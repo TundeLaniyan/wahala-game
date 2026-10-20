@@ -1,0 +1,406 @@
+/**
+ * What-if analysis built on the danger map and the time-expanded search: can I escape a
+ * generator I am about to place, can a rival escape it, how big is a rival's safe region, and
+ * the "distance to the enemy" field that keeps bots progressing instead of camping.
+ */
+import { DIRS, DIR_VEC, Tile } from '../sim';
+import type { Dir, Player } from '../sim';
+import type { Ctx } from './context';
+import type { HypoGen } from './danger';
+import { stepTicksOf, readyTick } from './world';
+
+export interface EscapePlan {
+  /** Per-transition actions (`null` = wait). */
+  actions: (Dir | null)[];
+  /** tiles[i] = tile after i transitions. */
+  tiles: number[];
+  /** Tick at which each transition executes. */
+  times: number[];
+  /** Tick from which the walker stands on tiles[0]. */
+  a0: number;
+}
+
+export function slotsFor(horizonTicks: number, step: number): number {
+  return Math.ceil(horizonTicks / step) + 2;
+}
+
+/** Blast range my next generator would have (Bad Fuel can shrink it). */
+export function myRange(c: Ctx): number {
+  const { me, obs } = c.world;
+  const weak = me.curse?.kind === 'weakFire' && obs.tick < me.curse.until;
+  return weak ? Math.min(me.range, obs.config.generator.weakFireRange) : me.range;
+}
+
+/** Tick at which a generator placed by me on `placeTick` would explode (remote ones use their failsafe). */
+export function explodeTickFor(c: Ctx, placeTick: number): number {
+  const cfg = c.world.obs.config.generator;
+  return placeTick + (c.world.me.remote ? cfg.remoteFailsafeTicks : cfg.fuseTicks) - 1;
+}
+
+/**
+ * If I stand on tile `u` from tick `a0` (able to step again from `a1`) and place a generator there,
+ * is there a path to a tile that is safe forever? Returns the escape path or null.
+ */
+export interface PlacementOptions {
+  /** Absolute explosion tick (a carried generator keeps counting down while it is carried). */
+  explodeAt?: number;
+  range?: number;
+  pierce?: boolean;
+}
+
+export function checkPlacement(
+  c: Ctx,
+  u: number,
+  a0: number,
+  a1: number,
+  step: number,
+  opts: PlacementOptions = {},
+): EscapePlan | null {
+  const { world, profile } = c;
+  const placeTick = Math.max(world.tick + 1, a0 + 1);
+  const hypo: HypoGen = {
+    x: world.xOf(u),
+    y: world.yOf(u),
+    range: opts.range ?? myRange(c),
+    pierce: opts.pierce ?? world.me.hotFuel,
+    explodeAt: opts.explodeAt ?? explodeTickFor(c, placeTick),
+  };
+  c.builder.build(c.tmp, world, profile, { extraGens: [hypo] });
+  return searchRefuge(c, c.tmp, u, a0, a1, step, u);
+}
+
+/** Shortest safe path from (`start` at `a0`) to any tile that stays safe forever, or null. */
+export function searchRefuge(
+  c: Ctx,
+  map: Ctx['tmp'],
+  start: number,
+  a0: number,
+  a1: number,
+  step: number,
+  extraBlocked?: number,
+  blocked?: Uint8Array,
+): EscapePlan | null {
+  const { aux, world, profile } = c;
+  aux.run({
+    start,
+    a0,
+    a1: Math.max(a1, a0 + 1),
+    step,
+    slots: slotsFor(profile.horizonTicks, step),
+    danger: map,
+    blocked: blocked ?? world.walk,
+    extraBlocked,
+    stopAtRefuge: true,
+  });
+  if (aux.foundSlot < 0) return null;
+  return extractPlan(aux, aux.foundTile, aux.foundSlot);
+}
+
+export function extractPlan(bfs: Ctx['aux'], tile: number, slot: number): EscapePlan {
+  const actions = bfs.pathTo(tile, slot, []);
+  const tiles = bfs.tilesTo(tile, slot, []);
+  const times: number[] = [];
+  for (let i = 0; i < slot; i++) times.push(bfs.tickAt(i + 1));
+  return { actions, tiles, times, a0: bfs.tickAt(0) };
+}
+
+export interface RivalEscape {
+  /** Distinct tiles from which the rival is safe forever and which it can reach in time. */
+  refuges: number;
+  /** Slot of the nearest refuge (-1 none). */
+  nearest: number;
+}
+
+/**
+ * How well can `rival` get away from the hazards in `map`? `delay` models its reaction time.
+ * `full` counts every refuge (shrink analysis); otherwise it stops at the first one.
+ */
+export function rivalEscape(
+  c: Ctx,
+  map: Ctx['tmp'],
+  rival: Readonly<Player>,
+  delay: number,
+  full: boolean,
+  extraBlocked?: number,
+): RivalEscape {
+  const { aux, world, profile } = c;
+  const { obs } = world;
+  const step = stepTicksOf(obs, rival);
+  const start = rival.y * world.board.width + rival.x;
+  const ready = readyTick(obs, rival) + delay;
+  aux.run({
+    start,
+    a0: obs.tick,
+    a1: Math.max(ready, obs.tick + 1),
+    step,
+    slots: slotsFor(Math.min(profile.horizonTicks, 240), step),
+    danger: map,
+    blocked: world.blocked,
+    extraBlocked,
+    stopAtRefuge: !full,
+  });
+  c.rivalSims++;
+  if (!full) return { refuges: aux.foundSlot < 0 ? 0 : 1, nearest: aux.foundSlot };
+  let distinct = 0;
+  let nearest = -1;
+  const seen = new Set<number>();
+  for (let i = 0; i < aux.refugeTile.length; i++) {
+    const t = aux.refugeTile[i]!;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    distinct++;
+    if (nearest < 0) nearest = aux.refugeSlot[i]!;
+  }
+  return { refuges: distinct, nearest };
+}
+
+// ------------------------------------------------------------------ geometry of a blast
+
+export interface BlastGeometry {
+  soft: number;
+  rivals: number;
+  mountedRivals: number;
+  pickups: number;
+  /** Other generators the flames would reach (chain reactions). */
+  chains: number;
+  /** Rivals standing in the flames of those chained generators (one level deep). */
+  chainRivals: number;
+}
+
+export function blastGeometry(
+  c: Ctx,
+  tile: number,
+  range: number,
+  pierce: boolean,
+  out: BlastGeometry,
+): void {
+  const { world } = c;
+  const { obs, board } = world;
+  const w = board.width;
+  out.soft = out.rivals = out.mountedRivals = out.pickups = out.chains = out.chainRivals = 0;
+  let hit0 = -1;
+  let hit1 = -1;
+  let hit2 = -1;
+  const x0 = tile % w;
+  const y0 = Math.floor(tile / w);
+  const note = (t: number): void => {
+    if (world.rivalAt[t]! > 0) {
+      out.rivals += world.rivalAt[t]!;
+      for (const r of world.rivals) if (r.y * w + r.x === t && r.mounted) out.mountedRivals++;
+    }
+    if (world.pickupAt[t]! >= 0) out.pickups++;
+  };
+  note(tile);
+  for (const d of DIRS) {
+    const v = DIR_VEC[d];
+    let pierced = false;
+    for (let i = 1; i <= range; i++) {
+      const x = x0 + v.dx * i;
+      const y = y0 + v.dy * i;
+      if (x < 0 || y < 0 || x >= w || y >= board.height) break;
+      const t = y * w + x;
+      const kind = obs.tiles[t];
+      if (kind === Tile.Hard) break;
+      note(t);
+      if (kind === Tile.Soft) {
+        out.soft++;
+        if (pierce && !pierced) {
+          pierced = true;
+          continue;
+        }
+        break;
+      }
+      if (world.genAt[t]! >= 0) {
+        out.chains++;
+        const gi = world.genAt[t]!;
+        if (hit0 < 0) hit0 = gi;
+        else if (hit1 < 0) hit1 = gi;
+        else hit2 = gi;
+        break;
+      }
+    }
+  }
+  for (const gi of [hit0, hit1, hit2]) {
+    if (gi >= 0) out.chainRivals += rivalsInBlast(c, obs.generators[gi]!);
+  }
+}
+
+/** Rivals standing in a generator's flames (concrete and the first soft block stop each arm). */
+function rivalsInBlast(
+  c: Ctx,
+  g: Readonly<{ x: number; y: number; range: number; pierce: boolean }>,
+): number {
+  const { world } = c;
+  const { board, obs } = world;
+  const w = board.width;
+  let n = world.rivalAt[g.y * w + g.x]!;
+  for (const d of DIRS) {
+    const v = DIR_VEC[d];
+    let pierced = false;
+    for (let i = 1; i <= g.range; i++) {
+      const x = g.x + v.dx * i;
+      const y = g.y + v.dy * i;
+      if (x < 0 || y < 0 || x >= w || y >= board.height) break;
+      const t = y * w + x;
+      const kind = obs.tiles[t];
+      if (kind === Tile.Hard) break;
+      n += world.rivalAt[t]!;
+      if (kind === Tile.Soft) {
+        if (g.pierce && !pierced) {
+          pierced = true;
+          continue;
+        }
+        break;
+      }
+      if (world.genAt[t]! >= 0) break;
+    }
+  }
+  return n;
+}
+
+// ------------------------------------------------------------------ hunting field
+
+const HUNT_FAR = 999;
+
+/**
+ * Cost-distance from the nearest rival to every tile. Soft blocks and generators can be passed at
+ * extra cost, so the field points through the walls the bot would have to blast.
+ */
+export function computeHuntField(c: Ctx): void {
+  const { world, hunt } = c;
+  const { board, obs } = world;
+  hunt.fill(HUNT_FAR);
+  const queue: number[] = [];
+  const inQueue = new Uint8Array(board.size);
+  for (const r of world.rivals) {
+    const t = r.y * board.width + r.x;
+    hunt[t] = 0;
+    queue.push(t);
+    inQueue[t] = 1;
+  }
+  for (let head = 0; head < queue.length; head++) {
+    const u = queue[head]!;
+    inQueue[u] = 0;
+    for (let d = 0; d < 4; d++) {
+      const v = board.neighbor[u * 4 + d]!;
+      if (v < 0) continue;
+      const kind = obs.tiles[v];
+      if (kind === Tile.Hard) continue;
+      const cost = kind === Tile.Soft ? 4 : world.genAt[v]! >= 0 ? 3 : 1;
+      if (hunt[u]! + cost < hunt[v]!) {
+        hunt[v] = hunt[u]! + cost;
+        if (!inQueue[v]) {
+          inQueue[v] = 1;
+          queue.push(v);
+        }
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------------ robustness against sealing
+
+/** Walking distance (in tiles) from a tile over walkable terrain; 999 when unreachable. */
+function walkDistances(c: Ctx, from: number, out: Int16Array): void {
+  const { world } = c;
+  out.fill(999);
+  out[from] = 0;
+  const queue: number[] = [from];
+  for (let head = 0; head < queue.length; head++) {
+    const u = queue[head]!;
+    for (let d = 0; d < 4; d++) {
+      const v = world.board.neighbor[u * 4 + d]!;
+      if (v < 0 || world.blocked[v] === 1 || out[v]! < 999) continue;
+      out[v] = out[u]! + 1;
+      queue.push(v);
+    }
+  }
+}
+
+const rivalDist = new Int16Array(4096);
+
+/**
+ * Would my escape still work if a nearby rival dropped a generator on one of the tiles I am about
+ * to run through (a block, and for Remote Starter owners a lane that can fire at any moment)?
+ * `mine` is the hypothetical generator being placed at `u`.
+ */
+export function escapeSurvivesSealing(
+  c: Ctx,
+  u: number,
+  a0: number,
+  a1: number,
+  step: number,
+  esc: EscapePlan,
+  mine: HypoGen | null,
+): boolean {
+  const { world, profile } = c;
+  const { obs } = world;
+  const w = world.board.width;
+  const dist = rivalDist.length >= world.board.size ? rivalDist : new Int16Array(world.board.size);
+  const fuse = obs.config.generator.fuseTicks;
+  for (const r of world.rivals) {
+    let active = 0;
+    for (const g of obs.generators) if (g.ownerId === r.id && g.mode !== 'disabled') active++;
+    if (active >= r.capacity || r.carrying !== null) continue;
+    const rt = r.y * w + r.x;
+    walkDistances(c, rt, dist);
+    const rstep = stepTicksOf(obs, r);
+    const rready = readyTick(obs, r);
+    for (let i = 1; i < esc.tiles.length; i++) {
+      const q = esc.tiles[i]!;
+      const d = dist[q]!;
+      if (d >= 999) continue;
+      const arrives = d === 0 ? obs.tick + 1 : rready + (d - 1) * rstep + 1;
+      const iPass = esc.times[i - 1]!;
+      if (arrives > iPass + 6) continue; // I am through before he can get there
+      const remote = r.remote;
+      const hypo: HypoGen = {
+        x: q % w,
+        y: Math.floor(q / w),
+        range: r.range,
+        pierce: false,
+        explodeAt: remote ? arrives : arrives + fuse - 1,
+        hold: remote,
+        ownerId: r.id,
+      };
+      c.builder.build(c.tmp, world, profile, { extraGens: mine ? [mine, hypo] : [hypo] });
+      c.scratch.set(world.walk);
+      c.scratch[q] = 1;
+      if (!searchRefuge(c, c.tmp, u, a0, a1, step, u, c.scratch)) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Could the nearest rival kill me where I plan to stand by dropping a generator right now? True when
+ * its generator, placed on the tile it occupies today, would leave me with no way out.
+ */
+export function vulnerableAt(c: Ctx, tile: number, a0: number, a1: number, step: number): boolean {
+  const { world, profile } = c;
+  const { obs } = world;
+  const w = world.board.width;
+  const fuse = obs.config.generator.fuseTicks;
+  for (const r of world.rivals) {
+    if (Math.abs(r.x - (tile % w)) + Math.abs(r.y - Math.floor(tile / w)) > 7) continue;
+    let active = 0;
+    for (const g of obs.generators) if (g.ownerId === r.id && g.mode !== 'disabled') active++;
+    if (active >= r.capacity || r.carrying !== null || r.entryUntil !== null) continue;
+    const at = Math.max(obs.tick + 1, readyTick(obs, r));
+    const hypo: HypoGen = {
+      x: r.x,
+      y: r.y,
+      range: r.range,
+      pierce: r.hotFuel,
+      explodeAt: r.remote ? at : at + fuse - 1,
+      hold: r.remote,
+      ownerId: r.id,
+    };
+    c.builder.build(c.tmp, world, profile, { extraGens: [hypo] });
+    c.scratch.set(world.walk);
+    c.scratch[r.y * w + r.x] = 1;
+    if (tile === r.y * w + r.x) continue;
+    if (!searchRefuge(c, c.tmp, tile, a0, a1, step, undefined, c.scratch)) return true;
+  }
+  return false;
+}

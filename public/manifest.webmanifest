@@ -1,0 +1,11 @@
+{
+  "name": "WAHALA!",
+  "short_name": "WAHALA!",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1b1209",
+  "theme_color": "#1b1209",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
