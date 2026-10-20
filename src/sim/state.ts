@@ -6,7 +6,15 @@ import type { ArenaDef } from './arenas';
 import { tileIndex } from './grid';
 import { nextFloat, seedToState, weightedPick } from './rng';
 import { Tile } from './types';
-import type { GameOptions, GameState, MatchSettings, PickupKind, Player, PlayerSetup } from './types';
+import type {
+  CrushState,
+  GameOptions,
+  GameState,
+  MatchSettings,
+  PickupKind,
+  Player,
+  PlayerSetup,
+} from './types';
 
 export const DEFAULT_SETTINGS: MatchSettings = { mode: 'classic', crowdThrows: false, floorHazards: false };
 
@@ -44,6 +52,7 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     hotFuel: false,
     mounted: false,
     jumpReadyTick: 0,
+    slide: null,
     hasVoucher: false,
     carrying: null,
     dazedUntil: 0,
@@ -99,6 +108,9 @@ export function createGame(options: GameOptions): GameState {
 
   buildTiles(state, arena);
   assignHiddenPickups(state);
+  if (settings.floorHazards) buildFloorHazards(state, arena);
+  if (settings.mode === 'crush') state.crush = createCrush(state);
+  if (settings.crowdThrows) state.crowd = { nextThrowTick: config.crowd.firstThrowTicks, throws: [] };
   return state;
 }
 
@@ -149,4 +161,39 @@ function assignHiddenPickups(state: GameState): void {
       state.hidden[i] = weightedPick<PickupKind>(state, config.pickups.weights);
     }
   }
+}
+
+function buildFloorHazards(state: GameState, arena: ArenaDef): void {
+  arena.hazardLayout?.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      const c = row[x];
+      const i = tileIndex(state, x, y);
+      if (state.tiles[i] === Tile.Hard) continue;
+      if (c === 'o') state.floorHazards[i] = 'pothole';
+      else if (c === '~') state.floorHazards[i] = 'oil';
+    }
+  });
+}
+
+/** Wahala Crush closes the arena from the outside in, in a clockwise spiral of ring tiles. */
+function createCrush(state: GameState): CrushState {
+  const { width: w, height: h } = state;
+  const order: number[] = [];
+  const rings = Math.ceil(Math.min(w, h) / 2);
+  for (let r = 0; r < rings; r++) {
+    const x0 = r;
+    const y0 = r;
+    const x1 = w - 1 - r;
+    const y1 = h - 1 - r;
+    const ring: [number, number][] = [];
+    for (let x = x0; x <= x1; x++) ring.push([x, y0]);
+    for (let y = y0 + 1; y <= y1; y++) ring.push([x1, y]);
+    if (y1 > y0) for (let x = x1 - 1; x >= x0; x--) ring.push([x, y1]);
+    if (x1 > x0) for (let y = y1 - 1; y > y0; y--) ring.push([x0, y]);
+    for (const [x, y] of ring) {
+      const i = tileIndex(state, x, y);
+      if (state.tiles[i] !== Tile.Hard) order.push(i);
+    }
+  }
+  return { order, next: 0, nextAtTick: state.config.crush.startTicks, pending: [] };
 }

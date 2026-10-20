@@ -92,6 +92,8 @@ export interface Player {
   hotFuel: boolean;
   mounted: boolean; // Okada
   jumpReadyTick: number;
+  /** Oil slick: forced automatic steps in `dir`. */
+  slide: { dir: Dir; remaining: number } | null;
   hasVoucher: boolean;
 
   carrying: number | null; // generator id

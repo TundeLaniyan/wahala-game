@@ -188,8 +188,8 @@ export const DEFAULT_CONFIG: GameConfig = {
   },
   crush: {
     startTicks: ticks(40),
-    intervalTicks: ticks(1.4),
-    warnTicks: ticks(1.5),
+    intervalTicks: ticks(0.8),
+    warnTicks: ticks(1.2),
   },
   crowd: {
     firstThrowTicks: ticks(25),

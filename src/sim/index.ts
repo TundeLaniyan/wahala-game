@@ -35,3 +35,5 @@ export {
 export { vehicleHitTiles, vehicleStepTicks } from './systems/vehicles';
 export { alivePlayers, playerStepTicks } from './systems/queries';
 export { secondsRemaining } from './systems/match';
+export { observe } from './observe';
+export type { Observation } from './observe';

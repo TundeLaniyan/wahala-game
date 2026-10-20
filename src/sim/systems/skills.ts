@@ -2,7 +2,7 @@
 import { DIR_VEC } from '../grid';
 import { CHARACTERS } from '../data/characters';
 import type { GameState, Player, SimEvent } from '../types';
-import { canPlayerEnter, beginStep } from './movement';
+import { beginStep, canPlayerEnter } from './stepping';
 import { isActing, playersAt } from './queries';
 
 export function useSkill(state: GameState, p: Player, events: SimEvent[]): void {

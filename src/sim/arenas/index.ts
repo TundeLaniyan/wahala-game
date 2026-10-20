@@ -1,10 +1,12 @@
 import { DANFO_BUS_PARK } from './danfoBusPark';
+import { LEKKI_ROADWORKS } from './lekkiRoadworks';
 import type { ArenaDef } from './types';
 
 export type { ArenaDef } from './types';
 
 export const ARENAS: Readonly<Record<string, ArenaDef>> = {
   [DANFO_BUS_PARK.id]: DANFO_BUS_PARK,
+  [LEKKI_ROADWORKS.id]: LEKKI_ROADWORKS,
 };
 
 export const DEFAULT_ARENA_ID = DANFO_BUS_PARK.id;
