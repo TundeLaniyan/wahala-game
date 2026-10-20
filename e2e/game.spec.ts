@@ -196,3 +196,30 @@ test.describe('signature vehicles', () => {
     expect((await getState(page)).vehicles).toHaveLength(1);
   });
 });
+
+test.describe('whole-match robustness', () => {
+  test('a full match against real bots runs to a result with audio, captions and effects, without errors', async ({
+    page,
+  }, info) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    await open(page);
+    await page.getByTestId('diff-hard').click();
+    await startMatch(page, { competitors: 4, waitPlaying: false });
+    for (let i = 0; i < 12; i++) {
+      await stepTicks(page, 300);
+      await page.waitForTimeout(60); // let frames render, events reach audio/captions
+    }
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-bots-midgame.png` });
+    const st = await getState(page);
+    expect(st.phase === 'playing' || st.phase === 'ended').toBe(true);
+    await page.evaluate(() =>
+      (window as never as { __WAHALA__: { controller(): { skipToResults(): void } } }).__WAHALA__
+        .controller()
+        .skipToResults(),
+    );
+    await expect(page.getByTestId('results')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+});

@@ -20,7 +20,7 @@ import type { FrameContext, View } from './types';
 
 const DEATH_TIME = 1.7;
 /** Characters are drawn a little larger than a tile-sized figure so they read at phone size. */
-const SCALE = 1.3;
+const SCALE = 1.5;
 
 interface Visual {
   model: PlayerModel;
@@ -196,10 +196,10 @@ export class PlayerViews implements View {
     (v.ring.material as MeshBasicMaterial).opacity =
       state.match.phase === 'countdown' ? 0.5 + 0.4 * Math.sin(time * 6) : 0.95;
     v.shadow.position.set(w.x, 0.02, w.z);
-    v.name.position.set(w.x, 1.5, w.z);
+    v.name.position.set(w.x, 1.72, w.z);
     v.name.visible = true;
     if (v.marker) {
-      v.marker.position.set(w.x, 1.9 + Math.sin(time * 5) * 0.08, w.z);
+      v.marker.position.set(w.x, 2.1 + Math.sin(time * 5) * 0.08, w.z);
       v.marker.visible = true;
     }
     const dazed = state.tick < p.dazedUntil;
@@ -207,7 +207,7 @@ export class PlayerViews implements View {
       s.visible = dazed;
       if (dazed) {
         const a = time * 6 + (i * Math.PI * 2) / 3;
-        s.position.set(w.x + Math.cos(a) * 0.28, 1.3 + (mounted ? 0.25 : 0), w.z + Math.sin(a) * 0.3);
+        s.position.set(w.x + Math.cos(a) * 0.28, 1.5 + (mounted ? 0.25 : 0), w.z + Math.sin(a) * 0.3);
       }
     });
     const cursed = p.curse !== null && state.tick < p.curse.until;
@@ -219,7 +219,7 @@ export class PlayerViews implements View {
     const entering = p.entryUntil !== null;
     v.voucher.visible = entering;
     if (entering) {
-      v.voucher.position.set(w.x, 1.9 + Math.sin(time * 8) * 0.06, w.z);
+      v.voucher.position.set(w.x, 2.1 + Math.sin(time * 8) * 0.06, w.z);
       v.ring.scale.setScalar(0.82 + 0.12 * Math.sin(time * 10));
     } else v.ring.scale.setScalar(0.82);
   }

@@ -43,8 +43,11 @@ export function bakeDirect(group: Group): void {
   for (const child of group.children) {
     if (!(child instanceof Mesh) || child.userData.keep) continue;
     child.updateMatrix();
-    const g = (child.geometry.index ? child.geometry.toNonIndexed() : child.geometry.clone()) as BufferGeometry;
-    for (const name of Object.keys(g.attributes)) if (name !== 'position' && name !== 'normal' && name !== 'uv') g.deleteAttribute(name);
+    const g = (
+      child.geometry.index ? child.geometry.toNonIndexed() : child.geometry.clone()
+    ) as BufferGeometry;
+    for (const name of Object.keys(g.attributes))
+      if (name !== 'position' && name !== 'normal' && name !== 'uv') g.deleteAttribute(name);
     g.applyMatrix4(child.matrix);
     const list = buckets.get(child.material as Material) ?? [];
     list.push(g);
