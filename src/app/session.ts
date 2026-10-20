@@ -7,6 +7,7 @@ import { createAudio, createCaptionGenerator } from '../audio';
 import { InputManager } from '../input';
 import { GameRenderer } from '../render';
 import type { GameState } from '../sim';
+import { enterImmersiveMode } from './fullscreen';
 import { MatchController } from './MatchController';
 import { NULL_AUDIO } from './ports';
 import type { AudioPort, CaptionPort } from './ports';
@@ -109,6 +110,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
 export const commands = {
   start(): void {
     void audio.unlock();
+    if (useGameStore.getState().touchCapable) void enterImmersiveMode();
     audio.playUi('start');
     const seed = Number(new URLSearchParams(location.search).get('seed'));
     controller?.start(useGameStore.getState().settings, Number.isFinite(seed) && seed > 0 ? seed : undefined);
