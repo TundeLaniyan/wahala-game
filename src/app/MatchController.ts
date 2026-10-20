@@ -326,7 +326,7 @@ export class MatchController {
       this.togglePause();
       return;
     }
-    const sent = this.entry.active ? this.entry.nav(command, state) : null;
+    const sent = this.entry.active ? this.entry.nav(command === 'back' ? 'cancel' : command, state) : null;
     if (command === 'cancel' && !this.entry.active && !sent) {
       if (state.match.phase === 'playing' || this.paused) this.togglePause();
       return;

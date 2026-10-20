@@ -77,7 +77,7 @@ export class GamepadInput {
         this.events.onUse();
         this.events.onAction(action);
         if (idx === 0) this.events.onNav('confirm');
-        if (idx === 1) this.events.onNav('cancel');
+        if (idx === 1) this.events.onNav('back');
       }
     }
     if (b(9) && !this.prev[9]) this.events.onNav('pause');

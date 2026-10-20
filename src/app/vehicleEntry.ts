@@ -107,6 +107,7 @@ export class VehicleEntryController {
       case 'confirm':
         return this.confirm(state);
       case 'cancel':
+      case 'back':
         return this.cancel();
       case 'up':
       case 'down':
