@@ -63,7 +63,22 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   if (forced === 'low' || forced === 'medium' || forced === 'high')
     patch({ settings: { ...useGameStore.getState().settings, quality: forced } });
   const settings = useGameStore.getState().settings;
-  renderer = new GameRenderer({ canvas, quality: settings.quality });
+  try {
+    renderer = new GameRenderer({
+      canvas,
+      quality: settings.quality,
+      onContextLost: () =>
+        patch({
+          fatal:
+            'The graphics context was lost (the device may be low on memory). Reload the page to continue.',
+        }),
+    });
+  } catch (error) {
+    patch({
+      fatal: `WebGL could not start (${error instanceof Error ? error.message : 'unknown error'}). Try a different browser or enable hardware acceleration.`,
+    });
+    return () => undefined;
+  }
   try {
     audio = createAudio();
   } catch {

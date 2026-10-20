@@ -15,6 +15,7 @@ export function App() {
   const touchSetting = useGameStore((s) => s.settings.touchControls);
   const touchCapable = useGameStore((s) => s.touchCapable);
   const device = useGameStore((s) => s.device);
+  const fatal = useGameStore((s) => s.fatal);
 
   useEffect(() => {
     const unmount = mount(canvasRef.current!);
@@ -39,7 +40,15 @@ export function App() {
       {screen === 'playing' && showTouch && !paused && <TouchControls />}
       {screen === 'playing' && paused && <PauseOverlay />}
       {screen === 'results' && <ResultsOverlay />}
-      {screen === 'title' && <TitleScreen />}
+      {screen === 'title' && !fatal && <TitleScreen />}
+      {fatal && (
+        <div className="scrim" data-testid="fatal">
+          <div className="card lose">
+            <h2>Cannot start</h2>
+            <p>{fatal}</p>
+          </div>
+        </div>
+      )}
       {screen === 'playing' && portrait && <RotateOverlay />}
     </div>
   );

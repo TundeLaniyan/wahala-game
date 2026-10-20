@@ -41,6 +41,8 @@ export interface UiState {
   stats: RenderStats | null;
   showStats: boolean;
   audioReady: boolean;
+  /** Set when the game cannot run at all (e.g. WebGL unavailable). */
+  fatal: string | null;
 }
 
 /** UI-facing state. The simulation state itself is deliberately NOT stored in React state. */
@@ -58,6 +60,7 @@ export const useGameStore = create<UiState>(() => ({
   stats: null,
   showStats: false,
   audioReady: false,
+  fatal: null,
 }));
 
 export const patch = (p: Partial<UiState>): void => useGameStore.setState(p);
