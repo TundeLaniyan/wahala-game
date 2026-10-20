@@ -183,9 +183,13 @@ export class VehicleEntryController {
       const dx = e.x - cur.x;
       const dy = e.y - cur.y;
       const along = dx * v[0]! + dy * v[1]!;
-      if (along <= 0 && !(dx === 0 && dy === 0)) return;
+      const sameTile = dx === 0 && dy === 0;
+      // A corner holds two entries: press toward the wall you want to enter through to switch.
+      const outward = { up: 'down', down: 'up', left: 'right', right: 'left' }[e.dir] === dir;
+      if (sameTile && !outward) return;
+      if (!sameTile && along <= 0) return;
       const across = Math.abs(dx * v[1]!) + Math.abs(dy * v[0]!);
-      const score = along + across * 2.2 + (dx === 0 && dy === 0 ? 0.5 : 0);
+      const score = sameTile ? 0 : along + across * 2.2;
       if (score < bestScore) {
         bestScore = score;
         best = i;
