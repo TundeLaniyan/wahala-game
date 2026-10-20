@@ -1,0 +1,23 @@
+import type { Dir, TilePos, VehicleEntry } from '../sim';
+
+/** What the vehicle-entry overlay should display. Built by the app layer, drawn by the renderer. */
+export interface EntryOverlayModel {
+  stage: 'entry' | 'turn';
+  entries: VehicleEntry[];
+  focusKey: string | null;
+  route: TilePos[] | null;
+  turns: { key: string; pos: TilePos; dir: Dir; atIndex: number }[];
+  focusTurnKey: string | null;
+  /** Seconds left in the selection window, 0..1 as a fraction. */
+  timeFraction: number;
+}
+
+export type EntryPick = { kind: 'entry'; key: string } | { kind: 'turn'; key: string };
+
+/** Per-frame inputs the renderer needs besides the simulation state. */
+export interface FrameInfo {
+  localPlayerId: number;
+  entryOverlay: EntryOverlayModel | null;
+  /** 0..1 crowd excitement. */
+  excitement: number;
+}

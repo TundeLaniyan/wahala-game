@@ -309,7 +309,15 @@ export type SimEvent =
   | { type: 'matchStarted' }
   | { type: 'matchEnded'; result: MatchResult }
   | { type: 'generatorPlaced'; generatorId: number; ownerId: number; x: number; y: number }
-  | { type: 'generatorExploded'; generatorId: number; ownerId: number; x: number; y: number; eventId: number }
+  | {
+      type: 'generatorExploded';
+      generatorId: number;
+      ownerId: number;
+      x: number;
+      y: number;
+      eventId: number;
+      range: number;
+    }
   | { type: 'generatorKicked'; generatorId: number }
   | { type: 'generatorCarried'; generatorId: number; playerId: number; bonus: boolean }
   | { type: 'generatorDropped'; generatorId: number; playerId: number }

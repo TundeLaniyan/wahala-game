@@ -15,7 +15,11 @@ export function updateFloorHazards(state: GameState, events: SimEvent[]): void {
     const kind = state.floorHazards[tileIndex(state, p.x, p.y)];
     if (!kind) continue;
     if (kind === 'pothole') {
-      p.stepRemaining += state.config.hazards.potholeStumbleTicks;
+      // A stumble is a brief non-lethal daze that starts once the step into the pothole completes.
+      p.dazedUntil = Math.max(
+        p.dazedUntil,
+        state.tick + p.stepTotal + state.config.hazards.potholeStumbleTicks,
+      );
       p.slide = null;
     } else {
       p.slide = { dir: p.facing, remaining: state.config.hazards.oilSlideTiles };

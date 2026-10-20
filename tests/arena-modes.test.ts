@@ -115,7 +115,7 @@ describe('floor hazards (trap arena)', () => {
     put(s, 0, px - 1, py);
     const ev = run(s, 1, { 0: { move: 'right' } });
     expect(eventsOf(ev, 'hazardTriggered')[0]!.kind).toBe('pothole');
-    expect(s.players[0]!.stepRemaining).toBeGreaterThan(s.players[0]!.stepTotal);
+    expect(s.players[0]!.dazedUntil).toBeGreaterThan(s.tick + s.players[0]!.stepTotal);
   });
 
   it('oil slides a player a fixed number of extra tiles', () => {

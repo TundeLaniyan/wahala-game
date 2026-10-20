@@ -37,3 +37,4 @@ export { alivePlayers, playerStepTicks } from './systems/queries';
 export { secondsRemaining } from './systems/match';
 export { observe } from './observe';
 export type { Observation } from './observe';
+export { previewBlast } from './systems/explosions';

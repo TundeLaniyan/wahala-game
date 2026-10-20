@@ -38,6 +38,7 @@ export function resolveExplosions(state: GameState, events: SimEvent[]): void {
           x: gen.x,
           y: gen.y,
           eventId,
+          range: gen.range,
         });
         for (const flame of buildFlames(state, gen, eventId, softHit)) {
           state.flames.push(flame);
@@ -120,4 +121,28 @@ export function destroySoftBlocks(
     events.push({ type: 'blockDestroyed', x, y, by });
     revealPickupAt(state, idx, by === 'flame' ? eventId : null, events);
   }
+}
+
+/**
+ * Read-only prediction of every tile a generator's blast (including chain reactions it would
+ * set off) will cover if it exploded right now. Used by the renderer to show danger lanes.
+ */
+export function previewBlast(state: GameState, gen: Generator): Set<number> {
+  const tiles = new Set<number>();
+  const seen = new Set<number>([gen.id]);
+  const queue: Generator[] = [gen];
+  const scratch = new Map<number, number>();
+  for (let head = 0; head < queue.length; head++) {
+    const g = queue[head]!;
+    for (const flame of buildFlames(state, g, 0, scratch)) {
+      tiles.add(tileIndex(state, flame.x, flame.y));
+      for (const other of triggerableGeneratorsAt(state, flame.x, flame.y)) {
+        if (!seen.has(other.id)) {
+          seen.add(other.id);
+          queue.push(other);
+        }
+      }
+    }
+  }
+  return tiles;
 }
