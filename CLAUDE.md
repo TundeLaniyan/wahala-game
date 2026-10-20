@@ -3,7 +3,7 @@
 Browser-only, offline, single-player (1 human vs 1-3 bots) Nigerian-inspired Bomberman-style game. **Authoritative design: `docs/GAME_DESIGN_BIBLE.md`.** Architecture: `docs/ARCHITECTURE.md`. Status/backlog: `docs/IMPLEMENTATION_STATUS.md`. Tuning/rule decisions: `docs/DECISIONS.md`.
 
 ## Commands
-`npm run dev` | `npm run check` (typecheck + lint + vitest + build) | `npm test` | `npm run test:e2e` (Playwright; set `WAHALA_CHROMIUM=/opt/pw-browsers/chromium` offline) | `npm run simulate` (bot batches).
+`npm run dev` | `npm run check` (typecheck + lint + vitest + build) | `npm test` | `npm run test:e2e` (Playwright; set `WAHALA_CHROMIUM=/opt/pw-browsers/chromium` offline) | `npm run simulate -- --matches 200` (bot batches). Debug URL flags: `?debug` (window.__WAHALA__), `?fps`, `?q=low|medium|high`, `?seed=N`, `?nobots`.
 
 ## Non-negotiable rules
 - Stack: TypeScript strict, Vite, Three.js, React + Zustand (UI only), Vitest, Playwright. No backend, DB, auth or sockets.

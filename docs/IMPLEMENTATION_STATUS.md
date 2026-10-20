@@ -23,11 +23,37 @@ A complete, browser-only, single-player-versus-AI WAHALA! prototype: one human a
 
 ## AI
 
-AI_SECTION_PLACEHOLDER
+`src/ai` (`createBot({ difficulty, seed, playerId }) -> { decide(obs) -> Intent }`) sees only `observe()` output, uses the same `Intent`s, speeds and rules as a human, and is deterministic per seed.
+
+- **Easy:** slow plans (~every 15-25 ticks), places generators without always verifying an escape, only reacts to imminent flames, ignores chains.
+- **Medium:** full danger map (flames, ticking/remote/disabled generators, chain reactions, vehicle lanes, Crush and crowd landings), time-expanded path search, verifies an escape before placing, collects pickups, uses kick/punch/carry/remote/Kill Switch, push/shove/daze, and spends its Vehicle Voucher on a legal entry that cuts a rival off.
+- **Hard:** everything Medium does plus checks that its escape survives a rival sealing it, looks for placements that trap a rival even without a direct hit, and times vouchers/remote detonations.
+
+Measured with `npm run simulate -- --matches 200 --players 4` (mixed difficulties, seats rotated, seeds 1-200):
+
+| | Easy | Medium | Hard |
+| --- | --- | --- | --- |
+| seat win % | 3.7 | 28.2 | 42.1 |
+| eliminated by own generator % (usually a rival sealed the exit) | 36 | 23 | 25 |
+| average survival | 21 s | 28 s | 32 s |
+| decision cost per tick | 5 us | 9 us | 77 us |
+
+Fixed-seed duels (in the test suite): Hard beats Medium 70 %, Medium beats Easy 91 %, Hard beats Easy 84 %. Average match 36 s, 1 of 200 timed out. Crush + crowd throws batch (60 matches) runs without problems. **Known weaknesses:** Hard over Medium is a moderate edge (about 63 % over other seeds), partly achieved by slower Medium reactions; Easy suicides a lot by design; bots can be trapped by well-timed generators and cannot escape a one-tile corridor sealed twice; Crush / crowd / hazard behaviour is unit-tested but not tuned; difficulty ordering was measured on Danfo Bus Park only.
 
 ## Verification (what was actually run)
 
-VERIFICATION_PLACEHOLDER
+All commands were run in this environment (Node 22, headless Chromium with a software GL renderer):
+
+| Command | Result |
+| --- | --- |
+| `npx tsc --noEmit` | clean |
+| `npx eslint .` | clean (includes the layering rules: sim/ai purity) |
+| `npx vitest run` | **18 files, 215 tests passed** (simulation scenarios incl. vehicles/okada/carry/remote/kill switch/crush/crowd/hazards, 80-match random-play fuzz with invariants and determinism, AI behaviour and ordering, audio with a fake AudioContext, app controller and vehicle-entry controller with fake ports, gamepad mapping, architecture layering) |
+| `npm run build` | succeeds; `dist/` ~430 kB app + 552 kB three.js chunk (gzip ~137 kB each) |
+| `npx playwright test` (desktop 1280x720 + landscape phone 844x390 with touch) | **30 passed, 4 skipped by design** (project-specific). Covers: title and settings, start/countdown, pause/resume/quit, keyboard movement (one tile per step), generator placement / exit / blocked re-entry / blast, own-generator elimination, spectator banner, skip to results, rematch, draw by simultaneous blast, pickup + Okada ride and loss, all three vehicles (voucher, border entry selection by keyboard, Keke turn stage, warning, driving), entry cancel/timeout, click-to-select, touch D-pad and contextual buttons, device switching, no page scroll on a phone, a full 4-player match against real Hard bots with real audio without console errors, Crush + trap arena + crowd throws together |
+| `npm run simulate -- --matches 200 --players 4` | see the AI section |
+
+Screenshots from the browser runs were inspected for layout and rendering problems (`e2e-shots/`, not committed); issues found and fixed that way include the camera never being fitted on load, overlapping touch buttons, tall pillars/walls hiding tiles, tiny characters, a Start button below the fold on phones, and unreadable flame lanes.
 
 ## Not implemented / known limitations
 
