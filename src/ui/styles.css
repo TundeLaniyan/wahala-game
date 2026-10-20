@@ -880,3 +880,27 @@ button {
     padding: 10px 18px;
   }
 }
+
+/* Start button always reachable, even on short landscape phones. */
+.start-row {
+  position: sticky;
+  bottom: 6px;
+  z-index: 5;
+  padding: 6px 0;
+}
+@media (max-height: 460px) {
+  .panels {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .char img {
+    max-width: 52px;
+  }
+  .chip {
+    padding: 5px 9px;
+    font-size: 0.78rem;
+  }
+  .start-row .btn.primary {
+    font-size: 1.1rem;
+    padding: 9px 34px;
+  }
+}
