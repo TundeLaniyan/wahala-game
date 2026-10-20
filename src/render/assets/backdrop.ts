@@ -1,5 +1,9 @@
 import {
+  BufferGeometry,
   CylinderGeometry,
+  DoubleSide,
+  Float32BufferAttribute,
+  MeshBasicMaterial,
   Group,
   InstancedMesh,
   Matrix4,
@@ -13,7 +17,14 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Layout } from '../coords';
-import { artRng, concreteTexture, hazardStripes, wallTexture, windowsTexture } from '../textures';
+import {
+  artRng,
+  concreteTexture,
+  hazardStripes,
+  labelTexture,
+  wallTexture,
+  windowsTexture,
+} from '../textures';
 import { box, mat } from './helpers';
 import { bakeModel } from './merge';
 import { createVehicleModel } from './vehicles';
@@ -146,6 +157,31 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
     addBuilding(W / 2 + 6.2 + rng(), z, 4, 3.8, 3.5 + rng() * 4, i++);
     addBuilding(-W / 2 - 6.2 - rng(), z, 4, 3.8, 3.5 + rng() * 4, i++);
   }
+
+  // Green-white-green bunting along the back wall, and the bus-park signboard.
+  const tri = new BufferGeometry();
+  tri.setAttribute('position', new Float32BufferAttribute([-0.2, 0, 0, 0.2, 0, 0, 0, -0.38, 0], 3));
+  tri.setAttribute('normal', new Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3));
+  const flags = new InstancedMesh(tri, new MeshBasicMaterial({ side: DoubleSide }), 34);
+  const flagColor = new Color();
+  const fm = new Matrix4();
+  for (let n = 0; n < 34; n++) {
+    const t = n / 33;
+    const x = -W / 2 - 0.2 + t * (W + 0.4);
+    const sag = Math.sin(t * Math.PI) * 0.35;
+    fm.makeTranslation(x, 2.0 - sag, -H / 2 - 0.45);
+    flags.setMatrixAt(n, fm);
+    flags.setColorAt(n, flagColor.setHex(n % 3 === 1 ? 0xffffff : 0x1fa64a));
+  }
+  root.add(flags);
+  const signMat = new MeshBasicMaterial({
+    map: labelTexture('DANFO BUS PARK', '#ffc21a', 'bold 30px system-ui, sans-serif', '#1a1208'),
+    transparent: true,
+  });
+  const sign = new Mesh(new PlaneGeometry(4.2, 1.5), signMat);
+  sign.position.set(-W / 2 + 3.2, 1.55, -H / 2 - 0.62);
+  sign.rotation.x = -0.35;
+  root.add(sign);
 
   // crowd: merged person geometry, per-instance colour, animated bobbing
   const bodyGeo = mergeGeometries([
