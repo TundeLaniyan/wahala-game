@@ -31,6 +31,8 @@ export interface Backdrop {
  */
 export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
   const root = new Group();
+  // Static scenery is collected here and baked into a handful of meshes at the end.
+  const statics = new Group();
   const W = layout.width;
   const H = layout.height;
   const disposables: { dispose(): void }[] = [];
@@ -40,8 +42,8 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.31;
   ground.receiveShadow = true;
-  root.add(ground);
-  root.add(
+  statics.add(ground);
+  statics.add(
     box(
       W + 1.6,
       0.3,
@@ -62,17 +64,17 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
   const east = box(thick, 0.55, H, wallMat, W / 2 + thick / 2, 0.275, 0);
   const west = box(thick, 0.55, H, wallMat, -W / 2 - thick / 2, 0.275, 0);
   const south = box(W + thick * 2, 0.2, thick, wallMat, 0, 0.1, H / 2 + thick / 2);
-  root.add(north, east, west, south);
+  statics.add(north, east, west, south);
   const capMat = mat(0x8c867c, { roughness: 0.95 });
-  root.add(box(W + thick * 2 + 0.1, 0.07, thick + 0.1, capMat, 0, 0.83, -H / 2 - thick / 2));
-  root.add(box(thick + 0.1, 0.07, H + 0.1, capMat, W / 2 + thick / 2, 0.585, 0));
-  root.add(box(thick + 0.1, 0.07, H + 0.1, capMat, -W / 2 - thick / 2, 0.585, 0));
-  root.add(box(W + thick * 2 + 0.1, 0.06, thick + 0.1, capMat, 0, 0.22, H / 2 + thick / 2));
+  statics.add(box(W + thick * 2 + 0.1, 0.07, thick + 0.1, capMat, 0, 0.83, -H / 2 - thick / 2));
+  statics.add(box(thick + 0.1, 0.07, H + 0.1, capMat, W / 2 + thick / 2, 0.585, 0));
+  statics.add(box(thick + 0.1, 0.07, H + 0.1, capMat, -W / 2 - thick / 2, 0.585, 0));
+  statics.add(box(W + thick * 2 + 0.1, 0.06, thick + 0.1, capMat, 0, 0.22, H / 2 + thick / 2));
   // hazard-striped corner posts
   const stripeMat = mat(0xffffff, { map: hazardStripes(), flat: false, roughness: 0.6 });
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
-      root.add(
+      statics.add(
         box(
           0.7,
           sz < 0 ? 1.15 : 0.5,
@@ -94,7 +96,7 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
     b.position.set(x, 0, z);
     b.rotation.y = ry;
     b.scale.setScalar(scale);
-    root.add(b);
+    statics.add(b);
   };
   for (let i = 0; i < 5; i++)
     place(W / 2 + 2.1 + (i % 2) * 0.1, -H / 2 + 1.2 + i * 2.35, Math.PI / 2 + (rng() - 0.5) * 0.1);
@@ -111,7 +113,7 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
     t.needsUpdate = true;
     t.repeat.set(Math.max(1, Math.round(w / 2)), Math.max(1, Math.round(h / 2)));
     disposables.push(t);
-    root.add(
+    statics.add(
       box(
         w,
         h,
@@ -131,9 +133,9 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
       h - 0.24,
       z,
     );
-    root.add(roof);
+    statics.add(roof);
     if (i % 3 === 0) {
-      root.add(box(0.5, 0.5, 0.5, mat(0x3a6ea5), x + w * 0.2, h + 0.1, z));
+      statics.add(box(0.5, 0.5, 0.5, mat(0x3a6ea5), x + w * 0.2, h + 0.1, z));
     }
   };
   let i = 0;
@@ -198,6 +200,7 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
     crowd.instanceMatrix.needsUpdate = true;
   };
   update(0, 0);
+  root.add(bakeModel(statics));
 
   return {
     root,

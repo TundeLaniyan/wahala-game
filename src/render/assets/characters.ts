@@ -2,6 +2,7 @@ import { Group } from 'three';
 import type { CharacterId } from '../../sim';
 import { LOOKS } from '../../assets/looks';
 import { box, cyl, mat, pivot, sphere } from './helpers';
+import { bakeDirect } from './merge';
 
 export interface PlayerModel {
   root: Group;
@@ -85,6 +86,7 @@ export function createPlayerModel(id: CharacterId): PlayerModel {
     head.add(sphere(0.07, hair, -0.12, 0.27, -0.02, 8), sphere(0.07, hair, 0.12, 0.27, -0.02, 8)); // hair puffs
     head.add(box(0.3, 0.03, 0.04, accent, 0, 0.22, 0.04)); // headband
   }
+  for (const part of [legL, legR, armL, armR, head, torso]) bakeDirect(part);
   torso.add(head);
   rig.add(legL, legR, torso, armL, armR);
 
@@ -108,6 +110,7 @@ export function createPlayerModel(id: CharacterId): PlayerModel {
   bike.add(box(0.05, 0.05, 0.34, chrome, 0.34, 0.54, 0)); // handlebar
   bike.add(sphere(0.045, mat(0xfff6c0, { emissive: 0xffe9a0, emissiveIntensity: 1 }), 0.4, 0.46, 0, 8));
   bike.add(box(0.2, 0.04, 0.22, black, -0.38, 0.38, 0)); // rack
+  bakeDirect(bike);
   bike.visible = false;
   root.add(bike);
   // The bike's forward axis is +X; characters face +Z, so rotate the bike to match.

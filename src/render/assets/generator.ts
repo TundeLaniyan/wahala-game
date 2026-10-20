@@ -2,6 +2,7 @@ import { AdditiveBlending, CylinderGeometry, Group, Sprite, SpriteMaterial } fro
 import type { Mesh, MeshStandardMaterial } from 'three';
 import { glowTexture } from '../textures';
 import { box, cyl, mat, mesh, pivot, sphere, torus, uniqueMat } from './helpers';
+import { bakeDirect } from './merge';
 
 export interface GeneratorModel {
   root: Group;
@@ -57,6 +58,9 @@ export function createGeneratorModel(): GeneratorModel {
   body.add(exhaust);
   // brand-less decal stripe
   body.add(box(0.5, 0.05, 0.385, mat(0xffffff), -0.03, 0.3, 0));
+
+  // Static casing parts become a few merged meshes; the casing material stays unique so it can recolour per mode.
+  bakeDirect(body);
 
   const lampMaterial = uniqueMat(0xff2200, { emissive: 0xff2200, emissiveIntensity: 1.5 });
   const lamp = mesh(new CylinderGeometry(0.04, 0.04, 0.05, 10), lampMaterial, 0.1, 0.43, 0.18);

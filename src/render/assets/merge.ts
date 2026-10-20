@@ -31,3 +31,33 @@ export function bakeModel(root: Group): Group {
   }
   return out;
 }
+
+/**
+ * Replaces the DIRECT mesh children of `group` with one merged mesh per material (in the group's
+ * local space). Nested groups (animated pivots) are left alone. Meshes flagged `userData.keep`
+ * stay separate, e.g. emissive lamps that are animated individually.
+ */
+export function bakeDirect(group: Group): void {
+  const buckets = new Map<Material, BufferGeometry[]>();
+  const toRemove: Mesh[] = [];
+  for (const child of group.children) {
+    if (!(child instanceof Mesh) || child.userData.keep) continue;
+    child.updateMatrix();
+    const g = (child.geometry.index ? child.geometry.toNonIndexed() : child.geometry.clone()) as BufferGeometry;
+    for (const name of Object.keys(g.attributes)) if (name !== 'position' && name !== 'normal' && name !== 'uv') g.deleteAttribute(name);
+    g.applyMatrix4(child.matrix);
+    const list = buckets.get(child.material as Material) ?? [];
+    list.push(g);
+    buckets.set(child.material as Material, list);
+    toRemove.push(child);
+  }
+  for (const m of toRemove) group.remove(m);
+  for (const [material, geos] of buckets) {
+    const merged = mergeGeometries(geos);
+    if (!merged) continue;
+    const mesh = new Mesh(merged, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+}

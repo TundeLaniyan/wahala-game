@@ -2,6 +2,7 @@ import { Group, MeshBasicMaterial, PlaneGeometry } from 'three';
 import type { VehicleKind } from '../../sim';
 import { labelTexture } from '../textures';
 import { box, cyl, mat, mesh, sphere } from './helpers';
+import { bakeDirect } from './merge';
 
 export interface VehicleModel {
   root: Group;
@@ -140,5 +141,6 @@ export function createVehicleModel(kind: VehicleKind): VehicleModel {
     s.rotation.y = Math.PI / 2;
     body.add(s);
   }
+  bakeDirect(body);
   return { root, wheels, body, kind };
 }
