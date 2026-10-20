@@ -91,15 +91,11 @@ export class InputManager {
       this.latch.until = tick + MOVE_BUFFER_TICKS;
     const move = held ?? (this.latch && tick < this.latch.until ? this.latch.dir : null);
     const intent: Intent = { move: this.navMode ? null : move };
-    if (this.navMode) {
-      this.pending.clear();
-      return intent;
+    for (const a of [...this.pending]) {
+      if (a === 'vehicle') continue; // consumed by takeVehiclePress() (vehicle entry controller)
+      this.pending.delete(a);
+      if (!this.navMode) intent[a] = true;
     }
-    for (const a of this.pending) {
-      if (a === 'vehicle') continue; // handled by the vehicle-entry controller
-      intent[a] = true;
-    }
-    this.pending.clear();
     return intent;
   }
 

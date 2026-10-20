@@ -73,7 +73,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   controller = new MatchController({
     renderer: renderer as never,
     input,
-    botFactory: createBot,
+    botFactory: params.has('nobots') ? () => ({ decide: () => ({}) }) : createBot,
     audio,
     captions,
   });

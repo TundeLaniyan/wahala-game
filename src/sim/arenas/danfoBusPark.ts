@@ -28,6 +28,9 @@ export const DANFO_BUS_PARK: ArenaDef = {
     { x: 2, y: 0 },
     { x: 0, y: 1 },
     { x: 0, y: 2 },
+    // corner-turn tiles: guarantee every spawn a safe way out of its own first blast
+    { x: 2, y: 1 },
+    { x: 1, y: 2 },
   ],
   mirrorSoftBlocks: true,
 };

@@ -663,10 +663,10 @@ button {
 }
 .actions {
   position: absolute;
-  right: max(14px, env(safe-area-inset-right));
-  bottom: max(14px, env(safe-area-inset-bottom));
-  width: clamp(150px, 42vh, 240px);
-  height: clamp(150px, 42vh, 240px);
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  width: clamp(190px, 58vh, 300px);
+  height: clamp(190px, 58vh, 300px);
   pointer-events: none;
 }
 .abtn {
@@ -683,17 +683,18 @@ button {
   line-height: 1.05;
   color: #fff;
   box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4);
+  padding: 0;
 }
 .abtn img {
-  width: 52%;
+  width: 46%;
   display: block;
   margin: 0 auto 1px;
 }
 .abtn.bomb {
-  right: 0;
-  bottom: 0;
-  width: 56%;
-  height: 56%;
+  left: 48%;
+  top: 48%;
+  width: 52%;
+  height: 52%;
   background: conic-gradient(#e4a30a 0 50%, #8b3cd6 50% 100%);
   font-size: clamp(0.8rem, 2.6vh, 1.1rem);
 }
@@ -703,40 +704,40 @@ button {
   padding: 3px 8px;
 }
 .abtn.a {
-  right: 60%;
-  bottom: 6%;
+  left: 14%;
+  top: 68%;
   width: 30%;
   height: 30%;
   background: #8c5cff;
 }
 .abtn.b {
-  right: 38%;
-  bottom: 52%;
-  width: 30%;
-  height: 30%;
+  left: 14%;
+  top: 36%;
+  width: 28%;
+  height: 28%;
   background: #3a8cff;
 }
+.abtn.v {
+  left: 44%;
+  top: 12%;
+  width: 31%;
+  height: 31%;
+  background: #1ca35a;
+  animation: pulse 0.7s infinite alternate;
+}
 .abtn.c {
-  right: 2%;
-  bottom: 62%;
-  width: 30%;
-  height: 30%;
+  left: 76%;
+  top: 16%;
+  width: 24%;
+  height: 24%;
   background: #ff3c8c;
 }
 .abtn.d {
-  right: 58%;
-  bottom: 30%;
-  width: 28%;
-  height: 28%;
+  left: -6%;
+  top: 38%;
+  width: 22%;
+  height: 22%;
   background: #6b7078;
-}
-.abtn.v {
-  right: 28%;
-  bottom: 36%;
-  width: 34%;
-  height: 34%;
-  background: #1ca35a;
-  animation: pulse 0.7s infinite alternate;
 }
 .abtn.dim {
   opacity: 0.45;
