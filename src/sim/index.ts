@@ -32,6 +32,7 @@ export {
   listKekeTurns,
   straightLeg,
 } from './systems/entries';
+export type { EntryView } from './systems/entries';
 export { vehicleHitTiles, vehicleStepTicks } from './systems/vehicles';
 export { alivePlayers, playerStepTicks } from './systems/queries';
 export { secondsRemaining } from './systems/match';

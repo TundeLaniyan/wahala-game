@@ -3,15 +3,19 @@
  * every selectable border entry and the route preview) and by AI.
  */
 import { DIR_VEC, perpendiculars, tileAt } from '../grid';
+import type { GridView } from '../grid';
 import { Tile } from '../types';
 import type { Dir, GameState, TilePos, VehicleEntry, VehicleKind, VehicleTurn } from '../types';
+
+/** Entry geometry only needs the board and the config, so bots can call it with an Observation. */
+export type EntryView = GridView & { readonly config: GameState['config'] };
 
 export function entryKey(e: VehicleEntry): string {
   return `${e.x},${e.y},${e.dir}`;
 }
 
 /** Tiles from `from` (inclusive or not) walking in `dir` until concrete or the arena edge. Soft blocks are included. */
-function walk(state: GameState, from: TilePos, dir: Dir, includeStart: boolean): TilePos[] {
+function walk(state: EntryView, from: TilePos, dir: Dir, includeStart: boolean): TilePos[] {
   const v = DIR_VEC[dir];
   const out: TilePos[] = [];
   let x = from.x + (includeStart ? 0 : v.dx);
@@ -25,7 +29,7 @@ function walk(state: GameState, from: TilePos, dir: Dir, includeStart: boolean):
 }
 
 /** Every perimeter tile paired with its inward direction (corners appear once per side). */
-export function allBorderEntries(state: GameState): VehicleEntry[] {
+export function allBorderEntries(state: EntryView): VehicleEntry[] {
   const { width: w, height: h } = state;
   const out: VehicleEntry[] = [];
   for (let x = 0; x < w; x++) out.push({ x, y: 0, dir: 'down' });
@@ -35,12 +39,12 @@ export function allBorderEntries(state: GameState): VehicleEntry[] {
   return out;
 }
 
-export function straightLeg(state: GameState, entry: VehicleEntry): TilePos[] {
+export function straightLeg(state: EntryView, entry: VehicleEntry): TilePos[] {
   return walk(state, entry, entry.dir, true);
 }
 
 /** Legal 90 degree turns for a Keke entering at `entry`. */
-export function listKekeTurns(state: GameState, entry: VehicleEntry): VehicleTurn[] {
+export function listKekeTurns(state: EntryView, entry: VehicleEntry): VehicleTurn[] {
   const leg = straightLeg(state, entry);
   const min = state.config.vehicles.minKekeLegTiles;
   const turns: VehicleTurn[] = [];
@@ -54,7 +58,7 @@ export function listKekeTurns(state: GameState, entry: VehicleEntry): VehicleTur
 
 /** Builds the full tile route, or null if the entry/turn is illegal for this vehicle. */
 export function buildRoute(
-  state: GameState,
+  state: EntryView,
   kind: VehicleKind,
   entry: VehicleEntry,
   turn?: VehicleTurn,
@@ -74,7 +78,7 @@ export function buildRoute(
 }
 
 /** Every border entry that is currently legal for the vehicle (any border tile, not fixed gates). */
-export function listEntries(state: GameState, kind: VehicleKind): VehicleEntry[] {
+export function listEntries(state: EntryView, kind: VehicleKind): VehicleEntry[] {
   return allBorderEntries(state).filter((entry) => {
     if (state.config.vehicles.specs[kind].turns) return listKekeTurns(state, entry).length > 0;
     return buildRoute(state, kind, entry) !== null;

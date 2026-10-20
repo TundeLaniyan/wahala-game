@@ -51,6 +51,8 @@ interface Cand {
   /** Arrival state is not safe forever: a refuge must exist from there. */
   verify: boolean;
   escape?: EscapePlan | null;
+  /** A placement with no direct value, tried only because it might cut a rival's escape off. */
+  speculative?: boolean;
 }
 
 const PICKUP_BASE: Record<PickupKind, number> = {
@@ -130,14 +132,21 @@ export function canPlaceNow(c: Ctx): boolean {
   return me.alive && me.carrying === null && me.entryUntil === null && activeGenerators(c) < me.capacity;
 }
 
-const geo: BlastGeometry = { soft: 0, rivals: 0, mountedRivals: 0, pickups: 0, chains: 0 };
+const geo: BlastGeometry = { soft: 0, rivals: 0, mountedRivals: 0, pickups: 0, chains: 0, chainRivals: 0 };
 
 /** Cheap geometric value of a generator placed on `tile` (no escape / rival simulation yet). */
 export function placementGain(c: Ctx, tile: number): number {
   const { profile, world } = c;
   blastGeometry(c, tile, myRange(c), world.me.hotFuel, geo);
-  const rivals = geo.rivals - geo.mountedRivals * 0.5;
+  const rivals = geo.rivals - geo.mountedRivals * 0.5 + (profile.chains ? 0.7 * geo.chainRivals : 0);
   return profile.softValue * geo.soft + profile.rivalValue * rivals - profile.pickupLoss * geo.pickups;
+}
+
+function nearRival(c: Ctx, tile: number, dist: number): boolean {
+  const { world } = c;
+  for (const r of world.rivals)
+    if (manhattanTiles(world.board, tile, r.y * world.board.width + r.x) <= dist) return true;
+  return false;
 }
 
 export function tileValue(c: Ctx, tile: number, prevGoal: number): number {
@@ -251,13 +260,26 @@ export function chooseGoal(c: Ctx, prevGoal: number): Plan | null {
       if (k < 0 || k > MAX_PLACE_SLOTS || world.blocked[t] === 1) continue;
       if (world.pickupAt[t]! >= 0) continue;
       const gain = placementGain(c, t);
-      if (gain < profile.placeMinGain) continue;
+      if (gain < profile.placeMinGain) {
+        // Hard also looks for pure cut-off placements: no direct hit, but a rival's way out may close
+        if (profile.trap === 'shrink' && nearRival(c, t, 4)) {
+          placeCands.push({
+            kind: 'place',
+            tile: t,
+            slot: k,
+            score: gain - 0.5 * k,
+            verify: true,
+            speculative: true,
+          });
+        }
+        continue;
+      }
       const score =
         gain - profile.slotCost * k - profile.huntWeight * c.hunt[t]! * 0.5 + (t === prevGoal ? 1.2 : 0);
       placeCands.push({ kind: 'place', tile: t, slot: k, score, verify: true });
     }
     placeCands.sort((a, b) => b.score - a.score);
-    const verifyBudget = profile.difficulty === 'hard' ? 6 : profile.difficulty === 'medium' ? 4 : 2;
+    const verifyBudget = profile.difficulty === 'hard' ? 8 : profile.difficulty === 'medium' ? 4 : 2;
     let verified = 0;
     for (const cand of placeCands) {
       if (verified >= verifyBudget) break;
@@ -270,7 +292,9 @@ export function chooseGoal(c: Ctx, prevGoal: number): Plan | null {
         if (!esc) continue;
         if (profile.robustEscape && !robust(c, cand.tile, a0, a1, step, esc)) continue;
         cand.escape = esc;
-        cand.score += trapBonus(c, cand, esc);
+        const bonus = trapBonus(c, cand, esc);
+        if (cand.speculative && bonus < 15) continue;
+        cand.score += bonus;
       }
       cands.push(cand);
     }
@@ -284,7 +308,14 @@ export function chooseGoal(c: Ctx, prevGoal: number): Plan | null {
   let sealChecks = 0;
   for (const cand of cands) {
     if (cand.kind === 'pickup' && cand.verify) {
-      const esc = searchRefuge(c, c.danger, cand.tile, bfs.tickAt(cand.slot), bfs.tickAt(cand.slot + 1), step);
+      const esc = searchRefuge(
+        c,
+        c.danger,
+        cand.tile,
+        bfs.tickAt(cand.slot),
+        bfs.tickAt(cand.slot + 1),
+        step,
+      );
       if (!esc) continue;
     }
     if (skip > 0 && cand.kind !== 'stay') {

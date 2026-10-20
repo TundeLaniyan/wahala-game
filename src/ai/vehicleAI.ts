@@ -9,7 +9,7 @@
  * generators already ticking, and it values Okada riders correctly (they need two events).
  */
 import { CHARACTERS, buildRoute, listEntries, listKekeTurns, nextFloat } from '../sim';
-import type { GameState, Intent, TilePos, VehicleEntry, VehicleTurn } from '../sim';
+import type { EntryView, Intent, TilePos, VehicleEntry, VehicleTurn } from '../sim';
 import { rivalEscape, searchRefuge } from './analysis';
 import { baselineRefuges } from './goals';
 import type { Ctx } from './context';
@@ -36,7 +36,7 @@ export const newVehicleMemory = (): VehicleMemory => ({
 });
 
 /** The sim's route helpers only read width / height / tiles / config, which the Observation carries. */
-const geometry = (c: Ctx): GameState => c.world.obs as unknown as GameState;
+const geometry = (c: Ctx): EntryView => c.world.obs;
 
 interface Cand {
   entry: VehicleEntry;

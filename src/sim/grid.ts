@@ -1,8 +1,13 @@
 /** Pure grid helpers shared by every system. No game rules here, only geometry. */
 import { Tile } from './types';
-import type { Dir, GameState, TilePos } from './types';
+import type { Dir, TilePos } from './types';
 
-export type GridView = Pick<GameState, 'width' | 'height' | 'tiles'>;
+/** The part of a state needed for geometry; read-only so an Observation qualifies too. */
+export interface GridView {
+  readonly width: number;
+  readonly height: number;
+  readonly tiles: readonly number[];
+}
 
 export const DIRS: readonly Dir[] = ['up', 'right', 'down', 'left'];
 export const DIR_VEC: Readonly<Record<Dir, { dx: number; dy: number }>> = {

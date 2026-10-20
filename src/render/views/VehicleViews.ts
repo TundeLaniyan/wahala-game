@@ -45,6 +45,7 @@ export class VehicleViews implements View {
         : Math.sin(time * 22 + veh.id) * 0.012;
       v.model.root.position.set(layout.wx(gx), 0, layout.wz(gy));
       v.model.root.rotation.set(crashing ? -0.18 : 0, v.yaw, wobble);
+      v.model.root.scale.setScalar(1.12);
       v.model.body.position.y = Math.abs(Math.sin(time * 18)) * (crashing ? 0 : 0.012);
       const spin = veh.phase === 'driving' ? ((dt * 60) / Math.max(4, veh.stepTotal)) * 5 : 0;
       for (const w of v.model.wheels) w.rotation.z -= spin;

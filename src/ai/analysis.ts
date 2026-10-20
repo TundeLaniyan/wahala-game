@@ -163,6 +163,8 @@ export interface BlastGeometry {
   pickups: number;
   /** Other generators the flames would reach (chain reactions). */
   chains: number;
+  /** Rivals standing in the flames of those chained generators (one level deep). */
+  chainRivals: number;
 }
 
 export function blastGeometry(
@@ -175,7 +177,10 @@ export function blastGeometry(
   const { world } = c;
   const { obs, board } = world;
   const w = board.width;
-  out.soft = out.rivals = out.mountedRivals = out.pickups = out.chains = 0;
+  out.soft = out.rivals = out.mountedRivals = out.pickups = out.chains = out.chainRivals = 0;
+  let hit0 = -1;
+  let hit1 = -1;
+  let hit2 = -1;
   const x0 = tile % w;
   const y0 = Math.floor(tile / w);
   const note = (t: number): void => {
@@ -207,10 +212,50 @@ export function blastGeometry(
       }
       if (world.genAt[t]! >= 0) {
         out.chains++;
+        const gi = world.genAt[t]!;
+        if (hit0 < 0) hit0 = gi;
+        else if (hit1 < 0) hit1 = gi;
+        else hit2 = gi;
         break;
       }
     }
   }
+  for (const gi of [hit0, hit1, hit2]) {
+    if (gi >= 0) out.chainRivals += rivalsInBlast(c, obs.generators[gi]!);
+  }
+}
+
+/** Rivals standing in a generator's flames (concrete and the first soft block stop each arm). */
+function rivalsInBlast(
+  c: Ctx,
+  g: Readonly<{ x: number; y: number; range: number; pierce: boolean }>,
+): number {
+  const { world } = c;
+  const { board, obs } = world;
+  const w = board.width;
+  let n = world.rivalAt[g.y * w + g.x]!;
+  for (const d of DIRS) {
+    const v = DIR_VEC[d];
+    let pierced = false;
+    for (let i = 1; i <= g.range; i++) {
+      const x = g.x + v.dx * i;
+      const y = g.y + v.dy * i;
+      if (x < 0 || y < 0 || x >= w || y >= board.height) break;
+      const t = y * w + x;
+      const kind = obs.tiles[t];
+      if (kind === Tile.Hard) break;
+      n += world.rivalAt[t]!;
+      if (kind === Tile.Soft) {
+        if (g.pierce && !pierced) {
+          pierced = true;
+          continue;
+        }
+        break;
+      }
+      if (world.genAt[t]! >= 0) break;
+    }
+  }
+  return n;
 }
 
 // ------------------------------------------------------------------ hunting field
