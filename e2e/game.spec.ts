@@ -223,3 +223,48 @@ test.describe('whole-match robustness', () => {
     expect(errors).toEqual([]);
   });
 });
+
+test.describe('optional modes', () => {
+  test('Wahala Crush, the trap arena and crowd throws run together without errors and telegraph first', async ({
+    page,
+  }, info) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    await open(page, '&nobots');
+    await page.getByTestId('mode-crush').click();
+    await page.getByTestId('arena-lekkiRoadworks').click();
+    await page.getByTestId('toggle-crowd').click();
+    await startMatch(page, { competitors: 4, waitPlaying: false });
+    await stepTicks(page, 160);
+    // jump to the point where the crush has begun and a spectator throw is imminent
+    await mutate(
+      page,
+      `s.match.playTicks = s.config.crush.startTicks - 5; s.crowd.nextThrowTick = s.match.playTicks + 3;`,
+    );
+    await stepTicks(page, 30);
+    const warned = await page.evaluate(() => {
+      const w = (
+        window as never as {
+          __WAHALA__: { getState(): { crush: { pending: unknown[] }; crowd: { throws: unknown[] } } };
+        }
+      ).__WAHALA__;
+      const s = w.getState();
+      return { crush: s.crush.pending.length, crowd: s.crowd.throws.length };
+    });
+    expect(warned.crush).toBeGreaterThan(0);
+    expect(warned.crowd).toBeGreaterThan(0);
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-modes-warning.png` });
+    await stepTicks(page, 400);
+    await page.waitForTimeout(100);
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-modes-later.png` });
+    const hard = await page.evaluate(
+      () =>
+        (window as never as { __WAHALA__: { getState(): { tiles: number[] } } }).__WAHALA__
+          .getState()
+          .tiles.filter((t) => t === 1).length,
+    );
+    expect(hard === 35 || hard > 35).toBe(true);
+    expect(errors).toEqual([]);
+  });
+});
