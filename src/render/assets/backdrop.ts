@@ -121,7 +121,7 @@ function addModelledPerimeter(root: Group, out: InstancedMesh[], W: number, H: n
  * Everything around the playing field: raised slab, perimeter walls, parked danfos, buildings and
  * a cheering crowd. Walls on the camera side are kept low so no tile is hidden.
  */
-export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
+export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 1): Backdrop {
   const root = new Group();
   // Static scenery is collected here and baked into a handful of meshes at the end.
   const statics = new Group();
@@ -196,6 +196,13 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
   for (let i = 0; i < 4; i++) place(-W / 2 - 2.2, -H / 2 + 0.8 + i * 2.8, -Math.PI / 2 + (rng() - 0.5) * 0.1);
   for (let i = 0; i < 4; i++) place(-W / 2 + 2.5 + i * 3.6, -H / 2 - 2.0, (rng() - 0.5) * 0.1);
   place(W / 2 - 3.2, H / 2 + 2.2, Math.PI);
+  // thin the lot on weaker devices: keep an evenly spread subset
+  const keep = Math.max(1, Math.round(busSpots.length * busFraction));
+  const shown = busSpots.filter(
+    (_, n) =>
+      Math.floor((n * keep) / busSpots.length) !== Math.floor(((n - 1) * keep) / busSpots.length) || n === 0,
+  );
+  busSpots.splice(0, busSpots.length, ...shown);
   const busParts = assets.parts('veh_danfo');
   if (busParts.length > 0) {
     const m4 = new Matrix4();
@@ -285,6 +292,32 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
       addBuilding(-W / 2 - 6.2 - rng(), z, 4, 3.8, 3.5 + rng() * 4, i++);
     }
   }
+
+  // street dressing around the lot (kiosks, lamps, utility poles, tyre stacks, barrels)
+  const dress = (id: string, spots: Placement[]): void => instanceAsset(root, instanced, id, spots);
+  dress('env_kiosk', [
+    { x: -W / 2 + 2.2, z: -H / 2 - 3.5, ry: 0, sx: 0.8, sy: 0.8, sz: 0.8 },
+    { x: W / 2 - 3.2, z: -H / 2 - 3.5, ry: 0, sx: 0.8, sy: 0.8, sz: 0.8 },
+  ]);
+  dress('env_lamp', [
+    { x: -W / 2 - 1.9, z: -H / 2 - 1.8, ry: 0.4 },
+    { x: W / 2 + 1.9, z: -H / 2 - 1.8, ry: -0.4 },
+    { x: -W / 2 - 1.9, z: H / 2 + 1.0, ry: 2.6 },
+    { x: W / 2 + 1.9, z: H / 2 + 1.0, ry: -2.6 },
+  ]);
+  dress('env_poles', [
+    { x: -W / 2 - 4.0, z: 1.0, ry: Math.PI / 2 },
+    { x: W / 2 + 4.0, z: -1.5, ry: -Math.PI / 2 },
+  ]);
+  dress('env_tyrestack', [
+    { x: -W / 2 - 1.4, z: H / 2 + 1.9, ry: 0.5 },
+    { x: W / 2 + 1.5, z: H / 2 + 1.8, ry: -0.4 },
+    { x: -2.5, z: -H / 2 - 2.5, ry: 1.2 },
+  ]);
+  dress('env_barrel', [
+    { x: -W / 2 + 4.0, z: H / 2 + 1.7, ry: 0.3 },
+    { x: W / 2 - 5.0, z: -H / 2 - 2.4, ry: 2.0 },
+  ]);
 
   // Green-white-green bunting along the back wall, and the bus-park signboard.
   const tri = new BufferGeometry();

@@ -100,9 +100,9 @@ def _wall(name: str, seed: int, posters_f, posters_b, extra_f=None, extra_b=None
         return (0.0, 1 - (y1 - pad) / atlas.h, 1.0, 1 - (y0 + pad) / atlas.h)
 
     rects = {"+z": rect("front"), "-z": rect("back"), "+y": rect("top"), "-y": rect("top"), "+x": rect("top"), "-x": rect("top")}
-    footing = extrude_x([(-0.15, 0.0), (0.15, 0.0), (0.15, 0.12), (0.135, 0.14), (-0.135, 0.14), (-0.155, 0.12)], -WL / 2, WL / 2)
+    footing = extrude_x([(-0.15, 0.0), (0.15, 0.0), (0.15, 0.12), (0.135, 0.14), (-0.135, 0.14), (-0.15, 0.12)], -WL / 2, WL / 2)
     body = extrude_x([(-0.135, 0.13), (0.135, 0.13), (0.135, 0.56), (-0.135, 0.56)], -WL / 2, WL / 2)
-    cap = extrude_x([(-0.15, 0.555), (0.15, 0.555), (0.15, 0.59), (0.125, 0.62), (-0.125, 0.62), (-0.155, 0.59)], -WL / 2, WL / 2)
+    cap = extrude_x([(-0.15, 0.555), (0.15, 0.555), (0.15, 0.59), (0.125, 0.62), (-0.125, 0.62), (-0.15, 0.59)], -WL / 2, WL / 2)
     m = EnvModel(name)
     lo, hi = (-WL / 2, 0.0, -WT / 2), (WL / 2, WH, WT / 2)
     for part in (footing, body, cap):
@@ -147,6 +147,35 @@ def wall_c() -> dict:
         stencil(s, "KEEP CLEAR", (256, wy(0.30)), 36, 0xf2b705, "black", a=0.8, squeeze=0.9, wear=0.7, seed=3, spacing=0.05)
 
     return _wall("env_wall_c", seed, pf, [], cr, cr)
+
+
+def wall_d() -> dict:
+    """Wall with a hand-painted danfo-bus mural."""
+    seed = 191
+    pb = [dict(x=330, y=int(wy(0.50)), w=100, h=118, seed=261, rot=-2, kind="sale")]
+
+    def mural(s):
+        x0, y0 = 62, wy(0.505)  # top-left of the painting area
+        w, h = 260, 130
+        with s.paint(height=0.06, rough=0.6) as d:
+            d.rect((x0 - 6, y0 - 10, x0 + w + 6, y0 + h + 12), 0x2a6fc0, a=0.9, r=8)  # blue sky panel
+            d.rect((x0 - 6, y0 + h - 16, x0 + w + 6, y0 + h + 12), 0x4a4a4c, a=0.95, r=0)  # road
+            d.line([(x0, y0 + h + 0), (x0 + w, y0 + h + 0)], 0xf1ead2, 2.0, a=0.8)
+            bx, by = x0 + 22, y0 + 28
+            d.rect((bx, by, bx + 216, by + 78), 0xf2c21b, r=12)  # body
+            d.rect((bx + 6, by - 12, bx + 160, by + 6), 0xf2c21b, r=8)  # roof bump
+            d.rect((bx, by + 38, bx + 216, by + 50), 0x1a1a1c)  # the black stripe
+            for k in range(5):  # windows
+                d.rect((bx + 14 + k * 30, by + 6, bx + 38 + k * 30, by + 32), 0xcfe7f3)
+            d.poly([(bx + 170, by + 6), (bx + 208, by + 6), (bx + 214, by + 34), (bx + 170, by + 34)], 0xcfe7f3)  # windscreen
+            d.rect((bx + 205, by + 52, bx + 216, by + 62), 0xfff3b0)  # headlight
+            d.rect((bx + 195, by + 66, bx + 216, by + 72), 0x2a2a2c)  # bumper
+            for wx in (bx + 46, bx + 164):
+                d.ellipse((wx - 17, by + 52, wx + 17, by + 86), 0x151517)
+                d.ellipse((wx - 8, by + 61, wx + 8, by + 77), 0xb0b4b8)
+        stencil(s, "NO WAHALA", (x0 + w / 2, y0 + h + 36), 30, 0xf2c21b, "black", a=0.9, squeeze=0.9, wear=0.5, seed=7, spacing=0.04)
+
+    return _wall("env_wall_d", seed, [], pb, mural, None)
 
 
 # ----------------------------------------------------------------------------- corner post
@@ -263,4 +292,4 @@ def bleacher() -> dict:
     return m.export({"main": atlas.mat(normal_strength=0.35)})
 
 
-WALLS = {"env_wall": wall_a, "env_wall_b": wall_b, "env_wall_c": wall_c, "env_wall_corner": corner, "env_bleacher": bleacher}
+WALLS = {"env_wall": wall_a, "env_wall_b": wall_b, "env_wall_c": wall_c, "env_wall_d": wall_d, "env_wall_corner": corner, "env_bleacher": bleacher}

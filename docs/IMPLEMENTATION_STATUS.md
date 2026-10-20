@@ -87,3 +87,15 @@ Online multiplayer and spectators, 2v2, larger "City Rumble" mode, 5-10 arenas i
 ## Continuation prompt
 
 > Continue WAHALA! from `docs/GAME_DESIGN_BIBLE.md`, `docs/IMPLEMENTATION_STATUS.md`, `docs/DECISIONS.md` and `CLAUDE.md`. First run `npm run check` and `npm run test:e2e` and read the playtest feedback in `docs/PLAYTEST_NOTES.md` (create it if missing). Prioritise fixing issues found in human playtests (controls feel, bot behaviour, vehicle readability, mobile performance, audio mix), then art quality and real-device optimisation. Keep `src/sim` pure and deterministic, keep all balance numbers in `src/sim/config.ts`, add a regression test for every bug, log every tuning decision in `docs/DECISIONS.md`, and do not add a backend or multiplayer.
+
+
+## Presentation overhaul (branch `claude/presentation-overhaul`)
+
+Gameplay rules, the simulation and the AI are unchanged (all 165 prior unit tests still pass).
+
+- **Characters:** three rigged glTF characters (22 bones, 16 clips: idle/run/carry/ride/place/kick/throw/push/stumble/daze/cheer/win/lose/two deaths) replace the primitive figures; clip choice follows sim state and `SimEvent`s.
+- **Arena:** textured modelled pillars (3 variants) and 8 soft-block variants, concrete-slab PBR floor, modelled perimeter wall (4 variants) + corner posts + spectator platforms, instanced modelled Danfos (parked and driving), taxi, Keke, Okada, generator; Lagos buildings (4), kiosks, lamps, poles, tyre stacks and barrels.
+- **Crowd:** 12 posed, clothed spectator models instanced around the lot (on bleacher platforms and behind), bobbing/cheering with match excitement.
+- **UI:** new typography (Anton / Barlow Condensed), title screen with a live bots-only attract match behind it, loading bar, 3D-rendered portraits for the HUD and character cards, warm vignette.
+- **Audio:** music removed; synthesised SFX bank (81 sounds), engine/generator loops, crowd ambience and event-driven crowd reactions; recorded-sample override slots.
+- **Verification:** see the overhaul report in the PR / final message; `npm run check` and the Playwright suite were run.

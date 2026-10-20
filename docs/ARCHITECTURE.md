@@ -88,7 +88,8 @@ Rules (enforced by ESLint `no-restricted-imports`):
 
 - `app/loop.ts`: fixed 60 Hz accumulator; renders every frame with interpolation `alpha`.
 - `app/store.ts`: Zustand store for UI-facing state (screen, settings, HUD snapshot). The simulation state itself is *not* in React state.
-- `render/`: scene, camera fit, asset registry (`render/assets`) with procedural low-poly models that can be swapped for loaded models, effects, entity views.
+- `render/`: scene, camera fit, shared lighting (`lighting.ts`), effects, entity views. `render/assets/library.ts` loads every glTF in `src/assets/models` once (preloaded behind the title screen); consumers (`characters.ts`+`rigged.ts`, `vehicles.ts`, `generator.ts`, `props.ts`, `backdrop.ts`, `crowd.ts`, `floor.ts`) use the modelled assets and keep procedural stand-ins only as a load-failure fallback. `render/portraits.ts` renders HUD/title portraits from the 3D characters.
+- `app/AttractController.ts`: a bots-only match behind the title menu (same sim code path, separate instance).
 - `input/`: keyboard, touch controls, gamepad -> `Intent`; one `InputManager` merges them.
 - `ui/`: React components: title/settings, HUD, touch controls, vehicle entry overlay, results.
 

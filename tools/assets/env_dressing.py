@@ -129,9 +129,11 @@ def _kiosk_flap(seed: int) -> Sheet:
     with s.paint(height=0.1, rough=0.5) as d:
         for k in range(-3, 10):
             d.poly([(k * 40, 0), (k * 40 + 20, 0), (k * 40 + 20 - 40, h), (k * 40 - 40, h)], 0xd62839, a=0.9)
-        d.rect((16, 30, w - 16, 84), 0xf6f1e0, r=6)
-        px = fit_px("AIRTIME", w - 60, 40, "black", 0.9, 0.03)
-        d.text((w / 2, 57), "AIRTIME", px, 0xb3172b, "black", "cm", squeeze=0.9, spacing=0.03)
+        d.rect((12, 12, w - 12, h - 12), 0xf6f1e0, r=6)
+        px = fit_px("MAMA JOY", w - 48, 46, "black", 0.9, 0.03)
+        d.text((w / 2, 40), "MAMA JOY", px, 0x0f6b3a, "black", "cm", squeeze=0.9, spacing=0.03)
+        px2 = fit_px("AIRTIME + CARDS", w - 56, 24, "black", 0.9, 0.03)
+        d.text((w / 2, 82), "AIRTIME + CARDS", px2, 0xb3172b, "black", "cm", squeeze=0.9, spacing=0.03)
     s.comp(0x3a3128, np.clip(noise2(w, h, seed + 2, fx=5, fy=3) * 1.5 - 0.7, 0, 1) * 0.4)
     speckle(s, seed + 3, amount=0.4, density=0.006)
     return s
@@ -215,8 +217,8 @@ def kiosk() -> dict:
     # counter plank + hinged flap propped on two sticks
     ct = flat_box((1.14, 0.04, 0.26), (cx, 0.52, D / 2 + 0.1))
     m.add(box_uv(ct, ct.v.min(axis=0), ct.v.max(axis=0), R("wood")))
-    ang = 36.0
-    L = 0.55
+    ang = 26.0
+    L = 0.5
     hinge = np.array([cx, hy1 + 0.02, D / 2 + 0.02])
     flap = flat_box((1.18, 0.025, L))
     flap = box_uv(flap, flap.v.min(axis=0), flap.v.max(axis=0), {"+y": R("flap"), "-y": R("steel"), "any": R("steel")})
@@ -302,11 +304,11 @@ def lamp() -> dict:
     arm_path = [(0, 2.80, 0.0), (0, 2.98, 0.05), (0, 3.10, 0.2), (0, 3.15, 0.42), (0, 3.15, 0.6)]
     arm = polytube(arm_path, 0.022, 6, caps=True)
     m.add(box_uv(arm, arm.v.min(axis=0), arm.v.max(axis=0), R("steel")))
-    path = np.array([(0, 3.12, 0.48), (0, 3.12, 0.74), (0, 3.12, 1.0)])
-    head = tube(path, [0.045, 0.07, 0.04], [0.08, 0.11, 0.06], sides=10, rings=7, exponent=2.4)
+    path = np.array([(0, 3.15, 0.40), (0, 3.15, 0.66), (0, 3.15, 0.98)])
+    head = tube(path, [0.030, 0.056, 0.026], [0.05, 0.088, 0.036], sides=10, rings=9, exponent=2.6)
     head = noisy(head, 0.0, 4, 0)
     m.add(box_uv(head, head.v.min(axis=0), head.v.max(axis=0), R("steel")))
-    lens = flat_box((0.13, 0.014, 0.34), (0, 3.045, 0.75))
+    lens = flat_box((0.14, 0.012, 0.38), (0, 3.092, 0.68))
     # separate emissive material for the lens
     m.add(flat_uv(lens, R("glow")), material="lamp")
     # tangled cables: four strands drooping off the top, plus a wrapped bundle round the pole
@@ -326,9 +328,9 @@ def lamp() -> dict:
             pts.append((r * np.cos(a), y, r * np.sin(a)))
         c = polytube(pts, 0.0085, 4, caps=False)
         m.add(flat_uv(c, R("cable")))
-    # a loose loop hanging from the arm
-    loop = [(0.02, 2.78, 0.03), (0.12, 2.5, 0.1), (0.22, 2.4, 0.0), (0.12, 2.52, -0.12), (0.02, 2.72, -0.02), (-0.1, 2.45, 0.1), (-0.15, 2.35, 0.02)]
-    m.add(flat_uv(polytube(loop, 0.0075, 4, caps=False), R("cable")))
+    # a loose strand dangling off the arm
+    dang = [(0.02, 2.80, 0.03), (0.06, 2.55, 0.10), (0.04, 2.30, 0.16), (-0.02, 2.12, 0.10)]
+    m.add(flat_uv(polytube(dang, 0.0075, 4, caps=False), R("cable")))
     am = atlas.mat(normal_strength=0.6, nblur=0.4)
     lm = Mat(albedo=np.full((4, 4, 3), 1.0), height=None, rough=0.4, metal=0.0, emissive=(1.0, 0.82, 0.5), emissive_strength=2.5)
     return m.export({"main": am, "lamp": lm})
@@ -425,7 +427,7 @@ def tyrestack() -> dict:
     for p in rim_mesh(atlas, pos=(0, y + 3 * (2 * TW - 0.012) + 0.045, 0), yaw=30):
         m.add(p)
     # one tyre leaning against the stack
-    parts = tyre_mesh(atlas, sides, seed + 9, level="full", tilt=(0, 0, 0), pos=(0, 0, 0), yaw=0)
+    parts = tyre_mesh(atlas, 18, seed + 9, level="full", tilt=(0, 0, 0), pos=(0, 0, 0), yaw=0)
     for p in parts:
         q = place(p, (0.0, 0.0, 0.0), (-72, 0, 0))
         q.v = q.v + np.array([0.03, 0.34, 0.50])

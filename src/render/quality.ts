@@ -8,6 +8,8 @@ export interface QualityProfile {
   shadowMapSize: number;
   particleDensity: number;
   crowd: number;
+  /** Fraction of the parked buses drawn (each is ~11k triangles). */
+  parkedBuses: number;
   antialias: boolean;
 }
 
@@ -18,7 +20,8 @@ export const QUALITY: Record<QualityLevel, QualityProfile> = {
     shadows: false,
     shadowMapSize: 512,
     particleDensity: 0.4,
-    crowd: 40,
+    crowd: 24,
+    parkedBuses: 0.4,
     antialias: false,
   },
   medium: {
@@ -27,7 +30,8 @@ export const QUALITY: Record<QualityLevel, QualityProfile> = {
     shadows: true,
     shadowMapSize: 1024,
     particleDensity: 0.75,
-    crowd: 90,
+    crowd: 80,
+    parkedBuses: 0.75,
     antialias: true,
   },
   high: {
@@ -37,6 +41,7 @@ export const QUALITY: Record<QualityLevel, QualityProfile> = {
     shadowMapSize: 2048,
     particleDensity: 1,
     crowd: 150,
+    parkedBuses: 1,
     antialias: true,
   },
 };

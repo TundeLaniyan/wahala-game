@@ -233,7 +233,7 @@ class Sheet:
     def overlay_image(self, img: Image.Image, x: int, y: int, height: float = 0.0, rough: float | None = None, shadow: float = 0.0, opacity: float = 1.0):
         """Alpha-composite a PIL RGBA image at (x, y) (clipped to the sheet); optional soft drop shadow underneath."""
         full = Image.new("RGBA", (self.w, self.h), (0, 0, 0, 0))
-        full.alpha_composite(img, (0, 0)) if False else full.paste(img, (x, y), img)
+        full.paste(img, (x, y), img)
         arr = np.asarray(full).astype(np.float64) / 255.0
         a = arr[..., 3]
         if shadow > 0:
@@ -548,7 +548,7 @@ def tear(img: Image.Image, seed: int, amount: float = 0.5, corner_peel: bool = T
         cx = rng.choice([0, w]) + rng.normal(0, w * 0.1)
         cy = rng.choice([0, h]) + rng.normal(0, h * 0.1)
         r = rng.uniform(0.18, 0.4) * min(w, h)
-        rr = r * (0.75 + 0.5 * noise2(w, h, seed + 9, fx=14, fy=14)) if False else r * (0.8 + 0.4 * n)
+        rr = r * (0.8 + 0.4 * n)
         alpha[(xs - cx) ** 2 + (ys - cy) ** 2 < rr**2] = 0
     if corner_peel and rng.random() < 0.7:  # lifted corner shows paper back: lighten a triangle
         c = rng.choice(4)
@@ -573,20 +573,13 @@ def stick_poster(s: Sheet, x: int, y: int, w: int, h: int, seed: int, rot: float
 
 
 def stencil(s: Sheet, text: str, xy, px: float, color=0xf1ead2, style="black", a=0.9, rot: float = 0.0, squeeze: float = 1.0, wear: float = 0.5, seed: int = 0, anchor="cm", spacing=0.0):
-    """Spray-stencil text: worn through noise, slightly rough edges."""
-    mask = np.zeros((s.h, s.w))
-    tmp = Sheet(s.w, s.h)
-    with tmp.paint() as d:
-        d.text(xy, text, px, 0xffffff, style, anchor, squeeze=squeeze, rot=rot, spacing=spacing)
-    cov = tmp.rgb[..., 0] * 0 + (np.clip(tmp.rgb.mean(axis=2), 0, 1) if False else 0)
-    # recover alpha: paint onto black sheet instead
+    """Spray-stencil text: worn through noise, slightly rough edges. Returns the coverage mask."""
     base = Sheet(s.w, s.h, color=0x000000)
     with base.paint() as d:
         d.text(xy, text, px, 0xffffff, style, anchor, squeeze=squeeze, rot=rot, spacing=spacing)
     mask = base.rgb[..., 0]
     n = noise2(s.w, s.h, seed, fx=40, fy=40, octaves=6, beta=1.0)
     mask = np.clip(mask - wear * np.clip(n - 0.5, 0, 1) * 3.0, 0, 1)
-    del cov
     s.comp(color, mask * a, height=0.04, rough=0.85)
     return mask
 

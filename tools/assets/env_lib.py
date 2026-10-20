@@ -220,11 +220,9 @@ def polytube(path, radius, sides: int = 5, caps: bool = True) -> Mesh:
     t = m.v[m.f]
     fn = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
     cen = t.mean(axis=1)
-    idx = np.clip(np.round(np.arange(len(cen)) * 0 + 0).astype(int), 0, 0)
     near = np.argmin(np.linalg.norm(cen[:, None, :] - path[None, :, :], axis=2), axis=1)
     if np.mean(np.einsum("ij,ij->i", fn, cen - path[near])) < 0:
         m.f = m.f[:, ::-1]
-    del idx
     return m
 
 
@@ -311,11 +309,6 @@ def vc_ground(m: Mesh, h: float = 0.18, dark: float = 0.45, seed: int = 0, mud: 
     k = np.clip(1.0 - m.v[:, 1] / (h * (0.7 + 0.6 * n)), 0, 1)
     m.c[:, :3] *= (1.0 - dark * k)[:, None] * (1.0 - 0.0 * mud)
     m.c[:, 0] *= 1.0 + 0.08 * mud * k
-    return m
-
-
-def vc_top_light(m: Mesh, amount: float = 0.12) -> Mesh:
-    """Sun-bleached look on up-facing, high vertices (cheap): brighten by height."""
     return m
 
 
@@ -513,9 +506,9 @@ class Mat:
     jpeg_q: int = 84
 
 
-def _jpeg(arr: np.ndarray, q: int) -> bytes:
+def _jpeg(arr: np.ndarray, q: int, subsampling: int | None = None) -> bytes:
     buf = io.BytesIO()
-    Image.fromarray(arr).save(buf, format="JPEG", quality=q, subsampling=0 if q >= 80 else 2, optimize=True)
+    Image.fromarray(arr).save(buf, format="JPEG", quality=q, subsampling=(0 if q >= 80 else 2) if subsampling is None else subsampling, optimize=True)
     return buf.getvalue()
 
 
@@ -561,10 +554,7 @@ def smooth_prim(m: Mesh, smooth_deg: float, material_id: int) -> dict:
         acc /= np.maximum(np.linalg.norm(acc, axis=1, keepdims=True), 1e-12)
         nrm[corners] = acc
     col = m.c[f].reshape(-1, 4)
-    if m.uv is not None:
-        uvfull = m.uv.reshape(-1, 3, 2) if len(m.uv) == len(m.f) * 3 and m.uv.shape[0] == len(m.f) * 3 and False else None
-        del uvfull
-    # UVs: unwelded meshes carry uv per vertex index == corner; welded ones are indexed by vertex
+    # UVs are stored per vertex index (unwelded meshes: one vertex per triangle corner)
     uv = m.uv[f].reshape(-1, 2) if m.uv is not None else np.zeros((len(pos), 2))
     if np.isnan(uv).any():
         raise ValueError("part without UVs in an atlas model; call box_uv/cyl_uv/flat_uv on every part")
@@ -626,7 +616,7 @@ class EnvModel:
             tex_i = g.add_texture(g.add_image(_jpeg((np.clip(s.albedo, 0, 1) * 255 + 0.5).astype(np.uint8), s.jpeg_q), "image/jpeg"))
             nrm_i = orm_i = None
             if s.height is not None:
-                nrm_i = g.add_texture(g.add_image(_jpeg(normal_map(s.height, s.normal_strength), 80), "image/jpeg"))
+                nrm_i = g.add_texture(g.add_image(_jpeg(normal_map(s.height, s.normal_strength), 72, 2), "image/jpeg"))
             rough_a, metal_a = np.asarray(s.rough, dtype=np.float64), np.asarray(s.metal, dtype=np.float64)
             flat = float(np.ptp(rough_a)) < 0.04 and float(np.ptp(metal_a)) < 0.02  # constant -> plain factors, no ORM image
             varying = not flat

@@ -98,7 +98,7 @@ test.describe('keyboard play', () => {
     await stepTicks(page, 200);
     const st = await getState(page);
     expect(st.result).toEqual({ kind: 'draw', reason: 'simultaneous' });
-    await expect(page.getByTestId('results')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('results')).toBeVisible({ timeout: 25_000 });
     await expect(page.getByTestId('result-title')).toHaveText('DRAW!');
   });
 

@@ -72,9 +72,9 @@ def laundry_tile(w, h, seed) -> Sheet:
 
 
 def roof_tile(w, h, seed) -> Sheet:
-    s = concrete_sheet(w, h, seed, 0x8f8a80, stains=0.9, grit=0.8)
+    s = concrete_sheet(w, h, seed, 0x74706a, stains=0.9, grit=0.8)
     n = noise2(w, h, seed + 1, fx=4, fy=3, octaves=5, beta=1.8)
-    s.comp(0x30302c, np.clip(n * 1.5 - 0.7, 0, 1) * 0.55)
+    s.comp(0x24241f, np.clip(n * 1.5 - 0.65, 0, 1) * 0.6)
     s.comp(0x4a5a30, np.clip(noise2(w, h, seed + 2, fx=5, fy=4, octaves=5) * 1.6 - 1.0, 0, 1) * 0.35)  # moss
     speckle(s, seed + 3, amount=0.4, density=0.005)
     return s
@@ -191,7 +191,7 @@ def antenna(pos, h=0.8, rng=None):
 # ----------------------------------------------------------------------------- the generic builder
 
 
-def build_building(name: str, seed: int, H: float, wall, peel, painter, parts_fn, side_windows=None, awning=(0xd62839, 0xf6f1e0)) -> dict:
+def build_building(name: str, seed: int, H: float, wall, peel, painter, parts_fn, side_windows=None, awning=(0xd62839, 0xf6f1e0), roof_metal=0x8c9196) -> dict:
     """painter(f: Facade) draws the facade; parts_fn(atlas, rng) -> list of (tile, mesh) extra geometry."""
     atlas = Atlas(1024, 1024, 0x808080)
     D = min(200.0, 900.0 / H)
@@ -205,7 +205,7 @@ def build_building(name: str, seed: int, H: float, wall, peel, painter, parts_fn
     atlas.add("roof", 660, side_h + 10, roof_tile(320, 240, seed + 6))
     regions = [(0, f.h + 4, 640, 1024), (660, side_h + 260, 1024, 1024)]
     P = lambda nm, tile: atlas.pack(nm, tile, regions=regions)  # noqa: E731
-    P("corr", corrugated_tile(192, 96, seed + 14))
+    P("corr", corrugated_tile(192, 96, seed + 14, roof_metal, 0.7))
     P("awning", awning_tile(144, 80, seed + 17, awning[0], awning[1], 8))
     P("tank", tank_tile(96, 96, seed + 9, 0x23272b))
     P("tankw", tank_tile(96, 96, seed + 10, 0xdfe5e8))
@@ -306,8 +306,8 @@ def building_a() -> dict:
 
 
 def building_b() -> dict:
-    H = 4.7
-    F1, F2, F3, F4 = 1.45, 2.58, 3.70, 4.42
+    H = 4.5
+    F1, F2, F3, F4 = 1.42, 2.52, 3.58, 4.22
 
     def paint(f: Facade):
         for y in (F1, F2, F3):
@@ -350,7 +350,7 @@ def building_b() -> dict:
         out.append(("rail", c))
         return out
 
-    return build_building("env_building_b", 331, H, 0xdba94a, 0xa8a094, paint, parts, side_windows=dict(windows=((0.55, 1.7), (1.85, 1.7), (1.2, 3.0))), awning=(0x1f8a4c, 0xf6f1e0))
+    return build_building("env_building_b", 331, H, 0xdba94a, 0xa8a094, paint, parts, side_windows=dict(windows=((0.55, 1.7), (1.85, 1.7), (1.2, 3.0))), awning=(0x1f8a4c, 0xf6f1e0), roof_metal=0xa8553a)
 
 
 # ----------------------------------------------------------------------------- C: peach spares shop + chemist
@@ -398,8 +398,8 @@ def building_c() -> dict:
 
 
 def building_d() -> dict:
-    H = 4.4
-    F1, F2, F3 = 1.42, 2.62, 3.72
+    H = 4.25
+    F1, F2, F3 = 1.42, 2.56, 3.62
 
     def paint(f: Facade):
         for y in (F1, F2):
@@ -439,10 +439,10 @@ def building_d() -> dict:
         out += tank((1.0, y0 + 0.14, -0.2), 0.32, 0.7, "tank", "tank")
         d = dish((1.3, y0 + 0.4, 0.7), 10, 0.2)
         out += [("steel", d[0]), ("steel", d[1]), ("steel", d[2])]
-        out += [("steel", a) for a in antenna((0.4, y0, -0.8), 1.0)]
+        out += [("steel", a) for a in antenna((0.4, y0, -0.8), 0.75)]
         return out
 
-    return build_building("env_building_d", 391, H, 0x7ea0c4, 0x9f998e, paint, parts, awning=(0xff4f9a, 0xf6f1e0))
+    return build_building("env_building_d", 391, H, 0x7ea0c4, 0x9f998e, paint, parts, awning=(0xff4f9a, 0xf6f1e0), roof_metal=0x3c8a86)
 
 
 BUILDINGS = {"env_building_a": building_a, "env_building_b": building_b, "env_building_c": building_c, "env_building_d": building_d}

@@ -326,13 +326,13 @@ def _sack_tile(kind: str, seed: int) -> Sheet:
     front half (u ~ 0.75) reading bottom->top and on the back half (u ~ 0.25) reading top->bottom."""
     w, h = SACK_TILE
     if kind == "rice":
-        s = burlap_sheet(w, h, seed, 0xc9a56a, 3.0, dirt=0.35)
+        s = burlap_sheet(w, h, seed, 0xc9a56a, 3.8, dirt=0.35)
         ink, ink2, text, sub = 0xb3172b, 0x0e6b3a, "OFADA RICE", "50 KG NET"
     elif kind == "pp":
-        s = burlap_sheet(w, h, seed, 0xe3dfd2, 2.4, dirt=0.30)
+        s = burlap_sheet(w, h, seed, 0xe3dfd2, 3.2, dirt=0.30)
         ink, ink2, text, sub = 0x1f4fb0, 0xd62839, "GOLDEN CROWN", "LONG GRAIN RICE 50KG"
     else:
-        s = burlap_sheet(w, h, seed, 0xb89458, 3.4, dirt=0.5)
+        s = burlap_sheet(w, h, seed, 0xb89458, 4.2, dirt=0.5)
         ink, ink2, text, sub = 0x16794a, 0x222222, "BROWN BEANS", "PRODUCE OF NIGERIA"
     for cx, rot in ((0.75, 90), (0.25, -90)):
         px = cx * w
@@ -344,8 +344,8 @@ def _sack_tile(kind: str, seed: int) -> Sheet:
         with s.paint(height=0.03, rough=0.7) as d:
             d.rect((px - 62, h * 0.12, px + 62, h * 0.88), 0xf0e6c8 if kind != "pp" else 0xf6f3ea, a=0.55 if kind != "pp" else 0.8)
             d.rect((px - 60, h * 0.14, px + 60, h * 0.86), ink, a=0.0)
-            tpx = min(38, 0.74 * h / (len(text) * 0.66 * 1.25))
-            spx = min(17, 0.74 * h / (len(sub) * 0.62 * 1.25))
+            tpx = min(38, 0.58 * h / (len(text) * 0.66 * 1.25))
+            spx = min(17, 0.58 * h / (len(sub) * 0.62 * 1.25))
             d.text((px - 14, h * 0.5), text, tpx, ink, "black", "cm", squeeze=1.25, rot=rot, spacing=0.02)
             d.text((px + 26 * (1 if rot == 90 else -1), h * 0.5), sub, spx, ink2, "bold", "cm", squeeze=1.25, rot=rot)
             for k in (-1, 1):
@@ -358,16 +358,17 @@ def _sack_tile(kind: str, seed: int) -> Sheet:
     return s
 
 
-def sack_mesh(atlas: Atlas, kind_tile: str, length=0.62, ha=0.105, hb=0.17, seed=0, boxy: float = 2.5, slump=0.0, mouth=0.28):
+def sack_mesh(atlas: Atlas, kind_tile: str, length=0.62, ha=0.105, hb=0.17, seed=0, boxy: float = 3.4, slump=0.0, mouth=0.28):
     """One slumped sack lying along x (mouth at +x), UV-mapped around the x axis."""
     rng = np.random.default_rng(seed)
     K = 6
     path = np.array([(x, 0.0, 0.0) for x in np.linspace(-length / 2, length / 2, K)])
-    prof_a = np.array([0.80, 1.0, 1.04, 1.0, 0.74, mouth]) * ha
-    prof_b = np.array([0.84, 1.0, 1.05, 1.0, 0.78, mouth * 1.15]) * hb
-    t = tube(path, prof_a, prof_b, sides=10, rings=11, exponent=boxy, cap_start=False, cap_end=False)
-    t = close_tube_ends(t, 10, 11)
-    t = noisy(t, 0.011, 9.0, seed)
+    # pillow: thickness collapses towards the sewn ends while the width stays (flat seams); the mouth end is gathered
+    prof_a = np.array([0.30, 0.92, 1.05, 1.0, 0.80, 0.34]) * ha
+    prof_b = np.array([0.94, 1.0, 1.04, 1.0, 0.94, mouth * 1.5]) * hb
+    t = tube(path, prof_a, prof_b, sides=10, rings=10, exponent=boxy, cap_start=False, cap_end=False)
+    t = close_tube_ends(t, 10, 10)
+    t = noisy(t, 0.012, 10.0, seed)
     # slump: wider/flatter in the middle, pinched mouth leans over
     v = t.v
     belly = np.exp(-((v[:, 0] + 0.05) / 0.22) ** 2)
@@ -391,14 +392,14 @@ def soft_sacks() -> dict:
     m = EnvModel("prop_soft_sacks")
     # (tile, centre xz, y0, yaw, slump, length)
     layout = [
-        ("rice", (-0.19, -0.04), 0.0, 94, 0.45, 0.68),
-        ("pp", (0.19, -0.02), 0.0, 84, 0.45, 0.68),
-        ("beans", (0.0, -0.06), 0.17, 6, 0.7, 0.70),
-        ("rice", (0.02, 0.29), 0.0, -4, 0.5, 0.62),
-        ("pp", (-0.06, 0.0), 0.35, 64, 0.8, 0.58),
+        ("rice", (-0.2, -0.07), 0.0, 93, 0.5, 0.68),
+        ("pp", (0.2, -0.06), 0.0, 85, 0.5, 0.68),
+        ("beans", (0.0, -0.08), 0.17, 8, 0.7, 0.72),
+        ("rice", (0.02, 0.27), 0.0, -4, 0.55, 0.62),
+        ("pp", (-0.03, -0.05), 0.36, 62, 0.8, 0.62),
     ]
     for i, (tile, (x, z), y0, yaw, slump, ln) in enumerate(layout):
-        sk = sack_mesh(atlas, tile, seed=seed + i, slump=slump, length=ln, ha=0.115, hb=0.145)
+        sk = sack_mesh(atlas, tile, seed=seed + i, slump=slump, length=ln, ha=0.128, hb=0.16)
         sk = place(sk, (0, 0, 0), (0, yaw, 0))
         sk.v = sk.v + np.array([x, 0, z])
         sk.v[:, 1] += y0 - sk.v[:, 1].min()
@@ -423,31 +424,57 @@ def soft_barrier() -> dict:
         d.ellipse((16, 16, 48, 48), 0xc8202c)
         d.ellipse((22, 20, 32, 28), 0xffd0d4, a=0.8)
     atlas.pack("red", red)
+    cone_t = Sheet(64, 128, 0xff6a13, rough=0.5)
+    with cone_t.paint(height=0.05) as d:
+        d.rect((0, 40, 64, 70), 0xf6f1e0)
+        d.rect((0, 100, 64, 128), 0x1a1a1c)
+    cone_t.comp(0x3a3128, np.clip(noise2(64, 128, seed + 5, fx=3, fy=4) * 1.5 - 0.7, 0, 1) * 0.5)
+    atlas.pack("cone", cone_t)
     m = EnvModel("prop_soft_barrier")
     rng = np.random.default_rng(seed)
-    px = 0.40
     steel = atlas.rect("steel")
-    S = lambda mesh: vc_ground(box_uv(mesh, mesh.v.min(axis=0), mesh.v.max(axis=0), steel), 0.12, 0.4, seed)  # noqa: E731
-    for sx in (-1, 1):
-        post = obox((sx * px, 0.31, 0), (0.05, 0.62, 0.05), bevel=0.008, seg=1)
-        m.add(S(post))
-        foot = obox((sx * px, 0.022, 0), (0.05, 0.044, 0.40), bevel=0.01, seg=1)
-        m.add(S(foot))
-        for sz in (-1, 1):
-            m.add(S(rod((sx * px, 0.46, 0.0), (sx * px, 0.04, sz * 0.18), 0.012, 6)))
-        m.add(S(rod((sx * px - 0.03, 0.62, 0), (sx * px + 0.03, 0.62, 0), 0.02, 8)))
-    # striped boards bolted on the front of the posts, alternating direction
-    for i, y in enumerate((0.52, 0.375, 0.23)):
-        w = 0.80 + rng.uniform(-0.01, 0.01)
-        bd = obox((0, 0, 0), (w, 0.125, 0.022), bevel=0.005, seg=1)
-        bd = box_uv(bd, bd.v.min(axis=0), bd.v.max(axis=0), _strip_rects(atlas.rect(f"b{i}")))
-        vc_mul(bd, (1, 1, 1), rng.uniform(0.92, 1.05))
-        vc_ground(bd, 0.12, 0.4, seed)
-        m.add(place(bd, (rng.uniform(-0.004, 0.004), y, 0.036), (0, 0, rng.uniform(-0.8, 0.8))))
-    # a red reflector on the top of each post
-    for sx in (-1, 1):
-        r = rod((sx * px, 0.63, 0.0), (sx * px, 0.66, 0.0), 0.026, 10)
-        m.add(flat_uv(r, atlas.rect("red"), (0.5, 0.5)))
+    S = lambda mesh, tr=None: mesh  # noqa: E731
+
+    def unit(width: float, pos, yaw: float, shade: float, board_ids=(0, 1, 2), height=0.62, depth=0.34):
+        """One barricade: two T-footed posts, diagonal struts, three striped boards bolted to the front."""
+        px = width / 2 + 0.02
+        parts = []
+
+        def add(mesh, tile=None):
+            if tile is None:
+                mm = box_uv(mesh, mesh.v.min(axis=0), mesh.v.max(axis=0), steel)
+            else:
+                mm = tile
+            vc_ground(mm, 0.12, 0.4, seed)
+            vc_mul(mm, (1, 1, 1), shade)
+            m.add(place(mm, pos, (0, yaw, 0)))
+
+        for sx in (-1, 1):
+            add(obox((sx * px, height / 2, 0), (0.05, height, 0.05), bevel=0.008, seg=1))
+            add(obox((sx * px, 0.022, 0), (0.05, 0.044, depth), bevel=0.01, seg=1))
+            for sz in (-1, 1):
+                add(rod((sx * px, height - 0.16, 0.0), (sx * px, 0.04, sz * (depth / 2 - 0.02)), 0.012, 6))
+            add(rod((sx * px - 0.03, height, 0), (sx * px + 0.03, height, 0), 0.02, 8))
+        ys = np.linspace(height - 0.10, 0.23, 3)
+        for k, y in enumerate(ys):
+            w = width + rng.uniform(-0.01, 0.01)
+            bd = obox((0, 0, 0), (w, 0.125, 0.022), bevel=0.005, seg=1)
+            bd = box_uv(bd, bd.v.min(axis=0), bd.v.max(axis=0), _strip_rects(atlas.rect(f"b{board_ids[k]}")))
+            vc_mul(bd, (1, 1, 1), rng.uniform(0.92, 1.05) * shade)
+            vc_ground(bd, 0.12, 0.4, seed)
+            m.add(place(place(bd, (rng.uniform(-0.004, 0.004), y, 0.036), (0, 0, rng.uniform(-0.8, 0.8))), pos, (0, yaw, 0)))
+        for sx in (-1, 1):
+            r = rod((sx * px, height + 0.01, 0.0), (sx * px, height + 0.04, 0.0), 0.026, 10)
+            m.add(place(flat_uv(r, atlas.rect("red"), (0.5, 0.5)), pos, (0, yaw, 0)))
+
+    unit(0.74, (0.0, 0.0, 0.22), 0.0, 1.0)
+    unit(0.46, (-0.1, 0.0, -0.2), 20.0, 0.9, board_ids=(1, 2, 0), height=0.55, depth=0.30)
+    cone = lathe([(0.075, 0.0), (0.075, 0.02), (0.052, 0.12), (0.034, 0.24), (0.026, 0.30), (0.0, 0.30)], 10, closed_axis=True)
+    cone = cyl_uv(cone, (0, 0, 0), atlas.rect("cone"), axis="y", v_range=(0, 0.3), mirror=True)
+    base = flat_box((0.17, 0.02, 0.17), (0, 0.01, 0))
+    base = flat_uv(base, atlas.rect("cone"), (0.5, 0.95))
+    for part in (cone, base):
+        m.add(vc_ground(place(part, (0.33, 0.0, 0.31), (0, 20, 0)), 0.08, 0.35, seed))
     return m.export({"main": atlas.mat(normal_strength=0.5)})
 
 
@@ -486,7 +513,7 @@ def _jerrycan_tiles(seed: int, tone, cap=0xc0392b):
 
 def jerrycan_parts(atlas: Atlas, name: str, pos, yaw, cap_tile="cap"):
     rects = {"+z": atlas.rect(f"{name}_front"), "-z": atlas.rect(f"{name}_front"), "+x": atlas.rect(f"{name}_side"), "-x": atlas.rect(f"{name}_side"), "+y": atlas.rect(f"{name}_top"), "-y": atlas.rect(f"{name}_top")}
-    body = bevel_box((0, 0.14, 0), (0.20, 0.28, 0.115), 0.022, 2)
+    body = bevel_box((0, 0.14, 0), (0.20, 0.28, 0.115), 0.022, 1)
     parts = [box_uv(body, body.v.min(axis=0), body.v.max(axis=0), rects)]
     handle = polytube([(0.045, 0.27, 0.0), (0.055, 0.31, 0.0), (0.0, 0.335, 0.0), (-0.035, 0.31, 0.0), (-0.035, 0.27, 0.0)], 0.011, 5, caps=False)
     parts.append(flat_uv(handle, atlas.rect(f"{name}_top"), (0.5, 0.5)))
@@ -522,11 +549,11 @@ def soft_cartons() -> dict:
         m.add(place(b, pos, (0, yaw, 0)))
 
     # left stack: two bales + a clear bale; right stack: two bales topped with jerrycans; one bale in front
-    bale("blue", (-0.20, 0.0, -0.17), 3)
+    bale("blue", (-0.20, 0.0, -0.17), 3, seg=1)
     bale("clear", (-0.19, 0.2, -0.17), -4, seg=2)
     bale("clear", (0.22, 0.0, -0.17), -2, seg=1)
     bale("blue", (0.21, 0.2, -0.18), 6, seg=2)
-    bale("blue", (0.0, 0.0, 0.22), 88, seg=2, size=(0.42, 0.20, 0.30))
+    bale("blue", (0.0, 0.0, 0.22), 88, seg=1, size=(0.42, 0.20, 0.30))
     for p in jerrycan_parts(atlas, "jy", (0.20, 0.4, -0.17), 20):
         m.add(vc_ground(p, 0.05, 0.1, seed))
     for p in jerrycan_parts(atlas, "jb", (-0.18, 0.4, -0.17), -24):
@@ -603,8 +630,10 @@ def soft_kegs() -> dict:
         if bottles:
             for ix in range(4):
                 for iz in range(3):
+                    if bottles == "half" and iz == 2:
+                        continue
                     bx, bz = -0.157 + ix * 0.105 + rng.uniform(-0.004, 0.004), -0.1 + iz * 0.1 + rng.uniform(-0.004, 0.004)
-                    prof = [(0.034, 0.0), (0.034, 0.055), (0.0185, 0.112), (0.0175, 0.152), (0.0215, 0.152), (0.0215, 0.168), (0.0, 0.168)]
+                    prof = [(0.034, 0.0), (0.034, 0.06), (0.019, 0.118), (0.019, 0.152), (0.022, 0.152), (0.0, 0.166)]
                     b = lathe(prof, 5, closed_axis=True)
                     tile = "amber" if (ix + iz) % 3 else "green"
                     b = cyl_uv(b, (0, 0, 0), atlas.rect(tile), axis="y", v_range=(-0.02, 0.15), mirror=True)
@@ -618,8 +647,9 @@ def soft_kegs() -> dict:
                         vc_mul(part, (1, 1, 1), rng.uniform(0.9, 1.1))
                         m.add(place(place(part, (bx, h - 0.004, bz)), pos, (0, yaw, 0)))
 
-    crate((-0.17, 0.0, 0.16), 3, True)
-    crate((-0.16, 0.27, -0.12), -4, True)
+    crate((-0.17, 0.0, 0.14), 2, False)
+    crate((-0.16, 0.27, 0.13), -3, True)
+    crate((-0.16, 0.0, -0.22), 5, 'half')
     # bucket (frustum with rim and wire handle)
     outer = [(0.0, 0.0), (0.118, 0.0), (0.122, 0.012), (0.158, 0.27), (0.166, 0.276), (0.166, 0.288), (0.159, 0.288)]
     inner = [(0.159, 0.288), (0.151, 0.262), (0.132, 0.05), (0.0, 0.045)]

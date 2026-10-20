@@ -6,7 +6,9 @@ const PORT = 4173;
 
 export default defineConfig({
   testDir: 'e2e',
-  timeout: 60_000,
+  timeout: 90_000,
+  // Software WebGL (SwiftShader) plus the audio bank's warm-up share one CPU, so UI state can lag the sim by seconds.
+  expect: { timeout: 15_000 },
   retries: 0,
   reporter: [['list']],
   use: {

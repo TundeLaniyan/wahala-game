@@ -115,7 +115,7 @@ export class GameRenderer {
     this.scene.fog = new Fog(0xe3b985, 38, 85);
     this.lights = createSceneLights(this.scene, this.renderer);
 
-    this.backdrop = createBackdrop(this.layout, this.profile.crowd);
+    this.backdrop = createBackdrop(this.layout, this.profile.crowd, this.profile.parkedBuses);
     this.arena = new ArenaView(state, this.layout);
     const generators = new GeneratorViews();
     const flames = new FlameViews();
