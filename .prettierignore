@@ -1,0 +1,7 @@
+dist
+node_modules
+reference
+package-lock.json
+docs
+README.md
+.github
