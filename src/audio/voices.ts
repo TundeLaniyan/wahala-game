@@ -1,12 +1,12 @@
 /**
- * Voice pool: caps simultaneous SFX voices so mid-range phones never drown in nodes.
+ * Voice pool: caps simultaneous one-shot voices so mid-range phones never drown in nodes.
  *
- * A "voice" is one sound effect (which may contain several oscillators/noise sources). Each has a
+ * A "voice" is one played sound (a buffer source, its gain and optional panner). Each has a
  * priority; when the pool is full the lowest-priority voice (earliest ending on ties) is stolen if
- * its priority is not higher than the newcomer's, otherwise the newcomer is dropped.
+ * its priority is not higher than the newcomer's, otherwise the newcomer is dropped. Looping beds
+ * (ambience, generator and engine loops) are managed separately and are not counted here.
  */
-import type { Sink } from './synth';
-import type { AudioBufferLike, AudioContextLike, AudioNodeLike, GainNodeLike } from './webaudio';
+import type { AudioContextLike, AudioNodeLike, GainNodeLike } from './webaudio';
 
 export const MAX_VOICES = 24;
 
@@ -20,10 +20,13 @@ export const Priority = {
   jingle: 7,
 } as const;
 
-export interface Voice extends Sink {
+export interface Voice {
+  /** Connect sources to this node. */
+  readonly dest: AudioNodeLike;
   readonly priority: number;
   /** Context time at which the voice's last source has finished. */
   readonly end: number;
+  track(source: { stop(when?: number): void }): void;
 }
 
 export interface VoiceOpts {
@@ -50,7 +53,7 @@ interface VoiceImpl extends Voice {
   release(): void;
 }
 
-export function createVoicePool(ctx: AudioContextLike, noise: AudioBufferLike, max = MAX_VOICES): VoicePool {
+export function createVoicePool(ctx: AudioContextLike, max = MAX_VOICES): VoicePool {
   let voices: VoiceImpl[] = [];
 
   const prune = (now: number): void => {
@@ -79,8 +82,6 @@ export function createVoicePool(ctx: AudioContextLike, noise: AudioBufferLike, m
     }
     const sources: { stop(when?: number): void }[] = [];
     return {
-      ctx,
-      noise,
       dest: out,
       priority: o.priority,
       end: at + o.duration + 0.06,

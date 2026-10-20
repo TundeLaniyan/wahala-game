@@ -61,13 +61,17 @@ export class CameraRig {
     cam.lookAt(this.target);
   }
 
-  update(shake: number, time: number): void {
+  update(shake: number, time: number, attract = false): void {
     const s = shake * shake * 0.35;
+    // Title-screen demo: a slow cinematic drift (the gameplay camera is always static).
+    const dx = attract ? Math.sin(time * 0.18) * 1.6 : 0;
+    const dy = attract ? Math.sin(time * 0.11) * 0.6 : 0;
     this.camera.position.set(
-      this.basePos.x + Math.sin(time * 53) * s,
-      this.basePos.y + Math.cos(time * 47) * s * 0.6,
+      this.basePos.x + dx + Math.sin(time * 53) * s,
+      this.basePos.y + dy + Math.cos(time * 47) * s * 0.6,
       this.basePos.z + Math.sin(time * 41) * s,
     );
+    if (attract) this.camera.lookAt(this.target);
   }
 
   /** World-space pixel scale for point sprites: pixels per world unit at distance 1. */

@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_VOICES, Priority, createVoicePool } from '../../src/audio/voices';
-import { createNoiseBuffer } from '../../src/audio/synth';
 import { FakeContext } from './fakeContext';
 
 function setup(max = 4) {
   const ctx = new FakeContext();
-  const pool = createVoicePool(ctx, createNoiseBuffer(ctx, 0.1), max);
+  const pool = createVoicePool(ctx, max);
   const dest = ctx.createGain();
   const begin = (priority: number, duration = 1) => pool.begin({ priority, duration, dest });
   return { ctx, pool, begin };
@@ -32,11 +31,11 @@ describe('voice pool', () => {
     const { ctx, pool, begin } = setup(2);
     const low = begin(Priority.ambient)!;
     begin(Priority.warning);
-    const osc = ctx.createOscillator();
-    osc.start(0);
-    low.track?.(osc);
+    const src = ctx.createBufferSource();
+    src.start(0);
+    low.track(src);
     expect(begin(Priority.normal)).not.toBeNull();
-    expect(osc.stoppedAt).not.toBeNull(); // the victim's sources were stopped
+    expect(src.stoppedAt).not.toBeNull(); // the victim's sources were stopped
     expect(pool.active()).toBe(2);
   });
 

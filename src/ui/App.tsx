@@ -36,6 +36,7 @@ export function App() {
           if (hasEntry) commands.pickEntry(e.clientX, e.clientY);
         }}
       />
+      <div className="vignette" aria-hidden />
       {screen !== 'title' && <Hud />}
       {screen === 'playing' && showTouch && !paused && <TouchControls />}
       {screen === 'playing' && paused && <PauseOverlay />}

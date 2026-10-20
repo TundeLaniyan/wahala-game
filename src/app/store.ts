@@ -43,6 +43,10 @@ export interface UiState {
   audioReady: boolean;
   /** Set when the game cannot run at all (e.g. WebGL unavailable). */
   fatal: string | null;
+  /** 3D asset preload progress; null once finished or when not applicable. */
+  loading: { done: number; total: number } | null;
+  /** Bumped when the rendered 3D portraits become available so the UI re-reads them. */
+  portraitsVersion: number;
 }
 
 /** UI-facing state. The simulation state itself is deliberately NOT stored in React state. */
@@ -61,6 +65,8 @@ export const useGameStore = create<UiState>(() => ({
   showStats: false,
   audioReady: false,
   fatal: null,
+  loading: { done: 0, total: 1 },
+  portraitsVersion: 0,
 }));
 
 export const patch = (p: Partial<UiState>): void => useGameStore.setState(p);

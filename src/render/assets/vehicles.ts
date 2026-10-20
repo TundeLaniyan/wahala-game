@@ -1,15 +1,19 @@
 import { Group, MeshBasicMaterial, PlaneGeometry } from 'three';
+import type { Object3D } from 'three';
 import type { VehicleKind } from '../../sim';
 import { labelTexture } from '../textures';
 import { box, cyl, mat, mesh, sphere } from './helpers';
+import { assets } from './library';
 import { bakeDirect } from './merge';
 
 export interface VehicleModel {
   root: Group;
-  wheels: Group[];
+  /** Wheel nodes; spin them with `spinWheel`. */
+  wheels: Object3D[];
   /** Everything that tilts/bounces together. */
   body: Group;
   kind: VehicleKind;
+  glb?: boolean;
 }
 
 function wheel(x: number, z: number, r: number, width: number): Group {
@@ -50,8 +54,35 @@ function sign(text: string, w: number, h: number, color = '#1a1208', bg = 0xffff
   return g;
 }
 
+const GLB_WHEELS: Record<VehicleKind, string[]> = {
+  danfo: ['wheel_FL', 'wheel_FR', 'wheel_RL', 'wheel_RR'],
+  taxi: ['wheel_FL', 'wheel_FR', 'wheel_RL', 'wheel_RR'],
+  keke: ['wheel_F', 'wheel_RL', 'wheel_RR'],
+};
+
+/** Modelled vehicles face +Z with wheel axles along X; the game's convention is +X forward. */
+function createGlbVehicle(kind: VehicleKind): VehicleModel | null {
+  const inst = assets.instance(`veh_${kind}`);
+  if (!inst) return null;
+  const root = new Group();
+  const body = new Group();
+  inst.rotation.y = Math.PI / 2;
+  body.add(inst);
+  root.add(body);
+  const wheels = GLB_WHEELS[kind].map((n) => inst.getObjectByName(n)).filter((w): w is Object3D => !!w);
+  return { root, wheels, body, kind };
+}
+
+/** Rolls a wheel forward by `angle` radians (GLB wheels spin about their local X axis, procedural ones about Z). */
+export function spinWheel(model: VehicleModel, wheel: Object3D, angle: number): void {
+  if (model.glb) wheel.rotation.x += angle;
+  else wheel.rotation.z -= angle;
+}
+
 /** Models face +X; the view rotates them to the travel direction. */
 export function createVehicleModel(kind: VehicleKind): VehicleModel {
+  const glb = createGlbVehicle(kind);
+  if (glb) return { ...glb, glb: true };
   const root = new Group();
   const body = new Group();
   root.add(body);

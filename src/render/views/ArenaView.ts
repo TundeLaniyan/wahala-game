@@ -12,10 +12,10 @@ import {
 } from 'three';
 import type { GameState } from '../../sim';
 import { Tile } from '../../sim';
-import { SOFT_VARIANTS, pillarParts, softBlockGeometry, softVariantFor } from '../assets/props';
+import { modelledPillars, pillarParts, softBlockParts, softVariantFor, softVariants } from '../assets/props';
 import type { SoftVariant } from '../assets/props';
 import type { Layout } from '../coords';
-import { floorTexture } from '../textures';
+import { floorMaterial } from '../assets/floor';
 import { InstanceSet } from './InstanceSet';
 import type { FrameContext, View } from './types';
 
@@ -24,7 +24,8 @@ const DROP_TIME = 0.28;
 /** Floor, concrete pillars, soft blocks (instanced), crush blocks dropping in, floor hazards. */
 export class ArenaView implements View {
   readonly group = new Group();
-  private readonly pillars: InstanceSet;
+  private readonly pillars: InstanceSet[];
+  private readonly variants = softVariants();
   private readonly soft = new Map<SoftVariant, InstanceSet>();
   private readonly cache: number[];
   private readonly initialHard: Set<number>;
@@ -42,19 +43,21 @@ export class ArenaView implements View {
   ) {
     const W = state.width;
     const H = state.height;
-    const floor = new Mesh(
-      new PlaneGeometry(W, H),
-      new MeshStandardMaterial({ map: floorTexture(W, H), roughness: 0.95, metalness: 0 }),
-    );
+    const floor = new Mesh(new PlaneGeometry(W, H), floorMaterial(W, H));
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.group.add(floor);
 
-    const parts = pillarParts();
-    this.pillars = new InstanceSet([parts.body, parts.band, parts.cap], W * H);
-    this.group.add(this.pillars.group);
-    for (const v of SOFT_VARIANTS) {
-      const set = new InstanceSet([softBlockGeometry(v)], W * H);
+    const modelled = modelledPillars();
+    if (modelled) {
+      this.pillars = modelled.map((parts) => new InstanceSet(parts, W * H));
+    } else {
+      const parts = pillarParts();
+      this.pillars = [new InstanceSet([parts.body, parts.band, parts.cap], W * H)];
+    }
+    for (const set of this.pillars) this.group.add(set.group);
+    for (const v of this.variants) {
+      const set = new InstanceSet(softBlockParts(v), W * H);
       this.soft.set(v, set);
       this.group.add(set.group);
     }
@@ -98,7 +101,7 @@ export class ArenaView implements View {
 
   /** Variant of the soft block at a tile (for debris colours). */
   variantAt(x: number, y: number): SoftVariant {
-    return softVariantFor(x, y);
+    return softVariantFor(x, y, this.variants);
   }
 
   update(ctx: FrameContext): void {
@@ -132,8 +135,12 @@ export class ArenaView implements View {
   }
 
   private removeTile(i: number, x: number, y: number, kind: number): void {
-    if (kind === Tile.Hard) this.pillars.remove(i);
-    else if (kind === Tile.Soft) this.soft.get(softVariantFor(x, y))!.remove(i);
+    if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.remove(i);
+    else if (kind === Tile.Soft) this.soft.get(softVariantFor(x, y, this.variants))!.remove(i);
+  }
+
+  private pillarVariant(x: number, y: number): number {
+    return (x * 5 + y * 3 + ((x ^ y) & 3)) % this.pillars.length;
   }
 
   private placePillar(i: number, x: number, y: number, lift: number): void {
@@ -141,7 +148,7 @@ export class ArenaView implements View {
     this.q.identity();
     this.s.set(1, 1, 1);
     this.m.compose(this.p, this.q, this.s);
-    this.pillars.set(i, this.m);
+    this.pillars[this.pillarVariant(x, y)]!.set(i, this.m);
   }
 
   private placeSoft(i: number, x: number, y: number): void {
@@ -150,11 +157,11 @@ export class ArenaView implements View {
     this.q.setFromEuler(this.e);
     this.s.set(1, 1, 1);
     this.m.compose(this.p, this.q, this.s);
-    this.soft.get(softVariantFor(x, y))!.set(i, this.m);
+    this.soft.get(softVariantFor(x, y, this.variants))!.set(i, this.m);
   }
 
   dispose(): void {
-    this.pillars.dispose();
+    for (const p of this.pillars) p.dispose();
     for (const s of this.soft.values()) s.dispose();
   }
 }

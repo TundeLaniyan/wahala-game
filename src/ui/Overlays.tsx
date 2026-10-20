@@ -10,7 +10,7 @@ export function PauseOverlay() {
         <h2>PAUSED</h2>
         <p>Take your time, oga.</p>
         <label className="slider">
-          Music
+          Crowd &amp; ambience
           <input
             type="range"
             min="0"

@@ -1,8 +1,11 @@
 import { Group } from 'three';
+import type { Object3D } from 'three';
 import type { CharacterId } from '../../sim';
 import { LOOKS } from '../../assets/looks';
 import { box, cyl, mat, pivot, sphere } from './helpers';
 import { bakeDirect } from './merge';
+import { assets } from './library';
+import { RiggedCharacter } from './rigged';
 
 export interface PlayerModel {
   root: Group;
@@ -15,9 +18,13 @@ export interface PlayerModel {
   head: Group;
   torso: Group;
   bike: Group;
+  /** Set when the glTF character is available; limb groups above are then unused placeholders. */
+  rigged: RiggedCharacter | null;
+  /** Okada wheels (spun while riding) when the modelled bike is loaded. */
+  bikeWheels: Object3D[];
 }
 
-/** Low-poly stylised characters assembled from primitives; easy to swap for glTF later. */
+/** Procedural fallback character, used only when the glTF cast is not loaded. */
 export function createPlayerModel(id: CharacterId): PlayerModel {
   const look = LOOKS[id];
   const skin = mat(look.skin, { roughness: 0.7 });
@@ -90,7 +97,13 @@ export function createPlayerModel(id: CharacterId): PlayerModel {
   torso.add(head);
   rig.add(legL, legR, torso, armL, armR);
 
-  // Okada (a rideable motorcycle, NOT an attack vehicle)
+  const bike = createOkada();
+  root.add(bike);
+  return { root, rig, legL, legR, armL, armR, head, torso, bike, rigged: null, bikeWheels: [] };
+}
+
+/** Okada (a rideable motorcycle, NOT an attack vehicle). Forward axis is rotated to character +Z. */
+export function createOkada(): Group {
   const bike = new Group();
   const frame = mat(0xffd21a, { roughness: 0.5, metalness: 0.2 });
   const black = mat(0x1a1a1a, { roughness: 0.7 });
@@ -112,8 +125,46 @@ export function createPlayerModel(id: CharacterId): PlayerModel {
   bike.add(box(0.2, 0.04, 0.22, black, -0.38, 0.38, 0)); // rack
   bakeDirect(bike);
   bike.visible = false;
-  root.add(bike);
   // The bike's forward axis is +X; characters face +Z, so rotate the bike to match.
   bike.rotation.y = -Math.PI / 2;
-  return { root, rig, legL, legR, armL, armR, head, torso, bike };
+  return bike;
+}
+
+/** The rigged glTF character wrapped in the same shape as the procedural one; null if not loaded. */
+export function createRiggedPlayerModel(id: CharacterId, phase = 0): PlayerModel | null {
+  const rigged = RiggedCharacter.create(id, phase);
+  if (!rigged) return null;
+  const root = new Group();
+  root.add(rigged.holder);
+  const glbBike = assets.instance('veh_okada');
+  let bike: Group;
+  let bikeWheels: Object3D[] = [];
+  if (glbBike) {
+    // Modelled in game units, so it sits beside (not inside) the model-metre holder.
+    bike = new Group();
+    bike.add(glbBike);
+    bike.visible = false;
+    root.add(bike);
+    bikeWheels = ['wheel_F', 'wheel_R']
+      .map((n) => glbBike.getObjectByName(n))
+      .filter((w): w is Object3D => !!w);
+  } else {
+    bike = createOkada();
+    bike.scale.setScalar(1.5);
+    rigged.holder.add(bike);
+  }
+  const none = (): Group => new Group();
+  return {
+    root,
+    rig: rigged.holder,
+    legL: none(),
+    legR: none(),
+    armL: none(),
+    armR: none(),
+    head: none(),
+    torso: none(),
+    bike,
+    rigged,
+    bikeWheels,
+  };
 }

@@ -13,7 +13,8 @@ export function bakeModel(root: Group): Group {
     if (!(o instanceof Mesh)) return;
     const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()) as BufferGeometry;
     for (const name of Object.keys(g.attributes))
-      if (name !== 'position' && name !== 'normal' && name !== 'uv') g.deleteAttribute(name);
+      if (name !== 'position' && name !== 'normal' && name !== 'uv' && name !== 'color')
+        g.deleteAttribute(name);
     if (!g.attributes.uv) return;
     g.applyMatrix4(o.matrixWorld);
     const list = buckets.get(o.material as Material) ?? [];
@@ -47,7 +48,8 @@ export function bakeDirect(group: Group): void {
       child.geometry.index ? child.geometry.toNonIndexed() : child.geometry.clone()
     ) as BufferGeometry;
     for (const name of Object.keys(g.attributes))
-      if (name !== 'position' && name !== 'normal' && name !== 'uv') g.deleteAttribute(name);
+      if (name !== 'position' && name !== 'normal' && name !== 'uv' && name !== 'color')
+        g.deleteAttribute(name);
     g.applyMatrix4(child.matrix);
     const list = buckets.get(child.material as Material) ?? [];
     list.push(g);

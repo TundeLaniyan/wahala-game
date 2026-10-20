@@ -13,8 +13,6 @@ import type {
   DynamicsCompressorNodeLike,
   FilterType,
   GainNodeLike,
-  OscType,
-  OscillatorNodeLike,
   StereoPannerNodeLike,
 } from '../../src/audio/webaudio';
 
@@ -78,44 +76,19 @@ export class FakeGain extends FakeNode implements GainNodeLike {
   readonly gain = new FakeParam(this.ctx, 1);
 }
 
-export class FakeOsc extends FakeNode implements OscillatorNodeLike {
-  type: OscType = 'sine';
-  readonly frequency = new FakeParam(this.ctx, 440);
-  startedAt: number | null = null;
-  stoppedAt: number | null = null;
-  readonly createdAt = this.ctx.currentTime;
-  /** First frequency set via setValueAtTime. */
-  f0 = 0;
-  constructor(ctx: FakeContext) {
-    super(ctx);
-    const orig = this.frequency.setValueAtTime.bind(this.frequency);
-    this.frequency.setValueAtTime = (v: number, t: number) => {
-      if (this.f0 === 0) this.f0 = v;
-      return orig(v, t);
-    };
-  }
-  start(when = 0): void {
-    if (this.startedAt !== null) throw new Error('InvalidStateError: start called twice');
-    if (!Number.isFinite(when) || when < 0) throw new RangeError('bad start');
-    this.startedAt = when;
-  }
-  stop(when = 0): void {
-    if (this.startedAt === null) throw new Error('InvalidStateError: stop before start');
-    if (!Number.isFinite(when) || when < 0) throw new RangeError('bad stop');
-    this.stoppedAt = when;
-  }
-}
-
 export class FakeBuffer implements AudioBufferLike {
-  private readonly data: Float32Array;
+  private readonly data: Float32Array[];
   constructor(
     readonly length: number,
     readonly sampleRate: number,
+    readonly numberOfChannels = 1,
   ) {
-    this.data = new Float32Array(length);
+    this.data = Array.from({ length: numberOfChannels }, () => new Float32Array(length));
   }
-  getChannelData(): Float32Array {
-    return this.data;
+  getChannelData(channel = 0): Float32Array {
+    const d = this.data[channel];
+    if (!d) throw new RangeError(`no channel ${channel}`);
+    return d;
   }
 }
 
@@ -125,12 +98,15 @@ export class FakeSource extends FakeNode implements BufferSourceNodeLike {
   readonly playbackRate = new FakeParam(this.ctx, 1);
   startedAt: number | null = null;
   stoppedAt: number | null = null;
+  startOffset = 0;
+  onended: (() => void) | null = null;
   start(when = 0, offset = 0): void {
     if (this.startedAt !== null) throw new Error('InvalidStateError: start called twice');
     if (!Number.isFinite(when) || when < 0 || !Number.isFinite(offset) || offset < 0) {
       throw new RangeError('bad start');
     }
     this.startedAt = when;
+    this.startOffset = offset;
   }
   stop(when = 0): void {
     if (this.startedAt === null) throw new Error('InvalidStateError: stop before start');
@@ -158,9 +134,16 @@ export class FakeCompressor extends FakeNode implements DynamicsCompressorNodeLi
   readonly release = new FakeParam(this.ctx, 0.25);
 }
 
+export class FakeShaper extends FakeNode {
+  curve: Float32Array | null = null;
+  oversample: 'none' | '2x' | '4x' = 'none';
+}
+
 export interface FakeContextOptions {
   /** Omit createStereoPanner (old Safari). */
   noPanner?: boolean;
+  /** Omit createWaveShaper. */
+  noShaper?: boolean;
 }
 
 export class FakeContext implements AudioContextLike {
@@ -171,14 +154,15 @@ export class FakeContext implements AudioContextLike {
   resumeCalls = 0;
   readonly destination = new FakeNode(this);
   readonly gains: FakeGain[] = [];
-  readonly oscs: FakeOsc[] = [];
   readonly sources: FakeSource[] = [];
   readonly filters: FakeFilter[] = [];
   readonly compressors: FakeCompressor[] = [];
   createStereoPanner?: () => StereoPannerNodeLike;
+  createWaveShaper?: () => FakeShaper;
 
   constructor(opts: FakeContextOptions = {}) {
     if (!opts.noPanner) this.createStereoPanner = () => new FakePanner(this);
+    if (!opts.noShaper) this.createWaveShaper = () => new FakeShaper(this);
   }
   resume(): Promise<void> {
     this.resumeCalls++;
@@ -195,11 +179,6 @@ export class FakeContext implements AudioContextLike {
     this.gains.push(g);
     return g;
   }
-  createOscillator(): FakeOsc {
-    const o = new FakeOsc(this);
-    this.oscs.push(o);
-    return o;
-  }
   createBufferSource(): FakeSource {
     const s = new FakeSource(this);
     this.sources.push(s);
@@ -210,8 +189,19 @@ export class FakeContext implements AudioContextLike {
     this.filters.push(f);
     return f;
   }
-  createBuffer(_channels: number, length: number, sampleRate: number): AudioBufferLike {
-    return new FakeBuffer(length, sampleRate);
+  createBuffer(channels: number, length: number, sampleRate: number): AudioBufferLike {
+    return new FakeBuffer(length, sampleRate, channels);
+  }
+  /** What decodeAudioData resolves with; set to a function to fail. */
+  decoded: ((data: ArrayBuffer) => AudioBufferLike) | null = (data) =>
+    new FakeBuffer(Math.max(64, data.byteLength), 44100, 2);
+  decodeAudioData(data: ArrayBuffer): Promise<AudioBufferLike> {
+    try {
+      if (!this.decoded) throw new Error('EncodingError');
+      return Promise.resolve(this.decoded(data));
+    } catch (e) {
+      return Promise.reject(e);
+    }
   }
   createDynamicsCompressor(): FakeCompressor {
     const c = new FakeCompressor(this);
@@ -236,7 +226,7 @@ export class FakeContext implements AudioContextLike {
     return this.gains.some((g) => g.gain.targets.some((t) => Math.abs(t - value) < 1e-9));
   }
   nodeCount(): number {
-    return this.gains.length + this.oscs.length + this.sources.length + this.filters.length;
+    return this.gains.length + this.sources.length + this.filters.length;
   }
   /** Advance the audio clock only (timers are driven separately with vi fake timers). */
   advance(seconds: number): void {

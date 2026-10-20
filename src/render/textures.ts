@@ -254,17 +254,50 @@ export function windowsTexture(seed: number): CanvasTexture {
 export function flameTexture(): CanvasTexture {
   return cached('flame', () => {
     const [c, g] = canvas(128, 128);
-    const grad = g.createRadialGradient(64, 76, 4, 64, 70, 60);
-    grad.addColorStop(0, 'rgba(255,255,230,1)');
-    grad.addColorStop(0.25, 'rgba(255,214,90,0.95)');
-    grad.addColorStop(0.6, 'rgba(255,110,20,0.6)');
-    grad.addColorStop(1, 'rgba(200,30,0,0)');
-    g.fillStyle = grad;
-    g.beginPath();
-    g.moveTo(64, 2);
-    g.bezierCurveTo(118, 50, 124, 96, 64, 126);
-    g.bezierCurveTo(4, 96, 10, 50, 64, 2);
-    g.fill();
+    const r = artRng(31);
+    g.globalCompositeOperation = 'lighter';
+    // ragged tongues of fire: hot yellow-white at the base, orange body, red translucent tips
+    const tongues = 7;
+    for (let i = 0; i < tongues; i++) {
+      const t = i / (tongues - 1);
+      const cx = 64 + (t - 0.5) * 62 + (r() - 0.5) * 8;
+      const h = 62 + (1 - Math.abs(t - 0.5) * 1.6) * 54 + r() * 10;
+      const w = 15 + r() * 8;
+      const baseY = 120;
+      const lean = (r() - 0.5) * 26;
+      const grad = g.createLinearGradient(cx, baseY, cx + lean, baseY - h);
+      grad.addColorStop(0, 'rgba(255,238,170,0.95)');
+      grad.addColorStop(0.35, 'rgba(255,150,40,0.85)');
+      grad.addColorStop(0.75, 'rgba(230,60,10,0.45)');
+      grad.addColorStop(1, 'rgba(160,20,0,0)');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.moveTo(cx - w, baseY);
+      g.bezierCurveTo(
+        cx - w * 1.1,
+        baseY - h * 0.45,
+        cx + lean * 0.4 - w * 0.4,
+        baseY - h * 0.75,
+        cx + lean,
+        baseY - h,
+      );
+      g.bezierCurveTo(
+        cx + lean * 0.4 + w * 0.5,
+        baseY - h * 0.7,
+        cx + w * 1.1,
+        baseY - h * 0.4,
+        cx + w,
+        baseY,
+      );
+      g.closePath();
+      g.fill();
+    }
+    const core = g.createRadialGradient(64, 104, 2, 64, 100, 38);
+    core.addColorStop(0, 'rgba(255,255,220,0.9)');
+    core.addColorStop(0.5, 'rgba(255,190,70,0.5)');
+    core.addColorStop(1, 'rgba(255,100,20,0)');
+    g.fillStyle = core;
+    g.fillRect(0, 50, 128, 78);
     return tex(c);
   });
 }

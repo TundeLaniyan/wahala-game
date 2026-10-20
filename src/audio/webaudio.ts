@@ -25,18 +25,10 @@ export interface GainNodeLike extends AudioNodeLike {
   readonly gain: AudioParamLike;
 }
 
-export type OscType = 'sine' | 'square' | 'sawtooth' | 'triangle';
-
-export interface OscillatorNodeLike extends AudioNodeLike {
-  type: OscType;
-  readonly frequency: AudioParamLike;
-  start(when?: number): void;
-  stop(when?: number): void;
-}
-
 export interface AudioBufferLike {
   readonly length: number;
   readonly sampleRate: number;
+  readonly numberOfChannels?: number;
   getChannelData(channel: number): Float32Array;
 }
 
@@ -46,6 +38,8 @@ export interface BufferSourceNodeLike extends AudioNodeLike {
   readonly playbackRate: AudioParamLike;
   start(when?: number, offset?: number): void;
   stop(when?: number): void;
+  /** Fired by browsers when playback finishes; used to release nodes of stopped loops. */
+  onended?: (() => void) | null;
 }
 
 export type FilterType = 'lowpass' | 'highpass' | 'bandpass' | 'peaking' | 'notch';
@@ -69,6 +63,12 @@ export interface DynamicsCompressorNodeLike extends AudioNodeLike {
   readonly release: AudioParamLike;
 }
 
+/** Optional (missing in no browser we target, but tests and exotic hosts may lack it). */
+export interface WaveShaperNodeLike extends AudioNodeLike {
+  curve: Float32Array | null;
+  oversample: 'none' | '2x' | '4x';
+}
+
 export interface AudioContextLike {
   readonly currentTime: number;
   readonly sampleRate: number;
@@ -77,13 +77,16 @@ export interface AudioContextLike {
   resume(): Promise<void>;
   close(): Promise<void>;
   createGain(): GainNodeLike;
-  createOscillator(): OscillatorNodeLike;
   createBufferSource(): BufferSourceNodeLike;
   createBiquadFilter(): BiquadFilterNodeLike;
   createBuffer(channels: number, length: number, sampleRate: number): AudioBufferLike;
+  /** Decodes an encoded file (ogg/mp3/wav). Used for optional recorded sample slots. */
+  decodeAudioData?(data: ArrayBuffer): Promise<AudioBufferLike>;
   createDynamicsCompressor(): DynamicsCompressorNodeLike;
   /** Missing on very old Safari; panning is skipped when absent. */
   createStereoPanner?(): StereoPannerNodeLike;
+  /** Used for the final soft clipper; skipped when absent. */
+  createWaveShaper?(): WaveShaperNodeLike;
 }
 
 export type ContextFactory = () => AudioContextLike | null | undefined;

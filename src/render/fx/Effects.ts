@@ -253,7 +253,7 @@ export class Effects {
   blockDebris(
     gx: number,
     gy: number,
-    variant: 'crate' | 'tyres' | 'sacks' | 'barrier' | 'concrete' = 'crate',
+    variant: 'crate' | 'tyres' | 'sacks' | 'barrier' | 'cartons' | 'kegs' | 'concrete' = 'crate',
   ): void {
     const x = this.layout.wx(gx);
     const z = this.layout.wz(gy);
@@ -274,6 +274,14 @@ export class Effects {
       barrier: [
         [1, 0.76, 0.1],
         [0.12, 0.12, 0.12],
+      ],
+      cartons: [
+        [0.2, 0.45, 0.85],
+        [0.9, 0.92, 0.95],
+      ],
+      kegs: [
+        [0.1, 0.35, 0.8],
+        [0.8, 0.85, 0.9],
       ],
       concrete: [
         [0.6, 0.58, 0.55],

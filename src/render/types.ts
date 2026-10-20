@@ -20,4 +20,6 @@ export interface FrameInfo {
   entryOverlay: EntryOverlayModel | null;
   /** 0..1 crowd excitement. */
   excitement: number;
+  /** Title-screen demo: the camera drifts gently and no HUD markers are shown. */
+  attract?: boolean;
 }

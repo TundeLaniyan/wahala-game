@@ -1,51 +1,79 @@
 /**
- * Mixer graph:
+ * Mixer graph. THERE IS NO MUSIC BUS: the old procedural music was removed. The `music` volume
+ * that the app still passes now scales the crowd ambience + crowd reactions (names kept so the app
+ * keeps working; the lead will rename it).
  *
- *   music sources -> music(fade) -> notch -> musicDuck -> musicBus --\
- *   crowd bed     -> crowd(duck) ------\                              \
- *   sfx voices    -> sfx (= sfxBus) ----+-> master -> compressor -> destination
+ *   sfx   sources -> sfxBus ------------------------------------------\
+ *   warn  sources -> warnBus (never ducked, slight boost) -------------+-> master -> compressor -> out
+ *   react sources -> notch -> reactDuck(light) -> crowdBus ------------+
+ *   amb   sources -> notch -> ambDuck(deep) ----> crowdBus ------------/
+ *   (master -> soft limiter -> makeup trim -> soft clipper -> out)
  *
- * - `master`, `musicBus`, `sfxBus` carry the user volumes. Mute only moves `master` (smoothly).
- * - Danger warnings connect to `sfx` and are never ducked; music and the crowd bed duck under them.
- * - The music is carved with a gentle notch at the warning band (WARN_BAND_HZ) so fuse ticks, horns
- *   and sirens stay on top of it.
+ * - `master`, `sfxBus`, `crowdBus` carry the user volumes. Mute only moves `master` (smoothly).
+ * - Warnings (horns, fuse ticks, alarms) sit in their own bus that is never ducked; the crowd paths
+ *   carry a gentle notch at the warning band (WARN_BAND_HZ) so warnings stay readable.
+ * - The master compressor works as a soft limiter so stacked explosions do not clip.
  */
 import { clamp01 } from './rng';
 import type { AudioContextLike, AudioNodeLike, BiquadFilterNodeLike, GainNodeLike } from './webaudio';
+import type { Bus } from './recipes/types';
 
 export interface Volumes {
   master: number;
+  /** Crowd ambience + reactions (formerly the music slider). */
   music: number;
   sfx: number;
 }
 
-/** Centre of the frequency band reserved for danger warnings (fuse ticks, sirens, crush alarm). */
+/** Centre of the frequency band reserved for danger warnings (fuse ticks, alarms, whistle). */
 export const WARN_BAND_HZ = 2600;
 
 /** Headroom scalers so that a 1.0 slider never clips the mix. */
-const MUSIC_BASE = 0.42;
-const SFX_BASE = 0.85;
+const CROWD_BASE = 0.8;
+const SFX_BASE = 0.62;
+const WARN_BASE = 0.8;
 const SMOOTH = 0.02; // seconds, time constant for volume / mute changes
 
+/** Master limiter settings (dB, dB, ratio) and the makeup-gain compensation derived from them. */
+export const LIMITER = { threshold: -6, knee: 8, ratio: 16 } as const;
+/**
+ * Makeup gain of the limiter above, measured in Chromium with OfflineAudioContext (a quiet sine came
+ * out +1.15 dB louder). Firefox and Safari share the same WebKit-derived algorithm.
+ */
+export const LIMITER_MAKEUP_DB = 1.15;
+/**
+ * Soft-clip transfer curve: exactly unity (transparent) up to |x| = 0.7, then a tanh knee that
+ * approaches 0.98, so the output can never reach full scale.
+ */
+export const SOFT_CLIP_CURVE: Float32Array = (() => {
+  const n = 2049;
+  const c = new Float32Array(n);
+  const knee = 0.7;
+  const room = 0.98 - knee;
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;
+    const a = Math.abs(x);
+    c[i] = Math.sign(x) * (a <= knee ? a : knee + room * Math.tanh((a - knee) / room));
+  }
+  return c;
+})();
+
+export const LIMITER_TRIM = Math.pow(10, -LIMITER_MAKEUP_DB / 20);
+
 export type DuckKind = 'warning' | 'blast';
-const DUCK: Record<DuckKind, { depth: number; hold: number }> = {
-  warning: { depth: 0.38, hold: 1.1 },
-  blast: { depth: 0.6, hold: 0.45 },
+/** Gain the crowd paths dip to, and for how long (seconds). Reactions duck less than the bed. */
+const DUCK: Record<DuckKind, { amb: number; react: number; hold: number }> = {
+  warning: { amb: 0.5, react: 0.8, hold: 0.9 },
+  blast: { amb: 0.4, react: 0.75, hold: 0.5 },
 };
 
 export interface Buses {
-  /** Input for normal and warning SFX voices. */
-  readonly sfx: GainNodeLike;
-  /** Input for the music sequencer. */
-  readonly music: GainNodeLike;
-  /** Input for the crowd bed (ducked on warnings). */
-  readonly crowd: GainNodeLike;
+  /** Input node for a sound's bus. */
+  input(bus: Bus): GainNodeLike;
   setVolumes(v: Volumes): void;
   setMuted(muted: boolean): void;
-  /** Briefly lowers music and crowd so a warning or big blast stays readable. */
+  /** Briefly lowers the crowd so a warning or big blast stays readable. Never touches sfx/warn. */
   duck(kind: DuckKind): void;
-  /** Smooth fade of the whole music input (used by start/stop). */
-  fadeMusic(to: number, seconds: number): void;
   readonly volumes: Readonly<Volumes>;
   readonly muted: boolean;
   dispose(): void;
@@ -59,42 +87,74 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
     nodes.push(g);
     return g;
   };
+  const notch = (): BiquadFilterNodeLike => {
+    const f = ctx.createBiquadFilter();
+    f.type = 'peaking';
+    f.frequency.value = WARN_BAND_HZ;
+    f.Q.value = 0.9;
+    f.gain.value = -5;
+    nodes.push(f);
+    return f;
+  };
 
   const master = gain(muted ? 0 : initial.master);
+  // A soft limiter, not a squasher: the threshold sits high so the quiet crowd bed passes through
+  // untouched and only stacked explosions get caught. Web Audio compressors apply an automatic
+  // makeup gain of (output level at 0 dBFS)^-0.6; `LIMITER_TRIM` cancels it so levels stay predictable.
   const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = -14;
-  comp.knee.value = 12;
-  comp.ratio.value = 6;
-  comp.attack.value = 0.004;
-  comp.release.value = 0.2;
+  comp.threshold.value = LIMITER.threshold;
+  comp.knee.value = LIMITER.knee;
+  comp.ratio.value = LIMITER.ratio;
+  comp.attack.value = 0.002;
+  comp.release.value = 0.16;
   nodes.push(comp);
+  const trim = gain(LIMITER_TRIM);
   master.connect(comp);
-  comp.connect(ctx.destination);
+  comp.connect(trim);
+  // final safety net: a soft clipper guarantees the output never exceeds full scale, even for
+  // transients that get through the limiter's attack time
+  const shaper = ctx.createWaveShaper?.();
+  if (shaper) {
+    shaper.curve = SOFT_CLIP_CURVE;
+    shaper.oversample = '2x';
+    nodes.push(shaper);
+    trim.connect(shaper);
+    shaper.connect(ctx.destination);
+  } else {
+    trim.connect(ctx.destination);
+  }
 
   const sfxBus = gain(initial.sfx * SFX_BASE);
   sfxBus.connect(master);
+  const warnBus = gain(initial.sfx * WARN_BASE);
+  warnBus.connect(master);
+  const crowdBus = gain(initial.music * CROWD_BASE);
+  crowdBus.connect(master);
 
-  const musicBus = gain(initial.music * MUSIC_BASE);
-  musicBus.connect(master);
-  const musicDuck = gain(1);
-  musicDuck.connect(musicBus);
-  const notch: BiquadFilterNodeLike = ctx.createBiquadFilter();
-  notch.type = 'peaking';
-  notch.frequency.value = WARN_BAND_HZ;
-  notch.Q.value = 0.9;
-  notch.gain.value = -6;
-  nodes.push(notch);
-  notch.connect(musicDuck);
-  const musicFade = gain(0);
-  musicFade.connect(notch);
+  const ambDuck = gain(1);
+  const reactDuck = gain(1);
+  const ambNotch = notch();
+  const reactNotch = notch();
+  ambNotch.connect(ambDuck);
+  ambDuck.connect(crowdBus);
+  reactNotch.connect(reactDuck);
+  reactDuck.connect(crowdBus);
 
-  const crowdDuck = gain(1);
-  crowdDuck.connect(sfxBus);
+  const inputs: Record<Bus, GainNodeLike> = {
+    sfx: sfxBus,
+    warn: warnBus,
+    // the notches are BiquadFilters; wrap them behind unity gains so every input is a GainNode
+    amb: gain(1),
+    react: gain(1),
+  };
+  inputs.amb.connect(ambNotch);
+  inputs.react.connect(reactNotch);
 
   let volumes: Volumes = { ...initial };
   let isMuted = muted;
   let duckUntil = 0;
-  let duckDepth = 1;
+  let duckAmb = 1;
+  let duckReact = 1;
 
   const smooth = (g: GainNodeLike, v: number): void => {
     const now = ctx.currentTime;
@@ -103,9 +163,7 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
   };
 
   return {
-    sfx: sfxBus,
-    music: musicFade,
-    crowd: crowdDuck,
+    input: (bus) => inputs[bus],
     get volumes() {
       return volumes;
     },
@@ -114,8 +172,9 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
     },
     setVolumes(v) {
       volumes = { master: clamp01(v.master), music: clamp01(v.music), sfx: clamp01(v.sfx) };
-      smooth(musicBus, volumes.music * MUSIC_BASE);
+      smooth(crowdBus, volumes.music * CROWD_BASE);
       smooth(sfxBus, volumes.sfx * SFX_BASE);
+      smooth(warnBus, volumes.sfx * WARN_BASE);
       smooth(master, isMuted ? 0 : volumes.master);
     },
     setMuted(m) {
@@ -123,23 +182,22 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
       smooth(master, m ? 0 : volumes.master);
     },
     duck(kind) {
-      const { depth, hold } = DUCK[kind];
+      const d = DUCK[kind];
       const now = ctx.currentTime;
-      const until = now + hold;
+      const until = now + d.hold;
       const active = now < duckUntil;
-      if (active && depth >= duckDepth && until <= duckUntil) return; // already deep and long enough
-      duckDepth = active ? Math.min(depth, duckDepth) : depth;
+      if (active && d.amb >= duckAmb && until <= duckUntil) return; // already deep and long enough
+      duckAmb = active ? Math.min(d.amb, duckAmb) : d.amb;
+      duckReact = active ? Math.min(d.react, duckReact) : d.react;
       duckUntil = active ? Math.max(until, duckUntil) : until;
-      for (const g of [musicDuck, crowdDuck]) {
+      for (const [g, depth, rel] of [
+        [ambDuck, duckAmb, 0.3],
+        [reactDuck, duckReact, 0.2],
+      ] as const) {
         g.gain.cancelScheduledValues(now);
-        g.gain.setTargetAtTime(duckDepth, now, 0.025);
-        g.gain.setTargetAtTime(1, duckUntil, 0.25);
+        g.gain.setTargetAtTime(depth, now, 0.02);
+        g.gain.setTargetAtTime(1, duckUntil, rel);
       }
-    },
-    fadeMusic(to, seconds) {
-      const now = ctx.currentTime;
-      musicFade.gain.cancelScheduledValues(now);
-      musicFade.gain.setTargetAtTime(to, now, Math.max(0.01, seconds / 3));
     },
     dispose() {
       for (const n of nodes) {

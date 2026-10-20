@@ -3,13 +3,36 @@ import type { BufferGeometry, Material } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { concreteTexture, crateTexture, hazardStripes, sackTexture } from '../textures';
 import { mat } from './helpers';
+import { assets } from './library';
 
-export const SOFT_VARIANTS = ['crate', 'crateStack', 'tyres', 'sacks', 'barrier'] as const;
-export type SoftVariant = (typeof SOFT_VARIANTS)[number];
+const PROCEDURAL_SOFT = ['crate', 'crateStack', 'tyres', 'sacks', 'barrier'] as const;
+export type SoftVariant = string;
+
+/** Modelled variants (`prop_soft_*.glb`) when loaded, else the procedural stand-ins. */
+export function softVariants(): SoftVariant[] {
+  const glb = assets.loadedIds('prop_soft_');
+  return glb.length > 0 ? glb : [...PROCEDURAL_SOFT];
+}
 
 /** Deterministic variant so the same tile always looks the same. */
-export function softVariantFor(x: number, y: number): SoftVariant {
-  return SOFT_VARIANTS[(x * 7 + y * 13 + ((x * y) % 5)) % SOFT_VARIANTS.length]!;
+export function softVariantFor(
+  x: number,
+  y: number,
+  variants: readonly SoftVariant[] = softVariants(),
+): SoftVariant {
+  return variants[(x * 7 + y * 13 + ((x * y) % 5)) % variants.length]!;
+}
+
+/** Debris palette that matches a block variant. */
+export function debrisKindFor(
+  variant: SoftVariant,
+): 'crate' | 'tyres' | 'sacks' | 'barrier' | 'cartons' | 'kegs' {
+  if (variant.includes('tyre')) return 'tyres';
+  if (variant.includes('sack')) return 'sacks';
+  if (variant.includes('barrier')) return 'barrier';
+  if (variant.includes('carton')) return 'cartons';
+  if (variant.includes('keg')) return 'kegs';
+  return 'crate';
 }
 
 function place(
@@ -36,6 +59,13 @@ function place(
 export interface PropGeometry {
   geometry: BufferGeometry;
   material: Material;
+}
+
+/** Instancing parts for a soft block: modelled meshes if the variant is a loaded asset, else procedural. */
+export function softBlockParts(variant: SoftVariant): PropGeometry[] {
+  if (variant.startsWith('prop_soft_'))
+    return assets.parts(variant).map(({ geometry, material }) => ({ geometry, material }));
+  return [softBlockGeometry(variant)];
 }
 
 export function softBlockGeometry(variant: SoftVariant): PropGeometry {
@@ -82,6 +112,7 @@ export function softBlockGeometry(variant: SoftVariant): PropGeometry {
         ])!,
         material: mat(0xffffff, { map: sackTexture(), roughness: 1 }),
       };
+    default:
     case 'barrier':
       return {
         geometry: mergeGeometries([
@@ -93,6 +124,13 @@ export function softBlockGeometry(variant: SoftVariant): PropGeometry {
         material: mat(0xffffff, { map: hazardStripes(), flat: false, roughness: 0.6 }),
       };
   }
+}
+
+/** Pillar variants (`prop_pillar_*.glb`) as instancing part lists, or null to use the procedural pillar. */
+export function modelledPillars(): PropGeometry[][] | null {
+  const ids = assets.loadedIds('prop_pillar_');
+  if (ids.length === 0) return null;
+  return ids.map((id) => assets.parts(id).map(({ geometry, material }) => ({ geometry, material })));
 }
 
 export function pillarParts(): { body: PropGeometry; band: PropGeometry; cap: PropGeometry } {

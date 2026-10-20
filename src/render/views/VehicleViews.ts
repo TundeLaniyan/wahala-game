@@ -1,6 +1,6 @@
 import { Group } from 'three';
 import type { Vehicle } from '../../sim';
-import { createVehicleModel } from '../assets/vehicles';
+import { createVehicleModel, spinWheel } from '../assets/vehicles';
 import type { VehicleModel } from '../assets/vehicles';
 import { lerpAngle, stepProgress } from './motion';
 import type { FrameContext, View } from './types';
@@ -48,7 +48,7 @@ export class VehicleViews implements View {
       v.model.root.scale.setScalar(1.12);
       v.model.body.position.y = Math.abs(Math.sin(time * 18)) * (crashing ? 0 : 0.012);
       const spin = veh.phase === 'driving' ? ((dt * 60) / Math.max(4, veh.stepTotal)) * 5 : 0;
-      for (const w of v.model.wheels) w.rotation.z -= spin;
+      for (const w of v.model.wheels) spinWheel(v.model, w, spin);
       v.lastPos = { x: layout.wx(gx), z: layout.wz(gy), y: 0.5 };
       if ((veh.damage > 0 || crashing) && time > v.smokeAt) {
         v.smokeAt = time + 0.08;

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ARENAS, CHARACTERS, CHARACTER_IDS, VEHICLE_DEFS } from '../sim';
 import type { CharacterId, Difficulty, MatchMode } from '../sim';
 import { portraitUrl } from '../assets/portraits';
@@ -29,21 +30,105 @@ function Choice<T extends string | number | boolean>(props: {
   );
 }
 
+function HowToPlay({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="scrim" data-testid="help" onClick={onClose}>
+      <div className="card help-modal" onClick={(e) => e.stopPropagation()}>
+        <h2>How to play</h2>
+        <ul>
+          <li>
+            Drop generators to blast rivals. Fire is a plus shape, stops at concrete and happily gets{' '}
+            <b>you</b> too.
+          </li>
+          <li>Last one standing wins in two minutes. If the last two fall together it is a draw.</li>
+          <li>
+            Break crates for upgrades. An <b>Okada</b> shields you from one deadly hit.
+          </li>
+          <li>
+            A <b>Vehicle Voucher</b> calls your Danfo, Yellow Cab or Keke down any open lane.
+          </li>
+        </ul>
+        <dl>
+          <dt>Move</dt>
+          <dd>
+            <span className="kbd">←↑↓→</span> / <span className="kbd">WASD</span> · D-pad / stick · on-screen
+            pad
+          </dd>
+          <dt>Generator</dt>
+          <dd>
+            <span className="kbd">Space</span> · gamepad A · big button
+          </dd>
+          <dt>Carry / punch</dt>
+          <dd>
+            <span className="kbd">E</span> · gamepad X
+          </dd>
+          <dt>Push / daze</dt>
+          <dd>
+            <span className="kbd">F</span> · gamepad B
+          </dd>
+          <dt>Remote boom</dt>
+          <dd>
+            <span className="kbd">Q</span> · gamepad RB
+          </dd>
+          <dt>Kill switch</dt>
+          <dd>
+            <span className="kbd">X</span> · gamepad LB
+          </dd>
+          <dt>Vehicle</dt>
+          <dd>
+            <span className="kbd">V</span> · gamepad Y, then pick a border arrow and confirm
+          </dd>
+          <dt>Pause</dt>
+          <dd>
+            <span className="kbd">P</span> / <span className="kbd">Esc</span>
+          </dd>
+        </dl>
+        <div className="row">
+          <button type="button" className="btn primary small" onClick={onClose}>
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TitleScreen() {
   const s = useGameStore((st) => st.settings);
+  const loading = useGameStore((st) => st.loading);
+  useGameStore((st) => st.portraitsVersion);
+  const [help, setHelp] = useState(false);
   const set = (p: Partial<GameSettings>) => commands.updateSettings(p);
   const arena = ARENAS[s.arenaId]!;
   const hasHazards = !!arena.hazardLayout;
+  const busy = loading !== null && loading.done < loading.total;
 
   return (
     <div className="title" data-testid="title-screen">
-      <h1 className="logo">
-        <b>WAHALA!</b>
-        <span>GENERATOR BATTLE · LAGOS ARCADE</span>
-      </h1>
-      <div className="stripe" />
+      <header className="brand">
+        <h1 className="logo">
+          <b>WAHALA!</b>
+          <span>GENERATOR WARS · LAGOS</span>
+        </h1>
+        <div className="tag">Outsmart your rivals in the bus park. Mind your own fire.</div>
+        <div className="cta">
+          <button
+            type="button"
+            className="btn primary"
+            data-testid="start-button"
+            disabled={busy}
+            onClick={() => commands.start()}
+          >
+            {busy ? 'Loading…' : 'Play'}
+          </button>
+          <button type="button" className="btn small" data-testid="help-button" onClick={() => setHelp(true)}>
+            How to play
+          </button>
+        </div>
+        <div className="footnote">Everything runs in your browser · no accounts · no servers</div>
+      </header>
 
-      <div className="panels">
+      <main className="menu">
         <section className="panel">
           <h3>Choose your fighter</h3>
           <div className="chars">
@@ -60,7 +145,7 @@ export function TitleScreen() {
                     set({ character: id });
                   }}
                 >
-                  <img src={portraitUrl(id, 0)} alt="" />
+                  <img src={portraitUrl(id, 0, 160)} alt="" />
                   <b>{c.name}</b>
                   <small>
                     {VEHICLE_DEFS[c.vehicle].name} ·{' '}
@@ -179,7 +264,7 @@ export function TitleScreen() {
             ))}
           </div>
           <label className="slider">
-            Music
+            Ambience
             <input
               type="range"
               min="0"
@@ -210,69 +295,17 @@ export function TitleScreen() {
             />
           </div>
         </section>
-      </div>
-
-      <div className="start-row">
-        <button
-          type="button"
-          className="btn primary"
-          data-testid="start-button"
-          onClick={() => commands.start()}
+      </main>
+      {busy && loading && (
+        <div
+          className="loading"
+          style={{ ['--p' as string]: `${Math.round((loading.done / Math.max(1, loading.total)) * 100)}%` }}
         >
-          Start match
-        </button>
-      </div>
-
-      <details className="panel help">
-        <summary style={{ cursor: 'pointer', fontWeight: 900, color: 'var(--yellow)' }}>
-          HOW TO PLAY &amp; CONTROLS
-        </summary>
-        <p>
-          Drop generators to blast rivals — but their fire is a plus shape, it stops at concrete, and it will
-          happily get <b>you</b> too. Last one standing wins in two minutes; if the last two fall together it
-          is a draw. Break crates for upgrades. An <b>Okada</b> is a ride that saves you from one deadly hit.
-          Grab a <b>Vehicle Voucher</b> to call your signature {`Danfo, Cab or Keke`} down any open lane.
-        </p>
-        <dl>
-          <dt>Move</dt>
-          <dd>
-            <span className="kbd">←↑↓→</span> or <span className="kbd">WASD</span> · D-pad / left stick ·
-            on-screen pad
-          </dd>
-          <dt>Generator</dt>
-          <dd>
-            <span className="kbd">Space</span> · gamepad A · big button
-          </dd>
-          <dt>Carry / punch</dt>
-          <dd>
-            <span className="kbd">E</span> · gamepad X
-          </dd>
-          <dt>Push / daze</dt>
-          <dd>
-            <span className="kbd">F</span> · gamepad B
-          </dd>
-          <dt>Remote boom</dt>
-          <dd>
-            <span className="kbd">Q</span> · gamepad RB
-          </dd>
-          <dt>Kill switch</dt>
-          <dd>
-            <span className="kbd">X</span> · gamepad LB
-          </dd>
-          <dt>Vehicle</dt>
-          <dd>
-            <span className="kbd">V</span> · gamepad Y — then pick an arrow on the border (arrows/D-pad, tap
-            or click) and confirm
-          </dd>
-          <dt>Pause</dt>
-          <dd>
-            <span className="kbd">P</span> or <span className="kbd">Esc</span>
-          </dd>
-        </dl>
-      </details>
-      <div className="footnote">
-        WAHALA! prototype · everything runs in your browser · no accounts, no servers
-      </div>
+          LOADING 3D ASSETS
+          <i />
+        </div>
+      )}
+      {help && <HowToPlay onClose={() => setHelp(false)} />}
     </div>
   );
 }

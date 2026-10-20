@@ -2,6 +2,7 @@ import { AdditiveBlending, CylinderGeometry, Group, Sprite, SpriteMaterial } fro
 import type { Mesh, MeshStandardMaterial } from 'three';
 import { glowTexture } from '../textures';
 import { box, cyl, mat, mesh, pivot, sphere, torus, uniqueMat } from './helpers';
+import { assets } from './library';
 import { bakeDirect } from './merge';
 
 export interface GeneratorModel {
@@ -20,6 +21,65 @@ export interface GeneratorModel {
  * pull-start and exhaust. Unmistakable at a glance so every flame has an obvious source.
  */
 export function createGeneratorModel(): GeneratorModel {
+  return createGlbGenerator() ?? createProceduralGenerator();
+}
+
+function glowSprite(): Sprite {
+  const glow = new Sprite(
+    new SpriteMaterial({
+      map: glowTexture(),
+      color: 0xff4020,
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+    }),
+  );
+  glow.scale.set(0.9, 0.9, 1);
+  glow.position.set(0, 0.35, 0);
+  glow.material.opacity = 0;
+  return glow;
+}
+
+/**
+ * The modelled generator (`gen_generator.glb`): a node `lamp` (emissive indicator), a node `antenna`
+ * (remote aerial) and a material named `casing` which the views recolour per generator mode.
+ */
+function createGlbGenerator(): GeneratorModel | null {
+  const inst = assets.instance('gen_generator');
+  if (!inst) return null;
+  const root = new Group();
+  const body = new Group();
+  body.add(inst);
+  root.add(body);
+  let casingMaterial: MeshStandardMaterial | null = null;
+  let lamp: Mesh | null = null;
+  inst.traverse((o) => {
+    const m = o as Mesh;
+    if (!m.isMesh) return;
+    const mat = m.material as MeshStandardMaterial;
+    if (mat.name === 'casing') {
+      casingMaterial ??= mat.clone();
+      m.material = casingMaterial;
+    }
+  });
+  const lampNode = inst.getObjectByName('lamp');
+  lampNode?.traverse((o) => {
+    const m = o as Mesh;
+    if (m.isMesh && !lamp) lamp = m;
+  });
+  const antenna = inst.getObjectByName('antenna') ?? new Group();
+  antenna.visible = false;
+  if (!casingMaterial || !lamp) return null;
+  const lampMesh: Mesh = lamp;
+  const lampMaterial = (lampMesh.material as MeshStandardMaterial).clone();
+  lampMesh.material = lampMaterial;
+  lampMesh.castShadow = false;
+  const glow = glowSprite();
+  root.add(glow);
+  return { root, body, lamp: lampMesh, lampMaterial, glow, antenna: antenna as Group, casingMaterial };
+}
+
+function createProceduralGenerator(): GeneratorModel {
   const root = new Group();
   const body = new Group();
   root.add(body);
@@ -74,18 +134,7 @@ export function createGeneratorModel(): GeneratorModel {
   antenna.visible = false;
   body.add(antenna);
 
-  const glow = new Sprite(
-    new SpriteMaterial({
-      map: glowTexture(),
-      color: 0xff4020,
-      transparent: true,
-      depthWrite: false,
-      blending: AdditiveBlending,
-    }),
-  );
-  glow.scale.set(0.9, 0.9, 1);
-  glow.position.set(0, 0.35, 0);
-  glow.material.opacity = 0;
+  const glow = glowSprite();
   root.add(glow);
 
   return { root, body, lamp, lampMaterial, glow, antenna, casingMaterial };

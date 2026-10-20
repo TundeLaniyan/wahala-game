@@ -38,3 +38,14 @@ Gameplay and tuning decisions taken during implementation, with the reason. The 
 - **Floor traps** (Lekki Roadworks only): pothole = brief stumble; oil = slide 2 tiles. Never lethal.
 - **Pause policy:** auto-pause when the tab is hidden; Esc/P toggles; pausing is blocked after the match ends.
 - **Pidgin captions** are original lines written for this project; a native-speaker review is recommended before shipping.
+
+## Presentation overhaul (branch `claude/presentation-overhaul`) - no gameplay rules changed
+
+| # | Decision | Where |
+| --- | --- | --- |
+| P1 | Assets are **generated from code** (numpy/scipy/Pillow -> glTF), not downloaded: the sandbox network blocks every CC0/asset host (Poly Haven, Quaternius, Kenney, Sketchfab, Mixamo, Freesound ...) and Blender's wheel is impractical. Provenance is therefore clean (all original), quality is bounded by what procedural modelling can do; see the overhaul report for honest limits. | `tools/assets/`, `docs/ASSET_PIPELINE.md` |
+| P2 | Characters are rigged glTF skinned meshes (22 bones, 16 clips) driven by an `AnimationMixer` (`RiggedCharacter`); clip choice is a pure function of existing sim state (move/carry/mounted/dazed/dead) plus one-shots from `SimEvent`s. The procedural primitive models remain only as a load-failure fallback. | `render/assets/rigged.ts`, `render/views/PlayerViews.ts` |
+| P3 | All models load through one `AssetLibrary` (Vite glob of `src/assets/models/**.glb`, base-path safe); the title screen shows load progress and the menu's live demo starts only when the cast is ready. | `render/assets/library.ts`, `app/session.ts` |
+| P4 | HUD / title portraits are rendered from the 3D models (throw-away WebGL context) instead of drawn faces. | `render/portraits.ts`, `assets/portraits.ts` |
+| P5 | A bots-only "attract" match runs behind the title menu (not on the `low` quality profile, never with `?nobots` / `?noattract`); it is a normal sim instance with the same code path and never touches the player's match. | `app/AttractController.ts` |
+| P6 | Music is removed. The audio engine now produces SFX, engine/vehicle loops, a layered crowd ambience and event-driven crowd reactions (all synthesised; **no recorded Nigerian crowd or music is bundled and none is claimed**). Recorded files can be dropped into `public/audio/` to override any slot. | `src/audio/` |

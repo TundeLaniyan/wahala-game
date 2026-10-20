@@ -3,11 +3,18 @@ import { LOOKS } from './looks';
 import { SLOT_CSS } from './palette';
 
 const cache = new Map<string, string>();
+/** Rendered 3D busts (set once the glTF cast has loaded); the drawn portrait below is the fallback. */
+const busts = new Map<CharacterId, HTMLCanvasElement>();
+
+export function registerBusts(map: Partial<Record<CharacterId, HTMLCanvasElement>>): void {
+  for (const [id, c] of Object.entries(map)) busts.set(id as CharacterId, c);
+  cache.clear();
+}
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
 /** Small cartoon portrait on a slot-coloured background (HUD, character cards). Cached data URL. */
 export function portraitUrl(id: CharacterId, slot: number, size = 96): string {
-  const key = `${id}:${slot}:${size}`;
+  const key = `${id}:${slot}:${size}:${busts.has(id) ? 'b' : 'd'}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const c = document.createElement('canvas');
@@ -20,6 +27,13 @@ export function portraitUrl(id: CharacterId, slot: number, size = 96): string {
   bg.addColorStop(1, '#14100a');
   g.fillStyle = bg;
   g.fillRect(0, 0, 96, 96);
+  const bust = busts.get(id);
+  if (bust) {
+    g.drawImage(bust, 0, 0, 96, 96);
+    const url = c.toDataURL('image/png');
+    cache.set(key, url);
+    return url;
+  }
   // shoulders / top
   g.fillStyle = hex(look.top);
   g.beginPath();

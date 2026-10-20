@@ -1,17 +1,9 @@
-import {
-  ACESFilmicToneMapping,
-  Color,
-  DirectionalLight,
-  Fog,
-  HemisphereLight,
-  PCFShadowMap,
-  Scene,
-  SRGBColorSpace,
-  WebGLRenderer,
-} from 'three';
+import { ACESFilmicToneMapping, Color, Fog, PCFShadowMap, Scene, SRGBColorSpace, WebGLRenderer } from 'three';
 import { PICKUP_DEFS } from '../sim';
 import type { GameState, SimEvent } from '../sim';
 import { createBackdrop } from './assets/backdrop';
+import { createSceneLights } from './lighting';
+import type { SceneLights } from './lighting';
 import type { Backdrop } from './assets/backdrop';
 import { CameraRig } from './cameraRig';
 import { createLayout } from './coords';
@@ -20,6 +12,7 @@ import { Effects } from './fx/Effects';
 import { QUALITY } from './quality';
 import type { QualityLevel, QualityProfile } from './quality';
 import type { EntryPick, FrameInfo } from './types';
+import { debrisKindFor } from './assets/props';
 import { ArenaView } from './views/ArenaView';
 import { FlameViews } from './views/FlameViews';
 import { GeneratorViews } from './views/GeneratorViews';
@@ -78,7 +71,8 @@ export class GameRenderer {
   private overlays!: OverlayViews;
   private vehicles!: VehicleViews;
   private views: View[] = [];
-  private sun!: DirectionalLight;
+  private players: PlayerViews | null = null;
+  private lights!: SceneLights;
   private profile: QualityProfile;
   private readonly auto: boolean;
   private width = 1;
@@ -119,20 +113,7 @@ export class GameRenderer {
 
     this.scene.background = new Color(0xe3b985);
     this.scene.fog = new Fog(0xe3b985, 38, 85);
-    this.scene.add(new HemisphereLight(0xffe6c4, 0x6b5a47, 1.5));
-    this.sun = new DirectionalLight(0xffd9a6, 2.9);
-    this.sun.position.set(-9, 15, 7);
-    this.sun.target.position.set(0, 0, 0);
-    const sc = this.sun.shadow.camera;
-    sc.left = -13;
-    sc.right = 13;
-    sc.top = 11;
-    sc.bottom = -11;
-    sc.near = 1;
-    sc.far = 45;
-    this.sun.shadow.bias = -0.0006;
-    this.sun.shadow.normalBias = 0.03;
-    this.scene.add(this.sun, this.sun.target);
+    this.lights = createSceneLights(this.scene, this.renderer);
 
     this.backdrop = createBackdrop(this.layout, this.profile.crowd);
     this.arena = new ArenaView(state, this.layout);
@@ -140,6 +121,7 @@ export class GameRenderer {
     const flames = new FlameViews();
     const pickups = new PickupViews();
     const players = new PlayerViews();
+    this.players = players;
     this.vehicles = new VehicleViews();
     this.overlays = new OverlayViews();
     this.views = [this.arena, generators, flames, pickups, players, this.vehicles, this.overlays];
@@ -164,9 +146,11 @@ export class GameRenderer {
     if (!this.loaded) return;
     for (const v of this.views) v.dispose();
     this.effects.dispose();
+    this.lights.dispose();
     this.backdrop.dispose();
     this.scene.clear();
     this.views = [];
+    this.players = null;
     this.loaded = false;
   }
 
@@ -197,10 +181,7 @@ export class GameRenderer {
     const p = this.profile;
     this.renderer.shadowMap.enabled = p.shadows;
     if (this.loaded) {
-      this.sun.castShadow = p.shadows;
-      this.sun.shadow.mapSize.set(p.shadowMapSize, p.shadowMapSize);
-      this.sun.shadow.map?.dispose();
-      this.sun.shadow.map = null;
+      this.lights.setShadows(p.shadows, p.shadowMapSize);
       this.scene.traverse((o) => {
         const m = (o as { material?: { needsUpdate: boolean } | { needsUpdate: boolean }[] }).material;
         if (Array.isArray(m)) for (const x of m) x.needsUpdate = true;
@@ -214,6 +195,7 @@ export class GameRenderer {
   handleEvents(events: readonly SimEvent[], state: GameState): void {
     if (!this.loaded) return;
     const fx = this.effects;
+    this.players?.onEvents(events);
     for (const e of events) {
       switch (e.type) {
         case 'generatorExploded':
@@ -224,11 +206,7 @@ export class GameRenderer {
           break;
         case 'blockDestroyed': {
           const variant = this.arena.variantAt(e.x, e.y);
-          fx.blockDebris(
-            e.x,
-            e.y,
-            e.by === 'crush' ? 'concrete' : variant === 'crateStack' ? 'crate' : variant,
-          );
+          fx.blockDebris(e.x, e.y, e.by === 'crush' ? 'concrete' : debrisKindFor(variant));
           break;
         }
         case 'pickupRevealed':
@@ -349,7 +327,7 @@ export class GameRenderer {
     for (const v of this.views) v.update(ctx);
     this.effects.update(dt, this.time);
     this.backdrop.update(this.time, info.excitement);
-    this.rig.update(this.effects.shake, this.time);
+    this.rig.update(this.effects.shake, this.time, info.attract === true);
     this.renderer.render(this.scene, this.rig.camera);
     this.trackPerformance(dt);
   }

@@ -9,6 +9,7 @@ import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
 
 function Portrait({ p }: { p: HudPlayer }) {
+  useGameStore((st) => st.portraitsVersion);
   return (
     <div
       className={`portrait${p.alive ? '' : ' out'}`}
@@ -62,22 +63,25 @@ function Timer({ seconds, total, urgent }: { seconds: number; total: number; urg
   const C = 2 * Math.PI * 46;
   return (
     <div className={`timer${urgent ? ' urgent' : ''}`}>
-      <div className="disc">
-        <svg viewBox="0 0 100 100">
-          <circle
-            cx="50"
-            cy="50"
-            r="46"
-            fill="none"
-            stroke="#ffc21a"
-            strokeWidth="6"
-            strokeDasharray={`${C * frac} ${C}`}
-            strokeLinecap="round"
-          />
-        </svg>
-        <b data-testid="timer">{`${mm}:${ss}`}</b>
+      <div className="plaque">
+        <div className="round">Round 1</div>
+        <div className="disc">
+          <svg viewBox="0 0 100 100">
+            <circle
+              cx="50"
+              cy="50"
+              r="46"
+              fill="none"
+              stroke="#ffc61a"
+              strokeWidth="6"
+              strokeDasharray={`${C * frac} ${C}`}
+              strokeLinecap="round"
+            />
+          </svg>
+          <b data-testid="timer">{`${mm}:${ss}`}</b>
+        </div>
+        <small>WAHALA!</small>
       </div>
-      <small>WAHALA!</small>
     </div>
   );
 }
@@ -111,7 +115,7 @@ export function Hud() {
       <div className="top-buttons">
         <button
           type="button"
-          className="round"
+          className="round-btn"
           aria-label="Pause"
           data-testid="pause-button"
           onClick={() => commands.togglePause()}
@@ -120,7 +124,7 @@ export function Hud() {
         </button>
         <button
           type="button"
-          className="round"
+          className="round-btn"
           aria-label="Mute"
           onClick={() => commands.updateSettings({ muted: !muted })}
         >

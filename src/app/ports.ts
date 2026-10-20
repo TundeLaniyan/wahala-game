@@ -15,6 +15,7 @@ export interface AudioPort {
   unlock(): Promise<void>;
   setVolumes(v: { master: number; music: number; sfx: number }): void;
   setMuted(muted: boolean): void;
+  /** Starts the crowd / bus-park ambience (there is no music). */
   startMusic(): void;
   stopMusic(): void;
   setIntensity(level: number): void;

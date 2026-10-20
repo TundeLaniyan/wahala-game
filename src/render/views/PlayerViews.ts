@@ -6,21 +6,25 @@ import {
   Sprite,
   SpriteMaterial,
   AdditiveBlending,
+  MathUtils,
   Vector3,
 } from 'three';
-import type { Player } from '../../sim';
+import type { Player, SimEvent } from '../../sim';
 import { SLOT_COLORS } from '../../assets/palette';
 import { drawPickupIcon } from '../../assets/pickupIcons';
-import { createPlayerModel } from '../assets/characters';
+import { createPlayerModel, createRiggedPlayerModel } from '../assets/characters';
 import type { PlayerModel } from '../assets/characters';
 import { CanvasTexture } from 'three';
 import { chevronTexture, glowTexture, labelTexture, ringTexture, starTexture } from '../textures';
+import type { ClipName } from '../assets/rigged';
 import { lerpAngle, playerGridPos, toWorld, yawForDir } from './motion';
 import type { FrameContext, View } from './types';
 
 const DEATH_TIME = 1.7;
 /** Characters are drawn a little larger than a tile-sized figure so they read at phone size. */
 const SCALE = 1.5;
+/** The seated Okada rider is lifted onto the bike seat (model metres). */
+const RIDER_LIFT = 0.14;
 
 interface Visual {
   model: PlayerModel;
@@ -45,6 +49,23 @@ export class PlayerViews implements View {
   readonly group = new Group();
   private readonly visuals = new Map<number, Visual>();
 
+  /** Triggers one-shot animations from simulation events. */
+  onEvents(events: readonly SimEvent[]): void {
+    const play = (id: number, clip: ClipName): void => this.visuals.get(id)?.model.rigged?.playOnce(clip);
+    for (const e of events) {
+      if (e.type === 'generatorPlaced') play(e.ownerId, 'Place');
+      else if (e.type === 'generatorThrown') play(e.playerId, 'Throw');
+      else if (e.type === 'skillUsed') play(e.playerId, e.skill === 'daze' ? 'Kick' : 'Push');
+      else if (e.type === 'playerPushed') play(e.playerId, 'Stumble');
+      else if (e.type === 'matchEnded') {
+        for (const [id, v] of this.visuals) {
+          if (e.result.kind === 'win') v.model.rigged?.setLoop(id === e.result.winnerId ? 'Win' : 'Lose');
+          else v.model.rigged?.setLoop('Lose');
+        }
+      }
+    }
+  }
+
   update(ctx: FrameContext): void {
     for (const p of ctx.state.players) {
       let v = this.visuals.get(p.id);
@@ -57,7 +78,7 @@ export class PlayerViews implements View {
   }
 
   private create(p: Player, ctx: FrameContext): Visual {
-    const model = createPlayerModel(p.characterId);
+    const model = createRiggedPlayerModel(p.characterId, p.id * 0.37) ?? createPlayerModel(p.characterId);
     const slot = SLOT_COLORS[p.slot % SLOT_COLORS.length]!;
     const ring = new Mesh(
       flat,
@@ -147,7 +168,7 @@ export class PlayerViews implements View {
   }
 
   private pose(ctx: FrameContext, p: Player, v: Visual): void {
-    const { state, time, alpha, layout, dt, fx } = ctx;
+    const { state, time, alpha, layout, dt } = ctx;
     const pos = playerGridPos(p, alpha);
     const w = toWorld(layout, pos.x, pos.y);
     const m = v.model;
@@ -161,7 +182,7 @@ export class PlayerViews implements View {
     v.yaw = lerpAngle(v.yaw, yawForDir(face[0]!, face[1]!), Math.min(1, dt * 16));
     m.root.position.set(w.x, 0, w.z);
     m.root.rotation.set(0, v.yaw, 0);
-    m.root.scale.setScalar(SCALE);
+    m.root.scale.setScalar(m.rigged ? 1 : SCALE);
     m.root.visible = true;
 
     const moving = pos.moving && state.match.phase !== 'ended';
@@ -169,9 +190,42 @@ export class PlayerViews implements View {
     v.phase += dt * (moving ? 7 + speed * 1.6 : 0);
     const swing = moving ? Math.sin(v.phase * 2) * 0.75 : Math.sin(time * 2 + p.id) * 0.03;
     const bob = moving ? Math.abs(Math.sin(v.phase * 2)) * 0.045 : Math.sin(time * 2.4 + p.id) * 0.012;
+    m.bike.visible = p.mounted;
+    if (m.rigged) this.animate(ctx, p, v, moving, speed);
+    else this.poseProcedural(ctx, p, v, moving, swing, bob);
+    this.decorate(ctx, p, v, w);
+  }
+
+  private animate(ctx: FrameContext, p: Player, v: Visual, moving: boolean, speed: number): void {
+    const r = v.model.rigged!;
+    const { state, dt } = ctx;
+    const ended = state.match.phase === 'ended';
+    const dazed = state.tick < p.dazedUntil;
+    let clip: ClipName = 'Idle';
+    if (p.mounted) clip = 'Ride';
+    else if (dazed) clip = 'Dazed';
+    else if (moving) clip = p.carrying ? 'RunCarry' : 'Run';
+    else if (p.carrying) clip = 'IdleCarry';
+    else if (state.match.phase === 'countdown') clip = 'Idle';
+    if (!ended) r.setLoop(clip, 0.12, moving ? MathUtils.clamp(speed * 0.52, 0.8, 1.7) : 1);
+    v.model.rig.position.y = 0;
+    r.body.position.y = p.mounted ? RIDER_LIFT : 0;
+    if (p.mounted && moving) for (const w of v.model.bikeWheels) w.rotation.x += dt * speed * 9;
+    r.update(dt);
+  }
+
+  private poseProcedural(
+    ctx: FrameContext,
+    p: Player,
+    v: Visual,
+    moving: boolean,
+    swing: number,
+    bob: number,
+  ): void {
+    const { time } = ctx;
+    const m = v.model;
     const carrying = p.carrying !== null;
     const mounted = p.mounted;
-    m.bike.visible = mounted;
     m.rig.position.y = mounted ? 0.2 + bob * 0.3 : bob;
     m.legL.rotation.x = mounted ? -1.15 : swing;
     m.legR.rotation.x = mounted ? -1.15 : -swing;
@@ -181,6 +235,11 @@ export class PlayerViews implements View {
     m.armR.rotation.z = carrying ? -0.15 : -0.04;
     m.torso.rotation.x = moving ? 0.1 : 0;
     m.head.rotation.z = Math.sin(time * 1.7 + p.id) * 0.03;
+  }
+
+  private decorate(ctx: FrameContext, p: Player, v: Visual, w: Vector3): void {
+    const { state, time, fx } = ctx;
+    const mounted = p.mounted;
 
     // Okada breaks apart comically the moment protection is spent.
     if (v.wasMounted && !mounted) {
@@ -227,6 +286,7 @@ export class PlayerViews implements View {
   private poseDead(ctx: FrameContext, p: Player, v: Visual, base: Vector3): void {
     const { time, fx } = ctx;
     const m = v.model;
+    const sc = m.rigged ? 1 : SCALE;
     v.ring.visible = false;
     v.name.visible = false;
     if (v.marker) v.marker.visible = false;
@@ -265,9 +325,9 @@ export class PlayerViews implements View {
       // Comically squashed flat.
       m.root.position.set(base.x, 0, base.z);
       m.root.scale.set(
-        SCALE * (1 + Math.min(1, t * 5) * 0.5),
-        Math.max(0.12, 1 - t * 6) * SCALE,
-        SCALE * (1 + Math.min(1, t * 5) * 0.5),
+        sc * (1 + Math.min(1, t * 5) * 0.5),
+        Math.max(0.12, 1 - t * 6) * sc,
+        sc * (1 + Math.min(1, t * 5) * 0.5),
       );
       m.root.rotation.set(0, v.yaw, 0);
     } else {
@@ -275,12 +335,15 @@ export class PlayerViews implements View {
       const h = t < air ? 3.4 * t * (1 - t / air) * 2 : 0;
       const slide = Math.min(t, 1.1);
       m.root.position.set(base.x + v.deathDir.x * slide * 1.4, h, base.z + v.deathDir.z * slide * 1.4);
-      m.root.rotation.set(
-        cause === 'vehicle' ? t * 9 : Math.min(t * 6, Math.PI / 2),
-        v.yaw + t * (cause === 'vehicle' ? 0 : 8) * (t < air ? 1 : 0),
-        cause === 'vehicle' ? t * 5 : 0,
-      );
-      m.root.scale.setScalar(SCALE * (k > 0.75 ? Math.max(0, 1 - (k - 0.75) * 4) : 1));
+      if (m.rigged)
+        m.root.rotation.set(0, v.yaw, 0); // the clip does the tumbling
+      else
+        m.root.rotation.set(
+          cause === 'vehicle' ? t * 9 : Math.min(t * 6, Math.PI / 2),
+          v.yaw + t * (cause === 'vehicle' ? 0 : 8) * (t < air ? 1 : 0),
+          cause === 'vehicle' ? t * 5 : 0,
+        );
+      m.root.scale.setScalar(sc * (k > 0.75 ? Math.max(0, 1 - (k - 0.75) * 4) : 1));
     }
     v.shadow.position.set(
       base.x + v.deathDir.x * Math.min(t, 1.1) * 1.4,
@@ -296,8 +359,13 @@ export class PlayerViews implements View {
         m.root.position.z + Math.sin(a) * 0.3,
       );
     });
-    m.legL.rotation.x = Math.sin(time * 30) * 0.6;
-    m.legR.rotation.x = -Math.sin(time * 30) * 0.6;
+    if (m.rigged) {
+      m.rigged.playFinal(cause === 'vehicle' ? 'DieVehicle' : 'DieBlast', 1.4);
+      m.rigged.update(ctx.dt);
+    } else {
+      m.legL.rotation.x = Math.sin(time * 30) * 0.6;
+      m.legR.rotation.x = -Math.sin(time * 30) * 0.6;
+    }
   }
 
   dispose(): void {

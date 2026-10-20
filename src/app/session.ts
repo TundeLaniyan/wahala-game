@@ -5,9 +5,11 @@
 import { createBot } from '../ai';
 import { createAudio, createCaptionGenerator } from '../audio';
 import { InputManager } from '../input';
-import { GameRenderer } from '../render';
+import { GameRenderer, assets, renderCastPortraits } from '../render';
+import { registerBusts } from '../assets/portraits';
 import type { GameState } from '../sim';
 import { enterImmersiveMode } from './fullscreen';
+import { AttractController } from './AttractController';
 import { MatchController } from './MatchController';
 import { NULL_AUDIO } from './ports';
 import type { AudioPort, CaptionPort } from './ports';
@@ -16,6 +18,7 @@ import type { GameSettings } from './settings';
 import { patch, useGameStore } from './store';
 
 let controller: MatchController | null = null;
+let attract: AttractController | null = null;
 let renderer: GameRenderer | null = null;
 let audio: AudioPort = NULL_AUDIO;
 let raf = 0;
@@ -35,7 +38,8 @@ function applyAudioSettings(s: GameSettings): void {
 function frame(now: number): void {
   raf = requestAnimationFrame(frame);
   if (!controller) return;
-  controller.frame(now);
+  if (useGameStore.getState().screen === 'title') attract?.frame(now);
+  else controller.frame(now);
   if (useGameStore.getState().showStats && renderer && Math.floor(now / 500) !== lastStatsTick) {
     lastStatsTick = Math.floor(now / 500);
     patch({ stats: renderer.stats() });
@@ -94,6 +98,27 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     captions,
   });
   applyAudioSettings(settings);
+  attract = new AttractController(renderer as never, createBot);
+  // The live demo behind the menu is skipped for tests (?nobots / ?noattract) and on the lowest quality.
+  // Models load once; the live demo behind the menu starts when the rigged cast is ready.
+  patch({ loading: { done: 0, total: 1 } });
+  void assets
+    .preload(undefined, (done, total) => patch({ loading: { done, total } }))
+    .then(() => {
+      try {
+        registerBusts(renderCastPortraits());
+      } catch {
+        /* portraits fall back to the drawn versions */
+      }
+      patch({ loading: null, portraitsVersion: useGameStore.getState().portraitsVersion + 1 });
+      if (
+        !params.has('nobots') &&
+        !params.has('noattract') &&
+        settings.quality !== 'low' &&
+        useGameStore.getState().screen === 'title'
+      )
+        attract?.start();
+    });
   resizeObserver = new ResizeObserver(sizeCanvas);
   resizeObserver.observe(canvas);
   sizeCanvas();
@@ -121,12 +146,20 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   };
 }
 
+function settingsAllowAttract(): boolean {
+  const params = new URLSearchParams(location.search);
+  return (
+    !params.has('nobots') && !params.has('noattract') && useGameStore.getState().settings.quality !== 'low'
+  );
+}
+
 /** Everything the UI can ask the game to do. */
 export const commands = {
   start(): void {
     void audio.unlock();
     if (useGameStore.getState().touchCapable) void enterImmersiveMode();
     audio.playUi('start');
+    attract?.stop();
     const seed = Number(new URLSearchParams(location.search).get('seed'));
     controller?.start(useGameStore.getState().settings, Number.isFinite(seed) && seed > 0 ? seed : undefined);
   },
@@ -137,6 +170,7 @@ export const commands = {
   toTitle(): void {
     audio.playUi('back');
     controller?.stop();
+    if (settingsAllowAttract()) attract?.start();
   },
   togglePause: (): void => controller?.togglePause(),
   resume: (): void => controller?.setPaused(false),
@@ -166,6 +200,7 @@ function exposeDebugHandle(): void {
     store: useGameStore,
     stats: () => renderer?.stats() ?? null,
     renderer: () => renderer,
+    assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
     stepTicks: (n: number) => {
       for (let i = 0; i < n; i++) controller?.stepOnce();
     },

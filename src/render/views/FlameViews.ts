@@ -58,7 +58,7 @@ export class FlameViews implements View {
       const size = (f.dir === null ? 2.0 : f.tip ? 1.35 : 1.6) * flick * (0.75 + env * 0.35);
       v.floor.position.set(x, 0.03, z);
       (v.floor.material as MeshBasicMaterial).opacity = 1.0 * env;
-      v.a.position.set(x, 0.42 + 0.1 * Math.sin(time * 20 + v.phase), z);
+      v.a.position.set(x, 0.5 + 0.08 * Math.sin(time * 20 + v.phase), z);
       v.a.scale.set(size * 0.9, size * 1.15, 1);
       v.a.material.opacity = env;
       v.b.position.set(
@@ -95,6 +95,7 @@ export class FlameViews implements View {
         const s = new Sprite(
           new SpriteMaterial({
             map: flameTexture(),
+            color: 0xffb070,
             transparent: true,
             blending: AdditiveBlending,
             depthWrite: false,
@@ -109,7 +110,7 @@ export class FlameViews implements View {
       const c = new Sprite(
         new SpriteMaterial({
           map: glowTexture(),
-          color: 0xfff2c0,
+          color: 0xffc680,
           transparent: true,
           blending: AdditiveBlending,
           depthWrite: false,

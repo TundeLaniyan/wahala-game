@@ -26,14 +26,95 @@ import {
   windowsTexture,
 } from '../textures';
 import { box, mat } from './helpers';
+import { createGlbCrowd } from './crowd';
+import { assets } from './library';
 import { bakeModel } from './merge';
 import { createVehicleModel } from './vehicles';
+
+/** Parked buses are drawn larger than the playing-field buses so the lot feels crowded and the arena small. */
+const PARKED_BUS_SCALE = 1.3;
 
 export interface Backdrop {
   root: Group;
   /** Animates the crowd; call every frame. */
   update(time: number, excitement: number): void;
   dispose(): void;
+}
+
+interface Placement {
+  x: number;
+  y?: number;
+  z: number;
+  ry: number;
+  sx?: number;
+  sy?: number;
+  sz?: number;
+}
+
+/** Instances every mesh of a modelled asset at the given placements (node transforms are baked into the parts). */
+function instanceAsset(root: Group, out: InstancedMesh[], id: string, placements: Placement[]): void {
+  if (placements.length === 0) return;
+  const m4 = new Matrix4();
+  const q = new Quaternion();
+  const e = new Euler();
+  const p = new Vector3();
+  const s = new Vector3();
+  for (const part of assets.parts(id)) {
+    const im = new InstancedMesh(part.geometry, part.material, placements.length);
+    im.castShadow = true;
+    im.receiveShadow = true;
+    placements.forEach((pl, n) => {
+      q.setFromEuler(e.set(0, pl.ry, 0));
+      m4.compose(p.set(pl.x, pl.y ?? 0, pl.z), q, s.set(pl.sx ?? 1, pl.sy ?? 1, pl.sz ?? 1));
+      im.setMatrixAt(n, m4);
+    });
+    out.push(im);
+    root.add(im);
+  }
+}
+
+/**
+ * Walls (north/east/west tall enough to read, south kept low so no tile is hidden), corner posts and
+ * spectator platforms from the modelled set. Returns false when the models are not loaded.
+ */
+function addModelledPerimeter(root: Group, out: InstancedMesh[], W: number, H: number): boolean {
+  const wallIds = assets.loadedIds('env_wall').filter((id) => id !== 'env_wall_corner');
+  if (wallIds.length === 0 || !assets.has('env_wall_corner')) return false;
+  const T = 0.155; // half wall thickness
+  const byVariant = wallIds.map(() => [] as Placement[]);
+  let k = 0;
+  const wall = (x: number, z: number, ry: number, sy = 1): void => {
+    byVariant[k++ % wallIds.length]!.push({ x, z, ry, sy });
+  };
+  for (let i = 0; i < W; i++) {
+    wall(-W / 2 + 0.5 + i, -H / 2 - T, 0);
+    wall(-W / 2 + 0.5 + i, H / 2 + T, Math.PI, 0.45);
+  }
+  for (let i = 0; i < H; i++) {
+    wall(W / 2 + T, -H / 2 + 0.5 + i, -Math.PI / 2, i > H - 2 ? 0.45 : 1);
+    wall(-W / 2 - T, -H / 2 + 0.5 + i, Math.PI / 2, i > H - 2 ? 0.45 : 1);
+  }
+  wallIds.forEach((id, n) => instanceAsset(root, out, id, byVariant[n]!));
+  const cx = W / 2 + T;
+  const cz = H / 2 + T;
+  instanceAsset(root, out, 'env_wall_corner', [
+    { x: -cx, z: -cz, ry: 0, sy: 1.1 },
+    { x: cx, z: -cz, ry: 0, sy: 1.1 },
+    { x: -cx, z: cz, ry: 0, sy: 0.45 },
+    { x: cx, z: cz, ry: 0, sy: 0.45 },
+  ]);
+  if (assets.has('env_bleacher')) {
+    const off = T * 2 + 0.26;
+    const plat: Placement[] = [];
+    // rail side faces the arena: the model's rail is on its -Z side, so face the front (+Z) away from the field
+    for (let i = -1; i <= W; i++) plat.push({ x: -W / 2 + 0.5 + i, z: -H / 2 - off, ry: Math.PI });
+    for (let i = 0; i < H; i++) {
+      plat.push({ x: W / 2 + off, z: -H / 2 + 0.5 + i, ry: Math.PI / 2 });
+      plat.push({ x: -W / 2 - off, z: -H / 2 + 0.5 + i, ry: -Math.PI / 2 });
+    }
+    instanceAsset(root, out, 'env_bleacher', plat);
+  }
+  return true;
 }
 
 /**
@@ -66,54 +147,86 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
     ),
   );
 
-  // perimeter walls
-  const wallTex = wallTexture();
-  wallTex.repeat.set(Math.ceil(W / 4), 1);
-  const wallMat = mat(0xffffff, { map: wallTex, flat: false, roughness: 1 });
-  const thick = 0.55;
-  const north = box(W + thick * 2, 0.8, thick, wallMat, 0, 0.4, -H / 2 - thick / 2);
-  const east = box(thick, 0.55, H, wallMat, W / 2 + thick / 2, 0.275, 0);
-  const west = box(thick, 0.55, H, wallMat, -W / 2 - thick / 2, 0.275, 0);
-  const south = box(W + thick * 2, 0.2, thick, wallMat, 0, 0.1, H / 2 + thick / 2);
-  statics.add(north, east, west, south);
-  const capMat = mat(0x8c867c, { roughness: 0.95 });
-  statics.add(box(W + thick * 2 + 0.1, 0.07, thick + 0.1, capMat, 0, 0.83, -H / 2 - thick / 2));
-  statics.add(box(thick + 0.1, 0.07, H + 0.1, capMat, W / 2 + thick / 2, 0.585, 0));
-  statics.add(box(thick + 0.1, 0.07, H + 0.1, capMat, -W / 2 - thick / 2, 0.585, 0));
-  statics.add(box(W + thick * 2 + 0.1, 0.06, thick + 0.1, capMat, 0, 0.22, H / 2 + thick / 2));
-  // hazard-striped corner posts
-  const stripeMat = mat(0xffffff, { map: hazardStripes(), flat: false, roughness: 0.6 });
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      statics.add(
-        box(
-          0.7,
-          sz < 0 ? 1.15 : 0.5,
-          0.7,
-          stripeMat,
-          sx * (W / 2 + thick / 2),
-          sz < 0 ? 0.575 : 0.25,
-          sz * (H / 2 + thick / 2),
-        ),
-      );
+  // perimeter: modelled wall segments, corner posts and spectator platforms, else the procedural walls
+  const instanced: InstancedMesh[] = [];
+  const modelledPerimeter = addModelledPerimeter(root, instanced, W, H);
+  if (!modelledPerimeter) {
+    // perimeter walls
+    const wallTex = wallTexture();
+    wallTex.repeat.set(Math.ceil(W / 4), 1);
+    const wallMat = mat(0xffffff, { map: wallTex, flat: false, roughness: 1 });
+    const thick = 0.55;
+    const north = box(W + thick * 2, 0.8, thick, wallMat, 0, 0.4, -H / 2 - thick / 2);
+    const east = box(thick, 0.55, H, wallMat, W / 2 + thick / 2, 0.275, 0);
+    const west = box(thick, 0.55, H, wallMat, -W / 2 - thick / 2, 0.275, 0);
+    const south = box(W + thick * 2, 0.2, thick, wallMat, 0, 0.1, H / 2 + thick / 2);
+    statics.add(north, east, west, south);
+    const capMat = mat(0x8c867c, { roughness: 0.95 });
+    statics.add(box(W + thick * 2 + 0.1, 0.07, thick + 0.1, capMat, 0, 0.83, -H / 2 - thick / 2));
+    statics.add(box(thick + 0.1, 0.07, H + 0.1, capMat, W / 2 + thick / 2, 0.585, 0));
+    statics.add(box(thick + 0.1, 0.07, H + 0.1, capMat, -W / 2 - thick / 2, 0.585, 0));
+    statics.add(box(W + thick * 2 + 0.1, 0.06, thick + 0.1, capMat, 0, 0.22, H / 2 + thick / 2));
+    // hazard-striped corner posts
+    const stripeMat = mat(0xffffff, { map: hazardStripes(), flat: false, roughness: 0.6 });
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        statics.add(
+          box(
+            0.7,
+            sz < 0 ? 1.15 : 0.5,
+            0.7,
+            stripeMat,
+            sx * (W / 2 + thick / 2),
+            sz < 0 ? 0.575 : 0.25,
+            sz * (H / 2 + thick / 2),
+          ),
+        );
+      }
     }
   }
 
-  // parked danfos (baked to a handful of meshes each)
-  const bus = bakeModel(createVehicleModel('danfo').root);
+  // parked danfos: instanced from the modelled bus, or baked procedural copies as a fallback
   const rng = artRng(404);
-  const place = (x: number, z: number, ry: number, scale = 1.0): void => {
-    const b = bus.clone();
-    b.position.set(x, 0, z);
-    b.rotation.y = ry;
-    b.scale.setScalar(scale);
-    statics.add(b);
+  const busSpots: { x: number; z: number; ry: number }[] = [];
+  const place = (x: number, z: number, ry: number): void => {
+    busSpots.push({ x, z, ry });
   };
   for (let i = 0; i < 5; i++)
     place(W / 2 + 2.1 + (i % 2) * 0.1, -H / 2 + 1.2 + i * 2.35, Math.PI / 2 + (rng() - 0.5) * 0.1);
   for (let i = 0; i < 4; i++) place(-W / 2 - 2.2, -H / 2 + 0.8 + i * 2.8, -Math.PI / 2 + (rng() - 0.5) * 0.1);
   for (let i = 0; i < 4; i++) place(-W / 2 + 2.5 + i * 3.6, -H / 2 - 2.0, (rng() - 0.5) * 0.1);
   place(W / 2 - 3.2, H / 2 + 2.2, Math.PI);
+  const busParts = assets.parts('veh_danfo');
+  if (busParts.length > 0) {
+    const m4 = new Matrix4();
+    const q4 = new Quaternion();
+    const e4 = new Euler();
+    for (const part of busParts) {
+      const im = new InstancedMesh(part.geometry, part.material, busSpots.length);
+      im.castShadow = true;
+      im.receiveShadow = true;
+      busSpots.forEach((b, n) => {
+        // modelled buses face +Z, the procedural ones faced +X
+        q4.setFromEuler(e4.set(0, b.ry + Math.PI / 2, 0));
+        m4.compose(
+          new Vector3(b.x, 0, b.z),
+          q4,
+          new Vector3(PARKED_BUS_SCALE, PARKED_BUS_SCALE, PARKED_BUS_SCALE),
+        );
+        im.setMatrixAt(n, m4);
+      });
+      instanced.push(im);
+      root.add(im);
+    }
+  } else {
+    const bus = bakeModel(createVehicleModel('danfo').root);
+    for (const b of busSpots) {
+      const copy = bus.clone();
+      copy.position.set(b.x, 0, b.z);
+      copy.rotation.y = b.ry;
+      statics.add(copy);
+    }
+  }
 
   // buildings
   const buildingColors = [0xd9a766, 0xc98b5a, 0xe0c07a, 0xb9745c, 0x9fb7a4, 0xd6c2a0];
@@ -149,13 +262,28 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
       statics.add(box(0.5, 0.5, 0.5, mat(0x3a6ea5), x + w * 0.2, h + 0.1, z));
     }
   };
-  let i = 0;
-  for (let x = -W / 2 - 9; x < W / 2 + 10; x += 4.2) {
-    addBuilding(x, -H / 2 - 5.6 - rng() * 1.2, 3.8, 4, 4 + rng() * 4, i++);
-  }
-  for (let z = -H / 2 - 4; z < H / 2 + 6; z += 4.2) {
-    addBuilding(W / 2 + 6.2 + rng(), z, 4, 3.8, 3.5 + rng() * 4, i++);
-    addBuilding(-W / 2 - 6.2 - rng(), z, 4, 3.8, 3.5 + rng() * 4, i++);
+  const buildingIds = assets.loadedIds('env_building_');
+  if (buildingIds.length > 0) {
+    const byVariant = buildingIds.map(() => [] as Placement[]);
+    let n = 0;
+    const put = (x: number, z: number, ry: number): void => {
+      byVariant[n++ % buildingIds.length]!.push({ x, z, ry, sy: 0.92 + rng() * 0.25 });
+    };
+    for (let x = -W / 2 - 7; x < W / 2 + 8; x += 3.45) put(x, -H / 2 - 4.7 - rng() * 0.5, 0);
+    for (let z = -H / 2 - 3.5; z < H / 2 + 6; z += 3.3) {
+      put(W / 2 + 5.2 + rng() * 0.5, z, -Math.PI / 2);
+      put(-W / 2 - 5.2 - rng() * 0.5, z, Math.PI / 2);
+    }
+    buildingIds.forEach((id, k) => instanceAsset(root, instanced, id, byVariant[k]!));
+  } else {
+    let i = 0;
+    for (let x = -W / 2 - 9; x < W / 2 + 10; x += 4.2) {
+      addBuilding(x, -H / 2 - 5.6 - rng() * 1.2, 3.8, 4, 4 + rng() * 4, i++);
+    }
+    for (let z = -H / 2 - 4; z < H / 2 + 6; z += 4.2) {
+      addBuilding(W / 2 + 6.2 + rng(), z, 4, 3.8, 3.5 + rng() * 4, i++);
+      addBuilding(-W / 2 - 6.2 - rng(), z, 4, 3.8, 3.5 + rng() * 4, i++);
+    }
   }
 
   // Green-white-green bunting along the back wall, and the bus-park signboard.
@@ -182,6 +310,20 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
   sign.position.set(-W / 2 + 3.2, 1.55, -H / 2 - 0.62);
   sign.rotation.x = -0.35;
   root.add(sign);
+
+  const glbCrowd = createGlbCrowd(layout, crowdSize, rng);
+  if (glbCrowd) {
+    root.add(glbCrowd.group, bakeModel(statics));
+    return {
+      root,
+      update: glbCrowd.update,
+      dispose() {
+        glbCrowd.dispose();
+        for (const im of instanced) im.dispose();
+        for (const d of disposables) d.dispose();
+      },
+    };
+  }
 
   // crowd: merged person geometry, per-instance colour, animated bobbing
   const bodyGeo = mergeGeometries([
@@ -243,6 +385,7 @@ export function createBackdrop(layout: Layout, crowdSize: number): Backdrop {
     update,
     dispose() {
       crowd.dispose();
+      for (const im of instanced) im.dispose();
       for (const d of disposables) d.dispose();
     },
   };
