@@ -797,3 +797,76 @@ def scale_model(m: Model, s: float) -> Model:
             it.mesh.v = it.mesh.v * s
         it.pivot = tuple(p * s for p in it.pivot)
     return m
+
+
+# ----------------------------------------------------------------------------- v4 wheels (rounder, deeper)
+
+
+def make_tyre_round(R: float, W: float, rim_r: float, sides: int = 18, tread_depth: float = 0.009) -> Mesh:
+    """Tyre about local X (outward +X): bulged outer sidewall, bevelled shoulders and a staggered block tread.
+    The inner side is kept minimal (it is hidden in the wheel arch)."""
+    hw = W / 2
+    s = R - rim_r
+    prof = [
+        (rim_r + s * 0.45, -hw * 1.0),
+        (R - s * 0.14, -hw * 0.94),
+        (R, -hw * 0.62),
+        (R, -hw * 0.18),
+        (R, hw * 0.18),
+        (R, hw * 0.62),
+        (R - s * 0.14, hw * 0.96),
+        (rim_r + s * 0.58, hw * 1.05),
+        (rim_r * 0.99, hw * 0.80),
+    ]
+    th = np.linspace(0, 2 * np.pi, sides, endpoint=False)
+    Vv = []
+    for i, (rho, w) in enumerate(prof):
+        for j, a in enumerate(th):
+            r = rho
+            if i in (2, 3, 4, 5):
+                phase = (j + (1 if i in (3, 4) else 0)) % 2
+                r = rho - tread_depth * (1.0 if phase else 0.0)
+            Vv.append((w, r * np.sin(a), r * np.cos(a)))
+    m = Mesh(np.array(Vv), grid_faces(len(prof), sides, closed_u=True))
+    rc = (R + rim_r) * 0.5
+
+    def core(c):
+        d = np.hypot(c[:, 1], c[:, 2])
+        k = rc / np.maximum(d, 1e-9)
+        return np.stack([np.zeros(len(c)), c[:, 1] * k, c[:, 2] * k], axis=1)
+
+    return orient_faces(m, core)
+
+
+def make_rim_dished(R_rim: float, W: float, sides: int = 28, lugs: int = 5, vents: int = 6) -> tuple[Mesh, Mesh, Mesh]:
+    """(dished steel rim, chrome hubcap + lug nuts, dark vent holes) about local X, outward +X.
+
+    The rim face sits well inside the tyre's sidewall so the wheel reads as deep, with a bright rolled lip."""
+    hw = W / 2
+    prof = [
+        (R_rim * 1.00, -hw * 0.40),
+        (R_rim * 1.00, hw * 0.62),
+        (R_rim * 1.05, hw * 0.70),  # rolled lip
+        (R_rim * 0.90, hw * 0.62),  # dish wall
+        (R_rim * 0.74, hw * 0.24),
+        (R_rim * 0.40, hw * 0.30),  # dish face
+        (0.0, hw * 0.36),
+    ]
+    rim = _orient(lathe(prof, sides), "x", (0, 0, 0))
+    rim = orient_faces(rim, lambda c: np.stack([c[:, 0] - 1.0, c[:, 1] * 0.0, c[:, 2] * 0.0], axis=1))
+    cap = _orient(lathe([(R_rim * 0.40, hw * 0.34), (R_rim * 0.36, hw * 0.56), (R_rim * 0.22, hw * 0.72), (0.0, hw * 0.79)], 10), "x", (0, 0, 0))
+    cap = orient_faces(cap, lambda c: np.stack([c[:, 0] - 1.0, c[:, 1] * 0.0, c[:, 2] * 0.0], axis=1))
+    parts = [cap]
+    for i in range(lugs):
+        a = 2 * np.pi * i / lugs + 0.3
+        c = (hw * 0.30, R_rim * 0.52 * np.sin(a), R_rim * 0.52 * np.cos(a))
+        parts.append(cylinder(c, R_rim * 0.07, hw * 0.16, sides=5, axis="x", caps=True))
+    holes = []
+    for i in range(vents):
+        a = 2 * np.pi * (i + 0.5) / vents
+        c = (hw * 0.245, R_rim * 0.63 * np.sin(a), R_rim * 0.63 * np.cos(a))
+        t = np.linspace(0, 2 * np.pi, 7, endpoint=False)
+        ring = np.stack([np.full(7, c[0]), c[1] + R_rim * 0.09 * np.sin(t), c[2] + R_rim * 0.09 * np.cos(t)], axis=1)
+        disc = Mesh(np.vstack([ring, [c]]), np.array([(k, (k + 1) % 7, 7) for k in range(7)]))
+        holes.append(orient_faces(disc, lambda q: q - np.array([1.0, 0.0, 0.0])))
+    return rim, merge(parts), merge(holes)

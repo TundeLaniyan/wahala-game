@@ -1,6 +1,6 @@
 """Builds the vehicle and generator GLBs into src/assets/models/.
 
-    python3 tools/assets/build_vehicles.py [danfo taxi keke okada generator]
+    python3 tools/assets/build_vehicles.py [danfo taxi keke okada generator parked]
 
 numpy + scipy + PIL only (no Blender). Deterministic."""
 from __future__ import annotations
@@ -17,6 +17,7 @@ MODULES = {
     "keke": "veh_keke",
     "okada": "veh_okada",
     "generator": "veh_generator",
+    "parked": "veh_parked",
 }
 
 

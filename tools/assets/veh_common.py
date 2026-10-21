@@ -179,3 +179,81 @@ def headlamp_pair(m: Model, x: float, y: float, z: float, w: float = 0.1, h: flo
         lens = V.bevel_box((sx * x, y, z + depth * 0.35), (w, h, depth * 0.8), bevel=0.012)
         V.paint(lens, 0xfff4d6)
         m.add(lens, "lamp")
+
+
+# ----------------------------------------------------------------------------- v4: clean art-directed finish
+
+
+def clean_specs(decal_tex: str | None = None, lamp_strength: float = 1.6, extra: dict | None = None) -> dict[str, Spec]:
+    """Glossy, clean material set (no grime texture on the paint: colour comes from the vertex livery).
+
+    The game upgrades `paint` to a clearcoat material at runtime; `glass` and `chrome` lean on the scene's
+    environment map for their reflections."""
+    specs = {
+        "paint": Spec(color=(1, 1, 1, 1), roughness=0.30, smooth_deg=58),
+        "glass": Spec(color=(1, 1, 1, 1), roughness=0.05, metallic=0.35, smooth_deg=60),
+        "trim": Spec(color=(1, 1, 1, 1), roughness=0.55, smooth_deg=50),
+        "tyre": Spec(color=(1, 1, 1, 1), roughness=0.9, texture="tyre_rubber", tex_args=dict(tone=0x2a2a2d), uv_m=0.35, smooth_deg=60),
+        "chrome": Spec(color=(0.92, 0.93, 0.95, 1), roughness=0.14, metallic=1.0, smooth_deg=55),
+        "steel": Spec(color=(1, 1, 1, 1), roughness=0.38, metallic=0.6, smooth_deg=55),
+        "lamp": Spec(color=(1, 1, 1, 1), roughness=0.15, emissive=(1.0, 0.92, 0.70), emissive_strength=lamp_strength, smooth_deg=60),
+    }
+    if decal_tex:
+        specs["decal"] = Spec(color=(1, 1, 1, 1), roughness=0.45, texture=decal_tex, smooth_deg=89)
+    if extra:
+        specs.update(extra)
+    return specs
+
+
+def livery_fn(bands, base=0xf9b90c, ao_y=(0.14, 0.30), dark=0.22, dust=0x8a7556, dust_y=0.20, top_tint=None):
+    """Vertex colour function for Body.build: clean paint with hard colour bands.
+
+    bands: list of (y0, y1, hex) - the first band containing y wins. Body seams must sit on every band edge.
+    Only a soft ground AO and a faint dust tint at the very bottom; no rust, no blotches."""
+    base_l = V.lin(base)
+    dust_l = V.lin(dust)
+    top_l = V.lin(top_tint[1]) if top_tint else None
+
+    def fn(y, pts, band):
+        y_eff = y + band * 1e-4
+        n = len(pts)
+        col = base_l
+        for y0, y1, hx in bands:
+            if y0 < y_eff < y1:
+                col = V.lin(hx)
+                break
+        if top_l is not None and y_eff > top_tint[0]:
+            col = top_l
+        col = np.tile(np.array(col, dtype=np.float64), (n, 1))
+        k = 1.0 - dark * float(np.clip((ao_y[1] - y) / max(ao_y[1] - ao_y[0], 1e-6), 0, 1)) ** 1.5
+        col = col * k
+        d = float(np.clip((dust_y - y) / 0.08, 0, 1)) * 0.25
+        col = col * (1 - d) + dust_l[None] * d * 0.6
+        return col
+
+    return fn
+
+
+def add_premium_wheels(m: Model, R: float, W: float, rim_r: float, spots, tyre_colour=0x2a2a2d, rim_colour=0xc9ccd2, sides: int = 18, lugs: int = 4, vents: int = 4, white_wall: bool = False):
+    """Rounder tyres (bulged sidewall, shoulder bevel, block tread) on a deep dished rim with chrome hubcap,
+    lug nuts and dark vent holes. spots: (node_name, x, y, z, outward_sign); axle along local X."""
+    tyre = V.make_tyre_round(R, W, rim_r, sides)
+    rim, hub, dark = V.make_rim_dished(rim_r, W, sides=sides, lugs=lugs, vents=vents)
+    V.paint(rim, rim_colour)
+    # darker inside the dish, bright lip: reads as depth from the gameplay camera
+    rr = np.hypot(rim.v[:, 1], rim.v[:, 2]) / rim_r
+    rim.c[:, :3] *= (0.55 + 0.45 * np.clip((rr - 0.55) / 0.4, 0, 1))[:, None]
+    V.paint(hub, 0xe8eaee)
+    V.paint(dark, 0x0c0c0e)
+    for name, x, y, z, sgn in spots:
+        for mesh, mat, col in ((tyre, "tyre", tyre_colour), (rim, "steel", None), (hub, "chrome", None), (dark, "trim", None)):
+            p = mesh.copy()
+            if col is not None:
+                p.c[:, :3] = V.lin(col)
+                if white_wall:
+                    rr2 = np.hypot(p.v[:, 1], p.v[:, 2])
+                    ww = (rr2 > rim_r + (R - rim_r) * 0.2) & (rr2 < rim_r + (R - rim_r) * 0.5) & (p.v[:, 0] > W * 0.3)
+                    p.c[ww, :3] = V.lin(0xe9e6dc)
+            p = V.mirror_for_side(p, sgn)
+            p = place(p, (x, y, z))
+            m.add(p, mat, node=name, pivot=(x, y, z))

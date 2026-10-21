@@ -1,30 +1,42 @@
-"""The Lagos Danfo: yellow high-roof minibus with a black stripe, roof rack and luggage (hero vehicle)."""
+"""The Lagos Danfo (v4): clean, glossy yellow minibus in the stylised Gemini direction.
+
+Short sloped semi-bonnet flowing into a raked windscreen, rounded roof, a continuous dark glasshouse band,
+bold black side stripe with white pinstripes, chrome grille and round head lamps, deep dished wheels and
+a light roof rack. Original design; no real brand."""
 from __future__ import annotations
 
 import numpy as np
-from PIL import ImageDraw
 
-from vehicles_lib import *  # noqa: F401,F403
 import vehicles_lib as V
-from veh_common import Wheels, add_wheel_set, std_specs, window_set, headlamp_pair, rust_color_fn  # noqa: F401
+from vehicles_lib import Model, place
+from veh_common import add_premium_wheels, clean_specs, livery_fn, poly_window
 
 # ----------------------------------------------------------------------------- dimensions
-Y0 = 0.14  # underside of the body shell
-WR, WW = 0.165, 0.11  # wheel radius / tyre width
-WX = 0.345  # tyre centre x
-WZ = 0.47  # axle z (front +, rear -)
-STRIPE = (0.295, 0.405)
-YTOP = 0.925
+Y0 = 0.15  # underside of the body shell
+WR, WW, RIM = 0.178, 0.118, 0.106  # wheel radius / tyre width / rim radius
+WX = 0.335  # tyre centre x
+WZ = 0.50  # axle z (front +, rear -)
+YTOP = 0.965
+YELLOW = 0xffbe0f
+BLACK = 0x0d0d0f
+WHITE = 0xf3efe2
+# livery bands (y ranges); every edge is also a body seam
+PIN_LO = (0.300, 0.313)
+STRIPE = (0.313, 0.420)
+PIN_HI = (0.420, 0.433)
+GLASS_BAND = (0.585, 0.900)
+BANDS = [(*PIN_LO, WHITE), (*STRIPE, BLACK), (*PIN_HI, WHITE), (*GLASS_BAND, 0x121316)]
+SEAMS = [PIN_LO[0], STRIPE[0], STRIPE[1], PIN_HI[1], GLASS_BAND[0], GLASS_BAND[1]]
 
 
 def make_atlas() -> V.Atlas:
     at = V.Atlas(512, seed=17)
 
     def dest(img, d, rng):
-        d.rectangle([0, 0, 255, 63], fill=(0xf0, 0xe9, 0xcf))
+        d.rectangle([0, 0, 255, 63], fill=(0xf4, 0xef, 0xd8))
         d.rectangle([0, 0, 255, 63], outline=(0x2a, 0x2a, 0x2a), width=3)
-        V.hand_text(d, rng, "OSHODI", (6, 2, 164, 62), (0x16, 0x16, 0x1c), 34, jitter=1.4)
-        d.polygon([(168, 32), (190, 14), (190, 24), (246, 24), (246, 40), (190, 40), (190, 50)], fill=(0xc4, 0x1e, 0x1e))
+        V.hand_text(d, rng, "OSHODI", (6, 2, 170, 62), (0x16, 0x16, 0x1c), 36, jitter=0.6)
+        d.polygon([(176, 32), (198, 12), (198, 23), (248, 23), (248, 41), (198, 41), (198, 52)], fill=(0xd0, 0x1c, 0x1c))
 
     def plate(img, d, rng):
         d.rectangle([0, 0, 127, 55], fill=(0xf2, 0xf2, 0xea), outline=(0x20, 0x20, 0x20), width=3)
@@ -33,49 +45,66 @@ def make_atlas() -> V.Atlas:
         V.hand_text(d, rng, "KJA 482 DK", (4, 18, 124, 52), (0x10, 0x10, 0x14), 19, path=V.FONT_MONO, jitter=0.0)
 
     def side_stripe(img, d, rng):
-        d.rectangle([0, 0, 511, 35], fill=(0x05, 0x05, 0x06))
-        d.rectangle([0, 3, 511, 5], fill=(0xf2, 0xb7, 0x05))
-        d.rectangle([0, 30, 511, 32], fill=(0xf2, 0xb7, 0x05))
-        V.hand_text(d, rng, "GOD'S TIME IS THE BEST  *  LAGOS", (6, 5, 506, 31), (0xf6, 0xc4, 0x1c), 24, jitter=1.0, tracking=1)
+        d.rectangle([0, 0, 383, 39], fill=(0x0d, 0x0d, 0x0f))
+        V.hand_text(d, rng, "GOD'S TIME IS THE BEST", (4, 3, 380, 37), (0xff, 0xc4, 0x1c), 27, jitter=0.4, tracking=1)
 
     def rear_stripe(img, d, rng):
-        d.rectangle([0, 0, 255, 35], fill=(0x05, 0x05, 0x06))
-        V.hand_text(d, rng, "NO CONDITION IS PERMANENT", (4, 3, 252, 33), (0xf2, 0xea, 0xd0), 13, jitter=1.0, tracking=0)
+        d.rectangle([0, 0, 255, 35], fill=(0x0d, 0x0d, 0x0f))
+        V.hand_text(d, rng, "NO CONDITION IS PERMANENT", (4, 3, 252, 33), (0xf2, 0xea, 0xd0), 13, jitter=0.4, tracking=0)
 
     def tail(img, d, rng):
-        d.rectangle([0, 0, 47, 95], fill=(0x8a, 0x10, 0x14))
-        d.rectangle([4, 4, 43, 40], fill=(0xd8, 0x1f, 0x26))
-        d.rectangle([4, 44, 43, 62], fill=(0xff, 0x9a, 0x1c))
-        d.rectangle([4, 66, 43, 90], fill=(0xe9, 0xe4, 0xd8))
-        d.rectangle([8, 8, 14, 36], fill=(0xff, 0x6a, 0x66))
+        d.rectangle([0, 0, 47, 95], fill=(0x40, 0x06, 0x08))
+        d.rounded_rectangle([3, 3, 44, 46], 6, fill=(0xe2, 0x1c, 0x24))
+        d.rounded_rectangle([3, 50, 44, 68], 4, fill=(0xff, 0x98, 0x18))
+        d.rounded_rectangle([3, 72, 44, 92], 4, fill=(0xf2, 0xee, 0xe4))
+        d.rectangle([9, 8, 15, 40], fill=(0xff, 0x78, 0x74))
 
     def amber(img, d, rng):
-        d.rectangle([0, 0, 31, 31], fill=(0xff, 0xa4, 0x1c))
-        d.rectangle([3, 3, 14, 12], fill=(0xff, 0xdd, 0x8a))
+        d.rectangle([0, 0, 31, 31], fill=(0x50, 0x2a, 0x06))
+        d.rounded_rectangle([2, 2, 29, 29], 6, fill=(0xff, 0xa8, 0x1c))
+        d.rectangle([6, 6, 14, 12], fill=(0xff, 0xe0, 0x96))
 
-    at.cell("side_stripe", 512, 36, side_stripe)
+    def badge(img, d, rng):
+        d.rectangle([0, 0, 127, 31], fill=(0x0d, 0x0d, 0x0f))
+        V.hand_text(d, rng, "DANFO", (2, 1, 126, 31), (0xff, 0xc4, 0x1c), 24, jitter=0.0, tracking=4)
+
+    at.cell("side_stripe", 384, 40, side_stripe)
     at.cell("dest", 256, 64, dest)
     at.cell("rear_stripe", 256, 36, rear_stripe)
     at.cell("plate", 128, 56, plate)
     at.cell("tail", 48, 96, tail)
     at.cell("amber", 32, 32, amber)
+    at.cell("badge", 128, 32, badge)
     at.build()
     return at
 
 
-def decal(proj, uc, vc, w, h, atlas, name, flip=False, off=0.0032, spacing=0.07, r=0.003):
+def decal(proj, uc, vc, w, h, atlas, name, flip=False, off=0.0045, spacing=0.07, r=0.003):
     u0, v0, u1, v1 = atlas.rect(name)
     rect = (u1, v0, u0, v1) if flip else (u0, v0, u1, v1)
     return V.grid_patch(proj, uc, vc, w, h, r, spacing, off=off, uv_rect=rect)
 
 
-def dent(mesh, cx, cy, cz, sigma, depth, scuff=0.35):
-    """Push side-panel vertices inwards around a point and scuff the paint there."""
-    d2 = (mesh.v[:, 0] - cx) ** 2 + (mesh.v[:, 1] - cy) ** 2 + (mesh.v[:, 2] - cz) ** 2
-    k = np.exp(-d2 / (2 * sigma**2))
-    sign = np.sign(cx)
-    mesh.v[:, 0] -= sign * depth * k
-    mesh.c[:, :3] *= (1 - scuff * k)[:, None]
+def body_shell() -> V.Body:
+    return V.Body(
+        [
+            (Y0, 0.368, 0.742, 0.762, 6.0),
+            (0.24, 0.379, 0.778, 0.768, 5.6),
+            (0.36, 0.382, 0.795, 0.770, 5.2),  # T2-style rounded nose: fullest at the lamps
+            (0.44, 0.382, 0.790, 0.770, 5.2),
+            (0.49, 0.382, 0.770, 0.770, 5.2),
+            (0.53, 0.381, 0.738, 0.770, 5.2),
+            (0.585, 0.379, 0.690, 0.768, 5.0),  # windscreen base
+            (0.90, 0.362, 0.535, 0.752, 4.6),  # raked windscreen top
+            (YTOP, 0.352, 0.505, 0.738, 4.6),
+        ],
+        ytop=YTOP,
+        roof_r=0.065,
+        crown=0.014,
+        roof_steps=6,
+        extra_ys=[0.51, 0.56, 0.74, 0.30],
+        bottom_round=0.014,
+    )
 
 
 def build():
@@ -83,293 +112,244 @@ def build():
     atlas = make_atlas()
     V.register_generator("decals_danfo", atlas.tex)
 
-    body = V.Body(
-        [
-            (Y0, 0.374, 0.752, 0.752, 8.0),
-            (0.30, 0.378, 0.757, 0.757, 8.0),
-            (0.52, 0.381, 0.758, 0.758, 7.5),
-            (0.56, 0.381, 0.752, 0.758, 7.5),
-            (0.86, 0.372, 0.640, 0.752, 7.0),
-            (YTOP, 0.366, 0.628, 0.746, 6.5),
-        ],
-        ytop=YTOP,
-        roof_r=0.05,
-        crown=0.010,
-        extra_ys=[0.40, 0.50, 0.75],
-        bottom_round=0.01,
-    )
-    axle_pts = [(WX, WR, WZ), (WX, WR, -WZ), (-WX, WR, WZ), (-WX, WR, -WZ)]
-    color_fn = rust_color_fn(body, axle_pts, seed=3, stripe=STRIPE)
-    shell = body.build(sides=60, color_fn=color_fn, seams=STRIPE)
-    # dented / scuffed panels
-    dent(shell, 0.383, 0.22, -0.36, 0.07, 0.014)
-    dent(shell, -0.383, 0.26, 0.60, 0.06, 0.016, 0.5)
-    dent(shell, -0.37, 0.58, -0.62, 0.08, 0.010)
+    body = body_shell()
+    shell = body.build(sides=46, color_fn=livery_fn(BANDS, base=YELLOW, ao_y=(Y0, 0.30), dark=0.20), seams=SEAMS, cap_rings=(0.82, 0.55, 0.3))
     m.add(shell, "paint")
 
-    # ---- glass, gaskets, sliding-window rails
-    glass_meshes, gasket_meshes, frame_meshes = [], [], []
-    WY, WH = 0.655, 0.30
-    wins = [(0.45, 0.31), (0.085, 0.31), (-0.28, 0.30), (-0.58, 0.20)]
-    for sign in (+1, -1):
-        proj = body.side(sign)
-        for zc, w in wins:
-            window_set(proj, zc, WY, w, WH, 0.04, glass_meshes, gasket_meshes, frame_meshes, spacing=0.06)
-    window_set(body.front, 0.0, 0.685, 0.62, 0.27, 0.05, glass_meshes, gasket_meshes, frame_meshes, spacing=0.055, mullion=False)
-    window_set(body.back, 0.0, WY, 0.44, WH, 0.05, glass_meshes, gasket_meshes, frame_meshes, spacing=0.06, mullion=False)
-    m.add(glass_meshes, "glass")
-
-    trim = list(gasket_meshes) + list(frame_meshes)
-    deco, chrome, steel, decals, lamps = [], [], [], [], []
-
-    # ---- panel seams (dark ribbons)
-    seam_col = 0x20180f
-
-    def seam(proj, pts, w=0.0035, closed=False):
-        r = V.ribbon(proj, pts, w, off=0.0042, closed=closed)
-        V.paint(r, seam_col)
-        trim.append(r)
+    glass, gasket, trim, chrome, steel, decals, lamps, deco = [], [], [], [], [], [], [], []
 
     def run(a, b, n):
         return [(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n) for i in range(n + 1)]
 
+    def seam(proj, pts, w=0.0042, col=0x241a0c):
+        r = V.ribbon(proj, pts, w, off=0.0035)
+        V.paint(r, col)
+        trim.append(r)
+
+    # ---- glasshouse: one long side window per side (raked front edge), black pillars over it
+    WY0, WY1 = 0.612, 0.872
+
+    def zf_at(y):
+        return body.params(y)[1]
+
     for sign in (+1, -1):
         proj = body.side(sign)
-        # cab door: rear edge, top edge, front edge (stops above the wheel arch)
-        top = [(0.2675 + (0.655 - 0.2675) * i / 8, 0.885) for i in range(9)]
-        front = run((0.655, 0.885), (0.655, 0.36), 6)
-        seam(proj, [(0.2675, 0.17 + 0.0)] + run((0.2675, 0.17), (0.2675, 0.86), 8)[1:] + [(0.2675 + 0.02, 0.885)] + top[1:-1] + [(0.655 - 0.02, 0.885)] + front)
-        # handles
-        hz = 0.305
-        hnd = V.bevel_box((sign * 0.384, 0.46, hz), (0.014, 0.026, 0.07), bevel=0.006)
-        V.paint(hnd, 0xb9bbc0)
-        chrome.append(hnd)
-    # sliding door on the right-hand (-X) side: rear edge, bottom, top rail + handle + roller track
-    proj = body.side(-1)
-    seam(proj, run((-0.105, 0.17), (-0.105, 0.885), 10))
-    seam(proj, run((-0.105, 0.17), (0.2675, 0.17), 5))
-    seam(proj, run((-0.105, 0.885), (0.2675, 0.885), 5))
-    rail = V.ribbon(proj, run((-0.34, 0.325), (0.27, 0.325), 12), 0.012, off=0.0025, height=0.006)
+        front = [(zf_at(WY0) - 0.115, WY0), (zf_at(WY1) - 0.10, WY1)]
+        corners = np.array([(-0.635, WY0), front[0], front[1], (-0.625, WY1)])
+        cen = corners.mean(axis=0)
+        ang = np.arctan2(corners[:, 1] - cen[1], corners[:, 0] - cen[0])
+        corners = corners[np.argsort(ang)]
+        poly = V.fillet_poly(corners, 0.035, 4, 0.06)
+        poly_window(proj, poly, glass, gasket, rings=2, off_g=0.0055, pad=0.012, glass_col=(0.03, 0.06, 0.085), sky=(0.20, 0.27, 0.32))
+        # B/C/D pillars (body-colour black band shows through as frame)
+        for zc in (0.215, -0.115, -0.40):
+            pil = V.ribbon(proj, run((zc, WY0 - 0.006), (zc - 0.012, WY1 + 0.006), 6), 0.034, off=0.0078)
+            V.paint(pil, 0x0b0b0c)
+            trim.append(pil)
+        # sliding-window rails across the passenger windows
+        rail = V.ribbon(proj, run((-0.625, 0.745), (0.20, 0.745), 10), 0.009, off=0.0082)
+        V.paint(rail, 0x0b0b0c)
+        trim.append(rail)
+
+    # windscreen (raked front surface) and rear window
+    def screen(proj_params_a, y_lo, y_hi, mrg_lo, mrg_hi, r=0.045):
+        a_lo, a_hi = body.params(y_lo)[0] - mrg_lo, body.params(y_hi)[0] - mrg_hi
+        cc = np.array([(-a_lo, y_lo), (a_lo, y_lo), (a_hi, y_hi), (-a_hi, y_hi)])
+        return V.fillet_poly(cc, r, 4, 0.055)
+
+    poly_window(body.front, screen(None, 0.605, 0.885, 0.06, 0.075), glass, gasket, rings=3, off_g=0.0068, pad=0.013, glass_col=(0.03, 0.065, 0.09), sky=(0.24, 0.31, 0.36))
+    poly_window(body.back, screen(None, 0.62, 0.87, 0.08, 0.085), glass, gasket, rings=2, off_g=0.0068, pad=0.012, streaks=False)
+    m.add(glass, "glass")
+    trim += gasket
+
+    # destination board behind the windscreen top + wipers
+    decals.append(decal(body.front, 0.0, 0.845, 0.30, 0.075, atlas, "dest", off=0.0105, spacing=0.06, r=0.002))
+    for sx in (-1, 1):
+        wp = V.ribbon(body.front, [(sx * 0.03, 0.618), (sx * 0.15, 0.665), (sx * 0.27, 0.71)], 0.008, off=0.011)
+        V.paint(wp, 0x0b0b0d)
+        trim.append(wp)
+
+    # ---- door seams, handles (below the glass band, on the yellow)
+    for sign in (+1, -1):
+        proj = body.side(sign)
+        seam(proj, run((0.275, 0.18), (0.275, 0.585), 8))
+        seam(proj, run((0.64, 0.585), (0.68, 0.24), 6))
+        h = V.bevel_box((sign * 0.384, 0.50, 0.31), (0.016, 0.026, 0.075), bevel=0.007)
+        V.paint(h, 0xc9cbd0)
+        chrome.append(h)
+    projR = body.side(-1)
+    seam(projR, run((-0.12, 0.18), (-0.12, 0.585), 8))
+    rail = V.ribbon(projR, run((-0.42, 0.53), (0.26, 0.53), 10), 0.010, off=0.0025, height=0.005)
     V.paint(rail, 0x15110c)
     trim.append(rail)
-    h2 = V.bevel_box((-0.385, 0.46, 0.17), (0.014, 0.026, 0.075), bevel=0.006)
-    V.paint(h2, 0xb9bbc0)
+    h2 = V.bevel_box((-0.385, 0.50, -0.09), (0.016, 0.026, 0.075), bevel=0.007)
+    V.paint(h2, 0xc9cbd0)
     chrome.append(h2)
-    # left (+X) side: fuel flap + a panel line behind the cab door
     projL = body.side(+1)
-    seam(projL, run((-0.105, 0.17), (-0.105, 0.885), 10), 0.003)
-    cap = V.cylinder((0.384, 0.452, -0.40), 0.022, 0.01, sides=10, axis="x")
-    V.paint(cap, 0xa9abb0)
+    seam(projL, run((-0.12, 0.18), (-0.12, 0.585), 8), 0.0036)
+    cap = V.cylinder((0.385, 0.50, -0.46), 0.024, 0.01, sides=12, axis="x")
+    V.paint(cap, 0xb9bbc0)
     chrome.append(cap)
 
-    # beltline ribs (raised yellow beads) below the stripe, both sides
+    # stripe lettering + rear lettering
     for sign in (+1, -1):
         proj = body.side(sign)
-        for yy in (0.255, 0.215):
-            rb = V.ribbon(proj, run((-0.245, yy), (0.245, yy), 6), 0.012, off=0.0, height=0.006)
-            deco.append(rb)
+        decals.append(decal(proj, 0.01, 0.3665, 0.45, 0.047, atlas, "side_stripe", flip=(sign > 0), off=0.0042, spacing=0.07, r=0.001))
+    decals.append(decal(body.back, 0.0, 0.3665, 0.44, 0.062, atlas, "rear_stripe", flip=True, off=0.0042, r=0.001))
 
-    # ---- wheel arches: dark wells + black flare lips
-    RA = 0.218
+    # ---- wheel arches: dark wells + flared black lips
+    RA = WR + 0.05
     phi0 = np.arcsin((Y0 + 0.003 - WR) / RA)
-    arc = [(RA * np.cos(p), WR + RA * np.sin(p)) for p in np.linspace(phi0, np.pi - phi0, 18)]
+    arc = [(RA * np.cos(p), WR + RA * np.sin(p)) for p in np.linspace(phi0, np.pi - phi0, 14)]
     for sign in (+1, -1):
         proj = body.side(sign)
         for zc in (WZ, -WZ):
             poly = [(zc + dx, y) for dx, y in arc]
             chord = [(poly[-1][0] + (poly[0][0] - poly[-1][0]) * k / 4, Y0 + 0.003) for k in range(1, 4)]
-            poly = poly + chord
-            well = V.patch(proj, np.array(poly), (zc, 0.22), rings=3, off=0.0035)
-            V.paint(well, 0x0a0a0b)
+            well = V.patch(proj, np.array(poly + chord), (zc, 0.24), rings=2, off=0.0032)
+            V.paint(well, 0x070708)
             trim.append(well)
-            lip = V.ribbon(proj, [(zc + dx, y) for dx, y in [(RA * np.cos(p) * 1.0, WR + RA * np.sin(p)) for p in np.linspace(phi0, np.pi - phi0, 14)]], 0.02, off=0.002, height=0.010)
-            V.paint(lip, 0x17171a)
+            lip = V.ribbon(proj, [(zc + dx * 1.03, WR + (y - WR) * 1.03) for dx, y in arc], 0.026, off=0.002, height=0.013)
+            V.paint(lip, 0x141416)
             trim.append(lip)
 
-    # ---- bumpers, grille, lamps (front); tail lamps, plate (rear)
+    # ---- bumpers (wrap-around chrome with a black rubber rub strip and corner caps)
     def bumper(zc, sgn):
-        bar = V.bevel_box((0, 0.172, zc), (0.79, 0.066, 0.05), bevel=0.02, seg=2)
-        V.paint(bar, 0xb9bbc0)
+        bar = V.bevel_box((0, 0.20, zc), (0.80, 0.07, 0.055), bevel=0.024, seg=1)
+        V.paint(bar, 0xd2d4d8)
         chrome.append(bar)
+        rub = V.bevel_box((0, 0.20, zc + sgn * 0.026), (0.66, 0.026, 0.012), bevel=0.005)
+        V.paint(rub, 0x141416)
+        trim.append(rub)
         for sx in (-1, 1):
-            blk = V.bevel_box((sx * 0.25, 0.172, zc + sgn * 0.028), (0.075, 0.05, 0.016), bevel=0.007)
-            V.paint(blk, 0x1a1a1c)
-            trim.append(blk)
-            endc = V.bevel_box((sx * 0.384, 0.172, zc - sgn * 0.045), (0.034, 0.066, 0.115), bevel=0.014)
-            V.paint(endc, 0xb0b2b7)
+            endc = V.bevel_box((sx * 0.386, 0.20, zc - sgn * 0.05), (0.036, 0.07, 0.12), bevel=0.016)
+            V.paint(endc, 0xc7c9ce)
             chrome.append(endc)
-        sk = V.bevel_box((0, 0.118, zc - sgn * 0.01), (0.60, 0.05, 0.04), bevel=0.012)
-        V.paint(sk, 0x1b1a1a)
+        sk = V.bevel_box((0, 0.145, zc - sgn * 0.012), (0.62, 0.05, 0.045), bevel=0.014)
+        V.paint(sk, 0x18181a)
         trim.append(sk)
 
-    bumper(0.781, 1)
-    bumper(-0.781, -1)
+    bumper(0.812, 1)
+    bumper(-0.792, -1)
 
-    # grille: black panel with chrome slats between the head lamps
-    gp = V.grid_patch(body.front, 0.0, 0.352, 0.30, 0.095, 0.015, 0.06, off=0.0045)
-    V.paint(gp, 0x08080a)
+    # ---- front: chrome-slat grille in the black stripe, round head lamps, indicators, plate, badge
+    gp = V.grid_patch(body.front, 0.0, 0.367, 0.34, 0.092, 0.016, 0.05, off=0.0045)
+    V.paint(gp, 0x050506)
     trim.append(gp)
-    for yy in (0.322, 0.352, 0.382):
-        sl = V.ribbon(body.front, [(-0.145 + 0.29 * i / 8, yy) for i in range(9)], 0.010, off=0.0075, height=0.006)
-        V.paint(sl, 0xc3c5ca)
+    gframe = V.frame_strip(body.front, 0.0, 0.367, 0.34, 0.092, 0.016, 0.012, 0.05, off=0.0058)
+    V.paint(gframe, 0xd2d4d8)
+    chrome.append(gframe)
+    for yy in (0.343, 0.367, 0.391):
+        sl = V.ribbon(body.front, [(-0.16 + 0.32 * i / 8, yy) for i in range(9)], 0.010, off=0.008, height=0.006)
+        V.paint(sl, 0xd2d4d8)
         chrome.append(sl)
-    # headlamps (chrome bezel + emissive lens), set on the surface
     for sx in (-1, 1):
-        zc = body.front(sx * 0.265, 0.352)[2]
-        bez = V.bevel_box((sx * 0.265, 0.352, zc + 0.002), (0.108, 0.078, 0.022), bevel=0.014)
-        V.paint(bez, 0xbfc1c6)
-        chrome.append(bez)
-        lens = V.bevel_box((sx * 0.265, 0.352, zc + 0.010), (0.090, 0.060, 0.016), bevel=0.011)
-        V.paint(lens, 0xfff2cf)
+        x = sx * 0.268
+        zc = body.front(x, 0.367)[2]
+        ring = V.cylinder((x, 0.367, zc + 0.008), 0.064, 0.022, sides=14, axis="z", bevel=0.006)
+        V.paint(ring, 0xd8dade)
+        chrome.append(ring)
+        lens = V.lathe([(0.0, 0.0), (0.052, 0.0), (0.054, 0.006), (0.046, 0.019), (0.026, 0.026), (0.0, 0.028)], 14)
+        lens = place(lens, (x, 0.367, zc + 0.016), (90, 0, 0))
+        V.paint(lens, 0xfff4d8)
         lamps.append(lens)
-        # indicator + reflector low on the corner
-        decals.append(decal(body.front, sx * 0.335, 0.262, 0.05, 0.04, atlas, "amber", off=0.0055))
-    decals.append(decal(body.front, 0.0, 0.252, 0.17, 0.0743, atlas, "plate", off=0.0055))
-    decals.append(decal(body.back, 0.0, 0.252, 0.17, 0.0743, atlas, "plate", flip=True, off=0.0055))
-    for sx in (-1, 1):
-        decals.append(decal(body.back, sx * 0.322, 0.50, 0.046, 0.092, atlas, "tail", flip=True, off=0.0055))
+        decals.append(decal(body.front, sx * 0.272, 0.268, 0.062, 0.04, atlas, "amber", off=0.005))
+    decals.append(decal(body.front, 0.0, 0.272, 0.17, 0.0743, atlas, "plate", off=0.03))
+    # bonnet shut line + vents on the sloped nose
+    def nose(x, t):
+        y = 0.49 + 0.09 * t
+        return body.front(x, y)
 
-    # lettering on the stripe (sides and tail)
-    for sign in (+1, -1):
-        proj = body.side(sign)
-        decals.append(decal(proj, -0.18, 0.350, 0.80, 0.0562, atlas, "side_stripe", flip=(sign > 0), off=0.0045, spacing=0.07, r=0.001))
-    decals.append(decal(body.back, 0.0, 0.350, 0.44, 0.062, atlas, "rear_stripe", flip=True, off=0.0045, r=0.001))
+    seam(nose, run((-0.30, 0.25), (0.30, 0.25), 10), 0.0035)
 
-    # destination board behind the windscreen, wipers
-    decals.append(decal(body.front, 0.0, 0.775, 0.30, 0.075, atlas, "dest", off=0.0095, spacing=0.06, r=0.002))
+    # ---- rear: tail lamps, plate, ladder
     for sx in (-1, 1):
-        wp = V.ribbon(body.front, [(sx * 0.03, 0.58), (sx * 0.16, 0.66), (sx * 0.27, 0.735)], 0.007, off=0.0110)
-        V.paint(wp, 0x0b0b0d)
-        trim.append(wp)
+        decals.append(decal(body.back, sx * 0.322, 0.53, 0.05, 0.10, atlas, "tail", flip=True, off=0.0055))
+    decals.append(decal(body.back, 0.0, 0.272, 0.17, 0.0743, atlas, "plate", flip=True, off=0.03))
+    seam(body.back, run((-0.27, 0.18), (-0.27, 0.58), 6))
+    seam(body.back, run((0.27, 0.18), (0.27, 0.58), 6))
+    hb = V.bevel_box((0.0, 0.50, -body.params(0.5)[2] - 0.004), (0.10, 0.022, 0.016), bevel=0.007)
+    V.paint(hb, 0xc9cbd0)
+    chrome.append(hb)
 
-    # mirrors on stalks
+    # mirrors on stalks from the A-pillar
     for sx in (-1, 1):
-        arm = V.tube_poly([(sx * 0.36, 0.60, 0.59), (sx * 0.395, 0.64, 0.615)], 0.007, 5)
+        arm = V.tube_poly([(sx * 0.36, 0.63, 0.61), (sx * 0.39, 0.665, 0.64), (sx * 0.405, 0.70, 0.635)], 0.008, 5)
         V.paint(arm, 0x18181a)
         trim.append(arm)
-        mir = V.bevel_box((sx * 0.397, 0.675, 0.615), (0.046, 0.105, 0.02), bevel=0.008)
-        V.paint(mir, 0x111113)
+        mir = V.bevel_box((sx * 0.41, 0.735, 0.635), (0.044, 0.11, 0.026), bevel=0.012, seg=1)
+        V.paint(mir, 0x121214)
         trim.append(mir)
-        face = V.bevel_box((sx * 0.397, 0.675, 0.605), (0.036, 0.092, 0.006), bevel=0.003)
-        V.paint(face, 0xc0c8cc)
+        face = V.bevel_box((sx * 0.41, 0.735, 0.623), (0.034, 0.094, 0.006), bevel=0.003)
+        V.paint(face, 0xcdd5da)
         chrome.append(face)
 
-    # mud flaps and exhaust
+    # mud flaps, exhaust, chassis, axles
     for sx in (-1, 1):
-        fl = V.bevel_box((sx * 0.335, 0.095, -WZ - 0.115), (0.11, 0.12, 0.008), bevel=0.003)
+        fl = V.bevel_box((sx * 0.33, 0.11, -WZ - 0.15), (0.11, 0.13, 0.01), bevel=0.004)
         V.paint(fl, 0x131315)
         trim.append(fl)
-    ex = V.tube_poly([(-0.22, 0.105, -0.55), (-0.22, 0.105, -0.80), (-0.22, 0.12, -0.83)], 0.02, 8)
-    V.paint(ex, 0x3b3a3c)
+    ex = V.tube_poly([(-0.22, 0.12, -0.55), (-0.22, 0.12, -0.80), (-0.22, 0.135, -0.84)], 0.022, 8)
+    V.paint(ex, 0x55545a)
     steel.append(ex)
-    # chassis box and axles
-    ch = V.bevel_box((0, 0.098, 0.0), (0.66, 0.06, 1.28), bevel=0.01)
-    V.paint(ch, 0x131214)
+    ch = V.bevel_box((0, 0.11, 0.0), (0.66, 0.07, 1.30), bevel=0.012)
+    V.paint(ch, 0x121214)
     trim.append(ch)
     for z in (WZ, -WZ):
-        ax = V.cylinder((0, WR, z), 0.02, 0.62, sides=8, axis="x")
+        ax = V.cylinder((0, WR, z), 0.022, 0.60, sides=8, axis="x")
         V.paint(ax, 0x262628)
         steel.append(ax)
 
-    # roof: pressed ribs, drip-rail beads along the edge and a vent hatch
+    # ---- roof: pressed ribs, gutter beads, a light rack with a few bundles
     def roof_proj(x, z):
         return np.array([x, body.roof_y(x, z), z])
 
     below = lambda c: c - np.array([0.0, 1.0, 0.0])
-    for xr in (-0.2, -0.09, 0.09, 0.2):
-        rb = V.ribbon(roof_proj, [(xr, -0.66 + 1.2 * i / 10) for i in range(11)], 0.034, off=0.0, height=0.0045, ref_fn=below)
+    for xr in (-0.19, -0.065, 0.065, 0.19):
+        rb = V.ribbon(roof_proj, [(xr, -0.62 + 1.04 * i / 10) for i in range(11)], 0.036, off=0.0, height=0.005, ref_fn=below)
+        V.paint(rb, YELLOW)
+        rb.c[:, :3] *= 0.96
         deco.append(rb)
-    hatch = V.bevel_box((0.0, body.roof_y(0, 0.2) + 0.004, 0.2), (0.17, 0.012, 0.13), bevel=0.005, seg=1)
-    V.paint(hatch, 0xd6a410)
-    deco.append(hatch)
     for sign in (+1, -1):
         proj = body.side(sign)
-        gut = V.ribbon(proj, run((-0.70, 0.872), (0.60, 0.872), 12), 0.012, off=0.0, height=0.006)
-        V.paint(gut, 0x2a2316)
-        trim.append(gut)
+        gut = V.ribbon(proj, run((-0.70, 0.918), (0.48, 0.918), 12), 0.012, off=0.0, height=0.007)
+        V.paint(gut, YELLOW)
+        deco.append(gut)
 
-    # ---- roof rack, luggage and rear ladder
-    YR = 0.975
-    rack_col = 0x3d3f45
-    rx = 0.305
-    z0, z1 = -0.64, 0.46
+    YR = 1.025
+    rack_col = 0x2c2e33
+    rx, z0, z1 = 0.29, -0.60, 0.30
 
-    def rod(p0, p1, r=0.0075, sides=5):
+    def rod(p0, p1, r=0.0085, sides=6):
         t = V.strut(p0, p1, r, sides, caps=False)
         V.paint(t, rack_col)
         steel.append(t)
 
     for sx in (-1, 1):
         rod((sx * rx, YR, z0), (sx * rx, YR, z1))
-    for zz in np.linspace(z0, z1, 7):
-        rod((-rx, YR, zz), (rx, YR, zz), 0.0065)
-    for sx in (-1, 1):
-        for zz in (z0, -0.18, z1):
-            rod((sx * rx, body.roof_y(sx * rx, zz) - 0.004, zz), (sx * rx, YR, zz), 0.009)
-        # raised fence over the rear half
-        rod((sx * rx, YR, z0), (sx * rx, 1.02, z0), 0.0075)
-        rod((sx * rx, 1.02, z0), (sx * rx, 1.02, -0.20), 0.0065)
-        rod((sx * rx, 1.02, -0.20), (sx * rx, YR, -0.20), 0.0075)
-    rod((-rx, 1.02, z0), (rx, 1.02, z0), 0.0065)
+        for zz in (z0, -0.15, z1):
+            rod((sx * rx, body.roof_y(sx * rx, zz) - 0.004, zz), (sx * rx, YR, zz), 0.010)
+    for zz in np.linspace(z0, z1, 5):
+        rod((-rx, YR, zz), (rx, YR, zz), 0.0075)
 
-    # luggage
-    def sack(c, r, col, seed, tilt=0.0):
-        b = V.blob(c, r, 7, 14, seed=seed, bumpy=0.10)
+    def bundle(c, r, col, seed):
+        b = V.blob(c, r, 5, 10, seed=seed, bumpy=0.07)
         V.paint(b, col)
-        V.finish(b, dirt=0.35, seed=seed)
+        V.finish(b, ao=0.25, ao_h=(c[1] - r[1], c[1] + r[1]))
         trim.append(b)
 
-    sack((0.13, 1.0, -0.45), (0.175, 0.066, 0.10), 0xdcd5c2, 1)
-    sack((-0.14, 0.995, -0.45), (0.15, 0.062, 0.095), 0x9c7a49, 2)
-    sack((0.02, 1.012, -0.32), (0.14, 0.062, 0.085), 0xcfc7b0, 5)
-    tarp = V.bevel_box((0.06, 0.998, 0.0), (0.40, 0.07, 0.25), bevel=0.032, seg=2)
-    V.paint(tarp, 0x2a5a98)
-    V.finish(tarp, dirt=0.3, seed=9)
-    trim.append(tarp)
-    for zz in (-0.065, 0.075):
-        band = V.bevel_box((0.06, 0.998, zz), (0.408, 0.078, 0.012), bevel=0.004, seg=1)
-        V.paint(band, 0x3c2c1c)
-        trim.append(band)
-    mat = V.cylinder((0.0, 1.0, 0.30), 0.048, 0.50, sides=9, axis="x")
-    V.paint(mat, 0xdcc66e)
-    V.finish(mat, dirt=0.3, seed=11)
-    trim.append(mat)
-    for xx in (-0.14, 0.12):
-        st = V.cylinder((xx, 1.0, 0.30), 0.052, 0.014, sides=9, axis="x")
-        V.paint(st, 0x9a3430)
-        trim.append(st)
-    bag = V.bevel_box((-0.19, 1.025, -0.02), (0.17, 0.075, 0.20), bevel=0.034, seg=2)
-    V.paint(bag, 0xa8352f)
-    V.finish(bag, dirt=0.3, seed=13)
+    bundle((0.10, 1.065, -0.42), (0.16, 0.058, 0.11), 0xe4dcc6, 1)
+    bundle((-0.12, 1.06, -0.40), (0.13, 0.052, 0.10), 0x2f62a8, 2)
+    bag = V.bevel_box((0.02, 1.07, -0.08), (0.36, 0.085, 0.20), bevel=0.035, seg=1)
+    V.paint(bag, 0xc23a2e)
     trim.append(bag)
-    for zz in (-0.06, 0.03):
-        bb = V.bevel_box((-0.19, 1.025, zz), (0.176, 0.08, 0.022), bevel=0.006, seg=1)
-        V.paint(bb, 0x2f5a96 if zz < 0 else 0xe6e0d0)
-        trim.append(bb)
-    jug = V.bevel_box((0.215, 1.03, 0.02), (0.075, 0.085, 0.13), bevel=0.022, seg=2)
-    V.paint(jug, 0x3b8654)
+    for zz in (-0.13, -0.03):
+        band = V.bevel_box((0.02, 1.07, zz), (0.366, 0.09, 0.014), bevel=0.004, seg=1)
+        V.paint(band, 0x2a2018)
+        trim.append(band)
+    jug = V.bevel_box((-0.16, 1.075, 0.18), (0.08, 0.09, 0.13), bevel=0.022, seg=1)
+    V.paint(jug, 0x2f9a58)
     trim.append(jug)
-    cap2 = V.cylinder((0.215, 1.078, 0.0), 0.016, 0.012, sides=6)
-    V.paint(cap2, 0x1a1a1a)
-    trim.append(cap2)
-    bucket = V.lathe([(0.0, 0.0), (0.040, 0.0), (0.060, 0.075), (0.066, 0.075), (0.0, 0.075)], 10)
-    bucket = place(bucket, (-0.20, 0.985, 0.37))
-    V.paint(bucket, 0xc4553a)
-    trim.append(bucket)
-
-    # ladder on the tail (right of the rear window)
-    for lx in (0.255, 0.345):
-        pts = []
-        for yy in (0.30, 0.55, 0.85):
-            pts.append(body.back(lx, yy) + np.array([0.0, 0.0, -0.022]))
-        pts.append(np.array([lx, 0.968, body.back(lx, 0.9)[2] - 0.02]))
-        pts.append(np.array([lx, YR, -0.64]))
-        t = V.tube_poly(pts, 0.0065, 5, caps=False)
-        V.paint(t, rack_col)
-        steel.append(t)
-    for yy in (0.36, 0.48, 0.60, 0.72, 0.84):
-        pa, pb = body.back(0.255, yy) + np.array([0, 0, -0.022]), body.back(0.345, yy) + np.array([0, 0, -0.022])
-        rod(tuple(pa), tuple(pb), 0.0075)
 
     m.add(deco, "paint")
     m.add(trim, "trim")
@@ -377,6 +357,6 @@ def build():
     m.add(steel, "steel")
     m.add(decals, "decal")
     m.add(lamps, "lamp")
-    add_wheel_set(m, Wheels(WR, WW, 0.1), [("wheel_FL", WX, WR, WZ, 1), ("wheel_FR", -WX, WR, WZ, -1), ("wheel_RL", WX, WR, -WZ, 1), ("wheel_RR", -WX, WR, -WZ, -1)])
-    V.scale_model(m, 0.965)
-    return m, std_specs(decal_tex="decals_danfo")
+    add_premium_wheels(m, WR, WW, RIM, [("wheel_FL", WX, WR, WZ, 1), ("wheel_FR", -WX, WR, WZ, -1), ("wheel_RL", WX, WR, -WZ, 1), ("wheel_RR", -WX, WR, -WZ, -1)], rim_colour=0xd5d7dc)
+    V.scale_model(m, 0.95)
+    return m, clean_specs(decal_tex="decals_danfo")
