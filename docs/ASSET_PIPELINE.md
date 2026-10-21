@@ -34,7 +34,8 @@ Assets are deterministic (seeded) and committed; the Vite build only needs the c
 - **Names** (the game finds parts by name):
   - Vehicles: wheels are separate nodes named `wheel_FL`, `wheel_FR`, `wheel_RL`, `wheel_RR` (Keke: `wheel_F`, `wheel_RL`, `wheel_RR`; Okada: `wheel_F`, `wheel_R`) with their **origin at the axle centre** and the axle along local **X** (the game spins them about X). Optional: `steering` node for the front fork/handlebars.
   - Generator: a node `lamp` (emissive indicator light), node `antenna` (remote aerial), `casing` material for the body paint.
-  - Characters: a skinned mesh with one armature; the exact clip list is in `tools/assets/characters.py` (Idle, Run, RunCarry, IdleCarry, Ride, Place, Kick, Throw, Stumble, Cheer, Win, Lose, DieBlast, DieVehicle).
+  - Characters: a skinned mesh with one armature; the exact clip list is in `tools/assets/characters.py` (Idle, Run, RunCarry, IdleCarry, Ride, Place, Kick, Throw, Stumble, Cheer, Win, Lose, DieBlast, DieVehicle). Bodies are passed through `chargen.stylise()` and heads (region `head`) are enlarged by `build_characters.HEAD_SCALE` about the chin; the crowd uses the same bodies and head scale.
+  - Crowd: one node per pose, named `spec_<name>_<role>_<frame>` with role `watch` | `talk` | `walk` and frame `0` (calm / first stride) or `1` (reaction / second stride). The game pairs the frames by name.
 - **Budgets** (mobile friendly): characters <= 9k triangles, <= 5 materials; vehicles <= 8k triangles, <= 8 materials; props <= 2k triangles, 1-2 materials; buildings/kiosks <= 3k triangles each. Textures power-of-two, <= 1024 px (vehicles, characters), <= 512 px (props); prefer one shared atlas per model. Whole `src/assets/models` target: <= 15 MB.
 - **Static props that the game instances** (pillars, crates, tyre stacks, barriers, sacks) must be **a single mesh with a single material** so they can be rendered with `InstancedMesh`.
 - Materials are glTF PBR (metallic-roughness). Emissive only where something really glows (lamps).
@@ -53,6 +54,14 @@ node tools/viewer/shot.mjs out.png "model=/src/assets/models/danfo.glb&view=thre
 ```
 
 It prints triangle/mesh/material/bone counts and the clip list. **Always inspect the screenshot** from at least the in-game view (`view=game`) and one close view before calling a model done.
+
+For whole-scene art reviews against `reference/`, `tools/viewer/gameshot.mjs` screenshots the real game (4 players, seed 7) at chosen simulation ticks:
+
+```bash
+node tools/viewer/gameshot.mjs out/shot 1280 720 high 300 330   # -> out/shot-300.png, out/shot-330.png
+node tools/viewer/gameshot.mjs out/phone 844 390 medium 300     # landscape phone (touch, 2x DPR)
+MOUNT=1 DSF=2 node tools/viewer/gameshot.mjs out/okada 1280 720 high 230   # everyone on an Okada, 2x
+```
 
 ## Regeneration
 

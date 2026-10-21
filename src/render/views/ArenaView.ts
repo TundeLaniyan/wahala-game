@@ -2,6 +2,7 @@ import {
   CircleGeometry,
   Matrix4,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   PlaneGeometry,
   Quaternion,
@@ -16,6 +17,7 @@ import { modelledPillars, pillarParts, softBlockParts, softVariantFor, softVaria
 import type { SoftVariant } from '../assets/props';
 import type { Layout } from '../coords';
 import { floorMaterial } from '../assets/floor';
+import { contactShadowTexture } from '../textures';
 import { InstanceSet } from './InstanceSet';
 import type { FrameContext, View } from './types';
 
@@ -36,6 +38,8 @@ export class ArenaView implements View {
   private readonly p = new Vector3();
   private readonly s = new Vector3(1, 1, 1);
   private readonly decals = new Group();
+  /** Contact shadows under every pillar and prop: grounding/AO that also works with shadows off. */
+  private readonly contact: InstanceSet;
 
   constructor(
     state: GameState,
@@ -61,6 +65,28 @@ export class ArenaView implements View {
       this.soft.set(v, set);
       this.group.add(set.group);
     }
+    const contactGeo = new PlaneGeometry(1.5, 1.5).rotateX(-Math.PI / 2).translate(0.06, 0.006, -0.03); // nudged down-sun
+    this.contact = new InstanceSet(
+      [
+        {
+          geometry: contactGeo,
+          material: new MeshBasicMaterial({
+            map: contactShadowTexture(),
+            color: 0x000000,
+            transparent: true,
+            opacity: 0.42,
+            depthWrite: false,
+          }),
+        },
+      ],
+      W * H,
+    );
+    for (const m of this.contact.group.children) {
+      m.castShadow = false;
+      m.receiveShadow = false;
+      m.renderOrder = 1;
+    }
+    this.group.add(this.contact.group);
     this.cache = new Array<number>(W * H).fill(-1);
     this.initialHard = new Set(state.tiles.flatMap((t, i) => (t === Tile.Hard ? [i] : [])));
     this.group.add(this.decals);
@@ -135,6 +161,7 @@ export class ArenaView implements View {
   }
 
   private removeTile(i: number, x: number, y: number, kind: number): void {
+    this.contact.remove(i);
     if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.remove(i);
     else if (kind === Tile.Soft) this.soft.get(softVariantFor(x, y, this.variants))!.remove(i);
   }
@@ -149,6 +176,16 @@ export class ArenaView implements View {
     this.s.set(1, 1, 1);
     this.m.compose(this.p, this.q, this.s);
     this.pillars[this.pillarVariant(x, y)]!.set(i, this.m);
+    if (lift === 0) this.setContact(i, x, y, 1);
+  }
+
+  private setContact(i: number, x: number, y: number, size: number): void {
+    this.p.set(this.layout.wx(x), 0, this.layout.wz(y));
+    this.q.identity();
+    this.s.set(size, 1, size);
+    this.m.compose(this.p, this.q, this.s);
+    this.contact.set(i, this.m);
+    this.s.set(1, 1, 1);
   }
 
   private placeSoft(i: number, x: number, y: number): void {
@@ -158,10 +195,12 @@ export class ArenaView implements View {
     this.s.set(1, 1, 1);
     this.m.compose(this.p, this.q, this.s);
     this.soft.get(softVariantFor(x, y, this.variants))!.set(i, this.m);
+    this.setContact(i, x, y, 0.85);
   }
 
   dispose(): void {
     for (const p of this.pillars) p.dispose();
     for (const s of this.soft.values()) s.dispose();
+    this.contact.dispose();
   }
 }

@@ -1,4 +1,12 @@
-import { Group } from 'three';
+import {
+  AdditiveBlending,
+  CanvasTexture,
+  DoubleSide,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  PlaneGeometry,
+} from 'three';
 import type { Vehicle } from '../../sim';
 import { createVehicleModel, spinWheel } from '../assets/vehicles';
 import type { VehicleModel } from '../assets/vehicles';
@@ -7,10 +15,77 @@ import type { FrameContext, View } from './types';
 
 interface Visual {
   model: VehicleModel;
+  /** speed streaks trailing a driving vehicle (local -X is behind it) */
+  trail: Group;
+  trailK: number;
   yaw: number;
   smokeAt: number;
   lastPos: { x: number; z: number; y: number };
   wrecked: boolean;
+}
+
+const TRAIL_COLORS: Record<Vehicle['kind'], number> = { danfo: 0xffd23a, taxi: 0xffe58a, keke: 0x9dffb0 };
+let streakTex: CanvasTexture | null = null;
+
+/** Soft streak: bright at the vehicle end, fading to nothing behind it and at the edges. */
+function streakTexture(): CanvasTexture {
+  if (streakTex) return streakTex;
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 16;
+  const g = c.getContext('2d')!;
+  const along = g.createLinearGradient(0, 0, 128, 0);
+  along.addColorStop(0, 'rgba(255,255,255,0)');
+  along.addColorStop(0.75, 'rgba(255,255,255,0.55)');
+  along.addColorStop(1, 'rgba(255,255,255,0.95)');
+  g.fillStyle = along;
+  g.fillRect(0, 0, 128, 16);
+  g.globalCompositeOperation = 'destination-in';
+  const across = g.createLinearGradient(0, 0, 0, 16);
+  across.addColorStop(0, 'rgba(0,0,0,0)');
+  across.addColorStop(0.5, 'rgba(0,0,0,1)');
+  across.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = across;
+  g.fillRect(0, 0, 128, 16);
+  streakTex = new CanvasTexture(c);
+  return streakTex;
+}
+
+function createTrail(kind: Vehicle['kind']): Group {
+  const trail = new Group();
+  const geo = new PlaneGeometry(1, 1).translate(-0.5, 0, 0); // extends backwards from the origin
+  const mat = new MeshBasicMaterial({
+    map: streakTexture(),
+    color: TRAIL_COLORS[kind],
+    transparent: true,
+    blending: AdditiveBlending,
+    depthWrite: false,
+    side: DoubleSide,
+  });
+  const lanes =
+    kind === 'danfo'
+      ? [
+          [0.42, 0.35, 0.16],
+          [-0.42, 0.35, 0.16],
+          [0.3, 0.95, 0.12],
+          [-0.3, 0.95, 0.12],
+          [0, 0.62, 0.22],
+        ]
+      : [
+          [0.3, 0.3, 0.12],
+          [-0.3, 0.3, 0.12],
+          [0, 0.55, 0.16],
+        ];
+  for (const [z, y, w] of lanes) {
+    const streak = new Mesh(geo, mat);
+    streak.rotation.x = -Math.PI / 2 + 0.5; // tilted towards the elevated camera
+    streak.position.set(-0.35, y!, z!);
+    streak.scale.set(1, w!, 1);
+    streak.renderOrder = 7;
+    trail.add(streak);
+  }
+  trail.visible = false;
+  return trail;
 }
 
 /** Danfo, taxi and Keke in motion. Models face +X; yaw maps travel direction onto that. */
@@ -27,8 +102,17 @@ export class VehicleViews implements View {
       let v = this.visuals.get(veh.id);
       if (!v) {
         const model = createVehicleModel(veh.kind);
-        this.group.add(model.root);
-        v = { model, yaw: this.targetYaw(veh), smokeAt: 0, lastPos: { x: 0, z: 0, y: 0 }, wrecked: false };
+        const trail = createTrail(veh.kind);
+        this.group.add(model.root, trail);
+        v = {
+          model,
+          trail,
+          trailK: 0,
+          yaw: this.targetYaw(veh),
+          smokeAt: 0,
+          lastPos: { x: 0, z: 0, y: 0 },
+          wrecked: false,
+        };
         this.visuals.set(veh.id, v);
       }
       const cur = veh.route[veh.index]!;
@@ -50,6 +134,20 @@ export class VehicleViews implements View {
       const spin = veh.phase === 'driving' ? ((dt * 60) / Math.max(4, veh.stepTotal)) * 5 : 0;
       for (const w of v.model.wheels) spinWheel(v.model, w, spin);
       v.lastPos = { x: layout.wx(gx), z: layout.wz(gy), y: 0.5 };
+      // speed streaks: longer for faster vehicles, fading in on launch and out when crashing
+      const driving = veh.phase === 'driving';
+      v.trailK = Math.max(0, Math.min(1, v.trailK + (driving ? dt * 4 : -dt * 3)));
+      v.trail.visible = v.trailK > 0.01;
+      if (v.trail.visible) {
+        const speed = 60 / Math.max(4, veh.stepTotal); // tiles per second
+        v.trail.position.copy(v.model.root.position);
+        v.trail.rotation.set(0, v.yaw, 0);
+        const len = (0.6 + speed * 0.32) * v.trailK;
+        v.trail.children.forEach((c, i) => {
+          c.scale.x = len * (1 + 0.15 * Math.sin(time * 30 + i * 1.7));
+          ((c as Mesh).material as MeshBasicMaterial).opacity = 0.75 * v.trailK;
+        });
+      }
       if ((veh.damage > 0 || crashing) && time > v.smokeAt) {
         v.smokeAt = time + 0.08;
         fx.smokePuff(layout.wx(gx), 0.7, layout.wz(gy), 0.5);
@@ -60,7 +158,10 @@ export class VehicleViews implements View {
     }
     for (const [id, v] of this.visuals) {
       if (!live.has(id)) {
-        this.group.remove(v.model.root);
+        this.group.remove(v.model.root, v.trail);
+        const streak = v.trail.children[0] as Mesh | undefined;
+        streak?.geometry.dispose();
+        (streak?.material as MeshBasicMaterial | undefined)?.dispose();
         this.visuals.delete(id);
       }
     }

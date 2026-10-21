@@ -136,7 +136,7 @@ def _build(name, seed, band_cfg, posters_f, posters_r, posters_l, extra_front=No
         vc_ground(mm, h=0.15, dark=0.35, seed=seed)
         vc_fn(mm, lambda p: 0.94 + 0.06 * value_noise(p, 8.0, seed + 5))
         m.add(mm)
-    return m.export({"main": atlas.mat(normal_strength=0.2)})
+    return m.export({"main": atlas.mat(normal_strength=0.2, jpeg_q=76)})
 
 
 def _base_parts(chip: bool, loops: bool):

@@ -307,6 +307,15 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
   dress('env_kiosk', [
     { x: -W / 2 + 2.2, z: -H / 2 - 3.5, ry: 0, sx: 0.8, sy: 0.8, sz: 0.8 },
     { x: W / 2 - 3.2, z: -H / 2 - 3.5, ry: 0, sx: 0.8, sy: 0.8, sz: 0.8 },
+    { x: 1.2, z: -H / 2 - 3.6, ry: 0.05, sx: 0.8, sy: 0.8, sz: 0.8 },
+    { x: -W / 2 - 3.3, z: H / 2 + 2.6, ry: Math.PI / 2, sx: 0.8, sy: 0.8, sz: 0.8 },
+  ]);
+  // roadside trade signs ("CHOP HERE", "POS HERE", "RECHARGE") around the lot
+  dress('env_shopsign', [
+    { x: -W / 2 - 1.2, z: H / 2 + 2.7, ry: 0.35 },
+    { x: W / 2 + 1.3, z: H / 2 + 2.5, ry: Math.PI - 0.35 },
+    { x: -W / 2 + 5.4, z: -H / 2 - 3.25, ry: 0 },
+    { x: W / 2 + 3.1, z: -H / 2 - 2.9, ry: -Math.PI / 2 },
   ]);
   dress('env_lamp', [
     { x: -W / 2 - 1.9, z: -H / 2 - 1.8, ry: 0.4 },
@@ -322,6 +331,8 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
     { x: -W / 2 - 1.4, z: H / 2 + 1.9, ry: 0.5 },
     { x: W / 2 + 1.5, z: H / 2 + 1.8, ry: -0.4 },
     { x: -2.5, z: -H / 2 - 2.5, ry: 1.2 },
+    { x: -W / 2 - 1.3, z: -H / 2 - 1.1, ry: 0.2 },
+    { x: W / 2 + 1.3, z: -H / 2 - 1.2, ry: 2.2 },
   ]);
   dress('env_barrel', [
     { x: -W / 2 + 4.0, z: H / 2 + 1.7, ry: 0.3 },

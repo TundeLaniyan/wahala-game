@@ -99,3 +99,15 @@ Gameplay rules, the simulation and the AI are unchanged (all 165 prior unit test
 - **UI:** new typography (Anton / Barlow Condensed), title screen with a live bots-only attract match behind it, loading bar, 3D-rendered portraits for the HUD and character cards, warm vignette.
 - **Audio:** music removed; synthesised SFX bank (81 sounds), engine/generator loops, crowd ambience and event-driven crowd reactions; recorded-sample override slots.
 - **Verification:** see the overhaul report in the PR / final message; `npm run check` and the Playwright suite were run.
+
+## Visual pass v3 (branch `claude/wahala-visual-v3`, based on `claude/presentation-overhaul`)
+
+Presentation only: `src/sim`, `src/ai`, `src/input`, `src/audio`, `src/app` are untouched. Decisions V1-V9 in `docs/DECISIONS.md`.
+
+- **Camera:** elevated three-quarter view (51 deg pitch, 44 deg FOV, re-centred fit). Unit test: every tile stays inside the HUD-free band and pointer picking round-trips every tile on desktop, landscape phone and portrait.
+- **Arena:** tall pale precast pillars with blue/yellow foot bands, 1.05 m perimeter walls with pilasters (low on the camera side), smooth light concrete slabs, instanced contact shadows under every pillar/prop (grounding even with shadows off), light-pine crates, weighted destructible variety, more kiosks, shop signs and tyre stacks around the lot.
+- **Characters:** stylised proportions (thicker limbs, 1.2x heads, chunkier trainers), fuller faces with lid lines, livelier idle, 8% larger, warm rim light, slot-coloured silhouettes when hidden behind scenery.
+- **Okada:** 1.55x red bike with visible wheels and front end, rider seated, golden shield bubble + badge, mount pop, dismount hop, speed dust.
+- **Lighting/effects:** warmer, stronger sun; tone-mapping colour grade; flames with orange body + hot core; pooled flame point lights (0/1/3 by quality); vehicle speed streaks.
+- **Crowd:** 70 / 170 / 320 people (low/medium/high), watchers, conversation pairs and walkers with calm/react pose flipbooks; ankara, wrappers, kaftans, basins.
+- **Tools:** `tools/viewer/gameshot.mjs` (real-game screenshots for art review).

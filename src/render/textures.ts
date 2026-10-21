@@ -426,3 +426,25 @@ export function tileGlowTexture(): CanvasTexture {
     return tex(c);
   });
 }
+
+/** Soft square contact shadow (ambient-occlusion stand-in) laid under pillars and props. */
+export function contactShadowTexture(): CanvasTexture {
+  return cached('contact', () => {
+    const [c, g] = canvas(64, 64);
+    const img = g.createImageData(64, 64);
+    for (let y = 0; y < 64; y++) {
+      for (let x = 0; x < 64; x++) {
+        // distance outside an inner square, normalised: dark under the footprint, fading outwards
+        const dx = Math.max(0, Math.abs(x - 31.5) - 16) / 16;
+        const dy = Math.max(0, Math.abs(y - 31.5) - 16) / 16;
+        const d = Math.min(1, Math.hypot(dx, dy));
+        const a = (1 - d) * (1 - d);
+        const i = (y * 64 + x) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = 0;
+        img.data[i + 3] = Math.round(a * 255);
+      }
+    }
+    g.putImageData(img, 0, 0);
+    return tex(c);
+  });
+}

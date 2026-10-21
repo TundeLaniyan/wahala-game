@@ -117,7 +117,7 @@ def _wall(name: str, seed: int, posters_f, posters_b, extra_f=None, extra_b=None
         mm = box_uv(part, lo, hi, rects)
         vc_ground(mm, 0.12, 0.35, seed)
         m.add(mm)
-    return m.export({"main": atlas.mat(normal_strength=0.3)})
+    return m.export({"main": atlas.mat(normal_strength=0.3, jpeg_q=72)})  # big atlas: keep the bundle under budget
 
 
 def wall_a() -> dict:

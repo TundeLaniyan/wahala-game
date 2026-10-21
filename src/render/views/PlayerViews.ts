@@ -220,6 +220,9 @@ export class PlayerViews implements View {
     const swing = moving ? Math.sin(v.phase * 2) * 0.75 : Math.sin(time * 2 + p.id) * 0.03;
     const bob = moving ? Math.abs(Math.sin(v.phase * 2)) * 0.045 : Math.sin(time * 2.4 + p.id) * 0.012;
     m.bike.visible = p.mounted;
+    // stamp mount/dismount before animating so the first mounted frame already starts the pop
+    if (p.mounted && !v.wasMounted) v.mountedAt = time;
+    if (!p.mounted && v.wasMounted) v.dismountedAt = time;
     if (m.rigged) this.animate(ctx, p, v, moving, speed);
     else this.poseProcedural(ctx, p, v, moving, swing, bob);
     this.decorate(ctx, p, v, w);

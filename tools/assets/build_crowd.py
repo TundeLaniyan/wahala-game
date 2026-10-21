@@ -19,9 +19,9 @@ from loft import vertex_normals
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "src", "assets", "models")
 
 
-def cluster_decimate(m, cell: float = 0.034):
+def cluster_decimate(m, cell: float = 0.042):
     """Vertex-clustering decimation: snaps vertices to a `cell` grid, merges each cell into its mean vertex
-    (colours averaged) and drops collapsed triangles. Crowd figures are seen at ~40 px, so a 3.4 cm grid (under a pixel) is
+    (colours averaged) and drops collapsed triangles. Crowd figures are seen at ~40 px, so a 4.2 cm grid (about a pixel) is
     invisible in game and roughly halves the triangle count."""
     key = np.floor(m.v / cell).astype(np.int64)
     _, inv, counts = np.unique(key, axis=0, return_inverse=True, return_counts=True)

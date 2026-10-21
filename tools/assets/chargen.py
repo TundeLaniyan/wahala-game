@@ -263,7 +263,8 @@ def build_head(b: Body) -> Mesh:
     v = m.v
     y = (v[:, 1] - cy) / ry  # -1..1
     # jaw / chin taper
-    taper = 1.0 - 0.20 * smoothstep(0.1, -1.0, y) * (1.0 + 0.0 * b.face_soft)
+    # fuller jaw and cheeks (the old 20 % taper read as a V-shaped mannequin chin)
+    taper = 1.0 - (0.11 + 0.03 * b.face_soft) * smoothstep(0.0, -1.0, y)
     v[:, 0] = (v[:, 0]) * taper
     chin = np.exp(-(((v[:, 0]) / 0.03) ** 2 + ((v[:, 1] - (cy - ry * 0.92)) / 0.035) ** 2))
     v[:, 2] += np.where(v[:, 2] > 0, chin * 0.012, 0)
@@ -282,25 +283,32 @@ def build_head(b: Body) -> Mesh:
     # nose: bridge, tip, wings
     bridge = np.exp(-(((v[:, 0]) / 0.010) ** 2 + ((v[:, 1] - (cy - ry * 0.05)) / 0.030) ** 2)) * np.where(v[:, 2] > 0, 1, 0)
     tip = np.exp(-(((v[:, 0]) / 0.014) ** 2 + ((v[:, 1] - (cy - ry * 0.30)) / 0.014) ** 2)) * np.where(v[:, 2] > 0, 1, 0)
-    wings = sum(np.exp(-(((v[:, 0] - s * 0.017) / 0.011) ** 2 + ((v[:, 1] - (cy - ry * 0.33)) / 0.010) ** 2)) for s in (-1, 1)) * np.where(v[:, 2] > 0, 1, 0)
-    v[:, 2] += bridge * 0.007 + tip * (0.020 - 0.004 * b.face_soft) + wings * 0.008
+    # broad nose with full alae
+    wings = sum(np.exp(-(((v[:, 0] - s * 0.021) / 0.013) ** 2 + ((v[:, 1] - (cy - ry * 0.34)) / 0.012) ** 2)) for s in (-1, 1)) * np.where(v[:, 2] > 0, 1, 0)
+    v[:, 2] += bridge * 0.006 + tip * (0.019 - 0.004 * b.face_soft) + wings * 0.011
     # mouth region: lips pushed forward, philtrum + mouth line dip
     lips_y = cy - ry * 0.58
-    lips = np.exp(-(((v[:, 0]) / 0.024) ** 2 + ((v[:, 1] - lips_y) / 0.012) ** 2)) * np.where(v[:, 2] > 0, 1, 0)
-    v[:, 2] += lips * (0.008 + 0.004 * b.face_soft)
-    line = np.exp(-(((v[:, 0]) / 0.020) ** 2 + ((v[:, 1] - (lips_y + 0.001)) / 0.0025) ** 2)) * np.where(v[:, 2] > 0, 1, 0)
-    v[:, 2] -= line * 0.004
+    lips = np.exp(-(((v[:, 0]) / 0.028) ** 2 + ((v[:, 1] - lips_y) / 0.014) ** 2)) * np.where(v[:, 2] > 0, 1, 0)
+    v[:, 2] += lips * (0.011 + 0.004 * b.face_soft)
+    line = np.exp(-(((v[:, 0]) / 0.024) ** 2 + ((v[:, 1] - (lips_y + 0.001)) / 0.0028) ** 2)) * np.where(v[:, 2] > 0, 1, 0)
+    v[:, 2] -= line * 0.005
     m.v = v
     skin = srgb_to_linear(hexrgb(b.skin))
     warm = srgb_to_linear(hexrgb(b.skin) * np.array([1.12, 0.92, 0.86]))
-    lip = srgb_to_linear(hexrgb(b.skin) * np.array([0.95, 0.62, 0.62]))
+    lip = srgb_to_linear(hexrgb(b.skin) * np.array([0.78, 0.48, 0.48]))
+    mouth = srgb_to_linear(np.array([0.10, 0.04, 0.03]))
     col = np.tile(skin, (len(v), 1))
     col = col * (1 - 0.5 * tip[:, None]) + warm * 0.5 * tip[:, None]
     for sx in (-1, 1):
         cheek = np.exp(-(((v[:, 0] - sx * rx * 0.62) / 0.03) ** 2 + ((v[:, 1] - (cy - ry * 0.28)) / 0.03) ** 2)) * np.where(v[:, 2] > 0, 1, 0)
         col = col * (1 - 0.35 * cheek[:, None]) + warm * 0.35 * cheek[:, None]
-    lipmask = np.exp(-(((v[:, 0]) / 0.020) ** 2 + ((v[:, 1] - lips_y) / 0.008) ** 2)) * np.where(v[:, 2] > 0, 1, 0)
-    col = col * (1 - 0.8 * lipmask[:, None]) + lip * 0.8 * lipmask[:, None]
+    lipmask = np.exp(-(((v[:, 0]) / 0.024) ** 2 + ((v[:, 1] - lips_y) / 0.010) ** 2)) * np.where(v[:, 2] > 0, 1, 0)
+    col = col * (1 - 0.85 * lipmask[:, None]) + lip * 0.85 * lipmask[:, None]
+    col = col * (1 - 0.9 * line[:, None]) + mouth * 0.9 * line[:, None]  # parting line reads as a mouth
+    # soft shading in the eye sockets and under the brow gives the face depth at a distance
+    for sx in (-1, 1):
+        sock = np.exp(-(((v[:, 0] - sx * rx * 0.40) / 0.026) ** 2 + ((v[:, 1] - (cy + ry * 0.12)) / 0.018) ** 2)) * np.where(v[:, 2] > 0, 1, 0)
+        col = col * (1 - 0.35 * sock[:, None])
     m.c[:, :3] = col
     m.region = ["head"] * len(v)
     m.material = "skin"
@@ -317,19 +325,23 @@ def build_face_details(b: Body) -> dict[str, Mesh]:
     eyes = []
     for sx in (-1, 1):
         ex, ey, ez = sx * rx * 0.40, cy + ry * 0.10, 0.012 + rz * 0.90
-        e = sphere((ex, ey, ez - 0.004), (0.0125, 0.0105, 0.010), lat=6, lon=9)
+        e = sphere((ex, ey, ez - 0.004), (0.0165, 0.0115, 0.010), lat=6, lon=10)
         e.c[:, :3] = white
-        i = sphere((ex, ey, ez + 0.004), (0.0072, 0.0072, 0.004), lat=4, lon=8)
+        i = sphere((ex, ey, ez + 0.0045), (0.0088, 0.0088, 0.004), lat=4, lon=8)
         i.c[:, :3] = iris
         e.region = ["head"] * len(e.v)
         i.region = ["head"] * len(i.v)
-        eyes += [e, i]
+        # dark upper lid / lash line: the single biggest cue for an expressive eye at small sizes
+        lid = tube(np.array([[ex - sx * 0.018, ey + 0.002, ez - 0.002], [ex, ey + 0.0115, ez + 0.004], [ex + sx * 0.018, ey + 0.004, ez - 0.003]]), [0.0028, 0.0034, 0.0024], [0.0024, 0.003, 0.002], sides=5, rings=5)
+        lid.c[:, :3] = srgb_to_linear(hexrgb(0x0c0806))
+        lid.region = ["head"] * len(lid.v)
+        eyes += [e, i, lid]
     parts["eyes"] = merge(eyes, "eyes")
     brow_col = srgb_to_linear(hexrgb(0x120b08))
     brows = []
     for sx in (-1, 1):
         pts = np.array([[sx * rx * 0.20, cy + ry * 0.30, 0.012 + rz * 0.93], [sx * rx * 0.42, cy + ry * 0.35, 0.012 + rz * 0.90], [sx * rx * 0.66, cy + ry * 0.28, 0.012 + rz * 0.78]])
-        t = tube(pts, [0.0055, 0.0055, 0.0045], [0.004, 0.004, 0.003], sides=6, rings=6)
+        t = tube(pts, [0.0068, 0.0068, 0.0052], [0.0046, 0.0046, 0.0034], sides=6, rings=6)
         t.c[:, :3] = brow_col
         t.region = ["head"] * len(t.v)
         brows.append(t)

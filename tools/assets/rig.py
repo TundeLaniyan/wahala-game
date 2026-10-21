@@ -141,19 +141,23 @@ def sin(x):
 
 
 def idle(t: float) -> dict:
+    """Relaxed, alert stance: weight settled on one hip, soft knees, loose arms, breathing, glancing around."""
     ph = 2 * np.pi * t / 2.4
+    look = 12.0 * sin(ph * 0.5)
     return {
-        "chest": (1.6 * sin(ph), 0, 0.8 * sin(ph * 0.5)),
-        "spine": (0.8 * sin(ph), 0, 0),
-        "head": (1.2 * sin(ph - 0.6), 3.0 * sin(ph * 0.5), 0),
-        "upperarm_L": (2 * sin(ph + 0.3), 0, 6 + 1.2 * sin(ph)),
-        "upperarm_R": (2 * sin(ph + 0.3), 0, -6 - 1.2 * sin(ph)),
-        "forearm_L": (-8 - 1.5 * sin(ph), 0, 0),
-        "forearm_R": (-8 - 1.5 * sin(ph), 0, 0),
-        "hips": (0, 0, 1.5 * sin(ph * 0.5)),
-        "thigh_L": (0, 0, -1.5 * sin(ph * 0.5)),
-        "thigh_R": (0, 0, -1.5 * sin(ph * 0.5)),
-        "_t": {"hips": (0, 0.004 * sin(ph * 2), 0)},
+        "chest": (2.0 * sin(ph), -0.3 * look, 1.0 * sin(ph * 0.5)),
+        "spine": (1.5 + 0.8 * sin(ph), 0, -1.5),
+        "head": (-2 + 1.2 * sin(ph - 0.6), look, 1.5),
+        "upperarm_L": (3 + 2.5 * sin(ph + 0.3), 0, 9 + 1.5 * sin(ph)),
+        "upperarm_R": (5 + 2.5 * sin(ph + 0.9), 0, -10 - 1.5 * sin(ph)),
+        "forearm_L": (-16 - 3 * sin(ph), 0, 0),
+        "forearm_R": (-22 - 3 * sin(ph + 0.5), 0, 0),
+        "hips": (0, 4, 3.5 + 1.0 * sin(ph * 0.5)),
+        "thigh_L": (-3, -4, -5),
+        "thigh_R": (4, -4, -1.0),
+        "shin_L": (7, 0, 0),
+        "shin_R": (5, 0, 0),
+        "_t": {"hips": (0, -0.012 + 0.004 * sin(ph * 2), 0)},
     }
 
 
