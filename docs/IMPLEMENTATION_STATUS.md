@@ -78,7 +78,7 @@ Screenshots from the browser runs were inspected for layout and rendering proble
 7. Readability at phone size: flame lanes, generator numbers, danger previews, entry arrows.
 8. Audio: mix, warnings cutting through music, the comic stings, Pidgin captions.
 9. Frame rate and battery on real mid-range phones; does Auto quality settle sensibly?
-10. Wahala Crush pacing (starts 0:40, one tile / 0.8 s) and crowd-throw frequency.
+10. Wahala Crush pacing (now starts at 0:45 remaining and is paced to finish exactly at 0:00; see "Gameplay corrections" in DECISIONS.md) and crowd-throw frequency.
 
 ## Backlog (from the Bible, not started)
 
@@ -99,3 +99,9 @@ Gameplay rules, the simulation and the AI are unchanged (all 165 prior unit test
 - **UI:** new typography (Anton / Barlow Condensed), title screen with a live bots-only attract match behind it, loading bar, 3D-rendered portraits for the HUD and character cards, warm vignette.
 - **Audio:** music removed; synthesised SFX bank (81 sounds), engine/generator loops, crowd ambience and event-driven crowd reactions; recorded-sample override slots.
 - **Verification:** see the overhaul report in the PR / final message; `npm run check` and the Playwright suite were run.
+
+## Gameplay corrections (branch `claude/wahala-controls-crush`)
+
+- **Movement precision (done):** edge-triggered, buffered-once input for keyboard, touch and gamepad (`src/input/moveGate.ts`); `tests/input-movement.test.ts` (45 scenario tests across all three devices) + real-browser tap / hold checks in `e2e/`.
+- **Wahala Crush rebalance (done):** starts at 0:45 remaining, final tile closes at exactly 0:00 (`tests/crush-schedule.test.ts`). The start threshold is `config.crush.startRemainingTicks`.
+

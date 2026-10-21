@@ -33,7 +33,7 @@ Gameplay and tuning decisions taken during implementation, with the reason. The 
 - **Jump Sneakers** hop exactly one generator (2 s cooldown). **Hot Fuel** is a one-generator boost: its arms burn through the first soft block of each arm.
 - **Curses:** slow, reversed controls, weak fire (range 1) for 8 s. Pickup weights are in `config.pickups.weights`.
 - **Death loot:** up to 2 held upgrades dropped on the nearest empty tiles (BFS), never into fire.
-- **Wahala Crush:** starts at 0:40, one outer-ring tile every 0.8 s clockwise, 1.2 s telegraph. An Okada rider under a landing block is shoved to the nearest free tile (Okada consumed). Crush kills inside one tick can draw.
+- **Wahala Crush:** see "Gameplay corrections" below (supersedes the original 0:40 start / 0.8 s cadence). An Okada rider under a landing block is shoved to the nearest free tile (Okada consumed). Crush kills inside one tick can draw.
 - **Crowd throws:** first at 0:25, then every 9-16 s, 2 s telegraph at a fixed tile (dodgeable). Bottle dazes; rare firecracker is lethal on its tile and the four around it (and sets generators off). Okada absorbs it.
 - **Floor traps** (Lekki Roadworks only): pothole = brief stumble; oil = slide 2 tiles. Never lethal.
 - **Pause policy:** auto-pause when the tab is hidden; Esc/P toggles; pausing is blocked after the match ends.
@@ -49,3 +49,20 @@ Gameplay and tuning decisions taken during implementation, with the reason. The 
 | P4 | HUD / title portraits are rendered from the 3D models (throw-away WebGL context) instead of drawn faces. | `render/portraits.ts`, `assets/portraits.ts` |
 | P5 | A bots-only "attract" match runs behind the title menu (not on the `low` quality profile, never with `?nobots` / `?noattract`); it is a normal sim instance with the same code path and never touches the player's match. | `app/AttractController.ts` |
 | P6 | Music is removed. The audio engine now produces SFX, engine/vehicle loops, a layered crowd ambience and event-driven crowd reactions (all synthesised; **no recorded Nigerian crowd or music is bundled and none is claimed**). Recorded files can be dropped into `public/audio/` to override any slot. | `src/audio/` |
+
+## Gameplay corrections (branch `claude/wahala-controls-crush`) - from human playtesting
+
+**Wahala Crush schedule.** The collapse began with ~80-90 s left, far too early. It is now paced from the real tile count (`crushSchedule` in `sim/state.ts`, config `crush.*`):
+
+| Moment (time left) | What happens |
+| --- | --- |
+| 2:00 - 0:45 | Arena fully open, nothing telegraphed. |
+| 0:45 | First tile telegraphed (`crush.startRemainingTicks`, default 45 s, configurable for playtests). It lands 1.2 s later (`crush.warnTicks`), so the first block closes at 0:43.8. |
+| 0:45 - 0:02 | Outer ring inwards (same clockwise spiral), tiles telegraphed at an even cadence so that every tile except the last has landed at 0:02 (`crush.finalTileLeadTicks`). 15 x 11 arena: ~0.28 s per tile; each tile warns 1.2 s ahead so about four upcoming tiles are always visible. |
+| 0:02 | Only the final safe tile is left. It is telegraphed at 0:01.2. |
+| 0:00 | Final tile lands. Anyone still alive dies in that tick, so nobody left = draw (simultaneous); one survivor earlier = normal win. |
+
+An Okada rider on the very last tile is not saved (no free tile exists to shove them to). Classic Timer is unchanged (no collapse, draw by timeout at 0:00). A match shorter than the start threshold starts collapsing immediately. `CrushState.warnAt` holds the per-tile schedule; bots read it for their danger map.
+
+**Movement input.** Measured root cause: the sim reads `Intent.move` as a level and starts a new step the tick the previous one ends (10 ticks), while `InputManager` kept the direction alive for 8 more ticks after release. A normal 100 ms tap (6 ticks) therefore produced two tiles (old behaviour measured: 1-tick and 3-tick taps = 1 tile, 6- and 9-tick taps = 2 tiles). Fix in `input/moveGate.ts` for all devices: a press is one request delivered on the first tick the player can step (`readyToStep`) and discarded after that whether or not it moved; at most one press is buffered, for at most 10 ticks; a direction held 12 ticks repeats at the player's own step cadence; release stops immediately and nothing is carried over. The simulation, step durations, speed upgrades and the Okada bonus are untouched. Stick input got a small hysteresis so a wobbling stick near the diagonal cannot register extra presses.
+

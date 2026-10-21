@@ -10,6 +10,8 @@ import type { ActionName } from '../input';
 function DPad() {
   const [dir, setDir] = useState<Dir | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  /** Only the finger that first touched the pad steers it; a second finger cannot add phantom presses. */
+  const owner = useRef<number | null>(null);
   const update = (e: RPointerEvent) => {
     const r = ref.current!.getBoundingClientRect();
     const dx = e.clientX - (r.left + r.width / 2);
@@ -21,7 +23,9 @@ function DPad() {
     setDir(d);
     input.setTouchDir(d);
   };
-  const end = () => {
+  const end = (e: RPointerEvent) => {
+    if (owner.current !== null && e.pointerId !== owner.current) return;
+    owner.current = null;
     setDir(null);
     input.setTouchDir(null);
   };
@@ -31,10 +35,12 @@ function DPad() {
       className="dpad"
       data-testid="dpad"
       onPointerDown={(e) => {
+        if (owner.current !== null) return;
+        owner.current = e.pointerId;
         e.currentTarget.setPointerCapture(e.pointerId);
         update(e);
       }}
-      onPointerMove={(e) => e.buttons !== 0 && update(e)}
+      onPointerMove={(e) => e.pointerId === owner.current && update(e)}
       onPointerUp={end}
       onPointerCancel={end}
       onLostPointerCapture={end}

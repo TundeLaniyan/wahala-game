@@ -1,5 +1,5 @@
 /** Public API of the simulation. Outer layers import from here, never from systems/ directly. */
-export { createGame, createPlayer, DEFAULT_SETTINGS, MAX_PLAYERS, MIN_PLAYERS } from './state';
+export { createGame, createPlayer, crushSchedule, DEFAULT_SETTINGS, MAX_PLAYERS, MIN_PLAYERS } from './state';
 export { tick } from './tick';
 export { DEFAULT_CONFIG, TICK_RATE, mergeConfig, ticks } from './config';
 export type { DeepPartial, GameConfig, VehicleSpec } from './config';
@@ -35,6 +35,7 @@ export {
 export type { EntryView } from './systems/entries';
 export { vehicleHitTiles, vehicleStepTicks } from './systems/vehicles';
 export { alivePlayers, playerStepTicks } from './systems/queries';
+export { readyToStep } from './systems/movement';
 export { secondsRemaining } from './systems/match';
 export { observe } from './observe';
 export type { Observation } from './observe';

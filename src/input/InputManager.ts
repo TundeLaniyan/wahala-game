@@ -1,10 +1,8 @@
 import type { Dir, Intent } from '../sim';
 import { GamepadInput } from './gamepad';
 import { KeyboardInput } from './keyboard';
+import { MoveGate } from './moveGate';
 import type { ActionName, InputSourceName, NavCommand } from './types';
-
-/** A quick tap still produces a step if it lands while the previous step is finishing. */
-const MOVE_BUFFER_TICKS = 8;
 
 export interface InputManagerEvents {
   /** Fired for menu-style commands (vehicle selection, pause). */
@@ -15,26 +13,30 @@ export interface InputManagerEvents {
 
 /**
  * Merges keyboard, touch and gamepad into one `Intent` per simulation tick. Every device has
- * identical power: they all just set the same Intent fields.
+ * identical power: they all just set the same Intent fields. Movement goes through a `MoveGate`, so a
+ * press is one step and only a deliberate hold repeats (see moveGate.ts).
  */
 export class InputManager {
   private readonly keyboard: KeyboardInput;
   private readonly gamepad: GamepadInput;
   private touchDir: Dir | null = null;
-  private latch: { dir: Dir; until: number } | null = null;
+  private readonly gate = new MoveGate();
+  /** Last tick handed to `buildIntent`; presses between ticks are stamped with it. */
+  private tickNow = 0;
   private readonly pending = new Set<ActionName>();
   private lastDevice: InputSourceName = 'keyboard';
-  private lastTouchDir: Dir | null = null;
   /** Set while the vehicle-entry selector owns the directional input. */
   navMode = false;
 
   constructor(private readonly events: InputManagerEvents) {
     this.keyboard = new KeyboardInput({
+      onMove: (d) => this.gate.press(d, this.tickNow),
       onAction: (a) => this.press(a),
       onNav: (c) => this.nav(c),
       onUse: () => this.device('keyboard'),
     });
     this.gamepad = new GamepadInput({
+      onMove: (d) => this.gate.press(d, this.tickNow),
       onAction: (a) => this.press(a),
       onNav: (c) => this.nav(c),
       onUse: () => this.device('gamepad'),
@@ -62,14 +64,14 @@ export class InputManager {
     this.press(action);
   }
 
+  /** On-screen D-pad: `dir` is the arm under the finger, null once it lifts. A new arm is a new press. */
   setTouchDir(dir: Dir | null): void {
-    if (dir) this.device('touch');
+    if (dir === this.touchDir) return;
     this.touchDir = dir;
-    if (dir && dir !== this.lastTouchDir) {
-      this.latch = { dir, until: Number.MAX_SAFE_INTEGER };
-      this.events.onNav(dir);
-    }
-    this.lastTouchDir = dir;
+    if (!dir) return;
+    this.device('touch');
+    this.gate.press(dir, this.tickNow);
+    this.events.onNav(dir);
   }
 
   /** Touch confirm/cancel buttons of the vehicle-entry overlay. */
@@ -83,14 +85,17 @@ export class InputManager {
     this.gamepad.poll();
   }
 
-  /** Builds the intent for this tick and clears the one-shot buffer. */
-  buildIntent(tick: number): Intent {
-    const held = this.keyboard.held ?? this.touchDir ?? this.gamepad.held;
-    if (held) this.latch = { dir: held, until: tick + MOVE_BUFFER_TICKS };
-    else if (this.latch && this.latch.until === Number.MAX_SAFE_INTEGER)
-      this.latch.until = tick + MOVE_BUFFER_TICKS;
-    const move = held ?? (this.latch && tick < this.latch.until ? this.latch.dir : null);
-    const intent: Intent = { move: this.navMode ? null : move };
+  /**
+   * Builds the intent for this tick and clears the one-shot buffer.
+   * @param canMove whether the local player's step finishes this tick (`readyToStep`); a press is held back
+   *   until then. Defaults to true, i.e. a press is offered to the simulation on exactly one tick.
+   */
+  buildIntent(tick: number, canMove = true): Intent {
+    this.tickNow = tick;
+    let move: Dir | null = null;
+    if (this.navMode) this.gate.clear();
+    else move = this.gate.next(tick, this.heldDir(), this.activeDirs(), canMove);
+    const intent: Intent = { move };
     for (const a of [...this.pending]) {
       if (a === 'vehicle') continue; // consumed by takeVehiclePress() (vehicle entry controller)
       this.pending.delete(a);
@@ -107,9 +112,18 @@ export class InputManager {
 
   clear(): void {
     this.pending.clear();
-    this.latch = null;
-    this.touchDir = null;
-    this.lastTouchDir = null;
+    this.gate.clear();
+  }
+
+  private heldDir(): Dir | null {
+    return this.keyboard.held ?? this.touchDir ?? this.gamepad.held;
+  }
+
+  private activeDirs(): ReadonlySet<Dir> {
+    const set = new Set<Dir>(this.keyboard.heldSet);
+    if (this.touchDir) set.add(this.touchDir);
+    if (this.gamepad.held) set.add(this.gamepad.held);
+    return set;
   }
 
   dispose(): void {

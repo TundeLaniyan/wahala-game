@@ -17,6 +17,7 @@ function setup() {
   const actions: ActionName[] = [];
   const navs: NavCommand[] = [];
   const input = new GamepadInput({
+    onMove: () => undefined,
     onAction: (a) => actions.push(a),
     onNav: (n) => navs.push(n),
     onUse: () => undefined,
@@ -35,6 +36,8 @@ describe('gamepad mapping', () => {
     g.set(pad([], [0.1, 0.9]));
     g.input.poll();
     expect(g.input.held).toBe('down');
+    g.set(pad([]));
+    g.input.poll();
     g.set(pad([], [0.7, 0.6]));
     g.input.poll();
     expect(g.input.held).toBe('right'); // dominant axis only: never diagonal
@@ -76,6 +79,7 @@ describe('gamepad mapping', () => {
   it('does nothing without a connected pad', () => {
     vi.stubGlobal('navigator', { getGamepads: () => [null] });
     const input = new GamepadInput({
+      onMove: () => undefined,
       onAction: () => undefined,
       onNav: () => undefined,
       onUse: () => undefined,

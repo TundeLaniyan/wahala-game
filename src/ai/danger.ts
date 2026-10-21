@@ -444,10 +444,7 @@ export class DangerBuilder {
     for (const p of crush.pending) map.add(p.index, p.landTick - profile.margin, NEVER);
     const horizon = obs.tick + profile.horizonTicks;
     for (let j = crush.next; j < crush.order.length; j++) {
-      const land =
-        obs.tick +
-        (crush.nextAtTick + (j - crush.next) * cfg.intervalTicks - obs.match.playTicks) +
-        cfg.warnTicks;
+      const land = obs.tick + (crush.warnAt[j]! - obs.match.playTicks) + cfg.warnTicks;
       if (land > horizon) break;
       map.add(crush.order[j]!, land - profile.margin, NEVER);
     }

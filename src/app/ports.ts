@@ -43,7 +43,7 @@ export interface RendererPort {
 export interface InputPort {
   navMode: boolean;
   pollDevices(): void;
-  buildIntent(tick: number): Intent;
+  buildIntent(tick: number, canMove?: boolean): Intent;
   takeVehiclePress(): boolean;
   clear(): void;
 }

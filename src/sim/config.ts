@@ -87,8 +87,11 @@ export interface GameConfig {
     softDensity: number;
   };
   crush: {
-    startTicks: number;
-    intervalTicks: number;
+    /** Time left on the clock when the first tile is telegraphed (the arena is fully open before this). */
+    startRemainingTicks: number;
+    /** Time left when the last-but-one tile has landed, leaving only the final safe tile. */
+    finalTileLeadTicks: number;
+    /** Telegraph time before a tile lands. The final tile lands exactly at 0:00. */
     warnTicks: number;
   };
   crowd: {
@@ -187,8 +190,8 @@ export const DEFAULT_CONFIG: GameConfig = {
     softDensity: 0.62,
   },
   crush: {
-    startTicks: ticks(40),
-    intervalTicks: ticks(0.8),
+    startRemainingTicks: ticks(45),
+    finalTileLeadTicks: ticks(2),
     warnTicks: ticks(1.2),
   },
   crowd: {
