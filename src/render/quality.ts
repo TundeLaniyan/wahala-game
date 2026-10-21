@@ -11,6 +11,8 @@ export interface QualityProfile {
   /** Fraction of the parked buses drawn (each is ~11k triangles). */
   parkedBuses: number;
   antialias: boolean;
+  /** Pooled point lights that let explosions light the surrounding props and players. */
+  flameLights: number;
 }
 
 export const QUALITY: Record<QualityLevel, QualityProfile> = {
@@ -20,9 +22,10 @@ export const QUALITY: Record<QualityLevel, QualityProfile> = {
     shadows: false,
     shadowMapSize: 512,
     particleDensity: 0.4,
-    crowd: 24,
+    crowd: 70,
     parkedBuses: 0.4,
     antialias: false,
+    flameLights: 0,
   },
   medium: {
     level: 'medium',
@@ -30,9 +33,10 @@ export const QUALITY: Record<QualityLevel, QualityProfile> = {
     shadows: true,
     shadowMapSize: 1024,
     particleDensity: 0.75,
-    crowd: 80,
+    crowd: 170,
     parkedBuses: 0.75,
     antialias: true,
+    flameLights: 1,
   },
   high: {
     level: 'high',
@@ -40,8 +44,9 @@ export const QUALITY: Record<QualityLevel, QualityProfile> = {
     shadows: true,
     shadowMapSize: 2048,
     particleDensity: 1,
-    crowd: 150,
+    crowd: 320,
     parkedBuses: 1,
     antialias: true,
+    flameLights: 3,
   },
 };

@@ -12,7 +12,9 @@ import {
 import type { Player, SimEvent } from '../../sim';
 import { SLOT_COLORS } from '../../assets/palette';
 import { drawPickupIcon } from '../../assets/pickupIcons';
-import { createPlayerModel, createRiggedPlayerModel } from '../assets/characters';
+import { OKADA_SCALE, createPlayerModel, createRiggedPlayerModel } from '../assets/characters';
+import { createShieldBubble, updateShieldBubble } from './okadaShield';
+import { addXray } from '../assets/xray';
 import type { PlayerModel } from '../assets/characters';
 import { CanvasTexture } from 'three';
 import { chevronTexture, glowTexture, labelTexture, ringTexture, starTexture } from '../textures';
@@ -23,8 +25,17 @@ import type { FrameContext, View } from './types';
 const DEATH_TIME = 1.7;
 /** Characters are drawn a little larger than a tile-sized figure so they read at phone size. */
 const SCALE = 1.5;
-/** The seated Okada rider is lifted onto the bike seat (model metres). */
-const RIDER_LIFT = 0.14;
+/** The seated Okada rider sits on the (enlarged) bike's seat: offsets in model metres. */
+const RIDER_LIFT = -0.05;
+const RIDER_BACK = -0.25;
+/** Mount: the bike pops in under a hopping rider; dismount (shield spent): the rider hops clear. */
+const MOUNT_TIME = 0.32;
+const DISMOUNT_TIME = 0.42;
+
+function easeOutBack(t: number): number {
+  const c = 1.9;
+  return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
+}
 
 interface Visual {
   model: PlayerModel;
@@ -40,10 +51,16 @@ interface Visual {
   deadAt: number | null;
   deathDir: Vector3;
   wasMounted: boolean;
+  shield: Mesh;
+  badge: Sprite;
+  mountedAt: number;
+  dismountedAt: number;
+  dustAt: number;
 }
 
 const flat = new PlaneGeometry(1, 1);
 let voucherTex: CanvasTexture | null = null;
+let okadaTex: CanvasTexture | null = null;
 
 export class PlayerViews implements View {
   readonly group = new Group();
@@ -80,6 +97,7 @@ export class PlayerViews implements View {
   private create(p: Player, ctx: FrameContext): Visual {
     const model = createRiggedPlayerModel(p.characterId, p.id * 0.37) ?? createPlayerModel(p.characterId);
     const slot = SLOT_COLORS[p.slot % SLOT_COLORS.length]!;
+    if (model.rigged) addXray(model.rigged.body, slot);
     const ring = new Mesh(
       flat,
       new MeshBasicMaterial({
@@ -149,7 +167,13 @@ export class PlayerViews implements View {
     voucher.scale.set(0.38, 0.38, 1);
     voucher.renderOrder = 33;
     voucher.visible = false;
-    this.group.add(model.root, ring, shadow, name, curse, voucher);
+    const shield = createShieldBubble();
+    okadaTex ??= new CanvasTexture(drawPickupIcon('okada', 64));
+    const badge = new Sprite(new SpriteMaterial({ map: okadaTex, transparent: true, depthTest: false }));
+    badge.scale.set(0.36, 0.36, 1);
+    badge.renderOrder = 33;
+    badge.visible = false;
+    this.group.add(model.root, ring, shadow, name, curse, voucher, shield, badge);
     return {
       model,
       ring,
@@ -164,6 +188,11 @@ export class PlayerViews implements View {
       deadAt: null,
       deathDir: new Vector3(0, 0, 1),
       wasMounted: false,
+      shield,
+      badge,
+      mountedAt: -10,
+      dismountedAt: -10,
+      dustAt: 0,
     };
   }
 
@@ -209,8 +238,26 @@ export class PlayerViews implements View {
     else if (state.match.phase === 'countdown') clip = 'Idle';
     if (!ended) r.setLoop(clip, 0.12, moving ? MathUtils.clamp(speed * 0.52, 0.8, 1.7) : 1);
     v.model.rig.position.y = 0;
-    r.body.position.y = p.mounted ? RIDER_LIFT : 0;
-    if (p.mounted && moving) for (const w of v.model.bikeWheels) w.rotation.x += dt * speed * 9;
+    const tm = ctx.time - v.mountedAt;
+    const td = ctx.time - v.dismountedAt;
+    let hop = 0;
+    if (p.mounted && tm < MOUNT_TIME) hop = Math.sin((Math.PI * tm) / MOUNT_TIME) * 0.32;
+    else if (!p.mounted && td < DISMOUNT_TIME) hop = Math.sin((Math.PI * td) / DISMOUNT_TIME) * 0.42;
+    r.body.position.y = (p.mounted ? RIDER_LIFT : 0) + hop;
+    r.body.position.z = p.mounted ? RIDER_BACK * Math.min(1, tm / MOUNT_TIME) : 0;
+    const bike = v.model.bike.children[0];
+    if (bike && v.model.bikeWheels.length > 0)
+      bike.scale.setScalar(OKADA_SCALE * (p.mounted ? easeOutBack(Math.min(1, tm / MOUNT_TIME)) : 1));
+    if (p.mounted && moving) {
+      for (const w of v.model.bikeWheels) w.rotation.x += dt * speed * 9;
+      // kicked-up dust behind the bike sells the extra speed
+      if (ctx.time > v.dustAt) {
+        v.dustAt = ctx.time + 0.09;
+        const pos = playerGridPos(p, ctx.alpha);
+        const back = { right: [-1, 0], left: [1, 0], up: [0, 1], down: [0, -1] }[p.facing];
+        ctx.fx.dust(pos.x + back[0]! * 0.45, pos.y + back[1]! * 0.45, 1, 0.42);
+      }
+    }
     r.update(dt);
   }
 
@@ -244,12 +291,28 @@ export class PlayerViews implements View {
     // Okada breaks apart comically the moment protection is spent.
     if (v.wasMounted && !mounted) {
       fx.wreck(w.x, 0.4, w.z, [
-        [1, 0.82, 0.1],
+        [0.83, 0.15, 0.17],
         [0.1, 0.1, 0.1],
         [0.8, 0.8, 0.82],
       ]);
+      fx.shockwave(w.x, w.z, 1.6, 0xffd54a);
+      v.dismountedAt = time;
+    }
+    if (!v.wasMounted && mounted) {
+      v.mountedAt = time;
+      fx.shockwave(w.x, w.z, 1.2, 0xffd54a);
     }
     v.wasMounted = mounted;
+    const pop = Math.max(
+      mounted ? 1 - (time - v.mountedAt) / 0.45 : 0,
+      !mounted ? 1 - (time - v.dismountedAt) / 0.3 : 0,
+    );
+    v.shield.position.set(w.x, 0.72, w.z);
+    v.shield.rotation.y = v.yaw;
+    v.shield.scale.set(0.78, 0.92, 0.95).multiplyScalar(1 + (mounted ? 0 : (1 - pop) * 0.6));
+    updateShieldBubble(v.shield, mounted, time, Math.max(0, pop));
+    v.badge.visible = mounted;
+    if (mounted) v.badge.position.set(w.x - 0.7, 1.72 + Math.sin(time * 4) * 0.03, w.z);
 
     v.ring.position.set(w.x, 0.03, w.z);
     (v.ring.material as MeshBasicMaterial).opacity =
@@ -292,6 +355,8 @@ export class PlayerViews implements View {
     if (v.marker) v.marker.visible = false;
     v.curse.visible = false;
     v.voucher.visible = false;
+    v.badge.visible = false;
+    v.shield.visible = false;
     m.bike.visible = false;
 
     if (v.deadAt === null) {

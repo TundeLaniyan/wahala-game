@@ -207,8 +207,8 @@ def ride(t: float) -> dict:
         out[f"thigh_{side}"] = (-82, 0, m * -14)
         out[f"shin_{side}"] = (86, 0, 0)
         out[f"foot_{side}"] = (-10, 0, 0)
-        out[f"upperarm_{side}"] = (-52, 0, m * 14)
-        out[f"forearm_{side}"] = (-30, 0, 0)
+        out[f"upperarm_{side}"] = (-46, 0, m * 20)
+        out[f"forearm_{side}"] = (-22, 0, 0)
     out["_t"] = {"hips": (0, -0.12 + 0.004 * sin(ph * 2), 0)}
     return out
 

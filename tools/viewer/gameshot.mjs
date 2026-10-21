@@ -17,7 +17,7 @@ const page = await browser.newPage({
   viewport: { width: +width, height: +height },
   isMobile: mobile,
   hasTouch: mobile,
-  deviceScaleFactor: mobile ? 2 : 1,
+  deviceScaleFactor: Number(process.env.DSF ?? (mobile ? 2 : 1)),
 });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
@@ -40,7 +40,7 @@ for (const t of ticks) {
     });
   }
   await page.waitForTimeout(1500);
-  await page.screenshot({ path: `${prefix}-${t}.png` });
+  await page.screenshot({ path: `${prefix}-${t}.png`, timeout: 120000 });
 }
 const stats = await page.evaluate(() => window.__WAHALA__.stats());
 console.log(JSON.stringify({ stats, errors }, null, 1));

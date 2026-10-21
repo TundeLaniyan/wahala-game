@@ -1,4 +1,4 @@
-"""Okada: Lagos commuter motorcycle (yellow tank, black seat, rear rack). Mount only, no rider."""
+"""Okada: Lagos commuter motorcycle (red tank and fenders, black seat, rear rack). Mount only, no rider."""
 from __future__ import annotations
 
 import numpy as np
@@ -7,7 +7,7 @@ import vehicles_lib as V
 from vehicles_lib import Model, place
 from veh_common import std_specs
 
-YELLOW = 0xf9c80e
+YELLOW = 0xd3262c  # Bajaj-red tank and fenders: contrasts with the yellow danfos and the pale floor
 R = 0.155
 FZ, RZ = 0.32, -0.30
 HEAD = (0.0, 0.50, 0.215)  # steering head pivot

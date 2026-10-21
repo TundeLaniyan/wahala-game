@@ -339,7 +339,8 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
     const t = n / 33;
     const x = -W / 2 - 0.2 + t * (W + 0.4);
     const sag = Math.sin(t * Math.PI) * 0.35;
-    fm.makeTranslation(x, 2.0 - sag, -H / 2 - 0.45);
+    // strung high over the back crowd (not across the wall face)
+    fm.makeTranslation(x, 2.75 - sag, -H / 2 - 1.5);
     flags.setMatrixAt(n, fm);
     flags.setColorAt(n, flagColor.setHex(n % 3 === 1 ? 0xffffff : 0x1fa64a));
   }
@@ -349,7 +350,7 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
     transparent: true,
   });
   const sign = new Mesh(new PlaneGeometry(4.2, 1.5), signMat);
-  sign.position.set(-W / 2 + 3.2, 1.55, -H / 2 - 0.62);
+  sign.position.set(-W / 2 + 3.2, 2.55, -H / 2 - 2.9);
   sign.rotation.x = -0.35;
   root.add(sign);
 

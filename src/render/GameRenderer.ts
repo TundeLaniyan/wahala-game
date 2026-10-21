@@ -93,6 +93,7 @@ export class GameRenderer {
       canvas: opts.canvas,
       antialias: this.profile.antialias,
       powerPreference: 'high-performance',
+      stencil: true, // occlusion silhouettes (assets/xray.ts)
     });
     this.renderer.outputColorSpace = SRGBColorSpace;
     installGrading(this.renderer);
@@ -118,7 +119,7 @@ export class GameRenderer {
     this.backdrop = createBackdrop(this.layout, this.profile.crowd, this.profile.parkedBuses);
     this.arena = new ArenaView(state, this.layout);
     const generators = new GeneratorViews();
-    const flames = new FlameViews();
+    const flames = new FlameViews(this.profile.flameLights);
     const pickups = new PickupViews();
     const players = new PlayerViews();
     this.players = players;

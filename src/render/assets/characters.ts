@@ -6,6 +6,10 @@ import { box, cyl, mat, pivot, sphere } from './helpers';
 import { bakeDirect } from './merge';
 import { assets } from './library';
 import { RiggedCharacter } from './rigged';
+import { addRim } from './rim';
+
+/** The Okada is drawn larger than true scale against the stylised riders so wheels and front end stay visible. */
+export const OKADA_SCALE = 1.55;
 
 export interface PlayerModel {
   root: Group;
@@ -142,6 +146,8 @@ export function createRiggedPlayerModel(id: CharacterId, phase = 0): PlayerModel
   if (glbBike) {
     // Modelled in game units, so it sits beside (not inside) the model-metre holder.
     bike = new Group();
+    glbBike.scale.setScalar(OKADA_SCALE);
+    addRim(glbBike, 0xffe08a, 0.34, 2.4); // golden edge: the bike itself signals the one-hit shield
     bike.add(glbBike);
     bike.visible = false;
     root.add(bike);
