@@ -14,13 +14,39 @@ export function softVariants(): SoftVariant[] {
   return glb.length > 0 ? glb : [...PROCEDURAL_SOFT];
 }
 
+/**
+ * Art-direction weights for the destructible set: mostly warm wooden crates (the reference's dominant
+ * breakable), then hazard barricades and tyre stacks, with the colourful market goods as accents so the
+ * field reads as one coherent bus-park clutter rather than confetti. Unknown variants weigh 1.
+ */
+const SOFT_WEIGHTS: Record<string, number> = {
+  prop_soft_crate: 4,
+  prop_soft_crate_b: 3,
+  prop_soft_crates: 4,
+  prop_soft_barrier: 3,
+  prop_soft_tyres: 3,
+  prop_soft_sacks: 2,
+  prop_soft_kegs: 1,
+  prop_soft_cartons: 1,
+};
+
 /** Deterministic variant so the same tile always looks the same. */
 export function softVariantFor(
   x: number,
   y: number,
   variants: readonly SoftVariant[] = softVariants(),
 ): SoftVariant {
-  return variants[(x * 7 + y * 13 + ((x * y) % 5)) % variants.length]!;
+  const total = variants.reduce((n, v) => n + (SOFT_WEIGHTS[v] ?? 1), 0);
+  // integer hash of the tile so neighbours decorrelate (no diagonal stripes of the same prop)
+  let h = Math.imul(x + 1, 0x9e3779b1) ^ Math.imul(y + 7, 0x85ebca77);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+  h ^= h >>> 13;
+  let pick = (h >>> 0) % total;
+  for (const v of variants) {
+    pick -= SOFT_WEIGHTS[v] ?? 1;
+    if (pick < 0) return v;
+  }
+  return variants[0]!;
 }
 
 /** Debris palette that matches a block variant. */

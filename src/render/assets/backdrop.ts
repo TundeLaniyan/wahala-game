@@ -88,21 +88,30 @@ function addModelledPerimeter(root: Group, out: InstancedMesh[], W: number, H: n
   };
   for (let i = 0; i < W; i++) {
     wall(-W / 2 + 0.5 + i, -H / 2 - T, 0);
-    wall(-W / 2 + 0.5 + i, H / 2 + T, Math.PI, 0.45);
+    wall(-W / 2 + 0.5 + i, H / 2 + T, Math.PI, 0.4);
   }
   for (let i = 0; i < H; i++) {
-    wall(W / 2 + T, -H / 2 + 0.5 + i, -Math.PI / 2, i > H - 2 ? 0.45 : 1);
-    wall(-W / 2 - T, -H / 2 + 0.5 + i, Math.PI / 2, i > H - 2 ? 0.45 : 1);
+    const sy = i > H - 2 ? 0.4 : i > H - 3 ? 0.7 : 1; // step down towards the camera side
+    wall(W / 2 + T, -H / 2 + 0.5 + i, -Math.PI / 2, sy);
+    wall(-W / 2 - T, -H / 2 + 0.5 + i, Math.PI / 2, sy);
   }
   wallIds.forEach((id, n) => instanceAsset(root, out, id, byVariant[n]!));
   const cx = W / 2 + T;
   const cz = H / 2 + T;
-  instanceAsset(root, out, 'env_wall_corner', [
-    { x: -cx, z: -cz, ry: 0, sy: 1.1 },
-    { x: cx, z: -cz, ry: 0, sy: 1.1 },
-    { x: -cx, z: cz, ry: 0, sy: 0.45 },
-    { x: cx, z: cz, ry: 0, sy: 0.45 },
-  ]);
+  const posts: Placement[] = [
+    { x: -cx, z: -cz, ry: 0 },
+    { x: cx, z: -cz, ry: 0 },
+    { x: -cx, z: cz, ry: 0, sy: 0.42 },
+    { x: cx, z: cz, ry: 0, sy: 0.42 },
+  ];
+  // intermediate pilasters every few panels break up the long runs (precast wall rhythm)
+  for (let i = 3; i < W - 1; i += 3) posts.push({ x: -W / 2 + i, z: -cz, ry: 0 });
+  for (let i = 3; i < H - 2; i += 3) {
+    posts.push({ x: -cx, z: -H / 2 + i, ry: Math.PI / 2 });
+    posts.push({ x: cx, z: -H / 2 + i, ry: -Math.PI / 2 });
+  }
+  for (let i = 3; i < W - 1; i += 3) posts.push({ x: -W / 2 + i, z: cz, ry: Math.PI, sy: 0.42 });
+  instanceAsset(root, out, 'env_wall_corner', posts);
   if (assets.has('env_bleacher')) {
     const off = T * 2 + 0.26;
     const plat: Placement[] = [];

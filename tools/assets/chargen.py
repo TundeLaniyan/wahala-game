@@ -122,6 +122,29 @@ FEMALE = Body(
     face_soft=1.0,
 )
 
+
+def stylise(b: Body, limbs: float = 1.22, torso: float = 1.10, depth: float = 1.08) -> Body:
+    """Game-read proportions: the measured bodies above are anatomically plausible but read as thin
+    mannequins from the elevated gameplay camera. Thicker limbs, a broader chest and chunkier shoes
+    give strong silhouettes (the head is enlarged at export, see build_characters.HEAD_SCALE)."""
+    from dataclasses import replace
+
+    return replace(
+        b,
+        torso=[(y, a * torso, f * depth, k * depth) for (y, a, f, k) in b.torso],
+        neck_r=b.neck_r * 1.18,
+        shoulder_x=b.shoulder_x * 1.10,
+        arm_r=tuple(r * limbs for r in b.arm_r),
+        leg_r=tuple(r * limbs * 0.96 for r in b.leg_r),
+        hip_x=b.hip_x * 1.08,
+        shoe_scale=b.shoe_scale * 1.22,
+    )
+
+
+MALE_ATHLETIC = stylise(MALE_ATHLETIC)
+MALE_SLIM = stylise(MALE_SLIM, limbs=1.2)
+FEMALE = stylise(FEMALE, limbs=1.16, torso=1.06)
+
 # Skeleton rest positions are derived from the same numbers so geometry and rig always agree.
 
 

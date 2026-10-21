@@ -1,7 +1,8 @@
 """Indestructible concrete pillars (three variants). One baked 512x512 atlas + one material per model.
 
-Shape (footprint 0.90, height 0.78): wide hazard-banded plinth, narrower shaft, overhanging chamfered cap.
-Atlas: top tile + three side elevations (front/right/left; the back reuses 'right'), painted per variant."""
+Shape (footprint 0.86, height 1.14): tall precast block on a hazard-banded plinth, narrower shaft, overhanging
+chamfered cap. Tall and pale so permanent concrete reads instantly against the low, warm destructible clutter.
+Atlas (1024x512): top tile + three side elevations (front/right/left; the back reuses 'right'), painted per variant."""
 from __future__ import annotations
 
 import numpy as np
@@ -24,16 +25,23 @@ from tex_env import (
     weather,
 )
 
-H = 0.78
-W = 0.90
-CAP_TOP = 0.735
+H = 1.14
+W = 0.86
+CAP_TOP = 1.10
 CAPW = 0.82
 SHAFTW = 0.76
-PLINTH_H = 0.17
-SHAFT_Y0 = 0.16
-CAP_BOT = 0.62
+PLINTH_H = 0.27
+SHAFT_Y0 = 0.26
+CAP_BOT = 0.97
 CAP_C = 0.03  # cap chamfer (top and bottom)
-TW, TH = 256, 224  # side tile
+TW = 256  # side tile width
+TH = int(np.ceil(H * TW / W)) + 2  # side tile height (same pixel density on both axes)
+SIDE_TONE = 0xc6c1b7  # pale precast concrete (reference: near-white blocks with a blue/yellow foot)
+
+
+def Y(y_old: float) -> float:
+    """Maps heights authored for the old 0.78 m pillar's shaft (0.16..0.62) onto the taller shaft."""
+    return SHAFT_Y0 + (y_old - 0.16) * (CAP_BOT - SHAFT_Y0) / (0.62 - 0.16)
 PPM = TW / W  # pixels per metre (both axes)
 
 
@@ -57,7 +65,7 @@ def _side(seed: int, tone, band_cfg: dict, posters: list, extra=None) -> Sheet:
             d.line([(0, ypx(yy)), (TW, ypx(yy))], 0x4a443c, wd, a=0.75)
         with s.paint(height=0.1) as d:
             d.line([(0, ypx(yy) + 1.6), (TW, ypx(yy) + 1.6)], 0xd8d2c4, 0.9, a=0.3)
-    weather(s, seed + 1, ground=0.45, ground_h=0.14, streaks=0.5, top_soot=0.25, edge=0.4, tone_dark=0x34312e)
+    weather(s, seed + 1, ground=0.22, ground_h=0.10, streaks=0.22, top_soot=0.08, edge=0.18, tone_dark=0x4a4540)
     ys = np.arange(TH)[:, None] + 0.5
     cap = np.clip((ypx(CAP_BOT + 0.02) - ys) / 6, 0, 1) * np.ones((1, TW))
     s.comp(0xd9d3c6, cap * 0.16)  # sun-bleached cap
@@ -71,7 +79,7 @@ def _side(seed: int, tone, band_cfg: dict, posters: list, extra=None) -> Sheet:
     cmask = np.zeros((TH, TW))
     cmask[y0 : y0 + bh, :] = cov
     s.comp(region.rgb, cmask, height=0.1, rough=0.7)
-    weather(s, seed + 4, ground=0.30, ground_h=0.10, streaks=0.0, top_soot=0.0, edge=0.0, tone_dark=0x34312e)
+    weather(s, seed + 4, ground=0.18, ground_h=0.06, streaks=0.0, top_soot=0.0, edge=0.0, tone_dark=0x34312e)
     for p in posters:
         stick_poster(s, **p)
     if extra:
@@ -82,23 +90,23 @@ def _side(seed: int, tone, band_cfg: dict, posters: list, extra=None) -> Sheet:
     inset = np.where(ys_ > ypx(PLINTH_H), 3.0, np.where(ys_ > ypx(CAP_BOT), (W - SHAFTW) / 2 * PPM, (W - CAPW) / 2 * PPM))
     dist = np.minimum(xs, TW - xs) - inset
     e = np.clip(1 - np.abs(dist) / 9.0, 0, 1) ** 1.5 * (dist > -9)
-    s.comp(0x2a251f, e * 0.20)
-    _band_shadow(s, CAP_BOT - 0.09, CAP_BOT, 0.42, up=True)
-    _band_shadow(s, PLINTH_H, PLINTH_H + 0.07, 0.34, up=False)
+    s.comp(0x2a251f, e * 0.10)
+    _band_shadow(s, CAP_BOT - 0.07, CAP_BOT, 0.30, up=True)
+    _band_shadow(s, PLINTH_H, PLINTH_H + 0.05, 0.22, up=False)
     speckle(s, seed + 7, amount=0.45, density=0.006)
     scuffs(s, seed + 8, n=10)
     return s
 
 
 def _top(seed: int, extra=None) -> Sheet:
-    s = concrete_sheet(256, 256, seed + 20, 0xa59f94, stains=0.3, grit=0.7)
+    s = concrete_sheet(256, 256, seed + 20, 0xbab4a9, stains=0.25, grit=0.7)
     yy, xx = np.mgrid[0:256, 0:256]
     r = np.maximum(np.abs(xx - 127.5), np.abs(yy - 127.5))  # px from the centre (Chebyshev)
     edge_px = 128.0 - r  # px from the tile edge
     # outer ring: plinth chamfer + ledge collect grime; cap chamfer ring is slightly worn-light
     dirty = np.clip(1 - edge_px / 14.0, 0, 1)
     nn = noise2(256, 256, seed + 24, fx=14, fy=14, octaves=5)
-    s.comp(0x34312e, dirty * (0.45 + 0.4 * nn))
+    s.comp(0x34312e, dirty * (0.25 + 0.25 * nn))
     cham = np.clip(1 - np.abs(edge_px - 16.0) / 4.0, 0, 1)
     s.comp(0xcfc8ba, cham * 0.25)
     n = noise2(256, 256, seed + 21, fx=3, fy=3, octaves=4)
@@ -110,15 +118,12 @@ def _top(seed: int, extra=None) -> Sheet:
     return s
 
 
-def _build(name, seed, band_cfg, posters_f, posters_r, posters_l, extra_front=None, extra_right=None, extra_left=None, extra_top=None, chip=False, loops=True, rebar=False) -> dict:
-    atlas = Atlas(512, 512)
+def _build(name, seed, band_cfg, posters_f, posters_r, posters_l, extra_front=None, extra_right=None, extra_left=None, extra_top=None, chip=False, loops=False, rebar=False) -> dict:
+    atlas = Atlas(1024, 512)
     atlas.add("top", 0, 0, _top(seed, extra_top))
-    atlas.add("front", 256, 0, _side(seed + 100, 0xb2ada2, band_cfg, posters_f, extra_front))
-    atlas.add("right", 0, 256, _side(seed + 200, 0xb2ada2, band_cfg, posters_r, extra_right))
-    atlas.add("left", 256, 256, _side(seed + 300, 0xb2ada2, band_cfg, posters_l, extra_left))
-    for k in ("front", "right", "left"):  # tiles are 256x224 on a 256 grid
-        x0, y0, x1, y1 = atlas.tiles[k]
-        atlas.tiles[k] = (x0, y0, x1, y0 + TH)
+    atlas.add("front", 256, 0, _side(seed + 100, SIDE_TONE, band_cfg, posters_f, extra_front))
+    atlas.add("right", 512, 0, _side(seed + 200, SIDE_TONE, band_cfg, posters_r, extra_right))
+    atlas.add("left", 768, 0, _side(seed + 300, SIDE_TONE, band_cfg, posters_l, extra_left))
     rects = {"+y": atlas.rect("top"), "-y": atlas.rect("top"), "+z": atlas.rect("front"), "+x": atlas.rect("right"), "-x": atlas.rect("left"), "-z": atlas.rect("right")}
 
     parts = _base_parts(chip, loops)
@@ -146,7 +151,7 @@ def _base_parts(chip: bool, loops: bool):
     parts = [base, shaft, cap]
     if loops:  # precast lifting eyes
         for x in (-0.18, 0.18):
-            arch = [(x, 0.725, -0.06), (x, 0.745, -0.06), (x, 0.76, -0.035), (x, 0.768, 0.0), (x, 0.76, 0.035), (x, 0.745, 0.06), (x, 0.725, 0.06)]
+            arch = [(x, CAP_TOP + y, z) for (y, z) in ((-0.01, -0.06), (0.01, -0.06), (0.025, -0.035), (0.033, 0.0), (0.025, 0.035), (0.01, 0.06), (-0.01, 0.06))]
             parts.append(polytube(arch, 0.010, 6, caps=False))
     return parts
 
@@ -163,37 +168,37 @@ def _rebar():
 
 # ----------------------------------------------------------------------------- variants
 
-# shaft face spans px x = 28 .. 228 and y = ypx(0.58) .. ypx(0.22)
+# shaft face spans px x = 28 .. 228 and y = ypx(Y(0.58)) .. ypx(Y(0.22))
 def pillar_a() -> dict:
     seed = 11
     posters_f = [
-        dict(x=30, y=int(ypx(0.59)), w=76, h=96, seed=3, rot=2, kind="concert"),
-        dict(x=104, y=int(ypx(0.56)), w=72, h=80, seed=7, rot=-3, kind="sale"),
-        dict(x=156, y=int(ypx(0.44)), w=58, h=68, seed=15, rot=4, kind="notice"),
+        dict(x=30, y=int(ypx(Y(0.59))), w=76, h=129, seed=3, rot=2, kind="concert"),
+        dict(x=104, y=int(ypx(Y(0.56))), w=72, h=108, seed=7, rot=-3, kind="sale"),
+        dict(x=156, y=int(ypx(Y(0.44))), w=58, h=91, seed=15, rot=4, kind="notice"),
     ]
-    posters_r = [dict(x=50, y=int(ypx(0.58)), w=82, h=100, seed=21, rot=-2, kind="sunburst")]
+    posters_r = [dict(x=50, y=int(ypx(Y(0.58))), w=82, h=135, seed=21, rot=-2, kind="sunburst")]
 
     def num(s):
-        stencil(s, "12", (170, ypx(0.42)), 80, 0xf1ead2, "black", a=0.85, squeeze=0.8, wear=0.55, seed=5)
+        stencil(s, "12", (170, ypx(Y(0.42))), 80, 0xf1ead2, "black", a=0.85, squeeze=0.8, wear=0.55, seed=5)
 
     def num_top(s):
         stencil(s, "A12", (128, 128), 34, 0xf1ead2, "black", a=0.45, squeeze=0.9, wear=0.8, seed=8)
 
-    return _build("prop_pillar_a", seed, dict(y0=0.02, y1=0.14), posters_f, posters_r, [], None, num, None, num_top)
+    return _build("prop_pillar_a", seed, dict(y0=0.02, y1=0.24), posters_f, posters_r, [], None, num, None, num_top)
 
 
 def pillar_b() -> dict:
     seed = 23
-    posters_f = [dict(x=34, y=int(ypx(0.58)), w=70, h=88, seed=31, rot=-3, kind="concert")]
-    posters_l = [dict(x=40, y=int(ypx(0.59)), w=80, h=96, seed=36, rot=3, kind="type"), dict(x=126, y=int(ypx(0.55)), w=80, h=72, seed=40, rot=-4, kind="stripe")]
+    posters_f = [dict(x=34, y=int(ypx(Y(0.58))), w=70, h=118, seed=31, rot=-3, kind="concert")]
+    posters_l = [dict(x=40, y=int(ypx(Y(0.59))), w=80, h=129, seed=36, rot=3, kind="type"), dict(x=126, y=int(ypx(Y(0.55))), w=80, h=97, seed=40, rot=-4, kind="stripe")]
 
     def tag(s):
-        spray_tag(s, 4, 100, ypx(0.52), 224, ypx(0.30), 0x151515, 3.6, loops=5)
-        spray_tag(s, 8, 102, ypx(0.50), 222, ypx(0.28), 0xff3d7f, 1.3, loops=5)
+        spray_tag(s, 4, 100, ypx(Y(0.52)), 224, ypx(Y(0.30)), 0x151515, 3.6, loops=5)
+        spray_tag(s, 8, 102, ypx(Y(0.50)), 222, ypx(Y(0.28)), 0xff3d7f, 1.3, loops=5)
 
     def tag_r(s):
-        stencil(s, "KEEP", (128, ypx(0.50)), 42, 0xf2b705, "black", a=0.8, squeeze=0.9, wear=0.7, seed=3)
-        stencil(s, "CLEAR", (128, ypx(0.34)), 42, 0xf2b705, "black", a=0.8, squeeze=0.9, wear=0.7, seed=4)
+        stencil(s, "KEEP", (128, ypx(Y(0.50))), 42, 0xf2b705, "black", a=0.8, squeeze=0.9, wear=0.7, seed=3)
+        stencil(s, "CLEAR", (128, ypx(Y(0.34))), 42, 0xf2b705, "black", a=0.8, squeeze=0.9, wear=0.7, seed=4)
 
     def rust_top(s):
         yy, xx = np.mgrid[0:256, 0:256]
@@ -202,34 +207,34 @@ def pillar_b() -> dict:
         s.comp(0x7a3d1c, np.clip(1 - d * 1.5, 0, 1) * n * 0.7)
 
     def chip_front(s):
-        drips(s, 3, 170, 226, ypx(0.30), 0x7a3d1c, n=6, length=(10, 40), width=2.2)
+        drips(s, 3, 170, 226, ypx(Y(0.30)), 0x7a3d1c, n=6, length=(10, 40), width=2.2)
 
-    return _build("prop_pillar_b", seed, dict(y0=0.02, y1=0.14, stripe=26, angle=40, wear=0.7), posters_f, [], posters_l, chip_front, tag_r, tag, rust_top, chip=True, loops=False, rebar=True)
+    return _build("prop_pillar_b", seed, dict(y0=0.02, y1=0.24, stripe=26, angle=40, wear=0.7), posters_f, [], posters_l, chip_front, tag_r, tag, rust_top, chip=True, loops=False, rebar=True)
 
 
 def pillar_c() -> dict:
     seed = 37
     posters_f = [
-        dict(x=26, y=int(ypx(0.59)), w=66, h=84, seed=52, rot=-2, kind="sunburst"),
-        dict(x=84, y=int(ypx(0.585)), w=64, h=78, seed=53, rot=3, kind="type"),
-        dict(x=146, y=int(ypx(0.59)), w=62, h=82, seed=57, rot=-2, kind="concert"),
-        dict(x=52, y=int(ypx(0.45)), w=76, h=54, seed=61, rot=1, kind="stripe"),
-        dict(x=156, y=int(ypx(0.40)), w=60, h=54, seed=64, rot=6, kind="notice"),
+        dict(x=26, y=int(ypx(Y(0.59))), w=66, h=113, seed=52, rot=-2, kind="sunburst"),
+        dict(x=84, y=int(ypx(Y(0.585))), w=64, h=105, seed=53, rot=3, kind="type"),
+        dict(x=146, y=int(ypx(Y(0.59))), w=62, h=110, seed=57, rot=-2, kind="concert"),
+        dict(x=52, y=int(ypx(Y(0.45))), w=76, h=72, seed=61, rot=1, kind="stripe"),
+        dict(x=156, y=int(ypx(Y(0.40))), w=60, h=72, seed=64, rot=6, kind="notice"),
     ]
-    posters_r = [dict(x=70, y=int(ypx(0.52)), w=64, h=76, seed=70, rot=-3, kind="notice")]
+    posters_r = [dict(x=70, y=int(ypx(Y(0.52))), w=64, h=102, seed=70, rot=-3, kind="notice")]
 
     def crack_side(s):
         cracks(s, 12, n=2, length=0.9, width=1.3, start_edge="top")
 
     def crack_left(s):
         cracks(s, 15, n=2, length=0.8, width=1.3, start_edge="bottom")
-        stencil(s, "B7", (128, ypx(0.40)), 68, 0xf2b705, "black", a=0.85, squeeze=0.85, wear=0.6, seed=9)
+        stencil(s, "B7", (128, ypx(Y(0.40))), 68, 0xf2b705, "black", a=0.85, squeeze=0.85, wear=0.6, seed=9)
 
     def top_extra(s):
         cracks(s, 18, n=3, length=0.7, width=1.5)
         stencil(s, "NO", (128, 100), 30, 0xf1ead2, "black", a=0.4, squeeze=0.9, wear=0.8, seed=2)
 
-    return _build("prop_pillar_c", seed, dict(y0=0.02, y1=0.14, stripe=22, angle=130, wear=0.5), posters_f, posters_r, [], None, crack_side, crack_left, top_extra)
+    return _build("prop_pillar_c", seed, dict(y0=0.02, y1=0.24, stripe=22, angle=130, wear=0.5), posters_f, posters_r, [], None, crack_side, crack_left, top_extra)
 
 
 PILLARS = {"prop_pillar_a": pillar_a, "prop_pillar_b": pillar_b, "prop_pillar_c": pillar_c}

@@ -1,8 +1,9 @@
-import { ACESFilmicToneMapping, Color, Fog, PCFShadowMap, Scene, SRGBColorSpace, WebGLRenderer } from 'three';
+import { Color, Fog, PCFShadowMap, Scene, SRGBColorSpace, WebGLRenderer } from 'three';
 import { PICKUP_DEFS } from '../sim';
 import type { GameState, SimEvent } from '../sim';
 import { createBackdrop } from './assets/backdrop';
 import { createSceneLights } from './lighting';
+import { installGrading } from './grading';
 import type { SceneLights } from './lighting';
 import type { Backdrop } from './assets/backdrop';
 import { CameraRig } from './cameraRig';
@@ -94,8 +95,7 @@ export class GameRenderer {
       powerPreference: 'high-performance',
     });
     this.renderer.outputColorSpace = SRGBColorSpace;
-    this.renderer.toneMapping = ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    installGrading(this.renderer);
     this.renderer.shadowMap.type = PCFShadowMap;
     this.renderer.setClearColor(0xe3b985);
     this.renderer.domElement.addEventListener('webglcontextlost', (e) => {

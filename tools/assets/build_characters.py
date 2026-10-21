@@ -28,9 +28,25 @@ MATERIALS = {
 }
 
 
+#: Heads (with hair, eyes, brows, ears and headwear) are enlarged about the chin so faces and hairstyles read
+#: from the gameplay camera: a stylised-realistic ratio of roughly 1 : 6.3 instead of 1 : 7.5.
+HEAD_SCALE = 1.2
+
+
+def enlarge_heads(spec: dict) -> None:
+    b = spec["body"]
+    pivot = np.array([0.0, b.head_y - b.head[1] * 0.92, 0.012])
+    for group in ("skin", "cloth", "hair", "eyes", "accessory"):
+        for m in spec.get(group) or []:
+            sel = np.array([r == "head" for r in m.region])
+            if sel.any():
+                m.v[sel] = pivot + (m.v[sel] - pivot) * HEAD_SCALE
+
+
 def build(name: str) -> str:
     spec = characters.CAST[name]()
     body = spec["body"]
+    enlarge_heads(spec)
     g = GltfBuilder()
     rest, world = rest_translations(body)
     nodes: dict[str, int] = {}

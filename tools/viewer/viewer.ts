@@ -9,7 +9,6 @@
  * When ready it sets window.__VIEWER__ = { ready, stats, clips }.
  */
 import {
-  ACESFilmicToneMapping,
   AnimationMixer,
   Box3,
   Color,
@@ -28,6 +27,7 @@ import type { Object3D } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { createSceneLights } from '../../src/render/lighting';
+import { installGrading } from '../../src/render/grading';
 import { floorTexture } from '../../src/render/textures';
 
 const q = new URLSearchParams(location.search);
@@ -39,8 +39,7 @@ const renderer = new WebGLRenderer({ canvas, antialias: true, preserveDrawingBuf
 renderer.setPixelRatio(1);
 renderer.setSize(W, H, false);
 renderer.outputColorSpace = SRGBColorSpace;
-renderer.toneMapping = ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+installGrading(renderer);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = PCFShadowMap;
 const scene = new Scene();

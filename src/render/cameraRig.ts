@@ -1,8 +1,12 @@
 import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
 import type { Layout } from './coords';
 
-const PITCH = (58 * Math.PI) / 180; // elevated, near top-down, fixed
-const FOV = 36;
+// Elevated three-quarter view: low enough that pillars, walls and characters read as solid 3D
+// objects (strong perspective, visible side faces), high enough that every lane stays visible.
+const PITCH = (51 * Math.PI) / 180;
+const FOV = 44;
+/** Height of the tallest perimeter dressing that must stay inside the frame (far wall top). */
+const FAR_TOP = 1.5;
 
 /**
  * Fixed elevated camera. It never pans or follows action: it is fitted once per viewport size so
@@ -22,28 +26,55 @@ export class CameraRig {
   fit(aspect: number, insets = { top: 0.1, bottom: 0.06 }): void {
     const cam = this.camera;
     cam.aspect = aspect;
-    cam.fov = aspect < 1.2 ? FOV + 14 : FOV;
+    cam.fov = aspect < 1.2 ? FOV + 12 : FOV;
     cam.updateProjectionMatrix();
     const W = this.layout.width;
     const H = this.layout.height;
     const pts = [
-      new Vector3(-W / 2 - 0.6, 1.1, -H / 2 - 0.6),
-      new Vector3(W / 2 + 0.6, 1.1, -H / 2 - 0.6),
-      new Vector3(-W / 2 - 0.6, 0, H / 2 + 0.6),
-      new Vector3(W / 2 + 0.6, 0, H / 2 + 0.6),
+      new Vector3(-W / 2 - 0.5, FAR_TOP, -H / 2 - 0.5),
+      new Vector3(W / 2 + 0.5, FAR_TOP, -H / 2 - 0.5),
+      new Vector3(-W / 2 - 0.5, 0, H / 2 + 0.7),
+      new Vector3(W / 2 + 0.5, 0, H / 2 + 0.7),
     ];
     const dir = new Vector3(0, Math.sin(PITCH), Math.cos(PITCH));
     const yTop = 1 - insets.top * 2;
     const yBottom = -1 + insets.bottom * 2;
-    const fits = (d: number, tz: number): boolean => {
+    const v = new Vector3();
+    const pose = (d: number, tz: number): void => {
       this.target.set(0, 0, tz);
       cam.position.copy(this.target).addScaledVector(dir, d);
       cam.lookAt(this.target);
       cam.updateMatrixWorld(true);
-      const v = new Vector3();
+    };
+    /** Signed vertical imbalance of the framed arena inside the HUD-free band (0 = centred). */
+    const imbalance = (d: number, tz: number): number => {
+      pose(d, tz);
+      let top = -Infinity;
+      let bottom = Infinity;
       for (const p of pts) {
         v.copy(p).project(cam);
-        if (Math.abs(v.x) > 0.97 || v.y > yTop || v.y < yBottom) return false;
+        top = Math.max(top, v.y);
+        bottom = Math.min(bottom, v.y);
+      }
+      return top - yTop - (yBottom - bottom);
+    };
+    // With strong perspective the far edge shrinks, so the look-at point is re-centred for each
+    // distance (bisection on the imbalance, which grows monotonically with tz).
+    const centre = (d: number): number => {
+      let a = -H / 2;
+      let b = H / 2;
+      for (let i = 0; i < 24; i++) {
+        const mid = (a + b) / 2;
+        if (imbalance(d, mid) > 0) b = mid;
+        else a = mid;
+      }
+      return (a + b) / 2;
+    };
+    const fits = (d: number): boolean => {
+      pose(d, centre(d));
+      for (const p of pts) {
+        v.copy(p).project(cam);
+        if (Math.abs(v.x) > 0.97 || v.y > yTop + 1e-4 || v.y < yBottom - 1e-4) return false;
       }
       return true;
     };
@@ -51,11 +82,11 @@ export class CameraRig {
     let hi = 70;
     for (let i = 0; i < 28; i++) {
       const mid = (lo + hi) / 2;
-      if (fits(mid, 0)) hi = mid;
+      if (fits(mid)) hi = mid;
       else lo = mid;
     }
     this.distance = hi;
-    this.target.set(0, 0, 0);
+    this.target.set(0, 0, centre(hi));
     this.basePos.copy(this.target).addScaledVector(dir, this.distance);
     cam.position.copy(this.basePos);
     cam.lookAt(this.target);

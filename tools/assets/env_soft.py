@@ -70,7 +70,7 @@ def _strip_rects(r):
 def _crate_atlas(seed: int, stencilled: bool, slat_h: float = 0.135, post_nail_fracs=None):
     """512x512: six 512x80 wood strips + a dark interior tile."""
     atlas = Atlas(512, 512)
-    tones = [0xc4975c, 0xab7b4c, 0x916743, 0xb7a48a, 0xb88955, 0xa9794a]
+    tones = [0xdcae70, 0xcf9e62, 0xc4935a, 0xd6bb92, 0xd8a86c, 0xc99862]  # fresh pine: warm, light, reads against grey concrete
     rng = np.random.default_rng(seed)
     nail_slat = [(0.045, 0.5), (0.955, 0.5)]
     for i, tone in enumerate(tones):
@@ -99,7 +99,7 @@ def _post_atlas_fracs(slat_h, gap, y0, n):
     return [(y0 + slat_h / 2 + k * (slat_h + gap)) for k in range(n)]
 
 
-def crate_parts(atlas: Atlas, seed: int, w: float = 0.74, d: float = 0.74, h: float = 0.664, tint=True, stencil_face: str | None = "+z", n_slats: int = 4, brace_faces=("+z", "+x"), broken: bool = True):
+def crate_parts(atlas: Atlas, seed: int, w: float = 0.82, d: float = 0.82, h: float = 0.74, tint=True, stencil_face: str | None = "+z", n_slats: int = 4, brace_faces=("+z", "+x"), broken: bool = True):
     """Return a list of UV-mapped meshes for one wooden crate centred at the origin (y from 0)."""
     rng = np.random.default_rng(seed)
     parts = []
@@ -201,10 +201,10 @@ def soft_crates() -> dict:
     seed = 21
     atlas = _crate_atlas(seed, True)
     m = EnvModel("prop_soft_crates")
-    bottom = crate_parts(atlas, seed, w=0.80, d=0.80, h=0.44, n_slats=3, stencil_face="+z", brace_faces=("+x",), broken=False)
-    top = crate_parts(atlas, seed + 3, w=0.60, d=0.60, h=0.42, n_slats=3, stencil_face=None, brace_faces=("+z",), broken=True)
+    bottom = crate_parts(atlas, seed, w=0.84, d=0.84, h=0.48, n_slats=3, stencil_face="+z", brace_faces=("+x",), broken=False)
+    top = crate_parts(atlas, seed + 3, w=0.64, d=0.64, h=0.44, n_slats=3, stencil_face=None, brace_faces=("+z",), broken=True)
     m.add(bottom)
-    m.add([place(p, (0.02, 0.44, -0.01), (0, 27, 0)) for p in top])
+    m.add([place(p, (0.02, 0.48, -0.01), (0, 27, 0)) for p in top])
     return m.export({"main": atlas.mat(normal_strength=0.45)})
 
 

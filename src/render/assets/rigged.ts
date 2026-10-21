@@ -2,6 +2,7 @@ import { AnimationMixer, Group, LoopOnce, LoopRepeat, MathUtils } from 'three';
 import type { AnimationAction, AnimationClip, Object3D } from 'three';
 import type { CharacterId } from '../../sim';
 import { assets } from './library';
+import { addRim } from './rim';
 
 export type ClipName =
   | 'Idle'
@@ -23,7 +24,7 @@ export type ClipName =
 
 /** Character height in the model file (metres) and the height it is drawn at, in tiles. */
 const MODEL_HEIGHT = 1.8;
-const DRAWN_HEIGHT = 1.5;
+const DRAWN_HEIGHT = 1.62;
 export const RIGGED_SCALE = DRAWN_HEIGHT / MODEL_HEIGHT;
 
 /** Plays the named clips of a skinned character with cross-fades and interruptible one-shots. */
@@ -50,6 +51,7 @@ export class RiggedCharacter {
   static create(id: CharacterId, phase = 0): RiggedCharacter | null {
     const body = assets.instance(`char_${id}`);
     if (!body) return null;
+    addRim(body);
     const rc = new RiggedCharacter(body, assets.clips(`char_${id}`));
     rc.mixer.setTime(phase);
     return rc;

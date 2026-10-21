@@ -109,9 +109,10 @@ def sneaker(b: Body, side: str, sole_h: float = 0.032, bulk: float = 1.0, sides:
     x = j[f"foot_{side}"][0]
     s = b.shoe_scale
     path = np.array([[x, 0.062, -0.078 * s], [x, 0.064, 0.015 * s], [x, 0.052, 0.115 * s], [x, 0.038, 0.215 * s]])
-    wid = np.array([0.040, 0.049, 0.050, 0.040]) * bulk
-    top = np.array([0.088, 0.066, 0.046, 0.032]) * bulk
-    bot = np.array([0.060, 0.052, 0.046, 0.036]) * bulk
+    chunky = 0.5 + 0.5 * s  # stylised bodies wear proportionally chunkier trainers
+    wid = np.array([0.040, 0.049, 0.050, 0.040]) * bulk * chunky
+    top = np.array([0.088, 0.066, 0.046, 0.032]) * bulk * chunky
+    bot = np.array([0.060, 0.052, 0.046, 0.036]) * bulk * chunky
     mesh = tube(path, wid, top, sides=sides, rings=9, exponent=2.4, front=top, back=bot, hint=(0, 1, 0), cap_start=True, cap_end=True)
     return mesh
 

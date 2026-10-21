@@ -25,11 +25,19 @@ from tex_env import (
     weather,
 )
 
-# ----------------------------------------------------------------------------- wall segment (1.0 long, 0.62 high, 0.30 thick)
+# ----------------------------------------------------------------------------- wall segment (1.0 long, 1.05 high, 0.30 thick)
+# Tall precast bus-park wall: it frames the arena like the reference and keeps the crowd outside it. The camera-side
+# (south) run is instanced at a fraction of this height by the game so no tile is hidden.
 
-WL, WH, WT = 1.0, 0.62, 0.30
-FW, FH = 512, 320  # front/back tile (512 px per metre)
+WL, WH, WT = 1.0, 1.05, 0.30
+CAP0 = WH - 0.065  # cap underside
+FW, FH = 512, 544  # front/back tile (512 px per metre)
 PX = 512.0
+LIFT = 0.36  # posters/stencils were authored for the old 0.62 m wall; raise them onto the taller face
+
+
+def P(y: float) -> float:
+    return y + LIFT
 
 
 def wy(y: float) -> float:
@@ -37,23 +45,23 @@ def wy(y: float) -> float:
 
 
 def _wall_face(seed: int, posters: list, extra=None, band_angle=45, tag=None) -> Sheet:
-    s = concrete_sheet(FW, FH, seed, 0xa8a398, stains=0.5)
+    s = concrete_sheet(FW, FH, seed, 0xbdb8ad, stains=0.4)
     tile_x(s)
-    for yy, wd in ((0.14, 1.6), (0.555, 1.8)):  # footing top / cap underside
+    for yy, wd in ((0.14, 1.6), (CAP0, 1.8)):  # footing top / cap underside
         with s.paint(height=-0.3, rough=0.95) as d:
             d.line([(0, wy(yy)), (FW, wy(yy))], 0x4a443c, wd, a=0.8)
         with s.paint(height=0.1) as d:
             d.line([(0, wy(yy) + 2), (FW, wy(yy) + 2)], 0xd8d2c4, 1.0, a=0.3)
     # panel joint: a thin vertical groove right at the segment ends (neighbours add the other half)
     with s.paint(height=-0.35, rough=0.95) as d:
-        d.rect((0, wy(0.555), 2.2, wy(0.14)), 0x3a352e, a=0.9)
-        d.rect((FW - 2.2, wy(0.555), FW, wy(0.14)), 0x3a352e, a=0.9)
-    weather(s, seed + 1, ground=0.5, ground_h=0.12, streaks=0.55, top_soot=0.3, tone_dark=0x34312e, tile=True)
+        d.rect((0, wy(CAP0), 2.2, wy(0.14)), 0x3a352e, a=0.9)
+        d.rect((FW - 2.2, wy(CAP0), FW, wy(0.14)), 0x3a352e, a=0.9)
+    weather(s, seed + 1, ground=0.3, ground_h=0.08, streaks=0.35, top_soot=0.15, tone_dark=0x3e3a35, tile=True)
     ys = np.arange(FH)[:, None] + 0.5
-    cap = np.clip((wy(0.555) - ys) / 8, 0, 1) * np.ones((1, FW))
+    cap = np.clip((wy(CAP0) - ys) / 8, 0, 1) * np.ones((1, FW))
     s.comp(0xd9d3c6, cap * 0.18)
     # hazard band on the footing (stripe pitch divides the 512 px width exactly: 8 colour pairs)
-    b0, b1 = 0.022, 0.118
+    b0, b1 = 0.022, 0.13
     bh = int(wy(b0) - wy(b1))
     band, cov = hazard_band(FW, bh, stripe=512 / 8 * 0.7071 / 2, angle=band_angle, seed=seed + 3, wear=0.5, tile=True)
     y0 = int(wy(b1))
@@ -89,20 +97,20 @@ def _wall_top(seed: int) -> Sheet:
 
 
 def _wall(name: str, seed: int, posters_f, posters_b, extra_f=None, extra_b=None, tag_f=None) -> dict:
-    atlas = Atlas(512, 1024, 0x808080)
+    atlas = Atlas(1024, 1024, 0x808080)
     atlas.add("front", 0, 0, _wall_face(seed, posters_f, extra_f, 45, tag_f))
-    atlas.add("back", 0, 320, _wall_face(seed + 50, posters_b, extra_b, -45))
-    atlas.add("top", 0, 640, _wall_top(seed))
+    atlas.add("back", 512, 0, _wall_face(seed + 50, posters_b, extra_b, -45))
+    atlas.add("top", 0, 560, _wall_top(seed))
 
-    def rect(nm):  # no padding in u: the atlas is repeat-wrapped and the tile is periodic in x
+    def rect(nm):  # u spans the whole (x-periodic) tile; v is padded against mip bleed
         x0, y0, x1, y1 = atlas.tiles[nm]
         pad = 3
-        return (0.0, 1 - (y1 - pad) / atlas.h, 1.0, 1 - (y0 + pad) / atlas.h)
+        return (x0 / atlas.w, 1 - (y1 - pad) / atlas.h, x1 / atlas.w, 1 - (y0 + pad) / atlas.h)
 
     rects = {"+z": rect("front"), "-z": rect("back"), "+y": rect("top"), "-y": rect("top"), "+x": rect("top"), "-x": rect("top")}
     footing = extrude_x([(-0.15, 0.0), (0.15, 0.0), (0.15, 0.12), (0.135, 0.14), (-0.135, 0.14), (-0.15, 0.12)], -WL / 2, WL / 2)
-    body = extrude_x([(-0.135, 0.13), (0.135, 0.13), (0.135, 0.56), (-0.135, 0.56)], -WL / 2, WL / 2)
-    cap = extrude_x([(-0.15, 0.555), (0.15, 0.555), (0.15, 0.59), (0.125, 0.62), (-0.125, 0.62), (-0.15, 0.59)], -WL / 2, WL / 2)
+    body = extrude_x([(-0.135, 0.13), (0.135, 0.13), (0.135, CAP0 + 0.005), (-0.135, CAP0 + 0.005)], -WL / 2, WL / 2)
+    cap = extrude_x([(-0.15, CAP0), (0.15, CAP0), (0.15, CAP0 + 0.035), (0.125, WH), (-0.125, WH), (-0.15, CAP0 + 0.035)], -WL / 2, WL / 2)
     m = EnvModel(name)
     lo, hi = (-WL / 2, 0.0, -WT / 2), (WL / 2, WH, WT / 2)
     for part in (footing, body, cap):
@@ -114,37 +122,37 @@ def _wall(name: str, seed: int, posters_f, posters_b, extra_f=None, extra_b=None
 
 def wall_a() -> dict:
     seed = 101
-    pf = [dict(x=70, y=int(wy(0.50)), w=100, h=125, seed=201, rot=2, kind="concert"), dict(x=290, y=int(wy(0.47)), w=96, h=104, seed=202, rot=-3, kind="stripe"), dict(x=372, y=int(wy(0.35)), w=70, h=84, seed=203, rot=4, kind="notice")]
-    pb = [dict(x=160, y=int(wy(0.50)), w=100, h=120, seed=211, rot=-2, kind="sunburst")]
+    pf = [dict(x=70, y=int(wy(P(0.50))), w=114, h=168, seed=201, rot=2, kind="concert"), dict(x=290, y=int(wy(P(0.47))), w=110, h=140, seed=202, rot=-3, kind="stripe"), dict(x=372, y=int(wy(P(0.35))), w=80, h=113, seed=203, rot=4, kind="notice")]
+    pb = [dict(x=160, y=int(wy(P(0.50))), w=114, h=162, seed=211, rot=-2, kind="sunburst")]
 
     def num(s):
-        stencil(s, "B4", (262, wy(0.30)), 70, 0xf1ead2, "black", a=0.85, squeeze=0.85, wear=0.6, seed=5)
+        stencil(s, "B4", (262, wy(P(0.30))), 70, 0xf1ead2, "black", a=0.85, squeeze=0.85, wear=0.6, seed=5)
 
     return _wall("env_wall", seed, pf, pb, None, num)
 
 
 def wall_b() -> dict:
     seed = 131
-    pf = [dict(x=250, y=int(wy(0.51)), w=104, h=132, seed=231, rot=-2, kind="type")]
-    pb = [dict(x=60, y=int(wy(0.50)), w=96, h=120, seed=241, rot=3, kind="sale"), dict(x=300, y=int(wy(0.48)), w=100, h=100, seed=242, rot=-2, kind="concert")]
+    pf = [dict(x=250, y=int(wy(P(0.51))), w=119, h=178, seed=231, rot=-2, kind="type")]
+    pb = [dict(x=60, y=int(wy(P(0.50))), w=110, h=162, seed=241, rot=3, kind="sale"), dict(x=300, y=int(wy(P(0.48))), w=114, h=135, seed=242, rot=-2, kind="concert")]
 
     def tag(s):
-        spray_tag(s, 4, 60, wy(0.46), 230, wy(0.28), 0x151515, 4.0, loops=5)
-        spray_tag(s, 9, 62, wy(0.44), 228, wy(0.26), 0xff3d7f, 1.5, loops=5)
+        spray_tag(s, 4, 60, wy(P(0.46)), 230, wy(P(0.28)), 0x151515, 4.0, loops=5)
+        spray_tag(s, 9, 62, wy(P(0.44)), 228, wy(P(0.26)), 0xff3d7f, 1.5, loops=5)
 
     def rust(s):
-        drips(s, 5, 330, 440, wy(0.50), 0x7a3d1c, n=7, length=(10, 60), width=2.4)
+        drips(s, 5, 330, 440, wy(P(0.50)), 0x7a3d1c, n=7, length=(10, 60), width=2.4)
 
     return _wall("env_wall_b", seed, pf, pb, rust, None, tag)
 
 
 def wall_c() -> dict:
     seed = 161
-    pf = [dict(x=64, y=int(wy(0.49)), w=90, h=108, seed=251, rot=-3, kind="sunburst"), dict(x=336, y=int(wy(0.50)), w=100, h=116, seed=252, rot=2, kind="concert")]
+    pf = [dict(x=64, y=int(wy(P(0.49))), w=103, h=145, seed=251, rot=-3, kind="sunburst"), dict(x=336, y=int(wy(P(0.50))), w=114, h=156, seed=252, rot=2, kind="concert")]
 
     def cr(s):
         cracks(s, 22, n=2, length=1.0, width=1.5, start_edge="top")
-        stencil(s, "KEEP CLEAR", (256, wy(0.30)), 36, 0xf2b705, "black", a=0.8, squeeze=0.9, wear=0.7, seed=3, spacing=0.05)
+        stencil(s, "KEEP CLEAR", (256, wy(P(0.30))), 36, 0xf2b705, "black", a=0.8, squeeze=0.9, wear=0.7, seed=3, spacing=0.05)
 
     return _wall("env_wall_c", seed, pf, [], cr, cr)
 
@@ -152,10 +160,10 @@ def wall_c() -> dict:
 def wall_d() -> dict:
     """Wall with a hand-painted danfo-bus mural."""
     seed = 191
-    pb = [dict(x=330, y=int(wy(0.50)), w=100, h=118, seed=261, rot=-2, kind="sale")]
+    pb = [dict(x=330, y=int(wy(P(0.50))), w=114, h=159, seed=261, rot=-2, kind="sale")]
 
     def mural(s):
-        x0, y0 = 62, wy(0.505)  # top-left of the painting area
+        x0, y0 = 62, wy(P(0.505))  # top-left of the painting area
         w, h = 260, 130
         with s.paint(height=0.06, rough=0.6) as d:
             d.rect((x0 - 6, y0 - 10, x0 + w + 6, y0 + h + 12), 0x2a6fc0, a=0.9, r=8)  # blue sky panel
@@ -183,21 +191,21 @@ def wall_d() -> dict:
 
 def corner() -> dict:
     seed = 181
-    PW, PH = 0.42, 0.76
-    TWd, THt = 192, 336  # side tile (px) for a 0.42 x 0.76 face -> ~440 px/m
+    PW, PH = 0.42, 1.24
+    TWd, THt = 192, 512  # side tile (px) for a 0.42 x 1.24 face
     ppm = TWd / PW
 
     def ypx(y):
         return THt - 1 - y * ppm * (THt / (PH * ppm))
 
     def side(sd, posters, extra=None):
-        s = concrete_sheet(TWd, THt, sd, 0xa8a398, stains=0.5)
+        s = concrete_sheet(TWd, THt, sd, 0xbdb8ad, stains=0.4)
         scale = THt / PH
         yp = lambda y: THt - 1 - y * scale  # noqa: E731
-        for yy, wd in ((0.18, 1.3), (0.66, 1.6)):
+        for yy, wd in ((0.18, 1.3), (PH - 0.12, 1.6)):
             with s.paint(height=-0.3, rough=0.95) as d:
                 d.line([(0, yp(yy)), (TWd, yp(yy))], 0x4a443c, wd, a=0.75)
-        weather(s, sd + 1, ground=0.5, ground_h=0.12, streaks=0.5, top_soot=0.3, edge=0.4, tone_dark=0x34312e)
+        weather(s, sd + 1, ground=0.3, ground_h=0.08, streaks=0.3, top_soot=0.15, edge=0.25, tone_dark=0x3e3a35)
         b0, b1 = 0.025, 0.15
         bh = int(yp(b0) - yp(b1))
         band, cov = hazard_band(TWd, bh, stripe=20, angle=50, seed=sd + 3, wear=0.5)
@@ -219,21 +227,21 @@ def corner() -> dict:
         return s
 
     def num(s, yp):
-        stencil(s, "7", (96, yp(0.42)), 120, 0xf1ead2, "black", a=0.85, squeeze=0.85, wear=0.6, seed=5)
+        stencil(s, "7", (96, yp(0.70)), 120, 0xf1ead2, "black", a=0.85, squeeze=0.85, wear=0.6, seed=5)
 
-    atlas = Atlas(512, 512, 0x808080)
-    atlas.add("front", 0, 0, side(seed, [dict(x=34, y=int(THt - 1 - 0.60 * THt / PH), w=76, h=92, seed=301, rot=2, kind="concert")]))
+    atlas = Atlas(512, 1024, 0x808080)
+    atlas.add("front", 0, 0, side(seed, [dict(x=34, y=int(THt - 1 - 0.98 * THt / PH), w=84, h=120, seed=301, rot=2, kind="concert")]))
     atlas.add("right", 192, 0, side(seed + 10, [], num))
     top = concrete_sheet(176, 176, seed + 20, 0xa59f94, stains=0.3, grit=0.7)
     yy, xx = np.mgrid[0:176, 0:176]
     edge_px = 88.0 - np.maximum(np.abs(xx - 87.5), np.abs(yy - 87.5))
     top.comp(0x34312e, np.clip(1 - edge_px / 14.0, 0, 1) * 0.5)
     speckle(top, seed + 22, amount=0.3, density=0.004)
-    atlas.add("top", 0, 340, top)
+    atlas.add("top", 0, 520, top)
     rects = {"+z": atlas.rect("front"), "-z": atlas.rect("right"), "+x": atlas.rect("right"), "-x": atlas.rect("front"), "+y": atlas.rect("top"), "-y": atlas.rect("top")}
     plinth = chamfer_prism(rect_poly(PW, PW), 0.0, 0.18, cb=0.0, ct=0.03)
-    shaft = obox((0, 0.42, 0), (0.34, 0.50, 0.34), bevel=0.01, seg=1)
-    cap = chamfer_prism(rect_poly(0.46, 0.46), 0.64, PH, cb=0.03, ct=0.04)
+    shaft = obox((0, (0.17 + PH - 0.11) / 2, 0), (0.34, PH - 0.11 - 0.17, 0.34), bevel=0.01, seg=1)
+    cap = chamfer_prism(rect_poly(0.46, 0.46), PH - 0.12, PH, cb=0.03, ct=0.04)
     m = EnvModel("env_wall_corner")
     lo, hi = (-PW / 2, 0.0, -PW / 2), (PW / 2, PH, PW / 2)
     for part in (plinth, shaft, cap):
