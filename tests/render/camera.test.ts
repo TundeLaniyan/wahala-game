@@ -39,6 +39,18 @@ describe('render camera framing and picking', () => {
     });
   }
 
+  it('landscape phone: near-row corners stay clear of the bottom-corner touch controls', () => {
+    const layout = createLayout(15, 11);
+    const rig = new CameraRig(layout);
+    rig.fit(844 / 390, { top: 0.13, bottom: 0.03 });
+    rig.camera.updateMatrixWorld(true);
+    for (const x of [0, layout.width - 1]) {
+      const v = new Vector3(layout.wx(x) + Math.sign(layout.wx(x)) * 0.5, 0, layout.wz(layout.height - 1) + 0.5);
+      v.project(rig.camera);
+      expect(Math.abs(v.x)).toBeLessThan(0.62);
+    }
+  });
+
   it('looks down at an elevated three-quarter angle (not top-down)', () => {
     const rig = new CameraRig(createLayout(15, 11));
     rig.fit(16 / 9);

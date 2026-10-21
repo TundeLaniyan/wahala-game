@@ -7,6 +7,8 @@ const PITCH = (51 * Math.PI) / 180;
 const FOV = 44;
 /** Height of the tallest perimeter dressing that must stay inside the frame (far wall top). */
 const FAR_TOP = 1.5;
+/** Max |NDC x| of the near arena corners in the phone layout (clear of the touch controls). */
+const NEAR_X_COMPACT = 0.62;
 
 /**
  * Fixed elevated camera. It never pans or follows action: it is fitted once per viewport size so
@@ -36,6 +38,11 @@ export class CameraRig {
       new Vector3(-W / 2 - 0.5, 0, H / 2 + 0.7),
       new Vector3(W / 2 + 0.5, 0, H / 2 + 0.7),
     ];
+    // Perspective widens the near row. In the short landscape (phone) layout the on-screen D-pad and
+    // action buttons sit in the bottom corners, so the near corners are kept inside them.
+    const compact = insets.top >= 0.12;
+    const nearX = compact ? NEAR_X_COMPACT : 0.97;
+    const maxX = (p: Vector3): number => (p.z > 0 ? nearX : 0.97);
     const dir = new Vector3(0, Math.sin(PITCH), Math.cos(PITCH));
     const yTop = 1 - insets.top * 2;
     const yBottom = -1 + insets.bottom * 2;
@@ -74,7 +81,7 @@ export class CameraRig {
       pose(d, centre(d));
       for (const p of pts) {
         v.copy(p).project(cam);
-        if (Math.abs(v.x) > 0.97 || v.y > yTop + 1e-4 || v.y < yBottom - 1e-4) return false;
+        if (Math.abs(v.x) > maxX(p) || v.y > yTop + 1e-4 || v.y < yBottom - 1e-4) return false;
       }
       return true;
     };
