@@ -80,11 +80,11 @@ describe('spectator throws', () => {
   });
 });
 
-describe('floor hazards (trap arena)', () => {
+describe('floor hazards (floor traps option)', () => {
   const trap = () => {
     const s = createGame({
       seed: 1,
-      arenaId: 'lekkiRoadworks',
+      arenaId: 'balogunMarket',
       players: duo,
       settings: { floorHazards: true },
     });
@@ -96,15 +96,21 @@ describe('floor hazards (trap arena)', () => {
   it('only exists when the option is on', () => {
     const on = createGame({
       seed: 1,
-      arenaId: 'lekkiRoadworks',
+      arenaId: 'balogunMarket',
       players: duo,
       settings: { floorHazards: true },
     });
-    const off = createGame({ seed: 1, arenaId: 'lekkiRoadworks', players: duo });
+    const off = createGame({ seed: 1, arenaId: 'balogunMarket', players: duo });
     expect(Object.keys(on.floorHazards).length).toBeGreaterThan(0);
     expect(Object.keys(off.floorHazards)).toHaveLength(0);
-    const plain = createGame({ seed: 1, players: duo, settings: { floorHazards: true } });
-    expect(Object.keys(plain.floorHazards)).toHaveLength(0); // standard arena has no traps
+    // only the designated trap arena has traps; the bus park stays clean even with the option on
+    const busPark = createGame({
+      seed: 1,
+      arenaId: 'danfoBusPark',
+      players: duo,
+      settings: { floorHazards: true },
+    });
+    expect(Object.keys(busPark.floorHazards)).toHaveLength(0);
   });
 
   it('a pothole makes a player stumble', () => {
@@ -120,13 +126,13 @@ describe('floor hazards (trap arena)', () => {
 
   it('oil slides a player a fixed number of extra tiles', () => {
     const s = trap();
-    // (2,5) is oil: approach along the clear column x=2 from above
-    expect(s.floorHazards[5 * s.width + 2]).toBe('oil');
-    put(s, 0, 2, 4);
-    run(s, 1, { 0: { move: 'down' } });
+    // (5,2) is palm oil: approach along the clear aisle y=2 from the left
+    expect(s.floorHazards[2 * s.width + 5]).toBe('oil');
+    put(s, 0, 4, 2);
+    run(s, 1, { 0: { move: 'right' } });
     expect(s.players[0]!.slide).not.toBeNull();
     run(s, 40);
-    expect(s.players[0]!.y).toBe(5 + s.config.hazards.oilSlideTiles);
+    expect(s.players[0]!.x).toBe(5 + s.config.hazards.oilSlideTiles);
     expect(tick(s, {})).toBeDefined();
   });
 });

@@ -17,6 +17,33 @@ test.describe('menus and match flow', () => {
     await page.screenshot({ path: `e2e-shots/${info.project.name}-arena.png` });
   });
 
+  test('both arenas are selectable and load different stages, with no errors', async ({ page }, info) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    await open(page, '&nobots');
+    const boards: Record<string, string> = {};
+    for (const arena of ['danfoBusPark', 'balogunMarket']) {
+      await page.getByTestId(`arena-${arena}`).click();
+      await startMatch(page, { competitors: 2 });
+      const st = await page.evaluate(() => {
+        const s = (
+          window as never as { __WAHALA__: { getState(): { arenaId: string; tiles: number[] } } }
+        ).__WAHALA__.getState();
+        return { arenaId: s.arenaId, hard: s.tiles.map((t) => (t === 1 ? '#' : '.')).join('') };
+      });
+      expect(st.arenaId).toBe(arena);
+      boards[arena] = st.hard;
+      await page.screenshot({ path: `e2e-shots/${info.project.name}-arena-${arena}.png` });
+      await page.keyboard.press('Escape');
+      await expect(page.getByTestId('pause-overlay')).toBeVisible();
+      await page.getByTestId('quit').click();
+      await expect(page.getByTestId('title-screen')).toBeVisible();
+    }
+    expect(boards.danfoBusPark).not.toBe(boards.balogunMarket);
+    expect(errors).toEqual([]);
+  });
+
   test('pause and resume, then quit back to the title', async ({ page }) => {
     await open(page, '&nobots');
     await startMatch(page);
@@ -225,7 +252,7 @@ test.describe('whole-match robustness', () => {
 });
 
 test.describe('optional modes', () => {
-  test('Wahala Crush, the trap arena and crowd throws run together without errors and telegraph first', async ({
+  test('Wahala Crush, floor traps and crowd throws run together on the market without errors and telegraph first', async ({
     page,
   }, info) => {
     const errors: string[] = [];
@@ -233,7 +260,8 @@ test.describe('optional modes', () => {
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
     await open(page, '&nobots');
     await page.getByTestId('mode-crush').click();
-    await page.getByTestId('arena-lekkiRoadworks').click();
+    await page.getByTestId('arena-balogunMarket').click();
+    await page.getByTestId('toggle-hazards').click();
     await page.getByTestId('toggle-crowd').click();
     await startMatch(page, { competitors: 4, waitPlaying: false });
     await stepTicks(page, 160);
@@ -258,13 +286,21 @@ test.describe('optional modes', () => {
     await stepTicks(page, 400);
     await page.waitForTimeout(100);
     await page.screenshot({ path: `e2e-shots/${info.project.name}-modes-later.png` });
-    const hard = await page.evaluate(
-      () =>
-        (window as never as { __WAHALA__: { getState(): { tiles: number[] } } }).__WAHALA__
-          .getState()
-          .tiles.filter((t) => t === 1).length,
-    );
-    expect(hard === 35 || hard > 35).toBe(true);
+    const board = await page.evaluate(() => {
+      const s = (
+        window as never as {
+          __WAHALA__: { getState(): { tiles: number[]; arenaId: string; floorHazards: object } };
+        }
+      ).__WAHALA__.getState();
+      return {
+        arena: s.arenaId,
+        hard: s.tiles.filter((t) => t === 1).length,
+        traps: Object.keys(s.floorHazards).length,
+      };
+    });
+    expect(board.arena).toBe('balogunMarket');
+    expect(board.traps).toBeGreaterThan(0);
+    expect(board.hard).toBeGreaterThan(34); // 34 market stalls + crush blocks
     expect(errors).toEqual([]);
   });
 });

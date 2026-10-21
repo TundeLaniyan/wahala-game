@@ -16,7 +16,7 @@ export {
   tileX,
   tileY,
 } from './grid';
-export { ARENAS, DEFAULT_ARENA_ID, getArena } from './arenas';
+export { ARENAS, DEFAULT_ARENA_ID, getArena, validateArena } from './arenas';
 export type { ArenaDef } from './arenas';
 export { CHARACTERS, CHARACTER_IDS } from './data/characters';
 export type { CharacterDef } from './data/characters';

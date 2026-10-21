@@ -9,7 +9,7 @@ export interface ArenaDef {
   spawns: TilePos[];
   /** Tiles kept clear of soft blocks around each spawn (relative offsets). */
   spawnClearance: TilePos[];
-  /** Optional floor hazards, only used by trap arenas: 'o' pothole, '~' oil in this grid. */
+  /** Optional floor hazards, only used when the "floor traps" option is on: 'o' pothole, '~' oil in this grid. */
   hazardLayout?: string[];
   mirrorSoftBlocks: boolean;
 }

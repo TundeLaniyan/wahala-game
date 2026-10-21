@@ -117,7 +117,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
         settings.quality !== 'low' &&
         useGameStore.getState().screen === 'title'
       )
-        attract?.start();
+        attract?.start(useGameStore.getState().settings.arenaId);
     });
   resizeObserver = new ResizeObserver(sizeCanvas);
   resizeObserver.observe(canvas);
@@ -170,7 +170,7 @@ export const commands = {
   toTitle(): void {
     audio.playUi('back');
     controller?.stop();
-    if (settingsAllowAttract()) attract?.start();
+    if (settingsAllowAttract()) attract?.start(useGameStore.getState().settings.arenaId);
   },
   togglePause: (): void => controller?.togglePause(),
   resume: (): void => controller?.setPaused(false),
@@ -185,6 +185,8 @@ export const commands = {
     saveSettings(settings);
     applyAudioSettings(settings);
     if (p.quality) renderer?.setQuality(p.quality);
+    // the live demo behind the menu previews the chosen arena
+    if (p.arenaId && attract?.running && useGameStore.getState().screen === 'title') attract.start(p.arenaId);
   },
 };
 

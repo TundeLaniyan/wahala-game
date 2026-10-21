@@ -89,13 +89,16 @@ function checkInvariants(s: GameState): void {
   if (s.match.phase === 'ended' && s.match.result?.kind === 'win') expect(alive).toBeGreaterThanOrEqual(1);
 }
 
-function play(seed: number, opts: { mode: 'classic' | 'crush'; crowd: boolean; arena: string }): GameState {
+function play(
+  seed: number,
+  opts: { mode: 'classic' | 'crush'; crowd: boolean; arena: string; traps: boolean },
+): GameState {
   const rng = createRng(seed * 31 + 7);
   const state = createGame({
     seed,
     arenaId: opts.arena,
     players: [0, 1, 2, 3].map((i) => ({ name: `P${i}`, characterId: CHARACTER_IDS[i % 3]!, isBot: i > 0 })),
-    settings: { mode: opts.mode, crowdThrows: opts.crowd, floorHazards: opts.arena === 'lekkiRoadworks' },
+    settings: { mode: opts.mode, crowdThrows: opts.crowd, floorHazards: opts.traps },
   });
   for (let t = 0; t < 4200 && state.match.phase !== 'ended'; t++) {
     const intents: Intents = {};
@@ -117,14 +120,16 @@ function play(seed: number, opts: { mode: 'classic' | 'crush'; crowd: boolean; a
 }
 
 describe('fuzz: random play never breaks simulation invariants', () => {
-  for (const [mode, crowd, arena] of [
-    ['classic', false, 'danfoBusPark'],
-    ['crush', true, 'lekkiRoadworks'],
+  for (const [mode, crowd, arena, traps] of [
+    ['classic', false, 'danfoBusPark', false],
+    ['crush', true, 'danfoBusPark', false],
+    ['classic', true, 'balogunMarket', true],
+    ['crush', true, 'balogunMarket', true],
   ] as const) {
-    it(`${mode} / ${arena}: 40 random seeded matches`, () => {
+    it(`${mode} / ${arena}${traps ? ' + traps' : ''}: 40 random seeded matches`, () => {
       let ended = 0;
       for (let seed = 1; seed <= 40; seed++) {
-        const s = play(seed, { mode, crowd, arena });
+        const s = play(seed, { mode, crowd, arena, traps });
         if (s.match.phase === 'ended') ended++;
       }
       expect(ended).toBeGreaterThan(5);
@@ -132,8 +137,8 @@ describe('fuzz: random play never breaks simulation invariants', () => {
   }
 
   it('is deterministic: the same seed and inputs reproduce the exact same final state', () => {
-    const a = play(5, { mode: 'classic', crowd: true, arena: 'danfoBusPark' });
-    const b = play(5, { mode: 'classic', crowd: true, arena: 'danfoBusPark' });
+    const a = play(5, { mode: 'classic', crowd: true, arena: 'danfoBusPark', traps: false });
+    const b = play(5, { mode: 'classic', crowd: true, arena: 'danfoBusPark', traps: false });
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
   });
 });

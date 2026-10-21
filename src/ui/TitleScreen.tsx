@@ -211,7 +211,7 @@ export function TitleScreen() {
                 value={a.id}
                 current={s.arenaId}
                 label={a.name}
-                onPick={(v) => set({ arenaId: v, floorHazards: !!ARENAS[v]!.hazardLayout })}
+                onPick={(v) => set({ arenaId: v })}
                 testId={`arena-${a.id}`}
               />
             ))}

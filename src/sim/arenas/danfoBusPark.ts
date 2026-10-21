@@ -1,9 +1,9 @@
 import type { ArenaDef } from './types';
 
 /**
- * Danfo Bus Park: 15 x 11 playable tiles. Concrete pillars sit on every odd/odd tile so each
- * even row and even column is a clear lane (the lanes vehicles can use). Soft blocks are filled
- * in with 4-fold mirror symmetry so every spawn faces the same layout.
+ * Danfo Bus Park: 15 x 11 playable tiles. Concrete pillars sit on every odd/odd tile (the parking-bay
+ * columns of a covered bus park) so each even row and even column is a clear lane the buses can use.
+ * Soft blocks are filled in with 4-fold mirror symmetry so every spawn faces the same layout.
  */
 const COLS = 15;
 const ROWS = 11;

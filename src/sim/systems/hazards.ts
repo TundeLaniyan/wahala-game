@@ -1,5 +1,5 @@
 /**
- * Arena-specific floor traps (only present in trap arenas): potholes make a player stumble,
+ * Arena-specific floor traps (only present when the "floor traps" option is on): potholes make a player stumble,
  * oil slicks make them slide a predictable number of tiles. Both are visible and never lethal.
  */
 import { DIR_VEC, tileIndex } from '../grid';
