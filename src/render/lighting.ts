@@ -14,6 +14,7 @@ import {
   Scene,
   ShaderMaterial,
   SphereGeometry,
+  Vector3,
 } from 'three';
 import type { Texture, WebGLRenderer } from 'three';
 
@@ -22,6 +23,11 @@ export interface SceneLights {
   hemi: HemisphereLight;
   environment: Texture;
   setShadows(enabled: boolean, mapSize: number): void;
+  /**
+   * Fits the sun's shadow frustum tightly around a width x depth arena (plus the scenery margin
+   * around it), so every shadow-map texel lands where the camera actually looks.
+   */
+  fitShadows(width: number, depth: number, margin?: number, height?: number): void;
   dispose(): void;
 }
 
@@ -68,7 +74,7 @@ export function createSceneLights(scene: Scene, renderer: WebGLRenderer): SceneL
   cam.far = 50;
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.035;
-  sun.shadow.radius = 2.2;
+  sun.shadow.radius = 1.6;
   scene.add(hemi, sun, sun.target);
 
   const pmrem = new PMREMGenerator(renderer);
@@ -81,6 +87,36 @@ export function createSceneLights(scene: Scene, renderer: WebGLRenderer): SceneL
     sun,
     hemi,
     environment: rt.texture,
+    fitShadows(width, depth, margin = 3.2, height = 2.6) {
+      // corners of the shadow-casting volume, in the light camera's view space
+      cam.position.copy(sun.position);
+      cam.lookAt(sun.target.position);
+      cam.updateMatrixWorld(true);
+      const p = new Vector3();
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+      let maxZ = -Infinity;
+      for (const sx of [-1, 1])
+        for (const sz of [-1, 1])
+          for (const y of [0, height]) {
+            p.set(sx * (width / 2 + margin), y, sz * (depth / 2 + margin)).applyMatrix4(
+              cam.matrixWorldInverse,
+            );
+            minX = Math.min(minX, p.x);
+            maxX = Math.max(maxX, p.x);
+            minY = Math.min(minY, p.y);
+            maxY = Math.max(maxY, p.y);
+            maxZ = Math.max(maxZ, -p.z);
+          }
+      cam.left = minX;
+      cam.right = maxX;
+      cam.bottom = minY;
+      cam.top = maxY;
+      cam.far = maxZ + 2;
+      cam.updateProjectionMatrix();
+    },
     setShadows(enabled, mapSize) {
       sun.castShadow = enabled;
       sun.shadow.mapSize.set(mapSize, mapSize);

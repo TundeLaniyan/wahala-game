@@ -10,10 +10,11 @@ import { CameraRig } from './cameraRig';
 import { createLayout } from './coords';
 import type { Layout } from './coords';
 import { Effects } from './fx/Effects';
-import { QUALITY } from './quality';
+import { QUALITY, renderPixelRatio } from './quality';
 import type { QualityLevel, QualityProfile } from './quality';
 import type { EntryPick, FrameInfo } from './types';
-import { debrisKindFor } from './assets/props';
+import { themeFor } from './themes';
+import type { ArenaTheme } from './themes';
 import { ArenaView } from './views/ArenaView';
 import { FlameViews } from './views/FlameViews';
 import { GeneratorViews } from './views/GeneratorViews';
@@ -69,6 +70,7 @@ export class GameRenderer {
   private effects!: Effects;
   private backdrop!: Backdrop;
   private arena!: ArenaView;
+  private theme!: ArenaTheme;
   private overlays!: OverlayViews;
   private vehicles!: VehicleViews;
   private views: View[] = [];
@@ -84,6 +86,8 @@ export class GameRenderer {
   private slowFrames = 0;
   private fastFrames = 0;
   private disposed = false;
+  /** Auto quality lowers the render resolution in steps before it drops a whole quality level. */
+  private renderScale = 1;
   private loaded = false;
 
   constructor(opts: RendererOptions) {
@@ -112,12 +116,16 @@ export class GameRenderer {
     this.rig = new CameraRig(this.layout);
     this.effects = new Effects(this.layout, this.profile);
 
-    this.scene.background = new Color(0xe3b985);
-    this.scene.fog = new Fog(0xe3b985, 38, 85);
+    const theme = themeFor(state.arenaId);
+    this.theme = theme;
+    this.scene.background = new Color(theme.sky);
+    this.scene.fog = new Fog(theme.sky, theme.fog[0], theme.fog[1]);
+    this.renderer.setClearColor(theme.sky);
     this.lights = createSceneLights(this.scene, this.renderer);
+    this.lights.fitShadows(state.width, state.height);
 
-    this.backdrop = createBackdrop(this.layout, this.profile.crowd, this.profile.parkedBuses);
-    this.arena = new ArenaView(state, this.layout);
+    this.backdrop = createBackdrop(this.layout, theme, this.profile.crowd, this.profile.parkedBuses);
+    this.arena = new ArenaView(state, this.layout, theme);
     const generators = new GeneratorViews();
     const flames = new FlameViews(this.profile.flameLights);
     const pickups = new PickupViews();
@@ -163,7 +171,7 @@ export class GameRenderer {
   resize(width: number, height: number): void {
     this.width = Math.max(1, Math.floor(width));
     this.height = Math.max(1, Math.floor(height));
-    const dpr = Math.min(this.profile.maxPixelRatio, globalThis.devicePixelRatio || 1);
+    const dpr = renderPixelRatio(this.profile, globalThis.devicePixelRatio || 1, this.renderScale);
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(this.width, this.height, false);
     if (this.loaded) {
@@ -174,6 +182,7 @@ export class GameRenderer {
 
   setQuality(level: QualityLevel | 'auto'): void {
     this.profile = QUALITY[level === 'auto' ? 'medium' : level];
+    this.renderScale = 1;
     this.applyQuality();
     this.resize(this.width, this.height);
   }
@@ -207,7 +216,7 @@ export class GameRenderer {
           break;
         case 'blockDestroyed': {
           const variant = this.arena.variantAt(e.x, e.y);
-          fx.blockDebris(e.x, e.y, e.by === 'crush' ? 'concrete' : debrisKindFor(variant));
+          fx.blockDebris(e.x, e.y, e.by === 'crush' ? 'concrete' : this.theme.debris(variant));
           break;
         }
         case 'pickupRevealed':
@@ -346,10 +355,21 @@ export class GameRenderer {
       this.slowFrames = 0;
       this.fastFrames = 0;
     }
-    if (this.slowFrames > 90 && this.profile.level !== 'low') {
+    if (this.slowFrames > 90 && this.renderScale > 0.8) {
+      // first trade a little resolution (cheap, keeps shadows and effects) ...
+      this.renderScale = Math.round((this.renderScale - 0.1) * 10) / 10;
+      this.slowFrames = 0;
+      this.resize(this.width, this.height);
+    } else if (this.slowFrames > 90 && this.profile.level !== 'low') {
+      // ... then the quality level, back at full resolution
       this.profile = QUALITY[this.profile.level === 'high' ? 'medium' : 'low'];
+      this.renderScale = 1;
       this.slowFrames = 0;
       this.applyQuality();
+      this.resize(this.width, this.height);
+    } else if (this.fastFrames > 600 && this.renderScale < 1) {
+      this.renderScale = Math.min(1, Math.round((this.renderScale + 0.1) * 10) / 10);
+      this.fastFrames = 0;
       this.resize(this.width, this.height);
     } else if (this.fastFrames > 600 && this.profile.level === 'low') {
       this.profile = QUALITY.medium;

@@ -1,5 +1,5 @@
-import { Group, MeshBasicMaterial, PlaneGeometry } from 'three';
-import type { Object3D } from 'three';
+import { Group, MeshBasicMaterial, MeshPhysicalMaterial, MeshStandardMaterial, PlaneGeometry } from 'three';
+import type { Material, Mesh, Object3D } from 'three';
 import type { VehicleKind } from '../../sim';
 import { labelTexture } from '../textures';
 import { box, cyl, mat, mesh, sphere } from './helpers';
@@ -60,10 +60,44 @@ const GLB_WHEELS: Record<VehicleKind, string[]> = {
   keke: ['wheel_F', 'wheel_RL', 'wheel_RR'],
 };
 
+/**
+ * Showroom finish for the attack vehicles (shared per source material, so every copy reuses one shader):
+ * the yellow paint gets a clear coat that picks up a crisp highlight from the environment, glass and
+ * chrome reflect the environment more strongly than the matte scenery does.
+ */
+const finishes = new Map<Material, Material>();
+function vehicleFinish(src: Material): Material {
+  let out = finishes.get(src);
+  if (out) return out;
+  out = src;
+  if (src instanceof MeshStandardMaterial) {
+    if (src.name === 'paint') {
+      const p = new MeshPhysicalMaterial();
+      MeshStandardMaterial.prototype.copy.call(p, src);
+      p.defines = { STANDARD: '', PHYSICAL: '' }; // Standard.copy() drops the physical shader define
+      p.roughness = 0.34;
+      p.clearcoat = 1;
+      p.clearcoatRoughness = 0.06;
+      p.envMapIntensity = 1.35;
+      out = p;
+    } else if (src.name === 'glass' || src.name === 'chrome') {
+      const m = src.clone();
+      m.envMapIntensity = src.name === 'glass' ? 2.2 : 1.6;
+      out = m;
+    }
+  }
+  finishes.set(src, out);
+  return out;
+}
+
 /** Modelled vehicles face +Z with wheel axles along X; the game's convention is +X forward. */
 function createGlbVehicle(kind: VehicleKind): VehicleModel | null {
   const inst = assets.instance(`veh_${kind}`);
   if (!inst) return null;
+  inst.traverse((o) => {
+    const m = o as Mesh;
+    if (m.isMesh && !Array.isArray(m.material)) m.material = vehicleFinish(m.material);
+  });
   const root = new Group();
   const body = new Group();
   inst.rotation.y = Math.PI / 2;

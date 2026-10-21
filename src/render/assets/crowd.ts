@@ -59,10 +59,9 @@ interface Spot {
 }
 
 /** Placement of `count` people around the lot (world units), deterministic from `rng`. */
-export function crowdSpots(layout: Layout, count: number, rng: () => number): Spot[] {
+export function crowdSpots(layout: Layout, count: number, rng: () => number, platform: boolean): Spot[] {
   const W = layout.width;
   const H = layout.height;
-  const platform = assets.has('env_bleacher');
   const spots: Spot[] = [];
   const face = (x: number, z: number): number => Math.atan2(-x, -z * 1.4) + (rng() - 0.5) * 0.45;
   const watch = (x: number, y: number, z: number): void => {
@@ -131,7 +130,12 @@ interface Pose {
   material: Material;
 }
 
-export function createGlbCrowd(layout: Layout, count: number, rng: () => number): Crowd | null {
+export function createGlbCrowd(
+  layout: Layout,
+  count: number,
+  rng: () => number,
+  platform: boolean,
+): Crowd | null {
   const parts = assets.parts('crowd');
   if (parts.length === 0) return null;
   // spec_<name>_<role>_<frame>; older single-pose files (spec_<name>) count as calm watchers
@@ -143,7 +147,7 @@ export function createGlbCrowd(layout: Layout, count: number, rng: () => number)
   });
   const byName = new Map<string, Pose[]>();
   for (const p of poses) byName.set(p.name, [...(byName.get(p.name) ?? []), p]);
-  const spots = crowdSpots(layout, count, rng);
+  const spots = crowdSpots(layout, count, rng, platform);
   const pool: Record<Role, string[]> = { watch: [], talk: [], walk: [] };
   for (const [name, list] of byName) pool[list[0]!.role].push(name);
   if (pool.talk.length === 0) pool.talk = pool.watch;

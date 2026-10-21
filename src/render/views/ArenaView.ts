@@ -13,8 +13,9 @@ import {
 } from 'three';
 import type { GameState } from '../../sim';
 import { Tile } from '../../sim';
-import { modelledPillars, pillarParts, softBlockParts, softVariantFor, softVariants } from '../assets/props';
-import type { SoftVariant } from '../assets/props';
+import { modelParts, pillarParts, softBlockParts, softVariantFor, softVariants } from '../assets/props';
+import type { PropGeometry, SoftVariant } from '../assets/props';
+import type { ArenaTheme } from '../themes';
 import type { Layout } from '../coords';
 import { floorMaterial } from '../assets/floor';
 import { contactShadowTexture } from '../textures';
@@ -23,11 +24,21 @@ import type { FrameContext, View } from './types';
 
 const DROP_TIME = 0.28;
 
-/** Floor, concrete pillars, soft blocks (instanced), crush blocks dropping in, floor hazards. */
+/**
+ * Floor, permanent obstacles, soft blocks (instanced), crush blocks dropping in, floor hazards; all
+ * drawn with the arena theme's models. Permanent tiles that sit in a straight run use the theme's
+ * joined model (market counters) turned along the run; isolated ones vary by tile hash.
+ */
 export class ArenaView implements View {
   readonly group = new Group();
+  /** Isolated permanent-obstacle variants, then the joined model (if any) as the last set. */
   private readonly pillars: InstanceSet[];
-  private readonly variants = softVariants();
+  private readonly isolatedCount: number;
+  /** Set index and yaw chosen for each permanent tile currently drawn. */
+  private readonly hardLook = new Map<number, { set: number; yaw: number }>();
+  private readonly joinedHeight: number;
+  private readonly variants: SoftVariant[];
+  private readonly weights: Readonly<Record<string, number>>;
   private readonly soft = new Map<SoftVariant, InstanceSet>();
   private readonly cache: number[];
   private readonly initialHard: Set<number>;
@@ -44,21 +55,28 @@ export class ArenaView implements View {
   constructor(
     state: GameState,
     private readonly layout: Layout,
+    theme: ArenaTheme,
   ) {
     const W = state.width;
     const H = state.height;
-    const floor = new Mesh(new PlaneGeometry(W, H), floorMaterial(W, H));
+    this.variants = softVariants(theme.soft);
+    this.weights = theme.soft;
+    const floorMat = floorMaterial(W, H, theme.floor, theme.floorFallback);
+    floorMat.color.setHex(theme.floorTint);
+    const floor = new Mesh(new PlaneGeometry(W, H), floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.group.add(floor);
 
-    const modelled = modelledPillars();
-    if (modelled) {
-      this.pillars = modelled.map((parts) => new InstanceSet(parts, W * H));
-    } else {
+    const isolated = theme.hardIsolated.map(modelParts).filter((p): p is PropGeometry[] => p !== null);
+    if (isolated.length === 0) {
       const parts = pillarParts();
-      this.pillars = [new InstanceSet([parts.body, parts.band, parts.cap], W * H)];
+      isolated.push([parts.body, parts.band, parts.cap]);
     }
+    this.isolatedCount = isolated.length;
+    this.joinedHeight = theme.hardJoinedHeight;
+    const joined = theme.hardJoined ? modelParts(theme.hardJoined) : null;
+    this.pillars = [...isolated, ...(joined ? [joined] : [])].map((parts) => new InstanceSet(parts, W * H));
     for (const set of this.pillars) this.group.add(set.group);
     for (const v of this.variants) {
       const set = new InstanceSet(softBlockParts(v), W * H);
@@ -127,7 +145,7 @@ export class ArenaView implements View {
 
   /** Variant of the soft block at a tile (for debris colours). */
   variantAt(x: number, y: number): SoftVariant {
-    return softVariantFor(x, y, this.variants);
+    return softVariantFor(x, y, this.variants, this.weights);
   }
 
   update(ctx: FrameContext): void {
@@ -162,20 +180,38 @@ export class ArenaView implements View {
 
   private removeTile(i: number, x: number, y: number, kind: number): void {
     this.contact.remove(i);
-    if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.remove(i);
-    else if (kind === Tile.Soft) this.soft.get(softVariantFor(x, y, this.variants))!.remove(i);
+    if (kind === Tile.Hard) {
+      const look = this.hardLook.get(i);
+      if (look) this.pillars[look.set]!.remove(i);
+      this.hardLook.delete(i);
+    } else if (kind === Tile.Soft) this.soft.get(this.variantAt(x, y))!.remove(i);
   }
 
-  private pillarVariant(x: number, y: number): number {
-    return (x * 5 + y * 3 + ((x ^ y) & 3)) % this.pillars.length;
+  /** Joined model along a straight run of original permanent tiles, else an isolated variant. */
+  private hardLookFor(i: number, x: number, y: number, W: number): { set: number; yaw: number } {
+    const joined = this.pillars.length > this.isolatedCount && this.initialHard.has(i);
+    if (joined) {
+      const run = (dx: number, dy: number): boolean =>
+        x + dx >= 0 && x + dx < W && this.initialHard.has(i + dx + dy * W);
+      if (run(1, 0) || run(-1, 0)) return { set: this.isolatedCount, yaw: 0 };
+      if (run(0, 1) || run(0, -1)) return { set: this.isolatedCount, yaw: Math.PI / 2 };
+    }
+    return { set: (x * 5 + y * 3 + ((x ^ y) & 3)) % this.isolatedCount, yaw: 0 };
   }
 
   private placePillar(i: number, x: number, y: number, lift: number): void {
+    let look = this.hardLook.get(i);
+    if (!look) {
+      look = this.hardLookFor(i, x, y, this.layout.width);
+      this.hardLook.set(i, look);
+    }
     this.p.set(this.layout.wx(x), lift, this.layout.wz(y));
-    this.q.identity();
-    this.s.set(1, 1, 1);
+    this.e.set(0, look.yaw, 0);
+    this.q.setFromEuler(this.e);
+    this.s.set(1, look.set >= this.isolatedCount ? this.joinedHeight : 1, 1);
     this.m.compose(this.p, this.q, this.s);
-    this.pillars[this.pillarVariant(x, y)]!.set(i, this.m);
+    this.s.set(1, 1, 1);
+    this.pillars[look.set]!.set(i, this.m);
     if (lift === 0) this.setContact(i, x, y, 1);
   }
 
@@ -194,7 +230,7 @@ export class ArenaView implements View {
     this.q.setFromEuler(this.e);
     this.s.set(1, 1, 1);
     this.m.compose(this.p, this.q, this.s);
-    this.soft.get(softVariantFor(x, y, this.variants))!.set(i, this.m);
+    this.soft.get(this.variantAt(x, y))!.set(i, this.m);
     this.setContact(i, x, y, 0.85);
   }
 

@@ -8,18 +8,8 @@ import { assets } from './library';
 const PROCEDURAL_SOFT = ['crate', 'crateStack', 'tyres', 'sacks', 'barrier'] as const;
 export type SoftVariant = string;
 
-/** Modelled variants (`prop_soft_*.glb`) when loaded, else the procedural stand-ins. */
-export function softVariants(): SoftVariant[] {
-  const glb = assets.loadedIds('prop_soft_');
-  return glb.length > 0 ? glb : [...PROCEDURAL_SOFT];
-}
-
-/**
- * Art-direction weights for the destructible set: mostly warm wooden crates (the reference's dominant
- * breakable), then hazard barricades and tyre stacks, with the colourful market goods as accents so the
- * field reads as one coherent bus-park clutter rather than confetti. Unknown variants weigh 1.
- */
-const SOFT_WEIGHTS: Record<string, number> = {
+/** Weights used when no theme is given (the bus park set). Unknown variants weigh 1. */
+const DEFAULT_WEIGHTS: Readonly<Record<string, number>> = {
   prop_soft_crate: 4,
   prop_soft_crate_b: 3,
   prop_soft_crates: 4,
@@ -30,35 +20,39 @@ const SOFT_WEIGHTS: Record<string, number> = {
   prop_soft_cartons: 1,
 };
 
-/** Deterministic variant so the same tile always looks the same. */
+/**
+ * Modelled destructible variants for a theme (its weighted ids that loaded), else every loaded
+ * `prop_soft_*` model, else the procedural stand-ins.
+ */
+export function softVariants(weights?: Readonly<Record<string, number>>): SoftVariant[] {
+  const themed = weights
+    ? Object.keys(weights)
+        .filter((id) => assets.has(id))
+        .sort()
+    : [];
+  if (themed.length > 0) return themed;
+  const glb = assets.loadedIds('prop_soft_');
+  return glb.length > 0 ? glb : [...PROCEDURAL_SOFT];
+}
+
+/** Deterministic, weighted variant so the same tile always looks the same. */
 export function softVariantFor(
   x: number,
   y: number,
   variants: readonly SoftVariant[] = softVariants(),
+  weights: Readonly<Record<string, number>> = DEFAULT_WEIGHTS,
 ): SoftVariant {
-  const total = variants.reduce((n, v) => n + (SOFT_WEIGHTS[v] ?? 1), 0);
+  const total = variants.reduce((n, v) => n + (weights[v] ?? 1), 0);
   // integer hash of the tile so neighbours decorrelate (no diagonal stripes of the same prop)
   let h = Math.imul(x + 1, 0x9e3779b1) ^ Math.imul(y + 7, 0x85ebca77);
   h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
   h ^= h >>> 13;
   let pick = (h >>> 0) % total;
   for (const v of variants) {
-    pick -= SOFT_WEIGHTS[v] ?? 1;
+    pick -= weights[v] ?? 1;
     if (pick < 0) return v;
   }
   return variants[0]!;
-}
-
-/** Debris palette that matches a block variant. */
-export function debrisKindFor(
-  variant: SoftVariant,
-): 'crate' | 'tyres' | 'sacks' | 'barrier' | 'cartons' | 'kegs' {
-  if (variant.includes('tyre')) return 'tyres';
-  if (variant.includes('sack')) return 'sacks';
-  if (variant.includes('barrier')) return 'barrier';
-  if (variant.includes('carton')) return 'cartons';
-  if (variant.includes('keg')) return 'kegs';
-  return 'crate';
 }
 
 function place(
@@ -89,9 +83,7 @@ export interface PropGeometry {
 
 /** Instancing parts for a soft block: modelled meshes if the variant is a loaded asset, else procedural. */
 export function softBlockParts(variant: SoftVariant): PropGeometry[] {
-  if (variant.startsWith('prop_soft_'))
-    return assets.parts(variant).map(({ geometry, material }) => ({ geometry, material }));
-  return [softBlockGeometry(variant)];
+  return modelParts(variant) ?? [softBlockGeometry(variant)];
 }
 
 export function softBlockGeometry(variant: SoftVariant): PropGeometry {
@@ -152,11 +144,10 @@ export function softBlockGeometry(variant: SoftVariant): PropGeometry {
   }
 }
 
-/** Pillar variants (`prop_pillar_*.glb`) as instancing part lists, or null to use the procedural pillar. */
-export function modelledPillars(): PropGeometry[][] | null {
-  const ids = assets.loadedIds('prop_pillar_');
-  if (ids.length === 0) return null;
-  return ids.map((id) => assets.parts(id).map(({ geometry, material }) => ({ geometry, material })));
+/** Instancing parts of a loaded model, or null if it is missing. */
+export function modelParts(id: string): PropGeometry[] | null {
+  const parts = assets.parts(id).map(({ geometry, material }) => ({ geometry, material }));
+  return parts.length > 0 ? parts : null;
 }
 
 export function pillarParts(): { body: PropGeometry; band: PropGeometry; cap: PropGeometry } {

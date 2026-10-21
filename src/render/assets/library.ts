@@ -5,7 +5,7 @@
  *
  * Conventions: Y-up, metres, front = +Z, origin on the ground at the model's centre.
  */
-import type { AnimationClip, BufferGeometry, Material, Mesh, Object3D } from 'three';
+import type { AnimationClip, BufferGeometry, Material, Mesh, Object3D, Texture } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 
@@ -25,6 +25,26 @@ const URL_BY_ID = new Map<string, string>(
     url,
   ]),
 );
+
+/**
+ * Anisotropic filtering for every texture of a loaded model. glTF textures default to none, which
+ * smears atlases on surfaces seen at a grazing angle (wall faces, crate sides, vehicle flanks) under
+ * the low 3/4 camera. three.js clamps the value to what the GPU supports.
+ */
+export const MODEL_ANISOTROPY = 8;
+
+function sharpenTextures(root: Object3D): void {
+  root.traverse((o) => {
+    const m = o as Mesh;
+    if (!m.isMesh) return;
+    for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
+      for (const v of Object.values(mat as unknown as Record<string, unknown>)) {
+        const t = v as Texture | null;
+        if (t && (t as { isTexture?: boolean }).isTexture) t.anisotropy = MODEL_ANISOTROPY;
+      }
+    }
+  });
+}
 
 export interface LoadedAsset {
   scene: Object3D;
@@ -63,6 +83,7 @@ export class AssetLibrary {
         try {
           if (!url) throw new Error('not bundled');
           const gltf = await this.loader.loadAsync(url);
+          sharpenTextures(gltf.scene);
           this.assets.set(id, { scene: gltf.scene, clips: gltf.animations });
         } catch (error) {
           console.warn(`[assets] ${id} failed to load`, error);

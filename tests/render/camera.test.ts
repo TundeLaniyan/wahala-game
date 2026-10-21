@@ -45,7 +45,11 @@ describe('render camera framing and picking', () => {
     rig.fit(844 / 390, { top: 0.13, bottom: 0.03 });
     rig.camera.updateMatrixWorld(true);
     for (const x of [0, layout.width - 1]) {
-      const v = new Vector3(layout.wx(x) + Math.sign(layout.wx(x)) * 0.5, 0, layout.wz(layout.height - 1) + 0.5);
+      const v = new Vector3(
+        layout.wx(x) + Math.sign(layout.wx(x)) * 0.5,
+        0,
+        layout.wz(layout.height - 1) + 0.5,
+      );
       v.project(rig.camera);
       expect(Math.abs(v.x)).toBeLessThan(0.62);
     }

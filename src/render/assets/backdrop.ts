@@ -17,22 +17,13 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Layout } from '../coords';
-import {
-  artRng,
-  concreteTexture,
-  hazardStripes,
-  labelTexture,
-  wallTexture,
-  windowsTexture,
-} from '../textures';
+import { artRng, concreteTexture, hazardStripes, labelTexture, wallTexture } from '../textures';
+import type { ArenaTheme, DressContext, Placement } from '../themes';
+import { instanceAsset } from '../themes/shared';
 import { box, mat } from './helpers';
 import { createGlbCrowd } from './crowd';
 import { assets } from './library';
 import { bakeModel } from './merge';
-import { createVehicleModel } from './vehicles';
-
-/** Parked buses are drawn larger than the playing-field buses so the lot feels crowded and the arena small. */
-const PARKED_BUS_SCALE = 1.3;
 
 export interface Backdrop {
   root: Group;
@@ -41,45 +32,19 @@ export interface Backdrop {
   dispose(): void;
 }
 
-interface Placement {
-  x: number;
-  y?: number;
-  z: number;
-  ry: number;
-  sx?: number;
-  sy?: number;
-  sz?: number;
-}
-
-/** Instances every mesh of a modelled asset at the given placements (node transforms are baked into the parts). */
-function instanceAsset(root: Group, out: InstancedMesh[], id: string, placements: Placement[]): void {
-  if (placements.length === 0) return;
-  const m4 = new Matrix4();
-  const q = new Quaternion();
-  const e = new Euler();
-  const p = new Vector3();
-  const s = new Vector3();
-  for (const part of assets.parts(id)) {
-    const im = new InstancedMesh(part.geometry, part.material, placements.length);
-    im.castShadow = true;
-    im.receiveShadow = true;
-    placements.forEach((pl, n) => {
-      q.setFromEuler(e.set(0, pl.ry, 0));
-      m4.compose(p.set(pl.x, pl.y ?? 0, pl.z), q, s.set(pl.sx ?? 1, pl.sy ?? 1, pl.sz ?? 1));
-      im.setMatrixAt(n, m4);
-    });
-    out.push(im);
-    root.add(im);
-  }
-}
-
 /**
  * Walls (north/east/west tall enough to read, south kept low so no tile is hidden), corner posts and
  * spectator platforms from the modelled set. Returns false when the models are not loaded.
  */
-function addModelledPerimeter(root: Group, out: InstancedMesh[], W: number, H: number): boolean {
-  const wallIds = assets.loadedIds('env_wall').filter((id) => id !== 'env_wall_corner');
-  if (wallIds.length === 0 || !assets.has('env_wall_corner')) return false;
+function addModelledPerimeter(
+  root: Group,
+  out: InstancedMesh[],
+  W: number,
+  H: number,
+  theme: ArenaTheme,
+): boolean {
+  const wallIds = theme.walls.filter((id) => assets.has(id));
+  if (wallIds.length === 0 || !assets.has(theme.wallCorner)) return false;
   const T = 0.155; // half wall thickness
   const byVariant = wallIds.map(() => [] as Placement[]);
   let k = 0;
@@ -111,8 +76,8 @@ function addModelledPerimeter(root: Group, out: InstancedMesh[], W: number, H: n
     posts.push({ x: cx, z: -H / 2 + i, ry: -Math.PI / 2 });
   }
   for (let i = 3; i < W - 1; i += 3) posts.push({ x: -W / 2 + i, z: cz, ry: Math.PI, sy: 0.42 });
-  instanceAsset(root, out, 'env_wall_corner', posts);
-  if (assets.has('env_bleacher')) {
+  instanceAsset(root, out, theme.wallCorner, posts);
+  if (theme.platform && assets.has(theme.platform)) {
     const off = T * 2 + 0.26;
     const plat: Placement[] = [];
     // rail side faces the arena: the model's rail is on its -Z side, so face the front (+Z) away from the field
@@ -121,16 +86,17 @@ function addModelledPerimeter(root: Group, out: InstancedMesh[], W: number, H: n
       plat.push({ x: W / 2 + off, z: -H / 2 + 0.5 + i, ry: Math.PI / 2 });
       plat.push({ x: -W / 2 - off, z: -H / 2 + 0.5 + i, ry: -Math.PI / 2 });
     }
-    instanceAsset(root, out, 'env_bleacher', plat);
+    instanceAsset(root, out, theme.platform, plat);
   }
   return true;
 }
 
 /**
- * Everything around the playing field: raised slab, perimeter walls, parked danfos, buildings and
- * a cheering crowd. Walls on the camera side are kept low so no tile is hidden.
+ * Everything around the playing field: ground, raised slab, perimeter walls, the arena theme's own
+ * scenery (parked buses or market stalls...), bunting, the entrance board and a living crowd.
+ * Walls on the camera side are kept low so no tile is hidden.
  */
-export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 1): Backdrop {
+export function createBackdrop(layout: Layout, theme: ArenaTheme, crowdSize: number, density = 1): Backdrop {
   const root = new Group();
   // Static scenery is collected here and baked into a handful of meshes at the end.
   const statics = new Group();
@@ -138,8 +104,8 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
   const H = layout.height;
   const disposables: { dispose(): void }[] = [];
 
-  // asphalt ground + slab
-  const ground = new Mesh(new PlaneGeometry(140, 110), mat(0x4c4741, { roughness: 1, flat: false }));
+  // ground + slab
+  const ground = new Mesh(new PlaneGeometry(140, 110), mat(theme.ground, { roughness: 1, flat: false }));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.31;
   ground.receiveShadow = true;
@@ -149,7 +115,7 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
       W + 1.6,
       0.3,
       H + 1.6,
-      mat(0xffffff, { map: concreteTexture(), flat: false, roughness: 1 }),
+      mat(theme.slab, { map: concreteTexture(), flat: false, roughness: 1 }),
       0,
       -0.16,
       0,
@@ -158,7 +124,7 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
 
   // perimeter: modelled wall segments, corner posts and spectator platforms, else the procedural walls
   const instanced: InstancedMesh[] = [];
-  const modelledPerimeter = addModelledPerimeter(root, instanced, W, H);
+  const modelledPerimeter = addModelledPerimeter(root, instanced, W, H, theme);
   if (!modelledPerimeter) {
     // perimeter walls
     const wallTex = wallTexture();
@@ -194,152 +160,22 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
     }
   }
 
-  // parked danfos: instanced from the modelled bus, or baked procedural copies as a fallback
+  // the theme's own surroundings
   const rng = artRng(404);
-  const busSpots: { x: number; z: number; ry: number }[] = [];
-  const place = (x: number, z: number, ry: number): void => {
-    busSpots.push({ x, z, ry });
+  const ctx: DressContext = {
+    layout,
+    root,
+    statics,
+    rng,
+    density,
+    instance: (id: string, placements: Placement[]) => {
+      if (assets.has(id)) instanceAsset(root, instanced, id, placements);
+    },
+    track: (d) => disposables.push(d),
   };
-  for (let i = 0; i < 5; i++)
-    place(W / 2 + 2.1 + (i % 2) * 0.1, -H / 2 + 1.2 + i * 2.35, Math.PI / 2 + (rng() - 0.5) * 0.1);
-  for (let i = 0; i < 4; i++) place(-W / 2 - 2.2, -H / 2 + 0.8 + i * 2.8, -Math.PI / 2 + (rng() - 0.5) * 0.1);
-  for (let i = 0; i < 4; i++) place(-W / 2 + 2.5 + i * 3.6, -H / 2 - 2.0, (rng() - 0.5) * 0.1);
-  place(W / 2 - 3.2, H / 2 + 2.2, Math.PI);
-  // thin the lot on weaker devices: keep an evenly spread subset
-  const keep = Math.max(1, Math.round(busSpots.length * busFraction));
-  const shown = busSpots.filter(
-    (_, n) =>
-      Math.floor((n * keep) / busSpots.length) !== Math.floor(((n - 1) * keep) / busSpots.length) || n === 0,
-  );
-  busSpots.splice(0, busSpots.length, ...shown);
-  const busParts = assets.parts('veh_danfo');
-  if (busParts.length > 0) {
-    const m4 = new Matrix4();
-    const q4 = new Quaternion();
-    const e4 = new Euler();
-    for (const part of busParts) {
-      const im = new InstancedMesh(part.geometry, part.material, busSpots.length);
-      im.castShadow = true;
-      im.receiveShadow = true;
-      busSpots.forEach((b, n) => {
-        // modelled buses face +Z, the procedural ones faced +X
-        q4.setFromEuler(e4.set(0, b.ry + Math.PI / 2, 0));
-        m4.compose(
-          new Vector3(b.x, 0, b.z),
-          q4,
-          new Vector3(PARKED_BUS_SCALE, PARKED_BUS_SCALE, PARKED_BUS_SCALE),
-        );
-        im.setMatrixAt(n, m4);
-      });
-      instanced.push(im);
-      root.add(im);
-    }
-  } else {
-    const bus = bakeModel(createVehicleModel('danfo').root);
-    for (const b of busSpots) {
-      const copy = bus.clone();
-      copy.position.set(b.x, 0, b.z);
-      copy.rotation.y = b.ry;
-      statics.add(copy);
-    }
-  }
+  theme.dress(ctx);
 
-  // buildings
-  const buildingColors = [0xd9a766, 0xc98b5a, 0xe0c07a, 0xb9745c, 0x9fb7a4, 0xd6c2a0];
-  const roofColors = [0x8a4b34, 0x4a6a8a, 0x6a7a4a, 0x7a5a3a];
-  const addBuilding = (x: number, z: number, w: number, d: number, h: number, i: number): void => {
-    const tex = windowsTexture(i);
-    const t = tex.clone();
-    t.needsUpdate = true;
-    t.repeat.set(Math.max(1, Math.round(w / 2)), Math.max(1, Math.round(h / 2)));
-    disposables.push(t);
-    statics.add(
-      box(
-        w,
-        h,
-        d,
-        mat(buildingColors[i % buildingColors.length]!, { map: t, flat: false, roughness: 1 }),
-        x,
-        h / 2 - 0.3,
-        z,
-      ),
-    );
-    const roof = box(
-      w + 0.2,
-      0.12,
-      d + 0.2,
-      mat(roofColors[i % roofColors.length]!, { roughness: 1 }),
-      x,
-      h - 0.24,
-      z,
-    );
-    statics.add(roof);
-    if (i % 3 === 0) {
-      statics.add(box(0.5, 0.5, 0.5, mat(0x3a6ea5), x + w * 0.2, h + 0.1, z));
-    }
-  };
-  const buildingIds = assets.loadedIds('env_building_');
-  if (buildingIds.length > 0) {
-    const byVariant = buildingIds.map(() => [] as Placement[]);
-    let n = 0;
-    const put = (x: number, z: number, ry: number): void => {
-      byVariant[n++ % buildingIds.length]!.push({ x, z, ry, sy: 0.92 + rng() * 0.25 });
-    };
-    for (let x = -W / 2 - 7; x < W / 2 + 8; x += 3.45) put(x, -H / 2 - 4.7 - rng() * 0.5, 0);
-    for (let z = -H / 2 - 3.5; z < H / 2 + 6; z += 3.3) {
-      put(W / 2 + 5.2 + rng() * 0.5, z, -Math.PI / 2);
-      put(-W / 2 - 5.2 - rng() * 0.5, z, Math.PI / 2);
-    }
-    buildingIds.forEach((id, k) => instanceAsset(root, instanced, id, byVariant[k]!));
-  } else {
-    let i = 0;
-    for (let x = -W / 2 - 9; x < W / 2 + 10; x += 4.2) {
-      addBuilding(x, -H / 2 - 5.6 - rng() * 1.2, 3.8, 4, 4 + rng() * 4, i++);
-    }
-    for (let z = -H / 2 - 4; z < H / 2 + 6; z += 4.2) {
-      addBuilding(W / 2 + 6.2 + rng(), z, 4, 3.8, 3.5 + rng() * 4, i++);
-      addBuilding(-W / 2 - 6.2 - rng(), z, 4, 3.8, 3.5 + rng() * 4, i++);
-    }
-  }
-
-  // street dressing around the lot (kiosks, lamps, utility poles, tyre stacks, barrels)
-  const dress = (id: string, spots: Placement[]): void => instanceAsset(root, instanced, id, spots);
-  dress('env_kiosk', [
-    { x: -W / 2 + 2.2, z: -H / 2 - 3.5, ry: 0, sx: 0.8, sy: 0.8, sz: 0.8 },
-    { x: W / 2 - 3.2, z: -H / 2 - 3.5, ry: 0, sx: 0.8, sy: 0.8, sz: 0.8 },
-    { x: 1.2, z: -H / 2 - 3.6, ry: 0.05, sx: 0.8, sy: 0.8, sz: 0.8 },
-    { x: -W / 2 - 3.3, z: H / 2 + 2.6, ry: Math.PI / 2, sx: 0.8, sy: 0.8, sz: 0.8 },
-  ]);
-  // roadside trade signs ("CHOP HERE", "POS HERE", "RECHARGE") around the lot
-  dress('env_shopsign', [
-    { x: -W / 2 - 1.2, z: H / 2 + 2.7, ry: 0.35 },
-    { x: W / 2 + 1.3, z: H / 2 + 2.5, ry: Math.PI - 0.35 },
-    { x: -W / 2 + 5.4, z: -H / 2 - 3.25, ry: 0 },
-    { x: W / 2 + 3.1, z: -H / 2 - 2.9, ry: -Math.PI / 2 },
-  ]);
-  dress('env_lamp', [
-    { x: -W / 2 - 1.9, z: -H / 2 - 1.8, ry: 0.4 },
-    { x: W / 2 + 1.9, z: -H / 2 - 1.8, ry: -0.4 },
-    { x: -W / 2 - 1.9, z: H / 2 + 1.0, ry: 2.6 },
-    { x: W / 2 + 1.9, z: H / 2 + 1.0, ry: -2.6 },
-  ]);
-  dress('env_poles', [
-    { x: -W / 2 - 4.0, z: 1.0, ry: Math.PI / 2 },
-    { x: W / 2 + 4.0, z: -1.5, ry: -Math.PI / 2 },
-  ]);
-  dress('env_tyrestack', [
-    { x: -W / 2 - 1.4, z: H / 2 + 1.9, ry: 0.5 },
-    { x: W / 2 + 1.5, z: H / 2 + 1.8, ry: -0.4 },
-    { x: -2.5, z: -H / 2 - 2.5, ry: 1.2 },
-    { x: -W / 2 - 1.3, z: -H / 2 - 1.1, ry: 0.2 },
-    { x: W / 2 + 1.3, z: -H / 2 - 1.2, ry: 2.2 },
-  ]);
-  dress('env_barrel', [
-    { x: -W / 2 + 4.0, z: H / 2 + 1.7, ry: 0.3 },
-    { x: W / 2 - 5.0, z: -H / 2 - 2.4, ry: 2.0 },
-  ]);
-
-  // Green-white-green bunting along the back wall, and the bus-park signboard.
+  // Bunting along the back wall, and the entrance signboard.
   const tri = new BufferGeometry();
   tri.setAttribute('position', new Float32BufferAttribute([-0.2, 0, 0, 0.2, 0, 0, 0, -0.38, 0], 3));
   tri.setAttribute('normal', new Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3));
@@ -353,11 +189,16 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
     // strung high over the back crowd (not across the wall face)
     fm.makeTranslation(x, 2.75 - sag, -H / 2 - 1.5);
     flags.setMatrixAt(n, fm);
-    flags.setColorAt(n, flagColor.setHex(n % 3 === 1 ? 0xffffff : 0x1fa64a));
+    flags.setColorAt(n, flagColor.setHex(theme.bunting[n % theme.bunting.length]!));
   }
   root.add(flags);
   const signMat = new MeshBasicMaterial({
-    map: labelTexture('DANFO BUS PARK', '#ffc21a', 'bold 30px system-ui, sans-serif', '#1a1208'),
+    map: labelTexture(
+      theme.sign.text,
+      theme.sign.color,
+      'bold 30px system-ui, sans-serif',
+      theme.sign.background,
+    ),
     transparent: true,
   });
   const sign = new Mesh(new PlaneGeometry(4.2, 1.5), signMat);
@@ -365,7 +206,7 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
   sign.rotation.x = -0.35;
   root.add(sign);
 
-  const glbCrowd = createGlbCrowd(layout, crowdSize, rng);
+  const glbCrowd = createGlbCrowd(layout, crowdSize, rng, !!theme.platform && assets.has(theme.platform));
   if (glbCrowd) {
     root.add(glbCrowd.group, bakeModel(statics));
     return {

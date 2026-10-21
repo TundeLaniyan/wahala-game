@@ -15,6 +15,7 @@ import type { Layout } from '../coords';
 import { flameTexture, glowTexture, labelTexture, ringTexture, smokeTexture, starTexture } from '../textures';
 import { ParticleSystem } from './Particles';
 import type { QualityProfile } from '../quality';
+import type { DebrisKind } from '../themes';
 
 interface Transient {
   obj: Object3D;
@@ -250,11 +251,7 @@ export class Effects {
     });
   }
 
-  blockDebris(
-    gx: number,
-    gy: number,
-    variant: 'crate' | 'tyres' | 'sacks' | 'barrier' | 'cartons' | 'kegs' | 'concrete' = 'crate',
-  ): void {
+  blockDebris(gx: number, gy: number, variant: DebrisKind = 'crate'): void {
     const x = this.layout.wx(gx);
     const z = this.layout.wz(gy);
     const palette: Record<string, [number, number, number][]> = {
@@ -286,6 +283,27 @@ export class Effects {
       concrete: [
         [0.6, 0.58, 0.55],
         [0.45, 0.43, 0.4],
+      ],
+      fabric: [
+        [0.9, 0.2, 0.25],
+        [1, 0.75, 0.1],
+        [0.15, 0.45, 0.9],
+        [0.2, 0.7, 0.4],
+      ],
+      produce: [
+        [0.85, 0.15, 0.1],
+        [0.95, 0.45, 0.1],
+        [0.6, 0.45, 0.25],
+      ],
+      buckets: [
+        [0.15, 0.5, 0.95],
+        [0.95, 0.3, 0.55],
+        [1, 0.8, 0.15],
+      ],
+      baskets: [
+        [0.75, 0.58, 0.32],
+        [0.55, 0.38, 0.2],
+        [0.85, 0.75, 0.55],
       ],
     };
     const cols = palette[variant]!;

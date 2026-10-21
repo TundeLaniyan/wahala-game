@@ -47,9 +47,9 @@ export function disposeTextures(): void {
   cache.clear();
 }
 
-/** Whole-arena floor: concrete slabs with a readable grid, oil stains, cracks and painted bay lines. */
-export function floorTexture(cols: number, rows: number): CanvasTexture {
-  return cached(`floor:${cols}x${rows}`, () => {
+/** Whole-arena floor: slabs with a readable grid, oil stains and cracks, optionally tinted (multiply). */
+export function floorTexture(cols: number, rows: number, tint?: string): CanvasTexture {
+  return cached(`floor:${cols}x${rows}:${tint ?? ''}`, () => {
     const T = 64;
     const [c, g] = canvas(cols * T, rows * T);
     const r = artRng(77);
@@ -95,6 +95,12 @@ export function floorTexture(cols: number, rows: number): CanvasTexture {
         g.lineTo(x, y);
       }
       g.stroke();
+    }
+    if (tint) {
+      g.globalCompositeOperation = 'multiply';
+      g.fillStyle = tint;
+      g.fillRect(0, 0, cols * T, rows * T);
+      g.globalCompositeOperation = 'source-over';
     }
     return tex(c);
   });
