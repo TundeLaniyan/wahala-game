@@ -36,7 +36,7 @@ Rules (enforced by ESLint `no-restricted-imports`):
 | `tick.ts` | `tick(state, intents) -> SimEvent[]`: advances exactly one fixed step (the pipeline order below is part of the rules). |
 | `rng.ts` | Seeded mulberry32; state lives in `state.rngState`. |
 | `grid.ts` | Pure geometry helpers. |
-| `arenas/` | Data-driven arena definitions (`ArenaDef`). Danfo Bus Park is 15x11. |
+| `arenas/` | Data-driven arena definitions (`ArenaDef`): Danfo Bus Park (pillar grid) and Balogun Market (stall counters + market square, the designated trap arena), both 15x11. `validate.ts` checks a layout (symmetry, connectivity, spawn escapes, vehicle lanes, hazards on open floor). |
 | `data/` | Presentation metadata and catalogues: characters (fixed signature vehicle + skill), pickups, vehicles. |
 | `observe.ts` | `observe(state, playerId)`: the restricted view bots receive. |
 | `systems/movement.ts` | Cardinal grid movement; kick/jump on blocked generator tiles. |
@@ -88,7 +88,7 @@ Rules (enforced by ESLint `no-restricted-imports`):
 
 - `app/loop.ts`: fixed 60 Hz accumulator; renders every frame with interpolation `alpha`.
 - `app/store.ts`: Zustand store for UI-facing state (screen, settings, HUD snapshot). The simulation state itself is *not* in React state.
-- `render/`: scene, camera fit, shared lighting (`lighting.ts`), effects, entity views. `render/assets/library.ts` loads every glTF in `src/assets/models` once (preloaded behind the title screen); consumers (`characters.ts`+`rigged.ts`, `vehicles.ts`, `generator.ts`, `props.ts`, `backdrop.ts`, `crowd.ts`, `floor.ts`) use the modelled assets and keep procedural stand-ins only as a load-failure fallback. `render/portraits.ts` renders HUD/title portraits from the 3D characters.
+- `render/`: scene, camera fit, shared lighting (`lighting.ts`), effects, entity views. `render/assets/library.ts` loads every glTF in `src/assets/models` once (preloaded behind the title screen); consumers (`characters.ts`+`rigged.ts`, `vehicles.ts`, `generator.ts`, `props.ts`, `backdrop.ts`, `crowd.ts`, `floor.ts`) use the modelled assets and keep procedural stand-ins only as a load-failure fallback. `render/portraits.ts` renders HUD/title portraits from the 3D characters. `render/themes/` maps each arena id to an `ArenaTheme` (floor texture set, permanent/destructible models and weights, perimeter walls, sky, bunting, signboard and a `dress()` builder for the surroundings); `ArenaView` and `backdrop.ts` draw whatever theme the match's arena names.
 - `app/AttractController.ts`: a bots-only match behind the title menu (same sim code path, separate instance).
 - `input/`: keyboard, touch controls, gamepad -> `Intent`; one `InputManager` merges them.
 - `ui/`: React components: title/settings, HUD, touch controls, vehicle entry overlay, results.
@@ -104,4 +104,4 @@ Rules (enforced by ESLint `no-restricted-imports`):
 
 - **New pickup:** add the kind to `PickupKind`, weight in `config.ts`, metadata in `data/pickups.ts`, effect in `systems/pickups.ts`, icon in `render/`.
 - **New character:** add to `data/characters.ts` (fixed vehicle + skill). **New vehicle:** add a `VehicleSpec` in `config.ts`.
-- **New arena:** add an `ArenaDef` in `arenas/` and register it in `arenas/index.ts`.
+- **New arena:** add an `ArenaDef` in `arenas/` and register it in `arenas/index.ts` (it must pass `validateArena`, see `tests/arenas.test.ts`), then add an `ArenaTheme` in `render/themes/` with its own models so it does not look like another arena.

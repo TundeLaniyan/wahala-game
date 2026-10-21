@@ -4,7 +4,7 @@ _Last updated at the end of the autonomous Phase 1 build session. Everything bel
 
 ## Summary
 
-A complete, browser-only, single-player-versus-AI WAHALA! prototype: one human against 1-3 bots in a 3D Danfo Bus Park (plus an optional trap arena), with all approved Phase 1 mechanics. No backend, accounts or database. It deploys as static files to GitHub Pages under `/wahala-game/`.
+A complete, browser-only, single-player-versus-AI WAHALA! prototype: one human against 1-3 bots in two 3D arenas, Danfo Bus Park and Balogun Market (the trap arena), with all approved Phase 1 mechanics. No backend, accounts or database. It deploys as static files to GitHub Pages under `/wahala-game/`.
 
 ## Checkpoints
 
@@ -111,3 +111,17 @@ Presentation only: `src/sim`, `src/ai`, `src/input`, `src/audio`, `src/app` are 
 - **Lighting/effects:** warmer, stronger sun; tone-mapping colour grade; flames with orange body + hot core; pooled flame point lights (0/1/3 by quality); vehicle speed streaks.
 - **Crowd:** 70 / 170 / 320 people (low/medium/high), watchers, conversation pairs and walkers with calm/react pose flipbooks; ankara, wrappers, kaftans, basins.
 - **Tools:** `tools/viewer/gameshot.mjs` (real-game screenshots for art review).
+
+## Session E: premium vehicles and two distinct arenas (branch `claude/wahala-vehicles-arenas-v4`, based on `claude/wahala-visual-v3`)
+
+Decisions E1-E8 in `docs/DECISIONS.md`. No rule, tuning number, crush scheduler, timing, audio or input code changed; simulation changes are limited to arena definitions, selection and validation.
+
+- **Arena audit:** before this session the menu offered "Danfo Bus Park" and "Lekki Roadworks", but Lekki was the same layout and the same scene plus potholes. It is retired (old saved settings migrate to the market with traps on).
+- **Two arenas, two layouts:** Danfo Bus Park keeps its pillar grid (parking-bay columns, 8 full columns + 6 full rows of bus lanes); **Balogun Market** has stall counters, posts and a central market square (only 14 of its 34 concrete positions coincide with the bus park's 35). The market is the designated trap arena (palm oil / broken paving, with the "Floor traps" option). Both support Classic and Wahala Crush, pass `validateArena`, and are tested with bots (`tests/arenas.test.ts`) and the random-play fuzz (`tests/fuzz.test.ts`, 4 configurations).
+- **Two looks:** per-arena themes (`src/render/themes/`). Bus park: pale concrete slabs and pillars, precast walls with spectator platforms, crates/barricades/tyres, ranks of low-poly parked danfos, waiting shelters, jersey barriers, route signs, a loading-bay booth, green-white-green bunting. Market: terracotta interlock pavers, painted stall posts with tin caps and joined trading counters, fabric bolts / produce crates / plastic basins / baskets to smash, low trading-counter walls, wooden stalls with striped awnings, rainbow parasols, fabric racks, pink/teal market buildings, multicoloured bunting, a hazier sky. The title-menu demo previews the selected arena.
+- **Vehicles:** rebuilt Danfo (rounder nose, black window band, pinstriped stripe, chrome grille/lamps, mirrors, wrap bumpers), a three-box Lagos yellow cab with chequered band and roof sign, and a Keke with steering fork, windscreen, canopy and benches; new dished wheels on all; clean clear-coated paint at runtime. Trajectories, hitboxes and damage unchanged.
+- **Sharpness:** anisotropic filtering on all model textures, High renders at >= 1.5x resolution, Medium DPR cap 1.75, Auto steps resolution before dropping quality, tighter sun shadow frustum.
+- **Screenshots:** `docs/screenshots/vehicles-arenas/` (desktop and landscape-phone views of both arenas, in-game and model close-ups of each vehicle, before/after, Gemini comparison). Tools: `tools/viewer/vehicleshot.mjs`, `ARENA=... tools/viewer/gameshot.mjs`.
+- **Known gaps:** the arenas still share the same 15x11 board size, camera and crowd system; market counters repeat the same goods per segment; vehicle bodies are lofted rings (soft creases, no interiors); model folder ~19 MB (over the 15 MB target); real-device performance is still unmeasured (headless SwiftShader only).
+- **Verification (run in this environment, headless Chromium + SwiftShader):** `npm run check` clean (typecheck, lint, **342 unit tests in 28 files**, build). Playwright: full suite 29 passed / 4 skipped by design / 1 failed (desktop Okada pickup: the real-time key hold missed the pickup while other jobs loaded the CPU; it passed on mobile in the same run and passed on desktop and mobile when re-run alone), plus the new "both arenas are selectable and load different stages" test passing on desktop and mobile. Bot batches: `npm run simulate -- --matches 80 --players 4 --arena <id>` (see E3).
+- **Render cost (1280x720, 4 players, tick 600; before = start of session):** Low 174 -> 162 draw calls / 437k -> 378k triangles (bus park), market 139 / 480k; Medium 217 -> 193 / 1.01M -> 0.79M, market 198 / 0.99M; High 219 -> 195 / 1.40M -> 1.11M, market 202 / 1.33M, but High now renders 2.25x the pixels on 1x displays. SwiftShader frame rates (24-32 fps either way) say nothing about real GPUs; real-device measurement is still outstanding.

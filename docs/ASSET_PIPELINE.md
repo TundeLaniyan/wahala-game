@@ -15,7 +15,10 @@ Everything is built by deterministic Python scripts in `tools/assets/` that need
 | `prim.py`, `tex.py` | hard-surface modelling kit (bevelled boxes, lathes, tori, prisms, decals) and procedural PBR texture synthesis (concrete, asphalt, wood, painted metal, corrugated iron, plaster, brick, rubber, posters) |
 | `build_vehicles.py` + `vehicles_lib.py` | `veh_*.glb`, `gen_generator.glb` |
 | `build_environment.py` + `env_lib.py` | `prop_*.glb`, `env_*.glb` (pillars, soft blocks, walls, buildings, kiosk, lamps...) |
-| `build_textures.py` | `src/assets/textures/floor_*.jpg` (the 4x4 concrete-slab atlas) |
+| `build_textures.py` | `src/assets/textures/floor_*.jpg` (the 4x4 concrete-slab atlas); `build_textures.py market` -> `market_*.jpg` (interlock pavers, `tex_market.py`) |
+| `env_market.py`, `tex_market.py` (`build_environment.py market`) | Balogun Market: `mkt_hard_post`, `mkt_hard_counter` (tiles seamlessly along X), `mkt_soft_{fabric,produce,buckets,baskets}`, `mkt_wall`, `mkt_wall_b`, `mkt_wall_corner`, `mkt_stall`, `mkt_umbrella`, `mkt_fabric_rack`, `mkt_building_a/b` |
+| `env_busterminal.py` (`build_environment.py busterminal`) | Danfo Bus Park terminal dressing: `bp_shelter`, `bp_barrier`, `bp_sign`, `bp_booth` |
+| `veh_parked.py` (`build_vehicles.py parked`) | `env_danfo_parked.glb`, the 1.6k-triangle background danfo (LOD for the parked ranks) |
 
 ```bash
 pip install numpy scipy pillow
@@ -36,7 +39,7 @@ Assets are deterministic (seeded) and committed; the Vite build only needs the c
   - Generator: a node `lamp` (emissive indicator light), node `antenna` (remote aerial), `casing` material for the body paint.
   - Characters: a skinned mesh with one armature; the exact clip list is in `tools/assets/characters.py` (Idle, Run, RunCarry, IdleCarry, Ride, Place, Kick, Throw, Stumble, Cheer, Win, Lose, DieBlast, DieVehicle). Bodies are passed through `chargen.stylise()` and heads (region `head`) are enlarged by `build_characters.HEAD_SCALE` about the chin; the crowd uses the same bodies and head scale.
   - Crowd: one node per pose, named `spec_<name>_<role>_<frame>` with role `watch` | `talk` | `walk` and frame `0` (calm / first stride) or `1` (reaction / second stride). The game pairs the frames by name.
-- **Budgets** (mobile friendly): characters <= 9k triangles, <= 5 materials; vehicles <= 8k triangles, <= 8 materials; props <= 2k triangles, 1-2 materials; buildings/kiosks <= 3k triangles each. Textures power-of-two, <= 1024 px (vehicles, characters), <= 512 px (props); prefer one shared atlas per model. Whole `src/assets/models` target: <= 15 MB.
+- **Budgets** (mobile friendly): characters <= 9k triangles, <= 5 materials; vehicles <= 8k triangles, <= 8 materials (the Session E danfo/taxi/Keke are 9.4k/8.5k/8.9k, accepted because at most three drive at once; background copies use the low-poly `env_danfo_parked`); props <= 2k triangles, 1-2 materials; buildings/kiosks <= 3k triangles each. Textures power-of-two, <= 1024 px (vehicles, characters), <= 512 px (props); prefer one shared atlas per model. Whole `src/assets/models` target: <= 15 MB.
 - **Static props that the game instances** (pillars, crates, tyre stacks, barriers, sacks) must be **a single mesh with a single material** so they can be rendered with `InstancedMesh`.
 - Materials are glTF PBR (metallic-roughness). Emissive only where something really glows (lamps).
 - Smooth shading with sensible normals and bevelled edges; no hard black seams; UVs unwrapped; no flipped normals.
@@ -62,6 +65,10 @@ node tools/viewer/gameshot.mjs out/shot 1280 720 high 300 330   # -> out/shot-30
 node tools/viewer/gameshot.mjs out/phone 844 390 medium 300     # landscape phone (touch, 2x DPR)
 MOUNT=1 DSF=2 node tools/viewer/gameshot.mjs out/okada 1280 720 high 230   # everyone on an Okada, 2x
 ```
+
+Arena art lives in themes (`src/render/themes/`): each arena id names its floor texture set, permanent/destructible models (with weights), wall set and surroundings, so a new arena's assets only need new ids there. Destructible props must stay single-mesh/single-material; a theme's joined permanent model must span exactly x in [-0.5, 0.5].
+
+For vehicles in the real game, `tools/viewer/vehicleshot.mjs <outPrefix> [arenaId]` launches each signature vehicle from the gameplay camera and writes a full frame plus a crop around the vehicle; `ARENA=balogunMarket node tools/viewer/gameshot.mjs ...` captures the market.
 
 ## Regeneration
 
