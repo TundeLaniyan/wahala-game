@@ -9,6 +9,10 @@
  *  - variant rotation (never the same recording twice in a row);
  *  - excitement scaling: louder and a bit more eager at high intensity.
  * Critical moments (`force`) bypass chance and spacing, but still respect the voice cap.
+ *
+ * Street mode (`opts.street`, used by the engine): WAHALA! happens in a Lagos bus park, not a football
+ * stadium. Stadium-style `roar` and `cheerBig` reactions are demoted to ordinary, quieter `cheer`s so
+ * the crowd never swells into a roar; the spoken Pidgin lines (pidgin.ts) carry the personality instead.
  */
 import type { SoundId } from './recipes';
 import type { Mixer } from './mixer';
@@ -67,7 +71,16 @@ export interface ReactionDirector {
   reset(): void;
 }
 
-export function createReactionDirector(mixer: Mixer, seed = 0xc20d): ReactionDirector {
+export interface ReactionOptions {
+  /** Demote stadium roars/big cheers to quiet street cheers (default false). */
+  street?: boolean;
+}
+
+export function createReactionDirector(
+  mixer: Mixer,
+  seed = 0xc20d,
+  opts: ReactionOptions = {},
+): ReactionDirector {
   const rand = createRand(seed);
   const lastKind = new Map<ReactionKind, number>();
   const lastVariant = new Map<ReactionKind, number>();
@@ -76,7 +89,11 @@ export function createReactionDirector(mixer: Mixer, seed = 0xc20d): ReactionDir
   let intensity = 0;
 
   return {
-    react(req, now) {
+    react(request, now) {
+      let req = request;
+      if (opts.street && (req.kind === 'roar' || req.kind === 'cheerBig')) {
+        req = { ...req, kind: 'cheer', strength: req.strength * (req.kind === 'roar' ? 0.7 : 0.8) };
+      }
       const { kind } = req;
       const start = now + (req.delay ?? 0);
       recent = recent.filter((r) => r.end > now - 1);
@@ -101,7 +118,7 @@ export function createReactionDirector(mixer: Mixer, seed = 0xc20d): ReactionDir
       if (pool.length > 1 && v === lastVariant.get(kind)) v = (v + 1) % pool.length;
       lastVariant.set(kind, v);
       const strength = Math.min(1, Math.max(0, req.strength));
-      const gain = (0.45 + 0.55 * strength) * (0.8 + 0.2 * intensity);
+      const gain = (0.45 + 0.55 * strength) * (0.8 + 0.2 * intensity) * (opts.street ? 0.8 : 1);
       const ok = mixer.play(pool[v]!, { gain, rate: 0.96 + rand() * 0.08, delay: req.delay ?? 0 });
       if (!ok) return false;
       lastKind.set(kind, start);

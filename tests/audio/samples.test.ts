@@ -39,13 +39,13 @@ describe('public/audio documentation and manifest', () => {
   const dir = join(__dirname, '../../public/audio');
   const read = (f: string): string => readFileSync(join(dir, f), 'utf8');
 
-  it('ships no recordings: slots.json is valid and empty, and the docs say so', () => {
-    const manifest = JSON.parse(read('slots.json')) as { slots: Record<string, unknown> };
-    expect(manifest.slots).toEqual({});
-    expect(parseManifest(manifest).entries).toEqual([]);
-    expect(read('README.md')).toMatch(/None are shipped yet/i);
-    expect(read('README.md')).toMatch(/synthesised/i);
-    expect(read('LICENSES.md')).toMatch(/No recorded audio is shipped/i);
+  it('ships NO third-party recordings: slots.json lists only the three generated Lagos beds, and the docs say so', () => {
+    const manifest = JSON.parse(read('slots.json')) as { slots: Record<string, { license: string }> };
+    expect(Object.keys(manifest.slots).sort()).toEqual(['buspark_loop', 'crowd_loop', 'crowd_loop_hype']);
+    expect(parseManifest(manifest).entries).toHaveLength(3);
+    expect(read('README.md')).toMatch(/No third-party recordings are shipped/i);
+    expect(read('README.md')).toMatch(/synthetic/i);
+    expect(read('LICENSES.md')).toMatch(/No third-party recorded audio is shipped/i);
     expect(read('LICENSES.md')).toMatch(/licen[cs]e/i);
   });
 

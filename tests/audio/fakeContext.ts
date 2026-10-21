@@ -95,18 +95,22 @@ export class FakeBuffer implements AudioBufferLike {
 export class FakeSource extends FakeNode implements BufferSourceNodeLike {
   buffer: AudioBufferLike | null = null;
   loop = false;
+  loopStart = 0;
+  loopEnd = 0;
   readonly playbackRate = new FakeParam(this.ctx, 1);
   startedAt: number | null = null;
   stoppedAt: number | null = null;
   startOffset = 0;
+  startDuration: number | undefined;
   onended: (() => void) | null = null;
-  start(when = 0, offset = 0): void {
+  start(when = 0, offset = 0, duration?: number): void {
     if (this.startedAt !== null) throw new Error('InvalidStateError: start called twice');
     if (!Number.isFinite(when) || when < 0 || !Number.isFinite(offset) || offset < 0) {
       throw new RangeError('bad start');
     }
     this.startedAt = when;
     this.startOffset = offset;
+    this.startDuration = duration;
   }
   stop(when = 0): void {
     if (this.startedAt === null) throw new Error('InvalidStateError: stop before start');

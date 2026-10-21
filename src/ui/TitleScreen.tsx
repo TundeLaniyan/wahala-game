@@ -5,6 +5,7 @@ import { portraitUrl } from '../assets/portraits';
 import { commands } from '../app/session';
 import { useGameStore } from '../app/store';
 import type { GameSettings } from '../app/settings';
+import { AudioSettingsPanel } from './AudioSettings';
 
 function Choice<T extends string | number | boolean>(props: {
   value: T;
@@ -263,37 +264,7 @@ export function TitleScreen() {
               />
             ))}
           </div>
-          <label className="slider">
-            Ambience
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={s.musicVolume}
-              onChange={(e) => set({ musicVolume: Number(e.target.value) })}
-            />
-          </label>
-          <label className="slider">
-            Effects
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={s.sfxVolume}
-              onChange={(e) => set({ sfxVolume: Number(e.target.value) })}
-            />
-          </label>
-          <div className="row" style={{ marginTop: 6 }}>
-            <Choice
-              value={true}
-              current={s.muted}
-              label={s.muted ? 'Muted' : 'Sound on'}
-              onPick={() => set({ muted: !s.muted })}
-              testId="toggle-mute"
-            />
-          </div>
+          <AudioSettingsPanel muted={s.muted} onMutedChange={(muted) => set({ muted })} />
         </section>
       </main>
       {busy && loading && (

@@ -28,9 +28,10 @@ const LAYERS: readonly LayerId[] = ['crowd_loop', 'buspark_loop', 'crowd_loop_hy
 export function levelsFor(intensity: number): AmbienceLevels {
   const i = clamp01(intensity);
   return {
-    crowd_loop: 0.85 + 0.15 * i,
+    // the babble beds are texture only: they sit well under the spoken Pidgin lines so those stay intelligible
+    crowd_loop: 0.5 + 0.1 * i,
     buspark_loop: 0.55 - 0.2 * i,
-    crowd_loop_hype: 0.3 + 0.7 * i,
+    crowd_loop_hype: 0.22 + 0.5 * i,
   };
 }
 

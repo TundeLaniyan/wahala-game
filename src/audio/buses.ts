@@ -1,15 +1,15 @@
 /**
- * Mixer graph. THERE IS NO MUSIC BUS: the old procedural music was removed. The `music` volume
- * that the app still passes now scales the crowd ambience + crowd reactions (names kept so the app
- * keeps working; the lead will rename it).
+ * Mixer graph with four independent user volumes:
  *
- *   sfx   sources -> sfxBus ------------------------------------------\
- *   warn  sources -> warnBus (never ducked, slight boost) -------------+-> master -> compressor -> out
- *   react sources -> notch -> reactDuck(light) -> crowdBus ------------+
- *   amb   sources -> notch -> ambDuck(deep) ----> crowdBus ------------/
+ *   music   Afrobeats loops + stings (src/audio/music.ts)   -> musicDuck -> musicBus ----\
+ *   sfx     effects                                          -> sfxBus -------------------+
+ *   warn    danger warnings (never ducked, slight boost)     -> warnBus (sfx volume) -----+-> master -> compressor -> out
+ *   react   crowd reactions + spoken Pidgin                  -> notch -> reactDuck -> crowdBus +
+ *   amb     Lagos street / bus-park / market beds            -> notch -> ambDuck ----> crowdBus /
  *   (master -> soft limiter -> makeup trim -> soft clipper -> out)
  *
- * - `master`, `sfxBus`, `crowdBus` carry the user volumes. Mute only moves `master` (smoothly).
+ * - `master`, `musicBus`, `sfxBus`, `crowdBus` carry the user volumes (crowdBus = "Lagos ambience and
+ *   voices"). Mute only moves `master` (smoothly).
  * - Warnings (horns, fuse ticks, alarms) sit in their own bus that is never ducked; the crowd paths
  *   carry a gentle notch at the warning band (WARN_BAND_HZ) so warnings stay readable.
  * - The master compressor works as a soft limiter so stacked explosions do not clip.
@@ -20,8 +20,11 @@ import type { Bus } from './recipes/types';
 
 export interface Volumes {
   master: number;
-  /** Crowd ambience + reactions (formerly the music slider). */
+  /** Afrobeats music loops and stings. */
   music: number;
+  /** Lagos ambience beds, crowd reactions and spoken Pidgin. */
+  ambience: number;
+  /** Gameplay effects and warnings. */
   sfx: number;
 }
 
@@ -30,6 +33,7 @@ export const WARN_BAND_HZ = 2600;
 
 /** Headroom scalers so that a 1.0 slider never clips the mix. */
 const CROWD_BASE = 0.8;
+const MUSIC_BASE = 1.3;
 const SFX_BASE = 0.62;
 const WARN_BASE = 0.8;
 const SMOOTH = 0.02; // seconds, time constant for volume / mute changes
@@ -60,20 +64,29 @@ export const SOFT_CLIP_CURVE: Float32Array = (() => {
 
 export const LIMITER_TRIM = Math.pow(10, -LIMITER_MAKEUP_DB / 20);
 
-export type DuckKind = 'warning' | 'blast';
+export type DuckKind = 'warning' | 'blast' | 'speech';
 /** Gain the crowd paths dip to, and for how long (seconds). Reactions duck less than the bed. */
-const DUCK: Record<DuckKind, { amb: number; react: number; hold: number }> = {
-  warning: { amb: 0.5, react: 0.8, hold: 0.9 },
-  blast: { amb: 0.4, react: 0.75, hold: 0.5 },
+const DUCK: Record<DuckKind, { amb: number; react: number; music: number; hold: number }> = {
+  warning: { amb: 0.5, react: 0.8, music: 0.8, hold: 0.9 },
+  blast: { amb: 0.4, react: 0.75, music: 0.6, hold: 0.5 },
+  // a spoken Pidgin line: the babble beds and the music make room, the voice itself is never ducked
+  speech: { amb: 0.4, react: 1, music: 0.6, hold: 1.5 },
 };
+
+export interface DuckOptions {
+  /** Audio-clock time the duck starts (default: now), for lines scheduled slightly ahead. */
+  at?: number;
+  /** Seconds to hold the dip (default: the kind's own hold). */
+  hold?: number;
+}
 
 export interface Buses {
   /** Input node for a sound's bus. */
   input(bus: Bus): GainNodeLike;
   setVolumes(v: Volumes): void;
   setMuted(muted: boolean): void;
-  /** Briefly lowers the crowd so a warning or big blast stays readable. Never touches sfx/warn. */
-  duck(kind: DuckKind): void;
+  /** Briefly lowers the crowd and music so a warning or big blast stays readable. Never touches sfx/warn. */
+  duck(kind: DuckKind, opts?: DuckOptions): void;
   readonly volumes: Readonly<Volumes>;
   readonly muted: boolean;
   dispose(): void;
@@ -128,8 +141,12 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
   sfxBus.connect(master);
   const warnBus = gain(initial.sfx * WARN_BASE);
   warnBus.connect(master);
-  const crowdBus = gain(initial.music * CROWD_BASE);
+  const crowdBus = gain(initial.ambience * CROWD_BASE);
   crowdBus.connect(master);
+  const musicBus = gain(initial.music * MUSIC_BASE);
+  const musicDuck = gain(1);
+  musicDuck.connect(musicBus);
+  musicBus.connect(master);
 
   const ambDuck = gain(1);
   const reactDuck = gain(1);
@@ -146,6 +163,7 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
     // the notches are BiquadFilters; wrap them behind unity gains so every input is a GainNode
     amb: gain(1),
     react: gain(1),
+    music: musicDuck,
   };
   inputs.amb.connect(ambNotch);
   inputs.react.connect(reactNotch);
@@ -155,6 +173,7 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
   let duckUntil = 0;
   let duckAmb = 1;
   let duckReact = 1;
+  let duckMusic = 1;
 
   const smooth = (g: GainNodeLike, v: number): void => {
     const now = ctx.currentTime;
@@ -171,8 +190,14 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
       return isMuted;
     },
     setVolumes(v) {
-      volumes = { master: clamp01(v.master), music: clamp01(v.music), sfx: clamp01(v.sfx) };
-      smooth(crowdBus, volumes.music * CROWD_BASE);
+      volumes = {
+        master: clamp01(v.master),
+        music: clamp01(v.music),
+        ambience: clamp01(v.ambience),
+        sfx: clamp01(v.sfx),
+      };
+      smooth(crowdBus, volumes.ambience * CROWD_BASE);
+      smooth(musicBus, volumes.music * MUSIC_BASE);
       smooth(sfxBus, volumes.sfx * SFX_BASE);
       smooth(warnBus, volumes.sfx * WARN_BASE);
       smooth(master, isMuted ? 0 : volumes.master);
@@ -181,18 +206,20 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
       isMuted = m;
       smooth(master, m ? 0 : volumes.master);
     },
-    duck(kind) {
+    duck(kind, o = {}) {
       const d = DUCK[kind];
-      const now = ctx.currentTime;
-      const until = now + d.hold;
+      const now = Math.max(ctx.currentTime, o.at ?? 0);
+      const until = now + (o.hold ?? d.hold);
       const active = now < duckUntil;
       if (active && d.amb >= duckAmb && until <= duckUntil) return; // already deep and long enough
       duckAmb = active ? Math.min(d.amb, duckAmb) : d.amb;
       duckReact = active ? Math.min(d.react, duckReact) : d.react;
+      duckMusic = active ? Math.min(d.music, duckMusic) : d.music;
       duckUntil = active ? Math.max(until, duckUntil) : until;
       for (const [g, depth, rel] of [
         [ambDuck, duckAmb, 0.3],
         [reactDuck, duckReact, 0.2],
+        [musicDuck, duckMusic, 0.35],
       ] as const) {
         g.gain.cancelScheduledValues(now);
         g.gain.setTargetAtTime(depth, now, 0.02);

@@ -115,16 +115,17 @@ describe('context handling', () => {
   });
 });
 
-describe('music is gone', () => {
-  it('has no music modules or exports; the legacy method names only drive the ambience', async () => {
+describe('music is pre-rendered audio, never a runtime oscillator sequence', () => {
+  it('has no sequencer/pattern modules and creates no oscillators; the app-facing method names still work', async () => {
     const files = (dir: string): string[] =>
       readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
         e.isDirectory() ? files(join(dir, e.name)) : [join(dir, e.name)],
       );
     const names = files(join(__dirname, '../../src/audio'));
-    expect(names.filter((n) => /music|sequenc|pattern/i.test(n))).toEqual([]);
-    expect(Object.keys(audioModule).filter((k) => /music|sequenc|pattern/i.test(k))).toEqual([]);
-    // compat surface kept for the app
+    // the only "music" source file is the player of pre-rendered files (src/audio/music.ts)
+    expect(names.filter((n) => /sequenc|pattern|oscillat/i.test(n))).toEqual([]);
+    expect(Object.keys(audioModule).filter((k) => /sequenc|pattern/i.test(k))).toEqual([]);
+    // app-facing surface
     const rig = makeRig();
     for (const m of ['startMusic', 'stopMusic', 'setIntensity'] as const) {
       expect(typeof rig.audio[m]).toBe('function');
@@ -255,7 +256,9 @@ describe('event mapping', () => {
     expect(big[0]!.rate).toBeLessThan(small.rate); // heavier = slower/lower
     expect(rig.ids()).toContain('explosion_rumble');
     // a big chain also gets a big crowd response
-    expect(rig.ids()).toContain('crowd_cheer_big');
+    // ...but it is a street crowd, not a stadium: no big-cheer/roar samples are ever used
+    expect(rig.ids().some((id) => id.startsWith('crowd_cheer'))).toBe(true);
+    expect(rig.ids()).not.toContain('crowd_cheer_big');
   });
 
   it('collapses a blast that breaks many soft blocks into one crumble', async () => {
@@ -351,7 +354,7 @@ describe('voice cap and rate limiting', () => {
 
 describe('volume and mute', () => {
   it('maps volumes onto buses, clamps them, and mutes smoothly via the master gain', async () => {
-    const { audio, ctx } = makeRig();
+    const { audio, ctx } = makeRig({ prefs: null });
     await audio.unlock();
     const master = ctx.master();
     audio.setVolumes({ master: 0.5, music: 0.5, sfx: 0.5 });
@@ -374,21 +377,23 @@ describe('volume and mute', () => {
     expect(master.gain.value).toBe(1);
   });
 
-  it('the legacy "music" volume scales the crowd, sfx volume scales effects and warnings', async () => {
-    const { audio, ctx } = makeRig();
+  it('music, ambience and sfx volumes each scale only their own buses', async () => {
+    const { audio, ctx } = makeRig({ prefs: null });
     await audio.unlock();
-    audio.setVolumes({ master: 1, music: 1, sfx: 0 });
+    audio.setVolumes({ master: 1, music: 1, ambience: 1, sfx: 0 });
     const master = ctx.master();
     const direct = ctx.gains.filter((g) => g.connections.includes(master));
-    // sfxBus, warnBus, crowdBus all feed the master; sfx slider at 0 silences two of them
-    expect(direct.length).toBe(3);
+    // sfxBus, warnBus, crowdBus and musicBus all feed the master; sfx at 0 silences two of them
+    expect(direct.length).toBe(4);
     expect(direct.filter((g) => g.gain.value === 0)).toHaveLength(2);
-    audio.setVolumes({ master: 1, music: 0, sfx: 1 });
-    expect(direct.filter((g) => g.gain.value === 0)).toHaveLength(1);
+    audio.setVolumes({ master: 1, music: 0, ambience: 1, sfx: 1 });
+    expect(direct.filter((g) => g.gain.value === 0)).toHaveLength(1); // only the music bus
+    audio.setVolumes({ master: 1, music: 1, ambience: 0, sfx: 1 });
+    expect(direct.filter((g) => g.gain.value === 0)).toHaveLength(1); // only the crowd/ambience bus
   });
 
   it('applies volumes and mute chosen before unlock', async () => {
-    const { audio, ctx } = makeRig();
+    const { audio, ctx } = makeRig({ prefs: null });
     audio.setVolumes({ master: 0.3, music: 1, sfx: 1 });
     audio.setMuted(true);
     await audio.unlock();
@@ -698,13 +703,14 @@ describe('crowd reactions', () => {
     expect(botRig.ids().some((id) => id.startsWith('crowd_'))).toBe(true);
   });
 
-  it('final elimination and a win get the big roar', async () => {
+  it('a win gets a cheer (street crowd: never a stadium roar)', async () => {
     const rig = await started();
     const s = playState();
     s.players[1]!.alive = false;
     rig.audio.handleEvents([{ type: 'matchEnded', result: { kind: 'win', winnerId: 0 } }], s);
     expect(rig.ids()).toContain('win_sting');
-    expect(rig.ids()).toContain('crowd_roar');
+    expect(rig.ids().some((id) => id.startsWith('crowd_cheer'))).toBe(true);
+    expect(rig.ids()).not.toContain('crowd_roar');
     const lose = await started();
     s.players[1]!.isBot = true;
     lose.audio.handleEvents([{ type: 'matchEnded', result: { kind: 'win', winnerId: 1 } }], s);
@@ -795,7 +801,7 @@ describe('crowd reactions', () => {
     expect(rig.ids().some((id) => id.startsWith('crowd_'))).toBe(false);
     s.match.playTicks += 10;
     rig.audio.handleEvents([], s);
-    expect(rig.ids()).toContain('crowd_cheer_big');
+    expect(rig.ids().some((id) => id.startsWith('crowd_cheer'))).toBe(true);
     const n = rig.ids().length;
     rig.ctx.advance(20);
     s.match.playTicks += 100;

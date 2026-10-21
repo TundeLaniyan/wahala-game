@@ -2,7 +2,8 @@
 /**
  * Real-browser smoke test of the audio engine (headless Chromium, real Web Audio).
  *
- *   WAHALA_CHROMIUM=/opt/pw-browsers/chromium node tools/audio/browserSmoke.mjs <outDir> [seconds] [seed] [audioOff|ambience] [intensity]
+ *   WAHALA_CHROMIUM=/opt/pw-browsers/chromium node tools/audio/browserSmoke.mjs <outDir> [seconds] [seed] [audioOff|ambience] [intensity] [prefsJson]
+ *   (prefsJson, e.g. '{"music":0,"sfx":0}', pre-seeds the saved audio preferences, to measure one layer alone)
  *
  * Bundles src/audio (+ sim + ai) with esbuild, serves it with a throwaway static server, plays a
  * bot-vs-bot match in real time and writes `mix.wav` (the engine's actual mixed output) and
@@ -11,7 +12,7 @@
  * real fetch + decodeAudioData path.
  */
 import { createServer } from 'node:http';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, existsSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { build } from 'esbuild';
 import { chromium } from '@playwright/test';
@@ -21,9 +22,10 @@ const seconds = Number(process.argv[3] ?? 40);
 const seed = Number(process.argv[4] ?? 3);
 const audioOff = process.argv[5] === 'audioOff';
 const ambienceOnly = process.argv[5] === 'ambience';
-const intensity = process.argv[6] === undefined ? undefined : Number(process.argv[6]);
+const intensity = process.argv[6] === undefined || process.argv[6] === '-' ? undefined : Number(process.argv[6]);
+const prefsJson = process.argv[7];
 if (!outDir) {
-  console.error('usage: browserSmoke.mjs <outDir> [seconds] [seed] [audioOff|ambience] [intensity]');
+  console.error('usage: browserSmoke.mjs <outDir> [seconds] [seed] [audioOff|ambience] [intensity] [prefsJson]');
   process.exit(2);
 }
 mkdirSync(outDir, { recursive: true });
@@ -38,49 +40,23 @@ const bundle = await build({
   define: { 'import.meta.env': '{"BASE_URL":"/"}' },
 });
 
-/** A 0.3 s 880 Hz tone WAV (stand-in for a licensed recording). */
-function toneWav() {
-  const rate = 44100;
-  const n = Math.floor(rate * 0.3);
-  const buf = Buffer.alloc(44 + n * 2);
-  buf.write('RIFF', 0);
-  buf.writeUInt32LE(36 + n * 2, 4);
-  buf.write('WAVEfmt ', 8);
-  buf.writeUInt32LE(16, 16);
-  buf.writeUInt16LE(1, 20);
-  buf.writeUInt16LE(1, 22);
-  buf.writeUInt32LE(rate, 24);
-  buf.writeUInt32LE(rate * 2, 28);
-  buf.writeUInt16LE(2, 32);
-  buf.writeUInt16LE(16, 34);
-  buf.write('data', 36);
-  buf.writeUInt32LE(n * 2, 40);
-  for (let i = 0; i < n; i++)
-    buf.writeInt16LE(
-      Math.round(Math.sin((2 * Math.PI * 880 * i) / rate) * 8000 * Math.exp(-i / 4000)),
-      44 + i * 2,
-    );
-  return buf;
-}
-
 const routes = {
   '/': [
     'text/html',
     '<!doctype html><meta charset=utf-8><title>audio smoke</title><body>audio smoke</body><script src="/bundle.js"></script>',
   ],
   '/bundle.js': ['text/javascript', bundle.outputFiles[0].text],
-  '/audio/slots.json': [
-    'application/json',
-    JSON.stringify({
-      slots: { ui_click: { file: 'ui_click.wav', license: 'synthetic test tone, no rights' } },
-    }),
-  ],
-  '/audio/ui_click.wav': ['audio/wav', toneWav()],
 };
+const TYPES = { '.json': 'application/json', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/wav' };
 const server = createServer((req, res) => {
-  const r = routes[req.url?.split('?')[0] ?? ''];
-  if (!r) return void res.writeHead(404).end();
-  res.writeHead(200, { 'content-type': r[0] }).end(r[1]);
+  const url = req.url?.split('?')[0] ?? '';
+  const r = routes[url];
+  if (r) return void res.writeHead(200, { 'content-type': r[0] }).end(r[1]);
+  // static files of public/audio under /audio/ (no path escapes)
+  const m = /^\/audio\/((?:music\/|voices\/)?[A-Za-z0-9_-]+\.(?:json|ogg|mp3|wav))$/.exec(url);
+  const file = m && join('public/audio', m[1]);
+  if (!file || !existsSync(file) || !statSync(file).isFile()) return void res.writeHead(404).end();
+  res.writeHead(200, { 'content-type': TYPES[file.slice(file.lastIndexOf('.'))] }).end(readFileSync(file));
 });
 await new Promise((r) => server.listen(0, r));
 const port = server.address().port;
@@ -90,6 +66,7 @@ const browser = await chromium.launch({
   args: ['--autoplay-policy=no-user-gesture-required', '--no-sandbox'],
 });
 const page = await browser.newPage();
+if (prefsJson) await page.addInitScript((p) => localStorage.setItem('wahala.audio.v1', p), prefsJson);
 page.on('pageerror', (e) => console.error('pageerror', e));
 page.on('console', (m) => m.type() === 'error' && console.error('console.error', m.text()));
 await page.goto(`http://localhost:${port}/`);

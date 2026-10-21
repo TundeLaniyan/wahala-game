@@ -33,6 +33,22 @@ interface SmokeResult {
   firstAudibleMs: number | null;
   matchPhase: string;
   loops: string[];
+  /** Spoken Pidgin lines scheduled, with the audio-clock time they start (seconds from first sample). */
+  spoken: {
+    clipId: string;
+    category: string;
+    voice: string;
+    ambient: boolean;
+    at: number;
+    startMs: number;
+  }[];
+  music: { loaded: string[]; failed: { track: string; reason: string }[] };
+  voices: {
+    loadedPacks: string[];
+    failed: { pack: string; reason: string }[];
+    clips: number;
+    scenes: number;
+  };
   gainValues: number[];
 }
 
@@ -98,6 +114,7 @@ async function runSmoke(o: SmokeOptions): Promise<SmokeResult> {
   });
 
   const played: Record<string, number> = {};
+  const spoken: SmokeResult['spoken'] = [];
   const audio = o.audioOff
     ? createAudio({ contextFactory: () => null })
     : createAudio({
@@ -105,6 +122,15 @@ async function runSmoke(o: SmokeOptions): Promise<SmokeResult> {
         onError: (e) => errors.push(String(e)),
         sampleBaseUrl: o.slotBase,
         onPlay: (t) => (played[t.id] = (played[t.id] ?? 0) + 1),
+        onSpeak: (t) =>
+          spoken.push({
+            clipId: t.clipId,
+            category: t.category,
+            voice: t.voice,
+            ambient: t.ambient,
+            at: t.at,
+            startMs: performance.now() - t0,
+          }),
       });
 
   // a real game: 4 bots, the first counts as the "human" for audio purposes
@@ -124,8 +150,10 @@ async function runSmoke(o: SmokeOptions): Promise<SmokeResult> {
 
   await audio.unlock();
   audio.startMusic();
-  audio.setVolumes({ master: 1, music: 0.8, sfx: 0.9 });
+  // volumes come from the persistent preferences store (defaults: master 80 / music 45 / ambience 65 / sfx 85)
   const report = await audio.whenSamplesLoaded();
+  const musicReport = await audio.whenMusicLoaded();
+  const voiceReport = await audio.whenVoicesLoaded();
 
   const eventsSeen: Record<string, number> = {};
   const handleTimes: number[] = [];
@@ -203,6 +231,9 @@ async function runSmoke(o: SmokeOptions): Promise<SmokeResult> {
     matchPhase: state.match.phase,
     loops: live,
     gainValues: gainVals,
+    spoken,
+    music: musicReport,
+    voices: voiceReport,
   };
 }
 

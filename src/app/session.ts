@@ -31,7 +31,7 @@ const input = new InputManager({
 });
 
 function applyAudioSettings(s: GameSettings): void {
-  audio.setVolumes({ master: 1, music: s.musicVolume, sfx: s.sfxVolume });
+  // volumes live in the persistent audio preferences (src/audio/prefs.ts), which the engine follows itself
   audio.setMuted(s.muted);
 }
 
