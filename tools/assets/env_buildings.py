@@ -191,11 +191,11 @@ def antenna(pos, h=0.8, rng=None):
 # ----------------------------------------------------------------------------- the generic builder
 
 
-def build_building(name: str, seed: int, H: float, wall, peel, painter, parts_fn, side_windows=None, awning=(0xd62839, 0xf6f1e0), roof_metal=0x8c9196) -> dict:
+def build_building(name: str, seed: int, H: float, wall, peel, painter, parts_fn, side_windows=None, awning=(0xd62839, 0xf6f1e0), roof_metal=0x8c9196, patchy=0.55, jpeg_q=84) -> dict:
     """painter(f: Facade) draws the facade; parts_fn(atlas, rng) -> list of (tile, mesh) extra geometry."""
     atlas = Atlas(1024, 1024, 0x808080)
     D = min(200.0, 900.0 / H)
-    f = Facade(BW, H, D, seed, wall, peel_tone=peel, patchy=0.55)
+    f = Facade(BW, H, D, seed, wall, peel_tone=peel, patchy=patchy)
     painter(f)
     f.finish()
     atlas.add("facade", 0, 0, f.s)
@@ -246,7 +246,7 @@ def build_building(name: str, seed: int, H: float, wall, peel, painter, parts_fn
         else:
             mm = box_uv(mesh, mesh.v.min(axis=0), mesh.v.max(axis=0), r)
         m.add(mm)
-    return m.export({"main": atlas.mat(normal_strength=0.6, jpeg_q=84, nblur=0.5)})
+    return m.export({"main": atlas.mat(normal_strength=0.6, jpeg_q=jpeg_q, nblur=0.5)})
 
 
 # ----------------------------------------------------------------------------- A: teal block with a buka + phones

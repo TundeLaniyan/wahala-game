@@ -1,7 +1,8 @@
 """Builds shared surface textures into src/assets/textures/.
 
-    python3 tools/assets/build_textures.py
+    python3 tools/assets/build_textures.py [floor] [market]     # no names = floor only (the original behaviour)
 
+market_*.jpg: the Balogun Market interlock-paver atlas (same 4x4 convention), see tex_market.py.
 floor_*.jpg: a 4x4 atlas of distinct concrete slabs (albedo, tangent normal, ORM) for the arena floor, one slab = one tile.
 """
 from __future__ import annotations
@@ -105,5 +106,14 @@ def floor_atlas(cells: int = 4, px: int = 256, seed: int = 5) -> None:
     print("floor atlas", S, "px:", [f"{s // 1024} KB" for s in sizes])
 
 
+def market_atlas() -> None:
+    from tex_market import market_floor_atlas
+
+    sizes = market_floor_atlas(OUT, jpeg)
+    print("market atlas:", [f"{s // 1024} KB" for s in sizes])
+
+
 if __name__ == "__main__":
-    floor_atlas()
+    targets = sys.argv[1:] or ["floor"]
+    for t in targets:
+        {"floor": floor_atlas, "market": market_atlas}[t]()

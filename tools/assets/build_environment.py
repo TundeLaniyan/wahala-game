@@ -1,6 +1,7 @@
 """Builds the environment GLBs (pillars, soft blocks, walls, buildings, dressing) into src/assets/models/.
 
     python3 tools/assets/build_environment.py [name ...]      # no names = everything
+    python3 tools/assets/build_environment.py market busterminal   # only the Balogun Market / bus-terminal sets
 
 numpy + scipy + PIL only (no Blender). Each module registers its builders in a dict of name -> function.
 """
@@ -18,7 +19,7 @@ def registry() -> dict:
     from env_pillars import PILLARS
 
     reg.update(PILLARS)
-    for modname, attr in (("env_soft", "SOFT"), ("env_walls", "WALLS"), ("env_buildings", "BUILDINGS"), ("env_dressing", "DRESSING")):
+    for modname, attr in (("env_soft", "SOFT"), ("env_walls", "WALLS"), ("env_buildings", "BUILDINGS"), ("env_dressing", "DRESSING"), ("env_market", "MARKET"), ("env_busterminal", "BUSTERMINAL")):
         try:
             mod = __import__(modname)
         except ModuleNotFoundError as e:  # module not written yet
@@ -29,9 +30,19 @@ def registry() -> dict:
     return reg
 
 
+GROUPS = {"market": "MARKET", "busterminal": "BUSTERMINAL"}  # whole-set aliases -> module dict
+
+
 def main(argv: list[str]) -> None:
     reg = registry()
-    names = argv or list(reg)
+    names = []
+    for a in argv:
+        if a in GROUPS:
+            mod = __import__({"market": "env_market", "busterminal": "env_busterminal"}[a])
+            names += list(getattr(mod, GROUPS[a]))
+        else:
+            names.append(a)
+    names = names or list(reg)
     infos = []
     for n in names:
         if n not in reg:
