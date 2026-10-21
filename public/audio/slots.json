@@ -1,3 +1,19 @@
 {
-  "slots": {}
+  "slots": {
+    "crowd_loop": {
+      "license": "Original generated audio (tools/audiogen/build_ambience.py): no third-party recordings; babble derived from the project's own synthetic Kokoro-82M (Apache-2.0) Pidgin clips",
+      "source": "tools/audiogen/build_ambience.py",
+      "gain": 1
+    },
+    "buspark_loop": {
+      "license": "Original generated audio (tools/audiogen/build_ambience.py): no third-party recordings; babble derived from the project's own synthetic Kokoro-82M (Apache-2.0) Pidgin clips",
+      "source": "tools/audiogen/build_ambience.py",
+      "gain": 1
+    },
+    "crowd_loop_hype": {
+      "license": "Original generated audio (tools/audiogen/build_ambience.py): no third-party recordings; babble derived from the project's own synthetic Kokoro-82M (Apache-2.0) Pidgin clips",
+      "source": "tools/audiogen/build_ambience.py",
+      "gain": 1
+    }
+  }
 }

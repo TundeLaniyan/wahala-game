@@ -1,0 +1,26 @@
+{
+  "crowd_loop": {
+    "seconds": 44.0,
+    "samples": 1940480,
+    "rms_db": -17.11,
+    "peak_db": -0.92,
+    "seam_jump_ratio": 0.119,
+    "ogg_bytes": 542541
+  },
+  "buspark_loop": {
+    "seconds": 38.01,
+    "samples": 1676288,
+    "rms_db": -26.1,
+    "peak_db": -8.51,
+    "seam_jump_ratio": 0.4,
+    "ogg_bytes": 467084
+  },
+  "crowd_loop_hype": {
+    "seconds": 33.0,
+    "samples": 1455104,
+    "rms_db": -16.75,
+    "peak_db": -0.92,
+    "seam_jump_ratio": 0.482,
+    "ogg_bytes": 427486
+  }
+}

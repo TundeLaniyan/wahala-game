@@ -1,0 +1,158 @@
+{
+  "sampleRate": 44100,
+  "tracks": {
+    "match_loop": {
+      "loop": true,
+      "bpm": 108,
+      "bars": 32,
+      "role": "In-match bed. 4 x 8-bar sections: groove, hook, variation, breakdown+build.",
+      "files": {
+        "ogg": {
+          "file": "match_loop.ogg",
+          "bytes": 1101483
+        },
+        "mp3": {
+          "file": "match_loop.mp3",
+          "bytes": 1484173
+        }
+      },
+      "samples": 3136000,
+      "seconds": 71.111,
+      "lufs": -15.0,
+      "peak_db": -1.45,
+      "seam": {
+        "seam_jump": 0.0989,
+        "typical_step": 0.0539,
+        "jump_ratio": 1.8336,
+        "rms_head_db": -12.385,
+        "rms_tail_db": -19.2659
+      },
+      "decoded_samples": {
+        "ogg": 3136000,
+        "mp3": 3136000
+      }
+    },
+    "menu_loop": {
+      "loop": true,
+      "bpm": 100,
+      "bars": 16,
+      "role": "Title / menu / results bed. Softer, sparser.",
+      "files": {
+        "ogg": {
+          "file": "menu_loop.ogg",
+          "bytes": 584788
+        },
+        "mp3": {
+          "file": "menu_loop.mp3",
+          "bytes": 807549
+        }
+      },
+      "samples": 1693440,
+      "seconds": 38.4,
+      "lufs": -17.0,
+      "peak_db": -3.33,
+      "seam": {
+        "seam_jump": 0.0101,
+        "typical_step": 0.0115,
+        "jump_ratio": 0.8755,
+        "rms_head_db": -18.2863,
+        "rms_tail_db": -29.0208
+      },
+      "decoded_samples": {
+        "ogg": 1693440,
+        "mp3": 1693440
+      }
+    },
+    "match_tension": {
+      "loop": true,
+      "bpm": 108,
+      "bars": 8,
+      "role": "Percussion-only stem layered over match_loop in the final seconds (8 bars divide the 32-bar loop).",
+      "files": {
+        "ogg": {
+          "file": "match_tension.ogg",
+          "bytes": 264830
+        },
+        "mp3": {
+          "file": "match_tension.mp3",
+          "bytes": 401679
+        }
+      },
+      "samples": 784000,
+      "seconds": 17.778,
+      "lufs": -19.0,
+      "peak_db": -1.5,
+      "seam": {
+        "seam_jump": 0.0254,
+        "typical_step": 0.0751,
+        "jump_ratio": 0.3389,
+        "rms_head_db": -18.4297,
+        "rms_tail_db": -20.4092
+      },
+      "decoded_samples": {
+        "ogg": 784000,
+        "mp3": 784000
+      }
+    },
+    "sting_win": {
+      "loop": false,
+      "bpm": 108,
+      "bars": 0,
+      "role": "Victory sting.",
+      "files": {
+        "ogg": {
+          "file": "sting_win.ogg",
+          "bytes": 102713
+        },
+        "mp3": {
+          "file": "sting_win.mp3",
+          "bytes": 122670
+        }
+      },
+      "samples": 361619,
+      "seconds": 8.2,
+      "lufs": -13.93,
+      "peak_db": -1.08
+    },
+    "sting_lose": {
+      "loop": false,
+      "bpm": 96,
+      "bars": 0,
+      "role": "Defeat sting (wry, not tragic).",
+      "files": {
+        "ogg": {
+          "file": "sting_lose.ogg",
+          "bytes": 71994
+        },
+        "mp3": {
+          "file": "sting_lose.mp3",
+          "bytes": 84366
+        }
+      },
+      "samples": 286650,
+      "seconds": 6.5,
+      "lufs": -17.0,
+      "peak_db": -3.77
+    },
+    "sting_draw": {
+      "loop": false,
+      "bpm": 108,
+      "bars": 0,
+      "role": "Draw sting (unresolved suspension).",
+      "files": {
+        "ogg": {
+          "file": "sting_draw.ogg",
+          "bytes": 80904
+        },
+        "mp3": {
+          "file": "sting_draw.mp3",
+          "bytes": 91146
+        }
+      },
+      "samples": 286650,
+      "seconds": 6.5,
+      "lufs": -17.0,
+      "peak_db": -2.06
+    }
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "_comment": "Slot for REAL recordings of the crowd lines. Empty today: every shipped voice line is a synthetic placeholder. See recorded/README.md and docs/AUDIO.md.",
+  "clips": []
+}
