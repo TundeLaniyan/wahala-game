@@ -7,8 +7,8 @@ import vehicles_lib as V
 from vehicles_lib import Model, place
 from veh_common import Wheels, add_wheel_set, poly_window, rust_color_fn, std_specs
 
-YELLOW = 0xf9c80e
-GREEN = 0x1c8a4a
+YELLOW = 0xf8c612
+GREEN = 0x22252b  # dark charcoal/black waterproof canvas canopy matching reference turnaround
 Y0 = 0.13
 RWR, RWW, RWX, RWZ = 0.125, 0.085, 0.255, -0.30
 FWR, FWW, FWZ = 0.12, 0.07, 0.43
@@ -148,16 +148,23 @@ def build():
         V.finish(s, dirt=0.3, seed=int(abs(c[2]) * 100))
         trim.append(s)
 
-    seat((0.0, 0.405, 0.02), (0.30, 0.06, 0.22), 0x1d1b1c)
-    seat((0.0, 0.50, -0.105), (0.30, 0.17, 0.05), 0x1d1b1c)
-    seat((0.0, 0.405, -0.28), (0.50, 0.06, 0.20), 0x6e2a22)
-    seat((0.0, 0.52, -0.395), (0.50, 0.21, 0.05), 0x6e2a22)
+    seat((0.0, 0.405, 0.02), (0.30, 0.06, 0.22), 0x1d1e22)
+    seat((0.0, 0.50, -0.105), (0.30, 0.17, 0.05), 0x1d1e22)
+    seat((0.0, 0.405, -0.28), (0.50, 0.06, 0.20), 0x24262b)
+    seat((0.0, 0.52, -0.395), (0.50, 0.21, 0.05), 0x24262b)
 
-    # ---- rear body panel, louvres, lights, plate, bumper
+    # ---- rear body panel, louvres, lights, plate, bumper, and rolled rear canvas flap
     rear = V.bevel_box((0, 0.50, -0.47), (0.56, 0.24, 0.10), bevel=0.03, seg=2)
     V.paint(rear, YELLOW)
     V.finish(rear, dirt=0.25, seed=2)
     m.add(rear, "paint")
+    roll_flap = V.cylinder((0.0, 0.842, -0.528), 0.024, 0.44, sides=10, axis="x", bevel=0.006)
+    V.paint(roll_flap, 0x1e2026)
+    trim.append(roll_flap)
+    for sx_s in (-0.15, 0.15):
+        strap_f = V.bevel_box((sx_s, 0.842, -0.530), (0.016, 0.054, 0.054), bevel=0.004)
+        V.paint(strap_f, 0x111215)
+        trim.append(strap_f)
     back_plane = lambda x, y: np.array([x, y, -0.522])
     for yy in (0.45, 0.48, 0.51, 0.54):
         lv = V.ribbon(back_plane, [(-0.14 + 0.28 * i / 4, yy) for i in range(5)], 0.016, off=0.0, height=0.007, ref_fn=V.axis_ref)
@@ -167,14 +174,14 @@ def build():
     for sx in (-1, 1):
         decals.append(decal(back_plane, sx * 0.225, 0.58, 0.04, 0.08, atlas, "tail", flip=True, off=0.001, spacing=0.05))
     bump = V.bevel_box((0, 0.175, -0.525), (0.50, 0.04, 0.03), bevel=0.014, seg=2)
-    V.paint(bump, 0xb9bbc0)
-    chrome.append(bump)
+    V.paint(bump, 0x1c1e22)
+    trim.append(bump)
 
-    # ---- front end: head lamp, trim, plate, indicators, fender, fork, handlebar
+    # ---- front end: single round head lamp in black bezel, trim, plate, indicators, fender, fork, handlebar
     zf = cowl.front(0.0, 0.43)[2]
-    ring = V.cylinder((0, 0.43, zf + 0.004), 0.066, 0.018, sides=16, axis="z", bevel=0.005)
-    V.paint(ring, 0xbfc1c6)
-    chrome.append(ring)
+    ring = V.cylinder((0, 0.43, zf + 0.004), 0.068, 0.020, sides=16, axis="z", bevel=0.005)
+    V.paint(ring, 0x16181c)
+    trim.append(ring)
     lens = V.lathe([(0.0, 0.0), (0.052, 0.0), (0.054, 0.006), (0.044, 0.020), (0.0, 0.026)], 16)
     lens = place(lens, (0, 0.43, zf + 0.014), (90, 0, 0))
     V.paint(lens, 0xfff2cf)

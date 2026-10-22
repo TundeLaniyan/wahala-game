@@ -139,10 +139,17 @@ export class OverlayViews implements View {
           x,
           z,
           color: 0xff2a2a,
-          intensity: 0.25 + 0.5 * k * (0.7 + 0.3 * Math.sin(time * 24)),
+          intensity: 0.28 + 0.54 * k * (0.7 + 0.3 * Math.sin(time * 24)),
           scale: 0.98,
         });
-        this.rings.push({ x, z, color: 0xffcc33, intensity: 0.4 + 0.6 * k, scale: 1.7 - k * 0.9 });
+        this.rings.push({ x, z, color: 0xffcc33, intensity: 0.45 + 0.55 * k, scale: 1.7 - k * 0.9 });
+        this.rings.push({
+          x,
+          z,
+          color: 0xff3b1f,
+          intensity: 0.5 + 0.5 * k,
+          scale: Math.max(0.32, 0.95 - k * 0.55),
+        });
       }
     }
 

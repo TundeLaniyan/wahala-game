@@ -13,7 +13,7 @@ from vehicles_lib import Model, Spec, place
 tex_veh.install()
 CAGE_X, CAGE_Z = 0.294, 0.232
 TOP, BOT = 0.60, 0.06
-CAGE_COL = 0xa7aab1
+CAGE_COL = 0x1e2024
 
 
 def make_atlas() -> V.Atlas:
@@ -21,14 +21,16 @@ def make_atlas() -> V.Atlas:
 
     def panel(img, d, rng):
         d.rectangle([0, 0, 379, 189], fill=(0x0b, 0x0b, 0x0d))
-        d.rounded_rectangle([5, 5, 374, 184], radius=10, outline=(0x55, 0x58, 0x5e), width=3)
+        d.rounded_rectangle([5, 5, 374, 184], radius=10, outline=(0xf5, 0xbc, 0x14), width=3)
         for cx, label in ((70, "230V"), (155, "16A")):
             V.hand_text(d, rng, label, (cx - 40, 128, cx + 40, 160), (0xe8, 0xe8, 0xe0), 22, jitter=0.0)
         V.hand_text(d, rng, "BREAKER", (212, 132, 300, 158), (0xe8, 0xe8, 0xe0), 12, jitter=0.0)
         V.hand_text(d, rng, "ON    OFF", (306, 132, 374, 158), (0xe8, 0xe8, 0xe0), 11, jitter=0.0)
-        V.hand_text(d, rng, "WAHALA POWER 3000W", (16, 16, 300, 50), (0xf2, 0xb7, 0x05), 19, jitter=0.0, tracking=0)
+        V.hand_text(d, rng, "I BETA PASS MY NEIGHBOUR", (16, 16, 360, 50), (0xf6, 0xc4, 0x16), 19, jitter=0.0, tracking=0)
         d.rectangle([14, 62, 366, 64], fill=(0x55, 0x58, 0x5e))
-        V.hand_text(d, rng, "READY", (286, 70, 340, 92), (0xe8, 0xe8, 0xe0), 11, jitter=0.0)
+        # digital countdown display on the panel too
+        d.rounded_rectangle([246, 68, 362, 124], radius=6, fill=(0x16, 0x06, 0x06), outline=(0xd8, 0x28, 0x20), width=2)
+        V.hand_text(d, rng, "00:00", (252, 74, 356, 118), (0xff, 0x2e, 0x22), 28, jitter=0.0, tracking=1)
 
     def flame(img, d, rng):
         d.rectangle([0, 0, 63, 63], fill=(0x0b, 0x0b, 0x0d))
@@ -38,15 +40,15 @@ def make_atlas() -> V.Atlas:
         d.polygon([(32, 34), (37, 44), (33, 50), (27, 50), (27, 43)], fill=(0xff, 0xc0, 0x30))
 
     def petrol(img, d, rng):
-        d.rectangle([0, 0, 159, 39], fill=(0xf4, 0xc2, 0x0a))
-        d.rectangle([0, 0, 159, 39], outline=(0x0b, 0x0b, 0x0d), width=3)
-        V.hand_text(d, rng, "PETROL ONLY", (4, 4, 156, 36), (0x10, 0x10, 0x12), 19, jitter=0.0, tracking=0)
+        d.rectangle([0, 0, 159, 39], fill=(0x12, 0x13, 0x16))
+        d.rectangle([0, 0, 159, 39], outline=(0xf6, 0xc4, 0x16), width=3)
+        V.hand_text(d, rng, "DANGER TNT", (4, 4, 156, 36), (0xff, 0x38, 0x24), 19, jitter=0.0, tracking=0)
 
     def brand(img, d, rng):
-        d.rectangle([0, 0, 199, 47], fill=(0x0b, 0x0b, 0x0d))
-        d.rectangle([0, 0, 199, 4], fill=(0xf2, 0xb7, 0x05))
-        d.rectangle([0, 43, 199, 47], fill=(0xf2, 0xb7, 0x05))
-        V.hand_text(d, rng, "WAHALA GEN", (4, 6, 196, 42), (0xf4, 0xf0, 0xe0), 26, jitter=0.0, tracking=2)
+        d.rectangle([0, 0, 199, 47], fill=(0x12, 0x13, 0x16))
+        d.rectangle([0, 0, 199, 5], fill=(0xf6, 0xc4, 0x16))
+        d.rectangle([0, 42, 199, 47], fill=(0xf6, 0xc4, 0x16))
+        V.hand_text(d, rng, "WAHALA GEN", (4, 6, 196, 42), (0xff, 0xd2, 0x28), 26, jitter=0.0, tracking=2)
 
     def gauge(img, d, rng):
         d.rectangle([0, 0, 63, 63], fill=(0x10, 0x10, 0x12))
@@ -57,11 +59,17 @@ def make_atlas() -> V.Atlas:
         d.line([32, 32, 44, 20], fill=(0xc0, 0x20, 0x14), width=3)
         d.ellipse([29, 29, 35, 35], fill=(0x10, 0x10, 0x12))
 
+    def timer_led(img, d, rng):
+        d.rectangle([0, 0, 127, 63], fill=(0x14, 0x16, 0x1a))
+        d.rounded_rectangle([4, 4, 123, 59], radius=8, fill=(0x08, 0x05, 0x06), outline=(0x40, 0x44, 0x4c), width=3)
+        V.hand_text(d, rng, "00:00", (10, 10, 118, 54), (0xff, 0x26, 0x1b), 34, jitter=0.0, tracking=2)
+
     at.cell("panel", 380, 190, panel)
     at.cell("flame", 64, 64, flame)
     at.cell("petrol", 160, 40, petrol)
     at.cell("brand", 200, 48, brand)
     at.cell("gauge", 64, 64, gauge)
+    at.cell("timer_led", 128, 64, timer_led)
     at.build()
     return at
 
@@ -232,13 +240,42 @@ def build():
     col(lamp_ring, 0x1c1c1f)
     trim.append(lamp_ring)
 
-    # ---- vents on the back and the muffler end
+    # ---- vents on the back and strapped red dynamite bundle with digital countdown timer
     back = lambda x, y: np.array([x, y, -0.180])
     for k in range(7):
         yy = 0.20 + 0.032 * k
         sl = V.ribbon(back, [(-0.15, yy), (0.15, yy)], 0.014, off=0.0, ref_fn=V.axis_ref)
         col(sl, 0x08080a)
         trim.append(sl)
+    # 3 red dynamite sticks strapped horizontally to both -Z and +Z upper flanks so they read from every angle
+    for z_side, flip_d in ((-0.202, -1.0), (0.202, 1.0)):
+        y_base = 0.275 if z_side < 0 else 0.405
+        for dy in (-0.036, 0.0, 0.036):
+            dyn = V.cylinder((0.0, y_base + dy, z_side), 0.019, 0.26, sides=10, axis="x", bevel=0.004)
+            col(dyn, 0xd8241c)
+            trim.append(dyn)
+            cap_l = V.cylinder((-0.131, y_base + dy, z_side), 0.015, 0.008, sides=8, axis="x")
+            col(cap_l, 0x241e18)
+            trim.append(cap_l)
+        for sx_strap in (-0.08, 0.08):
+            st_b = V.bevel_box((sx_strap, y_base, z_side), (0.016, 0.118, 0.042), bevel=0.003, seg=1)
+            col(st_b, 0x121316)
+            trim.append(st_b)
+        t_box = V.bevel_box((0.0, y_base, z_side + flip_d * 0.018), (0.108, 0.056, 0.016), bevel=0.004, seg=1)
+        col(t_box, 0x16181c)
+        trim.append(t_box)
+        u0, v0, u1, v1 = at.rect("timer_led")
+        decals.append(V.quad((0.0, y_base, z_side + flip_d * 0.0265), (flip_d, 0, 0), (0, 1, 0), 0.098, 0.048, (u0, v0, u1, v1)))
+
+    # ---- top siren beacon on the corner of the roll cage (part of `lamp` node so it pulses!)
+    siren_pos = (0.195, TOP + 0.004, 0.145)
+    siren_base = V.cylinder((siren_pos[0], siren_pos[1] + 0.010, siren_pos[2]), 0.040, 0.022, sides=14, bevel=0.004)
+    col(siren_base, 0x16181c)
+    trim.append(siren_base)
+    siren_dome = V.lathe([(0.0, 0.0), (0.034, 0.0), (0.034, 0.032), (0.028, 0.048), (0.016, 0.058), (0.0, 0.062)], 16)
+    siren_dome = place(siren_dome, (siren_pos[0], siren_pos[1] + 0.020, siren_pos[2]), (0, 0, 0))
+    col(siren_dome, 0xff281c)
+    lamp_m.append(siren_dome)
 
     # ---- recoil starter (+X end) and its handle
     rec = V.cylinder((0.262, 0.31, 0.0), 0.090, 0.045, sides=20, axis="x", bevel=0.010)
@@ -295,16 +332,16 @@ def build():
     m.add(trim, "trim")
     m.add(chrome, "chrome")
     m.add(decals, "decal")
-    m.add(lamp_m, "lamp", node="lamp", pivot=(0.145, 0.30, panel_z + 0.0085))
+    m.add(lamp_m, "lamp", node="lamp", pivot=siren_pos)
     m.add(ant_trim, "trim", node="antenna", pivot=base)
     m.add(ant_lamp, "lamp", node="antenna", pivot=base)
 
     specs = {
-        "casing": Spec(color=(0.694, 0.027, 0.013, 1.0), roughness=0.5, texture="van_paint", tex_args=dict(tone=0xf6f6f6, wear=0.32), uv_m=0.9, smooth_deg=55),
-        "frame": Spec(color=(1, 1, 1, 1), roughness=0.38, metallic=0.85, smooth_deg=60),
-        "trim": Spec(color=(1, 1, 1, 1), roughness=0.7, smooth_deg=55),
+        "casing": Spec(color=(0.96, 0.72, 0.06, 1.0), roughness=0.42, texture="van_paint", tex_args=dict(tone=0xf8f8f8, wear=0.26), uv_m=0.9, smooth_deg=55),
+        "frame": Spec(color=(1, 1, 1, 1), roughness=0.45, metallic=0.75, smooth_deg=60),
+        "trim": Spec(color=(1, 1, 1, 1), roughness=0.65, smooth_deg=55),
         "chrome": Spec(color=(0.88, 0.89, 0.92, 1), roughness=0.22, metallic=1.0, smooth_deg=55),
-        "lamp": Spec(color=(1, 1, 1, 1), roughness=0.3, emissive=(1.0, 0.55, 0.1), emissive_strength=1.5, smooth_deg=60),
-        "decal": Spec(color=(1, 1, 1, 1), roughness=1.0, texture="decals_gen", smooth_deg=89),
+        "lamp": Spec(color=(1, 1, 1, 1), roughness=0.25, emissive=(1.0, 0.22, 0.08), emissive_strength=2.4, smooth_deg=60),
+        "decal": Spec(color=(1, 1, 1, 1), roughness=0.85, texture="decals_gen", smooth_deg=89),
     }
     return m, specs

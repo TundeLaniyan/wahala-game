@@ -84,9 +84,9 @@ function createProceduralGenerator(): GeneratorModel {
   const body = new Group();
   root.add(body);
 
-  const casingMaterial = uniqueMat(0xd8301f, { roughness: 0.55, metalness: 0.2 });
-  const dark = mat(0x23201d, { roughness: 0.6, metalness: 0.3 });
-  const metal = mat(0xb9bdc4, { roughness: 0.35, metalness: 0.7 });
+  const casingMaterial = uniqueMat(0xffc61a, { roughness: 0.42, metalness: 0.15 });
+  const dark = mat(0x1c1e22, { roughness: 0.55, metalness: 0.35 });
+  const metal = mat(0x1e2024, { roughness: 0.45, metalness: 0.7 });
 
   body.add(box(0.62, 0.07, 0.5, dark, 0, 0.04, 0));
   body.add(box(0.5, 0.3, 0.38, casingMaterial, -0.03, 0.24, 0));

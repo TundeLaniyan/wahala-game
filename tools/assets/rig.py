@@ -94,6 +94,12 @@ def skin_weights(verts: np.ndarray, regions: list[str], b: Body) -> tuple[np.nda
                     w = w * smoothstep(1.34, 1.44, y)
                 if bone.startswith("thigh"):
                     w = w * smoothstep(0.98, 0.86, y)
+            if grp in ("arm_L", "arm_R"):
+                sh_y = j[f"upperarm_{grp[-1]}"][1]
+                if bone.startswith("upperarm"):
+                    w = w * smoothstep(sh_y + 0.02, sh_y - 0.065, p[:, 1])
+                if bone.startswith("clavicle"):
+                    w = w * (1.0 + 3.0 * smoothstep(sh_y - 0.06, sh_y + 0.02, p[:, 1]))
             if grp == "head" and bone == "neck":
                 w = w * smoothstep(b.head_y - b.head[1] * 0.4, b.head_y - b.head[1] * 1.1, p[:, 1])
             full[np.where(mask)[0], index[bone]] = w
@@ -148,8 +154,8 @@ def idle(t: float) -> dict:
         "chest": (2.0 * sin(ph), -0.3 * look, 1.0 * sin(ph * 0.5)),
         "spine": (1.5 + 0.8 * sin(ph), 0, -1.5),
         "head": (-2 + 1.2 * sin(ph - 0.6), look, 1.5),
-        "upperarm_L": (3 + 2.5 * sin(ph + 0.3), 0, 9 + 1.5 * sin(ph)),
-        "upperarm_R": (5 + 2.5 * sin(ph + 0.9), 0, -10 - 1.5 * sin(ph)),
+        "upperarm_L": (3 + 2.5 * sin(ph + 0.3), 0, -5 + 1.5 * sin(ph)),
+        "upperarm_R": (5 + 2.5 * sin(ph + 0.9), 0, 5 - 1.5 * sin(ph)),
         "forearm_L": (-16 - 3 * sin(ph), 0, 0),
         "forearm_R": (-22 - 3 * sin(ph + 0.5), 0, 0),
         "hips": (0, 4, 3.5 + 1.0 * sin(ph * 0.5)),

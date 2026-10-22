@@ -70,24 +70,27 @@ def _strip_rects(r):
 def _crate_atlas(seed: int, stencilled: bool, slat_h: float = 0.135, post_nail_fracs=None):
     """512x512: six 512x80 wood strips + a dark interior tile."""
     atlas = Atlas(512, 512)
-    tones = [0xdcae70, 0xcf9e62, 0xc4935a, 0xd6bb92, 0xd8a86c, 0xc99862]  # fresh pine: warm, light, reads against grey concrete
+    tones = [0xd89b52, 0xcc8c44, 0xc0803a, 0xe0aa64, 0xd4954c, 0xc6863f]  # warm golden-brown timber matching reference crate
     rng = np.random.default_rng(seed)
     nail_slat = [(0.045, 0.5), (0.955, 0.5)]
     for i, tone in enumerate(tones):
         nails = nail_slat if i in (0, 1, 2, 3) else [(0.05, 0.5), (0.95, 0.5)]
         if i in (4, 5):
             nails = nail_slat
-        sh = wood_sheet(512, 80, seed + i * 7, tone, "x", wear=0.35 + 0.15 * (i % 3), knots=1 if i % 2 == 0 else 2, gap=3, nails=nails)
+        sh = wood_sheet(512, 80, seed + i * 7, tone, "x", wear=0.32 + 0.12 * (i % 3), knots=1 if i % 2 == 0 else 2, gap=3, nails=nails)
         if stencilled and i == 4:
-            stencil(sh, "FRAGILE", (256, 40), 44, 0x1a1a1a, "black", a=0.9, squeeze=0.95, wear=0.55, seed=3, spacing=0.12)
+            stencil(sh, "FRAGILE", (256, 40), 44, 0xf8f4e8, "black", a=0.92, squeeze=0.95, wear=0.35, seed=3, spacing=0.12)
         if stencilled and i == 5:
-            for k, x in enumerate((90, 200, 310, 420)):
+            # White fragile wine-glass stencil & up arrows matching reference crate
+            for k, x in enumerate((120, 256, 392)):
                 with sh.paint(height=0.05) as d:
-                    d.poly([(x, 20), (x + 22, 58), (x - 22, 58)], 0x1a1a1a, a=0.88)
-                    d.rect((x - 7, 58, x + 7, 66), 0x1a1a1a, a=0.88)
+                    d.ellipse((x - 16, 12, x + 16, 44), 0xf8f4e8, a=0.92)
+                    d.rect((x - 20, 8, x + 20, 22), tone, a=1.0)
+                    d.rect((x - 3, 42, x + 3, 62), 0xf8f4e8, a=0.92)
+                    d.rect((x - 12, 60, x + 12, 66), 0xf8f4e8, a=0.92)
         if stencilled and i == 3:
             with sh.paint(height=0.04) as d:
-                d.rect((0, 34, 512, 46), 0xd8d2c4, a=0.8)
+                d.rect((0, 34, 512, 46), 0xf4eee0, a=0.82)
         atlas.add(f"s{i}", 0, i * 80, sh)
     dark = Sheet(512, 32, 0x20150d)
     dark.hgt[:] = 0.3
@@ -99,7 +102,7 @@ def _post_atlas_fracs(slat_h, gap, y0, n):
     return [(y0 + slat_h / 2 + k * (slat_h + gap)) for k in range(n)]
 
 
-def crate_parts(atlas: Atlas, seed: int, w: float = 0.82, d: float = 0.82, h: float = 0.74, tint=True, stencil_face: str | None = "+z", n_slats: int = 4, brace_faces=("+z", "+x"), broken: bool = True):
+def crate_parts(atlas: Atlas, seed: int, w: float = 0.82, d: float = 0.82, h: float = 0.74, tint=True, stencil_face: str | None = "+z", n_slats: int = 4, brace_faces=("+z", "-z", "+x", "-x"), broken: bool = False):
     """Return a list of UV-mapped meshes for one wooden crate centred at the origin (y from 0)."""
     rng = np.random.default_rng(seed)
     parts = []
@@ -186,7 +189,7 @@ def crate_parts(atlas: Atlas, seed: int, w: float = 0.82, d: float = 0.82, h: fl
     return parts
 
 
-def soft_crate(name="prop_soft_crate", stencilled=False, seed=5) -> dict:
+def soft_crate(name="prop_soft_crate", stencilled=True, seed=5) -> dict:
     atlas = _crate_atlas(seed, stencilled)
     m = EnvModel(name)
     m.add(crate_parts(atlas, seed, stencil_face="+z" if stencilled else None))
@@ -303,15 +306,19 @@ def soft_tyres() -> dict:
     m = EnvModel("prop_soft_tyres")
     sides = 14
     y = TW + 0.002
-    specs = [((0.0, 0.0), (1.2, 0), 10.0, True), ((0.025, -0.02), (-1.5, 1.2), 62.0, True), ((-0.015, 0.02), (1.0, -1.4), 140.0, False)]
-    ytop = 0
+    specs = [
+        ((0.0, 0.0), (0.8, -0.4), 10.0, True),
+        ((0.018, -0.015), (-1.2, 1.0), 62.0, True),
+        ((-0.012, 0.016), (1.1, -1.2), 140.0, True),
+        ((0.042, -0.028), (6.5, -4.5), 215.0, False),
+    ]
     for i, ((x, z), (tx, tz), yaw, simple) in enumerate(specs):
-        parts = tyre_mesh(atlas, sides, seed + i, level="full" if i == 2 else "low", tilt=(tx, 0, tz), pos=(x, y + i * (2 * TW - 0.012), z), yaw=yaw)
+        parts = tyre_mesh(atlas, sides, seed + i, level="full" if i == 3 else "low", tilt=(tx, 0, tz), pos=(x, y + i * (2 * TW - 0.018), z), yaw=yaw)
         for p in parts:
             vc_ground(p, 0.1, 0.45, seed + i)
         m.add(parts)
-        if i == 2:
-            for p in rim_mesh(atlas, pos=(x, y + i * (2 * TW - 0.012) + 0.045, z), yaw=yaw):
+        if i == 3:
+            for p in rim_mesh(atlas, pos=(x, y + i * (2 * TW - 0.018) + 0.045, z), yaw=yaw):
                 m.add(p)
     return m.export({"main": atlas.mat(normal_strength=0.9)})
 
@@ -326,14 +333,14 @@ def _sack_tile(kind: str, seed: int) -> Sheet:
     front half (u ~ 0.75) reading bottom->top and on the back half (u ~ 0.25) reading top->bottom."""
     w, h = SACK_TILE
     if kind == "rice":
-        s = burlap_sheet(w, h, seed, 0xc9a56a, 3.8, dirt=0.35)
-        ink, ink2, text, sub = 0xb3172b, 0x0e6b3a, "OFADA RICE", "50 KG NET"
+        s = burlap_sheet(w, h, seed, 0xd4b075, 3.8, dirt=0.25)
+        ink, ink2, text, sub = 0xc4162a, 0x0b7a3e, "OFADA RICE", "50 KG NET"
     elif kind == "pp":
-        s = burlap_sheet(w, h, seed, 0xe3dfd2, 3.2, dirt=0.30)
-        ink, ink2, text, sub = 0x1f4fb0, 0xd62839, "GOLDEN CROWN", "LONG GRAIN RICE 50KG"
+        s = burlap_sheet(w, h, seed, 0xede9dc, 3.0, dirt=0.22)
+        ink, ink2, text, sub = 0x1648b8, 0xd82232, "IJEBU GARRI", "PREMIUM GRADE 50KG"
     else:
-        s = burlap_sheet(w, h, seed, 0xb89458, 4.2, dirt=0.5)
-        ink, ink2, text, sub = 0x16794a, 0x222222, "BROWN BEANS", "PRODUCE OF NIGERIA"
+        s = burlap_sheet(w, h, seed, 0xc49e60, 4.0, dirt=0.35)
+        ink, ink2, text, sub = 0x0e7c46, 0x1e1e22, "BROWN BEANS", "PRODUCE OF NIGERIA"
     for cx, rot in ((0.75, 90), (0.25, -90)):
         px = cx * w
         if kind == "pp":
@@ -415,20 +422,20 @@ def soft_barrier() -> dict:
     seed = 51
     atlas = Atlas(512, 512, 0x606060)
     for i, ang in enumerate((45, -45, 45)):
-        atlas.pack(f"b{i}", hazard_board(512, 96, seed + i, angle=ang, stripe=24 + 3 * i, wear=0.35 + 0.1 * i))
-    st = steel_sheet(256, 128, seed + 9, tone=0x8a8e92, rust=0.55, paint=0x4d5258)
+        atlas.pack(f"b{i}", hazard_board(512, 96, seed + i, angle=ang, stripe=26 + 2 * i, wear=0.20 + 0.06 * i))
+    st = steel_sheet(256, 128, seed + 9, tone=0x969aa0, rust=0.35, paint=0x4d5258)
     atlas.pack("steel", st)
-    red = Sheet(64, 64, 0xc8202c, rough=0.3)
-    with red.paint(height=0.1) as d:
-        d.ellipse((6, 6, 58, 58), 0xe8505a)
-        d.ellipse((16, 16, 48, 48), 0xc8202c)
-        d.ellipse((22, 20, 32, 28), 0xffd0d4, a=0.8)
+    red = Sheet(64, 64, 0xe01e28, rough=0.25)
+    with red.paint(height=0.12) as d:
+        d.ellipse((6, 6, 58, 58), 0xff4a54)
+        d.ellipse((16, 16, 48, 48), 0xd81b26)
+        d.ellipse((20, 18, 34, 30), 0xffe0e4, a=0.9)
     atlas.pack("red", red)
-    cone_t = Sheet(64, 128, 0xff6a13, rough=0.5)
-    with cone_t.paint(height=0.05) as d:
-        d.rect((0, 40, 64, 70), 0xf6f1e0)
-        d.rect((0, 100, 64, 128), 0x1a1a1c)
-    cone_t.comp(0x3a3128, np.clip(noise2(64, 128, seed + 5, fx=3, fy=4) * 1.5 - 0.7, 0, 1) * 0.5)
+    cone_t = Sheet(64, 128, 0xff5e0e, rough=0.42)
+    with cone_t.paint(height=0.06) as d:
+        d.rect((0, 36, 64, 72), 0xfaf6ec)
+        d.rect((0, 102, 64, 128), 0x18181b)
+    cone_t.comp(0x3a3128, np.clip(noise2(64, 128, seed + 5, fx=3, fy=4) * 1.5 - 0.85, 0, 1) * 0.35)
     atlas.pack("cone", cone_t)
     m = EnvModel("prop_soft_barrier")
     rng = np.random.default_rng(seed)

@@ -7,6 +7,8 @@ const base = process.env.VIEWER_BASE ?? 'http://localhost:5199';
 const browser = await chromium.launch({
   executablePath: process.env.WAHALA_CHROMIUM || undefined,
   args: [
+    '--single-process',
+    '--no-sandbox',
     '--use-gl=angle',
     '--use-angle=swiftshader',
     '--enable-unsafe-swiftshader',

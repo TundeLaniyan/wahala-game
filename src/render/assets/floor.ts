@@ -25,11 +25,19 @@ function load(url: string, color: boolean, cols: number, rows: number): Texture 
   return t;
 }
 
+const ARENA_FLOOR_TINT: Record<string, number> = {
+  danfoBusPark: 0xffffff,
+  lekkiRoadworks: 0xd8d2c8,
+  balogunMarket: 0xf7e6cf,
+};
+
 /** Concrete-slab floor with normal + roughness maps; falls back to the drawn texture if the files are missing. */
-export function floorMaterial(cols: number, rows: number): MeshStandardMaterial {
+export function floorMaterial(cols: number, rows: number, arenaId = 'danfoBusPark'): MeshStandardMaterial {
+  const color = ARENA_FLOOR_TINT[arenaId] ?? 0xffffff;
   try {
     const orm = load(ormUrl, false, cols, rows);
     return new MeshStandardMaterial({
+      color,
       map: load(albedoUrl, true, cols, rows),
       normalMap: load(normalUrl, false, cols, rows),
       roughnessMap: orm,
@@ -37,6 +45,11 @@ export function floorMaterial(cols: number, rows: number): MeshStandardMaterial 
       metalness: 0,
     });
   } catch {
-    return new MeshStandardMaterial({ map: floorTexture(cols, rows), roughness: 0.95, metalness: 0 });
+    return new MeshStandardMaterial({
+      color,
+      map: floorTexture(cols, rows),
+      roughness: 0.95,
+      metalness: 0,
+    });
   }
 }

@@ -48,7 +48,7 @@ export class RiggedCharacter {
     this.setLoop('Idle', 0);
   }
 
-  static create(id: CharacterId, phase = 0): RiggedCharacter | null {
+  static create(id: CharacterId | string, phase = 0): RiggedCharacter | null {
     const body = assets.instance(`char_${id}`);
     if (!body) return null;
     addRim(body);

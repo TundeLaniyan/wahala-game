@@ -61,9 +61,9 @@ def _wall_face(seed: int, posters: list, extra=None, band_angle=45, tag=None) ->
     cap = np.clip((wy(CAP0) - ys) / 8, 0, 1) * np.ones((1, FW))
     s.comp(0xd9d3c6, cap * 0.18)
     # hazard band on the footing (stripe pitch divides the 512 px width exactly: 8 colour pairs)
-    b0, b1 = 0.022, 0.13
+    b0, b1 = 0.022, 0.145
     bh = int(wy(b0) - wy(b1))
-    band, cov = hazard_band(FW, bh, stripe=512 / 8 * 0.7071 / 2, angle=band_angle, seed=seed + 3, wear=0.5, tile=True)
+    band, cov = hazard_band(FW, bh, stripe=512 / 8 * 0.7071 / 2, angle=band_angle, seed=seed + 3, wear=0.28, tile=True)
     y0 = int(wy(b1))
     region = Sheet(FW, FH)
     region.paste(band, 0, y0)

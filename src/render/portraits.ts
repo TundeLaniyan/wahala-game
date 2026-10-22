@@ -10,15 +10,15 @@ import type { CharacterId } from '../sim';
 import { createSceneLights } from './lighting';
 import { assets } from './assets/library';
 
-const CAST: CharacterId[] = ['streetBaller', 'lekkiBoy', 'campusQueen'];
+const CAST = ['streetBaller', 'lekkiBoy', 'campusQueen', 'areaBoss'] as const;
 
 /**
  * Renders a transparent head-and-shoulders portrait of each rigged character (HUD cards, title screen).
  * Uses a throw-away WebGL context so the game renderer is never disturbed. Returns only the characters
  * whose models are loaded.
  */
-export function renderCastPortraits(size = 256): Partial<Record<CharacterId, HTMLCanvasElement>> {
-  const out: Partial<Record<CharacterId, HTMLCanvasElement>> = {};
+export function renderCastPortraits(size = 256): Partial<Record<CharacterId | string, HTMLCanvasElement>> {
+  const out: Partial<Record<CharacterId | string, HTMLCanvasElement>> = {};
   if (!CAST.some((id) => assets.has(`char_${id}`))) return out;
   const renderer = new WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setSize(size, size, false);
@@ -43,10 +43,10 @@ export function renderCastPortraits(size = 256): Partial<Record<CharacterId, HTM
       mixer.clipAction(clip).play();
       mixer.setTime(0.6);
     }
-    model.rotation.y = -0.38;
+    model.rotation.y = -0.32;
     scene.add(model);
-    camera.position.set(0.2, 1.62, 1.95);
-    camera.lookAt(0, 1.5, 0);
+    camera.position.set(0.16, 1.59, 1.68);
+    camera.lookAt(0, 1.48, 0);
     renderer.render(scene, camera);
     const copy = document.createElement('canvas');
     copy.width = copy.height = size;

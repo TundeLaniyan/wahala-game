@@ -1,4 +1,14 @@
-import { Group, Mesh, MeshBasicMaterial, PlaneGeometry, Sprite, SpriteMaterial } from 'three';
+import {
+  AdditiveBlending,
+  CanvasTexture,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  PlaneGeometry,
+  SRGBColorSpace,
+  Sprite,
+  SpriteMaterial,
+} from 'three';
 import type { Generator } from '../../sim';
 import { createGeneratorModel } from '../assets/generator';
 import type { GeneratorModel } from '../assets/generator';
@@ -10,10 +20,46 @@ interface Visual {
   model: GeneratorModel;
   label: Sprite;
   shadow: Mesh;
+  pad: Mesh;
   shown: string;
 }
 
-const shadowGeo = new PlaneGeometry(0.8, 0.8);
+const shadowGeo = new PlaneGeometry(0.96, 0.96);
+const padGeo = new PlaneGeometry(0.98, 0.98);
+
+let cachedPadTex: CanvasTexture | null = null;
+function generatorPadTexture(): CanvasTexture {
+  if (cachedPadTex) return cachedPadTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const cx = 64;
+  const cy = 64;
+  // Soft outer glow
+  const grad = g.createRadialGradient(cx, cy, 24, cx, cy, 62);
+  grad.addColorStop(0, 'rgba(255, 160, 20, 0.45)');
+  grad.addColorStop(0.68, 'rgba(255, 110, 10, 0.75)');
+  grad.addColorStop(0.86, 'rgba(255, 210, 60, 0.95)');
+  grad.addColorStop(1, 'rgba(255, 90, 0, 0)');
+  g.fillStyle = grad;
+  g.beginPath();
+  g.arc(cx, cy, 62, 0, Math.PI * 2);
+  g.fill();
+  // Crisp glowing ring + hazard ticks (matches reference floor pad under ticking bombs)
+  g.strokeStyle = '#ffdf48';
+  g.lineWidth = 4.5;
+  g.beginPath();
+  g.arc(cx, cy, 48, 0, Math.PI * 2);
+  g.stroke();
+  g.strokeStyle = '#ff5a14';
+  g.lineWidth = 2.5;
+  g.beginPath();
+  g.arc(cx, cy, 38, 0, Math.PI * 2);
+  g.stroke();
+  cachedPadTex = new CanvasTexture(c);
+  cachedPadTex.colorSpace = SRGBColorSpace;
+  return cachedPadTex;
+}
 
 export class GeneratorViews implements View {
   readonly group = new Group();
@@ -33,11 +79,12 @@ export class GeneratorViews implements View {
     }
     for (const [id, v] of this.visuals) {
       if (!live.has(id)) {
-        this.group.remove(v.model.root, v.label, v.shadow);
+        this.group.remove(v.model.root, v.label, v.shadow, v.pad);
         v.model.casingMaterial.dispose();
         v.model.lampMaterial.dispose();
         v.label.material.dispose();
         (v.shadow.material as MeshBasicMaterial).dispose();
+        (v.pad.material as MeshBasicMaterial).dispose();
         this.visuals.delete(id);
       }
     }
@@ -48,7 +95,7 @@ export class GeneratorViews implements View {
     const label = new Sprite(
       new SpriteMaterial({ map: labelTexture('3'), transparent: true, depthTest: false }),
     );
-    label.scale.set(0.8, 0.3, 1);
+    label.scale.set(0.86, 0.34, 1);
     label.renderOrder = 30;
     const shadow = new Mesh(
       shadowGeo,
@@ -56,14 +103,27 @@ export class GeneratorViews implements View {
         map: glowTexture(),
         color: 0x000000,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.58,
         depthWrite: false,
       }),
     );
     shadow.rotation.x = -Math.PI / 2;
     shadow.renderOrder = 3;
-    this.group.add(model.root, label, shadow);
-    return { model, label, shadow, shown: '' };
+    const pad = new Mesh(
+      padGeo,
+      new MeshBasicMaterial({
+        map: generatorPadTexture(),
+        color: 0xffb824,
+        transparent: true,
+        opacity: 0.85,
+        blending: AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
+    pad.rotation.x = -Math.PI / 2;
+    pad.renderOrder = 4;
+    this.group.add(model.root, label, shadow, pad);
+    return { model, label, shadow, pad, shown: '' };
   }
 
   private pose(ctx: FrameContext, g: Generator, v: Visual): void {
@@ -96,44 +156,56 @@ export class GeneratorViews implements View {
 
     const w = toWorld(layout, gx, gy);
     v.model.root.position.set(w.x, lift, w.z);
-    v.model.root.scale.setScalar(1.25);
+    v.model.root.scale.setScalar(1.28);
     v.shadow.position.set(w.x, 0.02, w.z);
     v.shadow.scale.setScalar(lift > 0.2 ? Math.max(0.5, 1 - lift * 0.2) : 1);
+    v.pad.position.set(w.x, 0.026, w.z);
+    v.pad.rotation.z = time * 1.2;
+    v.pad.visible = lift < 0.25 && (g.mode === 'timed' || g.mode === 'remote');
 
-    // Mode-specific look.
+    // Mode-specific look: bright yellow generator casing (timed) with red pulsing siren beacon & floor ring
     const timed = g.mode === 'timed';
     const frac = timed ? Math.max(0, g.timer / cfg.fuseTicks) : 1;
     const urgent = timed ? 1 - Math.min(1, frac) : 0;
     v.model.antenna.visible = g.mode === 'remote';
+    const padMat = v.pad.material as MeshBasicMaterial;
     let label: string;
     let labelColor: string;
     if (timed) {
       label = String(Math.max(1, Math.ceil((g.timer - alpha) / 60)));
-      labelColor = g.timer < 70 ? '#ff5a4a' : '#ffffff';
-      v.model.casingMaterial.color.setHex(0xd8301f);
+      labelColor = g.timer < 70 ? '#ff4a36' : '#ffe24a';
       const rate = 5 + urgent * 22;
-      const on = Math.sin(time * rate) > 0;
-      v.model.lampMaterial.emissiveIntensity = on ? 2 : 0.25;
+      const wave = 0.5 + 0.5 * Math.sin(time * rate);
+      const on = wave > 0.5;
+      // Vibrant yellow portable generator casing that flashes warm orange-red on final ticks
+      v.model.casingMaterial.color.setHex(urgent > 0.72 && on ? 0xff5a1f : 0xffc61a);
+      v.model.lampMaterial.emissiveIntensity = on ? 2.8 : 0.45;
       v.model.lampMaterial.color.setHex(0xff2200);
       v.model.lampMaterial.emissive.setHex(0xff2200);
-      const shake = 0.004 + urgent * urgent * 0.03;
+      const shake = 0.005 + urgent * urgent * 0.032;
       v.model.body.position.set(Math.sin(time * 70) * shake, 0, Math.cos(time * 63) * shake);
-      const pulse = 1 + Math.max(0, urgent - 0.7) * 0.25 * Math.sin(time * 40);
+      const pulse = 1 + Math.max(0, urgent - 0.55) * 0.24 * Math.sin(time * 38);
       v.model.body.scale.setScalar(pulse);
-      v.model.glow.material.opacity = Math.max(0, urgent - 0.55) * (on ? 1.2 : 0.5);
-      v.model.glow.material.color.setHex(0xff4020);
+      v.model.glow.material.opacity = (0.22 + urgent * 0.78) * (on ? 1.15 : 0.55);
+      v.model.glow.material.color.setHex(urgent > 0.6 ? 0xff3814 : 0xffa818);
+      padMat.color.setHex(urgent > 0.65 ? 0xff3b18 : 0xffb824);
+      padMat.opacity = 0.65 + 0.32 * wave;
+      v.pad.scale.setScalar(0.94 + 0.10 * wave);
     } else if (g.mode === 'remote') {
       label = g.timer < 180 ? String(Math.max(1, Math.ceil(g.timer / 60))) : 'R';
-      labelColor = '#ff7ac0';
-      v.model.casingMaterial.color.setHex(0xc4286e);
-      const on = Math.sin(time * 4) > 0;
-      v.model.lampMaterial.color.setHex(0x40a0ff);
-      v.model.lampMaterial.emissive.setHex(0x2080ff);
-      v.model.lampMaterial.emissiveIntensity = on ? 2 : 0.4;
+      labelColor = '#60f0ff';
+      v.model.casingMaterial.color.setHex(0x18a8c4);
+      const on = Math.sin(time * 5) > 0;
+      v.model.lampMaterial.color.setHex(0x40d0ff);
+      v.model.lampMaterial.emissive.setHex(0x2098ff);
+      v.model.lampMaterial.emissiveIntensity = on ? 2.4 : 0.5;
       v.model.body.position.set(0, 0, 0);
       v.model.body.scale.setScalar(1);
-      v.model.glow.material.opacity = g.timer < 180 ? 0.5 + 0.4 * Math.sin(time * 18) : 0;
-      v.model.glow.material.color.setHex(0xff3c8c);
+      v.model.glow.material.opacity = g.timer < 180 ? 0.5 + 0.4 * Math.sin(time * 18) : 0.25;
+      v.model.glow.material.color.setHex(0x28c8ff);
+      padMat.color.setHex(0x28c8ff);
+      padMat.opacity = 0.65;
+      v.pad.scale.setScalar(0.95);
     } else {
       label = 'X';
       labelColor = '#9aa3ad';
@@ -150,7 +222,7 @@ export class GeneratorViews implements View {
       v.label.material.map = labelTexture(label, labelColor, 'bold 64px system-ui, sans-serif');
       v.label.material.needsUpdate = true;
     }
-    v.label.position.set(w.x, lift + 1.0, w.z - 0.1);
+    v.label.position.set(w.x, lift + 1.02, w.z - 0.1);
     v.label.material.opacity = g.carriedBy !== null ? 0.9 : 1;
   }
 
@@ -159,6 +231,8 @@ export class GeneratorViews implements View {
       v.model.casingMaterial.dispose();
       v.model.lampMaterial.dispose();
       v.label.material.dispose();
+      (v.shadow.material as MeshBasicMaterial).dispose();
+      (v.pad.material as MeshBasicMaterial).dispose();
     }
     this.visuals.clear();
   }

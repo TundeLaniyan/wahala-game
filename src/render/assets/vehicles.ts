@@ -121,16 +121,17 @@ export function createVehicleModel(kind: VehicleKind): VehicleModel {
       body.add(w);
     }
   } else if (kind === 'taxi') {
-    const yellow = mat(0xffe24a, { roughness: 0.4, metalness: 0.2 });
-    const black = mat(0x151515);
-    body.add(box(1.2, 0.3, 0.7, yellow, 0, 0.36, 0));
-    body.add(box(0.62, 0.28, 0.64, yellow, -0.1, 0.62, 0));
-    for (const z of [-0.325, 0.325]) body.add(box(0.5, 0.2, 0.02, glass, -0.1, 0.64, z));
-    body.add(box(0.03, 0.2, 0.52, glass, 0.22, 0.63, 0));
-    body.add(box(0.03, 0.2, 0.52, glass, -0.42, 0.63, 0));
-    body.add(box(1.22, 0.06, 0.72, black, 0, 0.3, 0));
-    const roof = sign('TAXI', 0.3, 0.1, '#1a1208', 0xfff6c0);
-    roof.position.set(-0.1, 0.84, 0);
+    const cyan = mat(0x00a6e6, { roughness: 0.4, metalness: 0.2 });
+    const white = mat(0xf4f7fa, { roughness: 0.35, metalness: 0.15 });
+    const black = mat(0x15181e);
+    body.add(box(1.2, 0.3, 0.7, cyan, 0, 0.36, 0));
+    body.add(box(0.76, 0.28, 0.64, white, -0.06, 0.62, 0));
+    for (const z of [-0.325, 0.325]) body.add(box(0.6, 0.2, 0.02, glass, -0.06, 0.64, z));
+    body.add(box(0.03, 0.2, 0.52, glass, 0.32, 0.63, 0));
+    body.add(box(0.03, 0.2, 0.52, glass, -0.44, 0.63, 0));
+    body.add(box(1.22, 0.06, 0.72, black, 0, 0.22, 0));
+    const roof = sign('TAXI', 0.3, 0.1, '#101216', 0xffd018);
+    roof.position.set(-0.04, 0.84, 0);
     roof.rotation.y = Math.PI / 2;
     body.add(roof);
     body.add(sphere(0.055, light, 0.6, 0.4, 0.24, 6), sphere(0.055, light, 0.6, 0.4, -0.24, 6));
@@ -146,20 +147,20 @@ export function createVehicleModel(kind: VehicleKind): VehicleModel {
       body.add(w);
     }
   } else {
-    const green = mat(0x2fb35a, { roughness: 0.45, metalness: 0.15 });
-    const yellow = mat(0xffd21a, { roughness: 0.45 });
-    const blackTop = mat(0x1f1f1f);
-    body.add(box(0.82, 0.26, 0.62, green, -0.05, 0.36, 0));
-    body.add(box(0.34, 0.3, 0.46, green, 0.36, 0.42, 0)); // nose / cab
-    body.add(box(0.5, 0.05, 0.64, yellow, -0.15, 0.52, 0));
-    body.add(box(0.58, 0.07, 0.66, blackTop, -0.15, 0.92, 0)); // canopy
+    const yellow = mat(0xf8c612, { roughness: 0.45, metalness: 0.15 });
+    const blackTrim = mat(0x181a1e, { roughness: 0.5 });
+    const blackTop = mat(0x22252b, { roughness: 0.75 });
+    body.add(box(0.82, 0.26, 0.62, yellow, -0.05, 0.36, 0));
+    body.add(box(0.34, 0.3, 0.46, yellow, 0.36, 0.42, 0)); // nose / cab
+    body.add(box(0.84, 0.05, 0.64, blackTrim, -0.05, 0.32, 0));
+    body.add(box(0.58, 0.07, 0.66, blackTop, -0.15, 0.92, 0)); // dark charcoal canvas canopy
     for (const z of [-0.29, 0.29]) {
       body.add(
-        box(0.04, 0.4, 0.04, mat(0x333333), 0.1, 0.72, z),
-        box(0.04, 0.4, 0.04, mat(0x333333), -0.4, 0.72, z),
+        box(0.04, 0.4, 0.04, mat(0x22252b), 0.1, 0.72, z),
+        box(0.04, 0.4, 0.04, mat(0x22252b), -0.4, 0.72, z),
       );
     }
-    body.add(box(0.5, 0.18, 0.5, mat(0xffe9b0, { roughness: 0.9 }), -0.15, 0.64, 0)); // bench
+    body.add(box(0.5, 0.18, 0.5, mat(0x24262b, { roughness: 0.85 }), -0.15, 0.64, 0)); // bench
     body.add(sphere(0.055, light, 0.55, 0.45, 0, 6));
     body.add(box(0.03, 0.07, 0.14, tail, -0.47, 0.42, 0));
     const front = wheel(0.42, 0, 0.14, 0.09);
@@ -167,7 +168,7 @@ export function createVehicleModel(kind: VehicleKind): VehicleModel {
     const rr = wheel(-0.3, -0.33, 0.14, 0.09);
     wheels.push(front, rl, rr);
     body.add(front, rl, rr);
-    const s = sign('KEKE', 0.3, 0.09, '#2fb35a', 0xffe9b0);
+    const s = sign('KEKE', 0.3, 0.09, '#f8c612', 0x181a1e);
     s.position.set(0.0, 1.0, 0.0);
     s.rotation.y = Math.PI / 2;
     body.add(s);

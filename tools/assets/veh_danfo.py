@@ -21,26 +21,27 @@ def make_atlas() -> V.Atlas:
     at = V.Atlas(512, seed=17)
 
     def dest(img, d, rng):
-        d.rectangle([0, 0, 255, 63], fill=(0xf0, 0xe9, 0xcf))
-        d.rectangle([0, 0, 255, 63], outline=(0x2a, 0x2a, 0x2a), width=3)
-        V.hand_text(d, rng, "OSHODI", (6, 2, 164, 62), (0x16, 0x16, 0x1c), 34, jitter=1.4)
-        d.polygon([(168, 32), (190, 14), (190, 24), (246, 24), (246, 40), (190, 40), (190, 50)], fill=(0xc4, 0x1e, 0x1e))
+        d.rectangle([0, 0, 255, 63], fill=(0x12, 0x13, 0x16))
+        d.rectangle([2, 2, 253, 61], outline=(0xf6, 0xc4, 0x1c), width=3)
+        V.hand_text(d, rng, "OJUELEGBA - OSHODI", (8, 8, 248, 56), (0xf6, 0xc4, 0x1c), 26, jitter=0.5, tracking=1)
 
     def plate(img, d, rng):
-        d.rectangle([0, 0, 127, 55], fill=(0xf2, 0xf2, 0xea), outline=(0x20, 0x20, 0x20), width=3)
-        d.rectangle([4, 4, 123, 16], fill=(0x1b, 0x7a, 0x3a))
+        d.rectangle([0, 0, 127, 55], fill=(0xf6, 0xc4, 0x1c), outline=(0x16, 0x16, 0x1a), width=3)
+        d.rectangle([4, 4, 123, 16], fill=(0x16, 0x7a, 0x3a))
         V.hand_text(d, rng, "LAGOS", (4, 3, 124, 17), (0xff, 0xff, 0xff), 13, jitter=0.0, tracking=3)
-        V.hand_text(d, rng, "KJA 482 DK", (4, 18, 124, 52), (0x10, 0x10, 0x14), 19, path=V.FONT_MONO, jitter=0.0)
+        V.hand_text(d, rng, "LA 419-WAH", (4, 18, 124, 52), (0x10, 0x10, 0x14), 19, path=V.FONT_MONO, jitter=0.0)
 
     def side_stripe(img, d, rng):
-        d.rectangle([0, 0, 511, 35], fill=(0x05, 0x05, 0x06))
-        d.rectangle([0, 3, 511, 5], fill=(0xf2, 0xb7, 0x05))
-        d.rectangle([0, 30, 511, 32], fill=(0xf2, 0xb7, 0x05))
-        V.hand_text(d, rng, "GOD'S TIME IS THE BEST  *  LAGOS", (6, 5, 506, 31), (0xf6, 0xc4, 0x1c), 24, jitter=1.0, tracking=1)
+        d.rectangle([0, 0, 511, 35], fill=(0x08, 0x08, 0x0a))
+        d.rectangle([0, 2, 511, 5], fill=(0xf6, 0xc4, 0x1c))
+        d.rectangle([0, 30, 511, 33], fill=(0xf6, 0xc4, 0x1c))
+        V.hand_text(d, rng, "WAHALA!   *   OJUELEGBA - OSHODI", (10, 5, 502, 31), (0xf6, 0xc4, 0x1c), 24, jitter=0.4, tracking=2)
 
     def rear_stripe(img, d, rng):
-        d.rectangle([0, 0, 255, 35], fill=(0x05, 0x05, 0x06))
-        V.hand_text(d, rng, "NO CONDITION IS PERMANENT", (4, 3, 252, 33), (0xf2, 0xea, 0xd0), 13, jitter=1.0, tracking=0)
+        d.rectangle([0, 0, 255, 35], fill=(0x08, 0x08, 0x0a))
+        d.rectangle([0, 2, 255, 4], fill=(0xf6, 0xc4, 0x1c))
+        d.rectangle([0, 31, 255, 33], fill=(0xf6, 0xc4, 0x1c))
+        V.hand_text(d, rng, "EKO ONI BAAJE  *  WAHALA!", (6, 4, 250, 32), (0xf6, 0xc4, 0x1c), 16, jitter=0.4, tracking=1)
 
     def tail(img, d, rng):
         d.rectangle([0, 0, 47, 95], fill=(0x8a, 0x10, 0x14))
@@ -162,12 +163,20 @@ def build():
     V.paint(cap, 0xa9abb0)
     chrome.append(cap)
 
-    # beltline ribs (raised yellow beads) below the stripe, both sides
+    # beltline ribs and lower black Danfo stripe + C-pillar rear air intake vents
     for sign in (+1, -1):
         proj = body.side(sign)
-        for yy in (0.255, 0.215):
+        for yy in (0.262,):
             rb = V.ribbon(proj, run((-0.245, yy), (0.245, yy), 6), 0.012, off=0.0, height=0.006)
             deco.append(rb)
+        low_s = V.ribbon(proj, run((-0.25, 0.228), (0.25, 0.228), 8), 0.022, off=0.0038, height=0.003)
+        V.paint(low_s, 0x0c0c0e)
+        trim.append(low_s)
+        # C-pillar black air intake louvre block behind rear window
+        for vy in (0.58, 0.63, 0.68, 0.73):
+            vl = V.ribbon(proj, run((-0.73, vy), (-0.69, vy), 2), 0.012, off=0.004, height=0.003)
+            V.paint(vl, 0x0e0e11)
+            trim.append(vl)
 
     # ---- wheel arches: dark wells + black flare lips
     RA = 0.218

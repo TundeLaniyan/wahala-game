@@ -4,17 +4,18 @@ import { SLOT_CSS } from './palette';
 
 const cache = new Map<string, string>();
 /** Rendered 3D busts (set once the glTF cast has loaded); the drawn portrait below is the fallback. */
-const busts = new Map<CharacterId, HTMLCanvasElement>();
+const busts = new Map<string, HTMLCanvasElement>();
 
-export function registerBusts(map: Partial<Record<CharacterId, HTMLCanvasElement>>): void {
-  for (const [id, c] of Object.entries(map)) busts.set(id as CharacterId, c);
+export function registerBusts(map: Partial<Record<string, HTMLCanvasElement>>): void {
+  for (const [id, c] of Object.entries(map)) if (c) busts.set(id, c);
   cache.clear();
 }
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
 /** Small cartoon portrait on a slot-coloured background (HUD, character cards). Cached data URL. */
 export function portraitUrl(id: CharacterId, slot: number, size = 96): string {
-  const key = `${id}:${slot}:${size}:${busts.has(id) ? 'b' : 'd'}`;
+  const bustKey = slot === 3 && busts.has('areaBoss') ? 'areaBoss' : id;
+  const key = `${id}:${slot}:${size}:${busts.has(bustKey) ? 'b' : 'd'}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const c = document.createElement('canvas');
@@ -22,12 +23,14 @@ export function portraitUrl(id: CharacterId, slot: number, size = 96): string {
   const g = c.getContext('2d')!;
   g.scale(size / 96, size / 96);
   const look = LOOKS[id];
-  const bg = g.createLinearGradient(0, 0, 0, 96);
-  bg.addColorStop(0, SLOT_CSS[slot % SLOT_CSS.length]!);
-  bg.addColorStop(1, '#14100a');
+  const slotCol = SLOT_CSS[slot % SLOT_CSS.length]!;
+  const bg = g.createRadialGradient(48, 42, 8, 48, 48, 62);
+  bg.addColorStop(0, slotCol);
+  bg.addColorStop(0.65, '#241a10');
+  bg.addColorStop(1, '#100c08');
   g.fillStyle = bg;
   g.fillRect(0, 0, 96, 96);
-  const bust = busts.get(id);
+  const bust = busts.get(bustKey);
   if (bust) {
     g.drawImage(bust, 0, 0, 96, 96);
     const url = c.toDataURL('image/png');

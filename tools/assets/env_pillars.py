@@ -72,7 +72,7 @@ def _side(seed: int, tone, band_cfg: dict, posters: list, extra=None) -> Sheet:
     # hazard band on the plinth
     b0, b1 = band_cfg["y0"], band_cfg["y1"]
     bh = int(ypx(b0) - ypx(b1))
-    band, cov = hazard_band(TW, bh, c2=0x2672d2, stripe=band_cfg.get("stripe", 24), angle=band_cfg.get("angle", 50), seed=seed + 3, wear=band_cfg.get("wear", 0.55))
+    band, cov = hazard_band(TW, bh, c2=band_cfg.get("c2", 0x181a1e), stripe=band_cfg.get("stripe", 24), angle=band_cfg.get("angle", 50), seed=seed + 3, wear=band_cfg.get("wear", 0.42))
     y0 = int(ypx(b1))
     region = Sheet(TW, TH)
     region.paste(band, 0, y0)
@@ -158,11 +158,14 @@ def _base_parts(chip: bool, loops: bool):
 
 def _rebar():
     parts = []
-    for (x, z, tilt) in [(0.33, 0.13, 12), (0.30, 0.20, -10), (0.265, 0.265, 18), (0.22, 0.325, -6)]:
+    for (x, z, tilt, h_ext) in [(0.31, 0.14, 15, 0.11), (0.28, 0.22, -12, 0.14), (0.24, 0.28, 22, 0.12), (-0.26, -0.22, -16, 0.10)]:
         top = np.array([x, CAP_BOT + 0.015, z])
-        bend = np.array([np.sin(np.radians(tilt)) * 0.04, 0.085, np.cos(np.radians(tilt)) * 0.04])
-        parts.append(rod(top + [0, -0.03, 0], top + bend, 0.012, 6))
-        parts.append(rod(top + bend, top + bend + np.array([0.03, 0.04, 0.035]), 0.012, 6))
+        bend = np.array([np.sin(np.radians(tilt)) * 0.05, h_ext, np.cos(np.radians(tilt)) * 0.05])
+        r1 = rod(top + [0, -0.03, 0], top + bend, 0.015, 6)
+        r2 = rod(top + bend, top + bend + np.array([0.045 * np.sign(tilt), 0.05, 0.04]), 0.015, 6)
+        for rm in (r1, r2):
+            rm.c[:, :3] *= np.array([0.55, 0.28, 0.16])
+            parts.append(rm)
     return parts
 
 
@@ -184,7 +187,7 @@ def pillar_a() -> dict:
     def num_top(s):
         stencil(s, "A12", (128, 128), 34, 0xf1ead2, "black", a=0.45, squeeze=0.9, wear=0.8, seed=8)
 
-    return _build("prop_pillar_a", seed, dict(y0=0.02, y1=0.24), posters_f, posters_r, [], None, num, None, num_top)
+    return _build("prop_pillar_a", seed, dict(y0=0.02, y1=0.24, c2=0x1e68cf, wear=0.42), posters_f, posters_r, [], None, num, None, num_top)
 
 
 def pillar_b() -> dict:

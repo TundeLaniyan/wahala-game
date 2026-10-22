@@ -217,8 +217,8 @@ def build_body(b: Body, detail: float = 1.0, skip: frozenset = frozenset(), lowr
     parts["head"] = build_head(b)
 
     for side, m in (("L", 1.0), ("R", -1.0)):
-        up = _limb([j[f"upperarm_{side}"] + (0, 0.015, 0), j[f"upperarm_{side}"] * 0.5 + j[f"forearm_{side}"] * 0.5, j[f"forearm_{side}"]],
-                   [b.arm_r[0] * 0.86, ((b.arm_r[0] + b.arm_r[1]) / 2 + 0.002) * 0.94, b.arm_r[1]], sides=lo('upperarm', 12, 8), rings=lo('upperarm', 8, 5))
+        up = _limb([j[f"upperarm_{side}"] + (-0.018 * m, -0.006, 0), j[f"upperarm_{side}"] * 0.5 + j[f"forearm_{side}"] * 0.5, j[f"forearm_{side}"]],
+                   [b.arm_r[0] * 0.82, ((b.arm_r[0] + b.arm_r[1]) / 2 + 0.002) * 0.94, b.arm_r[1]], sides=lo('upperarm', 12, 8), rings=lo('upperarm', 8, 5))
         up.region = [f"upperarm_{side}"] * len(up.v)
         fo = _limb([j[f"forearm_{side}"], j[f"forearm_{side}"] * 0.45 + j[f"hand_{side}"] * 0.55, j[f"hand_{side}"]],
                    [b.arm_r[1], b.arm_r[1] * 0.98, b.arm_r[2]], sides=12, rings=7, cap_start=False, cap_end=False)

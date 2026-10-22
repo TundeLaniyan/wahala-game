@@ -30,20 +30,46 @@ const SOFT_WEIGHTS: Record<string, number> = {
   prop_soft_cartons: 1,
 };
 
+const ARENA_SOFT_WEIGHTS: Record<string, Record<string, number>> = {
+  danfoBusPark: SOFT_WEIGHTS,
+  lekkiRoadworks: {
+    prop_soft_barrier: 5,
+    prop_soft_tyres: 5,
+    prop_soft_cartons: 3,
+    prop_soft_crate: 3,
+    prop_soft_crates: 2,
+    prop_soft_crate_b: 2,
+    prop_soft_sacks: 1,
+    prop_soft_kegs: 1,
+  },
+  balogunMarket: {
+    prop_soft_sacks: 5,
+    prop_soft_kegs: 4,
+    prop_soft_cartons: 4,
+    prop_soft_crates: 3,
+    prop_soft_crate_b: 3,
+    prop_soft_crate: 2,
+    prop_soft_tyres: 1,
+    prop_soft_barrier: 1,
+  },
+};
+
 /** Deterministic variant so the same tile always looks the same. */
 export function softVariantFor(
   x: number,
   y: number,
   variants: readonly SoftVariant[] = softVariants(),
+  arenaId?: string,
 ): SoftVariant {
-  const total = variants.reduce((n, v) => n + (SOFT_WEIGHTS[v] ?? 1), 0);
+  const weights = (arenaId && ARENA_SOFT_WEIGHTS[arenaId]) || SOFT_WEIGHTS;
+  const total = variants.reduce((n, v) => n + (weights[v] ?? 1), 0);
   // integer hash of the tile so neighbours decorrelate (no diagonal stripes of the same prop)
   let h = Math.imul(x + 1, 0x9e3779b1) ^ Math.imul(y + 7, 0x85ebca77);
   h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
   h ^= h >>> 13;
   let pick = (h >>> 0) % total;
   for (const v of variants) {
-    pick -= SOFT_WEIGHTS[v] ?? 1;
+    pick -= weights[v] ?? 1;
     if (pick < 0) return v;
   }
   return variants[0]!;

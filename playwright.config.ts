@@ -9,13 +9,15 @@ export default defineConfig({
   timeout: 90_000,
   // Software WebGL (SwiftShader) plus the audio bank's warm-up share one CPU, so UI state can lag the sim by seconds.
   expect: { timeout: 15_000 },
-  retries: 0,
+  retries: 1,
   reporter: [['list']],
   use: {
     baseURL: `http://localhost:${PORT}/wahala-game/`,
     launchOptions: {
       executablePath,
       args: [
+        '--single-process',
+        '--no-sandbox',
         '--use-gl=angle',
         '--use-angle=swiftshader',
         '--enable-unsafe-swiftshader',

@@ -1,5 +1,6 @@
 import {
   BufferGeometry,
+  ConeGeometry,
   CylinderGeometry,
   DoubleSide,
   Float32BufferAttribute,
@@ -25,7 +26,7 @@ import {
   wallTexture,
   windowsTexture,
 } from '../textures';
-import { box, mat } from './helpers';
+import { box, cyl, mat } from './helpers';
 import { createGlbCrowd } from './crowd';
 import { assets } from './library';
 import { bakeModel } from './merge';
@@ -127,19 +128,153 @@ function addModelledPerimeter(root: Group, out: InstancedMesh[], W: number, H: n
 }
 
 /**
- * Everything around the playing field: raised slab, perimeter walls, parked danfos, buildings and
+ * Builds Balogun Market stalls: Ankara fabric racks, multi-striped market umbrellas,
+ * bukka cooking pots, and stacked colourful plastic basins (matching z3d4z2z3d4z2z3d4 (1),(2),(7).jpeg).
+ */
+function addBalogunMarketDressing(
+  root: Group,
+  statics: Group,
+  instanced: InstancedMesh[],
+  W: number,
+  H: number,
+): void {
+  const woodMat = mat(0x7c522b, { roughness: 0.85 });
+  const poleMat = mat(0xc4c8ce, { roughness: 0.4, metalness: 0.5 });
+  const potMat = mat(0x282a2e, { roughness: 0.45, metalness: 0.6 });
+  const ankaraColors = [0xe63946, 0xffbe0b, 0x1d6fe0, 0x12964f, 0x8338ec, 0xfb5607, 0xff4f9a];
+  const canopyPalettes: [number, number][] = [
+    [0xe63946, 0xffbe0b],
+    [0x1d6fe0, 0xf8f9fa],
+    [0x12964f, 0xffbe0b],
+    [0x8338ec, 0xfb5607],
+    [0xd62828, 0xf8f9fa],
+  ];
+
+  const addUmbrella = (x: number, z: number, idx: number, scale = 1.0): void => {
+    const [c1, c2] = canopyPalettes[idx % canopyPalettes.length]!;
+    statics.add(cyl(0.03 * scale, 0.035 * scale, 2.25 * scale, poleMat, x, 1.12 * scale, z, 8));
+    const cone = new Mesh(
+      new ConeGeometry(1.18 * scale, 0.46 * scale, 8),
+      mat(c1, { roughness: 0.75 }),
+    );
+    cone.position.set(x, 2.22 * scale, z);
+    cone.rotation.y = (idx * 0.4) % Math.PI;
+    statics.add(cone);
+    const cap = new Mesh(
+      new ConeGeometry(0.68 * scale, 0.28 * scale, 8),
+      mat(c2, { roughness: 0.75 }),
+    );
+    cap.position.set(x, 2.34 * scale, z);
+    cap.rotation.y = cone.rotation.y + Math.PI / 8;
+    statics.add(cap);
+    // Valance trim ring
+    statics.add(cyl(1.16 * scale, 1.18 * scale, 0.09 * scale, mat(c2, { roughness: 0.8 }), x, 1.97 * scale, z, 8));
+  };
+
+  const addAnkaraStall = (x: number, z: number, ry: number, idx: number): void => {
+    const g = new Group();
+    // Wooden counter table + overhead fabric hanging rack
+    g.add(box(2.1, 0.72, 0.85, woodMat, 0, 0.36, 0));
+    g.add(box(2.2, 0.06, 0.92, mat(ankaraColors[idx % ankaraColors.length]!, { roughness: 0.8 }), 0, 0.74, 0));
+    for (const sx of [-0.96, 0.96]) {
+      g.add(box(0.07, 1.95, 0.07, woodMat, sx, 0.98, -0.32));
+    }
+    g.add(box(2.1, 0.07, 0.07, woodMat, 0, 1.92, -0.32));
+    // Hanging bolts of patterned Ankara fabric & folded cloth stacks on table
+    for (let k = 0; k < 5; k++) {
+      const fx = -0.76 + k * 0.38;
+      const colA = ankaraColors[(idx + k) % ankaraColors.length]!;
+      const colB = ankaraColors[(idx + k + 2) % ankaraColors.length]!;
+      g.add(box(0.28, 0.82, 0.05, mat(colA, { roughness: 0.75 }), fx, 1.44, -0.32));
+      g.add(box(0.24, 0.24, 0.06, mat(colB, { roughness: 0.75 }), fx, 1.44, -0.32));
+      // Folded fabric stacks on counter
+      g.add(box(0.32, 0.14, 0.42, mat(colB, { roughness: 0.8 }), fx, 0.83, 0.08));
+      g.add(box(0.28, 0.11, 0.36, mat(colA, { roughness: 0.8 }), fx, 0.95, 0.08));
+    }
+    // Stacked plastic market basins beside the stall
+    for (let b = 0; b < 3; b++) {
+      const bCol = ankaraColors[(idx + b * 2) % ankaraColors.length]!;
+      g.add(cyl(0.28 - b * 0.02, 0.20, 0.16, mat(bCol, { roughness: 0.4 }), 1.28, 0.08 + b * 0.14, 0.15, 12));
+    }
+    // Bukka cooking pot on the opposite side
+    g.add(cyl(0.24, 0.22, 0.32, potMat, -1.28, 0.16, 0.15, 12));
+    g.position.set(x, 0, z);
+    g.rotation.y = ry;
+    statics.add(g);
+  };
+
+  // Line the north, east, and west market walkways with Ankara stalls and colourful market umbrellas
+  const stallX = [-W / 2 + 1.8, -2.6, 2.6, W / 2 - 1.8];
+  stallX.forEach((x, i) => {
+    addAnkaraStall(x, -H / 2 - 2.35, 0, i);
+    addUmbrella(x + 0.85, -H / 2 - 2.05, i, 1.05);
+  });
+  for (let i = 0; i < 3; i++) {
+    const z = -H / 2 + 1.8 + i * 3.4;
+    addAnkaraStall(W / 2 + 2.35, z, -Math.PI / 2, i + 4);
+    addUmbrella(W / 2 + 2.0, z - 0.7, i + 1, 1.0);
+    addAnkaraStall(-W / 2 - 2.35, z, Math.PI / 2, i + 2);
+    addUmbrella(-W / 2 - 2.0, z + 0.7, i + 3, 1.0);
+  }
+  // Extra umbrellas at the corners & south market entrance
+  addUmbrella(-W / 2 - 1.7, H / 2 + 1.6, 0, 0.9);
+  addUmbrella(W / 2 + 1.7, H / 2 + 1.6, 2, 0.9);
+
+  // Market sacks, bottle crates, and water cartons clustered around the stalls
+  instanceAsset(root, instanced, 'prop_soft_sacks', [
+    { x: -W / 2 + 4.2, z: -H / 2 - 2.0, ry: 0.3 },
+    { x: 0.0, z: -H / 2 - 2.1, ry: -0.2 },
+    { x: W / 2 - 4.2, z: -H / 2 - 2.0, ry: 0.8 },
+    { x: -W / 2 - 1.8, z: H / 2 + 2.2, ry: 0.4 },
+    { x: W / 2 + 1.8, z: H / 2 + 2.2, ry: -0.5 },
+  ]);
+  instanceAsset(root, instanced, 'prop_soft_kegs', [
+    { x: -W / 2 + 0.4, z: -H / 2 - 1.9, ry: 0.2 },
+    { x: W / 2 - 0.4, z: -H / 2 - 1.9, ry: -0.4 },
+  ]);
+
+  // Iconic "BALOGUN MARKET * LAGOS ISLAND" archway banner over the north market row
+  const archX = 0;
+  const archZ = -H / 2 - 2.85;
+  const archMat = mat(0xb81d2a, { roughness: 0.45, metalness: 0.2 });
+  const goldTrim = mat(0xf6c218, { roughness: 0.4, metalness: 0.3 });
+  for (const sx of [-2.4, 2.4]) {
+    statics.add(box(0.12, 2.65, 0.12, archMat, archX + sx, 1.32, archZ));
+    statics.add(box(0.2, 0.3, 0.2, goldTrim, archX + sx, 0.15, archZ));
+  }
+  statics.add(box(5.2, 0.18, 0.22, goldTrim, archX, 2.65, archZ));
+  const signMat = new MeshBasicMaterial({
+    map: labelTexture('BALOGUN MARKET', '#ffd628', 'bold 34px system-ui, sans-serif', '#7a0e18'),
+    transparent: true,
+  });
+  const sign = new Mesh(new PlaneGeometry(4.4, 0.68), signMat);
+  sign.position.set(archX, 2.68, archZ + 0.14);
+  sign.rotation.x = -0.18;
+  root.add(sign);
+}
+
+/**
+ * Everything around the playing field: raised slab, perimeter walls, parked vehicles, buildings and
  * a cheering crowd. Walls on the camera side are kept low so no tile is hidden.
  */
-export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 1): Backdrop {
+export function createBackdrop(
+  layout: Layout,
+  crowdSize: number,
+  busFraction = 1,
+  arenaId = 'danfoBusPark',
+): Backdrop {
   const root = new Group();
   // Static scenery is collected here and baked into a handful of meshes at the end.
   const statics = new Group();
   const W = layout.width;
   const H = layout.height;
   const disposables: { dispose(): void }[] = [];
+  const isMarket = arenaId === 'balogunMarket';
+  const isRoadworks = arenaId === 'lekkiRoadworks';
 
-  // asphalt ground + slab
-  const ground = new Mesh(new PlaneGeometry(140, 110), mat(0x4c4741, { roughness: 1, flat: false }));
+  // ground + raised arena slab
+  const groundColor = isMarket ? 0x6e553e : isRoadworks ? 0x3a3836 : 0x4c4741;
+  const ground = new Mesh(new PlaneGeometry(140, 110), mat(groundColor, { roughness: 1, flat: false }));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.31;
   ground.receiveShadow = true;
@@ -149,7 +284,7 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
       W + 1.6,
       0.3,
       H + 1.6,
-      mat(0xffffff, { map: concreteTexture(), flat: false, roughness: 1 }),
+      mat(isMarket ? 0xf2dfc8 : 0xffffff, { map: concreteTexture(), flat: false, roughness: 1 }),
       0,
       -0.16,
       0,
@@ -194,17 +329,44 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
     }
   }
 
-  // parked danfos: instanced from the modelled bus, or baked procedural copies as a fallback
+  // parked vehicles around the perimeter:
+  // - danfoBusPark: fleets of parked yellow Danfos
+  // - balogunMarket: Keke Napeps and Danfos parked outside the market stalls
+  // - lekkiRoadworks: LagRide Taxis, Keke Napeps, and Danfos held at the roadworks perimeter
   const rng = artRng(404);
   const busSpots: { x: number; z: number; ry: number }[] = [];
   const place = (x: number, z: number, ry: number): void => {
     busSpots.push({ x, z, ry });
   };
-  for (let i = 0; i < 5; i++)
-    place(W / 2 + 2.1 + (i % 2) * 0.1, -H / 2 + 1.2 + i * 2.35, Math.PI / 2 + (rng() - 0.5) * 0.1);
-  for (let i = 0; i < 4; i++) place(-W / 2 - 2.2, -H / 2 + 0.8 + i * 2.8, -Math.PI / 2 + (rng() - 0.5) * 0.1);
-  for (let i = 0; i < 4; i++) place(-W / 2 + 2.5 + i * 3.6, -H / 2 - 2.0, (rng() - 0.5) * 0.1);
-  place(W / 2 - 3.2, H / 2 + 2.2, Math.PI);
+  if (isMarket) {
+    place(W / 2 + 3.4, -H / 2 + 0.8, Math.PI / 2);
+    place(-W / 2 - 3.4, -H / 2 + 0.8, -Math.PI / 2);
+    place(W / 2 - 3.2, H / 2 + 2.4, Math.PI);
+    instanceAsset(root, instanced, 'veh_keke', [
+      { x: -W / 2 + 2.8, z: H / 2 + 2.1, ry: Math.PI * 0.85, sx: 1.25, sy: 1.25, sz: 1.25 },
+      { x: W / 2 + 3.1, z: H / 2 - 1.2, ry: Math.PI / 2, sx: 1.25, sy: 1.25, sz: 1.25 },
+      { x: -W / 2 - 3.1, z: H / 2 - 1.2, ry: -Math.PI / 2, sx: 1.25, sy: 1.25, sz: 1.25 },
+    ]);
+  } else if (isRoadworks) {
+    for (let i = 0; i < 3; i++)
+      place(W / 2 + 2.2, -H / 2 + 1.4 + i * 3.8, Math.PI / 2 + (rng() - 0.5) * 0.1);
+    for (let i = 0; i < 2; i++)
+      place(-W / 2 - 2.2, -H / 2 + 1.6 + i * 4.4, -Math.PI / 2 + (rng() - 0.5) * 0.1);
+    instanceAsset(root, instanced, 'veh_taxi', [
+      { x: -W / 2 + 2.8, z: -H / 2 - 2.1, ry: Math.PI / 2, sx: 1.25, sy: 1.25, sz: 1.25 },
+      { x: W / 2 - 2.8, z: -H / 2 - 2.1, ry: Math.PI / 2, sx: 1.25, sy: 1.25, sz: 1.25 },
+      { x: -W / 2 - 2.2, z: H / 2 - 1.8, ry: 0, sx: 1.25, sy: 1.25, sz: 1.25 },
+    ]);
+    instanceAsset(root, instanced, 'veh_keke', [
+      { x: W / 2 - 3.2, z: H / 2 + 2.1, ry: -Math.PI / 2, sx: 1.25, sy: 1.25, sz: 1.25 },
+    ]);
+  } else {
+    for (let i = 0; i < 5; i++)
+      place(W / 2 + 2.1 + (i % 2) * 0.1, -H / 2 + 1.2 + i * 2.35, Math.PI / 2 + (rng() - 0.5) * 0.1);
+    for (let i = 0; i < 4; i++) place(-W / 2 - 2.2, -H / 2 + 0.8 + i * 2.8, -Math.PI / 2 + (rng() - 0.5) * 0.1);
+    for (let i = 0; i < 4; i++) place(-W / 2 + 2.5 + i * 3.6, -H / 2 - 2.0, (rng() - 0.5) * 0.1);
+    place(W / 2 - 3.2, H / 2 + 2.2, Math.PI);
+  }
   // thin the lot on weaker devices: keep an evenly spread subset
   const keep = Math.max(1, Math.round(busSpots.length * busFraction));
   const shown = busSpots.filter(
@@ -281,7 +443,7 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
   const buildingIds = assets.loadedIds('env_building_');
   if (buildingIds.length > 0) {
     const byVariant = buildingIds.map(() => [] as Placement[]);
-    let n = 0;
+    let n = isMarket ? 2 : isRoadworks ? 1 : 0;
     const put = (x: number, z: number, ry: number): void => {
       byVariant[n++ % buildingIds.length]!.push({ x, z, ry, sy: 0.92 + rng() * 0.25 });
     };
@@ -302,15 +464,14 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
     }
   }
 
-  // street dressing around the lot (kiosks, lamps, utility poles, tyre stacks, barrels)
+  // street dressing around the lot (kiosks, lamps, utility poles, tyre stacks, barrels, and arena-specific features)
   const dress = (id: string, spots: Placement[]): void => instanceAsset(root, instanced, id, spots);
   dress('env_kiosk', [
-    { x: -W / 2 + 2.2, z: -H / 2 - 3.5, ry: 0, sx: 0.8, sy: 0.8, sz: 0.8 },
-    { x: W / 2 - 3.2, z: -H / 2 - 3.5, ry: 0, sx: 0.8, sy: 0.8, sz: 0.8 },
-    { x: 1.2, z: -H / 2 - 3.6, ry: 0.05, sx: 0.8, sy: 0.8, sz: 0.8 },
-    { x: -W / 2 - 3.3, z: H / 2 + 2.6, ry: Math.PI / 2, sx: 0.8, sy: 0.8, sz: 0.8 },
+    { x: -W / 2 + 2.2, z: -H / 2 - 3.5, ry: 0, sx: 0.85, sy: 0.85, sz: 0.85 },
+    { x: W / 2 - 3.2, z: -H / 2 - 3.5, ry: 0, sx: 0.85, sy: 0.85, sz: 0.85 },
+    { x: 1.2, z: -H / 2 - 3.6, ry: 0.05, sx: 0.85, sy: 0.85, sz: 0.85 },
+    { x: -W / 2 - 3.3, z: H / 2 + 2.6, ry: Math.PI / 2, sx: 0.85, sy: 0.85, sz: 0.85 },
   ]);
-  // roadside trade signs ("CHOP HERE", "POS HERE", "RECHARGE") around the lot
   dress('env_shopsign', [
     { x: -W / 2 - 1.2, z: H / 2 + 2.7, ry: 0.35 },
     { x: W / 2 + 1.3, z: H / 2 + 2.5, ry: Math.PI - 0.35 },
@@ -339,31 +500,92 @@ export function createBackdrop(layout: Layout, crowdSize: number, busFraction = 
     { x: W / 2 - 5.0, z: -H / 2 - 2.4, ry: 2.0 },
   ]);
 
-  // Green-white-green bunting along the back wall, and the bus-park signboard.
+  // Overhead bunting along the back wall
   const tri = new BufferGeometry();
   tri.setAttribute('position', new Float32BufferAttribute([-0.2, 0, 0, 0.2, 0, 0, 0, -0.38, 0], 3));
   tri.setAttribute('normal', new Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3));
   const flags = new InstancedMesh(tri, new MeshBasicMaterial({ side: DoubleSide }), 34);
   const flagColor = new Color();
   const fm = new Matrix4();
+  const marketBunting = [0xe63946, 0xffbe0b, 0x1d6fe0, 0x12964f, 0x8338ec, 0xffffff];
   for (let n = 0; n < 34; n++) {
     const t = n / 33;
     const x = -W / 2 - 0.2 + t * (W + 0.4);
     const sag = Math.sin(t * Math.PI) * 0.35;
-    // strung high over the back crowd (not across the wall face)
     fm.makeTranslation(x, 2.75 - sag, -H / 2 - 1.5);
     flags.setMatrixAt(n, fm);
-    flags.setColorAt(n, flagColor.setHex(n % 3 === 1 ? 0xffffff : 0x1fa64a));
+    const hex = isMarket
+      ? marketBunting[n % marketBunting.length]!
+      : isRoadworks
+        ? n % 2 === 0
+          ? 0xffbe0b
+          : 0x181a1e
+        : n % 3 === 1
+          ? 0xffffff
+          : 0x1fa64a;
+    flags.setColorAt(n, flagColor.setHex(hex));
   }
   root.add(flags);
-  const signMat = new MeshBasicMaterial({
-    map: labelTexture('DANFO BUS PARK', '#ffc21a', 'bold 30px system-ui, sans-serif', '#1a1208'),
-    transparent: true,
-  });
-  const sign = new Mesh(new PlaneGeometry(4.2, 1.5), signMat);
-  sign.position.set(-W / 2 + 3.2, 2.55, -H / 2 - 2.9);
-  sign.rotation.x = -0.35;
-  root.add(sign);
+
+  if (isMarket) {
+    addBalogunMarketDressing(root, statics, instanced, W, H);
+  } else if (isRoadworks) {
+    // Lekki Roadworks perimeter: roadwork barricades, asphalt barrels, and "LEKKI ROADWORKS" gantry sign
+    dress('prop_soft_barrier', [
+      { x: -W / 2 + 1.6, z: -H / 2 - 1.85, ry: 0.1 },
+      { x: -1.8, z: -H / 2 - 1.85, ry: -0.08 },
+      { x: 1.8, z: -H / 2 - 1.85, ry: 0.08 },
+      { x: W / 2 - 1.6, z: -H / 2 - 1.85, ry: -0.1 },
+      { x: -W / 2 - 1.8, z: H / 2 + 1.5, ry: 0.4 },
+      { x: W / 2 + 1.8, z: H / 2 + 1.5, ry: -0.4 },
+    ]);
+    dress('env_barrel', [
+      { x: -W / 2 - 2.1, z: -1.2, ry: 0.6 },
+      { x: W / 2 + 2.1, z: 1.2, ry: 1.4 },
+      { x: 0, z: -H / 2 - 2.2, ry: 0.9 },
+    ]);
+    const signX = 0;
+    const signZ = -H / 2 - 2.85;
+    const yellowMetal = mat(0xf6be18, { roughness: 0.42, metalness: 0.22 });
+    const darkSteel = mat(0x181a1e, { roughness: 0.5, metalness: 0.5 });
+    for (const sx of [-2.1, 2.1]) {
+      statics.add(box(0.1, 2.45, 0.1, darkSteel, signX + sx, 1.22, signZ));
+      statics.add(box(0.22, 0.35, 0.22, yellowMetal, signX + sx, 0.18, signZ));
+    }
+    statics.add(box(4.6, 0.16, 0.18, yellowMetal, signX, 2.45, signZ));
+    const signMat = new MeshBasicMaterial({
+      map: labelTexture('LEKKI ROADWORKS', '#16181c', 'bold 32px system-ui, sans-serif', '#ffc61a'),
+      transparent: true,
+    });
+    const sign = new Mesh(new PlaneGeometry(4.1, 0.64), signMat);
+    sign.position.set(signX, 2.48, signZ + 0.12);
+    sign.rotation.x = -0.2;
+    root.add(sign);
+  } else {
+    // Iconic yellow "OJUELEGBA" Lagos bus stop shelter + signboard along the back perimeter
+    const shelterX = -W / 2 + 3.2;
+    const shelterZ = -H / 2 - 2.85;
+    const yellowMetal = mat(0xf6be18, { roughness: 0.42, metalness: 0.22 });
+    const darkSteel = mat(0x181a1e, { roughness: 0.5, metalness: 0.5 });
+    for (const sx of [-1.85, 1.85]) {
+      for (const sz of [-0.45, 0.45]) {
+        statics.add(box(0.08, 2.25, 0.08, yellowMetal, shelterX + sx, 1.1, shelterZ + sz));
+        statics.add(box(0.14, 0.25, 0.14, darkSteel, shelterX + sx, 0.12, shelterZ + sz));
+      }
+    }
+    statics.add(box(4.1, 0.14, 1.35, yellowMetal, shelterX, 2.25, shelterZ));
+    statics.add(box(3.9, 0.10, 0.95, yellowMetal, shelterX, 2.34, shelterZ));
+    statics.add(box(3.6, 1.1, 0.06, darkSteel, shelterX, 1.15, shelterZ - 0.44));
+    statics.add(box(3.2, 0.07, 0.36, yellowMetal, shelterX, 0.52, shelterZ - 0.15));
+    const signMat = new MeshBasicMaterial({
+      map: labelTexture('OJUELEGBA', '#ffc61a', 'bold 34px system-ui, sans-serif', '#16181c'),
+      transparent: true,
+    });
+    const sign = new Mesh(new PlaneGeometry(3.4, 0.62), signMat);
+    sign.position.set(shelterX, 2.52, shelterZ + 0.55);
+    sign.rotation.x = -0.22;
+    root.add(sign);
+  }
 
   const glbCrowd = createGlbCrowd(layout, crowdSize, rng);
   if (glbCrowd) {

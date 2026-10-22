@@ -60,26 +60,29 @@ def U(mesh, rect):
 
 def _kiosk_front(seed: int) -> Sheet:
     w, h = 512, 346  # 1.7 x 1.15 m @ 300 px/m
-    s = corrugated_panel(w, h, seed, 0x1f8a4c, ribs=24, rust=0.45, wear=0.55)
+    s = corrugated_panel(w, h, seed, 0xf2be18, ribs=24, rust=0.35, wear=0.45)
     ppm = 300.0
-    # yellow fascia band above the hatch with the name
+    # black & yellow fascia band above the hatch with TICKET / OJUELEGBA signage
     with s.paint(height=0.1, rough=0.55) as d:
-        d.rect((0, 12, w, 74), 0xf2c21b)
-        d.rect((0, 74, w, 82), 0x14562f)
-        d.rect((0, h - 28, w, h - 6), 0xf2c21b, a=0.0)
+        d.rect((0, 12, w, 76), 0x16181c)
+        d.rect((0, 76, w, 84), 0xf6c61a)
+        # black/yellow hazard stripe at the bottom skirt
+        d.rect((0, h - 38, w, h), 0x16181c)
+        for k in range(-2, 18):
+            x0 = k * 34
+            d.poly([(x0, h - 36), (x0 + 17, h - 36), (x0 + 30, h), (x0 + 13, h)], 0xf6c61a)
     with s.paint(height=0.14, rough=0.5) as d:
-        px = fit_px("RECHARGE CARDS", w * 0.9, 50, "black", 0.88, 0.02)
-        d.text((w / 2 + 2, 44 + 2), "RECHARGE CARDS", px, 0x14201a, "black", "cm", squeeze=0.88, spacing=0.02, a=0.5, wobble=0.01, seed=2)
-        d.text((w / 2, 44), "RECHARGE CARDS", px, 0xd62839, "black", "cm", squeeze=0.88, spacing=0.02, wobble=0.01, seed=2)
+        px = fit_px("TICKET  *  OJUELEGBA", w * 0.9, 46, "black", 0.90, 0.03)
+        d.text((w / 2, 44), "TICKET  *  OJUELEGBA", px, 0xf6c61a, "black", "cm", squeeze=0.90, spacing=0.03, wobble=0.01, seed=2)
     # hatch area (painted dark so the edges read as a recess)
     hx0, hx1 = (1.2 - 0.95) * ppm, (1.2 + 0.05) * ppm
     # side stripe + name
     with s.paint(height=0.12, rough=0.5) as d:
-        d.text((hx1 + 40, 250), "MAMA JOY", 38, 0xf6f1e0, "black", "cm", squeeze=0.85, rot=0, spacing=0.02)
-        d.text((hx1 + 40, 290), "ENT.", 26, 0xf2c21b, "black", "cm", squeeze=0.9)
-        d.text((hx0 - 6, 200), "PURE", 24, 0xf6f1e0, "bold", "rm", squeeze=0.85, rot=0)
-        d.text((hx0 - 6, 226), "WATER", 24, 0xf6f1e0, "bold", "rm", squeeze=0.85)
-        d.text((hx0 - 6, 252), "SNACKS", 24, 0xf2c21b, "bold", "rm", squeeze=0.85)
+        d.text((hx1 + 40, 240), "BUS", 38, 0x16181c, "black", "cm", squeeze=0.85, rot=0, spacing=0.02)
+        d.text((hx1 + 40, 282), "TICKET", 30, 0xd62828, "black", "cm", squeeze=0.9)
+        d.text((hx0 - 6, 200), "PURE", 24, 0x16181c, "bold", "rm", squeeze=0.85, rot=0)
+        d.text((hx0 - 6, 226), "WATER", 24, 0x16181c, "bold", "rm", squeeze=0.85)
+        d.text((hx0 - 6, 252), "SNACKS", 24, 0xd62828, "bold", "rm", squeeze=0.85)
     stick_poster(s, int(hx1 + 22), 100, 62, 76, seed + 3, rot=3, kind="concert", amount=0.4, shadow=0.4)
     stick_poster(s, 22, 98, 52, 66, seed + 4, rot=-4, kind="sale", amount=0.4, shadow=0.4)
     speckle(s, seed + 5, amount=0.4, density=0.004)
@@ -88,14 +91,18 @@ def _kiosk_front(seed: int) -> Sheet:
 
 def _kiosk_side(seed: int) -> Sheet:
     w, h = 300, 346
-    s = corrugated_panel(w, h, seed + 8, 0x1f8a4c, ribs=15, rust=0.5, wear=0.6)
+    s = corrugated_panel(w, h, seed + 8, 0xf2be18, ribs=15, rust=0.4, wear=0.5)
     with s.paint(height=0.1, rough=0.55) as d:
-        d.rect((0, 12, w, 74), 0xf2c21b)
-        d.rect((0, 74, w, 82), 0x14562f)
+        d.rect((0, 12, w, 76), 0x16181c)
+        d.rect((0, 76, w, 84), 0xf6c61a)
+        d.rect((0, h - 38, w, h), 0x16181c)
+        for k in range(-2, 12):
+            x0 = k * 34
+            d.poly([(x0, h - 36), (x0 + 17, h - 36), (x0 + 30, h), (x0 + 13, h)], 0xf6c61a)
     with s.paint(height=0.12, rough=0.5) as d:
-        px = fit_px("MAMA JOY ENT.", w * 0.9, 44, "black", 0.88, 0.02)
-        d.text((w / 2, 44), "MAMA JOY ENT.", px, 0x14201a, "black", "cm", squeeze=0.88, spacing=0.02)
-    stencil(s, "NO 07", (w / 2, 240), 54, 0xf6f1e0, "black", a=0.8, squeeze=0.9, wear=0.7, seed=3)
+        px = fit_px("OJUELEGBA PARK", w * 0.9, 42, "black", 0.88, 0.02)
+        d.text((w / 2, 44), "OJUELEGBA PARK", px, 0xf6c61a, "black", "cm", squeeze=0.88, spacing=0.02)
+    stencil(s, "NO 07", (w / 2, 230), 54, 0x16181c, "black", a=0.8, squeeze=0.9, wear=0.6, seed=3)
     return s
 
 

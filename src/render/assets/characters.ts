@@ -135,7 +135,7 @@ export function createOkada(): Group {
 }
 
 /** The rigged glTF character wrapped in the same shape as the procedural one; null if not loaded. */
-export function createRiggedPlayerModel(id: CharacterId, phase = 0): PlayerModel | null {
+export function createRiggedPlayerModel(id: CharacterId | string, phase = 0): PlayerModel | null {
   const rigged = RiggedCharacter.create(id, phase);
   if (!rigged) return null;
   const root = new Group();

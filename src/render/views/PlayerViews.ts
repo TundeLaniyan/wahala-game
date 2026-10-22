@@ -13,6 +13,7 @@ import type { Player, SimEvent } from '../../sim';
 import { SLOT_COLORS } from '../../assets/palette';
 import { drawPickupIcon } from '../../assets/pickupIcons';
 import { OKADA_SCALE, createPlayerModel, createRiggedPlayerModel } from '../assets/characters';
+import { assets } from '../assets/library';
 import { createShieldBubble, updateShieldBubble } from './okadaShield';
 import { addXray } from '../assets/xray';
 import type { PlayerModel } from '../assets/characters';
@@ -95,7 +96,8 @@ export class PlayerViews implements View {
   }
 
   private create(p: Player, ctx: FrameContext): Visual {
-    const model = createRiggedPlayerModel(p.characterId, p.id * 0.37) ?? createPlayerModel(p.characterId);
+    const modelId = p.slot === 3 && assets.has('char_areaBoss') ? 'areaBoss' : p.characterId;
+    const model = createRiggedPlayerModel(modelId, p.id * 0.37) ?? createPlayerModel(p.characterId);
     const slot = SLOT_COLORS[p.slot % SLOT_COLORS.length]!;
     if (model.rigged) addXray(model.rigged.body, slot);
     const ring = new Mesh(
@@ -250,7 +252,7 @@ export class PlayerViews implements View {
     r.body.position.z = p.mounted ? RIDER_BACK * Math.min(1, tm / MOUNT_TIME) : 0;
     const bike = v.model.bike.children[0];
     if (bike && v.model.bikeWheels.length > 0)
-      bike.scale.setScalar(OKADA_SCALE * (p.mounted ? easeOutBack(Math.min(1, tm / MOUNT_TIME)) : 1));
+      bike.scale.setScalar(OKADA_SCALE * (p.mounted ? 0.5 + 0.5 * easeOutBack(Math.min(1, tm / MOUNT_TIME)) : 1));
     if (p.mounted && moving) {
       for (const w of v.model.bikeWheels) w.rotation.x += dt * speed * 9;
       // kicked-up dust behind the bike sells the extra speed

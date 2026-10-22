@@ -27,7 +27,7 @@ def ring_positions(y0: float, y1: float, n: int, boundaries=()) -> np.ndarray:
 
 
 def torso_cloth(b: Body, y0: float, y1: float, extra: float = 0.012, baggy: float = 0.0, sides: int = 22, rings: int = 10, cap_top: bool = False, bottom_flare: float = 0.0, boundaries=()) -> Mesh:
-    ys = np.linspace(y0, y1, 6)
+    ys = np.linspace(y0, y1, 18)
     rows = [_row_interp(b, y) for y in ys]
     flare = np.linspace(bottom_flare, 0, len(ys))
     a = [r[0] + extra + baggy + fl for r, fl in zip(rows, flare)]
@@ -54,7 +54,7 @@ def sleeve(b: Body, side: str, length: float, extra: float = 0.010, cuff_flare: 
     """Sleeve from the shoulder; `length` 0..1 covers the upper arm, up to 2.0 reaches the wrist."""
     j = joints_for(b)
     msign = 1.0 if side == "L" else -1.0
-    sh, el, wr = j[f"upperarm_{side}"] + (-0.036 * msign, 0.034, 0), j[f"forearm_{side}"], j[f"hand_{side}"]
+    sh, el, wr = j[f"upperarm_{side}"] + (-0.028 * msign, -0.006, 0), j[f"forearm_{side}"], j[f"hand_{side}"]
     pts = [sh, el, wr]
     radii = [b.arm_r[0], b.arm_r[1], b.arm_r[2]]
     n = max(3, int(rings * min(length, 2.0) / 1.0))
@@ -72,8 +72,8 @@ def sleeve(b: Body, side: str, length: float, extra: float = 0.010, cuff_flare: 
         rr.append(r + extra)
     rr[-1] += cuff_flare
     rr[-2] += cuff_flare * 0.4
-    rr[0] += 0.026
-    rr[1] += 0.016
+    rr[0] += 0.003
+    rr[1] += 0.002
     ts = np.linspace(0, 1, rings)
     if cut is not None:
         ts = np.array(sorted(list(ts) + [cut - 0.003, cut + 0.003]))
@@ -198,23 +198,44 @@ def short_curls(b: Body, seed: int = 5, n: int = 150, radius: float = 0.0105) ->
     return merge(balls) if balls else sphere((0, 0, 0), (0.001,) * 3)
 
 
-def sunglasses(b: Body, tint: int = 0x101216) -> list[Mesh]:
+def sunglasses(b: Body, tint: int = 0x0c0e12, frame_col: int = 0xd9a62e) -> list[Mesh]:
     rx, ry, rz = b.head
     cy = b.head_y
-    z = 0.012 + rz * 0.93
+    z = 0.012 + rz * 0.94
     out = []
     lens_col = srgb_to_linear(hexrgb(tint))
+    gold_col = srgb_to_linear(hexrgb(frame_col))
     for sx in (-1, 1):
-        l = sphere((sx * rx * 0.42, cy + ry * 0.10, z + 0.004), (0.026, 0.020, 0.0045), lat=8, lon=14)
+        l = sphere((sx * rx * 0.42, cy + ry * 0.11, z + 0.005), (0.028, 0.021, 0.005), lat=8, lon=14)
         l.c[:, :3] = lens_col
         out.append(l)
-        arm = tube(np.array([[sx * rx * 0.62, cy + ry * 0.12, z - 0.004], [sx * rx * 0.98, cy + ry * 0.12, 0.012 + rz * 0.35], [sx * rx * 1.0, cy + ry * 0.08, 0.0]]), [0.0025] * 3, [0.0025] * 3, sides=5, rings=5)
-        arm.c[:, :3] = lens_col
+        top_bar = tube(np.array([[sx * rx * 0.16, cy + ry * 0.24, z + 0.005], [sx * rx * 0.68, cy + ry * 0.22, z - 0.001]]), [0.0032, 0.0032], [0.0032, 0.0032], sides=5, rings=4)
+        top_bar.c[:, :3] = gold_col
+        out.append(top_bar)
+        arm = tube(np.array([[sx * rx * 0.64, cy + ry * 0.14, z - 0.003], [sx * rx * 0.99, cy + ry * 0.13, 0.012 + rz * 0.35], [sx * rx * 1.0, cy + ry * 0.08, 0.0]]), [0.0028] * 3, [0.0028] * 3, sides=5, rings=5)
+        arm.c[:, :3] = gold_col
         out.append(arm)
-    bridge = tube(np.array([[-rx * 0.15, cy + ry * 0.12, z + 0.003], [rx * 0.15, cy + ry * 0.12, z + 0.003]]), [0.003, 0.003], [0.003, 0.003], sides=5, rings=3)
-    bridge.c[:, :3] = lens_col
+    bridge = tube(np.array([[-rx * 0.16, cy + ry * 0.15, z + 0.005], [rx * 0.16, cy + ry * 0.15, z + 0.005]]), [0.0034, 0.0034], [0.0034, 0.0034], sides=5, rings=3)
+    bridge.c[:, :3] = gold_col
     out.append(bridge)
     return out
+
+
+def baseball_cap(b: Body, crown_col: int = 0xd9242c, visor_col: int = 0xb81820, badge_col: int = 0xf6c41c) -> list[Mesh]:
+    rx, ry, rz = b.head
+    cy = b.head_y
+    dome = sphere((0, cy + 0.016, -0.002), (rx + 0.012, ry * 0.82, rz + 0.012), lat=10, lon=18)
+    keep = dome.v[:, 1] > cy + ry * 0.22
+    dome.f = dome.f[keep[dome.f].all(axis=1)]
+    dome.c[:, :3] = srgb_to_linear(hexrgb(crown_col))
+    # Front gold emblem on crown
+    front_badge = (dome.v[:, 2] > rz * 0.78) & (np.abs(dome.v[:, 0]) < 0.022) & (dome.v[:, 1] > cy + ry * 0.36) & (dome.v[:, 1] < cy + ry * 0.68)
+    dome.c[front_badge, :3] = srgb_to_linear(hexrgb(badge_col))
+    dome.region = ["head"] * len(dome.v)
+    visor = sphere((0, cy + ry * 0.26, rz * 0.92), (rx * 0.84, 0.009, rz * 0.62), lat=6, lon=14)
+    visor.c[:, :3] = srgb_to_linear(hexrgb(visor_col))
+    visor.region = ["head"] * len(visor.v)
+    return [dome, visor]
 
 
 def chain(b: Body, y: float, color: int = 0xd9a62e, sag: float = 0.09, radius: float = 0.0045) -> Mesh:

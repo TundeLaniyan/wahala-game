@@ -23,7 +23,7 @@ interface Visual {
   phase: number;
 }
 
-const floorGeo = new PlaneGeometry(1, 1);
+const floorGeo = new PlaneGeometry(1.06, 1.06);
 
 /**
  * Draws every active flame tile. Each tile gets a hot floor glow (so the plus shape and its
@@ -73,31 +73,31 @@ export class FlameViews implements View {
       const env = Math.min(1, k * 9) * (k > 0.62 ? Math.max(0, 1 - (k - 0.62) / 0.38) : 1);
       const x = layout.wx(f.x);
       const z = layout.wz(f.y);
-      const flick = 0.85 + 0.25 * Math.sin(time * 28 + v.phase);
-      const size = (f.dir === null ? 2.0 : f.tip ? 1.35 : 1.6) * flick * (0.75 + env * 0.35);
-      v.floor.position.set(x, 0.03, z);
-      (v.floor.material as MeshBasicMaterial).opacity = 0.85 * env;
-      v.a.position.set(x, 0.5 + 0.08 * Math.sin(time * 20 + v.phase), z);
-      v.a.scale.set(size * 0.9, size * 1.15, 1);
+      const flick = 0.88 + 0.24 * Math.sin(time * 28 + v.phase);
+      const size = (f.dir === null ? 2.25 : f.tip ? 1.52 : 1.78) * flick * (0.8 + env * 0.35);
+      v.floor.position.set(x, 0.032, z);
+      (v.floor.material as MeshBasicMaterial).opacity = 0.94 * env;
+      v.a.position.set(x, 0.52 + 0.08 * Math.sin(time * 20 + v.phase), z);
+      v.a.scale.set(size * 0.95, size * 1.2, 1);
       v.a.material.opacity = env;
       v.b.position.set(
         x + 0.05 * Math.sin(time * 17 + v.phase),
-        0.32,
+        0.34,
         z + 0.05 * Math.cos(time * 15 + v.phase),
       );
-      v.b.scale.set(size * 0.82, size * 1.05, 1);
-      v.b.material.opacity = env * 0.75;
-      v.hot.position.set(x, 0.3, z);
-      v.hot.scale.set(size * 0.42, size * 0.55, 1);
-      v.hot.material.opacity = env * (0.45 + 0.15 * flick);
+      v.b.scale.set(size * 0.88, size * 1.1, 1);
+      v.b.material.opacity = env * 0.82;
+      v.hot.position.set(x, 0.34, z);
+      v.hot.scale.set(size * 0.56, size * 0.68, 1);
+      v.hot.material.opacity = env * (0.68 + 0.2 * flick);
       if (v.core) {
-        v.core.position.set(x, 0.4, z);
-        v.core.scale.setScalar(2.2 * (1.1 - k * 0.5));
+        v.core.position.set(x, 0.42, z);
+        v.core.scale.setScalar(2.55 * (1.15 - k * 0.45));
         v.core.material.opacity = env;
         const light = this.lights[lit++];
         if (light) {
-          light.position.set(x, 0.9, z);
-          light.intensity = 15 * env * flick;
+          light.position.set(x, 0.95, z);
+          light.intensity = 18 * env * flick;
         }
       }
     }

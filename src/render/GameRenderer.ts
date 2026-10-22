@@ -46,13 +46,13 @@ const WRECK_COLORS: Record<string, [number, number, number][]> = {
     [0.75, 0.75, 0.78],
   ],
   taxi: [
-    [1, 0.88, 0.3],
-    [0.95, 0.95, 0.9],
-    [0.1, 0.1, 0.1],
+    [0.0, 0.65, 0.9],
+    [0.95, 0.96, 0.98],
+    [0.12, 0.14, 0.18],
   ],
   keke: [
-    [0.18, 0.7, 0.35],
-    [1, 0.82, 0.1],
+    [0.97, 0.78, 0.08],
+    [0.14, 0.16, 0.2],
     [0.12, 0.12, 0.12],
   ],
 };
@@ -116,7 +116,7 @@ export class GameRenderer {
     this.scene.fog = new Fog(0xe3b985, 38, 85);
     this.lights = createSceneLights(this.scene, this.renderer);
 
-    this.backdrop = createBackdrop(this.layout, this.profile.crowd, this.profile.parkedBuses);
+    this.backdrop = createBackdrop(this.layout, this.profile.crowd, this.profile.parkedBuses, state.arenaId);
     this.arena = new ArenaView(state, this.layout);
     const generators = new GeneratorViews();
     const flames = new FlameViews(this.profile.flameLights);

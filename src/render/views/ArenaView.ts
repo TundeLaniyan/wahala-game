@@ -1,11 +1,14 @@
 import {
+  BoxGeometry,
   CircleGeometry,
+  CylinderGeometry,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
   PlaneGeometry,
   Quaternion,
+  RingGeometry,
   Vector3,
   Euler,
   Group,
@@ -26,6 +29,7 @@ const DROP_TIME = 0.28;
 /** Floor, concrete pillars, soft blocks (instanced), crush blocks dropping in, floor hazards. */
 export class ArenaView implements View {
   readonly group = new Group();
+  private readonly arenaId: string;
   private readonly pillars: InstanceSet[];
   private readonly variants = softVariants();
   private readonly soft = new Map<SoftVariant, InstanceSet>();
@@ -45,9 +49,10 @@ export class ArenaView implements View {
     state: GameState,
     private readonly layout: Layout,
   ) {
+    this.arenaId = state.arenaId;
     const W = state.width;
     const H = state.height;
-    const floor = new Mesh(new PlaneGeometry(W, H), floorMaterial(W, H));
+    const floor = new Mesh(new PlaneGeometry(W, H), floorMaterial(W, H, state.arenaId));
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.group.add(floor);
@@ -91,20 +96,23 @@ export class ArenaView implements View {
     this.initialHard = new Set(state.tiles.flatMap((t, i) => (t === Tile.Hard ? [i] : [])));
     this.group.add(this.decals);
     this.buildHazardDecals(state);
+    this.buildArenaPillarAccents(state);
   }
 
   private buildHazardDecals(state: GameState): void {
+    const rubbleGeo = new BoxGeometry(0.09, 0.045, 0.07);
+    const rubbleMat = new MeshStandardMaterial({ color: 0x5c534a, roughness: 0.95 });
     for (const [key, kind] of Object.entries(state.floorHazards)) {
       const i = Number(key);
       const x = this.layout.wx(i % state.width);
       const z = this.layout.wz(Math.floor(i / state.width));
       const hole = kind === 'pothole';
       const rim = new Mesh(
-        new CircleGeometry(hole ? 0.4 : 0.44, 20),
+        new CircleGeometry(hole ? 0.43 : 0.46, 20),
         new MeshStandardMaterial({
-          color: hole ? 0x6b625a : 0x2b2540,
-          roughness: hole ? 1 : 0.15,
-          metalness: hole ? 0 : 0.6,
+          color: hole ? 0x62584f : 0x1b1828,
+          roughness: hole ? 0.95 : 0.12,
+          metalness: hole ? 0 : 0.75,
           side: DoubleSide,
         }),
       );
@@ -112,22 +120,98 @@ export class ArenaView implements View {
       rim.position.set(x, 0.014, z);
       rim.receiveShadow = true;
       const core = new Mesh(
-        new CircleGeometry(hole ? 0.3 : 0.34, 18),
+        new CircleGeometry(hole ? 0.31 : 0.36, 18),
         new MeshStandardMaterial({
-          color: hole ? 0x15110e : 0x4a3d78,
-          roughness: hole ? 1 : 0.1,
-          metalness: hole ? 0 : 0.8,
+          color: hole ? 0x14100d : 0x3b2d6e,
+          roughness: hole ? 0.35 : 0.08,
+          metalness: hole ? 0.2 : 0.85,
         }),
       );
       core.rotation.x = -Math.PI / 2;
       core.position.set(x, 0.018, z);
       this.decals.add(rim, core);
+      if (hole) {
+        // Broken asphalt rubble chunks around the pothole rim
+        for (let k = 0; k < 5; k++) {
+          const ang = (k * Math.PI * 2) / 5 + (i % 3) * 0.4;
+          const chunk = new Mesh(rubbleGeo, rubbleMat);
+          chunk.position.set(x + Math.cos(ang) * 0.35, 0.024, z + Math.sin(ang) * 0.35);
+          chunk.rotation.y = ang * 1.7;
+          this.decals.add(chunk);
+        }
+      } else {
+        // Iridescent petroleum rainbow sheen ring on the oil slick
+        const sheen = new Mesh(
+          new RingGeometry(0.16, 0.29, 18),
+          new MeshStandardMaterial({
+            color: 0x28b8d8,
+            emissive: 0x245878,
+            emissiveIntensity: 0.35,
+            roughness: 0.08,
+            metalness: 0.9,
+            side: DoubleSide,
+          }),
+        );
+        sheen.rotation.x = -Math.PI / 2;
+        sheen.position.set(x + 0.03, 0.021, z - 0.02);
+        this.decals.add(sheen);
+      }
+    }
+  }
+
+  /** Distinct visual accents atop permanent interior pillars for Balogun Market and Lekki Roadworks. */
+  private buildArenaPillarAccents(state: GameState): void {
+    if (state.arenaId !== 'balogunMarket' && state.arenaId !== 'lekkiRoadworks') return;
+    const isMarket = state.arenaId === 'balogunMarket';
+    const marketColors = [0xe63946, 0xffbe0b, 0x1d6fe0, 0x169852, 0x8338ec, 0xfb5607];
+    const clothGeo = new BoxGeometry(0.38, 0.045, 0.26);
+    const clothTopGeo = new BoxGeometry(0.32, 0.04, 0.22);
+    const basinGeo = new CylinderGeometry(0.20, 0.14, 0.12, 12);
+    const goodsGeo = new CylinderGeometry(0.15, 0.18, 0.07, 10);
+    const coneGeo = new CylinderGeometry(0.03, 0.12, 0.32, 10);
+    const bandGeo = new CylinderGeometry(0.065, 0.09, 0.09, 10);
+    const coneMat = new MeshStandardMaterial({ color: 0xff5a0e, roughness: 0.45 });
+    const whiteMat = new MeshStandardMaterial({ color: 0xf6f3ea, roughness: 0.5 });
+
+    for (const i of this.initialHard) {
+      const gx = i % state.width;
+      const gy = Math.floor(i / state.width);
+      const wx = this.layout.wx(gx);
+      const wz = this.layout.wz(gy);
+      const h = (gx * 7 + gy * 13) % 6;
+      if (isMarket) {
+        // Folded Ankara fabric stack & enamel produce basin perched on the concrete pillar cap
+        const col1 = marketColors[h % marketColors.length]!;
+        const col2 = marketColors[(h + 2) % marketColors.length]!;
+        if ((gx + gy) % 4 === 0) {
+          const cloth = new Mesh(clothGeo, new MeshStandardMaterial({ color: col1, roughness: 0.78 }));
+          cloth.position.set(wx - 0.12, 1.12, wz + 0.08);
+          cloth.rotation.y = 0.22;
+          const cloth2 = new Mesh(clothTopGeo, new MeshStandardMaterial({ color: col2, roughness: 0.78 }));
+          cloth2.position.set(wx - 0.12, 1.16, wz + 0.08);
+          cloth2.rotation.y = -0.15;
+          this.decals.add(cloth, cloth2);
+        } else if ((gx + gy) % 4 === 2) {
+          const basin = new Mesh(basinGeo, new MeshStandardMaterial({ color: col2, roughness: 0.4 }));
+          basin.position.set(wx + 0.08, 1.15, wz - 0.06);
+          const goods = new Mesh(goodsGeo, new MeshStandardMaterial({ color: 0xf4a226, roughness: 0.75 }));
+          goods.position.set(wx + 0.08, 1.21, wz - 0.06);
+          this.decals.add(basin, goods);
+        }
+      } else if ((gx + gy) % 4 === 0) {
+        // Lekki Roadworks: bright orange/white traffic cone perched on select pillars
+        const cone = new Mesh(coneGeo, coneMat);
+        cone.position.set(wx, 1.26, wz);
+        const stripe = new Mesh(bandGeo, whiteMat);
+        stripe.position.set(wx, 1.25, wz);
+        this.decals.add(cone, stripe);
+      }
     }
   }
 
   /** Variant of the soft block at a tile (for debris colours). */
   variantAt(x: number, y: number): SoftVariant {
-    return softVariantFor(x, y, this.variants);
+    return softVariantFor(x, y, this.variants, this.arenaId);
   }
 
   update(ctx: FrameContext): void {
@@ -152,9 +236,12 @@ export class ArenaView implements View {
       const x = i % state.width;
       const y = Math.floor(i / state.width);
       this.placePillar(i, x, y, 6 * (1 - k * k));
+      this.setContact(i, x, y, 0.35 + 0.65 * k);
       if (k >= 1) {
         this.dropping.delete(i);
-        ctx.fx.dust(x, y, 10, 0.9);
+        ctx.fx.dust(x, y, 12, 1.0);
+        ctx.fx.shockwave(this.layout.wx(x), this.layout.wz(y), 1.5, 0xffaa44);
+        ctx.fx.blockDebris(x, y, 'concrete');
         ctx.fx.shake = Math.min(1, ctx.fx.shake + 0.25);
       }
     }
@@ -163,7 +250,7 @@ export class ArenaView implements View {
   private removeTile(i: number, x: number, y: number, kind: number): void {
     this.contact.remove(i);
     if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.remove(i);
-    else if (kind === Tile.Soft) this.soft.get(softVariantFor(x, y, this.variants))!.remove(i);
+    else if (kind === Tile.Soft) this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.remove(i);
   }
 
   private pillarVariant(x: number, y: number): number {
@@ -194,7 +281,7 @@ export class ArenaView implements View {
     this.q.setFromEuler(this.e);
     this.s.set(1, 1, 1);
     this.m.compose(this.p, this.q, this.s);
-    this.soft.get(softVariantFor(x, y, this.variants))!.set(i, this.m);
+    this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.set(i, this.m);
     this.setContact(i, x, y, 0.85);
   }
 
