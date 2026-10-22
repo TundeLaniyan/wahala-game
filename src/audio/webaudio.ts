@@ -35,8 +35,11 @@ export interface AudioBufferLike {
 export interface BufferSourceNodeLike extends AudioNodeLike {
   buffer: AudioBufferLike | null;
   loop: boolean;
+  /** Loop region in seconds (optional: only the music player sets them). */
+  loopStart?: number;
+  loopEnd?: number;
   readonly playbackRate: AudioParamLike;
-  start(when?: number, offset?: number): void;
+  start(when?: number, offset?: number, duration?: number): void;
   stop(when?: number): void;
   /** Fired by browsers when playback finishes; used to release nodes of stopped loops. */
   onended?: (() => void) | null;

@@ -1,8 +1,9 @@
 # Audio licence notes
 
-**No recorded audio is shipped with WAHALA! yet.** Every sound in the game is synthesised by
-`src/audio/recipes` (pure DSP, no samples). This file exists so that anyone who adds a recording
-records where it came from.
+**No recorded audio is shipped with WAHALA!.** Every sound is synthesised at runtime by
+`src/audio/recipes` (pure DSP, no samples). The generated music, synthetic Pidgin voice clips and generated
+ambience beds that the `claude/wahala-lagos-audio` branch put here were rejected and removed. This file exists
+so that anyone who adds a recording records where it came from.
 
 For every file you add to this folder, add a row here (and a matching `license` field in
 `slots.json`, which the game requires before it will use a recording):

@@ -1,6 +1,7 @@
 import { CHARACTERS } from '../sim';
 import { commands } from '../app/session';
 import { useGameStore } from '../app/store';
+import { AudioSettingsPanel } from './AudioSettings';
 
 export function PauseOverlay() {
   const s = useGameStore((st) => st.settings);
@@ -9,28 +10,7 @@ export function PauseOverlay() {
       <div className="card">
         <h2>PAUSED</h2>
         <p>Take your time, oga.</p>
-        <label className="slider">
-          Crowd &amp; ambience
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={s.musicVolume}
-            onChange={(e) => commands.updateSettings({ musicVolume: Number(e.target.value) })}
-          />
-        </label>
-        <label className="slider">
-          Effects
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={s.sfxVolume}
-            onChange={(e) => commands.updateSettings({ sfxVolume: Number(e.target.value) })}
-          />
-        </label>
+        <AudioSettingsPanel muted={s.muted} onMutedChange={(muted) => commands.updateSettings({ muted })} />
         <div className="row">
           <button
             type="button"

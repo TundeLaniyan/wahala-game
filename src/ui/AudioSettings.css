@@ -1,0 +1,33 @@
+.audio-panel {
+  display: grid;
+  gap: 8px;
+}
+.audio-panel .audio-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 38%) 1fr 3.2em;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.audio-panel .audio-row input {
+  width: 100%;
+  accent-color: var(--gold);
+}
+.audio-panel .audio-row output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.audio-panel .audio-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.audio-panel .audio-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.3;
+}

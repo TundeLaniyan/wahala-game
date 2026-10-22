@@ -1,0 +1,5 @@
+{
+  "_comment": "Music slots. EMPTY ON PURPOSE: the generated Afrobeats tracks were rejected and removed. Add licensed tracks here (see docs/AUDIO.md); the player stays silent while this is empty.",
+  "sampleRate": 44100,
+  "tracks": {}
+}

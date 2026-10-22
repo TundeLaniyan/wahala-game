@@ -3,10 +3,13 @@
  * the mixer buses, sound bank, voice pool, crowd ambience, reaction director, state loops and event
  * router together.
  *
- * THERE IS NO MUSIC. `startMusic` / `stopMusic` / `setIntensity` keep their names so the app keeps
- * working, but they only control the looping crowd/bus-park AMBIENCE; the `music` volume scales the
- * crowd. Every sound is either SYNTHESISED in src/audio/recipes or, when a licensed recording has
- * been dropped into public/audio (see samples.ts), that recording.
+ * Layers (each with its own user volume, see prefs.ts / buses.ts):
+ *   music     pre-rendered loops + stings (music.ts), menu loop until a match starts
+ *   ambience  crowd beds, crowd reactions and spoken lines (pidgin.ts)
+ *   sfx       synthesised gameplay effects and warnings (src/audio/recipes)
+ * NO music or voice files ship (the generated ones were rejected, docs/AUDIO.md): the music player and
+ * the voices stay silent until licensed files are listed in their manifests. Recorded files in
+ * public/audio (see samples.ts) may override synthesised sounds slot by slot.
  *
  * Contract highlights (see index.ts for the public surface):
  *  - Nothing is created or played until `unlock()` (call it from a click/touch handler).
@@ -15,6 +18,14 @@
  */
 import type { GameState, SimEvent } from '../sim';
 import { createAmbience } from './ambience';
+import { createMusicPlayer } from './music';
+import type { MusicPlayer, MusicReport } from './music';
+import { createPidginVoices } from './pidgin';
+import type { PidginVoices, SpokenTrace, VoiceReport } from './pidgin';
+import { createPidginReactor, stingForEnd } from './pidginReactions';
+import type { PidginReactor } from './pidginReactions';
+import { audioPrefs } from './prefs';
+import type { PrefsStore } from './prefs';
 import type { Ambience } from './ambience';
 import { createSoundBank } from './bank';
 import type { BankOptions, SoundBank } from './bank';
@@ -44,20 +55,26 @@ export interface AudioEngine {
   /** Call from a user gesture. Idempotent; later calls re-attempt `resume()` if the OS suspended audio. */
   unlock(): Promise<void>;
   /**
-   * Each value 0..1 (clamped). Effective SFX level = master x sfx. `music` is kept for API
-   * compatibility and now scales the crowd ambience + crowd reactions (there is no music).
+   * LEGACY / manual override. Volumes normally come from the persistent preferences store
+   * (`AudioOptions.prefs`, default `audioPrefs`), which the engine follows by itself; while a store
+   * is active this call is ignored so a stale caller can never override what the user saved.
+   * It applies only when the engine was created with `prefs: null`.
    */
-  setVolumes(v: { master: number; music: number; sfx: number }): void;
+  setVolumes(v: { master: number; music: number; sfx: number; ambience?: number }): void;
   /** Smooth (click-free) mute: ramps the master gain to 0 / back. */
   setMuted(muted: boolean): void;
   /**
-   * Starts the looping crowd/bus-park ambience (NOT music; the name is historical). Remembered if
-   * called before `unlock()`.
+   * A match is starting: crossfades the menu music to the in-match Afrobeats loop and starts the
+   * Lagos street ambience + chatter. Remembered if called before `unlock()`. (The name predates the
+   * music; it now means "enter the match soundscape".)
    */
   startMusic(): void;
-  /** Fades the ambience out and stops state-driven loops (generators, engines). */
+  /** Leaving the match: ambience fades out, generator/engine loops stop, the menu music returns. */
   stopMusic(): void;
-  /** 0..1 excitement: scales the ambience's excited layer and how eager/loud the crowd reacts. */
+  /**
+   * 0..1 excitement: scales the ambience's excited layer and how eager/loud the crowd reacts. Values
+   * above ~0.5 (the app sends 1 for the last 30 s) also fade in the percussion tension stem.
+   */
   setIntensity(level: number): void;
   /**
    * Plays SFX and crowd reactions for this batch of sim events and keeps generator / vehicle loops
@@ -67,6 +84,10 @@ export interface AudioEngine {
   playUi(kind: 'click' | 'back' | 'start' | 'countdown' | 'go'): void;
   /** Resolves when optional recorded sample slots have been tried (always resolves, never rejects). */
   whenSamplesLoaded(): Promise<SlotReport>;
+  /** Resolves when the music files have been tried (never rejects). */
+  whenMusicLoaded(): Promise<MusicReport>;
+  /** Resolves when the spoken-Pidgin packs have been tried (never rejects). */
+  whenVoicesLoaded(): Promise<VoiceReport>;
   /** Stops timers and sounds and closes the context. The engine is inert afterwards. */
   dispose(): void;
 }
@@ -87,6 +108,13 @@ export interface AudioOptions {
   bank?: BankOptions;
   /** Called for every one-shot that is actually started (debugging and tests). */
   onPlay?: (t: PlayTrace) => void;
+  /**
+   * Persistent preferences the engine follows (volumes, spoken-Pidgin switch). Default: the shared
+   * `audioPrefs` store (localStorage). Pass `null` to opt out (the legacy `setVolumes` then applies).
+   */
+  prefs?: PrefsStore | null;
+  /** Called for every spoken Pidgin line that is actually scheduled (debugging and tests). */
+  onSpeak?: (t: SpokenTrace) => void;
 }
 
 interface Graph {
@@ -100,9 +128,13 @@ interface Graph {
   loops: LoopSet;
   router: EventRouter;
   fuse: FuseTracker;
+  music: MusicPlayer;
+  voices: PidginVoices;
+  reactor: PidginReactor;
 }
 
-const DEFAULT_VOLUMES: Volumes = { master: 0.8, music: 0.8, sfx: 0.9 };
+const NO_MUSIC: MusicReport = { loaded: [], failed: [] };
+const NO_VOICES: VoiceReport = { loadedPacks: [], failed: [], clips: 0, scenes: 0 };
 const UI_SOUND: Record<Parameters<AudioEngine['playUi']>[0], SoundId> = {
   click: 'ui_click',
   back: 'ui_back',
@@ -125,12 +157,22 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
   let graph: Graph | null = null;
   let unlocking: Promise<void> | null = null;
   let disposed = false;
-  let volumes: Volumes = { ...DEFAULT_VOLUMES };
+  const prefs: PrefsStore | null = opts.prefs === undefined ? audioPrefs : opts.prefs;
+  const fromPrefs = (): Volumes => {
+    const p = (prefs as PrefsStore).get();
+    return { master: p.master, music: p.music, ambience: p.ambience, sfx: p.sfx };
+  };
+  let volumes: Volumes = prefs ? fromPrefs() : { master: 0.8, music: 0.45, ambience: 0.65, sfx: 0.85 };
   let muted = false;
   let ambienceWanted = false;
+  /** True from startMusic() until stopMusic(): the match soundscape (match music, street chatter). */
+  let matchWanted = false;
   let intensity = 0;
   let resuming = false;
   let samples: Promise<SlotReport> = Promise.resolve(EMPTY_REPORT);
+  let musicLoaded: Promise<MusicReport> = Promise.resolve(NO_MUSIC);
+  let voicesLoaded: Promise<VoiceReport> = Promise.resolve(NO_VOICES);
+  let unsubscribePrefs: (() => void) | null = null;
 
   const build = (ctx: AudioContextLike): Graph => {
     const buses = createBuses(ctx, volumes, muted);
@@ -139,8 +181,26 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
     const mixer = createMixer(ctx, bank, buses, pool, opts.onPlay);
     const ambience = createAmbience(ctx, bank, buses);
     ambience.setIntensity(intensity);
+    // street mode (no stadium roars) was tuned for the rejected Pidgin voices; keep the baseline crowd until real voices land
     const crowd = createReactionDirector(mixer);
     crowd.setIntensity(intensity);
+    const fetcher = opts.fetch === undefined ? defaultFetch() : opts.fetch;
+    const decode = decoderFor(ctx);
+    const music = createMusicPlayer(ctx, buses, {
+      fetch: fetcher,
+      decode,
+      baseUrl: opts.sampleBaseUrl,
+      onError: fail,
+    });
+    music.setScene(matchWanted ? 'match' : 'menu');
+    const voices = createPidginVoices(ctx, buses, pool, {
+      fetch: fetcher,
+      decode,
+      baseUrl: opts.sampleBaseUrl,
+      onError: fail,
+      onSpeak: opts.onSpeak,
+    });
+    voices.setEnabled(prefs ? prefs.get().voices : true);
     return {
       ctx,
       buses,
@@ -152,6 +212,9 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       loops: createLoopSet(ctx, bank, buses),
       router: createEventRouter({ mixer, buses, crowd, ambience, now: () => ctx.currentTime }),
       fuse: createFuseTracker(),
+      music,
+      voices,
+      reactor: createPidginReactor(voices),
     };
   };
 
@@ -174,8 +237,15 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
   };
 
   const applyAmbience = (g: Graph): void => {
-    if (ambienceWanted) g.ambience.start();
-    else {
+    g.music.setScene(matchWanted ? 'match' : 'menu');
+    if (ambienceWanted) {
+      if (!g.ambience.running) {
+        g.voices.reset(g.ctx.currentTime);
+        g.reactor.reset();
+      }
+      g.ambience.start();
+    } else {
+      g.voices.stop();
       g.ambience.stop();
       g.loops.stopAll();
       g.fuse.reset();
@@ -183,6 +253,16 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       g.crowd.reset();
     }
   };
+
+  if (prefs) {
+    unsubscribePrefs = prefs.subscribe((p) => {
+      volumes = { master: p.master, music: p.music, ambience: p.ambience, sfx: p.sfx };
+      guard((g) => {
+        g.buses.setVolumes(volumes);
+        g.voices.setEnabled(p.voices);
+      });
+    });
+  }
 
   return {
     unlock() {
@@ -220,6 +300,9 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
           fail(e);
           return EMPTY_REPORT;
         });
+        // music first (the title screen wants it), then the spoken-Pidgin packs
+        musicLoaded = g.music.load();
+        voicesLoaded = musicLoaded.then(() => g.voices.load());
       } catch (e) {
         fail(e);
         graph = null;
@@ -228,7 +311,13 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       return unlocking;
     },
     setVolumes(v) {
-      volumes = { master: clamp01(v.master), music: clamp01(v.music), sfx: clamp01(v.sfx) };
+      if (prefs) return; // the persistent preferences own the mix (see AudioEngine.setVolumes)
+      volumes = {
+        master: clamp01(v.master),
+        music: clamp01(v.music),
+        ambience: clamp01(v.ambience ?? volumes.ambience),
+        sfx: clamp01(v.sfx),
+      };
       guard((g) => g.buses.setVolumes(volumes));
     },
     setMuted(m) {
@@ -240,6 +329,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
     },
     startMusic() {
       ambienceWanted = true;
+      matchWanted = true;
       guard((g) => {
         applyAmbience(g);
         keepRunning(g);
@@ -247,6 +337,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
     },
     stopMusic() {
       ambienceWanted = false;
+      matchWanted = false;
       guard(applyAmbience);
     },
     setIntensity(level) {
@@ -256,6 +347,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       guard((g) => {
         g.ambience.setIntensity(intensity);
         g.crowd.setIntensity(intensity);
+        g.music.setTension((intensity - 0.5) * 2);
       });
     },
     handleEvents(events, state) {
@@ -263,6 +355,10 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
         if (muted) return;
         keepRunning(g);
         g.router.handle(events, state);
+        g.reactor.handle(events, state, g.router.lastNearMisses, g.router.panFor);
+        const sting = stingForEnd(events, state);
+        if (sting) g.music.sting(sting);
+        if (ambienceWanted) g.voices.update(g.ctx.currentTime, intensity);
         g.fuse.update(state, g.ctx.currentTime, (e) => {
           const pan = g.router.panFor(state, e.tileX);
           if (e.mode === 'timed') {
@@ -286,13 +382,19 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       });
     },
     whenSamplesLoaded: () => samples,
+    whenMusicLoaded: () => musicLoaded,
+    whenVoicesLoaded: () => voicesLoaded,
     dispose() {
       if (disposed) return;
       const g = graph;
       disposed = true;
       graph = null;
+      unsubscribePrefs?.();
+      unsubscribePrefs = null;
       if (!g) return;
       try {
+        g.music.dispose();
+        g.voices.dispose();
         g.ambience.dispose();
         g.loops.stopAll();
         g.pool.stopAll();

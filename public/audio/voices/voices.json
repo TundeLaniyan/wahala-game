@@ -1,0 +1,1351 @@
+{
+  "version": 1,
+  "synthetic": false,
+  "note": "LINE CATALOGUE ONLY - NO VOICE AUDIO IS SHIPPED. The synthetic placeholder voice packs were rejected and removed; every line here is silent until a real, licensed recording is listed in recorded.json (see recorded/README.md). `voice` is only a speaker-rotation tag.",
+  "packs": {},
+  "clips": [
+    {
+      "id": "r_match_start_0",
+      "pack": "react",
+      "category": "match_start",
+      "text": "Oya! Make we see wetin dey happen!",
+      "voice": "am_eric",
+      "start": 0.0,
+      "dur": 1.7872
+    },
+    {
+      "id": "r_match_start_1",
+      "pack": "react",
+      "category": "match_start",
+      "text": "Ehen! Wahala don start!",
+      "voice": "bf_alice",
+      "start": 2.0872,
+      "dur": 1.7644
+    },
+    {
+      "id": "r_match_start_2",
+      "pack": "react",
+      "category": "match_start",
+      "text": "Come, come, come! Dem don begin!",
+      "voice": "bm_george",
+      "start": 4.1516,
+      "dur": 2.1705
+    },
+    {
+      "id": "r_match_start_3",
+      "pack": "react",
+      "category": "match_start",
+      "text": "Abeg, make we start!",
+      "voice": "af_sarah",
+      "start": 6.6221,
+      "dur": 1.0505
+    },
+    {
+      "id": "r_gen_placed_0",
+      "pack": "react",
+      "category": "gen_placed",
+      "text": "Ah! Wetin be this one?",
+      "voice": "am_michael",
+      "start": 7.9726,
+      "dur": 1.3827
+    },
+    {
+      "id": "r_gen_placed_1",
+      "pack": "react",
+      "category": "gen_placed",
+      "text": "Oga, e don put generator o!",
+      "voice": "af_jessica",
+      "start": 9.6553,
+      "dur": 1.8804
+    },
+    {
+      "id": "r_gen_placed_2",
+      "pack": "react",
+      "category": "gen_placed",
+      "text": "Ehen, see am!",
+      "voice": "hm_psi",
+      "start": 11.8357,
+      "dur": 0.7613
+    },
+    {
+      "id": "r_gen_placed_3",
+      "pack": "react",
+      "category": "gen_placed",
+      "text": "Abeg, who put that thing for there?",
+      "voice": "bf_emma",
+      "start": 12.897,
+      "dur": 1.5146
+    },
+    {
+      "id": "r_fuse_0",
+      "pack": "react",
+      "category": "fuse",
+      "text": "Run! Run! E go blow!",
+      "voice": "bm_daniel",
+      "start": 14.7116,
+      "dur": 1.5682
+    },
+    {
+      "id": "r_fuse_1",
+      "pack": "react",
+      "category": "fuse",
+      "text": "Oga, shift! Shift from there!",
+      "voice": "af_bella",
+      "start": 16.5798,
+      "dur": 1.6031
+    },
+    {
+      "id": "r_fuse_2",
+      "pack": "react",
+      "category": "fuse",
+      "text": "Chai! The generator don dey go!",
+      "voice": "am_adam",
+      "start": 18.4829,
+      "dur": 1.7772
+    },
+    {
+      "id": "r_fuse_3",
+      "pack": "react",
+      "category": "fuse",
+      "text": "Abeg, move! Make e no catch you!",
+      "voice": "hf_alpha",
+      "start": 20.56,
+      "dur": 1.789
+    },
+    {
+      "id": "r_fuse_4",
+      "pack": "react",
+      "category": "fuse",
+      "text": "Ah! E don almost blow!",
+      "voice": "hm_omega",
+      "start": 22.6491,
+      "dur": 1.6065
+    },
+    {
+      "id": "r_escape_0",
+      "pack": "react",
+      "category": "escape",
+      "text": "Omo! See as e take escape!",
+      "voice": "af_sky",
+      "start": 24.5556,
+      "dur": 1.6333
+    },
+    {
+      "id": "r_escape_1",
+      "pack": "react",
+      "category": "escape",
+      "text": "Ah! E no touch am!",
+      "voice": "am_onyx",
+      "start": 26.4889,
+      "dur": 1.265
+    },
+    {
+      "id": "r_escape_2",
+      "pack": "react",
+      "category": "escape",
+      "text": "Oya! You sabi run o!",
+      "voice": "hf_beta",
+      "start": 28.0538,
+      "dur": 1.1264
+    },
+    {
+      "id": "r_escape_3",
+      "pack": "react",
+      "category": "escape",
+      "text": "God dey! Na by inch!",
+      "voice": "bm_lewis",
+      "start": 29.4803,
+      "dur": 1.594
+    },
+    {
+      "id": "r_escape_4",
+      "pack": "react",
+      "category": "escape",
+      "text": "Chai! That one na close shave!",
+      "voice": "af_nicole",
+      "start": 31.3742,
+      "dur": 1.7465
+    },
+    {
+      "id": "r_escape_5",
+      "pack": "react",
+      "category": "escape",
+      "text": "Ah! E nearly catch am!",
+      "voice": "am_liam",
+      "start": 33.4207,
+      "dur": 1.3393
+    },
+    {
+      "id": "r_elim_bot_0",
+      "pack": "react",
+      "category": "elim_bot",
+      "text": "Ah! You don finish am!",
+      "voice": "bf_isabella",
+      "start": 35.06,
+      "dur": 1.2105
+    },
+    {
+      "id": "r_elim_bot_1",
+      "pack": "react",
+      "category": "elim_bot",
+      "text": "Ehen! That one don go!",
+      "voice": "am_eric",
+      "start": 36.5705,
+      "dur": 1.4567
+    },
+    {
+      "id": "r_elim_bot_2",
+      "pack": "react",
+      "category": "elim_bot",
+      "text": "See calculation! This guy wicked!",
+      "voice": "bf_alice",
+      "start": 38.3272,
+      "dur": 2.0633
+    },
+    {
+      "id": "r_elim_bot_3",
+      "pack": "react",
+      "category": "elim_bot",
+      "text": "Oya! One don comot!",
+      "voice": "bm_george",
+      "start": 40.6905,
+      "dur": 1.6242
+    },
+    {
+      "id": "r_elim_bot_4",
+      "pack": "react",
+      "category": "elim_bot",
+      "text": "E don do! Na so e end!",
+      "voice": "af_sarah",
+      "start": 42.6147,
+      "dur": 1.4101
+    },
+    {
+      "id": "r_elim_human_0",
+      "pack": "react",
+      "category": "elim_human",
+      "text": "Chai! Oga don waka!",
+      "voice": "am_michael",
+      "start": 44.3248,
+      "dur": 1.4887
+    },
+    {
+      "id": "r_elim_human_1",
+      "pack": "react",
+      "category": "elim_human",
+      "text": "Ah ah! Sorry o!",
+      "voice": "af_jessica",
+      "start": 46.1135,
+      "dur": 1.0362
+    },
+    {
+      "id": "r_elim_human_2",
+      "pack": "react",
+      "category": "elim_human",
+      "text": "Wetin be that one? E don finish!",
+      "voice": "hm_psi",
+      "start": 47.4496,
+      "dur": 2.0348
+    },
+    {
+      "id": "r_elim_human_3",
+      "pack": "react",
+      "category": "elim_human",
+      "text": "Haa! You don burst!",
+      "voice": "bf_emma",
+      "start": 49.7845,
+      "dur": 1.2063
+    },
+    {
+      "id": "r_elim_human_4",
+      "pack": "react",
+      "category": "elim_human",
+      "text": "Abeg, no vex! Try again!",
+      "voice": "bm_daniel",
+      "start": 51.2907,
+      "dur": 1.7329
+    },
+    {
+      "id": "r_danfo_0",
+      "pack": "react",
+      "category": "danfo",
+      "text": "Chai! That Danfo don carry am go!",
+      "voice": "af_bella",
+      "start": 53.3236,
+      "dur": 2.0813
+    },
+    {
+      "id": "r_danfo_1",
+      "pack": "react",
+      "category": "danfo",
+      "text": "Danfo! Danfo! Shift! Shift!",
+      "voice": "am_adam",
+      "start": 55.705,
+      "dur": 1.5781
+    },
+    {
+      "id": "r_danfo_2",
+      "pack": "react",
+      "category": "danfo",
+      "text": "Oga, where you dey run go?",
+      "voice": "hf_alpha",
+      "start": 57.583,
+      "dur": 1.4889
+    },
+    {
+      "id": "r_danfo_3",
+      "pack": "react",
+      "category": "danfo",
+      "text": "See Danfo o! E no get brake!",
+      "voice": "hm_omega",
+      "start": 59.3719,
+      "dur": 2.1155
+    },
+    {
+      "id": "r_taxi_0",
+      "pack": "react",
+      "category": "taxi",
+      "text": "Yellow taxi dey come o!",
+      "voice": "af_sky",
+      "start": 61.7875,
+      "dur": 1.6159
+    },
+    {
+      "id": "r_taxi_1",
+      "pack": "react",
+      "category": "taxi",
+      "text": "Taxi! Taxi! Abeg, move!",
+      "voice": "am_onyx",
+      "start": 63.7033,
+      "dur": 1.55
+    },
+    {
+      "id": "r_taxi_2",
+      "pack": "react",
+      "category": "taxi",
+      "text": "Ah! That taxi dey craze!",
+      "voice": "hf_beta",
+      "start": 65.5533,
+      "dur": 1.3303
+    },
+    {
+      "id": "r_taxi_3",
+      "pack": "react",
+      "category": "taxi",
+      "text": "Where this taxi dey go?",
+      "voice": "bm_lewis",
+      "start": 67.1836,
+      "dur": 1.4203
+    },
+    {
+      "id": "r_keke_0",
+      "pack": "react",
+      "category": "keke",
+      "text": "Keke dey come! Keke dey come!",
+      "voice": "af_nicole",
+      "start": 68.9038,
+      "dur": 2.093
+    },
+    {
+      "id": "r_keke_1",
+      "pack": "react",
+      "category": "keke",
+      "text": "Ah! Keke don turn!",
+      "voice": "am_liam",
+      "start": 71.2968,
+      "dur": 1.317
+    },
+    {
+      "id": "r_keke_2",
+      "pack": "react",
+      "category": "keke",
+      "text": "Chai! Napep dey fly o!",
+      "voice": "bf_isabella",
+      "start": 72.9137,
+      "dur": 1.446
+    },
+    {
+      "id": "r_keke_3",
+      "pack": "react",
+      "category": "keke",
+      "text": "Oga, abeg, Keke dey your back!",
+      "voice": "am_eric",
+      "start": 74.6597,
+      "dur": 1.6457
+    },
+    {
+      "id": "r_vehicle_destroyed_0",
+      "pack": "react",
+      "category": "vehicle_destroyed",
+      "text": "Ah ah! Dem don scatter the motor!",
+      "voice": "bf_alice",
+      "start": 76.6054,
+      "dur": 1.818
+    },
+    {
+      "id": "r_vehicle_destroyed_1",
+      "pack": "react",
+      "category": "vehicle_destroyed",
+      "text": "Wahala! The motor don burst!",
+      "voice": "bm_george",
+      "start": 78.7234,
+      "dur": 2.0206
+    },
+    {
+      "id": "r_vehicle_destroyed_2",
+      "pack": "react",
+      "category": "vehicle_destroyed",
+      "text": "Na the generator scatter am o!",
+      "voice": "af_sarah",
+      "start": 81.044,
+      "dur": 1.473
+    },
+    {
+      "id": "r_vehicle_destroyed_3",
+      "pack": "react",
+      "category": "vehicle_destroyed",
+      "text": "Chai! No more motor!",
+      "voice": "am_michael",
+      "start": 82.817,
+      "dur": 1.2138
+    },
+    {
+      "id": "r_okada_save_0",
+      "pack": "react",
+      "category": "okada_save",
+      "text": "Okada save am! Na so e dey go!",
+      "voice": "af_jessica",
+      "start": 84.3308,
+      "dur": 1.9984
+    },
+    {
+      "id": "r_okada_save_1",
+      "pack": "react",
+      "category": "okada_save",
+      "text": "Ah! The Okada take the wahala for am!",
+      "voice": "hm_psi",
+      "start": 86.6292,
+      "dur": 1.9157
+    },
+    {
+      "id": "r_okada_save_2",
+      "pack": "react",
+      "category": "okada_save",
+      "text": "Omo! That Okada na hero!",
+      "voice": "bf_emma",
+      "start": 88.8449,
+      "dur": 1.4245
+    },
+    {
+      "id": "r_okada_break_0",
+      "pack": "react",
+      "category": "okada_break",
+      "text": "Chai! Okada don die!",
+      "voice": "bm_daniel",
+      "start": 90.5694,
+      "dur": 1.6233
+    },
+    {
+      "id": "r_okada_break_1",
+      "pack": "react",
+      "category": "okada_break",
+      "text": "Ah! The Okada don scatter!",
+      "voice": "af_bella",
+      "start": 92.4926,
+      "dur": 1.579
+    },
+    {
+      "id": "r_okada_break_2",
+      "pack": "react",
+      "category": "okada_break",
+      "text": "Okada don finish o!",
+      "voice": "am_adam",
+      "start": 94.3717,
+      "dur": 1.2559
+    },
+    {
+      "id": "r_final_0",
+      "pack": "react",
+      "category": "final",
+      "text": "Time dey go o! Oya, oya!",
+      "voice": "hf_alpha",
+      "start": 95.9275,
+      "dur": 1.6618
+    },
+    {
+      "id": "r_final_1",
+      "pack": "react",
+      "category": "final",
+      "text": "Make una hurry! Time don near finish!",
+      "voice": "hm_omega",
+      "start": 97.8893,
+      "dur": 2.3805
+    },
+    {
+      "id": "r_final_2",
+      "pack": "react",
+      "category": "final",
+      "text": "Oga, finish am before time go!",
+      "voice": "af_sky",
+      "start": 100.5698,
+      "dur": 1.9156
+    },
+    {
+      "id": "r_final_3",
+      "pack": "react",
+      "category": "final",
+      "text": "Last minute! Wahala dey!",
+      "voice": "am_onyx",
+      "start": 102.7855,
+      "dur": 1.3757
+    },
+    {
+      "id": "r_win_0",
+      "pack": "react",
+      "category": "win",
+      "text": "Ehen! Na you be the oga!",
+      "voice": "hf_beta",
+      "start": 104.4611,
+      "dur": 1.2146
+    },
+    {
+      "id": "r_win_1",
+      "pack": "react",
+      "category": "win",
+      "text": "Winner! Winner! Congratulations o!",
+      "voice": "bm_lewis",
+      "start": 105.9757,
+      "dur": 2.2317
+    },
+    {
+      "id": "r_win_2",
+      "pack": "react",
+      "category": "win",
+      "text": "Chai! You don win o!",
+      "voice": "af_nicole",
+      "start": 108.5075,
+      "dur": 1.248
+    },
+    {
+      "id": "r_win_3",
+      "pack": "react",
+      "category": "win",
+      "text": "Na you biggest! Well done!",
+      "voice": "am_liam",
+      "start": 110.0555,
+      "dur": 1.3913
+    },
+    {
+      "id": "r_lose_0",
+      "pack": "react",
+      "category": "lose",
+      "text": "Ah! Sorry o! Better luck next time!",
+      "voice": "bf_isabella",
+      "start": 111.7468,
+      "dur": 1.8628
+    },
+    {
+      "id": "r_lose_1",
+      "pack": "react",
+      "category": "lose",
+      "text": "E don do! Try again, my man!",
+      "voice": "am_eric",
+      "start": 113.9096,
+      "dur": 1.7848
+    },
+    {
+      "id": "r_lose_2",
+      "pack": "react",
+      "category": "lose",
+      "text": "Chai! The other one don win!",
+      "voice": "bf_alice",
+      "start": 115.9944,
+      "dur": 1.7112
+    },
+    {
+      "id": "r_draw_0",
+      "pack": "react",
+      "category": "draw",
+      "text": "Haa! Nobody win!",
+      "voice": "bm_george",
+      "start": 118.0055,
+      "dur": 1.3473
+    },
+    {
+      "id": "r_draw_1",
+      "pack": "react",
+      "category": "draw",
+      "text": "Wetin be this one? Both of dem don die!",
+      "voice": "af_sarah",
+      "start": 119.6528,
+      "dur": 2.0986
+    },
+    {
+      "id": "r_draw_2",
+      "pack": "react",
+      "category": "draw",
+      "text": "Na draw be that! Wahala!",
+      "voice": "am_michael",
+      "start": 122.0514,
+      "dur": 1.6241
+    },
+    {
+      "id": "r_kicked_0",
+      "pack": "react",
+      "category": "kicked",
+      "text": "Oga, why you kick am?",
+      "voice": "af_jessica",
+      "start": 123.9755,
+      "dur": 1.3926
+    },
+    {
+      "id": "r_kicked_1",
+      "pack": "react",
+      "category": "kicked",
+      "text": "Ah! See as e throw am!",
+      "voice": "hm_psi",
+      "start": 125.6681,
+      "dur": 1.194
+    },
+    {
+      "id": "r_kicked_2",
+      "pack": "react",
+      "category": "kicked",
+      "text": "Who dey throw generator like that?",
+      "voice": "bf_emma",
+      "start": 127.162,
+      "dur": 1.7246
+    },
+    {
+      "id": "r_pickup_0",
+      "pack": "react",
+      "category": "pickup",
+      "text": "Ehen! Lucky guy!",
+      "voice": "bm_daniel",
+      "start": 129.1867,
+      "dur": 1.2679
+    },
+    {
+      "id": "r_pickup_1",
+      "pack": "react",
+      "category": "pickup",
+      "text": "Oga, you don get am!",
+      "voice": "af_bella",
+      "start": 130.7546,
+      "dur": 1.192
+    },
+    {
+      "id": "r_pickup_2",
+      "pack": "react",
+      "category": "pickup",
+      "text": "Ah! See as e carry am!",
+      "voice": "am_adam",
+      "start": 132.2465,
+      "dur": 1.1062
+    },
+    {
+      "id": "r_pushed_0",
+      "pack": "react",
+      "category": "pushed",
+      "text": "Ah! Why you push am?",
+      "voice": "hf_alpha",
+      "start": 133.6528,
+      "dur": 1.118
+    },
+    {
+      "id": "r_pushed_1",
+      "pack": "react",
+      "category": "pushed",
+      "text": "Oga, you no get respect?",
+      "voice": "hm_omega",
+      "start": 135.0708,
+      "dur": 1.6993
+    },
+    {
+      "id": "r_pushed_2",
+      "pack": "react",
+      "category": "pushed",
+      "text": "Hey! Abeg, no push me!",
+      "voice": "af_sky",
+      "start": 137.0701,
+      "dur": 1.3934
+    },
+    {
+      "id": "r_thrown_0",
+      "pack": "react",
+      "category": "thrown",
+      "text": "Who dey throw bottle?",
+      "voice": "am_onyx",
+      "start": 138.7635,
+      "dur": 1.2431
+    },
+    {
+      "id": "r_thrown_1",
+      "pack": "react",
+      "category": "thrown",
+      "text": "Ah! Firecracker! Abeg, stop!",
+      "voice": "hf_beta",
+      "start": 140.3066,
+      "dur": 1.4008
+    },
+    {
+      "id": "r_thrown_2",
+      "pack": "react",
+      "category": "thrown",
+      "text": "Hey! Na who do that one?",
+      "voice": "bm_lewis",
+      "start": 142.0074,
+      "dur": 1.4028
+    },
+    {
+      "id": "r_crush_0",
+      "pack": "react",
+      "category": "crush",
+      "text": "Chai! E don fall o!",
+      "voice": "af_nicole",
+      "start": 143.7103,
+      "dur": 1.4918
+    },
+    {
+      "id": "r_crush_1",
+      "pack": "react",
+      "category": "crush",
+      "text": "Ah! Watch out!",
+      "voice": "am_liam",
+      "start": 145.502,
+      "dur": 1.0517
+    },
+    {
+      "id": "r_crush_2",
+      "pack": "react",
+      "category": "crush",
+      "text": "Abeg, be careful o!",
+      "voice": "bf_isabella",
+      "start": 146.8537,
+      "dur": 1.2167
+    },
+    {
+      "id": "r_hazard_0",
+      "pack": "react",
+      "category": "hazard",
+      "text": "Ah! Pothole! Na Lagos road!",
+      "voice": "am_eric",
+      "start": 148.3704,
+      "dur": 1.6131
+    },
+    {
+      "id": "r_hazard_1",
+      "pack": "react",
+      "category": "hazard",
+      "text": "E don slip! Na oil!",
+      "voice": "bf_alice",
+      "start": 150.2835,
+      "dur": 1.5373
+    },
+    {
+      "id": "r_hazard_2",
+      "pack": "react",
+      "category": "hazard",
+      "text": "Chai! Lagos road no be joke!",
+      "voice": "bm_george",
+      "start": 152.1207,
+      "dur": 2.0565
+    },
+    {
+      "id": "r_dazed_0",
+      "pack": "react",
+      "category": "dazed",
+      "text": "Ah! Him head don turn!",
+      "voice": "af_sarah",
+      "start": 154.4772,
+      "dur": 1.1392
+    },
+    {
+      "id": "r_dazed_1",
+      "pack": "react",
+      "category": "dazed",
+      "text": "Abeg, wake up! Wahala dey!",
+      "voice": "am_michael",
+      "start": 155.9165,
+      "dur": 1.6553
+    },
+    {
+      "id": "a_shift_0",
+      "pack": "ambient",
+      "category": "shift",
+      "text": "Oga, abeg shift small!",
+      "voice": "hm_psi",
+      "start": 0.0,
+      "dur": 1.5671
+    },
+    {
+      "id": "a_shift_1",
+      "pack": "ambient",
+      "category": "shift",
+      "text": "Ah ah! Where you wan make I go?",
+      "voice": "af_jessica",
+      "start": 1.8671,
+      "dur": 1.6135
+    },
+    {
+      "id": "a_shift_2",
+      "pack": "ambient",
+      "category": "shift",
+      "text": "Abeg, make I pass!",
+      "voice": "bm_daniel",
+      "start": 3.7806,
+      "dur": 1.3989
+    },
+    {
+      "id": "a_side_0",
+      "pack": "ambient",
+      "category": "side",
+      "text": "Wetin dey happen for that side?",
+      "voice": "bf_emma",
+      "start": 5.4795,
+      "dur": 1.7993
+    },
+    {
+      "id": "a_side_1",
+      "pack": "ambient",
+      "category": "side",
+      "text": "I no know o. Na fight dem dey fight.",
+      "voice": "am_adam",
+      "start": 7.5788,
+      "dur": 2.1897
+    },
+    {
+      "id": "a_bargain1_0",
+      "pack": "ambient",
+      "category": "bargain1",
+      "text": "Aunty, how much you wan collect for this one?",
+      "voice": "hm_omega",
+      "start": 10.0684,
+      "dur": 2.376
+    },
+    {
+      "id": "a_bargain1_1",
+      "pack": "ambient",
+      "category": "bargain1",
+      "text": "Na two thousand naira.",
+      "voice": "af_bella",
+      "start": 12.7444,
+      "dur": 1.057
+    },
+    {
+      "id": "a_bargain1_2",
+      "pack": "ambient",
+      "category": "bargain1",
+      "text": "Two thousand? You dey craze? Abeg, reduce am.",
+      "voice": "am_onyx",
+      "start": 14.1014,
+      "dur": 2.6901
+    },
+    {
+      "id": "a_bargain1_3",
+      "pack": "ambient",
+      "category": "bargain1",
+      "text": "Oga, na last price be that.",
+      "voice": "hf_alpha",
+      "start": 17.0915,
+      "dur": 1.813
+    },
+    {
+      "id": "a_bargain2_0",
+      "pack": "ambient",
+      "category": "bargain2",
+      "text": "How much be this one?",
+      "voice": "af_sky",
+      "start": 19.2045,
+      "dur": 1.338
+    },
+    {
+      "id": "a_bargain2_1",
+      "pack": "ambient",
+      "category": "bargain2",
+      "text": "Na five hundred.",
+      "voice": "bm_lewis",
+      "start": 20.8426,
+      "dur": 1.1227
+    },
+    {
+      "id": "a_bargain2_2",
+      "pack": "ambient",
+      "category": "bargain2",
+      "text": "Abeg, add small. I go pay now now.",
+      "voice": "hf_beta",
+      "start": 22.2653,
+      "dur": 2.0461
+    },
+    {
+      "id": "a_call_ikeja_0",
+      "pack": "ambient",
+      "category": "call_ikeja",
+      "text": "Ikeja! Ikeja! Ikeja! One more person!",
+      "voice": "am_liam",
+      "start": 24.6113,
+      "dur": 2.0459
+    },
+    {
+      "id": "a_call_oshodi_0",
+      "pack": "ambient",
+      "category": "call_oshodi",
+      "text": "Oshodi! Oshodi! Oshodi! Enter, enter!",
+      "voice": "am_eric",
+      "start": 26.9572,
+      "dur": 2.0762
+    },
+    {
+      "id": "a_call_yaba_0",
+      "pack": "ambient",
+      "category": "call_yaba",
+      "text": "Yaba! Yaba! Who dey go Yaba?",
+      "voice": "bm_george",
+      "start": 29.3334,
+      "dur": 2.0697
+    },
+    {
+      "id": "a_call_island_0",
+      "pack": "ambient",
+      "category": "call_island",
+      "text": "Obalende! Island! Island! Remain two!",
+      "voice": "am_michael",
+      "start": 31.7031,
+      "dur": 2.2076
+    },
+    {
+      "id": "a_call_mile2_0",
+      "pack": "ambient",
+      "category": "call_mile2",
+      "text": "Mile two! Mile two! Straight!",
+      "voice": "hm_psi",
+      "start": 34.2107,
+      "dur": 1.5089
+    },
+    {
+      "id": "a_call_ikorodu_0",
+      "pack": "ambient",
+      "category": "call_ikorodu",
+      "text": "Ikorodu! Ikorodu! Come, come, come!",
+      "voice": "bm_daniel",
+      "start": 36.0196,
+      "dur": 2.1939
+    },
+    {
+      "id": "a_call_water_0",
+      "pack": "ambient",
+      "category": "call_water",
+      "text": "Pure water! Pure water! Cold pure water!",
+      "voice": "af_nicole",
+      "start": 38.5135,
+      "dur": 3.0421
+    },
+    {
+      "id": "a_call_gala_0",
+      "pack": "ambient",
+      "category": "call_gala",
+      "text": "Gala! Gala! Buy your gala here!",
+      "voice": "bf_isabella",
+      "start": 41.8556,
+      "dur": 1.6638
+    },
+    {
+      "id": "a_call_suya_0",
+      "pack": "ambient",
+      "category": "call_suya",
+      "text": "Suya! Suya don ready! Hot suya!",
+      "voice": "am_adam",
+      "start": 43.8195,
+      "dur": 1.668
+    },
+    {
+      "id": "a_call_bread_0",
+      "pack": "ambient",
+      "category": "call_bread",
+      "text": "Agege bread! Hot bread! Come buy!",
+      "voice": "bf_alice",
+      "start": 45.7875,
+      "dur": 1.9732
+    },
+    {
+      "id": "a_change_0",
+      "pack": "ambient",
+      "category": "change",
+      "text": "Conductor, na who dey owe you change?",
+      "voice": "hm_omega",
+      "start": 48.0607,
+      "dur": 2.2428
+    },
+    {
+      "id": "a_change_1",
+      "pack": "ambient",
+      "category": "change",
+      "text": "Oga, I go give you. Wait small.",
+      "voice": "af_sarah",
+      "start": 50.6035,
+      "dur": 1.8017
+    },
+    {
+      "id": "a_argue1_0",
+      "pack": "ambient",
+      "category": "argue1",
+      "text": "Na you wan kill me?",
+      "voice": "af_jessica",
+      "start": 52.7052,
+      "dur": 1.1768
+    },
+    {
+      "id": "a_argue1_1",
+      "pack": "ambient",
+      "category": "argue1",
+      "text": "Abeg, no vex. I no see you.",
+      "voice": "am_onyx",
+      "start": 54.182,
+      "dur": 1.7412
+    },
+    {
+      "id": "a_argue1_2",
+      "pack": "ambient",
+      "category": "argue1",
+      "text": "You no get eye?",
+      "voice": "bf_emma",
+      "start": 56.2232,
+      "dur": 0.988
+    },
+    {
+      "id": "a_argue2_0",
+      "pack": "ambient",
+      "category": "argue2",
+      "text": "You wan fight me?",
+      "voice": "bm_lewis",
+      "start": 57.5112,
+      "dur": 1.0553
+    },
+    {
+      "id": "a_argue2_1",
+      "pack": "ambient",
+      "category": "argue2",
+      "text": "Oga, calm down. No be war.",
+      "voice": "af_bella",
+      "start": 58.8665,
+      "dur": 1.639
+    },
+    {
+      "id": "a_lagos_0",
+      "pack": "ambient",
+      "category": "lagos",
+      "text": "Which kain wahala be this?",
+      "voice": "hf_alpha",
+      "start": 60.8055,
+      "dur": 1.6856
+    },
+    {
+      "id": "a_lagos_1",
+      "pack": "ambient",
+      "category": "lagos",
+      "text": "Na Lagos, my brother.",
+      "voice": "am_liam",
+      "start": 62.7911,
+      "dur": 1.464
+    },
+    {
+      "id": "a_tease_0",
+      "pack": "ambient",
+      "category": "tease",
+      "text": "Your wife go catch you o!",
+      "voice": "am_eric",
+      "start": 64.555,
+      "dur": 1.4862
+    },
+    {
+      "id": "a_tease_1",
+      "pack": "ambient",
+      "category": "tease",
+      "text": "Ha! Na you sabi!",
+      "voice": "af_sky",
+      "start": 66.3413,
+      "dur": 1.1537
+    },
+    {
+      "id": "a_fuel_0",
+      "pack": "ambient",
+      "category": "fuel",
+      "text": "Dem say fuel don cost again.",
+      "voice": "hf_beta",
+      "start": 67.7949,
+      "dur": 1.7351
+    },
+    {
+      "id": "a_fuel_1",
+      "pack": "ambient",
+      "category": "fuel",
+      "text": "Na so e be. We go survive.",
+      "voice": "bm_george",
+      "start": 69.83,
+      "dur": 2.4242
+    },
+    {
+      "id": "a_come_see_0",
+      "pack": "ambient",
+      "category": "come_see",
+      "text": "Oya, make we go see wetin dey happen.",
+      "voice": "am_michael",
+      "start": 72.5542,
+      "dur": 2.2548
+    },
+    {
+      "id": "a_come_see_1",
+      "pack": "ambient",
+      "category": "come_see",
+      "text": "Wait for me!",
+      "voice": "af_nicole",
+      "start": 75.109,
+      "dur": 0.8373
+    },
+    {
+      "id": "a_driver_0",
+      "pack": "ambient",
+      "category": "driver",
+      "text": "Driver, abeg stop for front!",
+      "voice": "bf_isabella",
+      "start": 76.2463,
+      "dur": 1.7651
+    },
+    {
+      "id": "a_driver_1",
+      "pack": "ambient",
+      "category": "driver",
+      "text": "Oga, wait! I never reach there.",
+      "voice": "hm_psi",
+      "start": 78.3113,
+      "dur": 1.8037
+    },
+    {
+      "id": "a_respect_0",
+      "pack": "ambient",
+      "category": "respect",
+      "text": "See this boy o! You no get respect?",
+      "voice": "bm_daniel",
+      "start": 80.4151,
+      "dur": 2.0505
+    },
+    {
+      "id": "a_respect_1",
+      "pack": "ambient",
+      "category": "respect",
+      "text": "Sorry, sir. Na accident.",
+      "voice": "bf_alice",
+      "start": 82.7656,
+      "dur": 1.6061
+    },
+    {
+      "id": "a_goods_0",
+      "pack": "ambient",
+      "category": "goods",
+      "text": "Hey! No touch that o! Na my goods!",
+      "voice": "af_sarah",
+      "start": 84.6717,
+      "dur": 1.9183
+    },
+    {
+      "id": "a_goods_1",
+      "pack": "ambient",
+      "category": "goods",
+      "text": "Oga, I no touch am.",
+      "voice": "am_adam",
+      "start": 86.8899,
+      "dur": 1.1703
+    },
+    {
+      "id": "a_gist_0",
+      "pack": "ambient",
+      "category": "gist",
+      "text": "Shey you hear wetin happen yesterday?",
+      "voice": "hm_omega",
+      "start": 88.3602,
+      "dur": 2.2871
+    },
+    {
+      "id": "a_gist_1",
+      "pack": "ambient",
+      "category": "gist",
+      "text": "Ah! Tell me everything!",
+      "voice": "af_jessica",
+      "start": 90.9473,
+      "dur": 1.2723
+    },
+    {
+      "id": "a_thanks_0",
+      "pack": "ambient",
+      "category": "thanks",
+      "text": "Madam, your change.",
+      "voice": "bf_emma",
+      "start": 92.5196,
+      "dur": 1.205
+    },
+    {
+      "id": "a_thanks_1",
+      "pack": "ambient",
+      "category": "thanks",
+      "text": "Thank you o. God bless you.",
+      "voice": "am_onyx",
+      "start": 94.0247,
+      "dur": 1.5598
+    },
+    {
+      "id": "a_gen_loud_0",
+      "pack": "ambient",
+      "category": "gen_loud",
+      "text": "Ah! That generator loud o!",
+      "voice": "bm_lewis",
+      "start": 95.8845,
+      "dur": 1.7319
+    },
+    {
+      "id": "a_gen_loud_1",
+      "pack": "ambient",
+      "category": "gen_loud",
+      "text": "Abeg, na so e dey.",
+      "voice": "af_bella",
+      "start": 97.9164,
+      "dur": 1.3121
+    }
+  ],
+  "scenes": [
+    {
+      "id": "shift",
+      "kind": "talk",
+      "clips": ["a_shift_0", "a_shift_1", "a_shift_2"]
+    },
+    {
+      "id": "side",
+      "kind": "talk",
+      "clips": ["a_side_0", "a_side_1"]
+    },
+    {
+      "id": "bargain1",
+      "kind": "talk",
+      "clips": ["a_bargain1_0", "a_bargain1_1", "a_bargain1_2", "a_bargain1_3"]
+    },
+    {
+      "id": "bargain2",
+      "kind": "talk",
+      "clips": ["a_bargain2_0", "a_bargain2_1", "a_bargain2_2"]
+    },
+    {
+      "id": "call_ikeja",
+      "kind": "call",
+      "clips": ["a_call_ikeja_0"]
+    },
+    {
+      "id": "call_oshodi",
+      "kind": "call",
+      "clips": ["a_call_oshodi_0"]
+    },
+    {
+      "id": "call_yaba",
+      "kind": "call",
+      "clips": ["a_call_yaba_0"]
+    },
+    {
+      "id": "call_island",
+      "kind": "call",
+      "clips": ["a_call_island_0"]
+    },
+    {
+      "id": "call_mile2",
+      "kind": "call",
+      "clips": ["a_call_mile2_0"]
+    },
+    {
+      "id": "call_ikorodu",
+      "kind": "call",
+      "clips": ["a_call_ikorodu_0"]
+    },
+    {
+      "id": "call_water",
+      "kind": "call",
+      "clips": ["a_call_water_0"]
+    },
+    {
+      "id": "call_gala",
+      "kind": "call",
+      "clips": ["a_call_gala_0"]
+    },
+    {
+      "id": "call_suya",
+      "kind": "call",
+      "clips": ["a_call_suya_0"]
+    },
+    {
+      "id": "call_bread",
+      "kind": "call",
+      "clips": ["a_call_bread_0"]
+    },
+    {
+      "id": "change",
+      "kind": "talk",
+      "clips": ["a_change_0", "a_change_1"]
+    },
+    {
+      "id": "argue1",
+      "kind": "talk",
+      "clips": ["a_argue1_0", "a_argue1_1", "a_argue1_2"]
+    },
+    {
+      "id": "argue2",
+      "kind": "talk",
+      "clips": ["a_argue2_0", "a_argue2_1"]
+    },
+    {
+      "id": "lagos",
+      "kind": "talk",
+      "clips": ["a_lagos_0", "a_lagos_1"]
+    },
+    {
+      "id": "tease",
+      "kind": "talk",
+      "clips": ["a_tease_0", "a_tease_1"]
+    },
+    {
+      "id": "fuel",
+      "kind": "talk",
+      "clips": ["a_fuel_0", "a_fuel_1"]
+    },
+    {
+      "id": "come_see",
+      "kind": "talk",
+      "clips": ["a_come_see_0", "a_come_see_1"]
+    },
+    {
+      "id": "driver",
+      "kind": "talk",
+      "clips": ["a_driver_0", "a_driver_1"]
+    },
+    {
+      "id": "respect",
+      "kind": "talk",
+      "clips": ["a_respect_0", "a_respect_1"]
+    },
+    {
+      "id": "goods",
+      "kind": "talk",
+      "clips": ["a_goods_0", "a_goods_1"]
+    },
+    {
+      "id": "gist",
+      "kind": "talk",
+      "clips": ["a_gist_0", "a_gist_1"]
+    },
+    {
+      "id": "thanks",
+      "kind": "talk",
+      "clips": ["a_thanks_0", "a_thanks_1"]
+    },
+    {
+      "id": "gen_loud",
+      "kind": "talk",
+      "clips": ["a_gen_loud_0", "a_gen_loud_1"]
+    }
+  ]
+}

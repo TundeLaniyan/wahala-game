@@ -1,0 +1,4 @@
+{
+  "_comment": "Slot for REAL, licensed recordings of the crowd lines. Empty: no voice audio is shipped (the synthetic placeholders were rejected and removed). See recorded/README.md and docs/AUDIO.md.",
+  "clips": []
+}

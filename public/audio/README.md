@@ -1,9 +1,14 @@
 # Recorded audio slots
 
-**None are shipped yet. All current sounds are synthesised** (`src/audio/recipes`, pure DSP rendered
-into AudioBuffers at runtime). The synthesised crowd, engines, horns and effects are stand-ins and
-are not recordings of anything real. This folder lets properly licensed recordings replace any of
-them later, without code changes.
+**No recordings are shipped.** Every sound in the game is synthesised at runtime
+(`src/audio/recipes`). The generated music, synthetic Pidgin voices and generated ambience beds of the
+`claude/wahala-lagos-audio` branch were rejected and removed (see [`docs/AUDIO.md`](../../docs/AUDIO.md)).
+What remains here is configuration for real, licensed audio added later:
+
+- `music/manifest.json`: music tracks for `src/audio/music.ts` (empty: the player is silent);
+- `voices/voices.json`: the line catalogue for `src/audio/pidgin.ts` (no voice packs), plus
+  `voices/recorded.json` + `voices/recorded/` for licensed recordings of those lines (empty);
+- `slots.json`: per-sound overrides of the synthesised sounds, described below (empty).
 
 ## How it works
 

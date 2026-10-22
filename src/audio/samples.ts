@@ -137,6 +137,7 @@ export async function loadRecordedSlots(o: LoadOptions): Promise<SlotReport> {
 
   const work = async ([id, entry]: [SoundId, SlotEntry]): Promise<void> => {
     const files = entry.file ? [entry.file] : [`${id}.ogg`, `${id}.mp3`];
+    let reason = 'file not found';
     for (const file of files) {
       if (o.isCancelled?.()) return;
       try {
@@ -145,18 +146,18 @@ export async function loadRecordedSlots(o: LoadOptions): Promise<SlotReport> {
         const buf = await o.decode(await res.arrayBuffer());
         if (o.isCancelled?.()) return;
         if (!buf || buf.length < 16) {
-          report.skipped.push({ slot: id, reason: `${file} decoded to an empty buffer` });
-          return;
+          reason = `${file} decoded to an empty buffer`;
+          continue;
         }
         o.onSlot(id, buf, { gain: entry.gain ?? 1 });
         report.loaded.push(id);
         return;
       } catch (e) {
-        report.skipped.push({ slot: id, reason: `${file} failed to load/decode: ${String(e)}` });
-        return;
+        // e.g. a browser without Ogg Vorbis support: fall through to the next candidate (the .mp3)
+        reason = `${file} failed to load/decode: ${String(e)}`;
       }
     }
-    report.skipped.push({ slot: id, reason: 'file not found' });
+    report.skipped.push({ slot: id, reason });
   };
 
   const queue = [...parsed.entries];

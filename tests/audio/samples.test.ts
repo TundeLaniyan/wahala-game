@@ -39,12 +39,11 @@ describe('public/audio documentation and manifest', () => {
   const dir = join(__dirname, '../../public/audio');
   const read = (f: string): string => readFileSync(join(dir, f), 'utf8');
 
-  it('ships no recordings: slots.json is valid and empty, and the docs say so', () => {
-    const manifest = JSON.parse(read('slots.json')) as { slots: Record<string, unknown> };
+  it('ships NO recordings: slots.json is empty (rejected generated beds removed), and the docs say so', () => {
+    const manifest = JSON.parse(read('slots.json')) as { slots: Record<string, { license: string }> };
     expect(manifest.slots).toEqual({});
-    expect(parseManifest(manifest).entries).toEqual([]);
-    expect(read('README.md')).toMatch(/None are shipped yet/i);
-    expect(read('README.md')).toMatch(/synthesised/i);
+    expect(parseManifest(manifest).entries).toHaveLength(0);
+    expect(read('README.md')).toMatch(/No recordings are shipped/i);
     expect(read('LICENSES.md')).toMatch(/No recorded audio is shipped/i);
     expect(read('LICENSES.md')).toMatch(/licen[cs]e/i);
   });

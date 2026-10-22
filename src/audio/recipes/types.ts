@@ -15,8 +15,9 @@ import { Priority } from '../voices';
  *  - warn:  danger warnings (horns, fuse ticks, alarms): never ducked, sit in their own band
  *  - react: crowd reaction one-shots (ducked only lightly)
  *  - amb:   looping ambience beds (ducked under blasts/warnings)
+ *  - music: Afrobeats music loops and stings (src/audio/music.ts; never used by synthesised recipes)
  */
-export type Bus = 'sfx' | 'warn' | 'react' | 'amb';
+export type Bus = 'sfx' | 'warn' | 'react' | 'amb' | 'music';
 
 export interface RenderEnv {
   /** Sample rate to render at. */
