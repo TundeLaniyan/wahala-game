@@ -1,14 +1,15 @@
 import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
 import type { Layout } from './coords';
 
-// Elevated three-quarter view: low enough that pillars, walls and characters read as solid 3D
-// objects (strong perspective, visible side faces), high enough that every lane stays visible.
-const PITCH = (51 * Math.PI) / 180;
-const FOV = 44;
-/** Height of the tallest perimeter dressing that must stay inside the frame (far wall top). */
-const FAR_TOP = 1.5;
+// Cinematic three-quarter action view (~43 degrees): low enough that characters, Danfo buses,
+// pillars and Lagos storey buildings have strong 3D depth and vertical presence, while keeping
+// every lane and intersection readable.
+const PITCH = (43 * Math.PI) / 180;
+const FOV = 40;
+/** Height of the north-street Danfos & storey facades framed above the back wall. */
+const FAR_TOP = 3.1;
 /** Max |NDC x| of the near arena corners in the phone layout (clear of the touch controls). */
-const NEAR_X_COMPACT = 0.62;
+const NEAR_X_COMPACT = 0.59;
 
 /**
  * Fixed elevated camera. It never pans or follows action: it is fitted once per viewport size so
@@ -33,10 +34,10 @@ export class CameraRig {
     const W = this.layout.width;
     const H = this.layout.height;
     const pts = [
-      new Vector3(-W / 2 - 0.5, FAR_TOP, -H / 2 - 0.5),
-      new Vector3(W / 2 + 0.5, FAR_TOP, -H / 2 - 0.5),
-      new Vector3(-W / 2 - 0.5, 0, H / 2 + 0.7),
-      new Vector3(W / 2 + 0.5, 0, H / 2 + 0.7),
+      new Vector3(-W / 2 - 0.35, FAR_TOP, -H / 2 - 0.5),
+      new Vector3(W / 2 + 0.35, FAR_TOP, -H / 2 - 0.5),
+      new Vector3(-W / 2 - 0.3, 0, H / 2 + 0.45),
+      new Vector3(W / 2 + 0.3, 0, H / 2 + 0.45),
     ];
     // Perspective widens the near row. In the short landscape (phone) layout the on-screen D-pad and
     // action buttons sit in the bottom corners, so the near corners are kept inside them.

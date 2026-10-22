@@ -335,12 +335,18 @@ export function smokeTexture(): CanvasTexture {
 export function ringTexture(): CanvasTexture {
   return cached('ring', () => {
     const [c, g] = canvas(128, 128);
+    const glow = g.createRadialGradient(64, 64, 28, 64, 64, 62);
+    glow.addColorStop(0, 'rgba(255,255,255,0.18)');
+    glow.addColorStop(0.7, 'rgba(255,255,255,0.35)');
+    glow.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = glow;
+    g.fillRect(0, 0, 128, 128);
     g.strokeStyle = 'rgba(255,255,255,1)';
-    g.lineWidth = 10;
+    g.lineWidth = 12;
     g.beginPath();
     g.arc(64, 64, 52, 0, Math.PI * 2);
     g.stroke();
-    g.lineWidth = 3;
+    g.lineWidth = 4;
     g.beginPath();
     g.arc(64, 64, 38, 0, Math.PI * 2);
     g.stroke();
@@ -397,8 +403,13 @@ export function labelTexture(
     g.font = font;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
+    const w = Math.min(240, Math.max(84, g.measureText(text).width + 34));
+    g.fillStyle = 'rgba(14, 10, 6, 0.52)';
+    g.beginPath();
+    g.roundRect(128 - w / 2, 18, w, 60, 28);
+    g.fill();
     g.lineJoin = 'round';
-    g.lineWidth = 9;
+    g.lineWidth = 10;
     g.strokeStyle = stroke;
     g.strokeText(text, 128, 50);
     g.fillStyle = color;

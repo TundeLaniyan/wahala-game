@@ -24,8 +24,8 @@ import { lerpAngle, playerGridPos, toWorld, yawForDir } from './motion';
 import type { FrameContext, View } from './types';
 
 const DEATH_TIME = 1.7;
-/** Characters are drawn a little larger than a tile-sized figure so they read at phone size. */
-const SCALE = 1.5;
+/** Characters are drawn tall and heroic so they read as active 3D characters, not board tokens. */
+const SCALE = 1.85;
 /** The seated Okada rider sits on the (enlarged) bike's seat: offsets in model metres. */
 const RIDER_LIFT = -0.05;
 const RIDER_BACK = -0.25;
@@ -111,7 +111,7 @@ export class PlayerViews implements View {
       }),
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.scale.setScalar(0.82);
+    ring.scale.setScalar(0.96);
     ring.renderOrder = 4;
     const shadow = new Mesh(
       flat,
@@ -119,21 +119,21 @@ export class PlayerViews implements View {
         map: glowTexture(),
         color: 0x000000,
         transparent: true,
-        opacity: 0.55,
+        opacity: 0.65,
         depthWrite: false,
       }),
     );
     shadow.rotation.x = -Math.PI / 2;
-    shadow.scale.setScalar(0.7);
+    shadow.scale.setScalar(0.84);
     shadow.renderOrder = 3;
     const name = new Sprite(
       new SpriteMaterial({
-        map: labelTexture(p.name, '#ffffff', 'bold 40px system-ui, sans-serif'),
+        map: labelTexture(p.name, '#ffffff', 'bold 42px system-ui, sans-serif'),
         transparent: true,
         depthTest: false,
       }),
     );
-    name.scale.set(1.1, 0.41, 1);
+    name.scale.set(1.22, 0.45, 1);
     name.renderOrder = 31;
     let marker: Sprite | null = null;
     if (p.id === ctx.info.localPlayerId) {
@@ -141,7 +141,7 @@ export class PlayerViews implements View {
         new SpriteMaterial({ map: chevronTexture(), color: slot, transparent: true, depthTest: false }),
       );
       marker.material.rotation = Math.PI;
-      marker.scale.set(0.42, 0.42, 1);
+      marker.scale.set(0.48, 0.48, 1);
       marker.renderOrder = 32;
       this.group.add(marker);
     }
@@ -312,21 +312,21 @@ export class PlayerViews implements View {
       mounted ? 1 - (time - v.mountedAt) / 0.45 : 0,
       !mounted ? 1 - (time - v.dismountedAt) / 0.3 : 0,
     );
-    v.shield.position.set(w.x, 0.72, w.z);
+    v.shield.position.set(w.x, 0.88, w.z);
     v.shield.rotation.y = v.yaw;
-    v.shield.scale.set(0.78, 0.92, 0.95).multiplyScalar(1 + (mounted ? 0 : (1 - pop) * 0.6));
+    v.shield.scale.set(0.92, 1.08, 1.1).multiplyScalar(1 + (mounted ? 0 : (1 - pop) * 0.6));
     updateShieldBubble(v.shield, mounted, time, Math.max(0, pop));
     v.badge.visible = mounted;
-    if (mounted) v.badge.position.set(w.x - 0.7, 1.72 + Math.sin(time * 4) * 0.03, w.z);
+    if (mounted) v.badge.position.set(w.x - 0.78, 2.08 + Math.sin(time * 4) * 0.03, w.z);
 
     v.ring.position.set(w.x, 0.03, w.z);
     (v.ring.material as MeshBasicMaterial).opacity =
-      state.match.phase === 'countdown' ? 0.5 + 0.4 * Math.sin(time * 6) : 0.95;
+      state.match.phase === 'countdown' ? 0.55 + 0.4 * Math.sin(time * 6) : 0.98;
     v.shadow.position.set(w.x, 0.02, w.z);
-    v.name.position.set(w.x, 1.72, w.z);
+    v.name.position.set(w.x, 2.12, w.z);
     v.name.visible = true;
     if (v.marker) {
-      v.marker.position.set(w.x, 2.1 + Math.sin(time * 5) * 0.08, w.z);
+      v.marker.position.set(w.x, 2.52 + Math.sin(time * 5) * 0.08, w.z);
       v.marker.visible = true;
     }
     const dazed = state.tick < p.dazedUntil;
@@ -334,21 +334,21 @@ export class PlayerViews implements View {
       s.visible = dazed;
       if (dazed) {
         const a = time * 6 + (i * Math.PI * 2) / 3;
-        s.position.set(w.x + Math.cos(a) * 0.28, 1.5 + (mounted ? 0.25 : 0), w.z + Math.sin(a) * 0.3);
+        s.position.set(w.x + Math.cos(a) * 0.32, 1.85 + (mounted ? 0.28 : 0), w.z + Math.sin(a) * 0.34);
       }
     });
     const cursed = p.curse !== null && state.tick < p.curse.until;
     v.curse.visible = cursed;
     if (cursed) {
-      v.curse.position.set(w.x, 0.5, w.z);
+      v.curse.position.set(w.x, 0.6, w.z);
       v.curse.material.opacity = 0.45 + 0.3 * Math.sin(time * 9);
     }
     const entering = p.entryUntil !== null;
     v.voucher.visible = entering;
     if (entering) {
-      v.voucher.position.set(w.x, 2.1 + Math.sin(time * 8) * 0.06, w.z);
-      v.ring.scale.setScalar(0.82 + 0.12 * Math.sin(time * 10));
-    } else v.ring.scale.setScalar(0.82);
+      v.voucher.position.set(w.x, 2.48 + Math.sin(time * 8) * 0.06, w.z);
+      v.ring.scale.setScalar(0.96 + 0.14 * Math.sin(time * 10));
+    } else v.ring.scale.setScalar(0.96);
   }
 
   private poseDead(ctx: FrameContext, p: Player, v: Visual, base: Vector3): void {

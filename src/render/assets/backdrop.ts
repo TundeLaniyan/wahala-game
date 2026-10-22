@@ -1,9 +1,6 @@
 import {
-  BufferGeometry,
   ConeGeometry,
   CylinderGeometry,
-  DoubleSide,
-  Float32BufferAttribute,
   MeshBasicMaterial,
   Group,
   InstancedMesh,
@@ -32,8 +29,8 @@ import { assets } from './library';
 import { bakeModel } from './merge';
 import { createVehicleModel } from './vehicles';
 
-/** Parked buses are drawn larger than the playing-field buses so the lot feels crowded and the arena small. */
-const PARKED_BUS_SCALE = 1.3;
+/** Parked buses are drawn large and iconic so the Danfo fleet frames the Lagos arena. */
+const PARKED_BUS_SCALE = 1.48;
 
 export interface Backdrop {
   root: Group;
@@ -78,7 +75,7 @@ function instanceAsset(root: Group, out: InstancedMesh[], id: string, placements
  * Walls (north/east/west tall enough to read, south kept low so no tile is hidden), corner posts and
  * spectator platforms from the modelled set. Returns false when the models are not loaded.
  */
-function addModelledPerimeter(root: Group, out: InstancedMesh[], W: number, H: number): boolean {
+function addModelledPerimeter(root: Group, statics: Group, out: InstancedMesh[], W: number, H: number): boolean {
   const wallIds = assets.loadedIds('env_wall').filter((id) => id !== 'env_wall_corner');
   if (wallIds.length === 0 || !assets.has('env_wall_corner')) return false;
   const T = 0.155; // half wall thickness
@@ -88,36 +85,52 @@ function addModelledPerimeter(root: Group, out: InstancedMesh[], W: number, H: n
     byVariant[k++ % wallIds.length]!.push({ x, z, ry, sy });
   };
   for (let i = 0; i < W; i++) {
-    wall(-W / 2 + 0.5 + i, -H / 2 - T, 0);
-    wall(-W / 2 + 0.5 + i, H / 2 + T, Math.PI, 0.4);
+    wall(-W / 2 + 0.5 + i, -H / 2 - T, 0, 1.05);
+    // South wall: leave the center 3 tiles for the yellow/black hazard-striped compound gate
+    if (i < 6 || i > 8) {
+      wall(-W / 2 + 0.5 + i, H / 2 + T, Math.PI, 0.54);
+    }
   }
   for (let i = 0; i < H; i++) {
-    const sy = i > H - 2 ? 0.4 : i > H - 3 ? 0.7 : 1; // step down towards the camera side
+    const sy = i > H - 2 ? 0.56 : i > H - 3 ? 0.78 : 1.02; // step down towards the camera side
     wall(W / 2 + T, -H / 2 + 0.5 + i, -Math.PI / 2, sy);
     wall(-W / 2 - T, -H / 2 + 0.5 + i, Math.PI / 2, sy);
   }
   wallIds.forEach((id, n) => instanceAsset(root, out, id, byVariant[n]!));
+
+  // Center south compound gate with yellow/black diagonal hazard stripes & steel frame
+  const gateTex = hazardStripes();
+  gateTex.repeat.set(3, 1);
+  const gateMat = mat(0xffffff, { map: gateTex, flat: false, roughness: 0.55 });
+  const steelMat = mat(0x1e2024, { roughness: 0.45, metalness: 0.6 });
+  statics.add(box(2.96, 0.48, 0.22, gateMat, 0, 0.24, H / 2 + T));
+  statics.add(box(3.04, 0.06, 0.26, steelMat, 0, 0.5, H / 2 + T));
+
   const cx = W / 2 + T;
   const cz = H / 2 + T;
   const posts: Placement[] = [
-    { x: -cx, z: -cz, ry: 0 },
-    { x: cx, z: -cz, ry: 0 },
-    { x: -cx, z: cz, ry: 0, sy: 0.42 },
-    { x: cx, z: cz, ry: 0, sy: 0.42 },
+    { x: -cx, z: -cz, ry: 0, sy: 1.06 },
+    { x: cx, z: -cz, ry: 0, sy: 1.06 },
+    { x: -cx, z: cz, ry: 0, sy: 0.58 },
+    { x: cx, z: cz, ry: 0, sy: 0.58 },
+    // Gate posts flanking the center south hazard gate
+    { x: -1.55, z: cz, ry: Math.PI, sy: 0.62 },
+    { x: 1.55, z: cz, ry: Math.PI, sy: 0.62 },
   ];
   // intermediate pilasters every few panels break up the long runs (precast wall rhythm)
-  for (let i = 3; i < W - 1; i += 3) posts.push({ x: -W / 2 + i, z: -cz, ry: 0 });
+  for (let i = 3; i < W - 1; i += 3) posts.push({ x: -W / 2 + i, z: -cz, ry: 0, sy: 1.05 });
   for (let i = 3; i < H - 2; i += 3) {
     posts.push({ x: -cx, z: -H / 2 + i, ry: Math.PI / 2 });
     posts.push({ x: cx, z: -H / 2 + i, ry: -Math.PI / 2 });
   }
-  for (let i = 3; i < W - 1; i += 3) posts.push({ x: -W / 2 + i, z: cz, ry: Math.PI, sy: 0.42 });
+  for (let i = 3; i < W - 1; i += 3) {
+    if (Math.abs(-W / 2 + i) > 2) posts.push({ x: -W / 2 + i, z: cz, ry: Math.PI, sy: 0.56 });
+  }
   instanceAsset(root, out, 'env_wall_corner', posts);
   if (assets.has('env_bleacher')) {
     const off = T * 2 + 0.26;
     const plat: Placement[] = [];
-    // rail side faces the arena: the model's rail is on its -Z side, so face the front (+Z) away from the field
-    for (let i = -1; i <= W; i++) plat.push({ x: -W / 2 + 0.5 + i, z: -H / 2 - off, ry: Math.PI });
+    // Side spectator railings along the East and West walkways (North stays open for parked Danfos)
     for (let i = 0; i < H; i++) {
       plat.push({ x: W / 2 + off, z: -H / 2 + 0.5 + i, ry: Math.PI / 2 });
       plat.push({ x: -W / 2 - off, z: -H / 2 + 0.5 + i, ry: -Math.PI / 2 });
@@ -293,7 +306,7 @@ export function createBackdrop(
 
   // perimeter: modelled wall segments, corner posts and spectator platforms, else the procedural walls
   const instanced: InstancedMesh[] = [];
-  const modelledPerimeter = addModelledPerimeter(root, instanced, W, H);
+  const modelledPerimeter = addModelledPerimeter(root, statics, instanced, W, H);
   if (!modelledPerimeter) {
     // perimeter walls
     const wallTex = wallTexture();
@@ -339,33 +352,46 @@ export function createBackdrop(
     busSpots.push({ x, z, ry });
   };
   if (isMarket) {
-    place(W / 2 + 3.4, -H / 2 + 0.8, Math.PI / 2);
-    place(-W / 2 - 3.4, -H / 2 + 0.8, -Math.PI / 2);
-    place(W / 2 - 3.2, H / 2 + 2.4, Math.PI);
+    place(-4.2, -H / 2 - 1.95, 0.04);
+    place(4.2, -H / 2 - 1.95, Math.PI - 0.04);
+    place(W / 2 + 3.1, -H / 2 + 1.6, -Math.PI * 0.66);
+    place(-W / 2 - 3.1, -H / 2 + 1.6, -Math.PI * 0.34);
+    place(W / 2 - 2.8, H / 2 + 2.15, Math.PI + 0.06);
     instanceAsset(root, instanced, 'veh_keke', [
-      { x: -W / 2 + 2.8, z: H / 2 + 2.1, ry: Math.PI * 0.85, sx: 1.25, sy: 1.25, sz: 1.25 },
-      { x: W / 2 + 3.1, z: H / 2 - 1.2, ry: Math.PI / 2, sx: 1.25, sy: 1.25, sz: 1.25 },
-      { x: -W / 2 - 3.1, z: H / 2 - 1.2, ry: -Math.PI / 2, sx: 1.25, sy: 1.25, sz: 1.25 },
+      { x: -W / 2 + 2.8, z: H / 2 + 1.95, ry: Math.PI * 0.85, sx: 1.35, sy: 1.35, sz: 1.35 },
+      { x: W / 2 + 2.8, z: H / 2 - 1.2, ry: Math.PI / 2, sx: 1.35, sy: 1.35, sz: 1.35 },
+      { x: -W / 2 - 2.8, z: H / 2 - 1.2, ry: -Math.PI / 2, sx: 1.35, sy: 1.35, sz: 1.35 },
     ]);
   } else if (isRoadworks) {
+    place(-4.2, -H / 2 - 1.95, 0.04);
+    place(4.2, -H / 2 - 1.95, Math.PI - 0.04);
     for (let i = 0; i < 3; i++)
-      place(W / 2 + 2.2, -H / 2 + 1.4 + i * 3.8, Math.PI / 2 + (rng() - 0.5) * 0.1);
+      place(W / 2 + 2.65, -H / 2 + 1.6 + i * 3.6, -Math.PI * 0.66 + (rng() - 0.5) * 0.06);
     for (let i = 0; i < 2; i++)
-      place(-W / 2 - 2.2, -H / 2 + 1.6 + i * 4.4, -Math.PI / 2 + (rng() - 0.5) * 0.1);
+      place(-W / 2 - 2.55, -H / 2 + 2.0 + i * 4.2, -Math.PI * 0.34 + (rng() - 0.5) * 0.06);
     instanceAsset(root, instanced, 'veh_taxi', [
-      { x: -W / 2 + 2.8, z: -H / 2 - 2.1, ry: Math.PI / 2, sx: 1.25, sy: 1.25, sz: 1.25 },
-      { x: W / 2 - 2.8, z: -H / 2 - 2.1, ry: Math.PI / 2, sx: 1.25, sy: 1.25, sz: 1.25 },
-      { x: -W / 2 - 2.2, z: H / 2 - 1.8, ry: 0, sx: 1.25, sy: 1.25, sz: 1.25 },
+      { x: -W / 2 + 2.8, z: H / 2 + 2.0, ry: Math.PI / 2, sx: 1.35, sy: 1.35, sz: 1.35 },
+      { x: W / 2 - 2.8, z: H / 2 + 2.0, ry: -Math.PI / 2, sx: 1.35, sy: 1.35, sz: 1.35 },
+      { x: -W / 2 - 2.4, z: H / 2 - 1.8, ry: 0.25, sx: 1.35, sy: 1.35, sz: 1.35 },
     ]);
     instanceAsset(root, instanced, 'veh_keke', [
-      { x: W / 2 - 3.2, z: H / 2 + 2.1, ry: -Math.PI / 2, sx: 1.25, sy: 1.25, sz: 1.25 },
+      { x: 0, z: -H / 2 - 2.0, ry: Math.PI / 2, sx: 1.35, sy: 1.35, sz: 1.35 },
     ]);
   } else {
-    for (let i = 0; i < 5; i++)
-      place(W / 2 + 2.1 + (i % 2) * 0.1, -H / 2 + 1.2 + i * 2.35, Math.PI / 2 + (rng() - 0.5) * 0.1);
-    for (let i = 0; i < 4; i++) place(-W / 2 - 2.2, -H / 2 + 0.8 + i * 2.8, -Math.PI / 2 + (rng() - 0.5) * 0.1);
-    for (let i = 0; i < 4; i++) place(-W / 2 + 2.5 + i * 3.6, -H / 2 - 2.0, (rng() - 0.5) * 0.1);
-    place(W / 2 - 3.2, H / 2 + 2.2, Math.PI);
+    // Danfo Bus Park: matches the Gemini reference layout:
+    // 1) Two prominent side-profile yellow Danfos flanking the timer behind the north wall
+    place(-4.0, -H / 2 - 1.85, 0.03);
+    place(4.0, -H / 2 - 1.85, Math.PI - 0.03);
+    place(-W / 2 - 1.8, -H / 2 - 1.95, -0.18);
+    // 2) Diagonal echelon of 3 large yellow Danfos along the east street behind the crowd railing
+    place(W / 2 + 2.65, -H / 2 + 1.8, -Math.PI * 0.66);
+    place(W / 2 + 2.75, -H / 2 + 5.3, -Math.PI * 0.68);
+    place(W / 2 + 2.85, -H / 2 + 8.8, -Math.PI * 0.64);
+    // 3) West street parked Danfos below the 2-story Lagos building
+    place(-W / 2 - 2.55, -H / 2 + 2.6, -Math.PI * 0.34);
+    place(-W / 2 - 2.45, H / 2 - 2.2, -Math.PI * 0.32);
+    // 4) Foreground bottom-right Danfo outside the south compound wall
+    place(W / 2 - 2.8, H / 2 + 2.05, Math.PI + 0.06);
   }
   // thin the lot on weaker devices: keep an evenly spread subset
   const keep = Math.max(1, Math.round(busSpots.length * busFraction));
@@ -444,13 +470,24 @@ export function createBackdrop(
   if (buildingIds.length > 0) {
     const byVariant = buildingIds.map(() => [] as Placement[]);
     let n = isMarket ? 2 : isRoadworks ? 1 : 0;
-    const put = (x: number, z: number, ry: number): void => {
-      byVariant[n++ % buildingIds.length]!.push({ x, z, ry, sy: 0.92 + rng() * 0.25 });
+    const put = (x: number, z: number, ry: number, s = 1.16): void => {
+      byVariant[n++ % buildingIds.length]!.push({
+        x,
+        z,
+        ry,
+        sx: s,
+        sy: s * (1.02 + rng() * 0.16),
+        sz: s,
+      });
     };
-    for (let x = -W / 2 - 7; x < W / 2 + 8; x += 3.45) put(x, -H / 2 - 4.7 - rng() * 0.5, 0);
-    for (let z = -H / 2 - 3.5; z < H / 2 + 6; z += 3.3) {
-      put(W / 2 + 5.2 + rng() * 0.5, z, -Math.PI / 2);
-      put(-W / 2 - 5.2 - rng() * 0.5, z, Math.PI / 2);
+    // North street row of 2-story Lagos buildings framed right behind the parked Danfos
+    for (let x = -W / 2 - 6.5; x <= W / 2 + 6.5; x += 3.6) {
+      put(x, -H / 2 - 3.85 - (Math.abs(Math.round(x)) % 2) * 0.25, 0, 1.18);
+    }
+    // West & East street buildings (West brought closer so its balconies & awnings frame the left edge)
+    for (let z = -H / 2 - 2.5; z < H / 2 + 5; z += 3.5) {
+      put(-W / 2 - 3.95 - (Math.abs(Math.round(z)) % 2) * 0.2, z, Math.PI / 2, 1.18);
+      put(W / 2 + 4.75 + (Math.abs(Math.round(z)) % 2) * 0.2, z, -Math.PI / 2, 1.16);
     }
     buildingIds.forEach((id, k) => instanceAsset(root, instanced, id, byVariant[k]!));
   } else {
@@ -489,43 +526,17 @@ export function createBackdrop(
     { x: W / 2 + 4.0, z: -1.5, ry: -Math.PI / 2 },
   ]);
   dress('env_tyrestack', [
+    { x: -W / 2 - 0.95, z: H / 2 + 0.85, ry: 0.5, sx: 1.15, sy: 1.15, sz: 1.15 },
+    { x: W / 2 + 0.95, z: H / 2 + 0.85, ry: -0.4, sx: 1.15, sy: 1.15, sz: 1.15 },
     { x: -W / 2 - 1.4, z: H / 2 + 1.9, ry: 0.5 },
     { x: W / 2 + 1.5, z: H / 2 + 1.8, ry: -0.4 },
-    { x: -2.5, z: -H / 2 - 2.5, ry: 1.2 },
-    { x: -W / 2 - 1.3, z: -H / 2 - 1.1, ry: 0.2 },
-    { x: W / 2 + 1.3, z: -H / 2 - 1.2, ry: 2.2 },
+    { x: -W / 2 - 0.95, z: -H / 2 - 0.85, ry: 0.2, sx: 1.1, sy: 1.1, sz: 1.1 },
+    { x: W / 2 + 0.95, z: -H / 2 - 0.85, ry: 2.2, sx: 1.1, sy: 1.1, sz: 1.1 },
   ]);
   dress('env_barrel', [
     { x: -W / 2 + 4.0, z: H / 2 + 1.7, ry: 0.3 },
     { x: W / 2 - 5.0, z: -H / 2 - 2.4, ry: 2.0 },
   ]);
-
-  // Overhead bunting along the back wall
-  const tri = new BufferGeometry();
-  tri.setAttribute('position', new Float32BufferAttribute([-0.2, 0, 0, 0.2, 0, 0, 0, -0.38, 0], 3));
-  tri.setAttribute('normal', new Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3));
-  const flags = new InstancedMesh(tri, new MeshBasicMaterial({ side: DoubleSide }), 34);
-  const flagColor = new Color();
-  const fm = new Matrix4();
-  const marketBunting = [0xe63946, 0xffbe0b, 0x1d6fe0, 0x12964f, 0x8338ec, 0xffffff];
-  for (let n = 0; n < 34; n++) {
-    const t = n / 33;
-    const x = -W / 2 - 0.2 + t * (W + 0.4);
-    const sag = Math.sin(t * Math.PI) * 0.35;
-    fm.makeTranslation(x, 2.75 - sag, -H / 2 - 1.5);
-    flags.setMatrixAt(n, fm);
-    const hex = isMarket
-      ? marketBunting[n % marketBunting.length]!
-      : isRoadworks
-        ? n % 2 === 0
-          ? 0xffbe0b
-          : 0x181a1e
-        : n % 3 === 1
-          ? 0xffffff
-          : 0x1fa64a;
-    flags.setColorAt(n, flagColor.setHex(hex));
-  }
-  root.add(flags);
 
   if (isMarket) {
     addBalogunMarketDressing(root, statics, instanced, W, H);
@@ -562,9 +573,9 @@ export function createBackdrop(
     sign.rotation.x = -0.2;
     root.add(sign);
   } else {
-    // Iconic yellow "OJUELEGBA" Lagos bus stop shelter + signboard along the back perimeter
-    const shelterX = -W / 2 + 3.2;
-    const shelterZ = -H / 2 - 2.85;
+    // Iconic yellow "OJUELEGBA" Lagos bus stop shelter + signboard centered between the two north Danfos
+    const shelterX = 0;
+    const shelterZ = -H / 2 - 2.35;
     const yellowMetal = mat(0xf6be18, { roughness: 0.42, metalness: 0.22 });
     const darkSteel = mat(0x181a1e, { roughness: 0.5, metalness: 0.5 });
     for (const sx of [-1.85, 1.85]) {

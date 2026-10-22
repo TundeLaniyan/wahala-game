@@ -140,7 +140,7 @@ export const DEFAULT_CONFIG: GameConfig = {
     weakFireRange: 1,
   },
   pickups: {
-    hiddenChance: 0.4,
+    hiddenChance: 0.58,
     weights: {
       petrol: 18,
       socket: 14,
@@ -187,7 +187,7 @@ export const DEFAULT_CONFIG: GameConfig = {
     maxDeathDrops: 2,
   },
   arena: {
-    softDensity: 0.62,
+    softDensity: 0.38,
   },
   crush: {
     startRemainingTicks: ticks(45),

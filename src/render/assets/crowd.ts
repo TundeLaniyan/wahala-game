@@ -81,28 +81,30 @@ export function crowdSpots(layout: Layout, count: number, rng: () => number): Sp
   const ring = Math.round(count * 0.22);
   const south = Math.round(count * 0.16);
   const walkers = Math.max(0, count - rail - ring - south);
-  // 1) front row on the spectator platforms (or just behind the walls)
+  // 1) front row along the east/west spectator platforms and north sidewalk gaps
   for (let n = 0; n < rail; n++) {
     const edge = edgeFor(n) === 3 ? 0 : edgeFor(n);
-    const [x, z] = edgePoint(edge, rng(), platform ? 0.47 + rng() * 0.22 : 0.75 + rng() * 0.3);
-    watch(x, platform ? 0.62 : 0, z);
+    const onSidePlatform = platform && (edge === 1 || edge === 2);
+    const [x, z] = edgePoint(edge, rng(), onSidePlatform ? 0.47 + rng() * 0.22 : 0.82 + rng() * 0.35);
+    watch(x, onSidePlatform ? 0.62 : 0, z);
   }
   // 2) people standing on the ground behind the platforms, some in conversation pairs
   for (let n = 0; n < ring; n++) {
     const edge = edgeFor(n) === 3 ? 1 + (n % 2) : edgeFor(n);
-    const [x, z] = edgePoint(edge, rng(), 0.98 + rng() * 0.18);
+    const [x, z] = edgePoint(edge, rng(), 1.05 + rng() * 0.28);
     if (rng() < 0.35 && n + 1 < ring) {
       // a facing pair along the edge
-      const along = edge === 0 ? [0.32, 0] : [0, 0.32];
+      const along = edge === 0 ? [0.34, 0] : [0, 0.34];
       const yaw = Math.atan2(along[0]!, along[1]!);
       spots.push({ x: x - along[0]!, y: 0, z: z - along[1]!, yaw, role: 'talk' });
       spots.push({ x: x + along[0]!, y: 0, z: z + along[1]!, yaw: yaw + Math.PI, role: 'talk' });
       n++;
     } else watch(x, 0, z);
   }
-  // 3) camera side: a looser crowd below the low wall
+  // 3) camera side: foreground cheering spectators outside the south wall (framing the bottom edge)
   for (let n = 0; n < south; n++) {
-    const [x, z] = edgePoint(3, rng(), 1.15 + rng() * 1.2);
+    const [rawX, z] = edgePoint(3, rng(), 0.92 + rng() * 0.85);
+    const x = Math.abs(rawX) < 1.65 ? rawX + (rawX < 0 ? -1.7 : 1.7) : rawX; // keep the center hazard gate clear
     watch(x, 0, z);
   }
   // 4) passers-by on the streets around the lot
@@ -184,8 +186,8 @@ export function createGlbCrowd(layout: Layout, count: number, rng: () => number)
       y: s.y,
       z: s.z,
       yaw: s.yaw,
-      // a touch smaller than the hero-scaled players, so the cast stays the focus
-      scale: (s.z > layout.height / 2 ? 0.66 : 0.7) + rng() * 0.08,
+      // proportional to the taller players so the crowd reads as lively 3D spectators
+      scale: (s.z > layout.height / 2 ? 0.82 : 0.86) + rng() * 0.08,
       phase: rng() * 100,
       reactUntil: 0,
       next: rng() * 3,

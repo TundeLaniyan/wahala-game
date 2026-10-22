@@ -199,31 +199,31 @@ def corner() -> dict:
         return THt - 1 - y * ppm * (THt / (PH * ppm))
 
     def side(sd, posters, extra=None):
-        s = concrete_sheet(TWd, THt, sd, 0xbdb8ad, stains=0.4)
+        s = concrete_sheet(TWd, THt, sd, 0xd4cec2, stains=0.28)
         scale = THt / PH
         yp = lambda y: THt - 1 - y * scale  # noqa: E731
         for yy, wd in ((0.18, 1.3), (PH - 0.12, 1.6)):
             with s.paint(height=-0.3, rough=0.95) as d:
                 d.line([(0, yp(yy)), (TWd, yp(yy))], 0x4a443c, wd, a=0.75)
-        weather(s, sd + 1, ground=0.3, ground_h=0.08, streaks=0.3, top_soot=0.15, edge=0.25, tone_dark=0x3e3a35)
-        b0, b1 = 0.025, 0.15
+        weather(s, sd + 1, ground=0.2, ground_h=0.08, streaks=0.2, top_soot=0.1, edge=0.18, tone_dark=0x3e3a35)
+        b0, b1 = 0.025, 0.18
         bh = int(yp(b0) - yp(b1))
-        band, cov = hazard_band(TWd, bh, stripe=20, angle=50, seed=sd + 3, wear=0.5)
+        band, cov = hazard_band(TWd, bh, c2=0x1b64c8, stripe=20, angle=50, seed=sd + 3, wear=0.22)
         y0 = int(yp(b1))
         reg = Sheet(TWd, THt)
         reg.paste(band, 0, y0)
         cm = np.zeros((THt, TWd))
         cm[y0 : y0 + bh] = cov
         s.comp(reg.rgb, cm, height=0.1, rough=0.7)
-        weather(s, sd + 4, ground=0.3, ground_h=0.08, streaks=0.0, top_soot=0.0, tone_dark=0x34312e)
+        weather(s, sd + 4, ground=0.18, ground_h=0.06, streaks=0.0, top_soot=0.0, tone_dark=0x34312e)
         for p in posters:
             stick_poster(s, **p)
         if extra:
             extra(s, yp)
         xs = np.arange(TWd)[None, :] + 0.5
         e = np.clip(1 - np.minimum(xs, TWd - xs) / 9.0, 0, 1) ** 1.5
-        s.comp(0x2a251f, e * 0.2)
-        speckle(s, sd + 7, amount=0.4, density=0.006)
+        s.comp(0x2a251f, e * 0.14)
+        speckle(s, sd + 7, amount=0.3, density=0.005)
         return s
 
     def num(s, yp):
@@ -232,7 +232,7 @@ def corner() -> dict:
     atlas = Atlas(512, 1024, 0x808080)
     atlas.add("front", 0, 0, side(seed, [dict(x=34, y=int(THt - 1 - 0.98 * THt / PH), w=84, h=120, seed=301, rot=2, kind="concert")]))
     atlas.add("right", 192, 0, side(seed + 10, [], num))
-    top = concrete_sheet(176, 176, seed + 20, 0xa59f94, stains=0.3, grit=0.7)
+    top = concrete_sheet(176, 176, seed + 20, 0xd8d2c6, stains=0.2, grit=0.55)
     yy, xx = np.mgrid[0:176, 0:176]
     edge_px = 88.0 - np.maximum(np.abs(xx - 87.5), np.abs(yy - 87.5))
     top.comp(0x34312e, np.clip(1 - edge_px / 14.0, 0, 1) * 0.5)

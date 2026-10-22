@@ -1,9 +1,11 @@
 import {
   AdditiveBlending,
   CanvasTexture,
+  CylinderGeometry,
   Group,
   Mesh,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   PlaneGeometry,
   SRGBColorSpace,
   Sprite,
@@ -21,11 +23,13 @@ interface Visual {
   label: Sprite;
   shadow: Mesh;
   pad: Mesh;
+  pedestal: Mesh;
   shown: string;
 }
 
-const shadowGeo = new PlaneGeometry(0.96, 0.96);
-const padGeo = new PlaneGeometry(0.98, 0.98);
+const shadowGeo = new PlaneGeometry(1.06, 1.06);
+const padGeo = new PlaneGeometry(1.08, 1.08);
+const pedestalGeo = new CylinderGeometry(0.45, 0.5, 0.055, 24);
 
 let cachedPadTex: CanvasTexture | null = null;
 function generatorPadTexture(): CanvasTexture {
@@ -79,12 +83,13 @@ export class GeneratorViews implements View {
     }
     for (const [id, v] of this.visuals) {
       if (!live.has(id)) {
-        this.group.remove(v.model.root, v.label, v.shadow, v.pad);
+        this.group.remove(v.model.root, v.label, v.shadow, v.pad, v.pedestal);
         v.model.casingMaterial.dispose();
         v.model.lampMaterial.dispose();
         v.label.material.dispose();
         (v.shadow.material as MeshBasicMaterial).dispose();
         (v.pad.material as MeshBasicMaterial).dispose();
+        (v.pedestal.material as MeshStandardMaterial).dispose();
         this.visuals.delete(id);
       }
     }
@@ -95,7 +100,7 @@ export class GeneratorViews implements View {
     const label = new Sprite(
       new SpriteMaterial({ map: labelTexture('3'), transparent: true, depthTest: false }),
     );
-    label.scale.set(0.86, 0.34, 1);
+    label.scale.set(1.05, 0.42, 1);
     label.renderOrder = 30;
     const shadow = new Mesh(
       shadowGeo,
@@ -103,7 +108,7 @@ export class GeneratorViews implements View {
         map: glowTexture(),
         color: 0x000000,
         transparent: true,
-        opacity: 0.58,
+        opacity: 0.65,
         depthWrite: false,
       }),
     );
@@ -115,15 +120,26 @@ export class GeneratorViews implements View {
         map: generatorPadTexture(),
         color: 0xffb824,
         transparent: true,
-        opacity: 0.85,
+        opacity: 0.92,
         blending: AdditiveBlending,
         depthWrite: false,
       }),
     );
     pad.rotation.x = -Math.PI / 2;
     pad.renderOrder = 4;
-    this.group.add(model.root, label, shadow, pad);
-    return { model, label, shadow, pad, shown: '' };
+    const pedestal = new Mesh(
+      pedestalGeo,
+      new MeshStandardMaterial({
+        color: 0x242830,
+        emissive: 0xff8a14,
+        emissiveIntensity: 0.45,
+        roughness: 0.35,
+        metalness: 0.75,
+      }),
+    );
+    pedestal.receiveShadow = true;
+    this.group.add(model.root, label, shadow, pad, pedestal);
+    return { model, label, shadow, pad, pedestal, shown: '' };
   }
 
   private pose(ctx: FrameContext, g: Generator, v: Visual): void {
@@ -155,13 +171,15 @@ export class GeneratorViews implements View {
     }
 
     const w = toWorld(layout, gx, gy);
-    v.model.root.position.set(w.x, lift, w.z);
-    v.model.root.scale.setScalar(1.28);
+    v.model.root.position.set(w.x, lift + 0.04, w.z);
+    v.model.root.scale.setScalar(1.36);
     v.shadow.position.set(w.x, 0.02, w.z);
-    v.shadow.scale.setScalar(lift > 0.2 ? Math.max(0.5, 1 - lift * 0.2) : 1);
+    v.shadow.scale.setScalar(lift > 0.2 ? Math.max(0.5, 1 - lift * 0.2) : 1.05);
     v.pad.position.set(w.x, 0.026, w.z);
     v.pad.rotation.z = time * 1.2;
     v.pad.visible = lift < 0.25 && (g.mode === 'timed' || g.mode === 'remote');
+    v.pedestal.position.set(w.x, 0.028, w.z);
+    v.pedestal.visible = lift < 0.25;
 
     // Mode-specific look: bright yellow generator casing (timed) with red pulsing siren beacon & floor ring
     const timed = g.mode === 'timed';
@@ -222,7 +240,7 @@ export class GeneratorViews implements View {
       v.label.material.map = labelTexture(label, labelColor, 'bold 64px system-ui, sans-serif');
       v.label.material.needsUpdate = true;
     }
-    v.label.position.set(w.x, lift + 1.02, w.z - 0.1);
+    v.label.position.set(w.x, lift + 1.14, w.z - 0.1);
     v.label.material.opacity = g.carriedBy !== null ? 0.9 : 1;
   }
 
@@ -233,6 +251,7 @@ export class GeneratorViews implements View {
       v.label.material.dispose();
       (v.shadow.material as MeshBasicMaterial).dispose();
       (v.pad.material as MeshBasicMaterial).dispose();
+      (v.pedestal.material as MeshStandardMaterial).dispose();
     }
     this.visuals.clear();
   }

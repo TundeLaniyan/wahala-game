@@ -185,25 +185,25 @@ export class ArenaView implements View {
         const col2 = marketColors[(h + 2) % marketColors.length]!;
         if ((gx + gy) % 4 === 0) {
           const cloth = new Mesh(clothGeo, new MeshStandardMaterial({ color: col1, roughness: 0.78 }));
-          cloth.position.set(wx - 0.12, 1.12, wz + 0.08);
+          cloth.position.set(wx - 0.11, 1.21, wz + 0.07);
           cloth.rotation.y = 0.22;
           const cloth2 = new Mesh(clothTopGeo, new MeshStandardMaterial({ color: col2, roughness: 0.78 }));
-          cloth2.position.set(wx - 0.12, 1.16, wz + 0.08);
+          cloth2.position.set(wx - 0.11, 1.25, wz + 0.07);
           cloth2.rotation.y = -0.15;
           this.decals.add(cloth, cloth2);
         } else if ((gx + gy) % 4 === 2) {
           const basin = new Mesh(basinGeo, new MeshStandardMaterial({ color: col2, roughness: 0.4 }));
-          basin.position.set(wx + 0.08, 1.15, wz - 0.06);
+          basin.position.set(wx + 0.07, 1.24, wz - 0.05);
           const goods = new Mesh(goodsGeo, new MeshStandardMaterial({ color: 0xf4a226, roughness: 0.75 }));
-          goods.position.set(wx + 0.08, 1.21, wz - 0.06);
+          goods.position.set(wx + 0.07, 1.30, wz - 0.05);
           this.decals.add(basin, goods);
         }
       } else if ((gx + gy) % 4 === 0) {
         // Lekki Roadworks: bright orange/white traffic cone perched on select pillars
         const cone = new Mesh(coneGeo, coneMat);
-        cone.position.set(wx, 1.26, wz);
+        cone.position.set(wx, 1.35, wz);
         const stripe = new Mesh(bandGeo, whiteMat);
-        stripe.position.set(wx, 1.25, wz);
+        stripe.position.set(wx, 1.34, wz);
         this.decals.add(cone, stripe);
       }
     }
@@ -260,10 +260,11 @@ export class ArenaView implements View {
   private placePillar(i: number, x: number, y: number, lift: number): void {
     this.p.set(this.layout.wx(x), lift, this.layout.wz(y));
     this.q.identity();
-    this.s.set(1, 1, 1);
+    this.s.set(0.84, 1.08, 0.84);
     this.m.compose(this.p, this.q, this.s);
     this.pillars[this.pillarVariant(x, y)]!.set(i, this.m);
-    if (lift === 0) this.setContact(i, x, y, 1);
+    this.s.set(1, 1, 1);
+    if (lift === 0) this.setContact(i, x, y, 0.94);
   }
 
   private setContact(i: number, x: number, y: number, size: number): void {
@@ -277,12 +278,13 @@ export class ArenaView implements View {
 
   private placeSoft(i: number, x: number, y: number): void {
     this.p.set(this.layout.wx(x), 0, this.layout.wz(y));
-    this.e.set(0, ((x * 31 + y * 17) % 7) * 0.05 - 0.15, 0);
+    this.e.set(0, ((x * 31 + y * 17) % 5) * 0.03 - 0.06, 0);
     this.q.setFromEuler(this.e);
-    this.s.set(1, 1, 1);
+    this.s.set(0.86, 0.9, 0.86);
     this.m.compose(this.p, this.q, this.s);
     this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.set(i, this.m);
-    this.setContact(i, x, y, 0.85);
+    this.s.set(1, 1, 1);
+    this.setContact(i, x, y, 0.8);
   }
 
   dispose(): void {

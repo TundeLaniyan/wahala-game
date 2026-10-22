@@ -36,7 +36,7 @@ CAP_BOT = 0.97
 CAP_C = 0.03  # cap chamfer (top and bottom)
 TW = 256  # side tile width
 TH = int(np.ceil(H * TW / W)) + 2  # side tile height (same pixel density on both axes)
-SIDE_TONE = 0xc6c1b7  # pale precast concrete (reference: near-white blocks with a blue/yellow foot)
+SIDE_TONE = 0xd6d0c4  # bright sun-struck precast concrete with a vivid blue/yellow foot
 
 
 def Y(y_old: float) -> float:
@@ -99,20 +99,20 @@ def _side(seed: int, tone, band_cfg: dict, posters: list, extra=None) -> Sheet:
 
 
 def _top(seed: int, extra=None) -> Sheet:
-    s = concrete_sheet(256, 256, seed + 20, 0xbab4a9, stains=0.25, grit=0.7)
+    s = concrete_sheet(256, 256, seed + 20, 0xded8cc, stains=0.16, grit=0.55)
     yy, xx = np.mgrid[0:256, 0:256]
     r = np.maximum(np.abs(xx - 127.5), np.abs(yy - 127.5))  # px from the centre (Chebyshev)
     edge_px = 128.0 - r  # px from the tile edge
-    # outer ring: plinth chamfer + ledge collect grime; cap chamfer ring is slightly worn-light
+    # outer ring: plinth chamfer + ledge collect grime; cap chamfer ring is sun-highlighted
     dirty = np.clip(1 - edge_px / 14.0, 0, 1)
     nn = noise2(256, 256, seed + 24, fx=14, fy=14, octaves=5)
-    s.comp(0x34312e, dirty * (0.25 + 0.25 * nn))
+    s.comp(0x4a443c, dirty * (0.14 + 0.14 * nn))
     cham = np.clip(1 - np.abs(edge_px - 16.0) / 4.0, 0, 1)
-    s.comp(0xcfc8ba, cham * 0.25)
+    s.comp(0xf2ece0, cham * 0.32)
     n = noise2(256, 256, seed + 21, fx=3, fy=3, octaves=4)
-    s.comp(0x4d463d, np.clip(n * 1.6 - 0.85, 0, 1) * 0.30)  # rain stains
-    speckle(s, seed + 22, amount=0.3, density=0.004)
-    scuffs(s, seed + 23, n=18, length=(8, 30))
+    s.comp(0x6e665b, np.clip(n * 1.6 - 0.85, 0, 1) * 0.16)  # subtle rain stains
+    speckle(s, seed + 22, amount=0.22, density=0.003)
+    scuffs(s, seed + 23, n=10, length=(8, 24))
     if extra:
         extra(s)
     return s
@@ -187,7 +187,7 @@ def pillar_a() -> dict:
     def num_top(s):
         stencil(s, "A12", (128, 128), 34, 0xf1ead2, "black", a=0.45, squeeze=0.9, wear=0.8, seed=8)
 
-    return _build("prop_pillar_a", seed, dict(y0=0.02, y1=0.24, c2=0x1e68cf, wear=0.42), posters_f, posters_r, [], None, num, None, num_top)
+    return _build("prop_pillar_a", seed, dict(y0=0.02, y1=0.26, c2=0x1b64c8, stripe=24, wear=0.18), posters_f, posters_r, [], None, num, None, num_top)
 
 
 def pillar_b() -> dict:
@@ -207,12 +207,12 @@ def pillar_b() -> dict:
         yy, xx = np.mgrid[0:256, 0:256]
         d = np.sqrt((xx - 256) ** 2 + (yy - 256) ** 2) / 256.0  # rust bleed from the broken (+x,+z) corner
         n = noise2(256, 256, 31, fx=10, fy=10)
-        s.comp(0x7a3d1c, np.clip(1 - d * 1.5, 0, 1) * n * 0.7)
+        s.comp(0x7a3d1c, np.clip(1 - d * 1.5, 0, 1) * n * 0.22)
 
     def chip_front(s):
         drips(s, 3, 170, 226, ypx(Y(0.30)), 0x7a3d1c, n=6, length=(10, 40), width=2.2)
 
-    return _build("prop_pillar_b", seed, dict(y0=0.02, y1=0.24, stripe=26, angle=40, wear=0.7), posters_f, [], posters_l, chip_front, tag_r, tag, rust_top, chip=True, loops=False, rebar=True)
+    return _build("prop_pillar_b", seed, dict(y0=0.02, y1=0.26, c2=0x1b64c8, stripe=24, angle=45, wear=0.22), posters_f, [], posters_l, chip_front, tag_r, tag, rust_top, chip=True, loops=False, rebar=True)
 
 
 def pillar_c() -> dict:
@@ -234,10 +234,10 @@ def pillar_c() -> dict:
         stencil(s, "B7", (128, ypx(Y(0.40))), 68, 0xf2b705, "black", a=0.85, squeeze=0.85, wear=0.6, seed=9)
 
     def top_extra(s):
-        cracks(s, 18, n=3, length=0.7, width=1.5)
+        cracks(s, 18, n=2, length=0.6, width=1.2)
         stencil(s, "NO", (128, 100), 30, 0xf1ead2, "black", a=0.4, squeeze=0.9, wear=0.8, seed=2)
 
-    return _build("prop_pillar_c", seed, dict(y0=0.02, y1=0.24, stripe=22, angle=130, wear=0.5), posters_f, posters_r, [], None, crack_side, crack_left, top_extra)
+    return _build("prop_pillar_c", seed, dict(y0=0.02, y1=0.26, c2=0x1b64c8, stripe=24, angle=135, wear=0.20), posters_f, posters_r, [], None, crack_side, crack_left, top_extra)
 
 
 PILLARS = {"prop_pillar_a": pillar_a, "prop_pillar_b": pillar_b, "prop_pillar_c": pillar_c}

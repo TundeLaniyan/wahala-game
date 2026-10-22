@@ -1,9 +1,11 @@
 import {
   AdditiveBlending,
   CanvasTexture,
+  CylinderGeometry,
   Group,
   Mesh,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   PlaneGeometry,
   Sprite,
   SpriteMaterial,
@@ -17,6 +19,7 @@ import type { FrameContext, View } from './types';
 interface Visual {
   sprite: Sprite;
   ring: Mesh;
+  pedestal: Mesh;
   shadow: Mesh;
   born: number;
   kind: PickupKind;
@@ -32,6 +35,7 @@ function iconTexture(kind: PickupKind): CanvasTexture {
   return t;
 }
 const flat = new PlaneGeometry(1, 1);
+const pedestalGeo = new CylinderGeometry(0.36, 0.41, 0.045, 20);
 
 /** Floating, bobbing pickup tokens with a coloured ground ring so they read at a glance on a phone. */
 export class PickupViews implements View {
@@ -68,14 +72,25 @@ export class PickupViews implements View {
             map: glowTexture(),
             color: 0x000000,
             transparent: true,
-            opacity: 0.4,
+            opacity: 0.48,
             depthWrite: false,
           }),
         );
         shadow.rotation.x = -Math.PI / 2;
         shadow.renderOrder = 3;
-        this.group.add(sprite, ring, shadow);
-        v = { sprite, ring, shadow, born: time, kind: p.kind };
+        const pedestal = new Mesh(
+          pedestalGeo,
+          new MeshStandardMaterial({
+            color: def.color,
+            emissive: def.color,
+            emissiveIntensity: 0.38,
+            roughness: 0.3,
+            metalness: 0.65,
+          }),
+        );
+        pedestal.receiveShadow = true;
+        this.group.add(sprite, ring, pedestal, shadow);
+        v = { sprite, ring, pedestal, shadow, born: time, kind: p.kind };
         this.visuals.set(p.id, v);
       }
       const age = time - v.born;
@@ -86,19 +101,22 @@ export class PickupViews implements View {
       const bob = Math.sin(time * 3.2 + p.id) * 0.07;
       const bad = PICKUP_DEFS[p.kind].bad === true;
       const shake = bad ? Math.sin(time * 30) * 0.03 : 0;
-      v.sprite.position.set(x + shake, 0.62 + bob, z);
-      const size = 0.66 * pop * pop2;
+      v.sprite.position.set(x + shake, 0.68 + bob, z);
+      const size = 0.78 * pop * pop2;
       v.sprite.scale.set(size, size, 1);
       v.ring.position.set(x, 0.025, z);
-      v.ring.scale.setScalar(0.78 + 0.08 * Math.sin(time * 4 + p.id));
+      v.ring.scale.setScalar(0.88 + 0.09 * Math.sin(time * 4 + p.id));
+      v.pedestal.position.set(x, 0.023, z);
+      v.pedestal.scale.setScalar(pop);
       v.shadow.position.set(x, 0.02, z);
-      v.shadow.scale.setScalar(0.5 - bob * 0.5);
+      v.shadow.scale.setScalar(0.58 - bob * 0.5);
     }
     for (const [id, v] of this.visuals) {
       if (!live.has(id)) {
-        this.group.remove(v.sprite, v.ring, v.shadow);
+        this.group.remove(v.sprite, v.ring, v.pedestal, v.shadow);
         v.sprite.material.dispose();
         (v.ring.material as MeshBasicMaterial).dispose();
+        (v.pedestal.material as MeshStandardMaterial).dispose();
         (v.shadow.material as MeshBasicMaterial).dispose();
         this.visuals.delete(id);
       }

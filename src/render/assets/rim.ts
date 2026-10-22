@@ -9,7 +9,7 @@ import type { Material, MeshStandardMaterial, Object3D } from 'three';
 
 const patched = new WeakSet<Material>();
 
-export function addRim(root: Object3D, color = 0xffe0b0, strength = 0.26, power = 3.2): void {
+export function addRim(root: Object3D, color = 0xffe4b5, strength = 0.36, power = 2.8): void {
   const rimColor = new Color(color);
   root.traverse((o) => {
     const mats = (o as { material?: Material | Material[] }).material;

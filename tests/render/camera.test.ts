@@ -57,7 +57,7 @@ describe('render camera framing and picking', () => {
     rig.camera.updateMatrixWorld(true);
     const dir = rig.camera.getWorldDirection(new Vector3());
     const pitchDeg = (Math.asin(-dir.y) * 180) / Math.PI;
-    expect(pitchDeg).toBeGreaterThan(45);
-    expect(pitchDeg).toBeLessThan(56);
+    expect(pitchDeg).toBeGreaterThan(40);
+    expect(pitchDeg).toBeLessThan(50);
   });
 });

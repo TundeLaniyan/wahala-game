@@ -55,9 +55,9 @@ function buildSkyScene(): Scene {
 export function createSceneLights(scene: Scene, renderer: WebGLRenderer): SceneLights {
   // Late-afternoon Lagos sun from the upper left: warm key, crisp shadows falling right and slightly
   // back, and a lower sky/bounce fill so faces turned away from the sun keep real shape.
-  const hemi = new HemisphereLight(0xffe6c4, 0x82664a, 0.66);
-  const sun = new DirectionalLight(0xffd498, 4.0);
-  sun.position.set(-11, 14, 4.5);
+  const hemi = new HemisphereLight(0xffe8cc, 0x765a40, 0.62);
+  const sun = new DirectionalLight(0xffd698, 4.4);
+  sun.position.set(-13, 12.5, 6.2);
   sun.target.position.set(0, 0, 0);
   const cam = sun.shadow.camera;
   cam.left = -15;
@@ -68,7 +68,7 @@ export function createSceneLights(scene: Scene, renderer: WebGLRenderer): SceneL
   cam.far = 50;
   sun.shadow.bias = -0.00035;
   sun.shadow.normalBias = 0.03;
-  sun.shadow.radius = 2.0;
+  sun.shadow.radius = 1.6;
   scene.add(hemi, sun, sun.target);
 
   const pmrem = new PMREMGenerator(renderer);

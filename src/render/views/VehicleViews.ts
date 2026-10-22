@@ -129,8 +129,8 @@ export class VehicleViews implements View {
         : Math.sin(time * 22 + veh.id) * 0.012;
       v.model.root.position.set(layout.wx(gx), 0, layout.wz(gy));
       v.model.root.rotation.set(crashing ? -0.18 : 0, v.yaw, wobble);
-      v.model.root.scale.setScalar(1.12);
-      v.model.body.position.y = Math.abs(Math.sin(time * 18)) * (crashing ? 0 : 0.012);
+      v.model.root.scale.setScalar(1.32);
+      v.model.body.position.y = Math.abs(Math.sin(time * 18)) * (crashing ? 0 : 0.016);
       const spin = veh.phase === 'driving' ? ((dt * 60) / Math.max(4, veh.stepTotal)) * 5 : 0;
       for (const w of v.model.wheels) spinWheel(v.model, w, spin);
       v.lastPos = { x: layout.wx(gx), z: layout.wz(gy), y: 0.5 };
@@ -142,10 +142,10 @@ export class VehicleViews implements View {
         const speed = 60 / Math.max(4, veh.stepTotal); // tiles per second
         v.trail.position.copy(v.model.root.position);
         v.trail.rotation.set(0, v.yaw, 0);
-        const len = (0.6 + speed * 0.32) * v.trailK;
+        const len = (0.95 + speed * 0.42) * v.trailK;
         v.trail.children.forEach((c, i) => {
           c.scale.x = len * (1 + 0.15 * Math.sin(time * 30 + i * 1.7));
-          ((c as Mesh).material as MeshBasicMaterial).opacity = 0.75 * v.trailK;
+          ((c as Mesh).material as MeshBasicMaterial).opacity = 0.85 * v.trailK;
         });
       }
       if ((veh.damage > 0 || crashing) && time > v.smokeAt) {

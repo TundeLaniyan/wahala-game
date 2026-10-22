@@ -20,10 +20,10 @@ export function softVariants(): SoftVariant[] {
  * field reads as one coherent bus-park clutter rather than confetti. Unknown variants weigh 1.
  */
 const SOFT_WEIGHTS: Record<string, number> = {
-  prop_soft_crate: 4,
-  prop_soft_crate_b: 3,
+  prop_soft_crate: 5,
+  prop_soft_crate_b: 4,
   prop_soft_crates: 4,
-  prop_soft_barrier: 3,
+  prop_soft_barrier: 4,
   prop_soft_tyres: 3,
   prop_soft_sacks: 2,
   prop_soft_kegs: 1,
