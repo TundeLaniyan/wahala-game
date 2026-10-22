@@ -43,6 +43,8 @@ const NAV_KEYS: Record<string, NavCommand> = {
 };
 
 export interface KeyboardEvents {
+  /** A direction key went down (never fired for OS key auto-repeat). */
+  onMove(dir: Dir): void;
   onAction(action: ActionName): void;
   onNav(command: NavCommand): void;
   onUse(): void;
@@ -63,6 +65,11 @@ export class KeyboardInput {
     return this.stack.length ? this.stack[this.stack.length - 1]! : null;
   }
 
+  /** Every direction with a key currently down. */
+  get heldSet(): ReadonlySet<Dir> {
+    return new Set(this.stack);
+  }
+
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const target = e.target as HTMLElement | null;
@@ -79,6 +86,7 @@ export class KeyboardInput {
       const i = this.stack.indexOf(move);
       if (i >= 0) this.stack.splice(i, 1);
       this.stack.push(move);
+      this.events.onMove(move);
     }
     if (action) this.events.onAction(action);
     if (nav) this.events.onNav(nav);

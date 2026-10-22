@@ -195,5 +195,27 @@ function createCrush(state: GameState): CrushState {
       if (state.tiles[i] !== Tile.Hard) order.push(i);
     }
   }
-  return { order, next: 0, nextAtTick: state.config.crush.startTicks, pending: [] };
+  const warnAt = crushSchedule(order.length, state.config);
+  return { order, next: 0, warnAt, nextAtTick: warnAt[0] ?? Infinity, pending: [] };
+}
+
+/**
+ * Play tick at which each of `count` tiles is telegraphed. Paced from the real tile count so the
+ * arena is fully open until `startRemainingTicks` is left, every tile except the last has landed
+ * `finalTileLeadTicks` before the end, and the final tile lands exactly at the full-time tick.
+ */
+export function crushSchedule(count: number, config: GameConfig): number[] {
+  if (count === 0) return [];
+  const { durationTicks } = config.match;
+  const { startRemainingTicks, finalTileLeadTicks, warnTicks } = config.crush;
+  const first = Math.max(0, durationTicks - Math.min(startRemainingTicks, durationTicks));
+  const finalWarn = Math.max(first, durationTicks - warnTicks);
+  const lastOfRest = Math.min(Math.max(first, durationTicks - finalTileLeadTicks - warnTicks), finalWarn);
+  const rest = count - 1;
+  const warnAt: number[] = [];
+  for (let j = 0; j < rest; j++) {
+    warnAt.push(first + (rest > 1 ? Math.round(((lastOfRest - first) * j) / (rest - 1)) : 0));
+  }
+  warnAt.push(finalWarn);
+  return warnAt;
 }

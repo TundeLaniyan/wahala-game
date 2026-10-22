@@ -78,7 +78,7 @@ Screenshots from the browser runs were inspected for layout and rendering proble
 7. Readability at phone size: flame lanes, generator numbers, danger previews, entry arrows.
 8. Audio: mix, warnings cutting through music, the comic stings, Pidgin captions.
 9. Frame rate and battery on real mid-range phones; does Auto quality settle sensibly?
-10. Wahala Crush pacing (starts 0:40, one tile / 0.8 s) and crowd-throw frequency.
+10. Wahala Crush pacing (now starts at 0:45 remaining and is paced to finish exactly at 0:00; see "Gameplay corrections" in DECISIONS.md) and crowd-throw frequency.
 
 ## Backlog (from the Bible, not started)
 
@@ -111,3 +111,9 @@ Presentation only: `src/sim`, `src/ai`, `src/input`, `src/audio`, `src/app` are 
 - **Lighting/effects:** warmer, stronger sun; tone-mapping colour grade; flames with orange body + hot core; pooled flame point lights (0/1/3 by quality); vehicle speed streaks.
 - **Crowd:** 70 / 170 / 320 people (low/medium/high), watchers, conversation pairs and walkers with calm/react pose flipbooks; ankara, wrappers, kaftans, basins.
 - **Tools:** `tools/viewer/gameshot.mjs` (real-game screenshots for art review).
+
+## Gameplay corrections (branch `claude/wahala-controls-crush`)
+
+- **Movement precision (done):** edge-triggered, buffered-once input for keyboard, touch and gamepad (`src/input/moveGate.ts`); `tests/input-movement.test.ts` (45 scenario tests across all three devices) + real-browser tap / hold checks in `e2e/`.
+- **Wahala Crush rebalance (done):** starts at 0:45 remaining, final tile closes at exactly 0:00 (`tests/crush-schedule.test.ts`). The start threshold is `config.crush.startRemainingTicks`.
+

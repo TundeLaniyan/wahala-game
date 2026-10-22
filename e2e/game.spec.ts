@@ -35,6 +35,28 @@ test.describe('menus and match flow', () => {
 });
 
 test.describe('keyboard play', () => {
+  test('a 6-tick tap moves exactly one tile each time; holding repeats; releasing stops', async ({
+    page,
+  }) => {
+    await open(page, '&nobots');
+    await startMatch(page, { competitors: 2 });
+    const start = (await getState(page)).players[0]!;
+    // 6 ticks (100 ms) is a normal human tap; it used to outlast one 10-tick step's buffer and move two tiles.
+    for (let i = 0; i < 2; i++) {
+      await holdKey(page, 'ArrowRight', 6);
+      await stepTicks(page, 40);
+    }
+    const tapped = (await getState(page)).players[0]!;
+    expect([tapped.x, tapped.y]).toEqual([start.x + 2, start.y]);
+    await mutate(page, 'for (let i = 0; i < s.tiles.length; i++) if (s.tiles[i] === 2) s.tiles[i] = 0;');
+    await holdKey(page, 'ArrowRight', 40); // deliberate hold: first step, repeat delay, then steady steps
+    await stepTicks(page, 40);
+    const held = (await getState(page)).players[0]!;
+    expect(held.x).toBeGreaterThanOrEqual(tapped.x + 3); // a tap would give one tile; the hold repeated
+    await stepTicks(page, 120);
+    expect((await getState(page)).players[0]!.x).toBe(held.x); // nothing carried over after release
+  });
+
   test('moves one tile at a time, places a generator, escapes and sees the plus-shaped blast', async ({
     page,
   }, info) => {
@@ -240,7 +262,7 @@ test.describe('optional modes', () => {
     // jump to the point where the crush has begun and a spectator throw is imminent
     await mutate(
       page,
-      `s.match.playTicks = s.config.crush.startTicks - 5; s.crowd.nextThrowTick = s.match.playTicks + 3;`,
+      `s.match.playTicks = s.crush.warnAt[0] - 5; s.crowd.nextThrowTick = s.match.playTicks + 3;`,
     );
     await stepTicks(page, 30);
     const warned = await page.evaluate(() => {

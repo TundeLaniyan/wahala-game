@@ -1,4 +1,4 @@
-import { CHARACTERS, createGame, observe, tick } from '../sim';
+import { CHARACTERS, createGame, observe, readyToStep, tick } from '../sim';
 import type { GameState, Intent, Intents, SimEvent, VehicleIntent } from '../sim';
 import type { NavCommand } from '../input';
 import type { EntryPick } from '../render';
@@ -116,6 +116,7 @@ export class MatchController {
   setPaused(paused: boolean): void {
     if (!this.state || this.state.match.phase === 'ended') return;
     this.paused = paused;
+    this.deps.input.clear(); // a press made while paused must not become a move on resume
     this.lastMs = -1;
     patch({ paused });
   }
@@ -173,7 +174,7 @@ export class MatchController {
     if (me && !me.isBot && me.alive) {
       this.entry.sync(state);
       this.deps.input.navMode = this.entry.active;
-      const intent = this.deps.input.buildIntent(state.tick);
+      const intent = this.deps.input.buildIntent(state.tick, readyToStep(me));
       if (this.deps.input.takeVehiclePress()) {
         const v = this.entry.press(state);
         if (v) intent.vehicle = v;

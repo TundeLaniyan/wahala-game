@@ -208,6 +208,9 @@ export interface CrushState {
   /** Tile indices in the order they will close. */
   order: number[];
   next: number;
+  /** Play tick at which each tile of `order` is telegraphed; its landing is `warnTicks` later. */
+  warnAt: number[];
+  /** Play tick at which `order[next]` is telegraphed (derived from `warnAt`). */
   nextAtTick: number;
   /** Tiles currently warning, with the tick they land. */
   pending: { index: number; landTick: number }[];

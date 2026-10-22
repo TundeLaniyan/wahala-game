@@ -11,7 +11,7 @@ describe('Wahala Crush', () => {
   it('closes the arena inward with telegraphed, permanent concrete', () => {
     const s = createGame({ seed: 1, players: duo, settings: { mode: 'crush' } });
     s.match.phase = 'playing';
-    s.match.playTicks = s.config.crush.startTicks;
+    s.match.playTicks = s.crush!.warnAt[0]!;
     const ev = run(s, s.config.crush.warnTicks + 5);
     const warn = eventsOf(ev, 'crushWarning')[0]!;
     const land = eventsOf(ev, 'crushLanded')[0]!;
@@ -137,6 +137,7 @@ describe('generators and hazards stay consistent', () => {
     s.crush = {
       order: [],
       next: 0,
+      warnAt: [],
       nextAtTick: 1e9,
       pending: [{ index: 4 * s.width + 4, landTick: s.tick + 1 }],
     };

@@ -68,6 +68,7 @@ describe('hazard avoidance', () => {
     s.crush = {
       order: [],
       next: 0,
+      warnAt: [],
       nextAtTick: 999999,
       pending: [{ index: 4 * s.width + 6, landTick: s.tick + 50 }],
     };

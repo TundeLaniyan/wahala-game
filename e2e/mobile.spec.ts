@@ -39,6 +39,24 @@ test.describe('touch controls (landscape phone)', () => {
       .toBe('touch');
   });
 
+  test('a 6-tick D-pad tap moves exactly one tile and a lifted finger leaves nothing queued', async ({
+    page,
+  }) => {
+    await open(page, '&nobots');
+    await startMatch(page, { competitors: 2 });
+    const box = (await page.getByTestId('dpad').boundingBox())!;
+    const start = (await getState(page)).players[0]!;
+    for (let i = 0; i < 2; i++) {
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.12);
+      await page.mouse.down();
+      await stepTicks(page, 6);
+      await page.mouse.up();
+      await stepTicks(page, 60);
+    }
+    const after = (await getState(page)).players[0]!;
+    expect([after.x, after.y]).toEqual([start.x, start.y - 2]);
+  });
+
   test('contextual buttons appear with abilities and the vehicle button launches entry selection', async ({
     page,
   }, info) => {

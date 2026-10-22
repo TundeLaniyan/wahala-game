@@ -79,7 +79,7 @@ Rules (enforced by ESLint `no-restricted-imports`):
 
 ## Contracts between layers
 
-- **Input -> sim:** `Intents = Record<playerId, Intent>`. `move` is level-triggered; `place/action/disarm/skill/detonate/vehicle` are one-shot for exactly one tick. Humans and bots produce the same type.
+- **Input -> sim:** `Intents = Record<playerId, Intent>`. `move` is level-triggered in the sim (bots hold it), but human input goes through `input/moveGate.ts`, which turns presses into single steps and a deliberate hold into repeats; `place/action/disarm/skill/detonate/vehicle` are one-shot for exactly one tick. Humans and bots produce the same type.
 - **Bot:** `src/ai` exports `createBot({ difficulty, seed, playerId }) -> Bot` where `Bot.decide(obs: Observation): Intent`. Bots are deterministic given their seed and observations.
 - **Sim -> presentation:** `SimEvent[]` returned by every `tick` drive particles, sounds, captions and HUD toasts. State is read for positions.
 - **Audio:** `src/audio/index.ts` exports `createAudio()` returning `AudioEngine` (unlock after a user gesture, volumes, mute, music intensity, `handleEvents(events, state)`), plus a pure `captionsFor(events, state, rng)` producing Pidgin crowd lines.

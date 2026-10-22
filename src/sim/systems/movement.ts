@@ -10,6 +10,14 @@ import { continueSlide } from './hazards';
 import { beginStep, canPlayerEnter } from './stepping';
 import { groundedGeneratorAt, isActing, playerStepTicks } from './queries';
 
+/**
+ * Whether `updateMovement` will look at this player's move intent on the next tick (the previous
+ * step finishes on it). Input layers use it to hand over exactly one buffered move per press.
+ */
+export function readyToStep(player: { stepRemaining: number }): boolean {
+  return player.stepRemaining <= 1;
+}
+
 export function updateMovement(state: GameState, intents: Intents, events: SimEvent[]): void {
   for (const p of state.players) {
     if (!p.alive) continue;

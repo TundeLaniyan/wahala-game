@@ -16,7 +16,7 @@ export function updateCrush(state: GameState, hits: LethalHit[], events: SimEven
 
   while (state.match.playTicks >= crush.nextAtTick && crush.next < crush.order.length) {
     const index = crush.order[crush.next++]!;
-    crush.nextAtTick += cfg.intervalTicks;
+    crush.nextAtTick = crush.warnAt[crush.next] ?? Infinity;
     if (state.tiles[index] === Tile.Hard) continue;
     const landTick = state.tick + cfg.warnTicks;
     crush.pending.push({ index, landTick });
@@ -64,8 +64,9 @@ function land(state: GameState, index: number, hits: LethalHit[], events: SimEve
         p.x = p.stepFromX = spot.x;
         p.y = p.stepFromY = spot.y;
         p.stepRemaining = 0;
+        continue;
       }
-      continue;
+      // No open tile left (the final closure): the shield cannot save the rider.
     }
     hits.push({
       playerId: p.id,
