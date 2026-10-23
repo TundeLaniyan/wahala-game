@@ -2,20 +2,18 @@ import type { ArenaDef } from './types';
 import { CORNER_CLEARANCE, CORNER_SPAWNS, line, makeLayout, trapRows } from './build';
 
 /**
- * Oshodi Interchange: a junction under the flyovers. Two road rows (2 and 8) and two road columns
- * (4 and 10) cross the arena with no crates on them; under the flyover in the middle the pillars are
- * replaced by two wide piers.
+ * Oshodi Interchange: a junction under the flyovers. Two carriageways (rows 4 and 6, either side of the flyover piers) cross the whole
+ * arena with no crates on them; under the flyover in the middle the pillars are replaced by two wide
+ * piers. (Road columns as well were tried first: bot matches fell to ~20 s; with
+ * two carriageways bot matches last ~25 s - the fastest standard arena after the Power Yard, by
+ * design - decision N8.)
  *
- * Stage: traffic. Buses and kekes cross a whole road lane at speed, one lane at a time, each telegraphed
+ * Stage: traffic. Buses and kekes cross a whole carriageway at speed, one at a time, each telegraphed
  * 2 s ahead (flashing lane, horn). Anyone on the lane when the vehicle reaches them is out (Okada
  * absorbs); generators on the lane are set off.
  */
-const ROAD_ROWS = [2, 8];
-const ROAD_COLS = [4, 10];
-const roads = [
-  ...ROAD_ROWS.flatMap((y) => line([0, y], [14, y])),
-  ...ROAD_COLS.flatMap((x) => line([x, 0], [x, 10])),
-];
+const ROAD_ROWS = [4, 6];
+const roads = ROAD_ROWS.flatMap((y) => line([0, y], [14, y]));
 
 export const OSHODI_INTERCHANGE: ArenaDef = {
   id: 'oshodiInterchange',
@@ -48,10 +46,10 @@ export const OSHODI_INTERCHANGE: ArenaDef = {
     {
       kind: 'sweep',
       style: 'traffic',
-      routes: [line([0, 2], [14, 2]), line([14, 8], [0, 8]), line([4, 0], [4, 10]), line([10, 10], [10, 0])],
+      routes: [line([0, 4], [14, 4]), line([14, 6], [0, 6]), line([14, 4], [0, 4]), line([0, 6], [14, 6])],
       stepTicks: 5,
       firstAtSec: 8,
-      everySec: [6, 10],
+      everySec: [5, 9],
       warnSec: 2,
     },
   ],
@@ -59,7 +57,7 @@ export const OSHODI_INTERCHANGE: ArenaDef = {
     tagline: 'Chaos under the Oshodi flyovers: buses, kekes and hawkers in the traffic haze.',
     lighting: 'Bright late morning, traffic haze',
     hazards: [
-      'Buses and kekes cross the marked road lanes - the lane flashes 2 s before. Off the road!',
+      'Buses and kekes race along the two marked carriageways - the lane flashes 2 s before. Off the road!',
       'A generator on the road is set off by the traffic.',
     ],
   },

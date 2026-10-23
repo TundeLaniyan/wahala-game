@@ -1,6 +1,7 @@
 # WAHALA! audio: infrastructure, and what is (not) shipped
 
-State on `claude/wahala-gritty-gameplay-v1`: the approved-playlist music system (`src/audio/playlist.ts`,
+State on `claude/wahala-nine-arenas-city-rumble` (started from `claude/wahala-gritty-gameplay-v1`): **one signature
+track per standard arena** (see "Signature tracks" below) and the music bus raised by +2.5 dB. The approved-playlist music system (`src/audio/playlist.ts`,
 `src/audio/music.ts`, `src/audio/escalation.ts`) with **nine of the ten approved tracks installed and playing**.
 
 ## Read this first
@@ -67,24 +68,24 @@ download names, `<uploader>-<title>-<id>.mp3`, which is where the uploader and i
 ID3 tags). All nine decode (MPEG-1 layer III, 256 kbps) and are distinct (different content hashes). Loudness was
 measured with ffmpeg's EBU R128 meter; the manifest's `gain` levels every track to about -14 LUFS.
 
-| # | File in `public/audio/music/` | Uploader | Length | Loudness -> gain | Arena playlist | Status |
+| # | File in `public/audio/music/` | Uploader | Length | Loudness -> gain | Signature of (City Rumble rotation) | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `pixabay_569473.mp3` | arpmedia | 2:25 | -12.1 LUFS -> 0.80 | Balogun Market | installed |
-| 2 | `pixabay_573648.mp3` | alex-morgan | 2:23 | -9.8 LUFS -> 0.62 | Balogun Market (start) | installed |
-| 3 | `pixabay_588999.mp3` | solarflex | 1:36 | -13.2 LUFS -> 0.91 | Lekki Roadworks | installed |
-| 4 | `pixabay_491433.mp3` | apalonbeats | 3:03 | -11.2 LUFS -> 0.72 | Lekki Roadworks (start) | installed |
-| 5 | `pixabay_439622.mp3` | sigmamusicart | 1:50 | -13.5 LUFS -> 0.94 | Lekki Roadworks | installed |
-| 6 | `pixabay_491432.mp3` | apalonbeats | 2:54 | -11.6 LUFS -> 0.76 | Danfo Bus Park | installed |
-| 7 | `pixabay_496406.mp3` | (unknown) | - | - | Danfo Bus Park | **missing**: https://pixabay.com/music/afrobeat-afrobeat-afro-beat-496406/ |
-| 8 | `pixabay_406552.mp3` | audiolibraryinfinite | 4:00 | -15.2 LUFS -> 1.15 | Danfo Bus Park | installed |
-| 9 | `pixabay_540950.mp3` | hitslab | 1:51 | -10.6 LUFS -> 0.68 | Balogun Market | installed |
-| 10 | `pixabay_504898.mp3` | freemusicforvideo | 2:21 | -12.9 LUFS -> 0.88 | Danfo Bus Park (start) | installed |
+| 1 | `pixabay_569473.mp3` | arpmedia | 2:25 | -12.1 LUFS -> 0.80 | Oshodi Interchange (+ City Rumble) | installed |
+| 2 | `pixabay_573648.mp3` | alex-morgan | 2:23 | -9.8 LUFS -> 0.62 | Balogun Market | installed |
+| 3 | `pixabay_588999.mp3` | solarflex | 1:36 | -13.2 LUFS -> 0.91 | Ajegunle Backstreets | installed |
+| 4 | `pixabay_491433.mp3` | apalonbeats | 3:03 | -11.2 LUFS -> 0.72 | Lekki Roadworks | installed |
+| 5 | `pixabay_439622.mp3` | sigmamusicart | 1:50 | -13.5 LUFS -> 0.94 | Yaba After Dark (+ City Rumble) | installed |
+| 6 | `pixabay_491432.mp3` | apalonbeats | 2:54 | -11.6 LUFS -> 0.76 | Surulere Power Yard (+ City Rumble, first) | installed |
+| 7 | `pixabay_496406.mp3` | (unknown) | - | - | (none) | **missing**: https://pixabay.com/music/afrobeat-afrobeat-afro-beat-496406/ |
+| 8 | `pixabay_406552.mp3` | audiolibraryinfinite | 4:00 | -15.2 LUFS -> 1.15 | Lagos Lagoon Jetty | installed |
+| 9 | `pixabay_540950.mp3` | hitslab | 1:51 | -10.6 LUFS -> 0.68 | Third Mainland Checkpoint (+ City Rumble) | installed |
+| 10 | `pixabay_504898.mp3` | freemusicforvideo | 2:21 | -12.9 LUFS -> 0.88 | Danfo Bus Park (+ City Rumble) | installed |
 
 The missing track is identified by elimination of the Pixabay ids in the supplied file names: 496406 (approved #7)
 is the only approved id not among them. **To add it**: save it as `public/audio/music/pixabay_496406.mp3`, set its
 `artist` (and a measured `gain`) in `public/audio/music/manifest.json`, move its `LICENSES.md` row from "Missing" to "Files present",
 and update the installed-files assertion in `tests/audio/assets.test.ts`. No code change: it is already in the
-manifest and the Danfo Bus Park playlist.
+manifest (no arena uses it as a signature; add it to the City Rumble rotation if wanted).
 
 Licence handling: the tracks are shipped only as the game's soundtrack (named by slot, loaded by the game's player,
 never offered as a download or collection); see `public/audio/LICENSES.md`.
@@ -106,12 +107,42 @@ music is silent and everything else works. `whenMusicLoaded()` reports which ids
   an optional `signature`. A signature (meant for when there are ten arenas, one track each) always plays on its arena
   while available. The `start` track opens the **first** match on that arena in a session (unless it was the track
   just heard); later matches rotate through the arena's list, never repeating the previous track.
-- Today each arena has its own three tracks: Danfo Bus Park 504898 (start, ~117 BPM) / 406552 / 491432 (+ the empty
-  496406 slot), the busiest and fastest; Balogun Market 573648 "summer groove" (start) / 569473 / 540950; Lekki
-  Roadworks 491433 (start) / 588999 / 439622, the slower, heavier ones for the night shift. (Tempos are rough
-  onset-autocorrelation estimates; the grouping has not been judged by ear.) Signatures are `null`.
+- **Signature tracks (nine-arena branch, founder assignment):** every standard arena has exactly one track, set as
+  its `signature` (and `start`, and its only `tracks` entry), so every match on that arena opens with and keeps its
+  song (the `<audio>` element loops if the match outlasts it):
+
+  | Arena | Track |
+  | --- | --- |
+  | Danfo Bus Park | `pixabay_504898` |
+  | Balogun Market | `pixabay_573648` |
+  | Lekki Roadworks | `pixabay_491433` |
+  | Oshodi Interchange | `pixabay_569473` |
+  | Ajegunle Backstreets | `pixabay_588999` |
+  | Lagos Lagoon Jetty | `pixabay_406552` |
+  | Surulere Power Yard | `pixabay_491432` |
+  | Yaba After Dark | `pixabay_439622` |
+  | Third Mainland Checkpoint | `pixabay_540950` |
+
+  City Rumble rotates five of the same files (491432 first, then 439622, 569473, 540950, 504898, never back to back).
+  `tests/audio/playlist.test.ts` pins the table.
+- **Loudness:** the music bus headroom constant is raised by +2.5 dB (`MUSIC_LIFT_DB` in `src/audio/buses.ts`;
+  1.3 -> 1.73), per the founder's note that the music was too quiet. The per-track `gain` levelling is unchanged, the
+  master limiter and soft clip still guarantee no clipping, and the warning duck is a little deeper (music 0.8 ->
+  0.7) so trap alarms, fuse ticks and blasts stay on top. Still measured, not judged by ear.
 - `menu` lists optional title-screen tracks. It is empty, so the menus stay silent (the tracks were approved for
   matches; add ids there to use some on the title screen).
+
+### Licensing in a public repository and a public GitHub Pages build
+
+The repository is public and GitHub Pages serves static files, so every MP3 is technically downloadable by anyone who
+looks at the network requests or the repository. Nothing here pretends otherwise. What keeps the use within the
+Pixabay Content License is how the files are offered: as the soundtrack inside the game, loaded by the game's player,
+named by slot, with no download button, album page, ZIP, playlist page or "soundtrack" section, and the source pages
+credited in `public/audio/LICENSES.md`. The licence forbids distributing the music on a standalone basis; a public
+repository holding the files of a game that uses them is the normal way games ship licensed music, but it is the
+founder's call whether to keep the MP3s in the public repository or move them to private storage / a CDN before a
+commercial release (that would need a small change to where `music.ts` fetches from). Re-read the licence before
+any commercial launch.
 
 ### Streaming
 
