@@ -36,9 +36,9 @@ check `build.json` and the browser network panel (all requests should be 200, un
 
 ## Mobile notes
 
-- Play in landscape; the game shows a rotate-your-phone message in portrait and asks for fullscreen on the first tap
-  on touch devices (iOS Safari does not support the Fullscreen API on iPhone; add the page to the home screen for a
-  full-screen experience - `public/manifest.webmanifest` is in place).
+- Play in landscape: during a match a rotate-your-phone overlay covers portrait. Pressing Play on a touch device
+  requests fullscreen and a landscape lock (best effort: iPhone Safari supports neither; add the page to the home
+  screen for a full-screen app - `public/manifest.webmanifest` asks for fullscreen landscape).
 - Audio starts after the first tap (browser autoplay rules).
 - Music is streamed per arena (one MP3 when a match starts), not preloaded; 3D models load once with a progress bar.
 
