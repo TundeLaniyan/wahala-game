@@ -1,8 +1,11 @@
-name: Deploy to GitHub Pages
+name: Deploy preview to GitHub Pages
 
+# The playable mobile preview at https://tundelaniyan.github.io/wahala-game/ is built from the
+# nine-arenas / City Rumble branch. Only this workflow (on this branch) deploys; `main` keeps its own
+# copy of the old workflow, so a push to `main` would replace the preview (see docs/DEPLOYMENT.md).
 on:
   push:
-    branches: [main]
+    branches: [claude/wahala-nine-arenas-city-rumble]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +15,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -28,7 +31,11 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+      # SPA fallback and no Jekyll processing (files starting with "_" must be served).
+      - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

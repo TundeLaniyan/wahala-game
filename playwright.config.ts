@@ -16,7 +16,8 @@ export default defineConfig({
     launchOptions: {
       executablePath,
       args: [
-        '--single-process',
+        // The container's preinstalled Chromium needs one process; on CI runners it kills new contexts.
+        ...(executablePath ? ['--single-process'] : []),
         '--no-sandbox',
         '--use-gl=angle',
         '--use-angle=swiftshader',
