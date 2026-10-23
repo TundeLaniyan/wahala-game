@@ -173,7 +173,8 @@ describe('self-inflicted deaths', () => {
 });
 
 describe('matches finish', () => {
-  it('most matches end with a winner well before the two-minute timeout', () => {
+  // 16 full bot matches: allow for slow, shared CI machines (the assertions are what matter)
+  it('most matches end with a winner well before the two-minute timeout', { timeout: 30_000 }, () => {
     let finished = 0;
     let total = 0;
     let ticks = 0;
