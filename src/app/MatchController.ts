@@ -1,9 +1,10 @@
-import { CHARACTERS, createGame, observe, readyToStep, tick } from '../sim';
+import { CHARACTERS, createGame, getArena, observe, readyToStep, tick } from '../sim';
 import type { GameState, Intent, Intents, SimEvent, VehicleIntent } from '../sim';
 import type { NavCommand } from '../input';
 import type { EntryPick } from '../render';
 import { buildHud } from './hud';
 import { buildPlayers } from './names';
+import { cycleSpectateTarget, eliminatorOf, pickSpectateTarget } from './spectate';
 import { NULL_AUDIO, NULL_CAPTIONS } from './ports';
 import type { AudioPort, Bot, BotFactory, CaptionPort, InputPort, RendererPort } from './ports';
 import type { GameSettings } from './settings';
@@ -16,6 +17,12 @@ const MAX_FRAME_MS = 100;
 const RESULTS_DELAY_MS = 2200;
 const HUD_INTERVAL_MS = 90;
 const LOCAL_ID = 0;
+/** City Rumble "skip to results": wall-clock ms of simulation per animation frame while fast-forwarding. */
+const SKIP_BUDGET_MS = 24;
+/** City Rumble: events further than this (tiles, either axis) from the camera's focus are not heard. */
+const HEAR_TILES = 12;
+/** City Rumble follow camera: events further than this from the focus get no particles / shake. */
+const SEE_TILES = 16;
 
 /** The audio engine also takes the arena (its music playlist) and a pause hook; stub ports may not. */
 type MatchAudio = AudioPort & { startMusic(arenaId?: string): void; setPaused?(paused: boolean): void };
@@ -53,6 +60,13 @@ export class MatchController {
   private eliminations: number[] = [];
   private forced: Record<number, Intent> = {};
   private countdownShown = -1;
+  /** City Rumble: the large-match presentation (spectator camera, roster HUD, sliced skip). */
+  private rumble = false;
+  /** City Rumble: whom the camera follows once the local player is out (presentation only). */
+  private spectateId: number | null = null;
+  /** City Rumble: fast-forwarding to the result in slices (the page stays responsive). */
+  private skipping = false;
+  private closingAnnounced = false;
 
   constructor(private readonly deps: ControllerDeps) {
     this.audio = deps.audio ?? NULL_AUDIO;
@@ -74,6 +88,11 @@ export class MatchController {
       },
     });
     this.state = state;
+    this.rumble = getArena(state.arenaId).kind === 'rumble';
+    if (!this.rumble) this.audio.setListener?.(null); // standard arenas pan across the whole board
+    this.spectateId = null;
+    this.skipping = false;
+    this.closingAnnounced = false;
     this.bots = new Map();
     state.players.forEach((p, i) => {
       if (p.isBot)
@@ -101,6 +120,7 @@ export class MatchController {
       toasts: [],
       captions: [],
       summary: null,
+      skipping: false,
       hud: buildHud(state, LOCAL_ID, null),
     });
   }
@@ -116,7 +136,7 @@ export class MatchController {
   }
 
   setPaused(paused: boolean): void {
-    if (!this.state || this.state.match.phase === 'ended') return;
+    if (!this.state || this.state.match.phase === 'ended' || this.skipping) return;
     this.paused = paused;
     this.audio.setPaused?.(paused);
     this.deps.input.clear(); // a press made while paused must not become a move on resume
@@ -148,7 +168,9 @@ export class MatchController {
     this.lastMs = nowMs;
     const frameEvents: SimEvent[] = [];
 
-    if (!this.paused && !this.frozen) {
+    if (this.skipping) {
+      this.fastForward(frameEvents);
+    } else if (!this.paused && !this.frozen) {
       this.accumulator += dtMs;
       let steps = 0;
       while (this.accumulator >= STEP_MS && steps < 8) {
@@ -216,20 +238,28 @@ export class MatchController {
 
   private afterFrame(events: SimEvent[], nowMs: number, dt: number): void {
     const state = this.state!;
+    if (this.rumble) this.updateSpectate(state);
     this.excitement = Math.max(
       state.match.phase === 'playing' && state.match.playTicks > state.config.match.durationTicks - 1800
         ? 0.55
         : 0.18,
       this.excitement - dt * 0.35,
     );
-    this.deps.renderer.handleEvents(events, state);
-    this.audio.handleEvents(events, state);
+    // City Rumble: effects, sounds and crowd lines come from around whoever the camera follows (the
+    // follow camera shows ~12 x 8 tiles of a 41 x 31 city); the whole-city view keeps every effect
+    const seen =
+      this.rumble && useGameStore.getState().settings.cameraView !== 'overview'
+        ? this.nearFocus(events, state, SEE_TILES)
+        : events;
+    this.deps.renderer.handleEvents(seen, state);
+    const heard = this.rumble ? this.heardEvents(events, state) : events;
+    this.audio.handleEvents(heard, state);
     this.audio.setIntensity(
       state.match.phase === 'playing' && state.match.playTicks > state.config.match.durationTicks - 1800
         ? 1
         : this.excitement * 0.6,
     );
-    this.captionsFrom(events, nowMs);
+    this.captionsFrom(heard, events, nowMs);
     this.countdownBeeps(state);
 
     // The renderer interpolates between ticks using the unspent accumulator.
@@ -239,6 +269,7 @@ export class MatchController {
       localPlayerId: LOCAL_ID,
       entryOverlay: this.entry.overlay(state),
       excitement: this.excitement,
+      focusPlayerId: this.spectateId,
     });
 
     if (nowMs - this.hudClock > HUD_INTERVAL_MS || events.length > 0) {
@@ -258,9 +289,9 @@ export class MatchController {
     if (state.match.countdownRemaining <= 1) this.audio.playUi('go');
   }
 
-  private captionsFrom(events: SimEvent[], nowMs: number): void {
+  private captionsFrom(heard: SimEvent[], events: SimEvent[], nowMs: number): void {
     const state = this.state!;
-    const lines = this.captions.captionsFor(events, state);
+    const lines = this.captions.captionsFor(heard, state);
     const current = useGameStore.getState().captions.filter((c) => c.expires > nowMs);
     const added: Caption[] = lines.map((l) => ({ ...l, id: this.captionId++, expires: nowMs + l.ttlMs }));
     if (added.length > 0 || current.length !== useGameStore.getState().captions.length) {
@@ -288,6 +319,21 @@ export class MatchController {
         const me = state.players[LOCAL_ID]!;
         return me.x === e.x && me.y === e.y ? { text: 'OKADA SAVED YOU!', tone: 'good' } : null;
       }
+      case 'playerEliminated': {
+        if (!this.rumble) return null;
+        const victim = state.players[e.playerId]!;
+        if (e.playerId !== LOCAL_ID && eliminatorOf(state, victim)?.id === LOCAL_ID)
+          return { text: `YOU TOOK OUT ${victim.name.toUpperCase()}!`, tone: 'good' };
+        const left = state.players.filter((p) => p.alive).length;
+        if (state.players[LOCAL_ID]!.alive && (left === 10 || left === 5 || left === 3 || left === 2))
+          return { text: left === 2 ? 'FINAL TWO!' : `${left} LEFT STANDING`, tone: 'info' };
+        return null;
+      }
+      case 'crushWarning': {
+        if (!this.rumble || this.closingAnnounced) return null;
+        this.closingAnnounced = true;
+        return { text: 'THE CITY IS CLOSING IN!', tone: 'bad' };
+      }
       default:
         return null;
     }
@@ -307,7 +353,7 @@ export class MatchController {
           vehicle: this.entry.vehicleKind,
         }
       : null;
-    patch({ hud: buildHud(state, LOCAL_ID, entry) });
+    patch({ hud: buildHud(state, LOCAL_ID, entry, this.spectateId) });
     const toasts = useGameStore.getState().toasts;
     if (toasts.some((t) => t.expires <= nowMs)) patch({ toasts: toasts.filter((t) => t.expires > nowMs) });
   }
@@ -329,7 +375,8 @@ export class MatchController {
         localWon: result?.kind === 'win' && result.winnerId === LOCAL_ID,
       };
       this.audio.stopMusic();
-      patch({ screen: 'results', summary });
+      this.skipping = false;
+      patch({ screen: 'results', summary, skipping: false });
     }
   }
 
@@ -375,13 +422,129 @@ export class MatchController {
     this.forced[LOCAL_ID] = { ...this.forced[LOCAL_ID], vehicle: v };
   }
 
-  /** Human eliminated: run the rest of the match instantly with the bots and show results. */
+  /**
+   * Human eliminated: run the rest of the match with the bots and show results. Standard matches
+   * finish instantly; City Rumble (up to 31 bots) fast-forwards in slices over the next frames so the
+   * page never freezes (`finishSkip` completes it at once for tests).
+   */
   skipToResults(): void {
+    const state = this.state;
+    if (!state) return;
+    if (this.rumble && state.match.phase !== 'ended') {
+      this.skipping = true;
+      this.paused = false;
+      patch({ skipping: true, paused: false });
+      return;
+    }
+    this.finishSkip();
+  }
+
+  /** Runs the match to its end right now and shows the results. */
+  finishSkip(): void {
     const state = this.state;
     if (!state) return;
     for (let i = 0; i < 40000 && state.match.phase !== 'ended'; i++) this.stepOnce();
     this.endedAtMs = -1e9;
     this.publishHud(performance.now());
     this.handleEnded(performance.now());
+  }
+
+  get isSkipping(): boolean {
+    return this.skipping;
+  }
+
+  /** One slice of the City Rumble fast-forward (wall-clock budget per frame: presentation pacing only). */
+  private fastForward(events: SimEvent[]): void {
+    const state = this.state!;
+    const t0 = performance.now();
+    let n = 0;
+    while (state.match.phase !== 'ended' && (n < 30 || performance.now() - t0 < SKIP_BUDGET_MS) && n < 3000) {
+      const evs = this.stepOnce();
+      n++;
+      // keep only what the HUD / camera need: no blast effects or sounds for skipped play
+      for (const e of evs) if (e.type === 'matchEnded') events.push(e);
+    }
+    this.accumulator = 0;
+    if (state.match.phase === 'ended') {
+      this.endedAtMs = -1e9;
+      this.skipping = false;
+    }
+  }
+
+  // ------------------------------------------------------------------ City Rumble audio focus
+
+  /** Tile the camera follows: the local player, or the survivor being watched. */
+  private focusTile(state: GameState): { x: number; y: number } {
+    const p = state.players[this.spectateId ?? LOCAL_ID] ?? state.players[LOCAL_ID]!;
+    return { x: p.x, y: p.y };
+  }
+
+  /**
+   * The events worth hearing: anything within HEAR_TILES of the camera's focus, everything that
+   * involves the local player, and the match-wide moments (start, end, final traps). A 32-player city
+   * would otherwise be one long wall of explosions.
+   */
+  private heardEvents(events: SimEvent[], state: GameState): SimEvent[] {
+    this.audio.setListener?.(this.focusTile(state).x);
+    return this.nearFocus(events, state, HEAR_TILES);
+  }
+
+  /** Events within `range` tiles (either axis) of the camera focus, the local player's, and match-wide ones. */
+  private nearFocus(events: SimEvent[], state: GameState, range: number): SimEvent[] {
+    if (events.length === 0) return events;
+    const f = this.focusTile(state);
+    const near = (x: number, y: number): boolean => Math.abs(x - f.x) <= range && Math.abs(y - f.y) <= range;
+    const playerNear = (id: number): boolean => {
+      const p = state.players[id];
+      return id === LOCAL_ID || (p !== undefined && near(p.x, p.y));
+    };
+    return events.filter((e) => {
+      if ('x' in e && typeof e.x === 'number' && 'y' in e && typeof e.y === 'number')
+        return (
+          near(e.x, e.y) ||
+          ('playerId' in e && e.playerId === LOCAL_ID) ||
+          ('ownerId' in e && e.ownerId === LOCAL_ID)
+        );
+      if ('playerId' in e) return playerNear(e.playerId);
+      if ('ownerId' in e) return playerNear(e.ownerId);
+      if (e.type === 'stageWarning' || e.type === 'stageStarted') {
+        const w = state.width;
+        return e.event.tiles.some((t) => near(t % w, Math.floor(t / w)));
+      }
+      if (e.type === 'stageSweepStep') return near(e.x, e.y);
+      return true;
+    });
+  }
+
+  // ------------------------------------------------------------------ spectating (City Rumble)
+
+  /** Keeps the spectator camera on a survivor once the local player is out. */
+  private updateSpectate(state: GameState): void {
+    const me = state.players[LOCAL_ID];
+    if (!me || me.alive || state.match.phase === 'countdown') {
+      this.spectateId = null;
+      return;
+    }
+    if (state.match.phase === 'ended') {
+      const r = state.match.result;
+      this.spectateId = r?.kind === 'win' ? r.winnerId : this.spectateId;
+      return;
+    }
+    const next = pickSpectateTarget(state, LOCAL_ID, this.spectateId);
+    if (next !== this.spectateId) this.hudClock = -Infinity; // show the new name right away
+    this.spectateId = next;
+  }
+
+  /** Spectator: watch the next (1) or previous (-1) survivor. */
+  cycleSpectate(dir: 1 | -1): void {
+    const state = this.state;
+    if (!state || !this.rumble || state.players[LOCAL_ID]?.alive) return;
+    this.spectateId = cycleSpectateTarget(state, this.spectateId, dir);
+    this.publishHud(performance.now());
+  }
+
+  /** The competitor the camera follows while spectating (null while the local player is alive). */
+  get spectating(): number | null {
+    return this.spectateId;
   }
 }

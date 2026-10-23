@@ -359,12 +359,22 @@ const DRAW: Record<string, FloorDrawer> = {
   lekkiRoadworks: roadworks,
 };
 
+/** Largest floor canvas edge in pixels (memory and upload time on phones). */
+const MAX_FLOOR_PX = 2560;
+
 /** Builds the floor maps for an arena, or null when canvas is unavailable (tests, workers). */
 export function arenaFloorMaps(arenaId: string, cols: number, rows: number): FloorMaps | null {
   if (typeof document === 'undefined') return null;
   const draw = DRAW[arenaId] ?? NEW_ARENA_FLOORS()[arenaId] ?? busPark;
-  const [c, g] = makeCanvas(cols * T, rows * T);
-  const [rc, rg] = makeCanvas(cols * T, rows * T);
+  // Big boards (City Rumble, 41 x 31) paint at a reduced resolution; drawers keep working in T-pixel
+  // tile units through the context scale. Standard boards (15 x 11 = 1920 px wide) are unaffected.
+  const k = Math.min(1, MAX_FLOOR_PX / (Math.max(cols, rows) * T));
+  const [c, g] = makeCanvas(Math.round(cols * T * k), Math.round(rows * T * k));
+  const [rc, rg] = makeCanvas(Math.round(cols * T * k), Math.round(rows * T * k));
+  if (k < 1) {
+    g.scale(k, k);
+    rg.scale(k, k);
+  }
   draw(g, rg, cols, rows);
   const map = new CanvasTexture(c);
   map.colorSpace = SRGBColorSpace;

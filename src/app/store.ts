@@ -49,6 +49,8 @@ export interface UiState {
   portraitsVersion: number;
   /** Debug `?cam=stadium`: forces the stadium follow camera; null = chosen per arena. */
   cameraOverride: CameraMode | null;
+  /** City Rumble: fast-forwarding to the results after the local player went out. */
+  skipping: boolean;
 }
 
 /** UI-facing state. The simulation state itself is deliberately NOT stored in React state. */
@@ -70,6 +72,7 @@ export const useGameStore = create<UiState>(() => ({
   loading: { done: 0, total: 1 },
   portraitsVersion: 0,
   cameraOverride: null,
+  skipping: false,
 }));
 
 export const patch = (p: Partial<UiState>): void => useGameStore.setState(p);

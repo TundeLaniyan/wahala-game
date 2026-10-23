@@ -140,6 +140,15 @@ export function mount(canvas: HTMLCanvasElement): () => void {
       commands.toggleCameraView();
   };
   window.addEventListener('keydown', onCameraKey);
+  // City Rumble spectating: cycle the survivor the camera follows (presentation only).
+  const onSpectateKey = (e: KeyboardEvent): void => {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (useGameStore.getState().screen !== 'playing' || !useGameStore.getState().hud?.rumble?.spectating)
+      return;
+    const dir = SPECTATE_KEYS[e.code];
+    if (dir) commands.spectate(dir);
+  };
+  window.addEventListener('keydown', onSpectateKey);
   const unlock = (): void => {
     void audio.unlock().then(() => patch({ audioReady: true }));
   };
@@ -152,6 +161,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     cancelAnimationFrame(raf);
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('keydown', onCameraKey);
+    window.removeEventListener('keydown', onSpectateKey);
     resizeObserver?.disconnect();
     renderer?.dispose();
     renderer = null;
@@ -188,6 +198,8 @@ export const commands = {
   togglePause: (): void => controller?.togglePause(),
   resume: (): void => controller?.setPaused(false),
   skipToResults: (): void => controller?.skipToResults(),
+  /** City Rumble spectator: watch the next (1) or previous (-1) survivor. */
+  spectate: (dir: 1 | -1): void => controller?.cycleSpectate(dir),
   entryConfirm: (): void => controller?.confirmEntry(),
   entryCancel: (): void => controller?.cancelEntry(),
   pickEntry: (x: number, y: number): void => controller?.pickEntry(x, y),
@@ -207,6 +219,28 @@ export const commands = {
 };
 
 export { input };
+
+/** Keys that switch the spectated survivor (the local player is out, so they move nobody). */
+const SPECTATE_KEYS: Record<string, 1 | -1> = {
+  ArrowLeft: -1,
+  KeyA: -1,
+  KeyQ: -1,
+  BracketLeft: -1,
+  ArrowRight: 1,
+  KeyD: 1,
+  KeyE: 1,
+  BracketRight: 1,
+};
+
+/**
+ * The running match for presentation widgets that draw the board themselves (the City Rumble
+ * minimap). Read-only: never mutate the returned state.
+ */
+export function liveMatch(): { state: GameState; focusId: number } | null {
+  const state = controller?.state;
+  if (!state) return null;
+  return { state, focusId: controller?.spectating ?? 0 };
+}
 
 /** Debug/test hook, enabled with `?debug` in the URL (used by the Playwright suite). */
 function exposeDebugHandle(): void {

@@ -85,6 +85,11 @@ export interface AudioEngine {
    * in step with `state`. Call every sim tick or every frame (an empty `events` array is fine).
    */
   handleEvents(events: readonly SimEvent[], state: Readonly<GameState>): void;
+  /**
+   * Follow camera (City Rumble): stereo position is relative to this tile x (whoever the camera
+   * follows). Null (the default) pans across the whole arena, as on the standard one-screen arenas.
+   */
+  setListener(x: number | null): void;
   playUi(kind: 'click' | 'back' | 'start' | 'countdown' | 'go'): void;
   /** Resolves when optional recorded sample slots have been tried (always resolves, never rejects). */
   whenSamplesLoaded(): Promise<SlotReport>;
@@ -183,6 +188,8 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
   };
 
   let graph: Graph | null = null;
+  /** Follow-camera listener (City Rumble), re-applied when the graph is (re)built. */
+  let listenerX: number | null = null;
   let unlocking: Promise<void> | null = null;
   let disposed = false;
   const prefs: PrefsStore | null = opts.prefs === undefined ? audioPrefs : opts.prefs;
@@ -326,6 +333,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       }
       try {
         graph = build(ctx);
+        graph.router.setListener(listenerX);
         primeContext(ctx);
         graph.bank.warm(); // sliced background rendering of the synthesised sound bank
         // Start before resume resolves: scheduling is relative to ctx.currentTime, which only
@@ -403,6 +411,10 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
         g.ambience.setIntensity(intensity);
         g.crowd.setIntensity(intensity);
       });
+    },
+    setListener(x) {
+      listenerX = x;
+      guard((g) => g.router.setListener(x));
     },
     handleEvents(events, state) {
       guard((g) => {

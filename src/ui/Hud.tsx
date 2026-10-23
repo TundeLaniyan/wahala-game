@@ -8,6 +8,8 @@ import { commands } from '../app/session';
 import type { HudMe, HudPlayer } from '../app/hud';
 import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
+import { Minimap } from './Minimap';
+import { RumbleHud } from './RumbleHud';
 
 function Portrait({ p }: { p: HudPlayer }) {
   useGameStore((st) => st.portraitsVersion);
@@ -103,18 +105,29 @@ export function Hud() {
   const left = hud.players.slice(0, half);
   const right = hud.players.slice(half);
 
+  const rumble = hud.rumble;
   return (
     <div className="hud" data-testid="hud" data-phase={hud.phase}>
-      <div className="portraits left">
-        {left.map((p) => (
-          <Portrait key={p.id} p={p} />
-        ))}
-      </div>
-      <div className="portraits right">
-        {right.map((p) => (
-          <Portrait key={p.id} p={p} />
-        ))}
-      </div>
+      {rumble ? (
+        // City Rumble: a compact roster and the city map instead of one portrait per competitor
+        <>
+          <RumbleHud r={rumble} phase={hud.phase} localAlive={hud.localAlive} />
+          <Minimap />
+        </>
+      ) : (
+        <>
+          <div className="portraits left">
+            {left.map((p) => (
+              <Portrait key={p.id} p={p} />
+            ))}
+          </div>
+          <div className="portraits right">
+            {right.map((p) => (
+              <Portrait key={p.id} p={p} />
+            ))}
+          </div>
+        </>
+      )}
       <Timer seconds={hud.secondsLeft} total={120} urgent={hud.final30} />
       <div className="top-buttons">
         <button
@@ -170,9 +183,9 @@ export function Hud() {
           </div>
         ))}
       </div>
-      {hud.me && hud.phase !== 'ended' && <Inventory me={hud.me} />}
+      {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}
       {hud.entry && <EntryPanel entry={hud.entry} />}
-      {hud.phase === 'playing' && !hud.localAlive && (
+      {!rumble && hud.phase === 'playing' && !hud.localAlive && (
         <div className="spectate" data-testid="spectate">
           <span>You&apos;re out! Watching the rest…</span>
           <button

@@ -59,6 +59,10 @@ interface Visual {
   dustAt: number;
   /** Last facing, so a sharp turn while running can kick up a puff of dust. */
   facing: Player['facing'];
+  /** LOD: off screen this frame (follow camera only): no animation or matrix updates. */
+  culled: boolean;
+  /** LOD: animation time skipped while off screen, applied when the player comes back into view. */
+  catchUp: number;
 }
 
 const flat = new PlaneGeometry(1, 1);
@@ -93,8 +97,43 @@ export class PlayerViews implements View {
         v = this.create(p, ctx);
         this.visuals.set(p.id, v);
       }
+      if (this.cull(ctx, p, v)) continue;
       this.pose(ctx, p, v);
     }
+  }
+
+  /**
+   * LOD for the follow camera (City Rumble: up to 32 skinned characters on a 41 x 31 board): a living
+   * player outside the view is hidden and skips its animation mixer and its matrix updates; the skipped
+   * time is replayed in one step when it comes back. The fixed whole-arena camera never culls, so the
+   * standard look is unchanged.
+   */
+  private cull(ctx: FrameContext, p: Player, v: Visual): boolean {
+    const inView = ctx.inView;
+    let off = false;
+    if (inView && p.alive) {
+      const pos = playerGridPos(p, ctx.alpha);
+      off = !inView(ctx.layout.wx(pos.x), ctx.layout.wz(pos.y), 2.4);
+    }
+    if (off) {
+      if (!v.culled) {
+        v.culled = true;
+        v.model.root.visible = false;
+        v.model.root.matrixWorldAutoUpdate = false;
+        for (const o of [v.ring, v.shadow, v.name, v.curse, v.voucher, v.shield, v.badge, ...v.stars])
+          o.visible = false;
+        if (v.marker) v.marker.visible = false;
+      }
+      v.catchUp = Math.min(1, v.catchUp + ctx.dt);
+      return true;
+    }
+    if (v.culled) {
+      v.culled = false;
+      v.model.root.matrixWorldAutoUpdate = true;
+      v.ring.visible = true;
+      v.shadow.visible = true;
+    }
+    return false;
   }
 
   private create(p: Player, ctx: FrameContext): Visual {
@@ -198,6 +237,8 @@ export class PlayerViews implements View {
       dismountedAt: -10,
       dustAt: 0,
       facing: p.facing,
+      culled: false,
+      catchUp: 0,
     };
   }
 
@@ -271,7 +312,8 @@ export class PlayerViews implements View {
         ctx.fx.dust(pos.x + back[0]! * 0.45, pos.y + back[1]! * 0.45, 1, 0.42);
       }
     }
-    r.update(dt);
+    r.update(dt + v.catchUp);
+    v.catchUp = 0;
   }
 
   private poseProcedural(

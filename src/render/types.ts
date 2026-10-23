@@ -22,4 +22,9 @@ export interface FrameInfo {
   excitement: number;
   /** Title-screen demo: the camera drifts gently and no HUD markers are shown. */
   attract?: boolean;
+  /**
+   * Stadium camera only: the competitor to follow while the local player is out (spectating).
+   * Ignored by the fixed whole-arena camera of standard matches.
+   */
+  focusPlayerId?: number | null;
 }

@@ -34,6 +34,17 @@ const VEHICLE_NEAR = 2;
 
 const DIRS = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] } as const;
 
+/** Boards with more tiles than this (City Rumble) use the crowd-scale rules below; standard boards have 165. */
+const LARGE_BOARD_TILES = 400;
+/** Large boards: rivals this close (Manhattan tiles) are kept in frame. */
+const RIVAL_NEAR = 4;
+/** Large boards: kept points are clamped to this box around the focus (tiles), so the view never pulls out far. */
+const KEEP_BOX = { x: 7, z: 5 };
+/** Large boards: the follow camera sits a little wider than the standard action camera (more street to read). */
+const LARGE_ZOOM = 1.12;
+
+export const isLargeBoard = (state: GameState): boolean => state.width * state.height > LARGE_BOARD_TILES;
+
 function world(layout: Layout, x: number, y: number): WorldPoint {
   return { x: layout.wx(x), z: layout.wz(y) };
 }
@@ -87,19 +98,53 @@ function followPlayer(state: GameState, layout: Layout, p: Player, alpha: number
   const pos = playerGridPos(p, alpha);
   const d = DIRS[p.facing];
   const lead = pos.moving ? 0.55 : 0;
+  const focus = world(layout, pos.x, pos.y);
+  let keep = state.match.phase === 'playing' ? threatsNear(state, layout, pos.x, pos.y, p.id) : [];
+  if (isLargeBoard(state)) {
+    if (state.match.phase === 'playing') keep.push(...rivalsNear(state, layout, p, pos.x, pos.y, alpha));
+    keep = clampKeep(keep, focus);
+  }
   return {
     kind: 'action',
-    focus: world(layout, pos.x, pos.y),
+    focus,
     lead: { x: d[0] * lead, z: d[1] * lead },
-    keep: state.match.phase === 'playing' ? threatsNear(state, layout, pos.x, pos.y, p.id) : [],
-    zoom,
+    keep,
+    zoom: isLargeBoard(state) ? zoom * LARGE_ZOOM : zoom,
   };
+}
+
+/** Large boards: opponents standing within RIVAL_NEAR tiles of the followed player. */
+export function rivalsNear(
+  state: GameState,
+  layout: Layout,
+  self: Player,
+  fx: number,
+  fy: number,
+  alpha: number,
+): WorldPoint[] {
+  const out: WorldPoint[] = [];
+  for (const q of state.players) {
+    if (!q.alive || q.id === self.id) continue;
+    if (Math.abs(q.x - fx) + Math.abs(q.y - fy) > RIVAL_NEAR) continue;
+    const g = playerGridPos(q, alpha);
+    out.push(world(layout, g.x, g.y));
+  }
+  return out;
+}
+
+/** Large boards: pulls kept points into a box around the focus so the camera never tries to frame the city. */
+export function clampKeep(keep: WorldPoint[], focus: WorldPoint): WorldPoint[] {
+  return keep.map((k) => ({
+    x: Math.min(focus.x + KEEP_BOX.x, Math.max(focus.x - KEEP_BOX.x, k.x)),
+    z: Math.min(focus.z + KEEP_BOX.z, Math.max(focus.z - KEEP_BOX.z, k.z)),
+  }));
 }
 
 /**
  * Chooses the shot: an establishing view of the whole arena at the start of the countdown, then a
  * low three-quarter camera that follows the local player and widens to keep incoming danger in
- * frame; spectating frames the survivors; a win ends on a close-up of the winner.
+ * frame; spectating follows `focusId` when given (City Rumble) or frames the survivors; a win ends
+ * on a close-up of the winner.
  */
 export function directShot(
   state: GameState,
@@ -107,6 +152,7 @@ export function directShot(
   localId: number,
   alpha: number,
   preferOverview: boolean,
+  focusId: number | null = null,
 ): CameraShot {
   const overview: CameraShot = {
     kind: 'overview',
@@ -126,9 +172,12 @@ export function directShot(
   }
   const me = state.players[localId];
   if (me?.alive) return followPlayer(state, layout, me, alpha, 1);
-  // Spectating: frame everyone still standing.
+  // Spectating one competitor (City Rumble: the camera rides along with a survivor).
+  const watched = focusId !== null ? state.players[focusId] : undefined;
+  if (watched?.alive) return followPlayer(state, layout, watched, alpha, 1);
+  // Spectating: frame everyone still standing (a large board would need the whole city: overview).
   const alive = state.players.filter((p) => p.alive);
-  if (alive.length === 0) return overview;
+  if (alive.length === 0 || isLargeBoard(state)) return overview;
   const pts = alive.map((p) => {
     const g = playerGridPos(p, alpha);
     return world(layout, g.x, g.y);
