@@ -8,7 +8,7 @@ const RELEASE_ZONE = 0.35;
 const AXIS_HYSTERESIS = 1.25;
 
 // Standard mapping: 0=A 1=B 2=X 3=Y 4=LB 5=RB 9=Start 12-15 = D-pad up/down/left/right
-const ACTION_BUTTONS: Record<number, ActionName> = {
+export const ACTION_BUTTONS: Readonly<Record<number, ActionName>> = {
   0: 'place',
   2: 'action',
   3: 'vehicle',

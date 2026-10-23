@@ -7,10 +7,11 @@ import { createAudio, createCaptionGenerator } from '../audio';
 import { InputManager } from '../input';
 import { GameRenderer, assets, renderCastPortraits } from '../render';
 import { registerBusts } from '../assets/portraits';
-import type { GameState } from '../sim';
+import type { CharacterId, GameState } from '../sim';
 import { enterImmersiveMode } from './fullscreen';
 import { AttractController } from './AttractController';
 import { MatchController } from './MatchController';
+import { TutorialController } from './TutorialController';
 import { NULL_AUDIO } from './ports';
 import type { AudioPort, CaptionPort } from './ports';
 import { saveSettings } from './settings';
@@ -19,6 +20,7 @@ import { patch, useGameStore } from './store';
 
 let controller: MatchController | null = null;
 let attract: AttractController | null = null;
+let tutorial: TutorialController | null = null;
 let renderer: GameRenderer | null = null;
 let audio: AudioPort = NULL_AUDIO;
 let raf = 0;
@@ -39,13 +41,18 @@ function frame(now: number): void {
   raf = requestAnimationFrame(frame);
   if (!controller) return;
   if (useGameStore.getState().screen === 'title') attract?.frame(now);
-  else controller.frame(now);
+  else {
+    controller.frame(now);
+    if (useGameStore.getState().tutorial) tutorial?.frame();
+  }
   if (useGameStore.getState().showStats && renderer && Math.floor(now / 500) !== lastStatsTick) {
     lastStatsTick = Math.floor(now / 500);
     patch({ stats: renderer.stats() });
   }
 }
 let lastStatsTick = 0;
+/** Camera view used inside How to Play (never saved). */
+let tutorialView: 'action' | 'overview' = 'action';
 
 function sizeCanvas(): void {
   if (!canvasEl || !renderer) return;
@@ -103,6 +110,13 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   applyAudioSettings(settings);
   renderer.setCameraView(settings.cameraView);
   attract = new AttractController(renderer as never, createBot);
+  tutorial = new TutorialController(controller, {
+    stopAttract: () => attract?.stop(),
+    startAttract: () => {
+      if (settingsAllowAttract()) attract?.start();
+    },
+    menuCharacter: () => useGameStore.getState().settings.character,
+  });
   // The live demo behind the menu is skipped for tests (?nobots / ?noattract) and on the lowest quality.
   // Models load once; the live demo behind the menu starts when the rigged cast is ready.
   patch({ loading: { done: 0, total: 1 } });
@@ -136,8 +150,12 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   // Standard matches always show the whole arena, so the key does nothing there.
   const onCameraKey = (e: KeyboardEvent): void => {
     if (e.code !== 'KeyO' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (useGameStore.getState().screen === 'playing' && renderer?.cameraMode() === 'stadium')
-      commands.toggleCameraView();
+    if (useGameStore.getState().screen !== 'playing' || renderer?.cameraMode() !== 'stadium') return;
+    // in the tutorial the view toggles for this lesson only; the saved preference is untouched
+    if (useGameStore.getState().tutorial) {
+      tutorialView = tutorialView === 'overview' ? 'action' : 'overview';
+      renderer.setCameraView(tutorialView);
+    } else commands.toggleCameraView();
   };
   window.addEventListener('keydown', onCameraKey);
   // City Rumble spectating: cycle the survivor the camera follows (presentation only).
@@ -166,6 +184,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     renderer?.dispose();
     renderer = null;
     controller = null;
+    tutorial = null;
   };
 }
 
@@ -212,6 +231,26 @@ export const commands = {
     if (p.quality) renderer?.setQuality(p.quality);
     if (p.cameraView) renderer?.setCameraView(p.cameraView);
   },
+  // ---- How to Play (tutorial): isolated from competitive play, never writes the saved settings
+  openTutorial(chapter = 0): void {
+    void audio.unlock();
+    audio.playUi('click');
+    tutorialView = useGameStore.getState().settings.cameraView;
+    renderer?.setCameraView(tutorialView);
+    tutorial?.open(chapter);
+  },
+  tutorialWatch: (chapter?: number): void => tutorial?.watch(chapter),
+  tutorialPractice: (chapter?: number): void => tutorial?.practice(chapter),
+  tutorialReplay: (): void => tutorial?.replay(),
+  tutorialNext: (): void => tutorial?.next(),
+  tutorialPrev: (): void => tutorial?.prev(),
+  tutorialPause: (): void => tutorial?.togglePause(),
+  tutorialCharacter: (c: CharacterId): void => tutorial?.setCharacter(c),
+  exitTutorial(): void {
+    audio.playUi('back');
+    renderer?.setCameraView(useGameStore.getState().settings.cameraView);
+    tutorial?.exit();
+  },
   toggleCameraView(): void {
     const view = useGameStore.getState().settings.cameraView === 'overview' ? 'action' : 'overview';
     commands.updateSettings({ cameraView: view });
@@ -249,6 +288,7 @@ function exposeDebugHandle(): void {
   w.__WAHALA__ = {
     getState: (): GameState | null => controller?.state ?? null,
     controller: () => controller,
+    tutorial: () => tutorial,
     store: useGameStore,
     stats: () => renderer?.stats() ?? null,
     renderer: () => renderer,

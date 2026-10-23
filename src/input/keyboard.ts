@@ -1,7 +1,7 @@
 import type { Dir } from '../sim';
 import type { ActionName, NavCommand } from './types';
 
-const MOVE_KEYS: Record<string, Dir> = {
+export const MOVE_KEYS: Readonly<Record<string, Dir>> = {
   ArrowUp: 'up',
   KeyW: 'up',
   ArrowDown: 'down',
@@ -12,7 +12,7 @@ const MOVE_KEYS: Record<string, Dir> = {
   KeyD: 'right',
 };
 
-const ACTION_KEYS: Record<string, ActionName> = {
+export const ACTION_KEYS: Readonly<Record<string, ActionName>> = {
   Space: 'place',
   KeyJ: 'place',
   KeyE: 'action',
@@ -27,7 +27,7 @@ const ACTION_KEYS: Record<string, ActionName> = {
   KeyC: 'vehicle',
 };
 
-const NAV_KEYS: Record<string, NavCommand> = {
+export const NAV_KEYS: Readonly<Record<string, NavCommand>> = {
   ArrowUp: 'up',
   KeyW: 'up',
   ArrowDown: 'down',

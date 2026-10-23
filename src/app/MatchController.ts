@@ -1,7 +1,7 @@
-import { CHARACTERS, createGame, getArena, observe, readyToStep, tick } from '../sim';
-import type { GameState, Intent, Intents, SimEvent, VehicleIntent } from '../sim';
+import { CHARACTERS, createGame, entryKey, getArena, observe, readyToStep, tick } from '../sim';
+import type { GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent, VehicleTurn } from '../sim';
 import type { NavCommand } from '../input';
-import type { EntryPick } from '../render';
+import type { EntryOverlayModel, EntryPick } from '../render';
 import { buildHud } from './hud';
 import { buildPlayers } from './names';
 import { cycleSpectateTarget, eliminatorOf, pickSpectateTarget } from './spectate';
@@ -28,6 +28,30 @@ const SEE_TILES = 16;
 
 /** The audio engine also takes the arena (its music playlist) and a pause hook; stub ports may not. */
 type MatchAudio = AudioPort & { startMusic(arenaId?: string): void; setPaused?(paused: boolean): void };
+
+/**
+ * Tutorial hook: drives a prepared scenario instead of a normal match. It supplies the intents of
+ * scripted actors (and, while a demo plays the local player, that player's intents and vehicle-
+ * selector commands) and sees every tick. A scenario never shows results and never counts as a match.
+ */
+export interface ScenarioDirector {
+  /** True in practice (the human plays player 0); false while a demo plays player 0 itself. */
+  readonly humanInput: boolean;
+  beforeTick(state: GameState): ScenarioStep;
+  afterTick(state: GameState, events: readonly SimEvent[], intents: Intents): void;
+}
+
+/** Vehicle-selector operations, exactly as a player performs them. */
+export type ScenarioUi =
+  | { kind: 'vehiclePress' }
+  | { kind: 'nav'; command: NavCommand }
+  | { kind: 'pickEntry'; entry: VehicleEntry }
+  | { kind: 'pickTurn'; turn: VehicleTurn };
+
+export interface ScenarioStep {
+  intents: Intents;
+  ui: readonly ScenarioUi[];
+}
 
 export interface ControllerDeps {
   renderer: RendererPort;
@@ -70,6 +94,7 @@ export class MatchController {
   private skipping = false;
   private skipFrames = 0;
   private closingAnnounced = false;
+  private director: ScenarioDirector | null = null;
 
   constructor(private readonly deps: ControllerDeps) {
     this.audio = deps.audio ?? NULL_AUDIO;
@@ -79,6 +104,7 @@ export class MatchController {
   // ------------------------------------------------------------------ lifecycle
 
   start(settings: GameSettings, seed = Math.floor(Math.random() * 2 ** 31)): void {
+    this.director = null;
     this.settings = settings;
     const players = buildPlayers(settings, seed);
     const state = createGame({
@@ -128,11 +154,60 @@ export class MatchController {
     });
   }
 
+  /**
+   * Tutorial: runs a prepared state (already in its playing phase) under a director. No bots, no
+   * saved settings are touched and no results screen follows; `start` returns to normal play.
+   */
+  startScenario(state: GameState, director: ScenarioDirector): void {
+    this.director = director;
+    this.settings = null;
+    this.state = state;
+    this.bots = new Map();
+    this.accumulator = 0;
+    this.lastMs = -1;
+    this.paused = false;
+    this.frozen = false;
+    this.endedAtMs = null;
+    this.excitement = 0.2;
+    this.eliminations = state.players.map(() => 0);
+    this.countdownShown = -1;
+    this.forced = {};
+    this.entry.sync(state);
+    this.deps.input.clear();
+    this.deps.renderer.loadGame(state);
+    this.audio.startMusic(state.arenaId);
+    this.audio.setIntensity(0);
+    patch({
+      screen: 'playing',
+      paused: false,
+      toasts: [],
+      captions: [],
+      summary: null,
+      hud: buildHud(state, LOCAL_ID, null),
+    });
+  }
+
+  /** Read-only view of the local vehicle selector (tests / debug). */
+  entryOverlay(): EntryOverlayModel | null {
+    return this.state ? this.entry.overlay(this.state) : null;
+  }
+
+  /** True while a tutorial scenario (not a match) is running. */
+  get scenario(): boolean {
+    return this.director !== null;
+  }
+
+  /** A demo is playing the local player: human gameplay input is ignored (pause still works). */
+  private get scripted(): boolean {
+    return this.director !== null && !this.director.humanInput;
+  }
+
   rematch(): void {
-    if (this.settings) this.start(this.settings);
+    if (this.settings && !this.director) this.start(this.settings);
   }
 
   stop(): void {
+    this.director = null;
     this.state = null;
     this.audio.stopMusic();
     patch({ screen: 'title', hud: null, paused: false, summary: null, toasts: [], captions: [] });
@@ -200,16 +275,30 @@ export class MatchController {
   /** Advances exactly one simulation tick, with human and bot intents. */
   stepOnce(): SimEvent[] {
     const state = this.state!;
+    const director = this.director;
     const intents = this.collectIntents(state);
     const events = tick(state, intents);
     this.recordStats(events);
+    director?.afterTick(state, events, intents);
     return events;
   }
 
   private collectIntents(state: GameState): Intents {
     const intents: Intents = {};
     const me = state.players[LOCAL_ID];
-    if (me && !me.isBot && me.alive) {
+    const scene = this.director?.beforeTick(state) ?? null;
+    if (me && !me.isBot && me.alive && this.scripted) {
+      // a demo plays the local player: same selector, same intents, but from the script
+      this.entry.sync(state);
+      this.deps.input.navMode = false;
+      this.deps.input.clear();
+      const intent: Intent = { ...scene?.intents[LOCAL_ID] };
+      for (const cmd of scene?.ui ?? []) {
+        const v = this.applyUi(cmd, state);
+        if (v) intent.vehicle = v;
+      }
+      intents[LOCAL_ID] = intent;
+    } else if (me && !me.isBot && me.alive) {
       this.entry.sync(state);
       this.deps.input.navMode = this.entry.active;
       const intent = this.deps.input.buildIntent(state.tick, readyToStep(me));
@@ -221,6 +310,9 @@ export class MatchController {
     } else {
       this.deps.input.navMode = false;
     }
+    for (const [id, intent] of Object.entries(scene?.intents ?? {})) {
+      if (Number(id) !== LOCAL_ID && state.players[Number(id)]?.alive) intents[Number(id)] = intent;
+    }
     for (const [id, bot] of this.bots) {
       if (state.players[id]!.alive) intents[id] = bot.decide(observe(state, id));
     }
@@ -228,6 +320,20 @@ export class MatchController {
       intents[Number(id)] = { ...intents[Number(id)], ...forced };
     this.forced = {};
     return intents;
+  }
+
+  /** One vehicle-selector operation from a demo script (the same calls the input layer makes). */
+  private applyUi(cmd: ScenarioUi, state: GameState): VehicleIntent | null {
+    switch (cmd.kind) {
+      case 'vehiclePress':
+        return this.entry.press(state);
+      case 'nav':
+        return this.entry.active ? this.entry.nav(cmd.command, state) : null;
+      case 'pickEntry':
+        return this.entry.pick({ kind: 'entry', key: entryKey(cmd.entry) }, state);
+      case 'pickTurn':
+        return this.entry.pick({ kind: 'turn', key: `${cmd.turn.atIndex}:${cmd.turn.dir}` }, state);
+    }
   }
 
   private recordStats(events: SimEvent[]): void {
@@ -281,7 +387,7 @@ export class MatchController {
       this.hudClock = nowMs;
       this.publishHud(nowMs);
     }
-    if (state.match.phase === 'ended') this.handleEnded(nowMs);
+    if (state.match.phase === 'ended' && !this.director) this.handleEnded(nowMs);
   }
 
   private countdownBeeps(state: GameState): void {
@@ -296,7 +402,8 @@ export class MatchController {
 
   private captionsFrom(heard: SimEvent[], events: SimEvent[], nowMs: number): void {
     const state = this.state!;
-    const lines = this.captions.captionsFor(heard, state);
+    // crowd banter would talk over the tutorial's own captions
+    const lines = this.director ? [] : this.captions.captionsFor(heard, state);
     const current = useGameStore.getState().captions.filter((c) => c.expires > nowMs);
     const added: Caption[] = lines.map((l) => ({ ...l, id: this.captionId++, expires: nowMs + l.ttlMs }));
     if (added.length > 0 || current.length !== useGameStore.getState().captions.length) {
@@ -400,6 +507,11 @@ export class MatchController {
       this.togglePause();
       return;
     }
+    if (this.scripted) {
+      // during a demo the selector belongs to the script; Esc still pauses
+      if (command === 'cancel') this.togglePause();
+      return;
+    }
     const sent = this.entry.active ? this.entry.nav(command === 'back' ? 'cancel' : command, state) : null;
     if (command === 'cancel' && !this.entry.active && !sent) {
       if (state.match.phase === 'playing' || this.paused) this.togglePause();
@@ -410,7 +522,7 @@ export class MatchController {
 
   pickEntry(clientX: number, clientY: number): void {
     const state = this.state;
-    if (!state || !this.entry.active) return;
+    if (!state || !this.entry.active || this.scripted) return;
     const pick: EntryPick | null = this.deps.renderer.pickEntry(clientX, clientY);
     if (!pick) return;
     const sent = this.entry.pick(pick, state);
@@ -419,12 +531,13 @@ export class MatchController {
 
   confirmEntry(): void {
     const state = this.state;
-    if (!state) return;
+    if (!state || this.scripted) return;
     const sent = this.entry.confirm(state);
     if (sent) this.sendVehicle(sent);
   }
 
   cancelEntry(): void {
+    if (this.scripted) return;
     const sent = this.entry.cancel();
     if (sent) this.sendVehicle(sent);
   }
@@ -440,7 +553,7 @@ export class MatchController {
    */
   skipToResults(): void {
     const state = this.state;
-    if (!state) return;
+    if (!state || this.director) return;
     if (this.rumble && state.match.phase !== 'ended') {
       this.skipping = true;
       this.paused = false;
