@@ -24,6 +24,7 @@ import { OverlayViews } from './views/OverlayViews';
 import { PickupViews } from './views/PickupViews';
 import { PlayerViews } from './views/PlayerViews';
 import { VehicleViews } from './views/VehicleViews';
+import { TrapViews } from './views/TrapViews';
 import type { FrameContext, View } from './views/types';
 import { disposeTextures } from './textures';
 
@@ -136,14 +137,16 @@ export class GameRenderer {
     const generators = new GeneratorViews();
     const flames = new FlameViews(this.profile.flameLights);
     const pickups = new PickupViews();
+    const traps = new TrapViews(state.width * state.height);
     const players = new PlayerViews();
     this.players = players;
     this.vehicles = new VehicleViews();
     this.overlays = new OverlayViews();
-    this.views = [this.arena, generators, flames, pickups, players, this.vehicles, this.overlays];
+    this.views = [this.arena, traps, generators, flames, pickups, players, this.vehicles, this.overlays];
     this.scene.add(
       this.backdrop.root,
       this.arena.group,
+      traps.group,
       generators.group,
       flames.group,
       pickups.group,
@@ -332,6 +335,11 @@ export class GameRenderer {
           break;
         case 'crushLanded':
           fx.shake = Math.min(1, fx.shake + 0.2);
+          break;
+        case 'trapsActivated':
+          // the floor gives way: a jolt and a puff of grit on every new trap
+          fx.shake = Math.min(1, fx.shake + 0.35);
+          for (const t of e.tiles) fx.dust(t.index % state.width, Math.floor(t.index / state.width), 4, 0.5);
           break;
         default:
           break;

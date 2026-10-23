@@ -153,6 +153,23 @@ export class OverlayViews implements View {
       }
     }
 
+    // --- Mandatory endgame traps being telegraphed: strobing amber tile + a ring closing in until they go live
+    const warn = state.config.hazards.endgameWarnTicks;
+    for (const w of state.endgameTraps.warnings) {
+      const k = 1 - Math.max(0, w.liveTick - state.tick - alpha) / warn;
+      const x = wx(w.index % state.width);
+      const z = wz(Math.floor(w.index / state.width));
+      const oil = w.kind === 'oil';
+      this.fill.push({
+        x,
+        z,
+        color: oil ? 0xb04cff : 0xff8a00,
+        intensity: 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(time * 18)),
+        scale: 0.96,
+      });
+      this.rings.push({ x, z, color: 0xffd23a, intensity: 0.5 + 0.5 * k, scale: 1.9 - k * 1.3 });
+    }
+
     // --- spectator throws
     const crowd = state.crowd;
     const seen = new Set<number>();

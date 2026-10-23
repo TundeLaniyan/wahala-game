@@ -27,7 +27,7 @@ import {
 } from './systems/vehicles';
 import { updateCrowd } from './systems/crowd';
 import { updateCrush } from './systems/crush';
-import { updateFloorHazards } from './systems/hazards';
+import { updateEndgameTraps, updateFloorHazards } from './systems/hazards';
 
 export function tick(state: GameState, intents: Intents = {}): SimEvent[] {
   const events: SimEvent[] = [];
@@ -58,6 +58,7 @@ export function tick(state: GameState, intents: Intents = {}): SimEvent[] {
   const hits: LethalHit[] = [];
   updateVehicles(state, hits, events);
   updateCrush(state, hits, events);
+  updateEndgameTraps(state, events);
   updateCrowd(state, hits, events);
   resolveExplosions(state, events);
   burnPickups(state, events);

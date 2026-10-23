@@ -9,7 +9,17 @@ export interface ArenaDef {
   spawns: TilePos[];
   /** Tiles kept clear of soft blocks around each spawn (relative offsets). */
   spawnClearance: TilePos[];
-  /** Optional floor hazards, only used by trap arenas: 'o' pothole, '~' oil in this grid. */
+  /**
+   * Floor traps present for the whole match when the "early traps" match option is on:
+   * 'o' pothole, '~' oil in this grid.
+   */
   hazardLayout?: string[];
+  /**
+   * MANDATORY endgame trap waves (same format). They are part of every standard match and cannot be
+   * switched off: wave n becomes live at `config.hazards.endgameWaveRemainingTicks[n]` time left.
+   */
+  endgameTraps: string[][];
+  /** The designated trap arena: the early-traps option defaults to on when it is picked. */
+  trapArena?: boolean;
   mirrorSoftBlocks: boolean;
 }

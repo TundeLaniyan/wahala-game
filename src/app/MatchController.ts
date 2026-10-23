@@ -273,6 +273,8 @@ export class MatchController {
           tone: e.ownerId === LOCAL_ID ? 'info' : 'bad',
         };
       }
+      case 'trapsWarning':
+        return { text: e.wave === 0 ? 'FINAL 30s: FLOOR TRAPS!' : 'MORE TRAPS!', tone: 'bad' };
       case 'okadaBroken': {
         const me = state.players[LOCAL_ID]!;
         return me.x === e.x && me.y === e.y ? { text: 'OKADA SAVED YOU!', tone: 'good' } : null;

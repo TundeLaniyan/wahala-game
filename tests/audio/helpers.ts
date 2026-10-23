@@ -60,6 +60,8 @@ export const SAMPLES: Record<SimEvent['type'], SimEvent> = {
   crowdWarning: { type: 'crowdWarning', throwId: 1, x: 2, y: 2, kind: 'firecracker', landTick: 100 },
   crowdLanded: { type: 'crowdLanded', throwId: 1, x: 2, y: 2, kind: 'bottle' },
   hazardTriggered: { type: 'hazardTriggered', playerId: 0, kind: 'oil' },
+  trapsWarning: { type: 'trapsWarning', wave: 0, tiles: [{ index: 20, kind: 'oil' }], liveTick: 90 },
+  trapsActivated: { type: 'trapsActivated', wave: 0, tiles: [{ index: 20, kind: 'oil' }] },
 };
 
 export interface Rig {

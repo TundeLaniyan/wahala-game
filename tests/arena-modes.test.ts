@@ -93,7 +93,7 @@ describe('floor hazards (trap arena)', () => {
     return s;
   };
 
-  it('only exists when the option is on', () => {
+  it('early traps only exist when the option is on', () => {
     const on = createGame({
       seed: 1,
       arenaId: 'lekkiRoadworks',
@@ -103,8 +103,9 @@ describe('floor hazards (trap arena)', () => {
     const off = createGame({ seed: 1, arenaId: 'lekkiRoadworks', players: duo });
     expect(Object.keys(on.floorHazards).length).toBeGreaterThan(0);
     expect(Object.keys(off.floorHazards)).toHaveLength(0);
+    // every arena now has early traps available behind the same option
     const plain = createGame({ seed: 1, players: duo, settings: { floorHazards: true } });
-    expect(Object.keys(plain.floorHazards)).toHaveLength(0); // standard arena has no traps
+    expect(Object.keys(plain.floorHazards).length).toBeGreaterThan(0);
   });
 
   it('a pothole makes a player stumble', () => {

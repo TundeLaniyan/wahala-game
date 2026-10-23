@@ -8,12 +8,14 @@ import { nextFloat, seedToState, weightedPick } from './rng';
 import { Tile } from './types';
 import type {
   CrushState,
+  EndgameTrapState,
   GameOptions,
   GameState,
   MatchSettings,
   PickupKind,
   Player,
   PlayerSetup,
+  TrapTile,
 } from './types';
 
 export const DEFAULT_SETTINGS: MatchSettings = { mode: 'classic', crowdThrows: false, floorHazards: false };
@@ -87,6 +89,7 @@ export function createGame(options: GameOptions): GameState {
     tiles: new Array<number>(width * height).fill(Tile.Empty),
     hidden: {},
     floorHazards: {},
+    endgameTraps: { waves: [], liveAt: [], warned: 0, live: 0, warnings: [] },
     players: options.players.map((setup, id) => createPlayer(id, setup, arena, config)),
     generators: [],
     flames: [],
@@ -110,6 +113,7 @@ export function createGame(options: GameOptions): GameState {
   assignHiddenPickups(state);
   if (settings.floorHazards) buildFloorHazards(state, arena);
   if (settings.mode === 'crush') state.crush = createCrush(state);
+  state.endgameTraps = createEndgameTraps(state, arena);
   if (settings.crowdThrows) state.crowd = { nextThrowTick: config.crowd.firstThrowTicks, throws: [] };
   return state;
 }
@@ -173,6 +177,51 @@ function buildFloorHazards(state: GameState, arena: ArenaDef): void {
       else if (c === '~') state.floorHazards[i] = 'oil';
     }
   });
+}
+
+/**
+ * The mandatory endgame trap waves. Always built (no setting turns them off). Fairness: never on a
+ * concrete pillar, and in Wahala Crush never on the final safe tile or the tiles next to it, so the
+ * last stand is decided by the players, not by a trap.
+ */
+function createEndgameTraps(state: GameState, arena: ArenaDef): EndgameTrapState {
+  const { width, height, config } = state;
+  const excluded = new Set<number>();
+  if (state.crush && state.crush.order.length > 0) {
+    const last = state.crush.order[state.crush.order.length - 1]!;
+    const lx = last % width;
+    const ly = Math.floor(last / width);
+    excluded.add(last);
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      const x = lx + dx;
+      const y = ly + dy;
+      if (x >= 0 && y >= 0 && x < width && y < height) excluded.add(tileIndex(state, x, y));
+    }
+  }
+  const waves = arena.endgameTraps.map((rows) => {
+    const tiles: TrapTile[] = [];
+    rows.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        const c = row[x];
+        if (c !== 'o' && c !== '~') continue;
+        const index = tileIndex(state, x, y);
+        if (state.tiles[index] === Tile.Hard || excluded.has(index)) continue;
+        tiles.push({ index, kind: c === 'o' ? 'pothole' : 'oil' });
+      }
+    });
+    return tiles;
+  });
+  const { durationTicks } = config.match;
+  const liveAt = waves.map((_, n) => {
+    const remaining = config.hazards.endgameWaveRemainingTicks[n] ?? 0;
+    return Math.max(0, durationTicks - Math.min(remaining, durationTicks));
+  });
+  return { waves, liveAt, warned: 0, live: 0, warnings: [] };
 }
 
 /** Wahala Crush closes the arena from the outside in, in a clockwise spiral of ring tiles. */

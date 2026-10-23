@@ -296,6 +296,18 @@ const handlers: Handlers = {
     sfx(c, e.kind === 'pothole' ? 'pothole_thud' : 'oil_squeak', panOf(c, playerX(c, e.playerId)));
     react(c, { kind: 'laugh', strength: 0.5, chance: 0.6, delay: 0.5 });
   },
+  // Mandatory endgame traps: an unmistakable alarm when a wave is telegraphed, the floor giving way when it goes live.
+  trapsWarning: (_e, c) => {
+    sfx(c, 'crush_warning', 0, 1);
+    c.buses.duck('warning');
+    react(c, { kind: 'gasp', strength: 0.7, chance: 0.9, delay: 0.3 });
+  },
+  trapsActivated: (e, c) => {
+    if (e.tiles.length === 0) return;
+    sfx(c, 'pothole_thud', 0, 1);
+    sfx(c, 'oil_squeak', 0, 0.8);
+    c.buses.duck('blast');
+  },
 };
 
 /** Crowd and engine response to a near miss. At most one of these per call (see handle). */

@@ -234,8 +234,10 @@ export interface GameState {
   tiles: number[];
   /** Pickup hidden under each soft block (tile index -> kind). Never exposed to bots. */
   hidden: Record<number, PickupKind>;
-  /** Special floor hazards declared by the arena (tile index -> kind). */
+  /** Live floor traps (tile index -> kind): early traps plus the endgame waves that have gone live. */
   floorHazards: Record<number, 'pothole' | 'oil'>;
+  /** The mandatory endgame trap waves (always present in a standard match). */
+  endgameTraps: EndgameTrapState;
   players: Player[];
   generators: Generator[];
   flames: Flame[];
@@ -247,6 +249,25 @@ export interface GameState {
   nextId: number;
   nextEventId: number;
   match: MatchState;
+}
+
+export interface TrapTile {
+  index: number;
+  kind: FloorHazardKind;
+}
+
+export type FloorHazardKind = 'pothole' | 'oil';
+
+export interface EndgameTrapState {
+  /** Planned tiles of each wave, from the arena data. */
+  waves: TrapTile[][];
+  /** Play tick each wave goes live (its warning starts `endgameWarnTicks` earlier). */
+  liveAt: number[];
+  /** Waves whose warning has been shown / that have gone live. */
+  warned: number;
+  live: number;
+  /** Tiles currently telegraphed (public: drawn on the floor and seen by bots). */
+  warnings: (TrapTile & { liveTick: number })[];
 }
 
 // ---------------------------------------------------------------- settings
@@ -360,4 +381,8 @@ export type SimEvent =
       landTick: number;
     }
   | { type: 'crowdLanded'; throwId: number; x: number; y: number; kind: 'bottle' | 'firecracker' }
-  | { type: 'hazardTriggered'; playerId: number; kind: 'pothole' | 'oil' };
+  | { type: 'hazardTriggered'; playerId: number; kind: 'pothole' | 'oil' }
+  /** An endgame trap wave is telegraphed (wave 0 = the start of the final-30-seconds escalation). */
+  | { type: 'trapsWarning'; wave: number; tiles: TrapTile[]; liveTick: number }
+  /** An endgame trap wave is live. */
+  | { type: 'trapsActivated'; wave: number; tiles: TrapTile[] };

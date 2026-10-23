@@ -1,6 +1,5 @@
 import {
   BoxGeometry,
-  CircleGeometry,
   CylinderGeometry,
   Matrix4,
   Mesh,
@@ -8,11 +7,9 @@ import {
   MeshStandardMaterial,
   PlaneGeometry,
   Quaternion,
-  RingGeometry,
   Vector3,
   Euler,
   Group,
-  DoubleSide,
   Color,
 } from 'three';
 import type { Material, Texture } from 'three';
@@ -146,68 +143,7 @@ export class ArenaView implements View {
     markings.receiveShadow = true;
     markings.renderOrder = 1;
     this.decals.add(markings);
-    this.buildHazardDecals(state);
     this.buildArenaPillarAccents(state);
-  }
-
-  private buildHazardDecals(state: GameState): void {
-    const rubbleGeo = new BoxGeometry(0.09, 0.045, 0.07);
-    const rubbleMat = new MeshStandardMaterial({ color: 0x5c534a, roughness: 0.95 });
-    for (const [key, kind] of Object.entries(state.floorHazards)) {
-      const i = Number(key);
-      const x = this.layout.wx(i % state.width);
-      const z = this.layout.wz(Math.floor(i / state.width));
-      const hole = kind === 'pothole';
-      const rim = new Mesh(
-        new CircleGeometry(hole ? 0.43 : 0.46, 20),
-        new MeshStandardMaterial({
-          color: hole ? 0x62584f : 0x1b1828,
-          roughness: hole ? 0.95 : 0.12,
-          metalness: hole ? 0 : 0.75,
-          side: DoubleSide,
-        }),
-      );
-      rim.rotation.x = -Math.PI / 2;
-      rim.position.set(x, 0.014, z);
-      rim.receiveShadow = true;
-      const core = new Mesh(
-        new CircleGeometry(hole ? 0.31 : 0.36, 18),
-        new MeshStandardMaterial({
-          color: hole ? 0x14100d : 0x3b2d6e,
-          roughness: hole ? 0.35 : 0.08,
-          metalness: hole ? 0.2 : 0.85,
-        }),
-      );
-      core.rotation.x = -Math.PI / 2;
-      core.position.set(x, 0.018, z);
-      this.decals.add(rim, core);
-      if (hole) {
-        // Broken asphalt rubble chunks around the pothole rim
-        for (let k = 0; k < 5; k++) {
-          const ang = (k * Math.PI * 2) / 5 + (i % 3) * 0.4;
-          const chunk = new Mesh(rubbleGeo, rubbleMat);
-          chunk.position.set(x + Math.cos(ang) * 0.35, 0.024, z + Math.sin(ang) * 0.35);
-          chunk.rotation.y = ang * 1.7;
-          this.decals.add(chunk);
-        }
-      } else {
-        // Iridescent petroleum rainbow sheen ring on the oil slick
-        const sheen = new Mesh(
-          new RingGeometry(0.16, 0.29, 18),
-          new MeshStandardMaterial({
-            color: 0x28b8d8,
-            emissive: 0x245878,
-            emissiveIntensity: 0.35,
-            roughness: 0.08,
-            metalness: 0.9,
-            side: DoubleSide,
-          }),
-        );
-        sheen.rotation.x = -Math.PI / 2;
-        sheen.position.set(x + 0.03, 0.021, z - 0.02);
-        this.decals.add(sheen);
-      }
-    }
   }
 
   /**

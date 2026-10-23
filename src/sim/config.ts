@@ -107,6 +107,13 @@ export interface GameConfig {
     potholeStumbleTicks: number;
     /** Oil: tiles the player slides after stepping on it. */
     oilSlideTiles: number;
+    /**
+     * MANDATORY endgame traps: time left when each wave of the arena's `endgameTraps` goes live.
+     * The first wave opens the endgame escalation at the start of the final 30 seconds.
+     */
+    endgameWaveRemainingTicks: number[];
+    /** Each endgame wave is telegraphed on the floor this long before it goes live. */
+    endgameWarnTicks: number;
   };
 }
 
@@ -205,6 +212,8 @@ export const DEFAULT_CONFIG: GameConfig = {
   hazards: {
     potholeStumbleTicks: ticks(0.6),
     oilSlideTiles: 2,
+    endgameWaveRemainingTicks: [ticks(30), ticks(15)],
+    endgameWarnTicks: ticks(1.5),
   },
 };
 

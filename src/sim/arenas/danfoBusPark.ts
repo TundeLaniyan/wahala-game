@@ -1,4 +1,5 @@
 import type { ArenaDef } from './types';
+import { mirroredTraps } from './traps';
 
 /**
  * Danfo Bus Park: 15 x 11 playable tiles. Concrete pillars sit on every odd/odd tile so each
@@ -33,4 +34,24 @@ export const DANFO_BUS_PARK: ArenaDef = {
     { x: 1, y: 2 },
   ],
   mirrorSoftBlocks: true,
+  // Engine-oil stains in the bays and broken tarmac by the shelters.
+  hazardLayout: mirroredTraps([
+    [5, 2, '~'],
+    [2, 4, 'o'],
+  ]),
+  endgameTraps: [
+    // 0:30 - spilled diesel spreads across the bays, the worn tarmac gives way
+    mirroredTraps([
+      [4, 0, '~'],
+      [6, 4, '~'],
+      [2, 3, 'o'],
+      [7, 2, 'o'],
+    ]),
+    // 0:15 - the whole lot is slick
+    mirroredTraps([
+      [4, 4, '~'],
+      [0, 4, 'o'],
+      [6, 1, '~'],
+    ]),
+  ],
 };

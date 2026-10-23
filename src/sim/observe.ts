@@ -36,6 +36,8 @@ export interface Observation {
   readonly crush: Readonly<CrushState> | null;
   readonly crowd: Readonly<CrowdState> | null;
   readonly floorHazards: Readonly<GameState['floorHazards']>;
+  /** Endgame trap waves: telegraphed tiles are public. */
+  readonly endgameTraps: Readonly<GameState['endgameTraps']>;
 }
 
 export function observe(state: GameState, selfId: number): Observation {
@@ -56,5 +58,6 @@ export function observe(state: GameState, selfId: number): Observation {
     crush: state.crush,
     crowd: state.crowd,
     floorHazards: state.floorHazards,
+    endgameTraps: state.endgameTraps,
   };
 }

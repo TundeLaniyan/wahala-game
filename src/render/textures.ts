@@ -629,3 +629,126 @@ export function towerWindowsTexture(seed: number): CanvasTexture {
     return tex(c, { repeat: true });
   });
 }
+
+/** A broken-tarmac pothole seen from above: jagged dark crater, crumbled edge, loose gravel (RGBA). */
+export function potholeTexture(): CanvasTexture {
+  return cached('pothole', () => {
+    const S = 256;
+    const [c, g] = canvas(S, S);
+    const r = artRng(5150);
+    const ring = (radius: number, jag: number): [number, number][] => {
+      const pts: [number, number][] = [];
+      for (let k = 0; k < 28; k++) {
+        const a = (k / 28) * Math.PI * 2;
+        const rr = radius * (1 - jag + r() * jag * 2);
+        pts.push([S / 2 + Math.cos(a) * rr, S / 2 + Math.sin(a) * rr * 0.92]);
+      }
+      return pts;
+    };
+    const poly = (pts: [number, number][], fill: string | CanvasGradient): void => {
+      g.beginPath();
+      pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+      g.closePath();
+      g.fillStyle = fill;
+      g.fill();
+    };
+    // crumbled, lifted edge
+    poly(ring(118, 0.12), 'rgba(58,54,50,0.95)');
+    poly(ring(104, 0.14), 'rgba(38,35,32,1)');
+    // the hole: deep, wet-dark centre
+    const deep = g.createRadialGradient(S / 2 + 6, S / 2 + 8, 6, S / 2, S / 2, 92);
+    deep.addColorStop(0, 'rgba(6,5,5,1)');
+    deep.addColorStop(0.6, 'rgba(18,15,13,1)');
+    deep.addColorStop(1, 'rgba(32,28,25,1)');
+    poly(ring(88, 0.16), deep);
+    // standing muddy water with a cold highlight
+    g.fillStyle = 'rgba(52,48,40,0.55)';
+    g.beginPath();
+    g.ellipse(S / 2 + 10, S / 2 + 14, 44, 28, 0.4, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = 'rgba(170,180,190,0.12)';
+    g.beginPath();
+    g.ellipse(S / 2 - 6, S / 2 + 4, 20, 7, 0.4, 0, Math.PI * 2);
+    g.fill();
+    // gravel and asphalt crumbs
+    for (let i = 0; i < 260; i++) {
+      const a = r() * Math.PI * 2;
+      const d = 60 + r() * 62;
+      const v = 40 + Math.floor(r() * 70);
+      g.fillStyle = `rgba(${v + 8},${v + 4},${v},${0.6 + r() * 0.4})`;
+      g.fillRect(S / 2 + Math.cos(a) * d, S / 2 + Math.sin(a) * d, 1 + r() * 4, 1 + r() * 4);
+    }
+    // radiating cracks into the surrounding tarmac
+    g.strokeStyle = 'rgba(14,12,10,0.8)';
+    g.lineWidth = 2;
+    for (let i = 0; i < 7; i++) {
+      let a = r() * Math.PI * 2;
+      let x = S / 2 + Math.cos(a) * 96;
+      let y = S / 2 + Math.sin(a) * 90;
+      g.beginPath();
+      g.moveTo(x, y);
+      for (let k = 0; k < 4; k++) {
+        a += (r() - 0.5) * 0.8;
+        x += Math.cos(a) * 9;
+        y += Math.sin(a) * 9;
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    return tex(c);
+  });
+}
+
+/** A spreading black oil / diesel slick with a thin petrol rainbow sheen and splatter (RGBA). */
+export function oilSlickTexture(): CanvasTexture {
+  return cached('oilslick', () => {
+    const S = 256;
+    const [c, g] = canvas(S, S);
+    const r = artRng(2718);
+    const blob = (cx: number, cy: number, rad: number, fill: string): void => {
+      g.beginPath();
+      for (let k = 0; k <= 32; k++) {
+        const a = (k / 32) * Math.PI * 2;
+        const rr = rad * (0.78 + 0.22 * Math.sin(a * 3 + cx) + r() * 0.12);
+        const x = cx + Math.cos(a) * rr;
+        const y = cy + Math.sin(a) * rr * 0.86;
+        if (k) g.lineTo(x, y);
+        else g.moveTo(x, y);
+      }
+      g.closePath();
+      g.fillStyle = fill;
+      g.fill();
+    };
+    blob(S / 2, S / 2, 104, 'rgba(10,9,10,0.9)');
+    for (let i = 0; i < 7; i++) {
+      const a = r() * Math.PI * 2;
+      blob(S / 2 + Math.cos(a) * 92, S / 2 + Math.sin(a) * 80, 12 + r() * 22, 'rgba(12,10,11,0.85)');
+    }
+    // the sheen: a few soft iridescent bands, very restrained
+    const sheen = g.createRadialGradient(S / 2 - 18, S / 2 - 10, 10, S / 2 - 10, S / 2, 80);
+    sheen.addColorStop(0, 'rgba(0,0,0,0)');
+    sheen.addColorStop(0.45, 'rgba(60,110,140,0.22)');
+    sheen.addColorStop(0.6, 'rgba(150,80,150,0.18)');
+    sheen.addColorStop(0.75, 'rgba(150,130,60,0.16)');
+    sheen.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = sheen;
+    g.fillRect(0, 0, S, S);
+    // tyre track through it
+    g.strokeStyle = 'rgba(40,38,36,0.55)';
+    g.lineWidth = 16;
+    g.beginPath();
+    g.moveTo(20, S * 0.7);
+    g.bezierCurveTo(S * 0.4, S * 0.55, S * 0.6, S * 0.6, S - 20, S * 0.35);
+    g.stroke();
+    // splatter
+    for (let i = 0; i < 70; i++) {
+      const a = r() * Math.PI * 2;
+      const d = 100 + r() * 24;
+      g.fillStyle = 'rgba(8,8,8,0.8)';
+      g.beginPath();
+      g.arc(S / 2 + Math.cos(a) * d, S / 2 + Math.sin(a) * d * 0.86, 1 + r() * 3, 0, Math.PI * 2);
+      g.fill();
+    }
+    return tex(c);
+  });
+}

@@ -212,7 +212,7 @@ export function TitleScreen() {
                 value={a.id}
                 current={s.arenaId}
                 label={a.name}
-                onPick={(v) => set({ arenaId: v, floorHazards: !!ARENAS[v]!.hazardLayout })}
+                onPick={(v) => set({ arenaId: v, floorHazards: !!ARENAS[v]!.trapArena })}
                 testId={`arena-${a.id}`}
               />
             ))}
@@ -232,7 +232,7 @@ export function TitleScreen() {
             <Choice
               value={true}
               current={s.floorHazards && hasHazards}
-              label={`Floor traps ${s.floorHazards && hasHazards ? 'ON' : 'OFF'}`}
+              label={`Early traps ${s.floorHazards && hasHazards ? 'ON' : 'OFF'}`}
               disabled={!hasHazards}
               onPick={() => set({ floorHazards: !s.floorHazards })}
               testId="toggle-hazards"
