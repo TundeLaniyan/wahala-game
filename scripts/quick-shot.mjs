@@ -1,4 +1,6 @@
-// One gameplay screenshot of an arena (needs `npx vite --port 5199`): node scripts/quick-shot.mjs <out-prefix> <arena> <desktop|mobile> [ticks] [extra query]
+// One gameplay screenshot of an arena (needs a dev server; SHOT_URL defaults to http://localhost:5199/wahala-game/):
+//   node scripts/quick-shot.mjs <out-prefix> <arena> <desktop|mobile> [ticks] [extra query]
+// INSPECT="x,z,zoom;..." adds unclamped close-ups of world points (art review); Q=low|medium|high.
 import { chromium } from '@playwright/test';
 const [prefix, arena = 'danfoBusPark', device = 'desktop', ticks = '260', query = ''] = process.argv.slice(2);
 const VP = {
