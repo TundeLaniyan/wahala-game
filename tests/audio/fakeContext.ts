@@ -148,6 +148,18 @@ export interface FakeContextOptions {
   noPanner?: boolean;
   /** Omit createWaveShaper. */
   noShaper?: boolean;
+  /** Omit createMediaElementSource (the streaming music is then silent). */
+  noMediaElement?: boolean;
+}
+
+/** The node createMediaElementSource returns, with the element it wraps. */
+export class FakeMediaSource extends FakeNode {
+  constructor(
+    ctx: FakeContext,
+    readonly element: unknown,
+  ) {
+    super(ctx);
+  }
 }
 
 export class FakeContext implements AudioContextLike {
@@ -163,10 +175,22 @@ export class FakeContext implements AudioContextLike {
   readonly compressors: FakeCompressor[] = [];
   createStereoPanner?: () => StereoPannerNodeLike;
   createWaveShaper?: () => FakeShaper;
+  readonly mediaSources: FakeMediaSource[] = [];
+  createMediaElementSource?: (element: unknown) => FakeMediaSource;
 
   constructor(opts: FakeContextOptions = {}) {
     if (!opts.noPanner) this.createStereoPanner = () => new FakePanner(this);
     if (!opts.noShaper) this.createWaveShaper = () => new FakeShaper(this);
+    if (!opts.noMediaElement) {
+      this.createMediaElementSource = (element) => {
+        if (this.mediaSources.some((m) => m.element === element)) {
+          throw new Error('InvalidStateError: element already has a MediaElementSourceNode');
+        }
+        const n = new FakeMediaSource(this, element);
+        this.mediaSources.push(n);
+        return n;
+      };
+    }
   }
   resume(): Promise<void> {
     this.resumeCalls++;

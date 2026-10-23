@@ -45,7 +45,7 @@ export interface BufferSourceNodeLike extends AudioNodeLike {
   onended?: (() => void) | null;
 }
 
-export type FilterType = 'lowpass' | 'highpass' | 'bandpass' | 'peaking' | 'notch';
+export type FilterType = 'lowpass' | 'highpass' | 'bandpass' | 'peaking' | 'notch' | 'highshelf';
 
 export interface BiquadFilterNodeLike extends AudioNodeLike {
   type: FilterType;
@@ -72,6 +72,27 @@ export interface WaveShaperNodeLike extends AudioNodeLike {
   oversample: 'none' | '2x' | '4x';
 }
 
+/**
+ * The part of HTMLAudioElement the music player uses: it streams the long music tracks (so ten of them
+ * never sit decoded in memory) and changes tempo with the pitch preserved.
+ */
+export interface MediaElementLike {
+  src: string;
+  loop: boolean;
+  preload: string;
+  playbackRate: number;
+  /** Standard; `webkitPreservesPitch` / `mozPreservesPitch` on older engines. */
+  preservesPitch?: boolean;
+  readonly paused: boolean;
+  currentTime: number;
+  play(): Promise<void> | void;
+  pause(): void;
+  load(): void;
+  removeAttribute?(name: string): void;
+  addEventListener(type: 'error' | 'playing' | 'ended', listener: () => void): void;
+  removeEventListener(type: 'error' | 'playing' | 'ended', listener: () => void): void;
+}
+
 export interface AudioContextLike {
   readonly currentTime: number;
   readonly sampleRate: number;
@@ -90,6 +111,9 @@ export interface AudioContextLike {
   createStereoPanner?(): StereoPannerNodeLike;
   /** Used for the final soft clipper; skipped when absent. */
   createWaveShaper?(): WaveShaperNodeLike;
+  /** Routes a streaming <audio> element into the graph (music). Music is silent when absent. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createMediaElementSource?(element: any): AudioNodeLike;
 }
 
 export type ContextFactory = () => AudioContextLike | null | undefined;

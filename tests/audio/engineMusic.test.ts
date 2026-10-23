@@ -4,8 +4,11 @@ import { createPrefsStore } from '../../src/audio/prefs';
 import type { StorageLike } from '../../src/audio/prefs';
 import type { SpokenTrace, VoiceManifest } from '../../src/audio/pidgin';
 import type { SimEvent } from '../../src/sim';
-import { BASE, musicFiles, server } from './fakeServer';
+import { createRand } from '../../src/audio/rng';
+import { BASE, TRACK_IDS, musicFiles, musicManifest, server } from './fakeServer';
 import { FakeBuffer } from './fakeContext';
+import type { FakeGain } from './fakeContext';
+import { mediaFactory, trackOf } from './fakeMedia';
 import { finishWarmup, makeRig, playState } from './helpers';
 
 beforeEach(() => {
@@ -71,22 +74,35 @@ function allFiles(): Record<string, unknown> {
   };
 }
 
-async function rig(files: Record<string, unknown> = allFiles(), storage = mem()) {
+async function rig(files: Record<string, unknown> = allFiles(), storage = mem(), pitch = true) {
   const spoken: SpokenTrace[] = [];
   const prefs = createPrefsStore(() => storage);
+  const media = mediaFactory({ pitch, broken: (src) => files[src] === undefined });
   const r = makeRig({
     fetch: server(files).fetch,
     sampleBaseUrl: BASE,
     prefs,
     onSpeak: (t) => spoken.push(t),
+    createMediaElement: media.create,
+    musicRand: createRand(42),
   });
   r.ctx.decoded = (d) => new FakeBuffer(d.byteLength > 20000 ? 32000 : d.byteLength * 20, 44100, 2);
   await r.audio.unlock();
   await r.audio.whenMusicLoaded();
   await r.audio.whenVoicesLoaded();
   finishWarmup();
-  return { ...r, prefs, spoken, storage };
+  return { ...r, prefs, spoken, storage, media };
 }
+
+/** A sandbox state on the game clock: `remaining` seconds of play left (or ended). */
+function clockState(remaining: number, phase: 'playing' | 'ended' = 'playing') {
+  const s = playState(2);
+  s.players[1]!.isBot = true;
+  s.match.phase = phase;
+  s.match.playTicks = Math.round(s.config.match.durationTicks - remaining * 60);
+  return s;
+}
+const streaming = (r: Awaited<ReturnType<typeof rig>>) => r.media.sounding().map(trackOf);
 
 const loopsOn = (r: { ctx: { sources: { loop: boolean; stoppedAt: number | null; buffer: unknown }[] } }) =>
   r.ctx.sources.filter((s) => s.loop && s.stoppedAt === null);
@@ -98,85 +114,138 @@ const busGains = (r: Awaited<ReturnType<typeof rig>>) => {
 };
 
 describe('music through the engine', () => {
-  it('starts the menu music after unlock (the first user gesture) and not before', async () => {
-    const files = allFiles();
-    const r = makeRig({
-      fetch: server(files).fetch,
-      sampleBaseUrl: BASE,
-      prefs: createPrefsStore(() => mem()),
-    });
-    expect(r.ctx.sources).toHaveLength(0); // nothing is created until a gesture unlocks audio
-    expect(r.ctx.resumeCalls).toBe(0);
-    await r.audio.unlock();
-    await r.audio.whenMusicLoaded();
-    expect(r.ctx.resumeCalls).toBeGreaterThan(0);
-    expect(loopsOn(r).length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('crossfades to the match loop on startMusic, brings the menu music back on stopMusic', async () => {
-    const r = await rig();
-    const menu = loopsOn(r)[0]!;
-    r.audio.startMusic();
-    expect(loopsOn(r).filter((s) => s !== menu).length).toBeGreaterThanOrEqual(1);
-    expect((menu as { stoppedAt: number | null }).stoppedAt).not.toBeNull();
-    r.audio.stopMusic();
-    // a fresh source over the very same menu buffer is running again
-    expect(loopsOn(r).some((s) => s !== menu && s.buffer === (menu as { buffer: unknown }).buffer)).toBe(
-      true,
-    );
-    expect(r.errors).toEqual([]);
-  });
-
-  it('remembers startMusic() requested before unlock', async () => {
+  it('streams nothing before the first gesture; after unlock the menus are silent (no menu playlist)', async () => {
+    const media = mediaFactory();
     const r = makeRig({
       fetch: server(allFiles()).fetch,
       sampleBaseUrl: BASE,
       prefs: createPrefsStore(() => mem()),
+      createMediaElement: media.create,
     });
-    r.ctx.decoded = (d) => new FakeBuffer(d.byteLength > 20000 ? 32000 : 5000, 44100, 2);
-    r.audio.startMusic();
+    r.audio.startMusic('danfoBusPark');
+    expect(media.els).toHaveLength(0); // nothing is created until a gesture unlocks audio
+    expect(r.ctx.resumeCalls).toBe(0);
     await r.audio.unlock();
     await r.audio.whenMusicLoaded();
-    // match loop + tension stem (silent) are what runs; the menu loop was never started
-    expect(r.ctx.sources.filter((s) => s.loop).length).toBeGreaterThanOrEqual(2);
+    // the match requested before unlock was remembered
+    expect(media.sounding()).toHaveLength(1);
+    expect(r.audio.musicStatus().arenaId).toBe('danfoBusPark');
+    r.audio.stopMusic();
+    vi.advanceTimersByTime(3000);
+    expect(media.sounding()).toHaveLength(0); // empty menu playlist: the title screen is silent
   });
 
-  it('fades the tension stem in for the final stretch (intensity 1) and out again', async () => {
+  it('each match plays a track from the arena playlist, never the previous one; quitting stops it', async () => {
     const r = await rig();
-    r.audio.startMusic();
-    const before = r.ctx.gains.reduce((n, g) => n + g.gain.targets.length, 0);
-    r.audio.setIntensity(1);
-    const after = r.ctx.gains.reduce((n, g) => n + g.gain.targets.length, 0);
-    expect(after).toBeGreaterThan(before);
-    expect(r.ctx.gains.some((g) => g.gain.targets.some((t) => Math.abs(t - 0.9) < 1e-9))).toBe(true); // TENSION_GAIN
-    r.audio.setIntensity(0.2);
+    await expect(r.audio.whenMusicLoaded()).resolves.toMatchObject({ loaded: TRACK_IDS });
+    const seen: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      r.audio.startMusic(['danfoBusPark', 'balogunMarket', 'lekkiRoadworks'][i % 3]);
+      vi.advanceTimersByTime(2000);
+      expect(streaming(r)).toHaveLength(1);
+      seen.push(streaming(r)[0]!);
+    }
+    for (let i = 1; i < seen.length; i++) expect(seen[i]).not.toBe(seen[i - 1]);
+    r.audio.stopMusic(); // quit to the title screen
+    vi.advanceTimersByTime(3000);
+    expect(streaming(r)).toEqual([]);
     expect(r.errors).toEqual([]);
   });
 
-  it('plays the win / lose / draw sting when the match ends', async () => {
-    for (const [winnerId, humanIsZero] of [
-      [0, true],
-      [1, true],
-    ] as const) {
-      const r = await rig();
-      r.audio.startMusic();
-      const s = playState(2);
-      s.players[1]!.isBot = true;
-      const n = r.ctx.sources.length;
-      r.audio.handleEvents([{ type: 'matchEnded', result: { kind: 'win', winnerId } }], s);
-      // decoded music files are 32000 frames in this fixture; synthesised sounds never are
-      const stings = r.ctx.sources
-        .slice(n)
-        .filter((x) => !x.loop && (x.buffer as FakeBuffer | null)?.length === 32000);
-      expect(stings, `winner ${winnerId} human0=${String(humanIsZero)}`).toHaveLength(1);
+  it('only the approved files that are present play; missing ones are skipped', async () => {
+    const files = { ...allFiles() };
+    for (const id of TRACK_IDS.slice(0, 8)) delete files[`${BASE}music/${id}.mp3`];
+    const r = await rig(files);
+    expect((await r.audio.whenMusicLoaded()).loaded).toEqual(['t8', 't9']);
+    for (let i = 0; i < 6; i++) r.audio.startMusic('lekkiRoadworks');
+    expect(new Set(r.media.els.map(trackOf))).toEqual(new Set(['t8', 't9']));
+  });
+
+  it('handleEvents drives the endgame from the game clock, also while muted', async () => {
+    const r = await rig();
+    r.audio.startMusic('danfoBusPark');
+    const el = r.media.els[0]!;
+    r.audio.handleEvents([], clockState(45));
+    expect(el.playbackRate).toBe(1);
+    r.audio.handleEvents([], clockState(30));
+    expect(el.playbackRate).toBe(1);
+    r.audio.handleEvents([], clockState(15));
+    expect(el.playbackRate).toBeCloseTo(1.045, 3);
+    r.audio.setMuted(true);
+    r.audio.handleEvents([], clockState(0));
+    expect(el.playbackRate).toBeCloseTo(1.09, 3);
+    expect(el.preservesPitch).toBe(true);
+    expect(r.audio.musicStatus().urgency).toBe(1);
+    r.audio.setMuted(false);
+    expect(r.errors).toEqual([]);
+  });
+
+  it('match end eases the tempo back; a rematch starts a different track at 1.0', async () => {
+    const r = await rig();
+    r.audio.startMusic('balogunMarket');
+    const first = r.media.els[0]!;
+    r.audio.handleEvents([], clockState(0));
+    for (let i = 0; i < 200; i++) {
+      r.ctx.advance(1 / 60);
+      r.audio.handleEvents([], clockState(0, 'ended'));
     }
-    const d = await rig();
-    d.audio.startMusic();
-    const n = d.ctx.sources.length;
-    d.audio.handleEvents([{ type: 'matchEnded', result: { kind: 'draw', reason: 'timeout' } }], playState(2));
-    expect(
-      d.ctx.sources.slice(n).filter((x) => !x.loop && (x.buffer as FakeBuffer | null)?.length === 32000),
-    ).toHaveLength(1);
+    expect(first.playbackRate).toBe(1);
+    r.audio.startMusic('balogunMarket'); // rematch
+    const next = r.media.els.at(-1)!;
+    expect(trackOf(next)).not.toBe(trackOf(first));
+    expect(next.playbackRate).toBe(1);
+    expect(r.audio.musicStatus().rate).toBe(1);
+  });
+
+  it('pause pauses the stream and resume continues it; quitting from the pause menu cleans up', async () => {
+    const r = await rig();
+    r.audio.startMusic('danfoBusPark');
+    const el = r.media.els[0]!;
+    r.audio.setPaused(true);
+    vi.advanceTimersByTime(300);
+    expect(el.paused).toBe(true);
+    r.audio.handleEvents([], clockState(20)); // the paused frame loop keeps calling in
+    expect(el.paused).toBe(true);
+    r.audio.setPaused(false);
+    expect(el.paused).toBe(false);
+    r.audio.setPaused(true);
+    r.audio.stopMusic(); // quit to title while paused
+    vi.advanceTimersByTime(3000);
+    expect(r.audio.musicStatus().paused).toBe(false);
+    expect(el.released).toBe(true);
+    expect(streaming(r)).toEqual([]);
+  });
+
+  it('the music sits behind the music duck: blasts still duck it, effects and warnings are untouched by the escalation', async () => {
+    const r = await rig();
+    r.audio.startMusic('danfoBusPark');
+    const master = r.ctx.master();
+    const busesBefore = r.ctx.gains.filter((g) => g.connections.includes(master)).map((g) => g.gain.value);
+    r.audio.handleEvents([], clockState(0)); // full escalation
+    const busesAfter = r.ctx.gains.filter((g) => g.connections.includes(master)).map((g) => g.gain.value);
+    expect(busesAfter).toEqual(busesBefore); // sfx, warn, crowd and music bus levels unchanged
+    // element -> deck gain -> tone in -> shelf -> punch -> trim -> pause gain -> music duck -> music bus -> master
+    const path: unknown[] = [r.ctx.mediaSources[0]];
+    for (let i = 0; i < 9; i++) path.push((path.at(-1) as FakeGain).connections[0]);
+    expect(path[9]).toBe(master);
+    const musicDuck = path[7] as FakeGain;
+    r.audio.handleEvents(
+      [{ type: 'generatorExploded', generatorId: 1, ownerId: 0, x: 3, y: 3, eventId: 1, range: 2 }],
+      clockState(0),
+    );
+    expect(musicDuck!.gain.targets).toContain(0.6); // DUCK.blast.music
+  });
+
+  it('an optional menu playlist plays on the title screen', async () => {
+    const files = musicFiles(TRACK_IDS, `${BASE}music/`, musicManifest(TRACK_IDS, { menu: ['t3'] }));
+    const r = await rig(files);
+    expect(streaming(r)).toEqual(['t3']);
+    r.audio.startMusic('danfoBusPark');
+    vi.advanceTimersByTime(3000);
+    expect(streaming(r)).not.toContain('t3');
+    r.audio.stopMusic();
+    vi.advanceTimersByTime(3000);
+    expect(streaming(r)).toEqual(['t3']);
   });
 });
 
@@ -347,7 +416,7 @@ describe('graceful fallback when optional assets are unavailable', () => {
     expect(r.spoken.map((t) => t.category)).toEqual(['danfo']);
   });
 
-  it('a decode failure for every file is reported without throwing', async () => {
+  it('a decode failure for every file is reported without throwing (music streams, it is not decoded)', async () => {
     const r = makeRig({
       fetch: server(allFiles()).fetch,
       sampleBaseUrl: BASE,
@@ -355,7 +424,7 @@ describe('graceful fallback when optional assets are unavailable', () => {
     });
     r.ctx.decoded = null;
     await r.audio.unlock();
-    expect((await r.audio.whenMusicLoaded()).loaded).toEqual([]);
+    await r.audio.whenMusicLoaded();
     expect((await r.audio.whenVoicesLoaded()).loadedPacks).toEqual([]);
     r.audio.startMusic();
     r.audio.handleEvents([], playState());

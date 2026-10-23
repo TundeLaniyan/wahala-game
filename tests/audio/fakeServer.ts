@@ -27,40 +27,36 @@ export function server(files: Record<string, unknown>): { fetch: FetchLike; hits
 
 export const BASE = '/wahala-game/audio/';
 
-/** A music manifest in the shape tools/audiogen/build_music.py writes (sizes are tiny for tests). */
+/** Ten playlist ids in the shape of the shipped manifest (tests use their own tiny files). */
+export const TRACK_IDS = Array.from({ length: 10 }, (_, i) => `t${i}`);
+
+/** A version-2 music manifest (playlist.ts) listing `ids`, with optional arena playlists. */
 export function musicManifest(
-  samples = { match_loop: 32000, menu_loop: 16000, match_tension: 8000 },
+  ids: readonly string[] = TRACK_IDS,
+  extra: { arenas?: Record<string, { tracks?: string[]; signature?: string | null }>; menu?: string[] } = {},
 ): unknown {
-  const t = (n: number, loop: boolean) => ({
-    loop,
-    bpm: 108,
-    samples: n,
-    seconds: n / 44100,
-    files: { ogg: { file: 'x.ogg', bytes: 1 }, mp3: { file: 'x.mp3', bytes: 1 } },
-  });
-  const named = (name: string, n: number, loop: boolean) => {
-    const m = t(n, loop);
-    m.files = { ogg: { file: `${name}.ogg`, bytes: 1 }, mp3: { file: `${name}.mp3`, bytes: 1 } };
-    return [name, m] as const;
-  };
   return {
-    sampleRate: 44100,
-    tracks: Object.fromEntries([
-      named('menu_loop', samples.menu_loop, true),
-      named('match_loop', samples.match_loop, true),
-      named('match_tension', samples.match_tension, true),
-      named('sting_win', 20000, false),
-      named('sting_lose', 20000, false),
-      named('sting_draw', 20000, false),
-    ]),
+    version: 2,
+    tracks: ids.map((id) => ({
+      id,
+      title: `Track ${id}`,
+      artist: null,
+      source: `https://example.org/${id}`,
+      licence: 'Test licence',
+      file: `${id}.mp3`,
+    })),
+    playlists: { default: [...ids], arenas: extra.arenas ?? {} },
+    menu: extra.menu ?? [],
   };
 }
 
-export function musicFiles(prefix = `${BASE}music/`): Record<string, unknown> {
-  const files: Record<string, unknown> = { [`${prefix}manifest.json`]: musicManifest() };
-  for (const n of ['menu_loop', 'match_loop', 'match_tension', 'sting_win', 'sting_lose', 'sting_draw']) {
-    files[`${prefix}${n}.ogg`] = 'x'.repeat(40000);
-    files[`${prefix}${n}.mp3`] = 'x'.repeat(40000);
-  }
+/** Manifest + the files of `present` (default: all listed) under `<prefix>`. */
+export function musicFiles(
+  present: readonly string[] = TRACK_IDS,
+  prefix = `${BASE}music/`,
+  manifest: unknown = musicManifest(),
+): Record<string, unknown> {
+  const files: Record<string, unknown> = { [`${prefix}manifest.json`]: manifest };
+  for (const id of present) files[`${prefix}${id}.mp3`] = 'x'.repeat(4000);
   return files;
 }

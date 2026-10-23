@@ -214,6 +214,7 @@ function exposeDebugHandle(): void {
     stats: () => renderer?.stats() ?? null,
     renderer: () => renderer,
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
+    music: () => (audio as { musicStatus?: () => unknown }).musicStatus?.() ?? null,
     stepTicks: (n: number) => {
       for (let i = 0; i < n; i++) controller?.stepOnce();
     },
