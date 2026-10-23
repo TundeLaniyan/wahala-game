@@ -117,7 +117,7 @@ function shopAt(kit: StreetKit, g: Object3D, x: number, bay: number, o: HouseOpt
     w,
     2.3,
     0.02,
-    lit ? (r() < 0.5 ? 0xc4b08a : 0xa4b6c2) : 0x1a1714,
+    lit ? (r() < 0.5 ? 0xa8946e : 0x8a9caa) : 0x1a1714,
     x,
     1.45,
     0.05,

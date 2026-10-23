@@ -74,7 +74,7 @@ export function frontage(
     }
   }
   const sign = world(x, z, ry, 0, STREET + 3.4, 0.45);
-  L.glow(sign.x, sign.y, sign.z, w * 0.9, 0xfff0e0, 0.18);
+  L.glow(sign.x, sign.y + 0.3, sign.z, w * 0.9, 0xfff0e0, 0.1);
   // light spilling out of the open shop onto the pavement
   const door = world(x, z, ry, 0, STREET + 1.5, 0.35);
   L.glow(door.x, door.y, door.z, w * 0.7, f.spill, 0.26);

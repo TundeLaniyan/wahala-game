@@ -237,15 +237,21 @@ function signTex(specs: SignSpec[], seed: number): CanvasTexture {
       g.font = base.replace('40px', `${s.sub ? size - 6 : size}px`);
       const ty = y + (s.sub ? R * 0.38 : R / 2 + 2);
       if (s.neon) {
+        // glowing tube lettering on a dark board; on a bright lightbox face, crisp dark ink
+        const bright =
+          parseInt(s.bg.slice(1, 3), 16) + parseInt(s.bg.slice(3, 5), 16) + parseInt(s.bg.slice(5, 7), 16) >
+          360;
         g.shadowColor = s.ink;
-        g.shadowBlur = 14;
+        g.shadowBlur = bright ? 0 : 14;
         g.fillStyle = s.ink;
         g.fillText(s.text, 256, ty);
-        g.shadowBlur = 4;
-        g.fillStyle = '#ffffff';
-        g.globalAlpha = 0.55;
-        g.fillText(s.text, 256, ty);
-        g.globalAlpha = 1;
+        if (!bright) {
+          g.shadowBlur = 4;
+          g.fillStyle = '#ffffff';
+          g.globalAlpha = 0.55;
+          g.fillText(s.text, 256, ty);
+          g.globalAlpha = 1;
+        }
         g.shadowBlur = 0;
       } else {
         g.fillStyle = 'rgba(0,0,0,0.16)';

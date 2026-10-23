@@ -23,6 +23,7 @@ import { SiteLights } from './roadworksKit';
 import { StreetKit, frame, v3 } from './ajegunleKit';
 import type { SignSpec } from './ajegunleKit';
 import { basin, bucket, drum, jerrycan } from './ajegunleProps';
+import { house } from './ajegunleHouses';
 import {
   Swell,
   WATER,
@@ -540,6 +541,33 @@ function build(ctx: SetContext): void {
     jerrycan(kit, p, 14.6 + k * 0.3, Q, 0.4, k * 0.3, k === 2 ? 0x2a5a8a : 0xc8a020);
   kit.sign(p, 6, 2.0, 0.34, 9.4, Q + 1.9, -5.2, false);
 
+  // ---------------------------------------------------------------- the jetty office and the cargo store
+  house(kit, p, -18.6, Q, -0.4, Math.PI / 2, {
+    w: 9,
+    d: 5,
+    storeys: 1,
+    wall: 0xc8c0a8,
+    band: 0x2a4a6a,
+    roof: 0x9a6a46,
+    roofKind: 'lean',
+    ground: 'wdSwm',
+    verandah: 1.2,
+    weights: true,
+    tank: true,
+  });
+  house(kit, p, 21.4, Q, 0.4, -Math.PI / 2, {
+    w: 11,
+    d: 7,
+    storeys: 2,
+    wall: 0xa8a49a,
+    band: 0x3a3a36,
+    roof: 0x8a8a82,
+    roofKind: 'flat',
+    ground: 'SmSm',
+    upper: 'wwww',
+    shutter: 0x5a6a7a,
+    ac: true,
+  });
   // ---------------------------------------------------------------- lamps: steel posts with sodium heads
   for (const s of [-1, 1]) {
     const x = s * 9.9;
