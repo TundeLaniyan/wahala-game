@@ -4,6 +4,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { concreteTexture, crateTexture, hazardStripes, sackTexture } from '../textures';
 import { mat } from './helpers';
 import { assets } from './library';
+import { obstacleStyle, resolvePillars, resolveSoftWeights } from './obstacleStyles';
+import type { DebrisKind } from './obstacleStyles';
 
 const PROCEDURAL_SOFT = ['crate', 'crateStack', 'tyres', 'sacks', 'barrier'] as const;
 export type SoftVariant = string;
@@ -30,46 +32,6 @@ const SOFT_WEIGHTS: Record<string, number> = {
   prop_soft_cartons: 1,
 };
 
-/**
- * Each arena draws its breakables from a small, coherent family (weight 0 = never used there), so a
- * dense field reads as one place instead of a scatter of unrelated props.
- */
-const ARENA_SOFT_WEIGHTS: Record<string, Record<string, number>> = {
-  // Bus park: wooden cargo crates off the Danfo roof racks and spare tyre stacks
-  danfoBusPark: {
-    prop_soft_crate: 5,
-    prop_soft_crate_b: 4,
-    prop_soft_crates: 4,
-    prop_soft_tyres: 3,
-    prop_soft_barrier: 0,
-    prop_soft_sacks: 0,
-    prop_soft_kegs: 0,
-    prop_soft_cartons: 0,
-  },
-  // Roadworks: hazard barricades, tyre stacks and site crates
-  lekkiRoadworks: {
-    prop_soft_barrier: 6,
-    prop_soft_tyres: 4,
-    prop_soft_crates: 2,
-    prop_soft_crate: 0,
-    prop_soft_crate_b: 0,
-    prop_soft_cartons: 0,
-    prop_soft_sacks: 0,
-    prop_soft_kegs: 0,
-  },
-  // Market: produce sacks, sachet-water cartons and drink crates
-  balogunMarket: {
-    prop_soft_sacks: 6,
-    prop_soft_cartons: 3,
-    prop_soft_kegs: 2,
-    prop_soft_crate_b: 1,
-    prop_soft_crates: 0,
-    prop_soft_crate: 0,
-    prop_soft_tyres: 0,
-    prop_soft_barrier: 0,
-  },
-};
-
 /** Deterministic variant so the same tile always looks the same. */
 export function softVariantFor(
   x: number,
@@ -77,7 +39,8 @@ export function softVariantFor(
   variants: readonly SoftVariant[] = softVariants(),
   arenaId?: string,
 ): SoftVariant {
-  const weights = (arenaId && ARENA_SOFT_WEIGHTS[arenaId]) || SOFT_WEIGHTS;
+  // each arena draws from its own coherent family (obstacleStyles.ts); no arena = the general mix
+  const weights = arenaId ? resolveSoftWeights(obstacleStyle(arenaId), variants) : SOFT_WEIGHTS;
   const total = variants.reduce((n, v) => n + (weights[v] ?? 1), 0);
   // integer hash of the tile so neighbours decorrelate (no diagonal stripes of the same prop)
   let h = Math.imul(x + 1, 0x9e3779b1) ^ Math.imul(y + 7, 0x85ebca77);
@@ -93,9 +56,8 @@ export function softVariantFor(
 }
 
 /** Debris palette that matches a block variant. */
-export function debrisKindFor(
-  variant: SoftVariant,
-): 'crate' | 'tyres' | 'sacks' | 'barrier' | 'cartons' | 'kegs' {
+export function debrisKindFor(variant: SoftVariant): DebrisKind {
+  if (variant.includes('drum')) return 'drums';
   if (variant.includes('tyre')) return 'tyres';
   if (variant.includes('sack')) return 'sacks';
   if (variant.includes('barrier')) return 'barrier';
@@ -141,7 +103,7 @@ export function softBlockGeometry(variant: SoftVariant): PropGeometry {
   switch (variant) {
     case 'crate':
       return {
-        geometry: place(new BoxGeometry(0.82, 0.82, 0.82), 0, 0.41, 0, 0.06),
+        geometry: place(new BoxGeometry(0.84, 0.9, 0.84), 0, 0.45, 0, 0.06),
         material: mat(0xffffff, { map: crateTexture(), flat: false, roughness: 0.9 }),
       };
     case 'crateStack':
@@ -195,9 +157,12 @@ export function softBlockGeometry(variant: SoftVariant): PropGeometry {
   }
 }
 
-/** Pillar variants (`prop_pillar_*.glb`) as instancing part lists, or null to use the procedural pillar. */
-export function modelledPillars(): PropGeometry[][] | null {
-  const ids = assets.loadedIds('prop_pillar_');
+/**
+ * The arena's pillar models (`prop_pillar_*.glb`, chosen by its obstacle style) as instancing part
+ * lists, or null to use the procedural pillar.
+ */
+export function modelledPillars(arenaId?: string): PropGeometry[][] | null {
+  const ids = resolvePillars(obstacleStyle(arenaId), assets.loadedIds('prop_pillar_'));
   if (ids.length === 0) return null;
   return ids.map((id) => assets.parts(id).map(({ geometry, material }) => ({ geometry, material })));
 }
@@ -205,15 +170,15 @@ export function modelledPillars(): PropGeometry[][] | null {
 export function pillarParts(): { body: PropGeometry; band: PropGeometry; cap: PropGeometry } {
   return {
     body: {
-      geometry: new BoxGeometry(0.84, 0.74, 0.84).translate(0, 0.37, 0),
+      geometry: new BoxGeometry(0.78, 1.5, 0.78).translate(0, 0.75, 0),
       material: mat(0xffffff, { map: concreteTexture(), flat: false, roughness: 0.95 }),
     },
     band: {
-      geometry: new BoxGeometry(0.865, 0.15, 0.865).translate(0, 0.13, 0),
+      geometry: new BoxGeometry(0.84, 0.3, 0.84).translate(0, 0.15, 0),
       material: mat(0xffffff, { map: hazardStripes(), flat: false, roughness: 0.6 }),
     },
     cap: {
-      geometry: new BoxGeometry(0.9, 0.07, 0.9).translate(0, 0.775, 0),
+      geometry: new BoxGeometry(0.84, 0.12, 0.84).translate(0, 1.56, 0),
       material: mat(0x8c867c, { roughness: 0.95 }),
     },
   };

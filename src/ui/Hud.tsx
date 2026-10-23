@@ -57,31 +57,24 @@ function Inventory({ me }: { me: HudMe }) {
   );
 }
 
+/**
+ * Broadcast-style match clock: a slab of big condensed digits on a dark plate with a round tag and
+ * a time bar underneath; from the final 30 seconds the plate turns red and pulses.
+ */
 function Timer({ seconds, total, urgent }: { seconds: number; total: number; urgent: boolean }) {
   const mm = Math.floor(seconds / 60);
   const ss = String(seconds % 60).padStart(2, '0');
   const frac = Math.max(0, Math.min(1, seconds / total));
-  const C = 2 * Math.PI * 46;
   return (
-    <div className={`timer${urgent ? ' urgent' : ''}`}>
-      <div className="plaque">
-        <div className="round">Round 1</div>
-        <div className="disc">
-          <svg viewBox="0 0 100 100">
-            <circle
-              cx="50"
-              cy="50"
-              r="46"
-              fill="none"
-              stroke="#ffc61a"
-              strokeWidth="6"
-              strokeDasharray={`${C * frac} ${C}`}
-              strokeLinecap="round"
-            />
-          </svg>
-          <b data-testid="timer">{`${mm}:${ss}`}</b>
-        </div>
-        <small>WAHALA!</small>
+    <div className={`timer${urgent ? ' urgent' : ''}`} role="timer" aria-label={`${mm}:${ss} left`}>
+      <div className="clock">
+        <span className="round">
+          R<em>1</em>
+        </span>
+        <b data-testid="timer">{`${mm}:${ss}`}</b>
+      </div>
+      <div className="bar">
+        <i style={{ width: `${frac * 100}%` }} />
       </div>
     </div>
   );

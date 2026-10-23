@@ -1,6 +1,4 @@
 import {
-  BoxGeometry,
-  CylinderGeometry,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -12,7 +10,7 @@ import {
   Group,
   Color,
 } from 'three';
-import type { BufferGeometry, Material, Texture } from 'three';
+import type { Material, Texture } from 'three';
 import { arenaLook } from '../arenaLook';
 import type { GameState } from '../../sim';
 import { Tile } from '../../sim';
@@ -20,36 +18,50 @@ import { modelledPillars, pillarParts, softBlockParts, softVariantFor, softVaria
 import type { SoftVariant } from '../assets/props';
 import type { Layout } from '../coords';
 import { floorMaterial } from '../assets/floor';
-import { contactShadowTexture, corrugatedTexture } from '../textures';
+import { contactShadowTexture } from '../textures';
+import { obstacleStyle } from '../assets/obstacleStyles';
+import type { ObstacleStyle } from '../assets/obstacleStyles';
+import { MAX_HIDE, occludingTiles } from '../assets/occlusionFade';
 import { arenaFloorMaps } from '../arenas/floors';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { InstanceSet } from './InstanceSet';
 import type { FrameContext, View } from './types';
 
 const DROP_TIME = 0.28;
-/**
- * Obstacles are drawn squat and chunky: under the low action camera a tall pillar hides the lane
- * behind it, so pillars stand about one tile high and soft blocks about two thirds, leaving the
- * (taller) characters as the clear top of the visual hierarchy.
- */
-const PILLAR_SCALE = new Vector3(0.88, 0.84, 0.88);
-const SOFT_SCALE = new Vector3(0.88, 0.82, 0.88);
+/** Seconds for an obstacle to dissolve / come back when something stands behind it. */
+const HIDE_TAU = 0.12;
 
 /** Copies instancing parts with their material tinted (per-arena art direction). */
-function tinted<T extends { material: Material }>(parts: T[], tint: number, owned: Material[]): T[] {
-  if (tint === 0xffffff) return parts;
+function tinted<T extends { material: Material }>(
+  parts: T[],
+  tint: number,
+  extra: number,
+  owned: Material[],
+): T[] {
+  if (tint === 0xffffff && extra === 0xffffff) return parts;
   return parts.map((p) => {
     const m = p.material.clone() as MeshStandardMaterial;
-    if (m.color) m.color.multiply(new Color(tint));
+    // a clone does not inherit the weathering shader patch, only its flag: let grit patch it again
+    delete (m.userData as { gritPatched?: boolean }).gritPatched;
+    if (m.color) m.color.multiply(new Color(tint)).multiply(new Color(extra));
     owned.push(m);
     return { ...p, material: m };
   });
 }
 
-/** Floor, concrete pillars, soft blocks (instanced), crush blocks dropping in, floor hazards. */
+/**
+ * Floor, permanent blockers, breakables (instanced), crush blocks dropping in. What the obstacles
+ * look like (models, size, tint) comes from the arena's obstacle style (assets/obstacleStyles.ts);
+ * an obstacle that hides a player, generator or pickup standing behind it dissolves its upper part
+ * (assets/occlusionFade.ts).
+ */
 export class ArenaView implements View {
   readonly group = new Group();
   private readonly arenaId: string;
+  private readonly style: ObstacleStyle;
+  private readonly pillarScale: Vector3;
+  private readonly softScale: Vector3;
+  /** current occlusion fade per tile (eased towards its target every frame) */
+  private readonly hideOf = new Map<number, number>();
   private readonly pillars: InstanceSet[];
   private readonly variants = softVariants();
   private readonly soft = new Map<SoftVariant, InstanceSet>();
@@ -95,25 +107,34 @@ export class ArenaView implements View {
     this.group.add(floor);
 
     const look = arenaLook(state.arenaId);
+    const style = obstacleStyle(state.arenaId);
+    this.style = style;
+    this.pillarScale = new Vector3(...style.pillarScale);
+    this.softScale = new Vector3(...style.softScale);
     const owned = this.ownedMaterials;
-    const wraps = this.pillarWraps(state.arenaId);
-    const modelled = modelledPillars();
+    const modelled = modelledPillars(state.arenaId);
+    const fade = { fade: true };
     if (modelled) {
       this.pillars = modelled.map(
-        (parts) => new InstanceSet([...tinted(parts, look.pillarTint, owned), ...wraps], W * H),
+        (parts) => new InstanceSet(tinted(parts, look.pillarTint, style.pillarTint, owned), W * H, fade),
       );
     } else {
       const parts = pillarParts();
       this.pillars = [
         new InstanceSet(
-          [...tinted([parts.body, parts.band, parts.cap], look.pillarTint, owned), ...wraps],
+          tinted([parts.body, parts.band, parts.cap], look.pillarTint, style.pillarTint, owned),
           W * H,
+          fade,
         ),
       ];
     }
     for (const set of this.pillars) this.group.add(set.group);
     for (const v of this.variants) {
-      const set = new InstanceSet(tinted(softBlockParts(v), look.softTint, owned), W * H);
+      const set = new InstanceSet(
+        tinted(softBlockParts(v), look.softTint, style.softTint, owned),
+        W * H,
+        fade,
+      );
       this.soft.set(v, set);
       this.group.add(set.group);
     }
@@ -144,43 +165,6 @@ export class ArenaView implements View {
     this.group.add(this.decals);
   }
 
-  /**
-   * Arena-specific dressing instanced with every pillar (model space, before PILLAR_SCALE): market
-   * pillars wear a collar of rusted corrugated sheet like the stall posts around them; roadworks
-   * pillars are unfinished columns with rusty rebar stubs sticking out of the top. The bus park keeps
-   * the weathered poster pillars.
-   */
-  private pillarWraps(arenaId: string): { geometry: BufferGeometry; material: Material }[] {
-    if (arenaId === 'balogunMarket') {
-      const map = corrugatedTexture().clone();
-      map.needsUpdate = true;
-      map.repeat.set(2, 1);
-      const m = new MeshStandardMaterial({ color: 0x6a5240, map, roughness: 0.7, metalness: 0.4 });
-      this.ownedMaterials.push(m);
-      this.ownedTextures.push(map);
-      return [{ geometry: new BoxGeometry(0.91, 0.36, 0.91).translate(0, 0.66, 0), material: m }];
-    }
-    if (arenaId === 'lekkiRoadworks') {
-      const m = new MeshStandardMaterial({ color: 0x5a3624, roughness: 0.65, metalness: 0.5 });
-      this.ownedMaterials.push(m);
-      const bars: BufferGeometry[] = [];
-      for (const [x, z, lean] of [
-        [-0.3, -0.3, 0.12],
-        [0.3, -0.3, -0.08],
-        [-0.3, 0.3, 0.05],
-        [0.3, 0.3, -0.14],
-        [0, -0.3, 0.02],
-        [0, 0.3, -0.04],
-      ] as const) {
-        const bar = new CylinderGeometry(0.022, 0.022, 0.5, 5).translate(0, 0.25, 0);
-        bar.applyMatrix4(new Matrix4().makeRotationZ(lean));
-        bars.push(bar.translate(x, 1.08, z));
-      }
-      return [{ geometry: mergeGeometries(bars)!, material: m }];
-    }
-    return [];
-  }
-
   /** Variant of the soft block at a tile (for debris colours). */
   variantAt(x: number, y: number): SoftVariant {
     return softVariantFor(x, y, this.variants, this.arenaId);
@@ -203,6 +187,7 @@ export class ArenaView implements View {
         }
       }
     }
+    this.updateOcclusion(state, ctx.dt);
     for (const [i, start] of this.dropping) {
       const k = Math.min(1, (time - start) / DROP_TIME);
       const x = i % state.width;
@@ -213,9 +198,35 @@ export class ArenaView implements View {
         this.dropping.delete(i);
         ctx.fx.dust(x, y, 12, 1.0);
         ctx.fx.shockwave(this.layout.wx(x), this.layout.wz(y), 1.5, 0xffaa44);
-        ctx.fx.blockDebris(x, y, 'concrete');
+        ctx.fx.blockDebris(x, y, this.style.pillarDebris);
         ctx.fx.shake = Math.min(1, ctx.fx.shake + 0.25);
       }
+    }
+  }
+
+  /**
+   * Dissolves the upper part of a pillar or breakable standing directly in front of (south of) a
+   * live player, a generator or a pickup, so tall scenery never hides what matters.
+   */
+  private updateOcclusion(state: GameState, dt: number): void {
+    const behind: { x: number; y: number }[] = [];
+    for (const p of state.players) if (p.alive) behind.push(p);
+    for (const g of state.generators) behind.push(g);
+    for (const p of state.pickups) behind.push(p);
+    const want = occludingTiles(state.width, state.height, behind);
+    const k = 1 - Math.exp(-Math.max(0, dt) / HIDE_TAU);
+    for (const i of want) if (!this.hideOf.has(i)) this.hideOf.set(i, 0);
+    for (const [i, cur] of this.hideOf) {
+      const target = want.has(i) ? MAX_HIDE : 0;
+      const next = Math.abs(target - cur) < 0.01 ? target : cur + (target - cur) * k;
+      const x = i % state.width;
+      const y = Math.floor(i / state.width);
+      const kind = this.cache[i];
+      if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.setHide(i, next);
+      else if (kind === Tile.Soft)
+        this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.setHide(i, next);
+      if (next === 0 && target === 0) this.hideOf.delete(i);
+      else this.hideOf.set(i, next);
     }
   }
 
@@ -232,7 +243,7 @@ export class ArenaView implements View {
   private placePillar(i: number, x: number, y: number, lift: number): void {
     this.p.set(this.layout.wx(x), lift, this.layout.wz(y));
     this.q.identity();
-    this.m.compose(this.p, this.q, PILLAR_SCALE);
+    this.m.compose(this.p, this.q, this.pillarScale);
     this.pillars[this.pillarVariant(x, y)]!.set(i, this.m);
     this.s.set(1, 1, 1);
     if (lift === 0) this.setContact(i, x, y, 0.94);
@@ -251,7 +262,7 @@ export class ArenaView implements View {
     this.p.set(this.layout.wx(x), 0, this.layout.wz(y));
     this.e.set(0, ((x * 31 + y * 17) % 5) * 0.03 - 0.06, 0);
     this.q.setFromEuler(this.e);
-    this.m.compose(this.p, this.q, SOFT_SCALE);
+    this.m.compose(this.p, this.q, this.softScale);
     this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.set(i, this.m);
     this.s.set(1, 1, 1);
     this.setContact(i, x, y, 0.8);

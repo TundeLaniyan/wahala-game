@@ -504,6 +504,8 @@ class Mat:
     emissive_strength: float = 1.0
     double_sided: bool = False
     jpeg_q: int = 84
+    normal_q: int = 72  # JPEG quality of the normal map
+    orm_q: int = 88  # JPEG quality of the roughness/metal map (low frequency: can go much lower)
 
 
 def _jpeg(arr: np.ndarray, q: int, subsampling: int | None = None) -> bytes:
@@ -616,7 +618,7 @@ class EnvModel:
             tex_i = g.add_texture(g.add_image(_jpeg((np.clip(s.albedo, 0, 1) * 255 + 0.5).astype(np.uint8), s.jpeg_q), "image/jpeg"))
             nrm_i = orm_i = None
             if s.height is not None:
-                nrm_i = g.add_texture(g.add_image(_jpeg(normal_map(s.height, s.normal_strength), 72, 2), "image/jpeg"))
+                nrm_i = g.add_texture(g.add_image(_jpeg(normal_map(s.height, s.normal_strength), s.normal_q, 2), "image/jpeg"))
             rough_a, metal_a = np.asarray(s.rough, dtype=np.float64), np.asarray(s.metal, dtype=np.float64)
             flat = float(np.ptp(rough_a)) < 0.04 and float(np.ptp(metal_a)) < 0.02  # constant -> plain factors, no ORM image
             varying = not flat
@@ -627,7 +629,7 @@ class EnvModel:
                 r = np.broadcast_to(np.asarray(s.rough, dtype=np.float64), shape)
                 mt = np.broadcast_to(np.asarray(s.metal, dtype=np.float64), shape)
                 ao = np.ones(shape)
-                orm_i = g.add_texture(g.add_image(_jpeg((np.stack([ao, r, mt], -1) * 255 + 0.5).astype(np.uint8), 88), "image/jpeg"))
+                orm_i = g.add_texture(g.add_image(_jpeg((np.stack([ao, r, mt], -1) * 255 + 0.5).astype(np.uint8), s.orm_q), "image/jpeg"))
             mat_ids[name] = g.add_material(
                 Material(
                     name,

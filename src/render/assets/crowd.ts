@@ -104,7 +104,7 @@ export function crowdSpots(
     // camera looks straight across
     const edge = [0, 0, 1, 1, 1, 2, 2, 2][n % 8]!;
     const onSidePlatform = platform && (edge === 1 || edge === 2);
-    const [x, z] = edgePoint(edge, rng(), onSidePlatform ? 0.47 + rng() * 0.22 : 1.0 + rng() * 0.4);
+    const [x, z] = edgePoint(edge, rng(), onSidePlatform ? 0.56 + rng() * 0.18 : 1.0 + rng() * 0.4);
     watch(x, onSidePlatform ? 0.62 : 0, z);
   }
   // 2) people standing on the ground behind the platforms, some in conversation pairs

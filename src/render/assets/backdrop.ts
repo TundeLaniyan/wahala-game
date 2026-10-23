@@ -23,8 +23,30 @@ export interface Backdrop {
 }
 
 /**
- * Walls (north/east/west tall enough to read, south kept low so no tile is hidden), corner posts and
- * spectator platforms from the modelled set. Returns false when the models are not loaded.
+ * Perimeter wall sizing (scales of the 1.5 m `env_wall` model and the 1.85 m `env_wall_corner` pier).
+ * North: ~1.6 m, a real boundary behind the far row; east/west 1.5 m stepping down over the last two
+ * rows towards the camera; south: the low barrier (0.42 m) so the nearest row is not hidden.
+ */
+export const WALL = {
+  halfThickness: 0.2,
+  lowHalfDepth: 0.25,
+  north: 1.08,
+  side: 1,
+  southFallback: 0.3,
+  post: 1,
+  postSouth: 0.34,
+} as const;
+
+/** Height scale of the side-wall panel next to row `i` (0 = north): steps down near the camera. */
+export function sideWallScale(i: number, H: number): number {
+  return i > H - 2 ? 0.46 : i > H - 3 ? 0.7 : WALL.side;
+}
+
+/**
+ * The perimeter: heavy precast walls (1.5 m panels, 0.4 m thick) on the north, east and west, stepping
+ * down towards the camera on the last two side rows; the south (camera-side) run is the low, thick
+ * `env_wall_low` barrier so the nearest row stays visible; massive piers between panels; spectator
+ * kerbs. Returns false when the models are not loaded (procedural fallback).
  */
 function addModelledPerimeter(
   root: Group,
@@ -34,55 +56,57 @@ function addModelledPerimeter(
   H: number,
   platforms: boolean,
 ): boolean {
-  // env_wall_d carries a flat painted cartoon Danfo mural: not used, so the only Danfos in the
-  // scene are the modelled ones.
   const wallIds = assets
     .loadedIds('env_wall')
-    .filter((id) => id !== 'env_wall_corner' && id !== 'env_wall_d');
+    .filter((id) => id !== 'env_wall_corner' && id !== 'env_wall_low' && id !== 'env_wall_d');
   if (wallIds.length === 0 || !assets.has('env_wall_corner')) return false;
-  const T = 0.155; // half wall thickness
+  const T = WALL.halfThickness;
   const byVariant = wallIds.map(() => [] as Placement[]);
   let k = 0;
   const wall = (x: number, z: number, ry: number, sy = 1): void => {
     byVariant[k++ % wallIds.length]!.push({ x, z, ry, sy });
   };
+  const low: Placement[] = [];
   for (let i = 0; i < W; i++) {
-    wall(-W / 2 + 0.5 + i, -H / 2 - T, 0, 1.05);
+    wall(-W / 2 + 0.5 + i, -H / 2 - T, 0, WALL.north);
     // South wall: leave the center 3 tiles for the hazard-striped compound gate
-    if (i < 6 || i > 8) wall(-W / 2 + 0.5 + i, H / 2 + T, Math.PI, 0.54);
+    if (i < 6 || i > 8) {
+      if (assets.has('env_wall_low'))
+        low.push({ x: -W / 2 + 0.5 + i, z: H / 2 + WALL.lowHalfDepth, ry: Math.PI });
+      else wall(-W / 2 + 0.5 + i, H / 2 + T, Math.PI, WALL.southFallback);
+    }
   }
   for (let i = 0; i < H; i++) {
-    const sy = i > H - 2 ? 0.56 : i > H - 3 ? 0.78 : 1.02; // step down towards the camera side
+    const sy = sideWallScale(i, H);
     wall(W / 2 + T, -H / 2 + 0.5 + i, -Math.PI / 2, sy);
     wall(-W / 2 - T, -H / 2 + 0.5 + i, Math.PI / 2, sy);
   }
   wallIds.forEach((id, n) => instanceParts(root, out, id, byVariant[n]!));
+  instanceParts(root, out, 'env_wall_low', low);
 
-  // centre south compound gate: worn hazard stripes and a steel frame
+  // centre south compound gate: a heavy steel gate frame with worn hazard stripes, as low as the barrier
   const gateTex = hazardStripes();
   gateTex.repeat.set(3, 1);
   const gateMat = mat(0xb8b0a0, { map: gateTex, flat: false, roughness: 0.75 });
   const steelMat = mat(0x5c5a56, { roughness: 0.55, metalness: 0.6 });
-  statics.add(box(2.96, 0.48, 0.22, gateMat, 0, 0.24, H / 2 + T));
-  statics.add(box(3.04, 0.06, 0.26, steelMat, 0, 0.5, H / 2 + T));
+  statics.add(box(2.96, 0.36, 0.3, gateMat, 0, 0.18, H / 2 + 0.2));
+  statics.add(box(3.04, 0.07, 0.36, steelMat, 0, 0.395, H / 2 + 0.2));
 
   const cx = W / 2 + T;
   const cz = H / 2 + T;
   const posts: Placement[] = [
-    { x: -cx, z: -cz, ry: 0, sy: 1.06 },
-    { x: cx, z: -cz, ry: 0, sy: 1.06 },
-    { x: -cx, z: cz, ry: 0, sy: 0.58 },
-    { x: cx, z: cz, ry: 0, sy: 0.58 },
-    { x: -1.55, z: cz, ry: Math.PI, sy: 0.62 },
-    { x: 1.55, z: cz, ry: Math.PI, sy: 0.62 },
+    { x: -cx, z: -cz, ry: 0, sy: WALL.post },
+    { x: cx, z: -cz, ry: 0, sy: WALL.post },
+    { x: -cx, z: cz, ry: 0, sy: WALL.postSouth },
+    { x: cx, z: cz, ry: 0, sy: WALL.postSouth },
+    { x: -1.55, z: cz, ry: Math.PI, sy: WALL.postSouth },
+    { x: 1.55, z: cz, ry: Math.PI, sy: WALL.postSouth },
   ];
-  for (let i = 3; i < W - 1; i += 3) posts.push({ x: -W / 2 + i, z: -cz, ry: 0, sy: 1.05 });
+  for (let i = 3; i < W - 1; i += 3) posts.push({ x: -W / 2 + i, z: -cz, ry: 0, sy: WALL.post });
   for (let i = 3; i < H - 2; i += 3) {
-    posts.push({ x: -cx, z: -H / 2 + i, ry: Math.PI / 2 });
-    posts.push({ x: cx, z: -H / 2 + i, ry: -Math.PI / 2 });
-  }
-  for (let i = 3; i < W - 1; i += 3) {
-    if (Math.abs(-W / 2 + i) > 2) posts.push({ x: -W / 2 + i, z: cz, ry: Math.PI, sy: 0.56 });
+    const sy = Math.min(WALL.post, sideWallScale(i, H) * 1.1);
+    posts.push({ x: -cx, z: -H / 2 + i, ry: Math.PI / 2, sy });
+    posts.push({ x: cx, z: -H / 2 + i, ry: -Math.PI / 2, sy });
   }
   instanceParts(root, out, 'env_wall_corner', posts);
   if (platforms && assets.has('env_bleacher')) {
@@ -100,11 +124,11 @@ function addModelledPerimeter(
 /** Procedural perimeter used when the modelled walls are missing. */
 function addProceduralPerimeter(statics: Group, W: number, H: number): void {
   const wallMat = mat(0x8e877c, { map: concreteTexture(), flat: false, roughness: 1 });
-  const thick = 0.55;
-  statics.add(box(W + thick * 2, 0.8, thick, wallMat, 0, 0.4, -H / 2 - thick / 2));
-  statics.add(box(thick, 0.55, H, wallMat, W / 2 + thick / 2, 0.275, 0));
-  statics.add(box(thick, 0.55, H, wallMat, -W / 2 - thick / 2, 0.275, 0));
-  statics.add(box(W + thick * 2, 0.2, thick, wallMat, 0, 0.1, H / 2 + thick / 2));
+  const thick = 0.45;
+  statics.add(box(W + thick * 2, 1.55, thick, wallMat, 0, 0.775, -H / 2 - thick / 2));
+  statics.add(box(thick, 1.4, H, wallMat, W / 2 + thick / 2, 0.7, 0));
+  statics.add(box(thick, 1.4, H, wallMat, -W / 2 - thick / 2, 0.7, 0));
+  statics.add(box(W + thick * 2, 0.4, thick, wallMat, 0, 0.2, H / 2 + thick / 2));
 }
 
 /**

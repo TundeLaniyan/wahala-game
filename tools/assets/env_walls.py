@@ -25,15 +25,17 @@ from tex_env import (
     weather,
 )
 
-# ----------------------------------------------------------------------------- wall segment (1.0 long, 1.05 high, 0.30 thick)
-# Tall precast bus-park wall: it frames the arena like the reference and keeps the crowd outside it. The camera-side
-# (south) run is instanced at a fraction of this height by the game so no tile is hidden.
+# ----------------------------------------------------------------------------- wall segment (1.0 long, 1.5 high, 0.40 thick)
+# Heavy precast perimeter wall: a real physical boundary (nearly shoulder height for the 1.86-tile characters, 0.4 m
+# thick on a stepped footing with a projecting coping) that frames the arena and keeps the crowd outside it. The
+# camera-side (south) run uses the low, thick `env_wall_low` instead so the nearest rows stay visible.
 
-WL, WH, WT = 1.0, 1.05, 0.30
-CAP0 = WH - 0.065  # cap underside
-FW, FH = 512, 544  # front/back tile (512 px per metre)
+WL, WH, WT = 1.0, 1.5, 0.40
+HT = WT / 2  # half thickness
+CAP0 = WH - 0.085  # cap underside
+FW, FH = 512, 776  # front/back tile (512 px per metre)
 PX = 512.0
-LIFT = 0.36  # posters/stencils were authored for the old 0.62 m wall; raise them onto the taller face
+LIFT = 0.72  # posters/stencils were authored for the old 0.62 m wall; raise them onto the taller face
 
 
 def P(y: float) -> float:
@@ -47,7 +49,7 @@ def wy(y: float) -> float:
 def _wall_face(seed: int, posters: list, extra=None, band_angle=45, tag=None) -> Sheet:
     s = concrete_sheet(FW, FH, seed, 0xbdb8ad, stains=0.4)
     tile_x(s)
-    for yy, wd in ((0.14, 1.6), (CAP0, 1.8)):  # footing top / cap underside
+    for yy, wd in ((0.14, 1.6), (0.24, 1.2), (0.74, 1.4), (CAP0, 1.8)):  # footing / panel lift joint / cap underside
         with s.paint(height=-0.3, rough=0.95) as d:
             d.line([(0, wy(yy)), (FW, wy(yy))], 0x4a443c, wd, a=0.8)
         with s.paint(height=0.1) as d:
@@ -100,7 +102,7 @@ def _wall(name: str, seed: int, posters_f, posters_b, extra_f=None, extra_b=None
     atlas = Atlas(1024, 1024, 0x808080)
     atlas.add("front", 0, 0, _wall_face(seed, posters_f, extra_f, 45, tag_f))
     atlas.add("back", 512, 0, _wall_face(seed + 50, posters_b, extra_b, -45))
-    atlas.add("top", 0, 560, _wall_top(seed))
+    atlas.add("top", 0, 800, _wall_top(seed))
 
     def rect(nm):  # u spans the whole (x-periodic) tile; v is padded against mip bleed
         x0, y0, x1, y1 = atlas.tiles[nm]
@@ -108,16 +110,17 @@ def _wall(name: str, seed: int, posters_f, posters_b, extra_f=None, extra_b=None
         return (x0 / atlas.w, 1 - (y1 - pad) / atlas.h, x1 / atlas.w, 1 - (y0 + pad) / atlas.h)
 
     rects = {"+z": rect("front"), "-z": rect("back"), "+y": rect("top"), "-y": rect("top"), "+x": rect("top"), "-x": rect("top")}
-    footing = extrude_x([(-0.15, 0.0), (0.15, 0.0), (0.15, 0.12), (0.135, 0.14), (-0.135, 0.14), (-0.15, 0.12)], -WL / 2, WL / 2)
-    body = extrude_x([(-0.135, 0.13), (0.135, 0.13), (0.135, CAP0 + 0.005), (-0.135, CAP0 + 0.005)], -WL / 2, WL / 2)
-    cap = extrude_x([(-0.15, CAP0), (0.15, CAP0), (0.15, CAP0 + 0.035), (0.125, WH), (-0.125, WH), (-0.15, CAP0 + 0.035)], -WL / 2, WL / 2)
+    footing = extrude_x([(-HT, 0.0), (HT, 0.0), (HT, 0.12), (HT - 0.015, 0.14), (-HT + 0.015, 0.14), (-HT, 0.12)], -WL / 2, WL / 2)
+    step = extrude_x([(-HT + 0.02, 0.13), (HT - 0.02, 0.13), (HT - 0.02, 0.24), (HT - 0.035, 0.255), (-HT + 0.035, 0.255), (-HT + 0.02, 0.24)], -WL / 2, WL / 2)
+    body = extrude_x([(-HT + 0.035, 0.25), (HT - 0.035, 0.25), (HT - 0.035, CAP0 + 0.005), (-HT + 0.035, CAP0 + 0.005)], -WL / 2, WL / 2)
+    cap = extrude_x([(-HT - 0.01, CAP0), (HT + 0.01, CAP0), (HT + 0.01, CAP0 + 0.045), (HT - 0.03, WH), (-HT + 0.03, WH), (-HT - 0.01, CAP0 + 0.045)], -WL / 2, WL / 2)
     m = EnvModel(name)
-    lo, hi = (-WL / 2, 0.0, -WT / 2), (WL / 2, WH, WT / 2)
-    for part in (footing, body, cap):
+    lo, hi = (-WL / 2, 0.0, -HT), (WL / 2, WH, HT)
+    for part in (footing, step, body, cap):
         mm = box_uv(part, lo, hi, rects)
-        vc_ground(mm, 0.12, 0.35, seed)
+        vc_ground(mm, 0.14, 0.4, seed)
         m.add(mm)
-    return m.export({"main": atlas.mat(normal_strength=0.3, jpeg_q=72)})  # big atlas: keep the bundle under budget
+    return m.export({"main": atlas.mat(normal_strength=0.35, jpeg_q=72, normal_q=64, orm_q=58)})  # big atlas: keep the bundle under budget
 
 
 def wall_a() -> dict:
@@ -157,42 +160,13 @@ def wall_c() -> dict:
     return _wall("env_wall_c", seed, pf, [], cr, cr)
 
 
-def wall_d() -> dict:
-    """Wall with a hand-painted danfo-bus mural."""
-    seed = 191
-    pb = [dict(x=330, y=int(wy(P(0.50))), w=114, h=159, seed=261, rot=-2, kind="sale")]
-
-    def mural(s):
-        x0, y0 = 62, wy(P(0.505))  # top-left of the painting area
-        w, h = 260, 130
-        with s.paint(height=0.06, rough=0.6) as d:
-            d.rect((x0 - 6, y0 - 10, x0 + w + 6, y0 + h + 12), 0x2a6fc0, a=0.9, r=8)  # blue sky panel
-            d.rect((x0 - 6, y0 + h - 16, x0 + w + 6, y0 + h + 12), 0x4a4a4c, a=0.95, r=0)  # road
-            d.line([(x0, y0 + h + 0), (x0 + w, y0 + h + 0)], 0xf1ead2, 2.0, a=0.8)
-            bx, by = x0 + 22, y0 + 28
-            d.rect((bx, by, bx + 216, by + 78), 0xf2c21b, r=12)  # body
-            d.rect((bx + 6, by - 12, bx + 160, by + 6), 0xf2c21b, r=8)  # roof bump
-            d.rect((bx, by + 38, bx + 216, by + 50), 0x1a1a1c)  # the black stripe
-            for k in range(5):  # windows
-                d.rect((bx + 14 + k * 30, by + 6, bx + 38 + k * 30, by + 32), 0xcfe7f3)
-            d.poly([(bx + 170, by + 6), (bx + 208, by + 6), (bx + 214, by + 34), (bx + 170, by + 34)], 0xcfe7f3)  # windscreen
-            d.rect((bx + 205, by + 52, bx + 216, by + 62), 0xfff3b0)  # headlight
-            d.rect((bx + 195, by + 66, bx + 216, by + 72), 0x2a2a2c)  # bumper
-            for wx in (bx + 46, bx + 164):
-                d.ellipse((wx - 17, by + 52, wx + 17, by + 86), 0x151517)
-                d.ellipse((wx - 8, by + 61, wx + 8, by + 77), 0xb0b4b8)
-        stencil(s, "NO WAHALA", (x0 + w / 2, y0 + h + 36), 30, 0xf2c21b, "black", a=0.9, squeeze=0.9, wear=0.5, seed=7, spacing=0.04)
-
-    return _wall("env_wall_d", seed, [], pb, mural, None)
-
-
 # ----------------------------------------------------------------------------- corner post
 
 
 def corner() -> dict:
     seed = 181
-    PW, PH = 0.42, 1.24
-    TWd, THt = 192, 512  # side tile (px) for a 0.42 x 1.24 face
+    PW, PH = 0.54, 1.85  # a heavy pier between wall panels (the walls are 1.5 m high, 0.4 m thick)
+    TWd, THt = 192, 660  # side tile (px) for a 0.54 x 1.85 face
     ppm = TWd / PW
 
     def ypx(y):
@@ -237,18 +211,62 @@ def corner() -> dict:
     edge_px = 88.0 - np.maximum(np.abs(xx - 87.5), np.abs(yy - 87.5))
     top.comp(0x34312e, np.clip(1 - edge_px / 14.0, 0, 1) * 0.5)
     speckle(top, seed + 22, amount=0.3, density=0.004)
-    atlas.add("top", 0, 520, top)
+    atlas.add("top", 0, 672, top)
     rects = {"+z": atlas.rect("front"), "-z": atlas.rect("right"), "+x": atlas.rect("right"), "-x": atlas.rect("front"), "+y": atlas.rect("top"), "-y": atlas.rect("top")}
     plinth = chamfer_prism(rect_poly(PW, PW), 0.0, 0.18, cb=0.0, ct=0.03)
-    shaft = obox((0, (0.17 + PH - 0.11) / 2, 0), (0.34, PH - 0.11 - 0.17, 0.34), bevel=0.01, seg=1)
-    cap = chamfer_prism(rect_poly(0.46, 0.46), PH - 0.12, PH, cb=0.03, ct=0.04)
+    shaft = obox((0, (0.17 + PH - 0.11) / 2, 0), (0.46, PH - 0.11 - 0.17, 0.46), bevel=0.012, seg=1)
+    cap = chamfer_prism(rect_poly(0.6, 0.6), PH - 0.13, PH, cb=0.035, ct=0.045)
     m = EnvModel("env_wall_corner")
     lo, hi = (-PW / 2, 0.0, -PW / 2), (PW / 2, PH, PW / 2)
     for part in (plinth, shaft, cap):
         mm = box_uv(part, lo, hi, rects)
         vc_ground(mm, 0.14, 0.4, seed)
         m.add(mm)
-    return m.export({"main": atlas.mat(normal_strength=0.3)})
+    return m.export({"main": atlas.mat(normal_strength=0.3, normal_q=66, orm_q=60)})
+
+
+# ----------------------------------------------------------------------------- low camera-side wall
+
+
+def wall_low() -> dict:
+    """The south (camera-side) run: a low, very thick precast barrier wall (0.42 m high, 0.5 m deep) with a chamfered
+    coping, worn hazard paint and kerb scuffs. It has the mass of the other walls without hiding the nearest row."""
+    seed = 171
+    L, Hh, D = 1.0, 0.42, 0.5
+    ppm = 512
+    fh = int(Hh * ppm) + 4
+    face = concrete_sheet(512, fh, seed, 0xb7b1a5, stains=0.5)
+    tile_x(face)
+    band, cov = hazard_band(512, 40, stripe=512 / 8 * 0.7071 / 2, angle=45, seed=seed + 3, wear=0.35, tile=True)
+    reg = Sheet(512, fh)
+    reg.paste(band, 0, fh - 64)
+    cm = np.zeros((fh, 512))
+    cm[fh - 64 : fh - 24] = cov
+    face.comp(reg.rgb, cm, height=0.1, rough=0.7)
+    with face.paint(height=-0.35, rough=0.95) as d:  # panel joint at the segment ends
+        d.rect((0, 0, 2.2, fh), 0x3a352e, a=0.9)
+        d.rect((510, 0, 512, fh), 0x3a352e, a=0.9)
+    weather(face, seed + 1, ground=0.5, ground_h=0.25, streaks=0.3, top_soot=0.1, tone_dark=0x34312e, tile=True)
+    scuffs(face, seed + 2, n=40, length=(10, 60))
+    speckle(face, seed + 4, amount=0.5, density=0.005)
+    stencil(face, "KEEP OFF", (300, fh * 0.42), 34, 0xf1ead2, "black", a=0.55, squeeze=0.9, wear=0.7, seed=5)
+    top = _wall_top(seed)
+    atlas = Atlas(512, 512, 0x808080)
+    atlas.add("face", 0, 0, face)
+    atlas.add("top", 0, fh + 12, top)
+
+    def rect(nm):
+        x0, y0, x1, y1 = atlas.tiles[nm]
+        return (x0 / atlas.w, 1 - (y1 - 3) / atlas.h, x1 / atlas.w, 1 - (y0 + 3) / atlas.h)
+
+    rects = {"+z": rect("face"), "-z": rect("face"), "+y": rect("top"), "-y": rect("top"), "+x": rect("top"), "-x": rect("top")}
+    h = D / 2
+    body = extrude_x([(-h, 0.0), (h, 0.0), (h, Hh - 0.08), (h - 0.06, Hh), (-h + 0.06, Hh), (-h, Hh - 0.08)], -L / 2, L / 2)
+    m = EnvModel("env_wall_low")
+    mm = box_uv(body, (-L / 2, 0.0, -h), (L / 2, Hh, h), rects)
+    vc_ground(mm, 0.1, 0.4, seed)
+    m.add(mm)
+    return m.export({"main": atlas.mat(normal_strength=0.35, jpeg_q=72, normal_q=64, orm_q=58)})
 
 
 # ----------------------------------------------------------------------------- spectator railing + kerb
@@ -300,4 +318,5 @@ def bleacher() -> dict:
     return m.export({"main": atlas.mat(normal_strength=0.35)})
 
 
-WALLS = {"env_wall": wall_a, "env_wall_b": wall_b, "env_wall_c": wall_c, "env_wall_d": wall_d, "env_wall_corner": corner, "env_bleacher": bleacher}
+# (env_wall_d, the flat painted cartoon-Danfo mural, was retired: the game no longer used it)
+WALLS = {"env_wall": wall_a, "env_wall_b": wall_b, "env_wall_c": wall_c, "env_wall_low": wall_low, "env_wall_corner": corner, "env_bleacher": bleacher}

@@ -497,74 +497,86 @@ button {
   letter-spacing: 0.08em;
   padding: 1px 4px;
 }
+/* Broadcast-style match clock: big condensed digits on a dark slab hanging from the top edge, a
+   round tag, and a time bar; red and pulsing in the final 30 seconds. Height ~= the HUD-free top
+   inset (10% desktop, 13% phone) so it never sits over the arena. */
 .timer {
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  text-align: center;
   padding-top: max(0px, env(safe-area-inset-top));
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
 }
-.timer .plaque {
-  position: relative;
-  min-width: clamp(120px, 20vh, 168px);
-  padding: 6px 16px 10px;
-  background: linear-gradient(#3a3d44, #1a1c20 70%);
-  border: 2px solid #5a5e66;
+.timer .clock {
+  display: flex;
+  align-items: stretch;
+  background: linear-gradient(#24262b, #0d0e10 85%);
+  border: 2px solid #4c5058;
   border-top: 0;
-  border-radius: 0 0 16px 16px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.55);
+  border-radius: 0 0 10px 10px;
+  overflow: hidden;
 }
 .timer .round {
-  font-size: 0.68rem;
-  letter-spacing: 0.3em;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-.timer .disc {
-  position: relative;
-  width: clamp(60px, 11vh, 88px);
-  height: clamp(60px, 11vh, 88px);
-  margin: 2px auto 0;
-  border-radius: 50%;
   display: grid;
   place-items: center;
-  background: radial-gradient(#2a2c31, #0e0f12);
-  border: 3px solid #4a4d55;
-}
-.timer .disc svg {
-  position: absolute;
-  inset: -3px;
-  width: calc(100% + 6px);
-  height: calc(100% + 6px);
-  transform: rotate(-90deg);
-}
-.timer .disc b {
-  z-index: 1;
+  padding: 0 clamp(6px, 1.2vh, 10px);
+  background: var(--gold);
+  color: #111;
   font-family: var(--display);
   font-weight: 400;
-  font-size: clamp(1.05rem, 3.2vh, 1.55rem);
+  font-size: clamp(0.8rem, 2.4vh, 1.05rem);
+  line-height: 1;
   letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
 }
-.timer.urgent .disc b {
-  color: var(--red);
-  animation: pulse 0.5s infinite alternate;
+.timer .round em {
+  font-style: normal;
 }
-.timer small {
+.timer .clock b {
   display: block;
-  margin-top: 3px;
+  min-width: 3.1ch;
+  padding: clamp(1px, 0.4vh, 4px) clamp(10px, 1.8vh, 16px) 0;
   font-family: var(--display);
-  font-size: 0.7rem;
-  letter-spacing: 0.3em;
-  color: var(--gold);
+  font-weight: 400;
+  font-size: clamp(2.05rem, 7.4vh, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: 0.03em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: #fbf6ea;
   text-shadow: 0 2px 0 #000;
+}
+.timer .bar {
+  height: clamp(4px, 0.8vh, 6px);
+  margin: 0 8px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 0 0 4px 4px;
+  overflow: hidden;
+}
+.timer .bar i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  transition: width 0.4s linear;
+}
+.timer.urgent .clock {
+  background: linear-gradient(#7a1a10, #3a0c08 85%);
+  border-color: var(--red);
+}
+.timer.urgent .round,
+.timer.urgent .bar i {
+  background: var(--red);
+  color: #fff;
+}
+.timer.urgent .clock b {
+  color: #fff;
+  animation: pulse 0.5s infinite alternate;
 }
 .top-buttons {
   position: absolute;
   top: calc(max(8px, env(safe-area-inset-top)) + 4px);
   left: 50%;
-  margin-left: clamp(84px, 14vh, 112px);
+  margin-left: clamp(96px, 16vh, 136px);
   display: flex;
   gap: 6px;
   pointer-events: auto;
