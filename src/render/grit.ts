@@ -162,7 +162,9 @@ export function patchMaterial(material: Material, cls: GritClass): boolean {
   };
   // uGrit is a vec4 uniform: three accepts a plain array of 4 numbers; values differ per material
   // but the GLSL is identical, so every patched material shares one program per base variant.
-  material.customProgramCacheKey = () => 'grit2';
+  // other shader patches on the same material (e.g. occlusionFade.ts) extend the key
+  const extra = (material.userData.programKey as string | undefined) ?? '';
+  material.customProgramCacheKey = () => `grit2${extra}`;
   material.needsUpdate = true;
   return true;
 }

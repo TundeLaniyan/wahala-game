@@ -31,7 +31,10 @@ for (const arenaId of process.argv[4] ? process.argv[4].split(',') : STANDARD_AR
       if (!s.cause) return;
       deaths++;
       const k = s.cause.kind;
-      if (k === 'flame') s.cause.ownerId === seat ? c.own++ : c.rival++;
+      if (k === 'flame') {
+        if (s.cause.ownerId === seat) c.own++;
+        else c.rival++;
+      }
       else if (k === 'vehicle') c.veh++;
       else if (k === 'hazard') c.hazard++;
       else if (k === 'crush') c.crush++;

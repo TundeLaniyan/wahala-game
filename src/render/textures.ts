@@ -601,3 +601,86 @@ export function scorchTexture(): CanvasTexture {
     return tex(c);
   });
 }
+
+/** Hairline ground cracks radiating from a point (cosmetic, laid by heavy blasts). */
+export function crackTexture(): CanvasTexture {
+  return cached('crack', () => {
+    const S = 256;
+    const [c, g] = canvas(S, S);
+    const r = artRng(9127);
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    const branch = (x: number, y: number, a: number, len: number, w: number, depth: number): void => {
+      let px = x;
+      let py = y;
+      const steps = 6 + Math.floor(r() * 5);
+      for (let i = 0; i < steps; i++) {
+        a += (r() - 0.5) * 0.9;
+        const nx = px + Math.cos(a) * (len / steps);
+        const ny = py + Math.sin(a) * (len / steps);
+        const ww = w * (1 - i / (steps + 1));
+        // dark fissure with a lighter chipped lip
+        g.strokeStyle = 'rgba(205,195,180,0.22)';
+        g.lineWidth = ww + 2.2;
+        g.beginPath();
+        g.moveTo(px + 0.8, py + 0.8);
+        g.lineTo(nx + 0.8, ny + 0.8);
+        g.stroke();
+        g.strokeStyle = 'rgba(8,6,5,0.92)';
+        g.lineWidth = ww;
+        g.beginPath();
+        g.moveTo(px, py);
+        g.lineTo(nx, ny);
+        g.stroke();
+        if (depth > 0 && r() < 0.35) {
+          const turn = (r() < 0.5 ? -1 : 1) * (0.5 + r() * 0.6);
+          branch(nx, ny, a + turn, len * 0.45, ww * 0.7, depth - 1);
+        }
+        px = nx;
+        py = ny;
+      }
+    };
+    const n = 5 + Math.floor(r() * 3);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + r() * 0.6;
+      branch(S / 2 + Math.cos(a) * 8, S / 2 + Math.sin(a) * 8, a, 70 + r() * 50, 3.2, 2);
+    }
+    // crushed centre
+    const core = g.createRadialGradient(S / 2, S / 2, 2, S / 2, S / 2, 22);
+    core.addColorStop(0, 'rgba(10,8,6,0.8)');
+    core.addColorStop(1, 'rgba(10,8,6,0)');
+    g.fillStyle = core;
+    g.fillRect(0, 0, S, S);
+    return tex(c);
+  });
+}
+
+/** Soot streak along a flame lane (laid on arm tiles: lighter than the blast-centre scorch). */
+export function sootStreakTexture(): CanvasTexture {
+  return cached('sootstreak', () => {
+    const W = 128;
+    const H = 64;
+    const [c, g] = canvas(W, H);
+    const r = artRng(5521);
+    for (let i = 0; i < 46; i++) {
+      const x = r() * W;
+      const y = H / 2 + (r() - 0.5) * H * 0.55;
+      const rad = 6 + r() * 16;
+      const grad = g.createRadialGradient(x, y, 0, x, y, rad);
+      grad.addColorStop(0, `rgba(10,8,6,${0.25 + r() * 0.3})`);
+      grad.addColorStop(1, 'rgba(10,8,6,0)');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, W, H);
+    }
+    // fade the ends so consecutive tiles join without seams
+    g.globalCompositeOperation = 'destination-in';
+    const fade = g.createLinearGradient(0, 0, W, 0);
+    fade.addColorStop(0, 'rgba(0,0,0,0.55)');
+    fade.addColorStop(0.2, 'rgba(0,0,0,1)');
+    fade.addColorStop(0.8, 'rgba(0,0,0,1)');
+    fade.addColorStop(1, 'rgba(0,0,0,0.55)');
+    g.fillStyle = fade;
+    g.fillRect(0, 0, W, H);
+    return tex(c);
+  });
+}

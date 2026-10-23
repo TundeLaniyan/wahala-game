@@ -7,6 +7,7 @@ import numpy as np
 
 from env_lib import (
     EnvModel,
+    chamfer_prism,
     close_tube_ends,
     lathe_mesh,
     orient_from,
@@ -102,12 +103,13 @@ def _post_atlas_fracs(slat_h, gap, y0, n):
     return [(y0 + slat_h / 2 + k * (slat_h + gap)) for k in range(n)]
 
 
-def crate_parts(atlas: Atlas, seed: int, w: float = 0.82, d: float = 0.82, h: float = 0.74, tint=True, stencil_face: str | None = "+z", n_slats: int = 4, brace_faces=("+z", "-z", "+x", "-x"), broken: bool = False):
-    """Return a list of UV-mapped meshes for one wooden crate centred at the origin (y from 0)."""
+def crate_parts(atlas: Atlas, seed: int, w: float = 0.84, d: float = 0.84, h: float = 0.9, tint=True, stencil_face: str | None = "+z", n_slats: int = 5, brace_faces=("+z", "-z", "+x", "-x"), broken: bool = False, steel: bool = True):
+    """Return a list of UV-mapped meshes for one wooden crate centred at the origin (y from 0): heavy corner posts,
+    slatted sides with diagonal braces, a lid, and (steel=True) black steel corner brackets and two straps."""
     rng = np.random.default_rng(seed)
     parts = []
-    post = 0.075
-    lid_t = 0.024
+    post = 0.09
+    lid_t = 0.03
     y_lo = 0.035
     y_hi = h - lid_t - 0.004
     gap = 0.02
@@ -186,6 +188,25 @@ def crate_parts(atlas: Atlas, seed: int, w: float = 0.82, d: float = 0.82, h: fl
         br = beam(p0, p1, 0.066, bt, up=(0, 0, 1) if side in ("+z", "-z") else (1, 0, 0))
         strip = int(rng.choice([1, 2]))
         parts.append(mk(br, strip, swap=False, lo=br.v.min(axis=0), hi=br.v.max(axis=0)))
+    if steel:
+        dark = atlas.rect("dark")
+
+        def iron(mesh):
+            mm = flat_uv(mesh, dark)
+            vc_mul(mm, (1, 1, 1), 1.0)
+            return mm
+
+        cw, t = 0.13, 0.008  # L-brackets wrapping each of the 8 corners
+        for sx in (-1, 1):
+            for sz in (-1, 1):
+                for y0 in (0.0, h - cw):
+                    parts.append(iron(obox((sx * (w / 2 + t / 2 - 0.002), y0 + cw / 2, sz * (d / 2 - cw / 2 + 0.004)), (t, cw, cw))))
+                    parts.append(iron(obox((sx * (w / 2 - cw / 2 + 0.004), y0 + cw / 2, sz * (d / 2 + t / 2 - 0.002)), (cw, cw, t))))
+        for yy in (h * 0.3, h * 0.72):  # two steel straps round the body
+            parts.append(iron(obox((0, yy, d / 2 + 0.006), (w + 0.012, 0.03, 0.006))))
+            parts.append(iron(obox((0, yy, -d / 2 - 0.006), (w + 0.012, 0.03, 0.006))))
+            parts.append(iron(obox((w / 2 + 0.006, yy, 0), (0.006, 0.03, d + 0.012))))
+            parts.append(iron(obox((-w / 2 - 0.006, yy, 0), (0.006, 0.03, d + 0.012))))
     return parts
 
 
@@ -204,10 +225,10 @@ def soft_crates() -> dict:
     seed = 21
     atlas = _crate_atlas(seed, True)
     m = EnvModel("prop_soft_crates")
-    bottom = crate_parts(atlas, seed, w=0.84, d=0.84, h=0.48, n_slats=3, stencil_face="+z", brace_faces=("+x",), broken=False)
-    top = crate_parts(atlas, seed + 3, w=0.64, d=0.64, h=0.44, n_slats=3, stencil_face=None, brace_faces=("+z",), broken=True)
+    bottom = crate_parts(atlas, seed, w=0.86, d=0.86, h=0.58, n_slats=4, stencil_face="+z", brace_faces=("+x",), broken=False)
+    top = crate_parts(atlas, seed + 3, w=0.68, d=0.68, h=0.44, n_slats=3, stencil_face=None, brace_faces=("+z",), broken=True, steel=False)
     m.add(bottom)
-    m.add([place(p, (0.02, 0.48, -0.01), (0, 27, 0)) for p in top])
+    m.add([place(p, (0.02, 0.58, -0.01), (0, 27, 0)) for p in top])
     return m.export({"main": atlas.mat(normal_strength=0.45)})
 
 
@@ -310,14 +331,16 @@ def soft_tyres() -> dict:
         ((0.0, 0.0), (0.8, -0.4), 10.0, True),
         ((0.018, -0.015), (-1.2, 1.0), 62.0, True),
         ((-0.012, 0.016), (1.1, -1.2), 140.0, True),
-        ((0.042, -0.028), (6.5, -4.5), 215.0, False),
+        ((0.026, 0.01), (-0.9, 1.4), 188.0, True),
+        ((0.048, -0.03), (6.5, -4.5), 250.0, False),
     ]
+    last = len(specs) - 1
     for i, ((x, z), (tx, tz), yaw, simple) in enumerate(specs):
-        parts = tyre_mesh(atlas, sides, seed + i, level="full" if i == 3 else "low", tilt=(tx, 0, tz), pos=(x, y + i * (2 * TW - 0.018), z), yaw=yaw)
+        parts = tyre_mesh(atlas, sides, seed + i, level="full" if i == last else "low", tilt=(tx, 0, tz), pos=(x, y + i * (2 * TW - 0.018), z), yaw=yaw)
         for p in parts:
             vc_ground(p, 0.1, 0.45, seed + i)
         m.add(parts)
-        if i == 3:
+        if i == last:
             for p in rim_mesh(atlas, pos=(x, y + i * (2 * TW - 0.018) + 0.045, z), yaw=yaw):
                 m.add(p)
     return m.export({"main": atlas.mat(normal_strength=0.9)})
@@ -404,6 +427,8 @@ def soft_sacks() -> dict:
         ("beans", (0.0, -0.08), 0.17, 8, 0.7, 0.72),
         ("rice", (0.02, 0.27), 0.0, -4, 0.55, 0.62),
         ("pp", (-0.03, -0.05), 0.36, 62, 0.8, 0.62),
+        ("beans", (0.04, 0.24), 0.17, 95, 0.6, 0.6),
+        ("rice", (0.06, 0.08), 0.52, -12, 0.85, 0.58),
     ]
     for i, (tile, (x, z), y0, yaw, slump, ln) in enumerate(layout):
         sk = sack_mesh(atlas, tile, seed=seed + i, slump=slump, length=ln, ha=0.128, hb=0.16)
@@ -412,7 +437,7 @@ def soft_sacks() -> dict:
         sk.v[:, 1] += y0 - sk.v[:, 1].min()
         vc_ground(sk, 0.08, 0.5, seed + i)
         m.add(sk)
-    return m.export({"main": atlas.mat(normal_strength=1.6, nblur=1.6, jpeg_q=80)})
+    return m.export({"main": atlas.mat(normal_strength=1.6, nblur=1.6, jpeg_q=78, normal_q=66, orm_q=60)})
 
 
 # ============================================================================ road barrier
@@ -474,8 +499,16 @@ def soft_barrier() -> dict:
             r = rod((sx * px, height + 0.01, 0.0), (sx * px, height + 0.04, 0.0), 0.026, 10)
             m.add(place(flat_uv(r, atlas.rect("red"), (0.5, 0.5)), pos, (0, yaw, 0)))
 
-    unit(0.74, (0.0, 0.0, 0.22), 0.0, 1.0)
-    unit(0.46, (-0.1, 0.0, -0.2), 20.0, 0.9, board_ids=(1, 2, 0), height=0.55, depth=0.30)
+    unit(0.74, (0.0, 0.0, 0.24), 0.0, 1.0, height=0.86)
+    unit(0.5, (-0.12, 0.0, -0.22), 20.0, 0.9, board_ids=(1, 2, 0), height=0.74, depth=0.30)
+    # a water-filled plastic road-barrier block behind the barricades (orange, scuffed)
+    blk = chamfer_prism([(-0.32, -0.13), (0.32, -0.13), (0.32, 0.13), (-0.32, 0.13)], 0.0, 0.62, cb=0.0, ct=0.04)
+    cr = atlas.rect("cone")
+    u0, v0, u1, v1 = cr
+    blk = box_uv(blk, (-0.32, 0, -0.13), (0.32, 0.62, 0.13), (u0, v1 - (v1 - v0) * 0.28, u1, v1))
+    vc_mul(blk, (1, 1, 1), 0.85)
+    vc_ground(blk, 0.12, 0.45, seed)
+    m.add(place(blk, (0.08, 0.0, -0.24), (0, -10, 0)))
     cone = lathe([(0.075, 0.0), (0.075, 0.02), (0.052, 0.12), (0.034, 0.24), (0.026, 0.30), (0.0, 0.30)], 10, closed_axis=True)
     cone = cyl_uv(cone, (0, 0, 0), atlas.rect("cone"), axis="y", v_range=(0, 0.3), mirror=True)
     base = flat_box((0.17, 0.02, 0.17), (0, 0.01, 0))
@@ -561,9 +594,12 @@ def soft_cartons() -> dict:
     bale("clear", (0.22, 0.0, -0.17), -2, seg=1)
     bale("blue", (0.21, 0.2, -0.18), 6, seg=2)
     bale("blue", (0.0, 0.0, 0.22), 88, seg=1, size=(0.42, 0.20, 0.30))
-    for p in jerrycan_parts(atlas, "jy", (0.20, 0.4, -0.17), 20):
+    bale("blue", (-0.18, 0.4, -0.16), -2, seg=2)
+    bale("clear", (0.21, 0.4, -0.17), 4, seg=1)
+    bale("clear", (0.01, 0.2, 0.21), 85, seg=2, size=(0.42, 0.20, 0.30))
+    for p in jerrycan_parts(atlas, "jy", (0.20, 0.6, -0.17), 20):
         m.add(vc_ground(p, 0.05, 0.1, seed))
-    for p in jerrycan_parts(atlas, "jb", (-0.18, 0.4, -0.17), -24):
+    for p in jerrycan_parts(atlas, "jb", (-0.18, 0.6, -0.17), -24):
         m.add(p)
     for p in jerrycan_parts(atlas, "jy", (-0.34, 0.0, 0.2), 70):
         m.add(vc_ground(p, 0.05, 0.3, seed))
@@ -655,8 +691,12 @@ def soft_kegs() -> dict:
                         m.add(place(place(part, (bx, h - 0.004, bz)), pos, (0, yaw, 0)))
 
     crate((-0.17, 0.0, 0.14), 2, False)
-    crate((-0.16, 0.27, 0.13), -3, True)
-    crate((-0.16, 0.0, -0.22), 5, 'half')
+    crate((-0.16, 0.27, 0.13), -3, False)
+    crate((-0.17, 0.54, 0.14), 4, True)
+    crate((-0.16, 0.0, -0.22), 5, False)
+    crate((-0.15, 0.27, -0.21), -2, 'half')
+    crate((0.24, 0.0, -0.2), 88, False)
+    crate((0.25, 0.27, -0.19), 92, True)
     # bucket (frustum with rim and wire handle)
     outer = [(0.0, 0.0), (0.118, 0.0), (0.122, 0.012), (0.158, 0.27), (0.166, 0.276), (0.166, 0.288), (0.159, 0.288)]
     inner = [(0.159, 0.288), (0.151, 0.262), (0.132, 0.05), (0.0, 0.045)]
@@ -686,3 +726,7 @@ SOFT = {
     "prop_soft_cartons": soft_cartons,
     "prop_soft_kegs": soft_kegs,
 }
+
+from env_soft_city import SOFT_CITY  # noqa: E402  (breakables of the newer arenas)
+
+SOFT.update(SOFT_CITY)

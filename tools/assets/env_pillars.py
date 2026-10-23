@@ -1,7 +1,9 @@
-"""Indestructible concrete pillars (three variants). One baked 512x512 atlas + one material per model.
+"""Indestructible concrete pillars: the three bus-park precast variants here, the per-arena families in
+env_pillars_city.py (merged into PILLARS at the bottom). One baked atlas + one material per model.
 
-Shape (footprint 0.86, height 1.14): tall precast block on a hazard-banded plinth, narrower shaft, overhanging
-chamfered cap. Tall and pale so permanent concrete reads instantly against the low, warm destructible clutter.
+Shape (footprint 0.84, height 1.66, drawn 1:1 = most of a character's 1.86): a heavy precast column on a stepped,
+hazard-banded plinth, chamfered shaft with a cast construction joint, overhanging chamfered cap. Tall, massive and
+pale so permanent concrete reads instantly against the lower, warm destructible clutter.
 Atlas (1024x512): top tile + three side elevations (front/right/left; the back reuses 'right'), painted per variant."""
 from __future__ import annotations
 
@@ -25,18 +27,20 @@ from tex_env import (
     weather,
 )
 
-H = 1.14
-W = 0.86
-CAP_TOP = 1.10
+H = 1.66
+W = 0.84
+CAP_TOP = 1.62
 CAPW = 0.82
-SHAFTW = 0.76
-PLINTH_H = 0.27
-SHAFT_Y0 = 0.26
-CAP_BOT = 0.97
-CAP_C = 0.03  # cap chamfer (top and bottom)
+SHAFTW = 0.72
+PLINTH_H = 0.36
+SHAFT_Y0 = 0.35
+CAP_BOT = 1.43
+CAP_C = 0.035  # cap chamfer (top and bottom)
+JOINT_Y = 0.92  # cast construction joint (a proud ring half way up the shaft)
+SHAFT_CH = 0.04  # chamfer of the shaft's vertical edges
 TW = 256  # side tile width
 TH = int(np.ceil(H * TW / W)) + 2  # side tile height (same pixel density on both axes)
-SIDE_TONE = 0xd6d0c4  # bright sun-struck precast concrete with a vivid blue/yellow foot
+SIDE_TONE = 0xc2bbad  # bright sun-struck precast concrete with a vivid blue/yellow foot
 
 
 def Y(y_old: float) -> float:
@@ -60,7 +64,7 @@ def _band_shadow(s: Sheet, y0: float, y1: float, k: float, up: bool = True):
 
 def _side(seed: int, tone, band_cfg: dict, posters: list, extra=None) -> Sheet:
     s = concrete_sheet(TW, TH, seed, tone, stains=0.5)
-    for yy, wd in ((PLINTH_H, 1.3), (CAP_BOT, 1.6), (CAP_TOP - CAP_C, 1.0)):  # formwork lines
+    for yy, wd in ((PLINTH_H, 1.3), (JOINT_Y - 0.03, 1.4), (JOINT_Y + 0.03, 1.4), (CAP_BOT, 1.6), (CAP_TOP - CAP_C, 1.0)):  # formwork lines
         with s.paint(height=-0.3, rough=0.95) as d:
             d.line([(0, ypx(yy)), (TW, ypx(yy))], 0x4a443c, wd, a=0.75)
         with s.paint(height=0.1) as d:
@@ -68,7 +72,7 @@ def _side(seed: int, tone, band_cfg: dict, posters: list, extra=None) -> Sheet:
     weather(s, seed + 1, ground=0.22, ground_h=0.10, streaks=0.22, top_soot=0.08, edge=0.18, tone_dark=0x4a4540)
     ys = np.arange(TH)[:, None] + 0.5
     cap = np.clip((ypx(CAP_BOT + 0.02) - ys) / 6, 0, 1) * np.ones((1, TW))
-    s.comp(0xd9d3c6, cap * 0.16)  # sun-bleached cap
+    s.comp(0xd9d3c6, cap * 0.06)  # sun-bleached cap
     # hazard band on the plinth
     b0, b1 = band_cfg["y0"], band_cfg["y1"]
     bh = int(ypx(b0) - ypx(b1))
@@ -99,18 +103,19 @@ def _side(seed: int, tone, band_cfg: dict, posters: list, extra=None) -> Sheet:
 
 
 def _top(seed: int, extra=None) -> Sheet:
-    s = concrete_sheet(256, 256, seed + 20, 0xded8cc, stains=0.16, grit=0.55)
+    s = concrete_sheet(256, 256, seed + 20, 0xb0a798, stains=0.5, grit=0.8)
     yy, xx = np.mgrid[0:256, 0:256]
     r = np.maximum(np.abs(xx - 127.5), np.abs(yy - 127.5))  # px from the centre (Chebyshev)
     edge_px = 128.0 - r  # px from the tile edge
     # outer ring: plinth chamfer + ledge collect grime; cap chamfer ring is sun-highlighted
     dirty = np.clip(1 - edge_px / 14.0, 0, 1)
     nn = noise2(256, 256, seed + 24, fx=14, fy=14, octaves=5)
-    s.comp(0x4a443c, dirty * (0.14 + 0.14 * nn))
+    s.comp(0x3a342c, dirty * (0.3 + 0.25 * nn))
     cham = np.clip(1 - np.abs(edge_px - 16.0) / 4.0, 0, 1)
-    s.comp(0xf2ece0, cham * 0.32)
+    s.comp(0xe2dccf, cham * 0.18)
     n = noise2(256, 256, seed + 21, fx=3, fy=3, octaves=4)
-    s.comp(0x6e665b, np.clip(n * 1.6 - 0.85, 0, 1) * 0.16)  # subtle rain stains
+    s.comp(0x4e463b, np.clip(n * 1.6 - 0.7, 0, 1) * 0.45)  # rain pooling, soot and grime on the top
+    s.comp(0x2a2620, np.clip(noise2(256, 256, seed + 25, fx=7, fy=7, octaves=6) * 2.2 - 1.3, 0, 1) * 0.5)
     speckle(s, seed + 22, amount=0.22, density=0.003)
     scuffs(s, seed + 23, n=10, length=(8, 24))
     if extra:
@@ -136,19 +141,28 @@ def _build(name, seed, band_cfg, posters_f, posters_r, posters_l, extra_front=No
         vc_ground(mm, h=0.15, dark=0.35, seed=seed)
         vc_fn(mm, lambda p: 0.94 + 0.06 * value_noise(p, 8.0, seed + 5))
         m.add(mm)
-    return m.export({"main": atlas.mat(normal_strength=0.2, jpeg_q=76)})
+    return m.export({"main": atlas.mat(normal_strength=0.2, jpeg_q=72, normal_q=66, orm_q=60)})
+
+
+def _octo(w: float, c: float):
+    """Square footprint with chamfered corners (convex, counter-clockwise)."""
+    h = w / 2
+    return [(-h + c, -h), (h - c, -h), (h, -h + c), (h, h - c), (h - c, h), (-h + c, h), (-h, h - c), (-h, -h + c)]
 
 
 def _base_parts(chip: bool, loops: bool):
-    shaft = obox((0, (SHAFT_Y0 + CAP_BOT + 0.02) / 2, 0), (SHAFTW, CAP_BOT + 0.02 - SHAFT_Y0, SHAFTW), bevel=0.012, seg=1)
-    base = chamfer_prism(rect_poly(W, W), 0.0, PLINTH_H, cb=0.0, ct=0.035)
+    shaft = chamfer_prism(_octo(SHAFTW, SHAFT_CH), SHAFT_Y0 - 0.01, CAP_BOT + 0.02)
+    joint = chamfer_prism(_octo(SHAFTW + 0.028, SHAFT_CH + 0.01), JOINT_Y - 0.03, JOINT_Y + 0.03, cb=0.01, ct=0.01)
+    # stepped plinth: a wide footing and a slightly narrower upper course
+    foot = chamfer_prism(rect_poly(W, W), 0.0, 0.16, cb=0.0, ct=0.02)
+    base = chamfer_prism(_octo(W - 0.04, 0.03), 0.15, PLINTH_H, cb=0.0, ct=0.035)
     if chip:  # the +x/+z corner of the cap has broken away
         c = CAPW / 2
         poly = [(-c, -c), (c, -c), (c, 0.0), (c - 0.10, 0.13), (c - 0.18, 0.25), (c - 0.30, c), (-c, c)]
         cap = chamfer_prism(poly, CAP_BOT, CAP_TOP, cb=CAP_C, ct=CAP_C)
     else:
         cap = chamfer_prism(rect_poly(CAPW, CAPW), CAP_BOT, CAP_TOP, cb=CAP_C, ct=CAP_C)
-    parts = [base, shaft, cap]
+    parts = [foot, base, shaft, joint, cap]
     if loops:  # precast lifting eyes
         for x in (-0.18, 0.18):
             arch = [(x, CAP_TOP + y, z) for (y, z) in ((-0.01, -0.06), (0.01, -0.06), (0.025, -0.035), (0.033, 0.0), (0.025, 0.035), (0.01, 0.06), (-0.01, 0.06))]
@@ -187,7 +201,7 @@ def pillar_a() -> dict:
     def num_top(s):
         stencil(s, "A12", (128, 128), 34, 0xf1ead2, "black", a=0.45, squeeze=0.9, wear=0.8, seed=8)
 
-    return _build("prop_pillar_a", seed, dict(y0=0.02, y1=0.26, c2=0x1b64c8, stripe=24, wear=0.18), posters_f, posters_r, [], None, num, None, num_top)
+    return _build("prop_pillar_a", seed, dict(y0=0.03, y1=0.33, c2=0x1b64c8, stripe=24, wear=0.18), posters_f, posters_r, [], None, num, None, num_top)
 
 
 def pillar_b() -> dict:
@@ -212,7 +226,7 @@ def pillar_b() -> dict:
     def chip_front(s):
         drips(s, 3, 170, 226, ypx(Y(0.30)), 0x7a3d1c, n=6, length=(10, 40), width=2.2)
 
-    return _build("prop_pillar_b", seed, dict(y0=0.02, y1=0.26, c2=0x1b64c8, stripe=24, angle=45, wear=0.22), posters_f, [], posters_l, chip_front, tag_r, tag, rust_top, chip=True, loops=False, rebar=True)
+    return _build("prop_pillar_b", seed, dict(y0=0.03, y1=0.33, c2=0x1b64c8, stripe=24, angle=45, wear=0.22), posters_f, [], posters_l, chip_front, tag_r, tag, rust_top, chip=True, loops=False, rebar=True)
 
 
 def pillar_c() -> dict:
@@ -237,7 +251,11 @@ def pillar_c() -> dict:
         cracks(s, 18, n=2, length=0.6, width=1.2)
         stencil(s, "NO", (128, 100), 30, 0xf1ead2, "black", a=0.4, squeeze=0.9, wear=0.8, seed=2)
 
-    return _build("prop_pillar_c", seed, dict(y0=0.02, y1=0.26, c2=0x1b64c8, stripe=24, angle=135, wear=0.20), posters_f, posters_r, [], None, crack_side, crack_left, top_extra)
+    return _build("prop_pillar_c", seed, dict(y0=0.03, y1=0.33, c2=0x1b64c8, stripe=24, angle=135, wear=0.20), posters_f, posters_r, [], None, crack_side, crack_left, top_extra)
 
 
 PILLARS = {"prop_pillar_a": pillar_a, "prop_pillar_b": pillar_b, "prop_pillar_c": pillar_c}
+
+from env_pillars_city import CITY_PILLARS  # noqa: E402  (per-arena families)
+
+PILLARS.update(CITY_PILLARS)

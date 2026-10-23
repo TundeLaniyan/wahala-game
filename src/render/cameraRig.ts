@@ -5,8 +5,11 @@ import type { Layout } from './coords';
 /**
  * Two framings share one camera (which one is used is decided by the camera mode, cameraModes.ts):
  *
- * - OVERVIEW: the whole arena fitted inside the HUD-free band at a cinematic 46 degrees. This is the
- *   fixed camera of every standard match.
+ * - OVERVIEW: the whole arena fitted inside the HUD-free band, a cinematic three-quarter view at
+ *   42 degrees through a longer lens (31 degree vertical FOV): lower than a map view, so pillars,
+ *   walls and crates show their height and side faces, but far enough back that the near rows are
+ *   not blown up by perspective and the far rows keep their size. This is the fixed camera of every
+ *   standard match.
  * - ACTION (stadium mode only): a low, close three-quarter camera (41 degrees above the floor) that follows the
  *   local player with smooth damping, widening only as far as needed to keep incoming danger
  *   (a generator whose cross reaches the player, a vehicle about to pass) on screen. It never
@@ -15,8 +18,12 @@ import type { Layout } from './coords';
  * The camera is purely presentational: it never affects the simulation.
  */
 const ACTION_PITCH = MathUtils.degToRad(41);
-const OVERVIEW_PITCH = MathUtils.degToRad(46);
+const OVERVIEW_PITCH = MathUtils.degToRad(42);
+/** Vertical FOV of the action (stadium follow) camera and of the whole-arena camera, landscape. */
 const FOV = 38;
+const OVERVIEW_FOV = 31;
+/** Portrait screens widen both lenses by this much so the arena's width still fits. */
+const PORTRAIT_FOV_BOOST = 14;
 /** Vertical span (world units, in the view plane at the focus) covered by the HUD-free band. */
 const ACTION_SPAN = 6.4;
 /**
@@ -41,6 +48,8 @@ interface Pose {
   z: number;
   distance: number;
   pitch: number;
+  /** vertical field of view, degrees */
+  fov: number;
 }
 
 export class CameraRig {
@@ -49,10 +58,12 @@ export class CameraRig {
   private readonly ground = new Plane(new Vector3(0, 1, 0), 0);
   private insets = { top: 0.1, bottom: 0.06 };
   /** The fitted whole-arena pose. */
-  private readonly overview: Pose = { x: 0, z: 0, distance: 20, pitch: OVERVIEW_PITCH };
+  private readonly overview: Pose = { x: 0, z: 0, distance: 20, pitch: OVERVIEW_PITCH, fov: OVERVIEW_FOV };
   /** The current (smoothed) pose and its goal. */
-  private readonly pose: Pose = { x: 0, z: 0, distance: 20, pitch: OVERVIEW_PITCH };
-  private readonly goal: Pose = { x: 0, z: 0, distance: 20, pitch: OVERVIEW_PITCH };
+  private readonly pose: Pose = { x: 0, z: 0, distance: 20, pitch: OVERVIEW_PITCH, fov: OVERVIEW_FOV };
+  private readonly goal: Pose = { x: 0, z: 0, distance: 20, pitch: OVERVIEW_PITCH, fov: OVERVIEW_FOV };
+  private actionFov = FOV;
+  private overviewFov = OVERVIEW_FOV;
   private snap = true;
   /** Ground extents of the action view per unit of distance (they scale linearly with it). */
   private unitHalfWidth = 0.6;
@@ -68,9 +79,11 @@ export class CameraRig {
     const cam = this.camera;
     this.insets = insets;
     cam.aspect = aspect;
-    cam.fov = aspect < 1.2 ? FOV + 14 : FOV;
     cam.updateProjectionMatrix();
+    this.actionFov = aspect < 1.2 ? FOV + PORTRAIT_FOV_BOOST : FOV;
+    this.overviewFov = aspect < 1.2 ? OVERVIEW_FOV + PORTRAIT_FOV_BOOST : OVERVIEW_FOV;
     this.fitOverview(aspect);
+    this.setFov(this.actionFov);
     this.margin = insets.top >= 0.12 && aspect > 1.2 ? MARGIN_COMPACT : MARGIN;
 
     // Action framing: the HUD-free band spans ACTION_SPAN world units at the focus. Narrow
@@ -82,7 +95,7 @@ export class CameraRig {
     this.actionDistance = Math.min(this.actionDistance, this.overview.distance * 0.8);
 
     // Ground extents of the action view at distance 1, looking at the origin.
-    this.place({ x: 0, z: 0, distance: 1, pitch: ACTION_PITCH });
+    this.place({ x: 0, z: 0, distance: 1, pitch: ACTION_PITCH, fov: this.actionFov });
     const mid = this.groundAt(0.97, 0);
     const near = this.groundAt(0, -1 + insets.bottom * 2);
     this.unitHalfWidth = mid ? Math.abs(mid.x) : 0.6;
@@ -96,6 +109,7 @@ export class CameraRig {
   private fitOverview(aspect: number): void {
     const cam = this.camera;
     const insets = this.insets;
+    const fov = this.overviewFov;
     const W = this.layout.width;
     const H = this.layout.height;
     const pts = [
@@ -113,7 +127,7 @@ export class CameraRig {
     const yBottom = -1 + insets.bottom * 2;
     const v = this.v;
     const pose = (d: number, tz: number): void =>
-      this.place({ x: 0, z: tz, distance: d, pitch: OVERVIEW_PITCH });
+      this.place({ x: 0, z: tz, distance: d, pitch: OVERVIEW_PITCH, fov });
     /** Signed vertical imbalance of the framed arena inside the HUD-free band (0 = centred). */
     const imbalance = (d: number, tz: number): number => {
       pose(d, tz);
@@ -153,12 +167,19 @@ export class CameraRig {
       if (fits(mid)) hi = mid;
       else lo = mid;
     }
-    Object.assign(this.overview, { x: 0, z: centre(hi), distance: hi, pitch: OVERVIEW_PITCH });
+    Object.assign(this.overview, { x: 0, z: centre(hi), distance: hi, pitch: OVERVIEW_PITCH, fov });
+  }
+
+  private setFov(fov: number): void {
+    if (this.camera.fov === fov) return;
+    this.camera.fov = fov;
+    this.camera.updateProjectionMatrix();
   }
 
   /** Points the camera at (x, 0, z) from `distance` away at `pitch` above the floor. */
   private place(p: Pose): void {
     const cam = this.camera;
+    this.setFov(p.fov);
     cam.position.set(p.x, Math.sin(p.pitch) * p.distance, p.z + Math.cos(p.pitch) * p.distance);
     cam.lookAt(p.x, 0, p.z);
     cam.updateMatrixWorld(true);
@@ -173,7 +194,8 @@ export class CameraRig {
 
   /** The action-camera goal for a shot (look-at point and distance), clamped to the arena. */
   private actionGoal(shot: CameraShot): Pose {
-    const tanHalf = Math.tan(MathUtils.degToRad(this.camera.fov) / 2);
+    const fov = this.actionFov;
+    const tanHalf = Math.tan(MathUtils.degToRad(fov) / 2);
     const yTop = 1 - this.insets.top * 2;
     const yBottom = -1 + this.insets.bottom * 2;
     const yFocus = (yTop + yBottom) / 2 + FOCUS_BAND_Y * (yTop - yBottom) * 0.5;
@@ -209,7 +231,7 @@ export class CameraRig {
         [x1, 1.4, z0],
       ];
       const fits = (d: number): boolean => {
-        this.place({ x: cx, z: cz + lift(d), distance: d, pitch: ACTION_PITCH });
+        this.place({ x: cx, z: cz + lift(d), distance: d, pitch: ACTION_PITCH, fov });
         for (const c of corners) {
           this.v.set(c[0]!, c[1]!, c[2]!).project(this.camera);
           if (Math.abs(this.v.x) > 0.9 || this.v.y > yTop - 0.02 || this.v.y < yBottom + 0.02) return false;
@@ -230,7 +252,7 @@ export class CameraRig {
     }
     let x = cx;
     let z = cz + lift(distance);
-    if (shot.free) return { x, z, distance, pitch: ACTION_PITCH };
+    if (shot.free) return { x, z, distance, pitch: ACTION_PITCH, fov };
     // Keep the view on the arena: at most a margin of street beyond the side and south walls.
     const W = this.layout.width;
     const H = this.layout.height;
@@ -238,7 +260,7 @@ export class CameraRig {
     x = MathUtils.clamp(x, -sideRoom, sideRoom);
     z = Math.min(z, H / 2 + this.margin.south - this.unitNear * distance);
     z = Math.max(z, -H / 2 - 1);
-    return { x, z, distance, pitch: ACTION_PITCH };
+    return { x, z, distance, pitch: ACTION_PITCH, fov };
   }
 
   /**
@@ -258,6 +280,7 @@ export class CameraRig {
       p.z += (this.goal.z - p.z) * k(TAU_MOVE);
       p.distance += (this.goal.distance - p.distance) * k(TAU_ZOOM);
       p.pitch += (this.goal.pitch - p.pitch) * k(TAU_PITCH);
+      p.fov += (this.goal.fov - p.fov) * k(TAU_ZOOM);
     }
     this.place(p);
     const s = shake * shake * 0.35 * Math.min(1, p.distance / 18 + 0.4);

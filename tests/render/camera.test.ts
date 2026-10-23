@@ -75,7 +75,7 @@ describe('action camera: low, close, follows the local player', () => {
     rig.fit(16 / 9);
     rig.update(0, 0, 0, null);
     const overview = rig.currentPose().distance;
-    expect(pitchOf(rig)).toBeGreaterThan(45);
+    expect(pitchOf(rig)).toBeGreaterThanOrEqual(40);
     rig.cut();
     rig.update(0, 0, 0, directShot(state, layout, 0, 0, false));
     const pitch = pitchOf(rig);
@@ -271,18 +271,46 @@ describe('camera modes: standard matches keep the whole arena on one shared scre
   });
 
   for (const vp of VIEWPORTS) {
-    it(`${vp.name}: the fixed camera is a 40-50 degree three-quarter view framing the whole arena`, () => {
+    it(`${vp.name}: the fixed camera is a 35-45 degree three-quarter view framing the whole arena`, () => {
       const layout = createLayout(15, 11);
       const rig = new CameraRig(layout);
       rig.fit(vp.w / vp.h, vp.insets);
       rig.update(0, 0, 0, null);
       const pitch = pitchOf(rig);
-      expect(pitch).toBeGreaterThanOrEqual(40);
-      expect(pitch).toBeLessThanOrEqual(50);
+      expect(pitch).toBeGreaterThanOrEqual(35);
+      expect(pitch).toBeLessThanOrEqual(45);
       expect(rig.framesWholeArena()).toBe(true);
       // and it stays there over a long match (no drift towards anybody)
       for (let i = 0; i < 600; i++) rig.update(1 / 60, i / 60, 0, null);
       expect(rig.framesWholeArena()).toBe(true);
     });
+
+    it(`${vp.name}: character-height pillars on the far row and the near row stay inside the band`, () => {
+      const layout = createLayout(15, 11);
+      const rig = new CameraRig(layout);
+      rig.fit(vp.w / vp.h, vp.insets);
+      rig.update(0, 0, 0, null);
+      for (const x of [1, 7, 13]) {
+        for (const y of [1, 9]) {
+          // a 1.7 m pillar top (the tallest obstacle style) on the pillar rows nearest each edge
+          const top = project(rig, layout.wx(x), 1.7, layout.wz(y) - 0.45);
+          expect(Math.abs(top.x)).toBeLessThan(1);
+          expect(top.y).toBeLessThan(1 - vp.insets.top * 2);
+          expect(top.y).toBeGreaterThan(-1 + vp.insets.bottom * 2);
+        }
+      }
+    });
   }
+
+  it('the whole-arena lens is longer than the follow lens (less perspective blow-up of the near rows)', () => {
+    const layout = createLayout(15, 11);
+    const rig = new CameraRig(layout);
+    rig.fit(16 / 9, { top: 0.1, bottom: 0.05 });
+    rig.update(0, 0, 0, null);
+    expect(rig.camera.fov).toBeLessThan(36);
+    // near-row tiles are drawn at most 40% wider than far-row tiles
+    const width = (y: number): number =>
+      project(rig, layout.wx(8), 0, layout.wz(y)).x - project(rig, layout.wx(7), 0, layout.wz(y)).x;
+    expect(width(10) / width(0)).toBeLessThan(1.4);
+  });
 });
