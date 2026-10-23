@@ -183,59 +183,104 @@ function market(g: Ctx, rg: Ctx, cols: number, rows: number): void {
   const w = cols * T;
   const h = rows * T;
   const r = artRng(2207);
-  noiseFill(g, w, h, [112, 88, 72], 24, 21);
-  noiseFill(rg, w, h, [225, 225, 225], 20, 22);
-  // interlocking concrete pavers, many cracked or missing, stained with laterite
+  // bedding: compacted red laterite (shows wherever pavers are broken or missing)
+  noiseFill(g, w, h, [116, 70, 46], 22, 21);
+  noiseFill(rg, w, h, [228, 228, 228], 18, 22);
+  // interlocking concrete pavers in running bond, each a slightly different worn grey-beige;
+  // clusters are broken out or missing, others cracked or sunk and darker with grime
   const pw = T / 4;
   const ph = T / 8;
-  for (let y = 0; y < h; y += ph) {
-    const off = Math.floor(y / ph) % 2 ? pw / 2 : 0;
-    for (let x = -off; x < w; x += pw) {
-      const roll = r();
-      if (roll < 0.06) {
-        // missing paver: red earth showing through
-        g.fillStyle = `rgba(120,58,34,${0.6 + r() * 0.3})`;
-        g.fillRect(x + 1, y + 1, pw - 2, ph - 2);
-        continue;
-      }
-      const v = (r() - 0.5) * 26;
-      g.fillStyle = `rgba(${130 + v},${108 + v},${92 + v},0.35)`;
-      g.fillRect(x + 1, y + 1, pw - 2, ph - 2);
-      g.strokeStyle = 'rgba(50,34,26,0.45)';
-      g.lineWidth = 1.5;
-      g.strokeRect(x + 0.5, y + 0.5, pw - 1, ph - 1);
+  const nx = Math.ceil(w / pw) + 2;
+  const ny = Math.ceil(h / ph);
+  const holes = new Uint8Array(nx * ny);
+  for (let i = 0; i < cols * rows * 0.22; i++) {
+    // a broken patch: a small random walk of missing pavers
+    let cx = Math.floor(r() * nx);
+    let cy = Math.floor(r() * ny);
+    const n = 2 + Math.floor(r() * 6);
+    for (let k = 0; k < n; k++) {
+      holes[cy * nx + cx] = r() < 0.7 ? 1 : 2; // 1 missing, 2 broken in place
+      cx = Math.min(nx - 1, Math.max(0, cx + Math.floor(r() * 3) - 1));
+      cy = Math.min(ny - 1, Math.max(0, cy + Math.floor(r() * 3) - 1));
     }
   }
-  // laterite dust drifts and trodden paths
-  for (let i = 0; i < 40; i++)
-    stain(g, r() * w, r() * h, 80 + r() * 200, `rgba(140,70,38,${0.12 + r() * 0.12})`);
-  // palm-oil and water stains: glossy
-  for (let i = 0; i < cols * rows * 0.3; i++) {
+  for (let iy = 0; iy < ny; iy++) {
+    const y = iy * ph;
+    const off = iy % 2 ? pw / 2 : 0;
+    for (let ix = 0; ix < nx; ix++) {
+      const x = ix * pw - off;
+      const hole = holes[iy * nx + ix]!;
+      if (hole === 1) {
+        // missing: the laterite bedding with a few loose stones
+        g.fillStyle = `rgba(92,48,28,${0.45 + r() * 0.25})`;
+        g.fillRect(x + 1, y + 1, pw - 2, ph - 2);
+        for (let k = 0; k < 3; k++) {
+          const v = 90 + r() * 50;
+          g.fillStyle = `rgba(${v},${v * 0.9},${v * 0.8},0.8)`;
+          g.fillRect(x + r() * pw, y + r() * ph, 2 + r() * 3, 2 + r() * 2);
+        }
+        rg.fillStyle = 'rgba(250,250,250,0.6)';
+        rg.fillRect(x, y, pw, ph);
+        continue;
+      }
+      const v = (r() - 0.5) * 30;
+      const warm = r() * 14; // some pavers have taken more red dust than others
+      const sunk = r() < 0.08 ? -22 : 0;
+      g.fillStyle = `rgba(${136 + v + warm + sunk},${122 + v + sunk},${106 + v - warm * 0.4 + sunk},0.86)`;
+      g.fillRect(x + 1.5, y + 1.5, pw - 3, ph - 3);
+      // worn, slightly lighter top face and a dark sand-filled joint
+      g.fillStyle = 'rgba(255,240,220,0.06)';
+      g.fillRect(x + 3, y + 3, pw - 6, ph - 6);
+      g.strokeStyle = 'rgba(46,32,24,0.38)';
+      g.lineWidth = 1.3;
+      g.strokeRect(x + 0.7, y + 0.7, pw - 1.4, ph - 1.4);
+      if (hole === 2 || r() < 0.05) {
+        // cracked through
+        g.strokeStyle = 'rgba(40,28,20,0.7)';
+        g.lineWidth = 1.2;
+        g.beginPath();
+        g.moveTo(x + r() * pw, y + 1);
+        g.lineTo(x + r() * pw, y + ph * (0.4 + r() * 0.3));
+        g.lineTo(x + r() * pw, y + ph - 1);
+        g.stroke();
+      }
+    }
+  }
+  // laterite dust blown in from the lanes: heavier towards the edges, a few trodden drifts
+  for (let i = 0; i < 46; i++) {
+    const edge = r() < 0.55;
+    const x = edge && r() < 0.5 ? (r() < 0.5 ? r() * T : w - r() * T) : r() * w;
+    const y = edge && r() < 0.5 ? (r() < 0.5 ? r() * T : h - r() * T) : r() * h;
+    stain(g, x, y, 70 + r() * 190, `rgba(150,72,36,${0.1 + r() * 0.12})`);
+  }
+  // palm oil, spilt water and grime: dark in albedo, glossier in roughness
+  for (let i = 0; i < cols * rows * 0.28; i++) {
     const x = r() * w;
     const y = r() * h;
-    const rad = 16 + r() * 50;
+    const rad = 14 + r() * 46;
     stain(
       g,
       x,
       y,
       rad,
-      r() < 0.5 ? `rgba(120,50,14,${0.3 + r() * 0.3})` : `rgba(40,30,24,${0.3 + r() * 0.3})`,
+      r() < 0.45 ? `rgba(118,52,16,${0.25 + r() * 0.25})` : `rgba(38,28,22,${0.25 + r() * 0.25})`,
     );
-    stain(rg, x, y, rad, `rgba(60,60,60,${0.5 + r() * 0.3})`);
+    stain(rg, x, y, rad, `rgba(70,70,70,${0.45 + r() * 0.3})`);
   }
-  // leaves, paper, nylon scraps
-  for (let i = 0; i < 340; i++) {
+  // refuse: pure-water sachets, paper, nylon scraps, leaves, bottle tops
+  for (let i = 0; i < 360; i++) {
     const c = [
-      `rgba(70,80,40,${0.4 + r() * 0.3})`,
-      `rgba(200,196,180,${0.3 + r() * 0.3})`,
-      `rgba(40,60,90,${0.3 + r() * 0.2})`,
-    ][Math.floor(r() * 3)]!;
+      `rgba(72,82,44,${0.4 + r() * 0.3})`,
+      `rgba(200,196,182,${0.3 + r() * 0.3})`,
+      `rgba(48,64,92,${0.3 + r() * 0.2})`,
+      `rgba(150,60,40,${0.3 + r() * 0.2})`,
+    ][Math.floor(r() * 4)]!;
     g.fillStyle = c;
-    g.fillRect(r() * w, r() * h, 3 + r() * 10, 2 + r() * 7);
+    g.fillRect(r() * w, r() * h, 3 + r() * 9, 2 + r() * 6);
   }
-  for (let i = 0; i < cols * rows * 0.2; i++)
-    crack(g, r, r() * w, r() * h, 3 + Math.floor(r() * 6), 'rgba(40,26,18,0.65)', 2);
-  seams(g, cols, rows, 'rgba(40,26,18,0.4)', 3);
+  for (let i = 0; i < cols * rows * 0.12; i++)
+    crack(g, r, r() * w, r() * h, 3 + Math.floor(r() * 5), 'rgba(40,26,18,0.55)', 1.8);
+  seams(g, cols, rows, 'rgba(38,24,16,0.42)', 3);
 }
 
 function roadworks(g: Ctx, rg: Ctx, cols: number, rows: number): void {
