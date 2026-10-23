@@ -15,7 +15,13 @@ import type { Plan } from './goals';
 import type { AiProfile } from './profiles';
 import { Tactics } from './tactics';
 import { searchSlots } from './analysis';
-import { GEN_WATCH_RADIUS, LARGE_MIN_THINK, LARGE_THINKS_PER_TICK, WATCH_RADIUS } from './scale';
+import {
+  GEN_WATCH_RADIUS,
+  LARGE_CAREFUL_RIVALS,
+  LARGE_MIN_THINK,
+  LARGE_THINKS_PER_TICK,
+  WATCH_RADIUS,
+} from './scale';
 import { aiCounters } from './stats';
 import { largeHuntPace, updateZone } from './zone';
 import { readyTick, stepTicksOf } from './world';
@@ -194,6 +200,9 @@ export class Brain implements Bot {
     computeHuntField(c);
     updateZone(c);
     c.huntWeight = world.large ? profile.huntWeight * largeHuntPace(obs) : profile.huntWeight;
+    // large boards: in the final few even a careless bot checks its way out before placing, so a
+    // 32-player match rarely ends with the last two blowing each other up on the same tick
+    c.placeVerify = world.large && world.rivals.length <= LARGE_CAREFUL_RIVALS ? 1 : profile.placeVerify;
 
     const step = stepTicksOf(obs, me);
     bfs.run({
@@ -289,7 +298,7 @@ export class Brain implements Bot {
     let esc = plan.escape && plan.escapeTick === T ? plan.escape : null;
     if (!esc) {
       const step = stepTicksOf(obs, me);
-      const verify = profile.placeVerify >= 1 || nextInt(this.rng, 1000) < profile.placeVerify * 1000;
+      const verify = c.placeVerify >= 1 || nextInt(this.rng, 1000) < c.placeVerify * 1000;
       if (verify) {
         const carried = plan.drop ? obs.generators.find((o) => o.id === me.carrying) : undefined;
         esc = checkPlacement(

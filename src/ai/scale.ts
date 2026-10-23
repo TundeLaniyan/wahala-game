@@ -51,3 +51,6 @@ export const LARGE_MIN_THINK: Readonly<Record<Difficulty, number>> = { easy: 20,
  * (no plan, knocked off the plan, a lethal step vetoed) are never deferred.
  */
 export const LARGE_THINKS_PER_TICK = 4;
+
+/** Large boards: with this many rivals or fewer left, every placement's escape is verified. */
+export const LARGE_CAREFUL_RIVALS = 3;

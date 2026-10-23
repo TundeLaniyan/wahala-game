@@ -299,7 +299,7 @@ export function chooseGoal(c: Ctx, prevGoal: number): Plan | null {
       if (verified >= verifyBudget || overBudget(c)) break;
       const a0 = bfs.tickAt(cand.slot);
       const a1 = bfs.tickAt(cand.slot + 1);
-      const doVerify = nextFloat(c.rng) < profile.placeVerify;
+      const doVerify = nextFloat(c.rng) < c.placeVerify;
       verified++;
       if (doVerify) {
         const esc = checkPlacement(c, cand.tile, a0, a1, step);

@@ -46,6 +46,8 @@ export interface Ctx {
   zoneTick: number;
   /** Pull towards the nearest rival for this think (the profile's value; paced on large boards). */
   huntWeight: number;
+  /** Probability of verifying a placement's escape (the profile's; 1 in a large match's final few). */
+  placeVerify: number;
 }
 
 /** Records `units` of work; true when the think's budget is spent (never on standard boards). */
@@ -81,5 +83,6 @@ export function createCtx(profile: AiProfile, rng: RngHolder, board: Board): Ctx
     zone: new Int16Array(board.size),
     zoneTick: -1,
     huntWeight: profile.huntWeight,
+    placeVerify: profile.placeVerify,
   };
 }
