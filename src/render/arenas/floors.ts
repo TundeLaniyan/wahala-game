@@ -287,71 +287,188 @@ function roadworks(g: Ctx, rg: Ctx, cols: number, rows: number): void {
   const w = cols * T;
   const h = rows * T;
   const r = artRng(3313);
-  noiseFill(g, w, h, [58, 58, 60], 22, 31);
-  noiseFill(rg, w, h, [180, 180, 180], 30, 32);
-  // milled (grooved) strips where the old surface was stripped
-  for (let i = 0; i < 4; i++) {
-    const y = r() * h;
-    const sh = 160 + r() * 200;
-    g.fillStyle = 'rgba(90,88,86,0.4)';
+  // old, sun-greyed asphalt; mid-grey so the board reads at night (wet streaks darken it below)
+  noiseFill(g, w, h, [70, 69, 67], 22, 31);
+  noiseFill(rg, w, h, [150, 150, 150], 34, 32);
+  // exposed aggregate: the binder has worn off and the stones show as fine light and dark flecks
+  for (let i = 0; i < w * h * 0.004; i++) {
+    const v = r() < 0.55 ? 110 + r() * 70 : 30 + r() * 25;
+    g.fillStyle = `rgba(${v},${v - 2},${v - 6},${0.35 + r() * 0.35})`;
+    g.fillRect(r() * w, r() * h, 1 + r() * 2.5, 1 + r() * 2);
+  }
+  // milled bands where the wearing course has been planed off: lighter, rough, finely grooved,
+  // with a crisp step at each edge
+  const milled: [number, number][] = [];
+  for (let i = 0; i < 3; i++) {
+    const y = (0.12 + i * 0.32 + (r() - 0.5) * 0.08) * h;
+    const sh = T * (1.3 + r() * 1.2);
+    milled.push([y, sh]);
+    g.fillStyle = 'rgba(112,110,106,0.42)';
     g.fillRect(0, y, w, sh);
-    g.strokeStyle = 'rgba(30,30,32,0.35)';
-    g.lineWidth = 2;
-    for (let x = 0; x < w; x += 7) {
-      g.beginPath();
-      g.moveTo(x, y);
-      g.lineTo(x + 3, y + sh);
-      g.stroke();
+    rg.fillStyle = 'rgba(235,235,235,0.6)';
+    rg.fillRect(0, y, w, sh);
+    for (let x = 0; x < w; x += 5) {
+      g.fillStyle = x % 10 ? 'rgba(28,28,30,0.3)' : 'rgba(150,148,142,0.16)';
+      g.fillRect(x + (r() - 0.5), y, 1.6, sh);
+    }
+    g.fillStyle = 'rgba(16,16,18,0.7)';
+    g.fillRect(0, y - 2, w, 3);
+    g.fillStyle = 'rgba(150,148,140,0.35)';
+    g.fillRect(0, y + sh, w, 2);
+  }
+  // utility-cut reinstatements: rectangles of newer, blacker, smoother asphalt with sealed edges
+  for (let i = 0; i < 5; i++) {
+    const x = Math.floor(r() * cols) * T + T * 0.2;
+    const y = Math.floor(r() * rows) * T + T * 0.3;
+    const vertical = r() < 0.5;
+    const pw = vertical ? T * (0.5 + r() * 0.3) : T * (2 + r() * 3);
+    const ph = vertical ? T * (2 + r() * 3) : T * (0.5 + r() * 0.3);
+    g.fillStyle = 'rgba(30,30,32,0.62)';
+    g.fillRect(x, y, pw, ph);
+    rg.fillStyle = 'rgba(90,90,90,0.7)';
+    rg.fillRect(x, y, pw, ph);
+    g.strokeStyle = 'rgba(10,10,12,0.8)';
+    g.lineWidth = 5;
+    g.strokeRect(x, y, pw, ph);
+  }
+  // alligator cracking: a dense network in a few worn patches
+  for (let i = 0; i < 6; i++) {
+    const cx = r() * w;
+    const cy = r() * h;
+    for (let k = 0; k < 14; k++)
+      crack(
+        g,
+        r,
+        cx + (r() - 0.5) * 120,
+        cy + (r() - 0.5) * 120,
+        3 + Math.floor(r() * 3),
+        'rgba(14,14,16,0.7)',
+        1.6,
+      );
+  }
+  // long cracks, some sealed with a glossy band of bitumen
+  for (let i = 0; i < cols * rows * 0.32; i++) {
+    const x = r() * w;
+    const y = r() * h;
+    const len = 6 + Math.floor(r() * 10);
+    if (r() < 0.35) {
+      const seed = Math.floor(r() * 1e6);
+      crack(g, artRng(seed), x, y, len, 'rgba(12,12,14,0.55)', 7);
+      crack(rg, artRng(seed), x, y, len, 'rgba(30,30,30,0.85)', 7);
+    } else crack(g, r, x, y, len, 'rgba(10,10,12,0.8)', 2.2);
+  }
+  // excavator track marks: twin bands of grouser prints in dried mud, curving across the site
+  for (let i = 0; i < 2; i++) {
+    let x = -40;
+    let y = (0.25 + i * 0.45) * h;
+    let a = (r() - 0.5) * 0.4;
+    while (x < w + 40) {
+      for (const off of [-46, 46]) {
+        const px = x - Math.sin(a) * off;
+        const py = y + Math.cos(a) * off;
+        g.save();
+        g.translate(px, py);
+        g.rotate(a);
+        g.fillStyle = 'rgba(64,52,40,0.32)';
+        g.fillRect(-4, -14, 7, 28);
+        g.restore();
+      }
+      x += Math.cos(a) * 12;
+      y += Math.sin(a) * 12;
+      a += (r() - 0.5) * 0.05;
     }
   }
-  // raw cement patches
-  for (let i = 0; i < 10; i++) {
+  // spilled cement slurry and dusty footprints of it
+  for (let i = 0; i < 9; i++) {
     const x = r() * w;
     const y = r() * h;
-    g.fillStyle = `rgba(130,128,122,${0.45 + r() * 0.2})`;
-    g.beginPath();
-    g.ellipse(x, y, 80 + r() * 200, 60 + r() * 120, r() * 3, 0, Math.PI * 2);
-    g.fill();
+    stain(g, x, y, 40 + r() * 90, `rgba(150,148,140,${0.28 + r() * 0.2})`);
+    for (let k = 0; k < 10; k++) {
+      g.fillStyle = 'rgba(150,148,140,0.35)';
+      g.beginPath();
+      g.ellipse(
+        x + (r() - 0.5) * 220,
+        y + (r() - 0.5) * 220,
+        3 + r() * 4,
+        2 + r() * 3,
+        r() * 3,
+        0,
+        Math.PI * 2,
+      );
+      g.fill();
+    }
   }
-  // standing water: dark in albedo, mirror-smooth in roughness
-  for (let i = 0; i < cols * rows * 0.16; i++) {
+  // rain: wet streaks darken the surface and turn it glossy; puddles collect in the dips and in
+  // the milled grooves, with a darker damp rim
+  for (let i = 0; i < 26; i++) {
     const x = r() * w;
     const y = r() * h;
-    const rx = 30 + r() * 110;
-    const ry = 20 + r() * 60;
-    g.fillStyle = 'rgba(20,24,30,0.55)';
+    const rad = 60 + r() * 160;
+    stain(g, x, y, rad, 'rgba(22,24,28,0.28)');
+    stain(rg, x, y, rad, 'rgba(50,50,50,0.55)');
+  }
+  for (let i = 0; i < cols * rows * 0.14; i++) {
+    const inMill = i % 3 === 0 && milled.length > 0;
+    const band = milled[i % milled.length]!;
+    const x = r() * w;
+    const y = inMill ? band[0] + r() * band[1] : r() * h;
+    const rx = 26 + r() * 90;
+    const ry = 16 + r() * 46;
+    const rot = r() * 3;
+    g.fillStyle = 'rgba(20,22,26,0.32)';
     g.beginPath();
-    g.ellipse(x, y, rx, ry, r() * 3, 0, Math.PI * 2);
+    g.ellipse(x, y, rx * 1.25, ry * 1.25, rot, 0, Math.PI * 2);
     g.fill();
-    rg.fillStyle = 'rgba(14,14,14,0.92)';
+    g.fillStyle = 'rgba(16,19,24,0.6)';
+    g.beginPath();
+    g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+    g.fill();
+    rg.fillStyle = 'rgba(10,10,10,0.95)';
     rg.beginPath();
-    rg.ellipse(x, y, rx * 0.9, ry * 0.9, 0, 0, Math.PI * 2);
+    rg.ellipse(x, y, rx * 0.95, ry * 0.95, rot, 0, Math.PI * 2);
     rg.fill();
   }
-  for (let i = 0; i < cols * rows * 0.5; i++)
-    crack(g, r, r() * w, r() * h, 5 + Math.floor(r() * 9), 'rgba(12,12,14,0.75)', 2.4);
-  // spray-painted survey marks
+  // spray-painted survey marks: dig lines, crosses and arrows in faded orange and white
   g.lineWidth = 6;
-  for (let i = 0; i < 16; i++) {
-    g.strokeStyle = r() < 0.6 ? 'rgba(200,96,30,0.55)' : 'rgba(190,190,170,0.4)';
+  g.lineCap = 'round';
+  for (let i = 0; i < 18; i++) {
+    g.strokeStyle =
+      r() < 0.6 ? `rgba(196,92,30,${0.4 + r() * 0.2})` : `rgba(196,194,176,${0.3 + r() * 0.15})`;
     const x = r() * w;
     const y = r() * h;
+    const kind = r();
     g.beginPath();
-    if (r() < 0.5) {
-      g.moveTo(x - 30, y);
+    if (kind < 0.35) {
+      g.moveTo(x - 26, y);
+      g.lineTo(x + 26, y);
+      g.moveTo(x, y - 26);
+      g.lineTo(x, y + 26);
+    } else if (kind < 0.65) {
+      g.moveTo(x - 40, y);
       g.lineTo(x + 30, y);
-      g.moveTo(x, y - 30);
-      g.lineTo(x, y + 30);
-    } else g.arc(x, y, 24, 0, Math.PI * 1.6);
+      g.moveTo(x + 14, y - 14);
+      g.lineTo(x + 30, y);
+      g.lineTo(x + 14, y + 14);
+    } else {
+      g.setLineDash([22, 14]);
+      g.moveTo(x, y);
+      g.lineTo(x + (r() - 0.5) * 60, y + 150 + r() * 160);
+    }
     g.stroke();
+    g.setLineDash([]);
   }
-  // gravel
+  g.lineCap = 'butt';
+  // loose gravel and grit kicked about
   for (let i = 0; i < 1400; i++) {
     const v = 70 + r() * 80;
     g.fillStyle = `rgba(${v},${v},${v - 4},0.6)`;
     g.fillRect(r() * w, r() * h, 2 + r() * 4, 2 + r() * 3);
   }
-  seams(g, cols, rows, 'rgba(14,14,16,0.45)', 3);
+  // faint worn joints with a pale lip so the grid stays readable
+  seams(g, cols, rows, 'rgba(16,16,18,0.42)', 3);
+  g.translate(2, 2);
+  seams(g, cols, rows, 'rgba(150,148,140,0.1)', 1);
+  g.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 const DRAW: Record<string, (g: Ctx, rg: Ctx, cols: number, rows: number) => void> = {
