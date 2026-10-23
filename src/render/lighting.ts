@@ -11,6 +11,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   PMREMGenerator,
+  PointLight,
   Scene,
   ShaderMaterial,
   SphereGeometry,
@@ -20,14 +21,16 @@ import type { ArenaLook } from './arenaLook';
 
 export interface SceneLights {
   sun: DirectionalLight;
+  /** Warm work lamps around the arena (no shadows). */
+  lamps: PointLight[];
   hemi: HemisphereLight;
   environment: Texture;
   setShadows(enabled: boolean, mapSize: number): void;
   dispose(): void;
 }
 
-/** Procedural dusk sky used only to build the reflection environment. */
-function buildSkyScene(): Scene {
+/** Procedural sky used only to build the reflection environment (tinted by the arena's air). */
+function buildSkyScene(look?: ArenaLook): Scene {
   const sky = new Scene();
   const dome = new Mesh(
     new SphereGeometry(50, 32, 16),
@@ -35,9 +38,9 @@ function buildSkyScene(): Scene {
       side: BackSide,
       depthWrite: false,
       uniforms: {
-        top: { value: new Color(0x6f9bd1) },
-        horizon: { value: new Color(0xffd7a0) },
-        ground: { value: new Color(0x6a5846) },
+        top: { value: new Color(look ? look.hemi.sky : 0x6f9bd1).multiplyScalar(look ? 0.7 : 1) },
+        horizon: { value: new Color(look ? look.fog.color : 0xffd7a0) },
+        ground: { value: new Color(look ? look.street : 0x6a5846) },
       },
       vertexShader:
         'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
@@ -47,7 +50,10 @@ function buildSkyScene(): Scene {
   );
   sky.add(dome);
   // a bright "sun" patch so glossy surfaces pick up a warm highlight
-  const sun = new Mesh(new SphereGeometry(4, 16, 8), new MeshBasicMaterial({ color: 0xfff1cc }));
+  const sun = new Mesh(
+    new SphereGeometry(4, 16, 8),
+    new MeshBasicMaterial({ color: look ? look.sun.color : 0xfff1cc }),
+  );
   sun.position.set(-30, 26, 18);
   sky.add(sun);
   return sky;
@@ -77,9 +83,16 @@ export function createSceneLights(scene: Scene, renderer: WebGLRenderer, look?: 
   sun.shadow.normalBias = 0.03;
   sun.shadow.radius = 1.6;
   scene.add(hemi, sun, sun.target);
+  const lamps = (look?.lamps ?? []).map(([x, y, z, color]) => {
+    const l = new PointLight(color, 42, 14, 1.5);
+    l.position.set(x, y, z);
+    l.castShadow = false;
+    scene.add(l);
+    return l;
+  });
 
   const pmrem = new PMREMGenerator(renderer);
-  const rt = pmrem.fromScene(buildSkyScene(), 0.02);
+  const rt = pmrem.fromScene(buildSkyScene(look), 0.02);
   scene.environment = rt.texture;
   scene.environmentIntensity = look?.envIntensity ?? 0.6;
   pmrem.dispose();
@@ -87,6 +100,7 @@ export function createSceneLights(scene: Scene, renderer: WebGLRenderer, look?: 
   return {
     sun,
     hemi,
+    lamps,
     environment: rt.texture,
     setShadows(enabled, mapSize) {
       sun.castShadow = enabled;
@@ -96,7 +110,7 @@ export function createSceneLights(scene: Scene, renderer: WebGLRenderer, look?: 
     },
     dispose() {
       rt.dispose();
-      scene.remove(hemi, sun, sun.target);
+      scene.remove(hemi, sun, sun.target, ...lamps);
     },
   };
 }

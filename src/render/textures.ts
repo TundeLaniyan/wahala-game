@@ -752,3 +752,39 @@ export function oilSlickTexture(): CanvasTexture {
     return tex(c);
   });
 }
+
+/** Rusted, dented corrugated iron sheet (tile it along the corrugation). Multiply by a paint colour. */
+export function corrugatedTexture(): CanvasTexture {
+  return cached('corrugated', () => {
+    const S = 256;
+    const [c, g] = canvas(S, S);
+    const r = artRng(4242);
+    for (let x = 0; x < S; x++) {
+      const v = 150 + 70 * Math.sin((x / S) * Math.PI * 2 * 10);
+      g.fillStyle = `rgb(${v},${v},${v})`;
+      g.fillRect(x, 0, 1, S);
+    }
+    // rust blooms and streaks running down the corrugations
+    for (let i = 0; i < 90; i++) {
+      const x = r() * S;
+      const y = r() * S;
+      const rad = 6 + r() * 28;
+      const grad = g.createRadialGradient(x, y, 1, x, y, rad);
+      grad.addColorStop(0, `rgba(${110 + r() * 40},${48 + r() * 20},${20},${0.55 + r() * 0.3})`);
+      grad.addColorStop(1, 'rgba(90,40,15,0)');
+      g.fillStyle = grad;
+      g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    }
+    for (let i = 0; i < 40; i++) {
+      const x = r() * S;
+      g.fillStyle = `rgba(80,38,14,${0.15 + r() * 0.25})`;
+      g.fillRect(x, r() * S * 0.5, 2 + r() * 3, 40 + r() * 140);
+    }
+    // grime
+    for (let i = 0; i < 400; i++) {
+      g.fillStyle = `rgba(20,16,12,${r() * 0.12})`;
+      g.fillRect(r() * S, r() * S, 3 + r() * 10, 2 + r() * 6);
+    }
+    return tex(c, { repeat: true });
+  });
+}

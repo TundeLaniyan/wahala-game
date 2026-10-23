@@ -1092,12 +1092,12 @@ button {
   aspect-ratio: auto;
 }
 
-/* Warm cinematic vignette over the 3D view (under the HUD and menus). */
+/* Heavy cinematic vignette over the 3D view (under the HUD and menus): the edges of the street fall into shadow. */
 .vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 50% 48%, rgba(0, 0, 0, 0) 50%, rgba(20, 10, 0, 0.42) 100%),
-    linear-gradient(to bottom, rgba(255, 190, 110, 0.07), rgba(0, 0, 0, 0) 40%);
+    radial-gradient(ellipse at 50% 52%, rgba(0, 0, 0, 0) 46%, rgba(8, 5, 2, 0.62) 100%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0) 30%);
 }

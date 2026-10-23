@@ -230,6 +230,7 @@ export class CameraRig {
     }
     let x = cx;
     let z = cz + lift(distance);
+    if (shot.free) return { x, z, distance, pitch: ACTION_PITCH };
     // Keep the view on the arena: at most a margin of street beyond the side and south walls.
     const W = this.layout.width;
     const H = this.layout.height;

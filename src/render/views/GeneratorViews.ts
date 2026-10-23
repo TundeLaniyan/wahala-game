@@ -208,7 +208,7 @@ export class GeneratorViews implements View {
       v.model.glow.material.color.setHex(urgent > 0.6 ? 0xff3814 : 0xffa818);
       padMat.color.setHex(urgent > 0.65 ? 0xff3b18 : 0xffb824);
       padMat.opacity = 0.65 + 0.32 * wave;
-      v.pad.scale.setScalar(0.94 + 0.10 * wave);
+      v.pad.scale.setScalar(0.94 + 0.1 * wave);
     } else if (g.mode === 'remote') {
       label = g.timer < 180 ? String(Math.max(1, Math.ceil(g.timer / 60))) : 'R';
       labelColor = '#60f0ff';

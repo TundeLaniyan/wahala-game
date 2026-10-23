@@ -5,6 +5,8 @@ import { createBackdrop } from './assets/backdrop';
 import { createSceneLights } from './lighting';
 import { arenaLook } from './arenaLook';
 import { installGrading } from './grading';
+import { applyGrit, setGritWorld } from './grit';
+import type { GritClass } from './grit';
 import type { SceneLights } from './lighting';
 import type { Backdrop } from './assets/backdrop';
 import { CameraRig } from './cameraRig';
@@ -94,6 +96,9 @@ export class GameRenderer {
   private disposed = false;
   private loaded = false;
   private overviewPreferred = false;
+  private frames = 0;
+  /** Debug / art review only: a forced close shot of a world point (null = normal camera). */
+  private inspect: { x: number; z: number; zoom: number } | null = null;
   private readonly cameraOverride: CameraMode | null;
   private mode: CameraMode = 'arena';
 
@@ -131,8 +136,9 @@ export class GameRenderer {
     this.renderer.setClearColor(look.sky);
     this.renderer.toneMappingExposure = look.exposure;
     this.lights = createSceneLights(this.scene, this.renderer, look);
+    setGritWorld(look.grit.tone, look.grit.dirt, look.grit.dust);
 
-    this.backdrop = createBackdrop(this.layout, this.profile.crowd, this.profile.parkedBuses, state.arenaId);
+    this.backdrop = createBackdrop(this.layout, this.profile, state.arenaId);
     this.arena = new ArenaView(state, this.layout);
     const generators = new GeneratorViews();
     const flames = new FlameViews(this.profile.flameLights);
@@ -156,9 +162,29 @@ export class GameRenderer {
       this.effects.group,
     );
 
+    const tag = (o: { userData: Record<string, unknown> }, cls: GritClass): void => {
+      o.userData.grit = cls;
+    };
+    tag(this.backdrop.root, 'scenery');
+    tag(this.arena.group, 'scenery');
+    tag(traps.group, 'none');
+    tag(generators.group, 'vehicle');
+    tag(flames.group, 'none');
+    tag(pickups.group, 'none');
+    tag(players.group, 'player');
+    tag(this.vehicles.group, 'vehicle');
+    tag(this.overlays.group, 'none');
+    tag(this.effects.group, 'none');
+    this.weather();
+
     this.loaded = true;
     this.applyQuality();
     this.resize(this.width, this.height);
+  }
+
+  /** Applies the grit (weathering) patch to every material in the scene that does not have it yet. */
+  private weather(): void {
+    for (const child of this.scene.children) applyGrit(child, 'none');
   }
 
   private unload(): void {
@@ -187,6 +213,7 @@ export class GameRenderer {
     if (this.loaded) {
       this.rig.fit(this.width / this.height, this.insets);
       this.effects.setPixelScale(this.rig.pixelScale(this.height * dpr));
+      this.backdrop.setPixelScale(this.rig.pixelScale(this.height * dpr));
     }
   }
 
@@ -362,13 +389,24 @@ export class GameRenderer {
       fx: this.effects,
     };
     for (const v of this.views) v.update(ctx);
+    // models created mid-match (vehicles, wrecks, a player's swapped model) get weathered too
+    if (++this.frames % 30 === 0) this.weather();
     this.effects.update(dt, this.time);
-    this.backdrop.update(this.time, info.excitement);
-    const shot = selectShot(this.mode, state, this.layout, info.localPlayerId, alpha, {
-      preferOverview: this.overviewPreferred,
-      choosingEntry: info.entryOverlay !== null,
-      attract: info.attract === true,
-    });
+    this.backdrop.update(this.time, info.excitement, dt);
+    const shot = this.inspect
+      ? {
+          kind: 'action' as const,
+          focus: this.inspect,
+          lead: { x: 0, z: 0 },
+          keep: [],
+          zoom: this.inspect.zoom,
+          free: true,
+        }
+      : selectShot(this.mode, state, this.layout, info.localPlayerId, alpha, {
+          preferOverview: this.overviewPreferred,
+          choosingEntry: info.entryOverlay !== null,
+          attract: info.attract === true,
+        });
     this.rig.update(dt, this.time, this.effects.shake, shot, info.attract === true);
     this.renderer.render(this.scene, this.rig.camera);
     this.trackPerformance(dt);
@@ -406,6 +444,12 @@ export class GameRenderer {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const g = this.rig.screenToGrid(clientX - rect.left, clientY - rect.top, rect.width, rect.height);
     return g ? this.overlays.pick(g.x, g.y) : null;
+  }
+
+  /** Debug / art review: frame a world point closely (null restores the normal camera). Never used in play. */
+  debugInspect(target: { x: number; z: number; zoom?: number } | null): void {
+    this.inspect = target ? { x: target.x, z: target.z, zoom: target.zoom ?? 1 } : null;
+    this.rig?.cut();
   }
 
   /** Jumps the camera straight to its current goal (debug/screenshots; the next frame applies it). */

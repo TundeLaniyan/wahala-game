@@ -27,6 +27,13 @@ const MODEL_HEIGHT = 1.8;
 const DRAWN_HEIGHT = 1.86;
 export const RIGGED_SCALE = DRAWN_HEIGHT / MODEL_HEIGHT;
 
+/**
+ * Adult proportions: the cast was modelled with oversized "toy" heads (1.2x); in play they are
+ * drawn at a grounded adult head-to-body ratio. Applied to the head bone after the animation pose,
+ * so clips and the menu portraits are unaffected.
+ */
+export const ADULT_HEAD_SCALE = 0.82;
+
 /** Plays the named clips of a skinned character with cross-fades and interruptible one-shots. */
 export class RiggedCharacter {
   /** Unit-scaled holder: add things that should scale with the character (bike) here. */
@@ -38,6 +45,7 @@ export class RiggedCharacter {
   private active: ClipName | null = null;
   private oneShot: { name: ClipName; left: number } | null = null;
   private frozen = false;
+  private readonly head: Object3D | null;
 
   private constructor(body: Object3D, clips: readonly AnimationClip[]) {
     this.body = body;
@@ -45,6 +53,7 @@ export class RiggedCharacter {
     this.holder.add(body);
     this.mixer = new AnimationMixer(body);
     for (const c of clips) this.actions.set(c.name as ClipName, this.mixer.clipAction(c));
+    this.head = body.getObjectByName('head') ?? null;
     this.setLoop('Idle', 0);
   }
 
@@ -98,6 +107,7 @@ export class RiggedCharacter {
       }
     }
     this.mixer.update(dt);
+    this.head?.scale.setScalar(ADULT_HEAD_SCALE);
   }
 
   private activate(name: ClipName, fade: number, restart = false): void {

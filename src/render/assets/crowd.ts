@@ -58,8 +58,24 @@ interface Spot {
   path?: Person['path'];
 }
 
-/** Placement of `count` people around the lot (world units), deterministic from `rng`. */
-export function crowdSpots(layout: Layout, count: number, rng: () => number): Spot[] {
+export interface CrowdEdges {
+  north: boolean;
+  east: boolean;
+  west: boolean;
+  south: boolean;
+}
+const ALL_EDGES: CrowdEdges = { north: true, east: true, west: true, south: true };
+
+/**
+ * Placement of `count` people around the lot (world units), deterministic from `rng`. Edges that
+ * an arena keeps free of spectators (a construction site, say) are left empty.
+ */
+export function crowdSpots(
+  layout: Layout,
+  count: number,
+  rng: () => number,
+  edges: CrowdEdges = ALL_EDGES,
+): Spot[] {
   const W = layout.width;
   const H = layout.height;
   const platform = assets.has('env_bleacher');
@@ -125,7 +141,15 @@ export function crowdSpots(layout: Layout, count: number, rng: () => number): Sp
     if (rng() < 0.5) path = { ax: path.bx, az: path.bz, bx: path.ax, bz: path.az, speed };
     spots.push({ x: path.ax, y: 0, z: path.az, yaw: 0, role: 'walk', path });
   }
-  return spots;
+  const allowed = (x: number, z: number): boolean => {
+    if (x > W / 2 + 0.2) return edges.east;
+    if (x < -W / 2 - 0.2) return edges.west;
+    if (z < -H / 2) return edges.north;
+    return edges.south;
+  };
+  return spots.filter((s) =>
+    s.path ? allowed((s.path.ax + s.path.bx) / 2, (s.path.az + s.path.bz) / 2) : allowed(s.x, s.z),
+  );
 }
 
 interface Pose {
@@ -136,7 +160,12 @@ interface Pose {
   material: Material;
 }
 
-export function createGlbCrowd(layout: Layout, count: number, rng: () => number): Crowd | null {
+export function createGlbCrowd(
+  layout: Layout,
+  count: number,
+  rng: () => number,
+  edges: CrowdEdges = ALL_EDGES,
+): Crowd | null {
   const parts = assets.parts('crowd');
   if (parts.length === 0) return null;
   // spec_<name>_<role>_<frame>; older single-pose files (spec_<name>) count as calm watchers
@@ -148,7 +177,7 @@ export function createGlbCrowd(layout: Layout, count: number, rng: () => number)
   });
   const byName = new Map<string, Pose[]>();
   for (const p of poses) byName.set(p.name, [...(byName.get(p.name) ?? []), p]);
-  const spots = crowdSpots(layout, count, rng);
+  const spots = crowdSpots(layout, count, rng, edges);
   const pool: Record<Role, string[]> = { watch: [], talk: [], walk: [] };
   for (const [name, list] of byName) pool[list[0]!.role].push(name);
   if (pool.talk.length === 0) pool.talk = pool.watch;
@@ -181,7 +210,7 @@ export function createGlbCrowd(layout: Layout, count: number, rng: () => number)
     const variant = variants.get(choice[i]!)!;
     variant.count++;
     // Spectators sit a step darker than the players so the cast reads first (visual hierarchy).
-    const t = 0.66 + rng() * 0.2;
+    const t = 0.52 + rng() * 0.2;
     const tint = new Color(t, t * (0.95 + rng() * 0.08), t * (0.95 + rng() * 0.08));
     return {
       variant,

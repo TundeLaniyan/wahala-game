@@ -21,6 +21,8 @@ export interface CameraShot {
   keep: WorldPoint[];
   /** Distance multiplier for the action camera (below 1 = closer, e.g. the winner close-up). */
   zoom: number;
+  /** Debug / art review: do not clamp the view to the arena. */
+  free?: boolean;
 }
 
 /** Fraction of the countdown spent on the establishing (whole-arena) shot before gliding in. */

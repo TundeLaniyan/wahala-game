@@ -12,7 +12,7 @@ import {
   Group,
   Color,
 } from 'three';
-import type { Material, Texture } from 'three';
+import type { BufferGeometry, Material, Texture } from 'three';
 import { arenaLook } from '../arenaLook';
 import type { GameState } from '../../sim';
 import { Tile } from '../../sim';
@@ -20,7 +20,9 @@ import { modelledPillars, pillarParts, softBlockParts, softVariantFor, softVaria
 import type { SoftVariant } from '../assets/props';
 import type { Layout } from '../coords';
 import { floorMaterial } from '../assets/floor';
-import { ankaraTexture, chevronBandTexture, contactShadowTexture, floorMarkingsTexture } from '../textures';
+import { contactShadowTexture, corrugatedTexture } from '../textures';
+import { arenaFloorMaps } from '../arenas/floors';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { InstanceSet } from './InstanceSet';
 import type { FrameContext, View } from './types';
 
@@ -32,8 +34,6 @@ const DROP_TIME = 0.28;
  */
 const PILLAR_SCALE = new Vector3(0.88, 0.84, 0.88);
 const SOFT_SCALE = new Vector3(0.88, 0.82, 0.88);
-/** Height of the modelled pillar cap once scaled (accents sit on it). */
-const PILLAR_TOP = 1.1 * PILLAR_SCALE.y;
 
 /** Copies instancing parts with their material tinted (per-arena art direction). */
 function tinted<T extends { material: Material }>(parts: T[], tint: number, owned: Material[]): T[] {
@@ -74,9 +74,24 @@ export class ArenaView implements View {
     this.arenaId = state.arenaId;
     const W = state.width;
     const H = state.height;
-    const floor = new Mesh(new PlaneGeometry(W, H), floorMaterial(W, H, state.arenaId));
+    // the arena's own worn surface (tarmac / pavers / cracked asphalt); the slab atlas is the fallback
+    const maps = arenaFloorMaps(state.arenaId, W, H);
+    let floorMat: MeshStandardMaterial;
+    if (maps) {
+      floorMat = new MeshStandardMaterial({
+        color: 0xffffff,
+        map: maps.map,
+        roughnessMap: maps.roughnessMap,
+        roughness: 1,
+        metalness: 0,
+      });
+      this.ownedTextures.push(maps.map, maps.roughnessMap);
+      this.ownedMaterials.push(floorMat);
+    } else floorMat = floorMaterial(W, H, state.arenaId);
+    const floor = new Mesh(new PlaneGeometry(W, H), floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
+    floor.userData.grit = 'floor';
     this.group.add(floor);
 
     const look = arenaLook(state.arenaId);
@@ -127,89 +142,43 @@ export class ArenaView implements View {
     this.cache = new Array<number>(W * H).fill(-1);
     this.initialHard = new Set(state.tiles.flatMap((t, i) => (t === Tile.Hard ? [i] : [])));
     this.group.add(this.decals);
-    const markings = new Mesh(
-      new PlaneGeometry(W, H),
-      new MeshStandardMaterial({
-        map: floorMarkingsTexture(state.arenaId, W, H),
-        transparent: true,
-        depthWrite: false,
-        roughness: 0.85,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-      }),
-    );
-    markings.rotation.x = -Math.PI / 2;
-    markings.position.y = 0.004;
-    markings.receiveShadow = true;
-    markings.renderOrder = 1;
-    this.decals.add(markings);
-    this.buildArenaPillarAccents(state);
   }
 
   /**
-   * Arena-specific dressing instanced with every pillar (model space, before PILLAR_SCALE):
-   * market pillars are wrapped in Ankara cloth like stall posts; roadworks pillars carry red/white
-   * reflective chevron bands like jersey barriers. The bus park keeps the plain poster pillars.
+   * Arena-specific dressing instanced with every pillar (model space, before PILLAR_SCALE): market
+   * pillars wear a collar of rusted corrugated sheet like the stall posts around them; roadworks
+   * pillars are unfinished columns with rusty rebar stubs sticking out of the top. The bus park keeps
+   * the weathered poster pillars.
    */
-  private pillarWraps(arenaId: string): { geometry: BoxGeometry; material: Material }[] {
+  private pillarWraps(arenaId: string): { geometry: BufferGeometry; material: Material }[] {
     if (arenaId === 'balogunMarket') {
-      const m = new MeshStandardMaterial({ map: ankaraTexture(), alphaTest: 0.5, roughness: 0.82 });
-      this.ownedMaterials.push(m);
-      return [{ geometry: new BoxGeometry(0.905, 0.52, 0.905).translate(0, 0.74, 0), material: m }];
-    }
-    if (arenaId === 'lekkiRoadworks') {
-      const map = chevronBandTexture().clone();
+      const map = corrugatedTexture().clone();
       map.needsUpdate = true;
       map.repeat.set(2, 1);
-      const m = new MeshStandardMaterial({ map, roughness: 0.32, metalness: 0.05 });
+      const m = new MeshStandardMaterial({ color: 0x6a5240, map, roughness: 0.7, metalness: 0.4 });
       this.ownedMaterials.push(m);
       this.ownedTextures.push(map);
-      return [
-        { geometry: new BoxGeometry(0.89, 0.14, 0.89).translate(0, 0.88, 0), material: m },
-        { geometry: new BoxGeometry(0.89, 0.14, 0.89).translate(0, 0.56, 0), material: m },
-      ];
+      return [{ geometry: new BoxGeometry(0.91, 0.36, 0.91).translate(0, 0.66, 0), material: m }];
+    }
+    if (arenaId === 'lekkiRoadworks') {
+      const m = new MeshStandardMaterial({ color: 0x5a3624, roughness: 0.65, metalness: 0.5 });
+      this.ownedMaterials.push(m);
+      const bars: BufferGeometry[] = [];
+      for (const [x, z, lean] of [
+        [-0.3, -0.3, 0.12],
+        [0.3, -0.3, -0.08],
+        [-0.3, 0.3, 0.05],
+        [0.3, 0.3, -0.14],
+        [0, -0.3, 0.02],
+        [0, 0.3, -0.04],
+      ] as const) {
+        const bar = new CylinderGeometry(0.022, 0.022, 0.5, 5).translate(0, 0.25, 0);
+        bar.applyMatrix4(new Matrix4().makeRotationZ(lean));
+        bars.push(bar.translate(x, 1.08, z));
+      }
+      return [{ geometry: mergeGeometries(bars)!, material: m }];
     }
     return [];
-  }
-
-  /** Distinct visual accents atop permanent interior pillars for Balogun Market and Lekki Roadworks. */
-  private buildArenaPillarAccents(state: GameState): void {
-    if (state.arenaId !== 'balogunMarket' && state.arenaId !== 'lekkiRoadworks') return;
-    const isMarket = state.arenaId === 'balogunMarket';
-    const marketColors = [0xe63946, 0xffbe0b, 0x1d6fe0, 0x169852, 0x8338ec, 0xfb5607];
-    const basinGeo = new CylinderGeometry(0.2, 0.14, 0.12, 12);
-    const goodsGeo = new CylinderGeometry(0.15, 0.18, 0.07, 10);
-    const coneGeo = new CylinderGeometry(0.03, 0.12, 0.32, 10);
-    const bandGeo = new CylinderGeometry(0.065, 0.09, 0.09, 10);
-    const coneMat = new MeshStandardMaterial({ color: 0xff5a0e, roughness: 0.45 });
-    const whiteMat = new MeshStandardMaterial({ color: 0xf6f3ea, roughness: 0.5 });
-
-    for (const i of this.initialHard) {
-      const gx = i % state.width;
-      const gy = Math.floor(i / state.width);
-      const wx = this.layout.wx(gx);
-      const wz = this.layout.wz(gy);
-      const h = (gx * 7 + gy * 13) % 6;
-      if (isMarket) {
-        // Folded Ankara fabric stack & enamel produce basin perched on the concrete pillar cap
-        const col2 = marketColors[(h + 2) % marketColors.length]!;
-        // the cloth wrap carries the colour; only every fourth stall shows an enamel basin of produce
-        if ((gx + gy) % 4 === 0) {
-          const basin = new Mesh(basinGeo, new MeshStandardMaterial({ color: col2, roughness: 0.4 }));
-          basin.position.set(wx + 0.07, PILLAR_TOP + 0.05, wz - 0.05);
-          const goods = new Mesh(goodsGeo, new MeshStandardMaterial({ color: 0xf4a226, roughness: 0.75 }));
-          goods.position.set(wx + 0.07, PILLAR_TOP + 0.11, wz - 0.05);
-          this.decals.add(basin, goods);
-        }
-      } else if ((gx + gy) % 4 === 0) {
-        // Lekki Roadworks: bright orange/white traffic cone perched on select pillars
-        const cone = new Mesh(coneGeo, coneMat);
-        cone.position.set(wx, PILLAR_TOP + 0.16, wz);
-        const stripe = new Mesh(bandGeo, whiteMat);
-        stripe.position.set(wx, PILLAR_TOP + 0.15, wz);
-        this.decals.add(cone, stripe);
-      }
-    }
   }
 
   /** Variant of the soft block at a tile (for debris colours). */

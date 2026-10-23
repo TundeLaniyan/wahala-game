@@ -1,0 +1,332 @@
+import { Color, Group, MathUtils, MeshStandardMaterial } from 'three';
+import type { Material, Mesh, Object3D } from 'three';
+import { RiggedCharacter } from '../assets/rigged';
+import type { ClipName } from '../assets/rigged';
+
+/**
+ * Living Lagos street activity OUTSIDE the playable grid (presentation only; these people are
+ * never competitors and never stand on the board). Each actor is a real skinned, animated
+ * character (the same rigs as the cast) dressed in its own worn, muted clothes, acting out a small
+ * scripted scene whose timings are randomised per actor so nothing loops in sync:
+ *
+ * - fight: two men trading shoves and kicks, stumbling, circling, one backing off then returning;
+ * - argue: two traders squaring up, gesturing and shoving;
+ * - conductor: a danfo conductor waving and calling passengers, pacing beside his bus;
+ * - seller / buyer: a trader handing goods over while a customer bargains;
+ * - worker: a site labourer digging, stamping and carrying;
+ * - onlooker: watching (a fight, the match), cheering when things get loud;
+ * - walker: walking a path along the street and back.
+ *
+ * The number of actors is capped by the quality profile; extra requests are ignored.
+ */
+export type VignetteKind = 'fight' | 'argue' | 'conductor' | 'seller' | 'worker' | 'onlooker' | 'walker';
+
+export interface Vignette {
+  kind: VignetteKind;
+  x: number;
+  z: number;
+  /** Facing (radians, 0 = +Z). For pairs: the axis between the two actors. */
+  yaw: number;
+  /** Optional ground height (platforms). */
+  y?: number;
+  /** walker / conductor pacing: second point of the path. */
+  toX?: number;
+  toZ?: number;
+}
+
+/** The cast rigs NPCs are built from (outfits are re-coloured so nobody looks like a player). */
+const RIGS = ['streetBaller', 'lekkiBoy', 'areaBoss', 'campusQueen'] as const;
+/** Worn, muted clothing: faded navy, khaki, rust, olive, grey, dirty white, brown, maroon. */
+const CLOTH = [0x3a4252, 0x7a6e56, 0x7a4a34, 0x4e5236, 0x5c5c5a, 0xa8a08e, 0x5a4232, 0x5c2e30, 0x2e3a36];
+const HIVIS = 0xd9a21a;
+
+interface Actor {
+  rc: RiggedCharacter;
+  root: Group;
+  kind: VignetteKind;
+  role: 0 | 1;
+  baseX: number;
+  baseZ: number;
+  baseYaw: number;
+  /** path end (walker / pacing) */
+  toX: number;
+  toZ: number;
+  next: number;
+  speed: number;
+  /** walkers: position along the path 0..1 and direction */
+  t: number;
+  dir: 1 | -1;
+  partner: Actor | null;
+  /** fight: current circling offset */
+  circle: number;
+  retreatUntil: number;
+}
+
+/** Re-dresses a rig: own cloned materials, muted / worn clothing, slightly varied skin. */
+function dress(body: Object3D, rnd: () => number, hiVis: boolean): Material[] {
+  const owned: Material[] = [];
+  const cloth = new Color(hiVis ? HIVIS : CLOTH[Math.floor(rnd() * CLOTH.length)]!);
+  body.traverse((o) => {
+    const m = (o as Mesh).material as Material | Material[] | undefined;
+    if (!m || Array.isArray(m)) return;
+    if (!(m instanceof MeshStandardMaterial)) return;
+    const c = m.clone();
+    const name = m.name.toLowerCase();
+    if (name.includes('cloth')) {
+      // keep the outfit's own pattern/shading from the atlas but pull it to a worn tone
+      c.color.copy(cloth).multiplyScalar(1.5);
+      c.roughness = Math.min(1, c.roughness + 0.15);
+    } else if (name.includes('skin')) {
+      c.color.multiplyScalar(0.82 + rnd() * 0.22);
+    }
+    (o as Mesh).material = c;
+    owned.push(c);
+  });
+  return owned;
+}
+
+export class StreetLife {
+  readonly group = new Group();
+  private readonly actors: Actor[] = [];
+  private readonly owned: Material[] = [];
+  private seed: number;
+
+  constructor(
+    private readonly budget: number,
+    seed = 0x51ee7,
+  ) {
+    this.seed = seed;
+    this.group.userData.grit = 'crowd';
+  }
+
+  private rand(): number {
+    this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0;
+    return this.seed / 4294967296;
+  }
+
+  get count(): number {
+    return this.actors.length;
+  }
+
+  /** Room for `n` more actors? */
+  hasRoom(n = 1): boolean {
+    return this.actors.length + n <= this.budget;
+  }
+
+  private spawn(kind: VignetteKind, role: 0 | 1, x: number, z: number, yaw: number, y = 0): Actor | null {
+    if (!this.hasRoom()) return null;
+    const rig = RIGS[Math.floor(this.rand() * RIGS.length)]!;
+    const rc = RiggedCharacter.create(rig, this.rand() * 5);
+    if (!rc) return null;
+    this.owned.push(...dress(rc.body, () => this.rand(), kind === 'worker'));
+    const root = new Group();
+    root.add(rc.holder);
+    // adults of varied build; background people a touch smaller than the cast (depth cue)
+    root.scale.setScalar(0.86 + this.rand() * 0.12);
+    root.position.set(x, y, z);
+    root.rotation.y = yaw;
+    this.group.add(root);
+    const a: Actor = {
+      rc,
+      root,
+      kind,
+      role,
+      baseX: x,
+      baseZ: z,
+      baseYaw: yaw,
+      toX: x,
+      toZ: z,
+      next: this.rand() * 2.5,
+      speed: 0.7 + this.rand() * 0.6,
+      t: this.rand(),
+      dir: this.rand() < 0.5 ? 1 : -1,
+      partner: null,
+      circle: 0,
+      retreatUntil: 0,
+    };
+    this.actors.push(a);
+    return a;
+  }
+
+  /** Adds a scene. Returns false when the quality budget is exhausted. */
+  add(v: Vignette): boolean {
+    const y = v.y ?? 0;
+    if (v.kind === 'fight' || v.kind === 'argue' || v.kind === 'seller') {
+      if (!this.hasRoom(2)) return false;
+      const gap = v.kind === 'fight' ? 0.42 : 0.5;
+      const dx = Math.sin(v.yaw) * gap;
+      const dz = Math.cos(v.yaw) * gap;
+      const a = this.spawn(v.kind, 0, v.x - dx, v.z - dz, v.yaw, y);
+      const b = this.spawn(
+        v.kind === 'seller' ? 'seller' : v.kind,
+        1,
+        v.x + dx,
+        v.z + dz,
+        v.yaw + Math.PI,
+        y,
+      );
+      if (a && b) {
+        a.partner = b;
+        b.partner = a;
+      }
+      return true;
+    }
+    const a = this.spawn(v.kind, 0, v.x, v.z, v.yaw, y);
+    if (!a) return false;
+    if (v.toX !== undefined && v.toZ !== undefined) {
+      a.toX = v.toX;
+      a.toZ = v.toZ;
+    }
+    return true;
+  }
+
+  update(dt: number, time: number, excitement: number): void {
+    for (const a of this.actors) {
+      this.think(a, time, excitement);
+      this.move(a, dt, time);
+      a.rc.update(dt);
+    }
+  }
+
+  private once(a: Actor, clip: ClipName, speed = 1): void {
+    a.rc.playOnce(clip, 0.08, speed);
+  }
+
+  /** Decides the next beat of an actor's scene when its timer runs out. */
+  private think(a: Actor, time: number, excitement: number): void {
+    if (time < a.next) return;
+    const r = this.rand();
+    const wait = (lo: number, hi: number): number => (a.next = time + lo + this.rand() * (hi - lo));
+    switch (a.kind) {
+      case 'fight': {
+        a.rc.setLoop('Idle', 0.2, 1.4); // a fighter's bouncing guard
+        if (time < a.retreatUntil) {
+          wait(0.4, 0.8);
+          break;
+        }
+        if (r < 0.36) {
+          this.once(a, 'Push', 1.1 + this.rand() * 0.3);
+          const p = a.partner;
+          if (p && this.rand() < 0.75) {
+            p.next = time + 0.35;
+            p.rc.playOnce(this.rand() < 0.5 ? 'Stumble' : 'Dazed', 0.06, 1.2);
+          }
+          wait(1.0, 2.0);
+        } else if (r < 0.58) {
+          this.once(a, 'Kick', 1.15);
+          wait(1.0, 1.8);
+        } else if (r < 0.68) {
+          // back off a few steps, then square up again
+          a.retreatUntil = time + 1.2 + this.rand();
+          wait(0.2, 0.4);
+        } else {
+          wait(0.5, 1.3);
+        }
+        break;
+      }
+      case 'argue': {
+        a.rc.setLoop('Idle', 0.25, 1.1);
+        if (r < 0.32)
+          this.once(a, 'Throw', 0.8); // a big dismissive arm swing
+        else if (r < 0.48) this.once(a, 'Push', 0.9);
+        else if (r < 0.6) this.once(a, 'Cheer', 1.3); // both hands up: "see this man!"
+        wait(1.2, 3.2);
+        break;
+      }
+      case 'conductor': {
+        if (r < 0.45) {
+          a.rc.setLoop('Idle', 0.2);
+          this.once(a, r < 0.25 ? 'Cheer' : 'Throw', 0.9); // waving passengers in, calling the route
+          wait(1.5, 3.5);
+        } else {
+          a.dir = a.dir === 1 ? -1 : 1; // pace along the bus
+          wait(2.0, 4.0);
+        }
+        break;
+      }
+      case 'seller': {
+        a.rc.setLoop('Idle', 0.3);
+        if (a.role === 0 && r < 0.4) this.once(a, 'Place', 0.8);
+        else if (a.role === 1 && r < 0.3)
+          this.once(a, 'Push', 0.7); // haggling gesture
+        else if (r < 0.45) this.once(a, 'Throw', 0.7);
+        wait(2.0, 4.5);
+        break;
+      }
+      case 'worker': {
+        if (r < 0.4) {
+          a.rc.setLoop('Idle', 0.2);
+          this.once(a, 'Place', 0.75); // digging / laying
+          wait(1.4, 2.6);
+        } else if (r < 0.55) {
+          this.once(a, 'Kick', 0.7); // stamping the shovel in
+          wait(1.2, 2.0);
+        } else {
+          a.dir = a.dir === 1 ? -1 : 1;
+          wait(3.0, 6.0);
+        }
+        break;
+      }
+      case 'onlooker': {
+        a.rc.setLoop('Idle', 0.3);
+        if (this.rand() < 0.08 + excitement * 0.7) this.once(a, 'Cheer', 1 + excitement * 0.4);
+        wait(1.0, 3.0);
+        break;
+      }
+      case 'walker':
+        wait(5, 10);
+        break;
+    }
+  }
+
+  /** Positions an actor for this frame: walking paths, pacing, circling fighters. */
+  private move(a: Actor, dt: number, time: number): void {
+    const root = a.root;
+    if (a.kind === 'walker' || a.kind === 'conductor' || a.kind === 'worker') {
+      const len = Math.hypot(a.toX - a.baseX, a.toZ - a.baseZ);
+      if (len < 0.01) return;
+      const pacing = a.kind !== 'walker';
+      // conductors and workers stop between pacing legs; walkers keep going
+      const stand = pacing && time < a.next - 1.6;
+      if (stand) {
+        a.rc.setLoop(a.kind === 'worker' ? 'IdleCarry' : 'Idle', 0.25);
+        return;
+      }
+      const v = (a.kind === 'walker' ? 1.05 : 0.8) * a.speed;
+      a.t += (a.dir * v * dt) / len;
+      if (a.t >= 1 || a.t <= 0) {
+        a.t = MathUtils.clamp(a.t, 0, 1);
+        a.dir = a.t >= 1 ? -1 : 1;
+      }
+      const x = a.baseX + (a.toX - a.baseX) * a.t;
+      const z = a.baseZ + (a.toZ - a.baseZ) * a.t;
+      root.position.x = x;
+      root.position.z = z;
+      const yaw = Math.atan2((a.toX - a.baseX) * a.dir, (a.toZ - a.baseZ) * a.dir);
+      root.rotation.y = MathUtils.lerp(root.rotation.y, yaw, Math.min(1, dt * 8));
+      // the run clip slowed down reads as a brisk walk
+      a.rc.setLoop(a.kind === 'worker' ? 'RunCarry' : 'Run', 0.2, 0.55 * a.speed);
+      return;
+    }
+    if (a.kind === 'fight' && a.partner) {
+      // the pair slowly circles its centre; a retreating fighter backs away along the axis
+      const cx = (a.baseX + a.partner.baseX) / 2;
+      const cz = (a.baseZ + a.partner.baseZ) / 2;
+      a.circle += dt * 0.35 * (a.role === 0 ? 1 : 1);
+      const angle = a.baseYaw + Math.sin(time * 0.3 + a.circle) * 0.9;
+      const back = time < a.retreatUntil ? 0.55 : 0;
+      const gap = 0.42 + back;
+      const s = a.role === 0 ? -1 : 1;
+      const x = cx + Math.sin(angle) * gap * s;
+      const z = cz + Math.cos(angle) * gap * s;
+      root.position.x += (x - root.position.x) * Math.min(1, dt * 4);
+      root.position.z += (z - root.position.z) * Math.min(1, dt * 4);
+      root.rotation.y = Math.atan2(cx - root.position.x, cz - root.position.z);
+    }
+  }
+
+  dispose(): void {
+    for (const m of this.owned) m.dispose();
+    this.actors.length = 0;
+  }
+}
