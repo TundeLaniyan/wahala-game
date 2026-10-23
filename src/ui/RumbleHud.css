@@ -1,0 +1,356 @@
+/* City Rumble HUD: compact on phones (counter, closing clock, two feed lines), richer on desktop. */
+.rh-panel {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  left: max(10px, env(safe-area-inset-left));
+  width: clamp(180px, 22vw, 250px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+.rh-alive {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  width: max-content;
+  padding: 2px 12px 4px;
+  background: var(--glass);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--glass-edge);
+  border-left: 4px solid var(--gold);
+  border-radius: 8px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+.rh-alive b {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(1.6rem, 6vh, 2.4rem);
+  line-height: 1;
+  color: var(--gold);
+  text-shadow: 0 2px 0 #000;
+}
+.rh-alive span {
+  font-family: var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: clamp(0.72rem, 2.2vh, 0.95rem);
+  color: var(--text);
+}
+.rh-ring {
+  width: max-content;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: clamp(0.7rem, 2.1vh, 0.9rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(10, 12, 16, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.rh-ring.closing {
+  border-color: #ff7a1a;
+  color: #ffd2ae;
+  animation: pulse 0.8s infinite alternate;
+}
+.rh-ring.core {
+  border-color: var(--red);
+  color: #ffd0c8;
+}
+.rh-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rh-feed li {
+  width: max-content;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: clamp(0.7rem, 2.1vh, 0.92rem);
+  background: rgba(8, 9, 12, 0.62);
+  animation: pop 0.25s;
+}
+.rh-feed li.mine {
+  background: rgba(120, 70, 0, 0.75);
+  border: 1px solid var(--gold);
+}
+.rh-name {
+  font-weight: 700;
+  text-shadow: 0 1px 0 #000;
+}
+.rh-arrow,
+.rh-cause {
+  color: var(--muted);
+}
+.rh-lists {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+.rh-list {
+  background: rgba(10, 12, 16, 0.6);
+  border: 1px solid var(--glass-edge);
+  border-radius: 8px;
+  padding: 4px 8px 6px;
+}
+.rh-list h4 {
+  margin: 0 0 2px;
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.rh-list ul,
+.rh-roster ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rh-list li,
+.rh-roster li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+.rh-list li i,
+.rh-roster li i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.rh-list .nm,
+.rh-roster .nm {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rh-list .k,
+.rh-roster .k {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rh-roster li.out {
+  opacity: 0.5;
+}
+.rh-roster li.out .nm {
+  text-decoration: line-through;
+}
+li.me .nm {
+  color: var(--gold);
+}
+.rh-open {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-edge);
+  background: rgba(10, 12, 16, 0.7);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.rh-roster {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  left: calc(max(10px, env(safe-area-inset-left)) + clamp(180px, 22vw, 250px) + 10px);
+  width: 230px;
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 12, 16, 0.86);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-edge);
+  border-radius: 10px;
+  padding: 6px 10px 8px;
+  pointer-events: auto;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+}
+.rh-roster header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+.rh-roster header small {
+  flex: 1;
+  font-family: var(--ui);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+}
+.rh-x {
+  background: none;
+  border: 0;
+  color: var(--text);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.rh-roster ul {
+  overflow-y: auto;
+}
+
+/* spectator bar (replaces the inventory once the local player is out) */
+.rh-spectate {
+  position: absolute;
+  left: 50%;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  border: 2px solid var(--red);
+  border-radius: 12px;
+  pointer-events: auto;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+.rh-out b {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--red);
+}
+.rh-watch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rh-watch .round-btn {
+  width: 34px;
+  height: 34px;
+  color: var(--text);
+  cursor: pointer;
+}
+.rh-watch small {
+  color: var(--muted);
+}
+.rh-skipping {
+  font-family: var(--display);
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  animation: pulse 0.6s infinite alternate;
+}
+
+/* phones in landscape: counter, closing clock and two feed lines only */
+@media (max-height: 520px) {
+  .rh-panel {
+    width: clamp(150px, 24vw, 210px);
+    gap: 4px;
+  }
+  .rh-lists {
+    display: none;
+  }
+  .rh-feed li:nth-child(n + 3) {
+    display: none;
+  }
+  .rh-spectate {
+    gap: 8px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+  }
+  .rh-watch small {
+    display: none;
+  }
+  /* fit between the D-pad and the action buttons; the placing shows on the results card */
+  .rh-out {
+    display: none;
+  }
+  .rh-spectate .btn.small {
+    padding: 4px 10px;
+    font-size: 0.85rem;
+  }
+}
+
+/* results card (City Rumble) */
+.rr .stats b small {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.rr-podium,
+.rr-all {
+  list-style: none;
+  margin: 6px auto;
+  padding: 0;
+  max-width: 340px;
+  text-align: left;
+}
+.rr-podium li,
+.rr-all li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+.rr-podium li:first-child {
+  background: rgba(255, 198, 26, 0.14);
+  font-size: 1.05rem;
+}
+.rr-podium li.me,
+.rr-all li.me {
+  outline: 1px solid var(--gold);
+}
+.rr-podium i,
+.rr-all i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.rr-place {
+  width: 1.6em;
+  font-family: var(--display);
+  color: var(--gold);
+  text-align: right;
+}
+.rr-podium .nm,
+.rr-all .nm {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rr-podium small,
+.rr-all small {
+  color: var(--muted);
+}
+.rr-toggle {
+  display: block;
+  margin: 4px auto 0;
+}
+.rr-all {
+  max-height: 28vh;
+  overflow-y: auto;
+}
+@media (max-height: 520px) {
+  .rr-podium li:nth-child(n + 2) {
+    display: none;
+  }
+  .rr .stats {
+    margin: 4px 0;
+  }
+}

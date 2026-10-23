@@ -10,8 +10,10 @@ import type { Layout } from './coords';
  *   by a fixed cinematic three-quarter camera for the entire match (countdown, play, spectating and
  *   results). It never follows a player or zooms towards survivors, so every competitor can always
  *   see themselves and every opponent.
- * - `stadium` (reserved for the future 32-player stadium arena, which is far too big for one frame):
- *   the closer follow camera of `cameraDirector.ts`, with the whole-arena overview as a toggle.
+ * - `stadium` (City Rumble: 41 x 31 tiles and up to 32 competitors, far too big for one frame): the
+ *   close follow camera of `cameraDirector.ts` on the local player (and on a chosen survivor while
+ *   spectating), keeping nearby rivals and incoming danger in frame, with the whole-arena overview
+ *   as a toggle.
  *
  * Only City Rumble uses `stadium`; it can be forced for testing with the `?cam=stadium` URL flag.
  */
@@ -36,8 +38,15 @@ export function selectShot(
   layout: Layout,
   localId: number,
   alpha: number,
-  opts: { preferOverview: boolean; choosingEntry: boolean; attract: boolean },
+  opts: { preferOverview: boolean; choosingEntry: boolean; attract: boolean; focusId?: number | null },
 ): CameraShot | null {
   if (mode === 'arena' || opts.attract) return null;
-  return directShot(state, layout, localId, alpha, opts.preferOverview || opts.choosingEntry);
+  return directShot(
+    state,
+    layout,
+    localId,
+    alpha,
+    opts.preferOverview || opts.choosingEntry,
+    opts.focusId ?? null,
+  );
 }

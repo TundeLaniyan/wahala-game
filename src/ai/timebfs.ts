@@ -55,11 +55,15 @@ export class TimeBfs {
   foundSlot = -1;
   usedSlots = 0;
 
-  constructor(private readonly board: Board) {
+  constructor(
+    private readonly board: Board,
+    /** Largest slot count a run may use (searches on large boards are capped lower: scale.ts). */
+    private readonly maxSlots = MAX_SLOTS,
+  ) {
     const n = board.size;
     this.firstSlot = new Int16Array(n);
-    this.parent = new Int16Array(MAX_SLOTS * n);
-    this.stamp = new Int32Array(MAX_SLOTS * n);
+    this.parent = new Int16Array(maxSlots * n);
+    this.stamp = new Int32Array(maxSlots * n);
     this.cur = new Int16Array(n);
     this.nxt = new Int16Array(n);
   }
@@ -75,7 +79,7 @@ export class TimeBfs {
   run(r: BfsRun): void {
     const { board } = this;
     const n = board.size;
-    const slots = Math.min(MAX_SLOTS, Math.max(2, r.slots));
+    const slots = Math.min(this.maxSlots, Math.max(2, r.slots));
     this.a0 = r.a0;
     this.a1 = Math.max(r.a1, r.a0);
     this.stepTicks = r.step;

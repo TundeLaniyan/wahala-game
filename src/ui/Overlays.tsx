@@ -2,6 +2,7 @@ import { CHARACTERS } from '../sim';
 import { commands } from '../app/session';
 import { useGameStore } from '../app/store';
 import { AudioSettingsPanel } from './AudioSettings';
+import { RumbleResults } from './RumbleHud';
 
 export function PauseOverlay() {
   const s = useGameStore((st) => st.settings);
@@ -40,20 +41,24 @@ export function ResultsOverlay() {
   const winner = r.kind === 'win' ? hud.players[r.winnerId] : null;
   const won = summary?.localWon ?? false;
   const title = r.kind === 'draw' ? 'DRAW!' : won ? 'YOU WIN!' : 'ELIMINATED';
+  const rumble = hud.rumble;
   const detail =
     r.kind === 'draw'
       ? r.reason === 'timeout'
         ? 'Time up with rivals still standing: nobody wins.'
         : 'Everybody went down together. Wahala!'
       : won
-        ? 'Last one standing. Naija no dey carry last!'
+        ? rumble
+          ? `Last one standing out of ${rumble.total}. Naija no dey carry last!`
+          : 'Last one standing. Naija no dey carry last!'
         : `${winner?.name ?? 'A bot'} (${winner ? CHARACTERS[winner.characterId].name : ''}) took it.`;
   return (
     <div className="scrim" data-testid="results">
       <div className={`card ${r.kind === 'draw' ? '' : won ? 'win' : 'lose'}`}>
         <h2 data-testid="result-title">{title}</h2>
         <p>{detail}</p>
-        {summary && (
+        {rumble && <RumbleResults r={rumble} />}
+        {summary && !rumble && (
           <div className="stats">
             <div>
               <b>{summary.eliminations[0] ?? 0}</b>rivals out

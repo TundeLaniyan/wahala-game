@@ -48,7 +48,12 @@ interface RouteCtx {
   /** Last time (audio clock) each rate-limited key played. */
   last: Map<string, number>;
   now: number;
+  /** Large boards (City Rumble): tile x of whoever the camera follows; null = pan across the whole arena. */
+  listenerX: number | null;
 }
+
+/** With a listener, sounds this many tiles to either side are panned fully (the follow camera's half-width). */
+const LISTENER_HALF_TILES = 7;
 
 /** Rate limiter on the audio clock. */
 function allow(c: RouteCtx, key: string, gap: number): boolean {
@@ -59,6 +64,8 @@ function allow(c: RouteCtx, key: string, gap: number): boolean {
 }
 
 const panOf = (c: RouteCtx, x: number): number => {
+  if (c.listenerX !== null)
+    return Math.max(-1, Math.min(1, (x - c.listenerX) / LISTENER_HALF_TILES)) * PAN_WIDTH;
   const half = (c.state.width - 1) / 2;
   return half > 0 ? Math.max(-1, Math.min(1, (x - half) / half)) * PAN_WIDTH : 0;
 };
@@ -364,6 +371,8 @@ export interface EventRouter {
   panFor(state: Readonly<GameState>, tileX: number): number;
   /** Near misses found by the latest `handle` (introspection for tests). */
   readonly lastNearMisses: readonly NearMiss[];
+  /** Follow camera (City Rumble): pan relative to this tile x instead of across the arena (null = arena). */
+  setListener(x: number | null): void;
   reset(): void;
 }
 
@@ -395,6 +404,7 @@ export function createEventRouter(d: RouterDeps): EventRouter {
     elims: 0,
     last: new Map(),
     now: 0,
+    listenerX: null,
   };
   let misses: NearMiss[] = [];
   let final30 = false;
@@ -434,6 +444,9 @@ export function createEventRouter(d: RouterDeps): EventRouter {
       const m = misses.find((x) => x.human) ?? misses[0];
       if (m) reactToNearMiss(m, c);
       for (const e of events) (handlers[e.type] as (ev: SimEvent, ctx: RouteCtx) => void)(e, c);
+    },
+    setListener(x) {
+      c.listenerX = x;
     },
     panFor: (state, x) => {
       c.state = state;

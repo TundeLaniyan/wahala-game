@@ -14,7 +14,16 @@ import { canPlaceNow, chooseGamble, chooseGoal, lastResort, placementGain, robus
 import type { Plan } from './goals';
 import type { AiProfile } from './profiles';
 import { Tactics } from './tactics';
-import { slotsFor } from './analysis';
+import { searchSlots } from './analysis';
+import {
+  GEN_WATCH_RADIUS,
+  LARGE_CAREFUL_RIVALS,
+  LARGE_MIN_THINK,
+  LARGE_THINKS_PER_TICK,
+  WATCH_RADIUS,
+} from './scale';
+import { aiCounters } from './stats';
+import { largeHuntPace, updateZone } from './zone';
 import { readyTick, stepTicksOf } from './world';
 import type { Bot } from './types';
 
@@ -34,6 +43,62 @@ function signature(obs: Observation): number {
   if (obs.crowd) h = (h * 31 + obs.crowd.throws.length) | 0;
   for (const e of obs.stage.events) h = (h * 31 + e.id * 7 + (e.index + 1)) | 0;
   return h;
+}
+
+/**
+ * Large boards: the same idea restricted to what is near this bot (scale.ts). Far-away blasts, crates
+ * and closing tiles do not make it rebuild its danger map or re-plan; it notices them once they come
+ * within the watch window, which is wider than any blast that could reach it from outside.
+ */
+function localSignature(obs: Observation, me: Readonly<{ x: number; y: number }>): number {
+  const inWin = (x: number, y: number, r: number): boolean =>
+    Math.abs(x - me.x) <= r && Math.abs(y - me.y) <= r;
+  let h = obs.vehicles.length * 977;
+  let gens = 0;
+  for (const g of obs.generators) {
+    if (!inWin(g.x, g.y, GEN_WATCH_RADIUS)) continue;
+    gens++;
+    h = (h * 31 + g.x * 17 + g.y * 5 + g.id + (g.carriedBy ?? -1) * 3 + (g.triggered ? 1 : 0)) | 0;
+    h = (h * 31 + (g.mode === 'timed' ? 1 : g.mode === 'remote' ? 2 : 3)) | 0;
+  }
+  let flames = 0;
+  for (const f of obs.flames) if (inWin(f.x, f.y, WATCH_RADIUS)) flames++;
+  let pickups = 0;
+  for (const u of obs.pickups) if (inWin(u.x, u.y, WATCH_RADIUS)) pickups++;
+  h = (h * 31 + gens * 1009 + flames * 131 + pickups * 7) | 0;
+  for (const v of obs.vehicles)
+    h = (h * 31 + v.id * 13 + (v.phase === 'warning' ? 1 : v.phase === 'driving' ? 2 : 3)) | 0;
+  if (obs.crush) {
+    const w = obs.width;
+    let near = 0;
+    for (const p of obs.crush.pending) if (inWin(p.index % w, Math.floor(p.index / w), WATCH_RADIUS)) near++;
+    h = (h * 31 + near * 7) | 0;
+  }
+  if (obs.crowd) h = (h * 31 + obs.crowd.throws.length) | 0;
+  for (const e of obs.stage.events) h = (h * 31 + e.id * 7 + (e.index + 1)) | 0;
+  return h;
+}
+
+/**
+ * Routine re-plans allowed per tick on a large board, shared by all bots observing the same match
+ * (keyed by the match's live player array). Bots decide in player-id order, so which bot gets a slot
+ * is deterministic.
+ */
+const thinkSlots = new WeakMap<object, { tick: number; used: number }>();
+
+function takeThinkSlot(obs: Observation): boolean {
+  let slot = thinkSlots.get(obs.players);
+  if (!slot) {
+    slot = { tick: -1, used: 0 };
+    thinkSlots.set(obs.players, slot);
+  }
+  if (slot.tick !== obs.tick) {
+    slot.tick = obs.tick;
+    slot.used = 0;
+  }
+  if (slot.used >= LARGE_THINKS_PER_TICK) return false;
+  slot.used++;
+  return true;
 }
 
 /** Does any rival currently own an armed Remote Starter generator? */
@@ -66,6 +131,8 @@ export class Brain implements Bot {
     const me = obs.players[this.playerId];
     if (!me || !me.alive || obs.match.phase !== 'playing') {
       this.plan = null;
+      // allocate the search buffers during the countdown, not on the first tick of play
+      if (me?.alive && obs.match.phase === 'countdown') this.context(obs).world.refresh(obs, this.profile);
       return {};
     }
     const c = this.context(obs);
@@ -74,7 +141,7 @@ export class Brain implements Bot {
     const T = obs.tick;
 
     // ---- keep the danger map current; schedule a delayed reaction to anything new
-    const sig = signature(obs);
+    const sig = world.large ? localSignature(obs, world.me) : signature(obs);
     let rebuilt = false;
     if (sig !== this.sig) {
       if (!Number.isNaN(this.sig)) this.reactAt = T + profile.reaction;
@@ -83,14 +150,21 @@ export class Brain implements Bot {
       rebuilt = true;
     }
 
-    const due =
-      T >= this.nextThink ||
-      this.plan === null ||
-      this.rethinkNow ||
-      (this.reactAt >= 0 && T >= this.reactAt);
+    const urgent = this.plan === null || this.rethinkNow;
+    let due = urgent || T >= this.nextThink || (this.reactAt >= 0 && T >= this.reactAt);
+    // large boards: routine re-plans share a per-tick allowance across every bot of the match; a bot
+    // over the allowance keeps following its (reflex-guarded) plan and re-plans on a later tick
+    if (due && !urgent && world.large && !takeThinkSlot(obs)) {
+      due = false;
+      aiCounters.deferred++;
+    }
     if (due) {
       if (!rebuilt) c.builder.build(c.danger, world, profile);
       this.think(c);
+      aiCounters.thinks++;
+      if (!urgent) aiCounters.routineThinks++;
+      aiCounters.work += c.work;
+      aiCounters.maxThinkWork = Math.max(aiCounters.maxThinkWork, c.work);
     }
 
     const intent = this.follow(c);
@@ -119,9 +193,16 @@ export class Brain implements Bot {
     this.rethinkNow = false;
     this.reactAt = -1;
     this.nextThink = T + profile.thinkMin + nextInt(this.rng, profile.thinkMax - profile.thinkMin + 1);
+    if (world.large) this.nextThink = Math.max(this.nextThink, T + LARGE_MIN_THINK[profile.difficulty]);
     c.rivalSims = 0;
+    c.work = 0;
     c.baseline.clear();
     computeHuntField(c);
+    updateZone(c);
+    c.huntWeight = world.large ? profile.huntWeight * largeHuntPace(obs) : profile.huntWeight;
+    // large boards: in the final few even a careless bot checks its way out before placing, so a
+    // 32-player match rarely ends with the last two blowing each other up on the same tick
+    c.placeVerify = world.large && world.rivals.length <= LARGE_CAREFUL_RIVALS ? 1 : profile.placeVerify;
 
     const step = stepTicksOf(obs, me);
     bfs.run({
@@ -129,7 +210,7 @@ export class Brain implements Bot {
       a0: T,
       a1: readyTick(obs, me),
       step,
-      slots: slotsFor(profile.horizonTicks, step),
+      slots: searchSlots(c, profile.horizonTicks, step),
       danger: c.danger,
       blocked: world.walk,
     });
@@ -144,7 +225,7 @@ export class Brain implements Bot {
         a0: T,
         a1: readyTick(obs, me),
         step,
-        slots: slotsFor(profile.horizonTicks, step),
+        slots: searchSlots(c, profile.horizonTicks, step),
         danger: c.certain,
         refugeDanger: c.danger,
         blocked: world.walk,
@@ -217,7 +298,7 @@ export class Brain implements Bot {
     let esc = plan.escape && plan.escapeTick === T ? plan.escape : null;
     if (!esc) {
       const step = stepTicksOf(obs, me);
-      const verify = profile.placeVerify >= 1 || nextInt(this.rng, 1000) < profile.placeVerify * 1000;
+      const verify = c.placeVerify >= 1 || nextInt(this.rng, 1000) < c.placeVerify * 1000;
       if (verify) {
         const carried = plan.drop ? obs.generators.find((o) => o.id === me.carrying) : undefined;
         esc = checkPlacement(

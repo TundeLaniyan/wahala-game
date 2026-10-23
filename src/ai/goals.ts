@@ -19,7 +19,9 @@ import {
 } from './analysis';
 import type { BlastGeometry, EscapePlan } from './analysis';
 import { NEVER } from './danger';
+import { overBudget } from './context';
 import type { Ctx } from './context';
+import { ZONE_WEIGHT } from './zone';
 import { manhattanTiles } from './board';
 import { readyTick, stepTicksOf } from './world';
 
@@ -147,20 +149,25 @@ export function placementGain(c: Ctx, tile: number): number {
 
 function nearRival(c: Ctx, tile: number, dist: number): boolean {
   const { world } = c;
-  for (const r of world.rivals)
+  for (const r of world.near)
     if (manhattanTiles(world.board, tile, r.y * world.board.width + r.x) <= dist) return true;
   return false;
 }
 
 export function tileValue(c: Ctx, tile: number, prevGoal: number): number {
   const { profile, world, hunt } = c;
-  let v = -profile.huntWeight * hunt[tile]!;
+  let v = -c.huntWeight * hunt[tile]!;
+  if (c.zoneTick >= 0) v -= ZONE_WEIGHT * c.zone[tile]!;
   if (tile === prevGoal) v += 1.2;
   if (profile.refugeMinExits > 0 && world.exits(tile) < profile.refugeMinExits) v -= 1.5;
-  // do not loiter right next to a rival unless attacking
-  for (const r of world.rivals) {
-    if (manhattanTiles(world.board, tile, r.y * world.board.width + r.x) <= 1)
-      v -= profile.difficulty === 'easy' ? 0 : 2;
+  // do not loiter right next to a rival unless attacking (rivals on the tile or a neighbour)
+  if (profile.difficulty !== 'easy') {
+    let close = world.rivalAt[tile]!;
+    for (let d = 0; d < 4; d++) {
+      const n = world.board.neighbor[tile * 4 + d]!;
+      if (n >= 0) close += world.rivalAt[n]!;
+    }
+    for (let k = 0; k < close; k++) v -= 2; // one at a time: bit-identical to the per-rival loop
   }
   return v;
 }
@@ -278,17 +285,21 @@ export function chooseGoal(c: Ctx, prevGoal: number): Plan | null {
         continue;
       }
       const score =
-        gain - profile.slotCost * k - profile.huntWeight * c.hunt[t]! * 0.5 + (t === prevGoal ? 1.2 : 0);
+        gain -
+        profile.slotCost * k -
+        c.huntWeight * c.hunt[t]! * 0.5 -
+        (c.zoneTick >= 0 ? ZONE_WEIGHT * c.zone[t]! : 0) +
+        (t === prevGoal ? 1.2 : 0);
       placeCands.push({ kind: 'place', tile: t, slot: k, score, verify: true });
     }
     placeCands.sort((a, b) => b.score - a.score);
     const verifyBudget = profile.difficulty === 'hard' ? 8 : profile.difficulty === 'medium' ? 4 : 2;
     let verified = 0;
     for (const cand of placeCands) {
-      if (verified >= verifyBudget) break;
+      if (verified >= verifyBudget || overBudget(c)) break;
       const a0 = bfs.tickAt(cand.slot);
       const a1 = bfs.tickAt(cand.slot + 1);
-      const doVerify = nextFloat(c.rng) < profile.placeVerify;
+      const doVerify = nextFloat(c.rng) < c.placeVerify;
       verified++;
       if (doVerify) {
         const esc = checkPlacement(c, cand.tile, a0, a1, step);
@@ -328,7 +339,7 @@ export function chooseGoal(c: Ctx, prevGoal: number): Plan | null {
     const plan = compile(c, cand);
     // fleeing past a rival that could wall me in is how most deaths happen: prefer a sealing-proof route,
     // but a route that might be walled in still beats standing in the blast
-    if (threatened && cand.kind !== 'place' && sealChecks < 6) {
+    if (threatened && cand.kind !== 'place' && sealChecks < 6 && !overBudget(c)) {
       sealChecks++;
       if (!routeSurvivesSealing(c, plan, step)) {
         fallback ??= plan;
@@ -345,7 +356,7 @@ function penaliseVulnerable(c: Ctx, cands: Cand[], step: number): void {
   const { bfs } = c;
   let checked = 0;
   for (const cand of cands) {
-    if (checked >= 6) break;
+    if (checked >= 6 || overBudget(c)) break;
     if (cand.kind === 'place' || cand.kind === 'last') continue;
     checked++;
     if (vulnerableAt(c, cand.tile, bfs.tickAt(cand.slot), bfs.tickAt(cand.slot + 1), step)) cand.score -= 10;
@@ -380,8 +391,8 @@ function trapBonus(c: Ctx, cand: Cand, esc: EscapePlan): number {
   const w = world.board.width;
   let bonus = 0;
   const range = myRange(c);
-  for (const r of world.rivals) {
-    if (c.rivalSims >= profile.maxRivalSims) break;
+  for (const r of world.near) {
+    if (c.rivalSims >= c.maxRivalSims || overBudget(c)) break;
     const rt = r.y * w + r.x;
     if (manhattanTiles(world.board, cand.tile, rt) > range + 3) continue;
     const e = rivalEscape(c, c.tmp, r, 6, profile.trap === 'shrink', cand.tile);

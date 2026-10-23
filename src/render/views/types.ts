@@ -12,6 +12,11 @@ export interface FrameContext {
   info: FrameInfo;
   layout: Layout;
   fx: Effects;
+  /**
+   * Follow-camera (stadium) frames only: whether a world-space circle on the floor is inside the last
+   * frame's view. Views may skip work for what is off screen. Absent = everything counts as visible.
+   */
+  inView?: (x: number, z: number, radius: number) => boolean;
 }
 
 /** A self-contained piece of the scene that mirrors one aspect of the simulation. */

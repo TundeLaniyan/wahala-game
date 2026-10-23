@@ -1,0 +1,18 @@
+/* City Rumble minimap (top right, clear of the pause/mute buttons and the phone's action buttons). */
+.minimap {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  right: max(10px, env(safe-area-inset-right));
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(10, 12, 16, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  line-height: 0;
+}
+.minimap canvas {
+  display: block;
+  border-radius: 4px;
+  image-rendering: pixelated;
+}

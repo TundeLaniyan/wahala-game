@@ -1,4 +1,14 @@
-import { Color, Fog, PCFShadowMap, Scene, SRGBColorSpace, WebGLRenderer } from 'three';
+import {
+  Color,
+  Fog,
+  Frustum,
+  Matrix4,
+  PCFShadowMap,
+  Scene,
+  Sphere,
+  SRGBColorSpace,
+  WebGLRenderer,
+} from 'three';
 import { PICKUP_DEFS } from '../sim';
 import type { GameState, SimEvent } from '../sim';
 import { createBackdrop } from './assets/backdrop';
@@ -103,6 +113,15 @@ export class GameRenderer {
   private inspect: { x: number; z: number; zoom: number } | null = null;
   private readonly cameraOverride: CameraMode | null;
   private mode: CameraMode = 'arena';
+  private readonly frustum = new Frustum();
+  private readonly viewProj = new Matrix4();
+  private readonly sphere = new Sphere();
+  /** Is a floor circle (world x, z, radius) inside the last frame's view? (follow camera LOD) */
+  private readonly inView = (x: number, z: number, radius: number): boolean => {
+    this.sphere.center.set(x, 0.9, z);
+    this.sphere.radius = radius;
+    return this.frustum.intersectsSphere(this.sphere);
+  };
 
   constructor(opts: RendererOptions) {
     this.auto = opts.quality === 'auto';
@@ -405,7 +424,15 @@ export class GameRenderer {
       info,
       layout: this.layout,
       fx: this.effects,
+      // follow camera: views may skip what the last frame did not show (the fixed camera shows it all)
+      inView: this.mode === 'stadium' && !info.attract ? this.inView : undefined,
     };
+    if (ctx.inView) {
+      const cam = this.rig.camera;
+      this.frustum.setFromProjectionMatrix(
+        this.viewProj.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse),
+      );
+    }
     for (const v of this.views) v.update(ctx);
     // models created mid-match (vehicles, wrecks, a player's swapped model) get weathered too
     if (++this.frames % 30 === 0) this.weather();
@@ -424,6 +451,7 @@ export class GameRenderer {
           preferOverview: this.overviewPreferred,
           choosingEntry: info.entryOverlay !== null,
           attract: info.attract === true,
+          focusId: info.focusPlayerId ?? null,
         });
     this.rig.update(dt, this.time, this.effects.shake, shot, info.attract === true);
     this.renderer.render(this.scene, this.rig.camera);

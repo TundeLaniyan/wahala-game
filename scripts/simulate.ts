@@ -5,20 +5,24 @@
  *   npm run simulate -- --matches 200 --players 4
  *   npm run simulate -- --duel easy medium --matches 100 --players 2
  *   npm run simulate -- --matches 50 --seed 1000 --mode crush --crowd
+ *   npm run simulate -- --arena cityRumble --players 32 --matches 10 --difficulty medium
  *
  * Options
  *   --matches N        number of matches (default 100)
- *   --players P        2-4 competitors per match (default 4)
+ *   --players P        competitors per match (default 4; standard arenas 2-4, City Rumble up to 32)
  *   --seed S           first seed; match i uses seed S + i (default 1)
  *   --duel A B         only these two difficulties, alternating seats (A, B, A, B)
+ *   --difficulty D     every seat plays D (like the app, where all bots share one difficulty)
  *   --arena ID         arena id (default danfoBusPark)
  *   --mode classic|crush
  *   --crowd            enable spectator throws
  *   --no-hazards       switch the arena's stage hazards off (they are on in real matches)
  *   --verbose          print one line per match
+ *   --wall             time ticks with the wall clock (default: this process's CPU time, which is
+ *                      not inflated when other programs share the machine)
  */
 import { performance } from 'node:perf_hooks';
-import { ARENAS, MAX_PLAYERS, MIN_PLAYERS } from '../src/sim';
+import { ARENAS, DEFAULT_ARENA_ID, MAX_PLAYERS, MIN_PLAYERS } from '../src/sim';
 import type { Difficulty, MatchMode } from '../src/sim';
 import { runMatch } from '../src/ai/headless';
 
@@ -27,11 +31,13 @@ interface Options {
   players: number;
   seed: number;
   duel: [Difficulty, Difficulty] | null;
+  difficulty: Difficulty | null;
   arena: string | undefined;
   mode: MatchMode;
   crowd: boolean;
   hazards: boolean;
   verbose: boolean;
+  wall: boolean;
 }
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard'];
@@ -42,11 +48,13 @@ function parseArgs(argv: string[]): Options {
     players: 4,
     seed: 1,
     duel: null,
+    difficulty: null,
     arena: undefined,
     mode: 'classic',
     crowd: false,
     hazards: true,
     verbose: false,
+    wall: false,
   };
   const diff = (v: string | undefined): Difficulty => {
     if (!DIFFICULTIES.includes(v as Difficulty))
@@ -68,6 +76,9 @@ function parseArgs(argv: string[]): Options {
       case '--duel':
         o.duel = [diff(argv[++i]), diff(argv[++i])];
         break;
+      case '--difficulty':
+        o.difficulty = diff(argv[++i]);
+        break;
       case '--arena':
         o.arena = argv[++i];
         break;
@@ -83,22 +94,27 @@ function parseArgs(argv: string[]): Options {
       case '--verbose':
         o.verbose = true;
         break;
+      case '--wall':
+        o.wall = true;
+        break;
       default:
         throw new Error(`unknown option ${a}`);
     }
   }
   if (!Number.isInteger(o.matches) || o.matches < 1) throw new Error('--matches must be a positive integer');
-  if (!Number.isInteger(o.players) || o.players < MIN_PLAYERS + 1 || o.players > MAX_PLAYERS) {
-    throw new Error(`--players must be ${MIN_PLAYERS + 1}-${MAX_PLAYERS}`);
-  }
   if (o.arena && !(o.arena in ARENAS))
     throw new Error(`unknown arena ${o.arena}; try ${Object.keys(ARENAS).join(', ')}`);
+  const max = Math.min(MAX_PLAYERS, ARENAS[o.arena ?? DEFAULT_ARENA_ID]!.maxPlayers);
+  if (!Number.isInteger(o.players) || o.players < MIN_PLAYERS + 1 || o.players > max) {
+    throw new Error(`--players must be ${MIN_PLAYERS + 1}-${max} on this arena`);
+  }
   return o;
 }
 
 /** Seat line-up for match `i`: balanced across difficulties, rotated so no seat favours anybody. */
 function lineup(o: Options, i: number): Difficulty[] {
   let base: Difficulty[];
+  if (o.difficulty) return Array.from({ length: o.players }, () => o.difficulty!);
   if (o.duel) {
     base = Array.from({ length: o.players }, (_, k) => o.duel![k % 2]!);
   } else if (o.players === 2) {
@@ -109,7 +125,9 @@ function lineup(o: Options, i: number): Difficulty[] {
     ];
     base = pairs[i % 3]!;
   } else {
-    base = [...DIFFICULTIES, DIFFICULTIES[Math.floor(i / 3) % 3]!].slice(0, o.players);
+    base = Array.from({ length: o.players }, (_, k) =>
+      k < 3 ? DIFFICULTIES[k]! : DIFFICULTIES[(k + Math.floor(i / 3)) % 3]!,
+    );
   }
   const rot = i % o.players;
   return base.map((_, k) => base[(k + rot) % base.length]!);
@@ -125,6 +143,12 @@ interface Tally {
   survival: number;
   decideMs: number;
   decideCalls: number;
+}
+
+/** CPU time of this process in ms (user + system). */
+function cpuMs(): number {
+  const u = process.cpuUsage();
+  return (u.user + u.system) / 1000;
 }
 
 function main(): void {
@@ -153,6 +177,14 @@ function main(): void {
   let wins = 0;
   let draws = 0;
   const started = performance.now();
+  const tickMs: number[] = [];
+  const halfAt: number[] = [];
+  const twoAt: number[] = [];
+  const causes: Record<string, number> = {};
+  let seatsTotal = 0;
+  let seatsPlaced = 0;
+  let seatsMoved = 0;
+  let seatsKilled = 0;
 
   for (let i = 0; i < o.matches; i++) {
     const difficulties = lineup(o, i);
@@ -161,8 +193,19 @@ function main(): void {
       difficulties,
       arenaId: o.arena,
       settings: { mode: o.mode, crowdThrows: o.crowd, stageHazards: o.hazards },
-      now: () => performance.now(),
+      now: o.wall ? () => performance.now() : cpuMs,
     });
+    for (const t of out.tickMs) tickMs.push(t);
+    const half = Math.floor(o.players / 2);
+    if (out.survivorsAt[half] !== undefined) halfAt.push(out.survivorsAt[half] / 60);
+    if (out.survivorsAt[2] !== undefined) twoAt.push(out.survivorsAt[2] / 60);
+    for (const seat of out.seats) {
+      seatsTotal++;
+      if (seat.placed > 0) seatsPlaced++;
+      if (seat.tilesVisited >= 3) seatsMoved++;
+      if (seat.kills > 0) seatsKilled++;
+      if (seat.cause) causes[seat.cause.kind] = (causes[seat.cause.kind] ?? 0) + 1;
+    }
     matchSeconds += out.ticks / 60;
     if (out.timeout) timeouts++;
     if (out.winner !== null) wins++;
@@ -195,7 +238,7 @@ function main(): void {
     d === 0 ? '   -' : `${((100 * n) / d).toFixed(1).padStart(5)}%`;
   console.log(
     `\n${o.matches} matches, ${o.players} players${o.duel ? `, duel ${o.duel[0]} vs ${o.duel[1]}` : ''}, ` +
-      `mode ${o.mode}${o.crowd ? '+crowd' : ''}${o.hazards ? '' : ' (no stage hazards)'}, seeds ${o.seed}..${o.seed + o.matches - 1}`,
+      `${o.arena ?? DEFAULT_ARENA_ID}, mode ${ARENAS[o.arena ?? DEFAULT_ARENA_ID]!.forcedMode ?? o.mode}${o.crowd ? '+crowd' : ''}${o.hazards ? '' : ' (no stage hazards)'}, seeds ${o.seed}..${o.seed + o.matches - 1}`,
   );
   console.log('difficulty  seats   wins  win%  draws  self-kill%  unassisted%  avg-survive  decide(us)');
   for (const d of DIFFICULTIES) {
@@ -213,6 +256,29 @@ function main(): void {
   );
   console.log(
     'self-kill% = eliminated by own generator/vehicle (a rival may have sealed the exit); unassisted% = nobody placed a generator nearby in the last 4s.',
+  );
+  const sorted = [...tickMs].sort((a, b) => a - b);
+  const q = (arr: number[], f: number): number =>
+    arr.length ? arr[Math.min(arr.length - 1, Math.floor(arr.length * f))]! : NaN;
+  const avg = (arr: number[]): number => arr.reduce((a, b) => a + b, 0) / Math.max(1, arr.length);
+  console.log(
+    `tick cost (all bots + sim, ${o.wall ? 'wall clock' : 'CPU time'}, this machine): avg ${avg(sorted).toFixed(2)} ms | p50 ${q(sorted, 0.5).toFixed(2)} | p99 ${q(sorted, 0.99).toFixed(2)} | max ${q(sorted, 1).toFixed(2)} ms over ${sorted.length} ticks`,
+  );
+  const med = (arr: number[]): string =>
+    arr.length
+      ? `${q(
+          [...arr].sort((a, b) => a - b),
+          0.5,
+        ).toFixed(0)}s`
+      : '-';
+  console.log(
+    `survivors: half left at median ${med(halfAt)}, two left at median ${med(twoAt)} | ` +
+      `seats that placed a generator ${((100 * seatsPlaced) / seatsTotal).toFixed(0)}%, moved ${((100 * seatsMoved) / seatsTotal).toFixed(0)}%, scored a kill ${((100 * seatsKilled) / seatsTotal).toFixed(0)}%`,
+  );
+  console.log(
+    `eliminations by cause: ${Object.entries(causes)
+      .map(([k, v]) => `${k} ${v}`)
+      .join(', ')}`,
   );
 }
 

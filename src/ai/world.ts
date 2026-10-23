@@ -7,6 +7,7 @@ import type { Dir, Observation, Pickup, Player } from '../sim';
 import { getBoard } from './board';
 import type { AiProfile } from './profiles';
 import type { Board } from './board';
+import { NEAR_MAX, NEAR_RADIUS, isLargeBoard } from './scale';
 
 /** Ticks a player needs per tile (mirrors the sim's rule: skates, Okada, slow curse). */
 export function stepTicksOf(obs: Observation, p: Readonly<Player>): number {
@@ -28,6 +29,13 @@ export class World {
   board!: Board;
   me!: Readonly<Player>;
   rivals: Readonly<Player>[] = [];
+  /**
+   * Rivals worth an expensive simulation. Standard boards: every rival (same array as `rivals`).
+   * Large boards: the nearest few inside NEAR_RADIUS, nearest first (see scale.ts).
+   */
+  near: Readonly<Player>[] = [];
+  /** Large-board limits apply (City Rumble). */
+  large = false;
   /** 1 = concrete, soft block or a generator on the ground. */
   blocked = new Uint8Array(0);
   /** `blocked` plus the tiles this bot prefers never to step on (floor hazards, curses). Used for planning. */
@@ -61,6 +69,7 @@ export class World {
       this.genAt = new Int16Array(board.size);
     }
     this.me = obs.players[obs.selfId]!;
+    this.large = isLargeBoard(board);
     this.rivals.length = 0;
     this.rivalAt.fill(0);
     for (const p of obs.players) {
@@ -68,6 +77,8 @@ export class World {
       this.rivals.push(p);
       this.rivalAt[p.y * board.width + p.x]!++;
     }
+    if (this.large) this.pickNear();
+    else this.near = this.rivals;
     const { blocked, hazard, pickupAt } = this;
     for (let i = 0; i < board.size; i++) blocked[i] = obs.tiles[i] === Tile.Empty ? 0 : 1;
     this.genAt.fill(-1);
@@ -92,6 +103,20 @@ export class World {
     if (!profile.takeCurses) {
       for (const u of obs.pickups) if (u.kind === 'curse') walk[u.y * board.width + u.x] = 1;
     }
+  }
+
+  private readonly nearBuf: Readonly<Player>[] = [];
+
+  /** Large boards: the nearest NEAR_MAX rivals within NEAR_RADIUS (ties by id: deterministic). */
+  private pickNear(): void {
+    const me = this.me;
+    const out = this.nearBuf;
+    out.length = 0;
+    const dist = (p: Readonly<Player>): number => Math.abs(p.x - me.x) + Math.abs(p.y - me.y);
+    for (const p of this.rivals) if (dist(p) <= NEAR_RADIUS) out.push(p);
+    out.sort((a, b) => dist(a) - dist(b) || a.id - b.id);
+    if (out.length > NEAR_MAX) out.length = NEAR_MAX;
+    this.near = out;
   }
 
   tileOf(x: number, y: number): number {

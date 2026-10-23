@@ -17,14 +17,16 @@ import type { Bot } from './types';
 
 export interface MatchSpec {
   seed: number;
-  /** One entry per seat (2-4). */
+  /** One entry per seat (2-4 on standard arenas, up to 32 on City Rumble). */
   difficulties: Difficulty[];
   characters?: CharacterId[];
   arenaId?: string;
   settings?: Partial<MatchSettings>;
   config?: DeepPartial<GameConfig>;
-  /** Optional clock (ms) to measure decide() cost. */
+  /** Optional clock (ms) to measure decide() cost and the whole tick (bots + simulation). */
   now?: () => number;
+  /** Stop after this many playing ticks (default: the match runs to its end). */
+  maxPlayTicks?: number;
 }
 
 export interface SeatResult {
@@ -38,6 +40,15 @@ export interface SeatResult {
   assisted: boolean;
   /** Seconds of play survived (the match length if it never died). */
   survivedSeconds: number;
+  /** Generators this seat placed. */
+  placed: number;
+  /** Distinct tiles this seat stood on. */
+  tilesVisited: number;
+  /** Rivals eliminated by this seat's generators / vehicle. */
+  kills: number;
+  /** Tile where the seat ended the match (or was eliminated). */
+  x: number;
+  y: number;
 }
 
 export interface MatchOutcome {
@@ -51,6 +62,10 @@ export interface MatchOutcome {
   /** Total ms spent in decide() per difficulty when a clock was supplied. */
   decideMs: Record<Difficulty, number>;
   decideCalls: Record<Difficulty, number>;
+  /** Wall-clock ms of every playing tick (bots + simulation), when a clock was supplied. */
+  tickMs: number[];
+  /** Playing ticks at which the number of survivors first dropped to each value (index = survivors). */
+  survivorsAt: number[];
 }
 
 const CHARACTER_CYCLE: CharacterId[] = ['streetBaller', 'lekkiBoy', 'campusQueen'];
@@ -79,7 +94,14 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
   const cap = state.config.match.countdownTicks + state.config.match.durationTicks + 60;
   const intents: Intents = {};
   const placements: { owner: number; tick: number; x: number; y: number }[] = [];
-  while (state.match.phase !== 'ended' && state.tick < cap) {
+  const visited = state.players.map((p) => new Set<number>([p.y * state.width + p.x]));
+  const kills = state.players.map(() => 0);
+  const tickMs: number[] = [];
+  const survivorsAt: number[] = [];
+  let alive = n;
+  const stopAt = spec.maxPlayTicks ?? Infinity;
+  while (state.match.phase !== 'ended' && state.tick < cap && state.match.playTicks < stopAt) {
+    const tickStart = spec.now?.() ?? 0;
     for (let i = 0; i < n; i++) {
       if (!state.players[i]!.alive) {
         delete intents[i];
@@ -96,7 +118,18 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
     for (const e of tick(state, intents)) {
       if (e.type === 'generatorPlaced')
         placements.push({ owner: e.ownerId, tick: state.tick, x: e.x, y: e.y });
+      if (e.type === 'playerEliminated' && 'ownerId' in e.cause && e.cause.ownerId !== e.playerId)
+        kills[e.cause.ownerId]!++;
     }
+    if (spec.now && state.match.phase !== 'countdown') tickMs.push(spec.now() - tickStart);
+    let now = 0;
+    for (const p of state.players) {
+      if (!p.alive) continue;
+      now++;
+      visited[p.id]!.add(p.y * state.width + p.x);
+    }
+    for (let k = alive - 1; k >= now; k--) survivorsAt[k] = state.match.playTicks;
+    alive = now;
   }
   const result = state.match.result;
   const playTicks = state.match.playTicks;
@@ -130,9 +163,16 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
         suicide,
         assisted,
         survivedSeconds: survivedTicks / 60,
+        placed: placements.filter((q) => q.owner === p.id).length,
+        tilesVisited: visited[i]!.size,
+        kills: kills[i]!,
+        x: p.x,
+        y: p.y,
       };
     }),
     decideMs,
     decideCalls,
+    tickMs,
+    survivorsAt,
   };
 }
