@@ -30,6 +30,16 @@ function collectErrors(page: Page): string[] {
   return errors;
 }
 
+/**
+ * One more tick routed through the real frame path (renderer, HUD publish), so HUD-driven UI such as
+ * the entry panel is up to date even when software WebGL renders only a few frames a second.
+ */
+async function syncHud(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    (window as never as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
+  );
+}
+
 async function openTutorial(page: Page): Promise<void> {
   await page.getByTestId('help-button').click({ timeout: 120_000 });
   await expect(page.getByTestId('how-to-play')).toBeVisible();
@@ -44,6 +54,9 @@ async function openPractice(page: Page, chapterId: string): Promise<void> {
 }
 
 test.describe('How to Play', () => {
+  // every lesson loads a fresh 3D scene; on software WebGL in a shared container that takes a while
+  test.setTimeout(420_000);
+
   test('plays a real in-engine demo with captions, pause, replay, next chapter, and exits with settings unchanged', async ({
     page,
   }, info) => {
@@ -130,13 +143,15 @@ test.describe('How to Play', () => {
 
     await page.keyboard.press('v');
     await stepTicks(page, 3);
-    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'entry');
+    await syncHud(page);
+    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'entry', { timeout: 60_000 });
     await expect(page.getByTestId('htp-check-1')).toHaveAttribute('data-done', 'true');
     await page.keyboard.press('ArrowLeft');
     await stepTicks(page, 2);
     await page.keyboard.press('Enter');
     await stepTicks(page, 2);
-    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'turn');
+    await syncHud(page);
+    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'turn', { timeout: 60_000 });
     await page.screenshot({ path: `e2e-shots/${info.project.name}-tutorial-keke-turn.png` });
     await page.keyboard.press('Enter');
     await stepTicks(page, 3);
@@ -183,10 +198,12 @@ test.describe('How to Play', () => {
     await expect(page.getByTestId('btn-vehicle')).toBeVisible();
     await page.getByTestId('btn-vehicle').dispatchEvent('pointerdown');
     await stepTicks(page, 3);
-    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'entry');
+    await syncHud(page);
+    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'entry', { timeout: 60_000 });
     await page.getByTestId('entry-confirm').click(); // NEXT (the Keke still needs its turn)
     await stepTicks(page, 2);
-    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'turn');
+    await syncHud(page);
+    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'turn', { timeout: 60_000 });
     await page.screenshot({ path: `e2e-shots/${info.project.name}-tutorial-touch-turn.png` });
     await page.getByTestId('entry-confirm').click(); // LAUNCH
     await stepTicks(page, 3);
