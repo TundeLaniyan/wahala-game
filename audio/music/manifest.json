@@ -1,0 +1,225 @@
+{
+  "_comment": "The founder's approved Pixabay tracks (Pixabay Content License), shipped ONLY as WAHALA!'s in-game soundtrack, never as a standalone collection (see public/audio/LICENSES.md). Nothing generated may ever be listed here (tests/audio/assets.test.ts). `artist` is the Pixabay uploader as named in the downloaded file; `gain` levels every track to about -14 LUFS (measured with ffmpeg ebur128). A listed file that is not present (pixabay_496406) is skipped at runtime. Each standard arena has ONE signature track (founder assignment, decision N12); City Rumble rotates a five-track subset. See docs/AUDIO.md.",
+  "version": 2,
+  "tracks": [
+    {
+      "id": "pixabay_569473",
+      "title": "Afrobeat (Afro Beat)",
+      "artist": "arpmedia",
+      "source": "https://pixabay.com/music/afrobeat-afrobeat-afro-beat-569473/",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_569473.mp3",
+      "approved": true,
+      "gain": 0.8,
+      "loudnessLufs": -12.1,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
+    },
+    {
+      "id": "pixabay_573648",
+      "title": "Afrobeat Instrumental Summer Groove",
+      "artist": "alex-morgan",
+      "source": "https://pixabay.com/music/modern-jazz-afrobeat-instrumental-summer-groove-573648/",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_573648.mp3",
+      "approved": true,
+      "gain": 0.62,
+      "loudnessLufs": -9.8,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
+    },
+    {
+      "id": "pixabay_588999",
+      "title": "Afrobeat (Afro Beat)",
+      "artist": "solarflex",
+      "source": "https://pixabay.com/music/afrobeat-afrobeat-afro-beat-588999/",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_588999.mp3",
+      "approved": true,
+      "gain": 0.91,
+      "loudnessLufs": -13.2,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
+    },
+    {
+      "id": "pixabay_491433",
+      "title": "Afrobeat (Afro Beat)",
+      "artist": "apalonbeats",
+      "source": "https://pixabay.com/music/afrobeat-afrobeat-afro-beat-491433/",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_491433.mp3",
+      "approved": true,
+      "gain": 0.72,
+      "loudnessLufs": -11.2,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
+    },
+    {
+      "id": "pixabay_439622",
+      "title": "Afrobeat (Afro Beat)",
+      "artist": "sigmamusicart",
+      "source": "https://pixabay.com/music/afrobeat-afrobeat-afro-beat-439622/",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_439622.mp3",
+      "approved": true,
+      "gain": 0.94,
+      "loudnessLufs": -13.5,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
+    },
+    {
+      "id": "pixabay_491432",
+      "title": "Afrobeat (Afro Beat) 2",
+      "artist": "apalonbeats",
+      "source": "https://pixabay.com/music/beats-afrobeat-afro-beat-2-491432/",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_491432.mp3",
+      "approved": true,
+      "gain": 0.76,
+      "loudnessLufs": -11.6,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
+    },
+    {
+      "id": "pixabay_496406",
+      "title": "Afrobeat (Afro Beat)",
+      "artist": null,
+      "source": "https://pixabay.com/music/afrobeat-afrobeat-afro-beat-496406/",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_496406.mp3",
+      "approved": true,
+      "note": "MISSING: not supplied by the founder yet (batch 1 + 2 had nine of the ten). Drop the file here as pixabay_496406.mp3 to enable it; no code change needed."
+    },
+    {
+      "id": "pixabay_406552",
+      "title": "Pause",
+      "artist": "audiolibraryinfinite",
+      "source": "https://pixabay.com/music/afrobeat-pause-406552/",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_406552.mp3",
+      "approved": true,
+      "gain": 1.15,
+      "loudnessLufs": -15.2,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
+    },
+    {
+      "id": "pixabay_540950",
+      "title": "Afro Beat Afrobeat Instrumental",
+      "artist": "hitslab",
+      "source": "https://pixabay.com/music/afrobeat-afro-beat-afrobeat-instrumental-540950/",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_540950.mp3",
+      "approved": true,
+      "gain": 0.68,
+      "loudnessLufs": -10.6,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
+    },
+    {
+      "id": "pixabay_504898",
+      "title": "Afrobeat (Afro Beat)",
+      "artist": "freemusicforvideo",
+      "source": "https://pixabay.com/music/electronic-afrobeat-afro-beat-504898/",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_504898.mp3",
+      "approved": true,
+      "gain": 0.88,
+      "loudnessLufs": -12.9,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
+    }
+  ],
+  "playlists": {
+    "default": [
+      "pixabay_569473",
+      "pixabay_573648",
+      "pixabay_588999",
+      "pixabay_491433",
+      "pixabay_439622",
+      "pixabay_491432",
+      "pixabay_496406",
+      "pixabay_406552",
+      "pixabay_540950",
+      "pixabay_504898"
+    ],
+    "arenas": {
+      "danfoBusPark": {
+        "tracks": [
+          "pixabay_504898"
+        ],
+        "start": "pixabay_504898",
+        "signature": "pixabay_504898"
+      },
+      "balogunMarket": {
+        "tracks": [
+          "pixabay_573648"
+        ],
+        "start": "pixabay_573648",
+        "signature": "pixabay_573648"
+      },
+      "lekkiRoadworks": {
+        "tracks": [
+          "pixabay_491433"
+        ],
+        "start": "pixabay_491433",
+        "signature": "pixabay_491433"
+      },
+      "oshodiInterchange": {
+        "tracks": [
+          "pixabay_569473"
+        ],
+        "start": "pixabay_569473",
+        "signature": "pixabay_569473"
+      },
+      "ajegunleBackstreets": {
+        "tracks": [
+          "pixabay_588999"
+        ],
+        "start": "pixabay_588999",
+        "signature": "pixabay_588999"
+      },
+      "lagoonJetty": {
+        "tracks": [
+          "pixabay_406552"
+        ],
+        "start": "pixabay_406552",
+        "signature": "pixabay_406552"
+      },
+      "surulerePowerYard": {
+        "tracks": [
+          "pixabay_491432"
+        ],
+        "start": "pixabay_491432",
+        "signature": "pixabay_491432"
+      },
+      "yabaAfterDark": {
+        "tracks": [
+          "pixabay_439622"
+        ],
+        "start": "pixabay_439622",
+        "signature": "pixabay_439622"
+      },
+      "thirdMainland": {
+        "tracks": [
+          "pixabay_540950"
+        ],
+        "start": "pixabay_540950",
+        "signature": "pixabay_540950"
+      },
+      "cityRumble": {
+        "tracks": [
+          "pixabay_491432",
+          "pixabay_439622",
+          "pixabay_569473",
+          "pixabay_540950",
+          "pixabay_504898"
+        ],
+        "start": "pixabay_491432",
+        "signature": null
+      }
+    }
+  },
+  "menu": []
+}

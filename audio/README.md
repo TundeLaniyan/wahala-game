@@ -1,0 +1,86 @@
+# Recorded audio slots
+
+**The only recorded audio shipped is the in-game music**: nine of the founder's ten approved Pixabay tracks
+(`music/pixabay_<id>.mp3`, Pixabay Content License, part of the game only, never a standalone collection; see
+[`LICENSES.md`](LICENSES.md)). **No effect, voice or ambience recordings are shipped**: every other sound is
+synthesised at runtime (`src/audio/recipes`). The generated music, synthetic Pidgin voices and generated ambience
+beds of the `claude/wahala-lagos-audio` branch were rejected and removed (see [`docs/AUDIO.md`](../../docs/AUDIO.md)).
+
+- `music/manifest.json`: the approved tracks, their credits and levels, and the arena playlists for
+  `src/audio/music.ts`. Track #7 (`pixabay_496406.mp3`) is listed but not supplied yet; the player skips it;
+- `voices/voices.json`: the line catalogue for `src/audio/pidgin.ts` (no voice packs), plus
+  `voices/recorded.json` + `voices/recorded/` for licensed recordings of those lines (empty);
+- `slots.json`: per-sound overrides of the synthesised sounds, described below (empty).
+
+## How it works
+
+At unlock the engine fetches `slots.json` from this folder (one request; nothing else is requested
+for slots that are not listed). For each listed slot that
+
+1. is a known slot name (see the table below),
+2. has a non-empty `license` string, and
+3. fetches and decodes successfully,
+
+the recording replaces the synthesised sound of the same name. A recording always takes priority.
+Anything missing, unlicensed, misnamed or failing to decode silently keeps the synthesised sound, so
+a broken file can never silence the game.
+
+## Adding a recording
+
+1. Put the file here, named after the slot: `<slot>.ogg` (preferred) or `<slot>.mp3`, for example
+   `explosion_1.ogg`. Other names are allowed through an explicit `file` entry (letters, digits,
+   `_`, `-`; `.ogg`, `.mp3`, `.wav` or `.m4a`; no folders).
+2. List it in `slots.json`:
+
+   ```json
+   {
+     "slots": {
+       "explosion_1": { "license": "CC0 1.0", "source": "https://example.org/freesound/12345" },
+       "crowd_loop": { "file": "walla_loop.ogg", "license": "Purchased, game licence #A-77", "gain": 0.8 }
+     }
+   }
+   ```
+
+   - `license` (required): licence name or terms. Entries without it are ignored.
+   - `source` (recommended): where it came from.
+   - `file` (optional): defaults to `<slot>.ogg`, then `<slot>.mp3`.
+   - `gain` (optional, default 1): loudness trim relative to the synthesised sound.
+3. Add a row to `LICENSES.md` (author, source URL, licence, date, attribution needed or not).
+4. Check it plays: `?debug` build, trigger the event, or run `npm run dev` and listen.
+
+Mastering tips: mono or stereo, 44.1/48 kHz; one-shots trimmed tight with a short fade-out and a few
+dB of headroom (the engine does not normalise recordings); **loops must be seamless** (the engine
+loops the buffer end to start). Recorded buffers play through the same buses as the synthesised
+ones (see `src/audio/buses.ts`): warnings are never ducked, crowd sounds are ducked under blasts.
+
+## Slot names
+
+Slot name = sound id. One-shots unless marked loop. The buses are `sfx` (effects), `warn` (danger
+warnings, never ducked), `react` (crowd reactions) and `amb` (ambience beds).
+
+| Slot | Bus | Used for |
+| --- | --- | --- |
+| `crowd_loop` (loop) | amb | general crowd murmur ("walla"), always present |
+| `crowd_loop_hype` (loop) | amb | excited layer: cheering, claps, whistles; follows excitement |
+| `buspark_loop` (loop) | amb | distant bus park: engines, generators, horns |
+| `crowd_cheer_1`, `crowd_cheer_2`, `crowd_cheer_big` | react | cheers (normal, bigger) |
+| `crowd_ooh`, `crowd_gasp`, `crowd_groan`, `crowd_laugh` | react | near misses, shocks, sympathy, comedy |
+| `crowd_whistle_1`, `crowd_whistle_2`, `crowd_clap`, `crowd_shout`, `crowd_roar` | react | whistles, applause, vehicle-attack shout, victory roar |
+| `explosion_1`, `explosion_2`, `explosion_3`, `explosion_rumble` | sfx | generator blasts (variants) and the low layer for big chains |
+| `gen_run_loop`, `gen_rattle_loop` (loops) | sfx | burning-fuse generator engine and last-third rattle |
+| `gen_place`, `gen_remote_blip`, `gen_powerdown`, `gen_dud`, `gen_kick`, `gen_carry`, `gen_throw`, `gen_drop` | sfx / warn | generator handling |
+| `fuse_tick` | warn | countdown tick |
+| `block_crumble_1`, `block_crumble_2` | sfx | soft blocks breaking |
+| `danfo_horn`, `taxi_horn`, `keke_horn` | warn | vehicle warnings |
+| `danfo_engine_loop`, `taxi_engine_loop`, `keke_engine_loop` (loops) | sfx | engine while driving |
+| `danfo_launch`, `taxi_launch`, `keke_launch`, `danfo_pass`, `taxi_pass`, `keke_pass` | sfx | launch and near-miss pass-by |
+| `okada_mount`, `okada_break`, `vehicle_hit`, `vehicle_hit_gen`, `vehicle_damage`, `vehicle_wreck` | sfx | Okada, impacts, wrecks |
+| `vehicle_entry_on`, `vehicle_entry_off` | sfx | entry-mode cues |
+| `crush_warning`, `crush_slam`, `crowd_throw_whistle`, `bottle_smash`, `firecracker_bang`, `pothole_thud`, `oil_squeak` | sfx / warn | arena hazards |
+| `pickup_1`, `pickup_rare`, `pickup_voucher`, `pickup_curse`, `pickup_reveal`, `pickup_burn`, `pickup_drop`, `pickup_wasted` | sfx | pickups |
+| `push`, `daze`, `hop` | sfx | skills and jumps |
+| `elim_slide`, `elim_boing`, `elim_womp` | sfx | comic eliminations |
+| `ui_click`, `ui_back`, `ui_start`, `ui_count`, `ui_go` | sfx | UI |
+| `win_sting`, `lose_sting`, `draw_sting` | sfx | short match-end stingers (not music) |
+
+The authoritative list is `SAMPLE_SLOTS` in `src/audio/samples.ts`.
