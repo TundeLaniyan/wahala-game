@@ -36,17 +36,17 @@ await page.evaluate((n) => {
   w.stepTicks(n);
 }, Number(ticks));
 await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
-await page.waitForTimeout(2500);
+await page.waitForTimeout(Number(process.env.RUNMS ?? 2500));
 await page.evaluate(() => (window.__WAHALA__.controller().frozen = true));
 await page.waitForTimeout(800);
-await page.screenshot({ path: `${prefix}.jpg`, quality: 85 });
+await page.screenshot({ path: `${prefix}.jpg`, quality: 85, timeout: 180000 });
 // INSPECT="x,z,zoom;x,z,zoom" adds close-up frames of the surroundings (art review)
 for (const [n, spec] of (process.env.INSPECT ?? '').split(';').filter(Boolean).entries()) {
   const [x, z, zoom] = spec.split(',').map(Number);
   await page.evaluate((t) => window.__WAHALA__.renderer().debugInspect(t), { x, z, zoom: zoom || 1 });
   await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
   await page.waitForTimeout(1800);
-  await page.screenshot({ path: `${prefix}-inspect${n}.jpg`, quality: 85 });
+  await page.screenshot({ path: `${prefix}-inspect${n}.jpg`, quality: 85, timeout: 180000 });
 }
 const stats = await page.evaluate(() => window.__WAHALA__.stats());
 console.log(JSON.stringify({ stats, errors: errors.slice(0, 5) }));

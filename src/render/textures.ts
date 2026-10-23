@@ -788,3 +788,40 @@ export function corrugatedTexture(): CanvasTexture {
     return tex(c, { repeat: true });
   });
 }
+
+/** A blast scorch: a black soot splash with ragged rays and a burnt core (RGBA, used as a decal). */
+export function scorchTexture(): CanvasTexture {
+  return cached('scorch', () => {
+    const S = 256;
+    const [c, g] = canvas(S, S);
+    const r = artRng(6631);
+    const core = g.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, 90);
+    core.addColorStop(0, 'rgba(0,0,0,0.95)');
+    core.addColorStop(0.55, 'rgba(10,8,6,0.75)');
+    core.addColorStop(1, 'rgba(10,8,6,0)');
+    g.fillStyle = core;
+    g.fillRect(0, 0, S, S);
+    g.fillStyle = 'rgba(8,6,5,0.6)';
+    for (let i = 0; i < 26; i++) {
+      const a = r() * Math.PI * 2;
+      const len = 60 + r() * 62;
+      const w = 0.06 + r() * 0.1;
+      g.beginPath();
+      g.moveTo(S / 2, S / 2);
+      g.lineTo(S / 2 + Math.cos(a - w) * len, S / 2 + Math.sin(a - w) * len);
+      g.lineTo(S / 2 + Math.cos(a) * (len + 10), S / 2 + Math.sin(a) * (len + 10));
+      g.lineTo(S / 2 + Math.cos(a + w) * len, S / 2 + Math.sin(a + w) * len);
+      g.closePath();
+      g.fill();
+    }
+    for (let i = 0; i < 120; i++) {
+      const a = r() * Math.PI * 2;
+      const d = 40 + r() * 80;
+      g.fillStyle = `rgba(6,5,4,${0.3 + r() * 0.5})`;
+      g.beginPath();
+      g.arc(S / 2 + Math.cos(a) * d, S / 2 + Math.sin(a) * d, 1 + r() * 4, 0, Math.PI * 2);
+      g.fill();
+    }
+    return tex(c);
+  });
+}

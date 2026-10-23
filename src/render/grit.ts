@@ -3,7 +3,7 @@
  * materials. It is a small patch injected into every lit standard/physical material (no extra
  * render pass, no new textures), driven by world position so it never repeats per object:
  *
- * - colour pulled towards a dusty, desaturated tone (strength per material class);
+ * - colour (after texture, vertex and instance colours) pulled towards a dusty, desaturated tone;
  * - mottled grime and soot (two octaves of value noise, darker in the crevices of the noise);
  * - street dirt creeping up the bottom of everything that stands on the ground;
  * - a dust film on upward-facing surfaces;
@@ -37,7 +37,7 @@ export const GRIT_CLASSES: Readonly<Record<Exclude<GritClass, 'none'>, GritParam
   floor: { desat: 0.42, grime: 0.55, ground: 0, dust: 0.12, rough: 0.12 },
   vehicle: { desat: 0.34, grime: 0.5, ground: 0.55, dust: 0.3, rough: 0.14 },
   crowd: { desat: 0.66, grime: 0.36, ground: 0.3, dust: 0.08, rough: 0.1 },
-  player: { desat: 0.3, grime: 0.28, ground: 0.35, dust: 0.06, rough: 0.08 },
+  player: { desat: 0.3, grime: 0.34, ground: 0.4, dust: 0.08, rough: 0.22 },
   skin: { desat: 0.06, grime: 0.06, ground: 0, dust: 0, rough: 0.02 },
 };
 
@@ -157,12 +157,12 @@ export function patchMaterial(material: Material, cls: GritClass): boolean {
       .replace('#include <project_vertex>', `${VERT_BODY}\n#include <project_vertex>`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>\n${FRAG_DECL}`)
-      .replace('#include <map_fragment>', `#include <map_fragment>\n${FRAG_COLOR}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>\n${FRAG_COLOR}`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\n${FRAG_ROUGH}`);
   };
   // uGrit is a vec4 uniform: three accepts a plain array of 4 numbers; values differ per material
   // but the GLSL is identical, so every patched material shares one program per base variant.
-  material.customProgramCacheKey = () => 'grit1';
+  material.customProgramCacheKey = () => 'grit2';
   material.needsUpdate = true;
   return true;
 }

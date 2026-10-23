@@ -59,7 +59,13 @@ function buildSkyScene(look?: ArenaLook): Scene {
   return sky;
 }
 
-export function createSceneLights(scene: Scene, renderer: WebGLRenderer, look?: ArenaLook): SceneLights {
+export function createSceneLights(
+  scene: Scene,
+  renderer: WebGLRenderer,
+  look?: ArenaLook,
+  /** Work / street lamps cost a light per lit fragment: off on the low quality profile. */
+  withLamps = true,
+): SceneLights {
   // Default: late-afternoon Lagos sun from the upper left: warm key, crisp shadows falling right and
   // slightly back, and a lower sky/bounce fill so faces turned away from the sun keep real shape.
   // Each arena can bring its own key, fill and reflection strength (arenaLook.ts).
@@ -83,7 +89,7 @@ export function createSceneLights(scene: Scene, renderer: WebGLRenderer, look?: 
   sun.shadow.normalBias = 0.03;
   sun.shadow.radius = 1.6;
   scene.add(hemi, sun, sun.target);
-  const lamps = (look?.lamps ?? []).map(([x, y, z, color]) => {
+  const lamps = (withLamps ? (look?.lamps ?? []) : []).map(([x, y, z, color]) => {
     const l = new PointLight(color, 42, 14, 1.5);
     l.position.set(x, y, z);
     l.castShadow = false;

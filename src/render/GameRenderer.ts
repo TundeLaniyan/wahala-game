@@ -135,7 +135,7 @@ export class GameRenderer {
     this.scene.fog = new Fog(look.fog.color, look.fog.near, look.fog.far);
     this.renderer.setClearColor(look.sky);
     this.renderer.toneMappingExposure = look.exposure;
-    this.lights = createSceneLights(this.scene, this.renderer, look);
+    this.lights = createSceneLights(this.scene, this.renderer, look, this.profile.flameLights > 0);
     setGritWorld(look.grit.tone, look.grit.dirt, look.grit.dust);
 
     this.backdrop = createBackdrop(this.layout, this.profile, state.arenaId);

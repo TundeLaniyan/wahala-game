@@ -49,7 +49,13 @@ const LOOKS: Record<string, ArenaLook> = {
     slab: 0x6e665c,
     street: 0x26221e,
     grit: { tone: 0x78624c, dirt: 0x5a4c3c, dust: 0x8c7a64 },
-    lamps: [],
+    // sodium street lamps over the side streets and the north bays
+    lamps: [
+      [-9.2, 3.0, -0.8, 0xffa04a],
+      [9.2, 3.0, 1.2, 0xffa04a],
+      [-4.6, 3.2, -7.4, 0xff9a40],
+      [4.6, 3.2, -7.4, 0xff9a40],
+    ],
   },
   balogunMarket: {
     sky: 0x8f887a,
@@ -64,7 +70,13 @@ const LOOKS: Record<string, ArenaLook> = {
     slab: 0x6c5242,
     street: 0x3a2a1f,
     grit: { tone: 0x7c5a44, dirt: 0x5a3e2e, dust: 0x8e6c54 },
-    lamps: [],
+    // bare bulbs under the stall roofs
+    lamps: [
+      [-9.3, 2.3, 0.4, 0xffb060],
+      [9.3, 2.3, -0.6, 0xffb060],
+      [-3.4, 2.3, -7.1, 0xffaa55],
+      [3.4, 2.3, -7.1, 0xffaa55],
+    ],
   },
   lekkiRoadworks: {
     sky: 0x121722,

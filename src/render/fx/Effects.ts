@@ -12,7 +12,15 @@ import {
 } from 'three';
 import type { Object3D, Texture } from 'three';
 import type { Layout } from '../coords';
-import { flameTexture, glowTexture, labelTexture, ringTexture, smokeTexture, starTexture } from '../textures';
+import {
+  flameTexture,
+  glowTexture,
+  labelTexture,
+  ringTexture,
+  smokeTexture,
+  starTexture,
+  scorchTexture,
+} from '../textures';
 import { ParticleSystem } from './Particles';
 import type { QualityProfile } from '../quality';
 
@@ -140,23 +148,47 @@ export class Effects {
         gravity: 9,
       });
     }
-    for (let i = 0; i < this.n(10); i++) {
+    // a heavy billow of black generator smoke: rises quickly (so the lanes stay readable) and lingers above
+    for (let i = 0; i < this.n(16); i++) {
       const a = Math.random() * Math.PI * 2;
+      const c = 0.1 + Math.random() * 0.08;
       this.smoke.emit({
+        x: x + Math.cos(a) * 0.2,
+        y: 0.35,
+        z: z + Math.sin(a) * 0.2,
+        vx: Math.cos(a) * 0.7,
+        vy: 1.3 + Math.random() * 1.1,
+        vz: Math.sin(a) * 0.7,
+        life: 1.6 + Math.random() * 1.2,
+        size: 0.7,
+        sizeEnd: 2.3 + Math.random() * 0.8,
+        r: c,
+        g: c * 0.95,
+        b: c * 0.9,
+        a: 0.55,
+        drag: 0.9,
+      });
+    }
+    // torn metal, concrete grit and sparks thrown out of the blast
+    for (let i = 0; i < this.n(14); i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 2.2 + Math.random() * 3.6;
+      const c = Math.random() < 0.5 ? 0.16 : 0.32;
+      this.chunks.emit({
         x,
-        y: 0.3,
+        y: 0.4,
         z,
-        vx: Math.cos(a) * 0.6,
-        vy: 0.8 + Math.random() * 0.9,
-        vz: Math.sin(a) * 0.6,
-        life: 1.1 + Math.random() * 0.8,
-        size: 0.6,
-        sizeEnd: 1.7,
-        r: 0.28,
-        g: 0.26,
-        b: 0.25,
-        a: 0.65,
-        drag: 0.8,
+        vx: Math.cos(a) * s,
+        vy: 2.4 + Math.random() * 3.4,
+        vz: Math.sin(a) * s,
+        life: 0.7 + Math.random() * 0.6,
+        size: 0.08 + Math.random() * 0.1,
+        sizeEnd: 0.05,
+        r: c * 1.1,
+        g: c,
+        b: c * 0.9,
+        gravity: 12,
+        drag: 0.3,
       });
     }
     this.flash(x, 0.5, z, 3.2, 0xfff0b0, 0.22);
@@ -223,25 +255,26 @@ export class Effects {
 
   scorch(x: number, z: number): void {
     const mat = new MeshBasicMaterial({
-      map: glowTexture(),
-      color: 0x000000,
+      map: scorchTexture(),
+      color: 0xffffff,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.7,
       depthWrite: false,
       polygonOffset: true,
       polygonOffsetFactor: -2,
     });
-    const m = new Mesh(new PlaneGeometry(1.5, 1.5), mat);
-    m.rotation.x = -Math.PI / 2;
+    const m = new Mesh(new PlaneGeometry(1.7, 1.7), mat);
+    m.rotation.set(-Math.PI / 2, 0, Math.random() * Math.PI * 2);
     m.position.set(x, 0.012, z);
     m.renderOrder = 2;
     let age = 0;
+    // scorch marks stay for most of a match: the street remembers the fight
     this.add({
       obj: m,
       update: (dt) => {
         age += dt;
-        mat.opacity = Math.max(0, 0.4 * (1 - age / 14));
-        return age < 14;
+        mat.opacity = Math.max(0, 0.7 * (1 - Math.max(0, age - 40) / 30));
+        return age < 70;
       },
       dispose: () => {
         m.geometry.dispose();
