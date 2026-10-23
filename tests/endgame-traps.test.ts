@@ -13,7 +13,7 @@ const TPS = 60;
 const ARENA_IDS = Object.keys(ARENAS);
 const remaining = (s: GameState): number => s.config.match.durationTicks - s.match.playTicks;
 
-function game(arenaId: string, mode: MatchMode = 'classic', players = 2): GameState {
+function game(arenaId: string, mode: MatchMode = 'classic', players = 2, clearSoft = true): GameState {
   const s = createGame({
     seed: 9,
     arenaId,
@@ -26,6 +26,8 @@ function game(arenaId: string, mode: MatchMode = 'classic', players = 2): GameSt
   });
   s.match.phase = 'playing';
   s.match.countdownRemaining = 0;
+  // by the endgame most crates are gone; clear them so every planned trap tile is open floor
+  if (clearSoft) s.tiles = s.tiles.map((t) => (t === Tile.Soft ? Tile.Empty : t));
   if (s.crush) {
     // idle test players would be crushed in the first ring: park them on the final safe tile
     const last = s.crush.order[s.crush.order.length - 1]!;
@@ -199,6 +201,19 @@ describe('endgame traps genuinely work, fairly', () => {
     for (let t = 0; t < 2; t++) ev2.push(...tick(s, { 0: { move: b.dir } }));
     expect(ev2.some((e) => e.type === 'hazardTriggered' && e.kind === 'pothole')).toBe(true);
     expect(s.players[0]!.dazedUntil).toBeGreaterThan(s.tick);
+  });
+
+  it('a wave never hides a trap under a crate: tiles still covered when it is telegraphed are skipped', () => {
+    const s = game('danfoBusPark', 'classic', 2, false);
+    const planned = s.endgameTraps.waves[0]!;
+    const covered = planned.filter((t) => s.tiles[t.index] === Tile.Soft).map((t) => t.index);
+    const open = planned.filter((t) => s.tiles[t.index] === Tile.Empty).map((t) => t.index);
+    expect(covered.length + open.length).toBe(planned.length);
+    runUntil(s, 30 * TPS);
+    for (const i of covered) {
+      if (s.tiles[i] === Tile.Soft) expect(s.floorHazards[i]).toBeUndefined();
+    }
+    for (const i of open) expect(s.floorHazards[i]).toBeDefined();
   });
 
   it('a trap that appears under a standing player does nothing until they step onto a trap', () => {

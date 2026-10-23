@@ -223,5 +223,7 @@ function exposeDebugHandle(): void {
     stepTicks: (n: number) => {
       for (let i = 0; i < n; i++) controller?.stepOnce();
     },
+    /** Like stepTicks, but every tick's events reach the renderer, audio and HUD as in real play. */
+    advance: (n: number) => controller?.debugAdvance(n),
   };
 }

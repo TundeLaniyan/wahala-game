@@ -30,10 +30,18 @@ await page.getByTestId('players-4').click();
 await page.getByTestId('start-button').click();
 await page.getByTestId('hud').waitFor();
 await page.waitForTimeout(1500);
+// CLEARSOFT=1 (screenshot staging only): remove the crates, e.g. to show the endgame traps on open floor
+if (process.env.CLEARSOFT)
+  await page.evaluate(() => {
+    const s = window.__WAHALA__.getState();
+    s.tiles = s.tiles.map((t) => (t === 2 ? 0 : t));
+  });
 await page.evaluate((n) => {
   const w = window.__WAHALA__;
   w.controller().frozen = true;
-  w.stepTicks(n);
+  // fast-forward, then play the last 4 s through the real event path (effects, toasts, audio)
+  w.stepTicks(Math.max(0, n - 240));
+  w.advance(Math.min(n, 240));
 }, Number(ticks));
 await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
 await page.waitForTimeout(Number(process.env.RUNMS ?? 2500));

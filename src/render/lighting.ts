@@ -89,6 +89,8 @@ export function createSceneLights(
   sun.shadow.normalBias = 0.03;
   sun.shadow.radius = 1.6;
   scene.add(hemi, sun, sun.target);
+  // without its lamps (low quality) a lamp-lit arena gets a stronger fill so the streets stay readable
+  if (!withLamps && (look?.lamps.length ?? 0) > 0) hemi.intensity *= 1.3;
   const lamps = (withLamps ? (look?.lamps ?? []) : []).map(([x, y, z, color]) => {
     const l = new PointLight(color, 42, 14, 1.5);
     l.position.set(x, y, z);

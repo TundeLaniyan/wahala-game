@@ -163,6 +163,16 @@ export class MatchController {
     this.afterFrame(frameEvents, nowMs, this.paused ? 0 : dtMs / 1000);
   }
 
+  /**
+   * Debug / art review: advances `n` ticks and routes each tick's events exactly like real play
+   * (renderer effects, audio, captions, toasts), unlike `stepOnce`, which only runs the simulation.
+   */
+  debugAdvance(n: number): void {
+    for (let i = 0; i < n && this.state && this.state.match.phase !== 'ended'; i++) {
+      this.afterFrame(this.stepOnce(), performance.now(), 1 / 60);
+    }
+  }
+
   /** Advances exactly one simulation tick, with human and bot intents. */
   stepOnce(): SimEvent[] {
     const state = this.state!;
