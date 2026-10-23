@@ -95,6 +95,12 @@ the modelled ones.
 - They genuinely work (a pothole stumbles you, oil slides you two tiles) and are fair: only a step that starts onto a
   live trap triggers it; a wave only claims open floor (never a trap hidden under a crate); never on pillars; in
   Wahala Crush never on the final safe tile or its neighbours; crushed tiles bury their trap.
+- Screenshots (crates cleared for staging, bots off so the clock reaches 0:30): the telegraph at 0:31 on the bus
+  park, `detail/endgame-traps-telegraph-0-31.jpg`, and live traps at 0:28 on Lekki (endgame waves plus that arena's
+  early traps), `detail/endgame-traps-live-lekki-0-28.jpg`.
+
+  ![](screenshots/gritty-v1/detail/endgame-traps-telegraph-0-31.jpg)
+  ![](screenshots/gritty-v1/detail/endgame-traps-live-lekki-0-28.jpg)
 - The old option is now "Early traps" (traps all match, on top of the endgame waves), available on every arena.
 - Wahala Crush is unchanged and re-tested with the traps: warning at 0:45, first landing at 0:43.8, final tile at
   exactly 0:00, simultaneous final deaths = draw. Match duration, crate density and pickup odds are unchanged.
