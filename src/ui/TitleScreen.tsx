@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ARENAS, CHARACTERS, CHARACTER_IDS, VEHICLE_DEFS } from '../sim';
 import type { CharacterId, Difficulty, MatchMode } from '../sim';
 import { portraitUrl } from '../assets/portraits';
@@ -31,74 +30,10 @@ function Choice<T extends string | number | boolean>(props: {
   );
 }
 
-function HowToPlay({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="scrim" data-testid="help" onClick={onClose}>
-      <div className="card help-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>How to play</h2>
-        <ul>
-          <li>
-            Drop generators to blast rivals. Fire is a plus shape, stops at concrete and happily gets{' '}
-            <b>you</b> too.
-          </li>
-          <li>Last one standing wins in two minutes. If the last two fall together it is a draw.</li>
-          <li>
-            Break crates for upgrades. An <b>Okada</b> shields you from one deadly hit.
-          </li>
-          <li>
-            A <b>Vehicle Voucher</b> calls your Danfo, Yellow Cab or Keke down any open lane.
-          </li>
-        </ul>
-        <dl>
-          <dt>Move</dt>
-          <dd>
-            <span className="kbd">←↑↓→</span> / <span className="kbd">WASD</span> · D-pad / stick · on-screen
-            pad
-          </dd>
-          <dt>Generator</dt>
-          <dd>
-            <span className="kbd">Space</span> · gamepad A · big button
-          </dd>
-          <dt>Carry / punch</dt>
-          <dd>
-            <span className="kbd">E</span> · gamepad X
-          </dd>
-          <dt>Push / daze</dt>
-          <dd>
-            <span className="kbd">F</span> · gamepad B
-          </dd>
-          <dt>Remote boom</dt>
-          <dd>
-            <span className="kbd">Q</span> · gamepad RB
-          </dd>
-          <dt>Kill switch</dt>
-          <dd>
-            <span className="kbd">X</span> · gamepad LB
-          </dd>
-          <dt>Vehicle</dt>
-          <dd>
-            <span className="kbd">V</span> · gamepad Y, then pick a border arrow and confirm
-          </dd>
-          <dt>Pause</dt>
-          <dd>
-            <span className="kbd">P</span> / <span className="kbd">Esc</span>
-          </dd>
-        </dl>
-        <div className="row">
-          <button type="button" className="btn primary small" onClick={onClose}>
-            Got it
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function TitleScreen() {
   const s = useGameStore((st) => st.settings);
   const loading = useGameStore((st) => st.loading);
   useGameStore((st) => st.portraitsVersion);
-  const [help, setHelp] = useState(false);
   const set = (p: Partial<GameSettings>) => commands.updateSettings(p);
   const busy = loading !== null && loading.done < loading.total;
 
@@ -120,7 +55,13 @@ export function TitleScreen() {
           >
             {busy ? 'Loading…' : 'Play'}
           </button>
-          <button type="button" className="btn small" data-testid="help-button" onClick={() => setHelp(true)}>
+          <button
+            type="button"
+            className="btn small"
+            data-testid="help-button"
+            disabled={busy}
+            onClick={() => commands.openTutorial()}
+          >
             How to play
           </button>
         </div>
@@ -266,7 +207,6 @@ export function TitleScreen() {
           <i />
         </div>
       )}
-      {help && <HowToPlay onClose={() => setHelp(false)} />}
     </div>
   );
 }

@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 // Set WAHALA_CHROMIUM to use a preinstalled Chromium instead of `npx playwright install`.
 const executablePath = process.env.WAHALA_CHROMIUM || undefined;
-const PORT = 4173;
+// WAHALA_E2E_PORT: run against a private preview server (several checkouts on one machine)
+const PORT = Number(process.env.WAHALA_E2E_PORT) || 4173;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -17,7 +18,8 @@ export default defineConfig({
       executablePath,
       args: [
         // The container's preinstalled Chromium needs one process; on CI runners it kills new contexts.
-        ...(executablePath ? ['--single-process'] : []),
+        // WAHALA_MULTIPROCESS=1 opts out where the single-process launch itself crashes (busy shared container)
+        ...(executablePath && !process.env.WAHALA_MULTIPROCESS ? ['--single-process'] : []),
         '--no-sandbox',
         '--use-gl=angle',
         '--use-angle=swiftshader',

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { commands, mount } from '../app/session';
 import { useGameStore } from '../app/store';
+import { HowToPlay } from './HowToPlay';
 import { Hud } from './Hud';
 import { PauseOverlay, ResultsOverlay, RotateOverlay } from './Overlays';
 import { TitleScreen } from './TitleScreen';
@@ -16,6 +17,7 @@ export function App() {
   const touchCapable = useGameStore((s) => s.touchCapable);
   const device = useGameStore((s) => s.device);
   const fatal = useGameStore((s) => s.fatal);
+  const tutorial = useGameStore((s) => s.tutorial?.mode ?? null);
 
   useEffect(() => {
     const unmount = mount(canvasRef.current!);
@@ -27,7 +29,7 @@ export function App() {
     touchSetting === 'on' || (touchSetting === 'auto' && (touchCapable || device === 'touch'));
 
   return (
-    <div className="game-root">
+    <div className={`game-root${tutorial ? ' htp-on' : ''}`}>
       <canvas
         ref={canvasRef}
         className="game-canvas"
@@ -38,8 +40,9 @@ export function App() {
       />
       <div className="vignette" aria-hidden />
       {screen !== 'title' && <Hud />}
-      {screen === 'playing' && showTouch && !paused && <TouchControls />}
-      {screen === 'playing' && paused && <PauseOverlay />}
+      {screen === 'playing' && showTouch && !paused && tutorial !== 'demo' && <TouchControls />}
+      {screen === 'playing' && paused && !tutorial && <PauseOverlay />}
+      {screen === 'playing' && tutorial && <HowToPlay />}
       {screen === 'results' && <ResultsOverlay />}
       {screen === 'title' && !fatal && <TitleScreen />}
       {fatal && (
