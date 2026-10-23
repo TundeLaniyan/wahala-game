@@ -39,7 +39,16 @@ below come from those names (the files carry no ID3 tags). All nine are distinct
 
 | Expected file | Source page | Status |
 | --- | --- | --- |
-| `pixabay_496406.mp3` | https://pixabay.com/music/afrobeat-afrobeat-afro-beat-496406/ | Approved track #7; not supplied yet. Its slot is in the manifest (and in the Danfo Bus Park playlist); dropping the file in enables it with no code change. |
+| `pixabay_496406.mp3` | https://pixabay.com/music/afrobeat-afrobeat-afro-beat-496406/ | Approved track #7; not supplied yet. Its slot is in the manifest (no arena uses it as its signature track); dropping the file in enables it with no code change. |
+
+### Public repository and GitHub Pages
+
+The game is deployed as static files on GitHub Pages from a public repository, so the MP3s can be fetched by anyone
+who inspects the page or the repository; they are not technically protected from download and nobody should claim
+they are. They are used only as WAHALA!'s in-game soundtrack (one signature track per arena, loaded by the game's own
+player), never presented or linked as a separate collection. Keep it that way: no "download the soundtrack" link,
+no music page, no ZIP. Whether to keep the files in the public repository long term (versus private storage or a CDN
+for a commercial release) is a founder decision; see `docs/AUDIO.md`.
 
 ## Other recordings (sample slots, voices)
 
