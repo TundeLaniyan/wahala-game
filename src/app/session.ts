@@ -67,10 +67,13 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   if (forced === 'low' || forced === 'medium' || forced === 'high')
     patch({ settings: { ...useGameStore.getState().settings, quality: forced } });
   const settings = useGameStore.getState().settings;
+  const cameraOverride = params.get('cam') === 'stadium' ? 'stadium' : null;
+  patch({ cameraOverride });
   try {
     renderer = new GameRenderer({
       canvas,
       quality: settings.quality,
+      cameraMode: cameraOverride,
       onContextLost: () =>
         patch({
           fatal:
@@ -129,10 +132,12 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   const onVisibility = (): void => {
     if (document.hidden && useGameStore.getState().screen === 'playing') controller?.setPaused(true);
   };
-  // Camera view toggle (O): presentation only, so it lives outside the gameplay input mapping.
+  // Stadium camera toggle (O): presentation only, so it lives outside the gameplay input mapping.
+  // Standard matches always show the whole arena, so the key does nothing there.
   const onCameraKey = (e: KeyboardEvent): void => {
     if (e.code !== 'KeyO' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (useGameStore.getState().screen === 'playing') commands.toggleCameraView();
+    if (useGameStore.getState().screen === 'playing' && renderer?.cameraMode() === 'stadium')
+      commands.toggleCameraView();
   };
   window.addEventListener('keydown', onCameraKey);
   const unlock = (): void => {

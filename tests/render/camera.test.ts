@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Vector3 } from 'three';
 import { CameraRig } from '../../src/render/cameraRig';
 import { directShot } from '../../src/render/cameraDirector';
+import { cameraModeFor, selectShot } from '../../src/render/cameraModes';
 import { createLayout } from '../../src/render/coords';
 import { Tile } from '../../src/sim/types';
 import { addGenerator, put, sandbox } from '../helpers';
@@ -233,4 +234,55 @@ describe('camera director', () => {
     addGenerator(state, { ownerId: 1, x: 9, y: 7, range: 2 });
     expect(directShot(state, layout, 0, 0, false).keep).toHaveLength(0);
   });
+});
+
+describe('camera modes: standard matches keep the whole arena on one shared screen', () => {
+  it('every standard arena uses the fixed whole-arena camera; stadium is opt-in', () => {
+    for (const id of ['danfoBusPark', 'balogunMarket', 'lekkiRoadworks']) {
+      expect(cameraModeFor(id)).toBe('arena');
+      expect(cameraModeFor(id, 'stadium')).toBe('stadium');
+    }
+  });
+
+  it('arena mode never follows a player or zooms: countdown, play, threats, spectating, entry and results', () => {
+    const state = sandbox({ players: 4 });
+    const layout = createLayout(state.width, state.height);
+    const opts = { preferOverview: false, choosingEntry: false, attract: false };
+    const shots = (): unknown[] => [
+      selectShot('arena', state, layout, 0, 0, opts),
+      selectShot('arena', state, layout, 0, 0.5, { ...opts, choosingEntry: true }),
+    ];
+    state.match.phase = 'countdown';
+    state.match.countdownRemaining = 10;
+    expect(shots()).toEqual([null, null]);
+    state.match.phase = 'playing';
+    addGenerator(state, { ownerId: 1, x: 1, y: 0 });
+    expect(shots()).toEqual([null, null]);
+    state.players[0]!.alive = false;
+    state.players[1]!.alive = false;
+    expect(shots()).toEqual([null, null]);
+    state.match.phase = 'ended';
+    state.match.result = { kind: 'win', winnerId: 2 };
+    expect(shots()).toEqual([null, null]);
+    // the stadium mode keeps the follow camera
+    state.match.phase = 'playing';
+    state.players[0]!.alive = true;
+    expect(selectShot('stadium', state, layout, 0, 0, opts)?.kind).toBe('action');
+  });
+
+  for (const vp of VIEWPORTS) {
+    it(`${vp.name}: the fixed camera is a 40-50 degree three-quarter view framing the whole arena`, () => {
+      const layout = createLayout(15, 11);
+      const rig = new CameraRig(layout);
+      rig.fit(vp.w / vp.h, vp.insets);
+      rig.update(0, 0, 0, null);
+      const pitch = pitchOf(rig);
+      expect(pitch).toBeGreaterThanOrEqual(40);
+      expect(pitch).toBeLessThanOrEqual(50);
+      expect(rig.framesWholeArena()).toBe(true);
+      // and it stays there over a long match (no drift towards anybody)
+      for (let i = 0; i < 600; i++) rig.update(1 / 60, i / 60, 0, null);
+      expect(rig.framesWholeArena()).toBe(true);
+    });
+  }
 });

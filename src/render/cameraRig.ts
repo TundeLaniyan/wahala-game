@@ -3,19 +3,19 @@ import type { CameraShot } from './cameraDirector';
 import type { Layout } from './coords';
 
 /**
- * Two framings share one camera:
+ * Two framings share one camera (which one is used is decided by the camera mode, cameraModes.ts):
  *
- * - ACTION (default): a low, close three-quarter camera (41 degrees above the floor) that follows the
+ * - OVERVIEW: the whole arena fitted inside the HUD-free band at a cinematic 46 degrees. This is the
+ *   fixed camera of every standard match.
+ * - ACTION (stadium mode only): a low, close three-quarter camera (41 degrees above the floor) that follows the
  *   local player with smooth damping, widening only as far as needed to keep incoming danger
  *   (a generator whose cross reaches the player, a vehicle about to pass) on screen. It never
  *   rotates, so up is always north and the controls never change meaning.
- * - OVERVIEW: the whole arena fitted inside the HUD-free band (establishing shot, the toggle, and
- *   the fallback when nothing needs following).
  *
  * The camera is purely presentational: it never affects the simulation.
  */
 const ACTION_PITCH = MathUtils.degToRad(41);
-const OVERVIEW_PITCH = MathUtils.degToRad(48);
+const OVERVIEW_PITCH = MathUtils.degToRad(46);
 const FOV = 38;
 /** Vertical span (world units, in the view plane at the focus) covered by the HUD-free band. */
 const ACTION_SPAN = 6.4;
@@ -269,6 +269,32 @@ export class CameraRig {
     cam.position.z += Math.sin(time * 41) * s;
     if (attract) cam.lookAt(p.x, 0, p.z);
     cam.updateMatrixWorld(true);
+  }
+
+  /**
+   * True when every playable tile (floor corners, and a standing character's head on the far row) is
+   * inside the HUD-free band of the current camera; in the phone layout the near corners must also
+   * stay clear of the on-screen controls.
+   */
+  framesWholeArena(): boolean {
+    const W = this.layout.width;
+    const H = this.layout.height;
+    const compact = this.insets.top >= 0.12 && this.camera.aspect > 1.2;
+    const yTop = 1 - this.insets.top * 2;
+    const yBottom = -1 + this.insets.bottom * 2;
+    const pts: [number, number, number, number][] = [
+      [-W / 2, 0, -H / 2, 1],
+      [W / 2, 0, -H / 2, 1],
+      [-W / 2, 1.9, -H / 2 + 0.5, 1],
+      [W / 2, 1.9, -H / 2 + 0.5, 1],
+      [-W / 2, 0, H / 2, compact ? NEAR_X_COMPACT + 0.02 : 1],
+      [W / 2, 0, H / 2, compact ? NEAR_X_COMPACT + 0.02 : 1],
+    ];
+    for (const [x, y, z, maxX] of pts) {
+      this.v.set(x, y, z).project(this.camera);
+      if (Math.abs(this.v.x) > maxX || this.v.y > yTop + 0.02 || this.v.y < yBottom - 0.02) return false;
+    }
+    return true;
   }
 
   /** Jump straight to the goal on the next update (new match). */

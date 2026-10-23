@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { InputSourceName } from '../input';
-import type { RenderStats } from '../render';
+import type { CameraMode, RenderStats } from '../render';
 import type { HudSnapshot } from './hud';
 import type { CrowdCaptionLine } from './ports';
 import { loadSettings } from './settings';
@@ -47,6 +47,8 @@ export interface UiState {
   loading: { done: number; total: number } | null;
   /** Bumped when the rendered 3D portraits become available so the UI re-reads them. */
   portraitsVersion: number;
+  /** Debug `?cam=stadium`: forces the stadium follow camera; null = chosen per arena. */
+  cameraOverride: CameraMode | null;
 }
 
 /** UI-facing state. The simulation state itself is deliberately NOT stored in React state. */
@@ -67,6 +69,7 @@ export const useGameStore = create<UiState>(() => ({
   fatal: null,
   loading: { done: 0, total: 1 },
   portraitsVersion: 0,
+  cameraOverride: null,
 }));
 
 export const patch = (p: Partial<UiState>): void => useGameStore.setState(p);

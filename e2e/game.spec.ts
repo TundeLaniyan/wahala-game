@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { getState, holdKey, mutate, open, startMatch, stepTicks } from './helpers';
 
 test.describe('menus and match flow', () => {
@@ -35,19 +36,47 @@ test.describe('menus and match flow', () => {
 });
 
 test.describe('gameplay camera', () => {
-  test('follows the player low and close; O and the map button toggle the whole-arena view', async ({
+  type Pose = { pitchDeg: number; distance: number; mode: string; arenaInView: boolean };
+  const read = (page: Page): Promise<Pose> =>
+    page.evaluate(() =>
+      (window as unknown as { __WAHALA__: { renderer(): { debugCamera(): Pose } } }).__WAHALA__
+        .renderer()
+        .debugCamera(),
+    );
+
+  test('standard match: the whole arena stays on one shared screen for the entire match', async ({
     page,
   }, info) => {
     await open(page, '&nobots');
+    await startMatch(page, { competitors: 4 });
+    const first = await read(page);
+    expect(first.mode).toBe('arena');
+    expect(first.pitchDeg).toBeGreaterThan(40);
+    expect(first.pitchDeg).toBeLessThan(50);
+    expect(first.arenaInView).toBe(true);
+    await expect(page.getByTestId('camera-button')).toHaveCount(0);
+    // move, wait, press O: nothing changes the framing
+    await holdKey(page, 'ArrowUp', 6);
+    await stepTicks(page, 120);
+    await page.keyboard.press('o');
+    await stepTicks(page, 60);
+    const later = await read(page);
+    expect(later.arenaInView).toBe(true);
+    expect(later.distance).toBeCloseTo(first.distance, 3);
+    // spectating: the local player out, the camera still frames everybody
+    await mutate(page, 's.players[0].alive = false;');
+    await stepTicks(page, 30);
+    const spectating = await read(page);
+    expect(spectating.arenaInView).toBe(true);
+    expect(spectating.distance).toBeCloseTo(first.distance, 3);
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-camera-arena.png` });
+  });
+
+  test('stadium mode (?cam=stadium) keeps the close follow camera with the overview toggle', async ({
+    page,
+  }) => {
+    await open(page, '&nobots&cam=stadium');
     await startMatch(page, { competitors: 2 });
-    type Pose = { pitchDeg: number; distance: number };
-    const read = (): Promise<Pose> =>
-      page.evaluate(() =>
-        (window as unknown as { __WAHALA__: { renderer(): { debugCamera(): Pose } } }).__WAHALA__
-          .renderer()
-          .debugCamera(),
-      );
-    // software WebGL draws a few frames per second: jump the damped camera to its goal, then wait for a frame
     const cut = (): Promise<void> =>
       page.evaluate(() =>
         (window as unknown as { __WAHALA__: { renderer(): { cutCamera(): void } } }).__WAHALA__
@@ -55,28 +84,19 @@ test.describe('gameplay camera', () => {
           .cutCamera(),
       );
     await cut();
-    await expect.poll(async () => (await read()).distance, { timeout: 15_000 }).toBeLessThan(14);
-    const action = await read();
-    expect(action.pitchDeg).toBeGreaterThan(40);
-    expect(action.pitchDeg).toBeLessThan(50);
+    await expect.poll(async () => (await read(page)).distance, { timeout: 15_000 }).toBeLessThan(14);
+    const action = await read(page);
+    expect(action.mode).toBe('stadium');
     await expect(page.getByTestId('camera-button')).toHaveAttribute('data-view', 'action');
-    await page.screenshot({ path: `e2e-shots/${info.project.name}-camera-action.png` });
-
     await page.keyboard.press('o');
     await expect(page.getByTestId('camera-button')).toHaveAttribute('data-view', 'overview');
     await cut();
     await expect
-      .poll(async () => (await read()).distance, { timeout: 15_000 })
+      .poll(async () => (await read(page)).distance, { timeout: 15_000 })
       .toBeGreaterThan(action.distance * 1.5);
-    await page.screenshot({ path: `e2e-shots/${info.project.name}-camera-overview.png` });
-
     await page.getByTestId('camera-button').click();
     await expect(page.getByTestId('camera-button')).toHaveAttribute('data-view', 'action');
-    await cut();
-    await expect.poll(async () => (await read()).distance, { timeout: 15_000 }).toBeLessThan(14);
-    // presentation only: toggling never moved the player or changed the match
-    const st = await getState(page);
-    expect(st.phase).toBe('playing');
+    expect((await getState(page)).phase).toBe('playing');
   });
 });
 

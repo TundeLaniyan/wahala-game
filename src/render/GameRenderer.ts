@@ -8,7 +8,8 @@ import { installGrading } from './grading';
 import type { SceneLights } from './lighting';
 import type { Backdrop } from './assets/backdrop';
 import { CameraRig } from './cameraRig';
-import { directShot } from './cameraDirector';
+import { cameraModeFor, selectShot } from './cameraModes';
+import type { CameraMode } from './cameraModes';
 import { createLayout } from './coords';
 import type { Layout } from './coords';
 import { Effects } from './fx/Effects';
@@ -40,6 +41,8 @@ export type CameraView = 'action' | 'overview';
 export interface RendererOptions {
   canvas: HTMLCanvasElement;
   quality: QualityLevel | 'auto';
+  /** Forces a camera mode for every match (debug `?cam=stadium`); default: chosen per arena. */
+  cameraMode?: CameraMode | null;
   onContextLost?: () => void;
 }
 
@@ -90,9 +93,12 @@ export class GameRenderer {
   private disposed = false;
   private loaded = false;
   private overviewPreferred = false;
+  private readonly cameraOverride: CameraMode | null;
+  private mode: CameraMode = 'arena';
 
   constructor(opts: RendererOptions) {
     this.auto = opts.quality === 'auto';
+    this.cameraOverride = opts.cameraMode ?? null;
     this.profile = QUALITY[opts.quality === 'auto' ? 'medium' : opts.quality];
     this.renderer = new WebGLRenderer({
       canvas: opts.canvas,
@@ -115,6 +121,7 @@ export class GameRenderer {
     this.unload();
     this.layout = createLayout(state.width, state.height);
     this.rig = new CameraRig(this.layout);
+    this.mode = cameraModeFor(state.arenaId, this.cameraOverride);
     this.effects = new Effects(this.layout, this.profile);
 
     const look = arenaLook(state.arenaId);
@@ -180,9 +187,17 @@ export class GameRenderer {
     }
   }
 
-  /** 'action' = the low follow camera (default); 'overview' = the whole arena in one fixed frame. */
+  /**
+   * Stadium mode only: 'action' = the close follow camera, 'overview' = the whole arena. Standard
+   * matches (`arena` mode) always show the whole arena and ignore this.
+   */
   setCameraView(view: CameraView): void {
     this.overviewPreferred = view === 'overview';
+  }
+
+  /** Camera mode of the loaded match: 'arena' (whole arena, fixed) or 'stadium' (follow camera). */
+  cameraMode(): CameraMode {
+    return this.mode;
   }
 
   setQuality(level: QualityLevel | 'auto'): void {
@@ -341,9 +356,11 @@ export class GameRenderer {
     for (const v of this.views) v.update(ctx);
     this.effects.update(dt, this.time);
     this.backdrop.update(this.time, info.excitement);
-    // Choosing a vehicle entrance needs every border arrow on screen (and clickable): pull out to the overview.
-    const overview = this.overviewPreferred || info.entryOverlay !== null;
-    const shot = info.attract ? null : directShot(state, this.layout, info.localPlayerId, alpha, overview);
+    const shot = selectShot(this.mode, state, this.layout, info.localPlayerId, alpha, {
+      preferOverview: this.overviewPreferred,
+      choosingEntry: info.entryOverlay !== null,
+      attract: info.attract === true,
+    });
     this.rig.update(dt, this.time, this.effects.shake, shot, info.attract === true);
     this.renderer.render(this.scene, this.rig.camera);
     this.trackPerformance(dt);
@@ -388,8 +405,16 @@ export class GameRenderer {
     if (this.loaded) this.rig.cut();
   }
 
-  /** Debug: camera pose. */
-  debugCamera(): { position: number[]; aspect: number; fov: number; pitchDeg: number; distance: number } {
+  /** Debug: camera pose, mode and whether every playable tile is inside the HUD-free band. */
+  debugCamera(): {
+    position: number[];
+    aspect: number;
+    fov: number;
+    pitchDeg: number;
+    distance: number;
+    mode: CameraMode;
+    arenaInView: boolean;
+  } {
     const c = this.rig.camera;
     const pose = this.rig.currentPose();
     return {
@@ -398,6 +423,8 @@ export class GameRenderer {
       fov: c.fov,
       pitchDeg: (pose.pitch * 180) / Math.PI,
       distance: pose.distance,
+      mode: this.mode,
+      arenaInView: this.loaded && this.rig.framesWholeArena(),
     };
   }
 

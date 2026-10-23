@@ -14,7 +14,7 @@ export interface GameSettings {
   sfxVolume: number;
   muted: boolean;
   touchControls: 'auto' | 'on' | 'off';
-  /** Gameplay camera: the low follow camera, or the whole arena in one frame. */
+  /** Stadium-mode camera only: the follow camera, or the whole arena. Standard matches ignore it. */
   cameraView: CameraView;
 }
 

@@ -3,6 +3,7 @@ import type { PickupKind } from '../sim';
 import { SLOT_CSS } from '../assets/palette';
 import { pickupIconUrl } from '../assets/pickupIcons';
 import { portraitUrl } from '../assets/portraits';
+import { cameraModeFor } from '../render/cameraModes';
 import { commands } from '../app/session';
 import type { HudMe, HudPlayer } from '../app/hud';
 import { useGameStore } from '../app/store';
@@ -95,6 +96,8 @@ export function Hud() {
   const paused = useGameStore((s) => s.paused);
   const muted = useGameStore((s) => s.settings.muted);
   const cameraView = useGameStore((s) => s.settings.cameraView);
+  // Standard matches keep the whole arena on one shared screen; only the stadium camera can be toggled.
+  const stadium = useGameStore((s) => cameraModeFor(s.settings.arenaId, s.cameraOverride) === 'stadium');
   if (!hud) return null;
   const half = Math.ceil(hud.players.length / 2);
   const left = hud.players.slice(0, half);
@@ -131,17 +134,19 @@ export function Hud() {
         >
           {muted ? '🔇' : '🔊'}
         </button>
-        <button
-          type="button"
-          className="round-btn"
-          aria-label={cameraView === 'overview' ? 'Action camera (O)' : 'Whole-arena view (O)'}
-          title={cameraView === 'overview' ? 'Action camera (O)' : 'Whole-arena view (O)'}
-          data-testid="camera-button"
-          data-view={cameraView}
-          onClick={() => commands.toggleCameraView()}
-        >
-          {cameraView === 'overview' ? '🎥' : '🗺'}
-        </button>
+        {stadium && (
+          <button
+            type="button"
+            className="round-btn"
+            aria-label={cameraView === 'overview' ? 'Action camera (O)' : 'Whole-arena view (O)'}
+            title={cameraView === 'overview' ? 'Action camera (O)' : 'Whole-arena view (O)'}
+            data-testid="camera-button"
+            data-view={cameraView}
+            onClick={() => commands.toggleCameraView()}
+          >
+            {cameraView === 'overview' ? '🎥' : '🗺'}
+          </button>
+        )}
       </div>
 
       {hud.phase === 'countdown' && (
