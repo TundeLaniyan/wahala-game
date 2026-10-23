@@ -95,7 +95,7 @@ function play(seed: number, opts: { mode: 'classic' | 'crush'; crowd: boolean; a
     seed,
     arenaId: opts.arena,
     players: [0, 1, 2, 3].map((i) => ({ name: `P${i}`, characterId: CHARACTER_IDS[i % 3]!, isBot: i > 0 })),
-    settings: { mode: opts.mode, crowdThrows: opts.crowd, floorHazards: opts.arena === 'lekkiRoadworks' },
+    settings: { mode: opts.mode, crowdThrows: opts.crowd },
   });
   for (let t = 0; t < 4200 && state.match.phase !== 'ended'; t++) {
     const intents: Intents = {};

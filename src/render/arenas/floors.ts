@@ -7,129 +7,11 @@
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from 'three';
 import { artRng } from '../textures';
 
-const T = 128; // pixels per tile
+import { T, crack, makeCanvas, noiseFill, seams, stain, tyreTrack } from './floorKit';
+import type { Ctx, FloorDrawer, FloorMaps } from './floorKit';
+import { NEW_ARENA_FLOORS } from './newArenas';
 
-export interface FloorMaps {
-  map: CanvasTexture;
-  roughnessMap: CanvasTexture;
-}
-
-type Ctx = CanvasRenderingContext2D;
-
-function makeCanvas(w: number, h: number): [HTMLCanvasElement, Ctx] {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  return [c, c.getContext('2d')!];
-}
-
-/** Per-pixel value noise over a base colour (fast: one pass over ImageData). */
-function noiseFill(
-  g: Ctx,
-  w: number,
-  h: number,
-  base: [number, number, number],
-  amp: number,
-  seed: number,
-): void {
-  const img = g.createImageData(w, h);
-  const d = img.data;
-  const r = artRng(seed);
-  // coarse lattice for blotches
-  const cw = Math.ceil(w / 24) + 2;
-  const ch = Math.ceil(h / 24) + 2;
-  const lattice = new Float32Array(cw * ch).map(() => r());
-  for (let y = 0; y < h; y++) {
-    const ly = y / 24;
-    const y0 = Math.floor(ly);
-    const fy = ly - y0;
-    for (let x = 0; x < w; x++) {
-      const lx = x / 24;
-      const x0 = Math.floor(lx);
-      const fx = lx - x0;
-      const a = lattice[y0 * cw + x0]!;
-      const b = lattice[y0 * cw + x0 + 1]!;
-      const c = lattice[(y0 + 1) * cw + x0]!;
-      const e = lattice[(y0 + 1) * cw + x0 + 1]!;
-      const blotch = a + (b - a) * fx + (c - a) * fy + (a - b - c + e) * fx * fy;
-      const grain = r();
-      const v = (blotch - 0.5) * amp * 1.4 + (grain - 0.5) * amp;
-      const i = (y * w + x) * 4;
-      d[i] = base[0] + v;
-      d[i + 1] = base[1] + v;
-      d[i + 2] = base[2] + v * 0.95;
-      d[i + 3] = 255;
-    }
-  }
-  g.putImageData(img, 0, 0);
-}
-
-function stain(g: Ctx, x: number, y: number, rad: number, rgba: string): void {
-  const grad = g.createRadialGradient(x, y, rad * 0.1, x, y, rad);
-  grad.addColorStop(0, rgba);
-  grad.addColorStop(1, rgba.replace(/[\d.]+\)$/, '0)'));
-  g.fillStyle = grad;
-  g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
-}
-
-function crack(
-  g: Ctx,
-  r: () => number,
-  x: number,
-  y: number,
-  len: number,
-  color: string,
-  width: number,
-): void {
-  g.strokeStyle = color;
-  g.lineWidth = width;
-  g.beginPath();
-  g.moveTo(x, y);
-  let a = r() * Math.PI * 2;
-  for (let k = 0; k < len; k++) {
-    a += (r() - 0.5) * 0.9;
-    x += Math.cos(a) * 9;
-    y += Math.sin(a) * 9;
-    g.lineTo(x, y);
-    if (r() < 0.12) crack(g, r, x, y, Math.floor(len / 3), color, width * 0.6);
-  }
-  g.stroke();
-}
-
-/** Faint worn tile seams (grid readability), drawn on both maps. */
-function seams(g: Ctx, cols: number, rows: number, color: string, width = 2): void {
-  g.strokeStyle = color;
-  g.lineWidth = width;
-  for (let x = 1; x < cols; x++) {
-    g.beginPath();
-    g.moveTo(x * T, 0);
-    g.lineTo(x * T, rows * T);
-    g.stroke();
-  }
-  for (let y = 1; y < rows; y++) {
-    g.beginPath();
-    g.moveTo(0, y * T);
-    g.lineTo(cols * T, y * T);
-    g.stroke();
-  }
-}
-
-function tyreTrack(g: Ctx, r: () => number, w: number, h: number, color: string): void {
-  const y = r() * h;
-  g.strokeStyle = color;
-  g.lineWidth = 18 + r() * 10;
-  g.beginPath();
-  g.moveTo(-20, y);
-  g.bezierCurveTo(
-    w * 0.3,
-    y + (r() - 0.5) * 300,
-    w * 0.7,
-    y + (r() - 0.5) * 300,
-    w + 20,
-    y + (r() - 0.5) * 200,
-  );
-  g.stroke();
-}
+export type { FloorMaps } from './floorKit';
 
 function busPark(g: Ctx, rg: Ctx, cols: number, rows: number): void {
   const w = cols * T;
@@ -471,7 +353,7 @@ function roadworks(g: Ctx, rg: Ctx, cols: number, rows: number): void {
   g.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-const DRAW: Record<string, (g: Ctx, rg: Ctx, cols: number, rows: number) => void> = {
+const DRAW: Record<string, FloorDrawer> = {
   danfoBusPark: busPark,
   balogunMarket: market,
   lekkiRoadworks: roadworks,
@@ -480,7 +362,7 @@ const DRAW: Record<string, (g: Ctx, rg: Ctx, cols: number, rows: number) => void
 /** Builds the floor maps for an arena, or null when canvas is unavailable (tests, workers). */
 export function arenaFloorMaps(arenaId: string, cols: number, rows: number): FloorMaps | null {
   if (typeof document === 'undefined') return null;
-  const draw = DRAW[arenaId] ?? busPark;
+  const draw = DRAW[arenaId] ?? NEW_ARENA_FLOORS()[arenaId] ?? busPark;
   const [c, g] = makeCanvas(cols * T, rows * T);
   const [rc, rg] = makeCanvas(cols * T, rows * T);
   draw(g, rg, cols, rows);

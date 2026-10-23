@@ -70,6 +70,7 @@ const PICKUP_BASE: Record<PickupKind, number> = {
   curse: -50,
   sneakers: 2,
   hotfuel: 3,
+  bombpass: 4,
 };
 
 /** How much this bot wants a pickup, given what it already has. 0 = worthless. */
@@ -99,6 +100,8 @@ export function pickupValue(c: Ctx, kind: PickupKind): number {
       return me.sneakers ? have : base;
     case 'hotfuel':
       return me.hotFuel ? have : base;
+    case 'bombpass':
+      return me.bombPass ? have : base;
     case 'killswitch':
       return me.killSwitchCharges >= obs.config.pickups.maxKillSwitchCharges ? have : base;
     case 'okada':

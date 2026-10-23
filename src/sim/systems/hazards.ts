@@ -2,7 +2,7 @@
  * Floor traps: potholes make a player stumble, oil slicks make them slide a predictable number of
  * tiles. Both are visible and never lethal on their own.
  *
- * Early traps (the arena's `hazardLayout`) exist for the whole match when the match option is on.
+ * The arena's own floor traps (`floorTraps`) are part of its stage and exist for the whole match.
  * The ENDGAME trap waves are mandatory in every standard match: each is telegraphed on the floor,
  * then goes live (the first at the start of the final 30 seconds). Only a step that STARTS onto a
  * live trap triggers it, so a trap that appears under a player never affects them until they move.
@@ -73,7 +73,7 @@ export function continueSlide(state: GameState, p: GameState['players'][number])
   const v = DIR_VEC[p.slide.dir];
   const tx = p.x + v.dx;
   const ty = p.y + v.dy;
-  if (p.slide.remaining <= 0 || !canPlayerEnter(state, tx, ty)) {
+  if (p.slide.remaining <= 0 || !canPlayerEnter(state, tx, ty, p)) {
     p.slide = null;
     return false;
   }

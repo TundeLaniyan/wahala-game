@@ -2,6 +2,7 @@ import type { ArenaSet } from './common';
 import { BUS_PARK_SET } from './busPark';
 import { MARKET_SET } from './market';
 import { ROADWORKS_SET } from './roadworks';
+import { NEW_ARENA_ART } from './newArenas';
 
 export type { ArenaSet, SetContext } from './common';
 
@@ -13,5 +14,5 @@ const SETS: Record<string, ArenaSet> = {
 };
 
 export function arenaSet(arenaId: string): ArenaSet {
-  return SETS[arenaId] ?? BUS_PARK_SET;
+  return SETS[arenaId] ?? NEW_ARENA_ART()[arenaId]?.set ?? BUS_PARK_SET;
 }

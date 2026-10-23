@@ -10,6 +10,7 @@ import { FakeBuffer } from './fakeContext';
 import type { FakeGain } from './fakeContext';
 import { mediaFactory, trackOf } from './fakeMedia';
 import { finishWarmup, makeRig, playState } from './helpers';
+import { MUSIC_BASE } from '../../src/audio/buses';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -277,7 +278,7 @@ describe('independent persistent volumes', () => {
     const [sfx, , crowd, music] = busGains(r) as [number, number, number, number];
     expect(sfx / 0.62).toBeCloseTo(0.85, 5);
     expect(crowd / 0.8).toBeCloseTo(0.65, 5);
-    expect(music / 1.3).toBeCloseTo(0.45, 5);
+    expect(music / MUSIC_BASE).toBeCloseTo(0.45, 5);
   });
 
   it('applies saved preferences when the engine starts (remembered between visits)', async () => {
@@ -288,7 +289,7 @@ describe('independent persistent volumes', () => {
     const [sfx, , crowd, music] = busGains(r) as [number, number, number, number];
     expect(sfx / 0.62).toBeCloseTo(0.5, 5);
     expect(crowd / 0.8).toBeCloseTo(0.2, 5);
-    expect(music / 1.3).toBeCloseTo(0.9, 5);
+    expect(music / MUSIC_BASE).toBeCloseTo(0.9, 5);
   });
 
   it('mute silences the master without touching the saved volumes, and volume edits while muted stay muted', async () => {

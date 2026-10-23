@@ -37,7 +37,8 @@ export type PickupKind =
   | 'voucher'
   | 'curse'
   | 'sneakers'
-  | 'hotfuel';
+  | 'hotfuel'
+  | 'bombpass';
 export type CurseKind = 'slow' | 'inverted' | 'weakFire';
 export type GeneratorMode = 'timed' | 'remote' | 'disabled';
 
@@ -56,7 +57,8 @@ export type EliminationCause =
   | { kind: 'flame'; ownerId: number; eventId: number }
   | { kind: 'vehicle'; ownerId: number; vehicleKind: VehicleKind; eventId: number }
   | { kind: 'crush'; eventId: number }
-  | { kind: 'crowd'; eventId: number };
+  | { kind: 'crowd'; eventId: number }
+  | { kind: 'hazard'; style: StageHazardStyle; eventId: number };
 
 export interface Player {
   id: number;
@@ -90,6 +92,8 @@ export interface Player {
   killSwitchCharges: number;
   sneakers: boolean;
   hotFuel: boolean;
+  /** Generator Pass: walk through tiles holding grounded generators (own and rivals'). */
+  bombPass: boolean;
   mounted: boolean; // Okada
   jumpReadyTick: number;
   /** Oil slick: forced automatic steps in `dir`. */
@@ -103,6 +107,10 @@ export interface Player {
   curse: { kind: CurseKind; until: number } | null;
   entryUntil: number | null; // vehicle-entry mode deadline
   immune: ImmuneEntry[];
+  /** Manholes: the first tick this player may be carried through a trapdoor again. */
+  teleportReadyTick: number;
+  /** Manholes: set when a step onto a trapdoor began; resolved when that step completes. */
+  teleportPending: { toX: number; toY: number } | null;
 }
 
 export interface Generator {
@@ -246,6 +254,8 @@ export interface GameState {
   vehicles: Vehicle[];
   crush: CrushState | null;
   crowd: CrowdState | null;
+  /** The arena's own environmental hazards (traffic, debris, gusts, manholes ...). Public. */
+  stage: StageState;
   nextId: number;
   nextEventId: number;
   match: MatchState;
@@ -270,6 +280,55 @@ export interface EndgameTrapState {
   warnings: (TrapTile & { liveTick: number })[];
 }
 
+// ---------------------------------------------------------------- stage hazards
+
+/** What a stage hazard looks like / is called (presentation and elimination credit). */
+export type StageHazardStyle =
+  | 'danfo' // a Danfo pulling into / reversing out of a bay (sweep)
+  | 'traffic' // a bus or keke crossing a road lane (sweep)
+  | 'checkpoint' // a car rushing through the checkpoint lane (sweep)
+  | 'debris' // construction debris falling from the crane (strike)
+  | 'power' // electrified floor zone (strike)
+  | 'gust' // a wind gust on the bridge (push)
+  | 'wash' // lagoon water washing over the jetty (push + douse)
+  | 'merch' // market goods tumbling onto the floor (drop: new crates)
+  | 'manhole'; // connected trapdoors (teleport)
+
+export type StageHazardKind = 'sweep' | 'strike' | 'push' | 'drop';
+
+/** One telegraphed (then active) stage hazard event. */
+export interface StageEvent {
+  id: number;
+  /** Index of the hazard definition in the arena's `stageHazards`. */
+  hazard: number;
+  kind: StageHazardKind;
+  style: StageHazardStyle;
+  /** Tiles affected (sweep: the whole route in order; push: the zone; strike/drop: the target tiles). */
+  tiles: number[];
+  /** Push direction / sweep travel direction of the first leg. */
+  dir: Dir | null;
+  /** Tick the warning started and the tick the hazard becomes real. */
+  warnTick: number;
+  startTick: number;
+  /** Tick the event is over (sweep: updated as it drives). */
+  endTick: number;
+  /** Event id for elimination credit and Okada grace (lethal kinds only, else 0). */
+  eventId: number;
+  /** Sweep progress: index into `tiles` of the tile the vehicle occupies (-1 before it enters). */
+  index: number;
+  stepRemaining: number;
+  stepTicks: number;
+}
+
+export interface StageState {
+  /** Next play tick each hazard definition fires (Infinity = never / finished). */
+  nextAt: number[];
+  /** Events currently warning or active. */
+  events: StageEvent[];
+  /** Whether ordinary stage hazards run in this match (always true in real matches; off only in tutorials/tests). */
+  enabled: boolean;
+}
+
 // ---------------------------------------------------------------- settings
 
 export interface PlayerSetup {
@@ -282,7 +341,12 @@ export interface PlayerSetup {
 export interface MatchSettings {
   mode: MatchMode;
   crowdThrows: boolean;
-  floorHazards: boolean;
+  /**
+   * The arena's own environmental hazards (its stage identity). Always on in real matches - the menus
+   * offer no switch; only tutorials and test scenarios turn them off. The mandatory endgame trap waves
+   * are separate and can never be disabled.
+   */
+  stageHazards: boolean;
 }
 
 export interface GameOptions {
@@ -382,6 +446,16 @@ export type SimEvent =
     }
   | { type: 'crowdLanded'; throwId: number; x: number; y: number; kind: 'bottle' | 'firecracker' }
   | { type: 'hazardTriggered'; playerId: number; kind: 'pothole' | 'oil' }
+  /** A stage hazard is telegraphed (warning starts now, it becomes real at `startTick`). */
+  | { type: 'stageWarning'; event: StageEvent }
+  /** A stage hazard becomes real (sweep enters, strike lands, push blows, drop lands). */
+  | { type: 'stageStarted'; event: StageEvent }
+  | { type: 'stageEnded'; eventId: number; id: number }
+  /** A sweep vehicle moved onto a tile. */
+  | { type: 'stageSweepStep'; id: number; x: number; y: number }
+  | { type: 'stageBlockDropped'; x: number; y: number; style: StageHazardStyle }
+  | { type: 'playerTeleported'; playerId: number; fromX: number; fromY: number; toX: number; toY: number }
+  | { type: 'generatorDoused'; generatorId: number }
   /** An endgame trap wave is telegraphed (wave 0 = the start of the final-30-seconds escalation). */
   | { type: 'trapsWarning'; wave: number; tiles: TrapTile[]; liveTick: number }
   /** An endgame trap wave is live. */

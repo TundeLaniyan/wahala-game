@@ -143,7 +143,7 @@ describe('event mapping', () => {
   it('handles every SimEvent type without throwing and makes sound for most', async () => {
     const rig = await started({}, {});
     const s = playState();
-    const silent = new Set(['vehicleExited', 'vehicleEntryBegan', 'vehicleEntryCancelled']);
+    const silent = new Set(['vehicleExited', 'vehicleEntryBegan', 'vehicleEntryCancelled', 'stageEnded', 'stageSweepStep']);
     // an extra human-less state variant is covered below; here players 0/1 are both "human" sandbox players
     for (const [type, e] of Object.entries(SAMPLES)) {
       rig.traces.length = 0;

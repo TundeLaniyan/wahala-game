@@ -308,7 +308,41 @@ const handlers: Handlers = {
     sfx(c, 'oil_squeak', 0, 0.8);
     c.buses.duck('blast');
   },
+  // Stage hazards: every lethal one is announced with a sound as well as on the floor.
+  stageWarning: (e, c) => {
+    const x = tileXOf(c, e.event.tiles[0]);
+    const s = e.event.style;
+    if (s === 'danfo') sfx(c, 'danfo_horn', panOf(c, x));
+    else if (s === 'traffic') sfx(c, c.rand() < 0.5 ? 'danfo_horn' : 'keke_horn', panOf(c, x));
+    else if (s === 'checkpoint') sfx(c, 'taxi_horn', panOf(c, x));
+    else if (s === 'debris' || s === 'power') sfx(c, 'crush_warning', panOf(c, x), 0.8);
+    else if (s === 'gust' || s === 'wash') sfx(c, 'crowd_throw_whistle', 0, 0.6);
+    else if (s === 'merch') sfx(c, 'crowd_throw_whistle', panOf(c, x), 0.5);
+    if (s !== 'merch') c.buses.duck('warning');
+  },
+  stageStarted: (e, c) => {
+    const x = tileXOf(c, e.event.tiles[0]);
+    const s = e.event.style;
+    if (s === 'danfo' || s === 'traffic') sfx(c, 'danfo_pass', panOf(c, x));
+    else if (s === 'checkpoint') sfx(c, 'taxi_pass', panOf(c, x));
+    else if (s === 'debris') sfx(c, 'crush_slam', panOf(c, x));
+    else if (s === 'power') sfx(c, 'gen_remote_blip', panOf(c, x), 1, 0.6);
+    else if (s === 'wash') sfx(c, 'oil_squeak', 0, 0.9, 0.6);
+    else if (s === 'gust') sfx(c, 'hop', 0, 0.5, 0.5);
+  },
+  stageEnded: () => undefined,
+  stageSweepStep: () => undefined,
+  stageBlockDropped: (e, c) => sfx(c, 'block_crumble_1', panOf(c, e.x), 0.7, 1.3),
+  playerTeleported: (e, c) => {
+    sfx(c, 'hop', panOf(c, e.fromX), 0.9, 0.8);
+    sfx(c, 'hop', panOf(c, e.toX), 0.9, 1.2, 0.15);
+  },
+  generatorDoused: (e, c) => sfx(c, 'gen_dud', panOf(c, generatorX(c, e.generatorId))),
 };
+
+function tileXOf(c: RouteCtx, index: number | undefined): number {
+  return index === undefined ? (c.state.width - 1) / 2 : index % c.state.width;
+}
 
 /** Crowd and engine response to a near miss. At most one of these per call (see handle). */
 function reactToNearMiss(m: NearMiss, c: RouteCtx): void {

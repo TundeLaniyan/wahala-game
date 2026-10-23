@@ -19,6 +19,7 @@ function inventoryKinds(state: GameState, p: Player): PickupKind[] {
   if (p.killSwitchCharges > 0) out.push('killswitch');
   if (p.hasVoucher) out.push('voucher');
   if (p.sneakers) out.push('sneakers');
+  if (p.bombPass) out.push('bombpass');
   return out;
 }
 

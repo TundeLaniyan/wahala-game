@@ -14,7 +14,7 @@ function Portrait({ p }: { p: HudPlayer }) {
   return (
     <div
       className={`portrait${p.alive ? '' : ' out'}`}
-      style={{ ['--slot' as string]: SLOT_CSS[p.slot] }}
+      style={{ ['--slot' as string]: SLOT_CSS[p.slot % SLOT_CSS.length] }}
       data-testid={`portrait-${p.id}`}
       data-alive={p.alive}
     >

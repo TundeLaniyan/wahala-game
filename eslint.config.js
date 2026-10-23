@@ -29,7 +29,7 @@ const aiBoundary = {
 };
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'playwright-report', 'test-results', 'reference', 'e2e-shots'] },
+  { ignores: ['dist', 'node_modules', 'playwright-report', 'test-results', 'reference', 'e2e-shots', '.claude'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

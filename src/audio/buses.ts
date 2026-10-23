@@ -33,7 +33,13 @@ export const WARN_BAND_HZ = 2600;
 
 /** Headroom scalers so that a 1.0 slider never clips the mix. */
 const CROWD_BASE = 0.8;
-const MUSIC_BASE = 1.3;
+/**
+ * Music headroom: 1.3 raised by +2.5 dB (founder: "the music is somewhat too quiet", decision N13).
+ * The master limiter and soft clip keep the sum below full scale; the warning duck is a little deeper
+ * so alarms and fuse ticks still cut through.
+ */
+export const MUSIC_LIFT_DB = 2.5;
+export const MUSIC_BASE = 1.3 * Math.pow(10, MUSIC_LIFT_DB / 20);
 const SFX_BASE = 0.62;
 const WARN_BASE = 0.8;
 const SMOOTH = 0.02; // seconds, time constant for volume / mute changes
@@ -67,7 +73,7 @@ export const LIMITER_TRIM = Math.pow(10, -LIMITER_MAKEUP_DB / 20);
 export type DuckKind = 'warning' | 'blast' | 'speech';
 /** Gain the crowd paths dip to, and for how long (seconds). Reactions duck less than the bed. */
 const DUCK: Record<DuckKind, { amb: number; react: number; music: number; hold: number }> = {
-  warning: { amb: 0.5, react: 0.8, music: 0.8, hold: 0.9 },
+  warning: { amb: 0.5, react: 0.8, music: 0.7, hold: 0.9 },
   blast: { amb: 0.4, react: 0.75, music: 0.6, hold: 0.5 },
   // a spoken Pidgin line: the babble beds and the music make room, the voice itself is never ducked
   speech: { amb: 0.4, react: 1, music: 0.6, hold: 1.5 },

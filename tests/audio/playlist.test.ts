@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { parseMusicManifest, pickFrom, pickMatchTrack, playlistFor } from '../../src/audio/playlist';
 import type { MusicManifest } from '../../src/audio/playlist';
 import { createRand } from '../../src/audio/rng';
-import { ARENAS } from '../../src/sim';
+import { STANDARD_ARENA_IDS } from '../../src/sim';
 import { TRACK_IDS, musicManifest } from './fakeServer';
 
 const parse = (raw: unknown): MusicManifest => parseMusicManifest(raw).manifest;
@@ -143,28 +143,37 @@ describe('arena playlists and signature tracks', () => {
     ).not.toBe('t2');
   });
 
-  it('the shipped manifest: three arena playlists with their own starting track, all nine supplied tracks covered', () => {
+  it('the shipped manifest: every standard arena has its own signature track (founder table), City Rumble rotates', () => {
     const raw = JSON.parse(readFileSync(join(__dirname, '../../public/audio/music/manifest.json'), 'utf8'));
     const m = parse(raw);
     expect(m.tracks).toHaveLength(10);
-    const covered = new Set<string>();
-    for (const a of Object.keys(ARENAS)) {
+    const FOUNDER: Record<string, string> = {
+      danfoBusPark: 'pixabay_504898',
+      balogunMarket: 'pixabay_573648',
+      lekkiRoadworks: 'pixabay_491433',
+      oshodiInterchange: 'pixabay_569473',
+      ajegunleBackstreets: 'pixabay_588999',
+      lagoonJetty: 'pixabay_406552',
+      surulerePowerYard: 'pixabay_491432',
+      yabaAfterDark: 'pixabay_439622',
+      thirdMainland: 'pixabay_540950',
+    };
+    expect([...STANDARD_ARENA_IDS].sort()).toEqual(Object.keys(FOUNDER).sort());
+    for (const a of STANDARD_ARENA_IDS) {
       const pl = m.playlists.arenas[a]!;
-      expect(pl.signature).toBeNull();
-      expect(pl.start).not.toBeNull();
-      expect(playlistFor(m, a)).toContain(pl.start);
-      expect(playlistFor(m, a).length).toBeGreaterThanOrEqual(3);
-      for (const id of playlistFor(m, a)) covered.add(id);
+      expect(pl.signature, a).toBe(FOUNDER[a]);
+      // every match on the arena, first or fiftieth, plays the signature track
+      const picks = season(m, 20, { arenaId: a, isAvailable: () => true });
+      expect(new Set(picks), a).toEqual(new Set([FOUNDER[a]]));
     }
-    // every track (the missing one's slot included) belongs to an arena playlist; the starts differ
-    expect([...covered].sort()).toEqual(m.tracks.map((t) => t.id).sort());
-    const starts = Object.keys(ARENAS).map((a) => m.playlists.arenas[a]!.start);
-    expect(new Set(starts).size).toBe(starts.length);
-    // a long session on one arena never repeats a track back to back
-    for (const a of Object.keys(ARENAS)) {
-      const picks = season(m, 60, { arenaId: a, isAvailable: (id) => id !== 'pixabay_496406' });
-      for (let i = 1; i < picks.length; i++) expect(picks[i]).not.toBe(picks[i - 1]);
-    }
+    // nine different songs: one per arena, all nine supplied files used
+    expect(new Set(Object.values(FOUNDER)).size).toBe(9);
+    // City Rumble rotates a subset of the same tracks and never repeats back to back
+    const rumble = playlistFor(m, 'cityRumble');
+    expect(rumble.length).toBeGreaterThanOrEqual(3);
+    for (const id of rumble) expect(Object.values(FOUNDER)).toContain(id);
+    const picks = season(m, 60, { arenaId: 'cityRumble', isAvailable: () => true });
+    for (let i = 1; i < picks.length; i++) expect(picks[i]).not.toBe(picks[i - 1]);
   });
 });
 

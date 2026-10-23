@@ -16,8 +16,9 @@ export {
   tileX,
   tileY,
 } from './grid';
-export { ARENAS, DEFAULT_ARENA_ID, getArena } from './arenas';
-export type { ArenaDef } from './arenas';
+export { ARENAS, CITY_RUMBLE_ID, DEFAULT_ARENA_ID, STANDARD_ARENA_IDS, getArena } from './arenas';
+export type { ArenaDef, ArenaInfo, ArenaKind, HazardSchedule, StageHazardDef } from './arenas';
+export { isLethalStageEvent, manholePartners } from './systems/stage';
 export { CHARACTERS, CHARACTER_IDS } from './data/characters';
 export type { CharacterDef } from './data/characters';
 export { PICKUP_DEFS } from './data/pickups';

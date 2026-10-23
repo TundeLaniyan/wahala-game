@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARENAS, createGame, tick, Tile } from '../src/sim';
+import { ARENAS, STANDARD_ARENA_IDS, createGame, tick, Tile } from '../src/sim';
 import type { GameState, MatchMode, SimEvent } from '../src/sim';
 import { runMatch } from '../src/ai/headless';
 import { put } from './helpers';
@@ -10,7 +10,7 @@ import { put } from './helpers';
  * interfere with the Wahala Crush schedule or its final tile.
  */
 const TPS = 60;
-const ARENA_IDS = Object.keys(ARENAS);
+const ARENA_IDS = STANDARD_ARENA_IDS;
 const remaining = (s: GameState): number => s.config.match.durationTicks - s.match.playTicks;
 
 function game(arenaId: string, mode: MatchMode = 'classic', players = 2, clearSoft = true): GameState {
@@ -22,7 +22,8 @@ function game(arenaId: string, mode: MatchMode = 'classic', players = 2, clearSo
       characterId: 'streetBaller' as const,
       isBot: false,
     })),
-    settings: { mode },
+    // the arena's own stage hazards are tested separately (tests/stage-hazards.test.ts)
+    settings: { mode, stageHazards: false },
   });
   s.match.phase = 'playing';
   s.match.countdownRemaining = 0;
@@ -64,7 +65,6 @@ describe('endgame trap data', () => {
         });
         expect(count).toBeGreaterThanOrEqual(8);
       }
-      expect(arena.hazardLayout, 'early traps available on every arena').toBeDefined();
     });
   }
 });
@@ -72,9 +72,9 @@ describe('endgame trap data', () => {
 describe('endgame traps are mandatory and on schedule', () => {
   for (const id of ARENA_IDS) {
     for (const mode of ['classic', 'crush'] as const) {
-      it(`${id} / ${mode}: warned at 0:31.5, live at exactly 0:30 and 0:15, with the early-traps option OFF`, () => {
+      it(`${id} / ${mode}: warned at 0:31.5, live at exactly 0:30 and 0:15, with the stage hazards OFF`, () => {
         const s = game(id, mode);
-        expect(s.settings.floorHazards).toBe(false);
+        expect(s.settings.stageHazards).toBe(false);
         const before = runUntil(s, 30 * TPS + 91);
         expect(before.some((e) => e.type === 'trapsWarning' || e.type === 'trapsActivated')).toBe(false);
         expect(Object.keys(s.floorHazards)).toHaveLength(0);
@@ -113,13 +113,13 @@ describe('endgame traps are mandatory and on schedule', () => {
         { name: 'A', characterId: 'streetBaller', isBot: false },
         { name: 'B', characterId: 'lekkiBoy', isBot: false },
       ],
-      settings: { floorHazards: false, crowdThrows: false, mode: 'classic' },
+      settings: { stageHazards: false, crowdThrows: false, mode: 'classic' },
     });
     expect(s.endgameTraps.waves.length).toBe(2);
     expect(s.endgameTraps.waves.every((w) => w.length > 0)).toBe(true);
   });
 
-  it('early traps (option on) stay live through the endgame and the waves add to them', () => {
+  it("the arena's own floor traps stay live through the endgame and the waves add to them", () => {
     const s = createGame({
       seed: 3,
       arenaId: 'lekkiRoadworks',
@@ -127,9 +127,9 @@ describe('endgame traps are mandatory and on schedule', () => {
         { name: 'A', characterId: 'streetBaller', isBot: false },
         { name: 'B', characterId: 'lekkiBoy', isBot: false },
       ],
-      settings: { floorHazards: true },
     });
     s.match.phase = 'playing';
+    s.stage.enabled = false; // keep the crane debris off the idle test players
     const early = Object.keys(s.floorHazards);
     expect(early.length).toBeGreaterThan(0);
     runUntil(s, 15 * TPS);

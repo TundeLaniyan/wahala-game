@@ -78,6 +78,25 @@ function buildFlames(
   const base = { genId: gen.id, ownerId: gen.ownerId, eventId, startTick, endTick };
   const flames: Flame[] = [{ ...base, x: gen.x, y: gen.y, dir: null, tip: false }];
 
+  if (state.config.generator.blastMode === 'fullLine') {
+    // Power Yard: the whole row and column to the arena edge, straight through pillars, crates and
+    // other generators (crates in the line break; generators in it chain).
+    for (const dir of DIRS) {
+      const v = DIR_VEC[dir];
+      let last: Flame | null = null;
+      for (let x = gen.x + v.dx, y = gen.y + v.dy; x >= 0 && y >= 0 && x < state.width && y < state.height; x += v.dx, y += v.dy) {
+        const kind = tileAt(state, x, y);
+        if (kind === Tile.Hard) continue;
+        last = { ...base, x, y, dir, tip: false };
+        flames.push(last);
+        const idx = tileIndex(state, x, y);
+        if (kind === Tile.Soft && !softHit.has(idx)) softHit.set(idx, eventId);
+      }
+      if (last) last.tip = true;
+    }
+    return flames;
+  }
+
   for (const dir of DIRS) {
     const v = DIR_VEC[dir];
     let last: Flame | null = null;

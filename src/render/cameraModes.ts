@@ -13,12 +13,12 @@ import type { Layout } from './coords';
  * - `stadium` (reserved for the future 32-player stadium arena, which is far too big for one frame):
  *   the closer follow camera of `cameraDirector.ts`, with the whole-arena overview as a toggle.
  *
- * No arena uses `stadium` yet; it can be forced for testing with the `?cam=stadium` URL flag.
+ * Only City Rumble uses `stadium`; it can be forced for testing with the `?cam=stadium` URL flag.
  */
 export type CameraMode = 'arena' | 'stadium';
 
-/** Arena ids that need the follow camera (none yet: the stadium arena does not exist). */
-export const STADIUM_ARENAS: ReadonlySet<string> = new Set<string>();
+/** Arena ids that need the follow camera: the 41 x 31 City Rumble board. */
+export const STADIUM_ARENAS: ReadonlySet<string> = new Set<string>(['cityRumble']);
 
 export function cameraModeFor(arenaId: string, override?: CameraMode | null): CameraMode {
   if (override) return override;

@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, mergeConfig } from './config';
+import { DEFAULT_CONFIG, mergeConfig, ticks } from './config';
 import type { GameConfig } from './config';
 import { CHARACTERS } from './data/characters';
 import { DEFAULT_ARENA_ID, getArena } from './arenas';
@@ -15,13 +15,15 @@ import type {
   PickupKind,
   Player,
   PlayerSetup,
+  StageState,
   TrapTile,
 } from './types';
 
-export const DEFAULT_SETTINGS: MatchSettings = { mode: 'classic', crowdThrows: false, floorHazards: false };
+export const DEFAULT_SETTINGS: MatchSettings = { mode: 'classic', crowdThrows: false, stageHazards: true };
 
 export const MIN_PLAYERS = 1;
-export const MAX_PLAYERS = 4;
+/** The largest supported match (City Rumble). Each arena has its own `maxPlayers` (standard arenas: 4). */
+export const MAX_PLAYERS = 32;
 
 export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, config: GameConfig): Player {
   const spawn = arena.spawns[id]!;
@@ -52,6 +54,7 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     killSwitchCharges: 0,
     sneakers: false,
     hotFuel: false,
+    bombPass: false,
     mounted: false,
     jumpReadyTick: 0,
     slide: null,
@@ -63,17 +66,22 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     curse: null,
     entryUntil: null,
     immune: [],
+    teleportReadyTick: 0,
+    teleportPending: null,
   };
 }
 
 /** Builds a fresh match. Same options + seed always produce an identical state. */
 export function createGame(options: GameOptions): GameState {
-  if (options.players.length < MIN_PLAYERS || options.players.length > MAX_PLAYERS) {
-    throw new Error(`WAHALA! supports ${MIN_PLAYERS}-${MAX_PLAYERS} competitors`);
-  }
   const arena = getArena(options.arenaId ?? DEFAULT_ARENA_ID);
-  const config = mergeConfig(DEFAULT_CONFIG, options.config);
+  const max = Math.min(MAX_PLAYERS, arena.maxPlayers, arena.spawns.length);
+  if (options.players.length < MIN_PLAYERS || options.players.length > max) {
+    throw new Error(`${arena.name} supports ${MIN_PLAYERS}-${max} competitors`);
+  }
+  // arena rules (Power Yard blasts, City Rumble timing ...) first, then any test/tutorial override
+  const config = mergeConfig(mergeConfig(DEFAULT_CONFIG, arena.config), options.config);
   const settings: MatchSettings = { ...DEFAULT_SETTINGS, ...options.settings };
+  if (arena.forcedMode) settings.mode = arena.forcedMode;
   const width = arena.layout[0]!.length;
   const height = arena.layout.length;
 
@@ -98,6 +106,7 @@ export function createGame(options: GameOptions): GameState {
     vehicles: [],
     crush: null,
     crowd: null,
+    stage: { nextAt: [], events: [], enabled: settings.stageHazards },
     nextId: 1,
     nextEventId: 1,
     match: {
@@ -111,11 +120,21 @@ export function createGame(options: GameOptions): GameState {
 
   buildTiles(state, arena);
   assignHiddenPickups(state);
-  if (settings.floorHazards) buildFloorHazards(state, arena);
+  if (settings.stageHazards) buildFloorHazards(state, arena);
   if (settings.mode === 'crush') state.crush = createCrush(state);
   state.endgameTraps = createEndgameTraps(state, arena);
   if (settings.crowdThrows) state.crowd = { nextThrowTick: config.crowd.firstThrowTicks, throws: [] };
+  state.stage = createStage(state, arena);
   return state;
+}
+
+/** First firing tick of each scheduled stage hazard (teleporters are always on and need none). */
+function createStage(state: GameState, arena: ArenaDef): StageState {
+  const enabled = state.settings.stageHazards;
+  const nextAt = arena.stageHazards.map((h) =>
+    enabled && h.kind !== 'teleport' ? ticks(h.firstAtSec) : Infinity,
+  );
+  return { nextAt, events: [], enabled };
 }
 
 function buildTiles(state: GameState, arena: ArenaDef): void {
@@ -135,7 +154,8 @@ function buildTiles(state: GameState, arena: ArenaDef): void {
 
   const place = (x: number, y: number, soft: boolean): void => {
     const i = tileIndex(state, x, y);
-    if (state.tiles[i] === Tile.Hard || clear.has(i)) return;
+    // roads (traffic lanes, manholes, power zones) are kept clear of crates
+    if (state.tiles[i] === Tile.Hard || clear.has(i) || arena.layout[y]![x] === '=') return;
     if (soft) state.tiles[i] = Tile.Soft;
   };
 
@@ -168,7 +188,7 @@ function assignHiddenPickups(state: GameState): void {
 }
 
 function buildFloorHazards(state: GameState, arena: ArenaDef): void {
-  arena.hazardLayout?.forEach((row, y) => {
+  arena.floorTraps?.forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
       const c = row[x];
       const i = tileIndex(state, x, y);
@@ -187,7 +207,7 @@ function buildFloorHazards(state: GameState, arena: ArenaDef): void {
 function createEndgameTraps(state: GameState, arena: ArenaDef): EndgameTrapState {
   const { width, height, config } = state;
   const excluded = new Set<number>();
-  if (state.crush && state.crush.order.length > 0) {
+  if (state.crush && state.crush.order.length > 0 && !config.crush.keepCore) {
     const last = state.crush.order[state.crush.order.length - 1]!;
     const lx = last % width;
     const ly = Math.floor(last / width);
@@ -241,11 +261,20 @@ function createCrush(state: GameState): CrushState {
     if (x1 > x0) for (let y = y1 - 1; y > y0; y--) ring.push([x0, y]);
     for (const [x, y] of ring) {
       const i = tileIndex(state, x, y);
-      if (state.tiles[i] !== Tile.Hard) order.push(i);
+      if (state.tiles[i] !== Tile.Hard && !inCore(state, x, y)) order.push(i);
     }
   }
   const warnAt = crushSchedule(order.length, state.config);
   return { order, next: 0, warnAt, nextAtTick: warnAt[0] ?? Infinity, pending: [] };
+}
+
+/** City Rumble: is this tile inside the centred core that never closes? */
+function inCore(state: GameState, x: number, y: number): boolean {
+  const core = state.config.crush.keepCore;
+  if (!core) return false;
+  const x0 = Math.floor((state.width - core.w) / 2);
+  const y0 = Math.floor((state.height - core.h) / 2);
+  return x >= x0 && x < x0 + core.w && y >= y0 && y < y0 + core.h;
 }
 
 /**
@@ -258,6 +287,13 @@ export function crushSchedule(count: number, config: GameConfig): number[] {
   const { durationTicks } = config.match;
   const { startRemainingTicks, finalTileLeadTicks, warnTicks } = config.crush;
   const first = Math.max(0, durationTicks - Math.min(startRemainingTicks, durationTicks));
+  if (config.crush.keepCore) {
+    // City Rumble: an even cadence so that the last ring tile has landed when the core is all that is left
+    const last = Math.max(first, durationTicks - config.crush.coreClosedRemainingTicks - warnTicks);
+    return Array.from({ length: count }, (_, j) =>
+      first + (count > 1 ? Math.round(((last - first) * j) / (count - 1)) : 0),
+    );
+  }
   const finalWarn = Math.max(first, durationTicks - warnTicks);
   const lastOfRest = Math.min(Math.max(first, durationTicks - finalTileLeadTicks - warnTicks), finalWarn);
   const rest = count - 1;

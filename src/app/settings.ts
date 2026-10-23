@@ -2,13 +2,15 @@ import type { CharacterId, Difficulty, MatchMode } from '../sim';
 import type { CameraView, QualityLevel } from '../render';
 
 export interface GameSettings {
+  /** Standard arenas: 2-4 competitors (one human). */
   competitors: 2 | 3 | 4;
+  /** City Rumble: total competitors (one human plus bots). */
+  rumbleCompetitors: 8 | 16 | 24 | 32;
   difficulty: Difficulty;
   character: CharacterId;
   mode: MatchMode;
   arenaId: string;
   crowdThrows: boolean;
-  floorHazards: boolean;
   quality: QualityLevel | 'auto';
   musicVolume: number;
   sfxVolume: number;
@@ -20,12 +22,12 @@ export interface GameSettings {
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
   competitors: 4,
+  rumbleCompetitors: 16,
   difficulty: 'medium',
   character: 'streetBaller',
   mode: 'classic',
   arenaId: 'danfoBusPark',
   crowdThrows: false,
-  floorHazards: false,
   quality: 'auto',
   musicVolume: 0.7,
   sfxVolume: 0.9,

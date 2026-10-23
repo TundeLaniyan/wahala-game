@@ -100,8 +100,6 @@ export function TitleScreen() {
   useGameStore((st) => st.portraitsVersion);
   const [help, setHelp] = useState(false);
   const set = (p: Partial<GameSettings>) => commands.updateSettings(p);
-  const arena = ARENAS[s.arenaId]!;
-  const hasHazards = !!arena.hazardLayout;
   const busy = loading !== null && loading.done < loading.total;
 
   return (
@@ -212,7 +210,7 @@ export function TitleScreen() {
                 value={a.id}
                 current={s.arenaId}
                 label={a.name}
-                onPick={(v) => set({ arenaId: v, floorHazards: !!ARENAS[v]!.trapArena })}
+                onPick={(v) => set({ arenaId: v })}
                 testId={`arena-${a.id}`}
               />
             ))}
@@ -228,14 +226,6 @@ export function TitleScreen() {
               label={`Crowd throws ${s.crowdThrows ? 'ON' : 'OFF'}`}
               onPick={() => set({ crowdThrows: !s.crowdThrows })}
               testId="toggle-crowd"
-            />
-            <Choice
-              value={true}
-              current={s.floorHazards && hasHazards}
-              label={`Early traps ${s.floorHazards && hasHazards ? 'ON' : 'OFF'}`}
-              disabled={!hasHazards}
-              onPick={() => set({ floorHazards: !s.floorHazards })}
-              testId="toggle-hazards"
             />
           </div>
           <div className="row" style={{ marginBottom: 8 }}>

@@ -38,6 +38,9 @@ export interface Observation {
   readonly floorHazards: Readonly<GameState['floorHazards']>;
   /** Endgame trap waves: telegraphed tiles are public. */
   readonly endgameTraps: Readonly<GameState['endgameTraps']>;
+  /** Stage hazards: every warning and running event is public (it is on the floor for everyone). */
+  readonly stage: Readonly<GameState['stage']>;
+  readonly arenaId: string;
 }
 
 export function observe(state: GameState, selfId: number): Observation {
@@ -59,5 +62,7 @@ export function observe(state: GameState, selfId: number): Observation {
     crowd: state.crowd,
     floorHazards: state.floorHazards,
     endgameTraps: state.endgameTraps,
+    stage: state.stage,
+    arenaId: state.arenaId,
   };
 }

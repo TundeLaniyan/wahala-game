@@ -32,6 +32,7 @@ function signature(obs: Observation): number {
     h = (h * 31 + v.id * 13 + (v.phase === 'warning' ? 1 : v.phase === 'driving' ? 2 : 3)) | 0;
   if (obs.crush) h = (h * 31 + obs.crush.pending.length * 7 + obs.crush.next) | 0;
   if (obs.crowd) h = (h * 31 + obs.crowd.throws.length) | 0;
+  for (const e of obs.stage.events) h = (h * 31 + e.id * 7 + (e.index + 1)) | 0;
   return h;
 }
 

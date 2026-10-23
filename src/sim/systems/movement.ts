@@ -7,6 +7,7 @@ import { DIR_VEC, OPPOSITE } from '../grid';
 import type { Dir, GameState, Intents, SimEvent } from '../types';
 import { kickGenerator } from './generators';
 import { continueSlide } from './hazards';
+import { resolveTeleport } from './stage';
 import { beginStep, canPlayerEnter } from './stepping';
 import { groundedGeneratorAt, isActing, playerStepTicks } from './queries';
 
@@ -23,6 +24,8 @@ export function updateMovement(state: GameState, intents: Intents, events: SimEv
     if (!p.alive) continue;
     if (p.stepRemaining > 0) p.stepRemaining--;
     if (p.stepRemaining > 0) continue;
+    // a manhole entered by the step that just finished carries the player before anything else
+    if (p.teleportPending && resolveTeleport(state, p, events)) continue;
     if (!isActing(state, p) || p.entryUntil !== null) continue;
 
     if (continueSlide(state, p)) continue;
@@ -39,7 +42,12 @@ export function updateMovement(state: GameState, intents: Intents, events: SimEv
     } else {
       const gen = groundedGeneratorAt(state, tx, ty);
       if (!gen) continue;
+      // walking into a generator: Boots kick it if it can slide; otherwise Generator Pass walks over it
       if (p.kick && kickGenerator(state, gen, dir, events)) continue;
+      if (p.bombPass && canPlayerEnter(state, tx, ty, p)) {
+        beginStep(p, tx, ty, playerStepTicks(state, p));
+        continue;
+      }
       // Jump Sneakers: hop a single generator onto the free tile behind it.
       const lx = tx + v.dx;
       const ly = ty + v.dy;

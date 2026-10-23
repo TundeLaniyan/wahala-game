@@ -4,7 +4,7 @@
  *
  *   npm run simulate -- --matches 200 --players 4
  *   npm run simulate -- --duel easy medium --matches 100 --players 2
- *   npm run simulate -- --matches 50 --seed 1000 --mode crush --hazards --crowd
+ *   npm run simulate -- --matches 50 --seed 1000 --mode crush --crowd
  *
  * Options
  *   --matches N        number of matches (default 100)
@@ -14,7 +14,7 @@
  *   --arena ID         arena id (default danfoBusPark)
  *   --mode classic|crush
  *   --crowd            enable spectator throws
- *   --hazards          enable floor hazards (trap arenas)
+ *   --no-hazards       switch the arena's stage hazards off (they are on in real matches)
  *   --verbose          print one line per match
  */
 import { performance } from 'node:perf_hooks';
@@ -45,7 +45,7 @@ function parseArgs(argv: string[]): Options {
     arena: undefined,
     mode: 'classic',
     crowd: false,
-    hazards: false,
+    hazards: true,
     verbose: false,
   };
   const diff = (v: string | undefined): Difficulty => {
@@ -77,8 +77,8 @@ function parseArgs(argv: string[]): Options {
       case '--crowd':
         o.crowd = true;
         break;
-      case '--hazards':
-        o.hazards = true;
+      case '--no-hazards':
+        o.hazards = false;
         break;
       case '--verbose':
         o.verbose = true;
@@ -160,7 +160,7 @@ function main(): void {
       seed: o.seed + i,
       difficulties,
       arenaId: o.arena,
-      settings: { mode: o.mode, crowdThrows: o.crowd, floorHazards: o.hazards },
+      settings: { mode: o.mode, crowdThrows: o.crowd, stageHazards: o.hazards },
       now: () => performance.now(),
     });
     matchSeconds += out.ticks / 60;
@@ -195,7 +195,7 @@ function main(): void {
     d === 0 ? '   -' : `${((100 * n) / d).toFixed(1).padStart(5)}%`;
   console.log(
     `\n${o.matches} matches, ${o.players} players${o.duel ? `, duel ${o.duel[0]} vs ${o.duel[1]}` : ''}, ` +
-      `mode ${o.mode}${o.crowd ? '+crowd' : ''}${o.hazards ? '+hazards' : ''}, seeds ${o.seed}..${o.seed + o.matches - 1}`,
+      `mode ${o.mode}${o.crowd ? '+crowd' : ''}${o.hazards ? '' : ' (no stage hazards)'}, seeds ${o.seed}..${o.seed + o.matches - 1}`,
   );
   console.log('difficulty  seats   wins  win%  draws  self-kill%  unassisted%  avg-survive  decide(us)');
   for (const d of DIFFICULTIES) {

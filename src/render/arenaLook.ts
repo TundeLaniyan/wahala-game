@@ -12,6 +12,8 @@
  * - Lekki Roadworks: night shift. Cold white floodlights over raw cement and wet asphalt, sodium
  *   work lamps, black sky.
  */
+import { NEW_ARENA_ART } from './arenas/newArenas';
+
 export interface ArenaLook {
   /** Sky / clear colour and the distance fog that gives the backdrop atmospheric depth. */
   sky: number;
@@ -99,6 +101,7 @@ const LOOKS: Record<string, ArenaLook> = {
     ],
   },
 };
+/** The arena's look: the original three live here, the expansion arenas in their own modules. */
 export function arenaLook(arenaId: string): ArenaLook {
-  return LOOKS[arenaId] ?? LOOKS.danfoBusPark!;
+  return LOOKS[arenaId] ?? NEW_ARENA_ART()[arenaId]?.look ?? LOOKS.danfoBusPark!;
 }

@@ -341,6 +341,48 @@ const painters: Record<PickupKind, Painter> = {
     g.lineTo(44, 52);
     g.stroke();
   },
+  bombpass: (g) => {
+    // Generator Pass: a small generator crossed by a dashed footprint trail and an arrow straight through it
+    g.fillStyle = '#3a4048';
+    g.strokeStyle = '#16181c';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.roundRect(22, 22, 20, 18, 3);
+    g.fill();
+    g.stroke();
+    g.fillStyle = '#ffd018';
+    g.fillRect(26, 26, 12, 5);
+    g.globalAlpha = 0.55;
+    g.fillStyle = '#7cf0c8';
+    g.fillRect(22, 22, 20, 18);
+    g.globalAlpha = 1;
+    g.strokeStyle = '#7cf0c8';
+    g.lineWidth = 4;
+    g.setLineDash([5, 4]);
+    g.beginPath();
+    g.moveTo(8, 31);
+    g.lineTo(50, 31);
+    g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = '#7cf0c8';
+    g.beginPath();
+    g.moveTo(56, 31);
+    g.lineTo(46, 23);
+    g.lineTo(46, 39);
+    g.closePath();
+    g.fill();
+    g.fillStyle = W;
+    for (const [x, y] of [
+      [12, 46],
+      [24, 50],
+      [40, 46],
+      [52, 50],
+    ] as const) {
+      g.beginPath();
+      g.ellipse(x, y, 3.2, 2.2, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+  },
   hotfuel: (g) => {
     g.fillStyle = '#ffd018';
     g.strokeStyle = '#16181c';

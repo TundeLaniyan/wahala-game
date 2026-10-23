@@ -71,7 +71,6 @@ export class MatchController {
       settings: {
         mode: settings.mode,
         crowdThrows: settings.crowdThrows,
-        floorHazards: settings.floorHazards,
       },
     });
     this.state = state;

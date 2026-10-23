@@ -82,6 +82,8 @@ export function applyPickup(state: GameState, p: Player, kind: PickupKind, event
       return grant(p, 'sneakers');
     case 'hotfuel':
       return grant(p, 'hotFuel');
+    case 'bombpass':
+      return grant(p, 'bombPass');
     case 'killswitch':
       if (p.killSwitchCharges >= c.maxKillSwitchCharges) return false;
       p.killSwitchCharges = Math.min(c.maxKillSwitchCharges, p.killSwitchCharges + c.killSwitchCharges);
@@ -104,7 +106,10 @@ export function applyPickup(state: GameState, p: Player, kind: PickupKind, event
   }
 }
 
-function grant(p: Player, flag: 'kick' | 'punch' | 'grip' | 'remote' | 'sneakers' | 'hotFuel'): boolean {
+function grant(
+  p: Player,
+  flag: 'kick' | 'punch' | 'grip' | 'remote' | 'sneakers' | 'hotFuel' | 'bombPass',
+): boolean {
   if (p[flag]) return false;
   p[flag] = true;
   return true;

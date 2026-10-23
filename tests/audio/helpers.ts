@@ -8,6 +8,22 @@ import { FakeContext } from './fakeContext';
 import type { FakeContextOptions } from './fakeContext';
 
 /** One sample of every SimEvent type. The Record type makes a new sim event a compile error here. */
+const STAGE_EVENT = {
+  id: 9,
+  hazard: 0,
+  kind: 'sweep' as const,
+  style: 'danfo' as const,
+  tiles: [60, 61, 62],
+  dir: 'right' as const,
+  warnTick: 10,
+  startTick: 130,
+  endTick: 160,
+  eventId: 3,
+  index: -1,
+  stepRemaining: 0,
+  stepTicks: 9,
+};
+
 export const SAMPLES: Record<SimEvent['type'], SimEvent> = {
   matchStarted: { type: 'matchStarted' },
   matchEnded: { type: 'matchEnded', result: { kind: 'win', winnerId: 0 } },
@@ -62,6 +78,13 @@ export const SAMPLES: Record<SimEvent['type'], SimEvent> = {
   hazardTriggered: { type: 'hazardTriggered', playerId: 0, kind: 'oil' },
   trapsWarning: { type: 'trapsWarning', wave: 0, tiles: [{ index: 20, kind: 'oil' }], liveTick: 90 },
   trapsActivated: { type: 'trapsActivated', wave: 0, tiles: [{ index: 20, kind: 'oil' }] },
+  stageWarning: { type: 'stageWarning', event: STAGE_EVENT },
+  stageStarted: { type: 'stageStarted', event: STAGE_EVENT },
+  stageEnded: { type: 'stageEnded', eventId: 3, id: 9 },
+  stageSweepStep: { type: 'stageSweepStep', id: 9, x: 1, y: 4 },
+  stageBlockDropped: { type: 'stageBlockDropped', x: 5, y: 5, style: 'merch' },
+  playerTeleported: { type: 'playerTeleported', playerId: 0, fromX: 2, fromY: 4, toX: 12, toY: 6 },
+  generatorDoused: { type: 'generatorDoused', generatorId: 1 },
 };
 
 export interface Rig {

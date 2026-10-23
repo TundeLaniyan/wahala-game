@@ -18,6 +18,9 @@ export interface SandboxOptions {
   config?: DeepPartial<GameConfig>;
   /** Keep the random soft-block layout instead of clearing it. */
   keepSoft?: boolean;
+  arenaId?: string;
+  /** Keep the arena's stage hazards (floor traps, traffic ...). Off by default: scenarios stay controlled. */
+  stage?: boolean;
 }
 
 /**
@@ -29,8 +32,10 @@ export function sandbox(opts: SandboxOptions = {}): GameState {
     opts.characters ?? Array.from({ length: opts.players ?? 2 }, () => 'streetBaller' as CharacterId);
   const state = createGame({
     seed: opts.seed ?? 1,
+    arenaId: opts.arenaId,
     players: characters.map((characterId, i) => ({ name: `P${i}`, characterId, isBot: false })),
     config: opts.config,
+    settings: { stageHazards: opts.stage ?? false },
   });
   if (!opts.keepSoft) {
     state.tiles = state.tiles.map((t) => (t === Tile.Soft ? Tile.Empty : t));
@@ -82,11 +87,11 @@ export function addGenerator(
 export function run(
   state: GameState,
   n: number,
-  intents: Intents | ((t: number) => Intents) = {},
+  intents: Intents | ((t: number) => Partial<Intents>) = {},
 ): SimEvent[] {
   const all: SimEvent[] = [];
   for (let i = 0; i < n; i++) {
-    all.push(...tick(state, typeof intents === 'function' ? intents(i) : intents));
+    all.push(...tick(state, (typeof intents === 'function' ? intents(i) : intents) as Intents));
   }
   return all;
 }

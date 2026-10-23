@@ -187,6 +187,7 @@ export class DangerBuilder {
     this.link();
 
     this.applyVehicles(map, world, profile, q);
+    this.applyStage(map, world, profile);
     this.applyCrowd(map, world, profile);
 
     // ---- blast geometry, chains, then a refinement pass where earlier blasts have cleared soft blocks
@@ -262,6 +263,19 @@ export class DangerBuilder {
     n.hits.length = 0;
     n.tiles.push(n.tile);
     for (let o = this.head[n.tile]!; o >= 0; o = this.next[o]!) if (o !== idx) n.hits.push(o);
+    if (obs.config.generator.blastMode === 'fullLine') {
+      // Power Yard: the whole row and column, through everything (mirrors explosions.ts)
+      for (const d of DIRS) {
+        const v = DIR_VEC[d];
+        for (let cx = n.x + v.dx, cy = n.y + v.dy; cx >= 0 && cy >= 0 && cx < w && cy < board.height; cx += v.dx, cy += v.dy) {
+          const t = cy * w + cx;
+          if (obs.tiles[t] === Tile.Hard) continue;
+          n.tiles.push(t);
+          for (let o = this.head[t]!; o >= 0; o = this.next[o]!) if (o !== idx) n.hits.push(o);
+        }
+      }
+      return;
+    }
     for (const d of DIRS) {
       const v = DIR_VEC[d];
       let cx = n.x;
@@ -399,6 +413,36 @@ export class DangerBuilder {
       if (n.explodeAt > a) {
         n.explodeAt = a;
         n.hold = false;
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------ stage hazards
+
+  /** Telegraphed stage hazards: sweeping traffic along its route, lethal strike zones while live. */
+  private applyStage(map: DangerMap, world: World, profile: AiProfile): void {
+    const { obs } = world;
+    const T = obs.tick;
+    const m = profile.margin;
+    for (const e of obs.stage.events) {
+      if (e.startTick - T > profile.vehicleLookahead) continue;
+      if (e.kind === 'strike') {
+        for (const t of e.tiles) map.add(t, e.startTick - m, e.endTick - 1 + m);
+      } else if (e.kind === 'sweep') {
+        const st = e.stepTicks;
+        if (e.index < 0) {
+          e.tiles.forEach((t, j) => {
+            const a = e.startTick + j * st;
+            this.vehicleTile(map, t, a, a + st + (st >> 1), profile);
+          });
+        } else {
+          map.add(e.tiles[e.index]!, T - m, T + e.stepRemaining + m);
+          if (e.index > 0) map.add(e.tiles[e.index - 1]!, T - m, T + (st >> 1) + m);
+          for (let j = e.index + 1; j < e.tiles.length; j++) {
+            const a = T + e.stepRemaining + (j - e.index - 1) * st;
+            this.vehicleTile(map, e.tiles[j]!, a, a + st + (st >> 1), profile);
+          }
+        }
       }
     }
   }

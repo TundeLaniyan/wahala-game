@@ -28,6 +28,7 @@ import {
 import { updateCrowd } from './systems/crowd';
 import { updateCrush } from './systems/crush';
 import { updateEndgameTraps, updateFloorHazards } from './systems/hazards';
+import { armTeleports, updateStage } from './systems/stage';
 
 export function tick(state: GameState, intents: Intents = {}): SimEvent[] {
   const events: SimEvent[] = [];
@@ -51,6 +52,7 @@ export function tick(state: GameState, intents: Intents = {}): SimEvent[] {
   applyIntents(state, intents, events);
   updateMovement(state, intents, events);
   updateFloorHazards(state, events);
+  armTeleports(state);
   updateGeneratorMotion(state, events);
   collectPickups(state, events);
   updateGeneratorTimers(state, events);
@@ -60,6 +62,7 @@ export function tick(state: GameState, intents: Intents = {}): SimEvent[] {
   updateCrush(state, hits, events);
   updateEndgameTraps(state, events);
   updateCrowd(state, hits, events);
+  updateStage(state, hits, events);
   resolveExplosions(state, events);
   burnPickups(state, events);
   hits.push(...collectFlameHits(state));

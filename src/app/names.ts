@@ -1,5 +1,5 @@
 import type { CharacterId, PlayerSetup } from '../sim';
-import { CHARACTER_IDS, createRng, shuffle } from '../sim';
+import { CHARACTER_IDS, createRng, getArena, shuffle } from '../sim';
 import type { GameSettings } from './settings';
 
 const BOT_NAMES = [
@@ -13,7 +13,34 @@ const BOT_NAMES = [
   'Kunle_Z',
   'Ife_Star',
   'Danfo_Dan',
+  'Bisi_Boom',
+  'Agbero_1',
+  'Mama_Put',
+  'Tunde_T',
+  'Chioma_C',
+  'Okada_Oga',
+  'Ikeja_Ice',
+  'Bode_Blast',
+  'Amaka_A',
+  'Surulere_S',
+  'Eko_Elite',
+  'Ngozi_N',
+  'Femi_Fuse',
+  'Kemi_K',
+  'Obalende_O',
+  'Zainab_Z',
+  'Mushin_Max',
+  'Dayo_D',
+  'Emeka_E',
+  'Yemi_Y',
+  'Ajah_Ace',
+  'Funke_F',
 ];
+
+/** Total competitors for the chosen arena (City Rumble has its own, much larger count). */
+export function competitorCount(settings: GameSettings): number {
+  return getArena(settings.arenaId).kind === 'rumble' ? settings.rumbleCompetitors : settings.competitors;
+}
 
 /** Human takes slot 0; bots get the other characters first (so portraits stay distinct) and unique handles. */
 export function buildPlayers(settings: GameSettings, seed: number): PlayerSetup[] {
@@ -21,8 +48,10 @@ export function buildPlayers(settings: GameSettings, seed: number): PlayerSetup[
   const names = shuffle(rng, BOT_NAMES);
   const others = CHARACTER_IDS.filter((c) => c !== settings.character);
   const pool: CharacterId[] = [...shuffle(rng, others), ...shuffle(rng, CHARACTER_IDS)];
+  while (pool.length < 32) pool.push(...shuffle(rng, CHARACTER_IDS));
   const players: PlayerSetup[] = [{ name: 'YOU', characterId: settings.character, isBot: false }];
-  for (let i = 1; i < settings.competitors; i++) {
+  const count = competitorCount(settings);
+  for (let i = 1; i < count; i++) {
     players.push({
       name: names[i - 1]!,
       characterId: pool[i - 1]!,

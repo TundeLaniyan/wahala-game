@@ -4,10 +4,13 @@ import { Tile } from '../types';
 import type { GameState, Player } from '../types';
 import { groundedGeneratorAt } from './queries';
 
-/** Can a player's feet go onto this tile right now? */
-export function canPlayerEnter(state: GameState, x: number, y: number): boolean {
+/**
+ * Can a player's feet go onto this tile right now? Pass the player to honour Generator Pass (Bomb
+ * Pass), which lets them walk over grounded generators; concrete and soft blocks always stop them.
+ */
+export function canPlayerEnter(state: GameState, x: number, y: number, p?: Player): boolean {
   if (tileAt(state, x, y) !== Tile.Empty) return false;
-  return !groundedGeneratorAt(state, x, y);
+  return p?.bombPass === true || !groundedGeneratorAt(state, x, y);
 }
 
 export function beginStep(p: Player, x: number, y: number, stepTicks: number): void {

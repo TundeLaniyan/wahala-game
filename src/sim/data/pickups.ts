@@ -104,6 +104,13 @@ export const PICKUP_DEFS: Readonly<Record<PickupKind, PickupDef>> = {
     description: 'Hop over one generator',
     color: 0x5ad0ff,
   },
+  bombpass: {
+    kind: 'bombpass',
+    name: 'Generator Pass',
+    short: 'Pass',
+    description: 'Walk over generators (yours and rivals\') - no fire protection',
+    color: 0x7cf0c8,
+  },
   hotfuel: {
     kind: 'hotfuel',
     name: 'Hot Fuel',

@@ -51,6 +51,13 @@ export interface GameConfig {
     punchDistance: number;
     throwTicks: number;
     weakFireRange: number;
+    /**
+     * Blast shape. `plus` is the normal rule (range-limited, concrete stops it, the first soft block
+     * absorbs it). `fullLine` is the Surulere Power Yard rule: every blast covers its ENTIRE row and
+     * column up to the arena boundary, passing through (and breaking) every block in the line.
+     * Set only through an arena's config overrides, never globally.
+     */
+    blastMode: 'plus' | 'fullLine';
   };
   pickups: {
     /** Chance a soft block hides a pickup. */
@@ -93,6 +100,13 @@ export interface GameConfig {
     finalTileLeadTicks: number;
     /** Telegraph time before a tile lands. The final tile lands exactly at 0:00. */
     warnTicks: number;
+    /**
+     * City Rumble: a centred core (w x h tiles) that never closes. The ring closes around it and the
+     * last ring tile lands `coreClosedRemainingTicks` before the end; the core is fought over until 0:00.
+     * Null = the standard Wahala Crush (everything closes, the final tile lands at 0:00).
+     */
+    keepCore: { w: number; h: number } | null;
+    coreClosedRemainingTicks: number;
   };
   crowd: {
     firstThrowTicks: number;
@@ -114,6 +128,20 @@ export interface GameConfig {
     endgameWaveRemainingTicks: number[];
     /** Each endgame wave is telegraphed on the floor this long before it goes live. */
     endgameWarnTicks: number;
+  };
+  stage: {
+    /** Minimum telegraph of any LETHAL stage hazard (the arena data may ask for longer, never shorter). */
+    minLethalWarnTicks: number;
+    /** At most this many lethal stage events warn or run at the same moment. */
+    maxLethalEvents: number;
+    /** Manholes: how long after a trip a player cannot be carried through a trapdoor again. */
+    teleportCooldownTicks: number;
+    /** Manholes: the climb-out pause after arriving. */
+    teleportArriveTicks: number;
+    /** Merchandise drops never land within this many tiles (Manhattan) of a player. */
+    dropMinPlayerDistance: number;
+    /** Lethal stage events stop this long before the end, and when Wahala Crush starts closing. */
+    quietRemainingTicks: number;
   };
 }
 
@@ -145,24 +173,28 @@ export const DEFAULT_CONFIG: GameConfig = {
     punchDistance: 3,
     throwTicks: ticks(0.4),
     weakFireRange: 1,
+    blastMode: 'plus',
   },
   pickups: {
-    hiddenChance: 0.4,
+    hiddenChance: 0.45,
+    // Generators come first (founder direction, decision N5): Extra Socket + Petrol Top-Up are 60 of
+    // the 97 beneficial weight points (~62 %); the advanced skills are deliberately rarer.
     weights: {
-      petrol: 18,
-      socket: 14,
-      skates: 10,
-      diesel: 2,
-      boots: 6,
-      gloves: 5,
-      grip: 6,
-      remote: 5,
-      killswitch: 5,
+      petrol: 30,
+      socket: 30,
+      skates: 7,
+      diesel: 1,
+      boots: 3,
+      gloves: 2,
+      grip: 3,
+      remote: 2,
+      killswitch: 3,
       okada: 4,
-      voucher: 7,
-      curse: 6,
-      sneakers: 4,
-      hotfuel: 2,
+      voucher: 6,
+      curse: 5,
+      sneakers: 2,
+      hotfuel: 1,
+      bombpass: 3,
     },
     killSwitchCharges: 2,
     maxKillSwitchCharges: 3,
@@ -200,6 +232,8 @@ export const DEFAULT_CONFIG: GameConfig = {
     startRemainingTicks: ticks(45),
     finalTileLeadTicks: ticks(2),
     warnTicks: ticks(1.2),
+    keepCore: null,
+    coreClosedRemainingTicks: ticks(30),
   },
   crowd: {
     firstThrowTicks: ticks(25),
@@ -214,6 +248,14 @@ export const DEFAULT_CONFIG: GameConfig = {
     oilSlideTiles: 2,
     endgameWaveRemainingTicks: [ticks(30), ticks(15)],
     endgameWarnTicks: ticks(1.5),
+  },
+  stage: {
+    minLethalWarnTicks: ticks(1.5),
+    maxLethalEvents: 1,
+    teleportCooldownTicks: ticks(2.5),
+    teleportArriveTicks: ticks(0.3),
+    dropMinPlayerDistance: 2,
+    quietRemainingTicks: ticks(5),
   },
 };
 

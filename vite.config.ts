@@ -15,5 +15,7 @@ export default defineConfig(({ command, isPreview }) => ({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
+    // full bot matches are CPU-bound; under a parallel run on a shared machine 5 s is too tight
+    testTimeout: 30_000,
   },
 }));

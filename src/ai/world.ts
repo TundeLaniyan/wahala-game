@@ -2,7 +2,7 @@
  * Per-think snapshot of what the bot may see: walkability, pickups, rivals and timing helpers.
  * Arrays are reused between refreshes (the arena size is fixed for a match).
  */
-import { DIRS, Tile } from '../sim';
+import { DIRS, Tile, manholePartners } from '../sim';
 import type { Dir, Observation, Pickup, Player } from '../sim';
 import { getBoard } from './board';
 import type { AiProfile } from './profiles';
@@ -71,13 +71,17 @@ export class World {
     const { blocked, hazard, pickupAt } = this;
     for (let i = 0; i < board.size; i++) blocked[i] = obs.tiles[i] === Tile.Empty ? 0 : 1;
     this.genAt.fill(-1);
+    // Generator Pass: generators do not block this bot's feet (they still explode)
+    const pass = this.me.bombPass;
     obs.generators.forEach((g, i) => {
       if (g.carriedBy !== null) return;
-      blocked[g.y * board.width + g.x] = 1;
+      if (!pass) blocked[g.y * board.width + g.x] = 1;
       if (g.flight === null) this.genAt[g.y * board.width + g.x] = i;
     });
     hazard.fill(0);
     for (const k in obs.floorHazards) hazard[Number(k)] = 1;
+    // manholes move you somewhere the plan did not expect: treat them like floor traps
+    if (obs.stage.enabled) for (const k of manholePartners(obs).keys()) hazard[k] = 1;
     pickupAt.fill(-1);
     obs.pickups.forEach((u: Readonly<Pickup>, i) => {
       pickupAt[u.y * board.width + u.x] = i;

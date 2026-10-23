@@ -86,26 +86,23 @@ describe('floor hazards (trap arena)', () => {
       seed: 1,
       arenaId: 'lekkiRoadworks',
       players: duo,
-      settings: { floorHazards: true },
     });
+    s.stage.enabled = false; // floor traps only: no crane debris in these scenarios
     s.tiles = s.tiles.map((t) => (t === Tile.Soft ? Tile.Empty : t));
     s.match.phase = 'playing';
     return s;
   };
 
-  it('early traps only exist when the option is on', () => {
-    const on = createGame({
-      seed: 1,
-      arenaId: 'lekkiRoadworks',
-      players: duo,
-      settings: { floorHazards: true },
-    });
-    const off = createGame({ seed: 1, arenaId: 'lekkiRoadworks', players: duo });
-    expect(Object.keys(on.floorHazards).length).toBeGreaterThan(0);
+  it("floor traps belong to the arena: always there where the stage has them, never a menu option", () => {
+    const lekki = createGame({ seed: 1, arenaId: 'lekkiRoadworks', players: duo });
+    expect(Object.keys(lekki.floorHazards).length).toBeGreaterThan(0);
+    const busPark = createGame({ seed: 1, players: duo });
+    expect(Object.keys(busPark.floorHazards).length).toBeGreaterThan(0);
+    const ajegunle = createGame({ seed: 1, arenaId: 'ajegunleBackstreets', players: duo });
+    expect(Object.keys(ajegunle.floorHazards)).toHaveLength(0);
+    // only tutorials / test scenarios switch the stage off
+    const off = createGame({ seed: 1, arenaId: 'lekkiRoadworks', players: duo, settings: { stageHazards: false } });
     expect(Object.keys(off.floorHazards)).toHaveLength(0);
-    // every arena now has early traps available behind the same option
-    const plain = createGame({ seed: 1, players: duo, settings: { floorHazards: true } });
-    expect(Object.keys(plain.floorHazards).length).toBeGreaterThan(0);
   });
 
   it('a pothole makes a player stumble', () => {

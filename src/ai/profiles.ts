@@ -91,7 +91,7 @@ export const PROFILES: Readonly<Record<Difficulty, AiProfile>> = {
     margin: 0,
     guardTicks: 24,
     horizonTicks: 200,
-    avoidFloorHazards: false,
+    avoidFloorHazards: true,
     placeVerify: 0.5,
     placeMinGain: 2,
     softValue: 3,
