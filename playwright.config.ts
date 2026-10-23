@@ -4,11 +4,16 @@ import { defineConfig, devices } from '@playwright/test';
 const executablePath = process.env.WAHALA_CHROMIUM || undefined;
 const PORT = 4173;
 
+// GitHub's runners render WebGL in software on two slow vCPUs: a single frame (and so every screenshot)
+// can take tens of seconds there, so CI gets far longer budgets than the container.
+const CI = !!process.env.CI;
+
 export default defineConfig({
   testDir: 'e2e',
-  timeout: 90_000,
+  timeout: CI ? 300_000 : 90_000,
   // Software WebGL (SwiftShader) plus the audio bank's warm-up share one CPU, so UI state can lag the sim by seconds.
-  expect: { timeout: 15_000 },
+  expect: { timeout: CI ? 45_000 : 15_000 },
+  workers: CI ? 1 : undefined,
   retries: 1,
   reporter: [['list']],
   use: {
