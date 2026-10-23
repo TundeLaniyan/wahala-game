@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { InputSourceName } from '../input';
+import type { CharacterId } from '../sim';
 import type { CameraMode, RenderStats } from '../render';
 import type { HudSnapshot } from './hud';
 import type { CrowdCaptionLine } from './ports';
@@ -27,6 +28,31 @@ export interface MatchSummary {
   localWon: boolean;
 }
 
+/** What the How to Play screen shows (null when the tutorial is closed). */
+export interface TutorialView {
+  /** Index into the tutorial's chapter list. */
+  chapter: number;
+  mode: 'demo' | 'practice';
+  caption: string;
+  step: string | null;
+  beat: number;
+  beats: number;
+  /** The demo script has played to the end. */
+  finished: boolean;
+  practice: {
+    goal: string;
+    hint: string;
+    checks: { label: string; done: boolean }[];
+    complete: boolean;
+    character: CharacterId;
+    characterChoice: boolean;
+  } | null;
+  /** A short message, e.g. why a practice restarted. */
+  notice: string | null;
+  /** Bumped on every (re)load so the UI can restart its animations. */
+  run: number;
+}
+
 export interface UiState {
   screen: Screen;
   settings: GameSettings;
@@ -49,6 +75,8 @@ export interface UiState {
   portraitsVersion: number;
   /** Debug `?cam=stadium`: forces the stadium follow camera; null = chosen per arena. */
   cameraOverride: CameraMode | null;
+  /** How to Play (tutorial) state; null when it is closed. Never touches `settings`. */
+  tutorial: TutorialView | null;
 }
 
 /** UI-facing state. The simulation state itself is deliberately NOT stored in React state. */
@@ -70,6 +98,7 @@ export const useGameStore = create<UiState>(() => ({
   loading: { done: 0, total: 1 },
   portraitsVersion: 0,
   cameraOverride: null,
+  tutorial: null,
 }));
 
 export const patch = (p: Partial<UiState>): void => useGameStore.setState(p);
