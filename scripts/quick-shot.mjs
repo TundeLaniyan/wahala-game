@@ -22,7 +22,7 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 await page.goto(
-  `http://localhost:5199/wahala-game/?debug&noattract&q=${process.env.Q ?? 'high'}&seed=7${query}`,
+  `${process.env.SHOT_URL ?? 'http://localhost:5199/wahala-game/'}?debug&noattract&q=${process.env.Q ?? 'high'}&seed=7${query}`,
 );
 await page.getByTestId('title-screen').waitFor();
 await page.getByTestId(`arena-${arena}`).click();
