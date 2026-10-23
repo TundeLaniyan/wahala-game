@@ -1,13 +1,13 @@
 # Recorded audio slots
 
-**No recordings are shipped yet.** Every sound in the game is synthesised at runtime
-(`src/audio/recipes`). The generated music, synthetic Pidgin voices and generated ambience beds of the
-`claude/wahala-lagos-audio` branch were rejected and removed (see [`docs/AUDIO.md`](../../docs/AUDIO.md)).
-What remains here is configuration for real, licensed audio:
+**The only recorded audio shipped is the in-game music**: nine of the founder's ten approved Pixabay tracks
+(`music/pixabay_<id>.mp3`, Pixabay Content License, part of the game only, never a standalone collection; see
+[`LICENSES.md`](LICENSES.md)). **No effect, voice or ambience recordings are shipped**: every other sound is
+synthesised at runtime (`src/audio/recipes`). The generated music, synthetic Pidgin voices and generated ambience
+beds of the `claude/wahala-lagos-audio` branch were rejected and removed (see [`docs/AUDIO.md`](../../docs/AUDIO.md)).
 
-- `music/manifest.json`: the founder's ten approved Pixabay tracks for `src/audio/music.ts`. The files
-  (`music/pixabay_<id>.mp3`) are not in the repository yet; the player skips missing ones and is silent
-  without them. See `docs/AUDIO.md` for the exact file names;
+- `music/manifest.json`: the approved tracks, their credits and levels, and the arena playlists for
+  `src/audio/music.ts`. Track #7 (`pixabay_496406.mp3`) is listed but not supplied yet; the player skips it;
 - `voices/voices.json`: the line catalogue for `src/audio/pidgin.ts` (no voice packs), plus
   `voices/recorded.json` + `voices/recorded/` for licensed recordings of those lines (empty);
 - `slots.json`: per-sound overrides of the synthesised sounds, described below (empty).

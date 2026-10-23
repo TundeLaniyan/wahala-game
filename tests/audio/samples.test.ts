@@ -39,12 +39,15 @@ describe('public/audio documentation and manifest', () => {
   const dir = join(__dirname, '../../public/audio');
   const read = (f: string): string => readFileSync(join(dir, f), 'utf8');
 
-  it('ships NO recordings: slots.json is empty (rejected generated beds removed), and the docs say so', () => {
+  it('ships no effect/voice/ambience recordings: slots.json is empty, only the approved music is recorded audio', () => {
     const manifest = JSON.parse(read('slots.json')) as { slots: Record<string, { license: string }> };
     expect(manifest.slots).toEqual({});
     expect(parseManifest(manifest).entries).toHaveLength(0);
-    expect(read('README.md')).toMatch(/No recordings are shipped/i);
-    expect(read('LICENSES.md')).toMatch(/No recorded audio is shipped/i);
+    expect(read('README.md')).toMatch(/No effect, voice or ambience recordings are shipped/i);
+    expect(read('LICENSES.md')).toMatch(
+      /only recorded audio shipped is the founder's approved Pixabay music/i,
+    );
+    expect(read('LICENSES.md')).toMatch(/standalone/i);
     expect(read('LICENSES.md')).toMatch(/licen[cs]e/i);
   });
 

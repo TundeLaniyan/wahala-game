@@ -1,66 +1,84 @@
 {
-  "_comment": "The founder's ten APPROVED Pixabay tracks (Pixabay Content License). Nothing generated may ever be listed here (tests/audio/assets.test.ts). Each file goes next to this manifest under the exact name in `file`; a listed file that is not present is skipped at runtime. Titles are taken from the source page URLs (the pages could not be opened from the build environment); `artist` stays null until it is checked on the page. See docs/AUDIO.md.",
+  "_comment": "The founder's approved Pixabay tracks (Pixabay Content License), shipped ONLY as WAHALA!'s in-game soundtrack, never as a standalone collection (see public/audio/LICENSES.md). Nothing generated may ever be listed here (tests/audio/assets.test.ts). `artist` is the Pixabay uploader as named in the downloaded file; `gain` levels every track to about -14 LUFS (measured with ffmpeg ebur128). A listed file that is not present (pixabay_496406) is skipped at runtime. See docs/AUDIO.md.",
   "version": 2,
   "tracks": [
     {
       "id": "pixabay_569473",
       "title": "Afrobeat (Afro Beat)",
-      "artist": null,
+      "artist": "arpmedia",
       "source": "https://pixabay.com/music/afrobeat-afrobeat-afro-beat-569473/",
       "licence": "Pixabay Content License",
       "licenceUrl": "https://pixabay.com/service/license-summary/",
       "file": "pixabay_569473.mp3",
-      "approved": true
+      "approved": true,
+      "gain": 0.8,
+      "loudnessLufs": -12.1,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
     },
     {
       "id": "pixabay_573648",
       "title": "Afrobeat Instrumental Summer Groove",
-      "artist": null,
+      "artist": "alex-morgan",
       "source": "https://pixabay.com/music/modern-jazz-afrobeat-instrumental-summer-groove-573648/",
       "licence": "Pixabay Content License",
       "licenceUrl": "https://pixabay.com/service/license-summary/",
       "file": "pixabay_573648.mp3",
-      "approved": true
+      "approved": true,
+      "gain": 0.62,
+      "loudnessLufs": -9.8,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
     },
     {
       "id": "pixabay_588999",
       "title": "Afrobeat (Afro Beat)",
-      "artist": null,
+      "artist": "solarflex",
       "source": "https://pixabay.com/music/afrobeat-afrobeat-afro-beat-588999/",
       "licence": "Pixabay Content License",
       "licenceUrl": "https://pixabay.com/service/license-summary/",
       "file": "pixabay_588999.mp3",
-      "approved": true
+      "approved": true,
+      "gain": 0.91,
+      "loudnessLufs": -13.2,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
     },
     {
       "id": "pixabay_491433",
       "title": "Afrobeat (Afro Beat)",
-      "artist": null,
+      "artist": "apalonbeats",
       "source": "https://pixabay.com/music/afrobeat-afrobeat-afro-beat-491433/",
       "licence": "Pixabay Content License",
       "licenceUrl": "https://pixabay.com/service/license-summary/",
       "file": "pixabay_491433.mp3",
-      "approved": true
+      "approved": true,
+      "gain": 0.72,
+      "loudnessLufs": -11.2,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
     },
     {
       "id": "pixabay_439622",
       "title": "Afrobeat (Afro Beat)",
-      "artist": null,
+      "artist": "sigmamusicart",
       "source": "https://pixabay.com/music/afrobeat-afrobeat-afro-beat-439622/",
       "licence": "Pixabay Content License",
       "licenceUrl": "https://pixabay.com/service/license-summary/",
       "file": "pixabay_439622.mp3",
-      "approved": true
+      "approved": true,
+      "gain": 0.94,
+      "loudnessLufs": -13.5,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
     },
     {
       "id": "pixabay_491432",
       "title": "Afrobeat (Afro Beat) 2",
-      "artist": null,
+      "artist": "apalonbeats",
       "source": "https://pixabay.com/music/beats-afrobeat-afro-beat-2-491432/",
       "licence": "Pixabay Content License",
       "licenceUrl": "https://pixabay.com/service/license-summary/",
       "file": "pixabay_491432.mp3",
-      "approved": true
+      "approved": true,
+      "gain": 0.76,
+      "loudnessLufs": -11.6,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
     },
     {
       "id": "pixabay_496406",
@@ -70,37 +88,47 @@
       "licence": "Pixabay Content License",
       "licenceUrl": "https://pixabay.com/service/license-summary/",
       "file": "pixabay_496406.mp3",
-      "approved": true
+      "approved": true,
+      "note": "MISSING: not supplied by the founder yet (batch 1 + 2 had nine of the ten). Drop the file here as pixabay_496406.mp3 to enable it; no code change needed."
     },
     {
       "id": "pixabay_406552",
       "title": "Pause",
-      "artist": null,
+      "artist": "audiolibraryinfinite",
       "source": "https://pixabay.com/music/afrobeat-pause-406552/",
       "licence": "Pixabay Content License",
       "licenceUrl": "https://pixabay.com/service/license-summary/",
       "file": "pixabay_406552.mp3",
-      "approved": true
+      "approved": true,
+      "gain": 1.15,
+      "loudnessLufs": -15.2,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
     },
     {
       "id": "pixabay_540950",
       "title": "Afro Beat Afrobeat Instrumental",
-      "artist": null,
+      "artist": "hitslab",
       "source": "https://pixabay.com/music/afrobeat-afro-beat-afrobeat-instrumental-540950/",
       "licence": "Pixabay Content License",
       "licenceUrl": "https://pixabay.com/service/license-summary/",
       "file": "pixabay_540950.mp3",
-      "approved": true
+      "approved": true,
+      "gain": 0.68,
+      "loudnessLufs": -10.6,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
     },
     {
       "id": "pixabay_504898",
       "title": "Afrobeat (Afro Beat)",
-      "artist": null,
+      "artist": "freemusicforvideo",
       "source": "https://pixabay.com/music/electronic-afrobeat-afro-beat-504898/",
       "licence": "Pixabay Content License",
       "licenceUrl": "https://pixabay.com/service/license-summary/",
       "file": "pixabay_504898.mp3",
-      "approved": true
+      "approved": true,
+      "gain": 0.88,
+      "loudnessLufs": -12.9,
+      "artistSource": "Pixabay uploader handle in the downloaded file name"
     }
   ],
   "playlists": {
@@ -117,9 +145,21 @@
       "pixabay_504898"
     ],
     "arenas": {
-      "danfoBusPark": { "signature": null },
-      "balogunMarket": { "signature": null },
-      "lekkiRoadworks": { "signature": null }
+      "danfoBusPark": {
+        "tracks": ["pixabay_504898", "pixabay_406552", "pixabay_491432", "pixabay_496406"],
+        "start": "pixabay_504898",
+        "signature": null
+      },
+      "balogunMarket": {
+        "tracks": ["pixabay_573648", "pixabay_569473", "pixabay_540950"],
+        "start": "pixabay_573648",
+        "signature": null
+      },
+      "lekkiRoadworks": {
+        "tracks": ["pixabay_491433", "pixabay_588999", "pixabay_439622"],
+        "start": "pixabay_491433",
+        "signature": null
+      }
     }
   },
   "menu": []

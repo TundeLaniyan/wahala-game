@@ -142,3 +142,125 @@ test.describe('audio settings, persistence and music start', () => {
     expect((await probe(page)).errors).toEqual([]);
   });
 });
+
+interface MusicState {
+  scene: string;
+  track: string | null;
+  arenaId: string | null;
+  available: string[];
+  paused: boolean;
+  rate: number;
+  urgency: number;
+  pitchPreserved: boolean;
+  position: number;
+  playing: boolean;
+  history: string[];
+}
+const musicState = (page: Page): Promise<MusicState> =>
+  page.evaluate(() => (window as unknown as { __WAHALA__: { music: () => MusicState } }).__WAHALA__.music());
+
+test.describe('the approved soundtrack in a real browser', () => {
+  test('all nine supplied tracks fetch and decode as real audio', async ({ page }) => {
+    await open(page, '&nobots');
+    const decoded = await page.evaluate(
+      async (files) => {
+        const ctx = new AudioContext();
+        const out: { file: string; ok: boolean; seconds: number }[] = [];
+        for (const f of files) {
+          try {
+            const res = await fetch(`audio/music/${f}`);
+            const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+            out.push({ file: f, ok: true, seconds: buf.duration });
+          } catch {
+            out.push({ file: f, ok: false, seconds: 0 });
+          }
+        }
+        await ctx.close();
+        return out;
+      },
+      [...APPROVED_FILES],
+    );
+    const ok = decoded.filter((d) => d.ok);
+    expect(ok.map((d) => d.file).sort()).toEqual(
+      [...APPROVED_FILES].filter((f) => f !== 'pixabay_496406.mp3').sort(),
+    );
+    for (const d of ok) expect(d.seconds, d.file).toBeGreaterThan(90);
+    // track #7 is not supplied yet: its slot stays empty
+    expect(decoded.find((d) => d.file === 'pixabay_496406.mp3')?.ok).toBe(false);
+  });
+
+  test('a match plays its arena track, escalates pitch-preserved in the final 30 s, pauses and rotates', async ({
+    page,
+  }) => {
+    test.setTimeout(420_000); // three matches on software WebGL
+    await open(page, '&nobots');
+    await page.getByTestId('audio-music').click(); // the first gesture unlocks audio
+    await page.getByTestId('arena-danfoBusPark').click();
+    await startMatch(page, { competitors: 2 });
+    await expect.poll(async () => (await musicState(page)).available.length, { timeout: 30_000 }).toBe(9);
+    // the first bus-park match opens with the bus park's starting track, and it really plays
+    await expect.poll(async () => (await musicState(page)).track, { timeout: 30_000 }).toBe('pixabay_504898');
+    await page.evaluate(() => {
+      (
+        window as unknown as { __WAHALA__: { controller(): { frozen: boolean } } }
+      ).__WAHALA__.controller().frozen = false;
+    });
+    await expect
+      .poll(async () => (await musicState(page)).position, { timeout: 30_000 })
+      .toBeGreaterThan(0.5);
+    const playing = await musicState(page);
+    expect(playing.playing).toBe(true);
+    expect(playing.pitchPreserved).toBe(true);
+    expect(playing.rate).toBe(1);
+
+    // fast-forward to 0:16 left, then play one second through the real audio path: tempo is up, pitch kept
+    await page.evaluate(() => {
+      const w = (
+        window as unknown as {
+          __WAHALA__: {
+            controller(): { frozen: boolean };
+            getState(): { config: { match: { durationTicks: number } }; match: { playTicks: number } };
+            stepTicks(n: number): void;
+            advance(n: number): void;
+          };
+        }
+      ).__WAHALA__;
+      w.controller().frozen = true;
+      const s = w.getState();
+      w.stepTicks(s.config.match.durationTicks - 16 * 60 - s.match.playTicks);
+      w.advance(60);
+    });
+    const late = await musicState(page);
+    expect(late.urgency).toBeGreaterThan(0.4);
+    expect(late.rate).toBeGreaterThan(1.03);
+    expect(late.rate).toBeLessThan(1.06);
+    expect(late.pitchPreserved).toBe(true);
+
+    // pause reaches the music; resume continues
+    await page.keyboard.press('p');
+    await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    await expect.poll(async () => (await musicState(page)).paused).toBe(true);
+    await page.keyboard.press('p');
+    await expect.poll(async () => (await musicState(page)).paused).toBe(false);
+
+    // quit, then another arena: its own starting track; back to the bus park: a different track, tempo reset
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    await page.getByTestId('quit').click();
+    await expect(page.getByTestId('title-screen')).toBeVisible();
+    await page.getByTestId('arena-balogunMarket').click();
+    await startMatch(page, { competitors: 2 });
+    await expect.poll(async () => (await musicState(page)).track, { timeout: 30_000 }).toBe('pixabay_573648');
+    expect((await musicState(page)).rate).toBe(1);
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    await page.getByTestId('quit').click();
+    await page.getByTestId('arena-danfoBusPark').click();
+    await startMatch(page, { competitors: 2 });
+    await expect.poll(async () => (await musicState(page)).history.length, { timeout: 30_000 }).toBe(3);
+    const third = await musicState(page);
+    expect(third.track).not.toBe('pixabay_573648');
+    expect(['pixabay_406552', 'pixabay_491432', 'pixabay_504898']).toContain(third.track);
+    expect(third.rate).toBe(1);
+  });
+});

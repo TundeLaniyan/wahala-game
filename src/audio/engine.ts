@@ -159,6 +159,8 @@ const SILENT_MUSIC: MusicStatus = {
   paused: false,
   available: [],
   history: [],
+  position: 0,
+  playing: false,
 };
 const NO_VOICES: VoiceReport = { loadedPacks: [], failed: [], clips: 0, scenes: 0 };
 const UI_SOUND: Record<Parameters<AudioEngine['playUi']>[0], SoundId> = {

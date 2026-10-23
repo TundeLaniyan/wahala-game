@@ -80,6 +80,26 @@ describe('rejected generated audio stays disabled', () => {
     }
   });
 
+  it('nine approved tracks are installed as real MP3 audio; only #7 (pixabay_496406) is missing', () => {
+    const present = readdirSync(join(AUDIO, 'music'))
+      .filter((n) => n.endsWith('.mp3'))
+      .sort();
+    expect(present).toEqual(
+      Object.keys(APPROVED)
+        .filter((id) => id !== 'pixabay_496406')
+        .map((id) => `${id}.mp3`)
+        .sort(),
+    );
+    for (const f of present) {
+      const b = readFileSync(join(AUDIO, 'music', f));
+      // an MPEG audio frame sync (or an ID3 tag) at the start: real audio, not an HTML error page
+      const mpeg = b[0] === 0xff && (b[1]! & 0xe0) === 0xe0;
+      const id3 = b.subarray(0, 3).toString('latin1') === 'ID3';
+      expect(mpeg || id3, `${f} is not MP3 audio`).toBe(true);
+      expect(b.length, f).toBeGreaterThan(1_000_000);
+    }
+  });
+
   it('the voice catalogue has no packs and is not flagged as shipping synthetic speech', () => {
     const v = json<VoiceManifest>('voices/voices.json');
     expect(v.packs).toEqual({});

@@ -77,6 +77,9 @@ export interface MusicStatus {
   available: string[];
   /** Every match pick so far, oldest first. */
   history: string[];
+  /** Playback position of the heard track (seconds) and whether its element is playing (diagnostics). */
+  position: number;
+  playing: boolean;
 }
 
 export interface MusicPlayer {
@@ -231,6 +234,8 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
   let current: Deck | null = null;
   const live = new Set<Deck>();
   let previousMatch: string | null = null;
+  /** Arenas that already had a match this session (their `start` track has been used). */
+  const arenasStarted = new Set<string>();
   let previousMenu: string | null = null;
   const history: string[] = [];
   let paused = false;
@@ -380,7 +385,9 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
       previous: previousMatch,
       isAvailable,
       rand: o.rand,
+      firstOnArena: arena !== null && !arenasStarted.has(arena),
     });
+    if (arena !== null) arenasStarted.add(arena);
     const t = id ? trackById(id) : undefined;
     if (!t) return;
     const d = openDeck(t, 'match', CROSSFADE);
@@ -541,6 +548,8 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
       paused,
       available: manifest ? manifest.tracks.filter((t) => isAvailable(t.id)).map((t) => t.id) : [],
       history: [...history],
+      position: current ? current.el.currentTime : 0,
+      playing: current ? !current.el.paused : false,
     }),
     dispose() {
       if (disposed) return;

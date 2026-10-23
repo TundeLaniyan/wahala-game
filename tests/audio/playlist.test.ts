@@ -106,17 +106,64 @@ describe('arena playlists and signature tracks', () => {
         arenas: { danfoBusPark: { tracks: ['nope', 't1'], signature: 'ghost' } },
       }),
     );
-    expect(m.playlists.arenas.danfoBusPark).toEqual({ tracks: ['t1'], signature: null });
+    expect(m.playlists.arenas.danfoBusPark).toEqual({ tracks: ['t1'], signature: null, start: null });
   });
 
-  it('the shipped manifest knows the three current arenas and gives each all ten tracks', () => {
+  it('a start track opens the first match on an arena, then rotation takes over', () => {
+    const m = parse(
+      musicManifest(TRACK_IDS, { arenas: { danfoBusPark: { tracks: ['t0', 't1', 't2'], start: 't2' } } }),
+    );
+    const rand = createRand(3);
+    const first = pickMatchTrack(m, {
+      arenaId: 'danfoBusPark',
+      previous: null,
+      isAvailable: all,
+      rand,
+      firstOnArena: true,
+    });
+    expect(first).toBe('t2');
+    // not when it was the track just heard (no immediate repeat), nor when its file is missing
+    expect(
+      pickMatchTrack(m, {
+        arenaId: 'danfoBusPark',
+        previous: 't2',
+        isAvailable: all,
+        rand,
+        firstOnArena: true,
+      }),
+    ).not.toBe('t2');
+    expect(
+      pickMatchTrack(m, {
+        arenaId: 'danfoBusPark',
+        previous: null,
+        isAvailable: (id) => id !== 't2',
+        rand,
+        firstOnArena: true,
+      }),
+    ).not.toBe('t2');
+  });
+
+  it('the shipped manifest: three arena playlists with their own starting track, all nine supplied tracks covered', () => {
     const raw = JSON.parse(readFileSync(join(__dirname, '../../public/audio/music/manifest.json'), 'utf8'));
     const m = parse(raw);
     expect(m.tracks).toHaveLength(10);
+    const covered = new Set<string>();
     for (const a of Object.keys(ARENAS)) {
-      expect(Object.keys(m.playlists.arenas)).toContain(a);
-      expect(playlistFor(m, a)).toHaveLength(10);
-      expect(m.playlists.arenas[a]!.signature).toBeNull();
+      const pl = m.playlists.arenas[a]!;
+      expect(pl.signature).toBeNull();
+      expect(pl.start).not.toBeNull();
+      expect(playlistFor(m, a)).toContain(pl.start);
+      expect(playlistFor(m, a).length).toBeGreaterThanOrEqual(3);
+      for (const id of playlistFor(m, a)) covered.add(id);
+    }
+    // every track (the missing one's slot included) belongs to an arena playlist; the starts differ
+    expect([...covered].sort()).toEqual(m.tracks.map((t) => t.id).sort());
+    const starts = Object.keys(ARENAS).map((a) => m.playlists.arenas[a]!.start);
+    expect(new Set(starts).size).toBe(starts.length);
+    // a long session on one arena never repeats a track back to back
+    for (const a of Object.keys(ARENAS)) {
+      const picks = season(m, 60, { arenaId: a, isAvailable: (id) => id !== 'pixabay_496406' });
+      for (let i = 1; i < picks.length; i++) expect(picks[i]).not.toBe(picks[i - 1]);
     }
   });
 });

@@ -33,7 +33,10 @@ export const TRACK_IDS = Array.from({ length: 10 }, (_, i) => `t${i}`);
 /** A version-2 music manifest (playlist.ts) listing `ids`, with optional arena playlists. */
 export function musicManifest(
   ids: readonly string[] = TRACK_IDS,
-  extra: { arenas?: Record<string, { tracks?: string[]; signature?: string | null }>; menu?: string[] } = {},
+  extra: {
+    arenas?: Record<string, { tracks?: string[]; signature?: string | null; start?: string | null }>;
+    menu?: string[];
+  } = {},
 ): unknown {
   return {
     version: 2,
