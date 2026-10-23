@@ -60,6 +60,7 @@ const force = (page, intent) =>
 for (const device of devices) {
   const ctx = await browser.newContext(VIEWPORTS[device]);
   const page = await ctx.newPage();
+  page.setDefaultTimeout(180000);
   page.on('pageerror', (e) => console.error('pageerror', e.message));
   for (const arena of arenas) {
     await page.goto(`${url}?debug&q=${args.q ?? 'high'}&seed=${args.seed ?? 7}${query}`);
