@@ -26,7 +26,7 @@ export class OverlayViews implements View {
   readonly group = new Group();
   private readonly fill = new TileOverlay(tileGlowTexture(), 700, 7);
   private readonly chevrons = new TileOverlay(chevronTexture(), 300, 8);
-  private readonly rings = new TileOverlay(ringTexture(), 120, 9);
+  private readonly rings = new TileOverlay(ringTexture(), 260, 9);
   private readonly gates: Sprite[] = [];
   private pickTargets: { key: string; kind: 'entry' | 'turn'; x: number; y: number }[] = [];
   private readonly projectiles = new Map<number, Sprite>();
@@ -168,6 +168,15 @@ export class OverlayViews implements View {
         scale: 0.96,
       });
       this.rings.push({ x, z, color: 0xffd23a, intensity: 0.5 + 0.5 * k, scale: 1.9 - k * 1.3 });
+    }
+
+    // --- every live floor trap keeps a pulsing amber ring so it never reads as an ordinary oil stain
+    for (const key in state.floorHazards) {
+      const i = Number(key);
+      const x = wx(i % state.width);
+      const z = wz(Math.floor(i / state.width));
+      const pulse = 0.5 + 0.5 * Math.sin(time * 5 + i);
+      this.rings.push({ x, z, color: 0xff8a1a, intensity: 0.32 + 0.22 * pulse, scale: 1.02 + 0.06 * pulse });
     }
 
     // --- spectator throws
