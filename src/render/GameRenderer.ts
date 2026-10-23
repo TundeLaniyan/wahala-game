@@ -3,10 +3,12 @@ import { PICKUP_DEFS } from '../sim';
 import type { GameState, SimEvent } from '../sim';
 import { createBackdrop } from './assets/backdrop';
 import { createSceneLights } from './lighting';
+import { arenaLook } from './arenaLook';
 import { installGrading } from './grading';
 import type { SceneLights } from './lighting';
 import type { Backdrop } from './assets/backdrop';
 import { CameraRig } from './cameraRig';
+import { directShot } from './cameraDirector';
 import { createLayout } from './coords';
 import type { Layout } from './coords';
 import { Effects } from './fx/Effects';
@@ -32,6 +34,8 @@ export interface RenderStats {
   pixelRatio: number;
   quality: QualityLevel;
 }
+
+export type CameraView = 'action' | 'overview';
 
 export interface RendererOptions {
   canvas: HTMLCanvasElement;
@@ -85,6 +89,7 @@ export class GameRenderer {
   private fastFrames = 0;
   private disposed = false;
   private loaded = false;
+  private overviewPreferred = false;
 
   constructor(opts: RendererOptions) {
     this.auto = opts.quality === 'auto';
@@ -112,9 +117,12 @@ export class GameRenderer {
     this.rig = new CameraRig(this.layout);
     this.effects = new Effects(this.layout, this.profile);
 
-    this.scene.background = new Color(0xe3b985);
-    this.scene.fog = new Fog(0xe3b985, 38, 85);
-    this.lights = createSceneLights(this.scene, this.renderer);
+    const look = arenaLook(state.arenaId);
+    this.scene.background = new Color(look.sky);
+    this.scene.fog = new Fog(look.fog.color, look.fog.near, look.fog.far);
+    this.renderer.setClearColor(look.sky);
+    this.renderer.toneMappingExposure = look.exposure;
+    this.lights = createSceneLights(this.scene, this.renderer, look);
 
     this.backdrop = createBackdrop(this.layout, this.profile.crowd, this.profile.parkedBuses, state.arenaId);
     this.arena = new ArenaView(state, this.layout);
@@ -170,6 +178,11 @@ export class GameRenderer {
       this.rig.fit(this.width / this.height, this.insets);
       this.effects.setPixelScale(this.rig.pixelScale(this.height * dpr));
     }
+  }
+
+  /** 'action' = the low follow camera (default); 'overview' = the whole arena in one fixed frame. */
+  setCameraView(view: CameraView): void {
+    this.overviewPreferred = view === 'overview';
   }
 
   setQuality(level: QualityLevel | 'auto'): void {
@@ -328,7 +341,8 @@ export class GameRenderer {
     for (const v of this.views) v.update(ctx);
     this.effects.update(dt, this.time);
     this.backdrop.update(this.time, info.excitement);
-    this.rig.update(this.effects.shake, this.time, info.attract === true);
+    const shot = info.attract ? null : directShot(state, this.layout, info.localPlayerId, alpha, this.overviewPreferred);
+    this.rig.update(dt, this.time, this.effects.shake, shot, info.attract === true);
     this.renderer.render(this.scene, this.rig.camera);
     this.trackPerformance(dt);
   }
@@ -367,10 +381,22 @@ export class GameRenderer {
     return g ? this.overlays.pick(g.x, g.y) : null;
   }
 
+  /** Jumps the camera straight to its current goal (debug/screenshots; the next frame applies it). */
+  cutCamera(): void {
+    if (this.loaded) this.rig.cut();
+  }
+
   /** Debug: camera pose. */
-  debugCamera(): { position: number[]; aspect: number; fov: number } {
+  debugCamera(): { position: number[]; aspect: number; fov: number; pitchDeg: number; distance: number } {
     const c = this.rig.camera;
-    return { position: c.position.toArray(), aspect: c.aspect, fov: c.fov };
+    const pose = this.rig.currentPose();
+    return {
+      position: c.position.toArray(),
+      aspect: c.aspect,
+      fov: c.fov,
+      pitchDeg: (pose.pitch * 180) / Math.PI,
+      distance: pose.distance,
+    };
   }
 
   stats(): RenderStats {

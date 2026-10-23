@@ -109,26 +109,26 @@ export class FlameViews implements View {
       v.beam.rotation.y = f.dir === 'up' || f.dir === 'down' ? Math.PI / 2 : 0;
       v.beam.scale.set(f.dir === null ? 0.95 : 1.05, 0.75 + 0.35 * flick, f.dir === null ? 0.95 : 0.78);
       (v.beam.material as MeshBasicMaterial).opacity = 0.58 * env;
-      v.a.position.set(x, 0.58 + 0.08 * Math.sin(time * 20 + v.phase), z);
-      v.a.scale.set(size * 0.98, size * 1.25, 1);
+      v.a.position.set(x, 0.5 + 0.06 * Math.sin(time * 20 + v.phase), z);
+      v.a.scale.set(size * 0.98, size * 0.98, 1);
       v.a.material.opacity = env;
       v.b.position.set(
         x + 0.05 * Math.sin(time * 17 + v.phase),
         0.38,
         z + 0.05 * Math.cos(time * 15 + v.phase),
       );
-      v.b.scale.set(size * 0.92, size * 1.15, 1);
+      v.b.scale.set(size * 0.92, size * 0.88, 1);
       v.b.material.opacity = env * 0.88;
       v.hot.position.set(x, 0.38, z);
-      v.hot.scale.set(size * 0.62, size * 0.74, 1);
+      v.hot.scale.set(size * 0.62, size * 0.6, 1);
       v.hot.material.opacity = env * (0.76 + 0.2 * flick);
       if (v.core) {
         v.core.position.set(x, 0.48, z);
-        v.core.scale.setScalar(2.95 * (1.15 - k * 0.4));
+        v.core.scale.setScalar(2.6 * (1.15 - k * 0.4));
         v.core.material.opacity = env;
         if (v.cross) {
           v.cross.position.set(x, 0.68, z);
-          v.cross.scale.setScalar(1.35 * (0.92 + 0.12 * flick));
+          v.cross.scale.setScalar(1.15 * (0.92 + 0.12 * flick));
           v.cross.material.opacity = env;
         }
         const light = this.lights[lit++];

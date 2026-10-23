@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { Vector3 } from 'three';
 import { CameraRig } from '../../src/render/cameraRig';
+import { directShot } from '../../src/render/cameraDirector';
 import { createLayout } from '../../src/render/coords';
+import { Tile } from '../../src/sim/types';
+import { addGenerator, put, sandbox } from '../helpers';
 
 /**
- * The 3/4 camera is purely presentational: every tile must stay on screen (inside the HUD-free
- * band) and pointer picking must map back to exactly the tile under the cursor.
+ * The camera is purely presentational. The default ACTION camera is low and close and follows the
+ * local player; it must keep that player (and danger that can reach them) inside the HUD-free band
+ * from every tile. The OVERVIEW keeps every tile on screen. Pointer picking must map back to exactly
+ * the tile under the cursor in both.
  */
 const VIEWPORTS = [
   { name: 'desktop 16:9', w: 1280, h: 720, insets: { top: 0.1, bottom: 0.05 } },
@@ -13,25 +18,30 @@ const VIEWPORTS = [
   { name: 'portrait', w: 390, h: 844, insets: { top: 0.1, bottom: 0.05 } },
 ];
 
-describe('render camera framing and picking', () => {
+function pitchOf(rig: CameraRig): number {
+  rig.camera.updateMatrixWorld(true);
+  const dir = rig.camera.getWorldDirection(new Vector3());
+  return (Math.asin(-dir.y) * 180) / Math.PI;
+}
+
+function project(rig: CameraRig, x: number, y: number, z: number): Vector3 {
+  return new Vector3(x, y, z).project(rig.camera);
+}
+
+describe('overview camera: whole arena and picking', () => {
   for (const vp of VIEWPORTS) {
     it(`${vp.name}: whole arena visible and screenToGrid round-trips every tile`, () => {
       const layout = createLayout(15, 11);
       const rig = new CameraRig(layout);
       rig.fit(vp.w / vp.h, vp.insets);
-      rig.update(0, 0);
-      const cam = rig.camera;
-      cam.updateMatrixWorld(true);
-      const v = new Vector3();
+      rig.update(0, 0, 0, null);
       for (let y = 0; y < layout.height; y++) {
         for (let x = 0; x < layout.width; x++) {
-          v.set(layout.wx(x), 0, layout.wz(y)).project(cam);
+          const v = project(rig, layout.wx(x), 0, layout.wz(y));
           expect(Math.abs(v.x)).toBeLessThan(1);
           expect(v.y).toBeLessThan(1 - vp.insets.top * 2 + 1e-6);
           expect(v.y).toBeGreaterThan(-1 + vp.insets.bottom * 2 - 1e-6);
-          const px = ((v.x + 1) / 2) * vp.w;
-          const py = ((1 - v.y) / 2) * vp.h;
-          const g = rig.screenToGrid(px, py, vp.w, vp.h)!;
+          const g = rig.screenToGrid(((v.x + 1) / 2) * vp.w, ((1 - v.y) / 2) * vp.h, vp.w, vp.h)!;
           expect(g.x).toBeCloseTo(x, 3);
           expect(g.y).toBeCloseTo(y, 3);
         }
@@ -43,21 +53,149 @@ describe('render camera framing and picking', () => {
     const layout = createLayout(15, 11);
     const rig = new CameraRig(layout);
     rig.fit(844 / 390, { top: 0.13, bottom: 0.03 });
-    rig.camera.updateMatrixWorld(true);
+    rig.update(0, 0, 0, null);
     for (const x of [0, layout.width - 1]) {
-      const v = new Vector3(layout.wx(x) + Math.sign(layout.wx(x)) * 0.5, 0, layout.wz(layout.height - 1) + 0.5);
-      v.project(rig.camera);
+      const v = project(rig, layout.wx(x) + Math.sign(layout.wx(x)) * 0.5, 0, layout.wz(layout.height - 1) + 0.5);
       expect(Math.abs(v.x)).toBeLessThan(0.62);
     }
   });
+});
 
-  it('looks down at an elevated three-quarter angle (not top-down)', () => {
-    const rig = new CameraRig(createLayout(15, 11));
+describe('action camera: low, close, follows the local player', () => {
+  it('is a low three-quarter view (40-50 degrees) far closer than the overview', () => {
+    const state = sandbox();
+    const layout = createLayout(state.width, state.height);
+    const rig = new CameraRig(layout);
     rig.fit(16 / 9);
-    rig.camera.updateMatrixWorld(true);
-    const dir = rig.camera.getWorldDirection(new Vector3());
-    const pitchDeg = (Math.asin(-dir.y) * 180) / Math.PI;
-    expect(pitchDeg).toBeGreaterThan(40);
-    expect(pitchDeg).toBeLessThan(50);
+    rig.update(0, 0, 0, null);
+    const overview = rig.currentPose().distance;
+    expect(pitchOf(rig)).toBeGreaterThan(45);
+    rig.cut();
+    rig.update(0, 0, 0, directShot(state, layout, 0, 0, false));
+    const pitch = pitchOf(rig);
+    expect(pitch).toBeGreaterThan(40);
+    expect(pitch).toBeLessThan(50);
+    expect(rig.currentPose().distance).toBeLessThan(overview * 0.65);
+    // camera height: well under the old whole-board camera
+    expect(rig.camera.position.y).toBeLessThan(8);
+  });
+
+  for (const vp of VIEWPORTS) {
+    it(`${vp.name}: the local player stays in the HUD-free band from every open tile`, () => {
+      const state = sandbox();
+      const layout = createLayout(state.width, state.height);
+      const rig = new CameraRig(layout);
+      rig.fit(vp.w / vp.h, vp.insets);
+      const compact = vp.insets.top >= 0.12;
+      for (let y = 0; y < state.height; y++) {
+        for (let x = 0; x < state.width; x++) {
+          if (state.tiles[y * state.width + x] !== Tile.Empty) continue;
+          put(state, 0, x, y);
+          rig.cut();
+          rig.update(0, 0, 0, directShot(state, layout, 0, 0, false));
+          for (const h of [0, 1.6]) {
+            const v = project(rig, layout.wx(x), h, layout.wz(y));
+            expect(Math.abs(v.x)).toBeLessThan(0.85);
+            expect(v.y).toBeLessThan(1 - vp.insets.top * 2);
+            expect(v.y).toBeGreaterThan(-1 + vp.insets.bottom * 2);
+          }
+          // phones: the player's feet never sit under the bottom-corner D-pad or action buttons
+          if (compact) {
+            const feet = project(rig, layout.wx(x), 0, layout.wz(y));
+            expect(Math.abs(feet.x) < 0.62 || feet.y > -0.3).toBe(true);
+          }
+          const v = project(rig, layout.wx(x), 0, layout.wz(y));
+          const g = rig.screenToGrid(((v.x + 1) / 2) * vp.w, ((1 - v.y) / 2) * vp.h, vp.w, vp.h)!;
+          expect(g.x).toBeCloseTo(x, 3);
+          expect(g.y).toBeCloseTo(y, 3);
+        }
+      }
+    });
+  }
+
+  it('widens to keep a generator whose cross reaches the player in frame', () => {
+    const state = sandbox();
+    const layout = createLayout(state.width, state.height);
+    const rig = new CameraRig(layout);
+    rig.fit(16 / 9);
+    put(state, 0, 1, 1);
+    rig.cut();
+    rig.update(0, 0, 0, directShot(state, layout, 0, 0, false));
+    const calm = rig.currentPose().distance;
+    // a long-range generator at the far end of the same row
+    addGenerator(state, { ownerId: 1, x: 13, y: 1, range: 12 });
+    const shot = directShot(state, layout, 0, 0, false);
+    expect(shot.keep.length).toBeGreaterThan(0);
+    rig.cut();
+    rig.update(0, 0, 0, shot);
+    expect(rig.currentPose().distance).toBeGreaterThan(calm);
+    for (const x of [1, 13]) {
+      const v = project(rig, layout.wx(x), 0, layout.wz(1));
+      expect(Math.abs(v.x)).toBeLessThan(1);
+      expect(v.y).toBeLessThan(0.8);
+    }
+  });
+
+  it('moves smoothly: one frame covers only part of a jump between tiles', () => {
+    const state = sandbox();
+    const layout = createLayout(state.width, state.height);
+    const rig = new CameraRig(layout);
+    rig.fit(16 / 9);
+    put(state, 0, 3, 5);
+    rig.cut();
+    rig.update(0, 0, 0, directShot(state, layout, 0, 0, false));
+    const x0 = rig.currentPose().x;
+    put(state, 0, 9, 5);
+    rig.update(1 / 60, 0, 0, directShot(state, layout, 0, 0, false));
+    const step = rig.currentPose().x - x0;
+    expect(step).toBeGreaterThan(0);
+    expect(step).toBeLessThan(1);
+  });
+});
+
+describe('camera director', () => {
+  it('opens on the whole arena during the countdown, then follows the local player', () => {
+    const state = sandbox();
+    const layout = createLayout(state.width, state.height);
+    state.match.phase = 'countdown';
+    state.match.countdownRemaining = state.config.match.countdownTicks;
+    expect(directShot(state, layout, 0, 0, false).kind).toBe('overview');
+    state.match.countdownRemaining = 10;
+    expect(directShot(state, layout, 0, 0, false).kind).toBe('action');
+    state.match.phase = 'playing';
+    const shot = directShot(state, layout, 0, 0, false);
+    const me = state.players[0]!;
+    expect(shot.focus).toEqual({ x: layout.wx(me.x), z: layout.wz(me.y) });
+  });
+
+  it('honours the overview preference and frames survivors when the local player is out', () => {
+    const state = sandbox({ players: 3 });
+    const layout = createLayout(state.width, state.height);
+    expect(directShot(state, layout, 0, 0, true).kind).toBe('overview');
+    state.players[0]!.alive = false;
+    const shot = directShot(state, layout, 0, 0, false);
+    expect(shot.kind).toBe('action');
+    expect(shot.keep).toHaveLength(2);
+  });
+
+  it('ends a win on a close-up of the winner', () => {
+    const state = sandbox();
+    const layout = createLayout(state.width, state.height);
+    state.match.phase = 'ended';
+    state.match.result = { kind: 'win', winnerId: 1 };
+    const shot = directShot(state, layout, 0, 0, false);
+    const w = state.players[1]!;
+    expect(shot.focus).toEqual({ x: layout.wx(w.x), z: layout.wz(w.y) });
+    expect(shot.zoom).toBeLessThan(1);
+    state.match.result = { kind: 'draw', reason: 'timeout' };
+    expect(directShot(state, layout, 0, 0, false).kind).toBe('overview');
+  });
+
+  it('ignores generators that cannot reach the player', () => {
+    const state = sandbox();
+    const layout = createLayout(state.width, state.height);
+    put(state, 0, 1, 1);
+    addGenerator(state, { ownerId: 1, x: 9, y: 7, range: 2 });
+    expect(directShot(state, layout, 0, 0, false).keep).toHaveLength(0);
   });
 });

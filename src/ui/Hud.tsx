@@ -94,6 +94,7 @@ export function Hud() {
   const stats = useGameStore((s) => s.stats);
   const paused = useGameStore((s) => s.paused);
   const muted = useGameStore((s) => s.settings.muted);
+  const cameraView = useGameStore((s) => s.settings.cameraView);
   if (!hud) return null;
   const half = Math.ceil(hud.players.length / 2);
   const left = hud.players.slice(0, half);
@@ -129,6 +130,17 @@ export function Hud() {
           onClick={() => commands.updateSettings({ muted: !muted })}
         >
           {muted ? '🔇' : '🔊'}
+        </button>
+        <button
+          type="button"
+          className="round-btn"
+          aria-label={cameraView === 'overview' ? 'Action camera (O)' : 'Whole-arena view (O)'}
+          title={cameraView === 'overview' ? 'Action camera (O)' : 'Whole-arena view (O)'}
+          data-testid="camera-button"
+          data-view={cameraView}
+          onClick={() => commands.toggleCameraView()}
+        >
+          {cameraView === 'overview' ? '🎥' : '🗺'}
         </button>
       </div>
 

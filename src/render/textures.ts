@@ -459,3 +459,172 @@ export function contactShadowTexture(): CanvasTexture {
     return tex(c);
   });
 }
+
+/** Bold wax-print (Ankara) cloth with a scalloped hem (alpha) for market stall wraps. */
+export function ankaraTexture(): CanvasTexture {
+  return cached('ankara', () => {
+    const [c, g] = canvas(256, 128);
+    const r = artRng(31);
+    const bands = ['#e63946', '#ffbe0b', '#1d6fe0', '#12964f', '#8338ec', '#fb5607', '#ff4f9a'];
+    for (let i = 0; i < 4; i++) {
+      const x0 = i * 64;
+      g.fillStyle = bands[(i * 3) % bands.length]!;
+      g.fillRect(x0, 0, 64, 128);
+      const ink = bands[(i * 3 + 2) % bands.length]!;
+      const dot = bands[(i * 3 + 4) % bands.length]!;
+      // concentric "Ankara" medallions and zig-zag borders
+      for (let y = 18; y < 112; y += 34) {
+        const cx = x0 + 32 + (r() - 0.5) * 6;
+        g.fillStyle = ink;
+        g.beginPath();
+        g.arc(cx, y, 13, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = dot;
+        g.beginPath();
+        g.arc(cx, y, 7, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = '#fff6e0';
+        g.beginPath();
+        g.arc(cx, y, 2.5, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.strokeStyle = '#1c140e';
+      g.lineWidth = 3;
+      g.beginPath();
+      for (let y = 0; y <= 128; y += 8) g.lineTo(x0 + 3 + ((y / 8) % 2) * 5, y);
+      g.stroke();
+    }
+    // scalloped hem: transparent below a wavy line (alphaTest cuts it)
+    g.globalCompositeOperation = 'destination-out';
+    g.beginPath();
+    g.moveTo(0, 128);
+    for (let x = 0; x <= 256; x += 4) g.lineTo(x, 114 + Math.sin((x / 256) * Math.PI * 16) * 6);
+    g.lineTo(256, 128);
+    g.closePath();
+    g.fill();
+    g.globalCompositeOperation = 'source-over';
+    return tex(c, { repeat: true });
+  });
+}
+
+/** Red/white reflective chevron band (roadworks barrier markings). */
+export function chevronBandTexture(): CanvasTexture {
+  return cached('chevronBand', () => {
+    const [c, g] = canvas(128, 32);
+    g.fillStyle = '#f4f1ea';
+    g.fillRect(0, 0, 128, 32);
+    g.fillStyle = '#d8231f';
+    for (let i = -1; i < 6; i++) {
+      g.beginPath();
+      g.moveTo(i * 32, 0);
+      g.lineTo(i * 32 + 16, 0);
+      g.lineTo(i * 32 + 32, 32);
+      g.lineTo(i * 32 + 16, 32);
+      g.fill();
+    }
+    g.fillStyle = 'rgba(0,0,0,0.25)';
+    g.fillRect(0, 0, 128, 2);
+    g.fillRect(0, 30, 128, 2);
+    return tex(c, { repeat: true });
+  });
+}
+
+/**
+ * Painted markings laid over an arena floor (transparent): bus-bay lines and a stencilled
+ * "BUS STOP" for the park, faded lane lines and patched asphalt for the roadworks, paver joints
+ * and swept-dust patches for the market. One texel row per tile is `T` pixels.
+ */
+export function floorMarkingsTexture(arenaId: string, cols: number, rows: number): CanvasTexture {
+  return cached(`markings:${arenaId}:${cols}x${rows}`, () => {
+    const T = 64;
+    const [c, g] = canvas(cols * T, rows * T);
+    const r = artRng(arenaId.length * 97 + cols);
+    const W = cols * T;
+    const H = rows * T;
+    if (arenaId === 'lekkiRoadworks') {
+      // asphalt patches and tar seams
+      for (let i = 0; i < 14; i++) {
+        g.fillStyle = `rgba(20,20,24,${0.18 + r() * 0.18})`;
+        const w = T * (1 + r() * 2.5);
+        const h = T * (0.6 + r() * 1.6);
+        g.fillRect(r() * (W - w), r() * (H - h), w, h);
+      }
+      g.strokeStyle = 'rgba(15,15,18,0.55)';
+      g.lineWidth = 3;
+      for (let i = 0; i < 18; i++) {
+        g.beginPath();
+        let x = r() * W;
+        let y = r() * H;
+        g.moveTo(x, y);
+        for (let k = 0; k < 5; k++) {
+          x += (r() - 0.5) * 70;
+          y += (r() - 0.5) * 70;
+          g.lineTo(x, y);
+        }
+        g.stroke();
+      }
+      // faded lane lines (white dashes) along two corridors and a yellow centre line
+      g.fillStyle = 'rgba(240,238,228,0.55)';
+      for (const row of [2, rows - 3]) for (let x = 0; x < W; x += T * 1.5) g.fillRect(x + 8, row * T + T / 2 - 4, T * 0.8, 8);
+      g.fillStyle = 'rgba(255,196,30,0.6)';
+      g.fillRect(0, Math.floor(rows / 2) * T + T / 2 - 9, W, 5);
+      g.fillRect(0, Math.floor(rows / 2) * T + T / 2 + 4, W, 5);
+    } else if (arenaId === 'balogunMarket') {
+      // dust, spilled grain and crushed leaves between the stalls
+      for (let i = 0; i < 260; i++) {
+        g.fillStyle = r() < 0.5 ? `rgba(120,70,30,${0.08 + r() * 0.12})` : `rgba(255,236,190,${0.05 + r() * 0.1})`;
+        g.beginPath();
+        g.arc(r() * W, r() * H, 6 + r() * 26, 0, Math.PI * 2);
+        g.fill();
+      }
+      for (let i = 0; i < 120; i++) {
+        g.fillStyle = ['rgba(60,140,50,0.6)', 'rgba(230,180,40,0.55)', 'rgba(200,60,40,0.5)'][i % 3]!;
+        g.fillRect(r() * W, r() * H, 3 + r() * 4, 2 + r() * 3);
+      }
+    } else {
+      // bus park: yellow bay lines, a stencilled BUS STOP and oil drips
+      g.fillStyle = 'rgba(255,200,40,0.7)';
+      g.fillRect(T * 0.5, T * 0.15, W - T, 6);
+      g.fillRect(T * 0.5, H - T * 0.15 - 6, W - T, 6);
+      for (let x = 1; x < cols; x += 2) {
+        g.fillRect(x * T - 3, 0, 6, T * 0.6);
+        g.fillRect(x * T - 3, H - T * 0.6, 6, T * 0.6);
+      }
+      g.save();
+      g.font = `bold ${T * 0.55}px system-ui, sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillStyle = 'rgba(255,214,60,0.55)';
+      g.fillText('BUS STOP', W / 2, H / 2 + T * 0.02);
+      g.restore();
+      for (let i = 0; i < 26; i++) {
+        g.fillStyle = `rgba(30,24,18,${0.12 + r() * 0.16})`;
+        g.beginPath();
+        g.ellipse(r() * W, r() * H, 8 + r() * 22, 5 + r() * 14, r() * 3, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    const t = tex(c);
+    t.anisotropy = 8;
+    return t;
+  });
+}
+
+/** Night-time glass tower facade: dark blue curtain wall with a scatter of lit offices (emissive map). */
+export function towerWindowsTexture(seed: number): CanvasTexture {
+  return cached(`tower:${seed}`, () => {
+    const [c, g] = canvas(64, 128);
+    const r = artRng(500 + seed);
+    g.fillStyle = '#121a2c';
+    g.fillRect(0, 0, 64, 128);
+    for (let y = 2; y < 128; y += 6) {
+      for (let x = 2; x < 64; x += 5) {
+        const lit = r();
+        g.fillStyle =
+          lit < 0.34 ? (r() < 0.6 ? '#ffd796' : '#cfe6ff') : lit < 0.5 ? '#2c3b5c' : '#18223a';
+        g.fillRect(x, y, 3, 4);
+      }
+    }
+    return tex(c, { repeat: true });
+  });
+}

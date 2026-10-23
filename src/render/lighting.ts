@@ -16,6 +16,7 @@ import {
   SphereGeometry,
 } from 'three';
 import type { Texture, WebGLRenderer } from 'three';
+import type { ArenaLook } from './arenaLook';
 
 export interface SceneLights {
   sun: DirectionalLight;
@@ -52,12 +53,14 @@ function buildSkyScene(): Scene {
   return sky;
 }
 
-export function createSceneLights(scene: Scene, renderer: WebGLRenderer): SceneLights {
-  // Late-afternoon Lagos sun from the upper left: warm key, crisp shadows falling right and slightly
-  // back, and a lower sky/bounce fill so faces turned away from the sun keep real shape.
-  const hemi = new HemisphereLight(0xffe8cc, 0x765a40, 0.62);
-  const sun = new DirectionalLight(0xffd698, 4.4);
-  sun.position.set(-13, 12.5, 6.2);
+export function createSceneLights(scene: Scene, renderer: WebGLRenderer, look?: ArenaLook): SceneLights {
+  // Default: late-afternoon Lagos sun from the upper left: warm key, crisp shadows falling right and
+  // slightly back, and a lower sky/bounce fill so faces turned away from the sun keep real shape.
+  // Each arena can bring its own key, fill and reflection strength (arenaLook.ts).
+  const hemi = new HemisphereLight(look?.hemi.sky ?? 0xffe8cc, look?.hemi.ground ?? 0x765a40, look?.hemi.intensity ?? 0.62);
+  const sun = new DirectionalLight(look?.sun.color ?? 0xffd698, look?.sun.intensity ?? 4.4);
+  if (look) sun.position.set(...look.sun.position);
+  else sun.position.set(-13, 12.5, 6.2);
   sun.target.position.set(0, 0, 0);
   const cam = sun.shadow.camera;
   cam.left = -15;
@@ -74,7 +77,7 @@ export function createSceneLights(scene: Scene, renderer: WebGLRenderer): SceneL
   const pmrem = new PMREMGenerator(renderer);
   const rt = pmrem.fromScene(buildSkyScene(), 0.02);
   scene.environment = rt.texture;
-  scene.environmentIntensity = 0.6;
+  scene.environmentIntensity = look?.envIntensity ?? 0.6;
   pmrem.dispose();
 
   return {

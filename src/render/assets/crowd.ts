@@ -77,21 +77,24 @@ export function crowdSpots(layout: Layout, count: number, rng: () => number): Sp
   };
   const edgeFor = (n: number): number => [0, 0, 0, 1, 1, 2, 2, 3][n % 8]!;
 
-  const rail = Math.round(count * 0.42);
-  const ring = Math.round(count * 0.22);
-  const south = Math.round(count * 0.16);
+  // The low action camera looks across the south street, so only a thin row of people stands there.
+  const rail = Math.round(count * 0.44);
+  const ring = Math.round(count * 0.24);
+  const south = Math.round(count * 0.08);
   const walkers = Math.max(0, count - rail - ring - south);
   // 1) front row along the east/west spectator platforms and north sidewalk gaps
   for (let n = 0; n < rail; n++) {
-    const edge = edgeFor(n) === 3 ? 0 : edgeFor(n);
+    // more of the rail crowd lines the side walkways than the far (north) wall, which the action
+    // camera looks straight across
+    const edge = [0, 0, 1, 1, 1, 2, 2, 2][n % 8]!;
     const onSidePlatform = platform && (edge === 1 || edge === 2);
-    const [x, z] = edgePoint(edge, rng(), onSidePlatform ? 0.47 + rng() * 0.22 : 0.82 + rng() * 0.35);
+    const [x, z] = edgePoint(edge, rng(), onSidePlatform ? 0.47 + rng() * 0.22 : 1.0 + rng() * 0.4);
     watch(x, onSidePlatform ? 0.62 : 0, z);
   }
   // 2) people standing on the ground behind the platforms, some in conversation pairs
   for (let n = 0; n < ring; n++) {
     const edge = edgeFor(n) === 3 ? 1 + (n % 2) : edgeFor(n);
-    const [x, z] = edgePoint(edge, rng(), 1.05 + rng() * 0.28);
+    const [x, z] = edgePoint(edge, rng(), 1.45 + rng() * 0.4);
     if (rng() < 0.35 && n + 1 < ring) {
       // a facing pair along the edge
       const along = edge === 0 ? [0.34, 0] : [0, 0.34];
@@ -103,7 +106,7 @@ export function crowdSpots(layout: Layout, count: number, rng: () => number): Sp
   }
   // 3) camera side: foreground cheering spectators outside the south wall (framing the bottom edge)
   for (let n = 0; n < south; n++) {
-    const [rawX, z] = edgePoint(3, rng(), 0.92 + rng() * 0.85);
+    const [rawX, z] = edgePoint(3, rng(), 2.3 + rng() * 1.2);
     const x = Math.abs(rawX) < 1.65 ? rawX + (rawX < 0 ? -1.7 : 1.7) : rawX; // keep the center hazard gate clear
     watch(x, 0, z);
   }
@@ -177,7 +180,8 @@ export function createGlbCrowd(layout: Layout, count: number, rng: () => number)
   const people: Person[] = spots.map((s, i) => {
     const variant = variants.get(choice[i]!)!;
     variant.count++;
-    const t = 0.84 + rng() * 0.26;
+    // Spectators sit a step darker than the players so the cast reads first (visual hierarchy).
+    const t = 0.66 + rng() * 0.2;
     const tint = new Color(t, t * (0.95 + rng() * 0.08), t * (0.95 + rng() * 0.08));
     return {
       variant,
@@ -187,7 +191,7 @@ export function createGlbCrowd(layout: Layout, count: number, rng: () => number)
       z: s.z,
       yaw: s.yaw,
       // proportional to the taller players so the crowd reads as lively 3D spectators
-      scale: (s.z > layout.height / 2 ? 0.82 : 0.86) + rng() * 0.08,
+      scale: 0.76 + rng() * 0.08,
       phase: rng() * 100,
       reactUntil: 0,
       next: rng() * 3,

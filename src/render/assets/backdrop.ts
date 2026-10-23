@@ -15,6 +15,7 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Layout } from '../coords';
+import { arenaLook } from '../arenaLook';
 import {
   artRng,
   concreteTexture,
@@ -24,6 +25,7 @@ import {
   windowsTexture,
 } from '../textures';
 import { box, cyl, mat } from './helpers';
+import { addLekkiSite, addMarketCanopies, addSouthKerb } from './arenaSets';
 import { createGlbCrowd } from './crowd';
 import { assets } from './library';
 import { bakeModel } from './merge';
@@ -102,7 +104,7 @@ function addModelledPerimeter(root: Group, statics: Group, out: InstancedMesh[],
   const gateTex = hazardStripes();
   gateTex.repeat.set(3, 1);
   const gateMat = mat(0xffffff, { map: gateTex, flat: false, roughness: 0.55 });
-  const steelMat = mat(0x1e2024, { roughness: 0.45, metalness: 0.6 });
+  const steelMat = mat(0x8a8f96, { roughness: 0.4, metalness: 0.6 });
   statics.add(box(2.96, 0.48, 0.22, gateMat, 0, 0.24, H / 2 + T));
   statics.add(box(3.04, 0.06, 0.26, steelMat, 0, 0.5, H / 2 + T));
 
@@ -286,7 +288,8 @@ export function createBackdrop(
   const isRoadworks = arenaId === 'lekkiRoadworks';
 
   // ground + raised arena slab
-  const groundColor = isMarket ? 0x6e553e : isRoadworks ? 0x3a3836 : 0x4c4741;
+  const look = arenaLook(arenaId);
+  const groundColor = look.street;
   const ground = new Mesh(new PlaneGeometry(140, 110), mat(groundColor, { roughness: 1, flat: false }));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.31;
@@ -297,7 +300,7 @@ export function createBackdrop(
       W + 1.6,
       0.3,
       H + 1.6,
-      mat(isMarket ? 0xf2dfc8 : 0xffffff, { map: concreteTexture(), flat: false, roughness: 1 }),
+      mat(look.slab, { map: concreteTexture(), flat: false, roughness: 1 }),
       0,
       -0.16,
       0,
@@ -480,9 +483,12 @@ export function createBackdrop(
         sz: s,
       });
     };
-    // North street row of 2-story Lagos buildings framed right behind the parked Danfos
-    for (let x = -W / 2 - 6.5; x <= W / 2 + 6.5; x += 3.6) {
-      put(x, -H / 2 - 3.85 - (Math.abs(Math.round(x)) % 2) * 0.25, 0, 1.18);
+    // North street row of 2-story Lagos buildings framed right behind the parked Danfos (the
+    // roadworks has its construction site and the Lekki skyline there instead)
+    if (!isRoadworks) {
+      for (let x = -W / 2 - 6.5; x <= W / 2 + 6.5; x += 3.6) {
+        put(x, -H / 2 - 3.85 - (Math.abs(Math.round(x)) % 2) * 0.25, 0, 1.18);
+      }
     }
     // West & East street buildings (West brought closer so its balconies & awnings frame the left edge)
     for (let z = -H / 2 - 2.5; z < H / 2 + 5; z += 3.5) {
@@ -538,9 +544,12 @@ export function createBackdrop(
     { x: W / 2 - 5.0, z: -H / 2 - 2.4, ry: 2.0 },
   ]);
 
+  addSouthKerb(statics, W, H, arenaId);
   if (isMarket) {
     addBalogunMarketDressing(root, statics, instanced, W, H);
+    addMarketCanopies(statics, W, H);
   } else if (isRoadworks) {
+    addLekkiSite(root, statics, W, H);
     // Lekki Roadworks perimeter: roadwork barricades, asphalt barrels, and "LEKKI ROADWORKS" gantry sign
     dress('prop_soft_barrier', [
       { x: -W / 2 + 1.6, z: -H / 2 - 1.85, ry: 0.1 },
@@ -598,7 +607,8 @@ export function createBackdrop(
     root.add(sign);
   }
 
-  const glbCrowd = createGlbCrowd(layout, crowdSize, rng);
+  // A working site draws a thinner crowd than the bus park or the market.
+  const glbCrowd = createGlbCrowd(layout, isRoadworks ? Math.round(crowdSize * 0.55) : crowdSize, rng);
   if (glbCrowd) {
     root.add(glbCrowd.group, bakeModel(statics));
     return {

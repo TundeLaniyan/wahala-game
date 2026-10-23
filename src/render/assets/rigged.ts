@@ -24,7 +24,7 @@ export type ClipName =
 
 /** Character height in the model file (metres) and the height it is drawn at, in tiles. */
 const MODEL_HEIGHT = 1.8;
-const DRAWN_HEIGHT = 2.02;
+const DRAWN_HEIGHT = 1.86;
 export const RIGGED_SCALE = DRAWN_HEIGHT / MODEL_HEIGHT;
 
 /** Plays the named clips of a skinned character with cross-fades and interruptible one-shots. */

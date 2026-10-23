@@ -7,6 +7,7 @@ import {
 } from 'three';
 import type { Texture } from 'three';
 import { floorTexture } from '../textures';
+import { arenaLook } from '../arenaLook';
 
 const albedoUrl = new URL('../../assets/textures/floor_albedo.jpg', import.meta.url).href;
 const normalUrl = new URL('../../assets/textures/floor_normal.jpg', import.meta.url).href;
@@ -25,15 +26,9 @@ function load(url: string, color: boolean, cols: number, rows: number): Texture 
   return t;
 }
 
-const ARENA_FLOOR_TINT: Record<string, number> = {
-  danfoBusPark: 0xffffff,
-  lekkiRoadworks: 0xd8d2c8,
-  balogunMarket: 0xf7e6cf,
-};
-
 /** Concrete-slab floor with normal + roughness maps; falls back to the drawn texture if the files are missing. */
 export function floorMaterial(cols: number, rows: number, arenaId = 'danfoBusPark'): MeshStandardMaterial {
-  const color = ARENA_FLOOR_TINT[arenaId] ?? 0xffffff;
+  const color = arenaLook(arenaId).floorTint;
   try {
     const orm = load(ormUrl, false, cols, rows);
     return new MeshStandardMaterial({

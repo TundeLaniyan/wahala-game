@@ -30,27 +30,43 @@ const SOFT_WEIGHTS: Record<string, number> = {
   prop_soft_cartons: 1,
 };
 
+/**
+ * Each arena draws its breakables from a small, coherent family (weight 0 = never used there), so a
+ * dense field reads as one place instead of a scatter of unrelated props.
+ */
 const ARENA_SOFT_WEIGHTS: Record<string, Record<string, number>> = {
-  danfoBusPark: SOFT_WEIGHTS,
-  lekkiRoadworks: {
-    prop_soft_barrier: 5,
-    prop_soft_tyres: 5,
-    prop_soft_cartons: 3,
-    prop_soft_crate: 3,
-    prop_soft_crates: 2,
-    prop_soft_crate_b: 2,
-    prop_soft_sacks: 1,
-    prop_soft_kegs: 1,
+  // Bus park: wooden cargo crates off the Danfo roof racks and spare tyre stacks
+  danfoBusPark: {
+    prop_soft_crate: 5,
+    prop_soft_crate_b: 4,
+    prop_soft_crates: 4,
+    prop_soft_tyres: 3,
+    prop_soft_barrier: 0,
+    prop_soft_sacks: 0,
+    prop_soft_kegs: 0,
+    prop_soft_cartons: 0,
   },
+  // Roadworks: hazard barricades, tyre stacks and site crates
+  lekkiRoadworks: {
+    prop_soft_barrier: 6,
+    prop_soft_tyres: 4,
+    prop_soft_crates: 2,
+    prop_soft_crate: 0,
+    prop_soft_crate_b: 0,
+    prop_soft_cartons: 0,
+    prop_soft_sacks: 0,
+    prop_soft_kegs: 0,
+  },
+  // Market: produce sacks, sachet-water cartons and drink crates
   balogunMarket: {
-    prop_soft_sacks: 5,
-    prop_soft_kegs: 4,
-    prop_soft_cartons: 4,
-    prop_soft_crates: 3,
-    prop_soft_crate_b: 3,
-    prop_soft_crate: 2,
-    prop_soft_tyres: 1,
-    prop_soft_barrier: 1,
+    prop_soft_sacks: 6,
+    prop_soft_cartons: 3,
+    prop_soft_kegs: 2,
+    prop_soft_crate_b: 1,
+    prop_soft_crates: 0,
+    prop_soft_crate: 0,
+    prop_soft_tyres: 0,
+    prop_soft_barrier: 0,
   },
 };
 
@@ -67,6 +83,7 @@ export function softVariantFor(
   let h = Math.imul(x + 1, 0x9e3779b1) ^ Math.imul(y + 7, 0x85ebca77);
   h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
   h ^= h >>> 13;
+  if (total <= 0) return variants[0]!;
   let pick = (h >>> 0) % total;
   for (const v of variants) {
     pick -= weights[v] ?? 1;

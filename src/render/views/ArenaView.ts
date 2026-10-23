@@ -13,18 +13,41 @@ import {
   Euler,
   Group,
   DoubleSide,
+  Color,
 } from 'three';
+import type { Material } from 'three';
+import { arenaLook } from '../arenaLook';
 import type { GameState } from '../../sim';
 import { Tile } from '../../sim';
 import { modelledPillars, pillarParts, softBlockParts, softVariantFor, softVariants } from '../assets/props';
 import type { SoftVariant } from '../assets/props';
 import type { Layout } from '../coords';
 import { floorMaterial } from '../assets/floor';
-import { contactShadowTexture } from '../textures';
+import { ankaraTexture, chevronBandTexture, contactShadowTexture, floorMarkingsTexture } from '../textures';
 import { InstanceSet } from './InstanceSet';
 import type { FrameContext, View } from './types';
 
 const DROP_TIME = 0.28;
+/**
+ * Obstacles are drawn squat and chunky: under the low action camera a tall pillar hides the lane
+ * behind it, so pillars stand about one tile high and soft blocks about two thirds, leaving the
+ * (taller) characters as the clear top of the visual hierarchy.
+ */
+const PILLAR_SCALE = new Vector3(0.88, 0.84, 0.88);
+const SOFT_SCALE = new Vector3(0.88, 0.82, 0.88);
+/** Height of the modelled pillar cap once scaled (accents sit on it). */
+const PILLAR_TOP = 1.1 * PILLAR_SCALE.y;
+
+/** Copies instancing parts with their material tinted (per-arena art direction). */
+function tinted<T extends { material: Material }>(parts: T[], tint: number, owned: Material[]): T[] {
+  if (tint === 0xffffff) return parts;
+  return parts.map((p) => {
+    const m = p.material.clone() as MeshStandardMaterial;
+    if (m.color) m.color.multiply(new Color(tint));
+    owned.push(m);
+    return { ...p, material: m };
+  });
+}
 
 /** Floor, concrete pillars, soft blocks (instanced), crush blocks dropping in, floor hazards. */
 export class ArenaView implements View {
@@ -44,6 +67,7 @@ export class ArenaView implements View {
   private readonly decals = new Group();
   /** Contact shadows under every pillar and prop: grounding/AO that also works with shadows off. */
   private readonly contact: InstanceSet;
+  private readonly ownedMaterials: Material[] = [];
 
   constructor(
     state: GameState,
@@ -57,16 +81,23 @@ export class ArenaView implements View {
     floor.receiveShadow = true;
     this.group.add(floor);
 
+    const look = arenaLook(state.arenaId);
+    const owned = this.ownedMaterials;
+    const wraps = this.pillarWraps(state.arenaId);
     const modelled = modelledPillars();
     if (modelled) {
-      this.pillars = modelled.map((parts) => new InstanceSet(parts, W * H));
+      this.pillars = modelled.map(
+        (parts) => new InstanceSet([...tinted(parts, look.pillarTint, owned), ...wraps], W * H),
+      );
     } else {
       const parts = pillarParts();
-      this.pillars = [new InstanceSet([parts.body, parts.band, parts.cap], W * H)];
+      this.pillars = [
+        new InstanceSet([...tinted([parts.body, parts.band, parts.cap], look.pillarTint, owned), ...wraps], W * H),
+      ];
     }
     for (const set of this.pillars) this.group.add(set.group);
     for (const v of this.variants) {
-      const set = new InstanceSet(softBlockParts(v), W * H);
+      const set = new InstanceSet(tinted(softBlockParts(v), look.softTint, owned), W * H);
       this.soft.set(v, set);
       this.group.add(set.group);
     }
@@ -95,6 +126,22 @@ export class ArenaView implements View {
     this.cache = new Array<number>(W * H).fill(-1);
     this.initialHard = new Set(state.tiles.flatMap((t, i) => (t === Tile.Hard ? [i] : [])));
     this.group.add(this.decals);
+    const markings = new Mesh(
+      new PlaneGeometry(W, H),
+      new MeshStandardMaterial({
+        map: floorMarkingsTexture(state.arenaId, W, H),
+        transparent: true,
+        depthWrite: false,
+        roughness: 0.85,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+      }),
+    );
+    markings.rotation.x = -Math.PI / 2;
+    markings.position.y = 0.004;
+    markings.receiveShadow = true;
+    markings.renderOrder = 1;
+    this.decals.add(markings);
     this.buildHazardDecals(state);
     this.buildArenaPillarAccents(state);
   }
@@ -159,13 +206,36 @@ export class ArenaView implements View {
     }
   }
 
+  /**
+   * Arena-specific dressing instanced with every pillar (model space, before PILLAR_SCALE):
+   * market pillars are wrapped in Ankara cloth like stall posts; roadworks pillars carry red/white
+   * reflective chevron bands like jersey barriers. The bus park keeps the plain poster pillars.
+   */
+  private pillarWraps(arenaId: string): { geometry: BoxGeometry; material: Material }[] {
+    if (arenaId === 'balogunMarket') {
+      const m = new MeshStandardMaterial({ map: ankaraTexture(), alphaTest: 0.5, roughness: 0.82 });
+      this.ownedMaterials.push(m);
+      return [{ geometry: new BoxGeometry(0.905, 0.52, 0.905).translate(0, 0.74, 0), material: m }];
+    }
+    if (arenaId === 'lekkiRoadworks') {
+      const map = chevronBandTexture().clone();
+      map.needsUpdate = true;
+      map.repeat.set(2, 1);
+      const m = new MeshStandardMaterial({ map, roughness: 0.32, metalness: 0.05 });
+      this.ownedMaterials.push(m);
+      return [
+        { geometry: new BoxGeometry(0.89, 0.14, 0.89).translate(0, 0.88, 0), material: m },
+        { geometry: new BoxGeometry(0.89, 0.14, 0.89).translate(0, 0.56, 0), material: m },
+      ];
+    }
+    return [];
+  }
+
   /** Distinct visual accents atop permanent interior pillars for Balogun Market and Lekki Roadworks. */
   private buildArenaPillarAccents(state: GameState): void {
     if (state.arenaId !== 'balogunMarket' && state.arenaId !== 'lekkiRoadworks') return;
     const isMarket = state.arenaId === 'balogunMarket';
     const marketColors = [0xe63946, 0xffbe0b, 0x1d6fe0, 0x169852, 0x8338ec, 0xfb5607];
-    const clothGeo = new BoxGeometry(0.38, 0.045, 0.26);
-    const clothTopGeo = new BoxGeometry(0.32, 0.04, 0.22);
     const basinGeo = new CylinderGeometry(0.20, 0.14, 0.12, 12);
     const goodsGeo = new CylinderGeometry(0.15, 0.18, 0.07, 10);
     const coneGeo = new CylinderGeometry(0.03, 0.12, 0.32, 10);
@@ -181,29 +251,21 @@ export class ArenaView implements View {
       const h = (gx * 7 + gy * 13) % 6;
       if (isMarket) {
         // Folded Ankara fabric stack & enamel produce basin perched on the concrete pillar cap
-        const col1 = marketColors[h % marketColors.length]!;
         const col2 = marketColors[(h + 2) % marketColors.length]!;
+        // the cloth wrap carries the colour; only every fourth stall shows an enamel basin of produce
         if ((gx + gy) % 4 === 0) {
-          const cloth = new Mesh(clothGeo, new MeshStandardMaterial({ color: col1, roughness: 0.78 }));
-          cloth.position.set(wx - 0.11, 1.21, wz + 0.07);
-          cloth.rotation.y = 0.22;
-          const cloth2 = new Mesh(clothTopGeo, new MeshStandardMaterial({ color: col2, roughness: 0.78 }));
-          cloth2.position.set(wx - 0.11, 1.25, wz + 0.07);
-          cloth2.rotation.y = -0.15;
-          this.decals.add(cloth, cloth2);
-        } else if ((gx + gy) % 4 === 2) {
           const basin = new Mesh(basinGeo, new MeshStandardMaterial({ color: col2, roughness: 0.4 }));
-          basin.position.set(wx + 0.07, 1.24, wz - 0.05);
+          basin.position.set(wx + 0.07, PILLAR_TOP + 0.05, wz - 0.05);
           const goods = new Mesh(goodsGeo, new MeshStandardMaterial({ color: 0xf4a226, roughness: 0.75 }));
-          goods.position.set(wx + 0.07, 1.30, wz - 0.05);
+          goods.position.set(wx + 0.07, PILLAR_TOP + 0.11, wz - 0.05);
           this.decals.add(basin, goods);
         }
       } else if ((gx + gy) % 4 === 0) {
         // Lekki Roadworks: bright orange/white traffic cone perched on select pillars
         const cone = new Mesh(coneGeo, coneMat);
-        cone.position.set(wx, 1.35, wz);
+        cone.position.set(wx, PILLAR_TOP + 0.16, wz);
         const stripe = new Mesh(bandGeo, whiteMat);
-        stripe.position.set(wx, 1.34, wz);
+        stripe.position.set(wx, PILLAR_TOP + 0.15, wz);
         this.decals.add(cone, stripe);
       }
     }
@@ -260,8 +322,7 @@ export class ArenaView implements View {
   private placePillar(i: number, x: number, y: number, lift: number): void {
     this.p.set(this.layout.wx(x), lift, this.layout.wz(y));
     this.q.identity();
-    this.s.set(0.84, 1.08, 0.84);
-    this.m.compose(this.p, this.q, this.s);
+    this.m.compose(this.p, this.q, PILLAR_SCALE);
     this.pillars[this.pillarVariant(x, y)]!.set(i, this.m);
     this.s.set(1, 1, 1);
     if (lift === 0) this.setContact(i, x, y, 0.94);
@@ -280,8 +341,7 @@ export class ArenaView implements View {
     this.p.set(this.layout.wx(x), 0, this.layout.wz(y));
     this.e.set(0, ((x * 31 + y * 17) % 5) * 0.03 - 0.06, 0);
     this.q.setFromEuler(this.e);
-    this.s.set(0.86, 0.9, 0.86);
-    this.m.compose(this.p, this.q, this.s);
+    this.m.compose(this.p, this.q, SOFT_SCALE);
     this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.set(i, this.m);
     this.s.set(1, 1, 1);
     this.setContact(i, x, y, 0.8);
@@ -291,5 +351,6 @@ export class ArenaView implements View {
     for (const p of this.pillars) p.dispose();
     for (const s of this.soft.values()) s.dispose();
     this.contact.dispose();
+    for (const m of this.ownedMaterials) m.dispose();
   }
 }

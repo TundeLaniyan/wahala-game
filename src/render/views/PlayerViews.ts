@@ -57,6 +57,8 @@ interface Visual {
   mountedAt: number;
   dismountedAt: number;
   dustAt: number;
+  /** Last facing, so a sharp turn while running can kick up a puff of dust. */
+  facing: Player['facing'];
 }
 
 const flat = new PlaneGeometry(1, 1);
@@ -195,6 +197,7 @@ export class PlayerViews implements View {
       mountedAt: -10,
       dismountedAt: -10,
       dustAt: 0,
+      facing: p.facing,
     };
   }
 
@@ -210,6 +213,9 @@ export class PlayerViews implements View {
     }
 
     const face = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] }[p.facing];
+    // a sharp turn while running plants the feet: a small scuff of dust sells the direction change
+    if (p.facing !== v.facing && pos.moving && !p.mounted) ctx.fx.dust(pos.x, pos.y, 2, 0.32);
+    v.facing = p.facing;
     v.yaw = lerpAngle(v.yaw, yawForDir(face[0]!, face[1]!), Math.min(1, dt * 16));
     m.root.position.set(w.x, 0, w.z);
     m.root.rotation.set(0, v.yaw, 0);

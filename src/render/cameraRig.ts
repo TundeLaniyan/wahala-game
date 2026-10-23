@@ -1,36 +1,101 @@
-import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
+import { MathUtils, PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
+import type { CameraShot } from './cameraDirector';
 import type { Layout } from './coords';
 
-// Cinematic three-quarter action view (~43 degrees): low enough that characters, Danfo buses,
-// pillars and Lagos storey buildings have strong 3D depth and vertical presence, while keeping
-// every lane and intersection readable.
-const PITCH = (43 * Math.PI) / 180;
-const FOV = 40;
-/** Height of the north-street Danfos & storey facades framed above the back wall. */
+/**
+ * Two framings share one camera:
+ *
+ * - ACTION (default): a low, close three-quarter camera (41 degrees above the floor) that follows the
+ *   local player with smooth damping, widening only as far as needed to keep incoming danger
+ *   (a generator whose cross reaches the player, a vehicle about to pass) on screen. It never
+ *   rotates, so up is always north and the controls never change meaning.
+ * - OVERVIEW: the whole arena fitted inside the HUD-free band (establishing shot, the toggle, and
+ *   the fallback when nothing needs following).
+ *
+ * The camera is purely presentational: it never affects the simulation.
+ */
+const ACTION_PITCH = MathUtils.degToRad(41);
+const OVERVIEW_PITCH = MathUtils.degToRad(48);
+const FOV = 38;
+/** Vertical span (world units, in the view plane at the focus) covered by the HUD-free band. */
+const ACTION_SPAN = 6.4;
+/**
+ * World units of scenery the action camera may show beyond the side walls and the south wall. Phones
+ * get more, so a player in a corner can still sit clear of the on-screen D-pad and action buttons.
+ */
+const MARGIN = { side: 1.8, south: 1.1 };
+const MARGIN_COMPACT = { side: 3.4, south: 2.2 };
+/** Where the focus sits inside the HUD-free band (0 = centre, negative = lower). */
+const FOCUS_BAND_Y = -0.12;
+/** Damping time constants (seconds). */
+const TAU_MOVE = 0.3;
+const TAU_ZOOM = 0.55;
+const TAU_PITCH = 0.45;
+/** Height of the north-street Danfos & storey facades kept above the back wall in the overview. */
 const FAR_TOP = 3.1;
 /** Max |NDC x| of the near arena corners in the phone layout (clear of the touch controls). */
 const NEAR_X_COMPACT = 0.59;
 
-/**
- * Fixed elevated camera. It never pans or follows action: it is fitted once per viewport size so
- * the whole grid and its danger lanes are always visible (Bible section 12).
- */
+interface Pose {
+  x: number;
+  z: number;
+  distance: number;
+  pitch: number;
+}
+
 export class CameraRig {
   readonly camera = new PerspectiveCamera(FOV, 16 / 9, 0.5, 200);
-  private readonly target = new Vector3();
-  private distance = 20;
-  private readonly basePos = new Vector3();
   private readonly raycaster = new Raycaster();
   private readonly ground = new Plane(new Vector3(0, 1, 0), 0);
+  private insets = { top: 0.1, bottom: 0.06 };
+  /** The fitted whole-arena pose. */
+  private readonly overview: Pose = { x: 0, z: 0, distance: 20, pitch: OVERVIEW_PITCH };
+  /** The current (smoothed) pose and its goal. */
+  private readonly pose: Pose = { x: 0, z: 0, distance: 20, pitch: OVERVIEW_PITCH };
+  private readonly goal: Pose = { x: 0, z: 0, distance: 20, pitch: OVERVIEW_PITCH };
+  private snap = true;
+  /** Ground extents of the action view per unit of distance (they scale linearly with it). */
+  private unitHalfWidth = 0.6;
+  private unitNear = 0.4;
+  private actionDistance = 10;
+  private margin = MARGIN;
+  private readonly v = new Vector3();
 
   constructor(private readonly layout: Layout) {}
 
   /** `insets` are the fractions of the screen covered by HUD at the top/bottom (0..0.4). */
   fit(aspect: number, insets = { top: 0.1, bottom: 0.06 }): void {
     const cam = this.camera;
+    this.insets = insets;
     cam.aspect = aspect;
-    cam.fov = aspect < 1.2 ? FOV + 12 : FOV;
+    cam.fov = aspect < 1.2 ? FOV + 14 : FOV;
     cam.updateProjectionMatrix();
+    this.fitOverview(aspect);
+    this.margin = insets.top >= 0.12 && aspect > 1.2 ? MARGIN_COMPACT : MARGIN;
+
+    // Action framing: the HUD-free band spans ACTION_SPAN world units at the focus. Narrow
+    // (portrait) screens pull back a little so a useful width of the arena stays in view.
+    const tanHalf = Math.tan(MathUtils.degToRad(cam.fov) / 2);
+    const band = Math.max(0.5, 1 - insets.top - insets.bottom);
+    const minWidth = 7.5;
+    this.actionDistance = Math.max(ACTION_SPAN / (2 * tanHalf * band), minWidth / (2 * tanHalf * aspect));
+    this.actionDistance = Math.min(this.actionDistance, this.overview.distance * 0.8);
+
+    // Ground extents of the action view at distance 1, looking at the origin.
+    this.place({ x: 0, z: 0, distance: 1, pitch: ACTION_PITCH });
+    const mid = this.groundAt(0.97, 0);
+    const near = this.groundAt(0, -1 + insets.bottom * 2);
+    this.unitHalfWidth = mid ? Math.abs(mid.x) : 0.6;
+    this.unitNear = near ? near.z : 0.4;
+
+    if (this.snap) Object.assign(this.pose, this.overview);
+    this.place(this.pose);
+  }
+
+  /** The whole arena (plus the far-side scenery) inside the HUD-free band. */
+  private fitOverview(aspect: number): void {
+    const cam = this.camera;
+    const insets = this.insets;
     const W = this.layout.width;
     const H = this.layout.height;
     const pts = [
@@ -41,19 +106,13 @@ export class CameraRig {
     ];
     // Perspective widens the near row. In the short landscape (phone) layout the on-screen D-pad and
     // action buttons sit in the bottom corners, so the near corners are kept inside them.
-    const compact = insets.top >= 0.12;
+    const compact = insets.top >= 0.12 && aspect > 1.2;
     const nearX = compact ? NEAR_X_COMPACT : 0.97;
     const maxX = (p: Vector3): number => (p.z > 0 ? nearX : 0.97);
-    const dir = new Vector3(0, Math.sin(PITCH), Math.cos(PITCH));
     const yTop = 1 - insets.top * 2;
     const yBottom = -1 + insets.bottom * 2;
-    const v = new Vector3();
-    const pose = (d: number, tz: number): void => {
-      this.target.set(0, 0, tz);
-      cam.position.copy(this.target).addScaledVector(dir, d);
-      cam.lookAt(this.target);
-      cam.updateMatrixWorld(true);
-    };
+    const v = this.v;
+    const pose = (d: number, tz: number): void => this.place({ x: 0, z: tz, distance: d, pitch: OVERVIEW_PITCH });
     /** Signed vertical imbalance of the framed arena inside the HUD-free band (0 = centred). */
     const imbalance = (d: number, tz: number): number => {
       pose(d, tz);
@@ -93,24 +152,132 @@ export class CameraRig {
       if (fits(mid)) hi = mid;
       else lo = mid;
     }
-    this.distance = hi;
-    this.target.set(0, 0, centre(hi));
-    this.basePos.copy(this.target).addScaledVector(dir, this.distance);
-    cam.position.copy(this.basePos);
-    cam.lookAt(this.target);
+    Object.assign(this.overview, { x: 0, z: centre(hi), distance: hi, pitch: OVERVIEW_PITCH });
   }
 
-  update(shake: number, time: number, attract = false): void {
-    const s = shake * shake * 0.35;
-    // Title-screen demo: a slow cinematic drift (the gameplay camera is always static).
+  /** Points the camera at (x, 0, z) from `distance` away at `pitch` above the floor. */
+  private place(p: Pose): void {
+    const cam = this.camera;
+    cam.position.set(p.x, Math.sin(p.pitch) * p.distance, p.z + Math.cos(p.pitch) * p.distance);
+    cam.lookAt(p.x, 0, p.z);
+    cam.updateMatrixWorld(true);
+  }
+
+  /** Floor point under an NDC position for the current camera, relative to the look-at point. */
+  private groundAt(nx: number, ny: number): Vector3 | null {
+    this.raycaster.setFromCamera(new Vector2(nx, ny), this.camera);
+    const hit = new Vector3();
+    return this.raycaster.ray.intersectPlane(this.ground, hit);
+  }
+
+  /** The action-camera goal for a shot (look-at point and distance), clamped to the arena. */
+  private actionGoal(shot: CameraShot): Pose {
+    const tanHalf = Math.tan(MathUtils.degToRad(this.camera.fov) / 2);
+    const yTop = 1 - this.insets.top * 2;
+    const yBottom = -1 + this.insets.bottom * 2;
+    const yFocus = (yTop + yBottom) / 2 + FOCUS_BAND_Y * (yTop - yBottom) * 0.5;
+    const lift = (d: number): number => (yFocus * d * tanHalf) / Math.sin(ACTION_PITCH);
+
+    let cx = shot.focus.x + shot.lead.x;
+    let cz = shot.focus.z + shot.lead.z;
+    let distance = this.actionDistance * shot.zoom;
+    if (shot.keep.length > 0) {
+      // Frame the focus and every kept point: centre on their bounds, then back off just enough.
+      let x0 = cx;
+      let x1 = cx;
+      let z0 = cz;
+      let z1 = cz;
+      for (const p of shot.keep) {
+        x0 = Math.min(x0, p.x);
+        x1 = Math.max(x1, p.x);
+        z0 = Math.min(z0, p.z);
+        z1 = Math.max(z1, p.z);
+      }
+      x0 -= 0.8;
+      x1 += 0.8;
+      z0 -= 0.9;
+      z1 += 0.7;
+      cx = (x0 + x1) / 2;
+      cz = (z0 + z1) / 2;
+      const corners = [
+        [x0, 0, z0],
+        [x1, 0, z0],
+        [x0, 0, z1],
+        [x1, 0, z1],
+        [x0, 1.4, z0],
+        [x1, 1.4, z0],
+      ];
+      const fits = (d: number): boolean => {
+        this.place({ x: cx, z: cz + lift(d), distance: d, pitch: ACTION_PITCH });
+        for (const c of corners) {
+          this.v.set(c[0]!, c[1]!, c[2]!).project(this.camera);
+          if (Math.abs(this.v.x) > 0.9 || this.v.y > yTop - 0.02 || this.v.y < yBottom + 0.02) return false;
+        }
+        return true;
+      };
+      const far = this.overview.distance * 1.1;
+      if (!fits(distance)) {
+        let lo = distance;
+        let hi = far;
+        for (let i = 0; i < 16; i++) {
+          const mid = (lo + hi) / 2;
+          if (fits(mid)) hi = mid;
+          else lo = mid;
+        }
+        distance = hi;
+      }
+    }
+    let x = cx;
+    let z = cz + lift(distance);
+    // Keep the view on the arena: at most a margin of street beyond the side and south walls.
+    const W = this.layout.width;
+    const H = this.layout.height;
+    const sideRoom = Math.max(0, W / 2 + this.margin.side - this.unitHalfWidth * distance);
+    x = MathUtils.clamp(x, -sideRoom, sideRoom);
+    z = Math.min(z, H / 2 + this.margin.south - this.unitNear * distance);
+    z = Math.max(z, -H / 2 - 1);
+    return { x, z, distance, pitch: ACTION_PITCH };
+  }
+
+  /**
+   * Moves the camera towards the shot. `dt` in seconds; `shake` 0..1 from explosions. With no shot
+   * (or an overview shot) the whole arena is framed. `attract` adds the title-screen drift.
+   */
+  update(dt: number, time: number, shake: number, shot: CameraShot | null = null, attract = false): void {
+    const target = shot && shot.kind === 'action' && !attract ? this.actionGoal(shot) : this.overview;
+    Object.assign(this.goal, target);
+    const p = this.pose;
+    if (this.snap) {
+      Object.assign(p, this.goal);
+      this.snap = false;
+    } else {
+      const k = (tau: number): number => 1 - Math.exp(-Math.max(0, dt) / tau);
+      p.x += (this.goal.x - p.x) * k(TAU_MOVE);
+      p.z += (this.goal.z - p.z) * k(TAU_MOVE);
+      p.distance += (this.goal.distance - p.distance) * k(TAU_ZOOM);
+      p.pitch += (this.goal.pitch - p.pitch) * k(TAU_PITCH);
+    }
+    this.place(p);
+    const s = shake * shake * 0.35 * Math.min(1, p.distance / 18 + 0.4);
+    // Title-screen demo: a slow cinematic drift.
     const dx = attract ? Math.sin(time * 0.18) * 1.6 : 0;
     const dy = attract ? Math.sin(time * 0.11) * 0.6 : 0;
-    this.camera.position.set(
-      this.basePos.x + dx + Math.sin(time * 53) * s,
-      this.basePos.y + dy + Math.cos(time * 47) * s * 0.6,
-      this.basePos.z + Math.sin(time * 41) * s,
-    );
-    if (attract) this.camera.lookAt(this.target);
+    const cam = this.camera;
+    cam.position.x += dx + Math.sin(time * 53) * s;
+    cam.position.y += dy + Math.cos(time * 47) * s * 0.6;
+    cam.position.z += Math.sin(time * 41) * s;
+    if (attract) cam.lookAt(p.x, 0, p.z);
+    cam.updateMatrixWorld(true);
+  }
+
+  /** Jump straight to the goal on the next update (new match). */
+  cut(): void {
+    this.snap = true;
+  }
+
+  /** Debug/tests: the current smoothed pose. */
+  currentPose(): Readonly<Pose> {
+    return this.pose;
   }
 
   /** World-space pixel scale for point sprites: pixels per world unit at distance 1. */

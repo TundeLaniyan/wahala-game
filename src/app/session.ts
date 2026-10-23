@@ -98,6 +98,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     captions,
   });
   applyAudioSettings(settings);
+  renderer.setCameraView(settings.cameraView);
   attract = new AttractController(renderer as never, createBot);
   // The live demo behind the menu is skipped for tests (?nobots / ?noattract) and on the lowest quality.
   // Models load once; the live demo behind the menu starts when the rigged cast is ready.
@@ -128,6 +129,12 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   const onVisibility = (): void => {
     if (document.hidden && useGameStore.getState().screen === 'playing') controller?.setPaused(true);
   };
+  // Camera view toggle (O): presentation only, so it lives outside the gameplay input mapping.
+  const onCameraKey = (e: KeyboardEvent): void => {
+    if (e.code !== 'KeyO' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (useGameStore.getState().screen === 'playing') commands.toggleCameraView();
+  };
+  window.addEventListener('keydown', onCameraKey);
   const unlock = (): void => {
     void audio.unlock().then(() => patch({ audioReady: true }));
   };
@@ -139,6 +146,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   return () => {
     cancelAnimationFrame(raf);
     document.removeEventListener('visibilitychange', onVisibility);
+    window.removeEventListener('keydown', onCameraKey);
     resizeObserver?.disconnect();
     renderer?.dispose();
     renderer = null;
@@ -185,6 +193,11 @@ export const commands = {
     saveSettings(settings);
     applyAudioSettings(settings);
     if (p.quality) renderer?.setQuality(p.quality);
+    if (p.cameraView) renderer?.setCameraView(p.cameraView);
+  },
+  toggleCameraView(): void {
+    const view = useGameStore.getState().settings.cameraView === 'overview' ? 'action' : 'overview';
+    commands.updateSettings({ cameraView: view });
   },
 };
 

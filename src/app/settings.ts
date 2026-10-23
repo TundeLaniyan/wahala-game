@@ -1,5 +1,5 @@
 import type { CharacterId, Difficulty, MatchMode } from '../sim';
-import type { QualityLevel } from '../render';
+import type { CameraView, QualityLevel } from '../render';
 
 export interface GameSettings {
   competitors: 2 | 3 | 4;
@@ -14,6 +14,8 @@ export interface GameSettings {
   sfxVolume: number;
   muted: boolean;
   touchControls: 'auto' | 'on' | 'off';
+  /** Gameplay camera: the low follow camera, or the whole arena in one frame. */
+  cameraView: CameraView;
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
@@ -29,6 +31,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   sfxVolume: 0.9,
   muted: false,
   touchControls: 'auto',
+  cameraView: 'action',
 };
 
 const KEY = 'wahala.settings.v1';
