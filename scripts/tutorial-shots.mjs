@@ -109,6 +109,8 @@ for (const device of which === 'both' ? ['desktop', 'mobile'] : [which]) {
   await advance(page, 30);
   await shot(page, `${device}-08-vehicle-practice`);
 
+  // a phone practice starts with the lesson panel folded away
+  if (await page.getByTestId('htp-expand').isVisible()) await page.getByTestId('htp-expand').click();
   await page.getByTestId('htp-chapters').click();
   await page.waitForTimeout(300);
   await shot(page, `${device}-09-chapter-list`);

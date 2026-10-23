@@ -749,3 +749,21 @@
   padding: 5px 14px;
   animation: htp-fade 0.6s 6s forwards;
 }
+
+/* short landscape phones, while a demo plays: the board is small, so the demo's own subtitle and step
+   label stand in for the HUD's entry instructions and inventory row (both return in practice) */
+@media (max-height: 520px) {
+  .game-root.htp-on {
+    --htp-w: clamp(200px, 26vw, 240px);
+  }
+  .game-root.htp-on:has(.htp-panel[data-mode='demo']) .entry-panel,
+  .game-root.htp-on:has(.htp-panel[data-mode='demo']) .inventory {
+    display: none;
+  }
+  .htp-subtitle {
+    bottom: 4px;
+    padding: 4px 10px 5px;
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+}
