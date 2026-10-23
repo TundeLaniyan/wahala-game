@@ -288,6 +288,12 @@ export class MatchController {
         const me = state.players[LOCAL_ID]!;
         return me.x === e.x && me.y === e.y ? { text: 'OKADA SAVED YOU!', tone: 'good' } : null;
       }
+      case 'playerTeleported':
+        return e.playerId === LOCAL_ID ? { text: 'THROUGH THE MANHOLE!', tone: 'info' } : null;
+      case 'generatorDoused': {
+        const g = state.generators.find((o) => o.id === e.generatorId);
+        return g?.ownerId === LOCAL_ID ? { text: 'YOUR GENERATOR GOT SOAKED!', tone: 'bad' } : null;
+      }
       default:
         return null;
     }

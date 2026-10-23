@@ -1,5 +1,9 @@
 import { CHARACTERS, secondsRemaining } from '../sim';
 import type { CharacterId, CurseKind, GameState, MatchResult, VehicleKind } from '../sim';
+import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
+import type { StageAlert } from './stageAlerts';
+
+export type { StageAlert } from './stageAlerts';
 
 export interface HudPlayer {
   id: number;
@@ -24,6 +28,8 @@ export interface HudMe {
   killCharges: number;
   sneakers: boolean;
   hotFuel: boolean;
+  /** Generator Pass: walks over generators. */
+  bombPass: boolean;
   mounted: boolean;
   voucher: boolean;
   vehicle: VehicleKind;
@@ -47,6 +53,10 @@ export interface HudSnapshot {
   result: MatchResult | null;
   entry: { stage: 'entry' | 'turn'; fraction: number; vehicle: VehicleKind } | null;
   crush: boolean;
+  /** Stage hazards that concern the local player right now (most urgent first). */
+  stageAlerts: StageAlert[];
+  /** The arena's special rule, shown big during the countdown (null when there is none / after it). */
+  ruleBanner: string | null;
 }
 
 /** Pure projection of the simulation into what the HUD displays. */
@@ -70,6 +80,7 @@ export function buildHud(state: GameState, localId: number, entry: HudSnapshot['
         killCharges: local.killSwitchCharges,
         sneakers: local.sneakers,
         hotFuel: local.hotFuel,
+        bombPass: local.bombPass,
         mounted: local.mounted,
         voucher: local.hasVoucher,
         vehicle: CHARACTERS[local.characterId].vehicle,
@@ -105,5 +116,7 @@ export function buildHud(state: GameState, localId: number, entry: HudSnapshot['
     result: state.match.result,
     entry,
     crush: state.crush !== null,
+    stageAlerts: buildStageAlerts(state, localId),
+    ruleBanner: ruleBannerFor(state),
   };
 }
