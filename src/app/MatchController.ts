@@ -17,6 +17,9 @@ const RESULTS_DELAY_MS = 2200;
 const HUD_INTERVAL_MS = 90;
 const LOCAL_ID = 0;
 
+/** The audio engine also takes the arena (its music playlist) and a pause hook; stub ports may not. */
+type MatchAudio = AudioPort & { startMusic(arenaId?: string): void; setPaused?(paused: boolean): void };
+
 export interface ControllerDeps {
   renderer: RendererPort;
   input: InputPort;
@@ -34,7 +37,7 @@ export class MatchController {
   state: GameState | null = null;
   private bots = new Map<number, Bot>();
   private readonly entry = new VehicleEntryController(LOCAL_ID);
-  private readonly audio: AudioPort;
+  private readonly audio: MatchAudio;
   private readonly captions: CaptionPort;
   private accumulator = 0;
   private lastMs = -1;
@@ -91,7 +94,7 @@ export class MatchController {
     this.entry.sync(state);
     this.deps.input.clear();
     this.deps.renderer.loadGame(state);
-    this.audio.startMusic();
+    this.audio.startMusic(settings.arenaId);
     this.audio.setIntensity(0);
     patch({
       screen: 'playing',
@@ -116,6 +119,7 @@ export class MatchController {
   setPaused(paused: boolean): void {
     if (!this.state || this.state.match.phase === 'ended') return;
     this.paused = paused;
+    this.audio.setPaused?.(paused);
     this.deps.input.clear(); // a press made while paused must not become a move on resume
     this.lastMs = -1;
     patch({ paused });

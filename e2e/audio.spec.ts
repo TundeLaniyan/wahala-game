@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { open, startMatch } from './helpers';
@@ -24,6 +25,17 @@ interface Probe {
 }
 const probe = (page: Page): Promise<Probe> =>
   page.evaluate(() => (window as unknown as { __audio: Probe }).__audio);
+
+/** The only audio files the game may request: the approved tracks listed in the music manifest. */
+const APPROVED_FILES = new Set(
+  (
+    JSON.parse(readFileSync(new URL('../public/audio/music/manifest.json', import.meta.url), 'utf8')) as {
+      tracks: { file: string; approved?: boolean }[];
+    }
+  ).tracks
+    .filter((t) => t.approved === true)
+    .map((t) => t.file),
+);
 
 const sliderValue = (page: Page, key: string): Promise<string> =>
   page.getByTestId(`audio-${key}`).inputValue();
@@ -71,7 +83,7 @@ test.describe('audio settings, persistence and music start', () => {
     await expect(page.getByTestId('pause-overlay').getByTestId('audio-settings')).toBeVisible();
   });
 
-  test('no audio before the first gesture; the rejected music and voices are never fetched or played', async ({
+  test('no audio before the first gesture; only approved playlist files are ever requested', async ({
     page,
   }) => {
     const audioFiles: string[] = [];
@@ -95,6 +107,38 @@ test.describe('audio settings, persistence and music start', () => {
     expect(after.contexts).toBe(1);
     // synthesised effects and beds are fine; nothing long enough to be a music loop (> 20 s) may start
     expect(after.started.filter((s) => s.rate > 0 && s.frames / s.rate > 20)).toEqual([]);
-    expect(audioFiles).toEqual([]);
+    // only the approved playlist files may be requested (probed or streamed); never a voice pack, never
+    // anything generated
+    expect(audioFiles.filter((u) => !/\/audio\/music\/[A-Za-z0-9_-]+\.mp3(\?|$)/.test(u))).toEqual([]);
+    expect(
+      audioFiles.map((u) => /([A-Za-z0-9_-]+\.mp3)(\?|$)/.exec(u)![1]).filter((f) => !APPROVED_FILES.has(f!)),
+    ).toEqual([]);
+
+    // the playlist player in the real browser: a match track only if an approved file is present,
+    // otherwise silent; the pause menu reaches the music
+    const music = () =>
+      page.evaluate(
+        () =>
+          (
+            window as unknown as { __WAHALA__: { music: () => Record<string, unknown> | null } }
+          ).__WAHALA__.music() as {
+            scene: string;
+            track: string | null;
+            available: string[];
+            paused: boolean;
+            rate: number;
+          },
+      );
+    const m = await music();
+    expect(m.scene).toBe('match');
+    if (m.available.length === 0) expect(m.track).toBeNull();
+    else expect(m.available).toContain(m.track);
+    expect(m.rate).toBe(1);
+    await page.keyboard.press('p');
+    await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    await expect.poll(async () => (await music()).paused).toBe(true);
+    await page.keyboard.press('p');
+    await expect.poll(async () => (await music()).paused).toBe(false);
+    expect((await probe(page)).errors).toEqual([]);
   });
 });

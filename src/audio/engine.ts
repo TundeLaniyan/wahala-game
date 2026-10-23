@@ -4,11 +4,13 @@
  * router together.
  *
  * Layers (each with its own user volume, see prefs.ts / buses.ts):
- *   music     pre-rendered loops + stings (music.ts), menu loop until a match starts
+ *   music     the approved playlist, one streamed track per match (music.ts, playlist.ts), with the
+ *             endgame escalation of escalation.ts; optional menu playlist
  *   ambience  crowd beds, crowd reactions and spoken lines (pidgin.ts)
  *   sfx       synthesised gameplay effects and warnings (src/audio/recipes)
- * NO music or voice files ship (the generated ones were rejected, docs/AUDIO.md): the music player and
- * the voices stay silent until licensed files are listed in their manifests. Recorded files in
+ * The generated music and voices were rejected (docs/AUDIO.md). The music manifest lists only the
+ * founder's approved, licensed tracks; files that are not present are skipped and the player stays
+ * silent without them. The voices stay silent until licensed recordings are listed. Recorded files in
  * public/audio (see samples.ts) may override synthesised sounds slot by slot.
  *
  * Contract highlights (see index.ts for the public surface):
@@ -18,11 +20,12 @@
  */
 import type { GameState, SimEvent } from '../sim';
 import { createAmbience } from './ambience';
-import { createMusicPlayer } from './music';
-import type { MusicPlayer, MusicReport } from './music';
+import { matchClock } from './escalation';
+import { createMusicPlayer, defaultMediaFactory, defaultProbe, probeVia } from './music';
+import type { MediaFactory, MusicPlayer, MusicReport, MusicStatus, ProbeLike } from './music';
 import { createPidginVoices } from './pidgin';
 import type { PidginVoices, SpokenTrace, VoiceReport } from './pidgin';
-import { createPidginReactor, stingForEnd } from './pidginReactions';
+import { createPidginReactor } from './pidginReactions';
 import type { PidginReactor } from './pidginReactions';
 import { audioPrefs } from './prefs';
 import type { PrefsStore } from './prefs';
@@ -43,7 +46,8 @@ import type { Mixer, PlayTrace } from './mixer';
 import type { SoundId } from './recipes';
 import { createReactionDirector } from './reactions';
 import type { ReactionDirector } from './reactions';
-import { clamp01 } from './rng';
+import { clamp01, createRand } from './rng';
+import type { Rand } from './rng';
 import { decoderFor, defaultFetch, loadRecordedSlots } from './samples';
 import type { FetchLike, SlotReport } from './samples';
 import { updateStateLoops } from './stateLoops';
@@ -64,17 +68,17 @@ export interface AudioEngine {
   /** Smooth (click-free) mute: ramps the master gain to 0 / back. */
   setMuted(muted: boolean): void;
   /**
-   * A match is starting: crossfades the menu music to the in-match Afrobeats loop and starts the
-   * Lagos street ambience + chatter. Remembered if called before `unlock()`. (The name predates the
-   * music; it now means "enter the match soundscape".)
+   * A match is starting (or restarting): picks this match's track from the arena's playlist (never the
+   * previous match's track while another is available), tempo back to 1.0, and starts the street
+   * ambience. Remembered if called before `unlock()`. (The name predates the music; it means "enter
+   * the match soundscape".)
    */
-  startMusic(): void;
+  startMusic(arenaId?: string | null): void;
   /** Leaving the match: ambience fades out, generator/engine loops stop, the menu music returns. */
   stopMusic(): void;
-  /**
-   * 0..1 excitement: scales the ambience's excited layer and how eager/loud the crowd reacts. Values
-   * above ~0.5 (the app sends 1 for the last 30 s) also fade in the percussion tension stem.
-   */
+  /** Game paused / resumed: the music stream pauses (after a short fade) and continues where it was. */
+  setPaused(paused: boolean): void;
+  /** 0..1 excitement: scales the ambience's excited layer and how eager/loud the crowd reacts. */
   setIntensity(level: number): void;
   /**
    * Plays SFX and crowd reactions for this batch of sim events and keeps generator / vehicle loops
@@ -84,8 +88,10 @@ export interface AudioEngine {
   playUi(kind: 'click' | 'back' | 'start' | 'countdown' | 'go'): void;
   /** Resolves when optional recorded sample slots have been tried (always resolves, never rejects). */
   whenSamplesLoaded(): Promise<SlotReport>;
-  /** Resolves when the music files have been tried (never rejects). */
+  /** Resolves when the music manifest has been read and its files probed (never rejects). */
   whenMusicLoaded(): Promise<MusicReport>;
+  /** What the music is doing (debugging and tests). */
+  musicStatus(): MusicStatus;
   /** Resolves when the spoken-Pidgin packs have been tried (never rejects). */
   whenVoicesLoaded(): Promise<VoiceReport>;
   /** Stops timers and sounds and closes the context. The engine is inert afterwards. */
@@ -115,6 +121,15 @@ export interface AudioOptions {
   prefs?: PrefsStore | null;
   /** Called for every spoken Pidgin line that is actually scheduled (debugging and tests). */
   onSpeak?: (t: SpokenTrace) => void;
+  /**
+   * Music file availability check. Default: a HEAD request in a browser (or, when `fetch` is injected,
+   * a request through it); null: every listed file is assumed present until it fails to play.
+   */
+  musicProbe?: ProbeLike | null;
+  /** Creates the streaming music element. Default: `new Audio()` in a browser, none elsewhere. */
+  createMediaElement?: MediaFactory | null;
+  /** Randomness for the playlist rotation (default: seeded from the clock at creation). */
+  musicRand?: Rand;
 }
 
 interface Graph {
@@ -134,6 +149,17 @@ interface Graph {
 }
 
 const NO_MUSIC: MusicReport = { loaded: [], failed: [] };
+const SILENT_MUSIC: MusicStatus = {
+  scene: 'off',
+  track: null,
+  arenaId: null,
+  urgency: 0,
+  rate: 1,
+  pitchPreserved: false,
+  paused: false,
+  available: [],
+  history: [],
+};
 const NO_VOICES: VoiceReport = { loadedPacks: [], failed: [], clips: 0, scenes: 0 };
 const UI_SOUND: Record<Parameters<AudioEngine['playUi']>[0], SoundId> = {
   click: 'ui_click',
@@ -167,7 +193,10 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
   let ambienceWanted = false;
   /** True from startMusic() until stopMusic(): the match soundscape (match music, street chatter). */
   let matchWanted = false;
+  let arenaWanted: string | null = null;
+  let pausedWanted = false;
   let intensity = 0;
+  const musicRand: Rand = opts.musicRand ?? createRand((Date.now() ^ 0x5bd1e995) >>> 0);
   let resuming = false;
   let samples: Promise<SlotReport> = Promise.resolve(EMPTY_REPORT);
   let musicLoaded: Promise<MusicReport> = Promise.resolve(NO_MUSIC);
@@ -186,13 +215,26 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
     crowd.setIntensity(intensity);
     const fetcher = opts.fetch === undefined ? defaultFetch() : opts.fetch;
     const decode = decoderFor(ctx);
+    const probe =
+      opts.musicProbe !== undefined
+        ? opts.musicProbe
+        : opts.fetch === undefined
+          ? defaultProbe()
+          : opts.fetch
+            ? probeVia(opts.fetch)
+            : null;
     const music = createMusicPlayer(ctx, buses, {
       fetch: fetcher,
-      decode,
+      probe,
+      createElement: opts.createMediaElement === undefined ? defaultMediaFactory() : opts.createMediaElement,
+      rand: musicRand,
       baseUrl: opts.sampleBaseUrl,
       onError: fail,
     });
-    music.setScene(matchWanted ? 'match' : 'menu');
+    if (matchWanted) {
+      music.startMatch(arenaWanted);
+      music.setPaused(pausedWanted);
+    } else music.setScene('menu');
     const voices = createPidginVoices(ctx, buses, pool, {
       fetch: fetcher,
       decode,
@@ -237,7 +279,6 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
   };
 
   const applyAmbience = (g: Graph): void => {
-    g.music.setScene(matchWanted ? 'match' : 'menu');
     if (ambienceWanted) {
       if (!g.ambience.running) {
         g.voices.reset(g.ctx.currentTime);
@@ -327,10 +368,13 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
         if (m) g.loops.stopAll(); // loops rebuild on the next update after unmuting
       });
     },
-    startMusic() {
+    startMusic(arenaId) {
       ambienceWanted = true;
       matchWanted = true;
+      arenaWanted = arenaId ?? null;
+      pausedWanted = false;
       guard((g) => {
+        g.music.startMatch(arenaWanted);
         applyAmbience(g);
         keepRunning(g);
       });
@@ -338,7 +382,16 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
     stopMusic() {
       ambienceWanted = false;
       matchWanted = false;
-      guard(applyAmbience);
+      pausedWanted = false;
+      guard((g) => {
+        g.music.setPaused(false);
+        g.music.setScene('menu');
+        applyAmbience(g);
+      });
+    },
+    setPaused(p) {
+      pausedWanted = matchWanted && p;
+      guard((g) => g.music.setPaused(pausedWanted));
     },
     setIntensity(level) {
       const next = Number.isFinite(level) ? Math.min(1, Math.max(0, level)) : 0;
@@ -347,17 +400,16 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       guard((g) => {
         g.ambience.setIntensity(intensity);
         g.crowd.setIntensity(intensity);
-        g.music.setTension((intensity - 0.5) * 2);
       });
     },
     handleEvents(events, state) {
       guard((g) => {
+        // the music follows the game clock even while muted, so unmuting lands on the right tempo
+        if (matchWanted) g.music.update(matchClock(state));
         if (muted) return;
         keepRunning(g);
         g.router.handle(events, state);
         g.reactor.handle(events, state, g.router.lastNearMisses, g.router.panFor);
-        const sting = stingForEnd(events, state);
-        if (sting) g.music.sting(sting);
         if (ambienceWanted) g.voices.update(g.ctx.currentTime, intensity);
         g.fuse.update(state, g.ctx.currentTime, (e) => {
           const pan = g.router.panFor(state, e.tileX);
@@ -383,6 +435,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
     },
     whenSamplesLoaded: () => samples,
     whenMusicLoaded: () => musicLoaded,
+    musicStatus: () => (graph && !disposed ? graph.music.status() : SILENT_MUSIC),
     whenVoicesLoaded: () => voicesLoaded,
     dispose() {
       if (disposed) return;
