@@ -274,6 +274,14 @@ li.me .nm {
   .rh-watch small {
     display: none;
   }
+  /* fit between the D-pad and the action buttons; the placing shows on the results card */
+  .rh-out {
+    display: none;
+  }
+  .rh-spectate .btn.small {
+    padding: 4px 10px;
+    font-size: 0.85rem;
+  }
 }
 
 /* results card (City Rumble) */
