@@ -1,0 +1,138 @@
+/* Stage-hazard alerts (top of the toast column) and the arena rule banner (countdown). */
+.stage-alerts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+.stage-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 12px;
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  font-size: clamp(0.95rem, 2.9vh, 1.35rem);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fff4dc;
+  background: rgba(14, 12, 10, 0.9);
+  border: 2px solid #ffb21a;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+  animation: stage-alert-in 0.18s ease-out;
+}
+.stage-alert i {
+  font-style: normal;
+  font-size: 1.05em;
+  line-height: 1;
+}
+.stage-alert .secs {
+  display: grid;
+  place-items: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: #ffb21a;
+  color: #1b1100;
+  font-weight: 400;
+  font-size: 0.9em;
+}
+.stage-alert.warn {
+  border-color: #ffb21a;
+  color: #ffe6b0;
+}
+.stage-alert.info {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #e8e2d6;
+  font-size: clamp(0.8rem, 2.3vh, 1.05rem);
+}
+.stage-alert.info .secs {
+  background: rgba(255, 255, 255, 0.8);
+}
+.stage-alert.danger {
+  color: #fff;
+  border-color: #fff;
+  background: linear-gradient(90deg, #b3160a, #ff3b1f 50%, #b3160a);
+  font-size: clamp(1.05rem, 3.3vh, 1.6rem);
+  animation:
+    stage-alert-in 0.18s ease-out,
+    stage-alert-throb 0.36s ease-in-out infinite alternate;
+}
+.stage-alert.danger .secs {
+  background: #fff;
+  color: #b3160a;
+}
+@keyframes stage-alert-in {
+  from {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes stage-alert-throb {
+  from {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(255, 59, 31, 0);
+  }
+  to {
+    transform: scale(1.06);
+    box-shadow: 0 0 22px rgba(255, 59, 31, 0.85);
+  }
+}
+
+/* ---------- arena rule banner (countdown) ---------- */
+.rule-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(56px, 15vh, 130px);
+  display: flex;
+  justify-content: center;
+  padding: 0 max(12px, env(safe-area-inset-left));
+  pointer-events: none;
+  animation: stage-alert-in 0.3s ease-out;
+}
+.rule-inner {
+  max-width: min(900px, 92vw);
+  padding: 10px 22px 12px;
+  text-align: center;
+  background:
+    repeating-linear-gradient(-45deg, #ffc61a 0 14px, #1c1a17 14px 28px) top / 100% 7px no-repeat,
+    repeating-linear-gradient(-45deg, #ffc61a 0 14px, #1c1a17 14px 28px) bottom / 100% 7px no-repeat,
+    rgba(12, 10, 8, 0.94);
+  border-left: 4px solid #ff3b1f;
+  border-right: 4px solid #ff3b1f;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+.rule-inner b {
+  display: block;
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  font-size: clamp(1.2rem, 4.6vh, 2.2rem);
+  color: #ff5a3a;
+  text-shadow: 0 2px 0 #000;
+}
+.rule-inner span {
+  display: block;
+  margin-top: 2px;
+  font-weight: 700;
+  font-size: clamp(0.9rem, 3.2vh, 1.35rem);
+  line-height: 1.2;
+  color: #fff4dc;
+}
+@media (max-height: 520px) {
+  .rule-banner {
+    bottom: 8px;
+  }
+  .rule-inner {
+    padding: 7px 14px 9px;
+  }
+}

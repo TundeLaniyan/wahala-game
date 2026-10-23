@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ARENAS, CHARACTERS, CHARACTER_IDS, VEHICLE_DEFS } from '../sim';
+import { CHARACTERS, CHARACTER_IDS, CITY_RUMBLE_ID, VEHICLE_DEFS } from '../sim';
 import type { CharacterId, Difficulty, MatchMode } from '../sim';
 import { portraitUrl } from '../assets/portraits';
 import { commands } from '../app/session';
 import { useGameStore } from '../app/store';
 import type { GameSettings } from '../app/settings';
+import { ArenaPicker } from './ArenaPicker';
 import { AudioSettingsPanel } from './AudioSettings';
 
 function Choice<T extends string | number | boolean>(props: {
@@ -101,6 +102,8 @@ export function TitleScreen() {
   const [help, setHelp] = useState(false);
   const set = (p: Partial<GameSettings>) => commands.updateSettings(p);
   const busy = loading !== null && loading.done < loading.total;
+  // City Rumble has its own competitor count (on its card) and always closes in: no 2-4 or rules choice
+  const rumble = s.arenaId === CITY_RUMBLE_ID;
 
   return (
     <div className="title" data-testid="title-screen">
@@ -157,21 +160,28 @@ export function TitleScreen() {
         </section>
 
         <section className="panel">
+          <h3>Arena</h3>
+          <ArenaPicker settings={s} set={set} />
+        </section>
+
+        <section className="panel">
           <h3>Match</h3>
-          <div className="row" style={{ marginBottom: 8 }}>
-            <span>Competitors</span>
-            {([2, 3, 4] as const).map((n) => (
-              <Choice
-                key={n}
-                value={n}
-                current={s.competitors}
-                label={`${n}`}
-                onPick={(v) => set({ competitors: v })}
-                testId={`players-${n}`}
-              />
-            ))}
-          </div>
-          <div className="row" style={{ marginBottom: 8 }}>
+          {!rumble && (
+            <div className="row" style={{ marginBottom: 8 }}>
+              <span>Competitors</span>
+              {([2, 3, 4] as const).map((n) => (
+                <Choice
+                  key={n}
+                  value={n}
+                  current={s.competitors}
+                  label={`${n}`}
+                  onPick={(v) => set({ competitors: v })}
+                  testId={`players-${n}`}
+                />
+              ))}
+            </div>
+          )}
+          <div className="row" style={{ marginBottom: rumble ? 0 : 8 }}>
             <span>Bots</span>
             {(['easy', 'medium', 'hard'] as Difficulty[]).map((d) => (
               <Choice
@@ -184,37 +194,26 @@ export function TitleScreen() {
               />
             ))}
           </div>
-          <div className="row" style={{ marginBottom: 8 }}>
-            <span>Rules</span>
-            {(
-              [
-                ['classic', 'Classic Timer'],
-                ['crush', 'Wahala Crush'],
-              ] as [MatchMode, string][]
-            ).map(([m, label]) => (
-              <Choice
-                key={m}
-                value={m}
-                current={s.mode}
-                label={label}
-                onPick={(v) => set({ mode: v })}
-                testId={`mode-${m}`}
-              />
-            ))}
-          </div>
-          <div className="row">
-            <span>Arena</span>
-            {Object.values(ARENAS).map((a) => (
-              <Choice
-                key={a.id}
-                value={a.id}
-                current={s.arenaId}
-                label={a.name}
-                onPick={(v) => set({ arenaId: v })}
-                testId={`arena-${a.id}`}
-              />
-            ))}
-          </div>
+          {!rumble && (
+            <div className="row">
+              <span>Rules</span>
+              {(
+                [
+                  ['classic', 'Classic Timer'],
+                  ['crush', 'Wahala Crush'],
+                ] as [MatchMode, string][]
+              ).map(([m, label]) => (
+                <Choice
+                  key={m}
+                  value={m}
+                  current={s.mode}
+                  label={label}
+                  onPick={(v) => set({ mode: v })}
+                  testId={`mode-${m}`}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="panel">

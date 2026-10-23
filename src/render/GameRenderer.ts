@@ -27,6 +27,7 @@ import { PickupViews } from './views/PickupViews';
 import { PlayerViews } from './views/PlayerViews';
 import { VehicleViews } from './views/VehicleViews';
 import { TrapViews } from './views/TrapViews';
+import { StageHazardViews } from './views/StageHazardViews';
 import type { FrameContext, View } from './views/types';
 import { disposeTextures } from './textures';
 
@@ -81,6 +82,7 @@ export class GameRenderer {
   private arena!: ArenaView;
   private overlays!: OverlayViews;
   private vehicles!: VehicleViews;
+  private stage: StageHazardViews | null = null;
   private views: View[] = [];
   private players: PlayerViews | null = null;
   private lights!: SceneLights;
@@ -148,7 +150,18 @@ export class GameRenderer {
     this.players = players;
     this.vehicles = new VehicleViews();
     this.overlays = new OverlayViews();
-    this.views = [this.arena, traps, generators, flames, pickups, players, this.vehicles, this.overlays];
+    this.stage = new StageHazardViews(state, this.layout, this.effects, this.profile);
+    this.views = [
+      this.arena,
+      traps,
+      generators,
+      flames,
+      pickups,
+      players,
+      this.vehicles,
+      this.overlays,
+      this.stage,
+    ];
     this.scene.add(
       this.backdrop.root,
       this.arena.group,
@@ -159,6 +172,7 @@ export class GameRenderer {
       players.group,
       this.vehicles.group,
       this.overlays.group,
+      this.stage.group,
       this.effects.group,
     );
 
@@ -174,6 +188,7 @@ export class GameRenderer {
     tag(players.group, 'player');
     tag(this.vehicles.group, 'vehicle');
     tag(this.overlays.group, 'none');
+    tag(this.stage.group, 'none');
     tag(this.effects.group, 'none');
     this.weather();
 
@@ -196,6 +211,7 @@ export class GameRenderer {
     this.scene.clear();
     this.views = [];
     this.players = null;
+    this.stage = null;
     this.loaded = false;
   }
 
@@ -214,6 +230,7 @@ export class GameRenderer {
       this.rig.fit(this.width / this.height, this.insets);
       this.effects.setPixelScale(this.rig.pixelScale(this.height * dpr));
       this.backdrop.setPixelScale(this.rig.pixelScale(this.height * dpr));
+      this.stage?.setPixelScale(this.rig.pixelScale(this.height * dpr));
     }
   }
 
@@ -255,6 +272,7 @@ export class GameRenderer {
     if (!this.loaded) return;
     const fx = this.effects;
     this.players?.onEvents(events);
+    this.stage?.handleEvents(events, state);
     for (const e of events) {
       switch (e.type) {
         case 'generatorExploded':

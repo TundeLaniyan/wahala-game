@@ -8,6 +8,7 @@ import { commands } from '../app/session';
 import type { HudMe, HudPlayer } from '../app/hud';
 import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
+import { RuleBanner, StageAlerts } from './StageAlerts';
 
 function Portrait({ p }: { p: HudPlayer }) {
   useGameStore((st) => st.portraitsVersion);
@@ -50,6 +51,7 @@ function Inventory({ me }: { me: HudMe }) {
       {me.killCharges > 0 && <Chip kind="killswitch" text={`x${me.killCharges}`} />}
       {me.sneakers && <Chip kind="sneakers" text="" />}
       {me.hotFuel && <Chip kind="hotfuel" text="" />}
+      {me.bombPass && <Chip kind="bombpass" text="PASS" cls="good" />}
       {me.mounted && <Chip kind="okada" text="SHIELD" cls="good" />}
       {me.voucher && <Chip kind="voucher" text={VEHICLE_DEFS[me.vehicle].name.toUpperCase()} cls="good" />}
       {me.curse && <Chip kind="curse" text={`${curseLabel} ${me.curse.seconds}s`} cls="bad" />}
@@ -150,6 +152,7 @@ export function Hud() {
         </div>
       )}
       <div className="toasts">
+        <StageAlerts alerts={hud.stageAlerts} />
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.tone}`}>
             {t.text}
@@ -163,6 +166,7 @@ export function Hud() {
           </div>
         ))}
       </div>
+      {hud.ruleBanner && <RuleBanner text={hud.ruleBanner} />}
       {hud.me && hud.phase !== 'ended' && <Inventory me={hud.me} />}
       {hud.entry && <EntryPanel entry={hud.entry} />}
       {hud.phase === 'playing' && !hud.localAlive && (
