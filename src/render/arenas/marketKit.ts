@@ -21,8 +21,7 @@ import {
   RepeatWrapping,
   SRGBColorSpace,
 } from 'three';
-import type { BufferGeometry, Material ,
-  Object3D} from 'three';
+import type { BufferGeometry, Material, Object3D } from 'three';
 import { artRng, corrugatedTexture } from '../textures';
 import { bakeModel } from '../assets/merge';
 import type { Placement, SetContext } from './common';

@@ -38,7 +38,7 @@ export interface Vignette {
 const RIGS = ['streetBaller', 'lekkiBoy', 'areaBoss', 'campusQueen'] as const;
 /** Worn, muted clothing: faded navy, khaki, rust, olive, grey, dirty white, brown, maroon. */
 const CLOTH = [0x3a4252, 0x7a6e56, 0x7a4a34, 0x4e5236, 0x5c5c5a, 0xa8a08e, 0x5a4232, 0x5c2e30, 0x2e3a36];
-const HIVIS = 0xd9a21a;
+const HIVIS = 0xc45a18;
 
 interface Actor {
   rc: RiggedCharacter;
@@ -72,7 +72,13 @@ function dress(body: Object3D, rnd: () => number, hiVis: boolean): Material[] {
     if (!(m instanceof MeshStandardMaterial)) return;
     const c = m.clone();
     const name = m.name.toLowerCase();
-    if (name.includes('cloth')) {
+    if (name.includes('cloth') && hiVis) {
+      // fluorescent coveralls: a flat vivid colour (the outfit atlas would tint it), kept unweathered
+      c.map = null;
+      c.color.setHex(rnd() < 0.5 ? HIVIS : 0xa8ae26);
+      c.roughness = 0.75;
+      c.userData.noGrit = true;
+    } else if (name.includes('cloth')) {
       // keep the outfit's own pattern/shading from the atlas but pull it to a worn tone
       c.color.copy(cloth).multiplyScalar(1.5);
       c.roughness = Math.min(1, c.roughness + 0.15);
