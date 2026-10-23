@@ -1,24 +1,24 @@
 name: Deploy preview to GitHub Pages
 
 # The playable mobile preview at https://tundelaniyan.github.io/wahala-game/ is built from the
-# nine-arenas / City Rumble branch. Only this workflow (on this branch) deploys; `main` keeps its own
-# copy of the old workflow, so a push to `main` would replace the preview (see docs/DEPLOYMENT.md).
+# nine-arenas / City Rumble branch and published to the `gh-pages` branch. GitHub Pages must be set
+# ONCE by a repository admin: Settings -> Pages -> Build and deployment -> Source "Deploy from a
+# branch", Branch `gh-pages` / `(root)`. See docs/DEPLOYMENT.md. Only this workflow writes gh-pages,
+# so the old main-branch workflow (an Actions-source deployment) cannot replace the preview.
 on:
   push:
     branches: [claude/wahala-nine-arenas-city-rumble]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: pages-preview
   cancel-in-progress: true
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,21 +31,26 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
-      # SPA fallback and no Jekyll processing (files starting with "_" must be served).
-      - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      # SPA fallback; no Jekyll processing; a build stamp the founder can check on the live site
+      - run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+          echo "{\"commit\":\"${GITHUB_SHA}\",\"branch\":\"${GITHUB_REF_NAME}\",\"built\":\"$(date -u +%FT%TZ)\"}" > dist/build.json
+      - name: Publish dist/ to the gh-pages branch
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REMOTE="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads "$REMOTE" gh-pages >/dev/null; then
+            git clone --quiet --depth 1 --branch gh-pages "$REMOTE" site
+          else
+            mkdir site && git -C site init --quiet -b gh-pages && git -C site remote add origin "$REMOTE"
+          fi
+          find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a dist/. site/
+          cd site
+          git add -A
+          git commit --quiet -m "Preview build of ${GITHUB_SHA}" || echo "nothing changed"
+          git push --quiet origin gh-pages
