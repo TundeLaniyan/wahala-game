@@ -110,6 +110,9 @@ function followPlayer(state: GameState, layout: Layout, p: Player, alpha: number
     lead: { x: d[0] * lead, z: d[1] * lead },
     keep,
     zoom: isLargeBoard(state) ? zoom * LARGE_ZOOM : zoom,
+    // large boards: keep the followed player centred even at the city's edge (the street beyond is
+    // dressed); clamping the view to the board pushed a player at the edge under the HUD panels
+    free: isLargeBoard(state) ? true : undefined,
   };
 }
 

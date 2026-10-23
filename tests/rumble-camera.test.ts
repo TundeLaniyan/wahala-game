@@ -29,6 +29,7 @@ describe('City Rumble follow camera', () => {
     expect(shot.kind).toBe('action');
     expect(shot.focus).toEqual({ x: layout.wx(20), z: layout.wz(15) });
     expect(shot.zoom).toBeGreaterThan(1);
+    expect(shot.free).toBe(true); // centred even at the city's edge, never pushed under the HUD
     expect(shot.keep).toContainEqual({ x: layout.wx(22), z: layout.wz(16) });
     for (const k of shot.keep) {
       expect(Math.abs(k.x - shot.focus.x)).toBeLessThanOrEqual(7);
