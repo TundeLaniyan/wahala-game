@@ -84,9 +84,8 @@ describe('City Rumble follow camera', () => {
 });
 
 describe('City Rumble set dressing data', () => {
-  it('finds the twelve districts and the ten 3 x 3 buildings (none in the open core)', async () => {
+  it('finds the twelve districts between the avenues, four kinds of them', async () => {
     const { rumbleBlocks, districtOf } = await import('../src/render/arenas/rumble');
-    const { buildingCentres } = await import('../src/render/arenas/rumbleSet');
     const { getArena } = await import('../src/sim');
     const layout = getArena(CITY_RUMBLE_ID).layout;
     const blocks = rumbleBlocks(layout);
@@ -95,8 +94,28 @@ describe('City Rumble set dressing data', () => {
     for (const [x0, y0, x1, y1] of blocks) {
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) expect(layout[y]![x]).not.toBe('=');
     }
-    const b = buildingCentres(layout);
-    expect(b).toHaveLength(10);
-    for (const c of b) expect(Math.abs(c.x - 20) >= 8 || Math.abs(c.y - 15) >= 6).toBe(true);
+  });
+});
+
+describe('City Rumble audio panning', () => {
+  it('pans relative to the followed player once a listener is set; across the arena otherwise', async () => {
+    const { createEventRouter } = await import('../src/audio/eventRouter');
+    const router = createEventRouter({
+      mixer: {} as never,
+      buses: {} as never,
+      crowd: {} as never,
+      ambience: {} as never,
+      now: () => 0,
+    });
+    const s = sandbox({ players: 2, arenaId: CITY_RUMBLE_ID });
+    // whole arena: the left edge pans hard left, the centre is centred
+    expect(router.panFor(s, 0)).toBeLessThan(-0.5);
+    expect(router.panFor(s, 20)).toBeCloseTo(0, 5);
+    router.setListener(5);
+    expect(router.panFor(s, 5)).toBeCloseTo(0, 5); // a blast at the listener is centred
+    expect(router.panFor(s, 8)).toBeGreaterThan(0); // to its right, not "left of the city centre"
+    expect(router.panFor(s, 2)).toBeLessThan(0);
+    router.setListener(null);
+    expect(router.panFor(s, 8)).toBeLessThan(0);
   });
 });

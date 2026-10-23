@@ -18,7 +18,9 @@ const RESULTS_DELAY_MS = 2200;
 const HUD_INTERVAL_MS = 90;
 const LOCAL_ID = 0;
 /** City Rumble "skip to results": wall-clock ms of simulation per animation frame while fast-forwarding. */
-const SKIP_BUDGET_MS = 24;
+const SKIP_BUDGET_MS = 40;
+/** While fast-forwarding, the 3D view is redrawn on every n-th frame only. */
+const SKIP_RENDER_EVERY = 10;
 /** City Rumble: events further than this (tiles, either axis) from the camera's focus are not heard. */
 const HEAR_TILES = 12;
 /** City Rumble follow camera: events further than this from the focus get no particles / shake. */
@@ -66,6 +68,7 @@ export class MatchController {
   private spectateId: number | null = null;
   /** City Rumble: fast-forwarding to the result in slices (the page stays responsive). */
   private skipping = false;
+  private skipFrames = 0;
   private closingAnnounced = false;
 
   constructor(private readonly deps: ControllerDeps) {
@@ -265,12 +268,14 @@ export class MatchController {
     // The renderer interpolates between ticks using the unspent accumulator.
     const alpha = this.paused ? 0 : Math.min(1, this.accumulator / STEP_MS);
     this.entry.sync(state);
-    this.deps.renderer.render(state, alpha, dt, {
-      localPlayerId: LOCAL_ID,
-      entryOverlay: this.entry.overlay(state),
-      excitement: this.excitement,
-      focusPlayerId: this.spectateId,
-    });
+    // fast-forwarding: draw only now and then, so the frame's time goes into simulating
+    if (!this.skipping || this.skipFrames++ % SKIP_RENDER_EVERY === 0)
+      this.deps.renderer.render(state, alpha, dt, {
+        localPlayerId: LOCAL_ID,
+        entryOverlay: this.entry.overlay(state),
+        excitement: this.excitement,
+        focusPlayerId: this.spectateId,
+      });
 
     if (nowMs - this.hudClock > HUD_INTERVAL_MS || events.length > 0) {
       this.hudClock = nowMs;
@@ -458,7 +463,7 @@ export class MatchController {
     const state = this.state!;
     const t0 = performance.now();
     let n = 0;
-    while (state.match.phase !== 'ended' && (n < 30 || performance.now() - t0 < SKIP_BUDGET_MS) && n < 3000) {
+    while (state.match.phase !== 'ended' && (n < 60 || performance.now() - t0 < SKIP_BUDGET_MS) && n < 4000) {
       const evs = this.stepOnce();
       n++;
       // keep only what the HUD / camera need: no blast effects or sounds for skipped play

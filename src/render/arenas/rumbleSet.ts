@@ -4,33 +4,15 @@
  * meshes (kerbs, rooftops) and a few street-life actors. The avenues visibly run on past the board's
  * edges into the rest of the city, where traffic queues; the south (camera) side stays low.
  *
- * The 3 x 3 concrete buildings inside the blocks get a flat roof at pillar height with a parapet, so
- * each reads as one squat building rather than nine posts (no taller than the pillars: nothing hides a
- * lane).
+ * Nothing is added over the 3 x 3 concrete buildings inside the blocks: a roof slab at pillar height
+ * hid players standing just north of a building from the low follow camera.
  */
 import { getArena } from '../../sim';
 import { box, mat } from '../assets/helpers';
 import { assets } from '../assets/library';
 import type { Placement, SetContext } from './common';
 import { STREET } from './common';
-import { corrugatedRoof, shophouseRows, streetDressing } from './shared';
-
-/** Top of a drawn pillar (ArenaView draws concrete about one tile tall). */
-const ROOF_Y = 0.98;
-
-/** Centres (tile x, y) of the 3 x 3 concrete buildings: tiles whose eight neighbours are concrete too. */
-export function buildingCentres(layout: readonly string[]): { x: number; y: number }[] {
-  const out: { x: number; y: number }[] = [];
-  for (let y = 1; y < layout.length - 1; y++) {
-    for (let x = 1; x < layout[0]!.length - 1; x++) {
-      let all = true;
-      for (let dy = -1; dy <= 1 && all; dy++)
-        for (let dx = -1; dx <= 1 && all; dx++) if (layout[y + dy]![x + dx] !== '#') all = false;
-      if (all) out.push({ x, y });
-    }
-  }
-  return out;
-}
+import { shophouseRows, streetDressing } from './shared';
 
 /** Tile columns / rows that are avenue centre lines. */
 function avenueLines(layout: readonly string[]): { rows: number[]; cols: number[] } {
@@ -114,23 +96,6 @@ export function buildRumbleSet(ctx: SetContext): void {
   let k = 0;
   for (let x = -W / 2 - 0.6; x < W / 2 + 0.7; x += 0.6)
     statics.add(box(0.58, 0.1, 0.22, k++ % 2 ? kerbA : kerbB, x, 0.05, south + 0.62));
-
-  // --- rooftops on the 3 x 3 concrete buildings: slab, parapet, the odd corrugated shed or tank
-  const slab = mat(0x8c8476, { roughness: 0.95 });
-  const parapet = mat(0x6e675c, { roughness: 0.95 });
-  const tank = mat(0x2f3a48, { roughness: 0.6, metalness: 0.2 });
-  buildingCentres(layout).forEach((b, i) => {
-    const x = wx(b.x);
-    const z = wz(b.y);
-    statics.add(box(2.9, 0.12, 2.9, slab, x, ROOF_Y, z));
-    statics.add(box(2.9, 0.16, 0.12, parapet, x, ROOF_Y + 0.14, z - 1.39));
-    statics.add(box(2.9, 0.16, 0.12, parapet, x, ROOF_Y + 0.14, z + 1.39));
-    statics.add(box(0.12, 0.16, 2.9, parapet, x - 1.39, ROOF_Y + 0.14, z));
-    statics.add(box(0.12, 0.16, 2.9, parapet, x + 1.39, ROOF_Y + 0.14, z));
-    // kept low and on the north half of the roof, so a player south of the building stays visible
-    if (i % 3 === 0) corrugatedRoof(statics, x - 0.4, ROOF_Y + 0.42, z - 0.6, 1.3, 1.0, 0x6a4c36, 0.1);
-    else if (i % 3 === 1) statics.add(box(0.55, 0.36, 0.55, tank, x + 0.6, ROOF_Y + 0.24, z - 0.7));
-  });
 
   // --- street life at the avenue mouths (a handful only: the board is big and mostly off screen)
   const L = ctx.life;

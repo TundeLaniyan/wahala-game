@@ -6,6 +6,7 @@ import { useGameStore } from '../app/store';
 import './RumbleHud.css';
 
 const slotColor = (slot: number): string => SLOT_CSS[slot % SLOT_CSS.length]!;
+const elims = (n: number): string => `${n} elim${n === 1 ? '' : 's'}`;
 
 function Name({ name, slot, you }: { name: string; slot: number; you?: boolean }) {
   return (
@@ -130,7 +131,7 @@ function SpectatorBar({ r }: { r: RumbleSnapshot }) {
               {watched ? (
                 <>
                   Watching <Name name={watched.name} slot={watched.slot} />
-                  <small> {watched.kills} elims</small>
+                  <small> {elims(watched.kills)}</small>
                 </>
               ) : (
                 'Watching…'
@@ -188,7 +189,7 @@ export function RumbleResults({ r }: { r: RumbleSnapshot }) {
               <span className="rr-place">{e.placement}</span>
               <i style={{ background: slotColor(e.slot) }} />
               <span className="nm">{e.isLocal ? 'YOU' : e.name}</span>
-              <small>{e.kills} elims</small>
+              <small>{elims(e.kills)}</small>
             </li>
           ))}
         </ol>

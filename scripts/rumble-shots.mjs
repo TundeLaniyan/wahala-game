@@ -6,7 +6,7 @@
 import { mkdirSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 
-const [dir = 'shots', device = 'desktop', count = '32', ticks = '900'] = process.argv.slice(2);
+const [dir = 'shots', device = 'desktop', count = '32', ticks = '360'] = process.argv.slice(2);
 mkdirSync(dir, { recursive: true });
 const VP = {
   desktop: { viewport: { width: 1280, height: 720 } },
@@ -50,14 +50,19 @@ await page.waitForTimeout(1500);
 const shot = (name) =>
   page.screenshot({ path: `${dir}/${device}-${name}.jpg`, quality: 82, timeout: 180000 });
 
-// play: fast-forward, then a few seconds of real time so effects and the camera settle
+// play: fast-forward (simulation only), then a few real frames so effects and the camera settle
 await page.evaluate((n) => {
   const w = window.__WAHALA__;
   w.controller().frozen = true;
-  w.stepTicks(Math.max(0, n - 180));
-  w.advance(Math.min(n, 180));
-  w.controller().frozen = false;
+  w.stepTicks(Math.max(0, n - 30));
 }, Number(ticks));
+mark('fast-forwarded');
+await page.evaluate(() => {
+  const w = window.__WAHALA__;
+  w.advance(30);
+  w.controller().frozen = false;
+});
+mark('advanced');
 await page.waitForTimeout(1500);
 // measure a few seconds of real play (frames rendered per second of wall time)
 const fps = await page.evaluate(
@@ -67,7 +72,7 @@ const fps = await page.evaluate(
       const t0 = performance.now();
       const loop = () => {
         frames++;
-        if (performance.now() - t0 < 4000) requestAnimationFrame(loop);
+        if (performance.now() - t0 < 3000) requestAnimationFrame(loop);
         else resolve((frames * 1000) / (performance.now() - t0));
       };
       requestAnimationFrame(loop);
@@ -75,11 +80,13 @@ const fps = await page.evaluate(
 );
 await page.evaluate(() => (window.__WAHALA__.controller().frozen = true));
 await page.waitForTimeout(500);
+mark('fps measured');
 await shot('1-play');
 mark('play shot');
 const stats = await page.evaluate(() => ({
   render: window.__WAHALA__.stats(),
   alive: window.__WAHALA__.getState().players.filter((p) => p.alive).length,
+  localAlive: window.__WAHALA__.getState().players[0].alive,
   cam: window.__WAHALA__.renderer().debugCamera(),
 }));
 
@@ -87,6 +94,7 @@ const stats = await page.evaluate(() => ({
 await page.evaluate(() => {
   const s = window.__WAHALA__.getState();
   const me = s.players[0];
+  window.__WAHALA__.controller().frozen = false;
   if (!me.alive) return;
   let best = null;
   for (const p of s.players) {
@@ -112,7 +120,7 @@ if (device === 'desktop') {
   await page.getByTestId('roster-button').click();
 }
 await page.getByTestId('skip-results').click();
-await page.getByTestId('results').waitFor({ timeout: 120000 });
+await page.getByTestId('results').waitFor({ timeout: 900000 });
 await page.waitForTimeout(600);
 await shot('5-results');
 mark('results');
