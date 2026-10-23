@@ -36,8 +36,17 @@ function world(layout: Layout, x: number, y: number): WorldPoint {
   return { x: layout.wx(x), z: layout.wz(y) };
 }
 
-/** Dangers that can reach grid tile (fx, fy): live generators whose cross covers it, vehicles heading past. */
-export function threatsNear(state: GameState, layout: Layout, fx: number, fy: number): WorldPoint[] {
+/**
+ * Points worth keeping in frame around grid tile (fx, fy): live generators whose cross covers it,
+ * vehicles heading past it, and the vehicle the player at that tile called in themselves.
+ */
+export function threatsNear(
+  state: GameState,
+  layout: Layout,
+  fx: number,
+  fy: number,
+  ownerId = -1,
+): WorldPoint[] {
   const keep: WorldPoint[] = [];
   const tx = Math.round(fx);
   const ty = Math.round(fy);
@@ -52,6 +61,11 @@ export function threatsNear(state: GameState, layout: Layout, fx: number, fy: nu
   for (const v of state.vehicles) {
     if (v.phase === 'crashing') continue;
     const from = Math.max(0, v.index);
+    if (v.ownerId === ownerId) {
+      const at = v.route[Math.min(from, v.route.length - 1)]!;
+      keep.push(world(layout, at.x, at.y));
+      continue;
+    }
     let near = -1;
     for (let i = from; i < v.route.length; i++) {
       const t = v.route[i]!;
@@ -75,7 +89,7 @@ function followPlayer(state: GameState, layout: Layout, p: Player, alpha: number
     kind: 'action',
     focus: world(layout, pos.x, pos.y),
     lead: { x: d[0] * lead, z: d[1] * lead },
-    keep: state.match.phase === 'playing' ? threatsNear(state, layout, pos.x, pos.y) : [],
+    keep: state.match.phase === 'playing' ? threatsNear(state, layout, pos.x, pos.y, p.id) : [],
     zoom,
   };
 }
@@ -92,10 +106,17 @@ export function directShot(
   alpha: number,
   preferOverview: boolean,
 ): CameraShot {
-  const overview: CameraShot = { kind: 'overview', focus: { x: 0, z: 0 }, lead: { x: 0, z: 0 }, keep: [], zoom: 1 };
+  const overview: CameraShot = {
+    kind: 'overview',
+    focus: { x: 0, z: 0 },
+    lead: { x: 0, z: 0 },
+    keep: [],
+    zoom: 1,
+  };
   if (preferOverview) return overview;
   const m = state.match;
-  if (m.phase === 'countdown' && m.countdownRemaining > state.config.match.countdownTicks * ESTABLISH) return overview;
+  if (m.phase === 'countdown' && m.countdownRemaining > state.config.match.countdownTicks * ESTABLISH)
+    return overview;
   if (m.phase === 'ended') {
     const r = m.result;
     if (r?.kind !== 'win') return overview;

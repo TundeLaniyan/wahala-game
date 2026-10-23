@@ -341,7 +341,9 @@ export class GameRenderer {
     for (const v of this.views) v.update(ctx);
     this.effects.update(dt, this.time);
     this.backdrop.update(this.time, info.excitement);
-    const shot = info.attract ? null : directShot(state, this.layout, info.localPlayerId, alpha, this.overviewPreferred);
+    // Choosing a vehicle entrance needs every border arrow on screen (and clickable): pull out to the overview.
+    const overview = this.overviewPreferred || info.entryOverlay !== null;
+    const shot = info.attract ? null : directShot(state, this.layout, info.localPlayerId, alpha, overview);
     this.rig.update(dt, this.time, this.effects.shake, shot, info.attract === true);
     this.renderer.render(this.scene, this.rig.camera);
     this.trackPerformance(dt);

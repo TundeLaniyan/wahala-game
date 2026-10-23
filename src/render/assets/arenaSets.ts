@@ -37,13 +37,15 @@ export function addLekkiSite(root: Group, statics: Group, W: number, H: number):
   for (let level = 0; level < 3; level++) {
     const y0 = level * 2.2;
     for (let x = fx0; x <= fx1 + 0.01; x += (fx1 - fx0) / 4) {
-      for (const dz of [-1.3, 1.3]) statics.add(box(0.32, 2.2, 0.32, concrete, x, STREET + y0 + 1.1, fz + dz));
+      for (const dz of [-1.3, 1.3])
+        statics.add(box(0.32, 2.2, 0.32, concrete, x, STREET + y0 + 1.1, fz + dz));
     }
     statics.add(box(fx1 - fx0 + 0.8, 0.22, 3.1, concrete, (fx0 + fx1) / 2, STREET + y0 + 2.2, fz));
   }
   for (let x = fx0; x <= fx1 + 0.01; x += (fx1 - fx0) / 4) {
     for (const dz of [-1.3, 1.3]) {
-      for (const k of [-0.08, 0.08]) statics.add(cyl(0.02, 0.02, 0.9, rebar, x + k, STREET + 7.05, fz + dz, 5));
+      for (const k of [-0.08, 0.08])
+        statics.add(cyl(0.02, 0.02, 0.9, rebar, x + k, STREET + 7.05, fz + dz, 5));
     }
   }
 
@@ -141,7 +143,14 @@ export function addLekkiSite(root: Group, statics: Group, W: number, H: number):
     const map = towerWindowsTexture(i % 4).clone();
     map.needsUpdate = true;
     map.repeat.set(Math.max(1, Math.round(w / 2)), Math.max(1, Math.round(h / 6)));
-    const facade = uniqueMat(0x9fb6d8, { map, emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.25, metalness: 0.4, flat: false });
+    const facade = uniqueMat(0x9fb6d8, {
+      map,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.9,
+      roughness: 0.25,
+      metalness: 0.4,
+      flat: false,
+    });
     facade.emissiveMap = map;
     const tower = box(w, h, d, facade, x, h / 2 - 0.3, z);
     tower.castShadow = false;
@@ -155,7 +164,15 @@ export function addMarketCanopies(statics: Group, W: number, H: number): void {
   const pole = mat(0x6b4a2a, { roughness: 0.9 });
   const colours = [0xe63946, 0xffbe0b, 0x1d6fe0, 0x12964f, 0x8338ec, 0xfb5607, 0xff4f9a];
   const flagGeo = new ConeGeometry(0.14, 0.3, 3, 1, true);
-  const string = (x0: number, z0: number, x1: number, z1: number, h: number, n: number, seed: number): void => {
+  const string = (
+    x0: number,
+    z0: number,
+    x1: number,
+    z1: number,
+    h: number,
+    n: number,
+    seed: number,
+  ): void => {
     statics.add(cyl(0.05, 0.06, h, pole, x0, h / 2, z0, 6), cyl(0.05, 0.06, h, pole, x1, h / 2, z1, 6));
     for (let i = 1; i < n; i++) {
       const t = i / n;
@@ -180,7 +197,10 @@ export function addMarketCanopies(statics: Group, W: number, H: number): void {
     for (let i = 0; i < 4; i++) {
       const z = -H / 2 + 1.4 + i * 2.9;
       const x = side * (W / 2 + 1.55);
-      const sheet = uniqueMat(sheets[(i + (side > 0 ? 1 : 0)) % sheets.length]!, { roughness: 0.65, metalness: 0.35 });
+      const sheet = uniqueMat(sheets[(i + (side > 0 ? 1 : 0)) % sheets.length]!, {
+        roughness: 0.65,
+        metalness: 0.35,
+      });
       sheet.side = DoubleSide;
       const roof = new Mesh(new PlaneGeometry(1.9, 2.7, 1, 6), sheet);
       roof.position.set(x, 2.55, z);
@@ -188,7 +208,8 @@ export function addMarketCanopies(statics: Group, W: number, H: number): void {
       roof.castShadow = true;
       roof.receiveShadow = true;
       statics.add(roof);
-      for (const dz of [-1.2, 1.2]) statics.add(cyl(0.04, 0.04, 2.8, pole, x + side * 0.85, STREET + 1.4, z + dz, 6));
+      for (const dz of [-1.2, 1.2])
+        statics.add(cyl(0.04, 0.04, 2.8, pole, x + side * 0.85, STREET + 1.4, z + dz, 6));
     }
   }
 }
@@ -208,5 +229,6 @@ export function addSouthKerb(statics: Group, W: number, H: number, arenaId: stri
   const a = mat(arenaId === 'balogunMarket' ? 0xb88a5a : 0xcf9d1c, { roughness: 0.85 });
   const b = mat(arenaId === 'balogunMarket' ? 0x7a5634 : 0x34302a, { roughness: 0.85 });
   let k = 0;
-  for (let x = -W / 2 - 0.6; x < W / 2 + 0.7; x += 0.6) statics.add(box(0.58, 0.1, 0.22, k++ % 2 ? a : b, x, 0.05, z));
+  for (let x = -W / 2 - 0.6; x < W / 2 + 0.7; x += 0.6)
+    statics.add(box(0.58, 0.1, 0.22, k++ % 2 ? a : b, x, 0.05, z));
 }

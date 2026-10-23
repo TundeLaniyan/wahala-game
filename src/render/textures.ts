@@ -565,14 +565,16 @@ export function floorMarkingsTexture(arenaId: string, cols: number, rows: number
       }
       // faded lane lines (white dashes) along two corridors and a yellow centre line
       g.fillStyle = 'rgba(240,238,228,0.55)';
-      for (const row of [2, rows - 3]) for (let x = 0; x < W; x += T * 1.5) g.fillRect(x + 8, row * T + T / 2 - 4, T * 0.8, 8);
+      for (const row of [2, rows - 3])
+        for (let x = 0; x < W; x += T * 1.5) g.fillRect(x + 8, row * T + T / 2 - 4, T * 0.8, 8);
       g.fillStyle = 'rgba(255,196,30,0.6)';
       g.fillRect(0, Math.floor(rows / 2) * T + T / 2 - 9, W, 5);
       g.fillRect(0, Math.floor(rows / 2) * T + T / 2 + 4, W, 5);
     } else if (arenaId === 'balogunMarket') {
       // dust, spilled grain and crushed leaves between the stalls
       for (let i = 0; i < 260; i++) {
-        g.fillStyle = r() < 0.5 ? `rgba(120,70,30,${0.08 + r() * 0.12})` : `rgba(255,236,190,${0.05 + r() * 0.1})`;
+        g.fillStyle =
+          r() < 0.5 ? `rgba(120,70,30,${0.08 + r() * 0.12})` : `rgba(255,236,190,${0.05 + r() * 0.1})`;
         g.beginPath();
         g.arc(r() * W, r() * H, 6 + r() * 26, 0, Math.PI * 2);
         g.fill();
@@ -620,8 +622,7 @@ export function towerWindowsTexture(seed: number): CanvasTexture {
     for (let y = 2; y < 128; y += 6) {
       for (let x = 2; x < 64; x += 5) {
         const lit = r();
-        g.fillStyle =
-          lit < 0.34 ? (r() < 0.6 ? '#ffd796' : '#cfe6ff') : lit < 0.5 ? '#2c3b5c' : '#18223a';
+        g.fillStyle = lit < 0.34 ? (r() < 0.6 ? '#ffd796' : '#cfe6ff') : lit < 0.5 ? '#2c3b5c' : '#18223a';
         g.fillRect(x, y, 3, 4);
       }
     }

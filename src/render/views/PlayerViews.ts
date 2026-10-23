@@ -258,7 +258,9 @@ export class PlayerViews implements View {
     r.body.position.z = p.mounted ? RIDER_BACK * Math.min(1, tm / MOUNT_TIME) : 0;
     const bike = v.model.bike.children[0];
     if (bike && v.model.bikeWheels.length > 0)
-      bike.scale.setScalar(OKADA_SCALE * (p.mounted ? 0.5 + 0.5 * easeOutBack(Math.min(1, tm / MOUNT_TIME)) : 1));
+      bike.scale.setScalar(
+        OKADA_SCALE * (p.mounted ? 0.5 + 0.5 * easeOutBack(Math.min(1, tm / MOUNT_TIME)) : 1),
+      );
     if (p.mounted && moving) {
       for (const w of v.model.bikeWheels) w.rotation.x += dt * speed * 9;
       // kicked-up dust behind the bike sells the extra speed

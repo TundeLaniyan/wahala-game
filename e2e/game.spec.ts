@@ -34,6 +34,52 @@ test.describe('menus and match flow', () => {
   });
 });
 
+test.describe('gameplay camera', () => {
+  test('follows the player low and close; O and the map button toggle the whole-arena view', async ({
+    page,
+  }, info) => {
+    await open(page, '&nobots');
+    await startMatch(page, { competitors: 2 });
+    type Pose = { pitchDeg: number; distance: number };
+    const read = (): Promise<Pose> =>
+      page.evaluate(() =>
+        (window as unknown as { __WAHALA__: { renderer(): { debugCamera(): Pose } } }).__WAHALA__
+          .renderer()
+          .debugCamera(),
+      );
+    // software WebGL draws a few frames per second: jump the damped camera to its goal, then wait for a frame
+    const cut = (): Promise<void> =>
+      page.evaluate(() =>
+        (window as unknown as { __WAHALA__: { renderer(): { cutCamera(): void } } }).__WAHALA__
+          .renderer()
+          .cutCamera(),
+      );
+    await cut();
+    await expect.poll(async () => (await read()).distance, { timeout: 15_000 }).toBeLessThan(14);
+    const action = await read();
+    expect(action.pitchDeg).toBeGreaterThan(40);
+    expect(action.pitchDeg).toBeLessThan(50);
+    await expect(page.getByTestId('camera-button')).toHaveAttribute('data-view', 'action');
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-camera-action.png` });
+
+    await page.keyboard.press('o');
+    await expect(page.getByTestId('camera-button')).toHaveAttribute('data-view', 'overview');
+    await cut();
+    await expect
+      .poll(async () => (await read()).distance, { timeout: 15_000 })
+      .toBeGreaterThan(action.distance * 1.5);
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-camera-overview.png` });
+
+    await page.getByTestId('camera-button').click();
+    await expect(page.getByTestId('camera-button')).toHaveAttribute('data-view', 'action');
+    await cut();
+    await expect.poll(async () => (await read()).distance, { timeout: 15_000 }).toBeLessThan(14);
+    // presentation only: toggling never moved the player or changed the match
+    const st = await getState(page);
+    expect(st.phase).toBe('playing');
+  });
+});
+
 test.describe('keyboard play', () => {
   test('a 6-tick tap moves exactly one tile each time; holding repeats; releasing stops', async ({
     page,

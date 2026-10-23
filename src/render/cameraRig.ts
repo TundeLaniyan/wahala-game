@@ -112,7 +112,8 @@ export class CameraRig {
     const yTop = 1 - insets.top * 2;
     const yBottom = -1 + insets.bottom * 2;
     const v = this.v;
-    const pose = (d: number, tz: number): void => this.place({ x: 0, z: tz, distance: d, pitch: OVERVIEW_PITCH });
+    const pose = (d: number, tz: number): void =>
+      this.place({ x: 0, z: tz, distance: d, pitch: OVERVIEW_PITCH });
     /** Signed vertical imbalance of the framed arena inside the HUD-free band (0 = centred). */
     const imbalance = (d: number, tz: number): number => {
       pose(d, tz);

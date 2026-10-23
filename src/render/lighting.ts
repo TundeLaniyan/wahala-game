@@ -57,7 +57,11 @@ export function createSceneLights(scene: Scene, renderer: WebGLRenderer, look?: 
   // Default: late-afternoon Lagos sun from the upper left: warm key, crisp shadows falling right and
   // slightly back, and a lower sky/bounce fill so faces turned away from the sun keep real shape.
   // Each arena can bring its own key, fill and reflection strength (arenaLook.ts).
-  const hemi = new HemisphereLight(look?.hemi.sky ?? 0xffe8cc, look?.hemi.ground ?? 0x765a40, look?.hemi.intensity ?? 0.62);
+  const hemi = new HemisphereLight(
+    look?.hemi.sky ?? 0xffe8cc,
+    look?.hemi.ground ?? 0x765a40,
+    look?.hemi.intensity ?? 0.62,
+  );
   const sun = new DirectionalLight(look?.sun.color ?? 0xffd698, look?.sun.intensity ?? 4.4);
   if (look) sun.position.set(...look.sun.position);
   else sun.position.set(-13, 12.5, 6.2);

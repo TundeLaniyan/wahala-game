@@ -29,7 +29,13 @@ const VIEWPORTS = {
 
 const browser = await chromium.launch({
   executablePath: process.env.WAHALA_CHROMIUM || undefined,
-  args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  args: [
+    '--no-sandbox',
+    '--use-gl=angle',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+    '--ignore-gpu-blocklist',
+  ],
 });
 
 const step = (page, n) =>
@@ -109,6 +115,25 @@ for (const device of devices) {
     await step(page, 1);
     await settle(page);
     await page.screenshot({ path: name('3-north'), quality: 82 });
+    // Vehicle attack: give the local player a voucher, open the entry chooser, launch, then watch it drive.
+    if (args.vehicles !== undefined) {
+      await page.evaluate(() => {
+        const p = window.__WAHALA__.getState().players[0];
+        p.hasVoucher = true;
+      });
+      await step(page, 2);
+      await page.keyboard.press('v');
+      await step(page, 2);
+      await settle(page);
+      await page.screenshot({ path: name('5-entry'), quality: 82 });
+      await page.keyboard.press('Enter');
+      await step(page, 2);
+      await page.keyboard.press('Enter');
+      await step(page, 75);
+      await run(page, 400);
+      await settle(page);
+      await page.screenshot({ path: name('6-vehicle'), quality: 82 });
+    }
     if (args.overview !== undefined) {
       await page.keyboard.press('o');
       await settle(page);

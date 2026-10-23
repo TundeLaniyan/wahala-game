@@ -55,7 +55,12 @@ describe('overview camera: whole arena and picking', () => {
     rig.fit(844 / 390, { top: 0.13, bottom: 0.03 });
     rig.update(0, 0, 0, null);
     for (const x of [0, layout.width - 1]) {
-      const v = project(rig, layout.wx(x) + Math.sign(layout.wx(x)) * 0.5, 0, layout.wz(layout.height - 1) + 0.5);
+      const v = project(
+        rig,
+        layout.wx(x) + Math.sign(layout.wx(x)) * 0.5,
+        0,
+        layout.wz(layout.height - 1) + 0.5,
+      );
       expect(Math.abs(v.x)).toBeLessThan(0.62);
     }
   });
@@ -189,6 +194,36 @@ describe('camera director', () => {
     expect(shot.zoom).toBeLessThan(1);
     state.match.result = { kind: 'draw', reason: 'timeout' };
     expect(directShot(state, layout, 0, 0, false).kind).toBe('overview');
+  });
+
+  it("keeps the player's own vehicle in frame while it drives", () => {
+    const state = sandbox();
+    const layout = createLayout(state.width, state.height);
+    put(state, 0, 1, 1);
+    state.vehicles.push({
+      id: 99,
+      ownerId: 0,
+      kind: 'danfo',
+      route: [
+        { x: 13, y: 9 },
+        { x: 12, y: 9 },
+      ],
+      phase: 'driving',
+      warnRemaining: 0,
+      wreckRemaining: 0,
+      hitPlayerIds: [],
+      index: 0,
+      stepRemaining: 4,
+      stepTotal: 8,
+      damage: 0,
+      slowUntil: 0,
+      softBroken: 0,
+      playerHits: 0,
+      exposedEvents: [],
+      eventId: 1,
+      startTick: 0,
+    });
+    expect(directShot(state, layout, 0, 0, false).keep).toEqual([{ x: layout.wx(13), z: layout.wz(9) }]);
   });
 
   it('ignores generators that cannot reach the player', () => {

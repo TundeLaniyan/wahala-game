@@ -35,7 +35,7 @@ const LOOKS: Record<string, ArenaLook> = {
     exposure: 1.04,
     floorTint: 0xcfc2b0,
     pillarTint: 0xe6dccd,
-    softTint: 0xe4d6c4,
+    softTint: 0xd8cfca,
     slab: 0xd8c9b4,
     street: 0x3f3a35,
   },

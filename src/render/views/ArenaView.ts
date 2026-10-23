@@ -15,7 +15,7 @@ import {
   DoubleSide,
   Color,
 } from 'three';
-import type { Material } from 'three';
+import type { Material, Texture } from 'three';
 import { arenaLook } from '../arenaLook';
 import type { GameState } from '../../sim';
 import { Tile } from '../../sim';
@@ -68,6 +68,7 @@ export class ArenaView implements View {
   /** Contact shadows under every pillar and prop: grounding/AO that also works with shadows off. */
   private readonly contact: InstanceSet;
   private readonly ownedMaterials: Material[] = [];
+  private readonly ownedTextures: Texture[] = [];
 
   constructor(
     state: GameState,
@@ -92,7 +93,10 @@ export class ArenaView implements View {
     } else {
       const parts = pillarParts();
       this.pillars = [
-        new InstanceSet([...tinted([parts.body, parts.band, parts.cap], look.pillarTint, owned), ...wraps], W * H),
+        new InstanceSet(
+          [...tinted([parts.body, parts.band, parts.cap], look.pillarTint, owned), ...wraps],
+          W * H,
+        ),
       ];
     }
     for (const set of this.pillars) this.group.add(set.group);
@@ -223,6 +227,7 @@ export class ArenaView implements View {
       map.repeat.set(2, 1);
       const m = new MeshStandardMaterial({ map, roughness: 0.32, metalness: 0.05 });
       this.ownedMaterials.push(m);
+      this.ownedTextures.push(map);
       return [
         { geometry: new BoxGeometry(0.89, 0.14, 0.89).translate(0, 0.88, 0), material: m },
         { geometry: new BoxGeometry(0.89, 0.14, 0.89).translate(0, 0.56, 0), material: m },
@@ -236,7 +241,7 @@ export class ArenaView implements View {
     if (state.arenaId !== 'balogunMarket' && state.arenaId !== 'lekkiRoadworks') return;
     const isMarket = state.arenaId === 'balogunMarket';
     const marketColors = [0xe63946, 0xffbe0b, 0x1d6fe0, 0x169852, 0x8338ec, 0xfb5607];
-    const basinGeo = new CylinderGeometry(0.20, 0.14, 0.12, 12);
+    const basinGeo = new CylinderGeometry(0.2, 0.14, 0.12, 12);
     const goodsGeo = new CylinderGeometry(0.15, 0.18, 0.07, 10);
     const coneGeo = new CylinderGeometry(0.03, 0.12, 0.32, 10);
     const bandGeo = new CylinderGeometry(0.065, 0.09, 0.09, 10);
@@ -352,5 +357,6 @@ export class ArenaView implements View {
     for (const s of this.soft.values()) s.dispose();
     this.contact.dispose();
     for (const m of this.ownedMaterials) m.dispose();
+    for (const t of this.ownedTextures) t.dispose();
   }
 }

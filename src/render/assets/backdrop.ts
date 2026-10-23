@@ -77,7 +77,13 @@ function instanceAsset(root: Group, out: InstancedMesh[], id: string, placements
  * Walls (north/east/west tall enough to read, south kept low so no tile is hidden), corner posts and
  * spectator platforms from the modelled set. Returns false when the models are not loaded.
  */
-function addModelledPerimeter(root: Group, statics: Group, out: InstancedMesh[], W: number, H: number): boolean {
+function addModelledPerimeter(
+  root: Group,
+  statics: Group,
+  out: InstancedMesh[],
+  W: number,
+  H: number,
+): boolean {
   const wallIds = assets.loadedIds('env_wall').filter((id) => id !== 'env_wall_corner');
   if (wallIds.length === 0 || !assets.has('env_wall_corner')) return false;
   const T = 0.155; // half wall thickness
@@ -168,29 +174,27 @@ function addBalogunMarketDressing(
   const addUmbrella = (x: number, z: number, idx: number, scale = 1.0): void => {
     const [c1, c2] = canopyPalettes[idx % canopyPalettes.length]!;
     statics.add(cyl(0.03 * scale, 0.035 * scale, 2.25 * scale, poleMat, x, 1.12 * scale, z, 8));
-    const cone = new Mesh(
-      new ConeGeometry(1.18 * scale, 0.46 * scale, 8),
-      mat(c1, { roughness: 0.75 }),
-    );
+    const cone = new Mesh(new ConeGeometry(1.18 * scale, 0.46 * scale, 8), mat(c1, { roughness: 0.75 }));
     cone.position.set(x, 2.22 * scale, z);
     cone.rotation.y = (idx * 0.4) % Math.PI;
     statics.add(cone);
-    const cap = new Mesh(
-      new ConeGeometry(0.68 * scale, 0.28 * scale, 8),
-      mat(c2, { roughness: 0.75 }),
-    );
+    const cap = new Mesh(new ConeGeometry(0.68 * scale, 0.28 * scale, 8), mat(c2, { roughness: 0.75 }));
     cap.position.set(x, 2.34 * scale, z);
     cap.rotation.y = cone.rotation.y + Math.PI / 8;
     statics.add(cap);
     // Valance trim ring
-    statics.add(cyl(1.16 * scale, 1.18 * scale, 0.09 * scale, mat(c2, { roughness: 0.8 }), x, 1.97 * scale, z, 8));
+    statics.add(
+      cyl(1.16 * scale, 1.18 * scale, 0.09 * scale, mat(c2, { roughness: 0.8 }), x, 1.97 * scale, z, 8),
+    );
   };
 
   const addAnkaraStall = (x: number, z: number, ry: number, idx: number): void => {
     const g = new Group();
     // Wooden counter table + overhead fabric hanging rack
     g.add(box(2.1, 0.72, 0.85, woodMat, 0, 0.36, 0));
-    g.add(box(2.2, 0.06, 0.92, mat(ankaraColors[idx % ankaraColors.length]!, { roughness: 0.8 }), 0, 0.74, 0));
+    g.add(
+      box(2.2, 0.06, 0.92, mat(ankaraColors[idx % ankaraColors.length]!, { roughness: 0.8 }), 0, 0.74, 0),
+    );
     for (const sx of [-0.96, 0.96]) {
       g.add(box(0.07, 1.95, 0.07, woodMat, sx, 0.98, -0.32));
     }
@@ -209,7 +213,7 @@ function addBalogunMarketDressing(
     // Stacked plastic market basins beside the stall
     for (let b = 0; b < 3; b++) {
       const bCol = ankaraColors[(idx + b * 2) % ankaraColors.length]!;
-      g.add(cyl(0.28 - b * 0.02, 0.20, 0.16, mat(bCol, { roughness: 0.4 }), 1.28, 0.08 + b * 0.14, 0.15, 12));
+      g.add(cyl(0.28 - b * 0.02, 0.2, 0.16, mat(bCol, { roughness: 0.4 }), 1.28, 0.08 + b * 0.14, 0.15, 12));
     }
     // Bukka cooking pot on the opposite side
     g.add(cyl(0.24, 0.22, 0.32, potMat, -1.28, 0.16, 0.15, 12));
@@ -594,7 +598,7 @@ export function createBackdrop(
       }
     }
     statics.add(box(4.1, 0.14, 1.35, yellowMetal, shelterX, 2.25, shelterZ));
-    statics.add(box(3.9, 0.10, 0.95, yellowMetal, shelterX, 2.34, shelterZ));
+    statics.add(box(3.9, 0.1, 0.95, yellowMetal, shelterX, 2.34, shelterZ));
     statics.add(box(3.6, 1.1, 0.06, darkSteel, shelterX, 1.15, shelterZ - 0.44));
     statics.add(box(3.2, 0.07, 0.36, yellowMetal, shelterX, 0.52, shelterZ - 0.15));
     const signMat = new MeshBasicMaterial({
