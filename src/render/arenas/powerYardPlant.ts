@@ -9,7 +9,7 @@
  */
 import { DoubleSide, Group, Mesh, MeshStandardMaterial, PlaneGeometry } from 'three';
 import type { CanvasTexture, Material, Vector3 } from 'three';
-import { box, cyl, mat, mesh } from '../assets/helpers';
+import { box, cyl, mat, mesh, torus } from '../assets/helpers';
 import type { SetContext } from './common';
 import { STREET } from './common';
 import type { SiteLights } from './roadworksKit';
@@ -291,6 +291,19 @@ export function generatorContainer(
     [1, 1],
   ] as const)
     g.add(box(0.12, 0.1, 0.12, P.steel, sx * (w / 2 - 0.15), 0.22 + h + 0.08, sz * (len / 2 - 0.15)));
+  // roof panels, the radiator fan guards over the front end and a cable tray along one edge
+  for (let k = 1; k < 5; k++)
+    g.add(box(w - 0.1, 0.03, 0.04, P.black, 0, 0.22 + h + 0.065, -len / 2 + (k * len) / 5));
+  for (const fz of [len / 2 - 0.75, len / 2 - 1.75]) {
+    g.add(cyl(0.42, 0.42, 0.06, P.black, 0, 0.22 + h + 0.08, fz, 16));
+    for (let k = 0; k < 4; k++) {
+      const spoke = box(0.84, 0.03, 0.04, P.galv, 0, 0.22 + h + 0.12, fz);
+      spoke.rotation.y = (k * Math.PI) / 4;
+      g.add(spoke);
+    }
+    g.add(torus(0.42, 0.025, P.galv, 0, 0.22 + h + 0.12, fz).rotateX(Math.PI / 2));
+  }
+  g.add(box(0.25, 0.08, len - 0.6, P.galv, -w / 2 + 0.2, 0.22 + h + 0.1, 0));
   // an open side door showing the engine
   if (o.open) {
     const door = box(0.04, h - 0.35, 1.1, paint, w / 2 + 0.55, 0.22 + h / 2, 0.75);
