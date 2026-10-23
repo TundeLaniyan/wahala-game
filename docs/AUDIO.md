@@ -82,7 +82,7 @@ measured with ffmpeg's EBU R128 meter; the manifest's `gain` levels every track 
 
 The missing track is identified by elimination of the Pixabay ids in the supplied file names: 496406 (approved #7)
 is the only approved id not among them. **To add it**: save it as `public/audio/music/pixabay_496406.mp3`, set its
-`artist` (and a measured `gain`) in `manifest.json`, move its `LICENSES.md` row from "Missing" to "Files present",
+`artist` (and a measured `gain`) in `public/audio/music/manifest.json`, move its `LICENSES.md` row from "Missing" to "Files present",
 and update the installed-files assertion in `tests/audio/assets.test.ts`. No code change: it is already in the
 manifest and the Danfo Bus Park playlist.
 
