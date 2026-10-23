@@ -5,8 +5,10 @@
  */
 import { DIRS, DIR_VEC, Tile } from '../sim';
 import type { Dir, Player } from '../sim';
+import { overBudget, spend } from './context';
 import type { Ctx } from './context';
 import type { HypoGen } from './danger';
+import { LARGE_MAX_SLOTS, LARGE_RIVAL_SLOTS } from './scale';
 import { stepTicksOf, readyTick } from './world';
 
 export interface EscapePlan {
@@ -22,6 +24,12 @@ export interface EscapePlan {
 
 export function slotsFor(horizonTicks: number, step: number): number {
   return Math.ceil(horizonTicks / step) + 2;
+}
+
+/** Step slots for a search from this bot's point of view: capped on large boards (scale.ts). */
+export function searchSlots(c: Ctx, horizonTicks: number, step: number, cap = LARGE_MAX_SLOTS): number {
+  const n = slotsFor(horizonTicks, step);
+  return c.world.large ? Math.min(n, cap) : n;
 }
 
 /** Blast range my next generator would have (Bad Fuel can shrink it). */
@@ -66,6 +74,7 @@ export function checkPlacement(
     explodeAt: opts.explodeAt ?? explodeTickFor(c, placeTick),
   };
   c.builder.build(c.tmp, world, profile, { extraGens: [hypo] });
+  spend(c);
   return searchRefuge(c, c.tmp, u, a0, a1, step, u);
 }
 
@@ -81,12 +90,13 @@ export function searchRefuge(
   blocked?: Uint8Array,
 ): EscapePlan | null {
   const { aux, world, profile } = c;
+  spend(c);
   aux.run({
     start,
     a0,
     a1: Math.max(a1, a0 + 1),
     step,
-    slots: slotsFor(profile.horizonTicks, step),
+    slots: searchSlots(c, profile.horizonTicks, step),
     danger: map,
     blocked: blocked ?? world.walk,
     extraBlocked,
@@ -103,6 +113,8 @@ export function extractPlan(bfs: Ctx['aux'], tile: number, slot: number): Escape
   for (let i = 0; i < slot; i++) times.push(bfs.tickAt(i + 1));
   return { actions, tiles, times, a0: bfs.tickAt(0) };
 }
+
+const seenRefuges = new Set<number>();
 
 export interface RivalEscape {
   /** Distinct tiles from which the rival is safe forever and which it can reach in time. */
@@ -133,17 +145,19 @@ export function rivalEscape(
     a0: obs.tick,
     a1: Math.max(ready, obs.tick + 1),
     step,
-    slots: slotsFor(Math.min(profile.horizonTicks, 240), step),
+    slots: searchSlots(c, Math.min(profile.horizonTicks, 240), step, LARGE_RIVAL_SLOTS),
     danger: map,
     blocked: world.blocked,
     extraBlocked,
     stopAtRefuge: !full,
   });
   c.rivalSims++;
+  spend(c);
   if (!full) return { refuges: aux.foundSlot < 0 ? 0 : 1, nearest: aux.foundSlot };
   let distinct = 0;
   let nearest = -1;
-  const seen = new Set<number>();
+  const seen = seenRefuges;
+  seen.clear();
   for (let i = 0; i < aux.refugeTile.length; i++) {
     const t = aux.refugeTile[i]!;
     if (seen.has(t)) continue;
@@ -266,12 +280,19 @@ const HUNT_FAR = 999;
  * Cost-distance from the nearest rival to every tile. Soft blocks and generators can be passed at
  * extra cost, so the field points through the walls the bot would have to blast.
  */
+const huntQueue: number[] = [];
+let huntInQueue = new Uint8Array(0);
+
 export function computeHuntField(c: Ctx): void {
   const { world, hunt } = c;
   const { board, obs } = world;
   hunt.fill(HUNT_FAR);
-  const queue: number[] = [];
-  const inQueue = new Uint8Array(board.size);
+  // scratch buffers are shared (bots think one after another) and reset here: no per-think garbage
+  const queue = huntQueue;
+  queue.length = 0;
+  if (huntInQueue.length < board.size) huntInQueue = new Uint8Array(board.size);
+  const inQueue = huntInQueue;
+  inQueue.fill(0, 0, board.size);
   for (const r of world.rivals) {
     const t = r.y * board.width + r.x;
     hunt[t] = 0;
@@ -300,19 +321,29 @@ export function computeHuntField(c: Ctx): void {
 
 // ------------------------------------------------------------------ robustness against sealing
 
-/** Walking distance (in tiles) from a tile over walkable terrain; 999 when unreachable. */
-function walkDistances(c: Ctx, from: number, out: Int16Array): void {
+let walkQueue = new Int16Array(0);
+
+/**
+ * Walking distance (in tiles) from a tile over walkable terrain; 999 when unreachable or further
+ * than `maxD` (callers treat both the same way, so the bound changes no decision).
+ */
+function walkDistances(c: Ctx, from: number, out: Int16Array, maxD = 998): void {
   const { world } = c;
-  out.fill(999);
+  const size = world.board.size;
+  out.fill(999, 0, size);
   out[from] = 0;
-  const queue: number[] = [from];
-  for (let head = 0; head < queue.length; head++) {
+  if (walkQueue.length < size) walkQueue = new Int16Array(size);
+  const queue = walkQueue;
+  let tail = 0;
+  queue[tail++] = from;
+  for (let head = 0; head < tail; head++) {
     const u = queue[head]!;
+    if (out[u]! >= maxD) continue;
     for (let d = 0; d < 4; d++) {
       const v = world.board.neighbor[u * 4 + d]!;
       if (v < 0 || world.blocked[v] === 1 || out[v]! < 999) continue;
       out[v] = out[u]! + 1;
-      queue.push(v);
+      queue[tail++] = v;
     }
   }
 }
@@ -338,14 +369,17 @@ export function escapeSurvivesSealing(
   const w = world.board.width;
   const dist = rivalDist.length >= world.board.size ? rivalDist : new Int16Array(world.board.size);
   const fuse = obs.config.generator.fuseTicks;
-  for (const r of world.rivals) {
+  const lastPass = esc.times.length > 0 ? esc.times[esc.times.length - 1]! : obs.tick;
+  for (const r of world.near) {
     let active = 0;
     for (const g of obs.generators) if (g.ownerId === r.id && g.mode !== 'disabled') active++;
     if (active >= r.capacity || r.carrying !== null) continue;
     const rt = r.y * w + r.x;
-    walkDistances(c, rt, dist);
     const rstep = stepTicksOf(obs, r);
     const rready = readyTick(obs, r);
+    // a rival further than this cannot reach any escape tile in time (see `arrives` below)
+    const maxD = Math.max(1, Math.floor((lastPass + 6 - rready - 1) / rstep) + 2);
+    walkDistances(c, rt, dist, maxD);
     for (let i = 1; i < esc.tiles.length; i++) {
       const q = esc.tiles[i]!;
       const d = dist[q]!;
@@ -363,7 +397,10 @@ export function escapeSurvivesSealing(
         hold: remote,
         ownerId: r.id,
       };
+      // out of budget (large boards only): treat the escape as not proven
+      if (overBudget(c)) return false;
       c.builder.build(c.tmp, world, profile, { extraGens: mine ? [mine, hypo] : [hypo] });
+      spend(c);
       c.scratch.set(world.walk);
       c.scratch[q] = 1;
       if (!searchRefuge(c, c.tmp, u, a0, a1, step, u, c.scratch)) return false;
@@ -381,7 +418,7 @@ export function vulnerableAt(c: Ctx, tile: number, a0: number, a1: number, step:
   const { obs } = world;
   const w = world.board.width;
   const fuse = obs.config.generator.fuseTicks;
-  for (const r of world.rivals) {
+  for (const r of world.near) {
     if (Math.abs(r.x - (tile % w)) + Math.abs(r.y - Math.floor(tile / w)) > 7) continue;
     let active = 0;
     for (const g of obs.generators) if (g.ownerId === r.id && g.mode !== 'disabled') active++;
@@ -396,7 +433,9 @@ export function vulnerableAt(c: Ctx, tile: number, a0: number, a1: number, step:
       hold: r.remote,
       ownerId: r.id,
     };
+    if (overBudget(c)) return false;
     c.builder.build(c.tmp, world, profile, { extraGens: [hypo] });
+    spend(c);
     c.scratch.set(world.walk);
     c.scratch[r.y * w + r.x] = 1;
     if (tile === r.y * w + r.x) continue;

@@ -8,10 +8,11 @@
  * for pressure). Hard: also routes that cut the rival's remaining escapes down, combined with the
  * generators already ticking, and it values Okada riders correctly (they need two events).
  */
-import { CHARACTERS, buildRoute, listEntries, listKekeTurns, nextFloat } from '../sim';
+import { CHARACTERS, buildRoute, listEntries, listKekeTurns, nextFloat, straightLeg } from '../sim';
 import type { EntryView, Intent, TilePos, VehicleEntry, VehicleTurn } from '../sim';
 import { rivalEscape, searchRefuge } from './analysis';
 import { baselineRefuges } from './goals';
+import { overBudget, spend } from './context';
 import type { Ctx } from './context';
 import { readyTick, stepTicksOf } from './world';
 
@@ -45,6 +46,58 @@ interface Cand {
   cheap: number;
 }
 
+/** Diamond offsets at Manhattan distance 1 and 2 (rivals "near" a route tile). */
+const NEAR_OFFSETS: readonly (readonly [number, number])[] = [
+  [0, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+  [0, -2],
+  [1, -1],
+  [2, 0],
+  [1, 1],
+  [0, 2],
+  [-1, 1],
+  [-2, 0],
+  [-1, -1],
+];
+
+/**
+ * Rival contact counts along a route, read from the per-tile rival counts: identical to comparing
+ * every route tile with every rival, without the rival loop (City Rumble has up to 31 rivals).
+ */
+function contacts(
+  c: Ctx,
+  route: readonly TilePos[],
+  out: { direct: number; near: number; first: number },
+): void {
+  const { world } = c;
+  const { width: w, height: h } = world.board;
+  out.direct = out.near = 0;
+  out.first = 99;
+  route.forEach((t, i) => {
+    const here = world.rivalAt[t.y * w + t.x]!;
+    if (here > 0) {
+      out.direct += here;
+      out.first = Math.min(out.first, i);
+    }
+    for (const [dx, dy] of NEAR_OFFSETS) {
+      const x = t.x + dx;
+      const y = t.y + dy;
+      if (x >= 0 && y >= 0 && x < w && y < h) out.near += world.rivalAt[y * w + x]!;
+    }
+  });
+}
+
+/** True when some rival stands within 2 rows / columns of the straight line through `t` along `dir`. */
+function laneHasRival(c: Ctx, t: TilePos, dir: VehicleEntry['dir']): boolean {
+  const horizontal = dir === 'left' || dir === 'right';
+  for (const r of c.world.rivals) if (Math.abs(horizontal ? r.y - t.y : r.x - t.x) <= 2) return true;
+  return false;
+}
+
+const DIR_STEP = { up: [0, -1], right: [1, 0], down: [0, 1], left: [-1, 0] } as const;
+
 function routeCandidates(c: Ctx): Cand[] {
   const { world } = c;
   const { me, obs } = world;
@@ -52,35 +105,38 @@ function routeCandidates(c: Ctx): Cand[] {
   const geom = geometry(c);
   const w = world.board.width;
   const out: Cand[] = [];
-  const consider = (entry: VehicleEntry, turn?: VehicleTurn): void => {
-    const route = buildRoute(geom, kind, entry, turn);
-    if (!route) return;
-    let hitsMe = false;
-    let direct = 0;
-    let near = 0;
-    let first = 99;
-    route.forEach((t, i) => {
-      if (t.x === me.x && t.y === me.y) hitsMe = true;
-      for (const r of world.rivals) {
-        const d = Math.abs(r.x - t.x) + Math.abs(r.y - t.y);
-        if (d === 0) {
-          direct++;
-          first = Math.min(first, i);
-        } else if (d <= 2) near++;
-      }
-    });
-    if (hitsMe) return;
+  const counts = { direct: 0, near: 0, first: 99 };
+  const consider = (entry: VehicleEntry, route: TilePos[], turn?: VehicleTurn): void => {
+    if (route.some((t) => t.x === me.x && t.y === me.y)) return;
+    contacts(c, route, counts);
+    const { direct, near, first } = counts;
     let softs = 0;
     for (const t of route) if (obs.tiles[t.y * w + t.x] === 2) softs++;
     const cheap = direct * 10 + near - first * 0.05 + Math.min(softs, 3) * 0.5;
     if (direct === 0 && (c.profile.vehicle !== 'strategic' || near < 3)) return;
     out.push({ entry, turn, route, cheap });
   };
+  // A route can only score if a rival stands within two tiles of one of its legs, so lanes with
+  // nobody near them are skipped before any route is built (exact: such routes are rejected anyway).
   if (kind === 'keke') {
-    for (const entry of listEntries(geom, 'keke'))
-      for (const turn of listKekeTurns(geom, entry)) consider(entry, turn);
+    for (const entry of listEntries(geom, 'keke')) {
+      const leg = straightLeg(geom, entry);
+      const legLane = laneHasRival(c, entry, entry.dir);
+      for (const turn of listKekeTurns(geom, entry)) {
+        const at = leg[turn.atIndex]!;
+        if (!legLane && !laneHasRival(c, at, turn.dir)) continue;
+        const v = DIR_STEP[turn.dir];
+        // identical to buildRoute(): the first leg up to the turn, then straight on until concrete
+        const second = straightLeg(geom, { x: at.x + v[0], y: at.y + v[1], dir: turn.dir });
+        consider(entry, [...leg.slice(0, turn.atIndex + 1), ...second], turn);
+      }
+    }
   } else {
-    for (const entry of listEntries(geom, kind)) consider(entry);
+    for (const entry of listEntries(geom, kind)) {
+      if (!laneHasRival(c, entry, entry.dir)) continue;
+      const route = buildRoute(geom, kind, entry);
+      if (route) consider(entry, route);
+    }
   }
   out.sort((a, b) => b.cheap - a.cheap);
   return out;
@@ -102,8 +158,11 @@ function bestRoute(c: Ctx, launchTick: number): Choice | null {
   const budget = profile.vehicle === 'strategic' ? 8 : 5;
   const w = world.board.width;
   let best: Choice | null = null;
+  c.work = 0; // the vehicle check runs between thinks: it gets its own (large-board) budget
   for (const cand of cands.slice(0, budget)) {
+    if (overBudget(c)) break;
     c.builder.build(c.tmp, world, profile, { extraVehicles: [{ kind, route: cand.route, launchTick }] });
+    spend(c);
     // I must still be able to get clear once the vehicle is on the road
     if (!searchRefuge(c, c.tmp, world.myTile, obs.tick, ready, step)) continue;
     let score = 0;
@@ -111,6 +170,7 @@ function bestRoute(c: Ctx, launchTick: number): Choice | null {
       const onRoute = cand.route.some((t) => t.x === r.x && t.y === r.y);
       const near = cand.route.some((t) => Math.abs(t.x - r.x) + Math.abs(t.y - r.y) <= 2);
       if (!onRoute && !(profile.vehicle === 'strategic' && near)) continue;
+      if (overBudget(c)) break;
       const shield = r.mounted ? 0.3 : 1;
       const e = rivalEscape(c, c.tmp, r, 6, profile.vehicle === 'strategic', undefined);
       if (e.refuges === 0) {

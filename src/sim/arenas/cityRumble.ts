@@ -10,9 +10,12 @@ import { CORNER_CLEARANCE, line, mirror4, trapRows } from './build';
  *   no crates: they cut the city into twelve blocks and meet in open junction squares where fights
  *   happen. Inside each block the classic odd/odd pillar grid plus a solid building in the middle.
  * - 32 spawns spread by farthest-point order, so 8, 16 or 24 competitors are spread out too.
- * - The city closes in (Wahala Crush is always on here): from 3:00 left the outer streets fill with
+ * - The city closes in (Wahala Crush is always on here): from 2:00 left the outer streets fill with
  *   concrete ring by ring; a central 11 x 9 square never closes and is reached by 0:30, where the
- *   mandatory endgame trap waves land at 0:30 and 0:15. Five-minute match.
+ *   mandatory endgame trap waves land at 0:30 and 0:15. Three-minute match: headless batches of 8-32
+ *   bots (`npm run simulate -- --arena cityRumble --players N`) end on their own after about a
+ *   minute, so the closing starts at 1:00 of play and squeezes the long-tail matches into the core;
+ *   a five-minute clock never reached the closing city.
  * - Buses cross the avenues (telegraphed) until the closing starts.
  */
 export const RUMBLE_COLS = 41;
@@ -117,9 +120,9 @@ export const CITY_RUMBLE: ArenaDef = {
   maxPlayers: 32,
   forcedMode: 'crush',
   config: {
-    match: { durationTicks: ticks(300) },
+    match: { durationTicks: ticks(180) },
     crush: {
-      startRemainingTicks: ticks(180),
+      startRemainingTicks: ticks(120),
       keepCore: { w: CORE_W, h: CORE_H },
       coreClosedRemainingTicks: ticks(30),
       warnTicks: ticks(1.5),
@@ -169,7 +172,7 @@ export const CITY_RUMBLE: ArenaDef = {
     lighting: 'Hazy afternoon over the city',
     hazards: [
       'Buses cross the avenues (the lane flashes 2.5 s before) until the city starts closing.',
-      'From 3:00 left the outer streets fill with concrete; the central square never closes.',
+      'From 2:00 left the outer streets fill with concrete; the central square never closes.',
     ],
   },
 };

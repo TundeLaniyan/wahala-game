@@ -252,10 +252,10 @@ describe('City Rumble set-up', () => {
     expect(() => createGame({ seed: 1, players: field(5) })).toThrow();
   });
 
-  it('is a five-minute match where the city closes from 3:00 left around a core that never closes', () => {
+  it('is a three-minute match where the city closes from 2:00 left around a core that never closes', () => {
     const s = createGame({ seed: 3, arenaId: CITY_RUMBLE_ID, players: field(8) });
     expect(s.settings.mode).toBe('crush');
-    expect(s.config.match.durationTicks).toBe(300 * 60);
+    expect(s.config.match.durationTicks).toBe(180 * 60);
     const crush = s.crush!;
     const core = s.config.crush.keepCore!;
     const x0 = (s.width - core.w) / 2;
@@ -265,7 +265,7 @@ describe('City Rumble set-up', () => {
       const y = Math.floor(i / s.width);
       expect(x >= x0 && x < x0 + core.w && y >= y0 && y < y0 + core.h).toBe(false);
     }
-    expect(crush.warnAt[0]).toBe(s.config.match.durationTicks - 180 * 60);
+    expect(crush.warnAt[0]).toBe(s.config.match.durationTicks - 120 * 60);
     const lastLand = crush.warnAt[crush.warnAt.length - 1]! + s.config.crush.warnTicks;
     expect(lastLand).toBe(s.config.match.durationTicks - 30 * 60);
     // the endgame trap waves sit inside the core
