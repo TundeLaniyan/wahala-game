@@ -780,5 +780,7 @@ export class Effects {
     for (const t of this.transients) t.dispose?.();
     this.transients.length = 0;
     for (const p of [this.fire, this.smoke, this.chunks, this.stars]) p.dispose();
+    this.debris.dispose();
+    for (const d of [this.scorches, this.soot, this.cracks]) d.dispose();
   }
 }

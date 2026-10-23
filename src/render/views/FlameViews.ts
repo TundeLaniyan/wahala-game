@@ -151,7 +151,8 @@ export class FlameViews implements View {
       const env = Math.min(1, 0.55 + k * 10) * (k > 0.65 ? Math.max(0, 1 - (k - 0.65) / 0.35) : 1) * reach;
       if (env <= 0.002) continue;
       const flick = 0.9 + 0.24 * Math.sin(time * 28 + st.phase);
-      const size = (f.dir === null ? 2.65 : f.tip ? 1.75 : 2.15) * flick * (0.85 + env * 0.35);
+      // sized to rise over the character-height obstacles around the lane
+      const size = (f.dir === null ? 2.95 : f.tip ? 1.9 : 2.35) * flick * (0.85 + env * 0.35);
       const vertical = f.dir === 'up' || f.dir === 'down';
 
       // floor glow (additive: the colour is the fade)
@@ -160,18 +161,18 @@ export class FlameViews implements View {
       this.floor.push(this.m, fg, fg * 0.117, fg * 0.006); // 0xff6012 (linear)
       // the low fire beam along the lane
       this.q.setFromAxisAngle(this.up, vertical ? Math.PI / 2 : 0);
-      this.s.set(f.dir === null ? 0.95 : 1.05, 0.75 + 0.35 * flick, f.dir === null ? 0.95 : 0.78);
-      this.m.compose(this.p.set(x, 0.24, z), this.q, this.s);
+      this.s.set(f.dir === null ? 0.95 : 1.05, 1.0 + 0.4 * flick, f.dir === null ? 0.95 : 0.78);
+      this.m.compose(this.p.set(x, 0.3, z), this.q, this.s);
       const bg = 0.58 * env;
       this.beam.push(this.m, bg, bg * 0.262, bg * 0.01); // 0xff8c1a
 
       // colours are linear-space multipliers (the old sprite hex colours converted)
       this.tongue.push(
         x,
-        0.5 + 0.06 * Math.sin(time * 20 + st.phase),
+        0.64 + 0.07 * Math.sin(time * 20 + st.phase),
         z,
         size * 0.98,
-        size * 0.98,
+        size * 1.14,
         1,
         0.254,
         0.034,
@@ -179,16 +180,16 @@ export class FlameViews implements View {
       );
       this.body.push(
         x + 0.05 * Math.sin(time * 17 + st.phase),
-        0.38,
+        0.48,
         z + 0.05 * Math.cos(time * 15 + st.phase),
         size * 0.92,
-        size * 0.88,
+        size * 1.0,
         1,
         0.144,
         0.011,
         env * 0.88,
       );
-      this.hot.push(x, 0.38, z, size * 0.62, size * 0.6, 1, 0.76, 0.32, env * (0.76 + 0.2 * flick));
+      this.hot.push(x, 0.44, z, size * 0.62, size * 0.68, 1, 0.76, 0.32, env * (0.76 + 0.2 * flick));
       if (f.dir === null) {
         const cs = 2.6 * (1.15 - k * 0.4);
         this.core.push(x, 0.48, z, cs, cs, 1, 0.565, 0.216, env);
@@ -205,11 +206,6 @@ export class FlameViews implements View {
     this.floor.end();
     this.beam.end();
     for (; lit < this.lights.length; lit++) this.lights[lit]!.intensity = 0;
-  }
-
-  /** Debug/tests: number of draw calls the fire layer issues (constant, whatever is burning). */
-  drawCalls(): number {
-    return 7;
   }
 
   dispose(): void {

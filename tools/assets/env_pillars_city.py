@@ -123,19 +123,19 @@ def pillar_market() -> dict:
     atlas = Atlas(1024, 512, 0x808080)
 
     def plaster(sd, posters, extra=None):
-        s = concrete_sheet(e.w, e.h, sd, 0xc9b58f, stains=0.55)  # ochre-washed render
+        s = concrete_sheet(e.w, e.h, sd, 0xe6dabf, stains=0.45)  # lime-washed render (pale: the market sun is high, these faces sit in shade)
         # the wash has flaked off in patches, showing grey sandcrete with block joints
         n = noise2(e.w, e.h, sd + 3, fx=4, fy=6, octaves=6, beta=1.7)
         bare = np.clip(n * 2.4 - 1.35, 0, 1)
         blocks = Sheet(e.w, e.h)
-        blocks.rgb = concrete_sheet(e.w, e.h, sd + 9, 0x8d877c, stains=0.3).rgb
+        blocks.rgb = concrete_sheet(e.w, e.h, sd + 9, 0xa29c90, stains=0.3).rgb
         ys, xs = np.mgrid[0 : e.h, 0 : e.w]
         course = (ys / (0.225 * e.ppm)).astype(int)
         joint = ((ys % (0.225 * e.ppm)) < 3) | (((xs + (course % 2) * 0.22 * e.ppm) % (0.45 * e.ppm)) < 3)
         blocks.rgb[joint] *= 0.55
         s.comp(blocks.rgb, bare, height=-0.15, rough=0.95)
         s.comp(0x7a6a52, gblur((bare > 0.05).astype(float) - bare, 1.2).clip(0, 1) * 0.5)
-        weather(s, sd + 1, ground=0.5, ground_h=0.16, streaks=0.4, top_soot=0.15, edge=0.15, tone_dark=0x3a2e22)
+        weather(s, sd + 1, ground=0.4, ground_h=0.14, streaks=0.3, top_soot=0.12, edge=0.1, tone_dark=0x4a3c2c)
         for p in posters:
             stick_poster(s, **p)
         if extra:
@@ -386,9 +386,9 @@ def pillar_bollard() -> dict:
     seed = 521
     H = 1.42
     atlas = Atlas(512, 512, 0x808080)
-    tar = wood_sheet(256, 256, seed, 0x6a5440, "y", wear=0.85, knots=2, gap=0)
+    tar = wood_sheet(256, 256, seed, 0x9a8466, "y", wear=0.85, knots=2, gap=0)
     n = noise2(256, 256, seed + 1, fx=4, fy=8)
-    tar.comp(0x1e1812, np.clip(n * 1.6 - 0.5, 0, 1) * 0.55, rough=0.55)  # tar coat, worn through in places
+    tar.comp(0x2a2218, np.clip(n * 1.6 - 0.7, 0, 1) * 0.45, rough=0.55)  # tar coat, worn through in places
     ys = (np.arange(256)[:, None] + 0.5) / 256
     tar.comp(0x3c4a3a, np.clip((ys - 0.78) / 0.2, 0, 1) * 0.6 * np.ones((1, 256)))  # algae tide line at the foot
     atlas.add("tar", 0, 0, tar)
