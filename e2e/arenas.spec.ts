@@ -58,6 +58,16 @@ const stage = (page: Page): Promise<StageView> =>
     };
   });
 
+/**
+ * Plays one tick through the real frame path so the HUD snapshot is published right away (the HUD
+ * otherwise refreshes on animation frames, which software WebGL on a busy machine delivers slowly).
+ */
+async function syncHud(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    (window as unknown as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
+  );
+}
+
 /** Steps the frozen simulation one second at a time until a stage event is warning (max `seconds`). */
 async function untilStageWarning(page: Page, seconds: number): Promise<StageView> {
   for (let i = 0; i < seconds; i++) {
@@ -69,6 +79,8 @@ async function untilStageWarning(page: Page, seconds: number): Promise<StageView
 }
 
 test.describe('arena picker and stage hazards', () => {
+  // each test starts real matches under software WebGL: give them more than the default 90 s
+  test.beforeEach(() => test.setTimeout(5 * 60_000));
   test('every standard arena can be picked, started and reaches play without errors', async ({
     page,
   }, info) => {
@@ -83,7 +95,7 @@ test.describe('arena picker and stage hazards', () => {
       await page.getByTestId('start-button').click();
       await expect(page.getByTestId('hud')).toBeVisible();
       await stepTicks(page, 200);
-      await expect(page.getByTestId('hud')).toHaveAttribute('data-phase', 'playing');
+      // the simulation is the source of truth here; the HUD's own refresh is covered by the tests below
       const v = await stage(page);
       expect(v.arenaId).toBe(id);
       expect(v.phase).toBe('playing');
@@ -103,6 +115,7 @@ test.describe('arena picker and stage hazards', () => {
     await expect(page.getByTestId('hud')).toBeVisible();
     await stepTicks(page, 200);
     const v = await untilStageWarning(page, 14);
+    await syncHud(page);
     const warning = v.events.find((e) => v.tick < e.startTick);
     expect(warning?.style).toBe('traffic');
     expect(warning?.kind).toBe('sweep');
@@ -113,6 +126,7 @@ test.describe('arena picker and stage hazards', () => {
     await page.screenshot({ path: `e2e-shots/${info.project.name}-stage-alert.png` });
     // once it has driven through, the alert is gone
     await stepTicks(page, 60 * 6);
+    await syncHud(page);
     await expect(page.getByTestId('stage-alert')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
@@ -128,6 +142,7 @@ test.describe('arena picker and stage hazards', () => {
     await expect(banner).toContainText(/WHOLE row and column/);
     await page.screenshot({ path: `e2e-shots/${info.project.name}-power-yard-banner.png` });
     await stepTicks(page, 200);
+    await syncHud(page);
     await expect(page.getByTestId('hud')).toHaveAttribute('data-phase', 'playing');
     await expect(page.getByTestId('rule-banner')).toHaveCount(0);
   });
