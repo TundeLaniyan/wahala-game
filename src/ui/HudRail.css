@@ -88,18 +88,22 @@
   display: block;
   max-width: 100%;
   padding: 0;
+  animation: rail-in 0.2s ease-out;
 }
+/* compact enough that the whole rule stays readable in the narrowest rail (iPhone SE: about 90 x 130 px) */
 .hud-rail .rule-inner {
   max-width: 100%;
-  padding: 7px 9px 8px;
+  padding: 6px 7px 7px;
   text-align: left;
 }
 .hud-rail .rule-inner b {
-  font-size: clamp(0.75rem, 3vh, 1.25rem);
-  letter-spacing: 0.08em;
+  font-size: clamp(0.66rem, 2.6vh, 1.25rem);
+  letter-spacing: 0.06em;
+  line-height: 1.1;
 }
 .hud-rail .rule-inner span {
-  font-size: clamp(0.62rem, 2.4vh, 0.95rem);
+  font-size: clamp(0.56rem, 2.1vh, 0.95rem);
+  line-height: 1.15;
 }
 .hud-rail.rail-top .stage-alerts,
 .hud-rail.rail-top .rule-inner {

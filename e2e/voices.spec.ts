@@ -336,6 +336,44 @@ test.describe('Nigerian voice clips', () => {
       expect(r.right, `${r.cls} overlaps the board`).toBeLessThanOrEqual(leftEdgeAt(b, r.bottom) + 0.5);
   });
 
+  test('the Power Yard rule (countdown) fits whole in the rail, off the board, even on an iPhone SE (regression)', async ({
+    page,
+  }, info) => {
+    if (info.project.use.isMobile) await page.setViewportSize({ width: 568, height: 320 });
+    await open(page, '&nobots&noattract');
+    await page.getByTestId('arena-surulerePowerYard').click();
+    await page.getByTestId('start-button').click();
+    const banner = page.getByTestId('rule-banner');
+    await expect(banner).toBeVisible();
+    await page.evaluate(() => {
+      (
+        window as unknown as { __WAHALA__: { controller(): { frozen: boolean } } }
+      ).__WAHALA__.controller().frozen = true;
+    });
+    await expect.poll(() => board(page)).not.toBeNull();
+    await page.waitForTimeout(400); // the rail's 0.2 s slide-in
+    const g = await page.evaluate(() => {
+      const box = (sel: string) => {
+        const r = document.querySelector(sel)!.getBoundingClientRect();
+        return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+      };
+      const text = document.querySelector('[data-testid=rule-banner] span') as HTMLElement;
+      return {
+        banner: box('[data-testid=rule-banner]'),
+        rail: box('[data-testid=hud-rail]'),
+        clipped: text.scrollHeight > text.clientHeight + 1,
+      };
+    });
+    const b = (await board(page))!;
+    expect(g.banner.bottom, 'the rule is cut off by the rail').toBeLessThanOrEqual(g.rail.bottom + 0.5);
+    expect(g.clipped).toBe(false);
+    expect(g.banner.right).toBeLessThanOrEqual(leftEdgeAt(b, g.banner.bottom) + 0.5);
+    await page.screenshot({
+      path: `e2e-shots/${info.project.name}-power-yard-rule-rail.png`,
+      animations: 'disabled',
+    });
+  });
+
   test('phone: the thumbstick and generator placement still work while a subtitle and notices are shown', async ({
     page,
   }, info) => {

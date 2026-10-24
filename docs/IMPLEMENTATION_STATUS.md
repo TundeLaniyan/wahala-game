@@ -236,3 +236,22 @@ button column and a larger whole-arena board on landscape phones, music-first re
 **Not verified:** sound by ear (no audio output in the container; levels are measured with ffmpeg); feel of the
 stick on a real touch screen (Chromium touch emulation and mouse-driven pointer events only); frame rate on a
 real phone.
+
+## Nigerian voice integration and clean gameplay HUD (branch `claude/wahala-voice-integration`, from `7ef982f`)
+
+Report: `docs/VOICE_INTEGRATION.md`; decisions V1-V10 in `DECISIONS.md`; audio details, event mapping, how to add
+clips and licensing in `AUDIO.md` "Voice lines"; frames in `docs/screenshots/voice/`.
+
+- 19 founder-approved Gemini TTS clips imported (of 47 planned lines; the rejected `conductor_cms_01` excluded),
+  mapped to 8 of the 20 triggers; the other 12 triggers are wired and stay silent until their clips arrive.
+- Voice bus, urgent-speech ducking, priority interruption, per-line cooldowns, per-arena lazy loading, zone-aware
+  background talk (market line on Balogun / Oshodi / Yaba / City Rumble).
+- Crowd speech bubbles removed; essential notices, stage alerts, the arena rule and the new subtitles (Off by
+  default / On / Large) moved into a rail beside the board, sized from the board's screen corners.
+
+| Check (2026-10-24) | Result |
+| --- | --- |
+| `npm run check` (tsc, eslint, vitest, build) | clean; **55 files, 791 tests passed** |
+| Playwright, all specs, desktop + phone, one worker (`WAHALA_MULTIPROCESS=1`) | **76 passed, 0 failed, 0 flaky, 12 skipped by design** (29 min), including the new `e2e/voices.spec.ts` (clips decode at their listed lengths, per-arena loading, triggers, urgent interruption, 404/corrupt clips skipped, subtitles, nothing over the bottom row, joystick + generator placement with a subtitle showing). Then the Power Yard rule was found clipped in the rail on an iPhone SE frame: fixed, with a regression test (fails before, passes after on both projects) |
+| Real-browser frames (`docs/screenshots/voice/`) | 568x320, 844x390, 932x430, 1280x720 and the Power Yard rule at 568x320 / 844x390: rail left of the board edge, bottom row and lower-left spawn uncovered, no page errors |
+| Not verified | the mix by ear (no speakers in the container); playback on real iOS Safari / Android Chrome devices |
