@@ -117,7 +117,8 @@ for (const device of ['desktop', 'phone']) {
     await page.keyboard.press('Enter');
     await advance(page, 20);
     await shot(page, `vehicle-5-warning-${device}`);
-    await advance(page, 75);
+    // the warning lasts 72 ticks; catch the Keke mid-route, before it reaches the rival
+    await advance(page, 62);
     await shot(page, `vehicle-6-keke-driving-${device}`);
     if (errors.length) console.log(JSON.stringify({ errors }));
     await ctx.close();
