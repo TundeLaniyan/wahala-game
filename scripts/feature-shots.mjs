@@ -66,7 +66,7 @@ const settle = (page) => page.waitForTimeout(1200);
 async function shot(page, name) {
   await settle(page);
   const file = join(out, `${name}.jpg`);
-  await page.screenshot({ path: file, type: 'jpeg', quality: 82 });
+  await page.screenshot({ path: file, type: 'jpeg', quality: 82, timeout: 240_000 });
   console.log(JSON.stringify({ file }));
 }
 
