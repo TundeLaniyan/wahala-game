@@ -72,3 +72,31 @@ Isolated from real matches (never writes settings, never produces a result).
 
 Published to the `gh-pages` branch on every push; GitHub Pages must be pointed at that branch once by an admin
 (see `DEPLOYMENT.md`).
+
+## 7. Screenshots (integrated build)
+
+| What | Files (`docs/screenshots/nine-arenas/final/`) |
+| --- | --- |
+| All nine arenas, desktop 1280x720 and phone 844x390: countdown, running, blast, north side | `arenas/<arenaId>-<desktop|mobile>-<0-countdown|1-running|2-blast|3-north>.jpg` |
+| Power Yard: one blast fills its whole row and column | `features/powerYard-full-line-blast-<desktop|phone>.jpg` |
+| Vehicle attack: voucher, entrances, route preview, Keke turn, warning, driving | `features/vehicle-<1..6>-*-<desktop|phone>.jpg` |
+| Stage hazards telegraphed and active | `../hazards/` |
+| City Rumble (32 competitors): follow camera, minimap, roster, spectating, standings, results | `../rumble/` |
+| How to Play demos and practice | `../tutorial/` |
+| Obstacles, walls, destruction before/after | `../visual-e/` |
+
+## 8. Verification and limits
+
+See `IMPLEMENTATION_STATUS.md` ("integrated branch") for the exact commands and results: 752 unit tests, the full
+Playwright suite on desktop and phone (60 passed, 1 flaky, 0 failed), CI green on GitHub, bot batches per arena
+and for City Rumble.
+
+Limits, honestly:
+- Nobody has listened to the music or the hazard cues (no audio output in the build container).
+- Frame rate on real phones is unmeasured; the scenes are heavier than before (about 450-500 draw calls for the
+  new arenas on high quality, ~700 in City Rumble at medium). Use `?fps` on a real device and the `q=low` profile.
+- Balance numbers (pickup weights, hazard timing, City Rumble length) come from bot batches, not human playtests.
+- Some north-side scenery (skylines, upper floors) sits under the HUD band on desktop; the phone framing shows more.
+- Balogun Market's pillar sides render dark under its sun angle.
+- The GitHub Pages site needs one admin setting before the URL works.
+

@@ -192,3 +192,28 @@ Presentation only (decisions E1-E10 in `DECISIONS.md`); `src/sim`, `src/ai`, `sr
 - **Phones:** on short landscape screens a practice starts with the lesson panel folded to a slim strip (goal ticks, show, exit) so the arena gets the width; during demos the HUD entry panel and inventory row are hidden (the demo's subtitle and step label carry that information) and the subtitle sits on the bottom edge.
 - **Verification (2026-10-23):** `npm run check` passes (typecheck, ESLint, 686 Vitest tests in 45 files, of which 62 in `tests/tutorial/`, production build). Every chapter's demo is played headlessly through the real MatchController + simulation and asserted to show its mechanic (vehicle: voucher, entry mode, browse -> preview the chosen entrance -> turn stage -> chosen turn -> launch, Keke route bends, it drives and exits; Power Yard: crates broken along the whole row and column, the dummy behind a pillar caught; endgame: both waves warn and go live with stage hazards off; etc.); every practice has a scripted correct attempt through the real input port, and idle / failure / restart / settings-isolation tests. Playwright `e2e/tutorial.spec.ts` (`WAHALA_MULTIPROCESS=1 WAHALA_E2E_PORT=4391`, one worker): 4 passed, 2 skipped by design (device-specific), 0 retries: demo + pause + replay + next chapter + legend + exit with saved settings unchanged (desktop and phone), the Keke launch practice by keyboard (desktop) and by D-pad + on-screen buttons with the folded panel (phone), no console errors. The default `--single-process` launch crashed outright in this container under load, hence the opt-out. Screenshots: `docs/screenshots/nine-arenas/tutorial/` (desktop + phone, 10 each).
 - **Not covered:** Kill Switch and Okada have no chapter of their own (Okada is mentioned where hazards and vehicles can be absorbed); the City Rumble lesson describes the minimap from the design (`src/ui/Minimap.tsx` was being built in parallel and is not shown in the captures); the stage-hazard and endgame lessons are watch-only.
+
+## Nine arenas / City Rumble - integrated branch (`claude/wahala-nine-arenas-city-rumble`)
+
+Report: `docs/NINE_ARENAS_CITY_RUMBLE.md`; decisions N1-N21 and E1-E10 in `DECISIONS.md`; deployment in
+`DEPLOYMENT.md`. Six workstreams (visual quality, two arena-art passes, hazard presentation + menus, City Rumble,
+tutorial) were merged onto the simulation core and verified together:
+
+| Check (2026-10-24, integrated build) | Result |
+| --- | --- |
+| `npx tsc --noEmit`, `npx eslint .` | clean |
+| `npx vitest run` | **53 files, 752 tests passed** |
+| `npm run build` | succeeds; JS 0.90 MB + 0.65 MB three.js (gzip 299 KB + 163 KB), 18.7 MB of GLB models preloaded once behind the progress bar, music streamed per match (one MP3, 3-8 MB) |
+| Playwright, all specs, desktop + phone, one worker (`WAHALA_MULTIPROCESS=1`) | **60 passed, 0 failed, 1 flaky (passed on retry), 9 skipped by design** (39 min) |
+| GitHub Actions CI on this branch | green, e2e included (run #46, after the CI fixes N15) |
+| `scripts/arena-balance.ts` (bots, 20 matches per arena) | every arena decided (90-100 % winners), 20-57 s average, stage-hazard eliminations 0-10 % |
+| `npm run simulate -- --arena cityRumble --players 8/16/24/32` | 0.21-0.43 ms per tick (medium), 0 timeouts; see N16/N17 |
+| GitHub Pages | build published to `gh-pages` on every push (`build.json` names the commit); **Pages itself must be enabled once by an admin** (`DEPLOYMENT.md`) |
+
+Screenshots of the integrated build: `docs/screenshots/nine-arenas/final/` (all nine arenas desktop + phone:
+countdown, running, blast, north side; Power Yard full-line blast; the six-step Keke attack; desktop + phone).
+
+**Not verified:** sound by ear (no audio output in the container); frame rate on a real phone or GPU (software
+WebGL here gives single-digit to ~20 fps whatever the scene); the live Pages URL (the container cannot reach
+`*.github.io`, and Pages is not enabled yet); human playtesting of any balance number.
+
