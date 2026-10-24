@@ -733,45 +733,79 @@ button {
   padding: 3px 6px;
   border-radius: 4px;
 }
+/* Vehicle entrance selection: a compact strip in the gap between the match clock and the board's north
+   wall, so every border arrow (the north ones included) stays visible and clickable. */
 .entry-panel {
   position: absolute;
-  top: clamp(112px, 22vh, 150px);
+  top: clamp(64px, 9.6vh, 76px);
   left: 50%;
   transform: translateX(-50%);
   background: var(--glass);
   backdrop-filter: blur(10px);
   border: 2px solid var(--gold);
-  border-radius: 12px;
-  padding: 8px 18px 10px;
-  text-align: center;
+  border-radius: 10px;
+  padding: 4px 12px 5px;
   pointer-events: auto;
-  min-width: min(430px, 70vw);
+  width: min(660px, 62vw);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 12px;
+  align-items: center;
 }
 .entry-panel h4 {
-  margin: 0 0 2px;
+  grid-column: 1;
+  margin: 0;
   font-family: var(--display);
   font-weight: 400;
-  letter-spacing: 0.14em;
-  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  font-size: 0.95rem;
   color: var(--gold);
+  text-align: left;
 }
 .entry-panel p {
-  margin: 0 0 6px;
-  font-size: 0.9rem;
+  grid-column: 1;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.2;
   opacity: 0.92;
+  text-align: left;
+}
+.entry-panel .row {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  flex-wrap: nowrap;
 }
 .entry-panel .bar {
-  height: 8px;
-  border-radius: 4px;
+  grid-column: 1 / -1;
+  height: 5px;
+  border-radius: 3px;
   background: #2b2f36;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-top: 3px;
 }
 .entry-panel .bar i {
   display: block;
   height: 100%;
   background: linear-gradient(90deg, var(--green), var(--gold), var(--red));
   transform-origin: left;
+}
+/* landscape phones: the gap above the board is ~50 px */
+@media (max-height: 480px) {
+  .entry-panel {
+    top: 42px;
+    padding: 2px 8px 3px;
+    width: min(520px, 60vw);
+  }
+  .entry-panel h4 {
+    font-size: 0.78rem;
+  }
+  .entry-panel p {
+    font-size: 0.6rem;
+  }
+  .entry-panel .btn.small {
+    padding: 3px 10px;
+    font-size: 0.75rem;
+  }
 }
 
 /* ---------- touch controls ---------- */
