@@ -69,7 +69,8 @@ export function legendRows(): Record<ControlId, LegendRow> {
       label: 'Move',
       keyboard: moveKeys(),
       gamepad: ['D-pad', 'left stick'],
-      touch: 'The D-pad, bottom left: hold an arm to walk, slide your thumb to turn.',
+      touch:
+        'Floating thumbstick: put your thumb down anywhere in the lower-left of the screen and slide it up, down, left or right. Each slide is one tile; keep holding to keep walking; lift to stop.',
     },
     place: {
       id: 'place',
@@ -113,7 +114,7 @@ export function legendRows(): Record<ControlId, LegendRow> {
       keyboard: [...moveKeys(), 'or click an arrow'],
       gamepad: ['D-pad', 'left stick'],
       touch:
-        'Tap a glowing arrow on the border (or a turn marker) to preview its route, or step with the D-pad.',
+        'Tap a glowing arrow on the border (or a turn marker) to preview its route, or flick the thumbstick to step between them.',
     },
     entryConfirm: {
       id: 'entryConfirm',

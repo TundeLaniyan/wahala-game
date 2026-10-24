@@ -1,56 +1,97 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as RPointerEvent } from 'react';
 import { CHARACTERS } from '../sim';
 import type { Dir } from '../sim';
 import { pickupIconUrl } from '../assets/pickupIcons';
-import { input } from '../app/session';
+import { commands, input } from '../app/session';
+import { VirtualStick, stickConfigFor } from '../input/joystick';
 import { useGameStore } from '../app/store';
 import type { ActionName } from '../input';
 
-function DPad() {
-  const [dir, setDir] = useState<Dir | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
-  /** Only the finger that first touched the pad steers it; a second finger cannot add phantom presses. */
-  const owner = useRef<number | null>(null);
-  const update = (e: RPointerEvent) => {
-    const r = ref.current!.getBoundingClientRect();
-    const dx = e.clientX - (r.left + r.width / 2);
-    const dy = e.clientY - (r.top + r.height / 2);
-    const dead = r.width * 0.12;
-    let d: Dir | null = null;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) > dead)
-      d = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
-    setDir(d);
-    input.setTouchDir(d);
+/**
+ * Floating thumbstick: a touch anywhere in the bottom-left activation zone becomes the stick's centre
+ * and the drag picks one of the four grid directions (see `input/joystick.ts`). A quick tap that never
+ * leaves the dead zone is passed through as a tap on the board, so vehicle entrances under the zone can
+ * still be picked by touch.
+ */
+function Joystick({ entryOpen }: { entryOpen: boolean }) {
+  const zone = useRef<HTMLDivElement>(null);
+  const stick = useRef(new VirtualStick(stickConfigFor(window.innerWidth, window.innerHeight)));
+  const [view, setView] = useState<{ x: number; y: number; kx: number; ky: number; dir: Dir | null } | null>(
+    null,
+  );
+  const show = (): void => {
+    const s = stick.current;
+    if (!s.active || !zone.current) return setView(null);
+    const r = zone.current.getBoundingClientRect();
+    setView({ x: s.originX - r.left, y: s.originY - r.top, kx: s.knobX, ky: s.knobY, dir: s.dir });
   };
-  const end = (e: RPointerEvent) => {
-    if (owner.current !== null && e.pointerId !== owner.current) return;
-    owner.current = null;
-    setDir(null);
+  const release = (): void => {
+    stick.current.reset();
     input.setTouchDir(null);
+    setView(null);
   };
+  // a rotation or resize mid-drag invalidates the origin: drop the touch and resize the stick
+  useEffect(() => {
+    const onResize = (): void => {
+      stick.current.config = stickConfigFor(window.innerWidth, window.innerHeight);
+      if (stick.current.active) release();
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+      input.setTouchDir(null);
+    };
+  }, []);
+  const end = (e: RPointerEvent): void => {
+    const result = stick.current.end(e.pointerId, e.timeStamp);
+    if (!result) return;
+    input.setTouchDir(null);
+    setView(null);
+    if (result.tap && entryOpen && e.type === 'pointerup') commands.pickEntry(e.clientX, e.clientY);
+  };
+  const r = stick.current.config.radius;
   return (
     <div
-      ref={ref}
-      className="dpad"
-      data-testid="dpad"
+      ref={zone}
+      className="stick-zone"
+      data-testid="stick-zone"
+      data-dir={view?.dir ?? ''}
       onPointerDown={(e) => {
-        if (owner.current !== null) return;
-        owner.current = e.pointerId;
+        if (!stick.current.begin(e.pointerId, e.clientX, e.clientY, e.timeStamp)) return;
+        e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
-        update(e);
+        input.touchActive();
+        show();
       }}
-      onPointerMove={(e) => e.pointerId === owner.current && update(e)}
+      onPointerMove={(e) => {
+        if (e.pointerId !== stick.current.pointerId) return;
+        input.setTouchDir(stick.current.move(e.pointerId, e.clientX, e.clientY));
+        show();
+      }}
       onPointerUp={end}
       onPointerCancel={end}
       onLostPointerCapture={end}
     >
-      <div className="base" />
-      {(['up', 'down', 'left', 'right'] as Dir[]).map((d) => (
-        <div key={d} className={`arm ${d}${dir === d ? ' on' : ''}`} data-dir={d}>
-          {{ up: '▲', down: '▼', left: '◀', right: '▶' }[d]}
+      {view ? (
+        <div className="stick" style={{ left: view.x, top: view.y, ['--r' as string]: `${r}px` }}>
+          <div className="stick-base">
+            {(['up', 'down', 'left', 'right'] as Dir[]).map((d) => (
+              <i key={d} className={`stick-tick ${d}${view.dir === d ? ' on' : ''}`} />
+            ))}
+          </div>
+          <div
+            className={`stick-knob${view.dir ? ' on' : ''}`}
+            style={{ transform: `translate(calc(-50% + ${view.kx}px), calc(-50% + ${view.ky}px))` }}
+          />
         </div>
-      ))}
+      ) : (
+        <div className="stick-hint" style={{ ['--r' as string]: `${r}px` }}>
+          <span>MOVE</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -85,14 +126,14 @@ export function TouchControls() {
   if (!me || entry)
     return (
       <div className="touch">
-        <DPad />
+        <Joystick entryOpen={!!entry} />
       </div>
     );
   const skill = CHARACTERS[character].skill;
   const actionLabel = me.carrying ? (me.punch ? 'THROW' : 'DROP') : me.grip ? 'CARRY' : 'PUNCH';
   return (
     <div className="touch" data-testid="touch-controls">
-      <DPad />
+      <Joystick entryOpen={false} />
       <div className="actions">
         <ActionButton cls="bomb" action="place" testId="btn-place" label={<b>GENERATOR</b>} />
         <ActionButton

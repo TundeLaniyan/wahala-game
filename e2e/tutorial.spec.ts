@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, holdKey, open, stepTicks } from './helpers';
+import { getState, holdKey, open, stepTicks, thumb } from './helpers';
 
 /** The saved settings blob and the live store settings: the tutorial must leave both untouched. */
 async function savedSettings(page: Page): Promise<{ stored: string | null; live: unknown }> {
@@ -166,14 +166,15 @@ test.describe('How to Play', () => {
     expect(errors).toEqual([]);
   });
 
-  test('vehicle practice with touch: D-pad, vehicle button, NEXT and LAUNCH', async ({ page }, info) => {
+  test('vehicle practice with touch: thumbstick, vehicle button, NEXT and LAUNCH', async ({ page }, info) => {
     test.skip(!info.project.use.isMobile, 'mobile project only');
     const errors = collectErrors(page);
     await open(page);
     const before = await savedSettings(page);
     await openTutorial(page);
     // demos play by themselves: no on-screen controls; the legend opens on the touch layout
-    await expect(page.getByTestId('dpad')).toBeHidden();
+    await expect(page.getByTestId('stick-zone')).toBeHidden();
+    await expect(page.getByTestId('htp-stick')).toBeVisible();
     await expect(page.getByTestId('htp-legend')).toHaveAttribute('data-device', 'touch');
 
     await openPractice(page, 'vehicle');
@@ -185,15 +186,8 @@ test.describe('How to Play', () => {
     await expect(page.getByTestId('how-to-play')).toHaveAttribute('data-collapsed', 'true');
     await stepTicks(page, 2);
     expect((await getState(page)).players[0]!.characterId).toBe('campusQueen');
-    await expect(page.getByTestId('dpad')).toBeVisible();
-    const box = (await page.getByTestId('dpad').boundingBox())!;
-    for (let i = 0; i < 2; i++) {
-      await page.mouse.move(box.x + box.width * 0.88, box.y + box.height / 2);
-      await page.mouse.down();
-      await stepTicks(page, 4);
-      await page.mouse.up();
-      await stepTicks(page, 14);
-    }
+    await expect(page.getByTestId('stick-zone')).toBeVisible();
+    for (let i = 0; i < 2; i++) await thumb(page, 'right', 4, { settle: 14 });
     await expect(page.getByTestId('htp-check-0')).toHaveAttribute('data-done', 'true');
     await expect(page.getByTestId('btn-vehicle')).toBeVisible();
     await page.getByTestId('btn-vehicle').dispatchEvent('pointerdown');

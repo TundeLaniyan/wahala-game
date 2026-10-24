@@ -64,7 +64,15 @@ export class InputManager {
     this.press(action);
   }
 
-  /** On-screen D-pad: `dir` is the arm under the finger, null once it lifts. A new arm is a new press. */
+  /** A finger landed on the on-screen stick (switches the help/legend to touch before any direction). */
+  touchActive(): void {
+    this.device('touch');
+  }
+
+  /**
+   * On-screen thumbstick: `dir` is its quantised cardinal direction, null in the dead zone or once the
+   * finger lifts. A new direction is a new press (one tile); holding repeats at the step cadence.
+   */
   setTouchDir(dir: Dir | null): void {
     if (dir === this.touchDir) return;
     this.touchDir = dir;

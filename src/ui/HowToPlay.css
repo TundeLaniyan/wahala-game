@@ -359,39 +359,44 @@
   background: linear-gradient(#20242a, #121418);
   overflow: hidden;
 }
-.htp-touchmap .tm-pad {
+/* the floating thumbstick's activation zone (lower left) with a stick being pushed right */
+.htp-touchmap .tm-zone {
   position: absolute;
-  left: 8px;
-  bottom: 8px;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  background: rgba(40, 44, 52, 0.7);
+  left: 4px;
+  bottom: 4px;
+  width: 42%;
+  height: 72%;
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
   opacity: 0.45;
 }
-.htp-touchmap .tm-pad i {
+.htp-touchmap .tm-zone small {
   position: absolute;
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.3);
+  left: 6px;
+  top: 3px;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.7);
 }
-.htp-touchmap .tm-pad .u {
-  left: 17px;
-  top: 2px;
+.htp-touchmap .tm-stick {
+  position: absolute;
+  left: 34%;
+  top: 30%;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(40, 44, 52, 0.75);
 }
-.htp-touchmap .tm-pad .d {
-  left: 17px;
-  bottom: 2px;
-}
-.htp-touchmap .tm-pad .l {
-  left: 2px;
-  top: 17px;
-}
-.htp-touchmap .tm-pad .r {
-  right: 2px;
-  top: 17px;
+.htp-touchmap .tm-knob {
+  position: absolute;
+  left: 20px;
+  top: 9px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe37a, #ffc61a);
+  border: 2px solid #fff;
 }
 .htp-touchmap .tm-top {
   position: absolute;

@@ -814,54 +814,112 @@ button {
   inset: 0;
   pointer-events: none;
 }
-.dpad {
+/* Floating thumbstick. The activation zone is the lower-left of the screen below the HUD band and left of
+   the action buttons; the stick appears wherever the thumb lands in it. */
+.stick-zone {
   position: absolute;
-  left: max(14px, env(safe-area-inset-left));
-  bottom: max(14px, env(safe-area-inset-bottom));
-  width: clamp(124px, 34vh, 190px);
-  height: clamp(124px, 34vh, 190px);
+  left: 0;
+  bottom: 0;
+  width: min(46vw, calc(100vw - clamp(190px, 58vh, 300px) - 24px));
+  top: clamp(64px, 20vh, 120px);
   pointer-events: auto;
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
-.dpad .base {
+.stick {
   position: absolute;
-  inset: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.stick-base {
+  position: absolute;
+  left: calc(var(--r) * -1);
+  top: calc(var(--r) * -1);
+  width: calc(var(--r) * 2);
+  height: calc(var(--r) * 2);
   border-radius: 50%;
-  background: radial-gradient(rgba(40, 44, 52, 0.55), rgba(18, 20, 24, 0.55));
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(4px);
+  background: radial-gradient(rgba(40, 44, 52, 0.42), rgba(18, 20, 24, 0.5));
+  border: 2px solid rgba(255, 255, 255, 0.3);
 }
-.dpad .arm {
+.stick-tick {
   position: absolute;
-  width: 36%;
-  height: 36%;
+  width: 0;
+  height: 0;
+  border: 7px solid transparent;
+  opacity: 0.55;
+}
+.stick-tick.up {
+  left: calc(50% - 7px);
+  top: 4px;
+  border-bottom: 9px solid #fff;
+}
+.stick-tick.down {
+  left: calc(50% - 7px);
+  bottom: 4px;
+  border-top: 9px solid #fff;
+}
+.stick-tick.left {
+  top: calc(50% - 7px);
+  left: 4px;
+  border-right: 9px solid #fff;
+}
+.stick-tick.right {
+  top: calc(50% - 7px);
+  right: 4px;
+  border-left: 9px solid #fff;
+}
+.stick-tick.on {
+  opacity: 1;
+  border-bottom-color: var(--gold);
+  border-top-color: var(--gold);
+  border-left-color: var(--gold);
+  border-right-color: var(--gold);
+}
+.stick-tick.up.on,
+.stick-tick.down.on {
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+.stick-tick.left.on,
+.stick-tick.right.on {
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}
+.stick-knob {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--r) * 0.95);
+  height: calc(var(--r) * 0.95);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.85), rgba(190, 196, 206, 0.7));
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+}
+.stick-knob.on {
+  background: radial-gradient(circle at 35% 30%, #ffe37a, #ffc61a);
+}
+/* where to put your thumb when nothing is touching: a faint ring low in the zone */
+.stick-hint {
+  position: absolute;
+  left: max(calc(var(--r) * 0.4 + 10px), env(safe-area-inset-left));
+  bottom: max(calc(var(--r) * 0.4), env(safe-area-inset-bottom));
+  width: calc(var(--r) * 2);
+  height: calc(var(--r) * 2);
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.28);
   display: grid;
   place-items: center;
-  font-size: clamp(1rem, 5vh, 1.6rem);
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  pointer-events: none;
 }
-.dpad .arm.on {
-  background: rgba(255, 198, 26, 0.75);
-  color: #111;
-}
-.dpad .up {
-  left: 32%;
-  top: 4%;
-}
-.dpad .down {
-  left: 32%;
-  bottom: 4%;
-}
-.dpad .left {
-  left: 4%;
-  top: 32%;
-}
-.dpad .right {
-  right: 4%;
-  top: 32%;
+.stick-hint span {
+  font-family: var(--display);
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.45);
 }
 .actions {
   position: absolute;

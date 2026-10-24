@@ -450,11 +450,11 @@ function TouchMap({ controls }: { controls: ControlId[] }) {
   const entry = controls.includes('entryChoose');
   return (
     <div className="htp-touchmap" aria-hidden data-testid="htp-touchmap">
-      <div className={`tm-pad${on('move')}`}>
-        <i className="u" />
-        <i className="d" />
-        <i className="l" />
-        <i className="r" />
+      <div className={`tm-zone${on('move')}`} data-testid="htp-stick">
+        <div className="tm-stick">
+          <i className="tm-knob" />
+        </div>
+        <small>THUMB ANYWHERE HERE</small>
       </div>
       <div className="tm-top">
         <span className={`tm-pause${on('pause')}`}>II</span>
