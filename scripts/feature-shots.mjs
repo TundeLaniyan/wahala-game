@@ -4,7 +4,7 @@
 //    the Keke turn stage, the warning, and the Keke driving (desktop + phone).
 //
 //   WAHALA_CHROMIUM=/opt/pw-browsers/chromium node scripts/feature-shots.mjs --url http://localhost:4173/wahala-game/ \
-//        --out docs/screenshots/nine-arenas/final/features
+//        --out docs/screenshots/nine-arenas/final/features [--only powerYard,vehicle]
 //
 // Needs a running dev or preview server. Everything shown is the real game; the only staging is moving
 // the local player and handing them a voucher / a short fuse through the `?debug` hook.
@@ -20,6 +20,7 @@ const args = Object.fromEntries(
 );
 const url = args.url ?? 'http://localhost:4173/wahala-game/';
 const out = args.out ?? 'docs/screenshots/nine-arenas/final/features';
+const only = args.only ? args.only.split(',') : ['powerYard', 'vehicle'];
 mkdirSync(out, { recursive: true });
 
 const DEVICES = {
@@ -72,7 +73,7 @@ async function shot(page, name) {
 
 for (const device of ['desktop', 'phone']) {
   // ---- Power Yard: a full row + column blast
-  {
+  if (only.includes('powerYard')) {
     const { ctx, page, errors } = await openMatch(device, {
       arenaId: 'surulerePowerYard',
       competitors: 4,
@@ -92,11 +93,12 @@ for (const device of ['desktop', 'phone']) {
     await ctx.close();
   }
 
-  // ---- Vehicle workflow: Campus Queen's Keke (entry, preview, turn, warning, drive)
-  {
+  // ---- Vehicle workflow: Campus Queen's Keke (entry, preview, turn, warning, drive). Four competitors so
+  // the match goes on if the Keke runs a rival over.
+  if (only.includes('vehicle')) {
     const { ctx, page, errors } = await openMatch(device, {
       arenaId: 'danfoBusPark',
-      competitors: 2,
+      competitors: 4,
       character: 'campusQueen',
     });
     await mutate(
