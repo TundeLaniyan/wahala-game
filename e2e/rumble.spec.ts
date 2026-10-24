@@ -30,7 +30,8 @@ test.describe('City Rumble: 32 competitors', () => {
     page,
     isMobile,
   }, info) => {
-    test.setTimeout(240_000);
+    // 32 rigged characters on software WebGL: GitHub's two-vCPU runners need far longer than the container
+    test.setTimeout(process.env.CI ? 900_000 : 240_000);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => {
@@ -100,7 +101,7 @@ test.describe('City Rumble: 32 competitors', () => {
 
     // skip: the rest of the match fast-forwards (the page stays responsive), then the results
     await page.getByTestId('skip-results').click();
-    await expect(page.getByTestId('results')).toBeVisible({ timeout: 180_000 });
+    await expect(page.getByTestId('results')).toBeVisible({ timeout: process.env.CI ? 600_000 : 180_000 });
     await expect(page.getByTestId('rumble-results')).toBeVisible();
     await expect(page.getByTestId('placement')).toContainText('/32');
     expect((await getState(page)).phase).toBe('ended');
