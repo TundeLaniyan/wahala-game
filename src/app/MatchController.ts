@@ -5,11 +5,11 @@ import type { EntryOverlayModel, EntryPick } from '../render';
 import { buildHud } from './hud';
 import { buildPlayers } from './names';
 import { cycleSpectateTarget, eliminatorOf, pickSpectateTarget } from './spectate';
-import { NULL_AUDIO, NULL_CAPTIONS } from './ports';
-import type { AudioPort, Bot, BotFactory, CaptionPort, InputPort, RendererPort } from './ports';
+import { NULL_AUDIO } from './ports';
+import type { AudioPort, Bot, BotFactory, InputPort, RendererPort } from './ports';
 import type { GameSettings } from './settings';
 import { patch, useGameStore } from './store';
-import type { Caption, MatchSummary, Toast } from './store';
+import type { MatchSummary, Toast } from './store';
 import { VehicleEntryController } from './vehicleEntry';
 
 const STEP_MS = 1000 / 60;
@@ -58,7 +58,6 @@ export interface ControllerDeps {
   input: InputPort;
   botFactory: BotFactory;
   audio?: AudioPort;
-  captions?: CaptionPort;
 }
 
 /**
@@ -71,7 +70,6 @@ export class MatchController {
   private bots = new Map<number, Bot>();
   private readonly entry = new VehicleEntryController(LOCAL_ID);
   private readonly audio: MatchAudio;
-  private readonly captions: CaptionPort;
   private accumulator = 0;
   private lastMs = -1;
   private hudClock = 0;
@@ -81,7 +79,6 @@ export class MatchController {
   private settings: GameSettings | null = null;
   private endedAtMs: number | null = null;
   private toastId = 1;
-  private captionId = 1;
   private excitement = 0.2;
   private eliminations: number[] = [];
   private forced: Record<number, Intent> = {};
@@ -98,7 +95,6 @@ export class MatchController {
 
   constructor(private readonly deps: ControllerDeps) {
     this.audio = deps.audio ?? NULL_AUDIO;
-    this.captions = deps.captions ?? NULL_CAPTIONS;
   }
 
   // ------------------------------------------------------------------ lifecycle
@@ -147,7 +143,7 @@ export class MatchController {
       screen: 'playing',
       paused: false,
       toasts: [],
-      captions: [],
+      subtitle: null,
       summary: null,
       skipping: false,
       hud: buildHud(state, LOCAL_ID, null),
@@ -181,7 +177,7 @@ export class MatchController {
       screen: 'playing',
       paused: false,
       toasts: [],
-      captions: [],
+      subtitle: null,
       summary: null,
       hud: buildHud(state, LOCAL_ID, null),
     });
@@ -210,7 +206,7 @@ export class MatchController {
     this.director = null;
     this.state = null;
     this.audio.stopMusic();
-    patch({ screen: 'title', hud: null, paused: false, summary: null, toasts: [], captions: [] });
+    patch({ screen: 'title', hud: null, paused: false, summary: null, toasts: [], subtitle: null });
   }
 
   setPaused(paused: boolean): void {
@@ -264,7 +260,7 @@ export class MatchController {
 
   /**
    * Debug / art review: advances `n` ticks and routes each tick's events exactly like real play
-   * (renderer effects, audio, captions, toasts), unlike `stepOnce`, which only runs the simulation.
+   * (renderer effects, audio, toasts), unlike `stepOnce`, which only runs the simulation.
    */
   debugAdvance(n: number): void {
     for (let i = 0; i < n && this.state && this.state.match.phase !== 'ended'; i++) {
@@ -368,7 +364,7 @@ export class MatchController {
         ? 1
         : this.excitement * 0.6,
     );
-    this.captionsFrom(heard, events, nowMs);
+    this.toastsFrom(events, nowMs);
     this.countdownBeeps(state);
 
     // The renderer interpolates between ticks using the unspent accumulator.
@@ -400,15 +396,11 @@ export class MatchController {
     if (state.match.countdownRemaining <= 1) this.audio.playUi('go');
   }
 
-  private captionsFrom(heard: SimEvent[], events: SimEvent[], nowMs: number): void {
-    const state = this.state!;
-    // crowd banter would talk over the tutorial's own captions
-    const lines = this.director ? [] : this.captions.captionsFor(heard, state);
-    const current = useGameStore.getState().captions.filter((c) => c.expires > nowMs);
-    const added: Caption[] = lines.map((l) => ({ ...l, id: this.captionId++, expires: nowMs + l.ttlMs }));
-    if (added.length > 0 || current.length !== useGameStore.getState().captions.length) {
-      patch({ captions: [...current, ...added].slice(-2) });
-    }
+  /**
+   * Compact status notices (essential information only: incoming danger, the floor-trap waves, the Okada
+   * shield breaking...). The crowd's spoken reactions are voice clips, never on-screen text.
+   */
+  private toastsFrom(events: SimEvent[], nowMs: number): void {
     for (const e of events) {
       const toast = this.toastFor(e);
       if (toast) this.pushToast(toast, nowMs);

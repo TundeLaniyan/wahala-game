@@ -526,6 +526,19 @@ export class GameRenderer {
     };
   }
 
+  /**
+   * Where the playable board is on screen, in CSS pixels of the canvas: its four corners (far-left,
+   * far-right, near-right, near-left; the far ones at head height). Null before a match is loaded. The HUD
+   * uses it to keep notifications and subtitles off the board; tests assert it.
+   */
+  boardScreenCorners(): { x: number; y: number }[] | null {
+    if (!this.loaded) return null;
+    return this.rig.boardCornersNdc().map((p) => ({
+      x: ((p.x + 1) / 2) * this.width,
+      y: ((1 - p.y) / 2) * this.height,
+    }));
+  }
+
   stats(): RenderStats {
     const info = this.renderer.info.render;
     return {

@@ -629,68 +629,6 @@ button {
   border-color: var(--gold);
   box-shadow: 0 0 10px rgba(255, 198, 26, 0.3);
 }
-.toasts {
-  position: absolute;
-  top: clamp(112px, 22vh, 150px);
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.toast {
-  padding: 5px 22px;
-  font-family: var(--display);
-  letter-spacing: 0.1em;
-  font-size: clamp(0.95rem, 2.6vh, 1.2rem);
-  text-transform: uppercase;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(10, 12, 16, 0.92) 12%,
-    rgba(10, 12, 16, 0.92) 88%,
-    transparent
-  );
-  border-top: 2px solid var(--gold);
-  border-bottom: 2px solid var(--gold);
-  animation: pop 0.25s;
-}
-.toast.bad {
-  border-color: var(--red);
-  color: #ffd0c8;
-}
-.toast.good {
-  border-color: #4dff88;
-  color: #d4ffe2;
-}
-.captions {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(36px, 10vh, 70px);
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  max-width: 60vw;
-}
-.caption {
-  background: rgba(255, 246, 220, 0.96);
-  color: #2a1a05;
-  font-weight: 700;
-  font-style: italic;
-  padding: 4px 16px;
-  border-radius: 14px 14px 14px 3px;
-  font-size: clamp(0.85rem, 2.3vh, 1.1rem);
-  animation: pop 0.25s;
-  text-align: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-}
-.caption.warn,
-.caption.shock {
-  background: var(--gold);
-}
 .countdown {
   position: absolute;
   inset: 0;

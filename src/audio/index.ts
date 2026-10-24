@@ -1,12 +1,12 @@
 /**
- * Public API of the audio + crowd-captions module.
+ * Public API of the audio module.
  *
  * Layers (each with its own persistent volume, see prefs.ts):
  *  - MUSIC: the founder's approved playlist (public/audio/music/manifest.json, playlist.ts), one
  *    streamed track per match with an escalating endgame (music.ts, escalation.ts); listed files
  *    that are not present are skipped, so the music is silent until they are added;
- *  - AMBIENCE + VOICES: synthesised crowd beds, crowd reactions and spoken lines (pidgin.ts); no voice
- *    audio ships (the synthetic placeholders were rejected), see docs/AUDIO.md;
+ *  - AMBIENCE + VOICES: synthesised crowd beds and crowd reactions, plus the founder's approved Pidgin
+ *    voice clips (pidgin.ts: public/audio/voices/voices.json + recorded.json), see docs/AUDIO.md;
  *  - EFFECTS: synthesised gameplay sounds (src/audio/recipes).
  * Recorded files in public/audio override synthesised sounds slot by slot (samples.ts).
  *
@@ -18,7 +18,6 @@
  *   audio.setPaused(bool);              // pause menu: the music stream pauses and resumes
  *   // each sim tick:   const events = tick(state, intents);
  *   audio.handleEvents(events, state);  // effects, crowd reactions, spoken Pidgin, result stings
- *   const captions = captionGen.captionsFor(events, state);               // pure, separate
  *   audio.setIntensity(0..1);           // crowd excitement (the music escalates from the game clock itself)
  *   audio.stopMusic();                  // leaving the match: menu music returns, ambience fades
  *   audio.setMuted(bool);               // mute lives in the app settings (shared with the HUD button)
@@ -27,8 +26,6 @@
  */
 export { createAudio } from './engine';
 export type { AudioEngine, AudioOptions } from './engine';
-export { createCaptionGenerator } from './captions';
-export type { CaptionGenerator, CrowdCaption } from './captions';
 export type { AudioContextLike, ContextFactory } from './webaudio';
 export { SAMPLE_SLOTS } from './samples';
 export type { SlotEntry, SlotManifest, SlotReport, FetchLike } from './samples';
@@ -40,4 +37,5 @@ export { matchClock, tempoFor, toneFor, urgencyAt } from './escalation';
 export type { MatchClock } from './escalation';
 export { parseMusicManifest, pickMatchTrack, playlistFor } from './playlist';
 export type { MusicManifest, MusicTrack } from './playlist';
-export type { VoiceCategory, VoiceReport } from './pidgin';
+export { VOICE_TRIGGERS } from './pidgin';
+export type { SpokenTrace, VoiceReport, VoiceStatus, VoiceTrigger } from './pidgin';

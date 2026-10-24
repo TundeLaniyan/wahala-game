@@ -8,7 +8,7 @@ import { commands } from '../app/session';
 import type { HudMe, HudPlayer } from '../app/hud';
 import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
-import { RuleBanner, StageAlerts } from './StageAlerts';
+import { HudRail } from './HudRail';
 import { Minimap } from './Minimap';
 import { RumbleHud } from './RumbleHud';
 
@@ -87,7 +87,6 @@ function Timer({ seconds, total, urgent }: { seconds: number; total: number; urg
 export function Hud() {
   const hud = useGameStore((s) => s.hud);
   const toasts = useGameStore((s) => s.toasts);
-  const captions = useGameStore((s) => s.captions);
   const showStats = useGameStore((s) => s.showStats);
   const stats = useGameStore((s) => s.stats);
   const paused = useGameStore((s) => s.paused);
@@ -164,22 +163,7 @@ export function Hud() {
           </b>
         </div>
       )}
-      <div className="toasts">
-        <StageAlerts alerts={hud.stageAlerts} />
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.tone}`}>
-            {t.text}
-          </div>
-        ))}
-      </div>
-      <div className="captions">
-        {captions.map((c) => (
-          <div key={c.id} className={`caption ${c.tone}`}>
-            {c.text}
-          </div>
-        ))}
-      </div>
-      {hud.ruleBanner && <RuleBanner text={hud.ruleBanner} />}
+      <HudRail alerts={hud.stageAlerts} toasts={toasts} ruleBanner={hud.ruleBanner} rumble={!!rumble} />
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}
       {hud.entry && <EntryPanel entry={hud.entry} />}
       {!rumble && hud.phase === 'playing' && !hud.localAlive && (

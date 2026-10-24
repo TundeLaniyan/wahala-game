@@ -5,7 +5,8 @@ Target URL: **https://tundelaniyan.github.io/wahala-game/** (a project site, so 
 
 ## How it is built and published
 
-Since the mobile joystick / music-first update the preview is built from **`claude/wahala-mobile-joystick-audio`**.
+Since the voice integration (2026-10-24) the preview is built from **`claude/wahala-voice-integration`** (before
+that, from `claude/wahala-mobile-joystick-audio`, whose own copy of the workflow still publishes on its pushes).
 `.github/workflows/deploy.yml` is called by CI (`ci.yml`, job `deploy-preview`) on every push to that branch,
 **only after the full check has passed on that commit** (typecheck, lint, unit tests, build and the Playwright
 desktop + phone suite), so an unverified build is never published. It can also be run on demand from the Actions
@@ -29,7 +30,7 @@ with the source set to the `gh-pages` branch that old workflow cannot replace th
 4. After a minute the page shows "Your site is live at https://tundelaniyan.github.io/wahala-game/".
 
 Nothing else is needed: later pushes to the branch republish automatically. To publish without a code change, open
-**Actions -> Deploy preview to GitHub Pages -> Run workflow** on `claude/wahala-mobile-joystick-audio`.
+**Actions -> Deploy preview to GitHub Pages -> Run workflow** on `claude/wahala-voice-integration`.
 
 ## What could not be verified from the build environment
 
@@ -45,6 +46,7 @@ check `build.json` and the browser network panel (all requests should be 200, un
   screen for a full-screen app - `public/manifest.webmanifest` asks for fullscreen landscape).
 - Audio starts after the first tap (browser autoplay rules).
 - Music is streamed per arena (one MP3 when a match starts), not preloaded; 3D models load once with a progress bar.
+- Voice clips (MP3, 5-37 KB each) are fetched in the background when a match starts, only those that arena uses.
 
 ## Not this
 

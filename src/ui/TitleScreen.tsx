@@ -194,7 +194,12 @@ export function TitleScreen() {
               />
             ))}
           </div>
-          <AudioSettingsPanel muted={s.muted} onMutedChange={(muted) => set({ muted })} />
+          <AudioSettingsPanel
+            muted={s.muted}
+            onMutedChange={(muted) => set({ muted })}
+            subtitles={s.subtitles}
+            onSubtitlesChange={(subtitles) => set({ subtitles })}
+          />
         </section>
       </main>
       {busy && loading && (

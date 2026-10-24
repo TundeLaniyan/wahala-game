@@ -39,14 +39,13 @@ describe('public/audio documentation and manifest', () => {
   const dir = join(__dirname, '../../public/audio');
   const read = (f: string): string => readFileSync(join(dir, f), 'utf8');
 
-  it('ships no effect/voice/ambience recordings: slots.json is empty, only the approved music is recorded audio', () => {
+  it('ships no effect/ambience recordings: slots.json is empty; the audio files are the music and the TTS voice clips', () => {
     const manifest = JSON.parse(read('slots.json')) as { slots: Record<string, { license: string }> };
     expect(manifest.slots).toEqual({});
     expect(parseManifest(manifest).entries).toHaveLength(0);
-    expect(read('README.md')).toMatch(/No effect, voice or ambience recordings are shipped/i);
-    expect(read('LICENSES.md')).toMatch(
-      /only recorded audio shipped is the founder's approved Pixabay music/i,
-    );
+    expect(read('README.md')).toMatch(/No effect or ambience recordings are shipped/i);
+    expect(read('LICENSES.md')).toMatch(/approved Pixabay music and the founder-approved Gemini text-to-speech/i);
+    expect(read('LICENSES.md')).toMatch(/not recordings\s+of people/i);
     expect(read('LICENSES.md')).toMatch(/standalone/i);
     expect(read('LICENSES.md')).toMatch(/licen[cs]e/i);
   });

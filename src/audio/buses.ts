@@ -6,10 +6,14 @@
  *   warn    danger warnings (never ducked, slight boost)     -> warnBus (sqrt sfx vol) ---+-> master -> compressor -> out
  *   react   crowd reactions + spoken Pidgin                  -> notch -> reactDuck -> crowdBus +
  *   amb     Lagos street / bus-park / market beds            -> notch -> ambDuck ----> crowdBus /
+ *   voice   foreground spoken lines (reactions, warnings)    -> voiceBus (sqrt ambience vol) -> master
  *   (master -> soft limiter -> makeup trim -> soft clipper -> out)
  *
  * - `master`, `musicBus`, `sfxBus`, `crowdBus` carry the user volumes (crowdBus = "Lagos ambience and
  *   voices"). Mute only moves `master` (smoothly).
+ * - Spoken reactions sit in their own `voice` bus: no warning-band notch (it would eat the consonants), never
+ *   ducked, and it follows the ambience-and-voices slider on a square-root curve so a line stays intelligible
+ *   over the music-first default mix. Background conversations stay on the quieter, notched `amb` path.
  * - Warnings (horns, fuse ticks, alarms) sit in their own bus that is never ducked; the crowd paths
  *   carry a gentle notch at the warning band (WARN_BAND_HZ) so warnings stay readable.
  * - The master compressor works as a soft limiter so stacked explosions do not clip.
@@ -51,6 +55,13 @@ const WARN_BASE = 0.8;
  * plain effects are 4.6 dB below it. Zero is still silence.
  */
 export const warnLevel = (sfx: number): number => WARN_BASE * Math.sqrt(sfx);
+/**
+ * Foreground voice lines follow the ambience-and-voices slider on a square-root curve (like the warnings):
+ * at the 45 % default the bus sits at 0.87, so a clip mastered to -16 LUFS plays about 3.5 dB over the music
+ * ducked for an ordinary line and about 5.5 dB over it for an urgent one; zero is still silence.
+ */
+const VOICE_BASE = 1.3;
+export const voiceLevel = (ambience: number): number => VOICE_BASE * Math.sqrt(ambience);
 const SMOOTH = 0.02; // seconds, time constant for volume / mute changes
 
 /** Master limiter settings (dB, dB, ratio) and the makeup-gain compensation derived from them. */
@@ -79,14 +90,16 @@ export const SOFT_CLIP_CURVE: Float32Array = (() => {
 
 export const LIMITER_TRIM = Math.pow(10, -LIMITER_MAKEUP_DB / 20);
 
-export type DuckKind = 'warning' | 'blast' | 'speech';
+export type DuckKind = 'warning' | 'blast' | 'speech' | 'urgentSpeech';
 /** Gain the crowd paths dip to, and for how long (seconds). Reactions duck less than the bed. */
 const DUCK: Record<DuckKind, { amb: number; react: number; music: number; hold: number }> = {
   // the music is the loudest layer by default (M8): it makes clear room for warnings and big blasts
   warning: { amb: 0.5, react: 0.8, music: 0.5, hold: 0.9 },
   blast: { amb: 0.4, react: 0.75, music: 0.45, hold: 0.5 },
-  // a spoken Pidgin line: the babble beds and the music make room, the voice itself is never ducked
-  speech: { amb: 0.4, react: 1, music: 0.6, hold: 1.5 },
+  // a spoken line: the babble beds and the music make room, the voice itself (voice bus) is never ducked
+  speech: { amb: 0.4, react: 1, music: 0.5, hold: 1.5 },
+  // a spoken danger warning: the music and the crowd step further back for it
+  urgentSpeech: { amb: 0.3, react: 0.6, music: 0.4, hold: 1.5 },
 };
 
 export interface DuckOptions {
@@ -159,6 +172,8 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
   warnBus.connect(master);
   const crowdBus = gain(initial.ambience * CROWD_BASE);
   crowdBus.connect(master);
+  const voiceBus = gain(voiceLevel(initial.ambience));
+  voiceBus.connect(master);
   const musicBus = gain(initial.music * MUSIC_BASE);
   const musicDuck = gain(1);
   musicDuck.connect(musicBus);
@@ -180,6 +195,7 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
     amb: gain(1),
     react: gain(1),
     music: musicDuck,
+    voice: voiceBus,
   };
   inputs.amb.connect(ambNotch);
   inputs.react.connect(reactNotch);
@@ -213,6 +229,7 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
         sfx: clamp01(v.sfx),
       };
       smooth(crowdBus, volumes.ambience * CROWD_BASE);
+      smooth(voiceBus, voiceLevel(volumes.ambience));
       smooth(musicBus, volumes.music * MUSIC_BASE);
       smooth(sfxBus, volumes.sfx * SFX_BASE);
       smooth(warnBus, warnLevel(volumes.sfx));

@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { audioPrefs, isRecommendedMix } from '../audio/prefs';
 import type { AudioPrefs, PrefsStore } from '../audio/prefs';
+import { SUBTITLE_MODES } from '../app/settings';
+import type { SubtitleMode } from '../app/settings';
 import './AudioSettings.css';
 
 type VolumeKey = 'master' | 'music' | 'ambience' | 'sfx';
@@ -17,19 +19,35 @@ export interface AudioSettingsPanelProps {
   /** Mute lives in the app's GameSettings (it is shared with the HUD mute button). */
   muted: boolean;
   onMutedChange: (muted: boolean) => void;
+  /** Subtitles for the voice lines (a game setting, saved with the others). */
+  subtitles: SubtitleMode;
+  onSubtitlesChange: (mode: SubtitleMode) => void;
   /** Injected for tests; defaults to the shared persistent store. */
   store?: PrefsStore;
 }
 
 const pct = (v: number): string => `${Math.round(v * 100)}%`;
+const SUBTITLE_LABEL: Record<SubtitleMode, string> = {
+  off: 'Subtitles off',
+  on: 'Subtitles on',
+  large: 'Subtitles large',
+};
+const nextMode = (m: SubtitleMode): SubtitleMode =>
+  SUBTITLE_MODES[(SUBTITLE_MODES.indexOf(m) + 1) % SUBTITLE_MODES.length] ?? 'off';
 
 /**
  * Independent, persistent volume sliders (master / music / ambience and voices / effects), the
- * spoken-voices switch, mute and the "Recommended mix" button (restores the music-first defaults, also for
+ * spoken-voices switch, the subtitles setting (off / on / large), mute and the "Recommended mix" button (restores the music-first defaults, also for
  * a player whose browser still holds an older saved mix). Changes apply live (the audio engine follows the store) and
  * are saved to localStorage by the store itself.
  */
-export function AudioSettingsPanel({ muted, onMutedChange, store = audioPrefs }: AudioSettingsPanelProps) {
+export function AudioSettingsPanel({
+  muted,
+  onMutedChange,
+  subtitles,
+  onSubtitlesChange,
+  store = audioPrefs,
+}: AudioSettingsPanelProps) {
   const prefs: Readonly<AudioPrefs> = useSyncExternalStore(store.subscribe, store.get, store.get);
   const recommended = isRecommendedMix(prefs);
   return (
@@ -71,6 +89,17 @@ export function AudioSettingsPanel({ muted, onMutedChange, store = audioPrefs }:
         </button>
         <button
           type="button"
+          className={`chip${subtitles !== 'off' ? ' on' : ''}`}
+          data-testid="toggle-subtitles"
+          data-mode={subtitles}
+          aria-pressed={subtitles !== 'off'}
+          title="Show the voice line being spoken, beside the arena (off / on / large text)"
+          onClick={() => onSubtitlesChange(nextMode(subtitles))}
+        >
+          {SUBTITLE_LABEL[subtitles]}
+        </button>
+        <button
+          type="button"
           className={`chip${recommended ? ' on' : ''}`}
           data-testid="audio-reset"
           aria-pressed={recommended}
@@ -80,7 +109,9 @@ export function AudioSettingsPanel({ muted, onMutedChange, store = audioPrefs }:
           {recommended ? 'Recommended mix ✓' : 'Use recommended mix'}
         </button>
       </div>
-      <p className="audio-note">Spoken voice recordings are not included yet.</p>
+      <p className="audio-note">
+        Voices are synthetic Nigerian Pidgin clips (AI text-to-speech), more on the way.
+      </p>
     </div>
   );
 }

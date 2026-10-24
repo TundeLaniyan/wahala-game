@@ -3,9 +3,9 @@ import type { InputSourceName } from '../input';
 import type { CharacterId } from '../sim';
 import type { CameraMode, RenderStats } from '../render';
 import type { HudSnapshot } from './hud';
-import type { CrowdCaptionLine } from './ports';
 import { loadSettings } from './settings';
 import type { GameSettings } from './settings';
+import type { Subtitle } from './subtitles';
 
 export type Screen = 'title' | 'playing' | 'results';
 
@@ -16,9 +16,10 @@ export interface Toast {
   expires: number;
 }
 
-export interface Caption extends CrowdCaptionLine {
-  id: number;
-  expires: number;
+/** A screen point in CSS pixels. */
+export interface ScreenPoint {
+  x: number;
+  y: number;
 }
 
 export interface MatchSummary {
@@ -59,7 +60,13 @@ export interface UiState {
   hud: HudSnapshot | null;
   paused: boolean;
   toasts: Toast[];
-  captions: Caption[];
+  /** The voice line playing now, for the optional subtitles (shown only when settings.subtitles is on). */
+  subtitle: Subtitle | null;
+  /**
+   * The playable board's corners on screen (far-left, far-right, near-right, near-left; renderer
+   * `boardScreenCorners`), so the HUD keeps its notices beside the board. Null outside a match.
+   */
+  board: ScreenPoint[] | null;
   summary: MatchSummary | null;
   device: InputSourceName;
   touchCapable: boolean;
@@ -88,7 +95,8 @@ export const useGameStore = create<UiState>(() => ({
   hud: null,
   paused: false,
   toasts: [],
-  captions: [],
+  subtitle: null,
+  board: null,
   summary: null,
   device: 'keyboard',
   touchCapable: false,

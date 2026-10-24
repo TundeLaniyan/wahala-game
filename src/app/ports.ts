@@ -25,15 +25,6 @@ export interface AudioPort {
   setListener?(x: number | null): void;
 }
 
-export interface CrowdCaptionLine {
-  text: string;
-  tone: 'cheer' | 'tease' | 'shock' | 'warn' | 'sympathy';
-  ttlMs: number;
-}
-export interface CaptionPort {
-  captionsFor(events: readonly SimEvent[], state: Readonly<GameState>): CrowdCaptionLine[];
-}
-
 export interface RendererPort {
   loadGame(state: GameState): void;
   handleEvents(events: readonly SimEvent[], state: GameState): void;
@@ -62,5 +53,3 @@ export const NULL_AUDIO: AudioPort = {
   handleEvents: () => undefined,
   playUi: () => undefined,
 };
-
-export const NULL_CAPTIONS: CaptionPort = { captionsFor: () => [] };

@@ -16,8 +16,10 @@ import { Priority } from '../voices';
  *  - react: crowd reaction one-shots (ducked only lightly)
  *  - amb:   looping ambience beds (ducked under blasts/warnings)
  *  - music: Afrobeats music loops and stings (src/audio/music.ts; never used by synthesised recipes)
+ *  - voice: foreground spoken lines (src/audio/pidgin.ts; never used by synthesised recipes): no warning-band
+ *           notch, never ducked, follows the ambience-and-voices slider on a gentler curve
  */
-export type Bus = 'sfx' | 'warn' | 'react' | 'amb' | 'music';
+export type Bus = 'sfx' | 'warn' | 'react' | 'amb' | 'music' | 'voice';
 
 export interface RenderEnv {
   /** Sample rate to render at. */

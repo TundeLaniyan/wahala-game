@@ -35,11 +35,12 @@ jobs:
             playwright-report
             test-results
 
-  # The GitHub Pages preview is the build of the branch the founder is testing; it is published only
-  # after everything above passed on this exact commit.
+  # The GitHub Pages preview is the build of the branch the founder is testing (since the voice
+  # integration: claude/wahala-voice-integration); it is published only after everything above passed on
+  # this exact commit.
   deploy-preview:
     needs: check
-    if: github.event_name == 'push' && github.ref_name == 'claude/wahala-mobile-joystick-audio'
+    if: github.event_name == 'push' && github.ref_name == 'claude/wahala-voice-integration'
     permissions:
       contents: write
     uses: ./.github/workflows/deploy.yml

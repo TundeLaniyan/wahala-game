@@ -37,6 +37,15 @@ const APPROVED_FILES = new Set(
     .map((t) => t.file),
 );
 
+/** The approved voice clips (public/audio/voices/recorded.json). */
+const VOICE_FILES = new Set(
+  (
+    JSON.parse(readFileSync(new URL('../public/audio/voices/recorded.json', import.meta.url), 'utf8')) as {
+      clips: { file: string }[];
+    }
+  ).clips.map((c) => c.file),
+);
+
 const sliderValue = (page: Page, key: string): Promise<string> =>
   page.getByTestId(`audio-${key}`).inputValue();
 
@@ -149,12 +158,18 @@ test.describe('audio settings, persistence and music start', () => {
     expect(after.contexts).toBe(1);
     // synthesised effects and beds are fine; nothing long enough to be a music loop (> 20 s) may start
     expect(after.started.filter((s) => s.rate > 0 && s.frames / s.rate > 20)).toEqual([]);
-    // only the approved playlist files may be requested (probed or streamed); never a voice pack, never
-    // anything generated
-    expect(audioFiles.filter((u) => !/\/audio\/music\/[A-Za-z0-9_-]+\.mp3(\?|$)/.test(u))).toEqual([]);
+    // only the approved playlist files and the approved voice clips listed in recorded.json may be
+    // requested (probed, streamed or fetched); never anything generated or rejected
+    const musicReqs = audioFiles.filter((u) => /\/audio\/music\/[A-Za-z0-9_-]+\.mp3(\?|$)/.test(u));
+    const voiceReqs = audioFiles.filter((u) => /\/audio\/voices\/recorded\/[A-Za-z0-9_-]+\.mp3(\?|$)/.test(u));
+    expect(audioFiles.filter((u) => !musicReqs.includes(u) && !voiceReqs.includes(u))).toEqual([]);
     expect(
-      audioFiles.map((u) => /([A-Za-z0-9_-]+\.mp3)(\?|$)/.exec(u)![1]).filter((f) => !APPROVED_FILES.has(f!)),
+      musicReqs.map((u) => /([A-Za-z0-9_-]+\.mp3)(\?|$)/.exec(u)![1]).filter((f) => !APPROVED_FILES.has(f!)),
     ).toEqual([]);
+    expect(
+      voiceReqs.map((u) => /([A-Za-z0-9_-]+\.mp3)(\?|$)/.exec(u)![1]).filter((f) => !VOICE_FILES.has(f!)),
+    ).toEqual([]);
+    expect(new Set(voiceReqs).size).toBe(voiceReqs.length); // each clip requested once
 
     // the playlist player in the real browser: a match track only if an approved file is present,
     // otherwise silent; the pause menu reaches the music

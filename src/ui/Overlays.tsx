@@ -11,7 +11,12 @@ export function PauseOverlay() {
       <div className="card">
         <h2>PAUSED</h2>
         <p>Take your time, oga.</p>
-        <AudioSettingsPanel muted={s.muted} onMutedChange={(muted) => commands.updateSettings({ muted })} />
+        <AudioSettingsPanel
+          muted={s.muted}
+          onMutedChange={(muted) => commands.updateSettings({ muted })}
+          subtitles={s.subtitles}
+          onSubtitlesChange={(subtitles) => commands.updateSettings({ subtitles })}
+        />
         <div className="row">
           <button
             type="button"

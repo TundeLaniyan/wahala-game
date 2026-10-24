@@ -3,20 +3,23 @@
  * audio, bots and match controller, runs the animation loop, and exposes `commands` to the UI.
  */
 import { createBot } from '../ai';
-import { createAudio, createCaptionGenerator } from '../audio';
+import { createAudio } from '../audio';
+import type { SpokenTrace } from '../audio';
 import { InputManager } from '../input';
 import { GameRenderer, assets, renderCastPortraits } from '../render';
 import { registerBusts } from '../assets/portraits';
-import type { CharacterId, GameState } from '../sim';
+import type { CharacterId, GameState, SimEvent } from '../sim';
 import { enterImmersiveMode } from './fullscreen';
 import { AttractController } from './AttractController';
 import { MatchController } from './MatchController';
 import { TutorialController } from './TutorialController';
 import { NULL_AUDIO } from './ports';
-import type { AudioPort, CaptionPort } from './ports';
+import type { AudioPort } from './ports';
 import { saveSettings } from './settings';
 import type { GameSettings } from './settings';
 import { patch, useGameStore } from './store';
+import type { ScreenPoint } from './store';
+import { createSubtitleFeed } from './subtitles';
 
 let controller: MatchController | null = null;
 let attract: AttractController | null = null;
@@ -26,6 +29,21 @@ let audio: AudioPort = NULL_AUDIO;
 let raf = 0;
 let canvasEl: HTMLCanvasElement | null = null;
 let resizeObserver: ResizeObserver | null = null;
+
+/** The voice line playing now, for the optional subtitles (the HUD shows it only when the setting is on). */
+const subtitles = createSubtitleFeed({
+  get: () => useGameStore.getState().subtitle,
+  set: (subtitle) => patch({ subtitle }),
+  setTimer: (fn, ms) => setTimeout(fn, ms),
+  clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+});
+/** Debug (`?debug`): the last voice lines the engine scheduled, newest last. */
+const spokenLog: SpokenTrace[] = [];
+const onSpeak = (t: SpokenTrace): void => {
+  spokenLog.push(t);
+  if (spokenLog.length > 64) spokenLog.shift();
+  subtitles.push(t);
+};
 
 const input = new InputManager({
   onNav: (c) => controller?.handleNav(c),
@@ -45,12 +63,34 @@ function frame(now: number): void {
     controller.frame(now);
     if (useGameStore.getState().tutorial) tutorial?.frame();
   }
+  if (now - lastBoardCheck > 250) {
+    lastBoardCheck = now;
+    publishBoard();
+  }
   if (useGameStore.getState().showStats && renderer && Math.floor(now / 500) !== lastStatsTick) {
     lastStatsTick = Math.floor(now / 500);
     patch({ stats: renderer.stats() });
   }
 }
 let lastStatsTick = 0;
+let lastBoardCheck = -Infinity;
+
+/** Publishes where the board is on screen (only when it moved by a pixel or more), for the HUD layout. */
+function publishBoard(): void {
+  const st = useGameStore.getState();
+  const corners: ScreenPoint[] | null =
+    st.screen === 'playing' && renderer
+      ? (renderer.boardScreenCorners()?.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) })) ?? null)
+      : null;
+  const prev = st.board;
+  const same =
+    prev === corners ||
+    (prev !== null &&
+      corners !== null &&
+      prev.length === corners.length &&
+      prev.every((p, i) => p.x === corners[i]!.x && p.y === corners[i]!.y));
+  if (!same) patch({ board: corners });
+}
 /** Camera view used inside How to Play (never saved). */
 let tutorialView: 'action' | 'overview' = 'action';
 
@@ -94,18 +134,15 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     return () => undefined;
   }
   try {
-    audio = createAudio();
+    audio = createAudio({ onSpeak });
   } catch {
     audio = NULL_AUDIO;
   }
-  const captionGen = createCaptionGenerator(Date.now() & 0xffff);
-  const captions: CaptionPort = { captionsFor: (events, state) => captionGen.captionsFor(events, state) };
   controller = new MatchController({
     renderer: renderer as never,
     input,
     botFactory: params.has('nobots') ? () => ({ decide: () => ({}) }) : createBot,
     audio,
-    captions,
   });
   applyAudioSettings(settings);
   renderer.setCameraView(settings.cameraView);
@@ -202,15 +239,18 @@ export const commands = {
     if (useGameStore.getState().touchCapable) void enterImmersiveMode();
     audio.playUi('start');
     attract?.stop();
+    subtitles.clear();
     const seed = Number(new URLSearchParams(location.search).get('seed'));
     controller?.start(useGameStore.getState().settings, Number.isFinite(seed) && seed > 0 ? seed : undefined);
   },
   rematch(): void {
     audio.playUi('start');
+    subtitles.clear();
     controller?.rematch();
   },
   toTitle(): void {
     audio.playUi('back');
+    subtitles.clear();
     controller?.stop();
     if (settingsAllowAttract()) attract?.start();
   },
@@ -294,6 +334,20 @@ function exposeDebugHandle(): void {
     renderer: () => renderer,
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
     music: () => (audio as { musicStatus?: () => unknown }).musicStatus?.() ?? null,
+    /** Voice registry and per-match loading state, and the lines scheduled so far. */
+    voices: () => (audio as { voiceStatus?: () => unknown }).voiceStatus?.() ?? null,
+    voiceReport: () => (audio as { whenVoicesLoaded?: () => Promise<unknown> }).whenVoicesLoaded?.() ?? null,
+    voiceSceneLoaded: () =>
+      (audio as { whenVoiceSceneLoaded?: () => Promise<void> }).whenVoiceSceneLoaded?.() ?? null,
+    spoken: () => spokenLog.slice(),
+    /** Plays a line of this voice trigger now (stops the current line first). */
+    previewVoice: (trigger: string) =>
+      (audio as { previewVoice?: (t: string) => boolean }).previewVoice?.(trigger) ?? false,
+    /** Feeds a batch of sim events to the audio only (voice and sound checks; the match itself is untouched). */
+    hear: (events: SimEvent[]) => {
+      const state = controller?.state;
+      if (state) audio.handleEvents(events, state);
+    },
     stepTicks: (n: number) => {
       for (let i = 0; i < n; i++) controller?.stepOnce();
     },

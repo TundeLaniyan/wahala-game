@@ -3,9 +3,19 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { createPrefsStore } from '../../src/audio/prefs';
 import { AudioSettingsPanel, VOLUME_CONTROLS } from '../../src/ui/AudioSettings';
+import { DEFAULT_GAME_SETTINGS } from '../../src/app/settings';
+import type { SubtitleMode } from '../../src/app/settings';
 
-const render = (muted: boolean, store = createPrefsStore(() => null)) =>
-  renderToStaticMarkup(createElement(AudioSettingsPanel, { muted, onMutedChange: () => undefined, store }));
+const render = (muted: boolean, store = createPrefsStore(() => null), subtitles: SubtitleMode = 'off') =>
+  renderToStaticMarkup(
+    createElement(AudioSettingsPanel, {
+      muted,
+      onMutedChange: () => undefined,
+      subtitles,
+      onSubtitlesChange: () => undefined,
+      store,
+    }),
+  );
 
 describe('audio settings panel', () => {
   it('offers the four independent volumes with their saved values, a mute button and the voices switch', () => {
@@ -42,8 +52,18 @@ describe('audio settings panel', () => {
     expect(html).toContain('Voices off');
   });
 
-  it('says plainly that no spoken voice recordings are included', () => {
-    expect(render(false)).toMatch(/voice recordings are not included/i);
+  it('says plainly that the voices are synthetic text-to-speech clips', () => {
+    expect(render(false)).toMatch(/synthetic/i);
+    expect(render(false)).toMatch(/text-to-speech/i);
+  });
+
+  it('offers subtitles off (the default), on and large', () => {
+    expect(DEFAULT_GAME_SETTINGS.subtitles).toBe('off');
+    expect(render(false)).toMatch(/data-testid="toggle-subtitles"[^>]*>Subtitles off/);
+    expect(render(false, undefined, 'on')).toMatch(
+      /aria-pressed="true"[^>]*data-mode="on"|data-mode="on"[^>]*>Subtitles on/,
+    );
+    expect(render(false, undefined, 'large')).toContain('Subtitles large');
   });
 
   it('the recommended-mix button shows when the mix is the recommended one and offers it otherwise', () => {

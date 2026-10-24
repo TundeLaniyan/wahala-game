@@ -1,5 +1,10 @@
 # Voice recording script
 
+> **Superseded (2026-10-24).** The line catalogue is now the founder's own voice plan
+> (`tools/audio/voices/founder_manifest.json`, generated into `public/audio/voices/voices.json`) and the clips are
+> added with `tools/audio/voices/import_voices.py`; see `docs/AUDIO.md` "Voice lines". The table below is the old
+> catalogue, kept for reference only: none of these ids exists in the game any more.
+
 Every crowd line in the catalogue (`public/audio/voices/voices.json`). **No audio is shipped for these lines**: the
 synthetic placeholder voices were rejected and removed (see `docs/AUDIO.md`), so each line is silent until a
 recording by a Nigerian speaker is added. Originally exported from the (removed) `tools/audiogen/` script; edit

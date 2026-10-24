@@ -334,6 +334,26 @@ export class CameraRig {
     return true;
   }
 
+  /**
+   * The playable floor's four corners in normalised device coordinates (far-left, far-right, near-right,
+   * near-left), for HUD layout and tests that keep overlays off the board. The far corners are lifted to a
+   * standing character's head height, so a far-row player stays clear too.
+   */
+  boardCornersNdc(): { x: number; y: number }[] {
+    const W = this.layout.width;
+    const H = this.layout.height;
+    const pts: [number, number, number][] = [
+      [-W / 2, 1.9, -H / 2],
+      [W / 2, 1.9, -H / 2],
+      [W / 2, 0, H / 2],
+      [-W / 2, 0, H / 2],
+    ];
+    return pts.map(([x, y, z]) => {
+      this.v.set(x, y, z).project(this.camera);
+      return { x: this.v.x, y: this.v.y };
+    });
+  }
+
   /** Jump straight to the goal on the next update (new match). */
   cut(): void {
     this.snap = true;

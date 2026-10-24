@@ -6,11 +6,13 @@
  * Layers (each with its own user volume, see prefs.ts / buses.ts):
  *   music     the approved playlist, one streamed track per match (music.ts, playlist.ts), with the
  *             endgame escalation of escalation.ts; optional menu playlist
- *   ambience  crowd beds, crowd reactions and spoken lines (pidgin.ts)
+ *   ambience  crowd beds, crowd reactions and background conversations (pidgin.ts)
+ *   voice     the founder's approved Pidgin voice clips (pidgin.ts), on their own bus over the music
  *   sfx       synthesised gameplay effects and warnings (src/audio/recipes)
  * The generated music and voices were rejected (docs/AUDIO.md). The music manifest lists only the
  * founder's approved, licensed tracks; files that are not present are skipped and the player stays
- * silent without them. The voices stay silent until licensed recordings are listed. Recorded files in
+ * silent without them. Voice lines play only when an approved clip is listed in recorded.json, and their
+ * audio is fetched per arena when a match starts (never before, never all at once). Recorded files in
  * public/audio (see samples.ts) may override synthesised sounds slot by slot.
  *
  * Contract highlights (see index.ts for the public surface):
@@ -24,7 +26,7 @@ import { matchClock } from './escalation';
 import { createMusicPlayer, defaultMediaFactory, defaultProbe, probeVia } from './music';
 import type { MediaFactory, MusicPlayer, MusicReport, MusicStatus, ProbeLike } from './music';
 import { createPidginVoices } from './pidgin';
-import type { PidginVoices, SpokenTrace, VoiceReport } from './pidgin';
+import type { PidginVoices, SpokenTrace, VoiceReport, VoiceStatus, VoiceTrigger } from './pidgin';
 import { createPidginReactor } from './pidginReactions';
 import type { PidginReactor } from './pidginReactions';
 import { audioPrefs } from './prefs';
@@ -97,8 +99,17 @@ export interface AudioEngine {
   whenMusicLoaded(): Promise<MusicReport>;
   /** What the music is doing (debugging and tests). */
   musicStatus(): MusicStatus;
-  /** Resolves when the spoken-Pidgin packs have been tried (never rejects). */
+  /** Resolves when the voice manifests have been read (never rejects). Audio loads per match. */
   whenVoicesLoaded(): Promise<VoiceReport>;
+  /** Resolves when the current match's voice clips have been fetched or failed (never rejects). */
+  whenVoiceSceneLoaded(): Promise<void>;
+  /** What the voices are doing (debugging and tests). */
+  voiceStatus(): VoiceStatus | null;
+  /**
+   * Debug / audition: stops whatever is speaking and plays a line of this trigger now (if this match has
+   * one loaded). Returns true when a line started.
+   */
+  previewVoice(trigger: VoiceTrigger): boolean;
   /** Stops timers and sounds and closes the context. The engine is inert afterwards. */
   dispose(): void;
 }
@@ -167,7 +178,7 @@ const SILENT_MUSIC: MusicStatus = {
   position: 0,
   playing: false,
 };
-const NO_VOICES: VoiceReport = { loadedPacks: [], failed: [], clips: 0, scenes: 0 };
+const NO_VOICES: VoiceReport = { registered: [], triggers: [], ignored: [] };
 const UI_SOUND: Record<Parameters<AudioEngine['playUi']>[0], SoundId> = {
   click: 'ui_click',
   back: 'ui_back',
@@ -252,6 +263,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       onSpeak: opts.onSpeak,
     });
     voices.setEnabled(prefs ? prefs.get().voices : true);
+    voices.setScene(matchWanted ? arenaWanted : null);
     return {
       ctx,
       buses,
@@ -351,7 +363,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
           fail(e);
           return EMPTY_REPORT;
         });
-        // music first (the title screen wants it), then the spoken-Pidgin packs
+        // music first (the title screen wants it), then the two small voice manifests (clips load per match)
         musicLoaded = g.music.load();
         voicesLoaded = musicLoaded.then(() => g.voices.load());
       } catch (e) {
@@ -385,6 +397,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       pausedWanted = false;
       guard((g) => {
         g.music.startMatch(arenaWanted);
+        g.voices.setScene(arenaWanted);
         applyAmbience(g);
         keepRunning(g);
       });
@@ -394,6 +407,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       matchWanted = false;
       pausedWanted = false;
       guard((g) => {
+        g.voices.setScene(null);
         g.music.setPaused(false);
         g.music.setScene('menu');
         applyAmbience(g);
@@ -451,6 +465,17 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
     whenMusicLoaded: () => musicLoaded,
     musicStatus: () => (graph && !disposed ? graph.music.status() : SILENT_MUSIC),
     whenVoicesLoaded: () => voicesLoaded,
+    whenVoiceSceneLoaded: () => (graph && !disposed ? graph.voices.whenSceneLoaded() : Promise.resolve()),
+    voiceStatus: () => (graph && !disposed ? graph.voices.status() : null),
+    previewVoice(trigger) {
+      let ok = false;
+      guard((g) => {
+        if (muted) return;
+        g.voices.stop();
+        ok = g.voices.say(trigger, { force: true });
+      });
+      return ok;
+    },
     dispose() {
       if (disposed) return;
       const g = graph;

@@ -1,0 +1,167 @@
+/*
+ * HUD rail: the column beside the board for the remaining transient text (stage alerts, status toasts, the
+ * arena rule, subtitles). Its width and height are set inline from the board's screen position (hudRail.ts);
+ * the values here are the fallbacks before the first measurement.
+ */
+.hud-rail {
+  position: absolute;
+  left: max(10px, env(safe-area-inset-left));
+  /* just under the portrait row (portrait width clamp(54px, 11vh, 92px), aspect 0.82) */
+  top: calc(max(8px, env(safe-area-inset-top)) + clamp(54px, 11vh, 92px) / 0.82 + 8px);
+  width: 160px;
+  max-height: 40vh;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* City Rumble: the follow camera keeps the player centred, so the column hangs top-centre above them */
+.hud-rail.rail-top {
+  left: 50%;
+  top: clamp(112px, 22vh, 150px);
+  transform: translateX(-50%);
+  width: min(420px, 60vw);
+  align-items: center;
+}
+
+.hud-rail .toast {
+  max-width: 100%;
+  padding: 3px 9px 3px 8px;
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  font-size: clamp(0.62rem, 2.5vh, 0.95rem);
+  line-height: 1.15;
+  text-transform: uppercase;
+  color: #f4ecdc;
+  background: rgba(10, 12, 16, 0.88);
+  border: 0;
+  border-left: 3px solid var(--gold);
+  border-radius: 4px;
+  animation: rail-in 0.18s ease-out;
+}
+.hud-rail .toast.bad {
+  border-left-color: var(--red);
+  color: #ffd6cc;
+}
+.hud-rail .toast.good {
+  border-left-color: #4dff88;
+  color: #d4ffe2;
+}
+
+/* stage alerts and the arena rule: same content, compact and wrapping inside the rail */
+.hud-rail .stage-alerts {
+  align-items: flex-start;
+  max-width: 100%;
+  margin: 0;
+}
+.hud-rail .stage-alert {
+  max-width: 100%;
+  gap: 5px;
+  padding: 3px 7px;
+  white-space: normal;
+  line-height: 1.12;
+  letter-spacing: 0.05em;
+  font-size: clamp(0.62rem, 2.6vh, 1rem);
+  transform-origin: left center;
+}
+/* the column never grows towards the board: no scale-in or throb (they would push past its edge) */
+.hud-rail .stage-alert,
+.hud-rail .stage-alert.danger {
+  animation: rail-in 0.18s ease-out;
+}
+.hud-rail .stage-alert.danger {
+  animation:
+    rail-in 0.18s ease-out,
+    rail-throb 0.36s ease-in-out infinite alternate;
+}
+.hud-rail .stage-alert.info {
+  font-size: clamp(0.58rem, 2.2vh, 0.85rem);
+}
+.hud-rail .stage-alert.danger {
+  font-size: clamp(0.68rem, 2.9vh, 1.1rem);
+}
+.hud-rail .rule-banner {
+  position: static;
+  display: block;
+  max-width: 100%;
+  padding: 0;
+}
+.hud-rail .rule-inner {
+  max-width: 100%;
+  padding: 7px 9px 8px;
+  text-align: left;
+}
+.hud-rail .rule-inner b {
+  font-size: clamp(0.75rem, 3vh, 1.25rem);
+  letter-spacing: 0.08em;
+}
+.hud-rail .rule-inner span {
+  font-size: clamp(0.62rem, 2.4vh, 0.95rem);
+}
+.hud-rail.rail-top .stage-alerts,
+.hud-rail.rail-top .rule-inner {
+  align-items: center;
+  text-align: center;
+}
+
+/* subtitles: plain, high-contrast text on a dark plate; no speech bubble */
+.subtitle-slot {
+  max-width: 100%;
+}
+.subtitle {
+  margin: 0;
+  max-width: 100%;
+  padding: 3px 8px;
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: clamp(0.66rem, 2.6vh, 0.98rem);
+  line-height: 1.22;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.8);
+  border-left: 3px solid var(--gold);
+  border-radius: 3px;
+  animation: rail-in 0.15s ease-out;
+}
+.subtitle.large {
+  font-size: clamp(0.82rem, 3.4vh, 1.3rem);
+}
+.subtitle.urgent {
+  border-left-color: var(--red);
+}
+.subtitle.ambient {
+  font-style: italic;
+  font-weight: 500;
+  color: #ddd5c4;
+  border-left-color: rgba(255, 255, 255, 0.35);
+}
+
+@keyframes rail-throb {
+  from {
+    box-shadow: 0 0 0 rgba(255, 59, 31, 0);
+    filter: brightness(1);
+  }
+  to {
+    box-shadow: 0 0 14px rgba(255, 59, 31, 0.85);
+    filter: brightness(1.18);
+  }
+}
+@keyframes rail-in {
+  from {
+    transform: translateX(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-rail .toast,
+  .hud-rail .stage-alert,
+  .subtitle {
+    animation: none;
+  }
+}

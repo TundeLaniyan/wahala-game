@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { SimEvent } from '../../src/sim';
-import { CATEGORY_COOLDOWN } from '../../src/audio/pidgin';
-import type { VoiceCategory } from '../../src/audio/pidgin';
-import { newMemory, reactionsFor, stingForEnd } from '../../src/audio/pidginReactions';
+import { AMBIENT_TRIGGERS, VOICE_TRIGGERS } from '../../src/audio/pidgin';
+import type { VoiceTrigger } from '../../src/audio/pidgin';
+import { FUSE_WARN_TICKS, newMemory, reactionsFor, stingForEnd } from '../../src/audio/pidginReactions';
+import type { VoiceRequest } from '../../src/audio/pidginReactions';
 import type { NearMiss } from '../../src/audio/nearMiss';
 import { addGenerator, put, sandbox } from '../helpers';
 import { SAMPLES } from './helpers';
@@ -13,10 +15,20 @@ function game() {
   s.players.forEach((p, i) => (p.isBot = i !== 0));
   return s;
 }
-const cats = (r: { category: string }[]): string[] => r.map((x) => x.category);
+const first = (r: VoiceRequest[]): VoiceTrigger[] => r.map((x) => x.triggers[0]!);
+const elim = (
+  playerId: number,
+  cause: Extract<SimEvent, { type: 'playerEliminated' }>['cause'],
+): SimEvent => ({
+  type: 'playerEliminated',
+  playerId,
+  cause,
+  x: 3,
+  y: 3,
+});
 
-describe('what the crowd says about what happens', () => {
-  it('maps each match result to the right closing line, forced', () => {
+describe('which voice trigger each game event fires', () => {
+  it('victory: only the human winning gets the closing line (forced); losses and draws have none', () => {
     const s = game();
     const win = reactionsFor(
       [{ type: 'matchEnded', result: { kind: 'win', winnerId: 0 } }],
@@ -24,184 +36,208 @@ describe('what the crowd says about what happens', () => {
       [],
       newMemory(),
     );
-    const lose = reactionsFor(
-      [{ type: 'matchEnded', result: { kind: 'win', winnerId: 2 } }],
-      s,
-      [],
-      newMemory(),
-    );
-    const draw = reactionsFor(
-      [{ type: 'matchEnded', result: { kind: 'draw', reason: 'simultaneous' } }],
-      s,
-      [],
-      newMemory(),
-    );
-    expect(cats(win)).toEqual(['win']);
-    expect(cats(lose)).toEqual(['lose']);
-    expect(cats(draw)).toEqual(['draw']);
-    for (const r of [...win, ...lose, ...draw]) expect(r.opts.force).toBe(true);
-    expect(stingForEnd([{ type: 'matchEnded', result: { kind: 'win', winnerId: 0 } }], s)).toBe('win');
+    expect(first(win)).toEqual(['ON_MATCH_VICTORY']);
+    expect(win[0]!.opts.force).toBe(true);
+    expect(
+      reactionsFor([{ type: 'matchEnded', result: { kind: 'win', winnerId: 2 } }], s, [], newMemory()),
+    ).toEqual([]);
     expect(stingForEnd([{ type: 'matchEnded', result: { kind: 'win', winnerId: 1 } }], s)).toBe('lose');
-    expect(stingForEnd([{ type: 'matchEnded', result: { kind: 'draw', reason: 'timeout' } }], s)).toBe(
-      'draw',
-    );
     expect(stingForEnd([SAMPLES.generatorExploded], s)).toBeNull();
   });
 
-  it('eliminations: the human gets a forced "oga don waka"; bots get a cheer line; vehicle kills name the vehicle', () => {
+  it('generator danger: a short fuse with the human in its cross is an urgent, forced warning, once per generator', () => {
     const s = game();
-    const flame = { kind: 'flame', ownerId: 1, eventId: 1 } as const;
-    const human = reactionsFor(
-      [{ type: 'playerEliminated', playerId: 0, cause: flame, x: 3, y: 3 }],
-      s,
-      [],
-      newMemory(),
-    );
-    expect(cats(human)).toEqual(['elim_human']);
+    put(s, 0, 5, 5);
+    const inCross = addGenerator(s, { ownerId: 1, x: 7, y: 5, timer: FUSE_WARN_TICKS - 5, range: 2 });
+    addGenerator(s, { ownerId: 1, x: 6, y: 6, timer: 20, range: 3 }); // diagonal: not in the cross
+    addGenerator(s, { ownerId: 1, x: 5, y: 9, timer: 20, range: 2 }); // same column but out of range
+    addGenerator(s, { ownerId: 1, x: 5, y: 6, timer: FUSE_WARN_TICKS + 30 }); // fuse still long
+    const mem = newMemory();
+    const r = reactionsFor([], s, [], mem);
+    expect(first(r)).toEqual(['ON_GENERATOR_CRITICAL_PROXIMITY']);
+    expect(r[0]!.opts).toMatchObject({ force: true, key: `fuse${inCross.id}` });
+    expect(reactionsFor([], s, [], mem)).toEqual([]); // not twice for the same generator
+    s.players[0]!.alive = false;
+    expect(reactionsFor([], s, [], newMemory())).toEqual([]); // nobody left to warn
+  });
+
+  it('eliminations: the human is forced; Danfo kills and self-eliminations prefer their own lines, falling back', () => {
+    const s = game();
+    const human = reactionsFor([elim(0, { kind: 'flame', ownerId: 1, eventId: 1 })], s, [], newMemory());
+    expect(human[0]!.triggers).toEqual(['ON_PLAYER_ELIMINATED']);
     expect(human[0]!.opts.force).toBe(true);
-    const bot = reactionsFor(
-      [{ type: 'playerEliminated', playerId: 1, cause: flame, x: 3, y: 3 }],
+    const bot = reactionsFor([elim(1, { kind: 'flame', ownerId: 0, eventId: 1 })], s, [], newMemory());
+    expect(bot[0]!.opts.force).toBe(false);
+    expect(bot[0]!.opts.chance).toBeLessThan(1);
+    const danfo = reactionsFor(
+      [elim(1, { kind: 'vehicle', ownerId: 2, vehicleKind: 'danfo', eventId: 4 })],
       s,
       [],
       newMemory(),
     );
-    expect(cats(bot)).toEqual(['elim_bot']);
-    for (const kind of ['danfo', 'taxi', 'keke'] as const) {
-      const v = reactionsFor(
-        [
-          {
-            type: 'playerEliminated',
-            playerId: 1,
-            cause: { kind: 'vehicle', ownerId: 0, vehicleKind: kind, eventId: 2 },
-            x: 3,
-            y: 3,
-          },
-        ],
+    expect(danfo[0]!.triggers).toEqual(['ON_DANFO_HAZARD_IMPACT', 'ON_PLAYER_ELIMINATED']);
+    const bay = reactionsFor([elim(1, { kind: 'hazard', style: 'danfo', eventId: 9 })], s, [], newMemory());
+    expect(bay[0]!.triggers[0]).toBe('ON_DANFO_HAZARD_IMPACT');
+    const taxi = reactionsFor(
+      [elim(1, { kind: 'vehicle', ownerId: 2, vehicleKind: 'taxi', eventId: 4 })],
+      s,
+      [],
+      newMemory(),
+    );
+    expect(taxi[0]!.triggers).toEqual(['ON_PLAYER_ELIMINATED']);
+    const self = reactionsFor([elim(2, { kind: 'flame', ownerId: 2, eventId: 1 })], s, [], newMemory());
+    expect(self[0]!.triggers).toEqual([
+      'ON_PLAYER_COMEDIC_ELIMINATION',
+      'ON_PLAYER_SELF_TRAP',
+      'ON_PLAYER_ELIMINATED',
+    ]);
+    // two eliminations in one batch: one line
+    expect(
+      reactionsFor(
+        [elim(1, { kind: 'crush', eventId: 1 }), elim(2, { kind: 'crush', eventId: 1 })],
         s,
         [],
         newMemory(),
-      );
-      expect(cats(v)).toEqual([kind]);
-    }
+      ),
+    ).toHaveLength(1);
   });
 
-  it('vehicle attacks: Danfo, taxi and Keke each get their own line on launch and warning; wrecks get a wreck line', () => {
-    const s = game();
-    for (const kind of ['danfo', 'taxi', 'keke'] as const) {
-      const launch = reactionsFor(
-        [{ type: 'vehicleLaunched', vehicleId: 1, kind, ownerId: 1 }],
-        s,
-        [],
-        newMemory(),
-      );
-      expect(cats(launch)).toEqual([kind]);
-      const warn = reactionsFor(
-        [{ type: 'vehicleWarning', vehicleId: 2, kind, ownerId: 1, entry: { x: 0, y: 3 } }],
-        s,
-        [],
-        newMemory(),
-      );
-      expect(cats(warn)).toEqual([kind]);
-    }
-    const wreck = reactionsFor([SAMPLES.vehicleDestroyed], s, [], newMemory());
-    expect(cats(wreck)).toEqual(['vehicle_destroyed']);
-  });
-
-  it('Okada protection: the human is saved (forced); a bot losing its Okada is only sometimes remarked on', () => {
+  it('Okada protection: the human saved is forced; a bot losing its Okada only sometimes', () => {
     const s = game();
     const me = reactionsFor([{ type: 'okadaBroken', playerId: 0, x: 1, y: 1 }], s, [], newMemory());
-    expect(cats(me)).toEqual(['okada_save']);
+    expect(first(me)).toEqual(['ON_OKADA_SHIELD_SAVE']);
     expect(me[0]!.opts.force).toBe(true);
     const bot = reactionsFor([{ type: 'okadaBroken', playerId: 1, x: 1, y: 1 }], s, [], newMemory());
-    expect(cats(bot)).toEqual(['okada_break']);
-    expect(bot[0]!.opts.chance).toBeLessThan(1);
+    expect(bot[0]!.opts.force).toBe(false);
   });
 
-  it('near misses: a blast flame near the human is an "escape"; a vehicle brushing past names the vehicle; bots rarely get one', () => {
+  it("vehicles: an approaching Keke (not the human's own) and a Danfo launch; stage Keke and Danfo sweeps", () => {
     const s = game();
-    const flame: NearMiss = { kind: 'flame', playerId: 0, x: 5, y: 5, human: true };
-    expect(cats(reactionsFor([], s, [flame], newMemory()))).toEqual(['escape']);
-    const taxi: NearMiss = { kind: 'vehicle', playerId: 0, vehicleKind: 'taxi', x: 5, y: 5, human: true };
-    expect(cats(reactionsFor([], s, [taxi], newMemory()))).toEqual(['taxi']);
-    const botMiss: NearMiss = { kind: 'flame', playerId: 1, x: 5, y: 5, human: false };
-    expect(reactionsFor([], s, [botMiss], newMemory())[0]!.opts.chance).toBeLessThan(0.5);
-    // an okada near miss is already covered by okadaBroken
+    const keke: SimEvent = {
+      type: 'vehicleWarning',
+      vehicleId: 3,
+      kind: 'keke',
+      ownerId: 1,
+      entry: { x: 0, y: 4 },
+    };
+    expect(first(reactionsFor([keke], s, [], newMemory()))).toEqual(['ON_KEKE_HAZARD_SPAWN']);
+    expect(reactionsFor([{ ...keke, ownerId: 0 } as SimEvent], s, [], newMemory())).toEqual([]);
+    expect(
+      first(
+        reactionsFor(
+          [{ type: 'vehicleLaunched', vehicleId: 3, kind: 'danfo', ownerId: 1 }],
+          s,
+          [],
+          newMemory(),
+        ),
+      ),
+    ).toEqual(['ON_DANFO_HAZARD_SWEEP']);
+    expect(
+      reactionsFor([{ type: 'vehicleLaunched', vehicleId: 3, kind: 'taxi', ownerId: 1 }], s, [], newMemory()),
+    ).toEqual([]);
+    const sweep = (SAMPLES.stageWarning as Extract<SimEvent, { type: 'stageWarning' }>).event;
+    expect(first(reactionsFor([SAMPLES.stageWarning], s, [], newMemory()))).toEqual([
+      'ON_DANFO_HAZARD_SWEEP',
+    ]);
+    // traffic sweeps with id % 3 === 1 are driven by a Keke (stagePresentation.sweepVehicleKind)
+    const kekeLane: SimEvent = { type: 'stageWarning', event: { ...sweep, style: 'traffic', id: 4 } };
+    expect(first(reactionsFor([kekeLane], s, [], newMemory()))).toEqual(['ON_KEKE_HAZARD_SPAWN']);
+    const carLane: SimEvent = { type: 'stageWarning', event: { ...sweep, style: 'checkpoint', id: 4 } };
+    expect(reactionsFor([carLane], s, [], newMemory())).toEqual([]);
+  });
+
+  it('close calls: a flame beside the human is a narrow escape; a vehicle brushing past prefers the gasp', () => {
+    const s = game();
+    const flame: NearMiss = { kind: 'flame', playerId: 0, x: 2, y: 2, human: true };
+    const r = reactionsFor([], s, [flame], newMemory());
+    expect(r[0]!.triggers).toEqual(['ON_PLAYER_NARROW_ESCAPE']);
+    expect(r[0]!.opts.chance).toBe(1);
+    const car: NearMiss = { kind: 'vehicle', playerId: 0, vehicleKind: 'taxi', x: 2, y: 2, human: true };
+    expect(reactionsFor([], s, [car], newMemory())[0]!.triggers).toEqual([
+      'ON_NEAR_MISS_OR_TRAP_ARMED',
+      'ON_PLAYER_NARROW_ESCAPE',
+    ]);
+    const botMiss: NearMiss = { kind: 'flame', playerId: 2, x: 2, y: 2, human: false };
+    expect(reactionsFor([], s, [botMiss], newMemory())[0]!.opts.chance).toBeLessThan(1);
+    // the Okada case has its own line (above), not an escape
     expect(
       reactionsFor([], s, [{ kind: 'okada', playerId: 0, x: 1, y: 1, human: true }], newMemory()),
     ).toEqual([]);
   });
 
-  it('a generator about to blow near the human triggers one "run!" per generator; far ones and others stay quiet', () => {
-    const s = game();
-    put(s, 0, 5, 5);
-    const near = addGenerator(s, { ownerId: 1, x: 6, y: 5, timer: 40 });
-    addGenerator(s, { ownerId: 1, x: 12, y: 9, timer: 30 }); // too far away
-    addGenerator(s, { ownerId: 1, x: 5, y: 6, timer: 120 }); // fuse still long
-    const mem = newMemory();
-    const first = reactionsFor([], s, [], mem);
-    expect(cats(first)).toEqual(['fuse']);
-    expect(first[0]!.opts.key).toBe(`fuse${near.id}`);
-    expect(reactionsFor([], s, [], mem)).toEqual([]); // same generator is not called twice
-    const kill = reactionsFor(
-      [],
-      { ...s, players: s.players.map((p, i) => (i === 0 ? { ...p, alive: false } : p)) },
-      [],
-      newMemory(),
-    );
-    expect(cats(kill)).toEqual([]); // nobody to warn
-  });
-
-  it('final-seconds calls fire once at 30 s and once at 10 s, and re-arm for the next match', () => {
+  it('final seconds: fires once at 0:30 (forced) and re-arms for the next match', () => {
     const s = game();
     const mem = newMemory();
     const dur = s.config.match.durationTicks;
     s.match.playTicks = dur - 1900;
     expect(reactionsFor([], s, [], mem)).toEqual([]);
     s.match.playTicks = dur - 1800;
-    expect(cats(reactionsFor([], s, [], mem))).toEqual(['final']);
-    s.match.playTicks = dur - 1700;
-    expect(reactionsFor([], s, [], mem)).toEqual([]);
-    s.match.playTicks = dur - 590;
-    expect(cats(reactionsFor([], s, [], mem))).toEqual(['final']);
+    const r = reactionsFor([], s, [], mem);
+    expect(first(r)).toEqual(['ON_FINAL_COUNTDOWN_START']);
+    expect(r[0]!.opts.force).toBe(true);
     s.match.playTicks = dur - 100;
     expect(reactionsFor([], s, [], mem)).toEqual([]);
     s.match.phase = 'countdown';
     reactionsFor([], s, [], mem);
     s.match.phase = 'playing';
     s.match.playTicks = dur - 1800;
-    expect(cats(reactionsFor([], s, [], mem))).toEqual(['final']);
+    expect(first(reactionsFor([], s, [], mem))).toEqual(['ON_FINAL_COUNTDOWN_START']);
   });
 
-  it('every category the mapping can produce has a cooldown and exists in the Pidgin script', async () => {
+  it('blasts: one line per batch, more likely when big or close to the human', () => {
+    const s = game();
+    put(s, 0, 1, 1);
+    const far = { ...SAMPLES.generatorExploded, x: 12, y: 9 } as SimEvent;
+    const r = reactionsFor([far], s, [], newMemory());
+    expect(r[0]!.triggers).toEqual(['ON_GENERATOR_DETONATE']);
+    const near = { ...SAMPLES.generatorExploded, x: 2, y: 1 } as SimEvent;
+    const n = reactionsFor([near], s, [], newMemory());
+    expect(n[0]!.triggers).toEqual(['ON_SUDDEN_EXPLOSION_NEARBY', 'ON_GENERATOR_DETONATE']);
+    expect(n[0]!.opts.chance!).toBeGreaterThan(r[0]!.opts.chance!);
+    const chain = reactionsFor([far, { ...far, generatorId: 2 } as SimEvent], s, [], newMemory());
+    expect(chain).toHaveLength(1);
+  });
+
+  it('colour: floor traps arming, hazards, bumps and a rare pickup; never forced', () => {
+    const s = game();
+    const got = (e: SimEvent) => first(reactionsFor([e], s, [], newMemory()));
+    expect(got(SAMPLES.trapsWarning)).toEqual(['ON_NEAR_MISS_OR_TRAP_ARMED']);
+    expect(got(SAMPLES.hazardTriggered)).toEqual(['ON_HAZARD_IMPACT']);
+    expect(got(SAMPLES.playerPushed)).toEqual(['ON_STALL_BUMP_OR_BLOCK']);
+    expect(got(SAMPLES.pickupCollected)).toEqual(['ON_POWERUP_PICKUP_OR_CLUTCH']);
+    for (const e of Object.values(SAMPLES) as SimEvent[]) {
+      if (e.type === 'matchEnded' || e.type === 'okadaBroken' || e.type === 'playerEliminated') continue;
+      for (const r of reactionsFor([e], s, [], newMemory()))
+        expect(r.opts.force ?? false, e.type).toBe(false);
+    }
+  });
+
+  it('every gameplay trigger is reachable from some event, and every trigger in the catalogue is one the game knows', () => {
     const s = game();
     put(s, 0, 5, 5);
     addGenerator(s, { ownerId: 1, x: 6, y: 5, timer: 10 });
     s.match.playTicks = s.config.match.durationTicks - 100;
     const produced = new Set<string>();
-    for (const e of Object.values(SAMPLES) as SimEvent[]) {
-      for (const r of reactionsFor([e], s, [], newMemory())) produced.add(r.category);
+    const batches: SimEvent[][] = (Object.values(SAMPLES) as SimEvent[]).map((e) => [e]);
+    batches.push(
+      [elim(1, { kind: 'vehicle', ownerId: 2, vehicleKind: 'danfo', eventId: 1 })],
+      [elim(1, { kind: 'flame', ownerId: 1, eventId: 1 })],
+      [{ type: 'vehicleWarning', vehicleId: 3, kind: 'keke', ownerId: 1, entry: { x: 0, y: 4 } }],
+      [{ type: 'vehicleLaunched', vehicleId: 3, kind: 'danfo', ownerId: 1 }],
+      [{ type: 'crowdLanded', throwId: 1, x: 2, y: 2, kind: 'firecracker' }],
+    );
+    const misses: NearMiss[] = [
+      { kind: 'vehicle', playerId: 0, vehicleKind: 'taxi', x: 4, y: 5, human: true },
+    ];
+    for (const b of batches)
+      for (const r of reactionsFor(b, s, misses, newMemory())) r.triggers.forEach((t) => produced.add(t));
+    for (const t of VOICE_TRIGGERS) {
+      if (AMBIENT_TRIGGERS.includes(t)) continue; // played by the background scheduler
+      expect(produced.has(t), `${t} is never fired`).toBe(true);
     }
-    for (const c of [
-      'win',
-      'lose',
-      'draw',
-      'danfo',
-      'taxi',
-      'keke',
-      'escape',
-      'elim_bot',
-      'elim_human',
-    ] satisfies VoiceCategory[])
-      produced.add(c);
-    const script = JSON.parse(
-      (await import('node:fs')).readFileSync('public/audio/voices/voices.json', 'utf8'),
-    ) as { clips: { pack: string; category: string }[] };
-    const shipped = new Set(script.clips.filter((c) => c.pack === 'react').map((c) => c.category));
-    for (const c of produced) {
-      expect(CATEGORY_COOLDOWN, c).toHaveProperty(c);
-      expect(shipped.has(c), `no recorded/synthetic line for category ${c}`).toBe(true);
-    }
-    // ...and the reverse: no shipped category is unreachable
-    for (const c of shipped) expect(CATEGORY_COOLDOWN, c).toHaveProperty(c);
+    const catalogue = JSON.parse(readFileSync('public/audio/voices/voices.json', 'utf8')) as {
+      lines: { id: string; trigger: string }[];
+    };
+    for (const l of catalogue.lines) expect(VOICE_TRIGGERS as readonly string[], l.id).toContain(l.trigger);
   });
 });

@@ -1,16 +1,20 @@
 /**
- * Guards the founder's decision on the generated audio of the `claude/wahala-lagos-audio` branch:
- * the synthetic Afrobeats music, the synthetic Pidgin voices and the generated Lagos ambience beds
- * were REJECTED. The playback infrastructure is kept, but nothing generated may ship or play.
- *
- * The ONLY audio files allowed are the founder's ten approved Pixabay tracks, listed below by id and
- * in public/audio/music/manifest.json. Adding any other audio means changing this list deliberately.
+ * Guards the founder's decisions on shipped audio:
+ *  - the synthetic Afrobeats music, the Kokoro TTS Pidgin voices and the generated Lagos ambience beds of
+ *    the `claude/wahala-lagos-audio` branch were REJECTED and may never come back;
+ *  - the music is the founder's approved Pixabay tracks, listed below by id and in public/audio/music/manifest.json;
+ *  - the voices are the founder's approved Gemini TTS clips (2026-10-24), imported by
+ *    tools/audio/voices/import_voices.py and listed in public/audio/voices/recorded.json; the rejected
+ *    conductor recordings (conductor_cms_01) may never ship.
+ * Adding any other audio means changing this file deliberately.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseMusicManifest } from '../../src/audio/playlist';
-import type { RecordedManifest, VoiceManifest } from '../../src/audio/pidgin';
+import { voiceLevel } from '../../src/audio/buses';
+import { DEFAULT_AUDIO_PREFS } from '../../src/audio/prefs';
+import { parseRecorded, parseVoiceCatalogue, registerLines } from '../../src/audio/pidgin';
 
 const ROOT = join(__dirname, '../..');
 const AUDIO = join(ROOT, 'public/audio');
@@ -41,11 +45,14 @@ function walk(dir: string): string[] {
 }
 
 describe('rejected generated audio stays disabled', () => {
-  it('the only audio files under public/audio are approved Pixabay tracks in public/audio/music', () => {
+  it('the only audio files under public/audio are approved Pixabay tracks and the listed, approved voice clips', () => {
     const audioFiles = walk(AUDIO)
       .map((p) => relative(AUDIO, p).split('\\').join('/'))
       .filter((p) => /\.(ogg|mp3|wav|m4a|flac|aac|opus|webm)$/i.test(p));
-    const allowed = new Set(Object.keys(APPROVED).map((id) => `music/${id}.mp3`));
+    const voiceClips = json<{ clips: { file: string }[] }>('voices/recorded.json').clips.map(
+      (c) => `voices/recorded/${c.file}`,
+    );
+    const allowed = new Set([...Object.keys(APPROVED).map((id) => `music/${id}.mp3`), ...voiceClips]);
     expect(audioFiles.filter((p) => !allowed.has(p))).toEqual([]);
   });
 
@@ -100,20 +107,105 @@ describe('rejected generated audio stays disabled', () => {
     }
   });
 
-  it('the voice catalogue has no packs and is not flagged as shipping synthetic speech', () => {
-    const v = json<VoiceManifest>('voices/voices.json');
-    expect(v.packs).toEqual({});
-    expect(v.synthetic).toBe(false);
-    expect(v.note).toMatch(/no voice audio is shipped/i);
-  });
-
-  it('no recordings are listed for the Pidgin lines or the sample slots', () => {
-    expect(json<RecordedManifest>('voices/recorded.json').clips).toEqual([]);
+  it('no recordings are listed for the sample slots (effects and ambience beds stay synthesised)', () => {
     expect(json<{ slots: Record<string, unknown> }>('slots.json').slots).toEqual({});
   });
 
   it('the generators of the rejected audio are not in the repository', () => {
     expect(() => statSync(join(ROOT, 'tools/audiogen'))).toThrow();
+  });
+});
+
+describe('voice clips (founder-approved Gemini TTS, 2026-10-24)', () => {
+  const catalogue = parseVoiceCatalogue(json('voices/voices.json'));
+  const recorded = parseRecorded(json('voices/recorded.json'));
+  const MASTERS = join(ROOT, 'tools/audio/voices/masters');
+
+  it('the catalogue is the founder plan: 47 planned voice lines plus the rejected conductor line, no sound effects', () => {
+    expect(catalogue.ignored).toEqual([]);
+    const lines = catalogue.catalogue.lines;
+    expect(lines.filter((l) => l.status === 'planned')).toHaveLength(47);
+    expect(lines.filter((l) => l.status === 'rejected').map((l) => l.id)).toEqual(['conductor_cms_01']);
+    expect(
+      lines.some((l) => /horn|idle|accel|engine|footsteps|objects|clatter|trolley|traffic_amb/.test(l.id)),
+    ).toBe(false);
+    expect(Object.keys(catalogue.catalogue.zones).sort()).toEqual(['bus_park', 'market']);
+  });
+
+  it('every listed clip is a licensed, playable line with its MP3 present, a WAV master kept, and sane length', () => {
+    expect(recorded.ignored).toEqual([]);
+    const reg = registerLines(catalogue.catalogue, recorded.clips);
+    expect(reg.ignored).toEqual([]);
+    expect(reg.lines).toHaveLength(recorded.clips.length);
+    const raw = json<{ clips: { id: string; duration: number; peakDb: number }[] }>(
+      'voices/recorded.json',
+    ).clips;
+    for (const c of recorded.clips) {
+      expect(c.file).toBe(`${c.id}.mp3`);
+      expect(c.license).toMatch(/Gemini/);
+      expect(c.license).toMatch(/synthetic/i); // never presented as a recording of a person
+      const b = readFileSync(join(AUDIO, 'voices/recorded', c.file));
+      const mpeg = b[0] === 0xff && (b[1]! & 0xe0) === 0xe0;
+      const id3 = b.subarray(0, 3).toString('latin1') === 'ID3';
+      expect(mpeg || id3, `${c.file} is not MP3 audio`).toBe(true);
+      expect(b.length, c.file).toBeGreaterThan(2000);
+      expect(b.length, c.file).toBeLessThan(80_000);
+      expect(statSync(join(MASTERS, `${c.id}.wav`)).isFile()).toBe(true);
+      const meta = raw.find((r) => r.id === c.id)!;
+      expect(meta.duration).toBeGreaterThan(0.3);
+      expect(meta.duration).toBeLessThan(8);
+    }
+    // masters and clips match one to one
+    expect(
+      readdirSync(MASTERS)
+        .filter((n) => n.endsWith('.wav'))
+        .sort(),
+    ).toEqual(recorded.clips.map((c) => `${c.id}.wav`).sort());
+  });
+
+  it('the first batch: the 19 clips the founder supplied', () => {
+    expect(recorded.clips.map((c) => c.id).sort()).toEqual(
+      [
+        'danfo_hit_01',
+        'danfo_hit_02',
+        'danfo_hit_03',
+        'danger_explosion_01',
+        'danger_explosion_02',
+        'danger_explosion_03',
+        'danger_run_01',
+        'danger_run_02',
+        'danger_run_03',
+        'elimination_01',
+        'elimination_02',
+        'elimination_03',
+        'escape_01',
+        'escape_02',
+        'escape_03',
+        'keke_approach_01',
+        'keke_approach_02',
+        'keke_approach_03',
+        'market_come_buy_01',
+      ].sort(),
+    );
+  });
+
+  it('the rejected conductor recordings are nowhere: not listed, not shipped, not kept as masters', () => {
+    const everything = [...walk(AUDIO), ...walk(join(ROOT, 'tools/audio/voices'))].map((p) =>
+      p.toLowerCase(),
+    );
+    expect(everything.filter((p) => p.includes('conductor_cms'))).toEqual([]);
+    expect(recorded.clips.some((c) => c.id.includes('conductor_cms'))).toBe(false);
+  });
+
+  it('at the default mix a voice peak leaves headroom before the master limiter (no clipping, no distortion)', () => {
+    const raw = json<{ clips: { id: string; peakDb: number }[] }>('voices/recorded.json').clips;
+    const d = DEFAULT_AUDIO_PREFS;
+    for (const c of raw) {
+      expect(c.peakDb, c.id).toBeLessThanOrEqual(-1);
+      // loudest line gain is 1 (urgent); the voice bus follows the ambience slider; then the master slider
+      const peak = Math.pow(10, c.peakDb / 20) * 1 * voiceLevel(d.ambience) * d.master;
+      expect(20 * Math.log10(peak), c.id).toBeLessThan(-3);
+    }
   });
 });
 

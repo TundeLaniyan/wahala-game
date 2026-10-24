@@ -388,13 +388,13 @@ describe('volume and mute', () => {
     audio.setVolumes({ master: 1, music: 1, ambience: 1, sfx: 0 });
     const master = ctx.master();
     const direct = ctx.gains.filter((g) => g.connections.includes(master));
-    // sfxBus, warnBus, crowdBus and musicBus all feed the master; sfx at 0 silences two of them
-    expect(direct.length).toBe(4);
+    // sfxBus, warnBus, crowdBus, voiceBus and musicBus all feed the master; sfx at 0 silences two of them
+    expect(direct.length).toBe(5);
     expect(direct.filter((g) => g.gain.value === 0)).toHaveLength(2);
     audio.setVolumes({ master: 1, music: 0, ambience: 1, sfx: 1 });
     expect(direct.filter((g) => g.gain.value === 0)).toHaveLength(1); // only the music bus
     audio.setVolumes({ master: 1, music: 1, ambience: 0, sfx: 1 });
-    expect(direct.filter((g) => g.gain.value === 0)).toHaveLength(1); // only the crowd/ambience bus
+    expect(direct.filter((g) => g.gain.value === 0)).toHaveLength(2); // the crowd/ambience bus and the voice bus
   });
 
   it('applies volumes and mute chosen before unlock', async () => {

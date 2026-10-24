@@ -1,6 +1,9 @@
 import type { CharacterId, Difficulty, MatchMode } from '../sim';
 import type { CameraView, QualityLevel } from '../render';
 
+export type SubtitleMode = 'off' | 'on' | 'large';
+export const SUBTITLE_MODES: readonly SubtitleMode[] = ['off', 'on', 'large'];
+
 export interface GameSettings {
   /** Standard arenas: 2-4 competitors (one human). */
   competitors: 2 | 3 | 4;
@@ -18,6 +21,8 @@ export interface GameSettings {
   touchControls: 'auto' | 'on' | 'off';
   /** Stadium-mode camera only: the follow camera, or the whole arena. Standard matches ignore it. */
   cameraView: CameraView;
+  /** Subtitles for the voice line playing now (beside the board, never over it): off (default), on, or large text. */
+  subtitles: SubtitleMode;
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
@@ -34,6 +39,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   muted: false,
   touchControls: 'auto',
   cameraView: 'action',
+  subtitles: 'off',
 };
 
 const KEY = 'wahala.settings.v1';
@@ -42,7 +48,9 @@ export function loadSettings(): GameSettings {
   try {
     const raw = globalThis.localStorage?.getItem(KEY);
     if (!raw) return { ...DEFAULT_GAME_SETTINGS };
-    return { ...DEFAULT_GAME_SETTINGS, ...(JSON.parse(raw) as Partial<GameSettings>) };
+    const merged = { ...DEFAULT_GAME_SETTINGS, ...(JSON.parse(raw) as Partial<GameSettings>) };
+    if (!SUBTITLE_MODES.includes(merged.subtitles)) merged.subtitles = 'off';
+    return merged;
   } catch {
     return { ...DEFAULT_GAME_SETTINGS };
   }
