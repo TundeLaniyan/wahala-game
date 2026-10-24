@@ -40,8 +40,19 @@ const TAU_ZOOM = 0.55;
 const TAU_PITCH = 0.45;
 /** Height of the north-street Danfos & storey facades kept above the back wall in the overview. */
 const FAR_TOP = 3.1;
-/** Max |NDC x| of the near arena corners in the phone layout (clear of the touch controls). */
-const NEAR_X_COMPACT = 0.59;
+/** On phones only the back wall itself (1.6 m panels, 1.85 m piers) must clear the HUD: the board comes first. */
+const FAR_TOP_COMPACT = 2.0;
+/**
+ * Max |NDC x| of the near arena corners in the phone layout. The on-screen controls live in two strips
+ * beside the board's near row: the action-button column on the right is `PHONE_CONTROL_STRIP` screen
+ * heights wide (styles.css `.actions` in the compact layout: 30vh plus an 8 px gap) and the floating
+ * thumbstick's resting ring fits in the same width on the left. In NDC that strip is
+ * 2 * strip * height / width = 2 * strip / aspect.
+ */
+export const PHONE_CONTROL_STRIP = 0.28;
+export function compactNearX(aspect: number): number {
+  return MathUtils.clamp(1 - (2 * PHONE_CONTROL_STRIP) / aspect, 0.55, 0.76);
+}
 
 interface Pose {
   x: number;
@@ -112,16 +123,18 @@ export class CameraRig {
     const fov = this.overviewFov;
     const W = this.layout.width;
     const H = this.layout.height;
+    // Perspective widens the near row. In the short landscape (phone) layout the thumbstick's resting
+    // place and the action buttons sit beside the near row, so the near corners are kept between them;
+    // the board fills the rest (the scenery above the back wall gives way to it).
+    const compact = insets.top >= 0.12 && aspect > 1.2;
+    const farTop = compact ? FAR_TOP_COMPACT : FAR_TOP;
     const pts = [
-      new Vector3(-W / 2 - 0.35, FAR_TOP, -H / 2 - 0.5),
-      new Vector3(W / 2 + 0.35, FAR_TOP, -H / 2 - 0.5),
+      new Vector3(-W / 2 - 0.35, farTop, -H / 2 - 0.5),
+      new Vector3(W / 2 + 0.35, farTop, -H / 2 - 0.5),
       new Vector3(-W / 2 - 0.3, 0, H / 2 + 0.45),
       new Vector3(W / 2 + 0.3, 0, H / 2 + 0.45),
     ];
-    // Perspective widens the near row. In the short landscape (phone) layout the on-screen D-pad and
-    // action buttons sit in the bottom corners, so the near corners are kept inside them.
-    const compact = insets.top >= 0.12 && aspect > 1.2;
-    const nearX = compact ? NEAR_X_COMPACT : 0.97;
+    const nearX = compact ? compactNearX(aspect) : 0.97;
     const maxX = (p: Vector3): number => (p.z > 0 ? nearX : 0.97);
     const yTop = 1 - insets.top * 2;
     const yBottom = -1 + insets.bottom * 2;
@@ -311,8 +324,8 @@ export class CameraRig {
       [W / 2, 0, -H / 2, 1],
       [-W / 2, 1.9, -H / 2 + 0.5, 1],
       [W / 2, 1.9, -H / 2 + 0.5, 1],
-      [-W / 2, 0, H / 2, compact ? NEAR_X_COMPACT + 0.02 : 1],
-      [W / 2, 0, H / 2, compact ? NEAR_X_COMPACT + 0.02 : 1],
+      [-W / 2, 0, H / 2, compact ? compactNearX(this.camera.aspect) + 0.02 : 1],
+      [W / 2, 0, H / 2, compact ? compactNearX(this.camera.aspect) + 0.02 : 1],
     ];
     for (const [x, y, z, maxX] of pts) {
       this.v.set(x, y, z).project(this.camera);

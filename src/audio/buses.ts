@@ -3,7 +3,7 @@
  *
  *   music   Afrobeats loops + stings (src/audio/music.ts)   -> musicDuck -> musicBus ----\
  *   sfx     effects                                          -> sfxBus -------------------+
- *   warn    danger warnings (never ducked, slight boost)     -> warnBus (sfx volume) -----+-> master -> compressor -> out
+ *   warn    danger warnings (never ducked, slight boost)     -> warnBus (sqrt sfx vol) ---+-> master -> compressor -> out
  *   react   crowd reactions + spoken Pidgin                  -> notch -> reactDuck -> crowdBus +
  *   amb     Lagos street / bus-park / market beds            -> notch -> ambDuck ----> crowdBus /
  *   (master -> soft limiter -> makeup trim -> soft clipper -> out)
@@ -34,14 +34,23 @@ export const WARN_BAND_HZ = 2600;
 /** Headroom scalers so that a 1.0 slider never clips the mix. */
 const CROWD_BASE = 0.8;
 /**
- * Music headroom: 1.3 raised by +2.5 dB (founder: "the music is somewhat too quiet", decision N13).
- * The master limiter and soft clip keep the sum below full scale; the warning duck is a little deeper
- * so alarms and fuse ticks still cut through.
+ * Music bus at unity: every track is levelled to about -14 LUFS by its manifest `gain`, so a 100 % music
+ * slider plays it at that level and the music-first default (90 %, master 85 %) lands at about -16.8 LUFS
+ * after the master limiter, which then takes about 1 dB off the peaks (measured with ffmpeg, decision M8).
+ * The louder default comes from the slider alone: the earlier +2.5 dB bus lift (N13, base 1.73) is gone,
+ * so the boost is not applied twice and the limiter is not driven into pumping.
  */
-export const MUSIC_LIFT_DB = 2.5;
-export const MUSIC_BASE = 1.3 * Math.pow(10, MUSIC_LIFT_DB / 20);
+export const MUSIC_BASE = 1.0;
+/** The music bus before decision M8; saved music levels are converted from it so they sound the same. */
+export const LEGACY_MUSIC_BASE = 1.3 * Math.pow(10, 2.5 / 20);
 const SFX_BASE = 0.62;
 const WARN_BASE = 0.8;
+/**
+ * Danger warnings follow the effects slider on a gentler curve (square root) so a quieter effects mix
+ * never hides a hazard telegraph: at the 50 % default they are 1.6 dB below the old 85 % level while the
+ * plain effects are 4.6 dB below it. Zero is still silence.
+ */
+export const warnLevel = (sfx: number): number => WARN_BASE * Math.sqrt(sfx);
 const SMOOTH = 0.02; // seconds, time constant for volume / mute changes
 
 /** Master limiter settings (dB, dB, ratio) and the makeup-gain compensation derived from them. */
@@ -73,8 +82,9 @@ export const LIMITER_TRIM = Math.pow(10, -LIMITER_MAKEUP_DB / 20);
 export type DuckKind = 'warning' | 'blast' | 'speech';
 /** Gain the crowd paths dip to, and for how long (seconds). Reactions duck less than the bed. */
 const DUCK: Record<DuckKind, { amb: number; react: number; music: number; hold: number }> = {
-  warning: { amb: 0.5, react: 0.8, music: 0.7, hold: 0.9 },
-  blast: { amb: 0.4, react: 0.75, music: 0.6, hold: 0.5 },
+  // the music is the loudest layer by default (M8): it makes clear room for warnings and big blasts
+  warning: { amb: 0.5, react: 0.8, music: 0.5, hold: 0.9 },
+  blast: { amb: 0.4, react: 0.75, music: 0.45, hold: 0.5 },
   // a spoken Pidgin line: the babble beds and the music make room, the voice itself is never ducked
   speech: { amb: 0.4, react: 1, music: 0.6, hold: 1.5 },
 };
@@ -145,7 +155,7 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
 
   const sfxBus = gain(initial.sfx * SFX_BASE);
   sfxBus.connect(master);
-  const warnBus = gain(initial.sfx * WARN_BASE);
+  const warnBus = gain(warnLevel(initial.sfx));
   warnBus.connect(master);
   const crowdBus = gain(initial.ambience * CROWD_BASE);
   crowdBus.connect(master);
@@ -205,7 +215,7 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
       smooth(crowdBus, volumes.ambience * CROWD_BASE);
       smooth(musicBus, volumes.music * MUSIC_BASE);
       smooth(sfxBus, volumes.sfx * SFX_BASE);
-      smooth(warnBus, volumes.sfx * WARN_BASE);
+      smooth(warnBus, warnLevel(volumes.sfx));
       smooth(master, isMuted ? 0 : volumes.master);
     },
     setMuted(m) {
@@ -217,7 +227,8 @@ export function createBuses(ctx: AudioContextLike, initial: Volumes, muted: bool
       const now = Math.max(ctx.currentTime, o.at ?? 0);
       const until = now + (o.hold ?? d.hold);
       const active = now < duckUntil;
-      if (active && d.amb >= duckAmb && until <= duckUntil) return; // already deep and long enough
+      const deepEnough = d.amb >= duckAmb && d.react >= duckReact && d.music >= duckMusic;
+      if (active && deepEnough && until <= duckUntil) return; // already deep and long enough
       duckAmb = active ? Math.min(d.amb, duckAmb) : d.amb;
       duckReact = active ? Math.min(d.react, duckReact) : d.react;
       duckMusic = active ? Math.min(d.music, duckMusic) : d.music;

@@ -7,7 +7,15 @@
  * The store is framework-free (a tiny observable) so the engine, the React settings panel and the
  * tests can all use it. Storage access is injected and every read/write is guarded: private mode,
  * disabled storage or corrupt JSON all fall back to the defaults without throwing.
+ *
+ * The defaults are the music-first "recommended mix" (decision M8). Players who never touched the sliders
+ * have nothing stored and simply get it. Settings saved under the old key are migrated once: a mix that
+ * still equals the old defaults becomes the recommended mix; a mix the player changed is kept, with its
+ * music level converted so it sounds exactly as loud as before the music bus changed (LEGACY_MUSIC_BASE).
+ * `reset()` restores the recommended mix at any time (the "Recommended mix" button).
  */
+import { LEGACY_MUSIC_BASE, MUSIC_BASE } from './buses';
+
 export interface AudioPrefs {
   /** 0..1 */
   master: number;
@@ -21,7 +29,17 @@ export interface AudioPrefs {
   voices: boolean;
 }
 
+/** The recommended, music-first mix (founder: music 90, effects 50, ambience and voices 45, master 85). */
 export const DEFAULT_AUDIO_PREFS: Readonly<AudioPrefs> = {
+  master: 0.85,
+  music: 0.9,
+  ambience: 0.45,
+  sfx: 0.5,
+  voices: true,
+};
+
+/** The defaults before the music-first mix; a saved mix equal to these was never really chosen. */
+export const LEGACY_DEFAULT_AUDIO_PREFS: Readonly<AudioPrefs> = {
   master: 0.8,
   music: 0.45,
   ambience: 0.65,
@@ -29,7 +47,9 @@ export const DEFAULT_AUDIO_PREFS: Readonly<AudioPrefs> = {
   voices: true,
 };
 
-export const PREFS_KEY = 'wahala.audio.v1';
+export const PREFS_KEY = 'wahala.audio.v2';
+/** Where the old mix was saved (read once for migration, never written). */
+export const LEGACY_PREFS_KEY = 'wahala.audio.v1';
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -60,6 +80,24 @@ export function sanitizePrefs(raw: unknown): AudioPrefs {
   };
 }
 
+const SLIDER_STEP = 0.05;
+const sameVolumes = (a: AudioPrefs, b: Readonly<AudioPrefs>): boolean =>
+  (['master', 'music', 'ambience', 'sfx'] as const).every((k) => Math.abs(a[k] - b[k]) < 1e-6);
+
+/** Converts a mix saved under the old key (untrusted JSON) to the current meaning of the sliders. */
+export function migrateLegacyPrefs(raw: unknown): AudioPrefs {
+  const old = sanitizePrefs({
+    ...LEGACY_DEFAULT_AUDIO_PREFS,
+    ...(typeof raw === 'object' && raw ? raw : {}),
+  });
+  if (sameVolumes(old, LEGACY_DEFAULT_AUDIO_PREFS)) return { ...DEFAULT_AUDIO_PREFS, voices: old.voices };
+  const music = Math.round((old.music * LEGACY_MUSIC_BASE) / MUSIC_BASE / SLIDER_STEP) * SLIDER_STEP;
+  return { ...old, music: Math.min(1, Number(music.toFixed(2))) };
+}
+
+/** Whether `p` is the recommended mix (voices may be either way). */
+export const isRecommendedMix = (p: AudioPrefs): boolean => sameVolumes(p, DEFAULT_AUDIO_PREFS);
+
 export function createPrefsStore(getStorage: () => StorageLike | null | undefined): PrefsStore {
   const read = (): AudioPrefs => {
     try {
@@ -69,7 +107,19 @@ export function createPrefsStore(getStorage: () => StorageLike | null | undefine
       return { ...DEFAULT_AUDIO_PREFS };
     }
   };
-  let current = read();
+  /** The old key's mix, converted, or null when there is none (or no usable storage). */
+  const readLegacy = (): AudioPrefs | null => {
+    try {
+      const storage = getStorage();
+      if (!storage || storage.getItem(PREFS_KEY) !== null) return null;
+      const raw = storage.getItem(LEGACY_PREFS_KEY);
+      return raw ? migrateLegacyPrefs(JSON.parse(raw)) : null;
+    } catch {
+      return null;
+    }
+  };
+  const migrated = readLegacy();
+  let current = migrated ?? read();
   const listeners = new Set<(p: Readonly<AudioPrefs>) => void>();
   const commit = (next: AudioPrefs): void => {
     current = next;
@@ -80,6 +130,7 @@ export function createPrefsStore(getStorage: () => StorageLike | null | undefine
     }
     for (const fn of [...listeners]) fn(current);
   };
+  if (migrated) commit(migrated); // once: from now on the new key is the record
   return {
     get: () => current,
     set(patch) {

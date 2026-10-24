@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Vector3 } from 'three';
-import { CameraRig } from '../../src/render/cameraRig';
+import { CameraRig, PHONE_CONTROL_STRIP, compactNearX } from '../../src/render/cameraRig';
 import { directShot } from '../../src/render/cameraDirector';
 import { cameraModeFor, selectShot } from '../../src/render/cameraModes';
 import { createLayout } from '../../src/render/coords';
@@ -50,20 +50,40 @@ describe('overview camera: whole arena and picking', () => {
     });
   }
 
-  it('landscape phone: near-row corners stay clear of the bottom-corner touch controls', () => {
+  for (const [w, h] of [
+    [568, 320],
+    [667, 375],
+    [740, 360],
+    [844, 390],
+    [932, 430],
+  ] as const) {
+    it(`landscape phone ${w}x${h}: the near row stays between the thumbstick strip and the button column`, () => {
+      const layout = createLayout(15, 11);
+      const rig = new CameraRig(layout);
+      rig.fit(w / h, { top: 0.13, bottom: 0.03 });
+      rig.update(0, 0, 0, null);
+      expect(rig.framesWholeArena()).toBe(true);
+      // the control strips are PHONE_CONTROL_STRIP screen heights wide on each side (styles.css .actions)
+      const stripNdc = (2 * PHONE_CONTROL_STRIP * h) / w;
+      for (const x of [0, layout.width - 1]) {
+        const v = project(rig, layout.wx(x) + Math.sign(layout.wx(x)) * 0.5, 0, layout.wz(layout.height - 1) + 0.5);
+        expect(Math.abs(v.x)).toBeLessThanOrEqual(1 - stripNdc + 1e-6);
+        expect(Math.abs(v.x)).toBeLessThanOrEqual(compactNearX(w / h) + 1e-6);
+      }
+    });
+  }
+
+  it('landscape phone: the board fills far more of the screen than with the old fixed D-pad layout', () => {
     const layout = createLayout(15, 11);
     const rig = new CameraRig(layout);
     rig.fit(844 / 390, { top: 0.13, bottom: 0.03 });
     rig.update(0, 0, 0, null);
-    for (const x of [0, layout.width - 1]) {
-      const v = project(
-        rig,
-        layout.wx(x) + Math.sign(layout.wx(x)) * 0.5,
-        0,
-        layout.wz(layout.height - 1) + 0.5,
-      );
-      expect(Math.abs(v.x)).toBeLessThan(0.62);
-    }
+    const l = project(rig, layout.wx(0) - 0.5, 0, layout.wz(10) + 0.5);
+    const r = project(rig, layout.wx(14) + 0.5, 0, layout.wz(10) + 0.5);
+    const far = project(rig, 0, 0, layout.wz(0) - 0.5);
+    // old layout: near row 0.56 of the screen width, board 0.54 of its height
+    expect((r.x - l.x) / 2).toBeGreaterThan(0.66);
+    expect((far.y - l.y) / 2).toBeGreaterThan(0.6);
   });
 });
 

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { audioPrefs } from '../audio/prefs';
+import { audioPrefs, isRecommendedMix } from '../audio/prefs';
 import type { AudioPrefs, PrefsStore } from '../audio/prefs';
 import './AudioSettings.css';
 
@@ -25,11 +25,13 @@ const pct = (v: number): string => `${Math.round(v * 100)}%`;
 
 /**
  * Independent, persistent volume sliders (master / music / ambience and voices / effects), the
- * spoken-voices switch, mute and a reset. Changes apply live (the audio engine follows the store) and
+ * spoken-voices switch, mute and the "Recommended mix" button (restores the music-first defaults, also for
+ * a player whose browser still holds an older saved mix). Changes apply live (the audio engine follows the store) and
  * are saved to localStorage by the store itself.
  */
 export function AudioSettingsPanel({ muted, onMutedChange, store = audioPrefs }: AudioSettingsPanelProps) {
   const prefs: Readonly<AudioPrefs> = useSyncExternalStore(store.subscribe, store.get, store.get);
+  const recommended = isRecommendedMix(prefs);
   return (
     <div className="audio-panel" data-testid="audio-settings">
       {VOLUME_CONTROLS.map(({ key, label }) => (
@@ -67,11 +69,18 @@ export function AudioSettingsPanel({ muted, onMutedChange, store = audioPrefs }:
         >
           Voices {prefs.voices ? 'on' : 'off'}
         </button>
-        <button type="button" className="chip" data-testid="audio-reset" onClick={() => store.reset()}>
-          Reset audio
+        <button
+          type="button"
+          className={`chip${recommended ? ' on' : ''}`}
+          data-testid="audio-reset"
+          aria-pressed={recommended}
+          title="Music 90%, effects 50%, ambience and voices 45%, master 85%"
+          onClick={() => store.reset()}
+        >
+          {recommended ? 'Recommended mix ✓' : 'Use recommended mix'}
         </button>
       </div>
-      <p className="audio-note">Music and voice recordings are not included yet.</p>
+      <p className="audio-note">Spoken voice recordings are not included yet.</p>
     </div>
   );
 }

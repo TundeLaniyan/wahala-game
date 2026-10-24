@@ -12,10 +12,10 @@ describe('audio settings panel', () => {
     const html = render(false);
     expect(VOLUME_CONTROLS.map((c) => c.key)).toEqual(['master', 'music', 'ambience', 'sfx']);
     for (const [key, label, pct] of [
-      ['master', 'Master', 80],
-      ['music', 'Music', 45],
-      ['ambience', 'Ambience &amp; voices', 65],
-      ['sfx', 'Gameplay effects', 85],
+      ['master', 'Master', 85],
+      ['music', 'Music', 90],
+      ['ambience', 'Ambience &amp; voices', 45],
+      ['sfx', 'Gameplay effects', 50],
     ] as const) {
       expect(html).toContain(`data-testid="audio-${key}"`);
       expect(html).toContain(label);
@@ -42,7 +42,14 @@ describe('audio settings panel', () => {
     expect(html).toContain('Voices off');
   });
 
-  it('says plainly that no music or voice recordings are included', () => {
-    expect(render(false)).toMatch(/recordings are not included/i);
+  it('says plainly that no spoken voice recordings are included', () => {
+    expect(render(false)).toMatch(/voice recordings are not included/i);
+  });
+
+  it('the recommended-mix button shows when the mix is the recommended one and offers it otherwise', () => {
+    expect(render(false)).toMatch(/data-testid="audio-reset"[^>]*>Recommended mix/);
+    const store = createPrefsStore(() => null);
+    store.set({ music: 0.3 });
+    expect(render(false, store)).toMatch(/data-testid="audio-reset"[^>]*>Use recommended mix/);
   });
 });

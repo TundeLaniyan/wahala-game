@@ -32,24 +32,43 @@ recordings the game plays are the approved Pixabay music tracks.
 ```
 music   music.ts: streamed playlist track       -> musicDuck -> musicBus ----\
 sfx     effects                                   -> sfxBus -------------------+
-warn    danger warnings (never ducked)            -> warnBus (sfx volume) -----+-> master -> limiter -> out
+warn    danger warnings (never ducked)            -> warnBus (sqrt sfx vol) ---+-> master -> limiter -> out
 react   crowd reactions + spoken lines            -> notch -> reactDuck -> crowdBus
 amb     ambience beds                             -> notch -> ambDuck  -> crowdBus
 ```
 
-`src/audio/prefs.ts` holds four independent persistent volumes (localStorage key `wahala.audio.v1`; corrupt or
-unavailable storage falls back to the defaults) plus the voices on/off switch:
+`src/audio/prefs.ts` holds four independent persistent volumes (localStorage key `wahala.audio.v2`; corrupt or
+unavailable storage falls back to the defaults) plus the voices on/off switch. The defaults are the music-first
+**recommended mix** (founder, 2026-10-24, decision M8):
 
 | Slider | Default | Controls |
 | --- | --- | --- |
-| Master | 80% | everything |
-| Music | 45% | the playlist track (silent until the approved files are added) |
-| Ambience & voices | 65% | crowd beds, crowd reactions, spoken lines |
-| Effects | 85% | synthesised effects and warnings |
+| Master | 85% | everything |
+| Music | 90% | the arena's signature track |
+| Ambience & voices | 45% | crowd beds, crowd reactions, spoken lines |
+| Effects | 50% | synthesised effects; danger warnings follow it on a square-root curve |
 
 `src/ui/AudioSettings.tsx` shows them on the title screen and the pause menu, with mute (stored in the existing
-`GameSettings.muted`, shared with the HUD button), the voices switch and a reset. The engine follows the store
-itself; the legacy `setVolumes()` is ignored while a store is active.
+`GameSettings.muted`, shared with the HUD button), the voices switch and the **Recommended mix** button (reads
+"Recommended mix ✓" while the mix is the recommended one, "Use recommended mix" otherwise; one press restores it and
+saves it). The engine follows the store itself; the legacy `setVolumes()` is ignored while a store is active.
+
+Existing players: nothing is stored until someone moves a slider, so a player who never touched the mix gets the
+new one automatically. A mix saved by an older version (key `wahala.audio.v1`) is migrated once on load: if it still
+equals the old defaults (80 / 45 / 65 / 85) it becomes the recommended mix; a mix the player chose is kept, with its
+music slider converted for the new music bus (x 1.73, rounded to the 5% step) so it sounds as loud as before. The
+old key is left untouched and never read again once `wahala.audio.v2` exists.
+
+Gain staging (measured with ffmpeg on the nine shipped tracks): each track's manifest `gain` levels it to about
+-14 LUFS; the music bus is unity (`MUSIC_BASE = 1`), so the 90% slider and 85% master put the music at about
+-16.8 LUFS after the master limiter, which takes about 0.9 dB off its peaks on average (1.6 dB at most); no peak
+reaches the soft clipper's full scale. The louder default comes from the slider alone: the +2.5 dB music-bus lift of
+decision N13 was removed so the boost is not applied twice (with it the limiter would have taken 1.6-2.5 dB off the
+music and pumped on every kick). Compared with the old defaults the music is about 1.5 dB louder and the effects
+4.6 dB quieter, so the music sits about 6 dB further forward. Danger warnings use `0.8 * sqrt(effects)` (1.6 dB
+below the old level at the 50% default), and the music dips deeper for them (to 0.5) and for big blasts (to 0.45),
+so trap alarms, horns, fuse ticks and explosions still cut through. Nobody has listened to it yet (no audio output
+in the build container).
 
 Lifecycle: nothing is created before the first user gesture (`unlock()`); `startMusic(arenaId)` enters the match
 soundscape (and picks this match's track), `setPaused(bool)` follows the pause menu, `stopMusic()` leaves the match
@@ -125,10 +144,8 @@ music is silent and everything else works. `whenMusicLoaded()` reports which ids
 
   City Rumble rotates five of the same files (491432 first, then 439622, 569473, 540950, 504898, never back to back).
   `tests/audio/playlist.test.ts` pins the table.
-- **Loudness:** the music bus headroom constant is raised by +2.5 dB (`MUSIC_LIFT_DB` in `src/audio/buses.ts`;
-  1.3 -> 1.73), per the founder's note that the music was too quiet. The per-track `gain` levelling is unchanged, the
-  master limiter and soft clip still guarantee no clipping, and the warning duck is a little deeper (music 0.8 ->
-  0.7) so trap alarms, fuse ticks and blasts stay on top. Still measured, not judged by ear.
+- **Loudness:** see "Gain staging" above. The +2.5 dB music-bus lift of decision N13 was replaced by the music-first
+  default slider positions (decision M8); the per-track `gain` levelling is unchanged.
 - `menu` lists optional title-screen tracks. It is empty, so the menus stay silent (the tracks were approved for
   matches; add ids there to use some on the title screen).
 

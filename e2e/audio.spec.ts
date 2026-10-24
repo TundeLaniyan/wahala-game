@@ -41,7 +41,7 @@ const sliderValue = (page: Page, key: string): Promise<string> =>
   page.getByTestId(`audio-${key}`).inputValue();
 
 test.describe('audio settings, persistence and music start', () => {
-  test('four independent sliders with the requested defaults, saved between visits', async ({ page }) => {
+  test('four independent sliders with the music-first defaults, saved between visits', async ({ page }) => {
     await open(page, '&nobots');
     await expect(page.getByTestId('audio-settings')).toBeVisible();
     expect([
@@ -49,14 +49,16 @@ test.describe('audio settings, persistence and music start', () => {
       await sliderValue(page, 'music'),
       await sliderValue(page, 'ambience'),
       await sliderValue(page, 'sfx'),
-    ]).toEqual(['80', '45', '65', '85']);
+    ]).toEqual(['85', '90', '45', '50']);
+    await expect(page.getByTestId('audio-reset')).toContainText('Recommended mix');
 
     await page.getByTestId('audio-music').fill('20');
     await page.getByTestId('audio-ambience').fill('90');
     // changing one leaves the others alone
-    expect([await sliderValue(page, 'master'), await sliderValue(page, 'sfx')]).toEqual(['80', '85']);
-    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.audio.v1') ?? 'null'));
-    expect(saved).toEqual({ master: 0.8, music: 0.2, ambience: 0.9, sfx: 0.85, voices: true });
+    expect([await sliderValue(page, 'master'), await sliderValue(page, 'sfx')]).toEqual(['85', '50']);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.audio.v2') ?? 'null'));
+    expect(saved).toEqual({ master: 0.85, music: 0.2, ambience: 0.9, sfx: 0.5, voices: true });
+    await expect(page.getByTestId('audio-reset')).toContainText('Use recommended mix');
 
     await page.reload();
     await expect(page.getByTestId('title-screen')).toBeVisible();
@@ -65,7 +67,8 @@ test.describe('audio settings, persistence and music start', () => {
     await page.getByTestId('toggle-voices').click();
     await expect(page.getByTestId('toggle-voices')).toContainText('off');
     await page.getByTestId('audio-reset').click();
-    expect(await sliderValue(page, 'music')).toBe('45');
+    expect(await sliderValue(page, 'music')).toBe('90');
+    expect(await sliderValue(page, 'ambience')).toBe('45');
     await expect(page.getByTestId('toggle-voices')).toContainText('on');
   });
 
@@ -81,6 +84,45 @@ test.describe('audio settings, persistence and music start', () => {
     await page.keyboard.press('p');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
     await expect(page.getByTestId('pause-overlay').getByTestId('audio-settings')).toBeVisible();
+    await expect(page.getByTestId('pause-overlay').getByTestId('audio-reset')).toBeVisible();
+  });
+
+  test('a browser with the old saved defaults gets the new mix; a chosen mix is kept until the player asks', async ({
+    page,
+  }) => {
+    // an older version saved its untouched defaults
+    await page.addInitScript(() => {
+      if (!sessionStorage.getItem('seeded')) {
+        sessionStorage.setItem('seeded', '1');
+        localStorage.setItem(
+          'wahala.audio.v1',
+          JSON.stringify({ master: 0.8, music: 0.45, ambience: 0.65, sfx: 0.85, voices: true }),
+        );
+      }
+    });
+    await open(page, '&nobots');
+    const all = async () =>
+      Promise.all(['master', 'music', 'ambience', 'sfx'].map((k) => sliderValue(page, k)));
+    expect(await all()).toEqual(['85', '90', '45', '50']);
+
+    // an older version saved a mix the player chose: it is respected (music converted to sound the same)
+    await page.evaluate(() => {
+      localStorage.removeItem('wahala.audio.v2');
+      localStorage.setItem(
+        'wahala.audio.v1',
+        JSON.stringify({ master: 0.6, music: 0.3, ambience: 0.2, sfx: 1, voices: true }),
+      );
+    });
+    await page.reload();
+    await expect(page.getByTestId('title-screen')).toBeVisible();
+    expect(await all()).toEqual(['60', '50', '20', '100']);
+    await expect(page.getByTestId('audio-reset')).toContainText('Use recommended mix');
+    // one press applies the recommended mix, and it sticks
+    await page.getByTestId('audio-reset').click();
+    expect(await all()).toEqual(['85', '90', '45', '50']);
+    await page.reload();
+    await expect(page.getByTestId('title-screen')).toBeVisible();
+    expect(await all()).toEqual(['85', '90', '45', '50']);
   });
 
   test('no audio before the first gesture; only approved playlist files are ever requested', async ({

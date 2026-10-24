@@ -10,7 +10,7 @@ import { FakeBuffer } from './fakeContext';
 import type { FakeGain } from './fakeContext';
 import { mediaFactory, trackOf } from './fakeMedia';
 import { finishWarmup, makeRig, playState } from './helpers';
-import { MUSIC_BASE } from '../../src/audio/buses';
+import { MUSIC_BASE, warnLevel } from '../../src/audio/buses';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -231,10 +231,10 @@ describe('music through the engine', () => {
     expect(path[9]).toBe(master);
     const musicDuck = path[7] as FakeGain;
     r.audio.handleEvents(
-      [{ type: 'generatorExploded', generatorId: 1, ownerId: 0, x: 3, y: 3, eventId: 1, range: 2 }],
+      [{ type: 'generatorExploded', generatorId: 1, ownerId: 0, x: 3, y: 3, eventId: 1, range: 8 }], // a big blast
       clockState(0),
     );
-    expect(musicDuck!.gain.targets).toContain(0.6); // DUCK.blast.music
+    expect(musicDuck!.gain.targets).toContain(0.45); // DUCK.blast.music
   });
 
   it('an optional menu playlist plays on the title screen', async () => {
@@ -259,26 +259,42 @@ describe('independent persistent volumes', () => {
     const m = busGains(r);
     expect(m[3]).toBe(0);
     expect(m.slice(0, 3)).toEqual(base.slice(0, 3)); // sfx, warn, crowd untouched
-    r.prefs.set({ music: 0.45, ambience: 0 });
+    r.prefs.set({ music: 0.9, ambience: 0 });
     const a = busGains(r);
     expect(a[2]).toBe(0);
     expect([a[0], a[1], a[3]]).toEqual([base[0], base[1], base[3]]);
-    r.prefs.set({ ambience: 0.65, sfx: 0 });
+    r.prefs.set({ ambience: 0.45, sfx: 0 });
     const s = busGains(r);
     expect([s[0], s[1]]).toEqual([0, 0]);
     expect([s[2], s[3]]).toEqual([base[2], base[3]]);
-    r.prefs.set({ sfx: 0.85, master: 0.2 });
+    r.prefs.set({ sfx: 0.5, master: 0.2 });
     expect(r.ctx.master().gain.value).toBeCloseTo(0.2);
     expect(busGains(r).slice(1, 4)).toEqual(base.slice(1, 4)); // master does not change the bus levels
   });
 
-  it('starts at the requested defaults (master 80, music 45, ambience 65, effects 85)', async () => {
+  it('starts at the music-first defaults (master 85, music 90, ambience 45, effects 50)', async () => {
     const r = await rig();
-    expect(r.ctx.master().gain.value).toBeCloseTo(0.8);
-    const [sfx, , crowd, music] = busGains(r) as [number, number, number, number];
-    expect(sfx / 0.62).toBeCloseTo(0.85, 5);
-    expect(crowd / 0.8).toBeCloseTo(0.65, 5);
-    expect(music / MUSIC_BASE).toBeCloseTo(0.45, 5);
+    expect(r.ctx.master().gain.value).toBeCloseTo(0.85);
+    const [sfx, warn, crowd, music] = busGains(r) as [number, number, number, number];
+    expect(sfx / 0.62).toBeCloseTo(0.5, 5);
+    expect(warn).toBeCloseTo(warnLevel(0.5), 5);
+    expect(crowd / 0.8).toBeCloseTo(0.45, 5);
+    expect(music / MUSIC_BASE).toBeCloseTo(0.9, 5);
+  });
+
+  it('the louder default comes from the slider only: the music bus is unity, never boosted twice', async () => {
+    expect(MUSIC_BASE).toBe(1);
+    const r = await rig();
+    r.prefs.set({ music: 1 });
+    expect(busGains(r)[3]).toBe(1); // a full slider plays the levelled (-14 LUFS) track as it is
+  });
+
+  it('warnings stay on a gentler curve than effects so a quieter effects mix never hides them', () => {
+    expect(warnLevel(0)).toBe(0);
+    expect(warnLevel(1)).toBeCloseTo(0.8);
+    // at the 50 % default the warnings lose 1.6 dB against the old 85 % default, the effects 4.6 dB
+    expect(20 * Math.log10(warnLevel(0.5) / (0.85 * 0.8))).toBeGreaterThan(-1.7); // old linear warn bus
+    expect(20 * Math.log10(0.5 / 0.85)).toBeLessThan(-4.5);
   });
 
   it('applies saved preferences when the engine starts (remembered between visits)', async () => {
@@ -300,7 +316,7 @@ describe('independent persistent volumes', () => {
     expect(r.ctx.master().gain.value).toBe(0);
     r.audio.setMuted(false);
     expect(r.ctx.master().gain.value).toBe(1);
-    expect(r.prefs.get().music).toBe(0.45);
+    expect(r.prefs.get().music).toBe(0.9);
   });
 
   it('the legacy setVolumes() cannot override saved preferences', async () => {

@@ -1,5 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_AUDIO_PREFS, PREFS_KEY, createPrefsStore, sanitizePrefs } from '../../src/audio/prefs';
+import {
+  DEFAULT_AUDIO_PREFS,
+  LEGACY_DEFAULT_AUDIO_PREFS,
+  LEGACY_PREFS_KEY,
+  PREFS_KEY,
+  createPrefsStore,
+  isRecommendedMix,
+  migrateLegacyPrefs,
+  sanitizePrefs,
+} from '../../src/audio/prefs';
+import { LEGACY_MUSIC_BASE, MUSIC_BASE } from '../../src/audio/buses';
 import type { StorageLike } from '../../src/audio/prefs';
 
 const memory = (initial: Record<string, string> = {}): StorageLike & { data: Record<string, string> } => {
@@ -14,12 +24,12 @@ const memory = (initial: Record<string, string> = {}): StorageLike & { data: Rec
 };
 
 describe('audio preferences', () => {
-  it('defaults to master 80 / music 45 / ambience 65 / effects 85 with voices on', () => {
+  it('a new player gets the music-first mix: master 85 / music 90 / ambience and voices 45 / effects 50', () => {
     expect(DEFAULT_AUDIO_PREFS).toEqual({
-      master: 0.8,
-      music: 0.45,
-      ambience: 0.65,
-      sfx: 0.85,
+      master: 0.85,
+      music: 0.9,
+      ambience: 0.45,
+      sfx: 0.5,
       voices: true,
     });
     expect(createPrefsStore(() => memory()).get()).toEqual(DEFAULT_AUDIO_PREFS);
@@ -100,5 +110,63 @@ describe('audio preferences', () => {
     s.reset();
     expect(s.get()).toEqual(DEFAULT_AUDIO_PREFS);
     expect(createPrefsStore(() => storage).get()).toEqual(DEFAULT_AUDIO_PREFS);
+  });
+
+  it('reset restores the recommended mix even over an explicitly saved one', () => {
+    const storage = memory({
+      [PREFS_KEY]: JSON.stringify({ master: 1, music: 0.1, ambience: 1, sfx: 1, voices: false }),
+    });
+    const s = createPrefsStore(() => storage);
+    expect(isRecommendedMix(s.get())).toBe(false);
+    s.reset();
+    expect(isRecommendedMix(s.get())).toBe(true);
+    expect(JSON.parse(storage.data[PREFS_KEY]!)).toEqual(DEFAULT_AUDIO_PREFS);
+  });
+});
+
+describe('players with a mix saved by an older version', () => {
+  it('an untouched old default mix becomes the recommended mix (voices choice kept), saved once under the new key', () => {
+    const storage = memory({
+      [LEGACY_PREFS_KEY]: JSON.stringify({ ...LEGACY_DEFAULT_AUDIO_PREFS, voices: false }),
+    });
+    const s = createPrefsStore(() => storage);
+    expect(s.get()).toEqual({ ...DEFAULT_AUDIO_PREFS, voices: false });
+    expect(JSON.parse(storage.data[PREFS_KEY]!)).toEqual({ ...DEFAULT_AUDIO_PREFS, voices: false });
+    expect(storage.data[LEGACY_PREFS_KEY]).toBeDefined(); // the old record is left alone
+  });
+
+  it('an explicitly chosen mix is respected; its music level is converted so it sounds as loud as before', () => {
+    const saved = { master: 0.6, music: 0.3, ambience: 0.2, sfx: 1, voices: true };
+    const storage = memory({ [LEGACY_PREFS_KEY]: JSON.stringify(saved) });
+    const s = createPrefsStore(() => storage);
+    expect(s.get()).toEqual({ ...saved, music: 0.5 });
+    // same music bus gain as before, to the slider step
+    expect(Math.abs(s.get().music * MUSIC_BASE - saved.music * LEGACY_MUSIC_BASE)).toBeLessThan(0.05);
+    expect(migrateLegacyPrefs({ ...saved, music: 0.8 }).music).toBe(1); // capped at 100 %
+    expect(migrateLegacyPrefs({ ...saved, music: 0 }).music).toBe(0);
+  });
+
+  it('a mix already saved by this version wins over the old key, and a later visit does not migrate again', () => {
+    const storage = memory({
+      [LEGACY_PREFS_KEY]: JSON.stringify(LEGACY_DEFAULT_AUDIO_PREFS),
+      [PREFS_KEY]: JSON.stringify({ master: 0.4, music: 0.7, ambience: 0.1, sfx: 0.3, voices: true }),
+    });
+    expect(createPrefsStore(() => storage).get()).toEqual({
+      master: 0.4,
+      music: 0.7,
+      ambience: 0.1,
+      sfx: 0.3,
+      voices: true,
+    });
+    const fresh = memory({ [LEGACY_PREFS_KEY]: JSON.stringify({ ...LEGACY_DEFAULT_AUDIO_PREFS, sfx: 0.4 }) });
+    const first = createPrefsStore(() => fresh);
+    first.set({ sfx: 0.6 });
+    expect(createPrefsStore(() => fresh).get().sfx).toBe(0.6);
+  });
+
+  it('corrupt old records fall back to the recommended mix', () => {
+    expect(createPrefsStore(() => memory({ [LEGACY_PREFS_KEY]: '{oops' })).get()).toEqual(
+      DEFAULT_AUDIO_PREFS,
+    );
   });
 });

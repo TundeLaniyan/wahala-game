@@ -895,12 +895,14 @@ button {
   width: calc(var(--r) * 0.95);
   height: calc(var(--r) * 0.95);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.85), rgba(190, 196, 206, 0.7));
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+  /* see-through: the stick can sit over the board, and the tiles under it must stay readable */
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.5), rgba(190, 196, 206, 0.32));
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 .stick-knob.on {
-  background: radial-gradient(circle at 35% 30%, #ffe37a, #ffc61a);
+  background: radial-gradient(circle at 35% 30%, rgba(255, 227, 122, 0.62), rgba(255, 198, 26, 0.48));
+  border-color: #ffd23f;
 }
 /* where to put your thumb when nothing is touching: a faint ring low in the zone */
 .stick-hint {
@@ -1006,6 +1008,95 @@ button {
 }
 .abtn.dim {
   opacity: 0.45;
+}
+
+/*
+ * Landscape phones (height <= 480 px): the action buttons hug the right edge in a strip 28vh wide, and the
+ * thumbstick's resting ring fits the same strip on the left. The whole-arena camera keeps the board's near
+ * corners between the two strips (render/cameraRig.ts PHONE_CONTROL_STRIP = 0.28), so no control ever
+ * covers a tile; higher up the board narrows (perspective), which is where the smaller buttons sit.
+ */
+@media (max-height: 480px) and (orientation: landscape) {
+  /* the clock stays inside the 13% top band on a 320 px tall phone */
+  .timer .clock b {
+    font-size: clamp(1.45rem, 7.6vh, 2.2rem);
+  }
+  .timer .round {
+    font-size: clamp(0.7rem, 2.2vh, 0.9rem);
+  }
+  .actions {
+    right: max(4px, env(safe-area-inset-right));
+    bottom: max(4px, env(safe-area-inset-bottom));
+    width: calc(28vh - 8px);
+    height: 72vh;
+  }
+  .abtn {
+    border-width: 3px;
+    font-size: clamp(0.5rem, 2.6vh, 0.72rem);
+  }
+  .abtn.bomb {
+    left: auto;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    width: 24vh;
+    height: 24vh;
+    font-size: clamp(0.62rem, 3.2vh, 0.9rem);
+  }
+  .abtn.bomb b {
+    padding: 2px 5px;
+  }
+  .abtn.a {
+    left: auto;
+    top: auto;
+    right: 0;
+    bottom: 26vh;
+    width: 14vh;
+    height: 14vh;
+  }
+  .abtn.b {
+    left: auto;
+    top: auto;
+    right: 15vh;
+    bottom: 27vh;
+    width: 13vh;
+    height: 13vh;
+  }
+  .abtn.v {
+    left: auto;
+    top: auto;
+    right: 0;
+    bottom: 42vh;
+    width: 14vh;
+    height: 14vh;
+  }
+  .abtn.c {
+    left: auto;
+    top: auto;
+    right: 15vh;
+    bottom: 42vh;
+    width: 12vh;
+    height: 12vh;
+  }
+  .abtn.d {
+    left: auto;
+    top: auto;
+    right: 7vh;
+    bottom: 57vh;
+    width: 11vh;
+    height: 11vh;
+  }
+  .stick-zone {
+    width: calc(100vw - 28vh - 16px);
+    max-width: 50vw;
+    top: 18vh;
+  }
+  .stick-hint {
+    left: max(4px, env(safe-area-inset-left));
+    bottom: max(4px, env(safe-area-inset-bottom));
+    width: calc(28vh - 8px);
+    height: calc(28vh - 8px);
+  }
 }
 
 /* ---------- overlays ---------- */

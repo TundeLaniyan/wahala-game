@@ -5,6 +5,7 @@ import * as audioModule from '../../src/audio';
 import { createAudio } from '../../src/audio';
 import type { SimEvent } from '../../src/sim';
 import { addGenerator, put } from '../helpers';
+import { createBuses } from '../../src/audio/buses';
 import { FakeContext } from './fakeContext';
 import type { FakeGain } from './fakeContext';
 import { SAMPLES, finishWarmup, makeRig, playState } from './helpers';
@@ -143,7 +144,13 @@ describe('event mapping', () => {
   it('handles every SimEvent type without throwing and makes sound for most', async () => {
     const rig = await started({}, {});
     const s = playState();
-    const silent = new Set(['vehicleExited', 'vehicleEntryBegan', 'vehicleEntryCancelled', 'stageEnded', 'stageSweepStep']);
+    const silent = new Set([
+      'vehicleExited',
+      'vehicleEntryBegan',
+      'vehicleEntryCancelled',
+      'stageEnded',
+      'stageSweepStep',
+    ]);
     // an extra human-less state variant is covered below; here players 0/1 are both "human" sandbox players
     for (const [type, e] of Object.entries(SAMPLES)) {
       rig.traces.length = 0;
@@ -456,6 +463,15 @@ describe('ducking and warnings', () => {
     rig.audio.handleEvents([SAMPLES.generatorExploded], s);
     expect(rig.ctx.anyGainTargeted(0.4)).toBe(true); // blast duck depth
     expect(sfxBusGains.map((g) => g.gain.targets.length)).toEqual(before);
+  });
+
+  it('a blast during a spoken-line duck still pulls the music down to the blast depth (regression)', () => {
+    const ctx = new FakeContext();
+    const buses = createBuses(ctx, { master: 0.85, music: 0.9, ambience: 0.45, sfx: 0.5 }, false);
+    const musicDuck = buses.input('music') as unknown as FakeGain;
+    buses.duck('speech'); // ambience 0.4, music 0.6, held 1.5 s
+    buses.duck('blast'); // ambience 0.4 too, but the music must go to 0.45
+    expect(musicDuck.gain.targets).toContain(0.45);
   });
 
   it('gives each vehicle kind a distinct horn in the warning bus', async () => {
