@@ -68,6 +68,19 @@ test.describe('touch controls (landscape phone)', () => {
     expect(zone.x + zone.width).toBeLessThanOrEqual(place.x); // the zone never reaches the action buttons
   });
 
+  test('once the player is out the thumbstick goes away so the spectator buttons are free (regression)', async ({
+    page,
+  }) => {
+    await open(page, '&nobots');
+    await startMatch(page, { competitors: 4 });
+    await expect(page.getByTestId('stick-zone')).toBeVisible();
+    await mutate(page, 's.players[0].alive = false; s.players[0].eliminatedTick = s.tick;');
+    await stepTicks(page, 10);
+    await expect(page.getByTestId('stick-zone')).toHaveCount(0);
+    await expect(page.getByTestId('btn-place')).toHaveCount(0);
+    await page.getByTestId('skip-results').click(); // reachable: nothing on top of it
+  });
+
   test('contextual buttons appear with abilities and the vehicle button launches entry selection', async ({
     page,
   }, info) => {

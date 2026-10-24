@@ -123,6 +123,9 @@ export function TouchControls() {
   const me = useGameStore((s) => s.hud?.me);
   const entry = useGameStore((s) => s.hud?.entry);
   const character = useGameStore((s) => s.settings.character);
+  const localAlive = useGameStore((s) => s.hud?.localAlive ?? true);
+  // out of the match: nothing to steer, and the stick zone must not cover the spectator buttons
+  if (!localAlive) return null;
   if (!me || entry)
     return (
       <div className="touch">
