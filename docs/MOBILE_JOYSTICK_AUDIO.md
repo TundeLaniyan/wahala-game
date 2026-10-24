@@ -101,7 +101,14 @@ right: the player has moved exactly one tile and shows through the see-through k
   showing the thumbstick, keyboard / touch device switching, the stick gone once the player is out, audio
   defaults, persistence, migration and the recommended-mix button on the title screen and the pause menu.
 
-## 6. Remaining limits
+## 6. GitHub Pages
+
+CI now publishes the preview from this branch, and only after the full check (typecheck, lint, unit tests,
+build, Playwright desktop + phone) has passed on the pushed commit (`DEPLOYMENT.md`). First publish: CI green on
+`0abf93b`, `gh-pages` commit `92c7e0b`, `build.json` = `0abf93b`, GitHub's Pages build succeeded. Check the live
+build at https://tundelaniyan.github.io/wahala-game/build.json (not reachable from the build container).
+
+## 7. Remaining limits
 
 - Nobody has heard the new mix (no audio output in the build container); levels are measured, not judged by ear.
 - The stick was tested with emulated touch and pointer events, not on a physical touch screen.

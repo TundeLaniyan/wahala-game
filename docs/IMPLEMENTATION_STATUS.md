@@ -230,7 +230,8 @@ button column and a larger whole-arena board on landscape phones, music-first re
 | `npm run check` (tsc, eslint, vitest, build) | clean; **54 files, 783 tests passed** |
 | Playwright, all specs, desktop + phone, one worker | **63 passed, 1 failed, 10 skipped by design** (32 min); the failure (phone City Rumble: the stick zone covered the spectator button) was fixed and the affected specs re-run: **13 passed** (`mobile`, `rumble`, `tutorial`, both projects) |
 | Real-browser phone frames (`scripts/mobile-shots.mjs`) | 568x320, 667x375, 740x360, 844x390, 932x430 and City Rumble: no page errors; buttons clear of the board; clock 34-43 px tall |
-| GitHub Pages | published by CI only after the full check passes on the pushed commit (see `DEPLOYMENT.md`) |
+| GitHub Actions CI on `0abf93b` | **green**: typecheck, lint, unit tests, build and the full Playwright suite (desktop + phone) |
+| GitHub Pages | published by CI only after that check passed: `gh-pages` commit `92c7e0b` ("Preview build of 0abf93b"), `build.json` names `0abf93b` / this branch; GitHub's "pages build and deployment" run succeeded; JS, CSS, music manifest and tracks served from `gh-pages` with status 200. The live `*.github.io` URL itself cannot be opened from the container (proxy) |
 
 **Not verified:** sound by ear (no audio output in the container; levels are measured with ffmpeg); feel of the
 stick on a real touch screen (Chromium touch emulation and mouse-driven pointer events only); frame rate on a
