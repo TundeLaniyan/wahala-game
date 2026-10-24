@@ -72,3 +72,37 @@ minimap.
   mix is the recommended one.
 - The nine signature tracks and the final-30-second escalation are unchanged; no music was downloaded or
   generated.
+
+## 4. Screenshots (real game, Chromium, landscape phone viewports at 2x)
+
+`docs/screenshots/mobile-joystick/`: for each of iPhone SE 568x320, iPhone 8 667x375, Android 740x360,
+iPhone 14 844x390 and iPhone Pro Max 932x430, `<phone>-buttons.jpg` (every contextual button shown at once, so
+the frame proves none of them sits on the board) and `<phone>-thumbstick.jpg` (a thumb holding the stick to the
+right: the player has moved exactly one tile and shows through the see-through knob); plus
+`iphone-14-city-rumble.jpg` (follow camera, minimap, compact survivor count, button column). Regenerate with
+`node scripts/mobile-shots.mjs --url <preview url>`.
+
+## 5. Tests
+
+- `tests/input-joystick.test.ts` (17): activation anywhere in the zone at every phone size, four directions,
+  dead zone, release zone, hysteresis near a diagonal, reversal, clamp and origin follow, single owning finger,
+  taps; and with the real InputManager + simulation: one tile per flick in each direction, held repeats at the
+  player's step cadence (and the faster cadence after a speed upgrade), diagonal wobble never zig-zags or skips,
+  collisions with pillars and crates, a resting thumb never walks, placing a generator with another finger while
+  walking, cancellation stops.
+- `tests/render/camera.test.ts`: whole arena framed and clear of the button column at five phone sizes; the board
+  fills more of an iPhone 14 screen.
+- `tests/audio/prefs.test.ts`, `audioSettings.test.ts`, `engineMusic.test.ts`, `engine.test.ts`: new defaults
+  for new players, persistence, migration of old defaults and of a chosen mix, the recommended-mix button,
+  unity music bus (no double boost), warning curve, duck depths and the duck regression; the existing playlist,
+  signature-track and final-30-second escalation tests still pass.
+- Playwright (desktop + phone): thumbstick flicks from anywhere in the zone, hold and release, no page scroll,
+  zone never reaches the buttons, multitouch generator placement, vehicle entry by thumbstick, How to Play
+  showing the thumbstick, keyboard / touch device switching, the stick gone once the player is out, audio
+  defaults, persistence, migration and the recommended-mix button on the title screen and the pause menu.
+
+## 6. Remaining limits
+
+- Nobody has heard the new mix (no audio output in the build container); levels are measured, not judged by ear.
+- The stick was tested with emulated touch and pointer events, not on a physical touch screen.
+- Phone frame rate is unmeasured here (software WebGL); use `?fps` and `?q=low` on a real device.

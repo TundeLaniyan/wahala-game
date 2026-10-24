@@ -5,11 +5,15 @@ Target URL: **https://tundelaniyan.github.io/wahala-game/** (a project site, so 
 
 ## How it is built and published
 
-`.github/workflows/deploy.yml` runs on every push to `claude/wahala-nine-arenas-city-rumble` (and on demand from the
-Actions tab, "Run workflow"). It installs, typechecks, lints, runs the unit tests, builds, and then commits the
-contents of `dist/` to the **`gh-pages` branch** (one commit per build, no force-push). It also writes
-`build.json` (commit, branch, build time) next to `index.html` so anyone can check which commit is live:
-`https://tundelaniyan.github.io/wahala-game/build.json`.
+Since the mobile joystick / music-first update the preview is built from **`claude/wahala-mobile-joystick-audio`**.
+`.github/workflows/deploy.yml` is called by CI (`ci.yml`, job `deploy-preview`) on every push to that branch,
+**only after the full check has passed on that commit** (typecheck, lint, unit tests, build and the Playwright
+desktop + phone suite), so an unverified build is never published. It can also be run on demand from the Actions
+tab ("Run workflow"). It installs, typechecks, lints, runs the unit tests, builds, and then commits the contents
+of `dist/` to the **`gh-pages` branch** (one commit per build, no force-push). It also writes `build.json`
+(commit, branch, build time) next to `index.html` so anyone can check which commit is live:
+`https://tundelaniyan.github.io/wahala-game/build.json`. (Before this update it ran on every push to
+`claude/wahala-nine-arenas-city-rumble`; that branch's own copy of the workflow still does.)
 
 Why a `gh-pages` branch and not the "GitHub Actions" Pages source: Pages was not enabled on the repository, and a
 workflow token is not allowed to create the Pages site ("Resource not accessible by integration", Actions run
@@ -25,7 +29,7 @@ with the source set to the `gh-pages` branch that old workflow cannot replace th
 4. After a minute the page shows "Your site is live at https://tundelaniyan.github.io/wahala-game/".
 
 Nothing else is needed: later pushes to the branch republish automatically. To publish without a code change, open
-**Actions -> Deploy preview to GitHub Pages -> Run workflow** on `claude/wahala-nine-arenas-city-rumble`.
+**Actions -> Deploy preview to GitHub Pages -> Run workflow** on `claude/wahala-mobile-joystick-audio`.
 
 ## What could not be verified from the build environment
 

@@ -5,6 +5,11 @@ on:
   push:
     branches-ignore: [main]
 
+# a newer push supersedes an older run on the same branch (the e2e suite takes over an hour here)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -29,3 +34,12 @@ jobs:
           path: |
             playwright-report
             test-results
+
+  # The GitHub Pages preview is the build of the branch the founder is testing; it is published only
+  # after everything above passed on this exact commit.
+  deploy-preview:
+    needs: check
+    if: github.event_name == 'push' && github.ref_name == 'claude/wahala-mobile-joystick-audio'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/deploy.yml

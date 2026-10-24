@@ -217,3 +217,21 @@ countdown, running, blast, north side; Power Yard full-line blast; the six-step 
 WebGL here gives single-digit to ~20 fps whatever the scene); the live Pages URL (the container cannot reach
 `*.github.io`, and Pages is not enabled yet); human playtesting of any balance number.
 
+
+## Mobile joystick and music-first audio (branch `claude/wahala-mobile-joystick-audio`, from `39af53b`)
+
+Report: `docs/MOBILE_JOYSTICK_AUDIO.md`; decisions M1-M9 in `DECISIONS.md`; audio in `AUDIO.md`; deployment in
+`DEPLOYMENT.md`. Floating thumbstick (grid-only, one tile per slide, held = player's own cadence), right-edge
+button column and a larger whole-arena board on landscape phones, music-first recommended mix with migration and a
+"Use recommended mix" button, touch controls hidden once the player is out (regression found by the phone e2e run).
+
+| Check (2026-10-24) | Result |
+| --- | --- |
+| `npm run check` (tsc, eslint, vitest, build) | clean; **54 files, 783 tests passed** |
+| Playwright, all specs, desktop + phone, one worker | **63 passed, 1 failed, 10 skipped by design** (32 min); the failure (phone City Rumble: the stick zone covered the spectator button) was fixed and the affected specs re-run: **13 passed** (`mobile`, `rumble`, `tutorial`, both projects) |
+| Real-browser phone frames (`scripts/mobile-shots.mjs`) | 568x320, 667x375, 740x360, 844x390, 932x430 and City Rumble: no page errors; buttons clear of the board; clock 34-43 px tall |
+| GitHub Pages | published by CI only after the full check passes on the pushed commit (see `DEPLOYMENT.md`) |
+
+**Not verified:** sound by ear (no audio output in the container; levels are measured with ffmpeg); feel of the
+stick on a real touch screen (Chromium touch emulation and mouse-driven pointer events only); frame rate on a
+real phone.

@@ -1,25 +1,26 @@
 name: Deploy preview to GitHub Pages
 
-# The playable mobile preview at https://tundelaniyan.github.io/wahala-game/ is built from the
-# nine-arenas / City Rumble branch and published to the `gh-pages` branch. GitHub Pages must be set
-# ONCE by a repository admin: Settings -> Pages -> Build and deployment -> Source "Deploy from a
-# branch", Branch `gh-pages` / `(root)`. See docs/DEPLOYMENT.md. Only this workflow writes gh-pages,
-# so the old main-branch workflow (an Actions-source deployment) cannot replace the preview.
+# The playable mobile preview at https://tundelaniyan.github.io/wahala-game/ is published to the
+# `gh-pages` branch. GitHub Pages must be set ONCE by a repository admin: Settings -> Pages -> Build and
+# deployment -> Source "Deploy from a branch", Branch `gh-pages` / `(root)`. See docs/DEPLOYMENT.md. Only
+# this workflow writes gh-pages, so the old main-branch workflow cannot replace the preview.
+#
+# It is called by CI (ci.yml, job `deploy-preview`) only after the full check (typecheck, lint, unit
+# tests, build and the Playwright desktop + phone suite) has passed on a push to the preview branch,
+# so an unverified build is never published. "Run workflow" in the Actions tab republishes on demand.
 on:
-  push:
-    branches: [claude/wahala-nine-arenas-city-rumble]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: write
 
-concurrency:
-  group: pages-preview
-  cancel-in-progress: true
-
 jobs:
   publish:
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages-preview
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,7 +39,7 @@ jobs:
           echo "{\"commit\":\"${GITHUB_SHA}\",\"branch\":\"${GITHUB_REF_NAME}\",\"built\":\"$(date -u +%FT%TZ)\"}" > dist/build.json
       - name: Publish dist/ to the gh-pages branch
         env:
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TOKEN: ${{ github.token }}
         run: |
           REMOTE="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git config --global user.name "github-actions[bot]"
