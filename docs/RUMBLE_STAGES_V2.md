@@ -52,7 +52,7 @@ open tiles.
   Danfos nose into the corner bays and reverse out (2 s). Up to two at once.
 - **Look:** bright midday, pale exhaust haze, no lamps. Floor: pavers in the blocks, sun-bleached tarmac with
   yellow double centre lines, white lane edges, zebras, yellow box junctions, the BRT ONLY corridor, BUS STOP bays
-  and the flyover deck's hard shadow band. Obstacles: flyover piers in the shadow band, precast pillars and kiosks
+  and the flyover deck's hard shadow band. Obstacles: flyover piers in the shadow band, precast bus-park pillars
   elsewhere; tyres, crates, barricades.
 - **Surroundings:** the elevated expressway on hammerhead piers across the north with an under-bridge market
   and a slip road dropping east; a covered footbridge over the west carriageway (a walker on it); a green
@@ -71,7 +71,7 @@ open tiles.
   anyone); kekes and buses crawl along the access roads (2 s).
 - **Look:** hot, hazy afternoon (warm ochre light, closer fog), bare bulbs at the edges. Floor: red laterite dust
   on worn concrete, foot-polished aisles, gutters along every stall front, cloth and print mats at the counters,
-  paver plazas with kiosk rings. Obstacles: plastered stall piers, kiosks in the plazas; textile bales (sacks),
+  paver plazas with kiosk rings. Obstacles: plastered stall piers, poster-covered precast posts in the plazas; bales (sacks),
   cartons, kegs.
 - **Surroundings:** tall commercial blocks on three sides with continuous stall rows under rusted sheets and
   patched tarps (cloth, basins, grain, provisions), fictional textile-house boards, a BALOGUN / IDUMOTA banner, a
@@ -195,7 +195,22 @@ both sides identical ground; the low contact comes from the bots' team play, whi
 
 ## 4. Screenshots
 
-SHOTS_TABLE
+Real game frames (production build, Chromium with software WebGL, medium quality, 1280 x 720, 8 competitors,
+follow camera) captured with `node scripts/rumble-v2-shots.mjs <dir> <arenaId> desktop 8 600` (SPOTS moves the
+local player to chosen tiles for a few seconds of live play; the local player keeps spawn protection while the
+frames are staged). Working copies: `e2e-shots/rumble-v2/` (ignored by version control); the reviewed set is
+committed in `docs/screenshots/rumble-v2/`:
+
+| Stage | Frames |
+| --- | --- |
+| Oshodi Rush Hour | `rumbleOshodi-desktop-play.jpg` (spawn, west side, BRT shelter), `-spot0` (north carriageway, zebra and box junction), `-spot1` (east edge), `rumbleOshodi-mobile-play.jpg` / `-spot0` (844 x 390 phone) |
+| Lagos Island Markets | `rumbleLagosIsland-desktop-play.jpg` (west stall corridors, market blocks beyond the wall), `-spot0` (central square: pavers, kiosk rings, BALOGUN), `-spot1` (north access road and shopfronts) |
+| Ojuelegba Underbridge | `rumbleOjuelegba-desktop-play.jpg`, `-spot0` (under the bridge: piers, TAXI lanes, the wide road, the bus stop beyond the wall), `-spot1` (west neighbourhood lanes) |
+| Apapa Docks | `rumbleApapa-desktop-play.jpg` (a crane warning live, haul road arrows), `-spot0` (container aisles, bay codes), `-spot1` (east stacks and quay road) |
+| Lekki Nightworks | `rumbleLekkiNight-desktop-play.jpg`, `-spot0` (the dig: rebar columns, haul road, survey marks), `-spot1` (a scaffold maze) |
+
+Render cost in those frames (medium): 350-470 draw calls, 1.5-1.75 M triangles (the original district: about 700
+calls). The menu card images are `public/previews/<arenaId>.jpg` (640 x 360, HUD hidden).
 
 ## 5. Music and voices
 
@@ -209,4 +224,14 @@ for Lagos Island, `bus_park` for Apapa (drivers and conductors at the terminal g
 
 ## 6. Limits
 
-LIMITS
+- Judged on software-rendered frames only; nobody has played these stages on a real phone or listened to them.
+  Frame rate on real devices is unmeasured (`?fps` and the `q=low` profile are available).
+- The follow camera shows the surroundings only near an edge; the expressway (Oshodi), the deck (Ojuelegba) and the
+  ship and cranes (Apapa) stand north of the board and were reviewed from edge frames, not close-ups.
+- The flyovers over Ojuelegba and Oshodi are suggested on the board by piers and a painted deck shadow (nothing may
+  stand over the board); the decks themselves are built only north of it.
+- Balance comes from bot batches, not human play. Team Rumble contact is low with the interim team AI (section 3).
+- The global grit pass greys the containers by design; their paints are authored bright to survive it.
+- The stage picker is not wired into the menu on this branch: stream D's menu has a stand-in with the same props,
+  which the lead swaps for `RumbleStagePicker`. The default `rumbleArenaId` is still `cityRumble` (settings belong
+  to the lead); `rumbleOshodi` as the default would put the flagship first.

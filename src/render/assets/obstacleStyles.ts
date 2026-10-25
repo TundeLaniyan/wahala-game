@@ -252,7 +252,13 @@ export function resolveSoftWeights(s: ObstacleStyle, variants: readonly string[]
  * model when the preferred family is not loaded.
  */
 export function pillarIndexFor(s: ObstacleStyle, resolved: readonly string[], x: number, y: number): number {
-  const h = x * 5 + y * 3 + ((x ^ y) & 3);
+  // the original hash (kept for the zone-less standard arenas so their approved look never reshuffles) is always
+  // even, so a two-model family would only ever draw its first model: zoned styles use a mixing hash instead
+  let h = x * 5 + y * 3 + ((x ^ y) & 3);
+  if (s.pillarZones) {
+    const m = Math.imul(x + 1, 374761393) ^ Math.imul(y + 1, 668265263);
+    h = (Math.imul(m ^ (m >>> 13), 1274126177) >>> 0) >>> 3;
+  }
   if (resolved.length === 0) return 0;
   const zone = s.pillarZones?.find((z) => x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1);
   const pool = (zone?.pillars ?? s.pillars).filter((id) => resolved.includes(id));
