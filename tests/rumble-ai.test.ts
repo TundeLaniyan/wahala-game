@@ -30,7 +30,7 @@ const SHORT: MatchSpec['config'] = {
 
 /** Easy and Medium seats (Hard's cost is bounded separately below). */
 const mixed = (n: number): Difficulty[] =>
-  Array.from({ length: n }, (_, k): Difficulty => (k % 3 === 2 ? 'easy' : 'medium'));
+  Array.from({ length: n }, (_, k): Difficulty => (k % 3 === 2 ? 'beginner' : 'standard'));
 
 const crushed: number[] = [];
 
@@ -96,7 +96,7 @@ describe('City Rumble AI determinism and cost', () => {
     });
     // the most expensive line-up: every bot on Hard
     const bots = Array.from({ length: n }, (_, i) =>
-      createBot({ difficulty: 'hard', seed: 77 + i, playerId: i }),
+      createBot({ difficulty: 'expert', seed: 77 + i, playerId: i }),
     );
     const intents: Intents = {};
     resetAiCounters();
@@ -137,7 +137,7 @@ describe('City Rumble AI determinism and cost', () => {
       })),
     });
     const world = new World();
-    world.refresh(observe(state, 0), PROFILES.medium);
+    world.refresh(observe(state, 0), PROFILES.standard);
     expect(isLargeBoard(getBoard(state.width, state.height))).toBe(true);
     expect(world.large).toBe(true);
     expect(world.rivals).toHaveLength(31);
@@ -158,7 +158,7 @@ describe('City Rumble AI determinism and cost', () => {
       })),
     });
     const w2 = new World();
-    w2.refresh(observe(std, 0), PROFILES.medium);
+    w2.refresh(observe(std, 0), PROFILES.standard);
     expect(w2.large).toBe(false);
     expect(w2.near).toBe(w2.rivals);
   });

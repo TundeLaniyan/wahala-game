@@ -10,7 +10,7 @@ import { groundedGeneratorAt } from './queries';
  */
 export function canPlayerEnter(state: GameState, x: number, y: number, p?: Player): boolean {
   if (tileAt(state, x, y) !== Tile.Empty) return false;
-  return p?.bombPass === true || !groundedGeneratorAt(state, x, y);
+  return p?.contact === 'pass' || !groundedGeneratorAt(state, x, y);
 }
 
 export function beginStep(p: Player, x: number, y: number, stepTicks: number): void {

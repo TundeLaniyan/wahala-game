@@ -46,14 +46,13 @@ function Inventory({ me }: { me: HudMe }) {
       <Chip kind="socket" text={`${me.active}/${me.capacity}`} />
       <Chip kind={me.maxRange ? 'diesel' : 'petrol'} text={me.maxRange ? 'MAX' : String(me.range)} />
       {me.speedLevel > 0 && <Chip kind="skates" text={`x${me.speedLevel}`} />}
-      {me.kick && <Chip kind="boots" text="" />}
-      {me.punch && <Chip kind="gloves" text="" />}
-      {me.grip && <Chip kind="grip" text="" />}
+      {me.contact === 'kick' && <Chip kind="boots" text="" />}
+      {me.contact === 'punch' && <Chip kind="gloves" text="" />}
       {me.remote && <Chip kind="remote" text="" />}
       {me.killCharges > 0 && <Chip kind="killswitch" text={`x${me.killCharges}`} />}
       {me.sneakers && <Chip kind="sneakers" text="" />}
       {me.hotFuel && <Chip kind="hotfuel" text="" />}
-      {me.bombPass && <Chip kind="bombpass" text="PASS" cls="good" />}
+      {me.contact === 'pass' && <Chip kind="bombpass" text="PASS" cls="good" />}
       {me.mounted && <Chip kind="okada" text="SHIELD" cls="good" />}
       {me.voucher && <Chip kind="voucher" text={VEHICLE_DEFS[me.vehicle].name.toUpperCase()} cls="good" />}
       {me.curse && <Chip kind="curse" text={`${curseLabel} ${me.curse.seconds}s`} cls="bad" />}

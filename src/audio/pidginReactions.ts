@@ -221,6 +221,7 @@ export function stingForEnd(events: readonly SimEvent[], state: Readonly<GameSta
   for (const e of events) {
     if (e.type !== 'matchEnded') continue;
     if (e.result.kind === 'draw') return 'draw';
+    if (e.result.kind === 'teamWin') return state.players[0]?.team === e.result.team ? 'win' : 'lose';
     return isHuman(state, e.result.winnerId) ? 'win' : 'lose';
   }
   return null;

@@ -11,9 +11,9 @@ import { runMatch } from '../src/ai/headless';
 
 const matches = Number(process.argv[2] ?? 4);
 const lineups: Difficulty[][] = [
-  ['hard', 'medium', 'easy', 'hard'],
-  ['medium', 'medium', 'hard'],
-  ['easy', 'hard'],
+  ['expert', 'standard', 'beginner', 'expert'],
+  ['standard', 'standard', 'expert'],
+  ['beginner', 'expert'],
 ];
 for (const arenaId of STANDARD_ARENA_IDS) {
   for (let i = 0; i < matches; i++) {

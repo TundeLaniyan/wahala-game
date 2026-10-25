@@ -133,7 +133,7 @@ export function TouchControls() {
       </div>
     );
   const skill = CHARACTERS[character].skill;
-  const actionLabel = me.carrying ? (me.punch ? 'THROW' : 'DROP') : me.grip ? 'CARRY' : 'PUNCH';
+  const actionLabel = me.carrying ? 'DROP' : 'CARRY';
   return (
     <div className="touch" data-testid="touch-controls">
       <Joystick entryOpen={false} />

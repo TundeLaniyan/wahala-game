@@ -160,9 +160,9 @@ describe('stage alerts (HUD projection)', () => {
 describe('HUD: Generator Pass and the arena rule banner', () => {
   it('reports the Generator Pass in the local inventory', () => {
     const s = sandbox();
-    expect(buildHud(s, 0, null).me!.bombPass).toBe(false);
-    s.players[0]!.bombPass = true;
-    expect(buildHud(s, 0, null).me!.bombPass).toBe(true);
+    expect(buildHud(s, 0, null).me!.contact).toBe(null);
+    s.players[0]!.contact = 'pass';
+    expect(buildHud(s, 0, null).me!.contact).toBe('pass');
   });
 
   it('shows the Power Yard rule during the countdown only, and no banner elsewhere', () => {

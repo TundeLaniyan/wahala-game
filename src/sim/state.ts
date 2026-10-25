@@ -5,7 +5,8 @@ import { DEFAULT_ARENA_ID, getArena } from './arenas';
 import type { ArenaDef } from './arenas';
 import { tileIndex } from './grid';
 import { nextFloat, seedToState, weightedPick } from './rng';
-import { Tile } from './types';
+import { NO_TEAM, Tile } from './types';
+import { modeConfig, modeShrinks, teamFor } from './modes';
 import type {
   CrushState,
   EndgameTrapState,
@@ -19,7 +20,15 @@ import type {
   TrapTile,
 } from './types';
 
-export const DEFAULT_SETTINGS: MatchSettings = { mode: 'classic', crowdThrows: false, stageHazards: true };
+export const DEFAULT_SETTINGS: MatchSettings = {
+  game: 'classic',
+  friendlyFire: false,
+  teamCount: 2,
+  durationSec: null,
+  mode: 'classic',
+  crowdThrows: false,
+  stageHazards: true,
+};
 
 export const MIN_PLAYERS = 1;
 /** The largest supported match (City Rumble). Each arena has its own `maxPlayers` (standard arenas: 4). */
@@ -44,17 +53,25 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     alive: true,
     eliminatedTick: null,
     elimination: null,
+    eliminatedBy: null,
+    team: setup.team ?? NO_TEAM,
+    stats: { kills: 0, deaths: 0, assists: 0, lastKillTick: -1 },
+    recentHits: [],
+    respawnAt: null,
+    protectedUntil: 0,
+    spectator: null,
     range: config.generator.baseRange,
     capacity: config.generator.baseCapacity,
     speedLevel: 0,
-    kick: false,
-    punch: false,
+    contact: null,
+    contactReadyTick: 0,
     grip: false,
     remote: false,
     killSwitchCharges: 0,
     sneakers: false,
     hotFuel: false,
-    bombPass: false,
+    armour: 0,
+    squareTier: 0,
     mounted: false,
     jumpReadyTick: 0,
     slide: null,
@@ -78,10 +95,15 @@ export function createGame(options: GameOptions): GameState {
   if (options.players.length < MIN_PLAYERS || options.players.length > max) {
     throw new Error(`${arena.name} supports ${MIN_PLAYERS}-${max} competitors`);
   }
-  // arena rules (Power Yard blasts, City Rumble timing ...) first, then any test/tutorial override
-  const config = mergeConfig(mergeConfig(DEFAULT_CONFIG, arena.config), options.config);
   const settings: MatchSettings = { ...DEFAULT_SETTINGS, ...options.settings };
+  // arena rules (Power Yard blasts, City Rumble timing ...), then the ruleset (Rumble modes), then any
+  // test/tutorial override
+  const config = mergeConfig(
+    mergeConfig(mergeConfig(DEFAULT_CONFIG, arena.config), modeConfig(settings, arena)),
+    options.config,
+  );
   if (arena.forcedMode) settings.mode = arena.forcedMode;
+  if (!modeShrinks(settings)) settings.mode = 'classic';
   const width = arena.layout[0]!.length;
   const height = arena.layout.length;
 
@@ -98,7 +120,9 @@ export function createGame(options: GameOptions): GameState {
     hidden: {},
     floorHazards: {},
     endgameTraps: { waves: [], liveAt: [], warned: 0, live: 0, warnings: [] },
-    players: options.players.map((setup, id) => createPlayer(id, setup, arena, config)),
+    players: options.players.map((setup, id) =>
+      createPlayer(id, { ...setup, team: setup.team ?? teamFor(settings, id, options.players.length) }, arena, config),
+    ),
     generators: [],
     flames: [],
     blasts: [],

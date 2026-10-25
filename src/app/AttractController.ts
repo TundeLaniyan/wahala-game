@@ -38,7 +38,7 @@ export class AttractController {
         name: ['Ola_99', 'Chi_Boy', 'T_Blaze', 'Yaba_King'][i]!,
         characterId: CHARACTER_IDS[i % CHARACTER_IDS.length]!,
         isBot: true,
-        difficulty: 'medium' as const,
+        difficulty: 'standard' as const,
       })),
     });
     // skip the countdown: the demo should already be in motion
@@ -46,7 +46,7 @@ export class AttractController {
     state.match.countdownRemaining = 0;
     this.state = state;
     this.bots = state.players.map((_, i) =>
-      this.botFactory({ difficulty: 'medium', seed: seed + i * 31, playerId: i }),
+      this.botFactory({ difficulty: 'standard', seed: seed + i * 31, playerId: i }),
     );
     this.accumulator = 0;
     this.lastMs = -1;

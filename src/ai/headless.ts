@@ -2,7 +2,7 @@
  * Headless bot-vs-bot match runner used by the evaluation script and the statistical tests.
  * Deterministic: the same spec always produces the same outcome.
  */
-import { createGame, observe, tick } from '../sim';
+import { DIFFICULTIES, createGame, observe, tick } from '../sim';
 import type {
   CharacterId,
   DeepPartial,
@@ -89,8 +89,8 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
   const bots: Bot[] = spec.difficulties.map((difficulty, i) =>
     createBot({ difficulty, seed: spec.seed * 7919 + i * 104729 + 17, playerId: i }),
   );
-  const decideMs: Record<Difficulty, number> = { easy: 0, medium: 0, hard: 0 };
-  const decideCalls: Record<Difficulty, number> = { easy: 0, medium: 0, hard: 0 };
+  const decideMs = Object.fromEntries(DIFFICULTIES.map((d) => [d, 0])) as Record<Difficulty, number>;
+  const decideCalls = Object.fromEntries(DIFFICULTIES.map((d) => [d, 0])) as Record<Difficulty, number>;
   const cap = state.config.match.countdownTicks + state.config.match.durationTicks + 60;
   const intents: Intents = {};
   const placements: { owner: number; tick: number; x: number; y: number }[] = [];

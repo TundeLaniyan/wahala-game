@@ -1504,7 +1504,7 @@ export class StageHazardViews implements View {
   private drawPasses(ctx: FrameContext): void {
     const { state, alpha, time } = ctx;
     for (const p of state.players) {
-      if (!p.alive || !p.bombPass) continue;
+      if (!p.alive || p.contact !== 'pass') continue;
       const g = playerGridPos(p, alpha);
       const pulse = 0.5 + 0.5 * Math.sin(time * 4 + p.id);
       this.put(this.rings, this.wx(g.x), this.wz(g.y), PASS, 0.35 + 0.25 * pulse, 0.78 + 0.05 * pulse);

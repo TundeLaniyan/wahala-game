@@ -341,6 +341,51 @@ const painters: Record<PickupKind, Painter> = {
     g.lineTo(44, 52);
     g.stroke();
   },
+  armour: (g) => {
+    // Armour Vest: a steel-grey plated vest with a bright rim
+    g.fillStyle = '#8fa4b8';
+    g.strokeStyle = '#1a1e24';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(18, 12);
+    g.lineTo(26, 16);
+    g.lineTo(38, 16);
+    g.lineTo(46, 12);
+    g.lineTo(52, 22);
+    g.lineTo(48, 28);
+    g.lineTo(48, 52);
+    g.lineTo(16, 52);
+    g.lineTo(16, 28);
+    g.lineTo(12, 22);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    g.fillStyle = '#c9d6e2';
+    for (const y of [26, 36, 46]) g.fillRect(22, y - 3, 20, 5);
+    g.strokeStyle = W;
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(32, 18);
+    g.lineTo(32, 50);
+    g.stroke();
+  },
+  square: (g) => {
+    // Square Blast: a generator at the centre of a 3 x 3 burst grid
+    g.fillStyle = '#ff4fd8';
+    for (let y = 0; y < 3; y++)
+      for (let x = 0; x < 3; x++) {
+        g.globalAlpha = x === 1 && y === 1 ? 1 : 0.7;
+        g.fillRect(8 + x * 17, 8 + y * 17, 14, 14);
+      }
+    g.globalAlpha = 1;
+    g.strokeStyle = '#1a0a18';
+    g.lineWidth = 3;
+    g.strokeRect(6, 6, 52, 52);
+    g.fillStyle = '#3a4048';
+    g.fillRect(27, 27, 10, 10);
+    g.fillStyle = '#ffd018';
+    g.fillRect(29, 28, 6, 3);
+  },
   bombpass: (g) => {
     // Generator Pass: a small generator crossed by a dashed footprint trail and an arrow straight through it
     g.fillStyle = '#3a4048';

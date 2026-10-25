@@ -61,7 +61,7 @@ describe('tutorial isolation and the MatchController scenario hooks', () => {
   it('a normal match started afterwards is a normal match again', () => {
     const r = rig();
     r.tutorial.open();
-    r.match.start({ ...DEFAULT_GAME_SETTINGS, competitors: 2 }, 3);
+    r.match.start({ ...DEFAULT_GAME_SETTINGS, play: 'classic', competitors: 2 }, 3);
     expect(r.match.scenario).toBe(false);
     expect(r.match.state!.players).toHaveLength(2);
   });

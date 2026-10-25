@@ -1,5 +1,5 @@
-import type { CharacterId, PlayerSetup } from '../sim';
-import { CHARACTER_IDS, createRng, getArena, shuffle } from '../sim';
+import type { CharacterId, Difficulty, PlayerSetup } from '../sim';
+import { CHARACTER_IDS, DIFFICULTIES, createRng, getArena, shuffle } from '../sim';
 import type { GameSettings } from './settings';
 
 const BOT_NAMES = [
@@ -37,9 +37,27 @@ const BOT_NAMES = [
   'Funke_F',
 ];
 
-/** Total competitors for the chosen arena (City Rumble has its own, much larger count). */
+/** The arena the Play button starts: the chosen City Rumble stage or the Classic Battle arena. */
+export function matchArenaId(settings: GameSettings): string {
+  if (settings.play === 'rumble') return settings.rumbleArenaId;
+  return getArena(settings.arenaId).kind === 'rumble' ? 'danfoBusPark' : settings.arenaId;
+}
+
+/** Total competitors for the chosen game (City Rumble has its own, much larger count). */
 export function competitorCount(settings: GameSettings): number {
-  return getArena(settings.arenaId).kind === 'rumble' ? settings.rumbleCompetitors : settings.competitors;
+  return getArena(matchArenaId(settings)).kind === 'rumble' ? settings.rumbleCompetitors : settings.competitors;
+}
+
+/**
+ * Level of bot slot `i` (1-based). Classic: each bot has its own level. City Rumble: the preset, or with
+ * the mixed roster a deterministic spread of one level either side of it (never 31 manual choices).
+ */
+export function botDifficulty(settings: GameSettings, i: number): Difficulty {
+  if (settings.play === 'classic') return settings.botDifficulties[i - 1] ?? settings.difficulty;
+  if (!settings.rumbleMixed) return settings.difficulty;
+  const at = DIFFICULTIES.indexOf(settings.difficulty);
+  const spread = [0, -1, 1, 0, -2, 2, 0, 1, -1][i % 9]!;
+  return DIFFICULTIES[Math.max(0, Math.min(DIFFICULTIES.length - 1, at + spread))]!;
 }
 
 /** Human takes slot 0; bots get the other characters first (so portraits stay distinct) and unique handles. */
@@ -56,7 +74,7 @@ export function buildPlayers(settings: GameSettings, seed: number): PlayerSetup[
       name: names[i - 1]!,
       characterId: pool[i - 1]!,
       isBot: true,
-      difficulty: settings.difficulty,
+      difficulty: botDifficulty(settings, i),
     });
   }
   return players;

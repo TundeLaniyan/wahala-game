@@ -1,9 +1,9 @@
 import { CHARACTERS, createGame, entryKey, getArena, observe, readyToStep, tick } from '../sim';
-import type { GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent, VehicleTurn } from '../sim';
+import type { GameKind, GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent, VehicleTurn } from '../sim';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
 import { buildHud } from './hud';
-import { buildPlayers } from './names';
+import { buildPlayers, matchArenaId } from './names';
 import { cycleSpectateTarget, eliminatorOf, pickSpectateTarget } from './spectate';
 import { NULL_AUDIO } from './ports';
 import type { AudioPort, Bot, BotFactory, InputPort, RendererPort } from './ports';
@@ -103,12 +103,19 @@ export class MatchController {
     this.director = null;
     this.settings = settings;
     const players = buildPlayers(settings, seed);
+    const arenaId = matchArenaId(settings);
+    const rumble = getArena(arenaId).kind === 'rumble';
+    const game: GameKind = rumble ? settings.rumbleMode : 'classic';
     const state = createGame({
       seed,
-      arenaId: settings.arenaId,
+      arenaId,
       players,
       settings: {
-        mode: settings.mode,
+        game,
+        // Wahala Crush is mandatory in every standard match (no Classic Timer choice any more)
+        mode: 'crush',
+        friendlyFire: settings.friendlyFire,
+        durationSec: game === 'deathmatch' || game === 'team' ? settings.rumbleMinutes * 60 : null,
         crowdThrows: settings.crowdThrows,
       },
     });
@@ -123,7 +130,7 @@ export class MatchController {
       if (p.isBot)
         this.bots.set(
           i,
-          this.deps.botFactory({ difficulty: settings.difficulty, seed: seed + i * 7919, playerId: i }),
+          this.deps.botFactory({ difficulty: players[i]?.difficulty ?? settings.difficulty, seed: seed + i * 7919, playerId: i }),
         );
     });
     this.accumulator = 0;
@@ -137,7 +144,7 @@ export class MatchController {
     this.entry.sync(state);
     this.deps.input.clear();
     this.deps.renderer.loadGame(state);
-    this.audio.startMusic(settings.arenaId);
+    this.audio.startMusic(arenaId);
     this.audio.setIntensity(0);
     patch({
       screen: 'playing',

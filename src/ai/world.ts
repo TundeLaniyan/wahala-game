@@ -83,7 +83,7 @@ export class World {
     for (let i = 0; i < board.size; i++) blocked[i] = obs.tiles[i] === Tile.Empty ? 0 : 1;
     this.genAt.fill(-1);
     // Generator Pass: generators do not block this bot's feet (they still explode)
-    const pass = this.me.bombPass;
+    const pass = this.me.contact === 'pass';
     obs.generators.forEach((g, i) => {
       if (g.carriedBy !== null) return;
       if (!pass) blocked[g.y * board.width + g.x] = 1;

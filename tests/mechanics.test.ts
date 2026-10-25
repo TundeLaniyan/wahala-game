@@ -104,7 +104,7 @@ describe('generator handling', () => {
     const s = sandbox();
     put(s, 0, 2, 4);
     put(s, 1, 14, 0);
-    s.players[0]!.kick = true;
+    s.players[0]!.contact = 'kick';
     addSoft(s, 9, 4);
     const g = addGenerator(s, { ownerId: 1, x: 3, y: 4, timer: 9999 });
     run(s, 1, { 0: { move: 'right' } });
@@ -117,7 +117,7 @@ describe('generator handling', () => {
   it('a kicked generator cannot pass through concrete and kicking into concrete does nothing', () => {
     const s = sandbox();
     put(s, 0, 2, 1);
-    s.players[0]!.kick = true;
+    s.players[0]!.contact = 'kick';
     const g = addGenerator(s, { ownerId: 1, x: 3, y: 0, timer: 9999 });
     put(s, 0, 2, 0);
     run(s, 1, { 0: { move: 'right' } });
@@ -130,7 +130,7 @@ describe('generator handling', () => {
   it('Mechanic Gloves punch a generator three tiles without detonating it', () => {
     const s = sandbox();
     put(s, 0, 2, 4);
-    s.players[0]!.punch = true;
+    s.players[0]!.contact = 'punch';
     s.players[0]!.facing = 'right';
     const g = addGenerator(s, { ownerId: 1, x: 3, y: 4, timer: 200 });
     const ev = run(s, 1, { 0: { action: true } });

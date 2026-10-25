@@ -13,7 +13,7 @@
  * - every think has a deterministic work budget (counted danger builds + searches, never wall-clock),
  *   after which optional analyses are skipped conservatively.
  */
-import type { Difficulty } from '../sim';
+import type { AiTier } from './profiles';
 import type { Board } from './board';
 
 /** Boards with more tiles than this use the large-board limits (standard boards have 165). */
@@ -38,13 +38,13 @@ export const LARGE_RIVAL_SLOTS = 14;
  * Work units (danger-map builds + time-expanded searches) one think may spend on a large board before
  * optional analyses (extra placement checks, sealing / vulnerability checks) are skipped.
  */
-export const LARGE_WORK_BUDGET: Readonly<Record<Difficulty, number>> = { easy: 8, medium: 14, hard: 26 };
+export const LARGE_WORK_BUDGET: Readonly<Record<AiTier, number>> = { easy: 8, medium: 14, hard: 26 };
 
 /** Full rival-escape simulations per think on a large board (standard: the profile's 0 / 2 / 8). */
-export const LARGE_RIVAL_SIMS: Readonly<Record<Difficulty, number>> = { easy: 0, medium: 2, hard: 4 };
+export const LARGE_RIVAL_SIMS: Readonly<Record<AiTier, number>> = { easy: 0, medium: 2, hard: 4 };
 
 /** Minimum ticks between two full re-plans on a large board (standard boards use the profile only). */
-export const LARGE_MIN_THINK: Readonly<Record<Difficulty, number>> = { easy: 20, medium: 14, hard: 6 };
+export const LARGE_MIN_THINK: Readonly<Record<AiTier, number>> = { easy: 20, medium: 14, hard: 6 };
 
 /**
  * Routine (non-urgent) re-plans allowed per tick across ALL bots of a large match. Urgent re-plans

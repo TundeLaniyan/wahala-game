@@ -4,8 +4,8 @@ import type { Difficulty, GameState, Intents } from '../../src/sim';
 import { addGenerator, addPickup, addSoft, eventsOf, put, sandbox } from '../helpers';
 import { makeBots, runBots } from './helpers';
 
-const ALL: Difficulty[] = ['easy', 'medium', 'hard'];
-const SMART: Difficulty[] = ['medium', 'hard'];
+const ALL: Difficulty[] = ['beginner', 'standard', 'expert'];
+const SMART: Difficulty[] = ['standard', 'expert'];
 
 /** Two-player sandbox with the bot at slot 0 and an idle rival parked far away. */
 function duel(botAt: [number, number], rivalAt: [number, number] = [14, 0]): GameState {
@@ -153,7 +153,7 @@ describe('pickups', () => {
     addPickup(s, 6, 4, 'okada');
     addPickup(s, 2, 8, 'boots');
     runBots(s, makeBots({ 0: d }), 500);
-    expect(s.players[0]!.mounted || s.players[0]!.kick).toBe(true);
+    expect(s.players[0]!.mounted || s.players[0]!.contact === 'kick').toBe(true);
   });
 
   it.each(SMART)('%s does not pick up a curse on purpose', (d) => {
@@ -191,7 +191,7 @@ describe('vehicles', () => {
     let survived = 0;
     for (let seed = 1; seed <= 10; seed++) {
       const s = taxiAtRow4(6, 4);
-      runBots(s, makeBots({ 0: 'easy' }, seed), 400, { others: launchTaxi });
+      runBots(s, makeBots({ 0: 'beginner' }, seed), 400, { others: launchTaxi });
       if (s.players[0]!.alive) survived++;
     }
     expect(survived).toBeGreaterThanOrEqual(6);
@@ -283,7 +283,7 @@ describe('generator tools', () => {
 
   it.each(SMART)('%s kicks the generator sealing it in when it owns Football Boots', (d) => {
     const s = pocket();
-    s.players[0]!.kick = true;
+    s.players[0]!.contact = 'kick';
     const run = runBots(s, makeBots({ 0: d }), 260);
     expect(eventsOf(run.events, 'generatorKicked').length).toBeGreaterThan(0);
     expect(s.players[0]!.alive).toBe(true);
@@ -291,7 +291,7 @@ describe('generator tools', () => {
 
   it.each(SMART)('%s punches the generator sealing it in when it owns Mechanic Gloves', (d) => {
     const s = pocket();
-    s.players[0]!.punch = true;
+    s.players[0]!.contact = 'punch';
     s.players[0]!.facing = 'right';
     const run = runBots(s, makeBots({ 0: d }), 260);
     expect(eventsOf(run.events, 'generatorThrown').length).toBeGreaterThan(0);
@@ -315,7 +315,7 @@ describe('close combat', () => {
     put(s, 1, 5, 4);
     s.players[0]!.facing = 'right';
     addGenerator(s, { ownerId: 1, x: 6, y: 2, timer: 14, range: 2 }); // burns (6,3) (6,4) (6,5), not (5,4)
-    const run = runBots(s, makeBots({ 0: 'medium' }), 60);
+    const run = runBots(s, makeBots({ 0: 'standard' }), 60);
     expect(eventsOf(run.events, 'playerPushed')).toHaveLength(1);
     expect(s.players[1]!.alive).toBe(false);
     expect(s.players[0]!.alive).toBe(true);
@@ -327,7 +327,7 @@ describe('close combat', () => {
     put(s, 1, 5, 4);
     s.players[0]!.facing = 'right';
     addGenerator(s, { ownerId: 0, x: 8, y: 4, timer: 50, range: 4 });
-    const run = runBots(s, makeBots({ 0: 'hard' }), 90);
+    const run = runBots(s, makeBots({ 0: 'expert' }), 90);
     expect(eventsOf(run.events, 'playerDazed')).toHaveLength(1);
     expect(s.players[1]!.alive).toBe(false);
     expect(s.players[0]!.alive).toBe(true);
@@ -338,7 +338,7 @@ describe('close combat', () => {
     put(s, 0, 4, 4);
     put(s, 1, 5, 4);
     s.players[0]!.facing = 'right';
-    const run = runBots(s, makeBots({ 0: 'hard' }), 30);
+    const run = runBots(s, makeBots({ 0: 'expert' }), 30);
     expect(eventsOf(run.events, 'playerPushed')).toHaveLength(0);
   });
 });
@@ -349,8 +349,8 @@ describe('sanity', () => {
     const b = duel([0, 10]);
     addSoft(a, 2, 10, 'okada');
     addSoft(b, 2, 10);
-    const botsA = makeBots({ 0: 'hard' });
-    const botsB = makeBots({ 0: 'hard' });
+    const botsA = makeBots({ 0: 'expert' });
+    const botsB = makeBots({ 0: 'expert' });
     // identical until the block is destroyed (and the pickup becomes visible)
     for (let i = 0; i < 1500 && a.tiles[10 * a.width + 2] === Tile.Soft; i++) {
       const ra = runBots(a, botsA, 1);
@@ -361,7 +361,7 @@ describe('sanity', () => {
 
   it('never leaves the arena grid on hard tiles', () => {
     const s = duel([0, 10]);
-    runBots(s, makeBots({ 0: 'medium' }), 300);
+    runBots(s, makeBots({ 0: 'standard' }), 300);
     const p = s.players[0]!;
     expect(s.tiles[p.y * s.width + p.x]).toBe(Tile.Empty);
   });

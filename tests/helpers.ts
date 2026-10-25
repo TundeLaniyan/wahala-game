@@ -69,6 +69,8 @@ export function addGenerator(
     stepFromY: g.y,
     range: 2,
     pierce: false,
+    square: 0,
+    fromSpectator: false,
     mode: 'timed',
     timer: state.config.generator.fuseTicks,
     carriedBy: null,

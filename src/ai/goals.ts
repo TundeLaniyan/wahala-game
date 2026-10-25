@@ -73,6 +73,8 @@ const PICKUP_BASE: Record<PickupKind, number> = {
   sneakers: 2,
   hotfuel: 3,
   bombpass: 4,
+  armour: 8,
+  square: 6,
 };
 
 /** How much this bot wants a pickup, given what it already has. 0 = worthless. */
@@ -91,9 +93,9 @@ export function pickupValue(c: Ctx, kind: PickupKind): number {
     case 'skates':
       return me.speedLevel >= obs.config.pickups.maxSpeedLevel ? have : base;
     case 'boots':
-      return me.kick ? have : base;
+      return me.contact === 'kick' ? have : me.contact ? base * 0.5 : base;
     case 'gloves':
-      return me.punch ? have : base;
+      return me.contact === 'punch' ? have : me.contact ? base * 0.5 : base;
     case 'grip':
       return me.grip ? have : base;
     case 'remote':
@@ -103,9 +105,17 @@ export function pickupValue(c: Ctx, kind: PickupKind): number {
     case 'hotfuel':
       return me.hotFuel ? have : base;
     case 'bombpass':
-      return me.bombPass ? have : base;
+      return me.contact === 'pass' ? have : me.contact ? base * 0.5 : base;
     case 'killswitch':
-      return me.killSwitchCharges >= obs.config.pickups.maxKillSwitchCharges ? have : base;
+      return me.contact === 'disarm' && me.killSwitchCharges >= obs.config.pickups.maxKillSwitchCharges
+        ? have
+        : me.contact && me.contact !== 'disarm'
+          ? base * 0.5
+          : base;
+    case 'armour':
+      return me.armour >= obs.config.protection.maxArmour ? have : base;
+    case 'square':
+      return me.squareTier >= obs.config.square.maxTier ? have : base;
     case 'okada':
       return me.mounted ? have : base;
     case 'voucher':
@@ -161,7 +171,7 @@ export function tileValue(c: Ctx, tile: number, prevGoal: number): number {
   if (tile === prevGoal) v += 1.2;
   if (profile.refugeMinExits > 0 && world.exits(tile) < profile.refugeMinExits) v -= 1.5;
   // do not loiter right next to a rival unless attacking (rivals on the tile or a neighbour)
-  if (profile.difficulty !== 'easy') {
+  if (profile.tier !== 'easy') {
     let close = world.rivalAt[tile]!;
     for (let d = 0; d < 4; d++) {
       const n = world.board.neighbor[tile * 4 + d]!;
@@ -293,7 +303,7 @@ export function chooseGoal(c: Ctx, prevGoal: number): Plan | null {
       placeCands.push({ kind: 'place', tile: t, slot: k, score, verify: true });
     }
     placeCands.sort((a, b) => b.score - a.score);
-    const verifyBudget = profile.difficulty === 'hard' ? 8 : profile.difficulty === 'medium' ? 4 : 2;
+    const verifyBudget = profile.tier === 'hard' ? 8 : profile.tier === 'medium' ? 4 : 2;
     let verified = 0;
     for (const cand of placeCands) {
       if (verified >= verifyBudget || overBudget(c)) break;

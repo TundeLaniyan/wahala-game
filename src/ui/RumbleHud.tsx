@@ -23,6 +23,7 @@ const CAUSE: Record<FeedItem['cause'], string> = {
   crush: 'the city closed in',
   hazard: 'traffic',
   crowd: 'the crowd',
+  spectator: 'a sideline throw',
 };
 
 function Feed({ feed }: { feed: FeedItem[] }) {

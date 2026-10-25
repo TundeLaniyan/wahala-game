@@ -44,7 +44,7 @@ export function decideRemote(c: Ctx, standingOn: readonly number[]): boolean {
   }
   const full = mine.length >= me.capacity;
 
-  switch (profile.difficulty) {
+  switch (profile.tier) {
     case 'easy':
       return age >= 80 + ((me.id * 17) % 40);
     case 'medium':

@@ -7,6 +7,7 @@
  * removed afterwards, so two simultaneous blasts can never disagree about what blocks what.
  */
 import { DIRS, DIR_VEC, tileAt, tileIndex } from '../grid';
+import type { GridView } from '../grid';
 import { Tile } from '../types';
 import type { BlastEvent, Flame, GameState, Generator, SimEvent } from '../types';
 import { revealPickupAt } from './pickups';
@@ -53,6 +54,7 @@ export function resolveExplosions(state: GameState, events: SimEvent[]): void {
     const blast: BlastEvent = {
       id: eventId,
       tiles: [...tiles],
+      seedOwnerId: seed.ownerId,
       endTick: state.tick + state.config.generator.flameTicks,
     };
     state.blasts.push(blast);
@@ -75,7 +77,14 @@ function buildFlames(
 ): Flame[] {
   const startTick = state.tick;
   const endTick = state.tick + state.config.generator.flameTicks;
-  const base = { genId: gen.id, ownerId: gen.ownerId, eventId, startTick, endTick };
+  const base = {
+    genId: gen.id,
+    ownerId: gen.ownerId,
+    eventId,
+    startTick,
+    endTick,
+    ...(gen.fromSpectator ? { fromSpectator: true } : {}),
+  };
   const flames: Flame[] = [{ ...base, x: gen.x, y: gen.y, dir: null, tip: false }];
 
   if (state.config.generator.blastMode === 'fullLine') {
@@ -95,6 +104,20 @@ function buildFlames(
       if (last) last.tip = true;
     }
     return flames;
+  }
+
+  if (gen.square > 0) {
+    // V2 Square Blast: the plus arms below, plus every square tile the blast wave reaches
+    for (const t of squareFootprint(state, gen.x, gen.y, gen.square, (x, y) =>
+      triggerableGeneratorsAt(state, x, y).some((o) => o.id !== gen.id),
+    )) {
+      if (t.x === gen.x || t.y === gen.y) continue; // the centre row / column belong to the plus arms
+      flames.push({ ...base, x: t.x, y: t.y, dir: null, tip: false });
+      if (tileAt(state, t.x, t.y) === Tile.Soft) {
+        const idx = tileIndex(state, t.x, t.y);
+        if (!softHit.has(idx)) softHit.set(idx, eventId);
+      }
+    }
   }
 
   for (const dir of DIRS) {
@@ -123,6 +146,50 @@ function buildFlames(
     if (last) last.tip = true;
   }
   return flames;
+}
+
+/**
+ * V2 Square Blast propagation rule (documented in docs/GAMEPLAY_V2.md): the blast spreads out from the
+ * generator one tile at a time, ONLY ever moving away from it (each step increases |dx| or |dy| and never
+ * decreases the other), up to `radius` in both axes (a (2r+1) x (2r+1) square). Concrete and the arena
+ * edge are never entered; a crate is hit (it breaks) but the wave does not continue beyond it; a tile
+ * holding another generator is hit (that generator chains) but does not pass the wave on. So a square
+ * blast never reaches through concrete: a diagonal tile is only hit when one of the two tiles between it
+ * and the centre lets the wave through. Pure; the AI uses the same function for its danger map.
+ */
+export function squareFootprint(
+  grid: GridView,
+  cx: number,
+  cy: number,
+  radius: number,
+  blocksWave: (x: number, y: number) => boolean = () => false,
+): { x: number; y: number }[] {
+  const size = 2 * radius + 1;
+  const reached = new Uint8Array(size * size);
+  const passes = new Uint8Array(size * size);
+  const at = (dx: number, dy: number): number => (dy + radius) * size + (dx + radius);
+  reached[at(0, 0)] = 1;
+  passes[at(0, 0)] = 1;
+  const out: { x: number; y: number }[] = [];
+  for (let ring = 1; ring <= 2 * radius; ring++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const dyAbs = ring - Math.abs(dx);
+      if (dyAbs < 0 || dyAbs > radius) continue;
+      for (const dy of dyAbs === 0 ? [0] : [-dyAbs, dyAbs]) {
+        const x = cx + dx;
+        const y = cy + dy;
+        if (tileAt(grid, x, y) === Tile.Hard) continue;
+        // predecessors one step closer: towards the centre along x or along y
+        const fromX = dx !== 0 && passes[at(dx - Math.sign(dx), dy)] === 1;
+        const fromY = dy !== 0 && passes[at(dx, dy - Math.sign(dy))] === 1;
+        if (!fromX && !fromY) continue;
+        reached[at(dx, dy)] = 1;
+        out.push({ x, y });
+        if (tileAt(grid, x, y) === Tile.Empty && !blocksWave(x, y)) passes[at(dx, dy)] = 1;
+      }
+    }
+  }
+  return out;
 }
 
 /** Removes soft blocks, revealing whatever pickup was hidden underneath. */

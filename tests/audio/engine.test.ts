@@ -150,6 +150,14 @@ describe('event mapping', () => {
       'vehicleEntryCancelled',
       'stageEnded',
       'stageSweepStep',
+      // V2 events: the contact abilities reuse the kick / throw / disarm sounds of the events they cause
+      'contactUsed',
+      'contactEquipped',
+      'specialUsed',
+      'protectionBroken',
+      'rewardGranted',
+      'playerRespawned',
+      'spectatorThrow',
     ]);
     // an extra human-less state variant is covered below; here players 0/1 are both "human" sandbox players
     for (const [type, e] of Object.entries(SAMPLES)) {

@@ -29,6 +29,10 @@ import { updateCrowd } from './systems/crowd';
 import { updateCrush } from './systems/crush';
 import { updateEndgameTraps, updateFloorHazards } from './systems/hazards';
 import { armTeleports, updateStage } from './systems/stage';
+import { resolveSpecial } from './systems/actions';
+import { grantRewards } from './systems/rewards';
+import { scheduleRespawns, updateRespawns } from './systems/respawn';
+import { updateSpectators } from './systems/spectators';
 
 export function tick(state: GameState, intents: Intents = {}): SimEvent[] {
   const events: SimEvent[] = [];
@@ -48,9 +52,11 @@ export function tick(state: GameState, intents: Intents = {}): SimEvent[] {
   }
 
   state.match.playTicks++;
+  updateRespawns(state, events);
   expireEntryModes(state, events);
   applyIntents(state, intents, events);
   updateMovement(state, intents, events);
+  updateSpectators(state, intents, events);
   updateFloorHazards(state, events);
   armTeleports(state);
   updateGeneratorMotion(state, events);
@@ -68,6 +74,8 @@ export function tick(state: GameState, intents: Intents = {}): SimEvent[] {
   hits.push(...collectFlameHits(state));
 
   const eliminated = applyLethalHits(state, hits, events);
+  grantRewards(state, events);
+  scheduleRespawns(state, eliminated);
   applyBlastExposure(state, events);
   dropLoot(state, eliminated, events);
   expire(state);
@@ -84,6 +92,7 @@ function applyIntents(state: GameState, intents: Intents, events: SimEvent[]): v
     if (intent.disarm) tryDisarm(state, p, events);
     if (intent.action) performAction(state, p, events);
     if (intent.skill) useSkill(state, p, events);
+    if (intent.special) resolveSpecial(state, p, events);
     if (intent.place) tryPlaceGenerator(state, p, events);
   }
 }

@@ -3,6 +3,8 @@
  * simultaneous eliminations are genuinely simultaneous (and can therefore produce draws).
  */
 import type { EliminationCause, GameState, Player, SimEvent } from '../types';
+import { creditFor } from './attribution';
+import { canHarm } from './queries';
 
 export interface LethalHit {
   playerId: number;
@@ -23,10 +25,13 @@ export function collectFlameHits(state: GameState): LethalHit[] {
     if (!p.alive) continue;
     for (const f of state.flames) {
       if (f.x === p.x && f.y === p.y && state.tick >= f.startTick && state.tick < f.endTick) {
+        if (!canHarm(state, f.ownerId, p)) continue; // teammate's fire, friendly fire off
         hits.push({
           playerId: p.id,
           eventId: f.eventId,
-          cause: { kind: 'flame', ownerId: f.ownerId, eventId: f.eventId },
+          cause: f.fromSpectator
+            ? { kind: 'spectator', ownerId: f.ownerId, eventId: f.eventId }
+            : { kind: 'flame', ownerId: f.ownerId, eventId: f.eventId },
           graceUntil: Math.max(f.endTick, state.tick + state.config.okada.graceTicks),
         });
       }
@@ -51,12 +56,18 @@ export function applyLethalHits(state: GameState, hits: LethalHit[], events: Sim
     if (!p.alive || !mine) continue;
     const live = mine.filter((h) => !isImmune(state, p, h.eventId));
     if (live.length === 0) continue;
+    // spawn protection (respawn modes): ignore everything but the closing walls
+    if (state.tick < p.protectedUntil && live.every((h) => h.cause.kind !== 'crush')) continue;
 
-    if (p.mounted) {
-      // Okada absorbs every lethal event of this tick, breaks, and the rider carries on afoot.
-      p.mounted = false;
+    // Protection layers: ONE layer absorbs every lethal event of this tick (so one explosion frame can
+    // never eat the Okada, the Armour and the life at once); the Okada goes first, then Armour.
+    const layer = p.mounted ? 'okada' : p.armour > 0 ? 'armour' : null;
+    if (layer) {
+      if (layer === 'okada') p.mounted = false;
+      else p.armour--;
       for (const h of live) p.immune.push({ eventId: h.eventId, until: h.graceUntil });
-      events.push({ type: 'okadaBroken', playerId: p.id, x: p.x, y: p.y });
+      if (layer === 'okada') events.push({ type: 'okadaBroken', playerId: p.id, x: p.x, y: p.y });
+      events.push({ type: 'protectionBroken', playerId: p.id, layer, x: p.x, y: p.y });
       continue;
     }
     eliminate(state, p, live[0]!.cause, events);
@@ -66,9 +77,19 @@ export function applyLethalHits(state: GameState, hits: LethalHit[], events: Sim
 }
 
 export function eliminate(state: GameState, p: Player, cause: EliminationCause, events: SimEvent[]): void {
+  const credit = creditFor(state, p, cause);
   p.alive = false;
   p.eliminatedTick = state.tick;
   p.elimination = cause;
+  p.eliminatedBy = credit.creditId;
+  p.stats.deaths++;
+  p.recentHits = [];
+  if (credit.creditId !== null) {
+    const killer = state.players[credit.creditId]!;
+    killer.stats.kills++;
+    killer.stats.lastKillTick = state.tick;
+  }
+  for (const id of credit.assistIds) state.players[id]!.stats.assists++;
   p.entryUntil = null;
   p.stepRemaining = 0;
   if (p.carrying !== null) {
@@ -80,5 +101,13 @@ export function eliminate(state: GameState, p: Player, cause: EliminationCause, 
     }
     p.carrying = null;
   }
-  events.push({ type: 'playerEliminated', playerId: p.id, cause, x: p.x, y: p.y });
+  events.push({
+    type: 'playerEliminated',
+    playerId: p.id,
+    cause,
+    x: p.x,
+    y: p.y,
+    creditId: credit.creditId,
+    assistIds: credit.assistIds,
+  });
 }

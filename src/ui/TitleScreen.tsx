@@ -1,5 +1,5 @@
-import { CHARACTERS, CHARACTER_IDS, CITY_RUMBLE_ID, VEHICLE_DEFS } from '../sim';
-import type { CharacterId, Difficulty, MatchMode } from '../sim';
+import { CHARACTERS, CHARACTER_IDS, DIFFICULTIES, VEHICLE_DEFS } from '../sim';
+import type { CharacterId } from '../sim';
 import { portraitUrl } from '../assets/portraits';
 import { commands } from '../app/session';
 import { useGameStore } from '../app/store';
@@ -38,7 +38,7 @@ export function TitleScreen() {
   const set = (p: Partial<GameSettings>) => commands.updateSettings(p);
   const busy = loading !== null && loading.done < loading.total;
   // City Rumble has its own competitor count (on its card) and always closes in: no 2-4 or rules choice
-  const rumble = s.arenaId === CITY_RUMBLE_ID;
+  const rumble = s.play === 'rumble';
 
   return (
     <div className="title" data-testid="title-screen">
@@ -124,7 +124,7 @@ export function TitleScreen() {
           )}
           <div className="row" style={{ marginBottom: rumble ? 0 : 8 }}>
             <span>Bots</span>
-            {(['easy', 'medium', 'hard'] as Difficulty[]).map((d) => (
+            {DIFFICULTIES.map((d) => (
               <Choice
                 key={d}
                 value={d}
@@ -135,26 +135,6 @@ export function TitleScreen() {
               />
             ))}
           </div>
-          {!rumble && (
-            <div className="row">
-              <span>Rules</span>
-              {(
-                [
-                  ['classic', 'Classic Timer'],
-                  ['crush', 'Wahala Crush'],
-                ] as [MatchMode, string][]
-              ).map(([m, label]) => (
-                <Choice
-                  key={m}
-                  value={m}
-                  current={s.mode}
-                  label={label}
-                  onPick={(v) => set({ mode: v })}
-                  testId={`mode-${m}`}
-                />
-              ))}
-            </div>
-          )}
         </section>
 
         <section className="panel">

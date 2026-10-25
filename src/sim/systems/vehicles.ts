@@ -4,7 +4,9 @@
  * that lie on the vehicle's route; damage accumulates over separate events during one journey.
  */
 import { Tile } from '../types';
-import type { GameState, Intents, Player, SimEvent, Vehicle, VehicleIntent } from '../types';
+import type { GameState, Intents, Player, SimEvent, TilePos, Vehicle, VehicleIntent } from '../types';
+import { chooseAutoVehicle } from './autoVehicle';
+import { canHarm } from './queries';
 import { CHARACTERS } from '../data/characters';
 import { buildRoute } from './entries';
 import type { LethalHit } from './lethality';
@@ -52,34 +54,59 @@ export function handleVehicleIntent(
       const kind = CHARACTERS[p.characterId].vehicle;
       const route = buildRoute(state, kind, intent.entry, intent.turn);
       if (!route) return; // illegal selections are simply rejected; entry mode stays open
-      p.hasVoucher = false;
-      p.entryUntil = null;
-      const spec = state.config.vehicles.specs[kind];
-      const vehicle: Vehicle = {
-        id: state.nextId++,
-        ownerId: p.id,
-        kind,
-        route,
-        phase: 'warning',
-        warnRemaining: state.config.vehicles.entryWarnTicks,
-        wreckRemaining: 0,
-        hitPlayerIds: [],
-        index: -1,
-        stepRemaining: 0,
-        stepTotal: spec.stepTicks,
-        damage: 0,
-        slowUntil: 0,
-        softBroken: 0,
-        playerHits: 0,
-        exposedEvents: [],
-        eventId: state.nextEventId++,
-        startTick: state.tick,
-      };
-      state.vehicles.push(vehicle);
-      events.push({ type: 'vehicleWarning', vehicleId: vehicle.id, kind, ownerId: p.id, entry: route[0]! });
+      launchVehicle(state, p, route, events);
+      return;
+    }
+    case 'auto': {
+      autoLaunch(state, p, events);
       return;
     }
   }
+}
+
+/**
+ * V2 one-press launch: the simulation picks the route (autoVehicle.ts) and launches at once. Returns
+ * false (voucher kept) when there is no legal route or the player cannot act.
+ */
+export function autoLaunch(state: GameState, p: Player, events: SimEvent[]): boolean {
+  if (!isActing(state, p) || !p.hasVoucher || p.carrying !== null) return false;
+  if (vehiclesOf(state, p.id).length > 0) return false;
+  const choice = chooseAutoVehicle(state, p.id);
+  if (!choice) return false;
+  const kind = CHARACTERS[p.characterId].vehicle;
+  const route = buildRoute(state, kind, choice.entry, choice.turn);
+  if (!route) return false;
+  launchVehicle(state, p, route, events);
+  return true;
+}
+
+function launchVehicle(state: GameState, p: Player, route: TilePos[], events: SimEvent[]): void {
+  const kind = CHARACTERS[p.characterId].vehicle;
+  if (p.entryUntil !== null) p.entryUntil = null;
+  p.hasVoucher = false;
+  const spec = state.config.vehicles.specs[kind];
+  const vehicle: Vehicle = {
+    id: state.nextId++,
+    ownerId: p.id,
+    kind,
+    route,
+    phase: 'warning',
+    warnRemaining: state.config.vehicles.entryWarnTicks,
+    wreckRemaining: 0,
+    hitPlayerIds: [],
+    index: -1,
+    stepRemaining: 0,
+    stepTotal: spec.stepTicks,
+    damage: 0,
+    slowUntil: 0,
+    softBroken: 0,
+    playerHits: 0,
+    exposedEvents: [],
+    eventId: state.nextEventId++,
+    startTick: state.tick,
+  };
+  state.vehicles.push(vehicle);
+  events.push({ type: 'vehicleWarning', vehicleId: vehicle.id, kind, ownerId: p.id, entry: route[0]! });
 }
 
 export function expireEntryModes(state: GameState, events: SimEvent[]): void {
@@ -179,6 +206,7 @@ function collide(state: GameState, v: Vehicle, hits: LethalHit[], events: SimEve
     }
     for (const p of state.players) {
       if (!p.alive || p.x !== t.x || p.y !== t.y) continue;
+      if (!canHarm(state, v.ownerId, p)) continue; // a teammate's vehicle passes harmlessly (friendly fire off)
       hits.push({
         playerId: p.id,
         eventId: v.eventId,

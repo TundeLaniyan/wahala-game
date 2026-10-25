@@ -6,10 +6,13 @@
 import type { Difficulty } from '../sim';
 
 export type TrapLevel = 'none' | 'escape' | 'shrink';
+/** The pre-V2 behaviour family a level builds on (selects code paths in remote.ts, goals.ts, scale.ts ...). */
+export type AiTier = 'easy' | 'medium' | 'hard';
 export type VehicleStyle = 'naive' | 'purposeful' | 'strategic';
 
 export interface AiProfile {
   difficulty: Difficulty;
+  tier: AiTier;
 
   // ---- cadence ----
   /** Ticks between full re-plans (a random value in [min, max] each time). */
@@ -79,9 +82,9 @@ export interface AiProfile {
   maxRivalSims: number;
 }
 
-export const PROFILES: Readonly<Record<Difficulty, AiProfile>> = {
+const BASE: Readonly<Record<AiTier, Omit<AiProfile, 'difficulty'>>> = {
   easy: {
-    difficulty: 'easy',
+    tier: 'easy',
     thinkMin: 20,
     thinkMax: 30,
     reaction: 24,
@@ -115,7 +118,7 @@ export const PROFILES: Readonly<Record<Difficulty, AiProfile>> = {
     maxRivalSims: 0,
   },
   medium: {
-    difficulty: 'medium',
+    tier: 'medium',
     thinkMin: 14,
     thinkMax: 22,
     reaction: 20,
@@ -149,7 +152,7 @@ export const PROFILES: Readonly<Record<Difficulty, AiProfile>> = {
     maxRivalSims: 2,
   },
   hard: {
-    difficulty: 'hard',
+    tier: 'hard',
     thinkMin: 3,
     thinkMax: 4,
     reaction: 4,
@@ -182,4 +185,24 @@ export const PROFILES: Readonly<Record<Difficulty, AiProfile>> = {
     smartRemote: true,
     maxRivalSims: 8,
   },
+};
+
+/**
+ * INTERIM (Phase 0 contract): the seven V2 levels mapped onto the three pre-V2 families. Workstream B
+ * replaces this with seven distinct profiles.
+ */
+const level = (difficulty: Difficulty, tier: AiTier, tweak: Partial<AiProfile> = {}): AiProfile => ({
+  ...BASE[tier],
+  ...tweak,
+  difficulty,
+});
+
+export const PROFILES: Readonly<Record<Difficulty, AiProfile>> = {
+  rookie: level('rookie', 'easy'),
+  beginner: level('beginner', 'easy'),
+  casual: level('casual', 'easy'),
+  standard: level('standard', 'medium'),
+  skilled: level('skilled', 'medium'),
+  expert: level('expert', 'hard'),
+  nightmare: level('nightmare', 'hard'),
 };

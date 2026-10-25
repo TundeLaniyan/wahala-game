@@ -25,6 +25,8 @@ const elim = (
   cause,
   x: 3,
   y: 3,
+  creditId: 'ownerId' in cause && cause.ownerId !== playerId ? cause.ownerId : null,
+  assistIds: [],
 });
 
 describe('which voice trigger each game event fires', () => {

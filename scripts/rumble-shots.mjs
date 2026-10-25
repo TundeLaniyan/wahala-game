@@ -28,7 +28,7 @@ await context.addInitScript((n) => {
   const s = JSON.parse(localStorage.getItem(key) || '{}');
   localStorage.setItem(
     key,
-    JSON.stringify({ ...s, arenaId: 'cityRumble', rumbleCompetitors: n, difficulty: 'medium' }),
+    JSON.stringify({ ...s, arenaId: 'cityRumble', rumbleCompetitors: n, difficulty: 'standard' }),
   );
 }, Number(count));
 const page = await context.newPage();

@@ -59,7 +59,7 @@ export function ArenaPicker({
     set(p);
   };
   const rumble = ARENAS[CITY_RUMBLE_ID]!;
-  const rumbleOn = settings.arenaId === CITY_RUMBLE_ID;
+  const rumbleOn = settings.play === 'rumble';
 
   // bring the remembered choice into view when the menu opens
   useEffect(() => {
@@ -74,7 +74,7 @@ export function ArenaPicker({
       <div className="ap-strip" ref={strip}>
         {STANDARD_ARENA_IDS.map((id) => {
           const a = ARENAS[id]!;
-          const on = settings.arenaId === id;
+          const on = settings.play === 'classic' && settings.arenaId === id;
           return (
             <button
               key={id}
@@ -82,7 +82,7 @@ export function ArenaPicker({
               className={`ap-card${on ? ' on' : ''}${a.info.ruleWarning ? ' rule' : ''}`}
               data-testid={`arena-${id}`}
               aria-pressed={on}
-              onClick={() => pick({ arenaId: id })}
+              onClick={() => pick({ arenaId: id, play: 'classic' })}
             >
               <Preview arena={a} failed={failed.has(id)} onFail={fail(id)} />
               <div className="ap-body">
@@ -110,7 +110,7 @@ export function ArenaPicker({
           className="ap-rumble-main"
           data-testid={`arena-${CITY_RUMBLE_ID}`}
           aria-pressed={rumbleOn}
-          onClick={() => pick({ arenaId: CITY_RUMBLE_ID })}
+          onClick={() => pick({ play: 'rumble', rumbleArenaId: CITY_RUMBLE_ID })}
         >
           <Preview arena={rumble} failed={failed.has(CITY_RUMBLE_ID)} onFail={fail(CITY_RUMBLE_ID)} />
           <div className="ap-body">
@@ -136,7 +136,7 @@ export function ArenaPicker({
               type="button"
               className={`chip${rumbleOn && settings.rumbleCompetitors === n ? ' on' : ''}`}
               data-testid={`rumble-${n}`}
-              onClick={() => pick({ arenaId: CITY_RUMBLE_ID, rumbleCompetitors: n })}
+              onClick={() => pick({ play: 'rumble', rumbleArenaId: CITY_RUMBLE_ID, rumbleCompetitors: n })}
             >
               {n}
             </button>

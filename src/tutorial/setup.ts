@@ -98,6 +98,8 @@ export function generator(
     stepFromX: g.x,
     stepFromY: g.y,
     range: state.players[g.ownerId]?.range ?? cfg.baseRange,
+    square: 0,
+    fromSpectator: false,
     pierce: false,
     mode,
     timer: mode === 'remote' ? cfg.remoteFailsafeTicks : cfg.fuseTicks,

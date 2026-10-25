@@ -30,6 +30,8 @@ export function tryPlaceGenerator(state: GameState, p: Player, events: SimEvent[
     stepFromY: p.y,
     range: weak ? Math.min(p.range, cfg.weakFireRange) : p.range,
     pierce: p.hotFuel,
+    square: state.config.square.radiusByTier[Math.min(p.squareTier, state.config.square.maxTier)] ?? 0,
+    fromSpectator: false,
     mode: remote ? 'remote' : 'timed',
     timer: remote ? cfg.remoteFailsafeTicks : cfg.fuseTicks,
     carriedBy: null,
@@ -54,15 +56,27 @@ export function detonateRemote(state: GameState, p: Player): void {
   }
 }
 
-/** Kill Switch: permanently disables the timer / remote trigger of an adjacent (or own-tile) generator. */
+/** Kill Switch (legacy button path): disarms the faced (or own-tile) generator. */
 export function tryDisarm(state: GameState, p: Player, events: SimEvent[]): void {
-  if (!isActing(state, p) || p.entryUntil !== null || p.killSwitchCharges <= 0) return;
+  if (!isActing(state, p) || p.entryUntil !== null) return;
   const target = findInteractTarget(state, p);
-  if (!target || target.mode === 'disabled' || target.carriedBy !== null) return;
+  if (target) disarmGenerator(state, p, target, events);
+}
+
+/**
+ * Disarm: permanently switches off a generator's timer / remote trigger (it stays explosive to flame
+ * and vehicles - LOCKED). Uses one charge; the Disarm ability is gone with the last charge.
+ */
+export function disarmGenerator(state: GameState, p: Player, target: Generator, events: SimEvent[]): boolean {
+  if (p.killSwitchCharges <= 0 || target.mode === 'disabled' || target.carriedBy !== null || target.flight)
+    return false;
   p.killSwitchCharges--;
+  if (p.killSwitchCharges <= 0 && p.contact === 'disarm') p.contact = null;
   target.mode = 'disabled';
   target.timer = state.config.generator.disabledCleanupTicks;
+  target.triggered = false;
   events.push({ type: 'generatorDisarmed', generatorId: target.id, playerId: p.id });
+  return true;
 }
 
 /** The generator a player is facing, falling back to the one under their feet. */
@@ -96,7 +110,7 @@ export function kickGenerator(state: GameState, gen: Generator, dir: Dir, events
 
 // ------------------------------------------------------------------ carry / drop / punch
 
-/** Contextual action: carry or drop (Grip), punch (Gloves). Throwing a carried generator needs Gloves. */
+/** LEGACY contextual action: carry or drop (Grip), punch (Gloves). V2 normal play punches by walking into a generator. */
 export function performAction(state: GameState, p: Player, events: SimEvent[]): void {
   if (!isActing(state, p) || p.entryUntil !== null) return;
 
@@ -106,7 +120,7 @@ export function performAction(state: GameState, p: Player, events: SimEvent[]): 
       p.carrying = null;
       return;
     }
-    if (p.punch) throwGenerator(state, p, gen, events);
+    if (p.contact === 'punch') throwGenerator(state, p, gen, events);
     else dropGenerator(state, p, gen, events);
     return;
   }
@@ -114,7 +128,7 @@ export function performAction(state: GameState, p: Player, events: SimEvent[]): 
   const target = findInteractTarget(state, p);
   if (!target || target.slide) return;
   if (p.grip) pickUpGenerator(state, p, target, events);
-  else if (p.punch) throwGenerator(state, p, target, events);
+  else if (p.contact === 'punch') throwGenerator(state, p, target, events);
 }
 
 function pickUpGenerator(state: GameState, p: Player, gen: Generator, events: SimEvent[]): void {
@@ -155,7 +169,7 @@ export function findThrowLanding(
   ignoreId: number,
 ): { x: number; y: number } | null {
   const v = DIR_VEC[dir];
-  const want = state.config.generator.punchDistance;
+  const want = state.config.contact.punchDistance;
   const ok = (d: number): boolean =>
     isTileFreeForGenerator(state, fromX + v.dx * d, fromY + v.dy * d, ignoreId);
   const maxD = Math.max(state.width, state.height);
@@ -164,12 +178,24 @@ export function findThrowLanding(
   return null;
 }
 
-function throwGenerator(state: GameState, p: Player, gen: Generator, events: SimEvent[]): void {
+/** V2 Punch contact: strike the generator in `dir` so it flies away. */
+export function punchGenerator(
+  state: GameState,
+  p: Player,
+  gen: Generator,
+  dir: Dir,
+  events: SimEvent[],
+): boolean {
+  if (!isGrounded(gen) || gen.slide) return false;
+  return throwGenerator(state, p, gen, events, dir);
+}
+
+function throwGenerator(state: GameState, p: Player, gen: Generator, events: SimEvent[], dir = p.facing): boolean {
   const carried = gen.carriedBy === p.id;
   const fromX = carried ? p.x : gen.x;
   const fromY = carried ? p.y : gen.y;
-  const landing = findThrowLanding(state, fromX, fromY, p.facing, gen.id);
-  if (!landing) return;
+  const landing = findThrowLanding(state, fromX, fromY, dir, gen.id);
+  if (!landing) return false;
   if (carried) {
     gen.carriedBy = null;
     p.carrying = null;
@@ -188,6 +214,7 @@ function throwGenerator(state: GameState, p: Player, gen: Generator, events: Sim
     toX: landing.x,
     toY: landing.y,
   });
+  return true;
 }
 
 // ------------------------------------------------------------------ per-tick motion + timers

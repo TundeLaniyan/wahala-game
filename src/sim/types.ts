@@ -38,12 +38,44 @@ export type PickupKind =
   | 'curse'
   | 'sneakers'
   | 'hotfuel'
-  | 'bombpass';
+  | 'bombpass'
+  /** V2: absorbs one lethal hit (stacks with an Okada: separate layers). */
+  | 'armour'
+  /** V2: Square Blast tier up (3 x 3, then 5 x 5) on top of the normal plus. */
+  | 'square';
 export type CurseKind = 'slow' | 'inverted' | 'weakFire';
 export type GeneratorMode = 'timed' | 'remote' | 'disabled';
 
-export type Difficulty = 'easy' | 'medium' | 'hard';
+/**
+ * V2: generator-contact abilities. Mutually exclusive: the last one acquired replaces the previous one.
+ * They act when the player tries to MOVE into a tile holding a grounded generator (no button).
+ */
+export type ContactAbility = 'kick' | 'punch' | 'disarm' | 'pass';
+export const CONTACT_ABILITIES: readonly ContactAbility[] = ['kick', 'punch', 'disarm', 'pass'];
+
+/** V2: seven bot levels, easiest first. Rookie is the default for a new player. */
+export type Difficulty = 'rookie' | 'beginner' | 'casual' | 'standard' | 'skilled' | 'expert' | 'nightmare';
+export const DIFFICULTIES: readonly Difficulty[] = [
+  'rookie',
+  'beginner',
+  'casual',
+  'standard',
+  'skilled',
+  'expert',
+  'nightmare',
+];
+
+/** Whether Wahala Crush closes the arena (standard matches: always 'crush'; 'classic' only for tutorials/tests). */
 export type MatchMode = 'classic' | 'crush';
+
+/**
+ * V2: the match ruleset. `classic` = the 2-4 player standard match (last standing, mandatory Wahala Crush);
+ * the three City Rumble modes share the same simulation with different rules (src/sim/modes.ts).
+ */
+export type GameKind = 'classic' | 'survival' | 'deathmatch' | 'team';
+
+/** V2: no team (free-for-all). */
+export const NO_TEAM = -1;
 
 // ---------------------------------------------------------------- entities
 
@@ -58,7 +90,35 @@ export type EliminationCause =
   | { kind: 'vehicle'; ownerId: number; vehicleKind: VehicleKind; eventId: number }
   | { kind: 'crush'; eventId: number }
   | { kind: 'crowd'; eventId: number }
-  | { kind: 'hazard'; style: StageHazardStyle; eventId: number };
+  | { kind: 'hazard'; style: StageHazardStyle; eventId: number }
+  /** V2: a generator thrown in by an eliminated sideline spectator (never credited to anyone). */
+  | { kind: 'spectator'; ownerId: number; eventId: number };
+
+/** V2: per-player match statistics (scoreboards, Deathmatch / Team ranking, Rumble progression). */
+export interface PlayerStats {
+  /** Credited eliminations (see systems/attribution.ts). */
+  kills: number;
+  deaths: number;
+  assists: number;
+  /** Tick of the latest credited elimination (tie-break: whoever reached the score first). */
+  lastKillTick: number;
+}
+
+/** V2: a recent non-lethal attack on a player (melee push/daze), kept for elimination credit. */
+export interface HitRecord {
+  byId: number;
+  tick: number;
+}
+
+/** V2: an eliminated standard-match player on the sideline lane (systems/spectators.ts). */
+export interface SpectatorState {
+  /** Lane position: index into `spectatorLane(state)` (tiles just outside the board). */
+  pos: number;
+  /** First tick the next throw is allowed. */
+  readyTick: number;
+  /** Ticks until the next lane step is allowed (lane movement is grid-stepped like walking). */
+  stepRemaining: number;
+}
 
 export interface Player {
   id: number;
@@ -80,20 +140,40 @@ export interface Player {
   alive: boolean;
   eliminatedTick: number | null;
   elimination: EliminationCause | null;
+  /** V2: who got the credit for this player's latest elimination (null = nobody). */
+  eliminatedBy: number | null;
+
+  /** V2: team index (0 = Green, 1 = White) or NO_TEAM (-1) in free-for-all. */
+  team: number;
+  stats: PlayerStats;
+  /** V2: recent melee attackers (pruned to `config.credit.assistWindowTicks`). */
+  recentHits: HitRecord[];
+  /** V2 respawn modes: tick at which this (eliminated) player re-enters, else null. */
+  respawnAt: number | null;
+  /** V2: lethal hits are ignored before this tick (spawn protection). */
+  protectedUntil: number;
+  /** V2: standard-match sideline spectator state once eliminated (null otherwise). */
+  spectator: SpectatorState | null;
 
   // Upgrades (all reset every round).
   range: number;
   capacity: number;
   speedLevel: number;
-  kick: boolean;
-  punch: boolean;
+  /** V2: the equipped generator-contact ability (kick / punch / disarm / pass), or none. */
+  contact: ContactAbility | null;
+  /** V2: first tick another contact action may fire (anti double-fire). */
+  contactReadyTick: number;
+  /** LEGACY (removed from normal play in V2): carry a generator. Never granted by the normal pickup pool. */
   grip: boolean;
   remote: boolean;
+  /** Disarm (Kill Switch) charges; used by the `disarm` contact ability. */
   killSwitchCharges: number;
   sneakers: boolean;
   hotFuel: boolean;
-  /** Generator Pass: walk through tiles holding grounded generators (own and rivals'). */
-  bombPass: boolean;
+  /** V2: Armour layers (each absorbs one separate lethal hit). */
+  armour: number;
+  /** V2: Square Blast tier: 0 none, 1 = 3 x 3, 2 = 5 x 5 (radius from config.square.radiusByTier). */
+  squareTier: number;
   mounted: boolean; // Okada
   jumpReadyTick: number;
   /** Oil slick: forced automatic steps in `dir`. */
@@ -124,6 +204,10 @@ export interface Generator {
   range: number;
   /** Hot Fuel: flames burn through the first soft block on each arm. */
   pierce: boolean;
+  /** V2 Square Blast: radius of the extra square footprint (0 = plain plus, 1 = 3 x 3, 2 = 5 x 5). */
+  square: number;
+  /** V2: thrown in by a sideline spectator (no elimination credit, no capacity use). */
+  fromSpectator: boolean;
   mode: GeneratorMode;
   /**
    * Mode-dependent countdown in ticks: timed = fuse until detonation; remote = failsafe until
@@ -145,8 +229,10 @@ export interface Flame {
   eventId: number;
   genId: number;
   ownerId: number;
-  /** Direction the flame arm travels away from its generator; null at the centre. */
+  /** Direction the flame arm travels away from its generator; null at the centre (and Square Blast tiles). */
   dir: Dir | null;
+  /** V2: from a sideline spectator's generator (credited to nobody). */
+  fromSpectator?: boolean;
   tip: boolean;
   startTick: number;
   endTick: number;
@@ -156,6 +242,8 @@ export interface Flame {
 export interface BlastEvent {
   id: number;
   tiles: number[]; // unique tile indices covered by the whole chain
+  /** V2: owner of the generator that started this chain (elimination credit for chained own blasts). */
+  seedOwnerId: number;
   endTick: number;
 }
 
@@ -210,7 +298,10 @@ export interface MatchState {
 }
 
 export type MatchResult =
-  { kind: 'win'; winnerId: number } | { kind: 'draw'; reason: 'simultaneous' | 'timeout' };
+  | { kind: 'win'; winnerId: number }
+  | { kind: 'draw'; reason: 'simultaneous' | 'timeout' | 'tie' }
+  /** V2 Team Rumble. */
+  | { kind: 'teamWin'; team: number };
 
 export interface CrushState {
   /** Tile indices in the order they will close. */
@@ -336,9 +427,23 @@ export interface PlayerSetup {
   characterId: CharacterId;
   isBot: boolean;
   difficulty?: Difficulty;
+  /** V2 Team Rumble: team index; omitted = assigned by the ruleset (modes.ts). */
+  team?: number;
 }
 
 export interface MatchSettings {
+  /** V2 ruleset (see src/sim/modes.ts). Default 'classic'. */
+  game: GameKind;
+  /** Team Rumble: teammates can hurt each other (self-damage is ALWAYS on). Default false. */
+  friendlyFire: boolean;
+  /** Team Rumble: number of teams (2 = Green v White). */
+  teamCount: number;
+  /** Deathmatch / Team Rumble length in seconds (300 or 600); null = the arena / ruleset default. */
+  durationSec: number | null;
+  /**
+   * Whether Wahala Crush runs. Standard matches always use 'crush' (the menus offer no switch);
+   * 'classic' (no closing) exists only for tutorials and test scenarios.
+   */
   mode: MatchMode;
   crowdThrows: boolean;
   /**
@@ -360,7 +465,11 @@ export interface GameOptions {
 // ---------------------------------------------------------------- input
 
 export type VehicleIntent =
-  { type: 'begin' } | { type: 'cancel' } | { type: 'launch'; entry: VehicleEntry; turn?: VehicleTurn };
+  | { type: 'begin' }
+  | { type: 'cancel' }
+  | { type: 'launch'; entry: VehicleEntry; turn?: VehicleTurn }
+  /** V2 one-press launch: the simulation picks the route (systems/autoVehicle.ts). */
+  | { type: 'auto' };
 
 export interface VehicleEntry {
   x: number;
@@ -380,11 +489,18 @@ export interface VehicleTurn {
  */
 export interface Intent {
   move?: Dir | null;
+  /** Button A: place a generator (sideline spectator: throw one in). */
   place?: boolean;
+  /**
+   * V2 button B (tap): ONE deterministic context action (systems/actions.ts): melee an adjacent
+   * opponent, else launch the signature vehicle (voucher), else nothing. Never two things at once.
+   */
+  special?: boolean;
   /** Context action: pick up / drop (Grip), punch (Gloves). */
   action?: boolean;
   disarm?: boolean;
   skill?: boolean;
+  /** Button B (hold): Remote Detonator. */
   detonate?: boolean;
   vehicle?: VehicleIntent;
 }
@@ -417,7 +533,39 @@ export type SimEvent =
   | { type: 'pickupCollected'; pickupId: number; playerId: number; kind: PickupKind; wasted: boolean }
   | { type: 'pickupBurned'; pickupId: number; x: number; y: number }
   | { type: 'pickupDropped'; pickupId: number; x: number; y: number; kind: PickupKind }
-  | { type: 'playerEliminated'; playerId: number; cause: EliminationCause; x: number; y: number }
+  | {
+      type: 'playerEliminated';
+      playerId: number;
+      cause: EliminationCause;
+      x: number;
+      y: number;
+      /** V2: credited eliminator (null = nobody: own blast, environment, teammate ...). */
+      creditId: number | null;
+      assistIds: number[];
+    }
+  /** V2: a generator-contact ability acted (kick, punch, disarm, pass-through). */
+  | { type: 'contactUsed'; playerId: number; ability: ContactAbility; generatorId: number }
+  /** V2: a contact ability was picked up / replaced the previous one. */
+  | { type: 'contactEquipped'; playerId: number; ability: ContactAbility; replaced: ContactAbility | null }
+  /** V2: button B resolved to this action. */
+  | { type: 'specialUsed'; playerId: number; action: 'melee' | 'vehicle' }
+  /** V2: a protection layer absorbed a lethal hit (Okada also emits okadaBroken). */
+  | { type: 'protectionBroken'; playerId: number; layer: 'okada' | 'armour'; x: number; y: number }
+  /** V2 City Rumble: an elimination reward was granted to the credited eliminator. */
+  | { type: 'rewardGranted'; playerId: number; kind: PickupKind; kills: number }
+  /** V2 respawn modes. */
+  | { type: 'playerRespawned'; playerId: number; x: number; y: number }
+  /** V2 sideline spectator throw: lands (as a live generator) at toX/toY on landTick. */
+  | {
+      type: 'spectatorThrow';
+      playerId: number;
+      generatorId: number;
+      fromX: number;
+      fromY: number;
+      toX: number;
+      toY: number;
+      landTick: number;
+    }
   | { type: 'playerJumped'; playerId: number }
   | { type: 'okadaMounted'; playerId: number }
   | { type: 'okadaBroken'; playerId: number; x: number; y: number }

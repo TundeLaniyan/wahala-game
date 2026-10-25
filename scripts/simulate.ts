@@ -40,7 +40,7 @@ interface Options {
   wall: boolean;
 }
 
-const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard'];
+const DIFFICULTIES: Difficulty[] = ['rookie', 'beginner', 'casual', 'standard', 'skilled', 'expert', 'nightmare'];
 
 function parseArgs(argv: string[]): Options {
   const o: Options = {
@@ -119,9 +119,9 @@ function lineup(o: Options, i: number): Difficulty[] {
     base = Array.from({ length: o.players }, (_, k) => o.duel![k % 2]!);
   } else if (o.players === 2) {
     const pairs: Difficulty[][] = [
-      ['easy', 'medium'],
-      ['medium', 'hard'],
-      ['easy', 'hard'],
+      ['beginner', 'standard'],
+      ['standard', 'expert'],
+      ['beginner', 'expert'],
     ];
     base = pairs[i % 3]!;
   } else {

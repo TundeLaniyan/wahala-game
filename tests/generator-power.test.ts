@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CITY_RUMBLE_ID, DEFAULT_CONFIG, PICKUP_DEFS, Tile, createGame, getArena, tick } from '../src/sim';
-import type { Intents, PickupKind } from '../src/sim';
+import type { Intents, PickupKind, SimEvent } from '../src/sim';
+import { equipContact } from '../src/sim/systems/pickups';
 import { addGenerator, addPickup, addSoft, eventsOf, flameKeys, put, run, sandbox } from './helpers';
 
 /** Generators first: Extra Socket / Petrol Top-Up economy, Generator Pass, the Power Yard blast rule. */
@@ -91,7 +92,7 @@ describe('Generator Pass (Bomb Pass)', () => {
     put(s, 1, 14, 10);
     addPickup(s, 0, 0, 'bombpass');
     run(s, 1);
-    expect(p.bombPass).toBe(true);
+    expect(p.contact).toBe('pass');
     addGenerator(s, { ownerId: 0, x: 1, y: 0, timer: 9999 });
     addGenerator(s, { ownerId: 1, x: 2, y: 0, timer: 9999 });
     for (let i = 0; i < 3; i++) run(s, 10, (t): Intents => (t === 0 ? { 0: { move: 'right' } } : {}));
@@ -113,30 +114,33 @@ describe('Generator Pass (Bomb Pass)', () => {
     const s = sandbox();
     put(s, 0, 2, 0);
     put(s, 1, 14, 10);
-    s.players[0]!.bombPass = true;
+    s.players[0]!.contact = 'pass';
     addGenerator(s, { ownerId: 1, x: 2, y: 0, timer: 1 });
     run(s, 2);
     expect(s.players[0]!.alive).toBe(false);
   });
 
-  it('Boots still kick a generator that can slide; when it cannot, the pass walks over it', () => {
+  it('contact abilities are exclusive: Kick replaces Pass, so a generator that cannot slide now blocks', () => {
     const s = sandbox();
     const p = s.players[0]!;
     put(s, 0, 0, 0);
     put(s, 1, 14, 10);
-    p.bombPass = true;
-    p.kick = true;
+    p.contact = 'pass';
+    const ev0: SimEvent[] = [];
+    expect(equipContact(p, 'kick', ev0)).toBe(true);
+    expect(p.contact).toBe('kick');
+    expect(ev0).toEqual([{ type: 'contactEquipped', playerId: 0, ability: 'kick', replaced: 'pass' }]);
     const g = addGenerator(s, { ownerId: 0, x: 1, y: 0, timer: 9999 });
     const ev = run(s, 2, (t): Intents => (t === 0 ? { 0: { move: 'right' } } : {}));
     expect(eventsOf(ev, 'generatorKicked')).toHaveLength(1);
     run(s, 60);
     expect(g.x).toBe(14);
-    // a generator against concrete cannot slide: (0,1) -> (0,2)? put one at (0,2) backed by... the arena edge column
+    // two generators in a column: the first cannot slide, and without Pass the kicker stays put
     put(s, 0, 2, 2);
     const h = addGenerator(s, { ownerId: 0, x: 2, y: 3, timer: 9999 });
     addGenerator(s, { ownerId: 0, x: 2, y: 4, timer: 9999 });
     run(s, 12, (t): Intents => (t === 0 ? { 0: { move: 'down' } } : {}));
-    expect([p.x, p.y]).toEqual([2, 3]);
+    expect([p.x, p.y]).toEqual([2, 2]);
     expect([h.x, h.y]).toEqual([2, 3]);
   });
 
@@ -144,12 +148,12 @@ describe('Generator Pass (Bomb Pass)', () => {
     const s = sandbox();
     put(s, 0, 4, 4);
     put(s, 1, 14, 10);
-    s.players[0]!.bombPass = true;
+    s.players[0]!.contact = 'pass';
     addGenerator(s, { ownerId: 1, x: 4, y: 4, timer: 1 });
     const ev = run(s, 2);
     expect(eventsOf(ev, 'pickupDropped').map((e) => e.kind)).toContain('bombpass');
     const fresh = sandbox();
-    expect(fresh.players[0]!.bombPass).toBe(false);
+    expect(fresh.players[0]!.contact).toBe(null);
   });
 });
 

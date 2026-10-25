@@ -345,6 +345,14 @@ const handlers: Handlers = {
     sfx(c, 'hop', panOf(c, e.toX), 0.9, 1.2, 0.15);
   },
   generatorDoused: (e, c) => sfx(c, 'gen_dud', panOf(c, generatorX(c, e.generatorId))),
+  // V2 events (workstreams add their own sounds; silent until then)
+  contactUsed: () => undefined,
+  contactEquipped: () => undefined,
+  specialUsed: () => undefined,
+  protectionBroken: () => undefined,
+  rewardGranted: () => undefined,
+  playerRespawned: () => undefined,
+  spectatorThrow: () => undefined,
 };
 
 function tileXOf(c: RouteCtx, index: number | undefined): number {

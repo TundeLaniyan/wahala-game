@@ -1,5 +1,6 @@
 import { CHARACTERS, getArena, secondsRemaining } from '../sim';
-import type { CharacterId, CurseKind, GameState, MatchResult, VehicleKind } from '../sim';
+import type { CharacterId, ContactAbility, CurseKind, GameState, MatchResult, SpecialAction, VehicleKind } from '../sim';
+import { previewSpecial } from '../sim';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
 import type { StageAlert } from './stageAlerts';
 
@@ -22,16 +23,24 @@ export interface HudMe {
   capacity: number;
   active: number;
   speedLevel: number;
-  kick: boolean;
-  punch: boolean;
+  /** V2: the equipped generator-contact ability (one at a time). */
+  contact: ContactAbility | null;
   grip: boolean;
   remote: boolean;
   killCharges: number;
   sneakers: boolean;
   hotFuel: boolean;
-  /** Generator Pass: walks over generators. */
-  bombPass: boolean;
   mounted: boolean;
+  /** V2 protection layers (Okada is `mounted`). */
+  armour: number;
+  /** V2 Square Blast tier (0 none, 1 = 3 x 3, 2 = 5 x 5). */
+  squareTier: number;
+  /** V2: what a B tap does right now (null = nothing). */
+  special: SpecialAction;
+  /** V2: credited eliminations / deaths / assists this match. */
+  kills: number;
+  deaths: number;
+  assists: number;
   voucher: boolean;
   vehicle: VehicleKind;
   carrying: boolean;
@@ -85,7 +94,7 @@ export interface FeedItem {
   /** Null when no rival gets the credit (own generator, the city, traffic ...). */
   killer: string | null;
   killerSlot: number;
-  cause: 'flame' | 'vehicle' | 'crush' | 'hazard' | 'crowd' | 'self';
+  cause: 'flame' | 'vehicle' | 'crush' | 'hazard' | 'crowd' | 'spectator' | 'self';
   involvesLocal: boolean;
   /** Seconds since it happened. */
   age: number;
@@ -236,15 +245,19 @@ export function buildHud(
         capacity: local.capacity,
         active,
         speedLevel: local.speedLevel,
-        kick: local.kick,
-        punch: local.punch,
+        contact: local.contact,
         grip: local.grip,
         remote: local.remote,
         killCharges: local.killSwitchCharges,
         sneakers: local.sneakers,
         hotFuel: local.hotFuel,
-        bombPass: local.bombPass,
         mounted: local.mounted,
+        armour: local.armour,
+        squareTier: local.squareTier,
+        special: previewSpecial(state, local),
+        kills: local.stats.kills,
+        deaths: local.stats.deaths,
+        assists: local.stats.assists,
         voucher: local.hasVoucher,
         vehicle: CHARACTERS[local.characterId].vehicle,
         carrying: local.carrying !== null,
@@ -256,7 +269,7 @@ export function buildHud(
         skillReady: state.tick >= local.skillReadyTick,
         hasRemoteGenerator: state.generators.some((g) => g.ownerId === local.id && g.mode === 'remote'),
         canDisarm: local.killSwitchCharges > 0,
-        canAction: local.grip || local.punch || local.carrying !== null,
+        canAction: local.grip || local.carrying !== null,
       }
     : null;
   return {

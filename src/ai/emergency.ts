@@ -66,7 +66,7 @@ function throwEnd(
 ): { x: number; y: number } | null {
   const { world } = c;
   const v = DIR_VEC[dir];
-  const want = world.obs.config.generator.punchDistance;
+  const want = world.obs.config.contact.punchDistance;
   const maxD = Math.max(world.board.width, world.board.height);
   const ok = (d: number): boolean => {
     const x = fromX + v.dx * d;
@@ -109,7 +109,7 @@ function collectFixes(c: Ctx): Fix[] {
         });
       }
     }
-    if (s.dir !== null && me.kick) {
+    if (s.dir !== null && me.contact === 'kick') {
       const end = kickEnd(c, g, s.dir);
       if (end) {
         fixes.push({
@@ -122,7 +122,7 @@ function collectFixes(c: Ctx): Fix[] {
         });
       }
     }
-    if (me.punch && (s.dir === me.facing || (s.dir === null && (front < 0 || world.genAt[front]! < 0)))) {
+    if (me.contact === 'punch' && (s.dir === me.facing || (s.dir === null && (front < 0 || world.genAt[front]! < 0)))) {
       const end = throwEnd(c, g.x, g.y, me.facing, g.id);
       if (end) {
         fixes.push({

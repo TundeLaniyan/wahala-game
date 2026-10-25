@@ -29,8 +29,8 @@ function playReal(
 
 describe('determinism', () => {
   it('the same seed produces exactly the same match', () => {
-    const a = runMatch({ seed: 7, difficulties: ['easy', 'medium', 'hard', 'hard'] });
-    const b = runMatch({ seed: 7, difficulties: ['easy', 'medium', 'hard', 'hard'] });
+    const a = runMatch({ seed: 7, difficulties: ['beginner', 'standard', 'expert', 'expert'] });
+    const b = runMatch({ seed: 7, difficulties: ['beginner', 'standard', 'expert', 'expert'] });
     expect(b).toEqual(a);
   });
 
@@ -44,7 +44,7 @@ describe('determinism', () => {
         ],
       });
       while (s.match.phase === 'countdown') tick(s, {});
-      const bot = createBot({ difficulty: 'easy', seed, playerId: 0 });
+      const bot = createBot({ difficulty: 'beginner', seed, playerId: 0 });
       const trail: string[] = [];
       for (let i = 0; i < 400; i++) {
         tick(s, { 0: bot.decide(observe(s, 0)) });
@@ -58,8 +58,8 @@ describe('determinism', () => {
 
 describe('safety invariants over full matches', () => {
   const lineups: Difficulty[][] = [
-    ['easy', 'medium', 'hard', 'medium'],
-    ['hard', 'easy', 'hard', 'medium'],
+    ['beginner', 'standard', 'expert', 'standard'],
+    ['expert', 'beginner', 'expert', 'standard'],
   ];
 
   it('no bot ever steps onto a tile that is already burning', () => {
@@ -124,7 +124,7 @@ describe('safety invariants over full matches', () => {
           const gen = state.generators.some(
             (g) => g.carriedBy === null && g.flight === null && g.x === x && g.y === y,
           );
-          const kicking = gen && p.kick;
+          const kicking = gen && p.contact === 'kick';
           const turning = gen; // deliberately facing a generator to disarm / punch / carry it
           if ((tile !== Tile.Empty || gen) && !kicking && !turning) {
             wasted++;
@@ -160,15 +160,15 @@ describe('self-inflicted deaths', () => {
   }
 
   it('medium essentially never blows itself up when nobody can trap it', () => {
-    expect(soloDeaths('medium', 12)).toBeLessThanOrEqual(1);
+    expect(soloDeaths('standard', 12)).toBeLessThanOrEqual(1);
   }, 30000);
 
   it('hard essentially never blows itself up when nobody can trap it', () => {
-    expect(soloDeaths('hard', 12)).toBeLessThanOrEqual(1);
+    expect(soloDeaths('expert', 12)).toBeLessThanOrEqual(1);
   }, 30000);
 
   it('easy is careless but not suicidal', () => {
-    expect(soloDeaths('easy', 12)).toBeLessThanOrEqual(6); // at most half
+    expect(soloDeaths('beginner', 12)).toBeLessThanOrEqual(6); // at most half
   }, 30000);
 });
 
@@ -179,10 +179,10 @@ describe('matches finish', () => {
     let total = 0;
     let ticks = 0;
     const lineups: Difficulty[][] = [
-      ['medium', 'hard', 'medium', 'hard'],
-      ['easy', 'easy', 'easy', 'easy'],
-      ['hard', 'hard'],
-      ['easy', 'medium', 'hard'],
+      ['standard', 'expert', 'standard', 'expert'],
+      ['beginner', 'beginner', 'beginner', 'beginner'],
+      ['expert', 'expert'],
+      ['beginner', 'standard', 'expert'],
     ];
     for (const seats of lineups) {
       for (let seed = 1; seed <= 4; seed++) {
@@ -199,13 +199,13 @@ describe('matches finish', () => {
 
 describe('decision cost', () => {
   it('stays inside the per-tick budget (0.5 ms easy/medium, 2 ms hard on average)', () => {
-    const budget = { easy: 0.5, medium: 0.5, hard: 2 };
+    const budget = { beginner: 0.5, standard: 0.5, expert: 2 };
     const out = runMatch({
       seed: 11,
-      difficulties: ['easy', 'medium', 'hard', 'hard'],
+      difficulties: ['beginner', 'standard', 'expert', 'expert'],
       now: () => performance.now(),
     });
-    for (const d of ['easy', 'medium', 'hard'] as const) {
+    for (const d of ['beginner', 'standard', 'expert'] as const) {
       const avg = out.decideMs[d] / Math.max(1, out.decideCalls[d]);
       expect(avg).toBeLessThan(budget[d]);
     }

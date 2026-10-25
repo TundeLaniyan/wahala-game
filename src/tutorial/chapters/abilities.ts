@@ -76,12 +76,12 @@ export const PUNCH: Chapter = {
   title: 'Punch (Mechanic Gloves)',
   summary: 'Knock a generator 3 tiles, over walls.',
   facts: [
-    'With Mechanic Gloves, face a generator (or stand on it) and press the action button.',
-    'It flies 3 tiles in the direction you face, over crates and pillars.',
+    'With Mechanic Gloves, just walk into a generator: you punch it. No button.',
+    'It flies 3 tiles in the direction you walked, over crates and pillars.',
     'If the landing tile is taken it carries on to the next free tile.',
-    'Walking into a generator turns you to face it.',
+    'Gloves replace Boots, Kill Switch or Generator Pass: one contact ability at a time.',
   ],
-  controls: ['move', 'place', 'action'],
+  controls: ['move', 'place'],
   demo: {
     build() {
       const s = scenario({ actors: [{ ...HERO, at: [2, 8], facing: 'right' }] });
@@ -94,13 +94,13 @@ export const PUNCH: Chapter = {
     beats: [
       { caption: 'Mechanic Gloves let you punch generators.', acts: { 0: [walk('right', 1)] } },
       {
-        caption: 'Drop one, step back and face it. Walking into it turns you towards it.',
-        acts: { 0: [walk('right', 1), place, walk('left', 1), wait(15), bump('right')] },
+        caption: 'Drop one and step back.',
+        acts: { 0: [walk('right', 1), place, walk('left', 1), wait(15)] },
         hold: 40,
       },
       {
-        caption: 'Press the action button: it flies 3 tiles the way you face, right over crates and pillars.',
-        acts: { 0: [wait(20), action, untilEvent('generatorThrown')] },
+        caption: 'Walk into it: the punch sends it 3 tiles that way, right over crates and pillars.',
+        acts: { 0: [bump('right'), untilEvent('generatorThrown')] },
         hold: 110,
       },
       {
@@ -111,7 +111,7 @@ export const PUNCH: Chapter = {
   },
   practice: {
     goal: 'Pick up the Mechanic Gloves and punch a generator.',
-    hint: 'Face your generator (walk into it) and press the action button.',
+    hint: 'Place a generator, step off, then walk back into it.',
     build: (c) =>
       practiceBoard(c, (s) => {
         pickup(s, 2, 10, 'gloves');

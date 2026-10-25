@@ -33,7 +33,7 @@ describe('How to Play controls legend', () => {
   it('describes the on-screen buttons by the labels they really show', () => {
     expect(touchSrc).toContain('GENERATOR');
     expect(touchSrc).toContain('BOOM!');
-    for (const label of ['THROW', 'DROP', 'CARRY', 'PUNCH']) expect(touchSrc).toContain(`'${label}'`);
+    for (const label of ['DROP', 'CARRY']) expect(touchSrc).toContain(`'${label}'`);
     expect(rows.place.touch).toContain('GENERATOR');
     expect(rows.detonate.touch).toContain('BOOM!');
     expect(rows.skill.touch).toMatch(/PUSH \/ DAZE \/ SHOVE/);

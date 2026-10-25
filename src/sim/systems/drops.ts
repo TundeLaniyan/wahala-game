@@ -12,14 +12,15 @@ function inventoryKinds(state: GameState, p: Player): PickupKind[] {
   else if (p.range > g.baseRange) out.push('petrol');
   if (p.capacity > g.baseCapacity) out.push('socket');
   if (p.speedLevel > 0) out.push('skates');
-  if (p.kick) out.push('boots');
-  if (p.punch) out.push('gloves');
-  if (p.grip) out.push('grip');
+  if (p.contact === 'kick') out.push('boots');
+  if (p.contact === 'punch') out.push('gloves');
+  if (p.contact === 'disarm' && p.killSwitchCharges > 0) out.push('killswitch');
+  if (p.contact === 'pass') out.push('bombpass');
   if (p.remote) out.push('remote');
-  if (p.killSwitchCharges > 0) out.push('killswitch');
   if (p.hasVoucher) out.push('voucher');
   if (p.sneakers) out.push('sneakers');
-  if (p.bombPass) out.push('bombpass');
+  if (p.armour > 0) out.push('armour');
+  if (p.squareTier > 0) out.push('square');
   return out;
 }
 

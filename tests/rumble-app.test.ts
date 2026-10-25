@@ -170,7 +170,7 @@ describe('City Rumble match flow in the controller', () => {
       input: new FakeInput(),
       botFactory: () => idleBot,
     });
-    controller.start({ ...DEFAULT_GAME_SETTINGS, competitors: 2 }, 9);
+    controller.start({ ...DEFAULT_GAME_SETTINGS, play: 'classic', competitors: 2 }, 9);
     expect(useGameStore.getState().hud!.rumble).toBeNull();
     controller.skipToResults();
     expect(controller.state!.match.phase).toBe('ended');

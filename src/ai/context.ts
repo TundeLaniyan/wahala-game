@@ -72,14 +72,14 @@ export function createCtx(profile: AiProfile, rng: RngHolder, board: Board): Ctx
     hunt: new Int16Array(board.size),
     rivalSims: 0,
     maxRivalSims: isLargeBoard(board)
-      ? Math.min(profile.maxRivalSims, LARGE_RIVAL_SIMS[profile.difficulty])
+      ? Math.min(profile.maxRivalSims, LARGE_RIVAL_SIMS[profile.tier])
       : profile.maxRivalSims,
     mark: new Uint8Array(board.size),
     scratch: new Uint8Array(board.size),
     interest: new Map(),
     baseline: new Map(),
     work: 0,
-    budget: isLargeBoard(board) ? LARGE_WORK_BUDGET[profile.difficulty] : Infinity,
+    budget: isLargeBoard(board) ? LARGE_WORK_BUDGET[profile.tier] : Infinity,
     zone: new Int16Array(board.size),
     zoneTick: -1,
     huntWeight: profile.huntWeight,

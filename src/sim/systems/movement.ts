@@ -5,7 +5,7 @@
  */
 import { DIR_VEC, OPPOSITE } from '../grid';
 import type { Dir, GameState, Intents, SimEvent } from '../types';
-import { kickGenerator } from './generators';
+import { tryContact } from './contact';
 import { continueSlide } from './hazards';
 import { resolveTeleport } from './stage';
 import { beginStep, canPlayerEnter } from './stepping';
@@ -41,21 +41,8 @@ export function updateMovement(state: GameState, intents: Intents, events: SimEv
       beginStep(p, tx, ty, playerStepTicks(state, p));
     } else {
       const gen = groundedGeneratorAt(state, tx, ty);
-      if (!gen) continue;
-      // walking into a generator: Boots kick it if it can slide; otherwise Generator Pass walks over it
-      if (p.kick && kickGenerator(state, gen, dir, events)) continue;
-      if (p.bombPass && canPlayerEnter(state, tx, ty, p)) {
-        beginStep(p, tx, ty, playerStepTicks(state, p));
-        continue;
-      }
-      // Jump Sneakers: hop a single generator onto the free tile behind it.
-      const lx = tx + v.dx;
-      const ly = ty + v.dy;
-      if (p.sneakers && state.tick >= p.jumpReadyTick && canPlayerEnter(state, lx, ly)) {
-        p.jumpReadyTick = state.tick + state.config.movement.jumpCooldownTicks;
-        beginStep(p, lx, ly, playerStepTicks(state, p) * 2);
-        events.push({ type: 'playerJumped', playerId: p.id });
-      }
+      // walking into a generator: the equipped contact ability acts (kick / punch / disarm / pass)
+      if (gen) tryContact(state, p, gen, dir, events);
     }
   }
 }

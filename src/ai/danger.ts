@@ -458,7 +458,7 @@ export class DangerBuilder {
       if (t.landTick - world.obs.tick > profile.vehicleLookahead) continue;
       const centre = t.y * w + t.x;
       if (t.kind === 'bottle') {
-        if (profile.difficulty !== 'easy') map.add(centre, t.landTick - m, t.landTick + m);
+        if (profile.tier !== 'easy') map.add(centre, t.landTick - m, t.landTick + m);
         continue;
       }
       const tiles = [centre];

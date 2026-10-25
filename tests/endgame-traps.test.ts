@@ -271,7 +271,7 @@ describe('endgame traps genuinely work, fairly', () => {
             const out = runMatch({
               seed,
               arenaId: id,
-              difficulties: ['medium', 'medium', 'easy', 'hard'],
+              difficulties: ['standard', 'standard', 'beginner', 'expert'],
               settings: { mode },
               config: { match: { durationTicks: 40 * TPS } },
             });

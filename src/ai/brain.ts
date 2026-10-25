@@ -193,7 +193,7 @@ export class Brain implements Bot {
     this.rethinkNow = false;
     this.reactAt = -1;
     this.nextThink = T + profile.thinkMin + nextInt(this.rng, profile.thinkMax - profile.thinkMin + 1);
-    if (world.large) this.nextThink = Math.max(this.nextThink, T + LARGE_MIN_THINK[profile.difficulty]);
+    if (world.large) this.nextThink = Math.max(this.nextThink, T + LARGE_MIN_THINK[profile.tier]);
     c.rivalSims = 0;
     c.work = 0;
     c.baseline.clear();

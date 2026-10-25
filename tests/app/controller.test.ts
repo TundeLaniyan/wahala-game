@@ -53,16 +53,19 @@ function make(botFactory: BotFactory = () => idleBot) {
   return { input, renderer, controller };
 }
 
-const settings = { ...DEFAULT_GAME_SETTINGS, competitors: 3 as const };
+const settings = { ...DEFAULT_GAME_SETTINGS, play: 'classic' as const, competitors: 3 as const };
 
 describe('match setup', () => {
   it('builds distinct bots with the chosen difficulty and gives the human slot 0', () => {
-    const players = buildPlayers({ ...settings, character: 'lekkiBoy', difficulty: 'hard' }, 5);
+    const players = buildPlayers(
+      { ...settings, character: 'lekkiBoy', difficulty: 'expert', botDifficulties: ['expert', 'expert', 'expert'] },
+      5,
+    );
     expect(players).toHaveLength(3);
     expect(players[0]).toMatchObject({ name: 'YOU', isBot: false, characterId: 'lekkiBoy' });
     expect(players[1]!.characterId).not.toBe('lekkiBoy');
     expect(new Set(players.map((p) => p.name)).size).toBe(3);
-    expect(players.slice(1).every((p) => p.isBot && p.difficulty === 'hard')).toBe(true);
+    expect(players.slice(1).every((p) => p.isBot && p.difficulty === 'expert')).toBe(true);
   });
 });
 
@@ -117,10 +120,12 @@ describe('MatchController', () => {
   it('skips to a real result and reaches the results screen', () => {
     const { controller } = make();
     controller.start({ ...settings, competitors: 2 }, 9);
-    // the human stays idle on its spawn; the idle bot too: the match must end by timeout draw
+    // the human stays idle on its spawn; the idle bot too. Wahala Crush is mandatory (V2), so the closing
+    // walls decide it: the bot's top-right corner closes first in the clockwise spiral
     controller.skipToResults();
     expect(controller.state!.match.phase).toBe('ended');
-    expect(controller.state!.match.result).toEqual({ kind: 'draw', reason: 'timeout' });
+    expect(controller.state!.crush).not.toBeNull();
+    expect(controller.state!.match.result).toEqual({ kind: 'win', winnerId: 0 });
     expect(useGameStore.getState().screen).toBe('results');
     expect(useGameStore.getState().summary).not.toBeNull();
   });

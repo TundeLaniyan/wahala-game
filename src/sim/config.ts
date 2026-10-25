@@ -48,7 +48,6 @@ export interface GameConfig {
     disabledCleanupTicks: number;
     carryBonusTicks: number;
     kickStepTicks: number;
-    punchDistance: number;
     throwTicks: number;
     weakFireRange: number;
     /**
@@ -129,6 +128,67 @@ export interface GameConfig {
     /** Each endgame wave is telegraphed on the floor this long before it goes live. */
     endgameWarnTicks: number;
   };
+  /** V2: generator-contact abilities (kick / punch / disarm / pass), triggered by walking into a generator. */
+  contact: {
+    /** Punch: the generator flies this many tiles (over obstacles) and lands on the first free tile from there. */
+    punchDistance: number;
+    /** Disarm charges granted with the ability (also `pickups.killSwitchCharges` for the legacy pickup). */
+    disarmCharges: number;
+    /** After a contact action the same player cannot trigger another one for this long (no double fire). */
+    cooldownTicks: number;
+  };
+  /** V2: button B. */
+  special: {
+    /** Melee reaches an opponent on any adjacent tile (facing tile checked first). */
+    meleeAnyAdjacent: boolean;
+  };
+  /** V2: elimination credit (systems/attribution.ts). */
+  credit: {
+    /** A melee hit this recent makes the attacker the credited eliminator of an otherwise uncredited death. */
+    assistWindowTicks: number;
+  };
+  /** V2: defensive layers. */
+  protection: {
+    maxArmour: number;
+    /** Spawn protection after a respawn (respawn modes). */
+    spawnProtectionTicks: number;
+  };
+  /** V2 Square Blast. */
+  square: {
+    maxTier: number;
+    /** Square radius per tier (index = tier): 0, 1 (3 x 3), 2 (5 x 5). */
+    radiusByTier: number[];
+  };
+  /** V2 City Rumble reward economy (systems/rewards.ts). Disabled = rewards off. */
+  rewards: {
+    enabled: boolean;
+    /**
+     * Rewards granted for the n-th credited elimination (index n-1). Past the end of the ladder the
+     * final `repeatFrom`.. entries cycle, so a fighter keeps getting stronger.
+     */
+    ladder: PickupKind[][];
+    repeatFrom: number;
+  };
+  /** V2 respawn modes (Deathmatch, Team Rumble). */
+  respawn: {
+    enabled: boolean;
+    delayTicks: number;
+    /** A respawn tile has no living opponent within this many tiles (Manhattan) when possible. */
+    safeDistance: number;
+    /** Reset upgrades on death (life-based power-ups). */
+    resetOnDeath: boolean;
+  };
+  /** V2 standard-match sideline spectators. */
+  spectator: {
+    enabled: boolean;
+    cooldownTicks: number;
+    /** Warning / flight time before a thrown generator lands. */
+    flightTicks: number;
+    /** Ticks per lane step. */
+    stepTicks: number;
+    /** Live spectator generators per spectator. */
+    maxLive: number;
+  };
   stage: {
     /** Minimum telegraph of any LETHAL stage hazard (the arena data may ask for longer, never shorter). */
     minLethalWarnTicks: number;
@@ -170,7 +230,6 @@ export const DEFAULT_CONFIG: GameConfig = {
     disabledCleanupTicks: ticks(25),
     carryBonusTicks: ticks(1),
     kickStepTicks: 5,
-    punchDistance: 3,
     throwTicks: ticks(0.4),
     weakFireRange: 1,
     blastMode: 'plus',
@@ -186,7 +245,6 @@ export const DEFAULT_CONFIG: GameConfig = {
       diesel: 1,
       boots: 3,
       gloves: 2,
-      grip: 3,
       remote: 2,
       killswitch: 3,
       okada: 4,
@@ -195,6 +253,11 @@ export const DEFAULT_CONFIG: GameConfig = {
       sneakers: 2,
       hotfuel: 1,
       bombpass: 3,
+      // V2: Carry is out of normal play. Armour / Square Blast are elimination rewards (City Rumble);
+      // whether they also become rare Classic crate finds is a workstream C decision (needs AI support first)
+      grip: 0,
+      armour: 0,
+      square: 0,
     },
     killSwitchCharges: 2,
     maxKillSwitchCharges: 3,
@@ -248,6 +311,52 @@ export const DEFAULT_CONFIG: GameConfig = {
     oilSlideTiles: 2,
     endgameWaveRemainingTicks: [ticks(30), ticks(15)],
     endgameWarnTicks: ticks(1.5),
+  },
+  contact: {
+    punchDistance: 3,
+    disarmCharges: 2,
+    cooldownTicks: 8,
+  },
+  special: {
+    meleeAnyAdjacent: true,
+  },
+  credit: {
+    assistWindowTicks: ticks(4),
+  },
+  protection: {
+    maxArmour: 1,
+    spawnProtectionTicks: ticks(2.5),
+  },
+  square: {
+    maxTier: 2,
+    radiusByTier: [0, 1, 2],
+  },
+  rewards: {
+    enabled: false,
+    ladder: [
+      ['socket', 'petrol'],
+      ['skates', 'boots'],
+      ['armour'],
+      ['square', 'socket'],
+      ['remote', 'petrol'],
+      ['okada', 'voucher'],
+      ['square', 'socket'],
+      ['armour', 'petrol'],
+    ],
+    repeatFrom: 4,
+  },
+  respawn: {
+    enabled: false,
+    delayTicks: ticks(3),
+    safeDistance: 6,
+    resetOnDeath: true,
+  },
+  spectator: {
+    enabled: false,
+    cooldownTicks: ticks(8),
+    flightTicks: ticks(1.2),
+    stepTicks: 8,
+    maxLive: 1,
   },
   stage: {
     minLethalWarnTicks: ticks(1.5),

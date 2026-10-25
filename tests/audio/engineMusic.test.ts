@@ -321,7 +321,15 @@ describe('spoken Pidgin through the engine', () => {
     const r = await rig();
     await enter(r);
     const ev: SimEvent[] = [
-      { type: 'playerEliminated', playerId: 0, cause: { kind: 'flame', ownerId: 1, eventId: 1 }, x: 3, y: 3 },
+      {
+        type: 'playerEliminated',
+        playerId: 0,
+        cause: { kind: 'flame', ownerId: 1, eventId: 1 },
+        x: 3,
+        y: 3,
+        creditId: 1,
+        assistIds: [],
+      },
     ];
     r.audio.handleEvents(ev, state());
     r.audio.handleEvents(ev, state());
@@ -340,6 +348,8 @@ describe('spoken Pidgin through the engine', () => {
           cause: { kind: 'flame', ownerId: 1, eventId: 1 },
           x: 3,
           y: 3,
+          creditId: 1,
+          assistIds: [],
         },
       ],
       state(),

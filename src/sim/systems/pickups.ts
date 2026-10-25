@@ -1,6 +1,6 @@
 /** Pickup reveal, collection, burning and effects. Effects are data-light switch cases on PickupKind. */
 import { pick } from '../rng';
-import type { CurseKind, GameState, PickupKind, Player, SimEvent } from '../types';
+import type { ContactAbility, CurseKind, GameState, PickupKind, Player, SimEvent } from '../types';
 
 const CURSES: readonly CurseKind[] = ['slow', 'inverted', 'weakFire'];
 
@@ -71,9 +71,27 @@ export function applyPickup(state: GameState, p: Player, kind: PickupKind, event
       p.speedLevel++;
       return true;
     case 'boots':
-      return grant(p, 'kick');
+      return equipContact(p, 'kick', events);
     case 'gloves':
-      return grant(p, 'punch');
+      return equipContact(p, 'punch', events);
+    case 'bombpass':
+      return equipContact(p, 'pass', events);
+    case 'killswitch': {
+      // Disarm is a contact ability with charges: picking it up equips it (replacing kick/punch/pass)
+      const had = p.contact === 'disarm' ? p.killSwitchCharges : 0;
+      if (p.contact === 'disarm' && had >= c.maxKillSwitchCharges) return false;
+      p.killSwitchCharges = Math.min(c.maxKillSwitchCharges, had + c.killSwitchCharges);
+      if (p.contact !== 'disarm') equipContact(p, 'disarm', events);
+      return true;
+    }
+    case 'armour':
+      if (p.armour >= state.config.protection.maxArmour) return false;
+      p.armour++;
+      return true;
+    case 'square':
+      if (p.squareTier >= state.config.square.maxTier) return false;
+      p.squareTier++;
+      return true;
     case 'grip':
       return grant(p, 'grip');
     case 'remote':
@@ -82,12 +100,6 @@ export function applyPickup(state: GameState, p: Player, kind: PickupKind, event
       return grant(p, 'sneakers');
     case 'hotfuel':
       return grant(p, 'hotFuel');
-    case 'bombpass':
-      return grant(p, 'bombPass');
-    case 'killswitch':
-      if (p.killSwitchCharges >= c.maxKillSwitchCharges) return false;
-      p.killSwitchCharges = Math.min(c.maxKillSwitchCharges, p.killSwitchCharges + c.killSwitchCharges);
-      return true;
     case 'okada':
       if (p.mounted) return false; // never stack extra lives
       p.mounted = true;
@@ -106,10 +118,20 @@ export function applyPickup(state: GameState, p: Player, kind: PickupKind, event
   }
 }
 
-function grant(
-  p: Player,
-  flag: 'kick' | 'punch' | 'grip' | 'remote' | 'sneakers' | 'hotFuel' | 'bombPass',
-): boolean {
+/**
+ * Contact abilities are mutually exclusive: the newest replaces the previous one (Disarm keeps its
+ * charges only while it stays equipped). Returns false when it was already equipped.
+ */
+export function equipContact(p: Player, ability: ContactAbility, events: SimEvent[]): boolean {
+  if (p.contact === ability) return false;
+  const replaced = p.contact;
+  if (replaced === 'disarm') p.killSwitchCharges = 0;
+  p.contact = ability;
+  events.push({ type: 'contactEquipped', playerId: p.id, ability, replaced });
+  return true;
+}
+
+function grant(p: Player, flag: 'grip' | 'remote' | 'sneakers' | 'hotFuel'): boolean {
   if (p[flag]) return false;
   p[flag] = true;
   return true;

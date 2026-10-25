@@ -97,7 +97,7 @@ describe('each demo demonstrates its mechanic', () => {
     const run = demo('pass');
     const gen = of(run.events, 'generatorPlaced').find((e) => e.ownerId === 1)!;
     expect(run.heroTiles).toContain(`${gen.x},${gen.y}`);
-    expect(run.state.players[0]!.bombPass).toBe(true);
+    expect(run.state.players[0]!.contact).toBe('pass');
   });
 
   it('remote: the generator waits, then goes off on command', () => {
