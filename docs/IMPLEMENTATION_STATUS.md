@@ -19,7 +19,7 @@ All six streams are merged. Verified on the integrated branch (commands below); 
 | Lead | Contracts, 11 new voice clips (30 total), five Rumble tracks (160 kbps), V2 event sounds, voice zones for the new stages, integration fixes, e2e updates, deployment switch | `audio/*`, all suites |
 
 Verification on the integrated branch (container: 4 cores, software WebGL):
-- `npx tsc --noEmit`, `npx eslint .`: clean. `npx vitest run`: 82 files, 1159 tests pass.
+- `npx tsc --noEmit`, `npx eslint .`: clean. `npx vitest run`: 82 files, 1164 tests pass.
 - Playwright: every spec run on the integrated build in both projects (desktop 1280x720, phone 844x390), after the
   spec updates for the V2 menu; all pass (the nine-arena sweep needed its retry once, after a preview-server start
   failure).

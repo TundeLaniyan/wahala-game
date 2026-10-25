@@ -5,8 +5,9 @@ Target URL: **https://tundelaniyan.github.io/wahala-game/** (a project site, so 
 
 ## How it is built and published
 
-Since the voice integration (2026-10-24) the preview is built from **`claude/wahala-voice-integration`** (before
-that, from `claude/wahala-mobile-joystick-audio`, whose own copy of the workflow still publishes on its pushes).
+Since the V2 gameplay revolution (2026-10-25) the preview is built from **`claude/wahala-gameplay-rumble-v2`**
+(before that from `claude/wahala-voice-integration`, and before that `claude/wahala-mobile-joystick-audio`; each of
+those branches' own copy of the workflow would still publish if someone pushed to it, so leave them untouched).
 `.github/workflows/deploy.yml` is called by CI (`ci.yml`, job `deploy-preview`) on every push to that branch,
 **only after the full check has passed on that commit** (typecheck, lint, unit tests, build and the Playwright
 desktop + phone suite), so an unverified build is never published. It can also be run on demand from the Actions
@@ -30,7 +31,7 @@ with the source set to the `gh-pages` branch that old workflow cannot replace th
 4. After a minute the page shows "Your site is live at https://tundelaniyan.github.io/wahala-game/".
 
 Nothing else is needed: later pushes to the branch republish automatically. To publish without a code change, open
-**Actions -> Deploy preview to GitHub Pages -> Run workflow** on `claude/wahala-voice-integration`.
+**Actions -> Deploy preview to GitHub Pages -> Run workflow** on `claude/wahala-gameplay-rumble-v2`.
 
 ## What could not be verified from the build environment
 
