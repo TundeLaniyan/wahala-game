@@ -41,7 +41,7 @@ test.describe('main menu', () => {
   test('City Rumble is the main entry; Team Rumble from a phone; Classic Battle still one tap away', async ({
     page,
   }, info) => {
-    test.setTimeout(process.env.CI ? 600_000 : 240_000);
+    test.setTimeout(600_000); // software WebGL on a busy shared machine
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.setViewportSize({ width: 640, height: 360 });
@@ -53,7 +53,8 @@ test.describe('main menu', () => {
     const play = (await page.getByTestId('start-button').boundingBox())!;
     expect(play.y + play.height).toBeLessThanOrEqual(360);
     expect(play.x + play.width).toBeLessThanOrEqual(640);
-    await expect(page.getByTestId('start-button')).toContainText('Rumble');
+    // the 3D cast preloads first (the button reads "Loading…" until then; slow on software WebGL)
+    await expect(page.getByTestId('start-button')).toContainText('Rumble', { timeout: 120_000 });
     await shot(page, info.project.name, 'menu-phone-rumble');
 
     // Team Rumble: 4 v 4, 5 minutes, friendly fire on; the length / friendly fire rows follow the mode
@@ -108,7 +109,7 @@ test.describe('City Rumble: Deathmatch respawns', () => {
   test('down means back soon: countdown, no skip, spawn protection, K/D/A results', async ({
     page,
   }, info) => {
-    test.setTimeout(process.env.CI ? 600_000 : 240_000);
+    test.setTimeout(600_000); // software WebGL on a busy shared machine
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await open(page);
@@ -158,7 +159,7 @@ test.describe('City Rumble: 32 competitors (Survival)', () => {
     isMobile,
   }, info) => {
     // 32 rigged characters on software WebGL: GitHub's two-vCPU runners need far longer than the container
-    test.setTimeout(process.env.CI ? 900_000 : 240_000);
+    test.setTimeout(900_000);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => {
@@ -179,7 +180,9 @@ test.describe('City Rumble: 32 competitors (Survival)', () => {
     await expect(page.getByTestId('ring-status')).toBeVisible();
     await expect(page.locator('.portrait')).toHaveCount(0); // no 32 portraits on screen
 
-    // the bots play: they spread out and put generators down
+    // the bots play: they spread out and put generators down (the idle human is kept safe meanwhile, so
+    // the knock-out below is the one that counts)
+    await mutate(page, `s.players[0].protectedUntil = 1e9;`);
     const before = st.players.map((p) => `${p.x},${p.y}`);
     await stepTicks(page, 480);
     st = await getState(page);
@@ -190,11 +193,14 @@ test.describe('City Rumble: 32 competitors (Survival)', () => {
     const camPose = await page.evaluate(() => (window as never as Debug).__WAHALA__.renderer().debugCamera());
     expect(camPose.arenaInView).toBe(false);
     await shot(page, info.project.name, 'rumble-play');
+    // stop real-time play so the chosen killer cannot fall before the spectator camera picks it
+    await page.evaluate(() => ((window as never as Debug).__WAHALA__.controller().frozen = true));
 
     // the local player is knocked out by the nearest bot: the camera rides with that bot
     await mutate(
       page,
       `const me = s.players[0];
+       me.protectedUntil = 0;
        let best = null;
        for (const p of s.players) {
          if (!p.alive || p.id === 0) continue;
