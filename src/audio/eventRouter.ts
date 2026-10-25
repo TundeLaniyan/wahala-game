@@ -319,7 +319,7 @@ const handlers: Handlers = {
   stageWarning: (e, c) => {
     const x = tileXOf(c, e.event.tiles[0]);
     const s = e.event.style;
-    if (s === 'danfo') sfx(c, 'danfo_horn', panOf(c, x));
+    if (s === 'danfo' || s === 'truck') sfx(c, 'danfo_horn', panOf(c, x));
     else if (s === 'traffic') sfx(c, c.rand() < 0.5 ? 'danfo_horn' : 'keke_horn', panOf(c, x));
     else if (s === 'checkpoint') sfx(c, 'taxi_horn', panOf(c, x));
     else if (s === 'debris' || s === 'power' || s === 'cargo') sfx(c, 'crush_warning', panOf(c, x), 0.8);
@@ -331,7 +331,7 @@ const handlers: Handlers = {
   stageStarted: (e, c) => {
     const x = tileXOf(c, e.event.tiles[0]);
     const s = e.event.style;
-    if (s === 'danfo' || s === 'traffic') sfx(c, 'danfo_pass', panOf(c, x));
+    if (s === 'danfo' || s === 'traffic' || s === 'truck') sfx(c, 'danfo_pass', panOf(c, x));
     else if (s === 'checkpoint') sfx(c, 'taxi_pass', panOf(c, x));
     else if (s === 'debris' || s === 'cargo') sfx(c, 'crush_slam', panOf(c, x));
     else if (s === 'goods') sfx(c, 'block_crumble_1', panOf(c, x), 0.8, 1.1);

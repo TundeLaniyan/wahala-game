@@ -13,6 +13,7 @@ const ICON: Record<StageAlert['style'], string> = {
   manhole: '◎',
   cargo: '🏗',
   goods: '🧺',
+  truck: '🚛',
 };
 
 /** Concise stage-hazard warnings for the local player (rendered at the top of the toast column). */

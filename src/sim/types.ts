@@ -385,7 +385,8 @@ export type StageHazardStyle =
   | 'merch' // market goods tumbling onto the floor (drop: new crates)
   | 'manhole' // connected trapdoors (teleport)
   | 'cargo' // V2 Apapa: a container lowered by a quay crane onto a marked zone (strike)
-  | 'goods'; // V2 Lagos Island: bales and cartons tumbling off a shopfront onto a marked zone (strike)
+  | 'goods' // V2 Lagos Island: bales and cartons tumbling off a shopfront onto a marked zone (strike)
+  | 'truck'; // V2 Apapa: an articulated container truck racing a port road (sweep)
 
 export type StageHazardKind = 'sweep' | 'strike' | 'push' | 'drop';
 

@@ -5,6 +5,7 @@
 // north edge, the east edge, the centre) for a few seconds of live play each, and INSPECT close-ups
 // ("x,z,zoom;..." world points, unclamped) of the surroundings. Prints render stats and page errors.
 // Q=low|medium|high (default medium). HAZARD=1 waits for a stage warning before the `play` frame.
+// PREVIEW_OUT=<dir> also writes the 640 x 360 menu card image <dir>/<arenaId>.jpg (HUD hidden).
 import { mkdirSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 
@@ -56,17 +57,18 @@ const run = async (ms) => {
 await page.evaluate((n) => {
   const w = window.__WAHALA__;
   w.controller().frozen = true;
-  w.stepTicks(Math.max(0, n - 120));
-  w.advance(Math.min(n, 120));
+  w.stepTicks(Math.max(0, n - 12));
+  w.advance(Math.min(n, 12));
 }, Number(ticks));
 if (process.env.HAZARD) {
   await page.evaluate(() => {
     const w = window.__WAHALA__;
-    for (let i = 0; i < 1200 && w.getState().stage.events.length === 0; i++) w.advance(1);
-    w.advance(40);
+    for (let i = 0; i < 1200 && w.getState().stage.events.length === 0; i++) w.stepTicks(1);
+    w.stepTicks(50);
+    w.advance(6);
   });
 }
-await run(1500);
+await run(Number(process.env.RUNMS ?? 1200));
 await shot('play');
 mark('play');
 
@@ -87,7 +89,7 @@ for (const [n, spec] of spots.entries()) {
     },
     [x, y],
   );
-  await run(1600);
+  await run(Number(process.env.RUNMS ?? 1200));
   await shot(`spot${n}`);
   mark(`spot ${n}`);
 }
@@ -97,6 +99,14 @@ for (const [n, spec] of (process.env.INSPECT ?? '').split(';').filter(Boolean).e
   await run(1400);
   await shot(`inspect${n}`);
   mark(`inspect ${n}`);
+}
+// PREVIEW_OUT=public/previews: the menu card image (640 x 360, HUD hidden) from the current view
+if (process.env.PREVIEW_OUT) {
+  await page.setViewportSize({ width: 640, height: 360 });
+  await page.addStyleTag({ content: '.hud, .touch, .touch-controls { display: none !important; }' });
+  await run(1200);
+  await page.screenshot({ path: `${process.env.PREVIEW_OUT}/${arena}.jpg`, type: 'jpeg', quality: 75, timeout: 240000 });
+  mark('preview');
 }
 const stats = await page.evaluate(() => window.__WAHALA__.stats());
 console.log(JSON.stringify({ arena, stats, errors: errors.slice(0, 5) }));

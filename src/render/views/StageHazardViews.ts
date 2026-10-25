@@ -30,6 +30,7 @@ import { VEHICLE_SCALE } from '../arenas/common';
 import { assets } from '../assets/library';
 import { softVariantFor, softVariants } from '../assets/props';
 import { createVehicleModel, spinWheel } from '../assets/vehicles';
+import { createHazardTruck } from './hazardTruck';
 import type { VehicleModel } from '../assets/vehicles';
 import type { Layout } from '../coords';
 import type { Effects } from '../fx/Effects';
@@ -940,7 +941,7 @@ export class StageHazardViews implements View {
 
   private createSweep(ev: StageEvent): SweepVisual {
     const kind = sweepVehicleKind(ev.style, ev.id);
-    const model = createVehicleModel(kind);
+    const model = ev.style === 'truck' ? createHazardTruck(ev.id) : createVehicleModel(kind);
     // headlights and a pool of light on the road ahead (shared materials, children of the model)
     const box = new Box3().setFromObject(model.root);
     const front = box.max.x;

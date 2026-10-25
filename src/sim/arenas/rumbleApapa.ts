@@ -14,7 +14,7 @@ import { AISLE_CLEARANCE, mirrorQuadrant, mirrorZones, pairedSpawns, rect, rumbl
  * lanes; the open loading apron across the middle (rows 13-17) is the core that never closes.
  *
  * Stage: the quay cranes lower containers onto marked 2 x 2 zones in the aisles (lethal, 2.2 s warning
- * with a growing shadow); port traffic races the haul roads and the quay road (2 s warning).
+ * with a growing shadow); container trucks race the haul roads and the quay road (2 s warning).
  */
 const W = 45;
 const H = 31;
@@ -107,7 +107,7 @@ export const RUMBLE_APAPA: ArenaDef = {
     },
     {
       kind: 'sweep',
-      style: 'traffic',
+      style: 'truck',
       routes: [
         line([0, 1], [W - 1, 1]),
         line([W - 1, H - 2], [0, H - 2]),
@@ -127,7 +127,7 @@ export const RUMBLE_APAPA: ArenaDef = {
     lighting: 'Humid harbour noon, salt haze',
     hazards: [
       'Quay cranes lower containers onto the marked 2 x 2 zones in the aisles (2.2 s warning).',
-      'Port traffic races the haul roads and the quay road (2 s warning on the lane).',
+      'Container trucks race the haul roads and the quay road (2 s warning on the lane).',
       'From 2:00 left the yard closes in; the loading apron at the centre never closes.',
     ],
   },
