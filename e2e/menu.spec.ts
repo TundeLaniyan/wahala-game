@@ -5,7 +5,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { mutate, open, stepTicks } from './helpers';
+import { mutate, open, settled, stepTicks } from './helpers';
 
 type Debug = {
   __WAHALA__: {
@@ -248,10 +248,7 @@ test.describe('Stitch main menu', () => {
           screen,
         );
         await expect(page.getByTestId(root)).toBeVisible();
-        // measure the settled layout, after the screen's short entrance slide
-        await page.waitForFunction(() =>
-          document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
-        );
+        await settled(page); // measure the layout after the screen's short entrance slide
         const m = await page.evaluate((id) => {
           const el = document.querySelector(`[data-testid="${id}"]`)!.getBoundingClientRect();
           const small = [...document.querySelectorAll<HTMLElement>('.mn button')]

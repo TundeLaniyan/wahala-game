@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, mutate, open, startMatch, stepTicks, toRumbleSetup } from './helpers';
+import { getState, mutate, open, settled, startMatch, stepTicks, toRumbleSetup } from './helpers';
 
 type Debug = {
   __WAHALA__: {
@@ -47,6 +47,7 @@ test.describe('main menu', () => {
     await open(page);
 
     // Home: City Rumble is the flagship entry, first and on screen without scrolling
+    await settled(page);
     const entry = (await page.getByTestId('home-rumble').boundingBox())!;
     expect(entry.y + entry.height).toBeLessThanOrEqual(360);
     expect(entry.x + entry.width).toBeLessThanOrEqual(640);
@@ -75,6 +76,7 @@ test.describe('main menu', () => {
     await expect(page.getByTestId('ready-mode')).toContainText('Team Rumble');
     await expect(page.getByTestId('ready-opponents')).toContainText('4 v 4');
     await expect(page.getByTestId('ready-rules')).toContainText('Friendly fire: on');
+    await settled(page);
     const start = (await page.getByTestId('start-button').boundingBox())!;
     expect(start.y + start.height).toBeLessThanOrEqual(360);
     await page.getByTestId('start-button').click();

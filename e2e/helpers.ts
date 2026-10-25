@@ -96,6 +96,13 @@ export async function startMatch(
   if (opts.waitPlaying !== false) await stepTicks(page, 160);
 }
 
+/** Waits until the menu's entrance animations have finished (software WebGL renders a few frames a second). */
+export async function settled(page: Page): Promise<void> {
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
+  );
+}
+
 /** Main menu -> Settings on `tab` (audio / graphics / controls / access). */
 export async function openSettings(page: Page, tab: 'audio' | 'graphics' | 'controls' | 'access' = 'audio'): Promise<void> {
   await page.getByTestId('home-settings').click();
