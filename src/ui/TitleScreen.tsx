@@ -1,4 +1,4 @@
-import { CHARACTERS, CHARACTER_IDS, DIFFICULTIES, VEHICLE_DEFS } from '../sim';
+import { CHARACTERS, CHARACTER_IDS, VEHICLE_DEFS } from '../sim';
 import type { CharacterId } from '../sim';
 import { portraitUrl } from '../assets/portraits';
 import { commands } from '../app/session';
@@ -6,6 +6,7 @@ import { useGameStore } from '../app/store';
 import type { GameSettings } from '../app/settings';
 import { ArenaPicker } from './ArenaPicker';
 import { AudioSettingsPanel } from './AudioSettings';
+import { DifficultyPicker } from './DifficultyPicker';
 
 function Choice<T extends string | number | boolean>(props: {
   value: T;
@@ -122,19 +123,7 @@ export function TitleScreen() {
               ))}
             </div>
           )}
-          <div className="row" style={{ marginBottom: rumble ? 0 : 8 }}>
-            <span>Bots</span>
-            {DIFFICULTIES.map((d) => (
-              <Choice
-                key={d}
-                value={d}
-                current={s.difficulty}
-                label={d}
-                onPick={(v) => set({ difficulty: v })}
-                testId={`diff-${d}`}
-              />
-            ))}
-          </div>
+          <DifficultyPicker settings={s} set={set} />
         </section>
 
         <section className="panel">

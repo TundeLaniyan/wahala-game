@@ -11,6 +11,8 @@ import type { HypoGen } from './danger';
 import type { AiProfile } from './profiles';
 
 const aware = new WeakMap<AiProfile, AiProfile>();
+/** Earliest age (ticks) at which the simple remote policy (remote.ts, easy tier) detonates. */
+const REMOTE_EARLIEST = 80;
 
 /** The profile with complete hazard awareness (used only to judge a rival's escape). */
 function fullAwareness(profile: AiProfile): AiProfile {
@@ -34,7 +36,9 @@ export function wouldTrapRival(c: Ctx, tile: number, a0: number): boolean {
     if (Math.abs(r.x - tx) + Math.abs(r.y - ty) > range + 2) continue;
     if (!built) {
       const placeTick = Math.max(world.tick + 1, a0 + 1);
-      const hypo: HypoGen = { x: tx, y: ty, range, pierce: world.me.hotFuel, explodeAt: explodeTickFor(c, placeTick) };
+      // a Remote Starter generator may be set off long before its failsafe: judge the earliest the bot would
+      const explodeAt = Math.min(explodeTickFor(c, placeTick), world.me.remote ? placeTick + REMOTE_EARLIEST : Infinity);
+      const hypo: HypoGen = { x: tx, y: ty, range, pierce: world.me.hotFuel, explodeAt };
       c.builder.build(c.tmp, world, fullAwareness(profile), { extraGens: [hypo] });
       built = true;
     }

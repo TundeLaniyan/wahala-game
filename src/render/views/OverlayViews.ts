@@ -1,5 +1,5 @@
 import { Group, Sprite, SpriteMaterial, AdditiveBlending } from 'three';
-import { DIR_VEC, previewBlast } from '../../sim';
+import { DIR_VEC, canThrow, previewBlast, spectatorLane, spectatorLanding } from '../../sim';
 import type { Dir, TilePos, VehicleEntry } from '../../sim';
 import { entryKey } from '../../sim';
 import { chevronTexture, glowTexture, ringTexture, tileGlowTexture } from '../textures';
@@ -236,10 +236,56 @@ export class OverlayViews implements View {
       }
     }
 
+    this.drawSideline(ctx);
     this.drawEntry(ctx, info.entryOverlay);
     this.fill.end();
     this.chevrons.end();
     this.rings.end();
+  }
+
+  /**
+   * V2 sideline spectators (sim/systems/spectators.ts): a marker where each one stands on the lane outside
+   * the board, the local spectator's aim (where a throw would land now), and every thrown generator's
+   * landing tile, telegraphed until it lands.
+   */
+  private drawSideline(ctx: FrameContext): void {
+    const { state, time, alpha, layout, info } = ctx;
+    if (!state.config.spectator.enabled) return;
+    const wx = layout.wx;
+    const wz = layout.wz;
+    const lane = spectatorLane(state);
+    for (const p of state.players) {
+      const s = p.spectator;
+      if (p.alive || !s) continue;
+      const t = lane[s.pos];
+      if (!t) continue;
+      const local = p.id === info.localPlayerId;
+      const ready = canThrow(state, p);
+      this.rings.push({
+        x: wx(t.x),
+        z: wz(t.y),
+        color: local ? 0xffd23a : 0xc8c0b0,
+        intensity: (local ? 0.75 : 0.4) + (ready ? 0.25 * Math.sin(time * 8) : 0),
+        scale: local ? 1.0 : 0.8,
+      });
+      this.fill.push({ x: wx(t.x), z: wz(t.y), color: local ? 0xffd23a : 0x9a948a, intensity: 0.22, scale: 0.7 });
+      if (local && ready) {
+        const aim = spectatorLanding(state, s.pos);
+        if (aim) {
+          const pulse = 0.5 + 0.5 * Math.sin(time * 6);
+          this.fill.push({ x: wx(aim.x), z: wz(aim.y), color: 0xffd23a, intensity: 0.18 + 0.14 * pulse, scale: 0.9 });
+          this.rings.push({ x: wx(aim.x), z: wz(aim.y), color: 0xffe680, intensity: 0.6, scale: 0.9 + 0.1 * pulse });
+        }
+      }
+    }
+    for (const g of state.generators) {
+      if (!g.fromSpectator || !g.flight) continue;
+      const k = 1 - Math.max(0, g.flight.remaining - alpha) / Math.max(1, g.flight.total);
+      const x = wx(g.x);
+      const z = wz(g.y);
+      this.fill.push({ x, z, color: 0xff3a1a, intensity: 0.25 + 0.5 * k * (0.7 + 0.3 * Math.sin(time * 20)), scale: 0.96 });
+      this.rings.push({ x, z, color: 0xff7a2a, intensity: 0.9, scale: 1.8 - k * 1.0 });
+    }
   }
 
   private drawEntry(ctx: FrameContext, model: EntryOverlayModel | null): void {

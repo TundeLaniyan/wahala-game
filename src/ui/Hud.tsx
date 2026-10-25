@@ -165,7 +165,7 @@ export function Hud() {
       <HudRail alerts={hud.stageAlerts} toasts={toasts} ruleBanner={hud.ruleBanner} rumble={!!rumble} />
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}
       {hud.entry && <EntryPanel entry={hud.entry} />}
-      {!rumble && hud.phase === 'playing' && !hud.localAlive && (
+      {!rumble && hud.phase === 'playing' && !hud.localAlive && !hud.sideline && (
         <div className="spectate" data-testid="spectate">
           <span>You&apos;re out! Watching the rest…</span>
           <button

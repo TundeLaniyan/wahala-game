@@ -6,6 +6,7 @@ import { Hud } from './Hud';
 import { PauseOverlay, ResultsOverlay, RotateOverlay } from './Overlays';
 import { TitleScreen } from './TitleScreen';
 import { TouchControls } from './TouchControls';
+import { SpectatorControls } from './SpectatorControls';
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -41,6 +42,7 @@ export function App() {
       <div className="vignette" aria-hidden />
       {screen !== 'title' && <Hud />}
       {screen === 'playing' && showTouch && !paused && tutorial !== 'demo' && <TouchControls />}
+      {screen === 'playing' && !paused && !tutorial && <SpectatorControls touch={showTouch} />}
       {screen === 'playing' && paused && !tutorial && <PauseOverlay />}
       {screen === 'playing' && tutorial && <HowToPlay />}
       {screen === 'results' && <ResultsOverlay />}
