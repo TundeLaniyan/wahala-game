@@ -154,10 +154,6 @@ describe('event mapping', () => {
       'contactUsed',
       'contactEquipped',
       'specialUsed',
-      'protectionBroken',
-      'rewardGranted',
-      'playerRespawned',
-      'spectatorThrow',
     ]);
     // an extra human-less state variant is covered below; here players 0/1 are both "human" sandbox players
     for (const [type, e] of Object.entries(SAMPLES)) {

@@ -23,7 +23,7 @@ type Handler<K extends SimEvent['type']> = (e: EventOf<K>, c: RouteCtx) => void;
 type Handlers = { [K in SimEvent['type']]: Handler<K> };
 
 /** Pickups that earn the fancy chime. */
-const RARE = new Set(['okada', 'diesel', 'hotfuel', 'remote', 'killswitch', 'gloves', 'grip']);
+const RARE = new Set(['okada', 'diesel', 'hotfuel', 'remote', 'killswitch', 'gloves', 'grip', 'armour', 'square']);
 const MAX_BLASTS_PER_CALL = 3;
 const MAX_ELIM_PER_CALL = 2;
 const PAN_WIDTH = 0.6;
@@ -346,13 +346,25 @@ const handlers: Handlers = {
   },
   generatorDoused: (e, c) => sfx(c, 'gen_dud', panOf(c, generatorX(c, e.generatorId))),
   // V2 events (workstreams add their own sounds; silent until then)
+  // V2. Contact abilities and the B special make the sounds of what they cause (kick, throw, power-down,
+  // push / daze, vehicle warning), so their own events stay silent.
   contactUsed: () => undefined,
   contactEquipped: () => undefined,
   specialUsed: () => undefined,
-  protectionBroken: () => undefined,
-  rewardGranted: () => undefined,
-  playerRespawned: () => undefined,
-  spectatorThrow: () => undefined,
+  protectionBroken: (e, c) => {
+    // the Okada's own break is `okadaBroken`; an Armour plate cracks a little higher and drier
+    if (e.layer !== 'armour') return;
+    sfx(c, 'okada_break', panOf(c, e.x), isHuman(c, e.playerId) ? 0.9 : 0.5, 1.35);
+    if (isHuman(c, e.playerId)) c.buses.duck('blast');
+  },
+  rewardGranted: (e, c) => {
+    const pan = panOf(c, playerX(c, e.playerId));
+    if (!isHuman(c, e.playerId)) return sfx(c, 'pickup_1', pan, 0.4);
+    sfx(c, 'pickup_rare', pan, 1, 1 + Math.min(0.3, e.kills * 0.03));
+    react(c, { kind: 'cheer', strength: 0.6, chance: 0.5, delay: 0.3 });
+  },
+  playerRespawned: (e, c) => sfx(c, 'pickup_reveal', panOf(c, e.x), isHuman(c, e.playerId) ? 0.9 : 0.4),
+  spectatorThrow: (e, c) => sfx(c, 'gen_throw', panOf(c, e.toX), 0.8),
 };
 
 function tileXOf(c: RouteCtx, index: number | undefined): number {
