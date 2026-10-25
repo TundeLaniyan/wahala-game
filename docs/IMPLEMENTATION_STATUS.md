@@ -23,6 +23,10 @@ Verification on the integrated branch (container: 4 cores, software WebGL):
 - Playwright: every spec run on the integrated build in both projects (desktop 1280x720, phone 844x390), after the
   spec updates for the V2 menu; all pass (the nine-arena sweep needed its retry once, after a preview-server start
   failure).
+- GitHub CI run 92 on `1d69ad4` (2026-10-25): typecheck, lint, unit tests, build and the full Playwright suite passed;
+  `deploy-preview` then published `gh-pages` commit `fea5846` ("Preview build of 1d69ad4"), whose `build.json` names
+  `1d69ad4` on `claude/wahala-gameplay-rumble-v2`. (Run 91 had failed on one phone-only e2e measurement - fixed - so it
+  published nothing and the voice-integration preview stayed live until then.)
 - Not measured: frame rates on physical phones (only software-rendered Chromium was available).
 
 ## Summary
