@@ -2,6 +2,20 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Stitch menu and navigation (branch `claude/wahala-stitch-uiux-v1`, from `cd502b8`)
+
+Founder brief of 2026-10-25: the approved Google Stitch design implemented as the real game interface (report:
+`STITCH_UI.md`; decisions: `DECISIONS.md` UI1-UI11). Presentation only; the simulation is untouched.
+
+| Area | Delivered | Main tests |
+| --- | --- | --- |
+| Menu flow | Home -> Game mode -> Match setup -> Fighter -> Ready -> play; Arena detour; Edit-from-Ready returns to Ready; Quick play / Review for the saved setup; pure state machine `app/menu.ts` | `tests/app/menu.test.ts`, `e2e/menu.spec.ts` |
+| Real settings | Every screen writes `GameSettings` / audio prefs through `commands`; mode-specific options only; `sanitizeSettings` repairs broken saves before every start | `tests/app/settingsSanitize.test.ts`, `tests/ui/menuScreens.test.ts` |
+| Screens | Home, Mode, Setup (Rumble / Classic), Arena (registry-driven, previews, hazards, rules), Fighter (registry-driven, concept art, real melee + vehicle), Ready, Settings (Audio / Graphics / Controls / Accessibility, Restore defaults), Training Academy menu, Pause (Settings keeps the match paused), Results (real outcome, standings, Rematch / Change setup / Main menu) | `tests/ui/menuScreens.test.ts`, all e2e specs |
+| Input | Keyboard and gamepad focus navigation (D-pad / arrows, A / Enter, B / Esc), touch | `tests/ui/focusNav.test.ts`, `e2e/menu.spec.ts` |
+| Responsive | Desktop, laptop, phone portrait and landscape compositions; >= 44 px targets; safe areas; pause menu above the rotate notice | `e2e/menu.spec.ts` (six sizes) |
+| Art | Key art + three fighter portraits as local WebP (`tools/ui/build_menu_art.py`: mock HUD cropped, brand marks removed); Bebas Neue + Space Grotesk bundled | `scripts/menu-shots.mjs` review |
+
 ## V2 gameplay revolution and City Rumble V2 (branch `claude/wahala-gameplay-rumble-v2`, from `184837d`)
 
 Founder brief of 2026-10-25, built by one lead plus six parallel workstreams in separate worktrees (contracts:

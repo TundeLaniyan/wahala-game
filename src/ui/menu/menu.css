@@ -82,11 +82,9 @@
   filter: brightness(0.78) contrast(1.12) saturate(1.05);
   transform: scale(1.02);
 }
-/* a slow camera drift on the key art, only where it is cheap (desktop pointers) */
-@media (pointer: fine) and (min-width: 1000px) {
-  .mn-backdrop.hero img {
-    animation: mn-drift 40s ease-in-out infinite alternate;
-  }
+/* one slow push-in when Home opens (it ends, so the static picture costs nothing afterwards) */
+.mn-backdrop.hero img {
+  animation: mn-push 2.4s ease-out both;
 }
 .mn-shade {
   position: absolute;
@@ -106,12 +104,12 @@
   background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px);
   mix-blend-mode: overlay;
 }
-@keyframes mn-drift {
+@keyframes mn-push {
   from {
-    transform: scale(1.02) translate3d(0, 0, 0);
+    transform: scale(1.08);
   }
   to {
-    transform: scale(1.08) translate3d(-1.5%, -1%, 0);
+    transform: scale(1.02);
   }
 }
 
