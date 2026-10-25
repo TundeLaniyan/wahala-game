@@ -214,6 +214,12 @@ export interface GameConfig {
     stepTicks: number;
     /** Live spectator generators per spectator. */
     maxLive: number;
+    /** Preferred landing distance (tiles in from the board edge) of a throw. */
+    throwDistance: number;
+    /** Blast range of a thrown generator (no upgrades: the sideline has none). */
+    range: number;
+    /** No throws once this little time is left (the final closure belongs to the survivors). */
+    noThrowRemainingTicks: number;
   };
   stage: {
     /** Minimum telegraph of any LETHAL stage hazard (the arena data may ask for longer, never shorter). */
@@ -396,6 +402,9 @@ export const DEFAULT_CONFIG: GameConfig = {
     flightTicks: ticks(1.2),
     stepTicks: 8,
     maxLive: 1,
+    throwDistance: 3,
+    range: 2,
+    noThrowRemainingTicks: ticks(6),
   },
   stage: {
     minLethalWarnTicks: ticks(1.5),

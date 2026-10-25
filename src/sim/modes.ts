@@ -41,7 +41,8 @@ export const TEAM_NAMES: readonly string[] = ['Green', 'White', 'Gold', 'Red'];
 export function modeConfig(settings: MatchSettings, _arena: ArenaDef): DeepPartial<GameConfig> {
   switch (settings.game) {
     case 'classic':
-      return {};
+      // eliminated players throw generators in from the sideline (systems/spectators.ts)
+      return { spectator: { enabled: true } };
     case 'survival':
       return {
         // crates open routes; power comes from eliminations, credited straight to the eliminator

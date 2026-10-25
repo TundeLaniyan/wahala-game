@@ -16,7 +16,16 @@ export {
   tileX,
   tileY,
 } from './grid';
-export { ARENAS, CITY_RUMBLE_ID, DEFAULT_ARENA_ID, RUMBLE_ARENA_IDS, STANDARD_ARENA_IDS, getArena } from './arenas';
+export {
+  ARENAS,
+  CITY_RUMBLE_ID,
+  DEFAULT_ARENA_ID,
+  EXPERIMENTAL_ARENA_IDS,
+  MOBILE_TEST_ARENA_ID,
+  RUMBLE_ARENA_IDS,
+  STANDARD_ARENA_IDS,
+  getArena,
+} from './arenas';
 export type { ArenaDef, ArenaInfo, ArenaKind, HazardSchedule, StageHazardDef } from './arenas';
 export { isLethalStageEvent, manholePartners } from './systems/stage';
 export { CHARACTERS, CHARACTER_IDS } from './data/characters';
@@ -65,3 +74,5 @@ export {
   teamHome,
 } from './modes';
 export { isSpawnProtected } from './systems/respawn';
+export { canThrow, laneStep, spectatorLane, spectatorLanding, validLanding } from './systems/spectators';
+export type { LaneTile, SpectatorView } from './systems/spectators';

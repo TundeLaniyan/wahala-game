@@ -194,7 +194,7 @@ export function Hud() {
       {/* V2 City Rumble progression (workstream C): kills, next reward, protection, Square Blast */}
       {rumble && hud.me && hud.phase !== 'ended' && hud.localAlive && <ProgressionBadge me={hud.me} floating />}
       {hud.entry && <EntryPanel entry={hud.entry} />}
-      {!rumble && hud.phase === 'playing' && !hud.localAlive && (
+      {!rumble && hud.phase === 'playing' && !hud.localAlive && !hud.sideline && (
         <div className="spectate" data-testid="spectate">
           <span>You&apos;re out! Watching the rest…</span>
           <button

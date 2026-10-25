@@ -297,6 +297,10 @@ export class MatchController {
         if (v) intent.vehicle = v;
       }
       intents[LOCAL_ID] = intent;
+    } else if (me && !me.isBot && !me.alive && me.spectator !== null && !this.director) {
+      // V2 standard match (not tutorials): the eliminated local player walks the sideline lane and throws with A
+      this.deps.input.navMode = false;
+      intents[LOCAL_ID] = this.deps.input.buildIntent(state.tick, { canMove: me.spectator.stepRemaining <= 1 });
     } else if (me && !me.isBot && me.alive) {
       // V2 two buttons: B launches the vehicle in one press (the sim picks the route), so normal play never
       // opens the old entry selector; it only exists for scripted tutorial demos (navMode stays false here
@@ -315,7 +319,9 @@ export class MatchController {
       if (Number(id) !== LOCAL_ID && state.players[Number(id)]?.alive) intents[Number(id)] = intent;
     }
     for (const [id, bot] of this.bots) {
-      if (state.players[id]!.alive) intents[id] = bot.decide(observe(state, id));
+      const p = state.players[id]!;
+      // eliminated bots keep deciding while they are sideline spectators (standard matches)
+      if (p.alive || p.spectator !== null) intents[id] = bot.decide(observe(state, id));
     }
     for (const [id, forced] of Object.entries(this.forced))
       intents[Number(id)] = { ...intents[Number(id)], ...forced };

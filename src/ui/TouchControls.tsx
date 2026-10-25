@@ -15,7 +15,7 @@ import type { HudMe } from '../app/hud';
  * leaves the dead zone is passed through as a tap on the board, so a tutorial's vehicle entrances under
  * the zone can still be picked by touch.
  */
-function Joystick({ entryOpen }: { entryOpen: boolean }) {
+export function Joystick({ entryOpen }: { entryOpen: boolean }) {
   const zone = useRef<HTMLDivElement>(null);
   const stick = useRef(new VirtualStick(stickConfigFor(window.innerWidth, window.innerHeight)));
   const [view, setView] = useState<{ x: number; y: number; kx: number; ky: number; dir: Dir | null } | null>(

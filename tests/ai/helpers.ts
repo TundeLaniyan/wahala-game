@@ -2,7 +2,7 @@ import { createBot } from '../../src/ai';
 import { runMatch } from '../../src/ai/headless';
 import type { Bot } from '../../src/ai';
 import { createGame, observe, tick } from '../../src/sim';
-import type { Difficulty, GameState, Intent, Intents, SimEvent } from '../../src/sim';
+import type { Difficulty, GameState, Intent, Intents, MatchMode, SimEvent } from '../../src/sim';
 
 /** Creates bots for the given seats (seat id -> difficulty). Deterministic. */
 export function makeBots(seats: Record<number, Difficulty>, seed = 1): Record<number, Bot> {
@@ -68,12 +68,16 @@ export function realMatch(
   return { state, bots };
 }
 
-/** Share of duels (draws count half) won by difficulty `a` against `b`; seats alternate with the seed. */
+/**
+ * Share of duels (draws count half) won by difficulty `a` against `b`; seats alternate with the seed. Played
+ * like a real standard match: Danfo Bus Park with its stage hazards and the mandatory Wahala Crush.
+ */
 export function duelShare(
   a: Difficulty,
   b: Difficulty,
   matches: number,
   firstSeed: number,
+  mode: MatchMode = 'crush',
 ): { share: number; aWins: number; bWins: number; draws: number } {
   let aWins = 0;
   let bWins = 0;
@@ -82,7 +86,7 @@ export function duelShare(
     const seed = firstSeed + i;
     const aSeat = seed % 2;
     const seats: Difficulty[] = aSeat === 0 ? [a, b] : [b, a];
-    const out = runMatch({ seed, difficulties: seats });
+    const out = runMatch({ seed, difficulties: seats, settings: { mode } });
     if (out.winner === aSeat) aWins++;
     else if (out.winner !== null) bWins++;
     else draws++;

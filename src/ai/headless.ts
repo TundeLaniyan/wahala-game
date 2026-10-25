@@ -103,7 +103,9 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
   while (state.match.phase !== 'ended' && state.tick < cap && state.match.playTicks < stopAt) {
     const tickStart = spec.now?.() ?? 0;
     for (let i = 0; i < n; i++) {
-      if (!state.players[i]!.alive) {
+      const seat = state.players[i]!;
+      // the eliminated stay in play only as sideline spectators (standard matches)
+      if (!seat.alive && seat.spectator === null) {
         delete intents[i];
         continue;
       }

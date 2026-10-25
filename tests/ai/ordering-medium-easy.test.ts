@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { duelShare } from './helpers';
 
-// Fixed seeds: the result is fully deterministic. 80 duels, seats alternate.
-describe('difficulty ordering: medium vs easy', () => {
-  it('medium beats easy with a clear margin', () => {
+// Fixed seeds: the result is fully deterministic. 80 duels, seats alternate, real match rules (crush).
+describe('difficulty ordering: standard vs beginner (two levels apart)', () => {
+  it('standard beats beginner with a clear margin', () => {
     const r = duelShare('standard', 'beginner', 80, 1000);
-    console.log('medium vs easy', r);
+    console.log('standard vs beginner', r);
     expect(r.share).toBeGreaterThan(0.6);
-  }, 120000);
+  }, 300_000);
 });

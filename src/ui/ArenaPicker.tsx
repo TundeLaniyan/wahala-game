@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import * as sim from '../sim';
-import { ARENAS, STANDARD_ARENA_IDS } from '../sim';
+import { ARENAS, EXPERIMENTAL_ARENA_IDS, STANDARD_ARENA_IDS } from '../sim';
 import type { ArenaDef } from '../sim';
 import { commands } from '../app/session';
 import type { GameSettings } from '../app/settings';
@@ -39,14 +38,9 @@ export function Preview({ arena, failed, onFail }: { arena: ArenaDef; failed: bo
   );
 }
 
-/**
- * Arena ids of the "Test / experimental" Classic arenas when the simulation exports them
- * (`EXPERIMENTAL_ARENA_IDS`, stream B); an empty list until then. Read by key so the menu builds either way.
- */
+/** Arena ids of the "Test / experimental" Classic arenas (the Mobile Test Arena variants). */
 export function experimentalArenaIds(): readonly string[] {
-  const key = ['EXPERIMENTAL', 'ARENA', 'IDS'].join('_'); // not constant-folded: no build warning while absent
-  const ids = (sim as unknown as Record<string, unknown>)[key];
-  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && id in ARENAS) : [];
+  return EXPERIMENTAL_ARENA_IDS.filter((id) => id in ARENAS);
 }
 
 function ArenaCard({

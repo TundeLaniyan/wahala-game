@@ -388,7 +388,7 @@ test.describe('whole-match robustness', () => {
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
     await open(page);
-    await page.getByTestId('diff-hard').click();
+    await page.getByTestId('diff-all').selectOption('expert');
     await startMatch(page, { competitors: 4, waitPlaying: false });
     for (let i = 0; i < 12; i++) {
       await stepTicks(page, 300);

@@ -7,12 +7,21 @@ import type { ArenaSet } from './common';
 import type { FloorDrawer } from './floorKit';
 import { AJEGUNLE_FLOOR, AJEGUNLE_LOOK, AJEGUNLE_SET } from './ajegunle';
 import { LAGOON_FLOOR, LAGOON_LOOK, LAGOON_SET } from './lagoon';
+import { mobileTestArt } from './mobileTest';
 import { OSHODI_FLOOR, OSHODI_LOOK, OSHODI_SET } from './oshodi';
 import { POWER_YARD_FLOOR, POWER_YARD_LOOK, POWER_YARD_SET } from './powerYard';
 import { RUMBLE_FLOOR, RUMBLE_LOOK, RUMBLE_SET } from './rumble';
 import { RUMBLE_APAPA_FLOOR, RUMBLE_APAPA_LOOK, RUMBLE_APAPA_SET } from './rumbleApapaArt';
-import { RUMBLE_LAGOS_ISLAND_FLOOR, RUMBLE_LAGOS_ISLAND_LOOK, RUMBLE_LAGOS_ISLAND_SET } from './rumbleLagosIslandArt';
-import { RUMBLE_LEKKI_NIGHT_FLOOR, RUMBLE_LEKKI_NIGHT_LOOK, RUMBLE_LEKKI_NIGHT_SET } from './rumbleLekkiNightArt';
+import {
+  RUMBLE_LAGOS_ISLAND_FLOOR,
+  RUMBLE_LAGOS_ISLAND_LOOK,
+  RUMBLE_LAGOS_ISLAND_SET,
+} from './rumbleLagosIslandArt';
+import {
+  RUMBLE_LEKKI_NIGHT_FLOOR,
+  RUMBLE_LEKKI_NIGHT_LOOK,
+  RUMBLE_LEKKI_NIGHT_SET,
+} from './rumbleLekkiNightArt';
 import { RUMBLE_OJUELEGBA_FLOOR, RUMBLE_OJUELEGBA_LOOK, RUMBLE_OJUELEGBA_SET } from './rumbleOjuelegbaArt';
 import { RUMBLE_OSHODI_FLOOR, RUMBLE_OSHODI_LOOK, RUMBLE_OSHODI_SET } from './rumbleOshodiArt';
 import { THIRD_MAINLAND_FLOOR, THIRD_MAINLAND_LOOK, THIRD_MAINLAND_SET } from './thirdMainland';
@@ -37,10 +46,25 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
     cityRumble: { look: RUMBLE_LOOK, set: RUMBLE_SET, floor: RUMBLE_FLOOR },
     // City Rumble V2 stages
     rumbleOshodi: { look: RUMBLE_OSHODI_LOOK, set: RUMBLE_OSHODI_SET, floor: RUMBLE_OSHODI_FLOOR },
-    rumbleLagosIsland: { look: RUMBLE_LAGOS_ISLAND_LOOK, set: RUMBLE_LAGOS_ISLAND_SET, floor: RUMBLE_LAGOS_ISLAND_FLOOR },
-    rumbleOjuelegba: { look: RUMBLE_OJUELEGBA_LOOK, set: RUMBLE_OJUELEGBA_SET, floor: RUMBLE_OJUELEGBA_FLOOR },
+    rumbleLagosIsland: {
+      look: RUMBLE_LAGOS_ISLAND_LOOK,
+      set: RUMBLE_LAGOS_ISLAND_SET,
+      floor: RUMBLE_LAGOS_ISLAND_FLOOR,
+    },
+    rumbleOjuelegba: {
+      look: RUMBLE_OJUELEGBA_LOOK,
+      set: RUMBLE_OJUELEGBA_SET,
+      floor: RUMBLE_OJUELEGBA_FLOOR,
+    },
     rumbleApapa: { look: RUMBLE_APAPA_LOOK, set: RUMBLE_APAPA_SET, floor: RUMBLE_APAPA_FLOOR },
-    rumbleLekkiNight: { look: RUMBLE_LEKKI_NIGHT_LOOK, set: RUMBLE_LEKKI_NIGHT_SET, floor: RUMBLE_LEKKI_NIGHT_FLOOR },
+    rumbleLekkiNight: {
+      look: RUMBLE_LEKKI_NIGHT_LOOK,
+      set: RUMBLE_LEKKI_NIGHT_SET,
+      floor: RUMBLE_LEKKI_NIGHT_FLOOR,
+    },
+    // V2 experimental: the Mobile Test Arena wears Danfo Bus Park's presentation
+    mobileTest13x9: mobileTestArt(),
+    mobileTest15x9: mobileTestArt(),
   };
   return cache;
 }
