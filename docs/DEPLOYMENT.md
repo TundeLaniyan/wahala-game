@@ -5,9 +5,11 @@ Target URL: **https://tundelaniyan.github.io/wahala-game/** (a project site, so 
 
 ## How it is built and published
 
-Since the V2 gameplay revolution (2026-10-25) the preview is built from **`claude/wahala-gameplay-rumble-v2`**
-(before that from `claude/wahala-voice-integration`, and before that `claude/wahala-mobile-joystick-audio`; each of
-those branches' own copy of the workflow would still publish if someone pushed to it, so leave them untouched).
+Since the Stitch menu (2026-10-25, decision UI11) the preview is built from **`claude/wahala-stitch-uiux-v1`**
+(before that from `claude/wahala-gameplay-rumble-v2`, `claude/wahala-voice-integration` and
+`claude/wahala-mobile-joystick-audio`; each of those branches' own copy of the workflow would still publish if
+someone pushed to it, so leave them untouched - in particular a new push to `claude/wahala-gameplay-rumble-v2` would
+replace the Stitch preview with the old menu).
 `.github/workflows/deploy.yml` is called by CI (`ci.yml`, job `deploy-preview`) on every push to that branch,
 **only after the full check has passed on that commit** (typecheck, lint, unit tests, build and the Playwright
 desktop + phone suite), so an unverified build is never published. It can also be run on demand from the Actions

@@ -39,3 +39,10 @@ Browser-only, offline, single-player (1 human vs 1-3 bots) Nigerian-inspired Bom
 - Tests: scenario-style (`tests/helpers.ts` `sandbox()` etc.). Add a regression test with every bug fix.
 - `base` is `/wahala-game/` for production builds (GitHub Pages). Use relative/Vite-resolved asset URLs only.
 - Commit per milestone; update `docs/IMPLEMENTATION_STATUS.md`.
+
+## Stitch menu (branch `claude/wahala-stitch-uiux-v1`, docs/STITCH_UI.md, decisions UI1-UI11)
+- The main menu is multi-screen: Home -> Mode -> Setup -> Fighter -> Ready (Arena a detour; Settings and the Training Academy beside them). Navigation is the pure state machine `app/menu.ts` in `UiState.menu`; screens live in `src/ui/menu/` and edit the real `GameSettings` / `audioPrefs` only through `commands`. Never add a parallel setup state.
+- Menu text about modes, arenas and fighters comes from the sim registries / config and `src/tutorial`; never show invented stats, ranks, locks, rewards or online features from the Stitch mockups.
+- Menu art: `tools/ui/build_menu_art.py` builds `src/assets/ui/*.webp` from `tools/ui/masters/` (crops the mock HUD, removes brand marks); never hand-edit the outputs. Fonts are bundled (`@fontsource`), no CDN.
+- Keyboard / gamepad menu input goes through `app/menuNav.ts` before the match; Esc in the pause menu's Settings closes Settings and keeps the match paused.
+- Phones: every menu works in portrait and landscape, tap targets >= 44 px, safe areas; `e2e/menu.spec.ts` sweeps the sizes. `scripts/menu-shots.mjs` is the screenshot review tool for the menus.
