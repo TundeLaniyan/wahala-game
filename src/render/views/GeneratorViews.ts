@@ -152,10 +152,12 @@ export class GeneratorViews implements View {
         opacity: 0.8,
         blending: AdditiveBlending,
         depthWrite: false,
+        // a warning: drawn over the props of the blocks so the whole footprint reads (like a floor decal)
+        depthTest: false,
       }),
     );
     frame.rotation.x = -Math.PI / 2;
-    frame.renderOrder = 5;
+    frame.renderOrder = 9;
     frame.visible = false;
     this.group.add(model.root, label, shadow, pad, pedestal, frame);
     return { model, label, shadow, pad, pedestal, frame, shown: '' };
@@ -284,7 +286,7 @@ export class GeneratorViews implements View {
     const urgent = 1 - Math.min(1, fuse);
     const rate = 2.2 + urgent * 18;
     const mat = v.frame.material as MeshBasicMaterial;
-    mat.opacity = (0.42 + 0.4 * urgent) * (0.75 + 0.25 * Math.sin(time * rate));
+    mat.opacity = (0.6 + 0.4 * urgent) * (0.75 + 0.25 * Math.sin(time * rate));
     mat.color.setHex(urgent > 0.7 && Math.sin(time * rate) > 0 ? 0xffffff : SQUARE_SURGE);
   }
 

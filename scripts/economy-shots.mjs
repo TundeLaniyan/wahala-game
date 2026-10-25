@@ -42,7 +42,7 @@ const shot = (name) => page.screenshot({ path: `${dir}/${device}-${name}.jpg`, q
 // stage: the local fighter (id 0) with 4 eliminations, Okada, two plates, Square Blast 5 x 5
 const info = await page.evaluate(() => {
   const w = window.__WAHALA__;
-  w.advance(200); // through the countdown
+  w.stepTicks(200); // through the countdown (simulation only)
   const s = w.getState();
   const p = s.players[0];
   p.stats.kills = 4;
@@ -73,11 +73,17 @@ console.log('staged', JSON.stringify(info));
 mark('staged');
 await page.waitForTimeout(600);
 await shot('square-warning');
-await page.evaluate(() => window.__WAHALA__.advance(70));
+await page.evaluate(() => {
+  window.__WAHALA__.stepTicks(68);
+  window.__WAHALA__.advance(2);
+});
 await page.waitForTimeout(400);
 await shot('square-danger');
 // detonate: the Okada absorbs (the player stands in the square)
-await page.evaluate(() => window.__WAHALA__.advance(80));
+await page.evaluate(() => {
+  window.__WAHALA__.stepTicks(76);
+  window.__WAHALA__.advance(3);
+});
 await page.waitForTimeout(120);
 await shot('square-explosion');
 const after = await page.evaluate(() => {
