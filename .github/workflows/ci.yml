@@ -25,8 +25,9 @@ jobs:
       - run: npm run test
       - run: npm run build
       - run: npx playwright install --with-deps chromium
+      # 128 tests on software WebGL take ~2 h here (the Stitch menu added its own spec and per-screen checks)
       - run: npm run test:e2e
-        timeout-minutes: 120
+        timeout-minutes: 170
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
