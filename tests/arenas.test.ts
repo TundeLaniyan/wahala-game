@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { ARENAS, CITY_RUMBLE_ID, STANDARD_ARENA_IDS, Tile, createGame, getArena, listEntries } from '../src/sim';
+import {
+  ARENAS,
+  CITY_RUMBLE_ID,
+  EXPERIMENTAL_ARENA_IDS,
+  STANDARD_ARENA_IDS,
+  Tile,
+  createGame,
+  getArena,
+  listEntries,
+} from '../src/sim';
 import type { ArenaDef, VehicleKind } from '../src/sim';
 
 /**
@@ -43,7 +52,9 @@ describe('arena registry', () => {
       'thirdMainland',
     ]);
     expect(getArena(CITY_RUMBLE_ID).kind).toBe('rumble');
-    expect(ALL).toHaveLength(10);
+    // plus the V2 experimental Mobile Test Arena (two sizes), kept out of the official nine
+    expect(EXPERIMENTAL_ARENA_IDS).toEqual(['mobileTest13x9', 'mobileTest15x9']);
+    expect(ALL).toHaveLength(10 + EXPERIMENTAL_ARENA_IDS.length);
   });
 
   it('no two standard arenas share a layout and hazard set (not recolours of one grid)', () => {
@@ -90,8 +101,8 @@ describe.each(ALL.map((a) => [a.id, a] as const))('%s', (_id, a) => {
   });
 
   if (a.kind === 'standard') {
-    it('is a 15 x 11, 4-fold mirror-symmetric board (every corner faces the same arena)', () => {
-      expect([W, H]).toEqual([15, 11]);
+    it('is a 15 x 11 (experimental: its own size), 4-fold mirror-symmetric board (every corner faces the same arena)', () => {
+      if (!a.experimental) expect([W, H]).toEqual([15, 11]);
       for (let y = 0; y < H; y++)
         for (let x = 0; x < W; x++) {
           const c = at(a, x, y) === '#';

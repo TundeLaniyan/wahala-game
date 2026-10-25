@@ -301,6 +301,10 @@ export class MatchController {
         if (v) intent.vehicle = v;
       }
       intents[LOCAL_ID] = intent;
+    } else if (me && !me.isBot && !me.alive && me.spectator !== null) {
+      // V2 standard match: the eliminated local player walks the sideline lane and throws with A
+      this.deps.input.navMode = false;
+      intents[LOCAL_ID] = this.deps.input.buildIntent(state.tick, me.spectator.stepRemaining <= 1);
     } else if (me && !me.isBot && me.alive) {
       this.entry.sync(state);
       this.deps.input.navMode = this.entry.active;
@@ -317,7 +321,9 @@ export class MatchController {
       if (Number(id) !== LOCAL_ID && state.players[Number(id)]?.alive) intents[Number(id)] = intent;
     }
     for (const [id, bot] of this.bots) {
-      if (state.players[id]!.alive) intents[id] = bot.decide(observe(state, id));
+      const p = state.players[id]!;
+      // eliminated bots keep deciding while they are sideline spectators (standard matches)
+      if (p.alive || p.spectator !== null) intents[id] = bot.decide(observe(state, id));
     }
     for (const [id, forced] of Object.entries(this.forced))
       intents[Number(id)] = { ...intents[Number(id)], ...forced };

@@ -7,6 +7,7 @@ import type { ArenaSet } from './common';
 import type { FloorDrawer } from './floorKit';
 import { AJEGUNLE_FLOOR, AJEGUNLE_LOOK, AJEGUNLE_SET } from './ajegunle';
 import { LAGOON_FLOOR, LAGOON_LOOK, LAGOON_SET } from './lagoon';
+import { mobileTestArt } from './mobileTest';
 import { OSHODI_FLOOR, OSHODI_LOOK, OSHODI_SET } from './oshodi';
 import { POWER_YARD_FLOOR, POWER_YARD_LOOK, POWER_YARD_SET } from './powerYard';
 import { RUMBLE_FLOOR, RUMBLE_LOOK, RUMBLE_SET } from './rumble';
@@ -30,6 +31,9 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
     yabaAfterDark: { look: YABA_LOOK, set: YABA_SET, floor: YABA_FLOOR },
     thirdMainland: { look: THIRD_MAINLAND_LOOK, set: THIRD_MAINLAND_SET, floor: THIRD_MAINLAND_FLOOR },
     cityRumble: { look: RUMBLE_LOOK, set: RUMBLE_SET, floor: RUMBLE_FLOOR },
+    // V2 experimental: the Mobile Test Arena wears Danfo Bus Park's presentation
+    mobileTest13x9: mobileTestArt(),
+    mobileTest15x9: mobileTestArt(),
   };
   return cache;
 }
