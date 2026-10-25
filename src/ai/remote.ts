@@ -1,5 +1,5 @@
 /** Remote Starter: when to set off the generators the bot has armed. */
-import { blastGeometry } from './analysis';
+import { blastGeometry, protectionLayers } from './analysis';
 import type { BlastGeometry } from './analysis';
 import type { Ctx } from './context';
 
@@ -27,8 +27,9 @@ export function decideRemote(c: Ctx, standingOn: readonly number[]): boolean {
   const w = world.board.width;
   for (const r of world.rivals) {
     if (!c.tmp.hit(r.y * w + r.x, T + 1, T + 1)) continue;
-    if (r.mounted) {
-      maybes += 0.4;
+    // a protected rival (Okada / Armour) loses a layer, not its life: worth a little pressure only
+    if (protectionLayers(r) > 0) {
+      maybes += 0.4 / protectionLayers(r);
       continue;
     }
     const committed = r.stepRemaining >= 2 || r.dazedUntil > T + 1;
@@ -38,7 +39,7 @@ export function decideRemote(c: Ctx, standingOn: readonly number[]): boolean {
   let softs = 0;
   let pickups = 0;
   for (const g of mine) {
-    blastGeometry(c, g.y * w + g.x, g.range, g.pierce, geo);
+    blastGeometry(c, g.y * w + g.x, g.range, g.pierce, geo, g.square);
     softs += geo.soft;
     pickups += geo.pickups;
   }

@@ -2,7 +2,13 @@
  * Central balance configuration. Every tunable number in the simulation lives here so playtest
  * tuning never touches rules code. All durations are in ticks; use `ticks(seconds)` to author them.
  */
-import type { PickupKind, SkillKind, VehicleKind } from './types';
+import type { CharacterId, PickupKind, SkillKind, VehicleKind } from './types';
+
+/**
+ * V2 elimination reward: a pickup kind, or `contact` = the eliminator's generator-contact ability
+ * (`rewards.contactByCharacter` when they have none; Disarm charges topped up when Disarm is equipped).
+ */
+export type RewardKind = PickupKind | 'contact';
 
 export const TICK_RATE = 60;
 export const ticks = (seconds: number): number => Math.round(seconds * TICK_RATE);
@@ -163,11 +169,18 @@ export interface GameConfig {
   rewards: {
     enabled: boolean;
     /**
-     * Rewards granted for the n-th credited elimination (index n-1). Past the end of the ladder the
-     * final `repeatFrom`.. entries cycle, so a fighter keeps getting stronger.
+     * Rewards granted for the n-th credited elimination of the current life (index n-1; `stats.streak`).
+     * Past the end of the ladder the entries from `repeatFrom` on cycle, so a fighter keeps getting stronger.
      */
-    ladder: PickupKind[][];
+    ladder: RewardKind[][];
     repeatFrom: number;
+    /**
+     * A ladder reward that would be wasted (capped, already owned, Okada already ridden) is replaced by the
+     * first kind of this list that still does something, so every credited elimination pays.
+     */
+    fallback: PickupKind[];
+    /** The `contact` reward for a fighter with no contact ability: their character's signature tool. */
+    contactByCharacter: Record<CharacterId, PickupKind>;
   };
   /** V2 respawn modes (Deathmatch, Team Rumble). */
   respawn: {
@@ -321,7 +334,9 @@ export const DEFAULT_CONFIG: GameConfig = {
     meleeAnyAdjacent: true,
   },
   credit: {
-    assistWindowTicks: ticks(4),
+    // decision WC4: long enough for a shove into fire / traffic / the closing city, short enough that an
+    // old scuffle never scores an unrelated accident
+    assistWindowTicks: ticks(3),
   },
   protection: {
     maxArmour: 1,
@@ -331,19 +346,25 @@ export const DEFAULT_CONFIG: GameConfig = {
     maxTier: 2,
     radiusByTier: [0, 1, 2],
   },
+  // Decision WC1 (docs/DECISIONS.md): every credited elimination pays at once, rewards widen from raw
+  // generator power (1) to a tool (2), protection (3), Square Blast (4), control (5) and then several
+  // items per elimination; from the 6th the last four rungs cycle, so a top fighter keeps growing.
   rewards: {
     enabled: false,
     ladder: [
       ['socket', 'petrol'],
-      ['skates', 'boots'],
-      ['armour'],
-      ['square', 'socket'],
-      ['remote', 'petrol'],
-      ['okada', 'voucher'],
-      ['square', 'socket'],
-      ['armour', 'petrol'],
+      ['contact', 'skates'],
+      ['armour', 'socket'],
+      ['square', 'petrol'],
+      ['remote', 'voucher', 'socket'],
+      ['okada', 'armour', 'petrol'],
+      ['square', 'socket', 'skates'],
+      ['armour', 'voucher', 'petrol', 'socket'],
+      ['square', 'okada', 'contact'],
     ],
-    repeatFrom: 4,
+    repeatFrom: 5,
+    fallback: ['socket', 'petrol', 'armour', 'skates', 'square', 'voucher', 'okada'],
+    contactByCharacter: { streetBaller: 'boots', lekkiBoy: 'gloves', campusQueen: 'killswitch' },
   },
   respawn: {
     enabled: false,
@@ -367,6 +388,20 @@ export const DEFAULT_CONFIG: GameConfig = {
     quietRemainingTicks: ticks(5),
   },
 };
+
+/**
+ * V2 City Rumble economy (all three Rumble rulesets, merged by modes.ts): rewards on, and the caps a
+ * standard 2-4 player match needs are raised so elimination power keeps growing (decision WC2). What
+ * remains are technical limits: the Square Blast stops at 7 x 7 and generator capacity at 10 (danger
+ * maps / explosion work stay bounded with 32 fighters), flame reach at 10 (the plus still stops at
+ * concrete), and three Armour plates. Movement speed keeps its standard ceiling (grid step timing).
+ */
+export const RUMBLE_ECONOMY = {
+  generator: { maxCapacity: 10, maxRange: 10 },
+  protection: { maxArmour: 3 },
+  square: { maxTier: 3, radiusByTier: [0, 1, 2, 3] },
+  rewards: { enabled: true },
+} satisfies DeepPartial<GameConfig>;
 
 export type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 

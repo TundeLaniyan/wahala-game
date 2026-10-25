@@ -201,6 +201,7 @@ function collide(state: GameState, v: Vehicle, hits: LethalHit[], events: SimEve
     for (const g of state.generators) {
       if (g.x === t.x && g.y === t.y && g.carriedBy === null && g.flight === null && !g.triggered) {
         g.triggered = true; // even Kill-Switched or remote generators go off
+        if (g.ownerId !== v.ownerId) g.touchedBy = v.ownerId; // elimination credit (attribution.ts)
         events.push({ type: 'vehicleHitGenerator', vehicleId: v.id, generatorId: g.id });
       }
     }

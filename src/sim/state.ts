@@ -55,7 +55,7 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     elimination: null,
     eliminatedBy: null,
     team: setup.team ?? NO_TEAM,
-    stats: { kills: 0, deaths: 0, assists: 0, lastKillTick: -1 },
+    stats: { kills: 0, deaths: 0, assists: 0, lastKillTick: -1, streak: 0 },
     recentHits: [],
     respawnAt: null,
     protectedUntil: 0,
