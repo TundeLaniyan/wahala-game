@@ -1,3 +1,4 @@
+import { RUMBLE_ARENA_IDS } from '../sim';
 import type { GameState } from '../sim';
 import { directShot } from './cameraDirector';
 import type { CameraShot } from './cameraDirector';
@@ -15,12 +16,12 @@ import type { Layout } from './coords';
  *   spectating), keeping nearby rivals and incoming danger in frame, with the whole-arena overview
  *   as a toggle.
  *
- * Only City Rumble uses `stadium`; it can be forced for testing with the `?cam=stadium` URL flag.
+ * Only the City Rumble stages use `stadium`; it can be forced for testing with the `?cam=stadium` URL flag.
  */
 export type CameraMode = 'arena' | 'stadium';
 
-/** Arena ids that need the follow camera: the 41 x 31 City Rumble board. */
-export const STADIUM_ARENAS: ReadonlySet<string> = new Set<string>(['cityRumble']);
+/** Arena ids that need the follow camera: every City Rumble stage (41 x 31 and larger boards). */
+export const STADIUM_ARENAS: ReadonlySet<string> = new Set<string>(RUMBLE_ARENA_IDS);
 
 export function cameraModeFor(arenaId: string, override?: CameraMode | null): CameraMode {
   if (override) return override;

@@ -4,6 +4,11 @@ import { CITY_RUMBLE } from './cityRumble';
 import { DANFO_BUS_PARK } from './danfoBusPark';
 import { LAGOON_JETTY } from './lagoonJetty';
 import { LEKKI_ROADWORKS } from './lekkiRoadworks';
+import { RUMBLE_APAPA } from './rumbleApapa';
+import { RUMBLE_LAGOS_ISLAND } from './rumbleLagosIsland';
+import { RUMBLE_LEKKI_NIGHT } from './rumbleLekkiNight';
+import { RUMBLE_OJUELEGBA } from './rumbleOjuelegba';
+import { RUMBLE_OSHODI } from './rumbleOshodi';
 import { OSHODI_INTERCHANGE } from './oshodiInterchange';
 import { SURULERE_POWER_YARD } from './surulerePowerYard';
 import { THIRD_MAINLAND } from './thirdMainland';
@@ -12,7 +17,7 @@ import type { ArenaDef } from './types';
 
 export type { ArenaDef, ArenaInfo, ArenaKind, HazardSchedule, StageHazardDef } from './types';
 
-/** Every arena, in menu order: the nine standard arenas, then City Rumble. */
+/** Every arena, in menu order: the nine standard arenas, then the City Rumble stages (V2 five first). */
 export const ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
   [
     DANFO_BUS_PARK,
@@ -24,6 +29,11 @@ export const ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
     SURULERE_POWER_YARD,
     YABA_AFTER_DARK,
     THIRD_MAINLAND,
+    RUMBLE_OSHODI,
+    RUMBLE_LAGOS_ISLAND,
+    RUMBLE_OJUELEGBA,
+    RUMBLE_APAPA,
+    RUMBLE_LEKKI_NIGHT,
     CITY_RUMBLE,
   ].map((a) => [a.id, a]),
 );
@@ -31,6 +41,14 @@ export const ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
 /** The nine standard (2-4 player, whole-arena camera) arenas in menu order. */
 export const STANDARD_ARENA_IDS: readonly string[] = Object.values(ARENAS)
   .filter((a) => a.kind === 'standard')
+  .map((a) => a.id);
+
+/**
+ * The City Rumble stages in menu order: the five V2 Lagos locations first, then the original district
+ * (`cityRumble`, kept for tests and as the classic Rumble board).
+ */
+export const RUMBLE_ARENA_IDS: readonly string[] = Object.values(ARENAS)
+  .filter((a) => a.kind === 'rumble')
   .map((a) => a.id);
 
 export const CITY_RUMBLE_ID = CITY_RUMBLE.id;

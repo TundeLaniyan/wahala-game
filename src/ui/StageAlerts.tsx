@@ -11,6 +11,8 @@ const ICON: Record<StageAlert['style'], string> = {
   wash: '🌊',
   merch: '📦',
   manhole: '◎',
+  cargo: '🏗',
+  goods: '🧺',
 };
 
 /** Concise stage-hazard warnings for the local player (rendered at the top of the toast column). */

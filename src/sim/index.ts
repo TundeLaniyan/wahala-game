@@ -16,7 +16,7 @@ export {
   tileX,
   tileY,
 } from './grid';
-export { ARENAS, CITY_RUMBLE_ID, DEFAULT_ARENA_ID, STANDARD_ARENA_IDS, getArena } from './arenas';
+export { ARENAS, CITY_RUMBLE_ID, DEFAULT_ARENA_ID, RUMBLE_ARENA_IDS, STANDARD_ARENA_IDS, getArena } from './arenas';
 export type { ArenaDef, ArenaInfo, ArenaKind, HazardSchedule, StageHazardDef } from './arenas';
 export { isLethalStageEvent, manholePartners } from './systems/stage';
 export { CHARACTERS, CHARACTER_IDS } from './data/characters';

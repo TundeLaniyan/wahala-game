@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARENAS, CITY_RUMBLE_ID, STANDARD_ARENA_IDS, Tile, createGame, getArena, listEntries } from '../src/sim';
+import { ARENAS, CITY_RUMBLE_ID, RUMBLE_ARENA_IDS, STANDARD_ARENA_IDS, Tile, createGame, getArena, listEntries } from '../src/sim';
 import type { ArenaDef, VehicleKind } from '../src/sim';
 
 /**
@@ -30,7 +30,7 @@ function reachable(a: ArenaDef, from: { x: number; y: number }): Set<string> {
 }
 
 describe('arena registry', () => {
-  it('has nine standard arenas plus City Rumble, in menu order', () => {
+  it('has nine standard arenas plus the six City Rumble stages, in menu order', () => {
     expect(STANDARD_ARENA_IDS).toEqual([
       'danfoBusPark',
       'balogunMarket',
@@ -43,7 +43,16 @@ describe('arena registry', () => {
       'thirdMainland',
     ]);
     expect(getArena(CITY_RUMBLE_ID).kind).toBe('rumble');
-    expect(ALL).toHaveLength(10);
+    // V2: the five Lagos stages first, the original district last (tests/rumble-stages.test.ts)
+    expect(RUMBLE_ARENA_IDS).toEqual([
+      'rumbleOshodi',
+      'rumbleLagosIsland',
+      'rumbleOjuelegba',
+      'rumbleApapa',
+      'rumbleLekkiNight',
+      CITY_RUMBLE_ID,
+    ]);
+    expect(ALL).toHaveLength(15);
   });
 
   it('no two standard arenas share a layout and hazard set (not recolours of one grid)', () => {
