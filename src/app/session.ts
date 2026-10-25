@@ -78,9 +78,15 @@ let lastBoardCheck = -Infinity;
 /** Publishes where the board is on screen (only when it moved by a pixel or more), for the HUD layout. */
 function publishBoard(): void {
   const st = useGameStore.getState();
+  // the renderer reports canvas pixels; the canvas is not always at the page origin (the Academy column
+  // sits left of it), so shift them into page coordinates, which is what the HUD lays itself out in
+  const at = canvasEl?.getBoundingClientRect();
+  const ox = at?.left ?? 0;
+  const oy = at?.top ?? 0;
   const corners: ScreenPoint[] | null =
     st.screen === 'playing' && renderer
-      ? (renderer.boardScreenCorners()?.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) })) ?? null)
+      ? (renderer.boardScreenCorners()?.map((p) => ({ x: Math.round(p.x + ox), y: Math.round(p.y + oy) })) ??
+        null)
       : null;
   const prev = st.board;
   const same =

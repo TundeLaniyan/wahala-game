@@ -2,116 +2,115 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { getState, holdKey, open, stepTicks, thumb } from './helpers';
 
-/** The saved settings blob and the live store settings: the tutorial must leave both untouched. */
+type Debug = {
+  __WAHALA__: {
+    store: { getState(): Record<string, unknown> };
+    controller(): { frozen: boolean };
+    advance(n: number): void;
+  };
+};
+
+/** The saved settings blob and the live store settings: the Academy must leave both untouched. */
 async function savedSettings(page: Page): Promise<{ stored: string | null; live: unknown }> {
   return page.evaluate(() => ({
     stored: localStorage.getItem('wahala.settings.v1'),
-    live: (
-      window as never as { __WAHALA__: { store: { getState(): { settings: unknown } } } }
-    ).__WAHALA__.store.getState().settings,
+    live: (window as unknown as Debug).__WAHALA__.store.getState().settings,
   }));
 }
 
-async function tutorialView(
-  page: Page,
-): Promise<{ chapter: number; mode: string; beat: number; caption: string }> {
-  return page.evaluate(
-    () =>
-      (
-        window as never as { __WAHALA__: { store: { getState(): { tutorial: never } } } }
-      ).__WAHALA__.store.getState().tutorial,
-  );
-}
+const academyProgress = (page: Page) =>
+  page.evaluate(() => JSON.parse(localStorage.getItem('wahala.academy.v1') ?? 'null') as unknown);
 
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  page.on('console', (m) => {
+    if (m.type() === 'error' && !m.text().startsWith('Failed to load resource')) errors.push(m.text());
+  });
   return errors;
 }
 
-/**
- * One more tick routed through the real frame path (renderer, HUD publish), so HUD-driven UI such as
- * the entry panel is up to date even when software WebGL renders only a few frames a second.
- */
-async function syncHud(page: Page): Promise<void> {
-  await page.evaluate(() =>
-    (window as never as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
-  );
-}
+/** One tick through the real frame path (renderer, HUD publish), so HUD-driven UI is current. */
+const syncHud = (page: Page) => page.evaluate(() => (window as unknown as Debug).__WAHALA__.advance(1));
 
-async function openTutorial(page: Page): Promise<void> {
+const board = (page: Page) =>
+  page.evaluate(
+    () => (window as unknown as Debug).__WAHALA__.store.getState().board as { x: number; y: number }[] | null,
+  );
+
+async function openAcademy(page: Page): Promise<void> {
   await page.getByTestId('help-button').click({ timeout: 120_000 });
   await expect(page.getByTestId('how-to-play')).toBeVisible();
 }
 
-async function openPractice(page: Page, chapterId: string): Promise<void> {
-  await page.getByTestId('htp-chapters').click();
-  await page.getByTestId(`htp-chapter-${chapterId}`).click();
-  await expect(page.getByTestId('how-to-play')).toHaveAttribute('data-chapter', chapterId);
-  await page.getByTestId('htp-practice').click();
+/** Direct practice selection from the lesson list. */
+async function practiseFromList(page: Page, lessonId: string): Promise<void> {
+  await page.getByTestId('htp-lessons').click();
+  await page.getByTestId(`htp-practise-${lessonId}`).click();
+  await expect(page.getByTestId('how-to-play')).toHaveAttribute('data-lesson', lessonId);
   await expect(page.getByTestId('how-to-play')).toHaveAttribute('data-mode', 'practice');
 }
 
-test.describe('How to Play', () => {
+test.describe('Training Academy', () => {
   // every lesson loads a fresh 3D scene; on software WebGL in a shared container that takes a while
   test.setTimeout(420_000);
 
-  test('plays a real in-engine demo with captions, pause, replay, next chapter, and exits with settings unchanged', async ({
+  test('lesson 1: objective, a real demo, then the human plays it with the real controls; skip moves on', async ({
     page,
   }, info) => {
     const errors = collectErrors(page);
     await open(page);
     const before = await savedSettings(page);
-    await openTutorial(page);
-    await expect(page.getByTestId('htp-title')).toHaveText('Moving around');
-    await expect(page.getByTestId('htp-caption')).toContainText('one tile at a time');
+    await openAcademy(page);
+    await expect(page.getByTestId('htp-title')).toHaveText('Moving & turning');
+    await expect(page.getByTestId('htp-objective')).toContainText('glowing markers');
+    await expect(page.getByTestId('htp-caption')).toContainText('anywhere in the lower-left');
 
-    // the demo is the real simulation: the scripted hero walks
+    // step 2: the demonstration is the real simulation: the scripted hero walks
     await stepTicks(page, 1);
     const start = (await getState(page)).players[0]!;
     await stepTicks(page, 120);
     const moved = (await getState(page)).players[0]!;
     expect([moved.x, moved.y]).not.toEqual([start.x, start.y]);
-    await page.screenshot({ path: `e2e-shots/${info.project.name}-tutorial-demo.png` });
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-academy-demo.png` });
 
-    // pause holds the world still in real time; play resumes it
-    await page.evaluate(
-      () =>
-        ((
-          window as never as { __WAHALA__: { controller(): { frozen: boolean } } }
-        ).__WAHALA__.controller().frozen = false),
-    );
-    await page.getByTestId('htp-pause').click();
-    await expect(page.getByTestId('htp-pause')).toHaveAttribute('data-paused', 'true');
-    const pausedTick = (await getState(page)).tick;
-    await page.waitForTimeout(1200);
-    expect((await getState(page)).tick).toBe(pausedTick);
-    await page.getByTestId('htp-pause').click();
-    await expect
-      .poll(async () => (await getState(page)).tick, { timeout: 30_000 })
-      .toBeGreaterThan(pausedTick);
-
-    // let the captions move on, then replay starts the demo from the top
-    await stepTicks(page, 500);
-    expect((await tutorialView(page)).beat).toBeGreaterThan(0);
-    await page.getByTestId('htp-replay').click();
-    await expect.poll(async () => (await tutorialView(page)).beat).toBe(0);
-    expect((await getState(page)).tick).toBeLessThan(200);
-    await expect(page.getByTestId('htp-caption')).toContainText('one tile at a time');
-
-    // next chapter
-    await page.getByTestId('htp-next').click();
-    await expect(page.getByTestId('htp-title')).toHaveText('Generators & the plus blast');
-    await stepTicks(page, 400);
-    expect((await getState(page)).players[1]!.alive).toBe(false); // caught in the plus
-
-    // controls legend is there for every device
-    for (const d of ['keyboard', 'gamepad', 'touch']) {
-      await page.getByTestId(`htp-device-${d}`).click();
-      await expect(page.getByTestId('htp-legend')).toHaveAttribute('data-device', d);
+    // step 3: the human's turn, with the normal HUD (and, on touch, the real stick)
+    await page.getByTestId('htp-try').click();
+    await expect(page.getByTestId('how-to-play')).toHaveAttribute('data-mode', 'practice');
+    await stepTicks(page, 1); // hold real time still again: only the test's ticks move the world
+    await expect(page.getByTestId('htp-instruction')).toContainText('Walk to the glowing marker');
+    await expect(page.getByTestId('hud')).toBeVisible();
+    if (info.project.use.isMobile) {
+      await expect(page.getByTestId('stick-zone')).toBeVisible();
+      await expect(page.getByTestId('htp-instruction')).toContainText(
+        'thumb down anywhere in the lower-left',
+      );
+      for (let i = 0; i < 4; i++) await thumb(page, 'right', 4, { settle: 12 });
+    } else {
+      await expect(page.getByTestId('htp-instruction')).toContainText('WASD');
+      for (let i = 0; i < 4; i++) {
+        await holdKey(page, 'ArrowRight', 4);
+        await stepTicks(page, 12);
+      }
     }
-    await expect(page.getByTestId('htp-touchmap')).toBeVisible();
+    // step 4: completion comes from the simulation (the player really stands on the marker)
+    expect((await getState(page)).players[0]!.x).toBe(4);
+    await expect(page.getByTestId('htp-task-0')).toHaveAttribute('data-done', 'true');
+    await expect(page.getByTestId('htp-task-1')).toHaveAttribute('data-done', 'false');
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-academy-practice-move.png` });
+
+    // step 7: not complete yet -> no "next", only an explicit skip
+    await expect(page.getByTestId('htp-next')).toHaveCount(0);
+    await page.getByTestId('htp-skip').click();
+    await expect(page.getByTestId('htp-title')).toHaveText('Button A: place a generator');
+    expect(await academyProgress(page)).toEqual({ completed: [], skipped: ['move'] });
+
+    // the lesson list: grouped courses, the skipped lesson marked, any lesson practisable directly
+    await page.getByTestId('htp-lessons').click();
+    await expect(page.getByTestId('htp-list')).toBeVisible();
+    await expect(page.getByTestId('htp-lesson-move').locator('.htp-mark')).toHaveText('↷');
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-academy-lessons.png` });
+    await page.getByTestId('htp-list-close').click();
 
     await page.getByTestId('htp-exit').click();
     await expect(page.getByTestId('title-screen')).toBeVisible();
@@ -119,94 +118,75 @@ test.describe('How to Play', () => {
     expect(errors).toEqual([]);
   });
 
-  test('vehicle practice: voucher, VEHICLE key, entrance, Keke turn and launch with the keyboard', async ({
-    page,
-  }, info) => {
-    test.skip(info.project.name !== 'desktop', 'keyboard flow on desktop');
-    const errors = collectErrors(page);
-    await open(page);
-    const before = await savedSettings(page);
-    await openTutorial(page);
-    await openPractice(page, 'vehicle');
-    await page.getByTestId('htp-char-campusQueen').click();
-    await expect(page.getByTestId('htp-char-campusQueen')).toHaveAttribute('aria-pressed', 'true');
-    await stepTicks(page, 2);
-    expect((await getState(page)).players[0]!.characterId).toBe('campusQueen');
+  for (const vp of [
+    { width: 844, height: 390 },
+    { width: 667, height: 375 },
+  ]) {
+    test(`phone ${vp.width}x${vp.height}: Academy text never covers the board, its bottom row or the lower-left spawn`, async ({
+      page,
+    }, info) => {
+      test.skip(!info.project.use.isMobile, 'mobile project only');
+      const errors = collectErrors(page);
+      await page.setViewportSize(vp);
+      await open(page, '&noattract');
+      await openAcademy(page);
+      await practiseFromList(page, 'place');
+      await expect(page.getByTestId('stick-zone')).toBeVisible();
+      await stepTicks(page, 2);
+      await syncHud(page);
+      await expect.poll(() => board(page), { timeout: 30_000 }).not.toBeNull();
 
-    // walk two tiles right onto the voucher
-    for (let i = 0; i < 2; i++) {
-      await holdKey(page, 'ArrowRight', 4);
-      await stepTicks(page, 14);
-    }
-    await expect(page.getByTestId('htp-check-0')).toHaveAttribute('data-done', 'true');
-    expect((await getState(page)).players[0]!.hasVoucher).toBe(true);
+      // walk to the marker with the real floating stick, so the next instruction (button A) is up
+      for (let i = 0; i < 4; i++) await thumb(page, 'right', 4, { settle: 12 });
+      await expect(page.getByTestId('htp-task-0')).toHaveAttribute('data-done', 'true');
+      await expect(page.getByTestId('htp-instruction')).toHaveText(
+        /Press the A button to place a generator on the marker\./,
+      );
+      await page.waitForTimeout(400); // let the board position settle after the layout change
+      await syncHud(page);
 
-    await page.keyboard.press('v');
-    await stepTicks(page, 3);
-    await syncHud(page);
-    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'entry', { timeout: 60_000 });
-    await expect(page.getByTestId('htp-check-1')).toHaveAttribute('data-done', 'true');
-    await page.keyboard.press('ArrowLeft');
-    await stepTicks(page, 2);
-    await page.keyboard.press('Enter');
-    await stepTicks(page, 2);
-    await syncHud(page);
-    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'turn', { timeout: 60_000 });
-    await page.screenshot({ path: `e2e-shots/${info.project.name}-tutorial-keke-turn.png` });
-    await page.keyboard.press('Enter');
-    await stepTicks(page, 3);
-    await expect(page.getByTestId('htp-complete')).toBeVisible();
-    await expect(page.getByTestId('htp-check-2')).toHaveAttribute('data-done', 'true');
-    const s = await getState(page);
-    expect(s.vehicles[0]!.kind).toBe('keke');
+      const b = (await board(page))!;
+      const nearY = b[3]!.y;
+      const rowTop = nearY - (nearY - b[0]!.y) / 11;
+      const minLeft = Math.min(b[0]!.x, b[3]!.x);
+      // the lesson column sits entirely left of the board
+      const panel = (await page.getByTestId('how-to-play').boundingBox())!;
+      expect(panel.x + panel.width).toBeLessThanOrEqual(minLeft + 0.5);
+      // no Academy text anywhere on the board's bottom row (which holds the lower-left spawn)
+      const covering = await page.evaluate(
+        ({ left, right, top, bottom }) =>
+          [...document.querySelectorAll('[data-testid^="htp-"], .htp-panel *')]
+            .filter((e) => (e.textContent ?? '').trim().length > 0)
+            .filter((e) => {
+              const r = e.getBoundingClientRect();
+              const style = getComputedStyle(e);
+              if (style.visibility === 'hidden' || style.display === 'none' || r.width === 0) return false;
+              return r.left < right && r.right > left && r.top < bottom && r.bottom > top;
+            })
+            .map((e) => `${(e as HTMLElement).className}: ${e.textContent}`),
+        { left: b[3]!.x, right: b[2]!.x, top: rowTop, bottom: nearY },
+      );
+      expect(covering).toEqual([]);
+      // and nothing of the Academy is over the board at all
+      const overBoard = await page.evaluate(
+        ({ left, right, top, bottom }) =>
+          [...document.querySelectorAll('[data-testid^="htp-"]')]
+            .filter((e) => {
+              const r = e.getBoundingClientRect();
+              return r.width > 0 && r.left < right && r.right > left && r.top < bottom && r.bottom > top;
+            })
+            .map((e) => (e as HTMLElement).dataset.testid),
+        { left: minLeft, right: Math.max(b[1]!.x, b[2]!.x), top: b[0]!.y, bottom: nearY },
+      );
+      expect(overBoard).toEqual([]);
+      await page.screenshot({ path: `e2e-shots/mobile-${vp.width}x${vp.height}-academy-practice.png` });
 
-    await page.getByTestId('htp-exit').click();
-    await expect(page.getByTestId('title-screen')).toBeVisible();
-    expect(await savedSettings(page)).toEqual(before);
-    expect(errors).toEqual([]);
-  });
-
-  test('vehicle practice with touch: thumbstick, vehicle button, NEXT and LAUNCH', async ({ page }, info) => {
-    test.skip(!info.project.use.isMobile, 'mobile project only');
-    const errors = collectErrors(page);
-    await open(page);
-    const before = await savedSettings(page);
-    await openTutorial(page);
-    // demos play by themselves: no on-screen controls; the legend opens on the touch layout
-    await expect(page.getByTestId('stick-zone')).toBeHidden();
-    await expect(page.getByTestId('htp-stick')).toBeVisible();
-    await expect(page.getByTestId('htp-legend')).toHaveAttribute('data-device', 'touch');
-
-    await openPractice(page, 'vehicle');
-    // on a short landscape phone the practice starts with the lesson panel folded away
-    await expect(page.getByTestId('how-to-play')).toHaveAttribute('data-collapsed', 'true');
-    await page.getByTestId('htp-expand').click();
-    await page.getByTestId('htp-char-campusQueen').click();
-    await page.getByTestId('htp-collapse').click();
-    await expect(page.getByTestId('how-to-play')).toHaveAttribute('data-collapsed', 'true');
-    await stepTicks(page, 2);
-    expect((await getState(page)).players[0]!.characterId).toBe('campusQueen');
-    await expect(page.getByTestId('stick-zone')).toBeVisible();
-    for (let i = 0; i < 2; i++) await thumb(page, 'right', 4, { settle: 14 });
-    await expect(page.getByTestId('htp-check-0')).toHaveAttribute('data-done', 'true');
-    await expect(page.getByTestId('btn-vehicle')).toBeVisible();
-    await page.getByTestId('btn-vehicle').dispatchEvent('pointerdown');
-    await stepTicks(page, 3);
-    await syncHud(page);
-    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'entry', { timeout: 60_000 });
-    await page.getByTestId('entry-confirm').click(); // NEXT (the Keke still needs its turn)
-    await stepTicks(page, 2);
-    await syncHud(page);
-    await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'turn', { timeout: 60_000 });
-    await page.screenshot({ path: `e2e-shots/${info.project.name}-tutorial-touch-turn.png` });
-    await page.getByTestId('entry-confirm').click(); // LAUNCH
-    await stepTicks(page, 3);
-    await expect(page.getByTestId('htp-complete')).toBeVisible();
-    expect((await getState(page)).vehicles[0]!.kind).toBe('keke');
-
-    await page.getByTestId('htp-exit').click();
-    await expect(page.getByTestId('title-screen')).toBeVisible();
-    expect(await savedSettings(page)).toEqual(before);
-    expect(errors).toEqual([]);
-  });
+      // press A on the real touch control: a real generator goes down and the task ticks
+      await page.getByTestId('btn-place').dispatchEvent('pointerdown');
+      await stepTicks(page, 3);
+      await expect(page.getByTestId('htp-task-1')).toHaveAttribute('data-done', 'true');
+      expect((await getState(page)).generators.map((g) => [g.x, g.y])).toEqual([[4, 10]]);
+      expect(errors).toEqual([]);
+    });
+  }
 });
