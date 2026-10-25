@@ -5,10 +5,11 @@
  * player only: one human against AI bots, no matchmaking.
  */
 import { ARENAS, DIFFICULTIES } from '../sim';
-import type { ArenaDef, Difficulty } from '../sim';
+import type { ArenaDef } from '../sim';
 import { commands } from '../app/session';
 import type { GameSettings } from '../app/settings';
 import { RUMBLE_MODE_INFO, difficultyLabel } from '../app/setupSummary';
+import { DifficultyPicker } from './DifficultyPicker';
 import { ArenaPicker, Preview } from './ArenaPicker';
 import { useState } from 'react';
 
@@ -116,61 +117,6 @@ function RumbleBots({ settings: s, set }: SetProps) {
   );
 }
 
-/**
- * Interim Classic bot-level picker (stream B's `DifficultyPicker` replaces it): a level for all bots in
- * one press, and each bot's own level.
- */
-export function DifficultyPickerFallback({ settings: s, set }: SetProps) {
-  const bots = Math.max(1, s.competitors - 1);
-  const levels = (i: number): Difficulty => s.botDifficulties[i] ?? s.difficulty;
-  const all = (d: Difficulty) => set({ difficulty: d, botDifficulties: [d, d, d] });
-  return (
-    <div className="bot-levels" data-testid="difficulty-picker">
-      <div className="setup-row">
-        <span>All bots</span>
-        <div className="chips">
-          {DIFFICULTIES.map((d) => (
-            <Choice
-              key={d}
-              value={d}
-              current={
-                Array.from({ length: bots }, (_, i) => levels(i)).every((l) => l === d)
-                  ? d
-                  : ('' as Difficulty)
-              }
-              label={difficultyLabel(d)}
-              onPick={all}
-              testId={`diff-${d}`}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="setup-row per-bot">
-        {Array.from({ length: bots }, (_, i) => (
-          <label key={i} className="bot-level">
-            <small>Bot {i + 1}</small>
-            <select
-              data-testid={`bot-level-${i + 1}`}
-              value={levels(i)}
-              onChange={(e) => {
-                commands.click();
-                const next = [0, 1, 2].map((k) => levels(k));
-                next[i] = e.target.value as Difficulty;
-                set({ botDifficulties: next });
-              }}
-            >
-              {DIFFICULTIES.map((d) => (
-                <option key={d} value={d}>
-                  {difficultyLabel(d)}
-                </option>
-              ))}
-            </select>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /** City Rumble setup: mode cards, then the rules that mode uses, the stage and the bots. */
 export function RumbleSetup({ settings: s, set }: SetProps) {
@@ -311,7 +257,7 @@ export function ClassicSetup({ settings: s, set }: SetProps) {
             />
           </div>
         </div>
-        <DifficultyPickerFallback settings={s} set={set} />
+        <DifficultyPicker settings={s} set={set} />
       </section>
       <section className="panel">
         <h3>Arena</h3>

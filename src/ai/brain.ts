@@ -4,7 +4,7 @@
  * current plan step by step, vetoes any step that the freshest map says is lethal, and layers the
  * tactical one-shots (skills, remote, kill switch, vehicle) on top.
  */
-import { createRng, nextInt } from '../sim';
+import { createRng, nextFloat, nextInt } from '../sim';
 import type { Dir, Intent, Observation, RngHolder } from '../sim';
 import { checkPlacement, computeHuntField, extractPlan } from './analysis';
 import { dirIndex, getBoard } from './board';
@@ -23,6 +23,8 @@ import {
   WATCH_RADIUS,
 } from './scale';
 import { aiCounters } from './stats';
+import { wouldTrapRival } from './mercy';
+import { Sideline } from './sideline';
 import { largeHuntPace, updateZone } from './zone';
 import { readyTick, stepTicksOf } from './world';
 import type { Bot } from './types';
@@ -106,6 +108,13 @@ function enemyRemote(obs: Observation): boolean {
   return obs.generators.some((g) => g.mode === 'remote' && g.ownerId !== obs.selfId);
 }
 
+/** Mercy: how long a vetoed placement tile stays vetoed, and how many alternatives one think tries. */
+const MERCY_VETO_TICKS = 45;
+const MERCY_RETRIES = 3;
+/** A declined vehicle launch / melee opportunity is not reconsidered for this long. */
+const VEHICLE_VETO_TICKS = 300;
+const MELEE_VETO_TICKS = 45;
+
 export class Brain implements Bot {
   private ctx: Ctx | null = null;
   private plan: Plan | null = null;
@@ -118,6 +127,14 @@ export class Brain implements Bot {
   private rethinkNow = false;
   private readonly rng: RngHolder;
   private readonly tactics = new Tactics();
+  private readonly sideline = new Sideline();
+  /** Hesitation (Rookie-style pause while standing safely) lasts until this tick. */
+  private pauseUntil = -1;
+  /** Mercy: placement tiles vetoed because they would box a nearby rival in (tile -> until tick). */
+  private readonly mercyVeto = new Map<number, number>();
+  /** A declined vehicle launch / melee is not reconsidered before these ticks. */
+  private vehicleVetoUntil = -1;
+  private meleeVetoUntil = -1;
 
   constructor(
     private readonly profile: AiProfile,
@@ -129,6 +146,11 @@ export class Brain implements Bot {
 
   decide(obs: Observation): Intent {
     const me = obs.players[this.playerId];
+    if (me && !me.alive) {
+      // eliminated: in a standard match the bot may throw from the sideline lane
+      this.plan = null;
+      return this.sideline.decide(obs, this.profile);
+    }
     if (!me || !me.alive || obs.match.phase !== 'playing') {
       this.plan = null;
       // allocate the search buffers during the countdown, not on the first tick of play
@@ -172,7 +194,37 @@ export class Brain implements Bot {
       requestRethink: () => (this.rethinkNow = true),
       planKind: () => this.plan?.kind ?? null,
     });
+    this.gateSpecials(c, intent);
     return intent;
+  }
+
+  /**
+   * Level-dependent use of specials: the tactics layer proposes a vehicle launch or a melee move, the
+   * profile decides whether this level actually does it (Rookie never launches a vehicle). A declined
+   * opportunity is not reconsidered for a while, so the probability is per opportunity, not per tick.
+   */
+  private gateSpecials(c: Ctx, intent: Intent): void {
+    const { profile } = this;
+    const { world } = c;
+    const T = world.tick;
+    const adjacentRival = world.rivals.some((r) => Math.abs(r.x - world.me.x) + Math.abs(r.y - world.me.y) === 1);
+    const v = intent.vehicle;
+    const wantsVehicle = (v !== undefined && (v.type === 'begin' || v.type === 'auto')) || (intent.special && !adjacentRival);
+    if (wantsVehicle && profile.vehicleUse < 1) {
+      if (T < this.vehicleVetoUntil || nextFloat(this.rng) >= profile.vehicleUse) {
+        if (v && (v.type === 'begin' || v.type === 'auto')) delete intent.vehicle;
+        delete intent.special;
+        this.vehicleVetoUntil = Math.max(this.vehicleVetoUntil, T + VEHICLE_VETO_TICKS);
+      }
+    }
+    const wantsMelee = intent.skill === true || (intent.special === true && adjacentRival);
+    if (wantsMelee && (!profile.useSkill || profile.meleeUse < 1)) {
+      if (!profile.useSkill || T < this.meleeVetoUntil || nextFloat(this.rng) >= profile.meleeUse) {
+        delete intent.skill;
+        delete intent.special;
+        this.meleeVetoUntil = Math.max(this.meleeVetoUntil, T + MELEE_VETO_TICKS);
+      }
+    }
   }
 
   private context(obs: Observation): Ctx {
@@ -214,7 +266,7 @@ export class Brain implements Bot {
       danger: c.danger,
       blocked: world.walk,
     });
-    let plan = chooseGoal(c, this.prevGoal);
+    let plan = this.mercifulGoal(c);
     let certain = false;
     if (!plan && enemyRemote(obs)) {
       // Every way out crosses a lane that an enemy remote generator could fire at any moment: walk the
@@ -237,6 +289,45 @@ export class Brain implements Bot {
     this.plan = plan;
     this.progress = 0;
     this.prevGoal = plan.kind === 'place' || plan.kind === 'pickup' ? plan.goalTile : -1;
+    if (
+      profile.hesitate > 0 &&
+      plan.kind !== 'last' &&
+      !plan.gamble &&
+      c.danger.safeFrom(world.myTile, T) &&
+      nextFloat(this.rng) < profile.hesitate
+    ) {
+      this.pauseUntil = T + 1 + nextInt(this.rng, Math.max(1, profile.hesitateTicks));
+    }
+  }
+
+  /**
+   * chooseGoal, but (profile `mercy`) never a placement that would leave a nearby rival without a way out:
+   * such tiles are vetoed for a while and the choice is made again without them.
+   */
+  private mercifulGoal(c: Ctx): Plan | null {
+    if (!this.profile.mercy) return chooseGoal(c, this.prevGoal);
+    const { world } = c;
+    const T = world.tick;
+    for (const [tile, until] of this.mercyVeto) if (until <= T) this.mercyVeto.delete(tile);
+    const marked: number[] = [];
+    const veto = (tile: number): void => {
+      if (world.blocked[tile] === 1) return;
+      world.blocked[tile] = 1; // placement candidates skip blocked tiles (restored below)
+      marked.push(tile);
+    };
+    for (const tile of this.mercyVeto.keys()) veto(tile);
+    let plan: Plan | null = null;
+    for (let tries = 0; tries < MERCY_RETRIES; tries++) {
+      plan = chooseGoal(c, this.prevGoal);
+      if (!plan || plan.kind !== 'place' || plan.drop) break;
+      const arrive = plan.times.length > 0 ? plan.times[plan.times.length - 1]! : T;
+      if (!wouldTrapRival(c, plan.goalTile, arrive)) break;
+      this.mercyVeto.set(plan.goalTile, T + MERCY_VETO_TICKS);
+      veto(plan.goalTile);
+      plan = null;
+    }
+    for (const tile of marked) world.blocked[tile] = 0;
+    return plan;
   }
 
   // ------------------------------------------------------------------ plan following
@@ -248,6 +339,11 @@ export class Brain implements Bot {
     const intent: Intent = {};
     const plan = this.plan;
     if (!plan) return intent;
+    if (T < this.pauseUntil) {
+      // hesitating: stand still, but only while standing here stays safe
+      if (danger.safeFrom(world.myTile, T)) return intent;
+      this.pauseUntil = -1;
+    }
 
     while (this.progress < plan.times.length && plan.times[this.progress]! <= T) this.progress++;
     if (world.myTile !== plan.tiles[this.progress]) {
@@ -292,6 +388,12 @@ export class Brain implements Bot {
       ? me.carrying !== null && world.genAt[tile]! < 0
       : canPlaceNow(c) && placementGain(c, tile) >= profile.placeMinGain;
     if (!allowed) {
+      this.plan = null;
+      return null;
+    }
+    if (profile.mercy && !plan.drop && wouldTrapRival(c, tile, T)) {
+      // a rival walked up since the plan was made: placing now would box them in
+      this.mercyVeto.set(tile, T + MERCY_VETO_TICKS);
       this.plan = null;
       return null;
     }

@@ -13,7 +13,7 @@ import { NEW_ARENA_FLOORS } from './newArenas';
 
 export type { FloorMaps } from './floorKit';
 
-function busPark(g: Ctx, rg: Ctx, cols: number, rows: number): void {
+export function busPark(g: Ctx, rg: Ctx, cols: number, rows: number): void {
   const w = cols * T;
   const h = rows * T;
   const r = artRng(1301);

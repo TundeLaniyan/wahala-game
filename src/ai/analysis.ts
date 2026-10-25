@@ -467,7 +467,15 @@ export function escapeSurvivesSealing(
       spend(c);
       c.scratch.set(world.walk);
       c.scratch[q] = 1;
-      if (!searchRefuge(c, c.tmp, u, a0, a1, step, u, c.scratch)) return false;
+      if (mine) c.scratch[u] = 1; // my own generator stays in the way behind me
+      // I am committed to this route: the way out must exist from where I am when the seal appears,
+      // not from the start with hindsight (that let a bot run into a dead end a rival then closed)
+      let k = 0;
+      while (k < esc.times.length && esc.times[k]! <= arrives) k++;
+      const from = esc.tiles[k]!;
+      const fromA0 = k === 0 ? a0 : Math.max(a0, arrives);
+      const fromA1 = k === 0 ? a1 : Math.max(arrives + 1, esc.times[k - 1]! + step);
+      if (!searchRefuge(c, c.tmp, from, fromA0, fromA1, step, undefined, c.scratch)) return false;
     }
   }
   return true;

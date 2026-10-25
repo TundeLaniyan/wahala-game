@@ -1,0 +1,60 @@
+/* V2 sideline spectator controls (SpectatorControls.tsx). The bar sits where the old "You're out" bar was. */
+.sideline-bar {
+  position: absolute;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  max-width: min(560px, calc(100vw - 32px));
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  padding: 6px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  font-weight: 700;
+}
+.sideline-bar b {
+  font-family: var(--display);
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+.sideline-hint {
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.sideline-charge {
+  display: block;
+  width: 64px;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--gold) var(--p, 0%), rgba(255, 255, 255, 0.15) var(--p, 0%));
+}
+.abtn.sideline-throw {
+  background: radial-gradient(circle at 50% 40%, #ff9a3a, #b8420e);
+}
+.abtn.dim {
+  opacity: 0.45;
+}
+@media (max-height: 480px) {
+  /* phones in landscape: keep the bar clear of the stick (left) and the THROW button (right) */
+  .sideline-bar {
+    /* under the match clock (13% top band), clear of the stick (left) and the THROW button (right) */
+    bottom: auto;
+    top: calc(max(6px, env(safe-area-inset-top)) + 13vh);
+    max-width: 52vw;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+  }
+  .sideline-bar .btn.small {
+    padding: 3px 10px;
+    font-size: 0.75rem;
+  }
+  .sideline-hint {
+    display: none;
+  }
+}

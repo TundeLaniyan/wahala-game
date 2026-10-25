@@ -99,4 +99,9 @@ export interface ArenaDef {
   /** A rules mode the arena always uses (City Rumble always closes in). */
   forcedMode?: MatchMode;
   info: ArenaInfo;
+  /**
+   * V2: a test / experimental stage (the Mobile Test Arena). Kept out of the official lists
+   * (`STANDARD_ARENA_IDS`) and shown in a separate "Test / experimental" section of the arena picker.
+   */
+  experimental?: boolean;
 }

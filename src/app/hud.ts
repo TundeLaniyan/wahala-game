@@ -19,7 +19,7 @@ import type {
   SpecialAction,
   VehicleKind,
 } from '../sim';
-import { previewRewards, previewSpecial } from '../sim';
+import { canThrow, previewRewards, previewSpecial, spectatorLanding } from '../sim';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
 import type { StageAlert } from './stageAlerts';
 
@@ -94,6 +94,31 @@ export interface HudSnapshot {
   ruleBanner: string | null;
   /** City Rumble only (null on standard arenas): counts, kill feed, roster, spectating. */
   rumble: RumbleSnapshot | null;
+  /** V2 standard match: the eliminated local player on the sideline lane (null otherwise). */
+  sideline: SidelineHud | null;
+}
+
+/** V2 sideline spectator controls (ui/SpectatorControls.tsx). */
+export interface SidelineHud {
+  /** 0..1: how far the throw cooldown has run (1 = ready). */
+  charge: number;
+  /** A throw would go now: cooldown over, live limit free, time left, and a valid landing tile in line. */
+  canThrow: boolean;
+  /** Throws are over for this match (the final seconds). */
+  closed: boolean;
+}
+
+export function buildSideline(state: GameState, localId: number): SidelineHud | null {
+  const p = state.players[localId];
+  const s = p?.spectator;
+  if (!p || p.alive || !s || state.match.phase !== 'playing') return null;
+  const cfg = state.config.spectator;
+  const left = s.readyTick - state.tick;
+  return {
+    charge: left <= 0 ? 1 : Math.max(0, 1 - left / Math.max(1, cfg.cooldownTicks)),
+    canThrow: canThrow(state, p) && spectatorLanding(state, s.pos) !== null,
+    closed: state.config.match.durationTicks - state.match.playTicks <= cfg.noThrowRemainingTicks,
+  };
 }
 
 /** One competitor in the City Rumble roster. */
@@ -432,5 +457,6 @@ export function buildHud(
     stageAlerts: buildStageAlerts(state, localId),
     ruleBanner: ruleBannerFor(state),
     rumble: rumble ? buildRumble(state, localId, spectateId) : null,
+    sideline: buildSideline(state, localId),
   };
 }
