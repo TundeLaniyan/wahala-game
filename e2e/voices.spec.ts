@@ -68,6 +68,11 @@ const preview = (page: Page, trigger: string) =>
 const hear = (page: Page, events: unknown[]) =>
   page.evaluate((e) => (window as unknown as Debug).__WAHALA__.hear(e), events);
 const lastSpoken = async (page: Page) => (await spoken(page)).at(-1);
+/**
+ * The newest line of `trigger` spoken so far. Ambient street talk may follow it at any moment (it waits only for
+ * the foreground line to finish), so assertions about one reaction look that reaction up instead of the last line.
+ */
+const lastOf = async (page: Page, trigger: string) => (await spoken(page)).filter((l) => l.trigger === trigger).at(-1);
 /** Waits until no foreground line is speaking (the audio clock runs in real time). */
 const quiet = (page: Page) =>
   expect.poll(async () => (await voices(page))?.speaking ?? null, { timeout: 15_000 }).toBeNull();
@@ -219,8 +224,10 @@ test.describe('Nigerian voice clips', () => {
         triggered: false, placedTick: s.tick });`,
     );
     await page.evaluate(() => (window as unknown as Debug).__WAHALA__.advance(1));
-    await expect.poll(async () => (await lastSpoken(page))?.trigger).toBe('ON_GENERATOR_CRITICAL_PROXIMITY');
-    const run = (await lastSpoken(page))!;
+    await expect
+      .poll(async () => (await lastOf(page, 'ON_GENERATOR_CRITICAL_PROXIMITY'))?.trigger)
+      .toBe('ON_GENERATOR_CRITICAL_PROXIMITY');
+    const run = (await lastOf(page, 'ON_GENERATOR_CRITICAL_PROXIMITY'))!;
     expect(run.urgent).toBe(true);
     expect(run.interrupted).toBe(keke.clipId);
     expect(run.clipId).toMatch(/^danger_run_0[123]$/);
@@ -236,7 +243,9 @@ test.describe('Nigerian voice clips', () => {
         y: me.y,
       },
     ]);
-    await expect.poll(async () => (await lastSpoken(page))?.clipId).toMatch(/^danfo_hit_0[123]$/);
+    await expect
+      .poll(async () => (await lastOf(page, 'ON_DANFO_HAZARD_IMPACT'))?.clipId ?? '')
+      .toMatch(/^danfo_hit_0[123]$/);
 
     // every other trigger with a clip plays one of its own lines in the real browser
     const triggers = [...new Set(EVERYWHERE.map((id) => lineOf(id).trigger))];
