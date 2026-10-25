@@ -94,6 +94,15 @@ export class RiggedCharacter {
     this.oneShot = null;
   }
 
+  /** Respawn modes: leave a held death pose and return to the looping state clips. */
+  revive(): void {
+    this.frozen = false;
+    this.oneShot = null;
+    this.mixer.stopAllAction();
+    this.active = null;
+    this.activate(this.loop, 0);
+  }
+
   get current(): ClipName | null {
     return this.active;
   }

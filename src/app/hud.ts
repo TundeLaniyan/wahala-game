@@ -1,5 +1,23 @@
-import { CHARACTERS, getArena, secondsRemaining } from '../sim';
-import type { CharacterId, ContactAbility, CurseKind, GameState, MatchResult, SpecialAction, VehicleKind } from '../sim';
+import {
+  CHARACTERS,
+  TEAM_NAMES,
+  getArena,
+  isRespawnMode,
+  isTeamMode,
+  secondsRemaining,
+  teamStandings,
+} from '../sim';
+import type {
+  CharacterId,
+  ContactAbility,
+  CurseKind,
+  GameKind,
+  GameState,
+  MatchResult,
+  Player,
+  SpecialAction,
+  VehicleKind,
+} from '../sim';
 import { previewSpecial } from '../sim';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
 import type { StageAlert } from './stageAlerts';
@@ -81,9 +99,37 @@ export interface RumbleEntry {
   characterId: CharacterId;
   alive: boolean;
   isLocal: boolean;
+  /** Credited eliminations (sim `player.stats`). */
   kills: number;
-  /** Finishing place once out (1 = winner); shared by everyone who fell on the same tick. */
+  deaths: number;
+  assists: number;
+  /**
+   * Survival: finishing place once out (1 = winner); shared by everyone who fell on the same tick.
+   * Deathmatch / Team Rumble: the live ranking (kills, fewer deaths, assists, earlier last kill; equal
+   * stats share a place).
+   */
   placement: number | null;
+  /** Team Rumble team index (-1 = free-for-all). */
+  team: number;
+  /** Respawn modes: seconds until this fallen fighter is back (null when alive / no respawn). */
+  respawnIn: number | null;
+  /** Spawn protection is on right now. */
+  protected: boolean;
+}
+
+/** One team in the Team Rumble scoreboard. */
+export interface TeamScore {
+  team: number;
+  name: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  members: number;
+  alive: number;
+  /** The local player's team. */
+  mine: boolean;
+  /** 1 = leading (equal kills and deaths share the place). */
+  place: number;
 }
 
 export interface FeedItem {
@@ -91,16 +137,25 @@ export interface FeedItem {
   key: string;
   victim: string;
   victimSlot: number;
+  /** Team Rumble team of the victim / killer (-1 = free-for-all). */
+  victimTeam: number;
+  killerTeam: number;
   /** Null when no rival gets the credit (own generator, the city, traffic ...). */
   killer: string | null;
   killerSlot: number;
-  cause: 'flame' | 'vehicle' | 'crush' | 'hazard' | 'crowd' | 'spectator' | 'self';
+  cause: 'flame' | 'vehicle' | 'crush' | 'hazard' | 'crowd' | 'spectator' | 'self' | 'friendly';
   involvesLocal: boolean;
   /** Seconds since it happened. */
   age: number;
 }
 
 export interface RumbleSnapshot {
+  /** The ruleset: Survival (last standing), Deathmatch or Team Rumble (timed, respawns). */
+  mode: Exclude<GameKind, 'classic'>;
+  /** Fallen fighters come back (Deathmatch / Team Rumble). */
+  respawns: boolean;
+  /** Friendly fire (Team Rumble only). */
+  friendlyFire: boolean;
   total: number;
   alive: number;
   /** Newest first, at most FEED_MAX entries from the last FEED_SECONDS. */
@@ -114,14 +169,40 @@ export interface RumbleSnapshot {
   /** The competitor the camera follows while the local player is out (null otherwise). */
   spectating: RumbleEntry | null;
   local: RumbleEntry | null;
-  /** The closing city: 'open' (counting down to the closing), 'closing', or 'core' (only the core is left). */
-  ring: { phase: 'open' | 'closing' | 'core'; seconds: number };
+  /**
+   * The closing city: 'open' (counting down to the closing), 'closing', or 'core' (only the core is
+   * left). Null when the city never closes (respawn modes).
+   */
+  ring: { phase: 'open' | 'closing' | 'core'; seconds: number } | null;
+  /** Respawn modes: everybody by the live ranking, best first (empty in Survival). */
+  leaderboard: RumbleEntry[];
+  /** Team Rumble: the teams, leading team first (empty otherwise). */
+  teams: TeamScore[];
 }
 
 export const FEED_MAX = 4;
 export const FEED_SECONDS = 7;
 
+/** Deathmatch ranking key: equal keys share a place. */
+function rankKey(p: Player): [number, number, number, number] {
+  const last = p.stats.lastKillTick < 0 ? Infinity : p.stats.lastKillTick;
+  return [-p.stats.kills, p.stats.deaths, -p.stats.assists, last];
+}
+
+function compareKey(a: Player, b: Player): number {
+  const ka = rankKey(a);
+  const kb = rankKey(b);
+  for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i]! < kb[i]! ? -1 : 1;
+  return 0;
+}
+
+/** Respawn modes: live rank of every player (1 = best; equal stats share a place). */
+function timedPlacements(state: GameState): number[] {
+  return state.players.map((p) => 1 + state.players.filter((q) => compareKey(q, p) < 0).length);
+}
+
 function placements(state: GameState): (number | null)[] {
+  if (isRespawnMode(state.settings.game)) return timedPlacements(state);
   const out: (number | null)[] = state.players.map(() => null);
   const won = state.match.result?.kind === 'win' ? state.match.result.winnerId : -1;
   for (const p of state.players) {
@@ -141,6 +222,7 @@ function placements(state: GameState): (number | null)[] {
 export function buildRumble(state: GameState, localId: number, spectateId: number | null): RumbleSnapshot {
   const kills = killCounts(state);
   const place = placements(state);
+  const respawns = isRespawnMode(state.settings.game);
   const entries: RumbleEntry[] = state.players.map((p) => ({
     id: p.id,
     name: p.name,
@@ -149,7 +231,15 @@ export function buildRumble(state: GameState, localId: number, spectateId: numbe
     alive: p.alive,
     isLocal: p.id === localId,
     kills: kills[p.id]!,
+    deaths: p.stats.deaths,
+    assists: p.stats.assists,
     placement: place[p.id]!,
+    team: p.team,
+    respawnIn:
+      !p.alive && p.respawnAt !== null && state.match.phase === 'playing'
+        ? Math.max(1, Math.ceil((p.respawnAt - state.tick) / 60))
+        : null,
+    protected: p.alive && state.tick < p.protectedUntil,
   }));
   const survivors = entries.filter((e) => e.alive);
   const byKills = (a: RumbleEntry, b: RumbleEntry): number => b.kills - a.kills || a.id - b.id;
@@ -161,20 +251,32 @@ export function buildRumble(state: GameState, localId: number, spectateId: numbe
   ];
 
   const feed: FeedItem[] = [];
+  // respawn modes: a fighter who is already back still shows their last fall for a few seconds
   const out = state.players
     .filter(
-      (p) => !p.alive && p.eliminatedTick !== null && state.tick - p.eliminatedTick <= FEED_SECONDS * 60,
+      (p) =>
+        (!p.alive || respawns) &&
+        p.eliminatedTick !== null &&
+        state.tick - p.eliminatedTick <= FEED_SECONDS * 60,
     )
     .sort((a, b) => b.eliminatedTick! - a.eliminatedTick! || a.id - b.id)
     .slice(0, FEED_MAX);
   for (const p of out) {
     const killer = eliminatorOf(state, p);
     const c = p.elimination!;
-    const cause: FeedItem['cause'] = 'ownerId' in c && c.ownerId === p.id ? 'self' : c.kind;
+    const owner = 'ownerId' in c ? state.players[c.ownerId] : undefined;
+    const cause: FeedItem['cause'] =
+      owner?.id === p.id
+        ? 'self'
+        : owner && !killer && owner.team >= 0 && owner.team === p.team
+          ? 'friendly'
+          : c.kind;
     feed.push({
       key: `${p.id}@${p.eliminatedTick}`,
       victim: p.name,
       victimSlot: p.slot,
+      victimTeam: p.team,
+      killerTeam: killer?.team ?? -1,
       killer: killer?.name ?? null,
       killerSlot: killer?.slot ?? 0,
       cause,
@@ -186,7 +288,8 @@ export function buildRumble(state: GameState, localId: number, spectateId: numbe
   const focus = state.players[spectateId ?? localId] ?? state.players[localId];
   const nearby = focus
     ? survivors
-        .filter((e) => e.id !== focus.id)
+        // Team Rumble: the opponents near you (teammates are on the minimap in the team colour)
+        .filter((e) => e.id !== focus.id && !(focus.team >= 0 && e.team === focus.team))
         .map((e) => {
           const p = state.players[e.id]!;
           return { ...e, dist: Math.abs(p.x - focus.x) + Math.abs(p.y - focus.y) };
@@ -199,14 +302,36 @@ export function buildRumble(state: GameState, localId: number, spectateId: numbe
   const t = state.match.phase === 'countdown' ? 0 : state.match.playTicks;
   const closeAt = cfg.match.durationTicks - cfg.crush.startRemainingTicks;
   const coreAt = cfg.match.durationTicks - cfg.crush.coreClosedRemainingTicks;
-  const ring: RumbleSnapshot['ring'] =
-    t < closeAt
+  const ring: RumbleSnapshot['ring'] = !state.crush
+    ? null
+    : t < closeAt
       ? { phase: 'open', seconds: Math.ceil((closeAt - t) / 60) }
       : t < coreAt
         ? { phase: 'closing', seconds: Math.ceil((coreAt - t) / 60) }
         : { phase: 'core', seconds: Math.max(0, Math.ceil((cfg.match.durationTicks - t) / 60)) };
 
+  const game = state.settings.game === 'classic' ? 'survival' : state.settings.game;
+  const local = state.players[localId];
+  const standings = isTeamMode(state.settings.game) ? teamStandings(state) : [];
+  const teams: TeamScore[] = standings.map((t) => ({
+    team: t.team,
+    name: TEAM_NAMES[t.team] ?? `Team ${t.team + 1}`,
+    kills: t.kills,
+    deaths: t.deaths,
+    assists: t.assists,
+    members: t.members,
+    alive: state.players.filter((p) => p.team === t.team && p.alive).length,
+    mine: local?.team === t.team,
+    place:
+      1 + standings.filter((o) => o.kills > t.kills || (o.kills === t.kills && o.deaths < t.deaths)).length,
+  }));
+  // fixed order on screen (Green left, White right); `place` says who leads
+  teams.sort((a, b) => a.team - b.team);
+
   return {
+    mode: game,
+    respawns,
+    friendlyFire: isTeamMode(state.settings.game) && state.settings.friendlyFire,
     total: state.players.length,
     alive: survivors.length,
     feed,
@@ -222,6 +347,10 @@ export function buildRumble(state: GameState, localId: number, spectateId: numbe
         : null,
     local: entries[localId] ?? null,
     ring,
+    leaderboard: respawns
+      ? [...entries].sort((a, b) => (a.placement ?? 0) - (b.placement ?? 0) || a.id - b.id)
+      : [],
+    teams,
   };
 }
 

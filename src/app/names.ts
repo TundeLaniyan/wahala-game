@@ -1,4 +1,4 @@
-import type { CharacterId, Difficulty, PlayerSetup } from '../sim';
+import type { CharacterId, Difficulty, GameKind, MatchSettings, PlayerSetup } from '../sim';
 import { CHARACTER_IDS, DIFFICULTIES, createRng, getArena, shuffle } from '../sim';
 import type { GameSettings } from './settings';
 
@@ -41,6 +41,28 @@ const BOT_NAMES = [
 export function matchArenaId(settings: GameSettings): string {
   if (settings.play === 'rumble') return settings.rumbleArenaId;
   return getArena(settings.arenaId).kind === 'rumble' ? 'danfoBusPark' : settings.arenaId;
+}
+
+/**
+ * The match rules for the chosen game, built fresh from the saved menu settings for every start (so
+ * nothing carries over between match types): Classic = last standing with the mandatory Wahala Crush;
+ * City Rumble = the chosen Survival / Deathmatch / Team Rumble. Friendly fire only exists in Team
+ * Rumble and the 5 / 10 minute clock only in the respawn modes.
+ */
+export function matchRules(settings: GameSettings): Partial<MatchSettings> & { game: GameKind } {
+  const rumble = getArena(matchArenaId(settings)).kind === 'rumble';
+  const game: GameKind = rumble ? settings.rumbleMode : 'classic';
+  const timed = game === 'deathmatch' || game === 'team';
+  return {
+    game,
+    // Wahala Crush is mandatory in every standard match (no Classic Timer choice any more); the
+    // respawn modes never close in (createGame turns it off for them)
+    mode: 'crush',
+    friendlyFire: game === 'team' && settings.friendlyFire,
+    teamCount: 2,
+    durationSec: timed ? settings.rumbleMinutes * 60 : null,
+    crowdThrows: settings.crowdThrows,
+  };
 }
 
 /** Total competitors for the chosen game (City Rumble has its own, much larger count). */

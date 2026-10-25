@@ -86,6 +86,10 @@ function eliminate(s: GameState, id: number, by: number | null): void {
   p.alive = false;
   p.eliminatedTick = s.tick;
   p.elimination = by === null ? { kind: 'crush', eventId: 1 } : { kind: 'flame', ownerId: by, eventId: 1 };
+  // the credit the simulation would record (attribution.ts)
+  p.eliminatedBy = by;
+  p.stats.deaths++;
+  if (by !== null) s.players[by]!.stats.kills++;
 }
 
 describe('spectator target (City Rumble)', () => {
@@ -222,7 +226,7 @@ describe('rumble HUD snapshot', () => {
     expect(r.nearby[0]!.id).toBe(2);
     expect(r.nearby[0]!.dist).toBe(1);
     expect(r.nearby[1]!.id).toBe(3);
-    expect(r.ring.phase).toBe('open');
+    expect(r.ring!.phase).toBe('open');
   });
 });
 

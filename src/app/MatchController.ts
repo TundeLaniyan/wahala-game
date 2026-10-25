@@ -1,9 +1,9 @@
-import { CHARACTERS, createGame, entryKey, getArena, observe, readyToStep, tick } from '../sim';
-import type { GameKind, GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent, VehicleTurn } from '../sim';
+import { CHARACTERS, createGame, entryKey, getArena, isRespawnMode, isTeamMode, observe, readyToStep, tick } from '../sim';
+import type { GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent, VehicleTurn } from '../sim';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
 import { buildHud } from './hud';
-import { buildPlayers, matchArenaId } from './names';
+import { buildPlayers, matchArenaId, matchRules } from './names';
 import { cycleSpectateTarget, eliminatorOf, pickSpectateTarget } from './spectate';
 import { NULL_AUDIO } from './ports';
 import type { AudioPort, Bot, BotFactory, InputPort, RendererPort } from './ports';
@@ -80,7 +80,6 @@ export class MatchController {
   private endedAtMs: number | null = null;
   private toastId = 1;
   private excitement = 0.2;
-  private eliminations: number[] = [];
   private forced: Record<number, Intent> = {};
   private countdownShown = -1;
   /** City Rumble: the large-match presentation (spectator camera, roster HUD, sliced skip). */
@@ -104,21 +103,7 @@ export class MatchController {
     this.settings = settings;
     const players = buildPlayers(settings, seed);
     const arenaId = matchArenaId(settings);
-    const rumble = getArena(arenaId).kind === 'rumble';
-    const game: GameKind = rumble ? settings.rumbleMode : 'classic';
-    const state = createGame({
-      seed,
-      arenaId,
-      players,
-      settings: {
-        game,
-        // Wahala Crush is mandatory in every standard match (no Classic Timer choice any more)
-        mode: 'crush',
-        friendlyFire: settings.friendlyFire,
-        durationSec: game === 'deathmatch' || game === 'team' ? settings.rumbleMinutes * 60 : null,
-        crowdThrows: settings.crowdThrows,
-      },
-    });
+    const state = createGame({ seed, arenaId, players, settings: matchRules(settings) });
     this.state = state;
     this.rumble = getArena(state.arenaId).kind === 'rumble';
     if (!this.rumble) this.audio.setListener?.(null); // standard arenas pan across the whole board
@@ -138,7 +123,6 @@ export class MatchController {
     this.paused = false;
     this.endedAtMs = null;
     this.excitement = 0.2;
-    this.eliminations = state.players.map(() => 0);
     this.countdownShown = -1;
     this.forced = {};
     this.entry.sync(state);
@@ -172,7 +156,6 @@ export class MatchController {
     this.frozen = false;
     this.endedAtMs = null;
     this.excitement = 0.2;
-    this.eliminations = state.players.map(() => 0);
     this.countdownShown = -1;
     this.forced = {};
     this.entry.sync(state);
@@ -342,10 +325,12 @@ export class MatchController {
   private recordStats(events: SimEvent[]): void {
     for (const e of events) {
       if (e.type === 'generatorExploded') this.excitement = Math.min(1, this.excitement + 0.35);
-      if (e.type === 'playerEliminated' && 'ownerId' in e.cause && e.cause.ownerId !== e.playerId) {
-        this.eliminations[e.cause.ownerId] = (this.eliminations[e.cause.ownerId] ?? 0) + 1;
-      }
     }
+  }
+
+  /** Deathmatch / Team Rumble: a fallen local player comes back (no skip, no results until the clock). */
+  get respawnMode(): boolean {
+    return this.state !== null && isRespawnMode(this.state.settings.game);
   }
 
   private afterFrame(events: SimEvent[], nowMs: number, dt: number): void {
@@ -441,11 +426,24 @@ export class MatchController {
         const victim = state.players[e.playerId]!;
         if (e.playerId !== LOCAL_ID && eliminatorOf(state, victim)?.id === LOCAL_ID)
           return { text: `YOU TOOK OUT ${victim.name.toUpperCase()}!`, tone: 'good' };
+        if (e.playerId !== LOCAL_ID && e.assistIds.includes(LOCAL_ID))
+          return { text: `ASSIST ON ${victim.name.toUpperCase()}`, tone: 'good' };
+        if (this.respawnMode) {
+          if (e.playerId === LOCAL_ID) {
+            const by = eliminatorOf(state, victim);
+            return { text: by ? `${by.name.toUpperCase()} GOT YOU · BACK SOON` : 'DOWN! BACK SOON', tone: 'bad' };
+          }
+          return null;
+        }
         const left = state.players.filter((p) => p.alive).length;
         if (state.players[LOCAL_ID]!.alive && (left === 10 || left === 5 || left === 3 || left === 2))
           return { text: left === 2 ? 'FINAL TWO!' : `${left} LEFT STANDING`, tone: 'info' };
         return null;
       }
+      case 'playerRespawned':
+        return e.playerId === LOCAL_ID && this.rumble
+          ? { text: 'BACK IN! SPAWN PROTECTION', tone: 'info' }
+          : null;
       case 'crushWarning': {
         if (!this.rumble || this.closingAnnounced) return null;
         this.closingAnnounced = true;
@@ -484,12 +482,19 @@ export class MatchController {
     if (nowMs - this.endedAtMs > RESULTS_DELAY_MS && useGameStore.getState().screen === 'playing') {
       const result = state.match.result;
       const me = state.players[LOCAL_ID]!;
+      // credited eliminations from the simulation (attribution.ts), never a separate count
       const summary: MatchSummary = {
-        eliminations: this.eliminations.slice(),
+        eliminations: state.players.map((p) => p.stats.kills),
+        deaths: me.stats.deaths,
+        assists: me.stats.assists,
         survivedSeconds: Math.round(
-          ((me.eliminatedTick ?? state.tick) - state.config.match.countdownTicks) / 60,
+          (isRespawnMode(state.settings.game)
+            ? state.match.playTicks
+            : (me.eliminatedTick ?? state.tick) - state.config.match.countdownTicks) / 60,
         ),
-        localWon: result?.kind === 'win' && result.winnerId === LOCAL_ID,
+        localWon:
+          (result?.kind === 'win' && result.winnerId === LOCAL_ID) ||
+          (result?.kind === 'teamWin' && isTeamMode(state.settings.game) && me.team === result.team),
       };
       this.audio.stopMusic();
       this.skipping = false;
@@ -552,7 +557,8 @@ export class MatchController {
    */
   skipToResults(): void {
     const state = this.state;
-    if (!state || this.director) return;
+    // respawn modes: being down is temporary and the clock decides; there is nothing to skip to
+    if (!state || this.director || this.respawnMode) return;
     if (this.rumble && state.match.phase !== 'ended') {
       this.skipping = true;
       this.paused = false;

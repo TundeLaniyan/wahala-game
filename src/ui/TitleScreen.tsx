@@ -1,33 +1,45 @@
-import { CHARACTERS, CHARACTER_IDS, DIFFICULTIES, VEHICLE_DEFS } from '../sim';
+import { CHARACTERS, CHARACTER_IDS, VEHICLE_DEFS } from '../sim';
 import type { CharacterId } from '../sim';
 import { portraitUrl } from '../assets/portraits';
 import { commands } from '../app/session';
 import { useGameStore } from '../app/store';
 import type { GameSettings } from '../app/settings';
-import { ArenaPicker } from './ArenaPicker';
+import { setupSummary } from '../app/setupSummary';
 import { AudioSettingsPanel } from './AudioSettings';
+import { Choice, ClassicSetup, RumbleSetup } from './MatchSetup';
+import './TitleScreen.css';
 
-function Choice<T extends string | number | boolean>(props: {
-  value: T;
-  current: T;
-  label: string;
-  onPick: (v: T) => void;
-  disabled?: boolean;
-  testId?: string;
-}) {
+/** The two games: City Rumble (flagship, default) and Classic Battle (the quick four-player match). */
+function GameSwitch({ s, set }: { s: GameSettings; set: (p: Partial<GameSettings>) => void }) {
+  const pick = (play: GameSettings['play']) => () => {
+    commands.click();
+    set({ play });
+  };
   return (
-    <button
-      type="button"
-      className={`chip${props.value === props.current ? ' on' : ''}`}
-      disabled={props.disabled}
-      data-testid={props.testId}
-      onClick={() => {
-        commands.click();
-        props.onPick(props.value);
-      }}
-    >
-      {props.label}
-    </button>
+    <div className="game-switch" role="group" aria-label="Game">
+      <button
+        type="button"
+        className={`gs gs-rumble${s.play === 'rumble' ? ' on' : ''}`}
+        data-testid="play-rumble"
+        aria-pressed={s.play === 'rumble'}
+        onClick={pick('rumble')}
+      >
+        <b>
+          City <em>Rumble</em>
+        </b>
+        <small>Up to 32 fighters · Survival · Deathmatch · Teams</small>
+      </button>
+      <button
+        type="button"
+        className={`gs gs-classic${s.play === 'classic' ? ' on' : ''}`}
+        data-testid="play-classic"
+        aria-pressed={s.play === 'classic'}
+        onClick={pick('classic')}
+      >
+        <b>Classic Battle</b>
+        <small>Quick 2-4 player match</small>
+      </button>
+    </div>
   );
 }
 
@@ -37,17 +49,19 @@ export function TitleScreen() {
   useGameStore((st) => st.portraitsVersion);
   const set = (p: Partial<GameSettings>) => commands.updateSettings(p);
   const busy = loading !== null && loading.done < loading.total;
-  // City Rumble has its own competitor count (on its card) and always closes in: no 2-4 or rules choice
   const rumble = s.play === 'rumble';
 
   return (
-    <div className="title" data-testid="title-screen">
+    <div className={`title ${rumble ? 'title-rumble' : 'title-classic'}`} data-testid="title-screen">
       <header className="brand">
         <h1 className="logo">
           <b>WAHALA!</b>
           <span>GENERATOR WARS · LAGOS</span>
         </h1>
-        <div className="tag">Outsmart your rivals in the bus park. Mind your own fire.</div>
+        <GameSwitch s={s} set={set} />
+        <p className="setup-summary" data-testid="setup-summary">
+          {setupSummary(s)}
+        </p>
         <div className="cta">
           <button
             type="button"
@@ -56,7 +70,7 @@ export function TitleScreen() {
             disabled={busy}
             onClick={() => commands.start()}
           >
-            {busy ? 'Loading…' : 'Play'}
+            {busy ? 'Loading…' : rumble ? 'Play Rumble' : 'Play'}
           </button>
           <button
             type="button"
@@ -68,10 +82,12 @@ export function TitleScreen() {
             How to play
           </button>
         </div>
-        <div className="footnote">Everything runs in your browser · no accounts · no servers</div>
+        <div className="footnote">Offline · you against AI bots · no accounts · no servers</div>
       </header>
 
-      <main className="menu">
+      <main className="menu" data-testid="menu">
+        {rumble ? <RumbleSetup settings={s} set={set} /> : <ClassicSetup settings={s} set={set} />}
+
         <section className="panel">
           <h3>Choose your fighter</h3>
           <div className="chars">
@@ -101,53 +117,7 @@ export function TitleScreen() {
         </section>
 
         <section className="panel">
-          <h3>Arena</h3>
-          <ArenaPicker settings={s} set={set} />
-        </section>
-
-        <section className="panel">
-          <h3>Match</h3>
-          {!rumble && (
-            <div className="row" style={{ marginBottom: 8 }}>
-              <span>Competitors</span>
-              {([2, 3, 4] as const).map((n) => (
-                <Choice
-                  key={n}
-                  value={n}
-                  current={s.competitors}
-                  label={`${n}`}
-                  onPick={(v) => set({ competitors: v })}
-                  testId={`players-${n}`}
-                />
-              ))}
-            </div>
-          )}
-          <div className="row" style={{ marginBottom: rumble ? 0 : 8 }}>
-            <span>Bots</span>
-            {DIFFICULTIES.map((d) => (
-              <Choice
-                key={d}
-                value={d}
-                current={s.difficulty}
-                label={d}
-                onPick={(v) => set({ difficulty: v })}
-                testId={`diff-${d}`}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section className="panel">
-          <h3>Extras &amp; settings</h3>
-          <div className="row" style={{ marginBottom: 8 }}>
-            <Choice
-              value={true}
-              current={s.crowdThrows}
-              label={`Crowd throws ${s.crowdThrows ? 'ON' : 'OFF'}`}
-              onPick={() => set({ crowdThrows: !s.crowdThrows })}
-              testId="toggle-crowd"
-            />
-          </div>
+          <h3>Settings</h3>
           <div className="row" style={{ marginBottom: 8 }}>
             <span>Graphics</span>
             {(['auto', 'low', 'medium', 'high'] as const).map((q) => (
