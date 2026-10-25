@@ -40,7 +40,7 @@ export const RUMBLE_APAPA_LOOK: ArenaLook = {
   envIntensity: 0.55,
   exposure: 1.12,
   floorTint: 0xc0bcb4,
-  pillarTint: 0xd0ccc4,
+  pillarTint: 0xf2eee6,
   softTint: 0xccc4b8,
   slab: 0x76746e,
   street: 0x3e3e3c,

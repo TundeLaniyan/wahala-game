@@ -123,12 +123,13 @@ def _container(name: str, seed: int, lower: int, upper: int, codes: tuple[str, s
     return m.export({"main": atlas.mat(normal_strength=0.5, **Q)})
 
 
+# paints are bright and saturated on purpose: the game's grit pass (render/grit.ts) desaturates and grimes them
 def pillar_container_a() -> dict:
-    return _container("prop_pillar_container_a", 701, 0x8a3a26, 0x2e5a7a, ("LGSU 204118 2", "ECWU 551730 4"))
+    return _container("prop_pillar_container_a", 701, 0xc4482a, 0x2c74b8, ("LGSU 204118 2", "ECWU 551730 4"))
 
 
 def pillar_container_b() -> dict:
-    return _container("prop_pillar_container_b", 731, 0x3e6a48, 0xb8b09a, ("APPU 730294 1", "TCLU 118462 0"))
+    return _container("prop_pillar_container_b", 731, 0x3c9a52, 0xe4d8b8, ("APPU 730294 1", "TCLU 118462 0"))
 
 
 # ============================================================================ Lekki Nightworks: scaffold bay
