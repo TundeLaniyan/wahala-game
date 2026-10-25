@@ -2,6 +2,29 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## V2 gameplay revolution and City Rumble V2 (branch `claude/wahala-gameplay-rumble-v2`, from `184837d`)
+
+Founder brief of 2026-10-25, built by one lead plus six parallel workstreams in separate worktrees (contracts:
+`V2_CONTRACTS.md`; rules: `GAMEPLAY_V2.md`; stages: `RUMBLE_STAGES_V2.md`; decisions: `DECISIONS.md` section W).
+All six streams are merged. Verified on the integrated branch (commands below); nothing here is claimed untested.
+
+| Stream | Delivered | Main tests |
+| --- | --- | --- |
+| A two-button combat | A = generator, B tap = context special (melee, else one-press vehicle), B hold (400 ms) = Remote; no third button on any device; contact abilities (kick / punch / disarm / pass) by walking into a generator, mutually exclusive; Carry out of normal play; auto vehicle route chooser (reaction-aware, all three vehicles, Keke turn); one-tile corner-turn buffer; bounded camera shake (off on touch / reduced motion, crush adds none, touch targets use the un-shaken camera) | `v2-contact`, `v2-special`, `v2-auto-vehicle`, `input-two-buttons`, `render/shake`, `e2e/mobile.spec.ts` |
+| B AI and Classic | Seven distinct bot levels (Rookie default, mercy rule so Rookie never traps); per-bot levels in Classic, preset + mixed roster in Rumble; mandatory Wahala Crush (final tile at 0:00, ties, stage hazards cannot disable it); Mobile Test Arena 13x9 and 15x9 (experimental section); sideline spectators throwing generators (cooldown, telegraphed landing, never credited) | `ai/ordering-*`, `ai/rookie`, `crush-mandatory`, `spectators`, `ui/difficultyPicker` |
+| C economy and blast | Rumble power from credited eliminations only (crates empty), reward ladder per life streak with raised Rumble caps; deterministic credit (flame, chain starter, vehicle, melee-into-hazard within 3 s, never spectators/teammates, one credit per death); Square Blast 3x3 / 5x5 / 7x7 (union with the plus, never through concrete) in sim, AI and visuals; Armour + Okada layers (one layer per tick); progression badge | `economy`, `economy-ai`, `square-blast`, `protection` |
+| D modes and menu | City Rumble-first main menu with Classic Battle; Survival, Deathmatch (5 / 10 min, respawns, spawn protection, K/D/A ranking + tie-breaks), Team Rumble (Green v White up to 16 v 16, team sides, friendly-fire setting, team leaderboard); one simulation with rulesets; results screens | `modes`, `modes-bots`, `app/modes-app`, `e2e/rumble.spec.ts` |
+| E Training Academy | 20 interactive lessons on the real simulation (objective, short demo, attempt, event-based completion, tips, unlimited retries, skip), progress saved locally, floor markers, mobile text in the HUD rail | `tests/tutorial/*`, `e2e/tutorial.spec.ts` |
+| F five Rumble stages | Oshodi Rush Hour (default), Lagos Island Markets, Ojuelegba Underbridge, Apapa Docks (45x31), Lekki Nightworks: distinct layouts, hazards (traffic, falling goods, container drops, trucks, debris, machinery), surroundings and looks; one signature track each | `rumble-stages`, `audio/assets` |
+| Lead | Contracts, 11 new voice clips (30 total), five Rumble tracks (160 kbps), V2 event sounds, voice zones for the new stages, integration fixes, e2e updates, deployment switch | `audio/*`, all suites |
+
+Verification on the integrated branch (container: 4 cores, software WebGL):
+- `npx tsc --noEmit`, `npx eslint .`: clean. `npx vitest run`: 82 files, 1159 tests pass.
+- Playwright: every spec run on the integrated build in both projects (desktop 1280x720, phone 844x390), after the
+  spec updates for the V2 menu; all pass (the nine-arena sweep needed its retry once, after a preview-server start
+  failure).
+- Not measured: frame rates on physical phones (only software-rendered Chromium was available).
+
 ## Summary
 
 A complete, browser-only, single-player-versus-AI WAHALA! prototype: one human against 1-3 bots in a 3D Danfo Bus Park (plus an optional trap arena), with all approved Phase 1 mechanics. No backend, accounts or database. It deploys as static files to GitHub Pages under `/wahala-game/`.
