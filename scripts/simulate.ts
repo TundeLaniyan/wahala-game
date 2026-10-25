@@ -3,9 +3,10 @@
  * difficulty: win share, draws, self-inflicted deaths, average survival and decision cost.
  *
  *   npm run simulate -- --matches 200 --players 4
- *   npm run simulate -- --duel easy medium --matches 100 --players 2
- *   npm run simulate -- --matches 50 --seed 1000 --mode crush --crowd
- *   npm run simulate -- --arena cityRumble --players 32 --matches 10 --difficulty medium
+ *   npm run simulate -- --duel expert standard --matches 100 --players 2 --seed 1000
+ *   npm run simulate -- --matches 50 --seed 1000 --mode classic --crowd
+ *   npm run simulate -- --arena cityRumble --players 32 --matches 10 --difficulty standard
+ *   npm run simulate -- --arena mobileTest13x9 --players 4 --matches 50
  *
  * Options
  *   --matches N        number of matches (default 100)
@@ -14,7 +15,7 @@
  *   --duel A B         only these two difficulties, alternating seats (A, B, A, B)
  *   --difficulty D     every seat plays D (like the app, where all bots share one difficulty)
  *   --arena ID         arena id (default danfoBusPark)
- *   --mode classic|crush
+ *   --mode crush|classic  Wahala Crush (default: every real standard match has it) or no closing
  *   --crowd            enable spectator throws
  *   --no-hazards       switch the arena's stage hazards off (they are on in real matches)
  *   --verbose          print one line per match
@@ -50,7 +51,7 @@ function parseArgs(argv: string[]): Options {
     duel: null,
     difficulty: null,
     arena: undefined,
-    mode: 'classic',
+    mode: 'crush',
     crowd: false,
     hazards: true,
     verbose: false,
@@ -83,7 +84,7 @@ function parseArgs(argv: string[]): Options {
         o.arena = argv[++i];
         break;
       case '--mode':
-        o.mode = argv[++i] === 'crush' ? 'crush' : 'classic';
+        o.mode = argv[++i] === 'classic' ? 'classic' : 'crush';
         break;
       case '--crowd':
         o.crowd = true;
@@ -125,9 +126,8 @@ function lineup(o: Options, i: number): Difficulty[] {
     ];
     base = pairs[i % 3]!;
   } else {
-    base = Array.from({ length: o.players }, (_, k) =>
-      k < 3 ? DIFFICULTIES[k]! : DIFFICULTIES[(k + Math.floor(i / 3)) % 3]!,
-    );
+    // every level shows up: seats step two levels apart and the window slides one level per match
+    base = Array.from({ length: o.players }, (_, k) => DIFFICULTIES[(2 * k + i) % DIFFICULTIES.length]!);
   }
   const rot = i % o.players;
   return base.map((_, k) => base[(k + rot) % base.length]!);

@@ -284,8 +284,6 @@ export const PROFILES: Readonly<Record<Difficulty, AiProfile>> = {
   beginner: level('beginner', 'easy', EASY, {
     mercy: true,
     mercyDelay: 18,
-    hesitate: 0.1,
-    hesitateTicks: 45,
     vehicleUse: 0.4,
   }),
   casual: level('casual', 'medium', MEDIUM, {

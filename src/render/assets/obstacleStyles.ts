@@ -61,6 +61,9 @@ const style = (
 /** All ten arenas (three exist today; the rest are pre-filled so they render in character on day one). */
 export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
   danfoBusPark: DEFAULT_STYLE,
+  // V2 experimental Mobile Test Arena: Danfo Bus Park's obstacles (same presentation)
+  mobileTest13x9: DEFAULT_STYLE,
+  mobileTest15x9: DEFAULT_STYLE,
   balogunMarket: style({
     note: 'plastered block stall piers with rusted corrugated collars; produce sacks, sachet water, drink crates',
     pillars: ['prop_pillar_market'],
