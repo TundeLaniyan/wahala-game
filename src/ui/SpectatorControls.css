@@ -43,10 +43,16 @@
 @media (max-height: 480px) {
   /* phones in landscape: keep the bar clear of the stick (left) and the THROW button (right) */
   .sideline-bar {
+    /* under the match clock (13% top band), clear of the stick (left) and the THROW button (right) */
     bottom: auto;
-    top: max(6px, env(safe-area-inset-top));
+    top: calc(max(6px, env(safe-area-inset-top)) + 13vh);
     max-width: 52vw;
-    padding: 4px 8px;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+  }
+  .sideline-bar .btn.small {
+    padding: 3px 10px;
+    font-size: 0.75rem;
   }
   .sideline-hint {
     display: none;

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createBot } from '../src/ai';
+import { MatchController } from '../src/app/MatchController';
+import type { InputPort, RendererPort } from '../src/app/ports';
+import { DEFAULT_GAME_SETTINGS } from '../src/app/settings';
+import { buildHud } from '../src/app/hud';
 import {
   canThrow,
   createGame,
@@ -10,7 +14,7 @@ import {
   tick,
   Tile,
 } from '../src/sim';
-import type { GameState, Intents, SimEvent } from '../src/sim';
+import type { GameState, Intent, Intents, SimEvent } from '../src/sim';
 import { addGenerator, addPickup, addSoft, eventsOf, put, run, sandbox } from './helpers';
 
 /** Eliminates player `id` where it stands with a one-tick generator (owned by itself). */
@@ -281,5 +285,54 @@ describe('sideline spectators: bots', () => {
   it('a Rookie bot stays passive on the sideline', () => {
     const { throws } = botSpectator('rookie');
     expect(throws).toHaveLength(0);
+  });
+});
+
+describe('sideline spectators: the app', () => {
+  class Input implements InputPort {
+    navMode = false;
+    next: Intent = {};
+    pollDevices(): void {}
+    buildIntent(): Intent {
+      const i = this.next;
+      this.next = {};
+      return i;
+    }
+    takeVehiclePress(): boolean {
+      return false;
+    }
+    clear(): void {}
+  }
+  const renderer: RendererPort = {
+    loadGame: () => undefined,
+    handleEvents: () => undefined,
+    render: () => undefined,
+    pickEntry: () => null,
+    setQuality: () => undefined,
+  };
+
+  it('MatchController keeps feeding the eliminated local player\'s input to the sideline (classic match)', () => {
+    const input = new Input();
+    const c = new MatchController({ renderer, input, botFactory: () => ({ decide: () => ({}) }) });
+    c.start({ ...DEFAULT_GAME_SETTINGS, play: 'classic', competitors: 3 }, 4);
+    const s = c.state!;
+    while (s.match.phase === 'countdown') c.stepOnce();
+    put(s, 0, 6, 6);
+    s.tiles[6 * s.width + 6] = Tile.Empty;
+    addGenerator(s, { ownerId: 0, x: 6, y: 6, timer: 1, range: 1 });
+    for (let i = 0; i < 4; i++) c.stepOnce();
+    const sp = s.players[0]!.spectator!;
+    expect(sp).not.toBeNull();
+    const lane = spectatorLane(s);
+    const x0 = lane[sp.pos]!.x;
+    input.next = { move: 'right' };
+    c.stepOnce();
+    expect(lane[sp.pos]!.x).toBe(x0 + 1);
+    // the HUD knows the local player is on the sideline
+    expect(buildHud(s, 0, null).sideline).not.toBeNull();
+    sp.readyTick = 0;
+    input.next = { place: true };
+    expect(eventsOf(c.stepOnce(), 'spectatorThrow')).toHaveLength(1);
+    expect(buildHud(s, 0, null).sideline!.charge).toBeLessThan(0.05);
   });
 });

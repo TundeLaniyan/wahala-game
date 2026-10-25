@@ -301,8 +301,8 @@ export class MatchController {
         if (v) intent.vehicle = v;
       }
       intents[LOCAL_ID] = intent;
-    } else if (me && !me.isBot && !me.alive && me.spectator !== null) {
-      // V2 standard match: the eliminated local player walks the sideline lane and throws with A
+    } else if (me && !me.isBot && !me.alive && me.spectator !== null && !this.director) {
+      // V2 standard match (not tutorials): the eliminated local player walks the sideline lane and throws with A
       this.deps.input.navMode = false;
       intents[LOCAL_ID] = this.deps.input.buildIntent(state.tick, me.spectator.stepRemaining <= 1);
     } else if (me && !me.isBot && me.alive) {
