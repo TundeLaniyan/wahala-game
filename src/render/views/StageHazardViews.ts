@@ -30,6 +30,7 @@ import { VEHICLE_SCALE } from '../arenas/common';
 import { assets } from '../assets/library';
 import { softVariantFor, softVariants } from '../assets/props';
 import { createVehicleModel, spinWheel } from '../assets/vehicles';
+import { createHazardTruck } from './hazardTruck';
 import type { VehicleModel } from '../assets/vehicles';
 import type { Layout } from '../coords';
 import type { Effects } from '../fx/Effects';
@@ -356,6 +357,30 @@ interface SweepVisual {
   smokeAt: number;
 }
 
+type FallerKind = 'debris' | 'merch' | 'cargo';
+
+/** Faded shipping-container paints for the Apapa crane drops (no real line's livery). */
+const CARGO_COLORS = [0x8a3a26, 0x2e5a7a, 0x3e6a48, 0x9a8a5e, 0x6a6e72, 0xa8642e];
+
+/** Vertical ribs of a container wall (multiplied by the paint colour). */
+function ribTexture(): CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 16;
+  const g = c.getContext('2d')!;
+  for (let x = 0; x < 64; x += 8) {
+    g.fillStyle = '#ffffff';
+    g.fillRect(x, 0, 5, 16);
+    g.fillStyle = '#9a9a9a';
+    g.fillRect(x + 5, 0, 3, 16);
+  }
+  const t = new CanvasTexture(c);
+  t.wrapS = t.wrapT = RepeatWrapping;
+  t.repeat.set(3, 1);
+  t.colorSpace = SRGBColorSpace;
+  return t;
+}
+
 interface Faller {
   obj: Object3D;
   cable: Mesh | null;
@@ -418,6 +443,10 @@ export class StageHazardViews implements View {
   private readonly slabGeo = new BoxGeometry(0.78, 0.26, 0.62);
   private readonly beamPieceGeo = new BoxGeometry(0.95, 0.12, 0.14);
   private readonly cableGeo = new CylinderGeometry(0.018, 0.018, 1, 5).translate(0, 0.5, 0);
+  // Apapa: a short container (fits the 2 x 2 crane zone) and the crane's spreader frame
+  private readonly containerGeo = new BoxGeometry(1.86, 1.3, 1.72);
+  private readonly spreaderGeo = new BoxGeometry(2.0, 0.12, 0.3);
+  private readonly cargoMats = new Map<number, MeshStandardMaterial>();
   private readonly concreteMat = new MeshStandardMaterial({ color: 0x8d877d, roughness: 0.95 });
   private readonly steelMat = new MeshStandardMaterial({ color: 0x9a3a1c, roughness: 0.6, metalness: 0.5 });
   private readonly cableMat = new MeshBasicMaterial({ color: 0x1a1a1a });
@@ -523,6 +552,8 @@ export class StageHazardViews implements View {
       this.slabGeo,
       this.beamPieceGeo,
       this.cableGeo,
+      this.containerGeo,
+      this.spreaderGeo,
       this.concreteMat,
       this.steelMat,
       this.cableMat,
@@ -599,6 +630,18 @@ export class StageHazardViews implements View {
     this.owned.push(sheet, waterMat, foamGeo, foamMat);
 
     this.buildFloorFurniture(state);
+  }
+
+  private ribs: CanvasTexture | null = null;
+
+  private cargoMat(color: number): MeshStandardMaterial {
+    let m = this.cargoMats.get(color);
+    if (!m) {
+      this.ribs ??= this.own(ribTexture());
+      m = this.own(new MeshStandardMaterial({ color, map: this.ribs, roughness: 0.72, metalness: 0.35 }));
+      this.cargoMats.set(color, m);
+    }
+    return m;
   }
 
   private own<T extends { dispose(): void }>(o: T): T {
@@ -898,7 +941,7 @@ export class StageHazardViews implements View {
 
   private createSweep(ev: StageEvent): SweepVisual {
     const kind = sweepVehicleKind(ev.style, ev.id);
-    const model = createVehicleModel(kind);
+    const model = ev.style === 'truck' ? createHazardTruck(ev.id) : createVehicleModel(kind);
     // headlights and a pool of light on the road ahead (shared materials, children of the model)
     const box = new Box3().setFromObject(model.root);
     const front = box.max.x;
@@ -1074,8 +1117,19 @@ export class StageHazardViews implements View {
         this.arrow(x - v.dx * off, z - v.dy * off, d, 0.8, 0.5);
       }
       this.put(this.shadows, x, z, 0, 1, 0.35 + 0.85 * k);
-      this.updateFaller(ev.id * 64 + j, x, z, k, time, 'debris', state);
+      // Lagos Island: bales and cartons tip off the shopfront; Apapa: one container for the whole zone
+      if (ev.style === 'goods') this.updateFaller(ev.id * 64 + j, x, z, k, time, 'merch', state);
+      else if (ev.style !== 'cargo') this.updateFaller(ev.id * 64 + j, x, z, k, time, 'debris', state);
     });
+    if (ev.style === 'cargo' && warning && ev.tiles.length > 0) {
+      let cx = 0;
+      let cz = 0;
+      for (const i of ev.tiles) {
+        cx += this.wx(i % w);
+        cz += this.wz(Math.floor(i / w));
+      }
+      this.updateFaller(ev.id * 64, cx / ev.tiles.length, cz / ev.tiles.length, k, time, 'cargo', state);
+    }
   }
 
   private drawPower(ev: StageEvent, ctx: FrameContext): void {
@@ -1218,7 +1272,7 @@ export class StageHazardViews implements View {
     z: number,
     k: number,
     time: number,
-    kind: 'debris' | 'merch',
+    kind: FallerKind,
     state: GameState,
   ): void {
     let f = this.fallers.get(key);
@@ -1228,7 +1282,7 @@ export class StageHazardViews implements View {
     }
     f.seen = this.frame;
     // hangs (and sways) on the crane / tips off the stall, then falls under gravity to land exactly on time
-    const release = kind === 'debris' ? 0.55 : 0.45;
+    const release = kind === 'debris' ? 0.55 : kind === 'cargo' ? 0.62 : 0.45;
     const sway = k < release ? Math.sin(time * 1.6 + key) * 0.06 : 0;
     const t = k < release ? 0 : (k - release) / (1 - release);
     const y = f.height * (1 - t * t);
@@ -1245,17 +1299,41 @@ export class StageHazardViews implements View {
     }
     if (f.shaft) {
       f.shaft.position.set(x, 0.02, z);
-      f.shaft.scale.set(1.1 - 0.35 * k, 1, 1.1 - 0.35 * k);
+      const wide = kind === 'cargo' ? 2.1 : 1;
+      f.shaft.scale.set((1.1 - 0.35 * k) * wide, 1, (1.1 - 0.35 * k) * wide);
       this.shaftMat.opacity = 0.3 + 0.45 * k * (0.75 + 0.25 * Math.sin(time * (10 + 20 * k)));
       this.beaconMat.opacity = Math.sin(time * 14) > 0 ? 1 : 0.15;
     }
   }
 
-  private createFaller(kind: 'debris' | 'merch', x: number, z: number, state: GameState): Faller {
+  private createFaller(kind: FallerKind, x: number, z: number, state: GameState): Faller {
     let obj: Object3D;
     let cable: Mesh | null = null;
     let shaft: Mesh | null = null;
-    if (kind === 'debris') {
+    if (kind === 'cargo') {
+      // a short box container on the crane's spreader: ribbed steel in a faded shipping-line colour
+      const g = new Group();
+      const paint = CARGO_COLORS[Math.floor(Math.abs(x * 7 + z * 13)) % CARGO_COLORS.length]!;
+      const box = new Mesh(this.containerGeo, this.cargoMat(paint));
+      box.position.y = 0.66;
+      box.castShadow = true;
+      g.add(box);
+      const spreader = new Mesh(this.spreaderGeo, this.steelMat);
+      spreader.position.y = 1.38;
+      g.add(spreader);
+      const beacon = new Sprite(this.beaconMat);
+      beacon.position.set(0, 1.55, 0);
+      beacon.scale.setScalar(0.6);
+      beacon.renderOrder = 28;
+      g.add(beacon);
+      obj = g;
+      cable = new Mesh(this.cableGeo, this.cableMat);
+      this.solids.add(cable);
+      shaft = new Mesh(this.shaftGeo, this.shaftMat);
+      shaft.scale.set(2, 1, 2);
+      shaft.renderOrder = 23;
+      this.group.add(shaft);
+    } else if (kind === 'debris') {
       const g = new Group();
       const slab = new Mesh(this.slabGeo, this.concreteMat);
       slab.position.y = 0.13;
@@ -1306,7 +1384,7 @@ export class StageHazardViews implements View {
       shaft,
       x,
       y: 0,
-      height: kind === 'debris' ? 5.5 : 4.5,
+      height: kind === 'debris' ? 5.5 : kind === 'cargo' ? 7 : 4.5,
       seen: this.frame,
       spin: Math.random() * Math.PI,
     };
@@ -1578,6 +1656,15 @@ export class StageHazardViews implements View {
               this.fx.shockwave(this.wx(i % w), this.wz(Math.floor(i / w)), 1.1, 0xd8c8a8);
             }
             this.fx.shake = Math.min(1, this.fx.shake + 0.28);
+          } else if (ev.style === 'cargo' || ev.style === 'goods') {
+            const heavy = ev.style === 'cargo';
+            for (const i of ev.tiles) {
+              this.fx.blockDebris(i % w, Math.floor(i / w), heavy ? 'drums' : 'cartons');
+              this.fx.dust(i % w, Math.floor(i / w), heavy ? 14 : 8, heavy ? 1.1 : 0.8);
+            }
+            const c = ev.tiles[Math.floor(ev.tiles.length / 2)]!;
+            this.fx.shockwave(this.wx(c % w), this.wz(Math.floor(c / w)), heavy ? 2.0 : 1.0, 0xd8c8a8);
+            this.fx.shake = Math.min(1, this.fx.shake + (heavy ? 0.32 : 0.1));
           } else if (ev.style === 'power') {
             let cx = 0;
             let cz = 0;

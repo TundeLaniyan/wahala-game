@@ -32,11 +32,16 @@ const APPROVED: Record<string, string> = {
   pixabay_406552: 'https://pixabay.com/music/afrobeat-pause-406552/',
   pixabay_540950: 'https://pixabay.com/music/afrobeat-afro-beat-afrobeat-instrumental-540950/',
   pixabay_504898: 'https://pixabay.com/music/electronic-afrobeat-afro-beat-504898/',
-  pixabay_601035: 'Pixabay track 601035 by dmsoundworks (founder download; exact page URL not reachable from the build environment)',
-  pixabay_554543: 'Pixabay track 554543 by rediskasound (founder download; exact page URL not reachable from the build environment)',
-  pixabay_455231: 'Pixabay track 455231 by ruslansikunov (founder download; exact page URL not reachable from the build environment)',
-  pixabay_515507: 'Pixabay track 515507 by solarflex (founder download; exact page URL not reachable from the build environment)',
-  pixabay_623364: 'Pixabay track 623364 by sonican (founder download; exact page URL not reachable from the build environment)',
+  pixabay_601035:
+    'Pixabay track 601035 by dmsoundworks (founder download; exact page URL not reachable from the build environment)',
+  pixabay_554543:
+    'Pixabay track 554543 by rediskasound (founder download; exact page URL not reachable from the build environment)',
+  pixabay_455231:
+    'Pixabay track 455231 by ruslansikunov (founder download; exact page URL not reachable from the build environment)',
+  pixabay_515507:
+    'Pixabay track 515507 by solarflex (founder download; exact page URL not reachable from the build environment)',
+  pixabay_623364:
+    'Pixabay track 623364 by sonican (founder download; exact page URL not reachable from the build environment)',
 };
 /** Names of the rejected generated tracks; none may ever come back under any form. */
 const REJECTED_NAMES =
@@ -118,6 +123,38 @@ describe('rejected generated audio stays disabled', () => {
 
   it('the generators of the rejected audio are not in the repository', () => {
     expect(() => statSync(join(ROOT, 'tools/audiogen'))).toThrow();
+  });
+});
+
+describe('City Rumble V2 stage music (founder assignment, 2026-10-25)', () => {
+  /** One new licensed track per V2 stage; each always plays its own song there. */
+  const STAGE_SONG: Record<string, string> = {
+    rumbleOshodi: 'pixabay_601035', // dmsoundworks - Afrobeat Type Beat 2026 (Reach)
+    rumbleLagosIsland: 'pixabay_554543', // rediskasound - Afro Beat Groovy Instrumental
+    rumbleOjuelegba: 'pixabay_515507', // solarflex - Afrobeat (Afro Beat)
+    rumbleApapa: 'pixabay_455231', // ruslansikunov - Where the Sun Is Born
+    rumbleLekkiNight: 'pixabay_623364', // sonican - Afrobeat Groove
+  };
+
+  it('every V2 stage names its own track as playlist, start and signature, and the file is real audio', () => {
+    const raw = json<{
+      playlists: { arenas: Record<string, { tracks: string[]; start: string; signature: string }> };
+    }>('music/manifest.json');
+    const { manifest } = parseMusicManifest(raw);
+    for (const [arena, id] of Object.entries(STAGE_SONG)) {
+      expect(raw.playlists.arenas[arena], arena).toEqual({ tracks: [id], start: id, signature: id });
+      // the parser keeps it (the track entry exists and is licensed)
+      expect(manifest.playlists.arenas[arena]?.signature, arena).toBe(id);
+      expect(APPROVED[id]).toBeDefined();
+      const b = readFileSync(join(AUDIO, 'music', `${id}.mp3`));
+      expect(b.length).toBeGreaterThan(1_000_000);
+    }
+    // five different songs, none shared with another arena's signature
+    expect(new Set(Object.values(STAGE_SONG)).size).toBe(5);
+    const others = Object.entries(raw.playlists.arenas)
+      .filter(([a]) => !(a in STAGE_SONG))
+      .map(([, p]) => p.signature);
+    for (const id of Object.values(STAGE_SONG)) expect(others).not.toContain(id);
   });
 });
 

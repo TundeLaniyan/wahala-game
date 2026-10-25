@@ -19,7 +19,8 @@ import type { SoftVariant } from '../assets/props';
 import type { Layout } from '../coords';
 import { floorMaterial } from '../assets/floor';
 import { contactShadowTexture } from '../textures';
-import { obstacleStyle } from '../assets/obstacleStyles';
+import { obstacleStyle, pillarIndexFor, resolvePillars } from '../assets/obstacleStyles';
+import { assets } from '../assets/library';
 import type { ObstacleStyle } from '../assets/obstacleStyles';
 import { MAX_HIDE, occludingTiles } from '../assets/occlusionFade';
 import { arenaFloorMaps } from '../arenas/floors';
@@ -63,6 +64,8 @@ export class ArenaView implements View {
   /** current occlusion fade per tile (eased towards its target every frame) */
   private readonly hideOf = new Map<number, number>();
   private readonly pillars: InstanceSet[];
+  /** Model ids behind `pillars` (empty = the procedural pillar). */
+  private readonly pillarIds: string[];
   private readonly variants = softVariants();
   private readonly soft = new Map<SoftVariant, InstanceSet>();
   private readonly cache: number[];
@@ -113,6 +116,7 @@ export class ArenaView implements View {
     this.softScale = new Vector3(...style.softScale);
     const owned = this.ownedMaterials;
     const modelled = modelledPillars(state.arenaId);
+    this.pillarIds = modelled ? resolvePillars(style, assets.loadedIds('prop_pillar_')) : [];
     const fade = { fade: true };
     if (modelled) {
       this.pillars = modelled.map(
@@ -237,7 +241,9 @@ export class ArenaView implements View {
   }
 
   private pillarVariant(x: number, y: number): number {
-    return (x * 5 + y * 3 + ((x ^ y) & 3)) % this.pillars.length;
+    if (this.pillarIds.length !== this.pillars.length)
+      return (x * 5 + y * 3 + ((x ^ y) & 3)) % this.pillars.length;
+    return pillarIndexFor(this.style, this.pillarIds, x, y);
   }
 
   private placePillar(i: number, x: number, y: number, lift: number): void {

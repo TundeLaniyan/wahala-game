@@ -3,6 +3,7 @@ import {
   ARENAS,
   CITY_RUMBLE_ID,
   EXPERIMENTAL_ARENA_IDS,
+  RUMBLE_ARENA_IDS,
   STANDARD_ARENA_IDS,
   Tile,
   createGame,
@@ -39,7 +40,7 @@ function reachable(a: ArenaDef, from: { x: number; y: number }): Set<string> {
 }
 
 describe('arena registry', () => {
-  it('has nine standard arenas plus City Rumble, in menu order', () => {
+  it('has nine standard arenas plus the six City Rumble stages, in menu order', () => {
     expect(STANDARD_ARENA_IDS).toEqual([
       'danfoBusPark',
       'balogunMarket',
@@ -52,9 +53,18 @@ describe('arena registry', () => {
       'thirdMainland',
     ]);
     expect(getArena(CITY_RUMBLE_ID).kind).toBe('rumble');
+    // V2: the five Lagos stages first, the original district last (tests/rumble-stages.test.ts)
+    expect(RUMBLE_ARENA_IDS).toEqual([
+      'rumbleOshodi',
+      'rumbleLagosIsland',
+      'rumbleOjuelegba',
+      'rumbleApapa',
+      'rumbleLekkiNight',
+      CITY_RUMBLE_ID,
+    ]);
     // plus the V2 experimental Mobile Test Arena (two sizes), kept out of the official nine
     expect(EXPERIMENTAL_ARENA_IDS).toEqual(['mobileTest13x9', 'mobileTest15x9']);
-    expect(ALL).toHaveLength(10 + EXPERIMENTAL_ARENA_IDS.length);
+    expect(ALL).toHaveLength(15 + EXPERIMENTAL_ARENA_IDS.length);
   });
 
   it('no two standard arenas share a layout and hazard set (not recolours of one grid)', () => {
@@ -95,7 +105,9 @@ describe.each(ALL.map((a) => [a.id, a] as const))('%s', (_id, a) => {
   });
 
   it('every open tile is connected to every spawn', () => {
-    const open = a.layout.flatMap((row, y) => [...row].map((c, x) => (c === '#' ? null : `${x},${y}`))).filter(Boolean);
+    const open = a.layout
+      .flatMap((row, y) => [...row].map((c, x) => (c === '#' ? null : `${x},${y}`)))
+      .filter(Boolean);
     const seen = reachable(a, a.spawns[0]!);
     expect(seen.size).toBe(open.length);
   });
@@ -122,7 +134,8 @@ describe.each(ALL.map((a) => [a.id, a] as const))('%s', (_id, a) => {
         { name: 'B', characterId: 'lekkiBoy', isBot: false },
       ],
     });
-    for (const kind of ['danfo', 'taxi', 'keke'] as VehicleKind[]) expect(listEntries(s, kind).length).toBeGreaterThan(4);
+    for (const kind of ['danfo', 'taxi', 'keke'] as VehicleKind[])
+      expect(listEntries(s, kind).length).toBeGreaterThan(4);
   });
 
   it('road tiles never get a crate, and stage hazard data is on the board', () => {
@@ -160,10 +173,13 @@ describe.each(ALL.map((a) => [a.id, a] as const))('%s', (_id, a) => {
         expect(new Set(ends.map((t) => `${t}`)).size).toBe(ends.length);
         for (const t of ends) expect(at(a, t[0], t[1]), `manhole ${t}`).toBe('=');
       }
-      if (h.kind !== 'teleport' && (h.kind === 'sweep' || h.kind === 'strike')) expect(h.warnSec).toBeGreaterThanOrEqual(1.5);
+      if (h.kind !== 'teleport' && (h.kind === 'sweep' || h.kind === 'strike'))
+        expect(h.warnSec).toBeGreaterThanOrEqual(1.5);
     }
     for (const rows of [a.floorTraps ?? [], ...a.endgameTraps])
-      rows.forEach((row, y) => [...row].forEach((c, x) => c !== '.' && expect(at(a, x, y), `trap ${x},${y}`).not.toBe('#')));
+      rows.forEach((row, y) =>
+        [...row].forEach((c, x) => c !== '.' && expect(at(a, x, y), `trap ${x},${y}`).not.toBe('#')),
+      );
   });
 });
 
@@ -176,7 +192,8 @@ describe('City Rumble board', () => {
       const s = a.spawns.slice(0, n);
       let m = Infinity;
       for (let i = 0; i < s.length; i++)
-        for (let j = i + 1; j < s.length; j++) m = Math.min(m, Math.abs(s[i]!.x - s[j]!.x) + Math.abs(s[i]!.y - s[j]!.y));
+        for (let j = i + 1; j < s.length; j++)
+          m = Math.min(m, Math.abs(s[i]!.x - s[j]!.x) + Math.abs(s[i]!.y - s[j]!.y));
       return m;
     };
     expect(minGap(8)).toBeGreaterThanOrEqual(12);

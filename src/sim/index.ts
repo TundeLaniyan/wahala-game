@@ -22,6 +22,7 @@ export {
   DEFAULT_ARENA_ID,
   EXPERIMENTAL_ARENA_IDS,
   MOBILE_TEST_ARENA_ID,
+  RUMBLE_ARENA_IDS,
   STANDARD_ARENA_IDS,
   getArena,
 } from './arenas';

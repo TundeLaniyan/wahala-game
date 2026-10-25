@@ -1,0 +1,175 @@
+/* City Rumble stage picker: a swipeable strip of stage cards (phone first, scales up on desktop). */
+.rumble-stage-picker {
+  min-width: 0;
+}
+.rsp-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  touch-action: pan-x pan-y;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 198, 26, 0.5) transparent;
+}
+.rsp-strip::-webkit-scrollbar {
+  height: 6px;
+}
+.rsp-strip::-webkit-scrollbar-thumb {
+  background: rgba(255, 198, 26, 0.45);
+  border-radius: 3px;
+}
+.rsp-card {
+  appearance: none;
+  flex: 0 0 clamp(200px, 24vw, 260px);
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  text-align: left;
+  color: var(--text, #f4ead6);
+  background: rgba(10, 10, 12, 0.74);
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    transform 0.12s,
+    box-shadow 0.12s;
+}
+.rsp-card:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.rsp-card:focus-visible {
+  outline: 3px solid var(--gold, #ffc61a);
+  outline-offset: 2px;
+}
+.rsp-card.on {
+  border-color: var(--gold, #ffc61a);
+  box-shadow: 0 0 16px rgba(255, 198, 26, 0.45);
+  transform: translateY(-2px);
+}
+.rsp-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  flex: none;
+}
+.rsp-preview img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.rsp-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  text-align: center;
+  font-family: var(--display, sans-serif);
+  font-size: 1.2rem;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  text-transform: uppercase;
+}
+.rsp-light {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  max-width: calc(100% - 12px);
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(8, 8, 10, 0.78);
+  color: #f6e3b4;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rsp-body {
+  padding: 7px 9px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rsp-name {
+  font-family: var(--display, sans-serif);
+  font-weight: 400;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1.05;
+}
+.rsp-card.on .rsp-name {
+  color: var(--gold, #ffc61a);
+}
+.rsp-facts {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 198, 26, 0.85);
+}
+.rsp-tag {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  color: var(--muted, #c9bca4);
+}
+.rsp-hazards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.rsp-hazards li {
+  position: relative;
+  padding-left: 13px;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  color: #f1e6cf;
+}
+.rsp-hazards li::before {
+  content: '';
+  position: absolute;
+  left: 1px;
+  top: 0.42em;
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  background: #ff7a1a;
+}
+/* phones: the card is most of the screen width so one stage reads at a time; hazards stay readable */
+@media (max-width: 640px), (max-height: 480px) {
+  .rsp-card {
+    flex-basis: min(78vw, 300px);
+  }
+  .rsp-hazards li:nth-child(n + 4) {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rsp-card {
+    transition: none;
+  }
+  .rsp-card.on {
+    transform: none;
+  }
+}

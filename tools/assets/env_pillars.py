@@ -259,3 +259,7 @@ PILLARS = {"prop_pillar_a": pillar_a, "prop_pillar_b": pillar_b, "prop_pillar_c"
 from env_pillars_city import CITY_PILLARS  # noqa: E402  (per-arena families)
 
 PILLARS.update(CITY_PILLARS)
+
+from env_pillars_v2 import V2_PILLARS  # noqa: E402  (City Rumble V2 stages)
+
+PILLARS.update(V2_PILLARS)

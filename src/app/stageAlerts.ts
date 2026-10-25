@@ -81,6 +81,12 @@ export function stageAlertFor(state: GameState, ev: StageEvent, me: Player): Sta
         return { ...base, level: 'warn', text: warning ? 'POWER SURGE' : 'POWER LIVE' };
       }
       // debris (and any other strike): only the tile(s) under it matter
+      if (ev.style === 'cargo') {
+        if (onIt) return { ...base, level: 'danger', text: 'CONTAINER COMING DOWN - MOVE!' };
+        return warning ? { ...base, level: 'info', text: 'CRANE LOWERING A CONTAINER' } : null;
+      }
+      if (ev.style === 'goods' && onIt)
+        return { ...base, level: 'danger', text: 'GOODS FALLING ON YOU - MOVE!' };
       if (onIt) return { ...base, level: 'danger', text: 'DEBRIS ON YOU - MOVE!' };
       return null;
     }

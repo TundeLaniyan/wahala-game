@@ -288,6 +288,41 @@
         ],
         "start": "pixabay_491432",
         "signature": null
+      },
+      "rumbleOshodi": {
+        "tracks": [
+          "pixabay_601035"
+        ],
+        "start": "pixabay_601035",
+        "signature": "pixabay_601035"
+      },
+      "rumbleLagosIsland": {
+        "tracks": [
+          "pixabay_554543"
+        ],
+        "start": "pixabay_554543",
+        "signature": "pixabay_554543"
+      },
+      "rumbleOjuelegba": {
+        "tracks": [
+          "pixabay_515507"
+        ],
+        "start": "pixabay_515507",
+        "signature": "pixabay_515507"
+      },
+      "rumbleApapa": {
+        "tracks": [
+          "pixabay_455231"
+        ],
+        "start": "pixabay_455231",
+        "signature": "pixabay_455231"
+      },
+      "rumbleLekkiNight": {
+        "tracks": [
+          "pixabay_623364"
+        ],
+        "start": "pixabay_623364",
+        "signature": "pixabay_623364"
       }
     }
   },
