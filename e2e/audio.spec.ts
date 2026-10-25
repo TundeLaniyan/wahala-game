@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, startMatch, chooseArena } from './helpers';
+import { chooseArena, mutate, open, startMatch } from './helpers';
 
 /** Records every AudioContext and every started buffer source so the test can see what really played. */
 const TRACK = `
@@ -256,6 +256,9 @@ test.describe('the approved soundtrack in a real browser', () => {
     await page.getByTestId('audio-music').click(); // the first gesture unlocks audio
     await chooseArena(page, 'danfoBusPark');
     await startMatch(page, { competitors: 2 });
+    // the opponent is idle (&nobots): with the (mandatory) Wahala Crush it would be crushed before the final
+    // 30 s, ending the match. This test is about the music, so the closing walls are taken out of this state.
+    await mutate(page, 's.crush = null;');
     await expect.poll(async () => (await musicState(page)).available.length, { timeout: 30_000 }).toBe(14);
     // the first bus-park match opens with the bus park's starting track, and it really plays
     await expect.poll(async () => (await musicState(page)).track, { timeout: 30_000 }).toBe('pixabay_504898');
