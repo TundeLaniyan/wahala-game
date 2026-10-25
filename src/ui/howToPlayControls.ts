@@ -1,19 +1,23 @@
 /**
- * The Training Academy controls legend (V2: the stick plus exactly two buttons, A and B). Keyboard keys and
- * gamepad buttons are read from the real binding tables in `src/input`, so the legend and the lesson hints
- * cannot drift from what the game actually listens to. Touch entries describe the two on-screen buttons.
+ * The How to Play controls legend (V2 two-button scheme). Keyboard keys and gamepad buttons are read
+ * from the real binding tables in `src/input`, so the legend cannot drift from what the game actually
+ * listens to. Touch entries describe the on-screen controls exactly as `TouchControls` draws them.
  *
- * Action names looked up: `place` (A), `special` (B tap) and `detonate` (B hold). If the input layer binds
- * no key to one of them yet, the row says so instead of teaching a wrong key.
+ * Every device has the same two buttons: A = Generator, B = Special (tap: melee an adjacent rival, else
+ * call your vehicle; hold: Remote Detonator). Kick / punch / disarm / pass are contact abilities: walk
+ * into a generator. The Training Academy (src/tutorial) names the rows it shows by `ControlId`.
  */
-import { ACTION_BUTTONS, ACTION_KEYS, MOVE_KEYS, NAV_KEYS } from '../input';
-import type { NavCommand } from '../input';
+import { ACTION_BUTTONS, ACTION_KEYS, MOVE_KEYS, NAV_KEYS, SPECIAL_HOLD_MS } from '../input';
+import type { ActionName, NavCommand } from '../input';
 import type { ControlId } from '../tutorial';
 
 export type LegendDevice = 'keyboard' | 'gamepad' | 'touch';
 
+/** Legend ids: the tutorial's control ids plus the V2 rows (`special`, `contact`). */
+export type LegendId = ControlId | 'special' | 'contact';
+
 export interface LegendRow {
-  id: ControlId;
+  id: LegendId;
   label: string;
   keyboard: string[];
   gamepad: string[];
@@ -39,10 +43,9 @@ export function keyName(code: string): string {
 /** Standard gamepad mapping names. */
 const PAD_NAMES: Record<number, string> = { 0: 'A', 1: 'B', 2: 'X', 3: 'Y', 4: 'LB', 5: 'RB', 9: 'Start' };
 
-/** Keys bound to an input action (by name, so new V2 actions are found as soon as they are bound). */
-export const keysFor = (action: string): string[] =>
+export const keysFor = (action: ActionName): string[] =>
   Object.entries(ACTION_KEYS)
-    .filter(([, a]) => (a as string) === action)
+    .filter(([, a]) => a === action)
     .map(([code]) => keyName(code));
 
 export const navKeysFor = (command: NavCommand): string[] =>
@@ -50,9 +53,9 @@ export const navKeysFor = (command: NavCommand): string[] =>
     .filter(([, c]) => c === command)
     .map(([code]) => keyName(code));
 
-export const padFor = (action: string): string[] =>
+export const padFor = (action: ActionName): string[] =>
   Object.entries(ACTION_BUTTONS)
-    .filter(([, a]) => (a as string) === action)
+    .filter(([, a]) => a === action)
     .map(([i]) => PAD_NAMES[Number(i)] ?? `Button ${i}`);
 
 /** The arrow keys and the letter keys, each in their usual on-keyboard order (← ↑ ↓ →, W A S D). */
@@ -66,7 +69,37 @@ const moveKeys = (): string[] => {
   return [pick('Arrow', ['left', 'up', 'down', 'right']), pick('Key', ['up', 'left', 'down', 'right'])];
 };
 
-export function legendRows(): Record<ControlId, LegendRow> {
+const hold = (keys: string[]): string[] => keys.map((k) => `hold ${k}`);
+const HOLD_SECONDS = (SPECIAL_HOLD_MS / 1000).toFixed(1);
+
+/** The order the V2 legend lists its rows in (How to Play shows the ones a chapter asks for). */
+export const LEGEND_ORDER: readonly LegendId[] = [
+  'move',
+  'place',
+  'special',
+  'detonate',
+  'contact',
+  'pause',
+  'camera',
+];
+
+export function legendRows(): Record<LegendId, LegendRow> {
+  const special: LegendRow = {
+    id: 'special',
+    label: 'B: Special (melee / vehicle)',
+    keyboard: keysFor('special'),
+    gamepad: padFor('special'),
+    touch:
+      'The B button above GENERATOR. Next to a rival it strikes with your skill (PUSH / DAZE / SHOVE); holding a voucher it calls your vehicle. Its label shows what it will do.',
+  };
+  const contact: LegendRow = {
+    id: 'contact',
+    label: 'Kick / punch / disarm / pass',
+    keyboard: ['walk into a generator'],
+    gamepad: ['walk into a generator'],
+    touch:
+      'No button: walk into a generator with Boots (kick), Gloves (punch), Kill Switch (disarm) or Generator Pass (walk through). The icon by your items shows which one you carry.',
+  };
   return {
     move: {
       id: 'move',
@@ -74,30 +107,24 @@ export function legendRows(): Record<ControlId, LegendRow> {
       keyboard: moveKeys(),
       gamepad: ['D-pad', 'left stick'],
       touch:
-        'Floating stick: put your thumb down anywhere in the lower-left area of the screen and slide it up, down, left or right. Keep holding to keep walking; lift to stop.',
+        'Floating thumbstick: put your thumb down anywhere in the lower-left of the screen and slide it up, down, left or right. Each slide is one tile; keep holding to keep walking; lift to stop.',
     },
     place: {
       id: 'place',
-      label: 'A: place a generator',
+      label: 'A: Drop a generator',
       keyboard: keysFor('place'),
       gamepad: padFor('place'),
-      touch: 'Button A (bottom right): drops a generator on your tile.',
+      touch: 'The big GENERATOR button (A), bottom right.',
     },
-    special: {
-      id: 'special',
-      label: 'B tap: hit / vehicle',
-      keyboard: keysFor('special'),
-      gamepad: padFor('special'),
-      touch:
-        'Button B, tap: hits a rival next to you; with nobody next to you and a Vehicle Voucher, calls in your vehicle.',
-    },
+    special,
     detonate: {
       id: 'detonate',
-      label: 'B hold: remote detonate',
-      keyboard: keysFor('detonate'),
-      gamepad: padFor('detonate'),
-      touch: 'Button B, press and hold: sets off your remote generators (with the Remote Starter).',
+      label: 'Hold B: set off your remote',
+      keyboard: hold(keysFor('special')),
+      gamepad: hold(padFor('special')),
+      touch: `Hold B for ${HOLD_SECONDS} s (the ring fills, it reads HOLD: BOOM!) once you have the Remote Starter and a remote generator down. A quick tap is still your special.`,
     },
+    contact,
     pause: {
       id: 'pause',
       label: 'Pause',

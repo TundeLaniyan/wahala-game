@@ -3,6 +3,7 @@
  * tools for emergencies and close-combat skills. Each decision is verified against the danger map
  * before it is allowed to change the movement intent.
  */
+import { meleeTarget } from '../sim';
 import type { Intent } from '../sim';
 import { dirIndex } from './board';
 import type { Ctx } from './context';
@@ -28,10 +29,10 @@ export class Tactics {
     const T = obs.tick;
     if (!me.alive) return;
 
-    // ---- vehicle voucher (entry mode owns the whole intent)
+    // ---- vehicle voucher: one press of B, the same special the human presses
     const safeHere = danger.safeFrom(world.myTile, T) && intent.move === undefined;
     vehicleTactic(c, this.vehicle, intent, safeHere);
-    if (intent.vehicle || me.entryUntil !== null) return;
+    if (intent.special || intent.vehicle || me.entryUntil !== null) return;
 
     // ---- remote detonation
     if (me.remote && T >= this.nextRemote) {
@@ -47,7 +48,7 @@ export class Tactics {
     // ---- generator tools when there is no way out
     if (hooks.planKind() === 'last' && T % 2 === 0 && tryEmergencyFix(c, intent)) hooks.requestRethink();
 
-    // ---- close combat
-    if (decideSkill(c)) intent.skill = true;
+    // ---- close combat: B, which is a melee press whenever an opponent is adjacent (never the vehicle)
+    if (decideSkill(c) && meleeTarget(obs, me)) intent.special = true;
   }
 }

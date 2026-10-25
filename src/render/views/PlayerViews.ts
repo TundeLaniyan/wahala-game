@@ -95,6 +95,10 @@ export class PlayerViews implements View {
       if (e.type === 'generatorPlaced') play(e.ownerId, 'Place');
       else if (e.type === 'generatorThrown') play(e.playerId, 'Throw');
       else if (e.type === 'skillUsed') play(e.playerId, e.skill === 'daze' ? 'Kick' : 'Push');
+      // V2 contact abilities: a kick swings the leg, a disarm crouches over the generator (the punch
+      // already plays Throw through its generatorThrown event; walking through needs no gesture)
+      else if (e.type === 'contactUsed' && e.ability === 'kick') play(e.playerId, 'Kick');
+      else if (e.type === 'contactUsed' && e.ability === 'disarm') play(e.playerId, 'Place');
       else if (e.type === 'playerPushed') play(e.playerId, 'Stumble');
       else if (e.type === 'matchEnded') {
         const r = e.result;

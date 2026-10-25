@@ -15,14 +15,16 @@ function setup() {
   let current = pad([]);
   vi.stubGlobal('navigator', { getGamepads: () => [current] });
   const actions: ActionName[] = [];
+  const ups: string[] = [];
   const navs: NavCommand[] = [];
   const input = new GamepadInput({
     onMove: () => undefined,
     onAction: (a) => actions.push(a),
+    onActionUp: (a, src) => ups.push(`${a}:${src}`),
     onNav: (n) => navs.push(n),
     onUse: () => undefined,
   });
-  return { input, actions, navs, set: (p: Gamepad) => (current = p) };
+  return { input, actions, ups, navs, set: (p: Gamepad) => (current = p) };
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -46,22 +48,38 @@ describe('gamepad mapping', () => {
     expect(g.input.held).toBeNull();
   });
 
-  it('face buttons fire one-shot actions once per press', () => {
+  it('two buttons: A places, B (or X) is the special; the other buttons do nothing', () => {
     const g = setup();
-    g.set(pad([0, 5]));
+    g.set(pad([0, 3, 4, 5]));
     g.input.poll();
     g.input.poll();
-    expect(g.actions).toEqual(['place', 'detonate']);
-    g.set(pad([2, 3, 1, 4]));
+    expect(g.actions).toEqual(['place']);
+    g.set(pad([1]));
     g.input.poll();
-    expect(g.actions).toEqual(['place', 'detonate', 'skill', 'action', 'vehicle', 'disarm']);
+    g.set(pad([2]));
+    g.input.poll();
+    expect(g.actions).toEqual(['place', 'special', 'special']);
   });
 
-  it('B is the skill button and only steps back in menus; it never pauses', () => {
+  it('reports B releases (tap vs hold for the remote) and lets go of everything when the pad goes away', () => {
     const g = setup();
     g.set(pad([1]));
     g.input.poll();
-    expect(g.actions).toContain('skill');
+    g.set(pad([]));
+    g.input.poll();
+    expect(g.ups).toEqual(['special:pad1']);
+    g.set(pad([2]));
+    g.input.poll();
+    vi.stubGlobal('navigator', { getGamepads: () => [null] });
+    g.input.poll();
+    expect(g.ups).toEqual(['special:pad1', 'special:pad2']);
+  });
+
+  it('B is the special button and only steps back in menus; it never pauses', () => {
+    const g = setup();
+    g.set(pad([1]));
+    g.input.poll();
+    expect(g.actions).toContain('special');
     expect(g.navs).toContain('back');
     expect(g.navs).not.toContain('cancel');
     g.set(pad([9]));
@@ -81,6 +99,7 @@ describe('gamepad mapping', () => {
     const input = new GamepadInput({
       onMove: () => undefined,
       onAction: () => undefined,
+      onActionUp: () => undefined,
       onNav: () => undefined,
       onUse: () => undefined,
     });

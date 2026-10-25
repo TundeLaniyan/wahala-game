@@ -3,6 +3,7 @@ import { useGameStore } from '../app/store';
 import { AudioSettingsPanel } from './AudioSettings';
 import { RumbleResults } from './RumbleHud';
 import { resultText } from '../app/resultText';
+import { ShakeToggle } from './ShakeToggle';
 
 export function PauseOverlay() {
   const s = useGameStore((st) => st.settings);
@@ -17,6 +18,7 @@ export function PauseOverlay() {
           subtitles={s.subtitles}
           onSubtitlesChange={(subtitles) => commands.updateSettings({ subtitles })}
         />
+        <ShakeToggle />
         <div className="row">
           <button
             type="button"

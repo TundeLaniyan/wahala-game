@@ -47,6 +47,8 @@ export { chooseAutoVehicle, scoreRoute } from './systems/autoVehicle';
 export type { AutoVehicleChoice, AutoVehicleView } from './systems/autoVehicle';
 export { squareFootprint } from './systems/explosions';
 export { meleeTarget } from './systems/skills';
+export { moveWouldAct } from './systems/contact';
+export { autoRouteOptions, drivableStretch } from './systems/autoVehicle';
 export { canHarm, isOpponent, teammates } from './systems/queries';
 export { rankPlayers, teamStandings, timedResult } from './systems/match';
 export type { TeamStanding } from './systems/match';

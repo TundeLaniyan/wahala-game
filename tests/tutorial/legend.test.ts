@@ -1,8 +1,9 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ACTION_BUTTONS, ACTION_KEYS } from '../../src/input';
 import { LESSONS, TOUCH_WORDS, resolveHint } from '../../src/tutorial';
 import type { HintRows } from '../../src/tutorial';
-import { keyName, legendRows } from '../../src/ui/howToPlayControls';
+import { LEGEND_ORDER, keyName, keysFor, legendRows, navKeysFor, padFor } from '../../src/ui/howToPlayControls';
 
 const rows = legendRows();
 const bound = (name: string) =>
@@ -21,23 +22,38 @@ const LEGACY =
   /\b(CARRY|SKILL|DISARM button|VEHICLE button|BOOM|PUSH button|DAZE button|SHOVE button|GENERATOR button|action button)\b/i;
 
 describe('Academy controls legend (V2: the stick and two buttons)', () => {
-  it('keyboard and gamepad rows are read from the real binding tables, never hand-copied', () => {
+  it('teaches the real two-button keyboard and gamepad bindings, read from the binding tables', () => {
     expect(rows.place.keyboard).toEqual(bound('place'));
-    expect(rows.place.keyboard.length).toBeGreaterThan(0);
+    expect(rows.place.keyboard).toEqual(['Space', 'J']);
     expect(rows.special.keyboard).toEqual(bound('special'));
-    expect(rows.detonate.keyboard).toEqual(bound('detonate'));
+    expect(rows.special.keyboard).toEqual(['K', 'E', 'F', 'L', 'Left Shift']);
+    expect(rows.detonate.keyboard).toEqual(bound('special').map((k) => `hold ${k}`));
     expect(rows.move.keyboard).toEqual(['←↑↓→', 'WASD']);
-    const pad = (name: string) => Object.entries(ACTION_BUTTONS).filter(([, a]) => (a as string) === name);
-    expect(rows.place.gamepad).toHaveLength(pad('place').length);
-    expect(rows.special.gamepad).toHaveLength(pad('special').length);
+    expect(rows.pause.keyboard).toEqual(['P', 'Esc']);
+    expect(rows.place.gamepad).toEqual(['A']);
+    expect(rows.special.gamepad).toEqual(['B', 'X']);
+    expect(rows.detonate.gamepad).toEqual(['hold B', 'hold X']);
+    // contact abilities have no button on any device
+    expect(rows.contact.keyboard).toEqual(['walk into a generator']);
+    // exactly two actions exist on every device
+    expect(new Set(Object.values(ACTION_KEYS))).toEqual(new Set(['place', 'special']));
+    expect(new Set(Object.values(ACTION_BUTTONS))).toEqual(new Set(['place', 'special']));
+    expect(keysFor('place')).toEqual(['Space', 'J']);
+    expect(padFor('special')).toEqual(['B', 'X']);
+    expect(navKeysFor('confirm')).toEqual(['Enter', 'Space']);
   });
 
   it('the touch rows describe exactly the two on-screen buttons and the floating stick', () => {
-    expect(rows.place.touch).toMatch(/^Button A/);
-    expect(rows.special.touch).toMatch(/^Button B, tap/);
-    expect(rows.detonate.touch).toMatch(/^Button B, press and hold/);
-    expect(rows.move.touch).toMatch(/anywhere in the lower-left area/);
-    for (const r of Object.values(rows)) expect(r.touch, r.id).not.toMatch(LEGACY);
+    const touchSrc = readFileSync('src/ui/TouchControls.tsx', 'utf8');
+    expect(touchSrc).toContain('GENERATOR');
+    expect(touchSrc).toContain('HOLD: BOOM!');
+    expect(touchSrc).not.toMatch(/'CARRY'|'DROP'|'DISARM'/);
+    expect(rows.place.touch).toContain('GENERATOR');
+    expect(rows.detonate.touch).toContain('HOLD: BOOM!');
+    expect(rows.special.touch).toMatch(/PUSH \/ DAZE \/ SHOVE/);
+    expect(rows.contact.touch).toMatch(/No button/);
+    expect(rows.move.touch).toMatch(/anywhere in the lower-left/);
+    for (const id of LEGEND_ORDER) expect(rows[id].touch.length).toBeGreaterThan(10);
   });
 
   it('every control a lesson asks for has a legend row', () => {

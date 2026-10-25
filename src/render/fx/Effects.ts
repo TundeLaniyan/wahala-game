@@ -30,6 +30,7 @@ import type { FragmentShape } from './Debris';
 import { ParticleSystem } from './Particles';
 import type { QualityProfile } from '../quality';
 import { SQUARE_SURGE, squareFrameTexture } from '../views/squareBlastLook';
+import { ShakeBudget } from '../shake';
 
 interface Transient {
   obj: Object3D;
@@ -133,7 +134,8 @@ function chunkTexture(): Texture {
 /** One-off visual effects triggered by simulation events. Never influences gameplay. */
 export class Effects {
   readonly group = new Group();
-  shake = 0;
+  /** Bounded camera shake (render/shake.ts): per-frame budget, cap, fast decay, off on touch by default. */
+  readonly shaker = new ShakeBudget();
   private readonly fire: ParticleSystem;
   private readonly smoke: ParticleSystem;
   private readonly chunks: ParticleSystem;
@@ -180,8 +182,20 @@ export class Effects {
     return Math.max(1, Math.round(count * this.density));
   }
 
+  /**
+   * Shake trauma (0..cap). Views still write `fx.shake = Math.min(1, fx.shake + x)`: that is read as a
+   * request to add `x`, which the budget clips (a frame can add only so much, the total is capped).
+   */
+  get shake(): number {
+    return this.shaker.trauma;
+  }
+
+  set shake(value: number) {
+    this.shaker.add(value - this.shaker.trauma);
+  }
+
   update(dt: number, t: number): void {
-    this.shake = Math.max(0, this.shake - dt * 1.6);
+    this.shaker.update(dt);
     this.fire.update(dt);
     this.smoke.update(dt);
     this.chunks.update(dt);

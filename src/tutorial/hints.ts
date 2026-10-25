@@ -24,8 +24,12 @@ export const TOUCH_WORDS = {
   move: 'Put your thumb down anywhere in the lower-left area of the screen and slide it.',
 } as const;
 
+/** At most two keys are named ("K or E"), so an instruction stays one short line. */
 const keys = (list: readonly string[] | undefined): string =>
-  (list ?? []).filter((k) => !k.startsWith('or ')).join(' or ');
+  (list ?? [])
+    .filter((k) => !k.startsWith('or '))
+    .slice(0, 2)
+    .join(' or ');
 
 function word(token: 'A' | 'B' | 'holdB' | 'move', rows: HintRows, device: HintDevice): string {
   if (device === 'touch') return TOUCH_WORDS[token];
@@ -40,7 +44,8 @@ function word(token: 'A' | 'B' | 'holdB' | 'move', rows: HintRows, device: HintD
       return device === 'keyboard' ? (k ? `${k} (button B)` : 'button B') : k ? `pad ${k}` : 'button B';
     }
     case 'holdB': {
-      const k = keys(pick('detonate')) || keys(pick('special'));
+      // V2: the Remote Detonator is HOLDING the B key itself
+      const k = keys(pick('special'));
       return k ? `${k} (hold button B)` : 'button B (hold)';
     }
     case 'move': {

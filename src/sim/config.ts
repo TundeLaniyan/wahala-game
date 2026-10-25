@@ -147,6 +147,11 @@ export interface GameConfig {
   special: {
     /** Melee reaches an opponent on any adjacent tile (facing tile checked first). */
     meleeAnyAdjacent: boolean;
+    /**
+     * One-press vehicle (autoVehicle.ts): how long an opponent is assumed to need to react to the route
+     * warning before stepping (ticks). A route only counts as a trap if escaping takes longer than its warning.
+     */
+    autoVehicleReactionTicks: number;
   };
   /** V2: elimination credit (systems/attribution.ts). */
   credit: {
@@ -340,6 +345,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   },
   special: {
     meleeAnyAdjacent: true,
+    autoVehicleReactionTicks: ticks(0.35),
   },
   credit: {
     // decision WC4: long enough for a shove into fire / traffic / the closing city, short enough that an
