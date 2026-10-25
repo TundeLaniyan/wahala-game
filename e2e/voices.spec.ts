@@ -152,7 +152,8 @@ test.describe('Nigerian voice clips', () => {
     await open(page, '&nobots&noattract');
     await page.getByTestId('home-settings').click(); // first gesture: audio unlocks, manifests load
     await page.waitForTimeout(1500);
-    expect(requested).toEqual([]); // the title screen loads no clip
+    expect(requested).toEqual([]); // the menu loads no clip
+    await page.getByTestId('settings-close').click();
 
     const decoded = await page.evaluate(
       async (files) => {
