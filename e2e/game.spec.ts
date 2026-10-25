@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, holdKey, mutate, open as openTitle, startMatch, stepTicks } from './helpers';
+import { getState, holdKey, mutate, open as openTitle, startMatch, stepTicks, chooseArena } from './helpers';
 
 /**
  * V2 menus default to City Rumble; these specs drive Classic Battle (the 15 x 11 arenas), so the saved
@@ -184,7 +184,7 @@ test.describe('keyboard play', () => {
     await page.screenshot({ path: `e2e-shots/${info.project.name}-blast.png` });
   });
 
-  test('an own generator can eliminate the owner, shows the spectator banner, and results appear', async ({
+  test('an own generator can eliminate the owner, who becomes a sideline spectator, and results appear', async ({
     page,
   }, info) => {
     await open(page, '&nobots');
@@ -193,7 +193,8 @@ test.describe('keyboard play', () => {
     await stepTicks(page, 200);
     const st = await getState(page);
     expect(st.players[0]!.alive).toBe(false);
-    await expect(page.getByTestId('spectate')).toBeVisible();
+    // V2 Classic: the eliminated player walks the sideline and can throw generators in (bar under the clock)
+    await expect(page.getByTestId('sideline')).toBeVisible();
     await page.screenshot({ path: `e2e-shots/${info.project.name}-spectate.png` });
     await page.getByTestId('skip-results').click();
     await expect(page.getByTestId('results')).toBeVisible();
@@ -415,8 +416,8 @@ test.describe('optional modes', () => {
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
     await open(page, '&nobots');
-    await page.getByTestId('mode-crush').click();
-    await page.getByTestId('arena-lekkiRoadworks').click();
+    // V2: Wahala Crush is mandatory in Classic (there is no rules choice any more)
+    await chooseArena(page, 'lekkiRoadworks');
     await page.getByTestId('toggle-crowd').click();
     await startMatch(page, { competitors: 4, waitPlaying: false });
     await stepTicks(page, 160);

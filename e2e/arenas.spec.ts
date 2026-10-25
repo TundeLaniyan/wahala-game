@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, stepTicks } from './helpers';
+import { open, stepTicks, chooseArena } from './helpers';
 
 const STANDARD = [
   'danfoBusPark',
@@ -89,7 +89,7 @@ test.describe('arena picker and stage hazards', () => {
     const errors = watchErrors(page);
     await open(page, '&nobots&noattract');
     for (const id of STANDARD) {
-      await page.getByTestId(`arena-${id}`).click();
+      await chooseArena(page, id);
       await expect(page.getByTestId(`arena-${id}`)).toHaveAttribute('aria-pressed', 'true');
       await page.getByTestId('players-2').click();
       await page.getByTestId('start-button').click();
@@ -109,7 +109,7 @@ test.describe('arena picker and stage hazards', () => {
   test('a stage hazard warning is in the state and on screen as an alert', async ({ page }, info) => {
     const errors = watchErrors(page);
     await open(page, '&nobots&noattract');
-    await page.getByTestId('arena-oshodiInterchange').click();
+    await chooseArena(page, 'oshodiInterchange');
     await page.getByTestId('players-2').click();
     await page.getByTestId('start-button').click();
     await expect(page.getByTestId('hud')).toBeVisible();
@@ -133,6 +133,7 @@ test.describe('arena picker and stage hazards', () => {
 
   test('Surulere Power Yard shows its rule banner during the countdown', async ({ page }, info) => {
     await open(page, '&nobots&noattract');
+    await page.getByTestId('play-classic').click();
     const card = page.getByTestId('arena-surulerePowerYard');
     await expect(card).toContainText('POWER YARD RULE');
     await card.click();
@@ -147,14 +148,17 @@ test.describe('arena picker and stage hazards', () => {
     await expect(page.getByTestId('rule-banner')).toHaveCount(0);
   });
 
-  test('City Rumble card hides the 2-4 and rules choices, picks a size and starts', async ({ page }) => {
+  test('City Rumble (the default game) hides the 2-4 choice, picks a stage and a size and starts', async ({
+    page,
+  }) => {
     const errors = watchErrors(page);
     await open(page, '&nobots&noattract');
+    await page.getByTestId('play-classic').click();
     await expect(page.getByTestId('players-2')).toBeVisible();
     await expect(page.getByTestId('traps-note')).toContainText('0:30');
-    await page.getByTestId('arena-cityRumble').click();
+    await page.getByTestId('play-rumble').click();
     await expect(page.getByTestId('players-2')).toHaveCount(0);
-    await expect(page.getByTestId('mode-classic')).toHaveCount(0);
+    await page.getByTestId('rumble-stage-cityRumble').click();
     await page.getByTestId('rumble-8').click();
     await expect(page.getByTestId('rumble-8')).toHaveClass(/on/);
     await page.getByTestId('start-button').click();
@@ -176,7 +180,7 @@ test.describe('arena picker and stage hazards', () => {
     }));
     expect(scroll.doc).toBeLessThanOrEqual(0);
     expect(scroll.wide).toBeLessThanOrEqual(0);
-    await page.getByTestId('arena-thirdMainland').click();
+    await chooseArena(page, 'thirdMainland');
     await expect(page.getByTestId('arena-thirdMainland')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByTestId('start-button')).toBeInViewport();
     await page.screenshot({ path: `e2e-shots/${info.project.name}-arena-picker.png` });

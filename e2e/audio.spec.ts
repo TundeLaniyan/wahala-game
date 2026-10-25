@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, startMatch } from './helpers';
+import { open, startMatch, chooseArena } from './helpers';
 
 /** Records every AudioContext and every started buffer source so the test can see what really played. */
 const TRACK = `
@@ -161,7 +161,9 @@ test.describe('audio settings, persistence and music start', () => {
     // only the approved playlist files and the approved voice clips listed in recorded.json may be
     // requested (probed, streamed or fetched); never anything generated or rejected
     const musicReqs = audioFiles.filter((u) => /\/audio\/music\/[A-Za-z0-9_-]+\.mp3(\?|$)/.test(u));
-    const voiceReqs = audioFiles.filter((u) => /\/audio\/voices\/recorded\/[A-Za-z0-9_-]+\.mp3(\?|$)/.test(u));
+    const voiceReqs = audioFiles.filter((u) =>
+      /\/audio\/voices\/recorded\/[A-Za-z0-9_-]+\.mp3(\?|$)/.test(u),
+    );
     expect(audioFiles.filter((u) => !musicReqs.includes(u) && !voiceReqs.includes(u))).toEqual([]);
     expect(
       musicReqs.map((u) => /([A-Za-z0-9_-]+\.mp3)(\?|$)/.exec(u)![1]).filter((f) => !APPROVED_FILES.has(f!)),
@@ -217,7 +219,7 @@ const musicState = (page: Page): Promise<MusicState> =>
   page.evaluate(() => (window as unknown as { __WAHALA__: { music: () => MusicState } }).__WAHALA__.music());
 
 test.describe('the approved soundtrack in a real browser', () => {
-  test('all nine supplied tracks fetch and decode as real audio', async ({ page }) => {
+  test('every supplied track (fourteen) fetches and decodes as real audio', async ({ page }) => {
     await open(page, '&nobots');
     const decoded = await page.evaluate(
       async (files) => {
@@ -241,7 +243,7 @@ test.describe('the approved soundtrack in a real browser', () => {
     expect(ok.map((d) => d.file).sort()).toEqual(
       [...APPROVED_FILES].filter((f) => f !== 'pixabay_496406.mp3').sort(),
     );
-    for (const d of ok) expect(d.seconds, d.file).toBeGreaterThan(90);
+    for (const d of ok) expect(d.seconds, d.file).toBeGreaterThan(75); // the shortest (sonican, Lekki Nightworks) is 80 s
     // track #7 is not supplied yet: its slot stays empty
     expect(decoded.find((d) => d.file === 'pixabay_496406.mp3')?.ok).toBe(false);
   });
@@ -252,9 +254,9 @@ test.describe('the approved soundtrack in a real browser', () => {
     test.setTimeout(420_000); // three matches on software WebGL
     await open(page, '&nobots');
     await page.getByTestId('audio-music').click(); // the first gesture unlocks audio
-    await page.getByTestId('arena-danfoBusPark').click();
+    await chooseArena(page, 'danfoBusPark');
     await startMatch(page, { competitors: 2 });
-    await expect.poll(async () => (await musicState(page)).available.length, { timeout: 30_000 }).toBe(9);
+    await expect.poll(async () => (await musicState(page)).available.length, { timeout: 30_000 }).toBe(14);
     // the first bus-park match opens with the bus park's starting track, and it really plays
     await expect.poll(async () => (await musicState(page)).track, { timeout: 30_000 }).toBe('pixabay_504898');
     await page.evaluate(() => {
@@ -305,14 +307,14 @@ test.describe('the approved soundtrack in a real browser', () => {
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
     await page.getByTestId('quit').click();
     await expect(page.getByTestId('title-screen')).toBeVisible();
-    await page.getByTestId('arena-balogunMarket').click();
+    await chooseArena(page, 'balogunMarket');
     await startMatch(page, { competitors: 2 });
     await expect.poll(async () => (await musicState(page)).track, { timeout: 30_000 }).toBe('pixabay_573648');
     expect((await musicState(page)).rate).toBe(1);
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
     await page.getByTestId('quit').click();
-    await page.getByTestId('arena-danfoBusPark').click();
+    await chooseArena(page, 'danfoBusPark');
     await startMatch(page, { competitors: 2 });
     await expect.poll(async () => (await musicState(page)).history.length, { timeout: 30_000 }).toBe(3);
     const third = await musicState(page);

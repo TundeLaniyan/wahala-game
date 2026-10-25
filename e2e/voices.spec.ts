@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, mutate, open, startMatch, stepTicks, thumb } from './helpers';
+import { getState, mutate, open, startMatch, stepTicks, thumb, chooseArena } from './helpers';
 
 /** The founder-approved voice clips and the catalogue they belong to. */
 const RECORDED = (
@@ -71,7 +71,7 @@ function watchErrors(page: Page): string[] {
 
 async function startOn(page: Page, arena: string, query = '&nobots&noattract'): Promise<void> {
   await open(page, query);
-  await page.getByTestId(`arena-${arena}`).click();
+  await chooseArena(page, arena);
   await startMatch(page, { competitors: 2 });
   await sceneLoaded(page);
 }
@@ -166,7 +166,7 @@ test.describe('Nigerian voice clips', () => {
     }
     requested.length = 0;
 
-    await page.getByTestId('arena-danfoBusPark').click();
+    await chooseArena(page, 'danfoBusPark');
     await startMatch(page, { competitors: 2 });
     await sceneLoaded(page);
     const park = (await voices(page))!;
@@ -266,7 +266,7 @@ test.describe('Nigerian voice clips', () => {
   }, info) => {
     await open(page, '&nobots&noattract');
     await expect(page.getByTestId('toggle-subtitles')).toHaveAttribute('data-mode', 'off');
-    await page.getByTestId('arena-danfoBusPark').click();
+    await chooseArena(page, 'danfoBusPark');
     await startMatch(page, { competitors: 4 });
     await sceneLoaded(page);
     expect(await preview(page, 'ON_PLAYER_ELIMINATED')).toBe(true);
@@ -341,7 +341,7 @@ test.describe('Nigerian voice clips', () => {
   }, info) => {
     if (info.project.use.isMobile) await page.setViewportSize({ width: 568, height: 320 });
     await open(page, '&nobots&noattract');
-    await page.getByTestId('arena-surulerePowerYard').click();
+    await chooseArena(page, 'surulerePowerYard');
     await page.getByTestId('start-button').click();
     const banner = page.getByTestId('rule-banner');
     await expect(banner).toBeVisible();

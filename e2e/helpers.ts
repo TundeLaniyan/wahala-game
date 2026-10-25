@@ -31,6 +31,13 @@ export async function open(page: Page, query = ''): Promise<void> {
  * Starts a match from the title screen. V2: the menu opens on City Rumble, so this picks Classic Battle
  * first (the 2-4 player game these specs were written for) unless `game: 'rumble'` keeps the Rumble setup.
  */
+/** V2 menu: open Classic Battle (the menu starts on City Rumble), then pick a Classic arena card. */
+export async function chooseArena(page: Page, id: string): Promise<void> {
+  const classic = page.getByTestId('play-classic');
+  if ((await classic.count()) > 0) await classic.click();
+  await page.getByTestId(`arena-${id}`).click();
+}
+
 export async function startMatch(
   page: Page,
   opts: {
