@@ -144,7 +144,8 @@ test.describe('City Rumble: Deathmatch respawns', () => {
     // the clock decides: jump to the last second and read the ranking
     await mutate(page, `s.match.playTicks = s.config.match.durationTicks - 2;`);
     await stepTicks(page, 4);
-    await expect(page.getByTestId('results')).toBeVisible({ timeout: 30_000 });
+    // the results screen follows 2.2 s of real frames after the end; CI runners draw slowly
+    await expect(page.getByTestId('results')).toBeVisible({ timeout: 90_000 });
     await expect(page.getByTestId('rumble-results')).toHaveAttribute('data-mode', 'deathmatch');
     await expect(page.getByTestId('ranking')).toBeVisible();
     await expect(page.getByTestId('my-deaths')).toHaveText('1');

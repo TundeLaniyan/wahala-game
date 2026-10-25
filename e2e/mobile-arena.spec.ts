@@ -60,14 +60,17 @@ async function measure(page: Page, arenaId: string, cols: number, rows: number):
 }
 
 test('the Mobile Test Arena gives bigger on-screen tiles than a 15 x 11 board on phones', async ({
-  page,
+  browser,
 }, info) => {
   test.skip(info.project.name !== 'mobile', 'phone viewports only');
   test.setTimeout(10 * 60_000);
-  await page.goto('./?debug&q=low&seed=7&nobots&noattract');
   const rows: string[] = [];
   for (const vp of VIEWPORTS) {
-    await page.setViewportSize(vp);
+    // a fresh phone context per viewport: Play asks a touch device for fullscreen, and a fullscreen window
+    // cannot be resized (Browser.setWindowBounds fails on CI runners)
+    const context = await browser.newContext({ ...info.project.use, viewport: vp });
+    const page = await context.newPage();
+    await page.goto('./?debug&q=low&seed=7&nobots&noattract');
     const got: Record<string, Tiles> = {};
     for (const [id, cols, rowsN] of ARENAS) {
       got[id] = await measure(page, id, cols, rowsN);
@@ -76,6 +79,7 @@ test('the Mobile Test Arena gives bigger on-screen tiles than a 15 x 11 board on
         `${vp.width}x${vp.height} ${id}: near ${t.near.toFixed(1)} px, far ${t.far.toFixed(1)} px, row ${t.rowAvg.toFixed(1)} px`,
       );
     }
+    await context.close();
     expect(got.mobileTest13x9!.near).toBeGreaterThan(got.danfoBusPark!.near);
     expect(got.mobileTest15x9!.rowAvg).toBeGreaterThan(got.danfoBusPark!.rowAvg);
   }
