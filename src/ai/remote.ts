@@ -22,9 +22,11 @@ export function decideRemote(c: Ctx, standingOn: readonly number[]): boolean {
   const age = T - Math.min(...mine.map((g) => g.placedTick));
   const failsafe = Math.min(...mine.map((g) => g.timer));
 
+  const w = world.board.width;
+  // Team Rumble with friendly fire: never set off a blast that would catch a teammate
+  if (world.friendlyFire) for (const f of world.friends) if (c.tmp.hit(f.y * w + f.x, T + 1, T + flameLen)) return false;
   let kills = 0;
   let maybes = 0;
-  const w = world.board.width;
   for (const r of world.rivals) {
     if (!c.tmp.hit(r.y * w + r.x, T + 1, T + 1)) continue;
     if (r.mounted) {

@@ -51,4 +51,15 @@ export { canHarm, isOpponent, teammates } from './systems/queries';
 export { rankPlayers, teamStandings, timedResult } from './systems/match';
 export type { TeamStanding } from './systems/match';
 export { rewardsFor } from './systems/rewards';
-export { DEFAULT_TIMED_SECONDS, RUMBLE_MODES, isRespawnMode, isTeamMode, modeConfig } from './modes';
+export {
+  DEFAULT_TIMED_SECONDS,
+  RUMBLE_MODES,
+  TEAM_NAMES,
+  TIMED_MINUTES,
+  assignTeams,
+  isRespawnMode,
+  isTeamMode,
+  modeConfig,
+  teamHome,
+} from './modes';
+export { isSpawnProtected } from './systems/respawn';

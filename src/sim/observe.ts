@@ -11,6 +11,7 @@ import type {
   Flame,
   GameState,
   Generator,
+  MatchSettings,
   MatchState,
   Pickup,
   Player,
@@ -41,6 +42,8 @@ export interface Observation {
   /** Stage hazards: every warning and running event is public (it is on the floor for everyone). */
   readonly stage: Readonly<GameState['stage']>;
   readonly arenaId: string;
+  /** V2: the match rules (public: teams, friendly fire, timers). */
+  readonly settings: Readonly<MatchSettings>;
 }
 
 export function observe(state: GameState, selfId: number): Observation {
@@ -64,5 +67,6 @@ export function observe(state: GameState, selfId: number): Observation {
     endgameTraps: state.endgameTraps,
     stage: state.stage,
     arenaId: state.arenaId,
+    settings: state.settings,
   };
 }
