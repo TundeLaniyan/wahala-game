@@ -279,7 +279,6 @@ function build(ctx: SetContext): void {
       const pb = poles[b]!;
       wire(ctx, v3(pa.x, S + 3.45, pa.z + side * 0.8), v3(pb.x, S + 3.45, pb.z + side * 0.8), 0.8, cable, 0.02);
     }
-  wire(ctx, v3(-W / 2 - 4.2, S + 3.4, wz(15)), v3(-8, S + 5.4, north - 1.0), 0.9, cable, 0.02);
 
   // dust and exhaust hanging under the bridge and along the roads
   ctx.ambient.dust(0, north - 2.5, 7, 2);

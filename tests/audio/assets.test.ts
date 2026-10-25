@@ -121,6 +121,38 @@ describe('rejected generated audio stays disabled', () => {
   });
 });
 
+describe('City Rumble V2 stage music (founder assignment, 2026-10-25)', () => {
+  /** One new licensed track per V2 stage; each always plays its own song there. */
+  const STAGE_SONG: Record<string, string> = {
+    rumbleOshodi: 'pixabay_601035', // dmsoundworks - Afrobeat Type Beat 2026 (Reach)
+    rumbleLagosIsland: 'pixabay_554543', // rediskasound - Afro Beat Groovy Instrumental
+    rumbleOjuelegba: 'pixabay_515507', // solarflex - Afrobeat (Afro Beat)
+    rumbleApapa: 'pixabay_455231', // ruslansikunov - Where the Sun Is Born
+    rumbleLekkiNight: 'pixabay_623364', // sonican - Afrobeat Groove
+  };
+
+  it('every V2 stage names its own track as playlist, start and signature, and the file is real audio', () => {
+    const raw = json<{ playlists: { arenas: Record<string, { tracks: string[]; start: string; signature: string }> } }>(
+      'music/manifest.json',
+    );
+    const { manifest } = parseMusicManifest(raw);
+    for (const [arena, id] of Object.entries(STAGE_SONG)) {
+      expect(raw.playlists.arenas[arena], arena).toEqual({ tracks: [id], start: id, signature: id });
+      // the parser keeps it (the track entry exists and is licensed)
+      expect(manifest.playlists.arenas[arena]?.signature, arena).toBe(id);
+      expect(APPROVED[id]).toBeDefined();
+      const b = readFileSync(join(AUDIO, 'music', `${id}.mp3`));
+      expect(b.length).toBeGreaterThan(1_000_000);
+    }
+    // five different songs, none shared with another arena's signature
+    expect(new Set(Object.values(STAGE_SONG)).size).toBe(5);
+    const others = Object.entries(raw.playlists.arenas)
+      .filter(([a]) => !(a in STAGE_SONG))
+      .map(([, p]) => p.signature);
+    for (const id of Object.values(STAGE_SONG)) expect(others).not.toContain(id);
+  });
+});
+
 describe('voice clips (founder-approved Gemini TTS, 2026-10-24)', () => {
   const catalogue = parseVoiceCatalogue(json('voices/voices.json'));
   const recorded = parseRecorded(json('voices/recorded.json'));

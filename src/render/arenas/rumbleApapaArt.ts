@@ -292,7 +292,7 @@ function build(ctx: SetContext): void {
   // reefer plugs and cable along the east stacks, a straddle carrier parked by the haul road mouth
   const yellow = mat(0xc8a030, { roughness: 0.55, metalness: 0.3 });
   const sx = wx(32.5);
-  const sz = north - 2.2;
+  const sz = north - 3.4;
   for (const dx of [-1.6, 1.6]) for (const dz of [-1.8, 1.8]) ctx.statics.add(box(0.3, 5.2, 0.3, yellow, sx + dx, STREET + 2.6, sz + dz));
   for (const dx of [-1.6, 1.6]) ctx.statics.add(box(0.4, 0.5, 4.0, yellow, sx + dx, STREET + 5.2, sz));
   ctx.statics.add(box(3.6, 0.6, 0.6, yellow, sx, STREET + 5.4, sz - 1.8));

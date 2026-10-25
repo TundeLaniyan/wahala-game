@@ -178,7 +178,7 @@ function build(ctx: SetContext): void {
   const roofs: StallOpts['roof'][] = ['patch', 'sheet', 'tarp'];
   let k = 0;
   for (let x = -W / 2 + 1.4; x < W / 2 - 1; x += 2.45) {
-    stall(kit, { x, y: S, z: north - 1.9, ry: 0 }, {
+    stall(kit, { x, y: S, z: north - 2.5, ry: 0 }, {
       w: 2.2,
       d: 1.25,
       goods: goods[k % goods.length]!,
@@ -247,7 +247,7 @@ function build(ctx: SetContext): void {
   // goods on the move: push trucks of bales, wheelbarrows of sachet water, basins stacked to sell
   pushTruck(kit, { x: -W / 2 - 1.7, y: S, z: wz(12), ry: 0.08 }, 'bales', 2);
   pushTruck(kit, { x: W / 2 + 1.7, y: S, z: wz(19), ry: Math.PI - 0.1 }, 'sacks', 5);
-  pushTruck(kit, { x: -6, y: S, z: north - 0.75, ry: Math.PI / 2 - 0.1 }, 'bales', 7);
+  pushTruck(kit, { x: -6, y: S, z: north - 1.5, ry: Math.PI / 2 - 0.1 }, 'bales', 7);
   wheelbarrow(kit, { x: W / 2 + 1.4, y: S, z: wz(9), ry: -2.6 }, 0x9a8a5e);
   wheelbarrow(kit, { x: 9, y: S, z: H / 2 + 1.5, ry: 1.9 }, 0x8a5a3a);
   basinStack(kit, kit.statics, -W / 2 - 0.55, 0, H / 2 + 0.5, 3, 2);

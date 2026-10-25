@@ -280,7 +280,7 @@ function build(ctx: SetContext): void {
   tarBoiler(pctx, P, L, { x: -W / 2 - 1.6, z: wz(11), ry: 0.4 });
   rebarBundle(ctx, P, -W / 2 - 2.8, wz(28), 0.08, 4.0);
   timberStack(ctx, P, -W / 2 - 2.6, wz(2), 0.1, true);
-  sodiumPole(ctx, P, L, -W / 2 - 1.3, wz(20), 3.3, Math.PI / 2);
+  sodiumPole(ctx, P, L, -W / 2 - 2.6, wz(20), 3.3, -Math.PI / 2);
   lightTower(pctx, P, L, -W / 2 - 1.5, wz(8), v3(-8, 0, 0), 4.6, false);
 
   // ---------------------------------------------------------------- east: asphalt, yard, office
@@ -292,7 +292,7 @@ function build(ctx: SetContext): void {
   skip(pctx, P, { x: W / 2 + 2.0, z: wz(2.5), ry: 0.15 }, P.olive);
   hoarding(ctx, P, W / 2 + 6.2, wz(0), W / 2 + 6.2, wz(30), 2.2, 0x3c4c40, 7);
   jerseyLine(ctx, P, W / 2 + 0.95, wz(13), W / 2 + 0.95, wz(19));
-  sodiumPole(ctx, P, L, W / 2 + 1.3, wz(12), 3.3, -Math.PI / 2);
+  sodiumPole(ctx, P, L, W / 2 + 2.6, wz(12), 3.3, Math.PI / 2);
   lightTower(pctx, P, L, W / 2 + 1.5, wz(24), v3(8, 0, 0), 4.6, false);
   hoarding(ctx, P, -W / 2 - 8.2, wz(0), -W / 2 - 8.2, wz(30), 2.1, 0x2c4258, 3);
 
@@ -323,7 +323,11 @@ function build(ctx: SetContext): void {
   ctx.ambient.smokeColumn(W / 2 + 2.4, STREET + 0.2, wz(9), { shade: 0.75, size: 0.55, rate: 2 }); // asphalt steam
   ctx.ambient.dust(0, north - 2.0, 18, 2.2);
   ctx.ambient.dust(-W / 2 - 2, wz(16), 2, 9);
-  ctx.vehicles('okada', [{ x: W / 2 + 1.6, y: STREET, z: wz(29), ry: -2.6 }]);
+  ctx.vehicles('okada', [
+    { x: W / 2 + 1.6, y: STREET, z: wz(29), ry: -2.6 },
+    { x: W / 2 + 2.3, y: STREET, z: wz(29.6), ry: -2.4 },
+    { x: -W / 2 - 1.6, y: STREET, z: wz(13.5), ry: 0.3 },
+  ]);
   ctx.vehicles('keke', [{ x: -W / 2 - 2.4, y: STREET, z: wz(30.5), ry: 2.9 }]);
   ctx.vehicles('danfo', [{ x: W / 2 + 4.5, y: STREET, z: north - 2.5, ry: -Math.PI / 2 }], { idle: true }); // the crew bus
 
