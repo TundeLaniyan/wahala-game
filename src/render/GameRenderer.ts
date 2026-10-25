@@ -25,6 +25,7 @@ import type { CameraMode } from './cameraModes';
 import { createLayout } from './coords';
 import type { Layout } from './coords';
 import { Effects } from './fx/Effects';
+import type { ShakeMode } from './shake';
 import { QUALITY } from './quality';
 import type { QualityLevel, QualityProfile } from './quality';
 import type { EntryPick, FrameInfo } from './types';
@@ -113,6 +114,8 @@ export class GameRenderer {
   private inspect: { x: number; z: number; zoom: number } | null = null;
   private readonly cameraOverride: CameraMode | null;
   private mode: CameraMode = 'arena';
+  /** Camera shake mode (render/shake.ts); 'off' on touch devices by default, set by the app. */
+  private shakeMode: ShakeMode = 'subtle';
   private readonly frustum = new Frustum();
   private readonly viewProj = new Matrix4();
   private readonly sphere = new Sphere();
@@ -150,6 +153,7 @@ export class GameRenderer {
     this.rig = new CameraRig(this.layout);
     this.mode = cameraModeFor(state.arenaId, this.cameraOverride);
     this.effects = new Effects(this.layout, this.profile);
+    this.effects.shaker.mode = this.shakeMode;
 
     const look = arenaLook(state.arenaId);
     this.scene.background = new Color(look.sky);
@@ -261,6 +265,20 @@ export class GameRenderer {
     this.overviewPreferred = view === 'overview';
   }
 
+  /** Camera shake: 'off' (touch default, reduced motion) or 'subtle' (short, small, bounded). */
+  setShake(mode: ShakeMode): void {
+    this.shakeMode = mode;
+    if (this.loaded) {
+      this.effects.shaker.mode = mode;
+      if (mode === 'off') this.effects.shaker.reset();
+    }
+  }
+
+  /** Debug / tests: the shake mode and the current trauma (0..cap). */
+  shakeStatus(): { mode: ShakeMode; trauma: number } {
+    return { mode: this.shakeMode, trauma: this.loaded ? this.effects.shaker.trauma : 0 };
+  }
+
   /** Camera mode of the loaded match: 'arena' (whole arena, fixed) or 'stadium' (follow camera). */
   cameraMode(): CameraMode {
     return this.mode;
@@ -363,6 +381,14 @@ export class GameRenderer {
         case 'playerPushed':
           fx.dust(e.fromX, e.fromY, 5, 0.5);
           break;
+        case 'contactUsed': {
+          // kick / punch: a burst where the foot or fist met the generator
+          const p = state.players[e.playerId]!;
+          if (e.ability === 'kick') fx.dust(p.x, p.y, 4, 0.5);
+          else if (e.ability === 'punch')
+            fx.shockwave(this.layout.wx(p.x), this.layout.wz(p.y), 0.8, 0xffd23f);
+          break;
+        }
         case 'playerDazed': {
           const p = state.players[e.playerId]!;
           fx.floatText(p.x, p.y, 'DAZED!', '#ffe14a');
@@ -398,11 +424,11 @@ export class GameRenderer {
           else fx.shockwave(this.layout.wx(e.x), this.layout.wz(e.y), 1.2, 0x80e0ff);
           break;
         case 'crushLanded':
-          fx.shake = Math.min(1, fx.shake + 0.2);
+          // no shake: the Crush / City Rumble closing lands many tiles a second (decision WA6)
           break;
         case 'trapsActivated':
-          // the floor gives way: a jolt and a puff of grit on every new trap
-          fx.shake = Math.min(1, fx.shake + 0.35);
+          // the floor gives way: a small jolt (bounded by the shake budget) and a puff of grit per new trap
+          fx.shake = Math.min(1, fx.shake + 0.15);
           for (const t of e.tiles) fx.dust(t.index % state.width, Math.floor(t.index / state.width), 4, 0.5);
           break;
         default:
@@ -453,7 +479,8 @@ export class GameRenderer {
           attract: info.attract === true,
           focusId: info.focusPlayerId ?? null,
         });
-    this.rig.update(dt, this.time, this.effects.shake, shot, info.attract === true);
+    const shake = info.attract === true ? 0 : this.effects.shaker.offset(this.time);
+    this.rig.update(dt, this.time, shake, shot, info.attract === true);
     this.renderer.render(this.scene, this.rig.camera);
     this.trackPerformance(dt);
   }

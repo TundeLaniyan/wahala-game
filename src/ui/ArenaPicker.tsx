@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ARENAS, CITY_RUMBLE_ID, STANDARD_ARENA_IDS } from '../sim';
+import * as sim from '../sim';
+import { ARENAS, STANDARD_ARENA_IDS } from '../sim';
 import type { ArenaDef } from '../sim';
 import { commands } from '../app/session';
 import type { GameSettings } from '../app/settings';
 import './ArenaPicker.css';
-
-const RUMBLE_SIZES = [8, 16, 24, 32] as const;
 
 /** Fallback card art (used until / unless `public/previews/<id>.jpg` exists): a mood gradient per arena. */
 const MOOD: Record<string, [string, string]> = {
@@ -26,7 +25,7 @@ export function previewUrl(id: string): string {
   return `${import.meta.env.BASE_URL}previews/${id}.jpg`;
 }
 
-function Preview({ arena, failed, onFail }: { arena: ArenaDef; failed: boolean; onFail: () => void }) {
+export function Preview({ arena, failed, onFail }: { arena: ArenaDef; failed: boolean; onFail: () => void }) {
   const [a, b] = MOOD[arena.id] ?? ['#666', '#111'];
   return (
     <div className="ap-preview" style={{ background: `linear-gradient(160deg, ${a}, ${b})` }}>
@@ -41,8 +40,59 @@ function Preview({ arena, failed, onFail }: { arena: ArenaDef; failed: boolean; 
 }
 
 /**
- * Arena choice on the title screen: one card per standard arena (preview, lighting, tagline, hazards,
- * special rule) in a swipeable strip, plus the separate City Rumble card with its competitor count.
+ * Arena ids of the "Test / experimental" Classic arenas when the simulation exports them
+ * (`EXPERIMENTAL_ARENA_IDS`, stream B); an empty list until then. Read by key so the menu builds either way.
+ */
+export function experimentalArenaIds(): readonly string[] {
+  const key = ['EXPERIMENTAL', 'ARENA', 'IDS'].join('_'); // not constant-folded: no build warning while absent
+  const ids = (sim as unknown as Record<string, unknown>)[key];
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && id in ARENAS) : [];
+}
+
+function ArenaCard({
+  arena: a,
+  on,
+  failed,
+  onFail,
+  onPick,
+}: {
+  arena: ArenaDef;
+  on: boolean;
+  failed: boolean;
+  onFail: () => void;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`ap-card${on ? ' on' : ''}${a.info.ruleWarning ? ' rule' : ''}`}
+      data-testid={`arena-${a.id}`}
+      aria-pressed={on}
+      onClick={onPick}
+    >
+      <Preview arena={a} failed={failed} onFail={onFail} />
+      <div className="ap-body">
+        <b className="ap-name">{a.name}</b>
+        <p className="ap-tag">{a.info.tagline}</p>
+        {a.info.ruleWarning && <p className="ap-rule">{a.info.ruleWarning}</p>}
+        {a.info.hazards.length > 0 ? (
+          <ul className="ap-hazards">
+            {a.info.hazards.map((h) => (
+              <li key={h}>{h}</li>
+            ))}
+          </ul>
+        ) : (
+          !a.info.ruleWarning && <p className="ap-calm">No stage hazards.</p>
+        )}
+      </div>
+    </button>
+  );
+}
+
+/**
+ * Classic Battle arena choice on the title screen: one card per official standard arena (preview,
+ * lighting, tagline, hazards, special rule) in a swipeable strip, then a separate "Test / experimental"
+ * strip when the simulation lists any. City Rumble stages have their own picker.
  */
 export function ArenaPicker({
   settings,
@@ -54,12 +104,12 @@ export function ArenaPicker({
   const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
   const strip = useRef<HTMLDivElement>(null);
   const fail = (id: string) => () => setFailed((f) => new Set(f).add(id));
-  const pick = (p: Partial<GameSettings>) => {
+  const pick = (id: string) => () => {
     commands.click();
-    set(p);
+    set({ arenaId: id, play: 'classic' });
   };
-  const rumble = ARENAS[CITY_RUMBLE_ID]!;
-  const rumbleOn = settings.play === 'rumble';
+  const experimental = experimentalArenaIds();
+  const official = STANDARD_ARENA_IDS.filter((id) => !experimental.includes(id));
 
   // bring the remembered choice into view when the menu opens
   useEffect(() => {
@@ -69,81 +119,28 @@ export function ArenaPicker({
     // only on mount: later picks are already in view
   }, []);
 
+  const card = (id: string) => (
+    <ArenaCard
+      key={id}
+      arena={ARENAS[id]!}
+      on={settings.arenaId === id}
+      failed={failed.has(id)}
+      onFail={fail(id)}
+      onPick={pick(id)}
+    />
+  );
+
   return (
     <div className="arena-picker" data-testid="arena-picker">
       <div className="ap-strip" ref={strip}>
-        {STANDARD_ARENA_IDS.map((id) => {
-          const a = ARENAS[id]!;
-          const on = settings.play === 'classic' && settings.arenaId === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              className={`ap-card${on ? ' on' : ''}${a.info.ruleWarning ? ' rule' : ''}`}
-              data-testid={`arena-${id}`}
-              aria-pressed={on}
-              onClick={() => pick({ arenaId: id, play: 'classic' })}
-            >
-              <Preview arena={a} failed={failed.has(id)} onFail={fail(id)} />
-              <div className="ap-body">
-                <b className="ap-name">{a.name}</b>
-                <p className="ap-tag">{a.info.tagline}</p>
-                {a.info.ruleWarning && <p className="ap-rule">{a.info.ruleWarning}</p>}
-                {a.info.hazards.length > 0 ? (
-                  <ul className="ap-hazards">
-                    {a.info.hazards.map((h) => (
-                      <li key={h}>{h}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  !a.info.ruleWarning && <p className="ap-calm">No stage hazards.</p>
-                )}
-              </div>
-            </button>
-          );
-        })}
+        {official.map(card)}
       </div>
-
-      <div className={`ap-rumble${rumbleOn ? ' on' : ''}`}>
-        <button
-          type="button"
-          className="ap-rumble-main"
-          data-testid={`arena-${CITY_RUMBLE_ID}`}
-          aria-pressed={rumbleOn}
-          onClick={() => pick({ play: 'rumble', rumbleArenaId: CITY_RUMBLE_ID })}
-        >
-          <Preview arena={rumble} failed={failed.has(CITY_RUMBLE_ID)} onFail={fail(CITY_RUMBLE_ID)} />
-          <div className="ap-body">
-            <b className="ap-rumble-title">
-              WAHALA! <span>CITY RUMBLE</span>
-            </b>
-            <p className="ap-rumble-sub">1 human vs up to 31 bots · the city closes in · last one standing</p>
-            <p className="ap-tag">{rumble.info.tagline}</p>
-            {rumble.info.hazards.length > 0 && (
-              <ul className="ap-hazards">
-                {rumble.info.hazards.map((h) => (
-                  <li key={h}>{h}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </button>
-        <div className="ap-rumble-count">
-          <span>Competitors</span>
-          {RUMBLE_SIZES.map((n) => (
-            <button
-              key={n}
-              type="button"
-              className={`chip${rumbleOn && settings.rumbleCompetitors === n ? ' on' : ''}`}
-              data-testid={`rumble-${n}`}
-              onClick={() => pick({ play: 'rumble', rumbleArenaId: CITY_RUMBLE_ID, rumbleCompetitors: n })}
-            >
-              {n}
-            </button>
-          ))}
+      {experimental.length > 0 && (
+        <div className="ap-experimental" data-testid="arena-experimental">
+          <h4>Test / experimental</h4>
+          <div className="ap-strip">{experimental.map(card)}</div>
         </div>
-      </div>
-
+      )}
       <p className="ap-note" data-testid="traps-note">
         <b>Every match:</b> floor traps erupt at <b>0:30</b> and <b>0:15</b> (cannot be switched off). Stage
         hazards depend on the arena.

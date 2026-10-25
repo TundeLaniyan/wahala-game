@@ -1,11 +1,11 @@
 /**
  * Time-to-fire map. For every tile it stores the tick windows in which that tile is lethal, built
  * only from what `observe()` shows: burning flames, ticking / remote / disabled generators (with
- * chain reactions and soft-block clearing), vehicle lanes with arrival times, Wahala Crush
- * landings and spectator throws. Windows are absolute ticks, so a map stays valid until the
+ * chain reactions, soft-block clearing and V2 Square Blast footprints - the simulation's own
+ * `squareFootprint`), vehicle lanes with arrival times, Wahala Crush landings and spectator throws. Windows are absolute ticks, so a map stays valid until the
  * visible world changes.
  */
-import { DIRS, DIR_VEC, Tile } from '../sim';
+import { DIRS, DIR_VEC, Tile, squareFootprint } from '../sim';
 import type { Generator, TilePos, VehicleKind } from '../sim';
 import type { AiProfile } from './profiles';
 import type { World } from './world';
@@ -86,6 +86,8 @@ export interface HypoGen {
   y: number;
   range: number;
   pierce: boolean;
+  /** V2 Square Blast radius (0 / absent = plain plus). */
+  square?: number;
   explodeAt: number;
   /** Remote-style generator: its lane is lethal at any moment from `explodeAt` for a long time. */
   hold?: boolean;
@@ -120,6 +122,7 @@ interface GenNode {
   tile: number;
   range: number;
   pierce: boolean;
+  square: number;
   ownerId: number;
   explodeAt: number;
   hold: boolean;
@@ -135,6 +138,7 @@ const newNode = (): GenNode => ({
   tile: 0,
   range: 0,
   pierce: false,
+  square: 0,
   ownerId: -1,
   explodeAt: NEVER,
   hold: false,
@@ -149,6 +153,9 @@ export class DangerBuilder {
   private head = new Int16Array(0);
   private next = new Int16Array(64);
   private softGone = new Uint8Array(0);
+  /** Square Blast refinement: the tile kinds with `softGone` crates cleared (only kept while a square node exists). */
+  private goneTiles: number[] = [];
+  private goneValid = false;
   private order: number[] = [];
 
   /** Rebuilds `map` from the current observation plus optional hypothetical objects. */
@@ -179,6 +186,7 @@ export class DangerBuilder {
       n.tile = h.y * w + h.x;
       n.range = h.range;
       n.pierce = h.pierce;
+      n.square = h.square ?? 0;
       n.ownerId = h.ownerId ?? self;
       n.explodeAt = h.explodeAt;
       n.hold = h.hold === true;
@@ -227,6 +235,7 @@ export class DangerBuilder {
     n.tile = n.y * world.board.width + n.x;
     n.range = g.range;
     n.pierce = g.pierce;
+    n.square = g.square;
     n.ownerId = g.ownerId;
     n.triggerable = g.flight === null;
     n.hold = false;
@@ -274,6 +283,7 @@ export class DangerBuilder {
           for (let o = this.head[t]!; o >= 0; o = this.next[o]!) if (o !== idx) n.hits.push(o);
         }
       }
+      if (n.square > 0) this.squareArms(world, idx, useGone);
       return;
     }
     for (const d of DIRS) {
@@ -307,6 +317,31 @@ export class DangerBuilder {
         if (found) break;
       }
     }
+    if (n.square > 0) this.squareArms(world, idx, useGone);
+  }
+
+  /** V2 Square Blast: the square tiles the simulation's blast wave reaches, added to the plus (union). */
+  private squareArms(world: World, idx: number, useGone: boolean): void {
+    const n = this.nodes[idx]!;
+    const { obs, board } = world;
+    const w = board.width;
+    if (useGone && !this.goneValid) {
+      const g = this.goneTiles;
+      g.length = board.size;
+      for (let t = 0; t < board.size; t++) g[t] = this.softGone[t] === 1 ? Tile.Empty : obs.tiles[t]!;
+      this.goneValid = true;
+    }
+    const grid = useGone ? { width: w, height: board.height, tiles: this.goneTiles } : obs;
+    const blocks = (x: number, y: number): boolean => {
+      for (let o = this.head[y * w + x]!; o >= 0; o = this.next[o]!) if (o !== idx) return true;
+      return false;
+    };
+    for (const p of squareFootprint(grid, n.x, n.y, n.square, blocks)) {
+      const t = p.y * w + p.x;
+      if (n.tiles.includes(t)) continue;
+      n.tiles.push(t);
+      for (let o = this.head[t]!; o >= 0; o = this.next[o]!) if (o !== idx && !n.hits.includes(o)) n.hits.push(o);
+    }
   }
 
   /** A generator inside another's flame goes off with it: propagate the earliest tick. */
@@ -334,6 +369,7 @@ export class DangerBuilder {
     const { obs } = world;
     if (this.nodeCount < 2) return;
     this.softGone.fill(0);
+    this.goneValid = false;
     this.order.length = 0;
     for (let i = 0; i < this.nodeCount; i++) if (this.nodes[i]!.explodeAt < NEVER) this.order.push(i);
     this.order.sort((a, b) => this.nodes[a]!.explodeAt - this.nodes[b]!.explodeAt);
@@ -345,7 +381,10 @@ export class DangerBuilder {
       for (let q = k; q < e; q++) this.computeArms(world, this.order[q]!, true);
       for (let q = k; q < e; q++) {
         for (const t of this.nodes[this.order[q]!]!.tiles)
-          if (obs.tiles[t] === Tile.Soft) this.softGone[t] = 1;
+          if (obs.tiles[t] === Tile.Soft && this.softGone[t] === 0) {
+            this.softGone[t] = 1;
+            this.goneValid = false;
+          }
       }
       k = e;
     }

@@ -25,6 +25,8 @@ await page.goto(
   `${process.env.SHOT_URL ?? 'http://localhost:5199/wahala-game/'}?debug&noattract&q=${process.env.Q ?? 'high'}&seed=7${query}`,
 );
 await page.getByTestId('title-screen').waitFor();
+// V2 menu: City Rumble first; Classic Battle holds the standard arenas
+if ((await page.getByTestId('play-classic').count()) > 0) await page.getByTestId('play-classic').click();
 await page.getByTestId(`arena-${arena}`).click();
 await page.getByTestId('players-4').click();
 await page.getByTestId('start-button').click();

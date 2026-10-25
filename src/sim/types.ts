@@ -102,6 +102,11 @@ export interface PlayerStats {
   assists: number;
   /** Tick of the latest credited elimination (tie-break: whoever reached the score first). */
   lastKillTick: number;
+  /**
+   * V2 (workstream C): credited eliminations in the current life (= `kills` in survival; reset on every
+   * elimination). The Rumble reward ladder is indexed by it, so respawn modes restart the ladder per life.
+   */
+  streak: number;
 }
 
 /** V2: a recent non-lethal attack on a player (melee push/daze), kept for elimination credit. */
@@ -221,6 +226,11 @@ export interface Generator {
   /** Flagged during a tick when something has set this generator off. */
   triggered: boolean;
   placedTick: number;
+  /**
+   * V2 elimination credit: the last OTHER player who set this generator in motion or off without owning it
+   * (kicked / punched it, or rammed it with their vehicle). Optional: absent = nobody.
+   */
+  touchedBy?: number;
 }
 
 export interface Flame {
@@ -233,6 +243,8 @@ export interface Flame {
   dir: Dir | null;
   /** V2: from a sideline spectator's generator (credited to nobody). */
   fromSpectator?: boolean;
+  /** V2: a Square Blast tile (outside the plus arms) - drawn distinctly. */
+  square?: boolean;
   tip: boolean;
   startTick: number;
   endTick: number;
@@ -244,6 +256,11 @@ export interface BlastEvent {
   tiles: number[]; // unique tile indices covered by the whole chain
   /** V2: owner of the generator that started this chain (elimination credit for chained own blasts). */
   seedOwnerId: number;
+  /**
+   * V2: who set the chain off: the seed generator's `touchedBy` (kicker / puncher / vehicle owner) when
+   * present, else its owner (systems/attribution.ts).
+   */
+  instigatorId: number;
   endTick: number;
 }
 
@@ -350,6 +367,8 @@ export interface GameState {
   nextId: number;
   nextEventId: number;
   match: MatchState;
+  /** V2 respawn modes: tick each arena spawn was last used for a respawn (anti spawn-camping). */
+  spawnUsedAt: number[];
 }
 
 export interface TrapTile {
@@ -524,6 +543,8 @@ export type SimEvent =
       y: number;
       eventId: number;
       range: number;
+      /** V2 Square Blast radius of this generator (0 / absent = plain plus). */
+      square?: number;
     }
   | { type: 'generatorKicked'; generatorId: number }
   | { type: 'generatorCarried'; generatorId: number; playerId: number; bonus: boolean }

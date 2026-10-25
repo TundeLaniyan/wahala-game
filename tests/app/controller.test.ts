@@ -6,21 +6,16 @@ import { useGameStore } from '../../src/app/store';
 import { buildHud } from '../../src/app/hud';
 import { buildPlayers } from '../../src/app/names';
 import type { Intent, SimEvent } from '../../src/sim';
+import { addGenerator } from '../helpers';
 
 class FakeInput implements InputPort {
   navMode = false;
   next: Intent = {};
-  vehiclePress = false;
   pollDevices(): void {}
-  buildIntent(): Intent {
+  buildIntent(_tick?: number, _ctx?: unknown): Intent {
     const i = this.next;
     this.next = {};
     return i;
-  }
-  takeVehiclePress(): boolean {
-    const v = this.vehiclePress;
-    this.vehiclePress = false;
-    return v;
   }
   clear(): void {}
 }
@@ -58,7 +53,12 @@ const settings = { ...DEFAULT_GAME_SETTINGS, play: 'classic' as const, competito
 describe('match setup', () => {
   it('builds distinct bots with the chosen difficulty and gives the human slot 0', () => {
     const players = buildPlayers(
-      { ...settings, character: 'lekkiBoy', difficulty: 'expert', botDifficulties: ['expert', 'expert', 'expert'] },
+      {
+        ...settings,
+        character: 'lekkiBoy',
+        difficulty: 'expert',
+        botDifficulties: ['expert', 'expert', 'expert'],
+      },
       5,
     );
     expect(players).toHaveLength(3);
@@ -140,20 +140,38 @@ describe('MatchController', () => {
     expect(useGameStore.getState().screen).toBe('playing');
   });
 
-  it('runs the vehicle-entry flow: press begins, nav moves focus, confirm launches', () => {
+  it('B with a voucher launches the vehicle in ONE press: no entry selector in normal play', () => {
     const { controller, input } = make();
     controller.start({ ...settings, competitors: 2, character: 'streetBaller' }, 4);
     for (let i = 0; i < 160; i++) controller.stepOnce();
     controller.state!.players[0]!.hasVoucher = true;
-    input.vehiclePress = true;
-    controller.stepOnce();
-    controller.stepOnce();
-    expect(controller.state!.players[0]!.entryUntil).not.toBeNull();
-    controller.handleNav('right');
-    controller.handleNav('confirm');
-    controller.stepOnce();
+    input.next = { special: true };
+    const events = controller.stepOnce();
+    expect(controller.state!.players[0]!.entryUntil).toBeNull();
+    expect(controller.entryOverlay()).toBeNull();
     expect(controller.state!.vehicles).toHaveLength(1);
     expect(controller.state!.players[0]!.hasVoucher).toBe(false);
+    expect(events.some((e) => e.type === 'specialUsed' && e.action === 'vehicle')).toBe(true);
+  });
+
+  it('tells the input layer whether a remote is live and which moves are legal', () => {
+    const { controller, input } = make();
+    const seen: unknown[] = [];
+    input.buildIntent = (_t: number, ctx?: unknown) => {
+      seen.push(ctx);
+      return {};
+    };
+    controller.start({ ...settings, competitors: 2 }, 4);
+    for (let i = 0; i < 160; i++) controller.stepOnce();
+    const me = controller.state!.players[0]!;
+    me.remote = true;
+    controller.stepOnce();
+    const ctx = seen.at(-1) as { remoteReady: boolean; canMove: boolean; legal: (d: string) => boolean };
+    expect(ctx.remoteReady).toBe(false); // no remote generator down yet
+    expect(typeof ctx.legal).toBe('function');
+    addGenerator(controller.state!, { ownerId: 0, x: me.x, y: me.y, mode: 'remote' });
+    controller.stepOnce();
+    expect((seen.at(-1) as { remoteReady: boolean }).remoteReady).toBe(true);
   });
 
   it('tags the human win only when the human is the winner', () => {

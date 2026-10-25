@@ -40,6 +40,7 @@ export function resolveExplosions(state: GameState, events: SimEvent[]): void {
           y: gen.y,
           eventId,
           range: gen.range,
+          square: gen.square,
         });
         for (const flame of buildFlames(state, gen, eventId, softHit)) {
           state.flames.push(flame);
@@ -55,6 +56,7 @@ export function resolveExplosions(state: GameState, events: SimEvent[]): void {
       id: eventId,
       tiles: [...tiles],
       seedOwnerId: seed.ownerId,
+      instigatorId: seed.touchedBy ?? seed.ownerId,
       endTick: state.tick + state.config.generator.flameTicks,
     };
     state.blasts.push(blast);
@@ -68,7 +70,12 @@ export function resolveExplosions(state: GameState, events: SimEvent[]): void {
   destroySoftBlocks(state, softHit, 'flame', events);
 }
 
-/** Plus-shaped flame set for one generator. Never diagonal; concrete stops it; the first soft block absorbs it. */
+/**
+ * Flame set for one generator: the plus (never diagonal; concrete stops it; the first soft block absorbs
+ * it; a neighbouring generator absorbs it and chains) or the Power Yard full line, then - V2 Square Blast -
+ * every tile of the square footprint the blast wave reaches that the plus has not already covered.
+ * Each tile appears once per generator.
+ */
 function buildFlames(
   state: GameState,
   gen: Generator,
@@ -86,6 +93,11 @@ function buildFlames(
     ...(gen.fromSpectator ? { fromSpectator: true } : {}),
   };
   const flames: Flame[] = [{ ...base, x: gen.x, y: gen.y, dir: null, tip: false }];
+  const covered = new Set<number>([tileIndex(state, gen.x, gen.y)]);
+  const markSoft = (x: number, y: number): void => {
+    const idx = tileIndex(state, x, y);
+    if (!softHit.has(idx)) softHit.set(idx, eventId);
+  };
 
   if (state.config.generator.blastMode === 'fullLine') {
     // Power Yard: the whole row and column to the arena edge, straight through pillars, crates and
@@ -98,52 +110,50 @@ function buildFlames(
         if (kind === Tile.Hard) continue;
         last = { ...base, x, y, dir, tip: false };
         flames.push(last);
-        const idx = tileIndex(state, x, y);
-        if (kind === Tile.Soft && !softHit.has(idx)) softHit.set(idx, eventId);
+        covered.add(tileIndex(state, x, y));
+        if (kind === Tile.Soft) markSoft(x, y);
       }
       if (last) last.tip = true;
     }
-    return flames;
+  } else {
+    for (const dir of DIRS) {
+      const v = DIR_VEC[dir];
+      let last: Flame | null = null;
+      let pierced = false;
+      for (let i = 1; i <= gen.range; i++) {
+        const x = gen.x + v.dx * i;
+        const y = gen.y + v.dy * i;
+        const kind = tileAt(state, x, y);
+        if (kind === Tile.Hard) break;
+        last = { ...base, x, y, dir, tip: false };
+        flames.push(last);
+        covered.add(tileIndex(state, x, y));
+        if (kind === Tile.Soft) {
+          markSoft(x, y);
+          if (gen.pierce && !pierced) {
+            pierced = true; // Hot Fuel burns through exactly one soft block per arm
+            continue;
+          }
+          break;
+        }
+        // A neighbouring generator absorbs the arm; it explodes in the next chain round.
+        if (triggerableGeneratorsAt(state, x, y).some((o) => o.id !== gen.id)) break;
+      }
+      if (last) last.tip = true;
+    }
   }
 
   if (gen.square > 0) {
-    // V2 Square Blast: the plus arms below, plus every square tile the blast wave reaches
-    for (const t of squareFootprint(state, gen.x, gen.y, gen.square, (x, y) =>
-      triggerableGeneratorsAt(state, x, y).some((o) => o.id !== gen.id),
-    )) {
-      if (t.x === gen.x || t.y === gen.y) continue; // the centre row / column belong to the plus arms
-      flames.push({ ...base, x: t.x, y: t.y, dir: null, tip: false });
-      if (tileAt(state, t.x, t.y) === Tile.Soft) {
-        const idx = tileIndex(state, t.x, t.y);
-        if (!softHit.has(idx)) softHit.set(idx, eventId);
-      }
+    // V2 Square Blast: the square tiles the blast wave reaches, on top of the plus (union)
+    const blocks = (x: number, y: number): boolean =>
+      triggerableGeneratorsAt(state, x, y).some((o) => o.id !== gen.id);
+    for (const t of squareFootprint(state, gen.x, gen.y, gen.square, blocks)) {
+      const idx = tileIndex(state, t.x, t.y);
+      if (covered.has(idx)) continue;
+      covered.add(idx);
+      flames.push({ ...base, x: t.x, y: t.y, dir: null, tip: false, square: true });
+      if (tileAt(state, t.x, t.y) === Tile.Soft) markSoft(t.x, t.y);
     }
-  }
-
-  for (const dir of DIRS) {
-    const v = DIR_VEC[dir];
-    let last: Flame | null = null;
-    let pierced = false;
-    for (let i = 1; i <= gen.range; i++) {
-      const x = gen.x + v.dx * i;
-      const y = gen.y + v.dy * i;
-      const kind = tileAt(state, x, y);
-      if (kind === Tile.Hard) break;
-      last = { ...base, x, y, dir, tip: false };
-      flames.push(last);
-      if (kind === Tile.Soft) {
-        const idx = tileIndex(state, x, y);
-        if (!softHit.has(idx)) softHit.set(idx, eventId);
-        if (gen.pierce && !pierced) {
-          pierced = true; // Hot Fuel burns through exactly one soft block per arm
-          continue;
-        }
-        break;
-      }
-      // A neighbouring generator absorbs the arm; it explodes in the next chain round.
-      if (triggerableGeneratorsAt(state, x, y).some((o) => o.id !== gen.id)) break;
-    }
-    if (last) last.tip = true;
   }
   return flames;
 }

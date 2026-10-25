@@ -27,10 +27,24 @@ export async function open(page: Page, query = ''): Promise<void> {
   await expect(page.getByTestId('title-screen')).toBeVisible();
 }
 
+/**
+ * Starts a match from the title screen. V2: the menu opens on City Rumble, so this picks Classic Battle
+ * first (the 2-4 player game these specs were written for) unless `game: 'rumble'` keeps the Rumble setup.
+ */
 export async function startMatch(
   page: Page,
-  opts: { bots?: boolean; competitors?: 2 | 3 | 4; character?: string; waitPlaying?: boolean } = {},
+  opts: {
+    bots?: boolean;
+    competitors?: 2 | 3 | 4;
+    character?: string;
+    waitPlaying?: boolean;
+    game?: 'classic' | 'rumble';
+  } = {},
 ): Promise<void> {
+  if ((opts.game ?? 'classic') === 'classic') {
+    const classic = page.getByTestId('play-classic');
+    if ((await classic.count()) > 0) await classic.click();
+  }
   if (opts.competitors) await page.getByTestId(`players-${opts.competitors}`).click();
   if (opts.character) await page.getByTestId(`char-${opts.character}`).click();
   await page.getByTestId('start-button').click();

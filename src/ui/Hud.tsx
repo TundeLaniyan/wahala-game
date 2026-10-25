@@ -10,6 +10,7 @@ import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
 import { HudRail } from './HudRail';
 import { Minimap } from './Minimap';
+import { ProgressionBadge } from './ProgressionBadge';
 import { RumbleHud } from './RumbleHud';
 
 function Portrait({ p }: { p: HudPlayer }) {
@@ -39,6 +40,33 @@ function Chip({ kind, text, cls }: { kind: PickupKind; text: string; cls?: strin
   );
 }
 
+const CONTACT_ICON: Record<NonNullable<HudMe['contact']>, PickupKind> = {
+  kick: 'boots',
+  punch: 'gloves',
+  disarm: 'killswitch',
+  pass: 'bombpass',
+};
+
+/**
+ * V2: the ONE equipped generator-contact ability (no button: walk into a generator to use it). Compact,
+ * always in the same slot of the inventory row; absent when nothing is equipped.
+ */
+function ContactChip({ me }: { me: HudMe }) {
+  if (!me.contact) return null;
+  const text = me.contact === 'disarm' ? `DISARM x${me.killCharges}` : me.contact.toUpperCase();
+  return (
+    <span
+      className="inv good contact"
+      data-testid="contact-indicator"
+      data-contact={me.contact}
+      title="Walk into a generator"
+    >
+      <img src={pickupIconUrl(CONTACT_ICON[me.contact], 48)} alt="" />
+      {text}
+    </span>
+  );
+}
+
 function Inventory({ me }: { me: HudMe }) {
   const curseLabel = me.curse ? { slow: 'SLOW', inverted: 'REVERSED', weakFire: 'WEAK' }[me.curse.kind] : '';
   return (
@@ -46,13 +74,10 @@ function Inventory({ me }: { me: HudMe }) {
       <Chip kind="socket" text={`${me.active}/${me.capacity}`} />
       <Chip kind={me.maxRange ? 'diesel' : 'petrol'} text={me.maxRange ? 'MAX' : String(me.range)} />
       {me.speedLevel > 0 && <Chip kind="skates" text={`x${me.speedLevel}`} />}
-      {me.contact === 'kick' && <Chip kind="boots" text="" />}
-      {me.contact === 'punch' && <Chip kind="gloves" text="" />}
-      {me.remote && <Chip kind="remote" text="" />}
-      {me.killCharges > 0 && <Chip kind="killswitch" text={`x${me.killCharges}`} />}
+      <ContactChip me={me} />
+      {me.remote && <Chip kind="remote" text={me.hasRemoteGenerator ? 'HOLD B' : ''} />}
       {me.sneakers && <Chip kind="sneakers" text="" />}
       {me.hotFuel && <Chip kind="hotfuel" text="" />}
-      {me.contact === 'pass' && <Chip kind="bombpass" text="PASS" cls="good" />}
       {me.mounted && <Chip kind="okada" text="SHIELD" cls="good" />}
       {me.voucher && <Chip kind="voucher" text={VEHICLE_DEFS[me.vehicle].name.toUpperCase()} cls="good" />}
       {me.curse && <Chip kind="curse" text={`${curseLabel} ${me.curse.seconds}s`} cls="bad" />}
@@ -92,13 +117,15 @@ export function Hud() {
   const muted = useGameStore((s) => s.settings.muted);
   const cameraView = useGameStore((s) => s.settings.cameraView);
   // Standard matches keep the whole arena on one shared screen; only the stadium camera can be toggled.
-  const stadium = useGameStore((s) => cameraModeFor(s.settings.arenaId, s.cameraOverride) === 'stadium');
+  // (the running match decides: a City Rumble stage has the rumble HUD; `?cam=stadium` forces it anywhere)
+  const forced = useGameStore((s) => cameraModeFor('', s.cameraOverride) === 'stadium');
   if (!hud) return null;
   const half = Math.ceil(hud.players.length / 2);
   const left = hud.players.slice(0, half);
   const right = hud.players.slice(half);
 
   const rumble = hud.rumble;
+  const stadium = forced || rumble !== null;
   return (
     <div className="hud" data-testid="hud" data-phase={hud.phase}>
       {rumble ? (
@@ -164,6 +191,8 @@ export function Hud() {
       )}
       <HudRail alerts={hud.stageAlerts} toasts={toasts} ruleBanner={hud.ruleBanner} rumble={!!rumble} />
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}
+      {/* V2 City Rumble progression (workstream C): kills, next reward, protection, Square Blast */}
+      {rumble && hud.me && hud.phase !== 'ended' && hud.localAlive && <ProgressionBadge me={hud.me} floating />}
       {hud.entry && <EntryPanel entry={hud.entry} />}
       {!rumble && hud.phase === 'playing' && !hud.localAlive && (
         <div className="spectate" data-testid="spectate">

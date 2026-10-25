@@ -1,12 +1,13 @@
-/* How to Play: a sidebar beside the live game view. The game canvas, HUD and touch controls move
-   right of the sidebar while the tutorial is open (the renderer re-fits to the smaller canvas). */
+/* Training Academy: a column beside the live game view. The game canvas, HUD and touch controls move right
+   of the column while the Academy is open (the renderer re-fits to the smaller canvas), so lesson text never
+   sits over a playable tile, the lower-left spawn or the board's bottom row. */
 
 .game-root.htp-on {
-  --htp-w: clamp(272px, 27vw, 372px);
+  --htp-w: clamp(260px, 26vw, 360px);
 }
 @media (max-height: 520px), (max-width: 760px) {
   .game-root.htp-on {
-    --htp-w: clamp(212px, 30vw, 260px);
+    --htp-w: clamp(170px, 25vw, 220px);
   }
 }
 /* the canvas is a replaced element: it needs an explicit width (left/right alone keep its pixel size) */
@@ -22,12 +23,21 @@
   right: 0;
 }
 
-/* folded away: a slim strip (chapter, goal ticks, show / exit) */
-.game-root.htp-on:has(.htp-panel.collapsed) {
-  --htp-w: 46px;
+/* the task's control, lit up on the real touch layout: the stick's whole activation area, button A / B */
+.game-root.htp-on:has(.htp-panel[data-highlight~='move']) .stick-zone {
+  background: rgba(61, 255, 138, 0.07);
+  box-shadow: inset 0 0 0 2px rgba(61, 255, 138, 0.55);
+  border-radius: 0 14px 0 0;
+}
+.game-root.htp-on:has(.htp-panel[data-highlight~='place']) [data-testid='btn-place'],
+.game-root.htp-on:has(.htp-panel[data-highlight~='special']) [data-testid='btn-special'],
+.game-root.htp-on:has(.htp-panel[data-highlight~='detonate']) [data-testid='btn-special'] {
+  box-shadow:
+    0 0 0 3px rgba(61, 255, 138, 0.9),
+    0 0 18px rgba(61, 255, 138, 0.6);
 }
 
-/* ---------- sidebar ---------- */
+/* ---------- column ---------- */
 .htp-panel {
   position: absolute;
   z-index: 6;
@@ -45,7 +55,7 @@
   box-shadow: 8px 0 24px rgba(0, 0, 0, 0.45);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   scrollbar-width: thin;
   scrollbar-color: #4a4d55 transparent;
 }
@@ -53,80 +63,73 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
+}
+.htp-menu,
+.htp-exit {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.htp-menu {
+  border-color: rgba(255, 198, 26, 0.6);
+  color: var(--gold);
+}
+.htp-exit:hover {
+  background: rgba(255, 74, 46, 0.25);
+  border-color: var(--red);
 }
 .htp-kicker {
   font-family: var(--display);
-  letter-spacing: 0.16em;
+  letter-spacing: 0.1em;
   font-size: 0.8rem;
-  text-transform: uppercase;
   color: var(--muted);
 }
 .htp-kicker b {
   color: var(--gold);
   font-weight: 400;
 }
-.htp-exit {
-  appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
-  padding: 4px 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+.htp-titles small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-size: 0.85rem;
 }
-.htp-exit:hover {
-  background: rgba(255, 74, 46, 0.25);
-  border-color: var(--red);
-}
-.htp-nav {
-  display: grid;
-  grid-template-columns: 34px 1fr 34px;
-  gap: 6px;
-  align-items: stretch;
-}
-.htp-arrow {
-  appearance: none;
-  border: 1px solid var(--glass-edge);
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  font-size: 0.9rem;
-}
-.htp-arrow:disabled {
-  opacity: 0.25;
-  cursor: default;
-}
-.htp-title {
-  appearance: none;
-  border: 0;
-  background: none;
-  text-align: left;
-  padding: 0 2px;
-  min-width: 0;
-}
-.htp-title h2 {
+.htp-titles h2 {
   margin: 0;
   font-family: var(--display);
   font-weight: 400;
-  letter-spacing: 0.05em;
-  font-size: clamp(1.15rem, 3.6vh, 1.6rem);
+  letter-spacing: 0.04em;
+  font-size: clamp(1.05rem, 3.6vh, 1.5rem);
   line-height: 1.05;
   color: var(--gold);
   text-transform: uppercase;
   text-shadow: 0 2px 0 #4a2a00;
 }
-.htp-title small {
-  display: block;
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.htp-objective {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  color: #f1e9d8;
 }
-.htp-title:hover small {
-  color: var(--text);
+.htp-objective b {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: rgba(255, 198, 26, 0.2);
+  color: var(--gold);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 .htp-tabs,
 .htp-devices {
@@ -144,11 +147,11 @@
   border: 0;
   border-radius: 6px;
   background: none;
-  padding: 7px 4px;
+  padding: 6px 4px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: var(--muted);
 }
 .htp-tabs button[aria-selected='true'],
@@ -156,21 +159,135 @@
   background: var(--gold);
   color: #1b1100;
 }
-.htp-tabs button:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
 .htp-devices button {
-  font-size: 0.8rem;
-  padding: 5px 2px;
+  font-size: 0.76rem;
+  padding: 4px 2px;
 }
 
-/* ---------- demo controls ---------- */
+/* ---------- demo / practice ---------- */
 .htp-demo,
 .htp-practice {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
+}
+.htp-caption,
+.htp-instruction {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-left: 3px solid var(--gold);
+  font-size: 1rem;
+  line-height: 1.28;
+  color: #fff;
+  animation: htp-in 0.2s ease-out;
+}
+.htp-instruction {
+  border-left-color: #3dff8a;
+  font-weight: 600;
+}
+.htp-step {
+  display: block;
+  width: fit-content;
+  margin-bottom: 3px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #1b1100;
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+.htp-instruction .htp-step {
+  background: #3dff8a;
+  color: #04210f;
+}
+.htp-paused {
+  display: block;
+  margin-top: 3px;
+  color: var(--gold);
+  font-style: normal;
+  font-size: 0.75rem;
+}
+.htp-guidance,
+.htp-praise,
+.htp-success,
+.htp-attempts {
+  margin: 0;
+  padding: 6px 9px;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  animation: htp-in 0.2s ease-out;
+}
+.htp-guidance {
+  background: rgba(255, 198, 26, 0.12);
+  border: 1px solid rgba(255, 198, 26, 0.6);
+  color: #ffe9a8;
+}
+.htp-guidance::before {
+  content: 'Tip: ';
+  font-weight: 700;
+}
+.htp-guidance.fail {
+  background: rgba(255, 74, 46, 0.14);
+  border-color: var(--red);
+  color: #ffd6cc;
+}
+.htp-guidance.fail::before {
+  content: '';
+}
+.htp-praise {
+  background: rgba(25, 184, 92, 0.16);
+  border: 1px solid rgba(77, 255, 136, 0.6);
+  color: #d4ffe2;
+  font-weight: 700;
+}
+.htp-success {
+  background: rgba(25, 184, 92, 0.24);
+  border: 1px solid #4dff88;
+  color: #d4ffe2;
+  font-weight: 700;
+}
+.htp-attempts {
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.htp-tasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+.htp-tasks li {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: start;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.2;
+}
+.htp-tasks li.on {
+  background: rgba(61, 255, 138, 0.1);
+  color: #fff;
+}
+.htp-tasks li.done {
+  background: rgba(25, 184, 92, 0.16);
+  color: #c9ffdc;
+}
+.htp-tasks li span {
+  font-weight: 700;
+}
+.htp-tasks li.done span {
+  color: #4dff88;
 }
 .htp-progress {
   display: flex;
@@ -189,74 +306,27 @@
   background: var(--gold);
   box-shadow: 0 0 8px rgba(255, 198, 26, 0.7);
 }
-.htp-transport {
+.htp-row {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
 }
-.htp-transport .btn {
+.htp-row .btn {
   flex: 1;
-  padding: 7px 8px;
-  font-size: 0.82rem;
+  padding: 7px 6px;
+  font-size: 0.8rem;
   white-space: nowrap;
+}
+.htp-row .btn:disabled {
+  opacity: 0.3;
+}
+.htp-nav .btn:first-child {
+  flex: 0 0 38px;
+}
+.htp-grow {
+  flex: 1;
 }
 .htp-wide {
   width: 100%;
-}
-
-/* ---------- practice ---------- */
-.htp-goal {
-  margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.25;
-  color: #fff;
-}
-.htp-checks {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 4px;
-}
-.htp-checks li {
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  align-items: start;
-  padding: 5px 8px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  line-height: 1.2;
-}
-.htp-checks li span {
-  color: var(--muted);
-  font-weight: 700;
-}
-.htp-checks li.done {
-  background: rgba(25, 184, 92, 0.18);
-  color: #c9ffdc;
-}
-.htp-checks li.done span {
-  color: #4dff88;
-}
-.htp-hint,
-.htp-safe {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.25;
-}
-.htp-safe {
-  font-size: 0.78rem;
-  opacity: 0.85;
-}
-.htp-success {
-  margin: 0;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: rgba(25, 184, 92, 0.22);
-  border: 1px solid #4dff88;
-  color: #d4ffe2;
-  font-weight: 700;
 }
 .htp-chars {
   display: grid;
@@ -265,7 +335,7 @@
 .htp-char {
   appearance: none;
   display: grid;
-  grid-template-columns: 34px 1fr;
+  grid-template-columns: 30px 1fr;
   align-items: center;
   gap: 8px;
   text-align: left;
@@ -274,10 +344,11 @@
   border-radius: 8px;
   padding: 3px 8px 3px 3px;
   font-weight: 700;
+  font-size: 0.85rem;
 }
 .htp-char img {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   object-fit: cover;
   object-position: top;
   border-radius: 6px;
@@ -285,7 +356,7 @@
 .htp-char small {
   display: block;
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -294,23 +365,24 @@
   background: rgba(255, 198, 26, 0.16);
 }
 
-/* ---------- facts + legend ---------- */
-.htp-facts h3,
-.htp-legend h3 {
-  margin: 2px 0 6px;
+/* ---------- tips & controls ---------- */
+.htp-more summary {
+  cursor: pointer;
   font-family: var(--display);
-  font-weight: 400;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   font-size: 0.78rem;
   color: var(--muted);
   text-transform: uppercase;
 }
-.htp-facts ul {
-  margin: 0;
+.htp-more[open] summary {
+  margin-bottom: 6px;
+}
+.htp-facts {
+  margin: 0 0 8px;
   padding-left: 16px;
   display: grid;
   gap: 4px;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   line-height: 1.25;
 }
 .htp-facts li::marker {
@@ -326,46 +398,45 @@
   display: grid;
   gap: 5px;
 }
-.htp-row {
+.htp-legend-row {
   display: grid;
   gap: 2px;
 }
-.htp-row dt {
+.htp-legend-row dt {
   color: var(--gold);
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.htp-row dd {
+.htp-legend-row dd {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   line-height: 1.3;
 }
-.htp-row .kbd {
+.htp-legend-row .kbd {
   margin: 1px 0;
 }
 .htp-none {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
-/* a small map of the real on-screen controls (same colours and places as TouchControls) */
+/* a small map of the real on-screen layout: the stick's activation area (lower left) and buttons A / B */
 .htp-touchmap {
   position: relative;
-  height: 112px;
+  height: 104px;
   border-radius: 12px;
   border: 2px solid #3a3d44;
   background: linear-gradient(#20242a, #121418);
   overflow: hidden;
 }
-/* the floating thumbstick's activation zone (lower left) with a stick being pushed right */
 .htp-touchmap .tm-zone {
   position: absolute;
   left: 4px;
   bottom: 4px;
-  width: 42%;
-  height: 72%;
+  width: 50%;
+  height: 74%;
   border: 2px dashed rgba(255, 255, 255, 0.25);
   border-radius: 8px;
   opacity: 0.45;
@@ -374,227 +445,88 @@
   position: absolute;
   left: 6px;
   top: 3px;
-  font-size: 0.55rem;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.5rem;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.75);
 }
 .htp-touchmap .tm-stick {
   position: absolute;
-  left: 34%;
+  left: 32%;
   top: 30%;
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.35);
   background: rgba(40, 44, 52, 0.75);
 }
 .htp-touchmap .tm-knob {
   position: absolute;
-  left: 20px;
-  top: 9px;
-  width: 24px;
-  height: 24px;
+  left: 18px;
+  top: 8px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #ffe37a, #ffc61a);
   border: 2px solid #fff;
 }
-.htp-touchmap .tm-top {
-  position: absolute;
-  top: 5px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-.htp-touchmap .tm-pause {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  font-size: 0.55rem;
-  opacity: 0.45;
-}
-.htp-touchmap .tm-entry {
-  position: absolute;
-  top: 28px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 46%;
-  border: 1px solid var(--gold);
-  border-radius: 5px;
-  padding: 2px 3px;
-  font-size: 0.5rem;
-  text-align: center;
-  background: rgba(12, 14, 18, 0.8);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2px;
-}
-.htp-touchmap .tm-entry b {
-  width: 100%;
-  color: var(--gold);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-.htp-touchmap .tm-entry span {
-  border-radius: 3px;
-  padding: 0 4px;
-  background: #2c3037;
-}
-.htp-touchmap .tm-entry span:first-of-type {
-  background: var(--green);
-}
 .htp-touchmap .tm-actions {
   position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 92px;
-  height: 92px;
+  right: 6px;
+  bottom: 6px;
+  width: 42%;
+  height: 86%;
 }
 .htp-touchmap .tm-btn {
   position: absolute;
   display: grid;
   place-items: center;
+  align-content: center;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.55);
   font-family: var(--display);
-  font-size: 0.42rem;
-  letter-spacing: 0.04em;
+  font-size: 1rem;
+  line-height: 1;
   color: #fff;
-  opacity: 0.35;
+  opacity: 0.4;
   text-align: center;
+}
+.htp-touchmap .tm-btn small {
+  display: block;
+  font-family: var(--ui);
+  font-size: 0.4rem;
+  letter-spacing: 0;
+  line-height: 1.05;
+  max-width: 90%;
 }
 .htp-touchmap .on {
   opacity: 1;
-  box-shadow: 0 0 10px rgba(255, 198, 26, 0.75);
-}
-.htp-touchmap .tm-btn.bomb {
-  left: 48%;
-  top: 48%;
-  width: 52%;
-  height: 52%;
-  background: conic-gradient(#e4a30a 0 50%, #8b3cd6 50% 100%);
-  font-size: 0.45rem;
+  box-shadow: 0 0 10px rgba(61, 255, 138, 0.8);
 }
 .htp-touchmap .tm-btn.a {
-  left: 14%;
-  top: 68%;
-  width: 30%;
-  height: 30%;
-  background: #7c4dff;
+  right: 0;
+  bottom: 0;
+  width: 56%;
+  aspect-ratio: 1;
+  background: #d58f00;
 }
 .htp-touchmap .tm-btn.b {
-  left: 14%;
-  top: 36%;
-  width: 28%;
-  height: 28%;
+  left: 0;
+  top: 4%;
+  width: 46%;
+  aspect-ratio: 1;
   background: #2e7dff;
 }
-.htp-touchmap .tm-btn.v {
-  left: 44%;
-  top: 12%;
-  width: 31%;
-  height: 31%;
-  background: #12a455;
-}
-.htp-touchmap .tm-btn.c {
-  left: 76%;
-  top: 16%;
-  width: 24%;
-  height: 24%;
-  background: #ff2f86;
-}
-.htp-touchmap .tm-btn.d {
-  left: -6%;
-  top: 38%;
-  width: 22%;
-  height: 22%;
-  background: #6b7078;
-}
 
-/* ---------- over the game view ---------- */
-.htp-subtitle {
-  position: absolute;
-  z-index: 5;
-  left: calc(var(--htp-w) + (100% - var(--htp-w)) / 2);
-  transform: translateX(-50%);
-  bottom: clamp(44px, 11vh, 84px);
-  width: min(720px, calc((100% - var(--htp-w)) * 0.86));
-  padding: 9px 18px 10px;
-  border-radius: 10px;
-  background: rgba(8, 9, 11, 0.86);
-  border: 1px solid rgba(255, 198, 26, 0.45);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
-  text-align: center;
-  pointer-events: none;
-  font-size: clamp(0.95rem, 3vh, 1.3rem);
-  line-height: 1.25;
-  color: #fff;
-}
-.htp-subtitle > span {
-  display: block;
-}
-.htp-step {
-  display: inline-block;
-  margin-bottom: 3px;
-  padding: 1px 9px;
-  border-radius: 999px;
-  background: var(--gold);
-  color: #1b1100;
-  font-family: var(--display);
-  font-weight: 400;
-  letter-spacing: 0.12em;
-  font-size: 0.72em;
-  text-transform: uppercase;
-}
-.htp-paused {
-  display: block;
-  margin-top: 3px;
-  color: var(--gold);
-  font-style: normal;
-  font-size: 0.72em;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-.htp-notice {
-  position: absolute;
-  z-index: 5;
-  left: calc(var(--htp-w) + (100% - var(--htp-w)) / 2);
-  top: 42%;
-  transform: translate(-50%, -50%);
-  max-width: calc((100% - var(--htp-w)) * 0.7);
-  padding: 8px 22px;
-  border-radius: 10px;
-  background: rgba(40, 8, 4, 0.9);
-  border: 2px solid var(--red);
-  font-family: var(--display);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  text-align: center;
-  font-size: clamp(0.95rem, 3.4vh, 1.4rem);
-  pointer-events: none;
-  animation: pop 0.25s;
-}
-.htp-notice.good {
-  background: rgba(6, 40, 18, 0.9);
-  border-color: #4dff88;
-  color: #d4ffe2;
-  animation:
-    pop 0.25s,
-    htp-fade 0.6s 3s forwards;
-}
-
-/* ---------- chapter list ---------- */
+/* ---------- lesson list ---------- */
 .htp-list-scrim {
   z-index: 20;
 }
 .htp-list {
-  width: min(760px, 96vw);
+  width: min(820px, 96vw);
   max-width: none;
   max-height: 92vh;
   overflow-y: auto;
-  padding: 14px 18px;
+  padding: 12px 16px;
   text-align: left;
 }
 .htp-list-head {
@@ -603,172 +535,137 @@
   justify-content: space-between;
 }
 .htp-list h2 {
-  font-size: clamp(1.4rem, 5vh, 2.2rem);
+  font-size: clamp(1.3rem, 5vh, 2rem);
+  margin: 0;
 }
-.htp-list ol {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 6px;
+.htp-list-note {
+  margin: 2px 0 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
-.htp-list li button {
-  appearance: none;
-  width: 100%;
-  height: 100%;
-  display: grid;
-  grid-template-columns: 28px 1fr auto;
-  align-items: center;
-  gap: 8px;
-  text-align: left;
-  border: 1px solid var(--glass-edge);
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-weight: 700;
-}
-.htp-list li button:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-.htp-list li button.on {
-  border-color: var(--gold);
-  background: rgba(255, 198, 26, 0.14);
-}
-.htp-list li b {
+.htp-course-block h3 {
+  margin: 8px 0 4px;
   font-family: var(--display);
   font-weight: 400;
-  font-size: 1.2rem;
+  letter-spacing: 0.08em;
   color: var(--gold);
-  text-align: center;
-}
-.htp-list li small {
-  display: block;
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 0.8rem;
-}
-.htp-list li em {
-  font-style: normal;
-}
-
-@keyframes htp-fade {
-  to {
-    opacity: 0;
-  }
-}
-
-@media (max-height: 520px), (max-width: 760px) {
-  .htp-panel {
-    gap: 7px;
-    padding: max(6px, env(safe-area-inset-top)) 8px 10px max(8px, env(safe-area-inset-left));
-  }
-  .htp-facts ul,
-  .htp-row dd {
-    font-size: 0.82rem;
-  }
-  .htp-goal {
-    font-size: 0.92rem;
-  }
-  .htp-subtitle {
-    bottom: 34px;
-    padding: 6px 12px 7px;
-    font-size: 0.86rem;
-  }
-}
-
-/* ---------- folded sidebar ---------- */
-.htp-panel.collapsed {
-  padding: max(8px, env(safe-area-inset-top)) 4px 8px max(4px, env(safe-area-inset-left));
-  align-items: center;
-  gap: 8px;
-  overflow: hidden;
-}
-.htp-expand,
-.htp-mini-exit,
-.htp-fold {
-  appearance: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 198, 26, 0.6);
-  background: rgba(255, 198, 26, 0.14);
-  color: var(--gold);
-  font-size: 1.1rem;
-  font-weight: 700;
-  display: grid;
-  place-items: center;
-  flex: none;
-}
-.htp-fold {
-  width: 28px;
-  height: 28px;
+  text-transform: uppercase;
   font-size: 1rem;
 }
-.htp-mini-exit {
-  margin-top: auto;
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-}
-.htp-mini-num {
-  font-family: var(--display);
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
+.htp-course-block h3 small {
+  font-family: var(--ui);
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--muted);
+  font-size: 0.78rem;
 }
-.htp-mini-checks {
+.htp-course-block ol {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 5px;
-  justify-items: center;
 }
-.htp-mini-checks li {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+.htp-course-block li {
   display: grid;
-  place-items: center;
-  background: rgba(255, 255, 255, 0.07);
+  grid-template-columns: 26px 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--glass-edge);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+.htp-course-block li.on {
+  border-color: var(--gold);
+  background: rgba(255, 198, 26, 0.12);
+}
+.htp-course-block li small {
+  display: block;
   color: var(--muted);
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 0.74rem;
 }
-.htp-mini-checks li.done {
-  background: rgba(25, 184, 92, 0.35);
-  color: #c9ffdc;
+.htp-course-block li .btn {
+  padding: 5px 8px;
+  font-size: 0.74rem;
 }
-.htp-notice.goal {
-  top: auto;
-  bottom: auto;
-  top: clamp(118px, 31vh, 170px);
-  transform: translateX(-50%);
-  background: rgba(8, 9, 11, 0.82);
-  border: 1px solid rgba(255, 198, 26, 0.5);
-  font-family: var(--ui);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  font-size: clamp(0.8rem, 2.6vh, 1rem);
-  padding: 5px 14px;
-  animation: htp-fade 0.6s 6s forwards;
+.htp-mark {
+  font-family: var(--display);
+  color: var(--gold);
+  text-align: center;
+}
+.htp-reset {
+  margin-top: 10px;
 }
 
-/* short landscape phones, while a demo plays: the board is small, so the demo's own subtitle and step
-   label stand in for the HUD's entry instructions and inventory row (both return in practice) */
-@media (max-height: 520px) {
-  .game-root.htp-on {
-    --htp-w: clamp(200px, 26vw, 240px);
+@keyframes htp-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
   }
-  .game-root.htp-on:has(.htp-panel[data-mode='demo']) .entry-panel,
-  .game-root.htp-on:has(.htp-panel[data-mode='demo']) .inventory {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* short landscape phones: a slimmer column (the board keeps most of the screen), smaller type */
+@media (max-height: 520px), (max-width: 760px) {
+  .htp-panel {
+    gap: 6px;
+    padding: max(6px, env(safe-area-inset-top)) 7px 8px max(7px, env(safe-area-inset-left));
+  }
+  .htp-menu span {
     display: none;
   }
-  .htp-subtitle {
-    bottom: 4px;
-    padding: 4px 10px 5px;
-    font-size: 0.8rem;
-    line-height: 1.2;
+  .htp-menu,
+  .htp-exit {
+    padding: 3px 9px;
+  }
+  .htp-objective {
+    font-size: 0.76rem;
+  }
+  .htp-caption,
+  .htp-instruction {
+    padding: 6px 7px;
+    font-size: 0.84rem;
+  }
+  .htp-guidance,
+  .htp-praise,
+  .htp-success {
+    font-size: 0.78rem;
+    padding: 4px 6px;
+  }
+  .htp-tasks li {
+    font-size: 0.74rem;
+    padding: 3px 5px;
+  }
+  .htp-tabs button {
+    font-size: 0.72rem;
+    padding: 4px 2px;
+  }
+  .htp-row .btn {
+    font-size: 0.72rem;
+    padding: 6px 3px;
+  }
+  .htp-facts,
+  .htp-legend-row dd {
+    font-size: 0.76rem;
+  }
+  .htp-course-block ol {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .htp-caption,
+  .htp-instruction,
+  .htp-guidance,
+  .htp-praise,
+  .htp-success {
+    animation: none;
   }
 }

@@ -28,7 +28,12 @@ export class World {
   obs!: Observation;
   board!: Board;
   me!: Readonly<Player>;
+  /** Living opponents (Team Rumble: never a teammate). Everything that targets someone reads this. */
   rivals: Readonly<Player>[] = [];
+  /** Team Rumble: living teammates (empty in free-for-all). */
+  friends: Readonly<Player>[] = [];
+  /** Team Rumble with friendly fire on: own blasts and vehicles can hurt teammates. */
+  friendlyFire = false;
   /**
    * Rivals worth an expensive simulation. Standard boards: every rival (same array as `rivals`).
    * Large boards: the nearest few inside NEAR_RADIUS, nearest first (see scale.ts).
@@ -46,8 +51,10 @@ export class World {
   pickupAt = new Int16Array(0);
   /** Index of the generator resting on each tile or -1. */
   genAt = new Int16Array(0);
-  /** Number of alive players (not me) per tile. */
+  /** Number of alive opponents (not me, not a teammate) per tile. */
   rivalAt = new Uint8Array(0);
+  /** Number of alive teammates per tile (Team Rumble). */
+  friendAt = new Uint8Array(0);
 
   get tick(): number {
     return this.obs.tick;
@@ -66,14 +73,25 @@ export class World {
       this.hazard = new Uint8Array(board.size);
       this.pickupAt = new Int16Array(board.size);
       this.rivalAt = new Uint8Array(board.size);
+      this.friendAt = new Uint8Array(board.size);
       this.genAt = new Int16Array(board.size);
     }
     this.me = obs.players[obs.selfId]!;
     this.large = isLargeBoard(board);
     this.rivals.length = 0;
+    this.friends.length = 0;
     this.rivalAt.fill(0);
+    const team = this.me.team;
+    if (team >= 0) this.friendAt.fill(0);
+    this.friendlyFire = team >= 0 && (obs.settings?.friendlyFire ?? false);
     for (const p of obs.players) {
       if (p.id === obs.selfId || !p.alive) continue;
+      if (team >= 0 && p.team === team) {
+        // a teammate is never a target (melee, generators, vehicles, remote detonation)
+        this.friends.push(p);
+        this.friendAt[p.y * board.width + p.x]!++;
+        continue;
+      }
       this.rivals.push(p);
       this.rivalAt[p.y * board.width + p.x]!++;
     }

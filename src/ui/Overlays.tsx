@@ -1,8 +1,9 @@
-import { CHARACTERS } from '../sim';
 import { commands } from '../app/session';
 import { useGameStore } from '../app/store';
 import { AudioSettingsPanel } from './AudioSettings';
 import { RumbleResults } from './RumbleHud';
+import { resultText } from '../app/resultText';
+import { ShakeToggle } from './ShakeToggle';
 
 export function PauseOverlay() {
   const s = useGameStore((st) => st.settings);
@@ -17,6 +18,7 @@ export function PauseOverlay() {
           subtitles={s.subtitles}
           onSubtitlesChange={(subtitles) => commands.updateSettings({ subtitles })}
         />
+        <ShakeToggle />
         <div className="row">
           <button
             type="button"
@@ -43,20 +45,9 @@ export function ResultsOverlay() {
   const summary = useGameStore((s) => s.summary);
   if (!hud || !hud.result) return null;
   const r = hud.result;
-  const winner = r.kind === 'win' ? hud.players[r.winnerId] : null;
   const won = summary?.localWon ?? false;
-  const title = r.kind === 'draw' ? 'DRAW!' : won ? 'YOU WIN!' : 'ELIMINATED';
+  const { title, detail } = resultText(hud, won);
   const rumble = hud.rumble;
-  const detail =
-    r.kind === 'draw'
-      ? r.reason === 'timeout'
-        ? 'Time up with rivals still standing: nobody wins.'
-        : 'Everybody went down together. Wahala!'
-      : won
-        ? rumble
-          ? `Last one standing out of ${rumble.total}. Naija no dey carry last!`
-          : 'Last one standing. Naija no dey carry last!'
-        : `${winner?.name ?? 'A bot'} (${winner ? CHARACTERS[winner.characterId].name : ''}) took it.`;
   return (
     <div className="scrim" data-testid="results">
       <div className={`card ${r.kind === 'draw' ? '' : won ? 'win' : 'lose'}`}>

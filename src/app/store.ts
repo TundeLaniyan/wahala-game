@@ -23,16 +23,23 @@ export interface ScreenPoint {
 }
 
 export interface MatchSummary {
-  /** Index = player id. */
+  /** Credited eliminations (sim `player.stats.kills`), index = player id. */
   eliminations: number[];
+  /** The local player's deaths and assists (respawn modes show them). */
+  deaths: number;
+  assists: number;
+  /** Seconds survived (respawn modes: the seconds played). */
   survivedSeconds: number;
+  /** The local player won, or (Team Rumble) the local player's team won. */
   localWon: boolean;
 }
 
-/** What the How to Play screen shows (null when the tutorial is closed). */
+/** What the Training Academy screen shows (null when it is closed). Owned by app/TutorialController. */
 export interface TutorialView {
-  /** Index into the tutorial's chapter list. */
-  chapter: number;
+  /** Index into the Academy's lesson list. */
+  lesson: number;
+  lessonId: string;
+  /** 'demo' = step 2 (the demonstration plays by itself); 'practice' = the human's attempt. */
   mode: 'demo' | 'practice';
   caption: string;
   step: string | null;
@@ -41,17 +48,32 @@ export interface TutorialView {
   /** The demo script has played to the end. */
   finished: boolean;
   practice: {
-    goal: string;
-    hint: string;
-    checks: { label: string; done: boolean }[];
+    tasks: { id: string; label: string; done: boolean }[];
+    /** Index of the active task (== tasks.length once complete). */
+    current: number;
+    /** The active task's instruction, with device tokens ({A}, {B}, {holdB}, {move}) still to fill in. */
+    instruction: string;
+    /** Controls the active task is about (legend / touch highlights). */
+    controls: string[];
+    /** The latest corrective tip, or why the attempt failed. */
+    guidance: string | null;
+    /** The attempt failed and is about to restart from the latest checkpoint. */
+    failed: boolean;
+    /** Retries so far. */
+    attempts: number;
     complete: boolean;
     character: CharacterId;
     characterChoice: boolean;
   } | null;
-  /** A short message, e.g. why a practice restarted. */
+  /** A short message (praise for a finished task, lesson complete ...). */
   notice: string | null;
   /** Bumped on every (re)load so the UI can restart its animations. */
   run: number;
+  /** Lesson ids completed / explicitly skipped on this device. */
+  completed: string[];
+  skipped: string[];
+  /** The current lesson may be left forwards (completed or explicitly skipped). */
+  canAdvance: boolean;
 }
 
 export interface UiState {

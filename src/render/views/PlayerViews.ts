@@ -14,7 +14,15 @@ import { SLOT_COLORS } from '../../assets/palette';
 import { drawPickupIcon } from '../../assets/pickupIcons';
 import { OKADA_SCALE, createPlayerModel, createRiggedPlayerModel } from '../assets/characters';
 import { assets } from '../assets/library';
-import { createShieldBubble, updateShieldBubble } from './okadaShield';
+import {
+  ARMOUR_COLOR,
+  createArmourVisual,
+  createShieldBubble,
+  hideArmourVisual,
+  updateArmourVisual,
+  updateShieldBubble,
+} from './okadaShield';
+import type { ArmourVisual } from './okadaShield';
 import { addXray } from '../assets/xray';
 import type { PlayerModel } from '../assets/characters';
 import { CanvasTexture } from 'three';
@@ -22,6 +30,7 @@ import { chevronTexture, glowTexture, labelTexture, ringTexture, starTexture } f
 import type { ClipName } from '../assets/rigged';
 import { lerpAngle, playerGridPos, toWorld, yawForDir } from './motion';
 import type { FrameContext, View } from './types';
+import { addTeamKit, createProtectionRing, protectionBlink, teamColor } from './teamMarkings';
 
 const DEATH_TIME = 1.7;
 /** Characters are drawn tall and heroic so they read as active 3D characters, not board tokens. */
@@ -53,6 +62,8 @@ interface Visual {
   deathDir: Vector3;
   wasMounted: boolean;
   shield: Mesh;
+  /** V2 Armour layer (shell + plate pips), workstream C. */
+  armour: ArmourVisual;
   badge: Sprite;
   mountedAt: number;
   dismountedAt: number;
@@ -63,6 +74,8 @@ interface Visual {
   culled: boolean;
   /** LOD: animation time skipped while off screen, applied when the player comes back into view. */
   catchUp: number;
+  /** V2 respawn modes: blinking ring while spawn protection lasts. */
+  protect: Mesh;
 }
 
 const flat = new PlaneGeometry(1, 1);
@@ -72,6 +85,8 @@ let okadaTex: CanvasTexture | null = null;
 export class PlayerViews implements View {
   readonly group = new Group();
   private readonly visuals = new Map<number, Visual>();
+  /** Team of each player id (Team Rumble), for the end-of-match celebration. */
+  private readonly teams = new Map<number, number>();
 
   /** Triggers one-shot animations from simulation events. */
   onEvents(events: readonly SimEvent[]): void {
@@ -80,10 +95,16 @@ export class PlayerViews implements View {
       if (e.type === 'generatorPlaced') play(e.ownerId, 'Place');
       else if (e.type === 'generatorThrown') play(e.playerId, 'Throw');
       else if (e.type === 'skillUsed') play(e.playerId, e.skill === 'daze' ? 'Kick' : 'Push');
+      // V2 contact abilities: a kick swings the leg, a disarm crouches over the generator (the punch
+      // already plays Throw through its generatorThrown event; walking through needs no gesture)
+      else if (e.type === 'contactUsed' && e.ability === 'kick') play(e.playerId, 'Kick');
+      else if (e.type === 'contactUsed' && e.ability === 'disarm') play(e.playerId, 'Place');
       else if (e.type === 'playerPushed') play(e.playerId, 'Stumble');
       else if (e.type === 'matchEnded') {
+        const r = e.result;
         for (const [id, v] of this.visuals) {
-          if (e.result.kind === 'win') v.model.rigged?.setLoop(id === e.result.winnerId ? 'Win' : 'Lose');
+          if (r.kind === 'win') v.model.rigged?.setLoop(id === r.winnerId ? 'Win' : 'Lose');
+          else if (r.kind === 'teamWin') v.model.rigged?.setLoop(this.teams.get(id) === r.team ? 'Win' : 'Lose');
           else v.model.rigged?.setLoop('Lose');
         }
       }
@@ -120,8 +141,9 @@ export class PlayerViews implements View {
         v.culled = true;
         v.model.root.visible = false;
         v.model.root.matrixWorldAutoUpdate = false;
-        for (const o of [v.ring, v.shadow, v.name, v.curse, v.voucher, v.shield, v.badge, ...v.stars])
+        for (const o of [v.ring, v.shadow, v.name, v.curse, v.voucher, v.shield, v.badge, v.protect, ...v.stars])
           o.visible = false;
+        hideArmourVisual(v.armour, true);
         if (v.marker) v.marker.visible = false;
       }
       v.catchUp = Math.min(1, v.catchUp + ctx.dt);
@@ -139,7 +161,11 @@ export class PlayerViews implements View {
   private create(p: Player, ctx: FrameContext): Visual {
     const modelId = p.slot === 3 && assets.has('char_areaBoss') ? 'areaBoss' : p.characterId;
     const model = createRiggedPlayerModel(modelId, p.id * 0.37) ?? createPlayerModel(p.characterId);
-    const slot = SLOT_COLORS[p.slot % SLOT_COLORS.length]!;
+    // Team Rumble: the team colour replaces the slot colour on the ring, the silhouette, the marker and
+    // the name tag, and the character wears the team kit (jersey band and armbands)
+    const slot = p.team >= 0 ? teamColor(p.team) : SLOT_COLORS[p.slot % SLOT_COLORS.length]!;
+    this.teams.set(p.id, p.team);
+    if (p.team >= 0) addTeamKit(model, p.team);
     if (model.rigged) addXray(model.rigged.body, slot);
     const ring = new Mesh(
       flat,
@@ -169,7 +195,11 @@ export class PlayerViews implements View {
     shadow.renderOrder = 3;
     const name = new Sprite(
       new SpriteMaterial({
-        map: labelTexture(p.name, '#ffffff', 'bold 42px system-ui, sans-serif'),
+        map: labelTexture(
+          p.name,
+          p.team >= 0 ? `#${slot.toString(16).padStart(6, '0')}` : '#ffffff',
+          'bold 42px system-ui, sans-serif',
+        ),
         transparent: true,
         depthTest: false,
       }),
@@ -216,7 +246,9 @@ export class PlayerViews implements View {
     badge.scale.set(0.36, 0.36, 1);
     badge.renderOrder = 33;
     badge.visible = false;
-    this.group.add(model.root, ring, shadow, name, curse, voucher, shield, badge);
+    const armour = createArmourVisual();
+    const protect = createProtectionRing();
+    this.group.add(model.root, ring, shadow, name, curse, voucher, shield, badge, armour.group, protect);
     return {
       model,
       ring,
@@ -232,6 +264,7 @@ export class PlayerViews implements View {
       deathDir: new Vector3(0, 0, 1),
       wasMounted: false,
       shield,
+      armour,
       badge,
       mountedAt: -10,
       dismountedAt: -10,
@@ -239,6 +272,7 @@ export class PlayerViews implements View {
       facing: p.facing,
       culled: false,
       catchUp: 0,
+      protect,
     };
   }
 
@@ -252,6 +286,7 @@ export class PlayerViews implements View {
       this.poseDead(ctx, p, v, w);
       return;
     }
+    if (v.deadAt !== null) this.revive(ctx, v, w);
 
     const face = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] }[p.facing];
     // a sharp turn while running plants the feet: a small scuff of dust sells the direction change
@@ -368,6 +403,26 @@ export class PlayerViews implements View {
     updateShieldBubble(v.shield, mounted, time, Math.max(0, pop));
     v.badge.visible = mounted;
     if (mounted) v.badge.position.set(w.x - 0.78, 2.08 + Math.sin(time * 4) * 0.03, w.z);
+    // V2 Armour: steel shell + one pip per plate; a breaking plate throws steel shards
+    if (updateArmourVisual(v.armour, w.x, w.z, v.yaw, p.armour, mounted, time)) {
+      fx.wreck(w.x, 0.9, w.z, [
+        [0.62, 0.78, 0.9],
+        [0.85, 0.9, 0.95],
+        [0.35, 0.4, 0.46],
+      ]);
+      fx.shockwave(w.x, w.z, 1.5, ARMOUR_COLOR);
+    }
+
+    // spawn protection (respawn modes): a blinking ring and a blinking body
+    const shielded = state.tick < p.protectedUntil && state.match.phase === 'playing';
+    v.protect.visible = shielded;
+    if (shielded) {
+      const blink = protectionBlink(time);
+      v.protect.position.set(w.x, 0.05, w.z);
+      v.protect.scale.setScalar(1 + 0.12 * Math.sin(time * 14));
+      (v.protect.material as MeshBasicMaterial).opacity = blink ? 0.95 : 0.35;
+      v.model.root.visible = blink;
+    }
 
     v.ring.position.set(w.x, 0.03, w.z);
     (v.ring.material as MeshBasicMaterial).opacity =
@@ -401,6 +456,17 @@ export class PlayerViews implements View {
     } else v.ring.scale.setScalar(0.96);
   }
 
+  /** Respawn modes: a fallen fighter is back; undo the death pose and the hidden markers. */
+  private revive(ctx: FrameContext, v: Visual, w: Vector3): void {
+    v.deadAt = null;
+    v.ring.visible = true;
+    v.shadow.visible = true;
+    v.name.visible = true;
+    v.model.root.visible = true;
+    v.model.rigged?.revive();
+    ctx.fx.shockwave(w.x, w.z, 1.4, 0x7fd4ff);
+  }
+
   private poseDead(ctx: FrameContext, p: Player, v: Visual, base: Vector3): void {
     const { time, fx } = ctx;
     const m = v.model;
@@ -412,6 +478,8 @@ export class PlayerViews implements View {
     v.voucher.visible = false;
     v.badge.visible = false;
     v.shield.visible = false;
+    hideArmourVisual(v.armour, true);
+    v.protect.visible = false;
     m.bike.visible = false;
 
     if (v.deadAt === null) {
@@ -490,5 +558,6 @@ export class PlayerViews implements View {
 
   dispose(): void {
     this.visuals.clear();
+    this.teams.clear();
   }
 }

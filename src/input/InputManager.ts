@@ -2,42 +2,57 @@ import type { Dir, Intent } from '../sim';
 import { GamepadInput } from './gamepad';
 import { KeyboardInput } from './keyboard';
 import { MoveGate } from './moveGate';
+import { SpecialHold } from './specialHold';
 import type { ActionName, InputSourceName, NavCommand } from './types';
 
 export interface InputManagerEvents {
-  /** Fired for menu-style commands (vehicle selection, pause). */
+  /** Fired for menu-style commands (pause, tutorial vehicle selector). */
   onNav(command: NavCommand): void;
   /** Fired whenever the active input device changes (to show matching on-screen help). */
   onDeviceChange(device: InputSourceName): void;
 }
 
+/** What the match tells the input layer about the local player each tick. */
+export interface IntentContext {
+  /** Whether the local player's step finishes this tick (`readyToStep`); a press waits until then. */
+  canMove?: boolean;
+  /** The player owns a live remote generator: B must wait to tell a tap from a hold. */
+  remoteReady?: boolean;
+  /** Would a move this way do anything right now (step, kick ...)? Enables the corner-turn buffer. */
+  legal?: (dir: Dir) => boolean;
+}
+
 /**
  * Merges keyboard, touch and gamepad into one `Intent` per simulation tick. Every device has
- * identical power: they all just set the same Intent fields. Movement goes through a `MoveGate`, so a
- * press is one step and only a deliberate hold repeats (see moveGate.ts).
+ * identical power: they all just press the same two buttons (A = place, B = special / hold for the
+ * remote) and steer the same MoveGate, so a press is one step and only a deliberate hold repeats.
  */
 export class InputManager {
   private readonly keyboard: KeyboardInput;
   private readonly gamepad: GamepadInput;
   private touchDir: Dir | null = null;
   private readonly gate = new MoveGate();
+  private readonly b = new SpecialHold();
   /** Last tick handed to `buildIntent`; presses between ticks are stamped with it. */
   private tickNow = 0;
-  private readonly pending = new Set<ActionName>();
+  private remoteReady = false;
+  private placePending = false;
   private lastDevice: InputSourceName = 'keyboard';
-  /** Set while the vehicle-entry selector owns the directional input. */
+  /** Set while a (tutorial) vehicle-entry selector owns the directional input. */
   navMode = false;
 
   constructor(private readonly events: InputManagerEvents) {
     this.keyboard = new KeyboardInput({
       onMove: (d) => this.gate.press(d, this.tickNow),
-      onAction: (a) => this.press(a),
+      onAction: (a, code) => this.down(a, `key:${code}`),
+      onActionUp: (a, code) => this.up(a, `key:${code}`),
       onNav: (c) => this.nav(c),
       onUse: () => this.device('keyboard'),
     });
     this.gamepad = new GamepadInput({
       onMove: (d) => this.gate.press(d, this.tickNow),
-      onAction: (a) => this.press(a),
+      onAction: (a, src) => this.down(a, src),
+      onActionUp: (a, src) => this.up(a, src),
       onNav: (c) => this.nav(c),
       onUse: () => this.device('gamepad'),
     });
@@ -54,14 +69,30 @@ export class InputManager {
     this.events.onNav(c);
   }
 
-  /** Called by on-screen controls. */
-  press(action: ActionName): void {
-    this.pending.add(action);
+  private down(action: ActionName, source: string): void {
+    if (action === 'place') this.placePending = true;
+    else this.b.pressDown(source, this.tickNow, this.remoteReady);
   }
 
-  touchPress(action: ActionName): void {
+  private up(action: ActionName, source: string): void {
+    if (action === 'special') this.b.release(source);
+  }
+
+  /** On-screen button pressed (`source` tells several fingers apart; one finger = one source). */
+  touchDown(action: ActionName, source = 'touch'): void {
     this.device('touch');
-    this.press(action);
+    this.down(action, source);
+  }
+
+  /** On-screen button released / cancelled. */
+  touchUp(action: ActionName, source = 'touch'): void {
+    this.up(action, source);
+  }
+
+  /** A complete tap of an on-screen button (tests, scripted presses). */
+  touchPress(action: ActionName): void {
+    this.touchDown(action, 'tap');
+    this.touchUp(action, 'tap');
   }
 
   /** A finger landed on the on-screen stick (switches the help/legend to touch before any direction). */
@@ -82,7 +113,7 @@ export class InputManager {
     this.events.onNav(dir);
   }
 
-  /** Touch confirm/cancel buttons of the vehicle-entry overlay. */
+  /** Touch confirm/cancel buttons of the (tutorial) vehicle-entry overlay. */
   touchNav(c: NavCommand): void {
     this.device('touch');
     this.events.onNav(c);
@@ -93,33 +124,37 @@ export class InputManager {
     this.gamepad.poll();
   }
 
+  /** B is down and still deciding between tap and hold (the UI shows a filling ring), 0..1, else null. */
+  holdProgress(): number | null {
+    return this.b.progress(this.tickNow);
+  }
+
   /**
    * Builds the intent for this tick and clears the one-shot buffer.
-   * @param canMove whether the local player's step finishes this tick (`readyToStep`); a press is held back
-   *   until then. Defaults to true, i.e. a press is offered to the simulation on exactly one tick.
+   * @param tick the simulation tick about to run
+   * @param ctx  see IntentContext; a bare boolean is the legacy `canMove` argument
    */
-  buildIntent(tick: number, canMove = true): Intent {
+  buildIntent(tick: number, ctx: IntentContext | boolean = {}): Intent {
+    const c: IntentContext = typeof ctx === 'boolean' ? { canMove: ctx } : ctx;
     this.tickNow = tick;
+    this.remoteReady = c.remoteReady ?? false;
     let move: Dir | null = null;
     if (this.navMode) this.gate.clear();
-    else move = this.gate.next(tick, this.heldDir(), this.activeDirs(), canMove);
+    else move = this.gate.next(tick, this.heldDir(), this.activeDirs(), c.canMove ?? true, c.legal);
     const intent: Intent = { move };
-    for (const a of [...this.pending]) {
-      if (a === 'vehicle') continue; // consumed by takeVehiclePress() (vehicle entry controller)
-      this.pending.delete(a);
-      if (!this.navMode) intent[a] = true;
+    const b = this.b.take(tick);
+    if (!this.navMode) {
+      if (this.placePending) intent.place = true;
+      if (b === 'special') intent.special = true;
+      else if (b === 'detonate') intent.detonate = true;
     }
+    this.placePending = false;
     return intent;
   }
 
-  /** Whether the vehicle button was pressed since the last intent; consumed by the entry controller. */
-  takeVehiclePress(): boolean {
-    const had = this.pending.delete('vehicle');
-    return had;
-  }
-
   clear(): void {
-    this.pending.clear();
+    this.placePending = false;
+    this.b.clear();
     this.gate.clear();
   }
 

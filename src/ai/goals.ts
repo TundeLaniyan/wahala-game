@@ -3,7 +3,7 @@
  * destination; this module scores them (safe refuge, pickup, generator placement spot) and
  * compiles the winner into a Plan that the brain follows tick by tick.
  */
-import { nextFloat } from '../sim';
+import { nextFloat, previewRewards } from '../sim';
 import type { Dir, PickupKind } from '../sim';
 import {
   blastGeometry,
@@ -13,6 +13,8 @@ import {
   explodeTickFor,
   extractPlan,
   myRange,
+  mySquare,
+  protectionLayers,
   rivalEscape,
   searchRefuge,
   slotsFor,
@@ -125,6 +127,26 @@ export function pickupValue(c: Ctx, kind: PickupKind): number {
   }
 }
 
+/**
+ * V2 City Rumble (rewards on): how hard the bot hunts. Every credited elimination pays at once, so the
+ * pull towards rivals grows with the value of the next reward, and a bot wearing protection layers can
+ * afford to press harder. 1 when rewards are off (Classic). Cached per bot and tick. (Decision WC6.)
+ */
+const DRIVE_MAX = 2.5;
+const driveCache = new WeakMap<Ctx, { tick: number; drive: number }>();
+
+export function rewardDrive(c: Ctx): number {
+  const { obs, me } = c.world;
+  if (!obs.config.rewards.enabled) return 1;
+  const hit = driveCache.get(c);
+  if (hit && hit.tick === obs.tick) return hit.drive;
+  let value = 0;
+  for (const kind of previewRewards(obs, me)) value += Math.max(0, PICKUP_BASE[kind]);
+  const drive = Math.min(DRIVE_MAX, 1 + Math.min(1.2, value / 15) + 0.2 * protectionLayers(me));
+  driveCache.set(c, { tick: obs.tick, drive });
+  return drive;
+}
+
 function interested(c: Ctx, id: number): boolean {
   if (c.profile.pickupInterest >= 1) return true;
   let v = c.interest.get(id);
@@ -149,12 +171,17 @@ export function canPlaceNow(c: Ctx): boolean {
 
 const geo: BlastGeometry = { soft: 0, rivals: 0, mountedRivals: 0, pickups: 0, chains: 0, chainRivals: 0 };
 
-/** Cheap geometric value of a generator placed on `tile` (no escape / rival simulation yet). */
+/**
+ * Cheap geometric value of a generator placed on `tile` (no escape / rival simulation yet). Counts the
+ * Square Blast footprint, discounts rivals by their protection layers, and in City Rumble values a hit
+ * rival more the richer the next elimination reward is.
+ */
 export function placementGain(c: Ctx, tile: number): number {
   const { profile, world } = c;
-  blastGeometry(c, tile, myRange(c), world.me.hotFuel, geo);
-  const rivals = geo.rivals - geo.mountedRivals * 0.5 + (profile.chains ? 0.7 * geo.chainRivals : 0);
-  return profile.softValue * geo.soft + profile.rivalValue * rivals - profile.pickupLoss * geo.pickups;
+  blastGeometry(c, tile, myRange(c), world.me.hotFuel, geo, mySquare(c));
+  const rivals = geo.rivals - geo.mountedRivals + (profile.chains ? 0.7 * geo.chainRivals : 0);
+  const killValue = profile.rivalValue * (1 + 0.5 * (rewardDrive(c) - 1));
+  return profile.softValue * geo.soft + killValue * rivals - profile.pickupLoss * geo.pickups;
 }
 
 function nearRival(c: Ctx, tile: number, dist: number): boolean {
@@ -166,7 +193,7 @@ function nearRival(c: Ctx, tile: number, dist: number): boolean {
 
 export function tileValue(c: Ctx, tile: number, prevGoal: number): number {
   const { profile, world, hunt } = c;
-  let v = -c.huntWeight * hunt[tile]!;
+  let v = -c.huntWeight * rewardDrive(c) * hunt[tile]!;
   if (c.zoneTick >= 0) v -= ZONE_WEIGHT * c.zone[tile]!;
   if (tile === prevGoal) v += 1.2;
   if (profile.refugeMinExits > 0 && world.exits(tile) < profile.refugeMinExits) v -= 1.5;
@@ -197,10 +224,10 @@ function chooseDrop(c: Ctx): Plan | null {
   for (let t = 0; t < world.board.size; t++) {
     const k = bfs.firstSlot[t]!;
     if (k < 0 || k > 12 || world.genAt[t]! >= 0) continue;
-    blastGeometry(c, t, g.range, g.pierce, geo);
+    blastGeometry(c, t, g.range, g.pierce, geo, g.square);
     const gain =
       profile.softValue * geo.soft +
-      profile.rivalValue * (geo.rivals - geo.mountedRivals * 0.5) -
+      profile.rivalValue * (geo.rivals - geo.mountedRivals) -
       profile.pickupLoss * geo.pickups;
     cands.push({ kind: 'place', tile: t, slot: k, score: gain - profile.slotCost * k, verify: true });
   }
@@ -210,6 +237,7 @@ function chooseDrop(c: Ctx): Plan | null {
       explodeAt,
       range: g.range,
       pierce: g.pierce,
+      square: g.square,
     });
     if (!esc) continue;
     cand.escape = esc;
@@ -297,7 +325,7 @@ export function chooseGoal(c: Ctx, prevGoal: number): Plan | null {
       const score =
         gain -
         profile.slotCost * k -
-        c.huntWeight * c.hunt[t]! * 0.5 -
+        c.huntWeight * rewardDrive(c) * c.hunt[t]! * 0.5 -
         (c.zoneTick >= 0 ? ZONE_WEIGHT * c.zone[t]! : 0) +
         (t === prevGoal ? 1.2 : 0);
       placeCands.push({ kind: 'place', tile: t, slot: k, score, verify: true });
@@ -389,6 +417,7 @@ export function robust(c: Ctx, tile: number, a0: number, a1: number, step: numbe
     y: c.world.yOf(tile),
     range: myRange(c),
     pierce: c.world.me.hotFuel,
+    square: mySquare(c),
     explodeAt: explodeTickFor(c, placeTick),
   });
 }
@@ -406,7 +435,9 @@ function trapBonus(c: Ctx, cand: Cand, esc: EscapePlan): number {
     const rt = r.y * w + r.x;
     if (manhattanTiles(world.board, cand.tile, rt) > range + 3) continue;
     const e = rivalEscape(c, c.tmp, r, 6, profile.trap === 'shrink', cand.tile);
-    const soft = r.mounted ? 0.3 : 1;
+    // a protected rival (Okada / Armour) survives being caught: worth less the more layers it has
+    const layers = protectionLayers(r);
+    const soft = layers > 0 ? 0.3 / layers : 1;
     if (e.refuges === 0) {
       bonus += 60 * soft;
       continue;

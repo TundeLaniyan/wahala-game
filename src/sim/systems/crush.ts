@@ -1,12 +1,13 @@
 /**
  * Wahala Crush: the arena closes in with permanent concrete, one telegraphed tile at a time.
- * Everything under a landing tile is removed. A player caught there is eliminated, unless an
- * Okada absorbs it, in which case the rider is shoved to the nearest free tile.
+ * Everything under a landing tile is removed. A player caught there is eliminated, unless a protection
+ * layer (Okada, then Armour) absorbs it, in which case they are shoved to the nearest free tile; with no
+ * free tile left the landing kills through any protection (resolved in lethality.ts).
  */
 import { DIRS, DIR_VEC, inBounds, tileAt } from '../grid';
 import { Tile } from '../types';
 import type { GameState, SimEvent } from '../types';
-import { pickupAt, groundedGeneratorAt } from './queries';
+import { flameAt, pickupAt, groundedGeneratorAt } from './queries';
 import type { LethalHit } from './lethality';
 
 export function updateCrush(state: GameState, hits: LethalHit[], events: SimEvent[]): void {
@@ -56,36 +57,40 @@ function land(state: GameState, index: number, hits: LethalHit[], events: SimEve
   const eventId = state.nextEventId++;
   for (const p of state.players) {
     if (!p.alive || p.x !== x || p.y !== y) continue;
-    if (p.mounted) {
-      p.mounted = false;
-      events.push({ type: 'okadaBroken', playerId: p.id, x, y });
-      const spot = nearestFree(state, x, y);
-      if (spot) {
-        p.x = p.stepFromX = spot.x;
-        p.y = p.stepFromY = spot.y;
-        p.stepRemaining = 0;
-        continue;
-      }
-      // No open tile left (the final closure): the shield cannot save the rider.
-    }
+    // A protection layer (Okada, then Armour) saves a caught player by shoving them to the nearest free
+    // tile (lethality.ts); with no free tile left (the final closure) nothing can save them.
+    const spot = nearestFree(state, x, y);
     hits.push({
       playerId: p.id,
       eventId,
       cause: { kind: 'crush', eventId },
       graceUntil: state.tick,
+      ...(spot ? { relocate: spot } : { terminal: true }),
     });
   }
 }
 
+/** Nearest open tile (BFS over non-concrete), preferring one not burning or about to close. */
 function nearestFree(state: GameState, fromX: number, fromY: number): { x: number; y: number } | null {
+  return nearestOpen(state, fromX, fromY, true) ?? nearestOpen(state, fromX, fromY, false);
+}
+
+function nearestOpen(
+  state: GameState,
+  fromX: number,
+  fromY: number,
+  calm: boolean,
+): { x: number; y: number } | null {
   const seen = new Set<number>([fromY * state.width + fromX]);
   const queue = [{ x: fromX, y: fromY }];
+  const closing = new Set(state.crush?.pending.map((e) => e.index) ?? []);
   for (let head = 0; head < queue.length; head++) {
     const cur = queue[head]!;
     if (
       tileAt(state, cur.x, cur.y) === Tile.Empty &&
       !groundedGeneratorAt(state, cur.x, cur.y) &&
-      !pickupAt(state, cur.x, cur.y)
+      !pickupAt(state, cur.x, cur.y) &&
+      (!calm || (!flameAt(state, cur.x, cur.y) && !closing.has(cur.y * state.width + cur.x)))
     ) {
       return cur;
     }

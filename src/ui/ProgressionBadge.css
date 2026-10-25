@@ -1,0 +1,99 @@
+/* V2 City Rumble progression badge (workstream C). One compact row; never over the board centre. */
+.pbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(4px, 0.9vh, 8px);
+  padding: 2px 8px 2px 4px;
+  background: var(--glass, rgba(12, 13, 16, 0.72));
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--glass-edge, rgba(255, 255, 255, 0.16));
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: clamp(0.66rem, 1.8vh, 0.85rem);
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+  color: #f2f2f2;
+}
+.pbadge.floating {
+  position: absolute;
+  top: calc(max(0px, env(safe-area-inset-top)) + clamp(44px, 8.5vh, 64px));
+  left: 50%;
+  transform: translateX(-50%);
+}
+.pbadge small {
+  font-size: 0.68em;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+.pb-kills {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #ffc61a;
+  color: #111;
+}
+.pb-kills b {
+  font-size: 1.15em;
+}
+.pb-kills small {
+  opacity: 0.85;
+}
+.pb-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.pb-icon {
+  position: relative;
+  display: inline-flex;
+}
+.pb-icon img {
+  width: clamp(16px, 3vh, 22px);
+  height: clamp(16px, 3vh, 22px);
+}
+.pb-icon i {
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  font-style: normal;
+  font-size: 0.7em;
+  text-shadow: 0 0 3px #000;
+}
+.pb-guard {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.pb-pip {
+  display: inline-block;
+  width: clamp(7px, 1.3vh, 10px);
+  height: clamp(9px, 1.6vh, 12px);
+  clip-path: polygon(50% 0, 100% 18%, 100% 60%, 50% 100%, 0 60%, 0 18%);
+}
+.pb-pip.armour {
+  background: linear-gradient(#d8f1ff, #6aa9cf);
+}
+.pb-pip.okada {
+  background: linear-gradient(#fff2a8, #e2a812);
+}
+.pb-square {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #9fe4ff;
+}
+.pb-sq {
+  display: inline-block;
+  width: clamp(9px, 1.6vh, 12px);
+  height: clamp(9px, 1.6vh, 12px);
+  border: 2px solid #6fd8ff;
+  box-shadow: 0 0 6px rgba(111, 216, 255, 0.7);
+}
+@media (max-height: 520px) {
+  .pbadge.floating {
+    top: calc(max(0px, env(safe-area-inset-top)) + 38px);
+  }
+}

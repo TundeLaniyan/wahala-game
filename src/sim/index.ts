@@ -2,7 +2,7 @@
 export { createGame, createPlayer, crushSchedule, DEFAULT_SETTINGS, MAX_PLAYERS, MIN_PLAYERS } from './state';
 export { tick } from './tick';
 export { DEFAULT_CONFIG, TICK_RATE, mergeConfig, ticks } from './config';
-export type { DeepPartial, GameConfig, VehicleSpec } from './config';
+export type { DeepPartial, GameConfig, RewardKind, VehicleSpec } from './config';
 export * from './types';
 export {
   DIRS,
@@ -47,8 +47,21 @@ export { chooseAutoVehicle, scoreRoute } from './systems/autoVehicle';
 export type { AutoVehicleChoice, AutoVehicleView } from './systems/autoVehicle';
 export { squareFootprint } from './systems/explosions';
 export { meleeTarget } from './systems/skills';
+export { moveWouldAct } from './systems/contact';
+export { autoRouteOptions, drivableStretch } from './systems/autoVehicle';
 export { canHarm, isOpponent, teammates } from './systems/queries';
 export { rankPlayers, teamStandings, timedResult } from './systems/match';
 export type { TeamStanding } from './systems/match';
-export { rewardsFor } from './systems/rewards';
-export { DEFAULT_TIMED_SECONDS, RUMBLE_MODES, isRespawnMode, isTeamMode, modeConfig } from './modes';
+export { previewRewards, rewardUseful, rewardsFor } from './systems/rewards';
+export {
+  DEFAULT_TIMED_SECONDS,
+  RUMBLE_MODES,
+  TEAM_NAMES,
+  TIMED_MINUTES,
+  assignTeams,
+  isRespawnMode,
+  isTeamMode,
+  modeConfig,
+  teamHome,
+} from './modes';
+export { isSpawnProtected } from './systems/respawn';

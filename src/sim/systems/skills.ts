@@ -9,11 +9,22 @@ import { isActing, playersAt, teammates } from './queries';
  * V2 melee target: an opponent (never a teammate) on the faced tile, else on another adjacent tile in
  * the fixed order up, right, down, left (when `special.meleeAnyAdjacent`). Deterministic.
  */
-export function meleeTarget(state: GameState, p: Player): { target: Player; dir: Dir } | null {
-  const order: Dir[] = [p.facing, ...(state.config.special.meleeAnyAdjacent ? DIRS.filter((d) => d !== p.facing) : [])];
+export function meleeTarget<P extends Readonly<Player>>(
+  state: { readonly players: readonly P[]; readonly config: GameState['config'] },
+  p: Readonly<Player>,
+): { target: P; dir: Dir } | null {
+  const order: Dir[] = [
+    p.facing,
+    ...(state.config.special.meleeAnyAdjacent ? DIRS.filter((d) => d !== p.facing) : []),
+  ];
   for (const dir of order) {
     const v = DIR_VEC[dir];
-    const target = playersAt(state, p.x + v.dx, p.y + v.dy).find((o) => o.id !== p.id && !teammates(p, o));
+    const x = p.x + v.dx;
+    const y = p.y + v.dy;
+    // players in id order: the same pick every time (bots call this with their Observation)
+    const target = state.players.find(
+      (o) => o.alive && o.x === x && o.y === y && o.id !== p.id && !teammates(p, o),
+    );
     if (target) return { target, dir };
   }
   return null;
