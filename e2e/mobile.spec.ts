@@ -146,7 +146,7 @@ test.describe('touch controls (landscape phone)', () => {
     }
   });
 
-  test('once the player is out the thumbstick goes away so the spectator buttons are free (regression)', async ({
+  test('once the player is out the combat buttons go; the sideline stick + THROW never cover the spectator buttons (regression)', async ({
     page,
   }) => {
     await open(page, '&nobots');
@@ -155,8 +155,20 @@ test.describe('touch controls (landscape phone)', () => {
     await mutate(page, 's.players[0].alive = false; s.players[0].eliminatedTick = s.tick;');
     await stepTicks(page, 10);
     await publish(page);
-    await expect(page.getByTestId('stick-zone')).toHaveCount(0);
+    // V2 Classic: an eliminated player is a sideline spectator (stick to walk the lane, THROW = A); the two
+    // combat buttons are gone and the spectator bar's Skip stays reachable
     await expect(page.getByTestId('btn-place')).toHaveCount(0);
+    await expect(page.getByTestId('btn-special')).toHaveCount(0);
+    const skip = (await page.getByTestId('skip-results').boundingBox())!;
+    const zone = await page.getByTestId('stick-zone').boundingBox();
+    if (zone) {
+      const overlap =
+        zone.x < skip.x + skip.width &&
+        skip.x < zone.x + zone.width &&
+        zone.y < skip.y + skip.height &&
+        skip.y < zone.y + zone.height;
+      expect(overlap).toBe(false);
+    }
     await page.getByTestId('skip-results').click(); // reachable: nothing on top of it
   });
 
