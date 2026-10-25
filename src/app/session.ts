@@ -13,9 +13,12 @@ import { enterImmersiveMode } from './fullscreen';
 import { AttractController } from './AttractController';
 import { MatchController } from './MatchController';
 import { TutorialController } from './TutorialController';
+import { advance, back, editScreen, menuAt, openScreen } from './menu';
+import type { MenuScreen, MenuState } from './menu';
+import { routeMenuNav } from './menuNav';
 import { NULL_AUDIO } from './ports';
 import type { AudioPort } from './ports';
-import { saveSettings } from './settings';
+import { sanitizeSettings, saveSettings } from './settings';
 import type { GameSettings } from './settings';
 import { patch, useGameStore } from './store';
 import type { ScreenPoint } from './store';
@@ -46,7 +49,10 @@ const onSpeak = (t: SpokenTrace): void => {
 };
 
 const input = new InputManager({
-  onNav: (c) => controller?.handleNav(c),
+  // the menu showing (main menu, pause, results) gets menu input first; the match gets the rest
+  onNav: (c) => {
+    if (!routeMenuNav(c)) controller?.handleNav(c);
+  },
   onDeviceChange: (device) => patch({ device }),
 });
 
@@ -72,7 +78,10 @@ function applyAudioSettings(s: GameSettings): void {
 function frame(now: number): void {
   raf = requestAnimationFrame(frame);
   if (!controller) return;
-  if (useGameStore.getState().screen === 'title') attract?.frame(now);
+  if (useGameStore.getState().screen === 'title') {
+    input.pollDevices(); // gamepad navigation of the main menu (the match polls it while one runs)
+    attract?.frame(now);
+  }
   else {
     controller.frame(now);
     if (useGameStore.getState().tutorial) tutorial?.frame();
@@ -193,13 +202,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
         /* portraits fall back to the drawn versions */
       }
       patch({ loading: null, portraitsVersion: useGameStore.getState().portraitsVersion + 1 });
-      if (
-        !params.has('nobots') &&
-        !params.has('noattract') &&
-        settings.quality !== 'low' &&
-        useGameStore.getState().screen === 'title'
-      )
-        attract?.start();
+      if (settingsAllowAttract() && useGameStore.getState().screen === 'title') attract?.start();
     });
   resizeObserver = new ResizeObserver(sizeCanvas);
   resizeObserver.observe(canvas);
@@ -252,16 +255,28 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   };
 }
 
+/**
+ * The live bots-only demo behind the menu. The Stitch menu (decision UI1) covers the whole screen with
+ * its own cinematic backdrop, so the demo would only spend battery behind it: it runs only on request
+ * (`?attract`, e.g. for an idle-screen experiment).
+ */
 function settingsAllowAttract(): boolean {
   const params = new URLSearchParams(location.search);
   return (
-    !params.has('nobots') && !params.has('noattract') && useGameStore.getState().settings.quality !== 'low'
+    params.has('attract') &&
+    !params.has('nobots') &&
+    !params.has('noattract') &&
+    useGameStore.getState().settings.quality !== 'low'
   );
 }
 
 /** Everything the UI can ask the game to do. */
 export const commands = {
   start(): void {
+    // a match must always be able to start: repair anything an old save could hold first
+    const current = useGameStore.getState().settings;
+    const safe = sanitizeSettings(current);
+    if (JSON.stringify(safe) !== JSON.stringify(current)) commands.updateSettings(safe);
     void audio.unlock();
     if (useGameStore.getState().touchCapable) void enterImmersiveMode();
     audio.playUi('start');
@@ -275,11 +290,41 @@ export const commands = {
     subtitles.clear();
     controller?.rematch();
   },
-  toTitle(): void {
+  /** Leaves the match for the main menu, at `path` below home (default: the home screen). */
+  toTitle(path: readonly MenuScreen[] = []): void {
     audio.playUi('back');
     subtitles.clear();
+    patch({ menu: menuAt(path), pauseSettings: false });
     controller?.stop();
     if (settingsAllowAttract()) attract?.start();
+  },
+  // ---- main-menu navigation (app/menu.ts); the screens edit the real settings through updateSettings
+  menuOpen(screen: MenuScreen): void {
+    audio.playUi('click');
+    setMenu(openScreen(useGameStore.getState().menu, screen));
+  },
+  /** Ready's Edit buttons: change one choice, then come back to Ready. */
+  menuEdit(screen: MenuScreen): void {
+    audio.playUi('click');
+    setMenu(editScreen(useGameStore.getState().menu, screen));
+  },
+  menuBack(): void {
+    if (useGameStore.getState().menu.stack.length <= 1) return;
+    audio.playUi('back');
+    setMenu(back(useGameStore.getState().menu));
+  },
+  menuContinue(): void {
+    audio.playUi('click');
+    setMenu(advance(useGameStore.getState().menu));
+  },
+  menuHome(): void {
+    audio.playUi('back');
+    setMenu(menuAt([]));
+  },
+  /** The pause menu's Settings panel (the match stays paused behind it). */
+  pauseSettings(open: boolean): void {
+    audio.playUi(open ? 'click' : 'back');
+    patch({ pauseSettings: open });
   },
   togglePause: (): void => controller?.togglePause(),
   resume: (): void => controller?.setPaused(false),
@@ -328,6 +373,10 @@ export const commands = {
 };
 
 export { input };
+
+function setMenu(menu: MenuState): void {
+  patch({ menu });
+}
 
 /** Keys that switch the spectated survivor (the local player is out, so they move nobody). */
 const SPECTATE_KEYS: Record<string, 1 | -1> = {

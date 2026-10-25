@@ -1,4 +1,4 @@
-import { DIFFICULTIES } from '../sim';
+import { CHARACTER_IDS, DIFFICULTIES, EXPERIMENTAL_ARENA_IDS, RUMBLE_ARENA_IDS, STANDARD_ARENA_IDS } from '../sim';
 import type { CharacterId, Difficulty } from '../sim';
 import type { CameraView, QualityLevel } from '../render';
 
@@ -74,7 +74,78 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   narration: true,
 };
 
-const KEY = 'wahala.settings.v1';
+export const SETTINGS_KEY = 'wahala.settings.v1';
+const KEY = SETTINGS_KEY;
+
+/** City Rumble roster sizes offered by the menu. */
+export const RUMBLE_SIZES = [8, 16, 24, 32] as const;
+
+/**
+ * The device / presentation preferences (Settings screen), as opposed to the match setup. "Restore
+ * defaults" resets exactly these; the chosen game, fighter, arena and bots are never touched by it.
+ */
+export const PREFERENCE_KEYS = ['quality', 'touchControls', 'cameraView', 'subtitles', 'shake', 'narration', 'muted'] as const;
+export type PreferenceKey = (typeof PREFERENCE_KEYS)[number];
+
+export function preferenceDefaults(): Pick<GameSettings, PreferenceKey> {
+  const d = DEFAULT_GAME_SETTINGS;
+  return {
+    quality: d.quality,
+    touchControls: d.touchControls,
+    cameraView: d.cameraView,
+    subtitles: d.subtitles,
+    shake: d.shake,
+    narration: d.narration,
+    muted: d.muted,
+  };
+}
+
+const oneOf = <T>(value: unknown, allowed: readonly T[], fallback: T): T =>
+  allowed.includes(value as T) ? (value as T) : fallback;
+const bool = (value: unknown, fallback: boolean): boolean => (typeof value === 'boolean' ? value : fallback);
+
+/**
+ * Repairs any value the menu could not have produced (an old or hand-edited save, a removed arena) so a
+ * match can always start: each bad field falls back to its default, valid fields are kept.
+ */
+export function sanitizeSettings(s: GameSettings): GameSettings {
+  const d = DEFAULT_GAME_SETTINGS;
+  const classicArenas = [...STANDARD_ARENA_IDS, ...EXPERIMENTAL_ARENA_IDS];
+  const difficulty = migrateDifficulty(s.difficulty, d.difficulty);
+  const bots = Array.isArray(s.botDifficulties) ? s.botDifficulties : [];
+  return {
+    ...s,
+    play: oneOf(s.play, ['rumble', 'classic'] as const, d.play),
+    competitors: oneOf(s.competitors, [2, 3, 4] as const, d.competitors),
+    rumbleCompetitors: oneOf(s.rumbleCompetitors, RUMBLE_SIZES, d.rumbleCompetitors),
+    difficulty,
+    botDifficulties: [0, 1, 2].map((i) => migrateDifficulty(bots[i], difficulty)),
+    rumbleMixed: bool(s.rumbleMixed, d.rumbleMixed),
+    rumbleMode: oneOf(s.rumbleMode, ['survival', 'deathmatch', 'team'] as const, d.rumbleMode),
+    rumbleMinutes: oneOf(s.rumbleMinutes, [5, 10] as const, d.rumbleMinutes),
+    friendlyFire: bool(s.friendlyFire, d.friendlyFire),
+    rumbleArenaId: oneOf(s.rumbleArenaId, RUMBLE_ARENA_IDS, RUMBLE_ARENA_IDS[0] ?? d.rumbleArenaId),
+    character: oneOf(s.character, CHARACTER_IDS, d.character),
+    arenaId: oneOf(s.arenaId, classicArenas, d.arenaId),
+    crowdThrows: bool(s.crowdThrows, d.crowdThrows),
+    quality: oneOf(s.quality, ['auto', 'low', 'medium', 'high'] as const, d.quality),
+    muted: bool(s.muted, d.muted),
+    touchControls: oneOf(s.touchControls, ['auto', 'on', 'off'] as const, d.touchControls),
+    cameraView: oneOf(s.cameraView, ['action', 'overview'] as const, d.cameraView),
+    subtitles: oneOf(s.subtitles, SUBTITLE_MODES, 'off'),
+    shake: oneOf(s.shake, ['auto', 'off', 'subtle'] as const, d.shake),
+    narration: bool(s.narration, d.narration),
+  };
+}
+
+/** Whether a player has played or set something up before (offers the "Quick play" shortcut). */
+export function hasSavedSettings(): boolean {
+  try {
+    return !!globalThis.localStorage?.getItem(KEY);
+  } catch {
+    return false;
+  }
+}
 
 /** Pre-V2 saved levels map onto the nearest V2 level (never silently to Rookie). */
 const LEGACY_DIFFICULTY: Readonly<Record<string, Difficulty>> = {
@@ -105,7 +176,7 @@ export function loadSettings(): GameSettings {
       merged.play = 'rumble';
     }
     delete (merged as { mode?: unknown }).mode;
-    return merged;
+    return sanitizeSettings(merged);
   } catch {
     return { ...DEFAULT_GAME_SETTINGS };
   }

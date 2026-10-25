@@ -32,7 +32,7 @@ async function measure(page: Page, arenaId: string, cols: number, rows: number):
   }, arenaId);
   await page.goto('./?debug&q=low&seed=7&nobots&noattract');
   await expect(page.getByTestId('title-screen')).toBeVisible();
-  await page.getByTestId('start-button').click();
+  await page.getByTestId('quick-play').click(); // the saved setup, as a returning player starts it
   await expect(page.getByTestId('hud')).toBeVisible();
   await stepTicks(page, 30);
   const info = await page.evaluate(() => {
@@ -112,7 +112,7 @@ test('an eliminated player throws from the sideline with the THROW button (Mobil
     );
   });
   await page.goto('./?debug&q=low&seed=7&nobots&noattract');
-  await page.getByTestId('start-button').click();
+  await page.getByTestId('quick-play').click(); // the saved setup, as a returning player starts it
   await expect(page.getByTestId('hud')).toBeVisible();
   await stepTicks(page, 200);
   // knock the local player out in the middle of the board with a one-tick generator

@@ -4,7 +4,7 @@ import { useGameStore } from '../app/store';
 import { HowToPlay } from './HowToPlay';
 import { Hud } from './Hud';
 import { PauseOverlay, ResultsOverlay, RotateOverlay } from './Overlays';
-import { TitleScreen } from './TitleScreen';
+import { MainMenu } from './menu/MainMenu';
 import { TouchControls } from './TouchControls';
 import { SpectatorControls } from './SpectatorControls';
 
@@ -46,7 +46,7 @@ export function App() {
       {screen === 'playing' && paused && !tutorial && <PauseOverlay />}
       {screen === 'playing' && tutorial && <HowToPlay />}
       {screen === 'results' && <ResultsOverlay />}
-      {screen === 'title' && !fatal && <TitleScreen />}
+      {screen === 'title' && !fatal && <MainMenu />}
       {fatal && (
         <div className="scrim" data-testid="fatal">
           <div className="card lose">
@@ -55,7 +55,7 @@ export function App() {
           </div>
         </div>
       )}
-      {screen === 'playing' && portrait && <RotateOverlay />}
+      {screen === 'playing' && portrait && !paused && <RotateOverlay />}
     </div>
   );
 }

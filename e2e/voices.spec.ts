@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, mutate, open, startMatch, stepTicks, thumb, chooseArena } from './helpers';
+import { getState, mutate, open, startMatch, stepTicks, thumb, chooseArena, openSettings, pauseSettings, launch } from './helpers';
 
 /** The founder-approved voice clips and the catalogue they belong to. */
 const RECORDED = (
@@ -150,7 +150,7 @@ test.describe('Nigerian voice clips', () => {
       if (r.url().includes('/audio/voices/recorded/')) requested.push(r.url().split('/').pop()!);
     });
     await open(page, '&nobots&noattract');
-    await page.getByTestId('audio-music').click(); // first gesture: audio unlocks, manifests load
+    await page.getByTestId('home-settings').click(); // first gesture: audio unlocks, manifests load
     await page.waitForTimeout(1500);
     expect(requested).toEqual([]); // the title screen loads no clip
 
@@ -284,7 +284,9 @@ test.describe('Nigerian voice clips', () => {
     page,
   }, info) => {
     await open(page, '&nobots&noattract');
-    await expect(page.getByTestId('toggle-subtitles')).toHaveAttribute('data-mode', 'off');
+    await openSettings(page, 'access');
+    await expect(page.getByTestId('subtitles-off')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('settings-close').click();
     await chooseArena(page, 'danfoBusPark');
     await startMatch(page, { competitors: 4 });
     await sceneLoaded(page);
@@ -292,11 +294,13 @@ test.describe('Nigerian voice clips', () => {
     await page.waitForTimeout(300);
     await expect(page.getByTestId('subtitle')).toHaveCount(0); // subtitles are off
 
-    // turn them on from the pause menu
+    // turn them on from the pause menu's Settings, then back to the match
     await page.keyboard.press('p');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    await pauseSettings(page, 'audio');
     await page.getByTestId('toggle-subtitles').click();
     await expect(page.getByTestId('toggle-subtitles')).toHaveAttribute('data-mode', 'on');
+    await page.getByTestId('pause-settings-close').click();
     await page.keyboard.press('p');
     await expect(page.getByTestId('pause-overlay')).toHaveCount(0);
 
@@ -361,7 +365,7 @@ test.describe('Nigerian voice clips', () => {
     if (info.project.use.isMobile) await page.setViewportSize({ width: 568, height: 320 });
     await open(page, '&nobots&noattract');
     await chooseArena(page, 'surulerePowerYard');
-    await page.getByTestId('start-button').click();
+    await launch(page);
     const banner = page.getByTestId('rule-banner');
     await expect(banner).toBeVisible();
     await page.evaluate(() => {
@@ -398,7 +402,9 @@ test.describe('Nigerian voice clips', () => {
   }, info) => {
     test.skip(!info.project.use.isMobile, 'mobile project only');
     await open(page, '&nobots&noattract');
-    await page.getByTestId('toggle-subtitles').click();
+    await openSettings(page, 'access');
+    await page.getByTestId('subtitles-on').click();
+    await page.getByTestId('settings-close').click();
     await startMatch(page, { competitors: 4 });
     await sceneLoaded(page);
     expect(await preview(page, 'ON_PLAYER_NARROW_ESCAPE')).toBe(true);

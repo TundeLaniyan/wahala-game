@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { chooseArena, mutate, open, startMatch } from './helpers';
+import { chooseArena, mutate, open, openSettings, startMatch } from './helpers';
 
 /** Records every AudioContext and every started buffer source so the test can see what really played. */
 const TRACK = `
@@ -52,6 +52,7 @@ const sliderValue = (page: Page, key: string): Promise<string> =>
 test.describe('audio settings, persistence and music start', () => {
   test('four independent sliders with the music-first defaults, saved between visits', async ({ page }) => {
     await open(page, '&nobots');
+    await openSettings(page);
     await expect(page.getByTestId('audio-settings')).toBeVisible();
     expect([
       await sliderValue(page, 'master'),
@@ -71,6 +72,7 @@ test.describe('audio settings, persistence and music start', () => {
 
     await page.reload();
     await expect(page.getByTestId('title-screen')).toBeVisible();
+    await openSettings(page);
     expect([await sliderValue(page, 'music'), await sliderValue(page, 'ambience')]).toEqual(['20', '90']);
 
     await page.getByTestId('toggle-voices').click();
@@ -81,19 +83,53 @@ test.describe('audio settings, persistence and music start', () => {
     await expect(page.getByTestId('toggle-voices')).toContainText('on');
   });
 
-  test('mute is remembered and the panel is also on the pause menu', async ({ page }) => {
+  test('mute is remembered, shared by Home and Settings, and the panel is also in the pause menu', async ({ page }) => {
     await open(page, '&nobots');
+    await openSettings(page);
     await expect(page.getByTestId('toggle-mute')).toContainText('Sound on');
     await page.getByTestId('toggle-mute').click();
     await expect(page.getByTestId('toggle-mute')).toContainText('Muted');
     await page.reload();
-    await expect(page.getByTestId('toggle-mute')).toContainText('Muted');
-    await page.getByTestId('toggle-mute').click();
+    await expect(page.getByTestId('home-mute')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('home-mute').click();
+    await expect(page.getByTestId('home-mute')).toHaveAttribute('aria-pressed', 'false');
+    await openSettings(page);
+    await expect(page.getByTestId('toggle-mute')).toContainText('Sound on');
+    await page.getByTestId('settings-close').click();
     await startMatch(page);
     await page.keyboard.press('p');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    await page.getByTestId('pause-settings-open').click();
     await expect(page.getByTestId('pause-overlay').getByTestId('audio-settings')).toBeVisible();
     await expect(page.getByTestId('pause-overlay').getByTestId('audio-reset')).toBeVisible();
+  });
+
+  test('Restore defaults resets the audio mix and the device preferences, never the match setup', async ({ page }) => {
+    await open(page, '&nobots');
+    await page.getByTestId('home-classic').click();
+    await page.getByTestId('players-2').click();
+    await page.getByTestId('menu-back').click();
+    await openSettings(page);
+    await page.getByTestId('audio-music').fill('20');
+    await page.getByTestId('toggle-voices').click();
+    await page.getByTestId('settings-tab-graphics').click();
+    await page.getByTestId('quality-high').click();
+    await page.getByTestId('settings-tab-access').click();
+    await page.getByTestId('subtitles-large').click();
+    await page.getByTestId('shake-off').click();
+    // two presses: the first only asks for confirmation
+    await page.getByTestId('settings-restore').click();
+    await expect(page.getByTestId('subtitles-large')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('settings-restore').click();
+    await expect(page.getByTestId('subtitles-off')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('shake-auto')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('settings-tab-graphics').click();
+    await expect(page.getByTestId('quality-auto')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('settings-tab-audio').click();
+    expect(await sliderValue(page, 'music')).toBe('90');
+    await expect(page.getByTestId('toggle-voices')).toContainText('on');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.settings.v1') ?? '{}'));
+    expect(saved).toMatchObject({ quality: 'auto', subtitles: 'off', shake: 'auto', play: 'classic', competitors: 2 });
   });
 
   test('a browser with the old saved defaults gets the new mix; a chosen mix is kept until the player asks', async ({
@@ -110,6 +146,7 @@ test.describe('audio settings, persistence and music start', () => {
       }
     });
     await open(page, '&nobots');
+    await openSettings(page);
     const all = async () =>
       Promise.all(['master', 'music', 'ambience', 'sfx'].map((k) => sliderValue(page, k)));
     expect(await all()).toEqual(['85', '90', '45', '50']);
@@ -124,6 +161,7 @@ test.describe('audio settings, persistence and music start', () => {
     });
     await page.reload();
     await expect(page.getByTestId('title-screen')).toBeVisible();
+    await openSettings(page);
     expect(await all()).toEqual(['60', '50', '20', '100']);
     await expect(page.getByTestId('audio-reset')).toContainText('Use recommended mix');
     // one press applies the recommended mix, and it sticks
@@ -131,6 +169,7 @@ test.describe('audio settings, persistence and music start', () => {
     expect(await all()).toEqual(['85', '90', '45', '50']);
     await page.reload();
     await expect(page.getByTestId('title-screen')).toBeVisible();
+    await openSettings(page);
     expect(await all()).toEqual(['85', '90', '45', '50']);
   });
 
@@ -148,8 +187,9 @@ test.describe('audio settings, persistence and music start', () => {
     expect(before.contexts).toBe(0); // browsers block audio until a gesture, and so do we
     expect(before.started).toEqual([]);
 
-    await page.getByTestId('audio-music').click(); // first user interaction (a click on a slider)
+    await page.getByTestId('home-settings').click(); // first user interaction (a menu click)
     await expect.poll(async () => (await probe(page)).contexts, { timeout: 10_000 }).toBe(1);
+    await page.getByTestId('settings-close').click();
 
     await startMatch(page);
     await page.waitForTimeout(3000);
@@ -253,7 +293,8 @@ test.describe('the approved soundtrack in a real browser', () => {
   }) => {
     test.setTimeout(420_000); // three matches on software WebGL
     await open(page, '&nobots');
-    await page.getByTestId('audio-music').click(); // the first gesture unlocks audio
+    await page.getByTestId('home-settings').click(); // the first gesture unlocks audio
+    await page.getByTestId('settings-close').click();
     await chooseArena(page, 'danfoBusPark');
     await startMatch(page, { competitors: 2 });
     // the opponent is idle (&nobots): with the (mandatory) Wahala Crush it would be crushed before the final
@@ -317,6 +358,7 @@ test.describe('the approved soundtrack in a real browser', () => {
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
     await page.getByTestId('quit').click();
+    await expect(page.getByTestId('menu-home')).toBeVisible();
     await chooseArena(page, 'danfoBusPark');
     await startMatch(page, { competitors: 2 });
     await expect.poll(async () => (await musicState(page)).history.length, { timeout: 30_000 }).toBe(3);

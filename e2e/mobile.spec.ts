@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, mutate, open as openTitle, startMatch, stepTicks, thumb } from './helpers';
+import { getState, mutate, open as openTitle, startMatch, stepTicks, thumb, openSettings } from './helpers';
 
 /**
  * V2 menus default to City Rumble; these specs drive Classic Battle (the 15 x 11 arenas), so the saved
@@ -290,7 +290,9 @@ test.describe('input device switching', () => {
   test.skip(({ isMobile }) => isMobile === true, 'desktop only');
   test('keyboard then on-screen controls both drive the same player', async ({ page }) => {
     await open(page, '&nobots');
+    await openSettings(page, 'controls');
     await page.getByTestId('touch-on').click();
+    await page.getByTestId('settings-close').click();
     await startMatch(page, { competitors: 2 });
     await expect(page.getByTestId('stick-zone')).toBeVisible();
     const s0 = (await getState(page)).players[0]!;

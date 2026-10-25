@@ -1,6 +1,16 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, holdKey, mutate, open as openTitle, startMatch, stepTicks, chooseArena } from './helpers';
+import {
+  getState,
+  holdKey,
+  mutate,
+  open as openTitle,
+  pauseSettings,
+  startMatch,
+  stepTicks,
+  chooseArena,
+  toClassicSetup,
+} from './helpers';
 
 /**
  * V2 menus default to City Rumble; these specs drive Classic Battle (the 15 x 11 arenas), so the saved
@@ -52,12 +62,27 @@ test.describe('menus and match flow', () => {
     const before = (await getState(page)).tick;
     await page.waitForTimeout(300);
     expect((await getState(page)).tick).toBe(before);
+    // Settings from the pause menu: Esc and P close Settings and the match stays paused behind them
+    await page.getByTestId('pause-settings-open').click();
+    await expect(page.getByTestId('pause-settings')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('pause-settings')).toHaveCount(0);
+    await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    await page.getByTestId('pause-settings-open').click();
+    await page.keyboard.press('p');
+    await expect(page.getByTestId('pause-settings')).toHaveCount(0);
+    await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    await page.getByTestId('pause-settings-open').click();
+    await page.getByTestId('pause-settings-close').click();
+    await page.waitForTimeout(300);
+    expect((await getState(page)).tick).toBe(before);
     await page.getByTestId('resume').click();
     await expect(page.getByTestId('pause-overlay')).toBeHidden();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
     await page.getByTestId('quit').click();
     await expect(page.getByTestId('title-screen')).toBeVisible();
+    await expect(page.getByTestId('menu-home')).toBeVisible();
   });
 });
 
@@ -351,7 +376,7 @@ test.describe('two buttons and contact abilities (keyboard)', () => {
     expect((await getState(page)).generators).toHaveLength(0);
   });
 
-  test('pause menu: the screen-shake setting cycles auto / off / subtle and reaches the renderer', async ({
+  test('pause menu Settings: the screen-shake setting (auto / off / subtle) reaches the renderer', async ({
     page,
   }, info) => {
     test.skip(info.project.name !== 'desktop', 'desktop default is subtle');
@@ -367,17 +392,15 @@ test.describe('two buttons and contact abilities (keyboard)', () => {
             .shakeStatus().mode,
       );
     expect(await mode()).toBe('subtle'); // auto with a mouse
-    await page.keyboard.press('p');
-    const chip = page.getByTestId('toggle-shake');
-    await expect(chip).toHaveAttribute('data-value', 'auto');
-    await chip.click();
-    await expect(chip).toHaveAttribute('data-value', 'off');
+    await pauseSettings(page, 'access');
+    await expect(page.getByTestId('shake-auto')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('shake-off').click();
+    await expect(page.getByTestId('shake-off')).toHaveAttribute('aria-pressed', 'true');
     expect(await mode()).toBe('off');
-    await chip.click();
-    await expect(chip).toHaveAttribute('data-value', 'subtle');
+    await page.getByTestId('shake-subtle').click();
     expect(await mode()).toBe('subtle');
-    await chip.click();
-    await expect(chip).toHaveAttribute('data-value', 'auto');
+    await page.getByTestId('shake-auto').click();
+    await expect(page.getByTestId('shake-auto')).toHaveAttribute('aria-pressed', 'true');
   });
 });
 
@@ -389,8 +412,16 @@ test.describe('whole-match robustness', () => {
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
     await open(page);
-    await page.getByTestId('diff-all').selectOption('expert');
+    await toClassicSetup(page);
+    await page.getByTestId('diff-expert').click();
     await startMatch(page, { competitors: 4, waitPlaying: false });
+    // the level chosen in the menu reached the settings the running match was built from
+    const levels = await page.evaluate(
+      () =>
+        (window as never as { __WAHALA__: { controller(): { settings: { botDifficulties: string[] } } } }).__WAHALA__.controller()
+          .settings.botDifficulties,
+    );
+    expect(levels).toEqual(['expert', 'expert', 'expert']);
     for (let i = 0; i < 12; i++) {
       await stepTicks(page, 300);
       await page.waitForTimeout(60); // let frames render, events reach audio/captions

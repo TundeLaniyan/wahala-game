@@ -28,16 +28,56 @@ export async function open(page: Page, query = ''): Promise<void> {
 }
 
 /**
- * Starts a match from the title screen. V2: the menu opens on City Rumble, so this picks Classic Battle
- * first (the 2-4 player game these specs were written for) unless `game: 'rumble'` keeps the Rumble setup.
+ * V2 Stitch menu: Home -> (City Rumble -> mode) -> setup -> fighter -> ready -> play. These helpers walk the
+ * real journey; nothing is set behind the menu's back.
  */
-/** V2 menu: open Classic Battle (the menu starts on City Rumble), then pick a Classic arena card. */
-export async function chooseArena(page: Page, id: string): Promise<void> {
-  const classic = page.getByTestId('play-classic');
-  if ((await classic.count()) > 0) await classic.click();
-  await page.getByTestId(`arena-${id}`).click();
+export async function toClassicSetup(page: Page): Promise<void> {
+  if ((await page.getByTestId('classic-setup').count()) > 0) return;
+  await page.getByTestId('home-classic').click();
+  await expect(page.getByTestId('classic-setup')).toBeVisible();
 }
 
+export async function toRumbleSetup(
+  page: Page,
+  mode: 'survival' | 'deathmatch' | 'team' = 'survival',
+): Promise<void> {
+  if ((await page.getByTestId('rumble-setup').count()) > 0) return;
+  await page.getByTestId('home-rumble').click();
+  await page.getByTestId(`mode-${mode}`).click();
+  await page.getByTestId('menu-continue').click();
+  await expect(page.getByTestId('rumble-setup')).toBeVisible();
+}
+
+/** Classic Battle: opens the arena screen from the setup, picks arena `id` and confirms (back on the setup). */
+export async function chooseArena(page: Page, id: string): Promise<void> {
+  await toClassicSetup(page);
+  await page.getByTestId('setup-arena').click();
+  await page.getByTestId(`arena-${id}`).click();
+  await expect(page.getByTestId(`arena-${id}`)).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('arena-confirm').click();
+  await expect(page.getByTestId('menu-setup')).toBeVisible();
+}
+
+/**
+ * Starts the match from wherever the menu is: Home uses Quick play (the saved setup); a setup / fighter
+ * screen continues to Ready (picking `character` on the way) and presses Start.
+ */
+export async function launch(page: Page, character?: string): Promise<void> {
+  if (!character && (await page.getByTestId('menu-home').count()) > 0) {
+    await page.getByTestId('quick-play').click();
+    return;
+  }
+  if ((await page.getByTestId('menu-home').count()) > 0) await page.getByTestId('quick-review').click();
+  if ((await page.getByTestId('menu-setup').count()) > 0) await page.getByTestId('menu-continue').click();
+  if (character) {
+    if ((await page.getByTestId('menu-ready').count()) > 0) await page.getByTestId('edit-fighter').click();
+    await page.getByTestId(`char-${character}`).click();
+  }
+  if ((await page.getByTestId('menu-fighter').count()) > 0) await page.getByTestId('menu-continue').click();
+  await page.getByTestId('start-button').click();
+}
+
+/** Starts a match (default: Classic Battle, the 2-4 player game most specs were written for). */
 export async function startMatch(
   page: Page,
   opts: {
@@ -48,15 +88,25 @@ export async function startMatch(
     game?: 'classic' | 'rumble';
   } = {},
 ): Promise<void> {
-  if ((opts.game ?? 'classic') === 'classic') {
-    const classic = page.getByTestId('play-classic');
-    if ((await classic.count()) > 0) await classic.click();
-  }
+  if ((opts.game ?? 'classic') === 'classic') await toClassicSetup(page);
+  else await toRumbleSetup(page);
   if (opts.competitors) await page.getByTestId(`players-${opts.competitors}`).click();
-  if (opts.character) await page.getByTestId(`char-${opts.character}`).click();
-  await page.getByTestId('start-button').click();
+  await launch(page, opts.character);
   await expect(page.getByTestId('hud')).toBeVisible();
   if (opts.waitPlaying !== false) await stepTicks(page, 160);
+}
+
+/** Main menu -> Settings on `tab` (audio / graphics / controls / access). */
+export async function openSettings(page: Page, tab: 'audio' | 'graphics' | 'controls' | 'access' = 'audio'): Promise<void> {
+  await page.getByTestId('home-settings').click();
+  await page.getByTestId(`settings-tab-${tab}`).click();
+}
+
+/** In a match: pause and open the pause menu's Settings on `tab`. */
+export async function pauseSettings(page: Page, tab: 'audio' | 'graphics' | 'controls' | 'access' = 'audio'): Promise<void> {
+  if ((await page.getByTestId('pause-overlay').count()) === 0) await page.keyboard.press('Escape');
+  await page.getByTestId('pause-settings-open').click();
+  await page.getByTestId(`settings-tab-${tab}`).click();
 }
 
 export async function stepTicks(page: Page, n: number): Promise<void> {

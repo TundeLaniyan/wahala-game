@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, mutate, open, startMatch, stepTicks } from './helpers';
+import { getState, mutate, open, startMatch, stepTicks, toRumbleSetup } from './helpers';
 
 type Debug = {
   __WAHALA__: {
@@ -21,8 +21,7 @@ const shot = (page: Page, project: string, name: string) =>
 
 /** Chooses City Rumble from the main menu: mode and competitor count. */
 async function chooseRumble(page: Page, mode: 'survival' | 'deathmatch' | 'team', count: 8 | 16 | 24 | 32) {
-  await page.getByTestId('play-rumble').click();
-  await page.getByTestId(`mode-${mode}`).click();
+  await toRumbleSetup(page, mode);
   await page.getByTestId(`rumble-${count}`).click();
 }
 
@@ -47,31 +46,40 @@ test.describe('main menu', () => {
     await page.setViewportSize({ width: 640, height: 360 });
     await open(page);
 
-    // City Rumble is selected by default and Play is on screen without scrolling
-    await expect(page.getByTestId('play-rumble')).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByTestId('mode-survival')).toBeVisible();
-    const play = (await page.getByTestId('start-button').boundingBox())!;
-    expect(play.y + play.height).toBeLessThanOrEqual(360);
-    expect(play.x + play.width).toBeLessThanOrEqual(640);
-    // the 3D cast preloads first (the button reads "Loading…" until then; slow on software WebGL)
-    await expect(page.getByTestId('start-button')).toContainText('Rumble', { timeout: 120_000 });
+    // Home: City Rumble is the flagship entry, first and on screen without scrolling
+    const entry = (await page.getByTestId('home-rumble').boundingBox())!;
+    expect(entry.y + entry.height).toBeLessThanOrEqual(360);
+    expect(entry.x + entry.width).toBeLessThanOrEqual(640);
+    await shot(page, info.project.name, 'menu-phone-home');
+    await page.getByTestId('home-rumble').click();
+    await expect(page.getByTestId('mode-survival')).toHaveAttribute('aria-pressed', 'true');
     await shot(page, info.project.name, 'menu-phone-rumble');
 
-    // Team Rumble: 4 v 4, 5 minutes, friendly fire on; the length / friendly fire rows follow the mode
-    await page.getByTestId('mode-survival').click();
+    // Survival has no length and no friendly fire; Team Rumble adds both (and team splits)
+    await page.getByTestId('menu-continue').click();
+    await expect(page.getByTestId('rumble-setup')).toBeVisible();
     await expect(page.getByTestId('minutes-5')).toHaveCount(0);
     await expect(page.getByTestId('ff-on')).toHaveCount(0);
-    await chooseRumble(page, 'team', 8);
+    await page.getByTestId('setup-change-mode').click();
+    await page.getByTestId('mode-team').click();
+    await page.getByTestId('menu-continue').click();
+    await page.getByTestId('rumble-8').click();
     await expect(page.getByTestId('rumble-8')).toContainText('4 v 4');
     await page.getByTestId('minutes-5').click();
     await page.getByTestId('ff-on').click();
-    await expect(page.getByTestId('setup-summary')).toContainText(
-      'Team Rumble · 4 v 4 · 5 min · friendly fire',
-    );
-    await page.getByTestId('mode-team').scrollIntoViewIfNeeded();
     await shot(page, info.project.name, 'menu-phone-team');
-
-    await startMatch(page, { game: 'rumble' });
+    // fighter, then Ready reads the whole setup back before the start
+    await page.getByTestId('menu-continue').click();
+    await expect(page.getByTestId('menu-fighter')).toBeVisible();
+    await page.getByTestId('menu-continue').click();
+    await expect(page.getByTestId('ready-mode')).toContainText('Team Rumble');
+    await expect(page.getByTestId('ready-opponents')).toContainText('4 v 4');
+    await expect(page.getByTestId('ready-rules')).toContainText('Friendly fire: on');
+    const start = (await page.getByTestId('start-button').boundingBox())!;
+    expect(start.y + start.height).toBeLessThanOrEqual(360);
+    await page.getByTestId('start-button').click();
+    await expect(page.getByTestId('hud')).toBeVisible();
+    await stepTicks(page, 160);
     let s = await settingsOf(page);
     expect(s.game).toBe('team');
     expect(s.ff).toBe(true);
@@ -86,14 +94,16 @@ test.describe('main menu', () => {
     await page.waitForTimeout(600);
     await shot(page, info.project.name, 'team-rumble-phone');
 
-    // back to the menu: Classic Battle keeps the quick four-player game with no Rumble rules
+    // back to the menu: the saved setup is remembered; Classic Battle keeps the quick four-player game
     await page.getByTestId('pause-button').click();
     await page.getByTestId('quit').click();
-    await expect(page.getByTestId('title-screen')).toBeVisible();
-    await page.getByTestId('play-classic').click();
+    await expect(page.getByTestId('menu-home')).toBeVisible();
+    await expect(page.getByTestId('setup-summary')).toContainText('Team Rumble · 4 v 4 · 5 min · friendly fire');
+    await page.getByTestId('home-classic').click();
     await expect(page.getByTestId('players-4')).toBeVisible();
-    await expect(page.getByTestId('arena-danfoBusPark')).toBeVisible();
+    await expect(page.getByTestId('setup-arena')).toContainText('Danfo Bus Park');
     await expect(page.getByTestId('mode-team')).toHaveCount(0);
+    await expect(page.getByTestId('minutes-5')).toHaveCount(0);
     await shot(page, info.project.name, 'menu-phone-classic');
     await startMatch(page, { competitors: 4 });
     s = await settingsOf(page);

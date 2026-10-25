@@ -38,8 +38,11 @@ const board = (page: Page) =>
     () => (window as unknown as Debug).__WAHALA__.store.getState().board as { x: number; y: number }[] | null,
   );
 
+/** Home -> Training Academy menu -> Continue (the first unfinished lesson, played for real). */
 async function openAcademy(page: Page): Promise<void> {
-  await page.getByTestId('help-button').click({ timeout: 120_000 });
+  await page.getByTestId('home-academy').click({ timeout: 120_000 });
+  await expect(page.getByTestId('menu-academy')).toBeVisible();
+  await page.getByTestId('academy-continue').click();
   await expect(page.getByTestId('how-to-play')).toBeVisible();
 }
 
@@ -112,8 +115,17 @@ test.describe('Training Academy', () => {
     await page.screenshot({ path: `e2e-shots/${info.project.name}-academy-lessons.png` });
     await page.getByTestId('htp-list-close').click();
 
+    // leaving returns to the Academy menu, which shows the progress just made; any lesson replays from there
     await page.getByTestId('htp-exit').click();
-    await expect(page.getByTestId('title-screen')).toBeVisible();
+    await expect(page.getByTestId('menu-academy')).toBeVisible();
+    await expect(page.getByTestId('academy-lesson-move')).toHaveAttribute('data-status', 'skipped');
+    await expect(page.getByTestId('academy-lesson-place')).toHaveAttribute('data-status', 'next');
+    await page.getByTestId('academy-lesson-move').click();
+    await expect(page.getByTestId('how-to-play')).toHaveAttribute('data-lesson', 'move');
+    await page.getByTestId('htp-exit').click();
+    await expect(page.getByTestId('menu-academy')).toBeVisible();
+    await page.getByTestId('menu-back').click();
+    await expect(page.getByTestId('menu-home')).toBeVisible();
     expect(await savedSettings(page)).toEqual(before);
     expect(errors).toEqual([]);
   });

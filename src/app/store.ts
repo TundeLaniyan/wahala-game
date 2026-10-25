@@ -3,6 +3,8 @@ import type { InputSourceName } from '../input';
 import type { CharacterId } from '../sim';
 import type { CameraMode, RenderStats } from '../render';
 import type { HudSnapshot } from './hud';
+import { MENU_HOME } from './menu';
+import type { MenuState } from './menu';
 import { loadSettings } from './settings';
 import type { GameSettings } from './settings';
 import type { Subtitle } from './subtitles';
@@ -108,6 +110,10 @@ export interface UiState {
   skipping: boolean;
   /** How to Play (tutorial) state; null when it is closed. Never touches `settings`. */
   tutorial: TutorialView | null;
+  /** Main-menu navigation (app/menu.ts): which menu screen shows while `screen` is 'title'. */
+  menu: MenuState;
+  /** The pause menu's Settings panel is open (Esc / Start close it instead of resuming). */
+  pauseSettings: boolean;
 }
 
 /** UI-facing state. The simulation state itself is deliberately NOT stored in React state. */
@@ -132,6 +138,8 @@ export const useGameStore = create<UiState>(() => ({
   cameraOverride: null,
   skipping: false,
   tutorial: null,
+  menu: MENU_HOME,
+  pauseSettings: false,
 }));
 
 export const patch = (p: Partial<UiState>): void => useGameStore.setState(p);
