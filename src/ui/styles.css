@@ -755,9 +755,9 @@ button {
   pointer-events: none;
 }
 /* Floating thumbstick. The activation zone is the lower-left of the screen below the HUD band and left of
-   the action buttons; the stick appears wherever the thumb lands in it. The zone itself is drawn very
-   faintly (a soft corner glow and a hairline edge) so it reads as "touch anywhere here" without tinting
-   the tiles it overlaps. */
+   the action buttons; the stick appears wherever the thumb lands in it. The zone itself is only a faint
+   glow in its lower-left corner plus the resting ring ("MOVE / thumb anywhere here"), so it reads as a
+   touch area without drawing lines or tint over the tiles it overlaps. */
 .stick-zone {
   position: absolute;
   left: 0;
@@ -769,19 +769,13 @@ button {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
-  border-top-right-radius: 28px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.14);
-  border-right: 1px dashed rgba(255, 255, 255, 0.14);
+  /* no edges drawn across the board: only a soft glow in the corner the thumb rests in */
   background: radial-gradient(
-    120% 90% at 0% 100%,
-    rgba(255, 255, 255, 0.075),
-    rgba(255, 255, 255, 0.02) 55%,
-    rgba(255, 255, 255, 0) 80%
+    70% 75% at 0% 100%,
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.025) 55%,
+    rgba(255, 255, 255, 0) 100%
   );
-  transition: border-color 0.2s;
-}
-.stick-zone.live {
-  border-color: rgba(255, 210, 63, 0.2);
 }
 .stick {
   position: absolute;

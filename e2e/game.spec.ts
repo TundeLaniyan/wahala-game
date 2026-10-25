@@ -1,6 +1,32 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, holdKey, mutate, open, startMatch, stepTicks } from './helpers';
+import { getState, holdKey, mutate, open as openTitle, startMatch, stepTicks } from './helpers';
+
+/**
+ * V2 menus default to City Rumble; these specs drive Classic Battle (the 15 x 11 arenas), so the saved
+ * play kind is switched to classic after the title screen loads (the menu itself is stream D's).
+ */
+async function open(page: Page, query = ''): Promise<void> {
+  await openTitle(page, query);
+  await page.evaluate(() => {
+    const st = (
+      window as unknown as {
+        __WAHALA__: { store: { getState(): { settings: object }; setState(p: object): void } };
+      }
+    ).__WAHALA__.store;
+    st.setState({ settings: { ...st.getState().settings, play: 'classic' } });
+  });
+}
+
+/**
+ * One simulation tick routed like real play, which also publishes the HUD at once. The specs use it
+ * instead of waiting for animation frames: on a loaded machine software WebGL can go many seconds
+ * between frames, and the HUD (button labels, chips, alive flags) is only refreshed from a frame.
+ */
+const publish = (page: Page): Promise<void> =>
+  page.evaluate(() =>
+    (window as unknown as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
+  );
 
 test.describe('menus and match flow', () => {
   test('title screen starts a match with countdown, HUD and a rendered arena', async ({ page }, info) => {
@@ -212,6 +238,7 @@ test.describe('keyboard play', () => {
 });
 
 test.describe('signature vehicles: one press of B', () => {
+  test.slow();
   for (const [character, vehicle] of [
     ['streetBaller', 'danfo'],
     ['lekkiBoy', 'taxi'],
@@ -248,9 +275,7 @@ test.describe('signature vehicles: one press of B', () => {
           ).__WAHALA__.getState().vehicles[0]!.route,
       );
       expect(route.some((t) => t.x === 9 && t.y === 6)).toBe(true);
-      await page.evaluate(() =>
-        (window as unknown as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
-      );
+      await publish(page);
       await page.screenshot({ path: `e2e-shots/${info.project.name}-vehicle-warning-${vehicle}.png` });
       await stepTicks(page, 300);
       st = await getState(page);
@@ -283,6 +308,7 @@ test.describe('signature vehicles: one press of B', () => {
 });
 
 test.describe('two buttons and contact abilities (keyboard)', () => {
+  test.slow();
   test('walking into a generator with Football Boots kicks it; the HUD shows KICK as a chip, not a button', async ({
     page,
   }) => {
@@ -297,6 +323,7 @@ test.describe('two buttons and contact abilities (keyboard)', () => {
          flight: null, triggered: false, placedTick: s.tick });`,
     );
     await stepTicks(page, 2);
+    await publish(page);
     await expect(page.getByTestId('contact-indicator')).toContainText('KICK');
     await holdKey(page, 'ArrowRight', 3);
     await stepTicks(page, 120);

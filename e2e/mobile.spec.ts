@@ -1,6 +1,22 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, mutate, open, startMatch, stepTicks, thumb } from './helpers';
+import { getState, mutate, open as openTitle, startMatch, stepTicks, thumb } from './helpers';
+
+/**
+ * V2 menus default to City Rumble; these specs drive Classic Battle (the 15 x 11 arenas), so the saved
+ * play kind is switched to classic after the title screen loads (the menu itself is stream D's).
+ */
+async function open(page: Page, query = ''): Promise<void> {
+  await openTitle(page, query);
+  await page.evaluate(() => {
+    const st = (
+      window as unknown as {
+        __WAHALA__: { store: { getState(): { settings: object }; setState(p: object): void } };
+      }
+    ).__WAHALA__.store;
+    st.setState({ settings: { ...st.getState().settings, play: 'classic' } });
+  });
+}
 
 type Rect = { left: number; right: number; top: number; bottom: number };
 
@@ -19,14 +35,26 @@ const buttonRects = (page: Page): Promise<(Rect & { id: string })[]> =>
     }),
   );
 
+/** The board's on-screen corners straight from the renderer (far-left, far-right, near-right, near-left). */
 const board = (page: Page) =>
-  page.evaluate(
-    () =>
-      (
-        window as unknown as {
-          __WAHALA__: { store: { getState(): { board: { x: number; y: number }[] | null } } };
-        }
-      ).__WAHALA__.store.getState().board,
+  page.evaluate(() =>
+    (
+      window as unknown as {
+        __WAHALA__: { renderer(): { boardScreenCorners(): { x: number; y: number }[] | null } };
+      }
+    ).__WAHALA__
+      .renderer()
+      .boardScreenCorners(),
+  );
+
+/**
+ * One simulation tick routed like real play, which also publishes the HUD at once. The specs use it
+ * instead of waiting for animation frames: on a loaded machine software WebGL can go many seconds
+ * between frames, and the HUD (button labels, chips, alive flags) is only refreshed from a frame.
+ */
+const publish = (page: Page): Promise<void> =>
+  page.evaluate(() =>
+    (window as unknown as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
   );
 
 const shakeMode = (page: Page) =>
@@ -47,6 +75,8 @@ async function pressB(page: Page, ticks: number): Promise<void> {
 }
 
 test.describe('touch controls (landscape phone)', () => {
+  // software WebGL on a shared machine: a frame (and so a screenshot) can take tens of seconds
+  test.slow();
   test.skip(({ isMobile }) => !isMobile, 'mobile project only');
 
   test('exactly two action buttons, a floating thumbstick that moves one tile, A places a generator', async ({
@@ -124,6 +154,7 @@ test.describe('touch controls (landscape phone)', () => {
     await expect(page.getByTestId('stick-zone')).toBeVisible();
     await mutate(page, 's.players[0].alive = false; s.players[0].eliminatedTick = s.tick;');
     await stepTicks(page, 10);
+    await publish(page);
     await expect(page.getByTestId('stick-zone')).toHaveCount(0);
     await expect(page.getByTestId('btn-place')).toHaveCount(0);
     await page.getByTestId('skip-results').click(); // reachable: nothing on top of it
@@ -140,10 +171,11 @@ test.describe('touch controls (landscape phone)', () => {
       `const p = s.players[0]; p.hasVoucher = true; p.grip = true; p.remote = true; p.contact = 'disarm'; p.killSwitchCharges = 2;`,
     );
     await stepTicks(page, 12);
+    await publish(page);
     const after = await buttonRects(page);
     expect(after).toEqual(before); // same two buttons, same places
     await expect(page.getByTestId('btn-special')).toHaveAttribute('data-special', 'vehicle');
-    await expect(page.getByTestId('btn-special')).toContainText('TAXI');
+    await expect(page.getByTestId('btn-special')).toContainText('YELLOW CAB'); // the taxi's name (VEHICLE_DEFS)
     await expect(page.getByTestId('contact-indicator')).toContainText('DISARM x2'); // HUD chip, not a button
     await page.screenshot({ path: `e2e-shots/${info.project.name}-touch-full.png` });
     await pressB(page, 1);
@@ -168,6 +200,7 @@ test.describe('touch controls (landscape phone)', () => {
     // a remote generator down: B now waits to tell a tap from a hold
     await page.getByTestId('btn-place').dispatchEvent('pointerdown');
     await stepTicks(page, 4);
+    await publish(page);
     await expect(page.getByTestId('btn-special-hold')).toHaveText('HOLD: BOOM!');
     const rivalX = (await getState(page)).players[1]!.x;
     await pressB(page, 3); // a short tap: the push, not the remote
@@ -217,7 +250,6 @@ test.describe('touch controls (landscape phone)', () => {
       await open(page, '&nobots');
       await startMatch(page, { competitors: 4 });
       await expect.poll(() => board(page)).not.toBeNull();
-      await page.waitForTimeout(400); // the board corners are republished a few times a second
       const b = (await board(page))!;
       const nearY = b[3]!.y;
       const row = { left: b[3]!.x, right: b[2]!.x, top: nearY - (nearY - b[0]!.y) / 11, bottom: nearY };
