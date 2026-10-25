@@ -10,8 +10,8 @@ import { commands } from '../app/session';
 import type { GameSettings } from '../app/settings';
 import { RUMBLE_MODE_INFO, difficultyLabel } from '../app/setupSummary';
 import { DifficultyPicker } from './DifficultyPicker';
-import { ArenaPicker, Preview } from './ArenaPicker';
-import { useState } from 'react';
+import { RumbleStagePicker } from './RumbleStagePicker';
+import { ArenaPicker } from './ArenaPicker';
 
 type SetProps = { settings: GameSettings; set: (p: Partial<GameSettings>) => void };
 
@@ -49,44 +49,6 @@ export function rumbleStages(): ArenaDef[] {
   return Object.values(ARENAS).filter((a) => a.kind === 'rumble');
 }
 
-/**
- * Interim Rumble stage picker with the same props as stream F's `RumbleStagePicker` (which replaces it
- * at integration): one card per registered rumble arena.
- */
-export function RumbleStagePickerFallback({ settings, set }: SetProps) {
-  const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
-  const stages = rumbleStages();
-  return (
-    <div className="stage-list" data-testid="rumble-stages">
-      {stages.map((a) => {
-        const on = settings.rumbleArenaId === a.id;
-        return (
-          <button
-            key={a.id}
-            type="button"
-            className={`stage-card${on ? ' on' : ''}`}
-            data-testid={`stage-${a.id}`}
-            aria-pressed={on}
-            onClick={() => {
-              commands.click();
-              set({ play: 'rumble', rumbleArenaId: a.id });
-            }}
-          >
-            <Preview
-              arena={a}
-              failed={failed.has(a.id)}
-              onFail={() => setFailed((f) => new Set(f).add(a.id))}
-            />
-            <span className="stage-body">
-              <b>{a.name.replace(/^WAHALA! /, '')}</b>
-              <small>{a.info.tagline}</small>
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 /** Rumble: one preset level for the whole roster, optionally spread one level either side (mixed). */
 function RumbleBots({ settings: s, set }: SetProps) {
@@ -219,7 +181,7 @@ export function RumbleSetup({ settings: s, set }: SetProps) {
       </section>
       <section className="panel">
         <h3>Stage</h3>
-        <RumbleStagePickerFallback settings={s} set={set} />
+        <RumbleStagePicker settings={s} set={set} />
       </section>
       <section className="panel">
         <h3>Bots</h3>

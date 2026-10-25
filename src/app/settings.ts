@@ -59,7 +59,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   rumbleMode: 'survival',
   rumbleMinutes: 5,
   friendlyFire: false,
-  rumbleArenaId: 'cityRumble',
+  rumbleArenaId: 'rumbleOshodi',
   character: 'streetBaller',
   arenaId: 'danfoBusPark',
   crowdThrows: false,
