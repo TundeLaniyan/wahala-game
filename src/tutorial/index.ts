@@ -1,31 +1,59 @@
-/** The How to Play course: every chapter in teaching order. Pure: imports only `src/sim`. */
-import { CARRY, KICK, PASS, PUNCH, REMOTE, SKILLS } from './chapters/abilities';
-import { CITY_RUMBLE, ENDGAME, HAZARDS, POWER_YARD } from './chapters/arenas';
-import { GENERATOR, MOVE, RANGE, SOCKETS } from './chapters/basics';
-import { VEHICLE } from './chapters/vehicles';
-import type { Chapter } from './types';
+/** The WAHALA! Training Academy: courses and lessons in teaching order. Pure: imports only `src/sim`. */
+import { CROSS, ESCAPE, MOVE, PLACE, SAFETY } from './lessons/beginner';
+import { MELEE, VEHICLE } from './lessons/combat';
+import { CRUSH, DEATHMATCH, SURVIVAL, TEAM } from './lessons/modes';
+import { MULTIPLE, PROTECTION, RANGE, SQUARE } from './lessons/power';
+import { DISARM, KICK, PASS, PUNCH, REMOTE } from './lessons/tricks';
+import type { Course, Lesson } from './types';
 
-export const CHAPTERS: readonly Chapter[] = [
+export const COURSES: readonly Course[] = [
+  { id: 'beginner', title: 'Beginner', blurb: 'Five short lessons: everything your first match needs.' },
+  { id: 'power', title: 'Power-ups', blurb: 'More generators, longer reach, Square Blast, protection.' },
+  { id: 'tricks', title: 'Generator tricks', blurb: 'Kick, punch, disarm, walk through, remote.' },
+  { id: 'combat', title: 'Button B', blurb: 'Hit a rival, call in your vehicle.' },
+  { id: 'modes', title: 'Match rules', blurb: 'Wahala Crush and the three City Rumble modes.' },
+];
+
+export const LESSONS: readonly Lesson[] = [
   MOVE,
-  GENERATOR,
-  SOCKETS,
+  PLACE,
+  ESCAPE,
+  CROSS,
+  SAFETY,
+  MULTIPLE,
   RANGE,
+  SQUARE,
+  PROTECTION,
   KICK,
   PUNCH,
-  CARRY,
+  DISARM,
   PASS,
   REMOTE,
-  SKILLS,
+  MELEE,
   VEHICLE,
-  HAZARDS,
-  ENDGAME,
-  POWER_YARD,
-  CITY_RUMBLE,
+  CRUSH,
+  SURVIVAL,
+  DEATHMATCH,
+  TEAM,
 ];
+
+export const lessonIndex = (id: string): number => LESSONS.findIndex((l) => l.id === id);
 
 export { ScriptRunner, readingTicks } from './script';
 export type { ScriptTick } from './script';
-export { PracticeTracker } from './practice';
-export { inRumbleCore } from './chapters/arenas';
-export { DEMO_ENTRY, DEMO_TURN } from './chapters/vehicles';
+export { PracticeSession } from './practice';
+export type { PracticeSignal } from './practice';
+export { resolveHint, TOUCH_WORDS } from './hints';
+export type { HintDevice, HintRow, HintRows } from './hints';
+export {
+  ACADEMY_KEY,
+  emptyProgress,
+  loadProgress,
+  markCompleted,
+  markSkipped,
+  resumeIndex,
+  saveProgress,
+  settled,
+} from './progress';
+export type { AcademyProgress, KeyValueStore } from './progress';
 export type * from './types';

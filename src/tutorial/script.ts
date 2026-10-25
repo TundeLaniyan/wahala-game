@@ -1,7 +1,7 @@
 /**
- * Deterministic script player for tutorial demos. Each tick it turns the current beat's actions into
- * the same `Intent`s a human or bot would send (plus vehicle-selector commands for the local player);
- * the real simulation does everything else. Same script + same starting state = same demo, always.
+ * Deterministic script player for Academy demonstrations (and scripted practice opponents). Each tick it
+ * turns the current beat's actions into the same `Intent`s a human or bot would send; the real
+ * simulation does everything else. Same script + same starting state = same demo, always.
  */
 import { DIR_VEC, readyToStep } from '../sim';
 import type { Dir, GameState, Intent, Intents, SimEvent } from '../sim';
@@ -199,9 +199,11 @@ export class ScriptRunner {
 
 export const walk = (dir: Dir, tiles = 1): Act => ({ kind: 'walk', dir, tiles });
 export const bump = (dir: Dir): Act => ({ kind: 'bump', dir });
+/** Button A. */
 export const place: Act = { kind: 'press', button: 'place' };
-export const action: Act = { kind: 'press', button: 'action' };
-export const skill: Act = { kind: 'press', button: 'skill' };
+/** Button B tap: melee an adjacent opponent, else the one-press vehicle, else nothing. */
+export const special: Act = { kind: 'press', button: 'special' };
+/** Button B hold: the Remote Detonator. */
 export const detonate: Act = { kind: 'press', button: 'detonate' };
 export const wait = (ticks: number): Act => ({ kind: 'wait', ticks });
 export const until = (label: string, test: UntilTest, max = 900): Act => ({

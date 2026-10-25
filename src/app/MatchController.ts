@@ -39,6 +39,8 @@ export interface ScenarioDirector {
   readonly humanInput: boolean;
   beforeTick(state: GameState): ScenarioStep;
   afterTick(state: GameState, events: readonly SimEvent[], intents: Intents): void;
+  /** Training Academy: floor tiles to mark for the player (presentation only). */
+  markers?(state: GameState): readonly { x: number; y: number }[];
 }
 
 /** Vehicle-selector operations, exactly as a player performs them. */
@@ -384,6 +386,7 @@ export class MatchController {
         entryOverlay: this.entry.overlay(state),
         excitement: this.excitement,
         focusPlayerId: this.spectateId,
+        markers: this.director?.markers?.(state),
       });
 
     if (nowMs - this.hudClock > HUD_INTERVAL_MS || events.length > 0) {

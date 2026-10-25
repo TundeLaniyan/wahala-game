@@ -78,9 +78,15 @@ let lastBoardCheck = -Infinity;
 /** Publishes where the board is on screen (only when it moved by a pixel or more), for the HUD layout. */
 function publishBoard(): void {
   const st = useGameStore.getState();
+  // the renderer reports canvas pixels; the canvas is not always at the page origin (the Academy column
+  // sits left of it), so shift them into page coordinates, which is what the HUD lays itself out in
+  const at = canvasEl?.getBoundingClientRect();
+  const ox = at?.left ?? 0;
+  const oy = at?.top ?? 0;
   const corners: ScreenPoint[] | null =
     st.screen === 'playing' && renderer
-      ? (renderer.boardScreenCorners()?.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) })) ?? null)
+      ? (renderer.boardScreenCorners()?.map((p) => ({ x: Math.round(p.x + ox), y: Math.round(p.y + oy) })) ??
+        null)
       : null;
   const prev = st.board;
   const same =
@@ -153,6 +159,12 @@ export function mount(canvas: HTMLCanvasElement): () => void {
       if (settingsAllowAttract()) attract?.start();
     },
     menuCharacter: () => useGameStore.getState().settings.character,
+    storage: () => window.localStorage,
+    // Academy narration: an approved voice clip, only with the narration setting on (never synthesised here)
+    cue: (trigger) => {
+      if (!useGameStore.getState().settings.narration) return;
+      (audio as { previewVoice?: (t: string) => boolean }).previewVoice?.(trigger);
+    },
   });
   // The live demo behind the menu is skipped for tests (?nobots / ?noattract) and on the lowest quality.
   // Models load once; the live demo behind the menu starts when the rigged cast is ready.
@@ -271,18 +283,20 @@ export const commands = {
     if (p.quality) renderer?.setQuality(p.quality);
     if (p.cameraView) renderer?.setCameraView(p.cameraView);
   },
-  // ---- How to Play (tutorial): isolated from competitive play, never writes the saved settings
-  openTutorial(chapter = 0): void {
+  // ---- Training Academy (tutorial): isolated from competitive play, never writes the saved settings
+  openTutorial(lesson?: number): void {
     void audio.unlock();
     audio.playUi('click');
     tutorialView = useGameStore.getState().settings.cameraView;
     renderer?.setCameraView(tutorialView);
-    tutorial?.open(chapter);
+    tutorial?.open(lesson);
   },
-  tutorialWatch: (chapter?: number): void => tutorial?.watch(chapter),
-  tutorialPractice: (chapter?: number): void => tutorial?.practice(chapter),
+  tutorialWatch: (lesson?: number): void => tutorial?.watch(lesson),
+  tutorialPractice: (lesson?: number): void => tutorial?.practice(lesson),
   tutorialReplay: (): void => tutorial?.replay(),
-  tutorialNext: (): void => tutorial?.next(),
+  tutorialNext: (): void => void tutorial?.next(),
+  tutorialSkip: (): void => tutorial?.skip(),
+  tutorialResetProgress: (): void => tutorial?.resetProgress(),
   tutorialPrev: (): void => tutorial?.prev(),
   tutorialPause: (): void => tutorial?.togglePause(),
   tutorialCharacter: (c: CharacterId): void => tutorial?.setCharacter(c),

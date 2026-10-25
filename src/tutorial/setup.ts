@@ -11,6 +11,7 @@ import type {
   GameConfig,
   GameState,
   Generator,
+  MatchSettings,
   PickupKind,
   Player,
 } from '../sim';
@@ -22,6 +23,8 @@ export interface Actor {
   /** Where the actor stands (default: the arena spawn of its slot). */
   at?: [number, number];
   facing?: Dir;
+  /** Team Rumble lessons: the actor's team (default: assigned by the ruleset). */
+  team?: number;
 }
 
 export interface ScenarioOptions {
@@ -31,11 +34,13 @@ export interface ScenarioOptions {
   config?: DeepPartial<GameConfig>;
   /** The arena's own stage hazards (off unless the chapter is about them). */
   stage?: boolean;
-  /** Keep the random crate layout (default: an empty arena the chapter fills itself). */
+  /** Keep the random crate layout (default: an empty arena the lesson fills itself). */
   keepCrates?: boolean;
+  /** Ruleset / Wahala Crush for the scenario (default: classic rules without the closing walls). */
+  settings?: Partial<Pick<MatchSettings, 'game' | 'mode' | 'teamCount' | 'friendlyFire' | 'durationSec'>>;
 }
 
-/** Practices get a long clock so nobody runs out of time while learning (the endgame chapter uses the real one). */
+/** Practices get a long clock so nobody runs out of time while learning (the Crush lesson uses the real one). */
 export const PRACTICE_CONFIG: DeepPartial<GameConfig> = { match: { durationTicks: ticks(300) } };
 
 /** A running (post-countdown) match prepared for a lesson. Player 0 is the demo hero / the human. */
@@ -43,8 +48,13 @@ export function scenario(opts: ScenarioOptions): GameState {
   const state = createGame({
     seed: opts.seed ?? 11,
     arenaId: opts.arenaId ?? 'danfoBusPark',
-    players: opts.actors.map((a, i) => ({ name: a.name, characterId: a.characterId, isBot: i !== 0 })),
-    settings: { stageHazards: opts.stage ?? false },
+    players: opts.actors.map((a, i) => ({
+      name: a.name,
+      characterId: a.characterId,
+      isBot: i !== 0,
+      ...(a.team !== undefined ? { team: a.team } : {}),
+    })),
+    settings: { stageHazards: opts.stage ?? false, ...opts.settings },
     config: opts.config,
   });
   if (!opts.keepCrates) {

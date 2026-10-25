@@ -236,6 +236,25 @@ export class OverlayViews implements View {
       }
     }
 
+    // --- Training Academy "go here" markers: a calm green tile with a ring breathing in and out
+    for (const m of info.markers ?? []) {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 4);
+      this.fill.push({
+        x: wx(m.x),
+        z: wz(m.y),
+        color: 0x3dff8a,
+        intensity: 0.22 + 0.14 * pulse,
+        scale: 0.92,
+      });
+      this.rings.push({
+        x: wx(m.x),
+        z: wz(m.y),
+        color: 0x9dffc4,
+        intensity: 0.7 + 0.3 * pulse,
+        scale: 0.85 + 0.2 * pulse,
+      });
+    }
+
     this.drawEntry(ctx, info.entryOverlay);
     this.fill.end();
     this.chevrons.end();
