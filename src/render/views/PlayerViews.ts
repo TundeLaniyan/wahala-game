@@ -14,7 +14,15 @@ import { SLOT_COLORS } from '../../assets/palette';
 import { drawPickupIcon } from '../../assets/pickupIcons';
 import { OKADA_SCALE, createPlayerModel, createRiggedPlayerModel } from '../assets/characters';
 import { assets } from '../assets/library';
-import { createShieldBubble, updateShieldBubble } from './okadaShield';
+import {
+  ARMOUR_COLOR,
+  createArmourVisual,
+  createShieldBubble,
+  hideArmourVisual,
+  updateArmourVisual,
+  updateShieldBubble,
+} from './okadaShield';
+import type { ArmourVisual } from './okadaShield';
 import { addXray } from '../assets/xray';
 import type { PlayerModel } from '../assets/characters';
 import { CanvasTexture } from 'three';
@@ -53,6 +61,8 @@ interface Visual {
   deathDir: Vector3;
   wasMounted: boolean;
   shield: Mesh;
+  /** V2 Armour layer (shell + plate pips), workstream C. */
+  armour: ArmourVisual;
   badge: Sprite;
   mountedAt: number;
   dismountedAt: number;
@@ -122,6 +132,7 @@ export class PlayerViews implements View {
         v.model.root.matrixWorldAutoUpdate = false;
         for (const o of [v.ring, v.shadow, v.name, v.curse, v.voucher, v.shield, v.badge, ...v.stars])
           o.visible = false;
+        hideArmourVisual(v.armour, true);
         if (v.marker) v.marker.visible = false;
       }
       v.catchUp = Math.min(1, v.catchUp + ctx.dt);
@@ -216,7 +227,8 @@ export class PlayerViews implements View {
     badge.scale.set(0.36, 0.36, 1);
     badge.renderOrder = 33;
     badge.visible = false;
-    this.group.add(model.root, ring, shadow, name, curse, voucher, shield, badge);
+    const armour = createArmourVisual();
+    this.group.add(model.root, ring, shadow, name, curse, voucher, shield, badge, armour.group);
     return {
       model,
       ring,
@@ -232,6 +244,7 @@ export class PlayerViews implements View {
       deathDir: new Vector3(0, 0, 1),
       wasMounted: false,
       shield,
+      armour,
       badge,
       mountedAt: -10,
       dismountedAt: -10,
@@ -368,6 +381,15 @@ export class PlayerViews implements View {
     updateShieldBubble(v.shield, mounted, time, Math.max(0, pop));
     v.badge.visible = mounted;
     if (mounted) v.badge.position.set(w.x - 0.78, 2.08 + Math.sin(time * 4) * 0.03, w.z);
+    // V2 Armour: steel shell + one pip per plate; a breaking plate throws steel shards
+    if (updateArmourVisual(v.armour, w.x, w.z, v.yaw, p.armour, mounted, time)) {
+      fx.wreck(w.x, 0.9, w.z, [
+        [0.62, 0.78, 0.9],
+        [0.85, 0.9, 0.95],
+        [0.35, 0.4, 0.46],
+      ]);
+      fx.shockwave(w.x, w.z, 1.5, ARMOUR_COLOR);
+    }
 
     v.ring.position.set(w.x, 0.03, w.z);
     (v.ring.material as MeshBasicMaterial).opacity =
@@ -412,6 +434,7 @@ export class PlayerViews implements View {
     v.voucher.visible = false;
     v.badge.visible = false;
     v.shield.visible = false;
+    hideArmourVisual(v.armour, true);
     m.bike.visible = false;
 
     if (v.deadAt === null) {

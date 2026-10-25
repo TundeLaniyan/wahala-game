@@ -10,7 +10,7 @@
  */
 import { CHARACTERS, buildRoute, listEntries, listKekeTurns, nextFloat, straightLeg } from '../sim';
 import type { EntryView, Intent, TilePos, VehicleEntry, VehicleTurn } from '../sim';
-import { rivalEscape, searchRefuge } from './analysis';
+import { protectionLayers, rivalEscape, searchRefuge } from './analysis';
 import { baselineRefuges } from './goals';
 import { overBudget, spend } from './context';
 import type { Ctx } from './context';
@@ -171,7 +171,8 @@ function bestRoute(c: Ctx, launchTick: number): Choice | null {
       const near = cand.route.some((t) => Math.abs(t.x - r.x) + Math.abs(t.y - r.y) <= 2);
       if (!onRoute && !(profile.vehicle === 'strategic' && near)) continue;
       if (overBudget(c)) break;
-      const shield = r.mounted ? 0.3 : 1;
+      const layers = protectionLayers(r); // Okada / Armour: a hit only costs them a layer
+      const shield = layers > 0 ? 0.3 / layers : 1;
       const e = rivalEscape(c, c.tmp, r, 6, profile.vehicle === 'strategic', undefined);
       if (e.refuges === 0) {
         score += 100 * shield;

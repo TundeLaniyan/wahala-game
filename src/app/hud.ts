@@ -1,6 +1,15 @@
 import { CHARACTERS, getArena, secondsRemaining } from '../sim';
-import type { CharacterId, ContactAbility, CurseKind, GameState, MatchResult, SpecialAction, VehicleKind } from '../sim';
-import { previewSpecial } from '../sim';
+import type {
+  CharacterId,
+  ContactAbility,
+  CurseKind,
+  GameState,
+  MatchResult,
+  PickupKind,
+  SpecialAction,
+  VehicleKind,
+} from '../sim';
+import { previewRewards, previewSpecial } from '../sim';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
 import type { StageAlert } from './stageAlerts';
 
@@ -50,6 +59,10 @@ export interface HudMe {
   hasRemoteGenerator: boolean;
   canDisarm: boolean;
   canAction: boolean;
+  /** V2 City Rumble (workstream C): credited eliminations this life (the reward ladder position). */
+  streak: number;
+  /** V2 City Rumble: what the next credited elimination pays right now ([] when rewards are off). */
+  nextRewards: PickupKind[];
 }
 
 export interface HudSnapshot {
@@ -270,6 +283,8 @@ export function buildHud(
         hasRemoteGenerator: state.generators.some((g) => g.ownerId === local.id && g.mode === 'remote'),
         canDisarm: local.killSwitchCharges > 0,
         canAction: local.grip || local.carrying !== null,
+        streak: local.stats.streak,
+        nextRewards: previewRewards(state, local),
       }
     : null;
   return {

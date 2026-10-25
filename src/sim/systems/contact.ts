@@ -53,6 +53,11 @@ export function tryContact(state: GameState, p: Player, gen: Generator, dir: Dir
     }
     if (acted) {
       if (p.contact !== 'pass') arm(state, p);
+      // elimination credit (attribution.ts): who sent someone else's generator on its way
+      if (p.contact === 'kick' || p.contact === 'punch') {
+        if (gen.ownerId !== p.id) gen.touchedBy = p.id;
+        else delete gen.touchedBy;
+      }
       events.push({ type: 'contactUsed', playerId: p.id, ability: p.contact, generatorId: gen.id });
       return true;
     }

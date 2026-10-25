@@ -10,7 +10,7 @@
  * - team:       Deathmatch rules with teams (default Green v White) ranked by team eliminations.
  */
 import type { DeepPartial, GameConfig } from './config';
-import { ticks } from './config';
+import { RUMBLE_ECONOMY, ticks } from './config';
 import type { ArenaDef } from './arenas/types';
 import type { GameKind, MatchSettings } from './types';
 import { NO_TEAM } from './types';
@@ -31,17 +31,17 @@ export function modeConfig(settings: MatchSettings, _arena: ArenaDef): DeepParti
     case 'survival':
       return {
         // crates open routes; power comes from eliminations, credited straight to the eliminator
+        ...RUMBLE_ECONOMY,
         pickups: { hiddenChance: 0 },
         drops: { maxDeathDrops: 0 },
-        rewards: { enabled: true },
       };
     case 'deathmatch':
     case 'team':
       return {
+        ...RUMBLE_ECONOMY,
         match: { durationTicks: ticks(settings.durationSec ?? DEFAULT_TIMED_SECONDS) },
         pickups: { hiddenChance: 0 },
         drops: { maxDeathDrops: 0 },
-        rewards: { enabled: true },
         respawn: { enabled: true, resetOnDeath: true },
       };
   }

@@ -29,6 +29,7 @@ import { DebrisField } from './Debris';
 import type { FragmentShape } from './Debris';
 import { ParticleSystem } from './Particles';
 import type { QualityProfile } from '../quality';
+import { SQUARE_SURGE, squareFrameTexture } from '../views/squareBlastLook';
 
 interface Transient {
   obj: Object3D;
@@ -340,6 +341,69 @@ export class Effects {
     if (Math.random() < 0.22 + Math.min(0.4, range * 0.05))
       this.cracks.add(x, z, 1.5 + Math.random() * 0.5, 1.5 + Math.random() * 0.5, Math.random() * 6.28, 0.75);
     this.shake = Math.min(1, this.shake + 0.22 + range * 0.03);
+  }
+
+  /**
+   * V2 Square Blast detonation (on top of the normal explosion at the centre): an electric square ring
+   * snapping out to the footprint, a flat blue-white surge flash and sparks thrown at the corners, so a
+   * square blast never reads like an ordinary plus.
+   */
+  squareBlast(gx: number, gy: number, radius: number): void {
+    const x = this.layout.wx(gx);
+    const z = this.layout.wz(gy);
+    const span = 2 * radius + 1;
+    const mat = new MeshBasicMaterial({
+      map: squareFrameTexture(),
+      color: SQUARE_SURGE,
+      transparent: true,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      side: DoubleSide,
+    });
+    const m = new Mesh(new PlaneGeometry(1, 1), mat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(x, 0.06, z);
+    m.renderOrder = 8;
+    let age = 0;
+    const life = 0.5;
+    this.add({
+      obj: m,
+      update: (dt) => {
+        age += dt;
+        const k = Math.min(1, age / life);
+        m.scale.setScalar(0.6 + (span + 0.2) * (1 - (1 - k) * (1 - k) * (1 - k)));
+        mat.opacity = Math.max(0, 1 - k * k);
+        return age < life;
+      },
+      dispose: () => {
+        m.geometry.dispose();
+        mat.dispose();
+      },
+    });
+    this.flash(x, 0.35, z, 2.4 + span * 0.7, SQUARE_SURGE, 0.3);
+    // electric sparks racing to the four corners and the edges
+    for (let i = 0; i < this.n(10 + radius * 6); i++) {
+      const corner = i % 4;
+      const tx = (corner === 0 || corner === 3 ? -1 : 1) * radius * (0.6 + Math.random() * 0.5);
+      const tz = (corner < 2 ? -1 : 1) * radius * (0.6 + Math.random() * 0.5);
+      this.fire.emit({
+        x,
+        y: 0.3,
+        z,
+        vx: tx * 3.2,
+        vy: 1.2 + Math.random() * 2,
+        vz: tz * 3.2,
+        life: 0.3 + Math.random() * 0.2,
+        size: 0.14,
+        sizeEnd: 0.04,
+        r: 0.55,
+        g: 0.88,
+        b: 1,
+        a: 1,
+        drag: 2.2,
+      });
+    }
+    this.shake = Math.min(1, this.shake + 0.06 * radius);
   }
 
   /**

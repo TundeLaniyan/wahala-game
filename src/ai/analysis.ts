@@ -3,8 +3,8 @@
  * generator I am about to place, can a rival escape it, how big is a rival's safe region, and
  * the "distance to the enemy" field that keeps bots progressing instead of camping.
  */
-import { DIRS, DIR_VEC, Tile } from '../sim';
-import type { Dir, Player } from '../sim';
+import { DIRS, DIR_VEC, Tile, squareFootprint } from '../sim';
+import type { Dir, Observation, Player } from '../sim';
 import { overBudget, spend } from './context';
 import type { Ctx } from './context';
 import type { HypoGen } from './danger';
@@ -45,6 +45,22 @@ export function explodeTickFor(c: Ctx, placeTick: number): number {
   return placeTick + (c.world.me.remote ? cfg.remoteFailsafeTicks : cfg.fuseTicks) - 1;
 }
 
+/** Square Blast radius a player's next generator would have (0 = plain plus). */
+export function squareRadius(obs: Observation, p: Readonly<Player>): number {
+  const sq = obs.config.square;
+  return sq.radiusByTier[Math.min(p.squareTier, sq.maxTier)] ?? 0;
+}
+
+/** Square Blast radius of my next generator. */
+export function mySquare(c: Ctx): number {
+  return squareRadius(c.world.obs, c.world.me);
+}
+
+/** Lethal hits a player can still absorb: Okada + Armour plates (V2 protection layers). */
+export function protectionLayers(p: Readonly<Player>): number {
+  return (p.mounted ? 1 : 0) + p.armour;
+}
+
 /**
  * If I stand on tile `u` from tick `a0` (able to step again from `a1`) and place a generator there,
  * is there a path to a tile that is safe forever? Returns the escape path or null.
@@ -54,6 +70,7 @@ export interface PlacementOptions {
   explodeAt?: number;
   range?: number;
   pierce?: boolean;
+  square?: number;
 }
 
 export function checkPlacement(
@@ -71,6 +88,7 @@ export function checkPlacement(
     y: world.yOf(u),
     range: opts.range ?? myRange(c),
     pierce: opts.pierce ?? world.me.hotFuel,
+    square: opts.square ?? mySquare(c),
     explodeAt: opts.explodeAt ?? explodeTickFor(c, placeTick),
   };
   c.builder.build(c.tmp, world, profile, { extraGens: [hypo] });
@@ -173,6 +191,10 @@ export function rivalEscape(
 export interface BlastGeometry {
   soft: number;
   rivals: number;
+  /**
+   * How much of `rivals` protection takes away: a rival with L layers (Okada, Armour) needs L + 1 hits,
+   * so it counts 1 / (L + 1) of a kill (an Okada rider: half, as before V2).
+   */
   mountedRivals: number;
   pickups: number;
   /** Other generators the flames would reach (chain reactions). */
@@ -187,6 +209,7 @@ export function blastGeometry(
   range: number,
   pierce: boolean,
   out: BlastGeometry,
+  square = 0,
 ): void {
   const { world } = c;
   const { obs, board } = world;
@@ -200,7 +223,11 @@ export function blastGeometry(
   const note = (t: number): void => {
     if (world.rivalAt[t]! > 0) {
       out.rivals += world.rivalAt[t]!;
-      for (const r of world.rivals) if (r.y * w + r.x === t && r.mounted) out.mountedRivals++;
+      for (const r of world.rivals) {
+        if (r.y * w + r.x !== t) continue;
+        const layers = protectionLayers(r);
+        if (layers > 0) out.mountedRivals += 1 - 1 / (layers + 1);
+      }
     }
     if (world.pickupAt[t]! >= 0) out.pickups++;
   };
@@ -231,6 +258,23 @@ export function blastGeometry(
         else if (hit1 < 0) hit1 = gi;
         else hit2 = gi;
         break;
+      }
+    }
+  }
+  if (square > 0) {
+    // V2 Square Blast: the square tiles off the centre row / column (the plus above covers those)
+    const blocks = (x: number, y: number): boolean => world.genAt[y * w + x]! >= 0;
+    for (const p of squareFootprint(obs, x0, y0, square, blocks)) {
+      if (p.x === x0 || p.y === y0) continue;
+      const t = p.y * w + p.x;
+      note(t);
+      if (obs.tiles[t] === Tile.Soft) out.soft++;
+      else if (world.genAt[t]! >= 0) {
+        out.chains++;
+        const gi = world.genAt[t]!;
+        if (hit0 < 0) hit0 = gi;
+        else if (hit1 < 0) hit1 = gi;
+        else if (hit2 < 0) hit2 = gi;
       }
     }
   }
@@ -393,6 +437,7 @@ export function escapeSurvivesSealing(
         y: Math.floor(q / w),
         range: r.range,
         pierce: false,
+        square: squareRadius(obs, r),
         explodeAt: remote ? arrives : arrives + fuse - 1,
         hold: remote,
         ownerId: r.id,
@@ -429,6 +474,7 @@ export function vulnerableAt(c: Ctx, tile: number, a0: number, a1: number, step:
       y: r.y,
       range: r.range,
       pierce: r.hotFuel,
+      square: squareRadius(obs, r),
       explodeAt: r.remote ? at : at + fuse - 1,
       hold: r.remote,
       ownerId: r.id,

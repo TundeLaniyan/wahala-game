@@ -16,6 +16,7 @@ import { createGeneratorModel } from '../assets/generator';
 import type { GeneratorModel } from '../assets/generator';
 import { labelTexture, glowTexture } from '../textures';
 import { playerGridPos, stepProgress, toWorld } from './motion';
+import { SQUARE_SURGE, squareFrameTexture } from './squareBlastLook';
 import type { FrameContext, View } from './types';
 
 interface Visual {
@@ -24,12 +25,15 @@ interface Visual {
   shadow: Mesh;
   pad: Mesh;
   pedestal: Mesh;
+  /** V2 Square Blast: the footprint frame on the floor (hidden for a plain plus generator). */
+  frame: Mesh;
   shown: string;
 }
 
 const shadowGeo = new PlaneGeometry(1.06, 1.06);
 const padGeo = new PlaneGeometry(1.08, 1.08);
 const pedestalGeo = new CylinderGeometry(0.45, 0.5, 0.055, 24);
+const frameGeo = new PlaneGeometry(1, 1);
 
 let cachedPadTex: CanvasTexture | null = null;
 function generatorPadTexture(): CanvasTexture {
@@ -83,7 +87,8 @@ export class GeneratorViews implements View {
     }
     for (const [id, v] of this.visuals) {
       if (!live.has(id)) {
-        this.group.remove(v.model.root, v.label, v.shadow, v.pad, v.pedestal);
+        this.group.remove(v.model.root, v.label, v.shadow, v.pad, v.pedestal, v.frame);
+        (v.frame.material as MeshBasicMaterial).dispose();
         v.model.casingMaterial.dispose();
         v.model.lampMaterial.dispose();
         v.label.material.dispose();
@@ -138,8 +143,24 @@ export class GeneratorViews implements View {
       }),
     );
     pedestal.receiveShadow = true;
-    this.group.add(model.root, label, shadow, pad, pedestal);
-    return { model, label, shadow, pad, pedestal, shown: '' };
+    const frame = new Mesh(
+      frameGeo,
+      new MeshBasicMaterial({
+        map: squareFrameTexture(),
+        color: SQUARE_SURGE,
+        transparent: true,
+        opacity: 0.8,
+        blending: AdditiveBlending,
+        depthWrite: false,
+        // a warning: drawn over the props of the blocks so the whole footprint reads (like a floor decal)
+        depthTest: false,
+      }),
+    );
+    frame.rotation.x = -Math.PI / 2;
+    frame.renderOrder = 9;
+    frame.visible = false;
+    this.group.add(model.root, label, shadow, pad, pedestal, frame);
+    return { model, label, shadow, pad, pedestal, frame, shown: '' };
   }
 
   private pose(ctx: FrameContext, g: Generator, v: Visual): void {
@@ -180,6 +201,7 @@ export class GeneratorViews implements View {
     v.pad.visible = lift < 0.25 && (g.mode === 'timed' || g.mode === 'remote');
     v.pedestal.position.set(w.x, 0.028, w.z);
     v.pedestal.visible = lift < 0.25;
+    this.poseFrame(ctx, g, v, lift);
 
     // Mode-specific look: bright yellow generator casing (timed) with red pulsing siren beacon & floor ring
     const timed = g.mode === 'timed';
@@ -244,8 +266,33 @@ export class GeneratorViews implements View {
     v.label.material.opacity = g.carriedBy !== null ? 0.9 : 1;
   }
 
+  /**
+   * Square Blast warning: from the moment it lands, a Square Blast generator marks the square it will
+   * cover (clipped to the board) with an electric frame that breathes slowly and strobes as the fuse
+   * runs out. The exact tiles (round concrete, behind crates) light up in the danger lanes as usual.
+   */
+  private poseFrame(ctx: FrameContext, g: Generator, v: Visual, lift: number): void {
+    const { state, time, layout } = ctx;
+    const r = g.square;
+    v.frame.visible = r > 0 && lift < 0.25 && g.mode !== 'disabled' && g.flight === null && g.carriedBy === null;
+    if (!v.frame.visible) return;
+    const x0 = Math.max(0, g.x - r);
+    const x1 = Math.min(state.width - 1, g.x + r);
+    const y0 = Math.max(0, g.y - r);
+    const y1 = Math.min(state.height - 1, g.y + r);
+    v.frame.position.set((layout.wx(x0) + layout.wx(x1)) / 2, 0.034, (layout.wz(y0) + layout.wz(y1)) / 2);
+    v.frame.scale.set(x1 - x0 + 1, y1 - y0 + 1, 1);
+    const fuse = g.mode === 'timed' ? Math.max(0, g.timer) / state.config.generator.fuseTicks : 1;
+    const urgent = 1 - Math.min(1, fuse);
+    const rate = 2.2 + urgent * 18;
+    const mat = v.frame.material as MeshBasicMaterial;
+    mat.opacity = (0.6 + 0.4 * urgent) * (0.75 + 0.25 * Math.sin(time * rate));
+    mat.color.setHex(urgent > 0.7 && Math.sin(time * rate) > 0 ? 0xffffff : SQUARE_SURGE);
+  }
+
   dispose(): void {
     for (const v of this.visuals.values()) {
+      (v.frame.material as MeshBasicMaterial).dispose();
       v.model.casingMaterial.dispose();
       v.model.lampMaterial.dispose();
       v.label.material.dispose();

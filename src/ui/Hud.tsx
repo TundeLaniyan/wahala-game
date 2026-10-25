@@ -10,6 +10,7 @@ import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
 import { HudRail } from './HudRail';
 import { Minimap } from './Minimap';
+import { ProgressionBadge } from './ProgressionBadge';
 import { RumbleHud } from './RumbleHud';
 
 function Portrait({ p }: { p: HudPlayer }) {
@@ -164,6 +165,8 @@ export function Hud() {
       )}
       <HudRail alerts={hud.stageAlerts} toasts={toasts} ruleBanner={hud.ruleBanner} rumble={!!rumble} />
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}
+      {/* V2 City Rumble progression (workstream C): kills, next reward, protection, Square Blast */}
+      {rumble && hud.me && hud.phase !== 'ended' && hud.localAlive && <ProgressionBadge me={hud.me} floating />}
       {hud.entry && <EntryPanel entry={hud.entry} />}
       {!rumble && hud.phase === 'playing' && !hud.localAlive && (
         <div className="spectate" data-testid="spectate">
