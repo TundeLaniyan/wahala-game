@@ -1,5 +1,5 @@
 {
-  "_comment": "The founder's approved Pixabay tracks (Pixabay Content License), shipped ONLY as WAHALA!'s in-game soundtrack, never as a standalone collection (see public/audio/LICENSES.md). Nothing generated may ever be listed here (tests/audio/assets.test.ts). `artist` is the Pixabay uploader as named in the downloaded file; `gain` levels every track to about -14 LUFS (measured with ffmpeg ebur128). A listed file that is not present (pixabay_496406) is skipped at runtime. Each standard arena has ONE signature track (founder assignment, decision N12); City Rumble rotates a five-track subset. See docs/AUDIO.md.",
+  "_comment": "The founder's approved Pixabay tracks (Pixabay Content License), shipped ONLY as WAHALA!'s in-game soundtrack, never as a standalone collection (see public/audio/LICENSES.md). Nothing generated may ever be listed here (tests/audio/assets.test.ts). `artist` is the Pixabay uploader as named in the downloaded file; `gain` levels every track to about -14 LUFS (measured with ffmpeg ebur128). A listed file that is not present (pixabay_496406) is skipped at runtime. Each standard arena has ONE signature track (founder assignment, decision N12); The classic City Rumble district rotates a five-track subset; each of the five V2 Rumble stages has ONE signature track (supplied 2026-10-25). See docs/AUDIO.md.",
   "version": 2,
   "tracks": [
     {
@@ -129,6 +129,76 @@
       "gain": 0.88,
       "loudnessLufs": -12.9,
       "artistSource": "Pixabay uploader handle in the downloaded file name"
+    },
+    {
+      "id": "pixabay_601035",
+      "title": "Afrobeat Type Beat 2026 - Reach (Afrobeat Instrumental)",
+      "artist": "dmsoundworks",
+      "source": "Pixabay track 601035 by dmsoundworks (founder download; exact page URL not reachable from the build environment)",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_601035.mp3",
+      "approved": true,
+      "gain": 0.62,
+      "loudnessLufs": -9.8,
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "note": "City Rumble V2 signature track for rumbleOshodi (supplied 2026-10-25, re-encoded 160 kbps)"
+    },
+    {
+      "id": "pixabay_554543",
+      "title": "Afro Beat Groovy Instrumental",
+      "artist": "rediskasound",
+      "source": "Pixabay track 554543 by rediskasound (founder download; exact page URL not reachable from the build environment)",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_554543.mp3",
+      "approved": true,
+      "gain": 0.56,
+      "loudnessLufs": -8.9,
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "note": "City Rumble V2 signature track for rumbleLagosIsland (supplied 2026-10-25, re-encoded 160 kbps)"
+    },
+    {
+      "id": "pixabay_455231",
+      "title": "Where the Sun Is Born",
+      "artist": "ruslansikunov",
+      "source": "Pixabay track 455231 by ruslansikunov (founder download; exact page URL not reachable from the build environment)",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_455231.mp3",
+      "approved": true,
+      "gain": 1.11,
+      "loudnessLufs": -14.9,
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "note": "City Rumble V2 signature track for rumbleApapa (supplied 2026-10-25, re-encoded 160 kbps)"
+    },
+    {
+      "id": "pixabay_515507",
+      "title": "Afrobeat (Afro Beat)",
+      "artist": "solarflex",
+      "source": "Pixabay track 515507 by solarflex (founder download; exact page URL not reachable from the build environment)",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_515507.mp3",
+      "approved": true,
+      "gain": 0.64,
+      "loudnessLufs": -10.1,
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "note": "City Rumble V2 signature track for rumbleOjuelegba (supplied 2026-10-25, re-encoded 160 kbps)"
+    },
+    {
+      "id": "pixabay_623364",
+      "title": "Afrobeat Groove",
+      "artist": "sonican",
+      "source": "Pixabay track 623364 by sonican (founder download; exact page URL not reachable from the build environment)",
+      "licence": "Pixabay Content License",
+      "licenceUrl": "https://pixabay.com/service/license-summary/",
+      "file": "pixabay_623364.mp3",
+      "approved": true,
+      "gain": 0.79,
+      "loudnessLufs": -11.9,
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "note": "City Rumble V2 signature track for rumbleLekkiNight (supplied 2026-10-25, re-encoded 160 kbps)"
     }
   ],
   "playlists": {

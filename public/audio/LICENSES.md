@@ -34,6 +34,18 @@ below come from those names (the files carry no ID3 tags). All nine are distinct
 | `pixabay_406552.mp3` | Pause | audiolibraryinfinite | https://pixabay.com/music/afrobeat-pause-406552/ | Pixabay Content License | 2026-10-23 (supplied by the founder) | No (credited here anyway) | 240 s, 7.7 MB |
 | `pixabay_540950.mp3` | Afro Beat Afrobeat Instrumental | hitslab | https://pixabay.com/music/afrobeat-afro-beat-afrobeat-instrumental-540950/ | Pixabay Content License | 2026-10-23 (supplied by the founder) | No (credited here anyway) | 111 s, 3.6 MB |
 | `pixabay_504898.mp3` | Afrobeat (Afro Beat) | freemusicforvideo | https://pixabay.com/music/electronic-afrobeat-afro-beat-504898/ | Pixabay Content License | 2026-10-23 (supplied by the founder) | No (credited here anyway) | 141 s, 4.5 MB |
+| `pixabay_601035.mp3` | Afrobeat Type Beat 2026 - Reach (Afrobeat Instrumental) | dmsoundworks | Pixabay track 601035 by dmsoundworks (founder download; exact page URL not reachable from the build environment) | Pixabay Content License | 2026-10-25 (supplied by the founder, V2) | No (credited here anyway) | 172 s, 3.4 MB |
+| `pixabay_554543.mp3` | Afro Beat Groovy Instrumental | rediskasound | Pixabay track 554543 by rediskasound (founder download; exact page URL not reachable from the build environment) | Pixabay Content License | 2026-10-25 (supplied by the founder, V2) | No (credited here anyway) | 217 s, 4.3 MB |
+| `pixabay_455231.mp3` | Where the Sun Is Born | ruslansikunov | Pixabay track 455231 by ruslansikunov (founder download; exact page URL not reachable from the build environment) | Pixabay Content License | 2026-10-25 (supplied by the founder, V2) | No (credited here anyway) | 233 s, 4.7 MB |
+| `pixabay_515507.mp3` | Afrobeat (Afro Beat) | solarflex | Pixabay track 515507 by solarflex (founder download; exact page URL not reachable from the build environment) | Pixabay Content License | 2026-10-25 (supplied by the founder, V2) | No (credited here anyway) | 108 s, 2.2 MB |
+| `pixabay_623364.mp3` | Afrobeat Groove | sonican | Pixabay track 623364 by sonican (founder download; exact page URL not reachable from the build environment) | Pixabay Content License | 2026-10-25 (supplied by the founder, V2) | No (credited here anyway) | 81 s, 1.6 MB |
+
+The five City Rumble V2 tracks above came as `WAHALA_RUMBLE_MUSIC.zip` (2026-10-25) with Pixabay download names
+(`<uploader>-<title>-<id>.mp3`), from the same source as the rest of the soundtrack per the founder. Their Pixabay pages
+could not be opened from the build environment, so the uploader and id come from the file names only; the founder
+should keep the download receipts. They were re-encoded from 256 kbps to 160 kbps MP3 (smaller downloads; levels set
+by `gain` in the manifest, measured with ffmpeg ebur128). All five are distinct from each other and from the nine
+earlier tracks (content hashes differ).
 
 ### Missing
 

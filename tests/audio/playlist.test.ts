@@ -146,7 +146,7 @@ describe('arena playlists and signature tracks', () => {
   it('the shipped manifest: every standard arena has its own signature track (founder table), City Rumble rotates', () => {
     const raw = JSON.parse(readFileSync(join(__dirname, '../../public/audio/music/manifest.json'), 'utf8'));
     const m = parse(raw);
-    expect(m.tracks).toHaveLength(10);
+    expect(m.tracks).toHaveLength(15);
     const FOUNDER: Record<string, string> = {
       danfoBusPark: 'pixabay_504898',
       balogunMarket: 'pixabay_573648',

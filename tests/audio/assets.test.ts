@@ -32,6 +32,11 @@ const APPROVED: Record<string, string> = {
   pixabay_406552: 'https://pixabay.com/music/afrobeat-pause-406552/',
   pixabay_540950: 'https://pixabay.com/music/afrobeat-afro-beat-afrobeat-instrumental-540950/',
   pixabay_504898: 'https://pixabay.com/music/electronic-afrobeat-afro-beat-504898/',
+  pixabay_601035: 'Pixabay track 601035 by dmsoundworks (founder download; exact page URL not reachable from the build environment)',
+  pixabay_554543: 'Pixabay track 554543 by rediskasound (founder download; exact page URL not reachable from the build environment)',
+  pixabay_455231: 'Pixabay track 455231 by ruslansikunov (founder download; exact page URL not reachable from the build environment)',
+  pixabay_515507: 'Pixabay track 515507 by solarflex (founder download; exact page URL not reachable from the build environment)',
+  pixabay_623364: 'Pixabay track 623364 by sonican (founder download; exact page URL not reachable from the build environment)',
 };
 /** Names of the rejected generated tracks; none may ever come back under any form. */
 const REJECTED_NAMES =
@@ -56,7 +61,7 @@ describe('rejected generated audio stays disabled', () => {
     expect(audioFiles.filter((p) => !allowed.has(p))).toEqual([]);
   });
 
-  it('the music manifest lists exactly the ten approved tracks, each with its source page and licence', () => {
+  it('the music manifest lists exactly the fifteen approved tracks, each with its source and licence', () => {
     const raw = json<{
       tracks: { id: string; file: string; source: string; licence: string; approved: boolean }[];
     }>('music/manifest.json');
@@ -69,7 +74,7 @@ describe('rejected generated audio stays disabled', () => {
     }
     const { manifest, rejected } = parseMusicManifest(raw);
     expect(rejected).toEqual([]);
-    expect(manifest.tracks).toHaveLength(10);
+    expect(manifest.tracks).toHaveLength(15);
     expect(JSON.stringify(raw)).not.toMatch(REJECTED_NAMES);
   });
 
@@ -87,7 +92,7 @@ describe('rejected generated audio stays disabled', () => {
     }
   });
 
-  it('nine approved tracks are installed as real MP3 audio; only #7 (pixabay_496406) is missing', () => {
+  it('fourteen approved tracks are installed as real MP3 audio; only #7 (pixabay_496406) is missing', () => {
     const present = readdirSync(join(AUDIO, 'music'))
       .filter((n) => n.endsWith('.mp3'))
       .sort();
@@ -163,9 +168,22 @@ describe('voice clips (founder-approved Gemini TTS, 2026-10-24)', () => {
     ).toEqual(recorded.clips.map((c) => `${c.id}.wav`).sort());
   });
 
-  it('the first batch: the 19 clips the founder supplied', () => {
+  it('the founder batches: 19 clips (2026-10-24) plus 11 more (2026-10-25) = 30', () => {
     expect(recorded.clips.map((c) => c.id).sort()).toEqual(
       [
+        // second batch (WAHALA_VOICES_CURRENT.zip, V2 import)
+        'conductor_no_change_01',
+        'conductor_shift_01',
+        'final_seconds_01',
+        'okada_saved_01',
+        'okada_saved_02',
+        'okada_saved_03',
+        'park_driver_move_01',
+        'park_going_yaba_01',
+        'park_transport_fare_01',
+        'victory_01',
+        'victory_02',
+        // first batch
         'danfo_hit_01',
         'danfo_hit_02',
         'danfo_hit_03',
