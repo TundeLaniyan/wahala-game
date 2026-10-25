@@ -6,3 +6,5 @@ export type { EntryOverlayModel, EntryPick, FrameInfo } from './types';
 export type { QualityLevel } from './quality';
 export { assets } from './assets/library';
 export { renderCastPortraits } from './portraits';
+export { resolveShakeMode } from './shake';
+export type { ShakeMode, ShakeSetting } from './shake';

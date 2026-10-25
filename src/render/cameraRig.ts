@@ -1,6 +1,7 @@
 import { MathUtils, PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
 import type { CameraShot } from './cameraDirector';
 import type { Layout } from './coords';
+import type { ShakeOffset } from './shake';
 
 /**
  * Two framings share one camera (which one is used is decided by the camera mode, cameraModes.ts):
@@ -66,6 +67,7 @@ interface Pose {
 export class CameraRig {
   readonly camera = new PerspectiveCamera(FOV, 16 / 9, 0.5, 200);
   private readonly raycaster = new Raycaster();
+  private readonly shakeOffset = new Vector3();
   private readonly ground = new Plane(new Vector3(0, 1, 0), 0);
   private insets = { top: 0.1, bottom: 0.06 };
   /** The fitted whole-arena pose. */
@@ -277,10 +279,17 @@ export class CameraRig {
   }
 
   /**
-   * Moves the camera towards the shot. `dt` in seconds; `shake` 0..1 from explosions. With no shot
-   * (or an overview shot) the whole arena is framed. `attract` adds the title-screen drift.
+   * Moves the camera towards the shot. `dt` in seconds; `shake` is this frame's bounded camera offset
+   * (render/shake.ts; 0 = none). With no shot (or an overview shot) the whole arena is framed. `attract`
+   * adds the title-screen drift.
    */
-  update(dt: number, time: number, shake: number, shot: CameraShot | null = null, attract = false): void {
+  update(
+    dt: number,
+    time: number,
+    shake: Readonly<ShakeOffset> | 0,
+    shot: CameraShot | null = null,
+    attract = false,
+  ): void {
     const target = shot && shot.kind === 'action' && !attract ? this.actionGoal(shot) : this.overview;
     Object.assign(this.goal, target);
     const p = this.pose;
@@ -296,16 +305,40 @@ export class CameraRig {
       p.fov += (this.goal.fov - p.fov) * k(TAU_ZOOM);
     }
     this.place(p);
-    const s = shake * shake * 0.35 * Math.min(1, p.distance / 18 + 0.4);
-    // Title-screen demo: a slow cinematic drift.
-    const dx = attract ? Math.sin(time * 0.18) * 1.6 : 0;
-    const dy = attract ? Math.sin(time * 0.11) * 0.6 : 0;
+    // Title-screen demo: a slow cinematic drift (part of the framing, not shake).
     const cam = this.camera;
-    cam.position.x += dx + Math.sin(time * 53) * s;
-    cam.position.y += dy + Math.cos(time * 47) * s * 0.6;
-    cam.position.z += Math.sin(time * 41) * s;
-    if (attract) cam.lookAt(p.x, 0, p.z);
+    if (attract) {
+      cam.position.x += Math.sin(time * 0.18) * 1.6;
+      cam.position.y += Math.sin(time * 0.11) * 0.6;
+      cam.lookAt(p.x, 0, p.z);
+    }
+    // Shake is a pure translation added last, remembered so picking can take it back out.
+    const s = shake === 0 ? null : shake;
+    this.shakeOffset.set(s?.x ?? 0, s?.y ?? 0, s?.z ?? 0);
+    cam.position.add(this.shakeOffset);
     cam.updateMatrixWorld(true);
+  }
+
+  /** The offset the last `update` shook the camera by (zero when none). */
+  get currentShake(): Readonly<Vector3> {
+    return this.shakeOffset;
+  }
+
+  /**
+   * Runs `fn` with the camera at its un-shaken pose: touch / mouse picking and the HUD's board corners must
+   * never move with the shake (decision WA6).
+   */
+  private steady<T>(fn: () => T): T {
+    if (this.shakeOffset.lengthSq() === 0) return fn();
+    const cam = this.camera;
+    cam.position.sub(this.shakeOffset);
+    cam.updateMatrixWorld(true);
+    try {
+      return fn();
+    } finally {
+      cam.position.add(this.shakeOffset);
+      cam.updateMatrixWorld(true);
+    }
   }
 
   /**
@@ -314,6 +347,10 @@ export class CameraRig {
    * stay clear of the on-screen controls.
    */
   framesWholeArena(): boolean {
+    return this.steady(() => this.framesWholeArenaNow());
+  }
+
+  private framesWholeArenaNow(): boolean {
     const W = this.layout.width;
     const H = this.layout.height;
     const compact = this.insets.top >= 0.12 && this.camera.aspect > 1.2;
@@ -340,6 +377,10 @@ export class CameraRig {
    * standing character's head height, so a far-row player stays clear too.
    */
   boardCornersNdc(): { x: number; y: number }[] {
+    return this.steady(() => this.boardCornersNow());
+  }
+
+  private boardCornersNow(): { x: number; y: number }[] {
     const W = this.layout.width;
     const H = this.layout.height;
     const pts: [number, number, number][] = [
@@ -371,6 +412,15 @@ export class CameraRig {
 
   /** Converts a canvas pixel position to a (fractional) grid coordinate on the floor, or null. */
   screenToGrid(px: number, py: number, width: number, height: number): { x: number; y: number } | null {
+    return this.steady(() => this.screenToGridNow(px, py, width, height));
+  }
+
+  private screenToGridNow(
+    px: number,
+    py: number,
+    width: number,
+    height: number,
+  ): { x: number; y: number } | null {
     const ndc = new Vector2((px / width) * 2 - 1, -(py / height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
     const hit = new Vector3();

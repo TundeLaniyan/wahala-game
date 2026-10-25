@@ -3,7 +3,7 @@
  * browser and let each subsystem be swapped or stubbed independently.
  */
 import type { Dir, GameState, Intent, Observation, SimEvent, Difficulty } from '../sim';
-import type { ActionName } from '../input';
+import type { ActionName, IntentContext } from '../input';
 import type { EntryPick, FrameInfo, QualityLevel } from '../render';
 
 export interface Bot {
@@ -36,8 +36,8 @@ export interface RendererPort {
 export interface InputPort {
   navMode: boolean;
   pollDevices(): void;
-  buildIntent(tick: number, canMove?: boolean): Intent;
-  takeVehiclePress(): boolean;
+  /** The local player's intent for this tick (`ctx`: can they step, is a remote live, move legality). */
+  buildIntent(tick: number, ctx?: IntentContext): Intent;
   clear(): void;
 }
 

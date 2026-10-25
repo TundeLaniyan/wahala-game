@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as RPointerEvent } from 'react';
-import { CHARACTERS } from '../sim';
+import { CHARACTERS, VEHICLE_DEFS } from '../sim';
 import type { Dir } from '../sim';
 import { pickupIconUrl } from '../assets/pickupIcons';
 import { commands, input } from '../app/session';
 import { VirtualStick, stickConfigFor } from '../input/joystick';
+import { SPECIAL_HOLD_MS } from '../input';
 import { useGameStore } from '../app/store';
-import type { ActionName } from '../input';
+import type { HudMe } from '../app/hud';
 
 /**
  * Floating thumbstick: a touch anywhere in the bottom-left activation zone becomes the stick's centre
  * and the drag picks one of the four grid directions (see `input/joystick.ts`). A quick tap that never
- * leaves the dead zone is passed through as a tap on the board, so vehicle entrances under the zone can
- * still be picked by touch.
+ * leaves the dead zone is passed through as a tap on the board, so a tutorial's vehicle entrances under
+ * the zone can still be picked by touch.
  */
 function Joystick({ entryOpen }: { entryOpen: boolean }) {
   const zone = useRef<HTMLDivElement>(null);
@@ -56,7 +57,7 @@ function Joystick({ entryOpen }: { entryOpen: boolean }) {
   return (
     <div
       ref={zone}
-      className="stick-zone"
+      className={`stick-zone${view ? ' live' : ''}`}
       data-testid="stick-zone"
       data-dir={view?.dir ?? ''}
       onPointerDown={(e) => {
@@ -89,40 +90,104 @@ function Joystick({ entryOpen }: { entryOpen: boolean }) {
         </div>
       ) : (
         <div className="stick-hint" style={{ ['--r' as string]: `${r}px` }}>
+          {(['up', 'down', 'left', 'right'] as Dir[]).map((d) => (
+            <i key={d} className={`stick-tick ${d}`} />
+          ))}
           <span>MOVE</span>
+          <small>thumb anywhere here</small>
         </div>
       )}
     </div>
   );
 }
 
-function ActionButton(props: {
-  cls: string;
-  label: React.ReactNode;
-  action: ActionName;
-  testId: string;
-  dim?: boolean;
-}) {
+/** What button B does right now: its label (the position and look never change). */
+export function specialLabel(
+  me: HudMe,
+  skill: string,
+): { text: string; icon: 'voucher' | null; live: boolean } {
+  if (me.special === 'vehicle')
+    return { text: VEHICLE_DEFS[me.vehicle].name.toUpperCase(), icon: 'voucher', live: true };
+  if (me.special === 'melee') return { text: skill.toUpperCase(), icon: null, live: me.skillReady };
+  return { text: skill.toUpperCase(), icon: null, live: false };
+}
+
+/**
+ * Button A (GENERATOR). One finger = one press; several fingers never double-place within a tick.
+ */
+function GeneratorButton() {
   return (
     <button
       type="button"
-      className={`abtn ${props.cls}${props.dim ? ' dim' : ''}`}
-      data-testid={props.testId}
+      className="abtn bomb"
+      data-testid="btn-place"
+      aria-label="A: Generator"
       onPointerDown={(e) => {
         e.preventDefault();
-        input.touchPress(props.action);
+        input.touchDown('place', `p${e.pointerId}`);
       }}
     >
-      <span>{props.label}</span>
+      <span>
+        <b>GENERATOR</b>
+      </span>
     </button>
   );
 }
 
-/** Contextual on-screen buttons: only what the player can currently use is shown (Bible: no icon jungle). */
+/**
+ * Button B: tap = the context special (melee an adjacent rival, else the vehicle), HOLD = Remote
+ * Detonator while a remote generator is live (a ring fills over the hold time). The press and the
+ * release both go to the input layer, which alone decides tap vs hold (input/specialHold.ts).
+ */
+function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
+  const [holding, setHolding] = useState(false);
+  const label = specialLabel(me, skill);
+  const remoteReady = me.remote && me.hasRemoteGenerator;
+  const up = (e: RPointerEvent): void => {
+    input.touchUp('special', `p${e.pointerId}`);
+    setHolding(false);
+  };
+  return (
+    <button
+      type="button"
+      className={`abtn special${label.live ? '' : ' dim'}${label.icon ? ' vehicle' : ''}${holding ? ' holding' : ''}`}
+      data-testid="btn-special"
+      data-special={me.special ?? ''}
+      data-remote={remoteReady ? 'ready' : ''}
+      aria-label={`B: ${label.text}${remoteReady ? ', hold to set off remote' : ''}`}
+      style={{ ['--hold-ms' as string]: `${SPECIAL_HOLD_MS}ms` }}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        input.touchDown('special', `p${e.pointerId}`);
+        if (remoteReady) setHolding(true);
+      }}
+      onPointerUp={up}
+      onPointerCancel={up}
+      onLostPointerCapture={up}
+    >
+      {remoteReady && <i className="hold-ring" aria-hidden />}
+      <span>
+        {label.icon && <img src={pickupIconUrl('voucher', 64)} alt="" />}
+        {label.text}
+        {remoteReady && <small data-testid="btn-special-hold">HOLD: BOOM!</small>}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * V2 touch layout: a large movement area on the left and EXACTLY two action buttons on the right, always
+ * in the same place: A = GENERATOR, B = SPECIAL (its label follows what it would do; HOLD = remote).
+ * Contact abilities (kick / punch / disarm / pass) have no button: walk into a generator.
+ */
 export function TouchControls() {
   const me = useGameStore((s) => s.hud?.me);
   const entry = useGameStore((s) => s.hud?.entry);
-  const character = useGameStore((s) => s.settings.character);
+  // the local player's own character (a tutorial may play someone other than the saved choice)
+  const character = useGameStore(
+    (s) => s.hud?.players.find((p) => p.isLocal)?.characterId ?? s.settings.character,
+  );
   const localAlive = useGameStore((s) => s.hud?.localAlive ?? true);
   // out of the match: nothing to steer, and the stick zone must not cover the spectator buttons
   if (!localAlive) return null;
@@ -133,43 +198,12 @@ export function TouchControls() {
       </div>
     );
   const skill = CHARACTERS[character].skill;
-  const actionLabel = me.carrying ? 'DROP' : 'CARRY';
   return (
     <div className="touch" data-testid="touch-controls">
       <Joystick entryOpen={false} />
       <div className="actions">
-        <ActionButton cls="bomb" action="place" testId="btn-place" label={<b>GENERATOR</b>} />
-        <ActionButton
-          cls="a"
-          action="skill"
-          testId="btn-skill"
-          dim={!me.skillReady}
-          label={skill.toUpperCase()}
-        />
-        {me.canAction && <ActionButton cls="b" action="action" testId="btn-action" label={actionLabel} />}
-        {me.remote && (
-          <ActionButton
-            cls="c"
-            action="detonate"
-            testId="btn-detonate"
-            dim={!me.hasRemoteGenerator}
-            label="BOOM!"
-          />
-        )}
-        {me.canDisarm && <ActionButton cls="d" action="disarm" testId="btn-disarm" label="DISARM" />}
-        {me.voucher && (
-          <ActionButton
-            cls="v"
-            action="vehicle"
-            testId="btn-vehicle"
-            label={
-              <>
-                <img src={pickupIconUrl('voucher', 64)} alt="" />
-                {me.vehicle.toUpperCase()}
-              </>
-            }
-          />
-        )}
+        <GeneratorButton />
+        <SpecialButton me={me} skill={skill} />
       </div>
     </div>
   );

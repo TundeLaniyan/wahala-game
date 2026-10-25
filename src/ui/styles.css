@@ -747,13 +747,17 @@ button {
 }
 
 /* ---------- touch controls ---------- */
+/* V2: one movement area on the left, exactly two action buttons (A = GENERATOR, B = SPECIAL) on the right,
+   always in the same place (decision WA1). */
 .touch {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 /* Floating thumbstick. The activation zone is the lower-left of the screen below the HUD band and left of
-   the action buttons; the stick appears wherever the thumb lands in it. */
+   the action buttons; the stick appears wherever the thumb lands in it. The zone itself is drawn very
+   faintly (a soft corner glow and a hairline edge) so it reads as "touch anywhere here" without tinting
+   the tiles it overlaps. */
 .stick-zone {
   position: absolute;
   left: 0;
@@ -765,6 +769,19 @@ button {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  border-top-right-radius: 28px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.14);
+  border-right: 1px dashed rgba(255, 255, 255, 0.14);
+  background: radial-gradient(
+    120% 90% at 0% 100%,
+    rgba(255, 255, 255, 0.075),
+    rgba(255, 255, 255, 0.02) 55%,
+    rgba(255, 255, 255, 0) 80%
+  );
+  transition: border-color 0.2s;
+}
+.stick-zone.live {
+  border-color: rgba(255, 210, 63, 0.2);
 }
 .stick {
   position: absolute;
@@ -779,8 +796,8 @@ button {
   width: calc(var(--r) * 2);
   height: calc(var(--r) * 2);
   border-radius: 50%;
-  background: radial-gradient(rgba(40, 44, 52, 0.42), rgba(18, 20, 24, 0.5));
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: radial-gradient(rgba(40, 44, 52, 0.38), rgba(18, 20, 24, 0.46));
+  border: 2px solid rgba(255, 255, 255, 0.34);
 }
 .stick-tick {
   position: absolute;
@@ -842,24 +859,36 @@ button {
   background: radial-gradient(circle at 35% 30%, rgba(255, 227, 122, 0.62), rgba(255, 198, 26, 0.48));
   border-color: #ffd23f;
 }
-/* where to put your thumb when nothing is touching: a faint ring low in the zone */
+/* where a thumb naturally rests when nothing is touching: a ring with the four directions, low in the zone */
 .stick-hint {
   position: absolute;
   left: max(calc(var(--r) * 0.4 + 10px), env(safe-area-inset-left));
   bottom: max(calc(var(--r) * 0.4), env(safe-area-inset-bottom));
-  width: calc(var(--r) * 2);
-  height: calc(var(--r) * 2);
+  width: calc(var(--r) * 2.2);
+  height: calc(var(--r) * 2.2);
   border-radius: 50%;
-  border: 2px dashed rgba(255, 255, 255, 0.28);
-  display: grid;
-  place-items: center;
+  border: 2px dashed rgba(255, 255, 255, 0.34);
+  background: rgba(20, 22, 26, 0.16);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
+}
+.stick-hint .stick-tick {
+  opacity: 0.4;
 }
 .stick-hint span {
   font-family: var(--display);
   letter-spacing: 0.14em;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+.stick-hint small {
+  font-size: 0.55rem;
+  letter-spacing: 0.04em;
   color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
 }
 .actions {
   position: absolute;
@@ -873,6 +902,9 @@ button {
   position: absolute;
   pointer-events: auto;
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   border-radius: 50%;
   border: 4px solid rgba(255, 255, 255, 0.6);
   display: grid;
@@ -888,12 +920,28 @@ button {
     0 5px 0 rgba(0, 0, 0, 0.4),
     0 0 18px rgba(0, 0, 0, 0.4) inset;
   padding: 0;
+  overflow: hidden;
+}
+.abtn > span {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .abtn img {
   width: 46%;
   display: block;
   margin: 0 auto 1px;
 }
+.abtn small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72em;
+  letter-spacing: 0.04em;
+  color: #ffd6e8;
+}
+/* A: GENERATOR */
 .abtn.bomb {
   left: 48%;
   top: 48%;
@@ -908,51 +956,52 @@ button {
   padding: 3px 8px;
   font-weight: 400;
 }
-.abtn.a {
-  left: 14%;
-  top: 68%;
-  width: 30%;
-  height: 30%;
+/* B: SPECIAL (label changes, place and look never do) */
+.abtn.special {
+  left: 4%;
+  top: 54%;
+  width: 40%;
+  height: 40%;
   background: #7c4dff;
 }
-.abtn.b {
-  left: 14%;
-  top: 36%;
-  width: 28%;
-  height: 28%;
-  background: #2e7dff;
-}
-.abtn.v {
-  left: 44%;
-  top: 12%;
-  width: 31%;
-  height: 31%;
+.abtn.special.vehicle {
   background: #12a455;
-  animation: pulse 0.7s infinite alternate;
-}
-.abtn.c {
-  left: 76%;
-  top: 16%;
-  width: 24%;
-  height: 24%;
-  background: #ff2f86;
-}
-.abtn.d {
-  left: -6%;
-  top: 38%;
-  width: 22%;
-  height: 22%;
-  background: #6b7078;
 }
 .abtn.dim {
-  opacity: 0.45;
+  opacity: 0.5;
+}
+/* hold-for-remote: a ring fills over the hold time while B is down */
+.abtn .hold-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(rgba(255, 47, 134, 0.85) calc(var(--fill, 0) * 1turn), transparent 0);
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%);
+  mask: radial-gradient(circle, transparent 58%, #000 60%);
+  pointer-events: none;
+}
+.abtn.holding .hold-ring {
+  animation: hold-fill var(--hold-ms, 400ms) linear forwards;
+}
+@property --fill {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+@keyframes hold-fill {
+  from {
+    --fill: 0;
+  }
+  to {
+    --fill: 1;
+  }
 }
 
 /*
- * Landscape phones (height <= 480 px): the action buttons hug the right edge in a strip 28vh wide, and the
- * thumbstick's resting ring fits the same strip on the left. The whole-arena camera keeps the board's near
- * corners between the two strips (render/cameraRig.ts PHONE_CONTROL_STRIP = 0.28), so no control ever
- * covers a tile; higher up the board narrows (perspective), which is where the smaller buttons sit.
+ * Landscape phones (height <= 480 px): the two action buttons hug the right edge in a strip 28vh wide, and
+ * the thumbstick's resting ring fits the same strip on the left. The whole-arena camera keeps the board's
+ * near corners between the two strips (render/cameraRig.ts PHONE_CONTROL_STRIP = 0.28), so no control ever
+ * covers a tile; higher up the board narrows (perspective), which is where B sits, above A.
  */
 @media (max-height: 480px) and (orientation: landscape) {
   /* the clock stays inside the 13% top band on a 320 px tall phone */
@@ -984,45 +1033,13 @@ button {
   .abtn.bomb b {
     padding: 2px 5px;
   }
-  .abtn.a {
+  .abtn.special {
     left: auto;
     top: auto;
-    right: 0;
-    bottom: 26vh;
-    width: 14vh;
-    height: 14vh;
-  }
-  .abtn.b {
-    left: auto;
-    top: auto;
-    right: 15vh;
+    right: 1vh;
     bottom: 27vh;
-    width: 13vh;
-    height: 13vh;
-  }
-  .abtn.v {
-    left: auto;
-    top: auto;
-    right: 0;
-    bottom: 42vh;
-    width: 14vh;
-    height: 14vh;
-  }
-  .abtn.c {
-    left: auto;
-    top: auto;
-    right: 15vh;
-    bottom: 42vh;
-    width: 12vh;
-    height: 12vh;
-  }
-  .abtn.d {
-    left: auto;
-    top: auto;
-    right: 7vh;
-    bottom: 57vh;
-    width: 11vh;
-    height: 11vh;
+    width: 21vh;
+    height: 21vh;
   }
   .stick-zone {
     width: calc(100vw - 28vh - 16px);
@@ -1034,6 +1051,9 @@ button {
     bottom: max(4px, env(safe-area-inset-bottom));
     width: calc(28vh - 8px);
     height: calc(28vh - 8px);
+  }
+  .stick-hint small {
+    font-size: 0.45rem;
   }
 }
 

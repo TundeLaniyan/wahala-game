@@ -6,7 +6,7 @@ import { createBot } from '../ai';
 import { createAudio } from '../audio';
 import type { SpokenTrace } from '../audio';
 import { InputManager } from '../input';
-import { GameRenderer, assets, renderCastPortraits } from '../render';
+import { GameRenderer, assets, renderCastPortraits, resolveShakeMode } from '../render';
 import { registerBusts } from '../assets/portraits';
 import type { CharacterId, GameState, SimEvent } from '../sim';
 import { enterImmersiveMode } from './fullscreen';
@@ -49,6 +49,20 @@ const input = new InputManager({
   onNav: (c) => controller?.handleNav(c),
   onDeviceChange: (device) => patch({ device }),
 });
+
+/**
+ * Camera shake (decision WA6): the setting, resolved for this device. 'auto' is off on touch screens and
+ * subtle with a mouse; prefers-reduced-motion always turns it off.
+ */
+function applyShake(s: GameSettings): void {
+  const media = (q: string): boolean => window.matchMedia?.(q).matches ?? false;
+  renderer?.setShake(
+    resolveShakeMode(s.shake, {
+      coarsePointer: media('(pointer: coarse)') || 'ontouchstart' in window,
+      reducedMotion: media('(prefers-reduced-motion: reduce)'),
+    }),
+  );
+}
 
 function applyAudioSettings(s: GameSettings): void {
   // volumes live in the persistent audio preferences (src/audio/prefs.ts), which the engine follows itself
@@ -145,6 +159,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     audio,
   });
   applyAudioSettings(settings);
+  applyShake(settings);
   renderer.setCameraView(settings.cameraView);
   attract = new AttractController(renderer as never, createBot);
   tutorial = new TutorialController(controller, {
@@ -270,6 +285,7 @@ export const commands = {
     applyAudioSettings(settings);
     if (p.quality) renderer?.setQuality(p.quality);
     if (p.cameraView) renderer?.setCameraView(p.cameraView);
+    if (p.shake) applyShake(settings);
   },
   // ---- How to Play (tutorial): isolated from competitive play, never writes the saved settings
   openTutorial(chapter = 0): void {

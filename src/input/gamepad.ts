@@ -8,19 +8,19 @@ const RELEASE_ZONE = 0.35;
 const AXIS_HYSTERESIS = 1.25;
 
 // Standard mapping: 0=A 1=B 2=X 3=Y 4=LB 5=RB 9=Start 12-15 = D-pad up/down/left/right
+/** V2 two buttons: A = place; B (and X, for either thumb position) = special, hold = Remote Detonator. */
 export const ACTION_BUTTONS: Readonly<Record<number, ActionName>> = {
   0: 'place',
-  2: 'action',
-  3: 'vehicle',
-  1: 'skill',
-  4: 'disarm',
-  5: 'detonate',
+  1: 'special',
+  2: 'special',
 };
 
 export interface GamepadEvents {
   /** The D-pad / stick moved onto a new direction (an edge, not a level). */
   onMove(dir: Dir): void;
-  onAction(action: ActionName): void;
+  onAction(action: ActionName, source: string): void;
+  /** A face button was let go (B's tap / hold split needs the release). */
+  onActionUp(action: ActionName, source: string): void;
   onNav(command: NavCommand): void;
   onUse(): void;
 }
@@ -76,6 +76,7 @@ export class GamepadInput {
       this.current = null;
       this.prevDir = null;
       this.stickDir = null;
+      this.releaseAll();
       return;
     }
     const b = (i: number): boolean => !!pad.buttons[i]?.pressed;
@@ -101,12 +102,20 @@ export class GamepadInput {
       const idx = Number(i);
       if (b(idx) && !this.prev[idx]) {
         this.events.onUse();
-        this.events.onAction(action);
+        this.events.onAction(action, `pad${idx}`);
         if (idx === 0) this.events.onNav('confirm');
         if (idx === 1) this.events.onNav('back');
-      }
+      } else if (!b(idx) && this.prev[idx]) this.events.onActionUp(action, `pad${idx}`);
     }
     if (b(9) && !this.prev[9]) this.events.onNav('pause');
     this.prev = pad.buttons.map((x) => x.pressed);
+  }
+
+  /** The pad went away: every button it held is let go. */
+  private releaseAll(): void {
+    for (const [i, action] of Object.entries(ACTION_BUTTONS)) {
+      if (this.prev[Number(i)]) this.events.onActionUp(action, `pad${i}`);
+    }
+    this.prev = [];
   }
 }

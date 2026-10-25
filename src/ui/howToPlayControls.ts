@@ -1,16 +1,24 @@
 /**
- * The How to Play controls legend. Keyboard keys and gamepad buttons are read from the real binding
- * tables in `src/input`, so the legend cannot drift from what the game actually listens to. Touch
- * entries describe the on-screen controls exactly as `TouchControls` / `EntryPanel` draw them.
+ * The How to Play controls legend (V2 two-button scheme). Keyboard keys and gamepad buttons are read
+ * from the real binding tables in `src/input`, so the legend cannot drift from what the game actually
+ * listens to. Touch entries describe the on-screen controls exactly as `TouchControls` draws them.
+ *
+ * Every device has the same two buttons: A = Generator, B = Special (tap: melee an adjacent rival, else
+ * call your vehicle; hold: Remote Detonator). Kick / punch / disarm / pass are contact abilities: walk
+ * into a generator. Rows keyed by the pre-V2 control ids (`action`, `skill`, `vehicle`, `entry*`)
+ * describe what replaced them, so an older chapter list still shows correct help.
  */
-import { ACTION_BUTTONS, ACTION_KEYS, MOVE_KEYS, NAV_KEYS } from '../input';
+import { ACTION_BUTTONS, ACTION_KEYS, MOVE_KEYS, NAV_KEYS, SPECIAL_HOLD_MS } from '../input';
 import type { ActionName, NavCommand } from '../input';
 import type { ControlId } from '../tutorial';
 
 export type LegendDevice = 'keyboard' | 'gamepad' | 'touch';
 
+/** Legend ids: the tutorial's control ids plus the V2 rows (`special`, `contact`). */
+export type LegendId = ControlId | 'special' | 'contact';
+
 export interface LegendRow {
-  id: ControlId;
+  id: LegendId;
   label: string;
   keyboard: string[];
   gamepad: string[];
@@ -62,7 +70,37 @@ const moveKeys = (): string[] => {
   return [pick('Arrow', ['left', 'up', 'down', 'right']), pick('Key', ['up', 'left', 'down', 'right'])];
 };
 
-export function legendRows(): Record<ControlId, LegendRow> {
+const hold = (keys: string[]): string[] => keys.map((k) => `hold ${k}`);
+const HOLD_SECONDS = (SPECIAL_HOLD_MS / 1000).toFixed(1);
+
+/** The order the V2 legend lists its rows in (How to Play shows the ones a chapter asks for). */
+export const LEGEND_ORDER: readonly LegendId[] = [
+  'move',
+  'place',
+  'special',
+  'detonate',
+  'contact',
+  'pause',
+  'camera',
+];
+
+export function legendRows(): Record<LegendId, LegendRow> {
+  const special: LegendRow = {
+    id: 'special',
+    label: 'B: Special (melee / vehicle)',
+    keyboard: keysFor('special'),
+    gamepad: padFor('special'),
+    touch:
+      'The B button above GENERATOR. Next to a rival it strikes with your skill (PUSH / DAZE / SHOVE); holding a voucher it calls your vehicle. Its label shows what it will do.',
+  };
+  const contact: LegendRow = {
+    id: 'contact',
+    label: 'Kick / punch / disarm / pass',
+    keyboard: ['walk into a generator'],
+    gamepad: ['walk into a generator'],
+    touch:
+      'No button: walk into a generator with Boots (kick), Gloves (punch), Kill Switch (disarm) or Generator Pass (walk through). The icon by your items shows which one you carry.',
+  };
   return {
     move: {
       id: 'move',
@@ -74,61 +112,50 @@ export function legendRows(): Record<ControlId, LegendRow> {
     },
     place: {
       id: 'place',
-      label: 'Drop a generator',
+      label: 'A: Drop a generator',
       keyboard: keysFor('place'),
       gamepad: padFor('place'),
-      touch: 'The big GENERATOR button, bottom right.',
+      touch: 'The big GENERATOR button (A), bottom right.',
     },
-    action: {
-      id: 'action',
-      label: 'Carry / drop / punch / throw',
-      keyboard: keysFor('action'),
-      gamepad: padFor('action'),
-      touch: 'The blue CARRY / PUNCH / DROP / THROW button. It appears once you have Grip or Gloves.',
-    },
-    skill: {
-      id: 'skill',
-      label: 'Skill (push / daze / shove)',
-      keyboard: keysFor('skill'),
-      gamepad: padFor('skill'),
-      touch: 'The purple PUSH / DAZE / SHOVE button next to GENERATOR. It dims while recharging.',
-    },
+    special,
+    skill: { ...special, id: 'skill', label: 'B: Melee (push / daze / shove)' },
     detonate: {
       id: 'detonate',
-      label: 'Remote: set off',
-      keyboard: keysFor('detonate'),
-      gamepad: padFor('detonate'),
-      touch: 'The pink BOOM! button. It appears once you have the Remote Starter.',
+      label: 'Hold B: set off your remote',
+      keyboard: hold(keysFor('special')),
+      gamepad: hold(padFor('special')),
+      touch: `Hold B for ${HOLD_SECONDS} s (the ring fills, it reads HOLD: BOOM!) once you have the Remote Starter and a remote generator down. A quick tap is still your special.`,
     },
+    contact,
+    action: { ...contact, id: 'action' },
     vehicle: {
       id: 'vehicle',
-      label: 'Call your vehicle',
-      keyboard: keysFor('vehicle'),
-      gamepad: padFor('vehicle'),
+      label: 'B: Call your vehicle',
+      keyboard: keysFor('special'),
+      gamepad: padFor('special'),
       touch:
-        "The pulsing green button with the voucher and your vehicle's name. It appears while you hold a voucher.",
+        "Tap B while you hold a voucher (it turns green with your vehicle's name). The game picks the lane that threatens a rival most and shows the route before the vehicle arrives.",
     },
     entryChoose: {
       id: 'entryChoose',
-      label: 'Choose entrance / turn',
-      keyboard: [...moveKeys(), 'or click an arrow'],
-      gamepad: ['D-pad', 'left stick'],
-      touch:
-        'Tap a glowing arrow on the border (or a turn marker) to preview its route, or flick the thumbstick to step between them.',
+      label: 'Vehicle route',
+      keyboard: ['automatic'],
+      gamepad: ['automatic'],
+      touch: 'Nothing to choose: one press of B picks a legal route through or beside a rival.',
     },
     entryConfirm: {
       id: 'entryConfirm',
-      label: 'Confirm / launch',
-      keyboard: [...navKeysFor('confirm'), ...keysFor('vehicle')],
-      gamepad: [...padFor('place'), ...padFor('vehicle')],
-      touch: "Tap the same arrow again, or press LAUNCH (NEXT for the Keke's entrance).",
+      label: 'Launch',
+      keyboard: keysFor('special'),
+      gamepad: padFor('special'),
+      touch: 'One press of B launches at once (a short route warning flashes on the board).',
     },
     entryBack: {
       id: 'entryBack',
-      label: 'Back / cancel',
-      keyboard: navKeysFor('cancel'),
-      gamepad: padFor('skill'),
-      touch: 'The BACK button under the instructions. Cancelling keeps your voucher.',
+      label: 'Keep the voucher',
+      keyboard: ['just do not press B'],
+      gamepad: ['just do not press B'],
+      touch: 'There is nothing to cancel: the voucher stays until you press B.',
     },
     pause: {
       id: 'pause',

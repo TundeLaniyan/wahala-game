@@ -12,19 +12,19 @@ export const MOVE_KEYS: Readonly<Record<string, Dir>> = {
   KeyD: 'right',
 };
 
+/**
+ * V2: two buttons on every device. A (place) = Space / J; B (special: tap = melee / vehicle, hold =
+ * Remote Detonator) = K / E / F / L / Left Shift. The pre-V2 extra keys (carry, disarm, vehicle, a
+ * separate detonate) are gone: those abilities are contact (walk into a generator) or live on B.
+ */
 export const ACTION_KEYS: Readonly<Record<string, ActionName>> = {
   Space: 'place',
   KeyJ: 'place',
-  KeyE: 'action',
-  KeyK: 'action',
-  ShiftLeft: 'action',
-  KeyF: 'skill',
-  KeyL: 'skill',
-  KeyQ: 'detonate',
-  KeyR: 'detonate',
-  KeyX: 'disarm',
-  KeyV: 'vehicle',
-  KeyC: 'vehicle',
+  KeyK: 'special',
+  KeyE: 'special',
+  KeyF: 'special',
+  KeyL: 'special',
+  ShiftLeft: 'special',
 };
 
 export const NAV_KEYS: Readonly<Record<string, NavCommand>> = {
@@ -45,12 +45,14 @@ export const NAV_KEYS: Readonly<Record<string, NavCommand>> = {
 export interface KeyboardEvents {
   /** A direction key went down (never fired for OS key auto-repeat). */
   onMove(dir: Dir): void;
-  onAction(action: ActionName): void;
+  onAction(action: ActionName, code: string): void;
+  /** An action key went up (B's tap / hold split needs the release). */
+  onActionUp(action: ActionName, code: string): void;
   onNav(command: NavCommand): void;
   onUse(): void;
 }
 
-/** Arrows / WASD to move, Space to place, E carry/punch, F skill, Q detonate, X disarm, V vehicle, P/Esc pause. */
+/** Arrows / WASD to move, Space / J = A (place), K / E / F / L / Shift = B (special, hold = remote), P/Esc pause. */
 export class KeyboardInput {
   private readonly stack: Dir[] = [];
   private readonly down = new Set<string>();
@@ -88,12 +90,14 @@ export class KeyboardInput {
       this.stack.push(move);
       this.events.onMove(move);
     }
-    if (action) this.events.onAction(action);
+    if (action) this.events.onAction(action, e.code);
     if (nav) this.events.onNav(nav);
   };
 
   private readonly onKeyUp = (e: KeyboardEvent): void => {
-    this.down.delete(e.code);
+    const wasDown = this.down.delete(e.code);
+    const action = ACTION_KEYS[e.code];
+    if (action && wasDown) this.events.onActionUp(action, e.code);
     const move = MOVE_KEYS[e.code];
     if (!move) return;
     // WASD and arrows both map to the same direction: only release when neither is held.
@@ -106,6 +110,10 @@ export class KeyboardInput {
 
   private readonly reset = (): void => {
     this.stack.length = 0;
+    for (const code of this.down) {
+      const action = ACTION_KEYS[code];
+      if (action) this.events.onActionUp(action, code);
+    }
     this.down.clear();
   };
 

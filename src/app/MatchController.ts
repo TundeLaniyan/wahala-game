@@ -1,4 +1,4 @@
-import { CHARACTERS, createGame, entryKey, getArena, observe, readyToStep, tick } from '../sim';
+import { CHARACTERS, createGame, entryKey, getArena, moveWouldAct, observe, readyToStep, tick } from '../sim';
 import type { GameKind, GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent, VehicleTurn } from '../sim';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
@@ -302,14 +302,16 @@ export class MatchController {
       }
       intents[LOCAL_ID] = intent;
     } else if (me && !me.isBot && me.alive) {
+      // V2 two buttons: B launches the vehicle in one press (the sim picks the route), so normal play never
+      // opens the old entry selector; it only exists for scripted tutorial demos (navMode stays false here
+      // unless a script opened entry mode)
       this.entry.sync(state);
       this.deps.input.navMode = this.entry.active;
-      const intent = this.deps.input.buildIntent(state.tick, readyToStep(me));
-      if (this.deps.input.takeVehiclePress()) {
-        const v = this.entry.press(state);
-        if (v) intent.vehicle = v;
-      }
-      intents[LOCAL_ID] = intent;
+      intents[LOCAL_ID] = this.deps.input.buildIntent(state.tick, {
+        canMove: readyToStep(me),
+        remoteReady: me.remote && state.generators.some((g) => g.ownerId === me.id && g.mode === 'remote'),
+        legal: (d) => moveWouldAct(state, me, d),
+      });
     } else {
       this.deps.input.navMode = false;
     }

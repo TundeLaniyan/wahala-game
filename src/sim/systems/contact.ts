@@ -12,11 +12,11 @@
  * With nothing equipped (or when the ability cannot act) Jump Sneakers still hop a single generator.
  * A short per-player cooldown stops one held direction from firing twice.
  */
-import { DIR_VEC } from '../grid';
+import { DIR_VEC, OPPOSITE } from '../grid';
 import type { Dir, GameState, Generator, Player, SimEvent } from '../types';
 import { kickGenerator, punchGenerator, disarmGenerator } from './generators';
 import { beginStep, canPlayerEnter } from './stepping';
-import { playerStepTicks } from './queries';
+import { groundedGeneratorAt, playerStepTicks } from './queries';
 
 const cooldownOk = (state: GameState, p: Player): boolean => state.tick >= p.contactReadyTick;
 
@@ -28,7 +28,13 @@ function arm(state: GameState, p: Player): void {
  * The player tried to step from their tile in `dir` onto `gen`'s tile. Returns true when something
  * happened (the move intent is spent).
  */
-export function tryContact(state: GameState, p: Player, gen: Generator, dir: Dir, events: SimEvent[]): boolean {
+export function tryContact(
+  state: GameState,
+  p: Player,
+  gen: Generator,
+  dir: Dir,
+  events: SimEvent[],
+): boolean {
   const v = DIR_VEC[dir];
   const tx = p.x + v.dx;
   const ty = p.y + v.dy;
@@ -67,4 +73,19 @@ export function tryContact(state: GameState, p: Player, gen: Generator, dir: Dir
     return true;
   }
   return false;
+}
+
+/**
+ * Read-only: would a move intent in `dir` do something for `p` right now - a step, or a contact /
+ * jump on the generator in the way? (The inverted-controls curse is applied, as movement.ts does.)
+ * The input layer's corner-turn buffer uses it to tell "blocked" from "walkable".
+ */
+export function moveWouldAct(state: GameState, p: Player, dir: Dir): boolean {
+  const d = p.curse?.kind === 'inverted' && state.tick < p.curse.until ? OPPOSITE[dir] : dir;
+  const v = DIR_VEC[d];
+  const tx = p.x + v.dx;
+  const ty = p.y + v.dy;
+  if (canPlayerEnter(state, tx, ty, p)) return true;
+  if (!groundedGeneratorAt(state, tx, ty)) return false;
+  return p.contact !== null || p.sneakers;
 }
