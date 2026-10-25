@@ -75,7 +75,8 @@ asks for landscape, but the pause menu shows above the rotate notice (which has 
   keyboard, gamepad, broken-save repair, results actions, the responsive sweep at six sizes: 1440 x 900, 1280 x 720, 390 x 844, 844 x 390, 667 x 375, 915 x 412); every existing spec
   now walks the new journey (`e2e/helpers.ts`: `toClassicSetup`, `toRumbleSetup`, `chooseArena`, `launch`,
   `openSettings`, `pauseSettings`).
-- Screenshots: `scripts/menu-shots.mjs` walks every screen, pause and results at the five release viewports.
+- Screenshots: `scripts/menu-shots.mjs` walks every screen, pause and results at the five release viewports; a
+  selection is in `docs/screenshots/stitch-ui/`.
 
 ## Known limitations
 

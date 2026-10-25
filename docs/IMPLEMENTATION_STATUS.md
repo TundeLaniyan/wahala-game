@@ -16,6 +16,16 @@ Founder brief of 2026-10-25: the approved Google Stitch design implemented as th
 | Responsive | Desktop, laptop, phone portrait and landscape compositions; >= 44 px targets; safe areas; pause menu above the rotate notice | `e2e/menu.spec.ts` (six sizes) |
 | Art | Key art + three fighter portraits as local WebP (`tools/ui/build_menu_art.py`: mock HUD cropped, brand marks removed); Bebas Neue + Space Grotesk bundled | `scripts/menu-shots.mjs` review |
 
+Verification (container: 4 cores, software WebGL, Chromium 1243):
+- `npx tsc --noEmit`, `npx eslint .`: clean. `npx vitest run`: 85 files, 1189 tests pass. `npm run build`: ok.
+- Playwright, every spec on the release build in both projects (desktop 1280x720, phone 844x390): 96 passed in the
+  two-worker run; the failures were two spec bugs (fixed), an entrance-animation measurement (fixed: `settled`) and
+  load-starved HUD refreshes, and every one of them passes in a one-worker rerun. The voices test now looks up the
+  reaction it checks instead of the last line (ambient street talk can follow it); the interrupt is still asserted.
+- Screenshots of every screen at 1440x900, 1280x720, 390x844, 844x390 and 667x375 reviewed (`scripts/menu-shots.mjs`;
+  a selection in `docs/screenshots/stitch-ui/`).
+- Not measured: frame rates on physical phones.
+
 ## V2 gameplay revolution and City Rumble V2 (branch `claude/wahala-gameplay-rumble-v2`, from `184837d`)
 
 Founder brief of 2026-10-25, built by one lead plus six parallel workstreams in separate worktrees (contracts:

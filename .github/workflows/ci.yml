@@ -35,12 +35,12 @@ jobs:
             playwright-report
             test-results
 
-  # The GitHub Pages preview is the build of the branch the founder is testing (since the V2 gameplay
-  # revolution: claude/wahala-gameplay-rumble-v2; before it claude/wahala-voice-integration); it is
-  # published only after everything above passed on this exact commit.
+  # The GitHub Pages preview is the build of the branch the founder is testing (since the Stitch menu:
+  # claude/wahala-stitch-uiux-v1; before it claude/wahala-gameplay-rumble-v2); it is published only after
+  # everything above passed on this exact commit.
   deploy-preview:
     needs: check
-    if: github.event_name == 'push' && github.ref_name == 'claude/wahala-gameplay-rumble-v2'
+    if: github.event_name == 'push' && github.ref_name == 'claude/wahala-stitch-uiux-v1'
     permissions:
       contents: write
     uses: ./.github/workflows/deploy.yml
