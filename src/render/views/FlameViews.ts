@@ -16,6 +16,7 @@ import type { Flame } from '../../sim';
 import { BillboardSet, ColorInstances } from '../fx/Billboards';
 import { flameTexture, glowTexture, tileGlowTexture } from '../textures';
 import type { FrameContext, View } from './types';
+import { SQUARE_SURGE_LINEAR } from './squareBlastLook';
 
 let cachedCrossTex: CanvasTexture | null = null;
 function blastCrossTexture(): CanvasTexture {
@@ -60,6 +61,8 @@ interface FlameState {
 export class FlameViews implements View {
   readonly group = new Group();
   private readonly state = new Map<Flame, FlameState>();
+  /** Generators whose Square Blast detonation effect already played. */
+  private readonly surged = new Set<number>();
   private readonly floorMat = new MeshBasicMaterial({
     map: tileGlowTexture(),
     color: 0xffffff,
@@ -129,6 +132,7 @@ export class FlameViews implements View {
       const live = new Set<Flame>(state.flames);
       for (const f of this.state.keys()) if (!live.has(f)) this.state.delete(f);
     }
+    if (this.surged.size > 0 && state.flames.length === 0) this.surged.clear();
     const sets = [this.body, this.tongue, this.hot, this.core, this.cross];
     for (const s of sets) s.begin();
     this.floor.begin();
@@ -143,6 +147,7 @@ export class FlameViews implements View {
         st = { phase: (f.x * 7.13 + f.y * 3.71 + f.startTick * 0.37) % 6.283, born: time };
         this.state.set(f, st);
         fx.flameTile(f.x, f.y, f.dir, f.tip === true);
+        if (f.square && !this.surged.has(f.genId)) this.surge(ctx, f);
       }
       const life = Math.max(1, f.endTick - f.startTick);
       const k = Math.min(1, Math.max(0, (now - f.startTick) / life));
@@ -155,16 +160,21 @@ export class FlameViews implements View {
       const size = (f.dir === null ? 2.95 : f.tip ? 1.9 : 2.35) * flick * (0.85 + env * 0.35);
       const vertical = f.dir === 'up' || f.dir === 'down';
 
-      // floor glow (additive: the colour is the fade)
+      // floor glow (additive: the colour is the fade). Square Blast tiles burn electric blue-white on
+      // the floor so the square reads apart from the orange plus.
       this.m.makeTranslation(x, 0.032, z);
       const fg = 0.98 * env;
-      this.floor.push(this.m, fg, fg * 0.117, fg * 0.006); // 0xff6012 (linear)
+      if (f.square) {
+        const [sr, sg, sb] = SQUARE_SURGE_LINEAR;
+        this.floor.push(this.m, fg * (0.35 + sr), fg * sg, fg * sb);
+      } else this.floor.push(this.m, fg, fg * 0.117, fg * 0.006); // 0xff6012 (linear)
       // the low fire beam along the lane
       this.q.setFromAxisAngle(this.up, vertical ? Math.PI / 2 : 0);
       this.s.set(f.dir === null ? 0.95 : 1.05, 1.0 + 0.4 * flick, f.dir === null ? 0.95 : 0.78);
       this.m.compose(this.p.set(x, 0.3, z), this.q, this.s);
       const bg = 0.58 * env;
-      this.beam.push(this.m, bg, bg * 0.262, bg * 0.01); // 0xff8c1a
+      if (f.square) this.beam.push(this.m, bg * 0.5, bg * 0.55, bg * 0.62);
+      else this.beam.push(this.m, bg, bg * 0.262, bg * 0.01); // 0xff8c1a
 
       // colours are linear-space multipliers (the old sprite hex colours converted)
       this.tongue.push(
@@ -189,8 +199,9 @@ export class FlameViews implements View {
         0.011,
         env * 0.88,
       );
-      this.hot.push(x, 0.44, z, size * 0.62, size * 0.68, 1, 0.76, 0.32, env * (0.76 + 0.2 * flick));
-      if (f.dir === null) {
+      if (f.square) this.hot.push(x, 0.44, z, size * 0.6, size * 0.66, 0.62, 0.86, 1, env * (0.8 + 0.2 * flick));
+      else this.hot.push(x, 0.44, z, size * 0.62, size * 0.68, 1, 0.76, 0.32, env * (0.76 + 0.2 * flick));
+      if (f.dir === null && !f.square) {
         const cs = 2.6 * (1.15 - k * 0.4);
         this.core.push(x, 0.48, z, cs, cs, 1, 0.565, 0.216, env);
         const xs = 1.15 * (0.92 + 0.12 * flick);
@@ -206,6 +217,24 @@ export class FlameViews implements View {
     this.floor.end();
     this.beam.end();
     for (; lit < this.lights.length; lit++) this.lights[lit]!.intensity = 0;
+  }
+
+  /** First square tile of a generator's blast: play the Square Blast detonation at its centre once. */
+  private surge(ctx: FrameContext, f: Flame): void {
+    this.surged.add(f.genId);
+    let cx = f.x;
+    let cy = f.y;
+    let radius = 1;
+    for (const o of ctx.state.flames) {
+      if (o.genId !== f.genId) continue;
+      if (o.dir === null && !o.square) {
+        cx = o.x;
+        cy = o.y;
+      }
+    }
+    for (const o of ctx.state.flames)
+      if (o.genId === f.genId && o.square) radius = Math.max(radius, Math.abs(o.x - cx), Math.abs(o.y - cy));
+    ctx.fx.squareBlast(cx, cy, radius);
   }
 
   dispose(): void {
