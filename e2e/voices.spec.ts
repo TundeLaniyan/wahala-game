@@ -9,13 +9,25 @@ const RECORDED = (
     clips: { id: string; file: string; duration: number }[];
   }
 ).clips;
-const CATALOGUE = (
-  JSON.parse(readFileSync(new URL('../public/audio/voices/voices.json', import.meta.url), 'utf8')) as {
-    lines: { id: string; trigger: string; zone: string; text: string }[];
-  }
-).lines;
+const VOICES = JSON.parse(
+  readFileSync(new URL('../public/audio/voices/voices.json', import.meta.url), 'utf8'),
+) as {
+  zones: Record<string, string[]>;
+  lines: { id: string; trigger: string; zone: string; text: string }[];
+};
+const CATALOGUE = VOICES.lines;
 const lineOf = (id: string) => CATALOGUE.find((l) => l.id === id)!;
 const EVERYWHERE = RECORDED.filter((c) => lineOf(c.id).zone === 'all').map((c) => c.id);
+/** Clips an arena loads: the everywhere lines plus those of every location zone the arena belongs to. */
+const clipsFor = (arena: string) =>
+  RECORDED.filter((c) => {
+    const zone = lineOf(c.id).zone;
+    return zone === 'all' || (VOICES.zones[zone] ?? []).includes(arena);
+  }).map((c) => c.id);
+/** A planned trigger that has no approved clip yet (it must stay silent). */
+const SILENT_TRIGGER = CATALOGUE.map((l) => l.trigger).find(
+  (t) => !RECORDED.some((c) => lineOf(c.id).trigger === t),
+)!;
 
 interface Spoken {
   clipId: string;
@@ -172,8 +184,14 @@ test.describe('Nigerian voice clips', () => {
     const park = (await voices(page))!;
     expect(park.registered).toBe(RECORDED.length);
     expect(park.failed).toEqual([]);
-    expect(park.loaded.sort()).toEqual([...EVERYWHERE].sort()); // no market talk at the bus park
-    expect(requested.sort()).toEqual(EVERYWHERE.map((id) => `${id}.mp3`).sort());
+    // the everywhere lines plus the bus-park talk; no market talk at the bus park
+    expect(park.loaded.sort()).toEqual(clipsFor('danfoBusPark').sort());
+    expect(park.loaded).not.toContain('market_come_buy_01');
+    expect(requested.sort()).toEqual(
+      clipsFor('danfoBusPark')
+        .map((id) => `${id}.mp3`)
+        .sort(),
+    );
     expect(errors).toEqual([]);
   });
 
@@ -228,7 +246,8 @@ test.describe('Nigerian voice clips', () => {
       expect(lineOf(s.clipId).trigger).toBe(t);
     }
     // a trigger that has no clip yet stays silent (and shows nothing)
-    expect(await preview(page, 'ON_OKADA_SHIELD_SAVE')).toBe(false);
+    expect(SILENT_TRIGGER).toBeDefined();
+    expect(await preview(page, SILENT_TRIGGER)).toBe(false);
     expect(errors).toEqual([]);
   });
 
@@ -253,7 +272,7 @@ test.describe('Nigerian voice clips', () => {
     await startOn(page, 'danfoBusPark');
     const st = (await voices(page))!;
     expect(st.failed.map((f) => f.id).sort()).toEqual(['danger_run_01', 'danger_run_02']);
-    expect(st.loaded).toHaveLength(EVERYWHERE.length - 2);
+    expect(st.loaded).toHaveLength(clipsFor('danfoBusPark').length - 2);
     for (let i = 0; i < 4; i++) {
       expect(await preview(page, 'ON_GENERATOR_CRITICAL_PROXIMITY')).toBe(true);
       expect((await lastSpoken(page))!.clipId).toBe('danger_run_03');
