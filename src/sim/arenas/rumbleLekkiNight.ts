@@ -1,6 +1,13 @@
 import type { ArenaDef } from './types';
 import { trapRows } from './build';
-import { RUMBLE_CLEARANCE, mirrorQuadrant, mirrorZones, pairedSpawns, rect, rumbleStageConfig } from './rumbleKit';
+import {
+  RUMBLE_CLEARANCE,
+  mirrorQuadrant,
+  mirrorZones,
+  pairedSpawns,
+  rect,
+  rumbleStageConfig,
+} from './rumbleKit';
 
 /**
  * City Rumble V2, F5 - Lekki Nightworks: the Lekki expressway works on the night shift (41 x 31), in the

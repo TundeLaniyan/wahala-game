@@ -45,11 +45,15 @@ if (flag('bots')) {
   const players = opt('players', '16,32').split(',').map(Number);
   const game = opt('game', 'survival') as GameKind;
   const minutes = Number(opt('minutes', '5'));
-  console.log('\nstage | game | bots | seed | result | play seconds | crushed | hazard deaths | ms/tick');
+  console.log(
+    '\nstage | game | bots | seed | result | play seconds | eliminations | crushed | hazard deaths | ms/tick',
+  );
   for (const id of ids) {
     for (const n of players) {
       for (let m = 0; m < matches; m++) {
-        const difficulties = Array.from({ length: n }, (_, k): Difficulty => (k % 3 === 2 ? 'beginner' : 'standard'));
+        const difficulties = Array.from({ length: n }, (_, k): Difficulty =>
+          k % 3 === 2 ? 'beginner' : 'standard',
+        );
         const seed = 100 + m * 17 + n;
         const t0 = performance.now();
         const out = runMatch({
@@ -59,11 +63,21 @@ if (flag('bots')) {
           settings: { game, durationSec: game === 'survival' ? null : minutes * 60 },
         });
         const ms = (performance.now() - t0) / Math.max(1, out.ticks);
-        const result = out.timeout ? 'time' : out.draw ? 'draw' : `winner ${out.winner}`;
+        const kills = out.seats.reduce((k, s) => k + s.kills, 0);
+        // team rulesets: the default split is id % 2 (west vs east); the winner is the team with more eliminations
+        const team = [0, 1].map((t) => out.seats.reduce((k, s, i) => k + (i % 2 === t ? s.kills : 0), 0));
+        const result =
+          game === 'team'
+            ? `west ${team[0]} - east ${team[1]}`
+            : out.timeout
+              ? 'time'
+              : out.draw
+                ? 'draw'
+                : `winner ${out.winner}`;
         const crushed = out.seats.filter((s) => s.cause?.kind === 'crush').length;
         const hazard = out.seats.filter((s) => s.cause?.kind === 'hazard').length;
         console.log(
-          `${id} | ${game} | ${n} | ${seed} | ${result} | ${(out.ticks / 60).toFixed(0)} | ${crushed} | ${hazard} | ${ms.toFixed(2)}`,
+          `${id} | ${game} | ${n} | ${seed} | ${result} | ${(out.ticks / 60).toFixed(0)} | ${kills} | ${crushed} | ${hazard} | ${ms.toFixed(2)}`,
         );
       }
     }

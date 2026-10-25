@@ -30,7 +30,17 @@ import { cones } from './roadworksProps';
 import { directionGantry, expressway, flyoverPalette, footbridge, slipRoad } from './oshodiFlyover';
 import { drum, kerb, sign, signTexture, streetPlane, umbrella } from './oshodiKit';
 import type { Paint } from './oshodiKit';
-import { dash, floorWords, layoutOf, litter, mouthTraffic, paintKerbs, paintRoads, tileWorld, zebraTile } from './rumbleV2Kit';
+import {
+  dash,
+  floorWords,
+  layoutOf,
+  litter,
+  mouthTraffic,
+  paintKerbs,
+  paintRoads,
+  tileWorld,
+  zebraTile,
+} from './rumbleV2Kit';
 
 const ID = 'rumbleOshodi';
 
@@ -65,7 +75,8 @@ export const RUMBLE_OSHODI_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
     const off = (Math.floor(y / 30) % 2) * 30;
     for (let x = -off; x < w; x += 60) {
       const v = 128 + r() * 26;
-      g.fillStyle = r() < 0.1 ? `rgba(${v + 6},${v - 22},${v - 38},0.55)` : `rgba(${v},${v - 3},${v - 10},0.45)`;
+      g.fillStyle =
+        r() < 0.1 ? `rgba(${v + 6},${v - 22},${v - 38},0.55)` : `rgba(${v},${v - 3},${v - 10},0.45)`;
       g.fillRect(x + 2, y + 2, 56, 26);
     }
   }
@@ -79,7 +90,8 @@ export const RUMBLE_OSHODI_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
   g.fillStyle = 'rgba(226,222,208,0.75)';
   g.fillRect(0, brt * T + 4, w, 6);
   g.fillRect(0, (brt + 1) * T - 10, w, 6);
-  for (let x = 3; x < cols - 2; x += 8) floorWords(g, 'BRT ONLY', x + 0.5, brt + 0.55, 0.32, 'rgba(232,226,210,0.7)');
+  for (let x = 3; x < cols - 2; x += 8)
+    floorWords(g, 'BRT ONLY', x + 0.5, brt + 0.55, 0.32, 'rgba(232,226,210,0.7)');
   // carriageways: yellow double centre line, white dashed lane edges
   for (const y of [7, 24]) {
     g.fillStyle = 'rgba(214,176,52,0.8)';
@@ -217,12 +229,14 @@ function street(ctx: SetContext, layout: readonly string[]): void {
 function traders(ctx: SetContext, kit: Kit): void {
   const { W, H } = ctx;
   const { wz } = tileWorld(W, H);
-  const cloth: MeshStandardMaterial[] = [0xa8442e, 0xc8a844, 0x2e5a86, 0xd2ccb8, 0x3a744a, 0xb8622c].map((hex) => {
-    const m = uniqueMat(hex, { roughness: 0.88 });
-    m.side = DoubleSide;
-    ctx.own(m);
-    return m;
-  });
+  const cloth: MeshStandardMaterial[] = [0xa8442e, 0xc8a844, 0x2e5a86, 0xd2ccb8, 0x3a744a, 0xb8622c].map(
+    (hex) => {
+      const m = uniqueMat(hex, { roughness: 0.88 });
+      m.side = DoubleSide;
+      ctx.own(m);
+      return m;
+    },
+  );
   const c = (n: number): Material => cloth[n % cloth.length]!;
   const wood = mat(0x6e5440, { roughness: 0.95 });
   const table = (x: number, z: number, n: number): void => {
@@ -234,7 +248,10 @@ function traders(ctx: SetContext, kit: Kit): void {
       [0.48, 0.25],
     ] as const)
       ctx.statics.add(box(0.05, 0.76, 0.05, wood, x + dx, STREET + 0.38, z + dz));
-    for (let k = 0; k < 5; k++) ctx.statics.add(box(0.16, 0.08 + ((k + n) % 3) * 0.05, 0.4, c(k + n), x - 0.4 + k * 0.2, STREET + 0.85, z));
+    for (let k = 0; k < 5; k++)
+      ctx.statics.add(
+        box(0.16, 0.08 + ((k + n) % 3) * 0.05, 0.4, c(k + n), x - 0.4 + k * 0.2, STREET + 0.85, z),
+      );
   };
   // umbrellas and tables on the pavements beyond the west and east edges, between the road mouths
   const blocks = [wz(1.5), wz(4.5), wz(11), wz(19), wz(25.5), wz(29)];
@@ -258,16 +275,20 @@ function traders(ctx: SetContext, kit: Kit): void {
   const deckZ = -H / 2 - 5.2;
   const goods = ['provisions', 'basins', 'cloth', 'grain'] as const;
   [-22, -12.5, -6.5, 6.5, 12.5, 22].forEach((x, k) =>
-    stall(kit, { x, y: STREET, z: deckZ, ry: 0 }, {
-      w: 2.0,
-      d: 1.2,
-      goods: goods[k % 4]!,
-      roof: k % 2 ? 'tarp' : 'sheet',
-      front: 2.0,
-      back: 2.2,
-      seed: 3 + k * 3,
-      sign: k % 3 === 0 ? 4 + k : undefined,
-    }),
+    stall(
+      kit,
+      { x, y: STREET, z: deckZ, ry: 0 },
+      {
+        w: 2.0,
+        d: 1.2,
+        goods: goods[k % 4]!,
+        roof: k % 2 ? 'tarp' : 'sheet',
+        front: 2.0,
+        back: 2.2,
+        seed: 3 + k * 3,
+        sign: k % 3 === 0 ? 4 + k : undefined,
+      },
+    ),
   );
   pushTruck(kit, { x: 0.8, y: STREET, z: deckZ - 0.4, ry: 0.2 }, 'sacks', 4);
   // camera side: hawkers' low mats only
@@ -286,9 +307,25 @@ function build(ctx: SetContext): void {
   street(ctx, layout);
 
   // ------------------------------------------------------------ north: the expressway and its slip road
-  expressway(ctx, P, { front: north - 2.4, back: north - 9.6, soffit: 3.4, depth: 1.3, piers: [-27, -17, -3.5, 3.5, 17, 27] });
-  const east = slipRoad(ctx, P, { x0: W / 2 + 1, x1: W / 2 + 17, zs: north - 0.6, zn: north - 2.35, top: 4.6 });
-  ctx.vehicles('danfo', [{ x: W / 2 + 6, y: east(W / 2 + 6) + 0.03, z: north - 1.45, ry: Math.PI / 2, rx: Math.atan(4.6 / 16) }], { idle: true });
+  expressway(ctx, P, {
+    front: north - 2.4,
+    back: north - 9.6,
+    soffit: 3.4,
+    depth: 1.3,
+    piers: [-27, -17, -3.5, 3.5, 17, 27],
+  });
+  const east = slipRoad(ctx, P, {
+    x0: W / 2 + 1,
+    x1: W / 2 + 17,
+    zs: north - 0.6,
+    zn: north - 2.35,
+    top: 4.6,
+  });
+  ctx.vehicles(
+    'danfo',
+    [{ x: W / 2 + 6, y: east(W / 2 + 6) + 0.03, z: north - 1.45, ry: Math.PI / 2, rx: Math.atan(4.6 / 16) }],
+    { idle: true },
+  );
   // fluorescent tubes on the piers light the under-bridge market
   for (const x of [-17, -3.5, 3.5, 17]) L.glow(x, STREET + 2.4, north - 5.4, 0.9, 0xe8f4ff, 0.5);
 
@@ -303,14 +340,25 @@ function build(ctx: SetContext): void {
   directionGantry(ctx, P, W / 2 + 3.6, wz(22.2), wz(25), 3.4, -Math.PI / 2);
   // BRT shelters at both ends of the corridor: a steel canopy, a bench, the blue sign
   const steel = mat(0x5a6470, { roughness: 0.5, metalness: 0.6 });
-  const brtSign = signTexture('rosh:brt', 256, 128, { bg: '#1e4a8a', fg: '#f0ece0', lines: [['BRT', 54], ['OSHODI', 26]], border: '#f0ece0' });
+  const brtSign = signTexture('rosh:brt', 256, 128, {
+    bg: '#1e4a8a',
+    fg: '#f0ece0',
+    lines: [
+      ['BRT', 54],
+      ['OSHODI', 26],
+    ],
+    border: '#f0ece0',
+  });
   for (const side of [-1, 1]) {
     const x = side * (W / 2 + 3.4);
     const z = wz(15) + 1.6;
     for (const dx of [-1.4, 1.4]) ctx.statics.add(box(0.1, 2.4, 0.1, steel, x + dx, STREET + 1.2, z + 0.4));
     ctx.statics.add(box(3.2, 0.08, 1.4, steel, x, STREET + 2.42, z));
     ctx.statics.add(box(2.4, 0.06, 0.4, mat(0x2e3a48, { roughness: 0.6 }), x, STREET + 0.46, z + 0.2));
-    sign(ctx, brtSign, x + side * -1.7, 2.1, z - 0.3, 0.9, 0.45, side * -Math.PI / 2, { posts: 1, postMat: steel });
+    sign(ctx, brtSign, x + side * -1.7, 2.1, z - 0.3, 0.9, 0.45, (side * -Math.PI) / 2, {
+      posts: 1,
+      postMat: steel,
+    });
   }
   // traffic lights at the junction mouths, one lamp lit on each
   const pole = mat(0x4c4e4c, { roughness: 0.55, metalness: 0.6 });
@@ -330,11 +378,16 @@ function build(ctx: SetContext): void {
   const white = mat(0xbab4a6, { roughness: 0.75, metalness: 0.3 });
   drum(ctx, red, -W / 2 - 1.4, wz(15) - 1.0, { band: white });
   drum(ctx, white, W / 2 + 1.4, wz(15) + 1.0, { band: red });
-  cones(ctx, sitePalette(), [
-    [wx(12) + 0.4, north - 1.2],
-    [wx(28) - 0.4, north - 1.3],
-    [-W / 2 - 1.2, wz(26)],
-  ], 1);
+  cones(
+    ctx,
+    sitePalette(),
+    [
+      [wx(12) + 0.4, north - 1.2],
+      [wx(28) - 0.4, north - 1.3],
+      [-W / 2 - 1.2, wz(26)],
+    ],
+    1,
+  );
 
   // ------------------------------------------------------------ traffic in every road mouth
   mouthTraffic(ctx, layout, { kinds: ['danfo', 'keke', 'danfo', 'taxi', 'danfo', 'keke'], depth: 2 });
@@ -365,7 +418,15 @@ function build(ctx: SetContext): void {
   life.add({ y, kind: 'seller', x: -W / 2 - 2.5, z: wz(11.4), yaw: Math.PI / 2 });
   life.add({ y, kind: 'seller', x: W / 2 + 2.4, z: wz(19.4), yaw: -Math.PI / 2 });
   life.add({ y, kind: 'worker', x: wx(20), z: north - 1.2, yaw: 0.2 }); // the traffic warden
-  life.add({ kind: 'walker', x: -W / 2 - 4.6, y: STREET + 3.36, z: wz(5), yaw: 0, toX: -W / 2 - 4.6, toZ: wz(9) });
+  life.add({
+    kind: 'walker',
+    x: -W / 2 - 4.6,
+    y: STREET + 3.36,
+    z: wz(5),
+    yaw: 0,
+    toX: -W / 2 - 4.6,
+    toZ: wz(9),
+  });
   life.add({ y, kind: 'argue', x: W / 2 + 2.3, z: wz(4.4), yaw: 1.1 }); // keke men over a fare
   life.add({ y, kind: 'onlooker', x: W / 2 + 2.0, z: wz(12.6), yaw: -1.7 });
   life.add({ y, kind: 'walker', x: -14, z: north - 1.0, yaw: 0, toX: 14, toZ: north - 1.0 });

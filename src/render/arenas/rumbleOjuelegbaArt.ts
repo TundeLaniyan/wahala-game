@@ -28,7 +28,17 @@ import { flyoverPalette } from './oshodiFlyover';
 import { drum, sign, signTexture, umbrella, wire } from './oshodiKit';
 import { SiteLights, v3 } from './roadworksKit';
 import { shophouseRows } from './shared';
-import { dash, floorWords, layoutOf, litter, mouthTraffic, paintKerbs, paintRoads, tileWorld, zebraTile } from './rumbleV2Kit';
+import {
+  dash,
+  floorWords,
+  layoutOf,
+  litter,
+  mouthTraffic,
+  paintKerbs,
+  paintRoads,
+  tileWorld,
+  zebraTile,
+} from './rumbleV2Kit';
 
 const ID = 'rumbleOjuelegba';
 /** Tile columns under the deck. */
@@ -79,7 +89,8 @@ export const RUMBLE_OJUELEGBA_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
   for (let i = 0; i < cols * rows * 0.15; i++)
     stain(g, r() * w, r() * h, 40 + r() * 100, `rgba(176,150,110,${0.08 + r() * 0.1})`);
   // the wide roads and the taxi lanes
-  const wide = (x: number, y: number): boolean => at(x, y) === '=' && ((y >= 6 && y <= 8) || (y >= 22 && y <= 24));
+  const wide = (x: number, y: number): boolean =>
+    at(x, y) === '=' && ((y >= 6 && y <= 8) || (y >= 22 && y <= 24));
   paintRoads(g, rg, layout, r, [60, 58, 55]);
   paintKerbs(g, layout, 'rgba(206,200,184,0.85)', 'rgba(30,30,30,0.9)');
   for (const y0 of [6, 22]) {
@@ -104,7 +115,8 @@ export const RUMBLE_OJUELEGBA_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
       g.stroke();
     }
     g.restore();
-    for (let y = 2; y < rows; y += 7) if (!wide(x, y)) floorWords(g, 'TAXI', x + 0.5, y + 0.5, 0.3, 'rgba(232,200,70,0.8)', -Math.PI / 2);
+    for (let y = 2; y < rows; y += 7)
+      if (!wide(x, y)) floorWords(g, 'TAXI', x + 0.5, y + 0.5, 0.3, 'rgba(232,200,70,0.8)', -Math.PI / 2);
   }
   // pier footings: a ring of stained concrete round every pier under the bridge
   for (let y = 0; y < rows; y++)
@@ -157,7 +169,13 @@ function flyover(ctx: SetContext, L: SiteLights): void {
   s.add(box(width - 2, 1.0, len, P.deckDark, cx, soffit + 0.5, zc));
   s.add(box(width, 0.4, len, P.deck, cx, soffit + 1.2, zc));
   // the south end of the deck, facing the board, carries the name
-  const fascia = signTexture('roju:fascia', 1024, 128, { bg: '#8c867a', fg: '#2e2a24', lines: [['OJUELEGBA', 84]], wear: 1.6 }, 81);
+  const fascia = signTexture(
+    'roju:fascia',
+    1024,
+    128,
+    { bg: '#8c867a', fg: '#2e2a24', lines: [['OJUELEGBA', 84]], wear: 1.6 },
+    81,
+  );
   const fm = uniqueMat(0xffffff, { map: fascia, roughness: 0.95 });
   ctx.own(fm);
   const face = mesh(new PlaneGeometry(width, 1.3), fm, cx, soffit + 0.75, z0 + 0.012);
@@ -165,7 +183,8 @@ function flyover(ctx: SetContext, L: SiteLights): void {
   // parapets on both sides, lamp standards on the east parapet
   for (const side of [-1, 1]) {
     s.add(box(0.25, 0.8, len, P.parapet, cx + side * (width / 2 - 0.12), soffit + 1.8, zc));
-    for (let z = z0 - 3; z > z1; z -= 9) s.add(cyl(0.06, 0.08, 3.6, P.steel, cx + side * (width / 2 - 0.2), soffit + 3.2, z, 6));
+    for (let z = z0 - 3; z > z1; z -= 9)
+      s.add(cyl(0.06, 0.08, 3.6, P.steel, cx + side * (width / 2 - 0.2), soffit + 3.2, z, 6));
   }
   // twin columns with crossheads every 9 m, fly posters on the south faces
   for (let z = z0 - 3.2; z > z1 + 2; z -= 9) {
@@ -200,13 +219,23 @@ function build(ctx: SetContext): void {
   flyover(ctx, L);
   // shophouses either side of the bridge on the north side, and down the east and west streets
   shophouseRows(ctx, { east: true, west: true, seed: 2, close: 0.2 });
-  const left = signTexture('roju:busstop', 256, 256, { bg: '#c8a43a', fg: '#1c1a16', lines: [['BUS', 60], ['STOP', 60], ['OJUELEGBA', 28]], border: '#1c1a16' });
+  const left = signTexture('roju:busstop', 256, 256, {
+    bg: '#c8a43a',
+    fg: '#1c1a16',
+    lines: [
+      ['BUS', 60],
+      ['STOP', 60],
+      ['OJUELEGBA', 28],
+    ],
+    border: '#1c1a16',
+  });
   sign(ctx, left, wx(15), 2.4, north - 1.6, 0.7, 0.7, 0, { posts: 1 });
 
   // the bus stop under the bridge: benches, a kiosk, umbrellas and a crowd waiting
   const wood = mat(0x6e5440, { roughness: 0.95 });
   for (const x of [wx(14), wx(26)]) ctx.statics.add(box(2.2, 0.08, 0.45, wood, x, S + 0.45, north - 2.6));
-  if (ctx.quality.level !== 'low') ctx.instance('env_kiosk', [{ x: wx(20), y: S, z: north - 3.4, ry: 0, sx: 0.85, sy: 0.85, sz: 0.85 }]);
+  if (ctx.quality.level !== 'low')
+    ctx.instance('env_kiosk', [{ x: wx(20), y: S, z: north - 3.4, ry: 0, sx: 0.85, sy: 0.85, sz: 0.85 }]);
   const cloth = [0xa8442e, 0xc8a844, 0x2e5a86, 0x3a744a, 0xd2ccb8].map((c) => {
     const m = uniqueMat(c, { roughness: 0.88 });
     m.side = DoubleSide;
@@ -227,16 +256,20 @@ function build(ctx: SetContext): void {
   // stalls along the north pavement either side of the bridge
   kit.statics.updateMatrixWorld();
   [wx(2), wx(6), wx(10), wx(30), wx(34), wx(38)].forEach((x, k) =>
-    stall(kit, { x, y: S, z: north - 3.4, ry: 0 }, {
-      w: 2.2,
-      d: 1.2,
-      goods: (['provisions', 'basins', 'cloth', 'grain'] as const)[k % 4]!,
-      roof: k % 2 ? 'sheet' : 'tarp',
-      front: 2.0,
-      back: 2.3,
-      seed: 11 + k * 4,
-      sign: k % 2 ? k + 2 : undefined,
-    }),
+    stall(
+      kit,
+      { x, y: S, z: north - 3.4, ry: 0 },
+      {
+        w: 2.2,
+        d: 1.2,
+        goods: (['provisions', 'basins', 'cloth', 'grain'] as const)[k % 4]!,
+        roof: k % 2 ? 'sheet' : 'tarp',
+        front: 2.0,
+        back: 2.3,
+        seed: 11 + k * 4,
+        sign: k % 2 ? k + 2 : undefined,
+      },
+    ),
   );
   // a vulcaniser by the west road: tyres, a compressor drum
   ctx.instance('env_tyrestack', [
@@ -268,7 +301,10 @@ function build(ctx: SetContext): void {
     { x: W / 2 + 4.2, z: wz(15), ry: -Math.PI / 2 },
     { x: W / 2 + 4.2, z: wz(29), ry: -Math.PI / 2 },
   ];
-  ctx.instance('env_poles', poles.map((p) => ({ ...p, y: S })));
+  ctx.instance(
+    'env_poles',
+    poles.map((p) => ({ ...p, y: S })),
+  );
   const cable = mat(0x1c1c1c, { roughness: 0.6 });
   for (const [a, b] of [
     [0, 1],
@@ -277,7 +313,14 @@ function build(ctx: SetContext): void {
     for (const side of [-1, 1]) {
       const pa = poles[a]!;
       const pb = poles[b]!;
-      wire(ctx, v3(pa.x, S + 3.45, pa.z + side * 0.8), v3(pb.x, S + 3.45, pb.z + side * 0.8), 0.8, cable, 0.02);
+      wire(
+        ctx,
+        v3(pa.x, S + 3.45, pa.z + side * 0.8),
+        v3(pb.x, S + 3.45, pb.z + side * 0.8),
+        0.8,
+        cable,
+        0.02,
+      );
     }
 
   // dust and exhaust hanging under the bridge and along the roads

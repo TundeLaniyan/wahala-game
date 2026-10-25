@@ -42,7 +42,9 @@ function push(s: GameState, e: Pick<StageEvent, 'kind' | 'style' | 'tiles'> & Pa
 
 describe('V2 hazard presentation', () => {
   it('Apapa sweeps are container trucks: named TRUCK, never a Danfo or Keke for the voices', () => {
-    expect(getArena('rumbleApapa').stageHazards.some((h) => h.kind === 'sweep' && h.style === 'truck')).toBe(true);
+    expect(getArena('rumbleApapa').stageHazards.some((h) => h.kind === 'sweep' && h.style === 'truck')).toBe(
+      true,
+    );
     for (let id = 0; id < 6; id++) {
       expect(sweepVehicleNoun('truck', id)).toBe('TRUCK');
       expect(sweepVehicleKind('truck', id)).not.toBe('danfo');

@@ -85,7 +85,8 @@ export function stageAlertFor(state: GameState, ev: StageEvent, me: Player): Sta
         if (onIt) return { ...base, level: 'danger', text: 'CONTAINER COMING DOWN - MOVE!' };
         return warning ? { ...base, level: 'info', text: 'CRANE LOWERING A CONTAINER' } : null;
       }
-      if (ev.style === 'goods' && onIt) return { ...base, level: 'danger', text: 'GOODS FALLING ON YOU - MOVE!' };
+      if (ev.style === 'goods' && onIt)
+        return { ...base, level: 'danger', text: 'GOODS FALLING ON YOU - MOVE!' };
       if (onIt) return { ...base, level: 'danger', text: 'DEBRIS ON YOU - MOVE!' };
       return null;
     }

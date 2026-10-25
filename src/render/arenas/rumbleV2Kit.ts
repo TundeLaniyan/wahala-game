@@ -16,7 +16,10 @@ import type { Ctx } from './floorKit';
 export const layoutOf = (arenaId: string): readonly string[] => getArena(arenaId).layout;
 
 /** World x / z of a tile centre on a cols x rows board. */
-export function tileWorld(cols: number, rows: number): { wx: (x: number) => number; wz: (y: number) => number } {
+export function tileWorld(
+  cols: number,
+  rows: number,
+): { wx: (x: number) => number; wz: (y: number) => number } {
   return { wx: (x) => x - cols / 2 + 0.5, wz: (y) => y - rows / 2 + 0.5 };
 }
 
@@ -103,7 +106,17 @@ export function paintKerbs(
 }
 
 /** A dashed line in tile units (x0,y0)-(x1,y1), e.g. a lane divider along a tile edge or centre. */
-export function dash(g: Ctx, x0: number, y0: number, x1: number, y1: number, color: string, width: number, on = 0.55, off = 0.45): void {
+export function dash(
+  g: Ctx,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  color: string,
+  width: number,
+  on = 0.55,
+  off = 0.45,
+): void {
   g.strokeStyle = color;
   g.lineWidth = width;
   g.setLineDash([on * T, off * T]);
@@ -124,7 +137,15 @@ export function zebraTile(g: Ctx, tx: number, ty: number, alongX: boolean, alpha
 }
 
 /** Bold painted words on the floor (BUS ONLY, BRT ...), centred on a tile position. */
-export function floorWords(g: Ctx, text: string, cx: number, cy: number, sizeTiles: number, color: string, rot = 0): void {
+export function floorWords(
+  g: Ctx,
+  text: string,
+  cx: number,
+  cy: number,
+  sizeTiles: number,
+  color: string,
+  rot = 0,
+): void {
   g.save();
   g.translate(cx * T, cy * T);
   g.rotate(rot);
@@ -139,7 +160,10 @@ export function floorWords(g: Ctx, text: string, cx: number, cy: number, sizeTil
 /** Litter, sachets and bottle tops scattered over the board (density per tile). */
 export function litter(g: Ctx, r: () => number, cols: number, rows: number, perTile = 0.6): void {
   for (let i = 0; i < cols * rows * perTile; i++) {
-    g.fillStyle = r() < 0.6 ? `rgba(206,206,196,${0.25 + r() * 0.35})` : `rgba(${120 + r() * 80},${50 + r() * 40},34,${0.2 + r() * 0.3})`;
+    g.fillStyle =
+      r() < 0.6
+        ? `rgba(206,206,196,${0.25 + r() * 0.35})`
+        : `rgba(${120 + r() * 80},${50 + r() * 40},34,${0.2 + r() * 0.3})`;
     g.fillRect(r() * cols * T, r() * rows * T, 3 + r() * 7, 2 + r() * 4);
   }
 }
@@ -175,8 +199,10 @@ export function mouthTraffic(
         const l = len[kind];
         const jig = ((n * 13) % 7) * 0.03 - 0.09;
         if (m.edge === 'north') push(kind, { x: wx(i) + jig, y: STREET, z: -H / 2 - off - l / 2, ry: 0 });
-        else if (m.edge === 'south') push(kind, { x: wx(i) + jig, y: STREET, z: H / 2 + off + 0.4, ry: Math.PI });
-        else if (m.edge === 'west') push(kind, { x: -W / 2 - off - l / 2, y: STREET, z: wz(i) + jig, ry: Math.PI / 2 });
+        else if (m.edge === 'south')
+          push(kind, { x: wx(i) + jig, y: STREET, z: H / 2 + off + 0.4, ry: Math.PI });
+        else if (m.edge === 'west')
+          push(kind, { x: -W / 2 - off - l / 2, y: STREET, z: wz(i) + jig, ry: Math.PI / 2 });
         else push(kind, { x: W / 2 + off + l / 2, y: STREET, z: wz(i) + jig, ry: -Math.PI / 2 });
         off += l + (o.gap ?? 0.8);
       }

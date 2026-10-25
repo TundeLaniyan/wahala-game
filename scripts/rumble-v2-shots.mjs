@@ -9,7 +9,8 @@
 import { mkdirSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 
-const [dir = 'shots', arena = 'rumbleOshodi', device = 'desktop', count = '16', ticks = '900'] = process.argv.slice(2);
+const [dir = 'shots', arena = 'rumbleOshodi', device = 'desktop', count = '16', ticks = '900'] =
+  process.argv.slice(2);
 mkdirSync(dir, { recursive: true });
 const VP = {
   desktop: { viewport: { width: 1280, height: 720 } },
@@ -17,7 +18,13 @@ const VP = {
 };
 const browser = await chromium.launch({
   executablePath: process.env.WAHALA_CHROMIUM,
-  args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  args: [
+    '--no-sandbox',
+    '--use-gl=angle',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+    '--ignore-gpu-blocklist',
+  ],
 });
 const context = await browser.newContext(VP[device]);
 await context.addInitScript(
@@ -26,7 +33,14 @@ await context.addInitScript(
     const s = JSON.parse(localStorage.getItem(key) || '{}');
     localStorage.setItem(
       key,
-      JSON.stringify({ ...s, play: 'rumble', rumbleArenaId: a, rumbleCompetitors: n, rumbleMode: 'survival', difficulty: 'standard' }),
+      JSON.stringify({
+        ...s,
+        play: 'rumble',
+        rumbleArenaId: a,
+        rumbleCompetitors: n,
+        rumbleMode: 'survival',
+        difficulty: 'standard',
+      }),
     );
   },
   [arena, Number(count)],
@@ -38,7 +52,9 @@ const mark = (what) => console.error(`[${((Date.now() - t0) / 1000).toFixed(1)}s
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-await page.goto(`${process.env.SHOT_URL ?? 'http://localhost:5206/'}?debug&noattract&q=${process.env.Q ?? 'medium'}&seed=7`);
+await page.goto(
+  `${process.env.SHOT_URL ?? 'http://localhost:5206/'}?debug&noattract&q=${process.env.Q ?? 'medium'}&seed=7`,
+);
 await page.getByTestId('title-screen').waitFor({ timeout: 180000 });
 await page.getByTestId('start-button').click();
 await page.getByTestId('hud').waitFor();
@@ -46,7 +62,8 @@ mark('hud');
 const arenaNow = await page.evaluate(() => window.__WAHALA__.getState().arenaId);
 if (arenaNow !== arena) throw new Error(`started ${arenaNow}, wanted ${arena}`);
 await page.waitForTimeout(1200);
-const shot = (name) => page.screenshot({ path: `${dir}/${arena}-${device}-${name}.jpg`, quality: 82, timeout: 240000 });
+const shot = (name) =>
+  page.screenshot({ path: `${dir}/${arena}-${device}-${name}.jpg`, quality: 82, timeout: 240000 });
 const run = async (ms) => {
   await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
   await page.waitForTimeout(ms);
@@ -105,7 +122,12 @@ if (process.env.PREVIEW_OUT) {
   await page.setViewportSize({ width: 640, height: 360 });
   await page.addStyleTag({ content: '.hud, .touch, .touch-controls { display: none !important; }' });
   await run(1200);
-  await page.screenshot({ path: `${process.env.PREVIEW_OUT}/${arena}.jpg`, type: 'jpeg', quality: 75, timeout: 240000 });
+  await page.screenshot({
+    path: `${process.env.PREVIEW_OUT}/${arena}.jpg`,
+    type: 'jpeg',
+    quality: 75,
+    timeout: 240000,
+  });
   mark('preview');
 }
 const stats = await page.evaluate(() => window.__WAHALA__.stats());

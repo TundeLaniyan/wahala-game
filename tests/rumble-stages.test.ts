@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { runMatch } from '../src/ai/headless';
 import { cameraModeFor } from '../src/render/cameraModes';
-import { RUMBLE_ARENA_IDS, STANDARD_ARENA_IDS, Tile, createGame, getArena, listEntries, tick } from '../src/sim';
+import {
+  RUMBLE_ARENA_IDS,
+  STANDARD_ARENA_IDS,
+  Tile,
+  createGame,
+  getArena,
+  listEntries,
+  tick,
+} from '../src/sim';
 import type { ArenaDef, Difficulty, GameKind, Intents, VehicleKind } from '../src/sim';
 import { DEFAULT_CONFIG } from '../src/sim/config';
 import { minimapLayers } from '../src/ui/minimapModel';
@@ -12,7 +20,13 @@ import { layoutStats } from './rumbleStageStats';
  * Every stage must carry Survival / Deathmatch / Team Rumble for up to 32 competitors on a fair,
  * fully connected board with telegraphed stage hazards and a closing city that ends in its core.
  */
-const V2 = ['rumbleOshodi', 'rumbleLagosIsland', 'rumbleOjuelegba', 'rumbleApapa', 'rumbleLekkiNight'] as const;
+const V2 = [
+  'rumbleOshodi',
+  'rumbleLagosIsland',
+  'rumbleOjuelegba',
+  'rumbleApapa',
+  'rumbleLekkiNight',
+] as const;
 const SIZE: Record<(typeof V2)[number], [number, number]> = {
   rumbleOshodi: [41, 31],
   rumbleLagosIsland: [41, 31],
@@ -30,7 +44,11 @@ const DIRS = [
 ] as const;
 
 /** Open tiles reachable from `from`, crates ignored (they can be blasted), `blocked` treated as concrete. */
-function reach(a: ArenaDef, from: { x: number; y: number }, blocked?: (x: number, y: number) => boolean): Set<string> {
+function reach(
+  a: ArenaDef,
+  from: { x: number; y: number },
+  blocked?: (x: number, y: number) => boolean,
+): Set<string> {
   const W = a.layout[0]!.length;
   const H = a.layout.length;
   const seen = new Set<string>([`${from.x},${from.y}`]);
@@ -74,7 +92,12 @@ describe('Rumble stage registry', () => {
       const H = Math.min(a.layout.length, b.layout.length);
       let d = 0;
       for (let y = 0; y < H; y++)
-        for (let x = 0; x < W; x++) if ((at(a, x, y) === '#') !== (at(b, x, y) === '#') || (at(a, x, y) === '=') !== (at(b, x, y) === '=')) d++;
+        for (let x = 0; x < W; x++)
+          if (
+            (at(a, x, y) === '#') !== (at(b, x, y) === '#') ||
+            (at(a, x, y) === '=') !== (at(b, x, y) === '=')
+          )
+            d++;
       return d / (W * H);
     };
     const all = RUMBLE_ARENA_IDS.map(getArena);
@@ -132,7 +155,8 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
       expect(at(a, s.x, s.y), `spawn ${s.x},${s.y}`).toBe('.');
       const sx = s.x < W / 2 ? 1 : -1;
       const sy = s.y < H / 2 ? 1 : -1;
-      for (const o of a.spawnClearance) expect(at(a, s.x + o.x * sx, s.y + o.y * sy), `clearance of ${s.x},${s.y}`).toBe('.');
+      for (const o of a.spawnClearance)
+        expect(at(a, s.x + o.x * sx, s.y + o.y * sy), `clearance of ${s.x},${s.y}`).toBe('.');
     }
     // slot 2k on the west half, slot 2k + 1 its exact 180-degree mirror: id % 2 teams are side vs side
     for (let k = 0; k < 16; k++) {
@@ -145,7 +169,8 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
       const s = a.spawns.slice(0, n);
       let m = Infinity;
       for (let i = 0; i < s.length; i++)
-        for (let j = i + 1; j < s.length; j++) m = Math.min(m, Math.abs(s[i]!.x - s[j]!.x) + Math.abs(s[i]!.y - s[j]!.y));
+        for (let j = i + 1; j < s.length; j++)
+          m = Math.min(m, Math.abs(s[i]!.x - s[j]!.x) + Math.abs(s[i]!.y - s[j]!.y));
       return m;
     };
     expect(minGap(8)).toBeGreaterThanOrEqual(12);
@@ -200,7 +225,9 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
     expect(lethal).toBeGreaterThanOrEqual(1);
     expect(a.stageHazards.length).toBeGreaterThanOrEqual(2);
     for (const rows of [a.floorTraps ?? [], ...a.endgameTraps])
-      rows.forEach((row, y) => [...row].forEach((c, x) => c !== '.' && expect(at(a, x, y), `trap ${x},${y}`).not.toBe('#')));
+      rows.forEach((row, y) =>
+        [...row].forEach((c, x) => c !== '.' && expect(at(a, x, y), `trap ${x},${y}`).not.toBe('#')),
+      );
   });
 
   it('Survival closes the city ring by ring into a core that is never cut off, where the endgame traps land', () => {
@@ -210,7 +237,8 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
     const keep = s.config.crush.keepCore!;
     const x0 = Math.floor((W - keep.w) / 2);
     const y0 = Math.floor((H - keep.h) / 2);
-    const inCore = (x: number, y: number): boolean => x >= x0 && x < x0 + keep.w && y >= y0 && y < y0 + keep.h;
+    const inCore = (x: number, y: number): boolean =>
+      x >= x0 && x < x0 + keep.w && y >= y0 && y < y0 + keep.h;
     // every open tile outside the core closes, nothing inside it does
     const order = new Set(crush.order);
     for (let y = 0; y < H; y++)
@@ -220,7 +248,8 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
       }
     // the core is open ground (mostly), connected on its own
     const coreOpen: { x: number; y: number }[] = [];
-    for (let y = y0; y < y0 + keep.h; y++) for (let x = x0; x < x0 + keep.w; x++) if (at(a, x, y) !== '#') coreOpen.push({ x, y });
+    for (let y = y0; y < y0 + keep.h; y++)
+      for (let x = x0; x < x0 + keep.w; x++) if (at(a, x, y) !== '#') coreOpen.push({ x, y });
     expect(coreOpen.length).toBeGreaterThan(keep.w * keep.h * 0.6);
     const coreReach = reach(a, coreOpen[0]!, (x, y) => !inCore(x, y));
     expect(coreReach.size).toBe(coreOpen.length);
@@ -250,32 +279,43 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
     }
   });
 
-  it.each(['survival', 'deathmatch', 'team'] as GameKind[])('%s: a 32-competitor match is created correctly', (game) => {
-    const s = createGame({ seed: 9, arenaId: id, players: roster(32), settings: { game, durationSec: 300 } });
-    expect(s.players).toHaveLength(32);
-    expect(new Set(s.players.map((p) => `${p.x},${p.y}`)).size).toBe(32);
-    for (const p of s.players) expect(s.tiles[p.y * W + p.x]).toBe(Tile.Empty);
-    // road tiles never carry a crate
-    a.layout.forEach((row, y) => [...row].forEach((c, x) => c === '=' && expect(s.tiles[y * W + x]).toBe(Tile.Empty)));
-    if (game === 'survival') {
-      expect(s.crush).not.toBeNull();
-      expect(s.config.respawn.enabled).toBe(false);
-    } else {
-      // respawn modes never close the city
-      expect(s.crush).toBeNull();
-      expect(s.config.respawn.enabled).toBe(true);
-      expect(s.config.match.durationTicks).toBe(300 * 60);
-    }
-    if (game === 'team') {
-      const t0 = s.players.filter((p) => p.team === 0);
-      expect(t0).toHaveLength(16);
-      // the default split puts each team on its own half, mirror-balanced tile for tile
-      for (const p of t0) expect(p.x).toBeLessThan(W / 2);
-      for (const p of s.players.filter((q) => q.team === 1)) expect(p.x).toBeGreaterThan(W / 2);
-    }
-    // every signature vehicle can attack from the border
-    for (const kind of ['danfo', 'taxi', 'keke'] as VehicleKind[]) expect(listEntries(s, kind).length).toBeGreaterThan(8);
-  });
+  it.each(['survival', 'deathmatch', 'team'] as GameKind[])(
+    '%s: a 32-competitor match is created correctly',
+    (game) => {
+      const s = createGame({
+        seed: 9,
+        arenaId: id,
+        players: roster(32),
+        settings: { game, durationSec: 300 },
+      });
+      expect(s.players).toHaveLength(32);
+      expect(new Set(s.players.map((p) => `${p.x},${p.y}`)).size).toBe(32);
+      for (const p of s.players) expect(s.tiles[p.y * W + p.x]).toBe(Tile.Empty);
+      // road tiles never carry a crate
+      a.layout.forEach((row, y) =>
+        [...row].forEach((c, x) => c === '=' && expect(s.tiles[y * W + x]).toBe(Tile.Empty)),
+      );
+      if (game === 'survival') {
+        expect(s.crush).not.toBeNull();
+        expect(s.config.respawn.enabled).toBe(false);
+      } else {
+        // respawn modes never close the city
+        expect(s.crush).toBeNull();
+        expect(s.config.respawn.enabled).toBe(true);
+        expect(s.config.match.durationTicks).toBe(300 * 60);
+      }
+      if (game === 'team') {
+        const t0 = s.players.filter((p) => p.team === 0);
+        expect(t0).toHaveLength(16);
+        // the default split puts each team on its own half, mirror-balanced tile for tile
+        for (const p of t0) expect(p.x).toBeLessThan(W / 2);
+        for (const p of s.players.filter((q) => q.team === 1)) expect(p.x).toBeGreaterThan(W / 2);
+      }
+      // every signature vehicle can attack from the border
+      for (const kind of ['danfo', 'taxi', 'keke'] as VehicleKind[])
+        expect(listEntries(s, kind).length).toBeGreaterThan(8);
+    },
+  );
 
   it('stage events are telegraphed before they turn lethal and show on the minimap', () => {
     const s = createGame({ seed: 4, arenaId: id, players: roster(16), settings: { game: 'survival' } });
@@ -290,7 +330,9 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
         if (e.type === 'stageWarning') {
           warned++;
           if (e.event.kind === 'sweep' || e.event.kind === 'strike')
-            expect(e.event.startTick - e.event.warnTick).toBeGreaterThanOrEqual(s.config.stage.minLethalWarnTicks);
+            expect(e.event.startTick - e.event.warnTick).toBeGreaterThanOrEqual(
+              s.config.stage.minLethalWarnTicks,
+            );
         }
       }
       if (s.stage.events.some((e) => e.kind !== 'drop')) {
@@ -307,23 +349,22 @@ describe('Rumble stages: bots play every ruleset', () => {
   const mixed = (n: number): Difficulty[] =>
     Array.from({ length: n }, (_, k): Difficulty => (k % 3 === 2 ? 'beginner' : 'standard'));
 
-  it.each(V2.flatMap((id) => (['survival', 'deathmatch', 'team'] as GameKind[]).map((g) => [id, g] as const)))(
-    '%s %s: 32 bots run 7 s without a fault',
-    (id, game) => {
-      const out = runMatch({
-        seed: 7,
-        arenaId: id,
-        difficulties: mixed(32),
-        settings: { game, durationSec: 300 },
-        maxPlayTicks: 7 * 60,
-      });
-      expect(out.ticks).toBeGreaterThan(0);
-      expect(out.seats).toHaveLength(32);
-      // bots leave their spawns and put generators down
-      expect(out.seats.filter((s) => s.tilesVisited >= 3).length).toBeGreaterThan(24);
-      expect(out.seats.reduce((n, s) => n + s.placed, 0)).toBeGreaterThan(16);
-    },
-  );
+  it.each(
+    V2.flatMap((id) => (['survival', 'deathmatch', 'team'] as GameKind[]).map((g) => [id, g] as const)),
+  )('%s %s: 32 bots run 7 s without a fault', (id, game) => {
+    const out = runMatch({
+      seed: 7,
+      arenaId: id,
+      difficulties: mixed(32),
+      settings: { game, durationSec: 300 },
+      maxPlayTicks: 7 * 60,
+    });
+    expect(out.ticks).toBeGreaterThan(0);
+    expect(out.seats).toHaveLength(32);
+    // bots leave their spawns and put generators down
+    expect(out.seats.filter((s) => s.tilesVisited >= 3).length).toBeGreaterThan(24);
+    expect(out.seats.reduce((n, s) => n + s.placed, 0)).toBeGreaterThan(16);
+  });
 
   it.each(V2)('%s: a full 16-bot Survival match ends with a result', (id) => {
     const out = runMatch({ seed: 21, arenaId: id, difficulties: mixed(16), settings: { game: 'survival' } });

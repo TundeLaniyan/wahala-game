@@ -32,11 +32,16 @@ const APPROVED: Record<string, string> = {
   pixabay_406552: 'https://pixabay.com/music/afrobeat-pause-406552/',
   pixabay_540950: 'https://pixabay.com/music/afrobeat-afro-beat-afrobeat-instrumental-540950/',
   pixabay_504898: 'https://pixabay.com/music/electronic-afrobeat-afro-beat-504898/',
-  pixabay_601035: 'Pixabay track 601035 by dmsoundworks (founder download; exact page URL not reachable from the build environment)',
-  pixabay_554543: 'Pixabay track 554543 by rediskasound (founder download; exact page URL not reachable from the build environment)',
-  pixabay_455231: 'Pixabay track 455231 by ruslansikunov (founder download; exact page URL not reachable from the build environment)',
-  pixabay_515507: 'Pixabay track 515507 by solarflex (founder download; exact page URL not reachable from the build environment)',
-  pixabay_623364: 'Pixabay track 623364 by sonican (founder download; exact page URL not reachable from the build environment)',
+  pixabay_601035:
+    'Pixabay track 601035 by dmsoundworks (founder download; exact page URL not reachable from the build environment)',
+  pixabay_554543:
+    'Pixabay track 554543 by rediskasound (founder download; exact page URL not reachable from the build environment)',
+  pixabay_455231:
+    'Pixabay track 455231 by ruslansikunov (founder download; exact page URL not reachable from the build environment)',
+  pixabay_515507:
+    'Pixabay track 515507 by solarflex (founder download; exact page URL not reachable from the build environment)',
+  pixabay_623364:
+    'Pixabay track 623364 by sonican (founder download; exact page URL not reachable from the build environment)',
 };
 /** Names of the rejected generated tracks; none may ever come back under any form. */
 const REJECTED_NAMES =
@@ -132,9 +137,9 @@ describe('City Rumble V2 stage music (founder assignment, 2026-10-25)', () => {
   };
 
   it('every V2 stage names its own track as playlist, start and signature, and the file is real audio', () => {
-    const raw = json<{ playlists: { arenas: Record<string, { tracks: string[]; start: string; signature: string }> } }>(
-      'music/manifest.json',
-    );
+    const raw = json<{
+      playlists: { arenas: Record<string, { tracks: string[]; start: string; signature: string }> };
+    }>('music/manifest.json');
     const { manifest } = parseMusicManifest(raw);
     for (const [arena, id] of Object.entries(STAGE_SONG)) {
       expect(raw.playlists.arenas[arena], arena).toEqual({ tracks: [id], start: id, signature: id });

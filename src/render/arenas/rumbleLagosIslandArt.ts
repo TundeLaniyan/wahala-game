@@ -87,7 +87,8 @@ export const RUMBLE_LAGOS_ISLAND_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
       for (let py = 0; py < T; py += 24)
         for (let px = (py / 24) % 2 ? -24 : 0; px < T; px += 48) {
           const v = 130 + r() * 30;
-          g.fillStyle = r() < 0.12 ? `rgba(${v + 10},${v - 30},${v - 44},0.6)` : `rgba(${v},${v - 6},${v - 14},0.55)`;
+          g.fillStyle =
+            r() < 0.12 ? `rgba(${v + 10},${v - 30},${v - 44},0.6)` : `rgba(${v},${v - 6},${v - 14},0.55)`;
           g.fillRect(x * T + px + 2, y * T + py + 2, 44, 20);
         }
     }
@@ -134,7 +135,8 @@ export const RUMBLE_LAGOS_ISLAND_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
         const mw = T * (0.5 + r() * 0.35);
         g.fillRect(x * T + (T - mw) / 2, (y - 1) * T + T * 0.55, mw, T * 0.4);
         g.fillStyle = 'rgba(240,230,200,0.5)';
-        for (let k = 0; k < 4; k++) g.fillRect(x * T + (T - mw) / 2 + k * (mw / 4), (y - 1) * T + T * 0.6, 3, T * 0.3);
+        for (let k = 0; k < 4; k++)
+          g.fillRect(x * T + (T - mw) / 2 + k * (mw / 4), (y - 1) * T + T * 0.6, 3, T * 0.3);
         g.globalAlpha = 1;
       }
     }
@@ -143,7 +145,8 @@ export const RUMBLE_LAGOS_ISLAND_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
     crack(g, r, r() * w, r() * h, 3 + Math.floor(r() * 5), 'rgba(30,22,16,0.5)', 2);
   // cardboard, nylon bags and offcuts of cloth
   for (let i = 0; i < cols * rows * 0.35; i++) {
-    g.fillStyle = r() < 0.5 ? `rgba(170,130,80,${0.3 + r() * 0.3})` : PRINTS[Math.floor(r() * PRINTS.length)]!;
+    g.fillStyle =
+      r() < 0.5 ? `rgba(170,130,80,${0.3 + r() * 0.3})` : PRINTS[Math.floor(r() * PRINTS.length)]!;
     g.globalAlpha = 0.5;
     g.fillRect(r() * w, r() * h, 6 + r() * 14, 4 + r() * 8);
     g.globalAlpha = 1;
@@ -178,43 +181,58 @@ function build(ctx: SetContext): void {
   const roofs: StallOpts['roof'][] = ['patch', 'sheet', 'tarp'];
   let k = 0;
   for (let x = -W / 2 + 1.4; x < W / 2 - 1; x += 2.45) {
-    stall(kit, { x, y: S, z: north - 2.5, ry: 0 }, {
-      w: 2.2,
-      d: 1.25,
-      goods: goods[k % goods.length]!,
-      roof: roofs[k % 3]!,
-      front: 2.1 + (k % 3) * 0.06,
-      back: 2.55,
-      seed: k * 3 + 1,
-      sign: k % 2 ? k % 8 : undefined,
-    });
+    stall(
+      kit,
+      { x, y: S, z: north - 2.5, ry: 0 },
+      {
+        w: 2.2,
+        d: 1.25,
+        goods: goods[k % goods.length]!,
+        roof: roofs[k % 3]!,
+        front: 2.1 + (k % 3) * 0.06,
+        back: 2.55,
+        seed: k * 3 + 1,
+        sign: k % 2 ? k % 8 : undefined,
+      },
+    );
     k++;
   }
   for (const side of [-1, 1]) {
     for (let z = north + 4.4; z < H / 2 - 4; z += 2.6) {
       // the access roads leave the board at rows 2 and 28: keep their mouths open
       if (Math.abs(z - wz(2)) < 1.8 || Math.abs(z - wz(28)) < 1.8) continue;
-      stall(kit, { x: side * (W / 2 + 1.75), y: S, z, ry: -side * (Math.PI / 2) }, {
-        w: 2.3,
-        d: 1.15,
-        goods: goods[k % goods.length]!,
-        roof: roofs[k % 3]!,
-        front: 2.05,
-        back: 2.4,
-        seed: k * 5 + 7,
-        sign: k % 3 === 0 ? k % 8 : undefined,
-      });
+      stall(
+        kit,
+        { x: side * (W / 2 + 1.75), y: S, z, ry: -side * (Math.PI / 2) },
+        {
+          w: 2.3,
+          d: 1.15,
+          goods: goods[k % goods.length]!,
+          roof: roofs[k % 3]!,
+          front: 2.05,
+          back: 2.4,
+          seed: k * 5 + 7,
+          sign: k % 3 === 0 ? k % 8 : undefined,
+        },
+      );
       k++;
     }
   }
   // gutters along the foot of the slab on every side
   gutter(kit, { x: 0, y: S, z: north - 0.9, ry: 0 }, W + 1.8, 0.24);
   gutter(kit, { x: 0, y: S, z: H / 2 + 0.95, ry: 0 }, W + 1.8, 0.24);
-  for (const side of [-1, 1]) gutter(kit, { x: side * (W / 2 + 0.95), y: S, z: 0, ry: Math.PI / 2 }, H + 0.6, 0.22);
+  for (const side of [-1, 1])
+    gutter(kit, { x: side * (W / 2 + 0.95), y: S, z: 0, ry: Math.PI / 2 }, H + 0.6, 0.22);
 
   // fictional textile houses' boards over the pavements, a market banner across the north
   SHOPS.forEach(([text, bg, fg], i) => {
-    const map = signTexture(`rli:shop${i}`, 512, 128, { bg, fg, lines: [[text, 44]], border: fg, wear: 1.1 }, 60 + i);
+    const map = signTexture(
+      `rli:shop${i}`,
+      512,
+      128,
+      { bg, fg, lines: [[text, 44]], border: fg, wear: 1.1 },
+      60 + i,
+    );
     if (i < 2) sign(ctx, map, -8 + i * 16, 3.6, north - 3.6, 3.4, 0.85, 0);
     else {
       const side = i % 2 ? 1 : -1;
@@ -271,7 +289,9 @@ function build(ctx: SetContext): void {
   kit.finish();
 
   // generator exhaust and dust over the lanes, wood smoke behind the roofs
-  ctx.statics.add(box(0.6, 0.5, 0.45, mat(0x5c6b58, { roughness: 0.6, metalness: 0.4 }), W / 2 + 1.2, S + 0.25, wz(24)));
+  ctx.statics.add(
+    box(0.6, 0.5, 0.45, mat(0x5c6b58, { roughness: 0.6, metalness: 0.4 }), W / 2 + 1.2, S + 0.25, wz(24)),
+  );
   ctx.ambient.exhaust(W / 2 + 1.2, S + 0.45, wz(24) + 0.3, 0, 1);
   ctx.ambient.dust(0, north - 1.4, 18, 1.2);
   for (const side of [-1, 1]) ctx.ambient.dust(side * (W / 2 + 1.8), 0, 2, 13);
@@ -284,7 +304,15 @@ function build(ctx: SetContext): void {
   L.add({ kind: 'argue', x: -W / 2 - 1.8, y: S, z: wz(9), yaw: 0.1 }); // haggling over a bolt of lace
   L.add({ kind: 'walker', x: -14, y: S, z: north - 0.8, yaw: 0, toX: 14, toZ: north - 0.8 });
   L.add({ kind: 'seller', x: W / 2 + 1.1, y: S, z: wz(15), yaw: -Math.PI / 2 });
-  L.add({ kind: 'conductor', x: -W / 2 - 2.6, y: S, z: wz(2) + 1.4, yaw: 1.4, toX: -W / 2 - 5, toZ: wz(2) + 1.4 });
+  L.add({
+    kind: 'conductor',
+    x: -W / 2 - 2.6,
+    y: S,
+    z: wz(2) + 1.4,
+    yaw: 1.4,
+    toX: -W / 2 - 5,
+    toZ: wz(2) + 1.4,
+  });
   L.add({ kind: 'walker', x: W / 2 + 1.0, y: S, z: wz(4), yaw: 0, toX: W / 2 + 1.0, toZ: wz(26) });
   L.add({ kind: 'onlooker', x: hearth.x + 0.6, y: S, z: hearth.z - 0.4, yaw: 0.9 }); // the cook
   L.add({ kind: 'seller', x: -W / 2 - 1.1, y: S, z: wz(23), yaw: Math.PI / 2 });

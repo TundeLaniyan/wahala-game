@@ -31,9 +31,39 @@ import type { FloorDrawer } from './floorKit';
 import { SiteLights, lampMat, sitePalette, uvScale, v3 } from './roadworksKit';
 import type { SitePalette } from './roadworksKit';
 import { siteGroundTexture } from './roadworksTextures';
-import { concreteMixer, excavator, generatorSet, lightTower, roller, skip, tarBoiler } from './roadworksMachines';
-import { barrierLine, blockPallet, cable, cementBags, cones, heap, jerseyLine, pipeStack, rebarBundle, sandbags, timberStack, wheelbarrow } from './roadworksProps';
-import { concreteFrame, hoarding, scaffold, siteBoard, siteOffice, skyline, towerCrane, trench } from './roadworksStructures';
+import {
+  concreteMixer,
+  excavator,
+  generatorSet,
+  lightTower,
+  roller,
+  skip,
+  tarBoiler,
+} from './roadworksMachines';
+import {
+  barrierLine,
+  blockPallet,
+  cable,
+  cementBags,
+  cones,
+  heap,
+  jerseyLine,
+  pipeStack,
+  rebarBundle,
+  sandbags,
+  timberStack,
+  wheelbarrow,
+} from './roadworksProps';
+import {
+  concreteFrame,
+  hoarding,
+  scaffold,
+  siteBoard,
+  siteOffice,
+  skyline,
+  towerCrane,
+  trench,
+} from './roadworksStructures';
 import { layoutOf, tileWorld } from './rumbleV2Kit';
 
 const ID = 'rumbleLekkiNight';
@@ -75,7 +105,13 @@ export const RUMBLE_LEKKI_NIGHT_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
   noiseFill(rg, rg.canvas.width, rg.canvas.height, [228, 228, 228], 18, 62);
   for (let i = 0; i < cols * rows * 0.4; i++) {
     const sand = r() < 0.5;
-    stain(g, r() * w, r() * h, 40 + r() * 140, sand ? `rgba(170,150,116,${0.1 + r() * 0.12})` : `rgba(120,58,34,${0.08 + r() * 0.1})`);
+    stain(
+      g,
+      r() * w,
+      r() * h,
+      40 + r() * 140,
+      sand ? `rgba(170,150,116,${0.1 + r() * 0.12})` : `rgba(120,58,34,${0.08 + r() * 0.1})`,
+    );
   }
   // poured slabs under the scaffold mazes (the four corners), stained by formwork oil
   const W = cols;
@@ -90,7 +126,8 @@ export const RUMBLE_LEKKI_NIGHT_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
     const y0 = fy ? H - 10 : 0;
     g.fillStyle = 'rgba(120,118,112,0.62)';
     g.fillRect(x0 * T, y0 * T, 11 * T, 10 * T);
-    for (let k = 0; k < 12; k++) stain(g, (x0 + r() * 11) * T, (y0 + r() * 10) * T, 30 + r() * 70, 'rgba(40,36,30,0.25)');
+    for (let k = 0; k < 12; k++)
+      stain(g, (x0 + r() * 11) * T, (y0 + r() * 10) * T, 30 + r() * 70, 'rgba(40,36,30,0.25)');
     g.strokeStyle = 'rgba(60,58,54,0.5)';
     g.lineWidth = 3;
     for (let k = 1; k < 4; k++) {
@@ -155,7 +192,8 @@ export const RUMBLE_LEKKI_NIGHT_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
   // spray-painted survey marks and dropped rebar
   g.lineCap = 'round';
   for (let i = 0; i < cols * rows * 0.05; i++) {
-    g.strokeStyle = r() < 0.6 ? `rgba(196,92,30,${0.45 + r() * 0.2})` : `rgba(196,194,176,${0.35 + r() * 0.15})`;
+    g.strokeStyle =
+      r() < 0.6 ? `rgba(196,92,30,${0.45 + r() * 0.2})` : `rgba(196,194,176,${0.35 + r() * 0.15})`;
     g.lineWidth = 6;
     const x = r() * w;
     const y = r() * h;
@@ -183,7 +221,15 @@ export const RUMBLE_LEKKI_NIGHT_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
 
 // ------------------------------------------------------------------------------------------ the set
 
-function sodiumPole(ctx: SetContext, P: SitePalette, L: SiteLights, x: number, z: number, h: number, dir: number): void {
+function sodiumPole(
+  ctx: SetContext,
+  P: SitePalette,
+  L: SiteLights,
+  x: number,
+  z: number,
+  h: number,
+  dir: number,
+): void {
   const s = ctx.statics;
   s.add(cyl(0.05, 0.07, h, P.steel, x, STREET + h / 2, z, 6));
   const hx = x + Math.sin(dir) * 0.45;
@@ -191,7 +237,13 @@ function sodiumPole(ctx: SetContext, P: SitePalette, L: SiteLights, x: number, z
   s.add(box(0.36, 0.12, 0.24, P.black, hx, STREET + h - 0.02, hz));
   s.add(box(0.3, 0.03, 0.2, lampMat(0xffa848, 3), hx, STREET + h - 0.09, hz));
   L.glow(hx, STREET + h - 0.1, hz, 2.2, 0xff9a3a, 0.75);
-  L.beam(v3(hx, STREET + h - 0.1, hz), v3(hx + Math.sin(dir) * 1.2, STREET, hz + Math.cos(dir) * 1.2), 1.6, 0xff9a3a, 0.028);
+  L.beam(
+    v3(hx, STREET + h - 0.1, hz),
+    v3(hx + Math.sin(dir) * 1.2, STREET, hz + Math.cos(dir) * 1.2),
+    1.6,
+    0xff9a3a,
+    0.028,
+  );
 }
 
 function siteGround(ctx: SetContext, P: SitePalette): void {
@@ -297,13 +349,18 @@ function build(ctx: SetContext): void {
   hoarding(ctx, P, -W / 2 - 8.2, wz(0), -W / 2 - 8.2, wz(30), 2.1, 0x2c4258, 3);
 
   // ---------------------------------------------------------------- south (camera) sliver: low only
-  cones(ctx, P, [
-    [wx(5), south + 1.0],
-    [wx(9), south + 1.25],
-    [wx(31), south + 1.2],
-    [wx(36), south + 0.95],
-    [wx(20), south + 1.6],
-  ], 2);
+  cones(
+    ctx,
+    P,
+    [
+      [wx(5), south + 1.0],
+      [wx(9), south + 1.25],
+      [wx(31), south + 1.2],
+      [wx(36), south + 0.95],
+      [wx(20), south + 1.6],
+    ],
+    2,
+  );
   sandbags(ctx, P, wx(13), south + 1.7, wx(17), south + 1.7);
   barrierLine(ctx, P, wx(23), south + 1.5, wx(28), south + 1.05, 0.55);
   cable(ctx, P, [

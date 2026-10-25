@@ -1,6 +1,13 @@
 import type { ArenaDef } from './types';
 import { line, trapRows } from './build';
-import { AISLE_CLEARANCE, mirrorQuadrant, mirrorZones, pairedSpawns, rect, rumbleStageConfig } from './rumbleKit';
+import {
+  AISLE_CLEARANCE,
+  mirrorQuadrant,
+  mirrorZones,
+  pairedSpawns,
+  rect,
+  rumbleStageConfig,
+} from './rumbleKit';
 
 /**
  * City Rumble V2, F4 - Apapa Docks: a container terminal on the Lagos harbour (45 x 31, the widest

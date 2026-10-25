@@ -20,7 +20,11 @@ function fakeContext(canvas: { width: number; height: number }): CanvasRendering
   const gradient = { addColorStop: () => undefined };
   const target: Record<string | symbol, unknown> = {
     canvas,
-    createImageData: (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
+    createImageData: (w: number, h: number) => ({
+      data: new Uint8ClampedArray(w * h * 4),
+      width: w,
+      height: h,
+    }),
     getImageData: (_x: number, _y: number, w: number, h: number) => ({
       data: new Uint8ClampedArray(w * h * 4),
       width: w,
@@ -43,7 +47,11 @@ function fakeContext(canvas: { width: number; height: number }): CanvasRendering
 beforeAll(() => {
   vi.stubGlobal('document', {
     createElement: () => {
-      const c = { width: 1, height: 1, style: {} } as { width: number; height: number; getContext?: () => unknown };
+      const c = { width: 1, height: 1, style: {} } as {
+        width: number;
+        height: number;
+        getContext?: () => unknown;
+      };
       c.getContext = () => fakeContext(c);
       return c;
     },
@@ -72,7 +80,11 @@ function build(set: ArenaSet, W: number, H: number): Built {
     statics,
     rng: artRng(404),
     quality: QUALITY.high,
-    life: { add: (v: Vignette) => (people.push(v), true), group: new Group(), hasRoom: () => true } as unknown as StreetLife,
+    life: {
+      add: (v: Vignette) => (people.push(v), true),
+      group: new Group(),
+      hasRoom: () => true,
+    } as unknown as StreetLife,
     ambient: { fire: noop, smokeColumn: noop, exhaust: noop, dust: noop } as unknown as AmbientFx,
     instance: (id, ps) => ps.forEach((p) => placements.push({ id, p })),
     vehicles: (kind, ps) => ps.forEach((p) => placements.push({ id: kind, p })),
@@ -102,7 +114,8 @@ describe.each(STAGES)('%s surroundings', (id) => {
   const W = a.layout[0]!.length;
   const H = a.layout.length;
   const onBoard = (x: number, z: number): boolean => Math.abs(x) < W / 2 + 0.3 && Math.abs(z) < H / 2 + 0.3;
-  const southStrip = (x: number, z: number): boolean => Math.abs(x) < W / 2 + 0.3 && z > H / 2 + 0.3 && z < H / 2 + 2.8;
+  const southStrip = (x: number, z: number): boolean =>
+    Math.abs(x) < W / 2 + 0.3 && z > H / 2 + 0.3 && z < H / 2 + 2.8;
 
   it('registers its own look, set and floor, and builds a richly dressed scene', async () => {
     const reg = (await art())[id];
@@ -110,7 +123,9 @@ describe.each(STAGES)('%s surroundings', (id) => {
     const b = build(reg!.set, W, H);
     expect(b.meshes.length).toBeGreaterThan(200);
     expect(b.people.length).toBeGreaterThanOrEqual(9);
-    expect(b.placements.filter((p) => ['danfo', 'taxi', 'keke', 'okada'].includes(p.id)).length).toBeGreaterThanOrEqual(4);
+    expect(
+      b.placements.filter((p) => ['danfo', 'taxi', 'keke', 'okada'].includes(p.id)).length,
+    ).toBeGreaterThanOrEqual(4);
     // the floor painter runs on the stage's own board size
     const c = document.createElement('canvas');
     c.width = 64;
@@ -128,8 +143,18 @@ describe.each(STAGES)('%s surroundings', (id) => {
       const n = index ? index.count : pos.count;
       const v = [new Vector3(), new Vector3(), new Vector3()];
       for (let i = 0; i + 2 < n; i += 3) {
-        for (let k = 0; k < 3; k++) v[k]!.fromBufferAttribute(pos, index ? index.getX(i + k) : i + k).applyMatrix4(m.matrixWorld);
-        const samples = [v[0]!, v[1]!, v[2]!, new Vector3().add(v[0]!).add(v[1]!).add(v[2]!).multiplyScalar(1 / 3)];
+        for (let k = 0; k < 3; k++)
+          v[k]!.fromBufferAttribute(pos, index ? index.getX(i + k) : i + k).applyMatrix4(m.matrixWorld);
+        const samples = [
+          v[0]!,
+          v[1]!,
+          v[2]!,
+          new Vector3()
+            .add(v[0]!)
+            .add(v[1]!)
+            .add(v[2]!)
+            .multiplyScalar(1 / 3),
+        ];
         for (const [p, q] of [
           [0, 1],
           [1, 2],
@@ -138,16 +163,23 @@ describe.each(STAGES)('%s surroundings', (id) => {
           samples.push(new Vector3().addVectors(v[p]!, v[q]!).multiplyScalar(0.5));
         for (const q of samples) {
           if (onBoard(q.x, q.z) && q.y > 0.001)
-            throw new Error(`${id}: geometry over the board at ${q.x.toFixed(2)}, ${q.y.toFixed(2)}, ${q.z.toFixed(2)}`);
+            throw new Error(
+              `${id}: geometry over the board at ${q.x.toFixed(2)}, ${q.y.toFixed(2)}, ${q.z.toFixed(2)}`,
+            );
           if (southStrip(q.x, q.z) && q.y > 1.0)
-            throw new Error(`${id}: tall geometry on the camera side at ${q.x.toFixed(2)}, ${q.y.toFixed(2)}, ${q.z.toFixed(2)}`);
+            throw new Error(
+              `${id}: tall geometry on the camera side at ${q.x.toFixed(2)}, ${q.y.toFixed(2)}, ${q.z.toFixed(2)}`,
+            );
         }
       }
     }
     for (const { id: what, p } of b.placements) {
       expect(onBoard(p.x, p.z), `${id}: ${what} placed on the board at ${p.x}, ${p.z}`).toBe(false);
       if (southStrip(p.x, p.z))
-        expect(['env_tyrestack', 'okada', 'prop_soft_sacks', 'prop_soft_cartons'], `${id}: ${what} on the camera side`).toContain(what);
+        expect(
+          ['env_tyrestack', 'okada', 'prop_soft_sacks', 'prop_soft_cartons'],
+          `${id}: ${what} on the camera side`,
+        ).toContain(what);
     }
     for (const v of b.people) {
       expect(onBoard(v.x, v.z), `${id}: ${v.kind} on the board`).toBe(false);

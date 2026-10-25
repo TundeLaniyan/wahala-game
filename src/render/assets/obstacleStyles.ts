@@ -152,10 +152,16 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
   }),
   // ---- City Rumble V2 stages
   rumbleOshodi: style({
-    note: 'flyover piers under the expressway; precast pillars, kiosks and bus-park posts in the blocks; tyres, crates, barricades',
-    pillars: ['prop_pillar_a', 'prop_pillar_b', 'prop_pillar_kiosk'],
+    note: 'flyover piers under the expressway; precast bus-park pillars in the blocks; tyres, crates, barricades',
+    pillars: ['prop_pillar_a', 'prop_pillar_b', 'prop_pillar_c'],
     pillarZones: [{ x0: 0, y0: 12, x1: 40, y1: 18, pillars: ['prop_pillar_pier'] }],
-    soft: { prop_soft_tyres: 4, prop_soft_crates: 3, prop_soft_barrier: 2, prop_soft_cartons: 2, prop_soft_kegs: 1 },
+    soft: {
+      prop_soft_tyres: 4,
+      prop_soft_crates: 3,
+      prop_soft_barrier: 2,
+      prop_soft_cartons: 2,
+      prop_soft_kegs: 1,
+    },
   }),
   rumbleLagosIsland: style({
     note: 'plastered lock-up stall piers along the aisles, kiosks in the plazas; textile bales (sacks), cartons, kegs',
@@ -171,13 +177,27 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
     note: 'a forest of flyover piers under the bridge; broken compound walls and precast corners in the streets; tyres, cartons, kegs',
     pillars: ['prop_pillar_wallstub', 'prop_pillar_c', 'prop_pillar_a'],
     pillarZones: [{ x0: 13, y0: 0, x1: 27, y1: 30, pillars: ['prop_pillar_pier'] }],
-    soft: { prop_soft_tyres: 3, prop_soft_cartons: 3, prop_soft_kegs: 2, prop_soft_crates: 2, prop_soft_barrier: 1 },
+    soft: {
+      prop_soft_tyres: 3,
+      prop_soft_cartons: 3,
+      prop_soft_kegs: 2,
+      prop_soft_crates: 2,
+      prop_soft_barrier: 1,
+    },
   }),
   rumbleApapa: style({
     note: 'stacked shipping containers on yard pads, transit sheds of precast panels; drums, crates, cable drums',
     pillars: ['prop_pillar_container_a', 'prop_pillar_container_b'],
-    pillarZones: zones4(45, 31, [{ x0: 1, y0: 3, x1: 9, y1: 4, pillars: ['prop_pillar_b', 'prop_pillar_a'] }]),
-    soft: { prop_soft_drums: 4, prop_soft_crates: 3, prop_soft_crate: 2, prop_soft_cabledrum: 2, prop_soft_barrier: 1 },
+    pillarZones: zones4(45, 31, [
+      { x0: 1, y0: 3, x1: 9, y1: 4, pillars: ['prop_pillar_b', 'prop_pillar_a'] },
+    ]),
+    soft: {
+      prop_soft_drums: 4,
+      prop_soft_crates: 3,
+      prop_soft_crate: 2,
+      prop_soft_cabledrum: 2,
+      prop_soft_barrier: 1,
+    },
     pillarDebris: 'drums',
   }),
   rumbleLekkiNight: style({

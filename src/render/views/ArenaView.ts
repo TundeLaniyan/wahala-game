@@ -241,7 +241,8 @@ export class ArenaView implements View {
   }
 
   private pillarVariant(x: number, y: number): number {
-    if (this.pillarIds.length !== this.pillars.length) return (x * 5 + y * 3 + ((x ^ y) & 3)) % this.pillars.length;
+    if (this.pillarIds.length !== this.pillars.length)
+      return (x * 5 + y * 3 + ((x ^ y) & 3)) % this.pillars.length;
     return pillarIndexFor(this.style, this.pillarIds, x, y);
   }
 

@@ -40,7 +40,9 @@ export function RumbleStagePicker({
 }) {
   const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
   const strip = useRef<HTMLDivElement>(null);
-  const current = RUMBLE_ARENA_IDS.includes(settings.rumbleArenaId) ? settings.rumbleArenaId : RUMBLE_ARENA_IDS[0]!;
+  const current = RUMBLE_ARENA_IDS.includes(settings.rumbleArenaId)
+    ? settings.rumbleArenaId
+    : RUMBLE_ARENA_IDS[0]!;
 
   // bring the remembered stage into view when the menu opens
   useEffect(() => {

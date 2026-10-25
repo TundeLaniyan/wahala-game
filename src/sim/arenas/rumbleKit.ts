@@ -50,7 +50,11 @@ export function mirrorTraps(quadrant: readonly string[], cols: number, rows: num
 }
 
 /** The four mirror images of a list of tiles (deduplicated, stable order). */
-export function mirrorTiles(tiles: readonly (readonly [number, number])[], cols: number, rows: number): [number, number][] {
+export function mirrorTiles(
+  tiles: readonly (readonly [number, number])[],
+  cols: number,
+  rows: number,
+): [number, number][] {
   const seen = new Set<string>();
   const out: [number, number][] = [];
   for (const [x, y] of tiles)
@@ -69,7 +73,11 @@ export function mirrorTiles(tiles: readonly (readonly [number, number])[], cols:
 }
 
 /** A zone (list of tiles) in each of its four mirror images, as separate zones. */
-export function mirrorZones(zone: readonly (readonly [number, number])[], cols: number, rows: number): [number, number][][] {
+export function mirrorZones(
+  zone: readonly (readonly [number, number])[],
+  cols: number,
+  rows: number,
+): [number, number][][] {
   const flip = (fx: boolean, fy: boolean): [number, number][] =>
     zone.map(([x, y]) => [fx ? cols - 1 - x : x, fy ? rows - 1 - y : y]);
   return [flip(false, false), flip(true, false), flip(false, true), flip(true, true)];
@@ -98,7 +106,10 @@ export const AISLE_CLEARANCE: TilePos[] = [
   { x: 2, y: 1 },
 ];
 
-export function spawnCandidates(rows: readonly string[], clearance: readonly TilePos[] = RUMBLE_CLEARANCE): TilePos[] {
+export function spawnCandidates(
+  rows: readonly string[],
+  clearance: readonly TilePos[] = RUMBLE_CLEARANCE,
+): TilePos[] {
   const H = rows.length;
   const W = rows[0]!.length;
   const out: TilePos[] = [];

@@ -11,13 +11,18 @@ const { RumbleStagePicker } = await import('../../src/ui/RumbleStagePicker');
 
 const render = (rumbleArenaId: string) =>
   renderToStaticMarkup(
-    createElement(RumbleStagePicker, { settings: { ...DEFAULT_GAME_SETTINGS, rumbleArenaId }, set: () => undefined }),
+    createElement(RumbleStagePicker, {
+      settings: { ...DEFAULT_GAME_SETTINGS, rumbleArenaId },
+      set: () => undefined,
+    }),
   );
 
 describe('City Rumble stage picker', () => {
   it('shows one card per Rumble stage, the five V2 stages first, with name, lighting, size, tagline and hazards', () => {
     const html = render('rumbleApapa');
-    const order = [...html.matchAll(/data-testid="rumble-stage-(rumble[A-Za-z]+|cityRumble)"/g)].map((m) => m[1]);
+    const order = [...html.matchAll(/data-testid="rumble-stage-(rumble[A-Za-z]+|cityRumble)"/g)].map(
+      (m) => m[1],
+    );
     expect(order).toEqual([...RUMBLE_ARENA_IDS]);
     expect(order.slice(0, 5)).toEqual([
       'rumbleOshodi',
