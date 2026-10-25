@@ -23,9 +23,14 @@ export interface ScreenPoint {
 }
 
 export interface MatchSummary {
-  /** Index = player id. */
+  /** Credited eliminations (sim `player.stats.kills`), index = player id. */
   eliminations: number[];
+  /** The local player's deaths and assists (respawn modes show them). */
+  deaths: number;
+  assists: number;
+  /** Seconds survived (respawn modes: the seconds played). */
   survivedSeconds: number;
+  /** The local player won, or (Team Rumble) the local player's team won. */
   localWon: boolean;
 }
 

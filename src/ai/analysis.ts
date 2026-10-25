@@ -93,8 +93,18 @@ export function checkPlacement(
   };
   c.builder.build(c.tmp, world, profile, { extraGens: [hypo] });
   spend(c);
-  return searchRefuge(c, c.tmp, u, a0, a1, step, u);
+  const plan = searchRefuge(c, c.tmp, u, a0, a1, step, u);
+  // Team Rumble with friendly fire: every teammate near the spot must still be able to get clear too
+  if (!plan || !world.friendlyFire) return plan;
+  for (const f of world.friends) {
+    if (Math.abs(f.x - hypo.x) + Math.abs(f.y - hypo.y) > hypo.range + 2) continue;
+    if (rivalEscape(c, c.tmp, f, FRIEND_REACTION_TICKS, false, u).refuges === 0) return null;
+  }
+  return plan;
 }
+
+/** Reaction time granted to a teammate who must get clear of a placement (friendly fire on). */
+const FRIEND_REACTION_TICKS = 6;
 
 /** Shortest safe path from (`start` at `a0`) to any tile that stays safe forever, or null. */
 export function searchRefuge(
@@ -203,6 +213,9 @@ export interface BlastGeometry {
   chainRivals: number;
 }
 
+/** Team Rumble, friendly fire on: a teammate in the blast outweighs this many opponents. */
+const FRIEND_IN_BLAST = 8;
+
 export function blastGeometry(
   c: Ctx,
   tile: number,
@@ -229,6 +242,8 @@ export function blastGeometry(
         if (layers > 0) out.mountedRivals += 1 - 1 / (layers + 1);
       }
     }
+    // Team Rumble with friendly fire: a teammate in the blast counts heavily against the placement
+    if (world.friendlyFire && world.friendAt[t]! > 0) out.rivals -= FRIEND_IN_BLAST * world.friendAt[t]!;
     if (world.pickupAt[t]! >= 0) out.pickups++;
   };
   note(tile);
@@ -279,7 +294,10 @@ export function blastGeometry(
     }
   }
   for (const gi of [hit0, hit1, hit2]) {
-    if (gi >= 0) out.chainRivals += rivalsInBlast(c, obs.generators[gi]!);
+    if (gi < 0) continue;
+    out.chainRivals += rivalsInBlast(c, obs.generators[gi]!);
+    // friendly fire: a teammate caught by the chain counts against the placement like one in the blast
+    if (world.friendlyFire) out.rivals -= FRIEND_IN_BLAST * rivalsInBlast(c, obs.generators[gi]!, world.friendAt);
   }
 }
 
@@ -287,11 +305,12 @@ export function blastGeometry(
 function rivalsInBlast(
   c: Ctx,
   g: Readonly<{ x: number; y: number; range: number; pierce: boolean }>,
+  at: Uint8Array = c.world.rivalAt,
 ): number {
   const { world } = c;
   const { board, obs } = world;
   const w = board.width;
-  let n = world.rivalAt[g.y * w + g.x]!;
+  let n = at[g.y * w + g.x]!;
   for (const d of DIRS) {
     const v = DIR_VEC[d];
     let pierced = false;
@@ -302,7 +321,7 @@ function rivalsInBlast(
       const t = y * w + x;
       const kind = obs.tiles[t];
       if (kind === Tile.Hard) break;
-      n += world.rivalAt[t]!;
+      n += at[t]!;
       if (kind === Tile.Soft) {
         if (g.pierce && !pierced) {
           pierced = true;

@@ -93,13 +93,15 @@ export function Hud() {
   const muted = useGameStore((s) => s.settings.muted);
   const cameraView = useGameStore((s) => s.settings.cameraView);
   // Standard matches keep the whole arena on one shared screen; only the stadium camera can be toggled.
-  const stadium = useGameStore((s) => cameraModeFor(s.settings.arenaId, s.cameraOverride) === 'stadium');
+  // (the running match decides: a City Rumble stage has the rumble HUD; `?cam=stadium` forces it anywhere)
+  const forced = useGameStore((s) => cameraModeFor('', s.cameraOverride) === 'stadium');
   if (!hud) return null;
   const half = Math.ceil(hud.players.length / 2);
   const left = hud.players.slice(0, half);
   const right = hud.players.slice(half);
 
   const rumble = hud.rumble;
+  const stadium = forced || rumble !== null;
   return (
     <div className="hud" data-testid="hud" data-phase={hud.phase}>
       {rumble ? (

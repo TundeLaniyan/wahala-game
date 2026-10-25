@@ -1,4 +1,7 @@
-/** Match flow: countdown, two-minute timer, win / draw detection. */
+/**
+ * Match flow: countdown, timer, win / draw detection. Classic and Survival: last standing (a timeout
+ * with several standing is a draw). Deathmatch and Team Rumble: the clock decides (`timedResult`).
+ */
 import type { GameState, MatchResult, Player, SimEvent } from '../types';
 import { isRespawnMode, isTeamMode } from '../modes';
 import { alivePlayers } from './queries';
@@ -29,7 +32,10 @@ export function evaluateMatchEnd(state: GameState, events: SimEvent[]): void {
 
 /**
  * Deathmatch: most credited eliminations; ties broken by fewer deaths, then more assists, then whoever
- * reached the score first. Team Rumble: most team eliminations, then fewer team deaths. Identical = draw.
+ * reached the score first (the earlier last elimination). Still identical at the top = draw ('tie').
+ * Team Rumble: most team eliminations (credited eliminations of enemies: a friendly-fire or accidental
+ * death is nobody's point but still counts as a death), then fewer team deaths; identical = draw.
+ * Assists never decide a team match (they are not eliminations).
  */
 export function timedResult(state: GameState): MatchResult {
   if (isTeamMode(state.settings.game)) {
@@ -65,6 +71,8 @@ export interface TeamStanding {
   team: number;
   kills: number;
   deaths: number;
+  assists: number;
+  members: number;
 }
 
 /** Teams best first: most eliminations, then fewest deaths, then lower team index. */
@@ -72,9 +80,11 @@ export function teamStandings(state: GameState): TeamStanding[] {
   const map = new Map<number, TeamStanding>();
   for (const p of state.players) {
     if (p.team < 0) continue;
-    const t = map.get(p.team) ?? { team: p.team, kills: 0, deaths: 0 };
+    const t = map.get(p.team) ?? { team: p.team, kills: 0, deaths: 0, assists: 0, members: 0 };
     t.kills += p.stats.kills;
     t.deaths += p.stats.deaths;
+    t.assists += p.stats.assists;
+    t.members++;
     map.set(p.team, t);
   }
   return [...map.values()].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths || a.team - b.team);

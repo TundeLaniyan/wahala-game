@@ -264,3 +264,26 @@ clips and licensing in `AUDIO.md` "Voice lines"; frames in `docs/screenshots/voi
 | GitHub Actions CI on `a9da0dd` (run #73) | **green**: typecheck, lint, unit tests, build and the full Playwright suite (desktop + phone, 84 min) |
 | GitHub Pages | published by CI only after that check passed: `gh-pages` `build.json` names `a9da0dd` / `claude/wahala-voice-integration` (built 2026-10-24T08:37:56Z); the 19 voice MP3s are on `gh-pages` under `audio/voices/recorded/`. The live `*.github.io` page itself cannot be opened from the container (proxy) |
 | Not verified | the mix by ear (no speakers in the container); playback on real iOS Safari / Android Chrome devices |
+
+
+## V2 stream D: City Rumble modes, teams, respawning, scoring, main menu (branch `v2/d-modes`, from `ff67c52`)
+
+Decisions WD1-WD12 in `DECISIONS.md` (section W). Frames: `docs/screenshots/v2-modes/`.
+
+| Area | State |
+| --- | --- |
+| Main menu | City Rumble first (default), Classic Battle one tap away. Rumble: Survival / Deathmatch / Team Rumble cards, fighters 8-32 (team: N v N), 5 / 10 min (respawn modes), friendly fire (Team only), stage list (interim `RumbleStagePickerFallback`: every registered rumble arena; stream F's `RumbleStagePicker` takes the same props), bot preset + mixed roster. Classic: 2-4 players, crowd throws, all-bots level + per-bot level (interim `DifficultyPickerFallback`; stream B's `DifficultyPicker`), nine official arenas plus a "Test / experimental" strip once the sim exports `EXPERIMENTAL_ARENA_IDS`. Summary line under Play. 640x360 phone: Play visible without scrolling (e2e). |
+| Rules | `matchRules` rebuilds the match settings for every start (no leaks: tested Team -> Classic -> Survival, rematch keeps the mode). Teams split by map side, human Green. |
+| Respawn | Danger-free spawns (flames, predicted blasts incl. chains, stage hazards, vehicle routes, crowd throws), safe distance, own side, per-spawn cooldown, death-tile avoidance, open-floor fallback; 2.5 s protection that ends on placing a generator; life-based power reset. |
+| Scoring | Sim stats only (kills / deaths / assists); Deathmatch ranking with shared places, team standings; results card per mode (Survival placing, Deathmatch K/D/A table, Team scoreboard). |
+| HUD | Mode, team score bar, deathmatch rank, leaderboard K/D/A, respawn banner (no skip in respawn modes), spawn-protection tag, opponents-only "Nearby", feed survives respawns, ring hidden when the city never closes. |
+| Bots | Opponents only as targets; with friendly fire: placement penalty for teammates in (chained) blasts, refused placements that trap a nearby teammate, no remote detonation / vehicle route onto teammates. |
+| Render | Team jersey band + armbands on the rig bones, team-coloured ring / silhouette / name / minimap dot; blinking protection ring + body; death pose undone on respawn. |
+
+| Check (2026-10-25, shared 4-core machine at load 15-31) | Result |
+| --- | --- |
+| `npx tsc --noEmit`, `npx eslint .` | clean |
+| `tests/modes.test.ts` (22), `tests/modes-bots.test.ts` (5), `tests/app/modes-app.test.ts` (8) | pass |
+| Full vitest without the `ordering-*` files | 818 / 823 on a loaded machine; the 5 failures were timeouts only. `rumble-ai` passed on a rerun; `behaviour` "most matches end" and `endgame-traps` "bots play full matches" pass with a long timeout (temporary copies) |
+| `e2e/rumble.spec.ts`, desktop + phone (`WAHALA_MULTIPROCESS=1`) | 6 / 6 pass (menu + Team Rumble start + Classic, Deathmatch respawn flow, 32-fighter Survival) |
+| Not done | Other streams' specs were not run (`e2e/helpers.startMatch` now picks Classic unless `game: 'rumble'`); `scripts/quick-shot.mjs` with `cityRumble` no longer has an arena card to click (Rumble starts from the Rumble setup) |

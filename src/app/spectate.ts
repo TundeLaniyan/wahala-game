@@ -7,21 +7,18 @@ import type { GameState, Player } from '../sim';
 
 const alive = (state: GameState): Player[] => state.players.filter((p) => p.alive);
 
-/** Who eliminated `p` (null for the city, traffic, its own generator ...). */
+/**
+ * Who gets the credit for `p`'s last elimination (the simulation's `eliminatedBy`: flame owner, chain
+ * starter, vehicle owner or a recent melee attacker; null for the city, traffic, its own generator, a
+ * teammate's friendly fire ...).
+ */
 export function eliminatorOf(state: GameState, p: Player): Player | null {
-  const c = p.elimination;
-  if (!c || !('ownerId' in c) || c.ownerId === p.id) return null;
-  return state.players[c.ownerId] ?? null;
+  return p.eliminatedBy !== null ? (state.players[p.eliminatedBy] ?? null) : null;
 }
 
-/** Eliminations credited to each player (index = player id). */
+/** Credited eliminations of each player (index = player id), straight from the simulation's stats. */
 export function killCounts(state: GameState): number[] {
-  const kills = state.players.map(() => 0);
-  for (const p of state.players) {
-    const k = eliminatorOf(state, p);
-    if (k) kills[k.id]!++;
-  }
-  return kills;
+  return state.players.map((p) => p.stats.kills);
 }
 
 /**

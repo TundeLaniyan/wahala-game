@@ -29,6 +29,8 @@ export function tileToMinimap(geo: MinimapGeometry, x: number, y: number): { x: 
 export interface MinimapPlayer {
   id: number;
   slot: number;
+  /** Team Rumble team (-1 = free-for-all): the dot takes the team colour. */
+  team: number;
   x: number;
   y: number;
   kind: 'local' | 'focus' | 'rival';
@@ -78,6 +80,7 @@ export function minimapLayers(
     players.push({
       id: p.id,
       slot: p.slot,
+      team: p.team,
       x: p.x,
       y: p.y,
       kind: p.id === localId ? 'local' : p.id === focusId ? 'focus' : 'rival',

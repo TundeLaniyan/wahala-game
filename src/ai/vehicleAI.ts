@@ -147,7 +147,10 @@ function bestRoute(c: Ctx, launchTick: number): Choice | null {
   const { world, profile } = c;
   const { me, obs } = world;
   const kind = CHARACTERS[me.characterId].vehicle;
-  const cands = routeCandidates(c);
+  // Team Rumble with friendly fire: never drive through a teammate (with it off, the vehicle passes them)
+  const cands = world.friendlyFire
+    ? routeCandidates(c).filter((cand) => !cand.route.some((t) => world.friendAt[t.y * world.board.width + t.x]! > 0))
+    : routeCandidates(c);
   if (cands.length === 0) return null;
   if (profile.vehicle === 'naive') {
     const pick = cands[Math.min(cands.length - 1, Math.floor(nextFloat(c.rng) * Math.min(3, cands.length)))]!;

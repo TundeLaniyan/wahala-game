@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { getArena } from '../sim';
 import type { GameState } from '../sim';
-import { SLOT_CSS } from '../assets/palette';
+import { playerCss } from '../assets/palette';
 import { liveMatch } from '../app/session';
 import { useGameStore } from '../app/store';
 import { minimapGeometry, minimapLayers, tileToMinimap } from './minimapModel';
@@ -108,13 +108,20 @@ function draw(
   for (const pl of L.players) {
     const p = tileToMinimap(geo, pl.x, pl.y);
     const r = pl.kind === 'rival' ? Math.max(1.6, s * 0.45) : Math.max(2.6, s * 0.75);
-    g.fillStyle = SLOT_CSS[pl.slot % SLOT_CSS.length]!;
+    // Team Rumble: dots take the team colour (Green / White) with a dark rim so white reads on the map
+    g.fillStyle = playerCss(pl.slot, pl.team);
     g.beginPath();
     g.arc(p.x, p.y, r, 0, Math.PI * 2);
     g.fill();
+    if (pl.team >= 0 && pl.kind === 'rival') {
+      g.lineWidth = 1;
+      g.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+      g.stroke();
+    }
     if (pl.kind !== 'rival') {
       g.lineWidth = pl.kind === 'local' ? 2 : 1.5;
-      g.strokeStyle = pl.kind === 'local' ? '#ffffff' : '#ffc61a';
+      g.strokeStyle =
+        pl.kind === 'local' ? (pl.team >= 0 ? '#ffc61a' : '#ffffff') : pl.team >= 0 ? '#ff4a2e' : '#ffc61a';
       g.stroke();
     }
   }

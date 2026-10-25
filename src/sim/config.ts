@@ -190,6 +190,14 @@ export interface GameConfig {
     safeDistance: number;
     /** Reset upgrades on death (life-based power-ups). */
     resetOnDeath: boolean;
+    /** A spawn used for a respawn is avoided by the next respawns for this long (no spawn camping). */
+    spawnCooldownTicks: number;
+    /** Respawns avoid spawns this close (Manhattan) to the tile the fighter just fell on. */
+    deathAvoidRadius: number;
+    /** Team Rumble: a spawn on the own team's side scores this much (in tiles of distance) extra. */
+    homeSideBonus: number;
+    /** Spawn protection ends early once the protected fighter places a generator (no free attacks). */
+    protectionEndsOnAttack: boolean;
   };
   /** V2 standard-match sideline spectators. */
   spectator: {
@@ -371,6 +379,10 @@ export const DEFAULT_CONFIG: GameConfig = {
     delayTicks: ticks(3),
     safeDistance: 6,
     resetOnDeath: true,
+    spawnCooldownTicks: ticks(8),
+    deathAvoidRadius: 6,
+    homeSideBonus: 8,
+    protectionEndsOnAttack: true,
   },
   spectator: {
     enabled: false,

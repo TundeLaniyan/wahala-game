@@ -6,7 +6,7 @@ import type { ArenaDef } from './arenas';
 import { tileIndex } from './grid';
 import { nextFloat, seedToState, weightedPick } from './rng';
 import { NO_TEAM, Tile } from './types';
-import { modeConfig, modeShrinks, teamFor } from './modes';
+import { assignTeams, modeConfig, modeShrinks } from './modes';
 import type {
   CrushState,
   EndgameTrapState,
@@ -29,6 +29,9 @@ export const DEFAULT_SETTINGS: MatchSettings = {
   crowdThrows: false,
   stageHazards: true,
 };
+
+/** `GameState.spawnUsedAt` value of a spawn nobody has respawned on yet. */
+export const NEVER_USED = -1e9;
 
 export const MIN_PLAYERS = 1;
 /** The largest supported match (City Rumble). Each arena has its own `maxPlayers` (standard arenas: 4). */
@@ -106,6 +109,7 @@ export function createGame(options: GameOptions): GameState {
   if (!modeShrinks(settings)) settings.mode = 'classic';
   const width = arena.layout[0]!.length;
   const height = arena.layout.length;
+  const teams = assignTeams(settings, arena, options.players.length);
 
   const state: GameState = {
     tick: 0,
@@ -121,7 +125,7 @@ export function createGame(options: GameOptions): GameState {
     floorHazards: {},
     endgameTraps: { waves: [], liveAt: [], warned: 0, live: 0, warnings: [] },
     players: options.players.map((setup, id) =>
-      createPlayer(id, { ...setup, team: setup.team ?? teamFor(settings, id, options.players.length) }, arena, config),
+      createPlayer(id, { ...setup, team: setup.team ?? teams[id]! }, arena, config),
     ),
     generators: [],
     flames: [],
@@ -133,6 +137,7 @@ export function createGame(options: GameOptions): GameState {
     stage: { nextAt: [], events: [], enabled: settings.stageHazards },
     nextId: 1,
     nextEventId: 1,
+    spawnUsedAt: arena.spawns.map(() => NEVER_USED),
     match: {
       phase: 'countdown',
       playTicks: 0,

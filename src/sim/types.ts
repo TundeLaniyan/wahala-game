@@ -367,6 +367,8 @@ export interface GameState {
   nextId: number;
   nextEventId: number;
   match: MatchState;
+  /** V2 respawn modes: tick each arena spawn was last used for a respawn (anti spawn-camping). */
+  spawnUsedAt: number[];
 }
 
 export interface TrapTile {
