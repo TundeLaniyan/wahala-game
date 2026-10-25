@@ -1,7 +1,8 @@
 /**
- * Generator tools used to get out of a hopeless spot: Kill Switch, kick, punch and carry. Each
- * option is evaluated by actually rebuilding the danger map with the generator disabled / moved /
- * lifted and asking whether a safe refuge then exists; only a working fix is executed.
+ * Generator tools used to get out of a hopeless spot: the V2 contact abilities disarm, kick and punch,
+ * used exactly like the human does, by walking into an adjacent generator (carry is gone from normal
+ * play). Each option is evaluated by actually rebuilding the danger map with the generator disabled /
+ * moved and asking whether a safe refuge then exists; only a working fix is executed.
  */
 import { DIRS, DIR_VEC, Tile } from '../sim';
 import type { Dir, Generator, Intent } from '../sim';
@@ -12,9 +13,9 @@ import type { DangerQuery } from './danger';
 import { readyTick, stepTicksOf } from './world';
 
 interface Fix {
-  kind: 'disarm' | 'kick' | 'punch' | 'carry';
-  /** Direction of the target generator from the bot (null = underfoot). */
-  dir: Dir | null;
+  kind: 'disarm' | 'kick' | 'punch';
+  /** Direction of the (adjacent) target generator from the bot. */
+  dir: Dir;
   gen: Readonly<Generator>;
   query: DangerQuery;
   /** Tile that stops being blocked / starts being blocked in the what-if. */
@@ -84,66 +85,44 @@ function throwEnd(
 
 function collectFixes(c: Ctx): Fix[] {
   const { world } = c;
-  const { me } = world;
+  const { me, obs } = world;
   const w = world.board.width;
   const fixes: Fix[] = [];
-  const spots: { dir: Dir | null; tile: number }[] = [{ dir: null, tile: world.myTile }];
+  // V2: every tool is a contact ability, used by walking into an ADJACENT generator (same as the human)
+  if (me.contact === null || obs.tick < me.contactReadyTick) return fixes;
   for (const d of DIRS) {
-    const n = world.board.neighbor[world.myTile * 4 + dirIndex(d)]!;
-    if (n >= 0) spots.push({ dir: d, tile: n });
-  }
-  const front = world.board.neighbor[world.myTile * 4 + dirIndex(me.facing)]!;
-  for (const s of spots) {
-    const g = generatorAt(c, s.tile);
+    const tile = world.board.neighbor[world.myTile * 4 + dirIndex(d)]!;
+    if (tile < 0) continue;
+    const g = generatorAt(c, tile);
     if (!g || g.slide) continue;
-    if (me.killSwitchCharges > 0 && g.mode !== 'disabled') {
-      // the sim targets the generator in front first, so an underfoot target needs an empty front tile
-      if (s.dir !== null || front < 0 || world.genAt[front]! < 0) {
-        fixes.push({
-          kind: 'disarm',
-          dir: s.dir,
-          gen: g,
-          query: { disabledIds: [g.id] },
-          freed: -1,
-          taken: -1,
-        });
-      }
+    if (me.contact === 'disarm' && me.killSwitchCharges > 0 && g.mode !== 'disabled') {
+      fixes.push({ kind: 'disarm', dir: d, gen: g, query: { disabledIds: [g.id] }, freed: -1, taken: -1 });
     }
-    if (s.dir !== null && me.contact === 'kick') {
-      const end = kickEnd(c, g, s.dir);
+    if (me.contact === 'kick') {
+      const end = kickEnd(c, g, d);
       if (end) {
         fixes.push({
           kind: 'kick',
-          dir: s.dir,
+          dir: d,
           gen: g,
           query: { moved: new Map([[g.id, end]]) },
-          freed: s.tile,
+          freed: tile,
           taken: end.y * w + end.x,
         });
       }
     }
-    if (me.contact === 'punch' && (s.dir === me.facing || (s.dir === null && (front < 0 || world.genAt[front]! < 0)))) {
-      const end = throwEnd(c, g.x, g.y, me.facing, g.id);
+    if (me.contact === 'punch') {
+      const end = throwEnd(c, g.x, g.y, d, g.id);
       if (end) {
         fixes.push({
           kind: 'punch',
-          dir: s.dir,
+          dir: d,
           gen: g,
           query: { moved: new Map([[g.id, end]]) },
-          freed: s.tile,
+          freed: tile,
           taken: end.y * w + end.x,
         });
       }
-    }
-    if (me.grip && (s.dir === null ? front < 0 || world.genAt[front]! < 0 : true) && g.timer > 80) {
-      fixes.push({
-        kind: 'carry',
-        dir: s.dir,
-        gen: g,
-        query: { disabledIds: [g.id] },
-        freed: s.tile,
-        taken: -1,
-      });
     }
   }
   return fixes;
@@ -166,32 +145,9 @@ export function tryEmergencyFix(c: Ctx, intent: Intent): boolean {
     if (fix.freed >= 0) c.scratch[fix.freed] = 0;
     if (fix.taken >= 0) c.scratch[fix.taken] = 1;
     if (!searchRefuge(c, c.tmp, world.myTile, T, ready, step, undefined, c.scratch)) continue;
-    execute(c, fix, intent);
+    // walking into the generator IS the kick / punch / disarm (sim/systems/contact.ts)
+    intent.move = c.world.steer(fix.dir);
     return true;
   }
   return false;
-}
-
-function execute(c: Ctx, fix: Fix, intent: Intent): void {
-  const { me } = c.world;
-  const face = (d: Dir): void => {
-    intent.move = c.world.steer(d);
-  };
-  switch (fix.kind) {
-    case 'kick':
-      face(fix.dir!);
-      return;
-    case 'disarm':
-      if (fix.dir === null || me.facing === fix.dir) intent.disarm = true;
-      else face(fix.dir);
-      return;
-    case 'punch':
-      if (fix.dir === null || me.facing === fix.dir) intent.action = true;
-      else face(fix.dir);
-      return;
-    case 'carry':
-      if (fix.dir === null || me.facing === fix.dir) intent.action = true;
-      else face(fix.dir);
-      return;
-  }
 }

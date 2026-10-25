@@ -275,6 +275,8 @@ describe('generator tools', () => {
 
   it.each(SMART)('%s uses the Kill Switch to defuse the generator sealing it in', (d) => {
     const s = pocket();
+    // V2: Disarm is a contact ability (walk into the generator), equipped with its charges
+    s.players[0]!.contact = 'disarm';
     s.players[0]!.killSwitchCharges = 2;
     const run = runBots(s, makeBots({ 0: d }), 260);
     expect(eventsOf(run.events, 'generatorDisarmed')).toHaveLength(1);
@@ -298,13 +300,12 @@ describe('generator tools', () => {
     expect(s.players[0]!.alive).toBe(true);
   });
 
-  it.each(SMART)('%s picks the generator up when it owns the Grip, and does not die carrying it', (d) => {
+  it.each(SMART)('%s never carries (V2: carry is out of normal play, even with a legacy Grip)', (d) => {
     const s = pocket();
     s.players[0]!.grip = true;
     s.players[0]!.facing = 'right';
     const run = runBots(s, makeBots({ 0: d }), 400);
-    expect(eventsOf(run.events, 'generatorCarried').length).toBeGreaterThan(0);
-    expect(s.players[0]!.alive).toBe(true);
+    expect(eventsOf(run.events, 'generatorCarried')).toHaveLength(0);
   });
 });
 
