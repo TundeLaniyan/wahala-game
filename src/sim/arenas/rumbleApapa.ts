@@ -66,7 +66,13 @@ export const RUMBLE_APAPA: ArenaDef = {
   kind: 'rumble',
   layout,
   // one-tile lanes / two-tile aisles: the aisle L (three along, then the turn) fits where the corner L does not
-  spawns: pairedSpawns(layout, 32, { x: 4, y: H - 5 }, AISLE_CLEARANCE),
+  spawns: pairedSpawns(
+    layout,
+    32,
+    { x: 4, y: H - 5 },
+    AISLE_CLEARANCE,
+    CRANE_ZONES.flatMap((z) => mirrorZones(z, W, H)).flat(),
+  ),
   spawnClearance: AISLE_CLEARANCE,
   mirrorSoftBlocks: true,
   maxPlayers: 32,

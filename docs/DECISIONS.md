@@ -319,3 +319,16 @@ No simulation rule, timing or balance number changed. The Academy runs the real 
 | WF11 | Each stage has its own look (light, fog, lamps), painted floor and surroundings module (`render/arenas/rumble*Art.ts`), built from the existing kits (Oshodi flyover / signs / umbrellas, market stalls, roadworks machines and structures, Third Mainland trucks and booth, StreetLife, Ambient). Lekki Nightworks keeps the approved Lekki Roadworks night values (sky, fog colour, sun, hemi, exposure, grit). Nothing stands on the board and the camera side stays under 1 m (tested on every triangle). No fights or area-boy scenes in the V2 stages; shop, ship and sign names are fictional. | `render/arenas/`, `tests/render/rumble-stage-sets.test.ts` |
 | WF12 | **Music**: one founder track per stage as playlist, start and signature: Oshodi `pixabay_601035`, Lagos Island `pixabay_554543`, Ojuelegba `pixabay_515507`, Apapa `pixabay_455231`, Lekki Nightworks `pixabay_623364`. | `public/audio/music/manifest.json`, `tests/audio/assets.test.ts` |
 | WF13 | `RumbleStagePicker` (cards: preview or mood gradient, lighting, board size, tagline, hazards; swipe strip, one card per screen width on phones) writes `settings.rumbleArenaId`; stream D places it in the menu. | `ui/RumbleStagePicker.tsx` |
+
+### W-lead - integration decisions
+
+- **WL1 - Rumble spawns never sit in a stage hazard.** Integration review of the five stages found Lagos Island
+  spawns 22 / 23 and Apapa 18 / 19 inside strike zones (telegraphed, so not instantly lethal, but a fighter could
+  start or respawn into a falling container). `pairedSpawns` now takes the stage's strike-zone tiles to avoid (the
+  spawn tile and its way out); test "no spawn stands on a stage hazard" per stage.
+- **WL2 - Rookie checker precision.** After integration the Rookie test flagged one placement (seed 19) that the bot's
+  own mercy rule had correctly judged escapable: the test treated a flame line that died 7 ticks later as a wall. Only
+  fire still burning when the novice starts to move blocks now.
+- **WL3 - Preview publishing moves to the V2 branch** once the full CI check passes on it (`ci.yml` job
+  `deploy-preview`); the voice-integration branch is left untouched.
+

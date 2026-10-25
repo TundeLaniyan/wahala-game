@@ -178,6 +178,16 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
     expect(minGap(32)).toBeGreaterThanOrEqual(5);
   });
 
+  it('no spawn stands on a stage hazard (sweep route or strike zone): nobody starts or respawns inside one', () => {
+    const hazard = new Set<string>();
+    for (const h of a.stageHazards) {
+      if (h.kind === 'sweep') for (const r of h.routes) for (const [x, y] of r) hazard.add(`${x},${y}`);
+      if (h.kind === 'strike') for (const z of h.zones) for (const [x, y] of z) hazard.add(`${x},${y}`);
+    }
+    // regression: Lagos Island spawns 22 / 23 and Apapa 18 / 19 sat in strike zones
+    expect(a.spawns.filter((p) => hazard.has(`${p.x},${p.y}`))).toEqual([]);
+  });
+
   it('every spawn reaches every other spawn and every open tile (no unreachable pockets)', () => {
     const open = a.layout.flatMap((row, y) => [...row].flatMap((c, x) => (c === '#' ? [] : [`${x},${y}`])));
     for (const s of a.spawns) {

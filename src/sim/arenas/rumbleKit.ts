@@ -109,6 +109,7 @@ export const AISLE_CLEARANCE: TilePos[] = [
 export function spawnCandidates(
   rows: readonly string[],
   clearance: readonly TilePos[] = RUMBLE_CLEARANCE,
+  avoid: ReadonlySet<string> = new Set(),
 ): TilePos[] {
   const H = rows.length;
   const W = rows[0]!.length;
@@ -123,8 +124,8 @@ export function spawnCandidates(
       const ok = clearance.every((o) => {
         const tx = x + o.x * sx;
         const ty = y + o.y * sy;
-        // a spawn's way out is open floor (never a traffic lane)
-        return tx >= 0 && ty >= 0 && tx < W && ty < H && rows[ty]![tx] === '.';
+        // a spawn's way out is open floor (never a traffic lane, never a stage hazard's strike zone)
+        return tx >= 0 && ty >= 0 && tx < W && ty < H && rows[ty]![tx] === '.' && !avoid.has(`${tx},${ty}`);
       });
       if (ok) out.push({ x, y });
     }
@@ -141,10 +142,11 @@ export function pairedSpawns(
   count: number,
   start: TilePos,
   clearance: readonly TilePos[] = RUMBLE_CLEARANCE,
+  avoid: readonly (readonly [number, number])[] = [],
 ): TilePos[] {
   const H = rows.length;
   const W = rows[0]!.length;
-  const cand = spawnCandidates(rows, clearance);
+  const cand = spawnCandidates(rows, clearance, new Set(avoid.map(([x, y]) => `${x},${y}`)));
   if (cand.length === 0) throw new Error('no spawn fits the layout');
   const mirror = (p: TilePos): TilePos => ({ x: W - 1 - p.x, y: H - 1 - p.y });
   const west = (p: TilePos): TilePos => (p.x < W / 2 ? p : mirror(p));
