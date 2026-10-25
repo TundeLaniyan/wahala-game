@@ -211,77 +211,145 @@ test.describe('keyboard play', () => {
   });
 });
 
-test.describe('signature vehicles', () => {
+test.describe('signature vehicles: one press of B', () => {
   for (const [character, vehicle] of [
     ['streetBaller', 'danfo'],
     ['lekkiBoy', 'taxi'],
     ['campusQueen', 'keke'],
   ] as const) {
-    test(`${vehicle}: voucher, border entry selection by keyboard, warning, and the vehicle drives in`, async ({
+    test(`${vehicle}: voucher, ONE press of B picks a route through the rival, warns, and drives in`, async ({
       page,
     }, info) => {
       await open(page, '&nobots');
       await startMatch(page, { competitors: 2, character });
+      // the rival walled in between two crates on row 6 (pillars above and below): a lane worth taking
       await mutate(
         page,
-        `s.players[0].hasVoucher = true; s.players[0].x = 6; s.players[0].y = 5; s.players[0].stepFromX = 6; s.players[0].stepFromY = 5;`,
+        `const p = s.players[0]; p.hasVoucher = true; p.x = p.stepFromX = 0; p.y = p.stepFromY = 10;
+         const r = s.players[1]; r.x = r.stepFromX = 9; r.y = r.stepFromY = 6; r.stepRemaining = 0;
+         for (const x of [8, 10]) s.tiles[6 * s.width + x] = 2;
+         for (let i = 0; i < s.tiles.length; i++) if (s.tiles[i] === 2 && !(Math.floor(i / s.width) === 6 && (i % s.width === 8 || i % s.width === 10))) s.tiles[i] = 0;`,
       );
       await stepTicks(page, 2);
-      await page.keyboard.press('v');
+      await page.keyboard.press('k');
       await stepTicks(page, 2);
-      await expect(page.getByTestId('entry-panel')).toBeVisible();
-      await page.keyboard.press('ArrowLeft');
-      await page.keyboard.press('ArrowRight');
-      await stepTicks(page, 2);
-      await page.screenshot({ path: `e2e-shots/${info.project.name}-entry-${vehicle}.png` });
-      await page.keyboard.press('Enter');
-      if (vehicle === 'keke') {
-        await expect(page.getByTestId('entry-panel')).toHaveAttribute('data-stage', 'turn');
-        await stepTicks(page, 2);
-        await page.screenshot({ path: `e2e-shots/${info.project.name}-entry-keke-turn.png` });
-        await page.keyboard.press('Enter');
-      }
-      await stepTicks(page, 3);
+      await expect(page.getByTestId('entry-panel')).toHaveCount(0);
       let st = await getState(page);
       expect(st.vehicles).toHaveLength(1);
       expect(st.vehicles[0]!.kind).toBe(vehicle);
       expect(st.vehicles[0]!.phase).toBe('warning');
       expect(st.players[0]!.hasVoucher).toBe(false);
-      await stepTicks(page, 120);
+      const route = await page.evaluate(
+        () =>
+          (
+            window as unknown as {
+              __WAHALA__: { getState(): { vehicles: { route: { x: number; y: number }[] }[] } };
+            }
+          ).__WAHALA__.getState().vehicles[0]!.route,
+      );
+      expect(route.some((t) => t.x === 9 && t.y === 6)).toBe(true);
+      await page.evaluate(() =>
+        (window as unknown as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
+      );
+      await page.screenshot({ path: `e2e-shots/${info.project.name}-vehicle-warning-${vehicle}.png` });
+      await stepTicks(page, 300);
       st = await getState(page);
-      expect(st.vehicles.length === 0 || st.vehicles[0]!.phase !== 'warning').toBe(true);
-      await page.screenshot({ path: `e2e-shots/${info.project.name}-vehicle-${vehicle}.png` });
+      expect(st.players[1]!.alive).toBe(false);
+      expect(st.players[0]!.alive).toBe(true);
     });
   }
 
-  test('entry mode can be cancelled with Escape and times out on its own', async ({ page }) => {
-    await open(page, '&nobots');
-    await startMatch(page, { competitors: 2 });
-    await mutate(page, `s.players[0].hasVoucher = true;`);
-    await page.keyboard.press('v');
-    await stepTicks(page, 2);
-    await expect(page.getByTestId('entry-panel')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await stepTicks(page, 2);
-    await expect(page.getByTestId('entry-panel')).toBeHidden();
-    expect((await getState(page)).players[0]!.hasVoucher).toBe(true);
-    await page.keyboard.press('v');
-    await stepTicks(page, 500);
-    await expect(page.getByTestId('entry-panel')).toBeHidden();
-    expect((await getState(page)).players[0]!.hasVoucher).toBe(true);
-  });
-
-  test('a mouse click on a border arrow selects the entrance and a second click launches', async ({
+  test('there is no selector any more: V does nothing, B keeps the voucher when a rival is next to you', async ({
     page,
   }) => {
     await open(page, '&nobots');
     await startMatch(page, { competitors: 2 });
-    await mutate(page, `s.players[0].hasVoucher = true;`);
+    await mutate(
+      page,
+      `const p = s.players[0]; p.hasVoucher = true; const r = s.players[1];
+       r.x = r.stepFromX = p.x; r.y = r.stepFromY = p.y - 1; r.stepRemaining = 0; p.skillReadyTick = s.tick + 600;`,
+    );
     await page.keyboard.press('v');
-    await stepTicks(page, 2);
-    await page.getByTestId('entry-confirm').click();
     await stepTicks(page, 3);
-    expect((await getState(page)).vehicles).toHaveLength(1);
+    await expect(page.getByTestId('entry-panel')).toHaveCount(0);
+    expect((await getState(page)).players[0]!.entryUntil).toBeNull();
+    // a rival adjacent makes B a melee press (cooling down here): never a surprise vehicle
+    await page.keyboard.press('k');
+    await stepTicks(page, 3);
+    const st = await getState(page);
+    expect(st.vehicles).toHaveLength(0);
+    expect(st.players[0]!.hasVoucher).toBe(true);
+  });
+});
+
+test.describe('two buttons and contact abilities (keyboard)', () => {
+  test('walking into a generator with Football Boots kicks it; the HUD shows KICK as a chip, not a button', async ({
+    page,
+  }) => {
+    await open(page, '&nobots');
+    await startMatch(page, { competitors: 2 });
+    await mutate(
+      page,
+      `const p = s.players[0]; p.contact = 'kick'; p.x = p.stepFromX = 2; p.y = p.stepFromY = 4;
+       for (let i = 0; i < s.tiles.length; i++) if (s.tiles[i] === 2) s.tiles[i] = 0;
+       s.generators.push({ id: 990, ownerId: 1, x: 3, y: 4, stepFromX: 3, stepFromY: 4, range: 2, pierce: false, square: 0,
+         fromSpectator: false, mode: 'timed', timer: 9999, carriedBy: null, carryBonusUsed: false, slide: null,
+         flight: null, triggered: false, placedTick: s.tick });`,
+    );
+    await stepTicks(page, 2);
+    await expect(page.getByTestId('contact-indicator')).toContainText('KICK');
+    await holdKey(page, 'ArrowRight', 3);
+    await stepTicks(page, 120);
+    const g = (await getState(page)).generators.find((o) => o.id === 990)!;
+    expect(g.x).toBeGreaterThan(5);
+    expect(g.y).toBe(4);
+  });
+
+  test('B (K): a tap with a remote generator down still does the special; holding K sets the remote off', async ({
+    page,
+  }) => {
+    await open(page, '&nobots');
+    await startMatch(page, { competitors: 2 });
+    await mutate(page, `s.players[0].remote = true;`);
+    await page.keyboard.press('Space');
+    await stepTicks(page, 2);
+    await holdKey(page, 'ArrowUp', 3);
+    await stepTicks(page, 12);
+    expect((await getState(page)).generators[0]!.mode).toBe('remote');
+    await holdKey(page, 'k', 4); // a tap: nothing to melee, no voucher -> nothing, and NOT the remote
+    expect((await getState(page)).generators).toHaveLength(1);
+    await holdKey(page, 'k', 30); // a hold: boom
+    await stepTicks(page, 2);
+    expect((await getState(page)).generators).toHaveLength(0);
+  });
+
+  test('pause menu: the screen-shake setting cycles auto / off / subtle and reaches the renderer', async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== 'desktop', 'desktop default is subtle');
+    await open(page, '&nobots');
+    await startMatch(page, { competitors: 2 });
+    const mode = () =>
+      page.evaluate(
+        () =>
+          (
+            window as unknown as { __WAHALA__: { renderer(): { shakeStatus(): { mode: string } } } }
+          ).__WAHALA__
+            .renderer()
+            .shakeStatus().mode,
+      );
+    expect(await mode()).toBe('subtle'); // auto with a mouse
+    await page.keyboard.press('p');
+    const chip = page.getByTestId('toggle-shake');
+    await expect(chip).toHaveAttribute('data-value', 'auto');
+    await chip.click();
+    await expect(chip).toHaveAttribute('data-value', 'off');
+    expect(await mode()).toBe('off');
+    await chip.click();
+    await expect(chip).toHaveAttribute('data-value', 'subtle');
+    expect(await mode()).toBe('subtle');
+    await chip.click();
+    await expect(chip).toHaveAttribute('data-value', 'auto');
   });
 });
 

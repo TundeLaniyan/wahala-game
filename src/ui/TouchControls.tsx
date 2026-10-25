@@ -158,9 +158,14 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
       style={{ ['--hold-ms' as string]: `${SPECIAL_HOLD_MS}ms` }}
       onPointerDown={(e) => {
         e.preventDefault();
-        e.currentTarget.setPointerCapture(e.pointerId);
         input.touchDown('special', `p${e.pointerId}`);
         if (remoteReady) setHolding(true);
+        try {
+          // keep receiving this finger's release even if it slides off the button
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          /* not an active pointer (synthetic event): the release still arrives on the button */
+        }
       }}
       onPointerUp={up}
       onPointerCancel={up}
