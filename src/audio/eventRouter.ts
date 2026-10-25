@@ -322,7 +322,8 @@ const handlers: Handlers = {
     if (s === 'danfo') sfx(c, 'danfo_horn', panOf(c, x));
     else if (s === 'traffic') sfx(c, c.rand() < 0.5 ? 'danfo_horn' : 'keke_horn', panOf(c, x));
     else if (s === 'checkpoint') sfx(c, 'taxi_horn', panOf(c, x));
-    else if (s === 'debris' || s === 'power') sfx(c, 'crush_warning', panOf(c, x), 0.8);
+    else if (s === 'debris' || s === 'power' || s === 'cargo') sfx(c, 'crush_warning', panOf(c, x), 0.8);
+    else if (s === 'goods') sfx(c, 'crowd_throw_whistle', panOf(c, x), 0.6);
     else if (s === 'gust' || s === 'wash') sfx(c, 'crowd_throw_whistle', 0, 0.6);
     else if (s === 'merch') sfx(c, 'crowd_throw_whistle', panOf(c, x), 0.5);
     if (s !== 'merch') c.buses.duck('warning');
@@ -332,7 +333,8 @@ const handlers: Handlers = {
     const s = e.event.style;
     if (s === 'danfo' || s === 'traffic') sfx(c, 'danfo_pass', panOf(c, x));
     else if (s === 'checkpoint') sfx(c, 'taxi_pass', panOf(c, x));
-    else if (s === 'debris') sfx(c, 'crush_slam', panOf(c, x));
+    else if (s === 'debris' || s === 'cargo') sfx(c, 'crush_slam', panOf(c, x));
+    else if (s === 'goods') sfx(c, 'block_crumble_1', panOf(c, x), 0.8, 1.1);
     else if (s === 'power') sfx(c, 'gen_remote_blip', panOf(c, x), 1, 0.6);
     else if (s === 'wash') sfx(c, 'oil_squeak', 0, 0.9, 0.6);
     else if (s === 'gust') sfx(c, 'hop', 0, 0.5, 0.5);
