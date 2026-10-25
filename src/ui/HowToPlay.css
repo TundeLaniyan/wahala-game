@@ -669,3 +669,52 @@
     animation: none;
   }
 }
+
+/* ---------- Stitch theme (decision UI1): the menu's colours and type, same layout and footprint ---------- */
+.htp-panel,
+.htp-list {
+  font-family: 'Space Grotesk', 'Barlow Condensed', system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.htp-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 184, 0, 0.08), transparent 160px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 3px),
+    #11151d;
+  border-right: 2px solid #ffb800;
+}
+.htp-titles h2,
+.htp-list h2 {
+  font-family: 'Bebas Neue', 'Anton', Impact, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+.htp-titles small,
+.htp-kicker {
+  color: #ffb800;
+  letter-spacing: 0.14em;
+}
+.htp-menu,
+.htp-exit,
+.htp-tabs button,
+.htp-devices button {
+  border-radius: 0;
+  border-color: #2e384d;
+  background: rgba(30, 38, 56, 0.85);
+}
+.htp-tabs button[aria-selected='true'],
+.htp-devices button[aria-selected='true'] {
+  background: #ffb800;
+  border-color: #ffb800;
+  color: #0b0e14;
+}
+.htp-panel .btn {
+  border-radius: 0;
+  font-family: 'Bebas Neue', 'Anton', Impact, sans-serif;
+  letter-spacing: 0.08em;
+}
+.htp-panel .btn.primary {
+  background: linear-gradient(100deg, #ffb800, #e08700);
+  color: #0b0e14;
+}
