@@ -27,4 +27,6 @@ export interface FrameInfo {
    * Ignored by the fixed whole-arena camera of standard matches.
    */
   focusPlayerId?: number | null;
+  /** Training Academy: tiles to mark with a glowing "go here" ring (presentation only). */
+  markers?: readonly { x: number; y: number }[];
 }

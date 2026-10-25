@@ -1,10 +1,13 @@
 /**
- * The How to Play controls legend. Keyboard keys and gamepad buttons are read from the real binding
- * tables in `src/input`, so the legend cannot drift from what the game actually listens to. Touch
- * entries describe the on-screen controls exactly as `TouchControls` / `EntryPanel` draw them.
+ * The Training Academy controls legend (V2: the stick plus exactly two buttons, A and B). Keyboard keys and
+ * gamepad buttons are read from the real binding tables in `src/input`, so the legend and the lesson hints
+ * cannot drift from what the game actually listens to. Touch entries describe the two on-screen buttons.
+ *
+ * Action names looked up: `place` (A), `special` (B tap) and `detonate` (B hold). If the input layer binds
+ * no key to one of them yet, the row says so instead of teaching a wrong key.
  */
 import { ACTION_BUTTONS, ACTION_KEYS, MOVE_KEYS, NAV_KEYS } from '../input';
-import type { ActionName, NavCommand } from '../input';
+import type { NavCommand } from '../input';
 import type { ControlId } from '../tutorial';
 
 export type LegendDevice = 'keyboard' | 'gamepad' | 'touch';
@@ -36,9 +39,10 @@ export function keyName(code: string): string {
 /** Standard gamepad mapping names. */
 const PAD_NAMES: Record<number, string> = { 0: 'A', 1: 'B', 2: 'X', 3: 'Y', 4: 'LB', 5: 'RB', 9: 'Start' };
 
-export const keysFor = (action: ActionName): string[] =>
+/** Keys bound to an input action (by name, so new V2 actions are found as soon as they are bound). */
+export const keysFor = (action: string): string[] =>
   Object.entries(ACTION_KEYS)
-    .filter(([, a]) => a === action)
+    .filter(([, a]) => (a as string) === action)
     .map(([code]) => keyName(code));
 
 export const navKeysFor = (command: NavCommand): string[] =>
@@ -46,9 +50,9 @@ export const navKeysFor = (command: NavCommand): string[] =>
     .filter(([, c]) => c === command)
     .map(([code]) => keyName(code));
 
-export const padFor = (action: ActionName): string[] =>
+export const padFor = (action: string): string[] =>
   Object.entries(ACTION_BUTTONS)
-    .filter(([, a]) => a === action)
+    .filter(([, a]) => (a as string) === action)
     .map(([i]) => PAD_NAMES[Number(i)] ?? `Button ${i}`);
 
 /** The arrow keys and the letter keys, each in their usual on-keyboard order (← ↑ ↓ →, W A S D). */
@@ -70,65 +74,29 @@ export function legendRows(): Record<ControlId, LegendRow> {
       keyboard: moveKeys(),
       gamepad: ['D-pad', 'left stick'],
       touch:
-        'Floating thumbstick: put your thumb down anywhere in the lower-left of the screen and slide it up, down, left or right. Each slide is one tile; keep holding to keep walking; lift to stop.',
+        'Floating stick: put your thumb down anywhere in the lower-left area of the screen and slide it up, down, left or right. Keep holding to keep walking; lift to stop.',
     },
     place: {
       id: 'place',
-      label: 'Drop a generator',
+      label: 'A: place a generator',
       keyboard: keysFor('place'),
       gamepad: padFor('place'),
-      touch: 'The big GENERATOR button, bottom right.',
+      touch: 'Button A (bottom right): drops a generator on your tile.',
     },
-    action: {
-      id: 'action',
-      label: 'Carry / drop / punch / throw',
-      keyboard: keysFor('action'),
-      gamepad: padFor('action'),
-      touch: 'The blue CARRY / PUNCH / DROP / THROW button. It appears once you have Grip or Gloves.',
-    },
-    skill: {
-      id: 'skill',
-      label: 'Skill (push / daze / shove)',
-      keyboard: keysFor('skill'),
-      gamepad: padFor('skill'),
-      touch: 'The purple PUSH / DAZE / SHOVE button next to GENERATOR. It dims while recharging.',
+    special: {
+      id: 'special',
+      label: 'B tap: hit / vehicle',
+      keyboard: keysFor('special'),
+      gamepad: padFor('special'),
+      touch:
+        'Button B, tap: hits a rival next to you; with nobody next to you and a Vehicle Voucher, calls in your vehicle.',
     },
     detonate: {
       id: 'detonate',
-      label: 'Remote: set off',
+      label: 'B hold: remote detonate',
       keyboard: keysFor('detonate'),
       gamepad: padFor('detonate'),
-      touch: 'The pink BOOM! button. It appears once you have the Remote Starter.',
-    },
-    vehicle: {
-      id: 'vehicle',
-      label: 'Call your vehicle',
-      keyboard: keysFor('vehicle'),
-      gamepad: padFor('vehicle'),
-      touch:
-        "The pulsing green button with the voucher and your vehicle's name. It appears while you hold a voucher.",
-    },
-    entryChoose: {
-      id: 'entryChoose',
-      label: 'Choose entrance / turn',
-      keyboard: [...moveKeys(), 'or click an arrow'],
-      gamepad: ['D-pad', 'left stick'],
-      touch:
-        'Tap a glowing arrow on the border (or a turn marker) to preview its route, or flick the thumbstick to step between them.',
-    },
-    entryConfirm: {
-      id: 'entryConfirm',
-      label: 'Confirm / launch',
-      keyboard: [...navKeysFor('confirm'), ...keysFor('vehicle')],
-      gamepad: [...padFor('place'), ...padFor('vehicle')],
-      touch: "Tap the same arrow again, or press LAUNCH (NEXT for the Keke's entrance).",
-    },
-    entryBack: {
-      id: 'entryBack',
-      label: 'Back / cancel',
-      keyboard: navKeysFor('cancel'),
-      gamepad: padFor('skill'),
-      touch: 'The BACK button under the instructions. Cancelling keeps your voucher.',
+      touch: 'Button B, press and hold: sets off your remote generators (with the Remote Starter).',
     },
     pause: {
       id: 'pause',

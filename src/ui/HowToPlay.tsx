@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { CHARACTERS, VEHICLE_DEFS } from '../sim';
 import type { CharacterId } from '../sim';
-import { CHAPTERS } from '../tutorial';
-import type { ControlId } from '../tutorial';
+import { COURSES, LESSONS, resolveHint } from '../tutorial';
+import type { ControlId, HintDevice } from '../tutorial';
 import { portraitUrl } from '../assets/portraits';
 import { commands } from '../app/session';
 import { useGameStore } from '../app/store';
@@ -11,167 +11,82 @@ import { legendRows } from './howToPlayControls';
 import type { LegendDevice } from './howToPlayControls';
 import './HowToPlay.css';
 
-const ROWS = legendRows();
-
 /**
- * Clicking a tutorial button must not leave it focused: Space / Enter are game keys, and a focused
- * button would otherwise be "clicked" again by them in the middle of a practice.
+ * Clicking an Academy button must not leave it focused: Space / Enter are game keys, and a focused button
+ * would otherwise be "clicked" again by them in the middle of a practice.
  */
 const keepFocusOnGame = (e: { target: EventTarget; preventDefault(): void }): void => {
   if ((e.target as HTMLElement).closest?.('button')) e.preventDefault();
 };
 
+function defaultDevice(device: string, touchCapable: boolean): LegendDevice {
+  if (device === 'gamepad') return 'gamepad';
+  if (device === 'touch' || touchCapable) return 'touch';
+  return 'keyboard';
+}
+
+/** The device the instructions are worded for (follows the last device used, like the HUD). */
+function useHintDevice(): HintDevice {
+  const device = useGameStore((s) => s.device);
+  const touchCapable = useGameStore((s) => s.touchCapable);
+  return defaultDevice(device, touchCapable);
+}
+
 /**
- * How to Play: a sidebar beside the live game view. "Watch" plays the chapter's scripted demo in the
- * real engine (captions, pause, replay, chapters); "Practice" hands the controls to the player with
- * passive training dummies and ticks off the goals as the simulation sees them happen.
+ * The Training Academy: a column beside the live game view (the board, HUD and touch controls sit to its
+ * right, so no lesson text ever covers a playable tile). Each lesson shows its objective, plays a brief
+ * demonstration in the real engine, then hands the controls to the player and ticks off each task as the
+ * simulation sees it happen, with gentle tips and unlimited retries.
  */
 export function HowToPlay() {
   const view = useGameStore((s) => s.tutorial);
   const [listOpen, setListOpen] = useState(false);
-  // the player's own show / hide choice, remembered per mode (watch / practice)
-  const [choice, setChoice] = useState<{ mode: TutorialView['mode']; collapsed: boolean } | null>(null);
   if (!view) return null;
-  const chapter = CHAPTERS[view.chapter]!;
-  const first = view.chapter === 0;
-  const last = view.chapter === CHAPTERS.length - 1;
-  // on a short landscape phone a practice starts with the lesson folded away, so the arena gets the room
-  const collapsed =
-    choice && choice.mode === view.mode ? choice.collapsed : view.mode === 'practice' && shortScreen();
-  const setCollapsed = (c: boolean) => setChoice({ mode: view.mode, collapsed: c });
-
-  if (collapsed) {
-    return (
-      <>
-        <aside
-          className="htp-panel collapsed"
-          data-testid="how-to-play"
-          data-mode={view.mode}
-          data-chapter={chapter.id}
-          data-collapsed="true"
-          onMouseDown={keepFocusOnGame}
-        >
-          <button
-            type="button"
-            className="htp-expand"
-            data-testid="htp-expand"
-            aria-label="Show the lesson"
-            onClick={() => setCollapsed(false)}
-          >
-            ☰
-          </button>
-          <span className="htp-mini-num">
-            {view.chapter + 1}/{CHAPTERS.length}
-          </span>
-          {view.practice && (
-            <ul className="htp-mini-checks" aria-label="Practice goals">
-              {view.practice.checks.map((c, i) => (
-                <li
-                  key={c.label}
-                  className={c.done ? 'done' : ''}
-                  title={c.label}
-                  data-testid={`htp-check-${i}`}
-                  data-done={c.done}
-                >
-                  {c.done ? '✓' : '○'}
-                </li>
-              ))}
-              {view.practice.complete && (
-                <li className="done" data-testid="htp-complete" title="Practice complete">
-                  ★
-                </li>
-              )}
-            </ul>
-          )}
-          <button
-            type="button"
-            className="htp-mini-exit"
-            data-testid="htp-exit"
-            aria-label="Exit How to Play"
-            onClick={() => commands.exitTutorial()}
-          >
-            ✕
-          </button>
-        </aside>
-        {view.mode === 'demo' && <Subtitle view={view} />}
-        {view.mode === 'practice' && (view.notice || view.practice) && (
-          <div
-            className={`htp-notice${view.practice?.complete ? ' good' : ''}${view.notice ? '' : ' goal'}`}
-            data-testid="htp-notice"
-            key={`${view.run}-${view.notice ?? 'goal'}`}
-          >
-            {view.notice ?? view.practice?.goal}
-          </div>
-        )}
-      </>
-    );
-  }
-
+  const lesson = LESSONS[view.lesson]!;
+  const course = COURSES.find((c) => c.id === lesson.course)!;
+  const highlight =
+    (view.mode === 'practice' && !view.practice?.complete ? view.practice?.controls : lesson.controls) ?? [];
   return (
     <>
       <aside
         className="htp-panel"
         data-testid="how-to-play"
         data-mode={view.mode}
-        data-chapter={chapter.id}
+        data-lesson={lesson.id}
+        data-highlight={view.mode === 'practice' ? highlight.join(' ') : ''}
         onMouseDown={keepFocusOnGame}
       >
         <header className="htp-head">
           <button
             type="button"
-            className="htp-fold"
-            data-testid="htp-collapse"
-            aria-label="Hide the lesson panel"
-            title="Hide the lesson panel"
-            onClick={() => setCollapsed(true)}
+            className="htp-menu"
+            data-testid="htp-lessons"
+            aria-haspopup="dialog"
+            onClick={() => setListOpen(true)}
           >
-            «
+            ☰ <span>Lessons</span>
           </button>
           <span className="htp-kicker">
-            How to play <b>{view.chapter + 1}</b>/{CHAPTERS.length}
+            <b>{view.lesson + 1}</b>/{LESSONS.length}
           </span>
           <button
             type="button"
             className="htp-exit"
             data-testid="htp-exit"
+            aria-label="Exit the Academy"
             onClick={() => commands.exitTutorial()}
           >
-            ✕ Exit
+            ✕
           </button>
         </header>
-        <div className="htp-nav">
-          <button
-            type="button"
-            className="htp-arrow"
-            aria-label="Previous chapter"
-            data-testid="htp-prev"
-            disabled={first}
-            onClick={() => commands.tutorialPrev()}
-          >
-            ◀
-          </button>
-          <button
-            type="button"
-            className="htp-title"
-            data-testid="htp-chapters"
-            aria-haspopup="dialog"
-            onClick={() => setListOpen(true)}
-          >
-            <h2 data-testid="htp-title">{chapter.title}</h2>
-            <small>All chapters ▾</small>
-          </button>
-          <button
-            type="button"
-            className="htp-arrow"
-            aria-label="Next chapter"
-            data-testid="htp-next"
-            disabled={last}
-            onClick={() => commands.tutorialNext()}
-          >
-            ▶
-          </button>
+        <div className="htp-titles">
+          <small className="htp-course">{course.title}</small>
+          <h2 data-testid="htp-title">{lesson.title}</h2>
         </div>
-        <div className="htp-tabs" role="tablist">
+        <p className="htp-objective" data-testid="htp-objective">
+          <b>Goal</b> {lesson.objective}
+        </p>
+        <div className="htp-tabs" role="tablist" aria-label="Lesson step">
           <button
             type="button"
             role="tab"
@@ -179,46 +94,31 @@ export function HowToPlay() {
             data-testid="htp-watch"
             onClick={() => commands.tutorialWatch()}
           >
-            ▶ Watch
+            ① Watch
           </button>
           <button
             type="button"
             role="tab"
             aria-selected={view.mode === 'practice'}
             data-testid="htp-practice"
-            disabled={!chapter.practice}
-            title={chapter.practice ? 'Try it yourself' : 'Nothing to practise in this lesson: just watch'}
             onClick={() => commands.tutorialPractice()}
           >
-            ✋ Practice
+            ② Your turn
           </button>
         </div>
-        {view.mode === 'demo' ? (
-          <DemoControls view={view} hasPractice={!!chapter.practice} last={last} />
-        ) : (
-          <PracticeBody view={view} last={last} />
-        )}
-        <section className="htp-facts">
-          <h3>Remember</h3>
-          <ul>
-            {chapter.facts.map((f) => (
+        {view.mode === 'demo' ? <DemoBody view={view} /> : <PracticeBody view={view} />}
+        <LessonNav view={view} />
+        <details className="htp-more" open={!shortScreen()}>
+          <summary>Tips & controls</summary>
+          <ul className="htp-facts">
+            {lesson.facts.map((f) => (
               <li key={f}>{f}</li>
             ))}
           </ul>
-        </section>
-        <Legend controls={chapter.controls} />
+          <Legend controls={lesson.controls} />
+        </details>
       </aside>
-      {view.mode === 'demo' && <Subtitle view={view} />}
-      {view.mode === 'practice' && view.notice && (
-        <div
-          className={`htp-notice${view.practice?.complete ? ' good' : ''}`}
-          data-testid="htp-notice"
-          key={`${view.run}-${view.notice}`}
-        >
-          {view.notice}
-        </div>
-      )}
-      {listOpen && <ChapterList current={view.chapter} onClose={() => setListOpen(false)} />}
+      {listOpen && <LessonList view={view} onClose={() => setListOpen(false)} />}
     </>
   );
 }
@@ -231,31 +131,33 @@ function shortScreen(): boolean {
   }
 }
 
-function DemoControls({
-  view,
-  hasPractice,
-  last,
-}: {
-  view: TutorialView;
-  hasPractice: boolean;
-  last: boolean;
-}) {
+function DemoBody({ view }: { view: TutorialView }) {
   const paused = useGameStore((s) => s.paused);
   return (
     <div className="htp-demo">
+      <div
+        className="htp-caption"
+        data-testid="htp-caption"
+        aria-live="polite"
+        key={`${view.run}-${view.beat}`}
+      >
+        {view.step && <b className="htp-step">{view.step}</b>}
+        {view.caption}
+        {paused && <em className="htp-paused">Paused</em>}
+      </div>
       <div className="htp-progress" aria-label={`Part ${view.beat + 1} of ${view.beats}`}>
         {Array.from({ length: view.beats }, (_, i) => (
           <i key={i} className={i < view.beat || view.finished ? 'done' : i === view.beat ? 'on' : ''} />
         ))}
       </div>
-      <div className="htp-transport">
+      <div className="htp-row">
         <button
           type="button"
           className="btn small"
           data-testid="htp-replay"
           onClick={() => commands.tutorialReplay()}
         >
-          ⟲ Replay
+          ⟲ Again
         </button>
         {!view.finished && (
           <button
@@ -268,58 +170,83 @@ function DemoControls({
             {paused ? '▶ Play' : 'II Pause'}
           </button>
         )}
-        {view.finished && !last && (
-          <button
-            type="button"
-            className="btn small primary"
-            data-testid="htp-next-chapter"
-            onClick={() => commands.tutorialNext()}
-          >
-            Next ▶
-          </button>
-        )}
       </div>
-      {hasPractice && (
-        <button
-          type="button"
-          className={`btn small ${view.finished ? 'green' : ''} htp-wide`}
-          data-testid="htp-practice-this"
-          onClick={() => commands.tutorialPractice()}
-        >
-          ✋ Practice this
-        </button>
-      )}
+      <button
+        type="button"
+        className={`btn small htp-wide${view.finished ? ' green' : ''}`}
+        data-testid="htp-try"
+        onClick={() => commands.tutorialPractice()}
+      >
+        {view.finished ? 'Your turn ▶' : 'Skip demo: try it ▶'}
+      </button>
     </div>
   );
 }
 
-function PracticeBody({ view, last }: { view: TutorialView; last: boolean }) {
+function PracticeBody({ view }: { view: TutorialView }) {
   const p = view.practice;
-  const paused = useGameStore((s) => s.paused);
+  const device = useHintDevice();
   useGameStore((s) => s.portraitsVersion);
   if (!p) return null;
+  const rows = legendRows();
+  const instruction = resolveHint(p.instruction, rows, device);
   return (
-    <div className="htp-practice" data-testid="htp-practice-body" data-complete={p.complete}>
-      <p className="htp-goal">{p.goal}</p>
-      <ul className="htp-checks">
-        {p.checks.map((c, i) => (
-          <li
-            key={c.label}
-            className={c.done ? 'done' : ''}
-            data-testid={`htp-check-${i}`}
-            data-done={c.done}
-          >
-            <span aria-hidden>{c.done ? '✓' : '○'}</span>
-            {c.label}
-          </li>
-        ))}
-      </ul>
+    <div
+      className="htp-practice"
+      data-testid="htp-practice-body"
+      data-complete={p.complete}
+      data-failed={p.failed}
+      data-task={p.current}
+    >
       {p.complete ? (
-        <p className="htp-success" data-testid="htp-complete">
-          Practice complete! Keep playing, or move on.
+        <p className="htp-success" data-testid="htp-complete" role="status">
+          ★ Lesson complete! Play on, or go to the next lesson.
         </p>
       ) : (
-        <p className="htp-hint">Tip: {p.hint}</p>
+        <p
+          className="htp-instruction"
+          data-testid="htp-instruction"
+          aria-live="polite"
+          key={`${view.run}-${p.current}`}
+        >
+          <b className="htp-step">
+            Task {p.current + 1} of {p.tasks.length}
+          </b>
+          {instruction}
+        </p>
+      )}
+      {!p.complete && p.guidance && (
+        <p
+          className={`htp-guidance${p.failed ? ' fail' : ''}`}
+          data-testid="htp-guidance"
+          role="status"
+          key={`${view.run}-${p.guidance}`}
+        >
+          {p.guidance}
+        </p>
+      )}
+      {view.notice && !p.failed && (
+        <p className="htp-praise" data-testid="htp-notice" role="status" key={`${view.run}-${view.notice}`}>
+          {view.notice}
+        </p>
+      )}
+      <ol className="htp-tasks" aria-label="Tasks">
+        {p.tasks.map((t, i) => (
+          <li
+            key={t.id}
+            className={t.done ? 'done' : i === p.current ? 'on' : ''}
+            data-testid={`htp-task-${i}`}
+            data-done={t.done}
+          >
+            <span aria-hidden>{t.done ? '✓' : i === p.current ? '▸' : '○'}</span>
+            {t.label}
+          </li>
+        ))}
+      </ol>
+      {p.attempts > 0 && !p.complete && (
+        <p className="htp-attempts" data-testid="htp-attempts">
+          Attempt {p.attempts + 1}. Take your time: retries are unlimited.
+        </p>
       )}
       {p.characterChoice && (
         <div className="htp-chars" role="group" aria-label="Practise with">
@@ -341,10 +268,7 @@ function PracticeBody({ view, last }: { view: TutorialView; last: boolean }) {
           ))}
         </div>
       )}
-      <p className="htp-safe">
-        Training dummies only: they never fight back, and nothing here counts as a match.
-      </p>
-      <div className="htp-transport">
+      <div className="htp-row">
         <button
           type="button"
           className="btn small"
@@ -353,40 +277,64 @@ function PracticeBody({ view, last }: { view: TutorialView; last: boolean }) {
         >
           ⟲ Restart
         </button>
-        <button type="button" className="btn small" onClick={() => commands.togglePause()}>
-          {paused ? '▶ Resume' : 'II Pause'}
-        </button>
-        {!last && (
-          <button
-            type="button"
-            className={`btn small${p.complete ? ' primary' : ''}`}
-            data-testid="htp-next-chapter"
-            onClick={() => commands.tutorialNext()}
-          >
-            Next ▶
-          </button>
-        )}
+        <PauseButton />
       </div>
     </div>
   );
 }
 
-function Subtitle({ view }: { view: TutorialView }) {
+function PauseButton() {
   const paused = useGameStore((s) => s.paused);
   return (
-    <div className="htp-subtitle" data-testid="htp-caption" aria-live="polite" key={view.run}>
-      {view.step && <b className="htp-step">{view.step}</b>}
-      <span key={view.beat}>{view.caption}</span>
-      {paused && <em className="htp-paused">Paused</em>}
-      {view.finished && <em className="htp-paused">End of demo · Replay, practise or go on</em>}
-    </div>
+    <button
+      type="button"
+      className="btn small"
+      data-testid="htp-pause"
+      onClick={() => commands.togglePause()}
+    >
+      {paused ? '▶ Resume' : 'II Pause'}
+    </button>
   );
 }
 
-function defaultDevice(device: string, touchCapable: boolean): LegendDevice {
-  if (device === 'gamepad') return 'gamepad';
-  if (device === 'touch' || touchCapable) return 'touch';
-  return 'keyboard';
+/** Forward only once the lesson is completed or explicitly skipped. */
+function LessonNav({ view }: { view: TutorialView }) {
+  const last = view.lesson === LESSONS.length - 1;
+  return (
+    <div className="htp-row htp-nav">
+      <button
+        type="button"
+        className="btn small"
+        data-testid="htp-prev"
+        disabled={view.lesson === 0}
+        onClick={() => commands.tutorialPrev()}
+      >
+        ◀
+      </button>
+      {view.canAdvance ? (
+        !last && (
+          <button
+            type="button"
+            className="btn small primary htp-grow"
+            data-testid="htp-next"
+            onClick={() => commands.tutorialNext()}
+          >
+            Next lesson ▶
+          </button>
+        )
+      ) : (
+        <button
+          type="button"
+          className="btn small htp-grow"
+          data-testid="htp-skip"
+          title="Skip this lesson (you can come back to it from the lesson list)"
+          onClick={() => commands.tutorialSkip()}
+        >
+          Skip lesson ▷
+        </button>
+      )}
+    </div>
+  );
 }
 
 function Legend({ controls }: { controls: ControlId[] }) {
@@ -394,9 +342,9 @@ function Legend({ controls }: { controls: ControlId[] }) {
   const touchCapable = useGameStore((s) => s.touchCapable);
   const [picked, setPicked] = useState<LegendDevice | null>(null);
   const tab = picked ?? defaultDevice(device, touchCapable);
+  const rows = legendRows();
   return (
     <section className="htp-legend" data-testid="htp-legend" data-device={tab}>
-      <h3>Controls</h3>
       <div className="htp-devices" role="tablist">
         {(['keyboard', 'gamepad', 'touch'] as LegendDevice[]).map((d) => (
           <button
@@ -407,33 +355,30 @@ function Legend({ controls }: { controls: ControlId[] }) {
             data-testid={`htp-device-${d}`}
             onClick={() => setPicked(d)}
           >
-            {{ keyboard: '⌨ Keys', gamepad: '🎮 Pad', touch: '📱 Touch' }[d]}
+            {{ keyboard: 'Keys', gamepad: 'Pad', touch: 'Touch' }[d]}
           </button>
         ))}
       </div>
       {tab === 'touch' && <TouchMap controls={controls} />}
       <dl>
         {controls.map((id) => {
-          const row = ROWS[id];
+          const row = rows[id];
+          const keys = tab === 'keyboard' ? row.keyboard : row.gamepad;
           return (
-            <div key={id} className="htp-row">
+            <div key={id} className="htp-legend-row" data-testid={`htp-legend-${id}`}>
               <dt>{row.label}</dt>
               <dd>
                 {tab === 'touch' ? (
                   row.touch
-                ) : (tab === 'keyboard' ? row.keyboard : row.gamepad).length > 0 ? (
-                  (tab === 'keyboard' ? row.keyboard : row.gamepad).map((k, i) =>
-                    k.startsWith('or ') ? (
-                      <span key={k}> {k}</span>
-                    ) : (
-                      <span key={k}>
-                        {i > 0 && ' '}
-                        <span className="kbd">{k}</span>
-                      </span>
-                    ),
-                  )
+                ) : keys.length > 0 ? (
+                  keys.map((k, i) => (
+                    <span key={k}>
+                      {i > 0 && ' '}
+                      <span className="kbd">{k}</span>
+                    </span>
+                  ))
                 ) : (
-                  <span className="htp-none">no button: use the keyboard or the touch button</span>
+                  <span className="htp-none">not bound on this device</span>
                 )}
               </dd>
             </div>
@@ -444,79 +389,104 @@ function Legend({ controls }: { controls: ControlId[] }) {
   );
 }
 
-/** A small picture of the on-screen controls, laid out like the real ones, lighting the ones this lesson uses. */
+/** A small picture of the on-screen controls: the stick's whole activation area and the two buttons. */
 function TouchMap({ controls }: { controls: ControlId[] }) {
-  const on = (id: ControlId) => (controls.includes(id) ? ' on' : '');
-  const entry = controls.includes('entryChoose');
+  const on = (...ids: ControlId[]) => (ids.some((id) => controls.includes(id)) ? ' on' : '');
   return (
     <div className="htp-touchmap" aria-hidden data-testid="htp-touchmap">
       <div className={`tm-zone${on('move')}`} data-testid="htp-stick">
         <div className="tm-stick">
           <i className="tm-knob" />
         </div>
-        <small>THUMB ANYWHERE HERE</small>
+        <small>THUMB DOWN ANYWHERE HERE</small>
       </div>
-      <div className="tm-top">
-        <span className={`tm-pause${on('pause')}`}>II</span>
-      </div>
-      {entry ? (
-        <div className="tm-entry on">
-          <b>CALL IN THE …</b>
-          <span>LAUNCH</span>
-          <span>BACK</span>
-        </div>
-      ) : null}
       <div className="tm-actions">
-        <span className={`tm-btn bomb${on('place')}`}>GENERATOR</span>
-        <span className={`tm-btn a${on('skill')}`}>SKILL</span>
-        <span className={`tm-btn b${on('action')}`}>CARRY</span>
-        <span className={`tm-btn v${on('vehicle')}`}>KEKE</span>
-        <span className={`tm-btn c${on('detonate')}`}>BOOM!</span>
-        <span className="tm-btn d">DISARM</span>
+        <span className={`tm-btn b${on('special', 'detonate')}`}>
+          B<small>tap: hit / vehicle · hold: boom</small>
+        </span>
+        <span className={`tm-btn a${on('place')}`}>
+          A<small>generator</small>
+        </span>
       </div>
     </div>
   );
 }
 
-function ChapterList({ current, onClose }: { current: number; onClose: () => void }) {
+function LessonList({ view, onClose }: { view: TutorialView; onClose: () => void }) {
   return (
     <div
       className="scrim htp-list-scrim"
       data-testid="htp-list"
       role="dialog"
-      aria-label="Chapters"
+      aria-label="Lessons"
       onClick={onClose}
     >
       <div className="card htp-list" onClick={(e) => e.stopPropagation()} onMouseDown={keepFocusOnGame}>
         <div className="htp-list-head">
-          <h2>Chapters</h2>
-          <button type="button" className="btn small" onClick={onClose}>
+          <h2>Training Academy</h2>
+          <button type="button" className="btn small" data-testid="htp-list-close" onClick={onClose}>
             Close
           </button>
         </div>
-        <ol>
-          {CHAPTERS.map((c, i) => (
-            <li key={c.id}>
-              <button
-                type="button"
-                className={i === current ? 'on' : ''}
-                data-testid={`htp-chapter-${c.id}`}
-                onClick={() => {
-                  onClose();
-                  commands.tutorialWatch(i);
-                }}
-              >
-                <b>{i + 1}</b>
-                <span>
-                  {c.title}
-                  <small>{c.summary}</small>
-                </span>
-                {c.practice && <em title="Has a practice">✋</em>}
-              </button>
-            </li>
-          ))}
-        </ol>
+        <p className="htp-list-note">
+          {view.completed.length} of {LESSONS.length} lessons completed on this device.
+        </p>
+        {COURSES.map((course) => (
+          <section key={course.id} className="htp-course-block">
+            <h3>
+              {course.title} <small>{course.blurb}</small>
+            </h3>
+            <ol>
+              {LESSONS.map((l, i) =>
+                l.course !== course.id ? null : (
+                  <li key={l.id} className={i === view.lesson ? 'on' : ''} data-testid={`htp-lesson-${l.id}`}>
+                    <span className="htp-mark" aria-label={statusOf(view, l.id)}>
+                      {view.completed.includes(l.id) ? '✓' : view.skipped.includes(l.id) ? '↷' : i + 1}
+                    </span>
+                    <span className="htp-lname">
+                      {l.title}
+                      <small>{l.summary}</small>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn small"
+                      data-testid={`htp-watch-${l.id}`}
+                      onClick={() => {
+                        onClose();
+                        commands.tutorialWatch(i);
+                      }}
+                    >
+                      Watch
+                    </button>
+                    <button
+                      type="button"
+                      className="btn small green"
+                      data-testid={`htp-practise-${l.id}`}
+                      onClick={() => {
+                        onClose();
+                        commands.tutorialPractice(i);
+                      }}
+                    >
+                      Practise
+                    </button>
+                  </li>
+                ),
+              )}
+            </ol>
+          </section>
+        ))}
+        <button
+          type="button"
+          className="btn small htp-reset"
+          data-testid="htp-reset"
+          onClick={() => commands.tutorialResetProgress()}
+        >
+          Forget my progress
+        </button>
       </div>
     </div>
   );
 }
+
+const statusOf = (view: TutorialView, id: string): string =>
+  view.completed.includes(id) ? 'completed' : view.skipped.includes(id) ? 'skipped' : 'not done yet';
