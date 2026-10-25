@@ -164,11 +164,11 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
     },
   }),
   rumbleLagosIsland: style({
-    note: 'plastered lock-up stall piers along the aisles, kiosks in the plazas; textile bales (sacks), cartons, kegs',
+    note: 'plastered lock-up stall piers along the aisles, poster-covered precast posts in the plazas; textile bales (sacks), cartons, kegs',
     pillars: ['prop_pillar_market'],
     pillarZones: zones4(41, 31, [
-      { x0: 7, y0: 8, x1: 7, y1: 8, pillars: ['prop_pillar_kiosk'] },
-      { x0: 17, y0: 13, x1: 17, y1: 13, pillars: ['prop_pillar_kiosk'] },
+      { x0: 7, y0: 8, x1: 7, y1: 8, pillars: ['prop_pillar_a'] },
+      { x0: 17, y0: 13, x1: 17, y1: 13, pillars: ['prop_pillar_c'] },
       { x0: 0, y0: 1, x1: 20, y1: 1, pillars: ['prop_pillar_wallstub', 'prop_pillar_b'] },
     ]),
     soft: { prop_soft_sacks: 6, prop_soft_cartons: 4, prop_soft_kegs: 2, prop_soft_crate_b: 1 },

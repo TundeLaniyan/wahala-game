@@ -43,6 +43,7 @@ def _container(name: str, seed: int, lower: int, upper: int, codes: tuple[str, s
 
     def side(el: Elev, sd: int, tone: int, code: str | None, rust: float):
         s = corrugated_panel(el.w, el.h, sd, tone, ribs=11, rust=rust, wear=0.8)
+        s.metal = s.metal * 0.15  # painted boxes: a bare-metal response reads black under the game's low env light
         # top / bottom rails and a salt-bleached upper half
         hline(s, el, 0.04, 0x1e1c1a, 4.0, a=0.85)
         hline(s, el, el.h / el.ppm - 0.06, 0x2a2622, 3.0, a=0.8)
@@ -58,7 +59,7 @@ def _container(name: str, seed: int, lower: int, upper: int, codes: tuple[str, s
 
     def doors(el: Elev, sd: int, tone: int, code: str):
         s = steel_sheet(el.w, el.h, sd, tone=tone, rust=0.7, paint=tone)
-        s.metal = s.metal * 0.5
+        s.metal = s.metal * 0.15
         with s.paint(height=-0.3, rough=0.8) as d:
             d.line([(el.w / 2, el.y(0.03)), (el.w / 2, el.y(el.h / el.ppm - 0.03))], 0x161412, 2.4)  # door split
             for fx in (0.18, 0.38, 0.62, 0.82):  # locking bars
@@ -72,6 +73,7 @@ def _container(name: str, seed: int, lower: int, upper: int, codes: tuple[str, s
 
     def roof(sd: int, tone: int):
         s = steel_sheet(256, 256, sd, tone=tone, rust=0.9, paint=tone)
+        s.metal = s.metal * 0.15
         ys, xs = np.mgrid[0:256, 0:256]
         s.comp(0x1c1a18, ((xs // 32) % 2 == 0) * 0.12)  # roof panel dents
         s.comp(0x6e3a1c, np.clip(noise2(256, 256, sd + 1, fx=5, fy=5) * 1.6 - 0.8, 0, 1) * 0.6)

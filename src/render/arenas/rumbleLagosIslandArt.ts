@@ -31,14 +31,14 @@ const ID = 'rumbleLagosIsland';
 
 export const RUMBLE_LAGOS_ISLAND_LOOK: ArenaLook = {
   // hot hazy afternoon: warm ochre light filtered through dust and cooking smoke
-  sky: 0x9c8a70,
-  fog: { color: 0x8e7c64, near: 18, far: 66 },
-  sun: { color: 0xffd8a8, intensity: 3.5, position: [10, 20, 8] },
-  hemi: { sky: 0xd8c4a4, ground: 0x5c4232, intensity: 1.0 },
-  envIntensity: 0.42,
-  exposure: 1.06,
-  floorTint: 0xc4a488,
-  pillarTint: 0xcab8a4,
+  sky: 0xa8967a,
+  fog: { color: 0x9a8870, near: 20, far: 70 },
+  sun: { color: 0xffdcb0, intensity: 4.3, position: [6, 22, 12] },
+  hemi: { sky: 0xe4d2b4, ground: 0x6c5240, intensity: 1.4 },
+  envIntensity: 0.5,
+  exposure: 1.14,
+  floorTint: 0xd2b49a,
+  pillarTint: 0xe0d0bc,
   softTint: 0xc8b8a6,
   slab: 0x6c5242,
   street: 0x3a2a1f,
@@ -72,7 +72,7 @@ export const RUMBLE_LAGOS_ISLAND_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
       if (at(x, y) !== '.') continue;
       const aisle = at(x, y - 1) === '#' || at(x, y + 1) === '#';
       if (aisle) {
-        g.fillStyle = `rgba(60,40,30,${0.1 + r() * 0.08})`;
+        g.fillStyle = `rgba(60,40,30,${0.05 + r() * 0.05})`;
         g.fillRect(x * T, y * T, T, T);
         rg.fillStyle = 'rgba(150,150,150,0.5)';
         rg.fillRect(x * T, y * T, T, T);

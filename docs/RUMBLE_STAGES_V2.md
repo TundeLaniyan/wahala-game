@@ -132,7 +132,66 @@ open tiles.
 
 ## 3. Bots (headless, `scripts/rumble-stages.ts`, real clock)
 
-BOTS_TABLE
+Standard and Beginner bots mixed (every third seat Beginner), the real rules of each ruleset, no human. Commands:
+`npx tsx scripts/rumble-stages.ts --bots --matches 2 --players 16,32` (Survival), `... --matches 1 --game deathmatch
+--minutes 5`, `... --game team --minutes 5`. ms/tick (bots + simulation) was measured while five other build streams
+shared the 4-core machine (load average 25-38), so it is several times the idle cost; it is only comparable
+between rows of the same run.
+
+**Survival** (3:00 clock, the city closes from 2:00 left). Every match ended on its own with a result before the
+clock; nobody was buried by the closing city except one bot on Lagos Island; stage hazards took 0-2 bots per match.
+
+| Stage | Bots | Seed | Result | Ended at (s) | Crushed | Hazard deaths | ms/tick |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| rumbleOshodi | 16 | 116 | winner 6 | 151 | 0 | 0 | 1.42 |
+| rumbleOshodi | 16 | 133 | winner 6 | 62 | 0 | 0 | 1.70 |
+| rumbleOshodi | 32 | 132 | winner 19 | 105 | 0 | 0 | 1.33 |
+| rumbleOshodi | 32 | 149 | draw | 65 | 0 | 0 | 1.65 |
+| rumbleLagosIsland | 16 | 116 | winner 9 | 114 | 0 | 0 | 0.72 |
+| rumbleLagosIsland | 16 | 133 | winner 3 | 68 | 0 | 0 | 0.80 |
+| rumbleLagosIsland | 32 | 132 | winner 20 | 69 | 0 | 0 | 1.24 |
+| rumbleLagosIsland | 32 | 149 | winner 24 | 77 | 1 | 1 | 1.80 |
+| rumbleOjuelegba | 16 | 116 | winner 9 | 62 | 0 | 1 | 1.04 |
+| rumbleOjuelegba | 16 | 133 | winner 3 | 92 | 0 | 1 | 0.86 |
+| rumbleOjuelegba | 32 | 132 | winner 14 | 40 | 0 | 2 | 2.16 |
+| rumbleOjuelegba | 32 | 149 | draw | 28 | 0 | 0 | 2.39 |
+| rumbleApapa | 16 | 116 | draw | 92 | 0 | 0 | 1.37 |
+| rumbleApapa | 16 | 133 | winner 13 | 153 | 0 | 0 | 0.74 |
+| rumbleApapa | 32 | 132 | winner 12 | 150 | 0 | 0 | 1.02 |
+| rumbleApapa | 32 | 149 | draw | 73 | 0 | 0 | 2.20 |
+| rumbleLekkiNight | 16 | 116 | winner 0 | 155 | 0 | 0 | 0.78 |
+| rumbleLekkiNight | 16 | 133 | winner 9 | 56 | 0 | 0 | 0.85 |
+| rumbleLekkiNight | 32 | 132 | winner 3 | 29 | 0 | 0 | 2.06 |
+| rumbleLekkiNight | 32 | 149 | winner 13 | 152 | 0 | 1 | 0.91 |
+| cityRumble | 16 | 116 | winner 15 | 62 | 0 | 0 | 0.98 |
+| cityRumble | 16 | 133 | winner 3 | 50 | 0 | 0 | 0.75 |
+| cityRumble | 32 | 132 | winner 2 | 54 | 0 | 0 | 1.29 |
+| cityRumble | 32 | 149 | draw | 74 | 0 | 0 | 1.20 |
+
+A draw is a simultaneous final elimination (the last two or three bots caught in the same blast), as on the
+original district. Match length varies a lot by seed on every stage (Ojuelegba's wide roads and pier forest give the
+fastest 32-bot matches, 28-40 s; Apapa and Lekki the longest, up to 2:35).
+
+**Deathmatch** (5:00, respawns, never closes) and **Team Rumble** (5:00, default split = slot parity = west vs
+east, friendly fire off). Every match ran the full clock without a fault.
+
+| Stage | Bots | Deathmatch eliminations | DM top eliminator (slot) | Team eliminations (west - east) |
+| --- | --- | --- | --- | --- |
+| rumbleOshodi | 16 | 145 | 4 | 17 - 19 |
+| rumbleOshodi | 32 | 456 | 18 | 35 - 31 |
+| rumbleLagosIsland | 16 | 124 | 14 | 1 - 2 |
+| rumbleLagosIsland | 32 | 392 | 22 | 7 - 24 |
+| rumbleOjuelegba | 16 | 161 | 3 | 7 - 30 |
+| rumbleOjuelegba | 32 | 454 | 12 | 58 - 71 |
+| rumbleApapa | 16 | 136 | 7 | 22 - 21 |
+| rumbleApapa | 32 | 455 | 22 | 59 - 34 |
+| rumbleLekkiNight | 16 | 141 | 15 | 20 - 25 |
+| rumbleLekkiNight | 32 | 443 | 28 | 55 - 54 |
+
+Observation for stream D / B: with the interim team awareness at this commit, bots fight far less in Team Rumble than
+in Deathmatch on every stage (e.g. Oshodi 16 bots: 145 eliminations in Deathmatch, 36 in Team), and least of all on
+Lagos Island, where the two sides start in mirrored mazes (16 bots: 3 eliminations in five minutes). The stages give
+both sides identical ground; the low contact comes from the bots' team play, which is D's / B's workstream.
 
 ## 4. Screenshots
 

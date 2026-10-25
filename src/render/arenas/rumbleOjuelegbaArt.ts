@@ -49,10 +49,10 @@ export const RUMBLE_OJUELEGBA_LOOK: ArenaLook = {
   // late afternoon: a low amber sun from the west, long hard shadows, brown haze
   sky: 0xa08a6c,
   fog: { color: 0x8a7660, near: 20, far: 70 },
-  sun: { color: 0xffbe80, intensity: 4.0, position: [-16, 15, 7] },
-  hemi: { sky: 0xd0b494, ground: 0x4e3e30, intensity: 0.85 },
-  envIntensity: 0.42,
-  exposure: 1.05,
+  sun: { color: 0xffc488, intensity: 4.3, position: [-16, 17, 9] },
+  hemi: { sky: 0xd8bc9c, ground: 0x5a4838, intensity: 1.1 },
+  envIntensity: 0.46,
+  exposure: 1.12,
   floorTint: 0xb8ac9a,
   pillarTint: 0xc4bcae,
   softTint: 0xc4b6a6,
@@ -130,9 +130,9 @@ export const RUMBLE_OJUELEGBA_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
   const x1 = (DECK_X1 + 1) * T;
   const grad = g.createLinearGradient(x0 - T * 0.8, 0, x1 + T * 0.8, 0);
   grad.addColorStop(0, 'rgba(16,14,12,0)');
-  grad.addColorStop(0.06, 'rgba(16,14,12,0.42)');
-  grad.addColorStop(0.5, 'rgba(16,14,12,0.5)');
-  grad.addColorStop(0.94, 'rgba(16,14,12,0.42)');
+  grad.addColorStop(0.06, 'rgba(16,14,12,0.32)');
+  grad.addColorStop(0.5, 'rgba(16,14,12,0.4)');
+  grad.addColorStop(0.94, 'rgba(16,14,12,0.32)');
   grad.addColorStop(1, 'rgba(16,14,12,0)');
   g.fillStyle = grad;
   g.fillRect(x0 - T * 0.8, 0, x1 - x0 + T * 1.6, h);

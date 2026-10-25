@@ -74,6 +74,8 @@ const run = async (ms) => {
 await page.evaluate((n) => {
   const w = window.__WAHALA__;
   w.controller().frozen = true;
+  // screenshot staging only: the local player keeps spawn protection so the follow camera stays on them
+  w.getState().players[0].protectedUntil = 1e9;
   w.stepTicks(Math.max(0, n - 12));
   w.advance(Math.min(n, 12));
 }, Number(ticks));
