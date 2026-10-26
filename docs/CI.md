@@ -63,9 +63,10 @@ Actions-tab "Run workflow" button only lists workflows present on the default br
 
 ## Documentation-only commits
 
-`scripts/ci/plan.ts` looks for the nearest ancestor commit whose run of this workflow passed the CI gate
-("verified"). If every file changed since then is documentation (`docs/**`, `reference/**`, `README.md`,
-`CLAUDE.md`), the run does the fast checks only (the unit tests read some docs) and skips the browser suite and
+`scripts/ci/plan.ts` looks for the nearest ancestor commit whose run of this workflow **on the same branch**
+passed the CI gate ("verified"). Same branch, so a code change verified on a feature branch still gets a full run,
+and its release, when it lands on the publishing branch. If every file changed since then is documentation
+(`docs/**`, `reference/**`, `README.md`, `CLAUDE.md`), the run does the fast checks only (the unit tests read some docs) and skips the browser suite and
 the deploy. Anything else (code, assets, `public/`, `package*.json`, workflows, scripts, tests, configs), no
 verified ancestor, an API error or a diff too large to list means the full suite. Because only gate-passed
 commits count, a docs commit can never inherit verification from a run that was cancelled, failed or skipped:

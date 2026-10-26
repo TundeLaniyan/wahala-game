@@ -2,13 +2,16 @@
  * CI plan: does this commit need the full Playwright browser suite?
  *
  * The suite is skipped only when every file changed since the nearest *verified* ancestor is documentation
- * (DOC_PATHS). "Verified" means a run of this workflow whose `CI gate` job succeeded on that commit, so a
- * docs-only commit can never inherit verification from a run that was cancelled, failed or never ran the
- * suite: the chain always ends at a commit whose browser suite passed. Anything uncertain (no verified
- * ancestor, an API error, a truncated diff, a forced run) means the full suite. See docs/CI.md.
+ * (DOC_PATHS). "Verified" means a run of this workflow *on the same branch* whose `CI gate` job succeeded on
+ * that commit, so a docs-only commit can never inherit verification from a run that was cancelled, failed or
+ * never ran the suite: the chain always ends at a commit whose browser suite passed. Same branch, so a code
+ * change verified on a feature branch still gets its full run (and so its release) on the publishing branch.
+ * Anything uncertain (no verified ancestor, an API error, a truncated diff, a forced run) means the full
+ * suite. See docs/CI.md.
  *
- * Usage (GitHub Actions): `npx tsx scripts/ci/plan.ts` with GITHUB_TOKEN, GITHUB_REPOSITORY, HEAD_SHA and
- * optionally FORCE_FULL=true. Writes `full`, `reason` and `base` to $GITHUB_OUTPUT.
+ * Usage (GitHub Actions): `node --experimental-strip-types scripts/ci/plan.ts` with GITHUB_TOKEN,
+ * GITHUB_REPOSITORY, HEAD_SHA, BRANCH and optionally FORCE_FULL=true. Writes `full`, `reason` and `base` to
+ * $GITHUB_OUTPUT.
  */
 import { appendFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -68,9 +71,10 @@ async function verified(run: Run): Promise<boolean> {
   return jobs.some((j) => j.name === GATE_JOB && j.conclusion === 'success');
 }
 
-export async function plan(head: string): Promise<Plan> {
+export async function plan(head: string, branch: string): Promise<Plan> {
+  if (!branch) return { full: true, reason: 'branch unknown', base: '' };
   const { workflow_runs: runs } = await api<{ workflow_runs: Run[] }>(
-    `/actions/workflows/ci.yml/runs?status=success&per_page=100`,
+    `/actions/workflows/ci.yml/runs?status=success&per_page=100&branch=${encodeURIComponent(branch)}`,
   );
   const seen = new Set<string>();
   for (const run of runs) {
@@ -90,7 +94,7 @@ export async function plan(head: string): Promise<Plan> {
       files.flatMap((f) => (f.previous_filename ? [f.filename, f.previous_filename] : [f.filename])),
     );
   }
-  return { full: true, reason: 'no verified ancestor found', base: '' };
+  return { full: true, reason: `no verified ancestor on ${branch}`, base: '' };
 }
 
 async function main(): Promise<void> {
@@ -99,7 +103,7 @@ async function main(): Promise<void> {
   if (process.env.FORCE_FULL === 'true') result = { full: true, reason: 'full run requested', base: '' };
   else {
     try {
-      result = await plan(head);
+      result = await plan(head, process.env.BRANCH ?? '');
     } catch (err) {
       result = {
         full: true,
