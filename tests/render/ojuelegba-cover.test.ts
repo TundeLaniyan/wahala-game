@@ -188,9 +188,11 @@ describe('Ojuelegba crates', () => {
     };
     const yard = family(2, 2, 42, 8);
     expect(yard.has('prop_soft_drums')).toBe(true);
-    expect(yard.has('prop_soft_sacks')).toBe(false);
+    expect(yard.has('prop_soft_cartons')).toBe(false);
+    // five families on the whole board (each is its own instanced draw)
+    expect(family(0, 0, 44, 32).size).toBeLessThanOrEqual(5);
     const lane = family(0, 24, 30, 30);
-    expect(lane.has('prop_soft_sacks')).toBe(true);
+    expect(lane.has('prop_soft_cartons')).toBe(true);
     expect(lane.has('prop_soft_drums')).toBe(false);
   });
 });

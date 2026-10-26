@@ -667,9 +667,8 @@ export function buildOjuelegbaCover(board: { width: number; height: number }): B
   const paint = b.own(
     new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.03, flatShading: true }),
   );
-  const metal = b.own(
-    new MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.45, flatShading: true }),
-  );
+  // steel shares the painted material (vertex colours): one draw call fewer per chunk and pass
+  const metal = paint;
   const concrete = b.own(
     new MeshStandardMaterial({
       vertexColors: true,

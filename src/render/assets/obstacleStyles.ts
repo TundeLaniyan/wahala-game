@@ -71,11 +71,12 @@ function tileHash(x: number, y: number): number {
 
 /** Ojuelegba: what a crate is in each district (presentation only; the districts are sim data). */
 const OJUELEGBA_CLUTTER: Readonly<Record<string, readonly string[]>> = {
+  // five breakable families in all (each family is its own instanced draw: kept few for the draw-call budget)
   westApproach: ['prop_soft_tyres', 'prop_soft_barrier', 'prop_soft_tyres', 'prop_soft_crates'],
-  pierCourt: ['prop_soft_cartons', 'prop_soft_kegs', 'prop_soft_tyres', 'prop_soft_cartons'],
-  danfoPark: ['prop_soft_tyres', 'prop_soft_crates', 'prop_soft_kegs', 'prop_soft_tyres'],
-  shopfrontLane: ['prop_soft_sacks', 'prop_soft_cartons', 'prop_soft_kegs', 'prop_soft_crate_b'],
-  serviceLoop: ['prop_soft_drums', 'prop_soft_cabledrum', 'prop_soft_drums', 'prop_soft_crates'],
+  pierCourt: ['prop_soft_cartons', 'prop_soft_tyres', 'prop_soft_cartons', 'prop_soft_crates'],
+  danfoPark: ['prop_soft_tyres', 'prop_soft_crates', 'prop_soft_cartons', 'prop_soft_tyres'],
+  shopfrontLane: ['prop_soft_cartons', 'prop_soft_crates', 'prop_soft_cartons', 'prop_soft_barrier'],
+  serviceLoop: ['prop_soft_drums', 'prop_soft_tyres', 'prop_soft_drums', 'prop_soft_crates'],
 };
 let ojuelegbaLayout: readonly string[] | null = null;
 function ojuelegbaSoft(x: number, y: number): string | undefined {
