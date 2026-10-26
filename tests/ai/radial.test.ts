@@ -27,8 +27,12 @@ const RADIAL = { generator: { blastMode: 'radial' as const, maxRange: 5 } };
 const ALL: Difficulty[] = ['beginner', 'standard', 'expert'];
 
 /** Danfo sandbox (15 x 11) with radial blasts; the bot is player 0, an idle rival is parked at (14, 0). */
-function radialBoard(open = true, players = 2): GameState {
-  const s = sandbox({ players, config: RADIAL });
+function radialBoard(open = true, players = 2, maxSquare?: number): GameState {
+  const config =
+    maxSquare === undefined
+      ? RADIAL
+      : { generator: { ...RADIAL.generator, radialMaxSquareRadius: maxSquare } };
+  const s = sandbox({ players, config });
   if (open) s.tiles = s.tiles.map(() => Tile.Empty);
   put(s, 1, 14, 0);
   return s;
@@ -63,7 +67,8 @@ describe('the danger map is the simulation footprint', () => {
   it('random boards: crates, Petrol, Hot Fuel, Square Blast and chains give exactly previewBlast', () => {
     const rng = createRng(77);
     for (let trial = 0; trial < 40; trial++) {
-      const s = radialBoard(false);
+      // the square cap comes from the config (Rumble economy: 6), never a constant in the bots
+      const s = radialBoard(false, 2, trial % 2 === 0 ? 4 : 6);
       // random crates over the pillar grid, players parked off the board's centre
       for (let t = 0; t < s.tiles.length; t++)
         if (s.tiles[t] === Tile.Empty && nextInt(rng, 100) < 35) s.tiles[t] = Tile.Soft;
@@ -83,7 +88,7 @@ describe('the danger map is the simulation footprint', () => {
           timer: 30,
           range: 1 + nextInt(rng, 5),
           pierce: nextInt(rng, 3) === 0,
-          square: nextInt(rng, 4) === 0 ? 1 + nextInt(rng, 2) : 0,
+          square: nextInt(rng, 3) === 0 ? 1 + nextInt(rng, 3) : 0,
         });
       }
       const want = new Set<number>();
