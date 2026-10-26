@@ -38,6 +38,7 @@ describe('settings repair (invalid saves can never block a match)', () => {
       quality: 'high',
       subtitles: 'large',
       shake: 'off',
+      rumbleBlast: 'cross',
     };
     expect(sanitizeSettings(s)).toEqual(s);
   });
@@ -57,6 +58,7 @@ describe('settings repair (invalid saves can never block a match)', () => {
       touchControls: 'maybe',
       cameraView: 'drone',
       shake: 'max',
+      rumbleBlast: 'square',
       difficulty: 'hard',
       botDifficulties: ['easy', 'god'],
       friendlyFire: 'yes',
@@ -75,6 +77,7 @@ describe('settings repair (invalid saves can never block a match)', () => {
     expect(s.cameraView).toBe('action');
     expect(s.shake).toBe('auto');
     expect(s.friendlyFire).toBe(false);
+    expect(s.rumbleBlast).toBe('radial');
     // legacy level names still migrate to the nearest V2 level
     expect(s.difficulty).toBe('expert');
     expect(s.botDifficulties).toEqual(['beginner', 'expert', 'expert']);

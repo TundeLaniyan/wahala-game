@@ -36,6 +36,11 @@ export function matchRulesText(s: GameSettings): string[] {
       'Green (you) v White: most team eliminations wins',
       s.friendlyFire ? 'Friendly fire: on' : 'Friendly fire: off',
     );
+  rules.push(
+    s.rumbleBlast === 'cross'
+      ? 'Cross blasts (experiment): the Classic plus'
+      : 'Radial blasts: a circle around the generator; walls and crates shadow it',
+  );
   rules.push('Eliminations power you up (crates drop nothing)');
   return rules;
 }

@@ -482,6 +482,12 @@ export interface MatchSettings {
    * are separate and can never be disabled.
    */
   stageHazards: boolean;
+  /**
+   * City Rumble Evolution experiment switch (decision RE-L2): the Rumble blast shape. 'radial' (default) is
+   * the founder's Rumble blast; 'cross' plays the Rumble rulesets with the Classic plus (old reach cap 10)
+   * for side-by-side comparison. Classic always uses the cross and ignores it.
+   */
+  rumbleBlast: 'radial' | 'cross';
 }
 
 export interface GameOptions {

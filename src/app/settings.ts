@@ -51,6 +51,8 @@ export interface GameSettings {
   narration: boolean;
   /** Rumble Evolution: assisted movement (decisions RE-A). Auto = on for touch, the plain corner buffer with keyboard / gamepad. */
   moveAssist: MoveAssistSetting;
+  /** Rumble Evolution experiment (decision RE-L2): City Rumble blast shape, radial (default) or the Classic cross. */
+  rumbleBlast: 'radial' | 'cross';
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
@@ -77,6 +79,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   shake: 'auto',
   narration: true,
   moveAssist: 'auto',
+  rumbleBlast: 'radial',
 };
 
 export const SETTINGS_KEY = 'wahala.settings.v1';
@@ -142,6 +145,7 @@ export function sanitizeSettings(s: GameSettings): GameSettings {
     shake: oneOf(s.shake, ['auto', 'off', 'subtle'] as const, d.shake),
     narration: bool(s.narration, d.narration),
     moveAssist: oneOf(s.moveAssist, MOVE_ASSIST_SETTINGS, d.moveAssist),
+    rumbleBlast: oneOf(s.rumbleBlast, ['radial', 'cross'] as const, d.rumbleBlast),
   };
 }
 

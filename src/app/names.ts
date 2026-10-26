@@ -62,6 +62,7 @@ export function matchRules(settings: GameSettings): Partial<MatchSettings> & { g
     teamCount: 2,
     durationSec: timed ? settings.rumbleMinutes * 60 : null,
     crowdThrows: settings.crowdThrows,
+    rumbleBlast: settings.rumbleBlast,
   };
 }
 
