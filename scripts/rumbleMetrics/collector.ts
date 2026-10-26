@@ -289,6 +289,7 @@ export class MetricsCollector {
   private wasted = 0;
   private burned = 0;
   private readonly aliveTicks: number[];
+  private lastPlayTick = 0;
 
   constructor(
     initial: GameState,
@@ -312,6 +313,10 @@ export class MetricsCollector {
     const playSec = state.match.playTicks / 60;
     for (const e of events) this.onEvent(state, e, playSec);
     if (state.match.phase !== 'playing') return;
+    // one sample per tick of play: the tick that starts play (playTicks still 0) is not a tick of play,
+    // otherwise a fighter alive throughout reads as 1 + 1/playTicks of the match
+    if (state.match.playTicks <= this.lastPlayTick) return;
+    this.lastPlayTick = state.match.playTicks;
     for (const p of state.players)
       if (p.alive) {
         this.fighterTicks++;
