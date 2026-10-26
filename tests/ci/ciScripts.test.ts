@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isDocPath, planFromDiff } from '../../scripts/ci/plan';
 import { entries, problems, summarise } from '../../scripts/ci/report';
 import type { JsonReport } from '../../scripts/ci/report';
+import { balance, listLines, weights } from '../../scripts/ci/shards';
 
 describe('CI plan: when the browser suite may be skipped', () => {
   it('treats only docs/, reference/, README.md and CLAUDE.md as documentation', () => {
@@ -99,5 +100,37 @@ describe('CI report: merged shards against the full test list', () => {
       '[mobile] a.spec.ts:1:3 › group › one',
       '[desktop] a.spec.ts:2:3 › group › two',
     ]);
+  });
+});
+
+const listedForShards = report([
+  spec('one', 1, [
+    { projectName: 'desktop', status: 'skipped', results: 0 },
+    { projectName: 'mobile', status: 'skipped', results: 0 },
+  ]),
+  spec('two', 2, [{ projectName: 'desktop', status: 'skipped', results: 0 }]),
+]);
+
+describe('CI shards: duration-balanced test lists', () => {
+  it('writes one --test-list line per spec x project with the describe path', () => {
+    expect(listLines(listedForShards).map((t) => t.line)).toEqual([
+      '[desktop] › a.spec.ts › group › one',
+      '[mobile] › a.spec.ts › group › one',
+      '[desktop] › a.spec.ts › group › two',
+    ]);
+  });
+
+  it('puts every test in exactly one shard, longest first onto the least-loaded shard', () => {
+    const tests = [10, 1, 7, 3, 3, 2, 9, 1].map((w, i) => ({ line: `t${i}`, weight: w }));
+    const shards = balance(tests, 3);
+    expect(shards.flatMap((s) => s.lines).sort()).toEqual(tests.map((t) => t.line).sort());
+    expect(shards.map((s) => s.weight)).toEqual([12, 12, 12]);
+    // more shards than tests: the extra shards are empty, nothing is lost
+    expect(balance(tests.slice(0, 2), 4).map((s) => s.lines.length)).toEqual([1, 1, 0, 0]);
+  });
+
+  it('weighs a test with no recorded duration as the median', () => {
+    expect(weights(['a', 'b', 'c', 'new'], { a: 10, b: 30, c: 20 })).toEqual([10, 30, 20, 20]);
+    expect(weights(['x'], {})).toEqual([60_000]);
   });
 });

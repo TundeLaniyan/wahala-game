@@ -51,6 +51,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - id: plan
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -65,6 +66,52 @@ jobs:
           echo "shards=$SHARDS" >> "$GITHUB_OUTPUT"
           echo "workers=$WORKERS" >> "$GITHUB_OUTPUT"
           echo "matrix=$(seq -s, 1 "$SHARDS" | sed 's/.*/[&]/')" >> "$GITHUB_OUTPUT"
+      # duration-balanced shards: every listed test in exactly one shard (scripts/ci/shards.ts)
+      - if: steps.plan.outputs.full == 'true'
+        run: npm ci
+      - if: steps.plan.outputs.full == 'true'
+        name: Per-test durations of the last fully passing suite
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=e2e-timings&per_page=10" \
+            --jq '[.artifacts[] | select(.expired | not)][0].workflow_run.id // empty' || true)
+          if [ -n "$run" ] && gh run download "$run" -n e2e-timings -D timings -R "$GITHUB_REPOSITORY"; then
+            echo "durations from run $run"
+          else
+            echo "no recorded durations: every test counts the same"
+          fi
+      - if: steps.plan.outputs.full == 'true'
+        name: Split the suite into shards
+        run: |
+          npx playwright test --list --reporter=json > listed.json
+          timings=timings/e2e-timings.json; [ -f "$timings" ] || timings=-
+          node --experimental-strip-types scripts/ci/shards.ts split listed.json "$timings" "${{ steps.matrix.outputs.shards }}" shard-lists
+      - if: steps.plan.outputs.full == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard-lists
+          path: shard-lists
+          if-no-files-found: error
+          retention-days: 7
+
+  # installs the browser and its system packages once and caches them for the shards (runs beside the checks)
+  browser:
+    name: Browser cache
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: ./.github/actions/playwright-browser
+        with:
+          save: 'true'
 
   quality:
     name: Typecheck and lint
@@ -117,7 +164,7 @@ jobs:
 
   e2e:
     name: E2E shard ${{ matrix.shard }}/${{ needs.plan.outputs.shards }}
-    needs: [plan, quality, unit, build]
+    needs: [plan, quality, unit, build, browser]
     if: needs.plan.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -139,13 +186,19 @@ jobs:
         with:
           name: dist
           path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: shard-lists
+          path: shard-lists
       # the tests run headless, which is the headless shell; the full browser is not needed
-      - run: npx playwright install --with-deps --only-shell chromium
+      - uses: ./.github/actions/playwright-browser
       # software WebGL speed follows the runner's CPU, which varies between runs: keep it in the log
-      - run: echo "$(nproc) CPUs, $(lscpu | sed -n 's/^Model name: *//p'), $(free -g | awk '/Mem:/ {print $2}') GB"
-      # --fully-parallel shards by test instead of by file (every test has its own browser context; no
-      # spec shares state between tests); each shard still runs WAHALA_E2E_WORKERS software-WebGL browsers
-      - run: npx playwright test --shard=${{ matrix.shard }}/${{ needs.plan.outputs.shards }} --fully-parallel
+      - name: Runner
+        run: |
+          echo "$(nproc) CPUs, $(lscpu | sed -n 's/^Model name: *//p'), $(free -g | awk '/Mem:/ {print $2}') GB"
+      # this shard's tests from the plan; --fully-parallel lets a shard's workers share a file (every test
+      # has its own browser context; no spec shares state between tests)
+      - run: npx playwright test --test-list shard-lists/shard-${{ matrix.shard }}.txt --fully-parallel
         timeout-minutes: 45
       - uses: actions/upload-artifact@v4
         if: always()
@@ -186,6 +239,13 @@ jobs:
         run: |
           npx playwright test --list --reporter=json > listed.json
           node --experimental-strip-types scripts/ci/report.ts tests listed.json merged.json
+      # per-test durations of this fully passing suite: the next run's shard plan
+      - run: node --experimental-strip-types scripts/ci/shards.ts timings merged.json e2e-timings.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-timings
+          path: e2e-timings.json
+          retention-days: 30
       - name: Timings
         if: always()
         continue-on-error: true
@@ -197,7 +257,7 @@ jobs:
   # skipped for a documentation-only commit). scripts/ci/plan.ts trusts only commits where this passed.
   gate:
     name: CI gate
-    needs: [plan, quality, unit, build, e2e, e2e-report]
+    needs: [plan, quality, unit, build, browser, e2e, e2e-report]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -209,14 +269,15 @@ jobs:
           QUALITY: ${{ needs.quality.result }}
           UNIT: ${{ needs.unit.result }}
           BUILD: ${{ needs.build.result }}
+          BROWSER: ${{ needs.browser.result }}
           E2E: ${{ needs.e2e.result }}
           REPORT: ${{ needs.e2e-report.result }}
         run: |
-          echo "plan=$PLAN full=$FULL quality=$QUALITY unit=$UNIT build=$BUILD e2e=$E2E report=$REPORT"
+          echo "plan=$PLAN full=$FULL quality=$QUALITY unit=$UNIT build=$BUILD browser=$BROWSER e2e=$E2E report=$REPORT"
           ok=true
           for r in "$PLAN" "$QUALITY" "$UNIT" "$BUILD"; do [ "$r" = success ] || ok=false; done
           if [ "$FULL" = true ]; then
-            [ "$E2E" = success ] && [ "$REPORT" = success ] || ok=false
+            [ "$BROWSER" = success ] && [ "$E2E" = success ] && [ "$REPORT" = success ] || ok=false
           elif [ "$FULL" != false ]; then
             ok=false
           fi
