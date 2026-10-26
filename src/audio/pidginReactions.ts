@@ -8,6 +8,7 @@
  * cooldowns, priorities, line rotation and overlap rules. No game rules live here: it only reads events.
  */
 import { sweepVehicleKind } from '../assets/stagePresentation';
+import { previewBlast } from '../sim';
 import type { GameState, PickupKind, SimEvent } from '../sim';
 import type { StingKind } from './music';
 import type { NearMiss } from './nearMiss';
@@ -46,7 +47,16 @@ export interface ReactionMemory {
 }
 export const newMemory = (): ReactionMemory => ({ fuseCalled: new Set(), final: false });
 
-/** True when the human stands in a generator's blast cross (same row or column, within its range). */
+/**
+ * True when the human stands in a generator's blast: its cross (same row or column, within its range) in
+ * Classic, the real radial footprint (cover included) in City Rumble.
+ */
+function inBlast(state: Readonly<GameState>, g: GameState['generators'][number], p: { x: number; y: number }): boolean {
+  if (state.config.generator.blastMode === 'radial')
+    return previewBlast(state as GameState, g).has(p.y * state.width + p.x);
+  return inBlastCross(g, p);
+}
+
 function inBlastCross(g: { x: number; y: number; range: number }, p: { x: number; y: number }): boolean {
   const dx = Math.abs(g.x - p.x);
   const dy = Math.abs(g.y - p.y);
@@ -75,12 +85,12 @@ export function reactionsFor(
       add(['ON_MATCH_VICTORY'], { delay: 1.2, force: true });
   }
 
-  // --- a generator about to blow with the human in its cross: the urgent spoken warning
+  // --- a generator about to blow with the human in its blast: the urgent spoken warning
   if (me?.alive && state.match.phase === 'playing') {
     for (const g of state.generators) {
       if (g.mode !== 'timed' || g.carriedBy !== null || g.timer > FUSE_WARN_TICKS || mem.fuseCalled.has(g.id))
         continue;
-      if (!inBlastCross(g, me)) continue;
+      if (!inBlast(state, g, me)) continue;
       mem.fuseCalled.add(g.id);
       add(['ON_GENERATOR_CRITICAL_PROXIMITY'], { force: true, key: `fuse${g.id}` }, g.x);
     }
