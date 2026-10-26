@@ -1,47 +1,126 @@
 name: Deploy preview to GitHub Pages
 
-# The playable mobile preview at https://tundelaniyan.github.io/wahala-game/ is published to the
-# `gh-pages` branch. GitHub Pages must be set ONCE by a repository admin: Settings -> Pages -> Build and
-# deployment -> Source "Deploy from a branch", Branch `gh-pages` / `(root)`. See docs/DEPLOYMENT.md. Only
-# this workflow writes gh-pages, so the old main-branch workflow cannot replace the preview.
+# The playable preview at https://tundelaniyan.github.io/wahala-game/ (docs/DEPLOYMENT.md, docs/CI.md).
 #
-# It is called by CI (ci.yml, job `deploy-preview`) only after the full check (typecheck, lint, unit
-# tests, build and the Playwright desktop + phone suite) has passed on a push to the preview branch,
-# so an unverified build is never published. "Run workflow" in the Actions tab republishes on demand.
+# Called only by CI (ci.yml, job `deploy-preview`) after the CI gate passed on this exact commit, with the
+# `dist` artifact that the build job made and every E2E shard tested. It never rebuilds. There is no manual
+# trigger: to republish, run the CI workflow ("Run workflow") on the publishing branch.
+#
+# Release checks (job `prepare`), all of which must hold to publish:
+#   - the run is for PUBLISH_BRANCH (on any other branch this is a dry run that publishes nothing);
+#   - the commit is still the head of PUBLISH_BRANCH (a re-run of an old run cannot publish an old build);
+#   - the live build.json is not a newer commit of PUBLISH_BRANCH (the preview never moves backwards).
+#
+# Publishing follows the repository's Pages source: "Deploy from a branch" (gh-pages) pushes a commit to
+# gh-pages; "GitHub Actions" deploys through the `github-pages` environment, whose deployment-branch rule
+# is what stops other branches' old workflow copies from publishing (see docs/CI.md, "Single publisher").
 on:
   workflow_call:
-  workflow_dispatch:
 
-permissions:
-  contents: write
+env:
+  PUBLISH_BRANCH: claude/wahala-stitch-uiux-v1
 
 jobs:
-  publish:
+  prepare:
+    name: Release checks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: read
+      actions: read
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+      mode: ${{ steps.decide.outputs.mode }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: site
+      - name: Check and stamp the tested build
+        run: |
+          test -s site/index.html
+          grep -q '/wahala-game/' site/index.html # Vite base for the project site
+          cp site/index.html site/404.html # SPA fallback
+          touch site/.nojekyll
+          printf '{"commit":"%s","branch":"%s","run":"%s/%s/actions/runs/%s","built":"%s"}\n' \
+            "$GITHUB_SHA" "$GITHUB_REF_NAME" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" \
+            "$(date -u +%FT%TZ)" > site/build.json
+          cat site/build.json
+          echo "$(find site -type f | wc -l) files, $(du -sh site | cut -f1)"
+      - id: decide
+        name: Decide whether to publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          publish=true
+          pages=$(gh api "repos/$GITHUB_REPOSITORY/pages" 2>/dev/null || echo '{}')
+          build_type=$(echo "$pages" | jq -r '.build_type // "legacy"')
+          site_url=$(echo "$pages" | jq -r '.html_url // empty')
+          echo "Pages: source=$build_type branch=$(echo "$pages" | jq -r '.source.branch // "-"') url=${site_url:--}"
+          gh api "repos/$GITHUB_REPOSITORY/environments" --jq '.environments[] | "environment \(.name): \(.deployment_branch_policy // "any branch")"' || true
+          if [ "$build_type" = workflow ]; then mode=actions; else mode=branch; fi
+
+          if [ "$GITHUB_REF" != "refs/heads/$PUBLISH_BRANCH" ]; then
+            echo "::notice title=Deploy dry run::$GITHUB_REF_NAME is not the publishing branch ($PUBLISH_BRANCH); release checks only, nothing is published"
+            publish=false
+          else
+            head=$(gh api "repos/$GITHUB_REPOSITORY/branches/$PUBLISH_BRANCH" --jq .commit.sha)
+            if [ "$head" != "$GITHUB_SHA" ]; then
+              echo "::notice title=Not published::$PUBLISH_BRANCH has moved on to $head; that commit's own run publishes"
+              publish=false
+            fi
+          fi
+
+          live=$(curl -fsS --max-time 20 "${site_url:-https://tundelaniyan.github.io/wahala-game/}build.json" 2>/dev/null || true)
+          live_commit=$(echo "$live" | jq -r '.commit // empty' 2>/dev/null || true)
+          live_branch=$(echo "$live" | jq -r '.branch // empty' 2>/dev/null || true)
+          echo "Live build: ${live_commit:-unknown} from ${live_branch:-unknown}"
+          if [ -n "$live_commit" ] && [ "$live_commit" != "$GITHUB_SHA" ]; then
+            if [ "$live_branch" = "$PUBLISH_BRANCH" ]; then
+              status=$(gh api "repos/$GITHUB_REPOSITORY/compare/$live_commit...$GITHUB_SHA" --jq .status 2>/dev/null || echo unknown)
+              echo "This commit is '$status' of the live build"
+              if [ "$status" != ahead ] && [ "$publish" = true ]; then
+                echo "::error title=Not published::the live preview ($live_commit) is not an ancestor of $GITHUB_SHA; publishing would move it backwards"
+                exit 1
+              fi
+            else
+              echo "::warning title=Live preview came from another branch::$live_commit from '$live_branch'; this publish replaces it"
+            fi
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish mode=$mode"
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.decide.outputs.publish == 'true'
+        with:
+          path: site
+
+  # Pages source "Deploy from a branch": one commit on gh-pages per release (no force-push).
+  publish-branch:
+    name: Publish (gh-pages branch)
+    needs: prepare
+    if: needs.prepare.outputs.publish == 'true' && needs.prepare.outputs.mode == 'branch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
     concurrency:
       group: pages-preview
-      cancel-in-progress: true
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/download-artifact@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm run test
-      - run: npm run build
-      # SPA fallback; no Jekyll processing; a build stamp the founder can check on the live site
-      - run: |
-          cp dist/index.html dist/404.html
-          touch dist/.nojekyll
-          echo "{\"commit\":\"${GITHUB_SHA}\",\"branch\":\"${GITHUB_REF_NAME}\",\"built\":\"$(date -u +%FT%TZ)\"}" > dist/build.json
-      - name: Publish dist/ to the gh-pages branch
+          name: github-pages
+      - name: Publish the tested build to gh-pages
         env:
           TOKEN: ${{ github.token }}
         run: |
+          mkdir dist && tar -xf artifact.tar -C dist && touch dist/.nojekyll
           REMOTE="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # last check right before the push: a newer commit of the branch publishes itself
+          head=$(git ls-remote "$REMOTE" "refs/heads/$PUBLISH_BRANCH" | cut -f1)
+          if [ "$head" != "$GITHUB_SHA" ]; then echo "::notice::$PUBLISH_BRANCH moved on to $head; not publishing"; exit 0; fi
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git ls-remote --exit-code --heads "$REMOTE" gh-pages >/dev/null; then
@@ -53,5 +132,26 @@ jobs:
           cp -a dist/. site/
           cd site
           git add -A
-          git commit --quiet -m "Preview build of ${GITHUB_SHA}" || echo "nothing changed"
+          git commit --quiet -m "Preview build of ${GITHUB_SHA} (CI run ${GITHUB_RUN_ID})" || echo "nothing changed"
           git push --quiet origin gh-pages
+          echo "Published $(git rev-parse --short HEAD) to gh-pages"
+
+  # Pages source "GitHub Actions": deployed through the protected `github-pages` environment.
+  publish-actions:
+    name: Publish (GitHub Pages environment)
+    needs: prepare
+    if: needs.prepare.outputs.publish == 'true' && needs.prepare.outputs.mode == 'actions'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages-preview
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
