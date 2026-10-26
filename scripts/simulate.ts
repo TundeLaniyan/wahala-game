@@ -31,7 +31,7 @@
 import { performance } from 'node:perf_hooks';
 import { ARENAS, DEFAULT_ARENA_ID, MAX_PLAYERS, MIN_PLAYERS } from '../src/sim';
 import type { Difficulty, GameKind, MatchMode } from '../src/sim';
-import { ENGAGE_NEAR, runMatch } from '../src/ai/headless';
+import { ENGAGE_LATE, ENGAGE_NEAR, runMatch } from '../src/ai/headless';
 
 interface Options {
   matches: number;
@@ -219,6 +219,9 @@ function main(): void {
   let engageSamples = 0;
   let engageNear = 0;
   let engageDist = 0;
+  let lateSamples = 0;
+  let lateNear = 0;
+  let lateDist = 0;
 
   for (let i = 0; i < o.matches; i++) {
     const difficulties = lineup(o, i);
@@ -246,10 +249,18 @@ function main(): void {
       if (seat.placed > 0) seatsPlaced++;
       if (seat.tilesVisited >= 3) seatsMoved++;
       if (seat.kills > 0) seatsKilled++;
-      if (seat.cause) causes[seat.cause.kind] = (causes[seat.cause.kind] ?? 0) + 1;
+      if (seat.cause) {
+        // flames / vehicles split into the seat's own and a rival's (the radial-vs-cross question)
+        const k = seat.cause.kind;
+        const kind = k === 'flame' || k === 'vehicle' ? `${seat.suicide ? 'own' : 'rival'} ${k === 'flame' ? 'blast' : 'vehicle'}` : k;
+        causes[kind] = (causes[kind] ?? 0) + 1;
+      }
       engageSamples += seat.engageSamples;
       engageNear += seat.engageNear;
       engageDist += seat.engageDistSum;
+      lateSamples += seat.lateSamples;
+      lateNear += seat.lateNear;
+      lateDist += seat.lateDistSum;
     }
     matchSeconds += out.ticks / 60;
     if (out.timeout) timeouts++;
@@ -278,12 +289,14 @@ function main(): void {
         const es = out.seats.reduce((a, s) => a + s.engageSamples, 0);
         const en = out.seats.reduce((a, s) => a + s.engageNear, 0);
         const ed = out.seats.reduce((a, s) => a + s.engageDistSum, 0);
+        const ls = out.seats.reduce((a, s) => a + s.lateSamples, 0);
+        const ln = out.seats.reduce((a, s) => a + s.lateNear, 0);
         const ms = out.tickMs.reduce((a, b) => a + b, 0) / Math.max(1, out.tickMs.length);
         const kills = out.seats.reduce((a, s) => a + s.kills, 0);
         console.log(
           `seed ${o.seed + i} -> ${o.game === 'classic' || o.game === 'survival' ? w : out.draw ? 'draw/tie' : `#${out.winner}`} after ${(out.ticks / 60).toFixed(0)}s | ` +
             `eliminations ${dead}, own blast ${own}, credited kills ${kills} | opponent within ${ENGAGE_NEAR} ${pct(en, es).trim()} | ` +
-            `mean nearest ${(ed / Math.max(1, es)).toFixed(1)} | ${ms.toFixed(2)} ms/tick`,
+            `mean nearest ${(ed / Math.max(1, es)).toFixed(1)} | last ${ENGAGE_LATE}: within ${ENGAGE_NEAR} ${pct(ln, ls).trim()} | ${ms.toFixed(2)} ms/tick`,
         );
       } else {
         console.log(
@@ -336,7 +349,8 @@ function main(): void {
   );
   console.log(
     `engagement: an opponent within ${ENGAGE_NEAR} tiles in ${pct(engageNear, engageSamples).trim()} of alive samples, ` +
-      `mean distance to the nearest opponent ${(engageDist / Math.max(1, engageSamples)).toFixed(1)} tiles`,
+      `mean distance to the nearest opponent ${(engageDist / Math.max(1, engageSamples)).toFixed(1)} tiles; ` +
+      `with ${ENGAGE_LATE} or fewer left: within ${ENGAGE_NEAR} ${pct(lateNear, lateSamples).trim()}, mean ${(lateDist / Math.max(1, lateSamples)).toFixed(1)} tiles`,
   );
   console.log(
     `eliminations by cause: ${Object.entries(causes)

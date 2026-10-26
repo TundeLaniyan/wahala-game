@@ -57,11 +57,16 @@ export interface SeatResult {
   engageSamples: number;
   engageNear: number;
   engageDistSum: number;
+  /** The same, counted only while at most ENGAGE_LATE fighters were left (the endgame, where camping shows). */
+  lateSamples: number;
+  lateNear: number;
+  lateDistSum: number;
 }
 
 /** Engagement proxy sampling period (ticks) and "an opponent is close" distance (tiles). */
 export const ENGAGE_EVERY = 15;
 export const ENGAGE_NEAR = 6;
+export const ENGAGE_LATE = 6;
 
 export interface MatchOutcome {
   seed: number;
@@ -110,7 +115,7 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
   const kills = state.players.map(() => 0);
   const tickMs: number[] = [];
   const survivorsAt: number[] = [];
-  const engage = state.players.map(() => ({ samples: 0, near: 0, dist: 0 }));
+  const engage = state.players.map(() => ({ samples: 0, near: 0, dist: 0, late: 0, lateNear: 0, lateDist: 0 }));
   let alive = n;
   const stopAt = spec.maxPlayTicks ?? Infinity;
   while (state.match.phase !== 'ended' && state.tick < cap && state.match.playTicks < stopAt) {
@@ -187,6 +192,9 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
         engageSamples: engage[i]!.samples,
         engageNear: engage[i]!.near,
         engageDistSum: engage[i]!.dist,
+        lateSamples: engage[i]!.late,
+        lateNear: engage[i]!.lateNear,
+        lateDistSum: engage[i]!.lateDist,
       };
     }),
     decideMs,
@@ -199,8 +207,10 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
 /** One engagement sample per living seat: distance to the nearest living opponent (teammates excluded). */
 function sampleEngagement(
   state: ReturnType<typeof createGame>,
-  engage: { samples: number; near: number; dist: number }[],
+  engage: { samples: number; near: number; dist: number; late: number; lateNear: number; lateDist: number }[],
 ): void {
+  let living = 0;
+  for (const p of state.players) if (p.alive) living++;
   for (const p of state.players) {
     if (!p.alive) continue;
     let best = Infinity;
@@ -213,5 +223,10 @@ function sampleEngagement(
     e.samples++;
     e.dist += best;
     if (best <= ENGAGE_NEAR) e.near++;
+    if (living <= ENGAGE_LATE) {
+      e.late++;
+      e.lateDist += best;
+      if (best <= ENGAGE_NEAR) e.lateNear++;
+    }
   }
 }
