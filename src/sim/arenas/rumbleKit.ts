@@ -182,6 +182,123 @@ export function pairedSpawns(
 }
 
 /**
+ * City Rumble Evolution: a spawn's way out of its own first radial blast. Rumble blasts are discs
+ * (`dx^2 + dy^2 <= R^2 + R`, base R 2 = every tile within sqrt 6); the corner L and the aisle L both end
+ * inside that disc. This clearance keeps three steps straight on (to dx 3, outside the disc) and the turn
+ * two along / two across (dx 2, dy 2, outside too) free of crates.
+ */
+export const RADIAL_CLEARANCE: TilePos[] = [
+  { x: 0, y: 0 },
+  { x: 1, y: 0 },
+  { x: 2, y: 0 },
+  { x: 3, y: 0 },
+  { x: 2, y: 1 },
+  { x: 2, y: 2 },
+];
+
+/**
+ * `count` spawns (even) for a NON-mirrored stage, alternating halves: slot 0 is the candidate nearest
+ * `start` on the west half (the human), then odd slots come from the east half and even slots from the
+ * west half, each the candidate farthest (Manhattan) from every spawn chosen so far. So any even prefix is
+ * half west / half east (Team Rumble's west-versus-east split is balanced by count for every competitor
+ * count) and evenly spread. Candidates are `spawnCandidates` (open '.' floor with the clearance free, never
+ * on the centre lines, never on `avoid`). Ties break on scan order (row-major), so the list is stable.
+ */
+export function balancedSpawns(
+  rows: readonly string[],
+  count: number,
+  start: TilePos,
+  clearance: readonly TilePos[] = RUMBLE_CLEARANCE,
+  avoid: readonly (readonly [number, number])[] = [],
+): TilePos[] {
+  const W = rows[0]!.length;
+  const cand = spawnCandidates(rows, clearance, new Set(avoid.map(([x, y]) => `${x},${y}`)));
+  const west = cand.filter((c) => c.x < W / 2);
+  const east = cand.filter((c) => c.x > W / 2);
+  if (west.length === 0 || east.length === 0) throw new Error('no spawn fits one half of the layout');
+  const d = (a: TilePos, b: TilePos): number => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+  const first = west.reduce((best, c) => (d(c, start) < d(best, start) ? c : best));
+  const chosen: TilePos[] = [first];
+  const used = new Set([`${first.x},${first.y}`]);
+  while (chosen.length < count) {
+    const pool = chosen.length % 2 === 1 ? east : west;
+    let best: TilePos | null = null;
+    let bestD = -1;
+    for (const c of pool) {
+      if (used.has(`${c.x},${c.y}`)) continue;
+      let m = Infinity;
+      for (const s of chosen) m = Math.min(m, d(c, s));
+      if (m > bestD) {
+        bestD = m;
+        best = c;
+      }
+    }
+    if (!best) throw new Error(`only ${chosen.length} spawns fit`);
+    chosen.push(best);
+    used.add(`${best.x},${best.y}`);
+  }
+  return chosen;
+}
+
+/** Trap rows from explicit marks, NOT mirrored (non-mirrored stages). 'o' pothole, '~' oil. */
+export function trapGrid(
+  marks: readonly (readonly [number, number, 'o' | '~'])[],
+  cols: number,
+  rows: number,
+): string[] {
+  const grid = Array.from({ length: rows }, () => '.'.repeat(cols).split(''));
+  for (const [x, y, c] of marks) grid[y]![x] = c;
+  return grid.map((r) => r.join(''));
+}
+
+/**
+ * The open tiles either side of a border: every tile of the rectangle (x0, y0)-(x1, y1) that is open and
+ * whose neighbour at (dx, dy) is open too, plus that neighbour (deduplicated). E.g. the crossing tiles of a
+ * wide district border for `DistrictLink.tiles`.
+ */
+export function crossings(
+  rows: readonly string[],
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  dx: number,
+  dy: number,
+): [number, number][] {
+  const open = (x: number, y: number): boolean => (rows[y]?.[x] ?? '#') !== '#';
+  const seen = new Set<string>();
+  const out: [number, number][] = [];
+  const add = (x: number, y: number): void => {
+    if (seen.has(`${x},${y}`)) return;
+    seen.add(`${x},${y}`);
+    out.push([x, y]);
+  };
+  for (const [x, y] of rect(x0, y0, x1, y1))
+    if (open(x, y) && open(x + dx, y + dy)) {
+      add(x, y);
+      add(x + dx, y + dy);
+    }
+  return out;
+}
+
+/** Tiles within `radius` steps (Manhattan) of any of `tiles`, e.g. to keep spawns away from supply crates. */
+export function around(tiles: readonly (readonly [number, number])[], radius: number): [number, number][] {
+  const out: [number, number][] = [];
+  for (const [x, y] of tiles)
+    for (let dy = -radius; dy <= radius; dy++)
+      for (let dx = -radius; dx <= radius; dx++)
+        if (Math.abs(dx) + Math.abs(dy) <= radius) out.push([x + dx, y + dy]);
+  return out;
+}
+
+/** Every tile of the layout holding `char`, row-major. */
+export function tilesOf(rows: readonly string[], char: string): [number, number][] {
+  const out: [number, number][] = [];
+  rows.forEach((row, y) => [...row].forEach((c, x) => c === char && out.push([x, y])));
+  return out;
+}
+
+/**
  * The shared City Rumble V2 rules: a three-minute Survival clock, the city closing ring by ring from
  * 2:00 left around a core that never closes (reached by 0:30, where the mandatory trap waves land),
  * and up to two lethal stage events at once (the board is ~8x a standard arena; one at a time left
