@@ -17,7 +17,9 @@ balance, visual or menu change. Full description, admin steps and measured runs:
 | Touch flake | The B-hold test hung 15 min when the next frame removed B (the blast also eliminates the holder) before the test's separate `pointerup`; release now in the same page task. Same path was a real phone bug (a finger on B when B leaves the HUD jammed B after a respawn): `SpecialButton` releases held fingers on unmount; e2e regression test | e2e regression test fails before / passes after; runs 106-108 |
 
 Measured (same time of day, 15:00-17:00 UTC): old single job ~2 h at that hour (runs 99-100: 93-125 min; 63 min only
-at 01:00 UTC); new pipeline 22 min (run 106, 8 x 1) and 19 min (run 107, 8 x 2) from push to the deploy decision.
+at 01:00 UTC); new pipeline 20-22 min (runs 106 and 110, 8 x 1) from push to the deploy decision. Integrated into
+`claude/wahala-stitch-uiux-v1` by fast-forward (`408fb4d..a5619db`): CI run 111 passed 130/130 (0 flaky) and published
+`a5619db` to gh-pages (`779d572`) 24 minutes after the push.
 Remaining bottleneck: software-WebGL speed differs up to 2-3x between runners, so the slowest of 8 shards decides.
 **Not done (needs a repository admin):** Pages source "GitHub Actions" + a `github-pages` environment branch rule
 for `claude/wahala-stitch-uiux-v1` only, which is what stops the old branches' workflow copies from publishing

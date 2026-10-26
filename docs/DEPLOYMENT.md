@@ -36,7 +36,9 @@ only `contents: write`.
 
 ## Pages setting (admin)
 
-Current: Source "Deploy from a branch", Branch `gh-pages` / `(root)` (set once; the site is live). The
+Current: Source "Deploy from a branch", Branch `gh-pages` / `(root)` (set once; the site is live); the
+`github-pages` environment allows deployments only from `gh-pages`. Last publish: `a5619db` (CI run 111,
+gh-pages `779d572`, 2026-10-26). The
 recommended change to Source "GitHub Actions" with a branch-restricted `github-pages` environment is described
 step by step in `docs/CI.md`; the workflow detects the source by itself, and the URL stays the same.
 

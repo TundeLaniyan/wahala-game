@@ -106,12 +106,17 @@ The enforceable fix is a repository setting (needs a repository admin; a workflo
 1. **Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".** From then on the site is whatever the
    last Pages *deployment* was; pushes to the `gh-pages` branch (all the old workflows) no longer change it.
 2. **Settings -> Environments -> `github-pages` -> Deployment branches and tags: "Selected branches and tags",
-   add exactly `claude/wahala-stitch-uiux-v1`** (remove any other rule). GitHub then refuses a Pages deployment
+   add exactly `claude/wahala-stitch-uiux-v1`** and remove the existing `gh-pages` rule (today the environment
+   allows only `gh-pages`, the legacy branch build; the `Release checks` log prints the rule on every run). GitHub then refuses a Pages deployment
    from any other branch, whatever that branch's workflow says. The old `main`-style workflows that use
    `deploy-pages` are refused the same way.
 3. **Actions -> CI -> Run workflow** on `claude/wahala-stitch-uiux-v1`. The `Release checks` job reads the Pages
    source, takes the "GitHub Actions" path and deploys through the protected environment; the site URL does not
    change. Check `https://tundelaniyan.github.io/wahala-game/build.json` afterwards.
+
+Any branch cut from the Stitch branch before the new pipeline (for example `claude/wahala-rumble-evolution-v1`,
+from `408fb4d`) still carries the old `deploy.yml` with a manual trigger: integrate it into the Stitch branch by
+merging the Stitch branch into it first and keeping the new `.github/` files.
 
 To move the preview to another branch later, change `PUBLISH_BRANCH` in `deploy.yml` and the environment's branch
 rule together. Until steps 1-2 are done, do not push to the four branches above.
@@ -139,5 +144,12 @@ release checks (the deploy decision); for the old pipeline, push to the end of i
 | [#105](https://github.com/TundeLaniyan/wahala-game/actions/runs/40356611492) (16:11 UTC) | 4 shards, cached browser, no timings yet | 128: 104 passed, 24 skipped, 0 flaky | 39 min | 35 min |
 | [#106](https://github.com/TundeLaniyan/wahala-game/actions/runs/40362899002) (16:49 UTC) | **8 balanced shards x 1 worker** | 130: 105 passed, 25 skipped, 0 flaky | **22 min** | 18 min |
 | [#107](https://github.com/TundeLaniyan/wahala-game/actions/runs/40362928688) (16:50 UTC) | 8 balanced shards x 2 workers | 130: 105 passed, 25 skipped, 0 flaky | 19 min | 15 min |
+| [#108](https://github.com/TundeLaniyan/wahala-game/actions/runs/40366405992) (17:12 UTC) | 8 x 1 + a deliberately failing canary test | 132: 105 passed, 2 failed (the canary, both projects), 25 skipped | 21 min, **gate failed, deploy skipped** | 18 min |
+| [#109](https://github.com/TundeLaniyan/wahala-game/actions/runs/40369801089) (17:33 UTC) | documentation-only commit | fast checks only | 2.5 min, no deploy | - |
+| [#110](https://github.com/TundeLaniyan/wahala-game/actions/runs/40370402769) (17:37 UTC) | 8 x 1, final output-branch check | 130: 105 passed, 25 skipped, 0 flaky | 20.5 min | 17.6 min |
+| [#111](https://github.com/TundeLaniyan/wahala-game/actions/runs/40373645016) (17:58 UTC) | 8 x 1 on `claude/wahala-stitch-uiux-v1`, **published** | 130: 105 passed, 25 skipped, 0 flaky | **24 min to the gh-pages publish** | - |
+
+Cancelled run: [#102](https://github.com/TundeLaniyan/wahala-game/actions/runs/40348941662) was superseded mid-shards by
+a newer push: shards cancelled, gate failed, deploy skipped.
 
 (130 = the 128 tests plus the new B-button regression test on both projects; its desktop copy is skipped by design.)
