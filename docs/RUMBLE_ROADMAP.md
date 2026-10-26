@@ -20,26 +20,36 @@ how the systems built in V1 carry the next arenas and a single-player campaign w
 Rules stay generic: an arena never gets an `if (arenaId === ...)` in rules code; its differences are config overrides
 and data.
 
-## 2. The five remaining environments (in suggested order)
+## 2. The five remaining environments (order from the research pack)
 
-Each is a separate arena with its own districts, built and reviewed like Ojuelegba (layout + tests first, then
-presentation, then bots and performance). The current V2 stages for Oshodi, Lagos Island, Apapa and Lekki stay
-playable until their multi-district successors replace them in place (same id, music and menu card).
+Each is a separate arena with its own districts, built and reviewed like Ojuelegba: greybox layout + district tests
+first, then readability on the smallest phone, then one signalled hazard, then presentation, bots and performance.
+The current V2 stages for Oshodi, Lagos Island, Apapa and Lekki stay playable until their multi-district successors
+replace them in place (same id, music and menu card). District plans below are the primary research's fictional
+compositions (`RUMBLE_RESEARCH_DIGEST.md` section 3); every link list is "always open" unless marked as a breach.
 
-1. **Oshodi Interchange** (successor of `rumbleOshodi`). Districts: the BRT corridor under the expressway, the
-   bus-park blocks, the market under the bridge, the footbridge approaches, the slip road. Hazards: the existing long
-   traffic routes plus a BRT bus departure. Identity: midday glare, exhaust haze. Watch: long open lanes favour the
-   radial blast less than corners do - add breach barriers across the widest lanes.
-2. **Lagos Island Markets** (successor of `rumbleLagosIsland`). Districts: stall corridors, two plazas, the textile
-   arcade, the waterside loading street, the central market square kept as open `_` ground. Hazards: falling goods, cart pushes. Watch: corridors are radial-blast
-   death traps - measure self-eliminations and widen where bots and humans die to their own blasts.
-3. **Apapa Docks** (successor of `rumbleApapa`). Districts: container stacks, the quay apron, the transit sheds, the
-   truck holding road, the gate. Hazards: crane drops, truck sweeps. Opportunity: stacked containers as two-tile
-   permanent cover with breachable container doors (`x`).
-4. **Lekki Roadworks** (successor of `rumbleLekkiNight`). Districts: the dug-out site, scaffold mazes, the haul road,
-   the site compound, the finished carriageway. Hazards: debris strikes, excavator zones. Night light pockets carry
-   readability: the env budget must keep the work lamps on `q=low`.
-5. **Surulere Stadium District** (new arena, `rumbleSurulere`). See section 3: these requirements are locked.
+1. **Lagos Island Markets** (successor of `rumbleLagosIsland`; the research's second systems test: destruction that
+   reorganises a route network). Districts: textile street, Idumota-style junction (the exposed vehicle crossing
+   with two refuge pockets), wholesale loading court, covered shopping passage (foot-only), quieter neighbourhood
+   edge. Links A-B, B-C, C-E, E-A, A-D, D-C; breach D-E through a shuttered empty stock passage; the outer loop
+   survives every break state. Cultural review before art lock: no route through palace grounds or a mosque, Eyo
+   never an enemy / costume / destructible, no fire hazard modelled on a real market fire. Watch: corridors are
+   radial-blast death traps - measure self-eliminations and widen where fighters die to their own blasts.
+2. **Apapa Docks** (successor of `rumbleApapa`). Districts: gate and inspection apron, container canyon (two unequal
+   blocks), L-shaped warehouse apron, crane transfer court, quayside service walk. Links A-B, B-D, D-C, C-A, C-E, E-B;
+   breach A-D via marked empty packing crates; containers are permanent architecture. Hazards: a terminal-tractor
+   crossing first, then a fictional marked container lowering into an EMPTY slot (delayed while occupied) - the
+   only place the container idea is allowed. Attack vehicles only on the wide gate-canyon-court-warehouse loop.
+3. **Oshodi Interchange** (successor of `rumbleOshodi`). Districts: terminal forecourt, bus loading apron, concourse
+   spine (contiguous ticket-booth islands), transfer street (the strongest vehicle corridor), service court. Links
+   A-C, A-D, C-B, B-D, C-E, E-A; breach E-B through a pallet barrier. Hazard: a bus departure lane after amber lights,
+   never moving while its warning is hidden behind a parked bus. The skywalk is a cutaway landmark, not a layer.
+4. **Surulere Stadium District** (new arena, `rumbleSurulere`). See section 3: these requirements are locked.
+5. **Lekki Roadworks** (successor of `rumbleLekkiNight`; the specialised night / traffic stage once warning
+   readability is proven in daylight). Districts: contraflow carriageway, excavated work strip with visible plate
+   crossings, materials yard, frontage service lane, junction crossover. Links A-E, E-D, D-B, B-A, D-C, C-E; breach
+   B-C through yard hoarding. Hazard: a slow roller on one marked lane; trenches are permanent visible no-go
+   footprints. The env budget must keep the work lamps on `q=low`.
 
 ## 3. Surulere Stadium District - founder lock (future milestone)
 
@@ -57,6 +67,9 @@ and an exterior stadium backdrop is not an acceptable substitute. Mandatory:
 - **Distinct combat zones inside and outside**, interconnected so stadium combat and street combat happen in the same
   match; spawns spread over both.
 - **No repetitive checkerboard layout** anywhere.
+- The research's lighter option (a stadium bowl as non-playable backdrop with a gate plaza, merchandise lane,
+  community court and service crescent outside) is overruled by the founder: those exterior districts are welcome
+  as the surrounding streets, but the pitch and stands must be playable ground too.
 - Engineering notes: the bowl needs occlusion handling (stand roofs fade near the followed fighter); the survival
   core should be the pitch centre; crowd zones in the upper stands are protected off-board-equivalent areas
   (non-walkable `#` tiles drawn as seating), so NPC fans can react to blasts without ever being sim entities.
