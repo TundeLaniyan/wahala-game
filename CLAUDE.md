@@ -5,6 +5,11 @@ Browser-only, offline, single-player (1 human vs 1-3 bots) Nigerian-inspired Bom
 ## Commands
 `npm run dev` | `npm run check` (typecheck + lint + vitest + build) | `npm test` | `npm run test:e2e` (Playwright; set `WAHALA_CHROMIUM=/opt/pw-browsers/chromium` offline) | `npm run simulate -- --matches 200` (bot batches). Debug URL flags: `?debug` (window.__WAHALA__), `?fps`, `?q=low|medium|high`, `?seed=N`, `?nobots`.
 
+## CI and releases (docs/CI.md)
+- CI: plan + parallel fast checks (typecheck/lint, Vitest, one `vite build`) -> Playwright shards on separate runners (`--shard=i/N --fully-parallel`, 1 worker each, serving that build) -> merged report (`scripts/ci/report.ts` fails unless every listed test ran exactly once) -> `CI gate` -> deploy. Fix slow or hanging tests at the cause; do not raise the shard timeouts or reintroduce a single long E2E job.
+- Only `.github/workflows/deploy.yml`, called by CI after the gate, publishes the Pages preview, and only from its `PUBLISH_BRANCH` with the tested `dist` artifact. Never add another publishing workflow, a manual deploy trigger or a rebuild in deploy. Old feature branches still carry publishing workflow copies: do not push to them (docs/CI.md, "Single publisher").
+- Documentation-only commits (`docs/`, `reference/`, `README.md`, `CLAUDE.md`) skip the browser suite and the deploy (`scripts/ci/plan.ts`); do not push commits just to record that CI passed.
+
 ## Non-negotiable rules
 - Stack: TypeScript strict, Vite, Three.js, React + Zustand (UI only), Vitest, Playwright. No backend, DB, auth or sockets.
 - `src/sim` is pure and deterministic: no DOM, Three, React, `Math.random`, `Date.now`. Time = ticks (60/s). Randomness = seeded `rng.ts`. ESLint enforces this. `src/ai` may import only `src/sim`.
