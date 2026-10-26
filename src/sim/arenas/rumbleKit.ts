@@ -14,7 +14,10 @@ import { CORNER_CLEARANCE } from './build';
 
 /**
  * Full layout rows from a quadrant: `quadrant` holds rows 0..ceil(H/2)-1, each ceil(W/2) wide (the last
- * column / row is the board's centre line). Throws on a malformed quadrant (authoring error).
+ * column / row is the board's centre line). Throws on a malformed quadrant (authoring error). Besides
+ * `# = .` a quadrant may use the Rumble Evolution cover marks (docs/RUMBLE_EVOLUTION.md): `_` floor kept
+ * clear of random crates, `x` authored barrier crate, `$` marked supply crate - each mirrored with the rest
+ * (a mark on the centre line stays one tile; elsewhere it appears four times).
  */
 export function mirrorQuadrant(quadrant: readonly string[], cols: number, rows: number): string[] {
   const qw = Math.ceil(cols / 2);
@@ -22,7 +25,7 @@ export function mirrorQuadrant(quadrant: readonly string[], cols: number, rows: 
   if (quadrant.length !== qh) throw new Error(`quadrant needs ${qh} rows, has ${quadrant.length}`);
   quadrant.forEach((r, y) => {
     if (r.length !== qw) throw new Error(`quadrant row ${y} needs ${qw} tiles, has ${r.length}: "${r}"`);
-    if (!/^[#=.]+$/.test(r)) throw new Error(`quadrant row ${y} has a tile other than # = .`);
+    if (!/^[#=._x$]+$/.test(r)) throw new Error(`quadrant row ${y} has a tile other than # = . _ x $`);
   });
   const out: string[] = [];
   for (let y = 0; y < rows; y++) {

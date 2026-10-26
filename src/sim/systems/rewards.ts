@@ -18,6 +18,7 @@
  */
 import type { GameConfig, RewardKind } from '../config';
 import type { GameState, PickupKind, Player, SimEvent } from '../types';
+import { radialRadius, radialSquareRadius } from './blastShape';
 import { applyPickup } from './pickups';
 
 /** The ladder rung for the `streak`-th elimination of a life (1-based). Empty for 0 / no ladder. */
@@ -49,11 +50,24 @@ export function rewardUseful(config: GameConfig, p: Readonly<Player>, kind: Pick
     case 'bombpass':
       return p.contact === null;
     case 'killswitch':
-      return p.contact === null || (p.contact === 'disarm' && p.killSwitchCharges < config.pickups.maxKillSwitchCharges);
+      return (
+        p.contact === null ||
+        (p.contact === 'disarm' && p.killSwitchCharges < config.pickups.maxKillSwitchCharges)
+      );
     case 'armour':
       return p.armour < config.protection.maxArmour;
     case 'square':
-      return p.squareTier < config.square.maxTier;
+      if (p.squareTier >= config.square.maxTier) return false;
+      // radial blasts (decision RE-C4): a tier that would not change the footprint (the square is already as
+      // wide as the cap allows) is a wasted reward, so it falls back to something that does help
+      if (g.blastMode === 'radial' && p.squareTier > 0) {
+        const r = radialRadius(p.range, g.maxRange);
+        return (
+          radialSquareRadius(r, p.squareTier + 1, g.radialMaxSquareRadius) >
+          radialSquareRadius(r, p.squareTier, g.radialMaxSquareRadius)
+        );
+      }
+      return true;
     case 'remote':
       return !p.remote;
     case 'sneakers':
@@ -121,7 +135,10 @@ function simulateGrant(config: GameConfig, p: Player, kind: PickupKind): void {
       break;
     case 'killswitch':
       p.contact = 'disarm';
-      p.killSwitchCharges = Math.min(config.pickups.maxKillSwitchCharges, p.killSwitchCharges + config.pickups.killSwitchCharges);
+      p.killSwitchCharges = Math.min(
+        config.pickups.maxKillSwitchCharges,
+        p.killSwitchCharges + config.pickups.killSwitchCharges,
+      );
       break;
     case 'armour':
       p.armour++;
@@ -160,7 +177,8 @@ export function previewRewards(state: { config: GameConfig }, p: Readonly<Player
 export function grantRewards(state: GameState, events: SimEvent[]): void {
   if (!state.config.rewards.enabled) return;
   const credited = events.filter(
-    (e): e is Extract<SimEvent, { type: 'playerEliminated' }> => e.type === 'playerEliminated' && e.creditId !== null,
+    (e): e is Extract<SimEvent, { type: 'playerEliminated' }> =>
+      e.type === 'playerEliminated' && e.creditId !== null,
   );
   // a fighter with k eliminations this tick has streak s..s+k-1 -> s+k already counted: pay rungs in order
   const total = new Map<number, number>();

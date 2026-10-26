@@ -30,11 +30,12 @@ import { QUALITY } from './quality';
 import type { QualityLevel, QualityProfile } from './quality';
 import type { EntryPick, FrameInfo } from './types';
 import { debrisKindFor } from './assets/props';
-import { ArenaView } from './views/ArenaView';
+import { ArenaView, softTilt } from './views/ArenaView';
 import { FlameViews } from './views/FlameViews';
 import { GeneratorViews } from './views/GeneratorViews';
 import { OverlayViews } from './views/OverlayViews';
 import { PickupViews } from './views/PickupViews';
+import { SupplyMarkViews } from './views/SupplyMarkViews';
 import { PlayerViews } from './views/PlayerViews';
 import { VehicleViews } from './views/VehicleViews';
 import { TrapViews } from './views/TrapViews';
@@ -168,6 +169,7 @@ export class GameRenderer {
     const generators = new GeneratorViews();
     const flames = new FlameViews(this.profile.flameLights);
     const pickups = new PickupViews();
+    const supplies = new SupplyMarkViews((i) => this.arena.hideAmount(i), softTilt);
     const traps = new TrapViews(state.width * state.height);
     const players = new PlayerViews();
     this.players = players;
@@ -176,6 +178,7 @@ export class GameRenderer {
     this.stage = new StageHazardViews(state, this.layout, this.effects, this.profile);
     this.views = [
       this.arena,
+      supplies,
       traps,
       generators,
       flames,
@@ -188,6 +191,7 @@ export class GameRenderer {
     this.scene.add(
       this.backdrop.root,
       this.arena.group,
+      supplies.group,
       traps.group,
       generators.group,
       flames.group,
@@ -204,6 +208,7 @@ export class GameRenderer {
     };
     tag(this.backdrop.root, 'scenery');
     tag(this.arena.group, 'scenery');
+    tag(supplies.group, 'none');
     tag(traps.group, 'none');
     tag(generators.group, 'vehicle');
     tag(flames.group, 'none');

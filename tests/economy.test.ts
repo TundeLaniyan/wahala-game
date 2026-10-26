@@ -171,7 +171,9 @@ describe('elimination rewards', () => {
       }
     }
     expect(p.capacity).toBeGreaterThan(s.config.generator.baseCapacity + 5);
-    expect(p.squareTier).toBe(3);
+    // RE-C4: a Square Blast tier is only paid while it still widens the radial footprint; at radius 5 the
+    // square tops out at radius 6 with tier 2, so the third tier (which the cap allows) is never wasted on it
+    expect(p.squareTier).toBe(2);
     expect(p.armour).toBe(3);
     expect(p.capacity).toBeLessThanOrEqual(s.config.generator.maxCapacity);
   });

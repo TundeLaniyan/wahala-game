@@ -131,7 +131,8 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
 
   it('is a large board for up to 32 competitors that always closes in, with menu info', () => {
     expect([W, H]).toEqual(SIZE[id]);
-    for (const row of a.layout) expect(row).toMatch(new RegExp(`^[#=.]{${W}}$`));
+    // # concrete, = road, . floor, plus the Rumble Evolution cover marks (_ kept clear, x barrier, $ supply crate)
+    for (const row of a.layout) expect(row).toMatch(new RegExp(`^[#=._x$]{${W}}$`));
     expect(a.kind).toBe('rumble');
     expect(a.maxPlayers).toBe(32);
     expect(a.forcedMode).toBe('crush');
