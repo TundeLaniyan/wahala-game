@@ -479,6 +479,111 @@ real schedule (measured 40 vs 43).
 at 8-24 bots; the chain-link idea (RE-AI7) did not help. The new Ojuelegba layout was not used in any test or
 measurement (another stream owns it); its `x` partition is an ordinary barrier crate to the bots. Absolute
 ms/tick values are indicative only (shared machine); comparisons inside one table are like for like.
+### AI follow-up after the economy merge (RE-AI8)
+
+On the merged lead branch (economy: 8 `$` supply crates on Oshodi / Lagos Island / Apapa / Lekki Nightworks,
+`radialMaxSquareRadius` 6) `tests/ai/radial-rumble.test.ts` failed with radial 41 vs cross 38 own-blast deaths.
+The parity conclusion above did not survive the new layouts. The assertion was kept as it is, and the bots were
+improved instead (decision RE-AI8, radial only):
+
+- **Linked-chain worst case for every placement check.** Ticking generators that ONE more generator could link
+  (Chebyshev distance <= box a + box b) are assumed to go off with the earliest of their group, so a bot does
+  not put a generator into a cluster it cannot leave before the cluster's first blast (`DangerQuery.linkedChains`).
+- **Every level sees chains and checks its escape in City Rumble** (`radialProfile`: `chains` on,
+  `placeVerify` 1). Traced deaths showed Rookie / Beginner / Casual killed by their own second generator setting
+  off the first, or by unchecked placements in a 9 x 9 disc. Every other handicap is unchanged.
+
+Classic: `scripts/ai-fingerprint.ts` and the per-tick intent-hash replay are identical to the Phase 0 baseline
+(the merged branch's Classic baseline is itself identical to Phase 0).
+
+**Own-blast deaths, the full schedule, 6 seeds x 3 stages, line-up = the test's** (every level present, seeds 1-6;
+"before" = merged HEAD b3ef80d):
+
+| bots | stage | before, radial | now, radial | cross (unchanged by these changes) |
+| --- | --- | --- | --- | --- |
+| 32 | rumbleOshodi | 35 | 33 | 41 |
+| 32 | rumbleApapa | 51 | 21 | 45 |
+| 32 | cityRumble | 33 | 24 | 30 |
+| 32 | all | 119 | **78** | 116 |
+| 16 | rumbleOshodi | 18 | 16 | 19 |
+| 16 | rumbleApapa | 21 | 17 | 22 |
+| 16 | cityRumble | 23 | 15 | 13 |
+| 16 | all | 62 | **48** | 54 |
+
+The test's own cells (32 bots, seeds 1-2, three stages): 26 radial vs 38 cross. A first variant with only the
+linked-chain check gave 92 vs 116 at 32 bots but 71 vs 54 at 16 bots (the low levels' self-traps); the
+profile change fixed that.
+
+**8 / 16 / 24 / 32 combatants, radial vs cross, deaths by cause** (seeds 1-4 per cell, `simulate --game survival
+--players N --matches 4 --seed 1 [--blast plus] --verbose`, load 2-8):
+
+| stage | bots | blast | results (4 seeds) | mean length s | own blast | rival blast | vehicle | stage hazard | crush | other | opponent within 6 | ... with <= 6 left | ms/tick avg | p99 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| rumbleOshodi | 8 | radial | 4 won | 62 | 2 | 26 | 0 | 0 | 0 | 0 | 60.9 % | 65.5 % | 0.57 | 5.3 |
+| rumbleOshodi | 8 | cross | 4 won | 46 | 3 | 25 | 0 | 0 | 0 | 0 | 67.3 % | 78.0 % | 0.51 | 5.2 |
+| rumbleOshodi | 16 | radial | 4 won | 58 | 8 | 52 | 0 | 0 | 0 | 0 | 75.5 % | 78.0 % | 1.01 | 7.1 |
+| rumbleOshodi | 16 | cross | 4 won | 38 | 8 | 52 | 0 | 0 | 0 | 0 | 77.6 % | 87.7 % | 0.90 | 8.3 |
+| rumbleOshodi | 24 | radial | 4 won | 53 | 16 | 74 | 2 | 0 | 0 | 0 | 79.5 % | 69.8 % | 1.47 | 8.4 |
+| rumbleOshodi | 24 | cross | 4 won | 57 | 16 | 73 | 0 | 3 | 0 | 0 | 82.2 % | 75.0 % | 0.99 | 7.4 |
+| rumbleOshodi | 32 | radial | 4 won | 41 | 16 | 107 | 0 | 1 | 0 | 0 | 87.7 % | 79.3 % | 2.24 | 12.0 |
+| rumbleOshodi | 32 | cross | 4 won | 54 | 15 | 108 | 0 | 1 | 0 | 0 | 83.4 % | 71.2 % | 1.35 | 9.0 |
+| rumbleApapa | 8 | radial | 4 won | 62 | 4 | 24 | 0 | 0 | 0 | 0 | 60.6 % | 69.5 % | 0.71 | 6.4 |
+| rumbleApapa | 8 | cross | 4 won | 54 | 5 | 23 | 0 | 0 | 0 | 0 | 59.4 % | 75.6 % | 0.46 | 5.0 |
+| rumbleApapa | 16 | radial | 4 won | 55 | 6 | 54 | 0 | 0 | 0 | 0 | 71.4 % | 70.4 % | 1.19 | 7.7 |
+| rumbleApapa | 16 | cross | 4 won | 66 | 11 | 48 | 0 | 1 | 0 | 0 | 71.5 % | 82.1 % | 0.71 | 6.2 |
+| rumbleApapa | 24 | radial | 4 won | 52 | 13 | 79 | 0 | 0 | 0 | 0 | 80.9 % | 70.5 % | 1.66 | 8.7 |
+| rumbleApapa | 24 | cross | 4 won | 66 | 19 | 72 | 0 | 1 | 0 | 0 | 81.3 % | 82.5 % | 0.91 | 6.1 |
+| rumbleApapa | 32 | radial | 4 won | 62 | 19 | 105 | 0 | 0 | 0 | 0 | 83.0 % | 73.9 % | 1.88 | 9.7 |
+| rumbleApapa | 32 | cross | 4 won | 53 | 27 | 96 | 0 | 1 | 0 | 0 | 83.9 % | 82.1 % | 1.36 | 8.3 |
+| cityRumble | 8 | radial | 4 won | 55 | 8 | 20 | 0 | 0 | 0 | 0 | 74.3 % | 76.2 % | 0.50 | 5.5 |
+| cityRumble | 8 | cross | 4 won | 51 | 5 | 23 | 0 | 0 | 0 | 0 | 73.1 % | 76.4 % | 0.37 | 4.7 |
+| cityRumble | 16 | radial | 4 won | 50 | 10 | 50 | 0 | 0 | 0 | 0 | 77.8 % | 69.3 % | 0.89 | 6.9 |
+| cityRumble | 16 | cross | 4 won | 75 | 5 | 55 | 0 | 0 | 0 | 0 | 80.7 % | 87.7 % | 0.41 | 4.5 |
+| cityRumble | 24 | radial | 4 won | 59 | 11 | 81 | 0 | 0 | 0 | 0 | 83.4 % | 71.3 % | 1.24 | 8.0 |
+| cityRumble | 24 | cross | 3 won, 1 draw | 73 | 14 | 79 | 0 | 0 | 0 | 0 | 81.3 % | 73.9 % | 0.79 | 6.1 |
+| cityRumble | 32 | radial | 4 won | 44 | 19 | 105 | 0 | 0 | 0 | 0 | 86.0 % | 81.0 % | 1.92 | 10.5 |
+| cityRumble | 32 | cross | 4 won | 68 | 21 | 101 | 1 | 1 | 0 | 0 | 87.0 % | 86.6 % | 0.99 | 7.9 |
+
+| bots | blast | own blast | rival blast | vehicle | stage hazard | crush | all |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 8 | cross | 13 | 71 | 0 | 0 | 0 | 84 |
+| 8 | radial | 14 | 70 | 0 | 0 | 0 | 84 |
+| 16 | cross | 24 | 155 | 0 | 1 | 0 | 180 |
+| 16 | radial | 24 | 156 | 0 | 0 | 0 | 180 |
+| 24 | cross | 49 | 224 | 0 | 4 | 0 | 277 |
+| 24 | radial | 40 | 234 | 2 | 0 | 0 | 276 |
+| 32 | cross | 63 | 305 | 1 | 3 | 0 | 372 |
+| 32 | radial | 54 | 317 | 0 | 1 | 0 | 372 |
+
+Own blast is now at or below the cross at 16, 24 and 32 combatants (24 / 40 / 54 vs 24 / 49 / 63) and one death
+above it at 8 (14 vs 13). cityRumble at 8 / 16 bots is still worse than the cross (8 vs 5, 10 vs 5), where
+crowds are thin. Engagement stays in the same band (an opponent within 6 tiles 61-88 % of alive samples).
+
+**Cost, same session, same cells** (radial Survival, CPU ms per tick, average / p99; "before" = merged HEAD):
+
+| stage | bots | before | now |
+| --- | --- | --- | --- |
+| rumbleOshodi | 24 | 1.47 / 8.4 | 1.47 / 8.4 |
+| rumbleOshodi | 32 | 1.94 / 11.1 | 2.24 / 12.0 |
+| rumbleApapa | 24 | 1.19 / 7.6 | 1.66 / 8.7 |
+| rumbleApapa | 32 | 1.93 / 10.7 | 1.88 / 9.7 |
+| cityRumble | 24 | 1.58 / 9.3 | 1.24 / 8.0 |
+| cityRumble | 32 | 1.46 / 9.5 | 1.92 / 10.5 |
+
+That is about 10 % more on average: the low levels now verify every placement. Matches also run longer (a
+longer match keeps more fighters alive per tick), so the cells are not exactly comparable.
+
+**Test margins now:** friendly-fire placements reaching a teammate 0.072 (of 207, < 0.15), reaching an
+opponent 0.807; 32-bot Survival top eliminator power 30 and 27 vs median 4 (> median + 5).
+
+**Tests:** `tests/ai/radial.test.ts` (33 cases; new: the linked-chain worst case in the danger map, a placement
+refused next to a cluster about to blow and accepted when the cluster is far in time, the Rumble profile keeps
+every handicap except chain blindness / unchecked placements), plus `tests/ai`, `tests/rumble-ai.test.ts`,
+`tests/modes-bots.test.ts`, `tests/economy-ai.test.ts`, `tests/rumble-economy-evolution.test.ts`,
+`tests/spectators.test.ts`, `tests/radial-blast.test.ts`: 17 files, 197 tests green.
+
+**Still open:** cityRumble at low counts (8 / 16) and the cost increase above.
+
 ## E. Living environments, vehicles and NPCs
 
 Workstream E (decisions RE-E1 to RE-E7). Reusable systems that make a City Rumble stage feel alive, declared as
@@ -624,108 +729,3 @@ distance; `env-deck-traffic.jpg` is a close inspect of the stop, not of the deck
 | Ojuelegba lighting: shade under the deck with a hard sun edge and reflected light, LED / sodium practicals, palette | Adapted: LED (#E8F4FF) and sodium (#FF9F3A) practicals, bounce-light pools under the deck; the sun wall and palette are for the stage art (hints in `ojuelegbaEnv.ts`) |
 | Contract records ambient budgets, light limits, occlusion / cutaway, safe pockets, conflicting-event exclusions | Adopted: `budget`, `lights` caps, `occlusion.cutaway` / `keepClear`, `safety.safePockets` / `safety.exclusions` |
 | Falling containers / debris at Ojuelegba, crowd surges, NPC shoves, agbero damage, NPCs as obstacles, 150-NPC / Mass crowds, generated audio | Rejected: not built |
-
-### AI follow-up after the economy merge (RE-AI8)
-
-On the merged lead branch (economy: 8 `$` supply crates on Oshodi / Lagos Island / Apapa / Lekki Nightworks,
-`radialMaxSquareRadius` 6) `tests/ai/radial-rumble.test.ts` failed with radial 41 vs cross 38 own-blast deaths.
-The parity conclusion above did not survive the new layouts. The assertion was kept as it is, and the bots were
-improved instead (decision RE-AI8, radial only):
-
-- **Linked-chain worst case for every placement check.** Ticking generators that ONE more generator could link
-  (Chebyshev distance <= box a + box b) are assumed to go off with the earliest of their group, so a bot does
-  not put a generator into a cluster it cannot leave before the cluster's first blast (`DangerQuery.linkedChains`).
-- **Every level sees chains and checks its escape in City Rumble** (`radialProfile`: `chains` on,
-  `placeVerify` 1). Traced deaths showed Rookie / Beginner / Casual killed by their own second generator setting
-  off the first, or by unchecked placements in a 9 x 9 disc. Every other handicap is unchanged.
-
-Classic: `scripts/ai-fingerprint.ts` and the per-tick intent-hash replay are identical to the Phase 0 baseline
-(the merged branch's Classic baseline is itself identical to Phase 0).
-
-**Own-blast deaths, the full schedule, 6 seeds x 3 stages, line-up = the test's** (every level present, seeds 1-6;
-"before" = merged HEAD b3ef80d):
-
-| bots | stage | before, radial | now, radial | cross (unchanged by these changes) |
-| --- | --- | --- | --- | --- |
-| 32 | rumbleOshodi | 35 | 33 | 41 |
-| 32 | rumbleApapa | 51 | 21 | 45 |
-| 32 | cityRumble | 33 | 24 | 30 |
-| 32 | all | 119 | **78** | 116 |
-| 16 | rumbleOshodi | 18 | 16 | 19 |
-| 16 | rumbleApapa | 21 | 17 | 22 |
-| 16 | cityRumble | 23 | 15 | 13 |
-| 16 | all | 62 | **48** | 54 |
-
-The test's own cells (32 bots, seeds 1-2, three stages): 26 radial vs 38 cross. A first variant with only the
-linked-chain check gave 92 vs 116 at 32 bots but 71 vs 54 at 16 bots (the low levels' self-traps); the
-profile change fixed that.
-
-**8 / 16 / 24 / 32 combatants, radial vs cross, deaths by cause** (seeds 1-4 per cell, `simulate --game survival
---players N --matches 4 --seed 1 [--blast plus] --verbose`, load 2-8):
-
-| stage | bots | blast | results (4 seeds) | mean length s | own blast | rival blast | vehicle | stage hazard | crush | other | opponent within 6 | ... with <= 6 left | ms/tick avg | p99 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| rumbleOshodi | 8 | radial | 4 won | 62 | 2 | 26 | 0 | 0 | 0 | 0 | 60.9 % | 65.5 % | 0.57 | 5.3 |
-| rumbleOshodi | 8 | cross | 4 won | 46 | 3 | 25 | 0 | 0 | 0 | 0 | 67.3 % | 78.0 % | 0.51 | 5.2 |
-| rumbleOshodi | 16 | radial | 4 won | 58 | 8 | 52 | 0 | 0 | 0 | 0 | 75.5 % | 78.0 % | 1.01 | 7.1 |
-| rumbleOshodi | 16 | cross | 4 won | 38 | 8 | 52 | 0 | 0 | 0 | 0 | 77.6 % | 87.7 % | 0.90 | 8.3 |
-| rumbleOshodi | 24 | radial | 4 won | 53 | 16 | 74 | 2 | 0 | 0 | 0 | 79.5 % | 69.8 % | 1.47 | 8.4 |
-| rumbleOshodi | 24 | cross | 4 won | 57 | 16 | 73 | 0 | 3 | 0 | 0 | 82.2 % | 75.0 % | 0.99 | 7.4 |
-| rumbleOshodi | 32 | radial | 4 won | 41 | 16 | 107 | 0 | 1 | 0 | 0 | 87.7 % | 79.3 % | 2.24 | 12.0 |
-| rumbleOshodi | 32 | cross | 4 won | 54 | 15 | 108 | 0 | 1 | 0 | 0 | 83.4 % | 71.2 % | 1.35 | 9.0 |
-| rumbleApapa | 8 | radial | 4 won | 62 | 4 | 24 | 0 | 0 | 0 | 0 | 60.6 % | 69.5 % | 0.71 | 6.4 |
-| rumbleApapa | 8 | cross | 4 won | 54 | 5 | 23 | 0 | 0 | 0 | 0 | 59.4 % | 75.6 % | 0.46 | 5.0 |
-| rumbleApapa | 16 | radial | 4 won | 55 | 6 | 54 | 0 | 0 | 0 | 0 | 71.4 % | 70.4 % | 1.19 | 7.7 |
-| rumbleApapa | 16 | cross | 4 won | 66 | 11 | 48 | 0 | 1 | 0 | 0 | 71.5 % | 82.1 % | 0.71 | 6.2 |
-| rumbleApapa | 24 | radial | 4 won | 52 | 13 | 79 | 0 | 0 | 0 | 0 | 80.9 % | 70.5 % | 1.66 | 8.7 |
-| rumbleApapa | 24 | cross | 4 won | 66 | 19 | 72 | 0 | 1 | 0 | 0 | 81.3 % | 82.5 % | 0.91 | 6.1 |
-| rumbleApapa | 32 | radial | 4 won | 62 | 19 | 105 | 0 | 0 | 0 | 0 | 83.0 % | 73.9 % | 1.88 | 9.7 |
-| rumbleApapa | 32 | cross | 4 won | 53 | 27 | 96 | 0 | 1 | 0 | 0 | 83.9 % | 82.1 % | 1.36 | 8.3 |
-| cityRumble | 8 | radial | 4 won | 55 | 8 | 20 | 0 | 0 | 0 | 0 | 74.3 % | 76.2 % | 0.50 | 5.5 |
-| cityRumble | 8 | cross | 4 won | 51 | 5 | 23 | 0 | 0 | 0 | 0 | 73.1 % | 76.4 % | 0.37 | 4.7 |
-| cityRumble | 16 | radial | 4 won | 50 | 10 | 50 | 0 | 0 | 0 | 0 | 77.8 % | 69.3 % | 0.89 | 6.9 |
-| cityRumble | 16 | cross | 4 won | 75 | 5 | 55 | 0 | 0 | 0 | 0 | 80.7 % | 87.7 % | 0.41 | 4.5 |
-| cityRumble | 24 | radial | 4 won | 59 | 11 | 81 | 0 | 0 | 0 | 0 | 83.4 % | 71.3 % | 1.24 | 8.0 |
-| cityRumble | 24 | cross | 3 won, 1 draw | 73 | 14 | 79 | 0 | 0 | 0 | 0 | 81.3 % | 73.9 % | 0.79 | 6.1 |
-| cityRumble | 32 | radial | 4 won | 44 | 19 | 105 | 0 | 0 | 0 | 0 | 86.0 % | 81.0 % | 1.92 | 10.5 |
-| cityRumble | 32 | cross | 4 won | 68 | 21 | 101 | 1 | 1 | 0 | 0 | 87.0 % | 86.6 % | 0.99 | 7.9 |
-
-| bots | blast | own blast | rival blast | vehicle | stage hazard | crush | all |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 8 | cross | 13 | 71 | 0 | 0 | 0 | 84 |
-| 8 | radial | 14 | 70 | 0 | 0 | 0 | 84 |
-| 16 | cross | 24 | 155 | 0 | 1 | 0 | 180 |
-| 16 | radial | 24 | 156 | 0 | 0 | 0 | 180 |
-| 24 | cross | 49 | 224 | 0 | 4 | 0 | 277 |
-| 24 | radial | 40 | 234 | 2 | 0 | 0 | 276 |
-| 32 | cross | 63 | 305 | 1 | 3 | 0 | 372 |
-| 32 | radial | 54 | 317 | 0 | 1 | 0 | 372 |
-
-Own blast is now at or below the cross at 16, 24 and 32 combatants (24 / 40 / 54 vs 24 / 49 / 63) and one death
-above it at 8 (14 vs 13). cityRumble at 8 / 16 bots is still worse than the cross (8 vs 5, 10 vs 5), where
-crowds are thin. Engagement stays in the same band (an opponent within 6 tiles 61-88 % of alive samples).
-
-**Cost, same session, same cells** (radial Survival, CPU ms per tick, average / p99; "before" = merged HEAD):
-
-| stage | bots | before | now |
-| --- | --- | --- | --- |
-| rumbleOshodi | 24 | 1.47 / 8.4 | 1.47 / 8.4 |
-| rumbleOshodi | 32 | 1.94 / 11.1 | 2.24 / 12.0 |
-| rumbleApapa | 24 | 1.19 / 7.6 | 1.66 / 8.7 |
-| rumbleApapa | 32 | 1.93 / 10.7 | 1.88 / 9.7 |
-| cityRumble | 24 | 1.58 / 9.3 | 1.24 / 8.0 |
-| cityRumble | 32 | 1.46 / 9.5 | 1.92 / 10.5 |
-
-That is about 10 % more on average: the low levels now verify every placement. Matches also run longer (a
-longer match keeps more fighters alive per tick), so the cells are not exactly comparable.
-
-**Test margins now:** friendly-fire placements reaching a teammate 0.072 (of 207, < 0.15), reaching an
-opponent 0.807; 32-bot Survival top eliminator power 30 and 27 vs median 4 (> median + 5).
-
-**Tests:** `tests/ai/radial.test.ts` (33 cases; new: the linked-chain worst case in the danger map, a placement
-refused next to a cluster about to blow and accepted when the cluster is far in time, the Rumble profile keeps
-every handicap except chain blindness / unchecked placements), plus `tests/ai`, `tests/rumble-ai.test.ts`,
-`tests/modes-bots.test.ts`, `tests/economy-ai.test.ts`, `tests/rumble-economy-evolution.test.ts`,
-`tests/spectators.test.ts`, `tests/radial-blast.test.ts`: 17 files, 197 tests green.
-
-**Still open:** cityRumble at low counts (8 / 16) and the cost increase above.
