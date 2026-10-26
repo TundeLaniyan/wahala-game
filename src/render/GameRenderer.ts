@@ -30,6 +30,10 @@ import { QUALITY } from './quality';
 import type { QualityLevel, QualityProfile } from './quality';
 import type { EntryPick, FrameInfo } from './types';
 import { debrisKindFor } from './assets/props';
+import { NEW_ARENA_ART } from './arenas/newArenas';
+import { LivingEnvironment } from './env/LivingEnvironment';
+import type { LivingStats } from './env/LivingEnvironment';
+import { resolveEnv } from './env/plan';
 import { ArenaView } from './views/ArenaView';
 import { FlameViews } from './views/FlameViews';
 import { GeneratorViews } from './views/GeneratorViews';
@@ -94,6 +98,8 @@ export class GameRenderer {
   private overlays!: OverlayViews;
   private vehicles!: VehicleViews;
   private stage: StageHazardViews | null = null;
+  /** The stage's living environment (ambient traffic, crowds); null for arenas without one or with `?noenv`. */
+  private living: LivingEnvironment | null = null;
   private views: View[] = [];
   private players: PlayerViews | null = null;
   private lights!: SceneLights;
@@ -185,6 +191,8 @@ export class GameRenderer {
       this.overlays,
       this.stage,
     ];
+    this.living = this.createLiving(state);
+    if (this.living) this.views.push(this.living);
     this.scene.add(
       this.backdrop.root,
       this.arena.group,
@@ -198,6 +206,7 @@ export class GameRenderer {
       this.stage.group,
       this.effects.group,
     );
+    if (this.living) this.scene.add(this.living.group);
 
     const tag = (o: { userData: Record<string, unknown> }, cls: GritClass): void => {
       o.userData.grit = cls;
@@ -213,11 +222,26 @@ export class GameRenderer {
     tag(this.overlays.group, 'none');
     tag(this.stage.group, 'none');
     tag(this.effects.group, 'none');
+    if (this.living) tag(this.living.group, 'none');
     this.weather();
 
     this.loaded = true;
     this.applyQuality();
     this.resize(this.width, this.height);
+  }
+
+  /** The arena's living environment, if its art declares one (data in `ArenaArt.env`); `?noenv` turns it off for measuring. */
+  private createLiving(state: GameState): LivingEnvironment | null {
+    const src = NEW_ARENA_ART()[state.arenaId]?.env;
+    if (!src || (typeof location !== 'undefined' && new URLSearchParams(location.search).has('noenv'))) return null;
+    const board = { cols: state.width, rows: state.height };
+    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return new LivingEnvironment(resolveEnv(src, board), { board, profile: this.profile, reducedMotion: reduced });
+  }
+
+  /** What the living environment built (debug / performance report); null when the arena has none. */
+  livingStats(): LivingStats | null {
+    return this.living?.stats() ?? null;
   }
 
   /** Applies the grit (weathering) patch to every material in the scene that does not have it yet. */
@@ -235,6 +259,7 @@ export class GameRenderer {
     this.views = [];
     this.players = null;
     this.stage = null;
+    this.living = null;
     this.loaded = false;
   }
 
@@ -254,6 +279,7 @@ export class GameRenderer {
       this.effects.setPixelScale(this.rig.pixelScale(this.height * dpr));
       this.backdrop.setPixelScale(this.rig.pixelScale(this.height * dpr));
       this.stage?.setPixelScale(this.rig.pixelScale(this.height * dpr));
+      this.living?.setPixelScale(this.rig.pixelScale(this.height * dpr));
     }
   }
 
@@ -301,6 +327,7 @@ export class GameRenderer {
         else if (m) m.needsUpdate = true;
       });
       this.effects.setQuality(p);
+      this.living?.setProfile(p);
     }
   }
 
@@ -310,6 +337,7 @@ export class GameRenderer {
     const fx = this.effects;
     this.players?.onEvents(events);
     this.stage?.handleEvents(events, state);
+    this.living?.handleEvents(events);
     for (const e of events) {
       switch (e.type) {
         case 'generatorExploded':
