@@ -141,6 +141,8 @@ jobs:
           path: dist
       # the tests run headless, which is the headless shell; the full browser is not needed
       - run: npx playwright install --with-deps --only-shell chromium
+      # software WebGL speed follows the runner's CPU, which varies between runs: keep it in the log
+      - run: echo "$(nproc) CPUs, $(lscpu | sed -n 's/^Model name: *//p'), $(free -g | awk '/Mem:/ {print $2}') GB"
       # --fully-parallel shards by test instead of by file (every test has its own browser context; no
       # spec shares state between tests); each shard still runs WAHALA_E2E_WORKERS software-WebGL browsers
       - run: npx playwright test --shard=${{ matrix.shard }}/${{ needs.plan.outputs.shards }} --fully-parallel
