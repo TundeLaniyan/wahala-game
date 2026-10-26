@@ -286,6 +286,70 @@ test.describe('touch controls (landscape phone)', () => {
   }
 });
 
+test.describe('assisted movement (landscape phone)', () => {
+  test.slow();
+  test.skip(({ isMobile }) => !isMobile, 'mobile project only');
+
+  /** Clears the crates and walls the bottom lane's upper side in (1..3, 9): the first opening upwards is x = 4. */
+  const CORRIDOR = `s.tiles = s.tiles.map((t) => (t === 2 ? 0 : t)); for (const x of [1, 2, 3]) s.tiles[9 * s.width + x] = 1;`;
+
+  /** Thumb walks right to x = 2, then slides to UP without lifting: a corner turn two tiles early. */
+  async function earlyTurn(page: Page): Promise<{ x: number; y: number }> {
+    await mutate(page, CORRIDOR);
+    const box = (await page.getByTestId('stick-zone').boundingBox())!;
+    const x = box.x + box.width * 0.4;
+    const y = box.y + box.height * 0.65;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 46, y, { steps: 4 });
+    for (let i = 0; i < 80 && (await getState(page)).players[0]!.x < 2; i++) await stepTicks(page, 1);
+    await page.mouse.move(x, y - 46, { steps: 4 });
+    await stepTicks(page, 120);
+    await page.mouse.up();
+    await stepTicks(page, 20);
+    const p = (await getState(page)).players[0]!;
+    return { x: p.x, y: p.y };
+  }
+
+  test('Settings > Controls offers Auto / On / Off with 44 px targets; the choice is saved', async ({ page }) => {
+    await open(page, '&nobots');
+    await openSettings(page, 'controls');
+    for (const m of ['auto', 'on', 'off']) {
+      const box = (await page.getByTestId(`assist-${m}`).boundingBox())!;
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+    }
+    await expect(page.getByTestId('assist-auto')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('assist-off').click();
+    await expect(page.getByTestId('assist-off')).toHaveAttribute('aria-pressed', 'true');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.settings.v1') ?? '{}').moveAssist);
+    expect(saved).toBe('off');
+  });
+
+  test('a thumb that slides to UP two tiles before an opening is carried to the corner and turns (Auto)', async ({
+    page,
+  }) => {
+    await open(page, '&nobots');
+    await startMatch(page, { competitors: 2 });
+    const at = await earlyTurn(page);
+    expect(at.x).toBe(4);
+    expect(at.y).toBeLessThan(10);
+  });
+
+  test('with assisted movement Off the same gesture is the previous one-tile buffer: it does not turn', async ({
+    page,
+  }) => {
+    await open(page, '&nobots');
+    await openSettings(page, 'controls');
+    await page.getByTestId('assist-off').click();
+    await page.getByTestId('settings-close').click();
+    await startMatch(page, { competitors: 2 });
+    const at = await earlyTurn(page);
+    expect(at.y).toBe(10); // never left the lane
+    expect(at.x).toBeLessThan(4);
+  });
+});
+
 test.describe('input device switching', () => {
   test.skip(({ isMobile }) => isMobile === true, 'desktop only');
   test('keyboard then on-screen controls both drive the same player', async ({ page }) => {

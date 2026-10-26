@@ -53,3 +53,38 @@ need, never reorder, and say so in your report.
   expectation, change it to the new rule and say why in the test.
 - Log gameplay / tuning decisions in `DECISIONS.md` section RE with your prefix.
 - Never claim something works without a test or a real browser check. Report exactly what is done and not done.
+
+## A. Assisted movement
+
+Workstream A (decisions RE-A1..RE-A8). The founder found it hard to steer round corners, obstacles and generators
+with the mobile thumbstick. Movement is easier to steer while the simulation is exactly as before: the assist is
+local, deterministic input-layer logic (no cloud, no randomness) that only chooses which orthogonal direction
+`MoveGate` hands over, and every hand-over is still one tile resolved by the real movement and collision rules.
+
+| Help | What it does |
+| --- | --- |
+| Early turn | A turn held while walking, blocked here, is carried along the corridor up to 2 tiles to the first tile where it opens, and taken. No opening in reach: delivered at once, the player just faces the wall. A released flick is a plain press. |
+| Sidestep | A direction held against a wall (past the tap delay) with the opening one tile along the corridor slides there and goes on. One qualifying side only (or the thumb's secondary axis / last walked direction decides); never away from a crate. |
+| Diagonal thumb | `VirtualStick.wish`: the weaker axis of a clearly diagonal thumb (35 degrees engage, 27 release) is the next turn, taken at the first legal junction on a hold repeat, alternating with the main direction. A flick stays one tile. |
+| Direction switch | 2 ticks of settling when a thumb goes straight from one direction to another (touch), so a swipe through the centre leaks no stray tile. |
+
+Safety: a move the assist makes on the player's behalf is a plain step onto open floor that is not a flame, a
+generator or its blast footprint (`previewBlast`, radial included), a warned or live lethal stage event, a Wahala
+Crush warning, a floor trap, a manhole or an attack vehicle's route (`moveAssist.ts`, `hazardTiles`). The direction
+the player explicitly holds is never blocked.
+
+Setting `moveAssist` (`auto` / `on` / `off`, Settings > Controls): `auto` = full help on touch, WA2's one-tile corner
+buffer plus the danger check with keyboard / gamepad; `on` = full help everywhere; `off` = exactly the behaviour
+before this milestone. (The contract table in section 2 says `assistedMovement`; the field is `moveAssist`.)
+
+Files: `src/input/moveAssist.ts` (new), `moveGate.ts`, `InputManager.ts`, `joystick.ts`; `app/settings.ts`,
+`app/session.ts`, `app/MatchController.ts` (builds the `board`); `ui/TouchControls.tsx` (passes the wish),
+`ui/menu/SettingsScreen.tsx` + `menu.css` (toggle). Tests: `tests/input-assist.test.ts` (scenarios with the real
+InputManager, stick model and simulation: junctions, a sidestep alley, every hazard kind, the Lagos Island stall
+aisles, seven phone sizes incl. portrait), `tests/input-assist-gate.test.ts` (off == the verbatim pre-assist gate over
+random sessions, keyboard / gamepad latency, planners, wish hysteresis, board hazards, 60 random wandering-thumb
+sessions that check every self-chosen move), `tests/app/moveAssistSetting.test.ts`, and three phone-project
+Playwright checks in `e2e/mobile.spec.ts`.
+
+Not covered: nobody has used this on a physical phone (emulated touch and pointer events only); the thresholds
+(reach 2, wish 35 / 27 degrees, 2-tick settle) are first guesses to tune from play.
