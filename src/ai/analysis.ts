@@ -92,7 +92,9 @@ export function checkPlacement(
     square: opts.square ?? mySquare(c),
     explodeAt: opts.explodeAt ?? explodeTickFor(c, placeTick),
   };
-  c.builder.build(c.tmp, world, profile, { extraGens: [hypo] });
+  // City Rumble: a placement must stay escapable even if a rival links it to the ticking generators nearby
+  const linkedChains = profile.chains && isRadial(world.obs);
+  c.builder.build(c.tmp, world, profile, { extraGens: [hypo], linkedChains });
   spend(c);
   const plan = searchRefuge(c, c.tmp, u, a0, a1, step, u);
   // Team Rumble with friendly fire: every teammate near the spot must still be able to get clear too
