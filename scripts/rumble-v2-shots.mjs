@@ -56,7 +56,11 @@ await page.goto(
   `${process.env.SHOT_URL ?? 'http://localhost:5206/'}?debug&noattract&q=${process.env.Q ?? 'medium'}&seed=7`,
 );
 await page.getByTestId('title-screen').waitFor({ timeout: 180000 });
-await page.getByTestId('start-button').click();
+// the Stitch menu starts the saved setup from Home with Quick play (the older single screen had Start)
+const quick = page.getByTestId('quick-play');
+await quick.or(page.getByTestId('start-button')).first().waitFor({ timeout: 180000 });
+if ((await quick.count()) > 0) await quick.click();
+else await page.getByTestId('start-button').click();
 await page.getByTestId('hud').waitFor();
 mark('hud');
 const arenaNow = await page.evaluate(() => window.__WAHALA__.getState().arenaId);

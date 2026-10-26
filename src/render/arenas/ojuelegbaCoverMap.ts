@@ -7,75 +7,79 @@
  */
 
 export type CoverKind =
-  | 'pier' // P: twin 2 x 2 hammerhead pier columns of the flyover (bents)
-  | 'danfo' // D: a parked Danfo, two tiles long, nose to the aisle; a group = buses side by side
+  | 'pier' // P: large hammerhead piers of the flyover (2 x 2 / 2 x 3)
+  | 'danfo' // D: parked Danfos lying east-west, packed nose-to-tail along each row of the group
+  | 'danfoNS' // N: parked Danfos lying north-south, packed nose-to-tail down each column of the group
   | 'shop' // H: shop buildings facing south onto the lane (fascia boards, shutters, doorway recesses)
-  | 'container' // C: a shipping-container shop on a kerb
-  | 'wall' // W: compound / yard wall (plastered blockwork)
-  | 'fence' // F: the Danfo park fence (block plinth, zinc panels, posts)
+  | 'building' // Q: plain occupied buildings (the far perimeter, the roadside blocks of the approach)
+  | 'workshop' // O: the repair workshops of the service loop (roller shutters onto the court)
+  | 'container' // C: a shipping-container shop
+  | 'wall' // W: the service yard wall (plastered blockwork)
+  | 'island' // I: raised kerb islands and the railed crossing refuge
   | 'kiosk' // K: painted kiosks and ticket booths
   | 'stall' // T: lock-up market stalls
-  | 'shed' // S: mechanic's / vulcaniser's shed
-  | 'lorry' // R: a broken-down container lorry on the hard shoulder
-  | 'median' // M: jersey-barrier median
+  | 'lockup' // L: one-storey lock-up shops along the near (camera) edge, kept low
+  | 'shed' // S: a small corner shed
+  | 'tyres' // Y: tyre racks
   | 'busStop' // B: the bus stop shelter under the bridge
   | 'genHouse' // G: the generator house
-  | 'skip' // J: steel waste skips
-  | 'dock'; // L: the loading dock
+  | 'skip'; // J: a steel waste skip
 
 export const COVER_LETTERS: Readonly<Record<string, CoverKind>> = {
   P: 'pier',
   D: 'danfo',
+  N: 'danfoNS',
   H: 'shop',
+  Q: 'building',
+  O: 'workshop',
   C: 'container',
   W: 'wall',
-  F: 'fence',
+  I: 'island',
   K: 'kiosk',
   T: 'stall',
+  L: 'lockup',
   S: 'shed',
-  R: 'lorry',
-  M: 'median',
+  Y: 'tyres',
   B: 'busStop',
   G: 'genHouse',
   J: 'skip',
-  L: 'dock',
 };
 
 /** One letter per tile of the 45 x 33 board ('.' = not cover). Rows align with the sim layout. */
 export const OJUELEGBA_COVER: readonly string[] = [
-  '................................F............', // 0
-  '.................PP.......PP....F..DD....DD..', // 1
-  '.WWWW...WWWW..TT.PP.......PP.KK.F..DD....DD..', // 2
-  '...........W.............................DD..', // 3
-  '...........W....................F............', // 4
-  '.CCC..CCC.....TT.PP.......PP....F............', // 5
-  '.................PP.......PP.KK.F..DD....DD..', // 6
-  '................................F..DD....DD..', // 7
-  '...................................DD........', // 8
-  '...MMMMM...MMMMMM.................K..........', // 9
-  '..................................K..........', // 10
-  '...................................DD....DD..', // 11
-  '................................F..DD....DD..', // 12
-  '.RRRR............PP..BBB..PP....F........DD..', // 13
-  '.......SSS.......PP.......PP..K....DD........', // 14
-  '.......SSS...SS...............K.F..DD........', // 15
-  '.............SS.................F............', // 16
-  '.CCC............................F............', // 17
-  '......K...WWW....PP.......PP.KK..............', // 18
-  '.................PP.......PP....F............', // 19
-  '................................FFFF.FFFF.FFF', // 20
-  '..............................JJ.............', // 21
-  'HHHHH.HHHHHH..HHHHH..HHHHW...................', // 22
-  'HH.HH..HH.HH..HH.HH..HHHHW...................', // 23
-  '.............................GGG...JJ...L....', // 24
-  '.........................W...GGG........L....', // 25
-  '........................................L....', // 26
-  '........................................L....', // 27
-  '....T....TT....T....TT...W.........JJ...L....', // 28
-  '.........................W...................', // 29
-  '..KK........KK...............................', // 30
-  '..KK........KK....KK.........................', // 31
-  '..................KK...................JJ....', // 32
+  'QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ', // 0
+  'QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ', // 1
+  'QQ..........................................Q', // 2
+  'QQ..........................................Q', // 3
+  'QQ....Y...OOOOOOOOOOO...OOOOOOOO.......GGG..Q', // 4
+  'QQ....Y...OOOOOOOOOOO...OOOOOOOO.......GGG..Q', // 5
+  'QQ..........................................Q', // 6
+  'QQ..........YY.................YY..JJ.......Q', // 7
+  'QQ..........................................Q', // 8
+  'QQ.....WWWWWWWWWWWWWW...WWWWWWWWWWWWW.....WQQ', // 9
+  'QQQ....WWWWWWWWWWWWWWW.WWWWWWWWWWWWWW.....WQQ', // 10
+  'CCC.....QQQQQQ..............PP...............', // 11
+  '........QQ..QQ..PP.....PP...PP.DDDDDD.....DD.', // 12
+  '...II...........PP.....PP...PP.DDDDDD.....DD.', // 13
+  '.............................................', // 14
+  '.............................................', // 15
+  '.............................................', // 16
+  '.............................................', // 17
+  '.............................................', // 18
+  '................PP.....PP....................', // 19
+  '......I..Q..QQ..PP.....PP..PP....NNNN........', // 20
+  '.........QQQQQ.....BBB.....PP....NNNN.......K', // 21
+  'S......HHHHHHHHHHHHHHHHHHHHHHHH.............K', // 22
+  'S......HHH.HHHHHHHHHHHHHHHHHHHH..NNNN........', // 23
+  'S.............HHHH.HHHHHHH.HHHH..NNNN........', // 24
+  '.............................................', // 25
+  '...............................NN............', // 26
+  '..TT...TT..TT..................NN............', // 27
+  '...............TTTTTTT.TTTTTT................', // 28
+  '....KK...........................IIII........', // 29
+  '.............K...............................', // 30
+  'LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL.....', // 31
+  'LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL.....', // 32
 ];
 
 export interface CoverGroup {
@@ -136,19 +140,21 @@ export function coverGroups(map: readonly string[] = OJUELEGBA_COVER): CoverGrou
 
 /** Height class of each kind (world units, roughly): how far north it can hide things (tiles). */
 export const COVER_REACH: Readonly<Record<CoverKind, number>> = {
-  pier: 2,
+  pier: 3,
   danfo: 2,
+  danfoNS: 2,
   shop: 3,
+  building: 3,
+  workshop: 3,
   container: 2,
-  wall: 1,
-  fence: 1,
-  kiosk: 1,
+  wall: 2,
+  island: 1,
+  kiosk: 2,
   stall: 1,
+  lockup: 1,
   shed: 2,
-  lorry: 2,
-  median: 1,
+  tyres: 1,
   busStop: 2,
   genHouse: 2,
   skip: 1,
-  dock: 1,
 };

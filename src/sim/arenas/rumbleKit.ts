@@ -184,25 +184,25 @@ export function pairedSpawns(
 /**
  * City Rumble Evolution: a spawn's way out of its own first radial blast. Rumble blasts are discs
  * (`dx^2 + dy^2 <= R^2 + R`, base R 2 = every tile within sqrt 6); the corner L and the aisle L both end
- * inside that disc. This clearance keeps three steps straight on (to dx 3, outside the disc) and the turn
- * two along / two across (dx 2, dy 2, outside too) free of crates.
+ * inside that disc. This clearance keeps a straight run of three steps (to dx 3, outside the disc) and the
+ * tile beside the spawn free of crates, so a fighter can always walk out of their first generator's blast.
  */
 export const RADIAL_CLEARANCE: TilePos[] = [
   { x: 0, y: 0 },
   { x: 1, y: 0 },
   { x: 2, y: 0 },
   { x: 3, y: 0 },
-  { x: 2, y: 1 },
-  { x: 2, y: 2 },
+  { x: 0, y: 1 },
 ];
 
 /**
- * `count` spawns (even) for a NON-mirrored stage, alternating halves: slot 0 is the candidate nearest
- * `start` on the west half (the human), then odd slots come from the east half and even slots from the
- * west half, each the candidate farthest (Manhattan) from every spawn chosen so far. So any even prefix is
- * half west / half east (Team Rumble's west-versus-east split is balanced by count for every competitor
- * count) and evenly spread. Candidates are `spawnCandidates` (open '.' floor with the clearance free, never
- * on the centre lines, never on `avoid`). Ties break on scan order (row-major), so the list is stable.
+ * `count` spawns (even) for a NON-mirrored stage, balanced between the halves. Farthest-point order over
+ * the whole board (each pick the candidate farthest, Manhattan, from every spawn picked so far), starting
+ * from the west candidate nearest `start` (slot 0, the human), never letting one half get two picks ahead
+ * of the other. The picks are then interleaved: slot 2k is the k-th west pick, slot 2k + 1 the k-th east
+ * pick, so every even prefix is half west / half east (Team Rumble splits by x) and still evenly spread.
+ * Candidates are `spawnCandidates` (open '.' floor with the clearance free, never on the centre lines,
+ * never on `avoid`). Ties break on scan order (row-major), so the list is stable.
  */
 export function balancedSpawns(
   rows: readonly string[],
@@ -213,31 +213,72 @@ export function balancedSpawns(
 ): TilePos[] {
   const W = rows[0]!.length;
   const cand = spawnCandidates(rows, clearance, new Set(avoid.map(([x, y]) => `${x},${y}`)));
-  const west = cand.filter((c) => c.x < W / 2);
-  const east = cand.filter((c) => c.x > W / 2);
-  if (west.length === 0 || east.length === 0) throw new Error('no spawn fits one half of the layout');
+  const isWest = (c: TilePos): boolean => c.x < W / 2;
+  const west = cand.filter(isWest);
+  if (west.length === 0 || cand.length === west.length)
+    throw new Error('no spawn fits one half of the layout');
   const d = (a: TilePos, b: TilePos): number => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
   const first = west.reduce((best, c) => (d(c, start) < d(best, start) ? c : best));
-  const chosen: TilePos[] = [first];
+  const picks: TilePos[] = [first];
   const used = new Set([`${first.x},${first.y}`]);
-  while (chosen.length < count) {
-    const pool = chosen.length % 2 === 1 ? east : west;
+  let nWest = 1;
+  while (picks.length < count) {
     let best: TilePos | null = null;
     let bestD = -1;
-    for (const c of pool) {
+    for (const c of cand) {
       if (used.has(`${c.x},${c.y}`)) continue;
+      // the half that is behind (or either, when level) may pick
+      if (isWest(c) ? nWest > picks.length - nWest : picks.length - nWest > nWest) continue;
       let m = Infinity;
-      for (const s of chosen) m = Math.min(m, d(c, s));
+      for (const s of picks) m = Math.min(m, d(c, s));
       if (m > bestD) {
         bestD = m;
         best = c;
       }
     }
-    if (!best) throw new Error(`only ${chosen.length} spawns fit`);
-    chosen.push(best);
+    if (!best) throw new Error(`only ${picks.length} spawns fit`);
+    picks.push(best);
     used.add(`${best.x},${best.y}`);
+    if (isWest(best)) nWest++;
   }
-  return chosen;
+  const w = picks.filter(isWest);
+  const e = picks.filter((c) => !isWest(c));
+  const out = Array.from({ length: count }, (_, i) => (i % 2 === 0 ? w[i / 2]! : e[(i - 1) / 2]!));
+  // refinement: greedy picks can leave tight pairs late in the list; move a slot of a closest pair (the
+  // later slots first) to the free candidate of the same half that sits farthest from everyone, as long as
+  // that widens its own gap beyond the current minimum
+  const gapOf = (p: TilePos, skip: number): number => {
+    let mm = Infinity;
+    for (let k = 0; k < count; k++) if (k !== skip) mm = Math.min(mm, d(p, out[k]!));
+    return mm;
+  };
+  for (let round = 0; round < 8 * count; round++) {
+    let m = Infinity;
+    for (let i = 0; i < count; i++) for (let j = i + 1; j < count; j++) m = Math.min(m, d(out[i]!, out[j]!));
+    const tight: number[] = [];
+    for (let k = count - 1; k >= 0; k--) if (gapOf(out[k]!, k) === m) tight.push(k);
+    const taken = new Set(out.map((p) => `${p.x},${p.y}`));
+    let moved = false;
+    for (const slot of tight) {
+      let best: TilePos | null = null;
+      let bestD = m;
+      for (const c of cand) {
+        if (taken.has(`${c.x},${c.y}`) || isWest(c) !== isWest(out[slot]!)) continue;
+        const g = gapOf(c, slot);
+        if (g > bestD) {
+          bestD = g;
+          best = c;
+        }
+      }
+      if (best) {
+        out[slot] = best;
+        moved = true;
+        break;
+      }
+    }
+    if (!moved) break;
+  }
+  return out;
 }
 
 /** Trap rows from explicit marks, NOT mirrored (non-mirrored stages). 'o' pothole, '~' oil. */

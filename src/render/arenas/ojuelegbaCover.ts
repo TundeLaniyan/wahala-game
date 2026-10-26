@@ -1,11 +1,12 @@
 /**
  * Ojuelegba Underbridge - the board's permanent cover drawn as the real things it is (presentation only;
  * which tile is what comes from `ojuelegbaCoverMap.ts`, collision from the sim layout). Every group is
- * one object: twin hammerhead piers on stained footings, whole parked Danfos (the GLB model, yellow with
- * the black band, fictional route cards in the windscreens), shop buildings with fascia boards, half-open
- * shutters and doorway recesses, container shops, compound walls, the park's block-and-zinc fence, the
- * jersey-barrier median, kiosks, lock-up stalls, sheds, a broken-down container lorry, the bus stop, the
- * generator house, skips and the loading dock.
+ * one object: large hammerhead pier stubs with painted base bands (the overhead, `ojuelegbaDeck.ts`, carries
+ * them on to the deck), whole parked Danfos packed nose-to-tail (the GLB model, yellow with the black band,
+ * fictional route cards in the windscreens), shop buildings with fascia boards, half-open shutters and
+ * doorway recesses, occupied buildings with windows, the repair workshops with roller shutters, the yard
+ * wall, kerb islands and the railed refuge, kiosks, stalls, low lock-ups on the camera edge, tyre racks, the
+ * bus stop, the generator house and a skip.
  *
  * Everything is baked by `CoverBuilder` into a few merged meshes (vertex colours on shared materials,
  * one sign atlas), so the whole board's cover costs about a dozen draw calls per visible chunk.
@@ -28,6 +29,7 @@ import { artRng, concreteTexture, corrugatedTexture } from '../textures';
 import type { BoardCover } from './boardCover';
 import { CoverBuilder } from './boardCover';
 import { COVER_REACH, coverGroups } from './ojuelegbaCoverMap';
+import { PIER_CUT, buildDeck } from './ojuelegbaDeck';
 import type { CoverGroup } from './ojuelegbaCoverMap';
 import {
   BUS_STOP_BOARD,
@@ -45,7 +47,7 @@ import type { UvRect } from './ojuelegbaSigns';
 const VEHICLE_SCALE = 1.32;
 const PLASTER = [0xc8b48e, 0x9fb0a6, 0xd2c6a6, 0xb88a64, 0x8ea0b4, 0xcfa88a, 0xa6a07c];
 const KIOSK_PAINT = [0x2e5a8e, 0x3a7a46, 0xc8a02a, 0x9a2e22, 0xd8d0bc, 0x2a6a74];
-const CONTAINER_PAINT = [0x2e5a7a, 0x8a3a26, 0x3e6a48, 0x9a8a5e];
+const CONTAINER_PAINT = [0x5a8aaa, 0xb2583a, 0x6a9a6a, 0xc0ae78];
 
 interface Kit {
   b: CoverBuilder;
@@ -152,95 +154,177 @@ const pick = <T>(list: readonly T[], i: number): T => list[((i % list.length) + 
 
 // ----------------------------------------------------------------------------------- linear cover
 
-/**
- * Walls, fences and the median: from each tile centre a half segment towards every neighbour of the
- * same group, so runs and corners join up. `seg(len, along x?)` draws one piece centred at (x, z).
- */
-function linear(
-  grp: CoverGroup,
-  draw: (x: number, z: number, len: number, alongX: boolean, tile: [number, number], i: number) => void,
-  wx: (x: number) => number,
-  wz: (y: number) => number,
-): void {
+function wall(k: Kit, g: number, grp: CoverGroup, n: number): void {
   const has = new Set(grp.tiles.map(([x, y]) => `${x},${y}`));
+  const plaster = pick(PLASTER, n * 3 + 1);
   grp.tiles.forEach(([x, y], i) => {
-    const e1 = has.has(`${x + 1},${y}`);
-    const w1 = has.has(`${x - 1},${y}`);
-    const n1 = has.has(`${x},${y - 1}`);
-    const s1 = has.has(`${x},${y + 1}`);
-    const cx = wx(x);
-    const cz = wz(y);
-    if (!e1 && !w1 && !n1 && !s1) {
-      draw(cx, cz, 1, true, [x, y], i);
-      return;
-    }
-    if (e1 || w1) {
-      // one piece spanning the side(s) that continue, plus the centre
-      const a = w1 ? -0.5 : -0.25;
-      const b = e1 ? 0.5 : 0.25;
-      draw(cx + (a + b) / 2, cz, b - a, true, [x, y], i);
-    }
-    if (n1 || s1) {
-      const a = n1 ? -0.5 : -0.25;
-      const b = s1 ? 0.5 : 0.25;
-      draw(cx, cz + (a + b) / 2, b - a, false, [x, y], i);
-    }
+    const h = 1.42 - (i % 4 === 3 ? 0.1 : 0);
+    box(k, g, k.concrete, 1, h, 1, k.wx(x), 0, k.wz(y), plaster);
+    box(k, g, k.paint, 1.01, 0.32, 1.01, k.wx(x), 0, k.wz(y), 0x5e5040); // street dirt splashed up the base
+    box(k, g, k.concrete, 1.0, 0.08, 1.06, k.wx(x), h, k.wz(y), 0x8a8478); // coping
+    // bill posters on the faces the camera sees (south), every few blocks
+    const pi = (i + n) % POSTERS.length;
+    if (!has.has(`${x},${y + 1}`) && (x + y) % 3 === 0)
+      board(
+        k,
+        g,
+        k.atlas.board(`poster${pi}`, 96, 120, POSTERS[pi]!),
+        0.4,
+        0.5,
+        k.wx(x),
+        0.82,
+        k.wz(y) + 0.51,
+      );
   });
 }
 
-function wall(k: Kit, g: number, grp: CoverGroup, n: number): void {
-  const plaster = pick(PLASTER, n * 3 + 1);
-  const hgt = 1.3 + k.r() * 0.15;
-  linear(
-    grp,
-    (x, z, len, alongX, tile, i) => {
-      const w = alongX ? len : 0.5;
-      const d = alongX ? 0.5 : len;
-      const h = hgt - (i % 3 === 2 ? 0.12 : 0);
-      box(k, g, k.concrete, w, h, d, x, 0, z, plaster);
-      box(k, g, k.paint, w + 0.02, 0.32, d + 0.02, x, 0, z, 0x5e5040); // street dirt splashed up the base
-      box(k, g, k.concrete, w + 0.06, 0.08, d + 0.06, x, h, z, 0x8a8478); // coping
-      const pi = (i + n) % POSTERS.length;
-      if (alongX && (tile[0] + tile[1]) % 3 === 0)
-        board(k, g, k.atlas.board(`poster${pi}`, 96, 120, POSTERS[pi]!), 0.36, 0.46, x, 0.8, z + 0.26);
-    },
-    k.wx,
-    k.wz,
-  );
-}
-
-function fence(k: Kit, g: number, grp: CoverGroup): void {
-  linear(
-    grp,
-    (x, z, len, alongX, tile) => {
-      const w = alongX ? len : 0.44;
-      const d = alongX ? 0.44 : len;
-      box(k, g, k.concrete, w, 0.55, d, x, 0, z, 0x9a948a);
-      const tint = pick([0x8a5a3e, 0x6e7a80, 0x9a8a72, 0x7a4a34], tile[0] * 7 + tile[1] * 3);
-      box(k, g, k.zinc, alongX ? len : 0.06, 1.02, alongX ? 0.06 : len, x, 0.55, z, tint);
-    },
-    k.wx,
-    k.wz,
-  );
+/** Occupied buildings: storeys by setting (tall on the far north perimeter), windows on the camera side. */
+function building(k: Kit, g: number, grp: CoverGroup, n: number): void {
+  const has = new Set(grp.tiles.map(([x, y]) => `${x},${y}`));
+  const far = grp.y0 === 0;
   for (const [x, y] of grp.tiles) {
-    cyl(k, g, k.metal, 0.045, 0.05, 1.7, k.wx(x), 0, k.wz(y), 0x3a3834, 6);
+    // every three or four tiles a different house: its own plaster, its own roofline
+    const house = Math.floor((x + (far ? 0 : y)) / (far ? 4 : 3));
+    const c = pick(PLASTER, house * 5 + n);
+    const h = far ? 2.9 + (house % 2) * 0.2 : 2.3 + (house % 2) * 0.3;
+    box(k, g, k.concrete, 1, h, 1, k.wx(x), 0, k.wz(y), c);
+    box(k, g, k.concrete, 1.0, 0.14, 1.0, k.wx(x), h, k.wz(y), 0x7a7468);
+    if (!has.has(`${x},${y + 1}`)) {
+      const zf = k.wz(y) + 0.5;
+      box(k, g, k.paint, 0.46, 0.5, 0.04, k.wx(x), h - 0.95, zf, 0x1c1a18); // window
+      box(k, g, k.metal, 0.5, 0.06, 0.12, k.wx(x), h - 1.0, zf + 0.04, 0x6a6a66); // sill and burglar bars
+      if (h > 2.8) box(k, g, k.paint, 0.46, 0.5, 0.04, k.wx(x), h - 1.95, zf, 0x1c1a18);
+      if ((x * 7 + y) % 5 === 0)
+        box(k, g, k.metal, 0.34, 0.26, 0.2, k.wx(x) + 0.2, h - 0.5, zf + 0.1, 0xb8b4aa); // AC unit
+    }
   }
 }
 
-function median(k: Kit, g: number, grp: CoverGroup): void {
-  linear(
-    grp,
-    (x, z, len, alongX, tile) => {
-      const c = (tile[0] % 2 === 0 ? 0xd2ccbe : 0x2a2826) as number;
-      const w = alongX ? len : 0.68;
-      const d = alongX ? 0.68 : len;
-      box(k, g, k.concrete, w, 0.22, d, x, 0, z, c);
-      box(k, g, k.concrete, alongX ? len : 0.36, 0.48, alongX ? 0.36 : len, x, 0.22, z, c);
-      box(k, g, k.concrete, alongX ? len : 0.26, 0.1, alongX ? 0.26 : len, x, 0.7, z, 0x8a8478);
-    },
-    k.wx,
-    k.wz,
-  );
+/** The repair workshops: a solid block with roller shutters and signboards facing the court (south). */
+function workshop(k: Kit, g: number, grp: CoverGroup, n: number): void {
+  const has = new Set(grp.tiles.map(([x, y]) => `${x},${y}`));
+  for (const [x, y] of grp.tiles) {
+    box(k, g, k.concrete, 1, 2.3, 1, k.wx(x), 0, k.wz(y), pick([0xb8a88a, 0xa8b0a4], n));
+    box(k, g, k.zinc, 1.04, 0.06, 1.1, k.wx(x), 2.3, k.wz(y) + 0.04, 0x8a6e58, 0, 0.12);
+    if (!has.has(`${x},${y + 1}`)) {
+      const zf = k.wz(y) + 0.5;
+      // roller shutters, some up (a dark bay), some down
+      const up = (x + n) % 3 === 0;
+      box(
+        k,
+        g,
+        up ? k.paint : k.zinc,
+        0.86,
+        up ? 1.5 : 1.6,
+        0.05,
+        k.wx(x),
+        0.02,
+        zf,
+        up ? 0x15120f : 0x7c8488,
+      );
+    }
+  }
+  // the signboards along the front
+  const cx = (k.wx(grp.x0) + k.wx(grp.x1)) / 2;
+  const zf = k.wz(grp.y1) + 0.5;
+  const w = grp.x1 - grp.x0 + 1;
+  for (let i = 0; i < Math.floor(w / 4); i++)
+    board(
+      k,
+      g,
+      k.atlas.board(`shed${(n * 2 + i) % SHED_BOARDS.length}`, 256, 80, pick(SHED_BOARDS, n * 2 + i)),
+      2.2,
+      0.5,
+      cx - w / 2 + 2 + i * 4,
+      1.9,
+      zf + 0.04,
+    );
+}
+
+/** Raised kerb islands (black-and-white kerbs, a bollard and a sign) and the railed crossing refuge. */
+function island(k: Kit, g: number, grp: CoverGroup): void {
+  const w = grp.x1 - grp.x0 + 1 - 0.08;
+  const d = grp.y1 - grp.y0 + 1 - 0.08;
+  const cx = (k.wx(grp.x0) + k.wx(grp.x1)) / 2;
+  const cz = (k.wz(grp.y0) + k.wz(grp.y1)) / 2;
+  box(k, g, k.concrete, w, 0.26, d, cx, 0, cz, 0x9a968c);
+  const segs = Math.round(w * 3);
+  for (let i = 0; i < segs; i++)
+    box(
+      k,
+      g,
+      k.paint,
+      w / segs - 0.01,
+      0.22,
+      0.03,
+      cx - w / 2 + (i + 0.5) * (w / segs),
+      0.02,
+      cz + d / 2,
+      i % 2 ? 0x1a1a1a : 0xe8e4da,
+    );
+  if (w > 2) {
+    // the refuge: railings along both long sides
+    for (const dz of [-d / 2 + 0.08, d / 2 - 0.08]) {
+      box(k, g, k.metal, w - 0.1, 0.05, 0.05, cx, 0.95, cz + dz, 0xb8b0a0);
+      for (let i = 0; i <= Math.round(w); i++)
+        cyl(
+          k,
+          g,
+          k.metal,
+          0.03,
+          0.03,
+          0.72,
+          cx - w / 2 + 0.05 + i * ((w - 0.1) / Math.round(w)),
+          0.26,
+          cz + dz,
+          0xb8b0a0,
+          6,
+        );
+    }
+  } else {
+    cyl(k, g, k.paint, 0.12, 0.14, 0.7, cx - 0.2, 0.26, cz, 0xd8d2c4, 8);
+    cyl(k, g, k.metal, 0.03, 0.03, 1.4, cx + 0.25, 0.26, cz, 0x5a5a58, 6);
+    box(k, g, k.paint, 0.4, 0.4, 0.03, cx + 0.25, 1.4, cz + 0.03, 0x1e4a8a);
+  }
+}
+
+/** Low one-storey lock-ups along the near edge, kept under the fighters' eye line. */
+function lockup(k: Kit, g: number, grp: CoverGroup): void {
+  for (const [x, y] of grp.tiles) {
+    const c = pick([0x8a7a64, 0x7a8478, 0x9a8466, 0x6e6a60], Math.floor(x / 3));
+    box(k, g, k.concrete, 1, 1.05, 1, k.wx(x), 0, k.wz(y), c);
+    box(
+      k,
+      g,
+      k.zinc,
+      1.04,
+      0.05,
+      1.08,
+      k.wx(x),
+      1.05,
+      k.wz(y),
+      pick([0x8a6a52, 0x7a7a74, 0x6a5444], x + y),
+      0,
+      -0.1,
+    );
+  }
+}
+
+/** A tyre rack: a steel frame with used tyres stacked on it. */
+function tyres(k: Kit, g: number, grp: CoverGroup): void {
+  for (const [x, y] of grp.tiles) {
+    box(k, g, k.metal, 0.9, 0.05, 0.6, k.wx(x), 0.5, k.wz(y), 0x3a3a38);
+    for (const dx of [-0.42, 0.42]) box(k, g, k.metal, 0.05, 1.1, 0.6, k.wx(x) + dx, 0, k.wz(y), 0x3a3a38);
+    for (let i = 0; i < 3; i++)
+      for (const y0 of [0.3, 0.82])
+        k.b.add(
+          g,
+          new CylinderGeometry(0.24, 0.24, 0.17, 12),
+          k.paint,
+          at(k.wx(x) - 0.25 + i * 0.25, y0, k.wz(y), 0, Math.PI / 2),
+          0x181818,
+        );
+  }
 }
 
 // ------------------------------------------------------------------------------------ the bridge
@@ -248,28 +332,33 @@ function median(k: Kit, g: number, grp: CoverGroup): void {
 function pier(k: Kit, g: number, grp: CoverGroup, n: number): void {
   const cx = (k.wx(grp.x0) + k.wx(grp.x1)) / 2;
   const cz = (k.wz(grp.y0) + k.wz(grp.y1)) / 2;
-  const tone = 0xb6ae9e;
-  box(k, g, k.concrete, 1.94, 0.16, 1.94, cx, 0, cz, 0x7e786e); // footing, stained
-  box(k, g, k.paint, 2.0, 0.03, 2.0, cx, 0, cz, 0x2e2a24); // the wet ring round it
-  // the column: a chamfered (octagonal) blade
+  const deep = grp.y1 - grp.y0 + 1;
+  const zs = 0.82 * (deep > 2 ? 1.4 : 1);
+  // tonal variation per pier: some recently repaired / painted, some weathered
+  const tone = pick([0xb6ae9e, 0xa8a294, 0xc0b8a8], n);
+  box(k, g, k.concrete, 1.94, 0.16, deep - 0.06, cx, 0, cz, 0x7e786e); // footing, stained
+  box(k, g, k.paint, 2.0, 0.03, deep, cx, 0, cz, 0x2e2a24); // the wet ring round it
+  // the column stub up to the cut (the overhead, ojuelegbaDeck.ts, carries it on to the deck)
+  const shaft = PIER_CUT - 0.16;
   k.b.add(
     g,
-    new CylinderGeometry(0.74, 0.8, 1.78, 8),
+    new CylinderGeometry(0.74, 0.8, shaft, 8),
     k.concrete,
-    at(cx, 0.16 + 0.89, cz, Math.PI / 8, 0, 0, 1, 1, 0.82),
+    at(cx, 0.16 + shaft / 2, cz, Math.PI / 8, 0, 0, 1, 1, zs),
     tone,
   );
-  // the hammerhead flaring out to carry the deck (cut at the deck soffit line)
-  k.b.add(
-    g,
-    new CylinderGeometry(1.38, 0.82, 0.5, 4),
-    k.concrete,
-    at(cx, 1.94 + 0.25, cz, Math.PI / 4, 0, 0, 1, 1, 0.8),
-    tone,
-  );
-  box(k, g, k.paint, 1.96, 0.1, 1.58, cx, 2.44, cz, 0x4a4640); // bearing plinth: the cut line
+  // the painted base bands every Lagos bridge pier wears (black and white), worn
+  for (let i = 0; i < 3; i++)
+    k.b.add(
+      g,
+      new CylinderGeometry(0.815, 0.815, 0.2, 8),
+      k.paint,
+      at(cx, 0.2 + i * 0.2 + 0.1, cz, Math.PI / 8, 0, 0, 1, 1, zs),
+      i % 2 ? 0xd8d4c8 : 0x1c1c1c,
+    );
   // drainage stain down the south face and a band of bill posters
-  box(k, g, k.paint, 0.16, 1.5, 0.02, cx + 0.32, 0.2, cz + 0.66, 0x3a3428);
+  const zf = cz + 0.74 * zs * 0.93;
+  box(k, g, k.paint, 0.16, 1.4, 0.02, cx + 0.32, 0.8, zf, 0x3a3428);
   for (let i = 0; i < 2; i++)
     board(
       k,
@@ -278,11 +367,11 @@ function pier(k: Kit, g: number, grp: CoverGroup, n: number): void {
       0.34,
       0.42,
       cx - 0.3 + i * 0.36,
-      0.95,
-      cz + 0.67,
+      1.25,
+      zf + 0.01,
     );
-  // a fluorescent tube on the south face (the under-bridge light)
-  box(k, g, k.glow, 0.62, 0.05, 0.05, cx, 1.62, cz + 0.68, 0xe8f4ff);
+  // an LED tube on the south face (the under-bridge light)
+  box(k, g, k.glow, 0.62, 0.05, 0.05, cx, 2.1, zf + 0.02, 0xe8f4ff);
 }
 
 function busStop(k: Kit, g: number, grp: CoverGroup): void {
@@ -309,57 +398,58 @@ function busStop(k: Kit, g: number, grp: CoverGroup): void {
 
 type VehicleModel = ReturnType<typeof createVehicleModel>;
 
-/** A row of parked Danfos nose-in to the aisle; `bus` is one model, positioned per bus and baked. */
-function danfos(
-  k: Kit,
-  g: number,
-  grp: CoverGroup,
-  n: number,
-  aisleX: number,
-  bus: VehicleModel | null,
-): void {
+/**
+ * Parked Danfos: a 'D' group holds buses lying east-west (each row of the group packed nose-to-tail in
+ * two-tile buses), an 'N' group buses lying north-south (each column packed nose-to-tail). `bus` is one
+ * model, positioned per bus and baked.
+ */
+function danfos(k: Kit, g: number, grp: CoverGroup, n: number, ns: boolean, bus: VehicleModel | null): void {
   const root = bus?.root;
-  const facesEast = grp.x0 < aisleX;
-  for (let y = grp.y0; y <= grp.y1; y++) {
-    const cx = (k.wx(grp.x0) + k.wx(grp.x1)) / 2 + (k.r() - 0.5) * 0.08;
-    const cz = k.wz(y) + (k.r() - 0.5) * 0.08;
-    const ry = (facesEast ? 0 : Math.PI) + (k.r() - 0.5) * 0.06;
+  const spots: { cx: number; cz: number; ry: number }[] = [];
+  if (!ns)
+    for (let y = grp.y0; y <= grp.y1; y++)
+      for (let x = grp.x0; x + 1 <= grp.x1; x += 2)
+        spots.push({ cx: (k.wx(x) + k.wx(x + 1)) / 2, cz: k.wz(y), ry: (x + y + n) % 3 === 0 ? Math.PI : 0 });
+  else
+    for (let x = grp.x0; x <= grp.x1; x++)
+      for (let y = grp.y0; y + 1 <= grp.y1; y += 2)
+        spots.push({
+          cx: k.wx(x),
+          cz: (k.wz(y) + k.wz(y + 1)) / 2,
+          ry: (x + n) % 2 ? -Math.PI / 2 : Math.PI / 2,
+        });
+  spots.forEach((sp, i) => {
+    const cx = sp.cx + (k.r() - 0.5) * 0.06;
+    const cz = sp.cz + (k.r() - 0.5) * 0.06;
+    const ry = sp.ry + (k.r() - 0.5) * 0.05;
     if (root) {
       root.position.set(cx, 0, cz);
       root.rotation.set(0, ry, 0);
       root.scale.setScalar(VEHICLE_SCALE);
       k.b.addObject(g, root);
-    } else blockDanfo(k, g, cx, cz, facesEast ? 1 : -1);
-    // the route card propped in the windscreen
-    const dir = facesEast ? 1 : -1;
+    } else blockDanfo(k, g, cx, cz, ry);
+    // the route card propped in the windscreen (the model faces +X before the turn)
+    const fx = Math.cos(ry);
+    const fz = -Math.sin(ry);
     board(
       k,
       g,
-      k.atlas.board(`route${(n + y) % ROUTE_CARDS.length}`, 128, 48, pick(ROUTE_CARDS, n + y)),
+      k.atlas.board(`route${(n + i) % ROUTE_CARDS.length}`, 128, 48, pick(ROUTE_CARDS, n + i)),
       0.42,
       0.15,
-      cx + dir * 1.0,
+      cx + fx * 1.0,
       0.98,
-      cz,
-      dir * (Math.PI / 2),
+      cz + fz * 1.0,
+      ry + Math.PI / 2,
     );
-  }
+  });
 }
 
 /** Stand-in bus when neither the GLB nor a canvas is available (tests): yellow body, the black band. */
-function blockDanfo(k: Kit, g: number, cx: number, cz: number, dir: number): void {
-  box(k, g, k.paint, 2.0, 0.75, 1.04, cx, 0.2, cz, 0xf0b81a);
-  box(k, g, k.paint, 1.6, 0.48, 1.0, cx - dir * 0.15, 0.95, cz, 0xf0b81a);
-  box(k, g, k.paint, 2.02, 0.14, 1.06, cx, 0.62, cz, 0x141414);
-  for (const dx of [-0.65, 0.65])
-    for (const dz of [-0.48, 0.48])
-      k.b.add(
-        g,
-        new CylinderGeometry(0.2, 0.2, 0.12, 10),
-        k.paint,
-        at(cx + dx, 0.2, cz + dz, 0, Math.PI / 2),
-        0x151515,
-      );
+function blockDanfo(k: Kit, g: number, cx: number, cz: number, ry: number): void {
+  k.b.add(g, bx(2.0, 0.75, 1.04), k.paint, at(cx, 0.575, cz, ry), 0xf0b81a);
+  k.b.add(g, bx(1.6, 0.48, 1.0), k.paint, at(cx, 1.19, cz, ry), 0xf0b81a);
+  k.b.add(g, bx(2.02, 0.14, 1.06), k.paint, at(cx, 0.69, cz, ry), 0x141414);
 }
 
 // ------------------------------------------------------------------------------------ buildings
@@ -511,36 +601,6 @@ function shed(k: Kit, g: number, grp: CoverGroup, n: number): void {
   );
 }
 
-function lorry(k: Kit, g: number, grp: CoverGroup): void {
-  const w = grp.x1 - grp.x0 + 1;
-  const cx = (k.wx(grp.x0) + k.wx(grp.x1)) / 2;
-  const cz = k.wz(grp.y0);
-  // chassis, wheels, the cab at the east end (facing the traffic direction) and the container on the bed
-  box(k, g, k.metal, w - 0.3, 0.16, 0.7, cx, 0.3, cz, 0x1e1e1e);
-  for (const dx of [-w / 2 + 0.55, -w / 2 + 1.0, w / 2 - 0.65])
-    for (const dz of [-0.36, 0.36])
-      k.b.add(
-        g,
-        new CylinderGeometry(0.22, 0.22, 0.16, 12),
-        k.paint,
-        at(cx + dx, 0.22, cz + dz, 0, Math.PI / 2),
-        0x151515,
-      );
-  box(k, g, k.paint, 0.85, 0.92, 0.92, cx + w / 2 - 0.55, 0.36, cz, 0x2e5a7a);
-  box(k, g, k.metal, 0.05, 0.4, 0.8, cx + w / 2 - 0.12, 0.82, cz, 0x18222e); // windscreen
-  box(k, g, k.paint, 0.86, 0.06, 0.94, cx + w / 2 - 0.55, 1.28, cz, 0x1a1a1a);
-  box(k, g, k.zinc, w - 1.1, 1.05, 0.9, cx - 0.42, 0.46, cz, 0x8a3a26);
-  // broken down: a jack under the bed, a red warning triangle behind it
-  box(k, g, k.metal, 0.1, 0.25, 0.1, cx - 0.3, 0.05, cz + 0.2, 0xc02a1a);
-  k.b.add(
-    g,
-    new CylinderGeometry(0.0, 0.16, 0.26, 3),
-    k.glow,
-    at(cx - w / 2 + 0.15, 0.13, cz + 0.3),
-    0xd02010,
-  );
-}
-
 function genHouse(k: Kit, g: number, grp: CoverGroup): void {
   const w = grp.x1 - grp.x0 + 1 - 0.12;
   const d = grp.y1 - grp.y0 + 1 - 0.12;
@@ -593,43 +653,6 @@ function skip(k: Kit, g: number, grp: CoverGroup, n: number): void {
       0.82,
       cz + (k.r() - 0.5) * 0.4,
       pick([0x2a2622, 0x4a4a3a, 0x6a5a40, 0x1e2a3a, 0xd8d0c0], i + n),
-    );
-}
-
-function dock(k: Kit, g: number, grp: CoverGroup): void {
-  const d = grp.y1 - grp.y0 + 1;
-  const cx = k.wx(grp.x0);
-  const cz = (k.wz(grp.y0) + k.wz(grp.y1)) / 2;
-  box(k, g, k.concrete, 0.96, 0.92, d - 0.04, cx, 0, cz, 0xa49c8e);
-  // hazard stripes along the edge facing the bays (west) and rubber bumpers
-  for (let i = 0; i < d * 4; i++)
-    box(
-      k,
-      g,
-      k.paint,
-      0.02,
-      0.14,
-      0.24,
-      cx - 0.49,
-      0.74,
-      cz - d / 2 + 0.12 + i * 0.25,
-      i % 2 ? 0x1a1a1a : 0xe0b020,
-    );
-  for (let i = 0; i < d; i++)
-    box(k, g, k.paint, 0.12, 0.3, 0.3, cx - 0.52, 0.3, cz - d / 2 + 0.5 + i, 0x141414);
-  // sacks and cartons waiting on the dock
-  for (let i = 0; i < 3; i++)
-    box(
-      k,
-      g,
-      k.paint,
-      0.7,
-      0.32 + i * 0.1,
-      0.7,
-      cx,
-      0.92,
-      cz - d / 2 + 0.8 + i * 1.6,
-      pick([0xc8b48a, 0x8a6a46, 0xd8d0bc], i),
     );
 }
 
@@ -689,11 +712,14 @@ export function buildOjuelegbaCover(board: { width: number; height: number }): B
       case 'pier':
         pier(k, g, grp, n);
         break;
-      case 'danfo':
-        danfos(k, g, grp, n, 38, bus);
-        break;
       case 'shop':
         shop(k, g, grp, n);
+        break;
+      case 'building':
+        building(k, g, grp, n);
+        break;
+      case 'workshop':
+        workshop(k, g, grp, n);
         break;
       case 'container':
         container(k, g, grp, n);
@@ -701,8 +727,8 @@ export function buildOjuelegbaCover(board: { width: number; height: number }): B
       case 'wall':
         wall(k, g, grp, n);
         break;
-      case 'fence':
-        fence(k, g, grp);
+      case 'island':
+        island(k, g, grp);
         break;
       case 'kiosk':
         kiosk(k, g, grp, n);
@@ -710,14 +736,14 @@ export function buildOjuelegbaCover(board: { width: number; height: number }): B
       case 'stall':
         stall(k, g, grp, n);
         break;
+      case 'lockup':
+        lockup(k, g, grp);
+        break;
       case 'shed':
         shed(k, g, grp, n);
         break;
-      case 'lorry':
-        lorry(k, g, grp);
-        break;
-      case 'median':
-        median(k, g, grp);
+      case 'tyres':
+        tyres(k, g, grp);
         break;
       case 'busStop':
         busStop(k, g, grp);
@@ -728,8 +754,9 @@ export function buildOjuelegbaCover(board: { width: number; height: number }): B
       case 'skip':
         skip(k, g, grp, n);
         break;
-      case 'dock':
-        dock(k, g, grp);
+      case 'danfo':
+      case 'danfoNS':
+        danfos(k, g, grp, n, grp.kind === 'danfoNS', bus);
         break;
     }
   }
@@ -743,5 +770,21 @@ export function buildOjuelegbaCover(board: { width: number; height: number }): B
     const mm = (o as { material?: Material | Material[] }).material;
     if (mm) for (const x of Array.isArray(mm) ? mm : [mm]) b.grit(x, 'vehicle');
   });
-  return b.build();
+  const cover = b.build();
+  // the flyover's outer edges, crossheads and upper pier shafts overhead (cut away round the fighter)
+  const deck = buildDeck(
+    W,
+    H,
+    groups.filter((g) => g.kind === 'pier'),
+  );
+  cover.object.add(deck.object);
+  const dispose = cover.dispose.bind(cover);
+  return {
+    ...cover,
+    object: cover.object,
+    dispose() {
+      dispose();
+      deck.dispose();
+    },
+  };
 }

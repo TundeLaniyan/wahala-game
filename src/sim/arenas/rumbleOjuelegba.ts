@@ -6,7 +6,6 @@ import {
   around,
   balancedSpawns,
   crossings,
-  rect,
   rumbleStageConfig,
   tilesOf,
   trapGrid,
@@ -14,25 +13,30 @@ import {
 
 /**
  * City Rumble Evolution, workstream D - Ojuelegba Underbridge: five connected districts round the
- * Ojuelegba flyover (45 x 33, NOT mirrored). docs/RUMBLE_EVOLUTION.md section D has the map, the routes
- * and the numbers; the look of every district is `src/render/arenas/rumbleOjuelegbaArt.ts` (+ `ojuelegba*.ts`).
+ * Ojuelegba flyover (45 x 33, NOT mirrored), after the approved research layout (J-A .. J-E). The camera
+ * looks north, so the bands read far (north) / centre / near (south):
  *
- * - Western Approach (x 0-15, y 0-21): the dual carriageway coming in from the west (rows 7-11, a jersey
- *   barrier median on row 9 with crossing gaps), a walled compound and container shops on the north kerb,
- *   a broken-down lorry, a mechanic's shed and a container shop on the south side.
- * - Central Underbridge / Pier Court (x 16-31, y 0-21): under the flyover deck (the deck itself runs on north
- *   of the board, off it). Twin 2 x 2 hammerhead pier bents carry the deck at rows 1-2, 5-6, 13-14 and 18-19;
- *   the under-bridge road runs north between them (x 21-23) and meets the carriageway at the junction. South
- *   of it the pier court (kept clear of crates) with the bus stop shelter is the Survival core.
- * - Eastern Danfo Park (x 32-44, y 0-20): a fenced park; the aisle (x 38-39) runs in from the north gate and
- *   leaves as the departure lane out of the east edge (rows 17-18). Parked Danfos stand nose-in in bays either
- *   side (2 x 2 / 2 x 3 groups of buses); empty bays are kept clear. Gates in the west fence (one wide, two
- *   single) and one into the service road; a zinc panel (breach) each to the pier court and the service loop.
- * - Shopfront Lane (x 0-25, y 22-32): a row of shop buildings faces south onto the lane (doorway recesses),
- *   stalls and kiosks on the south side; back alleys up to the approach (one blocked by barrows = breach).
- * - Rear Service Loop (x 26-44, y 21-32): a one-way service road loop behind the shops and the park with the
- *   generator house, skips, a loading dock with kept-clear loading bays, and spurs out to the east and south
- *   edges (deliveries).
+ *   far     Rear Service Loop (E): service entrance west - repair court middle - return lane east
+ *   centre  Western Approach (A) | Underbridge Pier Court (B) | Eastern Danfo pocket (C)
+ *   near    Shopfront Lane (D), west and the middle bend      | the pocket's crossing refuge (C)
+ *
+ * Always-open links: A-B, B-C, A-D, D-C, A-E, E-C. Destruction-added: B-E through the marked empty
+ * workshop-yard partition (the one `x` in the yard wall). Three A-to-C paths: straight through the pier
+ * court, the close shopfront flank, the long rear loop. No district needs a blast to be reached.
+ *
+ * - A (x 0-13, y 11-21): the street narrowing toward the bridge (roadside buildings close in), two short
+ *   parking recesses kept clear, kerb islands, an escape pavement along the south.
+ * - B (x 14-30, y 11-21): under the deck; three bents of large 2 x 2 / 2 x 3 hammerhead piers: a pair round
+ *   the clear bay, a second pair, then a wider opening and an offset bent. The bus stop on the south
+ *   pavement. The through road (rows 15-18) runs between the supports. The Survival core.
+ * - C (x 31-44, y 11-32): Danfos packed nose-to-tail beside the road, bays south of it, loose parcel stacks
+ *   (`x`, alternate crossing angles), the departure strip (x 41-42) where buses pull out onto the road and
+ *   leave east, the railed crossing refuge.
+ * - D (x 0-30, y 22-32): shops facing south onto a 3-4 wide lane that bends at x 14, stalls and doorway
+ *   recesses for rhythm, a marked empty partition opening a cross-passage to the back pavement; low lock-ups
+ *   along the camera edge.
+ * - E (x 0-44, y 0-10): a loop round the repair workshops (tyre racks, the generator house, a skip), entered
+ *   from A (west) and C (east): the long, safe bypass with two exits.
  *
  * Layout chars: '#' permanent cover, '=' road (traffic / summoned vehicles, never a crate), '_' kept-clear
  * floor, 'x' authored barrier (always a crate: blasting it opens a shortcut), '$' marked supply crate.
@@ -41,119 +45,93 @@ const W = 45;
 const H = 33;
 
 const LAYOUT = [
-  '.....................===........#.....==.....', // 0
-  '.................##..===..##....#..##_==_##..', // 1
-  '.####...####..##.##..===..##.##.#..##_==_##..', // 2
-  '......$....#.........===............._==_##..', // 3
-  '...........#.........===........#...._==_....', // 4
-  '.###..###.....##.##..===..##....#...._==_....', // 5
-  '.................##..===..##.##.#..##_==_##..', // 6
-  '========================........#.$##_==_##..', // 7
-  '========================...........##_==_....', // 8
-  '===#####===######=======..........#.._==_....', // 9
-  '========================..........#.._==_....', // 10
-  '========================.....$.....##_==_##..', // 11
-  '...............$..._______......#..##_==_##..', // 12
-  '.####............##..###..##....#...._==_##..', // 13
-  '.......###.......##.......##..#.x..##_==_....', // 14
-  '.......###...##...._______....#.#..##_==_....', // 15
-  '.............##...._______......#...._==.....', // 16
-  '.###..............._______......#.....=======', // 17
-  '......#...###....##_______##.##.......=======', // 18
-  '.................##_______##....#............', // 19
-  '..................._______......####.####x###', // 20
-  '..............................##.............', // 21
-  '#####x######..#####..#####.================..', // 22
-  '##.##..##.##..##.##..#####.=..............=..', // 23
-  '.........................x.=.###...##___#.=..', // 24
-  '..........$..............#.=.###.....___#.=..', // 25
-  '===........................=.........___#.===', // 26
-  '...........................=....$....___#.=..', // 27
-  '....#....##....#....##...#.=.......##___#.=..', // 28
-  '.........................#.=..............=..', // 29
-  '..##........##.............================..', // 30
-  '..##........##....##..............==.........', // 31
-  '..................##..............==...##....', // 32
+  '#############################################', // 0
+  '#############################################', // 1
+  '##..........................................#', // 2
+  '##...................$......................#', // 3
+  '##....#...###########...########.......###..#', // 4
+  '##....#...###########...########.......###..#', // 5
+  '##..........................................#', // 6
+  '##...$......##.................##..##..$....#', // 7
+  '##..........................................#', // 8
+  '##.....##############...#############.....###', // 9
+  '###....###############x##############.....###', // 10
+  '###.....######...........$..##......._____...', // 11
+  '......$.##__##..##.....##...##.######.....##.', // 12
+  '...##...........##.....##...##.######.....##.', // 13
+  '.................._____......................', // 14
+  '=============================================', // 15
+  '=============================================', // 16
+  '=============================================', // 17
+  '=============================================', // 18
+  '................##_____##................==..', // 19
+  '......#..#__##..##.....##..##....####....==..', // 20
+  '.........#####.....###.....##....####..$.==.#', // 21
+  '#......########################......x...==.#', // 22
+  '#......###.####################..####....==..', // 23
+  '#.............####.#######.####..####....==..', // 24
+  '......................................x..==..', // 25
+  '.........$.....................##.x......==..', // 26
+  '..##...##..##..................##........==..', // 27
+  '...............#######x######............==..', // 28
+  '....##...........................####....==..', // 29
+  '.............#.............$.............==..', // 30
+  '########################################.==..', // 31
+  '########################################.==..', // 32
 ];
 
-/** Whole-match floor traps: oil on the carriageway and by the generator house, potholes on the side roads. */
+/** Whole-match floor traps: oil on the through road and by the generator house, potholes on the side roads. */
 const TRAP_MARKS = [
-  [5, 10, '~'],
-  [14, 8, '~'],
-  [9, 4, 'o'],
-  [4, 19, 'o'],
-  [7, 26, 'o'],
-  [29, 16, '~'],
-  [32, 26, '~'],
-  [38, 31, 'o'],
-  [43, 5, 'o'],
+  [6, 16, '~'],
+  [37, 17, '~'],
+  [4, 24, 'o'],
+  [12, 3, 'o'],
+  [41, 7, '~'],
+  [27, 26, 'o'],
+  [43, 28, 'o'],
 ] as const;
 
 /**
- * Summoned attack vehicles enter only at the board's road mouths: the carriageway from the west (not the
- * median row), the under-bridge road from the north, the park gate (north) and the departure lane (east),
- * the service spurs (east, south) and the shop lane's keke stub (west).
+ * Summoned attack vehicles use the through road only (A -> under the bridge -> C and back): its four lanes
+ * from the west and east edges, and the departure strip from the depot gate in the south-east. They pass
+ * between the piers, never through the walking gaps.
  */
 const LANES: [number, number, Dir][] = [
-  [0, 7, 'right'],
-  [0, 8, 'right'],
-  [0, 10, 'right'],
-  [0, 11, 'right'],
-  [21, 0, 'down'],
-  [22, 0, 'down'],
-  [23, 0, 'down'],
-  [38, 0, 'down'],
-  [39, 0, 'down'],
-  [44, 17, 'left'],
-  [44, 18, 'left'],
-  [44, 26, 'left'],
-  [34, 32, 'up'],
-  [35, 32, 'up'],
-  [0, 26, 'right'],
+  [0, 15, 'right'],
+  [0, 16, 'right'],
+  [0, 17, 'right'],
+  [0, 18, 'right'],
+  [W - 1, 15, 'left'],
+  [W - 1, 16, 'left'],
+  [W - 1, 17, 'left'],
+  [W - 1, 18, 'left'],
+  [41, H - 1, 'up'],
+  [42, H - 1, 'up'],
 ];
 
 export const OJUELEGBA_DISTRICTS: DistrictDef[] = [
-  { id: 'westApproach', name: 'Western Approach', role: 'approach', rects: [[0, 0, 15, 21]] },
-  {
-    id: 'pierCourt',
-    name: 'Underbridge Pier Court',
-    role: 'underbridge',
-    rects: [
-      [16, 0, 31, 20],
-      [16, 21, 25, 21],
-    ],
-  },
-  { id: 'danfoPark', name: 'Eastern Danfo Park', role: 'park', rects: [[32, 0, 44, 20]] },
-  { id: 'shopfrontLane', name: 'Shopfront Lane', role: 'lane', rects: [[0, 22, 25, 32]] },
-  { id: 'serviceLoop', name: 'Rear Service Loop', role: 'service', rects: [[26, 21, 44, 32]] },
+  { id: 'westApproach', name: 'Western Approach', role: 'approach', rects: [[0, 11, 13, 21]] },
+  { id: 'pierCourt', name: 'Underbridge Pier Court', role: 'underbridge', rects: [[14, 11, 30, 21]] },
+  { id: 'danfoPark', name: 'Eastern Danfo Pocket', role: 'park', rects: [[31, 11, 44, 32]] },
+  { id: 'shopfrontLane', name: 'Shopfront Lane', role: 'lane', rects: [[0, 22, 30, 32]] },
+  { id: 'serviceLoop', name: 'Rear Service Loop', role: 'service', rects: [[0, 0, 44, 10]] },
 ];
 
 export const OJUELEGBA_LINKS: DistrictLink[] = [
-  // the carriageway, the north kerb and the south roadside all run on under the deck
-  { from: 'westApproach', to: 'pierCourt', kind: 'open', tiles: crossings(LAYOUT, 15, 0, 15, 21, 1, 0) },
-  // the park's west fence: a pedestrian gate, the wide forecourt gate, a zinc panel, the south-west gate
-  { from: 'pierCourt', to: 'danfoPark', kind: 'chokepoint', tiles: [[32, 3]] },
-  { from: 'pierCourt', to: 'danfoPark', kind: 'open', tiles: rect(32, 8, 32, 11) },
-  { from: 'pierCourt', to: 'danfoPark', kind: 'breach', tiles: [[32, 14]] },
-  { from: 'pierCourt', to: 'danfoPark', kind: 'chokepoint', tiles: [[32, 18]] },
-  // behind the pier court the service road starts (skips behind the park)
-  {
-    from: 'pierCourt',
-    to: 'serviceLoop',
-    kind: 'open',
-    tiles: [...crossings(LAYOUT, 26, 20, 31, 20, 0, 1), ...crossings(LAYOUT, 25, 21, 25, 21, 1, 0)],
-  },
-  // the park's south fence: a gate, and a zinc panel opposite the loading dock
-  { from: 'danfoPark', to: 'serviceLoop', kind: 'chokepoint', tiles: [[36, 20]] },
-  { from: 'danfoPark', to: 'serviceLoop', kind: 'breach', tiles: [[41, 20]] },
-  // back alleys between the shop buildings
-  { from: 'westApproach', to: 'shopfrontLane', kind: 'chokepoint', tiles: rect(12, 22, 13, 22) },
-  { from: 'westApproach', to: 'shopfrontLane', kind: 'breach', tiles: [[5, 22]] },
-  { from: 'pierCourt', to: 'shopfrontLane', kind: 'chokepoint', tiles: rect(19, 22, 20, 22) },
-  // the lane runs on into the loop; the back pavement too; barrows block a hole in the yard wall
-  { from: 'shopfrontLane', to: 'serviceLoop', kind: 'open', tiles: rect(25, 26, 25, 27) },
-  { from: 'shopfrontLane', to: 'serviceLoop', kind: 'open', tiles: rect(25, 30, 25, 32) },
-  { from: 'shopfrontLane', to: 'serviceLoop', kind: 'breach', tiles: [[25, 24]] },
+  // A-B: the street runs on under the deck (pavements and the through road)
+  { from: 'westApproach', to: 'pierCourt', kind: 'open', tiles: crossings(LAYOUT, 13, 11, 13, 21, 1, 0) },
+  // B-C: the road strip and both pavements into the bus pocket
+  { from: 'pierCourt', to: 'danfoPark', kind: 'open', tiles: crossings(LAYOUT, 30, 11, 30, 21, 1, 0) },
+  // A-D: the street corner down into the shop lane
+  { from: 'westApproach', to: 'shopfrontLane', kind: 'open', tiles: crossings(LAYOUT, 0, 21, 13, 21, 0, 1) },
+  // D-C: the lane and the back pavement run on to the crossing refuge
+  { from: 'shopfrontLane', to: 'danfoPark', kind: 'open', tiles: crossings(LAYOUT, 30, 25, 30, 25, 1, 0) },
+  { from: 'shopfrontLane', to: 'danfoPark', kind: 'open', tiles: crossings(LAYOUT, 30, 28, 30, 30, 1, 0) },
+  // A-E: the service entrance; E-C: the return lane
+  { from: 'westApproach', to: 'serviceLoop', kind: 'open', tiles: crossings(LAYOUT, 0, 10, 13, 10, 0, 1) },
+  { from: 'serviceLoop', to: 'danfoPark', kind: 'open', tiles: crossings(LAYOUT, 31, 10, 44, 10, 0, 1) },
+  // B-E: only by blasting the empty workshop-yard partition
+  { from: 'pierCourt', to: 'serviceLoop', kind: 'breach', tiles: [[22, 10]] },
 ];
 
 export const RUMBLE_OJUELEGBA: ArenaDef = {
@@ -161,9 +139,9 @@ export const RUMBLE_OJUELEGBA: ArenaDef = {
   name: 'Ojuelegba Underbridge',
   kind: 'rumble',
   layout: LAYOUT,
-  // west / east alternate (Team Rumble splits by x); slot 0, the human, in the south-west of the shop lane;
+  // west / east balanced (Team Rumble splits by x); slot 0, the human, in the south-west of the shop lane;
   // never on a trap or within two steps of a supply crate
-  spawns: balancedSpawns(LAYOUT, 32, { x: 3, y: H - 4 }, RADIAL_CLEARANCE, [
+  spawns: balancedSpawns(LAYOUT, 32, { x: 1, y: 25 }, RADIAL_CLEARANCE, [
     ...TRAP_MARKS.map(([x, y]) => [x, y] as const),
     ...around(tilesOf(LAYOUT, '$'), 2),
   ]),
@@ -172,30 +150,30 @@ export const RUMBLE_OJUELEGBA: ArenaDef = {
   maxPlayers: 32,
   forcedMode: 'crush',
   config: {
-    ...rumbleStageConfig({ core: { w: 11, h: 9 }, softDensity: 0.5 }),
+    ...rumbleStageConfig({ core: { w: 11, h: 9 }, softDensity: 0.46 }),
     vehicles: { lanes: LANES },
   },
   floorTraps: trapGrid(TRAP_MARKS, W, H),
-  // the endgame waves land in the pier court round the bus stop (core x 17-27, y 12-20)
+  // the endgame waves land in the pier court round the clear bay and on the road between the piers
   endgameTraps: [
     trapGrid(
       [
-        [19, 15, 'o'],
-        [23, 17, '~'],
-        [21, 19, 'o'],
-        [25, 14, '~'],
-        [20, 12, 'o'],
+        [19, 14, 'o'],
+        [21, 16, '~'],
+        [26, 17, '~'],
+        [20, 19, 'o'],
+        [25, 13, 'o'],
       ],
       W,
       H,
     ),
     trapGrid(
       [
-        [24, 19, '~'],
-        [19, 17, 'o'],
-        [22, 15, '~'],
-        [25, 16, 'o'],
-        [24, 12, '~'],
+        [22, 14, '~'],
+        [18, 17, 'o'],
+        [24, 16, 'o'],
+        [22, 20, '~'],
+        [19, 12, '~'],
       ],
       W,
       H,
@@ -203,29 +181,30 @@ export const RUMBLE_OJUELEGBA: ArenaDef = {
   ],
   stageHazards: [
     {
-      // buses and kekes on the carriageway turning north under the bridge, and back (right-hand traffic)
+      // buses and kekes on the through road (right-hand traffic: eastbound south lanes, westbound north)
       kind: 'sweep',
       style: 'traffic',
       routes: [
-        [...line([0, 11], [22, 11]), ...line([23, 11], [23, 0])],
-        [...line([0, 10], [21, 10]), ...line([22, 10], [22, 0])],
-        [...line([21, 0], [21, 6]), ...line([21, 7], [0, 7])],
-        [...line([22, 0], [22, 7]), ...line([22, 8], [0, 8])],
+        line([0, 17], [W - 1, 17]),
+        line([0, 18], [W - 1, 18]),
+        line([W - 1, 15], [0, 15]),
+        line([W - 1, 16], [0, 16]),
       ],
       stepTicks: 4,
       firstAtSec: 10,
-      everySec: [5, 8],
+      everySec: [6, 9],
       warnSec: 2,
     },
     {
-      // Danfo departure: a loaded bus pulls in at the north gate, runs the park aisle and leaves along the
-      // departure lane out of the east edge (route data: aisle x 38 / 39, lane rows 17 / 18; workstream E
-      // owns the departure presentation and may extend this entry)
+      // the signalled bus pull-out: a loaded Danfo comes up the departure strip from the depot gate and
+      // pulls out onto the road, leaving east. Route data: strip x 41 / 42 (rows 32 -> 19), then road rows 18
+      // / 17 to the east edge; the pavements and the bays beside the strip are safe. Workstream E owns the
+      // departure presentation (horn, lit road markers) and may extend this entry.
       kind: 'sweep',
       style: 'danfo',
       routes: [
-        [...line([38, 0], [38, 16]), ...line([38, 17], [44, 17])],
-        [...line([39, 0], [39, 17]), ...line([39, 18], [44, 18])],
+        [...line([41, H - 1], [41, 19]), ...line([41, 18], [W - 1, 18])],
+        [...line([42, H - 1], [42, 18]), ...line([42, 17], [W - 1, 17])],
       ],
       stepTicks: 6,
       firstAtSec: 14,
@@ -236,11 +215,11 @@ export const RUMBLE_OJUELEGBA: ArenaDef = {
   ],
   info: {
     tagline:
-      'Five districts round the Ojuelegba flyover: the approach, the pier court, the Danfo park, the shops and the service loop.',
+      'Under the Ojuelegba flyover: the approach, the pier court, the bus pocket, the shop lane and the service loop.',
     lighting: 'Late afternoon, deep bridge shadow',
     hazards: [
-      'Buses and kekes race the western carriageway and turn under the bridge (2 s warning on the lane).',
-      'Loaded Danfos leave the park down the aisle and out along the departure lane (2.5 s warning).',
+      'Buses and kekes race the through road under the bridge (2 s warning on the lane).',
+      'A loaded Danfo pulls out of the depot up the departure strip and onto the road (2.5 s warning).',
       'Vendors dump barrows and tyres in the lanes - new crates block your route.',
       'From 2:00 left the outer districts fill with concrete; the pier court never closes.',
     ],

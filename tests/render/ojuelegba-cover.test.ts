@@ -6,10 +6,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Mesh } from 'three';
-import type { BufferAttribute } from 'three';
+import type { BufferAttribute, Material } from 'three';
 import { getArena } from '../../src/sim';
 import { COVER_LETTERS, OJUELEGBA_COVER, coverGroups } from '../../src/render/arenas/ojuelegbaCoverMap';
 import { buildOjuelegbaCover } from '../../src/render/arenas/ojuelegbaCover';
+import { PIER_CUT } from '../../src/render/arenas/ojuelegbaDeck';
 import { NEW_ARENA_ART } from '../../src/render/arenas/newArenas';
 import { obstacleStyle } from '../../src/render/assets/obstacleStyles';
 import { softVariantFor } from '../../src/render/assets/props';
@@ -31,31 +32,40 @@ describe('Ojuelegba cover map', () => {
     }
   });
 
-  it('groups are real objects: 2 x 2 piers, two-tile buses side by side, multi-tile buildings', () => {
+  it('groups are real objects: a few large piers in unequal bays, packed buses, long buildings', () => {
     const groups = coverGroups();
     const of = (k: string) => groups.filter((g) => g.kind === k);
-    expect(of('pier')).toHaveLength(8);
-    for (const g of of('pier')) expect([g.x1 - g.x0, g.y1 - g.y0, g.tiles.length]).toEqual([1, 1, 4]);
-    // every Danfo row is one bus two tiles long; groups hold two or three buses
-    const buses = of('danfo');
-    expect(buses.reduce((n, g) => n + g.y1 - g.y0 + 1, 0)).toBe(17);
-    for (const g of buses) {
+    // a SMALL number of LARGE piers: two pairs round the clear bay, then an offset bent past a wider opening
+    const piers = of('pier');
+    expect(piers).toHaveLength(6);
+    for (const g of piers) {
       expect(g.x1 - g.x0).toBe(1);
-      expect(g.y1 - g.y0 + 1).toBeGreaterThanOrEqual(2);
+      expect(g.tiles.length).toBeGreaterThanOrEqual(4);
     }
-    for (const g of of('shop')) expect(g.tiles.length).toBeGreaterThanOrEqual(8);
+    const xs = [...new Set(piers.map((g) => g.x0))].sort((a, b) => a - b);
+    const bays = xs.slice(1).map((x, i) => x - xs[i]!);
+    expect(new Set(bays).size).toBe(bays.length); // unequal bays, not a colonnade
+    // eighteen Danfos: rows packed nose-to-tail (east-west) and bays of buses side by side (north-south)
+    const buses =
+      of('danfo').reduce((n, g) => n + ((g.x1 - g.x0 + 1) / 2) * (g.y1 - g.y0 + 1), 0) +
+      of('danfoNS').reduce((n, g) => n + ((g.y1 - g.y0 + 1) / 2) * (g.x1 - g.x0 + 1), 0);
+    expect(buses).toBe(18);
+    for (const g of of('danfo')) expect((g.x1 - g.x0 + 1) % 2).toBe(0);
+    for (const g of of('danfoNS')) expect((g.y1 - g.y0 + 1) % 2).toBe(0);
+    for (const g of of('shop')) expect(g.tiles.length).toBeGreaterThanOrEqual(10);
     // most permanent cover is big: the mean group covers several tiles (not a pillar forest)
     const hard = groups.reduce((n, g) => n + g.tiles.length, 0);
-    expect(hard / groups.length).toBeGreaterThan(3.5);
-    expect(groups.filter((g) => g.tiles.length === 1).length).toBeLessThanOrEqual(4);
+    expect(hard / groups.length).toBeGreaterThan(6);
+    expect(groups.filter((g) => g.tiles.length === 1).length).toBeLessThanOrEqual(3);
   });
 });
 
 describe('Ojuelegba board cover', () => {
   const cover = buildOjuelegbaCover({ width: W, height: H })!;
   const meshes: Mesh[] = [];
+  const overhead: Mesh[] = [];
   cover.object.traverse((o) => {
-    if ((o as Mesh).isMesh) meshes.push(o as Mesh);
+    if ((o as Mesh).isMesh) (o.name === 'ojuelegbaDeck' ? overhead : meshes).push(o as Mesh);
   });
 
   it('is registered as the stage cover and claims exactly the concrete tiles', () => {
@@ -94,9 +104,28 @@ describe('Ojuelegba board cover', () => {
         const x = pos.getX(i);
         const z = pos.getZ(i);
         expect(covered(x, z), `vertex ${x.toFixed(2)},${pos.getY(i).toFixed(2)},${z.toFixed(2)}`).toBe(true);
-        expect(pos.getY(i)).toBeLessThan(3.2); // a shop roof tank is the tallest thing
+        expect(pos.getY(i)).toBeLessThan(3.5); // the far perimeter buildings are the tallest cover
       }
     }
+  });
+
+  it('the flyover overhead keeps to the outer edges above the road band and is cut away round the fighter', () => {
+    expect(overhead).toHaveLength(1);
+    const deck = overhead[0]!;
+    const pos = deck.geometry.attributes.position as BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      // never below the pier stubs (fighters, generators and crates stay clear), only over rows 11-21
+      expect(pos.getY(i)).toBeGreaterThanOrEqual(PIER_CUT - 0.01);
+      expect(pos.getZ(i) + H / 2).toBeGreaterThan(10.5);
+      expect(pos.getZ(i) + H / 2).toBeLessThan(22.5);
+    }
+    // the central deck is cut away: no soffit surface spans the middle of the band away from the bents
+    const material = deck.material as Material;
+    expect(String(material.userData.programKey)).toContain('deckcut');
+    let middle = 0;
+    for (let i = 0; i < pos.count; i++)
+      if (Math.abs(pos.getZ(i) - 0) < 2 && Math.abs(pos.getX(i) - 9) < 2) middle++;
+    expect(middle).toBe(0);
   });
 
   it('fades a whole group when anything stands behind one of its tiles, and comes back', () => {
@@ -155,10 +184,10 @@ describe('Ojuelegba crates', () => {
           if (a.layout[y]![x] === '.') out.add(softVariantFor(x, y, variants, a.id));
       return out;
     };
-    const yard = family(27, 23, 41, 29);
+    const yard = family(2, 2, 42, 8);
     expect(yard.has('prop_soft_drums')).toBe(true);
     expect(yard.has('prop_soft_sacks')).toBe(false);
-    const lane = family(0, 24, 24, 32);
+    const lane = family(0, 24, 30, 30);
     expect(lane.has('prop_soft_sacks')).toBe(true);
     expect(lane.has('prop_soft_drums')).toBe(false);
   });
