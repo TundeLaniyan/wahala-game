@@ -13,6 +13,7 @@ import type { Ctx } from './context';
 import { canPlaceNow, chooseGamble, chooseGoal, lastResort, placementGain, robust } from './goals';
 import type { Plan } from './goals';
 import type { AiProfile } from './profiles';
+import { radialProfile } from './profiles';
 import { Tactics } from './tactics';
 import { searchSlots } from './analysis';
 import {
@@ -234,12 +235,16 @@ export class Brain implements Bot {
 
   private context(obs: Observation): Ctx {
     const board = getBoard(obs.width, obs.height);
-    if (!this.ctx || this.ctx.world.board !== board) {
-      this.ctx = createCtx(this.profile, this.rng, board);
+    const radial = isRadial(obs);
+    if (!this.ctx || this.ctx.world.board !== board || this.ctxRadial !== radial) {
+      this.ctx = createCtx(radial ? radialProfile(this.profile) : this.profile, this.rng, board);
+      this.ctxRadial = radial;
       this.plan = null;
     }
     return this.ctx;
   }
+
+  private ctxRadial = false;
 
   // ------------------------------------------------------------------ planning
 

@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 import { getBoard } from '../../src/ai/board';
 import { createCtx } from '../../src/ai/context';
 import { placementGain } from '../../src/ai/goals';
-import { PROFILES } from '../../src/ai/profiles';
+import { PROFILES, radialProfile } from '../../src/ai/profiles';
+import { checkPlacement } from '../../src/ai/analysis';
 import {
   createRng,
   nextInt,
@@ -260,6 +261,53 @@ describe('stage hazards and authored cover under radial blasts', () => {
       expect(s.players[0]!.x).toBeGreaterThanOrEqual(7);
     },
   );
+});
+
+describe('crowded chains (RE-AI8)', () => {
+  it('linked-chain worst case: generators one placement apart go off with the earliest of them', () => {
+    const s = radialBoard();
+    put(s, 0, 0, 10);
+    addGenerator(s, { ownerId: 1, x: 3, y: 5, timer: 40, range: 2 });
+    addGenerator(s, { ownerId: 1, x: 7, y: 5, timer: 150, range: 2 }); // 4 apart: not chained, boxes touch
+    const c = ctxFor(s, 0);
+    c.builder.build(c.danger, c.world, c.profile);
+    const east = 5 * 15 + 9; // only in the later disc
+    expect(c.danger.hit(east, s.tick + 35, s.tick + 80)).toBe(false);
+    c.builder.build(c.tmp, c.world, c.profile, { linkedChains: true });
+    expect(c.tmp.hit(east, s.tick + 35, s.tick + 80)).toBe(true);
+  });
+
+  it('a radial placement is refused when one more generator could link it to a cluster about to blow', () => {
+    // a corridor; a rival generator going off in 15 ticks sits three tiles west of the spot - outside the spot's
+    // radius-2 disc, so no chain today, but one generator between them would link the two. Running clear of the
+    // bot's own disc takes three steps (about 21 ticks): escapable only if nobody links them.
+    const corridor = Array.from({ length: 13 }, (_, i) => `${1 + i},5`);
+    const s = radialBoard();
+    pocket(s, [...corridor, '14,0']);
+    put(s, 0, 9, 5);
+    addGenerator(s, { ownerId: 1, x: 6, y: 5, timer: 15, range: 2 });
+    const tile = 5 * 15 + 9;
+    const c = ctxFor(s, 0, 'standard');
+    expect(checkPlacement(c, tile, s.tick, s.tick + 1, 10)).toBeNull();
+    // the same spot with the rival generator far in the future is fine
+    s.generators[0]!.timer = 170;
+    const d = ctxFor(s, 0, 'standard');
+    expect(checkPlacement(d, tile, s.tick, s.tick + 1, 10)).not.toBeNull();
+  });
+
+  it('in City Rumble every level models chains and checks its escape; Classic profiles are untouched', () => {
+    for (const d of ['rookie', 'beginner', 'casual', 'standard', 'expert'] as const) {
+      const r = radialProfile(PROFILES[d]);
+      expect(r.chains).toBe(true);
+      expect(r.placeVerify).toBe(1);
+      // every other handicap is kept
+      expect(r.reaction).toBe(PROFILES[d].reaction);
+      expect(r.mistake).toBe(PROFILES[d].mistake);
+      expect(r.lookahead).toBe(PROFILES[d].lookahead);
+    }
+    expect(radialProfile(PROFILES.expert)).toBe(PROFILES.expert);
+    expect(PROFILES.casual.chains).toBe(false);
+  });
 });
 
 describe('placement analysis', () => {
