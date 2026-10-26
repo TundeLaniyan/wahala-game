@@ -943,3 +943,95 @@ prints its render cost):
 - Spawns cannot be perfectly fair on a non-mirrored board: the 8-player west mean to the core is 7 steps longer
   (the human's corner); 16 / 32 within 3.
 - Bot balance only; Survival length depends on the merged AI (37-115 s in the batch).
+
+## L. Lead integration, verification and delivery
+
+All six streams (Phase 0 contracts, A movement, C economy, AI bots, E living environment, D Ojuelegba) are merged on
+`claude/wahala-rumble-evolution-v1`; nothing is published to GitHub Pages from this branch (`ci.yml` deploys only from
+`claude/wahala-stitch-uiux-v1`), and the CI optimisation branch was not touched.
+
+### L.1 Verification on the merged branch (container: 4 cores, software WebGL, Chromium at /opt/pw-browsers)
+
+| Check | Result |
+| --- | --- |
+| `npx tsc --noEmit`, `npx eslint .` | clean |
+| `npx vitest run` | 98 files, 1469 passed, 5 skipped (the Ojuelegba mirror-symmetry exemptions in `tests/rumble-stages.test.ts`), 0 failed (baseline before the milestone: 85 files, 1189) |
+| `npm run build` | ok; main chunk 1,120 kB (353 -> 371 kB gzip; the Stitch baseline already exceeded Vite's 900 kB warning at 1,072 kB) |
+| Playwright, every spec, release build, desktop 1280x720 + phone 844x390 (`WAHALA_MULTIPROCESS=1`, 2 workers) | 113 passed, 27 skipped (project-specific), 0 failed, 0 flaky, 44.7 min |
+| New `e2e/rumble-evolution.spec.ts` | the real menus start Ojuelegba (45 x 33), radial blasts eliminate a diagonal neighbour, every fighter has two generators; Blast shape "Cross" keeps the diagonal safe; the Danfo pull-out is telegraphed before it turns lethal (frame reviewed; it found the "PULLING IN" wording bug, fixed with a regression test) |
+| Classic unchanged | Classic config (plus, one generator) tested; bot decisions byte-identical to Phase 0 (`scripts/ai-fingerprint.ts` + per-tick intent-hash replay, RE-AI); all pre-existing Classic, tutorial, audio, menu and pause tests pass unchanged |
+
+Lead fixes found during integration: metrics alive-tick off-by-one (`scripts/rumbleMetrics/collector.ts`), Danfo
+departure alert wording (`app/stageAlerts.ts`), danger overlay capacity 700 -> 2048 tiles, the radial-aware spoken
+fuse warning, the Rumble-only blast switch (RE-L2).
+
+### L.2 Final measurement: legacy (plus, 1 generator) vs evolution (radial, 2 generators)
+
+Full tables: `docs/measurements/rumble-evolution-final.md` (4 stages x 8/16/24/32 Survival + 16-bot Deathmatch,
+4 seeds each, radial-aware bots). Ranges across the four stages:
+
+| Measure | Legacy | Evolution |
+| --- | --- | --- |
+| Deathmatch eliminations in 5 min, 16 bots | 239-286 | 314-374 (+20-32 %) |
+| Deathmatch eliminations in the first 60 s | 27-35 | 37-45 |
+| Share of fighter time inside an opponent's live blast footprint (Survival) | 21-36 % | 33-51 % |
+| Generator placements per fighter-minute | 21-26 | 30-37 |
+| First elimination, 8-bot Survival | 8-16 s | 6-11 s |
+| First encounter (Survival, 16+ bots) | 0.3-1.1 s | 0.3-0.9 s |
+| Camping (>= 5 s inside a 3 x 3 area) | 0-5 % | 0-3 % |
+| Opponent within 6 tiles | 74-93 % | 53-90 % (lower with 8 bots on the big boards) |
+| Survival self-eliminations per match (32 bots) | 4-6 | 5-7 |
+| Deathmatch self-eliminations per match | 15-23 | 27-33 |
+| Supply crates opened (of 8) | 4.5-8 | 6.8-8, the first at 3.5-4.6 s |
+| Bots + sim ms/tick, 32 bots | 0.49-0.58 | 0.72-0.82 |
+
+Reading: the two-generator radial Rumble produces more and earlier offence, more pressure on every fighter and less
+camping, with strong leaders still emerging (top Deathmatch eliminators 139-202 kills). The costs are about twice as
+many self-eliminations in respawn modes, slightly looser spacing with 8 bots on the 45 x 33 / 41 x 31 boards (on
+Ojuelegba with 8 bots: two empty runs of 15 s or more per match, longest 25 s), and ~40 % more bot CPU. The
+original district (`cityRumble`) at 8/16 bots is the one place bots still kill themselves more under radial than
+under the cross (RE-AI8). Bot-only data: no human has played the evolution build.
+
+Ojuelegba specifically (evolution): every Survival match ended with a winner (legacy had one timeout draw at 8),
+stage hazards caused 0-0.3 deaths per match (the departure is telegraphed and escape-checked), 6.8-8 of 8 supply
+crates opened, the first encounter at 0.5-2.3 s.
+
+### L.3 Research pack (late, 26 Oct) - accountability
+
+All four documents read by the lead (memo 01, primary bible 02 in full, PDFs 03 and 04: Ojuelegba, shared rules,
+guardrails, rankings, other arenas skimmed). Digest and verdicts: `RUMBLE_RESEARCH_DIGEST.md`; per-stream tables:
+sections D.9 and E.8 above, C.6 (metrics the research asked for), AI (8/16/24/32 and death causes). Research-driven
+corrections to agent work already under way: the Ojuelegba layout rebuilt to the J-A..J-E bands and exact link graph,
+large piers in unequal bays, vehicles confined to the through road, the hazard turned into a bay pull-out, the deck
+reduced to edge girders with a cutaway, okadas and the place-name sign removed, unlabelled stills; the living
+environment lost its okada traffic, gained research budgets, zones, palette and the escape-time guard; the metrics
+harness gained first encounter, empty runs, causes, live generators, supplies and spawn slots; the bots were measured
+at 8/16/24/32. No research rule was adopted unapproved (no HP, cooldowns, chain caps, falloff, two-level combat,
+falling containers, NPC damage, navmesh or UE5 systems); the radial blast stays the founder's default and is
+switchable for comparison (RE-L2).
+
+### L.4 Remaining limitations
+
+- Nothing was judged on a physical phone: frame rate, touch feel of the assisted movement (thresholds are first
+  guesses) and readability are from emulated touch and software-rendered frames.
+- Ojuelegba render cost at medium is 461-583 draw calls (median 514) and 1.7-2.0 M triangles; the 520-call budget
+  holds in about half the frames; parked Danfos (the full playable bus model) are the next lever.
+- Recognition by Lagos-familiar reviewers from the unlabelled stills (`docs/screenshots/rumble-evolution/
+  ojuelegba-unlabelled-*.jpg`) is still to do, as is cultural / spelling review of the fictional signage.
+- The Danfo model's number plate (from an earlier milestone) imitates the Lagos plate layout and reads "LA 419-WAH";
+  the research asks for invented plate formats. Regenerating the model in this container is not byte-stable (different
+  system fonts change every painted texture), so it should be changed on the asset machine (`tools/assets/veh_danfo.py`).
+- The audio engine does not read the environments' audio hooks yet; ambient traffic buses / trucks reuse the stretched
+  Danfo model; deck traffic is above the follow camera's frame most of the time.
+- In City Rumble the stage-alert banner shows over the play area (the existing Rumble HUD rail placement, unchanged).
+- Bot balance only; Team Rumble and Deathmatch were measured briefly; Lekki Nightworks corner-spawn flag (RE-C6) still
+  needs a 50-seed rerun.
+- `scripts/arena-previews.mjs` still drives the pre-Stitch menu (the Ojuelegba card image was made from a reviewed
+  frame instead).
+
+### L.5 Roadmap
+
+`RUMBLE_ROADMAP.md`: the five remaining environments in the research order (Lagos Island, Apapa, Oshodi, Surulere,
+Lekki) on the reusable contracts, the locked Surulere Stadium District requirements (separate arena, enterable
+stadium with a playable pitch, multiple exits, stands, tunnels, concourses, connected streets), and the future
+single-player campaign on the same engine.
