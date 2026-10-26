@@ -116,6 +116,11 @@ export interface DangerQuery {
   detonateIds?: readonly number[];
   /** Leave out the "an enemy remote generator may go off at any moment" windows (certain hazards only). */
   ignoreHold?: boolean;
+  /**
+   * City Rumble (radial, decision RE-AI8): assume the worst chain. Ticking generators close enough that ONE more
+   * generator could link them (their boxes overlap) all go off with the earliest of their group.
+   */
+  linkedChains?: boolean;
 }
 
 interface GenNode {
@@ -221,6 +226,7 @@ export class DangerBuilder {
       this.relax();
       this.refine(world);
     }
+    if (q.linkedChains) this.collapseLinked(world, T);
 
     for (let i = 0; i < this.nodeCount; i++) {
       const n = this.nodes[i]!;
@@ -421,6 +427,54 @@ export class DangerBuilder {
       if (n.tiles.includes(t)) continue;
       n.tiles.push(t);
       for (let o = this.head[t]!; o >= 0; o = this.next[o]!) if (o !== idx && !n.hits.includes(o)) n.hits.push(o);
+    }
+  }
+
+  private readonly groupOf: number[] = [];
+
+  /**
+   * Linked-chain worst case: generators whose radial boxes are at most one generator apart (Chebyshev distance
+   * <= box a + box b) form a group; every timed member of a group is assumed to go off with its earliest member.
+   * Remote holds and disarmed generators keep their own timing.
+   */
+  private collapseLinked(world: World, T: number): void {
+    const { obs } = world;
+    const n = this.nodeCount;
+    const group = this.groupOf;
+    group.length = n;
+    const find = (i: number): number => {
+      while (group[i] !== i) i = group[i] = group[group[i]!]!;
+      return i;
+    };
+    const box: number[] = [];
+    for (let i = 0; i < n; i++) {
+      group[i] = i;
+      const a = this.nodes[i]!;
+      box[i] = radialBox(obs, a.range, a.square);
+    }
+    for (let i = 0; i < n; i++) {
+      const a = this.nodes[i]!;
+      if (a.explodeAt >= NEVER || a.hold) continue;
+      for (let j = i + 1; j < n; j++) {
+        const b = this.nodes[j]!;
+        if (b.explodeAt >= NEVER || b.hold) continue;
+        if (Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) > box[i]! + box[j]!) continue;
+        const ra = find(i);
+        const rb = find(j);
+        if (ra !== rb) group[ra] = rb;
+      }
+    }
+    const earliest = new Map<number, number>();
+    for (let i = 0; i < n; i++) {
+      const a = this.nodes[i]!;
+      if (a.explodeAt >= NEVER || a.hold) continue;
+      const r = find(i);
+      earliest.set(r, Math.min(earliest.get(r) ?? NEVER, a.explodeAt));
+    }
+    for (let i = 0; i < n; i++) {
+      const a = this.nodes[i]!;
+      if (a.explodeAt >= NEVER || a.hold) continue;
+      a.explodeAt = Math.max(T, Math.min(a.explodeAt, earliest.get(find(i))!));
     }
   }
 
