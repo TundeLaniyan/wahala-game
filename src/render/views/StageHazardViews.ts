@@ -37,6 +37,15 @@ import type { Effects } from '../fx/Effects';
 import { ParticleSystem } from '../fx/Particles';
 import type { QualityProfile } from '../quality';
 import { chevronTexture, glowTexture, ringTexture, smokeTexture, tileGlowTexture } from '../textures';
+import {
+  blinkerOn,
+  departDistance,
+  departRollback,
+  departSpeed,
+  easeDepart,
+  hornPulse,
+  routePoint,
+} from './departure';
 import { lerpAngle, playerGridPos, stepProgress, yawForDir } from './motion';
 import { chevronYaw } from './OverlayViews';
 import { TileOverlay } from './TileOverlay';
@@ -355,6 +364,9 @@ interface SweepVisual {
   fdy: number;
   speed: number;
   smokeAt: number;
+  /** Departures only: the warning lamps (own materials, disposed with the visual) and the parked-exhaust clock. */
+  lamps?: { reverse: Sprite[]; blink: Sprite[]; mats: SpriteMaterial[] };
+  puffAt?: number;
 }
 
 type FallerKind = 'debris' | 'merch' | 'cargo';
@@ -963,6 +975,7 @@ export class StageHazardViews implements View {
     model.root.visible = false;
     model.root.scale.setScalar(VEHICLE_SCALE);
     this.solids.add(model.root);
+    const lamps = ev.depart ? this.createDepartureLamps(model, box.min.x, half) : undefined;
     const d0 = DIR_VEC[ev.dir ?? 'right'];
     const v: SweepVisual = {
       ev,
@@ -981,9 +994,87 @@ export class StageHazardViews implements View {
       fdy: d0.dy,
       speed: 60 / Math.max(1, ev.stepTicks),
       smokeAt: 0,
+      lamps,
+      puffAt: 0,
     };
     this.sweeps.set(ev.id, v);
     return v;
+  }
+
+  /**
+   * A departing Danfo's warning lamps: two amber blinkers and two white reversing lamps at the back
+   * (additive glows on the vehicle, with their own materials so each flashes on its own).
+   */
+  private createDepartureLamps(
+    model: VehicleModel,
+    rearX: number,
+    half: number,
+  ): NonNullable<SweepVisual['lamps']> {
+    const lamps: NonNullable<SweepVisual['lamps']> = { reverse: [], blink: [], mats: [] };
+    const make = (color: number, z: number, y: number, size: number): Sprite => {
+      const m = new SpriteMaterial({
+        map: glowTexture(),
+        color,
+        transparent: true,
+        blending: AdditiveBlending,
+        depthWrite: false,
+        opacity: 0,
+      });
+      lamps.mats.push(m);
+      const sp = new Sprite(m);
+      sp.position.set(rearX - 0.02, y, z);
+      sp.scale.setScalar(size);
+      sp.renderOrder = 28;
+      model.root.add(sp);
+      return sp;
+    };
+    for (const z of [-half, half]) {
+      lamps.blink.push(make(0xffa21a, z * 1.05, 0.5, 0.36));
+      lamps.reverse.push(make(0xf4fbff, z * 0.55, 0.36, 0.3));
+    }
+    return lamps;
+  }
+
+  /**
+   * A DEPARTURE (decision RE-E3): the Danfo is parked on its bay for the whole warning, honking, blinking
+   * and revving, rolls back a hand's breadth with its reversing lamps on, then pulls out and accelerates
+   * along the lane. Simulation timing is uniform; only the picture eases (see `departure.ts`).
+   */
+  private updateDeparture(ev: StageEvent, v: SweepVisual, ctx: FrameContext): void {
+    const { state, alpha, time } = ctx;
+    const w = state.width;
+    const warning = state.tick < ev.startTick;
+    const k = warning ? warnProgress(ev, state, alpha) : 1;
+    const u = departDistance(ev.index, ev.stepRemaining, ev.stepTicks, alpha);
+    const parked = u <= 0;
+    const back = departRollback(k, u);
+    const p = routePoint(ev.tiles, easeDepart(u) - back, w);
+    v.lastIndex = ev.index;
+    v.dx = v.fdx = p.dx;
+    v.dy = v.fdy = p.dy;
+    v.smokeAt = parked ? time + 10 : Math.min(v.smokeAt, time); // while parked, the exhaust below runs instead
+    this.placeVehicle(v, p.x, p.y, ctx, departSpeed(u));
+    const root = v.model.root;
+    if (parked) {
+      // the engine revs harder as the moment nears
+      root.rotation.z += Math.sin(time * 46 + ev.id) * (0.006 + 0.02 * k);
+      v.model.body.position.y += Math.abs(Math.sin(time * 31)) * 0.02 * k;
+      if (time > (v.puffAt ?? 0)) {
+        v.puffAt = time + 0.5 - 0.42 * k;
+        this.fx.smokePuff(this.layout.wx(p.x) - p.dx * 0.8, 0.2, this.layout.wz(p.y) - p.dy * 0.8, 0.22 + 0.2 * k);
+      }
+    }
+    const lamps = v.lamps;
+    if (lamps) {
+      const blink = parked && blinkerOn(time, k);
+      for (const m of lamps.blink) (m.material as SpriteMaterial).opacity = parked ? (blink ? 0.95 : 0.08) : 0;
+      const reversing = back > 0.004 && (parked || u < 0.5);
+      for (const m of lamps.reverse) (m.material as SpriteMaterial).opacity = reversing ? 0.95 : 0;
+    }
+    // horn: two rings sent out from the vehicle (the horn itself is the audio's `stageWarning` sound)
+    const pulse = warning ? hornPulse(k) : -1;
+    if (pulse >= 0)
+      this.put(this.rings, this.wx(p.x), this.wz(p.y), 0xffe9a0, 0.75 * (1 - pulse), 1.3 + 2.2 * pulse);
   }
 
   private updateSweepVehicle(ev: StageEvent, ctx: FrameContext): void {
@@ -992,6 +1083,10 @@ export class StageHazardViews implements View {
     const v = this.sweeps.get(ev.id) ?? this.createSweep(ev);
     v.ev = ev;
     v.seen = this.frame;
+    if (ev.depart) {
+      this.updateDeparture(ev, v, ctx);
+      return;
+    }
     const d0 = DIR_VEC[ev.dir ?? 'right'];
     const t0 = ev.tiles[0]!;
     let gx: number;
@@ -1091,6 +1186,7 @@ export class StageHazardViews implements View {
 
   private removeSweep(id: number, v: SweepVisual): void {
     this.solids.remove(v.model.root);
+    for (const m of v.lamps?.mats ?? []) m.dispose();
     this.sweeps.delete(id);
   }
 
