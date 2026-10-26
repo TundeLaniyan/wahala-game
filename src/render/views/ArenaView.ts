@@ -24,6 +24,8 @@ import { assets } from '../assets/library';
 import type { ObstacleStyle } from '../assets/obstacleStyles';
 import { MAX_HIDE, occludingTiles } from '../assets/occlusionFade';
 import { arenaFloorMaps } from '../arenas/floors';
+import type { BoardCover } from '../arenas/boardCover';
+import { NEW_ARENA_ART } from '../arenas/newArenas';
 import { InstanceSet } from './InstanceSet';
 import type { FrameContext, View } from './types';
 
@@ -79,6 +81,8 @@ export class ArenaView implements View {
   private readonly decals = new Group();
   /** Contact shadows under every pillar and prop: grounding/AO that also works with shadows off. */
   private readonly contact: InstanceSet;
+  /** Permanent cover drawn as whole objects (an arena's `ArenaArt.cover`), or null: pillars per tile. */
+  private readonly cover: BoardCover | null;
   private readonly ownedMaterials: Material[] = [];
   private readonly ownedTextures: Texture[] = [];
 
@@ -133,6 +137,9 @@ export class ArenaView implements View {
       ];
     }
     for (const set of this.pillars) this.group.add(set.group);
+    // board cover: grouped concrete drawn as the buildings / buses / piers it stands for
+    this.cover = NEW_ARENA_ART()[state.arenaId]?.cover?.({ width: W, height: H }) ?? null;
+    if (this.cover) this.group.add(this.cover.object);
     for (const v of this.variants) {
       const set = new InstanceSet(
         tinted(softBlockParts(v), look.softTint, style.softTint, owned),
@@ -184,6 +191,7 @@ export class ArenaView implements View {
         this.removeTile(i, x, y, this.cache[i]!);
         this.cache[i] = kind;
         if (kind === Tile.Hard) {
+          if (this.coveredAt(i)) continue; // drawn by the board cover
           if (!this.initialHard.has(i)) this.dropping.set(i, time);
           this.placePillar(i, x, y, this.dropping.has(i) ? 6 : 0);
         } else if (kind === Tile.Soft) {
@@ -218,6 +226,19 @@ export class ArenaView implements View {
     for (const g of state.generators) behind.push(g);
     for (const p of state.pickups) behind.push(p);
     const want = occludingTiles(state.width, state.height, behind);
+    // a tall cover object (a shop, a bus) can hide more than the one tile behind it
+    const cover = this.cover;
+    if (cover)
+      for (const o of behind) {
+        const x = Math.round(o.x);
+        if (x < 0 || x >= state.width) continue;
+        for (let k = 2; k <= cover.maxReach; k++) {
+          const y = Math.round(o.y) + k;
+          if (y < 0 || y >= state.height) continue;
+          const i = y * state.width + x;
+          if (this.coveredAt(i) && cover.reach(i) >= k) want.add(i);
+        }
+      }
     const k = 1 - Math.exp(-Math.max(0, dt) / HIDE_TAU);
     for (const i of want) if (!this.hideOf.has(i)) this.hideOf.set(i, 0);
     for (const [i, cur] of this.hideOf) {
@@ -226,12 +247,19 @@ export class ArenaView implements View {
       const x = i % state.width;
       const y = Math.floor(i / state.width);
       const kind = this.cache[i];
-      if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.setHide(i, next);
+      if (kind === Tile.Hard && this.coveredAt(i)) cover!.setHide(i, next);
+      else if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.setHide(i, next);
       else if (kind === Tile.Soft)
         this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.setHide(i, next);
       if (next === 0 && target === 0) this.hideOf.delete(i);
       else this.hideOf.set(i, next);
     }
+    cover?.commit();
+  }
+
+  /** An original concrete tile the board cover draws (never a crush block dropped in later). */
+  private coveredAt(i: number): boolean {
+    return this.cover !== null && this.initialHard.has(i) && this.cover.covers(i);
   }
 
   private removeTile(i: number, x: number, y: number, kind: number): void {
@@ -278,6 +306,7 @@ export class ArenaView implements View {
     for (const p of this.pillars) p.dispose();
     for (const s of this.soft.values()) s.dispose();
     this.contact.dispose();
+    this.cover?.dispose();
     for (const m of this.ownedMaterials) m.dispose();
     for (const t of this.ownedTextures) t.dispose();
   }

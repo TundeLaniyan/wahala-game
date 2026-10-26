@@ -39,6 +39,9 @@ export function softVariantFor(
   variants: readonly SoftVariant[] = softVariants(),
   arenaId?: string,
 ): SoftVariant {
+  // an arena may name the family of a tile outright (authored barriers, district clutter)
+  const forced = arenaId ? obstacleStyle(arenaId).softFor?.(x, y) : undefined;
+  if (forced && variants.includes(forced)) return forced;
   // each arena draws from its own coherent family (obstacleStyles.ts); no arena = the general mix
   const weights = arenaId ? resolveSoftWeights(obstacleStyle(arenaId), variants) : SOFT_WEIGHTS;
   const total = variants.reduce((n, v) => n + (weights[v] ?? 1), 0);

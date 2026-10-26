@@ -3,6 +3,7 @@
  * its look, surroundings and floor; the registry is read lazily so module cycles never matter.
  */
 import type { ArenaLook } from '../arenaLook';
+import type { CoverFactory } from './boardCover';
 import type { ArenaSet } from './common';
 import type { FloorDrawer } from './floorKit';
 import { AJEGUNLE_FLOOR, AJEGUNLE_LOOK, AJEGUNLE_SET } from './ajegunle';
@@ -22,7 +23,12 @@ import {
   RUMBLE_LEKKI_NIGHT_LOOK,
   RUMBLE_LEKKI_NIGHT_SET,
 } from './rumbleLekkiNightArt';
-import { RUMBLE_OJUELEGBA_FLOOR, RUMBLE_OJUELEGBA_LOOK, RUMBLE_OJUELEGBA_SET } from './rumbleOjuelegbaArt';
+import {
+  RUMBLE_OJUELEGBA_COVER,
+  RUMBLE_OJUELEGBA_FLOOR,
+  RUMBLE_OJUELEGBA_LOOK,
+  RUMBLE_OJUELEGBA_SET,
+} from './rumbleOjuelegbaArt';
 import { RUMBLE_OSHODI_FLOOR, RUMBLE_OSHODI_LOOK, RUMBLE_OSHODI_SET } from './rumbleOshodiArt';
 import { THIRD_MAINLAND_FLOOR, THIRD_MAINLAND_LOOK, THIRD_MAINLAND_SET } from './thirdMainland';
 import { YABA_FLOOR, YABA_LOOK, YABA_SET } from './yaba';
@@ -31,6 +37,8 @@ export interface ArenaArt {
   look: ArenaLook;
   set: ArenaSet;
   floor: FloorDrawer;
+  /** Permanent cover drawn as whole objects instead of per-tile pillars (`boardCover.ts`). */
+  cover?: CoverFactory;
 }
 
 let cache: Record<string, ArenaArt> | null = null;
@@ -55,6 +63,7 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
       look: RUMBLE_OJUELEGBA_LOOK,
       set: RUMBLE_OJUELEGBA_SET,
       floor: RUMBLE_OJUELEGBA_FLOOR,
+      cover: RUMBLE_OJUELEGBA_COVER,
     },
     rumbleApapa: { look: RUMBLE_APAPA_LOOK, set: RUMBLE_APAPA_SET, floor: RUMBLE_APAPA_FLOOR },
     rumbleLekkiNight: {
