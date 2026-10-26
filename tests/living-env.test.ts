@@ -14,7 +14,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { AdditiveBlending } from 'three';
-import type { InstancedMesh, Material, Object3D , Mesh } from 'three';
+import type { InstancedMesh, Material, Object3D, Mesh } from 'three';
 import { createBot } from '../src/ai';
 import { SOUND_IDS } from '../src/audio/recipes';
 import { createGame, observe, tick } from '../src/sim';

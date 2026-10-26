@@ -251,6 +251,11 @@ export interface GameConfig {
     dropMinPlayerDistance: number;
     /** Lethal stage events stop this long before the end, and when Wahala Crush starts closing. */
     quietRemainingTicks: number;
+    /**
+     * Departure hazards: input allowance added to a fighter's walking time when checking that everyone on the
+     * lane can step off it before it turns lethal (RE-E3).
+     */
+    escapeInputTicks: number;
   };
 }
 
@@ -435,6 +440,7 @@ export const DEFAULT_CONFIG: GameConfig = {
     teleportArriveTicks: ticks(0.3),
     dropMinPlayerDistance: 2,
     quietRemainingTicks: ticks(5),
+    escapeInputTicks: ticks(0.2),
   },
 };
 

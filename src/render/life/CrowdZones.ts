@@ -398,10 +398,16 @@ export class CrowdZones {
 
   // --------------------------------------------------------------------------------------- frames
 
-  update(dt: number, time: number, excitement: number, visible?: (x: number, z: number) => boolean): void {
-    this.life.update(dt, time, excitement, visible);
+  update(
+    dt: number,
+    time: number,
+    excitement: number,
+    visible?: (x: number, z: number, radius: number) => boolean,
+  ): void {
+    this.life.update(dt, time, excitement, visible && ((x, z) => visible(x, z, 3)));
     const { cols, rows } = this.opts;
     for (const v of this.variants) v.filled = [0, 0];
+    const seen = new Set<Variant>();
     for (const f of this.figures) {
       const p = f.person;
       let x = p.x;
@@ -471,6 +477,12 @@ export class CrowdZones {
       f.dx = x;
       f.dy = y;
       f.pose = frame;
+      if (
+        visible &&
+        !seen.has(f.variant) &&
+        visible(x - cols / 2, y - rows / 2, 2 + (f.zone.def.elevation ?? 0))
+      )
+        seen.add(f.variant);
       this.q.setFromEuler(this.e.set(lean, yaw, 0, 'YXZ'));
       this.m4.compose(
         this.p.set(x - cols / 2, f.y + lift, y - rows / 2),
@@ -486,6 +498,7 @@ export class CrowdZones {
     for (const v of this.variants) {
       for (const fr of [0, 1] as const) {
         const m = v.frames[fr];
+        m.visible = !visible || seen.has(v); // follow camera: a pose set nobody in view uses is not drawn
         m.count = v.filled[fr];
         m.instanceMatrix.needsUpdate = true;
         if (m.instanceColor) m.instanceColor.needsUpdate = true;

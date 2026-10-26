@@ -23,8 +23,7 @@ import {
   Quaternion,
   Vector3,
 } from 'three';
-import type { BufferGeometry, Material, MeshStandardMaterial ,
-  Mesh} from 'three';
+import type { BufferGeometry, Material, MeshStandardMaterial, Mesh } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VEHICLE_SCALE, STREET } from '../arenas/common';
 import { assets } from '../assets/library';
@@ -191,11 +190,16 @@ export class AmbientTraffic {
     });
   }
 
-  update(time: number, dt: number): void {
+  /**
+   * Moves every vehicle to its place at `time`. With `visible` (follow camera) a model whose vehicles are all
+   * out of view is not drawn at all.
+   */
+  update(time: number, dt: number, visible?: (x: number, z: number, radius: number) => boolean): void {
     const speed = this.opts.reducedMotion ? 0.4 : 1;
     const { cols, rows } = this.opts;
     let all = 0;
     for (const set of this.sets) {
+      let seen = !visible;
       set.vehicles.forEach((v, n) => {
         const route = this.routes.get(v.routeId)!;
         const st = vehicleAt(route, v, time, speed);
@@ -203,6 +207,7 @@ export class AmbientTraffic {
         const x = st.x - cols / 2;
         const z = st.y - rows / 2;
         const y = STREET + (route.def.elevation ?? 0);
+        if (visible && !seen && visible(x, z, 4 + (route.def.elevation ?? 0))) seen = true;
         // a faint road shudder, different per vehicle
         const roll = Math.sin(time * 17 + v.phase) * 0.008;
         this.q.setFromEuler(this.e.set(0, st.heading, roll, 'YXZ'));
@@ -233,7 +238,10 @@ export class AmbientTraffic {
         }
         all++;
       });
-      for (const im of set.meshes) im.instanceMatrix.needsUpdate = true;
+      for (const im of set.meshes) {
+        im.instanceMatrix.needsUpdate = true;
+        im.visible = seen;
+      }
     }
     this.lastTime = time;
   }

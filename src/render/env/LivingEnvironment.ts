@@ -165,8 +165,9 @@ export class LivingEnvironment implements View {
 
   update(ctx: FrameContext): void {
     this.time = ctx.time;
-    this.traffic?.update(ctx.time, ctx.dt);
-    const visible = ctx.inView ? (x: number, z: number): boolean => ctx.inView!(x, z, 3) : undefined;
+    // follow camera: what is out of view is neither moved nor drawn (elevated things get a wider circle)
+    const visible = ctx.inView;
+    this.traffic?.update(ctx.time, ctx.dt, visible);
     this.crowd?.update(ctx.dt, ctx.time, ctx.info.excitement, visible);
     this.lights?.update(ctx.time);
     this.dust?.update(ctx.dt);

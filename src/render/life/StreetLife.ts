@@ -247,8 +247,12 @@ export class StreetLife {
 
   update(dt: number, time: number, excitement: number, visible?: (x: number, z: number) => boolean): void {
     for (const a of this.actors) {
-      // follow camera: people out of view neither think nor animate (their clip resumes where it stopped)
-      if (visible && !visible(a.root.position.x, a.root.position.z)) continue;
+      // follow camera: people out of view are neither drawn nor animated (their clip resumes where it stopped)
+      if (visible) {
+        const seen = visible(a.root.position.x, a.root.position.z);
+        a.root.visible = seen;
+        if (!seen) continue;
+      }
       if (a.react || a.offX !== 0 || a.offZ !== 0) {
         this.bystander(a, dt, time); // reacting, or walking back to the scene: the script waits
       } else {

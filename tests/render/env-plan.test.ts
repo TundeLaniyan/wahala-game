@@ -101,10 +101,48 @@ describe('the default Ojuelegba environment', () => {
     const west = env.traffic!.filter((r) => r.id.startsWith('west'));
     for (const r of west) expect(r.path.every(([x]) => x < 0)).toBe(true);
     const east = env.crowds!.filter((z) => z.rect.x0 > board.cols);
-    expect(east.map((z) => z.id).sort()).toEqual(['danfoParkTouts', 'rearLoopCrew']);
+    expect(east.map((z) => z.id).sort()).toEqual(['danfoParkTouts', 'rearLoopMechanics']);
     // the bus stop sits under the deck, north of the board
     const stop = env.crowds!.find((z) => z.id === 'busStop')!;
     expect(stop.rect.y1).toBeLessThan(0);
+  });
+
+  it('follows the research: no okadas, Danfos and buses dominate, taxis few, kekes sparse, trucks only on the flyover', () => {
+    for (const board of BOARDS) {
+      const env = ojuelegbaEnv(board);
+      const all = env.traffic!.flatMap((r) =>
+        r.kinds.map((k) => ({ k, elevated: (r.elevation ?? 0) > 0.5 })),
+      );
+      expect(all.some((x) => x.k === 'okada')).toBe(false);
+      expect(all.filter((x) => x.k === 'truck').every((x) => x.elevated)).toBe(true);
+      for (const level of LEVELS) {
+        const v = planTraffic(env, level).vehicles;
+        const share = (kinds: string[]): number => v.filter((x) => kinds.includes(x.kind)).length / v.length;
+        expect(share(['danfo', 'bus']), level).toBeGreaterThanOrEqual(0.5);
+        expect(share(['keke']), level).toBeLessThanOrEqual(0.2);
+        expect(share(['car']), level).toBeLessThanOrEqual(0.3);
+      }
+    }
+  });
+
+  it('keeps civilians in protected frontage strips: the bus stop, food sellers, touts, traders and mechanics', () => {
+    const ids = ojuelegbaEnv({ cols: 41, rows: 31 }).crowds!.map((z) => z.id);
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        'busStop',
+        'underBridgeFoodSellers',
+        'shopfrontTraders',
+        'rearLoopMechanics',
+        'danfoParkTouts',
+      ]),
+    );
+  });
+
+  it('records its safety notes and cutaway: safe pockets on the board, exclusions that name other styles', () => {
+    const env = ojuelegbaEnv({ cols: 41, rows: 31 });
+    expect(env.safety?.safePockets?.length).toBeGreaterThan(0);
+    expect(env.safety?.exclusions?.[0]?.notWith).toContain('crush');
+    expect(env.occlusion?.cutaway?.length).toBeGreaterThan(0);
   });
 
   it('declares audio hooks that are plain sound names (checked against the recipes in living-env.test.ts)', () => {
@@ -207,6 +245,18 @@ describe('validation catches what the contract forbids', () => {
     fails(e2, /on the board/);
   });
 
+  it('rejects malformed safety notes and cutaways', () => {
+    const env = base();
+    env.safety = {
+      safePockets: [{ style: 'danfo', rect: { x0: 30, y0: 5, x1: 50, y1: 8 } }],
+      exclusions: [{ style: 'danfo', notWith: [] }],
+    };
+    env.occlusion = { cutaway: [{ x0: 4, y0: 4, x1: 4, y1: 9 }] };
+    fails(env, /safe pocket/);
+    fails(env, /exclusion/);
+    fails(env, /cutaway/);
+  });
+
   it('honours keep-clear hints', () => {
     const env = base();
     env.occlusion = { keepClear: [{ x0: -20, y0: 8, x1: -15, y1: 12 }] };
@@ -244,7 +294,8 @@ describe('budgets per quality tier', () => {
     const plan = planEnvironment(ojuelegbaEnv({ cols: 41, rows: 31 }), 'low');
     expect(plan.rigs).toBe(0);
     expect(plan.models.length).toBeLessThanOrEqual(1);
-    expect(plan.people).toBeLessThanOrEqual(10);
+    expect(plan.people).toBeLessThanOrEqual(20);
+    expect(plan.people).toBeGreaterThanOrEqual(12); // the research's provisional low tier: 12-20 nearby people
     expect(plan.vehicles.length).toBeLessThanOrEqual(4);
     expect(plan.drawCalls).toBeLessThanOrEqual(24);
   });

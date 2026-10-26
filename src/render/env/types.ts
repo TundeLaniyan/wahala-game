@@ -173,6 +173,22 @@ export interface OcclusionHints {
   maxHeightSouth?: number;
   /** Regions the art occupies (stalls, a kiosk ...): ambient traffic and people keep clear of them. */
   keepClear?: readonly TileRect[];
+  /**
+   * Regions where an overhead mass (a flyover deck, a roof) fades or cuts away so the board stays readable.
+   * Declared for the art and for tests; ambient content never stands in them on the ground side of the board.
+   */
+  cutaway?: readonly TileRect[];
+}
+
+/**
+ * Hazard-safety notes the arena records next to its environment (the research asks each arena to). Data for
+ * review, floor art and tests: the simulation does not read them (the stage hazards in `ArenaDef` are the rules).
+ */
+export interface SafetyNotes {
+  /** Marked places beside a hazard that are always safe (pavement recesses beside a departure lane). */
+  safePockets?: readonly { style: string; rect: TileRect; note?: string }[];
+  /** Hazard styles that must never be live together, or with a closing city: documents what the sim guards. */
+  exclusions?: readonly { style: string; notWith: readonly string[] }[];
 }
 
 // ------------------------------------------------------------------------------------------ budget
@@ -192,7 +208,7 @@ export interface EnvBudget {
 }
 
 export const ENV_BUDGET: Readonly<Record<QualityLevel, EnvBudget>> = {
-  low: { vehicles: 4, vehicleModels: 1, people: 10, rigs: 0, lights: 4 },
+  low: { vehicles: 4, vehicleModels: 1, people: 14, rigs: 0, lights: 4 },
   medium: { vehicles: 10, vehicleModels: 3, people: 36, rigs: 5, lights: 8 },
   high: { vehicles: 18, vehicleModels: 4, people: 70, rigs: 10, lights: 14 },
 };
@@ -218,6 +234,7 @@ export interface StageEnvironment {
   lights?: readonly LightPocket[];
   audio?: AudioIdentity;
   occlusion?: OcclusionHints;
+  safety?: SafetyNotes;
   /** Per-tier overrides that LOWER the global caps (never raise them). */
   budget?: Partial<Record<QualityLevel, Partial<EnvBudget>>>;
 }

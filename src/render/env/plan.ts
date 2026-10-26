@@ -263,6 +263,21 @@ export function validateEnvironment(env: StageEnvironment, board: BoardSize): st
     }
   }
 
+  for (const p of env.safety?.safePockets ?? [])
+    if (
+      !(p.rect.x1 > p.rect.x0 && p.rect.y1 > p.rect.y0) ||
+      p.rect.x0 < 0 ||
+      p.rect.y0 < 0 ||
+      p.rect.x1 > board.cols ||
+      p.rect.y1 > board.rows
+    )
+      fail(`safe pocket for ${p.style} is empty or not on the board`);
+  for (const x of env.safety?.exclusions ?? [])
+    if (x.notWith.length === 0 || x.notWith.includes(x.style))
+      fail(`exclusion for ${x.style} is empty or names itself`);
+  for (const c of env.occlusion?.cutaway ?? [])
+    if (!(c.x1 > c.x0 && c.y1 > c.y0)) fail('a cutaway region is empty');
+
   for (const l of env.lights ?? []) {
     if (pointInRect(l.at[0], l.at[1], expandRect(rect, 0.3))) fail(`a light stands on the board at ${l.at}`);
     if (l.height < 0 || l.height > 9) fail(`a light at ${l.at} has an odd height ${l.height}`);

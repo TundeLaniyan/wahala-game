@@ -1,7 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { STANDARD_ARENA_IDS, Tile, createGame, getArena, isLethalStageEvent, tick } from '../src/sim';
+import {
+  STANDARD_ARENA_IDS,
+  Tile,
+  createGame,
+  getArena,
+  isLethalStageEvent,
+  laneEscapeSteps,
+  tick,
+} from '../src/sim';
 import type { GameState, SimEvent, StageEvent } from '../src/sim';
-import { addGenerator, eventsOf, put, run, sandbox } from './helpers';
+import { addGenerator, addSoft, eventsOf, put, run, sandbox } from './helpers';
 
 /**
  * Stage hazards: each arena's own environmental events. Deterministic, telegraphed, identical for
@@ -44,7 +52,8 @@ describe('scheduling and fairness', () => {
       });
       const out: string[] = [];
       for (let i = 0; i < 70 * TPS; i++)
-        for (const e of tick(s, {})) if (e.type === 'stageWarning') out.push(`${s.tick}:${e.event.tiles.join('.')}`);
+        for (const e of tick(s, {}))
+          if (e.type === 'stageWarning') out.push(`${s.tick}:${e.event.tiles.join('.')}`);
       return out.join('|');
     };
     expect(log(4)).toBe(log(4));
@@ -73,7 +82,8 @@ describe('scheduling and fairness', () => {
         for (const e of tick(s, {})) {
           if (e.type !== 'stageWarning') continue;
           lastWarn = s.match.playTicks;
-          if (isLethalStageEvent(e.event)) expect(e.event.startTick - e.event.warnTick).toBeGreaterThanOrEqual(1.5 * TPS);
+          if (isLethalStageEvent(e.event))
+            expect(e.event.startTick - e.event.warnTick).toBeGreaterThanOrEqual(1.5 * TPS);
         }
         maxLethal = Math.max(maxLethal, s.stage.events.filter(isLethalStageEvent).length);
       }
@@ -157,12 +167,21 @@ describe('sweeps: Danfo bays, Oshodi traffic, checkpoint car', () => {
         const [dx, dy] = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[d];
         const x = (lane % W) + dx;
         const y = Math.floor(lane / W) + dy;
-        return x >= 0 && x < W && y >= 0 && y < 11 && s.tiles[idx(x, y)] === Tile.Empty && !ev.tiles.includes(idx(x, y));
+        return (
+          x >= 0 &&
+          x < W &&
+          y >= 0 &&
+          y < 11 &&
+          s.tiles[idx(x, y)] === Tile.Empty &&
+          !ev.tiles.includes(idx(x, y))
+        );
       });
     const lane = ev.tiles.slice(1, 6).find((t) => exitOf(t) !== undefined)!;
     const off = exitOf(lane)!;
     put(s, 0, lane % W, Math.floor(lane / W));
-    const out = run(s, ev.startTick - s.tick + ev.tiles.length * ev.stepTicks + 2, (t) => (t < 2 ? { 0: { move: off } } : {}));
+    const out = run(s, ev.startTick - s.tick + ev.tiles.length * ev.stepTicks + 2, (t) =>
+      t < 2 ? { 0: { move: off } } : {},
+    );
     expect(eventsOf(out, 'generatorExploded').some((e) => e.x === gx && e.y === gy)).toBe(true);
     expect(s.players[0]!.alive).toBe(true);
   });
@@ -278,7 +297,8 @@ describe('drops: Balogun Market goods', () => {
       const ev = untilWarning(s);
       expect(ev.kind).toBe('drop');
       for (const t of ev.tiles) {
-        for (const p of s.players) expect(Math.abs(p.x - (t % W)) + Math.abs(p.y - Math.floor(t / W))).toBeGreaterThanOrEqual(2);
+        for (const p of s.players)
+          expect(Math.abs(p.x - (t % W)) + Math.abs(p.y - Math.floor(t / W))).toBeGreaterThanOrEqual(2);
       }
       const out: SimEvent[] = run(s, ev.startTick - s.tick + 1);
       dropped += eventsOf(out, 'stageBlockDropped').length;
@@ -311,7 +331,9 @@ describe('manholes: Ajegunle trapdoors', () => {
     expect(trip[0]).toMatchObject({ fromX: 2, fromY: 4, toX: 12, toY: 6 });
     expect([s.players[0]!.x, s.players[0]!.y]).toEqual([12, 6]);
     // arriving never sends you back, and stepping straight back on is on cooldown
-    const back = run(s, 40, (t) => (t === 20 ? { 0: { move: 'up' } } : t === 32 ? { 0: { move: 'down' } } : {}));
+    const back = run(s, 40, (t) =>
+      t === 20 ? { 0: { move: 'up' } } : t === 32 ? { 0: { move: 'down' } } : {},
+    );
     expect(eventsOf(back, 'playerTeleported')).toHaveLength(0);
     expect([s.players[0]!.x, s.players[0]!.y]).toEqual([12, 6]);
   });
@@ -322,7 +344,18 @@ describe('manholes: Ajegunle trapdoors', () => {
       put(s, 0, 2, 3);
       put(s, 1, 14, 0);
       if (block === 'generator') addGenerator(s, { ownerId: 1, x: 12, y: 6, timer: 99999 });
-      else s.flames.push({ x: 12, y: 6, eventId: 99, genId: 0, ownerId: 1, dir: null, tip: false, startTick: s.tick, endTick: s.tick + 600 });
+      else
+        s.flames.push({
+          x: 12,
+          y: 6,
+          eventId: 99,
+          genId: 0,
+          ownerId: 1,
+          dir: null,
+          tip: false,
+          startTick: s.tick,
+          endTick: s.tick + 600,
+        });
       const out = run(s, 12, (t) => (t === 0 ? { 0: { move: 'down' } } : {}));
       expect(eventsOf(out, 'playerTeleported'), block).toHaveLength(0);
       expect([s.players[0]!.x, s.players[0]!.y]).toEqual([2, 4]);
@@ -455,12 +488,55 @@ describe('departures: a parked Danfo pulls out of a bay (RE-E3)', () => {
     }
   });
 
+  it('every lane tile has a way off it that the slowest fighter walks within the warning (pavement pockets)', () => {
+    const layout = arena.layout;
+    const open = (i: number): boolean => layout[Math.floor(i / W)]![i % W] !== '#';
+    const steps = laneEscapeSteps(W, 11, lane, open);
+    expect(steps).toEqual([1, 1, 2, 1]); // (1,4) sits between pillars: out via (2,3)
+    const cfg = createGame({
+      seed: 1,
+      arenaId: 'danfoBusPark',
+      players: [
+        { name: 'A', characterId: 'streetBaller', isBot: false },
+        { name: 'B', characterId: 'lekkiBoy', isBot: false },
+      ],
+    }).config;
+    const slowest = Math.max(...cfg.movement.stepTicksBySpeedLevel);
+    const warn = (arena.stageHazards[0] as { warnSec: number }).warnSec * TPS;
+    steps.forEach((n, j) => {
+      expect(n * slowest + cfg.stage.escapeInputTicks, `lane tile ${j}`).toBeLessThanOrEqual(
+        Math.max(warn, cfg.stage.minLethalWarnTicks) + j * 9,
+      );
+    });
+  });
+
+  it('is delayed while anyone on the lane has no exit (crates / a generator close every way off), and goes ahead once one opens', () => {
+    const s = departure();
+    put(s, 0, 1, 4); // between pillars: out via (2,3) / (2,5) or (0,3) / (0,5)
+    for (const [x, y] of [
+      [2, 3],
+      [2, 5],
+      [0, 3],
+      [4, 4], // and the way east along the lane
+    ] as const)
+      addSoft(s, x, y);
+    addGenerator(s, { ownerId: 1, x: 0, y: 5, timer: 99999, range: 1 });
+    expect(run(s, 20 * TPS).filter((e) => e.type === 'stageWarning')).toHaveLength(0);
+    s.tiles[idx(2, 3)] = Tile.Empty; // an exit opens
+    const out = run(s, 6 * TPS).filter((e) => e.type === 'stageWarning');
+    expect(out.length).toBeGreaterThan(0);
+    // and a fighter who does stand there can use it: step off during the warning and live
+    const ev = out[0]!.type === 'stageWarning' ? out[0]!.event : null;
+    expect(ev?.depart).toBe(true);
+  });
+
   it('keeps the fairness guards: one lethal event at a time, and the same seed gives the same schedule', () => {
     const log = (): string => {
       const s = departure();
       const out: string[] = [];
       for (let i = 0; i < 40 * TPS; i++) {
-        for (const e of tick(s, {})) if (e.type === 'stageWarning') out.push(`${s.tick}:${e.event.tiles.join('.')}`);
+        for (const e of tick(s, {}))
+          if (e.type === 'stageWarning') out.push(`${s.tick}:${e.event.tiles.join('.')}`);
         expect(s.stage.events.filter(isLethalStageEvent).length).toBeLessThanOrEqual(1);
         s.players.forEach((p) => (p.alive = true));
       }

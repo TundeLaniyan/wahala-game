@@ -20,7 +20,7 @@ import { nextFloat, nextInt, shuffle, weightedPick } from '../rng';
 import { Tile } from '../types';
 import type { GameState, PickupKind, Player, SimEvent, StageEvent } from '../types';
 import type { LethalHit } from './lethality';
-import { flameAt, groundedGeneratorAt, pickupAt, playersAt } from './queries';
+import { flameAt, groundedGeneratorAt, pickupAt, playerStepTicks, playersAt } from './queries';
 import { beginStep } from './stepping';
 
 const sec = (s: number): number => Math.round(s * 60);
@@ -66,13 +66,17 @@ function schedule(state: GameState, defs: readonly StageHazardDef[], events: Sim
     const [lo, hi] = def.everySec;
     st.nextAt[i] = now + sec(lo) + nextInt(state, Math.max(1, sec(hi) - sec(lo) + 1));
     const ev = create(state, def, i);
+    if (ev === 'retry') {
+      st.nextAt[i] = now + 60; // a departure that would trap someone on its lane: look again in a second
+      return;
+    }
     if (!ev) return;
     st.events.push(ev);
     events.push({ type: 'stageWarning', event: { ...ev, tiles: [...ev.tiles] } });
   });
 }
 
-function create(state: GameState, def: StageHazardDef, hazard: number): StageEvent | null {
+function create(state: GameState, def: StageHazardDef, hazard: number): StageEvent | null | 'retry' {
   if (def.kind === 'teleport') return null;
   const lethal = def.kind === 'sweep' || def.kind === 'strike';
   const warn = Math.max(sec(def.warnSec), lethal ? state.config.stage.minLethalWarnTicks : 1);
@@ -99,11 +103,13 @@ function create(state: GameState, def: StageHazardDef, hazard: number): StageEve
       const route = def.routes[nextInt(state, def.routes.length)]!.map(idx);
       if (route.length === 0 || !notHard(route[0]!)) return null;
       if (def.depart) {
-        // a parked vehicle never appears on top of anyone: an occupied bay skips this departure
+        // a parked vehicle never appears on top of anyone: an occupied bay delays this departure
         const bx = route[0]! % state.width;
         const by = Math.floor(route[0]! / state.width);
-        if (state.tiles[route[0]!] !== Tile.Empty || playersAt(state, bx, by).length > 0) return null;
-        if (groundedGeneratorAt(state, bx, by)) return null;
+        if (state.tiles[route[0]!] !== Tile.Empty || playersAt(state, bx, by).length > 0) return 'retry';
+        if (groundedGeneratorAt(state, bx, by)) return 'retry';
+        // ...and neither does it announce itself while anyone on the lane could not walk off it in time
+        if (!laneIsEscapable(state, route, base.startTick - base.warnTick, def.stepTicks)) return 'retry';
         base.depart = true;
       }
       base.tiles = route;
@@ -151,6 +157,77 @@ function create(state: GameState, def: StageHazardDef, hazard: number): StageEve
       return base.tiles.length > 0 ? base : null;
     }
   }
+}
+
+/**
+ * For each tile of a lane: the fewest steps a fighter standing on it needs to reach an open tile that is not on the
+ * lane (1 = it is beside the lane; Infinity = boxed in). `open` says which tiles can be walked (the arena data in
+ * tests, the live board at run time). Pure.
+ */
+export function laneEscapeSteps(
+  width: number,
+  height: number,
+  lane: readonly number[],
+  open: (index: number) => boolean,
+): number[] {
+  const onLane = new Map<number, number>(lane.map((t, j) => [t, j]));
+  const steps = lane.map(() => Infinity);
+  const neighbours = (t: number): number[] => {
+    const x = t % width;
+    const y = Math.floor(t / width);
+    const out: number[] = [];
+    if (x > 0) out.push(t - 1);
+    if (x < width - 1) out.push(t + 1);
+    if (y > 0) out.push(t - width);
+    if (y < height - 1) out.push(t + width);
+    return out.filter(open);
+  };
+  const queue: number[] = [];
+  lane.forEach((t, j) => {
+    if (neighbours(t).some((n) => !onLane.has(n))) {
+      steps[j] = 1;
+      queue.push(j);
+    }
+  });
+  for (let q = 0; q < queue.length; q++) {
+    const j = queue[q]!;
+    for (const n of neighbours(lane[j]!)) {
+      const k = onLane.get(n);
+      if (k !== undefined && steps[k]! > steps[j]! + 1) {
+        steps[k] = steps[j]! + 1;
+        queue.push(k);
+      }
+    }
+  }
+  return steps;
+}
+
+/**
+ * Departure fairness (RE-E3): can everyone standing on the lane when it is announced walk off it before the vehicle
+ * reaches their tile? Tile j turns lethal `j` steps after the start, so a fighter on it has `warn + j * stepTicks`
+ * ticks, and needs their own step time per tile plus the input allowance. A tile that is blocked by a crate, a
+ * generator, flames or another lethal event is not an exit.
+ */
+function laneIsEscapable(state: GameState, lane: readonly number[], warn: number, stepTicks: number): boolean {
+  const onLane = new Set(lane);
+  const busy = new Set(state.stage.events.filter(isLethalStageEvent).flatMap((e) => e.tiles));
+  const open = (i: number): boolean => {
+    const x = i % state.width;
+    const y = Math.floor(i / state.width);
+    return (
+      state.tiles[i] === Tile.Empty &&
+      !busy.has(i) &&
+      (onLane.has(i) || (!groundedGeneratorAt(state, x, y) && !flameAt(state, x, y)))
+    );
+  };
+  const steps = laneEscapeSteps(state.width, state.height, lane, open);
+  return state.players.every((p) => {
+    if (!p.alive) return true;
+    const j = lane.indexOf(tileIndex(state, p.x, p.y));
+    if (j < 0) return true;
+    const need = steps[j]! * playerStepTicks(state, p) + state.config.stage.escapeInputTicks;
+    return need <= warn + j * stepTicks;
+  });
 }
 
 function dirOf(state: GameState, a: number, b: number): StageEvent['dir'] {

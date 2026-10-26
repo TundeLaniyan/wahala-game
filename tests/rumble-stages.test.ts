@@ -7,6 +7,7 @@ import {
   Tile,
   createGame,
   getArena,
+  laneEscapeSteps,
   listEntries,
   tick,
 } from '../src/sim';
@@ -221,7 +222,18 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
           // (a parked Danfo pulling out of a bay) is the one exception: it starts on a road tile at its bay and
           // must leave at the board edge instead (RE-E3).
           const onEdge = ([x, y]: readonly [number, number]): boolean => x === 0 || y === 0 || x === W - 1 || y === H - 1;
-          if (h.depart) expect(onEdge(route[route.length - 1]!), `departure end ${route[route.length - 1]}`).toBe(true);
+          if (h.depart) {
+            expect(onEdge(route[route.length - 1]!), `departure end ${route[route.length - 1]}`).toBe(true);
+            // fairness (RE-E3): from every lane tile the slowest fighter walks off the lane before the Danfo gets there
+            const lane = route.map(([x, y]) => y * W + x);
+            const steps = laneEscapeSteps(W, H, lane, (i) => !'#x$'.includes(a.layout[Math.floor(i / W)]![i % W]!));
+            const slowest = Math.max(...DEFAULT_CONFIG.movement.stepTicksBySpeedLevel);
+            steps.forEach((n, j) =>
+              expect(n * slowest + DEFAULT_CONFIG.stage.escapeInputTicks, `departure lane tile ${j}`).toBeLessThanOrEqual(
+                Math.max(h.warnSec * 60, DEFAULT_CONFIG.stage.minLethalWarnTicks) + j * h.stepTicks,
+              ),
+            );
+          }
           else expect(onEdge(route[0]!), `route start ${route[0]}`).toBe(true);
         }
       } else if (h.kind === 'strike') {
