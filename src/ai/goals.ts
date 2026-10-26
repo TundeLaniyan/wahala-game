@@ -21,6 +21,7 @@ import {
 } from './analysis';
 import type { BlastGeometry, EscapePlan } from './analysis';
 import { NEVER } from './danger';
+import { blastReach } from './blast';
 import { overBudget } from './context';
 import type { Ctx } from './context';
 import { ZONE_WEIGHT } from './zone';
@@ -169,7 +170,7 @@ export function canPlaceNow(c: Ctx): boolean {
   return me.alive && me.carrying === null && me.entryUntil === null && activeGenerators(c) < me.capacity;
 }
 
-const geo: BlastGeometry = { soft: 0, rivals: 0, mountedRivals: 0, pickups: 0, chains: 0, chainRivals: 0 };
+const geo: BlastGeometry = { soft: 0, rivals: 0, mountedRivals: 0, pickups: 0, chains: 0, chainRivals: 0, supplies: 0 };
 
 /**
  * Cheap geometric value of a generator placed on `tile` (no escape / rival simulation yet). Counts the
@@ -181,8 +182,13 @@ export function placementGain(c: Ctx, tile: number): number {
   blastGeometry(c, tile, myRange(c), world.me.hotFuel, geo, mySquare(c));
   const rivals = geo.rivals - geo.mountedRivals + (profile.chains ? 0.7 * geo.chainRivals : 0);
   const killValue = profile.rivalValue * (1 + 0.5 * (rewardDrive(c) - 1));
-  return profile.softValue * geo.soft + killValue * rivals - profile.pickupLoss * geo.pickups;
+  const gain = profile.softValue * geo.soft + killValue * rivals - profile.pickupLoss * geo.pickups;
+  // City Rumble: a marked supply crate hides a basic upgrade (public marking, content unknown)
+  return geo.supplies > 0 ? gain + SUPPLY_VALUE * geo.supplies : gain;
 }
+
+/** Placement value of breaking one marked supply crate open (on top of its crate value; RE-AI4). */
+export const SUPPLY_VALUE = 5;
 
 function nearRival(c: Ctx, tile: number, dist: number): boolean {
   const { world } = c;
@@ -429,11 +435,11 @@ function trapBonus(c: Ctx, cand: Cand, esc: EscapePlan): number {
   if (profile.trap === 'none') return 0;
   const w = world.board.width;
   let bonus = 0;
-  const range = myRange(c);
+  const reach = blastReach(world.obs, myRange(c), mySquare(c));
   for (const r of world.near) {
     if (c.rivalSims >= c.maxRivalSims || overBudget(c)) break;
     const rt = r.y * w + r.x;
-    if (manhattanTiles(world.board, cand.tile, rt) > range + 3) continue;
+    if (manhattanTiles(world.board, cand.tile, rt) > reach + 3) continue;
     const e = rivalEscape(c, c.tmp, r, 6, profile.trap === 'shrink', cand.tile);
     // a protected rival (Okada / Armour) survives being caught: worth less the more layers it has
     const layers = protectionLayers(r);

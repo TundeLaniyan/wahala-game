@@ -5,6 +5,7 @@
  */
 import { DIRS, DIR_VEC, Tile, squareFootprint } from '../sim';
 import type { Dir, Observation, Player } from '../sim';
+import { blastReach, isRadial, radialTiles } from './blast';
 import { overBudget, spend } from './context';
 import type { Ctx } from './context';
 import type { HypoGen } from './danger';
@@ -96,8 +97,9 @@ export function checkPlacement(
   const plan = searchRefuge(c, c.tmp, u, a0, a1, step, u);
   // Team Rumble with friendly fire: every teammate near the spot must still be able to get clear too
   if (!plan || !world.friendlyFire) return plan;
+  const reach = blastReach(world.obs, hypo.range, hypo.square ?? 0);
   for (const f of world.friends) {
-    if (Math.abs(f.x - hypo.x) + Math.abs(f.y - hypo.y) > hypo.range + 2) continue;
+    if (Math.abs(f.x - hypo.x) + Math.abs(f.y - hypo.y) > reach + 2) continue;
     if (rivalEscape(c, c.tmp, f, FRIEND_REACTION_TICKS, false, u).refuges === 0) return null;
   }
   return plan;
@@ -211,6 +213,8 @@ export interface BlastGeometry {
   chains: number;
   /** Rivals standing in the flames of those chained generators (one level deep). */
   chainRivals: number;
+  /** Marked supply crates (`obs.supplies`, City Rumble) the blast would break open. */
+  supplies: number;
 }
 
 /** Team Rumble, friendly fire on: a teammate in the blast outweighs this many opponents. */
@@ -227,7 +231,7 @@ export function blastGeometry(
   const { world } = c;
   const { obs, board } = world;
   const w = board.width;
-  out.soft = out.rivals = out.mountedRivals = out.pickups = out.chains = out.chainRivals = 0;
+  out.soft = out.rivals = out.mountedRivals = out.pickups = out.chains = out.chainRivals = out.supplies = 0;
   let hit0 = -1;
   let hit1 = -1;
   let hit2 = -1;
@@ -247,6 +251,10 @@ export function blastGeometry(
     if (world.pickupAt[t]! >= 0) out.pickups++;
   };
   note(tile);
+  if (isRadial(obs)) {
+    radialGeometry(c, x0, y0, range, pierce, square, out, note);
+    return;
+  }
   for (const d of DIRS) {
     const v = DIR_VEC[d];
     let pierced = false;
@@ -301,16 +309,75 @@ export function blastGeometry(
   }
 }
 
+const radialScratch: number[] = [];
+const chainScratch: number[] = [];
+/** Wave blocker for the bots' radial geometry: another generator on the ground (not the blast's own tile). */
+let blockWorld: Ctx['world'] | null = null;
+let blockOwn = -1;
+const blockedByGenerator = (x: number, y: number): boolean => {
+  const t = y * blockWorld!.board.width + x;
+  return t !== blockOwn && blockWorld!.genAt[t]! >= 0;
+};
+
+/**
+ * City Rumble radial blast (decision RE-AI1): the same counts over the simulation's radial footprint, where
+ * concrete and crates cast shadows and another generator on the ground is hit (a chain) but passes nothing on.
+ */
+function radialGeometry(
+  c: Ctx,
+  x0: number,
+  y0: number,
+  range: number,
+  pierce: boolean,
+  square: number,
+  out: BlastGeometry,
+  note: (t: number) => void,
+): void {
+  const { world } = c;
+  const { obs } = world;
+  const w = world.board.width;
+  const tiles = radialScratch;
+  tiles.length = 0;
+  blockWorld = world;
+  blockOwn = y0 * w + x0;
+  radialTiles(obs, obs, x0, y0, range, pierce, square, blockedByGenerator, tiles);
+  const supplied = obs.supplies.length > 0;
+  const chained = chainScratch;
+  chained.length = 0;
+  for (const t of tiles) {
+    note(t);
+    if (obs.tiles[t] === Tile.Soft) {
+      out.soft++;
+      if (supplied && obs.supplies.includes(t)) out.supplies++;
+    } else if (world.genAt[t]! >= 0) {
+      out.chains++;
+      chained.push(world.genAt[t]!);
+    }
+  }
+  for (const gi of chained) {
+    out.chainRivals += rivalsInBlast(c, obs.generators[gi]!);
+    if (world.friendlyFire) out.rivals -= FRIEND_IN_BLAST * rivalsInBlast(c, obs.generators[gi]!, world.friendAt);
+  }
+}
+
 /** Rivals standing in a generator's flames (concrete and the first soft block stop each arm). */
 function rivalsInBlast(
   c: Ctx,
-  g: Readonly<{ x: number; y: number; range: number; pierce: boolean }>,
+  g: Readonly<{ x: number; y: number; range: number; pierce: boolean; square: number }>,
   at: Uint8Array = c.world.rivalAt,
 ): number {
   const { world } = c;
   const { board, obs } = world;
   const w = board.width;
   let n = at[g.y * w + g.x]!;
+  if (isRadial(obs)) {
+    const tiles: number[] = [];
+    blockWorld = world;
+    blockOwn = g.y * w + g.x;
+    radialTiles(obs, obs, g.x, g.y, g.range, g.pierce, g.square, blockedByGenerator, tiles);
+    for (const t of tiles) n += at[t]!;
+    return n;
+  }
   for (const d of DIRS) {
     const v = DIR_VEC[d];
     let pierced = false;
@@ -490,8 +557,11 @@ export function vulnerableAt(c: Ctx, tile: number, a0: number, a1: number, step:
   const { obs } = world;
   const w = world.board.width;
   const fuse = obs.config.generator.fuseTicks;
+  const radial = isRadial(obs);
   for (const r of world.near) {
-    if (Math.abs(r.x - (tile % w)) + Math.abs(r.y - Math.floor(tile / w)) > 7) continue;
+    // a rival further away than its blast reaches cannot catch me (the cross always used 7)
+    const reach = radial ? blastReach(obs, r.range, squareRadius(obs, r)) : 7;
+    if (Math.abs(r.x - (tile % w)) + Math.abs(r.y - Math.floor(tile / w)) > reach) continue;
     let active = 0;
     for (const g of obs.generators) if (g.ownerId === r.id && g.mode !== 'disabled') active++;
     if (active >= r.capacity || r.carrying !== null || r.entryUntil !== null) continue;

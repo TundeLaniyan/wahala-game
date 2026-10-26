@@ -3,7 +3,7 @@ import { blastGeometry, protectionLayers } from './analysis';
 import type { BlastGeometry } from './analysis';
 import type { Ctx } from './context';
 
-const geo: BlastGeometry = { soft: 0, rivals: 0, mountedRivals: 0, pickups: 0, chains: 0, chainRivals: 0 };
+const geo: BlastGeometry = { soft: 0, rivals: 0, mountedRivals: 0, pickups: 0, chains: 0, chainRivals: 0, supplies: 0 };
 
 /** Returns true (and sets `detonate`) when detonating now is a good idea and safe for the bot. */
 export function decideRemote(c: Ctx, standingOn: readonly number[]): boolean {

@@ -23,6 +23,7 @@ import {
   WATCH_RADIUS,
 } from './scale';
 import { aiCounters } from './stats';
+import { isRadial } from './blast';
 import { wouldTrapRival } from './mercy';
 import { Sideline } from './sideline';
 import { largeHuntPace, updateZone } from './zone';
@@ -170,6 +171,10 @@ export class Brain implements Bot {
       this.sig = sig;
       c.builder.build(c.danger, world, profile);
       rebuilt = true;
+      // City Rumble (radial blasts, decision RE-AI3): a new generator can set mine off early or cover my
+      // refuge from a diagonal; when the fresh map makes the plan I am following lethal, re-planning is
+      // urgent (it is never deferred behind the large board's per-tick allowance)
+      if (this.plan && this.plan.kind !== 'last' && isRadial(obs) && !this.planStillSafe(c, this.plan)) this.rethinkNow = true;
     }
 
     const urgent = this.plan === null || this.rethinkNow;
@@ -328,6 +333,27 @@ export class Brain implements Bot {
     }
     for (const tile of marked) world.blocked[tile] = 0;
     return plan;
+  }
+
+  /** Does the plan still keep the bot out of every known lethal window (steps, waits and the refuge)? */
+  private planStillSafe(c: Ctx, plan: Plan): boolean {
+    const { world, danger } = c;
+    const T = world.tick;
+    let i = this.progress;
+    while (i < plan.times.length && plan.times[i]! <= T) i++;
+    const step = stepTicksOf(world.obs, world.me);
+    // standing on tiles[i] until the next transition, then each later tile until the one after
+    for (let k = i; k < plan.tiles.length; k++) {
+      const from = k === i ? T : plan.times[k - 1]!;
+      const until = k < plan.times.length ? plan.times[k]! : from + step;
+      if (danger.hit(plan.tiles[k]!, from, until)) return false;
+    }
+    if (plan.kind === 'refuge' || plan.kind === 'stay') {
+      const last = plan.tiles[plan.tiles.length - 1]!;
+      const arrive = plan.times.length > 0 ? plan.times[plan.times.length - 1]! : T;
+      if (!danger.safeFrom(last, Math.max(T, arrive))) return false;
+    }
+    return true;
   }
 
   // ------------------------------------------------------------------ plan following
