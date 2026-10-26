@@ -24,6 +24,10 @@ Verification (container: 4 cores, software WebGL, Chromium 1243):
   reaction it checks instead of the last line (ambient street talk can follow it); the interrupt is still asserted.
 - Screenshots of every screen at 1440x900, 1280x720, 390x844, 844x390 and 667x375 reviewed (`scripts/menu-shots.mjs`;
   a selection in `docs/screenshots/stitch-ui/`).
+- GitHub CI run 100 on `e3dfac8` (2026-10-26): typecheck, lint, unit tests, build and the full Playwright suite (128
+  tests, desktop + phone) passed; `deploy-preview` then published `gh-pages` commit `be5ec5a`, whose `build.json` names
+  `e3dfac8` on `claude/wahala-stitch-uiux-v1`. (Run 99 on `f6376af` passed every test it reached but hit the old
+  120-minute e2e step limit, so it published nothing; the limit is now 170 minutes.)
 - Not measured: frame rates on physical phones.
 
 ## V2 gameplay revolution and City Rumble V2 (branch `claude/wahala-gameplay-rumble-v2`, from `184837d`)
