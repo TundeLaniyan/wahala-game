@@ -65,12 +65,43 @@ const shakeMode = (page: Page) =>
         .shakeStatus().mode,
   );
 
+/**
+ * Runs `ticks` simulation ticks with a finger (`pointerId`) still on B, then lifts it, in ONE page task. The HUD
+ * is only refreshed from an animation frame, and no frame can run inside the task, so the release always reaches
+ * the button that was pressed, even when those ticks knock the local player out and the next frame takes B off
+ * the HUD. A separate `locator.dispatchEvent` would then wait (no action timeout) for a button that never comes
+ * back: that race hung the hold test for the whole 15-minute CI timeout.
+ */
+const ticksThenLiftB = (page: Page, pointerId: number, ticks: number): Promise<void> =>
+  page.evaluate(
+    ([id, n]) => {
+      const w = (
+        window as unknown as { __WAHALA__: { controller(): { frozen: boolean }; stepTicks(n: number): void } }
+      ).__WAHALA__;
+      w.controller().frozen = true;
+      w.stepTicks(n);
+      const b = document.querySelector('[data-testid="btn-special"]');
+      if (!b) throw new Error('B is not on screen to release');
+      b.dispatchEvent(
+        new PointerEvent('pointerup', {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          pointerId: id,
+          isPrimary: true,
+          pointerType: 'touch',
+        }),
+      );
+    },
+    [pointerId, ticks] as const,
+  );
+
 /** B pressed / released like a finger (pointer id 7), with simulation ticks in between. */
 async function pressB(page: Page, ticks: number): Promise<void> {
-  const b = page.getByTestId('btn-special');
-  await b.dispatchEvent('pointerdown', { pointerId: 7, isPrimary: true, pointerType: 'touch' });
-  await stepTicks(page, ticks);
-  await b.dispatchEvent('pointerup', { pointerId: 7, isPrimary: true, pointerType: 'touch' });
+  await page
+    .getByTestId('btn-special')
+    .dispatchEvent('pointerdown', { pointerId: 7, isPrimary: true, pointerType: 'touch' });
+  await ticksThenLiftB(page, 7, ticks);
   await stepTicks(page, 2);
 }
 
@@ -224,12 +255,40 @@ test.describe('touch controls (landscape phone)', () => {
     await b.dispatchEvent('pointerdown', { pointerId: 8, isPrimary: true, pointerType: 'touch' });
     await expect(b).toHaveClass(/holding/);
     await page.screenshot({ path: `e2e-shots/${info.project.name}-touch-hold-remote.png` });
-    await stepTicks(page, 30);
-    await b.dispatchEvent('pointerup', { pointerId: 8, isPrimary: true, pointerType: 'touch' });
+    // the blast also takes out the holder (own generator underfoot), so the next frame drops B from the HUD:
+    // the finger lifts in the same page task as the ticks (see ticksThenLiftB)
+    await ticksThenLiftB(page, 8, 30);
     await stepTicks(page, 2);
     st = await getState(page);
     expect(st.generators).toHaveLength(0);
     expect(st.flames).toBeGreaterThan(0);
+  });
+
+  test('a finger still on B when B leaves the HUD does not jam B once it is back (regression)', async ({
+    page,
+  }) => {
+    await open(page, '&nobots');
+    await startMatch(page, { competitors: 3, character: 'streetBaller' });
+    const b = page.getByTestId('btn-special');
+    // a finger is on B when the player drops out of play (knocked out; a Deathmatch respawn wait): the HUD
+    // takes B away, and that finger's release lands on a button React no longer listens to
+    await b.dispatchEvent('pointerdown', { pointerId: 9, isPrimary: true, pointerType: 'touch' });
+    await stepTicks(page, 2);
+    await mutate(page, `const p = s.players[0]; globalThis.__spot = [p.x, p.y]; p.alive = false;`);
+    await publish(page);
+    await expect(b).toHaveCount(0);
+    // back in play (as a respawn does), a rival next to us: a fresh tap of B must push
+    await mutate(
+      page,
+      `const p = s.players[0]; const r = s.players[1]; p.alive = true; p.spectator = null; p.eliminatedTick = null;
+       [p.x, p.y] = globalThis.__spot; p.stepFromX = p.x; p.stepFromY = p.y; p.stepRemaining = 0;
+       r.x = r.stepFromX = p.x + 1; r.y = r.stepFromY = p.y; r.stepRemaining = 0;`,
+    );
+    await publish(page);
+    await expect(b).toHaveCount(1);
+    const rivalX = (await getState(page)).players[1]!.x;
+    await pressB(page, 3);
+    expect((await getState(page)).players[1]!.x).toBe(rivalX + 1);
   });
 
   test('camera shake is off on a touch screen by default', async ({ page }) => {
