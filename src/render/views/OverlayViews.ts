@@ -24,7 +24,9 @@ function dirBetween(a: TilePos, b: TilePos): Dir {
  */
 export class OverlayViews implements View {
   readonly group = new Group();
-  private readonly fill = new TileOverlay(tileGlowTexture(), 700, 7);
+  // one instance per warned tile: room for a whole 49 x 35 Rumble board (radial blasts of 32 fighters plus
+  // vehicle lanes and the closing city); past the capacity tiles would silently go unwarned
+  private readonly fill = new TileOverlay(tileGlowTexture(), 2048, 7);
   private readonly chevrons = new TileOverlay(chevronTexture(), 300, 8);
   private readonly rings = new TileOverlay(ringTexture(), 260, 9);
   private readonly gates: Sprite[] = [];
