@@ -122,16 +122,55 @@ export function planSidestep(
 
 // ------------------------------------------------------------------ the board, from the real game state
 
-/** Tile indices an assisted step must stay out of, computed from public state only. */
-export function hazardTiles(state: GameState): Set<number> {
+/** How far from the player the assist ever looks (carry reach, the turn tile, a sidestep and the tile beyond it). */
+const PLANNING_RADIUS = TURN_REACH_TILES + 3;
+/** More armed generators than this near the player: stop following chain reactions tile by tile. */
+const EXACT_PREVIEW_LIMIT = 12;
+
+/**
+ * Tile indices an assisted step must stay out of, computed from public state only.
+ *
+ * Blast footprints are only worked out for generators that can reach the tiles around `near` (their blast
+ * radius plus the planning window): a generator further away cannot cover them by itself, and one that
+ * could only reach them by chaining through another generator is covered by that generator's own preview.
+ * (A full-line blast also counts every generator on a row or column of the window.) This keeps the check
+ * cheap even in a 32-fighter City Rumble full of chained generators.
+ */
+export function hazardTiles(state: GameState, near?: { x: number; y: number }): Set<number> {
   const bad = new Set<number>();
   const at = (x: number, y: number): number => y * state.width + x;
+  const gen = state.config.generator;
+  const reach = Math.max(gen.maxRange, gen.radialMaxSquareRadius) + PLANNING_RADIUS;
+  const inWindow = (g: { x: number; y: number }): boolean => {
+    if (!near) return true;
+    const dx = Math.abs(g.x - near.x);
+    const dy = Math.abs(g.y - near.y);
+    return (
+      (dx <= reach && dy <= reach) ||
+      (gen.blastMode === 'fullLine' && (dx <= PLANNING_RADIUS || dy <= PLANNING_RADIUS))
+    );
+  };
   for (const f of state.flames) bad.add(at(f.x, f.y));
+  const armed = state.generators.filter((g) => g.flight === null && g.mode !== 'disabled' && inWindow(g));
+  // the exact preview follows chain reactions, which gets expensive in a crowd of generators: past
+  // EXACT_PREVIEW_LIMIT use a cheap superset (every tile within reach, and the whole row / column for a
+  // full-line blast) instead - more cautious, never less
+  const exact = armed.length <= EXACT_PREVIEW_LIMIT;
   for (const g of state.generators) {
-    if (g.flight !== null) continue;
-    bad.add(at(g.x, g.y));
-    // an armed generator (timed or remote) and anything it would chain into
-    if (g.mode !== 'disabled') for (const i of previewBlast(state, g)) bad.add(i);
+    if (g.flight === null) bad.add(at(g.x, g.y));
+  }
+  for (const g of armed) {
+    if (exact) {
+      for (const i of previewBlast(state, g)) bad.add(i);
+      continue;
+    }
+    const r = Math.max(gen.maxRange, gen.radialMaxSquareRadius) + 2;
+    for (let y = Math.max(0, g.y - r); y <= Math.min(state.height - 1, g.y + r); y++)
+      for (let x = Math.max(0, g.x - r); x <= Math.min(state.width - 1, g.x + r); x++) bad.add(at(x, y));
+    if (gen.blastMode === 'fullLine') {
+      for (let x = 0; x < state.width; x++) bad.add(at(x, g.y));
+      for (let y = 0; y < state.height; y++) bad.add(at(g.x, y));
+    }
   }
   for (const c of state.crush?.pending ?? []) bad.add(c.index);
   for (const e of state.stage.events) {
@@ -162,7 +201,7 @@ export function buildMoveBoard(state: GameState, me: Player): MoveBoard {
     soft: (x, y) => inside(x, y) && state.tiles[y * state.width + x] === Tile.Soft,
     safe: (x, y) => {
       if (!inside(x, y)) return false;
-      bad ??= hazardTiles(state);
+      bad ??= hazardTiles(state, me);
       return !bad.has(y * state.width + x);
     },
     vec: (dir) => DIR_VEC[inverted ? OPPOSITE[dir] : dir],

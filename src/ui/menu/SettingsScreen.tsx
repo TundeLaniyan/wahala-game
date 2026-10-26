@@ -84,7 +84,7 @@ function ControlsTab({ s, set }: { s: GameSettings; set: Set }) {
         label="Assisted movement"
         hint="Helps your thumb steer: a turn pressed a little early is taken at the corner, and a direction pushed against a wall slides to an opening one tile away. It never walks you into a generator, flames or a warned hazard. Auto: on for touch, the plain corner buffer with keyboard and gamepad."
       >
-        <div className="mn-opts">
+        <div className="mn-opts mn-opts-tall">
           {(['auto', 'on', 'off'] as const).map((m) => (
             <Option key={m} value={m} current={s.moveAssist} label={ASSIST_LABEL[m]} onPick={(moveAssist) => set({ moveAssist })} testId={`assist-${m}`} />
           ))}

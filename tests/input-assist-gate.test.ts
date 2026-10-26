@@ -5,7 +5,7 @@ import { VirtualStick, stickConfigFor, wishFor } from '../src/input/joystick';
 import { MoveGate } from '../src/input/moveGate';
 import type { GateAssist } from '../src/input/moveGate';
 import { PERPENDICULAR, canStep, planSidestep, planTurn } from '../src/input/moveAssist';
-import { DIR_VEC, Tile, tileIndex } from '../src/sim';
+import { DIR_VEC, Tile, previewBlast, tileIndex } from '../src/sim';
 import type { Dir, StageEvent, Vehicle } from '../src/sim';
 import { AssistRig } from './assistRig';
 import { addGenerator, put, sandbox } from './helpers';
@@ -435,6 +435,23 @@ describe('the board sees every danger the sim exposes', () => {
     expect(b.safe(11, 3)).toBe(false);
     expect(b.safe(12, 4)).toBe(false); // off the cross: only a radial footprint covers it
     expect(g.x).toBe(10);
+  });
+
+  it('a crowd of generators near the player falls back to a cautious superset (never less than the exact footprints)', () => {
+    const s = sandbox({ players: 2, arenaId: 'rumbleLagosIsland' });
+    s.config.generator.blastMode = 'radial';
+    put(s, 0, 12, 7);
+    put(s, 1, 40, 30);
+    const placed: ReturnType<typeof addGenerator>[] = [];
+    for (let y = 0; y < 12 && placed.length < 24; y += 2)
+      for (let x = 6; x < 20 && placed.length < 24; x += 3)
+        if (s.tiles[y * s.width + x] === Tile.Empty)
+          placed.push(addGenerator(s, { ownerId: 1, x, y, range: 3, timer: 999 }));
+    expect(placed.length).toBeGreaterThan(14);
+    const board = buildMoveBoard(s, s.players[0]!);
+    for (const g of placed)
+      for (const i of previewBlast(s, g))
+        expect(board.safe(i % s.width, Math.floor(i / s.width))).toBe(false);
   });
 
   it('an inverted-controls curse flips the board so planning matches what the sim will do', () => {
