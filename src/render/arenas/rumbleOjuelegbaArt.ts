@@ -1,57 +1,48 @@
 /**
  * City Rumble Evolution - Ojuelegba Underbridge, five districts (presentation only; the grid, districts
  * and hazards are `src/sim/arenas/rumbleOjuelegba.ts`). Late afternoon under the Ojuelegba flyover, which
- * runs east-west over the through road.
+ * runs north-south over the pier court and the through road beneath it.
  *
  * - Board cover: every permanent tile is drawn as the object it is (`ojuelegbaCover.ts`, from the cover map
  *   in `ojuelegbaCoverMap.ts`): piers, packed Danfos, shops, workshops, kiosks, walls, kerb islands. The
  *   flyover's outer edges and crossheads overhead are cut away round the fighter (`ojuelegbaDeck.ts`).
- * - Floor (this file): the through road (four lanes, centre lines, lane arrows, zebras) under the deck's
- *   shadow band with a hard sun wall at both deck edges, expansion-joint drips over every pier bent and
+ * - Floor (this file): the through road (four lanes, centre lines, lane arrows, zebras) passing under the
+ *   deck's shadow band with a hard sun wall at both deck edges, expansion-joint drips over every pier bent and
  *   stained footings; patched asphalt and slab pavements on the approach with painted parking bays; bay lines,
  *   a stop line and DEPARTURE on the bus pocket's strip; pavers and a gutter in the shop lane; oil-stained
  *   hardstanding in the service court. Every authored barrier ('x': empty partitions, parcel stacks) sits in
  *   a painted yellow-and-black frame, so the breakable cover reads as breakable.
  * - Light pockets (`RUMBLE_OJUELEGBA_LOOK.lamps`): LED tubes under the deck (reflected daylight, never a
  *   dark cave), a sodium lamp over the bus pocket, bulbs in the shop lane and over the workshops.
- * - Surroundings: the flyover running on off the board east and west on its piers (Danfos on top); taller
- *   buildings beyond the far (north) edge; traffic queued in every road mouth; the south (camera) side keeps a
- *   kerb, low walls and hawkers' mats only (one incidental okada; commercial okadas are banned here).
+ * - Surroundings: the flyover running on north of the board on its twin columns (its moving traffic, the
+ *   road mouths' traffic and the crowds are the living environment, `render/env/ojuelegbaEnv.ts`); taller
+ *   buildings beyond the far (north) edge and down the sides; the south (camera) side keeps a kerb and
+ *   hawkers' mats only (one incidental okada; commercial okadas are banned here).
  */
 import { DoubleSide } from 'three';
 import { getArena } from '../../sim';
 import type { ArenaLook } from '../arenaLook';
 import { artRng } from '../textures';
 import { box, cyl, mat, uniqueMat } from '../assets/helpers';
+import { assets } from '../assets/library';
 import type { CoverFactory } from './boardCover';
-import type { ArenaSet, SetContext } from './common';
+import type { ArenaSet, Placement, SetContext } from './common';
 import { STREET } from './common';
 import { T, crack, noiseFill, stain, tyreTrack } from './floorKit';
 import type { Ctx, FloorDrawer } from './floorKit';
 import { Kit } from './marketKit';
 import { groundMat, stall } from './marketStalls';
 import { buildOjuelegbaCover } from './ojuelegbaCover';
+import { DECK_END, DECK_X0, DECK_X1, SOFFIT } from './ojuelegbaDeck';
 import { flyoverPalette } from './oshodiFlyover';
 import { drum, umbrella, wire } from './oshodiKit';
 import { SiteLights, v3 } from './roadworksKit';
 import { shophouseRows } from './shared';
-import {
-  dash,
-  floorWords,
-  litter,
-  mouthTraffic,
-  paintKerbs,
-  paintRoads,
-  tileWorld,
-  zebraTile,
-} from './rumbleV2Kit';
+import { dash, floorWords, litter, paintKerbs, paintRoads, tileWorld, zebraTile } from './rumbleV2Kit';
 
 const ID = 'rumbleOjuelegba';
-/** Board rows under the deck (the fascia girders stand over rows 11 and 21). */
-const DECK_Y0 = 11;
-const DECK_Y1 = 21;
-/** Board x of the pier bents (the deck's expansion joints sit over them). */
-const JOINT_X = [17, 24, 28.5];
+/** Board rows of the deck's expansion joints (over the two pier bents and one span in the service loop). */
+const JOINT_Y = [6, 13, 20];
 
 export const RUMBLE_OJUELEGBA_LOOK: ArenaLook = {
   // late afternoon: a low amber sun from the west, long hard shadows, brown haze
@@ -286,39 +277,34 @@ export const RUMBLE_OJUELEGBA_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
   // ---- every authored barrier in a painted frame (breakable, and it says so)
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) if (at(x, y) === 'x') barrierFrame(g, x, y);
 
-  // ---- under the deck: footing stains, expansion-joint drips over each bent, the shadow band
-  for (let y = DECK_Y0; y <= DECK_Y1; y++)
-    for (let x = 14; x <= 30; x++)
-      if (at(x, y) === '#') {
+  // ---- under the deck: footing stains, expansion-joint drips across it, the shadow band, the sun walls
+  for (let y = 0; y <= DECK_END; y++)
+    for (let x = DECK_X0; x <= DECK_X1; x++)
+      if (at(x, y) === '#' && districtAt(x, y) === 'pierCourt') {
         stain(g, (x + 0.5) * T, (y + 0.5) * T, T * 1.1, 'rgba(26,22,18,0.26)');
         stain(g, (x + 0.5) * T, (y + 1.2) * T, T * 0.5, 'rgba(10,10,10,0.28)');
       }
-  for (const jx of JOINT_X) {
+  const x0 = DECK_X0 * T + T * 0.2;
+  const x1 = (DECK_X1 + 1) * T - T * 0.2;
+  const yEnd = (DECK_END + 1) * T;
+  for (const jy of JOINT_Y) {
     g.fillStyle = 'rgba(8,8,8,0.3)';
-    g.fillRect(jx * T - 7, DECK_Y0 * T, 14, (DECK_Y1 - DECK_Y0 + 1) * T);
+    g.fillRect(x0, jy * T - 7, x1 - x0, 14);
     for (let i = 0; i < 12; i++)
-      stain(
-        g,
-        jx * T + (r() - 0.5) * T * 0.8,
-        (DECK_Y0 + r() * 10) * T,
-        14 + r() * 24,
-        'rgba(12,12,14,0.32)',
-      );
+      stain(g, x0 + r() * (x1 - x0), jy * T + (r() - 0.3) * T * 0.8, 14 + r() * 24, 'rgba(12,12,14,0.32)');
   }
-  const y0 = DECK_Y0 * T + T * 0.3;
-  const y1 = (DECK_Y1 + 1) * T - T * 0.3;
-  const grad = g.createLinearGradient(0, y0 - T * 0.6, 0, y1 + T * 0.6);
+  const grad = g.createLinearGradient(x0 - T * 0.6, 0, x1 + T * 0.6, 0);
   grad.addColorStop(0, 'rgba(16,14,12,0)');
   grad.addColorStop(0.05, 'rgba(16,14,12,0.3)');
   grad.addColorStop(0.5, 'rgba(16,14,12,0.34)');
   grad.addColorStop(0.95, 'rgba(16,14,12,0.3)');
   grad.addColorStop(1, 'rgba(16,14,12,0)');
   g.fillStyle = grad;
-  g.fillRect(0, y0 - T * 0.6, w, y1 - y0 + T * 1.2);
-  // the hard sun wall along both deck edges
+  g.fillRect(x0 - T * 0.6, 0, x1 - x0 + T * 1.2, yEnd);
+  // the hard sun wall along both deck edges, and the light spilling in past the cut end
   g.fillStyle = 'rgba(255,206,140,0.12)';
-  g.fillRect(0, y0 - T * 0.95, w, T * 0.35);
-  g.fillRect(0, y1 + T * 0.6, w, T * 0.35);
+  g.fillRect(x0 - T * 0.95, 0, T * 0.35, yEnd);
+  g.fillRect(x1 + T * 0.6, 0, T * 0.35, yEnd);
 
   for (let i = 0; i < cols * rows * 0.26; i++)
     crack(g, r, r() * w, r() * h, 3 + Math.floor(r() * 7), 'rgba(18,16,14,0.5)', 2);
@@ -327,45 +313,81 @@ export const RUMBLE_OJUELEGBA_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
 
 // ------------------------------------------------------------------------------------------ the set
 
-/** The flyover running on off the board east and west: deck, parapets and piers; Danfos on top. */
+/**
+ * The flyover running on north of the board over the deck columns: a deep box girder on twin columns with
+ * hammerhead crossheads. Its traffic is the living environment's (moving, `render/env/ojuelegbaEnv.ts`): no
+ * parked vehicles up here. Deck top at 6.3 above the board (6.6 above the street, the environment's deck).
+ */
 function flyover(ctx: SetContext, L: SiteLights): void {
   const { W, H } = ctx;
   const P = flyoverPalette();
   const s = ctx.statics;
-  const { wz } = tileWorld(W, H);
-  const zN = wz(DECK_Y0) - 0.2;
-  const zS = wz(DECK_Y1) + 0.2;
-  const zc = (zN + zS) / 2;
-  const width = zS - zN + 0.4;
-  const soffit = 4.4;
+  const { wx } = tileWorld(W, H);
+  const north = -H / 2;
+  const x0 = wx(DECK_X0) - 0.5;
+  const x1 = wx(DECK_X1) + 0.5;
+  const width = x1 - x0;
+  const cx = (x0 + x1) / 2;
+  const z0 = north - 0.45;
+  const z1 = north - 46;
+  const len = z0 - z1;
+  const zc = (z0 + z1) / 2;
+  s.add(box(width - 1.2, 1.5, len, P.deckDark, cx, SOFFIT + 0.75, zc));
+  s.add(box(width, 0.4, len, P.deck, cx, SOFFIT + 1.7, zc));
   for (const side of [-1, 1]) {
-    const x0 = side * (W / 2 + 0.45);
-    const x1 = side * (W / 2 + 34);
-    const len = Math.abs(x1 - x0);
-    const cx = (x0 + x1) / 2;
-    s.add(box(len, 0.9, width - 1.2, P.deckDark, cx, soffit + 0.45, zc));
-    s.add(box(len, 0.4, width, P.deck, cx, soffit + 1.05, zc));
-    for (const z of [zN, zS]) s.add(box(len, 0.75, 0.42, P.parapet, cx, soffit + 0.38, z));
-    // piers every 8 m, in pairs either side of the road below
-    for (let x = x0 + side * 5; Math.abs(x) < Math.abs(x1) - 2; x += side * 8) {
-      for (const z of [zN + 1, zS - 1]) {
-        s.add(cyl(0.7, 0.78, soffit - STREET, P.pier, x, STREET + (soffit - STREET) / 2, z, 8));
-        s.add(box(1.8, 0.3, 1.8, P.deckDark, x, STREET + 0.15, z));
-      }
-      s.add(box(1.3, 0.62, width - 0.6, P.pier, x, soffit - 0.3, zc));
-    }
-    ctx.vehicles('danfo', [
-      { x: cx - side * 6, y: soffit + 1.25, z: zc - 2, ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 },
-      { x: cx + side * 4, y: soffit + 1.25, z: zc + 2, ry: side > 0 ? Math.PI / 2 : -Math.PI / 2 },
-    ]);
-    L.glow(x0 + side * 2, STREET + 2.8, zN + 1.2, 0.9, 0xe8f4ff, 0.5);
+    s.add(box(0.42, 0.75, len, P.parapet, cx + side * (width / 2 - 0.2), SOFFIT + 0.38, zc));
+    s.add(box(0.25, 0.8, len, P.parapet, cx + side * (width / 2 - 0.12), SOFFIT + 2.3, zc));
+    for (let z = z0 - 3; z > z1; z -= 9)
+      s.add(cyl(0.06, 0.08, 3.6, P.steel, cx + side * (width / 2 - 0.2), SOFFIT + 3.7, z, 6));
   }
+  // twin columns on hammerhead crossheads every 8 m, as on the board
+  for (let z = z0 - 4; z > z1 + 2; z -= 8) {
+    for (const dx of [-4.8, 4.8]) {
+      s.add(cyl(0.7, 0.78, SOFFIT - STREET, P.pier, cx + dx, STREET + (SOFFIT - STREET) / 2, z, 8));
+      s.add(box(1.8, 0.3, 1.8, P.deckDark, cx + dx, STREET + 0.15, z));
+    }
+    s.add(box(width - 1, 0.62, 1.3, P.pier, cx, SOFFIT - 0.3, z));
+  }
+  L.glow(cx - 4.8, STREET + 2.8, north - 3.0, 0.9, 0xe8f4ff, 0.5);
+  L.glow(cx + 4.8, STREET + 2.8, north - 3.0, 0.9, 0xe8f4ff, 0.5);
+}
+
+/**
+ * Shophouses down the east and west side streets, leaving open what lives there (the living environment):
+ * the through road's mouths (rows 13-20) on both sides, the traders beyond the shop lane (west, rows 21-31)
+ * and the mechanics and touts beyond the service loop and the bus pocket (east, rows 1-9 and 18-27).
+ */
+function sideStreets(ctx: SetContext): void {
+  const { W, H } = ctx;
+  const ids = assets.loadedIds('env_building_');
+  if (ids.length === 0) return;
+  const { wz } = tileWorld(W, H);
+  const byVariant = ids.map(() => [] as Placement[]);
+  let n = 0;
+  const free = (z: number, west: boolean): boolean => {
+    const near = (y0: number, y1: number): boolean => z > wz(y0) - 2 && z < wz(y1) + 2;
+    if (near(13, 20)) return true;
+    return west ? near(21, 31) : near(1, 9) || near(18, 27);
+  };
+  for (let z = -H / 2 - 2.5; z < H / 2 + 5; z += 3.5)
+    for (const west of [true, false]) {
+      if (free(z, west)) continue;
+      const x = west ? -W / 2 - 3.75 : W / 2 + 4.55;
+      byVariant[n++ % ids.length]!.push({
+        x,
+        z,
+        ry: west ? Math.PI / 2 : -Math.PI / 2,
+        sx: 1.17,
+        sy: 1.2,
+        sz: 1.17,
+      });
+    }
+  ids.forEach((id, k) => ctx.instance(id, byVariant[k]!));
 }
 
 function build(ctx: SetContext): void {
   const { W, H } = ctx;
   const { wx, wz } = tileWorld(W, H);
-  const L0 = layout();
   const north = -H / 2;
   const S = STREET;
   const L = new SiteLights();
@@ -373,7 +395,8 @@ function build(ctx: SetContext): void {
 
   flyover(ctx, L);
   // tall buildings beyond the far edge and down the side streets
-  shophouseRows(ctx, { north: true, east: true, west: true, seed: 2, close: 0.2 });
+  shophouseRows(ctx, { north: true, seed: 2, close: 0.2 });
+  sideStreets(ctx);
 
   const cloth = [0xa8442e, 0xc8a844, 0x2e5a86, 0x3a744a, 0xd2ccb8].map((c) => {
     const m = uniqueMat(c, { roughness: 0.88 });
@@ -411,8 +434,22 @@ function build(ctx: SetContext): void {
     { x: W / 2 + 1.9, y: S, z: wz(5), ry: 0.6, sx: 0.8, sy: 0.6, sz: 0.8 },
   ]);
   drum(ctx, mat(0x8a2e22, { roughness: 0.75, metalness: 0.3 }), W / 2 + 1.6, wz(7));
-  // traffic queued in every road mouth (the south mouth of the strip: the depot gate, buses waiting)
-  mouthTraffic(ctx, L0, { kinds: ['danfo', 'taxi', 'keke', 'danfo', 'taxi'], depth: 2 });
+  // the road mouths' traffic is the living environment's moving traffic (render/env/ojuelegbaEnv.ts); parked
+  // here: Danfos waiting for passengers beyond the bus pocket's edge, a taxi at the mechanics', two in the side
+  // street beyond the shop lane
+  ctx.vehicles(
+    'danfo',
+    [
+      { x: W / 2 + 6.6, y: S, z: wz(21.5), ry: Math.PI },
+      { x: W / 2 + 6.7, y: S, z: wz(25), ry: Math.PI },
+    ],
+    { idle: true },
+  );
+  ctx.vehicles('taxi', [
+    { x: W / 2 + 6.4, y: S, z: wz(4.5), ry: 0.1 },
+    { x: -W / 2 - 3.6, y: S, z: wz(24), ry: 0 },
+    { x: -W / 2 - 3.7, y: S, z: wz(29), ry: 0.05 },
+  ]);
   ctx.vehicles('okada', [{ x: wx(9), y: S, z: H / 2 + 1.3, ry: 1.6 }]); // one incidental bike, no okada rank
   groundMat(kit, { x: -12, y: S, z: H / 2 + 1.5, ry: 0 }, 3);
   groundMat(kit, { x: 6, y: S, z: H / 2 + 1.5, ry: 0.1 }, 6);

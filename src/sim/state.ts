@@ -28,6 +28,7 @@ export const DEFAULT_SETTINGS: MatchSettings = {
   mode: 'classic',
   crowdThrows: false,
   stageHazards: true,
+  rumbleBlast: 'radial',
 };
 
 /** `GameState.spawnUsedAt` value of a spawn nobody has respawned on yet. */

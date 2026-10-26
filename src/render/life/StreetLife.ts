@@ -18,8 +18,33 @@ import type { ClipName } from '../assets/rigged';
  * - walker: walking a path along the street and back.
  *
  * The number of actors is capped by the quality profile; extra requests are ignored.
+ *
+ * Bystander reactions (City Rumble living environments): `reactInRect` makes the actors standing in a
+ * protected zone duck, flinch, scatter a few steps, cheer or look at something the simulation did. It
+ * only moves the actors' drawn offset (bounded by their zone) and picks clips; actors are presentation
+ * only and never exist in the simulation.
  */
 export type VignetteKind = 'fight' | 'argue' | 'conductor' | 'seller' | 'worker' | 'onlooker' | 'walker';
+
+/** How background people differ from the cast (smaller, darker, no shadows if asked). */
+export interface NpcStyle {
+  /** Uniform scale range of the rigs (the cast is drawn at 1). Default 0.86..0.98. */
+  scale?: readonly [number, number];
+  /** Colour multiplier on clothes and skin (1 = as dressed). Default 1. */
+  darken?: number;
+  /** Rigs cast shadows (default true; the double draw is what a tight budget turns off). */
+  castShadow?: boolean;
+}
+
+/** World-space rectangle (x / z, metres) an actor must stay inside while it reacts. */
+export interface WorldBounds {
+  x0: number;
+  z0: number;
+  x1: number;
+  z1: number;
+}
+
+export type BystanderReaction = 'duck' | 'flinch' | 'scatter' | 'cheer' | 'look';
 
 export interface Vignette {
   kind: VignetteKind;
@@ -32,6 +57,8 @@ export interface Vignette {
   /** walker / conductor pacing: second point of the path. */
   toX?: number;
   toZ?: number;
+  /** Protected zone: the actor never leaves it, whatever it reacts to. */
+  bounds?: WorldBounds;
 }
 
 /** The cast rigs NPCs are built from (outfits are re-coloured so nobody looks like a player). */
@@ -60,10 +87,19 @@ interface Actor {
   /** fight: current circling offset */
   circle: number;
   retreatUntil: number;
+  bounds: WorldBounds | null;
+  /** Current bystander reaction (null = none) and the drawn offset it causes. */
+  react: { kind: BystanderReaction; until: number; ox: number; oz: number; lookYaw: number } | null;
+  offX: number;
+  offZ: number;
+  baseScaleY: number;
+  /** Where the actor stood when it started reacting (a path walker's point on its path). */
+  holdX: number;
+  holdZ: number;
 }
 
 /** Re-dresses a rig: own cloned materials, muted / worn clothing, slightly varied skin. */
-function dress(body: Object3D, rnd: () => number, hiVis: boolean): Material[] {
+function dress(body: Object3D, rnd: () => number, hiVis: boolean, darken = 1): Material[] {
   const owned: Material[] = [];
   const cloth = new Color(hiVis ? HIVIS : CLOTH[Math.floor(rnd() * CLOTH.length)]!);
   body.traverse((o) => {
@@ -85,6 +121,7 @@ function dress(body: Object3D, rnd: () => number, hiVis: boolean): Material[] {
     } else if (name.includes('skin')) {
       c.color.multiplyScalar(0.82 + rnd() * 0.22);
     }
+    if (darken !== 1) c.color.multiplyScalar(darken);
     (o as Mesh).material = c;
     owned.push(c);
   });
@@ -100,6 +137,7 @@ export class StreetLife {
   constructor(
     private readonly budget: number,
     seed = 0x51ee7,
+    private readonly style: NpcStyle = {},
   ) {
     this.seed = seed;
     this.group.userData.grit = 'crowd';
@@ -119,16 +157,29 @@ export class StreetLife {
     return this.actors.length + n <= this.budget;
   }
 
-  private spawn(kind: VignetteKind, role: 0 | 1, x: number, z: number, yaw: number, y = 0): Actor | null {
+  private spawn(
+    kind: VignetteKind,
+    role: 0 | 1,
+    x: number,
+    z: number,
+    yaw: number,
+    y = 0,
+    bounds: WorldBounds | null = null,
+  ): Actor | null {
     if (!this.hasRoom()) return null;
     const rig = RIGS[Math.floor(this.rand() * RIGS.length)]!;
     const rc = RiggedCharacter.create(rig, this.rand() * 5);
     if (!rc) return null;
-    this.owned.push(...dress(rc.body, () => this.rand(), kind === 'worker'));
+    this.owned.push(...dress(rc.body, () => this.rand(), kind === 'worker', this.style.darken ?? 1));
+    if (this.style.castShadow === false)
+      rc.body.traverse((o) => {
+        (o as Mesh).castShadow = false;
+      });
     const root = new Group();
     root.add(rc.holder);
     // adults of varied build; background people a touch smaller than the cast (depth cue)
-    root.scale.setScalar(0.86 + this.rand() * 0.12);
+    const [lo, hi] = this.style.scale ?? [0.86, 0.98];
+    root.scale.setScalar(lo + this.rand() * (hi - lo));
     root.position.set(x, y, z);
     root.rotation.y = yaw;
     this.group.add(root);
@@ -149,6 +200,13 @@ export class StreetLife {
       partner: null,
       circle: 0,
       retreatUntil: 0,
+      bounds,
+      react: null,
+      offX: 0,
+      offZ: 0,
+      baseScaleY: root.scale.y,
+      holdX: x,
+      holdZ: z,
     };
     this.actors.push(a);
     return a;
@@ -162,7 +220,7 @@ export class StreetLife {
       const gap = v.kind === 'fight' ? 0.42 : 0.5;
       const dx = Math.sin(v.yaw) * gap;
       const dz = Math.cos(v.yaw) * gap;
-      const a = this.spawn(v.kind, 0, v.x - dx, v.z - dz, v.yaw, y);
+      const a = this.spawn(v.kind, 0, v.x - dx, v.z - dz, v.yaw, y, v.bounds);
       const b = this.spawn(
         v.kind === 'seller' ? 'seller' : v.kind,
         1,
@@ -170,6 +228,7 @@ export class StreetLife {
         v.z + dz,
         v.yaw + Math.PI,
         y,
+        v.bounds,
       );
       if (a && b) {
         a.partner = b;
@@ -177,7 +236,7 @@ export class StreetLife {
       }
       return true;
     }
-    const a = this.spawn(v.kind, 0, v.x, v.z, v.yaw, y);
+    const a = this.spawn(v.kind, 0, v.x, v.z, v.yaw, y, v.bounds);
     if (!a) return false;
     if (v.toX !== undefined && v.toZ !== undefined) {
       a.toX = v.toX;
@@ -186,12 +245,142 @@ export class StreetLife {
     return true;
   }
 
-  update(dt: number, time: number, excitement: number): void {
+  update(dt: number, time: number, excitement: number, visible?: (x: number, z: number) => boolean): void {
     for (const a of this.actors) {
-      this.think(a, time, excitement);
-      this.move(a, dt, time);
+      // follow camera: people out of view are neither drawn nor animated (their clip resumes where it stopped)
+      if (visible) {
+        const seen = visible(a.root.position.x, a.root.position.z);
+        a.root.visible = seen;
+        if (!seen) continue;
+      }
+      if (a.react || a.offX !== 0 || a.offZ !== 0) {
+        this.bystander(a, dt, time); // reacting, or walking back to the scene: the script waits
+      } else {
+        this.think(a, time, excitement);
+        this.move(a, dt, time);
+      }
       a.rc.update(dt);
     }
+  }
+
+  /**
+   * Makes the actors whose home lies inside `rect` (world metres) react to something that happened at
+   * `from`: each one answers with probability `chance`. Returns how many reacted. Fighters and arguers
+   * (the arena sets' scripted pairs) are left alone.
+   */
+  reactInRect(
+    rect: WorldBounds,
+    reaction: BystanderReaction,
+    time: number,
+    seconds: number,
+    from: { x: number; z: number },
+    chance: number,
+    distance = 0.9,
+  ): number {
+    let n = 0;
+    for (const a of this.actors) {
+      if (a.kind === 'fight' || a.kind === 'argue') continue;
+      if (a.baseX < rect.x0 || a.baseX > rect.x1 || a.baseZ < rect.z0 || a.baseZ > rect.z1) continue;
+      if (this.rand() >= chance) continue;
+      if (a.react && a.react.until > time + seconds) continue; // already reacting for longer
+      if (!a.react && a.offX === 0 && a.offZ === 0) {
+        a.holdX = a.root.position.x;
+        a.holdZ = a.root.position.z;
+      }
+      const dx = a.holdX - from.x;
+      const dz = a.holdZ - from.z;
+      const len = Math.hypot(dx, dz) || 1;
+      let ox = reaction === 'scatter' ? (dx / len) * distance : 0;
+      let oz = reaction === 'scatter' ? (dz / len) * distance : 0;
+      const b = a.bounds ?? rect;
+      // never leave the protected zone
+      ox = MathUtils.clamp(a.holdX + ox, b.x0 + 0.2, b.x1 - 0.2) - a.holdX;
+      oz = MathUtils.clamp(a.holdZ + oz, b.z0 + 0.2, b.z1 - 0.2) - a.holdZ;
+      a.react = {
+        kind: reaction,
+        until: time + seconds,
+        ox,
+        oz,
+        lookYaw: Math.atan2(from.x - a.holdX, from.z - a.holdZ),
+      };
+      switch (reaction) {
+        case 'duck':
+          a.rc.setLoop('Dazed', 0.1, 0.6);
+          break;
+        case 'flinch':
+          this.once(a, 'Stumble', 1.5);
+          break;
+        case 'cheer':
+          this.once(a, 'Cheer', 1.2);
+          break;
+        case 'scatter':
+          a.rc.setLoop('Run', 0.1, 0.9);
+          break;
+        case 'look':
+          a.rc.setLoop('Idle', 0.2);
+          break;
+      }
+      n++;
+    }
+    return n;
+  }
+
+  /** Current position of every actor (world metres): tests check they stay inside their zones. */
+  positions(): { x: number; z: number; bounds: WorldBounds | null }[] {
+    return this.actors.map((a) => ({ x: a.root.position.x, z: a.root.position.z, bounds: a.bounds }));
+  }
+
+  /** One frame of a bystander reaction: ease the drawn offset out, hold it, and ease back home. */
+  private bystander(a: Actor, dt: number, time: number): void {
+    const r = a.react;
+    const k = Math.min(1, dt * (r ? 7 : 3));
+    a.offX += ((r ? r.ox : 0) - a.offX) * k;
+    a.offZ += ((r ? r.oz : 0) - a.offZ) * k;
+    if (!r) {
+      // walking home
+      a.root.scale.y += (a.baseScaleY - a.root.scale.y) * Math.min(1, dt * 8);
+      if (Math.hypot(a.offX, a.offZ) < 0.03) {
+        a.offX = a.offZ = 0;
+        a.root.scale.y = a.baseScaleY;
+        this.applyOffset(a);
+        a.rc.setLoop('Idle', 0.2);
+      } else {
+        a.rc.setLoop('Run', 0.15, 0.7);
+        this.applyOffset(a);
+        a.root.rotation.y = MathUtils.lerp(
+          a.root.rotation.y,
+          Math.atan2(-a.offX, -a.offZ),
+          Math.min(1, dt * 8),
+        );
+      }
+      return;
+    }
+    if (time >= r.until) {
+      a.react = null;
+      return;
+    }
+    this.applyOffset(a);
+    const left = r.until - time;
+    switch (r.kind) {
+      case 'duck':
+        a.root.scale.y += (a.baseScaleY * 0.74 - a.root.scale.y) * Math.min(1, dt * 12);
+        break;
+      case 'scatter':
+        a.root.rotation.y = MathUtils.lerp(a.root.rotation.y, Math.atan2(r.ox, r.oz), Math.min(1, dt * 10));
+        if (left < 0.5) a.rc.setLoop('Idle', 0.2);
+        break;
+      case 'look':
+        a.root.rotation.y = MathUtils.lerp(a.root.rotation.y, r.lookYaw, Math.min(1, dt * 6));
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** The drawn position while reacting: where the actor stood plus the reaction offset. */
+  private applyOffset(a: Actor): void {
+    a.root.position.x = a.holdX + a.offX;
+    a.root.position.z = a.holdZ + a.offZ;
   }
 
   private once(a: Actor, clip: ClipName, speed = 1): void {

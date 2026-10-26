@@ -7,6 +7,8 @@
  *   npm run simulate -- --matches 50 --seed 1000 --mode classic --crowd
  *   npm run simulate -- --arena cityRumble --players 32 --matches 10 --difficulty standard
  *   npm run simulate -- --arena mobileTest13x9 --players 4 --matches 50
+ *   npm run simulate -- --arena rumbleOshodi --game survival --players 32 --matches 2 --verbose
+ *   npm run simulate -- --arena cityRumble --game team --friendly-fire --minutes 1 --players 16 --matches 2
  *
  * Options
  *   --matches N        number of matches (default 100)
@@ -16,6 +18,10 @@
  *   --difficulty D     every seat plays D (like the app, where all bots share one difficulty)
  *   --arena ID         arena id (default danfoBusPark)
  *   --mode crush|classic  Wahala Crush (default: every real standard match has it) or no closing
+ *   --game G           ruleset: classic (default), survival, deathmatch or team (City Rumble: radial blasts)
+ *   --minutes M        match length of the timed rulesets (deathmatch / team; default 5)
+ *   --friendly-fire    Team Rumble: own blasts and vehicles hurt teammates
+ *   --blast plus|radial  override the blast shape (e.g. a Rumble ruleset with the Classic cross, for comparison)
  *   --crowd            enable spectator throws
  *   --no-hazards       switch the arena's stage hazards off (they are on in real matches)
  *   --verbose          print one line per match
@@ -24,8 +30,8 @@
  */
 import { performance } from 'node:perf_hooks';
 import { ARENAS, DEFAULT_ARENA_ID, MAX_PLAYERS, MIN_PLAYERS } from '../src/sim';
-import type { Difficulty, MatchMode } from '../src/sim';
-import { runMatch } from '../src/ai/headless';
+import type { Difficulty, GameKind, MatchMode } from '../src/sim';
+import { ENGAGE_LATE, ENGAGE_NEAR, runMatch } from '../src/ai/headless';
 
 interface Options {
   matches: number;
@@ -35,6 +41,10 @@ interface Options {
   difficulty: Difficulty | null;
   arena: string | undefined;
   mode: MatchMode;
+  game: GameKind;
+  minutes: number;
+  friendlyFire: boolean;
+  blast: 'plus' | 'radial' | null;
   crowd: boolean;
   hazards: boolean;
   verbose: boolean;
@@ -52,6 +62,10 @@ function parseArgs(argv: string[]): Options {
     difficulty: null,
     arena: undefined,
     mode: 'crush',
+    game: 'classic',
+    minutes: 5,
+    friendlyFire: false,
+    blast: null,
     crowd: false,
     hazards: true,
     verbose: false,
@@ -85,6 +99,21 @@ function parseArgs(argv: string[]): Options {
         break;
       case '--mode':
         o.mode = argv[++i] === 'classic' ? 'classic' : 'crush';
+        break;
+      case '--game': {
+        const g = argv[++i] as GameKind;
+        if (!['classic', 'survival', 'deathmatch', 'team'].includes(g)) throw new Error('--game must be classic, survival, deathmatch or team');
+        o.game = g;
+        break;
+      }
+      case '--minutes':
+        o.minutes = Number(argv[++i]);
+        break;
+      case '--friendly-fire':
+        o.friendlyFire = true;
+        break;
+      case '--blast':
+        o.blast = argv[++i] === 'plus' ? 'plus' : 'radial';
         break;
       case '--crowd':
         o.crowd = true;
@@ -177,6 +206,8 @@ function main(): void {
   let wins = 0;
   let draws = 0;
   const started = performance.now();
+  const pct = (n: number, d: number): string =>
+    d === 0 ? '   -' : `${((100 * n) / d).toFixed(1).padStart(5)}%`;
   const tickMs: number[] = [];
   const halfAt: number[] = [];
   const twoAt: number[] = [];
@@ -185,6 +216,12 @@ function main(): void {
   let seatsPlaced = 0;
   let seatsMoved = 0;
   let seatsKilled = 0;
+  let engageSamples = 0;
+  let engageNear = 0;
+  let engageDist = 0;
+  let lateSamples = 0;
+  let lateNear = 0;
+  let lateDist = 0;
 
   for (let i = 0; i < o.matches; i++) {
     const difficulties = lineup(o, i);
@@ -192,7 +229,15 @@ function main(): void {
       seed: o.seed + i,
       difficulties,
       arenaId: o.arena,
-      settings: { mode: o.mode, crowdThrows: o.crowd, stageHazards: o.hazards },
+      settings: {
+        mode: o.mode,
+        game: o.game,
+        friendlyFire: o.friendlyFire,
+        durationSec: o.game === 'deathmatch' || o.game === 'team' ? o.minutes * 60 : null,
+        crowdThrows: o.crowd,
+        stageHazards: o.hazards,
+      },
+      ...(o.blast ? { config: { generator: { blastMode: o.blast } } } : {}),
       now: o.wall ? () => performance.now() : cpuMs,
     });
     for (const t of out.tickMs) tickMs.push(t);
@@ -204,7 +249,18 @@ function main(): void {
       if (seat.placed > 0) seatsPlaced++;
       if (seat.tilesVisited >= 3) seatsMoved++;
       if (seat.kills > 0) seatsKilled++;
-      if (seat.cause) causes[seat.cause.kind] = (causes[seat.cause.kind] ?? 0) + 1;
+      if (seat.cause) {
+        // flames / vehicles split into the seat's own and a rival's (the radial-vs-cross question)
+        const k = seat.cause.kind;
+        const kind = k === 'flame' || k === 'vehicle' ? `${seat.suicide ? 'own' : 'rival'} ${k === 'flame' ? 'blast' : 'vehicle'}` : k;
+        causes[kind] = (causes[kind] ?? 0) + 1;
+      }
+      engageSamples += seat.engageSamples;
+      engageNear += seat.engageNear;
+      engageDist += seat.engageDistSum;
+      lateSamples += seat.lateSamples;
+      lateNear += seat.lateNear;
+      lateDist += seat.lateDistSum;
     }
     matchSeconds += out.ticks / 60;
     if (out.timeout) timeouts++;
@@ -226,19 +282,35 @@ function main(): void {
     }
     if (o.verbose) {
       const w = out.winner === null ? (out.draw ? 'draw' : '-') : `${difficulties[out.winner]}#${out.winner}`;
-      console.log(
-        `seed ${o.seed + i} [${difficulties.join(',')}] -> ${w} after ${(out.ticks / 60).toFixed(1)}s` +
-          out.seats.map((s) => ` ${s.cause?.kind ?? 'alive'}${s.suicide ? '*' : ''}`).join(''),
-      );
+      if (o.players > 8) {
+        // large matches: one summary row per match (the docs tables come from these)
+        const own = out.seats.filter((s) => s.suicide).length;
+        const dead = out.seats.filter((s) => !s.alive).length;
+        const es = out.seats.reduce((a, s) => a + s.engageSamples, 0);
+        const en = out.seats.reduce((a, s) => a + s.engageNear, 0);
+        const ed = out.seats.reduce((a, s) => a + s.engageDistSum, 0);
+        const ls = out.seats.reduce((a, s) => a + s.lateSamples, 0);
+        const ln = out.seats.reduce((a, s) => a + s.lateNear, 0);
+        const ms = out.tickMs.reduce((a, b) => a + b, 0) / Math.max(1, out.tickMs.length);
+        const kills = out.seats.reduce((a, s) => a + s.kills, 0);
+        console.log(
+          `seed ${o.seed + i} -> ${o.game === 'classic' || o.game === 'survival' ? w : out.draw ? 'draw/tie' : `#${out.winner}`} after ${(out.ticks / 60).toFixed(0)}s | ` +
+            `eliminations ${dead}, own blast ${own}, credited kills ${kills} | opponent within ${ENGAGE_NEAR} ${pct(en, es).trim()} | ` +
+            `mean nearest ${(ed / Math.max(1, es)).toFixed(1)} | last ${ENGAGE_LATE}: within ${ENGAGE_NEAR} ${pct(ln, ls).trim()} | ${ms.toFixed(2)} ms/tick`,
+        );
+      } else {
+        console.log(
+          `seed ${o.seed + i} [${difficulties.join(',')}] -> ${w} after ${(out.ticks / 60).toFixed(1)}s` +
+            out.seats.map((s) => ` ${s.cause?.kind ?? 'alive'}${s.suicide ? '*' : ''}`).join(''),
+        );
+      }
     }
   }
 
   const elapsed = (performance.now() - started) / 1000;
-  const pct = (n: number, d: number): string =>
-    d === 0 ? '   -' : `${((100 * n) / d).toFixed(1).padStart(5)}%`;
   console.log(
     `\n${o.matches} matches, ${o.players} players${o.duel ? `, duel ${o.duel[0]} vs ${o.duel[1]}` : ''}, ` +
-      `${o.arena ?? DEFAULT_ARENA_ID}, mode ${ARENAS[o.arena ?? DEFAULT_ARENA_ID]!.forcedMode ?? o.mode}${o.crowd ? '+crowd' : ''}${o.hazards ? '' : ' (no stage hazards)'}, seeds ${o.seed}..${o.seed + o.matches - 1}`,
+      `${o.arena ?? DEFAULT_ARENA_ID}, ${o.game === 'classic' ? '' : `${o.game}${o.friendlyFire ? ' (friendly fire)' : ''}, `}${o.blast ? `${o.blast} blast, ` : ''}mode ${ARENAS[o.arena ?? DEFAULT_ARENA_ID]!.forcedMode ?? o.mode}${o.crowd ? '+crowd' : ''}${o.hazards ? '' : ' (no stage hazards)'}, seeds ${o.seed}..${o.seed + o.matches - 1}`,
   );
   console.log('difficulty  seats   wins  win%  draws  self-kill%  unassisted%  avg-survive  decide(us)');
   for (const d of DIFFICULTIES) {
@@ -274,6 +346,11 @@ function main(): void {
   console.log(
     `survivors: half left at median ${med(halfAt)}, two left at median ${med(twoAt)} | ` +
       `seats that placed a generator ${((100 * seatsPlaced) / seatsTotal).toFixed(0)}%, moved ${((100 * seatsMoved) / seatsTotal).toFixed(0)}%, scored a kill ${((100 * seatsKilled) / seatsTotal).toFixed(0)}%`,
+  );
+  console.log(
+    `engagement: an opponent within ${ENGAGE_NEAR} tiles in ${pct(engageNear, engageSamples).trim()} of alive samples, ` +
+      `mean distance to the nearest opponent ${(engageDist / Math.max(1, engageSamples)).toFixed(1)} tiles; ` +
+      `with ${ENGAGE_LATE} or fewer left: within ${ENGAGE_NEAR} ${pct(lateNear, lateSamples).trim()}, mean ${(lateDist / Math.max(1, lateSamples)).toFixed(1)} tiles`,
   );
   console.log(
     `eliminations by cause: ${Object.entries(causes)

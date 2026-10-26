@@ -6,6 +6,8 @@ import type { ArenaLook } from '../arenaLook';
 import type { CoverFactory } from './boardCover';
 import type { ArenaSet } from './common';
 import type { FloorDrawer } from './floorKit';
+import { OJUELEGBA_ENV } from '../env/ojuelegbaEnv';
+import type { StageEnvironmentSource } from '../env/types';
 import { AJEGUNLE_FLOOR, AJEGUNLE_LOOK, AJEGUNLE_SET } from './ajegunle';
 import { LAGOON_FLOOR, LAGOON_LOOK, LAGOON_SET } from './lagoon';
 import { mobileTestArt } from './mobileTest';
@@ -39,6 +41,8 @@ export interface ArenaArt {
   floor: FloorDrawer;
   /** Permanent cover drawn as whole objects instead of per-tile pillars (`boardCover.ts`). */
   cover?: CoverFactory;
+  /** The stage's living environment (ambient traffic, crowds, practical lights), as data. Optional. */
+  env?: StageEnvironmentSource;
 }
 
 let cache: Record<string, ArenaArt> | null = null;
@@ -64,6 +68,7 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
       set: RUMBLE_OJUELEGBA_SET,
       floor: RUMBLE_OJUELEGBA_FLOOR,
       cover: RUMBLE_OJUELEGBA_COVER,
+      env: OJUELEGBA_ENV,
     },
     rumbleApapa: { look: RUMBLE_APAPA_LOOK, set: RUMBLE_APAPA_SET, floor: RUMBLE_APAPA_FLOOR },
     rumbleLekkiNight: {

@@ -240,6 +240,27 @@ describe('rulesets', () => {
     expect(s.players.every((p) => p.capacity === 1)).toBe(true);
   });
 
+  it('the cross experiment variant (RE-L2) plays Rumble with the plus and keeps the two-generator start', () => {
+    const s = createGame({
+      seed: 3,
+      arenaId: 'rumbleOshodi',
+      players: Array.from({ length: 4 }, (_, i) => ({ name: `P${i}`, characterId: 'streetBaller', isBot: i > 0 })),
+      settings: { game: 'survival', stageHazards: false, rumbleBlast: 'cross' },
+    });
+    expect(s.config.generator.blastMode).toBe('plus');
+    expect(s.config.generator.maxRange).toBe(10);
+    expect(s.players.every((p) => p.capacity === 2)).toBe(true);
+    expect(s.config.rewards.enabled).toBe(true);
+    // Classic ignores the switch
+    const c = createGame({
+      seed: 3,
+      arenaId: 'danfoBusPark',
+      players: Array.from({ length: 2 }, (_, i) => ({ name: `P${i}`, characterId: 'streetBaller', isBot: i > 0 })),
+      settings: { game: 'classic', rumbleBlast: 'radial' },
+    });
+    expect(c.config.generator.blastMode).toBe('plus');
+  });
+
   it('every City Rumble ruleset is radial and starts with two generators', () => {
     for (const kind of ['survival', 'deathmatch', 'team'] as const) {
       const s = game(kind, 'rumbleOjuelegba');

@@ -37,6 +37,16 @@ export const TIMED_MINUTES: readonly number[] = [5, 10];
 /** Team names in team-index order (0 = Green, 1 = White; more teams only for tests / future menus). */
 export const TEAM_NAMES: readonly string[] = ['Green', 'White', 'Gold', 'Red'];
 
+/**
+ * The Rumble economy with the chosen blast shape: radial by default; the 'cross' experiment variant
+ * (decision RE-L2) keeps everything else (two starting generators, rewards, caps) but blasts with the plus
+ * and its old reach cap of 10.
+ */
+function rumbleEconomy(settings: MatchSettings): DeepPartial<GameConfig> {
+  if (settings.rumbleBlast !== 'cross') return RUMBLE_ECONOMY;
+  return { ...RUMBLE_ECONOMY, generator: { ...RUMBLE_ECONOMY.generator, blastMode: 'plus', maxRange: 10 } };
+}
+
 /** Config overrides for a ruleset, merged over the arena's own config (tests may override on top). */
 export function modeConfig(settings: MatchSettings, _arena: ArenaDef): DeepPartial<GameConfig> {
   switch (settings.game) {
@@ -46,14 +56,14 @@ export function modeConfig(settings: MatchSettings, _arena: ArenaDef): DeepParti
     case 'survival':
       return {
         // crates open routes; power comes from eliminations, credited straight to the eliminator
-        ...RUMBLE_ECONOMY,
+        ...rumbleEconomy(settings),
         pickups: { hiddenChance: 0 },
         drops: { maxDeathDrops: 0 },
       };
     case 'deathmatch':
     case 'team':
       return {
-        ...RUMBLE_ECONOMY,
+        ...rumbleEconomy(settings),
         match: { durationTicks: ticks(settings.durationSec ?? DEFAULT_TIMED_SECONDS) },
         pickups: { hiddenChance: 0 },
         drops: { maxDeathDrops: 0 },

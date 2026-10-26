@@ -1,6 +1,7 @@
 /**
- * Ojuelegba Underbridge - the flyover overhead (presentation only). The deck runs east-west over the
- * through road (board rows 11-21, the full width; the set continues it off the board east and west). Only
+ * Ojuelegba Underbridge - the flyover overhead (presentation only). The deck runs north-south over the
+ * pier court and the through road beneath it (tile columns 15-29, from the north edge to its cut end over
+ * the south bent; the set carries it on north of the board, where the ambient deck traffic runs). Only
  * its OUTER EDGES are drawn over the board - the two fascia girders, a strip of soffit inside each, the
  * hammerhead crossheads over the pier bents and the upper shafts of the piers - and the central deck is cut
  * away, so it never roofs over the fight (research: "cut away the central deck consistently while retaining
@@ -33,7 +34,11 @@ import type { CoverGroup } from './ojuelegbaCoverMap';
 /** Height of the on-board pier stub (the board cover draws up to here; the overhead takes over). */
 export const PIER_CUT = 2.5;
 /** Soffit (underside) of the deck. */
-const SOFFIT = 4.4;
+export const SOFFIT = 4.4;
+/** Tile columns under the deck, and the row over which it is cut off (the south bent). */
+export const DECK_X0 = 15;
+export const DECK_X1 = 29;
+export const DECK_END = 21;
 
 const CUT = {
   /** Fraction of pixels always dissolved (0 = solid). */
@@ -130,25 +135,33 @@ export function buildDeck(
 ): { object: Group; dispose(): void } {
   const wx = (x: number): number => x - W / 2 + 0.5;
   const wz = (y: number): number => y - H / 2 + 0.5;
-  const zN = wz(11) - 0.2;
-  const zS = wz(21) + 0.2;
+  // the deck runs north-south over the pier court (tile columns 15-29), on from the north edge of the board
+  // to its cut end over the south bent (row 21); the set carries it on north of the board
+  const xW = wx(DECK_X0) - 0.3;
+  const xE = wx(DECK_X1) + 0.3;
+  const zTop = -H / 2;
+  const zEnd = wz(DECK_END) + 0.5;
+  const len = zEnd - zTop;
+  const zc = (zTop + zEnd) / 2;
   const tone = 0x8e8a82; // soot concrete with some warmth (research palette #5E5A55, lit)
   const parts: BufferGeometry[] = [];
   const box = (w: number, h: number, d: number, x: number, y0: number, z: number, c: number): void => {
     parts.push(piece(new BoxGeometry(w, h, d), x, y0 + h / 2, z, c));
   };
   // fascia girders with a drip line, and the soffit strips just inside them (the deck's outer edges)
-  for (const [z, dir] of [
-    [zN, 1],
-    [zS, -1],
+  for (const [x, dir] of [
+    [xW, 1],
+    [xE, -1],
   ] as const) {
-    box(W, 0.75, 0.42, 0, SOFFIT, z, tone);
-    box(W, 0.12, 0.5, 0, SOFFIT + 0.75, z, 0x6e6a64); // parapet coping
-    box(W, 0.06, 0.44, 0, SOFFIT - 0.06, z, 0x3e3a36); // the dark drip line under the fascia
-    box(W, 0.14, 1.1, 0, SOFFIT, z + dir * 0.75, 0x7a766e); // soffit strip
+    box(0.42, 0.75, len, x, SOFFIT, zc, tone);
+    box(0.5, 0.12, len, x, SOFFIT + 0.75, zc, 0x6e6a64); // parapet coping
+    box(0.44, 0.06, len, x, SOFFIT - 0.06, zc, 0x3e3a36); // the dark drip line under the fascia
+    box(1.1, 0.14, len, x + dir * 0.75, SOFFIT, zc, 0x7a766e); // soffit strip
   }
-  // over every pier group: the upper shaft from the stub to a hammerhead crosshead spanning the band
-  const bents = new Map<number, number[]>();
+  // the cut end of the deck over the south bent: a dark section face between the girders
+  box(xE - xW, 0.75, 0.1, (xW + xE) / 2, SOFFIT, zEnd - 0.05, 0x4a4640);
+  // over every pier group: the upper shaft from the stub to a hammerhead crosshead spanning the deck
+  const bents = new Map<string, number[]>();
   for (const g of piers) {
     const cx = (wx(g.x0) + wx(g.x1)) / 2;
     const cz = (wz(g.y0) + wz(g.y1)) / 2;
@@ -170,12 +183,12 @@ export function buildDeck(
     parts.push(
       piece(new CylinderGeometry(1.3, 0.78, 0.5, 4), cx, SOFFIT - 0.25, cz, 0xa29a8a, Math.PI / 4, 1, 0.9),
     );
-    const key = Math.round(cx);
-    bents.set(key, [...(bents.get(key) ?? []), cx]);
+    const key = cz < 0 ? 'north' : 'south';
+    bents.set(key, [...(bents.get(key) ?? []), cz]);
   }
-  for (const xs of bents.values()) {
-    const cx = xs.reduce((a, b) => a + b, 0) / xs.length;
-    box(1.25, 0.62, zS - zN - 0.3, cx, SOFFIT - 0.05, (zN + zS) / 2, 0x9a9488);
+  for (const zs of bents.values()) {
+    const cz = zs.reduce((a, b) => a + b, 0) / zs.length;
+    box(xE - xW - 0.3, 0.62, 1.25, (xW + xE) / 2, SOFFIT - 0.05, cz, 0x9a9488);
   }
   const merged = mergeGeometries(parts)!;
   for (const g of parts) g.dispose();

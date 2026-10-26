@@ -8,6 +8,7 @@ import type { VoiceRequest } from '../../src/audio/pidginReactions';
 import type { NearMiss } from '../../src/audio/nearMiss';
 import { addGenerator, put, sandbox } from '../helpers';
 import { SAMPLES } from './helpers';
+import { Tile } from '../../src/sim/types';
 
 /** Player 0 is the human, everyone else a bot. */
 function game() {
@@ -61,6 +62,19 @@ describe('which voice trigger each game event fires', () => {
     expect(reactionsFor([], s, [], mem)).toEqual([]); // not twice for the same generator
     s.players[0]!.alive = false;
     expect(reactionsFor([], s, [], newMemory())).toEqual([]); // nobody left to warn
+  });
+
+  it('generator danger in City Rumble follows the radial footprint: a diagonal warns, a wall shadow does not', () => {
+    const s = sandbox({ players: 3, config: { generator: { blastMode: 'radial', maxRange: 5 } } });
+    s.players.forEach((p, i) => (p.isBot = i !== 0));
+    s.tiles = s.tiles.map(() => Tile.Empty);
+    put(s, 0, 5, 5);
+    const diagonal = addGenerator(s, { ownerId: 1, x: 6, y: 6, timer: FUSE_WARN_TICKS - 5, range: 2 });
+    expect(reactionsFor([], s, [], newMemory())[0]!.opts).toMatchObject({ key: `fuse${diagonal.id}` });
+    s.generators.length = 0;
+    s.tiles[5 * s.width + 6] = Tile.Hard; // concrete between the human and the generator
+    addGenerator(s, { ownerId: 1, x: 7, y: 5, timer: FUSE_WARN_TICKS - 5, range: 3 });
+    expect(reactionsFor([], s, [], newMemory())).toEqual([]);
   });
 
   it('eliminations: the human is forced; Danfo kills and self-eliminations prefer their own lines, falling back', () => {

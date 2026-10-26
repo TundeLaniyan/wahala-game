@@ -109,22 +109,24 @@ describe('Ojuelegba board cover', () => {
     }
   });
 
-  it('the flyover overhead keeps to the outer edges above the road band and is cut away round the fighter', () => {
+  it('the flyover overhead keeps to the outer edges over the pier court and is cut away near the camera', () => {
     expect(overhead).toHaveLength(1);
     const deck = overhead[0]!;
     const pos = deck.geometry.attributes.position as BufferAttribute;
     for (let i = 0; i < pos.count; i++) {
-      // never below the pier stubs (fighters, generators and crates stay clear), only over rows 11-21
+      // never below the pier stubs (fighters, generators and crates stay clear), only over the deck columns
+      // 15-29 and no further south than its cut end over the south bent (row 21)
       expect(pos.getY(i)).toBeGreaterThanOrEqual(PIER_CUT - 0.01);
-      expect(pos.getZ(i) + H / 2).toBeGreaterThan(10.5);
-      expect(pos.getZ(i) + H / 2).toBeLessThan(22.5);
+      expect(pos.getX(i) + W / 2).toBeGreaterThan(14.5);
+      expect(pos.getX(i) + W / 2).toBeLessThan(30.5);
+      expect(pos.getZ(i) + H / 2).toBeLessThan(22.1);
     }
-    // the central deck is cut away: no soffit surface spans the middle of the band away from the bents
+    // the central deck is cut away: nothing spans the middle of the deck between the bents (rows 14-18)
     const material = deck.material as Material;
     expect(String(material.userData.programKey)).toContain('deckcut');
     let middle = 0;
     for (let i = 0; i < pos.count; i++)
-      if (Math.abs(pos.getZ(i) - 0) < 2 && Math.abs(pos.getX(i) - 9) < 2) middle++;
+      if (Math.abs(pos.getZ(i) - 0) < 1.5 && Math.abs(pos.getX(i)) < 4) middle++;
     expect(middle).toBe(0);
   });
 

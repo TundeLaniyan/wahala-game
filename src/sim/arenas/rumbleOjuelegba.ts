@@ -196,15 +196,17 @@ export const RUMBLE_OJUELEGBA: ArenaDef = {
       warnSec: 2,
     },
     {
-      // the signalled bus pull-out: a loaded Danfo comes up the departure strip from the depot gate and
-      // pulls out onto the road, leaving east. Route data: strip x 41 / 42 (rows 32 -> 19), then road rows 18
-      // / 17 to the east edge; the pavements and the bays beside the strip are safe. Workstream E owns the
-      // departure presentation (horn, lit road markers) and may extend this entry.
+      // the signalled bus pull-out (a DEPARTURE, RE-E3): a loaded Danfo waits in its bay at the foot of the
+      // departure strip (x 41 / 42, row 31), pulls out up the strip and onto the road and leaves at the east
+      // edge (rows 18 / 17). The bus is shown parked in the bay through the telegraph; the sim holds the
+      // announcement while anyone on the lane could not walk off it in time. Pavements beside the strip and
+      // the bays west of it are safe. Workstream E owns the presentation (horn, lit road markers).
       kind: 'sweep',
       style: 'danfo',
+      depart: true,
       routes: [
-        [...line([41, H - 1], [41, 19]), ...line([41, 18], [W - 1, 18])],
-        [...line([42, H - 1], [42, 18]), ...line([42, 17], [W - 1, 17])],
+        [...line([41, H - 2], [41, 19]), ...line([41, 18], [W - 1, 18])],
+        [...line([42, H - 2], [42, 18]), ...line([42, 17], [W - 1, 17])],
       ],
       stepTicks: 6,
       firstAtSec: 14,
