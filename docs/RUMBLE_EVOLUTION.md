@@ -624,3 +624,217 @@ distance; `env-deck-traffic.jpg` is a close inspect of the stop, not of the deck
 | Ojuelegba lighting: shade under the deck with a hard sun edge and reflected light, LED / sodium practicals, palette | Adapted: LED (#E8F4FF) and sodium (#FF9F3A) practicals, bounce-light pools under the deck; the sun wall and palette are for the stage art (hints in `ojuelegbaEnv.ts`) |
 | Contract records ambient budgets, light limits, occlusion / cutaway, safe pockets, conflicting-event exclusions | Adopted: `budget`, `lights` caps, `occlusion.cutaway` / `keepClear`, `safety.safePockets` / `safety.exclusions` |
 | Falling containers / debris at Ojuelegba, crowd surges, NPC shoves, agbero damage, NPCs as obstacles, 150-NPC / Mass crowds, generated audio | Rejected: not built |
+
+## D. Ojuelegba Underbridge - five districts
+
+Workstream D (decisions RE-D1..RE-D10). `rumbleOjuelegba` keeps its id, name, music, menu card and place in
+`RUMBLE_ARENA_IDS`; everything else is new. The layout follows the approved research design (J-A..J-E of the
+founder's level-design research, section 5); the first draft written before the research arrived (west-east
+bands, four breaches, mirrored-stage habits) was replaced the same day.
+
+### D.1 The board (45 x 33, not mirrored)
+
+`#` permanent cover, `=` road, `_` kept clear, `x` breakable barrier, `$` supply crate. The camera looks
+north (row 0 is the far side).
+
+```
+     000000000011111111112222222222333333333344444
+     012345678901234567890123456789012345678901234
+  0  #############################################   E  Rear Service Loop (rows 0-10)
+  1  #############################################      far perimeter buildings
+  2  ##..........................................#
+  3  ##...................$......................#
+  4  ##....#...###########...########.......###..#      repair workshops, generator house
+  5  ##....#...###########...########.......###..#
+  6  ##..........................................#      the repair court / loop
+  7  ##...$......##.................##..##..$....#      tyre racks, a skip
+  8  ##..........................................#
+  9  ##.....##############...#############.....###      yard wall; A-E link west, E-C link east
+ 10  ###....###############x##############.....###      x = the workshop-yard partition (B-E)
+ 11  ###.....######...........$..##......._____...   A x 0-13 | B x 14-30 | C x 31-44
+ 12  ......$.##__##..##.....##...##.######.....##.      parking recess, piers, buses nose-to-tail
+ 13  ...##...........##.....##...##.######.....##.
+ 14  .................._____......................      the clear bay under the bridge
+ 15  =============================================      the through road (4 lanes) A -> B -> C
+ 16  =============================================
+ 17  =============================================
+ 18  =============================================
+ 19  ................##_____##................==..      departure strip x 41-42 (rows 19-32)
+ 20  ......#..#__##..##.....##..##....####....==..      piers, buses side by side in bays
+ 21  .........#####.....###.....##....####..$.==.#      bus stop (B), roadside buildings (A)
+ 22  #......########################......x...==.#   D  Shopfront Lane (x 0-30, rows 22-32)
+ 23  #......###.####################..####....==..      shops facing south, doorway recesses
+ 24  #.............####.#######.####..####....==..
+ 25  ......................................x..==..      the lane (bends at x 14)
+ 26  .........$.....................##.x......==..      parcel stacks (C)
+ 27  ..##...##..##..................##........==..      stalls
+ 28  ...............#######x######............==..      stall row; x = cross-passage partition
+ 29  ....##...........................####....==..      the railed crossing refuge (C)
+ 30  .............#.............$.............==..      back pavement
+ 31  ########################################.==..      low lock-ups along the camera edge
+ 32  ########################################.==..
+```
+
+| District (id) | Rects | Role / identity | Cover | Exits (no blast needed) |
+| --- | --- | --- | --- | --- |
+| Western Approach (`westApproach`, J-A) | x 0-13, y 11-21 | the street narrowing toward the bridge; two painted parking recesses (kept clear), kerb islands, the south pavement as escape route | roadside buildings closing in, a container shop, kerb islands | B (road + pavements), D (street corner, 6 wide), E (service entrance, 4 wide) |
+| Underbridge Pier Court (`pierCourt`, J-B) | x 14-30, y 11-21 | the main duel district and the Survival core; three bents of large hammerhead piers: a pair round the clear bay, a second pair, then a wider opening and an offset bent | 6 piers (2 x 2 / 2 x 3), the bus stop | A, C (road + both pavements); E only by breaching |
+| Eastern Danfo pocket (`danfoPark`, J-C) | x 31-44, y 11-32 | the bus pocket: 6 + 2 Danfos packed nose-to-tail beside the road, 10 more side by side in bays, loose parcel stacks, the departure strip, the railed crossing refuge | 18 parked Danfos, a ticket booth, the refuge | B (road + pavements), D (the lane, the back pavement), E (return lane, 5 wide) |
+| Shopfront Lane (`shopfrontLane`, J-D) | x 0-30, y 22-32 | the narrower fast flank: shops facing south onto a 3-4 wide lane that bends at x 14, stalls and doorway recesses for rhythm, a marked empty partition opening a cross-passage to the back pavement | 2 shop blocks (fictional fascias), stalls, kiosks, low lock-ups on the near edge | A (street corner), C (lane, back pavement) |
+| Rear Service Loop (`serviceLoop`, J-E) | x 0-44, y 0-10 | the long safe bypass: a loop round the repair workshops (fictional repair boards), tyre racks, the generator house, a skip; two exits, no dead end | workshops, yard wall, tall far buildings | A (west), C (east); B only by breaching |
+
+Links (`districtLinks`): open A-B, B-C, A-D, D-C (twice), A-E, E-C; breach B-E at (22,10). Tests encode exactly this
+graph, its completeness (every crossing belongs to a link) and the three A-to-C paths (pier court, shop flank, rear
+loop - each found with only that district between A and C, barriers standing).
+
+### D.2 Routes, chokepoints, breaches
+
+- **Direct:** the through road and its pavements, A -> B -> C (between the piers; zebras at x 13, 20, 30).
+- **Close flank:** A's street corner (x 1-6) down into the shop lane, along it, out east to C's refuge.
+- **Long bypass:** A's service entrance (x 3-6, rows 9-10) round the repair loop to the return lane (x 37-41) into C.
+- **Breaches (`x`, always a crate, a painted yellow-and-black floor frame):** the workshop-yard partition (22,10)
+  joins B and E; the shop lane's cross-passage partition (22,28); three parcel stacks in the pocket (37,22),
+  (38,25), (34,26) give alternate crossing angles. Both partitions save at least four steps (tested); every breach is
+  optional (all districts connect with every barrier standing; tested).
+- **Chokepoints:** 3 articulation tiles on the whole board (the doorway recesses); one-tile pinches are optional and
+  never a spawn's only exit.
+
+### D.3 Hazards, lanes, supplies
+
+- **Traffic** (`traffic` sweep): buses and kekes on the four road lanes, edge to edge (right-hand traffic), 2 s warning.
+- **Signalled bus pull-out** (`danfo` sweep, `depart: true`): a loaded Danfo waits in its bay at the foot of the
+  departure strip (41,31) / (42,31), pulls out up the strip, onto the road and leaves at the east edge (2.5 s warning;
+  the sim holds the announcement while anyone on the lane could not walk off it). The pavements beside the strip and
+  the bays west of it are safe (`safety.safePockets` in the environment).
+- **Dumped goods** (`merch` drop): three new crates in the lanes (non-lethal).
+- **Floor traps:** oil on the road and by the generator house, potholes on the side roads; the mandatory 0:30 /
+  0:15 waves land in the pier court.
+- **Attack lanes** (`config.vehicles.lanes`): the road's four lanes at the west and east mouths and the departure
+  strip's two lanes at the depot gate (10 entries; Danfo, taxi and Keke all have 8 or more legal entries; the
+  one-press special finds a lane route for each character).
+- **Supply crates:** 8 - E 3, A 1, B 1, C 1, D 2; four per half; each with three or more open sides; none within 2
+  steps of a spawn.
+- **Survival core:** 11 x 9 at x 17-27, y 12-20 - the pier court with the road running through it; the closing ring
+  stays one region (tested with the shared limit).
+
+### D.4 Layout statistics and spawns
+
+| Stage | Size | Open % | Road % | Avg corridor | Longest | Chokepoints | Spawn gap 8/16/32 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Ojuelegba (`rumbleOjuelegba`) | 45 x 33 | 66.9 | 14.0 | 8.3 | 45 | 3 | 13 / 8 / 6 |
+
+Spawns (`balancedSpawns`, `RADIAL_CLEARANCE`): slot 2k west, 2k+1 east, so Team Rumble's split by x is 16 / 16 at
+32 and half / half at every even count; slot 0 (the human) in the south-west at (1,25). Every district gets spawns.
+Mean walking distance to the core west / east: 24.9 / 22.2 steps (32 spawns), 24.3 / 22.5 (16), 26.5 / 19.5 (8:
+the human's south-west corner weighs on the west mean); to the nearest supply crate 7.9 / 7.7 (32), 8.8 / 7.8 (16).
+
+### D.5 Bots (headless, `scripts/rumble-stages.ts`, this branch after the A / C / AI / E merge)
+
+| Ruleset | Bots | Seed | Result | Play s | Eliminations | Crushed | Hazard deaths | ms/tick |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Survival | 16 | 116 | winner 1 | 115 | 11 | 0 | 0 | 0.49 |
+| Survival | 16 | 133 | winner 9 | 47 | 12 | 0 | 0 | 0.58 |
+| Survival | 32 | 132 | winner 13 | 37 | 28 | 0 | 0 | 1.06 |
+| Survival | 32 | 149 | winner 9 | 74 | 23 | 0 | 0 | 0.69 |
+| Deathmatch | 16 | 116 | winner 7 | 300 | 310 | 0 | 0 | 1.07 |
+| Deathmatch | 32 | 132 | winner 24 | 300 | 741 | 0 | 0 | 2.32 |
+| Team | 16 | 116 | west 143 - east 164 | 300 | 307 | 0 | 0 | 1.26 |
+| Team | 32 | 132 | west 367 - east 353 | 300 | 720 | 0 | 0 | 2.41 |
+
+ms/tick (bots + simulation) was measured while other streams and Chromium shared the 4-core machine; compare rows
+of one run only. Before the AI merge the same Survival batch ended in 14-23 s on this board and on Oshodi, Apapa and
+Lekki alike (radial blasts + two generators with the old bots), so the short matches were not a layout effect. Team
+Rumble is balanced on this ground (143 - 164, 367 - 353).
+
+### D.6 Presentation
+
+- **Board cover** (RE-D8): `ojuelegbaCoverMap.ts` names what every `#` tile is (17 kinds, tested against the layout);
+  `ojuelegbaCover.ts` bakes each group into merged meshes (one per material and 23 x 17 board chunk): pier stubs with
+  black-and-white base bands, posters and LED tubes; 18 Danfos from the GLB with route cards (YABA, CMS, OBALENDE...);
+  shops with fictional fascias, half-open shutters and doorway recesses; workshops with roller shutters and repair
+  boards; perimeter buildings with windows and AC units; the yard wall; kerb islands and the railed refuge; kiosks,
+  stalls, low lock-ups, tyre racks, the bus stop, the generator house, a skip. Generic hook: `ArenaArt.cover` ->
+  `ArenaView` (no per-tile pillar on claimed original concrete; the occlusion fade reaches the object's height and
+  fades four-column sections; crush blocks still drop in as pillars).
+- **Overhead** (RE-D9, `ojuelegbaDeck.ts`): the deck runs north-south over tile columns 15-29 and on north of the
+  board (set). Over the board only its two fascia girders with soffit strips and the upper pier shafts with their
+  hammerheads, cut away (ordered dither) in the lower ~60 % of the frame and round the followed fighter. East-west
+  crossheads were tried and removed: seen from the camera they lie across the frame and hid the pavement behind.
+- **Floor:** four-lane road with patches, double yellow centre line, arrows and zebras; the deck's shadow band with
+  sun walls and expansion-joint drips; slab pavements with painted parking bays; bay lines, numbers, a stop line and
+  DEPARTURE in the pocket; pavers and a gutter in the shop lane; oil-stained hardstanding in the service loop; a
+  painted yellow-and-black frame round every breakable barrier (it stays as an empty marked footprint).
+- **Light pockets** (`RUMBLE_OJUELEGBA_LOOK.lamps`): LED tubes under the deck (a 0.34 shade with reflected light, not
+  a cave), sodium over the pocket, bulbs in the shop lane and over the workshops.
+- **Surroundings:** the flyover north of the board on twin columns (no parked vehicles on it: the living environment's
+  deck traffic runs there); shophouses beyond the far edge and down the side streets, left open at the road mouths and
+  where the environment's people stand; Danfos waiting beyond the pocket, taxis in the side streets; one incidental
+  okada. Moving traffic, crowds and practical lights are the living environment (`render/env/ojuelegbaEnv.ts`,
+  workstream E), whose rows and rects D aligned to this layout: deck traffic north, approach traffic on the road's
+  west mouth, bus-stop commuters and food sellers under the deck north of the board, traders beyond the shop lane's
+  west end, touts beyond the pocket's east edge, mechanics beyond the service loop's east side.
+
+### D.7 Render cost (medium quality, production build, Chromium software GL, 8 competitors, follow camera)
+
+| View | Draw calls | Triangles |
+| --- | --- | --- |
+| desktop 1280 x 720, 7 frames (spawn + six districts) | 461-581 (median 514) | 1.72-2.03 M |
+| phone 844 x 390 (DPR 2), 4 frames | 494-583 | 1.87-2.01 M |
+| spectator camera pulled back (HUD hidden), 4 frames | 572-634 | 1.86-2.29 M |
+
+The <= 520 call / <= 2 M triangle budget is met in about half of the follow-camera frames and missed by up to ~60
+calls in the busiest (the pier court duel with eight generators, the shop lane). For comparison workstream E measured
+676 calls / 2.2 M on the previous Ojuelegba, +52 with the environment. Where the calls go (hide-one-group runs of the
+shot script, `COST=1`; frame-to-frame noise is about +-40 calls): the board cover about 90 calls / 0.33 M triangles
+(main and shadow passes; at most 13 materials per chunk - paint, concrete, zinc, signs, LED and the Danfo GLB's 8),
+the overhead 1 mesh, the living environment about 70, the surroundings set about 130 / 0.9 M, crates, players,
+generators, flames and hazards the rest. Further cuts, if needed: a cheaper Danfo for the parked buses (the GLB's 8
+materials and 11.5 k triangles each are the largest single item), no shadows for the low lock-ups and kerb islands.
+
+### D.8 Screenshots (`docs/screenshots/rumble-evolution/`)
+
+Real frames, `node scripts/rumble-v2-shots.mjs` (now starts through Quick play; `CLEAN=1` hides the HUD, each frame
+prints its render cost):
+
+- `ojuelegba-desktop-shopfront-spawn.jpg` (the human's spawn, shop lane), `-western-approach`, `-pier-court`,
+  `-danfo-pocket` (buses nose-to-tail by the road), `-shopfront-lane`, `-service-loop`, `-bus-bays` (the bays
+  south of the road beside the departure strip);
+- `ojuelegba-mobile-shopfront-spawn.jpg`, `-pier-court`, `-danfo-pocket`, `-shopfront-lane` (844 x 390, DPR 2);
+- `ojuelegba-unlabelled-1..3.jpg`: HUD hidden, no place name in frame, for the recognition review;
+- the menu card `public/previews/rumbleOjuelegba.jpg` (640 x 360) is the unlabelled pier-court frame
+  (`scripts/arena-previews.mjs` still drives the old single-screen menu and cannot start a Rumble stage).
+
+### D.9 Research reconciliation (late research pack, 26 Oct)
+
+| Research finding | Status |
+| --- | --- |
+| Five districts J-A..J-E, bands far / centre / near | adopted (D.1) |
+| Always-open A-B, B-C, A-D, D-C, A-E, E-C; B-E only by a marked empty partition; three A-to-C paths | adopted, tested |
+| No mandatory destructible bottleneck, two exits per district and spawn | adopted, tested |
+| Pier court: a few large piers, unequal bays, offset bent | adopted (6 piers in unequal bays, tested; an offset third bent) |
+| Bus pocket: packed nose-to-tail Danfos, bay marks, departure strip, parcel stacks | adopted |
+| Shopfront lane: narrower flank, doors and stalls, marked empty partition cross-passage | adopted |
+| Rear loop: repair court, tyre racks, solid workshop wall, two exits | adopted |
+| Vehicles A -> B road strip -> C, between the supports | adopted (lanes on the road mouths + the strip) |
+| Signalled bus pull-out (horn, lit markers: E's presentation) | adopted as a `depart` danfo sweep |
+| Cut away the central deck, keep beams / outer edges; never hide fighters | adopted (D.6), crossheads removed |
+| Tall buildings on the far perimeter, near storeys low | adopted (far perimeter buildings, low lock-ups) |
+| Tonal variation on concrete, reflected light under the deck, palette hints | adopted |
+| No okada clusters (commercial ban since 2022) | adopted: one incidental bike |
+| No real brands / unions / place-name billboard | adopted: fictional signage, the bus stop board carries no name |
+| Unlabelled stills for review | adopted (D.8) |
+| 45-60 % walkable, ~36 x 28 start | adapted: 67 %, 45 x 33 (RE-D1, RE-D2) |
+| Primary street 4-6, local routes 2-3, short optional pinches | adopted (4-lane road, 2-3 wide lanes, 3 pinches) |
+| Spectators in upper windows | deferred (E's crowd zones; not added) |
+| First encounter 5-10 s, no 15 s empty traversal | not measured with humans; bots start fighting within seconds (D.5) |
+| Two-level combat, falling containers / collapse, HP / falloff / cooldowns, agbero shoves, navmesh, UE5 | rejected, not built |
+
+### D.10 Limits
+
+- Judged on software-rendered frames only; nobody has played it on a phone or with Lagos-familiar reviewers yet.
+- The render budget is missed in the busiest frames (D.7).
+- The parked Danfos use the playable GLB with its existing livery text (route board and slogan on the model).
+- `arena-previews.mjs` was not updated for the Stitch menu; the preview came from the shot script's frame.
+- Spawns cannot be perfectly fair on a non-mirrored board: the 8-player west mean to the core is 7 steps longer
+  (the human's corner); 16 / 32 within 3.
+- Bot balance only; Survival length depends on the merged AI (37-115 s in the batch).
