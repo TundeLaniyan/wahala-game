@@ -5,7 +5,7 @@
 import { createBot } from '../../src/ai';
 import { createGame, observe, tick } from '../../src/sim';
 import type { CharacterId, DeepPartial, Difficulty, GameConfig, GameKind, Intents } from '../../src/sim';
-import { MetricsCollector, mean, median } from './collector';
+import { CAUSE_KEYS, MetricsCollector, mean, median } from './collector';
 import type { MatchMetrics } from './collector';
 import { mergeConfigs } from './variants';
 import type { Variant } from './variants';
@@ -88,6 +88,15 @@ export interface Aggregate {
   /** Matches in which nobody fell in the first 30 / 60 s. */
   noElim30: number;
   noElim60: number;
+  /** Mean eliminations per match by cause (`causeKey`). */
+  causes: Record<string, number>;
+  /** Per spawn slot over the matches: mean share of the match alive, mean credited eliminations, wins. */
+  slotSurvival: number[];
+  slotKills: number[];
+  slotWins: number[];
+  /** Spawn fairness: spread (max - min) and coefficient of variation of the per-slot mean survival. */
+  slotSurvivalSpread: number;
+  slotSurvivalCv: number;
   /** Per-result counts (`win`, `draw:simultaneous`, `draw:timeout` ...). */
   results: Record<string, number>;
 }
@@ -115,6 +124,17 @@ const NUMERIC: (keyof MatchMetrics)[] = [
   'topPower',
   'medianPower',
   'rewardsGranted',
+  'emptyRuns15',
+  'longestEmptySec',
+  'meanLiveGenerators',
+  'peakLiveGenerators',
+  'liveGeneratorsPerFighter',
+  'suppliesStart',
+  'suppliesOpened',
+  'suppliesOpened60',
+  'pickupsCollected',
+  'pickupsWasted',
+  'pickupsBurned',
   'msPerTick',
 ];
 
@@ -125,6 +145,21 @@ export function aggregate(rows: readonly MatchMetrics[]): Aggregate {
   // -1 = nobody fell in any match
   m.firstElimSec = firsts.length > 0 ? mean(firsts) : -1;
   m.medianFirstElimSec = firsts.length > 0 ? median(firsts) : -1;
+  const encounters = rows
+    .filter((r) => r.firstEncounterSec !== null)
+    .map((r) => r.firstEncounterSec as number);
+  m.firstEncounterSec = encounters.length > 0 ? mean(encounters) : -1;
+  const supplies = rows
+    .filter((r) => r.firstSupplyOpenedSec !== null)
+    .map((r) => r.firstSupplyOpenedSec as number);
+  m.firstSupplyOpenedSec = supplies.length > 0 ? mean(supplies) : -1;
+  const causes = Object.fromEntries(CAUSE_KEYS.map((k) => [k, mean(rows.map((r) => r.causes[k]))]));
+  const slots = Math.max(0, ...rows.map((r) => r.slotSurvival.length));
+  const slotSurvival = Array.from({ length: slots }, (_, i) => mean(rows.map((r) => r.slotSurvival[i] ?? 0)));
+  const slotKills = Array.from({ length: slots }, (_, i) => mean(rows.map((r) => r.slotKills[i] ?? 0)));
+  const slotWins = Array.from({ length: slots }, (_, i) => rows.filter((r) => r.winnerSlot === i).length);
+  const sMean = mean(slotSurvival);
+  const sVar = mean(slotSurvival.map((x) => (x - sMean) ** 2));
   const results: Record<string, number> = {};
   for (const r of rows) {
     const key = r.result.startsWith('win') ? 'win' : r.result;
@@ -134,6 +169,12 @@ export function aggregate(rows: readonly MatchMetrics[]): Aggregate {
     matches: rows.length,
     ended: rows.filter((r) => r.result !== 'none').length,
     mean: m,
+    causes,
+    slotSurvival,
+    slotKills,
+    slotWins,
+    slotSurvivalSpread: slots > 0 ? Math.max(...slotSurvival) - Math.min(...slotSurvival) : 0,
+    slotSurvivalCv: sMean > 0 ? Math.sqrt(sVar) / sMean : 0,
     noElim30: rows.filter((r) => r.elims30 === 0).length,
     noElim60: rows.filter((r) => r.elims60 === 0).length,
     results,
@@ -224,4 +265,68 @@ export function markdownTable(cells: readonly Cell[]): string {
   const rows = [TABLE_HEADER, ...cells.map(tableRow)];
   const line = (r: string[]): string => `| ${r.join(' | ')} |`;
   return [line(rows[0]!), line(TABLE_HEADER.map(() => '---')), ...rows.slice(1).map(line)].join('\n');
+}
+
+export const DETAIL_HEADER = [
+  'stage',
+  'ruleset',
+  'bots',
+  'variant',
+  '1st encounter s',
+  'empty runs >= 15 s',
+  'longest empty s',
+  'own / rival / team / veh / stage / crush / melee',
+  'live gens (mean / peak / per fighter)',
+  'supplies opened (of start, by 60 s, 1st s)',
+  'pickups taken / wasted / burned',
+  'slot survival spread / cv',
+];
+
+export function detailRow(c: Cell): string[] {
+  const { agg: a } = c;
+  const x = a.mean;
+  const k = a.causes;
+  return [
+    c.stage,
+    c.game + (c.minutes ? ` ${c.minutes}m` : ''),
+    String(c.players),
+    c.variant,
+    x.firstEncounterSec! < 0 ? '-' : f1(x.firstEncounterSec!),
+    f1(x.emptyRuns15!),
+    f1(x.longestEmptySec!),
+    [k.ownBlast, k.rivalBlast, k.teamBlast, k.vehicle, k.stageHazard, k.crush, k.melee]
+      .map((v) => f1(v!))
+      .join(' / '),
+    `${f1(x.meanLiveGenerators!)} / ${f1(x.peakLiveGenerators!)} / ${x.liveGeneratorsPerFighter!.toFixed(2)}`,
+    x.suppliesStart! > 0
+      ? `${f1(x.suppliesOpened!)} of ${f1(x.suppliesStart!)}, ${f1(x.suppliesOpened60!)}, ${x.firstSupplyOpenedSec! < 0 ? '-' : f1(x.firstSupplyOpenedSec!)}`
+      : '-',
+    `${f1(x.pickupsCollected!)} / ${f1(x.pickupsWasted!)} / ${f1(x.pickupsBurned!)}`,
+    `${a.slotSurvivalSpread.toFixed(2)} / ${a.slotSurvivalCv.toFixed(2)}`,
+  ];
+}
+
+export function detailTable(cells: readonly Cell[]): string {
+  const line = (r: string[]): string => `| ${r.join(' | ')} |`;
+  return [
+    line(DETAIL_HEADER),
+    line(DETAIL_HEADER.map(() => '---')),
+    ...cells.map((c) => line(detailRow(c))),
+  ].join('\n');
+}
+
+/** Per-slot spawn fairness for one cell: survival share, credited kills and wins of every slot, as a markdown table. */
+export function slotTable(c: Cell): string {
+  const a = c.agg;
+  const head = ['slot', 'mean alive share', 'mean kills', 'wins'];
+  const line = (r: string[]): string => `| ${r.join(' | ')} |`;
+  return [
+    `${c.stage} ${c.game} ${c.players} bots, ${c.variant} (n = ${a.matches})`,
+    '',
+    line(head),
+    line(head.map(() => '---')),
+    ...a.slotSurvival.map((v, i) =>
+      line([String(i), v.toFixed(2), a.slotKills[i]!.toFixed(2), String(a.slotWins[i]!)]),
+    ),
+  ].join('\n');
 }

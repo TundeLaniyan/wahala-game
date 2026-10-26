@@ -448,9 +448,19 @@ export const DEFAULT_CONFIG: GameConfig = {
  * City Rumble Evolution (decisions RE-B1, RE-C1): Rumble blasts are radial (`blastMode: 'radial'`,
  * systems/blastShape.ts) with the radius capped at 5 (a 97-tile disc; `maxRange` is the radius cap in radial
  * mode), and every fighter starts with two generators (`baseCapacity: 2`). Classic is untouched.
+ *
+ * Decision RE-C4: the Square Blast squares the disc off up to radius 6 (13 x 13) instead of the Phase 0 radius 4,
+ * so the second tier still widens a radius-5 blast (at radius 4 the square never grew past the disc cap's own
+ * square and tiers 2-3 paid nothing); `rewards.ts` skips a tier that would not widen the footprint.
  */
 export const RUMBLE_ECONOMY = {
-  generator: { maxCapacity: 10, maxRange: 5, baseCapacity: 2, blastMode: 'radial' as const },
+  generator: {
+    maxCapacity: 10,
+    maxRange: 5,
+    baseCapacity: 2,
+    blastMode: 'radial' as const,
+    radialMaxSquareRadius: 6,
+  },
   protection: { maxArmour: 3 },
   square: { maxTier: 3, radiusByTier: [0, 1, 2, 3] },
   rewards: { enabled: true },

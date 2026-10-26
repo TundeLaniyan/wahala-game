@@ -21,6 +21,7 @@
  *   --sample T          spatial sample interval in ticks (default 6)
  *   --max-seconds S     stop each match after S play seconds (quick looks)
  *   --json [file]       also write per-match + aggregate JSON (stdout when no file is named)
+ *   --slots             also print the per-spawn-slot table (survival, kills, wins) of every cell (spawn fairness)
  *   --quiet             no progress lines on stderr
  *   --ladder            instead of matches: print the bot-independent economy curve (what a fighter has after
  *                       n credited eliminations: generators, radius, blast tiles ...) for every variant
@@ -28,7 +29,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import type { DeepPartial, Difficulty, GameConfig, GameKind } from '../src/sim';
-import { aggregate, markdownTable, runMetricsMatch } from './rumbleMetrics/run';
+import { aggregate, detailTable, markdownTable, runMetricsMatch, slotTable } from './rumbleMetrics/run';
 import type { Cell } from './rumbleMetrics/run';
 import type { MatchMetrics } from './rumbleMetrics/collector';
 import { DEFAULT_SAMPLE_TICKS } from './rumbleMetrics/collector';
@@ -134,6 +135,8 @@ for (const stage of arenas) {
 }
 
 console.log(markdownTable(cells));
+console.log(`\n${detailTable(cells)}`);
+if (has('slots')) for (const c of cells) console.log(`\n${slotTable(c)}`);
 console.log(
   `\nmeans over ${matches} seeds from ${seed0}; bots: ${difficulty}; sample every ${sample} ticks. ` +
     'Columns: elims = eliminations per match; 1st s = mean time of the first elimination; <=30 / <=60 s = mean ' +

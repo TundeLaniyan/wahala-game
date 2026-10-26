@@ -23,7 +23,7 @@
  *  - concentration: top eliminator (most credited kills, ties: lower id) versus the median fighter, for
  *    credited kills and for peak power (`powerScore` above the start, sampled).
  */
-import { isOpponent, previewBlast } from '../../src/sim';
+import { isOpponent, previewBlast, teammates } from '../../src/sim';
 import type { GameState, PickupKind, Player, SimEvent } from '../../src/sim';
 
 /** Radius (tiles, Manhattan) inside which a living opponent counts as "in the fight". */
@@ -32,6 +32,8 @@ export const ENGAGE_RADIUS = 6;
 export const CAMP_SECONDS = 5;
 /** The "opening" window (seconds of play) for the engagement metrics reported separately. */
 export const OPENING_SECONDS = 60;
+/** A stretch with no living opponent in reach (`ENGAGE_RADIUS`) at least this long is a routine empty traversal. */
+export const EMPTY_FLAG_SECONDS = 15;
 /** Spatial metrics are sampled every this many ticks (6 = 10 Hz). */
 export const DEFAULT_SAMPLE_TICKS = 6;
 
@@ -113,6 +115,74 @@ export class CampTracker {
   }
 }
 
+export type CauseKey =
+  'ownBlast' | 'rivalBlast' | 'teamBlast' | 'vehicle' | 'stageHazard' | 'crush' | 'melee' | 'spectator';
+
+export const CAUSE_KEYS: readonly CauseKey[] = [
+  'ownBlast',
+  'rivalBlast',
+  'teamBlast',
+  'vehicle',
+  'stageHazard',
+  'crush',
+  'melee',
+  'spectator',
+];
+
+/**
+ * Elimination cause for the table: the fighter's own blast, a rival's, a teammate's (friendly fire), a
+ * vehicle, a stage hazard (traffic, crowd, falling goods), the closing city, or melee (the death came from
+ * the crush / a hazard but a rival's shove within the credit window is credited with it).
+ */
+export function causeKey(
+  state: Pick<GameState, 'players'>,
+  e: Extract<SimEvent, { type: 'playerEliminated' }>,
+): CauseKey {
+  const c = e.cause;
+  switch (c.kind) {
+    case 'flame': {
+      if (c.ownerId === e.playerId) return 'ownBlast';
+      const owner = state.players[c.ownerId];
+      const victim = state.players[e.playerId];
+      return owner && victim && teammates(owner, victim) ? 'teamBlast' : 'rivalBlast';
+    }
+    case 'vehicle':
+      return 'vehicle';
+    case 'spectator':
+      return 'spectator';
+    case 'crush':
+      return e.creditId !== null ? 'melee' : 'crush';
+    default:
+      return e.creditId !== null ? 'melee' : 'stageHazard';
+  }
+}
+
+/** Runs of consecutive time a fighter has no living opponent in reach; runs of `thresholdTicks`+ are flagged. */
+export class EmptyRunTracker {
+  private readonly runs = new Map<number, number>();
+  flaggedRuns = 0;
+  longestTicks = 0;
+
+  constructor(private readonly thresholdTicks: number) {}
+
+  step(id: number, empty: boolean, dt: number): void {
+    if (!empty) return this.stop(id);
+    this.runs.set(id, (this.runs.get(id) ?? 0) + dt);
+  }
+
+  stop(id: number): void {
+    const run = this.runs.get(id);
+    if (run === undefined) return;
+    this.runs.delete(id);
+    this.longestTicks = Math.max(this.longestTicks, run);
+    if (run >= this.thresholdTicks) this.flaggedRuns++;
+  }
+
+  finish(): void {
+    for (const id of [...this.runs.keys()]) this.stop(id);
+  }
+}
+
 export interface MatchMetrics {
   seed: number;
   /** `win:<id>`, `team:<n>`, `draw:<reason>` or `none` (no result before the cap). */
@@ -141,6 +211,30 @@ export interface MatchMetrics {
   openingEngagedShare: number;
   openingExposedShare: number;
   openingNearestOpponent: number;
+  /** First moment a fighter stood in a live opponent's blast footprint or a credited elimination fell (null: never). */
+  firstEncounterSec: number | null;
+  /** Routine empty traversals: runs of >= `EMPTY_FLAG_SECONDS` with no living opponent in reach, and the longest run. */
+  emptyRuns15: number;
+  longestEmptySec: number;
+  /** Eliminations by cause (see `causeKey`). */
+  causes: Record<CauseKey, number>;
+  /** Live (ticking) generators over the match: mean, peak, and mean per living fighter. */
+  meanLiveGenerators: number;
+  peakLiveGenerators: number;
+  liveGeneratorsPerFighter: number;
+  /** Supply crates: standing at the start, opened, opened within the first 60 s, first one opened (null: none). */
+  suppliesStart: number;
+  suppliesOpened: number;
+  suppliesOpened60: number;
+  firstSupplyOpenedSec: number | null;
+  /** Pickups on the floor: collected (useful / wasted) and burned before anyone took them. */
+  pickupsCollected: number;
+  pickupsWasted: number;
+  pickupsBurned: number;
+  /** Per spawn slot (= player id): share of the match alive, credited eliminations; slot of the winner (null: none / team). */
+  slotSurvival: number[];
+  slotKills: number[];
+  winnerSlot: number | null;
   topKills: number;
   medianKills: number;
   topPower: number;
@@ -179,6 +273,22 @@ export class MetricsCollector {
   private openDistSum = 0;
   private openDistCount = 0;
   private result = 'none';
+  private readonly empty = new EmptyRunTracker(EMPTY_FLAG_SECONDS * 60);
+  private firstEncounter: number | null = null;
+  private readonly causes = Object.fromEntries(CAUSE_KEYS.map((k) => [k, 0])) as Record<CauseKey, number>;
+  private genSamples = 0;
+  private genSum = 0;
+  private genPeak = 0;
+  private genPerFighterSum = 0;
+  private readonly supplySet: Set<number>;
+  private readonly suppliesAtStart: number;
+  private suppliesOpened = 0;
+  private suppliesOpened60 = 0;
+  private firstSupply: number | null = null;
+  private collected = 0;
+  private wasted = 0;
+  private burned = 0;
+  private readonly aliveTicks: number[];
 
   constructor(
     initial: GameState,
@@ -192,6 +302,9 @@ export class MetricsCollector {
     this.camp = new CampTracker(CAMP_SECONDS * 60);
     this.kills = initial.players.map(() => 0);
     this.peakPower = initial.players.map(() => 0);
+    this.aliveTicks = initial.players.map(() => 0);
+    this.supplySet = new Set(initial.supplies);
+    this.suppliesAtStart = initial.supplies.length;
   }
 
   /** Call after every `tick(state, ...)` with the events it returned. */
@@ -199,7 +312,11 @@ export class MetricsCollector {
     const playSec = state.match.playTicks / 60;
     for (const e of events) this.onEvent(state, e, playSec);
     if (state.match.phase !== 'playing') return;
-    for (const p of state.players) if (p.alive) this.fighterTicks++;
+    for (const p of state.players)
+      if (p.alive) {
+        this.fighterTicks++;
+        this.aliveTicks[p.id]!++;
+      }
     if (state.match.playTicks % this.sampleTicks === 0) this.sample(state);
   }
 
@@ -211,7 +328,9 @@ export class MetricsCollector {
         if (e.creditId !== null) {
           this.credited++;
           this.kills[e.creditId]!++;
+          this.noteEncounter(playSec);
         }
+        this.causes[causeKey(state, e)]++;
         const c = e.cause;
         if ((c.kind === 'flame' || c.kind === 'vehicle') && c.ownerId === e.playerId) this.selfKills++;
         break;
@@ -233,6 +352,20 @@ export class MetricsCollector {
         if (near) this.nearPlacements++;
         break;
       }
+      case 'blockDestroyed':
+        if (this.supplySet.delete(e.y * state.width + e.x)) {
+          this.suppliesOpened++;
+          if (playSec <= 60) this.suppliesOpened60++;
+          this.firstSupply ??= playSec;
+        }
+        break;
+      case 'pickupCollected':
+        this.collected++;
+        if (e.wasted) this.wasted++;
+        break;
+      case 'pickupBurned':
+        this.burned++;
+        break;
       case 'rewardGranted':
         this.rewardsGranted++;
         this.rewards[e.kind] = (this.rewards[e.kind] ?? 0) + 1;
@@ -253,6 +386,10 @@ export class MetricsCollector {
     }
   }
 
+  private noteEncounter(sec: number): void {
+    this.firstEncounter = this.firstEncounter === null ? sec : Math.min(this.firstEncounter, sec);
+  }
+
   private notePower(p: Readonly<Player> | undefined): void {
     if (!p) return;
     this.peakPower[p.id] = Math.max(this.peakPower[p.id]!, powerScore(p, this.base));
@@ -267,9 +404,16 @@ export class MetricsCollector {
       if (g.mode === 'disabled' || g.flight !== null || g.carriedBy !== null) continue;
       feet.push({ owner: g.ownerId, tiles: previewBlast(state, g) });
     }
+    const sec = state.match.playTicks / 60;
+    const aliveCount = players.filter((q) => q.alive).length;
+    this.genSamples++;
+    this.genSum += feet.length;
+    this.genPeak = Math.max(this.genPeak, feet.length);
+    if (aliveCount > 0) this.genPerFighterSum += feet.length / aliveCount;
     for (const a of players) {
       if (!a.alive) {
         this.camp.stop(a.id);
+        this.empty.stop(a.id);
         continue;
       }
       this.notePower(a);
@@ -279,6 +423,7 @@ export class MetricsCollector {
         if (!q.alive || !isOpponent(state, a.id, q)) continue;
         nearest = Math.min(nearest, Math.abs(q.x - a.x) + Math.abs(q.y - a.y));
       }
+      this.empty.step(a.id, nearest > ENGAGE_RADIUS, this.sampleTicks);
       const opening = state.match.playTicks <= OPENING_SECONDS * 60;
       this.samplePairs++;
       if (opening) this.openPairs++;
@@ -299,6 +444,7 @@ export class MetricsCollector {
         const owner = players[f.owner];
         if (owner && isOpponent(state, a.id, owner) && f.tiles.has(idx)) {
           this.exposed++;
+          this.noteEncounter(sec);
           if (opening) this.openExposed++;
           break;
         }
@@ -308,6 +454,7 @@ export class MetricsCollector {
 
   finish(state: GameState, msPerTick = 0): MatchMetrics {
     this.camp.finish();
+    this.empty.finish();
     for (const p of state.players) this.notePower(p);
     const playSeconds = state.match.playTicks / 60;
     const order = this.kills.map((k, id) => ({ k, id })).sort((a, b) => b.k - a.k || a.id - b.id);
@@ -337,6 +484,23 @@ export class MetricsCollector {
       openingEngagedShare: share(this.openEngaged, this.openPairs),
       openingExposedShare: share(this.openExposed, this.openPairs),
       openingNearestOpponent: share(this.openDistSum, this.openDistCount),
+      firstEncounterSec: this.firstEncounter,
+      emptyRuns15: this.empty.flaggedRuns,
+      longestEmptySec: this.empty.longestTicks / 60,
+      causes: this.causes,
+      meanLiveGenerators: share(this.genSum, this.genSamples),
+      peakLiveGenerators: this.genPeak,
+      liveGeneratorsPerFighter: share(this.genPerFighterSum, this.genSamples),
+      suppliesStart: this.suppliesAtStart,
+      suppliesOpened: this.suppliesOpened,
+      suppliesOpened60: this.suppliesOpened60,
+      firstSupplyOpenedSec: this.firstSupply,
+      pickupsCollected: this.collected,
+      pickupsWasted: this.wasted,
+      pickupsBurned: this.burned,
+      slotSurvival: this.aliveTicks.map((t) => share(t, state.match.playTicks)),
+      slotKills: [...this.kills],
+      winnerSlot: this.result.startsWith('win:') ? Number(this.result.slice(4)) : null,
       topKills: top.k,
       medianKills: median(this.kills),
       topPower: this.peakPower[top.id]!,

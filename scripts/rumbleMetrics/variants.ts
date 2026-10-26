@@ -22,6 +22,18 @@ export const VARIANTS: Record<string, Variant> = {
     description: 'the current defaults (radial blast radius <= 5, 2 starting generators)',
     config: {},
   },
+  nosupply: {
+    name: 'nosupply',
+    description:
+      'evolution with the marked supply crates left empty (plain crates): isolates what the supplies change',
+    config: { supply: { kinds: [] } },
+  },
+  sq6: {
+    name: 'sq6',
+    description:
+      'evolution + Square Blast squares up to radius 6 (13 x 13), so tier 2 still widens a radius-5 blast',
+    config: { generator: { radialMaxSquareRadius: 6 } },
+  },
 };
 
 /** Registers (or replaces) a variant; tests and the CLI's --config use it. */
