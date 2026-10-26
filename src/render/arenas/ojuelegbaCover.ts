@@ -707,7 +707,15 @@ export function buildOjuelegbaCover(board: { width: number; height: number }): B
   for (const grp of groups) {
     const n = counts.get(grp.kind) ?? 0;
     counts.set(grp.kind, n + 1);
-    const g = b.group(grp.tiles, COVER_REACH[grp.kind]);
+    // fade groups: long objects fade in sections of four columns (a bus is never split: buses start on even
+    // columns of their group), so one fighter behind a long building does not dissolve the whole row
+    const sections = new Map<number, [number, number][]>();
+    for (const t of grp.tiles) {
+      const key = Math.floor((t[0] - grp.x0) / 4);
+      sections.set(key, [...(sections.get(key) ?? []), t]);
+    }
+    const ids = [...sections.values()].map((tiles) => b.group(tiles, COVER_REACH[grp.kind]));
+    const g = ids[0]!;
     switch (grp.kind) {
       case 'pier':
         pier(k, g, grp, n);

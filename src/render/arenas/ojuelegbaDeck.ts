@@ -6,10 +6,12 @@
  * away, so it never roofs over the fight (research: "cut away the central deck consistently while retaining
  * beams and outer edges").
  *
- * Even those beams never hide play: their material is screen-door dithered (the same ordered dither as the
- * obstacle fade) - a light constant dissolve everywhere and a full cut-out in an ellipse round the screen
- * centre, where the follow camera keeps the local fighter. Occluded fighters keep their x-ray silhouettes
- * as everywhere else.
+ * Even those beams never hide play. Under the close follow camera anything 4-5 m up sits halfway to the
+ * lens, so the beams are cut by a screen-space cutaway (the same ordered screen-door dither as the obstacle
+ * fade): everything in the lower part of the screen - between the camera and the fight - is cut away, the
+ * beams only show towards the top of the frame (the far side of the road band, where they frame the view),
+ * an ellipse round the local fighter at the screen centre is always cut, and a light dissolve runs over the
+ * rest. Occluded fighters keep their x-ray silhouettes as everywhere else.
  */
 import {
   BoxGeometry,
@@ -35,10 +37,13 @@ const SOFFIT = 4.4;
 
 const CUT = {
   /** Fraction of pixels always dissolved (0 = solid). */
-  base: 0.22,
+  base: 0,
   /** Ellipse round the screen centre (fraction of the screen height): fully cut inside r0, solid-ish past r1. */
-  r0: 0.2,
-  r1: 0.34,
+  r0: 0.12,
+  r1: 0.22,
+  /** Cut plane: fully cut below y0 (fraction of the screen height from the bottom), shown above y1. */
+  y0: 0.56,
+  y1: 0.7,
 };
 
 const FRAG_DECL = /* glsl */ `
@@ -52,6 +57,7 @@ const FRAG_BODY = /* glsl */ `
   vec2 cd = ( gl_FragCoord.xy - uCutCentre ) * uCutScale;
   float cr = length( cd * vec2( 1.0, 1.35 ) );
   float cut = max( ${CUT.base.toFixed(2)}, 1.0 - smoothstep( ${CUT.r0.toFixed(2)}, ${CUT.r1.toFixed(2)}, cr ) );
+  cut = max( cut, 1.0 - smoothstep( ${CUT.y0.toFixed(2)}, ${CUT.y1.toFixed(2)}, gl_FragCoord.y * uCutScale ) );
   if ( cutBayer4( gl_FragCoord.xy ) < cut ) discard;
 }
 `;

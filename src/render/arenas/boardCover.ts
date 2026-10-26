@@ -10,7 +10,7 @@
  * fade attribute of `assets/occlusionFade.ts`; a cover GROUP (one building, one row of buses) fades as a
  * whole when anything worth seeing stands behind any of its tiles, the same dither the pillars use.
  */
-import { BufferAttribute, Color, Float32BufferAttribute, Group, Matrix4, Mesh } from 'three';
+import { BufferAttribute, Color, Float32BufferAttribute, Group, Matrix4, Mesh, Vector3 } from 'three';
 import type { Material, Object3D, BufferGeometry } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fadeableMaterial } from '../assets/occlusionFade';
@@ -104,6 +104,7 @@ export class CoverBuilder {
   private readonly groupReach: number[] = [];
   private readonly groupChunk: number[] = [];
   private readonly m = new Matrix4();
+  private readonly v = new Vector3();
   private readonly owned: { dispose(): void }[] = [];
   private readonly gritOf = new Map<Material, string>();
 
@@ -123,8 +124,8 @@ export class CoverBuilder {
    */
   constructor(
     private readonly width: number,
-    height: number,
-    private readonly chunk: [number, number] = [15, 11],
+    private readonly height: number,
+    private readonly chunk: [number, number] = [23, 17],
   ) {
     this.tileGroup = new Int32Array(width * height).fill(-1);
   }
@@ -169,7 +170,16 @@ export class CoverBuilder {
     });
   }
 
-  private push(group: number, geometry: BufferGeometry, material: Material): void {
+  private push(given: number, geometry: BufferGeometry, material: Material): void {
+    // a piece belongs to the fade group of the tile under its centre when that tile is claimed (so one
+    // object can be split into several fade groups, e.g. a long row of buildings fading in short sections)
+    geometry.computeBoundingBox();
+    const c = geometry.boundingBox!.getCenter(this.v);
+    const tx = Math.floor(c.x + this.width / 2);
+    const ty = Math.floor(c.z + this.height / 2);
+    const under =
+      tx >= 0 && ty >= 0 && tx < this.width && ty < this.height ? this.tileGroup[ty * this.width + tx]! : -1;
+    const group = under >= 0 ? under : given;
     const chunk = this.groupChunk[group] ?? 0;
     let byChunk = this.buckets.get(material);
     if (!byChunk) {

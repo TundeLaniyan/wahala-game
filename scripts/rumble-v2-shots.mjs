@@ -4,7 +4,7 @@
 // `ticks` of play), then the local player moved to each SPOTS entry ("x,y;x,y" tiles, default: the
 // north edge, the east edge, the centre) for a few seconds of live play each, and INSPECT close-ups
 // ("x,z,zoom;..." world points, unclamped) of the surroundings. Prints render stats and page errors.
-// Q=low|medium|high (default medium). HAZARD=1 waits for a stage warning before the `play` frame.
+// Q=low|medium|high (default medium). HAZARD=1 waits for a stage warning before the `play` frame. CLEAN=1 hides the HUD.
 // PREVIEW_OUT=<dir> also writes the 640 x 360 menu card image <dir>/<arenaId>.jpg (HUD hidden).
 import { mkdirSync } from 'node:fs';
 import { chromium } from '@playwright/test';
@@ -66,8 +66,14 @@ mark('hud');
 const arenaNow = await page.evaluate(() => window.__WAHALA__.getState().arenaId);
 if (arenaNow !== arena) throw new Error(`started ${arenaNow}, wanted ${arena}`);
 await page.waitForTimeout(1200);
-const shot = (name) =>
-  page.screenshot({ path: `${dir}/${arena}-${device}-${name}.jpg`, quality: 82, timeout: 240000 });
+// CLEAN=1: no HUD in any frame (unlabelled stills for recognition reviews)
+if (process.env.CLEAN) await page.addStyleTag({ content: '.hud, .touch, .touch-controls { display: none !important; }' });
+const shot = async (name) => {
+  await page.screenshot({ path: `${dir}/${arena}-${device}-${name}.jpg`, quality: 82, timeout: 240000 });
+  // render cost of this frame (draw calls / triangles of the last rendered frame)
+  const st = await page.evaluate(() => window.__WAHALA__.stats());
+  console.error(`  ${name}: ${st.drawCalls} calls, ${(st.triangles / 1e6).toFixed(2)} M triangles`);
+};
 const run = async (ms) => {
   await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
   await page.waitForTimeout(ms);

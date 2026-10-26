@@ -291,10 +291,8 @@ export const SHED_BOARDS: BoardSpec[] = [
 export const BUS_STOP_BOARD: BoardSpec = {
   bg: '#e4b42a',
   fg: '#16140f',
-  lines: [
-    ['BUS STOP', 40],
-    ['OJUELEGBA', 26],
-  ],
+  // no place name: the place must be recognised from its architecture, not a billboard
+  lines: [['BUS STOP', 44]],
   border: '#16140f',
 };
 
