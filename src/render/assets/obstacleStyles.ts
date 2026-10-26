@@ -8,6 +8,8 @@
  * are missing still renders. Unknown arena ids get `DEFAULT_STYLE`.
  */
 
+import { getArena } from '../../sim';
+
 export type DebrisKind = 'crate' | 'tyres' | 'sacks' | 'barrier' | 'cartons' | 'kegs' | 'drums' | 'concrete';
 
 /**
@@ -39,6 +41,11 @@ export interface ObstacleStyle {
   pillarDebris: DebrisKind;
   /** Optional regions with their own pillar models (first match wins; `pillars` everywhere else). */
   pillarZones?: readonly PillarZone[];
+  /**
+   * Optional per-tile breakable family (model id, or undefined = the weighted pick): e.g. an authored
+   * barrier drawn as a tyre stack, or each district of a multi-district stage with its own clutter.
+   */
+  softFor?: (x: number, y: number) => string | undefined;
 }
 
 /** The four mirror images of a zone on a cols x rows board (the V2 Rumble stages are 4-fold symmetric). */
@@ -54,6 +61,36 @@ function mirrorZone(z: PillarZone, cols: number, rows: number): PillarZone[] {
 }
 const zones4 = (cols: number, rows: number, zs: PillarZone[]): PillarZone[] =>
   zs.flatMap((z) => mirrorZone(z, cols, rows));
+
+/** Stable per-tile hash for the district clutter pick (decorrelated neighbours). */
+function tileHash(x: number, y: number): number {
+  let h = Math.imul(x + 3, 0x9e3779b1) ^ Math.imul(y + 11, 0x85ebca77);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+  return (h ^ (h >>> 13)) >>> 0;
+}
+
+/** Ojuelegba: what a crate is in each district (presentation only; the districts are sim data). */
+const OJUELEGBA_CLUTTER: Readonly<Record<string, readonly string[]>> = {
+  // five breakable families in all (each family is its own instanced draw: kept few for the draw-call budget)
+  westApproach: ['prop_soft_tyres', 'prop_soft_barrier', 'prop_soft_tyres', 'prop_soft_crates'],
+  pierCourt: ['prop_soft_cartons', 'prop_soft_tyres', 'prop_soft_cartons', 'prop_soft_crates'],
+  danfoPark: ['prop_soft_tyres', 'prop_soft_crates', 'prop_soft_cartons', 'prop_soft_tyres'],
+  shopfrontLane: ['prop_soft_cartons', 'prop_soft_crates', 'prop_soft_cartons', 'prop_soft_barrier'],
+  serviceLoop: ['prop_soft_drums', 'prop_soft_tyres', 'prop_soft_drums', 'prop_soft_crates'],
+};
+let ojuelegbaLayout: readonly string[] | null = null;
+function ojuelegbaSoft(x: number, y: number): string | undefined {
+  const a = getArena('rumbleOjuelegba');
+  ojuelegbaLayout ??= a.layout;
+  const h = tileHash(x, y);
+  // the authored barriers (blast them for a shortcut) are tyre stacks and road barricades
+  if (ojuelegbaLayout[y]?.[x] === 'x') return h % 2 ? 'prop_soft_tyres' : 'prop_soft_barrier';
+  const d = a.districts?.find((z) =>
+    z.rects.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1),
+  );
+  const family = d ? OJUELEGBA_CLUTTER[d.id] : undefined;
+  return family ? family[h % family.length] : undefined;
+}
 
 /** Bus-park precast pillars and crates/tyres: the shared fallback set (always bundled). */
 export const BASE_PILLARS = ['prop_pillar_a', 'prop_pillar_b', 'prop_pillar_c'] as const;
@@ -177,9 +214,8 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
     soft: { prop_soft_sacks: 6, prop_soft_cartons: 4, prop_soft_kegs: 2, prop_soft_crate_b: 1 },
   }),
   rumbleOjuelegba: style({
-    note: 'a forest of flyover piers under the bridge; broken compound walls and precast corners in the streets; tyres, cartons, kegs',
+    note: 'permanent cover is drawn whole by the board cover (piers, Danfos, shops: ojuelegbaCover.ts); crush blocks are wall stubs and precast; per district clutter: tyres and barricades on the approach, cartons and kegs under the bridge, tyres and crates in the park, sacks and cartons in the shop lane, drums and cable drums in the service yard; barriers are tyre stacks and barricades',
     pillars: ['prop_pillar_wallstub', 'prop_pillar_c', 'prop_pillar_a'],
-    pillarZones: [{ x0: 13, y0: 0, x1: 27, y1: 30, pillars: ['prop_pillar_pier'] }],
     soft: {
       prop_soft_tyres: 3,
       prop_soft_cartons: 3,
@@ -187,6 +223,7 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
       prop_soft_crates: 2,
       prop_soft_barrier: 1,
     },
+    softFor: ojuelegbaSoft,
   }),
   rumbleApapa: style({
     note: 'stacked shipping containers on yard pads, transit sheds of precast panels; drums, crates, cable drums',

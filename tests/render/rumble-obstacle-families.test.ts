@@ -18,17 +18,21 @@ describe('V2 obstacle families', () => {
     for (let x = 1; x <= 9; x++) expect(ids[pillarIndexFor(apapa, ids, x, 3)]).toMatch(/^prop_pillar_[ab]$/);
   });
 
-  it('Ojuelegba draws flyover piers under the bridge only', () => {
+  it('Ojuelegba: the permanent cover is drawn whole (ojuelegbaCover.ts); crush blocks are wall stubs and precast', () => {
+    // workstream D: the piers, buses and buildings are board-cover objects now, so the pillar family only
+    // draws the concrete the closing city drops in (tests/render/ojuelegba-cover.test.ts covers the rest)
     const oju = obstacleStyle('rumbleOjuelegba');
+    expect(oju.pillarZones).toBeUndefined();
     const ids = resolvePillars(oju, [
       'prop_pillar_pier',
       'prop_pillar_wallstub',
       'prop_pillar_c',
       'prop_pillar_a',
     ]);
-    for (const y of [1, 3, 5, 9]) expect(ids[pillarIndexFor(oju, ids, 15, y)]).toBe('prop_pillar_pier');
-    for (const x of [1, 2, 3, 5, 6, 7])
-      expect(ids[pillarIndexFor(oju, ids, x, 1)]).not.toBe('prop_pillar_pier');
+    expect(ids).not.toContain('prop_pillar_pier');
+    for (let x = 0; x < 45; x += 4)
+      for (let y = 0; y < 33; y += 4)
+        expect(ids[pillarIndexFor(oju, ids, x, y)]).toMatch(/wallstub|pillar_[ac]$/);
   });
 
   it('a style without zones keeps the original placement hash (the approved standard arenas never reshuffle)', () => {

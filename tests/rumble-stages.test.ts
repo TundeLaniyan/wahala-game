@@ -31,7 +31,7 @@ const V2 = [
 const SIZE: Record<(typeof V2)[number], [number, number]> = {
   rumbleOshodi: [41, 31],
   rumbleLagosIsland: [41, 31],
-  rumbleOjuelegba: [41, 31],
+  rumbleOjuelegba: [45, 33],
   rumbleApapa: [45, 31],
   rumbleLekkiNight: [41, 31],
 };
@@ -80,6 +80,9 @@ describe('Rumble stage registry', () => {
     expect(RUMBLE_ARENA_IDS).toEqual([...V2, 'cityRumble']);
     expect(STANDARD_ARENA_IDS).toHaveLength(9);
     for (const id of RUMBLE_ARENA_IDS) expect(getArena(id).kind).toBe('rumble');
+    // only the five-district Ojuelegba is authored without mirroring (its own fairness checks replace the
+    // mirror checks below); every other stage stays 4-fold symmetric
+    expect(V2.filter((id) => !getArena(id).mirrorSoftBlocks)).toEqual(['rumbleOjuelegba']);
   });
 
   it('every Rumble stage uses the follow (stadium) camera', () => {
@@ -119,7 +122,9 @@ describe('Rumble stage registry', () => {
     expect(stats.rumbleLagosIsland!.chokepoints).toBeGreaterThan(50);
     for (const id of V2) if (id !== 'rumbleLagosIsland') expect(stats[id]!.chokepoints).toBeLessThan(20);
     expect(stats.rumbleLagosIsland!.avgCorridor).toBeLessThan(7);
-    expect(stats.rumbleOjuelegba!.avgCorridor).toBeGreaterThan(stats.rumbleApapa!.avgCorridor);
+    // Ojuelegba is the multi-district stage (workstream D): five named districts on a non-mirrored board
+    expect(getArena('rumbleOjuelegba').districts?.length).toBe(5);
+    for (const id of V2) if (id !== 'rumbleOjuelegba') expect(getArena(id).districts).toBeUndefined();
     expect(stats.rumbleOshodi!.roadPct).toBeGreaterThan(20);
     expect(stats.rumbleLekkiNight!.roadPct).toBeLessThan(12);
     expect(stats.rumbleLekkiNight!.openPct).toBeGreaterThan(80);
@@ -142,15 +147,42 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
     expect(a.info.hazards.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('is 4-fold mirror symmetric (every quarter of the city faces the same streets)', () => {
-    for (let y = 0; y < H; y++)
-      for (let x = 0; x < W; x++) {
-        expect(at(a, W - 1 - x, y), `${x},${y}`).toBe(at(a, x, y));
-        expect(at(a, x, H - 1 - y), `${x},${y}`).toBe(at(a, x, y));
-      }
+  it.runIf(a.mirrorSoftBlocks)(
+    'is 4-fold mirror symmetric (every quarter of the city faces the same streets)',
+    () => {
+      for (let y = 0; y < H; y++)
+        for (let x = 0; x < W; x++) {
+          expect(at(a, W - 1 - x, y), `${x},${y}`).toBe(at(a, x, y));
+          expect(at(a, x, H - 1 - y), `${x},${y}`).toBe(at(a, x, y));
+        }
+    },
+  );
+
+  it.runIf(!a.mirrorSoftBlocks)('is not mirrored but its two team halves hold comparable ground', () => {
+    // Team Rumble splits west / east by x: each half (the centre column left out) has about as much open
+    // floor, road and permanent cover as the other
+    const count = (west: boolean, c: (ch: string) => boolean): number => {
+      let n = 0;
+      for (let y = 0; y < H; y++)
+        for (let x = 0; x < W; x++) if ((west ? x < (W - 1) / 2 : x > (W - 1) / 2) && c(at(a, x, y))) n++;
+      return n;
+    };
+    const near = (p: number, q: number, tol: number): void =>
+      expect(Math.abs(p - q) / Math.max(p, q), `${p} vs ${q}`).toBeLessThanOrEqual(tol);
+    near(
+      count(true, (c) => c !== '#'),
+      count(false, (c) => c !== '#'),
+      0.08,
+    );
+    near(
+      count(true, (c) => c === '#'),
+      count(false, (c) => c === '#'),
+      0.35,
+    );
+    expect(count(true, (c) => c === '$')).toBe(count(false, (c) => c === '$'));
   });
 
-  it('has 32 distinct spawns on open floor with a clear way out, spread out and mirror-paired for teams', () => {
+  it('has 32 distinct spawns on open floor with a clear way out, spread out and balanced for teams', () => {
     expect(a.spawns).toHaveLength(32);
     expect(new Set(a.spawns.map((s) => `${s.x},${s.y}`)).size).toBe(32);
     for (const s of a.spawns) {
@@ -160,12 +192,22 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
       for (const o of a.spawnClearance)
         expect(at(a, s.x + o.x * sx, s.y + o.y * sy), `clearance of ${s.x},${s.y}`).toBe('.');
     }
-    // slot 2k on the west half, slot 2k + 1 its exact 180-degree mirror: id % 2 teams are side vs side
-    for (let k = 0; k < 16; k++) {
-      const p = a.spawns[2 * k]!;
-      const q = a.spawns[2 * k + 1]!;
-      expect(p.x).toBeLessThan(W / 2);
-      expect(q).toEqual({ x: W - 1 - p.x, y: H - 1 - p.y });
+    if (a.mirrorSoftBlocks) {
+      // slot 2k on the west half, slot 2k + 1 its exact 180-degree mirror: id % 2 teams are side vs side
+      for (let k = 0; k < 16; k++) {
+        const p = a.spawns[2 * k]!;
+        const q = a.spawns[2 * k + 1]!;
+        expect(p.x).toBeLessThan(W / 2);
+        expect(q).toEqual({ x: W - 1 - p.x, y: H - 1 - p.y });
+      }
+    } else {
+      // a non-mirrored stage (Ojuelegba) cannot pair spawns by mirror: slots alternate west / east instead, so
+      // every even prefix is half and half, and each half's starts are comparable (tests/rumble-ojuelegba.test.ts
+      // checks the walking distances to the core and to the supply crates per half)
+      for (let k = 0; k < 16; k++) {
+        expect(a.spawns[2 * k]!.x).toBeLessThan(W / 2);
+        expect(a.spawns[2 * k + 1]!.x).toBeGreaterThan(W / 2);
+      }
     }
     const minGap = (n: number): number => {
       const s = a.spawns.slice(0, n);

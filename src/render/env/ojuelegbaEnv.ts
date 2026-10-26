@@ -1,10 +1,10 @@
 /**
  * The living environment of Ojuelegba Underbridge (City Rumble), as data relative to the board size.
  *
- * Written from the board bounds and sides only, because the stage is being rebuilt into five districts
- * (Western Approach, Central Underbridge / Pier Court, Eastern Danfo Park, Shopfront Lane, Rear Service
- * Loop) whose exact layout this file does not read. The lead re-aligns the numbers marked `ALIGN` after
- * the merge; the structure (what lives where, relative to the board) is the part that is meant to stay.
+ * Aligned (workstream D) to the five-district board of `src/sim/arenas/rumbleOjuelegba.ts`: the flyover
+ * runs north-south over tile columns 15-29 and on north of the board; the through road crosses the board
+ * east-west on rows 15-18 (its west and east mouths); the Shopfront Lane reaches the west edge on rows
+ * 22-30, the Danfo pocket the east edge on rows 19-30, the Rear Service Loop both sides on rows 2-8.
  *
  * Everything stands off the board and low on the camera (south) side:
  *  - the flyover deck (6.6 m up) north of the board carries Danfos and buses both ways, with the odd truck
@@ -20,7 +20,7 @@
  */
 import type { BoardSize, StageEnvironment } from './types';
 
-/** Deck surface above street level, metres (the flyover art puts its deck top at 6.6). ALIGN */
+/** Deck surface above street level, metres (rumbleOjuelegbaArt.ts puts its deck top at 6.3 above the board = 6.6). */
 const DECK_ELEVATION = 6.6;
 const LED_WHITE = 0xe8f4ff;
 const SODIUM = 0xff9f3a;
@@ -28,10 +28,10 @@ const SODIUM = 0xff9f3a;
 export function ojuelegbaEnv(board: BoardSize): StageEnvironment {
   const { cols, rows } = board;
   const cx = cols / 2;
-  // Western Approach lanes (rows of the two approach roads) ALIGN
-  const approachA = Math.round(rows * 0.26) + 0.5;
-  const approachB = Math.round(rows * 0.72) + 0.5;
-  const east = cols + 7.6; // the outer ring road east of the Danfo Park and the service loop ALIGN
+  // the through road's lanes beyond the west edge (right-hand traffic: eastbound south, westbound north)
+  const roadIn = rows * 0.5 + 1.0; // row 17
+  const roadOut = rows * 0.5 - 1.0; // row 15
+  const east = cols + 7.6; // the outer ring road east of the Danfo pocket and the service loop
   return {
     id: 'rumbleOjuelegba',
     seed: 0x0102e1e6,
@@ -65,14 +65,14 @@ export function ojuelegbaEnv(board: BoardSize): StageEnvironment {
         priority: 3,
         fade: 2.5,
       },
-      // Western Approach: Danfos and buses, a few taxis, one keke; they come in, turn along the outer lane, leave
+      // Western Approach: Danfos and buses, a few taxis, one keke on the through road beyond the west edge;
+      // they shrink in and out at the road mouth (the board's own traffic is the stage's sweeps)
       {
         id: 'westApproachIn',
         kinds: ['danfo', 'bus', 'car'],
         path: [
-          [-34, approachA],
-          [-3.6, approachA],
-          [-3.6, -14],
+          [-40, roadIn],
+          [-1.6, roadIn],
         ],
         count: 3,
         speed: 3.8,
@@ -83,9 +83,8 @@ export function ojuelegbaEnv(board: BoardSize): StageEnvironment {
         id: 'westApproachOut',
         kinds: ['danfo', 'car', 'keke'],
         path: [
-          [-3.6, rows + 9],
-          [-3.6, approachB],
-          [-34, approachB],
+          [-1.6, roadOut],
+          [-40, roadOut],
         ],
         count: 3,
         speed: 3.6,
@@ -124,28 +123,28 @@ export function ojuelegbaEnv(board: BoardSize): StageEnvironment {
         mood: 'trading',
         priority: 2,
       },
-      // traders at Shopfront Lane's outer edge (north-east) ALIGN
+      // traders beyond the Shopfront Lane's west barrier (rows 22-30), in front of the side-street shops
       {
         id: 'shopfrontTraders',
-        rect: { x0: cols * 0.68, y0: -4.4, x1: cols * 0.92, y1: -2.4 },
+        rect: { x0: -1.9, y0: rows * 0.68, x1: -0.9, y1: rows * 0.92 },
         count: 6,
         mood: 'trading',
         priority: 2,
         reacts: { blast: { reaction: 'flinch', radius: 10, minRange: 3, chance: 0.6 } },
       },
-      // roadside mechanics on the rear service loop (east, towards the rear) ALIGN
+      // roadside mechanics beyond the rear service loop's east side (rows 2-8)
       {
         id: 'rearLoopMechanics',
-        rect: { x0: cols + 2.2, y0: rows * 0.58, x1: cols + 5.4, y1: rows * 0.78 },
+        rect: { x0: cols + 2.2, y0: rows * 0.08, x1: cols + 5.4, y1: rows * 0.26 },
         count: 5,
         mood: 'working',
         priority: 2,
         reacts: { elimination: { reaction: 'look', radius: 60, chance: 0.5 } },
       },
-      // motor-park touts calling passengers at the Eastern Danfo Park (fictional: no union names) ALIGN
+      // motor-park touts calling passengers at the Eastern Danfo pocket's edge (fictional: no union names)
       {
         id: 'danfoParkTouts',
-        rect: { x0: cols + 2.2, y0: rows * 0.28, x1: cols + 5.4, y1: rows * 0.46 },
+        rect: { x0: cols + 2.2, y0: rows * 0.6, x1: cols + 5.4, y1: rows * 0.78 },
         count: 6,
         mood: 'trading',
         priority: 2,
@@ -178,9 +177,9 @@ export function ojuelegbaEnv(board: BoardSize): StageEnvironment {
         flicker: 'fluorescent',
         pool: 2.4,
       },
-      // phone-shop LEDs along Shopfront Lane
+      // phone-shop LEDs beyond the Shopfront Lane's west end
       {
-        at: [cols * 0.74, -2.8],
+        at: [-2.2, rows * 0.72],
         height: 2.2,
         color: LED_WHITE,
         size: 0.6,
@@ -189,7 +188,7 @@ export function ojuelegbaEnv(board: BoardSize): StageEnvironment {
         minQuality: 'medium',
       },
       {
-        at: [cols * 0.86, -2.8],
+        at: [-2.2, rows * 0.88],
         height: 2.2,
         color: LED_WHITE,
         size: 0.6,
@@ -199,7 +198,7 @@ export function ojuelegbaEnv(board: BoardSize): StageEnvironment {
       },
       // sodium worklight at the service loop, lantern at the park
       {
-        at: [cols + 3.8, rows * 0.62],
+        at: [cols + 3.8, rows * 0.16],
         height: 3.2,
         color: SODIUM,
         size: 1.1,
@@ -208,7 +207,7 @@ export function ojuelegbaEnv(board: BoardSize): StageEnvironment {
         pool: 2.6,
       },
       {
-        at: [cols + 3.8, rows * 0.36],
+        at: [cols + 3.8, rows * 0.7],
         height: 1.7,
         color: SODIUM,
         size: 0.5,
@@ -244,15 +243,17 @@ export function ojuelegbaEnv(board: BoardSize): StageEnvironment {
         { on: 'stage', sound: 'crowd_throw_whistle' },
       ],
     },
-    // the deck stands north of the board: its centre fades / cuts away; the beams and outer edges stay (art)
-    occlusion: { cutaway: [{ x0: cx - 7.5, y0: -20, x1: cx + 7.5, y1: -1 }] },
+    // the deck runs north-south over the pier court and on north of the board; over the board only its outer
+    // edges, crossheads and pier shafts are drawn, cut away in the lower part of the frame and round the
+    // fighter (render/arenas/ojuelegbaDeck.ts)
+    occlusion: { cutaway: [{ x0: cx - 7.5, y0: -20, x1: cx + 7.5, y1: rows * 0.68 }] },
     safety: {
-      // the pavement recesses beside the departure lane at the Eastern Danfo Park: always safe ALIGN
+      // the pavement beside the departure strip (tile columns 43-44, rows 19-30): never on the bus's lane
       safePockets: [
         {
           style: 'danfo',
-          rect: { x0: cols - 4, y0: rows * 0.28, x1: cols, y1: rows * 0.28 + 2 },
-          note: 'pavement recess beside the departure lane',
+          rect: { x0: cols - 2, y0: rows * 0.58, x1: cols, y1: rows * 0.94 },
+          note: 'pavement beside the departure strip',
         },
       ],
       // the sim keeps these apart (one lethal event at a time, nothing once the city closes)

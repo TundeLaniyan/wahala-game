@@ -80,6 +80,9 @@ open tiles.
 
 ### F3 Ojuelegba Underbridge - a pillar forest and two wide roads
 
+> **Superseded (City Rumble Evolution, workstream D):** Ojuelegba is now the five-district 45 x 33 prototype -
+> see `RUMBLE_EVOLUTION.md` section D (decisions RE-D1..RE-D10). The description below is the V2 stage it replaced.
+
 - **Layout:** the flyover crosses north-south over columns 13-27: under it a forest of single piers (every other
   tile in six columns) split by two taxi-queue lanes (columns 17 and 23). Either side, a dense neighbourhood of
   3 x 2 buildings with one-tile lanes. Two three-lane roads cross the whole board east-west (rows 6-8, 22-24): wide,
