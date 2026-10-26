@@ -2,8 +2,8 @@
  * Ojuelegba Underbridge - the flyover overhead (presentation only). The deck runs north-south over the
  * pier court and the through road beneath it (tile columns 15-29, from the north edge to its cut end over
  * the south bent; the set carries it on north of the board, where the ambient deck traffic runs). Only
- * its OUTER EDGES are drawn over the board - the two fascia girders, a strip of soffit inside each, the
- * hammerhead crossheads over the pier bents and the upper shafts of the piers - and the central deck is cut
+ * its OUTER EDGES are drawn over the board - the two north-south fascia girders with a strip of soffit
+ * inside each, and the upper shafts of the piers with their hammerheads - and the central deck is cut
  * away, so it never roofs over the fight (research: "cut away the central deck consistently while retaining
  * beams and outer edges").
  *
@@ -126,7 +126,7 @@ function piece(
 
 /**
  * The overhead for a W x H board: fascia girders over the north and south edges of the road band, soffit
- * strips, crossheads and upper pier shafts over every pier group. Returns a group and its disposer.
+ * strips, and the upper pier shafts with their hammerheads over every pier group. Returns a group and its disposer.
  */
 export function buildDeck(
   W: number,
@@ -158,10 +158,7 @@ export function buildDeck(
     box(0.44, 0.06, len, x, SOFFIT - 0.06, zc, 0x3e3a36); // the dark drip line under the fascia
     box(1.1, 0.14, len, x + dir * 0.75, SOFFIT, zc, 0x7a766e); // soffit strip
   }
-  // the cut end of the deck over the south bent: a dark section face between the girders
-  box(xE - xW, 0.75, 0.1, (xW + xE) / 2, SOFFIT, zEnd - 0.05, 0x4a4640);
-  // over every pier group: the upper shaft from the stub to a hammerhead crosshead spanning the deck
-  const bents = new Map<string, number[]>();
+  // over every pier group: the upper shaft from the stub to its hammerhead under the deck
   for (const g of piers) {
     const cx = (wx(g.x0) + wx(g.x1)) / 2;
     const cz = (wz(g.y0) + wz(g.y1)) / 2;
@@ -179,17 +176,13 @@ export function buildDeck(
         0.82 * (deep > 2 ? 1.4 : 1),
       ),
     );
-    // the hammerhead flaring out under the crosshead
+    // the hammerhead flaring out under the deck
     parts.push(
       piece(new CylinderGeometry(1.3, 0.78, 0.5, 4), cx, SOFFIT - 0.25, cz, 0xa29a8a, Math.PI / 4, 1, 0.9),
     );
-    const key = cz < 0 ? 'north' : 'south';
-    bents.set(key, [...(bents.get(key) ?? []), cz]);
   }
-  for (const zs of bents.values()) {
-    const cz = zs.reduce((a, b) => a + b, 0) / zs.length;
-    box(xE - xW - 0.3, 0.62, 1.25, (xW + xE) / 2, SOFFIT - 0.05, cz, 0x9a9488);
-  }
+  // no east-west crossheads over the board: seen from the camera they would lie across the frame and hide
+  // the pavement behind them; each shaft ends in its own hammerhead under the girders instead
   const merged = mergeGeometries(parts)!;
   for (const g of parts) g.dispose();
   const { material, centre, scale } = cutawayMaterial();
