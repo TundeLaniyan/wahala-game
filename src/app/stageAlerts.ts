@@ -62,6 +62,11 @@ export function stageAlertFor(state: GameState, ev: StageEvent, me: Player): Sta
       const onIt = sweepAhead(ev).includes(myTile);
       if (onIt) return { ...base, level: 'danger', text: `${noun} COMING - GET OFF THE LANE!` };
       if (!warning) return null;
+      if (ev.depart) {
+        // a parked bus leaving its bay (RE-E3): it drives OUT along the strip to the edge
+        const side = ev.tiles[0]! % state.width < state.width / 2 ? 'LEFT' : 'RIGHT';
+        return { ...base, level: 'warn', text: `${noun} PULLING OUT - ${side} BAY` };
+      }
       if (ev.style === 'danfo') {
         const side = ev.tiles[0]! % state.width < state.width / 2 ? 'LEFT' : 'RIGHT';
         return { ...base, level: 'warn', text: `DANFO PULLING IN - ${side} BAY` };

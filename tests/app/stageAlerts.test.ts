@@ -82,6 +82,13 @@ describe('stage alerts (HUD projection)', () => {
     expect(buildStageAlerts(s, 0)[0]!.text).toBe('DANFO PULLING IN - RIGHT BAY');
   });
 
+  it('a departure (a parked bus leaving its bay) says it is pulling OUT, not in', () => {
+    const s = sandbox();
+    put(s, 0, 0, 10);
+    event(s, { kind: 'sweep', style: 'danfo', depart: true, tiles: [...row(8, 13, 13), ...row(7, 13, 14)], dir: 'up', id: 9 });
+    expect(buildStageAlerts(s, 0)[0]!.text).toMatch(/PULLING OUT - RIGHT BAY$/);
+  });
+
   it('crane debris only alerts the player it is falling on', () => {
     const s = sandbox();
     put(s, 0, 2, 2);
