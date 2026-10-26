@@ -10,6 +10,7 @@ import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
 import { preferenceDefaults } from '../../app/settings';
 import type { GameSettings, ShakeSetting, SubtitleMode } from '../../app/settings';
+import type { MoveAssistSetting } from '../../input';
 import { audioPrefs } from '../../audio/prefs';
 import { AudioSettingsPanel } from '../AudioSettings';
 import { LEGEND_ORDER, legendRows } from '../howToPlayControls';
@@ -63,6 +64,8 @@ function GraphicsTab({ s, set }: { s: GameSettings; set: Set }) {
   );
 }
 
+const ASSIST_LABEL: Record<MoveAssistSetting, string> = { auto: 'Auto', on: 'On', off: 'Off' };
+
 function ControlsTab({ s, set }: { s: GameSettings; set: Set }) {
   const rows = legendRows();
   return (
@@ -74,6 +77,16 @@ function ControlsTab({ s, set }: { s: GameSettings; set: Set }) {
         <div className="mn-opts">
           {(['auto', 'on', 'off'] as const).map((t) => (
             <Option key={t} value={t} current={s.touchControls} label={t} onPick={(touchControls) => set({ touchControls })} testId={`touch-${t}`} />
+          ))}
+        </div>
+      </Field>
+      <Field
+        label="Assisted movement"
+        hint="Helps your thumb steer: a turn pressed a little early is taken at the corner, and a direction pushed against a wall slides to an opening one tile away. It never walks you into a generator, flames or a warned hazard. Auto: on for touch, the plain corner buffer with keyboard and gamepad."
+      >
+        <div className="mn-opts">
+          {(['auto', 'on', 'off'] as const).map((m) => (
+            <Option key={m} value={m} current={s.moveAssist} label={ASSIST_LABEL[m]} onPick={(moveAssist) => set({ moveAssist })} testId={`assist-${m}`} />
           ))}
         </div>
       </Field>

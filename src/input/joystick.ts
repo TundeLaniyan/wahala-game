@@ -13,7 +13,9 @@
  *    thumb drifting near a diagonal never produces alternating presses;
  *  - follow: dragging further than `followRadius` drags the origin along, so reversing is always a short
  *    flick instead of a long trip back across the screen;
- *  - one finger owns the stick (other fingers are free for the action buttons).
+ *  - one finger owns the stick (other fingers are free for the action buttons);
+ *  - wish (assisted movement): a clearly diagonal thumb also reports its weaker axis as `wish`, the turn the
+ *    player wants at the first legal junction (with its own hysteresis, so a wobble never flickers it).
  */
 import type { Dir } from '../sim';
 
@@ -28,6 +30,10 @@ export interface StickConfig {
   switchRatio: number;
   /** Beyond this distance the origin follows the thumb (px, >= radius). */
   followRadius: number;
+  /** The weaker axis becomes a wish once it is this fraction of the main one (about 35 degrees off the axis)... */
+  wishEngage: number;
+  /** ...and stops being one below this fraction (about 27 degrees). */
+  wishRelease: number;
   /** A touch that never left the dead zone and lasted less than this (ms) is a tap. */
   tapMs: number;
 }
@@ -41,6 +47,8 @@ export function stickConfigFor(width: number, height: number): StickConfig {
     releaseZone: Math.round(radius * 0.16),
     switchRatio: 1.35,
     followRadius: Math.round(radius * 1.35),
+    wishEngage: 0.7,
+    wishRelease: 0.5,
     tapMs: 300,
   };
 }
@@ -62,6 +70,8 @@ export class VirtualStick {
   knobX = 0;
   knobY = 0;
   dir: Dir | null = null;
+  /** Diagonal thumb: the secondary axis (always perpendicular to `dir`), or null. */
+  wish: Dir | null = null;
   private startMs = 0;
   /** Whether the thumb ever left the dead zone during this touch. */
   private travelled = false;
@@ -81,6 +91,7 @@ export class VirtualStick {
     this.knobX = 0;
     this.knobY = 0;
     this.dir = null;
+    this.wish = null;
     this.startMs = nowMs;
     this.travelled = false;
     return true;
@@ -106,7 +117,9 @@ export class VirtualStick {
     this.knobX = dx * clamp;
     this.knobY = dy * clamp;
     if (dist >= c.deadZone) this.travelled = true;
-    this.dir = quantise(this.dir, dx, dy, dist, c);
+    const previous = this.dir;
+    this.dir = quantise(previous, dx, dy, dist, c);
+    this.wish = this.dir ? wishFor(this.dir, this.dir === previous ? this.wish : null, dx, dy, c) : null;
     return this.dir;
   }
 
@@ -128,12 +141,34 @@ export class VirtualStick {
     this.knobX = 0;
     this.knobY = 0;
     this.dir = null;
+    this.wish = null;
     this.travelled = false;
   }
 }
 
+/**
+ * The weaker axis of a diagonal thumb, as a wish for the next turn. It needs `wishEngage` of the main axis to
+ * start and keeps going until it falls below `wishRelease`; a new main direction starts over.
+ */
+export function wishFor(dir: Dir, current: Dir | null, dx: number, dy: number, c: StickConfig): Dir | null {
+  const horizontal = dir === 'left' || dir === 'right';
+  const main = Math.abs(horizontal ? dx : dy);
+  const minor = horizontal ? dy : dx;
+  const side: Dir = horizontal ? (minor < 0 ? 'up' : 'down') : minor < 0 ? 'left' : 'right';
+  const strength = Math.abs(minor);
+  if (main <= 0 || strength < c.releaseZone) return null;
+  const keep = current === side ? c.wishRelease : c.wishEngage;
+  return strength >= main * keep ? side : null;
+}
+
 /** Cardinal direction for a thumb offset, with dead zone and hysteresis around the current direction. */
-export function quantise(current: Dir | null, dx: number, dy: number, dist: number, c: StickConfig): Dir | null {
+export function quantise(
+  current: Dir | null,
+  dx: number,
+  dy: number,
+  dist: number,
+  c: StickConfig,
+): Dir | null {
   if (current === null) {
     if (dist < c.deadZone) return null;
     return dominant(dx, dy);
