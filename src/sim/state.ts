@@ -4,7 +4,7 @@ import { CHARACTERS } from './data/characters';
 import { DEFAULT_ARENA_ID, getArena } from './arenas';
 import type { ArenaDef } from './arenas';
 import { tileIndex } from './grid';
-import { nextFloat, seedToState, weightedPick } from './rng';
+import { nextFloat, nextInt, seedToState, weightedPick } from './rng';
 import { NO_TEAM, Tile } from './types';
 import { assignTeams, modeConfig, modeShrinks } from './modes';
 import type {
@@ -122,6 +122,7 @@ export function createGame(options: GameOptions): GameState {
     height,
     tiles: new Array<number>(width * height).fill(Tile.Empty),
     hidden: {},
+    supplies: [],
     floorHazards: {},
     endgameTraps: { waves: [], liveAt: [], warned: 0, live: 0, warnings: [] },
     players: options.players.map((setup, id) =>
@@ -149,6 +150,7 @@ export function createGame(options: GameOptions): GameState {
 
   buildTiles(state, arena);
   assignHiddenPickups(state);
+  placeSupplies(state, arena);
   if (settings.stageHazards) buildFloorHazards(state, arena);
   if (settings.mode === 'crush') state.crush = createCrush(state);
   state.endgameTraps = createEndgameTraps(state, arena);
@@ -183,13 +185,16 @@ function buildTiles(state: GameState, arena: ArenaDef): void {
 
   const place = (x: number, y: number, soft: boolean): void => {
     const i = tileIndex(state, x, y);
-    // roads (traffic lanes, manholes, power zones) are kept clear of crates
-    if (state.tiles[i] === Tile.Hard || clear.has(i) || arena.layout[y]![x] === '=') return;
+    const c = arena.layout[y]![x];
+    // roads (traffic lanes, manholes, power zones) and kept-clear floor ('_') never get random crates;
+    // authored barriers ('x') and supply crates ('$') are always crates (placed after this pass)
+    if (state.tiles[i] === Tile.Hard || clear.has(i) || c === '=' || c === '_' || c === 'x' || c === '$') return;
     if (soft) state.tiles[i] = Tile.Soft;
   };
 
-  const halfW = Math.ceil(width / 2);
-  const halfH = Math.ceil(height / 2);
+  // a mirrored arena draws its top-left quadrant and mirrors it; any other arena draws every tile
+  const halfW = arena.mirrorSoftBlocks ? Math.ceil(width / 2) : width;
+  const halfH = arena.mirrorSoftBlocks ? Math.ceil(height / 2) : height;
   for (let y = 0; y < halfH; y++) {
     for (let x = 0; x < halfW; x++) {
       if (state.tiles[tileIndex(state, x, y)] === Tile.Hard) continue;
@@ -201,6 +206,26 @@ function buildTiles(state: GameState, arena: ArenaDef): void {
         place(width - 1 - x, height - 1 - y, soft);
       } else {
         place(x, y, soft);
+      }
+    }
+  }
+}
+
+/**
+ * Authored destructible cover (City Rumble Evolution): `x` barriers and `$` supply crates are always crates;
+ * each supply crate hides one basic upgrade (`config.supply.kinds`, match RNG) whatever `hiddenChance` is.
+ */
+function placeSupplies(state: GameState, arena: ArenaDef): void {
+  const kinds = state.config.supply.kinds;
+  for (let y = 0; y < state.height; y++) {
+    for (let x = 0; x < state.width; x++) {
+      const c = arena.layout[y]![x];
+      if (c !== 'x' && c !== '$') continue;
+      const i = tileIndex(state, x, y);
+      state.tiles[i] = Tile.Soft;
+      if (c === '$' && kinds.length > 0) {
+        state.hidden[i] = kinds[nextInt(state, kinds.length)]!;
+        state.supplies.push(i);
       }
     }
   }

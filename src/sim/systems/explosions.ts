@@ -9,7 +9,8 @@
 import { DIRS, DIR_VEC, tileAt, tileIndex } from '../grid';
 import type { GridView } from '../grid';
 import { Tile } from '../types';
-import type { BlastEvent, Flame, GameState, Generator, SimEvent } from '../types';
+import type { BlastEvent, Dir, Flame, GameState, Generator, SimEvent } from '../types';
+import { radialFootprint, radialRadius, radialSquareRadius } from './blastShape';
 import { revealPickupAt } from './pickups';
 import { triggerableGeneratorsAt } from './queries';
 
@@ -41,6 +42,7 @@ export function resolveExplosions(state: GameState, events: SimEvent[]): void {
           eventId,
           range: gen.range,
           square: gen.square,
+          ...(state.config.generator.blastMode === 'radial' ? { radial: true } : {}),
         });
         for (const flame of buildFlames(state, gen, eventId, softHit)) {
           state.flames.push(flame);
@@ -98,6 +100,11 @@ function buildFlames(
     const idx = tileIndex(state, x, y);
     if (!softHit.has(idx)) softHit.set(idx, eventId);
   };
+
+  if (state.config.generator.blastMode === 'radial') {
+    radialFlames(state, gen, base, flames, markSoft);
+    return flames;
+  }
 
   if (state.config.generator.blastMode === 'fullLine') {
     // Power Yard: the whole row and column to the arena edge, straight through pillars, crates and
@@ -159,6 +166,42 @@ function buildFlames(
 }
 
 /**
+ * City Rumble radial blast (systems/blastShape.ts): the disc of radius `range` - or, with Square Blast, the
+ * full square - shadowed by concrete, crates and other generators. Tiles on the generator's row / column
+ * keep their arm direction (the last one is the tip) so the flame art reads; the rest are `radial` tiles.
+ */
+function radialFlames(
+  state: GameState,
+  gen: Generator,
+  base: Omit<Flame, 'x' | 'y' | 'dir' | 'tip'>,
+  flames: Flame[],
+  markSoft: (x: number, y: number) => void,
+): void {
+  const g = state.config.generator;
+  const radius = radialRadius(gen.range, g.maxRange);
+  const tips = new Map<string, Flame>();
+  const tiles = radialFootprint(state, gen.x, gen.y, radius, {
+    pierce: gen.pierce,
+    squareRadius: radialSquareRadius(radius, gen.square, g.radialMaxSquareRadius),
+    blocksWave: (x, y) => triggerableGeneratorsAt(state, x, y).some((o) => o.id !== gen.id),
+  });
+  for (const t of tiles) {
+    const dx = t.x - gen.x;
+    const dy = t.y - gen.y;
+    const dir: Dir | null =
+      dy === 0 ? (dx > 0 ? 'right' : 'left') : dx === 0 ? (dy > 0 ? 'down' : 'up') : null;
+    const flame: Flame = dir ? { ...base, x: t.x, y: t.y, dir, tip: false } : { ...base, x: t.x, y: t.y, dir, tip: false, radial: true };
+    flames.push(flame);
+    if (dir) {
+      const prev = tips.get(dir);
+      if (!prev || Math.abs(dx) + Math.abs(dy) > Math.abs(prev.x - gen.x) + Math.abs(prev.y - gen.y)) tips.set(dir, flame);
+    }
+    if (tileAt(state, t.x, t.y) === Tile.Soft) markSoft(t.x, t.y);
+  }
+  for (const f of tips.values()) f.tip = true;
+}
+
+/**
  * V2 Square Blast propagation rule (documented in docs/GAMEPLAY_V2.md): the blast spreads out from the
  * generator one tile at a time, ONLY ever moving away from it (each step increases |dx| or |dy| and never
  * decreases the other), up to `radius` in both axes (a (2r+1) x (2r+1) square). Concrete and the arena
@@ -212,6 +255,8 @@ export function destroySoftBlocks(
   for (const [idx, eventId] of [...hits.entries()].sort((a, b) => a[0] - b[0])) {
     if (state.tiles[idx] !== Tile.Soft) continue;
     state.tiles[idx] = Tile.Empty;
+    const supply = state.supplies.indexOf(idx);
+    if (supply >= 0) state.supplies.splice(supply, 1);
     const x = idx % state.width;
     const y = Math.floor(idx / state.width);
     events.push({ type: 'blockDestroyed', x, y, by });

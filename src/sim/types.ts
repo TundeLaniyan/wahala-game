@@ -245,6 +245,8 @@ export interface Flame {
   fromSpectator?: boolean;
   /** V2: a Square Blast tile (outside the plus arms) - drawn distinctly. */
   square?: boolean;
+  /** City Rumble radial blast: a tile off the generator's row and column (systems/blastShape.ts). */
+  radial?: boolean;
   tip: boolean;
   startTick: number;
   endTick: number;
@@ -350,6 +352,12 @@ export interface GameState {
   tiles: number[];
   /** Pickup hidden under each soft block (tile index -> kind). Never exposed to bots. */
   hidden: Record<number, PickupKind>;
+  /**
+   * City Rumble Evolution: tile indices of the arena's marked supply crates (`$` in the layout) that still
+   * stand. Public: everyone sees the marking (a basic upgrade inside), not which one. An entry is live only
+   * while its tile is a soft block.
+   */
+  supplies: number[];
   /** Live floor traps (tile index -> kind): early traps plus the endgame waves that have gone live. */
   floorHazards: Record<number, 'pothole' | 'oil'>;
   /** The mandatory endgame trap waves (always present in a standard match). */
@@ -545,6 +553,8 @@ export type SimEvent =
       range: number;
       /** V2 Square Blast radius of this generator (0 / absent = plain plus). */
       square?: number;
+      /** City Rumble: the blast was radial (systems/blastShape.ts); `range` is then its radius. */
+      radial?: boolean;
     }
   | { type: 'generatorKicked'; generatorId: number }
   | { type: 'generatorCarried'; generatorId: number; playerId: number; bonus: boolean }

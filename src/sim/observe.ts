@@ -44,6 +44,8 @@ export interface Observation {
   readonly arenaId: string;
   /** V2: the match rules (public: teams, friendly fire, timers). */
   readonly settings: Readonly<MatchSettings>;
+  /** City Rumble Evolution: marked supply crates still standing (the marking is public, the content is not). */
+  readonly supplies: readonly number[];
 }
 
 export function observe(state: GameState, selfId: number): Observation {
@@ -68,5 +70,6 @@ export function observe(state: GameState, selfId: number): Observation {
     stage: state.stage,
     arenaId: state.arenaId,
     settings: state.settings,
+    supplies: state.supplies,
   };
 }

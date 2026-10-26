@@ -16,7 +16,15 @@ import { THIRD_MAINLAND } from './thirdMainland';
 import { YABA_AFTER_DARK } from './yabaAfterDark';
 import type { ArenaDef } from './types';
 
-export type { ArenaDef, ArenaInfo, ArenaKind, HazardSchedule, StageHazardDef } from './types';
+export type {
+  ArenaDef,
+  ArenaInfo,
+  ArenaKind,
+  DistrictDef,
+  DistrictLink,
+  HazardSchedule,
+  StageHazardDef,
+} from './types';
 
 /**
  * Every arena, in menu order: the nine standard arenas, the City Rumble stages (the five V2 stages first),

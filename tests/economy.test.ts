@@ -113,7 +113,9 @@ describe('elimination rewards', () => {
     expect(out[0]!.creditId).toBe(0);
     // same tick: reward events, applied to the eliminator's state, no pickups dropped
     expect(granted(tickEvents, 0)).toEqual(['socket', 'petrol']);
-    expect(s.players[0]!.capacity).toBe(2);
+    // City Rumble starts every fighter on two generators (decision RE-C1): the socket makes it three
+    expect(s.players[0]!.capacity).toBe(s.config.generator.baseCapacity + 1);
+    expect(s.config.generator.baseCapacity).toBe(2);
     expect(s.players[0]!.range).toBe(3);
     expect(s.players[0]!.stats).toMatchObject({ kills: 1, streak: 1 });
     expect(s.pickups).toHaveLength(0);

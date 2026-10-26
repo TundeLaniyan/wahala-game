@@ -54,6 +54,30 @@ export type StageHazardDef =
   | ({ kind: 'drop'; style: StageHazardStyle; count: number } & HazardSchedule)
   | { kind: 'teleport'; style: StageHazardStyle; pairs: [[number, number], [number, number]][] };
 
+/**
+ * City Rumble Evolution: one named district of a multi-district stage (layout and connectivity data; the
+ * look of a district lives in its render module). Tiles are inclusive rectangles [x0, y0, x1, y1].
+ */
+export interface DistrictDef {
+  id: string;
+  name: string;
+  /** What kind of ground it is (used by tests, the minimap labels and the bots' route sense). */
+  role: 'approach' | 'underbridge' | 'park' | 'lane' | 'service' | 'plaza' | 'stadium' | 'concourse' | 'street';
+  rects: [number, number, number, number][];
+}
+
+/**
+ * A connection between two districts: the open tiles where you cross from one to the other. `breach`
+ * links are opened only by blasting authored barriers (`x` in the layout); `chokepoint` links are one or
+ * two tiles wide.
+ */
+export interface DistrictLink {
+  from: string;
+  to: string;
+  kind: 'open' | 'chokepoint' | 'breach';
+  tiles: [number, number][];
+}
+
 /** Menu / tutorial text for an arena. Presentation data only. */
 export interface ArenaInfo {
   /** One line on the arena card. */
@@ -73,7 +97,9 @@ export interface ArenaDef {
   kind: ArenaKind;
   /**
    * Rows of the layout: '#' = indestructible concrete, '=' = road (open floor that never gets a soft
-   * block), anything else = open floor.
+   * block), '_' = open floor kept clear of random crates (plazas, a pitch), 'x' = an authored barrier
+   * (always a crate: blasting it opens a shortcut), '$' = a marked supply crate (always a crate, holds one
+   * basic upgrade, `config.supply`), anything else = open floor.
    */
   layout: string[];
   /** Spawn tiles in slot order. */
@@ -99,6 +125,9 @@ export interface ArenaDef {
   /** A rules mode the arena always uses (City Rumble always closes in). */
   forcedMode?: MatchMode;
   info: ArenaInfo;
+  /** City Rumble Evolution: named districts and how they connect (multi-district stages only). */
+  districts?: DistrictDef[];
+  districtLinks?: DistrictLink[];
   /**
    * V2: a test / experimental stage (the Mobile Test Arena). Kept out of the official lists
    * (`STANDARD_ARENA_IDS`) and shown in a separate "Test / experimental" section of the arena picker.
