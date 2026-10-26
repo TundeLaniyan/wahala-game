@@ -5,7 +5,8 @@
  * full hazard awareness (chains, every lookahead), so a careless level is careless about ITSELF, never
  * about whether it is boxing a newcomer in.
  */
-import { explodeTickFor, myRange, rivalEscape } from './analysis';
+import { explodeTickFor, myRange, mySquare, rivalEscape } from './analysis';
+import { blastReach, isRadial } from './blast';
 import type { Ctx } from './context';
 import type { HypoGen } from './danger';
 import type { AiProfile } from './profiles';
@@ -29,16 +30,20 @@ export function wouldTrapRival(c: Ctx, tile: number, a0: number): boolean {
   const { world, profile } = c;
   const w = world.board.width;
   const range = myRange(c);
+  const radial = isRadial(world.obs);
+  // City Rumble: the radial blast reaches further along its diagonals and includes the Square Blast square
+  const square = radial ? mySquare(c) : 0;
+  const reach = blastReach(world.obs, range, square);
   const tx = tile % w;
   const ty = Math.floor(tile / w);
   let built = false;
   for (const r of world.near) {
-    if (Math.abs(r.x - tx) + Math.abs(r.y - ty) > range + 2) continue;
+    if (Math.abs(r.x - tx) + Math.abs(r.y - ty) > reach + 2) continue;
     if (!built) {
       const placeTick = Math.max(world.tick + 1, a0 + 1);
       // a Remote Starter generator may be set off long before its failsafe: judge the earliest the bot would
       const explodeAt = Math.min(explodeTickFor(c, placeTick), world.me.remote ? placeTick + REMOTE_EARLIEST : Infinity);
-      const hypo: HypoGen = { x: tx, y: ty, range, pierce: world.me.hotFuel, explodeAt };
+      const hypo: HypoGen = { x: tx, y: ty, range, pierce: world.me.hotFuel, explodeAt, ...(radial ? { square } : {}) };
       c.builder.build(c.tmp, world, fullAwareness(profile), { extraGens: [hypo] });
       built = true;
     }

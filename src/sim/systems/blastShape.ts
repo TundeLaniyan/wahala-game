@@ -24,7 +24,6 @@
  *    crates hit in the same tick all block (explosions.ts resolves against the tile map at the start of the
  *    tick).
  */
-import { tileAt } from '../grid';
 import type { GridView } from '../grid';
 import { Tile } from '../types';
 
@@ -114,6 +113,73 @@ export interface RadialOptions {
 }
 
 /**
+ * `radialOffsets` compiled for the footprint loop (an internal speed-up, the output is unchanged): typed
+ * arrays of the offsets, the wave-buffer index of each offset and of its two wave predecessors (one step
+ * closer along x / along y, -1 = none), and the centre-line tiles flattened. Cached per shape.
+ */
+interface CompiledShape {
+  size: number;
+  count: number;
+  dx: Int8Array;
+  dy: Int8Array;
+  self: Int16Array;
+  predX: Int16Array;
+  predY: Int16Array;
+  /** Line tiles of offset i are bdx/bdy[bStart[i] .. bStart[i + 1] - 1]. */
+  bStart: Int32Array;
+  bdx: Int8Array;
+  bdy: Int8Array;
+}
+
+/** Indexed by 2 * r + (square ? 1 : 0). */
+const compiled: (CompiledShape | undefined)[] = [];
+
+function compiledShape(r: number, square: boolean): CompiledShape {
+  const key = 2 * r + (square ? 1 : 0);
+  const hit = compiled[key];
+  if (hit) return hit;
+  const offs = radialOffsets(r, square);
+  const size = 2 * r + 1;
+  const at = (dx: number, dy: number): number => (dy + r) * size + (dx + r);
+  const count = offs.length;
+  let lineTiles = 0;
+  for (const o of offs) lineTiles += o.between.length;
+  const shape: CompiledShape = {
+    size,
+    count,
+    dx: new Int8Array(count),
+    dy: new Int8Array(count),
+    self: new Int16Array(count),
+    predX: new Int16Array(count),
+    predY: new Int16Array(count),
+    bStart: new Int32Array(count + 1),
+    bdx: new Int8Array(lineTiles),
+    bdy: new Int8Array(lineTiles),
+  };
+  let b = 0;
+  offs.forEach((o, i) => {
+    shape.dx[i] = o.dx;
+    shape.dy[i] = o.dy;
+    shape.self[i] = at(o.dx, o.dy);
+    shape.predX[i] = o.dx !== 0 ? at(o.dx - Math.sign(o.dx), o.dy) : -1;
+    shape.predY[i] = o.dy !== 0 ? at(o.dx, o.dy - Math.sign(o.dy)) : -1;
+    shape.bStart[i] = b;
+    for (const [bx, by] of o.between) {
+      shape.bdx[b] = bx;
+      shape.bdy[b] = by;
+      b++;
+    }
+  });
+  shape.bStart[count] = b;
+  compiled[key] = shape;
+  return shape;
+}
+
+/** Wave buffer shared by every call (radialFootprint never re-enters itself; `blocksWave` must not call it). */
+let passScratch = new Uint8Array(0);
+const neverBlocks = (): boolean => false;
+
+/**
  * Every tile a radial blast centred on (cx, cy) reaches, the centre excluded, in deterministic wave order.
  * `grid` is the tile map the blast is resolved against (an Observation qualifies).
  */
@@ -126,42 +192,44 @@ export function radialFootprint(
 ): { x: number; y: number }[] {
   const squareR = opts.squareRadius ?? 0;
   const r = squareR > 0 ? squareR : radius;
-  const square = squareR > 0;
+  const shape = compiledShape(r, squareR > 0);
   const pierce = opts.pierce === true;
-  const blocks = opts.blocksWave ?? ((): boolean => false);
-  const size = 2 * r + 1;
+  const limit = pierce ? 1 : 0;
+  const blocks = opts.blocksWave ?? neverBlocks;
+  const { width, height, tiles } = grid;
+  const cells = shape.size * shape.size;
+  if (passScratch.length < cells) passScratch = new Uint8Array(cells);
   // 0 = not passing on, 1 = passes (fresh), 2 = passes having used the Hot Fuel crate
-  const pass = new Uint8Array(size * size);
-  const at = (dx: number, dy: number): number => (dy + r) * size + (dx + r);
-  pass[at(0, 0)] = 1;
-  // a tile the line may cross: open floor without a generator (or one crate with Hot Fuel)
-  const lineCost = (x: number, y: number): number => {
-    const k = tileAt(grid, x, y);
-    if (k === Tile.Hard) return 99;
-    if (k === Tile.Soft) return 1;
-    return blocks(x, y) ? 99 : 0;
-  };
+  const pass = passScratch;
+  pass.fill(0, 0, cells);
+  pass[r * shape.size + r] = 1;
+  const { dx, dy, self, predX, predY, bStart, bdx, bdy } = shape;
   const out: { x: number; y: number }[] = [];
-  for (const o of radialOffsets(r, square)) {
-    const x = cx + o.dx;
-    const y = cy + o.dy;
-    const kind = tileAt(grid, x, y);
+  for (let i = 0; i < shape.count; i++) {
+    const x = cx + dx[i]!;
+    const y = cy + dy[i]!;
+    // out of bounds behaves as concrete (tileAt)
+    if (x < 0 || y < 0 || x >= width || y >= height) continue;
+    const kind = tiles[y * width + x]!;
     if (kind === Tile.Hard) continue;
     // 1. the wave: a predecessor one step closer along x or along y passes it on
-    const px = o.dx !== 0 ? pass[at(o.dx - Math.sign(o.dx), o.dy)]! : 0;
-    const py = o.dy !== 0 ? pass[at(o.dx, o.dy - Math.sign(o.dy))]! : 0;
+    const px = predX[i]! >= 0 ? pass[predX[i]!]! : 0;
+    const py = predY[i]! >= 0 ? pass[predY[i]!]! : 0;
     const best = px === 1 || py === 1 ? 1 : px === 2 || py === 2 ? 2 : 0;
     if (best === 0) continue;
-    // 2. the line of sight
+    // 2. the line of sight: open floor without a generator costs 0, a crate 1 (Hot Fuel passes one)
     let crates = 0;
-    for (const [bx, by] of o.between) {
-      crates += lineCost(cx + bx, cy + by);
-      if (crates > (pierce ? 1 : 0)) break;
+    for (let j = bStart[i]!, e = bStart[i + 1]!; j < e; j++) {
+      const bx = cx + bdx[j]!;
+      const by = cy + bdy[j]!;
+      const k = bx < 0 || by < 0 || bx >= width || by >= height ? Tile.Hard : tiles[by * width + bx]!;
+      crates += k === Tile.Hard ? 99 : k === Tile.Soft ? 1 : blocks(bx, by) ? 99 : 0;
+      if (crates > limit) break;
     }
-    if (crates > (pierce ? 1 : 0)) continue;
+    if (crates > limit) continue;
     out.push({ x, y });
-    if (kind === Tile.Empty && !blocks(x, y)) pass[at(o.dx, o.dy)] = best;
-    else if (kind === Tile.Soft && pierce && best === 1 && !blocks(x, y)) pass[at(o.dx, o.dy)] = 2;
+    if (kind === Tile.Empty && !blocks(x, y)) pass[self[i]!] = best;
+    else if (kind === Tile.Soft && pierce && best === 1 && !blocks(x, y)) pass[self[i]!] = 2;
   }
   return out;
 }
