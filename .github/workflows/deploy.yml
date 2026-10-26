@@ -59,6 +59,8 @@ jobs:
           site_url=$(echo "$pages" | jq -r '.html_url // empty')
           echo "Pages: source=$build_type branch=$(echo "$pages" | jq -r '.source.branch // "-"') url=${site_url:--}"
           gh api "repos/$GITHUB_REPOSITORY/environments" --jq '.environments[] | "environment \(.name): \(.deployment_branch_policy // "any branch")"' || true
+          gh api "repos/$GITHUB_REPOSITORY/environments/github-pages/deployment-branch-policies" \
+            --jq '"github-pages deploys only from: " + ([.branch_policies[] | "\(.type // "branch") \(.name)"] | join(", "))' || true
           if [ "$build_type" = workflow ]; then mode=actions; else mode=branch; fi
 
           if [ "$GITHUB_REF" != "refs/heads/$PUBLISH_BRANCH" ]; then

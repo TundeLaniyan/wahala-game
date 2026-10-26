@@ -33,7 +33,7 @@ permissions:
   actions: read
 
 env:
-  E2E_SHARDS: '4'
+  E2E_SHARDS: '8'
   E2E_WORKERS: '1'
 
 jobs:
