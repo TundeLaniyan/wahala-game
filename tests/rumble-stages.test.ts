@@ -7,6 +7,7 @@ import {
   Tile,
   createGame,
   getArena,
+  laneEscapeSteps,
   listEntries,
   tick,
 } from '../src/sim';
@@ -218,9 +219,23 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
             expect(at(a, t[0], t[1]), `route tile ${t}`).toBe('=');
             if (i > 0) expect(Math.abs(t[0] - route[i - 1]![0]) + Math.abs(t[1] - route[i - 1]![1])).toBe(1);
           });
-          // traffic enters from the edge of the board, never out of thin air in the middle
-          const [x0, y0] = route[0]!;
-          expect(x0 === 0 || y0 === 0 || x0 === W - 1 || y0 === H - 1, `route start ${x0},${y0}`).toBe(true);
+          // traffic enters from the edge of the board, never out of thin air in the middle. A flagged DEPARTURE
+          // (a parked Danfo pulling out of a bay) is the one exception: it starts on a road tile at its bay and
+          // must leave at the board edge instead (RE-E3).
+          const onEdge = ([x, y]: readonly [number, number]): boolean => x === 0 || y === 0 || x === W - 1 || y === H - 1;
+          if (h.depart) {
+            expect(onEdge(route[route.length - 1]!), `departure end ${route[route.length - 1]}`).toBe(true);
+            // fairness (RE-E3): from every lane tile the slowest fighter walks off the lane before the Danfo gets there
+            const lane = route.map(([x, y]) => y * W + x);
+            const steps = laneEscapeSteps(W, H, lane, (i) => !'#x$'.includes(a.layout[Math.floor(i / W)]![i % W]!));
+            const slowest = Math.max(...DEFAULT_CONFIG.movement.stepTicksBySpeedLevel);
+            steps.forEach((n, j) =>
+              expect(n * slowest + DEFAULT_CONFIG.stage.escapeInputTicks, `departure lane tile ${j}`).toBeLessThanOrEqual(
+                Math.max(h.warnSec * 60, DEFAULT_CONFIG.stage.minLethalWarnTicks) + j * h.stepTicks,
+              ),
+            );
+          }
+          else expect(onEdge(route[0]!), `route start ${route[0]}`).toBe(true);
         }
       } else if (h.kind === 'strike') {
         expect(h.zones.length > 0 || h.targetPlayers).toBe(true);

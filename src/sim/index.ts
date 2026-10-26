@@ -35,7 +35,7 @@ export type {
   HazardSchedule,
   StageHazardDef,
 } from './arenas';
-export { isLethalStageEvent, manholePartners } from './systems/stage';
+export { isLethalStageEvent, laneEscapeSteps, manholePartners } from './systems/stage';
 export { CHARACTERS, CHARACTER_IDS } from './data/characters';
 export type { CharacterDef } from './data/characters';
 export { PICKUP_DEFS } from './data/pickups';
