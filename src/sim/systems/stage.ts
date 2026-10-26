@@ -98,6 +98,14 @@ function create(state: GameState, def: StageHazardDef, hazard: number): StageEve
     case 'sweep': {
       const route = def.routes[nextInt(state, def.routes.length)]!.map(idx);
       if (route.length === 0 || !notHard(route[0]!)) return null;
+      if (def.depart) {
+        // a parked vehicle never appears on top of anyone: an occupied bay skips this departure
+        const bx = route[0]! % state.width;
+        const by = Math.floor(route[0]! / state.width);
+        if (state.tiles[route[0]!] !== Tile.Empty || playersAt(state, bx, by).length > 0) return null;
+        if (groundedGeneratorAt(state, bx, by)) return null;
+        base.depart = true;
+      }
       base.tiles = route;
       base.stepTicks = def.stepTicks;
       base.endTick = base.startTick + def.stepTicks * route.length;

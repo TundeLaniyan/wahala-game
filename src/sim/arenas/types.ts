@@ -20,7 +20,12 @@ export interface HazardSchedule {
  *
  * - `sweep`: a vehicle drives along one of `routes` (chosen per event): lethal to anyone on its tile,
  *   sets off grounded generators it reaches, stops at concrete or a soft block. Routes run along road
- *   tiles (`=` in the layout), which never get soft blocks.
+ *   tiles (`=` in the layout), which never get soft blocks. With `depart: true` the route is a DEPARTURE:
+ *   a parked vehicle pulls out of a bay (the first tile, inside the board) and drives out to the board
+ *   edge (the last tile). The vehicle is shown parked on the bay for the whole telegraph; an event whose
+ *   bay is occupied by a player, a generator or a crate at warning time is skipped (nothing appears on
+ *   top of anyone). Timing is the ordinary uniform `stepTicks` (bots read it), so the pull-out is only
+ *   eased in the picture (RE-E3).
  * - `strike`: one of `zones` (or, with `targetPlayers`, the tile of a randomly chosen player that has
  *   a free neighbour to step to) becomes lethal for `activeSec` after the warning.
  * - `push`: everyone standing in one of `zones` is slid one tile in its direction (non-lethal; the
@@ -37,6 +42,8 @@ export type StageHazardDef =
       routes: [number, number][][];
       /** Ticks per tile while driving. */
       stepTicks: number;
+      /** A parked vehicle pulls out of the bay at `routes[i][0]` (inside the board) and leaves at the last tile (the edge). */
+      depart?: true;
     } & HazardSchedule)
   | ({
       kind: 'strike';

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { STANDARD_ARENA_IDS, Tile, createGame, getArena, isLethalStageEvent, tick } from '../src/sim';
 import type { GameState, SimEvent, StageEvent } from '../src/sim';
 import { addGenerator, eventsOf, put, run, sandbox } from './helpers';
@@ -337,5 +337,137 @@ describe('manholes: Ajegunle trapdoors', () => {
     s.players[0]!.carrying = g.id;
     run(s, 12, (t) => (t === 0 ? { 0: { move: 'down' } } : {}));
     expect([g.x, g.y]).toEqual([12, 6]);
+  });
+});
+
+describe('departures: a parked Danfo pulls out of a bay (RE-E3)', () => {
+  // Danfo Bus Park, west bay on row 4: the Danfo is parked on the inner tile (3,4) and drives out to the
+  // board edge (0,4). The arena's own hazard list is swapped for this one departure and restored afterwards.
+  const BAY: [number, number][] = [
+    [3, 4],
+    [2, 4],
+    [1, 4],
+    [0, 4],
+  ];
+  const lane = BAY.map(([x, y]) => idx(x, y));
+  const arena = getArena('danfoBusPark');
+  const original = arena.stageHazards;
+
+  beforeAll(() => {
+    arena.stageHazards = [
+      {
+        kind: 'sweep',
+        style: 'danfo',
+        routes: [BAY],
+        depart: true,
+        stepTicks: 9,
+        firstAtSec: 1,
+        everySec: [3, 3],
+        warnSec: 2,
+      },
+    ];
+  });
+  afterAll(() => {
+    arena.stageHazards = original;
+  });
+
+  function departure(players = 3): GameState {
+    const s = stage('danfoBusPark', players);
+    s.floorHazards = {};
+    // everyone out of the way: corners and the far side
+    put(s, 0, 14, 0);
+    if (players > 1) put(s, 1, 14, 10);
+    if (players > 2) put(s, 2, 0, 10);
+    return s;
+  }
+
+  it('is flagged, starts on the inner bay (inside the board) and is telegraphed for >= the lethal minimum', () => {
+    const s = departure();
+    const ev = untilWarning(s);
+    expect(ev.kind).toBe('sweep');
+    expect(ev.depart).toBe(true);
+    expect(ev.tiles).toEqual(lane);
+    expect(ev.tiles[0]! % W).toBe(3); // the bay is not on the edge
+    expect(ev.startTick - ev.warnTick).toBeGreaterThanOrEqual(s.config.stage.minLethalWarnTicks);
+    expect(isLethalStageEvent(ev)).toBe(true);
+  });
+
+  it('nobody is hurt during the warning, even standing in the bay or on the lane', () => {
+    const s = departure();
+    const ev = untilWarning(s);
+    put(s, 0, 3, 4);
+    put(s, 1, 2, 4);
+    const out = run(s, ev.startTick - s.tick - 1);
+    expect(eventsOf(out, 'playerEliminated')).toHaveLength(0);
+    expect(s.players[0]!.alive && s.players[1]!.alive).toBe(true);
+    expect(s.tick).toBeLessThan(ev.startTick);
+  });
+
+  it('the lane is lethal only while the Danfo passes: not before it arrives, not after it has gone', () => {
+    const s = departure();
+    const ev = untilWarning(s);
+    const st = ev.stepTicks;
+    // P0 waits on lane tile 2 (1,4) and is hit when the Danfo reaches it, not before
+    put(s, 0, 1, 4);
+    const before = run(s, ev.startTick - s.tick + 2 * st - 1);
+    expect(eventsOf(before, 'playerEliminated')).toHaveLength(0);
+    const hit = run(s, 2 * st);
+    const elim = eventsOf(hit, 'playerEliminated');
+    expect(elim.map((e) => e.playerId)).toEqual([0]);
+    expect(elim[0]!.cause).toMatchObject({ kind: 'hazard', style: 'danfo' });
+    // P1 walks into the bay (tile 0) after the Danfo has left it: safe
+    const s2 = departure();
+    const ev2 = untilWarning(s2);
+    run(s2, ev2.startTick - s2.tick + 3 * st);
+    put(s2, 1, 3, 4);
+    const after = run(s2, 4 * st);
+    expect(eventsOf(after, 'playerEliminated')).toHaveLength(0);
+    expect(s2.players[1]!.alive).toBe(true);
+  });
+
+  it('a player standing beside the lane is safe', () => {
+    const s = departure();
+    const ev = untilWarning(s);
+    put(s, 0, 2, 3); // open lane column above (2,4)
+    put(s, 1, 2, 5); // and below
+    const out = run(s, ev.startTick - s.tick + 8 * ev.stepTicks);
+    expect(eventsOf(out, 'playerEliminated')).toHaveLength(0);
+    expect(s.players[0]!.alive && s.players[1]!.alive).toBe(true);
+  });
+
+  it('sets off a generator lying on the lane, as other sweeps do', () => {
+    const s = departure();
+    const ev = untilWarning(s);
+    addGenerator(s, { ownerId: 0, x: 1, y: 4, timer: 99999, range: 1 });
+    const out = run(s, ev.startTick - s.tick + 4 * ev.stepTicks);
+    expect(eventsOf(out, 'generatorExploded').some((e) => e.x === 1 && e.y === 4)).toBe(true);
+  });
+
+  it('never appears on top of anyone: an occupied bay (player, generator or crate) skips the departure', () => {
+    for (const blocker of ['player', 'generator', 'crate'] as const) {
+      const s = departure();
+      if (blocker === 'player') put(s, 0, 3, 4);
+      else if (blocker === 'generator') addGenerator(s, { ownerId: 0, x: 3, y: 4, timer: 99999, range: 1 });
+      else s.tiles[idx(3, 4)] = Tile.Soft;
+      // the bay stays blocked for 30 s of play: no departure is ever announced
+      const warned = run(s, 30 * TPS).filter((e) => e.type === 'stageWarning');
+      expect(warned, blocker).toHaveLength(0);
+    }
+  });
+
+  it('keeps the fairness guards: one lethal event at a time, and the same seed gives the same schedule', () => {
+    const log = (): string => {
+      const s = departure();
+      const out: string[] = [];
+      for (let i = 0; i < 40 * TPS; i++) {
+        for (const e of tick(s, {})) if (e.type === 'stageWarning') out.push(`${s.tick}:${e.event.tiles.join('.')}`);
+        expect(s.stage.events.filter(isLethalStageEvent).length).toBeLessThanOrEqual(1);
+        s.players.forEach((p) => (p.alive = true));
+      }
+      return out.join('|');
+    };
+    const a = log();
+    expect(a.length).toBeGreaterThan(0);
+    expect(log()).toBe(a);
   });
 });

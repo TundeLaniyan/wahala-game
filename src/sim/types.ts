@@ -439,6 +439,8 @@ export interface StageEvent {
   index: number;
   stepRemaining: number;
   stepTicks: number;
+  /** Sweep only: a parked vehicle pulling out of a bay at `tiles[0]` (see `StageHazardDef.depart`); absent otherwise. */
+  depart?: boolean;
 }
 
 export interface StageState {
