@@ -7,6 +7,7 @@ import { createGame, observe, tick } from '../../src/sim';
 import type { CharacterId, DeepPartial, Difficulty, GameConfig, GameKind, Intents } from '../../src/sim';
 import { MetricsCollector, mean, median } from './collector';
 import type { MatchMetrics } from './collector';
+import { mergeConfigs } from './variants';
 import type { Variant } from './variants';
 
 export interface MetricsSpec {
@@ -39,7 +40,7 @@ export function runMetricsMatch(spec: MetricsSpec): MatchMetrics {
     seed: spec.seed,
     arenaId: spec.arenaId,
     settings: { game: spec.game, durationSec: spec.durationSec },
-    config: spec.config ? mergeOverrides(spec.variant.config, spec.config) : spec.variant.config,
+    config: mergeConfigs(spec.variant.config, spec.config),
     players: difficulties.map((difficulty, i) => ({
       name: `b${i}`,
       characterId: CHARACTERS[(i + spec.seed) % 3]!,
@@ -76,19 +77,6 @@ export function runMetricsMatch(spec: MetricsSpec): MatchMetrics {
   return collector.finish(state, playTicks > 0 ? simMs / playTicks : 0);
 }
 
-/** Variant config with ad hoc overrides on top (shallow per section, deep merge not needed for the numbers tuned here). */
-function mergeOverrides(a: DeepPartial<GameConfig>, b: DeepPartial<GameConfig>): DeepPartial<GameConfig> {
-  const out: Record<string, unknown> = { ...a };
-  for (const [k, v] of Object.entries(b)) {
-    const cur = out[k];
-    out[k] =
-      cur && v && typeof cur === 'object' && typeof v === 'object' && !Array.isArray(v)
-        ? mergeOverrides(cur as DeepPartial<GameConfig>, v as DeepPartial<GameConfig>)
-        : v;
-  }
-  return out as DeepPartial<GameConfig>;
-}
-
 // ------------------------------------------------------------------------------------------ aggregation
 
 export interface Aggregate {
@@ -119,6 +107,9 @@ const NUMERIC: (keyof MatchMetrics)[] = [
   'nearPlacementShare',
   'campShare',
   'meanNearestOpponent',
+  'openingEngagedShare',
+  'openingExposedShare',
+  'openingNearestOpponent',
   'topKills',
   'medianKills',
   'topPower',
@@ -177,7 +168,9 @@ export const TABLE_HEADER = [
   '<=30 s',
   '<=60 s',
   'engaged',
+  'engaged 60s',
   'in fire',
+  'in fire 60s',
   'gens/fm',
   'aimed',
   'camp',
@@ -211,7 +204,9 @@ export function tableRow(c: Cell): string[] {
     f1(x.elims30!),
     f1(x.elims60!),
     pct(x.engagedShare!),
+    pct(x.openingEngagedShare!),
     pct(x.exposedShare!),
+    pct(x.openingExposedShare!),
     f1(x.placementsPerFighterMinute!),
     pct(x.aimedPlacementShare!),
     pct(x.campShare!),

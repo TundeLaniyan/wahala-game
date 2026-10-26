@@ -31,6 +31,9 @@ const DROP_TIME = 0.28;
 /** Seconds for an obstacle to dissolve / come back when something stands behind it. */
 const HIDE_TAU = 0.12;
 
+/** Slight deterministic yaw of the breakable on a tile (radians); the supply marks follow it. */
+export const softTilt = (x: number, y: number): number => ((x * 31 + y * 17) % 5) * 0.03 - 0.06;
+
 /** Copies instancing parts with their material tinted (per-arena art direction). */
 function tinted<T extends { material: Material }>(
   parts: T[],
@@ -67,6 +70,13 @@ export class ArenaView implements View {
   /** Model ids behind `pillars` (empty = the procedural pillar). */
   private readonly pillarIds: string[];
   private readonly variants = softVariants();
+  /**
+   * Marked supply crates (RE-C3) all use one plain wooden crate model so the yellow marking
+   * (SupplyMarkViews) sits on a known shape; fixed at the start (supplies never refill).
+   */
+  private readonly supplyTiles: Set<number>;
+  private readonly supplyVariant: SoftVariant | null;
+  private readonly width: number;
   private readonly soft = new Map<SoftVariant, InstanceSet>();
   private readonly cache: number[];
   private readonly initialHard: Set<number>;
@@ -87,6 +97,9 @@ export class ArenaView implements View {
     private readonly layout: Layout,
   ) {
     this.arenaId = state.arenaId;
+    this.width = state.width;
+    this.supplyTiles = new Set(state.supplies);
+    this.supplyVariant = ['prop_soft_crate', 'crate'].find((v) => this.variants.includes(v)) ?? null;
     const W = state.width;
     const H = state.height;
     // the arena's own worn surface (tarmac / pavers / cracked asphalt); the slab atlas is the fallback
@@ -171,7 +184,18 @@ export class ArenaView implements View {
 
   /** Variant of the soft block at a tile (for debris colours). */
   variantAt(x: number, y: number): SoftVariant {
-    return softVariantFor(x, y, this.variants, this.arenaId);
+    return this.variantOf(y * this.width + x, x, y);
+  }
+
+  private variantOf(i: number, x: number, y: number): SoftVariant {
+    return this.supplyVariant !== null && this.supplyTiles.has(i)
+      ? this.supplyVariant
+      : softVariantFor(x, y, this.variants, this.arenaId);
+  }
+
+  /** How far the obstacle on a tile is currently dissolved (0 = solid .. MAX_HIDE); the supply marks follow it. */
+  hideAmount(i: number): number {
+    return this.hideOf.get(i) ?? 0;
   }
 
   update(ctx: FrameContext): void {
@@ -227,8 +251,7 @@ export class ArenaView implements View {
       const y = Math.floor(i / state.width);
       const kind = this.cache[i];
       if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.setHide(i, next);
-      else if (kind === Tile.Soft)
-        this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.setHide(i, next);
+      else if (kind === Tile.Soft) this.soft.get(this.variantOf(i, x, y))!.setHide(i, next);
       if (next === 0 && target === 0) this.hideOf.delete(i);
       else this.hideOf.set(i, next);
     }
@@ -237,7 +260,7 @@ export class ArenaView implements View {
   private removeTile(i: number, x: number, y: number, kind: number): void {
     this.contact.remove(i);
     if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.remove(i);
-    else if (kind === Tile.Soft) this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.remove(i);
+    else if (kind === Tile.Soft) this.soft.get(this.variantOf(i, x, y))!.remove(i);
   }
 
   private pillarVariant(x: number, y: number): number {
@@ -266,10 +289,10 @@ export class ArenaView implements View {
 
   private placeSoft(i: number, x: number, y: number): void {
     this.p.set(this.layout.wx(x), 0, this.layout.wz(y));
-    this.e.set(0, ((x * 31 + y * 17) % 5) * 0.03 - 0.06, 0);
+    this.e.set(0, softTilt(x, y), 0);
     this.q.setFromEuler(this.e);
     this.m.compose(this.p, this.q, this.softScale);
-    this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.set(i, this.m);
+    this.soft.get(this.variantOf(i, x, y))!.set(i, this.m);
     this.s.set(1, 1, 1);
     this.setContact(i, x, y, 0.8);
   }

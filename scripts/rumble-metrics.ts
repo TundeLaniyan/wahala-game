@@ -22,6 +22,9 @@
  *   --max-seconds S     stop each match after S play seconds (quick looks)
  *   --json [file]       also write per-match + aggregate JSON (stdout when no file is named)
  *   --quiet             no progress lines on stderr
+ *   --ladder            instead of matches: print the bot-independent economy curve (what a fighter has after
+ *                       n credited eliminations: generators, radius, blast tiles ...) for every variant
+ *                       (--kills N rows, default 14)
  */
 import { writeFileSync } from 'node:fs';
 import type { DeepPartial, Difficulty, GameConfig, GameKind } from '../src/sim';
@@ -29,7 +32,8 @@ import { aggregate, markdownTable, runMetricsMatch } from './rumbleMetrics/run';
 import type { Cell } from './rumbleMetrics/run';
 import type { MatchMetrics } from './rumbleMetrics/collector';
 import { DEFAULT_SAMPLE_TICKS } from './rumbleMetrics/collector';
-import { variantByName } from './rumbleMetrics/variants';
+import { ladderCurve, ladderTable } from './rumbleMetrics/ladder';
+import { mergeConfigs, variantByName } from './rumbleMetrics/variants';
 import type { Variant } from './rumbleMetrics/variants';
 
 const args = process.argv.slice(2);
@@ -66,6 +70,15 @@ const variants: { label: string; variant: Variant; extra?: DeepPartial<GameConfi
     const variant = variantByName(plus ? raw.slice(0, -1) : raw);
     return plus ? { label: `${variant.name}+`, variant, extra } : { label: variant.name, variant };
   });
+
+if (has('ladder')) {
+  const kills = Number(opt('kills', '14'));
+  for (const v of variants) {
+    console.log(`\n### ${v.label}: ${v.variant.description}\n`);
+    console.log(ladderTable(ladderCurve({ kills, config: mergeConfigs(v.variant.config, v.extra) })));
+  }
+  process.exit(0);
+}
 
 const cells: Cell[] = [];
 const perMatch: {

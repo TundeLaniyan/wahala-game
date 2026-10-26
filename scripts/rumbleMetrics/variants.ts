@@ -35,3 +35,20 @@ export function variantByName(name: string): Variant {
   if (!v) throw new Error(`unknown variant "${name}" (known: ${Object.keys(VARIANTS).join(', ')})`);
   return v;
 }
+
+/** `a` with `b` merged over it (nested objects merge, arrays and numbers replace); `b` may be absent. */
+export function mergeConfigs(
+  a: DeepPartial<GameConfig>,
+  b?: DeepPartial<GameConfig>,
+): DeepPartial<GameConfig> {
+  if (!b) return a;
+  const out: Record<string, unknown> = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    const cur = out[k];
+    out[k] =
+      cur && v && typeof cur === 'object' && typeof v === 'object' && !Array.isArray(v)
+        ? mergeConfigs(cur as DeepPartial<GameConfig>, v as DeepPartial<GameConfig>)
+        : v;
+  }
+  return out as DeepPartial<GameConfig>;
+}

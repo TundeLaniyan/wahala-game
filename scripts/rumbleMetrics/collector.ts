@@ -30,6 +30,8 @@ import type { GameState, PickupKind, Player, SimEvent } from '../../src/sim';
 export const ENGAGE_RADIUS = 6;
 /** A fighter that stays inside a 3 x 3 area for this long is camping. */
 export const CAMP_SECONDS = 5;
+/** The "opening" window (seconds of play) for the engagement metrics reported separately. */
+export const OPENING_SECONDS = 60;
 /** Spatial metrics are sampled every this many ticks (6 = 10 Hz). */
 export const DEFAULT_SAMPLE_TICKS = 6;
 
@@ -135,6 +137,10 @@ export interface MatchMetrics {
   nearPlacementShare: number;
   campShare: number;
   meanNearestOpponent: number;
+  /** The same three spatial measures over the first `OPENING_SECONDS` of play only (the opening). */
+  openingEngagedShare: number;
+  openingExposedShare: number;
+  openingNearestOpponent: number;
   topKills: number;
   medianKills: number;
   topPower: number;
@@ -167,6 +173,11 @@ export class MetricsCollector {
   private exposed = 0;
   private distSum = 0;
   private distCount = 0;
+  private openPairs = 0;
+  private openEngaged = 0;
+  private openExposed = 0;
+  private openDistSum = 0;
+  private openDistCount = 0;
   private result = 'none';
 
   constructor(
@@ -268,17 +279,27 @@ export class MetricsCollector {
         if (!q.alive || !isOpponent(state, a.id, q)) continue;
         nearest = Math.min(nearest, Math.abs(q.x - a.x) + Math.abs(q.y - a.y));
       }
+      const opening = state.match.playTicks <= OPENING_SECONDS * 60;
       this.samplePairs++;
-      if (nearest <= ENGAGE_RADIUS) this.engaged++;
+      if (opening) this.openPairs++;
+      if (nearest <= ENGAGE_RADIUS) {
+        this.engaged++;
+        if (opening) this.openEngaged++;
+      }
       if (nearest < Infinity) {
         this.distSum += nearest;
         this.distCount++;
+        if (opening) {
+          this.openDistSum += nearest;
+          this.openDistCount++;
+        }
       }
       const idx = a.y * width + a.x;
       for (const f of feet) {
         const owner = players[f.owner];
         if (owner && isOpponent(state, a.id, owner) && f.tiles.has(idx)) {
           this.exposed++;
+          if (opening) this.openExposed++;
           break;
         }
       }
@@ -313,6 +334,9 @@ export class MetricsCollector {
       nearPlacementShare: share(this.nearPlacements, this.placements),
       campShare: share(this.camp.campedTicks, this.fighterTicks),
       meanNearestOpponent: share(this.distSum, this.distCount),
+      openingEngagedShare: share(this.openEngaged, this.openPairs),
+      openingExposedShare: share(this.openExposed, this.openPairs),
+      openingNearestOpponent: share(this.openDistSum, this.openDistCount),
       topKills: top.k,
       medianKills: median(this.kills),
       topPower: this.peakPower[top.id]!,
