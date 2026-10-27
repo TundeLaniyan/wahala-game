@@ -13,6 +13,10 @@
  * beams only show towards the top of the frame (the far side of the road band, where they frame the view),
  * an ellipse round the local fighter at the screen centre is always cut, and a light dissolve runs over the
  * rest. Occluded fighters keep their x-ray silhouettes as everywhere else.
+ *
+ * Identity pass: the edges read as a real road structure, not a brown plank - a deep concrete box-girder
+ * fascia in cool grey (tonal bands), a black-and-white New Jersey barrier with a steel rail on top, lamp
+ * standards with arms, and the dark transverse ribs under the soffit strip.
  */
 import {
   BoxGeometry,
@@ -39,6 +43,8 @@ export const SOFFIT = 4.4;
 export const DECK_X0 = 15;
 export const DECK_X1 = 29;
 export const DECK_END = 21;
+/** Top of the deck slab (the deck north of the board is drawn to the same level). */
+export const DECK_TOP = SOFFIT + 1.9;
 
 const CUT = {
   /** Fraction of pixels always dissolved (0 = solid). */
@@ -143,20 +149,38 @@ export function buildDeck(
   const zEnd = wz(DECK_END) + 0.5;
   const len = zEnd - zTop;
   const zc = (zTop + zEnd) / 2;
-  const tone = 0x8e8a82; // soot concrete with some warmth (research palette #5E5A55, lit)
+  const tone = 0x9a9892; // soot concrete, cool grey (research palette #5E5A55, lit)
   const parts: BufferGeometry[] = [];
   const box = (w: number, h: number, d: number, x: number, y0: number, z: number, c: number): void => {
     parts.push(piece(new BoxGeometry(w, h, d), x, y0 + h / 2, z, c));
   };
-  // fascia girders with a drip line, and the soffit strips just inside them (the deck's outer edges)
+  // The deck's real depth (SOFFIT to DECK_TOP, the same as the deck north of the board): a deep box-girder
+  // fascia in two cool tonal bands with ribs down its inner face (the underside beams as the camera can see
+  // them), a drip line, the soffit strip just inside, the black-and-white barrier with its steel rail on
+  // top and lamp standards with swept arms - a road structure, not a plank. The slab between is cut away.
+  const FASCIA = DECK_TOP - SOFFIT; // 1.9
   for (const [x, dir] of [
     [xW, 1],
     [xE, -1],
   ] as const) {
-    box(0.42, 0.75, len, x, SOFFIT, zc, tone);
-    box(0.5, 0.12, len, x, SOFFIT + 0.75, zc, 0x6e6a64); // parapet coping
-    box(0.44, 0.06, len, x, SOFFIT - 0.06, zc, 0x3e3a36); // the dark drip line under the fascia
+    box(0.5, 0.6, len, x, SOFFIT, zc, 0x6e6a64); // dark soffit band
+    box(0.46, FASCIA - 0.72, len, x, SOFFIT + 0.6, zc, tone); // main fascia
+    box(0.5, 0.12, len, x, DECK_TOP - 0.12, zc, 0xb4b0a8); // slab edge / coping, lighter
+    box(0.54, 0.05, len, x, SOFFIT + 0.57, zc, 0x3e3a36); // the dark drip line
     box(1.1, 0.14, len, x + dir * 0.75, SOFFIT, zc, 0x7a766e); // soffit strip
+    for (let z = zTop + 1.2; z < zEnd - 0.6; z += 2.4)
+      box(0.14, FASCIA - 0.5, 0.36, x + dir * 0.3, SOFFIT + 0.45, z, 0x8a867e);
+    // barrier on the deck edge: pale concrete with a black block every other metre, steel rail above
+    box(0.5, 0.78, len, x, DECK_TOP, zc, 0xc8c4ba);
+    for (let z = zTop + 1; z < zEnd - 0.5; z += 2) box(0.54, 0.8, 1.0, x, DECK_TOP, z, 0x1c1c1c);
+    box(0.09, 0.09, len, x, DECK_TOP + 1.1, zc, 0x5a5c58);
+    for (let z = zTop + 1.5; z < zEnd; z += 3) box(0.08, 0.34, 0.08, x, DECK_TOP + 0.78, z, 0x5a5c58);
+    // lamp standards with a swept arm over the carriageway, every 9 m
+    for (let z = zTop + 3; z < zEnd - 1; z += 9) {
+      parts.push(piece(new CylinderGeometry(0.06, 0.09, 3.7, 6), x, DECK_TOP + 1.85, z, 0x4a4c48));
+      box(1.5, 0.07, 0.07, x + dir * 0.75, DECK_TOP + 3.65, z, 0x4a4c48);
+      box(0.5, 0.1, 0.24, x + dir * 1.5, DECK_TOP + 3.58, z, 0xe8f4ff);
+    }
   }
   // over every pier group: the upper shaft from the stub to its hammerhead under the deck
   for (const g of piers) {

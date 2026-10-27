@@ -154,7 +154,7 @@ export const COVER_REACH: Readonly<Record<CoverKind, number>> = {
   lockup: 1,
   shed: 2,
   tyres: 1,
-  busStop: 2,
+  busStop: 3,
   genHouse: 2,
   skip: 1,
 };

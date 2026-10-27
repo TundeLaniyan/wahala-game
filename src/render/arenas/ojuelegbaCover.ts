@@ -370,6 +370,28 @@ function pier(k: Kit, g: number, grp: CoverGroup, n: number): void {
       1.25,
       zf + 0.01,
     );
+  // a mural panel above the posters (the painted piers of the real junction): sky, a low sun, a skyline and
+  // a row of white bridge arches, in one of three palettes (abstract, no lettering)
+  const sky = pick([0x2c6f9a, 0xc4562e, 0x3a7a56], n);
+  const glow = pick([0xe8b35a, 0xf0c46a, 0xe6d27a], n + 1);
+  const mx = cx - 0.05;
+  box(k, g, k.paint, 0.95, 0.9, 0.02, mx, 1.58, zf + 0.03, sky);
+  box(k, g, k.paint, 0.95, 0.34, 0.02, mx, 1.58, zf + 0.04, glow);
+  cyl(k, g, k.paint, 0.11, 0.11, 0.02, mx + 0.2, 1.86, zf + 0.05, 0xf8e6a6, 10, Math.PI / 2);
+  for (let i = 0; i < 5; i++)
+    box(
+      k,
+      g,
+      k.paint,
+      0.14,
+      0.22 + ((i * 7 + n) % 4) * 0.08,
+      0.02,
+      mx - 0.36 + i * 0.18,
+      1.58,
+      zf + 0.05,
+      i % 2 ? 0x1f3a54 : 0x2d5170,
+    );
+  box(k, g, k.paint, 0.95, 0.07, 0.02, mx, 1.58, zf + 0.06, 0xe2b52c);
   // an LED tube on the south face (the under-bridge light)
   box(k, g, k.glow, 0.62, 0.05, 0.05, cx, 2.1, zf + 0.02, 0xe8f4ff);
 }
@@ -378,20 +400,38 @@ function busStop(k: Kit, g: number, grp: CoverGroup): void {
   const cx = (k.wx(grp.x0) + k.wx(grp.x1)) / 2;
   const cz = k.wz(grp.y0);
   const w = grp.x1 - grp.x0 + 1 - 0.1;
+  const YELLOW = 0xe0ae28;
   for (const dx of [-w / 2 + 0.08, w / 2 - 0.08])
-    for (const dz of [-0.4, 0.4]) cyl(k, g, k.metal, 0.04, 0.04, 1.95, cx + dx, 0, cz + dz, 0x6a6c68, 6);
-  box(k, g, k.metal, w + 0.1, 0.07, 1.0, cx, 1.95, cz, 0x8a8c86, 0, -0.05);
+    for (const dz of [-0.4, 0.4]) cyl(k, g, k.metal, 0.04, 0.04, 1.95, cx + dx, 0, cz + dz, YELLOW, 6);
+  // the canopy: bus-stop yellow with a black-and-yellow striped front edge, as at the real interchange
+  box(k, g, k.metal, w + 0.1, 0.07, 1.0, cx, 1.95, cz, YELLOW, 0, -0.05);
+  for (let i = 0; i < 10; i++)
+    box(
+      k,
+      g,
+      k.paint,
+      (w + 0.1) / 10,
+      0.2,
+      0.05,
+      cx - (w + 0.1) / 2 + ((i + 0.5) * (w + 0.1)) / 10,
+      1.78,
+      cz + 0.52,
+      i % 2 ? 0x1c1c1c : YELLOW,
+    );
   box(k, g, k.glow, w * 0.6, 0.04, 0.05, cx, 1.9, cz + 0.2, 0xe8f4ff);
-  // back panel with an advert, and the bench
+  // back panel with adverts, and the bench
   box(k, g, k.metal, w - 0.2, 1.3, 0.05, cx, 0.45, cz - 0.42, 0x2a3036);
   board(k, g, k.atlas.board('poster3', 96, 120, pick(POSTERS, 3)), 0.7, 0.9, cx - 0.5, 1.1, cz - 0.39);
   board(k, g, k.atlas.board('poster1', 96, 120, pick(POSTERS, 1)), 0.7, 0.9, cx + 0.5, 1.1, cz - 0.39);
   box(k, g, k.paint, w - 0.6, 0.06, 0.34, cx, 0.42, cz - 0.15, 0x6e5440);
   for (const dx of [-w / 2 + 0.5, 0, w / 2 - 0.5])
     box(k, g, k.metal, 0.05, 0.42, 0.3, cx + dx, 0, cz - 0.15, 0x3a3a38);
-  // the yellow board standing on the roof
-  cyl(k, g, k.metal, 0.03, 0.03, 0.5, cx + 0.9, 2.0, cz + 0.3, 0x4a4a48, 6);
-  board(k, g, k.atlas.board('busStop', 256, 128, BUS_STOP_BOARD), 1.0, 0.5, cx + 0.9, 2.4, cz + 0.33);
+  // the big yellow name board standing on the roof on two posts, facing the camera
+  // (high enough to read over the shop row's roofs, which stand between it and the camera)
+  for (const dx of [-w / 2 + 0.2, w / 2 - 0.2])
+    cyl(k, g, k.metal, 0.04, 0.04, 2.0, cx + dx, 1.98, cz + 0.4, YELLOW, 6);
+  box(k, g, k.metal, w + 0.15, 0.78, 0.06, cx, 3.62, cz + 0.4, 0x2a2a28);
+  board(k, g, k.atlas.board('busStop', 512, 128, BUS_STOP_BOARD), w + 0.05, 0.68, cx, 4.01, cz + 0.44);
 }
 
 // ------------------------------------------------------------------------------------ the park

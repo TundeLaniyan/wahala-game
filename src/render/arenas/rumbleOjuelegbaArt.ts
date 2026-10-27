@@ -23,7 +23,7 @@ import { DoubleSide } from 'three';
 import { getArena } from '../../sim';
 import type { ArenaLook } from '../arenaLook';
 import { artRng } from '../textures';
-import { box, cyl, mat, uniqueMat } from '../assets/helpers';
+import { mat, uniqueMat } from '../assets/helpers';
 import { assets } from '../assets/library';
 import type { CoverFactory } from './boardCover';
 import type { ArenaSet, Placement, SetContext } from './common';
@@ -33,8 +33,8 @@ import type { Ctx, FloorDrawer } from './floorKit';
 import { Kit } from './marketKit';
 import { groundMat, stall } from './marketStalls';
 import { buildOjuelegbaCover } from './ojuelegbaCover';
-import { DECK_END, DECK_X0, DECK_X1, SOFFIT } from './ojuelegbaDeck';
-import { flyoverPalette } from './oshodiFlyover';
+import { DECK_END, DECK_X0, DECK_X1 } from './ojuelegbaDeck';
+import { barracksCorridor, flyover, linkBridge } from './ojuelegbaLandmarks';
 import { drum, umbrella, wire } from './oshodiKit';
 import { SiteLights, v3 } from './roadworksKit';
 import { shophouseRows } from './shared';
@@ -45,18 +45,19 @@ const ID = 'rumbleOjuelegba';
 const JOINT_Y = [6, 13, 20];
 
 export const RUMBLE_OJUELEGBA_LOOK: ArenaLook = {
-  // late afternoon: a low amber sun from the west, long hard shadows, brown haze
-  sky: 0xa08a6c,
-  fog: { color: 0x8a7660, near: 20, far: 72 },
-  sun: { color: 0xffc488, intensity: 4.2, position: [-16, 17, 9] },
-  hemi: { sky: 0xd8bc9c, ground: 0x6a5848, intensity: 1.2 },
-  envIntensity: 0.46,
-  exposure: 1.14,
+  // late afternoon: a low amber sun from the west and long shadows under the deck, in clear dusty air - the
+  // flyover and the skyline beyond the board stay readable from the whole-arena view (identity pass)
+  sky: 0xb09a78,
+  fog: { color: 0xb8a68c, near: 36, far: 160 },
+  sun: { color: 0xffcf98, intensity: 4.7, position: [-16, 17, 9] },
+  hemi: { sky: 0xe2caa8, ground: 0x7a6858, intensity: 1.35 },
+  envIntensity: 0.5,
+  exposure: 1.2,
   floorTint: 0xb8ac9a,
   pillarTint: 0xc4bcae,
   softTint: 0xc4b6a6,
   slab: 0x6a6258,
-  street: 0x2a2622,
+  street: 0x4a4238,
   grit: { tone: 0x7a644c, dirt: 0x584a3a, dust: 0x8e7a62 },
   // light pockets per district (world x, y, z): LED tubes under the deck (west and east of the pier court),
   // a sodium lamp over the bus pocket, bulbs in the shop lane, a lamp over the workshops
@@ -148,6 +149,112 @@ function arrow(g: Ctx, x: number, y: number, dir: number, color: string): void {
   g.restore();
 }
 
+/** A black-and-white chequered kerb band along a horizontal road edge (y in tiles), with a lit top edge. */
+function bwKerb(g: Ctx, y: number, x0: number, x1: number, skip: readonly [number, number][] = []): void {
+  const seg = 52;
+  const band = 22;
+  const top = y * T - band / 2;
+  for (let px = x0 * T, i = 0; px < x1 * T; px += seg, i++) {
+    const tile = px / T;
+    if (skip.some(([a, b]) => tile >= a && tile < b)) continue;
+    const w = Math.min(seg, x1 * T - px);
+    g.fillStyle = i % 2 ? 'rgba(222,218,204,0.96)' : 'rgba(22,22,22,0.96)';
+    g.fillRect(px, top, w, band);
+    g.fillStyle = 'rgba(255,248,226,0.35)';
+    g.fillRect(px, top, w, 3);
+    g.fillStyle = 'rgba(0,0,0,0.3)';
+    g.fillRect(px, top + band, w, 4);
+  }
+}
+
+/** A curved turn arrow in a lane tile: `left` / `right` bends, `straightLeft` / `straightRight` fork. */
+function turnArrow(
+  g: Ctx,
+  x: number,
+  y: number,
+  dir: number,
+  kind: 'left' | 'right' | 'fork',
+  color: string,
+): void {
+  g.save();
+  g.translate((x + 0.5) * T, (y + 0.5) * T);
+  g.rotate((dir * Math.PI) / 2);
+  g.fillStyle = color;
+  g.strokeStyle = color;
+  g.lineWidth = T * 0.1;
+  const head = (hx: number, hy: number, a: number): void => {
+    g.save();
+    g.translate(hx, hy);
+    g.rotate(a);
+    g.beginPath();
+    g.moveTo(T * 0.16, 0);
+    g.lineTo(-T * 0.06, -T * 0.13);
+    g.lineTo(-T * 0.06, T * 0.13);
+    g.closePath();
+    g.fill();
+    g.restore();
+  };
+  g.beginPath();
+  g.moveTo(-T * 0.36, 0);
+  g.lineTo(kind === 'fork' ? T * 0.1 : -T * 0.04, 0);
+  g.stroke();
+  if (kind === 'fork') head(T * 0.2, 0, 0);
+  const sgn = kind === 'right' ? 1 : -1; // east-facing arrow: right turn bends to +y
+  g.beginPath();
+  g.arc(kind === 'fork' ? T * 0.1 : -T * 0.04, sgn * T * 0.22, T * 0.22, (-sgn * Math.PI) / 2, 0, sgn < 0);
+  g.stroke();
+  head(kind === 'fork' ? T * 0.32 : T * 0.18, sgn * T * 0.22, (sgn * Math.PI) / 2);
+  g.restore();
+}
+
+/** A yellow box junction: outline with crossed diagonals (tile rectangle, inclusive). */
+function boxJunction(g: Ctx, x0: number, y0: number, x1: number, y1: number): void {
+  g.strokeStyle = 'rgba(232,188,40,0.9)';
+  g.lineWidth = 8;
+  const l = x0 * T + 6;
+  const t = y0 * T + 6;
+  const r = (x1 + 1) * T - 6;
+  const b = (y1 + 1) * T - 6;
+  g.strokeRect(l, t, r - l, b - t);
+  g.lineWidth = 6;
+  for (let x = l; x < r; x += T * 0.9) {
+    g.beginPath();
+    g.moveTo(x, t);
+    g.lineTo(Math.min(r, x + (b - t)), Math.min(b, t + (r - x)));
+    g.stroke();
+  }
+}
+
+/** A chevron-hatched painted traffic island on the road centre: white outline, hatching, kerb ends. */
+function goreIsland(g: Ctx, x0: number, x1: number, y: number): void {
+  const t = (y - 0.5) * T + 18;
+  const b = (y + 0.5) * T - 18;
+  g.save();
+  g.beginPath();
+  g.rect(x0 * T, t, (x1 - x0) * T, b - t);
+  g.clip();
+  g.fillStyle = 'rgba(70,68,62,0.55)';
+  g.fillRect(x0 * T, t, (x1 - x0) * T, b - t);
+  g.strokeStyle = 'rgba(236,232,218,0.85)';
+  g.lineWidth = 8;
+  for (let x = x0 * T - T; x < x1 * T; x += 34) {
+    g.beginPath();
+    g.moveTo(x, b);
+    g.lineTo(x + (b - t), t);
+    g.stroke();
+  }
+  g.restore();
+  g.strokeStyle = 'rgba(236,232,218,0.9)';
+  g.lineWidth = 6;
+  g.strokeRect(x0 * T, t, (x1 - x0) * T, b - t);
+  for (const ex of [x0 * T - 10, x1 * T - 14]) {
+    for (let i = 0; i < 4; i++) {
+      g.fillStyle = i % 2 ? 'rgba(222,218,204,0.96)' : 'rgba(22,22,22,0.96)';
+      g.fillRect(ex, t + (i * (b - t)) / 4, 24, (b - t) / 4);
+    }
+  }
+}
+
 /** The painted frame round a breakable barrier: yellow-and-black chevrons on the tile edge. */
 function barrierFrame(g: Ctx, x: number, y: number): void {
   const k = 12;
@@ -214,6 +321,23 @@ export const RUMBLE_OJUELEGBA_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
   }
   // zebras where the approach and the pocket cross the road, and across the clear bay under the bridge
   for (const x of [13, 20, 30]) for (let y = 15; y <= 18; y++) zebraTile(g, x, y, false, 0.6);
+  // the junction (identity pass): thick black-and-white kerbs along both road edges (the departure strip's
+  // mouth left open), turn arrows into the shop approach and the bus pocket, a stop line before each
+  // crossing, a yellow box junction under the bridge and a hatched traffic island on the road centre
+  bwKerb(g, 15, 0, cols);
+  bwKerb(g, 19, 0, cols, [[41, 43]]);
+  turnArrow(g, 9, 18, 0, 'right', 'rgba(236,232,218,0.62)'); // south-east lane: right, into the shop approach
+  turnArrow(g, 33, 15, 2, 'right', 'rgba(236,232,218,0.62)'); // north-west lane: right, into the bus pocket's north gate
+  turnArrow(g, 36, 18, 0, 'fork', 'rgba(236,232,218,0.62)'); // straight on or right
+  turnArrow(g, 6, 16, 2, 'left', 'rgba(236,232,218,0.62)');
+  g.fillStyle = 'rgba(236,232,218,0.78)';
+  for (const [sx, ly0, ly1] of [
+    [12.35, 17, 19],
+    [31.55, 15, 17],
+  ] as const)
+    g.fillRect(sx * T, ly0 * T + 4, 12, (ly1 - ly0) * T - 8);
+  boxJunction(g, 19, 15, 22, 18);
+  goreIsland(g, 23.5, 28.5, 17);
   // the departure strip: arrows up, a stop line at the road, DEPARTURE along it, a hatched mouth
   for (let y = 21; y <= 31; y += 3) {
     arrow(g, 41, y, 3, 'rgba(240,236,220,0.6)');
@@ -249,6 +373,16 @@ export const RUMBLE_OJUELEGBA_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
   }
   floorWords(g, 'LOADING', 39, 12.5, 0.32, 'rgba(240,236,220,0.6)');
   for (let i = 0; i < 16; i++) tyreTrack(g, r, w, h, 'rgba(20,18,16,0.12)');
+
+  // ---- the OJUELEGBA bus stop (the shelter at row 21 under the bridge): a yellow-and-black queue box in front
+  g.fillStyle = 'rgba(232,188,40,0.38)';
+  g.fillRect(18 * T + 10, 20 * T + 10, 5 * T - 20, T - 20);
+  for (let i = 0; i < 20; i++) {
+    g.fillStyle = i % 2 ? 'rgba(22,22,22,0.85)' : 'rgba(232,188,40,0.9)';
+    g.fillRect(18 * T + 10 + i * ((5 * T - 20) / 20), 20 * T + 10, (5 * T - 20) / 20, 12);
+    g.fillRect(18 * T + 10 + i * ((5 * T - 20) / 20), 21 * T - 22, (5 * T - 20) / 20, 12);
+  }
+  floorWords(g, 'QUEUE HERE', 20.5, 20.5, 0.2, 'rgba(22,22,22,0.7)');
 
   // ---- the approach: two painted parking recesses
   for (const y of [12, 20]) {
@@ -314,45 +448,6 @@ export const RUMBLE_OJUELEGBA_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
 // ------------------------------------------------------------------------------------------ the set
 
 /**
- * The flyover running on north of the board over the deck columns: a deep box girder on twin columns with
- * hammerhead crossheads. Its traffic is the living environment's (moving, `render/env/ojuelegbaEnv.ts`): no
- * parked vehicles up here. Deck top at 6.3 above the board (6.6 above the street, the environment's deck).
- */
-function flyover(ctx: SetContext, L: SiteLights): void {
-  const { W, H } = ctx;
-  const P = flyoverPalette();
-  const s = ctx.statics;
-  const { wx } = tileWorld(W, H);
-  const north = -H / 2;
-  const x0 = wx(DECK_X0) - 0.5;
-  const x1 = wx(DECK_X1) + 0.5;
-  const width = x1 - x0;
-  const cx = (x0 + x1) / 2;
-  const z0 = north - 0.45;
-  const z1 = north - 46;
-  const len = z0 - z1;
-  const zc = (z0 + z1) / 2;
-  s.add(box(width - 1.2, 1.5, len, P.deckDark, cx, SOFFIT + 0.75, zc));
-  s.add(box(width, 0.4, len, P.deck, cx, SOFFIT + 1.7, zc));
-  for (const side of [-1, 1]) {
-    s.add(box(0.42, 0.75, len, P.parapet, cx + side * (width / 2 - 0.2), SOFFIT + 0.38, zc));
-    s.add(box(0.25, 0.8, len, P.parapet, cx + side * (width / 2 - 0.12), SOFFIT + 2.3, zc));
-    for (let z = z0 - 3; z > z1; z -= 9)
-      s.add(cyl(0.06, 0.08, 3.6, P.steel, cx + side * (width / 2 - 0.2), SOFFIT + 3.7, z, 6));
-  }
-  // twin columns on hammerhead crossheads every 8 m, as on the board
-  for (let z = z0 - 4; z > z1 + 2; z -= 8) {
-    for (const dx of [-4.8, 4.8]) {
-      s.add(cyl(0.7, 0.78, SOFFIT - STREET, P.pier, cx + dx, STREET + (SOFFIT - STREET) / 2, z, 8));
-      s.add(box(1.8, 0.3, 1.8, P.deckDark, cx + dx, STREET + 0.15, z));
-    }
-    s.add(box(width - 1, 0.62, 1.3, P.pier, cx, SOFFIT - 0.3, z));
-  }
-  L.glow(cx - 4.8, STREET + 2.8, north - 3.0, 0.9, 0xe8f4ff, 0.5);
-  L.glow(cx + 4.8, STREET + 2.8, north - 3.0, 0.9, 0xe8f4ff, 0.5);
-}
-
-/**
  * Shophouses down the east and west side streets, leaving open what lives there (the living environment):
  * the through road's mouths (rows 13-20) on both sides, the traders beyond the shop lane (west, rows 21-31)
  * and the mechanics and touts beyond the service loop and the bus pocket (east, rows 1-9 and 18-27).
@@ -394,6 +489,8 @@ function build(ctx: SetContext): void {
   const kit = new Kit(ctx);
 
   flyover(ctx, L);
+  linkBridge(ctx);
+  barracksCorridor(ctx);
   // tall buildings beyond the far edge and down the side streets
   shophouseRows(ctx, { north: true, seed: 2, close: 0.2 });
   sideStreets(ctx);
@@ -503,7 +600,7 @@ function build(ctx: SetContext): void {
     toX: W / 2 + 5,
     toZ: wz(19.5),
   }); // calling the next bus
-  life.add({ y: S, kind: 'argue', x: -W / 2 - 2.2, z: wz(13.5), yaw: 1.2 }); // driver and passenger over the change
+  life.add({ y: S, kind: 'argue', x: -W / 2 - 1.0, z: wz(13.5), yaw: 1.2 }); // driver and passenger over the change
   life.add({ y: S, kind: 'seller', x: -W / 2 - 1.2, z: wz(20), yaw: Math.PI / 2 });
   life.add({ y: S, kind: 'seller', x: -W / 2 - 1.4, z: wz(26.5), yaw: Math.PI / 2 }); // at the shop lane mouth
   life.add({ y: S, kind: 'worker', x: -W / 2 - 2.4, z: wz(4), yaw: 1.4 }); // the vulcaniser
@@ -511,7 +608,7 @@ function build(ctx: SetContext): void {
   life.add({ y: S, kind: 'walker', x: W / 2 + 1.1, z: wz(22), yaw: 0, toX: W / 2 + 1.1, toZ: wz(31) });
   life.add({ y: S, kind: 'walker', x: -W / 2 - 1.1, z: wz(30), yaw: 0, toX: -W / 2 - 1.1, toZ: wz(22) });
   life.add({ y: S, kind: 'onlooker', x: W / 2 + 1.8, z: wz(13), yaw: -1.6 });
-  life.add({ y: S, kind: 'onlooker', x: -W / 2 - 1.8, z: wz(19.5), yaw: 1.6 });
+  life.add({ y: S, kind: 'onlooker', x: -W / 2 - 0.9, z: wz(19.5), yaw: 1.6 });
 }
 
 export const RUMBLE_OJUELEGBA_SET: ArenaSet = {

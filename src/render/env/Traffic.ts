@@ -68,11 +68,16 @@ function modelParts(model: VehicleModelId): Part[] {
   return out;
 }
 
-/** position + normal + uv only, non-indexed: the common ground for merging parts of one material. */
+/**
+ * position + normal + uv (+ colour) only, non-indexed: the common ground for merging parts of one material.
+ * The vertex colours stay: the Danfo's paint lives in them (the glTF material has `vertexColors` on), so
+ * dropping them paints the whole bus black.
+ */
 function plain(g: BufferGeometry): BufferGeometry {
   const out = g.index ? g.toNonIndexed() : g.clone();
   for (const name of Object.keys(out.attributes))
-    if (name !== 'position' && name !== 'normal' && name !== 'uv') out.deleteAttribute(name);
+    if (name !== 'position' && name !== 'normal' && name !== 'uv' && name !== 'color')
+      out.deleteAttribute(name);
   if (!out.attributes.normal) out.computeVertexNormals();
   if (!out.attributes.uv)
     out.setAttribute(
