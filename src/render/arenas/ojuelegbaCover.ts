@@ -812,10 +812,10 @@ export function buildOjuelegbaCover(board: { width: number; height: number }): B
     signs.map = t;
     b.own(t);
   }
-  // the parked buses keep the vehicle weathering (paint, not plaster)
+  // the parked buses keep paint weathering, saturated (paint, not plaster)
   bus?.root.traverse((o) => {
     const mm = (o as { material?: Material | Material[] }).material;
-    if (mm) for (const x of Array.isArray(mm) ? mm : [mm]) b.grit(x, 'vehicle');
+    if (mm) for (const x of Array.isArray(mm) ? mm : [mm]) b.grit(x, 'paint');
   });
   const cover = b.build();
   // the flyover's outer edges, crossheads and upper pier shafts overhead (cut away round the fighter)

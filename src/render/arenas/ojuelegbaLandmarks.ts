@@ -443,13 +443,12 @@ export function linkBridge(ctx: SetContext): void {
       1280,
       320,
       [
-        { w: 3.0, lines: ['YABA'], arrow: 'left' },
-        { w: 3.4, lines: ['MUSHIN', 'LAWANSON'], arrow: 'up' },
-        { w: 4.4, lines: ['SURULERE', 'ITIRE', 'STADIUM'], arrow: 'right' },
+        { w: 1.4, lines: ['MUSHIN', 'YABA'], arrow: 'left' },
+        { w: 1.6, lines: ['SURULERE', 'STADIUM'], arrow: 'right' },
       ],
       31,
     );
-    board(ctx, tex, 4.4, 1.1, x - 1.5, deckY + 3.45, zS + 0.1); // shifted west so it stays off the board
+    board(ctx, tex, 2.6, 0.85, x - 0.5, deckY + 3.45, zS + 0.1); // shifted west so it stays off the board
   }
 }
 
@@ -543,4 +542,51 @@ export function barracksCorridor(ctx: SetContext): void {
   s.add(
     mesh(new CylinderGeometry(30.8, 30.8, 1.2, 44, 1, true, -1.0, 2.0), P.bowlDark, bx, STREET + 15.4, bz),
   );
+}
+
+/**
+ * Edge silhouettes on the open east ground beside the board (inside the overview frame): a pair of tall
+ * stadium floodlight masts and a pale three-storey examinations block with its plain "WAEC" fascia. Props only,
+ * well clear of the board and the camera side.
+ */
+export function eastEdgeLandmarks(ctx: SetContext): void {
+  const { W } = ctx;
+  const P = palette();
+  const s = ctx.statics;
+  const bx = W / 2 + 6.5;
+  const at = (
+    w: number,
+    h: number,
+    d: number,
+    m: Pal[keyof Pal],
+    px: number,
+    yBottom: number,
+    pz: number,
+  ): void => {
+    s.add(box(w, h, d, m, px, yBottom + h / 2, pz));
+  };
+  at(6, 8.6, 4, P.concreteLight, bx + 2, STREET, -19);
+  at(6.4, 0.3, 4.4, P.concreteDark, bx + 2, STREET + 8.6, -19);
+  for (let f = 0; f < 3; f++)
+    for (let i = 0; i < 3; i++)
+      at(0.9, 0.9, 0.06, P.blue, bx + 0.2 + i * 1.8, STREET + 1.2 + f * 2.7, -16.98);
+  if (hasDom())
+    board(
+      ctx,
+      fasciaTexture('ojuelegba:waec2', 256, 72, '#f2efe6', '#1b3a5e', 'WAEC'),
+      2.8,
+      0.8,
+      bx + 2,
+      STREET + 7.7,
+      -16.95,
+    );
+  for (const [mx, mz] of [
+    [bx - 1.5, -13],
+    [bx + 5, -3],
+  ] as const) {
+    s.add(cyl(0.18, 0.28, 15, P.steel, mx, STREET + 7.5, mz, 6));
+    for (let r = 0; r < 3; r++)
+      for (let c = 0; c < 4; c++)
+        at(0.5, 0.4, 0.3, P.white, mx - 0.9 + c * 0.6, STREET + 15 + r * 0.46, mz + 0.2);
+  }
 }

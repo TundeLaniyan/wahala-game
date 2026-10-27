@@ -34,7 +34,7 @@ import { Kit } from './marketKit';
 import { groundMat, stall } from './marketStalls';
 import { buildOjuelegbaCover } from './ojuelegbaCover';
 import { DECK_END, DECK_X0, DECK_X1 } from './ojuelegbaDeck';
-import { barracksCorridor, flyover, linkBridge } from './ojuelegbaLandmarks';
+import { barracksCorridor, eastEdgeLandmarks, flyover, linkBridge } from './ojuelegbaLandmarks';
 import { drum, umbrella, wire } from './oshodiKit';
 import { SiteLights, v3 } from './roadworksKit';
 import { shophouseRows } from './shared';
@@ -47,12 +47,12 @@ const JOINT_Y = [6, 13, 20];
 export const RUMBLE_OJUELEGBA_LOOK: ArenaLook = {
   // late afternoon: a low amber sun from the west and long shadows under the deck, in clear dusty air - the
   // flyover and the skyline beyond the board stay readable from the whole-arena view (identity pass)
-  sky: 0xb09a78,
-  fog: { color: 0xb8a68c, near: 36, far: 160 },
+  sky: 0xb8a47e,
+  fog: { color: 0xc4b498, near: 60, far: 240 },
   sun: { color: 0xffcf98, intensity: 4.7, position: [-16, 17, 9] },
   hemi: { sky: 0xe2caa8, ground: 0x7a6858, intensity: 1.35 },
   envIntensity: 0.5,
-  exposure: 1.2,
+  exposure: 1.3,
   floorTint: 0xb8ac9a,
   pillarTint: 0xc4bcae,
   softTint: 0xc4b6a6,
@@ -491,6 +491,7 @@ function build(ctx: SetContext): void {
   flyover(ctx, L);
   linkBridge(ctx);
   barracksCorridor(ctx);
+  eastEdgeLandmarks(ctx);
   // tall buildings beyond the far edge and down the side streets
   shophouseRows(ctx, { north: true, seed: 2, close: 0.2 });
   sideStreets(ctx);

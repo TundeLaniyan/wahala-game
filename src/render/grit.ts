@@ -17,7 +17,7 @@
 import { Color, MeshPhysicalMaterial, MeshStandardMaterial } from 'three';
 import type { Material, Object3D } from 'three';
 
-export type GritClass = 'scenery' | 'floor' | 'vehicle' | 'crowd' | 'player' | 'skin' | 'none';
+export type GritClass = 'scenery' | 'floor' | 'vehicle' | 'paint' | 'crowd' | 'player' | 'skin' | 'none';
 
 interface GritParams {
   /** 0 = keep colour, 1 = fully mixed to the dusty tone. */
@@ -36,6 +36,8 @@ export const GRIT_CLASSES: Readonly<Record<Exclude<GritClass, 'none'>, GritParam
   scenery: { desat: 0.5, grime: 0.62, ground: 0.6, dust: 0.32, rough: 0.16 },
   floor: { desat: 0.42, grime: 0.55, ground: 0, dust: 0.12, rough: 0.12 },
   vehicle: { desat: 0.34, grime: 0.5, ground: 0.55, dust: 0.3, rough: 0.14 },
+  /** Bright livery (Danfo yellow): weathered but kept saturated. */
+  paint: { desat: 0.1, grime: 0.34, ground: 0.45, dust: 0.1, rough: 0.14 },
   crowd: { desat: 0.66, grime: 0.36, ground: 0.3, dust: 0.08, rough: 0.1 },
   player: { desat: 0.3, grime: 0.34, ground: 0.4, dust: 0.08, rough: 0.22 },
   skin: { desat: 0.06, grime: 0.06, ground: 0, dust: 0, rough: 0.02 },
