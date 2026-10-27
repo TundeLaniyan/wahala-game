@@ -141,9 +141,22 @@ function GeneratorButton() {
  */
 function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
   const [holding, setHolding] = useState(false);
+  // fingers on B that have not been released yet (input sources)
+  const fingers = useRef(new Set<string>());
+  // B leaves the HUD while a finger is still on it (the player is knocked out, a Deathmatch respawn wait):
+  // that finger's release lands on a detached button that React never hears from, so release it here.
+  // Otherwise the input layer keeps B "down" and swallows every later press until the input is cleared.
+  useEffect(() => {
+    const held = fingers.current;
+    return () => {
+      for (const source of held) input.touchUp('special', source);
+      held.clear();
+    };
+  }, []);
   const label = specialLabel(me, skill);
   const remoteReady = me.remote && me.hasRemoteGenerator;
   const up = (e: RPointerEvent): void => {
+    fingers.current.delete(`p${e.pointerId}`);
     input.touchUp('special', `p${e.pointerId}`);
     setHolding(false);
   };
@@ -158,6 +171,7 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
       style={{ ['--hold-ms' as string]: `${SPECIAL_HOLD_MS}ms` }}
       onPointerDown={(e) => {
         e.preventDefault();
+        fingers.current.add(`p${e.pointerId}`);
         input.touchDown('special', `p${e.pointerId}`);
         if (remoteReady) setHolding(true);
         try {

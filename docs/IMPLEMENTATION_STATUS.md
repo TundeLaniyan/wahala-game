@@ -23,6 +23,28 @@ Verification (container: 4 cores, software WebGL):
 - Final legacy vs evolution bot measurement: `docs/measurements/rumble-evolution-final.md` (summary in
   `RUMBLE_EVOLUTION.md` L.2).
 - Not measured: physical phones (frame rate, touch feel), human playtests, recognition review. Limits: L.4.
+## CI: parallel browser shards and gated releases (branch `claude/wahala-ci-parallel-shards`, from `408fb4d`)
+
+Founder brief of 2026-10-26: end the two-hour CI cycles without weakening the checks. CI/CD only; no gameplay,
+balance, visual or menu change. Full description, admin steps and measured runs: `docs/CI.md`.
+
+| Area | Delivered | Verified by |
+| --- | --- | --- |
+| Pipeline | Plan + parallel fast checks (typecheck/lint, Vitest, one `vite build` artifact) -> 8 E2E shards on separate runners serving that build -> merged report -> `CI gate` -> deploy | CI runs 103-109 |
+| Shards | `--test-list` lists balanced by the last passing run's per-test durations (`scripts/ci/shards.ts`), `--fully-parallel`, 1 worker each; browser + apt packages cached once per runner image | runs 105-107 |
+| Report | Blob reports merged into one HTML (screenshots, retry traces) + JSON; fails unless every listed test ran exactly once; totals, flaky tests, per-job durations, wall clock in the run summary (`scripts/ci/report.ts`) | run 103 (128/128), 106-107 (130/130), 108 (2 failures named) |
+| Release safety | Deploy only after the gate, from the tested `dist`, only from `PUBLISH_BRANCH`, only while the commit is its head, never backwards; no manual deploy trigger; cancelled or failed runs never deploy | run 102 (cancelled: gate failed, deploy skipped), run 108 (failed shards: gate failed, deploy skipped), dry-run release checks on runs 103-107 |
+| Docs-only commits | Fast checks only; no browser suite, no deploy, when only docs changed since the last gate-passed commit on the same branch (`scripts/ci/plan.ts`) | run 109 (2.5 min) |
+| Touch flake | The B-hold test hung 15 min when the next frame removed B (the blast also eliminates the holder) before the test's separate `pointerup`; release now in the same page task. Same path was a real phone bug (a finger on B when B leaves the HUD jammed B after a respawn): `SpecialButton` releases held fingers on unmount; e2e regression test | e2e regression test fails before / passes after; runs 106-108 |
+
+Measured (same time of day, 15:00-17:00 UTC): old single job ~2 h at that hour (runs 99-100: 93-125 min; 63 min only
+at 01:00 UTC); new pipeline 20-22 min (runs 106 and 110, 8 x 1) from push to the deploy decision. Integrated into
+`claude/wahala-stitch-uiux-v1` by fast-forward (`408fb4d..a5619db`): CI run 111 passed 130/130 (0 flaky) and published
+`a5619db` to gh-pages (`779d572`) 24 minutes after the push.
+Remaining bottleneck: software-WebGL speed differs up to 2-3x between runners, so the slowest of 8 shards decides.
+**Not done (needs a repository admin):** Pages source "GitHub Actions" + a `github-pages` environment branch rule
+for `claude/wahala-stitch-uiux-v1` only, which is what stops the old branches' workflow copies from publishing
+(`docs/CI.md`, "Single publisher").
 
 ## Stitch menu and navigation (branch `claude/wahala-stitch-uiux-v1`, from `cd502b8`)
 

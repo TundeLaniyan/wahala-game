@@ -5,35 +5,42 @@ Target URL: **https://tundelaniyan.github.io/wahala-game/** (a project site, so 
 
 ## How it is built and published
 
-Since the Stitch menu (2026-10-25, decision UI11) the preview is built from **`claude/wahala-stitch-uiux-v1`**
-(before that from `claude/wahala-gameplay-rumble-v2`, `claude/wahala-voice-integration` and
-`claude/wahala-mobile-joystick-audio`; each of those branches' own copy of the workflow would still publish if
-someone pushed to it, so leave them untouched - in particular a new push to `claude/wahala-gameplay-rumble-v2` would
-replace the Stitch preview with the old menu).
-`.github/workflows/deploy.yml` is called by CI (`ci.yml`, job `deploy-preview`) on every push to that branch,
-**only after the full check has passed on that commit** (typecheck, lint, unit tests, build and the Playwright
-desktop + phone suite), so an unverified build is never published. It can also be run on demand from the Actions
-tab ("Run workflow"). It installs, typechecks, lints, runs the unit tests, builds, and then commits the contents
-of `dist/` to the **`gh-pages` branch** (one commit per build, no force-push). It also writes `build.json`
-(commit, branch, build time) next to `index.html` so anyone can check which commit is live:
-`https://tundelaniyan.github.io/wahala-game/build.json`. (Before this update it ran on every push to
-`claude/wahala-nine-arenas-city-rumble`; that branch's own copy of the workflow still does.)
+The preview is built from **`claude/wahala-stitch-uiux-v1`** (before the Stitch menu, decision UI11, from
+`claude/wahala-gameplay-rumble-v2`, and before that `claude/wahala-voice-integration` and
+`claude/wahala-mobile-joystick-audio`). The full pipeline, the release checks and the single-publisher setting
+are in **`docs/CI.md`**; in short:
 
-Why a `gh-pages` branch and not the "GitHub Actions" Pages source: Pages was not enabled on the repository, and a
-workflow token is not allowed to create the Pages site ("Resource not accessible by integration", Actions run
-#1 on this branch). Publishing to a branch needs only `contents: write`, which the workflow has, so the build is
-already sitting in `gh-pages`. A second benefit: the old `deploy.yml` on `main` uses the "GitHub Actions" source;
-with the source set to the `gh-pages` branch that old workflow cannot replace the preview.
+- CI (`.github/workflows/ci.yml`) runs typecheck, lint, the unit tests and one production build in parallel, then
+  the Playwright desktop + phone suite as parallel shards against that build, merges the shard reports and
+  passes a single `CI gate` job only when everything passed on that commit.
+- Only then, and only on a push (or a manual CI run) of the publishing branch, `.github/workflows/deploy.yml`
+  publishes **that same tested build** (no rebuild), adding `404.html`, `.nojekyll` and `build.json` (commit,
+  branch, CI run, build time): `https://tundelaniyan.github.io/wahala-game/build.json` shows which commit is
+  live. It refuses to publish if the branch has moved on or if the build would move the preview backwards.
+- With the Pages source "Deploy from a branch" it commits the build to the **`gh-pages` branch** (one commit per
+  release, no force-push); with the source "GitHub Actions" it deploys through the `github-pages` environment.
+- `deploy.yml` has no trigger of its own; to republish, run the CI workflow on the publishing branch
+  (`gh workflow run ci.yml --ref claude/wahala-stitch-uiux-v1`, or the REST API: the Actions-tab "Run workflow"
+  button only lists workflows that exist on the default branch, `main`, which has none).
+- Documentation-only commits run the fast checks and do not redeploy.
 
-## The one setting the founder must change (admin, once)
+**Old branches still publish if pushed:** `claude/wahala-gameplay-rumble-v2`, `claude/wahala-voice-integration`,
+`claude/wahala-mobile-joystick-audio` and `claude/wahala-nine-arenas-city-rumble` carry their own workflow copies
+that push to `gh-pages`. A push there would replace the Stitch preview with an old game. The repository-admin
+setting that stops this for good (Pages source "GitHub Actions" + a `github-pages` environment rule allowing only
+the publishing branch) is in `docs/CI.md`, "Single publisher". Until it is set, leave those branches untouched.
 
-1. Repository **Settings -> Pages**.
-2. **Build and deployment -> Source: "Deploy from a branch"**.
-3. **Branch: `gh-pages`, folder `/ (root)`**, Save.
-4. After a minute the page shows "Your site is live at https://tundelaniyan.github.io/wahala-game/".
+Why the `gh-pages` branch was used at first: Pages was not enabled on the repository, and a workflow token is
+not allowed to create the Pages site ("Resource not accessible by integration"). Publishing to a branch needs
+only `contents: write`.
 
-Nothing else is needed: later pushes to the branch republish automatically. To publish without a code change, open
-**Actions -> Deploy preview to GitHub Pages -> Run workflow** on `claude/wahala-gameplay-rumble-v2`.
+## Pages setting (admin)
+
+Current: Source "Deploy from a branch", Branch `gh-pages` / `(root)` (set once; the site is live); the
+`github-pages` environment allows deployments only from `gh-pages`. Last publish: `a5619db` (CI run 111,
+gh-pages `779d572`, 2026-10-26). The
+recommended change to Source "GitHub Actions" with a branch-restricted `github-pages` environment is described
+step by step in `docs/CI.md`; the workflow detects the source by itself, and the URL stays the same.
 
 ## What could not be verified from the build environment
 

@@ -1,0 +1,46 @@
+name: Playwright browser
+description: >-
+  Chromium headless shell and its system packages (`playwright install --with-deps`), cached per runner image and
+  Playwright version. The packages come from the Ubuntu mirror, which sometimes serves them at ~40 kB/s (a
+  10-minute install on two shard runners of CI run 103); with the .deb files cached, apt installs them locally.
+  Needs `npm ci` first.
+inputs:
+  save:
+    description: Save the cache on a miss (only the job that warms it up, so shards never race to save).
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - id: key
+      shell: bash
+      run: |
+        pw=$(node -p "require('./node_modules/@playwright/test/package.json').version")
+        echo "key=playwright-headless-shell-${ImageOS}-${ImageVersion}-${pw}" >> "$GITHUB_OUTPUT"
+    - id: cache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ~/.cache/ms-playwright
+          ~/.cache/playwright-apt
+        key: ${{ steps.key.outputs.key }}
+    - name: Install the headless shell and its packages
+      shell: bash
+      run: |
+        if compgen -G "$HOME/.cache/playwright-apt/*.deb" > /dev/null; then
+          sudo cp "$HOME"/.cache/playwright-apt/*.deb /var/cache/apt/archives/
+          echo "$(ls "$HOME"/.cache/playwright-apt | wc -l) cached packages"
+        fi
+        npx playwright install --with-deps --only-shell chromium
+    - if: inputs.save == 'true' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        mkdir -p ~/.cache/playwright-apt
+        cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
+        echo "caching $(ls ~/.cache/playwright-apt | wc -l) packages"
+    - if: inputs.save == 'true' && steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ~/.cache/ms-playwright
+          ~/.cache/playwright-apt
+        key: ${{ steps.key.outputs.key }}
