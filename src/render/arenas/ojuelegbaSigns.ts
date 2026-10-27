@@ -292,7 +292,10 @@ export const BUS_STOP_BOARD: BoardSpec = {
   bg: '#e4b42a',
   fg: '#16140f',
   // the interchange's name, the stage's focal landmark (identity pass): painted bus-stop yellow, black lettering
-  lines: [['OJUELEGBA BUS STOP', 50]],
+  lines: [
+    ['OJUELEGBA', 72],
+    ['BUS STOP', 56],
+  ],
   border: '#16140f',
 };
 

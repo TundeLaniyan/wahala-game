@@ -335,14 +335,14 @@ function pier(k: Kit, g: number, grp: CoverGroup, n: number): void {
   const deep = grp.y1 - grp.y0 + 1;
   const zs = 0.82 * (deep > 2 ? 1.4 : 1);
   // tonal variation per pier: some recently repaired / painted, some weathered
-  const tone = pick([0xb6ae9e, 0xa8a294, 0xc0b8a8], n);
+  const tone = pick([0xd0cabc, 0xc2bcb0, 0xdad6ca], n);
   box(k, g, k.concrete, 1.94, 0.16, deep - 0.06, cx, 0, cz, 0x7e786e); // footing, stained
   box(k, g, k.paint, 2.0, 0.03, deep, cx, 0, cz, 0x2e2a24); // the wet ring round it
   // the column stub up to the cut (the overhead, ojuelegbaDeck.ts, carries it on to the deck)
   const shaft = PIER_CUT - 0.16;
   k.b.add(
     g,
-    new CylinderGeometry(0.74, 0.8, shaft, 8),
+    new CylinderGeometry(0.9, 0.96, shaft, 8),
     k.concrete,
     at(cx, 0.16 + shaft / 2, cz, Math.PI / 8, 0, 0, 1, 1, zs),
     tone,
@@ -351,7 +351,7 @@ function pier(k: Kit, g: number, grp: CoverGroup, n: number): void {
   for (let i = 0; i < 3; i++)
     k.b.add(
       g,
-      new CylinderGeometry(0.815, 0.815, 0.2, 8),
+      new CylinderGeometry(0.975, 0.975, 0.2, 8),
       k.paint,
       at(cx, 0.2 + i * 0.2 + 0.1, cz, Math.PI / 8, 0, 0, 1, 1, zs),
       i % 2 ? 0xd8d4c8 : 0x1c1c1c,
@@ -429,9 +429,9 @@ function busStop(k: Kit, g: number, grp: CoverGroup): void {
   // the big yellow name board standing on the roof on two posts, facing the camera
   // (high enough to read over the shop row's roofs, which stand between it and the camera)
   for (const dx of [-w / 2 + 0.2, w / 2 - 0.2])
-    cyl(k, g, k.metal, 0.04, 0.04, 2.0, cx + dx, 1.98, cz + 0.4, YELLOW, 6);
-  box(k, g, k.metal, w + 0.15, 0.78, 0.06, cx, 3.62, cz + 0.4, 0x2a2a28);
-  board(k, g, k.atlas.board('busStop', 512, 128, BUS_STOP_BOARD), w + 0.05, 0.68, cx, 4.01, cz + 0.44);
+    cyl(k, g, k.metal, 0.04, 0.04, 2.2, cx + dx, 1.98, cz + 0.4, YELLOW, 6);
+  box(k, g, k.metal, w + 0.15, 1.3, 0.06, cx, 2.9, cz + 0.4, 0x16140f);
+  board(k, g, k.atlas.board('busStop', 512, 224, BUS_STOP_BOARD), w + 0.05, 1.2, cx, 3.55, cz + 0.44);
 }
 
 // ------------------------------------------------------------------------------------ the park

@@ -149,7 +149,7 @@ export function buildDeck(
   const zEnd = wz(DECK_END) + 0.5;
   const len = zEnd - zTop;
   const zc = (zTop + zEnd) / 2;
-  const tone = 0x9a9892; // soot concrete, cool grey (research palette #5E5A55, lit)
+  const tone = 0xb8b8b4; // soot concrete, cool grey (research palette #5E5A55, lit)
   const parts: BufferGeometry[] = [];
   const box = (w: number, h: number, d: number, x: number, y0: number, z: number, c: number): void => {
     parts.push(piece(new BoxGeometry(w, h, d), x, y0 + h / 2, z, c));
@@ -163,16 +163,16 @@ export function buildDeck(
     [xW, 1],
     [xE, -1],
   ] as const) {
-    box(0.5, 0.6, len, x, SOFFIT, zc, 0x6e6a64); // dark soffit band
-    box(0.46, FASCIA - 0.72, len, x, SOFFIT + 0.6, zc, tone); // main fascia
-    box(0.5, 0.12, len, x, DECK_TOP - 0.12, zc, 0xb4b0a8); // slab edge / coping, lighter
-    box(0.54, 0.05, len, x, SOFFIT + 0.57, zc, 0x3e3a36); // the dark drip line
-    box(1.1, 0.14, len, x + dir * 0.75, SOFFIT, zc, 0x7a766e); // soffit strip
+    box(0.8, 0.6, len, x, SOFFIT, zc, 0x3c3a38); // dark soffit band
+    box(0.8, FASCIA - 0.72, len, x, SOFFIT + 0.6, zc, tone); // main fascia
+    box(0.9, 0.12, len, x, DECK_TOP - 0.12, zc, 0xdcd8d0); // slab edge / coping, lighter
+    box(0.84, 0.05, len, x, SOFFIT + 0.57, zc, 0x242220); // the dark drip line
+    box(1.6, 0.14, len, x + dir * 0.95, SOFFIT, zc, 0x4a4844); // soffit strip
     for (let z = zTop + 1.2; z < zEnd - 0.6; z += 2.4)
-      box(0.14, FASCIA - 0.5, 0.36, x + dir * 0.3, SOFFIT + 0.45, z, 0x8a867e);
+      box(0.3, FASCIA - 0.5, 0.5, x + dir * 0.5, SOFFIT + 0.45, z, 0x5a5854);
     // barrier on the deck edge: pale concrete with a black block every other metre, steel rail above
-    box(0.5, 0.78, len, x, DECK_TOP, zc, 0xc8c4ba);
-    for (let z = zTop + 1; z < zEnd - 0.5; z += 2) box(0.54, 0.8, 1.0, x, DECK_TOP, z, 0x1c1c1c);
+    box(0.9, 0.78, len, x, DECK_TOP, zc, 0xe4e0d6);
+    for (let z = zTop + 1; z < zEnd - 0.5; z += 2) box(0.94, 0.8, 1.0, x, DECK_TOP, z, 0x141414);
     box(0.09, 0.09, len, x, DECK_TOP + 1.1, zc, 0x5a5c58);
     for (let z = zTop + 1.5; z < zEnd; z += 3) box(0.08, 0.34, 0.08, x, DECK_TOP + 0.78, z, 0x5a5c58);
     // lamp standards with a swept arm over the carriageway, every 9 m
@@ -190,11 +190,11 @@ export function buildDeck(
     const shaft = SOFFIT - 0.5 - PIER_CUT;
     parts.push(
       piece(
-        new CylinderGeometry(0.74, 0.74, shaft, 8),
+        new CylinderGeometry(0.94, 0.94, shaft, 8),
         cx,
         PIER_CUT + shaft / 2,
         cz,
-        0xa8a090,
+        0xd2ccbe,
         Math.PI / 8,
         1,
         0.82 * (deep > 2 ? 1.4 : 1),
@@ -202,7 +202,7 @@ export function buildDeck(
     );
     // the hammerhead flaring out under the deck
     parts.push(
-      piece(new CylinderGeometry(1.3, 0.78, 0.5, 4), cx, SOFFIT - 0.25, cz, 0xa29a8a, Math.PI / 4, 1, 0.9),
+      piece(new CylinderGeometry(1.55, 0.98, 0.6, 4), cx, SOFFIT - 0.3, cz, 0xc8c2b4, Math.PI / 4, 1, 0.9),
     );
   }
   // no east-west crossheads over the board: seen from the camera they would lie across the frame and hide

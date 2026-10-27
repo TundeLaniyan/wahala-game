@@ -47,18 +47,18 @@ const JOINT_Y = [6, 13, 20];
 export const RUMBLE_OJUELEGBA_LOOK: ArenaLook = {
   // late afternoon: a low amber sun from the west and long shadows under the deck, in clear dusty air - the
   // flyover and the skyline beyond the board stay readable from the whole-arena view (identity pass)
-  sky: 0xb8a47e,
-  fog: { color: 0xc4b498, near: 60, far: 240 },
-  sun: { color: 0xffcf98, intensity: 4.7, position: [-16, 17, 9] },
-  hemi: { sky: 0xe2caa8, ground: 0x7a6858, intensity: 1.35 },
+  sky: 0xa8a290,
+  fog: { color: 0xb8b8b0, near: 60, far: 240 },
+  sun: { color: 0xffe6c4, intensity: 4.7, position: [-16, 17, 9] },
+  hemi: { sky: 0xdcd8d0, ground: 0x6e6a64, intensity: 1.35 },
   envIntensity: 0.5,
   exposure: 1.3,
-  floorTint: 0xb8ac9a,
-  pillarTint: 0xc4bcae,
+  floorTint: 0xbab6aa,
+  pillarTint: 0xd4d0c8,
   softTint: 0xc4b6a6,
   slab: 0x6a6258,
-  street: 0x4a4238,
-  grit: { tone: 0x7a644c, dirt: 0x584a3a, dust: 0x8e7a62 },
+  street: 0x42413e,
+  grit: { tone: 0x6c6458, dirt: 0x4c463c, dust: 0x8a8478 },
   // light pockets per district (world x, y, z): LED tubes under the deck (west and east of the pier court),
   // a sodium lamp over the bus pocket, bulbs in the shop lane, a lamp over the workshops
   lamps: [

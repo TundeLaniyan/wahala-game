@@ -104,7 +104,7 @@ describe('Ojuelegba board cover', () => {
         const x = pos.getX(i);
         const z = pos.getZ(i);
         expect(covered(x, z), `vertex ${x.toFixed(2)},${pos.getY(i).toFixed(2)},${z.toFixed(2)}`).toBe(true);
-        expect(pos.getY(i)).toBeLessThan(4.5); // the far perimeter buildings and the raised bus-stop name board (about 4.4 m) are the tallest cover
+        expect(pos.getY(i)).toBeLessThan(4.5); // the far perimeter buildings and the raised bus-stop name board (about 4.2 m) are the tallest cover
       }
     }
   });

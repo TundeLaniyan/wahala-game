@@ -434,10 +434,10 @@ export function linkBridge(ctx: SetContext): void {
       s.add(stringer);
     }
   }
-  // the direction board standing on the roof's south end, facing the camera: every destination in one place
+  // the direction board standing on the roof's north end, facing the camera: every destination in one place
   if (hasDom()) {
     for (const dx of [-1.8, 1.8])
-      s.add(cyl(0.04, 0.04, 1.3, P.steel, x - 1.5 + dx, deckY + 3.15, zS + 0.05, 6));
+      s.add(cyl(0.04, 0.04, 1.3, P.steel, x - 1.5 + dx, deckY + 3.15, zN + 0.05, 6));
     const tex = directionTexture(
       'ojuelegba:bridge',
       1280,
@@ -448,7 +448,7 @@ export function linkBridge(ctx: SetContext): void {
       ],
       31,
     );
-    board(ctx, tex, 2.6, 0.85, x - 0.5, deckY + 3.45, zS + 0.1); // shifted west so it stays off the board
+    board(ctx, tex, 2.6, 0.85, x - 0.5, deckY + 3.45, zN + 0.1); // north end of the roof: nearer the frame centre; west so it stays off the board
   }
 }
 
