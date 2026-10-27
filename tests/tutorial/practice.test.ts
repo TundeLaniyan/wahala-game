@@ -317,7 +317,8 @@ describe('Academy practices', () => {
       .map((e) => e.kind);
     expect(rewards).toEqual(['socket', 'petrol']);
     const me = r.match.state!.players[0]!;
-    expect(me.capacity).toBe(2);
+    // City Rumble starts on two generators (decision RE-C1); the socket reward makes it three
+    expect(me.capacity).toBe(3);
     expect(me.range).toBe(3);
   });
 

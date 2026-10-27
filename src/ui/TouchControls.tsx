@@ -69,7 +69,7 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
       }}
       onPointerMove={(e) => {
         if (e.pointerId !== stick.current.pointerId) return;
-        input.setTouchDir(stick.current.move(e.pointerId, e.clientX, e.clientY));
+        input.setTouchDir(stick.current.move(e.pointerId, e.clientX, e.clientY), stick.current.wish);
         show();
       }}
       onPointerUp={end}

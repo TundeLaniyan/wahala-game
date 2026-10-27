@@ -4,7 +4,7 @@
 // `ticks` of play), then the local player moved to each SPOTS entry ("x,y;x,y" tiles, default: the
 // north edge, the east edge, the centre) for a few seconds of live play each, and INSPECT close-ups
 // ("x,z,zoom;..." world points, unclamped) of the surroundings. Prints render stats and page errors.
-// Q=low|medium|high (default medium). HAZARD=1 waits for a stage warning before the `play` frame.
+// Q=low|medium|high (default medium). HAZARD=1 waits for a stage warning before the `play` frame. CLEAN=1 hides the HUD.
 // PREVIEW_OUT=<dir> also writes the 640 x 360 menu card image <dir>/<arenaId>.jpg (HUD hidden).
 import { mkdirSync } from 'node:fs';
 import { chromium } from '@playwright/test';
@@ -56,14 +56,25 @@ await page.goto(
   `${process.env.SHOT_URL ?? 'http://localhost:5206/'}?debug&noattract&q=${process.env.Q ?? 'medium'}&seed=7`,
 );
 await page.getByTestId('title-screen').waitFor({ timeout: 180000 });
-await page.getByTestId('start-button').click();
+// the Stitch menu starts the saved setup from Home with Quick play (the older single screen had Start)
+const quick = page.getByTestId('quick-play');
+await quick.or(page.getByTestId('start-button')).first().waitFor({ timeout: 180000 });
+if ((await quick.count()) > 0) await quick.click();
+else await page.getByTestId('start-button').click();
 await page.getByTestId('hud').waitFor();
 mark('hud');
 const arenaNow = await page.evaluate(() => window.__WAHALA__.getState().arenaId);
 if (arenaNow !== arena) throw new Error(`started ${arenaNow}, wanted ${arena}`);
 await page.waitForTimeout(1200);
-const shot = (name) =>
-  page.screenshot({ path: `${dir}/${arena}-${device}-${name}.jpg`, quality: 82, timeout: 240000 });
+// CLEAN=1: no HUD in any frame (unlabelled stills for recognition reviews)
+if (process.env.CLEAN)
+  await page.addStyleTag({ content: '.hud, .touch, .touch-controls { display: none !important; }' });
+const shot = async (name) => {
+  await page.screenshot({ path: `${dir}/${arena}-${device}-${name}.jpg`, quality: 82, timeout: 240000 });
+  // render cost of this frame (draw calls / triangles of the last rendered frame)
+  const st = await page.evaluate(() => window.__WAHALA__.stats());
+  console.error(`  ${name}: ${st.drawCalls} calls, ${(st.triangles / 1e6).toFixed(2)} M triangles`);
+};
 const run = async (ms) => {
   await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
   await page.waitForTimeout(ms);
@@ -90,6 +101,35 @@ if (process.env.HAZARD) {
 await run(Number(process.env.RUNMS ?? 1200));
 await shot('play');
 mark('play');
+
+// COST=1: where the draw calls of the `play` frame go - every top-level scene group (and the board cover /
+// the Ojuelegba overhead) hidden in turn, the frame re-rendered and the drop in calls / triangles printed
+if (process.env.COST) {
+  const rows = await page.evaluate(async () => {
+    const w = window.__WAHALA__;
+    const read = async () => {
+      w.advance(1);
+      await new Promise((r) => setTimeout(r, 300));
+      const st = w.stats();
+      return [st.drawCalls, st.triangles];
+    };
+    const [c0, t0] = await read();
+    const out = [`all: ${c0} calls, ${(t0 / 1e6).toFixed(2)} M`];
+    const scene = w.renderer().scene;
+    const named = [];
+    scene.traverse((o) => (o.name === 'boardCover' || o.name === 'ojuelegbaOverhead') && named.push(o));
+    for (const g of [...scene.children, ...named]) {
+      if (!g.visible) continue;
+      g.visible = false;
+      const [c, t] = await read();
+      g.visible = true;
+      const label = g.name || g.userData.grit || g.type;
+      if (c0 - c > 0) out.push(`  ${label}: ${c0 - c} calls, ${((t0 - t) / 1e6).toFixed(2)} M`);
+    }
+    return out.join('\n');
+  });
+  console.error(rows);
+}
 
 const spots = (process.env.SPOTS ?? '').split(';').filter(Boolean);
 for (const [n, spec] of spots.entries()) {

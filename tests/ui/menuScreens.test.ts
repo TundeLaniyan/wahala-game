@@ -19,6 +19,7 @@ import {
   VEHICLE_DEFS,
 } from '../../src/sim';
 import { LESSONS } from '../../src/tutorial';
+import { matchRules } from '../../src/app/names';
 
 vi.mock('../../src/app/session', () => ({
   commands: new Proxy({}, { get: () => () => undefined }),
@@ -106,6 +107,18 @@ describe('match setup shows only what the chosen mode uses', () => {
     expect(html).not.toContain('ff-on');
     expect(html).toContain('data-testid="mixed-roster"');
     expect(html).toContain('data-testid="diff-nightmare"');
+  });
+
+  it('every City Rumble ruleset offers the blast-shape experiment (radial by default); Classic does not', () => {
+    for (const rumbleMode of ['survival', 'deathmatch', 'team'] as const) {
+      const html = render(SetupScreen, { play: 'rumble', rumbleMode });
+      expect(html).toContain('data-testid="blast-radial"');
+      expect(html).toContain('data-testid="blast-cross"');
+    }
+    expect(render(SetupScreen, { play: 'classic' })).not.toContain('blast-radial');
+    expect(matchRulesText({ ...DEFAULT_GAME_SETTINGS, play: 'rumble' }).join(' ')).toMatch(/Radial blasts/);
+    expect(matchRulesText({ ...DEFAULT_GAME_SETTINGS, play: 'rumble', rumbleBlast: 'cross' }).join(' ')).toMatch(/Cross blasts/);
+    expect(matchRules({ ...DEFAULT_GAME_SETTINGS, play: 'rumble', rumbleBlast: 'cross' }).rumbleBlast).toBe('cross');
   });
 
   it('Deathmatch adds the match length; Team Rumble adds team splits and friendly fire', () => {

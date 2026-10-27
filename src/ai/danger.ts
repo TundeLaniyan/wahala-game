@@ -3,10 +3,13 @@
  * only from what `observe()` shows: burning flames, ticking / remote / disabled generators (with
  * chain reactions, soft-block clearing and V2 Square Blast footprints - the simulation's own
  * `squareFootprint`), vehicle lanes with arrival times, Wahala Crush landings and spectator throws. Windows are absolute ticks, so a map stays valid until the
- * visible world changes.
+ * visible world changes. City Rumble's radial blasts (decision RE-AI1) use the simulation's `radialFootprint`
+ * (ai/blast.ts) for every node, with the same chain relax and crate-cleared refine passes.
  */
 import { DIRS, DIR_VEC, Tile, squareFootprint } from '../sim';
 import type { Generator, TilePos, VehicleKind } from '../sim';
+import { radialBox, radialTiles } from './blast';
+import type { BlastGrid } from './blast';
 import type { AiProfile } from './profiles';
 import type { World } from './world';
 
@@ -113,6 +116,11 @@ export interface DangerQuery {
   detonateIds?: readonly number[];
   /** Leave out the "an enemy remote generator may go off at any moment" windows (certain hazards only). */
   ignoreHold?: boolean;
+  /**
+   * City Rumble (radial, decision RE-AI8): assume the worst chain. Ticking generators close enough that ONE more
+   * generator could link them (their boxes overlap) all go off with the earliest of their group.
+   */
+  linkedChains?: boolean;
 }
 
 interface GenNode {
@@ -157,6 +165,18 @@ export class DangerBuilder {
   private goneTiles: number[] = [];
   private goneValid = false;
   private order: number[] = [];
+  /** Refine pass: the crates cleared so far (tile indices). */
+  private goneList: number[] = [];
+  /**
+   * Radial blasts: tiles (x, y pairs) where this build's what-ifs add, remove or move a generator. A node's
+   * footprint depends only on the tiles and generators inside its own box, so a footprint computed for the
+   * same observation is reused unless one of these (or, in the refine pass, a cleared crate) lies in the box.
+   */
+  private perturb: number[] = [];
+  private readonly radialCache = new Map<
+    number,
+    { obs: object; x: number; y: number; range: number; pierce: boolean; square: number; tiles: number[] }
+  >();
 
   /** Rebuilds `map` from the current observation plus optional hypothetical objects. */
   build(map: DangerMap, world: World, profile: AiProfile, q: DangerQuery = {}): void {
@@ -177,8 +197,10 @@ export class DangerBuilder {
     // ---- generator nodes
     this.nodeCount = 0;
     this.head.fill(-1);
+    this.perturb.length = 0;
     obs.generators.forEach((g) => this.addNode(world, g, T, self, q));
     for (const h of q.extraGens ?? []) {
+      this.perturb.push(h.x, h.y);
       const n = this.acquire();
       n.id = -1;
       n.x = h.x;
@@ -204,6 +226,7 @@ export class DangerBuilder {
       this.relax();
       this.refine(world);
     }
+    if (q.linkedChains) this.collapseLinked(world, T);
 
     for (let i = 0; i < this.nodeCount; i++) {
       const n = this.nodes[i]!;
@@ -229,6 +252,7 @@ export class DangerBuilder {
   private addNode(world: World, g: Readonly<Generator>, T: number, self: number, q: DangerQuery): void {
     const n = this.acquire();
     const mv = q.moved?.get(g.id);
+    if (mv) this.perturb.push(g.x, g.y, mv.x, mv.y);
     n.id = g.id;
     n.x = mv ? mv.x : g.x;
     n.y = mv ? mv.y : g.y;
@@ -272,6 +296,10 @@ export class DangerBuilder {
     n.hits.length = 0;
     n.tiles.push(n.tile);
     for (let o = this.head[n.tile]!; o >= 0; o = this.next[o]!) if (o !== idx) n.hits.push(o);
+    if (obs.config.generator.blastMode === 'radial') {
+      this.radialArms(world, idx, useGone);
+      return;
+    }
     if (obs.config.generator.blastMode === 'fullLine') {
       // Power Yard: the whole row and column, through everything (mirrors explosions.ts)
       for (const d of DIRS) {
@@ -320,27 +348,133 @@ export class DangerBuilder {
     if (n.square > 0) this.squareArms(world, idx, useGone);
   }
 
-  /** V2 Square Blast: the square tiles the simulation's blast wave reaches, added to the plus (union). */
-  private squareArms(world: World, idx: number, useGone: boolean): void {
-    const n = this.nodes[idx]!;
+  /** The tile map blasts resolve against: the observation, or (refine pass) with `softGone` crates cleared. */
+  private grid(world: World, useGone: boolean): BlastGrid {
     const { obs, board } = world;
-    const w = board.width;
-    if (useGone && !this.goneValid) {
+    if (!useGone) return obs;
+    if (!this.goneValid) {
       const g = this.goneTiles;
       g.length = board.size;
       for (let t = 0; t < board.size; t++) g[t] = this.softGone[t] === 1 ? Tile.Empty : obs.tiles[t]!;
       this.goneValid = true;
     }
-    const grid = useGone ? { width: w, height: board.height, tiles: this.goneTiles } : obs;
-    const blocks = (x: number, y: number): boolean => {
-      for (let o = this.head[y * w + x]!; o >= 0; o = this.next[o]!) if (o !== idx) return true;
-      return false;
-    };
+    return { width: board.width, height: board.height, tiles: this.goneTiles };
+  }
+
+  /** Does a tile hold a triggerable node other than `idx` (it is hit and chains but passes no wave on)? */
+  private blocker(w: number, idx: number): (x: number, y: number) => boolean {
+    this.blockW = w;
+    this.blockIdx = idx;
+    return this.blocks;
+  }
+
+  private blockW = 0;
+  private blockIdx = -1;
+  /** One function object for every footprint (no per-node closure); reads blockW / blockIdx. */
+  private readonly blocks = (x: number, y: number): boolean => {
+    for (let o = this.head[y * this.blockW + x]!; o >= 0; o = this.next[o]!) if (o !== this.blockIdx) return true;
+    return false;
+  };
+
+  /** Is any (x, y) of `list` (pairs, or tile indices when `stride` is 1) inside the box of half-size `box`? */
+  private near(list: readonly number[], stride: 1 | 2, cx: number, cy: number, box: number, w: number): boolean {
+    for (let i = 0; i < list.length; i += stride) {
+      const x = stride === 2 ? list[i]! : list[i]! % w;
+      const y = stride === 2 ? list[i + 1]! : Math.floor(list[i]! / w);
+      if (Math.abs(x - cx) <= box && Math.abs(y - cy) <= box) return true;
+    }
+    return false;
+  }
+
+  /** City Rumble radial blast: the simulation's footprint (disc or Square Blast square, with cover shadows). */
+  private radialArms(world: World, idx: number, useGone: boolean): void {
+    const n = this.nodes[idx]!;
+    const { obs } = world;
+    const w = world.board.width;
+    const box = radialBox(obs, n.range, n.square);
+    const local = n.id >= 0 && !this.near(this.perturb, 2, n.x, n.y, box, w);
+    const gone = useGone && this.near(this.goneList, 1, n.x, n.y, box, w);
+    let tiles: number[];
+    if (local && !gone) {
+      // nothing this build changes reaches the footprint: the observation's own footprint (cached)
+      const e = this.radialCache.get(n.id);
+      if (e && e.obs === obs && e.x === n.x && e.y === n.y && e.range === n.range && e.pierce === n.pierce && e.square === n.square) {
+        tiles = e.tiles;
+      } else {
+        tiles = [];
+        radialTiles(obs, obs, n.x, n.y, n.range, n.pierce, n.square, this.blocker(w, idx), tiles);
+        this.radialCache.set(n.id, { obs, x: n.x, y: n.y, range: n.range, pierce: n.pierce, square: n.square, tiles });
+      }
+    } else {
+      tiles = [];
+      radialTiles(obs, this.grid(world, useGone), n.x, n.y, n.range, n.pierce, n.square, this.blocker(w, idx), tiles);
+    }
+    for (const t of tiles) {
+      n.tiles.push(t);
+      for (let o = this.head[t]!; o >= 0; o = this.next[o]!) if (o !== idx) n.hits.push(o);
+    }
+  }
+
+  /** V2 Square Blast: the square tiles the simulation's blast wave reaches, added to the plus (union). */
+  private squareArms(world: World, idx: number, useGone: boolean): void {
+    const n = this.nodes[idx]!;
+    const { obs, board } = world;
+    const w = board.width;
+    const grid = useGone ? this.grid(world, true) : obs;
+    const blocks = this.blocker(w, idx);
     for (const p of squareFootprint(grid, n.x, n.y, n.square, blocks)) {
       const t = p.y * w + p.x;
       if (n.tiles.includes(t)) continue;
       n.tiles.push(t);
       for (let o = this.head[t]!; o >= 0; o = this.next[o]!) if (o !== idx && !n.hits.includes(o)) n.hits.push(o);
+    }
+  }
+
+  private readonly groupOf: number[] = [];
+
+  /**
+   * Linked-chain worst case: generators whose radial boxes are at most one generator apart (Chebyshev distance
+   * <= box a + box b) form a group; every timed member of a group is assumed to go off with its earliest member.
+   * Remote holds and disarmed generators keep their own timing.
+   */
+  private collapseLinked(world: World, T: number): void {
+    const { obs } = world;
+    const n = this.nodeCount;
+    const group = this.groupOf;
+    group.length = n;
+    const find = (i: number): number => {
+      while (group[i] !== i) i = group[i] = group[group[i]!]!;
+      return i;
+    };
+    const box: number[] = [];
+    for (let i = 0; i < n; i++) {
+      group[i] = i;
+      const a = this.nodes[i]!;
+      box[i] = radialBox(obs, a.range, a.square);
+    }
+    for (let i = 0; i < n; i++) {
+      const a = this.nodes[i]!;
+      if (a.explodeAt >= NEVER || a.hold) continue;
+      for (let j = i + 1; j < n; j++) {
+        const b = this.nodes[j]!;
+        if (b.explodeAt >= NEVER || b.hold) continue;
+        if (Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) > box[i]! + box[j]!) continue;
+        const ra = find(i);
+        const rb = find(j);
+        if (ra !== rb) group[ra] = rb;
+      }
+    }
+    const earliest = new Map<number, number>();
+    for (let i = 0; i < n; i++) {
+      const a = this.nodes[i]!;
+      if (a.explodeAt >= NEVER || a.hold) continue;
+      const r = find(i);
+      earliest.set(r, Math.min(earliest.get(r) ?? NEVER, a.explodeAt));
+    }
+    for (let i = 0; i < n; i++) {
+      const a = this.nodes[i]!;
+      if (a.explodeAt >= NEVER || a.hold) continue;
+      a.explodeAt = Math.max(T, Math.min(a.explodeAt, earliest.get(find(i))!));
     }
   }
 
@@ -370,6 +504,7 @@ export class DangerBuilder {
     if (this.nodeCount < 2) return;
     this.softGone.fill(0);
     this.goneValid = false;
+    this.goneList.length = 0;
     this.order.length = 0;
     for (let i = 0; i < this.nodeCount; i++) if (this.nodes[i]!.explodeAt < NEVER) this.order.push(i);
     this.order.sort((a, b) => this.nodes[a]!.explodeAt - this.nodes[b]!.explodeAt);
@@ -383,6 +518,7 @@ export class DangerBuilder {
         for (const t of this.nodes[this.order[q]!]!.tiles)
           if (obs.tiles[t] === Tile.Soft && this.softGone[t] === 0) {
             this.softGone[t] = 1;
+            this.goneList.push(t);
             this.goneValid = false;
           }
       }

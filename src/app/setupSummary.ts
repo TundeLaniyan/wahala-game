@@ -60,6 +60,7 @@ export function setupSummary(s: GameSettings): string {
   else parts.push(`${n} fighters`);
   if (s.rumbleMode !== 'survival') parts.push(`${s.rumbleMinutes} min`);
   if (s.rumbleMode === 'team' && s.friendlyFire) parts.push('friendly fire');
+  if (s.rumbleBlast === 'cross') parts.push('cross blasts');
   parts.push(arena.name.replace(/^WAHALA! /, ''), botsLabel(s));
   return parts.join(' · ');
 }

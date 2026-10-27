@@ -2,6 +2,27 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## City Rumble Evolution V1 (branch `claude/wahala-rumble-evolution-v1`, from `408fb4d`)
+
+Founder brief of 2026-10-26 plus the late research pack (report and contracts: `RUMBLE_EVOLUTION.md`; research
+verdicts: `RUMBLE_RESEARCH_DIGEST.md`; roadmap: `RUMBLE_ROADMAP.md`; decisions: `DECISIONS.md` section RE). One lead
+plus five parallel workstreams in separate worktrees, all merged. Classic Battle is unchanged. Not published to Pages.
+
+| Area | Delivered | Main tests |
+| --- | --- | --- |
+| Radial blast (Rumble) | One shared footprint (`sim/systems/blastShape.ts`): grid disc `dx^2+dy^2 <= R^2+R`, wave + line-of-sight cover, Hot Fuel, Square Blast successor; flames, `previewBlast`, voice warning and bots all use it; Rumble-only switch radial (default) / cross | `tests/radial-blast.test.ts`, `tests/ai/radial*.test.ts`, `e2e/rumble-evolution.spec.ts` |
+| Generators and rewards | Two starting generators in Rumble; radius cap 5, square cap 6 (no dead ladder rungs); eight marked `$` supply crates per stage (finite, public marking); measurement harness `scripts/rumble-metrics.ts` | `tests/rumble-economy-evolution.test.ts`, `tests/economy*.test.ts` |
+| Assisted movement | Input-layer only: early turns (2 tiles), sidestep, diagonal-thumb wish, switch settling, danger-safe substitutions; `moveAssist` auto / on / off in Settings | `tests/input-assist*.test.ts`, `e2e/mobile.spec.ts` |
+| Bots | Radial-aware danger maps, cover, worst-chain placement, two-generator cut-offs, supply interest; Classic decisions byte-identical | `tests/ai/*`, `tests/modes-bots.test.ts`, `tests/economy-ai.test.ts` |
+| Ojuelegba | Five districts (45 x 33, non-mirrored) on the research link graph, breach partition, merged-object cover, deck cutaway, attack lanes, Danfo pull-out | `tests/rumble-ojuelegba.test.ts`, `tests/rumble-stages.test.ts`, `tests/render/ojuelegba-cover.test.ts` |
+| Living environment | `StageEnvironment` contract, ambient traffic off the board, protected crowd zones with reactions, budgets per tier, departure hazard with escape guard | `tests/living-env.test.ts`, `tests/render/env-plan.test.ts`, `tests/stage-hazards.test.ts` |
+
+Verification (container: 4 cores, software WebGL):
+- `npx tsc --noEmit`, `npx eslint .`: clean. `npx vitest run`: 98 files, 1469 passed, 5 skipped, 0 failed. `npm run build`: ok.
+- Playwright, every spec on the release build, desktop + phone: 113 passed, 27 skipped (project-specific), 0 failed.
+- Final legacy vs evolution bot measurement: `docs/measurements/rumble-evolution-final.md` (summary in
+  `RUMBLE_EVOLUTION.md` L.2).
+- Not measured: physical phones (frame rate, touch feel), human playtests, recognition review. Limits: L.4.
 ## CI: parallel browser shards and gated releases (branch `claude/wahala-ci-parallel-shards`, from `408fb4d`)
 
 Founder brief of 2026-10-26: end the two-hour CI cycles without weakening the checks. CI/CD only; no gameplay,

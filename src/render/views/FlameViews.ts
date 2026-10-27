@@ -157,7 +157,9 @@ export class FlameViews implements View {
       if (env <= 0.002) continue;
       const flick = 0.9 + 0.24 * Math.sin(time * 28 + st.phase);
       // sized to rise over the character-height obstacles around the lane
-      const size = (f.dir === null ? 2.95 : f.tip ? 1.9 : 2.35) * flick * (0.85 + env * 0.35);
+      // City Rumble radial tiles (off the row / column) burn like arm tiles, never like a second centre
+      const centre = f.dir === null && !f.square && !f.radial;
+      const size = (centre ? 2.95 : f.tip ? 1.9 : 2.35) * flick * (0.85 + env * 0.35);
       const vertical = f.dir === 'up' || f.dir === 'down';
 
       // floor glow (additive: the colour is the fade). Square Blast tiles burn electric blue-white on
@@ -201,7 +203,7 @@ export class FlameViews implements View {
       );
       if (f.square) this.hot.push(x, 0.44, z, size * 0.6, size * 0.66, 0.62, 0.86, 1, env * (0.8 + 0.2 * flick));
       else this.hot.push(x, 0.44, z, size * 0.62, size * 0.68, 1, 0.76, 0.32, env * (0.76 + 0.2 * flick));
-      if (f.dir === null && !f.square) {
+      if (centre) {
         const cs = 2.6 * (1.15 - k * 0.4);
         this.core.push(x, 0.48, z, cs, cs, 1, 0.565, 0.216, env);
         const xs = 1.15 * (0.92 + 0.12 * flick);
@@ -227,7 +229,7 @@ export class FlameViews implements View {
     let radius = 1;
     for (const o of ctx.state.flames) {
       if (o.genId !== f.genId) continue;
-      if (o.dir === null && !o.square) {
+      if (o.dir === null && !o.square && !o.radial) {
         cx = o.x;
         cy = o.y;
       }

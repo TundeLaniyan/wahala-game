@@ -28,9 +28,21 @@ function walk(state: EntryView, from: TilePos, dir: Dir, includeStart: boolean):
   return out;
 }
 
-/** Every perimeter tile paired with its inward direction (corners appear once per side). */
+/**
+ * Every perimeter tile paired with its inward direction (corners appear once per side) - or, when the arena
+ * names attack lanes (`config.vehicles.lanes`), only those road mouths that sit on the border.
+ */
 export function allBorderEntries(state: EntryView): VehicleEntry[] {
   const { width: w, height: h } = state;
+  const lanes = state.config.vehicles.lanes;
+  if (lanes) {
+    const onBorder = ([x, y, dir]: [number, number, Dir]): boolean =>
+      (dir === 'down' && y === 0) ||
+      (dir === 'up' && y === h - 1) ||
+      (dir === 'right' && x === 0) ||
+      (dir === 'left' && x === w - 1);
+    return lanes.filter(onBorder).map(([x, y, dir]) => ({ x, y, dir }));
+  }
   const out: VehicleEntry[] = [];
   for (let x = 0; x < w; x++) out.push({ x, y: 0, dir: 'down' });
   for (let y = 0; y < h; y++) out.push({ x: w - 1, y, dir: 'left' });

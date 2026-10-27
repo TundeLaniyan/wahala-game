@@ -1,6 +1,8 @@
 import { CHARACTER_IDS, DIFFICULTIES, EXPERIMENTAL_ARENA_IDS, RUMBLE_ARENA_IDS, STANDARD_ARENA_IDS } from '../sim';
 import type { CharacterId, Difficulty } from '../sim';
 import type { CameraView, QualityLevel } from '../render';
+import { MOVE_ASSIST_SETTINGS } from '../input/moveAssist';
+import type { MoveAssistSetting } from '../input/moveAssist';
 
 export type SubtitleMode = 'off' | 'on' | 'large';
 export const SUBTITLE_MODES: readonly SubtitleMode[] = ['off', 'on', 'large'];
@@ -47,6 +49,10 @@ export interface GameSettings {
   shake: ShakeSetting;
   /** V2: tutorial narration (approved voice clips) on/off. */
   narration: boolean;
+  /** Rumble Evolution: assisted movement (decisions RE-A). Auto = on for touch, the plain corner buffer with keyboard / gamepad. */
+  moveAssist: MoveAssistSetting;
+  /** Rumble Evolution experiment (decision RE-L2): City Rumble blast shape, radial (default) or the Classic cross. */
+  rumbleBlast: 'radial' | 'cross';
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
@@ -72,6 +78,8 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   subtitles: 'off',
   shake: 'auto',
   narration: true,
+  moveAssist: 'auto',
+  rumbleBlast: 'radial',
 };
 
 export const SETTINGS_KEY = 'wahala.settings.v1';
@@ -84,7 +92,7 @@ export const RUMBLE_SIZES = [8, 16, 24, 32] as const;
  * The device / presentation preferences (Settings screen), as opposed to the match setup. "Restore
  * defaults" resets exactly these; the chosen game, fighter, arena and bots are never touched by it.
  */
-export const PREFERENCE_KEYS = ['quality', 'touchControls', 'cameraView', 'subtitles', 'shake', 'narration', 'muted'] as const;
+export const PREFERENCE_KEYS = ['quality', 'touchControls', 'cameraView', 'subtitles', 'shake', 'narration', 'muted', 'moveAssist'] as const;
 export type PreferenceKey = (typeof PREFERENCE_KEYS)[number];
 
 export function preferenceDefaults(): Pick<GameSettings, PreferenceKey> {
@@ -97,6 +105,7 @@ export function preferenceDefaults(): Pick<GameSettings, PreferenceKey> {
     shake: d.shake,
     narration: d.narration,
     muted: d.muted,
+    moveAssist: d.moveAssist,
   };
 }
 
@@ -135,6 +144,8 @@ export function sanitizeSettings(s: GameSettings): GameSettings {
     subtitles: oneOf(s.subtitles, SUBTITLE_MODES, 'off'),
     shake: oneOf(s.shake, ['auto', 'off', 'subtle'] as const, d.shake),
     narration: bool(s.narration, d.narration),
+    moveAssist: oneOf(s.moveAssist, MOVE_ASSIST_SETTINGS, d.moveAssist),
+    rumbleBlast: oneOf(s.rumbleBlast, ['radial', 'cross'] as const, d.rumbleBlast),
   };
 }
 

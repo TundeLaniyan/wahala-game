@@ -7,6 +7,7 @@ import {
   Tile,
   createGame,
   getArena,
+  laneEscapeSteps,
   listEntries,
   tick,
 } from '../src/sim';
@@ -30,7 +31,7 @@ const V2 = [
 const SIZE: Record<(typeof V2)[number], [number, number]> = {
   rumbleOshodi: [41, 31],
   rumbleLagosIsland: [41, 31],
-  rumbleOjuelegba: [41, 31],
+  rumbleOjuelegba: [45, 33],
   rumbleApapa: [45, 31],
   rumbleLekkiNight: [41, 31],
 };
@@ -79,6 +80,9 @@ describe('Rumble stage registry', () => {
     expect(RUMBLE_ARENA_IDS).toEqual([...V2, 'cityRumble']);
     expect(STANDARD_ARENA_IDS).toHaveLength(9);
     for (const id of RUMBLE_ARENA_IDS) expect(getArena(id).kind).toBe('rumble');
+    // only the five-district Ojuelegba is authored without mirroring (its own fairness checks replace the
+    // mirror checks below); every other stage stays 4-fold symmetric
+    expect(V2.filter((id) => !getArena(id).mirrorSoftBlocks)).toEqual(['rumbleOjuelegba']);
   });
 
   it('every Rumble stage uses the follow (stadium) camera', () => {
@@ -118,7 +122,9 @@ describe('Rumble stage registry', () => {
     expect(stats.rumbleLagosIsland!.chokepoints).toBeGreaterThan(50);
     for (const id of V2) if (id !== 'rumbleLagosIsland') expect(stats[id]!.chokepoints).toBeLessThan(20);
     expect(stats.rumbleLagosIsland!.avgCorridor).toBeLessThan(7);
-    expect(stats.rumbleOjuelegba!.avgCorridor).toBeGreaterThan(stats.rumbleApapa!.avgCorridor);
+    // Ojuelegba is the multi-district stage (workstream D): five named districts on a non-mirrored board
+    expect(getArena('rumbleOjuelegba').districts?.length).toBe(5);
+    for (const id of V2) if (id !== 'rumbleOjuelegba') expect(getArena(id).districts).toBeUndefined();
     expect(stats.rumbleOshodi!.roadPct).toBeGreaterThan(20);
     expect(stats.rumbleLekkiNight!.roadPct).toBeLessThan(12);
     expect(stats.rumbleLekkiNight!.openPct).toBeGreaterThan(80);
@@ -131,7 +137,8 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
 
   it('is a large board for up to 32 competitors that always closes in, with menu info', () => {
     expect([W, H]).toEqual(SIZE[id]);
-    for (const row of a.layout) expect(row).toMatch(new RegExp(`^[#=.]{${W}}$`));
+    // # concrete, = road, . floor, plus the Rumble Evolution cover marks (_ kept clear, x barrier, $ supply crate)
+    for (const row of a.layout) expect(row).toMatch(new RegExp(`^[#=._x$]{${W}}$`));
     expect(a.kind).toBe('rumble');
     expect(a.maxPlayers).toBe(32);
     expect(a.forcedMode).toBe('crush');
@@ -140,15 +147,42 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
     expect(a.info.hazards.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('is 4-fold mirror symmetric (every quarter of the city faces the same streets)', () => {
-    for (let y = 0; y < H; y++)
-      for (let x = 0; x < W; x++) {
-        expect(at(a, W - 1 - x, y), `${x},${y}`).toBe(at(a, x, y));
-        expect(at(a, x, H - 1 - y), `${x},${y}`).toBe(at(a, x, y));
-      }
+  it.runIf(a.mirrorSoftBlocks)(
+    'is 4-fold mirror symmetric (every quarter of the city faces the same streets)',
+    () => {
+      for (let y = 0; y < H; y++)
+        for (let x = 0; x < W; x++) {
+          expect(at(a, W - 1 - x, y), `${x},${y}`).toBe(at(a, x, y));
+          expect(at(a, x, H - 1 - y), `${x},${y}`).toBe(at(a, x, y));
+        }
+    },
+  );
+
+  it.runIf(!a.mirrorSoftBlocks)('is not mirrored but its two team halves hold comparable ground', () => {
+    // Team Rumble splits west / east by x: each half (the centre column left out) has about as much open
+    // floor, road and permanent cover as the other
+    const count = (west: boolean, c: (ch: string) => boolean): number => {
+      let n = 0;
+      for (let y = 0; y < H; y++)
+        for (let x = 0; x < W; x++) if ((west ? x < (W - 1) / 2 : x > (W - 1) / 2) && c(at(a, x, y))) n++;
+      return n;
+    };
+    const near = (p: number, q: number, tol: number): void =>
+      expect(Math.abs(p - q) / Math.max(p, q), `${p} vs ${q}`).toBeLessThanOrEqual(tol);
+    near(
+      count(true, (c) => c !== '#'),
+      count(false, (c) => c !== '#'),
+      0.08,
+    );
+    near(
+      count(true, (c) => c === '#'),
+      count(false, (c) => c === '#'),
+      0.35,
+    );
+    expect(count(true, (c) => c === '$')).toBe(count(false, (c) => c === '$'));
   });
 
-  it('has 32 distinct spawns on open floor with a clear way out, spread out and mirror-paired for teams', () => {
+  it('has 32 distinct spawns on open floor with a clear way out, spread out and balanced for teams', () => {
     expect(a.spawns).toHaveLength(32);
     expect(new Set(a.spawns.map((s) => `${s.x},${s.y}`)).size).toBe(32);
     for (const s of a.spawns) {
@@ -158,12 +192,22 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
       for (const o of a.spawnClearance)
         expect(at(a, s.x + o.x * sx, s.y + o.y * sy), `clearance of ${s.x},${s.y}`).toBe('.');
     }
-    // slot 2k on the west half, slot 2k + 1 its exact 180-degree mirror: id % 2 teams are side vs side
-    for (let k = 0; k < 16; k++) {
-      const p = a.spawns[2 * k]!;
-      const q = a.spawns[2 * k + 1]!;
-      expect(p.x).toBeLessThan(W / 2);
-      expect(q).toEqual({ x: W - 1 - p.x, y: H - 1 - p.y });
+    if (a.mirrorSoftBlocks) {
+      // slot 2k on the west half, slot 2k + 1 its exact 180-degree mirror: id % 2 teams are side vs side
+      for (let k = 0; k < 16; k++) {
+        const p = a.spawns[2 * k]!;
+        const q = a.spawns[2 * k + 1]!;
+        expect(p.x).toBeLessThan(W / 2);
+        expect(q).toEqual({ x: W - 1 - p.x, y: H - 1 - p.y });
+      }
+    } else {
+      // a non-mirrored stage (Ojuelegba) cannot pair spawns by mirror: slots alternate west / east instead, so
+      // every even prefix is half and half, and each half's starts are comparable (tests/rumble-ojuelegba.test.ts
+      // checks the walking distances to the core and to the supply crates per half)
+      for (let k = 0; k < 16; k++) {
+        expect(a.spawns[2 * k]!.x).toBeLessThan(W / 2);
+        expect(a.spawns[2 * k + 1]!.x).toBeGreaterThan(W / 2);
+      }
     }
     const minGap = (n: number): number => {
       const s = a.spawns.slice(0, n);
@@ -217,9 +261,23 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
             expect(at(a, t[0], t[1]), `route tile ${t}`).toBe('=');
             if (i > 0) expect(Math.abs(t[0] - route[i - 1]![0]) + Math.abs(t[1] - route[i - 1]![1])).toBe(1);
           });
-          // traffic enters from the edge of the board, never out of thin air in the middle
-          const [x0, y0] = route[0]!;
-          expect(x0 === 0 || y0 === 0 || x0 === W - 1 || y0 === H - 1, `route start ${x0},${y0}`).toBe(true);
+          // traffic enters from the edge of the board, never out of thin air in the middle. A flagged DEPARTURE
+          // (a parked Danfo pulling out of a bay) is the one exception: it starts on a road tile at its bay and
+          // must leave at the board edge instead (RE-E3).
+          const onEdge = ([x, y]: readonly [number, number]): boolean => x === 0 || y === 0 || x === W - 1 || y === H - 1;
+          if (h.depart) {
+            expect(onEdge(route[route.length - 1]!), `departure end ${route[route.length - 1]}`).toBe(true);
+            // fairness (RE-E3): from every lane tile the slowest fighter walks off the lane before the Danfo gets there
+            const lane = route.map(([x, y]) => y * W + x);
+            const steps = laneEscapeSteps(W, H, lane, (i) => !'#x$'.includes(a.layout[Math.floor(i / W)]![i % W]!));
+            const slowest = Math.max(...DEFAULT_CONFIG.movement.stepTicksBySpeedLevel);
+            steps.forEach((n, j) =>
+              expect(n * slowest + DEFAULT_CONFIG.stage.escapeInputTicks, `departure lane tile ${j}`).toBeLessThanOrEqual(
+                Math.max(h.warnSec * 60, DEFAULT_CONFIG.stage.minLethalWarnTicks) + j * h.stepTicks,
+              ),
+            );
+          }
+          else expect(onEdge(route[0]!), `route start ${route[0]}`).toBe(true);
         }
       } else if (h.kind === 'strike') {
         expect(h.zones.length > 0 || h.targetPlayers).toBe(true);

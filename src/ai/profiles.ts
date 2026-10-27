@@ -353,3 +353,21 @@ export const PROFILES: Readonly<Record<Difficulty, AiProfile>> = {
     teamwork: 1,
   }),
 };
+
+const radialProfiles = new WeakMap<AiProfile, AiProfile>();
+
+/**
+ * City Rumble's radial blast (decision RE-AI8): every level sees chain reactions and checks its way out before
+ * putting a generator down. With two generators each and discs instead of lanes, chain blindness and unchecked
+ * placements stop being a difficulty knob and become self-destruction (the low levels' own second generator
+ * set their first off under them). Every other handicap (cadence, reactions, lookahead, mistakes, hesitation,
+ * hunting, specials) is kept. Classic never uses this.
+ */
+export function radialProfile(p: AiProfile): AiProfile {
+  let r = radialProfiles.get(p);
+  if (!r) {
+    r = p.chains && p.placeVerify >= 1 ? p : { ...p, chains: true, placeVerify: 1 };
+    radialProfiles.set(p, r);
+  }
+  return r;
+}

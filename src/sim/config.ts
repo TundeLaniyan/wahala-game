@@ -2,7 +2,7 @@
  * Central balance configuration. Every tunable number in the simulation lives here so playtest
  * tuning never touches rules code. All durations are in ticks; use `ticks(seconds)` to author them.
  */
-import type { CharacterId, PickupKind, SkillKind, VehicleKind } from './types';
+import type { CharacterId, Dir, PickupKind, SkillKind, VehicleKind } from './types';
 
 /**
  * V2 elimination reward: a pickup kind, or `contact` = the eliminator's generator-contact ability
@@ -60,9 +60,13 @@ export interface GameConfig {
      * Blast shape. `plus` is the normal rule (range-limited, concrete stops it, the first soft block
      * absorbs it). `fullLine` is the Surulere Power Yard rule: every blast covers its ENTIRE row and
      * column up to the arena boundary, passing through (and breaking) every block in the line.
-     * Set only through an arena's config overrides, never globally.
+     * Set only through an arena's config overrides, never globally. `radial` is the City Rumble shape
+     * (systems/blastShape.ts): a grid disc of radius `range` (capped by `maxRange`) shadowed by walls and
+     * crates; set by the Rumble rulesets (`RUMBLE_ECONOMY`), never in Classic.
      */
-    blastMode: 'plus' | 'fullLine';
+    blastMode: 'plus' | 'fullLine' | 'radial';
+    /** Radial mode only: the largest square a Square Blast tier can make of the disc (radius). */
+    radialMaxSquareRadius: number;
   };
   pickups: {
     /** Chance a soft block hides a pickup. */
@@ -91,9 +95,22 @@ export interface GameConfig {
     minRouteTiles: number;
     minKekeLegTiles: number;
     specs: Record<VehicleKind, VehicleSpec>;
+    /**
+     * City Rumble Evolution: the board-edge entrances summoned attack vehicles may use (road mouths), as
+     * [x, y, inward dir]. Null = every border tile (the default). Set by an arena's config only.
+     */
+    lanes: [number, number, Dir][] | null;
   };
   drops: {
     maxDeathDrops: number;
+  };
+  /**
+   * City Rumble Evolution (decision RE-C3): marked supply crates (`$` in an arena layout) each hold one basic
+   * upgrade, drawn from these kinds with the match RNG. They exist only where an arena places them and never
+   * refill, so scenery can never be farmed.
+   */
+  supply: {
+    kinds: PickupKind[];
   };
   arena: {
     softDensity: number;
@@ -234,6 +251,11 @@ export interface GameConfig {
     dropMinPlayerDistance: number;
     /** Lethal stage events stop this long before the end, and when Wahala Crush starts closing. */
     quietRemainingTicks: number;
+    /**
+     * Departure hazards: input allowance added to a fighter's walking time when checking that everyone on the
+     * lane can step off it before it turns lethal (RE-E3).
+     */
+    escapeInputTicks: number;
   };
 }
 
@@ -265,6 +287,7 @@ export const DEFAULT_CONFIG: GameConfig = {
     throwTicks: ticks(0.4),
     weakFireRange: 1,
     blastMode: 'plus',
+    radialMaxSquareRadius: 4,
   },
   pickups: {
     hiddenChance: 0.45,
@@ -316,9 +339,13 @@ export const DEFAULT_CONFIG: GameConfig = {
       taxi: { stepTicks: 7, resistance: 6, softLimit: 2, playerHitLimit: 1, turns: false },
       keke: { stepTicks: 8, resistance: 4, softLimit: 1, playerHitLimit: 2, turns: true },
     },
+    lanes: null,
   },
   drops: {
     maxDeathDrops: 2,
+  },
+  supply: {
+    kinds: ['socket', 'petrol'],
   },
   arena: {
     softDensity: 0.62,
@@ -413,6 +440,7 @@ export const DEFAULT_CONFIG: GameConfig = {
     teleportArriveTicks: ticks(0.3),
     dropMinPlayerDistance: 2,
     quietRemainingTicks: ticks(5),
+    escapeInputTicks: ticks(0.2),
   },
 };
 
@@ -422,9 +450,23 @@ export const DEFAULT_CONFIG: GameConfig = {
  * remains are technical limits: the Square Blast stops at 7 x 7 and generator capacity at 10 (danger
  * maps / explosion work stay bounded with 32 fighters), flame reach at 10 (the plus still stops at
  * concrete), and three Armour plates. Movement speed keeps its standard ceiling (grid step timing).
+ *
+ * City Rumble Evolution (decisions RE-B1, RE-C1): Rumble blasts are radial (`blastMode: 'radial'`,
+ * systems/blastShape.ts) with the radius capped at 5 (a 97-tile disc; `maxRange` is the radius cap in radial
+ * mode), and every fighter starts with two generators (`baseCapacity: 2`). Classic is untouched.
+ *
+ * Decision RE-C4: the Square Blast squares the disc off up to radius 6 (13 x 13) instead of the Phase 0 radius 4,
+ * so the second tier still widens a radius-5 blast (at radius 4 the square never grew past the disc cap's own
+ * square and tiers 2-3 paid nothing); `rewards.ts` skips a tier that would not widen the footprint.
  */
 export const RUMBLE_ECONOMY = {
-  generator: { maxCapacity: 10, maxRange: 10 },
+  generator: {
+    maxCapacity: 10,
+    maxRange: 5,
+    baseCapacity: 2,
+    blastMode: 'radial' as const,
+    radialMaxSquareRadius: 6,
+  },
   protection: { maxArmour: 3 },
   square: { maxTier: 3, radiusByTier: [0, 1, 2, 3] },
   rewards: { enabled: true },

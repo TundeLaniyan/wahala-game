@@ -1,7 +1,10 @@
 import type { Dir, Intent } from '../sim';
 import { GamepadInput } from './gamepad';
 import { KeyboardInput } from './keyboard';
+import { SWITCH_SETTLE_TICKS, resolveAssistLevel } from './moveAssist';
+import type { AssistLevel, MoveAssistSetting, MoveBoard } from './moveAssist';
 import { MoveGate } from './moveGate';
+import type { GateAssist } from './moveGate';
 import { SpecialHold } from './specialHold';
 import type { ActionName, InputSourceName, NavCommand } from './types';
 
@@ -20,6 +23,11 @@ export interface IntentContext {
   remoteReady?: boolean;
   /** Would a move this way do anything right now (step, kick ...)? Enables the corner-turn buffer. */
   legal?: (dir: Dir) => boolean;
+  /**
+   * Assisted movement: the local player's surroundings (built lazily, only when a decision needs them).
+   * Without it - tutorial scripts, spectators, older callers - movement is exactly the unassisted gate.
+   */
+  board?: () => MoveBoard;
 }
 
 /**
@@ -31,6 +39,9 @@ export class InputManager {
   private readonly keyboard: KeyboardInput;
   private readonly gamepad: GamepadInput;
   private touchDir: Dir | null = null;
+  /** Diagonal thumb: the secondary axis (see `VirtualStick.wish`). */
+  private touchWish: Dir | null = null;
+  private moveAssist: MoveAssistSetting = 'auto';
   private readonly gate = new MoveGate();
   private readonly b = new SpecialHold();
   /** Last tick handed to `buildIntent`; presses between ticks are stamped with it. */
@@ -104,13 +115,28 @@ export class InputManager {
    * On-screen thumbstick: `dir` is its quantised cardinal direction, null in the dead zone or once the
    * finger lifts. A new direction is a new press (one tile); holding repeats at the step cadence.
    */
-  setTouchDir(dir: Dir | null): void {
+  setTouchDir(dir: Dir | null, wish: Dir | null = null): void {
+    this.touchWish = dir ? wish : null;
     if (dir === this.touchDir) return;
+    const switching = this.touchDir !== null && dir !== null;
     this.touchDir = dir;
     if (!dir) return;
     this.device('touch');
-    this.gate.press(dir, this.tickNow);
+    // a thumb that goes straight from one direction to another may be mid-swipe through the centre: a
+    // moment of settling (full assistance only) lets the real direction overwrite a stray one
+    const settle = switching && this.assistLevel === 'full' ? SWITCH_SETTLE_TICKS : 0;
+    this.gate.press(dir, this.tickNow, settle);
     this.events.onNav(dir);
+  }
+
+  /** Settings > Assisted movement. */
+  setMoveAssist(setting: MoveAssistSetting): void {
+    this.moveAssist = setting;
+  }
+
+  /** What assisted movement does right now (the setting, resolved for the device in use). */
+  get assistLevel(): AssistLevel {
+    return resolveAssistLevel(this.moveAssist, this.lastDevice);
   }
 
   /** Touch confirm/cancel buttons of the (tutorial) vehicle-entry overlay. */
@@ -140,7 +166,17 @@ export class InputManager {
     this.remoteReady = c.remoteReady ?? false;
     let move: Dir | null = null;
     if (this.navMode) this.gate.clear();
-    else move = this.gate.next(tick, this.heldDir(), this.activeDirs(), c.canMove ?? true, c.legal);
+    else {
+      const held = this.heldDir();
+      move = this.gate.next(
+        tick,
+        held,
+        this.activeDirs(),
+        c.canMove ?? true,
+        c.legal,
+        this.gateAssist(c, held),
+      );
+    }
     const intent: Intent = { move };
     const b = this.b.take(tick);
     if (!this.navMode) {
@@ -156,6 +192,16 @@ export class InputManager {
     this.placePending = false;
     this.b.clear();
     this.gate.clear();
+  }
+
+  private gateAssist(c: IntentContext, held: Dir | null): GateAssist | undefined {
+    const level = this.assistLevel;
+    if (level === 'off' || !c.legal || !c.board) return undefined;
+    // the diagonal wish belongs to the thumb: it only counts while the stick is what is being held
+    const wish = held !== null && held === this.touchDir ? this.touchWish : null;
+    let board: MoveBoard | null = null;
+    const make = c.board;
+    return { level, wish, board: () => (board ??= make()) };
   }
 
   private heldDir(): Dir | null {

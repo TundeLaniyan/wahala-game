@@ -3100,3 +3100,11 @@ kbd {
     animation: none;
   }
 }
+
+/* Assisted movement toggle (Rumble Evolution RE-A): a motor-accessibility control, so its chips keep the full
+   44 px tap target even in the compact landscape-phone layout. */
+.mn .mn-opts.mn-opts-tall .chip.mn-opt,
+.mn-overlay .mn-opts.mn-opts-tall .chip.mn-opt {
+  min-height: 44px;
+  min-width: 56px;
+}

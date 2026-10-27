@@ -26,8 +26,16 @@ export {
   STANDARD_ARENA_IDS,
   getArena,
 } from './arenas';
-export type { ArenaDef, ArenaInfo, ArenaKind, HazardSchedule, StageHazardDef } from './arenas';
-export { isLethalStageEvent, manholePartners } from './systems/stage';
+export type {
+  ArenaDef,
+  ArenaInfo,
+  ArenaKind,
+  DistrictDef,
+  DistrictLink,
+  HazardSchedule,
+  StageHazardDef,
+} from './arenas';
+export { isLethalStageEvent, laneEscapeSteps, manholePartners } from './systems/stage';
 export { CHARACTERS, CHARACTER_IDS } from './data/characters';
 export type { CharacterDef } from './data/characters';
 export { PICKUP_DEFS } from './data/pickups';
@@ -55,6 +63,15 @@ export type { SpecialAction } from './systems/actions';
 export { chooseAutoVehicle, scoreRoute } from './systems/autoVehicle';
 export type { AutoVehicleChoice, AutoVehicleView } from './systems/autoVehicle';
 export { squareFootprint } from './systems/explosions';
+export {
+  inDisc,
+  lineBetween,
+  radialFootprint,
+  radialOffsets,
+  radialRadius,
+  radialSquareRadius,
+} from './systems/blastShape';
+export type { RadialOffset, RadialOptions } from './systems/blastShape';
 export { meleeTarget } from './systems/skills';
 export { moveWouldAct } from './systems/contact';
 export { autoRouteOptions, drivableStretch } from './systems/autoVehicle';

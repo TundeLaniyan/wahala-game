@@ -20,7 +20,12 @@ export interface HazardSchedule {
  *
  * - `sweep`: a vehicle drives along one of `routes` (chosen per event): lethal to anyone on its tile,
  *   sets off grounded generators it reaches, stops at concrete or a soft block. Routes run along road
- *   tiles (`=` in the layout), which never get soft blocks.
+ *   tiles (`=` in the layout), which never get soft blocks. With `depart: true` the route is a DEPARTURE:
+ *   a parked vehicle pulls out of a bay (the first tile, inside the board) and drives out to the board
+ *   edge (the last tile). The vehicle is shown parked on the bay for the whole telegraph; an event whose
+ *   bay is occupied by a player, a generator or a crate at warning time is skipped (nothing appears on
+ *   top of anyone). Timing is the ordinary uniform `stepTicks` (bots read it), so the pull-out is only
+ *   eased in the picture (RE-E3).
  * - `strike`: one of `zones` (or, with `targetPlayers`, the tile of a randomly chosen player that has
  *   a free neighbour to step to) becomes lethal for `activeSec` after the warning.
  * - `push`: everyone standing in one of `zones` is slid one tile in its direction (non-lethal; the
@@ -37,6 +42,8 @@ export type StageHazardDef =
       routes: [number, number][][];
       /** Ticks per tile while driving. */
       stepTicks: number;
+      /** A parked vehicle pulls out of the bay at `routes[i][0]` (inside the board) and leaves at the last tile (the edge). */
+      depart?: true;
     } & HazardSchedule)
   | ({
       kind: 'strike';
@@ -53,6 +60,30 @@ export type StageHazardDef =
     } & HazardSchedule)
   | ({ kind: 'drop'; style: StageHazardStyle; count: number } & HazardSchedule)
   | { kind: 'teleport'; style: StageHazardStyle; pairs: [[number, number], [number, number]][] };
+
+/**
+ * City Rumble Evolution: one named district of a multi-district stage (layout and connectivity data; the
+ * look of a district lives in its render module). Tiles are inclusive rectangles [x0, y0, x1, y1].
+ */
+export interface DistrictDef {
+  id: string;
+  name: string;
+  /** What kind of ground it is (used by tests, the minimap labels and the bots' route sense). */
+  role: 'approach' | 'underbridge' | 'park' | 'lane' | 'service' | 'plaza' | 'stadium' | 'concourse' | 'street';
+  rects: [number, number, number, number][];
+}
+
+/**
+ * A connection between two districts: the open tiles where you cross from one to the other. `breach`
+ * links are opened only by blasting authored barriers (`x` in the layout); `chokepoint` links are one or
+ * two tiles wide.
+ */
+export interface DistrictLink {
+  from: string;
+  to: string;
+  kind: 'open' | 'chokepoint' | 'breach';
+  tiles: [number, number][];
+}
 
 /** Menu / tutorial text for an arena. Presentation data only. */
 export interface ArenaInfo {
@@ -73,7 +104,9 @@ export interface ArenaDef {
   kind: ArenaKind;
   /**
    * Rows of the layout: '#' = indestructible concrete, '=' = road (open floor that never gets a soft
-   * block), anything else = open floor.
+   * block), '_' = open floor kept clear of random crates (plazas, a pitch), 'x' = an authored barrier
+   * (always a crate: blasting it opens a shortcut), '$' = a marked supply crate (always a crate, holds one
+   * basic upgrade, `config.supply`), anything else = open floor.
    */
   layout: string[];
   /** Spawn tiles in slot order. */
@@ -99,6 +132,9 @@ export interface ArenaDef {
   /** A rules mode the arena always uses (City Rumble always closes in). */
   forcedMode?: MatchMode;
   info: ArenaInfo;
+  /** City Rumble Evolution: named districts and how they connect (multi-district stages only). */
+  districts?: DistrictDef[];
+  districtLinks?: DistrictLink[];
   /**
    * V2: a test / experimental stage (the Mobile Test Arena). Kept out of the official lists
    * (`STANDARD_ARENA_IDS`) and shown in a separate "Test / experimental" section of the arena picker.

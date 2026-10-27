@@ -24,12 +24,17 @@ import { assets } from '../assets/library';
 import type { ObstacleStyle } from '../assets/obstacleStyles';
 import { MAX_HIDE, occludingTiles } from '../assets/occlusionFade';
 import { arenaFloorMaps } from '../arenas/floors';
+import type { BoardCover } from '../arenas/boardCover';
+import { NEW_ARENA_ART } from '../arenas/newArenas';
 import { InstanceSet } from './InstanceSet';
 import type { FrameContext, View } from './types';
 
 const DROP_TIME = 0.28;
 /** Seconds for an obstacle to dissolve / come back when something stands behind it. */
 const HIDE_TAU = 0.12;
+
+/** Slight deterministic yaw of the breakable on a tile (radians); the supply marks follow it. */
+export const softTilt = (x: number, y: number): number => ((x * 31 + y * 17) % 5) * 0.03 - 0.06;
 
 /** Copies instancing parts with their material tinted (per-arena art direction). */
 function tinted<T extends { material: Material }>(
@@ -67,6 +72,13 @@ export class ArenaView implements View {
   /** Model ids behind `pillars` (empty = the procedural pillar). */
   private readonly pillarIds: string[];
   private readonly variants = softVariants();
+  /**
+   * Marked supply crates (RE-C3) all use one plain wooden crate model so the yellow marking
+   * (SupplyMarkViews) sits on a known shape; fixed at the start (supplies never refill).
+   */
+  private readonly supplyTiles: Set<number>;
+  private readonly supplyVariant: SoftVariant | null;
+  private readonly width: number;
   private readonly soft = new Map<SoftVariant, InstanceSet>();
   private readonly cache: number[];
   private readonly initialHard: Set<number>;
@@ -79,6 +91,8 @@ export class ArenaView implements View {
   private readonly decals = new Group();
   /** Contact shadows under every pillar and prop: grounding/AO that also works with shadows off. */
   private readonly contact: InstanceSet;
+  /** Permanent cover drawn as whole objects (an arena's `ArenaArt.cover`), or null: pillars per tile. */
+  private readonly cover: BoardCover | null;
   private readonly ownedMaterials: Material[] = [];
   private readonly ownedTextures: Texture[] = [];
 
@@ -87,6 +101,9 @@ export class ArenaView implements View {
     private readonly layout: Layout,
   ) {
     this.arenaId = state.arenaId;
+    this.width = state.width;
+    this.supplyTiles = new Set(state.supplies);
+    this.supplyVariant = ['prop_soft_crate', 'crate'].find((v) => this.variants.includes(v)) ?? null;
     const W = state.width;
     const H = state.height;
     // the arena's own worn surface (tarmac / pavers / cracked asphalt); the slab atlas is the fallback
@@ -133,6 +150,9 @@ export class ArenaView implements View {
       ];
     }
     for (const set of this.pillars) this.group.add(set.group);
+    // board cover: grouped concrete drawn as the buildings / buses / piers it stands for
+    this.cover = NEW_ARENA_ART()[state.arenaId]?.cover?.({ width: W, height: H }) ?? null;
+    if (this.cover) this.group.add(this.cover.object);
     for (const v of this.variants) {
       const set = new InstanceSet(
         tinted(softBlockParts(v), look.softTint, style.softTint, owned),
@@ -171,7 +191,18 @@ export class ArenaView implements View {
 
   /** Variant of the soft block at a tile (for debris colours). */
   variantAt(x: number, y: number): SoftVariant {
-    return softVariantFor(x, y, this.variants, this.arenaId);
+    return this.variantOf(y * this.width + x, x, y);
+  }
+
+  private variantOf(i: number, x: number, y: number): SoftVariant {
+    return this.supplyVariant !== null && this.supplyTiles.has(i)
+      ? this.supplyVariant
+      : softVariantFor(x, y, this.variants, this.arenaId);
+  }
+
+  /** How far the obstacle on a tile is currently dissolved (0 = solid .. MAX_HIDE); the supply marks follow it. */
+  hideAmount(i: number): number {
+    return this.hideOf.get(i) ?? 0;
   }
 
   update(ctx: FrameContext): void {
@@ -184,6 +215,7 @@ export class ArenaView implements View {
         this.removeTile(i, x, y, this.cache[i]!);
         this.cache[i] = kind;
         if (kind === Tile.Hard) {
+          if (this.coveredAt(i)) continue; // drawn by the board cover
           if (!this.initialHard.has(i)) this.dropping.set(i, time);
           this.placePillar(i, x, y, this.dropping.has(i) ? 6 : 0);
         } else if (kind === Tile.Soft) {
@@ -218,6 +250,19 @@ export class ArenaView implements View {
     for (const g of state.generators) behind.push(g);
     for (const p of state.pickups) behind.push(p);
     const want = occludingTiles(state.width, state.height, behind);
+    // a tall cover object (a shop, a bus) can hide more than the one tile behind it
+    const cover = this.cover;
+    if (cover)
+      for (const o of behind) {
+        const x = Math.round(o.x);
+        if (x < 0 || x >= state.width) continue;
+        for (let k = 2; k <= cover.maxReach; k++) {
+          const y = Math.round(o.y) + k;
+          if (y < 0 || y >= state.height) continue;
+          const i = y * state.width + x;
+          if (this.coveredAt(i) && cover.reach(i) >= k) want.add(i);
+        }
+      }
     const k = 1 - Math.exp(-Math.max(0, dt) / HIDE_TAU);
     for (const i of want) if (!this.hideOf.has(i)) this.hideOf.set(i, 0);
     for (const [i, cur] of this.hideOf) {
@@ -226,18 +271,24 @@ export class ArenaView implements View {
       const x = i % state.width;
       const y = Math.floor(i / state.width);
       const kind = this.cache[i];
-      if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.setHide(i, next);
-      else if (kind === Tile.Soft)
-        this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.setHide(i, next);
+      if (kind === Tile.Hard && this.coveredAt(i)) cover!.setHide(i, next);
+      else if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.setHide(i, next);
+      else if (kind === Tile.Soft) this.soft.get(this.variantOf(i, x, y))!.setHide(i, next);
       if (next === 0 && target === 0) this.hideOf.delete(i);
       else this.hideOf.set(i, next);
     }
+    cover?.commit();
+  }
+
+  /** An original concrete tile the board cover draws (never a crush block dropped in later). */
+  private coveredAt(i: number): boolean {
+    return this.cover !== null && this.initialHard.has(i) && this.cover.covers(i);
   }
 
   private removeTile(i: number, x: number, y: number, kind: number): void {
     this.contact.remove(i);
     if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.remove(i);
-    else if (kind === Tile.Soft) this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.remove(i);
+    else if (kind === Tile.Soft) this.soft.get(this.variantOf(i, x, y))!.remove(i);
   }
 
   private pillarVariant(x: number, y: number): number {
@@ -266,10 +317,10 @@ export class ArenaView implements View {
 
   private placeSoft(i: number, x: number, y: number): void {
     this.p.set(this.layout.wx(x), 0, this.layout.wz(y));
-    this.e.set(0, ((x * 31 + y * 17) % 5) * 0.03 - 0.06, 0);
+    this.e.set(0, softTilt(x, y), 0);
     this.q.setFromEuler(this.e);
     this.m.compose(this.p, this.q, this.softScale);
-    this.soft.get(softVariantFor(x, y, this.variants, this.arenaId))!.set(i, this.m);
+    this.soft.get(this.variantOf(i, x, y))!.set(i, this.m);
     this.s.set(1, 1, 1);
     this.setContact(i, x, y, 0.8);
   }
@@ -278,6 +329,7 @@ export class ArenaView implements View {
     for (const p of this.pillars) p.dispose();
     for (const s of this.soft.values()) s.dispose();
     this.contact.dispose();
+    this.cover?.dispose();
     for (const m of this.ownedMaterials) m.dispose();
     for (const t of this.ownedTextures) t.dispose();
   }

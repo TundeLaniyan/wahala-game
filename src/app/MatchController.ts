@@ -11,6 +11,7 @@ import {
   tick,
 } from '../sim';
 import type { GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent, VehicleTurn } from '../sim';
+import { buildMoveBoard } from '../input';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
 import { buildHud } from './hud';
@@ -311,6 +312,7 @@ export class MatchController {
         canMove: readyToStep(me),
         remoteReady: me.remote && state.generators.some((g) => g.ownerId === me.id && g.mode === 'remote'),
         legal: (d) => moveWouldAct(state, me, d),
+        board: () => buildMoveBoard(state, me),
       });
     } else {
       this.deps.input.navMode = false;
