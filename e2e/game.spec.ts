@@ -376,6 +376,27 @@ test.describe('two buttons and contact abilities (keyboard)', () => {
     expect((await getState(page)).generators).toHaveLength(0);
   });
 
+  test('A (Space): a tap drops a generator even with a remote one down; holding Space sets the remote ones off', async ({
+    page,
+  }) => {
+    await open(page, '&nobots');
+    await startMatch(page, { competitors: 2 });
+    await mutate(page, `s.players[0].remote = true; s.players[0].capacity = 4;`);
+    await page.keyboard.press('Space'); // no remote generator yet: places at once
+    await stepTicks(page, 2);
+    await holdKey(page, 'ArrowUp', 3);
+    await stepTicks(page, 12);
+    expect((await getState(page)).generators).toHaveLength(1);
+    await holdKey(page, 'Space', 4); // a quick tap with a remote down: places a second one, never detonates
+    await stepTicks(page, 2);
+    const two = (await getState(page)).generators;
+    expect(two).toHaveLength(2);
+    expect(two.every((g) => g.mode === 'remote')).toBe(true);
+    await holdKey(page, 'Space', 30); // a hold: every remote generator of mine goes off, nothing new is dropped
+    await stepTicks(page, 2);
+    expect((await getState(page)).generators).toHaveLength(0);
+  });
+
   test('pause menu Settings: the screen-shake setting (auto / off / subtle) reaches the renderer', async ({
     page,
   }, info) => {

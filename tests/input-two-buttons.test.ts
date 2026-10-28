@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InputManager } from '../src/input';
 import { MoveGate, TURN_BUFFER_TILES } from '../src/input/moveGate';
-import { SPECIAL_HOLD_TICKS, SpecialHold } from '../src/input/specialHold';
+import { PlaceHold, SPECIAL_HOLD_TICKS, SpecialHold } from '../src/input/specialHold';
 import { moveWouldAct, readyToStep, tick } from '../src/sim';
 import type { Dir, GameState, Intent } from '../src/sim';
 import { addGenerator, addSoft, put, sandbox } from './helpers';
@@ -113,6 +113,122 @@ describe('B: tap = special, hold = remote', () => {
     input.touchDown('special', 'p1');
     for (let i = 0; i < SPECIAL_HOLD_TICKS + 2; i++) step();
     expect(s.generators.includes(g)).toBe(false);
+  });
+});
+
+describe('A: tap = generator, hold = remote', () => {
+  it('without a live remote a press places at once and holding never detonates', () => {
+    const a = new PlaceHold();
+    a.pressDown('key:Space', 10, false);
+    expect(a.take(10)).toBe('place');
+    const out: (string | null)[] = [];
+    for (let t = 11; t < 10 + 3 * SPECIAL_HOLD_TICKS; t++) out.push(a.take(t));
+    a.release('key:Space');
+    expect(out.every((o) => o === null)).toBe(true);
+    expect(a.take(200)).toBeNull();
+  });
+
+  it('with a live remote a quick tap places on release and can never detonate', () => {
+    const a = new PlaceHold();
+    a.pressDown('touch', 0, true);
+    for (let t = 0; t < SPECIAL_HOLD_TICKS - 1; t++) expect(a.take(t)).toBeNull();
+    expect(a.progress(SPECIAL_HOLD_TICKS / 2)).toBeCloseTo(0.5);
+    a.release('touch');
+    expect(a.take(SPECIAL_HOLD_TICKS - 1)).toBe('place');
+    expect(a.take(SPECIAL_HOLD_TICKS)).toBeNull();
+  });
+
+  it('a hold detonates exactly once at the threshold and the release places nothing', () => {
+    const a = new PlaceHold();
+    a.pressDown('touch', 0, true);
+    const out: (string | null)[] = [];
+    for (let t = 0; t <= SPECIAL_HOLD_TICKS + 30; t++) out.push(a.take(t));
+    expect(out.filter((o) => o !== null)).toEqual(['detonate']);
+    expect(out.indexOf('detonate')).toBe(SPECIAL_HOLD_TICKS);
+    a.release('touch');
+    expect(a.take(100)).toBeNull();
+  });
+
+  it('through the InputManager: tap = place (never detonate), hold = detonate (never place); B is untouched', () => {
+    const input = manager();
+    const t0 = 100;
+    const ctx = { remoteReady: true };
+    input.buildIntent(t0, ctx);
+    // quick tap on A with a live remote
+    const tap: Intent[] = [];
+    input.touchDown('place', 'p1');
+    for (let t = t0 + 1; t < t0 + 5; t++) tap.push(input.buildIntent(t, ctx));
+    input.touchUp('place', 'p1');
+    tap.push(input.buildIntent(t0 + 5, ctx));
+    expect(tap.filter((i) => i.place)).toHaveLength(1);
+    expect(tap.filter((i) => i.detonate)).toHaveLength(0);
+    // hold on A
+    const held: Intent[] = [];
+    input.touchDown('place', 'p2');
+    for (let t = t0 + 6; t < t0 + 6 + SPECIAL_HOLD_TICKS + 10; t++) held.push(input.buildIntent(t, ctx));
+    expect(input.placeHoldProgress()).toBeNull(); // resolved: the ring is done
+    input.touchUp('place', 'p2');
+    held.push(input.buildIntent(t0 + 100, ctx));
+    expect(held.filter((i) => i.detonate)).toHaveLength(1);
+    expect(held.filter((i) => i.place)).toHaveLength(0);
+    expect(held.filter((i) => i.special)).toHaveLength(0);
+    // B still taps as the special and holds as the remote
+    input.touchDown('special', 'p3');
+    const b = [input.buildIntent(t0 + 101, ctx), input.buildIntent(t0 + 102, ctx)];
+    input.touchUp('special', 'p3');
+    b.push(input.buildIntent(t0 + 103, ctx));
+    expect(b.filter((i) => i.special)).toHaveLength(1);
+    expect(b.filter((i) => i.place || i.detonate)).toHaveLength(0);
+  });
+
+  it('exposes the arming fill for A (and the larger of A and B) while a press is open', () => {
+    const input = manager();
+    const ctx = { remoteReady: true };
+    input.buildIntent(10, ctx);
+    expect(input.detonateProgress()).toBeNull();
+    input.touchDown('place', 'p1');
+    input.buildIntent(10 + SPECIAL_HOLD_TICKS / 2, ctx);
+    expect(input.placeHoldProgress()).toBeCloseTo(0.5, 1);
+    expect(input.detonateProgress()).toBeCloseTo(0.5, 1);
+    input.touchUp('place', 'p1');
+    input.buildIntent(10 + SPECIAL_HOLD_TICKS, ctx);
+    expect(input.detonateProgress()).toBeNull();
+  });
+
+  it('end to end: a tap on A drops a generator and the remote stays; holding A sets off only your remote generators', () => {
+    const s = sandbox({ characters: ['streetBaller', 'lekkiBoy'] });
+    put(s, 0, 4, 4);
+    put(s, 1, 12, 8);
+    const me = s.players[0]!;
+    me.remote = true;
+    me.capacity = 6; // room for the pre-placed generators and the one dropped by the tap
+    const mine = addGenerator(s, { ownerId: 0, x: 8, y: 2, mode: 'remote', timer: 9999 });
+    const theirs = addGenerator(s, { ownerId: 1, x: 12, y: 6, mode: 'remote', timer: 9999 });
+    const timed = addGenerator(s, { ownerId: 0, x: 2, y: 8, mode: 'timed', timer: 9999 });
+    const input = manager();
+    const step = (): void => {
+      const remoteReady = me.remote && s.generators.some((o) => o.ownerId === 0 && o.mode === 'remote');
+      tick(s, { 0: input.buildIntent(s.tick, { canMove: readyToStep(me), remoteReady }) });
+    };
+    const before = s.generators.length;
+    input.touchDown('place', 'p1');
+    step();
+    step();
+    input.touchUp('place', 'p1');
+    step();
+    expect(s.generators.length).toBe(before + 1);
+    expect(s.generators).toContain(mine);
+    // a hold on A: only the player's own remote generator goes off
+    input.touchDown('place', 'p1');
+    for (let i = 0; i < SPECIAL_HOLD_TICKS + 2; i++) step();
+    input.touchUp('place', 'p1');
+    step();
+    expect(s.generators.includes(mine)).toBe(false);
+    expect(s.generators).toContain(theirs);
+    expect(s.generators).toContain(timed); // timed fuses are never set off by hand
+    expect(s.generators.filter((g) => g.ownerId === 0 && g.mode === 'timed').length).toBeGreaterThanOrEqual(
+      1,
+    );
   });
 });
 

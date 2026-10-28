@@ -8,7 +8,7 @@ docs where they conflict (they are recorded as decisions in `DECISIONS.md`, sect
 
 | Contract | Where | Notes |
 | --- | --- | --- |
-| Two buttons | `Intent.place` (A), `Intent.special` (B tap), `Intent.detonate` (B hold) | Legacy `action` / `disarm` / `skill` / `vehicle` intents still exist for tests and bots; the human UI no longer produces them. |
+| Two buttons | `Intent.place` (A tap), `Intent.special` (B tap), `Intent.detonate` (A hold; B hold too, decision OJ2) | Legacy `action` / `disarm` / `skill` / `vehicle` intents still exist for tests and bots; the human UI no longer produces them. |
 | B resolver | `sim/systems/actions.ts` `resolveSpecial`, `previewSpecial` | melee if an opponent is adjacent (facing first, then up/right/down/left; never a teammate) else voucher -> one-press vehicle else nothing. Adjacent opponent = melee context even on cooldown (never a surprise vehicle). Emits `specialUsed`. |
 | Contact abilities | `Player.contact: 'kick'|'punch'|'disarm'|'pass'|null`, `sim/systems/contact.ts` `tryContact` | Triggered by MOVING into a grounded generator. Mutually exclusive; `pickups.ts equipContact` replaces and emits `contactEquipped`. Disarm uses `killSwitchCharges`, the ability ends with the last charge. `contactReadyTick` anti double-fire. Pickups: boots=kick, gloves=punch, killswitch=disarm, bombpass=pass. |
 | Carry | `grip` weight 0 | Code kept (legacy `action` intent), never granted in normal play, not in tutorials. |

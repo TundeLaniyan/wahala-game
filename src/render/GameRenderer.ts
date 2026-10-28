@@ -449,7 +449,7 @@ export class GameRenderer {
         case 'hazardTriggered': {
           const p = state.players[e.playerId]!;
           fx.floatText(p.x, p.y, e.kind === 'pothole' ? 'WHOOPS!' : 'SLIPPERY!', '#ffffff');
-          fx.dust(p.x, p.y, 5, 0.5);
+          fx.trapContact(p.x, p.y, e.kind);
           break;
         }
         case 'crowdLanded':

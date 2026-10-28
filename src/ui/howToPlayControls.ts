@@ -4,7 +4,7 @@
  * listens to. Touch entries describe the on-screen controls exactly as `TouchControls` draws them.
  *
  * Every device has the same two buttons: A = Generator, B = Special (tap: melee an adjacent rival, else
- * call your vehicle; hold: Remote Detonator). Kick / punch / disarm / pass are contact abilities: walk
+ * call your vehicle; hold A or B: Remote Detonator). Kick / punch / disarm / pass are contact abilities: walk
  * into a generator. The Training Academy (src/tutorial) names the rows it shows by `ControlId`.
  */
 import { ACTION_BUTTONS, ACTION_KEYS, MOVE_KEYS, NAV_KEYS, SPECIAL_HOLD_MS } from '../input';
@@ -119,10 +119,10 @@ export function legendRows(): Record<LegendId, LegendRow> {
     special,
     detonate: {
       id: 'detonate',
-      label: 'Hold B: set off your remote',
-      keyboard: hold(keysFor('special')),
-      gamepad: hold(padFor('special')),
-      touch: `Hold B for ${HOLD_SECONDS} s (the ring fills, it reads HOLD: BOOM!) once you have the Remote Starter and a remote generator down. A quick tap is still your special.`,
+      label: 'Hold A (or B): set off your remote',
+      keyboard: [...hold(keysFor('place')), ...hold(keysFor('special'))],
+      gamepad: [...hold(padFor('place')), ...hold(padFor('special'))],
+      touch: `Hold A (or B) for ${HOLD_SECONDS} s (the ring fills, it reads HOLD: BOOM!) once you have the Remote Starter and a remote generator down. A quick tap still drops a generator (A) or uses your special (B).`,
     },
     contact,
     pause: {

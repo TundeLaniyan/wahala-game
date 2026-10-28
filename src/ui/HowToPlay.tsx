@@ -404,8 +404,8 @@ function TouchMap({ controls }: { controls: ControlId[] }) {
         <span className={`tm-btn b${on('special', 'detonate')}`}>
           B<small>tap: hit / vehicle · hold: boom</small>
         </span>
-        <span className={`tm-btn a${on('place')}`}>
-          A<small>generator</small>
+        <span className={`tm-btn a${on('place', 'detonate')}`}>
+          A<small>tap: generator · hold: boom</small>
         </span>
       </div>
     </div>

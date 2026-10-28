@@ -113,30 +113,63 @@ export function specialLabel(
 }
 
 /**
- * Button A (GENERATOR). One finger = one press; several fingers never double-place within a tick.
+ * Button A (GENERATOR): tap = place a generator, HOLD = set off your remote generators while one is live (a
+ * ring fills over the hold time and the label reads HOLD: BOOM!). One finger = one press; several fingers
+ * never double-place within a tick. The input layer alone decides tap vs hold (input/specialHold.ts); with no
+ * live remote generator a press places at once, exactly as before.
  */
-function GeneratorButton() {
+function GeneratorButton({ remoteReady }: { remoteReady: boolean }) {
+  const [holding, setHolding] = useState(false);
+  const fingers = useRef(new Set<string>());
+  // same safeguard as B: a finger still on A when it leaves the HUD must not leave A "down" in the input layer
+  useEffect(() => {
+    const held = fingers.current;
+    return () => {
+      for (const source of held) input.touchUp('place', source);
+      held.clear();
+    };
+  }, []);
+  const up = (e: RPointerEvent): void => {
+    fingers.current.delete(`p${e.pointerId}`);
+    input.touchUp('place', `p${e.pointerId}`);
+    setHolding(false);
+  };
   return (
     <button
       type="button"
-      className="abtn bomb"
+      className={`abtn bomb${holding ? ' holding' : ''}`}
       data-testid="btn-place"
-      aria-label="A: Generator"
+      data-remote={remoteReady ? 'ready' : ''}
+      aria-label={`A: Generator${remoteReady ? ', hold to set off remote' : ''}`}
+      style={{ ['--hold-ms' as string]: `${SPECIAL_HOLD_MS}ms` }}
       onPointerDown={(e) => {
         e.preventDefault();
+        fingers.current.add(`p${e.pointerId}`);
         input.touchDown('place', `p${e.pointerId}`);
+        if (remoteReady) setHolding(true);
+        try {
+          // keep receiving this finger's release even if it slides off the button
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          /* not an active pointer (synthetic event): the release still arrives on the button */
+        }
       }}
+      onPointerUp={up}
+      onPointerCancel={up}
+      onLostPointerCapture={up}
     >
+      {remoteReady && <i className="hold-ring" aria-hidden />}
       <span>
         <b>GENERATOR</b>
+        {remoteReady && <small data-testid="btn-place-hold">HOLD: BOOM!</small>}
       </span>
     </button>
   );
 }
 
 /**
- * Button B: tap = the context special (melee an adjacent rival, else the vehicle), HOLD = Remote
- * Detonator while a remote generator is live (a ring fills over the hold time). The press and the
+ * Button B: tap = the context special (melee an adjacent rival, else the vehicle); HOLD still sets off the
+ * remote as well (kept from V2, a ring fills over the hold time). The press and the
  * release both go to the input layer, which alone decides tap vs hold (input/specialHold.ts).
  */
 function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
@@ -197,7 +230,7 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
 
 /**
  * V2 touch layout: a large movement area on the left and EXACTLY two action buttons on the right, always
- * in the same place: A = GENERATOR, B = SPECIAL (its label follows what it would do; HOLD = remote).
+ * in the same place: A = GENERATOR (HOLD = remote), B = SPECIAL (its label follows what it would do).
  * Contact abilities (kick / punch / disarm / pass) have no button: walk into a generator.
  */
 export function TouchControls() {
@@ -221,7 +254,7 @@ export function TouchControls() {
     <div className="touch" data-testid="touch-controls">
       <Joystick entryOpen={false} />
       <div className="actions">
-        <GeneratorButton />
+        <GeneratorButton remoteReady={me.remote && me.hasRemoteGenerator} />
         <SpecialButton me={me} skill={skill} />
       </div>
     </div>

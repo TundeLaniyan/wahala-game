@@ -205,9 +205,27 @@ describe('voice clips (founder-approved Gemini TTS, 2026-10-24)', () => {
     ).toEqual(recorded.clips.map((c) => `${c.id}.wav`).sort());
   });
 
-  it('the founder batches: 19 clips (2026-10-24) plus 11 more (2026-10-25) = 30', () => {
+  it('the founder batches: 19 clips (2026-10-24), 11 more (2026-10-25) and the last 17 (2026-10-28) = all 47', () => {
     expect(recorded.clips.map((c) => c.id).sort()).toEqual(
       [
+        // third batch (Sounds.zip, 2026-10-28): the crowd reactions and the haggling / fare exchanges
+        'crowd_ahhh_01',
+        'crowd_argument_01',
+        'crowd_excited_01',
+        'crowd_gasp_01',
+        'crowd_groan_01',
+        'crowd_irritated_01',
+        'crowd_laugh_01',
+        'crowd_scream_01',
+        'market_bargain_exchange_01',
+        'market_bargain_exchange_02',
+        'market_customer_back_01',
+        'market_how_much_01',
+        'market_last_price_01',
+        'market_make_i_pass_01',
+        'market_no_price_01',
+        'park_fare_exchange_01',
+        'park_route_exchange_02',
         // second batch (WAHALA_VOICES_CURRENT.zip, V2 import)
         'conductor_no_change_01',
         'conductor_shift_01',

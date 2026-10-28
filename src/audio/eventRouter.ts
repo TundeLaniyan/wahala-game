@@ -300,7 +300,7 @@ const handlers: Handlers = {
     );
   },
   hazardTriggered: (e, c) => {
-    sfx(c, e.kind === 'pothole' ? 'pothole_thud' : 'oil_squeak', panOf(c, playerX(c, e.playerId)));
+    sfx(c, e.kind === 'pothole' ? 'pothole_thud' : 'oil_slip', panOf(c, playerX(c, e.playerId)));
     react(c, { kind: 'laugh', strength: 0.5, chance: 0.6, delay: 0.5 });
   },
   // Mandatory endgame traps: an unmistakable alarm when a wave is telegraphed, the floor giving way when it goes live.

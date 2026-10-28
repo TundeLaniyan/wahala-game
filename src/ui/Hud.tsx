@@ -1,10 +1,11 @@
+import { useEffect, useRef } from 'react';
 import { PICKUP_DEFS, VEHICLE_DEFS } from '../sim';
 import type { PickupKind } from '../sim';
 import { SLOT_CSS } from '../assets/palette';
 import { pickupIconUrl } from '../assets/pickupIcons';
 import { portraitUrl } from '../assets/portraits';
 import { cameraModeFor } from '../render/cameraModes';
-import { commands } from '../app/session';
+import { commands, input } from '../app/session';
 import type { HudMe, HudPlayer } from '../app/hud';
 import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
@@ -36,6 +37,45 @@ function Chip({ kind, text, cls }: { kind: PickupKind; text: string; cls?: strin
     <span className={`inv ${cls ?? ''}`} title={PICKUP_DEFS[kind].name}>
       <img src={pickupIconUrl(kind, 48)} alt="" />
       {text}
+    </span>
+  );
+}
+
+/**
+ * Remote Detonator chip. With a live remote generator it reads HOLD A and fills while A (or B) is held toward
+ * the detonation, so keyboard and gamepad players get the same arming cue as the touch buttons' ring. The fill
+ * follows the input layer's hold progress every frame (no React state per frame).
+ */
+function RemoteChip({ armed }: { armed: boolean }) {
+  const el = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const node = el.current;
+    if (!armed || !node) return;
+    let raf = 0;
+    const frame = (): void => {
+      const p = input.detonateProgress();
+      node.style.setProperty('--fill', String(p ?? 0));
+      node.dataset.arming = p !== null ? 'on' : '';
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(raf);
+      node.style.setProperty('--fill', '0');
+      node.dataset.arming = '';
+    };
+  }, [armed]);
+  return (
+    <span
+      ref={el}
+      className="inv remote-chip"
+      data-testid="remote-chip"
+      data-ready={armed ? 'ready' : ''}
+      title={PICKUP_DEFS.remote.name}
+    >
+      <img src={pickupIconUrl('remote', 48)} alt="" />
+      {armed ? 'HOLD A' : ''}
+      {armed && <i className="remote-fill" aria-hidden />}
     </span>
   );
 }
@@ -75,7 +115,7 @@ function Inventory({ me }: { me: HudMe }) {
       <Chip kind={me.maxRange ? 'diesel' : 'petrol'} text={me.maxRange ? 'MAX' : String(me.range)} />
       {me.speedLevel > 0 && <Chip kind="skates" text={`x${me.speedLevel}`} />}
       <ContactChip me={me} />
-      {me.remote && <Chip kind="remote" text={me.hasRemoteGenerator ? 'HOLD B' : ''} />}
+      {me.remote && <RemoteChip armed={me.hasRemoteGenerator} />}
       {me.sneakers && <Chip kind="sneakers" text="" />}
       {me.hotFuel && <Chip kind="hotfuel" text="" />}
       {me.mounted && <Chip kind="okada" text="SHIELD" cls="good" />}

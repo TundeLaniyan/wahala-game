@@ -27,12 +27,12 @@ describe('Academy controls legend (V2: the stick and two buttons)', () => {
     expect(rows.place.keyboard).toEqual(['Space', 'J']);
     expect(rows.special.keyboard).toEqual(bound('special'));
     expect(rows.special.keyboard).toEqual(['K', 'E', 'F', 'L', 'Left Shift']);
-    expect(rows.detonate.keyboard).toEqual(bound('special').map((k) => `hold ${k}`));
+    expect(rows.detonate.keyboard).toEqual([...bound('place'), ...bound('special')].map((k) => `hold ${k}`));
     expect(rows.move.keyboard).toEqual(['←↑↓→', 'WASD']);
     expect(rows.pause.keyboard).toEqual(['P', 'Esc']);
     expect(rows.place.gamepad).toEqual(['A']);
     expect(rows.special.gamepad).toEqual(['B', 'X']);
-    expect(rows.detonate.gamepad).toEqual(['hold B', 'hold X']);
+    expect(rows.detonate.gamepad).toEqual(['hold A', 'hold B', 'hold X']);
     // contact abilities have no button on any device
     expect(rows.contact.keyboard).toEqual(['walk into a generator']);
     // exactly two actions exist on every device

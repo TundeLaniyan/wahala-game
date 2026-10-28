@@ -342,7 +342,7 @@ export const REMOTE: Lesson = {
         acts: { 0: [walk('up', 2), walk('right', 1), wait(80)] },
       },
       {
-        caption: 'Then HOLD B: every remote generator you have goes off at once.',
+        caption: 'Then HOLD A (or B): every remote generator you have goes off at once.',
         acts: { 0: [detonate, wait(80)] },
       },
     ],
@@ -397,7 +397,9 @@ export const REMOTE: Lesson = {
         controls: ['detonate'],
         done: remoteBoom,
         mistakes: [
-          whiffedB('A quick tap of B is the special move. Press and HOLD B to set off your generator.'),
+          whiffedB(
+            'A quick tap of B is the special move. Press and HOLD A (or HOLD B) to set off your generator.',
+          ),
         ],
         failures: [
           failWhen(

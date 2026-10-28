@@ -674,6 +674,41 @@ export class Effects {
     }
   }
 
+  /**
+   * A fighter's foot just met a floor trap: a ring flashes on the tile and droplets (oil) or rubble chips
+   * (pothole) fly up, so the cause of the slip or stumble is unmistakable. Presentation only.
+   */
+  trapContact(gx: number, gy: number, kind: 'pothole' | 'oil'): void {
+    const x = this.layout.wx(gx);
+    const z = this.layout.wz(gy);
+    const oil = kind === 'oil';
+    const [r, g, b] = oil ? [1, 0.72, 0.2] : [0.82, 0.76, 0.64];
+    const count = this.n(oil ? 18 : 12);
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + Math.random() * 0.35;
+      const sp = 1 + Math.random() * 1.5;
+      this.fire.emit({
+        x,
+        y: 0.12,
+        z,
+        vx: Math.cos(a) * sp,
+        vy: 1.7 + Math.random() * 1.7,
+        vz: Math.sin(a) * sp,
+        life: 0.5 + Math.random() * 0.3,
+        size: oil ? 0.2 : 0.14,
+        sizeEnd: 0.04,
+        r,
+        g,
+        b,
+        a: 1,
+        gravity: 7,
+        drag: 0.8,
+      });
+    }
+    this.shockwave(x, z, oil ? 1 : 0.8, oil ? 0xffc24a : 0xd9c9a8);
+    this.dust(gx, gy, oil ? 2 : 7, 0.5);
+  }
+
   sparkle(gx: number, gy: number, color: number): void {
     const x = this.layout.wx(gx);
     const z = this.layout.wz(gy);

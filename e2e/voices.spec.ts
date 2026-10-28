@@ -24,10 +24,13 @@ const clipsFor = (arena: string) =>
     const zone = lineOf(c.id).zone;
     return zone === 'all' || (VOICES.zones[zone] ?? []).includes(arena);
   }).map((c) => c.id);
-/** A planned trigger that has no approved clip yet (it must stay silent). */
-const SILENT_TRIGGER = CATALOGUE.map((l) => l.trigger).find(
-  (t) => !RECORDED.some((c) => lineOf(c.id).trigger === t),
-)!;
+/**
+ * A trigger with no approved clip must stay silent. Since the last 17 clips (2026-10-28) every planned trigger has
+ * one, so this is the first planned trigger without a clip if the plan ever grows, else a name no line uses.
+ */
+const SILENT_TRIGGER =
+  CATALOGUE.map((l) => l.trigger).find((t) => !RECORDED.some((c) => lineOf(c.id).trigger === t)) ??
+  'NO_LINE_HAS_THIS_TRIGGER';
 
 interface Spoken {
   clipId: string;
@@ -266,7 +269,10 @@ test.describe('Nigerian voice clips', () => {
     const st = (await voices(page))!;
     expect(st.loaded).toContain('market_come_buy_01');
     expect(await preview(page, 'AMBIENT_SCHEDULER_MARKET')).toBe(true);
-    expect((await lastSpoken(page))!.clipId).toBe('market_come_buy_01');
+    // the market has several street-talk lines now (haggling, price calls); any of them is its own talk
+    const marketLines = RECORDED.filter((c) => lineOf(c.id).trigger === 'AMBIENT_SCHEDULER_MARKET').map((c) => c.id);
+    expect(marketLines).toContain('market_how_much_01');
+    expect(marketLines).toContain(`${(await lastSpoken(page))!.clipId}`);
   });
 
   test('a missing or broken clip never breaks playback: it is skipped and the others still speak', async ({
