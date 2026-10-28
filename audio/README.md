@@ -79,7 +79,7 @@ warnings, never ducked), `react` (crowd reactions) and `amb` (ambience beds).
 | `danfo_launch`, `taxi_launch`, `keke_launch`, `danfo_pass`, `taxi_pass`, `keke_pass` | sfx | launch and near-miss pass-by |
 | `okada_mount`, `okada_break`, `vehicle_hit`, `vehicle_hit_gen`, `vehicle_damage`, `vehicle_wreck` | sfx | Okada, impacts, wrecks |
 | `vehicle_entry_on`, `vehicle_entry_off` | sfx | entry-mode cues |
-| `crush_warning`, `crush_slam`, `crowd_throw_whistle`, `bottle_smash`, `firecracker_bang`, `pothole_thud`, `oil_squeak` | sfx / warn | arena hazards |
+| `crush_warning`, `crush_slam`, `crowd_throw_whistle`, `bottle_smash`, `firecracker_bang`, `pothole_thud`, `oil_squeak`, `oil_slip` | sfx / warn | arena hazards |
 | `pickup_1`, `pickup_rare`, `pickup_voucher`, `pickup_curse`, `pickup_reveal`, `pickup_burn`, `pickup_drop`, `pickup_wasted` | sfx | pickups |
 | `push`, `daze`, `hop` | sfx | skills and jumps |
 | `elim_slide`, `elim_boing`, `elim_womp` | sfx | comic eliminations |
