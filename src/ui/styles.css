@@ -977,6 +977,22 @@ button {
 .abtn.holding .hold-ring {
   animation: hold-fill var(--hold-ms, 400ms) linear forwards;
 }
+/* the HOLD A chip in the inventory row: a bar fills while A or B is held toward the detonation */
+.inv.remote-chip {
+  position: relative;
+  overflow: hidden;
+}
+.inv.remote-chip .remote-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  width: calc(var(--fill, 0) * 100%);
+  background: #ff2f86;
+}
+.inv.remote-chip[data-arming='on'] {
+  box-shadow: 0 0 10px rgba(255, 47, 134, 0.85);
+}
 @property --fill {
   syntax: '<number>';
   inherits: false;

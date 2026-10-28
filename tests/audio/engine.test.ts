@@ -187,7 +187,7 @@ describe('event mapping', () => {
     expectIds({ ...SAMPLES.pickupCollected, kind: 'petrol' } as SimEvent, 'pickup_1');
     expectIds({ ...SAMPLES.pickupCollected, wasted: true } as SimEvent, 'pickup_wasted');
     expectIds(SAMPLES.cursed, 'pickup_curse');
-    expectIds(SAMPLES.hazardTriggered, 'oil_squeak');
+    expectIds(SAMPLES.hazardTriggered, 'oil_slip');
     expectIds({ ...SAMPLES.hazardTriggered, kind: 'pothole' } as SimEvent, 'pothole_thud');
     expectIds(SAMPLES.crowdLanded, 'bottle_smash');
     expectIds(SAMPLES.crowdWarning, 'crowd_throw_whistle');

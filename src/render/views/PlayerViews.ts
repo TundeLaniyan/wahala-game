@@ -29,6 +29,9 @@ import { CanvasTexture } from 'three';
 import { chevronTexture, glowTexture, labelTexture, ringTexture, starTexture } from '../textures';
 import type { ClipName } from '../assets/rigged';
 import { lerpAngle, playerGridPos, toWorld, yawForDir } from './motion';
+import { SLIP_MAX_S, slipPose } from './slip';
+import type { SlipKind, SlipState } from './slip';
+import { TICK_RATE } from '../../sim';
 import type { FrameContext, View } from './types';
 import { addTeamKit, createProtectionRing, protectionBlink, teamColor } from './teamMarkings';
 
@@ -76,6 +79,9 @@ interface Visual {
   catchUp: number;
   /** V2 respawn modes: blinking ring while spawn protection lasts. */
   protect: Mesh;
+  /** A floor trap just got this fighter (stamped with render time on the next frame) / the slip in progress. */
+  slipPending: SlipKind | null;
+  slip: SlipState | null;
 }
 
 const flat = new PlaneGeometry(1, 1);
@@ -100,6 +106,12 @@ export class PlayerViews implements View {
       else if (e.type === 'contactUsed' && e.ability === 'kick') play(e.playerId, 'Kick');
       else if (e.type === 'contactUsed' && e.ability === 'disarm') play(e.playerId, 'Place');
       else if (e.type === 'playerPushed') play(e.playerId, 'Stumble');
+      else if (e.type === 'hazardTriggered') {
+        // a floor trap got them: the stumble clip plus a fall that lasts as long as the sim's slide / daze
+        const v = this.visuals.get(e.playerId);
+        if (v) v.slipPending = e.kind;
+        play(e.playerId, 'Stumble');
+      }
       else if (e.type === 'matchEnded') {
         const r = e.result;
         for (const [id, v] of this.visuals) {
@@ -273,6 +285,8 @@ export class PlayerViews implements View {
       culled: false,
       catchUp: 0,
       protect,
+      slipPending: null,
+      slip: null,
     };
   }
 
@@ -283,6 +297,9 @@ export class PlayerViews implements View {
     const m = v.model;
 
     if (!p.alive) {
+      v.slip = null;
+      v.slipPending = null;
+      m.root.rotation.order = 'XYZ';
       this.poseDead(ctx, p, v, w);
       return;
     }
@@ -309,7 +326,37 @@ export class PlayerViews implements View {
     if (!p.mounted && v.wasMounted) v.dismountedAt = time;
     if (m.rigged) this.animate(ctx, p, v, moving, speed);
     else this.poseProcedural(ctx, p, v, moving, swing, bob);
+    this.applySlip(ctx, p, v);
     this.decorate(ctx, p, v, w);
+  }
+
+  /**
+   * Floor-trap fall: tilts the whole body (about its feet) while the sim says the fighter is sliding on oil or
+   * dazed by a pothole, then eases back upright. Derived from sim state only.
+   */
+  private applySlip(ctx: FrameContext, p: Player, v: Visual): void {
+    const root = v.model.root;
+    if (v.slipPending) {
+      v.slip = { kind: v.slipPending, start: ctx.time, endedAt: null, holdUntil: ctx.time };
+      v.slipPending = null;
+    }
+    const s = v.slip;
+    if (!s) return;
+    const { state } = ctx;
+    // oil: down while the sim has the fighter sliding, plus the last slid tile (the sim clears `slide` as
+    // that tile's step begins); pothole: down for the sim's daze
+    if (p.slide !== null) s.holdUntil = ctx.time + p.stepTotal / TICK_RATE + 0.04;
+    const fallen = s.kind === 'oil' ? ctx.time <= s.holdUntil : state.tick < p.dazedUntil;
+    const pose = slipPose(s, ctx.time, fallen && ctx.time - s.start < SLIP_MAX_S);
+    if (pose.done) {
+      v.slip = null;
+      root.rotation.order = 'XYZ';
+      root.rotation.set(0, v.yaw, 0);
+      return;
+    }
+    root.rotation.order = 'YXZ'; // yaw first, then lean about the body's own X axis
+    root.rotation.set(pose.pitch, v.yaw, pose.roll);
+    root.position.y += pose.lift;
   }
 
   private animate(ctx: FrameContext, p: Player, v: Visual, moving: boolean, speed: number): void {

@@ -55,6 +55,7 @@ describe('sound registry', () => {
       'crowd_throw_whistle',
       'pothole_thud',
       'oil_squeak',
+      'oil_slip',
       'crush_slam',
     ] as SoundId[]) {
       expect(SOUND_IDS, id).toContain(id);

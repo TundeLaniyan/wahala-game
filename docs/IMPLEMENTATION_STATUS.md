@@ -2,6 +2,24 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Ojuelegba identity pass: audio completion, A-hold detonation, trap readability (branch `claude/wahala-ojuelegba-identity-pass-v1`)
+
+Founder brief of 2026-10-28 (decisions OJ1-OJ6 in `DECISIONS.md`). On top of the approved visual commit `592b409`
+(unchanged). No map, spawn, camera, traffic or combat-balance change. Release branch: `claude/wahala-stitch-uiux-v1`.
+
+| Area | Delivered | Main tests |
+| --- | --- | --- |
+| Voice clips | The last 17 founder clips (crowd reactions, market and fare exchanges) through `import_voices.py --add`: all 47 planned lines now have an approved clip; the 30 shipped clips re-encoded bit-identically; no music or manifest change | `tests/audio/assets.test.ts`, `e2e/voices.spec.ts` |
+| Button A | Tap = generator, hold = Remote Detonator (same 0.4 s threshold and rules as B's hold; B keeps both jobs); a quick tap never detonates, a hold never drops a generator; ring + `HOLD: BOOM!` on touch, `HOLD A` chip with a fill on keyboard / gamepad | `tests/input-two-buttons.test.ts`, `e2e/game.spec.ts` (A and B hold) |
+| Trap readability | Amber glossy oil spill and a rubble / fracture pothole with caution rims, contact ring and droplets, `Stumble` + a fall that lasts as long as the sim's slide / daze and a recovery to standing, new `oil_slip` sound; trap rules and size unchanged | `tests/render/trap-feedback.test.ts`, `tests/endgame-traps.test.ts`, `tests/audio/*` |
+| Traffic | Untouched; verified by the existing suites | `tests/stage-hazards.test.ts`, `tests/living-env.test.ts`, `tests/vehicles.test.ts`, `tests/rumble-ojuelegba.test.ts` |
+
+Verification (container: software WebGL): `npm run check` clean (typecheck, eslint, `vitest run`: 100 files, 1490 passed,
+5 skipped, 0 failed; production build ok). Playwright locally: `game.spec` A and B hold, `mobile`, `tutorial`, `audio`,
+`voices` specs passed on desktop and phone (the full suite runs sharded in CI on the pushed commit). A real-browser
+screenshot pass of the oil slick and pothole (contact, fall, recovery) showed no page errors. Known and untouched:
+the music file `pixabay_496406` is not installed (its slot is skipped). Not measured: physical phones.
+
 ## City Rumble Evolution V1 (branch `claude/wahala-rumble-evolution-v1`, from `408fb4d`)
 
 Founder brief of 2026-10-26 plus the late research pack (report and contracts: `RUMBLE_EVOLUTION.md`; research

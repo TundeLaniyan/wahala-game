@@ -548,6 +548,42 @@ export const blastSounds = {
       return t;
     }),
   }),
+
+  // A fighter's feet go out on an oil slick: a rubbery skid that glides down, a whoosh as the feet fly up,
+  // then the slap of the body landing and two scuffs as they slide. Clearly different from the endgame
+  // wave's `oil_squeak` and from the dull `pothole_thud`.
+  oil_slip: oneShot({
+    gain: 0.9,
+    render: simple(({ rate, rng }) => {
+      const t = new Track(rate, 1);
+      const f = (tt: number): number => 1900 * Math.exp(-tt * 2.6) + 380;
+      const n = len(rate, 0.5);
+      const skid = osc('sine', n, rate, (tt) => f(tt) * (1 + 0.05 * Math.sin(TAU * 31 * tt)));
+      const grit = osc('saw', n, rate, (tt) => f(tt) * 0.5);
+      for (let i = 0; i < n; i++) skid[i] = skid[i]! + 0.18 * grit[i]!;
+      t.add(
+        mul(
+          skid,
+          envelope(n, rate, [
+            [0, 0],
+            [0.015, 1],
+            [0.3, 0.7],
+            [0.5, 0],
+          ]),
+        ),
+        0,
+        0.5,
+      );
+      t.add(nburst(rate, 0.42, rng, 'bp', 2400, 500, 0.8, 0.18, 0.01), 0, 0.3);
+      t.add(air(rate, 0.3, rng, 1800, 0.1, 0.04), 0.12, 0.28);
+      // body hits the tarmac, then it slides
+      t.add(thump(rate, 0.24, 150, 52, 0.03, 0.09, 1.8), 0.34, 0.95);
+      t.add(nburst(rate, 0.16, rng, 'lp', 900, null, 0.8, 0.05), 0.34, 0.55);
+      t.add(nburst(rate, 0.24, rng, 'bp', 1400, 600, 0.9, 0.09, 0.004), 0.5, 0.22);
+      t.add(nburst(rate, 0.18, rng, 'bp', 1100, 500, 0.9, 0.07, 0.004), 0.68, 0.14);
+      return t;
+    }),
+  }),
 };
 
 function blockCrumble(variant: number) {

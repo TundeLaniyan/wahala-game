@@ -12,7 +12,7 @@ import type { FrameContext, View } from './types';
 
 /**
  * Live floor traps (early traps and the mandatory endgame waves): a broken-tarmac pothole with
- * rubble, or a black diesel slick. Rebuilt whenever the set of live traps changes (a wave goes
+ * rubble and caution dashes, or a glossy amber oil spill with a rainbow sheen. Rebuilt whenever the set of live traps changes (a wave goes
  * live, a Crush block buries one). Telegraphs are drawn by OverlayViews.
  */
 export class TrapViews implements View {
@@ -21,6 +21,7 @@ export class TrapViews implements View {
   private readonly oil: InstancedMesh;
   private readonly rubble: InstancedMesh;
   private key = '';
+  private readonly oilMat: MeshStandardMaterial;
   private readonly tmp = new Object3D();
   private readonly owned: { dispose(): void }[] = [];
 
@@ -40,11 +41,14 @@ export class TrapViews implements View {
       depthWrite: false,
       roughness: 0.08,
       metalness: 0.35,
+      emissive: 0x6a3d08,
+      emissiveIntensity: 0.3,
       polygonOffset: true,
       polygonOffsetFactor: -2,
     });
     const chunk = new BoxGeometry(0.1, 0.05, 0.08);
-    const chunkMat = new MeshStandardMaterial({ color: 0x3d3833, roughness: 0.95 });
+    const chunkMat = new MeshStandardMaterial({ color: 0x9a8f80, roughness: 0.95 });
+    this.oilMat = oilMat;
     this.holes = new InstancedMesh(plane, holeMat, capacity);
     this.oil = new InstancedMesh(plane, oilMat, capacity);
     this.rubble = new InstancedMesh(chunk, chunkMat, capacity * 6);
@@ -61,6 +65,8 @@ export class TrapViews implements View {
 
   update(ctx: FrameContext): void {
     const { state, layout } = ctx;
+    // a slow wet shimmer keeps the slick readable (and alive) from the whole-arena camera
+    this.oilMat.emissiveIntensity = 0.32 + 0.18 * Math.sin(ctx.time * 2.6);
     const entries = Object.entries(state.floorHazards);
     const key = entries.map(([k, v]) => `${k}${v[0]}`).join(',');
     if (key === this.key) return;

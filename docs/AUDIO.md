@@ -5,7 +5,7 @@ track per standard arena** (see "Signature tracks" below) and the music bus rais
 `src/audio/music.ts`, `src/audio/escalation.ts`) with **fourteen of the fifteen approved tracks installed and playing** (V2 added five City Rumble stage tracks on 2026-10-25, one signature track per V2 Rumble stage).
 
 **Voice integration (`claude/wahala-voice-integration`, 2026-10-24):** the founder's Gemini text-to-speech Pidgin
-voice clips now play (30 of the 47 planned lines: 19 in the first batch, 11 more added in V2 on 2026-10-25), on their own voice bus, mapped to game events,
+voice clips now play (all 47 planned lines: 19 in the first batch, 11 more added in V2 on 2026-10-25, the last 17 on 2026-10-28), on their own voice bus, mapped to game events,
 loaded per arena; see "Voice lines" below. The crowd's on-screen speech bubbles are gone (optional subtitles instead).
 
 ## Read this first
@@ -244,8 +244,17 @@ lines, 1 rejected conductor line, 10 sound-effect requests that are not voices) 
 deployed clips were byte-identical to their masters and re-encoded bit-identically; the **11 new clips** imported with
 `import_voices.py --add` are `conductor_no_change_01`, `conductor_shift_01`, `final_seconds_01`, `okada_saved_01-03`,
 `park_driver_move_01`, `park_going_yaba_01`, `park_transport_fare_01`, `victory_01-02` (0.93-3.44 s; matched to -16 LUFS).
-Their triggers (Okada saved, victory, 0:30 left, bus-park talk) were already wired and now speak. 17 planned lines are
-still missing (market haggling, crowd gasps / laughs / groans ...).
+Their triggers (Okada saved, victory, 0:30 left, bus-park talk) were already wired and now speak.
+
+**Last 17 lines (2026-10-28, `Sounds.zip`).** The attached pack held all 47 WAVs (plus macOS `__MACOSX` stubs, ignored); the
+30 already shipped were byte-identical to their masters, so only the 17 missing ones were added, with
+`import_voices.py --add` (no hand edits): `crowd_ahhh_01`, `crowd_argument_01`, `crowd_excited_01`, `crowd_gasp_01`,
+`crowd_groan_01`, `crowd_irritated_01`, `crowd_laugh_01`, `crowd_scream_01`, `market_bargain_exchange_01-02`,
+`market_customer_back_01`, `market_how_much_01`, `market_last_price_01`, `market_make_i_pass_01`, `market_no_price_01`,
+`park_fare_exchange_01`, `park_route_exchange_02`. Every planned line now has an approved clip (47 of 47); their triggers were
+already wired from the manifest, so the crowd reactions and the market / bus-park exchanges now speak. The 30 existing MP3s
+re-encoded bit-identically, `voices.json` is unchanged and `conductor_cms_01` stays rejected. The missing music file
+`pixabay_496406` is a separate, known, untouched warning.
 
 | Trigger (founder manifest) | Fired by (`src/audio/pidginReactions.ts`) | Clips present | Missing (planned) |
 | --- | --- | --- | --- |
@@ -256,22 +265,22 @@ still missing (market haggling, crowd gasps / laughs / groans ...).
 | `ON_DANFO_HAZARD_IMPACT` (1) | eliminated by a Danfo attack vehicle or a Danfo stage sweep | `danfo_hit_01`, `danfo_hit_03` | - |
 | `ON_DANFO_HAZARD_SWEEP` (2) | a Danfo attack vehicle launching (70 %) or a Danfo stage sweep warning (60 %) | `danfo_hit_02` | - |
 | `ON_KEKE_HAZARD_SPAWN` (2) | a bot's Keke attack warning (100 %), a Keke stage sweep warning (80 %) | `keke_approach_01-03` | - |
-| `AMBIENT_SCHEDULER_MARKET` (4, background) | the conversation scheduler, market zone only | `market_come_buy_01` | `market_how_much_01`, `market_last_price_01`, `market_no_price_01`, `market_customer_back_01`, `market_make_i_pass_01`, `market_bargain_exchange_01-02` |
-| `ON_OKADA_SHIELD_SAVE` (2) | the human's Okada absorbing a hit (forced), a bot's (40 %) | - | `okada_saved_01-03` |
-| `ON_MATCH_VICTORY` (1) | the human wins (forced, after 1.2 s) | - | `victory_01-02` |
-| `ON_FINAL_COUNTDOWN_START` (1) | 0:30 left (the first floor-trap wave), forced | - | `final_seconds_01` |
-| `AMBIENT_SCHEDULER_PARK` (4, background) | the conversation scheduler, bus-park zone only | - | `conductor_shift_01`, `conductor_no_change_01`, `park_driver_move_01`, `park_transport_fare_01`, `park_going_yaba_01`, `park_fare_exchange_01`, `park_route_exchange_02` |
-| `ON_NEAR_MISS_OR_TRAP_ARMED` (3) | floor-trap wave warning (80 %); a vehicle brushing past (preferred over the escape line) | - | `crowd_gasp_01` |
-| `ON_HAZARD_IMPACT` (3) | pothole/oil, Wahala Crush landing within 2 tiles of the human, a crowd firecracker | - | `crowd_ahhh_01` |
-| `ON_PLAYER_COMEDIC_ELIMINATION` (2) | a self-elimination (preferred, then `SELF_TRAP`, then `ELIMINATED`) | - | `crowd_laugh_01` |
-| `ON_PLAYER_SELF_TRAP` (3) | fallback for a self-elimination | - | `crowd_groan_01` |
-| `ON_STALL_BUMP_OR_BLOCK` (3) | a push (30 %), a generator kick (20 %) | - | `crowd_irritated_01` |
-| `ON_POWERUP_PICKUP_OR_CLUTCH` (3) | the human collecting a rare pickup (Okada, Diesel, Hot Fuel, Remote, Kill Switch, Voucher), 40 % | - | `crowd_excited_01` |
-| `ON_SUDDEN_EXPLOSION_NEARBY` (2) | a big or nearby blast (preferred over `DETONATE`) | - | `crowd_scream_01` |
-| `AMBIENT_CROWD_FLAREUP` (4, background) | the conversation scheduler when the match is lively (intensity > 0.4) | - | `crowd_argument_01` |
+| `AMBIENT_SCHEDULER_MARKET` (4, background) | the conversation scheduler, market zone only | `market_come_buy_01`, `market_how_much_01`, `market_last_price_01`, `market_no_price_01`, `market_customer_back_01`, `market_make_i_pass_01`, `market_bargain_exchange_01-02` | - |
+| `ON_OKADA_SHIELD_SAVE` (2) | the human's Okada absorbing a hit (forced), a bot's (40 %) | `okada_saved_01-03` | - |
+| `ON_MATCH_VICTORY` (1) | the human wins (forced, after 1.2 s) | `victory_01-02` | - |
+| `ON_FINAL_COUNTDOWN_START` (1) | 0:30 left (the first floor-trap wave), forced | `final_seconds_01` | - |
+| `AMBIENT_SCHEDULER_PARK` (4, background) | the conversation scheduler, bus-park zone only | `conductor_shift_01`, `conductor_no_change_01`, `park_driver_move_01`, `park_transport_fare_01`, `park_going_yaba_01`, `park_fare_exchange_01`, `park_route_exchange_02` | - |
+| `ON_NEAR_MISS_OR_TRAP_ARMED` (3) | floor-trap wave warning (80 %); a vehicle brushing past (preferred over the escape line) | `crowd_gasp_01` | - |
+| `ON_HAZARD_IMPACT` (3) | pothole/oil, Wahala Crush landing within 2 tiles of the human, a crowd firecracker | `crowd_ahhh_01` | - |
+| `ON_PLAYER_COMEDIC_ELIMINATION` (2) | a self-elimination (preferred, then `SELF_TRAP`, then `ELIMINATED`) | `crowd_laugh_01` | - |
+| `ON_PLAYER_SELF_TRAP` (3) | fallback for a self-elimination | `crowd_groan_01` | - |
+| `ON_STALL_BUMP_OR_BLOCK` (3) | a push (30 %), a generator kick (20 %) | `crowd_irritated_01` | - |
+| `ON_POWERUP_PICKUP_OR_CLUTCH` (3) | the human collecting a rare pickup (Okada, Diesel, Hot Fuel, Remote, Kill Switch, Voucher), 40 % | `crowd_excited_01` | - |
+| `ON_SUDDEN_EXPLOSION_NEARBY` (2) | a big or nearby blast (preferred over `DETONATE`) | `crowd_scream_01` | - |
+| `AMBIENT_CROWD_FLAREUP` (4, background) | the conversation scheduler when the match is lively (intensity > 0.4) | `crowd_argument_01` | - |
 
 A trigger without a clip is silent: nothing is shown instead (the visual cues carry the moment). Losses and draws
-have no planned voice line; the synthesised stings play. The first batch therefore covers 8 of the 20 triggers.
+have no planned voice line; the synthesised stings play. With all 47 clips installed, every one of the 20 triggers has a clip.
 
 Location zones (data, `voices.json` `zones`): `bus_park` = Danfo Bus Park, Oshodi Interchange, City Rumble;
 `market` = Balogun Market, Oshodi Interchange (hawkers), Yaba After Dark (street food), City Rumble. Gameplay

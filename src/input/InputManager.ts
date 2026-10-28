@@ -5,7 +5,7 @@ import { SWITCH_SETTLE_TICKS, resolveAssistLevel } from './moveAssist';
 import type { AssistLevel, MoveAssistSetting, MoveBoard } from './moveAssist';
 import { MoveGate } from './moveGate';
 import type { GateAssist } from './moveGate';
-import { SpecialHold } from './specialHold';
+import { PlaceHold, SpecialHold } from './specialHold';
 import type { ActionName, InputSourceName, NavCommand } from './types';
 
 export interface InputManagerEvents {
@@ -19,7 +19,7 @@ export interface InputManagerEvents {
 export interface IntentContext {
   /** Whether the local player's step finishes this tick (`readyToStep`); a press waits until then. */
   canMove?: boolean;
-  /** The player owns a live remote generator: B must wait to tell a tap from a hold. */
+  /** The player owns a live remote generator: A and B must wait to tell a tap from a hold. */
   remoteReady?: boolean;
   /** Would a move this way do anything right now (step, kick ...)? Enables the corner-turn buffer. */
   legal?: (dir: Dir) => boolean;
@@ -32,8 +32,8 @@ export interface IntentContext {
 
 /**
  * Merges keyboard, touch and gamepad into one `Intent` per simulation tick. Every device has
- * identical power: they all just press the same two buttons (A = place, B = special / hold for the
- * remote) and steer the same MoveGate, so a press is one step and only a deliberate hold repeats.
+ * identical power: they all just press the same two buttons (A = place, B = special; holding either sets
+ * off the remote generators) and steer the same MoveGate, so a press is one step and only a deliberate hold repeats.
  */
 export class InputManager {
   private readonly keyboard: KeyboardInput;
@@ -43,11 +43,11 @@ export class InputManager {
   private touchWish: Dir | null = null;
   private moveAssist: MoveAssistSetting = 'auto';
   private readonly gate = new MoveGate();
+  private readonly a = new PlaceHold();
   private readonly b = new SpecialHold();
   /** Last tick handed to `buildIntent`; presses between ticks are stamped with it. */
   private tickNow = 0;
   private remoteReady = false;
-  private placePending = false;
   private lastDevice: InputSourceName = 'keyboard';
   /** Set while a (tutorial) vehicle-entry selector owns the directional input. */
   navMode = false;
@@ -81,12 +81,13 @@ export class InputManager {
   }
 
   private down(action: ActionName, source: string): void {
-    if (action === 'place') this.placePending = true;
+    if (action === 'place') this.a.pressDown(source, this.tickNow, this.remoteReady);
     else this.b.pressDown(source, this.tickNow, this.remoteReady);
   }
 
   private up(action: ActionName, source: string): void {
-    if (action === 'special') this.b.release(source);
+    if (action === 'place') this.a.release(source);
+    else this.b.release(source);
   }
 
   /** On-screen button pressed (`source` tells several fingers apart; one finger = one source). */
@@ -155,6 +156,18 @@ export class InputManager {
     return this.b.progress(this.tickNow);
   }
 
+  /** The same for A (tap = generator, hold = remote), 0..1, else null. */
+  placeHoldProgress(): number | null {
+    return this.a.progress(this.tickNow);
+  }
+
+  /** Whichever of A and B is being held towards a detonation (the larger fill), 0..1, else null. */
+  detonateProgress(): number | null {
+    const a = this.placeHoldProgress();
+    const b = this.holdProgress();
+    return a === null ? b : b === null ? a : Math.max(a, b);
+  }
+
   /**
    * Builds the intent for this tick and clears the one-shot buffer.
    * @param tick the simulation tick about to run
@@ -178,18 +191,18 @@ export class InputManager {
       );
     }
     const intent: Intent = { move };
+    const a = this.a.take(tick);
     const b = this.b.take(tick);
     if (!this.navMode) {
-      if (this.placePending) intent.place = true;
+      if (a === 'place') intent.place = true;
       if (b === 'special') intent.special = true;
-      else if (b === 'detonate') intent.detonate = true;
+      if (a === 'detonate' || b === 'detonate') intent.detonate = true;
     }
-    this.placePending = false;
     return intent;
   }
 
   clear(): void {
-    this.placePending = false;
+    this.a.clear();
     this.b.clear();
     this.gate.clear();
   }

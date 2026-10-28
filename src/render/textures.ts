@@ -428,21 +428,24 @@ export function potholeTexture(): CanvasTexture {
       g.fillStyle = fill;
       g.fill();
     };
+    // caution dashes and a pale chalky rubble halo so the broken ground stands out from the dark tarmac
+    cautionRim(g, S, 122, 'rgba(255,128,32,0.95)', 'rgba(245,240,230,0.95)', 20);
+    poly(ring(114, 0.1), 'rgba(176,166,150,0.55)');
     // crumbled, lifted edge
-    poly(ring(118, 0.12), 'rgba(58,54,50,0.95)');
-    poly(ring(104, 0.14), 'rgba(38,35,32,1)');
+    poly(ring(106, 0.12), 'rgba(96,88,80,0.97)');
+    poly(ring(94, 0.14), 'rgba(92,82,72,1)');
     // the hole: deep, wet-dark centre
     const deep = g.createRadialGradient(S / 2 + 6, S / 2 + 8, 6, S / 2, S / 2, 92);
-    deep.addColorStop(0, 'rgba(6,5,5,1)');
-    deep.addColorStop(0.6, 'rgba(18,15,13,1)');
-    deep.addColorStop(1, 'rgba(32,28,25,1)');
-    poly(ring(88, 0.16), deep);
+    deep.addColorStop(0, 'rgba(34,29,25,1)');
+    deep.addColorStop(0.6, 'rgba(58,51,44,1)');
+    deep.addColorStop(1, 'rgba(84,75,64,1)');
+    poly(ring(80, 0.16), deep);
     // standing muddy water with a cold highlight
-    g.fillStyle = 'rgba(52,48,40,0.55)';
+    g.fillStyle = 'rgba(120,108,84,0.6)';
     g.beginPath();
     g.ellipse(S / 2 + 10, S / 2 + 14, 44, 28, 0.4, 0, Math.PI * 2);
     g.fill();
-    g.fillStyle = 'rgba(170,180,190,0.12)';
+    g.fillStyle = 'rgba(205,218,228,0.3)';
     g.beginPath();
     g.ellipse(S / 2 - 6, S / 2 + 4, 20, 7, 0.4, 0, Math.PI * 2);
     g.fill();
@@ -453,6 +456,23 @@ export function potholeTexture(): CanvasTexture {
       const v = 40 + Math.floor(r() * 70);
       g.fillStyle = `rgba(${v + 8},${v + 4},${v},${0.6 + r() * 0.4})`;
       g.fillRect(S / 2 + Math.cos(a) * d, S / 2 + Math.sin(a) * d, 1 + r() * 4, 1 + r() * 4);
+    }
+    // pale fracture lines across the crater: broken ground, not a dark disc
+    g.strokeStyle = 'rgba(240,232,216,0.85)';
+    g.lineWidth = 4;
+    for (let i = 0; i < 5; i++) {
+      let a = r() * Math.PI * 2;
+      let x = S / 2 + Math.cos(a) * 20;
+      let y = S / 2 + Math.sin(a) * 18;
+      g.beginPath();
+      g.moveTo(x, y);
+      for (let k = 0; k < 4; k++) {
+        a += (r() - 0.5) * 1.1;
+        x += Math.cos(a) * 18;
+        y += Math.sin(a) * 16;
+        g.lineTo(x, y);
+      }
+      g.stroke();
     }
     // radiating cracks into the surrounding tarmac
     g.strokeStyle = 'rgba(14,12,10,0.8)';
@@ -475,13 +495,36 @@ export function potholeTexture(): CanvasTexture {
   });
 }
 
-/** A spreading black oil / diesel slick with a thin petrol rainbow sheen and splatter (RGBA). */
+/** Caution dashes round a trap: bright enough to read as "something is on the floor" from the camera. */
+function cautionRim(
+  g: CanvasRenderingContext2D,
+  S: number,
+  radius: number,
+  a: string,
+  b: string,
+  dashes = 24,
+): void {
+  g.lineWidth = 7;
+  for (let k = 0; k < dashes; k++) {
+    const a0 = (k / dashes) * Math.PI * 2;
+    g.strokeStyle = k % 2 ? a : b;
+    g.beginPath();
+    g.ellipse(S / 2, S / 2, radius, radius * 0.92, 0, a0, a0 + (Math.PI * 2) / dashes);
+    g.stroke();
+  }
+}
+
+/**
+ * A spilled oil / diesel slick seen from above (RGBA): a glossy amber-brown puddle (not a black disc) with a
+ * strong petrol rainbow sheen, white specular streaks, a smeared tyre track, splatter, and a yellow/black
+ * caution dash rim. Same footprint as before (inside the tile); only the look is easier to read.
+ */
 export function oilSlickTexture(): CanvasTexture {
   return cached('oilslick', () => {
     const S = 256;
     const [c, g] = canvas(S, S);
     const r = artRng(2718);
-    const blob = (cx: number, cy: number, rad: number, fill: string): void => {
+    const blob = (cx: number, cy: number, rad: number, fill: string | CanvasGradient): void => {
       g.beginPath();
       for (let k = 0; k <= 32; k++) {
         const a = (k / 32) * Math.PI * 2;
@@ -495,32 +538,52 @@ export function oilSlickTexture(): CanvasTexture {
       g.fillStyle = fill;
       g.fill();
     };
-    blob(S / 2, S / 2, 104, 'rgba(10,9,10,0.9)');
+    // a pale wet halo so the spill lifts off dark tarmac
+    cautionRim(g, S, 120, 'rgba(255,205,40,0.95)', 'rgba(25,20,10,0.9)');
+    blob(S / 2, S / 2, 108, 'rgba(210,150,60,0.34)');
+    // the puddle: deep amber-brown at the rim, warm and glossy toward the middle
+    const body = g.createRadialGradient(S / 2 - 14, S / 2 - 12, 8, S / 2, S / 2, 104);
+    body.addColorStop(0, 'rgba(176,112,34,0.96)');
+    body.addColorStop(0.55, 'rgba(104,62,18,0.96)');
+    body.addColorStop(1, 'rgba(46,26,8,0.96)');
+    blob(S / 2, S / 2, 100, body);
     for (let i = 0; i < 7; i++) {
       const a = r() * Math.PI * 2;
-      blob(S / 2 + Math.cos(a) * 92, S / 2 + Math.sin(a) * 80, 12 + r() * 22, 'rgba(12,10,11,0.85)');
+      blob(S / 2 + Math.cos(a) * 92, S / 2 + Math.sin(a) * 80, 12 + r() * 22, 'rgba(84,48,14,0.92)');
     }
-    // the sheen: a few soft iridescent bands, very restrained
-    const sheen = g.createRadialGradient(S / 2 - 18, S / 2 - 10, 10, S / 2 - 10, S / 2, 80);
+    // the sheen: clear iridescent bands (cyan, magenta, gold) so it reads as fuel on water
+    const sheen = g.createRadialGradient(S / 2 - 18, S / 2 - 10, 6, S / 2 - 8, S / 2, 88);
     sheen.addColorStop(0, 'rgba(0,0,0,0)');
-    sheen.addColorStop(0.45, 'rgba(60,110,140,0.22)');
-    sheen.addColorStop(0.6, 'rgba(150,80,150,0.18)');
-    sheen.addColorStop(0.75, 'rgba(150,130,60,0.16)');
+    sheen.addColorStop(0.3, 'rgba(70,200,230,0.45)');
+    sheen.addColorStop(0.5, 'rgba(210,90,200,0.4)');
+    sheen.addColorStop(0.7, 'rgba(255,214,70,0.38)');
+    sheen.addColorStop(0.88, 'rgba(90,230,150,0.25)');
     sheen.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = sheen;
     g.fillRect(0, 0, S, S);
-    // tyre track through it
-    g.strokeStyle = 'rgba(40,38,36,0.55)';
-    g.lineWidth = 16;
+    // glossy specular streaks
+    g.strokeStyle = 'rgba(255,255,255,0.7)';
+    g.lineCap = 'round';
+    g.lineWidth = 6;
     g.beginPath();
-    g.moveTo(20, S * 0.7);
-    g.bezierCurveTo(S * 0.4, S * 0.55, S * 0.6, S * 0.6, S - 20, S * 0.35);
+    g.arc(S / 2 - 8, S / 2 - 6, 60, Math.PI * 1.1, Math.PI * 1.5);
+    g.stroke();
+    g.lineWidth = 3;
+    g.beginPath();
+    g.arc(S / 2 + 6, S / 2 + 4, 76, Math.PI * 0.15, Math.PI * 0.3);
+    g.stroke();
+    // tyre track smeared through it
+    g.strokeStyle = 'rgba(30,18,6,0.55)';
+    g.lineWidth = 14;
+    g.beginPath();
+    g.moveTo(26, S * 0.7);
+    g.bezierCurveTo(S * 0.4, S * 0.55, S * 0.6, S * 0.6, S - 26, S * 0.35);
     g.stroke();
     // splatter
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 60; i++) {
       const a = r() * Math.PI * 2;
-      const d = 100 + r() * 24;
-      g.fillStyle = 'rgba(8,8,8,0.8)';
+      const d = 104 + r() * 12;
+      g.fillStyle = 'rgba(120,70,20,0.85)';
       g.beginPath();
       g.arc(S / 2 + Math.cos(a) * d, S / 2 + Math.sin(a) * d * 0.86, 1 + r() * 3, 0, Math.PI * 2);
       g.fill();
