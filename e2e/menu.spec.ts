@@ -494,9 +494,9 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('rumble-stage-rumbleApapa').tap();
     await expect(page.getByTestId('arena-selected')).toHaveText('Apapa Docks');
     // the slider is dragged / set by touch-sized control (44 px high)
+    await page.getByTestId('diff-slider').scrollIntoViewIfNeeded();
     const box = (await page.getByTestId('diff-slider').boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(40);
-    await page.getByTestId('diff-slider').scrollIntoViewIfNeeded();
     await page.touchscreen.tap(box.x + box.width * 0.99, box.y + box.height / 2);
     await expect(page.getByTestId('diff-slider-name')).toHaveText('Nightmare');
     await page.getByTestId('menu-continue').tap();

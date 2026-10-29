@@ -735,6 +735,8 @@
   }
   .mn-abilities .mn-fact small {
     display: block;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
   }
   .mn-abilities .mn-fact p {
     margin: 2px 0 0;
@@ -794,4 +796,48 @@
 }
 .mn-quality-now .mn-tag {
   margin: 0 2px;
+}
+
+/* shorter portrait phones (360x740, 375x667): tighter fighter card so it never needs scrolling */
+@media (max-width: 700px) and (min-height: 521px) and (max-height: 780px) {
+  .mn-fighters2 {
+    gap: 8px;
+  }
+  .mn-fighter-card .mn-fighter-hero {
+    min-height: 168px;
+  }
+  .mn-fighter-card .mn-fighter-name {
+    font-size: 2.1rem;
+  }
+  .mn-fighter-card .mn-fighter-info {
+    gap: 2px;
+    padding: 6px 10px 6px 0;
+  }
+  .mn-fighter-card .mn-kicker {
+    display: none;
+  }
+  .mn-stats div {
+    padding: 3px 8px;
+  }
+  .mn-abilities {
+    gap: 6px;
+  }
+  .mn-abilities .mn-fact {
+    padding: 6px 10px;
+  }
+  .mn-abilities .mn-fact b {
+    font-size: 1.1rem;
+  }
+  .mn-abilities .mn-fact p {
+    font-size: 0.76rem;
+  }
+  .mn-fighters2 .mn-roster-pic {
+    aspect-ratio: 1 / 0.62;
+  }
+  .mn-fighters2 .mn-roster-text {
+    padding-top: 4px;
+  }
+  .mn-fighters2 .mn-roster-card b {
+    font-size: 1rem;
+  }
 }
