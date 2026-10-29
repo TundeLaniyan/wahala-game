@@ -53,17 +53,16 @@ test.describe('main menu', () => {
     expect(entry.x + entry.width).toBeLessThanOrEqual(640);
     await shot(page, info.project.name, 'menu-phone-home');
     await page.getByTestId('home-rumble').click();
-    await expect(page.getByTestId('mode-survival')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('mode-survival')).toHaveAttribute('aria-current', 'true');
     await shot(page, info.project.name, 'menu-phone-rumble');
 
     // Survival has no length and no friendly fire; Team Rumble adds both (and team splits)
-    await page.getByTestId('menu-continue').click();
+    await page.getByTestId('mode-survival').click(); // a tap opens the arena and settings
     await expect(page.getByTestId('rumble-setup')).toBeVisible();
     await expect(page.getByTestId('minutes-5')).toHaveCount(0);
     await expect(page.getByTestId('ff-on')).toHaveCount(0);
     await page.getByTestId('setup-change-mode').click();
     await page.getByTestId('mode-team').click();
-    await page.getByTestId('menu-continue').click();
     await page.getByTestId('rumble-8').click();
     await expect(page.getByTestId('rumble-8')).toContainText('4 v 4');
     await page.getByTestId('minutes-5').click();
@@ -100,7 +99,9 @@ test.describe('main menu', () => {
     await page.getByTestId('pause-button').click();
     await page.getByTestId('quit').click();
     await expect(page.getByTestId('menu-home')).toBeVisible();
-    await expect(page.getByTestId('setup-summary')).toContainText('Team Rumble · 4 v 4 · 5 min · friendly fire');
+    await expect(page.getByTestId('setup-summary')).toContainText(
+      'Team Rumble · 4 v 4 · 5 min · friendly fire',
+    );
     await page.getByTestId('home-classic').click();
     await expect(page.getByTestId('players-4')).toBeVisible();
     await expect(page.getByTestId('setup-arena')).toContainText('Danfo Bus Park');

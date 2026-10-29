@@ -34,9 +34,19 @@ describe('main menu navigation', () => {
     expect(back(back(back(back(m))))).toEqual(MENU_HOME);
   });
 
-  it('the arena screen returns to whichever screen opened it', () => {
-    expect(currentScreen(run(menuAt(['mode', 'setup']), open('arena'), advance))).toBe('setup');
-    expect(currentScreen(run(menuAt(['ready']), edit('arena'), advance))).toBe('ready');
+  it('choosing a mode moves straight on to setup, and the arena choice lives on that screen (no arena detour)', () => {
+    expect(currentScreen(advance(menuAt(['mode'])))).toBe('setup');
+    expect(validMenu({ stack: ['home', 'mode', 'arena' as never] })).toEqual({ stack: ['home', 'mode'] });
+  });
+
+  it('tapping a mode from Ready comes straight back to Ready; a different game opens setup first and then Ready', () => {
+    const ready = menuAt(['mode', 'setup', 'fighter', 'ready']);
+    const editing = edit('mode')(ready);
+    expect(currentScreen(advance(editing))).toBe('ready');
+    const switched = open('setup')(editing);
+    expect(currentScreen(switched)).toBe('setup');
+    expect(currentScreen(back(switched))).toBe('mode');
+    expect(advance(switched).stack).toEqual(ready.stack);
   });
 
   it('an Edit from Ready changes one choice and comes straight back to Ready', () => {

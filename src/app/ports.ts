@@ -4,7 +4,7 @@
  */
 import type { Dir, GameState, Intent, Observation, SimEvent, Difficulty } from '../sim';
 import type { ActionName, IntentContext } from '../input';
-import type { EntryPick, FrameInfo, QualityLevel } from '../render';
+import type { EntryPick, FrameInfo, QualitySetting } from '../render';
 
 export interface Bot {
   decide(obs: Observation): Intent;
@@ -30,7 +30,7 @@ export interface RendererPort {
   handleEvents(events: readonly SimEvent[], state: GameState): void;
   render(state: GameState, alpha: number, dt: number, info: FrameInfo): void;
   pickEntry(clientX: number, clientY: number): EntryPick | null;
-  setQuality(level: QualityLevel | 'auto'): void;
+  setQuality(setting: QualitySetting): void;
 }
 
 export interface InputPort {

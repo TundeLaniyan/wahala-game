@@ -1,7 +1,9 @@
 /**
  * Fighter select: the roster (read from the character registry, so a new fighter appears without a
- * redesign) beside a large portrait and the fighter's real melee and signature vehicle. No ratings,
- * ranks or locked slots: every fighter is playable and differs only in what the game actually does.
+ * redesign) beside the selected fighter's portrait, name, one-line description, real stats and abilities.
+ * Built to be understood without scrolling on a phone: the selected fighter's card comes first, the roster
+ * is a compact strip. No ratings, ranks or locked slots: every fighter is playable and differs only in what
+ * the game actually does (melee, cooldown and signature vehicle come from the sim data and config).
  */
 import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
@@ -11,10 +13,30 @@ import { ROSTER, fighterInfo } from './fighters';
 import { FighterImage } from './FighterImage';
 import { PrimaryButton, ScreenFrame } from './Frame';
 
-function Details({ id }: { id: CharacterId }) {
+function Stats({ id }: { id: CharacterId }) {
   const f = fighterInfo(id);
   return (
-    <div className="mn-fighter-facts">
+    <dl className="mn-stats" data-testid="fighter-stats">
+      <div>
+        <dt>Melee</dt>
+        <dd>{f.skillName}</dd>
+      </div>
+      <div>
+        <dt>Ready again</dt>
+        <dd>{f.skillCooldown} sec</dd>
+      </div>
+      <div>
+        <dt>Vehicle</dt>
+        <dd>{f.vehicleName}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function Abilities({ id }: { id: CharacterId }) {
+  const f = fighterInfo(id);
+  return (
+    <div className="mn-abilities">
       <div className="mn-fact" data-testid="fighter-skill">
         <small>Melee · button B next to a rival</small>
         <b>{f.skillName}</b>
@@ -41,8 +63,8 @@ export function FighterScreen() {
   return (
     <ScreenFrame
       id="fighter"
-      kicker="Step 3"
-      title="Choose your fighter"
+      kicker="Your fighter"
+      title="Choose fighter"
       status={
         <span className="mn-chosen">
           Fighter: <b>{f.name}</b>
@@ -54,7 +76,23 @@ export function FighterScreen() {
         </PrimaryButton>
       }
     >
-      <div className="mn-fighters">
+      <div className="mn-fighters2">
+        <article className="mn-fighter-card" data-testid="fighter-detail" aria-live="polite">
+          <div className="mn-fighter-hero" key={current}>
+            <FighterImage id={current} art={fighterArt(current)} sizes="(max-width: 700px) 42vw, 420px" />
+          </div>
+          <div className="mn-fighter-info">
+            <small className="mn-kicker">Selected fighter</small>
+            <h3 className="mn-fighter-name" data-testid="fighter-name">
+              {f.name}
+            </h3>
+            <p className="mn-fighter-tagline" data-testid="fighter-tagline">
+              {f.tagline}
+            </p>
+            <Stats id={current} />
+          </div>
+        </article>
+        <Abilities id={current} />
         <div className="mn-roster" role="group" aria-label="Fighters" data-testid="roster">
           {ROSTER.map((id) => {
             const on = id === current;
@@ -71,29 +109,19 @@ export function FighterScreen() {
                 onDoubleClick={() => commands.menuContinue()}
               >
                 <span className="mn-roster-pic">
-                  <FighterImage id={id} art={fighterArt(id)} sizes="(max-width: 700px) 30vw, 180px" />
+                  <FighterImage id={id} art={fighterArt(id)} sizes="(max-width: 700px) 30vw, 120px" />
                 </span>
-                <b>{info.name}</b>
-                <small>
-                  {info.skillName} · {info.vehicleName}
-                </small>
+                <span className="mn-roster-text">
+                  <b>{info.name}</b>
+                  <small>{info.tagline}</small>
+                </span>
               </button>
             );
           })}
         </div>
-        <div className="mn-fighter-stage" data-testid="fighter-detail">
-          <div className="mn-fighter-hero" key={current}>
-            <FighterImage id={current} art={fighterArt(current)} sizes="(max-width: 700px) 60vw, 420px" />
-          </div>
-          <div className="mn-fighter-info">
-            <small className="mn-kicker">Selected fighter</small>
-            <h3 className="mn-fighter-name" data-testid="fighter-name">
-              {f.name}
-            </h3>
-            <Details id={current} />
-            <p className="mn-fineprint">Menu artwork is concept art; in the match every fighter plays as their 3D model.</p>
-          </div>
-        </div>
+        <p className="mn-fineprint">
+          Menu artwork is concept art; in the match every fighter plays as their 3D model.
+        </p>
       </div>
     </ScreenFrame>
   );

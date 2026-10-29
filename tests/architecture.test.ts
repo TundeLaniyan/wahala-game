@@ -60,4 +60,19 @@ describe('layering rules', () => {
       expect(code, f).not.toMatch(/\b(180|7200)\b/);
     }
   });
+
+  it('graphics quality is render-only: the sim, the bots and the input layer never see it', () => {
+    for (const dir of ['src/sim', 'src/ai', 'src/input']) {
+      for (const f of files(dir)) {
+        const src = readFileSync(f, 'utf8');
+        expect(src, f).not.toMatch(/render\/(quality|perf)|QualityProfile|QualitySetting|AdaptiveQuality/);
+      }
+    }
+    // and the quality system itself imports nothing from the game's other layers
+    for (const f of files('src/render/perf')) {
+      for (const i of imports(f)) {
+        if (i.startsWith('..')) expect(/^\.\.\/quality$/.test(i), `${f} imports ${i}`).toBe(true);
+      }
+    }
+  });
 });

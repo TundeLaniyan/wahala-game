@@ -19,6 +19,11 @@ import { assets } from './library';
 export interface Crowd {
   group: Group;
   update(time: number, excitement: number): void;
+  /**
+   * Keeps a share (0..1) of the spectators drawn, spread evenly over the stands (adaptive quality: no
+   * rebuild, the instance counts just shrink on the next update).
+   */
+  setShare(share: number): void;
   dispose(): void;
 }
 
@@ -42,6 +47,8 @@ interface Person {
   yaw: number;
   scale: number;
   phase: number;
+  /** 0..1, evenly spread (golden ratio): the person stays drawn while the live share is above it. */
+  rank: number;
   /** watchers/talkers: react pose until this time; next decision at `next` */
   reactUntil: number;
   next: number;
@@ -222,6 +229,7 @@ export function createGlbCrowd(
       // proportional to the taller players so the crowd reads as lively 3D spectators
       scale: 0.76 + rng() * 0.08,
       phase: rng() * 100,
+      rank: (i * 0.6180339887) % 1,
       reactUntil: 0,
       next: rng() * 3,
       path: s.path ?? null,
@@ -240,9 +248,11 @@ export function createGlbCrowd(
     return seed / 4294967296;
   };
 
+  let share = 1;
   const update = (time: number, excitement: number): void => {
     for (const v of variants.values()) v.filled = [0, 0];
     for (const p of people) {
+      if (p.rank >= share) continue;
       let frame: number;
       let y = p.y;
       let x = p.x;
@@ -309,6 +319,9 @@ export function createGlbCrowd(
   return {
     group,
     update,
+    setShare(next) {
+      share = Math.max(0, Math.min(1, next));
+    },
     dispose() {
       for (const v of variants.values()) {
         v.frames[0].dispose();

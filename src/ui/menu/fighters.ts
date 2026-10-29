@@ -17,6 +17,8 @@ const SKILL: Readonly<Record<Skill, { name: string; text: string }>> = {
 export interface FighterInfo {
   id: CharacterId;
   name: string;
+  /** The one-line description from the character data ("Danfo + Push"). */
+  tagline: string;
   skillName: string;
   skillText: string;
   /** Seconds before the melee can be used again (from the sim config). */
@@ -31,6 +33,7 @@ export function fighterInfo(id: CharacterId): FighterInfo {
   return {
     id,
     name: c.name,
+    tagline: c.tagline,
     skillName: SKILL[c.skill].name,
     skillText: SKILL[c.skill].text,
     skillCooldown: DEFAULT_CONFIG.skills.cooldownTicks[c.skill] / TICK_RATE,

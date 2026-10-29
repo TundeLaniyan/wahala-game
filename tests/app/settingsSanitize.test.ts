@@ -9,6 +9,7 @@ import {
 } from '../../src/app/settings';
 import type { GameSettings } from '../../src/app/settings';
 import { EXPERIMENTAL_ARENA_IDS, RUMBLE_ARENA_IDS } from '../../src/sim';
+import { QUALITY_SETTINGS } from '../../src/render/quality';
 
 function withStorage(value: string | null) {
   const data = new Map<string, string>();
@@ -84,7 +85,9 @@ describe('settings repair (invalid saves can never block a match)', () => {
   });
 
   it('loadSettings repairs a corrupted save and keeps the pre-V2 migration', () => {
-    withStorage(JSON.stringify({ character: 'ghost', rumbleCompetitors: 100, arenaId: 'cityRumble', mode: 'timer' }));
+    withStorage(
+      JSON.stringify({ character: 'ghost', rumbleCompetitors: 100, arenaId: 'cityRumble', mode: 'timer' }),
+    );
     const s = loadSettings();
     expect(s.character).toBe('streetBaller');
     expect(s.rumbleCompetitors).toBe(16);
@@ -98,6 +101,49 @@ describe('settings repair (invalid saves can never block a match)', () => {
     expect(Object.keys(d).sort()).toEqual([...PREFERENCE_KEYS].sort());
     for (const k of ['play', 'character', 'arenaId', 'rumbleArenaId', 'difficulty', 'competitors'])
       expect(k in d).toBe(false);
-    expect(d).toMatchObject({ quality: 'auto', subtitles: 'off', shake: 'auto', touchControls: 'auto', muted: false });
+    expect(d).toMatchObject({
+      quality: 'auto',
+      subtitles: 'off',
+      shake: 'auto',
+      touchControls: 'auto',
+      muted: false,
+    });
+  });
+
+  describe('graphics quality setting', () => {
+    it('is Auto by default', () => {
+      expect(DEFAULT_GAME_SETTINGS.quality).toBe('auto');
+      withStorage(null);
+      expect(loadSettings().quality).toBe('auto');
+    });
+    it('keeps Auto and every manual preset through a save and a reload', () => {
+      for (const q of QUALITY_SETTINGS) {
+        withStorage(JSON.stringify({ quality: q }));
+        expect(loadSettings().quality).toBe(q);
+        expect(sanitizeSettings({ ...DEFAULT_GAME_SETTINGS, quality: q }).quality).toBe(q);
+      }
+      expect(QUALITY_SETTINGS).toEqual([
+        'auto',
+        'veryLow',
+        'low',
+        'mediumLow',
+        'medium',
+        'mediumHigh',
+        'high',
+      ]);
+    });
+    it('older saves with low / medium / high still load; unknown values fall back to Auto', () => {
+      for (const q of ['low', 'medium', 'high'] as const) {
+        withStorage(JSON.stringify({ quality: q }));
+        expect(loadSettings().quality).toBe(q);
+      }
+      for (const bad of ['ultra', 5, null, '']) {
+        withStorage(JSON.stringify({ quality: bad }));
+        expect(loadSettings().quality).toBe('auto');
+      }
+    });
+    it('"Restore defaults" puts the graphics back to Auto', () => {
+      expect(preferenceDefaults().quality).toBe('auto');
+    });
   });
 });

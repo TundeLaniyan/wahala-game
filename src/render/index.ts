@@ -1,9 +1,10 @@
 export { GameRenderer } from './GameRenderer';
-export type { CameraView, RenderStats, RendererOptions } from './GameRenderer';
+export type { CameraView, QualityEvent, QualityStatus, RenderStats, RendererOptions } from './GameRenderer';
 export type { CameraMode } from './cameraModes';
 export { cameraModeFor } from './cameraModes';
 export type { EntryOverlayModel, EntryPick, FrameInfo } from './types';
-export type { QualityLevel } from './quality';
+export type { QualityLevel, QualityPreset, QualitySetting } from './quality';
+export { QUALITY_LABEL, QUALITY_PRESETS, QUALITY_SETTINGS, isQualitySetting } from './quality';
 export { assets } from './assets/library';
 export { renderCastPortraits } from './portraits';
 export { resolveShakeMode } from './shake';

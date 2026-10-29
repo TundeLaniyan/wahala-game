@@ -5,6 +5,25 @@
 import { DIFFICULTIES } from '../sim';
 import type { Difficulty } from '../sim';
 import type { GameSettings } from '../app/settings';
+import { MIXED_SPREAD } from '../app/names';
+
+/** Words for the two ends of the scale, shown under the slider. */
+export const SCALE_ENDS = { low: 'Very easy', high: 'Extremely hard' } as const;
+
+export const LEVEL_COUNT = DIFFICULTIES.length;
+
+/** Position of a level on the scale (0 = easiest). */
+export const levelIndex = (d: Difficulty): number => DIFFICULTIES.indexOf(d);
+
+/** The level at a scale position (clamped, so a slider value can never produce an unknown level). */
+export const levelAt = (i: number): Difficulty =>
+  DIFFICULTIES[Math.max(0, Math.min(DIFFICULTIES.length - 1, Math.round(Number.isFinite(i) ? i : 0)))]!;
+
+/** The easiest and hardest level a mixed roster centred on `d` can contain (same spread as the match uses). */
+export function mixedRange(d: Difficulty): { lo: Difficulty; hi: Difficulty } {
+  const at = levelIndex(d);
+  return { lo: levelAt(at + Math.min(...MIXED_SPREAD)), hi: levelAt(at + Math.max(...MIXED_SPREAD)) };
+}
 
 export const LEVEL_LABEL: Readonly<Record<Difficulty, string>> = {
   rookie: 'Rookie',

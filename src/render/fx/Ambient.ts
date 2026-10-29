@@ -40,6 +40,8 @@ export class AmbientFx {
   private readonly sources: Source[] = [];
   private lightsLeft: number;
   private readonly density: number;
+  /** Live emission share (QualityProfile.ambient relative to what was built), 0..1. */
+  private scale = 1;
   private seed = 0x2f6e2b1;
 
   constructor(opts: AmbientOptions) {
@@ -51,6 +53,11 @@ export class AmbientFx {
     // ambient smoke draws before the gameplay effects so blasts stay on top
     this.smoke.points.renderOrder = 12;
     this.group.add(this.smoke.points, this.flames.points, this.embers.points);
+  }
+
+  /** Thins the emission without rebuilding anything (adaptive quality). */
+  setScale(scale: number): void {
+    this.scale = Math.max(0, Math.min(1, scale));
   }
 
   private rand(): number {
@@ -125,7 +132,7 @@ export class AmbientFx {
     dt = Math.min(dt, 0.1);
     const wind = 0.18 + 0.08 * Math.sin(time * 0.13);
     for (const s of this.sources) {
-      s.acc += s.rate * dt;
+      s.acc += s.rate * this.scale * dt;
       while (s.acc >= 1) {
         s.acc -= 1;
         this.emit(s, wind);

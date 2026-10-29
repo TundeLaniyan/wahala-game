@@ -26,8 +26,17 @@ import { createLayout } from './coords';
 import type { Layout } from './coords';
 import { Effects } from './fx/Effects';
 import type { ShakeMode } from './shake';
-import { QUALITY } from './quality';
-import type { QualityLevel, QualityProfile } from './quality';
+import { profileFor, rungOfPreset, rungOfSetting } from './quality';
+import type { QualityLevel, QualityProfile, QualitySetting } from './quality';
+import {
+  AdaptiveQuality,
+  deviceFingerprint,
+  detectCapabilities,
+  estimateRung,
+  loadLearned,
+  saveLearned,
+} from './perf';
+import type { AdaptiveStatus, CapabilityEnv, DeviceHints, QualityChange } from './perf';
 import type { EntryPick, FrameInfo } from './types';
 import { debrisKindFor } from './assets/props';
 import { NEW_ARENA_ART } from './arenas/newArenas';
@@ -54,16 +63,74 @@ export interface RenderStats {
   particles: number;
   pixelRatio: number;
   quality: QualityLevel;
+  /** Name of the ladder rung in use ("Medium-Low"), and whether Auto chose it. */
+  qualityName: string;
+  auto: boolean;
+}
+
+/** What Settings and the debug handle show about graphics quality. */
+export interface QualityStatus {
+  setting: QualitySetting;
+  auto: boolean;
+  rung: number;
+  name: string;
+  level: QualityLevel;
+  pixelRatio: number;
+  /** Median fps of the adaptive window (0 when Auto has not measured yet or is off). */
+  fps: number;
+  /** The first guess and why (hints are only a starting point). */
+  estimate: { rung: number; ceiling: number; reasons: string[] };
+  /** Auto started from a remembered measurement of this device. */
+  learned: boolean;
+  controller: AdaptiveStatus;
+}
+
+/** A quality change Auto made, for the notice and the debug log. */
+export interface QualityEvent {
+  change: QualityChange;
+  profile: QualityProfile;
 }
 
 export type CameraView = 'action' | 'overview';
 
 export interface RendererOptions {
   canvas: HTMLCanvasElement;
-  quality: QualityLevel | 'auto';
+  quality: QualitySetting;
+  /** Called when Auto moves the quality (the app shows a rate-limited notice). */
+  onQualityChange?: (e: QualityEvent) => void;
+  /** Browser objects for the capability estimate (defaults to the page's own; tests pass fakes). */
+  capabilityEnv?: CapabilityEnv;
+  /** Where the learned rung is kept (defaults to localStorage when available). */
+  storage?: Pick<Storage, 'getItem' | 'setItem'>;
   /** Forces a camera mode for every match (debug `?cam=stadium`); default: chosen per arena. */
   cameraMode?: CameraMode | null;
   onContextLost?: () => void;
+}
+
+/** The page's own browser objects for the capability estimate; every piece is optional. */
+function pageEnv(): CapabilityEnv {
+  const w = globalThis as unknown as Partial<{
+    navigator: CapabilityEnv['navigator'];
+    screen: CapabilityEnv['screen'];
+    devicePixelRatio: number;
+    matchMedia: CapabilityEnv['matchMedia'];
+    document: { createElement(tag: string): unknown };
+  }>;
+  return {
+    navigator: w.navigator,
+    screen: w.screen,
+    devicePixelRatio: w.devicePixelRatio,
+    matchMedia: w.matchMedia?.bind(globalThis),
+    createCanvas: w.document ? () => w.document!.createElement('canvas') as { getContext(t: string): unknown } : undefined,
+  };
+}
+
+function safeStorage(): Pick<Storage, 'getItem' | 'setItem'> | undefined {
+  try {
+    return globalThis.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 const WRECK_COLORS: Record<string, [number, number, number][]> = {
@@ -105,14 +172,25 @@ export class GameRenderer {
   private players: PlayerViews | null = null;
   private lights!: SceneLights;
   private profile: QualityProfile;
-  private readonly auto: boolean;
+  private auto: boolean;
+  private setting: QualitySetting;
+  private readonly hints: DeviceHints;
+  private readonly estimate: ReturnType<typeof estimateRung>;
+  private readonly fingerprint: string;
+  private readonly adaptive: AdaptiveQuality;
+  private readonly learned: boolean;
+  private readonly storage: Pick<Storage, 'getItem' | 'setItem'> | undefined;
+  private readonly onQualityChange: ((e: QualityEvent) => void) | undefined;
+  private lastFrameMs = 0;
+  /** Debug seam (e2e): while set, only synthetic frames feed the controller (see `debugFeedFrames`). */
+  private synthetic: { now: number } | null = null;
+  private lastBlastAt = -Infinity;
+  private appliedShadows: boolean | null = null;
   private width = 1;
   private height = 1;
   private insets = { top: 0.1, bottom: 0.06 };
   private time = 0;
   private frameAvg = 1 / 60;
-  private slowFrames = 0;
-  private fastFrames = 0;
   private disposed = false;
   private loaded = false;
   private overviewPreferred = false;
@@ -134,9 +212,25 @@ export class GameRenderer {
   };
 
   constructor(opts: RendererOptions) {
+    this.setting = opts.quality;
     this.auto = opts.quality === 'auto';
     this.cameraOverride = opts.cameraMode ?? null;
-    this.profile = QUALITY[opts.quality === 'auto' ? 'medium' : opts.quality];
+    this.onQualityChange = opts.onQualityChange;
+    this.storage = opts.storage ?? safeStorage();
+    // First guess from what the browser says about the device (and, if this device was measured before,
+    // from that); the adaptive controller then follows the real frame times.
+    this.hints = detectCapabilities(opts.capabilityEnv ?? pageEnv());
+    this.estimate = estimateRung(this.hints);
+    this.fingerprint = deviceFingerprint(this.hints);
+    const remembered = loadLearned(this.storage, this.fingerprint, Date.now());
+    this.learned = remembered !== null;
+    const autoStart = Math.min(remembered ?? this.estimate.rung, this.estimate.ceiling);
+    this.adaptive = new AdaptiveQuality({
+      start: autoStart,
+      ceiling: this.estimate.ceiling,
+      now: performance.now() / 1000,
+    });
+    this.profile = profileFor(rungOfSetting(opts.quality, autoStart));
     this.renderer = new WebGLRenderer({
       canvas: opts.canvas,
       antialias: this.profile.antialias,
@@ -161,6 +255,9 @@ export class GameRenderer {
     this.mode = cameraModeFor(state.arenaId, this.cameraOverride);
     this.effects = new Effects(this.layout, this.profile);
     this.effects.shaker.mode = this.shakeMode;
+    this.appliedShadows = null;
+    // shader compiles and first draws are not evidence about steady-state speed
+    this.adaptive.suspend(this.now(), 6);
 
     const look = arenaLook(state.arenaId);
     this.scene.background = new Color(look.sky);
@@ -315,25 +412,96 @@ export class GameRenderer {
     return this.mode;
   }
 
-  setQuality(level: QualityLevel | 'auto'): void {
-    this.profile = QUALITY[level === 'auto' ? 'medium' : level];
+  /**
+   * The graphics setting from Settings: a manual preset pins that rung (Auto never touches it); 'auto' hands
+   * the choice to the adaptive controller, starting from the rung the player was just looking at.
+   */
+  setQuality(setting: QualitySetting): void {
+    this.setting = setting;
+    this.auto = setting === 'auto';
+    if (setting === 'auto') this.adaptive.reset(this.profile.rung, this.now());
+    else this.profile = profileFor(rungOfPreset(setting));
+    this.synthetic = null;
     this.applyQuality();
     this.resize(this.width, this.height);
   }
 
+  /** Wall clock in seconds (the controller's clock outside tests). */
+  private now(): number {
+    return this.synthetic ? this.synthetic.now : performance.now() / 1000;
+  }
+
+  /**
+   * Makes the running match follow `this.profile`. Cheap live knobs only (pixel ratio, shadow map, particle
+   * density, crowd / street-life share, ambient, animation stride); the materials are recompiled only when
+   * the shadow pass is switched on or off, because that changes their shaders.
+   */
   private applyQuality(): void {
     const p = this.profile;
     this.renderer.shadowMap.enabled = p.shadows;
-    if (this.loaded) {
-      this.lights.setShadows(p.shadows, p.shadowMapSize);
+    if (!this.loaded) return;
+    this.lights.setShadows(p.shadows, p.shadowMapSize);
+    if (this.appliedShadows !== p.shadows) {
+      this.appliedShadows = p.shadows;
       this.scene.traverse((o) => {
         const m = (o as { material?: { needsUpdate: boolean } | { needsUpdate: boolean }[] }).material;
         if (Array.isArray(m)) for (const x of m) x.needsUpdate = true;
         else if (m) m.needsUpdate = true;
       });
-      this.effects.setQuality(p);
-      this.living?.setProfile(p);
     }
+    this.effects.setQuality(p);
+    this.backdrop.setQuality(p);
+    this.living?.setProfile(p);
+  }
+
+  /** What Settings and the debug handle show. */
+  qualityStatus(): QualityStatus {
+    const controller = this.adaptive.status(this.now());
+    return {
+      setting: this.setting,
+      auto: this.auto,
+      rung: this.profile.rung,
+      name: this.profile.name,
+      level: this.profile.level,
+      pixelRatio: Math.min(this.profile.maxPixelRatio, globalThis.devicePixelRatio || 1),
+      fps: this.auto ? controller.fps : 0,
+      estimate: { rung: this.estimate.rung, ceiling: this.estimate.ceiling, reasons: this.estimate.reasons },
+      learned: this.learned,
+      controller,
+    };
+  }
+
+  /**
+   * Debug / e2e: feeds `count` synthetic frames of `frameMs` to the Auto controller on a virtual clock and
+   * applies what it decides, exactly as real frames would. While any are fed, real frames are not sampled.
+   * `setQuality()` ends the synthetic mode.
+   */
+  debugFeedFrames(frameMs: number, count: number, opts: { busy?: boolean } = {}): QualityChange[] {
+    const changes: QualityChange[] = [];
+    if (!this.auto) return changes;
+    if (!this.synthetic) {
+      // enter the synthetic clock: measuring starts afresh at the rung in use, with no warm-up pause
+      this.synthetic = { now: performance.now() / 1000 };
+      this.adaptive.reset(this.profile.rung, this.synthetic.now, 0);
+    }
+    for (let i = 0; i < count; i++) {
+      this.synthetic.now += frameMs / 1000;
+      const c = this.adaptive.frame(frameMs / 1000, this.synthetic.now, opts);
+      if (c) {
+        changes.push(c);
+        this.adoptChange(c);
+      }
+    }
+    return changes;
+  }
+
+  /** Auto moved the quality: apply it, remember it for this device, tell the app. */
+  private adoptChange(change: QualityChange): void {
+    this.profile = profileFor(change.to);
+    this.applyQuality();
+    this.resize(this.width, this.height);
+    saveLearned(this.storage, this.fingerprint, change.to, Date.now());
+    this.onQualityChange?.({ change, profile: this.profile });
   }
 
   /** Reacts to simulation events with particles, camera shake and floating text. Call before render(). */
@@ -346,6 +514,7 @@ export class GameRenderer {
     for (const e of events) {
       switch (e.type) {
         case 'generatorExploded':
+          this.lastBlastAt = this.time;
           fx.explosion(e.x, e.y, e.range);
           break;
         case 'generatorPlaced':
@@ -515,33 +684,27 @@ export class GameRenderer {
     const shake = info.attract === true ? 0 : this.effects.shaker.offset(this.time);
     this.rig.update(dt, this.time, shake, shot, info.attract === true);
     this.renderer.render(this.scene, this.rig.camera);
-    this.trackPerformance(dt);
+    this.trackPerformance(dt, info);
   }
 
-  private trackPerformance(dt: number): void {
+  /**
+   * Frame-time bookkeeping. `dt` (clamped) feeds the displayed fps; the wall-clock gap between two renders
+   * is what the player actually experiences and is what Auto measures. Paused and fast-forward frames are not
+   * sampled, and an explosion burst defers a drop (adaptive.ts).
+   */
+  private trackPerformance(dt: number, info: FrameInfo): void {
     this.frameAvg = this.frameAvg * 0.95 + dt * 0.05;
-    if (!this.auto) return;
-    if (this.frameAvg > 1 / 30) {
-      this.slowFrames++;
-      this.fastFrames = 0;
-    } else if (this.frameAvg < 1 / 55) {
-      this.fastFrames++;
-      this.slowFrames = 0;
-    } else {
-      this.slowFrames = 0;
-      this.fastFrames = 0;
+    const nowMs = performance.now();
+    const gap = this.lastFrameMs > 0 ? (nowMs - this.lastFrameMs) / 1000 : 0;
+    this.lastFrameMs = nowMs;
+    if (!this.auto || this.synthetic || gap <= 0) return;
+    if (info.paused || info.skipping || info.attract) {
+      this.adaptive.suspend(nowMs / 1000, 2);
+      return;
     }
-    if (this.slowFrames > 90 && this.profile.level !== 'low') {
-      this.profile = QUALITY[this.profile.level === 'high' ? 'medium' : 'low'];
-      this.slowFrames = 0;
-      this.applyQuality();
-      this.resize(this.width, this.height);
-    } else if (this.fastFrames > 600 && this.profile.level === 'low') {
-      this.profile = QUALITY.medium;
-      this.fastFrames = 0;
-      this.applyQuality();
-      this.resize(this.width, this.height);
-    }
+    const busy = this.time - this.lastBlastAt < 1.5;
+    const change = this.adaptive.frame(gap, nowMs / 1000, { busy });
+    if (change) this.adoptChange(change);
   }
 
   /** Maps a pointer position to the nearest vehicle-entry or turn marker. */
@@ -608,6 +771,8 @@ export class GameRenderer {
       particles: this.loaded ? this.effects.activeParticles : 0,
       pixelRatio: this.renderer.getPixelRatio(),
       quality: this.profile.level,
+      qualityName: this.profile.name,
+      auto: this.auto,
     };
   }
 

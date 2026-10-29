@@ -133,6 +133,8 @@ export class StreetLife {
   private readonly actors: Actor[] = [];
   private readonly owned: Material[] = [];
   private seed: number;
+  /** How many of the actors (in the order they were added: most important first) are live. */
+  private active = Number.POSITIVE_INFINITY;
 
   constructor(
     private readonly budget: number,
@@ -150,6 +152,18 @@ export class StreetLife {
 
   get count(): number {
     return this.actors.length;
+  }
+
+  /**
+   * Keeps the first `share` (0..1) of the actors alive and hides the rest (adaptive quality): no rebuild,
+   * the tail is neither drawn nor animated. A pair (fight, argument) is kept or dropped together.
+   */
+  setShare(share: number): void {
+    const n = this.actors.length;
+    let k = Math.max(0, Math.min(n, Math.ceil(n * Math.max(0, Math.min(1, share)))));
+    while (k > 0 && k < n && this.actors[k - 1]!.partner === this.actors[k]) k++;
+    this.active = k;
+    for (let i = 0; i < n; i++) this.actors[i]!.root.visible = i < k;
   }
 
   /** Room for `n` more actors? */
@@ -246,7 +260,8 @@ export class StreetLife {
   }
 
   update(dt: number, time: number, excitement: number, visible?: (x: number, z: number) => boolean): void {
-    for (const a of this.actors) {
+    for (let i = 0, n = Math.min(this.active, this.actors.length); i < n; i++) {
+      const a = this.actors[i]!;
       // follow camera: people out of view are neither drawn nor animated (their clip resumes where it stopped)
       if (visible) {
         const seen = visible(a.root.position.x, a.root.position.z);

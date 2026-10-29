@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { mutate, open, stepTicks, toRumbleSetup } from './helpers';
+import { chooseStage, mutate, open, stepTicks, toRumbleSetup } from './helpers';
 
 /**
  * City Rumble Evolution (docs/RUMBLE_EVOLUTION.md) in the real game: the five-district Ojuelegba stage starts
@@ -42,13 +42,13 @@ async function startOjuelegba(page: Page, blast: 'radial' | 'cross'): Promise<vo
   await page.getByTestId(`blast-${blast}`).click();
   await expect(page.getByTestId(`blast-${blast}`)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('blast-note')).toContainText(blast === 'cross' ? 'Classic cross' : 'circle');
-  await page.getByTestId('setup-arena').click();
-  await page.getByTestId('rumble-stage-rumbleOjuelegba').click();
-  await page.getByTestId('arena-confirm').click();
+  await chooseStage(page, 'rumbleOjuelegba');
   await expect(page.getByTestId('setup-arena')).toContainText('Ojuelegba');
   await page.getByTestId('menu-continue').click();
   await page.getByTestId('menu-continue').click();
-  await expect(page.getByTestId('ready-rules')).toContainText(blast === 'cross' ? 'Cross blasts' : 'Radial blasts');
+  await expect(page.getByTestId('ready-rules')).toContainText(
+    blast === 'cross' ? 'Cross blasts' : 'Radial blasts',
+  );
   await page.getByTestId('start-button').click();
   await expect(page.getByTestId('hud')).toBeVisible();
   await stepTicks(page, 170); // past the countdown
@@ -82,8 +82,11 @@ async function diagonalSetup(page: Page): Promise<void> {
 const meAlive = (page: Page): Promise<boolean> =>
   page.evaluate(
     () =>
-      ((window as never as { __WAHALA__: { getState(): never } }).__WAHALA__.getState() as { players: { alive: boolean }[] })
-        .players[0]!.alive,
+      (
+        (window as never as { __WAHALA__: { getState(): never } }).__WAHALA__.getState() as {
+          players: { alive: boolean }[];
+        }
+      ).players[0]!.alive,
   );
 
 test.describe('City Rumble Evolution', () => {
@@ -103,7 +106,12 @@ test.describe('City Rumble Evolution', () => {
 
     await diagonalSetup(page);
     // the live danger footprint: let a few frames render while the fuse burns, then capture it
-    await page.evaluate(() => ((window as never as { __WAHALA__: { controller(): { frozen: boolean } } }).__WAHALA__.controller().frozen = true));
+    await page.evaluate(
+      () =>
+        ((
+          window as never as { __WAHALA__: { controller(): { frozen: boolean } } }
+        ).__WAHALA__.controller().frozen = true),
+    );
     await page.waitForTimeout(800);
     await page.screenshot({ path: `e2e-shots/${info.project.name}-radial-footprint.png` });
     await stepTicks(page, 40);
@@ -111,7 +119,9 @@ test.describe('City Rumble Evolution', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Blast shape "Cross" plays City Rumble with the Classic plus: the diagonal is safe', async ({ page }) => {
+  test('Blast shape "Cross" plays City Rumble with the Classic plus: the diagonal is safe', async ({
+    page,
+  }) => {
     test.setTimeout(600_000);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -126,7 +136,9 @@ test.describe('City Rumble Evolution', () => {
     expect(errors).toEqual([]);
   });
 
-  test('the Danfo pull-out is telegraphed on the departure strip before it turns lethal', async ({ page }, info) => {
+  test('the Danfo pull-out is telegraphed on the departure strip before it turns lethal', async ({
+    page,
+  }, info) => {
     test.setTimeout(600_000);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));

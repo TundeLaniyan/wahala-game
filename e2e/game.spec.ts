@@ -9,6 +9,7 @@ import {
   startMatch,
   stepTicks,
   chooseArena,
+  setDifficulty,
   toClassicSetup,
 } from './helpers';
 
@@ -434,13 +435,14 @@ test.describe('whole-match robustness', () => {
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
     await open(page);
     await toClassicSetup(page);
-    await page.getByTestId('diff-expert').click();
+    await setDifficulty(page, 5); // Expert
     await startMatch(page, { competitors: 4, waitPlaying: false });
     // the level chosen in the menu reached the settings the running match was built from
     const levels = await page.evaluate(
       () =>
-        (window as never as { __WAHALA__: { controller(): { settings: { botDifficulties: string[] } } } }).__WAHALA__.controller()
-          .settings.botDifficulties,
+        (
+          window as never as { __WAHALA__: { controller(): { settings: { botDifficulties: string[] } } } }
+        ).__WAHALA__.controller().settings.botDifficulties,
     );
     expect(levels).toEqual(['expert', 'expert', 'expert']);
     for (let i = 0; i < 12; i++) {

@@ -1,6 +1,13 @@
-import { CHARACTER_IDS, DIFFICULTIES, EXPERIMENTAL_ARENA_IDS, RUMBLE_ARENA_IDS, STANDARD_ARENA_IDS } from '../sim';
+import {
+  CHARACTER_IDS,
+  DIFFICULTIES,
+  EXPERIMENTAL_ARENA_IDS,
+  RUMBLE_ARENA_IDS,
+  STANDARD_ARENA_IDS,
+} from '../sim';
 import type { CharacterId, Difficulty } from '../sim';
-import type { CameraView, QualityLevel } from '../render';
+import { QUALITY_SETTINGS } from '../render/quality';
+import type { CameraView, QualitySetting } from '../render';
 import { MOVE_ASSIST_SETTINGS } from '../input/moveAssist';
 import type { MoveAssistSetting } from '../input/moveAssist';
 
@@ -36,7 +43,8 @@ export interface GameSettings {
   /** Classic Battle arena (one of the nine standard arenas, or the Mobile Test Arena). */
   arenaId: string;
   crowdThrows: boolean;
-  quality: QualityLevel | 'auto';
+  /** Graphics: 'auto' (adaptive, default) or a fixed preset from Very Low to High (render/quality.ts). */
+  quality: QualitySetting;
   musicVolume: number;
   sfxVolume: number;
   muted: boolean;
@@ -92,7 +100,16 @@ export const RUMBLE_SIZES = [8, 16, 24, 32] as const;
  * The device / presentation preferences (Settings screen), as opposed to the match setup. "Restore
  * defaults" resets exactly these; the chosen game, fighter, arena and bots are never touched by it.
  */
-export const PREFERENCE_KEYS = ['quality', 'touchControls', 'cameraView', 'subtitles', 'shake', 'narration', 'muted', 'moveAssist'] as const;
+export const PREFERENCE_KEYS = [
+  'quality',
+  'touchControls',
+  'cameraView',
+  'subtitles',
+  'shake',
+  'narration',
+  'muted',
+  'moveAssist',
+] as const;
 export type PreferenceKey = (typeof PREFERENCE_KEYS)[number];
 
 export function preferenceDefaults(): Pick<GameSettings, PreferenceKey> {
@@ -137,7 +154,7 @@ export function sanitizeSettings(s: GameSettings): GameSettings {
     character: oneOf(s.character, CHARACTER_IDS, d.character),
     arenaId: oneOf(s.arenaId, classicArenas, d.arenaId),
     crowdThrows: bool(s.crowdThrows, d.crowdThrows),
-    quality: oneOf(s.quality, ['auto', 'low', 'medium', 'high'] as const, d.quality),
+    quality: oneOf(s.quality, QUALITY_SETTINGS, d.quality),
     muted: bool(s.muted, d.muted),
     touchControls: oneOf(s.touchControls, ['auto', 'on', 'off'] as const, d.touchControls),
     cameraView: oneOf(s.cameraView, ['action', 'overview'] as const, d.cameraView),

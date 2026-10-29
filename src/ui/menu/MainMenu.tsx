@@ -14,18 +14,17 @@ import { HomeScreen } from './HomeScreen';
 import { ModeScreen } from './ModeScreen';
 import { SetupScreen } from './SetupScreen';
 import { FighterScreen } from './FighterScreen';
-import { ArenaScreen } from './ArenaScreen';
 import { ReadyScreen } from './ReadyScreen';
 import { SettingsScreen } from './SettingsScreen';
 import { AcademyScreen } from './AcademyScreen';
 import './menu.css';
+import './flow.css';
 
 const SCREENS: Record<MenuScreen, () => React.JSX.Element> = {
   home: HomeScreen,
   mode: ModeScreen,
   setup: SetupScreen,
   fighter: FighterScreen,
-  arena: ArenaScreen,
   ready: ReadyScreen,
   settings: SettingsScreen,
   academy: AcademyScreen,

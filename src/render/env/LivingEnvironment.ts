@@ -45,6 +45,8 @@ export class LivingEnvironment implements View {
   private dust: ParticleSystem | null = null;
   private plan!: EnvironmentPlan;
   private time = 0;
+  private pendingDt = 0;
+  private frames = 0;
   private pixelScale = 600;
 
   constructor(
@@ -60,7 +62,7 @@ export class LivingEnvironment implements View {
     const level = profile.level;
     this.plan = planEnvironment(this.env, level, board);
     const seed = this.env.seed ?? 1;
-    const particles = level !== 'low';
+    const particles = level === 'medium' || level === 'high';
     if (particles) {
       this.dust = new ParticleSystem(Math.round(160 * profile.particleDensity), smokeTexture(), false);
       this.dust.points.renderOrder = 13;
@@ -144,11 +146,15 @@ export class LivingEnvironment implements View {
     this.traffic = this.crowd = this.lights = this.dust = null;
   }
 
-  /** Rebuilds for a new quality profile (the renderer's auto quality dropped or raised the tier). */
+  /**
+   * A new quality profile (adaptive quality moved the rung). Only a change of coarse tier rebuilds (traffic,
+   * crowds and lights are budgeted per tier); inside a tier just the animation stride follows.
+   */
   setProfile(profile: QualityProfile): void {
-    if (profile.level === this.opts.profile.level) return;
-    this.teardown();
+    const rebuild = profile.level !== this.opts.profile.level;
     this.opts = { ...this.opts, profile };
+    if (!rebuild) return;
+    this.teardown();
     this.build();
   }
 
@@ -165,12 +171,18 @@ export class LivingEnvironment implements View {
 
   update(ctx: FrameContext): void {
     this.time = ctx.time;
+    // background animation on a stride at low quality: every Nth frame, with the time of the frames skipped
+    this.pendingDt += ctx.dt;
+    const stride = this.opts.profile.animationStride;
+    if (stride > 1 && ++this.frames % stride !== 0) return;
+    const dt = this.pendingDt;
+    this.pendingDt = 0;
     // follow camera: what is out of view is neither moved nor drawn (elevated things get a wider circle)
     const visible = ctx.inView;
-    this.traffic?.update(ctx.time, ctx.dt, visible);
-    this.crowd?.update(ctx.dt, ctx.time, ctx.info.excitement, visible);
+    this.traffic?.update(ctx.time, dt, visible);
+    this.crowd?.update(dt, ctx.time, ctx.info.excitement, visible);
     this.lights?.update(ctx.time);
-    this.dust?.update(ctx.dt);
+    this.dust?.update(dt);
   }
 
   /** What was built (debug overlay, tests, the performance report). */

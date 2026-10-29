@@ -69,7 +69,7 @@ export interface TrafficRouteDef {
   elevation?: number;
   /** Higher survives the per-quality budget longer (default 1). */
   priority?: number;
-  /** Lowest quality tier that draws the route (default 'low'). */
+  /** Lowest quality tier that draws the route (default: every tier, even 'veryLow'). */
   minQuality?: QualityLevel;
   /** Tiles over which a vehicle shrinks in / out at the two ends of the path (default 1.5; 0 = none). */
   fade?: number;
@@ -99,7 +99,7 @@ export interface CrowdZoneDef {
   hiVis?: boolean;
   /** Higher survives the per-quality budget longer (default 1). */
   priority?: number;
-  /** Lowest quality tier that draws the zone (default 'low'). */
+  /** Lowest quality tier that draws the zone (default: every tier, even 'veryLow'). */
   minQuality?: QualityLevel;
 }
 
@@ -150,7 +150,7 @@ export interface LightPocket {
   flicker?: LightFlicker;
   /** Radius of the pool of light on the street, metres (0 / absent = none). */
   pool?: number;
-  /** Lowest quality tier that draws it (default 'low'). */
+  /** Lowest quality tier that draws it (default: every tier, even 'veryLow'). */
   minQuality?: QualityLevel;
 }
 
@@ -208,6 +208,7 @@ export interface EnvBudget {
 }
 
 export const ENV_BUDGET: Readonly<Record<QualityLevel, EnvBudget>> = {
+  veryLow: { vehicles: 2, vehicleModels: 1, people: 8, rigs: 0, lights: 2 },
   low: { vehicles: 4, vehicleModels: 1, people: 14, rigs: 0, lights: 4 },
   medium: { vehicles: 10, vehicleModels: 3, people: 36, rigs: 5, lights: 8 },
   high: { vehicles: 18, vehicleModels: 4, people: 70, rigs: 10, lights: 14 },
@@ -215,6 +216,7 @@ export const ENV_BUDGET: Readonly<Record<QualityLevel, EnvBudget>> = {
 
 /** Draw calls the environment is planned to add at most (medium target from the brief: about 60). */
 export const ENV_DRAW_CALL_TARGET: Readonly<Record<QualityLevel, number>> = {
+  veryLow: 18,
   low: 24,
   medium: 60,
   high: 90,

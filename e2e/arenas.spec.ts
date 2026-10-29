@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, stepTicks, chooseArena, launch, toClassicSetup, toRumbleSetup } from './helpers';
+import { open, stepTicks, chooseArena, chooseStage, launch, toClassicSetup, toRumbleSetup } from './helpers';
 
 const STANDARD = [
   'danfoBusPark',
@@ -133,10 +133,8 @@ test.describe('arena picker and stage hazards', () => {
   test('Surulere Power Yard shows its rule banner during the countdown', async ({ page }, info) => {
     await open(page, '&nobots&noattract');
     await toClassicSetup(page);
-    await page.getByTestId('setup-arena').click();
-    await page.getByTestId('arena-surulerePowerYard').click();
+    await chooseArena(page, 'surulerePowerYard');
     await expect(page.getByTestId('arena-rule')).toContainText('POWER YARD RULE');
-    await page.getByTestId('arena-confirm').click();
     await launch(page);
     const banner = page.getByTestId('rule-banner');
     await expect(banner).toBeVisible();
@@ -157,9 +155,7 @@ test.describe('arena picker and stage hazards', () => {
     await page.getByTestId('menu-back').click();
     await toRumbleSetup(page);
     await expect(page.getByTestId('players-2')).toHaveCount(0);
-    await page.getByTestId('setup-arena').click();
-    await page.getByTestId('rumble-stage-cityRumble').click();
-    await page.getByTestId('arena-confirm').click();
+    await chooseStage(page, 'cityRumble');
     await page.getByTestId('rumble-8').click();
     await expect(page.getByTestId('rumble-8')).toHaveClass(/on/);
     await launch(page);
@@ -182,10 +178,8 @@ test.describe('arena picker and stage hazards', () => {
     expect(scroll.doc).toBeLessThanOrEqual(0);
     expect(scroll.wide).toBeLessThanOrEqual(0);
     await toClassicSetup(page);
-    await page.getByTestId('setup-arena').click();
-    await page.getByTestId('arena-thirdMainland').click();
-    await expect(page.getByTestId('arena-thirdMainland')).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByTestId('arena-confirm')).toBeInViewport();
+    await chooseArena(page, 'thirdMainland');
+    await expect(page.getByTestId('menu-continue')).toBeInViewport();
     await expect(page.getByTestId('arena-detail')).toContainText('Third Mainland');
     await page.screenshot({ path: `e2e-shots/${info.project.name}-arena-picker.png` });
   });

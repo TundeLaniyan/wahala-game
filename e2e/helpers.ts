@@ -28,8 +28,9 @@ export async function open(page: Page, query = ''): Promise<void> {
 }
 
 /**
- * V2 Stitch menu: Home -> (City Rumble -> mode) -> setup -> fighter -> ready -> play. These helpers walk the
- * real journey; nothing is set behind the menu's back.
+ * The menu journey: Home -> (City Rumble -> tap a mode) -> arena and settings -> fighter -> review -> play.
+ * Tapping a mode moves straight on (no Continue). These helpers walk the real journey; nothing is set behind
+ * the menu's back.
  */
 export async function toClassicSetup(page: Page): Promise<void> {
   if ((await page.getByTestId('classic-setup').count()) > 0) return;
@@ -44,18 +45,29 @@ export async function toRumbleSetup(
   if ((await page.getByTestId('rumble-setup').count()) > 0) return;
   await page.getByTestId('home-rumble').click();
   await page.getByTestId(`mode-${mode}`).click();
-  await page.getByTestId('menu-continue').click();
   await expect(page.getByTestId('rumble-setup')).toBeVisible();
 }
 
-/** Classic Battle: opens the arena screen from the setup, picks arena `id` and confirms (back on the setup). */
+/** Classic Battle: picks arena `id` from "Select Arena" on the setup screen. */
 export async function chooseArena(page: Page, id: string): Promise<void> {
   await toClassicSetup(page);
-  await page.getByTestId('setup-arena').click();
-  await page.getByTestId(`arena-${id}`).click();
-  await expect(page.getByTestId(`arena-${id}`)).toHaveAttribute('aria-pressed', 'true');
-  await page.getByTestId('arena-confirm').click();
-  await expect(page.getByTestId('menu-setup')).toBeVisible();
+  const card = page.getByTestId(`arena-${id}`);
+  await card.scrollIntoViewIfNeeded();
+  await card.click();
+  await expect(card).toHaveAttribute('aria-pressed', 'true');
+}
+
+/** City Rumble: picks stage `id` from "Select Arena" on the setup screen. */
+export async function chooseStage(page: Page, id: string): Promise<void> {
+  const card = page.getByTestId(`rumble-stage-${id}`);
+  await card.scrollIntoViewIfNeeded();
+  await card.click();
+  await expect(card).toHaveAttribute('aria-pressed', 'true');
+}
+
+/** Sets a bot difficulty slider (level index 0..6) the way a player would: by value. */
+export async function setDifficulty(page: Page, index: number, testId = 'diff-slider'): Promise<void> {
+  await page.getByTestId(testId).fill(String(index));
 }
 
 /**
@@ -99,18 +111,26 @@ export async function startMatch(
 /** Waits until the menu's entrance animations have finished (software WebGL renders a few frames a second). */
 export async function settled(page: Page): Promise<void> {
   await page.waitForFunction(() =>
-    document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
+    document
+      .getAnimations()
+      .every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
   );
 }
 
 /** Main menu -> Settings on `tab` (audio / graphics / controls / access). */
-export async function openSettings(page: Page, tab: 'audio' | 'graphics' | 'controls' | 'access' = 'audio'): Promise<void> {
+export async function openSettings(
+  page: Page,
+  tab: 'audio' | 'graphics' | 'controls' | 'access' = 'audio',
+): Promise<void> {
   await page.getByTestId('home-settings').click();
   await page.getByTestId(`settings-tab-${tab}`).click();
 }
 
 /** In a match: pause and open the pause menu's Settings on `tab`. */
-export async function pauseSettings(page: Page, tab: 'audio' | 'graphics' | 'controls' | 'access' = 'audio'): Promise<void> {
+export async function pauseSettings(
+  page: Page,
+  tab: 'audio' | 'graphics' | 'controls' | 'access' = 'audio',
+): Promise<void> {
   if ((await page.getByTestId('pause-overlay').count()) === 0) await page.keyboard.press('Escape');
   await page.getByTestId('pause-settings-open').click();
   await page.getByTestId(`settings-tab-${tab}`).click();

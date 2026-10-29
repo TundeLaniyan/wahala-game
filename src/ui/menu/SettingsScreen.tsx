@@ -12,6 +12,7 @@ import { preferenceDefaults } from '../../app/settings';
 import type { GameSettings, ShakeSetting, SubtitleMode } from '../../app/settings';
 import type { MoveAssistSetting } from '../../input';
 import { audioPrefs } from '../../audio/prefs';
+import { QUALITY_LABEL, QUALITY_SETTINGS } from '../../render/quality';
 import { AudioSettingsPanel } from '../AudioSettings';
 import { LEGEND_ORDER, legendRows } from '../howToPlayControls';
 import { Field, Option, PrimaryButton, ScreenFrame, Toggle } from './Frame';
@@ -39,25 +40,67 @@ function AudioTab({ s, set }: { s: GameSettings; set: Set }) {
 }
 
 function GraphicsTab({ s, set }: { s: GameSettings; set: Set }) {
+  const status = useGameStore((st) => st.quality);
   return (
     <>
       <Field
         label="Graphics quality"
-        hint="Auto picks a level for this device. Low runs fastest on older phones; High adds shadows and effects."
+        hint={
+          s.quality === 'auto'
+            ? 'Auto starts from a safe guess for this device and adjusts while you play, so the game stays smooth. Gameplay is never affected.'
+            : 'Fixed level: Auto will not change it. Lower levels run smoother on older phones; higher ones add shadows and effects.'
+        }
       >
-        <div className="mn-opts">
-          {(['auto', 'low', 'medium', 'high'] as const).map((q) => (
-            <Option key={q} value={q} current={s.quality} label={q} onPick={(quality) => set({ quality })} testId={`quality-${q}`} />
+        <div className="mn-opts mn-quality">
+          {QUALITY_SETTINGS.map((q) => (
+            <Option
+              key={q}
+              value={q}
+              current={s.quality}
+              label={QUALITY_LABEL[q]}
+              onPick={(quality) => set({ quality })}
+              testId={`quality-${q}`}
+            />
           ))}
         </div>
+        <p className="mn-quality-now" data-testid="quality-status" aria-live="polite">
+          {status ? (
+            <>
+              Now using <b data-testid="quality-current">{status.name}</b>
+              {status.auto ? (
+                <>
+                  {' '}
+                  <span className="mn-tag">Auto</span>
+                  {status.learned ? ' (started from what worked on this device before)' : ''}
+                </>
+              ) : (
+                <> (set by you)</>
+              )}
+            </>
+          ) : (
+            'Starting…'
+          )}
+        </p>
       </Field>
       <Field
         label="City Rumble camera"
         hint="Follow: the camera tracks your fighter. Whole stage: the wide overview. Press O in a Rumble to switch. Classic arenas always show the whole board."
       >
         <div className="mn-opts">
-          <Option value="action" current={s.cameraView} label="Follow" onPick={(cameraView) => set({ cameraView })} testId="camera-action" />
-          <Option value="overview" current={s.cameraView} label="Whole stage" onPick={(cameraView) => set({ cameraView })} testId="camera-overview" />
+          <Option
+            value="action"
+            current={s.cameraView}
+            label="Follow"
+            onPick={(cameraView) => set({ cameraView })}
+            testId="camera-action"
+          />
+          <Option
+            value="overview"
+            current={s.cameraView}
+            label="Whole stage"
+            onPick={(cameraView) => set({ cameraView })}
+            testId="camera-overview"
+          />
         </div>
       </Field>
     </>
@@ -76,7 +119,14 @@ function ControlsTab({ s, set }: { s: GameSettings; set: Set }) {
       >
         <div className="mn-opts">
           {(['auto', 'on', 'off'] as const).map((t) => (
-            <Option key={t} value={t} current={s.touchControls} label={t} onPick={(touchControls) => set({ touchControls })} testId={`touch-${t}`} />
+            <Option
+              key={t}
+              value={t}
+              current={s.touchControls}
+              label={t}
+              onPick={(touchControls) => set({ touchControls })}
+              testId={`touch-${t}`}
+            />
           ))}
         </div>
       </Field>
@@ -86,14 +136,21 @@ function ControlsTab({ s, set }: { s: GameSettings; set: Set }) {
       >
         <div className="mn-opts mn-opts-tall">
           {(['auto', 'on', 'off'] as const).map((m) => (
-            <Option key={m} value={m} current={s.moveAssist} label={ASSIST_LABEL[m]} onPick={(moveAssist) => set({ moveAssist })} testId={`assist-${m}`} />
+            <Option
+              key={m}
+              value={m}
+              current={s.moveAssist}
+              label={ASSIST_LABEL[m]}
+              onPick={(moveAssist) => set({ moveAssist })}
+              testId={`assist-${m}`}
+            />
           ))}
         </div>
       </Field>
       <div className="mn-controls-note">
-        <b>Two buttons on every device.</b> A places a generator. B taps for your special (melee when a rival is next to
-        you, otherwise your vehicle if you hold a voucher) and, held, fires your remote detonator. Kick, punch, disarm and
-        pass happen by walking into a generator.
+        <b>Two buttons on every device.</b> A places a generator. B taps for your special (melee when a rival
+        is next to you, otherwise your vehicle if you hold a voucher) and, held, fires your remote detonator.
+        Kick, punch, disarm and pass happen by walking into a generator.
       </div>
       <div className="mn-legend-wrap">
         <table className="mn-legend" data-testid="controls-legend">
@@ -111,8 +168,16 @@ function ControlsTab({ s, set }: { s: GameSettings; set: Set }) {
               return (
                 <tr key={id}>
                   <th scope="row">{r.label}</th>
-                  <td>{r.keyboard.map((k) => <kbd key={k}>{k}</kbd>)}</td>
-                  <td>{r.gamepad.map((k) => <kbd key={k}>{k}</kbd>)}</td>
+                  <td>
+                    {r.keyboard.map((k) => (
+                      <kbd key={k}>{k}</kbd>
+                    ))}
+                  </td>
+                  <td>
+                    {r.gamepad.map((k) => (
+                      <kbd key={k}>{k}</kbd>
+                    ))}
+                  </td>
                   <td>{r.touch}</td>
                 </tr>
               );
@@ -130,10 +195,20 @@ const SHAKE_LABEL: Record<ShakeSetting, string> = { auto: 'Auto', off: 'Off', su
 function AccessTab({ s, set }: { s: GameSettings; set: Set }) {
   return (
     <>
-      <Field label="Subtitles" hint="The voice line being spoken, shown beside the arena (never over it). Large uses bigger text.">
+      <Field
+        label="Subtitles"
+        hint="The voice line being spoken, shown beside the arena (never over it). Large uses bigger text."
+      >
         <div className="mn-opts">
           {(['off', 'on', 'large'] as const).map((m) => (
-            <Option key={m} value={m} current={s.subtitles} label={SUBTITLE_LABEL[m]} onPick={(subtitles) => set({ subtitles })} testId={`subtitles-${m}`} />
+            <Option
+              key={m}
+              value={m}
+              current={s.subtitles}
+              label={SUBTITLE_LABEL[m]}
+              onPick={(subtitles) => set({ subtitles })}
+              testId={`subtitles-${m}`}
+            />
           ))}
         </div>
       </Field>
@@ -143,15 +218,28 @@ function AccessTab({ s, set }: { s: GameSettings; set: Set }) {
       >
         <div className="mn-opts">
           {(['auto', 'off', 'subtle'] as const).map((m) => (
-            <Option key={m} value={m} current={s.shake} label={SHAKE_LABEL[m]} onPick={(shake) => set({ shake })} testId={`shake-${m}`} />
+            <Option
+              key={m}
+              value={m}
+              current={s.shake}
+              label={SHAKE_LABEL[m]}
+              onPick={(shake) => set({ shake })}
+              testId={`shake-${m}`}
+            />
           ))}
         </div>
       </Field>
       <Field label="Academy narration" hint="Spoken guidance in the Training Academy">
-        <Toggle on={s.narration} label={s.narration ? 'On' : 'Off'} onChange={(narration) => set({ narration })} testId="toggle-narration" />
+        <Toggle
+          on={s.narration}
+          label={s.narration ? 'On' : 'Off'}
+          onChange={(narration) => set({ narration })}
+          testId="toggle-narration"
+        />
       </Field>
       <p className="mn-note">
-        Reduced motion: when your device asks for less motion, the menus stop animating and the camera never shakes.
+        Reduced motion: when your device asks for less motion, the menus stop animating and the camera never
+        shakes.
       </p>
     </>
   );
