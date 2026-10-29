@@ -7,7 +7,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { openSettings, startMatch, stepTicks } from './helpers';
+import { openSettings, pauseSettings, startMatch, stepTicks } from './helpers';
 
 interface Status {
   setting: string;
@@ -144,9 +144,8 @@ test.describe('adaptive graphics', () => {
     expect(downNotices.some((t) => /Graphics reduced|Performance mode/.test(t))).toBe(true);
     await page.screenshot({ path: `e2e-shots/${info.project.name}-quality-notice.png` });
     // Settings shows the level now in use
-    await page.keyboard.press('Escape');
-    await page.getByTestId('pause-settings-open').click();
-    await page.getByTestId('settings-tab-graphics').click();
+    await stepTicks(page, 170); // past the countdown: Esc pauses only once play is on
+    await pauseSettings(page, 'graphics');
     await expect(page.getByTestId('quality-current')).toHaveText(low.name);
   });
 
