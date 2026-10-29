@@ -1,0 +1,797 @@
+/*
+ * The mobile-first setup flow: mode (tap to go) -> arena and match settings -> fighter -> review. Loaded after
+ * menu.css, so these rules own the Setup and Fighter screens and the difficulty control. Layouts:
+ *   desktop / laptop     two columns, no step strip;
+ *   phone landscape      (max-height 520px) two / three compact columns, own scroll per column;
+ *   phone portrait       (max-width 700px) one stacked column, the selected fighter card first.
+ */
+
+/* ---------- mode: the card is the button ---------- */
+.mn-mode-go {
+  margin-top: 6px;
+  color: var(--mn-amber);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.mn-mode:hover .mn-mode-go,
+.mn-mode:focus-visible .mn-mode-go {
+  color: #fff;
+}
+.mn-mode .mn-mode-blurb {
+  display: block;
+}
+@media (min-width: 1181px) and (max-height: 800px) {
+  .mn-mode .mn-mode-blurb {
+    display: -webkit-box;
+  }
+}
+
+/* ---------- setup: groups ---------- */
+.mn-setup2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.mn-setup2-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.mn-group {
+  min-width: 0;
+  border: 1px solid var(--mn-border);
+  background: rgba(20, 25, 35, 0.86);
+}
+.mn-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 14px;
+  padding: 12px 16px 6px;
+}
+.mn-group-head h3 {
+  margin: 0;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.7rem;
+  line-height: 1;
+  letter-spacing: 0.07em;
+  color: #fff;
+}
+.mn-group-sub {
+  min-width: 0;
+  color: var(--mn-muted);
+  font-size: 0.82rem;
+}
+.mn-group-sub b {
+  color: var(--mn-amber);
+}
+/* inside the groups a field is label-over-control: the column is narrow on every device */
+.mn-setup2 .mn-field {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px 16px 12px;
+}
+.mn-setup2 .mn-field-label b {
+  font-size: 1.2rem;
+}
+.mn-setup2 .mn-note {
+  margin: 4px 16px 14px;
+}
+.mn-setup2 .mn-badge {
+  padding: 6px 12px;
+}
+
+/* ---------- arena picker ---------- */
+.mn-arena-pick {
+  padding-bottom: 4px;
+}
+.mn-arena-group h4 {
+  margin: 4px 16px 0;
+  color: var(--mn-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.mn-arena-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  padding: 8px 14px 12px;
+}
+.mn-arena-card2 {
+  appearance: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--mn-border);
+  background: var(--mn-elev);
+  color: var(--mn-text);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+.mn-arena-card2:hover {
+  border-color: rgba(255, 184, 0, 0.7);
+}
+.mn-arena-card2.on {
+  border: 2px solid var(--mn-amber);
+  box-shadow: var(--mn-glow);
+}
+.mn-arena-pick .mn-arena-pic {
+  display: block;
+  aspect-ratio: 16 / 10;
+  flex: none;
+  overflow: hidden;
+}
+.mn-arena-pick .mn-arena-pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mn-arena-card2:not(.on) .mn-arena-pic img {
+  filter: saturate(0.75) brightness(0.85);
+}
+.mn-arena-name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 10px 9px;
+}
+.mn-arena-name b {
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.15rem;
+  line-height: 1.05;
+  letter-spacing: 0.05em;
+  overflow-wrap: anywhere;
+}
+.mn-arena-name small {
+  color: var(--mn-muted);
+  font-size: 0.7rem;
+}
+.mn-arena-check,
+.mn-arena-flag {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 3px 7px;
+  font-size: 0.64rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.mn-arena-check {
+  background: var(--mn-amber);
+  color: var(--mn-base);
+}
+.mn-arena-flag {
+  background: rgba(11, 14, 20, 0.85);
+  border: 1px solid rgba(255, 184, 0, 0.6);
+  color: var(--mn-amber);
+}
+.mn-arena-detail2 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 16px 14px;
+}
+.mn-arena-detail2 .mn-arena-tagline {
+  margin: 0;
+  color: var(--mn-sand);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+.mn-hazard-details summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  color: var(--mn-amber);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.mn-hazard-details .mn-hazards {
+  margin: 4px 0 0;
+}
+
+/* ---------- bot difficulty: one scale ---------- */
+.mn-seg {
+  display: flex;
+  gap: 8px;
+}
+.mn .mn-seg .chip.mn-opt {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 10px;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+}
+.mn-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.mn-diff-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.mn-diff-head small {
+  color: var(--mn-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.mn-diff-head b {
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.9rem;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--mn-amber);
+}
+.mn-diff-pos {
+  margin-left: auto;
+  color: var(--mn-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.mn-diff-hint {
+  margin: 0;
+  min-height: 2.5em;
+  color: var(--mn-text);
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+.mn-diff-track {
+  --thumb: 30px;
+  --p: 0;
+  position: relative;
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+.mn-diff-track input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.mn-diff-track input[type='range']::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--mn-amber) 0,
+    var(--mn-amber) calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--p)),
+    #2b3448 0
+  );
+}
+.mn-diff-track input[type='range']::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #2b3448;
+}
+.mn-diff-track input[type='range']::-moz-range-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--mn-amber);
+}
+.mn-diff-track input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: calc((8px - var(--thumb)) / 2);
+  border: 3px solid var(--mn-amber);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 184, 0, 0.18);
+}
+.mn-diff-track input[type='range']::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--thumb);
+  height: var(--thumb);
+  border: 3px solid var(--mn-amber);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 184, 0, 0.18);
+}
+.mn-diff-track input[type='range']:focus-visible {
+  outline: none;
+}
+.mn-diff-track input[type='range']:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 5px rgba(255, 184, 0, 0.55);
+}
+.mn-diff-track input[type='range']:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 5px rgba(255, 184, 0, 0.55);
+}
+.mn-diff-ticks {
+  position: absolute;
+  left: calc(var(--thumb) / 2);
+  right: calc(var(--thumb) / 2);
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  height: 16px;
+  margin-top: -8px;
+  pointer-events: none;
+}
+.mn-diff-ticks i {
+  width: 2px;
+  margin: 0 -1px;
+  background: #566079;
+}
+.mn-diff-ticks i.lit {
+  background: #ffe29a;
+}
+.mn-diff-ticks i.cur {
+  visibility: hidden;
+}
+.mn-diff-ends {
+  display: flex;
+  justify-content: space-between;
+  color: var(--mn-muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+}
+.mn-diff-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mn-diff.compact {
+  display: grid;
+  grid-template-columns: 7.2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0 10px;
+}
+.mn-diff.compact .mn-diff-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+.mn-diff.compact .mn-diff-head b {
+  font-size: 1.35rem;
+}
+.mn-diff.compact .mn-diff-pos {
+  display: none;
+}
+.mn-diff-explain {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--mn-amber);
+  background: rgba(11, 14, 20, 0.6);
+  color: var(--mn-sand);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+/* ---------- fighter: the selected card first, abilities beside, roster as a strip ---------- */
+.mn-fighters2 {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.62fr) minmax(0, 1.6fr);
+  grid-template-areas:
+    'roster card'
+    'roster abil'
+    'roster fine';
+  grid-template-rows: auto auto 1fr;
+  gap: 14px 18px;
+  align-items: start;
+}
+.mn-fighter-card {
+  grid-area: card;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+  min-height: 300px;
+  border: 1px solid var(--mn-border);
+  background:
+    radial-gradient(60% 70% at 30% 40%, rgba(255, 184, 0, 0.16), transparent 70%), rgba(20, 25, 35, 0.8);
+  overflow: hidden;
+}
+.mn-fighter-card .mn-fighter-hero {
+  position: relative;
+  min-height: 100%;
+}
+.mn-fighter-card .mn-fighter-info {
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 18px 16px 0;
+}
+.mn-fighter-tagline {
+  margin: 0;
+  color: var(--mn-sand);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.mn-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 0;
+}
+.mn-stats div {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--mn-border);
+  background: rgba(11, 14, 20, 0.75);
+}
+.mn-stats dt {
+  color: var(--mn-muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.mn-stats dd {
+  margin: 2px 0 0;
+  font-family: var(--mn-display);
+  font-size: 1.35rem;
+  line-height: 1.05;
+  letter-spacing: 0.05em;
+  color: var(--mn-amber);
+}
+.mn-abilities {
+  grid-area: abil;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.mn-abilities .mn-fact b {
+  font-size: 1.4rem;
+}
+.mn-fighters2 .mn-fineprint {
+  grid-area: fine;
+  margin: 0;
+}
+.mn-fighters2 .mn-roster {
+  grid-area: roster;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mn-fighters2 .mn-roster-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  min-height: 64px;
+}
+.mn-fighters2 .mn-roster-card:hover {
+  transform: none;
+}
+.mn-fighters2 .mn-roster-pic {
+  flex: none;
+  width: 68px;
+  height: 68px;
+  aspect-ratio: 1;
+}
+.mn-fighters2 .mn-roster-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.mn-fighters2 .mn-roster-card b {
+  padding: 0;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.mn-fighters2 .mn-roster-card small {
+  display: block;
+  padding: 0;
+}
+
+/* ---------- phone landscape (short screens) ---------- */
+@media (max-height: 520px) {
+  .mn-setup2 {
+    height: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+  }
+  .mn-setup2 > * {
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+  .mn-group-head {
+    padding: 8px 12px 4px;
+  }
+  .mn-group-head h3 {
+    font-size: 1.35rem;
+  }
+  .mn-arena-rail {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding: 6px 12px 8px;
+    gap: 8px;
+  }
+  .mn-arena-card2 {
+    flex: 0 0 128px;
+    scroll-snap-align: start;
+  }
+  .mn-arena-name {
+    padding: 5px 7px 6px;
+  }
+  .mn-arena-name b {
+    font-size: 1rem;
+  }
+  .mn-arena-detail2 {
+    padding: 0 12px 8px;
+    gap: 4px;
+  }
+  .mn-setup2 .mn-field {
+    padding: 6px 12px 8px;
+    gap: 6px;
+  }
+  .mn-diff-head b {
+    font-size: 1.5rem;
+  }
+  .mn-diff-hint {
+    min-height: 0;
+    font-size: 0.78rem;
+  }
+  .mn-diff-track,
+  .mn-diff-track input[type='range'] {
+    height: 40px;
+  }
+
+  .mn-fighters2 {
+    height: 100%;
+    grid-template-columns: 138px minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-areas: 'roster card abil';
+    grid-template-rows: minmax(0, 1fr);
+    gap: 10px;
+    align-items: stretch;
+  }
+  .mn-fighters2 .mn-fineprint {
+    display: none;
+  }
+  .mn-fighters2 .mn-roster {
+    gap: 6px;
+    overflow-y: auto;
+  }
+  .mn-fighters2 .mn-roster-card {
+    gap: 8px;
+    padding: 5px;
+    min-height: 54px;
+  }
+  .mn-fighters2 .mn-roster-pic {
+    width: 44px;
+    height: 44px;
+  }
+  .mn-fighters2 .mn-roster-card b {
+    font-size: 1.05rem;
+  }
+  .mn-fighters2 .mn-roster-card small {
+    display: none;
+  }
+  .mn-fighter-card {
+    min-height: 0;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  }
+  .mn-fighter-card .mn-fighter-info {
+    gap: 3px;
+    padding: 8px 10px 8px 0;
+  }
+  .mn-fighter-card .mn-fighter-name {
+    font-size: 2.2rem;
+  }
+  .mn-fighter-tagline {
+    font-size: 0.8rem;
+  }
+  .mn-stats {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .mn-stats div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 4px 8px;
+  }
+  .mn-stats dd {
+    margin: 0;
+    font-size: 1rem;
+  }
+  .mn-abilities {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    align-content: start;
+    overflow-y: auto;
+  }
+  .mn-abilities .mn-fact {
+    padding: 7px 9px;
+  }
+  .mn-abilities .mn-fact b {
+    font-size: 1.1rem;
+  }
+  .mn-abilities .mn-fact p {
+    font-size: 0.74rem;
+    line-height: 1.3;
+  }
+  .mn-abilities .mn-fact small {
+    font-size: 0.6rem;
+  }
+  .mn-abilities .mn-fact-meta {
+    margin-top: 2px;
+  }
+}
+
+/* ---------- phone portrait ---------- */
+@media (max-width: 700px) and (min-height: 521px) {
+  .mn-setup2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mn-arena-rail {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding: 6px 12px 10px;
+    gap: 8px;
+    touch-action: pan-x pan-y;
+  }
+  .mn-arena-card2 {
+    flex: 0 0 152px;
+    scroll-snap-align: start;
+  }
+  .mn-group-head h3 {
+    font-size: 1.5rem;
+  }
+  .mn-seg {
+    flex-direction: row;
+  }
+
+  .mn-fighters2 {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'card'
+      'abil'
+      'roster'
+      'fine';
+    grid-template-rows: none;
+    gap: 10px;
+  }
+  .mn-fighter-card {
+    min-height: 0;
+    grid-template-columns: 40% minmax(0, 1fr);
+  }
+  .mn-fighter-card .mn-fighter-hero {
+    min-height: 190px;
+  }
+  .mn-fighter-card .mn-fighter-hero .mn-fighter-img {
+    mask-image: linear-gradient(90deg, #000 72%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 72%, transparent);
+  }
+  .mn-fighter-card .mn-fighter-info {
+    margin: 0;
+    padding: 10px 12px 10px 0;
+    gap: 3px;
+    justify-content: center;
+  }
+  .mn-fighter-card .mn-fighter-name {
+    font-size: 2.5rem;
+  }
+  .mn-fighter-tagline {
+    font-size: 0.86rem;
+  }
+  .mn-stats {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .mn-stats div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 5px 8px;
+  }
+  .mn-stats dd {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+  .mn-abilities {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .mn-abilities .mn-fact {
+    padding: 8px 12px;
+  }
+  .mn-abilities .mn-fact b {
+    display: inline;
+    margin-right: 8px;
+    font-size: 1.25rem;
+  }
+  .mn-abilities .mn-fact small {
+    display: block;
+  }
+  .mn-abilities .mn-fact p {
+    margin: 2px 0 0;
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+  .mn-abilities .mn-fact-meta {
+    display: none;
+  }
+  .mn-fighters2 .mn-roster {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .mn-fighters2 .mn-roster-card {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 0 6px;
+  }
+  .mn-fighters2 .mn-roster-pic {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 0.85;
+  }
+  .mn-fighters2 .mn-roster-text {
+    padding: 6px 8px 0;
+  }
+  .mn-fighters2 .mn-roster-card b {
+    font-size: 1.1rem;
+  }
+  .mn-fighters2 .mn-roster-card small {
+    display: none;
+  }
+  .mn-fighters2 .mn-fineprint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mn-arena-card2,
+  .mn-diff-track input[type='range'] {
+    transition: none;
+  }
+}
+
+/* ---------- settings: the graphics level in use ---------- */
+.mn-quality-now {
+  margin: 4px 0 0;
+  color: var(--mn-muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+.mn-quality-now b {
+  color: var(--mn-amber);
+}
+.mn-quality-now .mn-tag {
+  margin: 0 2px;
+}

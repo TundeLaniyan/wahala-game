@@ -19,6 +19,8 @@ export interface Backdrop {
   /** Animates the crowd, street life and atmosphere; call every frame. */
   update(time: number, excitement: number, dt: number): void;
   setPixelScale(scale: number): void;
+  /** Live quality change: thins the crowd, street life and atmosphere, sets the animation stride. */
+  setQuality(profile: QualityProfile): void;
   dispose(): void;
 }
 
@@ -170,7 +172,7 @@ export function createBackdrop(layout: Layout, quality: QualityProfile, arenaId 
     density: quality.particleDensity,
     lights: quality.flameLights > 0 ? 2 : 0,
   });
-  const life = new StreetLife(quality.level === 'high' ? 16 : quality.level === 'medium' ? 10 : 4);
+  const life = new StreetLife(quality.streetLife);
   root.add(ambient.group, life.group);
   set.build(createSetContext({ W, H, root, statics, rng, quality, life, ambient, instanced, disposables }));
 
@@ -181,12 +183,27 @@ export function createBackdrop(layout: Layout, quality: QualityProfile, arenaId 
   }
   root.add(bakeModel(statics));
 
+  // Live quality (adaptive): thin what was built, never add to it (the build used the profile of match start),
+  // and update the background animation every Nth frame with the time it missed.
+  let stride = quality.animationStride;
+  let sinceUpdate = 0;
+  let frame = 0;
+
   return {
     root,
     update(time, excitement, dt) {
+      sinceUpdate += dt;
+      if (stride > 1 && ++frame % stride !== 0) return;
       crowd?.update(time, excitement);
-      life.update(dt, time, excitement);
-      ambient.update(dt, time);
+      life.update(sinceUpdate, time, excitement);
+      ambient.update(sinceUpdate, time);
+      sinceUpdate = 0;
+    },
+    setQuality(q) {
+      stride = Math.max(1, q.animationStride);
+      crowd?.setShare(q.crowd / Math.max(1, quality.crowd));
+      life.setShare(q.streetLife / Math.max(1, quality.streetLife));
+      ambient.setScale(q.ambient / Math.max(0.01, quality.ambient));
     },
     setPixelScale: (s) => ambient.setPixelScale(s),
     dispose() {

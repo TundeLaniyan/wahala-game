@@ -1,33 +1,10 @@
 /**
- * Building blocks shared by every menu screen: the screen frame (top bar with Back, title and the play
- * flow steps; scrollable body; action bar with the main button), buttons, option chips and toggles.
+ * Building blocks shared by every menu screen: the screen frame (top bar with Back and the title; scrollable
+ * body; action bar with the main button), buttons, option chips and toggles.
  */
 import type { ReactNode } from 'react';
 import { commands } from '../../app/session';
-import { FLOW_STEPS } from '../../app/menu';
 import type { MenuScreen } from '../../app/menu';
-
-const STEP_LABEL: Partial<Record<MenuScreen, string>> = {
-  mode: 'Mode',
-  setup: 'Setup',
-  fighter: 'Fighter',
-  ready: 'Ready',
-};
-
-export function StepIndicator({ at }: { at: MenuScreen }) {
-  const i = FLOW_STEPS.indexOf(at);
-  if (i < 0) return null;
-  return (
-    <ol className="mn-steps" aria-label="Match setup steps" data-testid="menu-steps">
-      {FLOW_STEPS.map((s, k) => (
-        <li key={s} className={k < i ? 'done' : k === i ? 'on' : ''} aria-current={k === i ? 'step' : undefined}>
-          <b>{k + 1}</b>
-          <span>{STEP_LABEL[s]}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
 
 export function ScreenFrame(props: {
   id: MenuScreen;
@@ -44,7 +21,10 @@ export function ScreenFrame(props: {
   className?: string;
 }) {
   return (
-    <section className={`mn-screen mn-screen-${props.id} ${props.className ?? ''}`} data-testid={`menu-${props.id}`}>
+    <section
+      className={`mn-screen mn-screen-${props.id} ${props.className ?? ''}`}
+      data-testid={`menu-${props.id}`}
+    >
       <header className="mn-top">
         <button
           type="button"
@@ -58,7 +38,6 @@ export function ScreenFrame(props: {
           <small>{props.kicker}</small>
           <h2>{props.title}</h2>
         </div>
-        <StepIndicator at={props.id} />
       </header>
       <div className="mn-body">{props.children}</div>
       {(props.actions || props.status) && (

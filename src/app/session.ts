@@ -6,7 +6,8 @@ import { createBot } from '../ai';
 import { createAudio } from '../audio';
 import type { SpokenTrace } from '../audio';
 import { InputManager } from '../input';
-import { GameRenderer, assets, renderCastPortraits, resolveShakeMode } from '../render';
+import { GameRenderer, assets, isQualitySetting, renderCastPortraits, resolveShakeMode } from '../render';
+import type { QualityEvent } from '../render';
 import { registerBusts } from '../assets/portraits';
 import type { CharacterId, GameState, SimEvent } from '../sim';
 import { enterImmersiveMode } from './fullscreen';
@@ -20,6 +21,7 @@ import { NULL_AUDIO } from './ports';
 import type { AudioPort } from './ports';
 import { sanitizeSettings, saveSettings } from './settings';
 import type { GameSettings } from './settings';
+import { QualityNotifier } from './qualityNotice';
 import { patch, useGameStore } from './store';
 import type { ScreenPoint } from './store';
 import { createSubtitleFeed } from './subtitles';
@@ -32,6 +34,16 @@ let audio: AudioPort = NULL_AUDIO;
 let raf = 0;
 let canvasEl: HTMLCanvasElement | null = null;
 let resizeObserver: ResizeObserver | null = null;
+/** Rate-limits the quiet "graphics changed" notice (Auto mode). */
+const qualityNotifier = new QualityNotifier();
+
+/** Auto moved the graphics quality: refresh what Settings shows and, in a match, say so once in a while. */
+function onQualityChange(e: QualityEvent): void {
+  if (renderer) patch({ quality: renderer.qualityStatus() });
+  // the controller's own clock (seconds), so the rate limit is the same in tests that feed it virtual time
+  const notice = qualityNotifier.handle(e.change, e.change.at * 1000);
+  if (notice) controller?.notice(notice.text, notice.tone);
+}
 
 /** The voice line playing now, for the optional subtitles (the HUD shows it only when the setting is on). */
 const subtitles = createSubtitleFeed({
@@ -81,8 +93,7 @@ function frame(now: number): void {
   if (useGameStore.getState().screen === 'title') {
     input.pollDevices(); // gamepad navigation of the main menu (the match polls it while one runs)
     attract?.frame(now);
-  }
-  else {
+  } else {
     controller.frame(now);
     if (useGameStore.getState().tutorial) tutorial?.frame();
   }
@@ -92,7 +103,7 @@ function frame(now: number): void {
   }
   if (useGameStore.getState().showStats && renderer && Math.floor(now / 500) !== lastStatsTick) {
     lastStatsTick = Math.floor(now / 500);
-    patch({ stats: renderer.stats() });
+    patch({ stats: renderer.stats(), timings: controller.timers.snapshot() });
   }
 }
 let lastStatsTick = 0;
@@ -140,8 +151,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   canvasEl = canvas;
   const params = new URLSearchParams(location.search);
   const forced = params.get('q');
-  if (forced === 'low' || forced === 'medium' || forced === 'high')
-    patch({ settings: { ...useGameStore.getState().settings, quality: forced } });
+  if (isQualitySetting(forced)) patch({ settings: { ...useGameStore.getState().settings, quality: forced } });
   const settings = useGameStore.getState().settings;
   const cameraOverride = params.get('cam') === 'stadium' ? 'stadium' : null;
   patch({ cameraOverride });
@@ -149,6 +159,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     renderer = new GameRenderer({
       canvas,
       quality: settings.quality,
+      onQualityChange,
       cameraMode: cameraOverride,
       onContextLost: () =>
         patch({
@@ -162,6 +173,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     });
     return () => undefined;
   }
+  patch({ quality: renderer.qualityStatus() });
   try {
     audio = createAudio({ onSpeak });
   } catch {
@@ -279,6 +291,7 @@ export const commands = {
     const safe = sanitizeSettings(current);
     if (JSON.stringify(safe) !== JSON.stringify(current)) commands.updateSettings(safe);
     void audio.unlock();
+    qualityNotifier.newMatch();
     if (useGameStore.getState().touchCapable) void enterImmersiveMode();
     audio.playUi('start');
     attract?.stop();
@@ -341,7 +354,10 @@ export const commands = {
     patch({ settings });
     saveSettings(settings);
     applyAudioSettings(settings);
-    if (p.quality) renderer?.setQuality(p.quality);
+    if (p.quality && renderer) {
+      renderer.setQuality(p.quality);
+      patch({ quality: renderer.qualityStatus() });
+    }
     if (p.cameraView) renderer?.setCameraView(p.cameraView);
     if (p.shake) applyShake(settings);
     if (p.moveAssist) input.setMoveAssist(settings.moveAssist);
@@ -412,6 +428,13 @@ function exposeDebugHandle(): void {
     tutorial: () => tutorial,
     store: useGameStore,
     stats: () => renderer?.stats() ?? null,
+    /** Smoothed ms per frame spent in sim ticks (including bots), bot decisions per tick, and render. */
+    timings: () => controller?.timers.snapshot() ?? null,
+    /** Graphics quality: the setting, the rung in use, the capability estimate and the controller state. */
+    quality: () => renderer?.qualityStatus() ?? null,
+    /** e2e: feeds synthetic frames (ms each) to Auto's controller on a virtual clock; returns what it changed. */
+    feedFrames: (frameMs: number, count: number, opts?: { busy?: boolean }) =>
+      renderer?.debugFeedFrames(frameMs, count, opts) ?? [],
     renderer: () => renderer,
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
     music: () => (audio as { musicStatus?: () => unknown }).musicStatus?.() ?? null,

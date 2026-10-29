@@ -395,7 +395,7 @@ export function flag(
   f.position.set(x, STREET + y, z);
   f.scale.x = dir;
   f.castShadow = true;
-  const animate = ctx.quality.level !== 'low';
+  const animate = ctx.quality.level === 'medium' || ctx.quality.level === 'high';
   const phase = ctx.rng() * 10;
   let last = -1;
   f.onBeforeRender = () => {

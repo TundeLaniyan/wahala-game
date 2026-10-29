@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { InputSourceName } from '../input';
 import type { CharacterId } from '../sim';
-import type { CameraMode, RenderStats } from '../render';
+import type { CameraMode, QualityStatus, RenderStats } from '../render';
 import type { HudSnapshot } from './hud';
 import { MENU_HOME } from './menu';
 import type { MenuState } from './menu';
@@ -96,6 +96,8 @@ export interface UiState {
   touchCapable: boolean;
   portrait: boolean;
   stats: RenderStats | null;
+  /** Smoothed ms per frame in sim / AI / render (shown with `?fps`). */
+  timings: Record<string, number> | null;
   showStats: boolean;
   audioReady: boolean;
   /** Set when the game cannot run at all (e.g. WebGL unavailable). */
@@ -114,6 +116,8 @@ export interface UiState {
   menu: MenuState;
   /** The pause menu's Settings panel is open (Esc / Start close it instead of resuming). */
   pauseSettings: boolean;
+  /** Graphics quality in use (null until the renderer exists): the Settings screen shows it. */
+  quality: QualityStatus | null;
 }
 
 /** UI-facing state. The simulation state itself is deliberately NOT stored in React state. */
@@ -130,6 +134,7 @@ export const useGameStore = create<UiState>(() => ({
   touchCapable: false,
   portrait: false,
   stats: null,
+  timings: null,
   showStats: false,
   audioReady: false,
   fatal: null,
@@ -140,6 +145,7 @@ export const useGameStore = create<UiState>(() => ({
   tutorial: null,
   menu: MENU_HOME,
   pauseSettings: false,
+  quality: null,
 }));
 
 export const patch = (p: Partial<UiState>): void => useGameStore.setState(p);

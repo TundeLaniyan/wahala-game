@@ -20,6 +20,7 @@ import { cycleSpectateTarget, eliminatorOf, pickSpectateTarget } from './spectat
 import { NULL_AUDIO } from './ports';
 import type { AudioPort, Bot, BotFactory, InputPort, RendererPort } from './ports';
 import type { GameSettings } from './settings';
+import { SectionTimers } from './sectionTimers';
 import { patch, useGameStore } from './store';
 import type { MatchSummary, Toast } from './store';
 import { VehicleEntryController } from './vehicleEntry';
@@ -105,6 +106,8 @@ export class MatchController {
   private skipFrames = 0;
   private closingAnnounced = false;
   private director: ScenarioDirector | null = null;
+  /** Smoothed ms per frame spent in sim ticks, bot decisions and the renderer (`?fps`, debug handle). */
+  readonly timers = new SectionTimers();
 
   constructor(private readonly deps: ControllerDeps) {
     this.audio = deps.audio ?? NULL_AUDIO;
@@ -129,7 +132,11 @@ export class MatchController {
       if (p.isBot)
         this.bots.set(
           i,
-          this.deps.botFactory({ difficulty: players[i]?.difficulty ?? settings.difficulty, seed: seed + i * 7919, playerId: i }),
+          this.deps.botFactory({
+            difficulty: players[i]?.difficulty ?? settings.difficulty,
+            seed: seed + i * 7919,
+            playerId: i,
+          }),
         );
     });
     this.accumulator = 0;
@@ -251,12 +258,14 @@ export class MatchController {
     } else if (!this.paused && !this.frozen) {
       this.accumulator += dtMs;
       let steps = 0;
+      const t0 = performance.now();
       while (this.accumulator >= STEP_MS && steps < 8) {
         this.accumulator -= STEP_MS;
         steps++;
         frameEvents.push(...this.stepOnce());
       }
       if (steps === 8) this.accumulator = 0;
+      if (steps > 0) this.timers.add('sim', performance.now() - t0);
     }
 
     this.afterFrame(frameEvents, nowMs, this.paused ? 0 : dtMs / 1000);
@@ -301,7 +310,9 @@ export class MatchController {
     } else if (me && !me.isBot && !me.alive && me.spectator !== null && !this.director) {
       // V2 standard match (not tutorials): the eliminated local player walks the sideline lane and throws with A
       this.deps.input.navMode = false;
-      intents[LOCAL_ID] = this.deps.input.buildIntent(state.tick, { canMove: me.spectator.stepRemaining <= 1 });
+      intents[LOCAL_ID] = this.deps.input.buildIntent(state.tick, {
+        canMove: me.spectator.stepRemaining <= 1,
+      });
     } else if (me && !me.isBot && me.alive) {
       // V2 two buttons: B launches the vehicle in one press (the sim picks the route), so normal play never
       // opens the old entry selector; it only exists for scripted tutorial demos (navMode stays false here
@@ -320,11 +331,13 @@ export class MatchController {
     for (const [id, intent] of Object.entries(scene?.intents ?? {})) {
       if (Number(id) !== LOCAL_ID && state.players[Number(id)]?.alive) intents[Number(id)] = intent;
     }
+    const botsAt = performance.now();
     for (const [id, bot] of this.bots) {
       const p = state.players[id]!;
       // eliminated bots keep deciding while they are sideline spectators (standard matches)
       if (p.alive || p.spectator !== null) intents[id] = bot.decide(observe(state, id));
     }
+    this.timers.add('ai', performance.now() - botsAt);
     for (const [id, forced] of Object.entries(this.forced))
       intents[Number(id)] = { ...intents[Number(id)], ...forced };
     this.forced = {};
@@ -387,13 +400,17 @@ export class MatchController {
     this.entry.sync(state);
     // fast-forwarding: draw only now and then, so the frame's time goes into simulating
     if (!this.skipping || this.skipFrames++ % SKIP_RENDER_EVERY === 0)
-      this.deps.renderer.render(state, alpha, dt, {
-        localPlayerId: LOCAL_ID,
-        entryOverlay: this.entry.overlay(state),
-        excitement: this.excitement,
-        focusPlayerId: this.spectateId,
-        markers: this.director?.markers?.(state),
-      });
+      this.timers.time('render', () =>
+        this.deps.renderer.render(state, alpha, dt, {
+          localPlayerId: LOCAL_ID,
+          entryOverlay: this.entry.overlay(state),
+          excitement: this.excitement,
+          focusPlayerId: this.spectateId,
+          markers: this.director?.markers?.(state),
+          paused: this.paused,
+          skipping: this.skipping,
+        }),
+      );
 
     if (nowMs - this.hudClock > HUD_INTERVAL_MS || events.length > 0) {
       this.hudClock = nowMs;
@@ -455,7 +472,10 @@ export class MatchController {
         if (this.respawnMode) {
           if (e.playerId === LOCAL_ID) {
             const by = eliminatorOf(state, victim);
-            return { text: by ? `${by.name.toUpperCase()} GOT YOU · BACK SOON` : 'DOWN! BACK SOON', tone: 'bad' };
+            return {
+              text: by ? `${by.name.toUpperCase()} GOT YOU · BACK SOON` : 'DOWN! BACK SOON',
+              tone: 'bad',
+            };
           }
           return null;
         }
@@ -478,8 +498,14 @@ export class MatchController {
     }
   }
 
-  private pushToast(t: Omit<Toast, 'id' | 'expires'>, nowMs: number): void {
-    const toast: Toast = { ...t, id: this.toastId++, expires: nowMs + 2200 };
+  /** A status notice from outside the sim (e.g. Auto graphics changed quality): same rail, slightly longer. */
+  notice(text: string, tone: Toast['tone'] = 'info'): void {
+    if (!this.state) return;
+    this.pushToast({ text, tone }, performance.now(), 3600);
+  }
+
+  private pushToast(t: Omit<Toast, 'id' | 'expires'>, nowMs: number, ttlMs = 2200): void {
+    const toast: Toast = { ...t, id: this.toastId++, expires: nowMs + ttlMs };
     patch({ toasts: [...useGameStore.getState().toasts.filter((x) => x.expires > nowMs), toast].slice(-3) });
   }
 

@@ -19,7 +19,12 @@ const only = process.argv.slice(3);
 
 const browser = await chromium.launch({
   executablePath: process.env.WAHALA_CHROMIUM || undefined,
-  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  args: [
+    '--use-gl=angle',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+    '--ignore-gpu-blocklist',
+  ],
 });
 for (const [name, vp] of Object.entries(VIEWPORTS)) {
   if (only.length && !only.includes(name)) continue;
@@ -33,11 +38,20 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   page.on('pageerror', (e) => console.log(`[${name}] pageerror`, e.message));
   await page.goto(`${BASE}?debug&q=low&seed=7&nobots`);
   await page.getByTestId('title-screen').waitFor();
-  await page.waitForFunction(() => !document.querySelector('[data-testid=menu-loading]'), null, { timeout: 120000 });
+  await page.waitForFunction(() => !document.querySelector('[data-testid=menu-loading]'), null, {
+    timeout: 120000,
+  });
   await page.waitForTimeout(600);
   const shot = async (s) => {
     // software WebGL renders a few frames a second: let the screen's entrance animation finish first
-    await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity), null, { timeout: 30000 });
+    await page.waitForFunction(
+      () =>
+        document
+          .getAnimations()
+          .every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
+      null,
+      { timeout: 30000 },
+    );
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${OUT}/${name}-${s}.png` });
     console.log(`${name}-${s}`);
@@ -45,24 +59,26 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   await shot('01-home');
   await page.getByTestId('home-rumble').click();
   await shot('02-mode');
-  await page.getByTestId('menu-continue').click();
+  await page.getByTestId('mode-survival').click(); // a tap opens the arena and settings
   await shot('03-setup-rumble');
-  await page.getByTestId('setup-arena').click();
-  await shot('04-arena-rumble');
-  await page.getByTestId('arena-confirm').click();
+  await page.getByTestId('mixed-roster').click();
+  await page.getByTestId('diff-slider').fill('4');
+  await page.getByTestId('diff-slider').scrollIntoViewIfNeeded();
+  await shot('04-setup-rumble-mixed');
   await page.getByTestId('menu-continue').click();
   await shot('05-fighter');
+  await page.getByTestId('char-lekkiBoy').click();
+  await shot('05b-fighter-lekki');
   await page.getByTestId('menu-continue').click();
   await shot('06-ready');
   await page.getByTestId('menu-back').click();
   await page.getByTestId('menu-back').click();
   await page.getByTestId('menu-back').click();
   await page.getByTestId('mode-classic').click();
-  await page.getByTestId('menu-continue').click();
   await shot('07-setup-classic');
-  await page.getByTestId('setup-arena').click();
-  await shot('08-arena-classic');
-  await page.getByTestId('arena-confirm').click();
+  await page.getByTestId('mixed-roster').click(); // set each bot
+  await page.getByTestId('diff-bot-2').scrollIntoViewIfNeeded();
+  await shot('08-setup-classic-each-bot');
   await page.evaluate(() => {
     const w = window;
     w.__WAHALA__.store.setState({ menu: { stack: ['home', 'settings'] } });

@@ -68,9 +68,9 @@ export const VEHICLE_DIMS: Readonly<Record<AmbientVehicleKind, VehicleDims>> = {
   okada: { model: 'okada', length: 1.3, height: 0.9, stretch: [1, 1, 1], tint: 0.8 },
 };
 
-const QUALITY_RANK: Record<QualityLevel, number> = { low: 0, medium: 1, high: 2 };
+const QUALITY_RANK: Record<QualityLevel, number> = { veryLow: 0, low: 1, medium: 2, high: 3 };
 export const atLeast = (level: QualityLevel, min: QualityLevel | undefined): boolean =>
-  QUALITY_RANK[level] >= QUALITY_RANK[min ?? 'low'];
+  QUALITY_RANK[level] >= QUALITY_RANK[min ?? 'veryLow'];
 
 // ----------------------------------------------------------------------------------------- resolving
 
@@ -283,7 +283,7 @@ export function validateEnvironment(env: StageEnvironment, board: BoardSize): st
     if (l.height < 0 || l.height > 9) fail(`a light at ${l.at} has an odd height ${l.height}`);
   }
 
-  for (const level of ['low', 'medium', 'high'] as const) {
+  for (const level of ['veryLow', 'low', 'medium', 'high'] as const) {
     const plan = planEnvironment(env, level, board);
     const b = budgetFor(env, level);
     if (plan.vehicles.length > b.vehicles) fail(`${level}: ${plan.vehicles.length} vehicles > ${b.vehicles}`);

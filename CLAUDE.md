@@ -46,8 +46,13 @@ Browser-only, offline, single-player (1 human vs 1-3 bots) Nigerian-inspired Bom
 - Commit per milestone; update `docs/IMPLEMENTATION_STATUS.md`.
 
 ## Stitch menu (branch `claude/wahala-stitch-uiux-v1`, docs/STITCH_UI.md, decisions UI1-UI11)
-- The main menu is multi-screen: Home -> Mode -> Setup -> Fighter -> Ready (Arena a detour; Settings and the Training Academy beside them). Navigation is the pure state machine `app/menu.ts` in `UiState.menu`; screens live in `src/ui/menu/` and edit the real `GameSettings` / `audioPrefs` only through `commands`. Never add a parallel setup state.
+- The main menu is a short flow with no numbered steps: Home -> Mode (a tap opens the next screen) -> Arena & settings ("Select Arena" is on it) -> Fighter -> Ready/Review -> Start Match (Settings and the Training Academy beside them). Bot difficulty is one slider (`ui/menu/DifficultyControl.tsx`). Layouts: `ui/menu/flow.css` over `menu.css`. Navigation is the pure state machine `app/menu.ts` in `UiState.menu`; screens live in `src/ui/menu/` and edit the real `GameSettings` / `audioPrefs` only through `commands`. Never add a parallel setup state.
 - Menu text about modes, arenas and fighters comes from the sim registries / config and `src/tutorial`; never show invented stats, ranks, locks, rewards or online features from the Stitch mockups.
 - Menu art: `tools/ui/build_menu_art.py` builds `src/assets/ui/*.webp` from `tools/ui/masters/` (crops the mock HUD, removes brand marks); never hand-edit the outputs. Fonts are bundled (`@fontsource`), no CDN.
 - Keyboard / gamepad menu input goes through `app/menuNav.ts` before the match; Esc in the pause menu's Settings closes Settings and keeps the match paused.
 - Phones: every menu works in portrait and landscape, tap targets >= 44 px, safe areas; `e2e/menu.spec.ts` sweeps the sizes. `scripts/menu-shots.mjs` is the screenshot review tool for the menus.
+
+## Graphics quality (branch `claude/uiux-adaptive-performance-v1`, docs/PERFORMANCE.md, decisions PF1-PF10)
+- `GameSettings.quality` is `'auto'` (default) or a preset (Very Low ... High). The ladder is `src/render/quality.ts` (8 rungs, every budget non-decreasing); the device estimate, the controller and the learned rung are in `src/render/perf/`. Render-only: `src/sim`, `src/ai` and `src/input` must never see quality, and nothing in the quality system may change input timing, bomb timing, collisions, blasts or match rules.
+- Add a new render budget as a field of `QualityProfile` with a value on every rung (the ladder test enforces the order), and make it LIVE (applied without a rebuild) unless it is decided at arena build; say which in the field's comment. A manual preset is never changed by Auto.
+- Threshold changes go in `DEFAULT_ADAPTIVE` with a test in `tests/render/adaptive-quality.test.ts`; do not add ad-hoc FPS checks elsewhere.

@@ -505,7 +505,7 @@ function build(ctx: SetContext): void {
     { x: -9.6, y: S, z: -3.6, ry: 0.3 },
     { x: -9.7, y: S, z: 5.2, ry: Math.PI - 0.4 },
   ]);
-  if (ctx.quality.level !== 'low')
+  if (ctx.quality.level === 'medium' || ctx.quality.level === 'high')
     ctx.instance('env_kiosk', [{ x: -9.8, y: S, z: -5.4, ry: Math.PI / 2, sx: 0.8, sy: 0.8, sz: 0.8 }]);
   ctx.instance('env_tyrestack', [{ x: 12.6, y: S, z: 5.6, ry: 0.4, sx: 0.8, sy: 0.6, sz: 0.8 }]);
   ctx.instance('env_barrel', [{ x: -12.9, y: S, z: -3.4, ry: 0.6 }]);

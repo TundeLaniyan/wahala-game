@@ -404,3 +404,17 @@ Decisions WD1-WD12 in `DECISIONS.md` (section W). Frames: `docs/screenshots/v2-m
 | Full vitest without the `ordering-*` files | 818 / 823 on a loaded machine; the 5 failures were timeouts only. `rumble-ai` passed on a rerun; `behaviour` "most matches end" and `endgame-traps` "bots play full matches" pass with a long timeout (temporary copies) |
 | `e2e/rumble.spec.ts`, desktop + phone (`WAHALA_MULTIPROCESS=1`) | 6 / 6 pass (menu + Team Rumble start + Classic, Deathmatch respawn flow, 32-fighter Survival) |
 | Not done | Other streams' specs were not run (`e2e/helpers.startMatch` now picks Classic unless `game: 'rumble'`); `scripts/quick-shot.mjs` with `cityRumble` no longer has an arena card to click (Rumble starts from the Rumble setup) |
+
+
+## Mobile-first flow and adaptive graphics (branch `claude/uiux-adaptive-performance-v1`, from `15466fc`)
+
+Decisions UX1-UX6 and PF1-PF10 in `DECISIONS.md`; reports `docs/STITCH_UI.md` (flow) and `docs/PERFORMANCE.md`.
+
+| Area | State |
+| --- | --- |
+| Flow | No step strip; a tapped mode opens "Arena & settings" (Select Arena + Opponents + Match rules); the Arena screen is gone; Review has Edit per row and "Start Match". |
+| Bot difficulty | One slider over the seven levels, plain-language same / mixed explanation, per-bot sliders in Classic. |
+| Fighter | Selected card first, no scrolling at 360x740 ... 1440x900. |
+| Graphics | Auto (default) + six fixed levels over an 8-rung ladder; capability estimate, measured adaptive controller with hysteresis, cooldowns, backoff and futility detection; quiet rate-limited notice; learned rung per device; `?fps` shows sim / ai / render ms. |
+| Not done (needs a decision or a device) | Real-phone measurements; reducing bot think rate / collision / debris work for CPU-bound 32-fighter Rumbles (changes gameplay or determinism); antialiasing cannot change mid-session. |
+

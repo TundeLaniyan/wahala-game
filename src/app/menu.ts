@@ -4,12 +4,13 @@
  * `UiState.menu`. The match settings themselves stay in `GameSettings` (every screen edits the real
  * settings directly, so a choice always reaches the next match).
  *
- * New-player flow: home -> mode -> setup -> fighter -> ready -> play. The arena screen is a detour opened
- * from setup or ready and returns there. Any screen opened from Ready to edit one choice returns to Ready
- * on Continue, so changing one decision never restarts the whole setup.
+ * New-player flow: home -> mode -> setup (arena and match settings) -> fighter -> ready -> play. There are
+ * no numbered steps: choosing a mode moves straight on to setup, and each later screen has one clear next
+ * action. Any screen opened from Ready to edit one choice returns to Ready, so changing one decision never
+ * restarts the whole setup.
  */
 
-export type MenuScreen = 'home' | 'mode' | 'setup' | 'fighter' | 'arena' | 'ready' | 'settings' | 'academy';
+export type MenuScreen = 'home' | 'mode' | 'setup' | 'fighter' | 'ready' | 'settings' | 'academy';
 
 export interface MenuState {
   /** Screens from the home screen (always first) to the one showing (last). */
@@ -18,15 +19,12 @@ export interface MenuState {
 
 export const MENU_HOME: MenuState = { stack: ['home'] };
 
-/** The step after each flow screen when it is continued (arena returns to where it was opened from). */
+/** The step after each flow screen when it is continued. */
 const NEXT: Partial<Record<MenuScreen, MenuScreen>> = {
   mode: 'setup',
   setup: 'fighter',
   fighter: 'ready',
 };
-
-/** The numbered steps of the play flow (the step indicator). */
-export const FLOW_STEPS: readonly MenuScreen[] = ['mode', 'setup', 'fighter', 'ready'];
 
 export const currentScreen = (m: MenuState): MenuScreen => m.stack[m.stack.length - 1] ?? 'home';
 
@@ -61,13 +59,12 @@ export function back(m: MenuState): MenuState {
 }
 
 /**
- * Continue / Confirm on the current screen: the next step of the flow, or straight back to Ready when
- * the screen was opened from Ready to edit one choice. The arena screen always returns to its opener.
+ * Continue / Confirm on the current screen (or a mode being tapped): the next step of the flow, or straight
+ * back to Ready when the screen was opened from Ready to edit one choice.
  */
 export function advance(m: MenuState): MenuState {
   const here = currentScreen(m);
   const below = m.stack.slice(0, -1);
-  if (here === 'arena') return back(m);
   if (below.includes('ready')) return openScreen(m, 'ready');
   const next = NEXT[here];
   return next ? openScreen(m, next) : m;
@@ -75,7 +72,7 @@ export function advance(m: MenuState): MenuState {
 
 /** Sanitises an untrusted menu state (keeps the app usable whatever was patched in). */
 export function validMenu(m: MenuState | null | undefined): MenuState {
-  const known: readonly MenuScreen[] = ['home', 'mode', 'setup', 'fighter', 'arena', 'ready', 'settings', 'academy'];
+  const known: readonly MenuScreen[] = ['home', 'mode', 'setup', 'fighter', 'ready', 'settings', 'academy'];
   const stack = (m?.stack ?? []).filter((s) => known.includes(s));
   return stack[0] === 'home' ? { stack } : menuAt(stack);
 }

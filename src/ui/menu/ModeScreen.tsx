@@ -1,6 +1,6 @@
 /**
- * Game mode: the three City Rumble rulesets and Classic Battle as four big cards. Picking a card writes
- * the real settings (`play`, `rumbleMode`); Continue opens the setup for that mode.
+ * Game mode: the three City Rumble rulesets and Classic Battle as four big cards. Tapping a card writes the
+ * real settings (`play`, `rumbleMode`) and opens the arena and settings for that mode at once.
  */
 import { ARENAS } from '../../sim';
 import { commands } from '../../app/session';
@@ -8,7 +8,7 @@ import { useGameStore } from '../../app/store';
 import { RUMBLE_MODE_INFO } from '../../app/setupSummary';
 import type { GameSettings, RumbleModeSetting } from '../../app/settings';
 import { stagePreviewUrl } from './arenaInfo';
-import { PrimaryButton, ScreenFrame } from './Frame';
+import { ScreenFrame } from './Frame';
 
 type ModeId = RumbleModeSetting | 'classic';
 
@@ -49,7 +49,9 @@ export const MODE_CARDS: readonly ModeCard[] = [
       tag: m.id === 'survival' ? 'Flagship' : m.id === 'team' ? 'Squads' : 'Timed',
       blurb: m.blurb,
       facts: facts[m.id],
-      preview: stagePreviewUrl({ survival: 'rumbleOshodi', deathmatch: 'rumbleLagosIsland', team: 'rumbleLekkiNight' }[m.id]),
+      preview: stagePreviewUrl(
+        { survival: 'rumbleOshodi', deathmatch: 'rumbleLagosIsland', team: 'rumbleLekkiNight' }[m.id],
+      ),
     };
   }),
   {
@@ -60,7 +62,10 @@ export const MODE_CARDS: readonly ModeCard[] = [
     blurb: 'The quick arena match: last one standing, and the Wahala Crush closes the board.',
     facts: [
       ['Fighters', '2 to 4'],
-      ['Arenas', `${Object.values(ARENAS).filter((a) => a.kind === 'standard' && !a.experimental).length} standard`],
+      [
+        'Arenas',
+        `${Object.values(ARENAS).filter((a) => a.kind === 'standard' && !a.experimental).length} standard`,
+      ],
       ['Wahala Crush', 'Always on'],
     ],
     preview: stagePreviewUrl('danfoBusPark'),
@@ -72,43 +77,36 @@ export const modeOf = (s: GameSettings): ModeId => (s.play === 'classic' ? 'clas
 export function ModeScreen() {
   const s = useGameStore((st) => st.settings);
   const current = modeOf(s);
+  /**
+   * Tapping a mode picks it AND moves on (no separate Continue). From Ready's Edit the player goes straight
+   * back to Ready, unless the game itself changed (City Rumble <-> Classic): its arena and settings are
+   * different, so the setup opens first.
+   */
   const pick = (id: ModeId) => {
-    commands.click();
-    commands.updateSettings(id === 'classic' ? { play: 'classic' } : { play: 'rumble', rumbleMode: id });
+    const patch: Partial<GameSettings> =
+      id === 'classic' ? { play: 'classic' } : { play: 'rumble', rumbleMode: id };
+    const gameChanged = patch.play !== s.play;
+    commands.updateSettings(patch);
+    if (gameChanged && useGameStore.getState().menu.stack.includes('ready')) commands.menuOpen('setup');
+    else commands.menuContinue();
   };
-  const chosen = MODE_CARDS.find((m) => m.id === current)!;
   return (
-    <ScreenFrame
-      id="mode"
-      kicker="Step 1"
-      title="Select game mode"
-      status={
-        <span className="mn-chosen" data-testid="mode-chosen">
-          Selected: <b>{chosen.game === 'City Rumble' ? `City Rumble · ${chosen.name}` : chosen.name}</b>
-        </span>
-      }
-      actions={
-        <PrimaryButton testId="menu-continue" onClick={() => commands.menuContinue()}>
-          Continue to setup
-        </PrimaryButton>
-      }
-    >
-      <div className="mn-modes" role="group" aria-label="Game mode">
+    <ScreenFrame id="mode" kicker="Play" title="Select game mode">
+      <div className="mn-modes" role="group" aria-label="Game mode. Choose one to continue.">
         {MODE_CARDS.map((m) => {
           const on = m.id === current;
           return (
             <button
               key={m.id}
               type="button"
-              aria-pressed={on}
+              aria-current={on ? 'true' : undefined}
               className={`mn-mode mn-mode-${m.id}${on ? ' on' : ''}`}
               data-testid={`mode-${m.id}`}
               data-autofocus={on ? '' : undefined}
               onClick={() => pick(m.id)}
-              onDoubleClick={() => commands.menuContinue()}
             >
               <span className="mn-mode-pic" style={{ backgroundImage: `url(${m.preview})` }} aria-hidden />
-              <span className="mn-mode-tag">{m.tag}</span>
+              <span className="mn-mode-tag">{on ? 'Current' : m.tag}</span>
               <span className="mn-mode-text">
                 <small>{m.game}</small>
                 <b>{m.name}</b>
@@ -119,6 +117,9 @@ export function ModeScreen() {
                       <i>{k}</i> {v}
                     </span>
                   ))}
+                </span>
+                <span className="mn-mode-go" aria-hidden>
+                  Play this mode →
                 </span>
               </span>
             </button>

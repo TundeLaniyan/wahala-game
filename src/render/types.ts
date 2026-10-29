@@ -27,6 +27,9 @@ export interface FrameInfo {
    * Ignored by the fixed whole-arena camera of standard matches.
    */
   focusPlayerId?: number | null;
+  /** The match is paused or being fast-forwarded: frame times then say nothing about quality (adaptive graphics skips them). */
+  paused?: boolean;
+  skipping?: boolean;
   /** Training Academy: tiles to mark with a glowing "go here" ring (presentation only). */
   markers?: readonly { x: number; y: number }[];
 }

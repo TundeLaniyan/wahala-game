@@ -95,7 +95,13 @@
 }
 .mn-backdrop.hero .mn-shade {
   background:
-    linear-gradient(90deg, rgba(11, 14, 20, 0.94) 0%, rgba(11, 14, 20, 0.72) 38%, rgba(11, 14, 20, 0.12) 70%, rgba(11, 14, 20, 0.35) 100%),
+    linear-gradient(
+      90deg,
+      rgba(11, 14, 20, 0.94) 0%,
+      rgba(11, 14, 20, 0.72) 38%,
+      rgba(11, 14, 20, 0.12) 70%,
+      rgba(11, 14, 20, 0.35) 100%
+    ),
     linear-gradient(0deg, rgba(11, 14, 20, 0.92) 0%, transparent 35%);
 }
 .mn-grain {
@@ -203,51 +209,7 @@
   border-color: var(--mn-amber);
   background: rgba(30, 38, 56, 0.95);
 }
-.mn-steps {
-  display: flex;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.mn-steps li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--mn-border);
-  background: rgba(20, 25, 35, 0.7);
-  color: var(--mn-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.mn-steps b {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  background: var(--mn-panel);
-  color: var(--mn-muted);
-  font-size: 0.72rem;
-}
-.mn-steps li.done {
-  color: var(--mn-sand);
-}
-.mn-steps li.done b {
-  background: var(--mn-green-deep);
-  color: #001b0b;
-}
-.mn-steps li.on {
-  border-color: var(--mn-amber);
-  color: #fff;
-  box-shadow: var(--mn-glow);
-}
-.mn-steps li.on b {
-  background: var(--mn-amber);
-  color: var(--mn-base);
-}
+
 .mn-body {
   flex: 1;
   min-height: 0;
@@ -299,7 +261,14 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
-  clip-path: polygon(0 0, calc(100% - var(--mn-cut)) 0, 100% var(--mn-cut), 100% 100%, var(--mn-cut) 100%, 0 calc(100% - var(--mn-cut)));
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--mn-cut)) 0,
+    100% var(--mn-cut),
+    100% 100%,
+    var(--mn-cut) 100%,
+    0 calc(100% - var(--mn-cut))
+  );
   transition:
     transform 0.08s,
     filter 0.15s,
@@ -969,7 +938,12 @@ kbd {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(11, 14, 20, 0.1) 0%, rgba(11, 14, 20, 0.55) 40%, rgba(11, 14, 20, 0.96) 78%);
+  background: linear-gradient(
+    180deg,
+    rgba(11, 14, 20, 0.1) 0%,
+    rgba(11, 14, 20, 0.55) 40%,
+    rgba(11, 14, 20, 0.96) 78%
+  );
 }
 .mn-mode:hover .mn-mode-pic,
 .mn-mode:focus-visible .mn-mode-pic,
@@ -1048,33 +1022,7 @@ kbd {
 }
 
 /* ---------- match setup ---------- */
-.mn-setup {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
-  gap: 18px;
-  align-items: start;
-}
-.mn-setup-side {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.mn-arena-card {
-  appearance: none;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  border: 1px solid var(--mn-border);
-  background: rgba(20, 25, 35, 0.9);
-  color: var(--mn-text);
-  text-align: left;
-  cursor: pointer;
-  overflow: hidden;
-  transition: border-color 0.15s;
-}
-.mn-arena-card:hover {
-  border-color: var(--mn-amber);
-}
+
 .mn-arena-pic {
   position: relative;
   display: block;
@@ -1090,60 +1038,9 @@ kbd {
   height: 100%;
   object-fit: cover;
 }
-.mn-arena-light {
-  position: absolute;
-  left: 10px;
-  bottom: 10px;
-  padding: 3px 8px;
-  background: rgba(11, 14, 20, 0.82);
-  color: var(--mn-amber);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.mn-arena-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 14px 14px;
-}
-.mn-arena-text small {
-  color: var(--mn-amber);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-.mn-arena-text b {
-  font-family: var(--mn-display);
-  font-weight: 400;
-  font-size: 1.8rem;
-  letter-spacing: 0.05em;
-  line-height: 1.05;
-}
-.mn-arena-text span {
-  color: var(--mn-muted);
-  font-size: 0.82rem;
-}
-.mn-arena-text em {
-  margin-top: 6px;
-  color: var(--mn-amber);
-  font-style: normal;
-  font-weight: 700;
-  font-size: 0.82rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
 
 /* ---------- fighter select ---------- */
-.mn-fighters {
-  display: grid;
-  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.6fr);
-  gap: 20px;
-  height: 100%;
-  min-height: 0;
-}
+
 .mn-roster {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -1210,18 +1107,7 @@ kbd {
 .mn-roster-card.on small {
   color: var(--mn-amber);
 }
-.mn-fighter-stage {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
-  gap: 18px;
-  min-height: 0;
-  border: 1px solid var(--mn-border);
-  background:
-    radial-gradient(60% 70% at 30% 40%, rgba(255, 184, 0, 0.16), transparent 70%),
-    rgba(20, 25, 35, 0.8);
-  overflow: hidden;
-}
+
 .mn-fighter-hero {
   position: relative;
   min-height: 280px;
@@ -1264,12 +1150,7 @@ kbd {
   letter-spacing: 0.04em;
   color: #fff;
 }
-.mn-fighter-facts {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 8px;
-}
+
 .mn-fact {
   padding: 12px 14px;
   border: 1px solid var(--mn-border);
@@ -1306,19 +1187,7 @@ kbd {
 }
 
 /* ---------- arena select ---------- */
-.mn-arenas {
-  display: grid;
-  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.4fr);
-  gap: 18px;
-  height: 100%;
-  min-height: 0;
-}
-.mn-arena-list {
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 4px;
-  touch-action: pan-y;
-}
+
 .mn-arena-group h4,
 .mn-academy-group h4,
 .mn-ready-rules h4,
@@ -1333,44 +1202,7 @@ kbd {
 .mn-arena-group + .mn-arena-group {
   margin-top: 14px;
 }
-.mn-arena-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.mn-arena-item {
-  appearance: none;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 64px;
-  padding: 8px 12px 8px 8px;
-  border: 1px solid var(--mn-border);
-  background: rgba(20, 25, 35, 0.86);
-  color: var(--mn-text);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    background 0.15s;
-}
-.mn-arena-item:hover {
-  border-color: rgba(255, 184, 0, 0.6);
-}
-.mn-arena-item.on {
-  border: 2px solid var(--mn-amber);
-  background: rgba(255, 184, 0, 0.08);
-  box-shadow: var(--mn-glow);
-}
-.mn-arena-thumb {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 84px;
-  height: 52px;
-  overflow: hidden;
-}
+
 .mn-pic-fallback {
   font-family: var(--mn-display);
   font-size: 1.4rem;
@@ -1379,49 +1211,7 @@ kbd {
   text-align: center;
   padding: 6px;
 }
-.mn-arena-item-text {
-  flex: 1;
-  min-width: 0;
-}
-.mn-arena-item-text b {
-  display: block;
-  font-family: var(--mn-display);
-  font-weight: 400;
-  font-size: 1.35rem;
-  letter-spacing: 0.05em;
-  line-height: 1.05;
-}
-.mn-arena-item-text small {
-  color: var(--mn-muted);
-  font-size: 0.76rem;
-}
-.mn-arena-detail {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-  touch-action: pan-y;
-}
-.mn-stage-pic {
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  aspect-ratio: 16 / 7;
-  overflow: hidden;
-}
-.mn-arena-detail-body {
-  position: relative;
-  padding: 14px 18px 18px;
-}
-.mn-arena-detail-body h3 {
-  margin: 8px 0 2px;
-  font-family: var(--mn-display);
-  font-weight: 400;
-  font-size: clamp(2.2rem, 3.6vw, 3.4rem);
-  line-height: 1;
-  letter-spacing: 0.05em;
-}
+
 .mn-arena-tagline {
   margin: 0 0 12px;
   color: #c9cdd8;
@@ -1988,8 +1778,8 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-left));
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: rgba(8, 10, 15, 0.8);
   animation: mn-fade 0.2s ease-out;
   overflow-y: auto;
@@ -2297,9 +2087,6 @@ kbd {
   .mn-ready-rules {
     grid-column: 1 / -1;
   }
-  .mn-steps span {
-    display: none;
-  }
 }
 /* desktop-height screens show all four modes side by side */
 @media (min-width: 1181px) and (max-height: 800px) {
@@ -2335,12 +2122,7 @@ kbd {
     padding: 0 12px 0 8px;
     font-size: 0.74rem;
   }
-  .mn-steps li {
-    padding: 4px 6px;
-  }
-  .mn-steps span {
-    display: none;
-  }
+
   .mn-body {
     padding: 8px 2px;
   }
@@ -2507,16 +2289,7 @@ kbd {
     left: 8px;
   }
   /* setup */
-  .mn-setup {
-    grid-template-columns: minmax(0, 1.6fr) minmax(200px, 0.8fr);
-    gap: 10px;
-  }
-  .mn-arena-text {
-    padding: 8px 10px;
-  }
-  .mn-arena-text b {
-    font-size: 1.3rem;
-  }
+
   .mn-note {
     padding: 8px 10px;
     font-size: 0.74rem;
@@ -2529,10 +2302,7 @@ kbd {
     display: none;
   }
   /* fighters */
-  .mn-fighters {
-    grid-template-columns: minmax(170px, 0.7fr) minmax(0, 1.5fr);
-    gap: 10px;
-  }
+
   .mn-roster {
     grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
     gap: 6px;
@@ -2547,9 +2317,7 @@ kbd {
   .mn-roster-card small {
     display: none;
   }
-  .mn-fighter-stage {
-    gap: 8px;
-  }
+
   .mn-fighter-hero {
     min-height: 0;
   }
@@ -2562,10 +2330,7 @@ kbd {
   .mn-fighter-name {
     font-size: 2.4rem;
   }
-  .mn-fighter-facts {
-    gap: 6px;
-    margin-top: 2px;
-  }
+
   .mn-fact {
     padding: 6px 8px;
   }
@@ -2583,38 +2348,7 @@ kbd {
     margin-top: 4px;
   }
   /* arenas */
-  .mn-arenas {
-    grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.3fr);
-    gap: 10px;
-  }
-  .mn-arena-item {
-    min-height: 50px;
-    padding: 4px 8px 4px 4px;
-    gap: 8px;
-  }
-  .mn-arena-thumb {
-    width: 60px;
-    height: 40px;
-  }
-  .mn-arena-item-text b {
-    font-size: 1.05rem;
-  }
-  .mn-arena-item-text small {
-    font-size: 0.66rem;
-  }
-  .mn-arena-item .mn-tag {
-    display: none;
-  }
-  .mn-stage-pic {
-    aspect-ratio: 16 / 6;
-  }
-  .mn-arena-detail-body {
-    padding: 8px 12px 12px;
-  }
-  .mn-arena-detail-body h3 {
-    font-size: 1.8rem;
-    margin-top: 4px;
-  }
+
   .mn-arena-tagline,
   .mn-hazards li,
   .mn-rule {
@@ -2789,18 +2523,7 @@ kbd {
     grid-template-columns: auto 1fr;
     gap: 10px;
   }
-  .mn-steps {
-    grid-column: 1 / -1;
-    justify-content: space-between;
-  }
-  .mn-steps li {
-    flex: 1;
-    justify-content: center;
-    padding: 4px;
-  }
-  .mn-steps span {
-    display: none;
-  }
+
   .mn-heading h2 {
     font-size: 1.9rem;
   }
@@ -2945,29 +2668,14 @@ kbd {
     padding: 6px 8px;
     font-size: 0.72rem;
   }
-  .mn-mode:not(.on) .mn-mode-blurb {
-    display: none;
-  }
   /* setup */
-  .mn-setup {
-    grid-template-columns: 1fr;
-  }
-  .mn-setup-side {
-    order: -1;
-  }
-  .mn-arena-card {
-    flex-direction: row;
-  }
+
   .mn-arena-pic {
     flex: 0 0 42%;
     aspect-ratio: auto;
   }
   /* fighters */
-  .mn-fighters {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
-    height: auto;
-  }
+
   .mn-roster {
     order: 2;
     grid-template-columns: repeat(3, 1fr);
@@ -2982,9 +2690,7 @@ kbd {
   .mn-roster-card small {
     display: none;
   }
-  .mn-fighter-stage {
-    grid-template-columns: 1fr;
-  }
+
   .mn-fighter-hero {
     min-height: 300px;
   }
@@ -3001,23 +2707,7 @@ kbd {
     font-size: 3.2rem;
   }
   /* arenas */
-  .mn-arenas {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
-  .mn-arena-detail {
-    order: -1;
-    overflow: visible;
-  }
-  .mn-arena-list {
-    overflow: visible;
-  }
-  .mn-arena-detail-body h3 {
-    font-size: 2rem;
-  }
-  .mn-stage-pic {
-    aspect-ratio: 16 / 8;
-  }
+
   /* ready */
   .mn-ready {
     grid-template-columns: 1fr;

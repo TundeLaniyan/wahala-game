@@ -153,6 +153,7 @@ export function Hud() {
   const toasts = useGameStore((s) => s.toasts);
   const showStats = useGameStore((s) => s.showStats);
   const stats = useGameStore((s) => s.stats);
+  const timings = useGameStore((s) => s.timings);
   const paused = useGameStore((s) => s.paused);
   const muted = useGameStore((s) => s.settings.muted);
   const cameraView = useGameStore((s) => s.settings.cameraView);
@@ -250,7 +251,13 @@ export function Hud() {
       {showStats && stats && (
         <div className="fps">
           {stats.fps} fps · {stats.drawCalls} calls · {Math.round(stats.triangles / 1000)}k tris ·{' '}
-          {stats.particles} fx · {stats.quality} @{stats.pixelRatio.toFixed(2)}x
+          {stats.particles} fx · {stats.auto ? 'Auto ' : ''}{stats.qualityName} @{stats.pixelRatio.toFixed(2)}x
+          {timings && (
+            <>
+              {' '}
+              · sim {timings.sim ?? 0}ms · ai {timings.ai ?? 0}ms · render {timings.render ?? 0}ms
+            </>
+          )}
         </div>
       )}
     </div>

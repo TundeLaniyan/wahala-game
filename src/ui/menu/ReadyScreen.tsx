@@ -10,7 +10,7 @@ import { useGameStore } from '../../app/store';
 import { competitorCount } from '../../app/names';
 import type { MenuScreen } from '../../app/menu';
 import type { GameSettings } from '../../app/settings';
-import { LEVEL_LABEL, botSlots, sharedLevel, slotLevel } from '../difficultyPicker';
+import { LEVEL_LABEL, botSlots, mixedRange, sharedLevel, slotLevel } from '../difficultyPicker';
 import { fighterArt } from './art';
 import { selectedArenaId, stagePreviewUrl, hasPreview, moodGradient } from './arenaInfo';
 import { fighterInfo } from './fighters';
@@ -28,8 +28,10 @@ export function matchRulesText(s: GameSettings): string[] {
       s.crowdThrows ? 'Crowd throws: on' : 'Crowd throws: off',
     ];
   const rules: string[] = [];
-  if (s.rumbleMode === 'survival') rules.push('One life: last one standing wins', 'The city closes in street by street');
-  if (s.rumbleMode === 'deathmatch') rules.push(`${s.rumbleMinutes} minutes, respawns on`, 'Most eliminations wins');
+  if (s.rumbleMode === 'survival')
+    rules.push('One life: last one standing wins', 'The city closes in street by street');
+  if (s.rumbleMode === 'deathmatch')
+    rules.push(`${s.rumbleMinutes} minutes, respawns on`, 'Most eliminations wins');
   if (s.rumbleMode === 'team')
     rules.push(
       `${s.rumbleMinutes} minutes, respawns on`,
@@ -45,15 +47,32 @@ export function matchRulesText(s: GameSettings): string[] {
   return rules;
 }
 
-/** "Rookie", "Rookie (mixed roster)", "Rookie, Expert, Casual" ... */
+/**
+ * "Skilled", "Mixed roster: Casual to Expert", "Bot 1 Rookie, Bot 2 Expert" ... Says outright whether the
+ * level applies to every bot or to a mixed roster.
+ */
 export function botLevelText(s: GameSettings): string {
-  if (s.play === 'rumble') return `${LEVEL_LABEL[s.difficulty]}${s.rumbleMixed ? ' (mixed roster)' : ''}`;
+  if (s.play === 'rumble') {
+    if (!s.rumbleMixed) return `${LEVEL_LABEL[s.difficulty]} (all bots)`;
+    const { lo, hi } = mixedRange(s.difficulty);
+    return `Mixed roster: ${LEVEL_LABEL[lo]} to ${LEVEL_LABEL[hi]}`;
+  }
   const shared = sharedLevel(s);
-  if (shared) return LEVEL_LABEL[shared];
-  return Array.from({ length: botSlots(s) }, (_, i) => LEVEL_LABEL[slotLevel(s, i)]).join(', ');
+  if (shared) return `${LEVEL_LABEL[shared]} (all bots)`;
+  return `Mixed: ${Array.from({ length: botSlots(s) }, (_, i) => `Bot ${i + 1} ${LEVEL_LABEL[slotLevel(s, i)]}`).join(', ')}`;
 }
 
-function Row(props: { label: string; value: React.ReactNode; edit: MenuScreen; testId: string; extra?: React.ReactNode }) {
+/** One reviewed choice with an Edit button that opens just the screen that sets it and comes back here. */
+function Row(props: {
+  label: string;
+  value: React.ReactNode;
+  /** The menu screen that changes it. */
+  screen: MenuScreen;
+  /** Test id suffix of the Edit button (`edit-<id>`). */
+  id: string;
+  testId: string;
+  extra?: React.ReactNode;
+}) {
   return (
     <div className="mn-ready-row" data-testid={props.testId}>
       <div>
@@ -61,7 +80,13 @@ function Row(props: { label: string; value: React.ReactNode; edit: MenuScreen; t
         <b>{props.value}</b>
         {props.extra}
       </div>
-      <button type="button" className="mn-edit" data-testid={`edit-${props.edit}`} onClick={() => commands.menuEdit(props.edit)}>
+      <button
+        type="button"
+        className="mn-edit"
+        data-testid={`edit-${props.id}`}
+        aria-label={`Edit ${props.label.toLowerCase()}`}
+        onClick={() => commands.menuEdit(props.screen)}
+      >
         Edit
       </button>
     </div>
@@ -93,7 +118,7 @@ export function ReadyScreen() {
   return (
     <ScreenFrame
       id="ready"
-      kicker="Step 4"
+      kicker="Review"
       title="Ready to fight"
       status={<span className="mn-chosen">Offline · you against AI bots</span>}
       actions={
@@ -105,7 +130,7 @@ export function ReadyScreen() {
           disabled={busy || launching}
           onClick={start}
         >
-          {busy ? 'Loading 3D…' : launching ? 'Starting…' : s.play === 'rumble' ? 'Start Rumble' : 'Start match'}
+          {busy ? 'Loading 3D…' : launching ? 'Starting…' : 'Start Match'}
           <span className="mn-arrow" aria-hidden>
             →
           </span>
@@ -114,7 +139,11 @@ export function ReadyScreen() {
     >
       <div className="mn-ready">
         <div className="mn-ready-fighter">
-          <FighterImage id={s.character} art={fighterArt(s.character)} sizes="(max-width: 700px) 40vw, 320px" />
+          <FighterImage
+            id={s.character}
+            art={fighterArt(s.character)}
+            sizes="(max-width: 700px) 40vw, 320px"
+          />
           <div className="mn-ready-fighter-text">
             <small className="mn-kicker">Your fighter</small>
             <b>{f.name}</b>
@@ -127,14 +156,15 @@ export function ReadyScreen() {
           <Row
             label="Mode"
             value={s.play === 'rumble' ? `City Rumble · ${mode.name}` : 'Classic Battle'}
-            edit="mode"
+            screen="mode"
+            id="mode"
             testId="ready-mode"
           />
-          <Row label="Fighter" value={f.name} edit="fighter" testId="ready-fighter" />
           <Row
             label={s.play === 'rumble' ? 'Stage' : 'Arena'}
             value={arena.name}
-            edit="arena"
+            screen="setup"
+            id="arena"
             testId="ready-arena"
             extra={
               <span className="mn-ready-thumb" style={{ background: moodGradient(arenaId) }}>
@@ -142,8 +172,9 @@ export function ReadyScreen() {
               </span>
             }
           />
-          <Row label="Opponents" value={opponents} edit="setup" testId="ready-opponents" />
-          <Row label="Bot level" value={botLevelText(s)} edit="setup" testId="ready-difficulty" />
+          <Row label="Fighter" value={f.name} screen="fighter" id="fighter" testId="ready-fighter" />
+          <Row label="Opponents" value={opponents} screen="setup" id="setup" testId="ready-opponents" />
+          <Row label="Bot level" value={botLevelText(s)} screen="setup" id="bots" testId="ready-difficulty" />
         </div>
         <div className="mn-panel mn-ready-rules" data-testid="ready-rules">
           <h4>Match rules</h4>
