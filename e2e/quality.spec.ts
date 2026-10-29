@@ -130,7 +130,7 @@ test.describe('adaptive graphics', () => {
     // 1) comfortable 60 fps for a minute: it climbs, one rung at a time, to the ceiling for this device
     const { changes: up, notices: upNotices } = await feedWithNotices(page, 1000 / 60, 60 * 120);
     expect(up.length).toBeGreaterThanOrEqual(1);
-    expect(upNotices).toContain('Graphics increased');
+    expect(upNotices.some((t) => /^Graphics increased · /.test(t))).toBe(true);
     expect(up.every((c) => c.direction === 'up' && c.to === c.from + 1)).toBe(true);
     const mid = await quality(page);
     expect(mid.rung).toBeGreaterThan(before.rung);
@@ -141,7 +141,7 @@ test.describe('adaptive graphics', () => {
     expect(down[0]).toMatchObject({ direction: 'down', from: mid.rung, to: mid.rung - 1 });
     const low = await quality(page);
     expect(low.rung).toBe(mid.rung - 1);
-    expect(downNotices.some((t) => /Graphics reduced|Performance mode/.test(t))).toBe(true);
+    expect(downNotices.some((t) => /Graphics reduced · /.test(t))).toBe(true);
     await page.screenshot({ path: `e2e-shots/${info.project.name}-quality-notice.png` });
     // Settings shows the level now in use
     await stepTicks(page, 170); // past the countdown: Esc pauses only once play is on
@@ -195,7 +195,7 @@ test.describe('adaptive graphics', () => {
     expect(t.x).toBeLessThan(200); // top-left of the screen
     // and a real notice lands inside it
     const { notices } = await feedWithNotices(page, 1000 / 60, 60 * 60);
-    expect(notices).toContain('Graphics increased');
+    expect(notices.some((t) => /^Graphics increased · /.test(t))).toBe(true);
   });
 
   test('quality never touches the simulation: the same seed plays out identically at any quality', async ({

@@ -1,6 +1,6 @@
 /**
- * The quiet notice shown when Auto graphics changes quality. Pure (unit-tested): decides the wording and
- * rate-limits so the player is never nagged. Wording is about the effect on the player, not about numbers.
+ * The quiet notice shown when Auto graphics changes quality. Pure (unit-tested): decides the wording
+ * ("Graphics reduced · Very Low", "Graphics increased · Medium") and rate-limits so the player is never nagged.
  *
  * Limits: at most one notice per `minGapMs`, at most `maxPerMatch` per match; a change that is suppressed is
  * simply not announced (the Settings screen always shows the current level).
@@ -17,10 +17,8 @@ export const NOTICE_MIN_GAP_MS = 25_000;
 export const NOTICE_MAX_PER_MATCH = 3;
 
 export function qualityNoticeText(change: QualityChange): string {
-  if (change.direction === 'up') return 'Graphics increased';
-  // the lowest rung gets its own name: the player should know the floor was reached
-  if (change.to === 0) return `Performance mode: ${rungName(0)}`;
-  return 'Graphics reduced for smoother performance';
+  const verb = change.direction === 'up' ? 'increased' : 'reduced';
+  return `Graphics ${verb} · ${rungName(change.to)}`;
 }
 
 export class QualityNotifier {

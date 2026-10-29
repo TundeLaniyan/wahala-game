@@ -21,11 +21,12 @@ const change = (
 });
 
 describe('quality notice wording', () => {
-  it('says what happened for the player, not numbers', () => {
-    expect(qualityNoticeText(change(5, 4))).toBe('Graphics reduced for smoother performance');
-    expect(qualityNoticeText(change(4, 5, 'headroom'))).toBe('Graphics increased');
-    expect(qualityNoticeText(change(3, 4, 'restore'))).toBe('Graphics increased');
-    expect(qualityNoticeText(change(2, 0, 'severe'))).toBe('Performance mode: Very Low');
+  it('says the direction and the level now in use', () => {
+    expect(qualityNoticeText(change(5, 4))).toBe('Graphics reduced · Medium-Low');
+    expect(qualityNoticeText(change(4, 5, 'headroom'))).toBe('Graphics increased · Medium');
+    expect(qualityNoticeText(change(3, 4, 'restore'))).toBe('Graphics increased · Medium-Low');
+    expect(qualityNoticeText(change(2, 0, 'severe'))).toBe('Graphics reduced · Very Low');
+    expect(qualityNoticeText(change(6, 7, 'headroom'))).toBe('Graphics increased · High');
   });
 });
 
@@ -33,7 +34,7 @@ describe('quality notice rate limit', () => {
   it('shows the first change and then waits out the gap', () => {
     const n = new QualityNotifier();
     expect(n.handle(change(5, 4), 1000)).toEqual({
-      text: 'Graphics reduced for smoother performance',
+      text: 'Graphics reduced · Medium-Low',
       tone: 'info',
     });
     expect(n.handle(change(4, 3), 1000 + NOTICE_MIN_GAP_MS - 1)).toBeNull();

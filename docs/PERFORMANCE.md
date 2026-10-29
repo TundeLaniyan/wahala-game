@@ -11,8 +11,7 @@ collision, blast, timing or match rule changed, and none of the code below may i
 - **Auto** starts from a guess about the device, then follows measured frame times, one step at a time.
 - **A manual level is never changed** by performance.
 - In a match, when Auto moves quality a short notice appears in the HUD rail (top-left, under the portraits, never
-  over the board): "Graphics reduced for smoother performance", "Graphics increased" or "Performance mode: Very
-  Low". At most one per 25 s and three per match (`app/qualityNotice.ts`). Settings shows the level at any time.
+  over the board): "Graphics reduced · Very Low", "Graphics increased · Medium" (direction and the level now in use). At most one per 25 s and three per match (`app/qualityNotice.ts`). Settings shows the level at any time.
 - `?fps` adds the level, render scale and where the frame goes: `sim`, `ai` (per tick) and `render` in ms.
 
 ## Architecture
