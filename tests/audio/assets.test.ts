@@ -11,7 +11,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseMusicManifest } from '../../src/audio/playlist';
+import { parseMusicManifest, pickMatchTrack, playlistFor } from '../../src/audio/playlist';
 import { voiceLevel } from '../../src/audio/buses';
 import { DEFAULT_AUDIO_PREFS } from '../../src/audio/prefs';
 import { parseRecorded, parseVoiceCatalogue, registerLines } from '../../src/audio/pidgin';
@@ -155,6 +155,37 @@ describe('City Rumble V2 stage music (founder assignment, 2026-10-25)', () => {
       .filter(([a]) => !(a in STAGE_SONG))
       .map(([, p]) => p.signature);
     for (const id of Object.values(STAGE_SONG)) expect(others).not.toContain(id);
+  });
+});
+
+describe('Lagos arenas build 1: Oshodi Transport Metropolis audio compatibility', () => {
+  const raw = json<{ playlists: { default: string[]; arenas: Record<string, { signature: string }> } }>(
+    'music/manifest.json',
+  );
+  const { manifest } = parseMusicManifest(raw);
+
+  it('adds no music: the stage plays the existing default playlist until the founder assigns a signature track', () => {
+    // no per-arena entry, so no new track, no shared signature and no change to the five founder assignments
+    expect(raw.playlists.arenas.rumbleOshodiMetro).toBeUndefined();
+    const ids = playlistFor(manifest, 'rumbleOshodiMetro');
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids).toEqual(playlistFor(manifest, undefined));
+    for (const id of ids) expect(APPROVED[id], id).toBeDefined();
+    const picked = pickMatchTrack(manifest, {
+      arenaId: 'rumbleOshodiMetro',
+      previous: null,
+      isAvailable: () => true,
+      rand: () => 0.4,
+      firstOnArena: true,
+    });
+    expect(picked).not.toBeNull();
+    expect(ids).toContain(picked);
+  });
+
+  it('ships no new recording or voice for the stage: the cues are synthesised recipes, not files', () => {
+    expect(json<{ slots: Record<string, unknown> }>('slots.json').slots).toEqual({});
+    const recorded = json<{ clips: { id: string }[] }>('voices/recorded.json').clips.map((c) => c.id);
+    expect(recorded.some((id) => /train|rail|oshodi|metro/i.test(id))).toBe(false);
   });
 });
 

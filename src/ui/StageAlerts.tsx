@@ -14,6 +14,7 @@ const ICON: Record<StageAlert['style'], string> = {
   cargo: '🏗',
   goods: '🧺',
   truck: '🚛',
+  train: '🚆',
 };
 
 /** Concise stage-hazard warnings for the local player (rendered at the top of the toast column). */

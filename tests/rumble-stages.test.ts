@@ -76,8 +76,8 @@ const roster = (n: number) =>
   }));
 
 describe('Rumble stage registry', () => {
-  it('lists the five V2 stages first, then the original district; the nine standard arenas are unchanged', () => {
-    expect(RUMBLE_ARENA_IDS).toEqual([...V2, 'cityRumble']);
+  it('lists the five V2 stages first, then the Lagos-arenas builds, then the original district; the nine standard arenas are unchanged', () => {
+    expect(RUMBLE_ARENA_IDS).toEqual([...V2, 'rumbleOshodiMetro', 'cityRumble']);
     expect(STANDARD_ARENA_IDS).toHaveLength(9);
     for (const id of RUMBLE_ARENA_IDS) expect(getArena(id).kind).toBe('rumble');
     // only the five-district Ojuelegba is authored without mirroring (its own fairness checks replace the

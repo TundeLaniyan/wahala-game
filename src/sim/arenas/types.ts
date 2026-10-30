@@ -69,7 +69,18 @@ export interface DistrictDef {
   id: string;
   name: string;
   /** What kind of ground it is (used by tests, the minimap labels and the bots' route sense). */
-  role: 'approach' | 'underbridge' | 'park' | 'lane' | 'service' | 'plaza' | 'stadium' | 'concourse' | 'street';
+  role:
+    | 'approach'
+    | 'underbridge'
+    | 'park'
+    | 'lane'
+    | 'service'
+    | 'plaza'
+    | 'stadium'
+    | 'concourse'
+    | 'street'
+    | 'rail'
+    | 'works';
   rects: [number, number, number, number][];
 }
 
@@ -140,4 +151,10 @@ export interface ArenaDef {
    * (`STANDARD_ARENA_IDS`) and shown in a separate "Test / experimental" section of the arena picker.
    */
   experimental?: boolean;
+  /**
+   * Reserved, NOT implemented: the identity slot of this area's future one-player boss (an original
+   * character loosely inspired by a locally iconic public figure, chosen and approved later). Metadata
+   * only: nothing in the simulation, the renderer or the menus reads it.
+   */
+  futureBoss?: { status: 'reserved'; area: string; brief: string };
 }

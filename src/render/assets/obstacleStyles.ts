@@ -92,6 +92,27 @@ function ojuelegbaSoft(x: number, y: number): string | undefined {
   return family ? family[h % family.length] : undefined;
 }
 
+/** Oshodi Transport Metropolis: what a crate is in each district (five families in all, as for Ojuelegba). */
+const OSHODI_METRO_CLUTTER: Readonly<Record<string, readonly string[]>> = {
+  tradingStreets: ['prop_soft_cartons', 'prop_soft_crates', 'prop_soft_cartons', 'prop_soft_tyres'],
+  skywalkQuarter: ['prop_soft_cartons', 'prop_soft_crates', 'prop_soft_barrier', 'prop_soft_cartons'],
+  interchangePlaza: ['prop_soft_crates', 'prop_soft_cartons', 'prop_soft_tyres', 'prop_soft_crates'],
+  expresswayJunction: ['prop_soft_barrier', 'prop_soft_tyres', 'prop_soft_barrier', 'prop_soft_crates'],
+  railwayEdge: ['prop_soft_crates', 'prop_soft_barrier', 'prop_soft_crates', 'prop_soft_drums'],
+  cappaWorks: ['prop_soft_drums', 'prop_soft_tyres', 'prop_soft_drums', 'prop_soft_crates'],
+};
+function oshodiMetroSoft(x: number, y: number): string | undefined {
+  const a = getArena('rumbleOshodiMetro');
+  const h = tileHash(x, y);
+  // the authored barriers (blast them for a shortcut) are road barricades and tyre stacks
+  if (a.layout[y]?.[x] === 'x') return h % 2 ? 'prop_soft_barrier' : 'prop_soft_tyres';
+  const d = a.districts?.find((z) =>
+    z.rects.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1),
+  );
+  const family = d ? OSHODI_METRO_CLUTTER[d.id] : undefined;
+  return family ? family[h % family.length] : undefined;
+}
+
 /** Bus-park precast pillars and crates/tyres: the shared fallback set (always bundled). */
 export const BASE_PILLARS = ['prop_pillar_a', 'prop_pillar_b', 'prop_pillar_c'] as const;
 const BASE_SOFT: Record<string, number> = {
@@ -224,6 +245,18 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
       prop_soft_barrier: 1,
     },
     softFor: ojuelegbaSoft,
+  }),
+  rumbleOshodiMetro: style({
+    note: 'permanent cover is drawn whole by the board cover (terminal, bus bays, skywalk piers, shopfronts, rail portals, station: oshodiMetroCover.ts); crush blocks are wall stubs and precast; per district clutter: cartons and crates in the streets and the skywalk quarter, crates and tyres in the plaza, barricades on the junction, freight crates and cable gear at the rail edge, drums and tyres at the works; barriers are barricades and tyre stacks',
+    pillars: ['prop_pillar_wallstub', 'prop_pillar_c', 'prop_pillar_a'],
+    soft: {
+      prop_soft_cartons: 3,
+      prop_soft_crates: 3,
+      prop_soft_tyres: 2,
+      prop_soft_barrier: 2,
+      prop_soft_drums: 1,
+    },
+    softFor: oshodiMetroSoft,
   }),
   rumbleApapa: style({
     note: 'stacked shipping containers on yard pads, transit sheds of precast panels; drums, crates, cable drums',

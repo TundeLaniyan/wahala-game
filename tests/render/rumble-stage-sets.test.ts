@@ -1,5 +1,6 @@
 /**
- * The City Rumble V2 stage surroundings (Oshodi, Lagos Island, Ojuelegba, Apapa, Lekki Nightworks) obey
+ * The City Rumble stage surroundings (Oshodi, Lagos Island, Ojuelegba, Apapa, Lekki Nightworks and the Lagos-arenas
+ * Oshodi Transport Metropolis) obey
  * the set rules in `src/render/arenas/common.ts` on their large boards: nothing stands on the board, and
  * the camera (south) side stays low so no tile is hidden. Built headless (a stub canvas stands in for the
  * DOM); every mesh triangle, vehicle, prop placement and background person is checked. The floor painters
@@ -58,7 +59,14 @@ beforeAll(() => {
   });
 });
 
-const STAGES = ['rumbleOshodi', 'rumbleLagosIsland', 'rumbleOjuelegba', 'rumbleApapa', 'rumbleLekkiNight'];
+const STAGES = [
+  'rumbleOshodi',
+  'rumbleLagosIsland',
+  'rumbleOjuelegba',
+  'rumbleApapa',
+  'rumbleLekkiNight',
+  'rumbleOshodiMetro',
+];
 
 interface Built {
   meshes: Mesh[];

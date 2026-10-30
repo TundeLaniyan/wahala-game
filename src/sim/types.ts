@@ -413,7 +413,8 @@ export type StageHazardStyle =
   | 'manhole' // connected trapdoors (teleport)
   | 'cargo' // V2 Apapa: a container lowered by a quay crane onto a marked zone (strike)
   | 'goods' // V2 Lagos Island: bales and cartons tumbling off a shopfront onto a marked zone (strike)
-  | 'truck'; // V2 Apapa: an articulated container truck racing a port road (sweep)
+  | 'truck' // V2 Apapa: an articulated container truck racing a port road (sweep)
+  | 'train'; // Oshodi Metropolis: a commuter railcar on a track lane, out of one portal and into the other (sweep)
 
 export type StageHazardKind = 'sweep' | 'strike' | 'push' | 'drop';
 

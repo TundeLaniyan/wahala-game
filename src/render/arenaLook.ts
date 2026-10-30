@@ -13,6 +13,7 @@
  *   work lamps, black sky.
  */
 import { NEW_ARENA_ART } from './arenas/newArenas';
+import { timeOfDay } from './timeOfDay';
 
 export interface ArenaLook {
   /** Sky / clear colour and the distance fog that gives the backdrop atmospheric depth. */
@@ -103,5 +104,10 @@ const LOOKS: Record<string, ArenaLook> = {
 };
 /** The arena's look: the original three live here, the expansion arenas in their own modules. */
 export function arenaLook(arenaId: string): ArenaLook {
-  return LOOKS[arenaId] ?? NEW_ARENA_ART()[arenaId]?.look ?? LOOKS.danfoBusPark!;
+  const built = LOOKS[arenaId];
+  if (built) return built;
+  const art = NEW_ARENA_ART()[arenaId];
+  // an arena that ships a night look on the same geometry shows it behind the review flag `?tod=night`
+  if (art?.nightLook && timeOfDay() === 'night') return art.nightLook;
+  return art?.look ?? LOOKS.danfoBusPark!;
 }

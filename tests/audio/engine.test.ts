@@ -181,6 +181,15 @@ describe('event mapping', () => {
     expectIds({ ...SAMPLES.vehicleWarning, kind: 'danfo' } as SimEvent, 'danfo_horn');
     expectIds({ ...SAMPLES.vehicleWarning, kind: 'taxi' } as SimEvent, 'taxi_horn');
     expectIds({ ...SAMPLES.vehicleWarning, kind: 'keke' } as SimEvent, 'keke_horn');
+    // the Oshodi railcar: the crossing bell and its own horn when announced, its own pass-by when it runs
+    const sweep = (SAMPLES.stageWarning as Extract<SimEvent, { type: 'stageWarning' }>).event;
+    const train = { ...sweep, style: 'train' as const };
+    expectIds({ type: 'stageWarning', event: train }, 'rail_bell', 'train_horn');
+    expectIds({ type: 'stageStarted', event: train }, 'train_pass');
+    rig.traces.length = 0;
+    rig.ctx.advance(10);
+    rig.audio.handleEvents([{ type: 'stageWarning', event: train }], s);
+    expect(rig.ids()).not.toContain('danfo_horn'); // never mistaken for a road vehicle
     expectIds({ ...SAMPLES.vehicleLaunched, kind: 'keke' } as SimEvent, 'keke_launch', 'crowd_shout');
     expectIds(SAMPLES.pickupCollected, 'pickup_rare');
     expectIds({ ...SAMPLES.pickupCollected, kind: 'voucher' } as SimEvent, 'pickup_voucher');

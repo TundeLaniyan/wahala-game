@@ -22,6 +22,7 @@ const MOOD: Record<string, [string, string]> = {
   rumbleOjuelegba: ['#8a7a66', '#1e1a18'],
   rumbleApapa: ['#6a8aa0', '#24323c'],
   rumbleLekkiNight: ['#2a3a52', '#07090d'],
+  rumbleOshodiMetro: ['#9fb0b8', '#1a2430'],
   cityRumble: ['#ff6a2a', '#1a0f08'],
 };
 
