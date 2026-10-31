@@ -1,4 +1,5 @@
 import type { CharacterId } from '../sim';
+import { fighterIdentity, rotateHueHex } from './fighterIdentity';
 import { LOOKS } from './looks';
 import { SLOT_CSS } from './palette';
 
@@ -31,18 +32,23 @@ export function portraitUrl(id: CharacterId, slot: number, size = 96): string {
   g.fillStyle = bg;
   g.fillRect(0, 0, 96, 96);
   const bust = busts.get(bustKey);
+  const shift = fighterIdentity(slot).hueShift;
   if (bust) {
+    // the slot's kit (decision FF1): the same hue rotation the 3D character wears (canvas filters are
+    // missing in some browsers; the bust then shows the base kit)
+    if (shift !== 0 && 'filter' in g) g.filter = `hue-rotate(${shift}deg)`;
     g.drawImage(bust, 0, 0, 96, 96);
+    if ('filter' in g) g.filter = 'none';
     const url = c.toDataURL('image/png');
     cache.set(key, url);
     return url;
   }
   // shoulders / top
-  g.fillStyle = hex(look.top);
+  g.fillStyle = hex(rotateHueHex(look.top, shift));
   g.beginPath();
   g.ellipse(48, 100, 40, 28, 0, Math.PI, 0);
   g.fill();
-  g.fillStyle = hex(look.topAccent);
+  g.fillStyle = hex(rotateHueHex(look.topAccent, shift));
   g.fillRect(40, 74, 16, 22);
   // neck + head
   g.fillStyle = hex(look.skin);
