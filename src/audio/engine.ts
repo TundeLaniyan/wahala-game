@@ -78,7 +78,14 @@ export interface AudioEngine {
   startMusic(arenaId?: string | null): void;
   /** Leaving the match: ambience fades out, generator/engine loops stop, the menu music returns. */
   stopMusic(): void;
-  /** Game paused / resumed: the music stream pauses (after a short fade) and continues where it was. */
+  /**
+   * Game paused / resumed (decision PA1). Pausing silences everything the match is making: the music stream
+   * pauses (after a short fade) and continues where it was, the street ambience fades to silence and keeps its
+   * loops, generator / vehicle loops, spoken lines and every one-shot (including the ones still scheduled for
+   * later) are stopped, and gameplay events are ignored until resume. Resuming brings the music and ambience back
+   * once and lets the loops rebuild from the game state: nothing doubles and nothing queued from before fires.
+   * Menu sounds (`playUi`) still play, so only a deliberate menu interaction is heard while paused.
+   */
   setPaused(paused: boolean): void;
   /** 0..1 excitement: scales the ambience's excited layer and how eager/loud the crowd reacts. */
   setIntensity(level: number): void;
@@ -306,6 +313,8 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
         g.reactor.reset();
       }
       g.ambience.start();
+      if (pausedWanted) g.ambience.pause();
+      else g.ambience.resume();
     } else {
       g.voices.stop();
       g.ambience.stop();
@@ -314,6 +323,26 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       g.router.reset();
       g.crowd.reset();
     }
+  };
+
+  /** Pause: stop everything the match is making, scheduled one-shots and spoken lines included. */
+  const silenceGameplay = (g: Graph): void => {
+    g.pool.stopAll();
+    g.voices.stop();
+    g.ambience.pause();
+    g.loops.stopAll();
+    g.fuse.reset();
+    g.router.reset();
+    g.crowd.reset();
+    g.reactor.reset();
+  };
+
+  /** Resume: the ambience returns from where it was; loops come back from the state on the next update. */
+  const resumeGameplay = (g: Graph): void => {
+    g.ambience.resume();
+    g.voices.reset(g.ctx.currentTime);
+    g.reactor.reset();
+    keepRunning(g);
   };
 
   if (prefs) {
@@ -414,8 +443,14 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       });
     },
     setPaused(p) {
-      pausedWanted = matchWanted && p;
-      guard((g) => g.music.setPaused(pausedWanted));
+      const next = matchWanted && p;
+      if (next === pausedWanted) return; // repeated pause / resume calls change nothing
+      pausedWanted = next;
+      guard((g) => {
+        g.music.setPaused(next);
+        if (next) silenceGameplay(g);
+        else resumeGameplay(g);
+      });
     },
     setIntensity(level) {
       const next = Number.isFinite(level) ? Math.min(1, Math.max(0, level)) : 0;
@@ -434,6 +469,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       guard((g) => {
         // the music follows the game clock even while muted, so unmuting lands on the right tempo
         if (matchWanted) g.music.update(matchClock(state));
+        if (pausedWanted) return; // paused: no gameplay sound, whatever the caller sends
         if (muted) return;
         keepRunning(g);
         g.router.handle(events, state);

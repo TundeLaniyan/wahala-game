@@ -420,7 +420,7 @@ export class MatchController {
   }
 
   private countdownBeeps(state: GameState): void {
-    if (state.match.phase !== 'countdown') return;
+    if (state.match.phase !== 'countdown' || this.paused) return; // a paused countdown stays silent
     const n = Math.ceil(state.match.countdownRemaining / 60);
     if (n !== this.countdownShown) {
       this.countdownShown = n;
