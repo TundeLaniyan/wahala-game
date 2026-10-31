@@ -213,12 +213,15 @@ test.describe('keyboard play', () => {
   test('an own generator can eliminate the owner, who becomes a sideline spectator, and results appear', async ({
     page,
   }, info) => {
+    // two screenshots and the results flow cost several software-WebGL frames each: this test is slow by design
+    test.slow();
     await open(page, '&nobots');
     await startMatch(page, { competitors: 3 });
     await page.keyboard.press('Space');
     await stepTicks(page, 200);
     const st = await getState(page);
     expect(st.players[0]!.alive).toBe(false);
+    await publish(page); // the HUD is only refreshed from a frame, and software WebGL can take seconds per frame
     // V2 Classic: the eliminated player walks the sideline and can throw generators in (bar under the clock)
     await expect(page.getByTestId('sideline')).toBeVisible();
     await page.screenshot({ path: `e2e-shots/${info.project.name}-spectate.png` });
@@ -253,6 +256,7 @@ test.describe('keyboard play', () => {
     );
     await holdKey(page, 'ArrowUp', 3);
     expect((await getState(page)).players[0]!.mounted).toBe(true);
+    await publish(page);
     await expect(page.getByTestId('inventory')).toContainText('SHIELD');
     await page.screenshot({ path: `e2e-shots/${info.project.name}-okada.png` });
     // standing on own generator when it blows: Okada absorbs, rider lives, and is on foot

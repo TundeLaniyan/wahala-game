@@ -142,6 +142,10 @@ test.describe('City Rumble: Deathmatch respawns', () => {
        me.respawnAt = s.tick + s.config.respawn.delayTicks;`,
     );
     await stepTicks(page, 2);
+    // the HUD is only refreshed from a frame, and software WebGL can take seconds per frame: publish it now
+    await page.evaluate(() =>
+      (window as never as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
+    );
     await expect(page.getByTestId('respawn-banner')).toBeVisible();
     await expect(page.getByTestId('respawn-countdown')).toContainText('Back in');
     await expect(page.getByTestId('skip-results')).toHaveCount(0);
@@ -150,6 +154,9 @@ test.describe('City Rumble: Deathmatch respawns', () => {
     await stepTicks(page, 240);
     const st = await getState(page);
     expect(st.players[0]!.alive).toBe(true);
+    await page.evaluate(() =>
+      (window as never as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
+    );
     await expect(page.getByTestId('respawn-banner')).toHaveCount(0);
     await expect(page.getByTestId('spawn-protected')).toBeVisible();
     await shot(page, info.project.name, 'deathmatch-respawned');
