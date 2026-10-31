@@ -23,7 +23,17 @@ type Handler<K extends SimEvent['type']> = (e: EventOf<K>, c: RouteCtx) => void;
 type Handlers = { [K in SimEvent['type']]: Handler<K> };
 
 /** Pickups that earn the fancy chime. */
-const RARE = new Set(['okada', 'diesel', 'hotfuel', 'remote', 'killswitch', 'gloves', 'grip', 'armour', 'square']);
+const RARE = new Set([
+  'okada',
+  'diesel',
+  'hotfuel',
+  'remote',
+  'killswitch',
+  'gloves',
+  'grip',
+  'armour',
+  'square',
+]);
 const MAX_BLASTS_PER_CALL = 3;
 const MAX_ELIM_PER_CALL = 2;
 const PAN_WIDTH = 0.6;
@@ -109,6 +119,21 @@ const handlers: Handlers = {
       react(c, { kind: 'laugh', strength: 0.6, chance: 0.8, delay: 0.9 });
     }
     c.ambience.swell(1);
+  },
+  // Rumble sudden death reuses the existing synthesised cues (no new recording or music is added)
+  suddenDeathStarted: (_e, c) => {
+    sfx(c, 'crush_warning');
+    c.buses.duck('warning');
+    c.ambience.swell(0.8);
+    react(c, { kind: 'gasp', strength: 0.8, force: true, delay: 0.3 });
+  },
+  suddenDeathCountdown: () => undefined, // silent: the HUD carries the countdown
+  suddenDeathBlast: (_e, c) => {
+    sfx(c, 'crush_slam');
+    sfx(c, 'explosion_rumble', 0, 0.9, 0.9, 0.05);
+    c.buses.duck('blast');
+    c.ambience.swell(1);
+    react(c, { kind: 'gasp', strength: 0.9, force: true, delay: 0.2 });
   },
   generatorPlaced: (e, c) => {
     if (allow(c, 'place', 0.05)) sfx(c, 'gen_place', panOf(c, e.x), 1, jitter(c, 0.04));

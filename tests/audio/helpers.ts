@@ -27,6 +27,15 @@ const STAGE_EVENT = {
 export const SAMPLES: Record<SimEvent['type'], SimEvent> = {
   matchStarted: { type: 'matchStarted' },
   matchEnded: { type: 'matchEnded', result: { kind: 'win', winnerId: 0 } },
+  suddenDeathStarted: {
+    type: 'suddenDeathStarted',
+    cause: 'timeout',
+    contenders: [],
+    area: { x0: 0, y0: 0, x1: 1, y1: 1 },
+    transitionEndTick: 240,
+  },
+  suddenDeathCountdown: { type: 'suddenDeathCountdown', blast: 1, blastTick: 3600 },
+  suddenDeathBlast: { type: 'suddenDeathBlast', blast: 1, survivors: [], eliminated: [] },
   generatorPlaced: { type: 'generatorPlaced', generatorId: 1, ownerId: 0, x: 3, y: 3 },
   generatorExploded: {
     type: 'generatorExploded',

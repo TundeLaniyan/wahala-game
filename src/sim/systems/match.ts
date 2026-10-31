@@ -1,41 +1,50 @@
 /**
- * Match flow: countdown, timer, win / draw detection. Classic and Survival: last standing (a timeout
- * with several standing is a draw). Deathmatch and Team Rumble: the clock decides (`timedResult`).
+ * Match flow: countdown, timer, win / draw detection.
+ *
+ * Classic: last standing; a timeout with several standing, or everybody falling together, is a draw
+ * (unchanged). City Rumble (decisions SD1-SD6): when the clock runs out, or a blast takes down everyone still
+ * active, the credited kills of every player (the fallen included) decide: one clear leader wins at once, the
+ * players tied on the highest total play sudden death (systems/suddenDeath.ts). Deathmatch and Team Rumble
+ * are decided by the clock (`timedResult` ranks the board; the kill count decides the match).
  */
 import type { GameState, MatchResult, Player, SimEvent } from '../types';
 import { isRespawnMode, isTeamMode } from '../modes';
+import { endMatch } from './matchResult';
 import { alivePlayers } from './queries';
-
-function end(state: GameState, result: NonNullable<GameState['match']['result']>, events: SimEvent[]): void {
-  state.match.phase = 'ended';
-  state.match.result = result;
-  state.match.endedTick = state.tick;
-  events.push({ type: 'matchEnded', result });
-}
+import { evaluateSuddenDeath, resolveByKills } from './suddenDeath';
 
 /**
  * Called once per playing tick AFTER all eliminations of the tick have been applied, so every
- * elimination in the same tick is seen together: nobody left means a draw, never an arbitrary winner.
+ * elimination in the same tick is seen together: nobody left means the kill totals decide in a Rumble
+ * and a draw in Classic, never an arbitrary winner.
  */
 export function evaluateMatchEnd(state: GameState, events: SimEvent[]): void {
   if (state.match.phase !== 'playing' || state.players.length < 2) return;
+  if (state.match.suddenDeath) {
+    evaluateSuddenDeath(state, events);
+    return;
+  }
+  const timeUp = state.match.playTicks >= state.config.match.durationTicks;
+  const rumble = state.settings.game !== 'classic';
   if (isRespawnMode(state.settings.game)) {
-    if (state.match.playTicks >= state.config.match.durationTicks) end(state, timedResult(state), events);
+    if (timeUp) resolveByKills(state, 'timeoutKills', events);
     return;
   }
   const alive = alivePlayers(state);
-  if (alive.length === 0) end(state, { kind: 'draw', reason: 'simultaneous' }, events);
-  else if (alive.length === 1) end(state, { kind: 'win', winnerId: alive[0]!.id }, events);
-  else if (state.match.playTicks >= state.config.match.durationTicks)
-    end(state, { kind: 'draw', reason: 'timeout' }, events);
+  if (alive.length === 0) {
+    if (rumble) resolveByKills(state, 'simultaneousKills', events);
+    else endMatch(state, { kind: 'draw', reason: 'simultaneous' }, events);
+  } else if (alive.length === 1) endMatch(state, { kind: 'win', winnerId: alive[0]!.id }, events);
+  else if (timeUp) {
+    if (rumble) resolveByKills(state, 'timeoutKills', events);
+    else endMatch(state, { kind: 'draw', reason: 'timeout' }, events);
+  }
 }
 
 /**
- * Deathmatch: most credited eliminations; ties broken by fewer deaths, then more assists, then whoever
- * reached the score first (the earlier last elimination). Still identical at the top = draw ('tie').
- * Team Rumble: most team eliminations (credited eliminations of enemies: a friendly-fire or accidental
- * death is nobody's point but still counts as a death), then fewer team deaths; identical = draw.
- * Assists never decide a team match (they are not eliminations).
+ * The Deathmatch / Team Rumble scoreboard order: most credited eliminations, then fewer deaths, more assists
+ * and whoever reached the score first (display only: the match itself is decided by the kill count alone, with
+ * sudden death for a shared lead). Returns the board leader, or a 'tie' draw when the board is level on every count.
  */
 export function timedResult(state: GameState): MatchResult {
   if (isTeamMode(state.settings.game)) {

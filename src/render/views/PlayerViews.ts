@@ -10,6 +10,7 @@ import {
   Vector3,
 } from 'three';
 import type { Player, SimEvent } from '../../sim';
+import { fighterIdentity } from '../../assets/fighterIdentity';
 import { SLOT_COLORS } from '../../assets/palette';
 import { drawPickupIcon } from '../../assets/pickupIcons';
 import { OKADA_SCALE, createPlayerModel, createRiggedPlayerModel } from '../assets/characters';
@@ -172,7 +173,9 @@ export class PlayerViews implements View {
 
   private create(p: Player, ctx: FrameContext): Visual {
     const modelId = p.slot === 3 && assets.has('char_areaBoss') ? 'areaBoss' : p.characterId;
-    const model = createRiggedPlayerModel(modelId, p.id * 0.37) ?? createPlayerModel(p.characterId);
+    const identity = fighterIdentity(p.slot);
+    const model =
+      createRiggedPlayerModel(modelId, p.id * 0.37, identity) ?? createPlayerModel(p.characterId, identity);
     // Team Rumble: the team colour replaces the slot colour on the ring, the silhouette, the marker and
     // the name tag, and the character wears the team kit (jersey band and armbands)
     const slot = p.team >= 0 ? teamColor(p.team) : SLOT_COLORS[p.slot % SLOT_COLORS.length]!;

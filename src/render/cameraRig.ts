@@ -45,12 +45,12 @@ const FAR_TOP = 3.1;
 const FAR_TOP_COMPACT = 2.0;
 /**
  * Max |NDC x| of the near arena corners in the phone layout. The on-screen controls live in two strips
- * beside the board's near row: the action-button column on the right is `PHONE_CONTROL_STRIP` screen
- * heights wide (styles.css `.actions` in the compact layout: 30vh plus an 8 px gap) and the floating
- * thumbstick's resting ring fits in the same width on the left. In NDC that strip is
- * 2 * strip * height / width = 2 * strip / aspect.
+ * beside the board's near row: the action cluster on the right is `PHONE_CONTROL_STRIP` screen heights wide
+ * (styles.css `.actions` in the compact layout: 32vh with its screen-edge margin; decision MC1 widened it from
+ * 0.28 so B sits diagonally above-left of A and the movement pad can grow) and the movement pad fits in the
+ * same width on the left. In NDC that strip is 2 * strip * height / width = 2 * strip / aspect.
  */
-export const PHONE_CONTROL_STRIP = 0.28;
+export const PHONE_CONTROL_STRIP = 0.32;
 export function compactNearX(aspect: number): number {
   return MathUtils.clamp(1 - (2 * PHONE_CONTROL_STRIP) / aspect, 0.55, 0.76);
 }

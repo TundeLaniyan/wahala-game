@@ -10,6 +10,7 @@ import type { HudMe, HudPlayer } from '../app/hud';
 import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
 import { HudRail } from './HudRail';
+import { SuddenDeathCard } from './SuddenDeath';
 import { Minimap } from './Minimap';
 import { ProgressionBadge } from './ProgressionBadge';
 import { RumbleHud } from './RumbleHud';
@@ -230,10 +231,19 @@ export function Hud() {
           </b>
         </div>
       )}
-      <HudRail alerts={hud.stageAlerts} toasts={toasts} ruleBanner={hud.ruleBanner} rumble={!!rumble} />
+      {hud.suddenDeath && <SuddenDeathCard sd={hud.suddenDeath} />}
+      <HudRail
+        alerts={hud.stageAlerts}
+        toasts={toasts}
+        ruleBanner={hud.ruleBanner}
+        suddenDeath={hud.suddenDeath}
+        rumble={!!rumble}
+      />
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}
       {/* V2 City Rumble progression (workstream C): kills, next reward, protection, Square Blast */}
-      {rumble && hud.me && hud.phase !== 'ended' && hud.localAlive && <ProgressionBadge me={hud.me} floating />}
+      {rumble && hud.me && hud.phase !== 'ended' && hud.localAlive && (
+        <ProgressionBadge me={hud.me} floating />
+      )}
       {hud.entry && <EntryPanel entry={hud.entry} />}
       {!rumble && hud.phase === 'playing' && !hud.localAlive && !hud.sideline && (
         <div className="spectate" data-testid="spectate">
@@ -251,7 +261,8 @@ export function Hud() {
       {showStats && stats && (
         <div className="fps">
           {stats.fps} fps · {stats.drawCalls} calls · {Math.round(stats.triangles / 1000)}k tris ·{' '}
-          {stats.particles} fx · {stats.auto ? 'Auto ' : ''}{stats.qualityName} @{stats.pixelRatio.toFixed(2)}x
+          {stats.particles} fx · {stats.auto ? 'Auto ' : ''}
+          {stats.qualityName} @{stats.pixelRatio.toFixed(2)}x
           {timings && (
             <>
               {' '}

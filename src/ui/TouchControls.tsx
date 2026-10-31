@@ -76,7 +76,18 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
       onPointerCancel={end}
       onLostPointerCapture={end}
     >
-      {view ? (
+      <div
+        className={`stick-hint${view ? ' live' : ''}`}
+        data-testid="stick-pad"
+        style={{ ['--r' as string]: `${r}px` }}
+      >
+        {(['up', 'down', 'left', 'right'] as Dir[]).map((d) => (
+          <i key={d} className={`stick-tick ${d}${view?.dir === d ? ' on' : ''}`} />
+        ))}
+        <span>MOVE</span>
+        <small>press anywhere on this pad</small>
+      </div>
+      {view && (
         <div className="stick" style={{ left: view.x, top: view.y, ['--r' as string]: `${r}px` }}>
           <div className="stick-base">
             {(['up', 'down', 'left', 'right'] as Dir[]).map((d) => (
@@ -87,14 +98,6 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
             className={`stick-knob${view.dir ? ' on' : ''}`}
             style={{ transform: `translate(calc(-50% + ${view.kx}px), calc(-50% + ${view.ky}px))` }}
           />
-        </div>
-      ) : (
-        <div className="stick-hint" style={{ ['--r' as string]: `${r}px` }}>
-          {(['up', 'down', 'left', 'right'] as Dir[]).map((d) => (
-            <i key={d} className={`stick-tick ${d}`} />
-          ))}
-          <span>MOVE</span>
-          <small>thumb anywhere here</small>
         </div>
       )}
     </div>
@@ -118,8 +121,9 @@ export function specialLabel(
  * never double-place within a tick. The input layer alone decides tap vs hold (input/specialHold.ts); with no
  * live remote generator a press places at once, exactly as before.
  */
-function GeneratorButton({ remoteReady }: { remoteReady: boolean }) {
+function GeneratorButton({ remoteReady, full }: { remoteReady: boolean; full: boolean }) {
   const [holding, setHolding] = useState(false);
+  const [pressed, setPressed] = useState(false);
   const fingers = useRef(new Set<string>());
   // same safeguard as B: a finger still on A when it leaves the HUD must not leave A "down" in the input layer
   useEffect(() => {
@@ -133,12 +137,27 @@ function GeneratorButton({ remoteReady }: { remoteReady: boolean }) {
     fingers.current.delete(`p${e.pointerId}`);
     input.touchUp('place', `p${e.pointerId}`);
     setHolding(false);
+    setPressed(fingers.current.size > 0);
   };
+  // visual state only: pressed = a finger is down, holding = the remote ring is filling, remote = a remote
+  // generator is waiting, disabled = every generator is already out (a press would do nothing)
+  const disabled = full && !remoteReady;
+  const state = holding
+    ? 'holding'
+    : pressed
+      ? 'pressed'
+      : remoteReady
+        ? 'remote'
+        : disabled
+          ? 'disabled'
+          : 'idle';
   return (
     <button
       type="button"
-      className={`abtn bomb${holding ? ' holding' : ''}`}
+      className={`abtn bomb${holding ? ' holding' : ''}${pressed ? ' pressed' : ''}${disabled ? ' dim' : ''}`}
       data-testid="btn-place"
+      data-state={state}
+      aria-disabled={disabled || undefined}
       data-remote={remoteReady ? 'ready' : ''}
       aria-label={`A: Generator${remoteReady ? ', hold to set off remote' : ''}`}
       style={{ ['--hold-ms' as string]: `${SPECIAL_HOLD_MS}ms` }}
@@ -146,6 +165,7 @@ function GeneratorButton({ remoteReady }: { remoteReady: boolean }) {
         e.preventDefault();
         fingers.current.add(`p${e.pointerId}`);
         input.touchDown('place', `p${e.pointerId}`);
+        setPressed(true);
         if (remoteReady) setHolding(true);
         try {
           // keep receiving this finger's release even if it slides off the button
@@ -159,6 +179,9 @@ function GeneratorButton({ remoteReady }: { remoteReady: boolean }) {
       onLostPointerCapture={up}
     >
       {remoteReady && <i className="hold-ring" aria-hidden />}
+      <em className="abtn-key" aria-hidden>
+        A
+      </em>
       <span>
         <b>GENERATOR</b>
         {remoteReady && <small data-testid="btn-place-hold">HOLD: BOOM!</small>}
@@ -174,6 +197,7 @@ function GeneratorButton({ remoteReady }: { remoteReady: boolean }) {
  */
 function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
   const [holding, setHolding] = useState(false);
+  const [pressed, setPressed] = useState(false);
   // fingers on B that have not been released yet (input sources)
   const fingers = useRef(new Set<string>());
   // B leaves the HUD while a finger is still on it (the player is knocked out, a Deathmatch respawn wait):
@@ -192,12 +216,25 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
     fingers.current.delete(`p${e.pointerId}`);
     input.touchUp('special', `p${e.pointerId}`);
     setHolding(false);
+    setPressed(fingers.current.size > 0);
   };
+  // visual state only (see GeneratorButton); B stays pressable when it has nothing to do, exactly as before
+  const state = holding
+    ? 'holding'
+    : pressed
+      ? 'pressed'
+      : remoteReady
+        ? 'remote'
+        : label.live
+          ? 'idle'
+          : 'disabled';
   return (
     <button
       type="button"
-      className={`abtn special${label.live ? '' : ' dim'}${label.icon ? ' vehicle' : ''}${holding ? ' holding' : ''}`}
+      className={`abtn special${label.live ? '' : ' dim'}${label.icon ? ' vehicle' : ''}${holding ? ' holding' : ''}${pressed ? ' pressed' : ''}`}
       data-testid="btn-special"
+      data-state={state}
+      aria-disabled={!label.live || undefined}
       data-special={me.special ?? ''}
       data-remote={remoteReady ? 'ready' : ''}
       aria-label={`B: ${label.text}${remoteReady ? ', hold to set off remote' : ''}`}
@@ -206,6 +243,7 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
         e.preventDefault();
         fingers.current.add(`p${e.pointerId}`);
         input.touchDown('special', `p${e.pointerId}`);
+        setPressed(true);
         if (remoteReady) setHolding(true);
         try {
           // keep receiving this finger's release even if it slides off the button
@@ -219,6 +257,9 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
       onLostPointerCapture={up}
     >
       {remoteReady && <i className="hold-ring" aria-hidden />}
+      <em className="abtn-key" aria-hidden>
+        B
+      </em>
       <span>
         {label.icon && <img src={pickupIconUrl('voucher', 64)} alt="" />}
         {label.text}
@@ -229,8 +270,9 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
 }
 
 /**
- * V2 touch layout: a large movement area on the left and EXACTLY two action buttons on the right, always
- * in the same place: A = GENERATOR (HOLD = remote), B = SPECIAL (its label follows what it would do).
+ * V2 touch layout: a large movement pad on the left and EXACTLY two action buttons in the lower right, always
+ * in the same place: A (GENERATOR, HOLD = remote) in the corner and B (SPECIAL, its label follows what it would
+ * do) diagonally above and to its left, so the two never stack and a thumb rolls from one to the other.
  * Contact abilities (kick / punch / disarm / pass) have no button: walk into a generator.
  */
 export function TouchControls() {
@@ -254,7 +296,7 @@ export function TouchControls() {
     <div className="touch" data-testid="touch-controls">
       <Joystick entryOpen={false} />
       <div className="actions">
-        <GeneratorButton remoteReady={me.remote && me.hasRemoteGenerator} />
+        <GeneratorButton remoteReady={me.remote && me.hasRemoteGenerator} full={me.active >= me.capacity} />
         <SpecialButton me={me} skill={skill} />
       </div>
     </div>

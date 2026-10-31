@@ -150,6 +150,8 @@ describe('event mapping', () => {
       'vehicleEntryCancelled',
       'stageEnded',
       'stageSweepStep',
+      // sudden death: the countdown is carried by the HUD clock (the title card and each blast have sounds)
+      'suddenDeathCountdown',
       // V2 events: the contact abilities reuse the kick / throw / disarm sounds of the events they cause
       'contactUsed',
       'contactEquipped',

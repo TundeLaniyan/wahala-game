@@ -1765,6 +1765,62 @@ kbd {
   height: 4px;
   background: linear-gradient(90deg, var(--mn-amber) var(--p), #2a3348 var(--p));
 }
+/* FlowFrame Performance (decision FP1): the mark, name and one plain sentence under the progress bar */
+.mn-loading {
+  flex-wrap: wrap;
+  justify-content: center;
+  /* left: 50% would otherwise cap the width at half the screen */
+  width: max-content;
+  max-width: min(94vw, 560px);
+  background: rgba(11, 14, 20, 0.97);
+}
+.mn-flowframe {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+  margin: 2px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--mn-border);
+  text-align: left;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-weight: 400;
+}
+.mn-flowframe .ff-mark {
+  grid-row: span 2;
+  color: var(--mn-amber);
+}
+.mn-flowframe b {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mn-sand);
+}
+.mn-flowframe em {
+  font-style: normal;
+  font-size: 0.66rem;
+  line-height: 1.3;
+  color: rgba(231, 220, 196, 0.78);
+}
+@media (max-height: 480px) {
+  /* short landscape phones: a wide, low strip at the very bottom, so it covers as little as possible */
+  .mn-loading,
+  .mn[data-screen='home'] .mn-loading {
+    max-width: min(96vw, 820px);
+    bottom: max(4px, env(safe-area-inset-bottom));
+    padding: 5px 12px;
+  }
+  .mn-flowframe {
+    padding-top: 4px;
+  }
+  .mn-flowframe em {
+    font-size: 0.58rem;
+    line-height: 1.2;
+  }
+}
 .mn-screen-home ~ .mn-loading,
 .mn[data-screen='home'] .mn-loading {
   bottom: 52px;

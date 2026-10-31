@@ -39,6 +39,13 @@ export interface Ambience {
   start(): void;
   /** Fades out. */
   stop(): void;
+  /**
+   * Match paused: every layer fades to silence quickly but keeps its looping source, so `resume()` brings the
+   * bed back from the same place with no second source (and so no doubled loop). A no-op unless running.
+   */
+  pause(): void;
+  resume(): void;
+  readonly paused: boolean;
   setIntensity(level: number): void;
   /** Momentary lift of the whole bed; `strength` 0..1. Quieter swells inside a louder one are ignored. */
   swell(strength: number): void;
@@ -55,17 +62,21 @@ interface Layer {
 }
 
 const FADE_IN = 1.2;
+/** Time constant (s) of the fast fade to silence when the match is paused. */
+const PAUSE_FADE = 0.03;
 
 export function createAmbience(ctx: AudioContextLike, bank: SoundBank, buses: Buses): Ambience {
   const layers: Layer[] = LAYERS.map((id) => ({ id, src: null, gain: null, buffer: null }));
   let running = false;
+  let paused = false;
   let intensity = 0;
   let target = levelsFor(0);
   let swellUntil = 0;
   let swellLevel = 0;
   let offsetSeed = 0;
 
-  const level = (l: Layer): number => target[l.id] * defOf(l.id as SoundId).gain * bank.trim(l.id);
+  const level = (l: Layer): number =>
+    paused ? 0 : target[l.id] * defOf(l.id as SoundId).gain * bank.trim(l.id);
 
   const fadeOutOld = (l: Layer): void => {
     if (!l.src || !l.gain) return;
@@ -132,14 +143,34 @@ export function createAmbience(ctx: AudioContextLike, bank: SoundBank, buses: Bu
     get running() {
       return running;
     },
+    get paused() {
+      return paused;
+    },
+    pause() {
+      if (!running || paused) return;
+      paused = true;
+      const now = ctx.currentTime;
+      for (const l of layers) {
+        if (!l.gain) continue;
+        l.gain.gain.cancelScheduledValues(now);
+        l.gain.gain.setTargetAtTime(0, now, PAUSE_FADE);
+      }
+    },
+    resume() {
+      if (!paused) return;
+      paused = false;
+      if (running) apply(0.2);
+    },
     start() {
       if (running) return;
       running = true;
+      paused = false;
       bank.prioritize(LAYERS);
       for (const l of layers) ensure(l);
       apply(FADE_IN / 3);
     },
     stop() {
+      paused = false;
       if (!running) return;
       running = false;
       for (const l of layers) fadeOutOld(l);
@@ -150,7 +181,7 @@ export function createAmbience(ctx: AudioContextLike, bank: SoundBank, buses: Bu
       if (running) apply(0.6);
     },
     swell(strength) {
-      if (!running) return;
+      if (!running || paused) return;
       const s = clamp01(strength);
       const now = ctx.currentTime;
       if (now < swellUntil && s <= swellLevel) return;

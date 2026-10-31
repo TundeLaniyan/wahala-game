@@ -437,3 +437,13 @@ Decisions UX1-UX6 and PF1-PF10 in `DECISIONS.md`; reports `docs/STITCH_UI.md` (f
 | Graphics | Auto (default) + six fixed levels over an 8-rung ladder; capability estimate, measured adaptive controller with hysteresis, cooldowns, backoff and futility detection; quiet rate-limited notice; learned rung per device; `?fps` shows sim / ai / render ms. |
 | Not done (needs a decision or a device) | Real-phone measurements; reducing bot think rate / collision / debris work for CPU-bound 32-fighter Rumbles (changes gameplay or determinism); antialiasing cannot change mid-session. |
 
+
+## Core rules and mobile UX (branch `claude/wahala-core-rules-mobile-ux-v1`, from `24e6387`; decisions SD1-SD5, FF1, MC1, PA1, FP1)
+
+| Area | State |
+| --- | --- |
+| Rumble draws | Done: credited kills decide a timeout and a simultaneous final contest; the players tied on the highest total (all players counted, the fallen too) are the only contenders of sudden death (title card, seated in the compacted core, full-size blasts after 60 s, 30 s, then every 15 s until one is left, one Okada / Armour layer per blast; the only draw is `suddenDeathExhausted`). Classic unchanged. `tests/sudden-death.test.ts`, `e2e/sudden-death.spec.ts`. No 3D blast effect (HUD flash and existing sounds only). |
+| Fighter kits | Done for the 32 competitor slots (the game has 3 selectable characters): 8 jersey hues x 4 headwear. `tests/fighter-identity.test.ts`, `scripts/identity-shots.mjs`. Menu fighter selection unchanged. |
+| Touch controls | Done: A lower-right, B diagonal above-left, bigger bounded pad, button states. `e2e/touch-layout.spec.ts`. Not tried on a physical phone. |
+| Pause audio | Done: everything silenced, no doubled loops on resume. `tests/audio/pause.test.ts`, `tests/app/pause-audio.test.ts`. Not listened to by ear. |
+| FlowFrame Performance | Done as a name, mark and loading-screen note; behaviour unchanged. `docs/FLOWFRAME_PERFORMANCE.md`. |

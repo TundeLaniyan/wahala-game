@@ -1,10 +1,13 @@
 import { Group } from 'three';
 import type { Object3D } from 'three';
 import type { CharacterId } from '../../sim';
+import { rotateHueHex } from '../../assets/fighterIdentity';
+import type { FighterIdentity } from '../../assets/fighterIdentity';
 import { LOOKS } from '../../assets/looks';
 import { box, cyl, mat, pivot, sphere } from './helpers';
 import { bakeDirect } from './merge';
 import { assets } from './library';
+import { buildHeadwear } from './outfit';
 import { RiggedCharacter } from './rigged';
 import { addRim } from './rim';
 
@@ -29,14 +32,15 @@ export interface PlayerModel {
 }
 
 /** Procedural fallback character, used only when the glTF cast is not loaded. */
-export function createPlayerModel(id: CharacterId): PlayerModel {
+export function createPlayerModel(id: CharacterId, identity?: FighterIdentity): PlayerModel {
   const look = LOOKS[id];
+  const shift = identity?.hueShift ?? 0;
   const skin = mat(look.skin, { roughness: 0.7 });
   const hair = mat(look.hair, { roughness: 0.9 });
-  const top = mat(look.top, { roughness: 0.65 });
-  const accent = mat(look.topAccent, { roughness: 0.6 });
-  const shorts = mat(look.shorts, { roughness: 0.7 });
-  const shoes = mat(look.shoes, { roughness: 0.5 });
+  const top = mat(rotateHueHex(look.top, shift), { roughness: 0.65 });
+  const accent = mat(rotateHueHex(look.topAccent, shift), { roughness: 0.6 });
+  const shorts = mat(rotateHueHex(look.shorts, shift), { roughness: 0.7 });
+  const shoes = mat(rotateHueHex(look.shoes, shift), { roughness: 0.5 });
 
   const root = new Group();
   const rig = new Group();
@@ -98,6 +102,11 @@ export function createPlayerModel(id: CharacterId): PlayerModel {
     head.add(box(0.3, 0.03, 0.04, accent, 0, 0.22, 0.04)); // headband
   }
   for (const part of [legL, legR, armL, armR, head, torso]) bakeDirect(part);
+  // the fallback head is a 0.15 sphere centred 0.1 above its pivot; headwear is added after baking
+  const wear = identity
+    ? buildHeadwear(identity.headwear, identity.headwearColor, { centre: 0.1, radius: 0.17 })
+    : null;
+  if (wear) head.add(wear);
   torso.add(head);
   rig.add(legL, legR, torso, armL, armR);
 
@@ -135,8 +144,12 @@ export function createOkada(): Group {
 }
 
 /** The rigged glTF character wrapped in the same shape as the procedural one; null if not loaded. */
-export function createRiggedPlayerModel(id: CharacterId | string, phase = 0): PlayerModel | null {
-  const rigged = RiggedCharacter.create(id, phase);
+export function createRiggedPlayerModel(
+  id: CharacterId | string,
+  phase = 0,
+  identity?: FighterIdentity,
+): PlayerModel | null {
+  const rigged = RiggedCharacter.create(id, phase, identity);
   if (!rigged) return null;
   const root = new Group();
   root.add(rigged.holder);

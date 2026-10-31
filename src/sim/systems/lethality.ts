@@ -6,7 +6,8 @@
  * Armour plates. ONE layer absorbs every lethal event of a tick (Okada first, then Armour), and the
  * absorbed events stay harmless for their grace window, so one explosion frame can never eat the Okada,
  * the Armour and the life as three impacts. Okada + one plate = survive two separate lethal hits, die to
- * the third. Wahala Crush: a protected player is shoved to the nearest free tile (a layer is used); when
+ * the third. The Rumble sudden-death blast uses the same layers (one per blast) and ignores spawn
+ * protection. Wahala Crush: a protected player is shoved to the nearest free tile (a layer is used); when
  * no free tile is left (the final closure) the hit is `terminal` and kills through any protection.
  */
 import type { EliminationCause, GameState, Player, SimEvent } from '../types';
@@ -68,7 +69,11 @@ export function applyLethalHits(state: GameState, hits: LethalHit[], events: Sim
     const live = mine.filter((h) => !isImmune(state, p, h.eventId));
     if (live.length === 0) continue;
     // spawn protection (respawn modes): ignore everything but the closing walls
-    if (state.tick < p.protectedUntil && live.every((h) => h.cause.kind !== 'crush')) continue;
+    if (
+      state.tick < p.protectedUntil &&
+      live.every((h) => h.cause.kind !== 'crush' && h.cause.kind !== 'suddenDeath')
+    )
+      continue;
 
     // Protection layers: ONE layer absorbs every lethal event of this tick (so one explosion frame can
     // never eat the Okada, the Armour and the life at once); the Okada goes first, then Armour.

@@ -198,7 +198,7 @@ export function ResultsOverlay() {
         <div className="mn-results-body">
           <small className="mn-kicker">Match over</small>
           <h2 data-testid="result-title">{title}</h2>
-          <p className="mn-results-detail">{detail}</p>
+          <p className="mn-results-detail" data-testid="result-detail">{detail}</p>
           {rumble ? <RumbleResults r={rumble} /> : <ClassicResults hud={hud} summary={summary} />}
           <div className="mn-results-actions">
             <button type="button" className="mn-btn mn-primary" data-testid="rematch" data-autofocus="" onClick={() => commands.rematch()}>

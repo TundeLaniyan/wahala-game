@@ -8,6 +8,8 @@ import { commands } from '../../app/session';
 import { currentScreen } from '../../app/menu';
 import type { MenuScreen } from '../../app/menu';
 import { useGameStore } from '../../app/store';
+import { FLOWFRAME } from '../../render/perf/brand';
+import { FlowFrameMark } from '../FlowFrameMark';
 import { KEY_ART } from './art';
 import { useMenuNav } from './focusNav';
 import { HomeScreen } from './HomeScreen';
@@ -64,6 +66,11 @@ export function MainMenu() {
         >
           <span>Loading 3D assets</span>
           <i />
+          <p className="mn-flowframe" data-testid="flowframe-note">
+            <FlowFrameMark size={18} />
+            <b>{FLOWFRAME.name}</b>
+            <em>{FLOWFRAME.description}</em>
+          </p>
         </div>
       )}
     </div>

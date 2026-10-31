@@ -2,6 +2,8 @@ import { AnimationMixer, Group, LoopOnce, LoopRepeat, MathUtils } from 'three';
 import type { AnimationAction, AnimationClip, Object3D } from 'three';
 import type { CharacterId } from '../../sim';
 import { assets } from './library';
+import { applyOutfit } from './outfit';
+import type { FighterIdentity } from '../../assets/fighterIdentity';
 import { addRim } from './rim';
 
 export type ClipName =
@@ -57,9 +59,10 @@ export class RiggedCharacter {
     this.setLoop('Idle', 0);
   }
 
-  static create(id: CharacterId | string, phase = 0): RiggedCharacter | null {
+  static create(id: CharacterId | string, phase = 0, identity?: FighterIdentity): RiggedCharacter | null {
     const body = assets.instance(`char_${id}`);
     if (!body) return null;
+    if (identity) applyOutfit(body, id, identity);
     addRim(body);
     const rc = new RiggedCharacter(body, assets.clips(`char_${id}`));
     rc.mixer.setTime(phase);
