@@ -38,13 +38,13 @@ describe('Oshodi cover map', () => {
     }
   });
 
-  it('draws the place as real objects: 23 families, big groups, no generic crate or pillar forest', () => {
+  it('draws the place as real objects: 24 families, big groups, no generic crate or pillar forest', () => {
     const groups = oshodiCoverGroups();
     const kinds = new Set(groups.map((g) => g.kind));
     // every family of the map is used, and the reach table covers each of them
     expect([...kinds].sort()).toEqual([...new Set(Object.values(OSHODI_COVER_LETTERS))].sort());
-    expect(kinds.size).toBe(23);
-    expect(Object.keys(OSHODI_COVER_REACH)).toHaveLength(23);
+    expect(kinds.size).toBe(24);
+    expect(Object.keys(OSHODI_COVER_REACH)).toHaveLength(24);
     expect([...kinds].some((k) => /crate|pillar/i.test(k))).toBe(false);
     // the mean group covers several tiles; single-tile groups are the exception (kiosks, columns, posts)
     const hard = groups.reduce((n, g) => n + g.tiles.length, 0);

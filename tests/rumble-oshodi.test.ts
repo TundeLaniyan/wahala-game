@@ -680,3 +680,43 @@ describe('Oshodi Metropolis: future boss slot', () => {
       expect(getArena(other).futureBoss, other).toBeUndefined();
   });
 });
+
+describe('Oshodi Metropolis: the main-road traffic wave is the weaponised road (ambient loops are scenery)', () => {
+  /** Advances until a road traffic wave is warned. */
+  function untilTraffic(s: GameState, max = 90 * TPS): StageEvent {
+    for (let i = 0; i < max; i++)
+      for (const e of tick(s, {}))
+        if (e.type === 'stageWarning' && e.event.style === 'traffic') return e.event;
+    throw new Error('no traffic warning');
+  }
+
+  it('hurts whoever stays on its lane after the warning, spares a neighbour on the pavement, and lets a mover live', () => {
+    for (const seed of [2, 5, 8]) {
+      const s = sandbox({ arenaId: a.id, players: 3, stage: true, seed });
+      put(s, 0, 3, 24);
+      put(s, 1, 3, 25);
+      put(s, 2, 41, 5);
+      const ev = untilTraffic(s);
+      expect(ev.startTick - ev.warnTick).toBeGreaterThanOrEqual(Math.round(2 * TPS));
+      const mid = ev.tiles[Math.floor(ev.tiles.length / 2)]!;
+      const lx = mid % W;
+      const ly = Math.floor(mid / W);
+      expect(a.layout[ly]![lx]).toBe('=');
+      put(s, 0, lx, ly);
+      put(s, 1, lx, ly === 15 || ly === 16 ? 14 : 19); // the pavement beside the road
+      for (let i = 0; i < 20 * TPS && s.stage.events.some((e) => e.id === ev.id); i++) tick(s, {});
+      expect(s.players[0]!.alive, `on the lane, seed ${seed}`).toBe(false);
+      expect(s.players[1]!.alive, `on the pavement, seed ${seed}`).toBe(true);
+    }
+  });
+
+  it('never lets an ambient vehicle touch the sim: the render plan keeps every loop off the board', () => {
+    // the combat vehicles are sim state only; ambient routes are validated against the board in
+    // tests/render/oshodi-metro-env.test.ts. Here: the sim exposes no ambient vehicle at all.
+    const s = sandbox({ arenaId: a.id, players: 2, stage: true, seed: 1 });
+    for (let i = 0; i < 20 * TPS; i++) tick(s, {});
+    expect(s.stage.events.every((e) => ['traffic', 'danfo', 'train', 'merch'].includes(e.style ?? ''))).toBe(
+      true,
+    );
+  });
+});

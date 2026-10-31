@@ -33,7 +33,8 @@ export type OshodiCoverKind =
   | 'workshop' // Y: the Cappa workshops
   | 'skip' // J: scrap skips
   | 'pavilion' // V: the Cappa Ground pavilion
-  | 'genHouse'; // X: the works generator house
+  | 'genHouse' // X: the works generator house
+  | 'arcade'; // F: the low trading arcade along the terminal side of the north edge (keeps the terminals in view)
 
 export const OSHODI_COVER_LETTERS: Readonly<Record<string, OshodiCoverKind>> = {
   Q: 'building',
@@ -59,12 +60,13 @@ export const OSHODI_COVER_LETTERS: Readonly<Record<string, OshodiCoverKind>> = {
   J: 'skip',
   V: 'pavilion',
   X: 'genHouse',
+  F: 'arcade',
 };
 
 /** One letter per tile of the 45 x 33 board ('.' = not cover). Rows align with the sim layout. */
 export const OSHODI_COVER: readonly string[] = [
-  'QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ', // 0
-  'QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ', // 1
+  'QQFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFQQQQQQQQQQQ', // 0
+  'QQFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFQQQQQQQQQQQ', // 1
   'QQ.........................................QQ', // 2
   'QQ............MM....PP......PP.K........PP.QQ', // 3
   'QQHHH.HHH...........PP......PP..........PP.QQ', // 4
@@ -179,4 +181,5 @@ export const OSHODI_COVER_REACH: Readonly<Record<OshodiCoverKind, number>> = {
   skip: 1,
   pavilion: 2,
   genHouse: 2,
+  arcade: 1,
 };

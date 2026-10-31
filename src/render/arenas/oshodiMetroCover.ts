@@ -285,6 +285,20 @@ function lockup(k: Kit, g: number, grp: OshodiCoverGroup): void {
   }
 }
 
+/** The low trading arcade (2.3 m): plaster stalls with a striped awning and a dark shutter, so the terminals behind stay in view. */
+function arcade(k: Kit, g: number, grp: OshodiCoverGroup): void {
+  for (const [x, y] of grp.tiles) {
+    const cx = k.wx(x);
+    const cz = k.wz(y);
+    box(k, g, k.concrete, 1, 2.3, 1, cx, 0, cz, pick(PLASTER, Math.floor(x / 2) + y));
+    box(k, g, k.concrete, 1.04, 0.1, 1.04, cx, 2.3, cz, CONCRETE_DARK);
+    if (y === grp.y1) {
+      box(k, g, k.paint, 0.8, 1.5, 0.05, cx, 0.1, cz + 0.5, 0x2a2e32);
+      box(k, g, k.paint, 1.0, 0.16, 0.34, cx, 1.9, cz + 0.6, pick(TARP, x));
+    }
+  }
+}
+
 function shop(k: Kit, g: number, grp: OshodiCoverGroup, n: number): void {
   const has = hasOf(grp);
   const wallC = pick(PLASTER, n * 2 + 3);
@@ -1004,6 +1018,9 @@ export function buildOshodiMetroCover(board: { width: number; height: number }):
         break;
       case 'pavilion':
         pavilion(k, g, grp);
+        break;
+      case 'arcade':
+        arcade(k, g, grp);
         break;
       case 'genHouse':
         genHouse(k, g, grp);

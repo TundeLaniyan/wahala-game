@@ -66,7 +66,7 @@ One lethal stage event at a time on this stage (`maxLethalEvents: 1`): the railc
 departure, and nothing runs once Wahala Crush starts or in the last 5 s. The hazard is rare (every 16-24 s), never
 random under a player (a fixed lane, announced), and never closes every escape.
 
-### 1.6 Permanent cover families (23, none a generic crate or pillar)
+### 1.6 Permanent cover families (24, none a generic crate or pillar; the 24th is the low north arcade)
 
 Interchange: terminal wings (lit glass band, name board), ticket hall, parked buses with route cards, bay shelters,
 huge canopy columns. Skywalk: round piers with a flared head, landing and stair, stair tower. Junction: kerb islands
@@ -203,7 +203,7 @@ the backdrop is rebuilt so the stage is unmistakable zoomed out:
 
 Playability is unchanged: nothing new is on the board; the cover re-skin (black-steel roof frames on the terminal
 wings, blue bay shelters) keeps every cover tile. Review shots: `7-review-zoomed-out-day.jpg`,
-`7b-review-zoomed-out-night.jpg` (draw calls 774 / 774, 3.12 / 3.12 M triangles, medium, software WebGL; the first identity pass was 764 / 777 and 2.74 / 2.80 M).
+`7b-review-zoomed-out-night.jpg` (draw calls 786 / 786, 3.17 / 3.17 M triangles, medium, software WebGL; before the terminal rework 764 / 777 and 2.74 / 2.80 M, before the arcade 774 / 774 and 3.12 M). The north edge is a low trading arcade so the terminals show (LA16).
 
 ## 4. Assumptions (the bible's "do not invent current conditions" rule)
 
