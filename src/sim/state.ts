@@ -146,6 +146,7 @@ export function createGame(options: GameOptions): GameState {
       countdownRemaining: config.match.countdownTicks,
       endedTick: null,
       result: null,
+      suddenDeath: null,
     },
   };
 

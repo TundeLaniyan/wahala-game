@@ -92,7 +92,9 @@ export type EliminationCause =
   | { kind: 'crowd'; eventId: number }
   | { kind: 'hazard'; style: StageHazardStyle; eventId: number }
   /** V2: a generator thrown in by an eliminated sideline spectator (never credited to anyone). */
-  | { kind: 'spectator'; ownerId: number; eventId: number };
+  | { kind: 'spectator'; ownerId: number; eventId: number }
+  /** Rumble sudden death: the full-area finishing blast, or standing down after losing the kill count. */
+  | { kind: 'suddenDeath'; eventId: number };
 
 /** V2: per-player match statistics (scoreboards, Deathmatch / Team ranking, Rumble progression). */
 export interface PlayerStats {
@@ -314,13 +316,70 @@ export interface MatchState {
   countdownRemaining: number;
   endedTick: number | null;
   result: MatchResult | null;
+  /** Rumble (decision SD1): the sudden-death round once a tied finish needs one, else null. */
+  suddenDeath: SuddenDeathState | null;
 }
 
+/**
+ * How a Rumble result was decided when it was not plain last-standing: the credited kill totals at time up
+ * (`timeoutKills`), among the fighters eliminated together in the final contest (`simultaneousKills`), or the
+ * sudden-death round (`suddenDeath`). Absent = last standing / the existing Classic results.
+ */
+export type WinReason = 'timeoutKills' | 'simultaneousKills' | 'suddenDeath';
+
 export type MatchResult =
-  | { kind: 'win'; winnerId: number }
-  | { kind: 'draw'; reason: 'simultaneous' | 'timeout' | 'tie' }
+  | { kind: 'win'; winnerId: number; decidedBy?: WinReason }
+  | {
+      kind: 'draw';
+      reason:
+        | 'simultaneous'
+        | 'timeout'
+        | 'tie'
+        /** Sudden death: every supported finishing blast fired and more than one contender still stands. */
+        | 'suddenDeathExhausted'
+        /** Sudden death: the contenders fell together (blast or fight) with identical kill totals. */
+        | 'suddenDeathMutual';
+    }
   /** V2 Team Rumble. */
-  | { kind: 'teamWin'; team: number };
+  | { kind: 'teamWin'; team: number; decidedBy?: WinReason };
+
+/** Why a sudden-death round started. */
+export type SuddenDeathCause = 'timeout' | 'simultaneous';
+
+/** `transition`: the title card (contenders placed, input held, protected); `countdown`: playing to the next blast. */
+export type SuddenDeathStage = 'transition' | 'countdown';
+
+export interface SuddenDeathContender {
+  playerId: number;
+  /** Credited kill total when the round started. */
+  kills: number;
+}
+
+export interface SuddenDeathArea {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+export interface SuddenDeathState {
+  cause: SuddenDeathCause;
+  stage: SuddenDeathStage;
+  contenders: SuddenDeathContender[];
+  startedTick: number;
+  /** First tick of the countdown stage (input returns). */
+  transitionEndTick: number;
+  /** The compacted area the contenders were moved into (the blast still reaches every contender). */
+  area: SuddenDeathArea;
+  /** Blasts fired so far (0..config.suddenDeath.blastDelayTicks.length). */
+  blastsFired: number;
+  /** Tick the next blast drops (Infinity during the transition and once the sequence is exhausted). */
+  nextBlastTick: number;
+  /** Tick of the latest blast, for the flash. */
+  lastBlastTick: number | null;
+  /** A blast's hits were queued this tick; the outcome is reported after they resolve. */
+  blastResolving: boolean;
+}
 
 export interface CrushState {
   /** Tile indices in the order they will close. */
@@ -551,6 +610,18 @@ export type Intents = Record<number, Intent>;
 export type SimEvent =
   | { type: 'matchStarted' }
   | { type: 'matchEnded'; result: MatchResult }
+  /** Rumble: the tied contenders are placed in the compacted area (the SUDDEN DEATH title card). */
+  | {
+      type: 'suddenDeathStarted';
+      cause: SuddenDeathCause;
+      contenders: SuddenDeathContender[];
+      area: SuddenDeathArea;
+      transitionEndTick: number;
+    }
+  /** Rumble: the countdown to blast number `blast` (1-based) is running. */
+  | { type: 'suddenDeathCountdown'; blast: number; of: number; blastTick: number }
+  /** Rumble: the full-area finishing blast. `survivors` were not eliminated by it (a protection layer was used). */
+  | { type: 'suddenDeathBlast'; blast: number; of: number; survivors: number[]; eliminated: number[] }
   | { type: 'generatorPlaced'; generatorId: number; ownerId: number; x: number; y: number }
   | {
       type: 'generatorExploded';

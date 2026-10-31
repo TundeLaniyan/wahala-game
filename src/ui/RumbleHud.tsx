@@ -25,6 +25,7 @@ const CAUSE: Record<FeedItem['cause'], string> = {
   hazard: 'traffic',
   crowd: 'the crowd',
   spectator: 'a sideline throw',
+  suddenDeath: 'sudden death',
   friendly: 'friendly fire',
 };
 

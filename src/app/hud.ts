@@ -75,6 +75,65 @@ export interface HudMe {
   nextRewards: PickupKind[];
 }
 
+/** The Rumble sudden-death round for the title card and the blast clock (null outside one). */
+export interface SuddenDeathHud {
+  stage: 'transition' | 'countdown';
+  cause: 'timeout' | 'simultaneous';
+  /** The tied contenders with the kill totals that tied them, and whether each still stands. */
+  contenders: {
+    id: number;
+    name: string;
+    slot: number;
+    team: number;
+    characterId: CharacterId;
+    kills: number;
+    isLocal: boolean;
+    alive: boolean;
+  }[];
+  /** The number of the next blast (1-based) and how many the sequence has. */
+  blast: number;
+  of: number;
+  /** Seconds until the next blast (null while the title card shows or once the sequence is spent). */
+  secondsToBlast: number | null;
+  /** Inside the warning window before a blast. */
+  warning: boolean;
+  /** A blast fell in the last second. */
+  flash: boolean;
+  /** Seconds from the end of the title card to the first blast (from the config). */
+  firstBlastSeconds: number;
+}
+
+export function buildSuddenDeath(state: GameState, localId: number): SuddenDeathHud | null {
+  const sd = state.match.suddenDeath;
+  if (!sd) return null;
+  const cfg = state.config.suddenDeath;
+  const left = sd.nextBlastTick - state.tick;
+  const pending = sd.stage === 'countdown' && Number.isFinite(sd.nextBlastTick);
+  return {
+    stage: sd.stage,
+    cause: sd.cause,
+    contenders: sd.contenders.map((c) => {
+      const p = state.players[c.playerId]!;
+      return {
+        id: p.id,
+        name: p.name,
+        slot: p.slot,
+        team: p.team,
+        characterId: p.characterId,
+        kills: c.kills,
+        isLocal: p.id === localId,
+        alive: p.alive,
+      };
+    }),
+    blast: Math.min(sd.blastsFired + 1, cfg.blastDelayTicks.length),
+    of: cfg.blastDelayTicks.length,
+    secondsToBlast: pending ? Math.max(0, Math.ceil(left / 60)) : null,
+    warning: pending && left <= cfg.warnTicks,
+    flash: sd.lastBlastTick !== null && state.tick - sd.lastBlastTick < 60,
+    firstBlastSeconds: Math.round((cfg.blastDelayTicks[0] ?? 0) / 60),
+  };
+}
+
 export interface HudSnapshot {
   phase: GameState['match']['phase'];
   countdown: number;
@@ -96,6 +155,8 @@ export interface HudSnapshot {
   rumble: RumbleSnapshot | null;
   /** V2 standard match: the eliminated local player on the sideline lane (null otherwise). */
   sideline: SidelineHud | null;
+  /** Rumble sudden death (decision SD1): the title card and the blast clock; null in every other state. */
+  suddenDeath: SuddenDeathHud | null;
 }
 
 /** V2 sideline spectator controls (ui/SpectatorControls.tsx). */
@@ -173,7 +234,8 @@ export interface FeedItem {
   /** Null when no rival gets the credit (own generator, the city, traffic ...). */
   killer: string | null;
   killerSlot: number;
-  cause: 'flame' | 'vehicle' | 'crush' | 'hazard' | 'crowd' | 'spectator' | 'self' | 'friendly';
+  cause:
+    'flame' | 'vehicle' | 'crush' | 'hazard' | 'crowd' | 'spectator' | 'suddenDeath' | 'self' | 'friendly';
   involvesLocal: boolean;
   /** Seconds since it happened. */
   age: number;
@@ -458,5 +520,6 @@ export function buildHud(
     ruleBanner: ruleBannerFor(state),
     rumble: rumble ? buildRumble(state, localId, spectateId) : null,
     sideline: buildSideline(state, localId),
+    suddenDeath: buildSuddenDeath(state, localId),
   };
 }

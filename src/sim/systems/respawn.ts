@@ -167,7 +167,8 @@ const NEIGHBOURS: readonly (readonly [number, number])[] = [
   [0, -1],
 ];
 
-function respawn(state: GameState, p: Player, x: number, y: number): void {
+/** Brings `p` back to life on tile (x, y) with spawn protection (also used to seat sudden-death contenders). */
+export function respawn(state: GameState, p: Player, x: number, y: number): void {
   const cfg = state.config;
   p.alive = true;
   p.respawnAt = null;

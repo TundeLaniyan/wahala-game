@@ -1,16 +1,19 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { StageAlert } from '../app/hud';
+import type { StageAlert, SuddenDeathHud } from '../app/hud';
 import type { Toast } from '../app/store';
 import { useGameStore } from '../app/store';
 import { railBox } from './hudRail';
 import type { RailBox } from './hudRail';
 import { RuleBanner, StageAlerts } from './StageAlerts';
+import { SuddenDeathClock } from './SuddenDeath';
 import './HudRail.css';
 
 export interface HudRailProps {
   alerts: StageAlert[];
   toasts: Toast[];
   ruleBanner: string | null;
+  /** Rumble sudden death: the blast clock. */
+  suddenDeath?: SuddenDeathHud | null;
   /** City Rumble (follow camera): the column sits top-centre, above the followed player. */
   rumble: boolean;
 }
@@ -21,7 +24,7 @@ export interface HudRailProps {
  * standard arenas it is a column beside the board, sized from where the board is on screen so it never covers
  * a playable tile (see hudRail.ts); the crowd's reactions are voice clips, never text.
  */
-export function HudRail({ alerts, toasts, ruleBanner, rumble }: HudRailProps) {
+export function HudRail({ alerts, toasts, ruleBanner, suddenDeath = null, rumble }: HudRailProps) {
   const board = useGameStore((s) => s.board);
   const subtitle = useGameStore((s) => s.subtitle);
   const mode = useGameStore((s) => s.settings.subtitles);
@@ -47,6 +50,7 @@ export function HudRail({ alerts, toasts, ruleBanner, rumble }: HudRailProps) {
       data-testid="hud-rail"
       style={box ? { width: `${box.width}px`, maxHeight: `${box.maxHeight}px` } : undefined}
     >
+      {suddenDeath && <SuddenDeathClock sd={suddenDeath} />}
       {ruleBanner && <RuleBanner text={ruleBanner} />}
       <StageAlerts alerts={alerts} />
       {toasts.map((t) => (

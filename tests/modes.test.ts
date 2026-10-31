@@ -113,7 +113,7 @@ describe('rulesets: each mode on its own', () => {
     s.match.playTicks = s.config.match.durationTicks - 2;
     const ev = run(s, 3);
     expect(s.match.phase).toBe('ended');
-    expect(eventsOf(ev, 'matchEnded')[0]!.result).toEqual({ kind: 'win', winnerId: 0 });
+    expect(eventsOf(ev, 'matchEnded')[0]!.result).toEqual({ kind: 'win', winnerId: 0, decidedBy: 'timeoutKills' });
   });
 
   it('Team Rumble: Green v White, even split for 8-32, teams start on opposite halves, human is Green', () => {

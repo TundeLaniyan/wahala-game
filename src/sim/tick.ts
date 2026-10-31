@@ -33,8 +33,10 @@ import { resolveSpecial } from './systems/actions';
 import { grantRewards } from './systems/rewards';
 import { scheduleRespawns, updateRespawns } from './systems/respawn';
 import { updateSpectators } from './systems/spectators';
+import { suddenDeathHoldsInput, updateSuddenDeath } from './systems/suddenDeath';
 
-export function tick(state: GameState, intents: Intents = {}): SimEvent[] {
+export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
+  const intents: Intents = suddenDeathHoldsInput(state) ? {} : rawIntents; // the SUDDEN DEATH title card
   const events: SimEvent[] = [];
   state.tick++;
 
@@ -69,6 +71,7 @@ export function tick(state: GameState, intents: Intents = {}): SimEvent[] {
   updateEndgameTraps(state, events);
   updateCrowd(state, hits, events);
   updateStage(state, hits, events);
+  updateSuddenDeath(state, hits, events);
   resolveExplosions(state, events);
   burnPickups(state, events);
   hits.push(...collectFlameHits(state));

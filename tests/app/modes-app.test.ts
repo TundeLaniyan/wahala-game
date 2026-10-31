@@ -222,7 +222,7 @@ describe('respawn modes in the controller', () => {
     s.match.playTicks = s.config.match.durationTicks - 1;
     controller.stepOnce();
     controller.finishSkip();
-    expect(s.match.result).toEqual({ kind: 'teamWin', team: 0 });
+    expect(s.match.result).toEqual({ kind: 'teamWin', team: 0, decidedBy: 'timeoutKills' });
     expect(useGameStore.getState().summary!.localWon).toBe(true);
     hud = useGameStore.getState().hud!;
     expect(resultText(hud, true)).toMatchObject({ title: 'GREEN WINS!' });
