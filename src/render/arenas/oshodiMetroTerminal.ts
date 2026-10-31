@@ -2,7 +2,7 @@
  * Oshodi Transport Metropolis - the interchange megastructures (presentation only, all OFF the board, north
  * and east of it; the camera side stays low). Shapes follow the visually inspected references:
  *
- * - TWO RING-FRAMED TERMINALS: oval drums whose glass core is caged by black steel ribs and horizontal rings,
+ * - TWO OPEN INTERCHANGE TERMINALS: deep black-steel roof truss frames on tall columns over painted bus bays,
  *   a flat roof, a blue bay skirt (aerial and night references of the round terminals);
  * - a TERMINAL 3 FRONTAGE: a tall glass wall under a sloping black truss roof;
  * - the TRUSS SKYWALK: a long covered black truss girder on cable-stayed lattice pylons, with a big truss
@@ -14,7 +14,7 @@
  * operator or logo. Everything goes into `ctx.statics` (baked into a few merged meshes), so the extra pieces
  * cost triangles, not draw calls.
  */
-import { BoxGeometry, CylinderGeometry, DoubleSide, PlaneGeometry, Vector3 } from 'three';
+import { BoxGeometry, DoubleSide, PlaneGeometry, Vector3 } from 'three';
 import type { CanvasTexture, Material, Mesh } from 'three';
 import { box, cyl, mat, mesh, uniqueMat } from '../assets/helpers';
 import type { SetContext } from './common';
@@ -32,7 +32,9 @@ function pal() {
     steelGrey: mat(0x4a4e52, { roughness: 0.5, metalness: 0.6 }),
     glass: mat(0x5f93b8, { roughness: 0.18, metalness: 0.5, emissive: 0x1d4a6e, emissiveIntensity: 0.6 }),
     glassWarm: mat(0xe8c27a, { roughness: 0.3, emissive: 0xf0b050, emissiveIntensity: 0.9 }),
-    core: mat(0x1c2a36, { roughness: 0.3, metalness: 0.4, emissive: 0x8a6a30, emissiveIntensity: 0.55 }),
+    apron: mat(0x55564f, { roughness: 1 }),
+    roofSkin: mat(0x6a7482, { roughness: 0.6, metalness: 0.4 }),
+    black: mat(0x1a1a1c, { roughness: 0.8 }),
     asphalt: mat(0x2c2d30, { roughness: 1 }),
     paintWhite: mat(0xe4e0d0, { roughness: 0.9 }),
     blue: mat(0x2a7fb8, { roughness: 0.4, metalness: 0.2 }),
@@ -88,63 +90,98 @@ function sign(key: string, w: number, h: number, bg: string, fg: string, lines: 
   );
 }
 
-// ------------------------------------------------------------------------------------ ring terminal
+// ----------------------------------------------------------------------------- open interchange terminal
 
 /**
- * One ring-framed oval terminal: a glass drum (a stretched cylinder) caged by black ribs and three horizontal
- * rings, a flat roof with a parapet ring and a blue bay skirt on the camera side. Centre (cx, cz), radii (a, b).
+ * A massive OPEN bus interchange (after the inspected terminal references): a deep black-steel roof truss frame
+ * on tall columns over the bus bays, skylit roof panels with gaps so the interior depth shows from above, a lit
+ * glass frontage at the back of the hall, painted bays with parked buses, and a lower blue bay canopy on the
+ * board side. `zFront` is the front (board-side) edge of the roof; the hall runs `depth` metres north of it.
  */
-function ringTerminal(
+function openTerminal(
   ctx: SetContext,
   P: Pal,
-  cx: number,
-  cz: number,
-  a: number,
-  b: number,
-  h: number,
-  ribs: number,
+  x0: number,
+  x1: number,
+  zFront: number,
+  depth: number,
+  roofH: number,
 ): void {
   const s = ctx.statics;
-  const core = mesh(new CylinderGeometry(1, 1, h, 28), P.core, cx, h / 2, cz);
-  core.scale.set(a * 0.94, 1, b * 0.94);
-  s.add(core);
-  const roof = mesh(new CylinderGeometry(1, 1, 0.5, 28), P.steelGrey, cx, h + 0.25, cz);
-  roof.scale.set(a * 1.02, 1, b * 1.02);
-  s.add(roof);
-  const pt = (t: number, k = 1): [number, number] => [cx + Math.cos(t) * a * k, cz + Math.sin(t) * b * k];
-  // vertical ribs and the diagonal bracing between neighbours
-  for (let i = 0; i < ribs; i++) {
-    const t0 = (i / ribs) * Math.PI * 2;
-    const t1 = ((i + 1) / ribs) * Math.PI * 2;
-    const [x0, z0] = pt(t0);
-    const [x1, z1] = pt(t1);
-    strut(ctx, V(x0, 0.2, z0), V(x0, h + 1.6, z0), 0.46, P.steel);
-    strut(ctx, V(x0, 0.4, z0), V(x1, h * 0.55, z1), 0.2, P.steel);
-    strut(ctx, V(x0, h * 0.55, z0), V(x1, h - 0.1, z1), 0.2, P.steel);
-    for (const y of [h * 0.3, h * 0.62, h, h + 1.5]) strut(ctx, V(x0, y, z0), V(x1, y, z1), 0.3, P.steel);
+  const w = x1 - x0;
+  const cx = (x0 + x1) / 2;
+  const zBack = zFront - depth;
+  const zc = (zFront + zBack) / 2;
+  const bays = mat(0xe0ae28, { roughness: 0.8 });
+  // the apron with painted bay lines, parked buses (blue BRT-style and yellow danfos) in most bays
+  s.add(box(w, 0.1, depth, P.apron, cx, STREET + 0.05, zc));
+  let i = 0;
+  for (let x = x0 + 2.2; x < x1 - 1.4; x += 3.7) {
+    s.add(box(0.12, 0.03, depth * 0.72, bays, x + 1.85, STREET + 0.12, zFront - depth * 0.38));
+    if (i % 4 !== 3) {
+      const body = i % 2 === 0 ? P.blue : P.yellow;
+      const bz = zFront - 4.4 - (i % 3) * 0.6;
+      s.add(box(2.35, 2.2, 7.2, body, x, STREET + 1.25, bz));
+      s.add(box(2.4, 0.7, 7.0, P.steel, x, STREET + 1.7, bz)); // window band
+      s.add(box(2.2, 0.12, 6.8, P.white, x, STREET + 2.4, bz)); // roof
+    }
+    i++;
   }
-  // the parapet ring
-  for (let i = 0; i < ribs; i++) {
-    const [x0, z0] = pt((i / ribs) * Math.PI * 2, 1.02);
-    const [x1, z1] = pt(((i + 1) / ribs) * Math.PI * 2, 1.02);
-    strut(ctx, V(x0, h + 0.9, z0), V(x1, h + 0.9, z1), 0.14, P.steel);
+  // the lit glass frontage at the back of the hall, with mullions and a deep dark back wall behind it
+  s.add(box(w, 7.4, 0.3, P.concrete, cx, 3.7, zBack - 0.2));
+  s.add(box(w - 0.6, 5.6, 0.14, P.glass, cx, 3.3, zBack + 0.5));
+  s.add(box(w - 1.0, 0.5, 2.2, P.glassWarm, cx, 6.5, zBack + 1.4)); // the lit ceiling band inside the hall
+  for (let x = x0 + 0.3; x <= x1 - 0.2; x += 1.25) s.add(box(0.1, 5.8, 0.16, P.steel, x, 3.3, zBack + 0.6));
+  // tall black columns with painted bases: a front row and a row inside the hall
+  const colX: number[] = [];
+  for (let x = x0 + 0.6; x <= x1 - 0.5; x += 6.2) colX.push(x);
+  for (const x of colX)
+    for (const z of [zFront - 0.4, zBack + 3.4]) {
+      strut(ctx, V(x, 0, z), V(x, roofH - 1.0, z), 0.5, P.steel);
+      s.add(cyl(0.55, 0.55, 0.3, P.black, x, STREET + 0.15, z, 8));
+      s.add(cyl(0.55, 0.55, 0.3, P.white, x, STREET + 0.45, z, 8));
+    }
+  // the roof: two longitudinal trusses (front and rear), transverse Warren trusses over the bays between them
+  const top = roofH;
+  const bot = roofH - 1.5;
+  for (const z of [zFront + 0.6, zBack + 1.2]) {
+    strut(ctx, V(x0, top, z), V(x1, top, z), 0.34, P.steel);
+    strut(ctx, V(x0, bot, z), V(x1, bot, z), 0.34, P.steel);
+    for (let x = x0; x + 2.0 <= x1 + 0.01; x += 2.0) {
+      const up = Math.round((x - x0) / 2.0) % 2 === 0;
+      strut(ctx, V(x, up ? bot : top, z), V(x + 2.0, up ? top : bot, z), 0.14, P.steel);
+    }
   }
-  // the blue bay skirt: a sloping canopy ring on the near (camera) half, on slim posts
-  const skirt = 1.6;
-  for (let i = 0; i < Math.floor(ribs / 2); i++) {
-    const t0 = Math.PI * (i / (ribs / 2));
-    const t1 = Math.PI * ((i + 1) / (ribs / 2));
-    const [xi0, zi0] = pt(t0, 1.0);
-    const [xi1, zi1] = pt(t1, 1.0);
-    const [xo0, zo0] = [cx + Math.cos(t0) * (a + skirt), cz + Math.sin(t0) * (b + skirt)];
-    const [xo1, zo1] = [cx + Math.cos(t1) * (a + skirt), cz + Math.sin(t1) * (b + skirt)];
-    const mx = (xi0 + xi1 + xo0 + xo1) / 4;
-    const mz = (zi0 + zi1 + zo0 + zo1) / 4;
-    const seg = Math.hypot(xo1 - xo0, zo1 - zo0) + 0.15;
-    const slab = mesh(new BoxGeometry(seg, 0.1, skirt), P.blue, mx, 3.3, mz);
-    slab.rotation.y = -Math.atan2(zo1 - zo0, xo1 - xo0);
-    s.add(slab);
-    strut(ctx, V(xo0, STREET, zo0), V(xo0, 3.25, zo0), 0.1, P.steelGrey);
+  const tx: number[] = [];
+  for (let x = x0; x <= x1 + 0.01; x += 3.1) tx.push(x);
+  for (const x of tx) {
+    strut(ctx, V(x, top, zFront + 0.6), V(x, top, zBack + 1.2), 0.2, P.steel);
+    strut(ctx, V(x, bot, zFront + 0.6), V(x, bot, zBack + 1.2), 0.2, P.steel);
+    const n = 6;
+    for (let k = 0; k < n; k++) {
+      const t0 = k / n;
+      const t1 = (k + 1) / n;
+      const za = zFront + 0.6 + (zBack + 1.2 - zFront - 0.6) * t0;
+      const zb = zFront + 0.6 + (zBack + 1.2 - zFront - 0.6) * t1;
+      strut(ctx, V(x, k % 2 === 0 ? bot : top, za), V(x, k % 2 === 0 ? top : bot, zb), 0.1, P.steel);
+    }
+  }
+  // roof skin in panels with skylight gaps, so the depth of the hall reads from above
+  for (let k = 0; k + 1 < tx.length; k++) {
+    const pw = (tx[k + 1]! - tx[k]!) * 0.58;
+    s.add(box(pw, 0.14, depth + 1.2, P.roofSkin, tx[k]! + pw / 2 + 0.15, top + 0.2, zc + 0.3));
+  }
+  // deep front fascia beam and the lower blue bay canopy on the board side
+  s.add(box(w, 0.9, 0.35, P.steel, cx, top - 0.2, zFront + 0.9));
+  s.add(box(w, 0.12, 2.4, P.blue, cx, 3.7, zFront + 0.9));
+  for (const x of colX) strut(ctx, V(x, 0, zFront + 1.9), V(x, 3.65, zFront + 1.9), 0.12, P.steelGrey);
+  // diagonal A-frame buttresses at both ends
+  for (const [x, dx] of [
+    [x0 - 0.2, -1.8],
+    [x1 + 0.2, 1.8],
+  ] as const) {
+    strut(ctx, V(x + dx, 0, zFront + 0.4), V(x, roofH, zFront + 0.4), 0.45, P.steel);
+    strut(ctx, V(x + dx, 0, zBack + 1.4), V(x, roofH, zBack + 1.4), 0.45, P.steel);
   }
 }
 
@@ -400,8 +437,8 @@ export function interchangeMegastructures(ctx: SetContext, L: SiteLights, tod: T
   const north = -H / 2;
   const night = tod === 'night';
   // the two ring-framed terminals in front of the expressway (the rail viaduct passes between them at x 12-16)
-  ringTerminal(ctx, P, -12.5, north - 8.6, 12, 4.3, 10, 28);
-  ringTerminal(ctx, P, 6, north - 8.2, 5, 3.6, 8.5, 16);
+  openTerminal(ctx, P, -26, -1, north - 3, 9.5, 12);
+  openTerminal(ctx, P, 1, 11, north - 3, 8, 10);
   // the Terminal 3 frontage east of the station tower
   frontage(ctx, P, 26, 44, north - 2.4, 5.2);
   // the long truss skywalk behind the rings, its pylons, and the big portal frame over it
@@ -413,14 +450,15 @@ export function interchangeMegastructures(ctx: SetContext, L: SiteLights, tod: T
   approachRoads(ctx, P);
   if (hasDom()) {
     const t2 = sign('t2', 512, 96, '#12304e', '#f4f2ea', ['TERMINAL 2']);
-    plate(ctx, t2, 7.2, 1.35, V(-12.5, 7.4, north - 4.3));
+    plate(ctx, t2, 8, 1.45, V(-13.5, 12.9, north - 2.0));
     const t1 = sign('t1b', 512, 96, '#12304e', '#f4f2ea', ['BUS BAYS 1 – 12']);
-    plate(ctx, t1, 5.2, 0.98, V(6, 6.2, north - 4.5));
+    plate(ctx, t1, 5.2, 0.98, V(6, 10.9, north - 2.0));
   }
-  // lit cores glow by night, and softly by day
+  // lit halls glow by night, and softly by day
   const k = night ? 1 : 0.45;
-  L.glow(-12.5, 3.6, north - 4.0, 3.2, 0x9ed0ff, 0.7 * k);
-  L.glow(6, 3.2, north - 4.3, 2.8, 0x9ed0ff, 0.65 * k);
+  L.glow(-19, 4.2, north - 8, 3.4, 0xffe2b0, 0.8 * k);
+  L.glow(-8, 4.2, north - 8, 3.4, 0xffe2b0, 0.8 * k);
+  L.glow(6, 4.0, north - 7, 3.0, 0xffe2b0, 0.7 * k);
   L.glow(35, 5.0, north - 0.4, 3.0, 0xffe2b0, 0.6 * k);
   L.glow(-1, 15.6, north - 16, 1.2, 0xff3a2a, night ? 0.9 : 0.4);
 }

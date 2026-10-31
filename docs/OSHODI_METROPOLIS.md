@@ -194,16 +194,16 @@ the backdrop is rebuilt so the stage is unmistakable zoomed out:
 
 | Reference feature | In the game |
 |---|---|
-| Round ring-framed terminals (aerial, night and construction references) | `ringTerminal`: two oval drums, 24 / 16 thick black ribs with rings and bracing, dark core with warm glow, blue bay skirt |
+| Open black-steel interchange terminals (aerial, interior and night references) | `openTerminal`: two deep truss-framed roofs on tall columns over painted bays with parked buses, skylit roof panels, a lit glass hall at the back, a blue bay canopy |
 | Terminal 3 glass frontage under a sloping truss roof | `frontage` east of the station tower, "TERMINAL 3" plain wording |
 | Black truss skywalk on cable-stayed pylons, truss portal | `skywalk` (open truss, low glazed band), two lattice `pylon`s with cable fans, `trussPortal` |
 | Freight rake beside the road | `freightSiding`: hoppers and container wagons on a ballast bed east of the board |
 | Umbrella-covered market edge | `marketEdge`: about 80 umbrellas and stalls west of the board, plus the trading-pavement crowd |
-| Slow bus-choked roads | `approachRoads` (asphalt, kerbs, dashes) and the boosted ambient plan (LA14) |
+| Slow bus-choked roads | `approachRoads` (asphalt, kerbs, dashes) and four ambient loops per the boosted plan (LA14) |
 
 Playability is unchanged: nothing new is on the board; the cover re-skin (black-steel roof frames on the terminal
 wings, blue bay shelters) keeps every cover tile. Review shots: `7-review-zoomed-out-day.jpg`,
-`7b-review-zoomed-out-night.jpg` (draw calls 764 / 777, 2.74 / 2.80 M triangles, medium, software WebGL).
+`7b-review-zoomed-out-night.jpg` (draw calls 774 / 774, 3.12 / 3.12 M triangles, medium, software WebGL; the first identity pass was 764 / 777 and 2.74 / 2.80 M).
 
 ## 4. Assumptions (the bible's "do not invent current conditions" rule)
 

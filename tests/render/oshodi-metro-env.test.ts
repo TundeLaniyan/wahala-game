@@ -159,8 +159,8 @@ describe('Oshodi bus-choked roads (opt-in budget boost)', () => {
   it('puts many more ground vehicles on the roads at medium and high, still none on the board', () => {
     const ground = (level: (typeof LEVELS)[number]): number =>
       planTraffic(env, level).vehicles.filter((v) => !v.routeId.startsWith('deck')).length;
-    expect(ground('medium')).toBeGreaterThanOrEqual(20);
-    expect(ground('high')).toBeGreaterThan(ground('medium'));
+    expect(ground('medium')).toBeGreaterThanOrEqual(40);
+    expect(ground('high')).toBeGreaterThanOrEqual(ground('medium'));
     expect(ground('veryLow')).toBeLessThanOrEqual(ENV_BUDGET.veryLow.vehicles);
   });
 });

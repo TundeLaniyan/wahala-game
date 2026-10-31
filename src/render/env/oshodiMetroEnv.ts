@@ -158,7 +158,7 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
         speed: 3.6,
         spacing: 6,
         elevation: OSHODI_DECK_ELEVATION,
-        priority: 3,
+        priority: 1,
         fade: 2.5,
       },
       {
@@ -172,75 +172,60 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
         speed: 3.2,
         spacing: 6,
         elevation: OSHODI_DECK_ELEVATION,
-        priority: 3,
+        priority: 1,
         fade: 2.5,
       },
-      // the main road beyond the west mouth: a slow, packed queue of buses and Danfos in (two lanes), a thinner
-      // stream out. Ambient only: it never enters the board, so the road's own sweeps stay the only hazard
-      {
-        id: 'westRoadIn',
-        kinds: ['danfo', 'bus', 'danfo', 'danfo', 'car', 'bus'],
-        path: [
-          [-44, eastbound],
-          [-1.6, eastbound],
-        ],
-        count: 14,
-        speed: 1.3,
-        spacing: 1.3,
-        priority: 3,
-      },
-      {
-        id: 'westRoadIn2',
-        kinds: ['danfo', 'danfo', 'keke', 'bus', 'danfo'],
-        path: [
-          [-44, eastbound - 1],
-          [-1.6, eastbound - 1],
-        ],
-        count: 13,
-        speed: 1.1,
-        spacing: 1.4,
-        priority: 2,
-        minQuality: 'medium',
-      },
-      {
-        id: 'westRoadOut',
-        kinds: ['danfo', 'bus', 'keke', 'danfo'],
-        path: [
-          [-1.6, westbound],
-          [-44, westbound],
-        ],
-        count: 11,
-        speed: 1.5,
-        spacing: 1.6,
-        priority: 3,
-      },
-      // beyond the east mouth, past the station forecourt and the freight siding
-      {
-        id: 'eastRoadOut',
-        kinds: ['bus', 'danfo', 'danfo', 'car', 'bus'],
-        path: [
-          [cols + 1.6, eastbound - 1],
-          [cols + 44, eastbound - 1],
-        ],
-        count: 8,
-        speed: 1.3,
-        spacing: 1.5,
-        priority: 1,
-        minQuality: 'medium',
-      },
-      {
-        id: 'eastRoadIn',
-        kinds: ['danfo', 'bus', 'danfo', 'keke', 'bus'],
-        path: [
-          [cols + 44, westbound + 1],
-          [cols + 1.6, westbound + 1],
-        ],
-        count: 8,
-        speed: 1.2,
-        spacing: 1.5,
-        priority: 1,
-        minQuality: 'medium',
-      },
+      // slow, bumper-to-bumper LOOPS beyond both mouths of the main road (right-hand traffic: eastbound south
+      // lanes, westbound north lanes): out along one lane, a U-turn at the far end, back along the other, and
+      // into the board's own road at the mouth. Two loops per side (outer lanes, inner lanes). Ambient only:
+      // it never enters the board, so the road's own sweeps stay the only hazard.
+      ...(['west', 'east'] as const).flatMap((side) => {
+        const dir = side === 'east' ? 1 : -1;
+        const mouth = side === 'east' ? cols + 1.6 : -1.6;
+        const loop = (
+          id: string,
+          outY: number,
+          backY: number,
+          far: number,
+          kinds: string[],
+          count: number,
+        ) => ({
+          id,
+          kinds: kinds as never,
+          path: [
+            [mouth, outY],
+            [mouth + dir * far, outY],
+            [mouth + dir * far, backY],
+            [mouth, backY],
+          ] as [number, number][],
+          count,
+          speed: 1.15,
+          spacing: 0.8,
+          priority: 3,
+          fade: 2.0,
+        });
+        // out lane: eastbound (south) on the east side, westbound (north) on the west side
+        const outer = side === 'east' ? [eastbound, westbound] : [westbound, eastbound];
+        const inner = side === 'east' ? [eastbound - 1, westbound + 1] : [westbound + 1, eastbound - 1];
+        return [
+          loop(
+            `${side}LoopOuter`,
+            outer[0]!,
+            outer[1]!,
+            27,
+            ['danfo', 'bus', 'danfo', 'danfo', 'bus', 'car', 'danfo'],
+            14,
+          ),
+          loop(
+            `${side}LoopInner`,
+            inner[0]!,
+            inner[1]!,
+            23,
+            ['bus', 'danfo', 'keke', 'danfo', 'bus', 'danfo'],
+            12,
+          ),
+        ];
+      }),
       // the terminal bay lane in front of the ring terminals: BRT-style buses and Danfos crawling past the bays
       {
         id: 'terminalBays',
@@ -268,7 +253,7 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
       // passengers on the station forecourt beyond the east edge, rows 10-14
       {
         id: 'stationForecourt',
-        rect: { x0: cols + 1.8, y0: 9.6, x1: cols + 5.2, y1: 14.2 },
+        rect: { x0: cols + 1.8, y0: 9.4, x1: cols + 5.2, y1: 13.2 },
         count: 8,
         mood: 'waiting',
         priority: 3,
@@ -310,9 +295,9 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
     // the bus-choked roads are this stage's identity: more ambient vehicles and people per tier (instanced: the
     // model count, hence the draw calls, is unchanged)
     boost: {
-      low: { vehicles: 6, people: 20 },
-      medium: { vehicles: 30, people: 52 },
-      high: { vehicles: 56, people: 96 },
+      low: { vehicles: 8, people: 20 },
+      medium: { vehicles: 64, people: 52 },
+      high: { vehicles: 96, people: 96 },
     },
     audio: {
       beds: ['buspark_loop', 'crowd_loop'],
