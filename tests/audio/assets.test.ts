@@ -11,7 +11,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseMusicManifest } from '../../src/audio/playlist';
+import { parseMusicManifest, pickMatchTrack, playlistFor } from '../../src/audio/playlist';
 import { voiceLevel } from '../../src/audio/buses';
 import { DEFAULT_AUDIO_PREFS } from '../../src/audio/prefs';
 import { parseRecorded, parseVoiceCatalogue, registerLines } from '../../src/audio/pidgin';
@@ -155,6 +155,39 @@ describe('City Rumble V2 stage music (founder assignment, 2026-10-25)', () => {
       .filter(([a]) => !(a in STAGE_SONG))
       .map(([, p]) => p.signature);
     for (const id of Object.values(STAGE_SONG)) expect(others).not.toContain(id);
+  });
+});
+
+describe('Oshodi Transport Metropolis (replaced the old Oshodi): audio compatibility', () => {
+  const raw = json<{
+    playlists: { default: string[]; arenas: Record<string, { tracks: string[]; signature: string }> };
+  }>('music/manifest.json');
+  const { manifest } = parseMusicManifest(raw);
+
+  it("keeps the old Oshodi stage's founder-assigned track under the canonical id, and adds no music", () => {
+    // the canonical id is unchanged, so the founder's signature track and the "rumbleOshodiMetro" absence hold
+    expect(raw.playlists.arenas.rumbleOshodi!.signature).toBe('pixabay_601035');
+    expect(raw.playlists.arenas.rumbleOshodiMetro).toBeUndefined();
+    expect(playlistFor(manifest, 'rumbleOshodi')).toEqual(['pixabay_601035']);
+    const picked = pickMatchTrack(manifest, {
+      arenaId: 'rumbleOshodi',
+      previous: null,
+      isAvailable: () => true,
+      rand: () => 0.4,
+      firstOnArena: true,
+    });
+    expect(picked).toBe('pixabay_601035');
+    expect(APPROVED[picked!]).toBeDefined();
+  });
+
+  it('keeps its voice zones (bus park and market) and ships no new recording or voice: cues are synthesised', () => {
+    const zones = json<{ zones: Record<string, string[]> }>('voices/voices.json').zones;
+    expect(zones.bus_park).toContain('rumbleOshodi');
+    expect(zones.market).toContain('rumbleOshodi');
+    for (const list of Object.values(zones)) expect(list).not.toContain('rumbleOshodiMetro');
+    expect(json<{ slots: Record<string, unknown> }>('slots.json').slots).toEqual({});
+    const recorded = json<{ clips: { id: string }[] }>('voices/recorded.json').clips.map((c) => c.id);
+    expect(recorded.some((id) => /train|rail|oshodi|metro/i.test(id))).toBe(false);
   });
 });
 

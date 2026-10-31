@@ -53,7 +53,8 @@ describe('arena registry', () => {
       'thirdMainland',
     ]);
     expect(getArena(CITY_RUMBLE_ID).kind).toBe('rumble');
-    // V2: the five Lagos stages first, the original district last (tests/rumble-stages.test.ts)
+    // V2: the five Lagos stages first, then the Lagos-arenas builds, the original district last
+    // (tests/rumble-stages.test.ts)
     expect(RUMBLE_ARENA_IDS).toEqual([
       'rumbleOshodi',
       'rumbleLagosIsland',

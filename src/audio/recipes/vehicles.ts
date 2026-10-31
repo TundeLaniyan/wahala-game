@@ -234,7 +234,98 @@ function passSound(kind: Kind) {
   });
 }
 
+/** The commuter railcar's horn: a low two-tone diesel horn, one short and one long blast (deeper than any road vehicle). */
+function trainHorn() {
+  return oneShot({
+    bus: 'warn',
+    priority: Priority.warning,
+    gain: 0.95,
+    render: function* ({ rate }) {
+      const t = new Track(rate, 2.1);
+      const blast = (seconds: number, hold: number): Float32Array =>
+        horn({
+          rate,
+          seconds,
+          notes: [196, 247],
+          attack: 0.04,
+          hold,
+          release: 0.14,
+          lp: 1500,
+          bellHz: 520,
+          bellGain: 1,
+          rasp: 0.16,
+          raspHz: 60,
+          sag: 0.99,
+        });
+      t.add(blast(0.55, 0.4), 0, 1);
+      t.add(blast(1.2, 0.98), 0.7, 1);
+      t.add(thump(rate, 1.6, 46, 44, 1, 0.9, 0), 0, 0.1);
+      yield;
+      return yield* addReverbSteps(t, 'yard', 0.14);
+    },
+  });
+}
+
+/** The level-crossing bell: two alternating metal strikes (a high and a low) ringing for about two seconds. */
+function railBell() {
+  return oneShot({
+    bus: 'warn',
+    priority: Priority.warning,
+    gain: 0.8,
+    render: function* ({ rate }) {
+      const t = new Track(rate, 2.2);
+      for (let i = 0; i < 7; i++) t.add(bell(rate, 0.5, i % 2 ? 1180 : 940, 0.18), i * 0.26, 0.8);
+      yield;
+      return yield* addReverbSteps(t, 'yard', 0.08);
+    },
+  });
+}
+
+/** A railcar rushing past: wheel clatter over the joints, a rising and falling rush and a low rumble. */
+function trainPass() {
+  return oneShot({
+    rate: 24000,
+    priority: Priority.normal,
+    gain: 0.85,
+    render: function* ({ rate, rng }) {
+      const T = 1.4;
+      const n = len(rate, T);
+      const swell = envelope(n, rate, [
+        [0, 0.05],
+        [T * 0.3, 0.6],
+        [T * 0.5, 1],
+        [T * 0.75, 0.5],
+        [T, 0.05],
+      ]);
+      const t = new Track(rate, T + 0.2);
+      t.add(
+        mul(
+          bandpass(white(n, rng), rate, (i) => 900 - 350 * (i / n), 0.8),
+          swell,
+        ),
+        0,
+        0.7,
+      );
+      // joints: a short clack every 80 ms under the swell
+      for (let k = 0; k < Math.floor(T / 0.08); k++)
+        t.add(
+          nburst(rate, 0.05, rng, 'bp', 2200, 1400, 1.2, 0.012),
+          k * 0.08,
+          0.25 * swell[Math.floor(k * 0.08 * rate)]!,
+        );
+      t.add(thump(rate, T, 58, 52, 1, 0.9, 0), 0, 0.12);
+      yield;
+      return yield* addReverbSteps(t, 'yard', 0.1);
+    },
+  });
+}
+
 export const vehicleSounds = {
+  /** Oshodi Metropolis: the commuter railcar's own cues (never shared with a road vehicle). */
+  train_horn: trainHorn(),
+  rail_bell: railBell(),
+  train_pass: trainPass(),
+
   danfo_horn: hornSound('danfo'),
   taxi_horn: hornSound('taxi'),
   keke_horn: hornSound('keke'),

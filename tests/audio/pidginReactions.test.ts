@@ -160,6 +160,9 @@ describe('which voice trigger each game event fires', () => {
     expect(first(reactionsFor([kekeLane], s, [], newMemory()))).toEqual(['ON_KEKE_HAZARD_SPAWN']);
     const carLane: SimEvent = { type: 'stageWarning', event: { ...sweep, style: 'checkpoint', id: 4 } };
     expect(reactionsFor([carLane], s, [], newMemory())).toEqual([]);
+    // the Oshodi railcar is never voiced as a Danfo or a Keke
+    const trainLane: SimEvent = { type: 'stageWarning', event: { ...sweep, style: 'train', id: 4 } };
+    expect(reactionsFor([trainLane], s, [], newMemory())).toEqual([]);
   });
 
   it('close calls: a flame beside the human is a narrow escape; a vehicle brushing past prefers the gasp', () => {

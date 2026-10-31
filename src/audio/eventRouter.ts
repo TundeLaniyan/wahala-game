@@ -320,7 +320,11 @@ const handlers: Handlers = {
     const x = tileXOf(c, e.event.tiles[0]);
     const s = e.event.style;
     if (s === 'danfo' || s === 'truck') sfx(c, 'danfo_horn', panOf(c, x));
-    else if (s === 'traffic') sfx(c, c.rand() < 0.5 ? 'danfo_horn' : 'keke_horn', panOf(c, x));
+    else if (s === 'train') {
+      // the crossing bell first, then the horn: panned to the track, quieter than the road horns
+      sfx(c, 'rail_bell', panOf(c, x), 0.8);
+      sfx(c, 'train_horn', panOf(c, x), 0.7);
+    } else if (s === 'traffic') sfx(c, c.rand() < 0.5 ? 'danfo_horn' : 'keke_horn', panOf(c, x));
     else if (s === 'checkpoint') sfx(c, 'taxi_horn', panOf(c, x));
     else if (s === 'debris' || s === 'power' || s === 'cargo') sfx(c, 'crush_warning', panOf(c, x), 0.8);
     else if (s === 'goods') sfx(c, 'crowd_throw_whistle', panOf(c, x), 0.6);
@@ -332,6 +336,7 @@ const handlers: Handlers = {
     const x = tileXOf(c, e.event.tiles[0]);
     const s = e.event.style;
     if (s === 'danfo' || s === 'traffic' || s === 'truck') sfx(c, 'danfo_pass', panOf(c, x));
+    else if (s === 'train') sfx(c, 'train_pass', panOf(c, x));
     else if (s === 'checkpoint') sfx(c, 'taxi_pass', panOf(c, x));
     else if (s === 'debris' || s === 'cargo') sfx(c, 'crush_slam', panOf(c, x));
     else if (s === 'goods') sfx(c, 'block_crumble_1', panOf(c, x), 0.8, 1.1);

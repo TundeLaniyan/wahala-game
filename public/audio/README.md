@@ -75,8 +75,9 @@ warnings, never ducked), `react` (crowd reactions) and `amb` (ambience beds).
 | `fuse_tick` | warn | countdown tick |
 | `block_crumble_1`, `block_crumble_2` | sfx | soft blocks breaking |
 | `danfo_horn`, `taxi_horn`, `keke_horn` | warn | vehicle warnings |
+| `train_horn`, `rail_bell` | warn | the Oshodi Red Line railcar's horn and the level-crossing bell (synthesised) |
 | `danfo_engine_loop`, `taxi_engine_loop`, `keke_engine_loop` (loops) | sfx | engine while driving |
-| `danfo_launch`, `taxi_launch`, `keke_launch`, `danfo_pass`, `taxi_pass`, `keke_pass` | sfx | launch and near-miss pass-by |
+| `danfo_launch`, `taxi_launch`, `keke_launch`, `danfo_pass`, `taxi_pass`, `keke_pass`, `train_pass` | sfx | launch and near-miss pass-by (and the railcar rushing past) |
 | `okada_mount`, `okada_break`, `vehicle_hit`, `vehicle_hit_gen`, `vehicle_damage`, `vehicle_wreck` | sfx | Okada, impacts, wrecks |
 | `vehicle_entry_on`, `vehicle_entry_off` | sfx | entry-mode cues |
 | `crush_warning`, `crush_slam`, `crowd_throw_whistle`, `bottle_smash`, `firecracker_bang`, `pothole_thud`, `oil_squeak`, `oil_slip` | sfx / warn | arena hazards |

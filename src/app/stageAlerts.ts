@@ -60,6 +60,13 @@ export function stageAlertFor(state: GameState, ev: StageEvent, me: Player): Sta
     case 'sweep': {
       const noun = sweepVehicleNoun(ev.style, ev.id);
       const onIt = sweepAhead(ev).includes(myTile);
+      if (ev.style === 'train') {
+        // a railcar on a track lane: say where to stand (the shoulders and platforms are always safe)
+        if (onIt) return { ...base, level: 'danger', text: 'TRAIN COMING - GET OFF THE TRACK!' };
+        if (!warning) return null;
+        const way = ev.dir ? ` ${ARROW[ev.dir]}` : '';
+        return { ...base, level: 'warn', text: `TRAIN${way} - STAY OFF THE TRACK` };
+      }
       if (onIt) return { ...base, level: 'danger', text: `${noun} COMING - GET OFF THE LANE!` };
       if (!warning) return null;
       if (ev.depart) {

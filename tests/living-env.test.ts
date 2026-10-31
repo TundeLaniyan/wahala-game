@@ -419,12 +419,12 @@ describe('the generic builder', () => {
     expect(env.stats().vehicles).toBe(0);
   });
 
-  it('only Ojuelegba declares an environment; other stages get nothing', async () => {
+  it('only Ojuelegba and the researched Oshodi declare an environment; other stages get nothing', async () => {
     const { NEW_ARENA_ART } = await import('../src/render/arenas/newArenas');
     const art = NEW_ARENA_ART();
-    expect(art.rumbleOjuelegba!.env).toBeDefined();
-    for (const [id, a] of Object.entries(art))
-      if (id !== 'rumbleOjuelegba') expect(a.env, id).toBeUndefined();
+    const WITH_ENV = ['rumbleOjuelegba', 'rumbleOshodi'];
+    for (const id of WITH_ENV) expect(art[id]!.env, id).toBeDefined();
+    for (const [id, a] of Object.entries(art)) if (!WITH_ENV.includes(id)) expect(a.env, id).toBeUndefined();
   });
 });
 

@@ -7,11 +7,20 @@ import type { CoverFactory } from './boardCover';
 import type { ArenaSet } from './common';
 import type { FloorDrawer } from './floorKit';
 import { OJUELEGBA_ENV } from '../env/ojuelegbaEnv';
+import { oshodiMetroEnv } from '../env/oshodiMetroEnv';
+import { timeOfDay } from '../timeOfDay';
 import type { StageEnvironmentSource } from '../env/types';
 import { AJEGUNLE_FLOOR, AJEGUNLE_LOOK, AJEGUNLE_SET } from './ajegunle';
 import { LAGOON_FLOOR, LAGOON_LOOK, LAGOON_SET } from './lagoon';
 import { mobileTestArt } from './mobileTest';
 import { OSHODI_FLOOR, OSHODI_LOOK, OSHODI_SET } from './oshodi';
+import {
+  OSHODI_METRO_COVER,
+  OSHODI_METRO_FLOOR,
+  OSHODI_METRO_LOOK,
+  OSHODI_METRO_NIGHT_LOOK,
+  OSHODI_METRO_SET,
+} from './oshodiMetroArt';
 import { POWER_YARD_FLOOR, POWER_YARD_LOOK, POWER_YARD_SET } from './powerYard';
 import { RUMBLE_FLOOR, RUMBLE_LOOK, RUMBLE_SET } from './rumble';
 import { RUMBLE_APAPA_FLOOR, RUMBLE_APAPA_LOOK, RUMBLE_APAPA_SET } from './rumbleApapaArt';
@@ -31,12 +40,13 @@ import {
   RUMBLE_OJUELEGBA_LOOK,
   RUMBLE_OJUELEGBA_SET,
 } from './rumbleOjuelegbaArt';
-import { RUMBLE_OSHODI_FLOOR, RUMBLE_OSHODI_LOOK, RUMBLE_OSHODI_SET } from './rumbleOshodiArt';
 import { THIRD_MAINLAND_FLOOR, THIRD_MAINLAND_LOOK, THIRD_MAINLAND_SET } from './thirdMainland';
 import { YABA_FLOOR, YABA_LOOK, YABA_SET } from './yaba';
 
 export interface ArenaArt {
   look: ArenaLook;
+  /** A night look on the same geometry, used instead of `look` when the review flag `?tod=night` is set. */
+  nightLook?: ArenaLook;
   set: ArenaSet;
   floor: FloorDrawer;
   /** Permanent cover drawn as whole objects instead of per-tile pillars (`boardCover.ts`). */
@@ -57,7 +67,6 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
     thirdMainland: { look: THIRD_MAINLAND_LOOK, set: THIRD_MAINLAND_SET, floor: THIRD_MAINLAND_FLOOR },
     cityRumble: { look: RUMBLE_LOOK, set: RUMBLE_SET, floor: RUMBLE_FLOOR },
     // City Rumble V2 stages
-    rumbleOshodi: { look: RUMBLE_OSHODI_LOOK, set: RUMBLE_OSHODI_SET, floor: RUMBLE_OSHODI_FLOOR },
     rumbleLagosIsland: {
       look: RUMBLE_LAGOS_ISLAND_LOOK,
       set: RUMBLE_LAGOS_ISLAND_SET,
@@ -75,6 +84,15 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
       look: RUMBLE_LEKKI_NIGHT_LOOK,
       set: RUMBLE_LEKKI_NIGHT_SET,
       floor: RUMBLE_LEKKI_NIGHT_FLOOR,
+    },
+    // Lagos arenas, build 1: Oshodi Transport Metropolis (day by default, a night look behind ?tod=night)
+    rumbleOshodi: {
+      look: OSHODI_METRO_LOOK,
+      nightLook: OSHODI_METRO_NIGHT_LOOK,
+      set: OSHODI_METRO_SET,
+      floor: OSHODI_METRO_FLOOR,
+      cover: OSHODI_METRO_COVER,
+      env: (board) => oshodiMetroEnv(board, timeOfDay()),
     },
     // V2 experimental: the Mobile Test Arena wears Danfo Bus Park's presentation
     mobileTest13x9: mobileTestArt(),

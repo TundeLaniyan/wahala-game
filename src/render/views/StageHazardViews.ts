@@ -30,6 +30,7 @@ import { VEHICLE_SCALE } from '../arenas/common';
 import { assets } from '../assets/library';
 import { softVariantFor, softVariants } from '../assets/props';
 import { createVehicleModel, spinWheel } from '../assets/vehicles';
+import { createHazardTrain } from './hazardTrain';
 import { createHazardTruck } from './hazardTruck';
 import type { VehicleModel } from '../assets/vehicles';
 import type { Layout } from '../coords';
@@ -81,6 +82,9 @@ const PAIR_CSS = ['#ffb21a', '#3fd2ff', '#ff4fd8', '#9dff4a'];
 /** Tiles of approach the sweep vehicle drives in from beyond the border before it becomes real. */
 const APPROACH_TILES = 4;
 const EXIT_SECONDS = 1.1;
+/** A railcar comes out of and goes into a solid portal block three tiles deep: it never shows beyond it. */
+const TRAIN_APPROACH_TILES = 2.2;
+const TRAIN_EXIT_SECONDS = 0.15;
 const ARC_SEGMENTS = 5;
 const MAX_ARCS = 36;
 
@@ -925,6 +929,7 @@ export class StageHazardViews implements View {
         this.arrow(x + v.dx * march * 0.5, z + v.dy * march * 0.5, dir, 0.55 + 0.4 * k, 0.62);
       }
     }
+    if (warning && ev.style === 'train') this.drawCrossingLamps(ev, ctx);
     if (warning) {
       // ring closing in on the entry tile: the countdown
       const i0 = ev.tiles[0]!;
@@ -941,6 +946,21 @@ export class StageHazardViews implements View {
     this.updateSweepVehicle(ev, ctx);
   }
 
+  /**
+   * The railcar's crossing lamps: red lamps at both ends of the lane and at its middle (the level crossing)
+   * flash alternately for the whole warning, so the lane is unmistakable on a small screen before it burns.
+   */
+  private drawCrossingLamps(ev: StageEvent, ctx: FrameContext): void {
+    const { state, time } = ctx;
+    const w = state.width;
+    const flash = Math.floor(time * 2.8) % 2;
+    const lamps = [ev.tiles[0]!, ev.tiles[Math.floor(ev.tiles.length / 2)]!, ev.tiles[ev.tiles.length - 1]!];
+    lamps.forEach((i, n) => {
+      const on = n % 2 === flash;
+      this.put(this.rings, this.wx(i % w), this.wz(Math.floor(i / w)), 0xff2a1a, on ? 0.95 : 0.22, on ? 1.7 : 1.2);
+    });
+  }
+
   private dirBetween(a: number, b: number, w: number): Dir | null {
     const dx = (b % w) - (a % w);
     const dy = Math.floor(b / w) - Math.floor(a / w);
@@ -953,7 +973,12 @@ export class StageHazardViews implements View {
 
   private createSweep(ev: StageEvent): SweepVisual {
     const kind = sweepVehicleKind(ev.style, ev.id);
-    const model = ev.style === 'truck' ? createHazardTruck(ev.id) : createVehicleModel(kind);
+    const model =
+      ev.style === 'train'
+        ? createHazardTrain(ev.id)
+        : ev.style === 'truck'
+          ? createHazardTruck(ev.id)
+          : createVehicleModel(kind);
     // headlights and a pool of light on the road ahead (shared materials, children of the model)
     const box = new Box3().setFromObject(model.root);
     const front = box.max.x;
@@ -1095,7 +1120,7 @@ export class StageHazardViews implements View {
     let dy = d0.dy;
     if (ev.index < 0) {
       const remaining = ev.startTick - state.tick - alpha;
-      if (remaining > ev.stepTicks * APPROACH_TILES) {
+      if (remaining > ev.stepTicks * (ev.style === 'train' ? TRAIN_APPROACH_TILES : APPROACH_TILES)) {
         v.model.root.visible = false;
         return;
       }
@@ -1143,7 +1168,7 @@ export class StageHazardViews implements View {
     v.model.body.position.y = Math.abs(Math.sin(time * 18 + v.ev.id)) * 0.016;
     const spin = dt * v.speed * 2.6 * gear;
     for (const wh of v.model.wheels) spinWheel(v.model, wh, spin);
-    if (time > v.smokeAt) {
+    if (time > v.smokeAt && v.ev.style !== 'train') {
       v.smokeAt = time + (v.model.kind === 'danfo' ? 0.09 : 0.16);
       const back = gear > 0 ? -0.75 : 0.75;
       this.fx.smokePuff(layout.wx(gx) + v.dx * back, 0.18, layout.wz(gy) + v.dy * back, 0.26);
@@ -1172,7 +1197,7 @@ export class StageHazardViews implements View {
       if (v.phase === 'exiting') {
         const gear = v.fdx === v.dx && v.fdy === v.dy ? 1 : -1;
         this.placeVehicle(v, v.gx + v.dx * v.speed * dt, v.gy + v.dy * v.speed * dt, ctx, gear);
-        if (age > EXIT_SECONDS) this.removeSweep(id, v);
+        if (age > (v.ev.style === 'train' ? TRAIN_EXIT_SECONDS : EXIT_SECONDS)) this.removeSweep(id, v);
       } else {
         const s = age < 0.4 ? 1 : Math.max(0, 1 - (age - 0.4) / 0.3);
         v.model.root.scale.setScalar(VEHICLE_SCALE * s);

@@ -69,7 +69,7 @@ describe('two generators from the start in every Rumble ruleset (RE-C1)', () => 
     (game) => {
       const s = rumble(game);
       for (const p of s.players) expect(p.capacity).toBe(2);
-      put(s, 0, 5, 6); // a road row: open floor to walk along
+      put(s, 0, 12, 2); // the Skywalk Quarter's north promenade: a long open row to walk along
       const mine = (): number => s.generators.filter((g) => g.ownerId === 0).length;
       run(s, 1, { 0: { place: true } });
       expect(mine()).toBe(1);
@@ -274,14 +274,15 @@ describe('marked supply crates (RE-C3, RE-C5)', () => {
   const STAGES = ['rumbleOshodi', 'rumbleLagosIsland', 'rumbleApapa', 'rumbleLekkiNight'];
   const BASIC = ['socket', 'petrol'];
 
-  it('the four V2 stages place a few symmetric supply crates; every stage keeps the count small', () => {
+  // Oshodi and Ojuelegba are non-mirrored: their supplies are balanced per half in their own tests
+  it('the mirrored V2 stages place a few symmetric supply crates; every stage keeps the count small', () => {
     for (const id of RUMBLE_ARENA_IDS) {
       const a = ARENAS[id]!;
       const marks = a.layout.join('').split('$').length - 1;
       expect(marks, id).toBeLessThanOrEqual(24);
       if (STAGES.includes(id)) expect(marks, id).toBeGreaterThanOrEqual(8);
     }
-    for (const id of STAGES) {
+    for (const id of STAGES.filter((s) => ARENAS[s]!.mirrorSoftBlocks)) {
       const a = ARENAS[id]!;
       const W = a.layout[0]!.length;
       const H = a.layout.length;

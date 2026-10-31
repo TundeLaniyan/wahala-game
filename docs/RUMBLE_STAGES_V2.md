@@ -1,5 +1,9 @@
 # WAHALA! City Rumble V2 - five Lagos stages (stream F)
 
+> **Superseded (2026-10-30):** F1 "Oshodi Rush Hour" was replaced by the researched Oshodi Transport Metropolis under the
+> same id `rumbleOshodi` (decisions LA1 and LA11, `OSHODI_METROPOLIS.md`). Its 41 x 31 mirrored board, its numbers below and
+> its screenshots (removed) describe the retired stage; the other four stages are unchanged.
+
 Founder requirement of 2026-10-25: five substantial large-map City Rumble arenas, each a distinct Lagos location
 with its own architecture, surroundings, light, hazards and movement. Decisions WF1-WF13 are in `DECISIONS.md`
 (section W). Simulation data: `src/sim/arenas/rumble*.ts` (helpers `rumbleKit.ts`); presentation:

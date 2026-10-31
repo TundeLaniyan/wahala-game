@@ -27,8 +27,8 @@ export type {
 } from './types';
 
 /**
- * Every arena, in menu order: the nine standard arenas, the City Rumble stages (the five V2 stages first),
- * then the experimental test arenas.
+ * Every arena, in menu order: the nine standard arenas, the City Rumble stages (the five V2 stages; the
+ * researched Oshodi is the first), then the experimental test arenas.
  */
 export const ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
   [
