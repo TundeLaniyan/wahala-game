@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { CITY_RUMBLE_ID, createGame, tick } from '../src/sim';
 import type { GameKind, GameState, MatchSettings } from '../src/sim';
 import { Tile } from '../src/sim/types';
+import { buildHud } from '../src/app/hud';
 import { addGenerator, eventsOf, put, run, runUntil } from './helpers';
 
 function match(
@@ -83,15 +84,22 @@ function openRow(s: GameState): { x: number; y: number } {
 }
 
 describe('timeout: credited kills decide', () => {
-  it('a unique highest-kill player wins immediately (Survival, only the standing are eligible)', () => {
+  it('every player counts, the fallen too: a dead player with the highest kills wins at time up (Survival)', () => {
     const s = match('survival', 4);
     setKills(s, [1, 3, 2, 9]);
-    out(s, 3); // the leader on kills already fell: not eligible
+    out(s, 3); // the leader on kills already fell: still counted
     const events = timeUp(s);
     expect(s.match.phase).toBe('ended');
-    expect(s.match.result).toEqual({ kind: 'win', winnerId: 1, decidedBy: 'timeoutKills' });
+    expect(s.match.result).toEqual({ kind: 'win', winnerId: 3, decidedBy: 'timeoutKills' });
     expect(eventsOf(events, 'matchEnded')).toHaveLength(1);
     expect(s.match.suddenDeath).toBeNull();
+  });
+
+  it('a clear leader among the standing wins immediately', () => {
+    const s = match('survival', 3);
+    setKills(s, [1, 3, 2]);
+    timeUp(s);
+    expect(s.match.result).toEqual({ kind: 'win', winnerId: 1, decidedBy: 'timeoutKills' });
   });
 
   it('the winner follows the kills, never the player id (mirrored totals, mirrored winner)', () => {
@@ -119,6 +127,21 @@ describe('timeout: credited kills decide', () => {
     expect(s.players[2]!.stats.deaths).toBe(0); // standing down is not a death
     expect(s.players[2]!.elimination).toMatchObject({ kind: 'suddenDeath' });
     expect(s.players.slice(0, 2).every((p) => p.alive)).toBe(true);
+  });
+
+  it('only the tied leaders contend, and a fallen leader is brought back for the round', () => {
+    const s = match('survival', 4);
+    setKills(s, [2, 5, 5, 1]);
+    out(s, 1); // fell earlier with the joint-highest total
+    timeUp(s);
+    const sd = s.match.suddenDeath!;
+    expect(sd.contenders).toEqual([
+      { playerId: 1, kills: 5 },
+      { playerId: 2, kills: 5 },
+    ]);
+    expect(s.players[1]!.alive).toBe(true); // revived into the compacted arena
+    expect(s.players[0]!.alive).toBe(false); // standing, but fewer kills: not a contender
+    expect(s.players[3]!.alive).toBe(false);
   });
 
   it('three-way tie at the top: all three contend', () => {
@@ -166,39 +189,39 @@ describe('timeout: credited kills decide', () => {
   });
 });
 
-describe('simultaneous final elimination: kills of those involved decide', () => {
+describe("a blast takes down everyone still active: every player's kills decide", () => {
   /** Players 0 and 1 stand together and a dead rival's generator takes both down in one blast. */
-  function bothFall(kills: [number, number]) {
+  function bothFall(kills: [number, number, number]) {
     const s = match('survival', 3);
     out(s, 2);
     const { x, y } = openRow(s);
     put(s, 0, x, y);
     put(s, 1, x + 1, y);
-    setKills(s, [kills[0], kills[1], 0]);
+    setKills(s, kills);
     addGenerator(s, { ownerId: 2, x, y, timer: 1, range: 3 });
     const events = run(s, 3);
     return { s, events };
   }
 
-  it('the unique highest kill total among the fallen wins', () => {
-    const { s } = bothFall([3, 1]);
-    expect(s.players[0]!.alive || s.players[1]!.alive).toBe(false);
-    expect(s.match.result).toEqual({ kind: 'win', winnerId: 0, decidedBy: 'simultaneousKills' });
-    expect(bothFall([1, 4]).s.match.result).toEqual({
-      kind: 'win',
-      winnerId: 1,
-      decidedBy: 'simultaneousKills',
-    });
+  it('the unique highest total among ALL players wins, including those who just fell', () => {
+    // the dead owner of the blast is credited two eliminations (kills 1 -> 3) and leads
+    const a = bothFall([2, 2, 1]).s;
+    expect(a.match.result).toEqual({ kind: 'win', winnerId: 2, decidedBy: 'simultaneousKills' });
+    const b = bothFall([6, 1, 0]).s;
+    expect(b.match.result).toEqual({ kind: 'win', winnerId: 0, decidedBy: 'simultaneousKills' });
   });
 
-  it('equal totals bring the tied fighters back for sudden death, never a draw or an id-picked winner', () => {
-    const { s, events } = bothFall([2, 2]);
-    expect(s.match.phase).toBe('playing');
-    expect(s.match.result).toBeNull();
-    expect(s.match.suddenDeath).toMatchObject({ cause: 'simultaneous', stage: 'transition' });
-    expect(s.players[0]!.alive && s.players[1]!.alive).toBe(true);
-    expect(eventsOf(events, 'suddenDeathStarted')).toHaveLength(1);
-    expect(eventsOf(events, 'matchEnded')).toHaveLength(0);
+  it('players tied on the highest total (a fallen one included) are the only contenders of sudden death', () => {
+    const { s, events } = bothFall([4, 1, 1]); // fighter 2 is credited both kills: 3 -> not the leader; 0 leads alone
+    expect(s.match.result).toMatchObject({ winnerId: 0 });
+    expect(eventsOf(events, 'suddenDeathStarted')).toHaveLength(0);
+    const t = bothFall([3, 3, 1]); // fighter 2 reaches 3 as well: a three-way tie
+    expect(t.s.match.result).toBeNull();
+    expect(t.s.match.suddenDeath).toMatchObject({ cause: 'simultaneous', stage: 'transition' });
+    expect(t.s.match.suddenDeath!.contenders.map((c) => c.kills)).toEqual([3, 3, 3]);
+    expect(t.s.players.every((p) => p.alive)).toBe(true);
+    expect(eventsOf(t.events, 'suddenDeathStarted')).toHaveLength(1);
+    expect(eventsOf(t.events, 'matchEnded')).toHaveLength(0);
   });
 });
 
@@ -231,7 +254,7 @@ describe('sudden death: transition and countdown', () => {
     const cd = eventsOf(events, 'suddenDeathCountdown')[0]!;
     expect(s.match.suddenDeath!.stage).toBe('countdown');
     expect(s.tick).toBe(s.match.suddenDeath!.transitionEndTick);
-    expect(cd).toMatchObject({ blast: 1, of: 3 });
+    expect(cd).toMatchObject({ blast: 1 });
     expect(cd.blastTick - s.tick).toBe(60 * 60);
     // input works again
     const p = s.players[0]!;
@@ -247,7 +270,7 @@ describe('sudden death: the full-area blast', () => {
     const events = toBlast(s);
     expect(s.tick - s.match.suddenDeath!.startedTick).toBe(240 + 3600);
     const blast = eventsOf(events, 'suddenDeathBlast')[0]!;
-    expect(blast).toMatchObject({ blast: 1, of: 3, survivors: [1], eliminated: [0] });
+    expect(blast).toMatchObject({ blast: 1, survivors: [1], eliminated: [0] });
     expect(s.players[1]!.armour).toBe(0); // the layer was spent
     expect(s.players[0]!.elimination).toMatchObject({ kind: 'suddenDeath' });
     expect(s.players[0]!.eliminatedBy).toBeNull(); // the blast credits nobody
@@ -311,38 +334,60 @@ describe('sudden death: the full-area blast', () => {
     expect(s.match.result).toEqual({ kind: 'win', winnerId: 0, decidedBy: 'suddenDeath' });
   });
 
-  it('delays are 60, 30 and 15 seconds in order, and the sequence is exactly three blasts', () => {
+  it('blasts come 60 s, then 30 s, then every 15 s, with no limit while protection lasts', () => {
     const s = sudden();
-    s.players[0]!.armour = 9;
-    s.players[1]!.armour = 9;
+    s.players[0]!.armour = 5;
+    s.players[1]!.armour = 5;
     const gaps: number[] = [];
     let last = s.match.suddenDeath!.transitionEndTick;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       toBlast(s);
       gaps.push(s.tick - last);
       last = s.tick;
+      expect(s.match.phase).toBe('playing');
     }
-    expect(gaps).toEqual([3600, 1800, 900]);
+    expect(gaps).toEqual([3600, 1800, 900, 900, 900]); // a fourth and a fifth blast follow the third
+    toBlast(s); // both are out of protection now
+    expect(s.match.phase).toBe('ended');
   });
 
-  it('a genuinely exhausted sequence (both still standing after the last blast) is the only draw', () => {
+  it('one layer per blast: three layers survive three blasts and fall to the fourth', () => {
     const s = sudden();
-    s.players[0]!.armour = 9;
-    s.players[1]!.armour = 9;
+    s.players[0]!.armour = 2;
+    s.players[0]!.mounted = true;
+    s.players[1]!.armour = 2;
+    s.players[1]!.mounted = true;
+    for (let i = 1; i <= 3; i++) {
+      toBlast(s);
+      expect(s.players.every((p) => p.alive)).toBe(true);
+      expect(s.players[0]!.armour + (s.players[0]!.mounted ? 1 : 0)).toBe(3 - i);
+    }
+    toBlast(s);
+    expect(s.players.every((p) => !p.alive)).toBe(true);
+  });
+
+  it('a draw only when the sequence is exhausted: the blast takes the last protection of every contender', () => {
+    const s = sudden();
+    s.players[0]!.armour = 3;
+    s.players[1]!.armour = 3;
     toBlast(s);
     toBlast(s);
     expect(s.match.phase).toBe('playing');
-    const events = toBlast(s);
+    expect(s.match.result).toBeNull();
+    const last = toBlast(s); // third blast: both on zero layers and still standing
+    expect(s.match.phase).toBe('playing');
+    const events = toBlast(s); // fourth: nothing left to absorb it
     expect(s.match.phase).toBe('ended');
     expect(s.match.result).toEqual({ kind: 'draw', reason: 'suddenDeathExhausted' });
     expect(eventsOf(events, 'matchEnded')).toHaveLength(1);
-    expect(s.players[0]!.alive && s.players[1]!.alive).toBe(true);
+    expect(eventsOf(last, 'matchEnded')).toHaveLength(0);
+    expect(eventsOf(events, 'suddenDeathBlast')[0]).toMatchObject({ survivors: [], eliminated: [0, 1] });
   });
 
-  it('nobody protected: the fallen are compared on kills (a draw only when those are level too)', () => {
+  it('nobody protected: the kills of every player decide; only a still-shared lead is the draw', () => {
     const s = sudden();
     toBlast(s);
-    expect(s.match.result).toEqual({ kind: 'draw', reason: 'suddenDeathMutual' });
+    expect(s.match.result).toEqual({ kind: 'draw', reason: 'suddenDeathExhausted' });
 
     const t = sudden();
     t.players[0]!.stats.kills++; // earned during the round
@@ -350,19 +395,30 @@ describe('sudden death: the full-area blast', () => {
     expect(t.match.result).toEqual({ kind: 'win', winnerId: 0, decidedBy: 'simultaneousKills' });
   });
 
-  it('a fight inside the area ends the round before any blast', () => {
+  it('there is no separate mutual-elimination result: contenders falling together in a fight start a new round', () => {
     const s = sudden();
     const [a, b] = [s.players[0]!, s.players[1]!];
     run(s, s.config.protection.spawnProtectionTicks + 60); // the settle window is over
     const { x, y } = openRow(s);
     put(s, 0, x, y);
-    put(s, 1, x + 1, y);
-    addGenerator(s, { ownerId: 0, x: x + 1, y, timer: 1, range: 2 });
-    run(s, 3);
-    expect(a.alive).toBe(false); // own blast reaches both; protection absent
-    expect(b.alive).toBe(false);
-    expect(s.match.phase).toBe('ended');
-    expect(s.match.suddenDeath!.blastsFired).toBe(0);
+    put(s, 1, x, y);
+    // an uncredited closing-city tile lands on both of them in the same tick
+    const index = y * s.width + x;
+    s.crush = {
+      order: [index],
+      next: 1,
+      warnAt: [0],
+      nextAtTick: Infinity,
+      pending: [{ index, landTick: s.tick + 1 }],
+    };
+    const startedBefore = s.match.suddenDeath!.startedTick;
+    const events = run(s, 3);
+    expect(eventsOf(events, 'matchEnded')).toHaveLength(0);
+    expect(s.match.result).toBeNull();
+    expect(s.match.suddenDeath!.startedTick).toBeGreaterThan(startedBefore); // a fresh round for the tied pair
+    expect(s.match.suddenDeath!.stage).toBe('transition');
+    expect(a.alive && b.alive).toBe(true);
+    expect(JSON.stringify(s.match.result)).not.toMatch(/Mutual/);
   });
 
   it('a kill during the round wins outright', () => {
@@ -396,6 +452,26 @@ describe('sudden death: the full-area blast', () => {
       return JSON.stringify([s.tick, s.match.result, s.players.map((p) => [p.x, p.y, p.alive])]);
     };
     expect(play()).toBe(play());
+  });
+});
+
+describe('the sudden-death HUD keeps the kill ranking', () => {
+  it('lists every player by credited kills (the fallen too), with the contenders flagged and live totals', () => {
+    const s = match('survival', 4);
+    setKills(s, [3, 1, 3, 0]);
+    out(s, 2);
+    timeUp(s);
+    const hud = buildHud(s, 0, null).suddenDeath!;
+    expect(hud.ranking.map((r) => [r.id, r.kills, r.contender])).toEqual([
+      [0, 3, true],
+      [2, 3, true],
+      [1, 1, false],
+      [3, 0, false],
+    ]);
+    expect(hud.contenders.map((c) => c.kills)).toEqual([3, 3]);
+    s.players[0]!.stats.kills++; // a kill earned during the round shows at once
+    expect(buildHud(s, 0, null).suddenDeath!.ranking[0]).toMatchObject({ id: 0, kills: 4 });
+    expect(hud.blast).toBe(1);
   });
 });
 

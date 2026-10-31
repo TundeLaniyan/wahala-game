@@ -34,12 +34,8 @@ export function resultText(hud: HudSnapshot, won: boolean): { title: string; det
     if (r.reason === 'suddenDeathExhausted')
       return {
         title: 'DRAW!',
-        detail: 'Sudden death: every blast fell and more than one fighter is still standing.',
-      };
-    if (r.reason === 'suddenDeathMutual')
-      return {
-        title: 'DRAW!',
-        detail: 'Sudden death: the last fighters fell together, level on eliminations.',
+        detail:
+          'Sudden death: the blasts took every protection and the last fighters fell together, level on eliminations.',
       };
     if (r.reason === 'tie')
       return {

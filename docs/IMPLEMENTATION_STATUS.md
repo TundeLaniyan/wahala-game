@@ -442,7 +442,7 @@ Decisions UX1-UX6 and PF1-PF10 in `DECISIONS.md`; reports `docs/STITCH_UI.md` (f
 
 | Area | State |
 | --- | --- |
-| Rumble draws | Done: credited kills decide a timeout and a simultaneous final contest; ties play sudden death (title card, tied fighters seated in the compacted core, full-size blasts after 60 / 30 / 15 s absorbed by Okada / Armour). Classic unchanged. `tests/sudden-death.test.ts`, `e2e/sudden-death.spec.ts`. No 3D blast effect (HUD flash and existing sounds only). |
+| Rumble draws | Done: credited kills decide a timeout and a simultaneous final contest; the players tied on the highest total (all players counted, the fallen too) are the only contenders of sudden death (title card, seated in the compacted core, full-size blasts after 60 s, 30 s, then every 15 s until one is left, one Okada / Armour layer per blast; the only draw is `suddenDeathExhausted`). Classic unchanged. `tests/sudden-death.test.ts`, `e2e/sudden-death.spec.ts`. No 3D blast effect (HUD flash and existing sounds only). |
 | Fighter kits | Done for the 32 competitor slots (the game has 3 selectable characters): 8 jersey hues x 4 headwear. `tests/fighter-identity.test.ts`, `scripts/identity-shots.mjs`. Menu fighter selection unchanged. |
 | Touch controls | Done: A lower-right, B diagonal above-left, bigger bounded pad, button states. `e2e/touch-layout.spec.ts`. Not tried on a physical phone. |
 | Pause audio | Done: everything silenced, no doubled loops on resume. `tests/audio/pause.test.ts`, `tests/app/pause-audio.test.ts`. Not listened to by ear. |

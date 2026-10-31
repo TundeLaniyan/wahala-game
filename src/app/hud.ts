@@ -90,9 +90,19 @@ export interface SuddenDeathHud {
     isLocal: boolean;
     alive: boolean;
   }[];
-  /** The number of the next blast (1-based) and how many the sequence has. */
+  /** The number of the next blast (1-based); blasts keep coming (30 s after the first, then every 15 s) until one side stands. */
   blast: number;
-  of: number;
+  /** The kill ranking, everyone's credited kills, most first (contenders flagged): the same count that decided who fights. */
+  ranking: {
+    id: number;
+    name: string;
+    slot: number;
+    team: number;
+    kills: number;
+    contender: boolean;
+    alive: boolean;
+    isLocal: boolean;
+  }[];
   /** Seconds until the next blast (null while the title card shows or once the sequence is spent). */
   secondsToBlast: number | null;
   /** Inside the warning window before a blast. */
@@ -120,13 +130,24 @@ export function buildSuddenDeath(state: GameState, localId: number): SuddenDeath
         slot: p.slot,
         team: p.team,
         characterId: p.characterId,
-        kills: c.kills,
+        kills: p.stats.kills,
         isLocal: p.id === localId,
         alive: p.alive,
       };
     }),
-    blast: Math.min(sd.blastsFired + 1, cfg.blastDelayTicks.length),
-    of: cfg.blastDelayTicks.length,
+    blast: sd.blastsFired + 1,
+    ranking: [...state.players]
+      .sort((a, b) => b.stats.kills - a.stats.kills || a.id - b.id)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        slot: p.slot,
+        team: p.team,
+        kills: p.stats.kills,
+        contender: sd.contenders.some((c) => c.playerId === p.id),
+        alive: p.alive,
+        isLocal: p.id === localId,
+      })),
     secondsToBlast: pending ? Math.max(0, Math.ceil(left / 60)) : null,
     warning: pending && left <= cfg.warnTicks,
     flash: sd.lastBlastTick !== null && state.tick - sd.lastBlastTick < 60,

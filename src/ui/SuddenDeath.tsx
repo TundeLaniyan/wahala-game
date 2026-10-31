@@ -51,8 +51,18 @@ export function SuddenDeathClock({ sd }: { sd: SuddenDeathHud }) {
         >
           <b>SUDDEN DEATH</b>
           <span>
-            Blast {sd.blast}/{sd.of} in <strong>{clock(sd.secondsToBlast)}</strong>
+            Blast {sd.blast} in <strong>{clock(sd.secondsToBlast)}</strong>
           </span>
+          <ol className="sd-rank" data-testid="sudden-death-ranking">
+            {sd.ranking
+              .filter((r) => r.contender)
+              .map((r) => (
+                <li key={r.id} className={`${r.isLocal ? 'mine' : ''}${r.alive ? '' : ' out'}`}>
+                  <b style={{ color: playerCss(r.slot, r.team) }}>{r.isLocal ? 'YOU' : r.name}</b>
+                  <em>{r.kills}</em>
+                </li>
+              ))}
+          </ol>
         </div>
       )}
       {sd.flash && <div className="sd-flash" data-testid="sudden-death-flash" aria-hidden />}

@@ -2,16 +2,16 @@
  * Match flow: countdown, timer, win / draw detection.
  *
  * Classic: last standing; a timeout with several standing, or everybody falling together, is a draw
- * (unchanged). City Rumble (decision SD1): a unique credited-kill leader wins at time up, and a final contest
- * that takes the last fighters down together goes to the highest kill total among them. Equal kill totals
- * never end in a draw: the tied contenders play sudden death (systems/suddenDeath.ts). Deathmatch and Team
- * Rumble are decided by the clock (`timedResult` ranks the board; the kill count decides the match).
+ * (unchanged). City Rumble (decisions SD1-SD6): when the clock runs out, or a blast takes down everyone still
+ * active, the credited kills of every player (the fallen included) decide: one clear leader wins at once, the
+ * players tied on the highest total play sudden death (systems/suddenDeath.ts). Deathmatch and Team Rumble
+ * are decided by the clock (`timedResult` ranks the board; the kill count decides the match).
  */
 import type { GameState, MatchResult, Player, SimEvent } from '../types';
 import { isRespawnMode, isTeamMode } from '../modes';
-import { endMatch, leadingSides, sideKills, sideOf, winFor } from './matchResult';
+import { endMatch } from './matchResult';
 import { alivePlayers } from './queries';
-import { enterSuddenDeath, evaluateSuddenDeath } from './suddenDeath';
+import { evaluateSuddenDeath, resolveByKills } from './suddenDeath';
 
 /**
  * Called once per playing tick AFTER all eliminations of the tick have been applied, so every
@@ -27,46 +27,18 @@ export function evaluateMatchEnd(state: GameState, events: SimEvent[]): void {
   const timeUp = state.match.playTicks >= state.config.match.durationTicks;
   const rumble = state.settings.game !== 'classic';
   if (isRespawnMode(state.settings.game)) {
-    if (timeUp) resolveTimeout(state, state.players, events);
+    if (timeUp) resolveByKills(state, 'timeoutKills', events);
     return;
   }
   const alive = alivePlayers(state);
   if (alive.length === 0) {
-    if (rumble) resolveSimultaneous(state, events);
+    if (rumble) resolveByKills(state, 'simultaneousKills', events);
     else endMatch(state, { kind: 'draw', reason: 'simultaneous' }, events);
   } else if (alive.length === 1) endMatch(state, { kind: 'win', winnerId: alive[0]!.id }, events);
   else if (timeUp) {
-    if (rumble) resolveTimeout(state, alive, events);
+    if (rumble) resolveByKills(state, 'timeoutKills', events);
     else endMatch(state, { kind: 'draw', reason: 'timeout' }, events);
   }
-}
-
-/** Time up: the eligible fighters' credited kills decide; a shared lead plays sudden death. */
-function resolveTimeout(state: GameState, eligible: readonly Player[], events: SimEvent[]): void {
-  const lead = leadingSides(sideKills(state, eligible));
-  if (lead.length === 1) endMatch(state, winFor(state, lead[0]!, 'timeoutKills'), events);
-  else {
-    const tied = eligible.filter((p) => lead.includes(sideOf(state, p)));
-    enterSuddenDeath(state, tied, 'timeout', events);
-  }
-}
-
-/** Nobody is left standing: the fighters eliminated together in this final contest are compared. */
-function resolveSimultaneous(state: GameState, events: SimEvent[]): void {
-  const involved = state.players.filter((p) => !p.alive && p.eliminatedTick === state.tick);
-  if (involved.length < 2) {
-    endMatch(state, { kind: 'draw', reason: 'simultaneous' }, events);
-    return;
-  }
-  const lead = leadingSides(sideKills(state, involved));
-  if (lead.length === 1) endMatch(state, winFor(state, lead[0]!, 'simultaneousKills'), events);
-  else
-    enterSuddenDeath(
-      state,
-      involved.filter((p) => lead.includes(sideOf(state, p))),
-      'simultaneous',
-      events,
-    );
 }
 
 /**

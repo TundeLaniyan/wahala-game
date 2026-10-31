@@ -131,13 +131,16 @@ export interface GameConfig {
     coreClosedRemainingTicks: number;
   };
   /**
-   * Rumble sudden death (decision SD1). The contenders are placed in the compacted area during a short
-   * title-card transition; then a full-area blast drops after `blastDelayTicks[0]`, and, while more than one
-   * contender survives it (a protection layer each), after `[1]` and `[2]`. The blast is never shrunk.
+   * Rumble sudden death (decisions SD1-SD6). The contenders (the players tied on the highest credited kill
+   * count) are placed in the compacted area during a short title-card transition; then a full-area blast drops
+   * after `blastDelayTicks[0]`, the next after `[1]`, and every `repeatBlastTicks` after that, until one side
+   * stands. Each blast takes one protection layer from each survivor. The blast is never shrunk.
    */
   suddenDeath: {
     transitionTicks: number;
+    /** Delay before blast 1, then blast 2 (60 s, 30 s); every later blast follows `repeatBlastTicks` after the last. */
     blastDelayTicks: number[];
+    repeatBlastTicks: number;
     /** The HUD warns this long before each blast. */
     warnTicks: number;
   };
@@ -370,7 +373,8 @@ export const DEFAULT_CONFIG: GameConfig = {
   },
   suddenDeath: {
     transitionTicks: ticks(4),
-    blastDelayTicks: [ticks(60), ticks(30), ticks(15)],
+    blastDelayTicks: [ticks(60), ticks(30)],
+    repeatBlastTicks: ticks(15),
     warnTicks: ticks(5),
   },
   crowd: {

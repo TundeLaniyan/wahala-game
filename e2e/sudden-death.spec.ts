@@ -56,7 +56,10 @@ test.describe('City Rumble: sudden death', () => {
     await step(page, 260);
     await expect(page.getByTestId('sudden-death-card')).toHaveCount(0);
     await expect(page.getByTestId('sudden-death-clock')).toBeVisible();
-    await expect(page.getByTestId('sudden-death-clock')).toContainText('Blast 1/3');
+    await expect(page.getByTestId('sudden-death-clock')).toContainText('Blast 1 in');
+    // the kill ranking stays visible beside the clock: both contenders with their eliminations
+    await expect(page.getByTestId('sudden-death-ranking')).toContainText('2');
+    await expect(page.getByTestId('sudden-death-ranking').locator('li')).toHaveCount(2);
     await shot(page, info.project.name, 'sudden-death-clock');
 
     // the rival carries an Armour plate; the local fighter does not: the blast decides it
@@ -81,13 +84,13 @@ test.describe('City Rumble: sudden death', () => {
       `s.crush = null;
        s.endgameTraps = { waves: [], liveAt: [], warned: 0, live: 0, warnings: [] };
        s.players.forEach((p, i) => { if (i > 1) { p.alive = false; p.eliminatedTick = s.tick; p.elimination = { kind: 'crush', eventId: 0 }; } });
-       s.players[0].armour = 9; s.players[1].armour = 9;
+       s.players[0].armour = 3; s.players[1].armour = 3;
        s.players[0].protectedUntil = 0; s.players[1].protectedUntil = 0;
        s.match.playTicks = s.config.match.durationTicks - 2;`,
     );
     await step(page, 4 + 260);
     await expect(page.getByTestId('sudden-death-clock')).toBeVisible();
-    await step(page, 60 * (60 + 30 + 15) + 10);
+    await step(page, 60 * (60 + 30 + 15 + 15) + 10);
     expect((await getState(page)).result).toEqual({ kind: 'draw', reason: 'suddenDeathExhausted' });
     await expect(page.getByTestId('results')).toBeVisible({ timeout: 90_000 });
     await expect(page.getByTestId('result-title')).toHaveText('DRAW!');

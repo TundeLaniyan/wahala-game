@@ -78,7 +78,8 @@
 }
 .sd-clock {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   align-items: baseline;
   padding: 4px 14px;
   background: rgba(12, 10, 8, 0.9);
@@ -148,4 +149,29 @@
   .sd-inner p {
     display: none;
   }
+}
+
+.sd-rank {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.74rem;
+}
+.sd-rank li {
+  display: flex;
+  gap: 5px;
+  align-items: baseline;
+}
+.sd-rank li.out {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.sd-rank em {
+  font-style: normal;
+  color: var(--gold);
+  font-weight: 700;
 }

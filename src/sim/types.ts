@@ -335,10 +335,8 @@ export type MatchResult =
         | 'simultaneous'
         | 'timeout'
         | 'tie'
-        /** Sudden death: every supported finishing blast fired and more than one contender still stands. */
-        | 'suddenDeathExhausted'
-        /** Sudden death: the contenders fell together (blast or fight) with identical kill totals. */
-        | 'suddenDeathMutual';
+        /** Sudden death: the blast sequence ran out of protection and no winner could be produced. */
+        | 'suddenDeathExhausted';
     }
   /** V2 Team Rumble. */
   | { kind: 'teamWin'; team: number; decidedBy?: WinReason };
@@ -371,7 +369,7 @@ export interface SuddenDeathState {
   transitionEndTick: number;
   /** The compacted area the contenders were moved into (the blast still reaches every contender). */
   area: SuddenDeathArea;
-  /** Blasts fired so far (0..config.suddenDeath.blastDelayTicks.length). */
+  /** Blasts fired so far in this round (the sequence runs on until one side stands). */
   blastsFired: number;
   /** Tick the next blast drops (Infinity during the transition and once the sequence is exhausted). */
   nextBlastTick: number;
@@ -619,9 +617,9 @@ export type SimEvent =
       transitionEndTick: number;
     }
   /** Rumble: the countdown to blast number `blast` (1-based) is running. */
-  | { type: 'suddenDeathCountdown'; blast: number; of: number; blastTick: number }
+  | { type: 'suddenDeathCountdown'; blast: number; blastTick: number }
   /** Rumble: the full-area finishing blast. `survivors` were not eliminated by it (a protection layer was used). */
-  | { type: 'suddenDeathBlast'; blast: number; of: number; survivors: number[]; eliminated: number[] }
+  | { type: 'suddenDeathBlast'; blast: number; survivors: number[]; eliminated: number[] }
   | { type: 'generatorPlaced'; generatorId: number; ownerId: number; x: number; y: number }
   | {
       type: 'generatorExploded';

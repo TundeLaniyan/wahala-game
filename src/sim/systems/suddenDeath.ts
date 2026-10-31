@@ -1,12 +1,14 @@
 /**
- * Rumble sudden death (decision SD1). A timed Rumble that still has tied leaders on the kill count, or a
- * final contest that took the last fighters down together with equal kills, does not end in a draw: the
- * tied contenders are seated in the compacted area and fight on until a full-area finishing blast drops
- * (after 60 s, then 30 s, then 15 s while more than one contender survives it).
+ * Rumble sudden death (decisions SD1-SD6). When the clock runs out, or a blast takes down everyone still active,
+ * the credited kills of every player (the fallen included) decide. One clear highest total wins at once; the
+ * players tied on it are the only contenders: they are seated in the compacted area and fight on until
+ * full-area blasts drop, the first after 60 s, the second 30 s later and then every 15 s, until one contender
+ * is left.
  *
- * The blast is an ordinary lethal hit (`cause.kind === 'suddenDeath'`) resolved by `applyLethalHits`, so
- * the existing protection layers decide who lives: a mounted Okada is spent first, then one Armour plate,
- * one layer per blast; a contender with none is eliminated. Nothing here invents an inventory.
+ * Each blast is an ordinary lethal hit (`cause.kind === 'suddenDeath'`) resolved by `applyLethalHits`, so the
+ * existing protection layers decide who lives: a mounted Okada is spent first, then one Armour plate, one layer
+ * per blast; a contender with none is eliminated. Nothing here invents an inventory. The only draw is
+ * `suddenDeathExhausted`: a blast takes the last contenders down together with the lead still shared.
  */
 import { tileAt } from '../grid';
 import { Tile } from '../types';
@@ -17,6 +19,7 @@ import type {
   SuddenDeathArea,
   SuddenDeathCause,
   SuddenDeathContender,
+  WinReason,
 } from '../types';
 import { endMatch, leadingSides, sideKills, sideOf, winFor } from './matchResult';
 import type { LethalHit } from './lethality';
@@ -194,18 +197,13 @@ export function suddenDeathHoldsInput(state: GameState): boolean {
   return sd !== null && sd.stage === 'transition' && state.tick < sd.transitionEndTick;
 }
 
+/** Blast 1 comes 60 s after the title card, blast 2 30 s after that, every later one 15 s after the last. */
 function scheduleBlast(state: GameState, events: SimEvent[]): void {
   const sd = state.match.suddenDeath!;
-  const delays = state.config.suddenDeath.blastDelayTicks;
-  const delay = delays[sd.blastsFired];
-  if (delay === undefined) return;
+  const cfg = state.config.suddenDeath;
+  const delay = cfg.blastDelayTicks[sd.blastsFired] ?? cfg.repeatBlastTicks;
   sd.nextBlastTick = state.tick + delay;
-  events.push({
-    type: 'suddenDeathCountdown',
-    blast: sd.blastsFired + 1,
-    of: delays.length,
-    blastTick: sd.nextBlastTick,
-  });
+  events.push({ type: 'suddenDeathCountdown', blast: sd.blastsFired + 1, blastTick: sd.nextBlastTick });
 }
 
 /** Per tick, before lethal hits resolve: ends the title card and queues a due blast's hits. */
@@ -235,29 +233,54 @@ export function updateSuddenDeath(state: GameState, hits: LethalHit[], events: S
   sd.blastResolving = true;
 }
 
-/** After lethal hits resolved: reports a blast, schedules the next one, and finds the winner or the draw. */
+/**
+ * Sudden death trigger (time up, or nobody left active): the credited kills of EVERY player count, the ones
+ * who have just fallen included. One clear highest total wins at once; the players tied on it (a team's
+ * members when teams tie) are the only contenders of the sudden-death round.
+ */
+export function resolveByKills(state: GameState, by: WinReason, events: SimEvent[]): void {
+  const lead = leadingSides(sideKills(state, state.players));
+  if (lead.length === 1) endMatch(state, winFor(state, lead[0]!, by), events);
+  else
+    enterSuddenDeath(
+      state,
+      state.players.filter((p) => lead.includes(sideOf(state, p))),
+      by === 'timeoutKills' ? 'timeout' : 'simultaneous',
+      events,
+    );
+}
+
+/**
+ * After lethal hits resolved: reports a blast, schedules the next one, and finds the winner or the draw.
+ *
+ *  - one side standing: it wins (a fight can end the round before any blast);
+ *  - several sides standing after a blast: the next blast is scheduled (30 s after the first, then every 15 s),
+ *    with no limit: each blast takes one protection layer from each survivor, so the round always narrows;
+ *  - nobody standing: the credited kills of every player decide again (the fallen included). One clear leader
+ *    wins. A fight that took the last contenders down together with the lead still shared starts a fresh round
+ *    for the tied players; a blast that did, has no winner left to produce, so it is the (only) draw,
+ *    `suddenDeathExhausted`.
+ */
 export function evaluateSuddenDeath(state: GameState, events: SimEvent[]): void {
   const sd = state.match.suddenDeath;
   if (!sd) return;
-  const cfg = state.config.suddenDeath;
   const members = sd.contenders.map((c) => state.players[c.playerId]!);
   const standing = members.filter((p) => p.alive);
   const sides = new Set(standing.map((p) => sideOf(state, p)));
+  const blastFell = sd.blastResolving;
 
-  if (sd.blastResolving) {
+  if (blastFell) {
     sd.blastResolving = false;
     events.push({
       type: 'suddenDeathBlast',
       blast: sd.blastsFired,
-      of: cfg.blastDelayTicks.length,
       survivors: standing.map((p) => p.id),
       eliminated: members
         .filter((p) => !p.alive && p.eliminatedTick === state.tick && p.elimination?.kind === 'suddenDeath')
         .map((p) => p.id),
     });
     if (sides.size > 1) {
-      if (sd.blastsFired < cfg.blastDelayTicks.length) scheduleBlast(state, events);
-      else endMatch(state, { kind: 'draw', reason: 'suddenDeathExhausted' }, events);
+      scheduleBlast(state, events);
       return;
     }
   }
@@ -265,10 +288,9 @@ export function evaluateSuddenDeath(state: GameState, events: SimEvent[]): void 
   if (sides.size === 1) {
     endMatch(state, winFor(state, [...sides][0]!, 'suddenDeath'), events);
   } else if (sides.size === 0) {
-    // the last contenders fell together (the blast or a fight): kill totals decide, never an id
-    const fallen = members.filter((p) => p.eliminatedTick === state.tick);
-    const lead = leadingSides(sideKills(state, fallen.length > 0 ? fallen : members));
+    const lead = leadingSides(sideKills(state, state.players));
     if (lead.length === 1) endMatch(state, winFor(state, lead[0]!, 'simultaneousKills'), events);
-    else endMatch(state, { kind: 'draw', reason: 'suddenDeathMutual' }, events);
+    else if (blastFell) endMatch(state, { kind: 'draw', reason: 'suddenDeathExhausted' }, events);
+    else resolveByKills(state, 'simultaneousKills', events);
   }
 }
