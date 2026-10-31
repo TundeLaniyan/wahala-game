@@ -129,67 +129,15 @@ function board(
   ctx.statics.add(p);
 }
 
-// -------------------------------------------------------------------------------------- terminal
-
-/**
- * The terminal canopy and hall north of the plaza (tile columns 9-21 -> world x -13 .. -1): a deep slab on tall
- * columns over the bus queues with the INTERCHANGE fascia, and a lit glass hall behind it.
- */
-export function terminalCanopy(ctx: SetContext, L: SiteLights, tod: TimeOfDay): void {
-  const { H } = ctx;
-  const P = palette();
-  const s = ctx.statics;
-  const north = -H / 2;
-  const x0 = -15.5;
-  const x1 = -0.5;
-  const cx = (x0 + x1) / 2;
-  const w = x1 - x0;
-  const zf = north - 1.6; // front edge of the canopy
-  const zb = north - 8.2; // back wall of the hall
-  const zc = (zf + zb) / 2;
-  const deep = zf - zb;
-  const roofY = 5.3;
-  s.add(box(w, 0.4, deep, P.concreteDark, cx, roofY, zc)); // the canopy slab
-  s.add(box(w, 0.26, 0.5, P.concreteLight, cx, roofY + 0.02, zf + 0.1)); // fascia edge
-  for (let x = x0 + 0.5; x <= x1 - 0.4; x += 3)
-    s.add(box(0.5, 0.5, deep - 0.3, P.concrete, x, roofY - 0.4, zc)); // soffit ribs
-  // tall columns along the front edge and a row behind, with painted base bands
-  for (const z of [zf - 0.4, zf - 3.6])
-    for (let x = x0 + 1; x <= x1 - 0.5; x += 3.5) {
-      s.add(cyl(0.34, 0.4, roofY - 0.2 - STREET, P.concrete, x, STREET + (roofY - 0.2 - STREET) / 2, z, 8));
-      s.add(cyl(0.43, 0.43, 0.24, P.black, x, STREET + 0.12, z, 8));
-      s.add(cyl(0.43, 0.43, 0.24, P.white, x, STREET + 0.36, z, 8));
-    }
-  // the lit glass hall behind it: a long low block with a glazed front and a plant deck
-  s.add(box(w - 1.2, 3.4, 3.4, P.concrete, cx, 1.7, zb + 1.7));
-  s.add(box(w - 2.0, 1.5, 0.12, P.glass, cx, 1.9, zb + 3.45));
-  for (let x = x0 + 1; x < x1; x += 1.6) s.add(box(0.07, 1.6, 0.1, P.steel, x, 1.9, zb + 3.5));
-  s.add(box(w - 1.6, 0.9, 1.2, P.concreteLight, cx, 3.85, zb + 1.7)); // plant deck
-  // the big name on the fascia, facing the camera
-  if (hasDom()) {
-    const tex = fasciaTexture('interchange', 1024, 192, '#12304e', '#f4f2ea', [
-      'INTERCHANGE  ·  TERMINALS 1 2 3',
-    ]);
-    board(ctx, tex, w - 1.0, (w - 1.0) * (192 / 1024), cx, roofY + 0.9, zf + 0.42);
-    const gates = fasciaTexture('bays', 512, 96, '#e8b82a', '#16140f', ['BUS BAYS 1 – 12']);
-    board(ctx, gates, 4.2, 0.8, x0 + 3.6, 3.3, zf + 0.28);
-  }
-  // roof mast and a red warning light
-  s.add(cyl(0.05, 0.08, 4.2, P.steel, x1 - 1.4, roofY + 2.4, zb + 1.2, 6));
-  L.glow(x1 - 1.4, roofY + 4.55, zb + 1.2, 0.7, 0xff3a2a, tod === 'night' ? 0.9 : 0.4);
-  L.glow(cx - 3, roofY - 0.5, zf - 0.6, 2.0, 0xe8f4ff, tod === 'night' ? 0.55 : 0.28);
-  L.glow(cx + 3, roofY - 0.5, zf - 0.6, 2.0, 0xe8f4ff, tod === 'night' ? 0.55 : 0.28);
-}
-
 // ------------------------------------------------------------------------------------ expressway
 
-/** The elevated expressway running east-west behind the terminal (deck centre z = north - 12.2). */
+/** The elevated expressway running east-west behind the terminal (deck centre z = north - 25). */
 export function expressway(ctx: SetContext, L: SiteLights): void {
   const { W, H } = ctx;
   const P = palette();
   const s = ctx.statics;
   const north = -H / 2;
-  const zc = north - 12.2;
+  const zc = north - 25;
   const width = 6.6;
   const len = W + 110;
   const cx = 0;
@@ -239,34 +187,6 @@ export function expressway(ctx: SetContext, L: SiteLights): void {
   }
   L.glow(gx - 5.5, DECK_TOP + 3.9, zc + 2.4, 1.6, 0xe8f4ff, 0.45);
   L.glow(gx + 5.5, DECK_TOP + 3.9, zc + 2.4, 1.6, 0xe8f4ff, 0.45);
-}
-
-// --------------------------------------------------------------------------------------- skywalks
-
-/** Two covered skywalk spans linking the terminal to the station tower over the north edge, on round piers. */
-export function skywalks(ctx: SetContext): void {
-  const { H } = ctx;
-  const P = palette();
-  const s = ctx.statics;
-  const z = -H / 2 - 2.6; // just beyond the north edge
-  const y = 5.0;
-  const spans: [number, number][] = [
-    [-0.5, 13.2],
-    [15.8, 29.6],
-  ];
-  for (const [xa, xb] of spans) {
-    const cx = (xa + xb) / 2;
-    const len = xb - xa;
-    s.add(box(len, 0.3, 1.9, P.concreteDark, cx, y, z)); // floor
-    s.add(box(len, 0.1, 2.1, P.steelLight, cx, y + 2.35, z)); // roof
-    s.add(box(len - 0.4, 1.3, 0.1, P.glass, cx, y + 1.05, z + 0.93)); // glazed side towards the camera
-    s.add(box(len - 0.4, 1.3, 0.1, P.glass, cx, y + 1.05, z - 0.93));
-    for (let x = xa + 0.4; x <= xb - 0.3; x += 1.6) s.add(box(0.1, 2.1, 0.1, P.steel, x, y + 1.3, z + 0.96));
-    for (let x = xa + 2; x < xb - 1; x += 6) {
-      s.add(cyl(0.32, 0.38, y - STREET, P.concrete, x, STREET + (y - STREET) / 2, z, 8));
-      s.add(box(1.3, 0.3, 1.3, P.concreteDark, x, y - 0.3, z));
-    }
-  }
 }
 
 // ----------------------------------------------------------------------- station tower and viaduct
@@ -337,14 +257,14 @@ export function skyline(ctx: SetContext, L: SiteLights, tod: TimeOfDay): void {
   const north = -H / 2;
   const towers: [number, number, number, number, number][] = [
     // x, depth z offset, width, height, seed
-    [-40, 30, 8, 24, 1],
-    [-26, 34, 9, 18, 2],
-    [-10, 30, 7, 30, 3],
-    [6, 36, 10, 21, 4],
-    [24, 32, 8, 27, 5],
-    [40, 30, 9, 19, 6],
-    [-52, 26, 7, 15, 7],
-    [54, 28, 8, 16, 8],
+    [-40, 40, 8, 24, 1],
+    [-26, 44, 9, 18, 2],
+    [-10, 40, 7, 30, 3],
+    [6, 46, 10, 21, 4],
+    [24, 42, 8, 27, 5],
+    [40, 40, 9, 19, 6],
+    [-52, 36, 7, 15, 7],
+    [54, 38, 8, 16, 8],
   ];
   for (const [x, dz, w, h, seed] of towers) {
     const tex = hasDom()

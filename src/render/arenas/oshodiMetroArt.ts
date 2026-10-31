@@ -31,14 +31,8 @@ import { STREET } from './common';
 import { T, crack, noiseFill, stain, tyreTrack } from './floorKit';
 import type { Ctx, FloorDrawer } from './floorKit';
 import { buildOshodiMetroCover } from './oshodiMetroCover';
-import {
-  expressway,
-  floodlights,
-  railViaduct,
-  skyline,
-  skywalks,
-  terminalCanopy,
-} from './oshodiMetroLandmarks';
+import { interchangeMegastructures } from './oshodiMetroTerminal';
+import { expressway, floodlights, railViaduct, skyline } from './oshodiMetroLandmarks';
 import { drum, umbrella, wire } from './oshodiKit';
 import { SiteLights, v3 } from './roadworksKit';
 import { dash, floorWords, litter, paintKerbs, paintRoads, tileWorld, zebraTile } from './rumbleV2Kit';
@@ -466,9 +460,8 @@ function build(ctx: SetContext): void {
   const L = new SiteLights();
   const S = STREET;
 
-  terminalCanopy(ctx, L, tod);
+  interchangeMegastructures(ctx, L, tod);
   expressway(ctx, L);
-  skywalks(ctx);
   railViaduct(ctx, L, tod);
   skyline(ctx, L, tod);
   floodlights(ctx, L, tod);

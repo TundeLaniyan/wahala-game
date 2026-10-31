@@ -268,8 +268,8 @@ export const RUMBLE_OSHODI: ArenaDef = {
       style: 'traffic',
       routes: TRAFFIC_ROUTES,
       stepTicks: 4,
-      firstAtSec: 10,
-      everySec: [6, 9],
+      firstAtSec: 8,
+      everySec: [5, 7.5],
       warnSec: 2,
     },
     {

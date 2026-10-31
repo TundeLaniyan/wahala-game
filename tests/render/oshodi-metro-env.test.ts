@@ -17,7 +17,7 @@ import {
   samplePath,
   validateEnvironment,
 } from '../../src/render/env/plan';
-import { ENV_DRAW_CALL_TARGET } from '../../src/render/env/types';
+import { ENV_BUDGET, ENV_DRAW_CALL_TARGET } from '../../src/render/env/types';
 import { NEW_ARENA_ART } from '../../src/render/arenas/newArenas';
 import { QUALITY } from '../../src/render/quality';
 
@@ -138,5 +138,29 @@ describe('Oshodi environment budgets', () => {
 
   it('the quality profiles still cap the stage cover at a few merged meshes', () => {
     for (const level of ['low', 'high'] as const) expect(QUALITY[level]).toBeDefined();
+  });
+});
+
+describe('Oshodi bus-choked roads (opt-in budget boost)', () => {
+  const env = oshodiMetroEnv(board, 'day');
+
+  it('raises the vehicle cap only for this stage; the shared caps are unchanged', () => {
+    expect(budgetFor(env, 'medium').vehicles).toBeGreaterThan(ENV_BUDGET.medium.vehicles);
+    expect(budgetFor(env, 'high').vehicles).toBeGreaterThan(ENV_BUDGET.high.vehicles);
+    const plain = { ...env, boost: undefined };
+    for (const level of LEVELS) expect(budgetFor(plain, level)).toEqual(ENV_BUDGET[level]);
+  });
+
+  it('keeps the model count (hence the vehicle draw calls) at the shared cap on every tier', () => {
+    for (const level of LEVELS)
+      expect(budgetFor(env, level).vehicleModels).toBe(ENV_BUDGET[level].vehicleModels);
+  });
+
+  it('puts many more ground vehicles on the roads at medium and high, still none on the board', () => {
+    const ground = (level: (typeof LEVELS)[number]): number =>
+      planTraffic(env, level).vehicles.filter((v) => !v.routeId.startsWith('deck')).length;
+    expect(ground('medium')).toBeGreaterThanOrEqual(20);
+    expect(ground('high')).toBeGreaterThan(ground('medium'));
+    expect(ground('veryLow')).toBeLessThanOrEqual(ENV_BUDGET.veryLow.vehicles);
   });
 });

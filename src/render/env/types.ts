@@ -239,6 +239,12 @@ export interface StageEnvironment {
   safety?: SafetyNotes;
   /** Per-tier overrides that LOWER the global caps (never raise them). */
   budget?: Partial<Record<QualityLevel, Partial<EnvBudget>>>;
+  /**
+   * Opt-in RAISES of a tier's caps for a stage whose identity is its crowd of vehicles (Oshodi's bus-choked
+   * roads). Instanced vehicles add triangles, not draw calls (the model count is unchanged), and the draw-call
+   * target still applies. A stage without `boost` is capped exactly as before.
+   */
+  boost?: Partial<Record<QualityLevel, Partial<EnvBudget>>>;
 }
 
 /** A stage environment, or a factory that derives it from the board size (the usual form). */

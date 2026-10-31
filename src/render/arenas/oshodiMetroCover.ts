@@ -65,6 +65,8 @@ const CONCRETE = 0xb6b2a8;
 const CONCRETE_DARK = 0x8a867c;
 const STEEL = 0x4a4e52;
 const YELLOW = 0xe0ae28;
+const BLACK_STEEL = 0x1d1f22;
+const BRT_BLUE = 0x2a7fb8;
 const RAIL_BLUE = 0x16212c;
 
 interface Kit {
@@ -430,7 +432,14 @@ function terminal(k: Kit, g: number, grp: OshodiCoverGroup, n: number): void {
   box(k, g, k.glow, w - 0.3, 1.1, 0.05, cx, 1.0, zf + 0.0, 0x7aa6c8); // lit glass band
   for (let i = 0; i <= Math.floor(w); i++)
     box(k, g, k.metal, 0.07, 1.2, 0.08, cx - w / 2 + i, 1.0, zf + 0.03, STEEL); // mullions
-  box(k, g, k.concrete, w + 0.1, 0.22, 0.4, cx, 2.55, zf + 0.2, CONCRETE_DARK); // canopy edge (a shallow overhang)
+  // the black steel truss roof frame (ring-terminal language): a deep chord on the front, X bracing across it
+  box(k, g, k.metal, w + 0.1, 0.3, 0.3, cx, 2.5, zf + 0.25, BLACK_STEEL);
+  for (let i = 0; i < Math.floor(w); i++) {
+    const x0 = cx - w / 2 + i + 0.5;
+    k.b.add(g, bx(0.06, 0.06, 0.9), k.metal, at(x0, H + 0.45, cz, 0, 0, 0.6, 1, 1, 1), BLACK_STEEL);
+    k.b.add(g, bx(0.06, 0.06, 0.9), k.metal, at(x0, H + 0.45, cz, 0, 0, -0.6, 1, 1, 1), BLACK_STEEL);
+  }
+  box(k, g, k.metal, w + 0.1, 0.08, 0.08, cx, H + 0.9, cz - d / 2 + 0.1, BLACK_STEEL);
   if (d === 1) {
     board(
       k,
@@ -504,7 +513,7 @@ function shelter(k: Kit, g: number, grp: OshodiCoverGroup): void {
     const cx = k.wx(x);
     const cz = k.wz(y);
     for (const dx of [-0.42, 0.42]) cyl(k, g, k.metal, 0.04, 0.04, 2.1, cx + dx, 0, cz - 0.38, YELLOW, 6);
-    box(k, g, k.metal, 1.0, 0.08, 0.95, cx, 2.1, cz - 0.05, YELLOW, 0, -0.06);
+    box(k, g, k.metal, 1.0, 0.08, 0.95, cx, 2.1, cz - 0.05, BRT_BLUE, 0, -0.06);
     for (let i = 0; i < 5; i++)
       box(k, g, k.paint, 0.2, 0.18, 0.05, cx - 0.4 + i * 0.2, 1.92, cz + 0.4, i % 2 ? 0x1c1c1c : YELLOW);
     box(k, g, k.metal, 0.9, 1.2, 0.05, cx, 0.5, cz - 0.42, 0x2a3036);

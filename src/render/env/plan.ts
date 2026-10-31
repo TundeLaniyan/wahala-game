@@ -80,7 +80,7 @@ export function resolveEnv(src: StageEnvironmentSource, board: BoardSize): Stage
 
 /** The environment's caps for a quality tier: its own `budget` can only LOWER the global ones. */
 export function budgetFor(env: StageEnvironment, level: QualityLevel): EnvBudget {
-  const cap = ENV_BUDGET[level];
+  const cap = { ...ENV_BUDGET[level], ...env.boost?.[level] };
   const own = env.budget?.[level] ?? {};
   const pick = (k: keyof EnvBudget): number => Math.max(0, Math.min(cap[k], own[k] ?? cap[k]));
   const out = {
