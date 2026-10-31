@@ -954,7 +954,7 @@ button {
   user-select: none;
   -webkit-touch-callout: none;
   border-radius: 50%;
-  border: 4px solid rgba(255, 255, 255, 0.6);
+  border: 3px solid rgba(255, 255, 255, 0.55);
   display: grid;
   place-items: center;
   font-family: var(--display);
@@ -964,9 +964,12 @@ button {
   font-size: clamp(0.6rem, 2vh, 0.85rem);
   line-height: 1.05;
   color: #fff;
+  /* a domed, glossy face button: a drop edge below, a bright top-left rim and a shaded underside inside */
   box-shadow:
-    0 5px 0 rgba(0, 0, 0, 0.4),
-    0 0 18px rgba(0, 0, 0, 0.4) inset;
+    0 6px 0 rgba(0, 0, 0, 0.5),
+    0 9px 14px rgba(0, 0, 0, 0.35),
+    inset 0 3px 5px rgba(255, 255, 255, 0.5),
+    inset 0 -8px 12px rgba(0, 0, 0, 0.38);
   padding: 0;
   overflow: hidden;
 }
@@ -989,49 +992,57 @@ button {
   letter-spacing: 0.04em;
   color: #ffd6e8;
 }
-/* A: GENERATOR, in the lower-right corner of the cluster */
+/*
+ * The action cluster follows a physical controller (decision MC2): A is the lower-left button and B sits
+ * diagonally above and to the right of it, so the thumb rolls up and to the right from A to B. Any further
+ * button would continue the same arc, up and to the right; there are exactly two today. The buttons are round,
+ * domed and lit from the top left like real face buttons, each with its letter and its label. There is no panel
+ * behind them: the cluster is only these two circles.
+ */
+/* A: GENERATOR, the lower-left button of the cluster */
 .abtn.bomb {
-  right: 0;
+  left: 0;
   bottom: 0;
   width: 56%;
   height: 56%;
-  background: conic-gradient(#e4a30a 0 50%, #8b3cd6 50% 100%);
+  background: radial-gradient(circle at 32% 26%, #ffe08a 0%, #f0b20f 38%, #c98200 72%, #8a5600 100%);
   font-size: clamp(0.9rem, 2.8vh, 1.2rem);
 }
 .abtn.bomb b {
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 6px;
-  padding: 3px 8px;
   font-weight: 400;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 }
-/* B: SPECIAL, diagonally above and to the left of A (label changes, place and look never do) */
+/* B: SPECIAL, diagonally above and to the right of A (label changes, place and look never do) */
 .abtn.special {
-  left: 2%;
+  right: 0;
   bottom: 46%;
   width: 42%;
   height: 42%;
-  background: #7c4dff;
+  background: radial-gradient(circle at 32% 26%, #c4b2ff 0%, #8d66ff 40%, #5a33d6 74%, #33198a 100%);
 }
 .abtn.special.vehicle {
-  background: #12a455;
+  background: radial-gradient(circle at 32% 26%, #7ff0b0 0%, #1fbe6a 40%, #0d8a49 74%, #08592f 100%);
 }
-/* the key letter of each button, like a pad's face buttons */
+/* the key letter of each button, printed on the dome like a pad's face buttons */
 .abtn-key {
   position: absolute;
-  top: 6%;
+  top: 9%;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
   font-style: normal;
-  font-size: 0.78em;
+  font-size: 1.45em;
   line-height: 1;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.55);
   letter-spacing: 0;
+  color: rgba(255, 255, 255, 0.96);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.55),
+    0 0 6px rgba(0, 0, 0, 0.5);
 }
-/* states (visual only; the input behaviour is unchanged):
+.abtn > span {
+  margin-top: 26%;
+}
+/* states (visual only; the input behaviour is unchanged; each keeps the physical look):
    idle      the resting look
    pressed   a finger is down: the button sinks and brightens
    holding   the hold-for-remote ring is filling
@@ -1042,16 +1053,16 @@ button {
   filter: brightness(1.22) saturate(1.1);
   border-color: #fff;
   box-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.4),
+    0 2px 0 rgba(0, 0, 0, 0.5),
     0 0 22px rgba(255, 255, 255, 0.45),
-    0 0 18px rgba(0, 0, 0, 0.4) inset;
+    inset 0 5px 10px rgba(0, 0, 0, 0.45);
 }
 .abtn.holding {
   border-color: #ff2f86;
   box-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.4),
+    0 2px 0 rgba(0, 0, 0, 0.5),
     0 0 26px rgba(255, 47, 134, 0.75),
-    0 0 18px rgba(0, 0, 0, 0.4) inset;
+    inset 0 4px 10px rgba(0, 0, 0, 0.4);
 }
 .abtn[data-state='remote'] {
   border-color: #ff2f86;
@@ -1067,24 +1078,27 @@ button {
 @keyframes abtn-remote {
   from {
     box-shadow:
-      0 5px 0 rgba(0, 0, 0, 0.4),
+      0 6px 0 rgba(0, 0, 0, 0.5),
       0 0 8px rgba(255, 47, 134, 0.35),
-      0 0 18px rgba(0, 0, 0, 0.4) inset;
+      inset 0 3px 5px rgba(255, 255, 255, 0.5),
+      inset 0 -8px 12px rgba(0, 0, 0, 0.38);
   }
   to {
     box-shadow:
-      0 5px 0 rgba(0, 0, 0, 0.4),
+      0 6px 0 rgba(0, 0, 0, 0.5),
       0 0 26px rgba(255, 47, 134, 0.95),
-      0 0 18px rgba(0, 0, 0, 0.4) inset;
+      inset 0 3px 5px rgba(255, 255, 255, 0.5),
+      inset 0 -8px 12px rgba(0, 0, 0, 0.38);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .abtn[data-state='remote'] {
     animation: none;
     box-shadow:
-      0 5px 0 rgba(0, 0, 0, 0.4),
+      0 6px 0 rgba(0, 0, 0, 0.5),
       0 0 20px rgba(255, 47, 134, 0.8),
-      0 0 18px rgba(0, 0, 0, 0.4) inset;
+      inset 0 3px 5px rgba(255, 255, 255, 0.5),
+      inset 0 -8px 12px rgba(0, 0, 0, 0.38);
   }
 }
 /* hold-for-remote: a ring fills over the hold time while B is down */
@@ -1161,19 +1175,15 @@ button {
     height: 19vh;
     font-size: clamp(0.58rem, 3vh, 0.86rem);
   }
-  .abtn.bomb b {
-    padding: 2px 5px;
-  }
   .abtn.special {
-    left: 0;
+    right: 0;
     bottom: 18.5vh;
     width: 17vh;
     height: 17vh;
   }
   .abtn-key {
-    top: 4%;
-    font-size: 0.7em;
-    padding: 1px 5px;
+    top: 7%;
+    font-size: 1.3em;
   }
   .stick-zone {
     width: calc(100vw - 32vh - 16px);

@@ -1,6 +1,6 @@
 import { CHARACTERS } from '../sim';
 import type { SuddenDeathHud } from '../app/hud';
-import { playerCss } from '../assets/palette';
+import { playerTextStyle } from '../assets/palette';
 import './SuddenDeath.css';
 
 const clock = (sec: number): string => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
@@ -21,7 +21,7 @@ export function SuddenDeathCard({ sd }: { sd: SuddenDeathHud }) {
         <ul data-testid="sudden-death-contenders">
           {sd.contenders.map((c) => (
             <li key={c.id} className={c.isLocal ? 'mine' : ''} data-testid="sudden-death-contender">
-              <b style={{ color: playerCss(c.slot, c.team) }}>{c.isLocal ? 'YOU' : c.name}</b>
+              <b style={playerTextStyle(c.slot, c.team)}>{c.isLocal ? 'YOU' : c.name}</b>
               <span>{CHARACTERS[c.characterId].name}</span>
               <em>
                 {c.kills} elimination{c.kills === 1 ? '' : 's'}
@@ -58,7 +58,7 @@ export function SuddenDeathClock({ sd }: { sd: SuddenDeathHud }) {
               .filter((r) => r.contender)
               .map((r) => (
                 <li key={r.id} className={`${r.isLocal ? 'mine' : ''}${r.alive ? '' : ' out'}`}>
-                  <b style={{ color: playerCss(r.slot, r.team) }}>{r.isLocal ? 'YOU' : r.name}</b>
+                  <b style={playerTextStyle(r.slot, r.team)}>{r.isLocal ? 'YOU' : r.name}</b>
                   <em>{r.kills}</em>
                 </li>
               ))}

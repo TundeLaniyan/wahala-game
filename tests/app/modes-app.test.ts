@@ -80,18 +80,18 @@ function blast(s: GameState, by: number, victim: number): void {
 describe('menu settings become match rules', () => {
   it('each game gets only its own rules; friendly fire and the clock never leak', () => {
     expect(
-      matchRules(rumble({ rumbleMode: 'survival', friendlyFire: true, rumbleMinutes: 10 })),
+      matchRules(rumble({ rumbleMode: 'survival', friendlyFire: true, rumbleMinutes: 5 })),
     ).toMatchObject({
       game: 'survival',
       friendlyFire: false,
       durationSec: null,
     });
     expect(
-      matchRules(rumble({ rumbleMode: 'deathmatch', rumbleMinutes: 10, friendlyFire: true })),
+      matchRules(rumble({ rumbleMode: 'deathmatch', rumbleMinutes: 5, friendlyFire: true })),
     ).toMatchObject({
       game: 'deathmatch',
       friendlyFire: false,
-      durationSec: 600,
+      durationSec: 300,
     });
     expect(matchRules(rumble({ rumbleMode: 'team', rumbleMinutes: 5, friendlyFire: true }))).toMatchObject({
       game: 'team',
@@ -110,12 +110,12 @@ describe('menu settings become match rules', () => {
 
   it('a Classic match after a Team Rumble has no teams, no respawn and the crush; rematch keeps the mode', () => {
     const { controller } = make();
-    controller.start(rumble({ rumbleMode: 'team', friendlyFire: true, rumbleMinutes: 10 }), 4);
+    controller.start(rumble({ rumbleMode: 'team', friendlyFire: true, rumbleMinutes: 5 }), 4);
     let s = controller.state!;
     expect(s.settings.game).toBe('team');
     expect(s.settings.friendlyFire).toBe(true);
     expect(s.players.filter((p) => p.team === 0)).toHaveLength(4);
-    expect(s.config.match.durationTicks).toBe(600 * 60);
+    expect(s.config.match.durationTicks).toBe(300 * 60);
     controller.rematch();
     s = controller.state!;
     expect(s.settings.game).toBe('team');
@@ -281,14 +281,14 @@ describe('menu summary line', () => {
   it('names the game, the size, the clock and the bots', () => {
     expect(
       setupSummary(
-        rumble({ rumbleMode: 'team', rumbleCompetitors: 16, rumbleMinutes: 10, friendlyFire: true }),
+        rumble({ rumbleMode: 'team', rumbleCompetitors: 16, rumbleMinutes: 5, friendlyFire: true }),
       ),
-    ).toBe('Team Rumble · 8 v 8 · 10 min · friendly fire · City Rumble · Rookie bots');
+    ).toBe('Team Deathmatch · 8 v 8 · 5 min · friendly fire · City Rumble · Rookie bots');
     expect(
       setupSummary(
         rumble({ rumbleMode: 'survival', rumbleCompetitors: 32, rumbleMixed: true, difficulty: 'expert' }),
       ),
-    ).toBe('Survival · 32 fighters · City Rumble · Expert bots (mixed)');
+    ).toBe('Last Player Standing · 32 fighters · City Rumble · Expert bots (mixed)');
     expect(
       setupSummary({ ...classic, competitors: 3, botDifficulties: ['rookie', 'expert', 'casual'] }),
     ).toBe('Classic Battle · 3 players · Danfo Bus Park · Rookie-Expert bots');

@@ -10,30 +10,39 @@ import type { GameSettings, RumbleModeSetting } from './settings';
 export interface RumbleModeInfo {
   id: RumbleModeSetting;
   name: string;
+  /** The rule in one line, spelt out for a new player: respawn or not, and what wins. */
+  rule: string;
   /** One line on the mode card. */
   blurb: string;
   /** Short facts (chips) on the mode card. */
   facts: string[];
 }
 
+/**
+ * The City Rumble modes in menu order (decision MD1): Free-for-All first and the default, then Team Deathmatch, then
+ * Last Player Standing (the no-respawn mode). The ids are the sim's rulesets (`deathmatch`, `team`, `survival`).
+ */
 export const RUMBLE_MODE_INFO: readonly RumbleModeInfo[] = [
   {
-    id: 'survival',
-    name: 'Survival',
-    blurb: 'Last one standing. The city closes in street by street.',
-    facts: ['One life', 'Eliminations power you up', 'Up to 32'],
-  },
-  {
     id: 'deathmatch',
-    name: 'Deathmatch',
-    blurb: 'Timed free-for-all. Fall, respawn, go again. Most eliminations wins.',
-    facts: ['Respawns', 'Spawn protection', '5 or 10 min'],
+    name: 'Free-for-All',
+    rule: 'Respawn enabled · highest kills wins',
+    blurb: 'Everyone for themselves on a 3 or 5 minute clock. Fall, respawn, go again.',
+    facts: ['Respawns', 'Spawn protection', '3 or 5 min'],
   },
   {
     id: 'team',
-    name: 'Team Rumble',
-    blurb: 'Green v White. You and your bot squad against the other side.',
-    facts: ['Teams', 'Respawns', 'Most team eliminations'],
+    name: 'Team Deathmatch',
+    rule: 'Respawn enabled · team with most kills wins',
+    blurb: 'Green v White. You and your bot squad against the other side, on the clock.',
+    facts: ['Two teams', 'Respawns', 'Most team kills'],
+  },
+  {
+    id: 'survival',
+    name: 'Last Player Standing',
+    rule: 'No respawn · last survivor wins',
+    blurb: 'One life. The city closes in street by street until one fighter is left.',
+    facts: ['One life', 'Kills power you up', 'Up to 32'],
   },
 ];
 
@@ -49,7 +58,7 @@ function botsLabel(s: GameSettings): string {
   return lo === hi ? `${difficultyLabel(lo)} bots` : `${difficultyLabel(lo)}-${difficultyLabel(hi)} bots`;
 }
 
-/** e.g. "Team Rumble · 8 v 8 · 10 min · City Rumble · Rookie bots". */
+/** e.g. "Team Deathmatch · 8 v 8 · 5 min · City Rumble · Rookie bots". */
 export function setupSummary(s: GameSettings): string {
   const arena = getArena(matchArenaId(s));
   const n = competitorCount(s);

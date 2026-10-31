@@ -1,5 +1,5 @@
 /**
- * Touch layout (decision MC1): exactly two action buttons, A in the lower-right and B diagonally above-left of
+ * Touch layout (decisions MC1, MC2): exactly two action buttons, A the lower-left button of the cluster and B diagonally above and right of
  * it (never stacked), the cluster clear of the screen edge and the safe areas, a large movement pad that says
  * the whole pad is the touch area, and visible pressed / disabled / remote states. Portrait, landscape, narrow
  * phones and safe-area devices (the safe areas are simulated with the --test-sa-* variables the touch layer
@@ -63,7 +63,7 @@ test.describe('touch layout', () => {
   }
 
   for (const [w, h, name] of SIZES) {
-    test(`${name} ${w}x${h}: A lower-right, B diagonally above-left, clear of edges, big pad`, async ({
+    test(`${name} ${w}x${h}: A lower-left, B diagonally above-right, clear of edges, big pad`, async ({
       page,
     }, info) => {
       await enter(page, w, h);
@@ -71,21 +71,21 @@ test.describe('touch layout', () => {
       expect(m.count).toBe(2);
       const a = centre(m.a);
       const b = centre(m.b);
-      // A is the lower-right button, B sits above and to the left of it
-      expect(b.x).toBeLessThan(a.x);
+      // A is the lower-left button of the cluster, B sits above and to the right of it (a physical controller)
+      expect(b.x).toBeGreaterThan(a.x);
       expect(b.y).toBeLessThan(a.y);
       // diagonal, not stacked: the horizontal offset is a real share of the button size (>= 25 % of A)
-      expect(a.x - b.x).toBeGreaterThanOrEqual(m.a.w * 0.25);
+      expect(b.x - a.x).toBeGreaterThanOrEqual(m.a.w * 0.25);
       // round buttons: their circles never touch (the square boxes may share a corner)
-      expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual((m.a.w + m.b.w) / 2);
-      // A is in the lower-right quarter of the screen
+      expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeGreaterThanOrEqual((m.a.w + m.b.w) / 2);
+      // the cluster lives in the lower-right quarter of the screen
       expect(a.x).toBeGreaterThan(m.vw * 0.6);
       expect(a.y).toBeGreaterThan(m.vh * 0.55);
       // tap targets >= 44 px, A at least as big as B
       expect(m.b.w).toBeGreaterThanOrEqual(44);
       expect(m.a.w).toBeGreaterThanOrEqual(m.b.w);
       // away from the screen edge (>= 12 px) on the right and bottom
-      expect(m.vw - (m.a.x + m.a.w)).toBeGreaterThanOrEqual(12);
+      expect(m.vw - Math.max(m.a.x + m.a.w, m.b.x + m.b.w)).toBeGreaterThanOrEqual(12);
       expect(m.vh - (m.a.y + m.a.h)).toBeGreaterThanOrEqual(12);
       // the movement pad: bounded, clear of the edge, never under the buttons, and big
       expect(m.pad.x).toBeGreaterThanOrEqual(12);
@@ -115,7 +115,7 @@ test.describe('touch layout', () => {
         root.setProperty('--test-sa-b', `${i.b}px`);
       }, inset);
       const m = await boxes(page);
-      expect(m.vw - (m.a.x + m.a.w)).toBeGreaterThanOrEqual(inset.r + 6);
+      expect(m.vw - Math.max(m.a.x + m.a.w, m.b.x + m.b.w)).toBeGreaterThanOrEqual(inset.r + 6);
       expect(m.vh - (m.a.y + m.a.h)).toBeGreaterThanOrEqual(inset.b + 6);
       expect(m.pad.x).toBeGreaterThanOrEqual(inset.l + 6);
       expect(m.vh - (m.pad.y + m.pad.h)).toBeGreaterThanOrEqual(inset.b + 6);

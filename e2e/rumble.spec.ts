@@ -53,10 +53,15 @@ test.describe('main menu', () => {
     expect(entry.x + entry.width).toBeLessThanOrEqual(640);
     await shot(page, info.project.name, 'menu-phone-home');
     await page.getByTestId('home-rumble').click();
-    await expect(page.getByTestId('mode-survival')).toHaveAttribute('aria-current', 'true');
+    await expect(page.getByTestId('mode-deathmatch')).toHaveAttribute('aria-current', 'true'); // Free-for-All is the default
+    await expect(page.getByTestId('mode-rule-deathmatch')).toHaveText('Respawn enabled · highest kills wins');
+    await expect(page.getByTestId('mode-rule-team')).toHaveText(
+      'Respawn enabled · team with most kills wins',
+    );
+    await expect(page.getByTestId('mode-rule-survival')).toHaveText('No respawn · last survivor wins');
     await shot(page, info.project.name, 'menu-phone-rumble');
 
-    // Survival has no length and no friendly fire; Team Rumble adds both (and team splits)
+    // Last Player Standing has no length and no friendly fire; Team Deathmatch adds both (and team splits)
     await page.getByTestId('mode-survival').click(); // a tap opens the arena and settings
     await expect(page.getByTestId('rumble-setup')).toBeVisible();
     await expect(page.getByTestId('minutes-5')).toHaveCount(0);
@@ -72,7 +77,7 @@ test.describe('main menu', () => {
     await page.getByTestId('menu-continue').click();
     await expect(page.getByTestId('menu-fighter')).toBeVisible();
     await page.getByTestId('menu-continue').click();
-    await expect(page.getByTestId('ready-mode')).toContainText('Team Rumble');
+    await expect(page.getByTestId('ready-mode')).toContainText('Team Deathmatch');
     await expect(page.getByTestId('ready-opponents')).toContainText('4 v 4');
     await expect(page.getByTestId('ready-rules')).toContainText('Friendly fire: on');
     await settled(page);
@@ -100,7 +105,7 @@ test.describe('main menu', () => {
     await page.getByTestId('quit').click();
     await expect(page.getByTestId('menu-home')).toBeVisible();
     await expect(page.getByTestId('setup-summary')).toContainText(
-      'Team Rumble · 4 v 4 · 5 min · friendly fire',
+      'Team Deathmatch · 4 v 4 · 5 min · friendly fire',
     );
     await page.getByTestId('home-classic').click();
     await expect(page.getByTestId('players-4')).toBeVisible();
@@ -118,7 +123,7 @@ test.describe('main menu', () => {
   });
 });
 
-test.describe('City Rumble: Deathmatch respawns', () => {
+test.describe('City Rumble: Free-for-All respawns', () => {
   test('down means back soon: countdown, no skip, spawn protection, K/D/A results', async ({
     page,
   }, info) => {
@@ -127,9 +132,9 @@ test.describe('City Rumble: Deathmatch respawns', () => {
     page.on('pageerror', (e) => errors.push(e.message));
     await open(page);
     await chooseRumble(page, 'deathmatch', 8);
-    await page.getByTestId('minutes-10').click();
+    await page.getByTestId('minutes-3').click();
     await startMatch(page, { game: 'rumble' });
-    expect((await settingsOf(page)).duration).toBe(600 * 60);
+    expect((await settingsOf(page)).duration).toBe(180 * 60);
     await expect(page.getByTestId('dm-rank')).toBeVisible();
 
     // the local player is knocked out by player 3

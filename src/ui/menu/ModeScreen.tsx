@@ -17,6 +17,8 @@ interface ModeCard {
   game: string;
   name: string;
   tag: string;
+  /** The rule, spelt out (respawn or not, what wins). */
+  rule: string;
   blurb: string;
   facts: [string, string][];
   /** A real stage preview as the card picture. */
@@ -26,31 +28,32 @@ interface ModeCard {
 export const MODE_CARDS: readonly ModeCard[] = [
   ...RUMBLE_MODE_INFO.map((m): ModeCard => {
     const facts: Record<RumbleModeSetting, [string, string][]> = {
-      survival: [
-        ['Fighters', '8 to 32'],
-        ['Lives', 'One'],
-        ['Win', 'Last one standing'],
-      ],
       deathmatch: [
-        ['Length', '5 or 10 min'],
+        ['Length', '3 or 5 min'],
         ['Lives', 'Respawn'],
-        ['Win', 'Most eliminations'],
+        ['Win', 'Highest kills'],
       ],
       team: [
         ['Teams', 'Green v White'],
         ['Lives', 'Respawn'],
-        ['Friendly fire', 'Your choice'],
+        ['Win', 'Team with most kills'],
+      ],
+      survival: [
+        ['Fighters', '8 to 32'],
+        ['Lives', 'One, no respawn'],
+        ['Win', 'Last survivor'],
       ],
     };
     return {
       id: m.id,
       game: 'City Rumble',
       name: m.name,
-      tag: m.id === 'survival' ? 'Flagship' : m.id === 'team' ? 'Squads' : 'Timed',
+      tag: m.id === 'deathmatch' ? 'Default' : m.id === 'team' ? 'Squads' : 'No respawn',
+      rule: m.rule,
       blurb: m.blurb,
       facts: facts[m.id],
       preview: stagePreviewUrl(
-        { survival: 'rumbleOshodi', deathmatch: 'rumbleLagosIsland', team: 'rumbleLekkiNight' }[m.id],
+        { deathmatch: 'rumbleLagosIsland', team: 'rumbleLekkiNight', survival: 'rumbleOshodi' }[m.id],
       ),
     };
   }),
@@ -59,6 +62,7 @@ export const MODE_CARDS: readonly ModeCard[] = [
     game: 'Arena',
     name: 'Classic Battle',
     tag: '2-4 fighters',
+    rule: 'No respawn · last survivor wins',
     blurb: 'The quick arena match: last one standing, and the Wahala Crush closes the board.',
     facts: [
       ['Fighters', '2 to 4'],
@@ -110,6 +114,9 @@ export function ModeScreen() {
               <span className="mn-mode-text">
                 <small>{m.game}</small>
                 <b>{m.name}</b>
+                <span className="mn-mode-rule" data-testid={`mode-rule-${m.id}`}>
+                  {m.rule}
+                </span>
                 <span className="mn-mode-blurb">{m.blurb}</span>
                 <span className="mn-mode-facts">
                   {m.facts.map(([k, v]) => (
