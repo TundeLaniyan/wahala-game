@@ -40,10 +40,20 @@ export function resolveAssistLevel(setting: MoveAssistSetting, device: InputSour
   return device === 'touch' ? 'full' : 'basic';
 }
 
-/** How many tiles ahead a turn pressed early is looked for (full assistance). */
+/** How many tiles ahead a turn pressed early is looked for (every assisted level; decision MV1). */
 export const TURN_REACH_TILES = 2;
 /** A thumb switching straight from one direction to another waits this long, so a swipe through the stick centre cannot leak a stray step. */
 export const SWITCH_SETTLE_TICKS = 2;
+
+/**
+ * A turn tapped while walking is remembered this long after the finger came off, so a quick tap a tile or two
+ * before the corner is still taken at the corner (assisted levels only).
+ */
+export const TURN_INTENT_TICKS = 24;
+/** A press waits this long for the player to be able to step (assisted levels; the slowest step is 13 ticks). */
+export const ASSIST_BUFFER_TICKS = 14;
+/** A direction already refused (wall, crate, ...) is not offered to the simulation again for this long (the bump guard). */
+export const BUMP_COOLDOWN_TICKS = 24;
 
 export const PERPENDICULAR: Readonly<Record<Dir, readonly [Dir, Dir]>> = {
   up: ['left', 'right'],
@@ -115,6 +125,43 @@ export function planSidestep(
     const s = board.vec(side);
     return canStep(board, held, board.x + s.dx, board.y + s.dy);
   });
+  if (options.length === 1) return options[0]!;
+  if (options.length === 2) return prefer.find((d): d is Dir => !!d && options.includes(d)) ?? null;
+  return null;
+}
+
+/**
+ * Bend following: `held` is blocked by a wall (never a crate: a player pressed against one is about to bomb it)
+ * in a one-tile-wide corridor and exactly one way round is a safe step - the bend of the corridor. `avoid` (the way the player just came
+ * from) is never taken, so a dead end never turns the player round; with two ways (a junction) only the
+ * thumb's own preference decides. `along` is the way the player is already walking (just round a bend): they keep
+ * following the corridor while it stays one tile wide. Returns the direction, or null.
+ */
+export function planBend(
+  board: MoveBoard,
+  held: Dir,
+  prefer: readonly (Dir | null | undefined)[],
+  avoid?: Dir | null,
+  along?: Dir | null,
+): Dir | null {
+  const f = board.vec(held);
+  if (board.soft(board.x + f.dx, board.y + f.dy)) return null;
+  // already walking round the bend: stay in the corridor while both walls across it are still there
+  if (along && PERPENDICULAR[held].includes(along) && canStep(board, along)) {
+    const across = board.open(board.x + f.dx, board.y + f.dy) || board.open(board.x - f.dx, board.y - f.dy);
+    if (!across) return along;
+  }
+  // a corridor, not the corner of a room: the tile behind is one tile wide (walls or crates on both sides)
+  const bx = board.x - f.dx;
+  const by = board.y - f.dy;
+  const narrow =
+    board.open(bx, by) &&
+    PERPENDICULAR[held].every((side) => {
+      const v = board.vec(side);
+      return !board.open(bx + v.dx, by + v.dy);
+    });
+  if (!narrow) return null;
+  const options = PERPENDICULAR[held].filter((side) => side !== avoid && canStep(board, side));
   if (options.length === 1) return options[0]!;
   if (options.length === 2) return prefer.find((d): d is Dir => !!d && options.includes(d)) ?? null;
   return null;

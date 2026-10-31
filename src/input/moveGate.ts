@@ -1,5 +1,16 @@
 import type { Dir } from '../sim';
-import { PERPENDICULAR, TURN_REACH_TILES, canStep, planSidestep, planTurn } from './moveAssist';
+import {
+  ASSIST_BUFFER_TICKS,
+  BUMP_COOLDOWN_TICKS,
+  PERPENDICULAR,
+  TURN_INTENT_TICKS,
+  TURN_REACH_TILES,
+  canStep,
+  planBend,
+  planSidestep,
+  planTurn,
+} from './moveAssist';
+import { OPPOSITE } from '../sim';
 import type { AssistLevel, MoveBoard } from './moveAssist';
 
 /** A press arriving up to this long before the player can step is remembered (one move, never a queue). */
@@ -40,12 +51,16 @@ export interface GateAssist {
  *  - releasing stops repeating immediately and nothing is carried over;
  *  - corner turns (when the caller passes `legal`): a perpendicular turn that is blocked right now, made
  *    while walking and still held, keeps the player walking the way they were going for at most
- *    `TURN_BUFFER_TILES` tile(s) and is taken on the first tile where it is legal. Every hand-over is
+ *    `TURN_BUFFER_TILES` tile(s) and is taken on the first tile where it is legal. Assisted levels (decision
+ *    MV1) plan up to `TURN_REACH_TILES` ahead, remember a tapped turn for `TURN_INTENT_TICKS` after release,
+ *    buffer a press a little longer and guard against bumping the same wall or crate every step. Every hand-over is
  *    still exactly one step; a turn that never opens up is simply delivered (the player faces the wall
  *    and stops, as before) - never a skipped tile, never a turn the player did not ask for.
  */
 export class MoveGate {
-  private pending: { dir: Dir; expires: number; notBefore: number } | null = null;
+  private pending: { dir: Dir; pressed: number; until: number; notBefore: number } | null = null;
+  /** The last direction the simulation was handed although it could do nothing (wall, crate ...). */
+  private bump: { dir: Dir; tick: number } | null = null;
   private readonly since = new Map<Dir, number>();
   private last: { dir: Dir; tick: number } | null = null;
   private carried = 0;
@@ -58,7 +73,8 @@ export class MoveGate {
    */
   press(dir: Dir, tick: number, settle = 0): void {
     this.since.set(dir, tick);
-    this.pending = { dir, expires: tick + MOVE_BUFFER_TICKS, notBefore: tick + settle };
+    this.pending = { dir, pressed: tick, until: 0, notBefore: tick + settle };
+    this.bump = null; // a fresh press is always offered to the simulation
     this.carried = 0;
     this.wishTaken = false;
   }
@@ -81,14 +97,18 @@ export class MoveGate {
     for (const dir of [...this.since.keys()]) if (!active.has(dir)) this.since.delete(dir);
     if (held && !this.since.has(held)) this.since.set(held, tick); // already down when we first saw it
 
-    if (this.pending && tick > this.pending.expires) this.pending = null;
+    // a press waits `MOVE_BUFFER_TICKS` for the player to be able to step (a little longer when assisted: the
+    // slowest step outlasts the plain buffer); a carried turn keeps it alive from tile to tile
+    const buffer = assist ? ASSIST_BUFFER_TICKS : MOVE_BUFFER_TICKS;
+    if (this.pending && tick > Math.max(this.pending.until, this.pending.pressed + buffer))
+      this.pending = null;
     if (this.pending && canMove && tick >= this.pending.notBefore) {
-      const { dir, notBefore } = this.pending;
-      const carry = legal ? this.carryFor(dir, tick, active, legal, assist) : null;
+      const { dir, notBefore, pressed } = this.pending;
+      const carry = legal ? this.carryFor(dir, tick, active, legal, assist, pressed) : null;
       if (carry) {
         // keep the turn for the next tile; walk on one tile the way we were going
         this.carried++;
-        this.pending = { dir, expires: tick + TURN_CONTINUE_TICKS, notBefore };
+        this.pending = { dir, pressed, until: tick + TURN_CONTINUE_TICKS, notBefore };
         return this.deliver(carry, tick);
       }
       const delayed = this.carried > 0;
@@ -101,10 +121,15 @@ export class MoveGate {
     }
     if (held && tick - this.since.get(held)! >= MOVE_REPEAT_DELAY_TICKS) {
       if (!canMove) return held;
-      return this.deliver(
-        assist?.level === 'full' && legal ? this.assistHold(held, legal, assist) : held,
-        tick,
-      );
+      const dir = assist?.level === 'full' && legal ? this.assistHold(held, legal, assist, tick) : held;
+      // bump guard (assisted levels): a direction the simulation already refused is not offered again every
+      // step; it is retried as soon as it would do something (the obstacle moved) or after the cooldown
+      if (assist && legal && !legal(dir)) {
+        const b = this.bump;
+        if (b && b.dir === dir && tick - b.tick < BUMP_COOLDOWN_TICKS) return null;
+        this.bump = { dir, tick };
+      }
+      return this.deliver(dir, tick);
     }
     return null;
   }
@@ -120,17 +145,19 @@ export class MoveGate {
     active: ReadonlySet<Dir>,
     legal: (d: Dir) => boolean,
     assist?: GateAssist,
+    pressed = 0,
   ): Dir | null {
     const last = this.last;
     if (!last || tick - last.tick > TURN_CONTINUE_TICKS) return null; // not walking: no carrying
     if (!PERPENDICULAR[dir].includes(last.dir)) return null;
-    if (!active.has(dir) || legal(dir) || !legal(last.dir)) return null;
-    if (assist?.level === 'full') {
+    // an assisted turn is also remembered after the finger came off (a quick tap before the corner)
+    const wanted = active.has(dir) || (!!assist && tick - pressed <= TURN_INTENT_TICKS);
+    if (!wanted || legal(dir) || !legal(last.dir)) return null;
+    if (assist) {
       const reach = TURN_REACH_TILES - this.carried;
       return reach > 0 && planTurn(assist.board(), last.dir, dir, reach) !== null ? last.dir : null;
     }
     if (this.carried >= TURN_BUFFER_TILES) return null;
-    if (assist && !canStep(assist.board(), last.dir)) return null;
     return last.dir;
   }
 
@@ -140,7 +167,7 @@ export class MoveGate {
    *     the first legal junction (then the primary direction gets its step before the wish is taken again);
    *  2. the direction is blocked by a wall and the opening is one tile along the corridor (a sidestep).
    */
-  private assistHold(held: Dir, legal: (d: Dir) => boolean, assist: GateAssist): Dir {
+  private assistHold(held: Dir, legal: (d: Dir) => boolean, assist: GateAssist, tick: number): Dir {
     const board = assist.board();
     const wish = assist.wish ?? null;
     if (wish && wish !== held && PERPENDICULAR[held].includes(wish) && canStep(board, wish)) {
@@ -151,7 +178,13 @@ export class MoveGate {
     }
     this.wishTaken = false;
     if (legal(held)) return held;
-    return planSidestep(board, held, [wish, this.last?.dir]) ?? held;
+    const prefer = [wish, this.last?.dir];
+    const around = planSidestep(board, held, prefer);
+    if (around) return around;
+    // a corridor bend: the way on is round the corner, never back where the player came from
+    const came = this.last && this.last.dir !== held ? OPPOSITE[this.last.dir] : null;
+    const along = this.last && tick - this.last.tick <= TURN_CONTINUE_TICKS ? this.last.dir : null;
+    return planBend(board, held, prefer, came, along) ?? held;
   }
 
   private deliver(dir: Dir, tick: number): Dir {
@@ -164,6 +197,7 @@ export class MoveGate {
     this.pending = null;
     this.since.clear();
     this.last = null;
+    this.bump = null;
     this.carried = 0;
     this.wishTaken = false;
   }

@@ -108,7 +108,9 @@ describe('toggle off is the previous behaviour exactly', () => {
     }
   });
 
-  it('basic assistance on a board with nothing dangerous is also identical (keyboard / gamepad under Auto)', () => {
+  it('basic assistance only ever differs from the plain gate by the three corner helpers (decision MV1)', () => {
+    // with every direction legal (no corner to plan, nothing to bump) basic is the plain gate, apart from the
+    // slightly longer press buffer: whenever the plain gate hands a move over, basic hands over the same one
     for (let seed = 40; seed <= 60; seed++) {
       const now = new MoveGate();
       const was = new LegacyMoveGate();
@@ -119,9 +121,9 @@ describe('toggle off is the previous behaviour exactly', () => {
           was.press(e.press, e.tick);
         }
         const act = new Set(e.active);
-        const a = now.next(e.tick, e.held, act, e.canMove, (d) => e.legal[d], assist);
-        const b = was.next(e.tick, e.held, act, e.canMove, (d) => e.legal[d]);
-        expect([seed, e.tick, a]).toEqual([seed, e.tick, b]);
+        const a = now.next(e.tick, e.held, act, e.canMove, () => true, assist);
+        const b = was.next(e.tick, e.held, act, e.canMove, () => true);
+        if (b !== null) expect([seed, e.tick, a]).toEqual([seed, e.tick, b]);
       }
     }
   });
@@ -167,21 +169,21 @@ describe('keyboard and gamepad stay as responsive as before', () => {
     },
   );
 
-  it('under Auto the keyboard keeps the plain corner buffer: a turn two tiles early is NOT carried, no sidestep', () => {
+  it('under Auto the keyboard now plans a turn up to two tiles early (decision MV1) but still never slides or follows a bend', () => {
     const corner = ['###########', '#.........#', '#####.#####', '#####.#####', '###########'];
     const r = new AssistRig({ map: corner, start: [1, 1], assist: 'auto' });
     r.keyDown('right');
     r.until(3, 1);
     r.keyUp('right');
-    r.keyDown('down');
+    r.keyDown('down'); // two tiles before the side street at x = 5
     r.step(120);
     expect(r.input.assistLevel).toBe('basic');
-    expect(r.at[1]).toBe(1); // faced the wall, no help
+    expect(r.at).toEqual([5, 3]); // carried along the row and taken at the opening
     const alley = ['#####.###', '#####.###', '#.......#', '#########'];
     const w = new AssistRig({ map: alley, start: [4, 2], assist: 'auto' });
     w.keyDown('up');
     w.step(150);
-    expect(w.at).toEqual([4, 2]);
+    expect(w.at).toEqual([4, 2]); // no sidestep for the keyboard: it faces the wall
   });
 
   it('the keyboard corner buffer (one tile) still works under Auto, and a flame on the carried tile cancels the carry', () => {
