@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import type { Mesh } from 'three';
 import type { BufferAttribute } from 'three';
 import { getArena } from '../../src/sim';
-import { OSHODI_TRACK_X, OSHODI_TRACK_Y } from '../../src/sim/arenas/rumbleOshodiMetro';
+import { OSHODI_TRACK_X, OSHODI_TRACK_Y } from '../../src/sim/arenas/rumbleOshodi';
 import {
   OSHODI_COVER,
   OSHODI_COVER_LETTERS,
@@ -21,7 +21,7 @@ import { NEW_ARENA_ART } from '../../src/render/arenas/newArenas';
 import { obstacleStyle } from '../../src/render/assets/obstacleStyles';
 import { softVariantFor } from '../../src/render/assets/props';
 
-const a = getArena('rumbleOshodiMetro');
+const a = getArena('rumbleOshodi');
 const W = a.layout[0]!.length;
 const H = a.layout.length;
 
@@ -103,11 +103,11 @@ describe('Oshodi board cover', () => {
   });
 
   it('is registered as the stage cover and claims exactly the concrete tiles', () => {
-    expect(NEW_ARENA_ART().rumbleOshodiMetro!.cover).toBeDefined();
+    expect(NEW_ARENA_ART().rumbleOshodi!.cover).toBeDefined();
     for (let y = 0; y < H; y++)
       for (let x = 0; x < W; x++) expect(cover.covers(y * W + x), `${x},${y}`).toBe(a.layout[y]![x] === '#');
     expect(cover.maxReach).toBeGreaterThanOrEqual(2);
-    expect(NEW_ARENA_ART().rumbleOshodiMetro!.cover!({ width: 41, height: 31 })).toBeNull();
+    expect(NEW_ARENA_ART().rumbleOshodi!.cover!({ width: 41, height: 31 })).toBeNull();
   });
 
   it('is cheap: a few merged meshes and a bounded triangle count (environment and draw-call budget)', () => {
@@ -191,7 +191,7 @@ describe('Oshodi crates', () => {
     'prop_soft_tyres',
   ];
   it('authored barriers are barricades and tyre stacks; each district has its own clutter; five families in all', () => {
-    expect(obstacleStyle('rumbleOshodiMetro').softFor).toBeDefined();
+    expect(obstacleStyle('rumbleOshodi').softFor).toBeDefined();
     a.layout.forEach((row, y) =>
       [...row].forEach((c, x) => {
         if (c === 'x')

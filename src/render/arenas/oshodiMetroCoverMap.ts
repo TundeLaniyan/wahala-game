@@ -1,6 +1,6 @@
 /**
  * Oshodi Transport Metropolis - the render-only cover map: what every permanent ('#') tile of
- * `src/sim/arenas/rumbleOshodiMetro.ts` really is. Each letter is a cover kind; a cover GROUP is a connected
+ * `src/sim/arenas/rumbleOshodi.ts` really is. Each letter is a cover kind; a cover GROUP is a connected
  * run of one letter (one terminal wing, one row of parked buses, one skywalk pier) and is drawn as one object by
  * `oshodiMetroCover.ts`. Pure data (no Three), checked against the sim layout by
  * tests/render/oshodi-metro-cover.test.ts: every '#' has a letter and every letter sits on a '#'.
@@ -75,7 +75,7 @@ export const OSHODI_COVER: readonly string[] = [
   'QQ..................................RR.......', // 9
   'QQ........TTTT..TTTT......WWW.............AAA', // 10
   'QQOOO.OOO.TTTT..TTTT....II....GG......LK..AAA', // 11
-  'QQ.........S......S.....II....GG..........AAA', // 12
+  'QQ.........S............II....GG..........AAA', // 12
   'QQ........BBBB..BBBB.CS......................', // 13
   '.............................................', // 14
   '.............................................', // 15

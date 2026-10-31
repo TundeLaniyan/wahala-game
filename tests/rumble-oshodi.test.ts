@@ -8,6 +8,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  ARENAS,
+  RUMBLE_ARENA_IDS,
   chooseAutoVehicle,
   createGame,
   getArena,
@@ -18,10 +20,10 @@ import {
 } from '../src/sim';
 import type { DistrictDef, GameState, StageEvent, VehicleKind } from '../src/sim';
 import { CHARACTERS } from '../src/sim/data/characters';
-import { OSHODI_TRACK_X, OSHODI_TRACK_Y } from '../src/sim/arenas/rumbleOshodiMetro';
+import { OSHODI_TRACK_X, OSHODI_TRACK_Y } from '../src/sim/arenas/rumbleOshodi';
 import { put, sandbox } from './helpers';
 
-const a = getArena('rumbleOshodiMetro');
+const a = getArena('rumbleOshodi');
 const W = a.layout[0]!.length;
 const H = a.layout.length;
 const TPS = 60;
@@ -75,7 +77,7 @@ describe('Oshodi Metropolis: the board', () => {
   it('is a non-mirrored 45 x 33 Rumble stage with its own name and id', () => {
     expect([W, H]).toEqual([45, 33]);
     for (const row of a.layout) expect(row).toMatch(/^[#=._x$]{45}$/);
-    expect(a.id).toBe('rumbleOshodiMetro');
+    expect(a.id).toBe('rumbleOshodi');
     expect(a.name).toBe('Oshodi Transport Metropolis');
     expect(a.kind).toBe('rumble');
     expect(a.mirrorSoftBlocks).toBe(false);
@@ -92,11 +94,18 @@ describe('Oshodi Metropolis: the board', () => {
     expect(tb).toBeGreaterThan(100);
   });
 
-  it('is its own stage: the older Oshodi Rush Hour is untouched next to it', () => {
-    const old = getArena('rumbleOshodi');
-    expect(old.name).toBe('Oshodi Rush Hour');
-    expect([old.layout[0]!.length, old.layout.length]).toEqual([41, 31]);
-    expect(old.districts).toBeUndefined();
+  it('REPLACES the old generic Oshodi: one Oshodi stage, under the canonical id, with no second card or leftover id', () => {
+    expect(RUMBLE_ARENA_IDS.filter((id) => /oshodi/i.test(id))).toEqual(['rumbleOshodi']);
+    expect(RUMBLE_ARENA_IDS[0]).toBe('rumbleOshodi'); // still the first (default) Rumble stage
+    expect(ARENAS['rumbleOshodiMetro']).toBeUndefined();
+    // every Rumble stage name is distinct and none is the retired "Oshodi Rush Hour"
+    const names = RUMBLE_ARENA_IDS.map((id) => getArena(id).name);
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).not.toContain('Oshodi Rush Hour');
+    expect(names.filter((n) => /oshodi/i.test(n))).toEqual(['Oshodi Transport Metropolis']);
+    // the retired mirrored 41 x 31 board is gone: this is the 45 x 33 six-district board
+    expect([W, H]).toEqual([45, 33]);
+    expect(districts).toHaveLength(6);
   });
 
   it('keeps the perimeter closed except the road mouths, and the camera (south) edge low and solid', () => {
@@ -417,6 +426,19 @@ describe('Oshodi Metropolis: supplies, core and attack lanes', () => {
     expect([...a.layout[16]!.slice(x0, x0 + keep.w!)].every((c) => c === '=')).toBe(true);
   });
 
+  it('the whole Survival core is one connected region, so nobody is cut off in it when the city has closed', () => {
+    const keep = a.config!.crush!.keepCore!;
+    const x0 = Math.floor((W - keep.w!) / 2);
+    const y0 = Math.floor((H - keep.h!) / 2);
+    const inCore = (x: number, y: number): boolean =>
+      x >= x0 && x < x0 + keep.w! && y >= y0 && y < y0 + keep.h!;
+    const tiles: { x: number; y: number }[] = [];
+    for (let y = y0; y < y0 + keep.h!; y++)
+      for (let x = x0; x < x0 + keep.w!; x++) if (open(x, y)) tiles.push({ x, y });
+    // regression: a shelter used to wall tile (17, 12) off from the rest of the core
+    expect(dist(tiles[0]!, inCore).size).toBe(tiles.length);
+  });
+
   it('endgame trap waves land on walkable core tiles only', () => {
     const keep = a.config!.crush!.keepCore!;
     const x0 = Math.floor((W - keep.w!) / 2);
@@ -654,7 +676,7 @@ describe('Oshodi Metropolis: future boss slot', () => {
     const text = JSON.stringify([a.info, a.name]);
     expect(text).not.toMatch(/boss/i);
     expect(Object.keys(CHARACTERS).some((id) => /boss/i.test(id))).toBe(false);
-    for (const other of ['rumbleOshodi', 'rumbleOjuelegba', 'rumbleApapa'])
+    for (const other of ['rumbleOjuelegba', 'rumbleApapa'])
       expect(getArena(other).futureBoss, other).toBeUndefined();
   });
 });

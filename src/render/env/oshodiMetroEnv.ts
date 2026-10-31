@@ -1,7 +1,7 @@
 /**
  * The living environment of Oshodi Transport Metropolis (City Rumble), as data relative to the board size.
  *
- * Aligned to the six-district board of `src/sim/arenas/rumbleOshodiMetro.ts` (45 x 33): the main road crosses
+ * Aligned to the six-district board of `src/sim/arenas/rumbleOshodi.ts` (45 x 33): the main road crosses
  * the board east-west on rows 15-18 and leaves it through the west and east mouths; the elevated expressway
  * runs east-west north of the board; the terminal canopy and its queues stand north of the plaza; the station
  * forecourt and the Cappa Ground's touchline are on the east side; the trading streets' pavement is west.
@@ -142,7 +142,7 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
     },
   ];
   return {
-    id: 'rumbleOshodiMetro',
+    id: 'rumbleOshodi',
     seed: 0x05b0d1e5,
     traffic: [
       // the elevated expressway, both ways (the Apapa approach): buses, Danfos, the odd truck, taxis. Ambient

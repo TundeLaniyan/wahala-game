@@ -40,7 +40,6 @@ import {
   RUMBLE_OJUELEGBA_LOOK,
   RUMBLE_OJUELEGBA_SET,
 } from './rumbleOjuelegbaArt';
-import { RUMBLE_OSHODI_FLOOR, RUMBLE_OSHODI_LOOK, RUMBLE_OSHODI_SET } from './rumbleOshodiArt';
 import { THIRD_MAINLAND_FLOOR, THIRD_MAINLAND_LOOK, THIRD_MAINLAND_SET } from './thirdMainland';
 import { YABA_FLOOR, YABA_LOOK, YABA_SET } from './yaba';
 
@@ -68,7 +67,6 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
     thirdMainland: { look: THIRD_MAINLAND_LOOK, set: THIRD_MAINLAND_SET, floor: THIRD_MAINLAND_FLOOR },
     cityRumble: { look: RUMBLE_LOOK, set: RUMBLE_SET, floor: RUMBLE_FLOOR },
     // City Rumble V2 stages
-    rumbleOshodi: { look: RUMBLE_OSHODI_LOOK, set: RUMBLE_OSHODI_SET, floor: RUMBLE_OSHODI_FLOOR },
     rumbleLagosIsland: {
       look: RUMBLE_LAGOS_ISLAND_LOOK,
       set: RUMBLE_LAGOS_ISLAND_SET,
@@ -88,7 +86,7 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
       floor: RUMBLE_LEKKI_NIGHT_FLOOR,
     },
     // Lagos arenas, build 1: Oshodi Transport Metropolis (day by default, a night look behind ?tod=night)
-    rumbleOshodiMetro: {
+    rumbleOshodi: {
       look: OSHODI_METRO_LOOK,
       nightLook: OSHODI_METRO_NIGHT_LOOK,
       set: OSHODI_METRO_SET,

@@ -17,12 +17,11 @@ const MOOD: Record<string, [string, string]> = {
   surulerePowerYard: ['#e8d27a', '#4a4030'],
   yabaAfterDark: ['#7a2a8a', '#0a0612'],
   thirdMainland: ['#f0a050', '#3a2440'],
-  rumbleOshodi: ['#d8c49a', '#3e3a34'],
   rumbleLagosIsland: ['#d89a4a', '#4a2414'],
   rumbleOjuelegba: ['#8a7a66', '#1e1a18'],
   rumbleApapa: ['#6a8aa0', '#24323c'],
   rumbleLekkiNight: ['#2a3a52', '#07090d'],
-  rumbleOshodiMetro: ['#9fb0b8', '#1a2430'],
+  rumbleOshodi: ['#9fb0b8', '#1a2430'],
   cityRumble: ['#ff6a2a', '#1a0f08'],
 };
 

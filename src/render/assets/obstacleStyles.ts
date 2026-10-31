@@ -102,7 +102,7 @@ const OSHODI_METRO_CLUTTER: Readonly<Record<string, readonly string[]>> = {
   cappaWorks: ['prop_soft_drums', 'prop_soft_tyres', 'prop_soft_drums', 'prop_soft_crates'],
 };
 function oshodiMetroSoft(x: number, y: number): string | undefined {
-  const a = getArena('rumbleOshodiMetro');
+  const a = getArena('rumbleOshodi');
   const h = tileHash(x, y);
   // the authored barriers (blast them for a shortcut) are road barricades and tyre stacks
   if (a.layout[y]?.[x] === 'x') return h % 2 ? 'prop_soft_barrier' : 'prop_soft_tyres';
@@ -212,18 +212,6 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
     },
   }),
   // ---- City Rumble V2 stages
-  rumbleOshodi: style({
-    note: 'flyover piers under the expressway; precast bus-park pillars in the blocks; tyres, crates, barricades',
-    pillars: ['prop_pillar_a', 'prop_pillar_b', 'prop_pillar_c'],
-    pillarZones: [{ x0: 0, y0: 12, x1: 40, y1: 18, pillars: ['prop_pillar_pier'] }],
-    soft: {
-      prop_soft_tyres: 4,
-      prop_soft_crates: 3,
-      prop_soft_barrier: 2,
-      prop_soft_cartons: 2,
-      prop_soft_kegs: 1,
-    },
-  }),
   rumbleLagosIsland: style({
     note: 'plastered lock-up stall piers along the aisles, poster-covered precast posts in the plazas; textile bales (sacks), cartons, kegs',
     pillars: ['prop_pillar_market'],
@@ -246,7 +234,7 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
     },
     softFor: ojuelegbaSoft,
   }),
-  rumbleOshodiMetro: style({
+  rumbleOshodi: style({
     note: 'permanent cover is drawn whole by the board cover (terminal, bus bays, skywalk piers, shopfronts, rail portals, station: oshodiMetroCover.ts); crush blocks are wall stubs and precast; per district clutter: cartons and crates in the streets and the skywalk quarter, crates and tyres in the plaza, barricades on the junction, freight crates and cable gear at the rail edge, drums and tyres at the works; barriers are barricades and tyre stacks',
     pillars: ['prop_pillar_wallstub', 'prop_pillar_c', 'prop_pillar_a'],
     soft: {

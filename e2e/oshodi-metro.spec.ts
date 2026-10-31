@@ -19,7 +19,7 @@ test.beforeEach(({ page }) => {
 async function startOshodi(page: Page): Promise<void> {
   await toRumbleSetup(page, 'survival');
   await page.getByTestId('rumble-8').click();
-  await chooseStage(page, 'rumbleOshodiMetro');
+  await chooseStage(page, 'rumbleOshodi');
   await expect(page.getByTestId('setup-arena')).toContainText('Oshodi Transport Metropolis');
   await page.getByTestId('menu-continue').click();
   await page.getByTestId('menu-continue').click();
@@ -27,6 +27,26 @@ async function startOshodi(page: Page): Promise<void> {
   await expect(page.getByTestId('hud')).toBeVisible();
   await stepTicks(page, 170);
 }
+
+test('the Rumble stage picker shows exactly one Oshodi: the researched one; the retired stage is not selectable', async ({
+  page,
+}) => {
+  await open(page);
+  await toRumbleSetup(page, 'survival');
+  // the stage cards (the picker container shares the prefix but is not selectable: cards carry aria-pressed)
+  const cards = page.locator('[data-testid^="rumble-stage-"][aria-pressed]');
+  await expect(cards).toHaveCount(6); // Oshodi, Lagos Island, Ojuelegba, Apapa, Lekki Nightworks, City Rumble
+  const oshodi = cards.filter({ hasText: /oshodi/i });
+  await expect(oshodi).toHaveCount(1);
+  await expect(oshodi).toHaveAttribute('data-testid', 'rumble-stage-rumbleOshodi');
+  await expect(oshodi).toContainText('Oshodi Transport Metropolis');
+  await expect(page.getByText('Rush Hour')).toHaveCount(0);
+  await expect(page.getByTestId('rumble-stage-rumbleOshodiMetro')).toHaveCount(0);
+  // the default (first) stage is the researched Oshodi, as it was for the old one
+  await expect(page.getByTestId('rumble-stage-rumbleOshodi')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('setup-arena')).toContainText('Oshodi Transport Metropolis');
+  expect(errors).toEqual([]);
+});
 
 test('the stage starts from the menu on a 45 x 33 board and plays without page errors', async ({ page }) => {
   await open(page);
@@ -40,7 +60,7 @@ test('the stage starts from the menu on a 45 x 33 board and plays without page e
     };
     return { arenaId: s.arenaId, width: s.width, height: s.height, players: s.players.length };
   });
-  expect(live).toEqual({ arenaId: 'rumbleOshodiMetro', width: 45, height: 33, players: 8 });
+  expect(live).toEqual({ arenaId: 'rumbleOshodi', width: 45, height: 33, players: 8 });
   await page.evaluate(() =>
     (window as never as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(4),
   );
@@ -116,7 +136,7 @@ test('the night look changes the light only: same board, same hazards, a dark sk
     const s = w.getState() as { arenaId: string; width: number; height: number };
     return { arenaId: s.arenaId, size: [s.width, s.height], sky: w.renderer().scene.background.getHex() };
   });
-  expect(look.arenaId).toBe('rumbleOshodiMetro');
+  expect(look.arenaId).toBe('rumbleOshodi');
   expect(look.size).toEqual([45, 33]);
   expect(look.sky).toBe(0x0e1626);
   expect(errors).toEqual([]);

@@ -30,7 +30,7 @@ function groundLight(l: ArenaLook): number {
 
 describe('day and night looks', () => {
   it('registers both looks for the stage; the day look is the default and the flag selects night', () => {
-    const reg = NEW_ARENA_ART().rumbleOshodiMetro!;
+    const reg = NEW_ARENA_ART().rumbleOshodi!;
     expect(reg.look).toBe(OSHODI_METRO_LOOK);
     expect(reg.nightLook).toBe(OSHODI_METRO_NIGHT_LOOK);
     expect(timeOfDay('')).toBe('day');
@@ -38,10 +38,10 @@ describe('day and night looks', () => {
     expect(timeOfDay('?tod=night')).toBe('night');
     expect(timeOfDay('?q=low&tod=night')).toBe('night');
     expect(timeOfDay('?tod=banana')).toBe('day');
-    expect(arenaLook('rumbleOshodiMetro')).toBe(OSHODI_METRO_LOOK);
+    expect(arenaLook('rumbleOshodi')).toBe(OSHODI_METRO_LOOK);
     // no other arena ships a night look behind the flag
     for (const [id, art] of Object.entries(NEW_ARENA_ART()))
-      if (id !== 'rumbleOshodiMetro') expect(art.nightLook, id).toBeUndefined();
+      if (id !== 'rumbleOshodi') expect(art.nightLook, id).toBeUndefined();
   });
 
   it('night is actually darker in sky and fog, but the ground stays as readable as the approved night stage', () => {
@@ -69,12 +69,12 @@ describe('day and night looks', () => {
   });
 
   it('the geometry is identical by day and night: the same floor, set, cover and combat data', () => {
-    const reg = NEW_ARENA_ART().rumbleOshodiMetro!;
+    const reg = NEW_ARENA_ART().rumbleOshodi!;
     // there is ONE floor, set and cover; only the look differs
     expect(reg.floor).toBeDefined();
     expect(reg.set).toBeDefined();
     expect(reg.cover).toBeDefined();
-    expect(getArena('rumbleOshodiMetro').layout.join('')).toBe(getArena('rumbleOshodiMetro').layout.join(''));
+    expect(getArena('rumbleOshodi').layout.join('')).toBe(getArena('rumbleOshodi').layout.join(''));
   });
 });
 
@@ -104,7 +104,7 @@ describe('the floor painter', () => {
 
   it('paints the whole 45 x 33 board without throwing', () => {
     const g = (globalThis as { __g?: CanvasRenderingContext2D }).__g!;
-    expect(() => NEW_ARENA_ART().rumbleOshodiMetro!.floor(g, g, 45, 33)).not.toThrow();
+    expect(() => NEW_ARENA_ART().rumbleOshodi!.floor(g, g, 45, 33)).not.toThrow();
   });
 });
 
@@ -112,7 +112,7 @@ describe('the railcar presentation', () => {
   const stateOn = (): GameState => {
     const s = createGame({
       seed: 1,
-      arenaId: 'rumbleOshodiMetro',
+      arenaId: 'rumbleOshodi',
       players: [
         { name: 'A', characterId: 'streetBaller', isBot: false },
         { name: 'B', characterId: 'lekkiBoy', isBot: true },
@@ -184,8 +184,8 @@ describe('the railcar presentation', () => {
 
 describe('the menu entry', () => {
   it('has a mood gradient of its own and reads its text from the sim registry (no invented stats)', () => {
-    expect(moodGradient('rumbleOshodiMetro')).not.toBe(moodGradient('noSuchArena'));
-    const a = getArena('rumbleOshodiMetro');
+    expect(moodGradient('rumbleOshodi')).not.toBe(moodGradient('noSuchArena'));
+    const a = getArena('rumbleOshodi');
     expect(a.info.tagline.length).toBeGreaterThan(40);
     expect(a.info.hazards.length).toBeGreaterThanOrEqual(4);
     expect(a.info.lighting).toMatch(/midday/i);

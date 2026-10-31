@@ -40,7 +40,7 @@ function reachable(a: ArenaDef, from: { x: number; y: number }): Set<string> {
 }
 
 describe('arena registry', () => {
-  it('has nine standard arenas plus the seven City Rumble stages, in menu order', () => {
+  it('has nine standard arenas plus the six City Rumble stages, in menu order', () => {
     expect(STANDARD_ARENA_IDS).toEqual([
       'danfoBusPark',
       'balogunMarket',
@@ -61,12 +61,11 @@ describe('arena registry', () => {
       'rumbleOjuelegba',
       'rumbleApapa',
       'rumbleLekkiNight',
-      'rumbleOshodiMetro',
       CITY_RUMBLE_ID,
     ]);
     // plus the V2 experimental Mobile Test Arena (two sizes), kept out of the official nine
     expect(EXPERIMENTAL_ARENA_IDS).toEqual(['mobileTest13x9', 'mobileTest15x9']);
-    expect(ALL).toHaveLength(16 + EXPERIMENTAL_ARENA_IDS.length);
+    expect(ALL).toHaveLength(15 + EXPERIMENTAL_ARENA_IDS.length);
   });
 
   it('no two standard arenas share a layout and hazard set (not recolours of one grid)', () => {

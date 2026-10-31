@@ -1,6 +1,6 @@
 /**
  * Lagos arenas, build 1 - Oshodi Transport Metropolis, six districts (presentation only; the grid, districts and
- * hazards are `src/sim/arenas/rumbleOshodiMetro.ts`). A hazy midday over the layered interchange, with a
+ * hazards are `src/sim/arenas/rumbleOshodi.ts`). A hazy midday over the layered interchange, with a
  * floodlit night look on the same geometry (`?tod=night`, `render/timeOfDay.ts`).
  *
  * - Board cover: every permanent tile is drawn as the object it is (`oshodiMetroCover.ts`, from the cover map in
@@ -43,7 +43,7 @@ import { drum, umbrella, wire } from './oshodiKit';
 import { SiteLights, v3 } from './roadworksKit';
 import { dash, floorWords, litter, paintKerbs, paintRoads, tileWorld, zebraTile } from './rumbleV2Kit';
 
-const ID = 'rumbleOshodiMetro';
+const ID = 'rumbleOshodi';
 const TRACK_X = [36, 37];
 const TRACK_Y0 = 10;
 const TRACK_Y1 = 22;

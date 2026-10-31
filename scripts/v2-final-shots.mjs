@@ -1,7 +1,7 @@
 // V2 integration screenshots of the real game (production build served by `vite preview`):
 //   SHOT_URL=http://localhost:4400/wahala-game/ node scripts/v2-final-shots.mjs <out-dir>
 // Phone (844 x 390) and small phone (667 x 375) frames of the main menu, a Classic match with the two
-// buttons, a City Rumble Survival match on Oshodi Rush Hour, a Team Rumble match, and a Training Academy
+// buttons, a City Rumble Survival match on Oshodi Transport Metropolis, a Team Rumble match, and a Training Academy
 // practice; plus desktop frames of Apapa Docks and Lekki Nightworks. Prints page errors.
 import { mkdirSync } from 'node:fs';
 import { chromium } from '@playwright/test';

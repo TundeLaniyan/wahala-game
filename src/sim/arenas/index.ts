@@ -10,7 +10,6 @@ import { RUMBLE_LAGOS_ISLAND } from './rumbleLagosIsland';
 import { RUMBLE_LEKKI_NIGHT } from './rumbleLekkiNight';
 import { RUMBLE_OJUELEGBA } from './rumbleOjuelegba';
 import { RUMBLE_OSHODI } from './rumbleOshodi';
-import { RUMBLE_OSHODI_METRO } from './rumbleOshodiMetro';
 import { OSHODI_INTERCHANGE } from './oshodiInterchange';
 import { SURULERE_POWER_YARD } from './surulerePowerYard';
 import { THIRD_MAINLAND } from './thirdMainland';
@@ -28,8 +27,8 @@ export type {
 } from './types';
 
 /**
- * Every arena, in menu order: the nine standard arenas, the City Rumble stages (the five V2 stages, then
- * the Lagos-arenas builds), then the experimental test arenas.
+ * Every arena, in menu order: the nine standard arenas, the City Rumble stages (the five V2 stages; the
+ * researched Oshodi is the first), then the experimental test arenas.
  */
 export const ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
   [
@@ -47,7 +46,6 @@ export const ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
     RUMBLE_OJUELEGBA,
     RUMBLE_APAPA,
     RUMBLE_LEKKI_NIGHT,
-    RUMBLE_OSHODI_METRO,
     CITY_RUMBLE,
     MOBILE_TEST_13X9,
     MOBILE_TEST_15X9,

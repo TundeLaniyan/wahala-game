@@ -21,7 +21,7 @@ import { ENV_DRAW_CALL_TARGET } from '../../src/render/env/types';
 import { NEW_ARENA_ART } from '../../src/render/arenas/newArenas';
 import { QUALITY } from '../../src/render/quality';
 
-const a = getArena('rumbleOshodiMetro');
+const a = getArena('rumbleOshodi');
 const board = { cols: a.layout[0]!.length, rows: a.layout.length };
 const LEVELS = ['veryLow', 'low', 'medium', 'high'] as const;
 
@@ -33,9 +33,9 @@ describe('Oshodi environment data', () => {
       });
 
   it('is registered with the stage and resolves for the real board', () => {
-    const src = NEW_ARENA_ART().rumbleOshodiMetro!.env!;
+    const src = NEW_ARENA_ART().rumbleOshodi!.env!;
     const env = typeof src === 'function' ? src(board) : src;
-    expect(env.id).toBe('rumbleOshodiMetro');
+    expect(env.id).toBe('rumbleOshodi');
     expect(env.traffic!.length).toBeGreaterThanOrEqual(5);
   });
 

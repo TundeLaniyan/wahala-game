@@ -410,7 +410,7 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('rumble-stage-rumbleOshodi').focus();
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('rumble-stage-rumbleOshodi')).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByTestId('arena-selected')).toHaveText('Oshodi Rush Hour');
+    await expect(page.getByTestId('arena-selected')).toHaveText('Oshodi Transport Metropolis');
   });
 
   test('the selected fighter is understood in one screen at every size, and the roster stays easy to scan', async ({

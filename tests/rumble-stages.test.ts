@@ -17,7 +17,10 @@ import { minimapLayers } from '../src/ui/minimapModel';
 import { layoutStats } from './rumbleStageStats';
 
 /**
- * City Rumble V2: the five Lagos stages (Oshodi, Lagos Island, Ojuelegba, Apapa, Lekki Nightworks).
+ * City Rumble V2: the five Lagos stages (Oshodi Transport Metropolis, Lagos Island, Ojuelegba, Apapa, Lekki
+ * Nightworks). Oshodi and Ojuelegba are the multi-district, non-mirrored stages: their own files
+ * (tests/rumble-oshodi.test.ts, tests/rumble-ojuelegba.test.ts) hold the fairness checks that replace the mirror
+ * checks here.
  * Every stage must carry Survival / Deathmatch / Team Rumble for up to 32 competitors on a fair,
  * fully connected board with telegraphed stage hazards and a closing city that ends in its core.
  */
@@ -29,12 +32,15 @@ const V2 = [
   'rumbleLekkiNight',
 ] as const;
 const SIZE: Record<(typeof V2)[number], [number, number]> = {
-  rumbleOshodi: [41, 31],
+  rumbleOshodi: [45, 33],
   rumbleLagosIsland: [41, 31],
   rumbleOjuelegba: [45, 33],
   rumbleApapa: [45, 31],
   rumbleLekkiNight: [41, 31],
 };
+
+/** The multi-district stages, authored without mirroring (district graph, per-half fairness in their own tests). */
+const MULTI = ['rumbleOshodi', 'rumbleOjuelegba'];
 
 const at = (a: ArenaDef, x: number, y: number): string => a.layout[y]?.[x] ?? '#';
 const DIRS = [
@@ -76,13 +82,15 @@ const roster = (n: number) =>
   }));
 
 describe('Rumble stage registry', () => {
-  it('lists the five V2 stages first, then the Lagos-arenas builds, then the original district; the nine standard arenas are unchanged', () => {
-    expect(RUMBLE_ARENA_IDS).toEqual([...V2, 'rumbleOshodiMetro', 'cityRumble']);
+  it('lists the five V2 stages first, then the original district; the nine standard arenas are unchanged', () => {
+    expect(RUMBLE_ARENA_IDS).toEqual([...V2, 'cityRumble']);
+    // the researched Oshodi replaced the old generic one: exactly one Oshodi stage, no second id
+    expect(RUMBLE_ARENA_IDS.filter((id) => /oshodi/i.test(id))).toEqual(['rumbleOshodi']);
     expect(STANDARD_ARENA_IDS).toHaveLength(9);
     for (const id of RUMBLE_ARENA_IDS) expect(getArena(id).kind).toBe('rumble');
-    // only the five-district Ojuelegba is authored without mirroring (its own fairness checks replace the
-    // mirror checks below); every other stage stays 4-fold symmetric
-    expect(V2.filter((id) => !getArena(id).mirrorSoftBlocks)).toEqual(['rumbleOjuelegba']);
+    // only the multi-district Oshodi and Ojuelegba are authored without mirroring (their own fairness checks
+    // replace the mirror checks below); every other stage stays 4-fold symmetric
+    expect(V2.filter((id) => !getArena(id).mirrorSoftBlocks)).toEqual(MULTI);
   });
 
   it('every Rumble stage uses the follow (stadium) camera', () => {
@@ -122,10 +130,12 @@ describe('Rumble stage registry', () => {
     expect(stats.rumbleLagosIsland!.chokepoints).toBeGreaterThan(50);
     for (const id of V2) if (id !== 'rumbleLagosIsland') expect(stats[id]!.chokepoints).toBeLessThan(20);
     expect(stats.rumbleLagosIsland!.avgCorridor).toBeLessThan(7);
-    // Ojuelegba is the multi-district stage (workstream D): five named districts on a non-mirrored board
+    // Ojuelegba (five districts) and Oshodi (six) are the multi-district stages on non-mirrored boards
     expect(getArena('rumbleOjuelegba').districts?.length).toBe(5);
-    for (const id of V2) if (id !== 'rumbleOjuelegba') expect(getArena(id).districts).toBeUndefined();
-    expect(stats.rumbleOshodi!.roadPct).toBeGreaterThan(20);
+    expect(getArena('rumbleOshodi').districts?.length).toBe(6);
+    for (const id of V2) if (!MULTI.includes(id)) expect(getArena(id).districts).toBeUndefined();
+    // Oshodi: the main road and the two tracks make it the most road-and-rail board
+    expect(stats.rumbleOshodi!.roadPct).toBeGreaterThan(10);
     expect(stats.rumbleLekkiNight!.roadPct).toBeLessThan(12);
     expect(stats.rumbleLekkiNight!.openPct).toBeGreaterThan(80);
   });
@@ -159,6 +169,9 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
   );
 
   it.runIf(!a.mirrorSoftBlocks)('is not mirrored but its two team halves hold comparable ground', () => {
+    // Oshodi's dense trading streets leave the west with about 12% less open floor than the east (the walking
+    // distances to the core and to supply crates are balanced in tests/rumble-oshodi.test.ts)
+    const openTol = id === 'rumbleOshodi' ? 0.12 : 0.08;
     // Team Rumble splits west / east by x: each half (the centre column left out) has about as much open
     // floor, road and permanent cover as the other
     const count = (west: boolean, c: (ch: string) => boolean): number => {
@@ -172,7 +185,7 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
     near(
       count(true, (c) => c !== '#'),
       count(false, (c) => c !== '#'),
-      0.08,
+      openTol,
     );
     near(
       count(true, (c) => c === '#'),
@@ -201,7 +214,7 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
         expect(q).toEqual({ x: W - 1 - p.x, y: H - 1 - p.y });
       }
     } else {
-      // a non-mirrored stage (Ojuelegba) cannot pair spawns by mirror: slots alternate west / east instead, so
+      // a non-mirrored stage (Ojuelegba, Oshodi) cannot pair spawns by mirror: slots alternate west / east instead, so
       // every even prefix is half and half, and each half's starts are comparable (tests/rumble-ojuelegba.test.ts
       // checks the walking distances to the core and to the supply crates per half)
       for (let k = 0; k < 16; k++) {
@@ -219,7 +232,8 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
     };
     expect(minGap(8)).toBeGreaterThanOrEqual(12);
     expect(minGap(16)).toBeGreaterThanOrEqual(8);
-    expect(minGap(32)).toBeGreaterThanOrEqual(5);
+    // Oshodi's explicit starts are 4 apart for all 32 (the original City Rumble's level); its own test pins it
+    expect(minGap(32)).toBeGreaterThanOrEqual(id === 'rumbleOshodi' ? 4 : 5);
   });
 
   it('no spawn stands on a stage hazard (sweep route or strike zone): nobody starts or respawns inside one', () => {
@@ -264,20 +278,34 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
           // traffic enters from the edge of the board, never out of thin air in the middle. A flagged DEPARTURE
           // (a parked Danfo pulling out of a bay) is the one exception: it starts on a road tile at its bay and
           // must leave at the board edge instead (RE-E3).
-          const onEdge = ([x, y]: readonly [number, number]): boolean => x === 0 || y === 0 || x === W - 1 || y === H - 1;
+          const onEdge = ([x, y]: readonly [number, number]): boolean =>
+            x === 0 || y === 0 || x === W - 1 || y === H - 1;
           if (h.depart) {
             expect(onEdge(route[route.length - 1]!), `departure end ${route[route.length - 1]}`).toBe(true);
             // fairness (RE-E3): from every lane tile the slowest fighter walks off the lane before the Danfo gets there
             const lane = route.map(([x, y]) => y * W + x);
-            const steps = laneEscapeSteps(W, H, lane, (i) => !'#x$'.includes(a.layout[Math.floor(i / W)]![i % W]!));
+            const steps = laneEscapeSteps(
+              W,
+              H,
+              lane,
+              (i) => !'#x$'.includes(a.layout[Math.floor(i / W)]![i % W]!),
+            );
             const slowest = Math.max(...DEFAULT_CONFIG.movement.stepTicksBySpeedLevel);
             steps.forEach((n, j) =>
-              expect(n * slowest + DEFAULT_CONFIG.stage.escapeInputTicks, `departure lane tile ${j}`).toBeLessThanOrEqual(
+              expect(
+                n * slowest + DEFAULT_CONFIG.stage.escapeInputTicks,
+                `departure lane tile ${j}`,
+              ).toBeLessThanOrEqual(
                 Math.max(h.warnSec * 60, DEFAULT_CONFIG.stage.minLethalWarnTicks) + j * h.stepTicks,
               ),
             );
+          } else {
+            // ...or, for Oshodi's railcar, out of a solid portal block: the tile behind its first tile is concrete
+            const [x0, y0] = route[0]!;
+            const [x1, y1] = route[1]!;
+            const behind = at(a, x0 - (x1 - x0), y0 - (y1 - y0));
+            expect(onEdge(route[0]!) || behind === '#', `route start ${route[0]}`).toBe(true);
           }
-          else expect(onEdge(route[0]!), `route start ${route[0]}`).toBe(true);
         }
       } else if (h.kind === 'strike') {
         expect(h.zones.length > 0 || h.targetPlayers).toBe(true);
@@ -381,7 +409,9 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
       }
       // every signature vehicle can attack from the border
       for (const kind of ['danfo', 'taxi', 'keke'] as VehicleKind[])
-        expect(listEntries(s, kind).length).toBeGreaterThan(8);
+        // (Oshodi has the main road's eight mouths and no south road, by decision LA5: it must keep the lower
+        // route crossable on foot)
+        expect(listEntries(s, kind).length).toBeGreaterThanOrEqual(id === 'rumbleOshodi' ? 8 : 9);
     },
   );
 

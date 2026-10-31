@@ -4,20 +4,22 @@ _Last updated at the end of the autonomous Phase 1 build session. Everything bel
 
 ## Lagos arenas, build 1: Oshodi Transport Metropolis (branch `claude/wahala-lagos-arenas-v1`, from `1e099f6`)
 
-Founder brief of 2026-10-30 (decisions LA1-LA10 in `DECISIONS.md`; report `OSHODI_METROPOLIS.md`). One new City Rumble
-stage, `rumbleOshodiMetro`; Ojuelegba and the older `rumbleOshodi` are untouched. No boss, no new music or voice.
+Founder brief of 2026-10-30 (decisions LA1-LA12 in `DECISIONS.md`; report `OSHODI_METROPOLIS.md`). The researched
+Oshodi is the canonical City Rumble stage `rumbleOshodi` (it replaced the old generic Oshodi); Ojuelegba is untouched. No boss,
+no new music or voice.
 
 | Area | Delivered | Main tests |
 | --- | --- | --- |
-| Sim | Six districts on 45 x 33, routes direct / upper / lower, explicit spawns, supplies, main-road attack lanes, traffic waves, bus-bay departures, the `train` sweep on two track lanes, one lethal event at a time | `tests/rumble-oshodi-metro.test.ts` |
+| Sim | Six districts on 45 x 33, routes direct / upper / lower, explicit spawns, supplies, main-road attack lanes, traffic waves, bus-bay departures, the `train` sweep on two track lanes, one lethal event at a time | `tests/rumble-oshodi.test.ts` |
 | Cover and set | 23 real-object cover families, landmark skyline (terminal canopy, expressway, skywalk spans, rail viaduct, station tower), floor with rails / crossing / bays / pitch | `tests/render/oshodi-metro-cover.test.ts`, `rumble-stage-sets.test.ts` |
 | Environment | Ambient traffic apart from combat, crowds, lights, per-tier budgets, day / night | `tests/render/oshodi-metro-env.test.ts` |
 | Day / night | Same geometry; `?tod=night` review flag | `tests/render/oshodi-metro-art.test.ts` |
 | Railcar presentation | Own model, lane lamps, bell + horn + pass-by (synthesised), HUD alert | `tests/render/oshodi-metro-art.test.ts`, `tests/audio/*` |
 | Browser | Desktop and phone start, HUD alert, night look | `e2e/oshodi-metro.spec.ts` |
 
-Not done / open: see `OSHODI_METROPOLIS.md` section 6 (replace-or-keep Oshodi Rush Hour, a signature track, voice zones,
-a player-facing night switch, the menu preview picture, local review of the geography).
+**Replacement (2026-10-30, founder decision, LA1 / LA11 / LA12):** this stage is now the canonical `rumbleOshodi` and the
+old generic Oshodi Rush Hour is gone (code, tests, screenshots); only one Oshodi appears in the picker. Open: a
+player-facing night switch, local review of the geography (`OSHODI_METROPOLIS.md` section 6).
 
 ## Ojuelegba identity pass: audio completion, A-hold detonation, trap readability (branch `claude/wahala-ojuelegba-identity-pass-v1`)
 

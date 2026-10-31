@@ -1,6 +1,6 @@
 /**
  * Oshodi Transport Metropolis - the landmarks that make the stage read as a layered transport nexus
- * (presentation only; the grid is `src/sim/arenas/rumbleOshodiMetro.ts`). Everything here stands OFF the board,
+ * (presentation only; the grid is `src/sim/arenas/rumbleOshodi.ts`). Everything here stands OFF the board,
  * north of it or beyond its side streets, and the camera (south) side stays low:
  *
  * - the interchange's terminal canopy and hall north of the plaza: a deep concrete canopy slab on tall columns

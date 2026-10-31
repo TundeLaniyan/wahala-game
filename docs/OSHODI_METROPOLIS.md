@@ -6,8 +6,11 @@ section 3.2 and the shared map-build contract. Existing tested engine contracts 
 stay above the research (authority order, bible section 1). **Ojuelegba is untouched** (its files, tests and
 numbers are unchanged; only registries and tests that listed "the stages" gained this one).
 
-The arena is a new City Rumble stage, `rumbleOshodiMetro` ("Oshodi Transport Metropolis"). The older
-`rumbleOshodi` ("Oshodi Rush Hour", the default stage) is **not** touched or removed: see "Open decisions".
+The arena is the canonical Oshodi City Rumble stage, `rumbleOshodi` ("Oshodi Transport Metropolis"). **Founder
+decision of 2026-10-30: it replaced the old generic "Oshodi Rush Hour"** (the 41 x 31 mirrored stage): the old sim,
+art and screenshots are gone, the new stage took over the same id (so the saved default stage, the Rumble setup's
+default, the founder-assigned Oshodi track and the voice zones all carry over), and the stage picker shows exactly one
+Oshodi card. (The separate Classic arena `oshodiInterchange` is a different, standard-mode arena and is unchanged.)
 
 ## 1. The plan, as implemented
 
@@ -115,7 +118,7 @@ the quality ladder are as they were.
 
 | Area | Test file |
 | --- | --- |
-| District connectivity, links, routes, spawns, supplies, attack lanes, hazard timing, safe escape, railcar in a running match, boss slot | `tests/rumble-oshodi-metro.test.ts` |
+| District connectivity, links, routes, spawns, supplies, attack lanes, hazard timing, safe escape, railcar in a running match, boss slot | `tests/rumble-oshodi.test.ts` |
 | Cover alignment, families, spill, camera edge, fade, crates, cover cost | `tests/render/oshodi-metro-cover.test.ts` |
 | Environment validity, budgets per quality tier, ambient/combat separation, day/night routes | `tests/render/oshodi-metro-env.test.ts` |
 | Day/night readability, `?tod`, floor painter, railcar model/name/alert/audio, menu card | `tests/render/oshodi-metro-art.test.ts` |
@@ -125,16 +128,17 @@ the quality ladder are as they were.
 | Registries that listed "the stages" | `tests/arenas.test.ts`, `tests/rumble-stages.test.ts`, `tests/living-env.test.ts`, `tests/render/obstacleStyles.test.ts` |
 
 Evidence script: `scripts/oshodi-shots.mjs` (see its header). Bot batch:
-`npm run simulate -- --arena rumbleOshodiMetro --game survival --players 32 --matches 4`.
+`npm run simulate -- --arena rumbleOshodi --game survival --players 32 --matches 4`.
 
 ### Verification run (container: 4 cores, software WebGL)
 
 - `npx tsc --noEmit`, `npx eslint .`: clean. `npm run build`: ok.
-- `npx vitest run`: **109 files, 1650 passed, 5 skipped, 0 failed** (baseline `1e099f6`: 106 files, 1607 passed). New: 4 test
-  files (73 tests, of which the sim file has 34) plus additions to 7 existing test files and the `e2e/oshodi-metro.spec.ts` spec.
-- Playwright (`WAHALA_MULTIPROCESS=1`, built bundle, desktop + phone projects): `e2e/oshodi-metro.spec.ts` 6 / 6
-  passed; the existing `menu.spec.ts` and `rumble.spec.ts` (which see the extra stage card): 21 passed, 7 skipped
-  (project-specific), 0 failed.
+- `npx vitest run` after the replacement: **109 files, 1645 passed, 5 skipped, 0 failed** (baseline `1e099f6`: 106 files, 1607
+  passed; the count fell by 5 from the first Oshodi commit because the old stage's duplicate checks went with it).
+- Playwright (`WAHALA_MULTIPROCESS=1`, built bundle, desktop + phone projects): `e2e/oshodi-metro.spec.ts` (now 4 tests,
+  including "the picker shows exactly one Oshodi"), `menu.spec.ts`, `rumble.spec.ts` and `voices.spec.ts` all pass. The
+  Deathmatch respawn test failed its first desktop attempt twice when run in parallel with other specs (a 15 s HUD wait under
+  load) and passed on retry; run alone it passed twice with retries disabled.
 - Bots: 4 matches of 32 bots on the stage all finished (82 s on average; 1 hazard elimination in the batch).
 - Real-browser frames: no page errors in any capture (desktop and phone, day and night).
 
@@ -154,7 +158,7 @@ material, instance the repeated far-frontage blocks.
 
 ## 3a. Evidence (`docs/screenshots/oshodi-metropolis/`)
 
-All are real frames of the running game (stage `rumbleOshodiMetro`, 16 competitors, seed 7, medium quality) made
+All are real frames of the running game (stage `rumbleOshodi`, 16 competitors, seed 7, medium quality) made
 by `scripts/oshodi-shots.mjs`; the railcar events in frames 3-5 are queued with the sim's own event shape so the
 frames are reproducible (the natural schedule is random). Bots idle in the art frames so no blast is in shot.
 
@@ -166,7 +170,22 @@ frames are reproducible (the natural schedule is random). Bots idle in the art f
 | 4 | `4-night-plaza.jpg`, `4b-night-rail-warning.jpg` | the same plaza and the same railcar warning under the night look |
 | 5 | `5-mobile-rail-warning.jpg`, `5b-mobile-night-rail-warning.jpg` | phone landscape (844 x 390 at 2x): the warning with the alert, the lane and the touch controls, by day and by night |
 
-Menu card: `public/previews/rumbleOshodiMetro.jpg` (day, from `scripts/rumble-v2-shots.mjs`).
+Menu card: `public/previews/rumbleOshodi.jpg` (day, from `scripts/rumble-v2-shots.mjs`).
+
+## 3b. The replacement pass (2026-10-30)
+
+- Deleted `src/sim/arenas/rumbleOshodi.ts` (old) and `src/render/arenas/rumbleOshodiArt.ts`; the new arena file took the
+  name and the id. The id `rumbleOshodiMetro` no longer exists anywhere (tested). Registries, the obstacle style, the menu
+  mood colour, tests and e2e text were updated; six screenshots of the retired Rumble stage were removed and the menu
+  card picture is now this stage's (`public/previews/rumbleOshodi.jpg`).
+- The generic stage suite found two real issues, fixed or recorded: **(a)** the Survival core had one tile walled off from
+  the rest (a bay shelter at (18,12) next to the terminal wing and a bus): the shelter tile was opened and a regression
+  test pins that the whole core is one connected region; **(b)** the stage has exactly eight attack-lane mouths per
+  vehicle (the generic floor is nine): kept at eight by decision LA5 and asserted at >= 8 for this stage only.
+- Known and accepted: the west half has about 12% less open floor than the east (dense Trading Streets), so Team Rumble's
+  generic open-floor tolerance is 12% for this stage (8% elsewhere); walking distances to the core and to supply crates are
+  balanced in `tests/rumble-oshodi.test.ts`. The 32-start spread is gap 4 (the original City Rumble's level).
+- Rendering cost is accepted as measured (section 3); no landmark or map detail was removed to match Ojuelegba.
 
 ## 4. Assumptions (the bible's "do not invent current conditions" rule)
 
@@ -190,19 +209,15 @@ legally distinct transport-network character, loosely inspired by a locally reco
 clothing, biography, catchphrase or branding may be used. Nothing reads the field; no boss exists in the simulation,
 the renderer or the menus (tested).
 
-## 6. Open decisions for founder review
+## 6. Open decisions for founder review (1-3 are closed)
 
-1. **Replace or keep Oshodi Rush Hour?** `rumbleOshodi` (the 41 x 31 mirrored stage, default of the Rumble setup and
-   of many tests) is untouched. Two Oshodi stages now appear in the picker. Ojuelegba's precedent was to replace the
-   old layout in place; that would touch the default stage and its tests, so it is left to you.
-2. **Music**: the stage plays the existing default playlist. A signature track needs a founder assignment (the five
-   assigned tracks are one-per-stage by test).
-3. **Voice zones**: `voices.json` lists the arenas of the `bus_park` and `market` zones (generated from the founder
-   manifest). The new arena is in neither, so zone-specific voice lines do not play here. Adding it means a founder
-   manifest change and a re-import (`tools/audio/voices/import_voices.py`), not done here.
+1. ~~Replace or keep Oshodi Rush Hour?~~ **Decided: replaced** (see the top of this document, LA1 and LA11).
+2. ~~Music~~ and 3. ~~Voice zones~~: **resolved by the replacement.** The stage keeps the id `rumbleOshodi`, so it plays
+   the founder's Oshodi track (`pixabay_601035`) and sits in the `bus_park` and `market` voice zones as before (tested).
+   No new music, voice or recording was added.
 4. **Night look in the menu**: `?tod=night` is a review flag. A player-facing day/night switch (or a night preview
    card) is not built.
-5. **Menu card**: a day preview picture is generated (`public/previews/rumbleOshodiMetro.jpg`); there is no night
+5. **Menu card**: a day preview picture is generated (`public/previews/rumbleOshodi.jpg`); there is no night
    preview in the menu and the card text does not mention the night look (it is not player-selectable).
 6. **Local review** (bible section 6): a Lagos-based reviewer should accept / revise / reject each district against
    photos before the geography is called final.

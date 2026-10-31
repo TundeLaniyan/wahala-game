@@ -1,7 +1,7 @@
 // Oshodi Transport Metropolis presentation evidence (docs/OSHODI_METROPOLIS.md): real frames of the real game.
 //   node scripts/oshodi-shots.mjs <out-dir> [only,...]
 // Needs a running dev / preview server (SHOT_URL, default http://localhost:5206/) and WAHALA_CHROMIUM
-// (/opt/pw-browsers/chromium offline). Shots (all of the stage `rumbleOshodiMetro`, 16 competitors, seed 7):
+// (/opt/pw-browsers/chromium offline). Shots (all of the stage `rumbleOshodi`, 16 competitors, seed 7):
 //   1-establishing    desktop, day: the whole interchange from above the plaza (zoomed out)
 //   2-landmark        desktop, day: close view of the skywalk piers and stair tower
 //   2b-frontage       desktop, day: close view of the far frontage (glass, balcony and plaster blocks) under the terminal fascia
@@ -21,7 +21,7 @@ const [dir = 'shots', only = ''] = process.argv.slice(2);
 const want = new Set(only.split(',').filter(Boolean));
 mkdirSync(dir, { recursive: true });
 const BASE = process.env.SHOT_URL ?? 'http://localhost:5206/';
-const ARENA = 'rumbleOshodiMetro';
+const ARENA = 'rumbleOshodi';
 const DESKTOP = { viewport: { width: 1280, height: 720 } };
 const PHONE = { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 };
 
