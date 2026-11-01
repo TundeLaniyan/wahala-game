@@ -972,13 +972,24 @@ button {
     inset 0 -8px 12px rgba(0, 0, 0, 0.38);
   padding: 0;
   overflow: hidden;
+  /* the label is sized from the button itself (cqw below), so a long action name always fits the circle */
+  container-type: size;
 }
+/*
+ * The label (decision MC4): its size is a share of the button's own width, never of the screen, so GENERATOR,
+ * YELLOW CAB and the other action names stay inside the round edge at every size the button is drawn at. The
+ * words sit on the lower half's wide chord and the icon above them; tracking is tight so a long word is short.
+ * The vh sizes on .abtn are only the fallback for a browser without container units.
+ */
 .abtn > span {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-size: 12cqw;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 .abtn img {
   width: 46%;

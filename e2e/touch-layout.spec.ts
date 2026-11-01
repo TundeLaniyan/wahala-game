@@ -44,7 +44,27 @@ test.describe('touch layout', () => {
       ).__WAHALA__
         .renderer()
         .boardScreenCorners();
+      // the painted content of a button (each text run's glyph box and the icon): what must stay inside the circle
+      const content = (sel: string) => {
+        const btn = document.querySelector(sel)!;
+        const out: { x: number; y: number; w: number; h: number }[] = [];
+        const walker = document.createTreeWalker(btn, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          if (!n.textContent?.trim()) continue;
+          const range = document.createRange();
+          range.selectNodeContents(n);
+          const r = range.getBoundingClientRect();
+          out.push({ x: r.left, y: r.top, w: r.width, h: r.height });
+        }
+        for (const img of btn.querySelectorAll('img')) {
+          const r = img.getBoundingClientRect();
+          out.push({ x: r.left, y: r.top, w: r.width, h: r.height });
+        }
+        return out;
+      };
       return {
+        aContent: content('[data-testid="btn-place"]'),
+        bContent: content('[data-testid="btn-special"]'),
         aText: text('[data-testid="btn-place"]'),
         bText: text('[data-testid="btn-special"]'),
         aIcon: !!document.querySelector('[data-testid="btn-place"] img'),
@@ -62,6 +82,25 @@ test.describe('touch layout', () => {
       };
     });
   const centre = (r: Box) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+  /**
+   * How far the painted content of a round button pokes out of its usable face, in px (<= 0 = fully inside).
+   * The face is the circle minus the 3 px border and a 2 px margin; every corner of every text run and icon
+   * box must lie inside it, so no glyph is ever clipped by the circular edge.
+   */
+  const spill = (button: Box, content: Box[]): number => {
+    const c = centre(button);
+    const face = button.w / 2 - 5;
+    let worst = -Infinity;
+    for (const r of content)
+      for (const [px, py] of [
+        [r.x, r.y],
+        [r.x + r.w, r.y],
+        [r.x, r.y + r.h],
+        [r.x + r.w, r.y + r.h],
+      ] as const)
+        worst = Math.max(worst, Math.hypot(px - c.x, py - c.y) - face);
+    return worst;
+  };
   const overlap = (p: Box, q: Box) =>
     p.x < q.x + q.w && p.x + p.w > q.x && p.y < q.y + q.h && p.y + p.h > q.y;
 
@@ -121,6 +160,10 @@ test.describe('touch layout', () => {
       expect(m.keyLetters).toBe(0);
       expect(m.aText.split(/\s+/).filter(Boolean)).toContain('GENERATOR');
       expect(m.aIcon).toBe(true);
+      // nothing is clipped by the round edge: the full GENERATOR word and its icon sit inside the face
+      expect(m.aContent.length).toBeGreaterThanOrEqual(2);
+      expect(spill(m.a, m.aContent), 'GENERATOR + icon inside the circle').toBeLessThanOrEqual(0);
+      expect(spill(m.b, m.bContent), 'second label inside the circle').toBeLessThanOrEqual(0);
       expect(m.bText.trim()).toBe('PUSH'); // streetBaller's own ability (the vehicle replaces it with a voucher)
       for (const t of [m.aText, m.bText]) expect(t.split(/\s+/).filter(Boolean)).not.toContain('A');
       for (const t of [m.aText, m.bText]) expect(t.split(/\s+/).filter(Boolean)).not.toContain('B');
@@ -270,6 +313,58 @@ test.describe('touch layout', () => {
     expect(await b.getAttribute('aria-label')).toBe('DANFO');
     await page.screenshot({ path: `e2e-shots/${info.project.name}-controls-vehicle.png` });
   });
+
+  // Decision MC4: every label stays inside its round button at every landscape size, in every state: the
+  // plain labels, the remote-ready "HOLD: BOOM!" line, and each vehicle name (YELLOW CAB is the longest).
+  for (const [w, h, name] of SIZES.filter(([vw, vh]) => vw > vh)) {
+    test(`labels stay inside the round buttons ${w}x${h} (${name}): ability, remote line and every vehicle`, async ({
+      page,
+    }) => {
+      await enter(page, w, h);
+      const settle = () =>
+        page.evaluate(() =>
+          (window as never as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
+        );
+      const check = async (what: string, aText: RegExp, bText: RegExp): Promise<void> => {
+        // the HUD publishes on rendered frames (throttled): advance until it shows the state under test
+        let m = await boxes(page);
+        for (let i = 0; i < 20 && !(aText.test(m.aText) && bText.test(m.bText)); i++) {
+          await settle();
+          await page.waitForTimeout(60);
+          m = await boxes(page);
+        }
+        expect(m.aText, `${what}: A text`).toMatch(aText);
+        expect(m.bText, `${what}: B text`).toMatch(bText);
+        expect(spill(m.a, m.aContent), `${what}: A inside the circle`).toBeLessThanOrEqual(0);
+        expect(spill(m.b, m.bContent), `${what}: B inside the circle`).toBeLessThanOrEqual(0);
+        // the words are not shrunk to nothing: GENERATOR is at least 7 px tall text on the narrowest phone
+        const size = await page.evaluate(() =>
+          parseFloat(getComputedStyle(document.querySelector('[data-testid="btn-place"] b')!).fontSize),
+        );
+        expect(size, `${what}: label size`).toBeGreaterThanOrEqual(7);
+      };
+      await check('ability', /GENERATOR/, /PUSH/);
+      for (const [character, vehicle] of [
+        ['streetBaller', /DANFO/],
+        ['lekkiBoy', /YELLOW CAB/],
+        ['campusQueen', /KEKE/],
+      ] as const) {
+        await mutate(page, `s.players[0].characterId = '${character}'; s.players[0].hasVoucher = false;`);
+        await check(`${character} ability`, /GENERATOR/, /PUSH|DAZE|SHOVE/);
+        await mutate(page, `s.players[0].hasVoucher = true;`);
+        await check(`${character} vehicle`, /GENERATOR/, vehicle);
+      }
+      const place = page.getByTestId('btn-place');
+      await place.dispatchEvent('pointerdown', { pointerId: 9, isPrimary: true, pointerType: 'touch' });
+      await place.dispatchEvent('pointerup', { pointerId: 9, isPrimary: true, pointerType: 'touch' });
+      await stepTicks(page, 2);
+      await mutate(
+        page,
+        `s.players[0].remote = true; s.generators.forEach((g) => { if (g.ownerId === 0) g.mode = 'remote'; });`,
+      );
+      await check('remote ready', /GENERATOR\s+HOLD: BOOM!/, /HOLD: BOOM!/);
+    });
+  }
 
   test('spectator state: once the player is out only the THROW button remains, named as such', async ({
     page,
