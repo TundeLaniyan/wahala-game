@@ -48,7 +48,7 @@ export const MODE_CARDS: readonly ModeCard[] = [
       id: m.id,
       game: 'City Rumble',
       name: m.name,
-      tag: m.id === 'deathmatch' ? 'Default' : m.id === 'team' ? 'Squads' : 'No respawn',
+      tag: m.id === 'deathmatch' ? 'Default' : m.id === 'team' ? 'Squads' : '1 life',
       rule: m.rule,
       blurb: m.blurb,
       facts: facts[m.id],
