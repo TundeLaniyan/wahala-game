@@ -1,5 +1,5 @@
 /**
- * Touch layout (decisions MC1, MC2): exactly two action buttons, A the lower-left button of the cluster and B diagonally above and right of
+ * Touch layout (decisions MC1-MC3): exactly two action buttons, the first action (GENERATOR) the lower-left button of the cluster and the second diagonally above and right of
  * it (never stacked), the cluster clear of the screen edge and the safe areas, a large movement pad that says
  * the whole pad is the touch area, and visible pressed / disabled / remote states. Portrait, landscape, narrow
  * phones and safe-area devices (the safe areas are simulated with the --test-sa-* variables the touch layer
@@ -31,7 +31,28 @@ test.describe('touch layout', () => {
         const r = document.querySelector(sel)!.getBoundingClientRect();
         return { x: r.left, y: r.top, w: r.width, h: r.height };
       };
+      const text = (sel: string) => (document.querySelector(sel) as HTMLElement).innerText;
+      const rect = (sel: string) =>
+        [...document.querySelectorAll(sel)].map((e) => {
+          const r = e.getBoundingClientRect();
+          return { x: r.left, y: r.top, w: r.width, h: r.height };
+        });
+      const corners = (
+        window as unknown as {
+          __WAHALA__: { renderer(): { boardScreenCorners(): { x: number; y: number }[] | null } };
+        }
+      ).__WAHALA__
+        .renderer()
+        .boardScreenCorners();
       return {
+        aText: text('[data-testid="btn-place"]'),
+        bText: text('[data-testid="btn-special"]'),
+        aIcon: !!document.querySelector('[data-testid="btn-place"] img'),
+        aAria: document.querySelector('[data-testid="btn-place"]')!.getAttribute('aria-label') ?? '',
+        bAria: document.querySelector('[data-testid="btn-special"]')!.getAttribute('aria-label') ?? '',
+        keyLetters: document.querySelectorAll('.abtn-key').length,
+        board: corners,
+        hud: rect('[data-testid="inventory"], .timer, .portrait, .round-btn, [data-testid="hud-rail"]'),
         a: b('[data-testid="btn-place"]'),
         b: b('[data-testid="btn-special"]'),
         pad: b('[data-testid="stick-pad"]'),
@@ -85,6 +106,57 @@ test.describe('touch layout', () => {
       // tap targets >= 44 px, A at least as big as B
       expect(m.b.w).toBeGreaterThanOrEqual(44);
       expect(m.a.w).toBeGreaterThanOrEqual(m.b.w);
+      // large practical buttons (decision MC3): the old landscape sizes were 19 / 17 vh
+      const landscape = m.vw > m.vh;
+      if (landscape) {
+        expect(m.a.w).toBeGreaterThanOrEqual(m.vh * 0.225);
+        expect(m.b.w).toBeGreaterThanOrEqual(m.vh * 0.2);
+      } else {
+        expect(m.a.w).toBeGreaterThanOrEqual(m.vw * 0.3);
+        expect(m.b.w).toBeGreaterThanOrEqual(m.vw * 0.22);
+      }
+      // far enough apart that a thumb cannot hit the wrong one: a gap of at least 8 px between the edges
+      expect(Math.hypot(b.x - a.x, b.y - a.y) - (m.a.w + m.b.w) / 2).toBeGreaterThanOrEqual(8);
+      // the buttons name their action and show its icon: no controller letters anywhere
+      expect(m.keyLetters).toBe(0);
+      expect(m.aText.split(/\s+/).filter(Boolean)).toContain('GENERATOR');
+      expect(m.aIcon).toBe(true);
+      expect(m.bText.trim()).toBe('PUSH'); // streetBaller's own ability (the vehicle replaces it with a voucher)
+      for (const t of [m.aText, m.bText]) expect(t.split(/\s+/).filter(Boolean)).not.toContain('A');
+      for (const t of [m.aText, m.bText]) expect(t.split(/\s+/).filter(Boolean)).not.toContain('B');
+      expect(`${m.aAria}|${m.bAria}`).not.toMatch(/(^|\|)[AB]:/);
+      // never over the board or the HUD (landscape: the playable layout; portrait shows the rotate notice)
+      if (landscape) {
+        const quad = m.board!;
+        const inside = (px: number, py: number) => {
+          let sign = 0;
+          for (let i = 0; i < quad.length; i++) {
+            const p1 = quad[i]!;
+            const p2 = quad[(i + 1) % quad.length]!;
+            const cross = (p2.x - p1.x) * (py - p1.y) - (p2.y - p1.y) * (px - p1.x);
+            if (cross !== 0) {
+              if (sign !== 0 && Math.sign(cross) !== sign) return false;
+              sign = Math.sign(cross);
+            }
+          }
+          return true;
+        };
+        for (const [name, r] of [
+          ['A', m.a],
+          ['B', m.b],
+        ] as const) {
+          const c = centre(r);
+          const pts = [
+            [c.x, c.y],
+            ...Array.from({ length: 24 }, (_, i) => [
+              c.x + (r.w / 2) * Math.cos((i / 24) * 2 * Math.PI),
+              c.y + (r.w / 2) * Math.sin((i / 24) * 2 * Math.PI),
+            ]),
+          ];
+          expect(pts.filter(([px, py]) => inside(px!, py!)).length, `${name} covers the board`).toBe(0);
+          for (const h of m.hud) expect(overlap(r, h), `${name} covers a HUD element`).toBe(false);
+        }
+      }
       // away from the screen edge (>= 12 px) on the right and bottom
       expect(m.vw - Math.max(m.a.x + m.a.w, m.b.x + m.b.w)).toBeGreaterThanOrEqual(12);
       expect(m.vh - (m.a.y + m.a.h)).toBeGreaterThanOrEqual(12);
@@ -96,6 +168,19 @@ test.describe('touch layout', () => {
       expect(m.pad.h).toBeGreaterThanOrEqual(m.pad.w * 0.95);
       await expect(page.getByTestId('stick-pad')).toContainText('press anywhere on this pad');
       await page.screenshot({ path: `e2e-shots/${info.project.name}-controls-${w}x${h}.png` });
+      // a close-up of the cluster for the art review
+      const pad = 16;
+      await page.screenshot({
+        path: `e2e-shots/${info.project.name}-controls-cluster-${w}x${h}.png`,
+        clip: {
+          x: Math.max(0, Math.min(m.a.x, m.b.x) - pad),
+          y: Math.max(0, Math.min(m.a.y, m.b.y) - pad),
+          width:
+            Math.min(m.vw, Math.max(m.a.x + m.a.w, m.b.x + m.b.w) + pad) -
+            Math.max(0, Math.min(m.a.x, m.b.x) - pad),
+          height: Math.min(m.vh, m.a.y + m.a.h + pad) - Math.max(0, Math.min(m.a.y, m.b.y) - pad),
+        },
+      });
     });
   }
 
@@ -167,5 +252,51 @@ test.describe('touch layout', () => {
     await a.dispatchEvent('pointerdown', { pointerId: 6, isPrimary: true, pointerType: 'touch' });
     await expect(a).toHaveAttribute('data-state', 'holding');
     await a.dispatchEvent('pointerup', { pointerId: 6, isPrimary: true, pointerType: 'touch' });
+  });
+
+  test('the second action names what it does: the vehicle (with its icon) when there is a voucher, the ability otherwise', async ({
+    page,
+  }, info) => {
+    await enter(page, 844, 390);
+    const b = page.getByTestId('btn-special');
+    await expect(b).toHaveText(/PUSH/);
+    await mutate(page, `s.players[0].hasVoucher = true;`);
+    await page.evaluate(() =>
+      (window as never as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
+    );
+    await expect(b).toHaveText(/DANFO/);
+    await expect(b.locator('img')).toHaveCount(1);
+    await expect(b).toHaveAttribute('data-special', 'vehicle');
+    expect(await b.getAttribute('aria-label')).toBe('DANFO');
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-controls-vehicle.png` });
+  });
+
+  test('spectator state: once the player is out only the THROW button remains, named as such', async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await open(page, '&nobots');
+    await page.evaluate(() => {
+      const st = (
+        window as unknown as {
+          __WAHALA__: { store: { getState(): { settings: object }; setState(p: object): void } };
+        }
+      ).__WAHALA__.store;
+      st.setState({ settings: { ...st.getState().settings, play: 'classic' } });
+    });
+    await startMatch(page, { competitors: 3 });
+    await mutate(
+      page,
+      `const me = s.players[0]; me.alive = false; me.eliminatedTick = s.tick; me.elimination = { kind: 'crush', eventId: 0 };
+       me.spectator = { pos: 0, readyTick: s.tick, stepRemaining: 0 };`,
+    );
+    await page.evaluate(() =>
+      (window as never as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
+    );
+    await expect(page.getByTestId('btn-throw')).toBeVisible();
+    await expect(page.getByTestId('btn-throw')).toHaveText('THROW');
+    await expect(page.getByTestId('btn-place')).toHaveCount(0);
+    await expect(page.getByTestId('btn-special')).toHaveCount(0);
+    await page.screenshot({ path: `e2e-shots/${info.project.name}-controls-spectator.png` });
   });
 });

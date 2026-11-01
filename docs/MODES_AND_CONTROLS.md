@@ -25,9 +25,11 @@ ring, names, dots, scoreboard and results (decision MD5).
 
 ## Controls: the A/B cluster and corner movement
 
-- A is the lower-left button of the right-hand cluster and B sits diagonally above and to the right of it; round,
-  domed buttons with a printed letter and label, no panel; pressed / holding / remote / disabled states; 12 px clear
-  of the edge and the safe areas (decision MC2).
+- The first action (GENERATOR, with the generator icon) is the lower-left button of the right-hand cluster and the
+  second (the fighter's ability, or the vehicle) sits diagonally above and to the right of it; large round, domed buttons
+  that carry the action's own name and icon (never a controller letter), no panel; pressed / holding / remote / disabled
+  states; 12 px clear of the edge and the safe areas (decisions MC2, MC3). The reference controller image fixed the
+  positions only; the sizes are ours.
 - Corner assistance (decision MV1): turns planned two tiles ahead on every assisted level, a tapped turn remembered
   for 24 ticks, a 14 tick press buffer, a bump guard (24 tick cooldown on a refused direction), and bend following in
   one-tile corridors on touch / "On". Grid movement, determinism and one-tile taps are unchanged.

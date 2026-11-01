@@ -159,7 +159,7 @@ function GeneratorButton({ remoteReady, full }: { remoteReady: boolean; full: bo
       data-state={state}
       aria-disabled={disabled || undefined}
       data-remote={remoteReady ? 'ready' : ''}
-      aria-label={`A: Generator${remoteReady ? ', hold to set off remote' : ''}`}
+      aria-label={`Generator${remoteReady ? ', hold to set off remote' : ''}`}
       style={{ ['--hold-ms' as string]: `${SPECIAL_HOLD_MS}ms` }}
       onPointerDown={(e) => {
         e.preventDefault();
@@ -179,10 +179,8 @@ function GeneratorButton({ remoteReady, full }: { remoteReady: boolean; full: bo
       onLostPointerCapture={up}
     >
       {remoteReady && <i className="hold-ring" aria-hidden />}
-      <em className="abtn-key" aria-hidden>
-        A
-      </em>
       <span>
+        <img src={pickupIconUrl('socket', 64)} alt="" />
         <b>GENERATOR</b>
         {remoteReady && <small data-testid="btn-place-hold">HOLD: BOOM!</small>}
       </span>
@@ -237,7 +235,7 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
       aria-disabled={!label.live || undefined}
       data-special={me.special ?? ''}
       data-remote={remoteReady ? 'ready' : ''}
-      aria-label={`B: ${label.text}${remoteReady ? ', hold to set off remote' : ''}`}
+      aria-label={`${label.text}${remoteReady ? ', hold to set off remote' : ''}`}
       style={{ ['--hold-ms' as string]: `${SPECIAL_HOLD_MS}ms` }}
       onPointerDown={(e) => {
         e.preventDefault();
@@ -257,9 +255,6 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
       onLostPointerCapture={up}
     >
       {remoteReady && <i className="hold-ring" aria-hidden />}
-      <em className="abtn-key" aria-hidden>
-        B
-      </em>
       <span>
         {label.icon && <img src={pickupIconUrl('voucher', 64)} alt="" />}
         {label.text}
@@ -271,8 +266,10 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
 
 /**
  * V2 touch layout: a large movement pad on the left and EXACTLY two action buttons in the lower right, always
- * in the same place: A (GENERATOR, HOLD = remote) in the corner and B (SPECIAL, its label follows what it would
- * do) diagonally above and to its left, so the two never stack and a thumb rolls from one to the other.
+ * in the same place: the first action (GENERATOR with its generator icon, HOLD = remote) is the lower-left button
+ * of the cluster and the second (its label follows what it would do: the vehicle, or the fighter's own ability)
+ * sits diagonally above and to the right of it, so the two never stack and a thumb rolls from one to the other.
+ * The buttons carry the action's own name and icon, never a controller letter (decision MC3).
  * Contact abilities (kick / punch / disarm / pass) have no button: walk into a generator.
  */
 export function TouchControls() {
