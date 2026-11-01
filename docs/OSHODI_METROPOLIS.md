@@ -231,6 +231,14 @@ low). Low-quality frame time (mean, whole board): about 1.9 s desktop and 1.2 s 
 versus about 1.65 s and 0.95 s before on the smaller board: roughly +15-30%, in line with the triangle growth.
 Real-phone timings were not measured.
 
+### 3e. Final polish (LA22-LA23)
+
+Ambient vehicles fade out around the road wave's approaching vehicle (`11-road-wave-cleared-lane.jpg`); Terminal 3 is
+4 m narrower and wholly inside the east edge; the core-distance gap was reviewed and accepted (LA23). Final shots:
+`10-final-zoomed-out-day.jpg`, `10b-...-night.jpg`, `10c-final-low-quality.jpg`, `10d-final-low-phone.jpg`.
+Whole-board view, medium, software WebGL: day 870 calls / 5.18 M triangles, night 858 / 5.13 M (previous pass 857 /
+5.13 M and 870 / 5.18 M); low 520 / 2.30 M; low phone 528 / 2.33 M. Vehicle counts are unchanged (2 / 10 / 64 / 64 per tier).
+
 ## 4. Assumptions (the bible's "do not invent current conditions" rule)
 
 - The street plan is **fictional and compressed**: the districts, links, portals, the platforms' position and the
