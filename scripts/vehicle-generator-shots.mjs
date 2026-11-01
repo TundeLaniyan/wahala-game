@@ -50,7 +50,7 @@ async function run(id) {
   const rumble = RUMBLE.includes(id);
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   await context.addInitScript(
-    ([id, rumble]) => {
+    ([id, rumble, CHARACTER]) => {
       const key = 'wahala.settings.v1';
       const s = JSON.parse(localStorage.getItem(key) || '{}');
       localStorage.setItem(
@@ -77,7 +77,7 @@ async function run(id) {
         ),
       );
     },
-    [id, rumble],
+    [id, rumble, CHARACTER],
   );
   const page = await context.newPage();
   page.setDefaultTimeout(300000);
@@ -217,7 +217,7 @@ async function controls(id) {
         }),
       );
     },
-    [id],
+    [id, CHARACTER],
   );
   const page = await context.newPage();
   page.setDefaultTimeout(300000);
