@@ -2,6 +2,18 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## All arenas pass and the moving-vehicle generator (branch `claude/wahala-all-arenas-vehicle-generators-v1`, from `f072484`)
+
+Decisions VG1-VG7 in `DECISIONS.md`; full record (audit, per-arena review, balance, performance) in
+`ALL_ARENAS_VEHICLE_GENERATORS.md`. Not merged, not deployed: awaiting approval.
+
+| Area | Delivered | Main tests |
+| --- | --- | --- |
+| Vehicle generator | The voucher vehicle is a carrier of a real generator (own character's vehicle only), harmless body, real blast footprint, 0.6 s late fuse, owner safe, 4 s hold, one use, clean expiry | `tests/vehicle-generator.test.ts` (25), `tests/vehicles.test.ts`, `tests/economy.test.ts`, `tests/modes.test.ts` |
+| Presentation | Roof generator + lamp + fuse ring on the carrier, quiet tick, no whole-route telegraph, contextual button label / icon unchanged | `tests/audio/*`, `e2e/vehicle-generator.spec.ts` |
+| Arenas | All 17 reviewed; two lighting lifts (Yaba After Dark, Lekki Night Rumble), no board, route, spawn or hazard changed | `tests/render/oshodi-metro-art.test.ts`, per-arena carrier tests |
+| Measurement | Balance over every arena and ruleset, perf before / after | `scripts/vehicle-generator-balance.ts`, `scripts/arena-perf.mjs`, `scripts/arena-audit-shots.mjs`, `scripts/vehicle-generator-shots.mjs` |
+
 ## Lagos arenas, build 1: Oshodi Transport Metropolis (branch `claude/wahala-lagos-arenas-v1`, from `1e099f6`)
 
 Founder brief of 2026-10-30 (decisions LA1-LA12 in `DECISIONS.md`; report `OSHODI_METROPOLIS.md`). The researched
