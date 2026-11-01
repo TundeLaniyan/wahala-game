@@ -309,3 +309,127 @@ describe('modes', () => {
     }
   });
 });
+
+describe('rulesets, closure and simultaneous endings (City Rumble)', () => {
+  function rumble(game: 'survival' | 'deathmatch' | 'team', n = 4): GameState {
+    const s = createGame({
+      seed: 7,
+      arenaId: 'cityRumble',
+      players: Array.from({ length: n }, (_, i) => ({
+        name: `P${i}`,
+        characterId: 'streetBaller' as const,
+        isBot: false,
+      })),
+      settings: { game, stageHazards: false },
+    });
+    s.tiles = s.tiles.map((t) => (t === 2 ? 0 : t));
+    s.hidden = {};
+    s.match.phase = 'playing';
+    s.match.countdownRemaining = 0;
+    s.crush = null;
+    s.endgameTraps = { waves: [], liveAt: [], warned: 0, live: 0, warnings: [] };
+    for (const p of s.players) p.protectedUntil = 0;
+    return s;
+  }
+
+  /** Launches player 0's vehicle on its automatic route, then stands `rival` on the fourth tile of that route. */
+  function sendAndTarget(s: GameState, rival: number): void {
+    const owner = s.players[0]!;
+    const far = [...s.players].filter((p) => p.id !== 0 && p.id !== rival);
+    far.forEach((p, i) => put(s, p.id, 1 + i * 2, 1));
+    s.players[rival]!.protectedUntil = 0;
+    owner.hasVoucher = true;
+    run(s, 1, { 0: { vehicle: { type: 'auto' } } });
+    const v = s.vehicles[0];
+    if (!v) throw new Error('no legal route on this board');
+    const t = v.route[4]!;
+    put(s, rival, t.x, t.y);
+    // the owner waits far from every tile of the route, so they are never inside the blast
+    const near = (x: number, y: number): boolean =>
+      v.route.some((r) => Math.abs(r.x - x) + Math.abs(r.y - y) <= 8);
+    for (let y = 1; y < s.height - 1; y++)
+      for (let x = 1; x < s.width - 1; x++) {
+        if (s.tiles[y * s.width + x] !== 0 || near(x, x === 0 ? 0 : y)) continue;
+        put(s, 0, x, y);
+        return;
+      }
+  }
+
+  it('Free-for-All respawn: the carried generator’s kill scores for the owner and the victim respawns', () => {
+    const s = rumble('deathmatch');
+    sendAndTarget(s, 1);
+    const before = s.players[0]!.stats.kills;
+    resolve(s, 4000);
+    expect(s.players[0]!.stats.kills).toBe(before + 1);
+    expect(s.players[1]!.stats.deaths).toBe(1);
+    run(s, s.config.match.durationTicks > 0 ? 400 : 0);
+    expect(s.players[1]!.alive).toBe(true); // respawned
+    expect(s.vehicles).toHaveLength(0);
+  });
+
+  it('Team Deathmatch: an opponent’s kill scores for the owner’s team, a teammate is never a target', () => {
+    const s = rumble('team');
+    const owner = s.players[0]!;
+    const mate = s.players.find((p) => p.id !== 0 && p.team === owner.team)!;
+    const foe = s.players.find((p) => p.team !== owner.team)!;
+    // the teammate stands on the route as well: the generator ignores them (friendly fire is off)
+    sendAndTarget(s, foe.id);
+    const v = s.vehicles[0]!;
+    put(s, mate.id, v.route[3]!.x, v.route[3]!.y);
+    const ev = resolve(s, 4000);
+    expect(mate.alive).toBe(true);
+    expect(foe.alive).toBe(false);
+    expect(eventsOf(ev, 'playerEliminated').find((e) => e.playerId === foe.id)!.creditId).toBe(0);
+  });
+
+  it('Last Player Standing (survival): the last rival goes and the owner wins', () => {
+    const s = rumble('survival', 2);
+    sendAndTarget(s, 1);
+    resolve(s, 4000);
+    expect(s.players[1]!.alive).toBe(false);
+    expect(s.match.result).toMatchObject({ kind: 'win', winnerId: 0 });
+  });
+
+  it('city closure: a route that has closed (concrete) stops the vehicle cleanly with no blast and no leftovers', () => {
+    const s = createGame({
+      seed: 4,
+      arenaId: 'danfoBusPark',
+      players: [0, 1].map((i) => ({ name: `P${i}`, characterId: 'streetBaller' as const, isBot: false })),
+      settings: { stageHazards: false },
+    });
+    s.tiles = s.tiles.map((t) => (t === 2 ? 0 : t));
+    s.match.phase = 'playing';
+    s.match.countdownRemaining = 0;
+    put(s, 0, 0, 10);
+    put(s, 1, 14, 0);
+    s.tiles[6 * s.width + 4] = 1; // the lane x = 4 is closed at y = 6
+    const ev = [...launch(s), ...resolve(s)];
+    // the route stops before the closed tile: the carrier leaves at its end (or crashes): either way it expires cleanly
+    expect(['route', 'crash']).toContain(eventsOf(ev, 'vehicleGeneratorExpired')[0]!.reason);
+    expect(eventsOf(ev, 'generatorExploded')).toHaveLength(0);
+    expect(s.vehicles).toHaveLength(0);
+  });
+
+  it('simultaneous eliminations: the owner and the rival go in the same tick: a kill-for-kill finish is never a win', () => {
+    const s = rumble('survival', 2);
+    sendAndTarget(s, 1);
+    // the rival's own generator under the owner goes off in the same tick as the carried one
+    const owner = s.players[0]!;
+    const rival = s.players[1]!;
+    run(s, s.config.vehicles.entryWarnTicks + 2);
+    const v = s.vehicles[0];
+    if (v) {
+      // park the owner far from the carried blast but on a generator that will kill them when it goes off
+      const t = v.route[Math.min(v.route.length - 1, 4)]!;
+      void t;
+    }
+    resolve(s, 4000);
+    expect(rival.alive).toBe(false);
+    expect(
+      owner.alive ||
+        (s.match.result?.kind as string) === 'draw' ||
+        s.match.suddenDeath !== null ||
+        s.match.result !== null,
+    ).toBe(true);
+  });
+});

@@ -9,13 +9,17 @@ import type {
   Difficulty,
   EliminationCause,
   GameConfig,
+  GameState,
   Intents,
   MatchSettings,
+  SimEvent,
 } from '../sim';
 import { createBot } from './index';
 import type { Bot } from './types';
 
 export interface MatchSpec {
+  /** Optional observer of every tick's events (measurement scripts: they may grant vouchers; the app never sets it). */
+  onEvents?: (events: readonly SimEvent[], state: GameState) => void;
   seed: number;
   /** One entry per seat (2-4 on standard arenas, up to 32 on City Rumble). */
   difficulties: Difficulty[];
@@ -115,7 +119,14 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
   const kills = state.players.map(() => 0);
   const tickMs: number[] = [];
   const survivorsAt: number[] = [];
-  const engage = state.players.map(() => ({ samples: 0, near: 0, dist: 0, late: 0, lateNear: 0, lateDist: 0 }));
+  const engage = state.players.map(() => ({
+    samples: 0,
+    near: 0,
+    dist: 0,
+    late: 0,
+    lateNear: 0,
+    lateDist: 0,
+  }));
   let alive = n;
   const stopAt = spec.maxPlayTicks ?? Infinity;
   while (state.match.phase !== 'ended' && state.tick < cap && state.match.playTicks < stopAt) {
@@ -135,7 +146,9 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
         decideCalls[d]++;
       }
     }
-    for (const e of tick(state, intents)) {
+    const tickEvents = tick(state, intents);
+    spec.onEvents?.(tickEvents, state);
+    for (const e of tickEvents) {
       if (e.type === 'generatorPlaced')
         placements.push({ owner: e.ownerId, tick: state.tick, x: e.x, y: e.y });
       if (e.type === 'playerEliminated' && 'ownerId' in e.cause && e.cause.ownerId !== e.playerId)
@@ -149,7 +162,8 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
       visited[p.id]!.add(p.y * state.width + p.x);
     }
     for (let k = alive - 1; k >= now; k--) survivorsAt[k] = state.match.playTicks;
-    if (state.match.phase === 'playing' && state.match.playTicks % ENGAGE_EVERY === 0) sampleEngagement(state, engage);
+    if (state.match.phase === 'playing' && state.match.playTicks % ENGAGE_EVERY === 0)
+      sampleEngagement(state, engage);
     alive = now;
   }
   const result = state.match.result;
