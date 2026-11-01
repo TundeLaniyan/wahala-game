@@ -25,6 +25,7 @@ const arenas = only.length ? only : [...STANDARD_ARENA_IDS, ...RUMBLE_ARENA_IDS]
 interface Row {
   launches: number;
   fused: number;
+  vehiclesWithTarget: number;
   detonated: number;
   escaped: number;
   routeEnd: number;
@@ -38,6 +39,7 @@ function measure(arenaId: string, game: GameKind, players: number): Row {
   const row: Row = {
     launches: 0,
     fused: 0,
+    vehiclesWithTarget: 0,
     detonated: 0,
     escaped: 0,
     routeEnd: 0,
@@ -49,6 +51,7 @@ function measure(arenaId: string, game: GameKind, players: number): Row {
   for (let seed = 1; seed <= matches; seed++) {
     const launched = new Map<number, number>();
     const fusing = new Set<number>();
+    const found = new Set<number>();
     runMatch({
       seed,
       arenaId,
@@ -67,6 +70,10 @@ function measure(arenaId: string, game: GameKind, players: number): Row {
           } else if (e.type === 'vehicleFuse') {
             row.fused++;
             fusing.add(e.vehicleId);
+            if (!found.has(e.vehicleId)) {
+              found.add(e.vehicleId);
+              row.vehiclesWithTarget++;
+            }
           } else if (e.type === 'vehicleDetonated') {
             row.detonated++;
             fusing.delete(e.vehicleId);
@@ -100,7 +107,7 @@ function measure(arenaId: string, game: GameKind, players: number): Row {
 
 const pct = (a: number, b: number): string => (b ? `${Math.round((100 * a) / b)}%` : '-');
 console.log(
-  '| arena | size | ruleset | players | launches | found target | fuse -> blast | fuse escaped | no target (route end) | crashed | launch->blast (s) | kills / blast | owner eliminated in a blast tick |',
+  '| arena | size | ruleset | players | launches | found a target (share of launches) | fuses ending in a blast | fuses the rival escaped | no target (route end) | crashed | launch->blast (s) | kills / blast | owner eliminated in a blast tick |',
 );
 console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|');
 for (const id of arenas) {
@@ -119,7 +126,7 @@ for (const id of arenas) {
       ? r.launchToBlastTicks.reduce((p, q) => p + q, 0) / r.launchToBlastTicks.length / 60
       : NaN;
     console.log(
-      `| ${id} | ${w}x${h} | ${game} | ${players} | ${r.launches} | ${pct(r.fused, r.launches)} | ${pct(r.detonated, r.fused)} | ${pct(r.escaped, r.fused)} | ${pct(r.routeEnd, r.launches)} | ${r.crashed} | ${Number.isNaN(mean) ? '-' : mean.toFixed(1)} | ${r.detonated ? (r.kills / r.detonated).toFixed(2) : '-'} | ${r.ownerViolations} |`,
+      `| ${id} | ${w}x${h} | ${game} | ${players} | ${r.launches} | ${pct(r.vehiclesWithTarget, r.launches)} | ${pct(r.detonated, r.fused)} | ${pct(r.escaped, r.fused)} | ${pct(r.routeEnd, r.launches)} | ${r.crashed} | ${Number.isNaN(mean) ? '-' : mean.toFixed(1)} | ${r.detonated ? (r.kills / r.detonated).toFixed(2) : '-'} | ${r.ownerViolations} |`,
     );
   }
 }
