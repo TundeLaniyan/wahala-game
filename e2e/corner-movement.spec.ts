@@ -111,11 +111,22 @@ test.describe('corner movement: phone thumb', () => {
   }) => {
     await open(page);
     await startMatch(page, { competitors: 2 });
-    await carve(page, STREET, [4, 1]);
-    await thumb(page, 'down', 150); // two tiles before the side street: held, carried, taken, walked down
-    const [x, y] = await pos(page);
-    expect(x).toBe(6);
-    expect(y).toBeGreaterThanOrEqual(2);
+    await carve(page, STREET, [1, 1]);
+    // the thumb walks right along the street, then swings down two tiles before the side street and stays there
+    const zone = (await page.getByTestId('stick-zone').boundingBox())!;
+    const x = zone.x + zone.width * 0.4;
+    const y = zone.y + zone.height * 0.65;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 46, y, { steps: 4 });
+    for (let i = 0; i < 80 && (await pos(page))[0] < 4; i++) await stepTicks(page, 1);
+    expect((await pos(page))[0]).toBe(4);
+    await page.mouse.move(x, y + 46, { steps: 4 });
+    await stepTicks(page, 150);
+    await page.mouse.up();
+    const [px, py] = await pos(page);
+    expect(px).toBe(6); // carried along the street to the opening
+    expect(py).toBeGreaterThanOrEqual(2); // and turned down it
     await carve(page, STREET, [2, 1]);
     await thumb(page, 'right', 3, { settle: 60 }); // a short flick: exactly one tile
     expect(await pos(page)).toEqual([3, 1]);
