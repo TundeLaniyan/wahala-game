@@ -121,15 +121,15 @@ test.describe('Stitch main menu', () => {
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('menu-mode')).toBeVisible();
-    await page.keyboard.press('ArrowRight'); // the saved mode first, then the next card
+    await page.keyboard.press('ArrowRight'); // the saved mode (Free-for-All) first, then the next card
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('mode-deathmatch')).toBeFocused();
+    await expect(page.getByTestId('mode-team')).toBeFocused();
     await page.keyboard.press('Enter'); // choosing a mode opens the arena and settings
     await expect(page.getByTestId('menu-setup')).toBeVisible();
     await expect(page.getByTestId('rumble-setup')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('menu-mode')).toBeVisible();
-    await expect(page.getByTestId('mode-deathmatch')).toHaveAttribute('aria-current', 'true');
+    await expect(page.getByTestId('mode-team')).toHaveAttribute('aria-current', 'true');
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('menu-home')).toBeVisible();
     // Esc on Home does nothing harmful

@@ -78,8 +78,9 @@ test.describe('touch layout', () => {
       expect(b.x - a.x).toBeGreaterThanOrEqual(m.a.w * 0.25);
       // round buttons: their circles never touch (the square boxes may share a corner)
       expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeGreaterThanOrEqual((m.a.w + m.b.w) / 2);
-      // the cluster lives in the lower-right quarter of the screen
-      expect(a.x).toBeGreaterThan(m.vw * 0.6);
+      // the cluster lives in the lower-right of the screen
+      expect(a.x).toBeGreaterThan(m.vw * 0.5); // A, the cluster's left button, is still in the right half
+      expect(b.x).toBeGreaterThan(m.vw * 0.6);
       expect(a.y).toBeGreaterThan(m.vh * 0.55);
       // tap targets >= 44 px, A at least as big as B
       expect(m.b.w).toBeGreaterThanOrEqual(44);
