@@ -29,13 +29,21 @@ export function matchRulesText(s: GameSettings): string[] {
     ];
   const rules: string[] = [];
   if (s.rumbleMode === 'survival')
-    rules.push('One life: last one standing wins', 'The city closes in street by street');
+    rules.push(
+      'No respawn: last survivor wins',
+      'The city closes in street by street',
+      'Time up or a tie on kills: highest kills, then sudden death',
+    );
   if (s.rumbleMode === 'deathmatch')
-    rules.push(`${s.rumbleMinutes} minutes, respawns on`, 'Most eliminations wins');
+    rules.push(
+      `${s.rumbleMinutes} minutes · respawn enabled`,
+      'Highest kills wins',
+      'Level on kills: sudden death between the leaders',
+    );
   if (s.rumbleMode === 'team')
     rules.push(
-      `${s.rumbleMinutes} minutes, respawns on`,
-      'Green (you) v White: most team eliminations wins',
+      `${s.rumbleMinutes} minutes · respawn enabled`,
+      'Green (you) v White: the team with most kills wins',
       s.friendlyFire ? 'Friendly fire: on' : 'Friendly fire: off',
     );
   rules.push(

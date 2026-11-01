@@ -2,6 +2,9 @@
  * V2 match rulesets. One simulation, configurable rules: every mode is a set of config overrides plus a
  * few switches read by the systems (respawn, rewards, scoring, teams). Nothing here is presentation.
  *
+ * Player-facing names (decision MD1): deathmatch = Free-for-All (the default), team = Team Deathmatch,
+ * survival = Last Player Standing. Capture the Flag and multi-team battles are planned modes only (docs).
+ *
  * - classic:    the 2-4 player standard match. Last standing wins; Wahala Crush is mandatory (the app always
  *               asks for it; `settings.mode = 'classic'` remains only for tutorials and tests).
  * - survival:   City Rumble, last standing, the city closes in, power comes from eliminations (cumulative).
@@ -32,7 +35,7 @@ export const isTeamMode = (game: GameKind): boolean => game === 'team';
 /** Default length of a respawn-mode match when the settings name none. */
 export const DEFAULT_TIMED_SECONDS = 300;
 /** The match lengths the menu offers for the respawn modes. */
-export const TIMED_MINUTES: readonly number[] = [5, 10];
+export const TIMED_MINUTES: readonly number[] = [3, 5];
 
 /** Team names in team-index order (0 = Green, 1 = White; more teams only for tests / future menus). */
 export const TEAM_NAMES: readonly string[] = ['Green', 'White', 'Gold', 'Red'];

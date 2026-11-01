@@ -79,17 +79,40 @@ describe('early turn buffering (a turn pressed early is carried to the junction)
     expect(r2.at).toEqual([5, 3]);
   });
 
-  it('a released flick is one plain press: nothing is carried after the thumb lifts (release stops at once)', () => {
+  it('a thumb that lifts with no turn pending stops at once: release never walks on', () => {
+    const r = new AssistRig({ map: CORNER, start: [1, 1] });
+    r.thumbDown();
+    r.push('right');
+    r.until(3, 1);
+    r.lift();
+    r.step(120);
+    expect(r.at[1]).toBe(1);
+    expect(r.at[0]).toBeLessThanOrEqual(4); // at most the step already under way
+    r.assertCleanTrace();
+  });
+
+  it('a turn flicked a tile or two before the corner is remembered after the thumb lifts and taken at the corner (MV1)', () => {
     const r = new AssistRig({ map: CORNER, start: [1, 1] });
     r.thumbDown();
     r.push('right');
     r.until(3, 1);
     r.push('down');
+    r.lift(); // a quick flick: the finger is already off when the corner comes
+    r.step(120);
+    expect(r.at).toEqual([5, 2]); // along the row to the opening, then ONE tile down (a tap is one tile), then it stops
+    r.assertCleanTrace();
+  });
+
+  it('a turn tapped long before the corner is forgotten: no surprise walking (the memory is short)', () => {
+    const r = new AssistRig({ map: CORNER, start: [1, 1] });
+    r.thumbDown();
+    r.push('right');
+    r.until(2, 1); // three tiles before the opening: out of reach
+    r.push('down');
     r.lift();
     r.step(120);
-    expect(r.at[1]).toBe(1); // never reached the side street
-    expect(r.at[0]).toBeLessThanOrEqual(4); // at most the step already under way
-    r.assertCleanTrace();
+    expect(r.at[1]).toBe(1);
+    expect(r.at[0]).toBeLessThanOrEqual(4);
   });
 
   it('standing still, a single press is exactly one tile and nothing else', () => {

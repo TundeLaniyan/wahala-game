@@ -375,6 +375,19 @@ li.me .nm {
   border-radius: 8px;
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
 }
+.rh-team.light .tn,
+.rh-team.light b {
+  /* the white team: a dark outline keeps its name and score readable */
+  text-shadow:
+    -1px -1px 0 #101418,
+    1px -1px 0 #101418,
+    -1px 1px 0 #101418,
+    1px 1px 0 #101418;
+}
+.rh-team.light {
+  outline: 2px solid #101418;
+  outline-offset: -2px;
+}
 .rh-team .tn {
   font-family: var(--display);
   letter-spacing: 0.1em;

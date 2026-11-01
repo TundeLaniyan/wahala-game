@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { playerCss } from '../assets/palette';
+import { isLightTeam, playerCss, playerDotStyle, playerTextStyle } from '../assets/palette';
 import { commands } from '../app/session';
 import type { FeedItem, RumbleEntry, RumbleSnapshot, TeamScore } from '../app/hud';
 import { useGameStore } from '../app/store';
@@ -11,7 +11,7 @@ const kda = (e: Pick<RumbleEntry, 'kills' | 'deaths' | 'assists'>): string =>
 
 function Name({ name, slot, team = -1, you }: { name: string; slot: number; team?: number; you?: boolean }) {
   return (
-    <b className="rh-name" style={{ color: playerCss(slot, team) }}>
+    <b className="rh-name" style={playerTextStyle(slot, team)}>
       {you ? 'YOU' : name}
     </b>
   );
@@ -81,7 +81,7 @@ function Row({ e, extra, stats }: { e: RumbleEntry; extra?: string; stats?: bool
       className={`${e.alive || stats ? '' : 'out'}${e.isLocal ? ' me' : ''}${e.team >= 0 ? ` team-${e.team}` : ''}`}
     >
       {stats && <span className="rk">{e.placement}</span>}
-      <i style={{ background: playerCss(e.slot, e.team) }} />
+      <i style={playerDotStyle(e.slot, e.team)} />
       <span className="nm">{e.isLocal ? 'YOU' : e.name}</span>
       <span className="k">{right}</span>
     </li>
@@ -116,7 +116,7 @@ export function TeamBar({ teams, big }: { teams: TeamScore[]; big?: boolean }) {
       {teams.map((t, i) => (
         <div
           key={t.team}
-          className={`rh-team${t.mine ? ' mine' : ''}${t.place === 1 && teams.length > 1 && teams[0]!.kills > 0 ? ' lead' : ''}`}
+          className={`rh-team${isLightTeam(t.team) ? ' light' : ''}${t.mine ? ' mine' : ''}${t.place === 1 && teams.length > 1 && teams[0]!.kills > 0 ? ' lead' : ''}`}
           style={{ ['--team' as string]: playerCss(0, t.team), order: i * 2 }}
           data-team={t.team}
         >
@@ -279,7 +279,7 @@ export function RumbleResults({ r }: { r: RumbleSnapshot }) {
               <tr key={e.id} className={e.isLocal ? 'me' : ''}>
                 <td className="rr-place">{e.placement}</td>
                 <td className="nm">
-                  <i style={{ background: playerCss(e.slot, e.team) }} />
+                  <i style={playerDotStyle(e.slot, e.team)} />
                   {e.isLocal ? 'YOU' : e.name}
                 </td>
                 <td>{e.kills}</td>
@@ -322,7 +322,7 @@ export function RumbleResults({ r }: { r: RumbleSnapshot }) {
           {podium.map((e) => (
             <li key={e.id} className={e.isLocal ? 'me' : ''}>
               <span className="rr-place">{e.placement}</span>
-              <i style={{ background: playerCss(e.slot, e.team) }} />
+              <i style={playerDotStyle(e.slot, e.team)} />
               <span className="nm">{e.isLocal ? 'YOU' : e.name}</span>
               <small>{elims(e.kills)}</small>
             </li>
@@ -344,7 +344,7 @@ export function RumbleResults({ r }: { r: RumbleSnapshot }) {
             .map((e) => (
               <li key={e.id} className={e.isLocal ? 'me' : ''}>
                 <span className="rr-place">{e.placement ?? '–'}</span>
-                <i style={{ background: playerCss(e.slot, e.team) }} />
+                <i style={playerDotStyle(e.slot, e.team)} />
                 <span className="nm">{e.isLocal ? 'YOU' : e.name}</span>
                 <small>{e.kills}</small>
               </li>

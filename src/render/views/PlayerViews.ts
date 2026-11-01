@@ -11,7 +11,7 @@ import {
 } from 'three';
 import type { Player, SimEvent } from '../../sim';
 import { fighterIdentity } from '../../assets/fighterIdentity';
-import { SLOT_COLORS } from '../../assets/palette';
+import { SLOT_COLORS, TEAM_OUTLINE } from '../../assets/palette';
 import { drawPickupIcon } from '../../assets/pickupIcons';
 import { OKADA_SCALE, createPlayerModel, createRiggedPlayerModel } from '../assets/characters';
 import { assets } from '../assets/library';
@@ -173,7 +173,11 @@ export class PlayerViews implements View {
 
   private create(p: Player, ctx: FrameContext): Visual {
     const modelId = p.slot === 3 && assets.has('char_areaBoss') ? 'areaBoss' : p.characterId;
-    const identity = fighterIdentity(p.slot);
+    // Team Deathmatch: the team colours are the kit; the per-slot jersey hue would fight them (a purple White
+    // team), so teammates keep the character's own look and differ by their headwear shape only
+    const base = fighterIdentity(p.slot);
+    const identity =
+      p.team >= 0 ? { ...base, hueShift: 0, hueIndex: 0, headwearColor: teamColor(p.team) } : base;
     const model =
       createRiggedPlayerModel(modelId, p.id * 0.37, identity) ?? createPlayerModel(p.characterId, identity);
     // Team Rumble: the team colour replaces the slot colour on the ring, the silhouette, the marker and
@@ -195,6 +199,23 @@ export class PlayerViews implements View {
     ring.rotation.x = -Math.PI / 2;
     ring.scale.setScalar(0.96);
     ring.renderOrder = 4;
+    if (p.team >= 0) {
+      // every team ring has a dark outline under it, so the white team reads on a pale floor
+      const outline = new Mesh(
+        flat,
+        new MeshBasicMaterial({
+          map: ringTexture(),
+          color: TEAM_OUTLINE,
+          transparent: true,
+          depthWrite: false,
+          opacity: 0.95,
+        }),
+      );
+      outline.scale.setScalar(1.1);
+      outline.position.z = -0.002;
+      outline.renderOrder = 3;
+      ring.add(outline);
+    }
     const shadow = new Mesh(
       flat,
       new MeshBasicMaterial({

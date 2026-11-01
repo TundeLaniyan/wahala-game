@@ -5,6 +5,7 @@
  * same band round its torso. Spawn protection shows as a blinking ring plus a blinking body.
  */
 import {
+  BackSide,
   CylinderGeometry,
   DoubleSide,
   Mesh,
@@ -15,7 +16,7 @@ import {
   Vector3,
 } from 'three';
 import type { Object3D } from 'three';
-import { TEAM_COLORS } from '../../assets/palette';
+import { TEAM_COLORS, TEAM_OUTLINE } from '../../assets/palette';
 import type { PlayerModel } from '../assets/characters';
 
 /** The team's colour (0 Green, 1 White ...). */
@@ -32,6 +33,17 @@ const UP = new Vector3(0, 1, 0);
 
 function kitMaterial(color: number): MeshStandardMaterial {
   return new MeshStandardMaterial({ color, roughness: 0.78, metalness: 0, side: DoubleSide });
+}
+
+/** The dark outline every team kit wears (so the white team reads on a pale floor), drawn as a larger back-face shell. */
+const outlineMaterial = new MeshBasicMaterial({ color: TEAM_OUTLINE, side: BackSide });
+function outlineOf(mesh: Mesh): Mesh {
+  const o = new Mesh(mesh.geometry, outlineMaterial);
+  o.name = `${mesh.name}_outline`;
+  o.position.copy(mesh.position);
+  o.quaternion.copy(mesh.quaternion);
+  o.scale.copy(mesh.scale).multiplyScalar(1.12);
+  return o;
 }
 
 /**
@@ -55,7 +67,9 @@ export function addTeamKit(model: PlayerModel, team: number): Object3D[] {
       jersey.position.set(0, 0.07, 0.005);
       jersey.scale.set(k, 1, 0.82 * Math.max(0.9, k));
       chest.add(jersey);
-      added.push(jersey);
+      const jo = outlineOf(jersey);
+      chest.add(jo);
+      added.push(jersey, jo);
     }
     for (const arm of [armL, armR]) {
       if (!arm) continue;
@@ -69,7 +83,9 @@ export function addTeamKit(model: PlayerModel, team: number): Object3D[] {
       band.position.copy(dir).multiplyScalar(len * 0.32);
       band.scale.setScalar(Math.max(0.85, k));
       arm.add(band);
-      added.push(band);
+      const bo = outlineOf(band);
+      arm.add(bo);
+      added.push(band, bo);
     }
     return added;
   }
@@ -79,7 +95,9 @@ export function addTeamKit(model: PlayerModel, team: number): Object3D[] {
   band.scale.set(0.62, 0.55, 0.55);
   band.position.set(0, 0.52, 0);
   model.torso.add(band);
-  added.push(band);
+  const bo = outlineOf(band);
+  model.torso.add(bo);
+  added.push(band, bo);
   return added;
 }
 

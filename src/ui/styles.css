@@ -766,7 +766,7 @@ button {
   position: absolute;
   left: 0;
   bottom: 0;
-  width: min(46vw, calc(100vw - clamp(150px, min(58vh, 52vw), 300px) - 24px));
+  width: min(46vw, calc(100vw - clamp(150px, min(60vh, 56vw), 320px) - 24px));
   top: clamp(64px, 20vh, 120px);
   pointer-events: auto;
   touch-action: none;
@@ -865,8 +865,8 @@ button {
   position: absolute;
   left: max(calc(var(--sa-l) + 10px), 12px);
   bottom: max(calc(var(--sa-b) + 8px), 14px);
-  width: clamp(112px, min(40vh, 38vw), 280px);
-  height: clamp(112px, min(40vh, 38vw), 280px);
+  width: clamp(112px, min(40vh, 34vw), 280px);
+  height: clamp(112px, min(40vh, 34vw), 280px);
   border-radius: 28%;
   border: 3px solid rgba(255, 255, 255, 0.5);
   background:
@@ -942,8 +942,8 @@ button {
   position: absolute;
   right: max(calc(var(--sa-r) + 10px), 16px);
   bottom: max(calc(var(--sa-b) + 10px), 20px);
-  width: clamp(150px, min(58vh, 52vw), 300px);
-  height: clamp(150px, min(58vh, 52vw), 300px);
+  width: clamp(150px, min(60vh, 56vw), 320px);
+  height: clamp(150px, min(60vh, 56vw), 320px);
   pointer-events: none;
 }
 .abtn {
@@ -954,28 +954,42 @@ button {
   user-select: none;
   -webkit-touch-callout: none;
   border-radius: 50%;
-  border: 4px solid rgba(255, 255, 255, 0.6);
+  border: 3px solid rgba(255, 255, 255, 0.55);
   display: grid;
   place-items: center;
   font-family: var(--display);
   font-weight: 400;
   letter-spacing: 0.08em;
   text-align: center;
-  font-size: clamp(0.6rem, 2vh, 0.85rem);
+  font-size: clamp(0.7rem, 2.4vh, 1rem);
   line-height: 1.05;
   color: #fff;
+  /* a domed, glossy face button: a drop edge below, a bright top-left rim and a shaded underside inside */
   box-shadow:
-    0 5px 0 rgba(0, 0, 0, 0.4),
-    0 0 18px rgba(0, 0, 0, 0.4) inset;
+    0 6px 0 rgba(0, 0, 0, 0.5),
+    0 9px 14px rgba(0, 0, 0, 0.35),
+    inset 0 3px 5px rgba(255, 255, 255, 0.5),
+    inset 0 -8px 12px rgba(0, 0, 0, 0.38);
   padding: 0;
   overflow: hidden;
+  /* the label is sized from the button itself (cqw below), so a long action name always fits the circle */
+  container-type: size;
 }
+/*
+ * The label (decision MC4): its size is a share of the button's own width, never of the screen, so GENERATOR,
+ * YELLOW CAB and the other action names stay inside the round edge at every size the button is drawn at. The
+ * words sit on the lower half's wide chord and the icon above them; tracking is tight so a long word is short.
+ * The vh sizes on .abtn are only the fallback for a browser without container units.
+ */
 .abtn > span {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-size: 12cqw;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 .abtn img {
   width: 46%;
@@ -989,49 +1003,43 @@ button {
   letter-spacing: 0.04em;
   color: #ffd6e8;
 }
-/* A: GENERATOR, in the lower-right corner of the cluster */
+/*
+ * The action cluster follows a physical controller (decision MC2): A is the lower-left button and B sits
+ * diagonally above and to the right of it, so the thumb rolls up and to the right from A to B. Any further
+ * button would continue the same arc, up and to the right; there are exactly two today. The buttons are round,
+ * domed and lit from the top left like real face buttons, each with its letter and its label. There is no panel
+ * behind them: the cluster is only these two circles.
+ */
+/* A: GENERATOR, the lower-left button of the cluster */
 .abtn.bomb {
-  right: 0;
+  left: 0;
   bottom: 0;
-  width: 56%;
-  height: 56%;
-  background: conic-gradient(#e4a30a 0 50%, #8b3cd6 50% 100%);
-  font-size: clamp(0.9rem, 2.8vh, 1.2rem);
+  width: 58%;
+  height: 58%;
+  background: radial-gradient(circle at 32% 26%, #ffe08a 0%, #f0b20f 38%, #c98200 72%, #8a5600 100%);
+  font-size: clamp(0.95rem, 3.2vh, 1.45rem);
 }
 .abtn.bomb b {
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 6px;
-  padding: 3px 8px;
   font-weight: 400;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 }
-/* B: SPECIAL, diagonally above and to the left of A (label changes, place and look never do) */
+.abtn.bomb img {
+  width: 40%;
+  margin-bottom: 2px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
+}
+/* B: SPECIAL, diagonally above and to the right of A (label changes, place and look never do) */
 .abtn.special {
-  left: 2%;
+  right: 0;
   bottom: 46%;
-  width: 42%;
-  height: 42%;
-  background: #7c4dff;
+  width: 44%;
+  height: 44%;
+  background: radial-gradient(circle at 32% 26%, #c4b2ff 0%, #8d66ff 40%, #5a33d6 74%, #33198a 100%);
 }
 .abtn.special.vehicle {
-  background: #12a455;
+  background: radial-gradient(circle at 32% 26%, #7ff0b0 0%, #1fbe6a 40%, #0d8a49 74%, #08592f 100%);
 }
-/* the key letter of each button, like a pad's face buttons */
-.abtn-key {
-  position: absolute;
-  top: 6%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  font-style: normal;
-  font-size: 0.78em;
-  line-height: 1;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  letter-spacing: 0;
-}
-/* states (visual only; the input behaviour is unchanged):
+/* states (visual only; the input behaviour is unchanged; each keeps the physical look):
    idle      the resting look
    pressed   a finger is down: the button sinks and brightens
    holding   the hold-for-remote ring is filling
@@ -1042,16 +1050,16 @@ button {
   filter: brightness(1.22) saturate(1.1);
   border-color: #fff;
   box-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.4),
+    0 2px 0 rgba(0, 0, 0, 0.5),
     0 0 22px rgba(255, 255, 255, 0.45),
-    0 0 18px rgba(0, 0, 0, 0.4) inset;
+    inset 0 5px 10px rgba(0, 0, 0, 0.45);
 }
 .abtn.holding {
   border-color: #ff2f86;
   box-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.4),
+    0 2px 0 rgba(0, 0, 0, 0.5),
     0 0 26px rgba(255, 47, 134, 0.75),
-    0 0 18px rgba(0, 0, 0, 0.4) inset;
+    inset 0 4px 10px rgba(0, 0, 0, 0.4);
 }
 .abtn[data-state='remote'] {
   border-color: #ff2f86;
@@ -1067,24 +1075,27 @@ button {
 @keyframes abtn-remote {
   from {
     box-shadow:
-      0 5px 0 rgba(0, 0, 0, 0.4),
+      0 6px 0 rgba(0, 0, 0, 0.5),
       0 0 8px rgba(255, 47, 134, 0.35),
-      0 0 18px rgba(0, 0, 0, 0.4) inset;
+      inset 0 3px 5px rgba(255, 255, 255, 0.5),
+      inset 0 -8px 12px rgba(0, 0, 0, 0.38);
   }
   to {
     box-shadow:
-      0 5px 0 rgba(0, 0, 0, 0.4),
+      0 6px 0 rgba(0, 0, 0, 0.5),
       0 0 26px rgba(255, 47, 134, 0.95),
-      0 0 18px rgba(0, 0, 0, 0.4) inset;
+      inset 0 3px 5px rgba(255, 255, 255, 0.5),
+      inset 0 -8px 12px rgba(0, 0, 0, 0.38);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .abtn[data-state='remote'] {
     animation: none;
     box-shadow:
-      0 5px 0 rgba(0, 0, 0, 0.4),
+      0 6px 0 rgba(0, 0, 0, 0.5),
       0 0 20px rgba(255, 47, 134, 0.8),
-      0 0 18px rgba(0, 0, 0, 0.4) inset;
+      inset 0 3px 5px rgba(255, 255, 255, 0.5),
+      inset 0 -8px 12px rgba(0, 0, 0, 0.38);
   }
 }
 /* hold-for-remote: a ring fills over the hold time while B is down */
@@ -1132,11 +1143,12 @@ button {
 
 /*
  * Landscape phones (height <= 480 px): the movement pad and the action cluster each live in a strip
- * 32vh wide at their own side (render/cameraRig.ts PHONE_CONTROL_STRIP = 0.32). The whole-arena camera keeps
+ * 36vh wide at their own side (render/cameraRig.ts PHONE_CONTROL_STRIP = 0.36). The whole-arena camera keeps
  * the board's near corners between the two strips, so no control ever covers a tile; higher up the board
- * narrows (perspective). Inside its strip the cluster keeps A in the lower-right corner and puts B diagonally
- * above and to the left of it (centres about 30 degrees off vertical), with a margin to the screen edge and the
- * safe area; the two buttons never overlap and each is at least 44 px.
+ * narrows (perspective). Inside its strip the cluster keeps the first action (GENERATOR) as the lower-left button
+ * and puts the second diagonally above and to the right of it, as large as the strip allows (about 23vh and
+ * 20.5vh, at least 44 px each), with 12 px to the screen edge and the safe areas and a gap of about 3vh between the
+ * two so a thumb cannot hit the wrong one (decision MC3).
  */
 @media (max-height: 480px) and (orientation: landscape) {
   /* the clock stays inside the 13% top band on a 320 px tall phone */
@@ -1149,41 +1161,36 @@ button {
   .actions {
     right: max(calc(var(--sa-r) + 8px), 12px);
     bottom: max(calc(var(--sa-b) + 8px), 12px);
-    width: calc(32vh - 14px);
-    height: 70vh;
+    width: calc(36vh - 12px);
+    height: 80vh;
   }
   .abtn {
     border-width: 3px;
-    font-size: clamp(0.5rem, 2.6vh, 0.72rem);
+    font-size: clamp(0.56rem, 3.1vh, 0.9rem);
   }
   .abtn.bomb {
-    width: 19vh;
-    height: 19vh;
-    font-size: clamp(0.58rem, 3vh, 0.86rem);
+    width: 23vh;
+    height: 23vh;
+    font-size: clamp(0.62rem, 3.5vh, 1rem);
   }
-  .abtn.bomb b {
-    padding: 2px 5px;
+  .abtn.bomb img {
+    width: 38%;
   }
   .abtn.special {
-    left: 0;
-    bottom: 18.5vh;
-    width: 17vh;
-    height: 17vh;
-  }
-  .abtn-key {
-    top: 4%;
-    font-size: 0.7em;
-    padding: 1px 5px;
+    right: 0;
+    bottom: 23.5vh;
+    width: 20.5vh;
+    height: 20.5vh;
   }
   .stick-zone {
-    width: calc(100vw - 32vh - 16px);
+    width: calc(100vw - 36vh - 16px);
     max-width: 50vw;
     top: 18vh;
   }
   .stick-hint {
     left: max(calc(var(--sa-l) + 8px), 12px);
     bottom: max(calc(var(--sa-b) + 8px), 12px);
-    width: calc(32vh - 14px);
+    width: calc(36vh - 14px);
     height: 52vh;
     border-radius: 22px;
   }

@@ -47,7 +47,7 @@ export function matchArenaId(settings: GameSettings): string {
  * The match rules for the chosen game, built fresh from the saved menu settings for every start (so
  * nothing carries over between match types): Classic = last standing with the mandatory Wahala Crush;
  * City Rumble = the chosen Survival / Deathmatch / Team Rumble. Friendly fire only exists in Team
- * Rumble and the 5 / 10 minute clock only in the respawn modes.
+ * Rumble and the 3 / 5 minute clock only in the respawn modes.
  */
 export function matchRules(settings: GameSettings): Partial<MatchSettings> & { game: GameKind } {
   const rumble = getArena(matchArenaId(settings)).kind === 'rumble';

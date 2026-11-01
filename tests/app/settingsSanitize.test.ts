@@ -31,7 +31,7 @@ describe('settings repair (invalid saves can never block a match)', () => {
       competitors: 3,
       rumbleCompetitors: 32,
       rumbleMode: 'team',
-      rumbleMinutes: 10,
+      rumbleMinutes: 3,
       friendlyFire: true,
       rumbleArenaId: RUMBLE_ARENA_IDS[3]!,
       arenaId: EXPERIMENTAL_ARENA_IDS[0]!,
@@ -51,7 +51,7 @@ describe('settings repair (invalid saves can never block a match)', () => {
       competitors: 9,
       rumbleCompetitors: 31,
       rumbleMode: 'battleRoyale',
-      rumbleMinutes: 7,
+      rumbleMinutes: 10, // the old 10 minute option no longer exists
       rumbleArenaId: 'danfoBusPark',
       arenaId: 'rumbleOshodi',
       character: 'areaBoss',
@@ -68,7 +68,7 @@ describe('settings repair (invalid saves can never block a match)', () => {
     expect(s.play).toBe('rumble');
     expect(s.competitors).toBe(4);
     expect(s.rumbleCompetitors).toBe(16);
-    expect(s.rumbleMode).toBe('survival');
+    expect(s.rumbleMode).toBe('deathmatch'); // Free-for-All is the default
     expect(s.rumbleMinutes).toBe(5);
     expect(s.rumbleArenaId).toBe(RUMBLE_ARENA_IDS[0]);
     expect(s.arenaId).toBe(DEFAULT_GAME_SETTINGS.arenaId);

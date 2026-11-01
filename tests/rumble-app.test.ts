@@ -60,6 +60,7 @@ const idleBot: Bot = { decide: () => ({}) };
 
 const rumbleSettings = (n: GameSettings['rumbleCompetitors']): GameSettings => ({
   ...DEFAULT_GAME_SETTINGS,
+  rumbleMode: 'survival', // these tests are about the no-respawn flow (the menu default is now Free-for-All)
   arenaId: CITY_RUMBLE_ID,
   rumbleCompetitors: n,
 });

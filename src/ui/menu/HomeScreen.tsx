@@ -97,7 +97,7 @@ export function HomeScreen() {
               icon="🔥"
               title="City Rumble"
               tag="Up to 32"
-              text={`Survival · Deathmatch · Team Rumble · ${RUMBLE_ARENA_IDS.length} Lagos stages`}
+              text={`Free-for-All · Team Deathmatch · Last Player Standing · ${RUMBLE_ARENA_IDS.length} Lagos stages`}
               onClick={() => {
                 commands.updateSettings({ play: 'rumble' });
                 commands.menuOpen('mode');
