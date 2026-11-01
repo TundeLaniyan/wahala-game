@@ -12,6 +12,9 @@ const [dir = 'vg-shots', label = 'vg', only = ''] = process.argv.slice(2);
 mkdirSync(dir, { recursive: true });
 const BASE = process.env.SHOT_URL ?? 'http://localhost:5206/';
 const Q = process.env.Q ?? 'medium';
+// first carrier tile that counts as "approaching" (0 on a stage whose blast reaches the entry at once, e.g. Power Yard)
+const MINI = Number(process.env.MINI ?? 2);
+const CHARACTER = process.env.CHARACTER ?? 'streetBaller';
 const STANDARD = [
   'danfoBusPark',
   'balogunMarket',
@@ -23,11 +26,24 @@ const STANDARD = [
   'yabaAfterDark',
   'thirdMainland',
 ];
-const RUMBLE = ['rumbleOshodi', 'rumbleLagosIsland', 'rumbleOjuelegba', 'rumbleApapa', 'rumbleLekkiNight', 'cityRumble'];
+const RUMBLE = [
+  'rumbleOshodi',
+  'rumbleLagosIsland',
+  'rumbleOjuelegba',
+  'rumbleApapa',
+  'rumbleLekkiNight',
+  'cityRumble',
+];
 const ids = only ? only.split(',') : [...STANDARD, ...RUMBLE];
 const browser = await chromium.launch({
   executablePath: process.env.WAHALA_CHROMIUM,
-  args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  args: [
+    '--no-sandbox',
+    '--use-gl=angle',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+    '--ignore-gpu-blocklist',
+  ],
 });
 
 async function run(id) {
@@ -41,8 +57,23 @@ async function run(id) {
         key,
         JSON.stringify(
           rumble
-            ? { ...s, play: 'rumble', rumbleArenaId: id, rumbleCompetitors: 8, rumbleMode: 'survival', difficulty: 'standard', character: 'streetBaller' }
-            : { ...s, play: 'classic', arenaId: id, competitors: 4, difficulty: 'standard', character: 'streetBaller' },
+            ? {
+                ...s,
+                play: 'rumble',
+                rumbleArenaId: id,
+                rumbleCompetitors: 8,
+                rumbleMode: 'survival',
+                difficulty: 'standard',
+                character: CHARACTER,
+              }
+            : {
+                ...s,
+                play: 'classic',
+                arenaId: id,
+                competitors: 4,
+                difficulty: 'standard',
+                character: CHARACTER,
+              },
         ),
       );
     },
@@ -86,8 +117,14 @@ async function run(id) {
     const t = v.route[Math.min(5, v.route.length - 1)];
     put(s.players[1], t.x, t.y);
     const free = [];
-    for (let y = 1; y < s.height - 1; y++) for (let x = 1; x < s.width - 1; x++) if (s.tiles[y * s.width + x] === 0 && !near(x, y)) free.push([x, y]);
-    s.players.slice(2).forEach((p, i) => free.length && put(p, ...free[Math.floor((free.length * (i + 1)) / (s.players.length))]));
+    for (let y = 1; y < s.height - 1; y++)
+      for (let x = 1; x < s.width - 1; x++)
+        if (s.tiles[y * s.width + x] === 0 && !near(x, y)) free.push([x, y]);
+    s.players
+      .slice(2)
+      .forEach(
+        (p, i) => free.length && put(p, ...free[Math.floor((free.length * (i + 1)) / s.players.length)]),
+      );
     if (free.length) put(s.players[0], ...free[0]);
     return { w: s.width, h: s.height, kind: v.kind, route: v.route.length };
   });
@@ -110,7 +147,12 @@ async function run(id) {
       [zoom],
     );
     await page.waitForTimeout(500);
-    await page.screenshot({ path: `${dir}/${label}-${id}-${name}.jpg`, quality: 85, type: 'jpeg', timeout: 240000 });
+    await page.screenshot({
+      path: `${dir}/${label}-${id}-${name}.jpg`,
+      quality: 85,
+      type: 'jpeg',
+      timeout: 240000,
+    });
   };
   const until = (pred, max = 1500) =>
     page.evaluate(
@@ -125,9 +167,13 @@ async function run(id) {
       },
       [pred, max],
     );
-  const approach = await until("s.vehicles[0] && s.vehicles[0].phase === 'driving' && s.vehicles[0].index >= 2");
+  const approach = await until(
+    `s.vehicles[0] && s.vehicles[0].phase === 'driving' && s.vehicles[0].index >= ${MINI}`,
+  );
   if (approach >= 0) await look('1-approach', 2.4);
-  const fuse = await until("s.vehicles[0] && s.vehicles[0].payload && s.vehicles[0].payload.state === 'fusing'");
+  const fuse = await until(
+    "s.vehicles[0] && s.vehicles[0].payload && s.vehicles[0].payload.state === 'fusing'",
+  );
   if (fuse >= 0) {
     await page.evaluate(() => window.__WAHALA__.stepTicks(12));
     await look('2-warning', 2.4);
@@ -141,18 +187,35 @@ async function run(id) {
     const s = window.__WAHALA__.getState();
     return { owner: s.players[0].alive, rival: s.players[1].alive, vehicles: s.vehicles.length };
   });
-  console.log(JSON.stringify({ arena: id, ...planned, approach, fuse, blast, ...state, errors: errors.slice(0, 2) }));
+  console.log(
+    JSON.stringify({ arena: id, ...planned, approach, fuse, blast, ...state, errors: errors.slice(0, 2) }),
+  );
   await context.close();
 }
 
 async function controls(id) {
   // the phone controls with the contextual vehicle action
-  const context = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  const context = await browser.newContext({
+    viewport: { width: 844, height: 390 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 2,
+  });
   await context.addInitScript(
-    ([id]) => {
+    ([id, CHARACTER]) => {
       const key = 'wahala.settings.v1';
       const s = JSON.parse(localStorage.getItem(key) || '{}');
-      localStorage.setItem(key, JSON.stringify({ ...s, play: 'classic', arenaId: id, competitors: 2, difficulty: 'standard', character: 'streetBaller' }));
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          ...s,
+          play: 'classic',
+          arenaId: id,
+          competitors: 2,
+          difficulty: 'standard',
+          character: CHARACTER,
+        }),
+      );
     },
     [id],
   );
@@ -168,13 +231,18 @@ async function controls(id) {
   await page.evaluate(() => {
     const w = window.__WAHALA__;
     w.controller().frozen = true;
+    w.stepTicks(300);
     w.getState().players[0].hasVoucher = true;
     w.advance(2);
   });
   await page.waitForTimeout(600);
-  await page.screenshot({ path: `${dir}/${label}-${id}-4-controls.jpg`, quality: 85, type: 'jpeg' });
+  await page.screenshot({
+    path: `${dir}/${label}-${id}-4-controls-${CHARACTER}.jpg`,
+    quality: 85,
+    type: 'jpeg',
+  });
   const txt = await page.evaluate(() => document.querySelector('[data-testid=btn-special]')?.textContent);
-  console.log(JSON.stringify({ arena: id, controlsLabel: txt }));
+  console.log(JSON.stringify({ arena: id, character: CHARACTER, controlsLabel: txt }));
   await context.close();
 }
 
@@ -182,5 +250,8 @@ for (const id of ids) {
   await run(id).catch((e) => console.log(JSON.stringify({ arena: id, failed: String(e).slice(0, 200) })));
 }
 if (process.env.CONTROLS !== '0')
-  for (const id of ids.slice(0, 1)) await controls(STANDARD.includes(id) ? id : 'danfoBusPark').catch((e) => console.log(JSON.stringify({ failed: String(e).slice(0, 200) })));
+  for (const id of ids.slice(0, 1))
+    await controls(STANDARD.includes(id) ? id : 'danfoBusPark').catch((e) =>
+      console.log(JSON.stringify({ failed: String(e).slice(0, 200) })),
+    );
 await browser.close();

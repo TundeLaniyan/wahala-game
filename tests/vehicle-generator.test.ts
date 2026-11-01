@@ -7,7 +7,7 @@
  * Standard sandbox board (15 x 11, pillars on odd/odd tiles): the lane x = 4 from the top edge runs down to y = 10.
  */
 import { describe, expect, it } from 'vitest';
-import { CHARACTERS, createGame, getArena, tick } from '../src/sim';
+import { ARENAS, CHARACTERS, createGame, getArena, tick } from '../src/sim';
 import { chooseAutoVehicle } from '../src/sim/systems/autoVehicle';
 import { buildRoute } from '../src/sim';
 import { canHarm } from '../src/sim/systems/queries';
@@ -286,27 +286,60 @@ describe('modes', () => {
     expect((s.match.phase as string) === 'ended' || s.match.result !== null).toBe(true);
   });
 
-  it('every stage still loads and a vehicle can be launched on it without error', () => {
-    for (const id of [
-      'danfoBusPark',
-      'balogunMarket',
-      'lekkiRoadworks',
-      'oshodiInterchange',
-      'rumbleOshodi',
-    ]) {
-      const a = getArena(id);
-      const s = createGame({ seed: 5, arenaId: id, players: roster(2), settings: { stageHazards: false } });
+  it('every arena (all 17) loads, launches the carrier on its own routes and ends cleanly: nothing is left over', () => {
+    for (const a of Object.values(ARENAS)) {
+      const s = createGame({ seed: 5, arenaId: a.id, players: roster(2), settings: { stageHazards: false } });
       s.match.phase = 'playing';
       s.match.countdownRemaining = 0;
       s.players[0]!.hasVoucher = true;
       const choice = chooseAutoVehicle(s, 0);
-      expect(a.id).toBe(id);
+      expect(getArena(a.id).id).toBe(a.id);
       if (!choice) continue; // a board with no legal route is allowed: nothing launches, nothing is left over
+      // every route tile is a walkable or soft tile of this arena (never a solid pillar / wall)
+      for (const t of choice.route) expect(s.tiles[t.y * s.width + t.x]).not.toBe(1);
       run(s, 1, { 0: { vehicle: { type: 'auto' } } });
-      resolve(s, 4000);
+      expect(s.vehicles.map((v) => v.kind)).toEqual(['danfo']);
+      resolve(s, 6000);
       expect(s.vehicles.length === 0 || (s.match.phase as string) === 'ended').toBe(true);
       expect(s.generators.filter((g) => g.carrier)).toHaveLength(0);
     }
+  });
+
+  it('a rival standing on the carrier route is taken out on the arenas, and the owner is never hurt', () => {
+    let detonations = 0;
+    for (const a of Object.values(ARENAS)) {
+      const s = createGame({ seed: 5, arenaId: a.id, players: roster(2), settings: { stageHazards: false } });
+      s.match.phase = 'playing';
+      s.match.countdownRemaining = 0;
+      s.players[0]!.hasVoucher = true;
+      const choice = chooseAutoVehicle(s, 0);
+      if (!choice) continue;
+      const t = choice.route[Math.min(4, choice.route.length - 1)]!;
+      // the owner far from the whole route, the rival on its fifth tile (the sim never reads hidden state)
+      const far = [...s.tiles.keys()]
+        .map((i) => ({ x: i % s.width, y: Math.floor(i / s.width), i }))
+        .filter(
+          (c) =>
+            s.tiles[c.i] === 0 && choice.route.every((r) => Math.abs(r.x - c.x) + Math.abs(r.y - c.y) > 8),
+        )
+        .at(-1);
+      if (!far) continue;
+      put(s, 0, far.x, far.y);
+      put(s, 1, t.x, t.y);
+      s.players[0]!.protectedUntil = 0;
+      s.players[1]!.protectedUntil = 0;
+      run(s, 1, { 0: { vehicle: { type: 'auto' } } });
+      const events = resolve(s, 6000);
+      expect(s.players[0]!.alive, a.id).toBe(true);
+      // the match ends with the rival's elimination (a 2-player sandbox), otherwise nothing is left on the board
+      expect(s.vehicles.length === 0 || (s.match.phase as string) === 'ended', a.id).toBe(true);
+      // detonated -> the rival is out; otherwise (the rival was never inside a footprint) nothing was left behind
+      if (events.some((e) => e.type === 'vehicleDetonated')) {
+        detonations++;
+        expect(s.players[1]!.alive, a.id).toBe(false);
+      }
+    }
+    expect(detonations).toBeGreaterThanOrEqual(10); // most of the 17 arenas take the rival out
   });
 });
 
