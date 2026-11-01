@@ -221,3 +221,23 @@ Kept outside git (local review output; large): zoomed-out day / medium night loo
 the Rumble stages, the carrier approaching, the late warning and the detonation for every arena at medium quality, and
 the phone controls with the contextual vehicle action for all three characters (`scripts/arena-audit-shots.mjs`,
 `scripts/vehicle-generator-shots.mjs`).
+
+## 8. Validation record (final commit of the branch)
+
+* `tsc --noEmit`, `eslint .`: clean. Prettier on every non-doc file changed by the branch: clean except
+  `src/sim/systems/explosions.ts`, which was already non-conformant at the release SHA (the branch adds one line there;
+  the file was not reformatted so the diff stays reviewable). Production build: succeeds (the chunk-size warning is the
+  existing one).
+* Unit suite: 120 files, 1783 passed, 5 skipped, 0 failed. The 5 skips are the conditional per-stage geometry checks in
+  `tests/rumble-stages.test.ts` (`it.runIf`: the mirror-symmetry check is skipped for the stages that opt out of
+  mirrored soft blocks, the "two halves comparable" check for the stages that are mirrored).
+* Full Playwright (desktop + phone, `--retries=0`, 2 workers, 236 tests): 175 passed, 60 skipped, 1 failed, 0 flaky.
+  The failure was `vehicle-generator.spec.ts` "gamepad": the pad is polled once per rendered frame and the button was
+  released after a fixed 800 ms, which a loaded software-GL runner can miss (a test-timing defect, not a game defect;
+  it had passed alone). The spec now keeps the button down while stepping the sim until the carrier is on the board. It
+  then passed 3 / 3 repeats under 2 workers (9 passed, 9 skipped by design) and alone. The full 236-test suite was NOT
+  re-run after that spec-only change.
+* The 60 browser skips are all declarative project gates (`test.skip` with a reason): 46 desktop-only tests skipped on
+  the phone project and 14 phone / touch-only tests skipped on the desktop project, plus the suites that deliberately
+  run on one project only ("one viewport is enough", "software rendering makes the render passes slow; one project is
+  enough", "structure is the same on every device").
