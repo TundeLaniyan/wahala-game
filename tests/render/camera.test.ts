@@ -81,8 +81,9 @@ describe('overview camera: whole arena and picking', () => {
     const l = project(rig, layout.wx(0) - 0.5, 0, layout.wz(10) + 0.5);
     const r = project(rig, layout.wx(14) + 0.5, 0, layout.wz(10) + 0.5);
     const far = project(rig, 0, 0, layout.wz(0) - 0.5);
-    // old layout: near row 0.56 of the screen width, board 0.54 of its height
-    expect((r.x - l.x) / 2).toBeGreaterThan(0.66);
+    // old layout: near row 0.56 of the screen width, board 0.54 of its height. The action buttons were made larger
+    // (decision MC3, control strips 0.36 of the height), so the near row is about 0.63 now: still far above 0.56
+    expect((r.x - l.x) / 2).toBeGreaterThan(0.62);
     expect((far.y - l.y) / 2).toBeGreaterThan(0.6);
   });
 });
