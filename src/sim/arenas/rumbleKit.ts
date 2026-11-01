@@ -350,7 +350,7 @@ export function tilesOf(rows: readonly string[], char: string): [number, number]
  * close the city (`sim/modes.ts`).
  */
 export function rumbleStageConfig(o: {
-  core: { w: number; h: number };
+  core: { w: number; h: number; x0?: number; y0?: number };
   softDensity: number;
   maxLethalEvents?: number;
 }): DeepPartial<GameConfig> {

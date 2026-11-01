@@ -27,6 +27,8 @@ export interface LivingOptions {
   reducedMotion: boolean;
 }
 
+import { wavePoints } from './waveClearance';
+
 export interface LivingStats {
   environment: string;
   quality: string;
@@ -179,6 +181,7 @@ export class LivingEnvironment implements View {
     this.pendingDt = 0;
     // follow camera: what is out of view is neither moved nor drawn (elevated things get a wider circle)
     const visible = ctx.inView;
+    if (this.env.yieldToWave && this.traffic) this.traffic.setWaves(wavePoints(ctx.state, ctx.alpha));
     this.traffic?.update(ctx.time, dt, visible);
     this.crowd?.update(dt, ctx.time, ctx.info.excitement, visible);
     this.lights?.update(ctx.time);

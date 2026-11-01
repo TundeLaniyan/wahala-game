@@ -66,7 +66,7 @@ One lethal stage event at a time on this stage (`maxLethalEvents: 1`): the railc
 departure, and nothing runs once Wahala Crush starts or in the last 5 s. The hazard is rare (every 16-24 s), never
 random under a player (a fixed lane, announced), and never closes every escape.
 
-### 1.6 Permanent cover families (23, none a generic crate or pillar)
+### 1.6 Permanent cover families (24, none a generic crate or pillar; the 24th is the low north arcade)
 
 Interchange: terminal wings (lit glass band, name board), ticket hall, parked buses with route cards, bay shelters,
 huge canopy columns. Skywalk: round piers with a flared head, landing and stair, stair tower. Junction: kerb islands
@@ -186,6 +186,58 @@ Menu card: `public/previews/rumbleOshodi.jpg` (day, from `scripts/rumble-v2-shot
   generic open-floor tolerance is 12% for this stage (8% elsewhere); walking distances to the core and to supply crates are
   balanced in `tests/rumble-oshodi.test.ts`. The 32-start spread is gap 4 (the original City Rumble's level).
 - Rendering cost is accepted as measured (section 3); no landmark or map detail was removed to match Ojuelegba.
+
+## 3c. Identity pass (2026-10-31, decisions LA13-LA15)
+
+The first build read as a generic market from above. After the visual-reference research (109 inspected images)
+the backdrop is rebuilt so the stage is unmistakable zoomed out:
+
+| Reference feature | In the game |
+|---|---|
+| Open black-steel interchange terminals (aerial, interior and night references) | `openTerminal`: two deep truss-framed roofs on tall columns over painted bays with parked buses, skylit roof panels, a lit glass hall at the back, a blue bay canopy |
+| Terminal 3 glass frontage under a sloping truss roof | `frontage` east of the station tower, "TERMINAL 3" plain wording |
+| Black truss skywalk on cable-stayed pylons, truss portal | `skywalk` (open truss, low glazed band), two lattice `pylon`s with cable fans, `trussPortal` |
+| Freight rake beside the road | `freightSiding`: hoppers and container wagons on a ballast bed east of the board |
+| Umbrella-covered market edge | `marketEdge`: about 80 umbrellas and stalls west of the board, plus the trading-pavement crowd |
+| Slow bus-choked roads | `approachRoads` (asphalt, kerbs, dashes) and four ambient loops per the boosted plan (LA14) |
+
+Playability is unchanged: nothing new is on the board; the cover re-skin (black-steel roof frames on the terminal
+wings, blue bay shelters) keeps every cover tile. Review shots: `7-review-zoomed-out-day.jpg`,
+`7b-review-zoomed-out-night.jpg` (draw calls 786 / 786, 3.17 / 3.17 M triangles, medium, software WebGL; before the terminal rework 764 / 777 and 2.74 / 2.80 M, before the arcade 774 / 774 and 3.12 M). The north edge is a low trading arcade so the terminals show (LA16).
+
+## 3d. The grown board (2026-11-01, decisions LA17-LA21)
+
+The stage is 63 x 47 (1.99x the first build): the original six districts keep their coordinates and four playable
+districts were added east and south (Papa Ajao Market, Freight Yard, Interstate Bus Park, Agege Motor Strip),
+joined by nine links. The Survival core stays at the interchange (x 21-31, y 12-20); the city closes in rings
+around it. Two lethal stage events run at once. The road wave's own vehicle is drawn from the first tick of its
+warning at the far end of the approach road (orange pulse rings), arriving on the tick the sim starts the sweep;
+the ambient bus / danfo loops on both approach roads are scenery only. Shots: `8-expanded-zoomed-out-day.jpg`,
+`8b-...-night.jpg`, `8c-expanded-low-quality.jpg`, `8d-expanded-low-phone.jpg` (844 x 390), `9-road-wave-approach.jpg`.
+
+Measured (software WebGL, 16 competitors, bots idle, same staging; frame times are SwiftShader and only comparable
+with each other):
+
+| Frame | Before (45 x 33, `babb585`) calls / tris | After (63 x 47) calls / tris |
+|---|---|---|
+| medium, day, original framing | 773 / 3.12 M | 792 / 5.02 M |
+| medium, night, original framing | 785 / 3.17 M | 792 / 5.03 M |
+| medium, day, whole board in view | n/a | 857 / 5.13 M |
+| low, day, original framing | 455 / 1.29 M | 464 / 2.23 M |
+| low, phone 844 x 390 | 450 / 1.29 M | 446 / 2.19 M (528 / 2.33 M whole board) |
+
+Ambient vehicles planned: very low 2, low 10, medium 64, high 64 (before: 2 / 8 / 64 / 64, all on the west road at
+low). Low-quality frame time (mean, whole board): about 1.9 s desktop and 1.2 s phone under software rendering,
+versus about 1.65 s and 0.95 s before on the smaller board: roughly +15-30%, in line with the triangle growth.
+Real-phone timings were not measured.
+
+### 3e. Final polish (LA22-LA23)
+
+Ambient vehicles fade out around the road wave's approaching vehicle (`11-road-wave-cleared-lane.jpg`); Terminal 3 is
+4 m narrower and wholly inside the east edge; the core-distance gap was reviewed and accepted (LA23). Final shots:
+`10-final-zoomed-out-day.jpg`, `10b-...-night.jpg`, `10c-final-low-quality.jpg`, `10d-final-low-phone.jpg`.
+Whole-board view, medium, software WebGL: day 870 calls / 5.18 M triangles, night 858 / 5.13 M (previous pass 857 /
+5.13 M and 870 / 5.18 M); low 520 / 2.30 M; low phone 528 / 2.33 M. Vehicle counts are unchanged (2 / 10 / 64 / 64 per tier).
 
 ## 4. Assumptions (the bible's "do not invent current conditions" rule)
 

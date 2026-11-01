@@ -29,6 +29,8 @@ import { VEHICLE_SCALE, STREET } from '../arenas/common';
 import { assets } from '../assets/library';
 import { createVehicleModel } from '../assets/vehicles';
 import { VEHICLE_DIMS, vehicleAt } from './plan';
+import { clearanceScale } from './waveClearance';
+import type { WavePoint } from './waveClearance';
 import type { PlannedVehicle, TrafficPlan, VehicleModelId } from './plan';
 
 export interface TrafficOptions {
@@ -131,6 +133,7 @@ export class AmbientTraffic {
   private readonly s = new Vector3();
   private readonly puffAt: number[] = [];
   private lastTime = 0;
+  private waves: readonly WavePoint[] = [];
 
   constructor(
     private readonly plan: TrafficPlan,
@@ -216,14 +219,16 @@ export class AmbientTraffic {
         // a faint road shudder, different per vehicle
         const roll = Math.sin(time * 17 + v.phase) * 0.008;
         this.q.setFromEuler(this.e.set(0, st.heading, roll, 'YXZ'));
-        const k = VEHICLE_SCALE * Math.max(0.001, st.scale);
+        const clear =
+          this.waves.length > 0 && !route.def.elevation ? clearanceScale(st.x, st.y, this.waves) : 1;
+        const k = VEHICLE_SCALE * Math.max(0.001, st.scale * clear);
         this.m4.compose(
           this.p.set(x, y, z),
           this.q,
           this.s.set(k * d.stretch[0], k * d.stretch[1], k * d.stretch[2]),
         );
         for (const im of set.meshes) im.setMatrixAt(n, this.m4);
-        if (this.opts.exhaust && st.scale > 0.9) {
+        if (this.opts.exhaust && st.scale > 0.9 && clear > 0.9) {
           const i = all;
           this.puffAt[i] = (this.puffAt[i] ?? 0) + dt * (v.kind === 'okada' ? 3 : 2.4);
           if (this.puffAt[i]! >= 1) {
@@ -249,6 +254,11 @@ export class AmbientTraffic {
       }
     }
     this.lastTime = time;
+  }
+
+  /** The road wave's approaching vehicles: ground traffic fades out around them (empty = no clearance). */
+  setWaves(waves: readonly WavePoint[]): void {
+    this.waves = waves;
   }
 
   /** The clock of the last update (tests). */

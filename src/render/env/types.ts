@@ -239,6 +239,16 @@ export interface StageEnvironment {
   safety?: SafetyNotes;
   /** Per-tier overrides that LOWER the global caps (never raise them). */
   budget?: Partial<Record<QualityLevel, Partial<EnvBudget>>>;
+  /**
+   * Opt-in RAISES of a tier's caps for a stage whose identity is its crowd of vehicles (Oshodi's bus-choked
+   * roads). Instanced vehicles add triangles, not draw calls (the model count is unchanged), and the draw-call
+   * target still applies. A stage without `boost` is capped exactly as before.
+   */
+  boost?: Partial<Record<QualityLevel, Partial<EnvBudget>>>;
+  /** Opt-in: ambient road vehicles fade out around the road wave's own approaching vehicle (`waveClearance.ts`). */
+  yieldToWave?: boolean;
+  /** Opt-in: routes of the same priority share a small vehicle budget round-robin (default: first route first). */
+  fairShare?: boolean;
 }
 
 /** A stage environment, or a factory that derives it from the board size (the usual form). */

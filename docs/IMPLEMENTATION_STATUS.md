@@ -10,9 +10,9 @@ no new music or voice.
 
 | Area | Delivered | Main tests |
 | --- | --- | --- |
-| Sim | Six districts on 45 x 33, routes direct / upper / lower, explicit spawns, supplies, main-road attack lanes, traffic waves, bus-bay departures, the `train` sweep on two track lanes, one lethal event at a time | `tests/rumble-oshodi.test.ts` |
+| Sim | Ten districts on 63 x 47 (the six original ones at their old coordinates plus Papa Ajao Market, the Freight Yard, the Interstate Bus Park and the Agege Motor Strip; LA17), routes direct / upper / lower, explicit spawns, 14 supplies, main-road attack lanes, traffic waves, bus-bay departures, the `train` sweep on two track lanes, up to two lethal events at once, an explicit Survival core x 21-31 / y 12-20 (LA18) | `tests/rumble-oshodi.test.ts` |
 | Cover and set | 23 real-object cover families, landmark skyline (terminal canopy, expressway, skywalk spans, rail viaduct, station tower), floor with rails / crossing / bays / pitch | `tests/render/oshodi-metro-cover.test.ts`, `rumble-stage-sets.test.ts` |
-| Environment | Ambient traffic apart from combat, crowds, lights, per-tier budgets, day / night | `tests/render/oshodi-metro-env.test.ts` |
+| Environment | Ambient bus / danfo loops on both approach roads (opt-in boost and fair share, LA14 / LA21), the road wave's own vehicle drawn from the first tick of its warning (LA20), crowds, lights, per-tier budgets, day / night | `tests/render/oshodi-metro-env.test.ts` |
 | Day / night | Same geometry; `?tod=night` review flag | `tests/render/oshodi-metro-art.test.ts` |
 | Railcar presentation | Own model, lane lamps, bell + horn + pass-by (synthesised), HUD alert | `tests/render/oshodi-metro-art.test.ts`, `tests/audio/*` |
 | Browser | Desktop and phone start, HUD alert, night look | `e2e/oshodi-metro.spec.ts` |

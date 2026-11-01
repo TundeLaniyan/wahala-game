@@ -32,7 +32,7 @@ const V2 = [
   'rumbleLekkiNight',
 ] as const;
 const SIZE: Record<(typeof V2)[number], [number, number]> = {
-  rumbleOshodi: [45, 33],
+  rumbleOshodi: [63, 47],
   rumbleLagosIsland: [41, 31],
   rumbleOjuelegba: [45, 33],
   rumbleApapa: [45, 31],
@@ -130,12 +130,12 @@ describe('Rumble stage registry', () => {
     expect(stats.rumbleLagosIsland!.chokepoints).toBeGreaterThan(50);
     for (const id of V2) if (id !== 'rumbleLagosIsland') expect(stats[id]!.chokepoints).toBeLessThan(20);
     expect(stats.rumbleLagosIsland!.avgCorridor).toBeLessThan(7);
-    // Ojuelegba (five districts) and Oshodi (six) are the multi-district stages on non-mirrored boards
+    // Ojuelegba (five districts) and Oshodi (ten) are the multi-district stages on non-mirrored boards
     expect(getArena('rumbleOjuelegba').districts?.length).toBe(5);
-    expect(getArena('rumbleOshodi').districts?.length).toBe(6);
+    expect(getArena('rumbleOshodi').districts?.length).toBe(10);
     for (const id of V2) if (!MULTI.includes(id)) expect(getArena(id).districts).toBeUndefined();
     // Oshodi: the main road and the two tracks make it the most road-and-rail board
-    expect(stats.rumbleOshodi!.roadPct).toBeGreaterThan(10);
+    expect(stats.rumbleOshodi!.roadPct).toBeGreaterThan(8); // the grown 63 x 47 board dilutes the one main road
     expect(stats.rumbleLekkiNight!.roadPct).toBeLessThan(12);
     expect(stats.rumbleLekkiNight!.openPct).toBeGreaterThan(80);
   });
@@ -331,8 +331,8 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
     const crush = s.crush!;
     expect(crush).not.toBeNull();
     const keep = s.config.crush.keepCore!;
-    const x0 = Math.floor((W - keep.w) / 2);
-    const y0 = Math.floor((H - keep.h) / 2);
+    const x0 = keep.x0 ?? Math.floor((W - keep.w) / 2);
+    const y0 = keep.y0 ?? Math.floor((H - keep.h) / 2);
     const inCore = (x: number, y: number): boolean =>
       x >= x0 && x < x0 + keep.w && y >= y0 && y < y0 + keep.h;
     // every open tile outside the core closes, nothing inside it does
