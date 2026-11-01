@@ -46,8 +46,10 @@ describe('day and night looks', () => {
 
   it('night is actually darker in sky and fog, but the ground stays as readable as the approved night stage', () => {
     expect(lum(OSHODI_METRO_NIGHT_LOOK.sky)).toBeLessThan(lum(OSHODI_METRO_LOOK.sky) * 0.35);
-    const lekki = arenaLook('rumbleLekkiNight');
-    // the floor at night is lit at least as well as the approved Lekki Nightworks stage
+    // the reference is the approved, unchanged Lekki Roadworks night (the Lekki Night Rumble stage was copied from it and
+    // lifted in the all-arenas pass, decision VG7, so it is no longer the baseline)
+    const lekki = arenaLook('lekkiRoadworks');
+    // the floor at night is lit at least as well as the approved Lekki Roadworks night
     expect(groundLight(OSHODI_METRO_NIGHT_LOOK)).toBeGreaterThanOrEqual(groundLight(lekki) * 0.9);
     // and not so dim against the day that a phone would lose the hazard lanes (>= 30% of the day's ground light)
     expect(groundLight(OSHODI_METRO_NIGHT_LOOK)).toBeGreaterThan(groundLight(OSHODI_METRO_LOOK) * 0.3);
