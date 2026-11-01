@@ -233,6 +233,8 @@ export interface Generator {
    * (kicked / punched it, or rammed it with their vehicle). Optional: absent = nobody.
    */
   touchedBy?: number;
+  /** A vehicle's carried generator going off (vehicles.ts): its flames never hurt the owner. */
+  carrier?: boolean;
 }
 
 export interface Flame {
@@ -245,6 +247,8 @@ export interface Flame {
   dir: Dir | null;
   /** V2: from a sideline spectator's generator (credited to nobody). */
   fromSpectator?: boolean;
+  /** From a vehicle-carried generator: harmless to its owner (decision VG1). */
+  ownerSafe?: boolean;
   /** V2: a Square Blast tile (outside the plus arms) - drawn distinctly. */
   square?: boolean;
   /** City Rumble radial blast: a tile off the generator's row and column (systems/blastShape.ts). */
@@ -299,6 +303,13 @@ export interface Vehicle {
   exposedEvents: number[];
   eventId: number; // id used for Okada grace against this vehicle
   startTick: number;
+  /**
+   * The generator the vehicle carries (decision VG1). It scans the blast footprint around the vehicle's tile every
+   * tick: 'scanning' until an opponent stands in it, then 'fusing' (a short fuse, the late warning), 'pending' when
+   * the fuse is out but the owner is still inside the footprint (it waits for the owner to leave), and 'spent' once
+   * it has gone off or can no longer.
+   */
+  payload?: { state: 'scanning' | 'fusing' | 'pending' | 'spent'; fuseRemaining: number };
 }
 
 export interface CrowdThrow {
@@ -692,8 +703,11 @@ export type SimEvent =
   | { type: 'vehicleHitPlayer'; vehicleId: number; playerId: number }
   | { type: 'vehicleHitGenerator'; vehicleId: number; generatorId: number }
   | { type: 'vehicleDamaged'; vehicleId: number; damage: number; total: number; resistance: number }
-  | { type: 'vehicleDestroyed'; vehicleId: number; x: number; y: number; reason: 'blast' | 'crash' }
+  | { type: 'vehicleDestroyed'; vehicleId: number; x: number; y: number; reason: 'blast' | 'crash' | 'detonation' }
   | { type: 'vehicleExited'; vehicleId: number }
+  | { type: 'vehicleFuse'; vehicleId: number; ownerId: number; x: number; y: number; ticks: number }
+  | { type: 'vehicleDetonated'; vehicleId: number; ownerId: number; x: number; y: number }
+  | { type: 'vehicleGeneratorExpired'; vehicleId: number; ownerId: number; reason: 'route' | 'crash' | 'blast' }
   | { type: 'crushWarning'; x: number; y: number; landTick: number }
   | { type: 'crushLanded'; x: number; y: number }
   | {

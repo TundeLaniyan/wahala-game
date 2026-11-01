@@ -11,7 +11,8 @@ import { CHARACTERS } from '../data/characters';
 import { buildRoute } from './entries';
 import type { LethalHit } from './lethality';
 import { isActing, vehiclesOf } from './queries';
-import { destroySoftBlocks } from './explosions';
+import { destroySoftBlocks, previewBlast } from './explosions';
+import type { Generator } from '../types';
 
 export function vehicleStepTicks(state: GameState, v: Vehicle): number {
   const spec = state.config.vehicles.specs[v.kind];
@@ -104,6 +105,7 @@ function launchVehicle(state: GameState, p: Player, route: TilePos[], events: Si
     exposedEvents: [],
     eventId: state.nextEventId++,
     startTick: state.tick,
+    payload: { state: 'scanning', fuseRemaining: 0 },
   };
   state.vehicles.push(vehicle);
   events.push({ type: 'vehicleWarning', vehicleId: vehicle.id, kind, ownerId: p.id, entry: route[0]! });
@@ -143,15 +145,21 @@ export function updateVehicles(state: GameState, hits: LethalHit[], events: SimE
         }
         break;
       case 'driving':
-        if (v.stepRemaining > 0) v.stepRemaining--;
-        if (v.stepRemaining === 0) advance(state, v, softHits, events);
+        // a fused carrier stops where it is: the generator goes off on the tile it found its target from
+        if (!isHeld(v)) {
+          if (v.stepRemaining > 0) v.stepRemaining--;
+          if (v.stepRemaining === 0) advance(state, v, softHits, events);
+        }
         break;
       case 'crashing':
         v.wreckRemaining--;
         if (v.wreckRemaining <= 0) removeVehicle(state, v);
         break;
     }
-    if (v.phase === 'driving') collide(state, v, hits, events);
+    if (v.phase === 'driving') {
+      collide(state, v, hits, events);
+      if (v.phase === 'driving') carrierStep(state, v, events);
+    }
   }
   destroySoftBlocks(state, softHits, 'vehicle', events);
 }
@@ -159,6 +167,7 @@ export function updateVehicles(state: GameState, hits: LethalHit[], events: SimE
 function advance(state: GameState, v: Vehicle, softHits: Map<number, number>, events: SimEvent[]): void {
   if (v.index >= v.route.length - 1) {
     events.push({ type: 'vehicleExited', vehicleId: v.id });
+    expirePayload(v, 'route', events);
     removeVehicle(state, v);
     return;
   }
@@ -182,20 +191,23 @@ function enterTile(state: GameState, v: Vehicle, softHits: Map<number, number>, 
   }
 }
 
-function crash(v: Vehicle, events: SimEvent[]): void {
+function crash(v: Vehicle, events: SimEvent[], reason: 'crash' | 'detonation' = 'crash'): void {
   v.phase = 'crashing';
   v.wreckRemaining = 40;
   const t = v.route[Math.max(0, v.index)]!;
-  events.push({ type: 'vehicleDestroyed', vehicleId: v.id, x: t.x, y: t.y, reason: 'crash' });
+  events.push({ type: 'vehicleDestroyed', vehicleId: v.id, x: t.x, y: t.y, reason });
+  if (reason === 'crash') expirePayload(v, 'crash', events);
 }
 
 function removeVehicle(state: GameState, v: Vehicle): void {
   state.vehicles.splice(state.vehicles.indexOf(v), 1);
 }
 
-/** Vehicle versus generators (immediate detonation) and players (lethal). */
-function collide(state: GameState, v: Vehicle, hits: LethalHit[], events: SimEvent[]): void {
-  const spec = state.config.vehicles.specs[v.kind];
+/**
+ * Vehicle versus generators (immediate detonation). The vehicle's body is harmless to players (decision VG1): the
+ * carried generator is the weapon, see `carrierStep`.
+ */
+function collide(state: GameState, v: Vehicle, _hits: LethalHit[], events: SimEvent[]): void {
   const tiles = vehicleHitTiles(v);
   for (const t of tiles) {
     for (const g of state.generators) {
@@ -205,23 +217,7 @@ function collide(state: GameState, v: Vehicle, hits: LethalHit[], events: SimEve
         events.push({ type: 'vehicleHitGenerator', vehicleId: v.id, generatorId: g.id });
       }
     }
-    for (const p of state.players) {
-      if (!p.alive || p.x !== t.x || p.y !== t.y) continue;
-      if (!canHarm(state, v.ownerId, p)) continue; // a teammate's vehicle passes harmlessly (friendly fire off)
-      hits.push({
-        playerId: p.id,
-        eventId: v.eventId,
-        cause: { kind: 'vehicle', ownerId: v.ownerId, vehicleKind: v.kind, eventId: v.eventId },
-        graceUntil: state.tick + state.config.okada.graceTicks,
-      });
-      if (!v.hitPlayerIds.includes(p.id)) {
-        v.hitPlayerIds.push(p.id);
-        v.playerHits++;
-        events.push({ type: 'vehicleHitPlayer', vehicleId: v.id, playerId: p.id });
-      }
-    }
   }
-  if (v.playerHits >= spec.playerHitLimit && v.phase === 'driving') crash(v, events);
 }
 
 /** Cumulative blast exposure. Each blast event damages a vehicle at most once per journey. */
@@ -247,6 +243,7 @@ export function applyBlastExposure(state: GameState, events: SimEvent[]): void {
       if (v.damage >= spec.resistance) {
         const t = v.route[v.index]!;
         events.push({ type: 'vehicleDestroyed', vehicleId: v.id, x: t.x, y: t.y, reason: 'blast' });
+        expirePayload(v, 'blast', events);
         removeVehicle(state, v);
         break;
       }
@@ -256,4 +253,135 @@ export function applyBlastExposure(state: GameState, events: SimEvent[]): void {
       v.stepTotal = Math.ceil(v.stepTotal * state.config.vehicles.slowFactor);
     }
   }
+}
+
+// ------------------------------------------------------------------ the carried generator (decision VG1)
+
+/** The carrier is parked while its fuse burns or while it waits for the owner to leave the blast. */
+function isHeld(v: Vehicle): boolean {
+  return v.payload?.state === 'fusing' || v.payload?.state === 'pending';
+}
+
+function expirePayload(v: Vehicle, reason: 'route' | 'crash' | 'blast', events: SimEvent[]): void {
+  if (v.payload?.state === 'spent') return;
+  v.payload = { state: 'spent', fuseRemaining: 0 };
+  events.push({ type: 'vehicleGeneratorExpired', vehicleId: v.id, ownerId: v.ownerId, reason });
+}
+
+/** A generator that is never placed on the board: the footprint a blast from tile (x, y) would cover. */
+function carriedGenerator(state: GameState, owner: Player, x: number, y: number, id = -1): Generator {
+  const cfg = state.config.generator;
+  const weak = owner.curse?.kind === 'weakFire' && state.tick < owner.curse.until;
+  return {
+    id,
+    ownerId: owner.id,
+    x,
+    y,
+    stepFromX: x,
+    stepFromY: y,
+    range: weak ? Math.min(owner.range, cfg.weakFireRange) : owner.range,
+    pierce: false,
+    square: state.config.square.radiusByTier[Math.min(owner.squareTier, state.config.square.maxTier)] ?? 0,
+    fromSpectator: false,
+    mode: 'timed',
+    timer: 0,
+    carriedBy: null,
+    carryBonusUsed: false,
+    slide: null,
+    flight: null,
+    triggered: false,
+    placedTick: state.tick,
+    carrier: true,
+  };
+}
+
+/** A player the carried generator would set off for: an alive opponent it can harm that is not protected. */
+function isTarget(state: GameState, owner: Player, p: Player): boolean {
+  return p.alive && p.id !== owner.id && canHarm(state, owner.id, p) && !(p.protectedUntil > state.tick);
+}
+
+/**
+ * One tick of the carried generator. It uses the real blast footprint (walls and crates stop it, radial or plus by
+ * the stage's mode), so it can never "see" through a wall. An opponent inside it starts the fuse; when the fuse is
+ * out the generator goes off - unless the owner is still inside the footprint, then it waits until the owner is out
+ * (and returns to scanning if no opponent is left in range). The owner is never hurt by it either way (the flames
+ * are `ownerSafe`).
+ */
+function carrierStep(state: GameState, v: Vehicle, events: SimEvent[]): void {
+  const payload = (v.payload ??= { state: 'scanning', fuseRemaining: 0 });
+  if (payload.state === 'spent') return;
+  const owner = state.players[v.ownerId];
+  if (!owner) return;
+  const t = v.route[v.index]!;
+  const width = state.width;
+  const footprint = previewBlast(state, carriedGenerator(state, owner, t.x, t.y));
+  const inRange = (p: Player): boolean => footprint.has(p.y * width + p.x);
+  const rivalInRange = state.players.some((p) => isTarget(state, owner, p) && inRange(p));
+  const ownerInRange = owner.alive && inRange(owner);
+  switch (payload.state) {
+    case 'scanning':
+      if (rivalInRange) {
+        payload.state = 'fusing';
+        payload.fuseRemaining = state.config.vehicles.fuseTicks;
+        events.push({
+          type: 'vehicleFuse',
+          vehicleId: v.id,
+          ownerId: v.ownerId,
+          x: t.x,
+          y: t.y,
+          ticks: payload.fuseRemaining,
+        });
+      }
+      return;
+    case 'fusing':
+      if (payload.fuseRemaining > 0) payload.fuseRemaining--;
+      if (payload.fuseRemaining > 0) return;
+      payload.state = 'pending'; // the fuse is out this tick: resolve it now
+      resolvePending(state, v, owner, t, rivalInRange, ownerInRange, events);
+      return;
+    case 'pending':
+      resolvePending(state, v, owner, t, rivalInRange, ownerInRange, events);
+      return;
+  }
+}
+
+function resolvePending(
+  state: GameState,
+  v: Vehicle,
+  owner: Player,
+  t: TilePos,
+  rivalInRange: boolean,
+  ownerInRange: boolean,
+  events: SimEvent[],
+): void {
+  if (!rivalInRange) {
+    v.payload = { state: 'scanning', fuseRemaining: 0 }; // everyone got away while it waited for the owner
+    return;
+  }
+  if (ownerInRange) {
+    // never while the owner is inside the blast; but never wait for ever either
+    const payload = (v.payload ??= { state: 'pending', fuseRemaining: 0 });
+    payload.fuseRemaining--;
+    if (-payload.fuseRemaining >= state.config.vehicles.holdTicks) {
+      expirePayload(v, 'route', events);
+    }
+    return;
+  }
+  detonate(state, v, owner, t.x, t.y, events);
+}
+
+function detonate(
+  state: GameState,
+  v: Vehicle,
+  owner: Player,
+  x: number,
+  y: number,
+  events: SimEvent[],
+): void {
+  const gen = carriedGenerator(state, owner, x, y, state.nextId++);
+  gen.triggered = true; // resolved by resolveExplosions later this tick: normal shapes, walls, crates, chains, credit
+  state.generators.push(gen);
+  v.payload = { state: 'spent', fuseRemaining: 0 };
+  events.push({ type: 'vehicleDetonated', vehicleId: v.id, ownerId: owner.id, x, y });
+  crash(v, events, 'detonation');
 }

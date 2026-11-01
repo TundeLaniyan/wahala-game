@@ -146,6 +146,9 @@ describe('event mapping', () => {
     const s = playState();
     const silent = new Set([
       'vehicleExited',
+      // the carried generator (VG1): its warning is the quiet fuse tick; the blast has the ordinary generator sounds
+      'vehicleDetonated',
+      'vehicleGeneratorExpired',
       'vehicleEntryBegan',
       'vehicleEntryCancelled',
       'stageEnded',
@@ -207,7 +210,8 @@ describe('event mapping', () => {
     expectIds(SAMPLES.okadaBroken, 'okada_break');
     expectIds(SAMPLES.okadaMounted, 'okada_mount');
     expectIds(SAMPLES.vehicleDestroyed, 'vehicle_wreck');
-    expect(rig.ids().some((id) => id.startsWith('crowd_'))).toBe(true);
+    expectIds(SAMPLES.vehicleFuse, 'fuse_tick');
+    // the carrier arrives like any public vehicle: one horn and no crowd gasp (the warning is the fuse)
   });
 
   it('puts warnings on the warning bus and crowd reactions on the reaction bus', async () => {
@@ -471,7 +475,7 @@ describe('ducking and warnings', () => {
     const sfxBusGains = rig.ctx.gains.filter((g) => g.connections.includes(rig.ctx.master()));
     const before = sfxBusGains.map((g) => g.gain.targets.length);
     expect(rig.ctx.anyGainTargeted(0.5)).toBe(false);
-    rig.audio.handleEvents([SAMPLES.vehicleWarning], s);
+    rig.audio.handleEvents([SAMPLES.crushWarning], s);
     expect(rig.ctx.anyGainTargeted(0.5)).toBe(true); // warning duck depth for the ambience
     rig.ctx.advance(3);
     expect(rig.ctx.anyGainTargeted(0.4)).toBe(false);

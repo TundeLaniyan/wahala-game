@@ -38,6 +38,7 @@ export function collectFlameHits(state: GameState): LethalHit[] {
     for (const f of state.flames) {
       if (f.x === p.x && f.y === p.y && state.tick >= f.startTick && state.tick < f.endTick) {
         if (!canHarm(state, f.ownerId, p)) continue; // teammate's fire, friendly fire off
+        if (f.ownerSafe && f.ownerId === p.id) continue; // a vehicle-carried generator never hurts its owner
         hits.push({
           playerId: p.id,
           eventId: f.eventId,

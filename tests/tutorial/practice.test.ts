@@ -188,7 +188,8 @@ describe('Academy practices', () => {
       expect(launched).toHaveLength(1);
       expect(launched[0]!.ownerId).toBe(0);
       const hit = of(events, 'playerEliminated').find((e) => e.playerId === 1)!;
-      expect(hit.cause.kind).toBe('vehicle');
+      expect(hit.cause).toMatchObject({ kind: 'flame', ownerId: 0 }); // the carried generator's blast (VG1)
+      expect(of(events, 'vehicleDetonated')).toHaveLength(1);
       expect(hit.creditId).toBe(0);
     });
   }

@@ -89,6 +89,10 @@ export interface GameConfig {
   vehicles: {
     entryWindowTicks: number;
     entryWarnTicks: number;
+    /** The carried generator's fuse once an opponent is inside its blast footprint (the late warning). */
+    fuseTicks: number;
+    /** How long a fused carrier waits for its owner to leave the blast footprint before it gives up. */
+    holdTicks: number;
     slowTicks: number;
     /** Multiplier on step ticks while a damaged vehicle is staggering. */
     slowFactor: number;
@@ -345,6 +349,8 @@ export const DEFAULT_CONFIG: GameConfig = {
   vehicles: {
     entryWindowTicks: ticks(8),
     entryWarnTicks: ticks(1.2),
+    fuseTicks: ticks(0.6),
+    holdTicks: ticks(4),
     slowTicks: ticks(1.5),
     slowFactor: 1.8,
     minRouteTiles: 4,

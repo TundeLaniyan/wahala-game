@@ -93,6 +93,7 @@ function buildFlames(
     startTick,
     endTick,
     ...(gen.fromSpectator ? { fromSpectator: true } : {}),
+    ...(gen.carrier ? { ownerSafe: true } : {}),
   };
   const flames: Flame[] = [{ ...base, x: gen.x, y: gen.y, dir: null, tip: false }];
   const covered = new Set<number>([tileIndex(state, gen.x, gen.y)]);

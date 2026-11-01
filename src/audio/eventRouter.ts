@@ -271,11 +271,15 @@ const handlers: Handlers = {
     if (isHuman(c, e.playerId)) sfx(c, 'vehicle_entry_off');
   },
   vehicleWarning: (e, c) => {
+    // the carrier arrives like any public vehicle: one horn, no ducking, no crowd gasp (the warning is the fuse)
     sfx(c, `${e.kind}_horn`, panOf(c, e.entry.x));
-    c.buses.duck('warning');
-    react(c, { kind: 'gasp', strength: 0.6, chance: 0.7, delay: 0.25 });
-    react(c, { kind: 'whistle', strength: 0.5, chance: 0.3, delay: 1.0 });
   },
+  // the late, subtle warning: a quiet fuse tick at the carrier, then the ordinary blast sounds (generatorExploded)
+  vehicleFuse: (e, c) => {
+    sfx(c, 'fuse_tick', panOf(c, e.x));
+  },
+  vehicleDetonated: () => undefined,
+  vehicleGeneratorExpired: () => undefined,
   vehicleLaunched: (e, c) => {
     sfx(c, `${e.kind}_launch`, panOf(c, vehicleX(c, e.vehicleId)));
     c.ambience.swell(0.7);

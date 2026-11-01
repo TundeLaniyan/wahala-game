@@ -11,7 +11,13 @@ import { recordHit } from '../src/sim/systems/skills';
 import { addGenerator, eventsOf, put, run, sandbox } from './helpers';
 
 /** A playing match in a given ruleset (stage hazards off, crates cleared unless `keepSoft`). */
-function match(game: GameKind, players = 4, extra: Partial<MatchSettings> = {}, keepSoft = false, seed = 1): GameState {
+function match(
+  game: GameKind,
+  players = 4,
+  extra: Partial<MatchSettings> = {},
+  keepSoft = false,
+  seed = 1,
+): GameState {
   const s = createGame({
     seed,
     players: Array.from({ length: players }, (_, i) => ({
@@ -47,38 +53,41 @@ const granted = (events: SimEvent[], id: number): PickupKind[] =>
     .map((e) => e.kind);
 
 describe('Rumble rulesets: crates open routes, never drop power', () => {
-  it.each(['survival', 'deathmatch', 'team'] as const)('%s hides no pickups in crates and drops no loot', (game) => {
-    const s = match(game, 4, {}, true);
-    expect(s.tiles.some((t) => t === Tile.Soft)).toBe(true);
-    expect(Object.keys(s.hidden)).toHaveLength(0);
-    expect(s.config.pickups.hiddenChance).toBe(0);
-    expect(s.config.drops.maxDeathDrops).toBe(0);
-    expect(s.config.rewards.enabled).toBe(true);
+  it.each(['survival', 'deathmatch', 'team'] as const)(
+    '%s hides no pickups in crates and drops no loot',
+    (game) => {
+      const s = match(game, 4, {}, true);
+      expect(s.tiles.some((t) => t === Tile.Soft)).toBe(true);
+      expect(Object.keys(s.hidden)).toHaveLength(0);
+      expect(s.config.pickups.hiddenChance).toBe(0);
+      expect(s.config.drops.maxDeathDrops).toBe(0);
+      expect(s.config.rewards.enabled).toBe(true);
 
-    // blow up crates: nothing is revealed
-    park(s);
-    const crates = s.tiles.map((t, i) => (t === Tile.Soft ? i : -1)).filter((i) => i >= 0);
-    const idx = crates[0]!;
-    const x = idx % s.width;
-    const y = Math.floor(idx / s.width);
-    const gx = x > 0 && s.tiles[idx - 1] === Tile.Empty ? x - 1 : x + 1;
-    addGenerator(s, { ownerId: 3, x: gx, y, timer: 1 });
-    const ev = run(s, 3);
-    expect(eventsOf(ev, 'blockDestroyed').length).toBeGreaterThan(0);
-    expect(eventsOf(ev, 'pickupRevealed')).toHaveLength(0);
+      // blow up crates: nothing is revealed
+      park(s);
+      const crates = s.tiles.map((t, i) => (t === Tile.Soft ? i : -1)).filter((i) => i >= 0);
+      const idx = crates[0]!;
+      const x = idx % s.width;
+      const y = Math.floor(idx / s.width);
+      const gx = x > 0 && s.tiles[idx - 1] === Tile.Empty ? x - 1 : x + 1;
+      addGenerator(s, { ownerId: 3, x: gx, y, timer: 1 });
+      const ev = run(s, 3);
+      expect(eventsOf(ev, 'blockDestroyed').length).toBeGreaterThan(0);
+      expect(eventsOf(ev, 'pickupRevealed')).toHaveLength(0);
 
-    // an eliminated fighter with upgrades drops nothing on the floor
-    const victim = s.players[1]!;
-    victim.capacity = 4;
-    victim.range = 5;
-    victim.armour = 0;
-    put(s, 1, 6, 0);
-    addGenerator(s, { ownerId: 1, x: 6, y: 0, timer: 1 });
-    const ev2 = run(s, 3);
-    expect(eventsOf(ev2, 'playerEliminated').some((e) => e.playerId === 1)).toBe(true);
-    expect(eventsOf(ev2, 'pickupDropped')).toHaveLength(0);
-    expect(s.pickups).toHaveLength(0);
-  });
+      // an eliminated fighter with upgrades drops nothing on the floor
+      const victim = s.players[1]!;
+      victim.capacity = 4;
+      victim.range = 5;
+      victim.armour = 0;
+      put(s, 1, 6, 0);
+      addGenerator(s, { ownerId: 1, x: 6, y: 0, timer: 1 });
+      const ev2 = run(s, 3);
+      expect(eventsOf(ev2, 'playerEliminated').some((e) => e.playerId === 1)).toBe(true);
+      expect(eventsOf(ev2, 'pickupDropped')).toHaveLength(0);
+      expect(s.pickups).toHaveLength(0);
+    },
+  );
 
   it('classic keeps crate finds and loot (rewards off)', () => {
     const s = match('classic', 4, {}, true);
@@ -192,7 +201,7 @@ describe('elimination rewards', () => {
     expect(s.players[0]!.contact).toBe('kick');
   });
 
-  it('a victim is credited once: two of the killer\'s blasts in one tick, and later flames on the body, pay once', () => {
+  it("a victim is credited once: two of the killer's blasts in one tick, and later flames on the body, pay once", () => {
     const s = match('survival');
     park(s);
     put(s, 0, 0, 0);
@@ -270,20 +279,21 @@ describe('elimination credit', () => {
     expect(granted(ev, 0)).toEqual(['socket', 'petrol']);
   });
 
-  it('vehicle: the owner of the vehicle, and of a generator it rams into its owner', () => {
+  it('vehicle: the owner of the carried generator, and of a generator the vehicle rams into its owner', () => {
     const s = match('survival');
     park(s);
     put(s, 0, 0, 10);
-    put(s, 1, 4, 8); // in the Danfo's lane (x = 4)
-    put(s, 2, 6, 2); // in P2's own generator's blast, which the Danfo will ram at (4,2)
+    put(s, 1, 5, 0); // next to the Danfo as it enters (4, 0): inside its carried generator's blast footprint
+    put(s, 2, 6, 2); // in P2's own generator's blast, which the carried blast sets off at (4, 2) (a chain)
     addGenerator(s, { ownerId: 2, x: 4, y: 2, timer: 900 });
     s.players[0]!.hasVoucher = true;
     run(s, 1, { 0: { vehicle: { type: 'begin' } } });
     const ev = run(s, 1, { 0: { vehicle: { type: 'launch', entry: { x: 4, y: 0, dir: 'down' } } } });
-    for (let i = 0; i < 400 && s.vehicles.length > 0; i++) ev.push(...run(s, 1));
+    for (let i = 0; i < 1200 && s.vehicles.length > 0; i++) ev.push(...run(s, 1));
     const outs = eventsOf(ev, 'playerEliminated');
     const byVictim = new Map(outs.map((e) => [e.playerId, e]));
-    expect(byVictim.get(1)).toMatchObject({ creditId: 0, cause: { kind: 'vehicle', ownerId: 0 } });
+    // the vehicle's carried generator (VG1) eliminates the rival in the lane: a flame of the owner, credited to them
+    expect(byVictim.get(1)).toMatchObject({ creditId: 0, cause: { kind: 'flame', ownerId: 0 } });
     expect(byVictim.get(2)).toMatchObject({ creditId: 0, cause: { kind: 'flame', ownerId: 2 } });
   });
 
@@ -304,7 +314,7 @@ describe('elimination credit', () => {
     expect(e.creditId).toBe(0);
   });
 
-  it('melee into the victim\'s own blast: the attacker gets the self-kill-after-push', () => {
+  it("melee into the victim's own blast: the attacker gets the self-kill-after-push", () => {
     const s = match('survival');
     park(s);
     put(s, 0, 2, 0);
@@ -327,18 +337,33 @@ describe('elimination credit', () => {
     const victim = s.players[1]!;
     recordHit(s, victim, 2);
     const ev: SimEvent[] = [];
-    applyLethalHits(s, [{ playerId: 1, eventId: 99, cause: { kind: 'hazard', style: 'traffic', eventId: 99 }, graceUntil: s.tick }], ev);
+    applyLethalHits(
+      s,
+      [
+        {
+          playerId: 1,
+          eventId: 99,
+          cause: { kind: 'hazard', style: 'traffic', eventId: 99 },
+          graceUntil: s.tick,
+        },
+      ],
+      ev,
+    );
     expect(eventsOf(ev, 'playerEliminated')[0]!.creditId).toBe(2);
 
     const t = match('survival');
     recordHit(t, t.players[1]!, 2);
     t.tick += t.config.credit.assistWindowTicks + 1; // the scuffle is old news
     const ev2: SimEvent[] = [];
-    applyLethalHits(t, [{ playerId: 1, eventId: 7, cause: { kind: 'crush', eventId: 7 }, graceUntil: t.tick }], ev2);
+    applyLethalHits(
+      t,
+      [{ playerId: 1, eventId: 7, cause: { kind: 'crush', eventId: 7 }, graceUntil: t.tick }],
+      ev2,
+    );
     expect(eventsOf(ev2, 'playerEliminated')[0]!.creditId).toBeNull();
   });
 
-  it('an unrelated accident is nobody\'s free kill', () => {
+  it("an unrelated accident is nobody's free kill", () => {
     const s = match('survival');
     park(s);
     put(s, 1, 4, 0);
@@ -355,11 +380,15 @@ describe('elimination credit', () => {
     const s = match('survival');
     recordHit(s, s.players[1]!, 2);
     const ev: SimEvent[] = [];
-    applyLethalHits(s, [{ playerId: 1, eventId: 5, cause: { kind: 'spectator', ownerId: 3, eventId: 5 }, graceUntil: s.tick }], ev);
+    applyLethalHits(
+      s,
+      [{ playerId: 1, eventId: 5, cause: { kind: 'spectator', ownerId: 3, eventId: 5 }, graceUntil: s.tick }],
+      ev,
+    );
     expect(eventsOf(ev, 'playerEliminated')[0]!.creditId).toBeNull();
   });
 
-  it('teammates: friendly fire scores nobody, a teammate\'s shove is no credit', () => {
+  it("teammates: friendly fire scores nobody, a teammate's shove is no credit", () => {
     const s = match('team', 4, { friendlyFire: true });
     park(s);
     expect(s.players[0]!.team).toBe(s.players[2]!.team);
@@ -375,11 +404,15 @@ describe('elimination credit', () => {
     const t = match('team', 4);
     recordHit(t, t.players[2]!, 0); // teammate
     const ev2: SimEvent[] = [];
-    applyLethalHits(t, [{ playerId: 2, eventId: 3, cause: { kind: 'crush', eventId: 3 }, graceUntil: t.tick }], ev2);
+    applyLethalHits(
+      t,
+      [{ playerId: 2, eventId: 3, cause: { kind: 'crush', eventId: 3 }, graceUntil: t.tick }],
+      ev2,
+    );
     expect(eventsOf(ev2, 'playerEliminated')[0]!.creditId).toBeNull();
   });
 
-  it('two rivals\' blasts in the same tick: the first credited blast scores, the other assists', () => {
+  it("two rivals' blasts in the same tick: the first credited blast scores, the other assists", () => {
     const s = match('survival');
     park(s);
     put(s, 1, 4, 2);

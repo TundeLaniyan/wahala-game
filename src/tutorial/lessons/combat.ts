@@ -94,18 +94,18 @@ export const MELEE: Lesson = {
 export const VEHICLE: Lesson = {
   id: 'vehicle',
   course: 'combat',
-  title: 'Button B: your vehicle',
-  summary: 'One press calls in your signature vehicle.',
+  title: 'Button B: your vehicle generator',
+  summary: 'One press sends your signature vehicle in, carrying a generator.',
   objective:
-    'Collect a Vehicle Voucher, then tap B once (with nobody next to you): your vehicle drives in and hits the dummy.',
+    'Collect a Vehicle Voucher, then tap B once (with nobody next to you): your vehicle drives in carrying a generator that goes off beside the dummy.',
   facts: [
-    "A Vehicle Voucher calls in YOUR character's own vehicle once.",
+    "A Vehicle Voucher sends in YOUR character's own vehicle once, carrying a generator.",
     ...(['streetBaller', 'lekkiBoy', 'campusQueen'] as CharacterId[]).map((id) => {
       const v = VEHICLE_DEFS[CHARACTERS[id].vehicle];
       return `${CHARACTERS[id].name}: ${v.name}. ${v.description}.`;
     }),
     'One tap of B with nobody next to you: the game picks the route that threatens a rival most. No route to choose.',
-    'The lane flashes and the horn sounds first. Your vehicle can hit you too: keep off its lane.',
+    'The vehicle itself is harmless. When a rival stands in its blast range it stops, a short fuse ticks, and the generator goes off. It never hurts you, and it waits while you are inside its blast.',
   ],
   controls: ['move', 'special'],
   demo: {
@@ -117,13 +117,13 @@ export const VEHICLE: Lesson = {
       { caption: 'Collect a Vehicle Voucher. They hide in crates.', acts: { 0: [walk('right', 1)] } },
       {
         caption:
-          'Then tap B, away from other people: your own vehicle comes in by itself, on the best route.',
+          'Then tap B, away from other people: your own vehicle comes in by itself, on the best route, carrying a generator.',
         acts: { 0: [wait(30), special] },
         hold: 90,
       },
       {
-        caption: 'The lane flashes and the horn sounds first. It can hit you too, so stay off it.',
-        acts: { 0: [untilEvent('vehicleExited', () => true, 900), wait(30)] },
+        caption: 'Near the dummy it stops, the fuse ticks and the generator goes off. It never hurts you.',
+        acts: { 0: [untilEvent('vehicleDetonated', () => true, 900), wait(30)] },
       },
     ],
   },
@@ -143,7 +143,8 @@ export const VEHICLE: Lesson = {
       {
         id: 'launch',
         label: 'Tap B once to call your vehicle',
-        instruction: 'Keep away from the dummy and tap {B} once: your vehicle drives in by itself.',
+        instruction:
+          'Keep away from the dummy and tap {B} once: your vehicle drives in by itself with a generator.',
         controls: ['special'],
         checkpoint: true,
         done: onEvent('specialUsed', (e, c) => e.playerId === c.localId && e.action === 'vehicle'),
@@ -158,11 +159,11 @@ export const VEHICLE: Lesson = {
       },
       {
         id: 'hit',
-        label: 'Your vehicle hits the dummy',
-        instruction: 'Stay off the flashing lane and watch your vehicle hit the dummy.',
+        label: 'Your vehicle’s generator catches the dummy',
+        instruction: 'Watch your vehicle stop near the dummy: the fuse ticks, then the generator goes off.',
         controls: ['move'],
-        done: eliminatedBy('vehicle', (id) => id === 1),
-        praise: 'Direct hit! One press, one vehicle.',
+        done: eliminatedBy('flame', (id) => id === 1),
+        praise: 'Direct hit! One press, one vehicle generator.',
       },
     ],
   },

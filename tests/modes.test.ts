@@ -113,7 +113,11 @@ describe('rulesets: each mode on its own', () => {
     s.match.playTicks = s.config.match.durationTicks - 2;
     const ev = run(s, 3);
     expect(s.match.phase).toBe('ended');
-    expect(eventsOf(ev, 'matchEnded')[0]!.result).toEqual({ kind: 'win', winnerId: 0, decidedBy: 'timeoutKills' });
+    expect(eventsOf(ev, 'matchEnded')[0]!.result).toEqual({
+      kind: 'win',
+      winnerId: 0,
+      decidedBy: 'timeoutKills',
+    });
   });
 
   it('Team Rumble: Green v White, even split for 8-32, teams start on opposite halves, human is Green', () => {
@@ -403,7 +407,7 @@ describe('friendly fire (Team Rumble)', () => {
     expect(mate.eliminatedBy).toBeNull();
   });
 
-  it('vehicles: a teammate on the route is passed harmlessly (FF off) and run over (FF on)', () => {
+  it('vehicles: the carried generator ignores a teammate on the route (FF off) and is set off by them (FF on)', () => {
     const LANE: VehicleEntry = { x: 4, y: 0, dir: 'down' };
     for (const ff of [false, true]) {
       const s = match('team', 4, { friendlyFire: ff }, 'danfoBusPark');
@@ -417,8 +421,10 @@ describe('friendly fire (Team Rumble)', () => {
       run(s, 1, { [me.id]: { vehicle: { type: 'begin' } } });
       run(s, 1, { [me.id]: { vehicle: { type: 'launch', entry: LANE } } });
       runUntil(s, () => s.vehicles.length === 0, 900);
-      expect(foe.alive).toBe(false);
+      // FF off: the teammate is no target and is spared by the blast, so the vehicle carries on and gets the foe;
+      // FF on: the teammate is a target and the vehicle goes off at them first
       expect(mate.alive).toBe(!ff);
+      if (!ff) expect(foe.alive).toBe(false);
     }
   });
 });

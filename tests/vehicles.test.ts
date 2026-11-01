@@ -94,28 +94,20 @@ describe('vehicle entry', () => {
 });
 
 describe('Danfo, taxi and Keke behaviour', () => {
-  it('Danfo keeps going after hitting a player and can eliminate several', () => {
-    const s = lane4(['streetBaller']);
-    put(s, 1, 4, 3);
-    put(s, 2, 4, 7);
-    launch(s, 0, LANE);
-    drive(s);
-    expect(s.players[1]!.alive).toBe(false);
-    expect(s.players[2]!.alive).toBe(false);
-    expect(s.players[3]!.alive).toBe(true);
+  it('the vehicle body is harmless to everyone: players on the route are only ever hurt by the carried generator (VG1)', () => {
+    for (const c of ['streetBaller', 'lekkiBoy'] as const) {
+      const s = lane4([c]);
+      put(s, 1, 4, 3);
+      put(s, 2, 4, 7);
+      launch(s, 0, LANE);
+      const ev = runUntil(s, () => s.vehicles.length === 0 || s.match.phase === 'ended', 1500);
+      expect(eventsOf(ev, 'vehicleHitPlayer')).toHaveLength(0);
+      expect(eventsOf(ev, 'playerEliminated').every((e) => e.cause.kind !== 'vehicle')).toBe(true);
+      expect(s.players[3]!.alive).toBe(true); // far from the lane: never in the blast
+    }
   });
 
-  it('taxi stops on the first player it hits', () => {
-    const s = lane4(['lekkiBoy']);
-    put(s, 1, 4, 3);
-    put(s, 2, 4, 7);
-    launch(s, 0, LANE);
-    drive(s);
-    expect(s.players[1]!.alive).toBe(false);
-    expect(s.players[2]!.alive).toBe(true);
-  });
-
-  it('Keke follows a single legal L turn and misses players on the straight beyond the turn', () => {
+  it('Keke follows a single legal L turn; the generator it carries threatens the rival on the L, not the one beyond', () => {
     const s = lane4(['campusQueen']);
     const turn = listKekeTurns(s, LANE).find((t) => t.atIndex === 4 && t.dir === 'right')!;
     put(s, 1, 9, 4);
@@ -124,18 +116,6 @@ describe('Danfo, taxi and Keke behaviour', () => {
     drive(s);
     expect(s.players[1]!.alive).toBe(false);
     expect(s.players[2]!.alive).toBe(true);
-  });
-
-  it('can eliminate its own owner', () => {
-    const s = lane4(['streetBaller']);
-    launch(s, 0, LANE);
-    put(s, 0, 4, 5);
-    const ev = runUntil(s, (e) => e.some((x) => x.type === 'playerEliminated'), 900);
-    expect(eventsOf(ev, 'playerEliminated')[0]!.cause).toMatchObject({
-      kind: 'vehicle',
-      ownerId: 0,
-      vehicleKind: 'danfo',
-    });
   });
 
   it('Danfo rips through soft blocks; the taxi only breaks a limited number then crashes; concrete is never entered', () => {
