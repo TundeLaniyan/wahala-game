@@ -44,7 +44,8 @@ function spawnSpacing(a: ArenaDef, n: number): { min: number; median: number } {
   let min = Infinity;
   for (let i = 0; i < s.length; i++) {
     let nearest = Infinity;
-    for (let j = 0; j < s.length; j++) if (i !== j) nearest = Math.min(nearest, Math.abs(s[i]!.x - s[j]!.x) + Math.abs(s[i]!.y - s[j]!.y));
+    for (let j = 0; j < s.length; j++)
+      if (i !== j) nearest = Math.min(nearest, Math.abs(s[i]!.x - s[j]!.x) + Math.abs(s[i]!.y - s[j]!.y));
     if (nearest < Infinity) {
       d.push(nearest);
       min = Math.min(min, nearest);
@@ -66,7 +67,18 @@ const out: string[] = [];
 const row = (...c: (string | number)[]): void => void out.push(`| ${c.join(' | ')} |`);
 
 out.push('### Rumble stages (Free-for-All / Team Deathmatch respawn; Last Player Standing no respawn)', '');
-row('stage', 'size', 'open tiles', 'open / fighter @8', '@16', '@24', '@32', 'spawns', 'spawn gap min/median @16', '@32');
+row(
+  'stage',
+  'size',
+  'open tiles',
+  'open / fighter @8',
+  '@16',
+  '@24',
+  '@32',
+  'spawns',
+  'spawn gap min/median @16',
+  '@32',
+);
 row(...Array(10).fill('---'));
 for (const id of RUMBLE_ARENA_IDS) {
   const a = ARENAS[id]!;

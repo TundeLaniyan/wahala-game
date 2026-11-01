@@ -110,7 +110,11 @@ function RumbleOpponents({ s, set }: { s: GameSettings; set: Set }) {
     <>
       <Field
         label={team ? 'Teams' : 'Fighters'}
-        hint={team ? 'You and AI teammates (Green) against the White team' : 'You plus AI bots, everyone for themselves'}
+        hint={
+          team
+            ? 'You and AI teammates (Green) against the White team'
+            : 'You plus AI bots, everyone for themselves'
+        }
       >
         <div className="mn-opts">
           {RUMBLE_SIZES.map((n) => (

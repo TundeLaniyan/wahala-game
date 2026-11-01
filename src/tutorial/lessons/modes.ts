@@ -165,8 +165,7 @@ export const DEATHMATCH: Lesson = {
   course: 'modes',
   title: 'Free-for-All: respawns',
   summary: 'Caught? You come back. Most eliminations wins.',
-  objective:
-    'See a respawn for yourself, then score an elimination: in Free-for-All the highest kills wins.',
+  objective: 'See a respawn for yourself, then score an elimination: in Free-for-All the highest kills wins.',
   facts: [
     'Free-for-All lasts 3 or 5 minutes. Caught? You come back after 3 seconds, with a moment of spawn protection.',
     'Your upgrades reset when you are caught: rewards last one life.',
