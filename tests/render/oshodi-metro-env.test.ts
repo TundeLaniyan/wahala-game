@@ -17,7 +17,7 @@ import {
   samplePath,
   validateEnvironment,
 } from '../../src/render/env/plan';
-import { ENV_DRAW_CALL_TARGET } from '../../src/render/env/types';
+import { ENV_BUDGET, ENV_DRAW_CALL_TARGET } from '../../src/render/env/types';
 import { NEW_ARENA_ART } from '../../src/render/arenas/newArenas';
 import { QUALITY } from '../../src/render/quality';
 
@@ -84,9 +84,7 @@ describe('Oshodi environment data', () => {
     const pockets = env.safety!.safePockets!.filter((p) => p.style === 'train');
     expect(pockets.length).toBeGreaterThanOrEqual(4);
     for (const p of pockets) expect(p.rect.x1 <= 36 || p.rect.x0 >= 38, `${p.note}`).toBe(true);
-    expect(env.safety!.exclusions![0]!.notWith).toEqual(
-      expect.arrayContaining(['traffic', 'danfo', 'goods', 'debris', 'crush']),
-    );
+    expect(env.safety!.exclusions![0]!.notWith).toEqual(expect.arrayContaining(['goods', 'debris', 'crush']));
   });
 
   it('buses and Danfos dominate, taxis and kekes stay a minority, trucks only on the expressway, no okadas', () => {
@@ -138,5 +136,50 @@ describe('Oshodi environment budgets', () => {
 
   it('the quality profiles still cap the stage cover at a few merged meshes', () => {
     for (const level of ['low', 'high'] as const) expect(QUALITY[level]).toBeDefined();
+  });
+});
+
+describe('Oshodi bus-choked roads (opt-in budget boost)', () => {
+  const env = oshodiMetroEnv(board, 'day');
+
+  it('raises the vehicle cap only for this stage; the shared caps are unchanged', () => {
+    expect(budgetFor(env, 'medium').vehicles).toBeGreaterThan(ENV_BUDGET.medium.vehicles);
+    expect(budgetFor(env, 'high').vehicles).toBeGreaterThan(ENV_BUDGET.high.vehicles);
+    const plain = { ...env, boost: undefined };
+    for (const level of LEVELS) expect(budgetFor(plain, level)).toEqual(ENV_BUDGET[level]);
+  });
+
+  it('keeps the model count (hence the vehicle draw calls) at the shared cap on every tier', () => {
+    for (const level of LEVELS)
+      expect(budgetFor(env, level).vehicleModels).toBe(ENV_BUDGET[level].vehicleModels);
+  });
+
+  it('puts many more ground vehicles on the roads at medium and high, still none on the board', () => {
+    const ground = (level: (typeof LEVELS)[number]): number =>
+      planTraffic(env, level).vehicles.filter((v) => !v.routeId.startsWith('deck')).length;
+    expect(ground('medium')).toBeGreaterThanOrEqual(40);
+    expect(ground('high')).toBeGreaterThanOrEqual(ground('medium'));
+    expect(ground('veryLow')).toBeLessThanOrEqual(ENV_BUDGET.veryLow.vehicles);
+  });
+});
+
+describe('Oshodi traffic on both approach roads at every tier', () => {
+  const env = oshodiMetroEnv(board, 'day');
+
+  it('puts vehicles on the west AND the east road at low, medium and high (fair share across the loops)', () => {
+    for (const level of ['low', 'medium', 'high'] as const) {
+      const plan = planTraffic(env, level);
+      const west = plan.vehicles.filter((v) => v.routeId.startsWith('west')).length;
+      const east = plan.vehicles.filter((v) => v.routeId.startsWith('east')).length;
+      expect(west, `${level} west`).toBeGreaterThanOrEqual(3);
+      expect(east, `${level} east`).toBeGreaterThanOrEqual(3);
+      expect(Math.abs(west - east), `${level} balance`).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it('a stage without fairShare keeps the first-route-first allocation (other stages unchanged)', () => {
+    const plain = { ...env, fairShare: false, boost: undefined };
+    const medium = planTraffic(plain, 'medium');
+    expect(medium.vehicles.length).toBeLessThanOrEqual(10);
   });
 });

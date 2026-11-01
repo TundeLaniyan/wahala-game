@@ -93,12 +93,12 @@ export const CRUSH: Lesson = {
 export const SURVIVAL: Lesson = {
   id: 'survival',
   course: 'modes',
-  title: 'Survival: elimination rewards',
+  title: 'Last Player Standing: elimination rewards',
   summary: 'City Rumble: one life, every elimination powers you up.',
   objective:
-    'Catch the dummy: in Survival every elimination you are credited with powers you up at once. Then use your reward.',
+    'Catch the dummy: in Last Player Standing every elimination you are credited with powers you up at once. Then use your reward.',
   facts: [
-    'Survival: one life each, last one standing wins, and the city closes in.',
+    'Last Player Standing: one life each, no respawn, last one standing wins, and the city closes in.',
     'Crates hold no pickups here: power comes from eliminations, given straight to whoever gets the credit.',
     'The first reward is an Extra Socket and a Petrol Top-Up; later ones bring Armour, Square Blast and more.',
   ],
@@ -111,7 +111,7 @@ export const SURVIVAL: Lesson = {
       }),
     beats: [
       {
-        caption: 'City Rumble Survival: one life, and every elimination powers you up at once.',
+        caption: 'Last Player Standing: one life, and every elimination powers you up at once.',
         acts: { 0: [walk('right', 2)] },
       },
       {
@@ -154,7 +154,7 @@ export const SURVIVAL: Lesson = {
         checkpoint: true,
         done: when((ctx) => ctx.state.generators.filter((g) => g.ownerId === ctx.localId).length >= 2),
         mistakes: [placeRefused('Wait until your first generators have gone off.')],
-        praise: 'Well done! That is how a Survival fighter grows.',
+        praise: 'Well done! That is how a Last Player Standing fighter grows.',
       },
     ],
   },
@@ -163,12 +163,11 @@ export const SURVIVAL: Lesson = {
 export const DEATHMATCH: Lesson = {
   id: 'deathmatch',
   course: 'modes',
-  title: 'Deathmatch: respawns',
+  title: 'Free-for-All: respawns',
   summary: 'Caught? You come back. Most eliminations wins.',
-  objective:
-    'See a respawn for yourself, then score an elimination: in Deathmatch the most eliminations wins.',
+  objective: 'See a respawn for yourself, then score an elimination: in Free-for-All the highest kills wins.',
   facts: [
-    'Deathmatch lasts 5 or 10 minutes. Caught? You come back after 3 seconds, with a moment of spawn protection.',
+    'Free-for-All lasts 3 or 5 minutes. Caught? You come back after 3 seconds, with a moment of spawn protection.',
     'Your upgrades reset when you are caught: rewards last one life.',
     'The most credited eliminations when time runs out wins (then fewer deaths, then assists).',
   ],
@@ -181,7 +180,7 @@ export const DEATHMATCH: Lesson = {
       }),
     beats: [
       {
-        caption: 'Deathmatch: being caught is not the end.',
+        caption: 'Free-for-All: being caught is not the end.',
         acts: { 0: [wait(20), place, untilEvent('playerEliminated')] },
       },
       {
@@ -220,10 +219,10 @@ export const DEATHMATCH: Lesson = {
       {
         id: 'back',
         label: 'Watch the dummy come back',
-        instruction: 'The dummy comes back too. In a real Deathmatch, keep scoring until time runs out.',
+        instruction: 'The dummy comes back too. In a real Free-for-All, keep scoring until time runs out.',
         controls: ['move'],
         done: onEvent('playerRespawned', (e) => e.playerId === 1),
-        praise: 'Well done! That is Deathmatch.',
+        praise: 'Well done! That is Free-for-All.',
       },
     ],
   },
@@ -232,12 +231,12 @@ export const DEATHMATCH: Lesson = {
 export const TEAM: Lesson = {
   id: 'team',
   course: 'modes',
-  title: 'Team Rumble: friend or enemy',
+  title: 'Team Deathmatch: friend or enemy',
   summary: 'Your fire spares teammates; B never hits them.',
   objective:
     'Catch the enemy with a blast that also covers your teammate (who is safe), then see that B never hits a teammate.',
   facts: [
-    'Team Rumble: Deathmatch rules in teams (Green v White). Team eliminations decide it.',
+    'Team Deathmatch: Free-for-All rules in teams (Green v White). The team with most kills wins.',
     'Your blasts and vehicles spare teammates (unless friendly fire is switched on). They still hurt you!',
     'B never hits a teammate.',
   ],
@@ -252,7 +251,7 @@ export const TEAM: Lesson = {
         ],
       }),
     beats: [
-      { caption: 'Team Rumble: MATE is on your team, ENEMY is not.', acts: { 0: [walk('right', 2)] } },
+      { caption: 'Team Deathmatch: MATE is on your team, ENEMY is not.', acts: { 0: [walk('right', 2)] } },
       {
         caption: 'Your blast covers both of them...',
         acts: { 0: [place, walk('up', 3), untilEvent('generatorExploded')] },

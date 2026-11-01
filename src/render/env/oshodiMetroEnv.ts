@@ -1,7 +1,7 @@
 /**
  * The living environment of Oshodi Transport Metropolis (City Rumble), as data relative to the board size.
  *
- * Aligned to the six-district board of `src/sim/arenas/rumbleOshodi.ts` (45 x 33): the main road crosses
+ * Aligned to the ten-district board of `src/sim/arenas/rumbleOshodi.ts` (63 x 47): the main road crosses
  * the board east-west on rows 15-18 and leaves it through the west and east mouths; the elevated expressway
  * runs east-west north of the board; the terminal canopy and its queues stand north of the plaza; the station
  * forecourt and the Cappa Ground's touchline are on the east side; the trading streets' pavement is west.
@@ -23,13 +23,13 @@ const SODIUM = 0xff9f3a;
 const RAIL_BLUE = 0x9ec8ff;
 
 export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageEnvironment {
-  const { cols, rows } = board;
+  const { cols } = board;
   const night = tod === 'night';
   const boost = night ? 1.5 : 1;
-  const cx = cols / 2;
+  const cx = 22.5; // the interchange's own centre (the board grew east and south around it)
   // the main road's lanes beyond the edges (right-hand traffic: eastbound rows 17-18, westbound rows 15-16)
-  const eastbound = rows * 0.5 + 2.0; // row 18 centre
-  const westbound = rows * 0.5 - 1.0; // row 15 centre
+  const eastbound = 18.5; // row 18 centre (the main road is rows 15-18 whatever the board size)
+  const westbound = 15.5; // row 15 centre
   const lights: LightPocket[] = [
     // the terminal canopy north of the plaza: tubes along the roof edge
     {
@@ -151,80 +151,93 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
         id: 'deckEastbound',
         kinds: ['bus', 'danfo', 'truck', 'bus', 'car'],
         path: [
-          [-52, -11],
-          [cols + 52, -11],
+          [-52, -23.8],
+          [cols + 52, -23.8],
         ],
         count: 5,
         speed: 3.6,
         spacing: 6,
         elevation: OSHODI_DECK_ELEVATION,
-        priority: 3,
+        priority: 1,
         fade: 2.5,
       },
       {
         id: 'deckWestbound',
         kinds: ['danfo', 'bus', 'car', 'truck', 'danfo'],
         path: [
-          [cols + 52, -13.4],
-          [-52, -13.4],
+          [cols + 52, -26.2],
+          [-52, -26.2],
         ],
         count: 5,
         speed: 3.2,
         spacing: 6,
         elevation: OSHODI_DECK_ELEVATION,
-        priority: 3,
+        priority: 1,
         fade: 2.5,
       },
-      // the main road beyond the west mouth: buses and Danfos in, the odd taxi and keke out
+      // slow, bumper-to-bumper LOOPS beyond both mouths of the main road (right-hand traffic: eastbound south
+      // lanes, westbound north lanes): out along one lane, a U-turn at the far end, back along the other, and
+      // into the board's own road at the mouth. Two loops per side (outer lanes, inner lanes). Ambient only:
+      // it never enters the board, so the road's own sweeps stay the only hazard.
+      ...(['west', 'east'] as const).flatMap((side) => {
+        const dir = side === 'east' ? 1 : -1;
+        const mouth = side === 'east' ? cols + 1.6 : -1.6;
+        const loop = (
+          id: string,
+          outY: number,
+          backY: number,
+          far: number,
+          kinds: string[],
+          count: number,
+        ) => ({
+          id,
+          kinds: kinds as never,
+          path: [
+            [mouth, outY],
+            [mouth + dir * far, outY],
+            [mouth + dir * far, backY],
+            [mouth, backY],
+          ] as [number, number][],
+          count,
+          speed: 1.15,
+          spacing: 0.8,
+          priority: 3,
+          fade: 2.0,
+        });
+        // out lane: eastbound (south) on the east side, westbound (north) on the west side
+        const outer = side === 'east' ? [eastbound, westbound] : [westbound, eastbound];
+        const inner = side === 'east' ? [eastbound - 1, westbound + 1] : [westbound + 1, eastbound - 1];
+        return [
+          loop(
+            `${side}LoopOuter`,
+            outer[0]!,
+            outer[1]!,
+            27,
+            ['danfo', 'bus', 'danfo', 'danfo', 'bus', 'car', 'danfo'],
+            14,
+          ),
+          loop(
+            `${side}LoopInner`,
+            inner[0]!,
+            inner[1]!,
+            23,
+            ['bus', 'danfo', 'keke', 'danfo', 'bus', 'danfo'],
+            12,
+          ),
+        ];
+      }),
+      // the terminal bay lane in front of the ring terminals: BRT-style buses and Danfos crawling past the bays
       {
-        id: 'westRoadIn',
-        kinds: ['bus', 'danfo', 'car', 'danfo'],
+        id: 'terminalBays',
+        kinds: ['bus', 'bus', 'danfo', 'bus'],
         path: [
-          [-40, eastbound],
-          [-1.6, eastbound],
+          [-6, -1.3],
+          [34, -1.3],
         ],
-        count: 3,
-        speed: 3.8,
-        spacing: 4,
+        count: 6,
+        speed: 0.9,
+        spacing: 5.5,
         priority: 2,
-      },
-      {
-        id: 'westRoadOut',
-        kinds: ['danfo', 'bus', 'keke'],
-        path: [
-          [-1.6, westbound],
-          [-40, westbound],
-        ],
-        count: 3,
-        speed: 3.6,
-        spacing: 4,
-        priority: 2,
-      },
-      // beyond the east mouth, past the station forecourt
-      {
-        id: 'eastRoadOut',
-        kinds: ['bus', 'danfo', 'car'],
-        path: [
-          [cols + 1.6, eastbound - 1],
-          [cols + 40, eastbound - 1],
-        ],
-        count: 3,
-        speed: 3.6,
-        spacing: 4,
-        priority: 1,
-        minQuality: 'medium',
-      },
-      {
-        id: 'eastRoadIn',
-        kinds: ['danfo', 'car', 'bus'],
-        path: [
-          [cols + 40, westbound + 1],
-          [cols + 1.6, westbound + 1],
-        ],
-        count: 3,
-        speed: 3.4,
-        spacing: 4,
-        priority: 1,
         minQuality: 'medium',
       },
     ],
@@ -232,15 +245,15 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
       // commuters queueing under the terminal canopy north of the plaza
       {
         id: 'terminalQueue',
-        rect: { x0: cx - 14, y0: -6.2, x1: cx - 3, y1: -3.4 },
-        count: 12,
+        rect: { x0: 3, y0: -3.1, x1: 20, y1: -2.2 },
+        count: 14,
         mood: 'waiting',
         priority: 3,
       },
-      // passengers on the station forecourt beyond the east edge, rows 10-14
+      // traders and passengers at the east edge beyond Papa Ajao Market, rows 9-13
       {
-        id: 'stationForecourt',
-        rect: { x0: cols + 1.8, y0: 9.6, x1: cols + 5.2, y1: 14.2 },
+        id: 'eastMarketEdge',
+        rect: { x0: cols + 1.8, y0: 9.4, x1: cols + 5.2, y1: 13.2 },
         count: 8,
         mood: 'waiting',
         priority: 3,
@@ -249,14 +262,14 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
       {
         id: 'tradingPavement',
         rect: { x0: -5.6, y0: 3, x1: -2.2, y1: 12 },
-        count: 9,
+        count: 14,
         mood: 'trading',
         priority: 2,
         reacts: { blast: { reaction: 'flinch', radius: 10, minRange: 3, chance: 0.6 } },
       },
-      // fans along the Cappa Ground's touchline (east edge, rows 26-30)
+      // yard hands and watchers at the east edge beyond the Freight Yard (rows 26-30)
       {
-        id: 'groundTouchline',
+        id: 'eastYardEdge',
         rect: { x0: cols + 1.8, y0: 26, x1: cols + 3.8, y1: 30.4 },
         count: 6,
         mood: 'watching',
@@ -279,6 +292,15 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
       stage: { reaction: 'look', radius: 18, chance: 0.5 },
     },
     lights,
+    // the bus-choked roads are this stage's identity: more ambient vehicles and people per tier (instanced: the
+    // model count, hence the draw calls, is unchanged)
+    fairShare: true,
+    yieldToWave: true,
+    boost: {
+      low: { vehicles: 12, people: 20 },
+      medium: { vehicles: 64, people: 52 },
+      high: { vehicles: 96, people: 96 },
+    },
     audio: {
       beds: ['buspark_loop', 'crowd_loop'],
       reactions: [
@@ -309,8 +331,8 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
           note: 'south platform and the Cappa passage',
         },
       ],
-      // the sim runs one lethal event at a time on this stage and none once the city closes
-      exclusions: [{ style: 'train', notWith: ['traffic', 'danfo', 'goods', 'debris', 'crush'] }],
+      // the sim runs up to two lethal events at once on this stage (each separately warned) and none once the city closes
+      exclusions: [{ style: 'train', notWith: ['goods', 'debris', 'crush'] }],
     },
   };
 }

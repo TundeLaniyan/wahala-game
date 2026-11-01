@@ -125,9 +125,10 @@ export interface GameConfig {
     /**
      * City Rumble: a centred core (w x h tiles) that never closes. The ring closes around it and the
      * last ring tile lands `coreClosedRemainingTicks` before the end; the core is fought over until 0:00.
-     * Null = the standard Wahala Crush (everything closes, the final tile lands at 0:00).
+     * `x0` / `y0` (both or neither) place the core's top-left tile explicitly for a stage whose heart is not
+     * the board's centre (Oshodi). Null = the standard Wahala Crush (everything closes, the final tile lands at 0:00).
      */
-    keepCore: { w: number; h: number } | null;
+    keepCore: { w: number; h: number; x0?: number; y0?: number } | null;
     coreClosedRemainingTicks: number;
   };
   /**

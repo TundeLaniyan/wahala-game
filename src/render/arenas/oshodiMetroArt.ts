@@ -31,14 +31,8 @@ import { STREET } from './common';
 import { T, crack, noiseFill, stain, tyreTrack } from './floorKit';
 import type { Ctx, FloorDrawer } from './floorKit';
 import { buildOshodiMetroCover } from './oshodiMetroCover';
-import {
-  expressway,
-  floodlights,
-  railViaduct,
-  skyline,
-  skywalks,
-  terminalCanopy,
-} from './oshodiMetroLandmarks';
+import { interchangeMegastructures } from './oshodiMetroTerminal';
+import { expressway, floodlights, railViaduct, skyline } from './oshodiMetroLandmarks';
 import { drum, umbrella, wire } from './oshodiKit';
 import { SiteLights, v3 } from './roadworksKit';
 import { dash, floorWords, litter, paintKerbs, paintRoads, tileWorld, zebraTile } from './rumbleV2Kit';
@@ -276,6 +270,24 @@ export const OSHODI_METRO_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
           g.fillStyle = 'rgba(110,86,12,0.5)';
           for (let k = 0; k < 5; k++) g.fillRect(x * T + T * 0.08, y * T + 10 + k * 24, 8, 8);
         }
+      } else if (d === 'papaAjao' || d === 'agegeStrip') {
+        // the market ground: trodden pavers with wet dark patches
+        pavers(g, r, x, y);
+        if (r() < 0.18) stain(g, (x + r()) * T, (y + r()) * T, 16 + r() * 34, 'rgba(36,30,22,0.38)');
+      } else if (d === 'freightYard') {
+        // ballast and cinders under the wagons
+        g.fillStyle = `rgba(${84 + r() * 18},${80 + r() * 16},${74 + r() * 14},0.7)`;
+        g.fillRect(x * T, y * T, T, T);
+        for (let i = 0; i < 26; i++) {
+          const c = 60 + r() * 90;
+          g.fillStyle = `rgba(${c},${c - 2},${c - 8},0.6)`;
+          g.fillRect(x * T + r() * T, y * T + r() * T, 2 + r() * 4, 2 + r() * 3);
+        }
+      } else if (d === 'busPark') {
+        // the interstate bus park: worn asphalt, oil and painted bay lines
+        g.fillStyle = `rgba(${62 + r() * 12},${60 + r() * 10},${58 + r() * 10},0.8)`;
+        g.fillRect(x * T, y * T, T, T);
+        if (r() < 0.14) stain(g, (x + r()) * T, (y + r()) * T, 20 + r() * 36, 'rgba(10,10,12,0.42)');
       } else if (d === 'cappaWorks') {
         g.fillStyle = `rgba(${92 + r() * 16},${88 + r() * 12},${80 + r() * 10},0.42)`;
         g.fillRect(x * T, y * T, T, T);
@@ -402,6 +414,22 @@ export const OSHODI_METRO_FLOOR: FloorDrawer = (g, rg, cols, rows) => {
   g.strokeRect(42 * T - 2 * T - 10, 27 * T + 10, 2 * T, 3 * T - 20);
   floorWords(g, 'CAPPA WORKS GROUND', 34.4, 30.62, 0.17, 'rgba(238,234,220,0.5)');
 
+  // ---- the grown board: stencils and bay lines of the new districts
+  g.strokeStyle = 'rgba(232,228,212,0.55)';
+  g.lineWidth = 5;
+  for (const x0 of [3, 9, 15, 21])
+    for (const y0 of [35, 40])
+      for (let x = x0; x <= x0 + 4; x += 2) {
+        g.beginPath();
+        g.moveTo(x * T, (y0 - 1) * T + 14);
+        g.lineTo(x * T, y0 * T + 4);
+        g.stroke();
+      }
+  floorWords(g, 'INTERSTATE BUS PARK', 14, 38.5, 0.3, 'rgba(242,206,64,0.55)');
+  floorWords(g, 'PAPA AJAO MARKET', 52.5, 2.6, 0.26, 'rgba(238,234,220,0.5)');
+  floorWords(g, 'FREIGHT YARD', 53, 19.6, 0.26, 'rgba(238,234,220,0.5)');
+  floorWords(g, 'AGEGE MOTOR STRIP', 47, 38.5, 0.26, 'rgba(238,234,220,0.5)');
+
   // ---- the works: oil under the workshops, a NO PARKING stencil at the gate
   for (let i = 0; i < 14; i++)
     stain(g, (10 + r() * 14) * T, (23 + r() * 6) * T, 30 + r() * 50, 'rgba(14,12,10,0.4)');
@@ -437,7 +465,7 @@ function sideStreets(ctx: SetContext): void {
   const near = (z: number, y0: number, y1: number): boolean => z > wz(y0) - 2 && z < wz(y1) + 2;
   const free = (z: number, west: boolean): boolean => {
     if (near(z, 13, 20)) return true;
-    return west ? near(z, 3, 12) || near(z, 21, 26) : near(z, 9, 15) || near(z, 25, 31);
+    return west ? near(z, 3, 12) || near(z, 21, 26) : near(z, 9, 13) || near(z, 25, 31);
   };
   for (let z = -H / 2 - 2.5; z < H / 2 + 5; z += 3.5)
     for (const west of [true, false]) {
@@ -451,11 +479,6 @@ function sideStreets(ctx: SetContext): void {
         sz: 1.17,
       });
     }
-  // north edge: west of the terminal and east of the station tower only
-  for (const x0 of [-W / 2 - 4, 30]) {
-    for (let x = x0; x < x0 + 11; x += 3.6)
-      byVariant[n++ % ids.length]!.push({ x, z: -H / 2 - 3.9, ry: 0, sx: 1.17, sy: 1.3, sz: 1.17 });
-  }
   ids.forEach((id, k) => ctx.instance(id, byVariant[k]!));
 }
 
@@ -466,9 +489,8 @@ function build(ctx: SetContext): void {
   const L = new SiteLights();
   const S = STREET;
 
-  terminalCanopy(ctx, L, tod);
+  interchangeMegastructures(ctx, L, tod);
   expressway(ctx, L);
-  skywalks(ctx);
   railViaduct(ctx, L, tod);
   skyline(ctx, L, tod);
   floodlights(ctx, L, tod);
@@ -582,4 +604,4 @@ export const OSHODI_METRO_SET: ArenaSet = {
 
 /** The board's permanent cover: terminal, buses, skywalk piers, rail portals, station, shopfronts, works. */
 export const OSHODI_METRO_COVER: CoverFactory = (board) =>
-  board.width === 45 && board.height === 33 ? buildOshodiMetroCover(board) : null;
+  board.width === 63 && board.height === 47 ? buildOshodiMetroCover(board) : null;

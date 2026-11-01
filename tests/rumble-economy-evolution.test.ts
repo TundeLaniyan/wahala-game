@@ -482,7 +482,7 @@ describe('measurement harness (scripts/rumbleMetrics)', () => {
     if (a.firstEncounterSec !== null && a.firstElimSec !== null) {
       expect(a.firstEncounterSec).toBeGreaterThan(0);
     }
-    expect(a.suppliesStart).toBe(8);
+    expect(a.suppliesStart).toBe(14);
     expect(a.suppliesOpened).toBeLessThanOrEqual(a.suppliesStart);
     expect(a.suppliesOpened60).toBe(a.suppliesOpened);
     expect(a.meanLiveGenerators).toBeGreaterThan(0);

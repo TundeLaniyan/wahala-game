@@ -57,8 +57,8 @@ test.describe('Stitch main menu', () => {
     await expect(page.getByTestId('menu-setup')).toBeVisible();
     await expect(page.getByTestId('menu-steps')).toHaveCount(0);
     await expect(page.getByTestId('setup-arena')).toContainText('Select Arena');
-    // only the Deathmatch rules: a length, no friendly fire
-    await page.getByTestId('minutes-10').click();
+    // only the Free-for-All rules: a length (3 or 5 minutes), no friendly fire
+    await page.getByTestId('minutes-3').click();
     await expect(page.getByTestId('ff-on')).toHaveCount(0);
     await page.getByTestId('rumble-8').click();
     await chooseStage(page, 'rumbleApapa');
@@ -67,7 +67,7 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('char-campusQueen').click();
     await expect(page.getByTestId('fighter-name')).toHaveText('Campus Queen');
     await page.getByTestId('menu-continue').click();
-    await expect(page.getByTestId('ready-mode')).toContainText('Deathmatch');
+    await expect(page.getByTestId('ready-mode')).toContainText('Free-for-All');
     await expect(page.getByTestId('ready-fighter')).toContainText('Campus Queen');
     await expect(page.getByTestId('ready-arena')).toContainText('Apapa');
     await expect(page.getByTestId('ready-opponents')).toContainText('7 AI bots');
@@ -94,7 +94,7 @@ test.describe('Stitch main menu', () => {
     expect(await live(page)).toEqual({
       arenaId: 'rumbleLekkiNight',
       game: 'deathmatch',
-      duration: 600 * 60,
+      duration: 180 * 60,
       players: 8,
       me: 'lekkiBoy',
     });
@@ -103,7 +103,7 @@ test.describe('Stitch main menu', () => {
     await page.keyboard.press('Escape');
     await page.getByTestId('quit').click();
     await expect(page.getByTestId('menu-home')).toBeVisible();
-    await expect(page.getByTestId('setup-summary')).toContainText('Deathmatch · 8 fighters · 10 min');
+    await expect(page.getByTestId('setup-summary')).toContainText('Free-for-All · 8 fighters · 3 min');
     await page.getByTestId('quick-play').click();
     await expect(page.getByTestId('hud')).toBeVisible();
     await stepTicks(page, 30);
@@ -121,15 +121,15 @@ test.describe('Stitch main menu', () => {
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('menu-mode')).toBeVisible();
-    await page.keyboard.press('ArrowRight'); // the saved mode first, then the next card
+    await page.keyboard.press('ArrowRight'); // the saved mode (Free-for-All) first, then the next card
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('mode-deathmatch')).toBeFocused();
+    await expect(page.getByTestId('mode-team')).toBeFocused();
     await page.keyboard.press('Enter'); // choosing a mode opens the arena and settings
     await expect(page.getByTestId('menu-setup')).toBeVisible();
     await expect(page.getByTestId('rumble-setup')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('menu-mode')).toBeVisible();
-    await expect(page.getByTestId('mode-deathmatch')).toHaveAttribute('aria-current', 'true');
+    await expect(page.getByTestId('mode-team')).toHaveAttribute('aria-current', 'true');
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('menu-home')).toBeVisible();
     // Esc on Home does nothing harmful

@@ -33,9 +33,13 @@ export interface GameSettings {
   botDifficulties: Difficulty[];
   /** V2 City Rumble: spread the roster around the preset level (mixed-difficulty roster). */
   rumbleMixed: boolean;
-  /** V2 City Rumble mode, length (respawn modes) and friendly fire (Team Rumble). */
+  /**
+   * City Rumble mode (decision MD1; the ids are the sim's rulesets): 'deathmatch' = Free-for-All (the default),
+   * 'team' = Team Deathmatch, 'survival' = Last Player Standing. Length of the respawn modes (3 or 5 minutes) and
+   * friendly fire (Team Deathmatch).
+   */
   rumbleMode: RumbleModeSetting;
-  rumbleMinutes: 5 | 10;
+  rumbleMinutes: 3 | 5;
   friendlyFire: boolean;
   /** V2 City Rumble stage. */
   rumbleArenaId: string;
@@ -70,7 +74,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   difficulty: 'rookie',
   botDifficulties: ['rookie', 'rookie', 'rookie'],
   rumbleMixed: false,
-  rumbleMode: 'survival',
+  rumbleMode: 'deathmatch',
   rumbleMinutes: 5,
   friendlyFire: false,
   rumbleArenaId: 'rumbleOshodi',
@@ -148,7 +152,7 @@ export function sanitizeSettings(s: GameSettings): GameSettings {
     botDifficulties: [0, 1, 2].map((i) => migrateDifficulty(bots[i], difficulty)),
     rumbleMixed: bool(s.rumbleMixed, d.rumbleMixed),
     rumbleMode: oneOf(s.rumbleMode, ['survival', 'deathmatch', 'team'] as const, d.rumbleMode),
-    rumbleMinutes: oneOf(s.rumbleMinutes, [5, 10] as const, d.rumbleMinutes),
+    rumbleMinutes: oneOf(s.rumbleMinutes, [3, 5] as const, d.rumbleMinutes),
     friendlyFire: bool(s.friendlyFire, d.friendlyFire),
     rumbleArenaId: oneOf(s.rumbleArenaId, RUMBLE_ARENA_IDS, RUMBLE_ARENA_IDS[0] ?? d.rumbleArenaId),
     character: oneOf(s.character, CHARACTER_IDS, d.character),

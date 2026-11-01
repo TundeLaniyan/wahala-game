@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
 import { RUMBLE_SIZES } from '../../app/settings';
+import { TIMED_MINUTES } from '../../sim';
 import type { GameSettings } from '../../app/settings';
 import {
   LEVEL_LABEL,
@@ -109,7 +110,11 @@ function RumbleOpponents({ s, set }: { s: GameSettings; set: Set }) {
     <>
       <Field
         label={team ? 'Teams' : 'Fighters'}
-        hint={team ? 'You and AI teammates (Green) against White' : 'You plus AI bots'}
+        hint={
+          team
+            ? 'You and AI teammates (Green) against the White team'
+            : 'You plus AI bots, everyone for themselves'
+        }
       >
         <div className="mn-opts">
           {RUMBLE_SIZES.map((n) => (
@@ -135,9 +140,9 @@ function RumbleRules({ s, set }: { s: GameSettings; set: Set }) {
   return (
     <>
       {timed && (
-        <Field label="Match length" hint="Respawn modes run on the clock">
+        <Field label="Match length" hint="Respawn enabled: the clock decides">
           <div className="mn-opts">
-            {([5, 10] as const).map((m) => (
+            {(TIMED_MINUTES as readonly (3 | 5)[]).map((m) => (
               <Option
                 key={m}
                 value={m}

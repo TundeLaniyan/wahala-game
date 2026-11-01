@@ -151,8 +151,11 @@ describe('match setup shows only what the chosen mode uses', () => {
     );
   });
 
-  it('Deathmatch adds the match length; Team Rumble adds team splits and friendly fire', () => {
-    expect(render(SetupScreen, { play: 'rumble', rumbleMode: 'deathmatch' })).toContain('minutes-10');
+  it('Free-for-All adds the 3 or 5 minute length; Team Deathmatch adds team splits and friendly fire', () => {
+    const ffa = render(SetupScreen, { play: 'rumble', rumbleMode: 'deathmatch' });
+    expect(ffa).toContain('minutes-3');
+    expect(ffa).toContain('minutes-5');
+    expect(ffa).not.toContain('minutes-10');
     const team = render(SetupScreen, { play: 'rumble', rumbleMode: 'team' });
     expect(team).toMatch(/data-testid="rumble-8"[^>]*>4 v 4/);
     expect(team).toContain('data-testid="ff-on"');
@@ -204,7 +207,7 @@ describe('mode, ready and home screens', () => {
       rumbleCompetitors: 32,
       friendlyFire: true,
     });
-    expect(html).toContain('Team Rumble');
+    expect(html).toContain('Team Deathmatch');
     expect(html).toContain('16 v 16');
     for (const e of ['mode', 'fighter', 'arena', 'setup', 'bots'])
       expect(html).toContain(`data-testid="edit-${e}"`);

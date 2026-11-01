@@ -962,7 +962,8 @@ kbd {
   position: absolute;
   z-index: 1;
   top: 14px;
-  left: 14px;
+  /* top right: the card text now also carries the rule line, so it can rise to the top-left corner */
+  right: 14px;
   padding: 4px 10px;
   background: rgba(11, 14, 20, 0.8);
   border: 1px solid var(--mn-border);
@@ -999,6 +1000,14 @@ kbd {
   line-height: 0.95;
   letter-spacing: 0.05em;
   color: #fff;
+}
+.mn-mode-rule {
+  display: block;
+  margin: 2px 0 4px;
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  color: var(--mn-amber);
 }
 .mn-mode-blurb {
   color: #c9cdd8;
@@ -2342,7 +2351,7 @@ kbd {
   }
   .mn-mode-tag {
     top: 8px;
-    left: 8px;
+    right: 8px;
   }
   /* setup */
 
