@@ -444,11 +444,10 @@ export class MatchController {
     const state = this.state!;
     switch (e.type) {
       case 'vehicleWarning': {
+        // the carrier's warning is the late fuse at the vehicle, not a toast: only its owner is told it is on its way
+        if (e.ownerId !== LOCAL_ID) return null;
         const owner = state.players[e.ownerId]!;
-        return {
-          text: `${CHARACTERS[owner.characterId].vehicle.toUpperCase()} INCOMING!`,
-          tone: e.ownerId === LOCAL_ID ? 'info' : 'bad',
-        };
+        return { text: `${CHARACTERS[owner.characterId].vehicle.toUpperCase()} ON ITS WAY`, tone: 'info' };
       }
       case 'trapsWarning':
         return { text: e.wave === 0 ? 'FINAL 30s: FLOOR TRAPS!' : 'MORE TRAPS!', tone: 'bad' };

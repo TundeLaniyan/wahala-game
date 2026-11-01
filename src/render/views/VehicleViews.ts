@@ -1,11 +1,16 @@
 import {
   AdditiveBlending,
+  Box3,
+  BoxGeometry,
   CanvasTexture,
+  CylinderGeometry,
   DoubleSide,
   Group,
   Mesh,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   PlaneGeometry,
+  RingGeometry,
 } from 'three';
 import type { Vehicle } from '../../sim';
 import { createVehicleModel, spinWheel } from '../assets/vehicles';
@@ -22,6 +27,64 @@ interface Visual {
   smokeAt: number;
   lastPos: { x: number; z: number; y: number };
   wrecked: boolean;
+  /** The generator the vehicle carries (a roof-mounted unit with a lamp): what tells it from scenery traffic. */
+  gen: Group;
+  lamp: Mesh;
+  /** The late warning: a small amber ring on the road under a fusing carrier. */
+  ring: Mesh;
+}
+
+let genParts: {
+  box: BoxGeometry;
+  band: CylinderGeometry;
+  lamp: CylinderGeometry;
+  body: MeshStandardMaterial;
+  dark: MeshStandardMaterial;
+} | null = null;
+let ringParts: { geo: RingGeometry; mat: MeshBasicMaterial } | null = null;
+
+/** A small yellow generator with black bands and a red lamp (shared geometry; one per carrier). */
+function createCarriedGenerator(): { gen: Group; lamp: Mesh } {
+  genParts ??= {
+    box: new BoxGeometry(0.46, 0.26, 0.34),
+    band: new CylinderGeometry(0.05, 0.05, 0.36, 6),
+    lamp: new CylinderGeometry(0.07, 0.07, 0.07, 8),
+    body: new MeshStandardMaterial({ color: 0xe8b020, roughness: 0.55, metalness: 0.3 }),
+    dark: new MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.7 }),
+  };
+  const gen = new Group();
+  const body = new Mesh(genParts.box, genParts.body);
+  body.position.y = 0.13;
+  gen.add(body);
+  for (const x of [-0.14, 0.14]) {
+    const band = new Mesh(genParts.band, genParts.dark);
+    band.rotation.x = Math.PI / 2;
+    band.position.set(x, 0.27, 0);
+    gen.add(band);
+  }
+  const lamp = new Mesh(genParts.lamp, new MeshBasicMaterial({ color: 0xff3b2a }));
+  lamp.position.set(0, 0.31, 0);
+  gen.add(lamp);
+  return { gen, lamp };
+}
+
+function createFuseRing(): Mesh {
+  ringParts ??= {
+    geo: new RingGeometry(0.62, 0.74, 28),
+    mat: new MeshBasicMaterial({
+      color: 0xffa23a,
+      transparent: true,
+      opacity: 0.0,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      side: DoubleSide,
+    }),
+  };
+  const ring = new Mesh(ringParts.geo, ringParts.mat.clone());
+  ring.rotation.x = -Math.PI / 2;
+  ring.renderOrder = 8;
+  ring.visible = false;
+  return ring;
 }
 
 const TRAIL_COLORS: Record<Vehicle['kind'], number> = { danfo: 0xffd23a, taxi: 0xffe58a, keke: 0x9dffb0 };
@@ -103,7 +166,12 @@ export class VehicleViews implements View {
       if (!v) {
         const model = createVehicleModel(veh.kind);
         const trail = createTrail(veh.kind);
-        this.group.add(model.root, trail);
+        const roofTop = new Box3().setFromObject(model.root).max;
+        const { gen, lamp } = createCarriedGenerator();
+        gen.position.set(0, roofTop.y, 0);
+        model.root.add(gen);
+        const ring = createFuseRing();
+        this.group.add(model.root, trail, ring);
         v = {
           model,
           trail,
@@ -112,6 +180,9 @@ export class VehicleViews implements View {
           smokeAt: 0,
           lastPos: { x: 0, z: 0, y: 0 },
           wrecked: false,
+          gen,
+          lamp,
+          ring,
         };
         this.visuals.set(veh.id, v);
       }
@@ -134,6 +205,7 @@ export class VehicleViews implements View {
       const spin = veh.phase === 'driving' ? ((dt * 60) / Math.max(4, veh.stepTotal)) * 5 : 0;
       for (const w of v.model.wheels) spinWheel(v.model, w, spin);
       v.lastPos = { x: layout.wx(gx), z: layout.wz(gy), y: 0.5 };
+      this.fuseVisual(veh, v, ctx, layout.wx(gx), layout.wz(gy));
       // speed streaks: longer for faster vehicles, fading in on launch and out when crashing
       const driving = veh.phase === 'driving';
       v.trailK = Math.max(0, Math.min(1, v.trailK + (driving ? dt * 4 : -dt * 3)));
@@ -158,12 +230,46 @@ export class VehicleViews implements View {
     }
     for (const [id, v] of this.visuals) {
       if (!live.has(id)) {
-        this.group.remove(v.model.root, v.trail);
+        this.group.remove(v.model.root, v.trail, v.ring);
+        (v.ring.material as MeshBasicMaterial).dispose();
         const streak = v.trail.children[0] as Mesh | undefined;
         streak?.geometry.dispose();
         (streak?.material as MeshBasicMaterial | undefined)?.dispose();
         this.visuals.delete(id);
       }
+    }
+  }
+
+  /**
+   * The late, subtle warning (decision VG1): a fusing carrier stops, its lamp flickers faster and a small amber ring
+   * pulses on the road under it; a carrier waiting for its owner to leave the blast pulses slowly. Nothing covers
+   * the screen: the ring is about one tile wide.
+   */
+  private fuseVisual(veh: Vehicle, v: Visual, ctx: FrameContext, wx: number, wz: number): void {
+    const { time, state } = ctx;
+    const st = veh.payload?.state ?? 'scanning';
+    const lamp = v.lamp.material as MeshBasicMaterial;
+    const fuseTicks = Math.max(1, state.config.vehicles.fuseTicks);
+    let ringOpacity = 0;
+    if (st === 'fusing') {
+      const left = Math.max(0, Math.min(1, (veh.payload?.fuseRemaining ?? 0) / fuseTicks));
+      const rate = 6 + (1 - left) * 18; // Hz: speeds up as the fuse burns down
+      const on = Math.sin(time * rate * Math.PI * 2) > 0;
+      lamp.color.setHex(on ? 0xff6a3a : 0x5a1410);
+      ringOpacity = on ? 0.55 : 0.18;
+    } else if (st === 'pending') {
+      const slow = 0.5 + 0.5 * Math.sin(time * 4);
+      lamp.color.setHex(0xff8a4a);
+      ringOpacity = 0.12 + 0.2 * slow;
+    } else {
+      // scanning: a steady, dim lamp: a carrier is recognisable from the generator on its roof
+      lamp.color.setHex(0xff3b2a);
+    }
+    v.ring.visible = ringOpacity > 0 && veh.phase === 'driving';
+    if (v.ring.visible) {
+      (v.ring.material as MeshBasicMaterial).opacity = ringOpacity;
+      v.ring.position.set(wx, 0.07, wz);
+      v.ring.scale.setScalar(1 + 0.12 * Math.sin(time * 12));
     }
   }
 

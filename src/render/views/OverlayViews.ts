@@ -93,21 +93,22 @@ export class OverlayViews implements View {
       const k = 1 - Math.max(0, v.warnRemaining - alpha) / total;
       const urgent = k > 0.65;
       const color = urgent ? 0xff4a1a : 0xffc21a;
-      v.route.forEach((t, i) => {
-        const pulse = 0.5 + 0.5 * Math.sin(time * (urgent ? 22 : 12) - i * 0.8);
-        this.fill.push({ x: wx(t.x), z: wz(t.y), color, intensity: 0.2 + 0.32 * pulse, scale: 0.97 });
-        const next = v.route[i + 1] ?? t;
-        const prev = v.route[i - 1] ?? t;
-        const dir = i < v.route.length - 1 ? dirBetween(t, next) : dirBetween(prev, t);
+      // the carrier's route is NOT telegraphed (decision VG1: the warning is the late fuse at the vehicle); only the
+      // entry tile shows a quiet chevron so the vehicle does not appear from nowhere
+      {
+        const t = v.route[0]!;
+        const next = v.route[1] ?? t;
+        const pulse = 0.5 + 0.5 * Math.sin(time * 8);
+        this.fill.push({ x: wx(t.x), z: wz(t.y), color, intensity: 0.1 + 0.14 * pulse, scale: 0.9 });
         this.chevrons.push({
           x: wx(t.x),
           z: wz(t.y),
           color,
-          intensity: 0.35 + 0.65 * pulse,
-          rotY: chevronYaw(dir),
-          scale: 0.72,
+          intensity: 0.25 + 0.3 * pulse,
+          rotY: chevronYaw(dirBetween(t, next)),
+          scale: 0.6,
         });
-      });
+      }
       const first = v.route[0]!;
       const second = v.route[1] ?? first;
       const gd = dirBetween(first, second);
@@ -116,16 +117,16 @@ export class OverlayViews implements View {
       if (gate) {
         gate.visible = true;
         gate.position.set(wx(first.x) - gv.dx * 0.55, 0.9, wz(first.y) - gv.dy * 0.55);
-        const flash = 0.6 + 0.4 * Math.sin(time * 18);
-        gate.scale.setScalar(1.4 + flash * 0.6);
-        gate.material.opacity = flash;
+        const flash = 0.35 + 0.2 * Math.sin(time * 10);
+        gate.scale.setScalar(1.0 + flash * 0.4);
+        gate.material.opacity = flash * 0.7;
       }
       this.rings.push({
         x: wx(first.x),
         z: wz(first.y),
         color: 0xffffff,
-        intensity: 0.6 + 0.4 * Math.sin(time * 16),
-        scale: 1.0 + 0.25 * Math.sin(time * 8),
+        intensity: 0.25 + 0.15 * Math.sin(time * 10),
+        scale: 0.9 + 0.1 * Math.sin(time * 8),
       });
     }
     for (let i = gateIdx; i < this.gates.length; i++) this.gates[i]!.visible = false;
@@ -289,13 +290,31 @@ export class OverlayViews implements View {
         intensity: (local ? 0.75 : 0.4) + (ready ? 0.25 * Math.sin(time * 8) : 0),
         scale: local ? 1.0 : 0.8,
       });
-      this.fill.push({ x: wx(t.x), z: wz(t.y), color: local ? 0xffd23a : 0x9a948a, intensity: 0.22, scale: 0.7 });
+      this.fill.push({
+        x: wx(t.x),
+        z: wz(t.y),
+        color: local ? 0xffd23a : 0x9a948a,
+        intensity: 0.22,
+        scale: 0.7,
+      });
       if (local && ready) {
         const aim = spectatorLanding(state, s.pos);
         if (aim) {
           const pulse = 0.5 + 0.5 * Math.sin(time * 6);
-          this.fill.push({ x: wx(aim.x), z: wz(aim.y), color: 0xffd23a, intensity: 0.18 + 0.14 * pulse, scale: 0.9 });
-          this.rings.push({ x: wx(aim.x), z: wz(aim.y), color: 0xffe680, intensity: 0.6, scale: 0.9 + 0.1 * pulse });
+          this.fill.push({
+            x: wx(aim.x),
+            z: wz(aim.y),
+            color: 0xffd23a,
+            intensity: 0.18 + 0.14 * pulse,
+            scale: 0.9,
+          });
+          this.rings.push({
+            x: wx(aim.x),
+            z: wz(aim.y),
+            color: 0xffe680,
+            intensity: 0.6,
+            scale: 0.9 + 0.1 * pulse,
+          });
         }
       }
     }
@@ -304,7 +323,13 @@ export class OverlayViews implements View {
       const k = 1 - Math.max(0, g.flight.remaining - alpha) / Math.max(1, g.flight.total);
       const x = wx(g.x);
       const z = wz(g.y);
-      this.fill.push({ x, z, color: 0xff3a1a, intensity: 0.25 + 0.5 * k * (0.7 + 0.3 * Math.sin(time * 20)), scale: 0.96 });
+      this.fill.push({
+        x,
+        z,
+        color: 0xff3a1a,
+        intensity: 0.25 + 0.5 * k * (0.7 + 0.3 * Math.sin(time * 20)),
+        scale: 0.96,
+      });
       this.rings.push({ x, z, color: 0xff7a2a, intensity: 0.9, scale: 1.8 - k * 1.0 });
     }
   }

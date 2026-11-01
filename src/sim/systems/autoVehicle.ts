@@ -47,7 +47,7 @@ export interface AutoVehicleChoice extends AutoRouteOption {
 /** Ranking weights of the heuristic (they only order routes against each other; no balance effect). */
 const TRAPPED = 100;
 const PRESSURE = 12;
-const BESIDE = 2;
+const BESIDE = 4;
 const ALLY = -60;
 const SELF = -1000;
 /** How far (steps) the escape search looks before an opponent counts as having no way out. */
@@ -196,6 +196,7 @@ function scoreWith(view: AutoVehicleView, scene: Scene, r: Legs): number {
   }
   if (mark[owner.y * w + owner.x] === stamp) return SELF;
 
+  const reach = Math.max(1, Math.min(3, owner.range));
   const warn = view.config.vehicles.entryWarnTicks;
   const reaction = view.config.special.autoVehicleReactionTicks;
   let score = 0;
@@ -227,19 +228,21 @@ function scoreWith(view: AutoVehicleView, scene: Scene, r: Legs): number {
         });
       }
     }
-    // zoning: opponents right beside the road (each counted once)
-    if (near !== 1) continue;
-    for (const d of DIRS) {
-      const x = t.x + DIR_VEC[d].dx;
-      const y = t.y + DIR_VEC[d].dy;
-      if (x < 0 || y < 0 || x >= w || y >= view.height) continue;
-      const n = y * w + x;
-      if (mark[n] === stamp || beside[n] === stamp) continue;
-      const there = scene.rivals.get(n);
-      if (!there) continue;
-      beside[n] = stamp;
-      score += BESIDE * there.length;
-    }
+    // reach (VG1): the vehicle carries a generator, so opponents within its blast reach of the road count too
+    // (each once), less than one who stands on the road itself
+    if (near === 0 || near > reach) continue;
+    for (let dy = -reach; dy <= reach; dy++)
+      for (let dx = -(reach - Math.abs(dy)); dx <= reach - Math.abs(dy); dx++) {
+        const x = t.x + dx;
+        const y = t.y + dy;
+        if (x < 0 || y < 0 || x >= w || y >= view.height) continue;
+        const n = y * w + x;
+        if (mark[n] === stamp || beside[n] === stamp) continue;
+        const there = scene.rivals.get(n);
+        if (!there) continue;
+        beside[n] = stamp;
+        score += BESIDE * there.length;
+      }
   }
   // a taxi / Keke stops at its player-hit limit: only the first victims along the road count
   if (victims) {
