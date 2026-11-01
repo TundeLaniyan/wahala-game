@@ -81,11 +81,15 @@ function measure(arenaId: string, game: GameKind, players: number): Row {
             row.kills += events.filter(
               (k) => k.type === 'playerEliminated' && k.creditId === e.ownerId && k.playerId !== e.ownerId,
             ).length;
-            // owner safety: the owner must never be eliminated in the tick their carried generator goes off
-            // (their flames are ownerSafe; a chain through someone else's generator is a separate event and is counted
-            // too, so any non-zero figure is worth a look)
+            // owner safety: the owner must never be eliminated by their OWN flames in the tick their carried
+            // generator goes off (the carrier's flames are ownerSafe). An elimination by a rival's flames in the
+            // same tick is a coincidence, not a violation, and is not counted.
             row.ownerViolations += events.filter(
-              (k) => k.type === 'playerEliminated' && k.playerId === e.ownerId,
+              (k) =>
+                k.type === 'playerEliminated' &&
+                k.playerId === e.ownerId &&
+                'ownerId' in k.cause &&
+                k.cause.ownerId === e.ownerId,
             ).length;
           } else if (e.type === 'vehicleGeneratorExpired') {
             if (e.reason === 'route') row.routeEnd++;
@@ -107,7 +111,7 @@ function measure(arenaId: string, game: GameKind, players: number): Row {
 
 const pct = (a: number, b: number): string => (b ? `${Math.round((100 * a) / b)}%` : '-');
 console.log(
-  '| arena | size | ruleset | players | launches | found a target (share of launches) | fuses ending in a blast | fuses the rival escaped | no target (route end) | crashed | launch->blast (s) | kills / blast | owner eliminated in a blast tick |',
+  '| arena | size | ruleset | players | launches | found a target (share of launches) | fuses ending in a blast | fuses the rival escaped | no target (route end) | crashed | launch->blast (s) | kills / blast | owner killed by own flames in the blast tick |',
 );
 console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|');
 for (const id of arenas) {

@@ -120,7 +120,7 @@ async function run(id, cfg) {
     return { w: s.width, h: s.height };
   });
   if (rumble) {
-    const zoom = Math.max(6, 11 * Math.max(info.w / 63, info.h / 47));
+    const zoom = id === 'rumbleOshodi' ? 11 : 4.3 * Math.max(info.w / 41, info.h / 31);
     await page.evaluate((z) => window.__WAHALA__.renderer().debugInspect({ x: 0, z: -1, zoom: z }), zoom);
   }
   await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));

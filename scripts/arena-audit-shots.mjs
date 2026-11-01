@@ -20,12 +20,25 @@ const STANDARD = [
   'yabaAfterDark',
   'thirdMainland',
 ];
-const RUMBLE = ['rumbleOshodi', 'rumbleLagosIsland', 'rumbleOjuelegba', 'rumbleApapa', 'rumbleLekkiNight', 'cityRumble'];
+const RUMBLE = [
+  'rumbleOshodi',
+  'rumbleLagosIsland',
+  'rumbleOjuelegba',
+  'rumbleApapa',
+  'rumbleLekkiNight',
+  'cityRumble',
+];
 const ids = only ? only.split(',') : [...STANDARD, ...RUMBLE];
 const MODES = (process.env.MODES ?? 'medium-day,medium-night,low-day,low-phone').split(',');
 const browser = await chromium.launch({
   executablePath: process.env.WAHALA_CHROMIUM,
-  args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  args: [
+    '--no-sandbox',
+    '--use-gl=angle',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+    '--ignore-gpu-blocklist',
+  ],
 });
 
 async function shot(id, mode) {
@@ -33,7 +46,9 @@ async function shot(id, mode) {
   const phone = tod === 'phone';
   const viewport = phone ? { width: 844, height: 390 } : { width: 1280, height: 720 };
   const rumble = RUMBLE.includes(id);
-  const context = await browser.newContext(phone ? { viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : { viewport });
+  const context = await browser.newContext(
+    phone ? { viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : { viewport },
+  );
   await context.addInitScript(
     ([id, rumble]) => {
       const key = 'wahala.settings.v1';
@@ -42,7 +57,14 @@ async function shot(id, mode) {
         key,
         JSON.stringify(
           rumble
-            ? { ...s, play: 'rumble', rumbleArenaId: id, rumbleCompetitors: 16, rumbleMode: 'survival', difficulty: 'standard' }
+            ? {
+                ...s,
+                play: 'rumble',
+                rumbleArenaId: id,
+                rumbleCompetitors: 16,
+                rumbleMode: 'survival',
+                difficulty: 'standard',
+              }
             : { ...s, play: 'classic', arenaId: id, competitors: 4, difficulty: 'standard' },
         ),
       );
@@ -69,9 +91,9 @@ async function shot(id, mode) {
     w.advance(6);
     return { arena: s.arenaId, w: s.width, h: s.height };
   });
-  // City Rumble stages use the follow camera: frame the whole board (zoom scales with the board, Oshodi 63 x 47 = 11)
+  // City Rumble stages use the follow camera: frame the whole board (zoom 4.3 fits a 41 x 31 stage and scales with the board; Oshodi 63 x 47 = 11)
   if (rumble) {
-    const zoom = Math.max(6, 11 * Math.max(info.w / 63, info.h / 47));
+    const zoom = id === 'rumbleOshodi' ? 11 : 4.3 * Math.max(info.w / 41, info.h / 31);
     await page.evaluate((z) => window.__WAHALA__.renderer().debugInspect({ x: 0, z: -1, zoom: z }), zoom);
   }
   await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
@@ -80,10 +102,28 @@ async function shot(id, mode) {
   await page.waitForTimeout(600);
   await page.addStyleTag({ content: '.hud, .touch, .touch-controls { display: none !important; }' });
   const st = await page.evaluate(() => window.__WAHALA__.stats());
-  await page.screenshot({ path: `${dir}/${label}-${id}-${mode}.jpg`, quality: 85, type: 'jpeg', timeout: 240000 });
-  console.log(JSON.stringify({ arena: info.arena, board: `${info.w}x${info.h}`, mode, calls: st.drawCalls, tris: st.triangles, errors: errors.slice(0, 3) }));
+  await page.screenshot({
+    path: `${dir}/${label}-${id}-${mode}.jpg`,
+    quality: 85,
+    type: 'jpeg',
+    timeout: 240000,
+  });
+  console.log(
+    JSON.stringify({
+      arena: info.arena,
+      board: `${info.w}x${info.h}`,
+      mode,
+      calls: st.drawCalls,
+      tris: st.triangles,
+      errors: errors.slice(0, 3),
+    }),
+  );
   await context.close();
 }
 
-for (const id of ids) for (const m of MODES) await shot(id, m).catch((e) => console.log(JSON.stringify({ arena: id, mode: m, failed: String(e).slice(0, 160) })));
+for (const id of ids)
+  for (const m of MODES)
+    await shot(id, m).catch((e) =>
+      console.log(JSON.stringify({ arena: id, mode: m, failed: String(e).slice(0, 160) })),
+    );
 await browser.close();
