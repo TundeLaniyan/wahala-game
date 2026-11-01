@@ -237,7 +237,8 @@ the phone controls with the contextual vehicle action for all three characters (
   it had passed alone). The spec now keeps the button down while stepping the sim until the carrier is on the board. It
   then passed 3 / 3 repeats under 2 workers (9 passed, 9 skipped by design) and alone. The full 236-test suite was NOT
   re-run after that spec-only change.
-* The 60 browser skips are all declarative project gates (`test.skip` with a reason): 46 desktop-only tests skipped on
-  the phone project and 14 phone / touch-only tests skipped on the desktop project, plus the suites that deliberately
-  run on one project only ("one viewport is enough", "software rendering makes the render passes slow; one project is
-  enough", "structure is the same on every device").
+* The 60 browser skips are all declarative project gates (`test.skip` with a reason): 44 on the desktop project
+  (40 "mobile project only" plus phone-layout / touch / phone-viewport tests) and 16 on the phone project ("desktop
+  project only" / "desktop only", keyboard- and gamepad-only tests, and the suites that deliberately run on one project
+  only: "one viewport is enough", "software rendering makes the render passes slow; one project is enough", "structure
+  is the same on every device").
