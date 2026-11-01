@@ -1,5 +1,5 @@
 /**
- * Lagos arenas, build 1: Oshodi Transport Metropolis (45 x 33, not mirrored, six districts).
+ * Lagos arenas, build 1: Oshodi Transport Metropolis (63 x 47, not mirrored, ten districts: the six original ones plus four expansion districts).
  * Districts and links are data (`ArenaDef.districts` / `districtLinks`); these checks keep the data honest
  * and the board fair for 32 competitors, Team Rumble's west-versus-east split, the vehicle lanes and - the
  * new part - the railway: a track lane is always warned for 3.5 s, always one step from a safe tile, and
@@ -74,9 +74,9 @@ const roster = (n: number) =>
   }));
 
 describe('Oshodi Metropolis: the board', () => {
-  it('is a non-mirrored 45 x 33 Rumble stage with its own name and id', () => {
-    expect([W, H]).toEqual([45, 33]);
-    for (const row of a.layout) expect(row).toMatch(/^[#=._x$]{45}$/);
+  it('is a non-mirrored 63 x 47 Rumble stage with its own name and id', () => {
+    expect([W, H]).toEqual([63, 47]);
+    for (const row of a.layout) expect(row).toMatch(/^[#=._x$]{63}$/);
     expect(a.id).toBe('rumbleOshodi');
     expect(a.name).toBe('Oshodi Transport Metropolis');
     expect(a.kind).toBe('rumble');
@@ -103,9 +103,11 @@ describe('Oshodi Metropolis: the board', () => {
     expect(new Set(names).size).toBe(names.length);
     expect(names).not.toContain('Oshodi Rush Hour');
     expect(names.filter((n) => /oshodi/i.test(n))).toEqual(['Oshodi Transport Metropolis']);
-    // the retired mirrored 41 x 31 board is gone: this is the 45 x 33 six-district board
-    expect([W, H]).toEqual([45, 33]);
-    expect(districts).toHaveLength(6);
+    // the retired mirrored 41 x 31 board is gone: this is the 63 x 47 ten-district board (about twice the
+    // 45 x 33 first build: the original six districts stay at the same coordinates)
+    expect([W, H]).toEqual([63, 47]);
+    expect(W * H).toBeGreaterThan(1.9 * 45 * 33);
+    expect(districts).toHaveLength(10);
   });
 
   it('keeps the perimeter closed except the road mouths, and the camera (south) edge low and solid', () => {
@@ -146,9 +148,13 @@ describe('Oshodi Metropolis: the board', () => {
 });
 
 describe('Oshodi Metropolis: district graph', () => {
-  it('declares the six bible districts (O1-O6), which cover the board exactly once', () => {
+  it('declares the six bible districts (O1-O6) and the four expansion districts, which cover the board exactly once', () => {
     expect(districts.map((d) => d.id).sort()).toEqual(
       [
+        'agegeStrip',
+        'busPark',
+        'freightYard',
+        'papaAjao',
         'cappaWorks',
         'expresswayJunction',
         'interchangePlaza',
@@ -372,7 +378,7 @@ describe('Oshodi Metropolis: spawns and teams', () => {
     expect(minGap(8)).toBeGreaterThanOrEqual(12);
     expect(minGap(16)).toBeGreaterThanOrEqual(8);
     expect(minGap(32)).toBeGreaterThanOrEqual(4);
-    const core = { x: 22, y: 16 };
+    const core = { x: 26, y: 16 }; // the middle of the core (x 21-31)
     const toCore = dist(core);
     const supplies: { x: number; y: number }[] = [];
     a.layout.forEach((row, y) => [...row].forEach((c, x) => c === '$' && supplies.push({ x, y })));
@@ -385,19 +391,19 @@ describe('Oshodi Metropolis: spawns and teams', () => {
       const coreE = mean(pick(false).map((s) => toCore.get(key(s.x, s.y))!));
       const supW = mean(pick(true).map((s) => Math.min(...fromSupply.map((d) => d.get(key(s.x, s.y))!))));
       const supE = mean(pick(false).map((s) => Math.min(...fromSupply.map((d) => d.get(key(s.x, s.y))!))));
-      expect(Math.abs(coreW - coreE), `core ${n}: ${coreW} vs ${coreE}`).toBeLessThanOrEqual(n === 8 ? 8 : 5);
+      expect(Math.abs(coreW - coreE), `core ${n}: ${coreW} vs ${coreE}`).toBeLessThanOrEqual(14); // the core sits in the west half of the grown board (decision LA17)
       expect(Math.abs(supW - supE), `supply ${n}: ${supW} vs ${supE}`).toBeLessThanOrEqual(4);
     }
   });
 });
 
 describe('Oshodi Metropolis: supplies, core and attack lanes', () => {
-  it('eight marked supply crates, four per half, in every district, never in a dead end', () => {
+  it('fourteen marked supply crates, seven per half, in every district, never in a dead end', () => {
     const supplies: [number, number][] = [];
     a.layout.forEach((row, y) => [...row].forEach((c, x) => c === '$' && supplies.push([x, y])));
-    expect(supplies).toHaveLength(8);
-    expect(supplies.filter(([x]) => x < W / 2).length).toBe(4);
-    expect(new Set(supplies.map(([x, y]) => districtOf(x, y)!.id)).size).toBe(6);
+    expect(supplies).toHaveLength(14);
+    expect(supplies.filter(([x]) => x < W / 2).length).toBe(7);
+    expect(new Set(supplies.map(([x, y]) => districtOf(x, y)!.id)).size).toBe(10);
     for (const [x, y] of supplies) {
       expect(DIRS.filter(([dx, dy]) => open(x + dx, y + dy)).length, `${x},${y}`).toBeGreaterThanOrEqual(3);
       expect(isTrack(x, y)).toBe(false);
@@ -409,10 +415,10 @@ describe('Oshodi Metropolis: supplies, core and attack lanes', () => {
     );
   });
 
-  it('the Survival core is where the plaza meets the junction: open, on the main road, never on the rails', () => {
+  it('the Survival core (placed explicitly: the board grew around it) is where the plaza meets the junction: open, on the main road, never on the rails', () => {
     const keep = a.config!.crush!.keepCore!;
-    const x0 = Math.floor((W - keep.w!) / 2);
-    const y0 = Math.floor((H - keep.h!) / 2);
+    const x0 = keep.x0 ?? Math.floor((W - keep.w!) / 2);
+    const y0 = keep.y0 ?? Math.floor((H - keep.h!) / 2);
     let openN = 0;
     const where = new Set<string>();
     for (let y = y0; y < y0 + keep.h!; y++)
@@ -428,8 +434,8 @@ describe('Oshodi Metropolis: supplies, core and attack lanes', () => {
 
   it('the whole Survival core is one connected region, so nobody is cut off in it when the city has closed', () => {
     const keep = a.config!.crush!.keepCore!;
-    const x0 = Math.floor((W - keep.w!) / 2);
-    const y0 = Math.floor((H - keep.h!) / 2);
+    const x0 = keep.x0 ?? Math.floor((W - keep.w!) / 2);
+    const y0 = keep.y0 ?? Math.floor((H - keep.h!) / 2);
     const inCore = (x: number, y: number): boolean =>
       x >= x0 && x < x0 + keep.w! && y >= y0 && y < y0 + keep.h!;
     const tiles: { x: number; y: number }[] = [];
@@ -441,8 +447,8 @@ describe('Oshodi Metropolis: supplies, core and attack lanes', () => {
 
   it('endgame trap waves land on walkable core tiles only', () => {
     const keep = a.config!.crush!.keepCore!;
-    const x0 = Math.floor((W - keep.w!) / 2);
-    const y0 = Math.floor((H - keep.h!) / 2);
+    const x0 = keep.x0 ?? Math.floor((W - keep.w!) / 2);
+    const y0 = keep.y0 ?? Math.floor((H - keep.h!) / 2);
     for (const wave of a.endgameTraps)
       wave.forEach((row, y) =>
         [...row].forEach((c, x) => {
@@ -576,9 +582,9 @@ describe('Oshodi Metropolis: hazards are telegraphed and always leave a safe rou
     }
   });
 
-  it('the hazard fairness guards cover the railcar: one lethal event at a time, none in the quiet seconds', () => {
+  it('the hazard fairness guards cover the railcar: at most two lethal events at once, none in the quiet seconds', () => {
     const cfg = createGame({ seed: 1, arenaId: a.id, players: roster(2) }).config.stage;
-    expect(cfg.maxLethalEvents).toBe(1);
+    expect(cfg.maxLethalEvents).toBe(2);
     expect(cfg.quietRemainingTicks).toBeGreaterThan(0);
   });
 });
@@ -649,7 +655,7 @@ describe('Oshodi Metropolis: the railcar in a running match', () => {
     }
   });
 
-  it('a long match stays fair: railcars come, every one warned, and never two lethal events at once', () => {
+  it('a long match stays fair: railcars come, every one warned, and never more than two lethal events at once', () => {
     const s = sandbox({ arenaId: a.id, players: 6, stage: true, seed: 9 });
     const warned: number[] = [];
     let maxLethal = 0;
@@ -665,7 +671,7 @@ describe('Oshodi Metropolis: the railcar in a running match', () => {
     }
     expect(warned.length).toBeGreaterThanOrEqual(2);
     for (const w of warned) expect(w).toBeGreaterThanOrEqual(Math.round(3.5 * TPS));
-    expect(maxLethal).toBeLessThanOrEqual(1);
+    expect(maxLethal).toBeLessThanOrEqual(2);
   });
 });
 

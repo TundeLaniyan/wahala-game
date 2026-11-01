@@ -238,13 +238,6 @@ export function railViaduct(ctx: SetContext, L: SiteLights, tod: TimeOfDay): voi
     board(ctx, tex, 5.2, 1.3, tx, 3.0, tz + 2.58);
   }
   L.glow(tx, 9.9, tz + 2.6, 1.0, 0xff3a2a, tod === 'night' ? 0.9 : 0.4);
-  // the forecourt canopy east of the board: a deep slab on columns (the passenger zone stands under it)
-  const fx = W / 2 + 3.4;
-  s.add(box(5.4, 0.3, 8.2, P.concreteDark, fx, 3.7, -4.4));
-  for (const dz of [-8, -1.2])
-    for (const dx of [-2, 2])
-      s.add(cyl(0.2, 0.24, 3.6 - STREET, P.steel, fx + dx, STREET + (3.6 - STREET) / 2, dz, 8));
-  L.glow(fx, 3.4, -4.4, 1.6, 0x9ec8ff, tod === 'night' ? 0.6 : 0.3);
 }
 
 // ----------------------------------------------------------------------------------------- skyline

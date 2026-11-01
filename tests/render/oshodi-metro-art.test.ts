@@ -102,9 +102,9 @@ describe('the floor painter', () => {
     (globalThis as { __g?: unknown }).__g = g;
   });
 
-  it('paints the whole 45 x 33 board without throwing', () => {
+  it('paints the whole 63 x 47 board without throwing', () => {
     const g = (globalThis as { __g?: CanvasRenderingContext2D }).__g!;
-    expect(() => NEW_ARENA_ART().rumbleOshodi!.floor(g, g, 45, 33)).not.toThrow();
+    expect(() => NEW_ARENA_ART().rumbleOshodi!.floor(g, g, 63, 47)).not.toThrow();
   });
 });
 

@@ -1,7 +1,7 @@
 /**
  * The living environment of Oshodi Transport Metropolis (City Rumble), as data relative to the board size.
  *
- * Aligned to the six-district board of `src/sim/arenas/rumbleOshodi.ts` (45 x 33): the main road crosses
+ * Aligned to the ten-district board of `src/sim/arenas/rumbleOshodi.ts` (63 x 47): the main road crosses
  * the board east-west on rows 15-18 and leaves it through the west and east mouths; the elevated expressway
  * runs east-west north of the board; the terminal canopy and its queues stand north of the plaza; the station
  * forecourt and the Cappa Ground's touchline are on the east side; the trading streets' pavement is west.
@@ -23,13 +23,13 @@ const SODIUM = 0xff9f3a;
 const RAIL_BLUE = 0x9ec8ff;
 
 export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageEnvironment {
-  const { cols, rows } = board;
+  const { cols } = board;
   const night = tod === 'night';
   const boost = night ? 1.5 : 1;
-  const cx = cols / 2;
+  const cx = 22.5; // the interchange's own centre (the board grew east and south around it)
   // the main road's lanes beyond the edges (right-hand traffic: eastbound rows 17-18, westbound rows 15-16)
-  const eastbound = rows * 0.5 + 2.0; // row 18 centre
-  const westbound = rows * 0.5 - 1.0; // row 15 centre
+  const eastbound = 18.5; // row 18 centre (the main road is rows 15-18 whatever the board size)
+  const westbound = 15.5; // row 15 centre
   const lights: LightPocket[] = [
     // the terminal canopy north of the plaza: tubes along the roof edge
     {
@@ -250,9 +250,9 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
         mood: 'waiting',
         priority: 3,
       },
-      // passengers on the station forecourt beyond the east edge, rows 10-14
+      // traders and passengers at the east edge beyond Papa Ajao Market, rows 9-13
       {
-        id: 'stationForecourt',
+        id: 'eastMarketEdge',
         rect: { x0: cols + 1.8, y0: 9.4, x1: cols + 5.2, y1: 13.2 },
         count: 8,
         mood: 'waiting',
@@ -267,9 +267,9 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
         priority: 2,
         reacts: { blast: { reaction: 'flinch', radius: 10, minRange: 3, chance: 0.6 } },
       },
-      // fans along the Cappa Ground's touchline (east edge, rows 26-30)
+      // yard hands and watchers at the east edge beyond the Freight Yard (rows 26-30)
       {
-        id: 'groundTouchline',
+        id: 'eastYardEdge',
         rect: { x0: cols + 1.8, y0: 26, x1: cols + 3.8, y1: 30.4 },
         count: 6,
         mood: 'watching',
@@ -294,8 +294,9 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
     lights,
     // the bus-choked roads are this stage's identity: more ambient vehicles and people per tier (instanced: the
     // model count, hence the draw calls, is unchanged)
+    fairShare: true,
     boost: {
-      low: { vehicles: 8, people: 20 },
+      low: { vehicles: 12, people: 20 },
       medium: { vehicles: 64, people: 52 },
       high: { vehicles: 96, people: 96 },
     },
@@ -329,8 +330,8 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
           note: 'south platform and the Cappa passage',
         },
       ],
-      // the sim runs one lethal event at a time on this stage and none once the city closes
-      exclusions: [{ style: 'train', notWith: ['traffic', 'danfo', 'goods', 'debris', 'crush'] }],
+      // the sim runs up to two lethal events at once on this stage (each separately warned) and none once the city closes
+      exclusions: [{ style: 'train', notWith: ['goods', 'debris', 'crush'] }],
     },
   };
 }

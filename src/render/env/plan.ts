@@ -337,13 +337,39 @@ export function planTraffic(env: StageEnvironment, level: QualityLevel): Traffic
   const models: VehicleModelId[] = [];
   const planned: PlannedRoute[] = [];
   const vehicles: PlannedVehicle[] = [];
+  const fitOf = (def: TrafficRouteDef): number => {
+    const longest = Math.max(...def.kinds.map((k) => VEHICLE_DIMS[k].length));
+    return Math.max(0, Math.floor(pathLength(def.path) / (longest + def.spacing)));
+  };
+  // `fairShare` stages (Oshodi): routes of one priority get vehicles round-robin, so a small budget still puts
+  // traffic on every road instead of filling the first route
+  const share = new Map<TrafficRouteDef, number>();
+  if (env.fairShare) {
+    let pool = budget.vehicles;
+    const levels = [...new Set(routes.map((r) => r.def.priority ?? 1))].sort((a, b) => b - a);
+    for (const pr of levels) {
+      const group = routes.filter((r) => (r.def.priority ?? 1) === pr).map((r) => r.def);
+      let progress = true;
+      while (pool > 0 && progress) {
+        progress = false;
+        for (const d of group) {
+          if (pool <= 0) break;
+          if ((share.get(d) ?? 0) < Math.min(d.count, fitOf(d))) {
+            share.set(d, (share.get(d) ?? 0) + 1);
+            pool--;
+            progress = true;
+          }
+        }
+      }
+    }
+  }
   for (const { def } of routes) {
     const left = budget.vehicles - vehicles.length;
     if (left <= 0) break;
     const length = pathLength(def.path);
     const longest = Math.max(...def.kinds.map((k) => VEHICLE_DIMS[k].length));
-    const fit = Math.max(0, Math.floor(length / (longest + def.spacing)));
-    const want = Math.min(def.count, fit, left);
+    const fit = fitOf(def);
+    const want = env.fairShare ? Math.min(share.get(def) ?? 0, left) : Math.min(def.count, fit, left);
     if (want <= 0) continue;
     const rand = rngFor(seed, `route:${def.id}`);
     const pitch = length / want;

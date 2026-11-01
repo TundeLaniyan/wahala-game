@@ -319,7 +319,8 @@ function skywalk(ctx: SetContext, P: Pal, x0: number, x1: number, z: number, y: 
     s.add(cyl(0.45, 0.55, y - 0.9 - STREET, P.concrete, x, STREET + (y - 0.9 - STREET) / 2, z, 8));
   }
   // cable-stayed lattice pylons
-  for (const px of [-7, 25]) pylon(ctx, P, px, z - 2.6, 19, { y, z }, 8);
+  for (const px of [-7 + (45 - ctx.W) / 2, 25 + (45 - ctx.W) / 2])
+    pylon(ctx, P, px, z - 2.6, 19, { y, z }, 8);
 }
 
 /** The big truss portal: two lattice towers and a triangular-section truss over the skywalk, facing the camera. */
@@ -435,30 +436,32 @@ export function interchangeMegastructures(ctx: SetContext, L: SiteLights, tod: T
   const { W, H } = ctx;
   const P = pal();
   const north = -H / 2;
+  // the terminals stand on the tile columns of the original 45 x 33 board (the board grew east and south)
+  const DX = (45 - W) / 2;
   const night = tod === 'night';
   // the two ring-framed terminals in front of the expressway (the rail viaduct passes between them at x 12-16)
-  openTerminal(ctx, P, -26, -1, north - 3, 9.5, 12);
-  openTerminal(ctx, P, 1, 11, north - 3, 8, 10);
+  openTerminal(ctx, P, -26 + DX, -1 + DX, north - 3, 9.5, 12);
+  openTerminal(ctx, P, 1 + DX, 11 + DX, north - 3, 8, 10);
   // the Terminal 3 frontage east of the station tower
-  frontage(ctx, P, 26, 44, north - 2.4, 5.2);
+  frontage(ctx, P, 26 + DX, 44 + DX, north - 2.4, 5.2);
   // the long truss skywalk behind the rings, its pylons, and the big portal frame over it
-  skywalk(ctx, P, -24, 36, north - 16, 10);
-  trussPortal(ctx, P, -1, north - 16, 22, 15);
+  skywalk(ctx, P, -24 + DX, 36 + DX, north - 16, 10);
+  trussPortal(ctx, P, -1 + DX, north - 16, 22, 15);
   // freight siding beyond the east edge, from the viaduct south
   freightSiding(ctx, P, W / 2 + 10.5, north + 2, H / 2 - 2);
   marketEdge(ctx, P);
   approachRoads(ctx, P);
   if (hasDom()) {
     const t2 = sign('t2', 512, 96, '#12304e', '#f4f2ea', ['TERMINAL 2']);
-    plate(ctx, t2, 8, 1.45, V(-13.5, 12.9, north - 2.0));
+    plate(ctx, t2, 8, 1.45, V(-13.5 + DX, 12.9, north - 2.0));
     const t1 = sign('t1b', 512, 96, '#12304e', '#f4f2ea', ['BUS BAYS 1 – 12']);
-    plate(ctx, t1, 5.2, 0.98, V(6, 10.9, north - 2.0));
+    plate(ctx, t1, 5.2, 0.98, V(6 + DX, 10.9, north - 2.0));
   }
   // lit halls glow by night, and softly by day
   const k = night ? 1 : 0.45;
-  L.glow(-19, 4.2, north - 8, 3.4, 0xffe2b0, 0.8 * k);
-  L.glow(-8, 4.2, north - 8, 3.4, 0xffe2b0, 0.8 * k);
-  L.glow(6, 4.0, north - 7, 3.0, 0xffe2b0, 0.7 * k);
-  L.glow(35, 5.0, north - 0.4, 3.0, 0xffe2b0, 0.6 * k);
-  L.glow(-1, 15.6, north - 16, 1.2, 0xff3a2a, night ? 0.9 : 0.4);
+  L.glow(-19 + DX, 4.2, north - 8, 3.4, 0xffe2b0, 0.8 * k);
+  L.glow(-8 + DX, 4.2, north - 8, 3.4, 0xffe2b0, 0.8 * k);
+  L.glow(6 + DX, 4.0, north - 7, 3.0, 0xffe2b0, 0.7 * k);
+  L.glow(35 + DX, 5.0, north - 3.4, 2.4, 0xffe2b0, 0.6 * k);
+  L.glow(-1 + DX, 15.6, north - 16, 1.2, 0xff3a2a, night ? 0.9 : 0.4);
 }

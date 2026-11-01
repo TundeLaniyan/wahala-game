@@ -111,7 +111,12 @@ export function minimapLayers(
   let core: MinimapLayers['core'] = null;
   const keep = state.config.crush.keepCore;
   if (crush && keep && state.match.playTicks >= crush.warnAt[0]! - 10 * 60) {
-    core = { x0: (w - keep.w) / 2, y0: (state.height - keep.h) / 2, w: keep.w, h: keep.h };
+    core = {
+      x0: keep.x0 ?? (w - keep.w) / 2,
+      y0: keep.y0 ?? (state.height - keep.h) / 2,
+      w: keep.w,
+      h: keep.h,
+    };
   }
 
   const hazards: number[] = [];

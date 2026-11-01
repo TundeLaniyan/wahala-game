@@ -63,41 +63,55 @@ export const OSHODI_COVER_LETTERS: Readonly<Record<string, OshodiCoverKind>> = {
   F: 'arcade',
 };
 
-/** One letter per tile of the 45 x 33 board ('.' = not cover). Rows align with the sim layout. */
+/** One letter per tile of the 63 x 47 board ('.' = not cover). Rows align with the sim layout. */
 export const OSHODI_COVER: readonly string[] = [
-  'QQFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFQQQQQQQQQQQ', // 0
-  'QQFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFQQQQQQQQQQQ', // 1
-  'QQ.........................................QQ', // 2
-  'QQ............MM....PP......PP.K........PP.QQ', // 3
-  'QQHHH.HHH...........PP......PP..........PP.QQ', // 4
-  'QQHHH.HHH..................................QQ', // 5
-  'QQHHH.HHH..TTTTTT......UUU.................QQ', // 6
-  'QQ.........TTTTTT..K...UUU...HHHHHH.RR..WWWQQ', // 7
-  'QQK.M..MM..TTTTTT......UUU...HHHHHH.RR.....QQ', // 8
-  'QQ..................................RR.......', // 9
-  'QQ........TTTT..TTTT......WWW.............AAA', // 10
-  'QQOOO.OOO.TTTT..TTTT....II....GG......LK..AAA', // 11
-  'QQ.........S............II....GG..........AAA', // 12
-  'QQ........BBBB..BBBB.CS......................', // 13
-  '.............................................', // 14
-  '.............................................', // 15
-  '.............................................', // 16
-  '.............................................', // 17
-  '.............................................', // 18
-  '.........................................AAAA', // 19
-  'QQHHH.HHH.BB.C...C......II.....GGNN...L..AAAA', // 20
-  'QQHHH.HHH...............II.S...GGNN......AAAA', // 21
-  'QQ........BB...KK..TTT.....S.............AAAA', // 22
-  'QQ..................................RR...VVQQ', // 23
-  'QQMM.MM.K.YYYY.YYYY..OO.......MM....RR...VVQQ', // 24
-  'QQ......K.YYYY.YYYY..OO.......MM....RR...VVQQ', // 25
-  'QQ......................O..................QQ', // 26
-  'QQHHH.HHH...............O..................QQ', // 27
-  'QQHHH.HHH..JJ...XXX........................QQ', // 28
-  'QQHHH.HHH..JJ..............................QQ', // 29
-  'QQ.........................................QQ', // 30
-  'EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE', // 31
-  'EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE', // 32
+  'QQFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ', // 0
+  'QQFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ', // 1
+  'QQ...........................................................QQ', // 2
+  'QQ............MM....PP......PP.K........PP.........MMMM......QQ', // 3
+  'QQHHH.HHH...........PP......PP..........PP....MMM..MMMM..MMM.QQ', // 4
+  'QQHHH.HHH.....................................MMM........MMM.QQ', // 5
+  'QQHHH.HHH..TTTTTT......UUU........................K.....K....QQ', // 6
+  'QQ.........TTTTTT..K...UUU...HHHHHH.RR..WWWQQ................QQ', // 7
+  'QQK.M..MM..TTTTTT......UUU...HHHHHH.RR........OOO........MMM.QQ', // 8
+  'QQ..................................RR.............OOOOO.MMM.QQ', // 9
+  'QQ........TTTT..TTTT......WWW.............AAA....K...........QQ', // 10
+  'QQOOO.OOO.TTTT..TTTT....II....GG......LK..AAA.MMMM..MMMM.....QQ', // 11
+  'QQ.........S............II....GG..........AAA.MMMM..MMMM..K..QQ', // 12
+  'QQ........BBBB..BBBB.CS..........................OOOOOOO.....QQ', // 13
+  '...............................................................', // 14
+  '...............................................................', // 15
+  '...............................................................', // 16
+  '...............................................................', // 17
+  '...............................................................', // 18
+  '.........................................AAAA....OOOOOOO.......', // 19
+  'QQHHH.HHH.BB.C...C......II.....GGNN...L..AAAA................QQ', // 20
+  'QQHHH.HHH...............II.S...GGNN......AAAA.OOOOOO.OOOOOO..QQ', // 21
+  'QQ........BB...KK..TTT.....S.............AAAA................QQ', // 22
+  'QQ..................................RR...VVQQ................QQ', // 23
+  'QQMM.MM.K.YYYY.YYYY..OO.......MM....RR...VVQQ.OOOOO.OOOOOOO..QQ', // 24
+  'QQ......K.YYYY.YYYY..OO.......MM....RR...VVQQ...JJJJJJJ......QQ', // 25
+  'QQ......................O..................................XXQQ', // 26
+  'QQHHH.HHH...............O......................YYYY.J.YYYY...QQ', // 27
+  'QQHHH.HHH..JJ...XXX............................YYYY.J.YYYY...QQ', // 28
+  'QQHHH.HHH..JJ................................................QQ', // 29
+  'QQ..............................................OOOOOOO......QQ', // 30
+  'EEE.......EEE...........EEE.............OOOOOOO..............QQ', // 31
+  'EEE.......EEE...........EEE.............MMMMMMM...OOOOOOO....QQ', // 32
+  'QQ.........BBBBBBB..........MMMMMMM.........KKKKKKK........M.QQ', // 33
+  'QQ..........................OOOOOOO........................M.QQ', // 34
+  'QQ.BBBB..BBBB..BBBB..BBBB.......MMM...MMMM.....MMMM...MMMM.M.QQ', // 35
+  'QQ.BBBB..BBBB..BBBB..BBBB.......MMM...MMMM.....MMMM...MMMM.M.QQ', // 36
+  'QQ..........................OOOOOOO........................M.QQ', // 37
+  'QQ......S.....S.....S.....S.............K..MMMMMM..K......KM.QQ', // 38
+  'QQ..........................MMMMMMM..........................QQ', // 39
+  'QQ.BBBB..BBBB..BBBB..BBBB........OOOO......OOOO.....OOOOO....QQ', // 40
+  'QQ.BBBB..BBBB..BBBB..BBBB.....................MMMMMMM........QQ', // 41
+  'QQ..........................MMMMMMM..........................QQ', // 42
+  'QQ.HHH.......TTTTTT...HHH..HHH..........EEEE...EEEE...EEEE...QQ', // 43
+  'QQ.HHH................HHH..HHH..........EEEE...EEEE...EEEE...QQ', // 44
+  'EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE', // 45
+  'EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE', // 46
 ];
 
 export interface OshodiCoverGroup {

@@ -245,6 +245,8 @@ export interface StageEnvironment {
    * target still applies. A stage without `boost` is capped exactly as before.
    */
   boost?: Partial<Record<QualityLevel, Partial<EnvBudget>>>;
+  /** Opt-in: routes of the same priority share a small vehicle budget round-robin (default: first route first). */
+  fairShare?: boolean;
 }
 
 /** A stage environment, or a factory that derives it from the board size (the usual form). */

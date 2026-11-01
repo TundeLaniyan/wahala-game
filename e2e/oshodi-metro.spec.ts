@@ -4,7 +4,7 @@ import { chooseStage, open, stepTicks, toRumbleSetup } from './helpers';
 
 /**
  * Lagos arenas, build 1 (docs/OSHODI_METROPOLIS.md): Oshodi Transport Metropolis in the real game on the desktop
- * and the phone project. It starts from the menu, plays its 45 x 33 board with no page errors, the railcar is
+ * and the phone project. It starts from the menu, plays its 63 x 47 board with no page errors, the railcar is
  * telegraphed in the HUD before it runs (3.5 s, a track-specific alert) and the review flag `?tod=night` swaps
  * only the look.
  */
@@ -48,7 +48,7 @@ test('the Rumble stage picker shows exactly one Oshodi: the researched one; the 
   expect(errors).toEqual([]);
 });
 
-test('the stage starts from the menu on a 45 x 33 board and plays without page errors', async ({ page }) => {
+test('the stage starts from the menu on a 63 x 47 board and plays without page errors', async ({ page }) => {
   await open(page);
   await startOshodi(page);
   const live = await page.evaluate(() => {
@@ -60,7 +60,7 @@ test('the stage starts from the menu on a 45 x 33 board and plays without page e
     };
     return { arenaId: s.arenaId, width: s.width, height: s.height, players: s.players.length };
   });
-  expect(live).toEqual({ arenaId: 'rumbleOshodi', width: 45, height: 33, players: 8 });
+  expect(live).toEqual({ arenaId: 'rumbleOshodi', width: 63, height: 47, players: 8 });
   await page.evaluate(() =>
     (window as never as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(4),
   );
@@ -137,7 +137,7 @@ test('the night look changes the light only: same board, same hazards, a dark sk
     return { arenaId: s.arenaId, size: [s.width, s.height], sky: w.renderer().scene.background.getHex() };
   });
   expect(look.arenaId).toBe('rumbleOshodi');
-  expect(look.size).toEqual([45, 33]);
+  expect(look.size).toEqual([63, 47]);
   expect(look.sky).toBe(0x0e1626);
   expect(errors).toEqual([]);
 });

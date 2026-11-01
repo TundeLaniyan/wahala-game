@@ -899,7 +899,7 @@ function wall(k: Kit, g: number, grp: OshodiCoverGroup, n: number): void {
 
 // ---------------------------------------------------------------------------------------- the build
 
-/** Builds the whole board's cover (null if the board is not the 45 x 33 Oshodi grid). */
+/** Builds the whole board's cover (null if the board is not the 63 x 47 Oshodi grid). */
 export function buildOshodiMetroCover(board: { width: number; height: number }): BoardCover | null {
   const groups = oshodiCoverGroups();
   const W = board.width;

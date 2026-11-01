@@ -84,6 +84,20 @@ const APPROACH_TILES = 4;
 const EXIT_SECONDS = 1.1;
 /** A railcar comes out of and goes into a solid portal block three tiles deep: it never shows beyond it. */
 const TRAIN_APPROACH_TILES = 2.2;
+
+/**
+ * How many tiles before its entry tile a sweep vehicle is drawn during the warning. The road's traffic wave is
+ * shown for the WHOLE warning: the bus or danfo appears at the far end of the approach road when the lane starts
+ * burning and covers the distance to the road mouth at the sim's own speed (one tile per `stepTicks`), so it is
+ * exactly the vehicle that will cross the lane, in the same lane and direction and arriving on the same tick.
+ */
+/** Stages whose road wave runs in from beyond the board along a drawn approach road (Oshodi); every other stage keeps the short approach. */
+const FULL_APPROACH_ARENAS: ReadonlySet<string> = new Set(['rumbleOshodi']);
+
+export function sweepApproachTiles(style: string | undefined, arenaId = ''): number {
+  if (style === 'train') return TRAIN_APPROACH_TILES;
+  return style === 'traffic' && FULL_APPROACH_ARENAS.has(arenaId) ? Infinity : APPROACH_TILES;
+}
 const TRAIN_EXIT_SECONDS = 0.15;
 const ARC_SEGMENTS = 5;
 const MAX_ARCS = 36;
@@ -957,7 +971,14 @@ export class StageHazardViews implements View {
     const lamps = [ev.tiles[0]!, ev.tiles[Math.floor(ev.tiles.length / 2)]!, ev.tiles[ev.tiles.length - 1]!];
     lamps.forEach((i, n) => {
       const on = n % 2 === flash;
-      this.put(this.rings, this.wx(i % w), this.wz(Math.floor(i / w)), 0xff2a1a, on ? 0.95 : 0.22, on ? 1.7 : 1.2);
+      this.put(
+        this.rings,
+        this.wx(i % w),
+        this.wz(Math.floor(i / w)),
+        0xff2a1a,
+        on ? 0.95 : 0.22,
+        on ? 1.7 : 1.2,
+      );
     });
   }
 
@@ -1086,13 +1107,19 @@ export class StageHazardViews implements View {
       v.model.body.position.y += Math.abs(Math.sin(time * 31)) * 0.02 * k;
       if (time > (v.puffAt ?? 0)) {
         v.puffAt = time + 0.5 - 0.42 * k;
-        this.fx.smokePuff(this.layout.wx(p.x) - p.dx * 0.8, 0.2, this.layout.wz(p.y) - p.dy * 0.8, 0.22 + 0.2 * k);
+        this.fx.smokePuff(
+          this.layout.wx(p.x) - p.dx * 0.8,
+          0.2,
+          this.layout.wz(p.y) - p.dy * 0.8,
+          0.22 + 0.2 * k,
+        );
       }
     }
     const lamps = v.lamps;
     if (lamps) {
       const blink = parked && blinkerOn(time, k);
-      for (const m of lamps.blink) (m.material as SpriteMaterial).opacity = parked ? (blink ? 0.95 : 0.08) : 0;
+      for (const m of lamps.blink)
+        (m.material as SpriteMaterial).opacity = parked ? (blink ? 0.95 : 0.08) : 0;
       const reversing = back > 0.004 && (parked || u < 0.5);
       for (const m of lamps.reverse) (m.material as SpriteMaterial).opacity = reversing ? 0.95 : 0;
     }
@@ -1120,7 +1147,7 @@ export class StageHazardViews implements View {
     let dy = d0.dy;
     if (ev.index < 0) {
       const remaining = ev.startTick - state.tick - alpha;
-      if (remaining > ev.stepTicks * (ev.style === 'train' ? TRAIN_APPROACH_TILES : APPROACH_TILES)) {
+      if (remaining > ev.stepTicks * sweepApproachTiles(ev.style, state.arenaId)) {
         v.model.root.visible = false;
         return;
       }
@@ -1152,6 +1179,12 @@ export class StageHazardViews implements View {
     v.fdx = reversing ? d0.dx : dx;
     v.fdy = reversing ? d0.dy : dy;
     this.placeVehicle(v, gx, gy, ctx, reversing ? -1 : 1);
+    // the road wave's vehicle (full approach stages) is told apart from the scenery: hazard-orange horn rings
+    // pulse around it all the way in, so the player sees which bus is the one that will hit
+    if (ev.index < 0 && sweepApproachTiles(ev.style, state.arenaId) === Infinity) {
+      const beat = 0.5 + 0.5 * Math.sin(ctx.time * 16);
+      this.put(this.rings, this.wx(gx), this.wz(gy), 0xff6a2a, 0.7 + 0.3 * beat, 2.8 + 1.2 * beat);
+    }
   }
 
   private placeVehicle(v: SweepVisual, gx: number, gy: number, ctx: FrameContext, gear: number): void {

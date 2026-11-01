@@ -303,6 +303,26 @@ function createEndgameTraps(state: GameState, arena: ArenaDef): EndgameTrapState
 function createCrush(state: GameState): CrushState {
   const { width: w, height: h } = state;
   const order: number[] = [];
+  const keep = state.config.crush.keepCore;
+  if (keep && keep.x0 !== undefined && keep.y0 !== undefined) {
+    // a core that is not the board's centre (Oshodi): close in rings AROUND THE CORE, farthest first, clockwise
+    // within a ring, so the last open ground is always the part next to the core (never a band cut off from it)
+    const cx = keep.x0 + (keep.w - 1) / 2;
+    const cy = keep.y0 + (keep.h - 1) / 2;
+    const tiles: { i: number; ring: number; angle: number }[] = [];
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const i = tileIndex(state, x, y);
+        if (state.tiles[i] === Tile.Hard || inCore(state, x, y)) continue;
+        const dx = Math.max(keep.x0 - x, x - (keep.x0 + keep.w - 1), 0);
+        const dy = Math.max(keep.y0 - y, y - (keep.y0 + keep.h - 1), 0);
+        tiles.push({ i, ring: Math.max(dx, dy), angle: Math.atan2(y - cy, x - cx) });
+      }
+    tiles.sort((a, b) => b.ring - a.ring || a.angle - b.angle || a.i - b.i);
+    for (const t of tiles) order.push(t.i);
+    const warnAt = crushSchedule(order.length, state.config);
+    return { order, next: 0, warnAt, nextAtTick: warnAt[0] ?? Infinity, pending: [] };
+  }
   const rings = Math.ceil(Math.min(w, h) / 2);
   for (let r = 0; r < rings; r++) {
     const x0 = r;
@@ -327,8 +347,8 @@ function createCrush(state: GameState): CrushState {
 function inCore(state: GameState, x: number, y: number): boolean {
   const core = state.config.crush.keepCore;
   if (!core) return false;
-  const x0 = Math.floor((state.width - core.w) / 2);
-  const y0 = Math.floor((state.height - core.h) / 2);
+  const x0 = core.x0 ?? Math.floor((state.width - core.w) / 2);
+  const y0 = core.y0 ?? Math.floor((state.height - core.h) / 2);
   return x >= x0 && x < x0 + core.w && y >= y0 && y < y0 + core.h;
 }
 

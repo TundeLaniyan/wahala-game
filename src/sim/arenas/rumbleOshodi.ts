@@ -5,7 +5,7 @@ import { RADIAL_CLEARANCE, crossings, rumbleStageConfig, trapGrid } from './rumb
 
 /**
  * Lagos arenas, build 1 - Oshodi Transport Metropolis: the layered transport nexus as six connected
- * districts on a 45 x 33 board (NOT mirrored), after the Canonical Lagos Map Build Bible v2 (section 3.2).
+ * districts on a 63 x 47 board (NOT mirrored; the original 45 x 33 board sits at x 0-44, y 0-32 and the board grew east and south: four expansion districts, decisions LA17-LA21), after the Canonical Lagos Map Build Bible v2 (section 3.2).
  * Selective compression and fictional links only: nothing here claims to be the present-day street plan.
  * The camera looks north, so the bands read far (north) / centre / near (south):
  *
@@ -29,43 +29,57 @@ import { RADIAL_CLEARANCE, crossings, rumbleStageConfig, trapGrid } from './rumb
  * crate), '_' kept-clear floor (the Cappa Ground pitch), 'x' authored barrier (always a crate),
  * '$' marked supply crate.
  */
-const W = 45;
-const H = 33;
+const W = 63;
+const H = 47;
 
 const LAYOUT = [
-  '#############################################', // 0
-  '#############################################', // 1
-  '##.........................................##', // 2
-  '##............##....##......##.#........##.##', // 3
-  '#####.###...$.......##......##...$......##.##', // 4
-  '#####.###..................................##', // 5
-  '#####.###..######......###.................##', // 6
-  '##.........######..#..x###...######.##..#####', // 7
-  '###.#$.##..######......###...######.##.....##', // 8
-  '##..................................##.......', // 9
-  '##........####..####......###.......==....###', // 10
-  '#####.###.####..####....##....##....==##..###', // 11
-  '##.........#............##....##....==....###', // 12
-  '##.....x..####.=####.##......$......==......x', // 13
-  '...............=..................$.==.......', // 14
-  '=============================================', // 15
-  '=============================================', // 16
-  '=============================================', // 17
-  '=============================================', // 18
-  '...................=....x...........==...####', // 19
-  '#####.###.##.#.$.#.=....##.....####.==#..####', // 20
-  '#####.###..........=....##.#...####.==...####', // 21
-  '##........##...##..###.....#........==...####', // 22
-  '##...$...........................$..##...####', // 23
-  '####.##.#.####.####..##.......##....##...####', // 24
-  '##......#.####.####..##.......##....##...####', // 25
-  '##......................#........__________##', // 26
-  '#####.###...........x...#......____________##', // 27
-  '#####.###..##...###............____________##', // 28
-  '#####.###..##..................____________##', // 29
-  '##.............................____________##', // 30
-  '#############################################', // 31
-  '#############################################', // 32
+  '###############################################################', // 0
+  '###############################################################', // 1
+  '##...........................................................##', // 2
+  '##............##....##......##.#........##.........####......##', // 3
+  '#####.###...$.......##......##...$......##....###..####..###.##', // 4
+  '#####.###.....................................###........###.##', // 5
+  '#####.###..######......###........................#..$..#....##', // 6
+  '##.........######..#..x###...######.##..#####................##', // 7
+  '###.#$.##..######......###...######.##........###........###.##', // 8
+  '##..................................##.............#####.###.##', // 9
+  '##........####..####......###.......==....###....#...........##', // 10
+  '#####.###.####..####....##....##....==##..###.####..####.....##', // 11
+  '##.........#............##....##....==....###.####..####..#..##', // 12
+  '##.....x..####.=####.##......$......==...........#######.....##', // 13
+  '...............=..................$.==.........................', // 14
+  '===============================================================', // 15
+  '===============================================================', // 16
+  '===============================================================', // 17
+  '===============================================================', // 18
+  '...................=....x...........==...####....#######.......', // 19
+  '#####.###.##.#.$.#.=....##.....####.==#..####................##', // 20
+  '#####.###..........=....##.#...####.==...####.######.######..##', // 21
+  '##........##...##..###.....#........==...####.......$........##', // 22
+  '##...$...........................$..##...####................##', // 23
+  '####.##.#.####.####..##.......##....##...####.#####.#######..##', // 24
+  '##......#.####.####..##.......##....##...####...#######......##', // 25
+  '##......................#........__________................####', // 26
+  '#####.###...........x...#......____________....####.#.####...##', // 27
+  '#####.###..##...###............____________....####.#.####...##', // 28
+  '#####.###..##..................____________...............$..##', // 29
+  '##.............................____________.....#######......##', // 30
+  '###.......###...........###.............#######..............##', // 31
+  '###.......###...........###.............#######...#######....##', // 32
+  '##.........#######..........#######.........#######........#.##', // 33
+  '##..........................#######........................#.##', // 34
+  '##.####..####..####..####.......###...####.....####...####.#.##', // 35
+  '##.####..####..####..####.......###...####.....####...####.#.##', // 36
+  '##..........................#######........................#.##', // 37
+  '##......#.....#.$...#...$.#.............#..######..#......##.##', // 38
+  '##..........................#######..........................##', // 39
+  '##.####..####..####..####........####......####.....#####....##', // 40
+  '##.####..####..####..####............$........#######........##', // 41
+  '##..........................#######..........................##', // 42
+  '##.###.......######...###..###..........####...####...####...##', // 43
+  '##.###................###..###..........####...####...####...##', // 44
+  '###############################################################', // 45
+  '###############################################################', // 46
 ];
 
 /** Whole-match floor traps: oil on the main road and by the workshops, potholes in the side streets. */
@@ -78,6 +92,15 @@ const TRAP_MARKS = [
   [34, 14, 'o'],
   [27, 27, 'o'],
   [4, 26, 'o'],
+  // the new districts: oil in the bus park and the Agege strip, potholes in the market and the freight yard
+  [8, 39, '~'],
+  [20, 34, 'o'],
+  [36, 37, '~'],
+  [49, 39, 'o'],
+  [52, 6, 'o'],
+  [48, 3, '~'],
+  [58, 31, 'o'],
+  [47, 22, '~'],
 ] as const;
 
 /**
@@ -127,38 +150,38 @@ const TRAIN_ROUTES: [number, number][][] = [
  * every district. tests/rumble-oshodi.test.ts re-checks every property.
  */
 const SPAWNS: TilePos[] = [
-  { x: 6, y: 26 },
-  { x: 24, y: 2 },
-  { x: 20, y: 10 },
-  { x: 42, y: 13 },
-  { x: 14, y: 30 },
-  { x: 26, y: 23 },
-  { x: 3, y: 13 },
-  { x: 31, y: 9 },
-  { x: 2, y: 2 },
-  { x: 41, y: 5 },
-  { x: 9, y: 21 },
-  { x: 26, y: 13 },
-  { x: 8, y: 9 },
-  { x: 25, y: 30 },
-  { x: 20, y: 26 },
+  { x: 2, y: 39 },
+  { x: 60, y: 2 },
+  { x: 28, y: 6 },
+  { x: 39, y: 44 },
+  { x: 20, y: 20 },
+  { x: 43, y: 13 },
+  { x: 2, y: 13 },
+  { x: 55, y: 31 },
+  { x: 27, y: 41 },
   { x: 32, y: 26 },
-  { x: 15, y: 4 },
-  { x: 30, y: 20 },
-  { x: 6, y: 2 },
-  { x: 38, y: 6 },
-  { x: 14, y: 26 },
-  { x: 23, y: 28 },
-  { x: 9, y: 30 },
-  { x: 30, y: 5 },
-  { x: 18, y: 8 },
-  { x: 25, y: 9 },
-  { x: 18, y: 2 },
-  { x: 42, y: 8 },
-  { x: 14, y: 12 },
-  { x: 27, y: 3 },
-  { x: 12, y: 23 },
-  { x: 30, y: 30 },
+  { x: 14, y: 9 },
+  { x: 50, y: 40 },
+  { x: 21, y: 33 },
+  { x: 39, y: 2 },
+  { x: 5, y: 2 },
+  { x: 59, y: 19 },
+  { x: 28, y: 31 },
+  { x: 35, y: 38 },
+  { x: 16, y: 2 },
+  { x: 48, y: 9 },
+  { x: 30, y: 19 },
+  { x: 45, y: 36 },
+  { x: 26, y: 24 },
+  { x: 33, y: 10 },
+  { x: 22, y: 9 },
+  { x: 59, y: 10 },
+  { x: 10, y: 39 },
+  { x: 39, y: 32 },
+  { x: 13, y: 27 },
+  { x: 46, y: 28 },
+  { x: 19, y: 42 },
+  { x: 58, y: 41 },
 ];
 
 export const OSHODI_METRO_DISTRICTS: DistrictDef[] = [
@@ -168,6 +191,27 @@ export const OSHODI_METRO_DISTRICTS: DistrictDef[] = [
   { id: 'expresswayJunction', name: 'Expressway Junction', role: 'approach', rects: [[22, 10, 32, 22]] },
   { id: 'railwayEdge', name: 'Railway Edge', role: 'rail', rects: [[33, 10, 44, 22]] },
   { id: 'cappaWorks', name: 'Cappa Works + Recreation', role: 'works', rects: [[9, 23, 44, 32]] },
+  // the eastern and southern expansion (board 63 x 47): a market, a freight yard, a bus park and a strip
+  { id: 'papaAjao', name: 'Papa Ajao Market', role: 'street', rects: [[45, 0, 62, 18]] },
+  { id: 'freightYard', name: 'Freight Yard', role: 'rail', rects: [[45, 19, 62, 32]] },
+  {
+    id: 'busPark',
+    name: 'Interstate Bus Park',
+    role: 'concourse',
+    rects: [
+      [0, 33, 31, 42],
+      [0, 43, 29, 46],
+    ],
+  },
+  {
+    id: 'agegeStrip',
+    name: 'Agege Motor Strip',
+    role: 'street',
+    rects: [
+      [32, 33, 62, 42],
+      [30, 43, 62, 46],
+    ],
+  },
 ];
 
 export const OSHODI_METRO_LINKS: DistrictLink[] = [
@@ -194,7 +238,7 @@ export const OSHODI_METRO_LINKS: DistrictLink[] = [
   { from: 'tradingStreets', to: 'skywalkQuarter', kind: 'open', tiles: crossings(LAYOUT, 8, 2, 8, 9, 1, 0) },
   { from: 'skywalkQuarter', to: 'railwayEdge', kind: 'open', tiles: crossings(LAYOUT, 33, 9, 44, 9, 0, 1) },
   // lower route O3-O6-O5: along the Cappa band, up onto the platforms south of the main road
-  { from: 'tradingStreets', to: 'cappaWorks', kind: 'open', tiles: crossings(LAYOUT, 8, 23, 8, 30, 1, 0) },
+  { from: 'tradingStreets', to: 'cappaWorks', kind: 'open', tiles: crossings(LAYOUT, 8, 23, 8, 32, 1, 0) },
   { from: 'cappaWorks', to: 'railwayEdge', kind: 'open', tiles: crossings(LAYOUT, 33, 22, 44, 22, 0, 1) },
   // cross-links between the bands and the middle
   {
@@ -210,6 +254,21 @@ export const OSHODI_METRO_LINKS: DistrictLink[] = [
     tiles: crossings(LAYOUT, 22, 9, 32, 9, 0, 1),
   },
   { from: 'interchangePlaza', to: 'cappaWorks', kind: 'open', tiles: crossings(LAYOUT, 9, 22, 21, 22, 0, 1) },
+  // the expansion: east of the railway and the Skywalk Quarter, south of the Cappa band and the Trading Streets
+  { from: 'skywalkQuarter', to: 'papaAjao', kind: 'open', tiles: crossings(LAYOUT, 44, 2, 44, 9, 1, 0) },
+  { from: 'railwayEdge', to: 'papaAjao', kind: 'open', tiles: crossings(LAYOUT, 44, 10, 44, 18, 1, 0) },
+  { from: 'cappaWorks', to: 'freightYard', kind: 'open', tiles: crossings(LAYOUT, 44, 23, 44, 32, 1, 0) },
+  { from: 'papaAjao', to: 'freightYard', kind: 'open', tiles: crossings(LAYOUT, 45, 18, 62, 18, 0, 1) },
+  { from: 'tradingStreets', to: 'busPark', kind: 'open', tiles: crossings(LAYOUT, 0, 32, 8, 32, 0, 1) },
+  { from: 'cappaWorks', to: 'busPark', kind: 'open', tiles: crossings(LAYOUT, 9, 32, 31, 32, 0, 1) },
+  { from: 'cappaWorks', to: 'agegeStrip', kind: 'open', tiles: crossings(LAYOUT, 32, 32, 44, 32, 0, 1) },
+  { from: 'freightYard', to: 'agegeStrip', kind: 'open', tiles: crossings(LAYOUT, 45, 32, 62, 32, 0, 1) },
+  {
+    from: 'busPark',
+    to: 'agegeStrip',
+    kind: 'open',
+    tiles: [...crossings(LAYOUT, 31, 33, 31, 42, 1, 0), ...crossings(LAYOUT, 29, 43, 29, 46, 1, 0)],
+  },
   {
     from: 'expresswayJunction',
     to: 'cappaWorks',
@@ -229,31 +288,34 @@ export const RUMBLE_OSHODI: ArenaDef = {
   maxPlayers: 32,
   forcedMode: 'crush',
   config: {
-    // one lethal stage event at a time: the railcar never overlaps traffic or a bus departure
-    ...rumbleStageConfig({ core: { w: 11, h: 9 }, softDensity: 0.46, maxLethalEvents: 1 }),
+    // up to two lethal stage events at once (the board is twice the first build: with one slot the road waves and
+    // bus departures starved the railcar), each separately warned and never within the quiet seconds
+    ...rumbleStageConfig({ core: { w: 11, h: 9, x0: 21, y0: 12 }, softDensity: 0.46, maxLethalEvents: 2 }),
     vehicles: { lanes: LANES },
   },
   floorTraps: trapGrid(TRAP_MARKS, W, H),
-  // the endgame waves land in the core where the plaza meets the junction, on and beside the main road
+  // the endgame waves land in the core (x 21-31, y 12-20: the plaza's east edge and the junction), on and beside the main road
   endgameTraps: [
     trapGrid(
       [
-        [19, 14, 'o'],
-        [21, 16, '~'],
+        [23, 14, 'o'],
+        [26, 13, '~'],
+        [29, 14, 'o'],
         [26, 17, '~'],
-        [20, 19, 'o'],
-        [25, 14, 'o'],
+        [25, 19, 'o'],
+        [28, 20, '~'],
       ],
       W,
       H,
     ),
     trapGrid(
       [
-        [22, 14, '~'],
-        [18, 17, 'o'],
-        [24, 16, 'o'],
-        [22, 19, '~'],
-        [26, 12, '~'],
+        [24, 14, '~'],
+        [28, 12, 'o'],
+        [30, 14, '~'],
+        [23, 16, 'o'],
+        [22, 19, 'o'],
+        [27, 19, '~'],
       ],
       W,
       H,
@@ -269,7 +331,7 @@ export const RUMBLE_OSHODI: ArenaDef = {
       routes: TRAFFIC_ROUTES,
       stepTicks: 4,
       firstAtSec: 8,
-      everySec: [5, 7.5],
+      everySec: [5, 8],
       warnSec: 2,
     },
     {
