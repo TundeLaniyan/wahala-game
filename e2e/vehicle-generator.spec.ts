@@ -127,10 +127,11 @@ test.describe('vehicle generator: desktop', () => {
           ((window as never as { __pad: { buttons: { pressed: boolean }[] } }).__pad.buttons[2]!.pressed = d),
         down,
       );
+    // the pad is polled once per rendered frame (a frame can take seconds on a loaded software-GL runner): keep the
+    // button down until the carrier is on the board, then let go
     await press(true);
-    await page.waitForTimeout(800); // the pad is polled once per rendered frame
+    await expect.poll(async () => (await snap(page)).vehicles.length, { timeout: 30_000 }).toBeGreaterThan(0);
     await press(false);
-    await page.waitForTimeout(300);
     const played = await playOut(page);
     await expectResolved(page, played);
   });
