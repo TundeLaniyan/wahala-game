@@ -15,7 +15,13 @@ const TX = Number(process.env.TX || 0);
 const TZ = Number(process.env.TZ || -8);
 const browser = await chromium.launch({
   executablePath: process.env.WAHALA_CHROMIUM,
-  args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  args: [
+    '--no-sandbox',
+    '--use-gl=angle',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+    '--ignore-gpu-blocklist',
+  ],
 });
 
 async function run(q, tod, viewport) {
@@ -23,7 +29,17 @@ async function run(q, tod, viewport) {
   await context.addInitScript(() => {
     const key = 'wahala.settings.v1';
     const s = JSON.parse(localStorage.getItem(key) || '{}');
-    localStorage.setItem(key, JSON.stringify({ ...s, play: 'rumble', rumbleArenaId: 'rumbleOshodi', rumbleCompetitors: 16, rumbleMode: 'survival', difficulty: 'standard' }));
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...s,
+        play: 'rumble',
+        rumbleArenaId: 'rumbleOshodi',
+        rumbleCompetitors: 16,
+        rumbleMode: 'survival',
+        difficulty: 'standard',
+      }),
+    );
   });
   const page = await context.newPage();
   page.setDefaultTimeout(300000);
@@ -41,13 +57,15 @@ async function run(q, tod, viewport) {
     s.players[0].protectedUntil = 1e9;
     w.stepTicks(400);
     w.advance(6);
-    const p = s.players[0];
     const cx = Math.floor(s.width / 2);
     const i = Math.floor(s.height * 0.36) * s.width + cx;
     if (s.tiles[i] === 2) s.tiles[i] = 0;
     return { w: s.width, h: s.height };
   });
-  await page.evaluate(([x, z, zoom]) => window.__WAHALA__.renderer().debugInspect({ x, z, zoom }), [TX, TZ, Z]);
+  await page.evaluate(
+    ([x, z, zoom]) => window.__WAHALA__.renderer().debugInspect({ x, z, zoom }),
+    [TX, TZ, Z],
+  );
   await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
   await page.waitForTimeout(1500);
   await page.evaluate(() => (window.__WAHALA__.controller().frozen = true));
@@ -70,13 +88,25 @@ async function run(q, tod, viewport) {
           if (t < end) requestAnimationFrame(f);
           else {
             d.sort((a, b) => a - b);
-            res({ n: d.length, mean: d.reduce((a, b) => a + b, 0) / d.length, p95: d[Math.floor(d.length * 0.95)] });
+            res({
+              n: d.length,
+              mean: d.reduce((a, b) => a + b, 0) / d.length,
+              p95: d[Math.floor(d.length * 0.95)],
+            });
           }
         };
         requestAnimationFrame(f);
       }),
   );
-  console.log(JSON.stringify({ name, board: size, calls: st.drawCalls, tris: st.triangles, frameMs: { mean: +ft.mean.toFixed(1), p95: +ft.p95.toFixed(1), frames: ft.n } }));
+  console.log(
+    JSON.stringify({
+      name,
+      board: size,
+      calls: st.drawCalls,
+      tris: st.triangles,
+      frameMs: { mean: +ft.mean.toFixed(1), p95: +ft.p95.toFixed(1), frames: ft.n },
+    }),
+  );
   await context.close();
 }
 
