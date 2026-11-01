@@ -74,12 +74,12 @@ function measure(arenaId: string, game: GameKind, players: number): Row {
             row.kills += events.filter(
               (k) => k.type === 'playerEliminated' && k.creditId === e.ownerId && k.playerId !== e.ownerId,
             ).length;
-            const owner = state.players[e.ownerId]!;
-            // the footprint is at least the plus of the range: the owner standing in line within range would be a violation
-            const inLine =
-              (owner.x === e.x || owner.y === e.y) &&
-              Math.abs(owner.x - e.x) + Math.abs(owner.y - e.y) <= owner.range;
-            if (owner.alive && inLine) row.ownerViolations++;
+            // owner safety: the owner must never be eliminated in the tick their carried generator goes off
+            // (their flames are ownerSafe; a chain through someone else's generator is a separate event and is counted
+            // too, so any non-zero figure is worth a look)
+            row.ownerViolations += events.filter(
+              (k) => k.type === 'playerEliminated' && k.playerId === e.ownerId,
+            ).length;
           } else if (e.type === 'vehicleGeneratorExpired') {
             if (e.reason === 'route') row.routeEnd++;
             else row.crashed++;
@@ -100,7 +100,7 @@ function measure(arenaId: string, game: GameKind, players: number): Row {
 
 const pct = (a: number, b: number): string => (b ? `${Math.round((100 * a) / b)}%` : '-');
 console.log(
-  '| arena | size | ruleset | players | launches | found target | fuse -> blast | fuse escaped | no target (route end) | crashed | launch->blast (s) | kills / blast | owner violations |',
+  '| arena | size | ruleset | players | launches | found target | fuse -> blast | fuse escaped | no target (route end) | crashed | launch->blast (s) | kills / blast | owner eliminated in a blast tick |',
 );
 console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|');
 for (const id of arenas) {

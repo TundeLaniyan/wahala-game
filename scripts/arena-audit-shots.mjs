@@ -69,7 +69,11 @@ async function shot(id, mode) {
     w.advance(6);
     return { arena: s.arenaId, w: s.width, h: s.height };
   });
-  if (rumble) await page.evaluate(() => window.__WAHALA__.renderer().debugInspect({ x: 0, z: -2, zoom: 11 }));
+  // City Rumble stages use the follow camera: frame the whole board (zoom scales with the board, Oshodi 63 x 47 = 11)
+  if (rumble) {
+    const zoom = Math.max(6, 11 * Math.max(info.w / 63, info.h / 47));
+    await page.evaluate((z) => window.__WAHALA__.renderer().debugInspect({ x: 0, z: -1, zoom: z }), zoom);
+  }
   await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
   await page.waitForTimeout(1500);
   await page.evaluate(() => (window.__WAHALA__.controller().frozen = true));
