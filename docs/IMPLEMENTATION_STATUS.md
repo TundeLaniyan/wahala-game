@@ -447,3 +447,7 @@ Decisions UX1-UX6 and PF1-PF10 in `DECISIONS.md`; reports `docs/STITCH_UI.md` (f
 | Touch controls | Done: A lower-right, B diagonal above-left, bigger bounded pad, button states. `e2e/touch-layout.spec.ts`. Not tried on a physical phone. |
 | Pause audio | Done: everything silenced, no doubled loops on resume. `tests/audio/pause.test.ts`, `tests/app/pause-audio.test.ts`. Not listened to by ear. |
 | FlowFrame Performance | Done as a name, mark and loading-screen note; behaviour unchanged. `docs/FLOWFRAME_PERFORMANCE.md`. |
+
+## Touchscreen diagonal corner movement (branch `claude/mobile-diagonal-corner-input-v1`, decision MV3)
+
+A diagonal touch thumb is planned as two whole cardinal moves (vertical first, reverse order as fallback, nothing partial, nothing when neither order is valid). Keyboard, gamepad and Assisted movement Off are unchanged. Tests: `tests/mobile-diagonal-corner.test.ts` (priority and fallback for all four diagonals, blocked, cardinal taps, keyboard / gamepad / Off, held repeat, wall / crate / one-tile corridor corners), `tests/input-assist.test.ts` (the diagonal flick now completes its route).

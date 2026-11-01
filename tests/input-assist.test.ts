@@ -224,15 +224,37 @@ describe('diagonal thumb: main axis now, secondary axis as the next turn', () =>
     expect(r.at).toEqual([9, 1]);
   });
 
-  it('a flick is still exactly one tile, diagonal or not', () => {
-    const r = new AssistRig({ map: CORNER, start: [4, 1] });
-    r.thumbDown();
-    r.aim(-40);
-    r.step(5);
-    r.lift();
-    r.step(120);
-    expect(r.at).toEqual([5, 1]);
-    expect(r.tiles).toBe(1);
+  it('a cardinal flick is exactly one tile; a diagonal flick is one complete two-step route (MV3) or, with assistance Off, one tile', () => {
+    const cardinal = new AssistRig({ map: CORNER, start: [4, 1] });
+    cardinal.thumbDown();
+    cardinal.push('right');
+    cardinal.step(5);
+    cardinal.lift();
+    cardinal.step(120);
+    expect(cardinal.at).toEqual([5, 1]);
+    expect(cardinal.tiles).toBe(1);
+
+    // down-right: Down -> Right is blocked by the wall below, so Right -> Down is taken in full
+    const diagonal = new AssistRig({ map: CORNER, start: [4, 1] });
+    diagonal.thumbDown();
+    diagonal.aim(-40);
+    diagonal.step(5);
+    diagonal.lift();
+    diagonal.step(120);
+    expect(diagonal.trace).toEqual([
+      [4, 1],
+      [5, 1],
+      [5, 2],
+    ]);
+
+    const off = new AssistRig({ map: CORNER, start: [4, 1], assist: 'off' });
+    off.thumbDown();
+    off.aim(-40);
+    off.step(5);
+    off.lift();
+    off.step(120);
+    expect(off.at).toEqual([5, 1]);
+    expect(off.tiles).toBe(1);
   });
 
   it('in open ground a diagonal thumb walks a clean staircase: right, down, right, down ...', () => {

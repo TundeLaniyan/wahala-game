@@ -7,11 +7,12 @@ import {
   TURN_REACH_TILES,
   canStep,
   planBend,
+  planDiagonal,
   planSidestep,
   planTurn,
 } from './moveAssist';
 import { OPPOSITE } from '../sim';
-import type { AssistLevel, MoveBoard } from './moveAssist';
+import type { AssistLevel, MoveBoard, TouchDiagonal } from './moveAssist';
 
 /** A press arriving up to this long before the player can step is remembered (one move, never a queue). */
 export const MOVE_BUFFER_TICKS = 10;
@@ -24,6 +25,8 @@ export const MOVE_REPEAT_DELAY_TICKS = 12;
 export const TURN_BUFFER_TILES = 1;
 /** "Already walking": a move was handed over at most this long ago (a step is 5-13 ticks). */
 export const TURN_CONTINUE_TICKS = 18;
+/** A diagonal route's second step is handed over within this long of the first (the slowest step is 14 ticks), else the route lapses. */
+export const DIAGONAL_ROUTE_TICKS = 40;
 
 /**
  * Assisted movement for one `next` call (see `moveAssist.ts`). Without it the gate behaves exactly as it
@@ -34,6 +37,11 @@ export interface GateAssist {
   board(): MoveBoard;
   /** Diagonal thumb: the secondary axis, taken as a turn at the first legal junction. */
   wish?: Dir | null;
+  /**
+   * Touchscreen thumbstick only (decision MV3): the stick is what is being held and it points diagonally. Never
+   * set for the keyboard, a gamepad or any physical controller, nor when assisted movement is Off.
+   */
+  diagonal?: TouchDiagonal | null;
 }
 
 /**
@@ -66,6 +74,12 @@ export class MoveGate {
   private carried = 0;
   /** The diagonal wish was already taken since the primary direction last moved the player (alternate: wish, primary, wish ...). */
   private wishTaken = false;
+  /**
+   * A diagonal route in progress (MV3): its first step has been handed over; the second one is owed. It is
+   * handed over on the first tick the player can step again, provided they stand on the intermediate tile and
+   * that tile's neighbour is still a safe step, whatever the thumb does meanwhile (the route is atomic).
+   */
+  private route: { second: Dir; x: number; y: number; until: number } | null = null;
 
   /**
    * A direction went down (keydown, pointer-down, D-pad edge).
@@ -97,6 +111,13 @@ export class MoveGate {
     for (const dir of [...this.since.keys()]) if (!active.has(dir)) this.since.delete(dir);
     if (held && !this.since.has(held)) this.since.set(held, tick); // already down when we first saw it
 
+    // a diagonal route owes its second step before anything else is handed over
+    if (this.route && tick > this.route.until) this.route = null;
+    if (this.route && canMove) {
+      const second = this.finishRoute(assist, legal);
+      if (second) return this.deliver(second, tick);
+    }
+
     // a press waits `MOVE_BUFFER_TICKS` for the player to be able to step (a little longer when assisted: the
     // slowest step outlasts the plain buffer); a carried turn keeps it alive from tile to tile
     const buffer = assist ? ASSIST_BUFFER_TICKS : MOVE_BUFFER_TICKS;
@@ -104,6 +125,12 @@ export class MoveGate {
       this.pending = null;
     if (this.pending && canMove && tick >= this.pending.notBefore) {
       const { dir, notBefore, pressed } = this.pending;
+      const diagonal = this.startRoute(dir, tick, assist);
+      if (diagonal) {
+        this.pending = null;
+        this.carried = 0;
+        return diagonal;
+      }
       const carry = legal ? this.carryFor(dir, tick, active, legal, assist, pressed) : null;
       if (carry) {
         // keep the turn for the next tile; walk on one tile the way we were going
@@ -121,6 +148,8 @@ export class MoveGate {
     }
     if (held && tick - this.since.get(held)! >= MOVE_REPEAT_DELAY_TICKS) {
       if (!canMove) return held;
+      const diagonal = this.startRoute(held, tick, assist);
+      if (diagonal) return diagonal;
       const dir = assist?.level === 'full' && legal ? this.assistHold(held, legal, assist, tick) : held;
       // bump guard (assisted levels): a direction the simulation already refused is not offered again every
       // step; it is retried as soon as it would do something (the obstacle moved) or after the cooldown
@@ -187,6 +216,43 @@ export class MoveGate {
     return planBend(board, held, prefer, came, along) ?? held;
   }
 
+  /**
+   * The touchscreen thumb is diagonal (`assist.diagonal`, whose main axis is `dir`): plan the complete two-step
+   * route from here and hand over its first step, owing the second. Returns null (nothing owed, the ordinary
+   * cardinal behaviour carries on exactly as before) when there is no diagonal or neither order is valid in full.
+   */
+  private startRoute(dir: Dir, tick: number, assist?: GateAssist): Dir | null {
+    const d = assist?.diagonal;
+    if (!assist || assist.level !== 'full' || !d || d.primary !== dir) return null;
+    const board = assist.board();
+    const plan = planDiagonal(board, d);
+    if (!plan) return null;
+    const v = board.vec(plan[0]);
+    this.route = {
+      second: plan[1],
+      x: board.x + v.dx,
+      y: board.y + v.dy,
+      until: tick + DIAGONAL_ROUTE_TICKS,
+    };
+    this.wishTaken = false;
+    this.bump = null;
+    return this.deliver(plan[0], tick);
+  }
+
+  /**
+   * The owed second step of a diagonal route, or null (and the route is dropped) when it can no longer be taken
+   * as planned: the player is not on the intermediate tile, or its next tile has since turned solid or dangerous.
+   */
+  private finishRoute(assist?: GateAssist, legal?: (dir: Dir) => boolean): Dir | null {
+    const r = this.route!;
+    this.route = null;
+    if (!assist) return null;
+    const board = assist.board();
+    if (board.x !== r.x || board.y !== r.y) return null;
+    if (!canStep(board, r.second) || (legal && !legal(r.second))) return null;
+    return r.second;
+  }
+
   private deliver(dir: Dir, tick: number): Dir {
     this.last = { dir, tick };
     return dir;
@@ -200,5 +266,6 @@ export class MoveGate {
     this.bump = null;
     this.carried = 0;
     this.wishTaken = false;
+    this.route = null;
   }
 }

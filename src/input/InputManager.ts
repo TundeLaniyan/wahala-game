@@ -2,7 +2,7 @@ import type { Dir, Intent } from '../sim';
 import { GamepadInput } from './gamepad';
 import { KeyboardInput } from './keyboard';
 import { SWITCH_SETTLE_TICKS, resolveAssistLevel } from './moveAssist';
-import type { AssistLevel, MoveAssistSetting, MoveBoard } from './moveAssist';
+import type { AssistLevel, MoveAssistSetting, MoveBoard, TouchDiagonal } from './moveAssist';
 import { MoveGate } from './moveGate';
 import type { GateAssist } from './moveGate';
 import { PlaceHold, SpecialHold } from './specialHold';
@@ -212,9 +212,14 @@ export class InputManager {
     if (level === 'off' || !c.legal || !c.board) return undefined;
     // the diagonal wish belongs to the thumb: it only counts while the stick is what is being held
     const wish = held !== null && held === this.touchDir ? this.touchWish : null;
+    // the two-step diagonal belongs to the touchscreen thumb alone: never a key, a D-pad or a gamepad stick
+    const diagonal: TouchDiagonal | null =
+      level === 'full' && this.lastDevice === 'touch' && held !== null && wish !== null
+        ? { primary: held, secondary: wish }
+        : null;
     let board: MoveBoard | null = null;
     const make = c.board;
-    return { level, wish, board: () => (board ??= make()) };
+    return { level, wish, diagonal, board: () => (board ??= make()) };
   }
 
   private heldDir(): Dir | null {
