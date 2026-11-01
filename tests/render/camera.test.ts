@@ -84,7 +84,7 @@ describe('overview camera: whole arena and picking', () => {
     // old layout: near row 0.56 of the screen width, board 0.54 of its height. The action buttons were made larger
     // (decision MC3, control strips 0.36 of the height), so the near row is about 0.63 now: still far above 0.56
     expect((r.x - l.x) / 2).toBeGreaterThan(0.62);
-    expect((far.y - l.y) / 2).toBeGreaterThan(0.6);
+    expect((far.y - l.y) / 2).toBeGreaterThan(0.58); // about 0.59 now (old layout 0.54)
   });
 });
 
