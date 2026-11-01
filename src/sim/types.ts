@@ -703,11 +703,22 @@ export type SimEvent =
   | { type: 'vehicleHitPlayer'; vehicleId: number; playerId: number }
   | { type: 'vehicleHitGenerator'; vehicleId: number; generatorId: number }
   | { type: 'vehicleDamaged'; vehicleId: number; damage: number; total: number; resistance: number }
-  | { type: 'vehicleDestroyed'; vehicleId: number; x: number; y: number; reason: 'blast' | 'crash' | 'detonation' }
+  | {
+      type: 'vehicleDestroyed';
+      vehicleId: number;
+      x: number;
+      y: number;
+      reason: 'blast' | 'crash' | 'detonation';
+    }
   | { type: 'vehicleExited'; vehicleId: number }
   | { type: 'vehicleFuse'; vehicleId: number; ownerId: number; x: number; y: number; ticks: number }
   | { type: 'vehicleDetonated'; vehicleId: number; ownerId: number; x: number; y: number }
-  | { type: 'vehicleGeneratorExpired'; vehicleId: number; ownerId: number; reason: 'route' | 'crash' | 'blast' }
+  | {
+      type: 'vehicleGeneratorExpired';
+      vehicleId: number;
+      ownerId: number;
+      reason: 'route' | 'crash' | 'blast';
+    }
   | { type: 'crushWarning'; x: number; y: number; landTick: number }
   | { type: 'crushLanded'; x: number; y: number }
   | {
