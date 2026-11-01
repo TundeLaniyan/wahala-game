@@ -295,6 +295,7 @@ export function oshodiMetroEnv(board: BoardSize, tod: TimeOfDay = 'day'): StageE
     // the bus-choked roads are this stage's identity: more ambient vehicles and people per tier (instanced: the
     // model count, hence the draw calls, is unchanged)
     fairShare: true,
+    yieldToWave: true,
     boost: {
       low: { vehicles: 12, people: 20 },
       medium: { vehicles: 64, people: 52 },

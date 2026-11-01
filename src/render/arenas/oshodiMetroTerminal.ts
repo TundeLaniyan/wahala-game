@@ -443,7 +443,7 @@ export function interchangeMegastructures(ctx: SetContext, L: SiteLights, tod: T
   openTerminal(ctx, P, -26 + DX, -1 + DX, north - 3, 9.5, 12);
   openTerminal(ctx, P, 1 + DX, 11 + DX, north - 3, 8, 10);
   // the Terminal 3 frontage east of the station tower
-  frontage(ctx, P, 26 + DX, 44 + DX, north - 2.4, 5.2);
+  frontage(ctx, P, 26 + DX, 40 + DX, north - 2.4, 5.2);
   // the long truss skywalk behind the rings, its pylons, and the big portal frame over it
   skywalk(ctx, P, -24 + DX, 36 + DX, north - 16, 10);
   trussPortal(ctx, P, -1 + DX, north - 16, 22, 15);
@@ -462,6 +462,6 @@ export function interchangeMegastructures(ctx: SetContext, L: SiteLights, tod: T
   L.glow(-19 + DX, 4.2, north - 8, 3.4, 0xffe2b0, 0.8 * k);
   L.glow(-8 + DX, 4.2, north - 8, 3.4, 0xffe2b0, 0.8 * k);
   L.glow(6 + DX, 4.0, north - 7, 3.0, 0xffe2b0, 0.7 * k);
-  L.glow(35 + DX, 5.0, north - 3.4, 2.4, 0xffe2b0, 0.6 * k);
+  L.glow(33 + DX, 5.0, north - 3.4, 2.4, 0xffe2b0, 0.6 * k);
   L.glow(-1 + DX, 15.6, north - 16, 1.2, 0xff3a2a, night ? 0.9 : 0.4);
 }

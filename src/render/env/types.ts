@@ -245,6 +245,8 @@ export interface StageEnvironment {
    * target still applies. A stage without `boost` is capped exactly as before.
    */
   boost?: Partial<Record<QualityLevel, Partial<EnvBudget>>>;
+  /** Opt-in: ambient road vehicles fade out around the road wave's own approaching vehicle (`waveClearance.ts`). */
+  yieldToWave?: boolean;
   /** Opt-in: routes of the same priority share a small vehicle budget round-robin (default: first route first). */
   fairShare?: boolean;
 }
