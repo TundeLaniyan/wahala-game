@@ -482,3 +482,10 @@ A diagonal touch thumb is planned as two whole cardinal moves (vertical first, r
 | Conflicts | `tests/helpers.ts` (both `RUMBLE_FIXTURE` and `giveVoucher` kept) and `docs/DECISIONS.md` (both decision tables kept). |
 | Integration fixes | The seven Rumble stages kept only their own lanes and lost the Okada (CR9, fixed + tested); `tests/ui/streakHud.test.ts` used the removed `cityRumble` (now `RUMBLE_FIXTURE`). |
 | Evidence | Typecheck, lint, build and the full Vitest suite pass. Browser evidence: see the commit message / report. |
+
+## EXPERIMENTAL personal-playtest deployment (map-only + streaks / combat / input)
+
+- **Status: experimental.** The combined code has NOT completed the full desktop + phone browser suite. It is published for the founder's own playtest only; it is not a release.
+- **Rollback point:** `8ebf3f4` (the previous known-good deployment of `claude/wahala-stitch-uiux-v1`). To roll back, reset `claude/wahala-stitch-uiux-v1` to `8ebf3f4` and let CI republish it.
+- **Combined code:** map-only `3db8719` (+ docs-only tip `d752b69`) with `claude/wahala-streaks-combat-input-v1` `712af9a`; integration fixes in decision CR9.
+- **Evidence before publishing:** 2,128 unit tests, typecheck, lint, build and 134 targeted browser tests (retries off) passed on the identical code (`3ceb9e2`); the full desktop and phone suites run after the publish started.
