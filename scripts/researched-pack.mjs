@@ -103,11 +103,11 @@ async function inspect(page, tx, ty, zoom) {
 async function run(id) {
   const [W, H, lx, ly, lz, what] = ARENAS[id];
   mkdirSync(`${dir}/${id}`, { recursive: true });
-  const zoomWhole = id === 'rumbleOshodi' ? 11 : 4.3 * Math.max(W / 41, H / 31);
+  const zoomWhole = id === 'rumbleOshodi' ? 11 : 4.8 * Math.max(W / 41, H / 31);
   const wholeFrame = async (page, name, withHud = false) => {
     await page.evaluate(
       ([z, id]) =>
-        window.__WAHALA__.renderer().debugInspect({ x: 0, z: id === 'rumbleOshodi' ? -1 : 0, zoom: z }),
+        window.__WAHALA__.renderer().debugInspect({ x: 0, z: id === 'rumbleOshodi' ? -1 : 1.6, zoom: z }),
       [zoomWhole, id],
     );
     await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
