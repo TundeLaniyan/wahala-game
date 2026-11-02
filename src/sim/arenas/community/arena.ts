@@ -6,7 +6,7 @@
  */
 import type { ArenaDef, ArenaInfo, DistrictDef, DistrictLink, StageHazardDef } from '../types';
 import type { Dir, TilePos } from '../../types';
-import { Board } from './painter';
+import type { Board } from './painter';
 import type { CoverLegend } from './painter';
 import { RADIAL_CLEARANCE, around, balancedSpawns, rumbleStageConfig, trapGrid } from '../rumbleKit';
 

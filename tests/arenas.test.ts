@@ -209,10 +209,10 @@ describe('City Rumble boards', () => {
             m = Math.min(m, Math.abs(s[i]!.x - s[j]!.x) + Math.abs(s[i]!.y - s[j]!.y));
         return m;
       };
-      // the compact Fadeyi sets the floor; the other communities are well above it
+      // the compact Fadeyi sets the floor (decision CR6: 12 / 7 / 3); the other communities are above it
       expect(minGap(8)).toBeGreaterThanOrEqual(8);
       expect(minGap(16)).toBeGreaterThanOrEqual(6);
-      expect(minGap(32)).toBeGreaterThanOrEqual(4);
+      expect(minGap(32)).toBeGreaterThanOrEqual(3);
     },
   );
 });

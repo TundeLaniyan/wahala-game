@@ -67,7 +67,9 @@ describe('Survival Rumble', () => {
       config: { match: { durationTicks: 75 * 60 }, crush: { startRemainingTicks: 55 * 60 } },
     });
     expect(out.winner !== null || out.draw || out.timeout).toBe(true);
-    if (!out.timeout) expect(out.seats.filter((s) => s.alive).length).toBeLessThanOrEqual(1);
+    // the last fighter stands, unless the (shortened) clock ran out first: then the ruleset names the winner
+    if (!out.timeout && out.ticks < 75 * 60)
+      expect(out.seats.filter((s) => s.alive).length).toBeLessThanOrEqual(1);
     expect(out.seats.filter((s) => !s.alive).length).toBeGreaterThanOrEqual(29);
   }, 120_000);
 });

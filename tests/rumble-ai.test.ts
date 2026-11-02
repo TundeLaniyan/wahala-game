@@ -18,7 +18,12 @@ import type { Difficulty, Intents } from '../src/sim';
 import { RUMBLE_FIXTURE } from './helpers';
 
 /** The never-closing core of the fixture arena. */
-const CORE = getArena(RUMBLE_FIXTURE).config!.crush!.keepCore! as { x0: number; y0: number; w: number; h: number };
+const CORE = getArena(RUMBLE_FIXTURE).config!.crush!.keepCore! as {
+  x0: number;
+  y0: number;
+  w: number;
+  h: number;
+};
 
 /**
  * City Rumble bots: 8 / 16 / 24 / 32 competitors on the 41 x 31 board. Matches use a shortened clock
