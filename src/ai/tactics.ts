@@ -38,6 +38,11 @@ export class Tactics {
     // ---- vehicle voucher: one press of B, the same special the human presses
     const safeHere = danger.safeFrom(world.myTile, T) && intent.move === undefined;
     vehicleTactic(c, this.vehicle, intent, safeHere);
+    // ---- GLOBAL KNOCKDOWN (the 7-kill streak reward): thrown when it will find rivals, with a charge to follow up
+    if (!intent.special && me.streakRewards.knockdown && safeHere && knockdownWorthIt(c)) {
+      intent.special = true;
+      delete intent.move;
+    }
     if (intent.special || intent.vehicle || me.entryUntil !== null) return;
 
     // ---- remote detonation
@@ -61,4 +66,21 @@ export class Tactics {
       if (danger.firstHit(world.myTile, T + 1) > T + startup + 14) delete intent.move;
     }
   }
+}
+
+/**
+ * Is a GLOBAL KNOCKDOWN worth throwing now? Two or more rivals within a few tiles (or the only rival close), at least
+ * one generator charge to follow up with, nobody next to me (B would be a melee press) and nobody already down.
+ */
+function knockdownWorthIt(c: Ctx): boolean {
+  const { world } = c;
+  const { obs, me } = world;
+  if (me.carrying !== null || obs.tick < me.dazedUntil) return false;
+  if (meleeTarget(obs, me)) return false;
+  const live = world.rivals.filter((r) => obs.tick >= r.knockdownImmuneUntil && obs.tick >= r.knockedUntil);
+  if (live.length === 0) return false;
+  const near = live.filter((r) => Math.abs(r.x - me.x) + Math.abs(r.y - me.y) <= 9);
+  if (near.length < Math.min(2, live.length)) return false;
+  const mine = obs.generators.filter((g) => g.ownerId === me.id && g.mode !== 'disabled' && !g.vehicleBorne).length;
+  return mine < me.capacity;
 }

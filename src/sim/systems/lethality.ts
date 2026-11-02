@@ -136,6 +136,7 @@ export function eliminate(
   p.entryUntil = null;
   p.stepRemaining = 0;
   p.attack = null;
+  p.knockedUntil = 0;
   // the streak is over: QUICK HANDS stops and unused one-use rewards are lost (the match score stays)
   const lost = clearStreakRewards(p);
   if (lost.length > 0) events.push({ type: 'streakRewardsLost', playerId: p.id, rewards: lost });

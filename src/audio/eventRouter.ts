@@ -415,6 +415,21 @@ const handlers: Handlers = {
     sfx(c, 'pickup_rare', pan, 1, 1 + Math.min(0.3, e.kills * 0.03));
     react(c, { kind: 'cheer', strength: 0.6, chance: 0.5, delay: 0.3 });
   },
+  // GLOBAL KNOCKDOWN: a whistle as the objects fly, a bottle-smash thud on each head, the crowd gasps and laughs
+  knockdownThrown: (_e, c) => {
+    if (allow(c, 'knockdownThrow', 0.4)) {
+      sfx(c, 'crowd_throw_whistle', 0, 1);
+      react(c, { kind: 'gasp', strength: 0.8, chance: 0.9, delay: 0.1 });
+    }
+  },
+  knockdownHit: (e, c) => {
+    sfx(c, 'bottle_smash', panOf(c, playerX(c, e.playerId)), isHuman(c, e.playerId) ? 1 : 0.8);
+    sfx(c, 'daze', panOf(c, playerX(c, e.playerId)), 0.6, 0.8, 0.05);
+    react(c, { kind: 'laugh', strength: 0.7, chance: 0.5, delay: 0.4 });
+  },
+  knockdownEnded: (e, c) => {
+    if (isHuman(c, e.playerId)) sfx(c, 'pickup_reveal', 0, 0.5, 1.2);
+  },
   // kill-streak rewards (decision SK1): the earned chime is the elimination reward's, a little higher
   streakRewardEarned: (e, c) => {
     const pan = panOf(c, playerX(c, e.playerId));

@@ -10,6 +10,7 @@
  */
 import type { GameState, Player, SimEvent } from '../types';
 import { isActing } from './queries';
+import { useKnockdown } from './knockdown';
 import { attackTarget, beginAttack } from './skills';
 import { autoLaunch, useVehicleGenerator } from './vehicles';
 
@@ -39,6 +40,10 @@ export function resolveSpecial(state: GameState, p: Player, events: SimEvent[]):
   if (p.streakRewards.vehicleGenerator !== null && useVehicleGenerator(state, p, events)) {
     events.push({ type: 'specialUsed', playerId: p.id, action: 'vehicleGenerator' });
     return 'vehicleGenerator';
+  }
+  if (p.streakRewards.knockdown && useKnockdown(state, p, events)) {
+    events.push({ type: 'specialUsed', playerId: p.id, action: 'globalKnockdown' });
+    return 'globalKnockdown';
   }
   if (p.hasVoucher && autoLaunch(state, p, events)) {
     events.push({ type: 'specialUsed', playerId: p.id, action: 'vehicle' });

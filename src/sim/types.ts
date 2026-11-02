@@ -159,6 +159,17 @@ export interface PendingAttack {
   resolveTick: number;
 }
 
+/** A GLOBAL KNOCKDOWN object in the air: it lands on `targetId`'s head at `landTick` (decision GK1). */
+export interface PendingKnockdown {
+  id: number;
+  ownerId: number;
+  targetId: number;
+  /** Where it is thrown from: a tile just outside the board edge nearest the target (the building side). */
+  fromX: number;
+  fromY: number;
+  landTick: number;
+}
+
 export interface Player {
   id: number;
   slot: number;
@@ -226,6 +237,10 @@ export interface Player {
   dazeImmuneUntil: number;
   /** First tick this fighter may START another melee attack (their global recovery after the last one). */
   skillReadyTick: number;
+  /** Lying on the ground from a GLOBAL KNOCKDOWN until this tick (0 = not knocked down); `dazedUntil` holds them too. */
+  knockedUntil: number;
+  /** After getting up from a knockdown nobody can knock this fighter down again before this tick. */
+  knockdownImmuneUntil: number;
   /** Kill-streak rewards held (cleared by a death). */
   streakRewards: StreakRewards;
   /** A melee attack in its startup: resolves at `resolveTick` (decision CB1); null when idle. */
@@ -477,6 +492,8 @@ export interface GameState {
    * while its tile is a soft block.
    */
   supplies: number[];
+  /** GLOBAL KNOCKDOWN objects in the air (decision GK1). */
+  knockdowns: PendingKnockdown[];
   /** Live floor traps (tile index -> kind): early traps plus the endgame waves that have gone live. */
   floorHazards: Record<number, 'pothole' | 'oil'>;
   /** The mandatory endgame trap waves (always present in a standard match). */
@@ -761,6 +778,12 @@ export type SimEvent =
   | { type: 'streakRewardEnded'; playerId: number; reward: StreakRewardKind }
   /** A death cleared rewards that were still unused. */
   | { type: 'streakRewardsLost'; playerId: number; rewards: StreakRewardKind[] }
+  /** GLOBAL KNOCKDOWN: an object is thrown from the building side at one rival (one event per rival). */
+  | { type: 'knockdownThrown'; ownerId: number; targetId: number; fromX: number; fromY: number; landTick: number }
+  /** The object hit the rival's head: they fall and lie there until `until`. */
+  | { type: 'knockdownHit'; ownerId: number; playerId: number; x: number; y: number; until: number }
+  /** The rival got up. */
+  | { type: 'knockdownEnded'; playerId: number }
   /** A melee press began its startup (the telegraph: a raised fist, a braced shoulder ...). */
   | { type: 'attackStarted'; playerId: number; skill: SkillKind; targetId: number; resolveTick: number }
   /** A melee attack finished its startup: it connected (`targetId`) or whiffed (null). */

@@ -86,6 +86,8 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     dazedUntil: 0,
     dazeImmuneUntil: 0,
     skillReadyTick: 0,
+    knockedUntil: 0,
+    knockdownImmuneUntil: 0,
     streakRewards: freshStreakRewards(),
     attack: null,
     meleeLock: {},
@@ -129,6 +131,7 @@ export function createGame(options: GameOptions): GameState {
     tiles: new Array<number>(width * height).fill(Tile.Empty),
     hidden: {},
     supplies: [],
+    knockdowns: [],
     floorHazards: {},
     endgameTraps: { waves: [], liveAt: [], warned: 0, live: 0, warnings: [] },
     players: options.players.map((setup, id) =>

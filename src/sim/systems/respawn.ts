@@ -185,6 +185,7 @@ export function respawn(state: GameState, p: Player, x: number, y: number): void
   p.entryUntil = null;
   p.carrying = null;
   p.attack = null;
+  p.knockedUntil = 0;
   p.skillReadyTick = 0;
   p.meleeLock = {};
   clearStreakRewards(p);
