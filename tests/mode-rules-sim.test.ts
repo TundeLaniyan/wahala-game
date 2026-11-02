@@ -7,10 +7,10 @@ import { describe, expect, it } from 'vitest';
 import { matchRules } from '../src/app/names';
 import { DEFAULT_GAME_SETTINGS } from '../src/app/settings';
 import type { GameSettings } from '../src/app/settings';
-import { CITY_RUMBLE_ID, createGame, teamStandings, tick } from '../src/sim';
+import { createGame, teamStandings, tick } from '../src/sim';
 import type { GameState, SimEvent } from '../src/sim';
 import { Tile } from '../src/sim/types';
-import { addGenerator, eventsOf, run } from './helpers';
+import { addGenerator, eventsOf, run, RUMBLE_FIXTURE } from './helpers';
 
 const settings = (
   rumbleMode: GameSettings['rumbleMode'],
@@ -19,7 +19,7 @@ const settings = (
 ): GameSettings => ({
   ...DEFAULT_GAME_SETTINGS,
   play: 'rumble',
-  rumbleArenaId: CITY_RUMBLE_ID,
+  rumbleArenaId: RUMBLE_FIXTURE,
   rumbleMode,
   rumbleMinutes,
   friendlyFire,
@@ -34,7 +34,7 @@ function match(
 ): GameState {
   const s = createGame({
     seed: 11,
-    arenaId: CITY_RUMBLE_ID,
+    arenaId: RUMBLE_FIXTURE,
     players: Array.from({ length: n }, (_, i) => ({
       name: `P${i}`,
       characterId: 'streetBaller',
@@ -74,8 +74,8 @@ function playToEnd(s: GameState, max = 20000): SimEvent[] {
 /** Open core tiles (never closed by the city) spaced out, for no-respawn timeouts played with the closing city on. */
 function coreSpots(s: GameState, n: number): { x: number; y: number }[] {
   const core = s.config.crush.keepCore!;
-  const x0 = Math.floor((s.width - core.w) / 2);
-  const y0 = Math.floor((s.height - core.h) / 2);
+  const x0 = core.x0 ?? Math.floor((s.width - core.w) / 2);
+  const y0 = core.y0 ?? Math.floor((s.height - core.h) / 2);
   const spots: { x: number; y: number }[] = [];
   for (let y = y0; y < y0 + core.h; y++)
     for (let x = x0; x < x0 + core.w; x++) {

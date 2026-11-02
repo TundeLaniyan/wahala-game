@@ -278,17 +278,6 @@
         "start": "pixabay_540950",
         "signature": "pixabay_540950"
       },
-      "cityRumble": {
-        "tracks": [
-          "pixabay_491432",
-          "pixabay_439622",
-          "pixabay_569473",
-          "pixabay_540950",
-          "pixabay_504898"
-        ],
-        "start": "pixabay_491432",
-        "signature": null
-      },
       "rumbleOshodi": {
         "tracks": [
           "pixabay_601035"
@@ -310,14 +299,7 @@
         "start": "pixabay_515507",
         "signature": "pixabay_515507"
       },
-      "rumbleApapa": {
-        "tracks": [
-          "pixabay_455231"
-        ],
-        "start": "pixabay_455231",
-        "signature": "pixabay_455231"
-      },
-      "rumbleLekkiNight": {
+      "rumbleLekki": {
         "tracks": [
           "pixabay_623364"
         ],

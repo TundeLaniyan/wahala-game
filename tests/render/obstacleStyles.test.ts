@@ -28,11 +28,11 @@ const TEN = [
   'surulerePowerYard',
   'yabaAfterDark',
   'thirdMainland',
-  'cityRumble',
+  'rumbleMushin',
 ];
 
 describe('obstacle style registry (presentation only)', () => {
-  it('has an entry for all ten arenas and every playable arena', () => {
+  it('has an entry for the nine standard arenas, a researched community and every playable arena', () => {
     for (const id of [...TEN, ...Object.keys(ARENAS)]) {
       const s = OBSTACLE_STYLES[id];
       expect(s, id).toBeDefined();

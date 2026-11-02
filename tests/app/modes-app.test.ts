@@ -53,7 +53,7 @@ function make() {
 const rumble = (p: Partial<GameSettings>): GameSettings => ({
   ...DEFAULT_GAME_SETTINGS,
   play: 'rumble',
-  rumbleArenaId: 'cityRumble',
+  rumbleArenaId: 'rumbleLagosIsland',
   rumbleCompetitors: 8,
   ...p,
 });
@@ -283,12 +283,12 @@ describe('menu summary line', () => {
       setupSummary(
         rumble({ rumbleMode: 'team', rumbleCompetitors: 16, rumbleMinutes: 5, friendlyFire: true }),
       ),
-    ).toBe('Team Deathmatch · 8 v 8 · 5 min · friendly fire · City Rumble · Rookie bots');
+    ).toBe('Team Deathmatch · 8 v 8 · 5 min · friendly fire · Lagos Island · Rookie bots');
     expect(
       setupSummary(
         rumble({ rumbleMode: 'survival', rumbleCompetitors: 32, rumbleMixed: true, difficulty: 'expert' }),
       ),
-    ).toBe('Last Player Standing · 32 fighters · City Rumble · Expert bots (mixed)');
+    ).toBe('Last Player Standing · 32 fighters · Lagos Island · Expert bots (mixed)');
     expect(
       setupSummary({ ...classic, competitors: 3, botDifficulties: ['rookie', 'expert', 'casual'] }),
     ).toBe('Classic Battle · 3 players · Danfo Bus Park · Rookie-Expert bots');

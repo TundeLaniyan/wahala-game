@@ -35,14 +35,14 @@ test('the Rumble stage picker shows exactly one Oshodi: the researched one; the 
   await toRumbleSetup(page, 'survival');
   // the stage cards (the picker container shares the prefix but is not selectable: cards carry aria-pressed)
   const cards = page.locator('[data-testid^="rumble-stage-"][aria-pressed]');
-  await expect(cards).toHaveCount(6); // Oshodi, Lagos Island, Ojuelegba, Apapa, Lekki Nightworks, City Rumble
+  await expect(cards).toHaveCount(7); // Ojuelegba, Oshodi, Mushin, Fadeyi, Lagos Island, Lekki, Ebute-Metta
   const oshodi = cards.filter({ hasText: /oshodi/i });
   await expect(oshodi).toHaveCount(1);
   await expect(oshodi).toHaveAttribute('data-testid', 'rumble-stage-rumbleOshodi');
   await expect(oshodi).toContainText('Oshodi Transport Metropolis');
   await expect(page.getByText('Rush Hour')).toHaveCount(0);
   await expect(page.getByTestId('rumble-stage-rumbleOshodiMetro')).toHaveCount(0);
-  // the default (first) stage is the researched Oshodi, as it was for the old one
+  // the saved default stage is still the researched Oshodi, as it was for the old one
   await expect(page.getByTestId('rumble-stage-rumbleOshodi')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('setup-arena')).toContainText('Oshodi Transport Metropolis');
   expect(errors).toEqual([]);

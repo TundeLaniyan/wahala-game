@@ -18,7 +18,6 @@ export {
 } from './grid';
 export {
   ARENAS,
-  CITY_RUMBLE_ID,
   DEFAULT_ARENA_ID,
   EXPERIMENTAL_ARENA_IDS,
   MOBILE_TEST_ARENA_ID,
@@ -30,6 +29,7 @@ export type {
   ArenaDef,
   ArenaInfo,
   ArenaKind,
+  CoverRect,
   DistrictDef,
   DistrictLink,
   HazardSchedule,

@@ -451,3 +451,13 @@ Decisions UX1-UX6 and PF1-PF10 in `DECISIONS.md`; reports `docs/STITCH_UI.md` (f
 ## Touchscreen diagonal corner movement (branch `claude/mobile-diagonal-corner-input-v1`, decision MV3)
 
 A diagonal touch thumb is planned as two whole cardinal moves (vertical first, reverse order as fallback, nothing partial, nothing when neither order is valid). Keyboard, gamepad and Assisted movement Off are unchanged. Tests: `tests/mobile-diagonal-corner.test.ts` (priority and fallback for all four diagonals, blocked, cardinal taps, keyboard / gamepad / Off, held repeat, wall / crate / one-tile corridor corners), `tests/input-assist.test.ts` (the diagonal flick now completes its route).
+
+
+## City Rumble: seven researched arenas, map-only (branch `claude/wahala-city-rumble-map-only-v1`, from `8ebf3f4`; decisions CR1-CR8; `docs/CITY_RUMBLE_RESEARCHED_ARENAS.md`)
+
+| Area | State |
+| --- | --- |
+| Rumble set | Done: exactly seven arenas (Ojuelegba, Oshodi kept at 63 x 47, and Mushin, Fadeyi, Lagos Island, Lekki, Ebute-Metta from the six approved researched areas, each once). The generic City Rumble, Apapa, old Lagos Island and old Lekki Night maps are removed from sim, render, menu, audio data, previews and tests. The nine standard arenas are untouched. `tests/rumble-researched.test.ts`, `tests/rumble-stages.test.ts`. |
+| Scope | Map-only: no vehicle, input, combat or UX rule is touched; the vehicle-generator work lives on its own branch. |
+| Evidence | Done: 49-frame pack in `docs/screenshots/city-rumble-researched-arenas/` (7 per arena); performance tables in the arena doc (software WebGL: draw calls / triangles exact, frame times unusable). |
+| Not done | Founder-assigned music / voices for the new arenas; real-device performance; vehicle approach / detonation frames (to be re-shot with the vehicle branch). |

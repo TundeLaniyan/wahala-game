@@ -127,3 +127,6 @@ export const flameKeys = (state: GameState): string[] =>
   [...new Set(state.flames.map((f) => `${f.x},${f.y}`))].sort();
 
 export const keys = (...pairs: [number, number][]): string[] => pairs.map(([x, y]) => `${x},${y}`).sort();
+
+/** The City Rumble arena the generic ruleset / camera / bot fixtures play on (any researched Rumble community works; this one is open and large). */
+export const RUMBLE_FIXTURE = 'rumbleLagosIsland';

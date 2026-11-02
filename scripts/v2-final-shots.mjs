@@ -80,7 +80,7 @@ await session(
     await shot(p, 'phone-844x390-team-rumble-ojuelegba');
   },
 );
-for (const arena of ['rumbleApapa', 'rumbleLekkiNight', 'rumbleLagosIsland']) {
+for (const arena of ['rumbleMushin', 'rumbleLekki', 'rumbleLagosIsland']) {
   await session(
     DESK,
     { play: 'rumble', rumbleArenaId: arena, rumbleMode: 'deathmatch', rumbleCompetitors: 16 },

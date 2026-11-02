@@ -41,8 +41,8 @@ function push(s: GameState, e: Pick<StageEvent, 'kind' | 'style' | 'tiles'> & Pa
 }
 
 describe('V2 hazard presentation', () => {
-  it('Apapa sweeps are container trucks: named TRUCK, never a Danfo or Keke for the voices', () => {
-    expect(getArena('rumbleApapa').stageHazards.some((h) => h.kind === 'sweep' && h.style === 'truck')).toBe(
+  it('delivery-truck sweeps (Mushin, Ebute-Metta) are named TRUCK, never a Danfo or Keke for the voices', () => {
+    expect(getArena('rumbleMushin').stageHazards.some((h) => h.kind === 'sweep' && h.style === 'truck')).toBe(
       true,
     );
     for (let id = 0; id < 6; id++) {
@@ -50,7 +50,7 @@ describe('V2 hazard presentation', () => {
       expect(sweepVehicleKind('truck', id)).not.toBe('danfo');
       expect(sweepVehicleKind('truck', id)).not.toBe('keke');
     }
-    const s = stateOn('rumbleApapa');
+    const s = stateOn('rumbleMushin');
     const me = s.players[0]!;
     push(s, { kind: 'sweep', style: 'truck', tiles: [me.y * s.width + me.x] });
     expect(buildStageAlerts(s, 0)[0]!.text).toBe('TRUCK COMING - GET OFF THE LANE!');
@@ -67,7 +67,7 @@ describe('V2 hazard presentation', () => {
   });
 
   it('a container being lowered and goods falling name themselves to whoever stands under them', () => {
-    const s = stateOn('rumbleApapa');
+    const s = stateOn('rumbleMushin');
     const me = s.players[0]!;
     const here = me.y * s.width + me.x;
     push(s, { kind: 'strike', style: 'cargo', tiles: [here, here + 1] });

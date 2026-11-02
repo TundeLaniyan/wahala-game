@@ -119,7 +119,7 @@ for (const phone of PHONES) {
 if (!only || only.includes('rumble')) {
   const phone = PHONES[3];
   const { ctx, page, errors } = await open(phone, {
-    arenaId: 'cityRumble',
+    arenaId: 'rumbleLagosIsland',
     rumbleCompetitors: 16,
     touchControls: 'on',
   });

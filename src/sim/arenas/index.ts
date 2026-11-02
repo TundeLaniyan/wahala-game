@@ -1,13 +1,14 @@
 import { AJEGUNLE_BACKSTREETS } from './ajegunleBackstreets';
 import { BALOGUN_MARKET } from './balogunMarket';
-import { CITY_RUMBLE } from './cityRumble';
 import { DANFO_BUS_PARK } from './danfoBusPark';
 import { LAGOON_JETTY } from './lagoonJetty';
 import { LEKKI_ROADWORKS } from './lekkiRoadworks';
 import { MOBILE_TEST_13X9, MOBILE_TEST_15X9 } from './mobileTest';
-import { RUMBLE_APAPA } from './rumbleApapa';
 import { RUMBLE_LAGOS_ISLAND } from './rumbleLagosIsland';
-import { RUMBLE_LEKKI_NIGHT } from './rumbleLekkiNight';
+import { RUMBLE_LEKKI } from './rumbleLekki';
+import { RUMBLE_EBUTE_METTA } from './rumbleEbuteMetta';
+import { RUMBLE_FADEYI } from './rumbleFadeyi';
+import { RUMBLE_MUSHIN } from './rumbleMushin';
 import { RUMBLE_OJUELEGBA } from './rumbleOjuelegba';
 import { RUMBLE_OSHODI } from './rumbleOshodi';
 import { OSHODI_INTERCHANGE } from './oshodiInterchange';
@@ -21,14 +22,16 @@ export type {
   ArenaInfo,
   ArenaKind,
   DistrictDef,
+  CoverRect,
   DistrictLink,
   HazardSchedule,
   StageHazardDef,
 } from './types';
 
 /**
- * Every arena, in menu order: the nine standard arenas, the City Rumble stages (the five V2 stages; the
- * researched Oshodi is the first), then the experimental test arenas.
+ * Every arena, in menu order: the nine standard arenas, the seven City Rumble communities (Ojuelegba, the reference,
+ * then the six researched areas of the Canonical Lagos Map Build Bible v2: Oshodi, Mushin, Fadeyi, Lagos Island,
+ * Lekki, Ebute-Metta), then the experimental test arenas.
  */
 export const ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
   [
@@ -41,12 +44,13 @@ export const ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
     SURULERE_POWER_YARD,
     YABA_AFTER_DARK,
     THIRD_MAINLAND,
-    RUMBLE_OSHODI,
-    RUMBLE_LAGOS_ISLAND,
     RUMBLE_OJUELEGBA,
-    RUMBLE_APAPA,
-    RUMBLE_LEKKI_NIGHT,
-    CITY_RUMBLE,
+    RUMBLE_OSHODI,
+    RUMBLE_MUSHIN,
+    RUMBLE_FADEYI,
+    RUMBLE_LAGOS_ISLAND,
+    RUMBLE_LEKKI,
+    RUMBLE_EBUTE_METTA,
     MOBILE_TEST_13X9,
     MOBILE_TEST_15X9,
   ].map((a) => [a.id, a]),
@@ -57,10 +61,7 @@ export const STANDARD_ARENA_IDS: readonly string[] = Object.values(ARENAS)
   .filter((a) => a.kind === 'standard' && !a.experimental)
   .map((a) => a.id);
 
-/**
- * The City Rumble stages in menu order: the five V2 Lagos locations first, then the original district
- * (`cityRumble`, kept for tests and as the classic Rumble board).
- */
+/** The seven City Rumble communities in menu order. */
 export const RUMBLE_ARENA_IDS: readonly string[] = Object.values(ARENAS)
   .filter((a) => a.kind === 'rumble')
   .map((a) => a.id);
@@ -71,7 +72,6 @@ export const EXPERIMENTAL_ARENA_IDS: readonly string[] = Object.values(ARENAS)
   .map((a) => a.id);
 export const MOBILE_TEST_ARENA_ID = MOBILE_TEST_13X9.id;
 
-export const CITY_RUMBLE_ID = CITY_RUMBLE.id;
 export const DEFAULT_ARENA_ID = DANFO_BUS_PARK.id;
 
 export function getArena(id: string): ArenaDef {

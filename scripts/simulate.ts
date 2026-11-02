@@ -5,10 +5,10 @@
  *   npm run simulate -- --matches 200 --players 4
  *   npm run simulate -- --duel expert standard --matches 100 --players 2 --seed 1000
  *   npm run simulate -- --matches 50 --seed 1000 --mode classic --crowd
- *   npm run simulate -- --arena cityRumble --players 32 --matches 10 --difficulty standard
+ *   npm run simulate -- --arena rumbleLagosIsland --players 32 --matches 10 --difficulty standard
  *   npm run simulate -- --arena mobileTest13x9 --players 4 --matches 50
  *   npm run simulate -- --arena rumbleOshodi --game survival --players 32 --matches 2 --verbose
- *   npm run simulate -- --arena cityRumble --game team --friendly-fire --minutes 1 --players 16 --matches 2
+ *   npm run simulate -- --arena rumbleLagosIsland --game team --friendly-fire --minutes 1 --players 16 --matches 2
  *
  * Options
  *   --matches N        number of matches (default 100)

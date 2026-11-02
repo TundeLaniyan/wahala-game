@@ -62,7 +62,7 @@ function main(): void {
     const seed = o.seed + m;
     const state = createGame({
       seed,
-      arenaId: 'cityRumble',
+      arenaId: 'rumbleLagosIsland',
       settings: { game: o.game },
       players: Array.from({ length: o.players }, (_, i) => ({
         name: `b${i}`,
