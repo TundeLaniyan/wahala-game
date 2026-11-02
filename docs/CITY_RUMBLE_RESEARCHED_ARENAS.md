@@ -170,7 +170,7 @@ repeat runs vary by about 40 % on this shared machine.
 | `eslint .` | pass |
 | Prettier | every file this branch added or changed is formatted except 7 that were already non-conformant on the base branch (`public/audio/music/manifest.json`, `scripts/mobile-shots.mjs`, `scripts/rumble-economy.ts`, `scripts/simulate.ts`, `tests/economy-ai.test.ts`, `tests/spectators.test.ts`, `tests/ui/progressionBadge.test.ts`); 57 files repo-wide are non-conformant, all pre-existing, none touched by formatting here |
 | `npm run build` | pass |
-| Full Vitest (`vitest run`) | 121 files, 1933 passed, 7 skipped (the 7 are the documented `describe.skip` Oshodi-only timing cases in `tests/rumble-stages.test.ts`), 0 failed |
+| Full Vitest (`vitest run`) | 121 files, 1933 passed, 7 skipped (the 7 are the per-arena "4-fold mirror symmetric" cases in `tests/rumble-stages.test.ts`, which the suite skips for every non-mirrored Rumble arena; all seven are non-mirrored by design), 0 failed |
 | Rumble arena suites | `tests/rumble-researched.test.ts` 64, `tests/rumble-stages.test.ts` 108 (+7 skipped), `tests/arenas.test.ts` (all pass) |
 | Vehicle-generator suite | `tests/vehicle-generator.test.ts` 63 passed on all seven Rumble arenas (route, carry, trigger, owner safety, fuse, cleanup, determinism, character-to-vehicle) |
 | Full Playwright, desktop + phone, `--retries=0`, 2 workers, software WebGL | 262 tests: **189 passed, 0 failed, 0 flaky, 73 skipped** (desktop 86 passed / 45 skipped, phone 103 passed / 28 skipped). Every skip is an in-source project guard (`test.skip(isMobile ...)`, "phone only", "one viewport is enough", "desktop project only", touch / keyboard / gamepad variants); there is no `fixme` and no unconditional skip. Wall time 1.4 h. |
@@ -202,7 +202,7 @@ append a section; resolved by keeping both), and after that `tsc` and the three 
 
 ## 7. What changed (files)
 
-83 added / 58 modified / 23 deleted files against the vehicle-generator branch: `src/sim/arenas/` (painter, community assembler, five
+97 added (70 of them pack frames) / 58 modified / 23 deleted files against the vehicle-generator branch: `src/sim/arenas/` (painter, community assembler, five
 arena modules, registry; deleted `cityRumble.ts`, `rumbleApapa.ts`, `rumbleLekkiNight.ts`), `src/render/arenas/` (community kit,
 families, floor, env, looks, set kit, five art modules, `newArenas.ts`, `obstacleStyles.ts`), `src/render/env`, `src/ui/menu`
 (arena info, mode screen), audio manifests, 8 menu previews, tests (new `tests/rumble-researched.test.ts`,
