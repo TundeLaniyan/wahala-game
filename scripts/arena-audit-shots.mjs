@@ -45,7 +45,7 @@ async function shot(id, mode) {
   const [q, tod] = mode.split('-');
   const phone = tod === 'phone';
   const viewport = phone ? { width: 844, height: 390 } : { width: 1280, height: 720 };
-  const rumble = RUMBLE.includes(id);
+  const rumble = RUMBLE.includes(id) || id.startsWith('rumble');
   const context = await browser.newContext(
     phone ? { viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : { viewport },
   );

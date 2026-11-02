@@ -7,7 +7,10 @@ import { LEKKI_ROADWORKS } from './lekkiRoadworks';
 import { MOBILE_TEST_13X9, MOBILE_TEST_15X9 } from './mobileTest';
 import { RUMBLE_APAPA } from './rumbleApapa';
 import { RUMBLE_LAGOS_ISLAND } from './rumbleLagosIsland';
-import { RUMBLE_LEKKI_NIGHT } from './rumbleLekkiNight';
+import { RUMBLE_LEKKI } from './rumbleLekki';
+import { RUMBLE_EBUTE_METTA } from './rumbleEbuteMetta';
+import { RUMBLE_FADEYI } from './rumbleFadeyi';
+import { RUMBLE_MUSHIN } from './rumbleMushin';
 import { RUMBLE_OJUELEGBA } from './rumbleOjuelegba';
 import { RUMBLE_OSHODI } from './rumbleOshodi';
 import { OSHODI_INTERCHANGE } from './oshodiInterchange';
@@ -46,8 +49,11 @@ export const ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
     RUMBLE_LAGOS_ISLAND,
     RUMBLE_OJUELEGBA,
     RUMBLE_APAPA,
-    RUMBLE_LEKKI_NIGHT,
     CITY_RUMBLE,
+    RUMBLE_MUSHIN,
+    RUMBLE_FADEYI,
+    RUMBLE_LEKKI,
+    RUMBLE_EBUTE_METTA,
     MOBILE_TEST_13X9,
     MOBILE_TEST_15X9,
   ].map((a) => [a.id, a]),

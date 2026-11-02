@@ -20,9 +20,12 @@ const MOOD: Record<string, [string, string]> = {
   rumbleLagosIsland: ['#d89a4a', '#4a2414'],
   rumbleOjuelegba: ['#8a7a66', '#1e1a18'],
   rumbleApapa: ['#6a8aa0', '#24323c'],
-  rumbleLekkiNight: ['#2a3a52', '#07090d'],
+  rumbleLekki: ['#8ab0c4', '#2a3a4a'],
+  rumbleEbuteMetta: ['#b8987a', '#2a2018'],
   rumbleOshodi: ['#9fb0b8', '#1a2430'],
   cityRumble: ['#ff6a2a', '#1a0f08'],
+  rumbleMushin: ['#c98a4a', '#3a2418'],
+  rumbleFadeyi: ['#9aa4ac', '#2a2e34'],
 };
 
 /** Base-path-safe URL of an arena's preview picture (GitHub Pages serves the game under /wahala-game/). */

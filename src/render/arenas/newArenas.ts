@@ -8,6 +8,38 @@ import type { ArenaSet } from './common';
 import type { FloorDrawer } from './floorKit';
 import { OJUELEGBA_ENV } from '../env/ojuelegbaEnv';
 import { oshodiMetroEnv } from '../env/oshodiMetroEnv';
+import {
+  RUMBLE_EBUTE_METTA_COVER,
+  RUMBLE_EBUTE_METTA_FLOOR,
+  RUMBLE_EBUTE_METTA_LOOK,
+  RUMBLE_EBUTE_METTA_NIGHT_LOOK,
+  RUMBLE_EBUTE_METTA_SET,
+  ebuteMettaEnv,
+} from './ebuteMettaArt';
+import {
+  RUMBLE_FADEYI_COVER,
+  RUMBLE_FADEYI_FLOOR,
+  RUMBLE_FADEYI_LOOK,
+  RUMBLE_FADEYI_NIGHT_LOOK,
+  RUMBLE_FADEYI_SET,
+  fadeyiEnv,
+} from './fadeyiArt';
+import {
+  RUMBLE_LEKKI_COVER,
+  RUMBLE_LEKKI_FLOOR,
+  RUMBLE_LEKKI_LOOK,
+  RUMBLE_LEKKI_NIGHT_LOOK,
+  RUMBLE_LEKKI_SET,
+  lekkiEnv,
+} from './lekkiArt';
+import {
+  RUMBLE_MUSHIN_COVER,
+  RUMBLE_MUSHIN_FLOOR,
+  RUMBLE_MUSHIN_LOOK,
+  RUMBLE_MUSHIN_NIGHT_LOOK,
+  RUMBLE_MUSHIN_SET,
+  mushinEnv,
+} from './mushinArt';
 import { timeOfDay } from '../timeOfDay';
 import type { StageEnvironmentSource } from '../env/types';
 import { AJEGUNLE_FLOOR, AJEGUNLE_LOOK, AJEGUNLE_SET } from './ajegunle';
@@ -25,15 +57,13 @@ import { POWER_YARD_FLOOR, POWER_YARD_LOOK, POWER_YARD_SET } from './powerYard';
 import { RUMBLE_FLOOR, RUMBLE_LOOK, RUMBLE_SET } from './rumble';
 import { RUMBLE_APAPA_FLOOR, RUMBLE_APAPA_LOOK, RUMBLE_APAPA_SET } from './rumbleApapaArt';
 import {
+  RUMBLE_LAGOS_ISLAND_COVER,
   RUMBLE_LAGOS_ISLAND_FLOOR,
   RUMBLE_LAGOS_ISLAND_LOOK,
+  RUMBLE_LAGOS_ISLAND_NIGHT_LOOK,
   RUMBLE_LAGOS_ISLAND_SET,
-} from './rumbleLagosIslandArt';
-import {
-  RUMBLE_LEKKI_NIGHT_FLOOR,
-  RUMBLE_LEKKI_NIGHT_LOOK,
-  RUMBLE_LEKKI_NIGHT_SET,
-} from './rumbleLekkiNightArt';
+  lagosIslandEnv,
+} from './lagosIslandArt';
 import {
   RUMBLE_OJUELEGBA_COVER,
   RUMBLE_OJUELEGBA_FLOOR,
@@ -69,8 +99,11 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
     // City Rumble V2 stages
     rumbleLagosIsland: {
       look: RUMBLE_LAGOS_ISLAND_LOOK,
+      nightLook: RUMBLE_LAGOS_ISLAND_NIGHT_LOOK,
       set: RUMBLE_LAGOS_ISLAND_SET,
       floor: RUMBLE_LAGOS_ISLAND_FLOOR,
+      cover: RUMBLE_LAGOS_ISLAND_COVER,
+      env: lagosIslandEnv,
     },
     rumbleOjuelegba: {
       look: RUMBLE_OJUELEGBA_LOOK,
@@ -80,11 +113,6 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
       env: OJUELEGBA_ENV,
     },
     rumbleApapa: { look: RUMBLE_APAPA_LOOK, set: RUMBLE_APAPA_SET, floor: RUMBLE_APAPA_FLOOR },
-    rumbleLekkiNight: {
-      look: RUMBLE_LEKKI_NIGHT_LOOK,
-      set: RUMBLE_LEKKI_NIGHT_SET,
-      floor: RUMBLE_LEKKI_NIGHT_FLOOR,
-    },
     // Lagos arenas, build 1: Oshodi Transport Metropolis (day by default, a night look behind ?tod=night)
     rumbleOshodi: {
       look: OSHODI_METRO_LOOK,
@@ -93,6 +121,39 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
       floor: OSHODI_METRO_FLOOR,
       cover: OSHODI_METRO_COVER,
       env: (board) => oshodiMetroEnv(board, timeOfDay()),
+    },
+    // researched communities (Canonical Lagos Map Build Bible v2): day by default, a night look behind ?tod=night
+    rumbleMushin: {
+      look: RUMBLE_MUSHIN_LOOK,
+      nightLook: RUMBLE_MUSHIN_NIGHT_LOOK,
+      set: RUMBLE_MUSHIN_SET,
+      floor: RUMBLE_MUSHIN_FLOOR,
+      cover: RUMBLE_MUSHIN_COVER,
+      env: mushinEnv,
+    },
+    rumbleFadeyi: {
+      look: RUMBLE_FADEYI_LOOK,
+      nightLook: RUMBLE_FADEYI_NIGHT_LOOK,
+      set: RUMBLE_FADEYI_SET,
+      floor: RUMBLE_FADEYI_FLOOR,
+      cover: RUMBLE_FADEYI_COVER,
+      env: fadeyiEnv,
+    },
+    rumbleLekki: {
+      look: RUMBLE_LEKKI_LOOK,
+      nightLook: RUMBLE_LEKKI_NIGHT_LOOK,
+      set: RUMBLE_LEKKI_SET,
+      floor: RUMBLE_LEKKI_FLOOR,
+      cover: RUMBLE_LEKKI_COVER,
+      env: lekkiEnv,
+    },
+    rumbleEbuteMetta: {
+      look: RUMBLE_EBUTE_METTA_LOOK,
+      nightLook: RUMBLE_EBUTE_METTA_NIGHT_LOOK,
+      set: RUMBLE_EBUTE_METTA_SET,
+      floor: RUMBLE_EBUTE_METTA_FLOOR,
+      cover: RUMBLE_EBUTE_METTA_COVER,
+      env: ebuteMettaEnv,
     },
     // V2 experimental: the Mobile Test Arena wears Danfo Bus Park's presentation
     mobileTest13x9: mobileTestArt(),

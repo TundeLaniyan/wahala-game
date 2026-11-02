@@ -113,6 +113,24 @@ function oshodiMetroSoft(x: number, y: number): string | undefined {
   return family ? family[h % family.length] : undefined;
 }
 
+/**
+ * The researched community arenas (Mushin, Fadeyi, Lagos Island, Lekki, Ebute-Metta): what a crate is in each district
+ * (a handful of breakable families per arena), read from the arena's own districts; authored barriers ('x') are
+ * tyre stacks and road barricades. Presentation only.
+ */
+function communitySoft(arenaId: string, clutter: Readonly<Record<string, readonly string[]>>) {
+  return (x: number, y: number): string | undefined => {
+    const a = getArena(arenaId);
+    const h = tileHash(x, y);
+    if (a.layout[y]?.[x] === 'x') return h % 2 ? 'prop_soft_barrier' : 'prop_soft_tyres';
+    const d = a.districts?.find((z) =>
+      z.rects.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1),
+    );
+    const family = d ? clutter[d.id] : undefined;
+    return family ? family[h % family.length] : undefined;
+  };
+}
+
 /** Bus-park precast pillars and crates/tyres: the shared fallback set (always bundled). */
 export const BASE_PILLARS = ['prop_pillar_a', 'prop_pillar_b', 'prop_pillar_c'] as const;
 const BASE_SOFT: Record<string, number> = {
@@ -213,14 +231,17 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
   }),
   // ---- City Rumble V2 stages
   rumbleLagosIsland: style({
-    note: 'plastered lock-up stall piers along the aisles, poster-covered precast posts in the plazas; textile bales (sacks), cartons, kegs',
-    pillars: ['prop_pillar_market'],
-    pillarZones: zones4(41, 31, [
-      { x0: 7, y0: 8, x1: 7, y1: 8, pillars: ['prop_pillar_a'] },
-      { x0: 17, y0: 13, x1: 17, y1: 13, pillars: ['prop_pillar_c'] },
-      { x0: 0, y0: 1, x1: 20, y1: 1, pillars: ['prop_pillar_wallstub', 'prop_pillar_b'] },
-    ]),
-    soft: { prop_soft_sacks: 6, prop_soft_cartons: 4, prop_soft_kegs: 2, prop_soft_crate_b: 1 },
+    note: 'permanent cover is drawn whole by the board cover (textile stalls, shopfronts, office towers, heritage blocks, the park wall, trees, the harbour sheds: lagosIslandArt.ts); crush blocks are wall stubs and precast; per district clutter: bales (sacks) and cartons in Balogun, crates and cartons at Idumota, cartons and kegs on Broad Street, crates in the civic square, kegs and tyres in the park, fish crates and drums on the Marina; barriers are tyre stacks and barricades',
+    pillars: ['prop_pillar_wallstub', 'prop_pillar_c', 'prop_pillar_a'],
+    soft: { prop_soft_sacks: 4, prop_soft_cartons: 4, prop_soft_crates: 2, prop_soft_kegs: 2 },
+    softFor: communitySoft('rumbleLagosIsland', {
+      balogun: ['prop_soft_sacks', 'prop_soft_cartons', 'prop_soft_sacks', 'prop_soft_crates'],
+      idumota: ['prop_soft_crates', 'prop_soft_cartons', 'prop_soft_tyres', 'prop_soft_cartons'],
+      broadStreet: ['prop_soft_cartons', 'prop_soft_kegs', 'prop_soft_cartons', 'prop_soft_crates'],
+      civicSquare: ['prop_soft_crates', 'prop_soft_cartons', 'prop_soft_crates', 'prop_soft_kegs'],
+      onikan: ['prop_soft_kegs', 'prop_soft_tyres', 'prop_soft_crates', 'prop_soft_kegs'],
+      marina: ['prop_soft_fishcrates', 'prop_soft_drums', 'prop_soft_fishcrates', 'prop_soft_crates'],
+    }),
   }),
   rumbleOjuelegba: style({
     note: 'permanent cover is drawn whole by the board cover (piers, Danfos, shops: ojuelegbaCover.ts); crush blocks are wall stubs and precast; per district clutter: tyres and barricades on the approach, cartons and kegs under the bridge, tyres and crates in the park, sacks and cartons in the shop lane, drums and cable drums in the service yard; barriers are tyre stacks and barricades',
@@ -246,6 +267,56 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
     },
     softFor: oshodiMetroSoft,
   }),
+  rumbleMushin: style({
+    note: 'permanent cover is drawn whole by the board cover (parts stalls, workshops, shopfronts, warehouses, timber yards, the food hall: community/families.ts, mushinArt.ts); crush blocks are wall stubs and precast; per district clutter: tyres and crates in Ladipo, cartons and crates in Ojuwoye, sacks in Daleko, crates and cartons at Idi-Oro, planks (crates) and drums in Timber Row, cartons and kegs in the courtyards; barriers are tyre stacks and barricades',
+    pillars: ['prop_pillar_wallstub', 'prop_pillar_c', 'prop_pillar_a'],
+    soft: {
+      prop_soft_tyres: 3,
+      prop_soft_cartons: 3,
+      prop_soft_crates: 3,
+      prop_soft_sacks: 2,
+      prop_soft_kegs: 1,
+    },
+    softFor: communitySoft('rumbleMushin', {
+      ladipo: ['prop_soft_tyres', 'prop_soft_crates', 'prop_soft_tyres', 'prop_soft_cartons'],
+      ojuwoye: ['prop_soft_cartons', 'prop_soft_crates', 'prop_soft_cartons', 'prop_soft_sacks'],
+      idiOro: ['prop_soft_crates', 'prop_soft_cartons', 'prop_soft_crates', 'prop_soft_kegs'],
+      daleko: ['prop_soft_sacks', 'prop_soft_sacks', 'prop_soft_crates', 'prop_soft_cartons'],
+      timberRow: ['prop_soft_crates', 'prop_soft_drums', 'prop_soft_crates', 'prop_soft_tyres'],
+      courtyards: ['prop_soft_cartons', 'prop_soft_kegs', 'prop_soft_cartons', 'prop_soft_crates'],
+    }),
+  }),
+  rumbleFadeyi: style({
+    note: 'permanent cover is drawn whole by the board cover (shop rows, workshops, houses, the BRT shelters, the median barriers, the bank frontage: fadeyiArt.ts); crush blocks are wall stubs and precast; per district clutter: cartons and crates on the shop pavements, barricades and tyres on the highway, kegs and crates in the neighbourhood, drums and tyres at the workshops; barriers are tyre stacks and barricades',
+    pillars: ['prop_pillar_jersey', 'prop_pillar_wallstub', 'prop_pillar_c'],
+    soft: { prop_soft_cartons: 3, prop_soft_crates: 3, prop_soft_barrier: 2, prop_soft_tyres: 2 },
+    softFor: communitySoft('rumbleFadeyi', {
+      shopfronts: ['prop_soft_cartons', 'prop_soft_crates', 'prop_soft_cartons', 'prop_soft_kegs'],
+      brtCentreline: ['prop_soft_barrier', 'prop_soft_tyres', 'prop_soft_barrier', 'prop_soft_crates'],
+      neighbourhood: ['prop_soft_kegs', 'prop_soft_cartons', 'prop_soft_crates', 'prop_soft_cartons'],
+      onipanu: ['prop_soft_crates', 'prop_soft_tyres', 'prop_soft_cartons', 'prop_soft_barrier'],
+      recreation: ['prop_soft_drums', 'prop_soft_tyres', 'prop_soft_crates', 'prop_soft_drums'],
+    }),
+  }),
+  rumbleEbuteMetta: style({
+    note: 'permanent cover is drawn whole by the board cover (the colonial terminus, the heritage house, the station hall, the rail portals, freight wagons, the Oyingbo arcade, timber stacks: ebuteMettaArt.ts); crush blocks are wall stubs and precast; per district clutter: crates and cartons at the terminus, barricades and cable drums at the station, crates and sacks at Oyingbo, cartons and kegs in the mainland streets, drums and cable drums in the rail yard, planks (crates) and tyres on the foreshore; barriers are tyre stacks and barricades',
+    pillars: ['prop_pillar_wallstub', 'prop_pillar_c', 'prop_pillar_a'],
+    soft: {
+      prop_soft_crates: 3,
+      prop_soft_cartons: 3,
+      prop_soft_cabledrum: 2,
+      prop_soft_sacks: 2,
+      prop_soft_tyres: 1,
+    },
+    softFor: communitySoft('rumbleEbuteMetta', {
+      heritage: ['prop_soft_crates', 'prop_soft_cartons', 'prop_soft_crates', 'prop_soft_kegs'],
+      station: ['prop_soft_barrier', 'prop_soft_cabledrum', 'prop_soft_cartons', 'prop_soft_barrier'],
+      oyingbo: ['prop_soft_crates', 'prop_soft_sacks', 'prop_soft_cartons', 'prop_soft_sacks'],
+      residential: ['prop_soft_cartons', 'prop_soft_kegs', 'prop_soft_cartons', 'prop_soft_crates'],
+      railYard: ['prop_soft_drums', 'prop_soft_cabledrum', 'prop_soft_crates', 'prop_soft_drums'],
+      foreshore: ['prop_soft_crates', 'prop_soft_tyres', 'prop_soft_crates', 'prop_soft_drums'],
+    }),
+  }),
   rumbleApapa: style({
     note: 'stacked shipping containers on yard pads, transit sheds of precast panels; drums, crates, cable drums',
     pillars: ['prop_pillar_container_a', 'prop_pillar_container_b'],
@@ -261,11 +332,24 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
     },
     pillarDebris: 'drums',
   }),
-  rumbleLekkiNight: style({
-    note: 'scaffold bays round the half-built frames; cast columns with rebar in the dig; barricades, cable drums, tyres',
-    pillars: ['prop_pillar_column'],
-    pillarZones: zones4(41, 31, [{ x0: 0, y0: 0, x1: 10, y1: 9, pillars: ['prop_pillar_scaffold'] }]),
-    soft: { prop_soft_barrier: 4, prop_soft_cabledrum: 3, prop_soft_tyres: 2, prop_soft_crates: 2 },
+  rumbleLekki: style({
+    note: 'permanent cover is drawn whole by the board cover (glass blocks, compound walls, villas, arts-market sheds, the site hoarding, palms, the fuel canopy: lekkiArt.ts); crush blocks are wall stubs and precast; per district clutter: kegs and cartons on the promenade, crates at Ikate, barricades and cable drums at the site, sacks and tyres on the coastal lanes, crates and cartons in the estates, tyres and drums on the expressway; barriers are tyre stacks and barricades',
+    pillars: ['prop_pillar_wallstub', 'prop_pillar_c', 'prop_pillar_a'],
+    soft: {
+      prop_soft_cartons: 3,
+      prop_soft_crates: 3,
+      prop_soft_kegs: 2,
+      prop_soft_barrier: 2,
+      prop_soft_tyres: 1,
+    },
+    softFor: communitySoft('rumbleLekki', {
+      promenade: ['prop_soft_kegs', 'prop_soft_cartons', 'prop_soft_kegs', 'prop_soft_crates'],
+      ikate: ['prop_soft_crates', 'prop_soft_cartons', 'prop_soft_crates', 'prop_soft_kegs'],
+      admiralty: ['prop_soft_barrier', 'prop_soft_cabledrum', 'prop_soft_crates', 'prop_soft_cartons'],
+      coastal: ['prop_soft_sacks', 'prop_soft_tyres', 'prop_soft_crates', 'prop_soft_sacks'],
+      estates: ['prop_soft_crates', 'prop_soft_cartons', 'prop_soft_crates', 'prop_soft_kegs'],
+      gateway: ['prop_soft_tyres', 'prop_soft_drums', 'prop_soft_barrier', 'prop_soft_crates'],
+    }),
   }),
 };
 
