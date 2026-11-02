@@ -405,6 +405,22 @@ const handlers: Handlers = {
     sfx(c, 'pickup_rare', pan, 1, 1 + Math.min(0.3, e.kills * 0.03));
     react(c, { kind: 'cheer', strength: 0.6, chance: 0.5, delay: 0.3 });
   },
+  // kill-streak rewards (decision SK1): the earned chime is the elimination reward's, a little higher
+  streakRewardEarned: (e, c) => {
+    const pan = panOf(c, playerX(c, e.playerId));
+    if (!isHuman(c, e.playerId)) return sfx(c, 'pickup_1', pan, 0.4, 1.15);
+    sfx(c, 'pickup_rare', pan, 1, 1.25);
+    react(c, { kind: 'cheer', strength: 0.7, chance: 0.6, delay: 0.3 });
+  },
+  streakRewardUsed: (e, c) => {
+    sfx(c, 'pickup_rare', panOf(c, playerX(c, e.playerId)), isHuman(c, e.playerId) ? 0.7 : 0.4, 0.8);
+  },
+  streakRewardEnded: (e, c) => {
+    if (isHuman(c, e.playerId)) sfx(c, 'pickup_curse', 0, 0.35, 1.4);
+  },
+  streakRewardsLost: (e, c) => {
+    if (isHuman(c, e.playerId)) sfx(c, 'pickup_curse', 0, 0.5, 0.9);
+  },
   playerRespawned: (e, c) => sfx(c, 'pickup_reveal', panOf(c, e.x), isHuman(c, e.playerId) ? 0.9 : 0.4),
   spectatorThrow: (e, c) => sfx(c, 'gen_throw', panOf(c, e.toX), 0.8),
 };

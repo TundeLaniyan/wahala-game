@@ -2,7 +2,7 @@
  * Central balance configuration. Every tunable number in the simulation lives here so playtest
  * tuning never touches rules code. All durations are in ticks; use `ticks(seconds)` to author them.
  */
-import type { CharacterId, Dir, PickupKind, SkillKind, VehicleKind } from './types';
+import type { CharacterId, Dir, PickupKind, SkillKind, StreakRewardKind, VehicleKind } from './types';
 
 /**
  * V2 elimination reward: a pickup kind, or `contact` = the eliminator's generator-contact ability
@@ -116,6 +116,11 @@ export interface GameConfig {
     slowFactor: number;
     minRouteTiles: number;
     minKekeLegTiles: number;
+    /**
+     * The public vehicles a voucher or a VEHICLE GENERATOR may be (decision VG1): any fighter may get any of them,
+     * the character no longer decides. An arena narrows it with its own config (an Okada only where it allows).
+     */
+    allowed: VehicleKind[];
     specs: Record<VehicleKind, VehicleSpec>;
     /**
      * City Rumble Evolution: the board-edge entrances summoned attack vehicles may use (road mouths), as
@@ -240,6 +245,23 @@ export interface GameConfig {
     fallback: PickupKind[];
     /** The `contact` reward for a fighter with no contact ability: their character's signature tool. */
     contactByCharacter: Record<CharacterId, PickupKind>;
+  };
+  /**
+   * The fixed initial kill-streak loadout (decision SK1): rewards for the nth CREDITED elimination of the current
+   * life. Each threshold pays once per streak and each reward is consumed once; a death clears both.
+   */
+  streaks: {
+    enabled: boolean;
+    loadout: { kills: number; reward: StreakRewardKind }[];
+    /** QUICK HANDS (decision SK2). */
+    quickHands: {
+      /** How long it lasts. */
+      durationTicks: number;
+      /** Extra generator capacity while it lasts (on top of the capacity the fighter already has). */
+      extraCapacity: number;
+      /** A placement press that cannot be done yet (dazed, tile taken, at capacity) is kept this long. */
+      placeBufferTicks: number;
+    };
   };
   /** V2 respawn modes (Deathmatch, Team Rumble). */
   respawn: {
@@ -400,6 +422,7 @@ export const DEFAULT_CONFIG: GameConfig = {
     slowFactor: 1.8,
     minRouteTiles: 4,
     minKekeLegTiles: 3,
+    allowed: ['danfo', 'taxi', 'keke'],
     specs: {
       danfo: { stepTicks: 14, resistance: 9, softLimit: 999, playerHitLimit: 999, turns: false },
       taxi: { stepTicks: 7, resistance: 6, softLimit: 2, playerHitLimit: 1, turns: false },
@@ -485,6 +508,15 @@ export const DEFAULT_CONFIG: GameConfig = {
     fallback: ['socket', 'petrol', 'armour', 'skates', 'square', 'voucher', 'okada'],
     contactByCharacter: { streetBaller: 'boots', lekkiBoy: 'gloves', campusQueen: 'killswitch' },
   },
+  streaks: {
+    enabled: false,
+    loadout: [
+      { kills: 3, reward: 'quickHands' },
+      { kills: 5, reward: 'vehicleGenerator' },
+      { kills: 7, reward: 'globalKnockdown' },
+    ],
+    quickHands: { durationTicks: ticks(18), extraCapacity: 5, placeBufferTicks: ticks(1.2) },
+  },
   respawn: {
     enabled: false,
     delayTicks: ticks(3),
@@ -542,6 +574,7 @@ export const RUMBLE_ECONOMY = {
   protection: { maxArmour: 3 },
   square: { maxTier: 3, radiusByTier: [0, 1, 2, 3] },
   rewards: { enabled: true },
+  streaks: { enabled: true },
 } satisfies DeepPartial<GameConfig>;
 
 export type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };

@@ -23,6 +23,8 @@ export type TileKind = (typeof Tile)[keyof typeof Tile];
 export type CharacterId = 'streetBaller' | 'lekkiBoy' | 'campusQueen';
 export type VehicleKind = 'danfo' | 'taxi' | 'keke';
 export type SkillKind = 'push' | 'daze' | 'shove';
+/** The kill-streak rewards of the fixed initial loadout (decision SK1). */
+export type StreakRewardKind = 'quickHands' | 'vehicleGenerator' | 'globalKnockdown';
 export type PickupKind =
   | 'petrol'
   | 'diesel'
@@ -127,6 +129,27 @@ export interface SpectatorState {
   stepRemaining: number;
 }
 
+/**
+ * The kill-streak rewards a fighter holds right now (decision SK1). All of it is per life: a death clears it. A
+ * threshold is earned once per streak (`earned`), and each reward is consumed once.
+ */
+export interface StreakRewards {
+  /** The kill-count thresholds already paid during this streak (so a threshold never pays twice). */
+  earned: number[];
+  /** QUICK HANDS is active until this tick (0 = not active). */
+  quickHandsUntil: number;
+  /** When QUICK HANDS began (the HUD's duration ring). */
+  quickHandsStart: number;
+  /** The extra generator capacity QUICK HANDS added, taken away again when it ends. */
+  quickHandsExtra: number;
+  /** QUICK HANDS: a placement press that could not be done yet (dazed, tile taken ...) is kept until this tick. */
+  placeQueuedUntil: number;
+  /** An unused VEHICLE GENERATOR: the public vehicle it will launch (null = none). */
+  vehicleGenerator: VehicleKind | null;
+  /** An unused GLOBAL KNOCKDOWN. */
+  knockdown: boolean;
+}
+
 /** A melee attack between the press and its effect (the startup). It never roots the attacker. */
 export interface PendingAttack {
   skill: SkillKind;
@@ -200,6 +223,8 @@ export interface Player {
   dazeImmuneUntil: number;
   /** First tick this fighter may START another melee attack (their global recovery after the last one). */
   skillReadyTick: number;
+  /** Kill-streak rewards held (cleared by a death). */
+  streakRewards: StreakRewards;
   /** A melee attack in its startup: resolves at `resolveTick` (decision CB1); null when idle. */
   attack: PendingAttack | null;
   /**
@@ -605,6 +630,11 @@ export interface Intent {
   /** Button A: place a generator (sideline spectator: throw one in). */
   place?: boolean;
   /**
+   * Button A held down (not a tap). Only QUICK HANDS reads it: while active, a held A lays a generator on every
+   * tile the player steps onto. Ignored otherwise.
+   */
+  placeHeld?: boolean;
+  /**
    * V2 button B (tap): ONE deterministic context action (systems/actions.ts): melee an adjacent
    * opponent, else launch the signature vehicle (voucher), else nothing. Never two things at once.
    */
@@ -699,6 +729,14 @@ export type SimEvent =
   | { type: 'okadaMounted'; playerId: number }
   | { type: 'okadaBroken'; playerId: number; x: number; y: number }
   | { type: 'skillUsed'; playerId: number; skill: SkillKind; targetId: number | null }
+  /** A kill streak reached a threshold of the loadout: the reward is earned (`vehicle` for a VEHICLE GENERATOR). */
+  | { type: 'streakRewardEarned'; playerId: number; reward: StreakRewardKind; kills: number; vehicle?: VehicleKind }
+  /** A one-use reward was spent (VEHICLE GENERATOR launched, GLOBAL KNOCKDOWN fired). */
+  | { type: 'streakRewardUsed'; playerId: number; reward: StreakRewardKind }
+  /** QUICK HANDS ran out. */
+  | { type: 'streakRewardEnded'; playerId: number; reward: StreakRewardKind }
+  /** A death cleared rewards that were still unused. */
+  | { type: 'streakRewardsLost'; playerId: number; rewards: StreakRewardKind[] }
   /** A melee press began its startup (the telegraph: a raised fist, a braced shoulder ...). */
   | { type: 'attackStarted'; playerId: number; skill: SkillKind; targetId: number; resolveTick: number }
   /** A melee attack finished its startup: it connected (`targetId`) or whiffed (null). */

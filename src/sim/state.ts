@@ -1,3 +1,4 @@
+import { freshStreakRewards } from './data/streaks';
 import { DEFAULT_CONFIG, mergeConfig, ticks } from './config';
 import type { GameConfig } from './config';
 import { CHARACTERS } from './data/characters';
@@ -84,6 +85,7 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     dazedUntil: 0,
     dazeImmuneUntil: 0,
     skillReadyTick: 0,
+    streakRewards: freshStreakRewards(),
     attack: null,
     meleeLock: {},
     curse: null,

@@ -6,6 +6,7 @@ import {
   isRespawnMode,
   isTeamMode,
   movementLocked,
+  quickHandsActive,
   moveWouldAct,
   observe,
   readyToStep,
@@ -343,6 +344,7 @@ export class MatchController {
         legal: (d) => moveWouldAct(state, me, d),
         board: () => buildMoveBoard(state, me),
         locked: movementLocked(state, me),
+        quickHands: quickHandsActive(state, me),
       });
     } else {
       this.deps.input.navMode = false;

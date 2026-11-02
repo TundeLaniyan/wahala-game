@@ -34,6 +34,8 @@ export interface IntentContext {
    * sliding, arriving from a trapdoor ... Touch presses wait for them instead of being spent (decision MI1).
    */
   locked?: boolean;
+  /** QUICK HANDS is running for the local player: a held A lays a generator on every tile they step onto. */
+  quickHands?: boolean;
 }
 
 /**
@@ -205,6 +207,8 @@ export class InputManager {
     const b = this.b.take(tick);
     if (!this.navMode) {
       if (a === 'place') intent.place = true;
+      // QUICK HANDS: A held (and not waiting to become a remote detonation) keeps laying generators
+      if (c.quickHands && !c.remoteReady && this.a.isDown) intent.placeHeld = true;
       if (b === 'special') intent.special = true;
       if (a === 'detonate' || b === 'detonate') intent.detonate = true;
     }

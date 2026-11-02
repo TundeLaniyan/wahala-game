@@ -1,0 +1,133 @@
+/**
+ * Kill-streak rewards (decisions SK1-SK3). The fixed initial loadout is, for the nth credited elimination of the
+ * current life:
+ *
+ *   3  QUICK HANDS        a timed buff: more generator capacity, hold-to-lay, no placement press is ever lost
+ *   5  VEHICLE GENERATOR  one use: a public vehicle carries a live generator at a rival (systems/vehicleGenerator.ts)
+ *   7  GLOBAL KNOCKDOWN   one use: every rival is knocked flat by a thrown object (systems/knockdown.ts)
+ *
+ * Each threshold pays once per streak and each reward is consumed once. A death clears the streak and every unused
+ * reward; the match score (kills, deaths, assists) is never touched. Pure and deterministic: the only randomness
+ * is the match RNG choosing a vehicle for the VEHICLE GENERATOR.
+ */
+import { freshStreakRewards, heldStreakRewards } from '../data/streaks';
+import { nextInt } from '../rng';
+import type { GameState, Player, SimEvent, StreakRewardKind, VehicleKind } from '../types';
+import { tryPlaceGenerator } from './generators';
+
+/** Is QUICK HANDS running for this fighter? */
+export const quickHandsActive = (state: Pick<GameState, 'tick'>, p: Pick<Player, 'streakRewards'>): boolean =>
+  p.streakRewards.quickHandsUntil > state.tick;
+
+/** The public vehicles this match allows (never empty). */
+export function allowedVehicles(state: Pick<GameState, 'config'>): VehicleKind[] {
+  const list = state.config.vehicles.allowed;
+  return list.length > 0 ? list : ['danfo'];
+}
+
+/** Draws a vehicle for a voucher or a VEHICLE GENERATOR from the match RNG; the character plays no part. */
+export function drawVehicle(state: GameState): VehicleKind {
+  const list = allowedVehicles(state);
+  return list[nextInt(state, list.length)]!;
+}
+
+/** Pays the thresholds the credited eliminations of this tick crossed (to living eliminators only). */
+export function grantStreakRewards(state: GameState, events: SimEvent[]): void {
+  const cfg = state.config.streaks;
+  if (!cfg.enabled) return;
+  const credited = new Map<number, number>();
+  for (const e of events) {
+    if (e.type === 'playerEliminated' && e.creditId !== null)
+      credited.set(e.creditId, (credited.get(e.creditId) ?? 0) + 1);
+  }
+  for (const [id, count] of [...credited.entries()].sort((a, b) => a[0] - b[0])) {
+    const p = state.players[id];
+    if (!p || !p.alive) continue; // fell in the same tick: nothing to hand over
+    const after = p.stats.streak;
+    const before = after - count;
+    for (const step of [...cfg.loadout].sort((a, b) => a.kills - b.kills)) {
+      if (step.kills <= before || step.kills > after || p.streakRewards.earned.includes(step.kills)) continue;
+      p.streakRewards.earned.push(step.kills);
+      earn(state, p, step.reward, step.kills, events);
+    }
+  }
+}
+
+function earn(state: GameState, p: Player, reward: StreakRewardKind, kills: number, events: SimEvent[]): void {
+  const r = p.streakRewards;
+  switch (reward) {
+    case 'quickHands': {
+      const q = state.config.streaks.quickHands;
+      r.quickHandsStart = state.tick;
+      r.quickHandsUntil = state.tick + q.durationTicks;
+      r.quickHandsExtra = q.extraCapacity;
+      p.capacity += q.extraCapacity;
+      events.push({ type: 'streakRewardEarned', playerId: p.id, reward, kills });
+      return;
+    }
+    case 'vehicleGenerator': {
+      const vehicle = drawVehicle(state);
+      r.vehicleGenerator = vehicle;
+      events.push({ type: 'streakRewardEarned', playerId: p.id, reward, kills, vehicle });
+      return;
+    }
+    case 'globalKnockdown':
+      r.knockdown = true;
+      events.push({ type: 'streakRewardEarned', playerId: p.id, reward, kills });
+      return;
+  }
+}
+
+/** Ends QUICK HANDS when its time is up (taking its extra capacity away again). */
+export function updateStreaks(state: GameState, events: SimEvent[]): void {
+  for (const p of state.players) {
+    const r = p.streakRewards;
+    if (r.quickHandsUntil > 0 && state.tick >= r.quickHandsUntil) {
+      endQuickHands(p);
+      if (p.alive) events.push({ type: 'streakRewardEnded', playerId: p.id, reward: 'quickHands' });
+    }
+  }
+}
+
+function endQuickHands(p: Player): void {
+  const r = p.streakRewards;
+  p.capacity = Math.max(1, p.capacity - r.quickHandsExtra);
+  r.quickHandsUntil = 0;
+  r.quickHandsExtra = 0;
+  r.placeQueuedUntil = 0;
+}
+
+/**
+ * A death (or a respawn) clears the streak and every reward: QUICK HANDS stops (its extra capacity goes with it) and
+ * unused one-use rewards are lost. Returns the unused rewards that were lost, for the HUD.
+ */
+export function clearStreakRewards(p: Player): StreakRewardKind[] {
+  const lost = heldStreakRewards(p.streakRewards);
+  if (p.streakRewards.quickHandsUntil > 0) endQuickHands(p);
+  p.streakRewards = freshStreakRewards();
+  return lost;
+}
+
+/**
+ * QUICK HANDS placement (applied after the fighter's other intents each tick):
+ *  - a held A lays a generator on every tile the fighter steps onto (`Intent.placeHeld`);
+ *  - a placement press that could not be done (dazed, the tile taken, at capacity) is kept for `placeBufferTicks`
+ *    and done the moment it can be, so it is never silently ignored.
+ */
+export function quickHandsPlacement(
+  state: GameState,
+  p: Player,
+  intent: { place?: boolean; placeHeld?: boolean },
+  events: SimEvent[],
+): void {
+  if (!quickHandsActive(state, p)) return;
+  const r = p.streakRewards;
+  const wants = intent.place === true || intent.placeHeld === true || r.placeQueuedUntil > state.tick;
+  if (!wants) return;
+  if (tryPlaceGenerator(state, p, events)) {
+    r.placeQueuedUntil = 0;
+    return;
+  }
+  // a tap that failed is remembered (a held A already retries every tick)
+  if (intent.place === true) r.placeQueuedUntil = state.tick + state.config.streaks.quickHands.placeBufferTicks;
+}

@@ -34,6 +34,7 @@ import { grantRewards } from './systems/rewards';
 import { scheduleRespawns, updateRespawns } from './systems/respawn';
 import { updateSpectators } from './systems/spectators';
 import { suddenDeathHoldsInput, updateSuddenDeath } from './systems/suddenDeath';
+import { grantStreakRewards, quickHandsPlacement, updateStreaks } from './systems/streaks';
 
 export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   const intents: Intents = suddenDeathHoldsInput(state) ? {} : rawIntents; // the SUDDEN DEATH title card
@@ -55,6 +56,7 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
 
   state.match.playTicks++;
   updateRespawns(state, events);
+  updateStreaks(state, events);
   expireEntryModes(state, events);
   applyIntents(state, intents, events);
   updateMovement(state, intents, events);
@@ -79,6 +81,7 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
 
   const eliminated = applyLethalHits(state, hits, events);
   grantRewards(state, events);
+  grantStreakRewards(state, events);
   scheduleRespawns(state, eliminated);
   applyBlastExposure(state, events);
   dropLoot(state, eliminated, events);
@@ -90,14 +93,19 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
 function applyIntents(state: GameState, intents: Intents, events: SimEvent[]): void {
   for (const p of state.players) {
     const intent = intents[p.id];
-    if (!intent || !p.alive) continue;
+    if (!p.alive) continue;
+    if (!intent) {
+      quickHandsPlacement(state, p, {}, events); // a kept press is done as soon as it can be
+      continue;
+    }
     if (intent.vehicle) handleVehicleIntent(state, p, intent.vehicle, events);
     if (intent.detonate) detonateRemote(state, p);
     if (intent.disarm) tryDisarm(state, p, events);
     if (intent.action) performAction(state, p, events);
     if (intent.skill) useSkill(state, p, events);
     if (intent.special) resolveSpecial(state, p, events);
-    if (intent.place) tryPlaceGenerator(state, p, events);
+    if (p.streakRewards.quickHandsUntil > state.tick) quickHandsPlacement(state, p, intent, events);
+    else if (intent.place) tryPlaceGenerator(state, p, events);
   }
 }
 
