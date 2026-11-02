@@ -6,16 +6,13 @@
     "bus_park": [
       "danfoBusPark",
       "oshodiInterchange",
-      "cityRumble",
       "rumbleOshodi",
-      "rumbleOjuelegba",
-      "rumbleApapa"
+      "rumbleOjuelegba"
     ],
     "market": [
       "balogunMarket",
       "oshodiInterchange",
       "yabaAfterDark",
-      "cityRumble",
       "rumbleOshodi",
       "rumbleLagosIsland",
       "rumbleOjuelegba"

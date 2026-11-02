@@ -10,6 +10,9 @@ import { box, cyl, mat, mesh, uniqueMat } from '../../assets/helpers';
 import type { SetContext } from '../common';
 import { STREET } from '../common';
 import { painted } from '../oshodiKit';
+import { Kit } from '../marketKit';
+import { stall } from '../marketStalls';
+import type { Goods, StallOpts } from '../marketStalls';
 import type { TimeOfDay } from '../../timeOfDay';
 
 export const hasDom = (): boolean => typeof document !== 'undefined';
@@ -281,4 +284,104 @@ export function lampPost(ctx: SetContext, x: number, z: number, ry: number, colo
       z + dz,
     ),
   );
+}
+
+/**
+ * Stalls along the pavement beyond the north, east and west edges (the old Lagos market pattern): lock-up stalls under
+ * rusted sheets and tarps with the goods of the arena (`goods`), gaps where a road mouth leaves the board
+ * (`gap(z)` for the side edges). Presentation only; nothing stands on the board and the south side stays clear.
+ */
+export function edgeStalls(
+  ctx: SetContext,
+  o: {
+    north?: boolean;
+    east?: boolean;
+    west?: boolean;
+    goods: readonly Goods[];
+    gap?: (z: number) => boolean;
+    gapNorth?: (x: number) => boolean;
+    seed?: number;
+    step?: number;
+  },
+): void {
+  const { W, H } = ctx;
+  const kit = new Kit(ctx);
+  const S = STREET;
+  const roofs: StallOpts['roof'][] = ['patch', 'sheet', 'tarp'];
+  const step = o.step ?? 2.45;
+  let k = o.seed ?? 0;
+  const put = (x: number, z: number, ry: number, w: number): void => {
+    stall(
+      kit,
+      { x, y: S, z, ry },
+      {
+        w,
+        d: 1.2,
+        goods: o.goods[k % o.goods.length]!,
+        roof: roofs[k % 3]!,
+        front: 2.05 + (k % 3) * 0.06,
+        back: 2.5,
+        seed: k * 3 + 1,
+        sign: k % 3 === 0 ? k % 8 : undefined,
+      },
+    );
+    k++;
+  };
+  if (o.north)
+    for (let x = -W / 2 + 1.4; x < W / 2 - 1; x += step) {
+      if (o.gapNorth?.(x)) continue;
+      put(x, -H / 2 - 2.5, 0, 2.2);
+    }
+  for (const side of [-1, 1] as const) {
+    if ((side < 0 && !o.west) || (side > 0 && !o.east)) continue;
+    for (let z = -H / 2 + 4.4; z < H / 2 - 4; z += step + 0.15) {
+      if (o.gap?.(z)) continue;
+      put(side * (W / 2 + 1.75), z, -side * (Math.PI / 2), 2.3);
+    }
+  }
+  kit.finish();
+}
+
+/**
+ * Street life beyond the edges: traders, buyers, porters and onlookers on the north edge and the two sides (never on
+ * the board, never on the camera side), with a few walkers going along the pavement. `gap(z)` keeps the road mouths
+ * clear. `n` people of mixed kinds; the first ones matter most (the quality budget drops the tail).
+ */
+export function streetLife(
+  ctx: SetContext,
+  o: { n?: number; gap?: (z: number) => boolean; kinds?: readonly string[]; north?: boolean; seed?: number },
+): void {
+  const { W, H, rng, life } = ctx;
+  const n = o.n ?? 12;
+  const kinds = o.kinds ?? ['seller', 'argue', 'onlooker', 'seller', 'walker', 'conductor'];
+  const north = -H / 2;
+  for (let i = 0; i < n; i++) {
+    const kind = kinds[(i + (o.seed ?? 0)) % kinds.length]!;
+    const edge = i % 3; // north, west, east
+    const t = rng();
+    if (edge === 0 && o.north !== false) {
+      const x = (t - 0.5) * (W - 6);
+      life.add({
+        kind: kind as 'seller',
+        x,
+        y: STREET,
+        z: north - 1.1 - rng() * 0.4,
+        yaw: (rng() - 0.5) * 0.6,
+        ...(kind === 'walker' ? { toX: x + 8, toZ: north - 1.0 } : {}),
+      });
+      continue;
+    }
+    const side = edge === 1 ? -1 : 1;
+    let z = (t - 0.5) * (H - 8);
+    for (let tries = 0; tries < 6 && o.gap?.(z); tries++) z = (rng() - 0.5) * (H - 8);
+    if (o.gap?.(z)) continue;
+    life.add({
+      kind: kind as 'seller',
+      x: side * (W / 2 + 1.1 + rng() * 0.9),
+      y: STREET,
+      z,
+      yaw: -side * (Math.PI / 2) + (rng() - 0.5) * 0.5,
+      ...(kind === 'walker' ? { toX: side * (W / 2 + 1.1), toZ: z + 7 } : {}),
+    });
+  }
 }

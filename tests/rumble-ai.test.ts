@@ -13,15 +13,18 @@ import {
 import { aiCounters, resetAiCounters } from '../src/ai/stats';
 import { World } from '../src/ai/world';
 import { PROFILES } from '../src/ai/profiles';
-import { CITY_RUMBLE_ID, createGame, observe, tick } from '../src/sim';
-import { RUMBLE_CORE } from '../src/sim/arenas/cityRumble';
+import { createGame, getArena, observe, tick } from '../src/sim';
 import type { Difficulty, Intents } from '../src/sim';
+import { RUMBLE_FIXTURE } from './helpers';
+
+/** The never-closing core of the fixture arena. */
+const CORE = getArena(RUMBLE_FIXTURE).config!.crush!.keepCore! as { x0: number; y0: number; w: number; h: number };
 
 /**
  * City Rumble bots: 8 / 16 / 24 / 32 competitors on the 41 x 31 board. Matches use a shortened clock
  * (the city closes from 0:20 of play, the core is all that is left at 0:45, the end at 1:15) so the
  * suite stays short; the real three-minute schedule is measured by
- * `npm run simulate -- --arena cityRumble --players N`.
+ * `npm run simulate -- --arena rumbleLagosIsland --players N`.
  */
 const SHORT: MatchSpec['config'] = {
   match: { durationTicks: 75 * 60 },
@@ -37,15 +40,15 @@ const crushed: number[] = [];
 describe('City Rumble bots play complete matches', () => {
   for (const n of [8, 16, 24, 32]) {
     it(`${n} competitors: the match resolves and everybody takes part`, () => {
-      const out = runMatch({ seed: 40 + n, arenaId: CITY_RUMBLE_ID, difficulties: mixed(n), config: SHORT });
+      const out = runMatch({ seed: 40 + n, arenaId: RUMBLE_FIXTURE, difficulties: mixed(n), config: SHORT });
       crushed.push(out.seats.filter((s) => s.cause?.kind === 'crush').length / n);
       if (out.timeout) {
         // the clock ran out on a duel: the few left were all fighting inside the core
         const alive = out.seats.filter((s) => s.alive);
         expect(alive.length).toBeLessThanOrEqual(3);
         for (const s of alive) {
-          expect(s.x >= RUMBLE_CORE.x0 && s.x < RUMBLE_CORE.x0 + RUMBLE_CORE.w).toBe(true);
-          expect(s.y >= RUMBLE_CORE.y0 && s.y < RUMBLE_CORE.y0 + RUMBLE_CORE.h).toBe(true);
+          expect(s.x >= CORE.x0 && s.x < CORE.x0 + CORE.w).toBe(true);
+          expect(s.y >= CORE.y0 && s.y < CORE.y0 + CORE.h).toBe(true);
         }
       } else if (out.draw) {
         const ticks = out.seats.map((s) => s.eliminatedTick);
@@ -75,7 +78,7 @@ describe('City Rumble AI determinism and cost', () => {
   it('replays a 16-bot match exactly', () => {
     const spec: MatchSpec = {
       seed: 5,
-      arenaId: CITY_RUMBLE_ID,
+      arenaId: RUMBLE_FIXTURE,
       difficulties: mixed(16),
       config: SHORT,
       maxPlayTicks: 900,
@@ -87,7 +90,7 @@ describe('City Rumble AI determinism and cost', () => {
     const n = 32;
     const state = createGame({
       seed: 11,
-      arenaId: CITY_RUMBLE_ID,
+      arenaId: RUMBLE_FIXTURE,
       players: Array.from({ length: n }, (_, i) => ({
         name: `b${i}`,
         characterId: 'lekkiBoy' as const,
@@ -129,7 +132,7 @@ describe('City Rumble AI determinism and cost', () => {
   it('reasons about the nearest few rivals inside a local window', () => {
     const state = createGame({
       seed: 2,
-      arenaId: CITY_RUMBLE_ID,
+      arenaId: RUMBLE_FIXTURE,
       players: Array.from({ length: 32 }, (_, i) => ({
         name: `b${i}`,
         characterId: 'campusQueen' as const,

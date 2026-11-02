@@ -13,19 +13,32 @@ import { crossings } from './rumbleKit';
  * north-east and south-east corners. Selective compression; the pedestrian crossing is a FICTIONAL at-grade
  * crossing pair (median gaps with refuge islands), "not claimed as a current real bridge".
  *
- *   F2 Westbound Shopfronts  (x 2-31, y 2-9)    shop row on the highway pavement, stalls and workshops behind
- *   F1 BRT Centreline        (x 0-42, y 10-18)  westbound carriageway, BRT lanes between two median barriers,
- *                                               eastbound carriageway; median gaps at x 10-11 and 28-29 are the crossings
- *   F3 Inner Neighbourhood Grid (x 2-17, y 19-27) houses and lanes behind the south pavement
- *   F5 Recreation + Workshops (x 18-31, y 19-27)  workshops, the bank frontage, a walled recreation court
- *   F4 Onipanu Approach      (x 32-40, y 2-9 and 19-27)  the side roads and their frontage at the two east corners
+ *   F2 Westbound Shopfronts  (x 2-39, y 2-11)    shop row on the highway pavement, stalls and workshops behind
+ *   F1 BRT Centreline        (x 0-50, y 12-20)  westbound carriageway, BRT lanes between two median barriers,
+ *                                               eastbound carriageway; median gaps at x 11-12 and 37-38 are the crossings
+ *   F3 Inner Neighbourhood Grid (x 2-19, y 21-30) houses and lanes behind the south pavement
+ *   F5 Recreation + Workshops (x 20-39, y 21-30)  workshops, the bank frontage, a walled recreation court
+ *   F4 Onipanu Approach      (x 40-48, y 2-11 and 21-30)  the side roads and their frontage at the two east corners
  *
  * Routes (bible 3.3): direct F2-F1-F4; neighbourhood F2-F3-F4 and recreation F2-F5-F4 (both cross the highway at a
  * crossing gap); cross-links F1-F3 and F3-F5. Median gaps always stay open; the two carriageways and the BRT lanes
  * are the only lethal ground and each wave is telegraphed.
  */
-const W = 43;
-const H = 29;
+const W = 51;
+const H = 33;
+
+/** Highway rows: westbound 12-13, median 14, BRT 15-16, median 17, eastbound 18-20 (the bay lane is 20). */
+export const FADEYI_ROWS = {
+  top: 12,
+  bottom: 20,
+  medianA: 14,
+  medianB: 17,
+  brt: [15, 16] as const,
+  west: [12, 13] as const,
+  east: [18, 19, 20] as const,
+};
+/** Median crossing gaps (tile columns, two wide). */
+export const FADEYI_CROSSINGS = [11, 37] as const;
 
 export const FADEYI_LEGEND: CoverLegend = {
   B: { kind: 'building', maxRun: 8 },
@@ -47,31 +60,41 @@ function paint(): Board {
     .fill(0, 0, 1, H - 1, 'B')
     .fill(W - 2, 0, W - 1, H - 1, 'B')
     .fill(0, H - 2, W - 1, H - 1, 'L');
+  const R = FADEYI_ROWS;
   // the Ikorodu Road carriageways and the BRT centreline
-  b.fill(0, 10, W - 1, 18, '=');
-  for (const y of [12, 15]) {
+  b.fill(0, R.top, W - 1, R.bottom, '=');
+  for (const y of [R.medianA, R.medianB]) {
     b.fill(2, y, W - 3, y, 'D');
-    b.fill(10, y, 11, y, '_').fill(28, y, 29, y, '_'); // crossing gaps with refuge islands
+    for (const x of FADEYI_CROSSINGS) b.fill(x, y, x + 1, y, '_'); // crossing gaps with refuge islands
   }
-  b.fill(17, 12, 22, 12, 'C').fill(17, 15, 22, 15, 'C'); // the BRT stop shelters on the median lines
+  b.fill(21, R.medianA, 27, R.medianA, 'C').fill(21, R.medianB, 27, R.medianB, 'C'); // the BRT stop shelters on the median lines
   // F2: the shop row on the north pavement, stalls / workshops / kiosks behind it, a lane through the row
-  b.fill(2, 6, 31, 7, 'S');
-  b.blocks(2, 2, 31, 3, { ch: (i) => (i % 3 === 0 ? 'W' : 'M'), bw: 3, bh: 2, gx: 2, gy: 0, seed: 5, jw: 1, drop: 0.15 });
-  for (const x of [8, 9, 20, 21, 29, 30]) b.fill(x, 6, x, 7, '.');
+  b.fill(2, 7, 38, 8, 'S');
+  b.blocks(2, 2, 38, 4, {
+    ch: (i) => (i % 3 === 0 ? 'W' : 'M'),
+    bw: 3,
+    bh: 2,
+    gx: 3,
+    gy: 0,
+    seed: 5,
+    jw: 1,
+    drop: 0.2,
+  });
+  for (const x of [9, 10, 23, 24, 36, 37]) b.fill(x, 7, x, 8, '.');
   // F4 north-east: the Onipanu approach road leaves the north edge; frontage either side of it
-  b.fill(34, 0, 37, 9, '=');
-  b.fill(32, 6, 33, 7, 'S').fill(38, 6, 40, 7, 'S').fill(38, 2, 39, 3, 'K').fill(32, 2, 33, 3, 'B');
+  b.fill(42, 0, 45, 11, '=');
+  b.fill(40, 7, 41, 8, 'S').fill(46, 7, 48, 8, 'S').fill(46, 2, 47, 4, 'K').fill(40, 2, 41, 4, 'B');
   // F3: the south shop row, houses and lanes behind it
-  b.fill(2, 21, 17, 22, 'S');
-  b.blocks(2, 24, 17, 26, { ch: 'R', bw: 4, bh: 3, gx: 3, gy: 0, seed: 9, jw: 1, drop: 0.1 });
+  b.fill(2, 24, 19, 25, 'S');
+  b.blocks(2, 28, 19, 30, { ch: 'R', bw: 4, bh: 3, gx: 5, gy: 0, seed: 9, jw: 1, drop: 0.25 });
+  for (const x of [9, 10, 15, 16]) b.fill(x, 24, x, 25, '.');
   // F5: the bank frontage on the pavement, workshops, the walled recreation court
-  b.fill(19, 21, 26, 22, 'T');
-  b.blocks(19, 24, 25, 26, { ch: 'W', bw: 3, bh: 2, gx: 1, gy: 0, seed: 13, jw: 1, drop: 0.2 });
-  b.fill(27, 21, 31, 26, '_').fill(26, 23, 26, 26, 'V');
+  b.fill(22, 24, 29, 26, 'T');
+  b.blocks(22, 28, 29, 30, { ch: 'W', bw: 3, bh: 2, gx: 3, gy: 0, seed: 13, jw: 1, drop: 0.4 });
+  b.fill(32, 24, 38, 30, '_').fill(31, 26, 31, 30, 'V');
   // F4 south-east: the side road leaves the south edge
-  b.fill(34, 19, 37, 28, '=');
-  b.fill(32, 21, 33, 22, 'S').fill(38, 21, 40, 22, 'B').fill(38, 24, 40, 26, 'K');
-  for (const x of [8, 9, 14, 15]) b.fill(x, 21, x, 22, '.');
+  b.fill(42, 21, 45, 32, '=');
+  b.fill(40, 24, 41, 25, 'S').fill(46, 24, 48, 25, 'B').fill(46, 27, 48, 29, 'K');
   return b;
 }
 
@@ -84,21 +107,22 @@ const near = (x: number, y: number): [number, number] => {
   return t;
 };
 const SUPPLIES = [
-  [5, 5],
-  [14, 4],
-  [25, 5],
-  [29, 8],
-  [6, 9],
-  [38, 8],
-  [5, 24],
-  [14, 24],
-  [22, 26],
-  [30, 25],
-  [39, 22],
+  [5, 4],
+  [16, 5],
+  [28, 4],
+  [33, 10],
+  [6, 10],
+  [42, 10],
+  [5, 22],
+  [16, 29],
+  [26, 22],
+  [33, 28],
+  [43, 22],
+  [20, 10],
 ].map(([x, y]) => near(x!, y!));
 const BARRIERS = [
-  [18, 9],
-  [33, 25],
+  [20, 11],
+  [36, 29],
 ].map(([x, y]) => near(x!, y!));
 const ZONE_TAKEN = new Set<string>(taken);
 const ZONES = [
@@ -126,41 +150,44 @@ const TRAPS = [
   return [t[0], t[1], (t[0] + t[1]) % 2 === 0 ? 'o' : '~'] as const;
 });
 
-/** Carriageways: westbound on the north lanes (rows 10-11), eastbound on the south (rows 16-17); BRT lanes 13-14. */
-const WESTBOUND: [number, number][][] = [line([W - 1, 10], [0, 10]), line([W - 1, 11], [0, 11])];
-const EASTBOUND: [number, number][][] = [line([0, 16], [W - 1, 16]), line([0, 17], [W - 1, 17])];
-const BRT: [number, number][][] = [line([0, 13], [W - 1, 13]), line([W - 1, 14], [0, 14])];
-/** A Danfo leaves its bay at the south-west and joins the eastbound carriageway. */
-const DEPARTURE: [number, number][][] = [[...line([13, 18], [13, 18]), ...line([14, 18], [W - 1, 18])]];
+/** Carriageways: westbound on the north lanes, eastbound on the south; BRT lanes between the medians. */
+const WESTBOUND: [number, number][][] = FADEYI_ROWS.west.map((y) => line([W - 1, y], [0, y]));
+const EASTBOUND: [number, number][][] = [18, 19].map((y) => line([0, y], [W - 1, y]));
+const BRT: [number, number][][] = [
+  line([0, FADEYI_ROWS.brt[0]], [W - 1, FADEYI_ROWS.brt[0]]),
+  line([W - 1, FADEYI_ROWS.brt[1]], [0, FADEYI_ROWS.brt[1]]),
+];
+/** A Danfo leaves its bay (13, 20) on the bottom lane and joins the eastbound carriageway to the edge. */
+const DEPARTURE: [number, number][][] = [line([14, 20], [W - 1, 20])];
 
 const DISTRICTS: DistrictDef[] = [
-  { id: 'shopfronts', name: 'Westbound Shopfronts', role: 'street', rects: [[2, 2, 31, 9]] },
-  { id: 'brtCentreline', name: 'BRT Centreline', role: 'approach', rects: [[0, 10, 42, 18]] },
-  { id: 'neighbourhood', name: 'Inner Neighbourhood Grid', role: 'lane', rects: [[2, 19, 17, 27]] },
+  { id: 'shopfronts', name: 'Westbound Shopfronts', role: 'street', rects: [[2, 2, 39, 11]] },
+  { id: 'brtCentreline', name: 'BRT Centreline', role: 'approach', rects: [[0, 12, 50, 20]] },
+  { id: 'neighbourhood', name: 'Inner Neighbourhood Grid', role: 'lane', rects: [[2, 21, 19, 30]] },
   {
     id: 'onipanu',
     name: 'Onipanu Approach',
     role: 'street',
     rects: [
-      [32, 2, 40, 9],
-      [32, 19, 40, 27],
+      [36, 2, 44, 11],
+      [36, 21, 44, 30],
     ],
   },
-  { id: 'recreation', name: 'Recreation + Workshops', role: 'works', rects: [[18, 19, 31, 27]] },
+  { id: 'recreation', name: 'Recreation + Workshops', role: 'works', rects: [[20, 21, 39, 30]] },
 ];
 const LINKS: DistrictLink[] = [
-  { from: 'shopfronts', to: 'brtCentreline', kind: 'open', tiles: crossings(open, 2, 9, 31, 9, 0, 1) },
-  { from: 'brtCentreline', to: 'neighbourhood', kind: 'open', tiles: crossings(open, 2, 18, 17, 18, 0, 1) },
-  { from: 'brtCentreline', to: 'recreation', kind: 'open', tiles: crossings(open, 18, 18, 31, 18, 0, 1) },
+  { from: 'shopfronts', to: 'brtCentreline', kind: 'open', tiles: crossings(open, 2, 11, 39, 11, 0, 1) },
+  { from: 'brtCentreline', to: 'neighbourhood', kind: 'open', tiles: crossings(open, 2, 20, 19, 20, 0, 1) },
+  { from: 'brtCentreline', to: 'recreation', kind: 'open', tiles: crossings(open, 20, 20, 39, 20, 0, 1) },
   {
     from: 'brtCentreline',
     to: 'onipanu',
     kind: 'open',
-    tiles: [...crossings(open, 32, 9, 40, 9, 0, 1), ...crossings(open, 32, 18, 40, 18, 0, 1)],
+    tiles: [...crossings(open, 40, 11, 48, 11, 0, 1), ...crossings(open, 40, 20, 48, 20, 0, 1)],
   },
-  { from: 'shopfronts', to: 'onipanu', kind: 'open', tiles: crossings(open, 31, 2, 31, 9, 1, 0) },
-  { from: 'neighbourhood', to: 'recreation', kind: 'open', tiles: crossings(open, 17, 19, 17, 27, 1, 0) },
-  { from: 'recreation', to: 'onipanu', kind: 'open', tiles: crossings(open, 31, 19, 31, 27, 1, 0) },
+  { from: 'shopfronts', to: 'onipanu', kind: 'open', tiles: crossings(open, 39, 2, 39, 11, 1, 0) },
+  { from: 'neighbourhood', to: 'recreation', kind: 'open', tiles: crossings(open, 19, 21, 19, 30, 1, 0) },
+  { from: 'recreation', to: 'onipanu', kind: 'open', tiles: crossings(open, 39, 21, 39, 30, 1, 0) },
 ];
 
 export const FADEYI_BOARD = base;
@@ -171,35 +198,19 @@ export const RUMBLE_FADEYI: ArenaDef = communityArena({
   legend: FADEYI_LEGEND,
   supplies: SUPPLIES,
   barriers: BARRIERS,
-  core: { w: 11, h: 9, x0: 16, y0: 10 },
+  core: { w: 11, h: 9, x0: 20, y0: 12 },
   softDensity: 0.4,
   lanes: [
-    [0, 10, 'right'],
-    [0, 11, 'right'],
-    [0, 16, 'right'],
-    [0, 17, 'right'],
-    [W - 1, 10, 'left'],
-    [W - 1, 11, 'left'],
-    [W - 1, 16, 'left'],
-    [W - 1, 17, 'left'],
+    [0, 12, 'right'],
+    [0, 13, 'right'],
+    [0, 18, 'right'],
+    [0, 19, 'right'],
+    [W - 1, 12, 'left'],
+    [W - 1, 13, 'left'],
+    [W - 1, 18, 'left'],
+    [W - 1, 19, 'left'],
   ],
   traps: TRAPS,
-  endgame: [
-    [
-      [18, 11, 'o'],
-      [22, 17, '~'],
-      [24, 11, 'o'],
-      [20, 13, '~'],
-      [17, 16, 'o'],
-    ],
-    [
-      [19, 10, '~'],
-      [24, 16, 'o'],
-      [21, 14, '~'],
-      [26, 10, 'o'],
-      [16, 17, '~'],
-    ],
-  ],
   hazards: [
     {
       kind: 'sweep',
@@ -254,7 +265,7 @@ export const RUMBLE_FADEYI: ArenaDef = communityArena({
   },
   districts: DISTRICTS,
   links: LINKS,
-  start: { x: 4, y: 23 },
+  start: { x: 4, y: 27 },
   area: 'Fadeyi',
   boss: BOSS_BRIEF('Fadeyi / Shomolu', 'route-control'),
 });

@@ -96,7 +96,7 @@ describe('Oshodi Metropolis: the board', () => {
 
   it('REPLACES the old generic Oshodi: one Oshodi stage, under the canonical id, with no second card or leftover id', () => {
     expect(RUMBLE_ARENA_IDS.filter((id) => /oshodi/i.test(id))).toEqual(['rumbleOshodi']);
-    expect(RUMBLE_ARENA_IDS[0]).toBe('rumbleOshodi'); // still the first (default) Rumble stage
+    expect(RUMBLE_ARENA_IDS).toContain('rumbleOshodi'); // still a City Rumble community (and the saved default stage)
     expect(ARENAS['rumbleOshodiMetro']).toBeUndefined();
     // every Rumble stage name is distinct and none is the retired "Oshodi Rush Hour"
     const names = RUMBLE_ARENA_IDS.map((id) => getArena(id).name);
@@ -682,8 +682,8 @@ describe('Oshodi Metropolis: future boss slot', () => {
     const text = JSON.stringify([a.info, a.name]);
     expect(text).not.toMatch(/boss/i);
     expect(Object.keys(CHARACTERS).some((id) => /boss/i.test(id))).toBe(false);
-    for (const other of ['rumbleOjuelegba', 'rumbleApapa'])
-      expect(getArena(other).futureBoss, other).toBeUndefined();
+    // Ojuelegba (the reference arena) reserves nothing; the other researched communities reserve metadata only
+    expect(getArena('rumbleOjuelegba').futureBoss).toBeUndefined();
   });
 });
 

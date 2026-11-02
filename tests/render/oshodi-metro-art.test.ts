@@ -39,9 +39,18 @@ describe('day and night looks', () => {
     expect(timeOfDay('?q=low&tod=night')).toBe('night');
     expect(timeOfDay('?tod=banana')).toBe('day');
     expect(arenaLook('rumbleOshodi')).toBe(OSHODI_METRO_LOOK);
-    // no other arena ships a night look behind the flag
+    // only the researched communities (Oshodi and the five later ones) ship a night look behind the flag
+    const NIGHT = [
+      'rumbleOshodi',
+      'rumbleMushin',
+      'rumbleFadeyi',
+      'rumbleLagosIsland',
+      'rumbleLekki',
+      'rumbleEbuteMetta',
+    ];
     for (const [id, art] of Object.entries(NEW_ARENA_ART()))
-      if (id !== 'rumbleOshodi') expect(art.nightLook, id).toBeUndefined();
+      if (!NIGHT.includes(id)) expect(art.nightLook, id).toBeUndefined();
+      else expect(art.nightLook, id).toBeDefined();
   });
 
   it('night is actually darker in sky and fog, but the ground stays as readable as the approved night stage', () => {

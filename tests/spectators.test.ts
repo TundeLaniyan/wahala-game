@@ -61,7 +61,7 @@ describe('sideline spectators: who and where', () => {
   it('is off in City Rumble survival and when the config disables it', () => {
     const rumble = createGame({
       seed: 1,
-      arenaId: 'cityRumble',
+      arenaId: 'rumbleLagosIsland',
       settings: { game: 'survival' },
       players: Array.from({ length: 4 }, (_, i) => ({ name: `P${i}`, characterId: 'streetBaller' as const, isBot: false })),
     });

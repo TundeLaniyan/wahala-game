@@ -20,11 +20,12 @@ import { board, box as cbox, cyl as ccyl } from './community/kit';
 import { communityFloor } from './community/floor';
 import { communityEnv } from './community/env';
 import { nightLookOf } from './community/looks';
-import { lampPost, lettered, plaque, skyline } from './community/setKit';
+import { edgeStalls, streetLife, lampPost, lettered, plaque, skyline } from './community/setKit';
 import { sign, signTexture } from './oshodiKit';
 import { streetPlane } from './oshodiKit';
 import { shophouseRows } from './shared';
 import { layoutOf, mouthTraffic, tileWorld, floorWords, zebraTile } from './rumbleV2Kit';
+import { FADEYI_CROSSINGS, FADEYI_ROWS } from '../../sim/arenas/rumbleFadeyi';
 import type { StageEnvironment } from '../env/types';
 
 const ID = 'rumbleFadeyi';
@@ -194,18 +195,20 @@ export const RUMBLE_FADEYI_FLOOR: FloorDrawer = communityFloor(ID, {
   },
   extra: (g, _rg, layout) => {
     const cols = layout[0]!.length;
+    const R = FADEYI_ROWS;
     // the BRT lanes: blue paint with the white BRT word, the median crossings: zebra bars and a refuge slab
     g.fillStyle = 'rgba(42,127,184,0.55)';
-    g.fillRect(0, 13 * T, cols * T, 2 * T);
-    for (const x of [6, 18, 30, 38]) floorWords(g, 'BRT', x + 0.5, 14, 0.8, 'rgba(240,244,250,0.7)');
-    for (const gx of [10, 28])
+    g.fillRect(0, R.brt[0] * T, cols * T, 2 * T);
+    for (const x of [6, 20, 34, 44])
+      floorWords(g, 'BRT', x + 0.5, R.brt[0] + 1, 0.8, 'rgba(240,244,250,0.7)');
+    for (const gx of FADEYI_CROSSINGS)
       for (const x of [gx, gx + 1])
-        for (const y of [10, 11, 13, 14, 16, 17, 18]) zebraTile(g, x, y, false, 0.55);
-    for (const gx of [10, 28]) {
+        for (const y of [...R.west, ...R.brt, ...R.east]) zebraTile(g, x, y, false, 0.55);
+    for (const gx of FADEYI_CROSSINGS) {
       g.fillStyle = 'rgba(190,186,176,0.8)';
-      for (const y of [12, 15]) g.fillRect(gx * T, y * T, 2 * T, T);
+      for (const y of [R.medianA, R.medianB]) g.fillRect(gx * T, y * T, 2 * T, T);
     }
-    floorWords(g, 'BUS STOP', 19.5, 17.5, 0.5, 'rgba(240,226,160,0.5)');
+    floorWords(g, 'BUS STOP', 23.5, R.east[2] - 0.5, 0.5, 'rgba(240,226,160,0.5)');
   },
 });
 
@@ -214,25 +217,26 @@ function build(ctx: SetContext): void {
   const tod = timeOfDay();
   const { wz } = tileWorld(W, H);
   const north = -H / 2;
-  const hwGap = (c: number): boolean => c > wz(8.5) - 1 && c < wz(19.5) + 1;
+  const hwGap = (c: number): boolean => c > wz(FADEYI_ROWS.top) - 1 && c < wz(FADEYI_ROWS.bottom) + 1;
   // the highway runs on beyond both edges: asphalt, edge lines, lane dashes, blue BRT lanes, median barriers
   for (const side of [-1, 1])
     streetPlane(
       ctx,
       `cr:fadeyi:hw${side}`,
-      { x: side * (W / 2 + 26), z: wz(14), w: 52, d: 9.4, ppm: 14 },
+      { x: side * (W / 2 + 26), z: wz(16), w: 52, d: 9.4, ppm: 14 },
       (g, px, s) => {
         g.fillStyle = '#3c3e40';
         g.fillRect(0, 0, 9999, 9999);
         const [, z0] = px(0, wz(10) - 0.5);
         const row = (y: number): number => z0 + (y - 10) * s;
         g.fillStyle = 'rgba(42,127,184,0.7)';
-        g.fillRect(0, row(13), 9999, 2 * s);
+        g.fillRect(0, row(FADEYI_ROWS.brt[0]), 9999, 2 * s);
         g.fillStyle = 'rgba(232,224,196,0.7)';
-        for (const y of [10, 11, 13, 14, 16, 17, 18])
+        for (const y of [...FADEYI_ROWS.west, ...FADEYI_ROWS.brt, ...FADEYI_ROWS.east])
           for (let x = 0; x < 9999; x += s * 2) g.fillRect(x, row(y) + s * 0.96, s * 0.9, 3);
         g.fillStyle = '#b6b2a8';
-        for (const y of [12, 15]) g.fillRect(0, row(y) + s * 0.15, 9999, s * 0.7);
+        for (const y of [FADEYI_ROWS.medianA, FADEYI_ROWS.medianB])
+          g.fillRect(0, row(y) + s * 0.15, 9999, s * 0.7);
       },
     );
   shophouseRows(ctx, { north: true, east: false, west: false, seed: 11, close: 0.5, scale: 1.2 });
@@ -270,8 +274,8 @@ function build(ctx: SetContext): void {
 
   // the footbridge (fictional, functional): a steel-railed deck over the highway on two concrete piers, stairs at both ends
   const fx = W / 2 + 11;
-  const zn = wz(8.8);
-  const zs = wz(19.2);
+  const zn = wz(FADEYI_ROWS.top - 1.2);
+  const zs = wz(FADEYI_ROWS.bottom + 1.2);
   const conc = mat(0xb6b2a8, { roughness: 1, flat: false });
   const steel = mat(0x4a5258, { roughness: 0.5, metalness: 0.6 });
   ctx.statics.add(box(2.4, 0.4, zs - zn, conc, fx, 5.1, (zn + zs) / 2));
@@ -308,7 +312,8 @@ function build(ctx: SetContext): void {
   );
 
   // wires, lamps, a billboard
-  for (const x of [-W / 2 - 6, W / 2 + 6, -W / 2 - 18, W / 2 + 18]) lampPost(ctx, x, wz(9.3), 0, 0xffd9a0);
+  for (const x of [-W / 2 - 6, W / 2 + 6, -W / 2 - 18, W / 2 + 18])
+    lampPost(ctx, x, wz(FADEYI_ROWS.top - 0.7), 0, 0xffd9a0);
   const board0 = signTexture(
     'fad:bb',
     512,
@@ -324,20 +329,17 @@ function build(ctx: SetContext): void {
   );
   sign(ctx, board0, -8, 5.8, north - 6, 8, 2, 0, { posts: 2 });
   mouthTraffic(ctx, layoutOf(ID), { kinds: ['danfo', 'taxi', 'danfo', 'keke'], depth: 3 });
-  const L = ctx.life;
-  L.add({ kind: 'onlooker', x: -W / 2 - 1.8, y: STREET, z: wz(8.5), yaw: 1.5 });
-  L.add({ kind: 'onlooker', x: -W / 2 - 1.5, y: STREET, z: wz(8.9), yaw: 1.5 });
-  L.add({
-    kind: 'conductor',
-    x: W / 2 + 2.2,
-    y: STREET,
-    z: wz(19.4),
-    yaw: -1.4,
-    toX: W / 2 + 5,
-    toZ: wz(19.4),
+  const streetGap = (z: number): boolean => z > wz(FADEYI_ROWS.top) - 1.5 && z < wz(FADEYI_ROWS.bottom) + 1.5;
+  edgeStalls(ctx, {
+    north: true,
+    east: true,
+    west: true,
+    goods: ['provisions', 'basins', 'cloth'],
+    gap: streetGap,
+    seed: 3,
   });
-  L.add({ kind: 'walker', x: -14, y: STREET, z: north - 0.8, yaw: 0, toX: 14, toZ: north - 0.8 });
-  ctx.ambient.exhaust(W / 2 + 6, 0.4, wz(16), 0, 1);
+  streetLife(ctx, { n: 14, gap: streetGap });
+  ctx.ambient.exhaust(W / 2 + 6, 0.4, wz(18), 0, 1);
   ctx.ambient.dust(0, north - 1.4, 18, 1);
   void cyl;
 }
@@ -356,10 +358,10 @@ export function fadeyiEnv(board: { cols: number; rows: number }): StageEnvironme
     count: 4,
     speed: 4.2,
     crowds: [
-      { id: 'queueWest', rect: { x0: -6, y0: 5.5, x1: -2, y1: 9 }, count: 9, mood: 'waiting', priority: 2 },
+      { id: 'queueWest', rect: { x0: -6, y0: 8, x1: -2, y1: 11.5 }, count: 9, mood: 'waiting', priority: 2 },
       {
         id: 'queueEast',
-        rect: { x0: cols + 2, y0: 19.5, x1: cols + 6, y1: rows - 1.5 },
+        rect: { x0: cols + 2, y0: 21.5, x1: cols + 6, y1: rows - 2.5 },
         count: 7,
         mood: 'waiting',
         priority: 2,
@@ -373,7 +375,7 @@ export function fadeyiEnv(board: { cols: number; rows: number }): StageEnvironme
       },
     ],
     lights: [
-      { at: [-3, 8], height: 2.8, color: 0xffd9a0, size: 1.0, strength: 0.55, flicker: 'sodium', pool: 2.4 },
+      { at: [-3, 10], height: 2.8, color: 0xffd9a0, size: 1.0, strength: 0.55, flicker: 'sodium', pool: 2.4 },
       {
         at: [cols + 3, 20],
         height: 2.8,

@@ -3,21 +3,6 @@ import { obstacleStyle, pillarIndexFor, resolvePillars } from '../../src/render/
 
 /** V2 stage obstacle families (presentation only): zoned styles mix their models and respect their zones. */
 describe('V2 obstacle families', () => {
-  it('a container block of the Apapa yard draws both container models; the corner sheds draw precast panels', () => {
-    const apapa = obstacleStyle('rumbleApapa');
-    const ids = resolvePillars(apapa, [
-      'prop_pillar_container_a',
-      'prop_pillar_container_b',
-      'prop_pillar_a',
-      'prop_pillar_b',
-    ]);
-    const seen = new Set<string>();
-    for (let x = 15; x <= 18; x++)
-      for (let y = 3; y <= 4; y++) seen.add(ids[pillarIndexFor(apapa, ids, x, y)]!);
-    expect(seen).toEqual(new Set(['prop_pillar_container_a', 'prop_pillar_container_b']));
-    for (let x = 1; x <= 9; x++) expect(ids[pillarIndexFor(apapa, ids, x, 3)]).toMatch(/^prop_pillar_[ab]$/);
-  });
-
   it('Ojuelegba: the permanent cover is drawn whole (ojuelegbaCover.ts); crush blocks are wall stubs and precast', () => {
     // workstream D: the piers, buses and buildings are board-cover objects now, so the pillar family only
     // draws the concrete the closing city drops in (tests/render/ojuelegba-cover.test.ts covers the rest)
@@ -36,7 +21,7 @@ describe('V2 obstacle families', () => {
   });
 
   it('a style without zones keeps the original placement hash (the approved standard arenas never reshuffle)', () => {
-    const market = obstacleStyle('cityRumble');
+    const market = obstacleStyle('rumbleMushin');
     const ids = resolvePillars(market, [...market.pillars]);
     for (let x = 0; x < 15; x++)
       for (let y = 0; y < 11; y++)

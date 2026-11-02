@@ -22,7 +22,7 @@ import { board, box as cbox, cyl as ccyl, pick } from './community/kit';
 import { communityFloor } from './community/floor';
 import { communityEnv } from './community/env';
 import { nightLookOf } from './community/looks';
-import { lampPost, lettered, plaque, skyline, viaduct } from './community/setKit';
+import { edgeStalls, streetLife, lampPost, lettered, plaque, skyline, viaduct } from './community/setKit';
 import { streetPlane, umbrella as setUmbrella } from './oshodiKit';
 import { shophouseRows } from './shared';
 import { layoutOf, mouthTraffic, tileWorld } from './rumbleV2Kit';
@@ -117,7 +117,6 @@ const heritage: Family = (k, g, r, n) => {
       H + 0.4,
       r.cz + (sgn * (r.h + 0.5)) / 4,
       0x9a4a32,
-      0,
       0,
       -sgn * 0.3,
     );
@@ -466,11 +465,16 @@ function build(ctx: SetContext): void {
   );
   for (const x of [-W / 2 - 4, W / 2 + 4]) lampPost(ctx, x, wz(12), Math.PI / 2, 0xffd9a0);
   mouthTraffic(ctx, layoutOf(ID), { kinds: ['danfo', 'keke', 'taxi', 'danfo'], depth: 3 });
-  const L = ctx.life;
-  L.add({ kind: 'seller', x: -W / 2 - 1.8, y: STREET, z: wz(9), yaw: 1.5 });
-  L.add({ kind: 'argue', x: -W / 2 - 1.8, y: STREET, z: wz(18), yaw: 1.5 });
-  L.add({ kind: 'walker', x: -14, y: STREET, z: north - 0.8, yaw: 0, toX: 14, toZ: north - 0.8 });
-  L.add({ kind: 'onlooker', x: W / 2 + 1.8, y: STREET, z: wz(10), yaw: -1.5 });
+  const streetGap = (z: number): boolean => z > wz(30.5) && z < wz(34);
+  edgeStalls(ctx, {
+    north: true,
+    east: true,
+    west: true,
+    goods: ['cloth', 'cloth', 'basins', 'grain', 'provisions'],
+    gap: streetGap,
+    seed: 3,
+  });
+  streetLife(ctx, { n: 14, gap: streetGap });
   ctx.ambient.dust(0, north - 1.4, 18, 1);
 }
 

@@ -240,24 +240,6 @@ export const RUMBLE_EBUTE_METTA: ArenaDef = communityArena({
     [W - 1, 19, 'left'],
   ],
   traps: TRAPS,
-  endgame: [
-    [
-      [23, 16, 'o'],
-      [29, 17, '~'],
-      [31, 19, 'o'],
-      [24, 20, '~'],
-      [28, 22, 'o'],
-      [22, 17, '~'],
-    ],
-    [
-      [24, 17, '~'],
-      [30, 16, 'o'],
-      [32, 18, '~'],
-      [23, 21, 'o'],
-      [29, 24, '~'],
-      [25, 19, 'o'],
-    ],
-  ],
   hazards: [
     {
       kind: 'sweep',

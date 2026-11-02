@@ -23,7 +23,16 @@ import { board, box as cbox, cyl as ccyl, pick } from './community/kit';
 import { communityFloor } from './community/floor';
 import { communityEnv } from './community/env';
 import { nightLookOf } from './community/looks';
-import { lampPost, lettered, plaque, railcars, skyline, viaduct } from './community/setKit';
+import {
+  edgeStalls,
+  streetLife,
+  lampPost,
+  lettered,
+  plaque,
+  railcars,
+  skyline,
+  viaduct,
+} from './community/setKit';
 import { streetPlane, umbrella as setUmbrella } from './oshodiKit';
 import { shophouseRows } from './shared';
 import { layoutOf, mouthTraffic, tileWorld } from './rumbleV2Kit';
@@ -83,7 +92,6 @@ const terminus: Family = (k, g, r, n) => {
       r.cz + (sgn * (r.h + 0.6)) / 4,
       0x8a4a30,
       0,
-      0,
       -sgn * 0.26,
     );
   cbox(k, g, k.concrete, r.w, 0.2, 1.1, r.cx, 2.5, zf + 0.5, 0xf4f0e0); // veranda roof
@@ -129,7 +137,6 @@ const heritageHouse: Family = (k, g, r, n) => {
       H + 0.3,
       r.cz + (sgn * (r.h + 0.5)) / 4,
       0x6a6e72,
-      0,
       0,
       -sgn * 0.3,
     );
@@ -544,10 +551,16 @@ function build(ctx: SetContext): void {
   );
   for (const x of [-W / 2 - 4, W / 2 + 4]) lampPost(ctx, x, wz(14), Math.PI / 2, 0xffb868);
   mouthTraffic(ctx, layoutOf(ID), { kinds: ['danfo', 'keke', 'taxi', 'danfo'], depth: 3 });
-  const L = ctx.life;
-  L.add({ kind: 'onlooker', x: -W / 2 - 1.8, y: STREET, z: wz(14), yaw: 1.5 });
-  L.add({ kind: 'seller', x: W / 2 + 1.8, y: STREET, z: wz(12), yaw: -1.5 });
-  L.add({ kind: 'walker', x: -14, y: STREET, z: north - 0.8, yaw: 0, toX: 14, toZ: north - 0.8 });
+  const streetGap = (z: number): boolean => z > wz(15.5) && z < wz(20);
+  edgeStalls(ctx, {
+    north: true,
+    east: true,
+    west: true,
+    goods: ['grain', 'provisions', 'cloth'],
+    gap: streetGap,
+    seed: 3,
+  });
+  streetLife(ctx, { n: 14, gap: streetGap });
   ctx.ambient.dust(0, north - 1.4, 18, 1);
   ctx.ambient.smokeColumn(-W / 2 - 6, 6, north - 9, { shade: 0.55, size: 1.2, rate: 2 });
 }

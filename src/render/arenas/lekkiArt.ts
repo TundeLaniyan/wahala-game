@@ -21,7 +21,7 @@ import { board, box as cbox, cyl as ccyl, drum, pick } from './community/kit';
 import { communityFloor } from './community/floor';
 import { communityEnv } from './community/env';
 import { nightLookOf } from './community/looks';
-import { lampPost, skyline } from './community/setKit';
+import { edgeStalls, streetLife, lampPost, skyline } from './community/setKit';
 import { streetPlane, umbrella as setUmbrella } from './oshodiKit';
 import { layoutOf, mouthTraffic, tileWorld } from './rumbleV2Kit';
 import type { StageEnvironment } from '../env/types';
@@ -472,10 +472,16 @@ function build(ctx: SetContext): void {
     { x: W / 2 + 1.6, y: STREET, z: wz(8), ry: -0.4 },
   ]);
   mouthTraffic(ctx, layoutOf(ID), { kinds: ['taxi', 'danfo', 'taxi', 'keke'], depth: 3 });
-  const L = ctx.life;
-  L.add({ kind: 'onlooker', x: -W / 2 - 1.8, y: STREET, z: wz(8), yaw: 1.5 });
-  L.add({ kind: 'walker', x: -14, y: STREET, z: north - 0.8, yaw: 0, toX: 14, toZ: north - 0.8 });
-  L.add({ kind: 'seller', x: W / 2 + 1.8, y: STREET, z: wz(9), yaw: -1.5 });
+  const streetGap = (z: number): boolean => z > wz(17.5) && z < wz(35);
+  edgeStalls(ctx, {
+    north: true,
+    east: true,
+    west: true,
+    goods: ['provisions', 'basins', 'cloth'],
+    gap: streetGap,
+    seed: 3,
+  });
+  streetLife(ctx, { n: 14, gap: streetGap });
   ctx.ambient.dust(0, north - 1.4, 18, 0.8);
 }
 

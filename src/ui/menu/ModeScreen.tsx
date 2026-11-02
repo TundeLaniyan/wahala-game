@@ -53,7 +53,7 @@ export const MODE_CARDS: readonly ModeCard[] = [
       blurb: m.blurb,
       facts: facts[m.id],
       preview: stagePreviewUrl(
-        { deathmatch: 'rumbleLagosIsland', team: 'rumbleLekkiNight', survival: 'rumbleOshodi' }[m.id],
+        { deathmatch: 'rumbleLagosIsland', team: 'rumbleLekki', survival: 'rumbleOshodi' }[m.id],
       ),
     };
   }),

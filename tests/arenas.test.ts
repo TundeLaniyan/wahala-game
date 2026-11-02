@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   ARENAS,
-  CITY_RUMBLE_ID,
   EXPERIMENTAL_ARENA_IDS,
   RUMBLE_ARENA_IDS,
   STANDARD_ARENA_IDS,
@@ -11,6 +10,7 @@ import {
   listEntries,
 } from '../src/sim';
 import type { ArenaDef, VehicleKind } from '../src/sim';
+import { RUMBLE_FIXTURE } from './helpers';
 
 /**
  * Arena data contract: nine distinct, fair, connected standard arenas and the City Rumble board.
@@ -40,7 +40,7 @@ function reachable(a: ArenaDef, from: { x: number; y: number }): Set<string> {
 }
 
 describe('arena registry', () => {
-  it('has nine standard arenas plus the six City Rumble stages, in menu order', () => {
+  it('has nine standard arenas plus the seven City Rumble communities, in menu order', () => {
     expect(STANDARD_ARENA_IDS).toEqual([
       'danfoBusPark',
       'balogunMarket',
@@ -52,20 +52,21 @@ describe('arena registry', () => {
       'yabaAfterDark',
       'thirdMainland',
     ]);
-    expect(getArena(CITY_RUMBLE_ID).kind).toBe('rumble');
-    // V2: the five Lagos stages first, then the Lagos-arenas builds, the original district last
-    // (tests/rumble-stages.test.ts)
+    expect(getArena(RUMBLE_FIXTURE).kind).toBe('rumble');
+    // City Rumble: Ojuelegba (the reference arena) and the six researched areas of the Canonical Lagos Map Build Bible v2
+    // (tests/rumble-researched.test.ts); the generic Apapa and City Rumble boards are gone
     expect(RUMBLE_ARENA_IDS).toEqual([
-      'rumbleOshodi',
-      'rumbleLagosIsland',
       'rumbleOjuelegba',
-      'rumbleApapa',
-      'rumbleLekkiNight',
-      CITY_RUMBLE_ID,
+      'rumbleOshodi',
+      'rumbleMushin',
+      'rumbleFadeyi',
+      'rumbleLagosIsland',
+      'rumbleLekki',
+      'rumbleEbuteMetta',
     ]);
     // plus the V2 experimental Mobile Test Arena (two sizes), kept out of the official nine
     expect(EXPERIMENTAL_ARENA_IDS).toEqual(['mobileTest13x9', 'mobileTest15x9']);
-    expect(ALL).toHaveLength(15 + EXPERIMENTAL_ARENA_IDS.length);
+    expect(ALL).toHaveLength(16 + EXPERIMENTAL_ARENA_IDS.length);
   });
 
   it('no two standard arenas share a layout and hazard set (not recolours of one grid)', () => {
@@ -184,21 +185,34 @@ describe.each(ALL.map((a) => [a.id, a] as const))('%s', (_id, a) => {
   });
 });
 
-describe('City Rumble board', () => {
-  const a = getArena(CITY_RUMBLE_ID);
-  it('is a large 41 x 31 district for up to 32 competitors with spread-out spawns', () => {
-    expect([a.layout[0]!.length, a.layout.length]).toEqual([41, 31]);
-    expect(a.maxPlayers).toBe(32);
-    const minGap = (n: number): number => {
-      const s = a.spawns.slice(0, n);
-      let m = Infinity;
-      for (let i = 0; i < s.length; i++)
-        for (let j = i + 1; j < s.length; j++)
-          m = Math.min(m, Math.abs(s[i]!.x - s[j]!.x) + Math.abs(s[i]!.y - s[j]!.y));
-      return m;
-    };
-    expect(minGap(8)).toBeGreaterThanOrEqual(12);
-    expect(minGap(16)).toBeGreaterThanOrEqual(8);
-    expect(minGap(32)).toBeGreaterThanOrEqual(4);
-  });
+describe('City Rumble boards', () => {
+  const SIZE: Record<string, [number, number]> = {
+    rumbleOjuelegba: [45, 33],
+    rumbleOshodi: [63, 47],
+    rumbleMushin: [53, 39],
+    rumbleFadeyi: [51, 33],
+    rumbleLagosIsland: [55, 39],
+    rumbleLekki: [57, 39],
+    rumbleEbuteMetta: [55, 39],
+  };
+  it.each(Object.entries(SIZE))(
+    '%s is a large board for up to 32 competitors with spread-out spawns',
+    (id, size) => {
+      const a = getArena(id);
+      expect([a.layout[0]!.length, a.layout.length]).toEqual(size);
+      expect(a.maxPlayers).toBe(32);
+      const minGap = (n: number): number => {
+        const s = a.spawns.slice(0, n);
+        let m = Infinity;
+        for (let i = 0; i < s.length; i++)
+          for (let j = i + 1; j < s.length; j++)
+            m = Math.min(m, Math.abs(s[i]!.x - s[j]!.x) + Math.abs(s[i]!.y - s[j]!.y));
+        return m;
+      };
+      // the compact Fadeyi sets the floor; the other communities are well above it
+      expect(minGap(8)).toBeGreaterThanOrEqual(8);
+      expect(minGap(16)).toBeGreaterThanOrEqual(6);
+      expect(minGap(32)).toBeGreaterThanOrEqual(4);
+    },
+  );
 });

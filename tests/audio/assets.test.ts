@@ -132,8 +132,7 @@ describe('City Rumble V2 stage music (founder assignment, 2026-10-25)', () => {
     rumbleOshodi: 'pixabay_601035', // dmsoundworks - Afrobeat Type Beat 2026 (Reach)
     rumbleLagosIsland: 'pixabay_554543', // rediskasound - Afro Beat Groovy Instrumental
     rumbleOjuelegba: 'pixabay_515507', // solarflex - Afrobeat (Afro Beat)
-    rumbleApapa: 'pixabay_455231', // ruslansikunov - Where the Sun Is Born
-    rumbleLekkiNight: 'pixabay_623364', // sonican - Afrobeat Groove
+    rumbleLekki: 'pixabay_623364', // sonican - Afrobeat Groove (the founder's Lekki Night assignment moved to the researched Lekki)
   };
 
   it('every V2 stage names its own track as playlist, start and signature, and the file is real audio', () => {
@@ -149,8 +148,8 @@ describe('City Rumble V2 stage music (founder assignment, 2026-10-25)', () => {
       const b = readFileSync(join(AUDIO, 'music', `${id}.mp3`));
       expect(b.length).toBeGreaterThan(1_000_000);
     }
-    // five different songs, none shared with another arena's signature
-    expect(new Set(Object.values(STAGE_SONG)).size).toBe(5);
+    // four different songs, none shared with another arena's signature
+    expect(new Set(Object.values(STAGE_SONG)).size).toBe(4);
     const others = Object.entries(raw.playlists.arenas)
       .filter(([a]) => !(a in STAGE_SONG))
       .map(([, p]) => p.signature);

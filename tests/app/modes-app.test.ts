@@ -53,7 +53,7 @@ function make() {
 const rumble = (p: Partial<GameSettings>): GameSettings => ({
   ...DEFAULT_GAME_SETTINGS,
   play: 'rumble',
-  rumbleArenaId: 'cityRumble',
+  rumbleArenaId: 'rumbleLagosIsland',
   rumbleCompetitors: 8,
   ...p,
 });

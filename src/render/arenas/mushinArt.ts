@@ -34,7 +34,16 @@ import { board, box as cbox, cyl as ccyl, drum, pick, smallBoard } from './commu
 import { communityFloor } from './community/floor';
 import { communityEnv } from './community/env';
 import { nightLookOf } from './community/looks';
-import { lampPost, lettered, plaque, railcars, skyline, viaduct } from './community/setKit';
+import {
+  edgeStalls,
+  streetLife,
+  lampPost,
+  lettered,
+  plaque,
+  railcars,
+  skyline,
+  viaduct,
+} from './community/setKit';
 import { sign, signTexture, umbrella as setUmbrella } from './oshodiKit';
 import { shophouseRows } from './shared';
 import { layoutOf, mouthTraffic, tileWorld } from './rumbleV2Kit';
@@ -438,11 +447,16 @@ function build(ctx: SetContext): void {
   lampPost(ctx, -W / 2 - 3.2, -10, Math.PI / 2, 0xffb060);
   lampPost(ctx, W / 2 + 3.2, 9, -Math.PI / 2, 0xffb060);
   mouthTraffic(ctx, layoutOf(ID), { kinds: ['danfo', 'keke', 'taxi', 'danfo'], depth: 3 });
-  const L = ctx.life;
-  L.add({ kind: 'seller', x: -W / 2 - 1.8, y: STREET, z: wz(9), yaw: 1.5 });
-  L.add({ kind: 'argue', x: W / 2 + 1.8, y: STREET, z: wz(12), yaw: -1.5 });
-  L.add({ kind: 'walker', x: -14, y: STREET, z: north - 0.8, yaw: 0, toX: 14, toZ: north - 0.8 });
-  L.add({ kind: 'seller', x: 8, y: STREET, z: north - 1.1, yaw: 0 });
+  const streetGap = (z: number): boolean => Math.abs(z - wz(17.5)) < 3.4;
+  edgeStalls(ctx, {
+    north: true,
+    east: true,
+    west: true,
+    goods: ['grain', 'provisions', 'basins', 'cloth'],
+    gap: streetGap,
+    seed: 3,
+  });
+  streetLife(ctx, { n: 14, gap: streetGap });
   ctx.ambient.dust(0, north - 1.4, 18, 1.2);
   ctx.ambient.smokeColumn(-W / 2 - 6, 6, north - 9, { shade: 0.55, size: 1.4, rate: 2.5 });
 }

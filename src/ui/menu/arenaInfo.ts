@@ -19,11 +19,9 @@ const MOOD: Record<string, [string, string]> = {
   thirdMainland: ['#f0a050', '#3a2440'],
   rumbleLagosIsland: ['#d89a4a', '#4a2414'],
   rumbleOjuelegba: ['#8a7a66', '#1e1a18'],
-  rumbleApapa: ['#6a8aa0', '#24323c'],
   rumbleLekki: ['#8ab0c4', '#2a3a4a'],
   rumbleEbuteMetta: ['#b8987a', '#2a2018'],
   rumbleOshodi: ['#9fb0b8', '#1a2430'],
-  cityRumble: ['#ff6a2a', '#1a0f08'],
   rumbleMushin: ['#c98a4a', '#3a2418'],
   rumbleFadeyi: ['#9aa4ac', '#2a2e34'],
 };

@@ -48,20 +48,6 @@ export interface ObstacleStyle {
   softFor?: (x: number, y: number) => string | undefined;
 }
 
-/** The four mirror images of a zone on a cols x rows board (the V2 Rumble stages are 4-fold symmetric). */
-function mirrorZone(z: PillarZone, cols: number, rows: number): PillarZone[] {
-  const fx = (x: number): number => cols - 1 - x;
-  const fy = (y: number): number => rows - 1 - y;
-  return [
-    z,
-    { ...z, x0: fx(z.x1), x1: fx(z.x0) },
-    { ...z, y0: fy(z.y1), y1: fy(z.y0) },
-    { ...z, x0: fx(z.x1), x1: fx(z.x0), y0: fy(z.y1), y1: fy(z.y0) },
-  ];
-}
-const zones4 = (cols: number, rows: number, zs: PillarZone[]): PillarZone[] =>
-  zs.flatMap((z) => mirrorZone(z, cols, rows));
-
 /** Stable per-tile hash for the district clutter pick (decorrelated neighbours). */
 function tileHash(x: number, y: number): number {
   let h = Math.imul(x + 3, 0x9e3779b1) ^ Math.imul(y + 11, 0x85ebca77);
@@ -209,26 +195,6 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
     pillars: ['prop_pillar_jersey'],
     soft: { prop_soft_drums: 4, prop_soft_barrier: 3, prop_soft_tyres: 3 },
   }),
-  cityRumble: style({
-    note: 'a mix of the city: flyover piers, precast pillars and wall stubs; every breakable family',
-    pillars: [
-      'prop_pillar_pier',
-      'prop_pillar_a',
-      'prop_pillar_wallstub',
-      'prop_pillar_c',
-      'prop_pillar_kiosk',
-    ],
-    soft: {
-      prop_soft_crate: 3,
-      prop_soft_crates: 3,
-      prop_soft_tyres: 3,
-      prop_soft_barrier: 2,
-      prop_soft_sacks: 2,
-      prop_soft_drums: 2,
-      prop_soft_cabledrum: 1,
-      prop_soft_cartons: 1,
-    },
-  }),
   // ---- City Rumble V2 stages
   rumbleLagosIsland: style({
     note: 'permanent cover is drawn whole by the board cover (textile stalls, shopfronts, office towers, heritage blocks, the park wall, trees, the harbour sheds: lagosIslandArt.ts); crush blocks are wall stubs and precast; per district clutter: bales (sacks) and cartons in Balogun, crates and cartons at Idumota, cartons and kegs on Broad Street, crates in the civic square, kegs and tyres in the park, fish crates and drums on the Marina; barriers are tyre stacks and barricades',
@@ -316,21 +282,6 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
       railYard: ['prop_soft_drums', 'prop_soft_cabledrum', 'prop_soft_crates', 'prop_soft_drums'],
       foreshore: ['prop_soft_crates', 'prop_soft_tyres', 'prop_soft_crates', 'prop_soft_drums'],
     }),
-  }),
-  rumbleApapa: style({
-    note: 'stacked shipping containers on yard pads, transit sheds of precast panels; drums, crates, cable drums',
-    pillars: ['prop_pillar_container_a', 'prop_pillar_container_b'],
-    pillarZones: zones4(45, 31, [
-      { x0: 1, y0: 3, x1: 9, y1: 4, pillars: ['prop_pillar_b', 'prop_pillar_a'] },
-    ]),
-    soft: {
-      prop_soft_drums: 4,
-      prop_soft_crates: 3,
-      prop_soft_crate: 2,
-      prop_soft_cabledrum: 2,
-      prop_soft_barrier: 1,
-    },
-    pillarDebris: 'drums',
   }),
   rumbleLekki: style({
     note: 'permanent cover is drawn whole by the board cover (glass blocks, compound walls, villas, arts-market sheds, the site hoarding, palms, the fuel canopy: lekkiArt.ts); crush blocks are wall stubs and precast; per district clutter: kegs and cartons on the promenade, crates at Ikate, barricades and cable drums at the site, sacks and tyres on the coastal lanes, crates and cartons in the estates, tyres and drums on the expressway; barriers are tyre stacks and barricades',

@@ -5,17 +5,17 @@
  * Classic is unchanged.
  */
 import { describe, expect, it } from 'vitest';
-import { CITY_RUMBLE_ID, createGame, tick } from '../src/sim';
+import { createGame, tick } from '../src/sim';
 import type { GameKind, GameState, MatchSettings } from '../src/sim';
 import { Tile } from '../src/sim/types';
 import { buildHud } from '../src/app/hud';
-import { addGenerator, eventsOf, put, run, runUntil } from './helpers';
+import { addGenerator, eventsOf, put, run, runUntil, RUMBLE_FIXTURE } from './helpers';
 
 function match(
   game: GameKind,
   n: number,
   settings: Partial<MatchSettings> = {},
-  arenaId = CITY_RUMBLE_ID,
+  arenaId = RUMBLE_FIXTURE,
 ): GameState {
   const state = createGame({
     seed: 7,

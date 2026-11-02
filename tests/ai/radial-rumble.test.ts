@@ -35,7 +35,7 @@ const SEEDS = [1, 2];
 describe('32-bot radial Survival', () => {
   for (const [arenaId, seed] of [
     ['rumbleOshodi', 3],
-    ['rumbleApapa', 4],
+    ['rumbleMushin', 4],
   ] as const) {
     it(`${arenaId} seed ${seed}: the match ends with a result and the bots keep fighting`, () => {
       const radial = survival(arenaId, seed, 'radial');
@@ -57,7 +57,7 @@ describe('32-bot radial Survival', () => {
     // the real schedule, three stages, the same seeds and line-ups with either blast shape
     let radial = 0;
     let plus = 0;
-    for (const arenaId of ['rumbleOshodi', 'rumbleApapa', 'cityRumble']) {
+    for (const arenaId of ['rumbleOshodi', 'rumbleMushin', 'rumbleLagosIsland']) {
       for (const seed of SEEDS) {
         radial += own(survival(arenaId, seed, 'radial', false));
         plus += own(survival(arenaId, seed, 'plus', false));

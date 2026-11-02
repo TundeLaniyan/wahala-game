@@ -236,24 +236,6 @@ export const RUMBLE_LAGOS_ISLAND: ArenaDef = communityArena({
     [W - 1, 33, 'left'],
   ],
   traps: TRAPS,
-  endgame: [
-    [
-      [24, 18, 'o'],
-      [27, 21, '~'],
-      [25, 24, 'o'],
-      [22, 20, '~'],
-      [29, 19, 'o'],
-      [26, 26, '~'],
-    ],
-    [
-      [25, 17, '~'],
-      [26, 22, 'o'],
-      [29, 25, '~'],
-      [23, 23, 'o'],
-      [24, 19, '~'],
-      [27, 18, 'o'],
-    ],
-  ],
   hazards: [
     {
       kind: 'sweep',

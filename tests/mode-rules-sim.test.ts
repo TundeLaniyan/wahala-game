@@ -7,10 +7,10 @@ import { describe, expect, it } from 'vitest';
 import { matchRules } from '../src/app/names';
 import { DEFAULT_GAME_SETTINGS } from '../src/app/settings';
 import type { GameSettings } from '../src/app/settings';
-import { CITY_RUMBLE_ID, createGame, teamStandings, tick } from '../src/sim';
+import { createGame, teamStandings, tick } from '../src/sim';
 import type { GameState, SimEvent } from '../src/sim';
 import { Tile } from '../src/sim/types';
-import { addGenerator, eventsOf, run } from './helpers';
+import { addGenerator, eventsOf, run, RUMBLE_FIXTURE } from './helpers';
 
 const settings = (
   rumbleMode: GameSettings['rumbleMode'],
@@ -19,7 +19,7 @@ const settings = (
 ): GameSettings => ({
   ...DEFAULT_GAME_SETTINGS,
   play: 'rumble',
-  rumbleArenaId: CITY_RUMBLE_ID,
+  rumbleArenaId: RUMBLE_FIXTURE,
   rumbleMode,
   rumbleMinutes,
   friendlyFire,
@@ -34,7 +34,7 @@ function match(
 ): GameState {
   const s = createGame({
     seed: 11,
-    arenaId: CITY_RUMBLE_ID,
+    arenaId: RUMBLE_FIXTURE,
     players: Array.from({ length: n }, (_, i) => ({
       name: `P${i}`,
       characterId: 'streetBaller',

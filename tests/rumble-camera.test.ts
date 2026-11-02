@@ -4,8 +4,8 @@ import { CameraRig } from '../src/render/cameraRig';
 import { directShot, isLargeBoard } from '../src/render/cameraDirector';
 import { cameraModeFor, selectShot } from '../src/render/cameraModes';
 import { createLayout } from '../src/render/coords';
-import { CITY_RUMBLE_ID, STANDARD_ARENA_IDS } from '../src/sim';
-import { addGenerator, put, sandbox } from './helpers';
+import { STANDARD_ARENA_IDS } from '../src/sim';
+import { addGenerator, put, sandbox, RUMBLE_FIXTURE } from './helpers';
 
 /**
  * City Rumble uses the stadium (follow) camera: it rides along with the local player (or, once they are
@@ -14,12 +14,12 @@ import { addGenerator, put, sandbox } from './helpers';
  */
 describe('City Rumble follow camera', () => {
   it('City Rumble alone uses the follow camera', () => {
-    expect(cameraModeFor(CITY_RUMBLE_ID)).toBe('stadium');
+    expect(cameraModeFor(RUMBLE_FIXTURE)).toBe('stadium');
     for (const id of STANDARD_ARENA_IDS) expect(cameraModeFor(id)).toBe('arena');
   });
 
   it('follows the local player a little wider than the standard action camera; far danger is clamped close', () => {
-    const s = sandbox({ players: 8, arenaId: CITY_RUMBLE_ID });
+    const s = sandbox({ players: 8, arenaId: RUMBLE_FIXTURE });
     const layout = createLayout(s.width, s.height);
     expect(isLargeBoard(s)).toBe(true);
     put(s, 0, 20, 15);
@@ -38,7 +38,7 @@ describe('City Rumble follow camera', () => {
   });
 
   it('spectating rides with the watched survivor; with nobody to watch it shows the city', () => {
-    const s = sandbox({ players: 8, arenaId: CITY_RUMBLE_ID });
+    const s = sandbox({ players: 8, arenaId: RUMBLE_FIXTURE });
     const layout = createLayout(s.width, s.height);
     s.players[0]!.alive = false;
     put(s, 5, 30, 20);
@@ -55,7 +55,7 @@ describe('City Rumble follow camera', () => {
   });
 
   it('the rig stays close: the follow shot is a fraction of the whole-city distance on desktop and phone', () => {
-    const s = sandbox({ players: 32, arenaId: CITY_RUMBLE_ID });
+    const s = sandbox({ players: 32, arenaId: RUMBLE_FIXTURE });
     const layout = createLayout(s.width, s.height);
     for (const [aspect, insets] of [
       [1280 / 720, { top: 0.1, bottom: 0.05 }],
@@ -84,20 +84,6 @@ describe('City Rumble follow camera', () => {
   });
 });
 
-describe('City Rumble set dressing data', () => {
-  it('finds the twelve districts between the avenues, four kinds of them', async () => {
-    const { rumbleBlocks, districtOf } = await import('../src/render/arenas/rumble');
-    const { getArena } = await import('../src/sim');
-    const layout = getArena(CITY_RUMBLE_ID).layout;
-    const blocks = rumbleBlocks(layout);
-    expect(blocks).toHaveLength(12);
-    expect(new Set(blocks.map((_, i) => districtOf(i))).size).toBe(4);
-    for (const [x0, y0, x1, y1] of blocks) {
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) expect(layout[y]![x]).not.toBe('=');
-    }
-  });
-});
-
 describe('City Rumble audio panning', () => {
   it('pans relative to the followed player once a listener is set; across the arena otherwise', async () => {
     const { createEventRouter } = await import('../src/audio/eventRouter');
@@ -108,7 +94,7 @@ describe('City Rumble audio panning', () => {
       ambience: {} as never,
       now: () => 0,
     });
-    const s = sandbox({ players: 2, arenaId: CITY_RUMBLE_ID });
+    const s = sandbox({ players: 2, arenaId: RUMBLE_FIXTURE });
     // whole arena: the left edge pans hard left, the centre is centred
     expect(router.panFor(s, 0)).toBeLessThan(-0.5);
     expect(router.panFor(s, 20)).toBeCloseTo(0, 5);

@@ -136,7 +136,7 @@ describe('City Rumble survival, 32 bots', () => {
     for (const seed of [1, 2]) {
       const state = createGame({
         seed,
-        arenaId: 'cityRumble',
+        arenaId: 'rumbleLagosIsland',
         settings: { game: 'survival' },
         players: Array.from({ length: 32 }, (_, i) => ({
           name: `b${i}`,

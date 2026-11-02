@@ -49,7 +49,7 @@ beforeEach(() => Object.assign(useGameStore.getInitialState(), { settings: { ...
 
 describe('Select Arena (on the setup screen)', () => {
   it('City Rumble lists every Rumble stage from the registry, in order, with real facts and previews', () => {
-    const html = render(ArenaPicker, { play: 'rumble', rumbleArenaId: 'rumbleApapa' });
+    const html = render(ArenaPicker, { play: 'rumble', rumbleArenaId: 'rumbleMushin' });
     const order = [...html.matchAll(/data-testid="rumble-stage-([A-Za-z]+)"/g)]
       .map((m) => m[1]!)
       .filter((id) => id in ARENAS);
@@ -61,15 +61,15 @@ describe('Select Arena (on the setup screen)', () => {
       expect(html).toContain(`previews/${id}.jpg`);
     }
     // the chosen stage is described in full: board size and its stage hazards
-    const apapa = ARENAS.rumbleApapa!;
-    expect(html).toContain(`${apapa.layout[0]!.length} x ${apapa.layout.length}`);
-    expect(html).toMatch(/aria-pressed="true"[^>]*data-testid="rumble-stage-rumbleApapa"/);
-    for (const h of apapa.info.hazards) expect(html).toContain(h);
+    const chosen = ARENAS.rumbleMushin!;
+    expect(html).toContain(`${chosen.layout[0]!.length} x ${chosen.layout.length}`);
+    expect(html).toMatch(/aria-pressed="true"[^>]*data-testid="rumble-stage-rumbleMushin"/);
+    for (const h of chosen.info.hazards) expect(html).toContain(h);
   });
 
   it('an unknown saved stage falls back to the first stage', () => {
     expect(render(ArenaPicker, { play: 'rumble', rumbleArenaId: 'gone' })).toMatch(
-      /aria-pressed="true"[^>]*data-testid="rumble-stage-rumbleOshodi"/,
+      /aria-pressed="true"[^>]*data-testid="rumble-stage-rumbleOjuelegba"/,
     );
   });
 

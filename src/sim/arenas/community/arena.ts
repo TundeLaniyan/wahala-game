@@ -27,7 +27,8 @@ export interface CommunitySpec {
   /** Summoned attack-vehicle entry lanes (road mouths only). */
   lanes: readonly [number, number, Dir][];
   traps: readonly Mark[];
-  endgame: readonly [readonly Mark[], readonly Mark[]];
+  /** Seeds of the two endgame trap waves: six marks each, drawn deterministically on open floor inside the core. */
+  endgameSeeds?: readonly [number, number];
   hazards: StageHazardDef[];
   info: ArenaInfo;
   districts: DistrictDef[];
@@ -49,12 +50,50 @@ function spawnsFor(
 ): TilePos[] {
   for (let n = 32; n >= 2; n -= 2) {
     try {
-      return balancedSpawns(layout, n, start, RADIAL_CLEARANCE, avoid);
+      // kept-clear plazas ('_') are open floor too: starts may stand on them
+      return balancedSpawns(layout.map((r) => r.replace(/_/g, '.')), n, start, RADIAL_CLEARANCE, avoid);
     } catch {
       /* try fewer */
     }
   }
   return [];
+}
+
+/** `count` trap marks on open floor ('.', '_', '=') inside the core, spread out, drawn with a seeded generator. */
+function coreMarks(
+  layout: readonly string[],
+  core: { w: number; h: number; x0: number; y0: number },
+  count: number,
+  seed: number,
+  not: ReadonlySet<string>,
+): Mark[] {
+  const cand: [number, number][] = [];
+  for (let y = core.y0; y < core.y0 + core.h; y++)
+    for (let x = core.x0; x < core.x0 + core.w; x++)
+      if ('._='.includes(layout[y]?.[x] ?? '#') && !not.has(`${x},${y}`)) cand.push([x, y]);
+  let t = seed >>> 0 || 1;
+  const rnd = (): number => {
+    t = (Math.imul(t ^ (t >>> 15), 2246822519) + 0x9e3779b9) >>> 0;
+    return t / 4294967296;
+  };
+  const out: Mark[] = [];
+  while (out.length < count && cand.length) {
+    // the candidate farthest (Manhattan) from the marks so far, among a few random draws: spread without a pattern
+    let best = -1;
+    let bestD = -1;
+    for (let k = 0; k < 6; k++) {
+      const i = Math.floor(rnd() * cand.length);
+      const [x, y] = cand[i]!;
+      const d = out.length ? Math.min(...out.map(([a, b]) => Math.abs(a - x) + Math.abs(b - y))) : 99;
+      if (d > bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    const [x, y] = cand.splice(best, 1)[0]!;
+    out.push([x, y, out.length % 2 === 0 ? 'o' : '~']);
+  }
+  return out;
 }
 
 export function communityArena(s: CommunitySpec): ArenaDef {
@@ -69,7 +108,12 @@ export function communityArena(s: CommunitySpec): ArenaDef {
     if (h.kind === 'strike') for (const z of h.zones) avoid.push(...z);
     if (h.kind === 'push') for (const z of h.zones) avoid.push(...z.tiles);
   }
-  for (const [x, y] of [...s.traps, ...s.endgame[0], ...s.endgame[1]]) avoid.push([x, y]);
+  const seeds = s.endgameSeeds ?? [11, 23];
+  const used = new Set<string>([...s.traps].map(([x, y]) => `${x},${y}`));
+  const wave1 = coreMarks(layout, s.core, 6, seeds[0], used);
+  for (const [x, y] of wave1) used.add(`${x},${y}`);
+  const wave2 = coreMarks(layout, s.core, 6, seeds[1], used);
+  for (const [x, y] of [...s.traps, ...wave1, ...wave2]) avoid.push([x, y]);
   return {
     id: s.id,
     name: s.name,
@@ -86,7 +130,7 @@ export function communityArena(s: CommunitySpec): ArenaDef {
       vehicles: { lanes: s.lanes.map(([x, y, d]) => [x, y, d] as [number, number, Dir]) },
     },
     floorTraps: trapGrid(s.traps, W, H),
-    endgameTraps: [trapGrid(s.endgame[0], W, H), trapGrid(s.endgame[1], W, H)],
+    endgameTraps: [trapGrid(wave1, W, H), trapGrid(wave2, W, H)],
     stageHazards: s.hazards,
     info: s.info,
     districts: s.districts,

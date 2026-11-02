@@ -168,11 +168,11 @@ describe('arena playlists and signature tracks', () => {
     }
     // nine different songs: one per arena, all nine supplied files used
     expect(new Set(Object.values(FOUNDER)).size).toBe(9);
-    // City Rumble rotates a subset of the same tracks and never repeats back to back
-    const rumble = playlistFor(m, 'cityRumble');
+    // a Rumble community without a founder-assigned track (Mushin, Fadeyi, Ebute-Metta) rotates the default list and never repeats back to back
+    const rumble = playlistFor(m, 'rumbleMushin');
     expect(rumble.length).toBeGreaterThanOrEqual(3);
     for (const id of rumble) expect(Object.values(FOUNDER)).toContain(id);
-    const picks = season(m, 60, { arenaId: 'cityRumble', isAvailable: () => true });
+    const picks = season(m, 60, { arenaId: 'rumbleMushin', isAvailable: () => true });
     for (let i = 1; i < picks.length; i++) expect(picks[i]).not.toBe(picks[i - 1]);
   });
 });

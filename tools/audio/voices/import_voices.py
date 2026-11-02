@@ -67,12 +67,11 @@ BUS = {'VO_REACTION': 'reaction', 'VO_CROWD': 'crowd', 'VO_AMBIENT': 'ambient'}
 ZONE = {'ALL': 'all', 'DANFO_BUS_PARK': 'bus_park', 'BALOGUN_MARKET': 'market'}
 #: Initial arena membership of the location zones (kept from the existing voices.json once it exists).
 DEFAULT_ZONES = {
-    'bus_park': ['danfoBusPark', 'oshodiInterchange', 'cityRumble', 'rumbleOshodi', 'rumbleOjuelegba', 'rumbleApapa'],
+    'bus_park': ['danfoBusPark', 'oshodiInterchange', 'rumbleOshodi', 'rumbleOjuelegba'],
     'market': [
         'balogunMarket',
         'oshodiInterchange',
         'yabaAfterDark',
-        'cityRumble',
         'rumbleOshodi',
         'rumbleLagosIsland',
         'rumbleOjuelegba',
