@@ -2,6 +2,18 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Kill streaks, close combat and touch input (branch `claude/wahala-streaks-combat-input-v1`, from `8ebf3f4`)
+
+Reference: `docs/STREAKS_AND_COMBAT.md`; decisions MI1-MI5, CB1-CB4, SK1-SK4, VG1-VG4, GK1. Not merged, not deployed.
+
+- Touch input: presses kept through a daze / stumble / slide / trapdoor arrival, newest direction cancels an owed diagonal step, emergency escape through a blast footprint, input trace (`?debug` / `?trace`); keyboard and gamepad unchanged.
+- Close attacks: Punch (Street Jab), Shove and Daze Punch are three different attacks (startup, whiff / hit recovery, per-target lockout, displacement, daze), no attacker freeze; `npm run combat-balance`.
+- Fixed streak loadout 3 / 5 / 7: QUICK HANDS (18 s, +5 charges, hold-A lays), VEHICLE GENERATOR (any public vehicle, 3 s fuse from launch, thrown at 2 s, owner safe), GLOBAL KNOCKDOWN (2 s, visible, non-lethal); `npm run streak-measure`.
+- Vehicles are public (character mapping removed); the Okada is a vehicle where an arena allows it.
+- HUD rail cards and notices, real action names on the touch buttons, day / night checks (`e2e/streaks.spec.ts`, `tests/ui/streakContrast.test.ts`).
+
+Verification (commits `5d165d1` for the unit / build / phone suite, `0d9be51` for the desktop suite): `npm run check` (typecheck, lint, 128 unit files: 2016 passed, 5 skipped, production build) clean; phone Playwright 111 passed, 14 skipped, 0 failed (retries off); desktop Playwright 81 passed, 43 skipped, 1 failed (`rumble.spec.ts:183`, a 15 s HUD wait under load; it passes alone in 3.5 min and passed in every earlier run). Known gaps: assists pay no reward; the Okada vehicle model is procedural (no glTF); a 4-rung bot-level check of VEHICLE GENERATOR / GLOBAL KNOCKDOWN use is only the Standard-level measurement.
+
 ## Lagos arenas, build 1: Oshodi Transport Metropolis (branch `claude/wahala-lagos-arenas-v1`, from `1e099f6`)
 
 Founder brief of 2026-10-30 (decisions LA1-LA12 in `DECISIONS.md`; report `OSHODI_METROPOLIS.md`). The researched
