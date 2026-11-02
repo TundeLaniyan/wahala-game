@@ -70,6 +70,9 @@ test('the stage starts from the menu on a 63 x 47 board and plays without page e
 test('the railcar is announced in the HUD with its warning time, and the track tiles are a lane', async ({
   page,
 }) => {
+  // fast-forwards up to 9000 simulated ticks of the 63 x 47 city before it can read the first warning: about 50 s
+  // alone, so it needs the slow multiplier beside another worker on a software-WebGL runner
+  test.slow();
   await open(page);
   await startOshodi(page);
   // fast-forward (staging only: the human keeps spawn protection) to the first railcar warning
