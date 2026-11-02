@@ -10,7 +10,7 @@
  */
 import type { GameState, Player, SimEvent } from '../types';
 import { isActing } from './queries';
-import { meleeTarget, strike } from './skills';
+import { attackTarget, beginAttack } from './skills';
 import { autoLaunch } from './vehicles';
 
 export type SpecialAction = 'melee' | 'vehicle' | null;
@@ -18,19 +18,17 @@ export type SpecialAction = 'melee' | 'vehicle' | null;
 /** What a B tap would do right now (HUD label, tutorial, bots). Read-only. */
 export function previewSpecial(state: GameState, p: Player): SpecialAction {
   if (!isActing(state, p) || p.entryUntil !== null) return null;
-  if (meleeTarget(state, p)) return 'melee';
+  if (attackTarget(state, p)) return 'melee';
   if (p.hasVoucher && !state.vehicles.some((v) => v.ownerId === p.id)) return 'vehicle';
   return null;
 }
 
 export function resolveSpecial(state: GameState, p: Player, events: SimEvent[]): SpecialAction {
   if (!isActing(state, p) || p.entryUntil !== null) return null;
-  const melee = meleeTarget(state, p);
+  const melee = attackTarget(state, p);
   if (melee) {
-    // an adjacent opponent makes B a melee press, even while it cools down: never a surprise vehicle
-    if (state.tick < p.skillReadyTick) return null;
-    p.facing = melee.dir;
-    if (!strike(state, p, melee.target, events)) return null;
+    // an adjacent attackable opponent makes B a melee press, even while it recovers: never a surprise vehicle
+    if (!beginAttack(state, p, melee.target, melee.dir, events)) return null;
     events.push({ type: 'specialUsed', playerId: p.id, action: 'melee' });
     return 'melee';
   }

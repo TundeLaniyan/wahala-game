@@ -29,12 +29,12 @@ export const MELEE: Lesson = {
   id: 'melee',
   course: 'combat',
   title: 'Button B: hit',
-  summary: 'Tap B next to a rival: push, daze or shove.',
+  summary: 'Tap B next to a rival: punch, daze or shove.',
   objective: 'Walk up to the training dummy and tap B to hit it. Then hit it again once B has recharged.',
   facts: [
-    "Tap B with an opponent on a tile next to you: your character's hit. Street Baller pushes, Lekki Boy dazes, Campus Queen shoves.",
-    'It recharges for a few seconds. B never hits a teammate.',
-    'A hit never knocks anyone out by itself, but a push into a blast does.',
+    "Tap B with an opponent on a tile next to you: your character's hit. Street Baller throws a fast Punch (a brief daze), Lekki Boy a slower Daze Punch (a long one), Campus Queen a Shove that pushes two tiles.",
+    'It needs a moment to start and a few seconds to recharge, and the same rival cannot be hit twice in a row. B never hits a teammate.',
+    'A hit never knocks anyone out by itself, but a shove into a blast does.',
   ],
   controls: ['move', 'special'],
   demo: {
@@ -45,7 +45,7 @@ export const MELEE: Lesson = {
     beats: [
       { caption: 'Walk right up to a rival...', acts: { 0: [walk('right', 3)] } },
       {
-        caption: '...and tap B. Street Baller pushes them a tile.',
+        caption: '...and tap B. Street Baller punches: a brief daze.',
         acts: { 0: [wait(20), special] },
         hold: 120,
       },
@@ -81,7 +81,7 @@ export const MELEE: Lesson = {
         id: 'again',
         label: 'Hit it again when B is ready',
         instruction:
-          'B recharges in a few seconds. Walk up to the dummy again and hit it once more with {B}.',
+          'B recharges in a few seconds, and the dummy is out of reach for a moment after a hit. Wait, then hit it once more with {B}.',
         controls: ['move', 'special'],
         done: when(meleeBy),
         mistakes: [bWhiff],

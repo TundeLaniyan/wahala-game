@@ -252,6 +252,16 @@ const handlers: Handlers = {
   skillUsed: (e, c) => {
     if (allow(c, 'skill', 0.08)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)));
   },
+  // the telegraph of a melee press (a quick breath of air), and the empty swing of one that found nobody
+  attackStarted: (e, c) => {
+    if (allow(c, 'attackStart', 0.05)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.35, 1.5);
+  },
+  attackResolved: (e, c) => {
+    if (!e.hit && allow(c, 'attackWhiff', 0.1)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.3, 0.8);
+  },
+  attackInterrupted: (e, c) => {
+    sfx(c, 'daze', panOf(c, playerX(c, e.playerId)), 0.5, 1.3);
+  },
   playerPushed: (e, c) => {
     sfx(c, 'gen_drop', panOf(c, playerX(c, e.playerId)), 0.9);
     react(c, { kind: 'gasp', strength: 0.3, chance: 0.4, delay: 0.1 });

@@ -127,6 +127,14 @@ export interface SpectatorState {
   stepRemaining: number;
 }
 
+/** A melee attack between the press and its effect (the startup). It never roots the attacker. */
+export interface PendingAttack {
+  skill: SkillKind;
+  /** The rival it was aimed at (the effect re-checks who is adjacent when it resolves). */
+  targetId: number;
+  resolveTick: number;
+}
+
 export interface Player {
   id: number;
   slot: number;
@@ -190,7 +198,16 @@ export interface Player {
   carrying: number | null; // generator id
   dazedUntil: number;
   dazeImmuneUntil: number;
+  /** First tick this fighter may START another melee attack (their global recovery after the last one). */
   skillReadyTick: number;
+  /** A melee attack in its startup: resolves at `resolveTick` (decision CB1); null when idle. */
+  attack: PendingAttack | null;
+  /**
+   * Per-target lockout (decision CB3): `meleeLock[victimId]` is the first tick this fighter's melee may affect
+   * that victim again. Other victims are unaffected, so a chain on one opponent is impossible while a different
+   * opponent stays hittable once the attacker's own recovery (`skillReadyTick`) is over.
+   */
+  meleeLock: Record<number, number>;
   curse: { kind: CurseKind; until: number } | null;
   entryUntil: number | null; // vehicle-entry mode deadline
   immune: ImmuneEntry[];
@@ -682,6 +699,12 @@ export type SimEvent =
   | { type: 'okadaMounted'; playerId: number }
   | { type: 'okadaBroken'; playerId: number; x: number; y: number }
   | { type: 'skillUsed'; playerId: number; skill: SkillKind; targetId: number | null }
+  /** A melee press began its startup (the telegraph: a raised fist, a braced shoulder ...). */
+  | { type: 'attackStarted'; playerId: number; skill: SkillKind; targetId: number; resolveTick: number }
+  /** A melee attack finished its startup: it connected (`targetId`) or whiffed (null). */
+  | { type: 'attackResolved'; playerId: number; skill: SkillKind; targetId: number | null; hit: boolean }
+  /** A hit that dazed or displaced the target cut a melee startup short. */
+  | { type: 'attackInterrupted'; playerId: number; byId: number }
   | { type: 'playerPushed'; playerId: number; byId: number; fromX: number; fromY: number }
   | { type: 'playerDazed'; playerId: number; byId: number | null }
   | { type: 'cursed'; playerId: number; curse: CurseKind }

@@ -7,7 +7,7 @@ import { addSoft, eventsOf, put, run, sandbox } from './helpers';
  * character's skill; 2 else a Vehicle Voucher -> one-press vehicle; 3 else nothing. Never two things.
  */
 describe('B priority', () => {
-  it('1. an adjacent opponent: B is the melee (Push moves them a tile) and the hit is recorded for credit', () => {
+  it('1. an adjacent opponent: B is the melee (the Punch dazes them) and the hit is recorded for credit', () => {
     const s = sandbox({ characters: ['streetBaller', 'lekkiBoy'] });
     put(s, 0, 4, 4);
     put(s, 1, 5, 4);
@@ -15,8 +15,9 @@ describe('B priority', () => {
     expect(previewSpecial(s, s.players[0]!)).toBe('melee');
     const ev = run(s, 1, { 0: { special: true } });
     expect(eventsOf(ev, 'specialUsed')).toEqual([{ type: 'specialUsed', playerId: 0, action: 'melee' }]);
-    expect(eventsOf(ev, 'playerPushed')).toHaveLength(1);
-    expect(s.players[1]!.x).toBe(6);
+    ev.push(...run(s, s.config.skills.attacks.push.startupTicks));
+    expect(eventsOf(ev, 'playerDazed')).toHaveLength(1);
+    expect(s.players[1]!.x).toBe(5); // the Punch does not move them
     expect(s.vehicles).toHaveLength(0);
     expect(s.players[0]!.hasVoucher).toBe(true);
     expect(s.players[1]!.recentHits.map((h) => h.byId)).toEqual([0]);
@@ -29,15 +30,17 @@ describe('B priority', () => {
     put(s, 2, 14, 10);
     s.players[0]!.facing = 'down';
     const ev = run(s, 1, { 0: { special: true } });
+    expect(s.players[0]!.facing).toBe('up'); // it turns to face the rival at once
+    ev.push(...run(s, s.config.skills.attacks.daze.startupTicks));
     expect(eventsOf(ev, 'playerDazed')).toEqual([{ type: 'playerDazed', playerId: 1, byId: 0 }]);
-    expect(s.players[0]!.facing).toBe('up');
 
     const t = sandbox({ characters: ['campusQueen', 'streetBaller'] });
     put(t, 0, 4, 4);
     put(t, 1, 3, 4);
     const ev2 = run(t, 1, { 0: { special: true } });
+    ev2.push(...run(t, t.config.skills.attacks.shove.startupTicks));
     expect(eventsOf(ev2, 'skillUsed')[0]!.skill).toBe('shove');
-    expect(t.players[1]!.x).toBe(2);
+    expect(t.players[1]!.x).toBeLessThan(3); // pushed away (two tiles where the map allows)
   });
 
   it('a melee on cooldown with a voucher does NOTHING: never a surprise vehicle next to a rival', () => {
@@ -52,15 +55,15 @@ describe('B priority', () => {
     expect(s.players[0]!.hasVoucher).toBe(true);
   });
 
-  it('a push into a wall fails cleanly: no vehicle either', () => {
-    const s = sandbox({ characters: ['streetBaller', 'lekkiBoy'] });
+  it('a shove into a wall fails cleanly (a whiff): no vehicle either', () => {
+    const s = sandbox({ characters: ['campusQueen', 'lekkiBoy'] });
     put(s, 0, 4, 4);
     put(s, 1, 5, 4);
     addSoft(s, 6, 4);
     s.players[0]!.facing = 'right';
     s.players[0]!.hasVoucher = true;
-    const ev = run(s, 1, { 0: { special: true } });
-    expect(eventsOf(ev, 'specialUsed')).toHaveLength(0);
+    const ev = run(s, 1 + s.config.skills.attacks.shove.startupTicks, { 0: { special: true } });
+    expect(eventsOf(ev, 'attackResolved').map((e) => e.hit)).toEqual([false]);
     expect([s.players[1]!.x, s.vehicles.length]).toEqual([5, 0]);
   });
 

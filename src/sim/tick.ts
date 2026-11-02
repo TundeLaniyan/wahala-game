@@ -18,7 +18,7 @@ import type { LethalHit } from './systems/lethality';
 import { evaluateMatchEnd } from './systems/match';
 import { updateMovement } from './systems/movement';
 import { burnPickups, collectPickups } from './systems/pickups';
-import { useSkill } from './systems/skills';
+import { updateAttacks, useSkill } from './systems/skills';
 import {
   applyBlastExposure,
   expireEntryModes,
@@ -58,6 +58,7 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   expireEntryModes(state, events);
   applyIntents(state, intents, events);
   updateMovement(state, intents, events);
+  updateAttacks(state, events);
   updateSpectators(state, intents, events);
   updateFloorHazards(state, events);
   armTeleports(state);

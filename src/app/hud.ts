@@ -508,7 +508,7 @@ export function buildHud(
           local.curse && state.tick < local.curse.until
             ? { kind: local.curse.kind, seconds: Math.ceil((local.curse.until - state.tick) / 60) }
             : null,
-        skillReady: state.tick >= local.skillReadyTick,
+        skillReady: state.tick >= local.skillReadyTick && local.attack === null,
         hasRemoteGenerator: state.generators.some((g) => g.ownerId === local.id && g.mode === 'remote'),
         canDisarm: local.killSwitchCharges > 0,
         canAction: local.grip || local.carrying !== null,

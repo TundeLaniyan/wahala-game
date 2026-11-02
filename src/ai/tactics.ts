@@ -3,7 +3,7 @@
  * tools for emergencies and close-combat skills. Each decision is verified against the danger map
  * before it is allowed to change the movement intent.
  */
-import { meleeTarget } from '../sim';
+import { CHARACTERS, meleeTarget } from '../sim';
 import type { Intent } from '../sim';
 import { dirIndex } from './board';
 import type { Ctx } from './context';
@@ -29,6 +29,12 @@ export class Tactics {
     const T = obs.tick;
     if (!me.alive) return;
 
+    // ---- a melee in its startup: stay on the tile while it is safe to, so the hit finds the rival (the startup
+    // never roots anyone, but a step away would make the attack miss)
+    if (me.attack && danger.firstHit(world.myTile, T + 1) > T + Math.max(0, me.attack.resolveTick - T) + 14) {
+      delete intent.move;
+    }
+
     // ---- vehicle voucher: one press of B, the same special the human presses
     const safeHere = danger.safeFrom(world.myTile, T) && intent.move === undefined;
     vehicleTactic(c, this.vehicle, intent, safeHere);
@@ -49,6 +55,10 @@ export class Tactics {
     if (hooks.planKind() === 'last' && T % 2 === 0 && tryEmergencyFix(c, intent)) hooks.requestRethink();
 
     // ---- close combat: B, which is a melee press whenever an opponent is adjacent (never the vehicle)
-    if (decideSkill(c) && meleeTarget(obs, me)) intent.special = true;
+    if (decideSkill(c) && meleeTarget(obs, me)) {
+      intent.special = true;
+      const startup = obs.config.skills.attacks[CHARACTERS[me.characterId].skill].startupTicks;
+      if (danger.firstHit(world.myTile, T + 1) > T + startup + 14) delete intent.move;
+    }
   }
 }

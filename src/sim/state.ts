@@ -84,6 +84,8 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     dazedUntil: 0,
     dazeImmuneUntil: 0,
     skillReadyTick: 0,
+    attack: null,
+    meleeLock: {},
     curse: null,
     entryUntil: null,
     immune: [],
@@ -190,7 +192,8 @@ function buildTiles(state: GameState, arena: ArenaDef): void {
     const c = arena.layout[y]![x];
     // roads (traffic lanes, manholes, power zones) and kept-clear floor ('_') never get random crates;
     // authored barriers ('x') and supply crates ('$') are always crates (placed after this pass)
-    if (state.tiles[i] === Tile.Hard || clear.has(i) || c === '=' || c === '_' || c === 'x' || c === '$') return;
+    if (state.tiles[i] === Tile.Hard || clear.has(i) || c === '=' || c === '_' || c === 'x' || c === '$')
+      return;
     if (soft) state.tiles[i] = Tile.Soft;
   };
 
@@ -366,8 +369,9 @@ export function crushSchedule(count: number, config: GameConfig): number[] {
   if (config.crush.keepCore) {
     // City Rumble: an even cadence so that the last ring tile has landed when the core is all that is left
     const last = Math.max(first, durationTicks - config.crush.coreClosedRemainingTicks - warnTicks);
-    return Array.from({ length: count }, (_, j) =>
-      first + (count > 1 ? Math.round(((last - first) * j) / (count - 1)) : 0),
+    return Array.from(
+      { length: count },
+      (_, j) => first + (count > 1 ? Math.round(((last - first) * j) / (count - 1)) : 0),
     );
   }
   const finalWarn = Math.max(first, durationTicks - warnTicks);

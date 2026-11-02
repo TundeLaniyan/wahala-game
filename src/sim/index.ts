@@ -2,7 +2,7 @@
 export { createGame, createPlayer, crushSchedule, DEFAULT_SETTINGS, MAX_PLAYERS, MIN_PLAYERS } from './state';
 export { tick } from './tick';
 export { DEFAULT_CONFIG, TICK_RATE, mergeConfig, ticks } from './config';
-export type { DeepPartial, GameConfig, RewardKind, VehicleSpec } from './config';
+export type { AttackSpec, DeepPartial, GameConfig, RewardKind, VehicleSpec } from './config';
 export * from './types';
 export {
   DIRS,
@@ -40,6 +40,8 @@ export { CHARACTERS, CHARACTER_IDS } from './data/characters';
 export type { CharacterDef } from './data/characters';
 export { PICKUP_DEFS } from './data/pickups';
 export { VEHICLE_DEFS } from './data/vehicles';
+export { SKILL_DEFS } from './data/skills';
+export type { SkillDef } from './data/skills';
 export { createRng, nextFloat, nextInt, pick, shuffle } from './rng';
 export type { RngHolder } from './rng';
 export {

@@ -156,6 +156,8 @@ describe('event mapping', () => {
       'contactUsed',
       'contactEquipped',
       'specialUsed',
+      // melee: a hit is voiced by skillUsed / playerDazed / playerPushed; only a whiff makes its own (soft) sound
+      'attackResolved',
     ]);
     // an extra human-less state variant is covered below; here players 0/1 are both "human" sandbox players
     for (const [type, e] of Object.entries(SAMPLES)) {

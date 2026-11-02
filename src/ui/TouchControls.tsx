@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as RPointerEvent } from 'react';
-import { CHARACTERS, VEHICLE_DEFS } from '../sim';
+import { CHARACTERS, SKILL_DEFS, VEHICLE_DEFS } from '../sim';
 import type { Dir } from '../sim';
 import { pickupIconUrl } from '../assets/pickupIcons';
 import { commands, input } from '../app/session';
@@ -135,8 +135,9 @@ export function specialLabel(
 ): { text: string; icon: 'voucher' | null; live: boolean } {
   if (me.special === 'vehicle')
     return { text: VEHICLE_DEFS[me.vehicle].name.toUpperCase(), icon: 'voucher', live: true };
-  if (me.special === 'melee') return { text: skill.toUpperCase(), icon: null, live: me.skillReady };
-  return { text: skill.toUpperCase(), icon: null, live: false };
+  const label = SKILL_DEFS[skill as keyof typeof SKILL_DEFS]?.label ?? skill.toUpperCase();
+  if (me.special === 'melee') return { text: label, icon: null, live: me.skillReady };
+  return { text: label, icon: null, live: false };
 }
 
 /**

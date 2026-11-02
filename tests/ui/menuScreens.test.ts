@@ -118,7 +118,7 @@ describe('fighter screen', () => {
     for (const id of CHARACTER_IDS) {
       const f = fighterInfo(id);
       const skill = CHARACTERS[id].skill;
-      expect(f.skillCooldown).toBe(DEFAULT_CONFIG.skills.cooldownTicks[skill] / TICK_RATE);
+      expect(f.skillCooldown).toBe(DEFAULT_CONFIG.skills.attacks[skill].hitRecoveryTicks / TICK_RATE);
       expect(f.vehicleName).toBe(VEHICLE_DEFS[CHARACTERS[id].vehicle].name);
     }
   });

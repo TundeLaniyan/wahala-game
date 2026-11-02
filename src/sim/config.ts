@@ -26,6 +26,27 @@ export interface VehicleSpec {
   turns: boolean;
 }
 
+/**
+ * One close attack (B tap next to a rival). Nothing here roots the attacker: the recoveries only keep THEIR NEXT
+ * attack from starting; walking, placing generators and everything else stay free.
+ */
+export interface AttackSpec {
+  /** Ticks between the press and the effect (the telegraph; a hit that dazes or displaces cuts it short). */
+  startupTicks: number;
+  /** The attacker's next attack may not start for this long after the effect found nobody (or was interrupted). */
+  whiffRecoveryTicks: number;
+  /** ... and for this long after it connected (their global recovery: any other rival is hittable after it). */
+  hitRecoveryTicks: number;
+  /** The same attacker may not affect the same victim again for this long after a hit (no chain). */
+  targetLockoutTicks: number;
+  /** Tiles the victim is pushed straight away from the attacker (0 = not displaced); a hit that cannot move them at all whiffs. */
+  displacementTiles: number;
+  /** Ticks the victim cannot act (0 = no daze). */
+  dazeTicks: number;
+  /** After this daze ends the victim cannot be dazed by an attack again for this long. */
+  dazeImmunityTicks: number;
+}
+
 export interface GameConfig {
   match: {
     durationTicks: number;
@@ -82,8 +103,9 @@ export interface GameConfig {
     graceTicks: number;
   };
   skills: {
-    cooldownTicks: Record<SkillKind, number>;
-    dazeTicks: number;
+    /** The three close attacks (decision CB1): each is a startup, an effect and recoveries, all in ticks. */
+    attacks: Record<SkillKind, AttackSpec>;
+    /** Daze immunity after the crowd's bottle (the attacks carry their own, `AttackSpec.dazeImmunityTicks`). */
     dazeImmunityTicks: number;
   };
   vehicles: {
@@ -338,8 +360,37 @@ export const DEFAULT_CONFIG: GameConfig = {
     graceTicks: ticks(0.75),
   },
   skills: {
-    cooldownTicks: { push: ticks(4), shove: ticks(3), daze: ticks(5) },
-    dazeTicks: ticks(1),
+    // Punch / Street Jab (push): fast and light. Shove: slow, positional, risky. Daze Punch: slow and heavy.
+    // Decision CB2 lists the measured trade-offs; scripts/combat-balance.ts re-measures them.
+    attacks: {
+      push: {
+        startupTicks: 4,
+        whiffRecoveryTicks: 12,
+        hitRecoveryTicks: ticks(1),
+        targetLockoutTicks: ticks(3),
+        displacementTiles: 0,
+        dazeTicks: 30,
+        dazeImmunityTicks: ticks(1),
+      },
+      shove: {
+        startupTicks: 12,
+        whiffRecoveryTicks: 36,
+        hitRecoveryTicks: ticks(2),
+        targetLockoutTicks: ticks(3),
+        displacementTiles: 2,
+        dazeTicks: 0,
+        dazeImmunityTicks: 0,
+      },
+      daze: {
+        startupTicks: 18,
+        whiffRecoveryTicks: 30,
+        hitRecoveryTicks: ticks(4),
+        targetLockoutTicks: ticks(4),
+        displacementTiles: 0,
+        dazeTicks: ticks(1),
+        dazeImmunityTicks: ticks(2),
+      },
+    },
     dazeImmunityTicks: ticks(2),
   },
   vehicles: {
