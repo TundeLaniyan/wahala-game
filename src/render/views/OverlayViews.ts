@@ -63,8 +63,16 @@ export class OverlayViews implements View {
     // --- blast danger lanes (generators about to explode, and remote ones faintly)
     const danger = new Map<number, number>();
     for (const g of state.generators) {
-      if (g.flight !== null || g.mode === 'disabled') continue;
+      // a thrown VEHICLE GENERATOR shows where it will land and what it will burn from the moment it is let go
+      const thrown = g.vehicleBorne === true && g.mountedOn === undefined && g.flight !== null;
+      if ((g.flight !== null && !thrown) || g.mountedOn !== undefined || g.mode === 'disabled') continue;
       let intensity: number;
+      if (thrown) {
+        const k = 1 - g.flight!.remaining / Math.max(1, g.flight!.total);
+        intensity = 0.22 + 0.3 * k + 0.1 * Math.sin(time * 22);
+        for (const idx of previewBlast(state, g)) danger.set(idx, Math.max(danger.get(idx) ?? 0, intensity));
+        continue;
+      }
       if (g.mode === 'timed') {
         const left = g.timer - alpha;
         if (left > 100) continue;
@@ -92,7 +100,8 @@ export class OverlayViews implements View {
       const total = state.config.vehicles.entryWarnTicks;
       const k = 1 - Math.max(0, v.warnRemaining - alpha) / total;
       const urgent = k > 0.65;
-      const color = urgent ? 0xff4a1a : 0xffc21a;
+      // a VEHICLE GENERATOR carrier's lane is pink, never the ram vehicles' amber / red
+      const color = v.payload ? (urgent ? 0xff2f86 : 0xff9bd0) : urgent ? 0xff4a1a : 0xffc21a;
       v.route.forEach((t, i) => {
         const pulse = 0.5 + 0.5 * Math.sin(time * (urgent ? 22 : 12) - i * 0.8);
         this.fill.push({ x: wx(t.x), z: wz(t.y), color, intensity: 0.2 + 0.32 * pulse, scale: 0.97 });

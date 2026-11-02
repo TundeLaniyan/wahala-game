@@ -147,6 +147,27 @@ export function createVehicleModel(kind: VehicleKind): VehicleModel {
       wheels.push(w);
       body.add(w);
     }
+  } else if (kind === 'okada') {
+    // a Lagos commercial motorbike: orange tank, black seat, a long saddle, one headlight, two wheels
+    const orange = mat(0xff7a1a, { roughness: 0.45, metalness: 0.25 });
+    const black = mat(0x15181e, { roughness: 0.6 });
+    const chrome = mat(0xc9ced6, { metalness: 0.7, roughness: 0.35 });
+    body.add(box(0.46, 0.16, 0.2, orange, 0.12, 0.4, 0)); // tank and frame
+    body.add(box(0.5, 0.08, 0.22, black, -0.26, 0.44, 0)); // the long saddle
+    body.add(box(0.12, 0.2, 0.08, black, -0.52, 0.5, 0)); // pillion grab rail
+    body.add(box(0.05, 0.34, 0.05, chrome, 0.46, 0.38, 0)); // front fork
+    body.add(box(0.06, 0.05, 0.4, chrome, 0.46, 0.58, 0)); // handlebar
+    body.add(sphere(0.06, light, 0.52, 0.52, 0, 6));
+    body.add(box(0.03, 0.06, 0.12, tail, -0.58, 0.42, 0));
+    body.add(box(0.28, 0.05, 0.24, black, -0.1, 0.24, 0)); // engine block
+    const front = wheel(0.46, 0, 0.2, 0.08);
+    const rear = wheel(-0.4, 0, 0.2, 0.09);
+    wheels.push(front, rear);
+    body.add(front, rear);
+    const s = sign('OKADA', 0.3, 0.09, '#ff7a1a', 0x15181e);
+    s.position.set(-0.12, 0.74, 0);
+    s.rotation.y = Math.PI / 2;
+    body.add(s);
   } else {
     const yellow = mat(0xf8c612, { roughness: 0.45, metalness: 0.15 });
     const blackTrim = mat(0x181a1e, { roughness: 0.5 });

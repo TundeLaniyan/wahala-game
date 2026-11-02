@@ -7,6 +7,7 @@ import { MENU_HOME } from './menu';
 import type { MenuState } from './menu';
 import { loadSettings } from './settings';
 import type { GameSettings } from './settings';
+import type { StreakRewardKind } from '../sim';
 import type { Subtitle } from './subtitles';
 
 export type Screen = 'title' | 'playing' | 'results';
@@ -16,6 +17,8 @@ export interface Toast {
   text: string;
   tone: 'info' | 'good' | 'bad';
   expires: number;
+  /** A kill-streak reward this notice is about: its icon is drawn next to the text (decision SK4). */
+  icon?: StreakRewardKind;
 }
 
 /** A screen point in CSS pixels. */

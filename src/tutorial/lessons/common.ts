@@ -46,7 +46,8 @@ export function practiceBoard(
       { name: 'YOU', characterId: character, at: opts.at ?? [0, 10], facing: 'right' },
       ...(opts.others ?? []),
     ],
-    config: { ...PRACTICE_CONFIG, ...opts.config },
+    // the lessons teach one vehicle (a Danfo) so they stay predictable; the real game draws any public vehicle
+    config: { vehicles: { allowed: ['danfo'] }, ...PRACTICE_CONFIG, ...opts.config },
     settings: opts.settings,
   });
   fill(s);
@@ -61,7 +62,7 @@ export function demoBoard(
 ): GameState {
   const s = scenario({
     actors: [{ ...HERO, at, facing: 'right' }, ...(opts.others ?? [])],
-    config: opts.config,
+    config: { vehicles: { allowed: ['danfo'] }, ...opts.config },
     settings: opts.settings,
   });
   fill(s);

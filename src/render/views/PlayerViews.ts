@@ -30,7 +30,7 @@ import { CanvasTexture } from 'three';
 import { chevronTexture, glowTexture, labelTexture, ringTexture, starTexture } from '../textures';
 import type { ClipName } from '../assets/rigged';
 import { lerpAngle, playerGridPos, toWorld, yawForDir } from './motion';
-import { SLIP_MAX_S, slipPose } from './slip';
+import { KNOCKDOWN_MAX_S, SLIP_MAX_S, slipPose } from './slip';
 import type { SlipKind, SlipState } from './slip';
 import { TICK_RATE } from '../../sim';
 import type { FrameContext, View } from './types';
@@ -107,6 +107,12 @@ export class PlayerViews implements View {
       else if (e.type === 'contactUsed' && e.ability === 'kick') play(e.playerId, 'Kick');
       else if (e.type === 'contactUsed' && e.ability === 'disarm') play(e.playerId, 'Place');
       else if (e.type === 'playerPushed') play(e.playerId, 'Stumble');
+      else if (e.type === 'knockdownHit') {
+        // hit on the head: down flat for the sim's whole knockdown
+        const v = this.visuals.get(e.playerId);
+        if (v) v.slipPending = 'knockdown';
+        play(e.playerId, 'Stumble');
+      }
       else if (e.type === 'hazardTriggered') {
         // a floor trap got them: the stumble clip plus a fall that lasts as long as the sim's slide / daze
         const v = this.visuals.get(e.playerId);
@@ -370,8 +376,14 @@ export class PlayerViews implements View {
     // oil: down while the sim has the fighter sliding, plus the last slid tile (the sim clears `slide` as
     // that tile's step begins); pothole: down for the sim's daze
     if (p.slide !== null) s.holdUntil = ctx.time + p.stepTotal / TICK_RATE + 0.04;
-    const fallen = s.kind === 'oil' ? ctx.time <= s.holdUntil : state.tick < p.dazedUntil;
-    const pose = slipPose(s, ctx.time, fallen && ctx.time - s.start < SLIP_MAX_S);
+    const fallen =
+      s.kind === 'oil'
+        ? ctx.time <= s.holdUntil
+        : s.kind === 'knockdown'
+          ? state.tick < p.knockedUntil
+          : state.tick < p.dazedUntil;
+    const limit = s.kind === 'knockdown' ? KNOCKDOWN_MAX_S : SLIP_MAX_S;
+    const pose = slipPose(s, ctx.time, fallen && ctx.time - s.start < limit);
     if (pose.done) {
       v.slip = null;
       root.rotation.order = 'XYZ';

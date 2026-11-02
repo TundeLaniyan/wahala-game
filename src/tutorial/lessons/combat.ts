@@ -97,7 +97,7 @@ export const VEHICLE: Lesson = {
   objective:
     'Collect a Vehicle Voucher, then tap B once (with nobody next to you): your vehicle drives in and hits the dummy.',
   facts: [
-    'A Vehicle Voucher calls in a public vehicle (a Danfo, a Yellow Cab, a Keke ...) once. Which one is drawn when you pick the voucher up, and it is shown on the button.',
+    'A Vehicle Voucher calls in a public vehicle once: in a real match a Danfo, a Yellow Cab, a Keke or an Okada (drawn when you pick it up, and shown on the button); this lesson always gives a Danfo.',
     'One tap of B with nobody next to you: the game picks the route that threatens a rival most. No route to choose.',
     'The lane flashes and the horn sounds first. Your vehicle can hit you too: keep off its lane.',
   ],

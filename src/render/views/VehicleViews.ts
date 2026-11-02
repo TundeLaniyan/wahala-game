@@ -6,6 +6,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
+  SphereGeometry,
 } from 'three';
 import type { Vehicle } from '../../sim';
 import { createVehicleModel, spinWheel } from '../assets/vehicles';
@@ -22,6 +23,8 @@ interface Visual {
   smokeAt: number;
   lastPos: { x: number; z: number; y: number };
   wrecked: boolean;
+  /** A VEHICLE GENERATOR carrier's roof beacon: a pulsing pink lamp, so it is never mistaken for a ram or for traffic. */
+  beacon: Mesh | null;
 }
 
 const TRAIL_COLORS: Record<Vehicle['kind'], number> = { danfo: 0xffd23a, taxi: 0xffe58a, keke: 0x9dffb0, okada: 0xffa05a };
@@ -112,7 +115,17 @@ export class VehicleViews implements View {
           smokeAt: 0,
           lastPos: { x: 0, z: 0, y: 0 },
           wrecked: false,
+          beacon: null,
         };
+        if (veh.payload) {
+          const beacon = new Mesh(
+            new SphereGeometry(0.1, 10, 8),
+            new MeshBasicMaterial({ color: 0xff2f86, transparent: true, opacity: 0.95 }),
+          );
+          beacon.position.set(0, 1.05, 0);
+          model.root.add(beacon);
+          v.beacon = beacon;
+        }
         this.visuals.set(veh.id, v);
       }
       const cur = veh.route[veh.index]!;
@@ -130,6 +143,13 @@ export class VehicleViews implements View {
       v.model.root.position.set(layout.wx(gx), 0, layout.wz(gy));
       v.model.root.rotation.set(crashing ? -0.18 : 0, v.yaw, wobble);
       v.model.root.scale.setScalar(1.32);
+      if (v.beacon) {
+        // faster as the fuse runs down
+        const left = Math.max(0, 1 - (state.tick - veh.startTick) / 240);
+        const flash = Math.sin(time * (12 + (1 - left) * 18)) > 0;
+        (v.beacon.material as MeshBasicMaterial).color.setHex(flash ? 0xff2f86 : 0xffd0e6);
+        v.beacon.scale.setScalar(flash ? 1.25 : 0.85);
+      }
       v.model.body.position.y = Math.abs(Math.sin(time * 18)) * (crashing ? 0 : 0.016);
       const spin = veh.phase === 'driving' ? ((dt * 60) / Math.max(4, veh.stepTotal)) * 5 : 0;
       for (const w of v.model.wheels) spinWheel(v.model, w, spin);
@@ -162,6 +182,10 @@ export class VehicleViews implements View {
         const streak = v.trail.children[0] as Mesh | undefined;
         streak?.geometry.dispose();
         (streak?.material as MeshBasicMaterial | undefined)?.dispose();
+        if (v.beacon) {
+          v.beacon.geometry.dispose();
+          (v.beacon.material as MeshBasicMaterial).dispose();
+        }
         this.visuals.delete(id);
       }
     }
