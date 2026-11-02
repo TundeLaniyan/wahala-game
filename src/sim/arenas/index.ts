@@ -21,6 +21,7 @@ export type {
   ArenaInfo,
   ArenaKind,
   DistrictDef,
+  CoverRect,
   DistrictLink,
   HazardSchedule,
   StageHazardDef,

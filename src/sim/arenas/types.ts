@@ -108,6 +108,24 @@ export interface ArenaInfo {
   ruleWarning?: string;
 }
 
+/**
+ * One permanent object of a researched community board: what the '#' tiles of the rectangle (x, y, w, h) are
+ * (a shopfront, a stall block, a station hall...). Presentation data produced by `community/painter.ts` together
+ * with the layout; the renderer draws each rectangle as one real object, the simulation never reads it.
+ */
+export interface CoverRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** The renderer's cover family. */
+  kind: string;
+  /** Variant (palette / sign / height pick). */
+  v: number;
+  /** The painter call it came from (rectangles of one call fade together). */
+  g: number;
+}
+
 export interface ArenaDef {
   id: string;
   name: string;
@@ -146,6 +164,8 @@ export interface ArenaDef {
   /** City Rumble Evolution: named districts and how they connect (multi-district stages only). */
   districts?: DistrictDef[];
   districtLinks?: DistrictLink[];
+  /** Researched communities: the permanent objects behind the '#' tiles (presentation data, see `CoverRect`). */
+  cover?: CoverRect[];
   /**
    * V2: a test / experimental stage (the Mobile Test Arena). Kept out of the official lists
    * (`STANDARD_ARENA_IDS`) and shown in a separate "Test / experimental" section of the arena picker.
