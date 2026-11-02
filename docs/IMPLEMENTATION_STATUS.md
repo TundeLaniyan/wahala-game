@@ -459,3 +459,13 @@ Decisions UX1-UX6 and PF1-PF10 in `DECISIONS.md`; reports `docs/STITCH_UI.md` (f
 | Touch controls | Done: A lower-right, B diagonal above-left, bigger bounded pad, button states. `e2e/touch-layout.spec.ts`. Not tried on a physical phone. |
 | Pause audio | Done: everything silenced, no doubled loops on resume. `tests/audio/pause.test.ts`, `tests/app/pause-audio.test.ts`. Not listened to by ear. |
 | FlowFrame Performance | Done as a name, mark and loading-screen note; behaviour unchanged. `docs/FLOWFRAME_PERFORMANCE.md`. |
+
+## City Rumble: seven researched arenas (branch `claude/wahala-city-rumble-researched-arenas-v1`; decisions CR1-CR8; `docs/CITY_RUMBLE_RESEARCHED_ARENAS.md`)
+
+| Area | State |
+| --- | --- |
+| Rumble set | Done: exactly seven arenas (Ojuelegba, Oshodi kept at 63 x 47, and Mushin, Fadeyi, Lagos Island, Lekki, Ebute-Metta from the six approved researched areas, each once). The generic City Rumble, Apapa, old Lagos Island and old Lekki Night maps are removed from sim, render, menu, audio data, previews and tests. Standard nine arenas untouched. `tests/rumble-researched.test.ts`. |
+| Vehicle generator | Verified on all seven (Street Baller Danfo, Lekki Boy taxi, Campus Queen Keke): `tests/vehicle-generator.test.ts`. |
+| Evidence | Done: 70-frame pack in `docs/screenshots/city-rumble-researched-arenas/`; perf tables in the arena doc (software WebGL: draw calls / triangles exact, frame times unusable). |
+| Validation | Full Vitest 1933 pass; full Playwright desktop + phone 189 pass / 0 fail / 0 flaky / 73 project-guard skips. Not tried on a physical phone. |
+| Not done | Founder-assigned music / voices for the new arenas; vehicle x-ray through tall cover; real-device performance. Not merged, not deployed (awaiting approval). |

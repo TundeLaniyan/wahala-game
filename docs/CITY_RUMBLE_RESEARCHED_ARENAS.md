@@ -161,3 +161,50 @@ same method and machine: Ojuelegba 0.020, Oshodi 0.023, old generic City Rumble 
 Lekki Night 0.018. The new boards are larger (53-57 x 33-39 against 41 x 31), so a rise of the same order is expected; the
 repeat runs vary by about 40 % on this shared machine.
 
+
+## 5. Validation (final code state `f4507e1`; later commits are docs only)
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | pass |
+| `eslint .` | pass |
+| Prettier | every file this branch added or changed is formatted except 7 that were already non-conformant on the base branch (`public/audio/music/manifest.json`, `scripts/mobile-shots.mjs`, `scripts/rumble-economy.ts`, `scripts/simulate.ts`, `tests/economy-ai.test.ts`, `tests/spectators.test.ts`, `tests/ui/progressionBadge.test.ts`); 57 files repo-wide are non-conformant, all pre-existing, none touched by formatting here |
+| `npm run build` | pass |
+| Full Vitest (`vitest run`) | 121 files, 1933 passed, 7 skipped (the 7 are the documented `describe.skip` Oshodi-only timing cases in `tests/rumble-stages.test.ts`), 0 failed |
+| Rumble arena suites | `tests/rumble-researched.test.ts` 64, `tests/rumble-stages.test.ts` 108 (+7 skipped), `tests/arenas.test.ts` (all pass) |
+| Vehicle-generator suite | `tests/vehicle-generator.test.ts` 63 passed on all seven Rumble arenas (route, carry, trigger, owner safety, fuse, cleanup, determinism, character-to-vehicle) |
+| Full Playwright, desktop + phone, `--retries=0`, 2 workers, software WebGL | 262 tests: **189 passed, 0 failed, 0 flaky, 73 skipped** (desktop 86 passed / 45 skipped, phone 103 passed / 28 skipped). Every skip is an in-source project guard (`test.skip(isMobile ...)`, "phone only", "one viewport is enough", "desktop project only", touch / keyboard / gamepad variants); there is no `fixme` and no unconditional skip. Wall time 1.4 h. |
+
+How the browser run got here (nothing hidden): a first full run found one failure of mine, the five-arena night-look sweep in
+`e2e/researched-arenas.spec.ts`, which I had given a private 10-minute timeout and which exceeded it under load (each arena
+alone passes in about a minute). The fix is at the cause: that spec is now one test per community with the default timeout, no
+override. That first run was then voided because I stopped its preview server myself while tidying a port (every later test failed in
+1-2 s with no connection), so a second complete run was made from scratch on the fixed code. The result above is that
+second run; it is the only browser run counted. A first Vitest pass had two failures (the 32-bot Survival test now
+reaches the shortened 75-second clock with two survivors on one seed, and the arena spawn-gap floor for Fadeyi: 3 at 32
+fighters, decision CR6); both tests were corrected deliberately, not loosened silently, and the final Vitest run is clean.
+
+Merge check (not merged): the release branch `claude/wahala-stitch-uiux-v1` is one commit ahead of this branch's base (the diagonal-corner
+movement commit, MV3). A trial merge in a throwaway worktree has exactly one textual conflict, `docs/DECISIONS.md` (both sides
+append a section; resolved by keeping both), and after that `tsc` and the three input suites (172 tests) pass on the merged tree.
+
+## 6. Remaining visual issues and honest limits
+
+- Software WebGL only: frame times are unusable here and nothing was measured on a real phone or GPU; draw calls and triangles are exact, frame rate is not.
+- Ojuelegba has no night look (by design; its night/day frames are identical).
+- The Lekki Link Bridge is faint in the whole-board frame (it is far, on the horizon); the pylon and stays are readable in the landmark-area frames only as a silhouette.
+- Voucher vehicles are not x-rayed through tall baked cover. Lekki's one real case (two-tile shopfronts on the expressway) was fixed with low lock-ups; other arenas showed the vehicle in every frame, but a vehicle on the lane directly behind a tall frontage can still be partly covered from the camera.
+- Menu preview cards for the five new / replaced arenas are crops of the whole-board day frames, not countdown frames.
+- Very Low quality was not captured in the pack (medium, low and phone-low are); it only removes ambient traffic and crowd detail.
+- Fadeyi is the compact board (51 x 33): the spawn spread floor is 12 / 7 / 3 at 8 / 16 / 32 fighters, an accepted, documented exception (CR6).
+- Lekki performance rows were measured just before the gateway shops became low lock-ups.
+- No founder-assigned music, voice or ambience was added; Apapa's old Rumble track is unassigned and Lekki Night's track is re-keyed to Lekki (CR8).
+
+## 7. What changed (files)
+
+83 added / 58 modified / 23 deleted files against the vehicle-generator branch: `src/sim/arenas/` (painter, community assembler, five
+arena modules, registry; deleted `cityRumble.ts`, `rumbleApapa.ts`, `rumbleLekkiNight.ts`), `src/render/arenas/` (community kit,
+families, floor, env, looks, set kit, five art modules, `newArenas.ts`, `obstacleStyles.ts`), `src/render/env`, `src/ui/menu`
+(arena info, mode screen), audio manifests, 8 menu previews, tests (new `tests/rumble-researched.test.ts`,
+`e2e/researched-arenas.spec.ts`; ~40 existing suites re-pointed at the seven-arena set), scripts (`researched-pack.mjs`,
+`arena-perf.mjs`, `board-ascii.ts`), and `docs/screenshots/city-rumble-researched-arenas/` (70 frames).
