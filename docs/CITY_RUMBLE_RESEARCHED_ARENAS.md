@@ -208,3 +208,13 @@ families, floor, env, looks, set kit, five art modules, `newArenas.ts`, `obstacl
 (arena info, mode screen), audio manifests, 8 menu previews, tests (new `tests/rumble-researched.test.ts`,
 `e2e/researched-arenas.spec.ts`; ~40 existing suites re-pointed at the seven-arena set), scripts (`researched-pack.mjs`,
 `arena-perf.mjs`, `board-ascii.ts`), and `docs/screenshots/city-rumble-researched-arenas/` (70 frames).
+
+## 8. Merge record (deployment branch `claude/wahala-stitch-uiux-v1` at `8ebf3f4` merged into this branch; not deployed)
+
+The deployment branch (one commit ahead of this branch's base: MV3 diagonal corner movement) was merged into the map branch. Conflicts: only
+`docs/DECISIONS.md` and `docs/IMPLEMENTATION_STATUS.md` (both sides append a section; both kept). One code change was
+removed from the result to keep the standard arenas untouched: the Yaba After Dark lighting tweak (`src/render/arenas/yaba.ts`)
+that came with the vehicle-generator branch is reverted to the deployment version. Validation on the merged result: `tsc`, `eslint`,
+`npm run build` pass; Vitest 122 files, 2033 passed, 7 skipped (the mirror-symmetry cases), 0 failed; full Playwright desktop + phone,
+`--retries=0`: 262 tests, 189 passed, 0 failed, 0 flaky, 73 skipped (project guards). The vehicle-generator code that rides along is
+the baseline from `claude/wahala-all-arenas-vehicle-generators-v1` (decisions VG1-VG7) and is not extended here.
