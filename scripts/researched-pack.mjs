@@ -172,7 +172,9 @@ async function run(id) {
   const { page } = r;
   await page.evaluate(() => {
     const w = window.__WAHALA__;
-    w.getState().players[0].hasVoucher = true;
+    const st = w.getState();
+    for (const p of st.players) p.protectedUntil = 0;
+    st.players[0].hasVoucher = true;
   });
   await page.keyboard.down('KeyK');
   await page.evaluate(() => window.__WAHALA__.stepTicks(3));
