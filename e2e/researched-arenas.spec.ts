@@ -57,15 +57,14 @@ const live = (
   });
 
 test.describe('City Rumble communities', () => {
-  test.beforeEach(() => test.setTimeout(10 * 60_000));
-
-  test('every community is picked from the menu, starts on its own board and plays without page errors', async ({
-    page,
-  }, info) => {
-    test.skip(info.project.name !== 'desktop', 'one viewport is enough for the seven-stage sweep');
-    const errors = watchErrors(page);
-    await open(page, '&nobots&noattract');
-    for (const [id, name, size] of STAGES) {
+  // one test per community: each is timed on its own (a sweep over all seven in one test is slow in software WebGL)
+  for (const [id, name, size] of STAGES) {
+    test(`${id}: picked from the menu, starts on its own board and plays without page errors`, async ({
+      page,
+    }, info) => {
+      test.skip(info.project.name !== 'desktop', 'one viewport is enough');
+      const errors = watchErrors(page);
+      await open(page, '&nobots&noattract');
       await toRumbleSetup(page, 'deathmatch');
       await chooseStage(page, id);
       await expect(page.getByTestId('setup-arena')).toContainText(name);
@@ -74,18 +73,16 @@ test.describe('City Rumble communities', () => {
       await stepTicks(page, 200);
       const v = await live(page);
       expect(v).toMatchObject({ arenaId: id, width: size[0], height: size[1], phase: 'playing' });
-      await page.keyboard.press('Escape');
-      await page.getByTestId('quit').click();
-      await expect(page.getByTestId('title-screen')).toBeVisible();
-    }
-    expect(errors).toEqual([]);
-  });
+      expect(errors).toEqual([]);
+    });
+  }
 
-  test('the night look starts on every researched community without page errors', async ({ page }, info) => {
-    test.skip(info.project.name !== 'desktop', 'one viewport is enough');
-    const errors = watchErrors(page);
-    await open(page, '&nobots&noattract&tod=night');
-    for (const [id, name] of STAGES.slice(2)) {
+  // one test per community (sharded and timed on their own; a sweep over all of them in one test is slow in software WebGL)
+  for (const [id, name] of STAGES.slice(2)) {
+    test(`${id}: the night look starts without page errors`, async ({ page }, info) => {
+      test.skip(info.project.name !== 'desktop', 'one viewport is enough');
+      const errors = watchErrors(page);
+      await open(page, '&nobots&noattract&tod=night');
       await toRumbleSetup(page, 'deathmatch');
       await chooseStage(page, id);
       await expect(page.getByTestId('setup-arena')).toContainText(name);
@@ -93,12 +90,9 @@ test.describe('City Rumble communities', () => {
       await expect(page.getByTestId('hud')).toBeVisible();
       await stepTicks(page, 60);
       expect((await live(page)).arenaId).toBe(id);
-      await page.keyboard.press('Escape');
-      await page.getByTestId('quit').click();
-      await expect(page.getByTestId('title-screen')).toBeVisible();
-    }
-    expect(errors).toEqual([]);
-  });
+      expect(errors).toEqual([]);
+    });
+  }
 
   test('phone: on a researched stage the second action names the vehicle and there are exactly two action buttons', async ({
     page,
