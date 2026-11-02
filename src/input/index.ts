@@ -7,3 +7,5 @@ export { ACTION_BUTTONS } from './gamepad';
 export { SPECIAL_HOLD_MS, SPECIAL_HOLD_TICKS } from './specialHold';
 export { buildMoveBoard, resolveAssistLevel, MOVE_ASSIST_SETTINGS } from './moveAssist';
 export type { AssistLevel, MoveAssistSetting, MoveBoard } from './moveAssist';
+export { InputTrace, inputTrace } from './trace';
+export type { TraceEvent } from './trace';

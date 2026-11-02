@@ -63,6 +63,15 @@ export function isActing(state: GameState, p: Player): boolean {
   return p.alive && state.match.phase === 'playing' && state.tick >= p.dazedUntil;
 }
 
+/**
+ * Will the simulation ignore this player's move intent on the tick their step ends? Dazed or stumbling, sliding on
+ * oil, arriving from a trapdoor, or choosing a vehicle entrance. The touch input layer keeps a press for such a
+ * player instead of spending it (decision MI1). Read-only.
+ */
+export function movementLocked(state: GameState, p: Player): boolean {
+  return !isActing(state, p) || p.slide !== null || p.teleportPending !== null || p.entryUntil !== null;
+}
+
 /** V2: are these two players on the same team (never true in free-for-all, never for oneself)? */
 export function teammates(a: Pick<Player, 'id' | 'team'>, b: Pick<Player, 'id' | 'team'>): boolean {
   return a.id !== b.id && a.team >= 0 && a.team === b.team;

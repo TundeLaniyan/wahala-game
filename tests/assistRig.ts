@@ -6,7 +6,7 @@ import { vi } from 'vitest';
 import { InputManager, buildMoveBoard } from '../src/input';
 import type { MoveAssistSetting } from '../src/input';
 import { VirtualStick, stickConfigFor } from '../src/input/joystick';
-import { Tile, moveWouldAct, readyToStep, tick } from '../src/sim';
+import { Tile, movementLocked, moveWouldAct, readyToStep, tick } from '../src/sim';
 import type { Dir, GameState, Intent } from '../src/sim';
 import { put, sandbox } from './helpers';
 
@@ -146,6 +146,7 @@ export class AssistRig {
         canMove: readyToStep(p),
         legal: (d) => moveWouldAct(this.state, p, d),
         board: () => buildMoveBoard(this.state, p),
+        locked: movementLocked(this.state, p),
       });
       observe?.(intent);
       this.moves.push({ tick: this.state.tick, move: intent.move ?? null });

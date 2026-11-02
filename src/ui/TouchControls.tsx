@@ -5,7 +5,7 @@ import type { Dir } from '../sim';
 import { pickupIconUrl } from '../assets/pickupIcons';
 import { commands, input } from '../app/session';
 import { VirtualStick, stickConfigFor } from '../input/joystick';
-import { SPECIAL_HOLD_MS } from '../input';
+import { SPECIAL_HOLD_MS, inputTrace } from '../input';
 import { useGameStore } from '../app/store';
 import type { HudMe } from '../app/hud';
 
@@ -49,6 +49,14 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
   const end = (e: RPointerEvent): void => {
     const result = stick.current.end(e.pointerId, e.timeStamp);
     if (!result) return;
+    inputTrace.record({
+      k: 'raw',
+      ms: Math.round(e.timeStamp),
+      type: e.type === 'pointerup' ? 'up' : 'cancel',
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+    });
     input.setTouchDir(null);
     setView(null);
     if (result.tap && entryOpen && e.type === 'pointerup') commands.pickEntry(e.clientX, e.clientY);
@@ -62,6 +70,14 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
       data-dir={view?.dir ?? ''}
       onPointerDown={(e) => {
         if (!stick.current.begin(e.pointerId, e.clientX, e.clientY, e.timeStamp)) return;
+        inputTrace.record({
+          k: 'raw',
+          ms: Math.round(e.timeStamp),
+          type: 'down',
+          id: e.pointerId,
+          x: e.clientX,
+          y: e.clientY,
+        });
         e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
         input.touchActive();
@@ -69,6 +85,14 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
       }}
       onPointerMove={(e) => {
         if (e.pointerId !== stick.current.pointerId) return;
+        inputTrace.record({
+          k: 'raw',
+          ms: Math.round(e.timeStamp),
+          type: 'move',
+          id: e.pointerId,
+          x: e.clientX,
+          y: e.clientY,
+        });
         input.setTouchDir(stick.current.move(e.pointerId, e.clientX, e.clientY), stick.current.wish);
         show();
       }}

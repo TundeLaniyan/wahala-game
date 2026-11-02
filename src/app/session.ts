@@ -5,7 +5,7 @@
 import { createBot } from '../ai';
 import { createAudio } from '../audio';
 import type { SpokenTrace } from '../audio';
-import { InputManager } from '../input';
+import { InputManager, inputTrace } from '../input';
 import { GameRenderer, assets, isQualitySetting, renderCastPortraits, resolveShakeMode } from '../render';
 import type { QualityEvent } from '../render';
 import { registerBusts } from '../assets/portraits';
@@ -420,7 +420,10 @@ export function liveMatch(): { state: GameState; focusId: number } | null {
 
 /** Debug/test hook, enabled with `?debug` in the URL (used by the Playwright suite). */
 function exposeDebugHandle(): void {
-  if (!new URLSearchParams(location.search).has('debug')) return;
+  const params = new URLSearchParams(location.search);
+  // `?trace` records the touch -> gate -> simulation input trace on its own (decision MI5)
+  if (params.has('debug') || params.has('trace')) inputTrace.enabled = true;
+  if (!params.has('debug')) return;
   const w = window as unknown as { __WAHALA__?: unknown };
   w.__WAHALA__ = {
     getState: (): GameState | null => controller?.state ?? null,
@@ -452,6 +455,8 @@ function exposeDebugHandle(): void {
       const state = controller?.state;
       if (state) audio.handleEvents(events, state);
     },
+    /** Input trace: raw touch -> quantised direction -> gate decision -> simulation result (`inputTrace().dump()`). */
+    inputTrace: () => inputTrace,
     stepTicks: (n: number) => {
       for (let i = 0; i < n; i++) controller?.stepOnce();
     },

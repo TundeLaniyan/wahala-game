@@ -5,13 +5,14 @@ import {
   getArena,
   isRespawnMode,
   isTeamMode,
+  movementLocked,
   moveWouldAct,
   observe,
   readyToStep,
   tick,
 } from '../sim';
 import type { GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent, VehicleTurn } from '../sim';
-import { buildMoveBoard } from '../input';
+import { buildMoveBoard, inputTrace } from '../input';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
 import { buildHud } from './hud';
@@ -286,7 +287,24 @@ export class MatchController {
     const state = this.state!;
     const director = this.director;
     const intents = this.collectIntents(state);
+    const me = state.players[LOCAL_ID];
+    const before =
+      inputTrace.enabled && me && intents[LOCAL_ID]?.move
+        ? { x: me.x, y: me.y, wait: me.stepRemaining, locked: movementLocked(state, me) }
+        : null;
     const events = tick(state, intents);
+    if (before && me) {
+      // what the simulation did with the move the gate handed over (input trace, decision MI5)
+      const stepped = me.x !== before.x || me.y !== before.y;
+      const result = stepped
+        ? 'stepped'
+        : before.locked
+          ? 'ignored-cannot-act'
+          : before.wait > 1
+            ? 'ignored-mid-step'
+            : 'blocked';
+      inputTrace.record({ k: 'sim', tick: state.tick, result, x: me.x, y: me.y });
+    }
     this.recordStats(events);
     director?.afterTick(state, events, intents);
     return events;
@@ -324,6 +342,7 @@ export class MatchController {
         remoteReady: me.remote && state.generators.some((g) => g.ownerId === me.id && g.mode === 'remote'),
         legal: (d) => moveWouldAct(state, me, d),
         board: () => buildMoveBoard(state, me),
+        locked: movementLocked(state, me),
       });
     } else {
       this.deps.input.navMode = false;

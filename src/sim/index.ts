@@ -52,7 +52,7 @@ export {
 } from './systems/entries';
 export type { EntryView } from './systems/entries';
 export { vehicleHitTiles, vehicleStepTicks } from './systems/vehicles';
-export { alivePlayers, playerStepTicks } from './systems/queries';
+export { alivePlayers, movementLocked, playerStepTicks } from './systems/queries';
 export { readyToStep } from './systems/movement';
 export { secondsRemaining } from './systems/match';
 export { observe } from './observe';
