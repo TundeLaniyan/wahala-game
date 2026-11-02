@@ -7,11 +7,11 @@
  * deterministic per seed. Variants (scripts/rumbleMetrics/variants.ts): legacy (plus blast, 1 starting
  * generator, reach cap 10) and evolution (the current defaults); --config '<json>' adds an ad hoc one.
  *
- *   npx tsx scripts/rumble-metrics.ts --arenas rumbleOshodi,rumbleApapa,cityRumble \
+ *   npx tsx scripts/rumble-metrics.ts --arenas rumbleOshodi,rumbleMushin,rumbleLagosIsland \
  *       --cases survival:16,survival:32,deathmatch:16:5 --variants legacy,evolution --matches 4
  *
  * Options:
- *   --arenas a,b        stages (default rumbleOshodi,rumbleApapa,cityRumble)
+ *   --arenas a,b        stages (default rumbleOshodi,rumbleMushin,rumbleLagosIsland)
  *   --cases g:n[:min]   ruleset:bots[:minutes for respawn rulesets] (default survival:16,survival:32,deathmatch:16:5)
  *   --variants v1,v2    named variants (default legacy,evolution)
  *   --config '{...}'    extra config override (DeepPartial<GameConfig> JSON) applied to every variant listed
@@ -44,7 +44,7 @@ const opt = (name: string, dflt: string): string => {
 };
 const has = (name: string): boolean => args.includes(`--${name}`);
 
-const arenas = opt('arenas', 'rumbleOshodi,rumbleApapa,cityRumble').split(',');
+const arenas = opt('arenas', 'rumbleOshodi,rumbleMushin,rumbleLagosIsland').split(',');
 const cases = opt('cases', 'survival:16,survival:32,deathmatch:16:5')
   .split(',')
   .map((c) => {

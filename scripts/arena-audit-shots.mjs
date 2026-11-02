@@ -21,12 +21,13 @@ const STANDARD = [
   'thirdMainland',
 ];
 const RUMBLE = [
-  'rumbleOshodi',
-  'rumbleLagosIsland',
   'rumbleOjuelegba',
-  'rumbleApapa',
-  'rumbleLekkiNight',
-  'cityRumble',
+  'rumbleOshodi',
+  'rumbleMushin',
+  'rumbleFadeyi',
+  'rumbleLagosIsland',
+  'rumbleLekki',
+  'rumbleEbuteMetta',
 ];
 const ids = only ? only.split(',') : [...STANDARD, ...RUMBLE];
 const MODES = (process.env.MODES ?? 'medium-day,medium-night,low-day,low-phone').split(',');
