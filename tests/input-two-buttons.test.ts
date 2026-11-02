@@ -87,7 +87,7 @@ describe('B: tap = special, hold = remote', () => {
     expect(held.filter((i) => i.special)).toHaveLength(0);
   });
 
-  it('end to end: holding B sets off the remote generator; tapping B next to a rival pushes them instead', () => {
+  it('end to end: holding B sets off the remote generator; tapping B next to a rival punches them instead', () => {
     const s = sandbox({ characters: ['streetBaller', 'lekkiBoy'] });
     put(s, 0, 4, 4);
     put(s, 1, 12, 8);
@@ -99,15 +99,16 @@ describe('B: tap = special, hold = remote', () => {
       const remoteReady = me.remote && s.generators.some((o) => o.ownerId === 0 && o.mode === 'remote');
       tick(s, { 0: input.buildIntent(s.tick, { canMove: readyToStep(me), remoteReady }) });
     };
-    // a tap with a rival adjacent: push, the remote generator stays
+    // a tap with a rival adjacent: the Punch lands after its startup, the remote generator stays
     put(s, 1, 5, 4);
     step();
     input.touchDown('special', 'p1');
     step();
     step();
     input.touchUp('special', 'p1');
-    step();
-    expect(s.players[1]!.x).toBe(6);
+    for (let i = 0; i < 6; i++) step();
+    expect(s.players[1]!.dazedUntil).toBeGreaterThan(s.tick - 6);
+    expect(s.players[1]!.x).toBe(5);
     expect(s.generators).toContain(g);
     // a hold: the remote goes off
     input.touchDown('special', 'p1');

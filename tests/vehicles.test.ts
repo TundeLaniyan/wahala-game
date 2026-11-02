@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { allBorderEntries, buildRoute, listEntries, listKekeTurns } from '../src/sim';
 import type { GameState, VehicleEntry, VehicleTurn } from '../src/sim';
-import { addGenerator, addSoft, eventsOf, put, run, runUntil, sandbox } from './helpers';
+import { addGenerator, addSoft, eventsOf, put, run, runUntil, sandbox, giveVoucher } from './helpers';
 
 const LANE: VehicleEntry = { x: 4, y: 0, dir: 'down' };
 
 function launch(s: GameState, owner: number, entry: VehicleEntry, turn?: VehicleTurn): void {
-  s.players[owner]!.hasVoucher = true;
+  giveVoucher(s, owner);
   run(s, 1, { [owner]: { vehicle: { type: 'begin' } } });
   run(s, 1, { [owner]: { vehicle: { type: 'launch', entry, turn } } });
 }
@@ -59,7 +59,7 @@ describe('vehicle entry', () => {
     const s = sandbox({ characters: ['streetBaller', 'lekkiBoy'] });
     run(s, 1, { 0: { vehicle: { type: 'begin' } } });
     expect(s.players[0]!.entryUntil).toBeNull();
-    s.players[0]!.hasVoucher = true;
+    giveVoucher(s, 0);
     run(s, 1, { 0: { vehicle: { type: 'begin' } } });
     expect(s.players[0]!.entryUntil).not.toBeNull();
     run(s, 1, { 0: { vehicle: { type: 'launch', entry: { x: 1, y: 0, dir: 'down' } } } });
@@ -76,7 +76,7 @@ describe('vehicle entry', () => {
   it('the selecting player stands still while choosing', () => {
     const s = sandbox();
     put(s, 0, 4, 4);
-    s.players[0]!.hasVoucher = true;
+    giveVoucher(s, 0);
     run(s, 1, { 0: { vehicle: { type: 'begin' } } });
     run(s, 40, { 0: { move: 'right' } });
     expect(s.players[0]!.x).toBe(4);
@@ -251,7 +251,7 @@ describe('vehicle vs generator and cumulative blast damage', () => {
     laneGen(s, 3);
     launch(s, 0, LANE);
     drive(s);
-    s.players[0]!.hasVoucher = true;
+    giveVoucher(s, 0);
     s.players[0]!.alive = true;
     launch(s, 0, { x: 6, y: 0, dir: 'down' });
     expect(s.vehicles[0]!.damage).toBe(0);

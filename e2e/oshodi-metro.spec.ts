@@ -35,14 +35,14 @@ test('the Rumble stage picker shows exactly one Oshodi: the researched one; the 
   await toRumbleSetup(page, 'survival');
   // the stage cards (the picker container shares the prefix but is not selectable: cards carry aria-pressed)
   const cards = page.locator('[data-testid^="rumble-stage-"][aria-pressed]');
-  await expect(cards).toHaveCount(6); // Oshodi, Lagos Island, Ojuelegba, Apapa, Lekki Nightworks, City Rumble
+  await expect(cards).toHaveCount(7); // Ojuelegba, Oshodi, Mushin, Fadeyi, Lagos Island, Lekki, Ebute-Metta
   const oshodi = cards.filter({ hasText: /oshodi/i });
   await expect(oshodi).toHaveCount(1);
   await expect(oshodi).toHaveAttribute('data-testid', 'rumble-stage-rumbleOshodi');
   await expect(oshodi).toContainText('Oshodi Transport Metropolis');
   await expect(page.getByText('Rush Hour')).toHaveCount(0);
   await expect(page.getByTestId('rumble-stage-rumbleOshodiMetro')).toHaveCount(0);
-  // the default (first) stage is the researched Oshodi, as it was for the old one
+  // the saved default stage is still the researched Oshodi, as it was for the old one
   await expect(page.getByTestId('rumble-stage-rumbleOshodi')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('setup-arena')).toContainText('Oshodi Transport Metropolis');
   expect(errors).toEqual([]);
@@ -70,6 +70,9 @@ test('the stage starts from the menu on a 63 x 47 board and plays without page e
 test('the railcar is announced in the HUD with its warning time, and the track tiles are a lane', async ({
   page,
 }) => {
+  // fast-forwards up to 9000 simulated ticks of the 63 x 47 city before it can read the first warning: about 50 s
+  // alone, so it needs the slow multiplier beside another worker on a software-WebGL runner
+  test.slow();
   await open(page);
   await startOshodi(page);
   // fast-forward (staging only: the human keeps spawn protection) to the first railcar warning

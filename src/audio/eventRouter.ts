@@ -252,6 +252,16 @@ const handlers: Handlers = {
   skillUsed: (e, c) => {
     if (allow(c, 'skill', 0.08)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)));
   },
+  // the telegraph of a melee press (a quick breath of air), and the empty swing of one that found nobody
+  attackStarted: (e, c) => {
+    if (allow(c, 'attackStart', 0.05)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.35, 1.5);
+  },
+  attackResolved: (e, c) => {
+    if (!e.hit && allow(c, 'attackWhiff', 0.1)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.3, 0.8);
+  },
+  attackInterrupted: (e, c) => {
+    sfx(c, 'daze', panOf(c, playerX(c, e.playerId)), 0.5, 1.3);
+  },
   playerPushed: (e, c) => {
     sfx(c, 'gen_drop', panOf(c, playerX(c, e.playerId)), 0.9);
     react(c, { kind: 'gasp', strength: 0.3, chance: 0.4, delay: 0.1 });
@@ -275,6 +285,16 @@ const handlers: Handlers = {
     c.buses.duck('warning');
     react(c, { kind: 'gasp', strength: 0.6, chance: 0.7, delay: 0.25 });
     react(c, { kind: 'whistle', strength: 0.5, chance: 0.3, delay: 1.0 });
+  },
+  // VEHICLE GENERATOR: the carrier's own launch sound, then the throw (a whoosh + a gasp from the crowd)
+  vehicleGeneratorLaunched: (e, c) => {
+    sfx(c, `${e.kind}_launch`, panOf(c, vehicleX(c, e.vehicleId)));
+    react(c, { kind: 'gasp', strength: 0.5, chance: 0.6, delay: 0.2 });
+  },
+  vehicleGeneratorReleased: (e, c) => {
+    sfx(c, 'gen_throw', panOf(c, e.toX), 1, 1.1);
+    c.buses.duck('warning');
+    react(c, { kind: 'gasp', strength: 0.7, chance: 0.8, delay: 0.15 });
   },
   vehicleLaunched: (e, c) => {
     sfx(c, `${e.kind}_launch`, panOf(c, vehicleX(c, e.vehicleId)));
@@ -394,6 +414,37 @@ const handlers: Handlers = {
     if (!isHuman(c, e.playerId)) return sfx(c, 'pickup_1', pan, 0.4);
     sfx(c, 'pickup_rare', pan, 1, 1 + Math.min(0.3, e.kills * 0.03));
     react(c, { kind: 'cheer', strength: 0.6, chance: 0.5, delay: 0.3 });
+  },
+  // GLOBAL KNOCKDOWN: a whistle as the objects fly, a bottle-smash thud on each head, the crowd gasps and laughs
+  knockdownThrown: (_e, c) => {
+    if (allow(c, 'knockdownThrow', 0.4)) {
+      sfx(c, 'crowd_throw_whistle', 0, 1);
+      react(c, { kind: 'gasp', strength: 0.8, chance: 0.9, delay: 0.1 });
+    }
+  },
+  knockdownHit: (e, c) => {
+    sfx(c, 'bottle_smash', panOf(c, playerX(c, e.playerId)), isHuman(c, e.playerId) ? 1 : 0.8);
+    sfx(c, 'daze', panOf(c, playerX(c, e.playerId)), 0.6, 0.8, 0.05);
+    react(c, { kind: 'laugh', strength: 0.7, chance: 0.5, delay: 0.4 });
+  },
+  knockdownEnded: (e, c) => {
+    if (isHuman(c, e.playerId)) sfx(c, 'pickup_reveal', 0, 0.5, 1.2);
+  },
+  // kill-streak rewards (decision SK1): the earned chime is the elimination reward's, a little higher
+  streakRewardEarned: (e, c) => {
+    const pan = panOf(c, playerX(c, e.playerId));
+    if (!isHuman(c, e.playerId)) return sfx(c, 'pickup_1', pan, 0.4, 1.15);
+    sfx(c, 'pickup_rare', pan, 1, 1.25);
+    react(c, { kind: 'cheer', strength: 0.7, chance: 0.6, delay: 0.3 });
+  },
+  streakRewardUsed: (e, c) => {
+    sfx(c, 'pickup_rare', panOf(c, playerX(c, e.playerId)), isHuman(c, e.playerId) ? 0.7 : 0.4, 0.8);
+  },
+  streakRewardEnded: (e, c) => {
+    if (isHuman(c, e.playerId)) sfx(c, 'pickup_curse', 0, 0.35, 1.4);
+  },
+  streakRewardsLost: (e, c) => {
+    if (isHuman(c, e.playerId)) sfx(c, 'pickup_curse', 0, 0.5, 0.9);
   },
   playerRespawned: (e, c) => sfx(c, 'pickup_reveal', panOf(c, e.x), isHuman(c, e.playerId) ? 0.9 : 0.4),
   spectatorThrow: (e, c) => sfx(c, 'gen_throw', panOf(c, e.toX), 0.8),

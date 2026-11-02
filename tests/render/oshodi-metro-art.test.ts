@@ -39,15 +39,25 @@ describe('day and night looks', () => {
     expect(timeOfDay('?q=low&tod=night')).toBe('night');
     expect(timeOfDay('?tod=banana')).toBe('day');
     expect(arenaLook('rumbleOshodi')).toBe(OSHODI_METRO_LOOK);
-    // no other arena ships a night look behind the flag
+    // only the researched communities (Oshodi and the five later ones) ship a night look behind the flag
+    const NIGHT = [
+      'rumbleOshodi',
+      'rumbleMushin',
+      'rumbleFadeyi',
+      'rumbleLagosIsland',
+      'rumbleLekki',
+      'rumbleEbuteMetta',
+    ];
     for (const [id, art] of Object.entries(NEW_ARENA_ART()))
-      if (id !== 'rumbleOshodi') expect(art.nightLook, id).toBeUndefined();
+      if (!NIGHT.includes(id)) expect(art.nightLook, id).toBeUndefined();
+      else expect(art.nightLook, id).toBeDefined();
   });
 
   it('night is actually darker in sky and fog, but the ground stays as readable as the approved night stage', () => {
     expect(lum(OSHODI_METRO_NIGHT_LOOK.sky)).toBeLessThan(lum(OSHODI_METRO_LOOK.sky) * 0.35);
-    const lekki = arenaLook('rumbleLekkiNight');
-    // the floor at night is lit at least as well as the approved Lekki Nightworks stage
+    // the reference is the approved Lekki Roadworks night (the Lekki Night Rumble stage it was copied from is retired)
+    const lekki = arenaLook('lekkiRoadworks');
+    // the floor at night is lit at least as well as the approved Lekki Roadworks night
     expect(groundLight(OSHODI_METRO_NIGHT_LOOK)).toBeGreaterThanOrEqual(groundLight(lekki) * 0.9);
     // and not so dim against the day that a phone would lose the hazard lanes (>= 30% of the day's ground light)
     expect(groundLight(OSHODI_METRO_NIGHT_LOOK)).toBeGreaterThan(groundLight(OSHODI_METRO_LOOK) * 0.3);

@@ -2,7 +2,7 @@
  * Central balance configuration. Every tunable number in the simulation lives here so playtest
  * tuning never touches rules code. All durations are in ticks; use `ticks(seconds)` to author them.
  */
-import type { CharacterId, Dir, PickupKind, SkillKind, VehicleKind } from './types';
+import type { CharacterId, Dir, PickupKind, SkillKind, StreakRewardKind, VehicleKind } from './types';
 
 /**
  * V2 elimination reward: a pickup kind, or `contact` = the eliminator's generator-contact ability
@@ -24,6 +24,27 @@ export interface VehicleSpec {
   playerHitLimit: number;
   /** Whether the route has exactly one 90 degree turn. */
   turns: boolean;
+}
+
+/**
+ * One close attack (B tap next to a rival). Nothing here roots the attacker: the recoveries only keep THEIR NEXT
+ * attack from starting; walking, placing generators and everything else stay free.
+ */
+export interface AttackSpec {
+  /** Ticks between the press and the effect (the telegraph; a hit that dazes or displaces cuts it short). */
+  startupTicks: number;
+  /** The attacker's next attack may not start for this long after the effect found nobody (or was interrupted). */
+  whiffRecoveryTicks: number;
+  /** ... and for this long after it connected (their global recovery: any other rival is hittable after it). */
+  hitRecoveryTicks: number;
+  /** The same attacker may not affect the same victim again for this long after a hit (no chain). */
+  targetLockoutTicks: number;
+  /** Tiles the victim is pushed straight away from the attacker (0 = not displaced); a hit that cannot move them at all whiffs. */
+  displacementTiles: number;
+  /** Ticks the victim cannot act (0 = no daze). */
+  dazeTicks: number;
+  /** After this daze ends the victim cannot be dazed by an attack again for this long. */
+  dazeImmunityTicks: number;
 }
 
 export interface GameConfig {
@@ -82,8 +103,9 @@ export interface GameConfig {
     graceTicks: number;
   };
   skills: {
-    cooldownTicks: Record<SkillKind, number>;
-    dazeTicks: number;
+    /** The three close attacks (decision CB1): each is a startup, an effect and recoveries, all in ticks. */
+    attacks: Record<SkillKind, AttackSpec>;
+    /** Daze immunity after the crowd's bottle (the attacks carry their own, `AttackSpec.dazeImmunityTicks`). */
     dazeImmunityTicks: number;
   };
   vehicles: {
@@ -94,7 +116,14 @@ export interface GameConfig {
     slowFactor: number;
     minRouteTiles: number;
     minKekeLegTiles: number;
+    /**
+     * The public vehicles a voucher or a VEHICLE GENERATOR may be (decision VG1): any fighter may get any of them,
+     * the character no longer decides. An arena narrows it with its own config (an Okada only where it allows).
+     */
+    allowed: VehicleKind[];
     specs: Record<VehicleKind, VehicleSpec>;
+    /** Ticks per tile while a VEHICLE GENERATOR rides the vehicle (it is a carrier, not a ram: decision VG2). */
+    carrierStepTicks: Record<VehicleKind, number>;
     /**
      * City Rumble Evolution: the board-edge entrances summoned attack vehicles may use (road mouths), as
      * [x, y, inward dir]. Null = every border tile (the default). Set by an arena's config only.
@@ -219,6 +248,43 @@ export interface GameConfig {
     /** The `contact` reward for a fighter with no contact ability: their character's signature tool. */
     contactByCharacter: Record<CharacterId, PickupKind>;
   };
+  /**
+   * The fixed initial kill-streak loadout (decision SK1): rewards for the nth CREDITED elimination of the current
+   * life. Each threshold pays once per streak and each reward is consumed once; a death clears both.
+   */
+  streaks: {
+    enabled: boolean;
+    loadout: { kills: number; reward: StreakRewardKind }[];
+    /** QUICK HANDS (decision SK2). */
+    quickHands: {
+      /** How long it lasts. */
+      durationTicks: number;
+      /** Extra generator capacity while it lasts (on top of the capacity the fighter already has). */
+      extraCapacity: number;
+      /** A placement press that cannot be done yet (dazed, tile taken, at capacity) is kept this long. */
+      placeBufferTicks: number;
+    };
+    /** VEHICLE GENERATOR (decision VG2): one three-second fuse from the moment the vehicle starts driving. */
+    vehicleGenerator: {
+      /** The generator's whole fuse, started when the vehicle launches. */
+      fuseTicks: number;
+      /** The carrier lets go this long after it starts driving (about the first two seconds). */
+      releaseTicks: number;
+      /** The thrown generator's flight time (the late, readable warning: a visible projectile plus a marker). */
+      throwTicks: number;
+      /** The longest throw (Manhattan tiles): on a big map a rival further than this is not thrown at from afar. */
+      maxThrowTiles: number;
+    };
+    /** GLOBAL KNOCKDOWN (decision GK1). */
+    globalKnockdown: {
+      /** Flight time of the thrown object from the building to each rival's head. */
+      throwTicks: number;
+      /** How long a rival lies on the ground (cannot move, place or attack). Tuned 1.5-3 s. */
+      knockdownTicks: number;
+      /** After getting up a rival cannot be knocked down again for this long. */
+      immunityTicks: number;
+    };
+  };
   /** V2 respawn modes (Deathmatch, Team Rumble). */
   respawn: {
     enabled: boolean;
@@ -338,8 +404,37 @@ export const DEFAULT_CONFIG: GameConfig = {
     graceTicks: ticks(0.75),
   },
   skills: {
-    cooldownTicks: { push: ticks(4), shove: ticks(3), daze: ticks(5) },
-    dazeTicks: ticks(1),
+    // Punch / Street Jab (push): fast and light. Shove: slow, positional, risky. Daze Punch: slow and heavy.
+    // Decision CB2 lists the measured trade-offs; scripts/combat-balance.ts re-measures them.
+    attacks: {
+      push: {
+        startupTicks: 4,
+        whiffRecoveryTicks: 12,
+        hitRecoveryTicks: ticks(1),
+        targetLockoutTicks: ticks(3),
+        displacementTiles: 0,
+        dazeTicks: 30,
+        dazeImmunityTicks: ticks(1),
+      },
+      shove: {
+        startupTicks: 12,
+        whiffRecoveryTicks: 36,
+        hitRecoveryTicks: ticks(2),
+        targetLockoutTicks: ticks(3),
+        displacementTiles: 2,
+        dazeTicks: 0,
+        dazeImmunityTicks: 0,
+      },
+      daze: {
+        startupTicks: 18,
+        whiffRecoveryTicks: 30,
+        hitRecoveryTicks: ticks(4),
+        targetLockoutTicks: ticks(4),
+        displacementTiles: 0,
+        dazeTicks: ticks(1),
+        dazeImmunityTicks: ticks(2),
+      },
+    },
     dazeImmunityTicks: ticks(2),
   },
   vehicles: {
@@ -349,11 +444,16 @@ export const DEFAULT_CONFIG: GameConfig = {
     slowFactor: 1.8,
     minRouteTiles: 4,
     minKekeLegTiles: 3,
+    allowed: ['danfo', 'taxi', 'keke'],
     specs: {
       danfo: { stepTicks: 14, resistance: 9, softLimit: 999, playerHitLimit: 999, turns: false },
       taxi: { stepTicks: 7, resistance: 6, softLimit: 2, playerHitLimit: 1, turns: false },
       keke: { stepTicks: 8, resistance: 4, softLimit: 1, playerHitLimit: 2, turns: true },
+      // the Okada as a hazard (decision VG1): fastest, lightest - no crate breaking, gone after one rival
+      okada: { stepTicks: 6, resistance: 3, softLimit: 0, playerHitLimit: 1, turns: false },
     },
+    /** Ticks per tile while a VEHICLE GENERATOR rides it: slower than an attack run so the carrier is readable. */
+    carrierStepTicks: { danfo: 12, taxi: 9, keke: 10, okada: 8 },
     lanes: null,
   },
   drops: {
@@ -434,6 +534,17 @@ export const DEFAULT_CONFIG: GameConfig = {
     fallback: ['socket', 'petrol', 'armour', 'skates', 'square', 'voucher', 'okada'],
     contactByCharacter: { streetBaller: 'boots', lekkiBoy: 'gloves', campusQueen: 'killswitch' },
   },
+  streaks: {
+    enabled: false,
+    loadout: [
+      { kills: 3, reward: 'quickHands' },
+      { kills: 5, reward: 'vehicleGenerator' },
+      { kills: 7, reward: 'globalKnockdown' },
+    ],
+    quickHands: { durationTicks: ticks(18), extraCapacity: 5, placeBufferTicks: ticks(1.2) },
+    vehicleGenerator: { fuseTicks: ticks(3), releaseTicks: ticks(2), throwTicks: 40, maxThrowTiles: 10 },
+    globalKnockdown: { throwTicks: 36, knockdownTicks: ticks(2), immunityTicks: ticks(4) },
+  },
   respawn: {
     enabled: false,
     delayTicks: ticks(3),
@@ -491,6 +602,7 @@ export const RUMBLE_ECONOMY = {
   protection: { maxArmour: 3 },
   square: { maxTier: 3, radiusByTier: [0, 1, 2, 3] },
   rewards: { enabled: true },
+  streaks: { enabled: true },
 } satisfies DeepPartial<GameConfig>;
 
 export type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };

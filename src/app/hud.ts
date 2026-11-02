@@ -1,5 +1,4 @@
 import {
-  CHARACTERS,
   TEAM_NAMES,
   getArena,
   isRespawnMode,
@@ -17,6 +16,7 @@ import type {
   PickupKind,
   Player,
   SpecialAction,
+  StreakRewardKind,
   VehicleKind,
 } from '../sim';
 import { canThrow, previewRewards, previewSpecial, spectatorLanding } from '../sim';
@@ -73,6 +73,20 @@ export interface HudMe {
   streak: number;
   /** V2 City Rumble: what the next credited elimination pays right now ([] when rewards are off). */
   nextRewards: PickupKind[];
+  /** The kill-streak rewards (null when the ruleset has none): decision SK4. */
+  rewards: StreakHud | null;
+}
+
+/** What the fighter holds from their kill streak, for the HUD rail's reward cards (decision SK4). */
+export interface StreakHud {
+  /** QUICK HANDS while it runs: seconds and fraction left, and the generator charges left. */
+  quickHands: { seconds: number; fraction: number; charges: number; capacity: number } | null;
+  /** An unused VEHICLE GENERATOR and the vehicle it will be. */
+  vehicleGenerator: VehicleKind | null;
+  /** An unused GLOBAL KNOCKDOWN. */
+  knockdown: boolean;
+  /** The next threshold of the loadout this streak has not reached yet (null once all are earned). */
+  next: { kills: number; reward: StreakRewardKind; toGo: number } | null;
 }
 
 /** The Rumble sudden-death round for the title card and the blast clock (null outside one). */
@@ -188,6 +202,29 @@ export interface SidelineHud {
   canThrow: boolean;
   /** Throws are over for this match (the final seconds). */
   closed: boolean;
+}
+
+function buildStreakHud(state: GameState, p: Readonly<Player>, active: number): StreakHud | null {
+  const cfg = state.config.streaks;
+  if (!cfg.enabled) return null;
+  const r = p.streakRewards;
+  const next = [...cfg.loadout]
+    .sort((a, b) => a.kills - b.kills)
+    .find((s) => !r.earned.includes(s.kills) && s.kills > p.stats.streak);
+  return {
+    quickHands:
+      r.quickHandsUntil > state.tick
+        ? {
+            seconds: Math.ceil((r.quickHandsUntil - state.tick) / 60),
+            fraction: Math.max(0, (r.quickHandsUntil - state.tick) / Math.max(1, r.quickHandsUntil - r.quickHandsStart)),
+            charges: Math.max(0, p.capacity - active),
+            capacity: p.capacity,
+          }
+        : null,
+    vehicleGenerator: r.vehicleGenerator,
+    knockdown: r.knockdown,
+    next: next ? { kills: next.kills, reward: next.reward, toGo: next.kills - p.stats.streak } : null,
+  };
 }
 
 export function buildSideline(state: GameState, localId: number): SidelineHud | null {
@@ -476,7 +513,7 @@ export function buildHud(
 ): HudSnapshot {
   const local = state.players[localId];
   const active = local
-    ? state.generators.filter((g) => g.ownerId === local.id && g.mode !== 'disabled').length
+    ? state.generators.filter((g) => g.ownerId === local.id && g.mode !== 'disabled' && !g.vehicleBorne).length
     : 0;
   const cfg = state.config;
   const rumble = getArena(state.arenaId).kind === 'rumble';
@@ -501,19 +538,21 @@ export function buildHud(
         deaths: local.stats.deaths,
         assists: local.stats.assists,
         voucher: local.hasVoucher,
-        vehicle: CHARACTERS[local.characterId].vehicle,
+        // the vehicle B would call in: a VEHICLE GENERATOR's drawn vehicle, else the voucher's
+        vehicle: local.streakRewards.vehicleGenerator ?? local.voucherKind,
         carrying: local.carrying !== null,
         dazed: state.tick < local.dazedUntil,
         curse:
           local.curse && state.tick < local.curse.until
             ? { kind: local.curse.kind, seconds: Math.ceil((local.curse.until - state.tick) / 60) }
             : null,
-        skillReady: state.tick >= local.skillReadyTick,
+        skillReady: state.tick >= local.skillReadyTick && local.attack === null,
         hasRemoteGenerator: state.generators.some((g) => g.ownerId === local.id && g.mode === 'remote'),
         canDisarm: local.killSwitchCharges > 0,
         canAction: local.grip || local.carrying !== null,
         streak: local.stats.streak,
         nextRewards: previewRewards(state, local),
+        rewards: buildStreakHud(state, local, active),
       }
     : null;
   return {

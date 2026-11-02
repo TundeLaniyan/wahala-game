@@ -90,7 +90,7 @@ export function legendRows(): Record<LegendId, LegendRow> {
     keyboard: keysFor('special'),
     gamepad: padFor('special'),
     touch:
-      'The B button above GENERATOR. Next to a rival it strikes with your skill (PUSH / DAZE / SHOVE); holding a voucher it calls your vehicle. Its label shows what it will do.',
+      'The B button above GENERATOR. Next to a rival it strikes with your skill (PUNCH / DAZE / SHOVE); holding a voucher it calls your vehicle. Its label shows what it will do.',
   };
   const contact: LegendRow = {
     id: 'contact',

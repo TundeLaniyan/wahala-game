@@ -268,12 +268,14 @@ test.describe('keyboard play', () => {
   });
 });
 
-test.describe('signature vehicles: one press of B', () => {
+// vehicles are public (decision VG1): the voucher's vehicle is drawn, not tied to the character, so each case hands out the
+// kind under test (any character can use any of them)
+test.describe('public vehicles: one press of B', () => {
   test.slow();
   for (const [character, vehicle] of [
-    ['streetBaller', 'danfo'],
-    ['lekkiBoy', 'taxi'],
-    ['campusQueen', 'keke'],
+    ['campusQueen', 'danfo'],
+    ['streetBaller', 'taxi'],
+    ['lekkiBoy', 'keke'],
   ] as const) {
     test(`${vehicle}: voucher, ONE press of B picks a route through the rival, warns, and drives in`, async ({
       page,
@@ -283,7 +285,7 @@ test.describe('signature vehicles: one press of B', () => {
       // the rival walled in between two crates on row 6 (pillars above and below): a lane worth taking
       await mutate(
         page,
-        `const p = s.players[0]; p.hasVoucher = true; p.x = p.stepFromX = 0; p.y = p.stepFromY = 10;
+        `const p = s.players[0]; p.hasVoucher = true; p.voucherKind = '${vehicle}'; p.x = p.stepFromX = 0; p.y = p.stepFromY = 10;
          const r = s.players[1]; r.x = r.stepFromX = 9; r.y = r.stepFromY = 6; r.stepRemaining = 0;
          for (const x of [8, 10]) s.tiles[6 * s.width + x] = 2;
          for (let i = 0; i < s.tiles.length; i++) if (s.tiles[i] === 2 && !(Math.floor(i / s.width) === 6 && (i % s.width === 8 || i % s.width === 10))) s.tiles[i] = 0;`,

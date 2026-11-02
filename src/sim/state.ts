@@ -1,3 +1,4 @@
+import { freshStreakRewards } from './data/streaks';
 import { DEFAULT_CONFIG, mergeConfig, ticks } from './config';
 import type { GameConfig } from './config';
 import { CHARACTERS } from './data/characters';
@@ -80,10 +81,16 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     jumpReadyTick: 0,
     slide: null,
     hasVoucher: false,
+    voucherKind: 'danfo',
     carrying: null,
     dazedUntil: 0,
     dazeImmuneUntil: 0,
     skillReadyTick: 0,
+    knockedUntil: 0,
+    knockdownImmuneUntil: 0,
+    streakRewards: freshStreakRewards(),
+    attack: null,
+    meleeLock: {},
     curse: null,
     entryUntil: null,
     immune: [],
@@ -124,6 +131,7 @@ export function createGame(options: GameOptions): GameState {
     tiles: new Array<number>(width * height).fill(Tile.Empty),
     hidden: {},
     supplies: [],
+    knockdowns: [],
     floorHazards: {},
     endgameTraps: { waves: [], liveAt: [], warned: 0, live: 0, warnings: [] },
     players: options.players.map((setup, id) =>
@@ -190,7 +198,8 @@ function buildTiles(state: GameState, arena: ArenaDef): void {
     const c = arena.layout[y]![x];
     // roads (traffic lanes, manholes, power zones) and kept-clear floor ('_') never get random crates;
     // authored barriers ('x') and supply crates ('$') are always crates (placed after this pass)
-    if (state.tiles[i] === Tile.Hard || clear.has(i) || c === '=' || c === '_' || c === 'x' || c === '$') return;
+    if (state.tiles[i] === Tile.Hard || clear.has(i) || c === '=' || c === '_' || c === 'x' || c === '$')
+      return;
     if (soft) state.tiles[i] = Tile.Soft;
   };
 
@@ -366,8 +375,9 @@ export function crushSchedule(count: number, config: GameConfig): number[] {
   if (config.crush.keepCore) {
     // City Rumble: an even cadence so that the last ring tile has landed when the core is all that is left
     const last = Math.max(first, durationTicks - config.crush.coreClosedRemainingTicks - warnTicks);
-    return Array.from({ length: count }, (_, j) =>
-      first + (count > 1 ? Math.round(((last - first) * j) / (count - 1)) : 0),
+    return Array.from(
+      { length: count },
+      (_, j) => first + (count > 1 ? Math.round(((last - first) * j) / (count - 1)) : 0),
     );
   }
   const finalWarn = Math.max(first, durationTicks - warnTicks);

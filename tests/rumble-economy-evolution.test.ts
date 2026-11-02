@@ -271,11 +271,18 @@ describe('the ladder under radial caps (RE-C4)', () => {
 });
 
 describe('marked supply crates (RE-C3, RE-C5)', () => {
-  const STAGES = ['rumbleOshodi', 'rumbleLagosIsland', 'rumbleApapa', 'rumbleLekkiNight'];
+  const STAGES = [
+    'rumbleOshodi',
+    'rumbleMushin',
+    'rumbleFadeyi',
+    'rumbleLagosIsland',
+    'rumbleLekki',
+    'rumbleEbuteMetta',
+  ];
   const BASIC = ['socket', 'petrol'];
 
   // Oshodi and Ojuelegba are non-mirrored: their supplies are balanced per half in their own tests
-  it('the mirrored V2 stages place a few symmetric supply crates; every stage keeps the count small', () => {
+  it('the researched stages place marked supply crates; every stage keeps the count small (no mirrored board is left)', () => {
     for (const id of RUMBLE_ARENA_IDS) {
       const a = ARENAS[id]!;
       const marks = a.layout.join('').split('$').length - 1;

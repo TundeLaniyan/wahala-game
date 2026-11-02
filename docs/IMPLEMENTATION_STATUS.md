@@ -2,6 +2,18 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Kill streaks, close combat and touch input (branch `claude/wahala-streaks-combat-input-v1`, from `8ebf3f4`)
+
+Reference: `docs/STREAKS_AND_COMBAT.md`; decisions MI1-MI5, CB1-CB4, SK1-SK4, VG1-VG4, GK1. Not merged, not deployed.
+
+- Touch input: presses kept through a daze / stumble / slide / trapdoor arrival, newest direction cancels an owed diagonal step, emergency escape through a blast footprint, input trace (`?debug` / `?trace`); keyboard and gamepad unchanged.
+- Close attacks: Punch (Street Jab), Shove and Daze Punch are three different attacks (startup, whiff / hit recovery, per-target lockout, displacement, daze), no attacker freeze; `npm run combat-balance`.
+- Fixed streak loadout 3 / 5 / 7: QUICK HANDS (18 s, +5 charges, hold-A lays), VEHICLE GENERATOR (any public vehicle, 3 s fuse from launch, thrown at 2 s, owner safe), GLOBAL KNOCKDOWN (2 s, visible, non-lethal); `npm run streak-measure`.
+- Vehicles are public (character mapping removed); the Okada is a vehicle where an arena allows it.
+- HUD rail cards and notices, real action names on the touch buttons, day / night checks (`e2e/streaks.spec.ts`, `tests/ui/streakContrast.test.ts`).
+
+Verification (commits `5d165d1` for the unit / build / phone suite, `0d9be51` for the desktop suite): `npm run check` (typecheck, lint, 128 unit files: 2016 passed, 5 skipped, production build) clean; phone Playwright 111 passed, 14 skipped, 0 failed (retries off); desktop Playwright 81 passed, 43 skipped, 1 failed (`rumble.spec.ts:183`, a 15 s HUD wait under load; it passes alone in 3.5 min and passed in every earlier run). Known gaps: assists pay no reward; the Okada vehicle model is procedural (no glTF); a 4-rung bot-level check of VEHICLE GENERATOR / GLOBAL KNOCKDOWN use is only the Standard-level measurement.
+
 ## Lagos arenas, build 1: Oshodi Transport Metropolis (branch `claude/wahala-lagos-arenas-v1`, from `1e099f6`)
 
 Founder brief of 2026-10-30 (decisions LA1-LA12 in `DECISIONS.md`; report `OSHODI_METROPOLIS.md`). The researched
@@ -451,3 +463,29 @@ Decisions UX1-UX6 and PF1-PF10 in `DECISIONS.md`; reports `docs/STITCH_UI.md` (f
 ## Touchscreen diagonal corner movement (branch `claude/mobile-diagonal-corner-input-v1`, decision MV3)
 
 A diagonal touch thumb is planned as two whole cardinal moves (vertical first, reverse order as fallback, nothing partial, nothing when neither order is valid). Keyboard, gamepad and Assisted movement Off are unchanged. Tests: `tests/mobile-diagonal-corner.test.ts` (priority and fallback for all four diagonals, blocked, cardinal taps, keyboard / gamepad / Off, held repeat, wall / crate / one-tile corridor corners), `tests/input-assist.test.ts` (the diagonal flick now completes its route).
+
+
+## City Rumble: seven researched arenas, map-only (branch `claude/wahala-city-rumble-map-only-v1`, from `8ebf3f4`; decisions CR1-CR8; `docs/CITY_RUMBLE_RESEARCHED_ARENAS.md`)
+
+| Area | State |
+| --- | --- |
+| Rumble set | Done: exactly seven arenas (Ojuelegba, Oshodi kept at 63 x 47, and Mushin, Fadeyi, Lagos Island, Lekki, Ebute-Metta from the six approved researched areas, each once). The generic City Rumble, Apapa, old Lagos Island and old Lekki Night maps are removed from sim, render, menu, audio data, previews and tests. The nine standard arenas are untouched. `tests/rumble-researched.test.ts`, `tests/rumble-stages.test.ts`. |
+| Scope | Map-only: no vehicle, input, combat or UX rule is touched; the vehicle-generator work lives on its own branch. |
+| Evidence | Done: 49-frame pack in `docs/screenshots/city-rumble-researched-arenas/` (7 per arena); performance tables in the arena doc (software WebGL: draw calls / triangles exact, frame times unusable). |
+| Not done | Founder-assigned music / voices for the new arenas; real-device performance; vehicle approach / detonation frames (to be re-shot with the vehicle branch). |
+
+## Integration preview: map-only base + streaks / combat / input (branch `claude/wahala-integration-map-ux-preview-v1`; decision CR9)
+
+| Area | State |
+| --- | --- |
+| Composition | `claude/wahala-city-rumble-map-only-v1` (3db8719) with `claude/wahala-streaks-combat-input-v1` (712af9a) merged on top. Experimental: never published (the canonical `claude/wahala-stitch-uiux-v1` is untouched). |
+| Conflicts | `tests/helpers.ts` (both `RUMBLE_FIXTURE` and `giveVoucher` kept) and `docs/DECISIONS.md` (both decision tables kept). |
+| Integration fixes | The seven Rumble stages kept only their own lanes and lost the Okada (CR9, fixed + tested); `tests/ui/streakHud.test.ts` used the removed `cityRumble` (now `RUMBLE_FIXTURE`). |
+| Evidence | Typecheck, lint, build and the full Vitest suite pass. Browser evidence: see the commit message / report. |
+
+## EXPERIMENTAL personal-playtest deployment (map-only + streaks / combat / input)
+
+- **Status: experimental.** The combined code has NOT completed the full desktop + phone browser suite. It is published for the founder's own playtest only; it is not a release.
+- **Rollback point:** `8ebf3f4` (the previous known-good deployment of `claude/wahala-stitch-uiux-v1`). To roll back, reset `claude/wahala-stitch-uiux-v1` to `8ebf3f4` and let CI republish it.
+- **Combined code:** map-only `3db8719` (+ docs-only tip `d752b69`) with `claude/wahala-streaks-combat-input-v1` `712af9a`; integration fixes in decision CR9.
+- **Evidence before publishing:** 2,128 unit tests, typecheck, lint, build and 134 targeted browser tests (retries off) passed on the identical code (`3ceb9e2`); the full desktop and phone suites run after the publish started.

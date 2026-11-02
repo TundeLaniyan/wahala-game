@@ -8,7 +8,7 @@ import {
   scoreRoute,
 } from '../src/sim';
 import type { CharacterId, GameState, TilePos } from '../src/sim';
-import { addSoft, eventsOf, put, run, sandbox } from './helpers';
+import { addSoft, eventsOf, put, run, sandbox, giveVoucher } from './helpers';
 
 /**
  * V2 one-press vehicle (founder A8): the simulation picks a useful LEGAL route by itself. Danfo Bus Park
@@ -24,7 +24,7 @@ function boxedRival(owner: CharacterId): GameState {
   put(s, 1, 9, 6);
   addSoft(s, 8, 6);
   addSoft(s, 10, 6);
-  s.players[0]!.hasVoucher = true;
+  giveVoucher(s, 0);
   return s;
 }
 
@@ -86,7 +86,7 @@ describe('one-press vehicle: auto route choice', () => {
     put(s, 2, 9, 6);
     addSoft(s, 8, 6);
     addSoft(s, 10, 6);
-    s.players[0]!.hasVoucher = true;
+    giveVoucher(s, 0);
     const choice = chooseAutoVehicle(observe(s, 0), 0)!;
     expect(has(choice.route, 9, 6)).toBe(true);
   });
@@ -161,7 +161,7 @@ describe('one-press vehicle: auto route choice', () => {
     });
     put(s, 0, 4, 4);
     put(s, 1, 10, 4);
-    s.players[0]!.hasVoucher = true;
+    giveVoucher(s, 0);
     expect(chooseAutoVehicle(observe(s, 0), 0)).toBeNull();
     const ev = run(s, 1, { 0: { special: true } });
     expect(eventsOf(ev, 'specialUsed')).toHaveLength(0);

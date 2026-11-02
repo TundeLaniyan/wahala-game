@@ -11,7 +11,7 @@ const { ProgressionBadge, groupRewards, squareLabel } = await import('../../src/
 function hudFor(game: 'classic' | 'survival') {
   const state = createGame({
     seed: 1,
-    arenaId: 'cityRumble',
+    arenaId: 'rumbleLagosIsland',
     players: Array.from({ length: 4 }, (_, i) => ({ name: `P${i}`, characterId: 'streetBaller' as const, isBot: i > 0 })),
     settings: { game },
   });

@@ -11,8 +11,7 @@
  * escapes down combined with the generators already ticking, valuing Okada riders correctly.
  */
 import { chooseAutoVehicle, meleeTarget, nextFloat } from '../sim';
-import type { Intent, TilePos } from '../sim';
-import { CHARACTERS } from '../sim';
+import type { Intent, TilePos, VehicleKind } from '../sim';
 import { protectionLayers, rivalEscape, searchRefuge } from './analysis';
 import { baselineRefuges } from './goals';
 import { overBudget, spend } from './context';
@@ -33,10 +32,14 @@ export const newVehicleMemory = (): VehicleMemory => ({
  * The bot's own value of `route` launched at `launchTick` (danger + rival model), or -1 when launching it
  * would leave the bot no refuge.
  */
-export function routeValue(c: Ctx, route: readonly TilePos[], launchTick: number): number {
+export function routeValue(
+  c: Ctx,
+  route: readonly TilePos[],
+  launchTick: number,
+  kind: VehicleKind = c.world.me.voucherKind,
+): number {
   const { world, profile } = c;
   const { me, obs } = world;
-  const kind = CHARACTERS[me.characterId].vehicle;
   const w = world.board.width;
   c.work = 0; // the vehicle check runs between thinks: it gets its own (large-board) budget
   c.builder.build(c.tmp, world, profile, {
@@ -84,10 +87,13 @@ export function vehicleTactic(c: Ctx, mem: VehicleMemory, intent: Intent, safeHe
   const { world, profile } = c;
   const { obs, me } = world;
   const T = obs.tick;
-  if (!me.hasVoucher) {
+  // a VEHICLE GENERATOR (the 5-kill streak reward) is called in like a voucher, with the vehicle it was drawn as
+  const generatorKind = me.streakRewards.vehicleGenerator;
+  if (!me.hasVoucher && generatorKind === null) {
     mem.haveSince = -1;
     return;
   }
+  const kind = generatorKind ?? me.voucherKind;
   if (mem.haveSince < 0) mem.haveSince = T;
   if (me.entryUntil !== null) {
     // legacy entry mode (only a script can open it): leave it, the voucher is kept
@@ -100,7 +106,7 @@ export function vehicleTactic(c: Ctx, mem: VehicleMemory, intent: Intent, safeHe
   if (profile.vehicle === 'naive' && nextFloat(c.rng) > 0.5) return;
   // with an opponent next to me B is a melee press, never the vehicle
   if (meleeTarget(obs, me)) return;
-  const choice = chooseAutoVehicle(obs, me.id);
+  const choice = chooseAutoVehicle(obs, me.id, kind);
   // the auto route must run over (or right beside) a rival to be worth a look at all
   if (!choice || choice.score < 2) return;
   // Team Rumble with friendly fire: never drive through a teammate (with it off, the vehicle passes them)
@@ -108,9 +114,10 @@ export function vehicleTactic(c: Ctx, mem: VehicleMemory, intent: Intent, safeHe
   if (profile.vehicle === 'naive') {
     if (choice.score < 10) return; // a rival on the road
   } else if (
-    routeValue(c, choice.route, T + obs.config.vehicles.entryWarnTicks) < threshold(c, T - mem.haveSince)
+    generatorKind === null &&
+    routeValue(c, choice.route, T + obs.config.vehicles.entryWarnTicks, kind) < threshold(c, T - mem.haveSince)
   )
-    return;
+    return; // (a generator carrier never rams, so only a voucher's route is judged as a ram)
   intent.special = true;
   delete intent.move;
   delete intent.place;

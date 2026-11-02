@@ -2,6 +2,7 @@
  * Generator lifecycle: placement, fuses, kick / carry / punch, Kill Switch, remote detonation.
  * Detonation itself is resolved in explosions.ts; this module only flags generators as triggered.
  */
+import { followVehicle } from './vehicleGenerator';
 import { DIR_VEC, tileAt } from '../grid';
 import { Tile } from '../types';
 import type { Dir, GameState, Generator, Player, SimEvent } from '../types';
@@ -227,6 +228,10 @@ export function updateGeneratorMotion(state: GameState, events: SimEvent[]): voi
       g.y = carrier.y;
       g.stepFromX = carrier.stepFromX;
       g.stepFromY = carrier.stepFromY;
+      continue;
+    }
+    if (g.mountedOn !== undefined) {
+      if (!followVehicle(state, g)) delete g.mountedOn; // its carrier is gone (released first, so this is only a guard)
       continue;
     }
     if (g.flight) {

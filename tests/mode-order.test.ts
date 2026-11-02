@@ -16,9 +16,9 @@ import {
   playerTextStyle,
 } from '../src/assets/palette';
 import { FIGHTER_IDENTITIES } from '../src/assets/fighterIdentity';
-import { CITY_RUMBLE_ID, TIMED_MINUTES, createGame, isRespawnMode, isTeamMode } from '../src/sim';
+import { TIMED_MINUTES, createGame, isRespawnMode, isTeamMode } from '../src/sim';
 import { Tile } from '../src/sim/types';
-import { eventsOf, run } from './helpers';
+import { eventsOf, run, RUMBLE_FIXTURE } from './helpers';
 import { addGenerator } from './helpers';
 
 vi.mock('../src/app/session', () => ({
@@ -74,7 +74,7 @@ describe('what each mode does', () => {
   const start = (settings: GameSettings, n = 4) =>
     createGame({
       seed: 3,
-      arenaId: CITY_RUMBLE_ID,
+      arenaId: RUMBLE_FIXTURE,
       players: Array.from({ length: n }, (_, i) => ({
         name: `P${i}`,
         characterId: 'streetBaller',

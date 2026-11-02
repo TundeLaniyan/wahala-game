@@ -9,7 +9,7 @@ import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const ARENA_IDS = [
+const STANDARD_IDS = [
   'danfoBusPark',
   'balogunMarket',
   'lekkiRoadworks',
@@ -19,8 +19,18 @@ const ARENA_IDS = [
   'surulerePowerYard',
   'yabaAfterDark',
   'thirdMainland',
-  'cityRumble',
 ];
+/** The seven City Rumble communities (Ojuelegba and the six researched areas). */
+const RUMBLE_IDS = [
+  'rumbleOjuelegba',
+  'rumbleOshodi',
+  'rumbleMushin',
+  'rumbleFadeyi',
+  'rumbleLagosIsland',
+  'rumbleLekki',
+  'rumbleEbuteMetta',
+];
+const ARENA_IDS = [...STANDARD_IDS, ...RUMBLE_IDS];
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, all) => {
@@ -45,18 +55,30 @@ const browser = await chromium.launch({
 });
 
 for (const id of arenas) {
-  const page = await (
-    await browser.newContext({ viewport: { width: 640, height: 360 }, deviceScaleFactor: 1 })
-  ).newPage();
+  const context = await browser.newContext({ viewport: { width: 640, height: 360 }, deviceScaleFactor: 1 });
+  // the saved setup is the way in (the same settings the menu writes); Quick play starts it
+  await context.addInitScript(
+    ([id, rumble]) => {
+      const key = 'wahala.settings.v1';
+      const s = JSON.parse(localStorage.getItem(key) || '{}');
+      localStorage.setItem(
+        key,
+        JSON.stringify(
+          rumble
+            ? { ...s, play: 'rumble', rumbleArenaId: id, rumbleCompetitors: 16, rumbleMode: 'deathmatch' }
+            : { ...s, play: 'classic', arenaId: id, competitors: 4 },
+        ),
+      );
+    },
+    [id, RUMBLE_IDS.includes(id)],
+  );
+  const page = await context.newPage();
   page.setDefaultTimeout(300000); // software WebGL on a busy machine can take seconds per frame
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${url}?debug&noattract&nobots&q=${process.env.Q ?? 'high'}&seed=${process.env.SEED ?? 7}`);
-  await page.getByTestId('title-screen').waitFor();
-  await page.getByTestId(`arena-${id}`).click();
-  if (id !== 'cityRumble') await page.getByTestId('players-4').click();
-  else await page.getByTestId('rumble-16').click();
-  await page.getByTestId('start-button').click();
+  await page.getByTestId('quick-play').waitFor();
+  await page.getByTestId('quick-play').click();
   await page.getByTestId('hud').waitFor();
   // a countdown frame: the arena with everyone at their spawns, before anything happens
   await page.evaluate(() => {

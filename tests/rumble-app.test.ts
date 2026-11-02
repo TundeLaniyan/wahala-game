@@ -7,11 +7,11 @@ import type { GameSettings } from '../src/app/settings';
 import { useGameStore } from '../src/app/store';
 import { buildHud, FEED_MAX } from '../src/app/hud';
 import { cycleSpectateTarget, killCounts, pickSpectateTarget } from '../src/app/spectate';
-import { CITY_RUMBLE_ID, Tile, getArena } from '../src/sim';
+import { Tile, getArena } from '../src/sim';
 import type { GameState, Intent, SimEvent } from '../src/sim';
 import type { FrameInfo } from '../src/render';
 import { minimapGeometry, minimapLayers, tileToMinimap, NEAR_TILES } from '../src/ui/minimapModel';
-import { addGenerator, put, sandbox } from './helpers';
+import { addGenerator, put, sandbox, RUMBLE_FIXTURE } from './helpers';
 
 class FakeInput implements InputPort {
   navMode = false;
@@ -61,7 +61,7 @@ const idleBot: Bot = { decide: () => ({}) };
 const rumbleSettings = (n: GameSettings['rumbleCompetitors']): GameSettings => ({
   ...DEFAULT_GAME_SETTINGS,
   rumbleMode: 'survival', // these tests are about the no-respawn flow (the menu default is now Free-for-All)
-  arenaId: CITY_RUMBLE_ID,
+  arenaId: RUMBLE_FIXTURE,
   rumbleCompetitors: n,
 });
 
@@ -95,7 +95,7 @@ function eliminate(s: GameState, id: number, by: number | null): void {
 
 describe('spectator target (City Rumble)', () => {
   it('follows the killer first, then the nearest survivor; cycling skips the fallen and wraps', () => {
-    const s = sandbox({ players: 6, arenaId: CITY_RUMBLE_ID });
+    const s = sandbox({ players: 6, arenaId: RUMBLE_FIXTURE });
     put(s, 0, 10, 10);
     put(s, 1, 30, 25);
     put(s, 2, 11, 12);
@@ -115,7 +115,7 @@ describe('spectator target (City Rumble)', () => {
     eliminate(s, 2, 5);
     expect(killCounts(s)[5]).toBe(1);
     // nearest to the local player's death spot with no killer alive: 5 at (12, 10)
-    const t = sandbox({ players: 4, arenaId: CITY_RUMBLE_ID });
+    const t = sandbox({ players: 4, arenaId: RUMBLE_FIXTURE });
     put(t, 0, 10, 10);
     put(t, 1, 30, 25);
     put(t, 2, 12, 10);
@@ -203,7 +203,7 @@ describe('City Rumble match flow in the controller', () => {
 
 describe('rumble HUD snapshot', () => {
   it('counts survivors, keeps a short newest-first feed, ranks the fallen and finds who is near', () => {
-    const s = sandbox({ players: 12, arenaId: CITY_RUMBLE_ID });
+    const s = sandbox({ players: 12, arenaId: RUMBLE_FIXTURE });
     for (let i = 0; i < 6; i++) {
       s.tick = 100 + i * 10;
       eliminate(s, 6 + i, i === 5 ? null : 1);
@@ -245,8 +245,8 @@ describe('minimap projection', () => {
   });
 
   it('shows the board, the closing city, nearby generators and everybody standing, never pickups', () => {
-    const s = sandbox({ players: 6, arenaId: CITY_RUMBLE_ID, keepSoft: true });
-    const layout = getArena(CITY_RUMBLE_ID).layout;
+    const s = sandbox({ players: 6, arenaId: RUMBLE_FIXTURE, keepSoft: true });
+    const layout = getArena(RUMBLE_FIXTURE).layout;
     put(s, 0, 4, 4);
     put(s, 3, 6, 4);
     eliminate(s, 5, 0);
@@ -273,12 +273,18 @@ describe('minimap projection', () => {
   });
 
   it('marks the next stretch of the ring and the core once the closing is near', () => {
-    const s = sandbox({ players: 2, arenaId: CITY_RUMBLE_ID });
-    const layout = getArena(CITY_RUMBLE_ID).layout;
+    const s = sandbox({ players: 2, arenaId: RUMBLE_FIXTURE });
+    const layout = getArena(RUMBLE_FIXTURE).layout;
     expect(minimapLayers(s, layout, 0, 0).core).toBeNull();
     s.match.playTicks = s.crush!.warnAt[0]!;
     const m = minimapLayers(s, layout, 0, 0);
-    expect(m.core).toEqual({ x0: 15, y0: 11, w: 11, h: 9 });
+    const core = s.config.crush.keepCore!;
+    expect(m.core).toEqual({
+      x0: core.x0 ?? Math.floor((s.width - core.w) / 2),
+      y0: core.y0 ?? Math.floor((s.height - core.h) / 2),
+      w: core.w,
+      h: core.h,
+    });
     expect(m.closingSoon.length).toBeGreaterThan(5);
     expect(m.closingSoon).toContain(s.crush!.order[0]!);
   });

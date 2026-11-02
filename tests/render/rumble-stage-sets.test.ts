@@ -59,7 +59,15 @@ beforeAll(() => {
   });
 });
 
-const STAGES = ['rumbleOshodi', 'rumbleLagosIsland', 'rumbleOjuelegba', 'rumbleApapa', 'rumbleLekkiNight'];
+const STAGES = [
+  'rumbleOshodi',
+  'rumbleLagosIsland',
+  'rumbleOjuelegba',
+  'rumbleMushin',
+  'rumbleFadeyi',
+  'rumbleLekki',
+  'rumbleEbuteMetta',
+];
 
 interface Built {
   meshes: Mesh[];

@@ -75,7 +75,7 @@ const SOLUTIONS: Record<string, Act[]> = {
   disarm: [walk('right', 5), wait(20), bump('right'), place, walk('left', 3)],
   pass: [walk('right', 2), place, walk('left', 1), walk('right', 4)],
   remote: [walk('right', 2), place, walk('right', 2), walk('up', 2), detonate],
-  melee: [walk('right', 5), special, wait(250), walk('right', 1), special],
+  melee: [walk('right', 5), special, wait(250), special],
   vehicle: [walk('right', 2), wait(10), special],
   crush: [walk('up', 4), walk('right', 5)],
   survival: [
@@ -199,9 +199,10 @@ describe('Academy practices', () => {
     expect(view().practice!.guidance).toMatch(/Nobody is next to you/);
     expect(view().practice!.tasks[0]!.done).toBe(false);
     drive(r, [walk('right', 5), special], 400, false);
-    for (let i = 0; i < 5; i++) step(r);
+    for (let i = 0; i < 6; i++) step(r);
     expect(view().practice!.tasks[1]!.done).toBe(true);
-    expect(r.match.state!.players[1]!.x).toBe(7); // Street Baller's push really moved the dummy
+    // Street Baller's Punch really dazed the dummy (it does not move it)
+    expect(r.match.state!.players[1]!.dazedUntil).toBeGreaterThan(r.match.state!.tick - 1);
   });
 
   it('vehicle: B right next to the dummy is a hit, not a vehicle, and the tip says so', () => {

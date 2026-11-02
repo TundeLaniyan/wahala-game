@@ -176,6 +176,18 @@ export class GeneratorViews implements View {
       gx = pos.x;
       gy = pos.y;
       lift = 1.12;
+    } else if (g.mountedOn !== undefined) {
+      // a VEHICLE GENERATOR rides its carrier's roof, a live countdown on it
+      const veh = state.vehicles.find((o) => o.id === g.mountedOn);
+      if (veh) {
+        const cur = veh.route[Math.max(0, Math.min(veh.index, veh.route.length - 1))]!;
+        const prev = veh.index > 0 ? veh.route[veh.index - 1]! : cur;
+        const k = veh.phase === 'driving' ? stepProgress(veh.stepRemaining, veh.stepTotal, alpha) : 1;
+        gx = prev.x + (cur.x - prev.x) * k;
+        gy = prev.y + (cur.y - prev.y) * k;
+      }
+      lift = 1.1;
+      v.model.root.rotation.z = 0;
     } else if (g.flight) {
       const k = stepProgress(g.flight.remaining, g.flight.total, alpha);
       gx = g.flight.fromX + (g.x - g.flight.fromX) * k;

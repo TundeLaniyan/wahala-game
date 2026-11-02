@@ -21,8 +21,11 @@ export type TileKind = (typeof Tile)[keyof typeof Tile];
 // ---------------------------------------------------------------- catalogue ids
 
 export type CharacterId = 'streetBaller' | 'lekkiBoy' | 'campusQueen';
-export type VehicleKind = 'danfo' | 'taxi' | 'keke';
+/** The public vehicles of Lagos. Any fighter may get any of them (decision VG1). */
+export type VehicleKind = 'danfo' | 'taxi' | 'keke' | 'okada';
 export type SkillKind = 'push' | 'daze' | 'shove';
+/** The kill-streak rewards of the fixed initial loadout (decision SK1). */
+export type StreakRewardKind = 'quickHands' | 'vehicleGenerator' | 'globalKnockdown';
 export type PickupKind =
   | 'petrol'
   | 'diesel'
@@ -127,6 +130,46 @@ export interface SpectatorState {
   stepRemaining: number;
 }
 
+/**
+ * The kill-streak rewards a fighter holds right now (decision SK1). All of it is per life: a death clears it. A
+ * threshold is earned once per streak (`earned`), and each reward is consumed once.
+ */
+export interface StreakRewards {
+  /** The kill-count thresholds already paid during this streak (so a threshold never pays twice). */
+  earned: number[];
+  /** QUICK HANDS is active until this tick (0 = not active). */
+  quickHandsUntil: number;
+  /** When QUICK HANDS began (the HUD's duration ring). */
+  quickHandsStart: number;
+  /** The extra generator capacity QUICK HANDS added, taken away again when it ends. */
+  quickHandsExtra: number;
+  /** QUICK HANDS: a placement press that could not be done yet (dazed, tile taken ...) is kept until this tick. */
+  placeQueuedUntil: number;
+  /** An unused VEHICLE GENERATOR: the public vehicle it will launch (null = none). */
+  vehicleGenerator: VehicleKind | null;
+  /** An unused GLOBAL KNOCKDOWN. */
+  knockdown: boolean;
+}
+
+/** A melee attack between the press and its effect (the startup). It never roots the attacker. */
+export interface PendingAttack {
+  skill: SkillKind;
+  /** The rival it was aimed at (the effect re-checks who is adjacent when it resolves). */
+  targetId: number;
+  resolveTick: number;
+}
+
+/** A GLOBAL KNOCKDOWN object in the air: it lands on `targetId`'s head at `landTick` (decision GK1). */
+export interface PendingKnockdown {
+  id: number;
+  ownerId: number;
+  targetId: number;
+  /** Where it is thrown from: a tile just outside the board edge nearest the target (the building side). */
+  fromX: number;
+  fromY: number;
+  landTick: number;
+}
+
 export interface Player {
   id: number;
   slot: number;
@@ -186,11 +229,28 @@ export interface Player {
   /** Oil slick: forced automatic steps in `dir`. */
   slide: { dir: Dir; remaining: number } | null;
   hasVoucher: boolean;
+  /** The public vehicle the held voucher will launch (drawn when it was granted; meaningless without a voucher). */
+  voucherKind: VehicleKind;
 
   carrying: number | null; // generator id
   dazedUntil: number;
   dazeImmuneUntil: number;
+  /** First tick this fighter may START another melee attack (their global recovery after the last one). */
   skillReadyTick: number;
+  /** Lying on the ground from a GLOBAL KNOCKDOWN until this tick (0 = not knocked down); `dazedUntil` holds them too. */
+  knockedUntil: number;
+  /** After getting up from a knockdown nobody can knock this fighter down again before this tick. */
+  knockdownImmuneUntil: number;
+  /** Kill-streak rewards held (cleared by a death). */
+  streakRewards: StreakRewards;
+  /** A melee attack in its startup: resolves at `resolveTick` (decision CB1); null when idle. */
+  attack: PendingAttack | null;
+  /**
+   * Per-target lockout (decision CB3): `meleeLock[victimId]` is the first tick this fighter's melee may affect
+   * that victim again. Other victims are unaffected, so a chain on one opponent is impossible while a different
+   * opponent stays hittable once the attacker's own recovery (`skillReadyTick`) is over.
+   */
+  meleeLock: Record<number, number>;
   curse: { kind: CurseKind; until: number } | null;
   entryUntil: number | null; // vehicle-entry mode deadline
   immune: ImmuneEntry[];
@@ -233,6 +293,10 @@ export interface Generator {
    * (kicked / punched it, or rammed it with their vehicle). Optional: absent = nobody.
    */
   touchedBy?: number;
+  /** A VEHICLE GENERATOR's generator (decision VG2): carried by `mountedOn`, then thrown; not counted against capacity. */
+  vehicleBorne?: boolean;
+  /** The vehicle currently carrying this generator (it is airborne, off the ground, until released). */
+  mountedOn?: number;
 }
 
 export interface Flame {
@@ -247,6 +311,8 @@ export interface Flame {
   fromSpectator?: boolean;
   /** V2: a Square Blast tile (outside the plus arms) - drawn distinctly. */
   square?: boolean;
+  /** From a VEHICLE GENERATOR: the owner is never caught in this blast (decision VG4). */
+  ownerSafe?: boolean;
   /** City Rumble radial blast: a tile off the generator's row and column (systems/blastShape.ts). */
   radial?: boolean;
   tip: boolean;
@@ -299,6 +365,17 @@ export interface Vehicle {
   exposedEvents: number[];
   eventId: number; // id used for Okada grace against this vehicle
   startTick: number;
+  /** A VEHICLE GENERATOR carrier (decision VG2): a live generator rides it and is thrown at `targetId` (never rams). */
+  payload: VehiclePayload | null;
+}
+
+export interface VehiclePayload {
+  generatorId: number;
+  /** The rival the generator is thrown at (the nearest rival to the route; re-picked at release if they are gone). */
+  targetId: number | null;
+  /** The tick the generator is released (set when the vehicle starts driving). */
+  releaseTick: number;
+  released: boolean;
 }
 
 export interface CrowdThrow {
@@ -415,6 +492,8 @@ export interface GameState {
    * while its tile is a soft block.
    */
   supplies: number[];
+  /** GLOBAL KNOCKDOWN objects in the air (decision GK1). */
+  knockdowns: PendingKnockdown[];
   /** Live floor traps (tile index -> kind): early traps plus the endgame waves that have gone live. */
   floorHazards: Record<number, 'pothole' | 'oil'>;
   /** The mandatory endgame trap waves (always present in a standard match). */
@@ -588,6 +667,11 @@ export interface Intent {
   /** Button A: place a generator (sideline spectator: throw one in). */
   place?: boolean;
   /**
+   * Button A held down (not a tap). Only QUICK HANDS reads it: while active, a held A lays a generator on every
+   * tile the player steps onto. Ignored otherwise.
+   */
+  placeHeld?: boolean;
+  /**
    * V2 button B (tap): ONE deterministic context action (systems/actions.ts): melee an adjacent
    * opponent, else launch the signature vehicle (voucher), else nothing. Never two things at once.
    */
@@ -660,7 +744,11 @@ export type SimEvent =
   /** V2: a contact ability was picked up / replaced the previous one. */
   | { type: 'contactEquipped'; playerId: number; ability: ContactAbility; replaced: ContactAbility | null }
   /** V2: button B resolved to this action. */
-  | { type: 'specialUsed'; playerId: number; action: 'melee' | 'vehicle' }
+  | { type: 'specialUsed'; playerId: number; action: 'melee' | 'vehicle' | 'vehicleGenerator' | 'globalKnockdown' }
+  /** A VEHICLE GENERATOR carrier started driving: the generator's three-second fuse is running. */
+  | { type: 'vehicleGeneratorLaunched'; vehicleId: number; ownerId: number; kind: VehicleKind; generatorId: number; targetId: number | null }
+  /** The carrier let go: the generator is thrown from (fromX, fromY) to (toX, toY) at `targetId`. */
+  | { type: 'vehicleGeneratorReleased'; vehicleId: number; ownerId: number; generatorId: number; fromX: number; fromY: number; toX: number; toY: number; targetId: number | null; landTick: number; boomTick: number }
   /** V2: a protection layer absorbed a lethal hit (Okada also emits okadaBroken). */
   | { type: 'protectionBroken'; playerId: number; layer: 'okada' | 'armour'; x: number; y: number }
   /** V2 City Rumble: an elimination reward was granted to the credited eliminator. */
@@ -682,6 +770,26 @@ export type SimEvent =
   | { type: 'okadaMounted'; playerId: number }
   | { type: 'okadaBroken'; playerId: number; x: number; y: number }
   | { type: 'skillUsed'; playerId: number; skill: SkillKind; targetId: number | null }
+  /** A kill streak reached a threshold of the loadout: the reward is earned (`vehicle` for a VEHICLE GENERATOR). */
+  | { type: 'streakRewardEarned'; playerId: number; reward: StreakRewardKind; kills: number; vehicle?: VehicleKind }
+  /** A one-use reward was spent (VEHICLE GENERATOR launched, GLOBAL KNOCKDOWN fired). */
+  | { type: 'streakRewardUsed'; playerId: number; reward: StreakRewardKind }
+  /** QUICK HANDS ran out. */
+  | { type: 'streakRewardEnded'; playerId: number; reward: StreakRewardKind }
+  /** A death cleared rewards that were still unused. */
+  | { type: 'streakRewardsLost'; playerId: number; rewards: StreakRewardKind[] }
+  /** GLOBAL KNOCKDOWN: an object is thrown from the building side at one rival (one event per rival). */
+  | { type: 'knockdownThrown'; ownerId: number; targetId: number; fromX: number; fromY: number; landTick: number }
+  /** The object hit the rival's head: they fall and lie there until `until`. */
+  | { type: 'knockdownHit'; ownerId: number; playerId: number; x: number; y: number; until: number }
+  /** The rival got up. */
+  | { type: 'knockdownEnded'; playerId: number }
+  /** A melee press began its startup (the telegraph: a raised fist, a braced shoulder ...). */
+  | { type: 'attackStarted'; playerId: number; skill: SkillKind; targetId: number; resolveTick: number }
+  /** A melee attack finished its startup: it connected (`targetId`) or whiffed (null). */
+  | { type: 'attackResolved'; playerId: number; skill: SkillKind; targetId: number | null; hit: boolean }
+  /** A hit that dazed or displaced the target cut a melee startup short. */
+  | { type: 'attackInterrupted'; playerId: number; byId: number }
   | { type: 'playerPushed'; playerId: number; byId: number; fromX: number; fromY: number }
   | { type: 'playerDazed'; playerId: number; byId: number | null }
   | { type: 'cursed'; playerId: number; curse: CurseKind }

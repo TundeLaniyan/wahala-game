@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { VehicleEntryController } from '../../src/app/vehicleEntry';
-import { sandbox } from '../helpers';
+import { giveVoucher, sandbox } from '../helpers';
 
 function open(character: 'streetBaller' | 'lekkiBoy' | 'campusQueen') {
   const s = sandbox({ characters: [character, 'streetBaller'] });
-  s.players[0]!.hasVoucher = true;
+  giveVoucher(s, 0); // (the legacy kind for that character: this controller works for any vehicle)
   s.players[0]!.entryUntil = s.tick + s.config.vehicles.entryWindowTicks;
   const c = new VehicleEntryController(0);
   c.sync(s);

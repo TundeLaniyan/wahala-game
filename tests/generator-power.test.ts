@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { CITY_RUMBLE_ID, DEFAULT_CONFIG, PICKUP_DEFS, Tile, createGame, getArena, tick } from '../src/sim';
+import { DEFAULT_CONFIG, PICKUP_DEFS, Tile, createGame, getArena, tick } from '../src/sim';
 import type { Intents, PickupKind, SimEvent } from '../src/sim';
 import { equipContact } from '../src/sim/systems/pickups';
-import { addGenerator, addPickup, addSoft, eventsOf, flameKeys, put, run, sandbox } from './helpers';
+import {
+  addGenerator,
+  addPickup,
+  addSoft,
+  eventsOf,
+  flameKeys,
+  put,
+  run,
+  sandbox,
+  RUMBLE_FIXTURE,
+} from './helpers';
 
 /** Generators first: Extra Socket / Petrol Top-Up economy, Generator Pass, the Power Yard blast rule. */
 
@@ -15,7 +25,8 @@ describe('pickup economy', () => {
     expect(share).toBeGreaterThanOrEqual(0.6);
     expect(share).toBeLessThanOrEqual(0.7);
     // the advanced skills are each rarer than either generator upgrade
-    for (const k of ['boots', 'gloves', 'grip', 'remote', 'sneakers', 'bombpass'] as const) expect(w[k]).toBeLessThan(w.socket / 4);
+    for (const k of ['boots', 'gloves', 'grip', 'remote', 'sneakers', 'bombpass'] as const)
+      expect(w[k]).toBeLessThan(w.socket / 4);
   });
 
   it('the hidden pickups of real matches follow those weights', () => {
@@ -157,6 +168,15 @@ describe('Generator Pass (Bomb Pass)', () => {
   });
 });
 
+/** The centre of five open tiles in a row on the arena (so a range-2 plus blast is unobstructed along the row). */
+function openRun(arenaId: string): [number, number] {
+  const rows = getArena(arenaId).layout;
+  for (let y = 5; y < rows.length - 5; y++)
+    for (let x = 5; x < rows[0]!.length - 5; x++)
+      if ([-2, -1, 0, 1, 2].every((d) => rows[y]![x + d] === '.')) return [x, y];
+  throw new Error('no open run');
+}
+
 describe('Surulere Power Yard: full-length blasts (this arena only)', () => {
   const yard = () => sandbox({ arenaId: 'surulerePowerYard' });
 
@@ -174,7 +194,11 @@ describe('Surulere Power Yard: full-length blasts (this arena only)', () => {
     for (let y = 0; y < 11; y++) if (y !== 2 && s.tiles[y * 15 + 6] !== Tile.Hard) expected.push(`6,${y}`);
     expect(keys).toEqual(expected.sort());
     // both crates in the lines broke
-    expect(eventsOf(ev, 'blockDestroyed').map((e) => `${e.x},${e.y}`).sort()).toEqual(['4,2', '6,6']);
+    expect(
+      eventsOf(ev, 'blockDestroyed')
+        .map((e) => `${e.x},${e.y}`)
+        .sort(),
+    ).toEqual(['4,2', '6,6']);
   });
 
   it('pillars still block walking; a generator anywhere on the line chains in the same event', () => {
@@ -225,7 +249,7 @@ describe('Surulere Power Yard: full-length blasts (this arena only)', () => {
     for (const [arenaId, gx, gy] of [
       ['danfoBusPark', 6, 4],
       ['yabaAfterDark', 6, 4],
-      [CITY_RUMBLE_ID, 14, 12],
+      [RUMBLE_FIXTURE, ...openRun(RUMBLE_FIXTURE)],
     ] as const) {
       const s = sandbox({ arenaId });
       expect(s.config.generator.blastMode).toBe('plus');
@@ -242,28 +266,32 @@ describe('Surulere Power Yard: full-length blasts (this arena only)', () => {
 
 describe('City Rumble set-up', () => {
   const field = (n: number) =>
-    Array.from({ length: n }, (_, i) => ({ name: `P${i}`, characterId: 'streetBaller' as const, isBot: i > 0 }));
+    Array.from({ length: n }, (_, i) => ({
+      name: `P${i}`,
+      characterId: 'streetBaller' as const,
+      isBot: i > 0,
+    }));
 
   it('takes 8, 16, 24 or 32 competitors on distinct spawns; standard arenas stay 1-4', () => {
     for (const n of [8, 16, 24, 32]) {
-      const s = createGame({ seed: n, arenaId: CITY_RUMBLE_ID, players: field(n) });
+      const s = createGame({ seed: n, arenaId: RUMBLE_FIXTURE, players: field(n) });
       expect(s.players).toHaveLength(n);
       expect(new Set(s.players.map((p) => `${p.x},${p.y}`)).size).toBe(n);
       expect(s.players.filter((p) => !p.isBot)).toHaveLength(1);
       for (const p of s.players) expect(s.tiles[p.y * s.width + p.x]).toBe(Tile.Empty);
     }
-    expect(() => createGame({ seed: 1, arenaId: CITY_RUMBLE_ID, players: field(33) })).toThrow();
+    expect(() => createGame({ seed: 1, arenaId: RUMBLE_FIXTURE, players: field(33) })).toThrow();
     expect(() => createGame({ seed: 1, players: field(5) })).toThrow();
   });
 
   it('is a three-minute match where the city closes from 2:00 left around a core that never closes', () => {
-    const s = createGame({ seed: 3, arenaId: CITY_RUMBLE_ID, players: field(8) });
+    const s = createGame({ seed: 3, arenaId: RUMBLE_FIXTURE, players: field(8) });
     expect(s.settings.mode).toBe('crush');
     expect(s.config.match.durationTicks).toBe(180 * 60);
     const crush = s.crush!;
     const core = s.config.crush.keepCore!;
-    const x0 = (s.width - core.w) / 2;
-    const y0 = (s.height - core.h) / 2;
+    const x0 = core.x0 ?? (s.width - core.w) / 2;
+    const y0 = core.y0 ?? (s.height - core.h) / 2;
     for (const i of crush.order) {
       const x = i % s.width;
       const y = Math.floor(i / s.width);
@@ -285,7 +313,7 @@ describe('City Rumble set-up', () => {
 
   it('a 32-player match runs deterministically through the closing city', () => {
     const play = () => {
-      const s = createGame({ seed: 9, arenaId: CITY_RUMBLE_ID, players: field(32) });
+      const s = createGame({ seed: 9, arenaId: RUMBLE_FIXTURE, players: field(32) });
       for (let i = 0; i < 2000; i++) tick(s, {});
       return JSON.stringify(s);
     };

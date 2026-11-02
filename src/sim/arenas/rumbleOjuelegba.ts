@@ -134,6 +134,8 @@ export const OJUELEGBA_LINKS: DistrictLink[] = [
   { from: 'pierCourt', to: 'serviceLoop', kind: 'breach', tiles: [[22, 10]] },
 ];
 
+const STAGE = rumbleStageConfig({ core: { w: 11, h: 9 }, softDensity: 0.46 });
+
 export const RUMBLE_OJUELEGBA: ArenaDef = {
   id: 'rumbleOjuelegba',
   name: 'Ojuelegba Underbridge',
@@ -150,8 +152,8 @@ export const RUMBLE_OJUELEGBA: ArenaDef = {
   maxPlayers: 32,
   forcedMode: 'crush',
   config: {
-    ...rumbleStageConfig({ core: { w: 11, h: 9 }, softDensity: 0.46 }),
-    vehicles: { lanes: LANES },
+    ...STAGE,
+    vehicles: { ...STAGE.vehicles, lanes: LANES },
   },
   floorTraps: trapGrid(TRAP_MARKS, W, H),
   // the endgame waves land in the pier court round the clear bay and on the road between the piers

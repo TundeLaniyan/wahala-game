@@ -244,6 +244,7 @@ describe('camera director', () => {
       exposedEvents: [],
       eventId: 1,
       startTick: 0,
+      payload: null,
     });
     expect(directShot(state, layout, 0, 0, false).keep).toEqual([{ x: layout.wx(13), z: layout.wz(9) }]);
   });

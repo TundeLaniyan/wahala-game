@@ -387,17 +387,26 @@ describe('9. a held diagonal repeats predictably, never as a stray zig-zag', () 
     expect(r.trace).toEqual([START, [4, 3], [3, 3]]);
   });
 
-  it('a route is never left half done by the thumb: a new press mid-route does not drop its second step', () => {
+  it('the thumb lifting does not drop the second step (MV3), but a NEW direction does (newest press wins, MI2)', () => {
+    const lifted = new AssistRig({ map: room(), start: START });
+    lifted.thumbDown();
+    lifted.aim(130, 0.9);
+    lifted.step(2);
+    lifted.lift(); // a flick: the finger is off before the second step is due
+    lifted.step(200);
+    expect(lifted.trace.slice(0, 3)).toEqual([START, [4, 3], [3, 3]]);
+
     const r = new AssistRig({ map: room(), start: START });
     r.thumbDown();
     r.aim(130, 0.9);
     r.step(2);
-    r.push('down', 0.9); // the thumb swings away before the second step is due
+    r.push('down', 0.9); // the thumb swings to a direction that is neither step of the route
     r.step(1);
     r.lift();
     r.step(200);
     expect(r.trace[1]).toEqual([4, 3]);
-    expect(r.trace[2]).toEqual([3, 3]);
+    expect(r.trace).not.toContainEqual([3, 3]); // the owed second step was cancelled, not performed
+    expect(r.trace[2]).toEqual(START); // the new direction (down) took the player back instead
   });
 
   it('a second step that has become dangerous is not taken; the player simply stands on the intermediate tile', () => {

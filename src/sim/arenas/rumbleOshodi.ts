@@ -277,6 +277,12 @@ export const OSHODI_METRO_LINKS: DistrictLink[] = [
   },
 ];
 
+const STAGE = rumbleStageConfig({
+  core: { w: 11, h: 9, x0: 21, y0: 12 },
+  softDensity: 0.46,
+  maxLethalEvents: 2,
+});
+
 export const RUMBLE_OSHODI: ArenaDef = {
   id: 'rumbleOshodi',
   name: 'Oshodi Transport Metropolis',
@@ -290,8 +296,8 @@ export const RUMBLE_OSHODI: ArenaDef = {
   config: {
     // up to two lethal stage events at once (the board is twice the first build: with one slot the road waves and
     // bus departures starved the railcar), each separately warned and never within the quiet seconds
-    ...rumbleStageConfig({ core: { w: 11, h: 9, x0: 21, y0: 12 }, softDensity: 0.46, maxLethalEvents: 2 }),
-    vehicles: { lanes: LANES },
+    ...STAGE,
+    vehicles: { ...STAGE.vehicles, lanes: LANES },
   },
   floorTraps: trapGrid(TRAP_MARKS, W, H),
   // the endgame waves land in the core (x 21-31, y 12-20: the plaza's east edge and the junction), on and beside the main road

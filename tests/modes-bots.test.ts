@@ -7,9 +7,10 @@ import { createBot } from '../src/ai';
 import { runMatch } from '../src/ai/headless';
 import { World } from '../src/ai/world';
 import { PROFILES } from '../src/ai/profiles';
-import { CITY_RUMBLE_ID, createGame, observe, tick } from '../src/sim';
+import { createGame, observe, tick } from '../src/sim';
 import { previewBlast } from '../src/sim/systems/explosions';
 import type { Difficulty, GameKind, GameState, Intents, MatchSettings, SimEvent } from '../src/sim';
+import { RUMBLE_FIXTURE } from './helpers';
 
 const LEVELS: Difficulty[] = ['beginner', 'standard', 'standard'];
 
@@ -24,7 +25,7 @@ function play(
 ): { state: GameState; events: SimEvent[]; deadFor: number[] } {
   const state = createGame({
     seed,
-    arenaId: CITY_RUMBLE_ID,
+    arenaId: RUMBLE_FIXTURE,
     settings: { game, ...settings },
     players: Array.from({ length: n }, (_, i) => ({
       name: `B${i}`,
@@ -60,13 +61,15 @@ describe('Survival Rumble', () => {
   it('32 competitors (one seat a human would take) reach a single result with the closing city', () => {
     const out = runMatch({
       seed: 91,
-      arenaId: CITY_RUMBLE_ID,
+      arenaId: RUMBLE_FIXTURE,
       settings: { game: 'survival' },
       difficulties: Array.from({ length: 32 }, (_, i) => LEVELS[i % LEVELS.length]!),
       config: { match: { durationTicks: 75 * 60 }, crush: { startRemainingTicks: 55 * 60 } },
     });
     expect(out.winner !== null || out.draw || out.timeout).toBe(true);
-    if (!out.timeout) expect(out.seats.filter((s) => s.alive).length).toBeLessThanOrEqual(1);
+    // the last fighter stands, unless the (shortened) clock ran out first: then the ruleset names the winner
+    if (!out.timeout && out.ticks < 75 * 60)
+      expect(out.seats.filter((s) => s.alive).length).toBeLessThanOrEqual(1);
     expect(out.seats.filter((s) => !s.alive).length).toBeGreaterThanOrEqual(29);
   }, 120_000);
 });
@@ -137,7 +140,7 @@ describe('Team Rumble with bots', () => {
   it('a bot sees teammates as friends, never as rivals to hunt or strike', () => {
     const state = createGame({
       seed: 3,
-      arenaId: CITY_RUMBLE_ID,
+      arenaId: RUMBLE_FIXTURE,
       settings: { game: 'team', friendlyFire: true },
       players: Array.from({ length: 8 }, (_, i) => ({
         name: `B${i}`,

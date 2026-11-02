@@ -10,7 +10,7 @@ describe('sweep vehicle approach', () => {
   it('shows the traffic wave for the whole warning, the railcar and other sweeps only at the end', () => {
     expect(sweepApproachTiles('traffic', 'rumbleOshodi')).toBe(Infinity);
     // every other stage keeps the short approach
-    for (const id of ['rumbleOjuelegba', 'cityRumble', 'rumbleLagosIsland', 'oshodiInterchange', ''])
+    for (const id of ['rumbleOjuelegba', 'rumbleMushin', 'rumbleLagosIsland', 'oshodiInterchange', ''])
       expect(sweepApproachTiles('traffic', id)).toBeLessThan(10);
     expect(sweepApproachTiles('train')).toBeLessThan(5);
     expect(sweepApproachTiles('danfo')).toBeLessThan(10);

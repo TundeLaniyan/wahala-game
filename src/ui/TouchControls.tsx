@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as RPointerEvent } from 'react';
-import { CHARACTERS, VEHICLE_DEFS } from '../sim';
+import { CHARACTERS } from '../sim';
 import type { Dir } from '../sim';
 import { pickupIconUrl } from '../assets/pickupIcons';
+import { StreakIcon } from './streakIcons';
+import { specialLabel } from './specialLabel';
 import { commands, input } from '../app/session';
 import { VirtualStick, stickConfigFor } from '../input/joystick';
-import { SPECIAL_HOLD_MS } from '../input';
+import { SPECIAL_HOLD_MS, inputTrace } from '../input';
 import { useGameStore } from '../app/store';
 import type { HudMe } from '../app/hud';
 
@@ -49,6 +51,14 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
   const end = (e: RPointerEvent): void => {
     const result = stick.current.end(e.pointerId, e.timeStamp);
     if (!result) return;
+    inputTrace.record({
+      k: 'raw',
+      ms: Math.round(e.timeStamp),
+      type: e.type === 'pointerup' ? 'up' : 'cancel',
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+    });
     input.setTouchDir(null);
     setView(null);
     if (result.tap && entryOpen && e.type === 'pointerup') commands.pickEntry(e.clientX, e.clientY);
@@ -62,6 +72,14 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
       data-dir={view?.dir ?? ''}
       onPointerDown={(e) => {
         if (!stick.current.begin(e.pointerId, e.clientX, e.clientY, e.timeStamp)) return;
+        inputTrace.record({
+          k: 'raw',
+          ms: Math.round(e.timeStamp),
+          type: 'down',
+          id: e.pointerId,
+          x: e.clientX,
+          y: e.clientY,
+        });
         e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
         input.touchActive();
@@ -69,6 +87,14 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
       }}
       onPointerMove={(e) => {
         if (e.pointerId !== stick.current.pointerId) return;
+        inputTrace.record({
+          k: 'raw',
+          ms: Math.round(e.timeStamp),
+          type: 'move',
+          id: e.pointerId,
+          x: e.clientX,
+          y: e.clientY,
+        });
         input.setTouchDir(stick.current.move(e.pointerId, e.clientX, e.clientY), stick.current.wish);
         show();
       }}
@@ -104,24 +130,21 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
   );
 }
 
-/** What button B does right now: its label (the position and look never change). */
-export function specialLabel(
-  me: HudMe,
-  skill: string,
-): { text: string; icon: 'voucher' | null; live: boolean } {
-  if (me.special === 'vehicle')
-    return { text: VEHICLE_DEFS[me.vehicle].name.toUpperCase(), icon: 'voucher', live: true };
-  if (me.special === 'melee') return { text: skill.toUpperCase(), icon: null, live: me.skillReady };
-  return { text: skill.toUpperCase(), icon: null, live: false };
-}
-
 /**
  * Button A (GENERATOR): tap = place a generator, HOLD = set off your remote generators while one is live (a
  * ring fills over the hold time and the label reads HOLD: BOOM!). One finger = one press; several fingers
  * never double-place within a tick. The input layer alone decides tap vs hold (input/specialHold.ts); with no
  * live remote generator a press places at once, exactly as before.
  */
-function GeneratorButton({ remoteReady, full }: { remoteReady: boolean; full: boolean }) {
+function GeneratorButton({
+  remoteReady,
+  full,
+  quickHands,
+}: {
+  remoteReady: boolean;
+  full: boolean;
+  quickHands: boolean;
+}) {
   const [holding, setHolding] = useState(false);
   const [pressed, setPressed] = useState(false);
   const fingers = useRef(new Set<string>());
@@ -183,6 +206,7 @@ function GeneratorButton({ remoteReady, full }: { remoteReady: boolean; full: bo
         <img src={pickupIconUrl('socket', 64)} alt="" />
         <b>GENERATOR</b>
         {remoteReady && <small data-testid="btn-place-hold">HOLD: BOOM!</small>}
+        {quickHands && !remoteReady && <small data-testid="btn-place-lay">HOLD: LAY</small>}
       </span>
     </button>
   );
@@ -229,7 +253,7 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
   return (
     <button
       type="button"
-      className={`abtn special${label.live ? '' : ' dim'}${label.icon ? ' vehicle' : ''}${holding ? ' holding' : ''}${pressed ? ' pressed' : ''}`}
+      className={`abtn special${label.live ? '' : ' dim'}${label.icon && label.icon !== 'knockdown' ? ' vehicle' : ''}${label.icon === 'knockdown' ? ' knockdown' : ''}${holding ? ' holding' : ''}${pressed ? ' pressed' : ''}`}
       data-testid="btn-special"
       data-state={state}
       aria-disabled={!label.live || undefined}
@@ -256,8 +280,13 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
     >
       {remoteReady && <i className="hold-ring" aria-hidden />}
       <span>
-        {label.icon && <img src={pickupIconUrl('voucher', 64)} alt="" />}
+        {label.icon === 'knockdown' ? (
+          <StreakIcon kind="globalKnockdown" size={64} />
+        ) : label.icon ? (
+          <img src={pickupIconUrl(label.icon === 'generator' ? 'socket' : 'voucher', 64)} alt="" />
+        ) : null}
         {label.text}
+        {label.sub && <small data-testid="btn-special-sub">{label.sub}</small>}
         {remoteReady && <small data-testid="btn-special-hold">HOLD: BOOM!</small>}
       </span>
     </button>
@@ -293,7 +322,11 @@ export function TouchControls() {
     <div className="touch" data-testid="touch-controls">
       <Joystick entryOpen={false} />
       <div className="actions">
-        <GeneratorButton remoteReady={me.remote && me.hasRemoteGenerator} full={me.active >= me.capacity} />
+        <GeneratorButton
+          remoteReady={me.remote && me.hasRemoteGenerator}
+          full={me.active >= me.capacity}
+          quickHands={!!me.rewards?.quickHands}
+        />
         <SpecialButton me={me} skill={skill} />
       </div>
     </div>

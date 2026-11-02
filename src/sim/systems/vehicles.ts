@@ -4,19 +4,31 @@
  * that lie on the vehicle's route; damage accumulates over separate events during one journey.
  */
 import { Tile } from '../types';
-import type { GameState, Intents, Player, SimEvent, TilePos, Vehicle, VehicleIntent } from '../types';
+import type {
+  GameState,
+  Intents,
+  Player,
+  SimEvent,
+  TilePos,
+  Vehicle,
+  VehicleIntent,
+  VehicleKind,
+  VehiclePayload,
+} from '../types';
 import { chooseAutoVehicle } from './autoVehicle';
 import { canHarm } from './queries';
-import { CHARACTERS } from '../data/characters';
 import { buildRoute } from './entries';
 import type { LethalHit } from './lethality';
 import { isActing, vehiclesOf } from './queries';
 import { destroySoftBlocks } from './explosions';
+import { mountGenerator, pickRouteTarget, releaseGenerator } from './vehicleGenerator';
 
 export function vehicleStepTicks(state: GameState, v: Vehicle): number {
-  const spec = state.config.vehicles.specs[v.kind];
-  const slow = state.tick < v.slowUntil ? state.config.vehicles.slowFactor : 1;
-  return Math.round(spec.stepTicks * slow);
+  const cfg = state.config.vehicles;
+  const slow = state.tick < v.slowUntil ? cfg.slowFactor : 1;
+  // a VEHICLE GENERATOR carrier drives at its own, slower pace (it is a carrier, not a ram)
+  const base = v.payload ? cfg.carrierStepTicks[v.kind] : cfg.specs[v.kind].stepTicks;
+  return Math.round(base * slow);
 }
 
 /** Tiles a driving vehicle currently covers: its tile, plus the one it is leaving during the first half of a step. */
@@ -51,10 +63,10 @@ export function handleVehicleIntent(
     }
     case 'launch': {
       if (!isActing(state, p) || p.entryUntil === null || !p.hasVoucher) return;
-      const kind = CHARACTERS[p.characterId].vehicle;
+      const kind = p.voucherKind;
       const route = buildRoute(state, kind, intent.entry, intent.turn);
       if (!route) return; // illegal selections are simply rejected; entry mode stays open
-      launchVehicle(state, p, route, events);
+      launchVehicle(state, p, route, events, kind);
       return;
     }
     case 'auto': {
@@ -71,19 +83,43 @@ export function handleVehicleIntent(
 export function autoLaunch(state: GameState, p: Player, events: SimEvent[]): boolean {
   if (!isActing(state, p) || !p.hasVoucher || p.carrying !== null) return false;
   if (vehiclesOf(state, p.id).length > 0) return false;
-  const choice = chooseAutoVehicle(state, p.id);
+  const choice = chooseAutoVehicle(state, p.id, p.voucherKind);
   if (!choice) return false;
-  const kind = CHARACTERS[p.characterId].vehicle;
-  const route = buildRoute(state, kind, choice.entry, choice.turn);
+  const route = buildRoute(state, p.voucherKind, choice.entry, choice.turn);
   if (!route) return false;
-  launchVehicle(state, p, route, events);
+  launchVehicle(state, p, route, events, p.voucherKind);
   return true;
 }
 
-function launchVehicle(state: GameState, p: Player, route: TilePos[], events: SimEvent[]): void {
-  const kind = CHARACTERS[p.characterId].vehicle;
+/**
+ * VEHICLE GENERATOR (the 5-kill streak reward): a one-press launch of the fighter's drawn public vehicle carrying a
+ * live generator at the rival the route passes nearest to. Returns false (reward kept) when there is no legal route
+ * or the fighter cannot act. The reward is consumed by a launch.
+ */
+export function useVehicleGenerator(state: GameState, p: Player, events: SimEvent[]): boolean {
+  const kind = p.streakRewards.vehicleGenerator;
+  if (kind === null || !isActing(state, p) || p.entryUntil !== null || p.carrying !== null) return false;
+  if (vehiclesOf(state, p.id).length > 0) return false;
+  const choice = chooseAutoVehicle(state, p.id, kind);
+  if (!choice) return false;
+  const route = buildRoute(state, kind, choice.entry, choice.turn);
+  if (!route) return false;
+  p.streakRewards.vehicleGenerator = null;
+  launchVehicle(state, p, route, events, kind, { generatorId: -1, targetId: pickRouteTarget(state, p, route), releaseTick: 0, released: false });
+  events.push({ type: 'streakRewardUsed', playerId: p.id, reward: 'vehicleGenerator' });
+  return true;
+}
+
+function launchVehicle(
+  state: GameState,
+  p: Player,
+  route: TilePos[],
+  events: SimEvent[],
+  kind: VehicleKind,
+  payload: VehiclePayload | null = null,
+): void {
   if (p.entryUntil !== null) p.entryUntil = null;
-  p.hasVoucher = false;
+  if (payload === null) p.hasVoucher = false;
   const spec = state.config.vehicles.specs[kind];
   const vehicle: Vehicle = {
     id: state.nextId++,
@@ -104,6 +140,7 @@ function launchVehicle(state: GameState, p: Player, route: TilePos[], events: Si
     exposedEvents: [],
     eventId: state.nextEventId++,
     startTick: state.tick,
+    payload,
   };
   state.vehicles.push(vehicle);
   events.push({ type: 'vehicleWarning', vehicleId: vehicle.id, kind, ownerId: p.id, entry: route[0]! });
@@ -140,6 +177,7 @@ export function updateVehicles(state: GameState, hits: LethalHit[], events: SimE
           v.stepTotal = v.stepRemaining = vehicleStepTicks(state, v);
           events.push({ type: 'vehicleLaunched', vehicleId: v.id, kind: v.kind, ownerId: v.ownerId });
           enterTile(state, v, softHits, events);
+          mountGenerator(state, v, events); // the three-second fuse starts now
         }
         break;
       case 'driving':
@@ -148,9 +186,12 @@ export function updateVehicles(state: GameState, hits: LethalHit[], events: SimE
         break;
       case 'crashing':
         v.wreckRemaining--;
-        if (v.wreckRemaining <= 0) removeVehicle(state, v);
+        if (v.wreckRemaining <= 0) removeVehicle(state, v, events);
         break;
     }
+    // a carrier lets its generator go at the release tick, or at once when it has crashed
+    if (v.payload && !v.payload.released && (v.phase === 'crashing' || (v.payload.generatorId >= 0 && state.tick >= v.payload.releaseTick)))
+      releaseGenerator(state, v, events);
     if (v.phase === 'driving') collide(state, v, hits, events);
   }
   destroySoftBlocks(state, softHits, 'vehicle', events);
@@ -159,7 +200,7 @@ export function updateVehicles(state: GameState, hits: LethalHit[], events: SimE
 function advance(state: GameState, v: Vehicle, softHits: Map<number, number>, events: SimEvent[]): void {
   if (v.index >= v.route.length - 1) {
     events.push({ type: 'vehicleExited', vehicleId: v.id });
-    removeVehicle(state, v);
+    removeVehicle(state, v, events);
     return;
   }
   const next = v.route[v.index + 1]!;
@@ -189,12 +230,14 @@ function crash(v: Vehicle, events: SimEvent[]): void {
   events.push({ type: 'vehicleDestroyed', vehicleId: v.id, x: t.x, y: t.y, reason: 'crash' });
 }
 
-function removeVehicle(state: GameState, v: Vehicle): void {
+function removeVehicle(state: GameState, v: Vehicle, events: SimEvent[]): void {
+  releaseGenerator(state, v, events); // a carrier that leaves the board or is destroyed lets its generator go first
   state.vehicles.splice(state.vehicles.indexOf(v), 1);
 }
 
 /** Vehicle versus generators (immediate detonation) and players (lethal). */
 function collide(state: GameState, v: Vehicle, hits: LethalHit[], events: SimEvent[]): void {
+  if (v.payload) return; // a VEHICLE GENERATOR carrier never rams: the generator is the threat
   const spec = state.config.vehicles.specs[v.kind];
   const tiles = vehicleHitTiles(v);
   for (const t of tiles) {
@@ -247,7 +290,7 @@ export function applyBlastExposure(state: GameState, events: SimEvent[]): void {
       if (v.damage >= spec.resistance) {
         const t = v.route[v.index]!;
         events.push({ type: 'vehicleDestroyed', vehicleId: v.id, x: t.x, y: t.y, reason: 'blast' });
-        removeVehicle(state, v);
+        removeVehicle(state, v, events);
         break;
       }
       v.slowUntil = state.tick + state.config.vehicles.slowTicks;

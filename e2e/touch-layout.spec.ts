@@ -164,7 +164,7 @@ test.describe('touch layout', () => {
       expect(m.aContent.length).toBeGreaterThanOrEqual(2);
       expect(spill(m.a, m.aContent), 'GENERATOR + icon inside the circle').toBeLessThanOrEqual(0);
       expect(spill(m.b, m.bContent), 'second label inside the circle').toBeLessThanOrEqual(0);
-      expect(m.bText.trim()).toBe('PUSH'); // streetBaller's own ability (the vehicle replaces it with a voucher)
+      expect(m.bText.trim()).toBe('PUNCH'); // streetBaller's own ability (the vehicle replaces it with a voucher)
       for (const t of [m.aText, m.bText]) expect(t.split(/\s+/).filter(Boolean)).not.toContain('A');
       for (const t of [m.aText, m.bText]) expect(t.split(/\s+/).filter(Boolean)).not.toContain('B');
       expect(`${m.aAria}|${m.bAria}`).not.toMatch(/(^|\|)[AB]:/);
@@ -302,7 +302,7 @@ test.describe('touch layout', () => {
   }, info) => {
     await enter(page, 844, 390);
     const b = page.getByTestId('btn-special');
-    await expect(b).toHaveText(/PUSH/);
+    await expect(b).toHaveText(/PUNCH/);
     await mutate(page, `s.players[0].hasVoucher = true;`);
     await page.evaluate(() =>
       (window as never as { __WAHALA__: { advance(n: number): void } }).__WAHALA__.advance(1),
@@ -343,16 +343,18 @@ test.describe('touch layout', () => {
         );
         expect(size, `${what}: label size`).toBeGreaterThanOrEqual(7);
       };
-      await check('ability', /GENERATOR/, /PUSH/);
-      for (const [character, vehicle] of [
-        ['streetBaller', /DANFO/],
-        ['lekkiBoy', /YELLOW CAB/],
-        ['campusQueen', /KEKE/],
+      await check('ability', /GENERATOR/, /PUNCH/);
+      // any character, any public vehicle (decision VG1): the voucher's kind, not the fighter, names the vehicle
+      for (const [character, kind, vehicle] of [
+        ['streetBaller', 'danfo', /DANFO/],
+        ['lekkiBoy', 'taxi', /YELLOW CAB/],
+        ['campusQueen', 'keke', /KEKE/],
+        ['streetBaller', 'okada', /OKADA/],
       ] as const) {
         await mutate(page, `s.players[0].characterId = '${character}'; s.players[0].hasVoucher = false;`);
-        await check(`${character} ability`, /GENERATOR/, /PUSH|DAZE|SHOVE/);
-        await mutate(page, `s.players[0].hasVoucher = true;`);
-        await check(`${character} vehicle`, /GENERATOR/, vehicle);
+        await check(`${character} ability`, /GENERATOR/, /PUNCH|DAZE|SHOVE/);
+        await mutate(page, `s.players[0].hasVoucher = true; s.players[0].voucherKind = '${kind}';`);
+        await check(`${character} ${kind} vehicle`, /GENERATOR/, vehicle);
       }
       const place = page.getByTestId('btn-place');
       await place.dispatchEvent('pointerdown', { pointerId: 9, isPrimary: true, pointerType: 'touch' });

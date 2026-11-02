@@ -34,7 +34,7 @@ export function pickupAt(state: GameState, x: number, y: number): Pickup | undef
 }
 
 export function activeGeneratorCount(state: GameState, ownerId: number): number {
-  return state.generators.filter((g) => g.ownerId === ownerId && g.mode !== 'disabled').length;
+  return state.generators.filter((g) => g.ownerId === ownerId && g.mode !== 'disabled' && !g.vehicleBorne).length;
 }
 
 export function isFloor(state: GameState, x: number, y: number): boolean {
@@ -61,6 +61,15 @@ export function playerStepTicks(state: GameState, p: Player): number {
 
 export function isActing(state: GameState, p: Player): boolean {
   return p.alive && state.match.phase === 'playing' && state.tick >= p.dazedUntil;
+}
+
+/**
+ * Will the simulation ignore this player's move intent on the tick their step ends? Dazed or stumbling, sliding on
+ * oil, arriving from a trapdoor, or choosing a vehicle entrance. The touch input layer keeps a press for such a
+ * player instead of spending it (decision MI1). Read-only.
+ */
+export function movementLocked(state: GameState, p: Player): boolean {
+  return !isActing(state, p) || p.slide !== null || p.teleportPending !== null || p.entryUntil !== null;
 }
 
 /** V2: are these two players on the same team (never true in free-for-all, never for oneself)? */

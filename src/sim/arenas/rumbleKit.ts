@@ -364,5 +364,7 @@ export function rumbleStageConfig(o: {
     },
     arena: { softDensity: o.softDensity },
     stage: { maxLethalEvents: o.maxLethalEvents ?? 2 },
+    // the open Rumble stages have the road mouths and room for an Okada (decision VG1); the standard arenas do not
+    vehicles: { allowed: ['danfo', 'taxi', 'keke', 'okada'] },
   };
 }

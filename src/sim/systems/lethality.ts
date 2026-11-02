@@ -13,6 +13,7 @@
 import type { EliminationCause, GameState, Player, SimEvent } from '../types';
 import { creditFor } from './attribution';
 import { canHarm } from './queries';
+import { clearStreakRewards } from './streaks';
 
 export interface LethalHit {
   playerId: number;
@@ -38,6 +39,7 @@ export function collectFlameHits(state: GameState): LethalHit[] {
     for (const f of state.flames) {
       if (f.x === p.x && f.y === p.y && state.tick >= f.startTick && state.tick < f.endTick) {
         if (!canHarm(state, f.ownerId, p)) continue; // teammate's fire, friendly fire off
+        if (f.ownerSafe && f.ownerId === p.id) continue; // a VEHICLE GENERATOR never catches its owner
         hits.push({
           playerId: p.id,
           eventId: f.eventId,
@@ -133,6 +135,11 @@ export function eliminate(
   for (const id of credit.assistIds) state.players[id]!.stats.assists++;
   p.entryUntil = null;
   p.stepRemaining = 0;
+  p.attack = null;
+  p.knockedUntil = 0;
+  // the streak is over: QUICK HANDS stops and unused one-use rewards are lost (the match score stays)
+  const lost = clearStreakRewards(p);
+  if (lost.length > 0) events.push({ type: 'streakRewardsLost', playerId: p.id, rewards: lost });
   if (p.carrying !== null) {
     const gen = state.generators.find((g) => g.id === p.carrying);
     if (gen) {

@@ -4,7 +4,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  CITY_RUMBLE_ID,
   TEAM_NAMES,
   assignTeams,
   canHarm,
@@ -17,14 +16,14 @@ import {
 import type { GameKind, GameState, MatchSettings, VehicleEntry } from '../src/sim';
 import { NO_TEAM, Tile } from '../src/sim/types';
 import { dangerTiles } from '../src/sim/systems/respawn';
-import { addGenerator, eventsOf, put, run, runUntil } from './helpers';
+import { addGenerator, eventsOf, put, run, runUntil, RUMBLE_FIXTURE } from './helpers';
 
 /** A playing-phase match on `arenaId` (crates cleared, no stage hazards) under the given ruleset. */
 function match(
   game: GameKind,
   n: number,
   settings: Partial<MatchSettings> = {},
-  arenaId = CITY_RUMBLE_ID,
+  arenaId = RUMBLE_FIXTURE,
 ): GameState {
   const state = createGame({
     seed: 7,
@@ -118,7 +117,7 @@ describe('rulesets: each mode on its own', () => {
 
   it('Team Rumble: Green v White, even split for 8-32, teams start on opposite halves, human is Green', () => {
     expect(TEAM_NAMES.slice(0, 2)).toEqual(['Green', 'White']);
-    const arena = getArena(CITY_RUMBLE_ID);
+    const arena = getArena(RUMBLE_FIXTURE);
     for (const n of [8, 12, 16, 24, 32]) {
       const teams = assignTeams({ ...match('team', 2).settings }, arena, n);
       const green = teams.filter((t) => t === 0).length;
@@ -140,7 +139,7 @@ describe('rulesets: each mode on its own', () => {
     // an explicit team in the setup wins over the automatic split
     const forced = createGame({
       seed: 1,
-      arenaId: CITY_RUMBLE_ID,
+      arenaId: RUMBLE_FIXTURE,
       settings: { game: 'team' },
       players: Array.from({ length: 8 }, (_, i) => ({
         name: `P${i}`,

@@ -238,6 +238,7 @@ export function Hud() {
         ruleBanner={hud.ruleBanner}
         suddenDeath={hud.suddenDeath}
         rumble={!!rumble}
+        streak={hud.localAlive ? (hud.me?.rewards ?? null) : null}
       />
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}
       {/* V2 City Rumble progression (workstream C): kills, next reward, protection, Square Blast */}

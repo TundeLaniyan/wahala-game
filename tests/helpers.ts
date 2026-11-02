@@ -127,3 +127,16 @@ export const flameKeys = (state: GameState): string[] =>
   [...new Set(state.flames.map((f) => `${f.x},${f.y}`))].sort();
 
 export const keys = (...pairs: [number, number][]): string[] => pairs.map(([x, y]) => `${x},${y}`).sort();
+
+/** The City Rumble arena the generic ruleset / camera / bot fixtures play on (any researched Rumble community works; this one is open and large). */
+export const RUMBLE_FIXTURE = 'rumbleLagosIsland';
+
+/** The vehicle each character used to be tied to (decision VG1 removed the tie; these tests still want those kinds). */
+const LEGACY_VEHICLE = { streetBaller: 'danfo', lekkiBoy: 'taxi', campusQueen: 'keke' } as const;
+
+/** Gives `id` a Vehicle Voucher for `kind` (default: the vehicle their character used to be tied to). */
+export function giveVoucher(state: GameState, id: number, kind?: 'danfo' | 'taxi' | 'keke' | 'okada'): void {
+  const p = state.players[id]!;
+  p.hasVoucher = true;
+  p.voucherKind = kind ?? LEGACY_VEHICLE[p.characterId];
+}

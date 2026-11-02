@@ -21,4 +21,10 @@ export const VEHICLE_DEFS: Readonly<Record<VehicleKind, VehicleDef>> = {
     color: 0xffe14a,
   },
   keke: { kind: 'keke', name: 'Keke', description: 'Agile, one 90 degree turn', color: 0x2fb35a },
+  okada: {
+    kind: 'okada',
+    name: 'Okada',
+    description: 'The fastest and lightest: no crates, gone after one rival',
+    color: 0xff7a1a,
+  },
 };
