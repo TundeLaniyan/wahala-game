@@ -118,7 +118,14 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
   const engage = state.players.map(() => ({ samples: 0, near: 0, dist: 0, late: 0, lateNear: 0, lateDist: 0 }));
   let alive = n;
   const stopAt = spec.maxPlayTicks ?? Infinity;
-  while (state.match.phase !== 'ended' && state.tick < cap && state.match.playTicks < stopAt) {
+  // a clock that ran out in a tie goes to sudden death (decisions SD1-SD6): let it finish (it is bounded: 4 s card,
+  // 60 s, 30 s, then a blast every 15 s) instead of cutting the match off with no result
+  const hardCap = cap + 6 * 60 * 60;
+  while (
+    state.match.phase !== 'ended' &&
+    (state.tick < cap || (state.match.suddenDeath != null && state.tick < hardCap)) &&
+    state.match.playTicks < stopAt
+  ) {
     const tickStart = spec.now?.() ?? 0;
     for (let i = 0; i < n; i++) {
       const seat = state.players[i]!;
