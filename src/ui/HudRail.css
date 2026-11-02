@@ -169,3 +169,90 @@
     animation: none;
   }
 }
+
+/* ---- kill-streak rewards (decision SK4): notices with an icon, and the reward cards ---- */
+.hud-rail .toast.with-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hud-rail .toast .streak-icon {
+  flex: none;
+  color: #ffe14a;
+}
+.hud-rail .toast.bad .streak-icon {
+  color: #ff8a70;
+}
+.hud-rail .streak-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  max-width: 100%;
+  margin-top: 2px;
+}
+.hud-rail .streak-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 1px;
+  max-width: 100%;
+  padding: 3px 8px 3px 6px;
+  font-family: var(--display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: #f4ecdc;
+  background: rgba(10, 12, 16, 0.88);
+  border-left: 3px solid #4dff88;
+  border-radius: 4px;
+}
+.hud-rail .streak-card.ready {
+  border-left-color: var(--gold);
+  box-shadow: 0 0 10px rgba(255, 210, 58, 0.45);
+}
+.hud-rail .streak-card.next {
+  border-left-color: #8d96a3;
+  color: #c9cfd8;
+  opacity: 0.9;
+}
+.hud-rail .streak-card .streak-icon {
+  grid-row: 1 / span 3;
+  color: #6cf0a0;
+}
+.hud-rail .streak-card.ready .streak-icon {
+  color: var(--gold);
+}
+.hud-rail .streak-name {
+  font-size: clamp(0.58rem, 2.3vh, 0.86rem);
+  white-space: nowrap;
+}
+.hud-rail .streak-time {
+  font-weight: 400;
+  font-size: clamp(0.62rem, 2.5vh, 0.95rem);
+  color: #ffffff;
+  white-space: nowrap;
+}
+.hud-rail .streak-bar {
+  grid-column: 2 / span 2;
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.hud-rail .streak-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #4dff88, #ffe14a);
+  transition: width 0.25s linear;
+}
+.hud-rail .streak-sub {
+  grid-column: 2 / span 2;
+  font-size: clamp(0.5rem, 2vh, 0.72rem);
+  letter-spacing: 0.04em;
+  color: #b8c0cc;
+  white-space: nowrap;
+}

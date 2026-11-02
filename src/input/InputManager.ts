@@ -6,6 +6,7 @@ import type { AssistLevel, MoveAssistSetting, MoveBoard, TouchDiagonal } from '.
 import { MoveGate } from './moveGate';
 import type { GateAssist } from './moveGate';
 import { PlaceHold, SpecialHold } from './specialHold';
+import { inputTrace } from './trace';
 import type { ActionName, InputSourceName, NavCommand } from './types';
 
 export interface InputManagerEvents {
@@ -28,6 +29,13 @@ export interface IntentContext {
    * Without it - tutorial scripts, spectators, older callers - movement is exactly the unassisted gate.
    */
   board?: () => MoveBoard;
+  /**
+   * The simulation will ignore a move this tick although the step is finished: the player is dazed, stumbling,
+   * sliding, arriving from a trapdoor ... Touch presses wait for them instead of being spent (decision MI1).
+   */
+  locked?: boolean;
+  /** QUICK HANDS is running for the local player: a held A lays a generator on every tile they step onto. */
+  quickHands?: boolean;
 }
 
 /**
@@ -118,6 +126,7 @@ export class InputManager {
    */
   setTouchDir(dir: Dir | null, wish: Dir | null = null): void {
     this.touchWish = dir ? wish : null;
+    inputTrace.record({ k: 'dir', tick: this.tickNow, dir, wish: this.touchWish });
     if (dir === this.touchDir) return;
     const switching = this.touchDir !== null && dir !== null;
     this.touchDir = dir;
@@ -126,7 +135,7 @@ export class InputManager {
     // a thumb that goes straight from one direction to another may be mid-swipe through the centre: a
     // moment of settling (full assistance only) lets the real direction overwrite a stray one
     const settle = switching && this.assistLevel === 'full' ? SWITCH_SETTLE_TICKS : 0;
-    this.gate.press(dir, this.tickNow, settle);
+    this.gate.press(dir, this.tickNow, settle, true);
     this.events.onNav(dir);
   }
 
@@ -188,13 +197,18 @@ export class InputManager {
         c.canMove ?? true,
         c.legal,
         this.gateAssist(c, held),
+        c.locked ?? false,
       );
+      if (inputTrace.enabled && (move !== null || this.gate.reason !== 'idle'))
+        inputTrace.record({ k: 'gate', tick, move, reason: this.gate.reason });
     }
     const intent: Intent = { move };
     const a = this.a.take(tick);
     const b = this.b.take(tick);
     if (!this.navMode) {
       if (a === 'place') intent.place = true;
+      // QUICK HANDS: A held (and not waiting to become a remote detonation) keeps laying generators
+      if (c.quickHands && !c.remoteReady && this.a.isDown) intent.placeHeld = true;
       if (b === 'special') intent.special = true;
       if (a === 'detonate' || b === 'detonate') intent.detonate = true;
     }
@@ -219,7 +233,15 @@ export class InputManager {
         : null;
     let board: MoveBoard | null = null;
     const make = c.board;
-    return { level, wish, diagonal, board: () => (board ??= make()) };
+    const getBoard = (): MoveBoard => (board ??= make());
+    return {
+      level,
+      wish,
+      diagonal,
+      board: getBoard,
+      touch: level === 'full' && this.lastDevice === 'touch',
+      emergency: () => getBoard().danger?.() ?? false,
+    };
   }
 
   private heldDir(): Dir | null {

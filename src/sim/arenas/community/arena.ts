@@ -153,10 +153,14 @@ export function communityArena(s: CommunitySpec): ArenaDef {
     mirrorSoftBlocks: false,
     maxPlayers: 32,
     forcedMode: 'crush',
-    config: {
-      ...rumbleStageConfig({ core: s.core, softDensity: s.softDensity, maxLethalEvents: 2 }),
-      vehicles: { lanes: s.lanes.map(([x, y, d]) => [x, y, d] as [number, number, Dir]) },
-    },
+    config: (() => {
+      const base = rumbleStageConfig({ core: s.core, softDensity: s.softDensity, maxLethalEvents: 2 });
+      // keep the shared stage's public-vehicle list (the Okada, decision VG1) next to this board's own lanes
+      return {
+        ...base,
+        vehicles: { ...base.vehicles, lanes: s.lanes.map(([x, y, d]) => [x, y, d] as [number, number, Dir]) },
+      };
+    })(),
     floorTraps: trapGrid(s.traps, W, H),
     endgameTraps: [trapGrid(wave1, W, H), trapGrid(wave2, W, H)],
     stageHazards: s.hazards,

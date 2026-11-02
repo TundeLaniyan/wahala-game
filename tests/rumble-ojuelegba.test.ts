@@ -7,7 +7,6 @@
 import { describe, expect, it } from 'vitest';
 import { chooseAutoVehicle, createGame, getArena, listEntries, Tile } from '../src/sim';
 import type { DistrictDef, GameState, VehicleKind } from '../src/sim';
-import { CHARACTERS } from '../src/sim/data/characters';
 
 const a = getArena('rumbleOjuelegba');
 const W = a.layout[0]!.length;
@@ -420,8 +419,9 @@ describe('Ojuelegba Underbridge: supplies, core, hazards and attack lanes', () =
   });
 
   it('the one-press vehicle finds a road-mouth route for each signature vehicle', () => {
-    const kinds = Object.values(CHARACTERS).map((c) => [c.id, c.vehicle] as const);
-    for (const [characterId, kind] of kinds) {
+    // any public vehicle, whoever calls it (decision VG1)
+    for (const kind of ['danfo', 'taxi', 'keke', 'okada'] as const) {
+      const characterId = 'streetBaller' as const;
       const s: GameState = createGame({
         seed: 6,
         arenaId: a.id,
@@ -436,7 +436,7 @@ describe('Ojuelegba Underbridge: supplies, core, hazards and attack lanes', () =
       // the rival waits on the carriageway, the caller far away in the park
       Object.assign(s.players[1]!, { x: 10, y: 16, stepFromX: 10, stepFromY: 16 });
       Object.assign(s.players[0]!, { x: 33, y: 25, stepFromX: 33, stepFromY: 25 });
-      const choice = chooseAutoVehicle(s, 0);
+      const choice = chooseAutoVehicle(s, 0, kind);
       expect(choice, kind).not.toBeNull();
       const lanes = a.config!.vehicles!.lanes!;
       expect(

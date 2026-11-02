@@ -26,6 +26,7 @@ WAHALA! should be instantly readable, skill-based, tactical and playful: a moder
 - Do not substitute cars or animals for the main generator weapon.
 - Do not add rideable animals, dinosaurs or Bomberman Louie lookalikes. **An Okada motorcycle replaces that role.**
 - Do not make Okada the fourth vehicle attack. There are **exactly three signature vehicle attacks**: Danfo, LAGride-style taxi, Keke. A previous Cadillac/Caddo proposal was removed.
+  - **AMENDED by founder direction (decision VG1, 2026-11-02):** vehicles are public and no longer tied to a character: any fighter may be given any public vehicle (Danfo, taxi, Keke, and an Okada where the arena allows it) by a voucher or the VEHICLE GENERATOR kill-streak reward. The Okada rider shield (section 7) is unchanged.
 - No fighting-combo/health bar system, no diagonal explosions, no gameplay-driven cinematic camera, no untraceable fire, no mandatory server for Phase 1.
 - Do not treat generated reference images/videos as exact gameplay logic. They are *visual inspiration*, not licensed game assets or evidence of correct mechanics.
 
@@ -156,7 +157,7 @@ Every selectable character has a **fixed assigned signature vehicle**. Everyone 
 | **LAGride-style taxi** | Faster straight cardinal route; **stops on hitting first player** | Breaks a limited number of soft obstacles; hard walls stop it |
 | **Keke Napep** | Faster agile attack with **one 90-degree turn** in a legal L-shaped cardinal path (**PLAYTEST** target count) | Limited break-through strength, hard walls stop it |
 
-**LOCKED:** No fourth Okada special; no Cadillac. Character may be hurt by their own special vehicle. In team games, teammates can be harmed when friendly fire On; team-owned damage is ignored by teammates when friendly fire Off; **owner remains vulnerable in either setting**.
+**LOCKED:** No fourth Okada special; no Cadillac. Character may be hurt by their own special vehicle. *(AMENDED by VG1: no vehicle is a character's "special" any more; the VEHICLE GENERATOR's own blast never catches its owner, decision VG4. A plain voucher vehicle still can.)* In team games, teammates can be harmed when friendly fire On; team-owned damage is ignored by teammates when friendly fire Off; **owner remains vulnerable in either setting**.
 
 ### Entry and controls — locked design direction, exact UI tuned
 
@@ -181,7 +182,7 @@ Every selectable character has a **fixed assigned signature vehicle**. Everyone 
 
 ## 9. Characters and close-combat skills
 
-- **LOCKED** close-combat design: some characters have a **Push** that shifts an adjacent rival one tile, others have a brief **Daze Punch** that freezes an adjacent rival temporarily. The push/punch cannot directly eliminate; however, it may place an opponent in a flame line or vehicle path. No health, multi-hit melee KO or damage numbers.
+- **LOCKED** close-combat design: some characters have a **Push** that shifts an adjacent rival one tile, others have a brief **Daze Punch** that freezes an adjacent rival temporarily. *(AMENDED by decisions CB1-CB4: the three attacks are the Punch / Street Jab (a brief daze), the Shove (two tiles, no daze) and the Daze Punch (a long daze), each with a startup, recoveries and a per-target lockout.)* The push/punch cannot directly eliminate; however, it may place an opponent in a flame line or vehicle path. No health, multi-hit melee KO or damage numbers.
 - **ACCEPTED starting character concepts** (working names/looks, not branding commitments):
 
 | Character | Fixed special | Secondary |

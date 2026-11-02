@@ -561,7 +561,10 @@ describe('randomised steering never breaks the rules (market + dense hazards)', 
             r.state.generators.some((g) => g.x === to.x && g.y === to.y),
             why,
           ).toBe(false);
-          expect(board.safe(to.x, to.y), why).toBe(true);
+          // safe - or, for a player already standing in a blast footprint, a step that does not bring them nearer
+          // an armed generator (decision MI4); never a tile that is lethal now
+          expect(board.walkable!(to.x, to.y, r.p.x, r.p.y), why).toBe(true);
+          if (!board.safe(to.x, to.y)) expect(board.danger!(), why).toBe(true);
         });
       }
       r.assertCleanTrace();

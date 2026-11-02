@@ -19,7 +19,7 @@
  * Reads the game state, never changes it.
  */
 import { DIR_VEC, OPPOSITE, Tile, isLethalStageEvent, manholePartners, previewBlast } from '../sim';
-import type { Dir, GameState, Player } from '../sim';
+import type { Dir, GameState, Generator, Player } from '../sim';
 import type { InputSourceName } from './types';
 
 /** The Settings value: Auto = assisted on touch, the plain WA2 behaviour with the keyboard / gamepad. */
@@ -79,14 +79,30 @@ export interface MoveBoard {
   safe(x: number, y: number): boolean;
   /** Where one step with this input direction goes. */
   vec(dir: Dir): { dx: number; dy: number };
+  /**
+   * The player's own tile is in danger (a flame, a generator's blast footprint, a warned hazard ...). Optional: a
+   * board that cannot tell is never in danger.
+   */
+  danger?(): boolean;
+  /**
+   * Optional, may an assisted step from (fx, fy) enter (x, y)? `safe`, except that a player already standing in
+   * danger may step through a generator's blast footprint (decision MI4) as long as the step does not bring them
+   * nearer to an armed generator - they are running out of it - and never onto a tile that is lethal now (a flame,
+   * a closing tile, a warned hazard). Absent = `safe`.
+   */
+  walkable?(x: number, y: number, fromX: number, fromY: number): boolean;
 }
+
+/** May an assisted step enter this tile? (`safe`, relaxed only for a player escaping their own footprint.) */
+const stepSafe = (board: MoveBoard, x: number, y: number, fromX: number, fromY: number): boolean =>
+  board.walkable ? board.walkable(x, y, fromX, fromY) : board.safe(x, y);
 
 /** Plain step onto open, safe floor (the only kind of move the assist ever makes by itself). */
 export function canStep(board: MoveBoard, dir: Dir, fromX = board.x, fromY = board.y): boolean {
   const v = board.vec(dir);
   const x = fromX + v.dx;
   const y = fromY + v.dy;
-  return board.open(x, y) && board.safe(x, y);
+  return board.open(x, y) && stepSafe(board, x, y, fromX, fromY);
 }
 
 /**
@@ -99,9 +115,11 @@ export function planTurn(board: MoveBoard, walking: Dir, want: Dir, reach: numbe
   let y = board.y;
   const w = board.vec(walking);
   for (let k = 1; k <= reach; k++) {
+    const px = x;
+    const py = y;
     x += w.dx;
     y += w.dy;
-    if (!board.open(x, y) || !board.safe(x, y)) return null;
+    if (!board.open(x, y) || !stepSafe(board, x, y, px, py)) return null;
     if (canStep(board, want, x, y)) return k;
   }
   return null;
@@ -212,7 +230,23 @@ const EXACT_PREVIEW_LIMIT = 12;
  * cheap even in a 32-fighter City Rumble full of chained generators.
  */
 export function hazardTiles(state: GameState, near?: { x: number; y: number }): Set<number> {
-  const bad = new Set<number>();
+  const { footprint, lethal } = hazardSets(state, near);
+  for (const i of footprint) lethal.add(i);
+  return lethal;
+}
+
+/**
+ * `hazardTiles` in two parts: `footprint` = generator tiles and the blast footprints of armed generators (the
+ * danger a player standing inside it is already running out of), `lethal` = everything else (flames, closing
+ * tiles, warned stage events, floor traps, vehicle routes, manholes). An escaping player may cross a footprint
+ * but never a lethal tile.
+ */
+export function hazardSets(
+  state: GameState,
+  near?: { x: number; y: number },
+): { footprint: Set<number>; lethal: Set<number> } {
+  const bad = new Set<number>(); // footprint
+  const lethal = new Set<number>();
   const at = (x: number, y: number): number => y * state.width + x;
   const gen = state.config.generator;
   const reach = Math.max(gen.maxRange, gen.radialMaxSquareRadius) + PLANNING_RADIUS;
@@ -225,7 +259,7 @@ export function hazardTiles(state: GameState, near?: { x: number; y: number }): 
       (gen.blastMode === 'fullLine' && (dx <= PLANNING_RADIUS || dy <= PLANNING_RADIUS))
     );
   };
-  for (const f of state.flames) bad.add(at(f.x, f.y));
+  for (const f of state.flames) lethal.add(at(f.x, f.y));
   const armed = state.generators.filter((g) => g.flight === null && g.mode !== 'disabled' && inWindow(g));
   // the exact preview follows chain reactions, which gets expensive in a crowd of generators: past
   // EXACT_PREVIEW_LIMIT use a cheap superset (every tile within reach, and the whole row / column for a
@@ -247,24 +281,28 @@ export function hazardTiles(state: GameState, near?: { x: number; y: number }): 
       for (let y = 0; y < state.height; y++) bad.add(at(g.x, y));
     }
   }
-  for (const c of state.crush?.pending ?? []) bad.add(c.index);
+  for (const c of state.crush?.pending ?? []) lethal.add(c.index);
   for (const e of state.stage.events) {
-    if (isLethalStageEvent(e) || e.kind === 'drop') for (const i of e.tiles) bad.add(i);
+    if (isLethalStageEvent(e) || e.kind === 'drop') for (const i of e.tiles) lethal.add(i);
   }
-  for (const key in state.floorHazards) bad.add(Number(key));
-  for (const w of state.endgameTraps.warnings) bad.add(w.index);
+  for (const key in state.floorHazards) lethal.add(Number(key));
+  for (const w of state.endgameTraps.warnings) lethal.add(w.index);
   for (const v of state.vehicles) {
     if (v.phase === 'crashing') continue;
-    for (const t of v.route) bad.add(at(t.x, t.y));
+    for (const t of v.route) lethal.add(at(t.x, t.y));
   }
-  for (const i of manholePartners(state).keys()) bad.add(i);
-  return bad;
+  for (const i of manholePartners(state).keys()) lethal.add(i);
+  return { footprint: bad, lethal };
 }
 
 /** The assist's read-only view of `me` in `state`. The hazard set is built on first use (most ticks never need it). */
 export function buildMoveBoard(state: GameState, me: Player): MoveBoard {
   const inverted = me.curse?.kind === 'inverted' && state.tick < me.curse.until;
-  let bad: Set<number> | null = null;
+  let sets: { footprint: Set<number>; lethal: Set<number> } | null = null;
+  const hazards = (): { footprint: Set<number>; lethal: Set<number> } => (sets ??= hazardSets(state, me));
+  const own = me.y * state.width + me.x;
+  let endangered: boolean | null = null;
+  let armed: Generator[] | null = null;
   const inside = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < state.width && y < state.height;
   return {
     x: me.x,
@@ -276,8 +314,24 @@ export function buildMoveBoard(state: GameState, me: Player): MoveBoard {
     soft: (x, y) => inside(x, y) && state.tiles[y * state.width + x] === Tile.Soft,
     safe: (x, y) => {
       if (!inside(x, y)) return false;
-      bad ??= hazardTiles(state, me);
-      return !bad.has(y * state.width + x);
+      const h = hazards();
+      const i = y * state.width + x;
+      return !h.lethal.has(i) && !h.footprint.has(i);
+    },
+    danger: () => (endangered ??= hazards().footprint.has(own) || hazards().lethal.has(own)),
+    walkable: (x, y, fromX, fromY) => {
+      if (!inside(x, y)) return false;
+      const h = hazards();
+      const i = y * state.width + x;
+      if (h.lethal.has(i)) return false;
+      if (!h.footprint.has(i)) return true;
+      // standing in danger already: stepping through a footprint is how the player gets out, but never towards
+      // the generator that makes it one (decision MI4)
+      if (!(endangered ??= h.footprint.has(own) || h.lethal.has(own))) return false;
+      armed ??= state.generators.filter((g) => g.flight === null && g.carriedBy === null && g.mode !== 'disabled');
+      const near = (tx: number, ty: number): number =>
+        armed!.reduce((d, g) => Math.min(d, Math.abs(g.x - tx) + Math.abs(g.y - ty)), Infinity);
+      return near(x, y) >= near(fromX, fromY);
     },
     vec: (dir) => DIR_VEC[inverted ? OPPOSITE[dir] : dir],
   };

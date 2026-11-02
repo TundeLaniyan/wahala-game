@@ -50,6 +50,7 @@ import { OverlayViews } from './views/OverlayViews';
 import { PickupViews } from './views/PickupViews';
 import { SupplyMarkViews } from './views/SupplyMarkViews';
 import { PlayerViews } from './views/PlayerViews';
+import { KnockdownViews } from './views/KnockdownViews';
 import { VehicleViews } from './views/VehicleViews';
 import { TrapViews } from './views/TrapViews';
 import { StageHazardViews } from './views/StageHazardViews';
@@ -278,6 +279,7 @@ export class GameRenderer {
     this.players = players;
     this.vehicles = new VehicleViews();
     this.overlays = new OverlayViews();
+    const knockdown = new KnockdownViews();
     this.stage = new StageHazardViews(state, this.layout, this.effects, this.profile);
     this.views = [
       this.arena,
@@ -289,6 +291,7 @@ export class GameRenderer {
       players,
       this.vehicles,
       this.overlays,
+      knockdown,
       this.stage,
     ];
     this.living = this.createLiving(state);
@@ -304,6 +307,7 @@ export class GameRenderer {
       players.group,
       this.vehicles.group,
       this.overlays.group,
+      knockdown.group,
       this.stage.group,
       this.effects.group,
     );
@@ -322,6 +326,7 @@ export class GameRenderer {
     tag(players.group, 'player');
     tag(this.vehicles.group, 'vehicle');
     tag(this.overlays.group, 'none');
+    tag(knockdown.group, 'none');
     tag(this.stage.group, 'none');
     tag(this.effects.group, 'none');
     if (this.living) tag(this.living.group, 'none');
@@ -557,6 +562,24 @@ export class GameRenderer {
         case 'vehicleLaunched': {
           const v = state.vehicles.find((o) => o.id === e.vehicleId);
           if (v) fx.dust(v.route[0]!.x, v.route[0]!.y, 8, 0.8);
+          break;
+        }
+        case 'vehicleGeneratorReleased': {
+          // the carrier lets go: a puff where it was, a pink ring where the generator will land
+          fx.dust(e.fromX, e.fromY, 6, 0.7);
+          fx.shockwave(this.layout.wx(e.toX), this.layout.wz(e.toY), 1.4, 0xff2f86);
+          break;
+        }
+        case 'knockdownHit': {
+          // the object finds the head: a ring, a cloud of dust and a small jolt of the screen
+          fx.shockwave(this.layout.wx(e.x), this.layout.wz(e.y), 1.8, 0xffe14a);
+          fx.dust(e.x, e.y, 10, 0.8);
+          fx.shake = Math.min(1, fx.shake + 0.22);
+          break;
+        }
+        case 'streakRewardEarned': {
+          const p = state.players[e.playerId]!;
+          fx.shockwave(this.layout.wx(p.x), this.layout.wz(p.y), 2.2, 0x6cf0a0);
           break;
         }
         case 'vehicleHitPlayer':

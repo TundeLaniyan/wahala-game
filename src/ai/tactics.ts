@@ -3,7 +3,7 @@
  * tools for emergencies and close-combat skills. Each decision is verified against the danger map
  * before it is allowed to change the movement intent.
  */
-import { meleeTarget } from '../sim';
+import { CHARACTERS, meleeTarget } from '../sim';
 import type { Intent } from '../sim';
 import { dirIndex } from './board';
 import type { Ctx } from './context';
@@ -29,9 +29,20 @@ export class Tactics {
     const T = obs.tick;
     if (!me.alive) return;
 
+    // ---- a melee in its startup: stay on the tile while it is safe to, so the hit finds the rival (the startup
+    // never roots anyone, but a step away would make the attack miss)
+    if (me.attack && danger.firstHit(world.myTile, T + 1) > T + Math.max(0, me.attack.resolveTick - T) + 14) {
+      delete intent.move;
+    }
+
     // ---- vehicle voucher: one press of B, the same special the human presses
     const safeHere = danger.safeFrom(world.myTile, T) && intent.move === undefined;
     vehicleTactic(c, this.vehicle, intent, safeHere);
+    // ---- GLOBAL KNOCKDOWN (the 7-kill streak reward): thrown when it will find rivals, with a charge to follow up
+    if (!intent.special && me.streakRewards.knockdown && safeHere && knockdownWorthIt(c)) {
+      intent.special = true;
+      delete intent.move;
+    }
     if (intent.special || intent.vehicle || me.entryUntil !== null) return;
 
     // ---- remote detonation
@@ -49,6 +60,27 @@ export class Tactics {
     if (hooks.planKind() === 'last' && T % 2 === 0 && tryEmergencyFix(c, intent)) hooks.requestRethink();
 
     // ---- close combat: B, which is a melee press whenever an opponent is adjacent (never the vehicle)
-    if (decideSkill(c) && meleeTarget(obs, me)) intent.special = true;
+    if (decideSkill(c) && meleeTarget(obs, me)) {
+      intent.special = true;
+      const startup = obs.config.skills.attacks[CHARACTERS[me.characterId].skill].startupTicks;
+      if (danger.firstHit(world.myTile, T + 1) > T + startup + 14) delete intent.move;
+    }
   }
+}
+
+/**
+ * Is a GLOBAL KNOCKDOWN worth throwing now? Two or more rivals within a few tiles (or the only rival close), at least
+ * one generator charge to follow up with, nobody next to me (B would be a melee press) and nobody already down.
+ */
+function knockdownWorthIt(c: Ctx): boolean {
+  const { world } = c;
+  const { obs, me } = world;
+  if (me.carrying !== null || obs.tick < me.dazedUntil) return false;
+  if (meleeTarget(obs, me)) return false;
+  const live = world.rivals.filter((r) => obs.tick >= r.knockdownImmuneUntil && obs.tick >= r.knockedUntil);
+  if (live.length === 0) return false;
+  const near = live.filter((r) => Math.abs(r.x - me.x) + Math.abs(r.y - me.y) <= 9);
+  if (near.length < Math.min(2, live.length)) return false;
+  const mine = obs.generators.filter((g) => g.ownerId === me.id && g.mode !== 'disabled' && !g.vehicleBorne).length;
+  return mine < me.capacity;
 }

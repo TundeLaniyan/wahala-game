@@ -156,7 +156,7 @@ export function ReadyScreen() {
             <small className="mn-kicker">Your fighter</small>
             <b>{f.name}</b>
             <span>
-              {f.skillName} · {f.vehicleName}
+              {f.skillName} · {f.skillEffect}
             </span>
           </div>
         </div>

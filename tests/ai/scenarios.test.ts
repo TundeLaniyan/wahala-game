@@ -310,12 +310,13 @@ describe('generator tools', () => {
 });
 
 describe('close combat', () => {
-  it('Street Baller pushes a rival onto a lane that is about to burn', () => {
-    const s = sandbox({ characters: ['streetBaller', 'streetBaller'] });
+  it('Campus Queen shoves a rival onto a lane that is about to burn', () => {
+    const s = sandbox({ characters: ['campusQueen', 'streetBaller'] });
     put(s, 0, 4, 4);
     put(s, 1, 5, 4);
     s.players[0]!.facing = 'right';
-    addGenerator(s, { ownerId: 1, x: 6, y: 2, timer: 14, range: 2 }); // burns (6,3) (6,4) (6,5), not (5,4)
+    // the shove lands the rival two tiles away, on (7,4): the row burns (7,4) and (8,4), not (5,4) or the bot's (4,4)
+    addGenerator(s, { ownerId: 1, x: 9, y: 4, timer: 26, range: 2 });
     const run = runBots(s, makeBots({ 0: 'standard' }), 60);
     expect(eventsOf(run.events, 'playerPushed')).toHaveLength(1);
     expect(s.players[1]!.alive).toBe(false);
@@ -324,11 +325,12 @@ describe('close combat', () => {
 
   it('Lekki Boy dazes a rival standing in a lane that is about to burn', () => {
     const s = sandbox({ characters: ['lekkiBoy', 'streetBaller'] });
-    put(s, 0, 4, 4);
-    put(s, 1, 5, 4);
+    put(s, 0, 5, 4);
+    put(s, 1, 6, 4);
     s.players[0]!.facing = 'right';
-    addGenerator(s, { ownerId: 0, x: 8, y: 4, timer: 50, range: 4 });
-    const run = runBots(s, makeBots({ 0: 'expert' }), 90);
+    // the rival stands in the column x = 6 that burns at tick 70; the bot (x = 5) is outside it
+    addGenerator(s, { ownerId: 0, x: 6, y: 2, timer: 70, range: 3 });
+    const run = runBots(s, makeBots({ 0: 'expert' }), 110);
     expect(eventsOf(run.events, 'playerDazed')).toHaveLength(1);
     expect(s.players[1]!.alive).toBe(false);
     expect(s.players[0]!.alive).toBe(true);

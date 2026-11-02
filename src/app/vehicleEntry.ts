@@ -4,7 +4,6 @@
  * player has focused and turns keyboard / gamepad / touch / mouse input into sim intents.
  */
 import {
-  CHARACTERS,
   allBorderEntries,
   buildRoute,
   entryKey,
@@ -49,7 +48,7 @@ export class VehicleEntryController {
 
   private open(state: GameState): void {
     const p = state.players[this.localId]!;
-    this.kind = CHARACTERS[p.characterId].vehicle;
+    this.kind = p.voucherKind;
     this.entries = this.ordered(listEntries(state, this.kind), state);
     this.focus = this.suggest(state);
     this.stage = 'entry';

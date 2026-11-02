@@ -50,7 +50,7 @@ describe('Academy controls legend (V2: the stick and two buttons)', () => {
     expect(touchSrc).not.toMatch(/'CARRY'|'DROP'|'DISARM'/);
     expect(rows.place.touch).toContain('GENERATOR');
     expect(rows.detonate.touch).toContain('HOLD: BOOM!');
-    expect(rows.special.touch).toMatch(/PUSH \/ DAZE \/ SHOVE/);
+    expect(rows.special.touch).toMatch(/PUNCH \/ DAZE \/ SHOVE/);
     expect(rows.contact.touch).toMatch(/No button/);
     expect(rows.move.touch).toMatch(/anywhere in the lower-left/);
     for (const id of LEGEND_ORDER) expect(rows[id].touch.length).toBeGreaterThan(10);

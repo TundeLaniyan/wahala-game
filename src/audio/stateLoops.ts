@@ -10,7 +10,7 @@ const MAX_GEN_RUN = 3;
 const MAX_GEN_RATTLE = 2;
 const MAX_VEHICLE_ENGINES = 2;
 const RANK = [1, 0.75, 0.55] as const;
-const ENGINE_GAIN: Record<VehicleKind, number> = { danfo: 0.9, taxi: 0.75, keke: 0.8 };
+const ENGINE_GAIN: Record<VehicleKind, number> = { danfo: 0.9, taxi: 0.75, keke: 0.8, okada: 0.85 };
 
 const smooth = (v: number): number => {
   const x = Math.min(1, Math.max(0, v));

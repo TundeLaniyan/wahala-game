@@ -27,6 +27,12 @@ export const TURN_BUFFER_TILES = 1;
 export const TURN_CONTINUE_TICKS = 18;
 /** A diagonal route's second step is handed over within this long of the first (the slowest step is 14 ticks), else the route lapses. */
 export const DIAGONAL_ROUTE_TICKS = 40;
+/**
+ * Touchscreen only (decision MI1): a press made while the player cannot act (daze, stumble, slide, teleport arrival)
+ * is kept this long from the press, newest press winning, and handed over on the first tick they can. Longer than the
+ * longest daze (1.2 s), so a tap made at any point of a lock is never silently dropped.
+ */
+export const LOCK_BUFFER_TICKS = 90;
 
 /**
  * Assisted movement for one `next` call (see `moveAssist.ts`). Without it the gate behaves exactly as it
@@ -42,6 +48,14 @@ export interface GateAssist {
    * set for the keyboard, a gamepad or any physical controller, nor when assisted movement is Off.
    */
   diagonal?: TouchDiagonal | null;
+  /**
+   * The touchscreen thumb is the device in use (decision MI1): enables the pending-input buffer while the player
+   * cannot act, newest-direction priority over an owed diagonal step, and the emergency escape rules. Never set for
+   * a key, a D-pad or a gamepad stick, so they keep exactly the behaviour they had.
+   */
+  touch?: boolean;
+  /** Is the player standing in danger right now (decision MI4)? Lazy; only asked while a press is settling or a route is owed. */
+  emergency?(): boolean;
 }
 
 /**
@@ -79,13 +93,26 @@ export class MoveGate {
    * handed over on the first tick the player can step again, provided they stand on the intermediate tile and
    * that tile's neighbour is still a safe step, whatever the thumb does meanwhile (the route is atomic).
    */
-  private route: { second: Dir; x: number; y: number; until: number } | null = null;
+  private route: { first: Dir; second: Dir; x: number; y: number; until: number } | null = null;
+  /** Why the last `next` call answered as it did (input trace, decision MI5), and one-off notes raised between calls. */
+  private why = 'idle';
+  private note: string | null = null;
+
+  /** The reason behind the last `next` answer, for the input trace. */
+  get reason(): string {
+    return this.why;
+  }
 
   /**
    * A direction went down (keydown, pointer-down, D-pad edge).
    * @param settle ticks to wait before the press may be handed over (a thumb switching direction, so a swipe through the centre can still be overwritten)
    */
-  press(dir: Dir, tick: number, settle = 0): void {
+  press(dir: Dir, tick: number, settle = 0, touch = false): void {
+    // newest direction wins (decision MI2): a touch press that is neither step of an owed diagonal route ends it
+    if (touch && this.route && dir !== this.route.first && dir !== this.route.second) {
+      this.route = null;
+      this.note = 'route-cancelled-by-newer-press';
+    }
     this.since.set(dir, tick);
     this.pending = { dir, pressed: tick, until: 0, notBefore: tick + settle };
     this.bump = null; // a fresh press is always offered to the simulation
@@ -107,15 +134,64 @@ export class MoveGate {
     canMove: boolean,
     legal?: (dir: Dir) => boolean,
     assist?: GateAssist,
+    locked = false,
   ): Dir | null {
+    const answer = this.decide(tick, held, active, canMove, legal, assist, locked);
+    if (this.note && this.why === 'idle') this.why = this.note;
+    this.note = null;
+    return answer;
+  }
+
+  private decide(
+    tick: number,
+    held: Dir | null,
+    active: ReadonlySet<Dir>,
+    canMove: boolean,
+    legal: ((dir: Dir) => boolean) | undefined,
+    assist: GateAssist | undefined,
+    locked: boolean,
+  ): Dir | null {
+    this.why = 'idle';
     for (const dir of [...this.since.keys()]) if (!active.has(dir)) this.since.delete(dir);
     if (held && !this.since.has(held)) this.since.set(held, tick); // already down when we first saw it
 
+    const touch = !!assist?.touch;
+    // the player cannot act (daze, stumble, slide, teleport arrival): nothing is handed over, an owed diagonal step
+    // lapses, and the newest press waits for them (decision MI1) instead of being spent on a tick that ignores it
+    if (touch && locked) {
+      if (this.route) {
+        this.route = null;
+        this.why = 'route-lapsed-locked';
+      }
+      if (this.pending) {
+        this.pending.until = Math.max(this.pending.until, this.pending.pressed + LOCK_BUFFER_TICKS);
+        if (tick > this.pending.until) this.pending = null;
+      }
+      if (this.why === 'idle') this.why = this.pending ? 'buffered-while-locked' : 'locked';
+      return null;
+    }
+
     // a diagonal route owes its second step before anything else is handed over
     if (this.route && tick > this.route.until) this.route = null;
+    // escape input first (decision MI4): standing in danger, a thumb that has left the route's directions ends it
+    if (this.route && touch && held && held !== this.route.first && held !== this.route.second) {
+      if (assist!.emergency?.()) {
+        this.route = null;
+        this.why = 'route-cancelled-emergency';
+      }
+    }
     if (this.route && canMove) {
       const second = this.finishRoute(assist, legal);
-      if (second) return this.deliver(second, tick);
+      if (second) {
+        this.why = 'route-second-step';
+        return this.deliver(second, tick);
+      }
+      this.why = 'route-second-dropped';
+    }
+    // a press still settling is handed over at once when the player is in danger (decision MI4)
+    if (this.pending && canMove && touch && tick < this.pending.notBefore && assist!.emergency?.()) {
+      this.pending.notBefore = tick;
+      this.note = 'settle-bypassed-emergency';
     }
 
     // a press waits `MOVE_BUFFER_TICKS` for the player to be able to step (a little longer when assisted: the
@@ -129,6 +205,7 @@ export class MoveGate {
       if (diagonal) {
         this.pending = null;
         this.carried = 0;
+        this.why = 'route-first-step';
         return diagonal;
       }
       const carry = legal ? this.carryFor(dir, tick, active, legal, assist, pressed) : null;
@@ -136,6 +213,7 @@ export class MoveGate {
         // keep the turn for the next tile; walk on one tile the way we were going
         this.carried++;
         this.pending = { dir, pressed, until: tick + TURN_CONTINUE_TICKS, notBefore };
+        this.why = 'turn-carry';
         return this.deliver(carry, tick);
       }
       const delayed = this.carried > 0;
@@ -143,21 +221,32 @@ export class MoveGate {
       this.carried = 0;
       // a turn the assist waited for is not taken blindly: never into a danger that appeared meanwhile
       // (the player's own explicit hold still goes through the repeat path below)
-      if (delayed && assist && !canStep(assist.board(), dir)) return null;
+      if (delayed && assist && !canStep(assist.board(), dir)) {
+        this.why = 'turn-dropped-unsafe';
+        return null;
+      }
+      this.why = 'press';
       return this.deliver(dir, tick);
     }
     if (held && tick - this.since.get(held)! >= MOVE_REPEAT_DELAY_TICKS) {
       if (!canMove) return held;
       const diagonal = this.startRoute(held, tick, assist);
-      if (diagonal) return diagonal;
+      if (diagonal) {
+        this.why = 'route-first-step';
+        return diagonal;
+      }
       const dir = assist?.level === 'full' && legal ? this.assistHold(held, legal, assist, tick) : held;
       // bump guard (assisted levels): a direction the simulation already refused is not offered again every
       // step; it is retried as soon as it would do something (the obstacle moved) or after the cooldown
       if (assist && legal && !legal(dir)) {
         const b = this.bump;
-        if (b && b.dir === dir && tick - b.tick < BUMP_COOLDOWN_TICKS) return null;
+        if (b && b.dir === dir && tick - b.tick < BUMP_COOLDOWN_TICKS) {
+          this.why = 'bump-guard';
+          return null;
+        }
         this.bump = { dir, tick };
       }
+      this.why = 'repeat';
       return this.deliver(dir, tick);
     }
     return null;
@@ -229,6 +318,7 @@ export class MoveGate {
     if (!plan) return null;
     const v = board.vec(plan[0]);
     this.route = {
+      first: plan[0],
       second: plan[1],
       x: board.x + v.dx,
       y: board.y + v.dy,
@@ -267,5 +357,7 @@ export class MoveGate {
     this.carried = 0;
     this.wishTaken = false;
     this.route = null;
+    this.note = null;
+    this.why = 'idle';
   }
 }

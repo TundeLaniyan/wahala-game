@@ -1,17 +1,20 @@
 import {
-  CHARACTERS,
   createGame,
   entryKey,
   getArena,
   isRespawnMode,
   isTeamMode,
+  STREAK_REWARD_DEFS,
+  VEHICLE_DEFS,
+  movementLocked,
+  quickHandsActive,
   moveWouldAct,
   observe,
   readyToStep,
   tick,
 } from '../sim';
 import type { GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent, VehicleTurn } from '../sim';
-import { buildMoveBoard } from '../input';
+import { buildMoveBoard, inputTrace } from '../input';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
 import { buildHud } from './hud';
@@ -286,7 +289,24 @@ export class MatchController {
     const state = this.state!;
     const director = this.director;
     const intents = this.collectIntents(state);
+    const me = state.players[LOCAL_ID];
+    const before =
+      inputTrace.enabled && me && intents[LOCAL_ID]?.move
+        ? { x: me.x, y: me.y, wait: me.stepRemaining, locked: movementLocked(state, me) }
+        : null;
     const events = tick(state, intents);
+    if (before && me) {
+      // what the simulation did with the move the gate handed over (input trace, decision MI5)
+      const stepped = me.x !== before.x || me.y !== before.y;
+      const result = stepped
+        ? 'stepped'
+        : before.locked
+          ? 'ignored-cannot-act'
+          : before.wait > 1
+            ? 'ignored-mid-step'
+            : 'blocked';
+      inputTrace.record({ k: 'sim', tick: state.tick, result, x: me.x, y: me.y });
+    }
     this.recordStats(events);
     director?.afterTick(state, events, intents);
     return events;
@@ -324,6 +344,8 @@ export class MatchController {
         remoteReady: me.remote && state.generators.some((g) => g.ownerId === me.id && g.mode === 'remote'),
         legal: (d) => moveWouldAct(state, me, d),
         board: () => buildMoveBoard(state, me),
+        locked: movementLocked(state, me),
+        quickHands: quickHandsActive(state, me),
       });
     } else {
       this.deps.input.navMode = false;
@@ -435,21 +457,57 @@ export class MatchController {
    */
   private toastsFrom(events: SimEvent[], nowMs: number): void {
     for (const e of events) {
-      const toast = this.toastFor(e);
-      if (toast) this.pushToast(toast, nowMs);
+      const made = this.toastFor(e);
+      if (!made) continue;
+      const { ttlMs, ...toast } = made;
+      this.pushToast(toast, nowMs, ttlMs);
     }
   }
 
-  private toastFor(e: SimEvent): Omit<Toast, 'id' | 'expires'> | null {
+  private toastFor(e: SimEvent): (Omit<Toast, 'id' | 'expires'> & { ttlMs?: number }) | null {
     const state = this.state!;
     switch (e.type) {
       case 'vehicleWarning': {
-        const owner = state.players[e.ownerId]!;
         return {
-          text: `${CHARACTERS[owner.characterId].vehicle.toUpperCase()} INCOMING!`,
+          text: `${VEHICLE_DEFS[e.kind].name.toUpperCase()} INCOMING!`,
           tone: e.ownerId === LOCAL_ID ? 'info' : 'bad',
         };
       }
+      // ---- kill-streak rewards (decision SK4): earned, active, consumed, lost - all in the HUD rail
+      case 'streakRewardEarned': {
+        if (e.playerId !== LOCAL_ID) return null;
+        const name = STREAK_REWARD_DEFS[e.reward].name;
+        return {
+          text:
+            e.reward === 'vehicleGenerator' && e.vehicle
+              ? `${name}: ${VEHICLE_DEFS[e.vehicle].name.toUpperCase()}`
+              : `${name} EARNED`,
+          tone: 'good',
+          icon: e.reward,
+          ttlMs: 3400,
+        };
+      }
+      case 'streakRewardUsed':
+        return e.playerId === LOCAL_ID
+          ? { text: `${STREAK_REWARD_DEFS[e.reward].name} USED`, tone: 'info', icon: e.reward }
+          : null;
+      case 'streakRewardEnded':
+        return e.playerId === LOCAL_ID
+          ? { text: 'QUICK HANDS OVER', tone: 'info', icon: e.reward }
+          : null;
+      case 'streakRewardsLost':
+        return e.playerId === LOCAL_ID ? { text: 'STREAK LOST: REWARDS GONE', tone: 'bad' } : null;
+      // what the others see coming
+      case 'vehicleGeneratorLaunched':
+        return e.ownerId === LOCAL_ID
+          ? null
+          : { text: `${VEHICLE_DEFS[e.kind].name.toUpperCase()} WITH A GENERATOR!`, tone: 'bad', icon: 'vehicleGenerator' };
+      case 'knockdownThrown':
+        return e.targetId === LOCAL_ID
+          ? { text: 'LOCAL CHAMPION! DUCK!', tone: 'bad', icon: 'globalKnockdown' }
+          : null;
+      case 'knockdownEnded':
+        return e.playerId === LOCAL_ID ? { text: 'GET UP AND RUN!', tone: 'info' } : null;
       case 'trapsWarning':
         return { text: e.wave === 0 ? 'FINAL 30s: FLOOR TRAPS!' : 'MORE TRAPS!', tone: 'bad' };
       case 'okadaBroken': {

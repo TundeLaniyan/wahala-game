@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CHARACTERS, VEHICLE_DEFS } from '../sim';
+import { CHARACTERS, SKILL_DEFS } from '../sim';
 import type { CharacterId } from '../sim';
 import { COURSES, LESSONS, resolveHint } from '../tutorial';
 import type { ControlId, HintDevice } from '../tutorial';
@@ -262,7 +262,7 @@ function PracticeBody({ view }: { view: TutorialView }) {
               <img src={portraitUrl(id, 0, 64)} alt="" />
               <span>
                 {CHARACTERS[id].name}
-                <small>{VEHICLE_DEFS[CHARACTERS[id].vehicle].name}</small>
+                <small>{SKILL_DEFS[CHARACTERS[id].skill].name}</small>
               </span>
             </button>
           ))}

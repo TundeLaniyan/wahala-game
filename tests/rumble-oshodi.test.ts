@@ -483,7 +483,9 @@ describe('Oshodi Metropolis: supplies, core and attack lanes', () => {
   });
 
   it('the one-press vehicle finds a road-mouth route for each signature vehicle', () => {
-    for (const [characterId, kind] of Object.values(CHARACTERS).map((c) => [c.id, c.vehicle] as const)) {
+    // any public vehicle, whoever calls it (decision VG1)
+    for (const kind of ['danfo', 'taxi', 'keke', 'okada'] as const) {
+      const characterId = 'streetBaller' as const;
       const s: GameState = createGame({
         seed: 6,
         arenaId: a.id,
@@ -497,7 +499,7 @@ describe('Oshodi Metropolis: supplies, core and attack lanes', () => {
       s.match.countdownRemaining = 0;
       Object.assign(s.players[1]!, { x: 10, y: 16, stepFromX: 10, stepFromY: 16 });
       Object.assign(s.players[0]!, { x: 34, y: 28, stepFromX: 34, stepFromY: 28 });
-      const choice = chooseAutoVehicle(s, 0);
+      const choice = chooseAutoVehicle(s, 0, kind);
       expect(choice, kind).not.toBeNull();
       const lanes = a.config!.vehicles!.lanes!;
       expect(

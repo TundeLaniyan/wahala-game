@@ -1,9 +1,7 @@
 /**
  * Combat with button B (tap): the character's melee hit on an adjacent opponent, and, with a Vehicle
- * Voucher and nobody next to you, the one-press signature vehicle (the simulation picks the route).
+ * Voucher and nobody next to you, a one-press public vehicle (the simulation picks the route).
  */
-import { CHARACTERS, VEHICLE_DEFS } from '../../sim';
-import type { CharacterId } from '../../sim';
 import { collect, eliminatedBy, onEvent, tip, when } from '../practice';
 import { special, untilEvent, wait, walk } from '../script';
 import { pickup } from '../setup';
@@ -29,12 +27,12 @@ export const MELEE: Lesson = {
   id: 'melee',
   course: 'combat',
   title: 'Button B: hit',
-  summary: 'Tap B next to a rival: push, daze or shove.',
+  summary: 'Tap B next to a rival: punch, daze or shove.',
   objective: 'Walk up to the training dummy and tap B to hit it. Then hit it again once B has recharged.',
   facts: [
-    "Tap B with an opponent on a tile next to you: your character's hit. Street Baller pushes, Lekki Boy dazes, Campus Queen shoves.",
-    'It recharges for a few seconds. B never hits a teammate.',
-    'A hit never knocks anyone out by itself, but a push into a blast does.',
+    "Tap B with an opponent on a tile next to you: your character's hit. Street Baller throws a fast Punch (a brief daze), Lekki Boy a slower Daze Punch (a long one), Campus Queen a Shove that pushes two tiles.",
+    'It needs a moment to start and a few seconds to recharge, and the same rival cannot be hit twice in a row. B never hits a teammate.',
+    'A hit never knocks anyone out by itself, but a shove into a blast does.',
   ],
   controls: ['move', 'special'],
   demo: {
@@ -45,7 +43,7 @@ export const MELEE: Lesson = {
     beats: [
       { caption: 'Walk right up to a rival...', acts: { 0: [walk('right', 3)] } },
       {
-        caption: '...and tap B. Street Baller pushes them a tile.',
+        caption: '...and tap B. Street Baller punches: a brief daze.',
         acts: { 0: [wait(20), special] },
         hold: 120,
       },
@@ -81,7 +79,7 @@ export const MELEE: Lesson = {
         id: 'again',
         label: 'Hit it again when B is ready',
         instruction:
-          'B recharges in a few seconds. Walk up to the dummy again and hit it once more with {B}.',
+          'B recharges in a few seconds, and the dummy is out of reach for a moment after a hit. Wait, then hit it once more with {B}.',
         controls: ['move', 'special'],
         done: when(meleeBy),
         mistakes: [bWhiff],
@@ -95,15 +93,11 @@ export const VEHICLE: Lesson = {
   id: 'vehicle',
   course: 'combat',
   title: 'Button B: your vehicle',
-  summary: 'One press calls in your signature vehicle.',
+  summary: 'One press calls in a public vehicle.',
   objective:
     'Collect a Vehicle Voucher, then tap B once (with nobody next to you): your vehicle drives in and hits the dummy.',
   facts: [
-    "A Vehicle Voucher calls in YOUR character's own vehicle once.",
-    ...(['streetBaller', 'lekkiBoy', 'campusQueen'] as CharacterId[]).map((id) => {
-      const v = VEHICLE_DEFS[CHARACTERS[id].vehicle];
-      return `${CHARACTERS[id].name}: ${v.name}. ${v.description}.`;
-    }),
+    'A Vehicle Voucher calls in a public vehicle once: in a real match a Danfo, a Yellow Cab, a Keke or an Okada (drawn when you pick it up, and shown on the button); this lesson always gives a Danfo.',
     'One tap of B with nobody next to you: the game picks the route that threatens a rival most. No route to choose.',
     'The lane flashes and the horn sounds first. Your vehicle can hit you too: keep off its lane.',
   ],

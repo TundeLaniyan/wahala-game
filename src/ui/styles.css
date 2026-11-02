@@ -1039,6 +1039,16 @@ button {
 .abtn.special.vehicle {
   background: radial-gradient(circle at 32% 26%, #7ff0b0 0%, #1fbe6a 40%, #0d8a49 74%, #08592f 100%);
 }
+.abtn.special.knockdown {
+  background: radial-gradient(circle at 32% 26%, #ffb98a 0%, #ff7a3a 40%, #d6431a 74%, #8a2208 100%);
+}
+.abtn .streak-icon {
+  display: block;
+  width: 38%;
+  height: auto;
+  margin: 0 auto 1px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
+}
 /* states (visual only; the input behaviour is unchanged; each keeps the physical look):
    idle      the resting look
    pressed   a finger is down: the button sinks and brightens

@@ -307,11 +307,13 @@ describe('elimination credit', () => {
   it('melee into the victim\'s own blast: the attacker gets the self-kill-after-push', () => {
     const s = match('survival');
     park(s);
+    s.players[0]!.characterId = 'campusQueen'; // the Shove displaces (Punch only dazes)
     put(s, 0, 2, 0);
     put(s, 1, 3, 0);
     s.players[0]!.facing = 'right';
-    addGenerator(s, { ownerId: 1, x: 6, y: 0, timer: 30 }); // left arm reaches (4,0), not (3,0)
+    addGenerator(s, { ownerId: 1, x: 6, y: 0, timer: 40 }); // its left arm reaches (4,0) and (5,0), not (3,0)
     const ev = run(s, 1, { 0: { special: true } });
+    ev.push(...run(s, s.config.skills.attacks.shove.startupTicks + 1));
     expect(eventsOf(ev, 'playerPushed')).toHaveLength(1);
     put(s, 0, 0, 2);
     ev.push(...run(s, 40));

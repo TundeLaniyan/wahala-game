@@ -30,6 +30,11 @@ export class HoldButton<Tap extends string> {
 
   constructor(private readonly tap: Tap) {}
 
+  /** True while any source holds the button down (QUICK HANDS: a held A lays generators). */
+  get isDown(): boolean {
+    return this.down.size > 0;
+  }
+
   /** True while the button is down and waiting to become a tap or a hold (UI fill feedback). */
   get pending(): boolean {
     return this.press !== null && !this.press.resolved;

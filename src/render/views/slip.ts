@@ -3,15 +3,18 @@
  * the slide or the daze lasts (`Player.slide`, `Player.dazedUntil`); this module only turns "still down?" into a
  * body tilt that falls in fast, stays down, then gets back up to standing.
  *  - oil: the feet shoot out and the fighter lands on their back (pitch back, a little wobble, a small lift);
- *  - pothole: a trip, pitching forward.
+ *  - pothole: a trip, pitching forward;
+ *  - knockdown (GLOBAL KNOCKDOWN): hit on the head, flat on the back for the sim's whole knockdown.
  */
-export type SlipKind = 'oil' | 'pothole';
+export type SlipKind = 'oil' | 'pothole' | 'knockdown';
 
 /** Seconds to go down, and to get back on their feet. */
 export const SLIP_DOWN_S = 0.16;
 export const SLIP_RECOVER_S = 0.5;
 /** A slip never lasts longer than this whatever the sim says (a safety net for the visual only). */
 export const SLIP_MAX_S = 2.2;
+/** ... and a knockdown (tuned up to 3 s) never longer than this. */
+export const KNOCKDOWN_MAX_S = 3.8;
 
 export interface SlipState {
   kind: SlipKind;
@@ -39,11 +42,11 @@ const smooth = (k: number): number => k * k * (3 - 2 * k);
 /** `fallen`: the sim still has the fighter sliding / dazed. Stamps `endedAt` the first time it is false. */
 export function slipPose(s: SlipState, time: number, fallen: boolean): SlipPose {
   const down = Math.min(1, Math.max(0, (time - s.start) / SLIP_DOWN_S));
-  const timedOut = time - s.start > SLIP_MAX_S;
+  const timedOut = time - s.start > (s.kind === 'knockdown' ? KNOCKDOWN_MAX_S : SLIP_MAX_S);
   if ((!fallen || timedOut) && s.endedAt === null) s.endedAt = time;
-  const oil = s.kind === 'oil';
-  const peakPitch = oil ? -1.2 : 0.6;
-  const peakLift = oil ? 0.1 : 0.02;
+  const oil = s.kind === 'oil' || s.kind === 'knockdown';
+  const peakPitch = s.kind === 'knockdown' ? -1.5 : oil ? -1.2 : 0.6;
+  const peakLift = s.kind === 'knockdown' ? 0.14 : oil ? 0.1 : 0.02;
   let amt = 1 - (1 - down) * (1 - down);
   let hop = 0;
   if (s.endedAt !== null) {

@@ -211,14 +211,14 @@ test.describe('touch controls (landscape phone)', () => {
     const before = await buttonRects(page);
     await mutate(
       page,
-      `const p = s.players[0]; p.hasVoucher = true; p.grip = true; p.remote = true; p.contact = 'disarm'; p.killSwitchCharges = 2;`,
+      `const p = s.players[0]; p.hasVoucher = true; p.voucherKind = 'taxi'; p.grip = true; p.remote = true; p.contact = 'disarm'; p.killSwitchCharges = 2;`,
     );
     await stepTicks(page, 12);
     await publish(page);
     const after = await buttonRects(page);
     expect(after).toEqual(before); // same two buttons, same places
     await expect(page.getByTestId('btn-special')).toHaveAttribute('data-special', 'vehicle');
-    await expect(page.getByTestId('btn-special')).toContainText('YELLOW CAB'); // the taxi's name (VEHICLE_DEFS)
+    await expect(page.getByTestId('btn-special')).toContainText('YELLOW CAB'); // the voucher's vehicle (VEHICLE_DEFS)
     await expect(page.getByTestId('contact-indicator')).toContainText('DISARM x2'); // HUD chip, not a button
     await page.screenshot({ path: `e2e-shots/${info.project.name}-touch-full.png` });
     await pressB(page, 1);
@@ -230,7 +230,7 @@ test.describe('touch controls (landscape phone)', () => {
     await page.screenshot({ path: `e2e-shots/${info.project.name}-touch-vehicle-warning.png` });
   });
 
-  test('B: a tap next to a rival pushes; holding B with a remote generator down sets it off (ring fills)', async ({
+  test('B: a tap next to a rival punches; holding B with a remote generator down sets it off (ring fills)', async ({
     page,
   }, info) => {
     await open(page, '&nobots');
@@ -246,9 +246,11 @@ test.describe('touch controls (landscape phone)', () => {
     await publish(page);
     await expect(page.getByTestId('btn-special-hold')).toHaveText('HOLD: BOOM!');
     const rivalX = (await getState(page)).players[1]!.x;
-    await pressB(page, 3); // a short tap: the push, not the remote
+    await pressB(page, 8); // a short tap: the Punch (a brief daze after its startup), not the remote
+    await stepTicks(page, 8); // (with a remote down the tap fires on release; the Punch lands 4 ticks later)
     let st = await getState(page);
-    expect(st.players[1]!.x).toBe(rivalX + 1);
+    expect(st.players[1]!.x).toBe(rivalX);
+    expect(st.players[1]!.dazedUntil).toBeGreaterThan(st.tick - 8);
     expect(st.generators).toHaveLength(1);
     // hold: the ring fills, then the remote goes off (the release does nothing more)
     const b = page.getByTestId('btn-special');
@@ -277,7 +279,7 @@ test.describe('touch controls (landscape phone)', () => {
     await mutate(page, `const p = s.players[0]; globalThis.__spot = [p.x, p.y]; p.alive = false;`);
     await publish(page);
     await expect(b).toHaveCount(0);
-    // back in play (as a respawn does), a rival next to us: a fresh tap of B must push
+    // back in play (as a respawn does), a rival next to us: a fresh tap of B must punch
     await mutate(
       page,
       `const p = s.players[0]; const r = s.players[1]; p.alive = true; p.spectator = null; p.eliminatedTick = null;
@@ -286,9 +288,9 @@ test.describe('touch controls (landscape phone)', () => {
     );
     await publish(page);
     await expect(b).toHaveCount(1);
-    const rivalX = (await getState(page)).players[1]!.x;
-    await pressB(page, 3);
-    expect((await getState(page)).players[1]!.x).toBe(rivalX + 1);
+    await pressB(page, 8);
+    const after = await getState(page);
+    expect(after.players[1]!.dazedUntil).toBeGreaterThan(after.tick - 8); // the Punch landed
   });
 
   test('camera shake is off on a touch screen by default', async ({ page }) => {
@@ -370,7 +372,9 @@ test.describe('assisted movement (landscape phone)', () => {
     return { x: p.x, y: p.y };
   }
 
-  test('Settings > Controls offers Auto / On / Off with 44 px targets; the choice is saved', async ({ page }) => {
+  test('Settings > Controls offers Auto / On / Off with 44 px targets; the choice is saved', async ({
+    page,
+  }) => {
     await open(page, '&nobots');
     await openSettings(page, 'controls');
     for (const m of ['auto', 'on', 'off']) {
@@ -381,7 +385,9 @@ test.describe('assisted movement (landscape phone)', () => {
     await expect(page.getByTestId('assist-auto')).toHaveAttribute('aria-pressed', 'true');
     await page.getByTestId('assist-off').click();
     await expect(page.getByTestId('assist-off')).toHaveAttribute('aria-pressed', 'true');
-    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.settings.v1') ?? '{}').moveAssist);
+    const saved = await page.evaluate(
+      () => JSON.parse(localStorage.getItem('wahala.settings.v1') ?? '{}').moveAssist,
+    );
     expect(saved).toBe('off');
   });
 

@@ -2,7 +2,7 @@
 export { createGame, createPlayer, crushSchedule, DEFAULT_SETTINGS, MAX_PLAYERS, MIN_PLAYERS } from './state';
 export { tick } from './tick';
 export { DEFAULT_CONFIG, TICK_RATE, mergeConfig, ticks } from './config';
-export type { DeepPartial, GameConfig, RewardKind, VehicleSpec } from './config';
+export type { AttackSpec, DeepPartial, GameConfig, RewardKind, VehicleSpec } from './config';
 export * from './types';
 export {
   DIRS,
@@ -40,6 +40,11 @@ export { CHARACTERS, CHARACTER_IDS } from './data/characters';
 export type { CharacterDef } from './data/characters';
 export { PICKUP_DEFS } from './data/pickups';
 export { VEHICLE_DEFS } from './data/vehicles';
+export { SKILL_DEFS } from './data/skills';
+export { STREAK_REWARD_DEFS, freshStreakRewards, heldStreakRewards } from './data/streaks';
+export type { StreakRewardDef } from './data/streaks';
+export { allowedVehicles, drawVehicle, quickHandsActive } from './systems/streaks';
+export type { SkillDef } from './data/skills';
 export { createRng, nextFloat, nextInt, pick, shuffle } from './rng';
 export type { RngHolder } from './rng';
 export {
@@ -52,7 +57,7 @@ export {
 } from './systems/entries';
 export type { EntryView } from './systems/entries';
 export { vehicleHitTiles, vehicleStepTicks } from './systems/vehicles';
-export { alivePlayers, playerStepTicks } from './systems/queries';
+export { alivePlayers, movementLocked, playerStepTicks } from './systems/queries';
 export { readyToStep } from './systems/movement';
 export { secondsRemaining } from './systems/match';
 export { observe } from './observe';

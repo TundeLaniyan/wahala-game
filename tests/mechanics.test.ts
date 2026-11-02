@@ -294,51 +294,63 @@ describe('Okada', () => {
   });
 });
 
-describe('character skills', () => {
-  it('Push shifts an adjacent rival one tile and cannot kill', () => {
+describe('character skills (see tests/combat-attacks.test.ts for the full attack rules)', () => {
+  const settle = (s: ReturnType<typeof sandbox>, skill: 'push' | 'shove' | 'daze'): void => {
+    run(s, s.config.skills.attacks[skill].startupTicks + 1);
+  };
+
+  it('Punch (Street Baller) dazes an adjacent rival briefly, does not move them and cannot kill', () => {
     const s = sandbox({ characters: ['streetBaller', 'lekkiBoy'] });
     put(s, 0, 4, 4);
     put(s, 1, 5, 4);
     s.players[0]!.facing = 'right';
     run(s, 1, { 0: { skill: true } });
-    expect([s.players[1]!.x, s.players[1]!.y]).toEqual([6, 4]);
+    settle(s, 'push');
+    expect([s.players[1]!.x, s.players[1]!.y]).toEqual([5, 4]);
+    expect(s.players[1]!.dazedUntil).toBeGreaterThan(s.tick);
     expect(s.players[1]!.alive).toBe(true);
   });
 
-  it('Push does nothing into concrete or a generator, and respects cooldown', () => {
-    const s = sandbox({ characters: ['streetBaller', 'lekkiBoy'] });
+  it('Shove (Campus Queen) moves a rival two tiles, does nothing into concrete or a generator, and respects its recovery', () => {
+    const s = sandbox({ characters: ['campusQueen', 'lekkiBoy'] });
     put(s, 0, 0, 1);
     put(s, 1, 0, 2);
     s.players[0]!.facing = 'down';
     addGenerator(s, { ownerId: 0, x: 0, y: 3, timer: 9999 });
     run(s, 1, { 0: { skill: true } });
-    expect(s.players[1]!.y).toBe(2);
+    settle(s, 'shove');
+    expect(s.players[1]!.y).toBe(2); // a generator right behind: no push
     put(s, 0, 4, 4);
     put(s, 1, 5, 4);
     s.players[0]!.facing = 'right';
+    s.players[0]!.skillReadyTick = 0;
     run(s, 1, { 0: { skill: true } });
-    expect(s.players[1]!.x).toBe(6);
-    put(s, 0, 5, 4);
+    settle(s, 'shove');
+    expect(s.players[1]!.x).toBe(7);
+    put(s, 0, 6, 4);
     run(s, 1, { 0: { skill: true } });
-    expect(s.players[1]!.x).toBe(6); // on cooldown
+    run(s, 20);
+    expect(s.players[1]!.x).toBe(7); // recovering: nothing happened
   });
 
-  it('Daze freezes a rival briefly, then grants anti-stunlock immunity', () => {
+  it('Daze Punch (Lekki Boy) freezes a rival, then grants anti-stunlock immunity', () => {
     const s = sandbox({ characters: ['lekkiBoy', 'streetBaller'] });
     put(s, 0, 4, 4);
     put(s, 1, 5, 4);
     s.players[0]!.facing = 'right';
     run(s, 1, { 0: { skill: true } });
+    settle(s, 'daze');
     const x = s.players[1]!.x;
     run(s, 30, { 1: { move: 'right' } });
     expect(s.players[1]!.x).toBe(x);
     run(s, 40, { 1: { move: 'right' } });
     expect(s.players[1]!.x).toBeGreaterThan(x);
     s.players[0]!.skillReadyTick = 0;
+    s.players[0]!.meleeLock = {};
     put(s, 1, s.players[0]!.x + 1, s.players[0]!.y);
-    run(s, 1, { 0: { skill: true } });
+    const ev = run(s, 1, { 0: { skill: true } });
     expect(s.tick).toBeLessThan(s.players[1]!.dazeImmuneUntil);
-    expect(s.players[1]!.dazedUntil).toBeLessThanOrEqual(s.tick); // immune: no new daze
+    expect(ev.some((e) => e.type === 'attackStarted')).toBe(false); // immune: no new daze can even start
   });
 });
 
