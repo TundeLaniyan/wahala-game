@@ -61,15 +61,15 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('minutes-3').click();
     await expect(page.getByTestId('ff-on')).toHaveCount(0);
     await page.getByTestId('rumble-8').click();
-    await chooseStage(page, 'rumbleApapa');
-    await expect(page.getByTestId('setup-arena')).toContainText('Apapa');
+    await chooseStage(page, 'rumbleMushin');
+    await expect(page.getByTestId('setup-arena')).toContainText('Mushin');
     await page.getByTestId('menu-continue').click();
     await page.getByTestId('char-campusQueen').click();
     await expect(page.getByTestId('fighter-name')).toHaveText('Campus Queen');
     await page.getByTestId('menu-continue').click();
     await expect(page.getByTestId('ready-mode')).toContainText('Free-for-All');
     await expect(page.getByTestId('ready-fighter')).toContainText('Campus Queen');
-    await expect(page.getByTestId('ready-arena')).toContainText('Apapa');
+    await expect(page.getByTestId('ready-arena')).toContainText('Mushin');
     await expect(page.getByTestId('ready-opponents')).toContainText('7 AI bots');
 
     // Edit: one choice, straight back to Ready (no walking the whole setup again)
@@ -79,7 +79,7 @@ test.describe('Stitch main menu', () => {
     await expect(page.getByTestId('menu-ready')).toBeVisible();
     await expect(page.getByTestId('ready-fighter')).toContainText('Lekki Boy');
     await page.getByTestId('edit-arena').click();
-    await chooseStage(page, 'rumbleLekkiNight');
+    await chooseStage(page, 'rumbleLekki');
     await expect(page.getByTestId('menu-continue')).toContainText('Back to review');
     await page.getByTestId('menu-continue').click();
     await expect(page.getByTestId('ready-arena')).toContainText('Lekki');
@@ -92,7 +92,7 @@ test.describe('Stitch main menu', () => {
     await expect(page.getByTestId('hud')).toBeVisible();
     await stepTicks(page, 170); // past the countdown (Esc pauses only once play is on)
     expect(await live(page)).toEqual({
-      arenaId: 'rumbleLekkiNight',
+      arenaId: 'rumbleLekki',
       game: 'deathmatch',
       duration: 180 * 60,
       players: 8,
@@ -107,7 +107,7 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('quick-play').click();
     await expect(page.getByTestId('hud')).toBeVisible();
     await stepTicks(page, 30);
-    expect((await live(page)).arenaId).toBe('rumbleLekkiNight');
+    expect((await live(page)).arenaId).toBe('rumbleLekki');
     expect(errors).toEqual([]);
   });
 
@@ -491,8 +491,8 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('home-rumble').tap();
     await page.getByTestId('mode-survival').tap();
     await expect(page.getByRole('heading', { name: 'Select Arena' })).toBeInViewport();
-    await page.getByTestId('rumble-stage-rumbleApapa').tap();
-    await expect(page.getByTestId('arena-selected')).toHaveText('Apapa Docks');
+    await page.getByTestId('rumble-stage-rumbleMushin').tap();
+    await expect(page.getByTestId('arena-selected')).toHaveText('Mushin');
     // the slider is dragged / set by touch-sized control (44 px high)
     await page.getByTestId('diff-slider').scrollIntoViewIfNeeded();
     const box = (await page.getByTestId('diff-slider').boundingBox())!;
@@ -503,7 +503,7 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('char-lekkiBoy').tap();
     await expect(page.getByTestId('fighter-name')).toHaveText('Lekki Boy');
     await page.getByTestId('menu-continue').tap();
-    await expect(page.getByTestId('ready-arena')).toContainText('Apapa');
+    await expect(page.getByTestId('ready-arena')).toContainText('Mushin');
     await expect(page.getByTestId('ready-difficulty')).toContainText('Nightmare');
     await expect(page.getByTestId('start-button')).toBeInViewport();
   });

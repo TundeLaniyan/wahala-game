@@ -86,7 +86,7 @@ function paint(): Board {
   b.fill(40, 7, 41, 8, 'S').fill(46, 7, 48, 8, 'S').fill(46, 2, 47, 4, 'K').fill(40, 2, 41, 4, 'B');
   // F3: the south shop row, houses and lanes behind it
   b.fill(2, 24, 19, 25, 'S');
-  b.blocks(2, 28, 19, 30, { ch: 'R', bw: 4, bh: 3, gx: 5, gy: 0, seed: 9, jw: 1, drop: 0.25 });
+  b.fill(3, 28, 6, 30, 'R').fill(15, 28, 18, 30, 'R'); // two houses at the lane ends
   for (const x of [9, 10, 15, 16]) b.fill(x, 24, x, 25, '.');
   // F5: the bank frontage on the pavement, workshops, the walled recreation court
   b.fill(22, 24, 29, 26, 'T');

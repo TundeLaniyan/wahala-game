@@ -501,7 +501,7 @@ export function lekkiEnv(board: { cols: number; rows: number }): StageEnvironmen
     crowds: [
       {
         id: 'westWaiters',
-        rect: { x0: -5.5, y0: 21, x1: -2, y1: 29 },
+        rect: { x0: -5.5, y0: 22.5, x1: -2, y1: 29 },
         count: 6,
         mood: 'waiting',
         priority: 2,

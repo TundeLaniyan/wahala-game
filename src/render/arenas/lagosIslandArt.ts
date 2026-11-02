@@ -536,7 +536,7 @@ export function lagosIslandEnv(board: { cols: number; rows: number }): StageEnvi
       },
       {
         id: 'quayStrollers',
-        rect: { x0: cols * 0.3, y0: -5, x1: cols * 0.6, y1: -2 },
+        rect: { x0: 4, y0: -5, x1: 19, y1: -2 },
         count: 5,
         mood: 'waiting',
         facing: 0,

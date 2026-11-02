@@ -163,32 +163,12 @@ const MARINA: [number, number][][] = [
   line([W - 1, 32], [0, 32]),
   line([0, 33], [W - 1, 33]),
 ];
+/** Harbour water washes the open quay tiles (landward push, one tile north: never lethal, never onto the Marina road). */
 const WASH_ZONES = [
-  {
-    tiles: [
-      [10, 36],
-      [11, 36],
-      [12, 36],
-    ] as [number, number][],
-    dir: 'up' as const,
-  },
-  {
-    tiles: [
-      [30, 36],
-      [31, 36],
-      [32, 36],
-    ] as [number, number][],
-    dir: 'up' as const,
-  },
-  {
-    tiles: [
-      [44, 36],
-      [45, 36],
-      [46, 36],
-    ] as [number, number][],
-    dir: 'up' as const,
-  },
-];
+  [10, 36],
+  [30, 36],
+  [48, 36],
+].map(([x, y]) => ({ tiles: zoneNear(open, x!, y!, ZONE_TAKEN), dir: 'up' as const }));
 
 const DISTRICTS: DistrictDef[] = [
   { id: 'balogun', name: 'Balogun Trading Maze', role: 'street', rects: [[2, 2, 19, 30]] },

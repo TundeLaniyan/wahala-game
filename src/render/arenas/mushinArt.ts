@@ -498,7 +498,7 @@ export function mushinEnv(board: { cols: number; rows: number }): StageEnvironme
       },
       {
         id: 'stopWaiters',
-        rect: { x0: -5.5, y0: rows * 0.5 - 3, x1: -2, y1: rows * 0.5 - 0.5 },
+        rect: { x0: -5.5, y0: 11, x1: -2, y1: 14.4 },
         count: 5,
         mood: 'waiting',
       },

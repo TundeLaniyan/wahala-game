@@ -155,14 +155,14 @@ test.describe('arena picker and stage hazards', () => {
     await page.getByTestId('menu-back').click();
     await toRumbleSetup(page);
     await expect(page.getByTestId('players-2')).toHaveCount(0);
-    await chooseStage(page, 'cityRumble');
+    await chooseStage(page, 'rumbleMushin');
     await page.getByTestId('rumble-8').click();
     await expect(page.getByTestId('rumble-8')).toHaveClass(/on/);
     await launch(page);
     await expect(page.getByTestId('hud')).toBeVisible();
     await stepTicks(page, 200);
     const v = await stage(page);
-    expect(v.arenaId).toBe('cityRumble');
+    expect(v.arenaId).toBe('rumbleMushin');
     expect(v.players).toBe(8);
     expect(v.phase).toBe('playing');
     expect(errors).toEqual([]);
