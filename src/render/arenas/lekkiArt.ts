@@ -419,10 +419,10 @@ function build(ctx: SetContext): void {
   );
   ctx.statics.add(box(W + 120, 0.7, 0.6, mat(0xa8a090, { roughness: 1 }), 0, STREET - 0.1, north - 1.3));
   const px = wx(10);
-  const pz = north - 24;
+  const pz = north - 15;
   const white = mat(0xe8e8e2, { roughness: 0.6 });
   ctx.statics.add(box(60, 0.8, 4, mat(0x8a8e92, { roughness: 0.7 }), px + 10, 5.6, pz + 3)); // the bridge deck
-  for (const dx of [-0.9, 0.9]) ctx.statics.add(box(0.7, 21, 1.4, white, px + dx, 6 + 10.5, pz + 3));
+  for (const dx of [-0.9, 0.9]) ctx.statics.add(box(0.7, 26, 1.4, white, px + dx, 6 + 13, pz + 3));
   ctx.statics.add(box(2.6, 0.9, 1.4, white, px, 6 + 14, pz + 3));
   ctx.statics.add(box(2.6, 0.9, 1.4, white, px, 6 + 9, pz + 3));
   // radiating stay cables: thin bars from the pylon head to the deck, both ways

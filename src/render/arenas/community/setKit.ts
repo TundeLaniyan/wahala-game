@@ -34,11 +34,11 @@ export function facadeTexture(
       g.fillRect(0, 0, 128, 256);
       const lit = tod === 'night' ? 0.5 : 0.14;
       const step = 128 / cols;
-      for (let y = 8; y < 248; y += 16)
+      for (let y = 8; y < 248; y += 20)
         for (let x = 4; x < 124; x += step) {
           const on = r() < lit;
-          g.fillStyle = on ? (r() < 0.5 ? '#f6dc9a' : '#cfe4f4') : 'rgba(18,28,40,0.78)';
-          g.fillRect(x, y, step * 0.55, 10);
+          g.fillStyle = on ? (r() < 0.5 ? '#f6dc9a' : '#cfe4f4') : 'rgba(28,40,54,0.5)';
+          g.fillRect(x, y, step * 0.5, 11);
         }
       for (let i = 0; i < 140; i++) {
         g.fillStyle = r() < 0.6 ? `rgba(20,18,14,${r() * 0.16})` : `rgba(235,226,200,${r() * 0.1})`;
@@ -67,11 +67,11 @@ export function block(
   },
 ): void {
   const map = hasDom()
-    ? facadeTexture(`b${o.tint}${o.cols ?? 8}`, tod, o.seed ?? 3, o.tint, o.cols ?? 8).clone()
+    ? facadeTexture(`b${o.tint}${o.cols ?? 6}`, tod, o.seed ?? 3, o.tint, o.cols ?? 6).clone()
     : undefined;
   if (map) {
     map.needsUpdate = true;
-    map.repeat.set(Math.max(1, o.w / 3.2), Math.max(1, o.h / 3.6));
+    map.repeat.set(Math.max(1, o.w / 4.2), Math.max(1, o.h / 4.4));
   }
   const m = uniqueMat(o.color ?? 0xffffff, { map, roughness: 0.9, flat: false });
   ctx.own(m);
