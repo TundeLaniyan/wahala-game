@@ -97,7 +97,7 @@ describe('City Rumble audio panning', () => {
     const s = sandbox({ players: 2, arenaId: RUMBLE_FIXTURE });
     // whole arena: the left edge pans hard left, the centre is centred
     expect(router.panFor(s, 0)).toBeLessThan(-0.5);
-    expect(router.panFor(s, 20)).toBeCloseTo(0, 5);
+    expect(router.panFor(s, Math.floor(s.width / 2))).toBeCloseTo(0, 5);
     router.setListener(5);
     expect(router.panFor(s, 5)).toBeCloseTo(0, 5); // a blast at the listener is centred
     expect(router.panFor(s, 8)).toBeGreaterThan(0); // to its right, not "left of the city centre"

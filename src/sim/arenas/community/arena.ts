@@ -48,15 +48,43 @@ function spawnsFor(
   start: TilePos,
   avoid: readonly (readonly [number, number])[],
 ): TilePos[] {
-  for (let n = 32; n >= 2; n -= 2) {
-    try {
-      // kept-clear plazas ('_') are open floor too: starts may stand on them
-      return balancedSpawns(layout.map((r) => r.replace(/_/g, '.')), n, start, RADIAL_CLEARANCE, avoid);
-    } catch {
-      /* try fewer */
+  // kept-clear plazas ('_') are open floor too: starts may stand on them
+  const rows = layout.map((r) => r.replace(/_/g, '.'));
+  const gaps = (s: readonly TilePos[]): number[] =>
+    [8, 16, 32].map((n) => {
+      let m = Infinity;
+      const t = s.slice(0, n);
+      for (let i = 0; i < t.length; i++)
+        for (let j = i + 1; j < t.length; j++)
+          m = Math.min(m, Math.abs(t[i]!.x - t[j]!.x) + Math.abs(t[i]!.y - t[j]!.y));
+      return m;
+    });
+  // the farthest-point pick depends on where it starts: try the preferred start and its west neighbours, keep the
+  // spread that best meets 8 / 16 / 32 starts at least 12 / 8 / 4 tiles apart (deterministic, authoring time)
+  const starts: TilePos[] = [start];
+  for (let dy = -6; dy <= 6; dy += 2)
+    for (let dx = -6; dx <= 6; dx += 2) starts.push({ x: start.x + dx, y: start.y + dy });
+  let best: TilePos[] = [];
+  let bestScore = -1;
+  for (const st of starts) {
+    for (let n = 32; n >= 2; n -= 2) {
+      let got: TilePos[];
+      try {
+        got = balancedSpawns(rows, n, st, RADIAL_CLEARANCE, avoid);
+      } catch {
+        continue; // try fewer
+      }
+      const g = gaps(got);
+      const score = n === 32 ? Math.min(g[0]! / 12, g[1]! / 8, g[2]! / 4) : -1 + n / 100;
+      if (score > bestScore) {
+        bestScore = score;
+        best = got;
+      }
+      break;
     }
+    if (bestScore >= 1) break;
   }
-  return [];
+  return best;
 }
 
 /** `count` trap marks on open floor ('.', '_', '=') inside the core, spread out, drawn with a seeded generator. */

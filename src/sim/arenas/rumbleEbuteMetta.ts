@@ -118,25 +118,21 @@ const near = (x: number, y: number): [number, number] => {
   taken.add(`${t[0]},${t[1]}`);
   return t;
 };
-const SUPPLIES = [
+/** Anchors of the west half; the east half mirrors them (Team Rumble splits by x, so supplies are balanced tile count for tile count). */
+const SUPPLY_WEST: [number, number][] = [
   [5, 8],
   [19, 10],
   [4, 14],
   [24, 6],
-  [31, 8],
   [24, 13],
-  [38, 7],
-  [48, 9],
-  [43, 15],
   [5, 26],
   [18, 30],
   [10, 33],
   [24, 29],
-  [31, 30],
-  [40, 30],
-  [50, 33],
-  [34, 24],
-].map(([x, y]) => near(x!, y!));
+];
+const SUPPLIES = [...SUPPLY_WEST, ...SUPPLY_WEST.map(([x, y]): [number, number] => [W - 1 - x, y])].map(
+  ([x, y]) => near(x, y),
+);
 const BARRIERS = [
   [21, 13],
   [34, 9],

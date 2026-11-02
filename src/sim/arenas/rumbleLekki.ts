@@ -82,6 +82,10 @@ function paint(): Board {
   b.fill(4, 23, 17, 28, '_');
   b.blocks(2, 22, 19, 22, { ch: 'M', bw: 2, bh: 1, gx: 2, gy: 0, seed: 53 });
   b.blocks(3, 28, 18, 29, { ch: 'K', bw: 2, bh: 1, gx: 5, gy: 0, seed: 55 });
+  b.blocks(5, 24, 17, 27, { ch: 'M', bw: 2, bh: 2, gx: 2, gy: 1, seed: 77 });
+  b.blocks(3, 11, 19, 12, { ch: 'M', bw: 2, bh: 1, gx: 3, gy: 0, seed: 81 });
+  b.blocks(3, 13, 19, 14, { ch: 'M', bw: 2, bh: 1, gx: 4, gy: 0, seed: 83 });
+  b.blocks(3, 5, 12, 7, { ch: 'K', bw: 2, bh: 1, gx: 2, gy: 1, seed: 79 });
   // K3 estates: walled compounds with villas, quiet lanes between
   b.blocks(24, 10, 36, 17, {
     ch: (i, j) => ((i + j) % 2 === 0 ? 'V' : 'R'),
@@ -123,24 +127,21 @@ const near = (x: number, y: number): [number, number] => {
   taken.add(`${t[0]},${t[1]}`);
   return t;
 };
-const SUPPLIES = [
+/** Anchors of the west half; the east half mirrors them (Team Rumble splits by x, so supplies are balanced tile count for tile count). */
+const SUPPLY_WEST: [number, number][] = [
   [6, 8],
   [18, 6],
   [26, 4],
-  [33, 8],
-  [44, 9],
-  [52, 12],
   [8, 13],
   [16, 16],
   [8, 25],
   [16, 27],
-  [30, 14],
-  [33, 24],
-  [44, 25],
-  [52, 28],
   [12, 35],
-  [46, 35],
-].map(([x, y]) => near(x!, y!));
+  [22, 24],
+];
+const SUPPLIES = [...SUPPLY_WEST, ...SUPPLY_WEST.map(([x, y]): [number, number] => [W - 1 - x, y])].map(
+  ([x, y]) => near(x, y),
+);
 const BARRIERS = [
   [20, 8],
   [36, 6],

@@ -171,7 +171,7 @@ describe('arena playlists and signature tracks', () => {
     // a Rumble community without a founder-assigned track (Mushin, Fadeyi, Ebute-Metta) rotates the default list and never repeats back to back
     const rumble = playlistFor(m, 'rumbleMushin');
     expect(rumble.length).toBeGreaterThanOrEqual(3);
-    for (const id of rumble) expect(Object.values(FOUNDER)).toContain(id);
+    for (const id of rumble) expect(m.playlists.default).toContain(id);
     const picks = season(m, 60, { arenaId: 'rumbleMushin', isAvailable: () => true });
     for (let i = 1; i < picks.length; i++) expect(picks[i]).not.toBe(picks[i - 1]);
   });

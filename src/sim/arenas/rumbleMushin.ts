@@ -120,20 +120,21 @@ const near = (x: number, y: number, taken: Set<string>): [number, number] => {
 
 /** Anchors by intent (the nearest open floor is used): a supply crate in every district, two in the big ones. */
 const taken = new Set<string>();
-const SUPPLIES = [
+/** Anchors of the west half; the east half mirrors them (Team Rumble splits by x, so supplies are balanced tile count for tile count). */
+const SUPPLY_WEST: [number, number][] = [
   [4, 5],
   [13, 12],
   [22, 6],
-  [30, 11],
-  [45, 5],
-  [40, 13],
   [20, 25],
-  [24, 33],
   [5, 25],
   [13, 33],
-  [40, 24],
-  [46, 33],
-].map(([x, y]) => near(x!, y!, taken));
+  [10, 8],
+  [23, 33],
+  [24, 14],
+];
+const SUPPLIES = [...SUPPLY_WEST, ...SUPPLY_WEST.map(([x, y]): [number, number] => [W - 1 - x, y])].map(
+  ([x, y]) => near(x, y, taken),
+);
 const BARRIERS = [
   [17, 9],
   [34, 9],

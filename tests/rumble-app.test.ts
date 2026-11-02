@@ -278,7 +278,13 @@ describe('minimap projection', () => {
     expect(minimapLayers(s, layout, 0, 0).core).toBeNull();
     s.match.playTicks = s.crush!.warnAt[0]!;
     const m = minimapLayers(s, layout, 0, 0);
-    expect(m.core).toEqual({ x0: 15, y0: 11, w: 11, h: 9 });
+    const core = s.config.crush.keepCore!;
+    expect(m.core).toEqual({
+      x0: core.x0 ?? Math.floor((s.width - core.w) / 2),
+      y0: core.y0 ?? Math.floor((s.height - core.h) / 2),
+      w: core.w,
+      h: core.h,
+    });
     expect(m.closingSoon.length).toBeGreaterThan(5);
     expect(m.closingSoon).toContain(s.crush!.order[0]!);
   });

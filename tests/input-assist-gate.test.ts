@@ -5,7 +5,7 @@ import { VirtualStick, stickConfigFor, wishFor } from '../src/input/joystick';
 import { MoveGate } from '../src/input/moveGate';
 import type { GateAssist } from '../src/input/moveGate';
 import { PERPENDICULAR, canStep, planSidestep, planTurn } from '../src/input/moveAssist';
-import { DIR_VEC, Tile, previewBlast, tileIndex } from '../src/sim';
+import { DIR_VEC, Tile, getArena, previewBlast, tileIndex } from '../src/sim';
 import type { Dir, StageEvent, Vehicle } from '../src/sim';
 import { AssistRig } from './assistRig';
 import { addGenerator, put, sandbox } from './helpers';
@@ -325,6 +325,25 @@ describe('the stick reports a diagonal wish with hysteresis', () => {
   });
 });
 
+/** The open tile with the most open tiles within five steps (a plaza): a stable spot on any arena layout. */
+function densestOpen(arenaId: string): [number, number] {
+  const rows = getArena(arenaId).layout;
+  let best: [number, number] = [1, 1];
+  let bestN = -1;
+  for (let y = 6; y < rows.length - 6; y++)
+    for (let x = 6; x < rows[0]!.length - 6; x++) {
+      if (rows[y]![x] !== '.' && rows[y]![x] !== '_') continue;
+      let n = 0;
+      for (let dy = -5; dy <= 5; dy++)
+        for (let dx = -5; dx <= 5; dx++) if ('._'.includes(rows[y + dy]![x + dx]!)) n++;
+      if (n > bestN) {
+        bestN = n;
+        best = [x, y];
+      }
+    }
+  return best;
+}
+
 describe('the board sees every danger the sim exposes', () => {
   const open = (rows = 7) => {
     const s = sandbox({ players: 2 });
@@ -426,28 +445,30 @@ describe('the board sees every danger the sim exposes', () => {
 
   it('covers the City Rumble radial blast through the shared previewBlast', () => {
     const s = sandbox({ players: 2, arenaId: 'rumbleLagosIsland' });
-    put(s, 0, 10, 3);
-    put(s, 1, 40, 30);
-    // a radial generator in the open plaza rows: every tile of its disc (not only the cross) is unsafe
+    const [ox, oy] = densestOpen('rumbleLagosIsland');
+    put(s, 0, ox, oy + 1);
+    put(s, 1, 1, 1);
+    // a radial generator in an open plaza: every tile of its disc (not only the cross) is unsafe
     s.config.generator.blastMode = 'radial';
-    const g = addGenerator(s, { ownerId: 1, x: 10, y: 2, range: 3, timer: 999 });
+    const g = addGenerator(s, { ownerId: 1, x: ox, y: oy, range: 3, timer: 999 });
     const b = buildMoveBoard(s, s.players[0]!);
-    const diagonal = tileIndex(s, 11, 3);
+    const diagonal = tileIndex(s, ox + 1, oy + 1);
     expect(s.tiles[diagonal]).toBe(Tile.Empty);
-    expect(b.safe(11, 3)).toBe(false);
-    expect(b.safe(12, 4)).toBe(false); // off the cross: only a radial footprint covers it
-    expect(g.x).toBe(10);
+    expect(b.safe(ox + 1, oy + 1)).toBe(false);
+    expect(b.safe(ox + 2, oy + 2)).toBe(false); // off the cross: only a radial footprint covers it
+    expect(g.x).toBe(ox);
   });
 
   it('a crowd of generators near the player falls back to a cautious superset (never less than the exact footprints)', () => {
     const s = sandbox({ players: 2, arenaId: 'rumbleLagosIsland' });
     s.config.generator.blastMode = 'radial';
-    put(s, 0, 12, 7);
-    put(s, 1, 40, 30);
+    const [ox, oy] = densestOpen('rumbleLagosIsland');
+    put(s, 0, ox, oy);
+    put(s, 1, 1, 1);
     const placed: ReturnType<typeof addGenerator>[] = [];
-    for (let y = 0; y < 12 && placed.length < 24; y += 2)
-      for (let x = 6; x < 20 && placed.length < 24; x += 3)
-        if (s.tiles[y * s.width + x] === Tile.Empty)
+    for (let y = oy - 5; y <= oy + 5 && placed.length < 24; y += 2)
+      for (let x = ox - 6; x <= ox + 6 && placed.length < 24; x += 3)
+        if (s.tiles[y * s.width + x] === Tile.Empty && !(x === ox && y === oy))
           placed.push(addGenerator(s, { ownerId: 1, x, y, range: 3, timer: 999 }));
     expect(placed.length).toBeGreaterThan(14);
     const board = buildMoveBoard(s, s.players[0]!);
@@ -497,15 +518,16 @@ describe('randomised steering never breaks the rules (market + dense hazards)', 
     for (let seed = 1; seed <= 60; seed++) {
       const rnd = lcg(seed * 7919);
       const arena = seed % 2 ? 'rumbleLagosIsland' : 'danfoBusPark';
+      const [ox, oy] = arena === 'danfoBusPark' ? [4, 4] : densestOpen(arena);
       const r = new AssistRig({
         arena,
-        start: arena === 'danfoBusPark' ? [0, 0] : [0, 5],
+        start: arena === 'danfoBusPark' ? [0, 0] : [ox, oy],
         assist: seed % 3 === 0 ? 'auto' : 'on',
       });
       // scatter armed generators and flames near the start
       for (let i = 0; i < 6; i++) {
-        const x = Math.floor(rnd() * 9);
-        const y = Math.floor(rnd() * 9);
+        const x = arena === 'danfoBusPark' ? Math.floor(rnd() * 9) : ox - 4 + Math.floor(rnd() * 9);
+        const y = arena === 'danfoBusPark' ? Math.floor(rnd() * 9) : oy - 4 + Math.floor(rnd() * 9);
         if (r.state.tiles[y * r.state.width + x] === Tile.Empty && !(x === r.p.x && y === r.p.y))
           addGenerator(r.state, { ownerId: 1, x, y, range: 2, timer: 60 + Math.floor(rnd() * 200) });
       }

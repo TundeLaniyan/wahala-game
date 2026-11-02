@@ -74,8 +74,8 @@ function playToEnd(s: GameState, max = 20000): SimEvent[] {
 /** Open core tiles (never closed by the city) spaced out, for no-respawn timeouts played with the closing city on. */
 function coreSpots(s: GameState, n: number): { x: number; y: number }[] {
   const core = s.config.crush.keepCore!;
-  const x0 = Math.floor((s.width - core.w) / 2);
-  const y0 = Math.floor((s.height - core.h) / 2);
+  const x0 = core.x0 ?? Math.floor((s.width - core.w) / 2);
+  const y0 = core.y0 ?? Math.floor((s.height - core.h) / 2);
   const spots: { x: number; y: number }[] = [];
   for (let y = y0; y < y0 + core.h; y++)
     for (let x = x0; x < x0 + core.w; x++) {

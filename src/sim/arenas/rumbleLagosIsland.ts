@@ -98,24 +98,21 @@ const near = (x: number, y: number): [number, number] => {
   taken.add(`${t[0]},${t[1]}`);
   return t;
 };
-const SUPPLIES = [
+/** Anchors of the west half; the east half mirrors them (Team Rumble splits by x, so supplies are balanced tile count for tile count). */
+const SUPPLY_WEST: [number, number][] = [
   [5, 14],
   [14, 24],
   [8, 6],
   [16, 18],
   [22, 9],
-  [31, 8],
-  [31, 23],
-  [38, 8],
-  [48, 12],
-  [44, 18],
-  [41, 26],
-  [50, 25],
   [10, 34],
-  [26, 34],
-  [44, 34],
   [18, 30],
-].map(([x, y]) => near(x!, y!));
+  [4, 26],
+  [24, 34],
+];
+const SUPPLIES = [...SUPPLY_WEST, ...SUPPLY_WEST.map(([x, y]): [number, number] => [W - 1 - x, y])].map(
+  ([x, y]) => near(x, y),
+);
 const BARRIERS = [
   [19, 24],
   [33, 14],
@@ -156,8 +153,8 @@ const TRAPS = [
 
 /** The boulevard (southbound on x 26-27 is the east pair: right-hand traffic) and the Marina road. */
 const BOULEVARD: [number, number][][] = [
-  line([24, 30], [24, 0]),
-  line([25, 30], [25, 0]),
+  line([24, 0], [24, 30]),
+  line([25, 0], [25, 30]),
   line([26, 0], [26, 30]),
   line([27, 0], [27, 30]),
 ];

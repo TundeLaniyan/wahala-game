@@ -528,27 +528,36 @@ describe('the explicit hold is never second-guessed', () => {
   });
 });
 
-describe('Lagos Island market (tight stall corridors)', () => {
-  // row 5 is an aisle; the stall row above it (y=4) has gaps at x=4, 8, 12 ...
+describe('a market (tight stall corridors)', () => {
+  // the stall rows of the former Lagos Island Markets board (the researched Lagos Island replaced that arena), kept here
+  // as a fixed fixture so the assisted-movement behaviour stays pinned: row 2 is an aisle; the stall row above it
+  // (y=1) has gaps at x=4, 8, 12, 16 and the row below (y=3) at x=2, 6, 10, 14, 18
+  const MARKET = [
+    '.....................',
+    '####.###.###.###.####',
+    '......#.......#......',
+    '##.###.###.###.###.##',
+    '.....................',
+  ];
   it('walking the aisle and pushing up two tiles early lands in the stall gap and goes up it', () => {
-    const r = new AssistRig({ arena: 'rumbleLagosIsland', start: [0, 5] });
+    const r = new AssistRig({ map: MARKET, start: [0, 2] });
     r.thumbDown();
     r.push('right');
-    r.until(2, 5);
+    r.until(2, 2);
     r.push('up');
     r.step(200);
     expect(r.at[0]).toBe(4);
-    expect(r.at[1]).toBeLessThan(5);
+    expect(r.at[1]).toBeLessThan(2);
     r.assertCleanTrace();
   });
 
   it('holding down beside a gap slides to the gap', () => {
-    const r = new AssistRig({ arena: 'rumbleLagosIsland', start: [1, 5] });
+    const r = new AssistRig({ map: MARKET, start: [1, 2] });
     r.thumbDown();
     r.push('down'); // gap in the stall row below is at x=2
     r.step(200);
     expect(r.at[0]).toBe(2);
-    expect(r.at[1]).toBeGreaterThan(5);
+    expect(r.at[1]).toBeGreaterThan(2);
     r.assertCleanTrace();
   });
 });

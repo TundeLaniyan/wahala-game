@@ -15,7 +15,7 @@ import { crossings } from './rumbleKit';
  *
  *   F2 Westbound Shopfronts  (x 2-39, y 2-11)    shop row on the highway pavement, stalls and workshops behind
  *   F1 BRT Centreline        (x 0-50, y 12-20)  westbound carriageway, BRT lanes between two median barriers,
- *                                               eastbound carriageway; median gaps at x 11-12 and 37-38 are the crossings
+ *                                               eastbound carriageway; median gaps at x 11-12, 29-30 and 42-43 are the crossings
  *   F3 Inner Neighbourhood Grid (x 2-19, y 21-30) houses and lanes behind the south pavement
  *   F5 Recreation + Workshops (x 20-39, y 21-30)  workshops, the bank frontage, a walled recreation court
  *   F4 Onipanu Approach      (x 40-48, y 2-11 and 21-30)  the side roads and their frontage at the two east corners
@@ -38,7 +38,7 @@ export const FADEYI_ROWS = {
   east: [18, 19, 20] as const,
 };
 /** Median crossing gaps (tile columns, two wide). */
-export const FADEYI_CROSSINGS = [11, 37] as const;
+export const FADEYI_CROSSINGS = [11, 29, 42] as const;
 
 export const FADEYI_LEGEND: CoverLegend = {
   B: { kind: 'building', maxRun: 8 },
@@ -106,20 +106,20 @@ const near = (x: number, y: number): [number, number] => {
   taken.add(`${t[0]},${t[1]}`);
   return t;
 };
-const SUPPLIES = [
+/** Anchors of the west half; the east half mirrors them (Team Rumble splits by x, so supplies are balanced tile count for tile count). */
+const SUPPLY_WEST: [number, number][] = [
   [5, 4],
   [16, 5],
-  [28, 4],
-  [33, 10],
+  [22, 10],
   [6, 10],
-  [42, 10],
   [5, 22],
   [16, 29],
-  [26, 22],
-  [33, 28],
-  [43, 22],
-  [20, 10],
-].map(([x, y]) => near(x!, y!));
+  [12, 22],
+  [22, 29],
+];
+const SUPPLIES = [...SUPPLY_WEST, ...SUPPLY_WEST.map(([x, y]): [number, number] => [W - 1 - x, y])].map(
+  ([x, y]) => near(x, y),
+);
 const BARRIERS = [
   [20, 11],
   [36, 29],

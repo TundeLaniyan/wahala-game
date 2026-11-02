@@ -168,6 +168,15 @@ describe('Generator Pass (Bomb Pass)', () => {
   });
 });
 
+/** The centre of five open tiles in a row on the arena (so a range-2 plus blast is unobstructed along the row). */
+function openRun(arenaId: string): [number, number] {
+  const rows = getArena(arenaId).layout;
+  for (let y = 5; y < rows.length - 5; y++)
+    for (let x = 5; x < rows[0]!.length - 5; x++)
+      if ([-2, -1, 0, 1, 2].every((d) => rows[y]![x + d] === '.')) return [x, y];
+  throw new Error('no open run');
+}
+
 describe('Surulere Power Yard: full-length blasts (this arena only)', () => {
   const yard = () => sandbox({ arenaId: 'surulerePowerYard' });
 
@@ -240,7 +249,7 @@ describe('Surulere Power Yard: full-length blasts (this arena only)', () => {
     for (const [arenaId, gx, gy] of [
       ['danfoBusPark', 6, 4],
       ['yabaAfterDark', 6, 4],
-      [RUMBLE_FIXTURE, 14, 12],
+      [RUMBLE_FIXTURE, ...openRun(RUMBLE_FIXTURE)],
     ] as const) {
       const s = sandbox({ arenaId });
       expect(s.config.generator.blastMode).toBe('plus');
@@ -281,8 +290,8 @@ describe('City Rumble set-up', () => {
     expect(s.config.match.durationTicks).toBe(180 * 60);
     const crush = s.crush!;
     const core = s.config.crush.keepCore!;
-    const x0 = (s.width - core.w) / 2;
-    const y0 = (s.height - core.h) / 2;
+    const x0 = core.x0 ?? (s.width - core.w) / 2;
+    const y0 = core.y0 ?? (s.height - core.h) / 2;
     for (const i of crush.order) {
       const x = i % s.width;
       const y = Math.floor(i / s.width);
