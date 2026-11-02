@@ -130,6 +130,34 @@ export function planSidestep(
   return null;
 }
 
+/** The thumb's diagonal on the touchscreen stick: its main axis and the perpendicular axis it also leans towards. */
+export interface TouchDiagonal {
+  readonly primary: Dir;
+  readonly secondary: Dir;
+}
+
+/**
+ * Touchscreen diagonal (decision MV3): a diagonal thumb is TWO cardinal grid moves, the vertical one first
+ * (Up->Left, Up->Right, Down->Left, Down->Right), the reverse order only when that route is blocked.
+ * Returns the first route that is valid as a WHOLE, checked from the player's tile before anything moves -
+ * every step a plain, safe step onto open floor (no wall, crate, generator, flame or warned hazard, and the
+ * intermediate tile counts too) - or null when neither is. The caller never performs a route partly.
+ */
+export function planDiagonal(board: MoveBoard, d: TouchDiagonal): readonly [Dir, Dir] | null {
+  if (!PERPENDICULAR[d.primary].includes(d.secondary)) return null;
+  const vertical = d.primary === 'up' || d.primary === 'down' ? d.primary : d.secondary;
+  const horizontal = vertical === d.primary ? d.secondary : d.primary;
+  for (const [first, second] of [
+    [vertical, horizontal],
+    [horizontal, vertical],
+  ] as const) {
+    if (!canStep(board, first)) continue;
+    const v = board.vec(first);
+    if (canStep(board, second, board.x + v.dx, board.y + v.dy)) return [first, second];
+  }
+  return null;
+}
+
 /**
  * Bend following: `held` is blocked by a wall (never a crate: a player pressed against one is about to bomb it)
  * in a one-tile-wide corridor and exactly one way round is a safe step - the bend of the corridor. `avoid` (the way the player just came
