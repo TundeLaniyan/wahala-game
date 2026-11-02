@@ -346,3 +346,15 @@ describe('determinism and replay', () => {
     expect(fingerprint(kind)).toBe(fingerprint(kind));
   });
 });
+
+describe('on a big map the throw is never a cross-map lob', () => {
+  it('a rival further than the throw reach is not thrown at from afar: the landing is clamped to the reach', () => {
+    const s = scene('danfo');
+    put(s, 1, 0, 0); // far from the carrier's lane
+    const r = play(s);
+    const rel = eventsOf(r.events, 'vehicleGeneratorReleased')[0];
+    if (!rel) return; // (no lane could be driven)
+    const reach = VG.maxThrowTiles;
+    expect(Math.abs(rel.toX - rel.fromX) + Math.abs(rel.toY - rel.fromY)).toBeLessThanOrEqual(reach + 2);
+  });
+});

@@ -100,8 +100,9 @@ export function releaseGenerator(state: GameState, v: Vehicle, events: SimEvent[
   delete g.mountedOn;
   const owner = state.players[v.ownerId]!;
   const from = vehicleTile(v);
-  const target = pickTarget(state, owner, payload.targetId, from);
-  const landing = chooseLanding(state, owner, g, target, from);
+  const reach = state.config.streaks.vehicleGenerator.maxThrowTiles;
+  const target = pickTarget(state, owner, payload.targetId, from, reach);
+  const landing = chooseLanding(state, owner, g, target, from, reach);
   if (!landing) {
     // nowhere safe to put it: it never goes off (a dud that is cleaned away)
     g.flight = null;
@@ -132,11 +133,18 @@ export function releaseGenerator(state: GameState, v: Vehicle, events: SimEvent[
   });
 }
 
-function pickTarget(state: GameState, owner: Player, aimed: number | null, from: TilePos): Player | null {
+function pickTarget(
+  state: GameState,
+  owner: Player,
+  aimed: number | null,
+  from: TilePos,
+  reach: number,
+): Player | null {
   const ok = (o: Player | undefined): o is Player =>
     !!o && o.alive && o.id !== owner.id && !teammates(owner, o);
   const first = aimed === null ? undefined : state.players[aimed];
-  if (ok(first)) return first;
+  // the rival the route was aimed at, while they are still within a sensible throw; else the nearest rival now
+  if (ok(first) && Math.abs(first.x - from.x) + Math.abs(first.y - from.y) <= reach) return first;
   let best: { p: Player; d: number } | null = null;
   for (const o of state.players) {
     if (!ok(o)) continue;
@@ -162,12 +170,20 @@ function chooseLanding(
   g: Generator,
   target: Player | null,
   from: TilePos,
+  reach: number,
 ): TilePos | null {
   const free = (t: TilePos): boolean =>
     tileAt(state, t.x, t.y) === Tile.Empty &&
     !groundedGeneratorAt(state, t.x, t.y) &&
     !state.generators.some((o) => o !== g && o.flight !== null && o.x === t.x && o.y === t.y);
-  const spots = candidates(target ?? from).filter(free);
+  // nobody within reach: the throw is clamped to `reach` tiles along the line to the nearest rival (never a cross-map lob)
+  let aim: TilePos = target ?? from;
+  const dist = Math.abs(aim.x - from.x) + Math.abs(aim.y - from.y);
+  if (target && dist > reach) {
+    const k = reach / dist;
+    aim = { x: Math.round(from.x + (target.x - from.x) * k), y: Math.round(from.y + (target.y - from.y) * k) };
+  }
+  const spots = candidates(aim).filter(free);
   if (spots.length === 0) return null;
   const ownerIdx = owner.y * state.width + owner.x;
   const savedX = g.x;

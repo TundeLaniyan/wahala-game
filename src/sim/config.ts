@@ -272,6 +272,8 @@ export interface GameConfig {
       releaseTicks: number;
       /** The thrown generator's flight time (the late, readable warning: a visible projectile plus a marker). */
       throwTicks: number;
+      /** The longest throw (Manhattan tiles): on a big map a rival further than this is not thrown at from afar. */
+      maxThrowTiles: number;
     };
     /** GLOBAL KNOCKDOWN (decision GK1). */
     globalKnockdown: {
@@ -540,7 +542,7 @@ export const DEFAULT_CONFIG: GameConfig = {
       { kills: 7, reward: 'globalKnockdown' },
     ],
     quickHands: { durationTicks: ticks(18), extraCapacity: 5, placeBufferTicks: ticks(1.2) },
-    vehicleGenerator: { fuseTicks: ticks(3), releaseTicks: ticks(2), throwTicks: 40 },
+    vehicleGenerator: { fuseTicks: ticks(3), releaseTicks: ticks(2), throwTicks: 40, maxThrowTiles: 10 },
     globalKnockdown: { throwTicks: 36, knockdownTicks: ticks(2), immunityTicks: ticks(4) },
   },
   respawn: {

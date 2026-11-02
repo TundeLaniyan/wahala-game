@@ -15,7 +15,7 @@ import { playerGridPos, toWorld } from './motion';
 import type { FrameContext, View } from './types';
 
 /** Where the throwers stand: a small balcony above the board's edge wall, so they read as the building side. */
-const THROWER_HEIGHT = 1.9;
+const THROWER_HEIGHT = 2.6;
 /** The height of a fighter's head, where the object lands. */
 const HEAD_HEIGHT = 1.8;
 
@@ -46,14 +46,14 @@ export class KnockdownViews implements View {
   private readonly glass = new MeshStandardMaterial({
     color: 0x7be07a,
     emissive: 0x38c24a,
-    emissiveIntensity: 0.9,
+    emissiveIntensity: 1.6,
     roughness: 0.2,
     metalness: 0.1,
     transparent: true,
-    opacity: 0.92,
+    opacity: 1,
   });
   private readonly skin = new MeshStandardMaterial({ color: 0x6b4328, roughness: 0.8 });
-  private readonly shirt = new MeshStandardMaterial({ color: 0xe8e2d0, roughness: 0.9, emissive: 0x403c30 });
+  private readonly shirt = new MeshStandardMaterial({ color: 0xd8b06a, roughness: 0.9, emissive: 0x3a2a10 });
   private readonly dark = new MeshStandardMaterial({ color: 0x2a2018, roughness: 0.9 });
 
   update(ctx: FrameContext): void {
@@ -110,7 +110,13 @@ export class KnockdownViews implements View {
     // a short bright streak behind the bottle so the flight reads at a glance
     const trail = new Mesh(
       new BoxGeometry(0.06, 0.06, 0.7),
-      new MeshBasicMaterial({ color: 0xfff2a0, transparent: true, opacity: 0.7, blending: AdditiveBlending, depthWrite: false }),
+      new MeshBasicMaterial({
+        color: 0xfff2a0,
+        transparent: true,
+        opacity: 0.7,
+        blending: AdditiveBlending,
+        depthWrite: false,
+      }),
     );
     group.add(thrower, bottle, marker, trail);
     this.group.add(group);
@@ -127,6 +133,8 @@ export class KnockdownViews implements View {
     const to = toWorld(layout, tp.x, tp.y);
 
     // the thrower leans out over the edge and swings the arm, then stays to watch
+    v.thrower.scale.setScalar(1.25);
+    v.bottle.scale.setScalar(1.7);
     v.thrower.position.set(from.x, THROWER_HEIGHT - 0.4, from.z);
     v.thrower.lookAt(to.x, THROWER_HEIGHT - 0.4, to.z);
     const arm = v.thrower.getObjectByName('arm');

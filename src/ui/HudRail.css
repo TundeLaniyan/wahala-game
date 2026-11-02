@@ -232,7 +232,7 @@
 .hud-rail .streak-time {
   font-weight: 400;
   font-size: clamp(0.62rem, 2.5vh, 0.95rem);
-  color: #fff;
+  color: #ffffff;
   white-space: nowrap;
 }
 .hud-rail .streak-bar {
