@@ -344,15 +344,17 @@ test.describe('touch layout', () => {
         expect(size, `${what}: label size`).toBeGreaterThanOrEqual(7);
       };
       await check('ability', /GENERATOR/, /PUNCH/);
-      for (const [character, vehicle] of [
-        ['streetBaller', /DANFO/],
-        ['lekkiBoy', /YELLOW CAB/],
-        ['campusQueen', /KEKE/],
+      // any character, any public vehicle (decision VG1): the voucher's kind, not the fighter, names the vehicle
+      for (const [character, kind, vehicle] of [
+        ['streetBaller', 'danfo', /DANFO/],
+        ['lekkiBoy', 'taxi', /YELLOW CAB/],
+        ['campusQueen', 'keke', /KEKE/],
+        ['streetBaller', 'okada', /OKADA/],
       ] as const) {
         await mutate(page, `s.players[0].characterId = '${character}'; s.players[0].hasVoucher = false;`);
         await check(`${character} ability`, /GENERATOR/, /PUNCH|DAZE|SHOVE/);
-        await mutate(page, `s.players[0].hasVoucher = true;`);
-        await check(`${character} vehicle`, /GENERATOR/, vehicle);
+        await mutate(page, `s.players[0].hasVoucher = true; s.players[0].voucherKind = '${kind}';`);
+        await check(`${character} ${kind} vehicle`, /GENERATOR/, vehicle);
       }
       const place = page.getByTestId('btn-place');
       await place.dispatchEvent('pointerdown', { pointerId: 9, isPrimary: true, pointerType: 'touch' });

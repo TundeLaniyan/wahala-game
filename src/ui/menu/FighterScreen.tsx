@@ -45,8 +45,8 @@ function Abilities({ id }: { id: CharacterId }) {
       </div>
       <div className="mn-fact" data-testid="fighter-vehicle">
         <small>Public vehicles · button B with a voucher</small>
-        <b>Any fighter, any vehicle</b>
-        <p>Vouchers and kill streaks call in a Danfo, a Yellow Cab, a Keke or an Okada. The vehicle does not depend on who you play.</p>
+        <b>Any vehicle</b>
+        <p>Not tied to a fighter.</p>
       </div>
     </div>
   );

@@ -18,18 +18,15 @@ function skillText(skill: Skill): { name: string; text: string } {
     case 'push':
       return {
         name,
-        text: `A very fast jab at an adjacent rival: a ${secs(a.dazeTicks)} s daze, no push. Quick to recover, light on effect.`,
+        text: `A very fast jab: a ${secs(a.dazeTicks)} s daze.`,
       };
     case 'shove':
       return {
         name,
-        text: `A slower shove that pushes an adjacent rival ${a.displacementTiles} tiles where the map allows, into flames, traffic or a wall's edge. A miss leaves you open.`,
+        text: `A slower shove: pushes a rival ${a.displacementTiles} tiles.`,
       };
     case 'daze':
-      return {
-        name,
-        text: `A slow, heavy punch: the longest daze (${secs(a.dazeTicks)} s) on an adjacent rival, with a long recovery.`,
-      };
+      return { name, text: `A slow, heavy punch: the longest daze (${secs(a.dazeTicks)} s).` };
   }
 }
 
@@ -57,9 +54,7 @@ export function fighterInfo(id: CharacterId): FighterInfo {
     skillText: skillText(c.skill).text,
     skillCooldown: DEFAULT_CONFIG.skills.attacks[c.skill].hitRecoveryTicks / TICK_RATE,
     skillEffect:
-      a.displacementTiles > 0
-        ? `pushes ${a.displacementTiles} tiles`
-        : `${secs(a.dazeTicks)} s daze`,
+      a.displacementTiles > 0 ? `pushes ${a.displacementTiles} tiles` : `${secs(a.dazeTicks)} s daze`,
   };
 }
 
