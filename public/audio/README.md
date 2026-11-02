@@ -74,10 +74,10 @@ warnings, never ducked), `react` (crowd reactions) and `amb` (ambience beds).
 | `gen_place`, `gen_remote_blip`, `gen_powerdown`, `gen_dud`, `gen_kick`, `gen_carry`, `gen_throw`, `gen_drop` | sfx / warn | generator handling |
 | `fuse_tick` | warn | countdown tick |
 | `block_crumble_1`, `block_crumble_2` | sfx | soft blocks breaking |
-| `danfo_horn`, `taxi_horn`, `keke_horn` | warn | vehicle warnings |
+| `danfo_horn`, `taxi_horn`, `keke_horn`, `okada_horn` | warn | vehicle warnings |
 | `train_horn`, `rail_bell` | warn | the Oshodi Red Line railcar's horn and the level-crossing bell (synthesised) |
-| `danfo_engine_loop`, `taxi_engine_loop`, `keke_engine_loop` (loops) | sfx | engine while driving |
-| `danfo_launch`, `taxi_launch`, `keke_launch`, `danfo_pass`, `taxi_pass`, `keke_pass`, `train_pass` | sfx | launch and near-miss pass-by (and the railcar rushing past) |
+| `danfo_engine_loop`, `taxi_engine_loop`, `keke_engine_loop`, `okada_engine_loop` (loops) | sfx | engine while driving |
+| `danfo_launch`, `taxi_launch`, `keke_launch`, `okada_launch`, `danfo_pass`, `taxi_pass`, `keke_pass`, `okada_pass`, `train_pass` | sfx | launch and near-miss pass-by (and the railcar rushing past) |
 | `okada_mount`, `okada_break`, `vehicle_hit`, `vehicle_hit_gen`, `vehicle_damage`, `vehicle_wreck` | sfx | Okada, impacts, wrecks |
 | `vehicle_entry_on`, `vehicle_entry_off` | sfx | entry-mode cues |
 | `crush_warning`, `crush_slam`, `crowd_throw_whistle`, `bottle_smash`, `firecracker_bang`, `pothole_thud`, `oil_squeak`, `oil_slip` | sfx / warn | arena hazards |

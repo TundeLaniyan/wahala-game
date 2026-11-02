@@ -3,7 +3,7 @@
  * registry, vehicle registry and the skill config), so the menu can never advertise a power the game
  * does not have. Pure: unit-tested.
  */
-import { CHARACTERS, CHARACTER_IDS, DEFAULT_CONFIG, SKILL_DEFS, TICK_RATE, VEHICLE_DEFS } from '../../sim';
+import { CHARACTERS, CHARACTER_IDS, DEFAULT_CONFIG, SKILL_DEFS, TICK_RATE } from '../../sim';
 import type { CharacterId } from '../../sim';
 
 type Skill = (typeof CHARACTERS)[CharacterId]['skill'];
@@ -42,13 +42,13 @@ export interface FighterInfo {
   skillText: string;
   /** Seconds before the melee can be used again (from the sim config). */
   skillCooldown: number;
-  vehicleName: string;
-  vehicleText: string;
+  /** The melee's effect in one phrase, from the sim config. */
+  skillEffect: string;
 }
 
 export function fighterInfo(id: CharacterId): FighterInfo {
   const c = CHARACTERS[id];
-  const v = VEHICLE_DEFS[c.vehicle];
+  const a = DEFAULT_CONFIG.skills.attacks[c.skill];
   return {
     id,
     name: c.name,
@@ -56,8 +56,10 @@ export function fighterInfo(id: CharacterId): FighterInfo {
     skillName: skillText(c.skill).name,
     skillText: skillText(c.skill).text,
     skillCooldown: DEFAULT_CONFIG.skills.attacks[c.skill].hitRecoveryTicks / TICK_RATE,
-    vehicleName: v.name,
-    vehicleText: v.description,
+    skillEffect:
+      a.displacementTiles > 0
+        ? `pushes ${a.displacementTiles} tiles`
+        : `${secs(a.dazeTicks)} s daze`,
   };
 }
 

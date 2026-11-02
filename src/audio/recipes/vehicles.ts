@@ -62,6 +62,21 @@ const ENGINES: Record<Kind, EngineParams> = {
     hp: 90,
     drive: 2.2,
   },
+  // the Okada: a revving 2-stroke bike, higher and angrier than the Keke
+  okada: {
+    fire: 44,
+    harmonics: 28,
+    tilt: 0.25,
+    peakHz: 1100,
+    peakGain: 2.0,
+    clatter: 0.8,
+    clatterHz: 2400,
+    clatterQ: 1.4,
+    rough: 0.7,
+    lp: 4200,
+    hp: 110,
+    drive: 2.4,
+  },
 };
 
 const HORNS: Record<Kind, HornSpec> = {
@@ -105,6 +120,20 @@ const HORNS: Record<Kind, HornSpec> = {
     rasp: 0.3,
     raspHz: 45,
     sag: 1.12,
+  },
+  // two quick bike peeps
+  okada: {
+    rate: 32000,
+    seconds: 0.16,
+    notes: [1500],
+    attack: 0.005,
+    hold: 0.07,
+    release: 0.04,
+    lp: 3600,
+    bellHz: 2800,
+    bellGain: 0.8,
+    rasp: 0.2,
+    raspHz: 50,
   },
 };
 
@@ -329,18 +358,22 @@ export const vehicleSounds = {
   danfo_horn: hornSound('danfo'),
   taxi_horn: hornSound('taxi'),
   keke_horn: hornSound('keke'),
+  okada_horn: hornSound('okada'),
 
   danfo_engine_loop: engineLoop('danfo'),
   taxi_engine_loop: engineLoop('taxi'),
   keke_engine_loop: engineLoop('keke'),
+  okada_engine_loop: engineLoop('okada'),
 
   danfo_launch: launchSound('danfo'),
   taxi_launch: launchSound('taxi'),
   keke_launch: launchSound('keke'),
+  okada_launch: launchSound('okada'),
 
   danfo_pass: passSound('danfo'),
   taxi_pass: passSound('taxi'),
   keke_pass: passSound('keke'),
+  okada_pass: passSound('okada'),
 
   /** Okada mounted: 2-stroke motorbike revving ("brrp-brrrap"). */
   okada_mount: oneShot({

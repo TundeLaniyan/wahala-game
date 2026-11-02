@@ -34,7 +34,7 @@ export function pickupAt(state: GameState, x: number, y: number): Pickup | undef
 }
 
 export function activeGeneratorCount(state: GameState, ownerId: number): number {
-  return state.generators.filter((g) => g.ownerId === ownerId && g.mode !== 'disabled').length;
+  return state.generators.filter((g) => g.ownerId === ownerId && g.mode !== 'disabled' && !g.vehicleBorne).length;
 }
 
 export function isFloor(state: GameState, x: number, y: number): boolean {

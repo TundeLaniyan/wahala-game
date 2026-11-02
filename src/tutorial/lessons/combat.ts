@@ -1,9 +1,7 @@
 /**
  * Combat with button B (tap): the character's melee hit on an adjacent opponent, and, with a Vehicle
- * Voucher and nobody next to you, the one-press signature vehicle (the simulation picks the route).
+ * Voucher and nobody next to you, a one-press public vehicle (the simulation picks the route).
  */
-import { CHARACTERS, VEHICLE_DEFS } from '../../sim';
-import type { CharacterId } from '../../sim';
 import { collect, eliminatedBy, onEvent, tip, when } from '../practice';
 import { special, untilEvent, wait, walk } from '../script';
 import { pickup } from '../setup';
@@ -95,15 +93,11 @@ export const VEHICLE: Lesson = {
   id: 'vehicle',
   course: 'combat',
   title: 'Button B: your vehicle',
-  summary: 'One press calls in your signature vehicle.',
+  summary: 'One press calls in a public vehicle.',
   objective:
     'Collect a Vehicle Voucher, then tap B once (with nobody next to you): your vehicle drives in and hits the dummy.',
   facts: [
-    "A Vehicle Voucher calls in YOUR character's own vehicle once.",
-    ...(['streetBaller', 'lekkiBoy', 'campusQueen'] as CharacterId[]).map((id) => {
-      const v = VEHICLE_DEFS[CHARACTERS[id].vehicle];
-      return `${CHARACTERS[id].name}: ${v.name}. ${v.description}.`;
-    }),
+    'A Vehicle Voucher calls in a public vehicle (a Danfo, a Yellow Cab, a Keke ...) once. Which one is drawn when you pick the voucher up, and it is shown on the button.',
     'One tap of B with nobody next to you: the game picks the route that threatens a rival most. No route to choose.',
     'The lane flashes and the horn sounds first. Your vehicle can hit you too: keep off its lane.',
   ],

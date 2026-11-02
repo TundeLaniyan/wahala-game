@@ -286,6 +286,16 @@ const handlers: Handlers = {
     react(c, { kind: 'gasp', strength: 0.6, chance: 0.7, delay: 0.25 });
     react(c, { kind: 'whistle', strength: 0.5, chance: 0.3, delay: 1.0 });
   },
+  // VEHICLE GENERATOR: the carrier's own launch sound, then the throw (a whoosh + a gasp from the crowd)
+  vehicleGeneratorLaunched: (e, c) => {
+    sfx(c, `${e.kind}_launch`, panOf(c, vehicleX(c, e.vehicleId)));
+    react(c, { kind: 'gasp', strength: 0.5, chance: 0.6, delay: 0.2 });
+  },
+  vehicleGeneratorReleased: (e, c) => {
+    sfx(c, 'gen_throw', panOf(c, e.toX), 1, 1.1);
+    c.buses.duck('warning');
+    react(c, { kind: 'gasp', strength: 0.7, chance: 0.8, delay: 0.15 });
+  },
   vehicleLaunched: (e, c) => {
     sfx(c, `${e.kind}_launch`, panOf(c, vehicleX(c, e.vehicleId)));
     c.ambience.swell(0.7);

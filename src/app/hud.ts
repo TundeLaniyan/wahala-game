@@ -1,5 +1,4 @@
 import {
-  CHARACTERS,
   TEAM_NAMES,
   getArena,
   isRespawnMode,
@@ -501,7 +500,8 @@ export function buildHud(
         deaths: local.stats.deaths,
         assists: local.stats.assists,
         voucher: local.hasVoucher,
-        vehicle: CHARACTERS[local.characterId].vehicle,
+        // the vehicle B would call in: a VEHICLE GENERATOR's drawn vehicle, else the voucher's
+        vehicle: local.streakRewards.vehicleGenerator ?? local.voucherKind,
         carrying: local.carrying !== null,
         dazed: state.tick < local.dazedUntil,
         curse:

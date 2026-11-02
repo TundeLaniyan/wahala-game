@@ -635,6 +635,7 @@ describe('vehicle engine loops', () => {
       exposedEvents: [],
       eventId: 5,
       startTick: 0,
+      payload: null,
     });
     rig.audio.handleEvents([], s);
     expect(rig.ctx.sources.filter((x) => x.loop)).toHaveLength(0);
@@ -813,6 +814,7 @@ describe('crowd reactions', () => {
       exposedEvents: [],
       eventId: 5,
       startTick: 0,
+      payload: null,
     });
     rig.audio.handleEvents([], s);
     expect(rig.ids()).toContain('taxi_pass');

@@ -81,6 +81,7 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     jumpReadyTick: 0,
     slide: null,
     hasVoucher: false,
+    voucherKind: 'danfo',
     carrying: null,
     dazedUntil: 0,
     dazeImmuneUntil: 0,

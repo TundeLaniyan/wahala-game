@@ -38,6 +38,7 @@ const vehicle = (over: Partial<Vehicle> = {}): Vehicle => ({
   exposedEvents: [],
   eventId: 9,
   startTick: 0,
+  payload: null,
   ...over,
 });
 const base = (): GameState => {

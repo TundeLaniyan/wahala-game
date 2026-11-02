@@ -16,7 +16,6 @@ import {
   RUMBLE_ARENA_IDS,
   STANDARD_ARENA_IDS,
   TICK_RATE,
-  VEHICLE_DEFS,
 } from '../../src/sim';
 import { LESSONS } from '../../src/tutorial';
 import { matchRules } from '../../src/app/names';
@@ -107,7 +106,6 @@ describe('fighter screen', () => {
     for (const id of CHARACTER_IDS) {
       expect(html).toContain(`data-testid="char-${id}"`);
       expect(html).toContain(CHARACTERS[id].name);
-      expect(html).toContain(VEHICLE_DEFS[CHARACTERS[id].vehicle].name);
     }
     expect(html).toMatch(/aria-pressed="true"[^>]*data-testid="char-lekkiBoy"/);
     expect(html).toContain('Daze Punch');
@@ -119,7 +117,7 @@ describe('fighter screen', () => {
       const f = fighterInfo(id);
       const skill = CHARACTERS[id].skill;
       expect(f.skillCooldown).toBe(DEFAULT_CONFIG.skills.attacks[skill].hitRecoveryTicks / TICK_RATE);
-      expect(f.vehicleName).toBe(VEHICLE_DEFS[CHARACTERS[id].vehicle].name);
+      expect(f.skillEffect.length).toBeGreaterThan(0);
     }
   });
 });

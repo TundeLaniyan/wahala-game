@@ -140,7 +140,7 @@ export function HomeScreen() {
             <h3>{CHARACTERS[s.character].name}</h3>
             <p className="mn-home-card-facts">
               <span>{fighter.skillName}</span>
-              <span>{fighter.vehicleName}</span>
+              <span>{fighter.skillEffect}</span>
             </p>
             <small className="mn-kicker">Last setup</small>
             <p className="mn-home-summary" data-testid="setup-summary">

@@ -1,10 +1,10 @@
 import {
-  CHARACTERS,
   createGame,
   entryKey,
   getArena,
   isRespawnMode,
   isTeamMode,
+  VEHICLE_DEFS,
   movementLocked,
   quickHandsActive,
   moveWouldAct,
@@ -465,9 +465,8 @@ export class MatchController {
     const state = this.state!;
     switch (e.type) {
       case 'vehicleWarning': {
-        const owner = state.players[e.ownerId]!;
         return {
-          text: `${CHARACTERS[owner.characterId].vehicle.toUpperCase()} INCOMING!`,
+          text: `${VEHICLE_DEFS[e.kind].name.toUpperCase()} INCOMING!`,
           tone: e.ownerId === LOCAL_ID ? 'info' : 'bad',
         };
       }

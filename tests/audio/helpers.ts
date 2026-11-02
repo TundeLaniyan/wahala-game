@@ -90,6 +90,8 @@ export const SAMPLES: Record<SimEvent['type'], SimEvent> = {
   streakRewardUsed: { type: 'streakRewardUsed', playerId: 0, reward: 'globalKnockdown' },
   streakRewardEnded: { type: 'streakRewardEnded', playerId: 0, reward: 'quickHands' },
   streakRewardsLost: { type: 'streakRewardsLost', playerId: 0, rewards: ['vehicleGenerator'] },
+  vehicleGeneratorLaunched: { type: 'vehicleGeneratorLaunched', vehicleId: 1, ownerId: 0, kind: 'danfo', generatorId: 9, targetId: 1 },
+  vehicleGeneratorReleased: { type: 'vehicleGeneratorReleased', vehicleId: 1, ownerId: 0, generatorId: 9, fromX: 3, fromY: 3, toX: 6, toY: 4, targetId: 1, landTick: 40, boomTick: 60 },
   attackStarted: { type: 'attackStarted', playerId: 0, skill: 'push', targetId: 1, resolveTick: 10 },
   attackResolved: { type: 'attackResolved', playerId: 0, skill: 'push', targetId: 1, hit: true },
   attackInterrupted: { type: 'attackInterrupted', playerId: 1, byId: 0 },

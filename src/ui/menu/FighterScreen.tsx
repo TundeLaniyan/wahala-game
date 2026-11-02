@@ -3,7 +3,7 @@
  * redesign) beside the selected fighter's portrait, name, one-line description, real stats and abilities.
  * Built to be understood without scrolling on a phone: the selected fighter's card comes first, the roster
  * is a compact strip. No ratings, ranks or locked slots: every fighter is playable and differs only in what
- * the game actually does (melee, cooldown and signature vehicle come from the sim data and config).
+ * the game actually does (melee, recovery and effect come from the sim data and config).
  */
 import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
@@ -26,8 +26,8 @@ function Stats({ id }: { id: CharacterId }) {
         <dd>{f.skillCooldown} sec</dd>
       </div>
       <div>
-        <dt>Vehicle</dt>
-        <dd>{f.vehicleName}</dd>
+        <dt>Effect</dt>
+        <dd>{f.skillEffect}</dd>
       </div>
     </dl>
   );
@@ -44,9 +44,9 @@ function Abilities({ id }: { id: CharacterId }) {
         <span className="mn-fact-meta">Ready again after {f.skillCooldown} s</span>
       </div>
       <div className="mn-fact" data-testid="fighter-vehicle">
-        <small>Signature vehicle · button B with a voucher</small>
-        <b>{f.vehicleName}</b>
-        <p>{f.vehicleText}.</p>
+        <small>Public vehicles · button B with a voucher</small>
+        <b>Any fighter, any vehicle</b>
+        <p>Vouchers and kill streaks call in a Danfo, a Yellow Cab, a Keke or an Okada. The vehicle does not depend on who you play.</p>
       </div>
     </div>
   );

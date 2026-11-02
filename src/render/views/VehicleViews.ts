@@ -24,7 +24,7 @@ interface Visual {
   wrecked: boolean;
 }
 
-const TRAIL_COLORS: Record<Vehicle['kind'], number> = { danfo: 0xffd23a, taxi: 0xffe58a, keke: 0x9dffb0 };
+const TRAIL_COLORS: Record<Vehicle['kind'], number> = { danfo: 0xffd23a, taxi: 0xffe58a, keke: 0x9dffb0, okada: 0xffa05a };
 let streakTex: CanvasTexture | null = null;
 
 /** Soft streak: bright at the vehicle end, fading to nothing behind it and at the edges. */

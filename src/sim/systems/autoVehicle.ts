@@ -20,7 +20,6 @@
  * Routes are scored as two legs without being built, with stamped scratch arrays, so even a Keke on the
  * 41 x 31 City Rumble board (thousands of legal turns) is cheap enough for bots to ask often.
  */
-import { CHARACTERS } from '../data/characters';
 import { DIRS, DIR_VEC, perpendiculars, tileAt } from '../grid';
 import { Tile } from '../types';
 import type { Flame, Generator, Player, TilePos, VehicleEntry, VehicleKind, VehicleTurn } from '../types';
@@ -114,7 +113,7 @@ interface Scene {
   stamp: number;
 }
 
-function buildScene(view: AutoVehicleView, ownerId: number): Scene | null {
+function buildScene(view: AutoVehicleView, ownerId: number, kind?: VehicleKind): Scene | null {
   const owner = view.players[ownerId];
   if (!owner) return null;
   const w = view.width;
@@ -142,7 +141,7 @@ function buildScene(view: AutoVehicleView, ownerId: number): Scene | null {
   );
   return {
     owner,
-    kind: CHARACTERS[owner.characterId].vehicle,
+    kind: kind ?? owner.voucherKind,
     rivals,
     allies,
     nearest,
@@ -255,8 +254,13 @@ function scoreWith(view: AutoVehicleView, scene: Scene, r: Legs): number {
  * Score of one route for `ownerId` (higher = more threatening). > 0 threatens at least one opponent;
  * negative endangers the owner (never chosen) or a teammate.
  */
-export function scoreRoute(view: AutoVehicleView, ownerId: number, route: readonly TilePos[]): number {
-  const scene = buildScene(view, ownerId);
+export function scoreRoute(
+  view: AutoVehicleView,
+  ownerId: number,
+  route: readonly TilePos[],
+  kind?: VehicleKind,
+): number {
+  const scene = buildScene(view, ownerId, kind);
   return scene ? scoreWith(view, scene, { leg: route, k: route.length - 1, second: [] }) : -Infinity;
 }
 
@@ -320,8 +324,12 @@ interface Best {
  * The route a one-press launch takes for `ownerId`, or null when every legal route runs over the
  * owner or a teammate. Deterministic: the first best-scoring option in border order wins.
  */
-export function chooseAutoVehicle(view: AutoVehicleView, ownerId: number): AutoVehicleChoice | null {
-  const scene = buildScene(view, ownerId);
+export function chooseAutoVehicle(
+  view: AutoVehicleView,
+  ownerId: number,
+  kind?: VehicleKind,
+): AutoVehicleChoice | null {
+  const scene = buildScene(view, ownerId, kind);
   if (!scene) return null;
   const best: { b: Best | null } = { b: null };
   forEachOption(view, scene.kind, (entry, turn, legs) => {

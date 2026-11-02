@@ -122,6 +122,8 @@ export interface GameConfig {
      */
     allowed: VehicleKind[];
     specs: Record<VehicleKind, VehicleSpec>;
+    /** Ticks per tile while a VEHICLE GENERATOR rides the vehicle (it is a carrier, not a ram: decision VG2). */
+    carrierStepTicks: Record<VehicleKind, number>;
     /**
      * City Rumble Evolution: the board-edge entrances summoned attack vehicles may use (road mouths), as
      * [x, y, inward dir]. Null = every border tile (the default). Set by an arena's config only.
@@ -261,6 +263,24 @@ export interface GameConfig {
       extraCapacity: number;
       /** A placement press that cannot be done yet (dazed, tile taken, at capacity) is kept this long. */
       placeBufferTicks: number;
+    };
+    /** VEHICLE GENERATOR (decision VG2): one three-second fuse from the moment the vehicle starts driving. */
+    vehicleGenerator: {
+      /** The generator's whole fuse, started when the vehicle launches. */
+      fuseTicks: number;
+      /** The carrier lets go this long after it starts driving (about the first two seconds). */
+      releaseTicks: number;
+      /** The thrown generator's flight time (the late, readable warning: a visible projectile plus a marker). */
+      throwTicks: number;
+    };
+    /** GLOBAL KNOCKDOWN (decision GK1). */
+    globalKnockdown: {
+      /** Flight time of the thrown object from the building to each rival's head. */
+      throwTicks: number;
+      /** How long a rival lies on the ground (cannot move, place or attack). Tuned 1.5-3 s. */
+      knockdownTicks: number;
+      /** After getting up a rival cannot be knocked down again for this long. */
+      immunityTicks: number;
     };
   };
   /** V2 respawn modes (Deathmatch, Team Rumble). */
@@ -427,7 +447,11 @@ export const DEFAULT_CONFIG: GameConfig = {
       danfo: { stepTicks: 14, resistance: 9, softLimit: 999, playerHitLimit: 999, turns: false },
       taxi: { stepTicks: 7, resistance: 6, softLimit: 2, playerHitLimit: 1, turns: false },
       keke: { stepTicks: 8, resistance: 4, softLimit: 1, playerHitLimit: 2, turns: true },
+      // the Okada as a hazard (decision VG1): fastest, lightest - no crate breaking, gone after one rival
+      okada: { stepTicks: 6, resistance: 3, softLimit: 0, playerHitLimit: 1, turns: false },
     },
+    /** Ticks per tile while a VEHICLE GENERATOR rides it: slower than an attack run so the carrier is readable. */
+    carrierStepTicks: { danfo: 12, taxi: 9, keke: 10, okada: 8 },
     lanes: null,
   },
   drops: {
@@ -516,6 +540,8 @@ export const DEFAULT_CONFIG: GameConfig = {
       { kills: 7, reward: 'globalKnockdown' },
     ],
     quickHands: { durationTicks: ticks(18), extraCapacity: 5, placeBufferTicks: ticks(1.2) },
+    vehicleGenerator: { fuseTicks: ticks(3), releaseTicks: ticks(2), throwTicks: 40 },
+    globalKnockdown: { throwTicks: 36, knockdownTicks: ticks(2), immunityTicks: ticks(4) },
   },
   respawn: {
     enabled: false,

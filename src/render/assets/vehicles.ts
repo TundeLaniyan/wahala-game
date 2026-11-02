@@ -58,6 +58,7 @@ const GLB_WHEELS: Record<VehicleKind, string[]> = {
   danfo: ['wheel_FL', 'wheel_FR', 'wheel_RL', 'wheel_RR'],
   taxi: ['wheel_FL', 'wheel_FR', 'wheel_RL', 'wheel_RR'],
   keke: ['wheel_F', 'wheel_RL', 'wheel_RR'],
+  okada: ['wheel_F', 'wheel_R'],
 };
 
 /** Modelled vehicles face +Z with wheel axles along X; the game's convention is +X forward. */

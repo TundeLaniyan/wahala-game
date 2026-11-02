@@ -21,7 +21,8 @@ export type TileKind = (typeof Tile)[keyof typeof Tile];
 // ---------------------------------------------------------------- catalogue ids
 
 export type CharacterId = 'streetBaller' | 'lekkiBoy' | 'campusQueen';
-export type VehicleKind = 'danfo' | 'taxi' | 'keke';
+/** The public vehicles of Lagos. Any fighter may get any of them (decision VG1). */
+export type VehicleKind = 'danfo' | 'taxi' | 'keke' | 'okada';
 export type SkillKind = 'push' | 'daze' | 'shove';
 /** The kill-streak rewards of the fixed initial loadout (decision SK1). */
 export type StreakRewardKind = 'quickHands' | 'vehicleGenerator' | 'globalKnockdown';
@@ -217,6 +218,8 @@ export interface Player {
   /** Oil slick: forced automatic steps in `dir`. */
   slide: { dir: Dir; remaining: number } | null;
   hasVoucher: boolean;
+  /** The public vehicle the held voucher will launch (drawn when it was granted; meaningless without a voucher). */
+  voucherKind: VehicleKind;
 
   carrying: number | null; // generator id
   dazedUntil: number;
@@ -275,6 +278,10 @@ export interface Generator {
    * (kicked / punched it, or rammed it with their vehicle). Optional: absent = nobody.
    */
   touchedBy?: number;
+  /** A VEHICLE GENERATOR's generator (decision VG2): carried by `mountedOn`, then thrown; not counted against capacity. */
+  vehicleBorne?: boolean;
+  /** The vehicle currently carrying this generator (it is airborne, off the ground, until released). */
+  mountedOn?: number;
 }
 
 export interface Flame {
@@ -289,6 +296,8 @@ export interface Flame {
   fromSpectator?: boolean;
   /** V2: a Square Blast tile (outside the plus arms) - drawn distinctly. */
   square?: boolean;
+  /** From a VEHICLE GENERATOR: the owner is never caught in this blast (decision VG4). */
+  ownerSafe?: boolean;
   /** City Rumble radial blast: a tile off the generator's row and column (systems/blastShape.ts). */
   radial?: boolean;
   tip: boolean;
@@ -341,6 +350,17 @@ export interface Vehicle {
   exposedEvents: number[];
   eventId: number; // id used for Okada grace against this vehicle
   startTick: number;
+  /** A VEHICLE GENERATOR carrier (decision VG2): a live generator rides it and is thrown at `targetId` (never rams). */
+  payload: VehiclePayload | null;
+}
+
+export interface VehiclePayload {
+  generatorId: number;
+  /** The rival the generator is thrown at (the nearest rival to the route; re-picked at release if they are gone). */
+  targetId: number | null;
+  /** The tick the generator is released (set when the vehicle starts driving). */
+  releaseTick: number;
+  released: boolean;
 }
 
 export interface CrowdThrow {
@@ -707,7 +727,11 @@ export type SimEvent =
   /** V2: a contact ability was picked up / replaced the previous one. */
   | { type: 'contactEquipped'; playerId: number; ability: ContactAbility; replaced: ContactAbility | null }
   /** V2: button B resolved to this action. */
-  | { type: 'specialUsed'; playerId: number; action: 'melee' | 'vehicle' }
+  | { type: 'specialUsed'; playerId: number; action: 'melee' | 'vehicle' | 'vehicleGenerator' | 'globalKnockdown' }
+  /** A VEHICLE GENERATOR carrier started driving: the generator's three-second fuse is running. */
+  | { type: 'vehicleGeneratorLaunched'; vehicleId: number; ownerId: number; kind: VehicleKind; generatorId: number; targetId: number | null }
+  /** The carrier let go: the generator is thrown from (fromX, fromY) to (toX, toY) at `targetId`. */
+  | { type: 'vehicleGeneratorReleased'; vehicleId: number; ownerId: number; generatorId: number; fromX: number; fromY: number; toX: number; toY: number; targetId: number | null; landTick: number; boomTick: number }
   /** V2: a protection layer absorbed a lethal hit (Okada also emits okadaBroken). */
   | { type: 'protectionBroken'; playerId: number; layer: 'okada' | 'armour'; x: number; y: number }
   /** V2 City Rumble: an elimination reward was granted to the credited eliminator. */

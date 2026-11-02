@@ -1,4 +1,5 @@
 /** Pickup reveal, collection, burning and effects. Effects are data-light switch cases on PickupKind. */
+import { drawVehicle } from './streaks';
 import { pick } from '../rng';
 import type { ContactAbility, CurseKind, GameState, PickupKind, Player, SimEvent } from '../types';
 
@@ -108,6 +109,7 @@ export function applyPickup(state: GameState, p: Player, kind: PickupKind, event
     case 'voucher':
       if (p.hasVoucher) return false;
       p.hasVoucher = true;
+      p.voucherKind = drawVehicle(state); // any public vehicle the arena allows; the character plays no part
       return true;
     case 'curse': {
       const curse = pick(state, CURSES);

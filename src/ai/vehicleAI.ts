@@ -12,7 +12,7 @@
  */
 import { chooseAutoVehicle, meleeTarget, nextFloat } from '../sim';
 import type { Intent, TilePos } from '../sim';
-import { CHARACTERS } from '../sim';
+import { } from '../sim';
 import { protectionLayers, rivalEscape, searchRefuge } from './analysis';
 import { baselineRefuges } from './goals';
 import { overBudget, spend } from './context';
@@ -36,7 +36,7 @@ export const newVehicleMemory = (): VehicleMemory => ({
 export function routeValue(c: Ctx, route: readonly TilePos[], launchTick: number): number {
   const { world, profile } = c;
   const { me, obs } = world;
-  const kind = CHARACTERS[me.characterId].vehicle;
+  const kind = me.voucherKind;
   const w = world.board.width;
   c.work = 0; // the vehicle check runs between thinks: it gets its own (large-board) budget
   c.builder.build(c.tmp, world, profile, {
@@ -100,7 +100,7 @@ export function vehicleTactic(c: Ctx, mem: VehicleMemory, intent: Intent, safeHe
   if (profile.vehicle === 'naive' && nextFloat(c.rng) > 0.5) return;
   // with an opponent next to me B is a melee press, never the vehicle
   if (meleeTarget(obs, me)) return;
-  const choice = chooseAutoVehicle(obs, me.id);
+  const choice = chooseAutoVehicle(obs, me.id, me.voucherKind);
   // the auto route must run over (or right beside) a rival to be worth a look at all
   if (!choice || choice.score < 2) return;
   // Team Rumble with friendly fire: never drive through a teammate (with it off, the vehicle passes them)
