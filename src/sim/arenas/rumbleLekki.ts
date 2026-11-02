@@ -109,8 +109,8 @@ function paint(): Board {
     jw: 1,
     drop: 0.1,
   });
-  // K1 the gateway: roadside commerce and the fuel canopy on the south pavement, shops on the north pavement
-  b.fill(2, 35, 14, 36, 'S').fill(24, 35, 32, 36, 'F').fill(40, 35, 54, 36, 'S');
+  // K1 the gateway: roadside commerce and the fuel canopy on the south pavement, low lock-up shops on the south pavement (a tall frontage would hide the lane in front of it from the camera), shops on the north pavement
+  b.fill(2, 35, 14, 36, 'L').fill(24, 35, 32, 36, 'F').fill(40, 35, 54, 36, 'L');
   for (const x of [15, 16, 17, 33, 34, 35]) b.fill(x, 35, x, 36, '.');
   b.fill(24, 31, 27, 31, '=');
   // the lane clearings between the estate compounds and Admiralty Way

@@ -14,11 +14,11 @@ const ARENAS = {
   // id: [board w, h, landmark tile x, y, zoom, what the landmark frame shows]
   rumbleOjuelegba: [45, 33, 22, 15, 2.2, 'the flyover piers and the Danfo park'],
   rumbleOshodi: [63, 47, 17, 10, 2.4, 'the interchange terminal and its bus bays'],
-  rumbleMushin: [53, 39, 26, 24, 2.2, 'the Idi-Oro food hall, parts stalls and the shop rows'],
+  rumbleMushin: [53, 39, 26, 22, 1.5, 'the Idi-Oro food hall, parts stalls and the shop rows'],
   rumbleFadeyi: [51, 33, 24, 14, 2.2, 'the BRT centreline, median barriers, shelters and crossing'],
   rumbleLagosIsland: [55, 39, 44, 9, 2.2, 'the civic square, monument, heritage frontage and trees'],
-  rumbleLekki: [57, 39, 40, 8, 2.2, 'the sports club, the arts-market sheds and the promenade'],
-  rumbleEbuteMetta: [55, 39, 29, 12, 2.2, 'the station hall, platforms, tracks and the colonial terminus'],
+  rumbleLekki: [57, 39, 40, 8, 1.5, 'the sports club, the arts-market sheds and the promenade'],
+  rumbleEbuteMetta: [55, 39, 29, 12, 1.5, 'the station hall, platforms, tracks and the colonial terminus'],
 };
 const ids = only ? only.split(',') : Object.keys(ARENAS);
 mkdirSync(dir, { recursive: true });
