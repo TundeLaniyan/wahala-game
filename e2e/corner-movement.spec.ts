@@ -1,7 +1,7 @@
 /**
  * Corner movement in a real browser (decision MV1): a turn tapped a tile or two before a corner is taken at the
  * corner (keyboard on desktop, thumb on phones), holding into a wall does not keep bumping it, a thumb held up a
- * one-tile corridor follows its bend, and a short tap is still exactly one tile.
+ * one-tile corridor follows its bend (Beginner Assist), and a short tap is still exactly one tile.
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -96,9 +96,13 @@ test.describe('corner movement: phone thumb', () => {
   test.slow();
   test.skip(({ isMobile }) => !isMobile, 'mobile project only');
 
-  test('a thumb held up a one-tile corridor follows its bend to the end, one clean tile at a time', async ({
+  test('Beginner Assist: a thumb held up a one-tile corridor follows its bend to the end, one clean tile at a time', async ({
     page,
   }) => {
+    // bend following is a Beginner Assist rule (decision AS4); Standard stops at the corner (unit-tested)
+    await page.addInitScript(() =>
+      localStorage.setItem('wahala.settings.v1', JSON.stringify({ moveStyle: 'beginner' })),
+    );
     await open(page);
     await startMatch(page, { competitors: 2 });
     await carve(page, BEND, [1, 5]);
