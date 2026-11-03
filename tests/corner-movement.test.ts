@@ -70,9 +70,17 @@ describe('bump guard: the same wall or crate is not hit every step', () => {
   });
 });
 
-describe('bend following (touch / On): a corridor is walked round its corner', () => {
+describe('bend following (touch Beginner Assist): a corridor is walked round its corner', () => {
+  it('Standard touch movement stops at the corner: a straight push is a push (decision AS4)', () => {
+    const r = new AssistRig({ map: BEND, start: [1, 5], assist: 'on', style: 'standard' });
+    r.thumbDown();
+    r.push('up');
+    r.step(400);
+    expect(r.at).toEqual([1, 1]);
+  });
+
   it('holding up in a one-tile corridor turns the corner on its own and walks on to the end, never back', () => {
-    const r = new AssistRig({ map: BEND, start: [1, 5], assist: 'on' });
+    const r = new AssistRig({ map: BEND, start: [1, 5], assist: 'on', style: 'beginner' });
     r.thumbDown();
     r.push('up');
     r.step(400);
