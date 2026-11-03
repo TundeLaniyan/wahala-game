@@ -114,7 +114,7 @@ describe('toggle off is the previous behaviour exactly', () => {
     for (let seed = 40; seed <= 60; seed++) {
       const now = new MoveGate();
       const was = new LegacyMoveGate();
-      const assist: GateAssist = { level: 'basic', board: () => FREE_BOARD, wish: null };
+      const assist: GateAssist = { level: 'basic', board: () => FREE_BOARD };
       for (const e of script(seed)) {
         if (e.press) {
           now.press(e.press, e.tick);

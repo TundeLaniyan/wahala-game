@@ -8,7 +8,7 @@
  *  - turn planning: a turn pressed early is carried along the corridor to the first tile where it opens
  *    (`planTurn`);
  *  - sidestep: a direction held against a wall, with the opening one tile along the corridor (`planSidestep`);
- *  - thumb wish: a diagonal thumb's secondary axis is taken at the first legal junction (`canStep`).
+ *  - corner route: a diagonal thumb whose main direction is blocked goes round the obstacle (`planDiagonal`).
  *
  * Every move the assist substitutes or continues on the player's behalf must be a plain step onto open
  * floor (never a kick or a jump), and must not enter anything dangerous (`MoveBoard.safe`): a flame, a
@@ -25,6 +25,17 @@ import type { InputSourceName } from './types';
 /** The Settings value: Auto = assisted on touch, the plain WA2 behaviour with the keyboard / gamepad. */
 export type MoveAssistSetting = 'auto' | 'on' | 'off';
 export const MOVE_ASSIST_SETTINGS: readonly MoveAssistSetting[] = ['auto', 'on', 'off'];
+
+/**
+ * The touchscreen thumb's movement style (decision AS4). `standard` is cardinal movement plus limited corner
+ * assistance: a diagonal, a sidestep or an early turn only when the direction the thumb wants is BLOCKED and the thumb
+ * clearly leans round the obstacle. `beginner` adds short input buffering (a press kept while dazed, a longer buffer, a
+ * tapped turn remembered a moment) and limited emergency replanning (a press settles at once, and a step may cross a
+ * generator's footprint, when the player already stands in danger). Neither ever moves the player without a current
+ * directional input, and keyboard and gamepad ignore the style.
+ */
+export type MoveStyle = 'standard' | 'beginner';
+export const MOVE_STYLES: readonly MoveStyle[] = ['standard', 'beginner'];
 
 /**
  * What the input layer actually does this tick:
@@ -328,7 +339,9 @@ export function buildMoveBoard(state: GameState, me: Player): MoveBoard {
       // standing in danger already: stepping through a footprint is how the player gets out, but never towards
       // the generator that makes it one (decision MI4)
       if (!(endangered ??= h.footprint.has(own) || h.lethal.has(own))) return false;
-      armed ??= state.generators.filter((g) => g.flight === null && g.carriedBy === null && g.mode !== 'disabled');
+      armed ??= state.generators.filter(
+        (g) => g.flight === null && g.carriedBy === null && g.mode !== 'disabled',
+      );
       const near = (tx: number, ty: number): number =>
         armed!.reduce((d, g) => Math.min(d, Math.abs(g.x - tx) + Math.abs(g.y - ty)), Infinity);
       return near(x, y) >= near(fromX, fromY);

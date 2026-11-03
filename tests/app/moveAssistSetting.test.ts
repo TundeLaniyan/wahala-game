@@ -62,6 +62,29 @@ describe('moveAssist setting', () => {
   });
 });
 
+describe('moveStyle setting (decision AS4)', () => {
+  it('defaults to Standard and is one of the device preferences "Restore defaults" resets', () => {
+    expect(DEFAULT_GAME_SETTINGS.moveStyle).toBe('standard');
+    expect(PREFERENCE_KEYS).toContain('moveStyle');
+    expect(preferenceDefaults().moveStyle).toBe('standard');
+  });
+
+  it('keeps Standard / Beginner and repairs anything else; an old save loads as Standard', () => {
+    for (const v of ['standard', 'beginner'] as const)
+      expect(sanitizeSettings({ ...DEFAULT_GAME_SETTINGS, moveStyle: v }).moveStyle).toBe(v);
+    for (const bad of ['assist', 1, null, undefined, true])
+      expect(sanitizeSettings({ ...DEFAULT_GAME_SETTINGS, moveStyle: bad as never }).moveStyle).toBe(
+        'standard',
+      );
+    const old: Partial<GameSettings> = { ...DEFAULT_GAME_SETTINGS };
+    delete (old as { moveStyle?: unknown }).moveStyle;
+    withStorage(JSON.stringify(old));
+    expect(loadSettings().moveStyle).toBe('standard');
+    withStorage(JSON.stringify({ ...DEFAULT_GAME_SETTINGS, moveStyle: 'beginner' }));
+    expect(loadSettings().moveStyle).toBe('beginner');
+  });
+});
+
 describe('Settings > Controls toggle', () => {
   const render = (moveAssist: GameSettings['moveAssist']): string => {
     Object.assign(useGameStore.getInitialState(), { settings: { ...DEFAULT_GAME_SETTINGS, moveAssist } });
@@ -81,5 +104,16 @@ describe('Settings > Controls toggle', () => {
     const html = render('auto');
     expect(html).toMatch(/never walks you into a generator, flames or a warned hazard/);
     expect(html).not.toMatch(/auto-?pilot|aim assist|cloud|online/i);
+  });
+
+  it('offers Standard and Beginner Assist for the touch thumb, and says what each does', () => {
+    Object.assign(useGameStore.getInitialState(), {
+      settings: { ...DEFAULT_GAME_SETTINGS, moveStyle: 'beginner' },
+    });
+    const html = renderToStaticMarkup(createElement(SettingsPanel, { initialTab: 'controls' }));
+    expect(html).toContain('data-testid="movestyle-standard"');
+    expect(html).toMatch(/data-testid="movestyle-beginner"[^>]*aria-pressed="true"/);
+    expect(html).toMatch(/Beginner Assist/);
+    expect(html).toMatch(/Neither ever moves you without your thumb on the stick/);
   });
 });

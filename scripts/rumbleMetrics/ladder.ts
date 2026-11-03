@@ -1,12 +1,11 @@
 /**
  * Bot-independent economy curve: what a fighter looks like after n credited eliminations under a config
- * variant (the reward ladder applied through the real `previewRewards` / `applyPickup`, so caps, fallbacks
+ * variant (the reward ladder applied through the real `grantRewards`, so caps, fallbacks, the life-perk limits
  * and the radial rules are exactly the game's). Used by `scripts/rumble-metrics.ts --ladder` and by
  * tests/rumble-economy-evolution.test.ts (progression is monotone, the ladder pays with radial caps).
  */
 import {
   createGame,
-  previewRewards,
   radialFootprint,
   radialRadius,
   radialSquareRadius,
@@ -20,9 +19,10 @@ import type {
   GameState,
   PickupKind,
   Player,
+  SimEvent,
 } from '../../src/sim';
 import { Tile } from '../../src/sim/types';
-import { applyPickup } from '../../src/sim/systems/pickups';
+import { grantRewards } from '../../src/sim/systems/rewards';
 import { powerScore } from './collector';
 
 export interface LadderRow {
@@ -115,12 +115,23 @@ export function ladderCurve(
     };
   };
   const rows = [row(0, [])];
+  // the kills come back to back (inside one perk life), so this is the CEILING a fighter can reach (decisions AS1-AS2)
   for (let k = 1; k <= (opts.kills ?? 14); k++) {
-    p.stats.streak = k - 1;
-    const paid = previewRewards(state, p);
-    for (const kind of paid) applyPickup(state, p, kind, []);
     p.stats.streak = k;
     p.stats.kills = k;
+    const events: SimEvent[] = [
+      {
+        type: 'playerEliminated',
+        playerId: 1,
+        cause: { kind: 'flame', ownerId: 0, eventId: k },
+        x: 0,
+        y: 0,
+        creditId: 0,
+        assistIds: [],
+      },
+    ];
+    grantRewards(state, events);
+    const paid = events.flatMap((e) => (e.type === 'rewardGranted' ? [e.kind] : []));
     rows.push(row(k, paid));
   }
   return rows;

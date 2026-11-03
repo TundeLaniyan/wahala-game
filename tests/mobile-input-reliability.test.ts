@@ -1,7 +1,8 @@
 /**
- * Mobile input reliability (decisions MI1-MI5): the touch thumb never silently loses a press, the newest direction
- * wins over an owed diagonal step, a player standing in danger gets escape priority, and the keyboard and the gamepad
- * behave exactly as they did before.
+ * Mobile input reliability (decisions MI1-MI5, AS4): Beginner Assist keeps a touch press through a daze and gives a
+ * player standing in danger escape priority; on every style the newest direction wins over an owed corner step. The
+ * keyboard and the gamepad behave exactly as they did before. (Standard touch movement and the corner rules are in
+ * mobile-corner-assist.test.ts.)
  *
  * Deterministic: the REAL InputManager + stick model + simulation, wired as MatchController wires them (`AssistRig`).
  * Ticks are 1/60 s; a normal step is 10 ticks.
@@ -31,85 +32,35 @@ function room(walls: [number, number][] = [], crates: [number, number][] = []): 
 }
 const START: [number, number] = [4, 4];
 
-describe('1. a diagonal flick followed quickly by an opposite tap (newest press wins)', () => {
-  // a flick towards up-right owes Up then Right; a tap Left is neither step of that route
-  it.each([1, 4, 8])(
-    'tap %i ticks after the flick: the owed second step is cancelled and the tap is done',
-    (gap) => {
-      const r = new AssistRig({ map: room(), start: START });
+describe('1. the newest direction wins over an owed corner step', () => {
+  it('a tap in another direction while the second step is owed cancels it and is performed instead', () => {
+    for (const style of ['standard', 'beginner'] as const) {
+      const r = new AssistRig({ map: room([[4, 3]]), start: START, style }); // a wall above
       r.thumbDown();
-      r.aim(45, 0.9);
+      r.aim(135, 0.9); // up-left: up is blocked, so the corner goes left then up
       r.step(2);
-      r.lift();
-      r.step(gap);
-      r.thumbDown();
-      r.push('left');
-      r.step(2);
-      r.lift();
-      r.step(80);
-      expect(r.trace[1]).toEqual([4, 3]); // the first step was already under way
-      expect(r.trace).not.toContainEqual([5, 3]); // the owed Right never happens
-      expect(r.trace[2]).toEqual([3, 3]); // the tap Left is performed, once
-      expect(r.tiles).toBe(2);
-      r.assertCleanTrace();
-    },
-  );
-
-  it('a tap after the second step has already begun (12 ticks) cannot undo it: it is performed right after', () => {
-    const r = new AssistRig({ map: room(), start: START });
-    r.thumbDown();
-    r.aim(45, 0.9);
-    r.step(2);
-    r.lift();
-    r.step(12);
-    r.thumbDown();
-    r.push('left');
-    r.step(2);
-    r.lift();
-    r.step(80);
-    expect(r.trace).toEqual([START, [4, 3], [5, 3], [4, 3]]);
-  });
-
-  it('the tap is performed when the first step ends (10 ticks), not after a full second step (20 ticks)', () => {
-    const r = new AssistRig({ map: room(), start: START });
-    r.thumbDown();
-    r.aim(45, 0.9);
-    r.step(2);
-    r.lift();
-    r.step(1);
-    r.thumbDown();
-    r.push('left');
-    r.step(2);
-    r.lift();
-    r.step(60);
-    const left = r.movesDelivered.find((m) => m.move === 'left');
-    expect(left?.tick).toBeLessThanOrEqual(11);
-  });
-
-  it('a flick alone still performs both steps, and lifting the finger never drops the second one', () => {
-    const r = new AssistRig({ map: room(), start: START });
-    r.thumbDown();
-    r.aim(45, 0.9);
-    r.step(2);
-    r.lift();
-    r.step(80);
-    expect(r.trace).toEqual([START, [4, 3], [5, 3]]);
+      r.push('right'); // the player changes their mind (the thumb stays down)
+      r.step(40);
+      expect(r.trace[1], style).toEqual([3, 4]); // the first step was already under way
+      expect(r.trace, style).not.toContainEqual([3, 3]); // the owed Up never happens
+      expect(r.trace[2], style).toEqual([4, 4]); // the new direction is performed
+    }
   });
 
   it("a thumb that stays on one of the route's own directions does not cancel it", () => {
-    const r = new AssistRig({ map: room(), start: START });
+    const r = new AssistRig({ map: room([[4, 3]]), start: START });
     r.thumbDown();
-    r.aim(45, 0.9);
+    r.aim(135, 0.9);
     r.step(2);
-    r.push('right'); // the second step's own direction
-    r.step(60);
-    expect(r.trace.slice(0, 3)).toEqual([START, [4, 3], [5, 3]]);
+    r.push('up'); // the route's own second direction
+    r.step(30);
+    expect(r.trace.slice(0, 3)).toEqual([START, [3, 4], [3, 3]]);
   });
 });
 
-describe('2. a tap while the player cannot act is kept, not discarded', () => {
+describe('2. Beginner Assist: a tap while the player cannot act is kept, not discarded', () => {
   function dazed(dazeTicks: number): AssistRig {
-    const r = new AssistRig({ map: room(), start: START });
+    const r = new AssistRig({ map: room(), start: START, style: 'beginner' });
     r.thumbDown();
     r.p.dazedUntil = r.state.tick + dazeTicks;
     return r;
@@ -163,7 +114,7 @@ describe('2. a tap while the player cannot act is kept, not discarded', () => {
   });
 
   it('an oil slide: a tap made during the slide is performed when it ends', () => {
-    const r = new AssistRig({ map: room(), start: [1, 4] });
+    const r = new AssistRig({ map: room(), start: [1, 4], style: 'beginner' });
     r.thumbDown();
     r.p.slide = { dir: 'right', remaining: 2 };
     r.step(3);
@@ -177,7 +128,12 @@ describe('2. a tap while the player cannot act is kept, not discarded', () => {
 
   it('the gate keeps a press through a lock (unit): teleport arrival, stumble ... the sim ignores them all the same', () => {
     const gate = new MoveGate();
-    const assist = { level: 'full', touch: true, board: () => ({}) } as unknown as GateAssist;
+    const assist = {
+      level: 'full',
+      touch: true,
+      style: 'beginner',
+      board: () => ({}),
+    } as unknown as GateAssist;
     const legal = () => true;
     gate.press('left', 0, 0, true);
     for (let t = 0; t < 50; t++) {
@@ -190,7 +146,12 @@ describe('2. a tap while the player cannot act is kept, not discarded', () => {
 
   it('a lock never keeps a press for ever: after LOCK_BUFFER_TICKS it is gone', () => {
     const gate = new MoveGate();
-    const assist = { level: 'full', touch: true, board: () => ({}) } as unknown as GateAssist;
+    const assist = {
+      level: 'full',
+      touch: true,
+      style: 'beginner',
+      board: () => ({}),
+    } as unknown as GateAssist;
     gate.press('left', 0, 0, true);
     for (let t = 0; t < 120; t++) gate.next(t, null, new Set<Dir>(), true, () => true, assist, true);
     expect(gate.next(120, null, new Set<Dir>(), true, () => true, assist, false)).toBeNull();
@@ -232,46 +193,49 @@ describe('3. wall contact followed by a new direction', () => {
   });
 });
 
-describe('4. generator danger beneath the player (emergency escape)', () => {
+describe('4. Beginner Assist: generator danger beneath the player (emergency escape)', () => {
   const generatorUnder = (r: AssistRig): void => {
     addGenerator(r.state, { ownerId: 0, x: r.p.x, y: r.p.y, timer: 150 });
   };
+  /** Up is a wall; the thumb leans up-right: the corner goes right, then up. */
+  const lean = (r: AssistRig): void => {
+    r.thumbDown();
+    r.aim(45, 0.9);
+    r.step(40);
+  };
 
-  it('a diagonal flick runs two whole tiles out of the footprint (it was one tile before MI4)', () => {
-    const r = new AssistRig({ map: room(), start: START });
+  it('Beginner: a corner lean runs two whole tiles out of the footprint (the assist may cross it when already in it)', () => {
+    const r = new AssistRig({ map: room([[4, 3]]), start: START, style: 'beginner' });
     generatorUnder(r);
-    r.thumbDown();
-    r.aim(45, 0.9);
-    r.step(2);
-    r.lift();
-    r.step(80);
-    expect(r.trace).toEqual([START, [4, 3], [5, 3]]);
+    lean(r);
+    expect(r.trace.slice(0, 3)).toEqual([START, [5, 4], [5, 3]]);
   });
 
-  it('the same flick without any danger still does exactly the same (normal diagonal recognition is untouched)', () => {
-    const r = new AssistRig({ map: room(), start: START });
-    r.thumbDown();
-    r.aim(45, 0.9);
-    r.step(2);
-    r.lift();
-    r.step(80);
-    expect(r.trace).toEqual([START, [4, 3], [5, 3]]);
+  it('Standard plans only onto safe tiles: from inside a footprint it gives no corner help (the thumb can still walk)', () => {
+    const r = new AssistRig({ map: room([[4, 3]]), start: START, style: 'standard' });
+    generatorUnder(r);
+    lean(r);
+    expect(r.trace).toEqual([START]);
   });
 
-  it('the escape never steps nearer the generator that makes the footprint', () => {
-    const r = new AssistRig({ map: room(), start: [4, 2] });
-    addGenerator(r.state, { ownerId: 1, x: 4, y: 4, timer: 150 }); // two tiles south; the player stands in its arm
-    r.thumbDown();
-    r.aim(-45, 0.9); // down-right: Down would go nearer the generator
-    r.step(2);
-    r.lift();
-    r.step(80);
-    expect(r.trace).not.toContainEqual([4, 3]); // never the tile nearer the generator
+  it('without danger both styles do exactly the same corner', () => {
+    for (const style of ['standard', 'beginner'] as const) {
+      const r = new AssistRig({ map: room([[4, 3]]), start: START, style });
+      lean(r);
+      expect(r.trace.slice(0, 3), style).toEqual([START, [5, 4], [5, 3]]);
+    }
   });
 
-  it('a direction switch skips the settle while the player is in danger, and keeps it otherwise', () => {
-    const latency = (danger: boolean): number => {
-      const r = new AssistRig({ map: room(), start: START });
+  it('the emergency never moves a player who is not pressing anything', () => {
+    const r = new AssistRig({ map: room(), start: START, style: 'beginner' });
+    generatorUnder(r);
+    r.step(100);
+    expect(r.trace).toEqual([START]);
+  });
+
+  it('a direction switch skips the settle while the player is in danger (Beginner), and keeps it otherwise', () => {
+    const latency = (danger: boolean, style: 'standard' | 'beginner'): number => {
+      const r = new AssistRig({ map: room(), start: START, style });
       // a long-range generator behind the player: the whole row they walk along is its footprint
       if (danger) addGenerator(r.state, { ownerId: 1, x: 4, y: 4, range: 8, timer: 150 });
       r.thumbDown();
@@ -287,16 +251,16 @@ describe('4. generator danger beneath the player (emergency escape)', () => {
       }
       return -1;
     };
-    // the same moment in the step either way; in danger the 2-tick settle is skipped
     // measured: handed over at once (1 tick to show on the board) in danger, and one tick later otherwise - the
     // settle is stamped with the previous tick, so its real cost is a single tick (about 17 ms), not a freeze
-    expect(latency(true)).toBe(1);
-    expect(latency(false)).toBe(2);
+    expect(latency(true, 'beginner')).toBe(1);
+    expect(latency(false, 'beginner')).toBe(2);
+    expect(latency(true, 'standard')).toBe(2); // Standard has no emergency rule
     expect(SWITCH_SETTLE_TICKS).toBe(2);
   });
 
-  it('an owed route is ended by the thumb leaving its directions while the player is in danger', () => {
-    const r = new AssistRig({ map: room(), start: START });
+  it('an owed corner step is ended by the thumb leaving its directions while the player is in danger', () => {
+    const r = new AssistRig({ map: room([[4, 3]]), start: START, style: 'beginner' });
     r.thumbDown();
     r.aim(45, 0.9);
     r.step(2);
@@ -312,42 +276,48 @@ describe('5. blocked up-then-left with a valid left-then-up', () => {
     const r = new AssistRig({ map: room([[4, 3]]), start: START }); // the tile above is a wall
     r.thumbDown();
     r.aim(135, 0.9); // up-left: Up first, but Up is blocked
-    r.step(2);
-    r.lift();
-    r.step(80);
-    expect(r.trace).toEqual([START, [3, 4], [3, 3]]);
+    r.step(30);
+    expect(r.trace.slice(0, 3)).toEqual([START, [3, 4], [3, 3]]);
   });
 
   it('a crate in the way behaves the same', () => {
     const r = new AssistRig({ map: room([], [[4, 3]]), start: START });
     r.thumbDown();
     r.aim(135, 0.9);
-    r.step(2);
-    r.lift();
-    r.step(80);
-    expect(r.trace).toEqual([START, [3, 4], [3, 3]]);
+    r.step(30);
+    expect(r.trace.slice(0, 3)).toEqual([START, [3, 4], [3, 3]]);
   });
 
   it('when both orders end on a blocked tile nothing diagonal happens (no half routes)', () => {
-    const r = new AssistRig({ map: room([[3, 3]]), start: START });
+    const r = new AssistRig({
+      map: room([
+        [4, 3],
+        [3, 3],
+      ]),
+      start: START,
+    });
     r.thumbDown();
     r.aim(135, 0.9);
-    r.step(2);
-    r.lift();
-    r.step(80);
+    r.step(40);
     expect(r.trace).not.toContainEqual([3, 3]);
+    expect(r.tiles).toBe(0);
     r.assertCleanTrace();
   });
 
   it('the second step is revalidated: a tile that turns solid after the first step is not entered', () => {
-    const r = new AssistRig({ map: room(), start: START });
+    const r = new AssistRig({
+      map: room([
+        [4, 3],
+        [2, 3],
+      ]),
+      start: START,
+    }); // (2,3) walled: no second route afterwards
     r.thumbDown();
     r.aim(135, 0.9);
     r.step(2);
-    r.lift();
     r.state.tiles[3 * r.state.width + 3] = Tile.Hard; // the second tile closes after the first step began
-    r.step(80);
-    expect(r.trace).toEqual([START, [4, 3]]);
+    r.step(40);
+    expect(r.trace).toEqual([START, [3, 4]]);
   });
 });
 
@@ -488,7 +458,7 @@ describe('9. the input trace (touch event -> direction -> gate -> simulation)', 
 
   it('names why a press was held back or dropped', () => {
     inputTrace.enabled = true;
-    const r = new AssistRig({ map: room(), start: START });
+    const r = new AssistRig({ map: room(), start: START, style: 'beginner' });
     r.thumbDown();
     r.p.dazedUntil = r.state.tick + 30;
     r.push('right');

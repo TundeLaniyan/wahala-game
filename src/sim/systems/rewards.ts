@@ -10,14 +10,19 @@
  *   elimination pays.
  * - `contact` = the character's signature contact tool (`rewards.contactByCharacter`) for a fighter with
  *   none; a Disarm holder gets its charges topped up instead. A different equipped tool is never replaced.
- * - Survival keeps everything (snowballing is intended); respawn modes reset upgrades on death (respawn.ts)
- *   and the streak restarts, so the ladder is per life there.
+ * - Anti-snowball (decisions AS1-AS2, `lifePerks.ts`): every upgrade paid here is a temporary life perk (12 s from
+ *   the kill that granted it; a newer grant of that perk, and only it, moves its expiry), bounded by five slots
+ *   (Armour, Okada and Remote Detonator take two), one perk per category, range at most two steps above the base,
+ *   at most three active generators, one large upgrade (Armour, Okada, Remote, Square Blast) per kill reward and
+ *   never a Remote Detonator together with a Vehicle Voucher. A death clears them (respawn.ts) and the streak
+ *   restarts, so the ladder is per life.
  * - Several eliminations by one fighter in the same tick pay consecutive rungs, in event order.
  *
  * Pure and deterministic: no RNG. `previewRewards` is the HUD's "next reward" (same resolution, no effect).
  */
 import type { GameConfig, RewardKind } from '../config';
-import type { GameState, PickupKind, Player, SimEvent } from '../types';
+import type { GameState, LifePerk, PerkCategory, PickupKind, Player, SimEvent } from '../types';
+import { endPerk, perkAllowed, perkSpec, recordPerk, undoPerk } from './lifePerks';
 import { radialRadius, radialSquareRadius } from './blastShape';
 import { applyPickup } from './pickups';
 
@@ -34,15 +39,16 @@ export function rewardsFor(state: { config: GameConfig }, streak: number): Rewar
 /** Would granting `kind` to `p` change anything? Mirrors applyPickup's caps without touching the player. */
 export function rewardUseful(config: GameConfig, p: Readonly<Player>, kind: PickupKind): boolean {
   const g = config.generator;
+  if (!perkAllowed(config, p.lifePerks, kind)) return false;
   switch (kind) {
     case 'petrol':
-      return p.range < g.maxRange;
+      return p.range < Math.min(g.maxRange, g.baseRange + config.rewards.perks.maxRangeSteps);
     case 'diesel':
       return p.range < g.dieselRange;
     case 'socket':
       return p.capacity < g.maxCapacity;
     case 'skates':
-      return p.speedLevel < config.pickups.maxSpeedLevel;
+      return p.speedLevel < Math.min(config.pickups.maxSpeedLevel, config.rewards.perks.maxSpeedSteps);
     case 'boots':
       return p.contact === null;
     case 'gloves':
@@ -57,7 +63,7 @@ export function rewardUseful(config: GameConfig, p: Readonly<Player>, kind: Pick
     case 'armour':
       return p.armour < config.protection.maxArmour;
     case 'square':
-      if (p.squareTier >= config.square.maxTier) return false;
+      if (p.squareTier >= Math.min(config.square.maxTier, config.rewards.perks.maxSquareSteps)) return false;
       // radial blasts (decision RE-C4): a tier that would not change the footprint (the square is already as
       // wide as the cap allows) is a wasted reward, so it falls back to something that does help
       if (g.blastMode === 'radial' && p.squareTier > 0) {
@@ -90,27 +96,71 @@ function concrete(config: GameConfig, p: Readonly<Player>, kind: RewardKind): Pi
   return p.contact === 'disarm' ? 'killswitch' : config.rewards.contactByCharacter[p.characterId];
 }
 
+/** One paid entry: the pickup, and whether it only refreshes a perk the fighter already holds at its ceiling. */
+interface Paid {
+  kind: PickupKind;
+  refresh: boolean;
+}
+
 /**
- * Resolves one rung for a fighter: each entry becomes itself when useful, else the first useful fallback.
- * `simulate` applies each grant to a scratch copy so a rung never counts the same cap twice.
+ * Resolves one rung for a fighter: each entry becomes itself when useful and allowed, else the first useful, allowed
+ * fallback. Within one rung: at most one large upgrade, never a Remote Detonator with a Vehicle Voucher. An entry that
+ * nothing can replace but that the fighter already holds at its ceiling only refreshes that perk's timer (the reward
+ * just earned, never the rest). `simulate` applies each grant to a scratch copy so a rung never counts the same cap
+ * twice.
  */
-function resolveRung(config: GameConfig, p: Readonly<Player>, rung: readonly RewardKind[]): PickupKind[] {
-  const scratch: Player = { ...p };
-  const out: PickupKind[] = [];
+function resolveRung(config: GameConfig, p: Readonly<Player>, rung: readonly RewardKind[]): Paid[] {
+  const scratch: Player = { ...p, lifePerks: p.lifePerks.map((perk) => ({ ...perk })) };
+  const out: Paid[] = [];
+  const paidCategories = new Set<PerkCategory>();
+  const pushedOut = new Set<PerkCategory>(); // a perk this reward made room by pushing out is not paid again in it
+  let large = false;
+  const fits = (kind: PickupKind): boolean => {
+    if (!rewardUseful(config, scratch, kind)) return false;
+    const category = perkSpec(kind)?.category;
+    if (category && pushedOut.has(category)) return false;
+    if (large && perkSpec(kind)?.large) return false;
+    const has = (k: PickupKind): boolean => out.some((o) => o.kind === k);
+    if (kind === 'voucher' && has('remote')) return false;
+    if (kind === 'remote' && has('voucher')) return false;
+    return true;
+  };
   for (const entry of rung) {
     const want = concrete(config, scratch, entry);
-    const kind = rewardUseful(config, scratch, want)
-      ? want
-      : config.rewards.fallback.find((k) => rewardUseful(config, scratch, k));
-    if (kind === undefined) continue;
-    out.push(kind);
-    simulateGrant(config, scratch, kind);
+    const kind = fits(want) ? want : config.rewards.fallback.find(fits);
+    if (kind !== undefined) {
+      out.push({ kind, refresh: false });
+      if (perkSpec(kind)?.large) large = true;
+      for (const gone of simulateGrant(config, scratch, kind, paidCategories)) pushedOut.add(gone.category);
+      const cat = perkSpec(kind)?.category;
+      if (cat) paidCategories.add(cat);
+      continue;
+    }
+    const spec = perkSpec(want);
+    if (
+      spec &&
+      !paidCategories.has(spec.category) &&
+      scratch.lifePerks.some((perk) => perk.category === spec.category && perk.kind === want)
+    )
+      out.push({ kind: want, refresh: true });
   }
   return out;
 }
 
 /** Scratch-only effect of a grant (enough for `rewardUseful` on the next entry). */
-function simulateGrant(config: GameConfig, p: Player, kind: PickupKind): void {
+function simulateGrant(
+  config: GameConfig,
+  p: Player,
+  kind: PickupKind,
+  rung: ReadonlySet<PerkCategory>,
+): LifePerk[] {
+  const { evicted } = recordPerk(config, p.lifePerks, kind, 0, true, rung);
+  for (const gone of evicted) undoPerk(config, p, gone);
+  applyScratch(config, p, kind);
+  return evicted;
+}
+
+function applyScratch(config: GameConfig, p: Player, kind: PickupKind): void {
   switch (kind) {
     case 'petrol':
       p.range = Math.min(config.generator.maxRange, p.range + 1);
@@ -170,7 +220,7 @@ function simulateGrant(config: GameConfig, p: Player, kind: PickupKind): void {
 /** What this fighter's NEXT credited elimination would pay right now (HUD preview; [] when rewards are off). */
 export function previewRewards(state: { config: GameConfig }, p: Readonly<Player>): PickupKind[] {
   if (!state.config.rewards.enabled) return [];
-  return resolveRung(state.config, p, rewardsFor(state, p.stats.streak + 1));
+  return resolveRung(state.config, p, rewardsFor(state, p.stats.streak + 1)).map((o) => o.kind);
 }
 
 /** Grants the rewards of every credited elimination in this tick's events (eliminator must be alive). */
@@ -190,9 +240,20 @@ export function grantRewards(state: GameState, events: SimEvent[]): void {
     const n = paid.get(killer.id) ?? 0;
     paid.set(killer.id, n + 1);
     const streak = killer.stats.streak - total.get(killer.id)! + n + 1;
-    for (const kind of resolveRung(state.config, killer, rewardsFor(state, streak))) {
-      if (applyPickup(state, killer, kind, events))
+    const paidCategories = new Set<PerkCategory>(); // perks this reward paid: the next entry may not push them out
+    for (const { kind, refresh } of resolveRung(state.config, killer, rewardsFor(state, streak))) {
+      const cat = perkSpec(kind)?.category;
+      if (refresh) {
+        recordPerk(state.config, killer.lifePerks, kind, state.tick, false);
+        if (cat) paidCategories.add(cat);
         events.push({ type: 'rewardGranted', playerId: killer.id, kind, kills: killer.stats.kills });
+      } else if (applyPickup(state, killer, kind, events)) {
+        for (const gone of recordPerk(state.config, killer.lifePerks, kind, state.tick, true, paidCategories)
+          .evicted)
+          endPerk(state, killer, gone);
+        if (cat) paidCategories.add(cat);
+        events.push({ type: 'rewardGranted', playerId: killer.id, kind, kills: killer.stats.kills });
+      }
     }
   }
 }

@@ -4,7 +4,7 @@
  */
 import { vi } from 'vitest';
 import { InputManager, buildMoveBoard } from '../src/input';
-import type { MoveAssistSetting } from '../src/input';
+import type { MoveAssistSetting, MoveStyle } from '../src/input';
 import { VirtualStick, stickConfigFor } from '../src/input/joystick';
 import { Tile, movementLocked, moveWouldAct, readyToStep, tick } from '../src/sim';
 import type { Dir, GameState, Intent } from '../src/sim';
@@ -34,6 +34,8 @@ export interface RigOptions {
   arena?: string;
   start: [number, number];
   assist?: MoveAssistSetting;
+  /** The touch movement style (decision AS4); default standard. */
+  style?: MoveStyle;
   /** Phone viewport the stick is sized for. */
   viewport?: [number, number];
 }
@@ -71,6 +73,7 @@ export class AssistRig {
     if (o.map) carve(this.state, o.map);
     this.input = new InputManager({ onNav: () => undefined, onDeviceChange: () => undefined });
     this.input.setMoveAssist(o.assist ?? 'on');
+    this.input.setMoveStyle(o.style ?? 'standard');
     const [w, h] = o.viewport ?? [844, 390];
     this.stick = new VirtualStick(stickConfigFor(w, h));
     put(this.state, 0, o.start[0], o.start[1]);

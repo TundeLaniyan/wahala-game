@@ -73,10 +73,15 @@ describe('two generators from the start in every Rumble ruleset (RE-C1)', () => 
       const mine = (): number => s.generators.filter((g) => g.ownerId === 0).length;
       run(s, 1, { 0: { place: true } });
       expect(mine()).toBe(1);
-      run(s, 14, { 0: { move: 'right' } });
+      // decision AS3: a second generator inside the placement interval is refused
+      run(s, 4, {});
+      run(s, 1, { 0: { place: true } });
+      expect(mine()).toBe(1);
+      const gap = s.config.generator.placeIntervalTicks;
+      run(s, gap, { 0: { move: 'right' } });
       run(s, 1, { 0: { place: true } });
       expect(mine()).toBe(2);
-      run(s, 14, { 0: { move: 'right' } });
+      run(s, gap + 2, { 0: { move: 'right' } });
       run(s, 1, { 0: { place: true } });
       expect(mine()).toBe(2); // the third is refused until one has gone off
     },
@@ -178,12 +183,15 @@ describe('the ladder under radial caps (RE-C4)', () => {
     }
   });
 
-  it('never pays a Square Blast tier that does not widen the footprint', () => {
+  it('pays a Square Blast tier only inside the reward ceiling (one tier), and each paid tier shows on the fighter', () => {
     for (const character of CHARS) {
       const rows = ladderCurve({ character, kills: 14 });
       rows.forEach((r, i) => {
-        if (i > 0 && r.paid.includes('square'))
-          expect(r.blastTiles, `kill ${r.kills}`).toBeGreaterThan(rows[i - 1]!.blastTiles);
+        if (i > 0 && r.paid.includes('square')) {
+          expect(r.squareTier, `kill ${r.kills}`).toBeGreaterThan(0);
+          expect(r.squareTier).toBeLessThanOrEqual(g.radialMaxSquareRadius);
+        }
+        expect(r.squareTier).toBeLessThanOrEqual(rumble('survival').config.rewards.perks.maxSquareSteps);
       });
     }
     // and the helper agrees with the simulation's own footprint on open ground
@@ -199,20 +207,25 @@ describe('the ladder under radial caps (RE-C4)', () => {
     );
   });
 
-  it('progression is monotone: more eliminations is never weaker, and the early ladder strictly grows', () => {
+  it('progression is bounded: the early ladder strictly grows, then the life perks cap it (AS1-AS2)', () => {
     for (const variant of ['evolution', 'legacy'] as const) {
       for (const character of CHARS) {
-        const rows = ladderCurve({ character, kills: 16, config: VARIANTS[variant]!.config });
-        for (let i = 1; i < rows.length; i++) {
-          const a = rows[i - 1]!;
-          const b = rows[i]!;
-          expect(b.power, `${variant} kill ${i}`).toBeGreaterThanOrEqual(a.power);
-          expect(b.coverage).toBeGreaterThanOrEqual(a.coverage);
-          expect(b.blastTiles).toBeGreaterThanOrEqual(a.blastTiles);
-          for (const k of ['capacity', 'range', 'squareTier', 'armour', 'speedLevel'] as const)
-            expect(b[k], `${variant} ${k} kill ${i}`).toBeGreaterThanOrEqual(a[k]);
-          if (i <= 8) expect(b.power, `${variant} kill ${i} strictly stronger`).toBeGreaterThan(a.power);
+        const cfg = VARIANTS[variant]!.config;
+        const rows = ladderCurve({ character, kills: 16, config: cfg });
+        const ceiling = Math.max(...rows.map((r) => r.power));
+        for (let i = 1; i <= 2; i++)
+          expect(rows[i]!.power, `${variant} kill ${i} strictly stronger`).toBeGreaterThan(
+            rows[i - 1]!.power,
+          );
+        for (const r of rows) {
+          // five slots hold at most: one major + three minors, or two majors + one minor
+          expect(r.capacity, `${variant} kill ${r.kills}`).toBeLessThanOrEqual(3);
+          expect(r.armour).toBeLessThanOrEqual(1);
+          expect(r.speedLevel).toBeLessThanOrEqual(1);
+          expect(r.power).toBeLessThanOrEqual(ceiling);
         }
+        // no 16-kill run is more than a few steps above the first dozen
+        expect(ceiling).toBeLessThanOrEqual(12);
       }
     }
   });

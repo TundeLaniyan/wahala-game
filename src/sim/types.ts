@@ -170,6 +170,24 @@ export interface PendingKnockdown {
   landTick: number;
 }
 
+/** What a kill-earned upgrade is for (decision AS1): one active perk per category. */
+export type PerkCategory = 'range' | 'capacity' | 'speed' | 'tool' | 'blast' | 'shield' | 'detonation';
+
+/**
+ * One active kill-earned upgrade (decision AS1). `level` counts the steps it gave (the effect is undone by exactly
+ * that much when it ends); every step shares `expiresAt`, which only a newer grant of THIS perk moves.
+ */
+export interface LifePerk {
+  category: PerkCategory;
+  /** The pickup that granted it (the first one for a leveled perk). */
+  kind: PickupKind;
+  level: number;
+  /** Life slots it occupies (a major perk takes `rewards.perks.majorSlots`). */
+  slots: number;
+  since: number;
+  expiresAt: number;
+}
+
 export interface Player {
   id: number;
   slot: number;
@@ -243,6 +261,10 @@ export interface Player {
   knockdownImmuneUntil: number;
   /** Kill-streak rewards held (cleared by a death). */
   streakRewards: StreakRewards;
+  /** Kill-earned power upgrades currently active, with their expiry (decision AS1; cleared by a death). */
+  lifePerks: LifePerk[];
+  /** The tick this fighter last laid a generator (decision AS3: the short placement interval). */
+  lastPlaceTick: number;
   /** A melee attack in its startup: resolves at `resolveTick` (decision CB1); null when idle. */
   attack: PendingAttack | null;
   /**

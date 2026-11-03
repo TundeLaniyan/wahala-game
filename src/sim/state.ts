@@ -89,6 +89,8 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     knockedUntil: 0,
     knockdownImmuneUntil: 0,
     streakRewards: freshStreakRewards(),
+    lifePerks: [],
+    lastPlaceTick: -1e9,
     attack: null,
     meleeLock: {},
     curse: null,

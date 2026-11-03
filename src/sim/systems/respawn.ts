@@ -14,6 +14,7 @@
  *     fighter just fell on, minus dangerous neighbours (an escape route must exist);
  *  3. when every arena spawn is unusable, any safe open floor tile (a respawn is never lost).
  */
+import { clearLifePerks } from './lifePerks';
 import { clearStreakRewards } from './streaks';
 import { getArena } from '../arenas';
 import { tileAt } from '../grid';
@@ -189,6 +190,8 @@ export function respawn(state: GameState, p: Player, x: number, y: number): void
   p.skillReadyTick = 0;
   p.meleeLock = {};
   clearStreakRewards(p);
+  clearLifePerks(p);
+  p.lastPlaceTick = -1e9;
   // `eliminatedTick` / `elimination` / `eliminatedBy` keep describing the last death (kill feed)
   p.protectedUntil = state.tick + cfg.protection.spawnProtectionTicks;
   if (cfg.respawn.resetOnDeath) {
