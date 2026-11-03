@@ -12,7 +12,7 @@ import {
   planTurn,
 } from './moveAssist';
 import { OPPOSITE } from '../sim';
-import type { AssistLevel, MoveBoard, TouchDiagonal } from './moveAssist';
+import type { AssistLevel, MoveBoard, MoveStyle, TouchDiagonal } from './moveAssist';
 
 /** A press arriving up to this long before the player can step is remembered (one move, never a queue). */
 export const MOVE_BUFFER_TICKS = 10;
@@ -25,7 +25,7 @@ export const MOVE_REPEAT_DELAY_TICKS = 12;
 export const TURN_BUFFER_TILES = 1;
 /** "Already walking": a move was handed over at most this long ago (a step is 5-13 ticks). */
 export const TURN_CONTINUE_TICKS = 18;
-/** A diagonal route's second step is handed over within this long of the first (the slowest step is 14 ticks), else the route lapses. */
+/** A corner route's second step is handed over within this long of the first (the slowest step is 14 ticks), else the route lapses. */
 export const DIAGONAL_ROUTE_TICKS = 40;
 /**
  * Touchscreen only (decision MI1): a press made while the player cannot act (daze, stumble, slide, teleport arrival)
@@ -41,19 +41,20 @@ export const LOCK_BUFFER_TICKS = 90;
 export interface GateAssist {
   level: Exclude<AssistLevel, 'off'>;
   board(): MoveBoard;
-  /** Diagonal thumb: the secondary axis, taken as a turn at the first legal junction. */
-  wish?: Dir | null;
   /**
-   * Touchscreen thumbstick only (decision MV3): the stick is what is being held and it points diagonally. Never
-   * set for the keyboard, a gamepad or any physical controller, nor when assisted movement is Off.
+   * Touchscreen thumbstick only (decisions MV3, AS4): the stick is what is being held and it leans diagonally. A route
+   * is only planned when the stick's main direction is BLOCKED (a wall, a crate, an obstacle): in open space a diagonal
+   * is just its main cardinal direction. Never set for the keyboard, a gamepad or any physical controller, nor when
+   * assisted movement is Off.
    */
   diagonal?: TouchDiagonal | null;
   /**
-   * The touchscreen thumb is the device in use (decision MI1): enables the pending-input buffer while the player
-   * cannot act, newest-direction priority over an owed diagonal step, and the emergency escape rules. Never set for
-   * a key, a D-pad or a gamepad stick, so they keep exactly the behaviour they had.
+   * The touchscreen thumb is the device in use: newest-direction priority over an owed corner step, and the rules
+   * of `style`. Never set for a key, a D-pad or a gamepad stick, so they keep exactly the behaviour they had.
    */
   touch?: boolean;
+  /** Touch only (decision AS4): `standard` = corner assistance only; `beginner` adds buffering and emergency replanning. */
+  style?: MoveStyle;
   /** Is the player standing in danger right now (decision MI4)? Lazy; only asked while a press is settling or a route is owed. */
   emergency?(): boolean;
 }
@@ -86,8 +87,6 @@ export class MoveGate {
   private readonly since = new Map<Dir, number>();
   private last: { dir: Dir; tick: number } | null = null;
   private carried = 0;
-  /** The diagonal wish was already taken since the primary direction last moved the player (alternate: wish, primary, wish ...). */
-  private wishTaken = false;
   /**
    * A diagonal route in progress (MV3): its first step has been handed over; the second one is owed. It is
    * handed over on the first tick the player can step again, provided they stand on the intermediate tile and
@@ -117,7 +116,6 @@ export class MoveGate {
     this.pending = { dir, pressed: tick, until: 0, notBefore: tick + settle };
     this.bump = null; // a fresh press is always offered to the simulation
     this.carried = 0;
-    this.wishTaken = false;
   }
 
   /**
@@ -156,9 +154,12 @@ export class MoveGate {
     if (held && !this.since.has(held)) this.since.set(held, tick); // already down when we first saw it
 
     const touch = !!assist?.touch;
-    // the player cannot act (daze, stumble, slide, teleport arrival): nothing is handed over, an owed diagonal step
-    // lapses, and the newest press waits for them (decision MI1) instead of being spent on a tick that ignores it
-    if (touch && locked) {
+    // Beginner Assist (decision AS4) adds buffering and emergency replanning to the standard touch movement
+    const beginner = touch && assist!.style === 'beginner';
+    // the player cannot act (daze, stumble, slide, teleport arrival): nothing is handed over, an owed corner step
+    // lapses, and - Beginner Assist only - the newest press waits for them (decision MI1) instead of being spent on a
+    // tick that ignores it
+    if (beginner && locked) {
       if (this.route) {
         this.route = null;
         this.why = 'route-lapsed-locked';
@@ -171,14 +172,13 @@ export class MoveGate {
       return null;
     }
 
-    // a diagonal route owes its second step before anything else is handed over
+    // a corner route owes its second step before anything else is handed over - but only while the thumb is still on it
     if (this.route && tick > this.route.until) this.route = null;
-    // escape input first (decision MI4): standing in danger, a thumb that has left the route's directions ends it
-    if (this.route && touch && held && held !== this.route.first && held !== this.route.second) {
-      if (assist!.emergency?.()) {
-        this.route = null;
-        this.why = 'route-cancelled-emergency';
-      }
+    // no current directional input, no step: a thumb that has lifted, or moved off both of the route's directions,
+    // ends the route (the player stands on the intermediate tile and the new input decides)
+    if (this.route && (!held || (held !== this.route.first && held !== this.route.second))) {
+      this.route = null;
+      this.why = held ? 'route-cancelled-new-direction' : 'route-cancelled-thumb-lifted';
     }
     if (this.route && canMove) {
       const second = this.finishRoute(assist, legal);
@@ -188,20 +188,20 @@ export class MoveGate {
       }
       this.why = 'route-second-dropped';
     }
-    // a press still settling is handed over at once when the player is in danger (decision MI4)
-    if (this.pending && canMove && touch && tick < this.pending.notBefore && assist!.emergency?.()) {
+    // a press still settling is handed over at once when the player is in danger (decision MI4; Beginner Assist)
+    if (this.pending && canMove && beginner && tick < this.pending.notBefore && assist!.emergency?.()) {
       this.pending.notBefore = tick;
       this.note = 'settle-bypassed-emergency';
     }
 
     // a press waits `MOVE_BUFFER_TICKS` for the player to be able to step (a little longer when assisted: the
     // slowest step outlasts the plain buffer); a carried turn keeps it alive from tile to tile
-    const buffer = assist ? ASSIST_BUFFER_TICKS : MOVE_BUFFER_TICKS;
+    const buffer = assist && (!touch || beginner) ? ASSIST_BUFFER_TICKS : MOVE_BUFFER_TICKS;
     if (this.pending && tick > Math.max(this.pending.until, this.pending.pressed + buffer))
       this.pending = null;
     if (this.pending && canMove && tick >= this.pending.notBefore) {
       const { dir, notBefore, pressed } = this.pending;
-      const diagonal = this.startRoute(dir, tick, assist);
+      const diagonal = this.startRoute(dir, tick, assist, legal);
       if (diagonal) {
         this.pending = null;
         this.carried = 0;
@@ -230,7 +230,7 @@ export class MoveGate {
     }
     if (held && tick - this.since.get(held)! >= MOVE_REPEAT_DELAY_TICKS) {
       if (!canMove) return held;
-      const diagonal = this.startRoute(held, tick, assist);
+      const diagonal = this.startRoute(held, tick, assist, legal);
       if (diagonal) {
         this.why = 'route-first-step';
         return diagonal;
@@ -268,8 +268,11 @@ export class MoveGate {
     const last = this.last;
     if (!last || tick - last.tick > TURN_CONTINUE_TICKS) return null; // not walking: no carrying
     if (!PERPENDICULAR[dir].includes(last.dir)) return null;
-    // an assisted turn is also remembered after the finger came off (a quick tap before the corner)
-    const wanted = active.has(dir) || (!!assist && tick - pressed <= TURN_INTENT_TICKS);
+    // an assisted turn is also remembered after the finger came off (a quick tap before the corner) - except on the
+    // touchscreen's standard style, where the player is only ever carried while a direction is held (decision AS4)
+    const remembered =
+      !!assist && !(assist.touch && assist.style !== 'beginner') && tick - pressed <= TURN_INTENT_TICKS;
+    const wanted = active.has(dir) || remembered;
     if (!wanted || legal(dir) || !legal(last.dir)) return null;
     if (assist) {
       const reach = TURN_REACH_TILES - this.carried;
@@ -280,23 +283,19 @@ export class MoveGate {
   }
 
   /**
-   * A direction held long enough to repeat (full assistance): the player's own direction, unless
-   *  1. the thumb is diagonal and its secondary axis is a safe step here - the turn the thumb asked for, taken at
-   *     the first legal junction (then the primary direction gets its step before the wish is taken again);
-   *  2. the direction is blocked by a wall and the opening is one tile along the corridor (a sidestep).
+   * A direction held long enough to repeat (full assistance): the player's own direction, unless it is blocked by a
+   * wall and there is a way round that the thumb is not leaning against:
+   *  - touchscreen Standard: none here - the lean is a corner route (`startRoute`), a straight push stays a push;
+   *  - touchscreen Beginner Assist: the single opening one tile along the corridor (a sidestep) and the one bend of a
+   *    narrow corridor, but never against a lean (a lean is the route's business, valid or not);
+   *  - keyboard / gamepad at the full level: exactly as before (sidestep and bend following).
+   * Open space never changes the player's direction.
    */
   private assistHold(held: Dir, legal: (d: Dir) => boolean, assist: GateAssist, tick: number): Dir {
-    const board = assist.board();
-    const wish = assist.wish ?? null;
-    if (wish && wish !== held && PERPENDICULAR[held].includes(wish) && canStep(board, wish)) {
-      if (!this.wishTaken || !legal(held)) {
-        this.wishTaken = true;
-        return wish;
-      }
-    }
-    this.wishTaken = false;
     if (legal(held)) return held;
-    const prefer = [wish, this.last?.dir];
+    if (assist.touch && (assist.style !== 'beginner' || assist.diagonal)) return held;
+    const board = assist.board();
+    const prefer = [this.last?.dir];
     const around = planSidestep(board, held, prefer);
     if (around) return around;
     // a corridor bend: the way on is round the corner, never back where the player came from
@@ -306,13 +305,16 @@ export class MoveGate {
   }
 
   /**
-   * The touchscreen thumb is diagonal (`assist.diagonal`, whose main axis is `dir`): plan the complete two-step
-   * route from here and hand over its first step, owing the second. Returns null (nothing owed, the ordinary
-   * cardinal behaviour carries on exactly as before) when there is no diagonal or neither order is valid in full.
+   * The touchscreen thumb leans diagonally (`assist.diagonal`, whose main axis is `dir`) AND `dir` itself is blocked (a
+   * wall, a crate, an obstacle): plan the complete two-step route round the corner (the two legal orders are tried, the
+   * first valid one wins) and hand over its first step, owing the second. In open space `dir` is simply walked - there
+   * is no staircase. Returns null (nothing owed, the ordinary cardinal behaviour carries on) when there is no diagonal,
+   * `dir` is not blocked, or neither order is valid in full.
    */
-  private startRoute(dir: Dir, tick: number, assist?: GateAssist): Dir | null {
+  private startRoute(dir: Dir, tick: number, assist?: GateAssist, legal?: (d: Dir) => boolean): Dir | null {
     const d = assist?.diagonal;
     if (!assist || assist.level !== 'full' || !d || d.primary !== dir) return null;
+    if (!legal || legal(dir)) return null; // the thumb's own direction works: just walk it
     const board = assist.board();
     const plan = planDiagonal(board, d);
     if (!plan) return null;
@@ -324,7 +326,6 @@ export class MoveGate {
       y: board.y + v.dy,
       until: tick + DIAGONAL_ROUTE_TICKS,
     };
-    this.wishTaken = false;
     this.bump = null;
     return this.deliver(plan[0], tick);
   }
@@ -355,7 +356,6 @@ export class MoveGate {
     this.last = null;
     this.bump = null;
     this.carried = 0;
-    this.wishTaken = false;
     this.route = null;
     this.note = null;
     this.why = 'idle';

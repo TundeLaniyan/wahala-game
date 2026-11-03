@@ -1,7 +1,7 @@
 /**
  * V2 workstream C, AI side: bots see Square Blast footprints in their danger map (the simulation's own
  * squareFootprint), value square placements, discount protected rivals, and a 32-bot City Rumble
- * survival match reaches a result with the top eliminators clearly stronger than the low scorers.
+ * survival match reaches a result with every fighter inside the life-perk limits (decisions AS1-AS3).
  */
 import { describe, expect, it } from 'vitest';
 import { createBot } from '../src/ai';
@@ -50,7 +50,9 @@ describe('AI and Square Blast', () => {
   function pocket(square: number): GameState {
     const s = sandbox({ players: 2 });
     const openTiles = ['6,5', '6,6', '5,6', '7,6', '6,7', '6,8', '6,9', '5,9', '4,9', '14,0'];
-    s.tiles = s.tiles.map((_, i) => (openTiles.includes(`${i % s.width},${Math.floor(i / s.width)}`) ? Tile.Empty : Tile.Hard));
+    s.tiles = s.tiles.map((_, i) =>
+      openTiles.includes(`${i % s.width},${Math.floor(i / s.width)}`) ? Tile.Empty : Tile.Hard,
+    );
     put(s, 0, 6, 6);
     put(s, 1, 14, 0);
     addGenerator(s, { ownerId: 1, x: 6, y: 5, timer: 45, square });
@@ -131,8 +133,8 @@ describe('AI and protection / rewards', () => {
 });
 
 describe('City Rumble survival, 32 bots', () => {
-  it('reaches a result in bounded time and the top eliminators end clearly stronger', () => {
-    const outcomes: { ended: boolean; topPower: number; lowPower: number }[] = [];
+  it('reaches a result in bounded time and no fighter ever passes the life-perk limits', () => {
+    const outcomes: { ended: boolean }[] = [];
     for (const seed of [1, 2]) {
       const state = createGame({
         seed,
@@ -145,7 +147,9 @@ describe('City Rumble survival, 32 bots', () => {
           difficulty: 'standard' as const,
         })),
       });
-      const bots = state.players.map((_, i) => createBot({ difficulty: 'standard', seed: seed * 7919 + i * 104729 + 17, playerId: i }));
+      const bots = state.players.map((_, i) =>
+        createBot({ difficulty: 'standard', seed: seed * 7919 + i * 104729 + 17, playerId: i }),
+      );
       const cap = state.config.match.countdownTicks + state.config.match.durationTicks + 120;
       const intents: Intents = {};
       while (state.match.phase !== 'ended' && state.tick < cap) {
@@ -155,24 +159,26 @@ describe('City Rumble survival, 32 bots', () => {
         }
         tick(state, intents);
       }
-      const power = (p: (typeof state.players)[number]): number =>
-        p.capacity + p.range + p.squareTier * 2 + p.armour * 2 + (p.mounted ? 2 : 0) + p.speedLevel;
+      const cfg = state.config;
       const byKills = [...state.players].sort((a, b) => b.stats.kills - a.stats.kills || a.id - b.id);
-      // the best eliminator versus the median fighter
-      outcomes.push({
-        ended: state.match.phase === 'ended' && state.match.result !== null,
-        topPower: power(byKills[0]!),
-        lowPower: power(byKills[16]!),
-      });
+      outcomes.push({ ended: state.match.phase === 'ended' && state.match.result !== null });
+      for (const p of state.players) {
+        // QUICK HANDS is its own temporary exception (decision SK2)
+        const quick = p.streakRewards.quickHandsUntil > state.tick ? p.streakRewards.quickHandsExtra : 0;
+        expect(p.capacity, `${p.name} generators`).toBeLessThanOrEqual(cfg.generator.maxCapacity + quick);
+        expect(p.range, `${p.name} range`).toBeLessThanOrEqual(
+          cfg.generator.baseRange + cfg.rewards.perks.maxRangeSteps,
+        );
+        expect(p.lifePerks.reduce((n, perk) => n + perk.slots, 0)).toBeLessThanOrEqual(
+          cfg.rewards.perks.maxSlots,
+        );
+      }
       expect(byKills[0]!.stats.kills).toBeGreaterThanOrEqual(3);
       // every credited elimination is a real death: kills never exceed deaths
       const kills = state.players.reduce((n, p) => n + p.stats.kills, 0);
       const deaths = state.players.reduce((n, p) => n + p.stats.deaths, 0);
       expect(kills).toBeLessThanOrEqual(deaths);
     }
-    for (const o of outcomes) {
-      expect(o.ended).toBe(true);
-      expect(o.topPower).toBeGreaterThan(o.lowPower + 5);
-    }
+    for (const o of outcomes) expect(o.ended).toBe(true);
   }, 120_000);
 });

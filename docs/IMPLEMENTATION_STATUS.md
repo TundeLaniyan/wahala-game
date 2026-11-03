@@ -489,3 +489,11 @@ A diagonal touch thumb is planned as two whole cardinal moves (vertical first, r
 - **Rollback point:** `8ebf3f4` (the previous known-good deployment of `claude/wahala-stitch-uiux-v1`). To roll back, reset `claude/wahala-stitch-uiux-v1` to `8ebf3f4` and let CI republish it.
 - **Combined code:** map-only `3db8719` (+ docs-only tip `d752b69`) with `claude/wahala-streaks-combat-input-v1` `712af9a`; integration fixes in decision CR9.
 - **Evidence before publishing:** 2,128 unit tests, typecheck, lint, build and 134 targeted browser tests (retries off) passed on the identical code (`3ceb9e2`); the full desktop and phone suites run after the publish started.
+
+## Balance patch: anti-snowball perks and touch movement style (branch `claude/wahala-balance-patch-v1`, from `5c19a4d`; decisions AS1-AS4)
+
+| Area | State |
+| --- | --- |
+| Life perks | Done (EXPERIMENTAL): 12 s life, 5 slots (major = 2), one perk per category, range +2 max, 3 generators, 10-tick placement interval, no Remote + Voucher in one reward, one large upgrade per reward. `tests/life-perks.test.ts`, updated economy tests. Not tuned against real play; `npm run rumble-metrics -- --ladder` shows the ceiling curve. HUD does not yet show perk timers. |
+| Touch movement | Done: Standard (cardinal + blocked-direction corner lean) and Beginner Assist (buffering, emergency). `tests/mobile-corner-assist.test.ts`, updated input tests. Not tried on a physical phone. |
+| Not run | The full unit and browser suites (targeted checks only). |

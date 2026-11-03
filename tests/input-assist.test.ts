@@ -13,6 +13,9 @@ import { addGenerator, addSoft } from './helpers';
  */
 afterEach(() => vi.unstubAllGlobals());
 
+/** Beginner Assist (decision AS4): the touch style that also slides along a wall and remembers a tapped turn. */
+const BEGINNER = { style: 'beginner' } as const;
+
 /** A corridor along y=1 with a side street down at x=5 (two tiles deep). */
 const CORNER = ['###########', '#.........#', '#####.#####', '#####.#####', '###########'];
 
@@ -91,8 +94,20 @@ describe('early turn buffering (a turn pressed early is carried to the junction)
     r.assertCleanTrace();
   });
 
-  it('a turn flicked a tile or two before the corner is remembered after the thumb lifts and taken at the corner (MV1)', () => {
+  it('Standard: a turn tapped before the corner is not remembered once the thumb has lifted (no current input, no step)', () => {
     const r = new AssistRig({ map: CORNER, start: [1, 1] });
+    r.thumbDown();
+    r.push('right');
+    r.until(3, 1);
+    r.push('down');
+    r.lift();
+    r.step(120);
+    expect(r.at[1]).toBe(1); // it never reached the side street
+    expect(r.at[0]).toBeLessThan(5);
+  });
+
+  it('Beginner Assist: a turn flicked a tile or two before the corner is remembered after the thumb lifts and taken at the corner (MV1)', () => {
+    const r = new AssistRig({ map: CORNER, start: [1, 1], ...BEGINNER });
     r.thumbDown();
     r.push('right');
     r.until(3, 1);
@@ -104,7 +119,7 @@ describe('early turn buffering (a turn pressed early is carried to the junction)
   });
 
   it('a turn tapped long before the corner is forgotten: no surprise walking (the memory is short)', () => {
-    const r = new AssistRig({ map: CORNER, start: [1, 1] });
+    const r = new AssistRig({ map: CORNER, start: [1, 1], ...BEGINNER });
     r.thumbDown();
     r.push('right');
     r.until(2, 1); // three tiles before the opening: out of reach
@@ -133,7 +148,7 @@ describe('sidestep: a direction pushed against a wall with the opening one tile 
       [4, 5],
       [6, 5],
     ] as const) {
-      const r = new AssistRig({ map: ALLEY, start: [from, 2] });
+      const r = new AssistRig({ map: ALLEY, start: [from, 2], ...BEGINNER });
       r.thumbDown();
       r.push('up');
       r.step(150);
@@ -151,8 +166,26 @@ describe('sidestep: a direction pushed against a wall with the opening one tile 
     expect(r.at).toEqual([4, 2]);
   });
 
-  it('is part of a deliberate hold: a quick tap at the wall never slides (a press is one tile)', () => {
+  it('Standard never slides on a straight push: the thumb has to lean round the wall', () => {
     const r = new AssistRig({ map: ALLEY, start: [4, 2] });
+    r.thumbDown();
+    r.push('up');
+    r.step(150);
+    expect(r.at).toEqual([4, 2]);
+    // leaning towards the alley goes round the wall and up it
+    const lean = new AssistRig({ map: ALLEY, start: [4, 2] });
+    lean.thumbDown();
+    lean.aim(50, 0.9); // up, leaning right (40 degrees off the axis engages the lean)
+    lean.step(150);
+    expect(lean.trace.slice(0, 3)).toEqual([
+      [4, 2],
+      [5, 2],
+      [5, 1],
+    ]);
+  });
+
+  it('is part of a deliberate hold: a quick tap at the wall never slides (a press is one tile)', () => {
+    const r = new AssistRig({ map: ALLEY, start: [4, 2], ...BEGINNER });
     r.thumbDown();
     r.push('up');
     r.step(MOVE_REPEAT_DELAY_TICKS - 2);
@@ -164,7 +197,7 @@ describe('sidestep: a direction pushed against a wall with the opening one tile 
 
   it('two openings beside the player: no guessing (it stays), unless the way they just walked decides', () => {
     const two = ['###.#.###', '###.#.###', '#.......#', '#########'];
-    const still = new AssistRig({ map: two, start: [4, 2] });
+    const still = new AssistRig({ map: two, start: [4, 2], ...BEGINNER });
     still.thumbDown();
     still.push('up');
     still.step(150);
@@ -182,7 +215,7 @@ describe('sidestep: a direction pushed against a wall with the opening one tile 
 
   it('never slides away from a crate (the player is about to bomb it)', () => {
     const map = ['#####.###', '####S.###', '#.......#', '#########'];
-    const r = new AssistRig({ map, start: [4, 2] });
+    const r = new AssistRig({ map, start: [4, 2], ...BEGINNER });
     r.thumbDown();
     r.push('up');
     r.step(150);
@@ -190,7 +223,7 @@ describe('sidestep: a direction pushed against a wall with the opening one tile 
   });
 
   it('a wall with no opening anywhere near does nothing', () => {
-    const r = new AssistRig({ map: ALLEY, start: [2, 2] });
+    const r = new AssistRig({ map: ALLEY, start: [2, 2], ...BEGINNER });
     r.thumbDown();
     r.push('up');
     r.step(150);
@@ -199,13 +232,15 @@ describe('sidestep: a direction pushed against a wall with the opening one tile 
 });
 
 describe('diagonal thumb: main axis now, secondary axis as the next turn', () => {
-  it('walks the corridor and takes the side street at the first opening, then keeps going down it', () => {
-    const r = new AssistRig({ map: CORNER, start: [1, 1] });
-    r.thumbDown();
-    r.aim(-40); // right and a little down
-    r.step(300);
-    expect(r.at).toEqual([5, 3]);
-    r.assertCleanTrace();
+  it('a lean alone never turns a walk: right with a little down passes the side street (decision AS4)', () => {
+    for (const style of ['standard', 'beginner'] as const) {
+      const r = new AssistRig({ map: CORNER, start: [1, 1], style });
+      r.thumbDown();
+      r.aim(-40); // right and a little down
+      r.step(300);
+      expect(r.at, style).toEqual([9, 1]);
+      r.assertCleanTrace();
+    }
   });
 
   it('a thumb only slightly off the axis is just that axis', () => {
@@ -224,7 +259,7 @@ describe('diagonal thumb: main axis now, secondary axis as the next turn', () =>
     expect(r.at).toEqual([9, 1]);
   });
 
-  it('a cardinal flick is exactly one tile; a diagonal flick is one complete two-step route (MV3) or, with assistance Off, one tile', () => {
+  it('a cardinal flick is exactly one tile; a diagonal flick whose main direction is free is that one tile too', () => {
     const cardinal = new AssistRig({ map: CORNER, start: [4, 1] });
     cardinal.thumbDown();
     cardinal.push('right');
@@ -234,7 +269,7 @@ describe('diagonal thumb: main axis now, secondary axis as the next turn', () =>
     expect(cardinal.at).toEqual([5, 1]);
     expect(cardinal.tiles).toBe(1);
 
-    // down-right: Down -> Right is blocked by the wall below, so Right -> Down is taken in full
+    // right-and-down: right is free, so it is just right (the wall below plays no part)
     const diagonal = new AssistRig({ map: CORNER, start: [4, 1] });
     diagonal.thumbDown();
     diagonal.aim(-40);
@@ -244,7 +279,6 @@ describe('diagonal thumb: main axis now, secondary axis as the next turn', () =>
     expect(diagonal.trace).toEqual([
       [4, 1],
       [5, 1],
-      [5, 2],
     ]);
 
     const off = new AssistRig({ map: CORNER, start: [4, 1], assist: 'off' });
@@ -257,22 +291,21 @@ describe('diagonal thumb: main axis now, secondary axis as the next turn', () =>
     expect(off.tiles).toBe(1);
   });
 
-  it('in open ground a diagonal thumb walks a clean staircase: right, down, right, down ...', () => {
+  it('in open ground a diagonal thumb walks a straight line along its main axis: no staircase (decision AS4)', () => {
     const field = Array.from({ length: 11 }, () => '..............');
-    const r = new AssistRig({ map: field, start: [0, 0] });
-    r.thumbDown();
-    r.aim(-44);
-    r.step(200);
-    r.lift();
-    r.assertCleanTrace();
-    expect(r.tiles).toBeGreaterThan(6);
-    for (let i = 1; i < r.trace.length; i++) {
-      expect(r.trace[i]![0]).toBeGreaterThanOrEqual(r.trace[i - 1]![0]);
-      expect(r.trace[i]![1]).toBeGreaterThanOrEqual(r.trace[i - 1]![1]);
+    for (const style of ['standard', 'beginner'] as const) {
+      const r = new AssistRig({ map: field, start: [0, 0], style });
+      r.thumbDown();
+      r.aim(-40); // right is the main axis, a little down
+      r.step(200);
+      r.lift();
+      r.assertCleanTrace();
+      expect(r.tiles, style).toBeGreaterThan(6);
+      expect(
+        r.trace.every(([, y]) => y === 0),
+        style,
+      ).toBe(true);
     }
-    // alternating after the first flick tile: never two vertical or two horizontal steps in a row
-    const dirs = r.trace.slice(1).map(([x], i) => (x !== r.trace[i]![0] ? 'h' : 'v'));
-    for (let i = 1; i < dirs.length; i++) expect(dirs[i]).not.toBe(dirs[i - 1]);
   });
 
   it('a wobbling thumb around the diagonal never zig-zags: the path only ever goes right and down', () => {
@@ -360,40 +393,48 @@ describe('phone viewports (stick sizes) and portrait', () => {
     [390, 844], // portrait
     [360, 740],
   ];
-  it.each(SIZES)('%i x %i: early turn, sidestep and diagonal wish all work with that stick', (w, h) => {
-    const corner = new AssistRig({ map: CORNER, start: [1, 1], viewport: [w, h] });
-    corner.thumbDown();
-    corner.push('right', 0.9);
-    corner.until(3, 1);
-    corner.push('down', 0.9);
-    corner.step(120);
-    expect(corner.at).toEqual([5, 3]);
+  it.each(SIZES)(
+    '%i x %i: early turn, sidestep (Beginner) and the corner lean all work with that stick',
+    (w, h) => {
+      const corner = new AssistRig({ map: CORNER, start: [1, 1], viewport: [w, h] });
+      corner.thumbDown();
+      corner.push('right', 0.9);
+      corner.until(3, 1);
+      corner.push('down', 0.9);
+      corner.step(120);
+      expect(corner.at).toEqual([5, 3]);
 
-    const alley = new AssistRig({ map: ALLEY, start: [4, 2], viewport: [w, h] });
-    alley.thumbDown();
-    alley.push('up', 0.9);
-    alley.step(150);
-    expect(alley.at).toEqual([5, 0]);
+      const alley = new AssistRig({ map: ALLEY, start: [4, 2], viewport: [w, h], ...BEGINNER });
+      alley.thumbDown();
+      alley.push('up', 0.9);
+      alley.step(150);
+      expect(alley.at).toEqual([5, 0]);
 
-    const diag = new AssistRig({ map: CORNER, start: [1, 1], viewport: [w, h] });
-    diag.thumbDown();
-    diag.aim(-40, 0.9);
-    diag.step(300);
-    expect(diag.at).toEqual([5, 3]);
+      // a lean round a blocked main direction: up-and-right against the alley wall goes round it and up
+      const diag = new AssistRig({ map: ALLEY, start: [4, 2], viewport: [w, h] });
+      diag.thumbDown();
+      diag.aim(50, 0.9);
+      diag.step(300);
+      expect(diag.trace.slice(0, 3)).toEqual([
+        [4, 2],
+        [5, 2],
+        [5, 1],
+      ]);
 
-    // and a resting thumb inside the dead zone still never walks
-    const rest = new AssistRig({ map: CORNER, start: [1, 1], viewport: [w, h] });
-    rest.thumbDown();
-    const c = stickConfigFor(w, h);
-    for (let i = 0; i < 60; i++) {
-      rest.input.setTouchDir(
-        rest.stick.move(1, rest.stick.originX + ((i % 3) - 1) * (c.deadZone - 2), rest.stick.originY),
-        rest.stick.wish,
-      );
-      rest.step(1);
-    }
-    expect(rest.tiles).toBe(0);
-  });
+      // and a resting thumb inside the dead zone still never walks
+      const rest = new AssistRig({ map: CORNER, start: [1, 1], viewport: [w, h] });
+      rest.thumbDown();
+      const c = stickConfigFor(w, h);
+      for (let i = 0; i < 60; i++) {
+        rest.input.setTouchDir(
+          rest.stick.move(1, rest.stick.originX + ((i % 3) - 1) * (c.deadZone - 2), rest.stick.originY),
+          rest.stick.wish,
+        );
+        rest.step(1);
+      }
+      expect(rest.tiles).toBe(0);
+    },
+  );
 });
 
 // ------------------------------------------------------------------ safety
@@ -464,7 +505,7 @@ describe.each(HAZARDS)('assistance never auto-travels into %s', (_name, mark) =>
       [5, 2], // the tile it would slide onto
       [5, 1], // the first tile of the alley
     ] as const) {
-      const r = new AssistRig({ map: ALLEY, start: [4, 2] });
+      const r = new AssistRig({ map: ALLEY, start: [4, 2], ...BEGINNER });
       mark(r.state, x, y, [5, 0]);
       r.thumbDown();
       r.push('up');
@@ -472,14 +513,14 @@ describe.each(HAZARDS)('assistance never auto-travels into %s', (_name, mark) =>
       expect(r.at).toEqual([4, 2]);
     }
     // control: the same scene without the danger does slide
-    const clean = new AssistRig({ map: ALLEY, start: [4, 2] });
+    const clean = new AssistRig({ map: ALLEY, start: [4, 2], ...BEGINNER });
     clean.thumbDown();
     clean.push('up');
     clean.step(150);
     expect(clean.at).toEqual([5, 0]);
   });
 
-  it('an early turn is not carried through it, and a diagonal wish does not turn into it', () => {
+  it('an early turn is not carried through it, and a lean never turns into it', () => {
     const r = new AssistRig({ map: CORNER, start: [1, 1] });
     mark(r.state, 4, 1, [7, 1]); // the corridor tile the carry would walk through
     r.thumbDown();
@@ -511,7 +552,8 @@ describe.each(HAZARDS)('assistance never auto-travels into %s', (_name, mark) =>
     farWish.thumbDown();
     farWish.aim(-40);
     farWish.step(300);
-    expect(farWish.at).toEqual([5, 3]);
+    // a lean alone never takes the side street, danger or not (decision AS4)
+    expect(farWish.trace.some(([, y]) => y > 1)).toBe(false);
   });
 });
 
@@ -574,7 +616,7 @@ describe('a market (tight stall corridors)', () => {
   });
 
   it('holding down beside a gap slides to the gap', () => {
-    const r = new AssistRig({ map: MARKET, start: [1, 2] });
+    const r = new AssistRig({ map: MARKET, start: [1, 2], ...BEGINNER });
     r.thumbDown();
     r.push('down'); // gap in the stall row below is at x=2
     r.step(200);

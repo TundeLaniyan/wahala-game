@@ -188,6 +188,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   applyAudioSettings(settings);
   applyShake(settings);
   input.setMoveAssist(settings.moveAssist);
+  input.setMoveStyle(settings.moveStyle);
   renderer.setCameraView(settings.cameraView);
   attract = new AttractController(renderer as never, createBot);
   tutorial = new TutorialController(controller, {
@@ -361,6 +362,7 @@ export const commands = {
     if (p.cameraView) renderer?.setCameraView(p.cameraView);
     if (p.shake) applyShake(settings);
     if (p.moveAssist) input.setMoveAssist(settings.moveAssist);
+    if (p.moveStyle) input.setMoveStyle(settings.moveStyle);
   },
   // ---- Training Academy (tutorial): isolated from competitive play, never writes the saved settings
   openTutorial(lesson?: number): void {

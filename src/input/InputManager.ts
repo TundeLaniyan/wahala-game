@@ -2,7 +2,7 @@ import type { Dir, Intent } from '../sim';
 import { GamepadInput } from './gamepad';
 import { KeyboardInput } from './keyboard';
 import { SWITCH_SETTLE_TICKS, resolveAssistLevel } from './moveAssist';
-import type { AssistLevel, MoveAssistSetting, MoveBoard, TouchDiagonal } from './moveAssist';
+import type { AssistLevel, MoveAssistSetting, MoveBoard, MoveStyle, TouchDiagonal } from './moveAssist';
 import { MoveGate } from './moveGate';
 import type { GateAssist } from './moveGate';
 import { PlaceHold, SpecialHold } from './specialHold';
@@ -50,6 +50,7 @@ export class InputManager {
   /** Diagonal thumb: the secondary axis (see `VirtualStick.wish`). */
   private touchWish: Dir | null = null;
   private moveAssist: MoveAssistSetting = 'auto';
+  private moveStyle: MoveStyle = 'standard';
   private readonly gate = new MoveGate();
   private readonly a = new PlaceHold();
   private readonly b = new SpecialHold();
@@ -134,7 +135,7 @@ export class InputManager {
     this.device('touch');
     // a thumb that goes straight from one direction to another may be mid-swipe through the centre: a
     // moment of settling (full assistance only) lets the real direction overwrite a stray one
-    const settle = switching && this.assistLevel === 'full' ? SWITCH_SETTLE_TICKS : 0;
+    const settle = switching && this.assistLevel === 'full' ? SWITCH_SETTLE_TICKS : 0; // input filtering, both styles
     this.gate.press(dir, this.tickNow, settle, true);
     this.events.onNav(dir);
   }
@@ -142,6 +143,11 @@ export class InputManager {
   /** Settings > Assisted movement. */
   setMoveAssist(setting: MoveAssistSetting): void {
     this.moveAssist = setting;
+  }
+
+  /** Settings > Movement style (decision AS4): the touchscreen thumb's standard or beginner assistance. */
+  setMoveStyle(style: MoveStyle): void {
+    this.moveStyle = style;
   }
 
   /** What assisted movement does right now (the setting, resolved for the device in use). */
@@ -224,23 +230,29 @@ export class InputManager {
   private gateAssist(c: IntentContext, held: Dir | null): GateAssist | undefined {
     const level = this.assistLevel;
     if (level === 'off' || !c.legal || !c.board) return undefined;
-    // the diagonal wish belongs to the thumb: it only counts while the stick is what is being held
+    // the thumb's lean belongs to the stick: it only counts while the stick is what is being held
     const wish = held !== null && held === this.touchDir ? this.touchWish : null;
-    // the two-step diagonal belongs to the touchscreen thumb alone: never a key, a D-pad or a gamepad stick
+    // the corner route belongs to the touchscreen thumb alone: never a key, a D-pad or a gamepad stick
+    const touch = level === 'full' && this.lastDevice === 'touch';
     const diagonal: TouchDiagonal | null =
-      level === 'full' && this.lastDevice === 'touch' && held !== null && wish !== null
-        ? { primary: held, secondary: wish }
-        : null;
+      touch && held !== null && wish !== null ? { primary: held, secondary: wish } : null;
+    const beginner = touch && this.moveStyle === 'beginner';
     let board: MoveBoard | null = null;
     const make = c.board;
-    const getBoard = (): MoveBoard => (board ??= make());
+    // emergency stepping through a generator's footprint (decision MI4) is a Beginner Assist rule: the standard style
+    // plans only onto tiles that are safe, as it always did for everything but an escape
+    const getBoard = (): MoveBoard => {
+      if (board) return board;
+      const full = make();
+      return (board = touch && !beginner ? { ...full, walkable: undefined, danger: undefined } : full);
+    };
     return {
       level,
-      wish,
       diagonal,
       board: getBoard,
-      touch: level === 'full' && this.lastDevice === 'touch',
-      emergency: () => getBoard().danger?.() ?? false,
+      touch,
+      style: touch ? this.moveStyle : undefined,
+      emergency: () => beginner && (getBoard().danger?.() ?? false),
     };
   }
 

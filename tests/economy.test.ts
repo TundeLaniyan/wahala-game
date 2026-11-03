@@ -7,11 +7,18 @@ import { createGame, previewRewards, rewardsFor } from '../src/sim';
 import type { GameKind, GameState, MatchSettings, PickupKind, SimEvent } from '../src/sim';
 import { Tile } from '../src/sim/types';
 import { applyLethalHits } from '../src/sim/systems/lethality';
+import { grantRewards } from '../src/sim/systems/rewards';
 import { recordHit } from '../src/sim/systems/skills';
 import { addGenerator, eventsOf, put, run, sandbox } from './helpers';
 
 /** A playing match in a given ruleset (stage hazards off, crates cleared unless `keepSoft`). */
-function match(game: GameKind, players = 4, extra: Partial<MatchSettings> = {}, keepSoft = false, seed = 1): GameState {
+function match(
+  game: GameKind,
+  players = 4,
+  extra: Partial<MatchSettings> = {},
+  keepSoft = false,
+  seed = 1,
+): GameState {
   const s = createGame({
     seed,
     players: Array.from({ length: players }, (_, i) => ({
@@ -41,44 +48,50 @@ function park(s: GameState): void {
   s.players.forEach((_, i) => put(s, i, spots[i % spots.length]![0], spots[i % spots.length]![1]));
 }
 
+const slotsOf = (p: { lifePerks: { slots: number }[] }): number =>
+  p.lifePerks.reduce((n, x) => n + x.slots, 0);
+
 const granted = (events: SimEvent[], id: number): PickupKind[] =>
   eventsOf(events, 'rewardGranted')
     .filter((e) => e.playerId === id)
     .map((e) => e.kind);
 
 describe('Rumble rulesets: crates open routes, never drop power', () => {
-  it.each(['survival', 'deathmatch', 'team'] as const)('%s hides no pickups in crates and drops no loot', (game) => {
-    const s = match(game, 4, {}, true);
-    expect(s.tiles.some((t) => t === Tile.Soft)).toBe(true);
-    expect(Object.keys(s.hidden)).toHaveLength(0);
-    expect(s.config.pickups.hiddenChance).toBe(0);
-    expect(s.config.drops.maxDeathDrops).toBe(0);
-    expect(s.config.rewards.enabled).toBe(true);
+  it.each(['survival', 'deathmatch', 'team'] as const)(
+    '%s hides no pickups in crates and drops no loot',
+    (game) => {
+      const s = match(game, 4, {}, true);
+      expect(s.tiles.some((t) => t === Tile.Soft)).toBe(true);
+      expect(Object.keys(s.hidden)).toHaveLength(0);
+      expect(s.config.pickups.hiddenChance).toBe(0);
+      expect(s.config.drops.maxDeathDrops).toBe(0);
+      expect(s.config.rewards.enabled).toBe(true);
 
-    // blow up crates: nothing is revealed
-    park(s);
-    const crates = s.tiles.map((t, i) => (t === Tile.Soft ? i : -1)).filter((i) => i >= 0);
-    const idx = crates[0]!;
-    const x = idx % s.width;
-    const y = Math.floor(idx / s.width);
-    const gx = x > 0 && s.tiles[idx - 1] === Tile.Empty ? x - 1 : x + 1;
-    addGenerator(s, { ownerId: 3, x: gx, y, timer: 1 });
-    const ev = run(s, 3);
-    expect(eventsOf(ev, 'blockDestroyed').length).toBeGreaterThan(0);
-    expect(eventsOf(ev, 'pickupRevealed')).toHaveLength(0);
+      // blow up crates: nothing is revealed
+      park(s);
+      const crates = s.tiles.map((t, i) => (t === Tile.Soft ? i : -1)).filter((i) => i >= 0);
+      const idx = crates[0]!;
+      const x = idx % s.width;
+      const y = Math.floor(idx / s.width);
+      const gx = x > 0 && s.tiles[idx - 1] === Tile.Empty ? x - 1 : x + 1;
+      addGenerator(s, { ownerId: 3, x: gx, y, timer: 1 });
+      const ev = run(s, 3);
+      expect(eventsOf(ev, 'blockDestroyed').length).toBeGreaterThan(0);
+      expect(eventsOf(ev, 'pickupRevealed')).toHaveLength(0);
 
-    // an eliminated fighter with upgrades drops nothing on the floor
-    const victim = s.players[1]!;
-    victim.capacity = 4;
-    victim.range = 5;
-    victim.armour = 0;
-    put(s, 1, 6, 0);
-    addGenerator(s, { ownerId: 1, x: 6, y: 0, timer: 1 });
-    const ev2 = run(s, 3);
-    expect(eventsOf(ev2, 'playerEliminated').some((e) => e.playerId === 1)).toBe(true);
-    expect(eventsOf(ev2, 'pickupDropped')).toHaveLength(0);
-    expect(s.pickups).toHaveLength(0);
-  });
+      // an eliminated fighter with upgrades drops nothing on the floor
+      const victim = s.players[1]!;
+      victim.capacity = 4;
+      victim.range = 5;
+      victim.armour = 0;
+      put(s, 1, 6, 0);
+      addGenerator(s, { ownerId: 1, x: 6, y: 0, timer: 1 });
+      const ev2 = run(s, 3);
+      expect(eventsOf(ev2, 'playerEliminated').some((e) => e.playerId === 1)).toBe(true);
+      expect(eventsOf(ev2, 'pickupDropped')).toHaveLength(0);
+      expect(s.pickups).toHaveLength(0);
+    },
+  );
 
   it('classic keeps crate finds and loot (rewards off)', () => {
     const s = match('classic', 4, {}, true);
@@ -87,15 +100,27 @@ describe('Rumble rulesets: crates open routes, never drop power', () => {
     expect(s.config.drops.maxDeathDrops).toBeGreaterThan(0);
   });
 
-  it('raises the standard caps in every Rumble ruleset (technical limits only)', () => {
+  it('bounds the economy in every Rumble ruleset (decisions AS1-AS3), and leaves Classic alone', () => {
     for (const game of ['survival', 'deathmatch', 'team'] as const) {
       const c = match(game).config;
-      expect(c.generator.maxCapacity).toBeGreaterThan(6);
-      expect(c.protection.maxArmour).toBeGreaterThan(1);
+      // base two generators + one Extra Socket = three active at most; a short gap between two placements
+      expect(c.generator.maxCapacity).toBe(3);
+      expect(c.generator.baseCapacity).toBe(2);
+      expect(c.generator.placeIntervalTicks).toBeGreaterThan(0);
+      // the perk limits
+      expect(c.rewards.perks).toMatchObject({
+        lifeTicks: 12 * 60,
+        maxSlots: 5,
+        majorSlots: 2,
+        maxRangeSteps: 2,
+      });
       expect(c.square.maxTier).toBe(3);
       expect(c.square.radiusByTier[3]).toBe(3);
     }
-    expect(match('classic').config.protection.maxArmour).toBe(1);
+    const classic = match('classic').config;
+    expect(classic.protection.maxArmour).toBe(1);
+    expect(classic.generator.placeIntervalTicks).toBe(0);
+    expect(classic.generator.maxCapacity).toBe(6);
   });
 });
 
@@ -136,46 +161,57 @@ describe('elimination rewards', () => {
     expect(previewRewards(s, s.players[2]!)[0]).toBe('killswitch');
   });
 
-  it('never wastes a rung: an owned / capped reward becomes the first useful fallback', () => {
+  it('never wastes a rung: an owned / capped / disallowed reward becomes the first useful, allowed fallback', () => {
     const s = match('survival');
     const p = s.players[0]!;
-    p.stats.streak = 5; // next = rung 6: okada, armour, petrol
+    p.stats.streak = 5; // next = rung 6: okada, petrol
+    expect(previewRewards(s, p)).toEqual(['okada', 'petrol']);
+    // a fighter already on an Okada: the shield category is taken, so the Okada becomes the first fallback
     p.mounted = true;
-    expect(previewRewards(s, p)).toEqual(['socket', 'armour', 'petrol']);
+    p.lifePerks.push({ category: 'shield', kind: 'okada', level: 1, slots: 2, since: 0, expiresAt: 1e9 });
+    expect(previewRewards(s, p)).toEqual(['socket', 'petrol']);
+    // generators capped (three) and range two steps up: nothing in the range / capacity categories is left
     p.capacity = s.config.generator.maxCapacity;
-    p.armour = s.config.protection.maxArmour;
-    expect(previewRewards(s, p)).toEqual(['petrol', 'petrol', 'petrol']);
+    p.range = s.config.generator.baseRange + s.config.rewards.perks.maxRangeSteps;
+    p.lifePerks.push({ category: 'capacity', kind: 'socket', level: 1, slots: 1, since: 0, expiresAt: 1e9 });
+    p.lifePerks.push({ category: 'range', kind: 'petrol', level: 2, slots: 1, since: 0, expiresAt: 1e9 });
+    expect(previewRewards(s, p).every((k) => k !== 'socket' && k !== 'petrol')).toBe(true);
     // a fighter with a different contact tool keeps it (the contact rung falls back)
-    p.stats.streak = 1;
-    p.contact = 'punch';
-    p.capacity = 1;
-    expect(previewRewards(s, p)[0]).toBe('socket');
+    const q = s.players[1]!;
+    q.stats.streak = 1;
+    q.contact = 'punch';
+    expect(previewRewards(s, q)[0]).toBe('socket');
     expect(previewRewards(match('classic'), p)).toEqual([]);
   });
 
-  it('keeps growing past the ladder: the late rungs cycle and the caps are well above Classic', () => {
+  it('stays bounded past the ladder: the late rungs cycle, and no run of kills passes the caps', () => {
     const s = match('survival');
     const ladder = s.config.rewards.ladder;
     expect(rewardsFor(s, ladder.length + 1)).toEqual(ladder[s.config.rewards.repeatFrom]);
     expect(rewardsFor(s, 0)).toEqual([]);
-    // simulate a 14-elimination run of rewards on one fighter
+    // 14 eliminations back to back (inside one perk life) through the real grant path
     const p = s.players[0]!;
     for (let k = 1; k <= 14; k++) {
-      p.stats.streak = k - 1;
-      for (const kind of previewRewards(s, p)) {
-        if (kind === 'socket') p.capacity++;
-        if (kind === 'petrol') p.range++;
-        if (kind === 'square') p.squareTier++;
-        if (kind === 'armour') p.armour++;
-        if (kind === 'okada') p.mounted = true;
-      }
+      p.stats.kills = k;
+      p.stats.streak = k;
+      grantRewards(s, [
+        {
+          type: 'playerEliminated',
+          playerId: 1,
+          cause: { kind: 'flame', ownerId: 0, eventId: k },
+          x: 0,
+          y: 0,
+          creditId: 0,
+          assistIds: [],
+        },
+      ]);
+      expect(p.capacity).toBeLessThanOrEqual(s.config.generator.maxCapacity);
+      expect(p.range).toBeLessThanOrEqual(s.config.generator.baseRange + 2);
+      expect(p.armour).toBeLessThanOrEqual(1);
+      expect(p.squareTier).toBeLessThanOrEqual(s.config.rewards.perks.maxSquareSteps);
+      expect(p.speedLevel).toBeLessThanOrEqual(s.config.rewards.perks.maxSpeedSteps);
+      expect(slotsOf(p)).toBeLessThanOrEqual(s.config.rewards.perks.maxSlots);
     }
-    expect(p.capacity).toBeGreaterThan(s.config.generator.baseCapacity + 5);
-    // RE-C4: a Square Blast tier is only paid while it still widens the radial footprint; at radius 5 the
-    // square tops out at radius 6 with tier 2, so the third tier (which the cap allows) is never wasted on it
-    expect(p.squareTier).toBe(2);
-    expect(p.armour).toBe(3);
-    expect(p.capacity).toBeLessThanOrEqual(s.config.generator.maxCapacity);
   });
 
   it('pays two consecutive rungs for a double elimination in one tick (no duplicates)', () => {
@@ -192,7 +228,7 @@ describe('elimination rewards', () => {
     expect(s.players[0]!.contact).toBe('kick');
   });
 
-  it('a victim is credited once: two of the killer\'s blasts in one tick, and later flames on the body, pay once', () => {
+  it("a victim is credited once: two of the killer's blasts in one tick, and later flames on the body, pay once", () => {
     const s = match('survival');
     park(s);
     put(s, 0, 0, 0);
@@ -304,7 +340,7 @@ describe('elimination credit', () => {
     expect(e.creditId).toBe(0);
   });
 
-  it('melee into the victim\'s own blast: the attacker gets the self-kill-after-push', () => {
+  it("melee into the victim's own blast: the attacker gets the self-kill-after-push", () => {
     const s = match('survival');
     park(s);
     s.players[0]!.characterId = 'campusQueen'; // the Shove displaces (Punch only dazes)
@@ -329,18 +365,33 @@ describe('elimination credit', () => {
     const victim = s.players[1]!;
     recordHit(s, victim, 2);
     const ev: SimEvent[] = [];
-    applyLethalHits(s, [{ playerId: 1, eventId: 99, cause: { kind: 'hazard', style: 'traffic', eventId: 99 }, graceUntil: s.tick }], ev);
+    applyLethalHits(
+      s,
+      [
+        {
+          playerId: 1,
+          eventId: 99,
+          cause: { kind: 'hazard', style: 'traffic', eventId: 99 },
+          graceUntil: s.tick,
+        },
+      ],
+      ev,
+    );
     expect(eventsOf(ev, 'playerEliminated')[0]!.creditId).toBe(2);
 
     const t = match('survival');
     recordHit(t, t.players[1]!, 2);
     t.tick += t.config.credit.assistWindowTicks + 1; // the scuffle is old news
     const ev2: SimEvent[] = [];
-    applyLethalHits(t, [{ playerId: 1, eventId: 7, cause: { kind: 'crush', eventId: 7 }, graceUntil: t.tick }], ev2);
+    applyLethalHits(
+      t,
+      [{ playerId: 1, eventId: 7, cause: { kind: 'crush', eventId: 7 }, graceUntil: t.tick }],
+      ev2,
+    );
     expect(eventsOf(ev2, 'playerEliminated')[0]!.creditId).toBeNull();
   });
 
-  it('an unrelated accident is nobody\'s free kill', () => {
+  it("an unrelated accident is nobody's free kill", () => {
     const s = match('survival');
     park(s);
     put(s, 1, 4, 0);
@@ -357,11 +408,15 @@ describe('elimination credit', () => {
     const s = match('survival');
     recordHit(s, s.players[1]!, 2);
     const ev: SimEvent[] = [];
-    applyLethalHits(s, [{ playerId: 1, eventId: 5, cause: { kind: 'spectator', ownerId: 3, eventId: 5 }, graceUntil: s.tick }], ev);
+    applyLethalHits(
+      s,
+      [{ playerId: 1, eventId: 5, cause: { kind: 'spectator', ownerId: 3, eventId: 5 }, graceUntil: s.tick }],
+      ev,
+    );
     expect(eventsOf(ev, 'playerEliminated')[0]!.creditId).toBeNull();
   });
 
-  it('teammates: friendly fire scores nobody, a teammate\'s shove is no credit', () => {
+  it("teammates: friendly fire scores nobody, a teammate's shove is no credit", () => {
     const s = match('team', 4, { friendlyFire: true });
     park(s);
     expect(s.players[0]!.team).toBe(s.players[2]!.team);
@@ -377,11 +432,15 @@ describe('elimination credit', () => {
     const t = match('team', 4);
     recordHit(t, t.players[2]!, 0); // teammate
     const ev2: SimEvent[] = [];
-    applyLethalHits(t, [{ playerId: 2, eventId: 3, cause: { kind: 'crush', eventId: 3 }, graceUntil: t.tick }], ev2);
+    applyLethalHits(
+      t,
+      [{ playerId: 2, eventId: 3, cause: { kind: 'crush', eventId: 3 }, graceUntil: t.tick }],
+      ev2,
+    );
     expect(eventsOf(ev2, 'playerEliminated')[0]!.creditId).toBeNull();
   });
 
-  it('two rivals\' blasts in the same tick: the first credited blast scores, the other assists', () => {
+  it("two rivals' blasts in the same tick: the first credited blast scores, the other assists", () => {
     const s = match('survival');
     park(s);
     put(s, 1, 4, 2);

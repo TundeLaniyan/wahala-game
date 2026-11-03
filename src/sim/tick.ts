@@ -30,6 +30,7 @@ import { updateCrush } from './systems/crush';
 import { updateEndgameTraps, updateFloorHazards } from './systems/hazards';
 import { armTeleports, updateStage } from './systems/stage';
 import { resolveSpecial } from './systems/actions';
+import { updateLifePerks } from './systems/lifePerks';
 import { grantRewards } from './systems/rewards';
 import { scheduleRespawns, updateRespawns } from './systems/respawn';
 import { updateSpectators } from './systems/spectators';
@@ -57,6 +58,7 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
 
   state.match.playTicks++;
   updateRespawns(state, events);
+  updateLifePerks(state);
   updateStreaks(state, events);
   updateKnockdowns(state, events);
   expireEntryModes(state, events);

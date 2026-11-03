@@ -8,8 +8,8 @@ import {
 import type { CharacterId, Difficulty } from '../sim';
 import { QUALITY_SETTINGS } from '../render/quality';
 import type { CameraView, QualitySetting } from '../render';
-import { MOVE_ASSIST_SETTINGS } from '../input/moveAssist';
-import type { MoveAssistSetting } from '../input/moveAssist';
+import { MOVE_ASSIST_SETTINGS, MOVE_STYLES } from '../input/moveAssist';
+import type { MoveAssistSetting, MoveStyle } from '../input/moveAssist';
 
 export type SubtitleMode = 'off' | 'on' | 'large';
 export const SUBTITLE_MODES: readonly SubtitleMode[] = ['off', 'on', 'large'];
@@ -63,6 +63,8 @@ export interface GameSettings {
   narration: boolean;
   /** Rumble Evolution: assisted movement (decisions RE-A). Auto = on for touch, the plain corner buffer with keyboard / gamepad. */
   moveAssist: MoveAssistSetting;
+  /** Decision AS4: the touchscreen thumb's style - standard (cardinal + corner help) or beginner (adds buffering and emergency replanning). */
+  moveStyle: MoveStyle;
   /** Rumble Evolution experiment (decision RE-L2): City Rumble blast shape, radial (default) or the Classic cross. */
   rumbleBlast: 'radial' | 'cross';
 }
@@ -91,6 +93,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   shake: 'auto',
   narration: true,
   moveAssist: 'auto',
+  moveStyle: 'standard',
   rumbleBlast: 'radial',
 };
 
@@ -113,6 +116,7 @@ export const PREFERENCE_KEYS = [
   'narration',
   'muted',
   'moveAssist',
+  'moveStyle',
 ] as const;
 export type PreferenceKey = (typeof PREFERENCE_KEYS)[number];
 
@@ -127,6 +131,7 @@ export function preferenceDefaults(): Pick<GameSettings, PreferenceKey> {
     narration: d.narration,
     muted: d.muted,
     moveAssist: d.moveAssist,
+    moveStyle: d.moveStyle,
   };
 }
 
@@ -166,6 +171,7 @@ export function sanitizeSettings(s: GameSettings): GameSettings {
     shake: oneOf(s.shake, ['auto', 'off', 'subtle'] as const, d.shake),
     narration: bool(s.narration, d.narration),
     moveAssist: oneOf(s.moveAssist, MOVE_ASSIST_SETTINGS, d.moveAssist),
+    moveStyle: oneOf(s.moveStyle, MOVE_STYLES, d.moveStyle),
     rumbleBlast: oneOf(s.rumbleBlast, ['radial', 'cross'] as const, d.rumbleBlast),
   };
 }

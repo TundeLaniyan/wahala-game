@@ -71,6 +71,11 @@ export interface GameConfig {
     dieselRange: number;
     baseCapacity: number;
     maxCapacity: number;
+    /**
+     * Decision AS3: the least time between two generators laid by the same fighter (0 = none, Classic). It stops a
+     * fast mount dropping generators continuously; a running QUICK HANDS is exempt (its whole point is hold-to-lay).
+     */
+    placeIntervalTicks: number;
     remoteFailsafeTicks: number;
     disabledCleanupTicks: number;
     carryBonusTicks: number;
@@ -247,6 +252,24 @@ export interface GameConfig {
     fallback: PickupKind[];
     /** The `contact` reward for a fighter with no contact ability: their character's signature tool. */
     contactByCharacter: Record<CharacterId, PickupKind>;
+    /**
+     * Decision AS1-AS2: kill-earned power is temporary and bounded (`systems/lifePerks.ts`). Applies wherever
+     * `enabled` is on; a death clears every perk.
+     */
+    perks: {
+      /** How long a kill-earned upgrade lasts from the kill that granted it. */
+      lifeTicks: number;
+      /** Life slots a fighter may fill at once. */
+      maxSlots: number;
+      /** Slots one major perk (Armour, Okada, Remote Detonator) takes; every other perk takes one. */
+      majorSlots: number;
+      /** Bomb range may rise at most this many steps above `generator.baseRange` from rewards. */
+      maxRangeSteps: number;
+      /** Speed levels the rewards may give (the ceiling of the pickup economy is `pickups.maxSpeedLevel`). */
+      maxSpeedSteps: number;
+      /** Square Blast tiers the rewards may give. */
+      maxSquareSteps: number;
+    };
   };
   /**
    * The fixed initial kill-streak loadout (decision SK1): rewards for the nth CREDITED elimination of the current
@@ -361,6 +384,7 @@ export const DEFAULT_CONFIG: GameConfig = {
     dieselRange: 99,
     baseCapacity: 1,
     maxCapacity: 6,
+    placeIntervalTicks: 0,
     remoteFailsafeTicks: ticks(20),
     disabledCleanupTicks: ticks(25),
     carryBonusTicks: ticks(1),
@@ -515,8 +539,10 @@ export const DEFAULT_CONFIG: GameConfig = {
     radiusByTier: [0, 1, 2],
   },
   // Decision WC1 (docs/DECISIONS.md): every credited elimination pays at once, rewards widen from raw
-  // generator power (1) to a tool (2), protection (3), Square Blast (4), control (5) and then several
-  // items per elimination; from the 6th the last four rungs cycle, so a top fighter keeps growing.
+  // generator power (1) to a tool (2), protection (3), Square Blast (4), control (5), a mount (6), a vehicle
+  // (7) and so on; from the 6th the last four rungs cycle. Decisions AS1-AS2 (docs/DECISIONS.md) bound it: each
+  // rung has at most one large upgrade and never a Remote Detonator with a Vehicle Voucher, and what it pays is a
+  // 12-second life perk inside five slots (systems/lifePerks.ts).
   rewards: {
     enabled: false,
     ladder: [
@@ -524,15 +550,23 @@ export const DEFAULT_CONFIG: GameConfig = {
       ['contact', 'skates'],
       ['armour', 'socket'],
       ['square', 'petrol'],
-      ['remote', 'voucher', 'socket'],
-      ['okada', 'armour', 'petrol'],
-      ['square', 'socket', 'skates'],
-      ['armour', 'voucher', 'petrol', 'socket'],
-      ['square', 'okada', 'contact'],
+      ['remote', 'socket'],
+      ['okada', 'petrol'],
+      ['voucher', 'skates', 'socket'],
+      ['armour', 'petrol', 'socket'],
+      ['square', 'contact'],
     ],
     repeatFrom: 5,
     fallback: ['socket', 'petrol', 'armour', 'skates', 'square', 'voucher', 'okada'],
     contactByCharacter: { streetBaller: 'boots', lekkiBoy: 'gloves', campusQueen: 'killswitch' },
+    perks: {
+      lifeTicks: ticks(12),
+      maxSlots: 5,
+      majorSlots: 2,
+      maxRangeSteps: 2,
+      maxSpeedSteps: 1,
+      maxSquareSteps: 1,
+    },
   },
   streaks: {
     enabled: false,
@@ -577,11 +611,13 @@ export const DEFAULT_CONFIG: GameConfig = {
 };
 
 /**
- * V2 City Rumble economy (all three Rumble rulesets, merged by modes.ts): rewards on, and the caps a
- * standard 2-4 player match needs are raised so elimination power keeps growing (decision WC2). What
- * remains are technical limits: the Square Blast stops at 7 x 7 and generator capacity at 10 (danger
- * maps / explosion work stay bounded with 32 fighters), flame reach at 10 (the plus still stops at
- * concrete), and three Armour plates. Movement speed keeps its standard ceiling (grid step timing).
+ * V2 City Rumble economy (all three Rumble rulesets, merged by modes.ts): rewards on. The caps are the
+ * anti-snowball ones (decisions AS1-AS3): at most three active generators per fighter (base two + one Extra
+ * Socket; QUICK HANDS is its own temporary exception), a 10-tick (0.17 s) interval between two generators laid by
+ * the same fighter - a walker (10 ticks a tile) is not held back, an Okada rider (6-8 ticks a tile) lays every other
+ * tile at most (not while QUICK HANDS runs), and the reward limits in `rewards.perks` (range at most two steps above
+ * the base, one Square Blast tier, one Armour plate, one speed step, five life slots). Movement speed keeps its
+ * standard ceiling (grid step timing).
  *
  * City Rumble Evolution (decisions RE-B1, RE-C1): Rumble blasts are radial (`blastMode: 'radial'`,
  * systems/blastShape.ts) with the radius capped at 5 (a 97-tile disc; `maxRange` is the radius cap in radial
@@ -593,7 +629,8 @@ export const DEFAULT_CONFIG: GameConfig = {
  */
 export const RUMBLE_ECONOMY = {
   generator: {
-    maxCapacity: 10,
+    maxCapacity: 3,
+    placeIntervalTicks: 10,
     maxRange: 5,
     baseCapacity: 2,
     blastMode: 'radial' as const,

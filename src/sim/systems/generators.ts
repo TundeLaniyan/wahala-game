@@ -18,6 +18,9 @@ export function tryPlaceGenerator(state: GameState, p: Player, events: SimEvent[
   if (!isActing(state, p) || p.entryUntil !== null || p.carrying !== null) return null;
   if (activeGeneratorCount(state, p.id) >= p.capacity) return null;
   if (!canPlaceGeneratorAt(state, p.x, p.y)) return null;
+  // decision AS3: a short interval between generators, so a fast mount cannot lay a continuous trail (QUICK HANDS lifts it)
+  const gap = state.config.generator.placeIntervalTicks;
+  if (gap > 0 && state.tick - p.lastPlaceTick < gap && p.streakRewards.quickHandsUntil <= state.tick) return null;
 
   const cfg = state.config.generator;
   const weak = p.curse?.kind === 'weakFire' && state.tick < p.curse.until;
@@ -43,6 +46,7 @@ export function tryPlaceGenerator(state: GameState, p: Player, events: SimEvent[
     placedTick: state.tick,
   };
   p.hotFuel = false; // Hot Fuel is a one-generator boost
+  p.lastPlaceTick = state.tick;
   state.generators.push(gen);
   events.push({ type: 'generatorPlaced', generatorId: gen.id, ownerId: p.id, x: gen.x, y: gen.y });
   return gen;

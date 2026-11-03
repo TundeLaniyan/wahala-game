@@ -32,7 +32,7 @@ describe('progression badge', () => {
     const { state, me } = hudFor('survival');
     const p = state.players[0]!;
     p.stats.kills = 4;
-    p.stats.streak = 4; // next rung: remote, voucher, socket
+    p.stats.streak = 4; // next rung: remote, socket
     p.mounted = true;
     p.armour = 2;
     p.squareTier = 2;
@@ -40,7 +40,7 @@ describe('progression badge', () => {
     expect(html).toContain('data-testid="progression-badge"');
     expect(html).toContain('class="pbadge floating"');
     expect(html).toContain('<b>4</b>');
-    for (const k of ['remote', 'voucher', 'socket']) expect(html).toContain(`icon:${k}`);
+    for (const k of ['remote', 'socket']) expect(html).toContain(`icon:${k}`);
     expect(html.match(/pb-pip armour/g)).toHaveLength(2);
     expect(html.match(/pb-pip okada/g)).toHaveLength(1);
     expect(html).toContain('5×5');

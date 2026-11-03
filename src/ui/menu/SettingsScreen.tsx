@@ -10,7 +10,7 @@ import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
 import { preferenceDefaults } from '../../app/settings';
 import type { GameSettings, ShakeSetting, SubtitleMode } from '../../app/settings';
-import type { MoveAssistSetting } from '../../input';
+import type { MoveAssistSetting, MoveStyle } from '../../input';
 import { audioPrefs } from '../../audio/prefs';
 import { QUALITY_LABEL, QUALITY_SETTINGS } from '../../render/quality';
 import { AudioSettingsPanel } from '../AudioSettings';
@@ -108,6 +108,7 @@ function GraphicsTab({ s, set }: { s: GameSettings; set: Set }) {
 }
 
 const ASSIST_LABEL: Record<MoveAssistSetting, string> = { auto: 'Auto', on: 'On', off: 'Off' };
+const STYLE_LABEL: Record<MoveStyle, string> = { standard: 'Standard', beginner: 'Beginner Assist' };
 
 function ControlsTab({ s, set }: { s: GameSettings; set: Set }) {
   const rows = legendRows();
@@ -132,7 +133,7 @@ function ControlsTab({ s, set }: { s: GameSettings; set: Set }) {
       </Field>
       <Field
         label="Assisted movement"
-        hint="Helps your thumb steer: a turn pressed a little early is taken at the corner, and a direction pushed against a wall slides to an opening one tile away. It never walks you into a generator, flames or a warned hazard. Auto: on for touch, the plain corner buffer with keyboard and gamepad."
+        hint="Helps your thumb steer: a turn pressed a little early is taken at the corner, and a lean round a blocked way goes round the corner. It never walks you into a generator, flames or a warned hazard. Auto: on for touch, the plain corner buffer with keyboard and gamepad."
       >
         <div className="mn-opts mn-opts-tall">
           {(['auto', 'on', 'off'] as const).map((m) => (
@@ -143,6 +144,23 @@ function ControlsTab({ s, set }: { s: GameSettings; set: Set }) {
               label={ASSIST_LABEL[m]}
               onPick={(moveAssist) => set({ moveAssist })}
               testId={`assist-${m}`}
+            />
+          ))}
+        </div>
+      </Field>
+      <Field
+        label="Touch movement"
+        hint="Standard: the stick walks up, down, left or right; only when the way you push is blocked and you lean round it does it help you round the corner. Beginner Assist adds a short memory for presses (also while dazed), a slide along a wall to the nearest opening, and lets a step cross a generator's blast area when you are already in it. Neither ever moves you without your thumb on the stick. Keyboard and gamepad are not affected."
+      >
+        <div className="mn-opts mn-opts-tall">
+          {(['standard', 'beginner'] as const).map((m) => (
+            <Option
+              key={m}
+              value={m}
+              current={s.moveStyle}
+              label={STYLE_LABEL[m]}
+              onPick={(moveStyle) => set({ moveStyle })}
+              testId={`movestyle-${m}`}
             />
           ))}
         </div>
