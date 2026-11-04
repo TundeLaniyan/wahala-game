@@ -315,6 +315,23 @@ const seawall: Family = (k, g, r, n) => {
     ccyl(k, g, k.metal, 0.05, 0.07, 2.4, k.wx(x), 0.55, nz + 0.2, 0x3a3c40, 6);
     cbox(k, g, k.glow, 0.3, 0.12, 0.3, k.wx(x), 2.95, nz + 0.2, 0xffe4ae); // lamp head
   }
+  // the bridge's name plate on the seawall face, in front of the pylon (anchor lekki-link-bridge, read ahead of the player)
+  if (r.x === 16 || r.x === 24)
+    board(
+      k,
+      g,
+      k.atlas.board('bridgeplate', 256, 40, {
+        bg: '#14509a',
+        fg: '#ffffff',
+        lines: [['LAGOON LINK BRIDGE', 24]],
+        border: '#ffffff',
+      }),
+      2.2,
+      0.34,
+      r.cx,
+      0.3,
+      k.wz(r.y1) + 0.5 + 0.03,
+    );
   void n;
 };
 
@@ -554,7 +571,7 @@ function build(ctx: SetContext): void {
     },
   );
   // the link bridge hugs the seawall (lekkiBridge.ts), its pylon on the axis of Admiralty Way and the plaza
-  linkBridge(ctx, { px: wx(22.5), z: north - 2.5, half: W / 2 + 60 });
+  linkBridge(ctx, { px: wx(22.5), z: north - 2.4, half: W / 2 + 60 });
 
   skyline(ctx, tod, {
     edge: 'east',

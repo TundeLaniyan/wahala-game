@@ -51,9 +51,9 @@ export const MAP_ANCHORS: Readonly<Record<string, MapAnchorTriple>> = {
       note: 'Two covered pedestrian spans from the terminal to the station tower on round piers, over the north edge.',
     },
     {
-      id: 'oshodi-rail-viaduct',
-      name: 'Rail Viaduct and Railcar',
-      note: 'The commuter railway leaving the board portal onto a viaduct, with the telegraphed railcar crossing.',
+      id: 'oshodi-expressway',
+      name: 'Elevated Expressway',
+      note: 'The box-girder expressway deck on twin-column bents with barriers, lamp standards and a direction gantry, running behind the terminals (the rail viaduct and the telegraphed railcar are the second layer).',
     },
   ],
   rumbleMushin: [
@@ -150,7 +150,7 @@ export const ANCHOR_MODULES: Readonly<Record<string, string>> = {
   'ojuelegba-direction-gantry': 'ojuelegbaLandmarks.ts',
   'oshodi-terminal-canopy': 'oshodiMetroTerminal.ts',
   'oshodi-skywalk': 'oshodiMetroTerminal.ts',
-  'oshodi-rail-viaduct': 'oshodiMetroLandmarks.ts',
+  'oshodi-expressway': 'oshodiMetroLandmarks.ts',
   'mushin-red-line-station': 'mushinArt.ts',
   'mushin-footbridge': 'mushinArt.ts',
   'mushin-idi-oro-hall': 'mushinArt.ts',

@@ -45,8 +45,8 @@ export function linkBridge(ctx: SetContext, o: LinkBridgeOpts): void {
   const conc = mat(0xc4c2b8, { roughness: 1, flat: false });
   const dark = mat(0x34363a, { roughness: 0.9 });
   const len = o.half * 2;
-  const DECK = 1.5;
-  const WIDTH = 3.0;
+  const DECK = 1.7;
+  const WIDTH = 2.6;
   const z0 = o.z;
   let first = true;
   const keep = (m: Mesh): Mesh => {
@@ -74,15 +74,16 @@ export function linkBridge(ctx: SetContext, o: LinkBridgeOpts): void {
     add(box(len, 0.06, 0.1, white, 0, DECK + 0.68, z0 + (sd * (WIDTH - 0.3)) / 2));
   }
   for (let x = -o.half + 3; x < o.half; x += 11)
-    add(box(1.0, DECK - STREET - 0.4, 2.2, conc, x, STREET + (DECK - STREET - 0.4) / 2, z0));
+    add(box(1.0, DECK - STREET - 0.4, 2.0, conc, x, STREET + (DECK - STREET - 0.4) / 2, z0));
 
   // the pylon: two slim legs (depth-wise), cross struts, a cap and a red aviation light
   const H = 27;
   for (const sd of [-1, 1]) {
-    add(box(0.9, H, 0.7, white, o.px, DECK + H / 2 - 0.2, z0 + sd * 1.55));
-    add(box(0.5, 0.5, 0.5, white, o.px, DECK + H + 0.1, z0 + sd * 1.55));
+    add(box(0.9, H, 0.6, white, o.px, DECK + H / 2 - 0.2, z0 + sd * 1.15));
+    add(box(1.7, 1.2, 0.9, white, o.px, DECK + 0.6, z0 + sd * 1.15)); // the flared foot of the leg
+    add(box(0.5, 0.5, 0.5, white, o.px, DECK + H + 0.1, z0 + sd * 1.15));
   }
-  for (const y of [4.2, 11, 19]) add(box(1.0, 0.7, 3.6, white, o.px, DECK + y, z0));
+  for (const y of [4.2, 11, 19]) add(box(1.0, 0.7, 2.9, white, o.px, DECK + y, z0));
   add(
     box(
       0.5,
@@ -102,9 +103,9 @@ export function linkBridge(ctx: SetContext, o: LinkBridgeOpts): void {
     const run = 5 + i * 5.6;
     for (const dx of [-1, 1])
       for (const sd of [-1, 1]) {
-        const a = new Vector3(o.px + dx * 0.5, top, z0 + sd * 1.55);
-        const b = new Vector3(o.px + dx * run, DECK + 0.4, z0 + sd * 1.35);
-        add(strut(a, b, 0.11, stay));
+        const a = new Vector3(o.px + dx * 0.5, top, z0 + sd * 1.15);
+        const b = new Vector3(o.px + dx * run, DECK + 0.4, z0 + sd * 1.15);
+        add(strut(a, b, 0.17, stay));
       }
   }
 
@@ -112,8 +113,8 @@ export function linkBridge(ctx: SetContext, o: LinkBridgeOpts): void {
   const glow = mat(0xffe2a8, { emissive: 0xffd488, emissiveIntensity: 1.2, roughness: 0.4 });
   for (let x = -o.half + 6; x < o.half; x += 9) {
     for (const sd of [-1, 1]) {
-      add(cyl(0.05, 0.07, 2.6, dark, x, DECK + 1.3, z0 + sd * 1.35, 5));
-      add(box(0.32, 0.1, 0.18, glow, x, DECK + 2.6, z0 + sd * 1.35));
+      add(cyl(0.05, 0.07, 2.6, dark, x, DECK + 1.3, z0 + sd * 1.15, 5));
+      add(box(0.32, 0.1, 0.18, glow, x, DECK + 2.6, z0 + sd * 1.15));
     }
   }
   // a few buses crossing: the deck is a working road

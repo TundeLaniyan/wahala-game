@@ -13,7 +13,7 @@
  * - the skyline: a row of towers of different heights with window grids and red mast lights;
  * - the Cappa Ground's floodlight masts on the east side (lit at night, a soft glow by day).
  *
- * Map identity anchor (docs/MAP_IDENTITY.md): `oshodi-rail-viaduct` (railViaduct below; the terminal canopy and the skywalk are
+ * Map identity anchor (docs/MAP_IDENTITY.md): `oshodi-expressway` (expressway below; the terminal canopy and the skywalk are
  * `oshodi-terminal-canopy` / `oshodi-skywalk` in oshodiMetroTerminal.ts).
  *
  * Boards say place names and plain station / terminal wording only; every other name is fictional and no real

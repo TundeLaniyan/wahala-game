@@ -282,7 +282,7 @@ const railBoard: Family = (k, g, r, n) => {
     Math.min(2.8, r.w - 0.3),
     0.5,
     r.cx,
-    2.5,
+    2.8,
     k.wz(r.y1) + 0.5 + 0.05,
   );
 };

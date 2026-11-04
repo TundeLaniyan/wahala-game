@@ -27,14 +27,14 @@ export const SHOTS = {
   ],
   rumbleMushin: [
     ['follow-redline', 28, 4],
-    ['follow-footbridge', 3, 17],
+    ['follow-footbridge', 1, 17],
     ['follow-idioro', 26, 28],
     ['whole', 'whole'],
   ],
   rumbleFadeyi: [
-    ['follow-footbridge', 47, 16],
-    ['follow-brt', 14, 16],
-    ['follow-bank', 26, 22],
+    ['follow-footbridge', 48, 11],
+    ['follow-brt', 11, 14],
+    ['follow-bank', 27, 29],
     ['whole', 'whole'],
   ],
   rumbleLagosIsland: [
@@ -44,7 +44,7 @@ export const SHOTS = {
     ['whole', 'whole'],
   ],
   rumbleLekki: [
-    ['follow-bridge', 22, 3],
+    ['follow-bridge', 22, 2],
     ['follow-admiralty', 22, 22],
     ['follow-plaza', 24, 10],
     ['whole', 'whole'],
@@ -52,7 +52,7 @@ export const SHOTS = {
   rumbleEbuteMetta: [
     ['follow-station', 31, 17],
     ['follow-yard', 28, 23],
-    ['follow-gantry', 26, 5],
+    ['follow-gantry', 23, 5],
     ['whole', 'whole'],
   ],
 };
@@ -120,11 +120,9 @@ async function start(id) {
   return { context, page, errors };
 }
 
+// the sim stays frozen (a lethal stage wave could otherwise end the staged player's run); the renderer still settles the camera
 const run = async (page, ms) => {
-  await page.evaluate(() => (window.__WAHALA__.controller().frozen = false));
   await page.waitForTimeout(ms);
-  await page.evaluate(() => (window.__WAHALA__.controller().frozen = true));
-  await page.waitForTimeout(500);
 };
 
 for (const id of ids) {
@@ -140,10 +138,10 @@ for (const id of ids) {
         const s = window.__WAHALA__.getState();
         return { w: s.width, h: s.height };
       });
-      const z = id === 'rumbleOshodi' ? 11 : 4.8 * Math.max(dims.w / 41, dims.h / 31);
+      const z = id === 'rumbleOshodi' ? 11 : 5.4 * Math.max(dims.w / 41, dims.h / 31);
       await page.evaluate(
         ([z, o]) => window.__WAHALA__.renderer().debugInspect({ x: 0, z: o, zoom: z }),
-        [z, id === 'rumbleOshodi' ? -1 : 1.6],
+        [z, id === 'rumbleOshodi' ? -1 : -0.6],
       );
     } else {
       await page.evaluate(() => window.__WAHALA__.renderer().debugInspect(null));
@@ -166,7 +164,8 @@ for (const id of ids) {
     const file = `${dir}/${prefix}_${id}_${name}.jpg`;
     await page.screenshot({ path: file, quality: 78, type: 'jpeg', timeout: 240000 });
     const st = await page.evaluate(() => window.__WAHALA__.stats());
-    console.log(JSON.stringify({ id, name, calls: st.drawCalls, tris: st.triangles, file }));
+    const alive = await page.evaluate(() => window.__WAHALA__.getState().players[0].alive);
+    console.log(JSON.stringify({ id, name, alive, calls: st.drawCalls, tris: st.triangles, file }));
   }
   if (errors.length) console.log(JSON.stringify({ id, errors: errors.slice(0, 3) }));
   await context.close();
