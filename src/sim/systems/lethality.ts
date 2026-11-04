@@ -15,6 +15,7 @@ import type { EliminationCause, GameState, Player, SimEvent } from '../types';
 import { creditFor } from './attribution';
 import { canHarm } from './queries';
 import { clearStreakRewards } from './streaks';
+import { isShieldedBoss } from '../mission/rules';
 
 export interface LethalHit {
   playerId: number;
@@ -71,6 +72,7 @@ export function applyLethalHits(state: GameState, hits: LethalHit[], events: Sim
     if (!p.alive || !mine) continue;
     const live = mine.filter((h) => !isImmune(state, p, h.eventId));
     if (live.length === 0) continue;
+    if (isShieldedBoss(state, p)) continue; // a mission boss cannot be hurt until the objective exposes it
     // spawn protection (respawn modes): ignore everything but the closing walls
     if (
       state.tick < p.protectedUntil &&

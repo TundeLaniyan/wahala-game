@@ -18,6 +18,7 @@ import { freshStreakRewards } from '../data/streaks';
 import { nextInt } from '../rng';
 import type { GameState, Player, SimEvent, StreakRewardKind, VehicleKind } from '../types';
 import { tryPlaceGenerator } from './generators';
+import { missionRewardEligible } from '../mission/rules';
 
 /** Is QUICK HANDS running for this fighter? */
 export const quickHandsActive = (state: Pick<GameState, 'tick'>, p: Pick<Player, 'streakRewards'>): boolean =>
@@ -41,7 +42,7 @@ export function grantStreakRewards(state: GameState, events: SimEvent[]): void {
   if (!cfg.enabled) return;
   const credited = new Map<number, number>();
   for (const e of events) {
-    if (e.type === 'playerEliminated' && e.creditId !== null)
+    if (e.type === 'playerEliminated' && e.creditId !== null && missionRewardEligible(state, e.creditId))
       credited.set(e.creditId, (credited.get(e.creditId) ?? 0) + 1);
   }
   for (const [id, count] of [...credited.entries()].sort((a, b) => a[0] - b[0])) {

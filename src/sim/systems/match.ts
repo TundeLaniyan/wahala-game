@@ -12,6 +12,7 @@ import { isRespawnMode, isTeamMode } from '../modes';
 import { endMatch } from './matchResult';
 import { alivePlayers } from './queries';
 import { evaluateSuddenDeath, resolveByKills } from './suddenDeath';
+import { evaluateMission } from '../mission/runtime';
 
 /**
  * Called once per playing tick AFTER all eliminations of the tick have been applied, so every
@@ -19,6 +20,10 @@ import { evaluateSuddenDeath, resolveByKills } from './suddenDeath';
  * and a draw in Classic, never an arbitrary winner.
  */
 export function evaluateMatchEnd(state: GameState, events: SimEvent[]): void {
+  if (state.mission) {
+    evaluateMission(state, events); // a mission ends by its own rules (boss, lives, clock)
+    return;
+  }
   if (state.match.phase !== 'playing' || state.players.length < 2) return;
   if (state.match.suddenDeath) {
     evaluateSuddenDeath(state, events);

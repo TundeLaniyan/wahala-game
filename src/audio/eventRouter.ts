@@ -397,6 +397,16 @@ const handlers: Handlers = {
     sfx(c, 'hop', panOf(c, e.toX), 0.9, 1.2, 0.15);
   },
   generatorDoused: (e, c) => sfx(c, 'gen_dud', panOf(c, generatorX(c, e.generatorId))),
+  // campaign missions (src/sim/mission): silent here; a mission audio pass gives them synthesised cues
+  missionStarted: () => undefined,
+  missionPhase: () => undefined,
+  missionNode: () => undefined,
+  missionWarning: () => undefined,
+  bossExposed: () => undefined,
+  bossShielded: () => undefined,
+  bossDefeated: () => undefined,
+  missionOutcome: () => undefined,
+  missionCallout: () => undefined,
   // V2 events (workstreams add their own sounds; silent until then)
   // V2. Contact abilities and the B special make the sounds of what they cause (kick, throw, power-down,
   // push / daze, vehicle warning), so their own events stay silent.

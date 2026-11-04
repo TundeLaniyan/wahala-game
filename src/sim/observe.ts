@@ -4,6 +4,8 @@
  * The view shares (does not copy) the live arrays for speed: treat everything as read-only.
  */
 import type { GameConfig } from './config';
+import { directiveFor } from './mission/directives';
+import type { NpcDirective } from './mission/types';
 import type {
   BlastEvent,
   CrowdState,
@@ -46,9 +48,12 @@ export interface Observation {
   readonly settings: Readonly<MatchSettings>;
   /** City Rumble Evolution: marked supply crates still standing (the marking is public, the content is not). */
   readonly supplies: readonly number[];
+  /** Campaign missions: what this crew bot's role asks of it (absent in normal matches and for the human). */
+  readonly directive?: NpcDirective;
 }
 
 export function observe(state: GameState, selfId: number): Observation {
+  const directive = state.mission ? directiveFor(state, selfId) : undefined;
   return {
     selfId,
     tick: state.tick,
@@ -71,5 +76,6 @@ export function observe(state: GameState, selfId: number): Observation {
     arenaId: state.arenaId,
     settings: state.settings,
     supplies: state.supplies,
+    ...(directive ? { directive } : {}),
   };
 }

@@ -75,6 +75,11 @@ export interface MissionSpec {
   difficulty?: Difficulty;
   /** Human lives (default 3). A life is spent when the human is eliminated; 0 left = mission lost. */
   lives?: number;
+  /**
+   * Overrides the mission's clock (seconds). Not offered by the campaign: for practice variants and tests (a short
+   * clock makes a timeout test cheap). Absent = the mission's own limit from its data (`MISSION_DEFS`).
+   */
+  timeLimitSec?: number;
 }
 
 export type MissionNodeState =
@@ -155,4 +160,179 @@ export interface MissionSeat {
   factionId: string;
   characterId: CharacterId;
   name: string;
+  /** Crew: the tile the bot stands on at the start and returns to (after snapping to free floor). */
+  post?: { x: number; y: number };
+  /** Crew: guard / follow radius in tiles, and for defenders the index of the phase node they stay at. */
+  radius?: number;
+  anchor?: number;
+}
+
+// ---------------------------------------------------------------- runtime state (plain JSON in `GameState.mission`)
+
+/** A crew bot's directive for the AI (computed by the sim from its role; carried by `Observation.directive`). */
+export interface NpcDirective {
+  /**
+   * guard: stay within `radius` of (x, y) and fight what comes in; block: stand on the tile; chase: hunt the rival
+   * (the AI picks its own target); run: go to the tile (a restock / objective tile); escort: stay with the tile's
+   * occupant (the boss); support: stay with an ally; flee: keep away from the human (x, y is the human's tile).
+   */
+  kind: 'guard' | 'block' | 'chase' | 'run' | 'escort' | 'support' | 'flee';
+  x: number;
+  y: number;
+  radius?: number;
+}
+
+/** One telegraphed mission strike (a convoy lane, an audit, a contingency...). Lethal flames land at `landTick`. */
+export interface MissionStrike {
+  id: number;
+  kind: 'convoy' | 'strike' | 'contingency' | 'marshal' | 'audit';
+  /** Tile indices (y * width + x) that burn. */
+  tiles: number[];
+  warnTick: number;
+  landTick: number;
+  /** Tick the flames go out (landTick + active time; the strike is dropped after it). */
+  endTick: number;
+  eventId: number;
+  /** Node id that called it ('' = the mission). */
+  source: string;
+  /** Times the landing was postponed because the target could not move (mercy; bounded). */
+  postponed: number;
+  /** The flames have been created. */
+  landed: boolean;
+}
+
+/** One objective node at run time. Every mechanic uses the fields it needs; the rest stay at their defaults. */
+export interface MissionNodeRuntime {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+  /** Channel / hold progress in ticks (relay jam, junction hold, ledger pickup, switch-off, switch throw). */
+  progress: number;
+  /** Completed right now: jammed / destroyed / held / collected / thrown / switched off. */
+  done: boolean;
+  /** Tick it completed (lapse timers). */
+  doneAt: number;
+  /** Next pulse tick of a live relay / junction (-1 = none). */
+  nextPulse: number;
+  /** Blast hits left (parts stack). */
+  hp: number;
+  /** Last flame event that already counted against this stack (one blast counts once). */
+  lastEvent: number;
+  /** Crew progress ticks (a runner re-arming a relay / restocking a stack). */
+  crewProgress: number;
+  /** Hold zone radius in tiles (junction), 0 = the tile only. */
+  radius: number;
+  /** Position in the contingency order (-1 = not part of it). */
+  order: number;
+  /** Switch cannot trigger again until the player has stepped off it. */
+  needsRelease: boolean;
+  /** Last state reported through a `missionNode` event. */
+  shown: MissionNodeState;
+  /** Tile indices opened (soft blocks cleared) when completed (junctions). */
+  opens: number[];
+}
+
+/** The rail window cycle of the dispatch-windows mission. */
+export interface MissionRail {
+  /** Next cycle starts (its train warning begins) at this tick. */
+  nextCycleAt: number;
+  /** Tick the telegraphed railcar enters the lane (-1 = no cycle running). */
+  trainAt: number;
+  /** Tick the lane is clear again and the dispatch window opens. */
+  openAt: number;
+  /** Tick the window closes. */
+  closeAt: number;
+  open: boolean;
+  route: number;
+  cycles: number;
+}
+
+export interface MissionBossState {
+  shielded: boolean;
+  /** Tick the exposure window ends (0 = not exposed). */
+  exposedUntil: number;
+  /** Windows opened so far (retry loop bound: `tuning.maxExposures`). */
+  exposures: number;
+  defeated: boolean;
+}
+
+export interface MissionReinforcement {
+  playerId: number;
+  atTick: number;
+}
+
+/** One phase of the encounter with every number resolved (data + replay modifiers). Ticks unless stated. */
+export interface PhaseTuning {
+  goal: number;
+  /** Channel / hold time (relay jam, junction hold, ledger pickup, switch-off, switch throw). */
+  holdTicks: number;
+  /** Progress lost per tick while nobody works the node. */
+  decayPerTick: number;
+  /** A completed node reverts after this long (0 = it stays done). */
+  rearmTicks: number;
+  /** Pressure cadence per source (0 = none). */
+  pulseTicks: number;
+  /** Strike telegraph: never below 150 ticks (2.5 s) for a lethal strike, 210 for a train. */
+  warnTicks: number;
+  /** How long a strike burns. */
+  activeTicks: number;
+  /** Strike size: lane tiles (convoy / marshal) or area radius (targeted strikes). */
+  strikeSpan: number;
+  /** Parts stack: separate blasts needed. */
+  hp: number;
+  /** A runner standing on a destroyed stack / jammed relay needs this long to restock / re-arm it (0 = never). */
+  crewTicks: number;
+  /** Rail windows: gap between two cycle starts, how long a window stays open. */
+  cycleTicks: number;
+  openTicks: number;
+  /** Contingency: length of the switch-off sequence. */
+  sequence: number;
+  /** Evidence: how long a carried ledger may be carried before it is lost (0 = unlimited). */
+  carryLimitTicks: number;
+  callout: string;
+}
+
+export interface MissionTuning {
+  timeLimitTicks: number;
+  parTicks: number;
+  exposeTicks: number;
+  maxExposures: number;
+  reinforceMax: number;
+  /** Extra ticks per step while carrying a ledger. */
+  carrySlowTicks: number;
+  phases: [PhaseTuning, PhaseTuning, PhaseTuning];
+}
+
+export interface MissionState {
+  id: MissionId;
+  objective: ObjectiveKind;
+  modifiers: MissionModifierId[];
+  difficulty: Difficulty;
+  seats: MissionSeat[];
+  bossId: number;
+  tuning: MissionTuning;
+  phase: 0 | 1 | 2;
+  phaseState: MissionPhaseState;
+  phaseStartTick: number;
+  phasesCleared: number;
+  nodes: MissionNodeRuntime[];
+  strikes: MissionStrike[];
+  rail: MissionRail | null;
+  /** Contingency: the signalled order (node ids) and how far it has got. */
+  sequence: string[];
+  seqIndex: number;
+  /** Evidence: the carried ledger (null = none) and how many were delivered this phase. */
+  carry: { playerId: number; nodeId: string; since: number } | null;
+  delivered: number;
+  /** Next mission-wide pressure pulse (targeted strikes of the supply, evidence and contingency missions); -1 = none. */
+  pulseAt: number;
+  boss: MissionBossState;
+  livesUsed: number;
+  livesMax: number;
+  reinforcements: MissionReinforcement[];
+  reinforcementsUsed: number;
+  announced: boolean;
+  outcome: MissionOutcome | null;
+  callout: string | null;
 }

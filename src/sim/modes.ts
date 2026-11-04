@@ -11,6 +11,9 @@
  * - deathmatch: City Rumble, 5 or 10 minutes, respawns with spawn protection, no closing, ranked by
  *               eliminations; elimination rewards last one life.
  * - team:       Deathmatch rules with teams (default Green v White) ranked by team eliminations.
+ * - mission:    a campaign mission (src/sim/mission): the Rumble economy on a district stage, no closing, no hidden
+ *               pickups, the human respawns until the mission's lives are spent, the crew never respawns; the
+ *               end of the match belongs to the mission runtime (win / lose / timeout), not to kills or the clock.
  *
  * | rule              | classic | survival | deathmatch | team       |
  * | ----------------- | ------- | -------- | ---------- | ---------- |
@@ -72,12 +75,21 @@ export function modeConfig(settings: MatchSettings, _arena: ArenaDef): DeepParti
         drops: { maxDeathDrops: 0 },
         respawn: { enabled: true, resetOnDeath: true },
       };
+    case 'mission':
+      // the clock and the crate density come from the mission (mission/build.ts); who respawns is decided by
+      // the mission runtime (the human only, while lives last)
+      return {
+        ...rumbleEconomy(settings),
+        pickups: { hiddenChance: 0 },
+        drops: { maxDeathDrops: 0 },
+        respawn: { enabled: true, resetOnDeath: true },
+      };
   }
 }
 
 /** Whether the arena closes in under this ruleset (respawn modes never shrink permanently). */
 export function modeShrinks(settings: MatchSettings): boolean {
-  return !isRespawnMode(settings.game);
+  return settings.game !== 'mission' && !isRespawnMode(settings.game);
 }
 
 /**

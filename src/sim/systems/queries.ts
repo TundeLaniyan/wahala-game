@@ -2,6 +2,7 @@
 import { Tile } from '../types';
 import type { GameState, Generator, Player, Pickup, Vehicle } from '../types';
 import { tileAt } from '../grid';
+import { missionStepPenalty } from '../mission/rules';
 
 export function getPlayer(state: GameState, id: number): Player | undefined {
   return state.players[id];
@@ -56,6 +57,7 @@ export function playerStepTicks(state: GameState, p: Player): number {
   let ticks = levels[Math.min(p.speedLevel, levels.length - 1)]!;
   if (p.mounted) ticks -= m.okadaStepBonus;
   if (p.curse?.kind === 'slow' && state.tick < p.curse.until) ticks += m.slowCurseExtraTicks;
+  if (state.mission) ticks += missionStepPenalty(state, p); // carrying a ledger
   return Math.max(m.minStepTicks, ticks);
 }
 
