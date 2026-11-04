@@ -36,6 +36,7 @@ import { scheduleRespawns, updateRespawns } from './systems/respawn';
 import { updateSpectators } from './systems/spectators';
 import { suddenDeathHoldsInput, updateSuddenDeath } from './systems/suddenDeath';
 import { updateKnockdowns } from './systems/knockdown';
+import { updateLocalChampion } from './systems/localChampion';
 import { grantStreakRewards, quickHandsPlacement, updateStreaks } from './systems/streaks';
 
 export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
@@ -61,6 +62,7 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   updateLifePerks(state);
   updateStreaks(state, events);
   updateKnockdowns(state, events);
+  updateLocalChampion(state, events);
   expireEntryModes(state, events);
   applyIntents(state, intents, events);
   updateMovement(state, intents, events);

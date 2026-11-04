@@ -3,7 +3,7 @@
  * tools for emergencies and close-combat skills. Each decision is verified against the danger map
  * before it is allowed to change the movement intent.
  */
-import { CHARACTERS, meleeTarget } from '../sim';
+import { chooseAttack, meleeTarget, primaryOf } from '../sim';
 import type { Intent } from '../sim';
 import { dirIndex } from './board';
 import type { Ctx } from './context';
@@ -43,6 +43,17 @@ export class Tactics {
       intent.special = true;
       delete intent.move;
     }
+    // ---- LOCAL CHAMPION (decision FC6): the crowd backs me for a few seconds: used when a rival is within its radius
+    if (
+      !intent.special &&
+      me.streakRewards.localChampion &&
+      me.localChampion === null &&
+      safeHere &&
+      localChampionWorthIt(c)
+    ) {
+      intent.special = true;
+      delete intent.move;
+    }
     if (intent.special || intent.vehicle || me.entryUntil !== null) return;
 
     // ---- remote detonation
@@ -62,10 +73,37 @@ export class Tactics {
     // ---- close combat: B, which is a melee press whenever an opponent is adjacent (never the vehicle)
     if (decideSkill(c) && meleeTarget(obs, me)) {
       intent.special = true;
-      const startup = obs.config.skills.attacks[CHARACTERS[me.characterId].skill].startupTicks;
+      const startup = obs.config.skills.attacks[primaryOf(me)].startupTicks;
       if (danger.firstHit(world.myTile, T + 1) > T + startup + 14) delete intent.move;
+    } else if (
+      me.attacks.secondary &&
+      profile.useSkill &&
+      T >= me.dazedUntil &&
+      intent.special === undefined
+    ) {
+      // the SECONDARY attack (a reach-2 opener, or the follow-up while the primary recovers): the same B press the
+      // human makes (`chooseAttack` is the resolver's own choice), only from a tile that is safe for its startup
+      const pick = chooseAttack(obs, me);
+      if (pick && pick.ready && pick.kind !== me.attacks.primary) {
+        const startup = obs.config.skills.attacks[pick.kind].startupTicks;
+        if (danger.firstHit(world.myTile, T + 1) > T + startup + 14) {
+          intent.special = true;
+          delete intent.move;
+        }
+      }
     }
   }
+}
+
+/** Is a LOCAL CHAMPION worth starting now? A rival within its radius, who is not immune, and nobody adjacent (B would be a melee press). */
+function localChampionWorthIt(c: Ctx): boolean {
+  const { world } = c;
+  const { obs, me } = world;
+  if (obs.tick < me.dazedUntil || meleeTarget(obs, me)) return false;
+  const radius = obs.config.streaks.localChampion.radiusTiles;
+  return world.rivals.some(
+    (r) => Math.abs(r.x - me.x) + Math.abs(r.y - me.y) <= radius && obs.tick >= r.localChampionImmuneUntil,
+  );
 }
 
 /**
@@ -81,6 +119,8 @@ function knockdownWorthIt(c: Ctx): boolean {
   if (live.length === 0) return false;
   const near = live.filter((r) => Math.abs(r.x - me.x) + Math.abs(r.y - me.y) <= 9);
   if (near.length < Math.min(2, live.length)) return false;
-  const mine = obs.generators.filter((g) => g.ownerId === me.id && g.mode !== 'disabled' && !g.vehicleBorne).length;
+  const mine = obs.generators.filter(
+    (g) => g.ownerId === me.id && g.mode !== 'disabled' && !g.vehicleBorne,
+  ).length;
   return mine < me.capacity;
 }

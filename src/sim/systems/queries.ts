@@ -34,7 +34,8 @@ export function pickupAt(state: GameState, x: number, y: number): Pickup | undef
 }
 
 export function activeGeneratorCount(state: GameState, ownerId: number): number {
-  return state.generators.filter((g) => g.ownerId === ownerId && g.mode !== 'disabled' && !g.vehicleBorne).length;
+  return state.generators.filter((g) => g.ownerId === ownerId && g.mode !== 'disabled' && !g.vehicleBorne)
+    .length;
 }
 
 export function isFloor(state: GameState, x: number, y: number): boolean {
@@ -56,6 +57,7 @@ export function playerStepTicks(state: GameState, p: Player): number {
   let ticks = levels[Math.min(p.speedLevel, levels.length - 1)]!;
   if (p.mounted) ticks -= m.okadaStepBonus;
   if (p.curse?.kind === 'slow' && state.tick < p.curse.until) ticks += m.slowCurseExtraTicks;
+  if (p.slow && state.tick < p.slow.until) ticks += p.slow.extraStepTicks; // a Leg Sweep (decision FC3)
   return Math.max(m.minStepTicks, ticks);
 }
 
@@ -69,7 +71,13 @@ export function isActing(state: GameState, p: Player): boolean {
  * player instead of spending it (decision MI1). Read-only.
  */
 export function movementLocked(state: GameState, p: Player): boolean {
-  return !isActing(state, p) || p.slide !== null || p.teleportPending !== null || p.entryUntil !== null;
+  return (
+    !isActing(state, p) ||
+    p.slide !== null ||
+    p.teleportPending !== null ||
+    p.entryUntil !== null ||
+    state.tick < p.rootedUntil
+  );
 }
 
 /** V2: are these two players on the same team (never true in free-for-all, never for oneself)? */

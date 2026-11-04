@@ -4,7 +4,7 @@
  * current plan step by step, vetoes any step that the freshest map says is lethal, and layers the
  * tactical one-shots (skills, remote, kill switch, vehicle) on top.
  */
-import { createRng, nextFloat, nextInt } from '../sim';
+import { chooseAttack, createRng, nextFloat, nextInt } from '../sim';
 import type { Dir, Intent, Observation, RngHolder } from '../sim';
 import { checkPlacement, computeHuntField, extractPlan } from './analysis';
 import { dirIndex, getBoard } from './board';
@@ -175,7 +175,8 @@ export class Brain implements Bot {
       // City Rumble (radial blasts, decision RE-AI3): a new generator can set mine off early or cover my
       // refuge from a diagonal; when the fresh map makes the plan I am following lethal, re-planning is
       // urgent (it is never deferred behind the large board's per-tick allowance)
-      if (this.plan && this.plan.kind !== 'last' && isRadial(obs) && !this.planStillSafe(c, this.plan)) this.rethinkNow = true;
+      if (this.plan && this.plan.kind !== 'last' && isRadial(obs) && !this.planStillSafe(c, this.plan))
+        this.rethinkNow = true;
     }
 
     const urgent = this.plan === null || this.rethinkNow;
@@ -213,9 +214,13 @@ export class Brain implements Bot {
     const { profile } = this;
     const { world } = c;
     const T = world.tick;
-    const adjacentRival = world.rivals.some((r) => Math.abs(r.x - world.me.x) + Math.abs(r.y - world.me.y) === 1);
+    // a rival for a melee press: next to me, or exactly in the reach of a reach-2 attack (never mistaken for a vehicle press)
+    const adjacentRival =
+      world.rivals.some((r) => Math.abs(r.x - world.me.x) + Math.abs(r.y - world.me.y) === 1) ||
+      chooseAttack(world.obs, world.me) !== null;
     const v = intent.vehicle;
-    const wantsVehicle = (v !== undefined && (v.type === 'begin' || v.type === 'auto')) || (intent.special && !adjacentRival);
+    const wantsVehicle =
+      (v !== undefined && (v.type === 'begin' || v.type === 'auto')) || (intent.special && !adjacentRival);
     if (wantsVehicle && profile.vehicleUse < 1) {
       if (T < this.vehicleVetoUntil || nextFloat(this.rng) >= profile.vehicleUse) {
         if (v && (v.type === 'begin' || v.type === 'auto')) delete intent.vehicle;

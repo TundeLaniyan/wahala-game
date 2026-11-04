@@ -2,6 +2,7 @@ import { freshStreakRewards } from './data/streaks';
 import { DEFAULT_CONFIG, mergeConfig, ticks } from './config';
 import type { GameConfig } from './config';
 import { CHARACTERS } from './data/characters';
+import { defaultAttacks } from './data/fighters';
 import { DEFAULT_ARENA_ID, getArena } from './arenas';
 import type { ArenaDef } from './arenas';
 import { tileIndex } from './grid';
@@ -42,11 +43,13 @@ export const MAX_PLAYERS = 32;
 export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, config: GameConfig): Player {
   const spawn = arena.spawns[id]!;
   const facing = spawn.x < arena.layout[0]!.length / 2 ? 'right' : 'left';
+  const characterId = setup.characterId in CHARACTERS ? setup.characterId : 'streetBaller';
+  const base = defaultAttacks(characterId, config.skills.secondaryAttacks);
   return {
     id,
     slot: id,
     name: setup.name,
-    characterId: setup.characterId in CHARACTERS ? setup.characterId : 'streetBaller',
+    characterId,
     isBot: setup.isBot,
     x: spawn.x,
     y: spawn.y,
@@ -93,6 +96,17 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     lastPlaceTick: -1e9,
     attack: null,
     meleeLock: {},
+    attacks: {
+      primary: setup.attacks?.primary ?? base.primary,
+      secondary:
+        setup.attacks && 'secondary' in setup.attacks ? (setup.attacks.secondary ?? null) : base.secondary,
+    },
+    rootedUntil: 0,
+    slow: null,
+    attackCooldowns: {},
+    slowImmuneUntil: 0,
+    localChampion: null,
+    localChampionImmuneUntil: 0,
     curse: null,
     entryUntil: null,
     immune: [],

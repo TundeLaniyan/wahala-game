@@ -41,9 +41,27 @@ export type { CharacterDef } from './data/characters';
 export { PICKUP_DEFS } from './data/pickups';
 export { VEHICLE_DEFS } from './data/vehicles';
 export { SKILL_DEFS } from './data/skills';
+export {
+  ATTACK_AXES,
+  ATTACK_DEFS,
+  ATTACK_KINDS,
+  controlValueSeconds,
+  controlValueTicks,
+  dominates,
+} from './data/attacks';
+export type { AttackDef } from './data/attacks';
+export { defaultAttacks, fighterRoster, getFighter, isFighterId } from './data/fighters';
+export type {
+  ExperimentalFighterId,
+  FighterCostume,
+  FighterDef,
+  FighterId,
+  FighterStatus,
+  FighterTrait,
+} from './data/fighters';
 export { STREAK_REWARD_DEFS, freshStreakRewards, heldStreakRewards } from './data/streaks';
 export type { StreakRewardDef } from './data/streaks';
-export { allowedVehicles, drawVehicle, quickHandsActive } from './systems/streaks';
+export { allowedVehicles, drawVehicle, grantStreakReward, quickHandsActive } from './systems/streaks';
 export type { SkillDef } from './data/skills';
 export { createRng, nextFloat, nextInt, pick, shuffle } from './rng';
 export type { RngHolder } from './rng';
@@ -77,7 +95,9 @@ export {
   radialSquareRadius,
 } from './systems/blastShape';
 export type { RadialOffset, RadialOptions } from './systems/blastShape';
-export { meleeTarget } from './systems/skills';
+export { attackReady, chooseAttack, lineTarget, meleeTarget, primaryOf } from './systems/skills';
+export type { AttackChoice } from './systems/skills';
+export { localChampionTargets, useLocalChampion } from './systems/localChampion';
 export { moveWouldAct } from './systems/contact';
 export { autoRouteOptions, drivableStretch } from './systems/autoVehicle';
 export { canHarm, isOpponent, teammates } from './systems/queries';

@@ -508,7 +508,11 @@ export class MatchController {
             };
       case 'knockdownThrown':
         return e.targetId === LOCAL_ID
-          ? { text: 'LOCAL CHAMPION! DUCK!', tone: 'bad', icon: 'globalKnockdown' }
+          ? { text: 'GLOBAL KNOCKDOWN! DUCK!', tone: 'bad', icon: 'globalKnockdown' }
+          : null;
+      case 'localChampionThrow':
+        return e.targetId === LOCAL_ID
+          ? { text: 'LOCAL CHAMPION! STEP OFF THE TILE!', tone: 'bad', icon: 'localChampion' }
           : null;
       case 'knockdownEnded':
         return e.playerId === LOCAL_ID ? { text: 'GET UP AND RUN!', tone: 'info' } : null;

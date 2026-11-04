@@ -29,6 +29,7 @@ export function updateMovement(state: GameState, intents: Intents, events: SimEv
     if (!isActing(state, p) || p.entryUntil !== null) continue;
 
     if (continueSlide(state, p)) continue;
+    if (state.tick < p.rootedUntil) continue; // planted by an attack's wind-up or recoil (AttackSpec vulnerability)
     const wanted = intents[p.id]?.move ?? null;
     if (!wanted) continue;
     const dir: Dir = p.curse?.kind === 'inverted' && state.tick < p.curse.until ? OPPOSITE[wanted] : wanted;

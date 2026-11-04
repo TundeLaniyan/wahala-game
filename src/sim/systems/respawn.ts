@@ -190,6 +190,10 @@ export function respawn(state: GameState, p: Player, x: number, y: number): void
   p.knockedUntil = 0;
   p.skillReadyTick = 0;
   p.meleeLock = {};
+  p.attackCooldowns = {};
+  p.rootedUntil = 0;
+  p.slow = null;
+  p.localChampion = null;
   clearStreakRewards(state, p);
   clearLifePerks(p);
   p.lastPlaceTick = -1e9;

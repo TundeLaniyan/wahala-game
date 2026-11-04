@@ -1,44 +1,76 @@
 /**
- * Close-range, non-lethal character attacks (decisions CB1-CB4). B next to a rival starts an attack; it takes effect
- * `startupTicks` later against whoever is adjacent THEN (a rival who stepped away is a whiff). Three attacks, three
- * different trades (numbers in `config.skills.attacks`):
+ * Close-range, non-lethal attacks (decisions CB1-CB4, FC1-FC4). B next to a rival starts an attack; it takes effect
+ * `startupTicks` later against whoever is in reach THEN (a rival who stepped away is a whiff). The catalogue
+ * (`config.skills.attacks`, named in `data/attacks.ts`) has eight attacks with different trades; a fighter throws
+ * the `attacks.primary` of their `FighterDef` and, when the loadout has one, a `secondary` (resolver: `actions.ts`).
  *
- *   Punch / Street Jab  `push`   adjacent, very fast, a brief daze, no displacement, short recoveries
- *   Shove               `shove`  adjacent, slower, pushes two tiles where the map allows, no daze,
- *                                long whiff recovery (a failed Shove leaves the attacker exposed)
- *   Daze Punch          `daze`   adjacent, slow telegraph, the longest daze, long recovery
- *
- * Rules shared by all three:
- *  - nothing roots the attacker: the recoveries only delay THEIR NEXT attack (`skillReadyTick`);
+ * Rules shared by every attack:
+ *  - nothing roots the attacker EXCEPT where the spec says so (`plantedStartup`, `whiffRootTicks`, `hitRootTicks`:
+ *    the attacker cannot take a step; they can still place generators and press B);
  *  - a whiff costs `whiffRecoveryTicks`, a hit `hitRecoveryTicks` (the global recovery: after it any rival is
- *    hittable again);
+ *    hittable again) and an attack with a `cooldownTicks` cannot be thrown again for that long (per attack);
  *  - the same attacker cannot affect the same victim again for `targetLockoutTicks` (no chain, no stun-lock);
- *  - a hit that dazes or displaces cuts a pending attack of the victim short (a fast jab beats a slow wind-up).
+ *  - a hit that `interrupts` cuts a pending attack of the victim short (a fast jab beats a slow wind-up);
+ *  - STEP GRACE (decision FC1): a rival who began stepping away during the startup but has not yet visually crossed
+ *    half the step (`config.skills.stepGrace`) is still hit;
+ *  - NOTHING here kills: every effect is a daze, a slow or a displacement (`AttackSpec.damage` is always 0).
  * Everything is ticks and the match RNG is never used, so replays are identical.
  */
-import { DIRS, DIR_VEC } from '../grid';
-import { CHARACTERS } from '../data/characters';
+import { DIRS, DIR_VEC, tileAt } from '../grid';
+import type { GridView } from '../grid';
 import type { AttackSpec } from '../config';
-import type { Dir, GameState, Player, SimEvent, SkillKind } from '../types';
+import type { AttackKind, Dir, GameState, Player, SimEvent, SkillKind } from '../types';
+import { Tile } from '../types';
+import { CHARACTERS } from '../data/characters';
 import { beginStep, canPlayerEnter } from './stepping';
 import { isActing, playersAt, teammates } from './queries';
 
-/** The attack a fighter throws (their character's skill). */
+/** The fighter's original skill (their character's); kept for the menu and the HUD label. */
 export const skillOf = (p: Pick<Player, 'characterId'>): SkillKind => CHARACTERS[p.characterId].skill;
 
-/** Can `attacker` (a fighter or the bots' observation of themselves) start an attack on `victim` right now? */
+/** The attacks a fighter throws: the primary of their loadout (falls back to their character's skill). */
+export const primaryOf = (p: Pick<Player, 'characterId' | 'attacks'>): AttackKind =>
+  p.attacks?.primary ?? skillOf(p);
+
+/** The read-only part of the state attack rules look at (an Observation qualifies, so bots use the same code). */
+export type AttackView = GridView & {
+  readonly tick: number;
+  readonly players: readonly Readonly<Player>[];
+  readonly config: GameState['config'];
+};
+
+type Attacker = Readonly<Pick<Player, 'characterId' | 'meleeLock' | 'id' | 'attacks'>>;
+
+/** Can `attacker` start `kind` (default: their primary) on `victim` right now? Lockout, immunities - not recovery. */
 export function attackable(
   state: { readonly tick?: number; readonly config: GameState['config'] },
   tick: number,
-  attacker: Readonly<Pick<Player, 'characterId' | 'meleeLock' | 'id'>>,
-  victim: Readonly<Pick<Player, 'id' | 'dazeImmuneUntil'>>,
+  attacker: Attacker,
+  victim: Readonly<Pick<Player, 'id' | 'dazeImmuneUntil' | 'slowImmuneUntil'>>,
+  kind: AttackKind = primaryOf(attacker),
 ): boolean {
   if (tick < (attacker.meleeLock[victim.id] ?? 0)) return false; // the per-target lockout
-  const spec = state.config.skills.attacks[skillOf(attacker)];
+  const spec = state.config.skills.attacks[kind];
   // a pure daze has nothing to do to a victim who is still immune to one
   if (spec.dazeTicks > 0 && spec.displacementTiles === 0 && tick < victim.dazeImmuneUntil) return false;
+  // ... and neither has a pure slow
+  if (
+    spec.slowTicks > 0 &&
+    spec.dazeTicks === 0 &&
+    spec.displacementTiles === 0 &&
+    tick < (victim.slowImmuneUntil ?? 0)
+  )
+    return false;
   return true;
 }
+
+/** Is `kind` off recovery and off its own cooldown for `p` (it may start now)? */
+export const attackReady = (
+  state: { readonly tick: number },
+  p: Readonly<Pick<Player, 'skillReadyTick' | 'attackCooldowns' | 'attack'>>,
+  kind: AttackKind,
+): boolean =>
+  p.attack === null && state.tick >= p.skillReadyTick && state.tick >= (p.attackCooldowns?.[kind] ?? 0);
 
 /**
  * V2 melee target: an attackable opponent (never a teammate) on the faced tile, else on another adjacent tile in
@@ -66,12 +98,70 @@ export function meleeTarget<P extends Readonly<Player>>(
   return null;
 }
 
-/** The rival an attack by `p` could start on now (adjacent, not locked out, not pointless), or null. */
+/** The rival a PRIMARY attack by `p` could start on now (adjacent, not locked out, not pointless), or null. */
 export function attackTarget<P extends Readonly<Player>>(
   state: { readonly tick: number; readonly players: readonly P[]; readonly config: GameState['config'] },
   p: Readonly<Player>,
 ): { target: P; dir: Dir } | null {
   return meleeTarget(state, p, (o) => attackable(state, state.tick, p, o));
+}
+
+/** A rival exactly two tiles away in the faced line with open ground between (what a reach-2 attack aims at). */
+export function lineTarget<P extends Readonly<Player>>(
+  state: GridView & { readonly players: readonly P[] },
+  p: Readonly<Player>,
+  dir: Dir,
+  ok: (o: P) => boolean = () => true,
+): P | null {
+  const v = DIR_VEC[dir];
+  if (tileAt(state, p.x + v.dx, p.y + v.dy) !== Tile.Empty) return null;
+  const x = p.x + v.dx * 2;
+  const y = p.y + v.dy * 2;
+  return (
+    state.players.find(
+      (o) => o.alive && o.x === x && o.y === y && o.id !== p.id && !teammates(p, o) && ok(o),
+    ) ?? null
+  );
+}
+
+/** What B would throw right now: which attack, at whom, and whether it can start this tick (else B is a no-op). */
+export interface AttackChoice<P extends Readonly<Player> = Readonly<Player>> {
+  kind: AttackKind;
+  target: P;
+  dir: Dir;
+  ready: boolean;
+}
+
+/**
+ * The attack B starts, in the fixed order (docs/FIGHTERS_AND_ATTACKS.md section 4):
+ *  1. a rival on an ADJACENT tile (faced first): the PRIMARY if it is ready, else the SECONDARY if that is ready and
+ *     can hit them; neither ready = B is spent on nothing (`ready: false`, never a vehicle or a reward);
+ *  2. nobody adjacent: a ready attack of REACH 2 (primary first, then secondary) on a rival exactly two tiles away
+ *     in the faced line with open ground between;
+ *  3. otherwise null, and the rest of B's order (rewards, vehicle voucher) applies.
+ */
+export function chooseAttack<P extends Readonly<Player>>(
+  state: AttackView & { readonly players: readonly P[] },
+  p: Readonly<Player>,
+): AttackChoice<P> | null {
+  const kinds: AttackKind[] = p.attacks.secondary
+    ? [p.attacks.primary, p.attacks.secondary]
+    : [p.attacks.primary];
+  let claimed: AttackChoice<P> | null = null;
+  for (const kind of kinds) {
+    const adj = meleeTarget(state, p, (o) => attackable(state, state.tick, p, o, kind));
+    if (!adj) continue;
+    const choice = { kind, target: adj.target, dir: adj.dir, ready: attackReady(state, p, kind) };
+    if (choice.ready) return choice;
+    claimed ??= choice; // an adjacent rival claims B even while everything recovers
+  }
+  if (claimed) return claimed;
+  for (const kind of kinds) {
+    if (state.config.skills.attacks[kind].reach < 2 || !attackReady(state, p, kind)) continue;
+    const target = lineTarget(state, p, p.facing, (o) => attackable(state, state.tick, p, o, kind));
+    if (target) return { kind, target, dir: p.facing, ready: true };
+  }
+  return null;
 }
 
 /** Legacy `skill` intent: the faced tile only. */
@@ -85,8 +175,8 @@ export function useSkill(state: GameState, p: Player, events: SimEvent[]): void 
 }
 
 /**
- * Starts the attack on `target` (already adjacent in `dir`): the startup runs, the effect follows. Returns whether
- * it began (not while recovering from the last one or already winding up).
+ * Starts `kind` (default: the primary) on `target` (already in reach in `dir`): the startup runs, the effect follows.
+ * Returns whether it began (not while recovering from the last attack, on cooldown or already winding up).
  */
 export function beginAttack(
   state: GameState,
@@ -94,18 +184,21 @@ export function beginAttack(
   target: Player,
   dir: Dir,
   events: SimEvent[],
+  kind: AttackKind = primaryOf(p),
 ): boolean {
-  if (p.attack !== null || state.tick < p.skillReadyTick) return false;
-  const skill = skillOf(p);
-  const spec = state.config.skills.attacks[skill];
+  if (!attackReady(state, p, kind)) return false;
+  const spec = state.config.skills.attacks[kind];
   p.facing = dir;
-  p.attack = { skill, targetId: target.id, resolveTick: state.tick + spec.startupTicks };
+  const pending = { skill: kind, targetId: target.id, resolveTick: state.tick + spec.startupTicks, dir };
+  p.attack = pending;
+  if (spec.cooldownTicks > 0) p.attackCooldowns[kind] = state.tick + spec.cooldownTicks; // spent even if it whiffs
+  if (spec.plantedStartup) p.rootedUntil = Math.max(p.rootedUntil, pending.resolveTick); // VULNERABILITY: planted
   events.push({
     type: 'attackStarted',
     playerId: p.id,
-    skill,
+    skill: kind,
     targetId: target.id,
-    resolveTick: p.attack.resolveTick,
+    resolveTick: pending.resolveTick,
   });
   return true;
 }
@@ -121,36 +214,47 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
   const pending = p.attack!;
   p.attack = null;
   const spec = state.config.skills.attacks[pending.skill];
-  const target = p.alive && isActing(state, p) ? pickTarget(state, p, pending.targetId) : null;
-  if (!target) return whiff(state, p, spec, pending.skill, events);
+  const found = p.alive && isActing(state, p) ? pickTarget(state, p, pending, spec) : null;
+  if (!found) return whiff(state, p, spec, pending.skill, events);
+  const { target, dir } = found;
 
-  const dir = adjacentDir(p, target)!;
+  // displacement: a rival who cannot be moved at all makes a push-only attack a whiff (a blocked Shove / Kick)
+  const pushOnly = spec.dazeTicks === 0 && spec.slowTicks === 0;
   let landing: { x: number; y: number; tiles: number } | null = null;
   if (spec.displacementTiles > 0) {
     landing = pushLanding(state, target, DIR_VEC[dir], spec.displacementTiles);
-    // a shove that cannot move them at all (a wall, a crate or a generator right behind) does nothing
-    if (!landing) return whiff(state, p, spec, pending.skill, events);
+    if (!landing && pushOnly) return whiff(state, p, spec, pending.skill, events);
   }
 
   p.facing = dir;
+  // a counter: the victim is in the startup of an attack of their own right now
+  const countering = spec.counterDazeTicks > 0 && target.attack !== null;
   if (landing) {
     const fromX = target.x;
     const fromY = target.y;
     beginStep(target, landing.x, landing.y, state.config.movement.pushStepTicks * landing.tiles);
     events.push({ type: 'playerPushed', playerId: target.id, byId: p.id, fromX, fromY });
   }
-  if (spec.dazeTicks > 0) {
-    target.dazedUntil = Math.max(target.dazedUntil, state.tick + spec.dazeTicks);
+  const daze = spec.dazeTicks + (countering ? spec.counterDazeTicks : 0);
+  // an attack that is ONLY a daze never reaches an immune rival (pickTarget); a daze that rides on a bump is skipped
+  if (daze > 0 && (state.tick >= target.dazeImmuneUntil || spec.displacementTiles === 0)) {
+    target.dazedUntil = Math.max(target.dazedUntil, state.tick + daze);
     target.dazeImmuneUntil = Math.max(target.dazeImmuneUntil, target.dazedUntil + spec.dazeImmunityTicks);
     target.entryUntil = null; // a dazed player drops out of vehicle-entry mode
     events.push({ type: 'playerDazed', playerId: target.id, byId: p.id });
   }
-  if ((landing || spec.dazeTicks > 0) && target.attack) {
+  if (spec.slowTicks > 0 && state.tick >= target.slowImmuneUntil) {
+    const until = Math.max(target.slow?.until ?? 0, state.tick + spec.slowTicks);
+    target.slow = { until, extraStepTicks: spec.slowExtraStepTicks };
+    target.slowImmuneUntil = until + spec.slowImmunityTicks;
+  }
+  if (spec.interrupts && target.attack) {
     target.attack = null; // a hit cuts the victim's wind-up short
     events.push({ type: 'attackInterrupted', playerId: target.id, byId: p.id });
   }
-  p.skillReadyTick = state.tick + spec.hitRecoveryTicks;
+  p.skillReadyTick = Math.max(p.skillReadyTick, state.tick + spec.hitRecoveryTicks);
   p.meleeLock[target.id] = state.tick + spec.targetLockoutTicks;
+  if (spec.hitRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.hitRootTicks); // recoil
   recordHit(state, target, p.id);
   events.push({ type: 'skillUsed', playerId: p.id, skill: pending.skill, targetId: target.id });
   events.push({
@@ -162,22 +266,65 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
   });
 }
 
-function whiff(state: GameState, p: Player, spec: AttackSpec, skill: SkillKind, events: SimEvent[]): void {
+function whiff(state: GameState, p: Player, spec: AttackSpec, skill: AttackKind, events: SimEvent[]): void {
   p.skillReadyTick = Math.max(p.skillReadyTick, state.tick + spec.whiffRecoveryTicks);
+  if (spec.whiffRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.whiffRootTicks); // a committed miss
   events.push({ type: 'attackResolved', playerId: p.id, skill, targetId: null, hit: false });
 }
 
-/** The victim when the startup ends: the one aimed at if still adjacent and hittable, else any other that is. */
-function pickTarget(state: GameState, p: Player, aimed: number): Player | null {
-  const ok = (o: Player): boolean => attackable(state, state.tick, p, o);
-  const first = state.players[aimed];
-  if (first && first.alive && first.id !== p.id && !teammates(p, first) && adjacentDir(p, first) && ok(first))
-    return first;
-  return meleeTarget(state, p, ok)?.target ?? null;
+/**
+ * The direction from the attacker to `o` if `o` is in reach: on an adjacent tile, or (reach 2) two tiles away along
+ * `lineDir` with open ground between. With step grace a rival who started stepping away and has not yet visually
+ * crossed `maxShare` of the step still counts as standing on the tile they left (decision FC1).
+ */
+function reachDir(
+  state: GameState,
+  p: Readonly<Player>,
+  o: Readonly<Player>,
+  reach: number,
+  lineDir: Dir,
+): Dir | null {
+  const spots: { x: number; y: number }[] = [{ x: o.x, y: o.y }];
+  const g = state.config.skills.stepGrace;
+  if (g.enabled && o.stepRemaining > 0 && o.stepTotal > 0 && o.stepRemaining / o.stepTotal > 1 - g.maxShare)
+    spots.push({ x: o.stepFromX, y: o.stepFromY });
+  for (const s of spots) {
+    for (const d of DIRS) if (p.x + DIR_VEC[d].dx === s.x && p.y + DIR_VEC[d].dy === s.y) return d;
+    if (reach >= 2) {
+      const v = DIR_VEC[lineDir];
+      if (
+        s.x === p.x + v.dx * 2 &&
+        s.y === p.y + v.dy * 2 &&
+        tileAt(state, p.x + v.dx, p.y + v.dy) === Tile.Empty
+      )
+        return lineDir;
+    }
+  }
+  return null;
 }
 
-function adjacentDir(a: Readonly<Player>, b: Readonly<Player>): Dir | null {
-  for (const d of DIRS) if (a.x + DIR_VEC[d].dx === b.x && a.y + DIR_VEC[d].dy === b.y) return d;
+/** The victim when the startup ends: the one aimed at if still in reach and hittable, else any other that is. */
+function pickTarget(
+  state: GameState,
+  p: Player,
+  pending: NonNullable<Player['attack']>,
+  spec: AttackSpec,
+): { target: Player; dir: Dir } | null {
+  const ok = (o: Player): boolean =>
+    o.alive && o.id !== p.id && !teammates(p, o) && attackable(state, state.tick, p, o, pending.skill);
+  const first = state.players[pending.targetId];
+  if (first && ok(first)) {
+    const dir = reachDir(state, p, first, spec.reach, pending.dir);
+    if (dir) return { target: first, dir };
+  }
+  // another rival on an adjacent tile (faced tile first, as at the press), then any in reach or still on a tile they left
+  const adj = meleeTarget(state, p, (o) => o !== first && ok(o));
+  if (adj) return adj;
+  for (const o of state.players) {
+    if (o === first || !ok(o)) continue;
+    const dir = reachDir(state, p, o, spec.reach, pending.dir);
+    if (dir) return { target: o, dir };
+  }
   return null;
 }
 

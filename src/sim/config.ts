@@ -2,7 +2,7 @@
  * Central balance configuration. Every tunable number in the simulation lives here so playtest
  * tuning never touches rules code. All durations are in ticks; use `ticks(seconds)` to author them.
  */
-import type { CharacterId, Dir, PickupKind, SkillKind, StreakRewardKind, VehicleKind } from './types';
+import type { AttackKind, CharacterId, Dir, PickupKind, StreakRewardKind, VehicleKind } from './types';
 
 /**
  * V2 elimination reward: a pickup kind, or `contact` = the eliminator's generator-contact ability
@@ -27,11 +27,13 @@ export interface VehicleSpec {
 }
 
 /**
- * One close attack (B tap next to a rival). Nothing here roots the attacker: the recoveries only keep THEIR NEXT
- * attack from starting; walking, placing generators and everything else stay free.
+ * One close attack (B tap next to a rival; the resolution order is in `sim/systems/actions.ts`). Unless a field below
+ * says otherwise nothing here roots the attacker: the recoveries only keep THEIR NEXT attack from starting; walking,
+ * placing generators and everything else stay free. EVERY attack is non-lethal: its value is control (daze, slow,
+ * displacement), never damage (`controlValueTicks` in `sim/data/attacks.ts` is the one-number summary).
  */
 export interface AttackSpec {
-  /** Ticks between the press and the effect (the telegraph; a hit that dazes or displaces cuts it short). */
+  /** Ticks between the press and the effect (the telegraph; a hit that interrupts cuts a rival's startup short). */
   startupTicks: number;
   /** The attacker's next attack may not start for this long after the effect found nobody (or was interrupted). */
   whiffRecoveryTicks: number;
@@ -45,7 +47,44 @@ export interface AttackSpec {
   dazeTicks: number;
   /** After this daze ends the victim cannot be dazed by an attack again for this long. */
   dazeImmunityTicks: number;
+  /** Tiles in the faced line the attack reaches (1 = adjacent only; 2 = also a rival two tiles away with a free tile between). */
+  reach: number;
+  /** The victim walks slower for this long (0 = no slow). Never stacks or extends: see `slowImmunityTicks`. */
+  slowTicks: number;
+  /** Extra ticks per tile while slowed. */
+  slowExtraStepTicks: number;
+  /** After a slow ends no attack may slow the same fighter again for this long. */
+  slowImmunityTicks: number;
+  /** Minimum time from the effect until the attacker may start ANY attack again, hit or whiff (0 = only the recoveries). */
+  cooldownTicks: number;
+  /** VULNERABILITY: true = the attacker is planted (cannot step) for the whole startup. */
+  plantedStartup: boolean;
+  /** VULNERABILITY: the attacker cannot step for this long after the effect found nobody (a committed miss). */
+  whiffRootTicks: number;
+  /** VULNERABILITY: the attacker cannot step for this long after the effect connected (recoil). */
+  hitRootTicks: number;
+  /** Whether a hit cuts a rival's pending startup short (every attack of the catalogue does). */
+  interrupts: boolean;
+  /** Extra daze ticks when the victim is in the startup of an attack of their own (a counter); 0 = none. */
+  counterDazeTicks: number;
+  /** Always 0: no attack hurts or kills. Lethality is only ever a flame, a vehicle or the closing city. */
+  damage: 0;
 }
+
+/** The recoveries / roots / extras an attack of the original three does not use. */
+const PLAIN = {
+  reach: 1,
+  slowTicks: 0,
+  slowExtraStepTicks: 0,
+  slowImmunityTicks: 0,
+  cooldownTicks: 0,
+  plantedStartup: false,
+  whiffRootTicks: 0,
+  hitRootTicks: 0,
+  interrupts: true,
+  counterDazeTicks: 0,
+  damage: 0,
+} as const;
 
 export interface GameConfig {
   match: {
@@ -108,8 +147,19 @@ export interface GameConfig {
     graceTicks: number;
   };
   skills: {
-    /** The three close attacks (decision CB1): each is a startup, an effect and recoveries, all in ticks. */
-    attacks: Record<SkillKind, AttackSpec>;
+    /** The close attacks of the catalogue (decisions CB1, FC2): each is a startup, an effect and recoveries, all in ticks. */
+    attacks: Record<AttackKind, AttackSpec>;
+    /**
+     * Whether fighters throw their SECONDARY attack (`FighterDef.secondaryAttack`, chosen by B: see actions.ts). Off in
+     * the deployed game (decision FC5): the three fighters keep their one attack until the founder approves the change.
+     * Missions, tests and `PlayerSetup.attacks` can always give a secondary.
+     */
+    secondaryAttacks: boolean;
+    /**
+     * Step grace (decision FC1): an attack whose rival began stepping away during the startup still connects while
+     * that rival has not visually crossed `maxShare` of the step (the board shows them still on the tile).
+     */
+    stepGrace: { enabled: boolean; maxShare: number };
     /** Daze immunity after the crowd's bottle (the attacks carry their own, `AttackSpec.dazeImmunityTicks`). */
     dazeImmunityTicks: number;
   };
@@ -301,6 +351,29 @@ export interface GameConfig {
       /** The longest throw (Manhattan tiles): on a big map a rival further than this is not thrown at from afar. */
       maxThrowTiles: number;
     };
+    /**
+     * LOCAL CHAMPION (decision FC6): neighbours and people on the building side throw objects at rivals NEAR THE OWNER
+     * for a limited window. Range-limited and dodgeable (the object lands on the tile the rival stood on), a short
+     * daze only, one hit per rival per use. Not part of the fixed ladder unless `ladder` is on.
+     */
+    localChampion: {
+      /** On: the 7-kill reward is LOCAL CHAMPION instead of GLOBAL KNOCKDOWN (an alternative, never both). Default off. */
+      ladder: boolean;
+      /** How long the crowd keeps throwing after the press. */
+      windowTicks: number;
+      /** A rival must be within this many tiles (Manhattan) of the owner when the crowd picks them. */
+      radiusTiles: number;
+      /** The crowd chooses new targets this often (the first volley is one `throwTicks` after the press). */
+      volleyTicks: number;
+      /** At most this many throws per volley (nearest rivals first). */
+      maxThrowsPerVolley: number;
+      /** Flight time: the warning. At least the GLOBAL KNOCKDOWN's `throwTicks` (tested). */
+      throwTicks: number;
+      /** The daze a hit causes: short, never a knockdown. */
+      dazeTicks: number;
+      /** After a hit nobody's crowd may hit that rival again for this long (no stun-lock, across uses and owners). */
+      immunityTicks: number;
+    };
     /** GLOBAL KNOCKDOWN (decision GK1). */
     globalKnockdown: {
       /** Flight time of the thrown object from the building to each rival's head. */
@@ -442,6 +515,7 @@ export const DEFAULT_CONFIG: GameConfig = {
         displacementTiles: 0,
         dazeTicks: 30,
         dazeImmunityTicks: ticks(1),
+        ...PLAIN,
       },
       shove: {
         startupTicks: 12,
@@ -451,6 +525,7 @@ export const DEFAULT_CONFIG: GameConfig = {
         displacementTiles: 2,
         dazeTicks: 0,
         dazeImmunityTicks: 0,
+        ...PLAIN,
       },
       daze: {
         startupTicks: 18,
@@ -460,8 +535,78 @@ export const DEFAULT_CONFIG: GameConfig = {
         displacementTiles: 0,
         dazeTicks: ticks(1),
         dazeImmunityTicks: ticks(2),
+        ...PLAIN,
+      },
+      // ---- the extended catalogue (decisions FC2-FC4; docs/FIGHTERS_AND_ATTACKS.md has the measured matrix)
+      // Kick: the only reach-2 attack; slow, planted, the longest whiff. Moves a rival one tile.
+      kick: {
+        startupTicks: 14,
+        whiffRecoveryTicks: 54,
+        hitRecoveryTicks: ticks(2.5),
+        targetLockoutTicks: ticks(3),
+        displacementTiles: 1,
+        dazeTicks: 24,
+        dazeImmunityTicks: 60,
+        ...PLAIN,
+        reach: 2,
+        plantedStartup: true,
+        whiffRootTicks: 30,
+      },
+      // Bottle strike: the longest daze of all, once per ten seconds, and a committed miss leaves the attacker stuck.
+      bottle: {
+        startupTicks: 10,
+        whiffRecoveryTicks: 90,
+        hitRecoveryTicks: 150,
+        targetLockoutTicks: ticks(10),
+        displacementTiles: 0,
+        dazeTicks: 150,
+        dazeImmunityTicks: ticks(2),
+        ...PLAIN,
+        cooldownTicks: ticks(10),
+        plantedStartup: true,
+        whiffRootTicks: 60,
+      },
+      // Sweep (leg strike): no daze at all; the victim limps for four seconds. Short range, quick to recover.
+      sweep: {
+        startupTicks: 14,
+        whiffRecoveryTicks: 24,
+        hitRecoveryTicks: ticks(1.5),
+        targetLockoutTicks: ticks(4),
+        displacementTiles: 0,
+        dazeTicks: 0,
+        dazeImmunityTicks: 0,
+        ...PLAIN,
+        slowTicks: ticks(4),
+        slowExtraStepTicks: 6,
+        slowImmunityTicks: ticks(2),
+      },
+      // Headbutt: fast, a medium daze, but the attacker reels from it too (a short recoil after a hit).
+      headbutt: {
+        startupTicks: 8,
+        whiffRecoveryTicks: 30,
+        hitRecoveryTicks: ticks(2),
+        targetLockoutTicks: ticks(5),
+        displacementTiles: 0,
+        dazeTicks: 45,
+        dazeImmunityTicks: ticks(1.5),
+        ...PLAIN,
+        hitRootTicks: 30,
+      },
+      // Elbow check: a short bump that nobody can punish, doubly effective on a rival who is winding up an attack.
+      elbow: {
+        startupTicks: 9,
+        whiffRecoveryTicks: 30,
+        hitRecoveryTicks: 100,
+        targetLockoutTicks: ticks(3.5),
+        displacementTiles: 1,
+        dazeTicks: 12,
+        dazeImmunityTicks: ticks(1),
+        ...PLAIN,
+        counterDazeTicks: 36,
       },
     },
+    secondaryAttacks: false,
+    stepGrace: { enabled: true, maxShare: 0.5 },
     dazeImmunityTicks: ticks(2),
   },
   vehicles: {
@@ -581,6 +726,16 @@ export const DEFAULT_CONFIG: GameConfig = {
     quickHands: { durationTicks: ticks(18), extraCapacity: 5, placeBufferTicks: ticks(1.2) },
     vehicleGenerator: { fuseTicks: ticks(3), releaseTicks: ticks(2), throwTicks: 40, maxThrowTiles: 10 },
     globalKnockdown: { throwTicks: 36, knockdownTicks: ticks(2), immunityTicks: ticks(4) },
+    localChampion: {
+      ladder: false,
+      windowTicks: ticks(8),
+      radiusTiles: 5,
+      volleyTicks: ticks(1.5),
+      maxThrowsPerVolley: 2,
+      throwTicks: 48,
+      dazeTicks: 36,
+      immunityTicks: ticks(5),
+    },
   },
   respawn: {
     enabled: false,
