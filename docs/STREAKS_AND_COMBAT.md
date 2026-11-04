@@ -82,7 +82,7 @@ For the nth credited elimination of the current life (`stats.streak`), in every 
 | 5 | VEHICLE GENERATOR | one use; a public vehicle (any, drawn when earned and shown on the button) carries a live generator |
 | 7 | GLOBAL KNOCKDOWN / LOCAL CHAMPION | one use; every rival is knocked flat by a thrown object; non-lethal |
 
-Earned once per threshold; consumed once; a death clears the streak and every unused reward (and QUICK HANDS stops); kills, deaths and assists are never reduced; the respawn is the normal one. The existing elimination ladder (`config.rewards`), supply crates and the rule that ordinary crates drop nothing in Rumble are unchanged. Assists pay nothing (future work; not required by the streak system).
+Earned once per threshold; consumed once; a death ends the streak but loses no earned reward (decision AS7): unused VEHICLE GENERATOR / GLOBAL KNOCKDOWN stay, and a running QUICK HANDS is paused with its unspent time stored and resumed on the respawn; kills, deaths and assists are never reduced; the respawn is the normal one. The existing elimination ladder (`config.rewards`), supply crates and the rule that ordinary crates drop nothing in Rumble are unchanged. Assists pay nothing (future work; not required by the streak system).
 
 B resolves in this order: an attackable adjacent rival -> melee, else VEHICLE GENERATOR, else GLOBAL KNOCKDOWN, else a voucher vehicle, else nothing. Still exactly two action buttons.
 

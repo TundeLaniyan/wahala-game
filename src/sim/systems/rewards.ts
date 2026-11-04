@@ -226,6 +226,7 @@ export function previewRewards(state: { config: GameConfig }, p: Readonly<Player
 /** Grants the rewards of every credited elimination in this tick's events (eliminator must be alive). */
 export function grantRewards(state: GameState, events: SimEvent[]): void {
   if (!state.config.rewards.enabled) return;
+  if (state.match.suddenDeath?.finalPhase) return; // the final lethal phase pays nothing (decision AS6)
   const credited = events.filter(
     (e): e is Extract<SimEvent, { type: 'playerEliminated' }> =>
       e.type === 'playerEliminated' && e.creditId !== null,

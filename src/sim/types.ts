@@ -139,6 +139,11 @@ export interface StreakRewards {
   earned: number[];
   /** QUICK HANDS is active until this tick (0 = not active). */
   quickHandsUntil: number;
+  /**
+   * The earned QUICK HANDS time that has NOT been used yet while the buff is not running: a death pauses the buff and
+   * stores what was left here, and the respawn resumes exactly that (never a fresh payment). 0 = nothing stored.
+   */
+  quickHandsBank: number;
   /** When QUICK HANDS began (the HUD's duration ring). */
   quickHandsStart: number;
   /** The extra generator capacity QUICK HANDS added, taken away again when it ends. */
@@ -476,6 +481,11 @@ export interface SuddenDeathState {
   lastBlastTick: number | null;
   /** A blast's hits were queued this tick; the outcome is reported after they resolve. */
   blastResolving: boolean;
+  /**
+   * Decision AS6: both sides still stood after blast 2, so the round is in its FINAL lethal phase - no pickups, no
+   * respawns, no kill rewards, and the next blast kills through Armour and the Okada.
+   */
+  finalPhase: boolean;
 }
 
 export interface CrushState {
@@ -766,11 +776,34 @@ export type SimEvent =
   /** V2: a contact ability was picked up / replaced the previous one. */
   | { type: 'contactEquipped'; playerId: number; ability: ContactAbility; replaced: ContactAbility | null }
   /** V2: button B resolved to this action. */
-  | { type: 'specialUsed'; playerId: number; action: 'melee' | 'vehicle' | 'vehicleGenerator' | 'globalKnockdown' }
+  | {
+      type: 'specialUsed';
+      playerId: number;
+      action: 'melee' | 'vehicle' | 'vehicleGenerator' | 'globalKnockdown';
+    }
   /** A VEHICLE GENERATOR carrier started driving: the generator's three-second fuse is running. */
-  | { type: 'vehicleGeneratorLaunched'; vehicleId: number; ownerId: number; kind: VehicleKind; generatorId: number; targetId: number | null }
+  | {
+      type: 'vehicleGeneratorLaunched';
+      vehicleId: number;
+      ownerId: number;
+      kind: VehicleKind;
+      generatorId: number;
+      targetId: number | null;
+    }
   /** The carrier let go: the generator is thrown from (fromX, fromY) to (toX, toY) at `targetId`. */
-  | { type: 'vehicleGeneratorReleased'; vehicleId: number; ownerId: number; generatorId: number; fromX: number; fromY: number; toX: number; toY: number; targetId: number | null; landTick: number; boomTick: number }
+  | {
+      type: 'vehicleGeneratorReleased';
+      vehicleId: number;
+      ownerId: number;
+      generatorId: number;
+      fromX: number;
+      fromY: number;
+      toX: number;
+      toY: number;
+      targetId: number | null;
+      landTick: number;
+      boomTick: number;
+    }
   /** V2: a protection layer absorbed a lethal hit (Okada also emits okadaBroken). */
   | { type: 'protectionBroken'; playerId: number; layer: 'okada' | 'armour'; x: number; y: number }
   /** V2 City Rumble: an elimination reward was granted to the credited eliminator. */
@@ -793,15 +826,28 @@ export type SimEvent =
   | { type: 'okadaBroken'; playerId: number; x: number; y: number }
   | { type: 'skillUsed'; playerId: number; skill: SkillKind; targetId: number | null }
   /** A kill streak reached a threshold of the loadout: the reward is earned (`vehicle` for a VEHICLE GENERATOR). */
-  | { type: 'streakRewardEarned'; playerId: number; reward: StreakRewardKind; kills: number; vehicle?: VehicleKind }
+  | {
+      type: 'streakRewardEarned';
+      playerId: number;
+      reward: StreakRewardKind;
+      kills: number;
+      vehicle?: VehicleKind;
+    }
   /** A one-use reward was spent (VEHICLE GENERATOR launched, GLOBAL KNOCKDOWN fired). */
   | { type: 'streakRewardUsed'; playerId: number; reward: StreakRewardKind }
   /** QUICK HANDS ran out. */
   | { type: 'streakRewardEnded'; playerId: number; reward: StreakRewardKind }
   /** A death cleared rewards that were still unused. */
-  | { type: 'streakRewardsLost'; playerId: number; rewards: StreakRewardKind[] }
+  | { type: 'streakRewardResumed'; playerId: number; reward: StreakRewardKind; ticksLeft: number }
   /** GLOBAL KNOCKDOWN: an object is thrown from the building side at one rival (one event per rival). */
-  | { type: 'knockdownThrown'; ownerId: number; targetId: number; fromX: number; fromY: number; landTick: number }
+  | {
+      type: 'knockdownThrown';
+      ownerId: number;
+      targetId: number;
+      fromX: number;
+      fromY: number;
+      landTick: number;
+    }
   /** The object hit the rival's head: they fall and lie there until `until`. */
   | { type: 'knockdownHit'; ownerId: number; playerId: number; x: number; y: number; until: number }
   /** The rival got up. */

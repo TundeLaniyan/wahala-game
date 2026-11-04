@@ -2,13 +2,15 @@
  * Rumble sudden death (decisions SD1-SD6). When the clock runs out, or a blast takes down everyone still active,
  * the credited kills of every player (the fallen included) decide. One clear highest total wins at once; the
  * players tied on it are the only contenders: they are seated in the compacted area and fight on until
- * full-area blasts drop, the first after 60 s, the second 30 s later and then every 15 s, until one contender
- * is left.
+ * full-area blasts drop: the first after 60 s, the second 15 s later (decisions SD1-SD6, AS6).
  *
  * Each blast is an ordinary lethal hit (`cause.kind === 'suddenDeath'`) resolved by `applyLethalHits`, so the
  * existing protection layers decide who lives: a mounted Okada is spent first, then one Armour plate, one layer
- * per blast; a contender with none is eliminated. Nothing here invents an inventory. The only draw is
- * `suddenDeathExhausted`: a blast takes the last contenders down together with the lead still shared.
+ * per blast; a contender with none is eliminated, a contender who survives through a shield has not died and keeps
+ * everything else. If both sides still stand after blast 2 the round enters its FINAL lethal phase: no respawns,
+ * pickups or kill rewards, and the next blast (15 s later) kills through any protection, so the round cannot loop.
+ * Nothing here invents an inventory. The only draw is `suddenDeathExhausted`: a blast takes the last contenders
+ * down together with the lead still shared.
  */
 import { tileAt } from '../grid';
 import { Tile } from '../types';
@@ -187,6 +189,7 @@ export function enterSuddenDeath(
     nextBlastTick: Infinity,
     lastBlastTick: null,
     blastResolving: false,
+    finalPhase: false,
   };
   events.push({ type: 'suddenDeathStarted', cause, contenders: list, area, transitionEndTick });
 }
@@ -225,6 +228,8 @@ export function updateSuddenDeath(state: GameState, hits: LethalHit[], events: S
       eventId,
       cause: { kind: 'suddenDeath', eventId },
       graceUntil: state.tick,
+      // the final blast of the round ignores every protection layer (decision AS6)
+      ...(sd.finalPhase ? { terminal: true } : {}),
     });
   }
   sd.blastsFired++;
@@ -254,8 +259,8 @@ export function resolveByKills(state: GameState, by: WinReason, events: SimEvent
  * After lethal hits resolved: reports a blast, schedules the next one, and finds the winner or the draw.
  *
  *  - one side standing: it wins (a fight can end the round before any blast);
- *  - several sides standing after a blast: the next blast is scheduled (30 s after the first, then every 15 s),
- *    with no limit: each blast takes one protection layer from each survivor, so the round always narrows;
+ *  - several sides standing after a blast: the next blast is scheduled (15 s after blast 1; 15 s after blast 2, which
+ *    is the final, shield-proof one - see the header);
  *  - nobody standing: the credited kills of every player decide again (the fallen included). One clear leader
  *    wins. A fight that took the last contenders down together with the lead still shared starts a fresh round
  *    for the tied players; a blast that did, has no winner left to produce, so it is the (only) draw,
@@ -280,6 +285,12 @@ export function evaluateSuddenDeath(state: GameState, events: SimEvent[]): void 
         .map((p) => p.id),
     });
     if (sides.size > 1) {
+      // both sides survived blast 2 (each spent a shield): the next blast is the final, shield-proof one, and nothing may
+      // be replenished meanwhile (decision AS6)
+      if (sd.blastsFired >= state.config.suddenDeath.blastDelayTicks.length && !sd.finalPhase) {
+        sd.finalPhase = true;
+        state.pickups = [];
+      }
       scheduleBlast(state, events);
       return;
     }

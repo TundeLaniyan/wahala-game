@@ -10,6 +10,7 @@
  * protection. Wahala Crush: a protected player is shoved to the nearest free tile (a layer is used); when
  * no free tile is left (the final closure) the hit is `terminal` and kills through any protection.
  */
+import { endLifePerksOnDeath } from './lifePerks';
 import type { EliminationCause, GameState, Player, SimEvent } from '../types';
 import { creditFor } from './attribution';
 import { canHarm } from './queries';
@@ -137,9 +138,10 @@ export function eliminate(
   p.stepRemaining = 0;
   p.attack = null;
   p.knockedUntil = 0;
-  // the streak is over: QUICK HANDS stops and unused one-use rewards are lost (the match score stays)
-  const lost = clearStreakRewards(p);
-  if (lost.length > 0) events.push({ type: 'streakRewardsLost', playerId: p.id, rewards: lost });
+  // the streak is over, the rewards are not (decision AS7): QUICK HANDS is paused with its unspent time stored, the
+  // one-use rewards stay; the match score stays
+  clearStreakRewards(state, p);
+  endLifePerksOnDeath(state, p);
   if (p.carrying !== null) {
     const gen = state.generators.find((g) => g.id === p.carrying);
     if (gen) {

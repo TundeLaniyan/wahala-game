@@ -174,14 +174,13 @@ describe('one use, no stacking', () => {
     expect(eventsOf(again, 'knockdownThrown')).toHaveLength(3);
   });
 
-  it('is lost on death like every unused streak reward', () => {
+  it('survives an actual death: an earned one-use reward stays until it is used (decision AS5)', () => {
     const s = scene();
     put(s, 0, 3, 4);
     addGenerator(s, { ownerId: 1, x: 3, y: 4, timer: 1 });
-    const ev = run(s, 3);
+    run(s, 3);
     expect(s.players[0]!.alive).toBe(false);
-    expect(eventsOf(ev, 'streakRewardsLost')[0]?.rewards).toContain('globalKnockdown');
-    expect(s.players[0]!.streakRewards.knockdown).toBe(false);
+    expect(s.players[0]!.streakRewards.knockdown).toBe(true);
   });
 });
 

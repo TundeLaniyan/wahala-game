@@ -36,6 +36,7 @@ export function scheduleRespawns(state: GameState, eliminated: readonly number[]
 
 export function updateRespawns(state: GameState, events: SimEvent[]): void {
   if (!state.config.respawn.enabled) return;
+  if (state.match.suddenDeath) return; // sudden death: the fallen stay out (decision AS6)
   endProtectionOnAttack(state);
   const remaining = state.config.match.durationTicks - state.match.playTicks;
   let danger: Set<number> | null = null;
@@ -189,7 +190,7 @@ export function respawn(state: GameState, p: Player, x: number, y: number): void
   p.knockedUntil = 0;
   p.skillReadyTick = 0;
   p.meleeLock = {};
-  clearStreakRewards(p);
+  clearStreakRewards(state, p);
   clearLifePerks(p);
   p.lastPlaceTick = -1e9;
   // `eliminatedTick` / `elimination` / `eliminatedBy` keep describing the last death (kill feed)

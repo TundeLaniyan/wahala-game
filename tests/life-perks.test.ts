@@ -67,7 +67,7 @@ const slots = (s: GameState): number => s.players[0]!.lifePerks.reduce((n, p) =>
 const LARGE: PickupKind[] = ['armour', 'okada', 'remote', 'square'];
 
 describe('the perk limits', () => {
-  it('five slots, a major perk (Armour, Okada, Remote) takes two, one perk per category', () => {
+  it('five slots, the Remote Detonator (major) takes two, a shield takes none, one perk per category', () => {
     const s = rumble();
     expect(s.config.rewards.perks).toMatchObject({ maxSlots: 5, majorSlots: 2 });
     const p = s.players[0]!;
@@ -77,7 +77,7 @@ describe('the perk limits', () => {
       const cats = p.lifePerks.map((x) => x.category);
       expect(new Set(cats).size, 'one perk per category').toBe(cats.length);
       for (const perk of p.lifePerks)
-        expect(perk.slots).toBe(['armour', 'okada', 'remote'].includes(perk.kind) ? 2 : 1);
+        expect(perk.slots).toBe(perk.kind === 'remote' ? 2 : perk.category === 'shield' ? 0 : 1);
     }
   });
 
@@ -211,14 +211,16 @@ describe('the 12 second life', () => {
     expect(p.remote).toBe(false);
   });
 
-  it('a spent Okada gives its slots back at once', () => {
+  it('a spent shield leaves the list at once, and nothing else changes', () => {
     const s = rumble();
     const p = s.players[0]!;
-    while (!p.mounted && p.stats.kills < 12) kill(s);
-    expect(p.mounted).toBe(true);
-    p.mounted = false; // the hit took it
+    while (p.armour === 0 && p.stats.kills < 12) kill(s);
+    expect(p.armour).toBe(1);
+    const others = p.lifePerks.filter((x) => x.kind !== 'armour').map((x) => x.kind);
+    p.armour = 0; // the hit took it
     run(s, 1);
-    expect(p.lifePerks.some((x) => x.kind === 'okada')).toBe(false);
+    expect(p.lifePerks.some((x) => x.category === 'shield')).toBe(false);
+    expect(p.lifePerks.map((x) => x.kind)).toEqual(others);
   });
 
   it('when the Remote Detonator ends, generators still waiting for the trigger go off on an ordinary fuse', () => {

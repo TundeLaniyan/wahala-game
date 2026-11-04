@@ -13,7 +13,12 @@
  *    Vehicle Voucher in the same reward;
  *  - a death clears them all (respawn.ts); expiry undoes exactly the steps the perk gave.
  *
- * The Vehicle Voucher is a one-use item, not a perk: no slot, no expiry. Pure and deterministic.
+ * Armour and the Okada are NOT temporary perks (decision AS5): they are defensive extra lives. They never expire, take no
+ * slot and are never pushed out; the first lethal hit spends the shield and leaves the fighter alive, and spending it
+ * touches nothing else. Only an actual death clears the temporary perks (`endLifePerksOnDeath`).
+ *
+ * The Vehicle Voucher is a one-use item, not a perk: no slot, no expiry; an actual death takes it away. Pure and
+ * deterministic.
  */
 import type { GameConfig } from '../config';
 import type { GameState, LifePerk, PerkCategory, PickupKind, Player } from '../types';
@@ -24,6 +29,8 @@ interface PerkSpec {
   major: boolean;
   /** Counts as a "large power upgrade": at most one per kill reward. */
   large: boolean;
+  /** A defensive extra life (Armour, Okada): no slot, no expiry, never pushed out (decision AS5). */
+  shield?: boolean;
 }
 
 const NONE: ReadonlySet<PerkCategory> = new Set();
@@ -40,8 +47,8 @@ export const PERK_SPEC: Readonly<Partial<Record<PickupKind, PerkSpec>>> = {
   bombpass: MINOR('tool'),
   killswitch: MINOR('tool'),
   square: { category: 'blast', major: false, large: true },
-  armour: { category: 'shield', major: true, large: true },
-  okada: { category: 'shield', major: true, large: true },
+  armour: { category: 'shield', major: false, large: true, shield: true },
+  okada: { category: 'shield', major: false, large: true, shield: true },
   remote: { category: 'detonation', major: true, large: true },
 };
 
@@ -97,20 +104,20 @@ export function recordPerk(
 ): { perk: LifePerk | null; evicted: LifePerk[] } {
   const spec = perkSpec(kind);
   if (!spec) return { perk: null, evicted: [] };
-  const expiresAt = now + config.rewards.perks.lifeTicks;
+  const expiresAt = spec.shield ? Infinity : now + config.rewards.perks.lifeTicks;
   const held = perks.find((p) => p.category === spec.category);
   if (held) {
     if (stepped) held.level++;
     held.expiresAt = expiresAt; // the reward just earned, and only it
     return { perk: held, evicted: [] };
   }
-  const slots = spec.major ? config.rewards.perks.majorSlots : 1;
+  const slots = spec.shield ? 0 : spec.major ? config.rewards.perks.majorSlots : 1;
   const evicted: LifePerk[] = [];
   while (slotsUsed(perks) + slots > config.rewards.perks.maxSlots) {
     // the oldest perk goes first, but never one the same kill reward has just paid
     let oldest = -1;
     for (let i = 0; i < perks.length; i++) {
-      if (protect.has(perks[i]!.category)) continue;
+      if (protect.has(perks[i]!.category) || perks[i]!.slots === 0) continue; // a shield is never pushed out
       if (oldest < 0 || perks[i]!.expiresAt < perks[oldest]!.expiresAt) oldest = i;
     }
     if (oldest < 0) break;
@@ -182,4 +189,17 @@ export function updateLifePerks(state: GameState): void {
 /** A death (or a fresh life): no perk survives. The caller resets the numbers they gave. */
 export function clearLifePerks(p: Player): void {
   p.lifePerks = [];
+}
+
+/**
+ * An actual death (a spent shield is not one): every temporary perk ends - extra generators, range, speed, tool, Square
+ * Blast, the Remote Detonator (its waiting generators fall back to an ordinary fuse) - and the Vehicle Voucher goes.
+ * Earned one-use kill-streak rewards are NOT touched (decision AS5). Only where the kill economy is on.
+ */
+export function endLifePerksOnDeath(state: GameState, p: Player): void {
+  if (!state.config.rewards.enabled) return;
+  const ended = p.lifePerks;
+  p.lifePerks = [];
+  for (const perk of ended) endPerk(state, p, perk);
+  p.hasVoucher = false;
 }

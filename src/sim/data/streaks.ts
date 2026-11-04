@@ -4,6 +4,7 @@ import type { StreakRewardKind, StreakRewards } from '../types';
 export const freshStreakRewards = (): StreakRewards => ({
   earned: [],
   quickHandsUntil: 0,
+  quickHandsBank: 0,
   quickHandsStart: 0,
   quickHandsExtra: 0,
   placeQueuedUntil: 0,
@@ -28,7 +29,7 @@ export const STREAK_REWARD_DEFS: Readonly<Record<StreakRewardKind, StreakRewardD
 /** The unused one-use rewards a fighter holds, in the order B spends them (VEHICLE GENERATOR first). */
 export function heldStreakRewards(r: Readonly<StreakRewards>): StreakRewardKind[] {
   const out: StreakRewardKind[] = [];
-  if (r.quickHandsUntil > 0) out.push('quickHands');
+  if (r.quickHandsUntil > 0 || r.quickHandsBank > 0) out.push('quickHands'); // running, or stored through a death
   if (r.vehicleGenerator !== null) out.push('vehicleGenerator');
   if (r.knockdown) out.push('globalKnockdown');
   return out;

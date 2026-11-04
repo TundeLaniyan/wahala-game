@@ -443,8 +443,9 @@ const handlers: Handlers = {
   streakRewardEnded: (e, c) => {
     if (isHuman(c, e.playerId)) sfx(c, 'pickup_curse', 0, 0.35, 1.4);
   },
-  streakRewardsLost: (e, c) => {
-    if (isHuman(c, e.playerId)) sfx(c, 'pickup_curse', 0, 0.5, 0.9);
+  // a death paused QUICK HANDS and the respawn gives the unspent time back (decision AS7)
+  streakRewardResumed: (e, c) => {
+    if (isHuman(c, e.playerId)) sfx(c, 'pickup_rare', 0, 0.6, 1.1);
   },
   playerRespawned: (e, c) => sfx(c, 'pickup_reveal', panOf(c, e.x), isHuman(c, e.playerId) ? 0.9 : 0.4),
   spectatorThrow: (e, c) => sfx(c, 'gen_throw', panOf(c, e.toX), 0.8),
