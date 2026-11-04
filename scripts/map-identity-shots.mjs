@@ -159,7 +159,7 @@ for (const id of ids) {
         [a, b],
       );
       await page.evaluate(() => window.__WAHALA__.renderer().cutCamera()); // snap the camera to the player (frames are slow under software WebGL)
-      if (zoom) await page.evaluate((z) => window.__WAHALA__.renderer().debugInspect(null), zoom);
+      if (zoom) await page.evaluate((_z) => window.__WAHALA__.renderer().debugInspect(null), zoom);
     }
     await run(page, 1500);
     const file = `${dir}/${prefix}_${id}_${name}.jpg`;

@@ -56,7 +56,9 @@ test.describe('City Rumble: sudden death', () => {
     await step(page, 260);
     await expect(page.getByTestId('sudden-death-card')).toHaveCount(0);
     await expect(page.getByTestId('sudden-death-clock')).toBeVisible();
-    await expect(page.getByTestId('sudden-death-status')).toContainText(/BLAST 1 OF 3 · SHIELDS RESPECTED · \d+:\d\d/);
+    await expect(page.getByTestId('sudden-death-status')).toContainText(
+      /BLAST 1 OF 3 · SHIELDS RESPECTED · \d+:\d\d/,
+    );
     // the kill ranking stays visible beside the clock: both contenders with their eliminations
     await expect(page.getByTestId('sudden-death-ranking')).toContainText('2');
     await expect(page.getByTestId('sudden-death-ranking').locator('li')).toHaveCount(2);

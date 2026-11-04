@@ -152,7 +152,7 @@ for (const item of list.split(',')) {
       const n = m.nodes[0];
       const q = beside(n.x, n.y);
       put(0, q.x, q.y);
-      m.nodes[1] && (m.nodes[1].progress = Math.round(m.tuning.phases[m.phase].holdTicks * 0.95));
+      if (m.nodes[1]) m.nodes[1].progress = Math.round(m.tuning.phases[m.phase].holdTicks * 0.95);
       w.stepTicks(1);
     } else if (scenario === 'shielded' || scenario === 'exposed') {
       if (scenario === 'exposed') {

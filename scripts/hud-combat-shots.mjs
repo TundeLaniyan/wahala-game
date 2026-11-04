@@ -48,7 +48,7 @@ for (const [device, ctx] of Object.entries(VP)) {
   await page.evaluate(() => {
     window.__WAHALA__.controller().frozen = true;
   });
-  const publish = async () => {
+  const _publish = async () => {
     await page.waitForTimeout(160);
     await page.evaluate(() => window.__WAHALA__.advance(1));
     await page.waitForTimeout(160);

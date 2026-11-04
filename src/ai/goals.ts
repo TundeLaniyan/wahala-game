@@ -171,7 +171,15 @@ export function canPlaceNow(c: Ctx): boolean {
   return me.alive && me.carrying === null && me.entryUntil === null && activeGenerators(c) < me.capacity;
 }
 
-const geo: BlastGeometry = { soft: 0, rivals: 0, mountedRivals: 0, pickups: 0, chains: 0, chainRivals: 0, supplies: 0 };
+const geo: BlastGeometry = {
+  soft: 0,
+  rivals: 0,
+  mountedRivals: 0,
+  pickups: 0,
+  chains: 0,
+  chainRivals: 0,
+  supplies: 0,
+};
 
 /**
  * Cheap geometric value of a generator placed on `tile` (no escape / rival simulation yet). Counts the

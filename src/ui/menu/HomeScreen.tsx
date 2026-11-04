@@ -166,7 +166,11 @@ export function HomeScreen() {
 
         <aside className="mn-home-card" data-testid="quick-card">
           <div className="mn-home-card-art">
-            <FighterImage id={s.character} art={fighterArt(s.character)} sizes="(max-width: 700px) 30vw, 220px" />
+            <FighterImage
+              id={s.character}
+              art={fighterArt(s.character)}
+              sizes="(max-width: 700px) 30vw, 220px"
+            />
           </div>
           <div className="mn-home-card-body">
             <small className="mn-kicker">Your fighter</small>

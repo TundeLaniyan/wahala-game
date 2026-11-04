@@ -3,8 +3,12 @@
 // campaign controller: earlier districts are cleared with finishMission fixtures so the target is unlocked.
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-const [outDir = 'docs/screenshots/missions', device = 'desktop', ids = 'oshodi,mushin,fadeyiSomolu,ebuteMetta,lagosIsland,lekki', ticks = '900'] =
-  process.argv.slice(2);
+const [
+  outDir = 'docs/screenshots/missions',
+  device = 'desktop',
+  ids = 'oshodi,mushin,fadeyiSomolu,ebuteMetta,lagosIsland,lekki',
+  ticks = '900',
+] = process.argv.slice(2);
 const ORDER = ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta', 'lagosIsland', 'lekki'];
 const VP = {
   desktop: { viewport: { width: 1280, height: 720 } },
@@ -13,7 +17,13 @@ const VP = {
 mkdirSync(outDir, { recursive: true });
 const browser = await chromium.launch({
   executablePath: process.env.WAHALA_CHROMIUM,
-  args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  args: [
+    '--no-sandbox',
+    '--use-gl=angle',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+    '--ignore-gpu-blocklist',
+  ],
 });
 for (const id of ids.split(',')) {
   const page = await (await browser.newContext(VP[device])).newPage();
@@ -29,7 +39,17 @@ for (const id of ids.split(',')) {
       c.startNew();
       c.storyDone();
       for (const earlier of order.slice(0, order.indexOf(id))) {
-        c.finishMission({ result: 'won', missionId: earlier, modifiers: [], seconds: 100, livesUsed: 0, phasesCleared: 3, defeat: 'eliminated', stars: 3, creditedKills: 1 });
+        c.finishMission({
+          result: 'won',
+          missionId: earlier,
+          modifiers: [],
+          seconds: 100,
+          livesUsed: 0,
+          phasesCleared: 3,
+          defeat: 'eliminated',
+          stars: 3,
+          creditedKills: 1,
+        });
       }
       c.beginBriefing(id);
       c.startFromBriefing();
