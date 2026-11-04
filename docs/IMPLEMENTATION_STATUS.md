@@ -497,3 +497,12 @@ A diagonal touch thumb is planned as two whole cardinal moves (vertical first, r
 | Life perks | Done (EXPERIMENTAL): 12 s life, 5 slots (major = 2), one perk per category, range +2 max, 3 generators, 10-tick placement interval, no Remote + Voucher in one reward, one large upgrade per reward. `tests/life-perks.test.ts`, updated economy tests. Not tuned against real play; `npm run rumble-metrics -- --ladder` shows the ceiling curve. HUD does not yet show perk timers. |
 | Touch movement | Done: Standard (cardinal + blocked-direction corner lean) and Beginner Assist (buffering, emergency). `tests/mobile-corner-assist.test.ts`, updated input tests. Not tried on a physical phone. |
 | Not run | The full unit and browser suites (targeted checks only). |
+
+## Perk correction: shields are extra lives, death rules, Sudden Death (decisions AS5-AS6)
+
+| Area | State |
+| --- | --- |
+| Shields | Done (EXPERIMENTAL): Armour / Okada never expire, take no slot, are spent by the first lethal hit and touch nothing else. `tests/shield-and-death.test.ts`. |
+| Death | Done: an actual death clears temporary perks and the voucher, keeps unused VEHICLE GENERATOR / GLOBAL KNOCKDOWN, never duplicates a reward. |
+| Sudden Death | Done: blast 1 at 60 s, blast 2 at +15 s, a final shield-proof blast at +15 s with no respawns / pickups / rewards. Not tried in a full browser match beyond `e2e/sudden-death.spec.ts`. |
+

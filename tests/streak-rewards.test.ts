@@ -4,7 +4,7 @@
  * untouched. Real simulation ticks.
  */
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CONFIG, createGame, tick } from '../src/sim';
+import { DEFAULT_CONFIG, createGame, heldStreakRewards, tick } from '../src/sim';
 import type { GameKind, GameState, Intents, MatchSettings, SimEvent } from '../src/sim';
 import { Tile } from '../src/sim/types';
 import { eliminate } from '../src/sim/systems/lethality';
@@ -147,8 +147,8 @@ describe('earning (credited eliminations only)', () => {
   });
 });
 
-describe('death clears the streak and unused rewards, never the score', () => {
-  it('resets the streak, QUICK HANDS and its capacity, and unused one-use rewards; kills / deaths / assists stay', () => {
+describe('death ends the streak and QUICK HANDS, keeps unused one-use rewards, never touches the score (AS5)', () => {
+  it('resets the streak, QUICK HANDS and its capacity; the unused one-use rewards stay; kills / deaths / assists stay', () => {
     const s = match('deathmatch');
     for (let k = 1; k <= 7; k++) {
       revive(s, 1);
@@ -165,13 +165,37 @@ describe('death clears the streak and unused rewards, never the score', () => {
     expect(p.stats.kills).toBe(7);
     expect(p.stats.deaths).toBe(1);
     expect(p.stats.assists).toBe(2);
-    expect(p.streakRewards.vehicleGenerator).toBeNull();
-    expect(p.streakRewards.knockdown).toBe(false);
-    expect(p.streakRewards.quickHandsUntil).toBe(0);
-    expect(p.streakRewards.earned).toEqual([]);
+    expect(p.streakRewards.vehicleGenerator).not.toBeNull(); // earned, unused: kept
+    expect(p.streakRewards.knockdown).toBe(true);
+    expect(p.streakRewards.quickHandsUntil).toBe(0); // the timed buff is over
+    expect(p.streakRewards.earned).toEqual([]); // a new streak can earn the thresholds again
     expect(p.capacity).toBe(capacity - 5);
     const lost = eventsOf(events, 'streakRewardsLost')[0]!;
-    expect(lost.rewards.sort()).toEqual(['globalKnockdown', 'quickHands', 'vehicleGenerator']);
+    expect(lost.rewards).toEqual(['quickHands']); // only the timed buff is reported lost
+  });
+
+  it('a reward earned again while one is still held is not duplicated; the held vehicle is unchanged', () => {
+    const s = match('deathmatch');
+    for (let k = 1; k <= 7; k++) {
+      revive(s, 1);
+      credit(s, 0, 1);
+    }
+    const p = s.players[0]!;
+    const held = p.streakRewards.vehicleGenerator;
+    eliminate(s, p, { kind: 'flame', ownerId: 1, eventId: 78 }, []);
+    // a fresh life, a fresh streak to 7: the thresholds pay again, the held rewards are not paid a second time
+    p.alive = true;
+    for (let k = 1; k <= 7; k++) {
+      revive(s, 1);
+      credit(s, 0, 1);
+    }
+    expect(p.streakRewards.vehicleGenerator).toBe(held);
+    expect(p.streakRewards.knockdown).toBe(true);
+    expect(
+      heldStreakRewards(p.streakRewards)
+        .filter((k) => k !== 'quickHands')
+        .sort(),
+    ).toEqual(['globalKnockdown', 'vehicleGenerator']);
   });
 
   it('the respawn is normal: spawn protection, base upgrades, no rewards, and the streak starts over', () => {
@@ -192,6 +216,7 @@ describe('death clears the streak and unused rewards, never the score', () => {
     expect(p.protectedUntil).toBeGreaterThan(s.tick);
     expect(p.capacity).toBe(s.config.generator.baseCapacity);
     expect(p.streakRewards.quickHandsUntil).toBe(0);
+    expect(p.streakRewards.vehicleGenerator).toBeNull(); // nothing earned yet, nothing invented on the respawn
     expect(p.stats.kills).toBe(3); // the scoreboard keeps every kill
     // a new streak earns QUICK HANDS again at 3
     for (let k = 1; k <= 3; k++) {

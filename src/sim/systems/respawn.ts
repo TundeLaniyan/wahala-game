@@ -36,6 +36,7 @@ export function scheduleRespawns(state: GameState, eliminated: readonly number[]
 
 export function updateRespawns(state: GameState, events: SimEvent[]): void {
   if (!state.config.respawn.enabled) return;
+  if (state.match.suddenDeath) return; // sudden death: the fallen stay out (decision AS6)
   endProtectionOnAttack(state);
   const remaining = state.config.match.durationTicks - state.match.playTicks;
   let danger: Set<number> | null = null;

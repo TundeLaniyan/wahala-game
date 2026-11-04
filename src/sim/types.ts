@@ -476,6 +476,11 @@ export interface SuddenDeathState {
   lastBlastTick: number | null;
   /** A blast's hits were queued this tick; the outcome is reported after they resolve. */
   blastResolving: boolean;
+  /**
+   * Decision AS6: both sides still stood after blast 2, so the round is in its FINAL lethal phase - no pickups, no
+   * respawns, no kill rewards, and the next blast kills through Armour and the Okada.
+   */
+  finalPhase: boolean;
 }
 
 export interface CrushState {

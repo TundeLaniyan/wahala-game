@@ -6,11 +6,13 @@
  *   5  VEHICLE GENERATOR  one use: a public vehicle carries a live generator at a rival (systems/vehicleGenerator.ts)
  *   7  GLOBAL KNOCKDOWN   one use: every rival is knocked flat by a thrown object (systems/knockdown.ts)
  *
- * Each threshold pays once per streak and each reward is consumed once. A death clears the streak and every unused
- * reward; the match score (kills, deaths, assists) is never touched. Pure and deterministic: the only randomness
- * is the match RNG choosing a vehicle for the VEHICLE GENERATOR.
+ * Each threshold pays once per streak and each reward is consumed once. An actual death ends the streak and QUICK HANDS
+ * (a timed buff); an earned one-use reward (VEHICLE GENERATOR, GLOBAL KNOCKDOWN) is kept until it is used or the match
+ * ends (decision AS5), and a reward already held is never paid a second time. The match score (kills, deaths,
+ * assists) is never touched. Pure and deterministic: the only randomness is the match RNG choosing a vehicle for the
+ * VEHICLE GENERATOR.
  */
-import { freshStreakRewards, heldStreakRewards } from '../data/streaks';
+import { freshStreakRewards } from '../data/streaks';
 import { nextInt } from '../rng';
 import type { GameState, Player, SimEvent, StreakRewardKind, VehicleKind } from '../types';
 import { tryPlaceGenerator } from './generators';
@@ -53,7 +55,13 @@ export function grantStreakRewards(state: GameState, events: SimEvent[]): void {
   }
 }
 
-function earn(state: GameState, p: Player, reward: StreakRewardKind, kills: number, events: SimEvent[]): void {
+function earn(
+  state: GameState,
+  p: Player,
+  reward: StreakRewardKind,
+  kills: number,
+  events: SimEvent[],
+): void {
   const r = p.streakRewards;
   switch (reward) {
     case 'quickHands': {
@@ -66,12 +74,14 @@ function earn(state: GameState, p: Player, reward: StreakRewardKind, kills: numb
       return;
     }
     case 'vehicleGenerator': {
+      if (r.vehicleGenerator !== null) return; // one unused copy at most: never duplicated (decision AS5)
       const vehicle = drawVehicle(state);
       r.vehicleGenerator = vehicle;
       events.push({ type: 'streakRewardEarned', playerId: p.id, reward, kills, vehicle });
       return;
     }
     case 'globalKnockdown':
+      if (r.knockdown) return; // one unused copy at most
       r.knockdown = true;
       events.push({ type: 'streakRewardEarned', playerId: p.id, reward, kills });
       return;
@@ -98,13 +108,18 @@ function endQuickHands(p: Player): void {
 }
 
 /**
- * A death (or a respawn) clears the streak and every reward: QUICK HANDS stops (its extra capacity goes with it) and
- * unused one-use rewards are lost. Returns the unused rewards that were lost, for the HUD.
+ * A death (or a respawn) ends the streak: QUICK HANDS stops (its extra capacity goes with it) and the thresholds can be
+ * earned again. An unused one-use reward (VEHICLE GENERATOR, GLOBAL KNOCKDOWN) stays with the fighter (decision AS5).
+ * Returns what was lost, for the HUD.
  */
 export function clearStreakRewards(p: Player): StreakRewardKind[] {
-  const lost = heldStreakRewards(p.streakRewards);
-  if (p.streakRewards.quickHandsUntil > 0) endQuickHands(p);
-  p.streakRewards = freshStreakRewards();
+  const lost: StreakRewardKind[] = [];
+  const r = p.streakRewards;
+  if (r.quickHandsUntil > 0) {
+    endQuickHands(p);
+    lost.push('quickHands');
+  }
+  p.streakRewards = { ...freshStreakRewards(), vehicleGenerator: r.vehicleGenerator, knockdown: r.knockdown };
   return lost;
 }
 
@@ -129,5 +144,6 @@ export function quickHandsPlacement(
     return;
   }
   // a tap that failed is remembered (a held A already retries every tick)
-  if (intent.place === true) r.placeQueuedUntil = state.tick + state.config.streaks.quickHands.placeBufferTicks;
+  if (intent.place === true)
+    r.placeQueuedUntil = state.tick + state.config.streaks.quickHands.placeBufferTicks;
 }

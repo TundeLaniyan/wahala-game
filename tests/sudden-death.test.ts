@@ -1,7 +1,7 @@
 /**
  * Rumble draw resolution and sudden death (decision SD1): kill totals decide a timeout and a simultaneous
- * final contest; equal totals play a sudden-death round (title card, then full-area blasts after 60 / 30 / 15
- * seconds that the existing Okada / Armour layers absorb one each); a draw only when the sequence is spent.
+ * final contest; equal totals play a sudden-death round (title card, then full-area blasts after 60 s and 15 s that
+ * the existing Okada / Armour layers absorb one each, then a final shield-proof blast 15 s later, decision AS6).
  * Classic is unchanged.
  */
 import { describe, expect, it } from 'vitest';
@@ -287,7 +287,7 @@ describe('sudden death: the full-area blast', () => {
     expect(s.match.result).toMatchObject({ kind: 'win', winnerId: 1 });
   });
 
-  it('spends the Okada first, then Armour, one layer per blast; 30 s follow-up decides', () => {
+  it('spends the Okada first, then Armour, one layer per blast; the 15 s follow-up decides', () => {
     const s = sudden();
     const [a, b] = [s.players[0]!, s.players[1]!];
     a.mounted = true;
@@ -304,7 +304,7 @@ describe('sudden death: the full-area blast', () => {
     expect(a.armour).toBe(1); // one layer per blast
     expect(s.match.result).toBeNull();
     const next = eventsOf(first, 'suddenDeathCountdown').find((e) => e.blast === 2)!;
-    expect(next.blastTick - s.tick).toBe(30 * 60);
+    expect(next.blastTick - s.tick).toBe(15 * 60); // decision AS6: 15 s, not 30
 
     const second = toBlast(s);
     expect(eventsOf(second, 'suddenDeathBlast')[0]).toMatchObject({
@@ -316,48 +316,62 @@ describe('sudden death: the full-area blast', () => {
     expect(s.match.result).toEqual({ kind: 'win', winnerId: 0, decidedBy: 'suddenDeath' });
   });
 
-  it('a 15 s third blast decides when protection runs out between the contenders', () => {
+  it('both sides surviving blast 2 enter the FINAL lethal phase: the next blast (15 s) ignores every shield', () => {
     const s = sudden();
     s.players[0]!.armour = 3;
     s.players[1]!.armour = 2;
     toBlast(s);
+    expect(s.match.suddenDeath!.finalPhase).toBe(false);
     const second = toBlast(s);
+    expect(s.match.suddenDeath!.finalPhase).toBe(true);
     const next = eventsOf(second, 'suddenDeathCountdown').find((e) => e.blast === 3)!;
     expect(next.blastTick - s.tick).toBe(15 * 60);
     expect(s.match.result).toBeNull();
+    expect(s.players[0]!.armour).toBe(1); // still holds a plate...
     const third = toBlast(s);
+    // ...which does not help against the final blast: both fall, the kills decide (tied: the only draw)
     expect(eventsOf(third, 'suddenDeathBlast')[0]).toMatchObject({
       blast: 3,
-      survivors: [0],
-      eliminated: [1],
+      survivors: [],
+      eliminated: [0, 1],
     });
-    expect(s.match.result).toEqual({ kind: 'win', winnerId: 0, decidedBy: 'suddenDeath' });
+    expect(s.match.result).toEqual({ kind: 'draw', reason: 'suddenDeathExhausted' });
   });
 
-  it('blasts come 60 s, then 30 s, then every 15 s, with no limit while protection lasts', () => {
+  it('blasts come 60 s, then 15 s, then a final 15 s: the round is over by the third blast', () => {
     const s = sudden();
     s.players[0]!.armour = 5;
     s.players[1]!.armour = 5;
     const gaps: number[] = [];
     let last = s.match.suddenDeath!.transitionEndTick;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) {
       toBlast(s);
       gaps.push(s.tick - last);
       last = s.tick;
-      expect(s.match.phase).toBe('playing');
+      if (i < 2) expect(s.match.phase).toBe('playing');
     }
-    expect(gaps).toEqual([3600, 1800, 900, 900, 900]); // a fourth and a fifth blast follow the third
-    toBlast(s); // both are out of protection now
-    expect(s.match.phase).toBe('ended');
+    expect(gaps).toEqual([3600, 900, 900]);
+    expect(s.match.phase).toBe('ended'); // however many layers they held: no loop
   });
 
-  it('one layer per blast: three layers survive three blasts and fall to the fourth', () => {
+  it('a lead earned during the round wins the final blast', () => {
+    const s = sudden();
+    s.players[0]!.armour = 3;
+    s.players[1]!.armour = 3;
+    toBlast(s);
+    toBlast(s);
+    s.players[0]!.stats.kills++;
+    toBlast(s);
+    expect(s.match.result).toEqual({ kind: 'win', winnerId: 0, decidedBy: 'simultaneousKills' });
+  });
+
+  it('one layer per blast: two layers survive two blasts; the final blast takes even the third', () => {
     const s = sudden();
     s.players[0]!.armour = 2;
     s.players[0]!.mounted = true;
     s.players[1]!.armour = 2;
     s.players[1]!.mounted = true;
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 2; i++) {
       toBlast(s);
       expect(s.players.every((p) => p.alive)).toBe(true);
       expect(s.players[0]!.armour + (s.players[0]!.mounted ? 1 : 0)).toBe(3 - i);
@@ -366,22 +380,27 @@ describe('sudden death: the full-area blast', () => {
     expect(s.players.every((p) => !p.alive)).toBe(true);
   });
 
-  it('a draw only when the sequence is exhausted: the blast takes the last protection of every contender', () => {
+  it('no respawns, pickups or kill rewards in the final phase', () => {
     const s = sudden();
     s.players[0]!.armour = 3;
     s.players[1]!.armour = 3;
     toBlast(s);
     toBlast(s);
-    expect(s.match.phase).toBe('playing');
-    expect(s.match.result).toBeNull();
-    const last = toBlast(s); // third blast: both on zero layers and still standing
-    expect(s.match.phase).toBe('playing');
-    const events = toBlast(s); // fourth: nothing left to absorb it
-    expect(s.match.phase).toBe('ended');
-    expect(s.match.result).toEqual({ kind: 'draw', reason: 'suddenDeathExhausted' });
-    expect(eventsOf(events, 'matchEnded')).toHaveLength(1);
-    expect(eventsOf(last, 'matchEnded')).toHaveLength(0);
-    expect(eventsOf(events, 'suddenDeathBlast')[0]).toMatchObject({ survivors: [], eliminated: [0, 1] });
+    expect(s.match.suddenDeath!.finalPhase).toBe(true);
+    // a pickup lying on the floor is swept away and nothing new can be collected
+    expect(s.pickups).toHaveLength(0);
+    const p = s.players[0]!;
+    s.pickups.push({ id: 999, x: p.x, y: p.y, kind: 'socket', safeEventId: null });
+    const cap = p.capacity;
+    run(s, 5);
+    expect(p.capacity).toBe(cap);
+    // a fallen contender is not brought back (respawns switched on and time left on the clock, so only the rule stops it)
+    s.config.respawn.enabled = true;
+    s.match.playTicks = 0;
+    s.players[1]!.respawnAt = s.tick;
+    s.players[1]!.alive = false;
+    run(s, 5);
+    expect(s.players[1]!.alive).toBe(false);
   });
 
   it('nobody protected: the kills of every player decide; only a still-shared lead is the draw', () => {

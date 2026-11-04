@@ -22,6 +22,7 @@ export function revealPickupAt(
 }
 
 export function collectPickups(state: GameState, events: SimEvent[]): void {
+  if (state.match.suddenDeath?.finalPhase) return; // the final lethal phase: no pickups (decision AS6)
   for (const p of state.players) {
     if (!p.alive || state.match.phase !== 'playing') continue;
     for (const pickup of state.pickups.filter((u) => u.x === p.x && u.y === p.y)) {

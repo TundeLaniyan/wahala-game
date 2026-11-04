@@ -496,7 +496,7 @@ export class MatchController {
           ? { text: 'QUICK HANDS OVER', tone: 'info', icon: e.reward }
           : null;
       case 'streakRewardsLost':
-        return e.playerId === LOCAL_ID ? { text: 'STREAK LOST: REWARDS GONE', tone: 'bad' } : null;
+        return e.playerId === LOCAL_ID ? { text: 'STREAK OVER: QUICK HANDS ENDED', tone: 'bad' } : null;
       // what the others see coming
       case 'vehicleGeneratorLaunched':
         return e.ownerId === LOCAL_ID

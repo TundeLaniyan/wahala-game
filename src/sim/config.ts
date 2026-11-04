@@ -173,7 +173,10 @@ export interface GameConfig {
    */
   suddenDeath: {
     transitionTicks: number;
-    /** Delay before blast 1, then blast 2 (60 s, 30 s); every later blast follows `repeatBlastTicks` after the last. */
+    /**
+     * Delay before blast 1, then blast 2 (60 s, then 15 s); the FINAL blast follows `repeatBlastTicks` after blast 2 and
+     * kills through any protection (decision AS6).
+     */
     blastDelayTicks: number[];
     repeatBlastTicks: number;
     /** The HUD warns this long before each blast. */
@@ -498,7 +501,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   },
   suddenDeath: {
     transitionTicks: ticks(4),
-    blastDelayTicks: [ticks(60), ticks(30)],
+    blastDelayTicks: [ticks(60), ticks(15)],
     repeatBlastTicks: ticks(15),
     warnTicks: ticks(5),
   },
