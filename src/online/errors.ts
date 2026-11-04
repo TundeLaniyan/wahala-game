@@ -4,7 +4,14 @@
 
 /** Why a message was rejected by a validator (client UX and, identically, the server). */
 export interface ValidationError {
-  code: 'malformed' | 'invalid' | 'unknownType' | 'unknownField' | 'forbiddenField' | 'tooLarge' | 'versionMismatch';
+  code:
+    | 'malformed'
+    | 'invalid'
+    | 'unknownType'
+    | 'unknownField'
+    | 'forbiddenField'
+    | 'tooLarge'
+    | 'versionMismatch';
   /** JSON-path-like location, e.g. `intent.vehicle.entry.x`. */
   path: string;
   message: string;

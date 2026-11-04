@@ -41,7 +41,9 @@ export interface Clock {
 export const systemClock: Clock = { now: () => Date.now() };
 
 /** A clock tests move by hand. */
-export function manualClock(start = 1_700_000_000_000): Clock & { advance(ms: number): void; set(ms: number): void } {
+export function manualClock(
+  start = 1_700_000_000_000,
+): Clock & { advance(ms: number): void; set(ms: number): void } {
   let t = start;
   return {
     now: () => t,
@@ -138,7 +140,10 @@ export class Faults {
   /** @internal */
   take(service: ServiceName, method: string): OnlineError | null {
     const rule = this.rules.find(
-      (r) => r.left > 0 && (r.service === '*' || r.service === service) && (r.method === '*' || r.method === method),
+      (r) =>
+        r.left > 0 &&
+        (r.service === '*' || r.service === service) &&
+        (r.method === '*' || r.method === method),
     );
     if (!rule) return null;
     rule.left--;

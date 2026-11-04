@@ -32,13 +32,19 @@ describe('mock reconnect', () => {
     const dropped = events.find((e) => e.type === 'match.connection' && !e.connected);
     expect(dropped).toMatchObject({ graceMs: 20_000, seat: 0 });
     // while the connection is down the server refuses input and the seat idles
-    expect(await m.online.matches.submitInput(d.matchId, lastSeen.tick + 30, { move: 'up' })).toMatchObject({ error: { code: 'conflict' } });
+    expect(await m.online.matches.submitInput(d.matchId, lastSeen.tick + 30, { move: 'up' })).toMatchObject({
+      error: { code: 'conflict' },
+    });
     m.online.control.step(d.matchId, 60);
     m.clock.advance(5000);
     m.online.control.pump();
 
     const resumed = val(
-      await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: d.resumeToken, lastAckedTick: lastSeen.tick }),
+      await m.online.reconnect.resume({
+        matchId: d.matchId,
+        resumeToken: d.resumeToken,
+        lastAckedTick: lastSeen.tick,
+      }),
     );
     expect(m.online.connection()).toBe('connected');
     expect(resumed.graceRemainingMs).toBe(15_000);
@@ -52,16 +58,24 @@ describe('mock reconnect', () => {
     const check = m.online.control.verifyReplay(d.matchId)!;
     expect(check.replayed).toBe(check.live);
     // input works again
-    expect((await m.online.matches.submitInput(d.matchId, resumed.snapshot.tick, { move: 'down' })).ok).toBe(true);
+    expect((await m.online.matches.submitInput(d.matchId, resumed.snapshot.tick, { move: 'down' })).ok).toBe(
+      true,
+    );
   });
 
   it('the resume token is single use: a stolen or replayed token is refused', async () => {
     const m = mock();
     const d = await liveMatch(m);
     val(m.online.control.simulateDrop(d.matchId));
-    expect(await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: 'x'.repeat(24), lastAckedTick: 0 })).toMatchObject({ error: { code: 'forbidden' } });
-    val(await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: d.resumeToken, lastAckedTick: 0 }));
-    expect(await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: d.resumeToken, lastAckedTick: 0 })).toMatchObject({ error: { code: 'forbidden' } });
+    expect(
+      await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: 'x'.repeat(24), lastAckedTick: 0 }),
+    ).toMatchObject({ error: { code: 'forbidden' } });
+    val(
+      await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: d.resumeToken, lastAckedTick: 0 }),
+    );
+    expect(
+      await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: d.resumeToken, lastAckedTick: 0 }),
+    ).toMatchObject({ error: { code: 'forbidden' } });
   });
 
   it('after the grace window a bot takes the seat and the resume is refused (reconnectExpired)', async () => {
@@ -73,8 +87,13 @@ describe('mock reconnect', () => {
     m.wait(10_500, 500);
     const rec = m.online.control.inspect(d.matchId)!;
     expect(rec.links[0]!).toMatchObject({ expired: true, bot: true, connected: false });
-    expect(events.filter((e) => e.type === 'match.connection').at(-1)).toMatchObject({ connected: false, graceMs: null });
-    expect(await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: d.resumeToken, lastAckedTick: 0 })).toMatchObject({
+    expect(events.filter((e) => e.type === 'match.connection').at(-1)).toMatchObject({
+      connected: false,
+      graceMs: null,
+    });
+    expect(
+      await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: d.resumeToken, lastAckedTick: 0 }),
+    ).toMatchObject({
       error: { code: 'reconnectExpired' },
     });
   });
@@ -84,10 +103,14 @@ describe('mock reconnect', () => {
     const d = await liveMatch(m);
     val(m.online.control.simulateDrop(d.matchId));
     val(m.online.control.fastForward(d.matchId));
-    expect(await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: d.resumeToken, lastAckedTick: 0 })).toMatchObject({
+    expect(
+      await m.online.reconnect.resume({ matchId: d.matchId, resumeToken: d.resumeToken, lastAckedTick: 0 }),
+    ).toMatchObject({
       error: { code: 'reconnectExpired' },
     });
-    expect(await m.online.reconnect.resume({ matchId: 'nope', resumeToken: d.resumeToken, lastAckedTick: 0 })).toMatchObject({ error: { code: 'notFound' } });
+    expect(
+      await m.online.reconnect.resume({ matchId: 'nope', resumeToken: d.resumeToken, lastAckedTick: 0 }),
+    ).toMatchObject({ error: { code: 'notFound' } });
   });
 
   it('dropping twice, or dropping a seat a bot already plays, is refused', async () => {
@@ -95,7 +118,10 @@ describe('mock reconnect', () => {
     const d = await liveMatch(m);
     val(m.online.control.simulateDrop(d.matchId));
     val(await m.online.matches.leave(d.matchId));
-    expect(m.online.control.simulateDrop(d.matchId)).toMatchObject({ ok: false, error: { code: 'conflict' } });
+    expect(m.online.control.simulateDrop(d.matchId)).toMatchObject({
+      ok: false,
+      error: { code: 'conflict' },
+    });
     expect(m.online.control.simulateDrop('nope')).toMatchObject({ ok: false, error: { code: 'notFound' } });
   });
 });

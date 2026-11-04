@@ -7,7 +7,11 @@ describe('mock error injection', () => {
   it('serverUnavailable, timeout and roomFull can be injected per service and method', async () => {
     const m = mock();
     val(await m.online.accounts.signInGuest());
-    m.online.control.faults.inject({ service: 'matchmaking', method: 'enqueue', error: E.serverUnavailable() });
+    m.online.control.faults.inject({
+      service: 'matchmaking',
+      method: 'enqueue',
+      error: E.serverUnavailable(),
+    });
     expect(await m.online.matchmaking.enqueue({ game: 'classic', arenaId: 'danfoBusPark' })).toMatchObject({
       ok: false,
       error: { code: 'serverUnavailable' },
@@ -25,7 +29,12 @@ describe('mock error injection', () => {
 
   it('wildcards, repeat counts and clearing', async () => {
     const m = mock();
-    m.online.control.faults.inject({ service: '*', method: '*', error: E.serverUnavailable(), times: Infinity });
+    m.online.control.faults.inject({
+      service: '*',
+      method: '*',
+      error: E.serverUnavailable(),
+      times: Infinity,
+    });
     for (const call of [
       () => m.online.accounts.signInGuest(),
       () => m.online.social.friends(),
@@ -40,10 +49,22 @@ describe('mock error injection', () => {
 
   it('injected rate limiting and version mismatch carry their details', async () => {
     const m = mock();
-    m.online.control.faults.inject({ service: 'accounts', method: 'signInGuest', error: E.rateLimited(1500) });
-    expect(await m.online.accounts.signInGuest()).toMatchObject({ error: { code: 'rateLimited', retryAfterMs: 1500 } });
-    m.online.control.faults.inject({ service: 'accounts', method: 'signInGuest', error: E.versionMismatch(1, 2) });
-    expect(await m.online.accounts.signInGuest()).toMatchObject({ error: { code: 'versionMismatch', serverVersion: 2 } });
+    m.online.control.faults.inject({
+      service: 'accounts',
+      method: 'signInGuest',
+      error: E.rateLimited(1500),
+    });
+    expect(await m.online.accounts.signInGuest()).toMatchObject({
+      error: { code: 'rateLimited', retryAfterMs: 1500 },
+    });
+    m.online.control.faults.inject({
+      service: 'accounts',
+      method: 'signInGuest',
+      error: E.versionMismatch(1, 2),
+    });
+    expect(await m.online.accounts.signInGuest()).toMatchObject({
+      error: { code: 'versionMismatch', serverVersion: 2 },
+    });
   });
 
   it('no service call ever throws: odd arguments come back as error results', async () => {
@@ -67,7 +88,15 @@ describe('mock error injection', () => {
 
   it('every error code is covered by a human readable line and a constructor', () => {
     for (const code of ONLINE_ERROR_CODES) {
-      const sample = { code, message: 'm', issues: [], state: 's', retryAfterMs: 1, clientVersion: 1, serverVersion: 2 } as never;
+      const sample = {
+        code,
+        message: 'm',
+        issues: [],
+        state: 's',
+        retryAfterMs: 1,
+        clientVersion: 1,
+        serverVersion: 2,
+      } as never;
       expect(typeof describeError(sample)).toBe('string');
     }
     expect(Object.keys(E).length).toBeGreaterThanOrEqual(ONLINE_ERROR_CODES.length - 1);

@@ -98,7 +98,11 @@ const clientVariants = {
   'match.leave': { matchId: ID },
   'match.ready': { matchId: ID, ready: bool() },
   'match.input': { matchId: ID, tick: int(0, LIMITS.maxTick), intent: intentSchema },
-  'match.resume': { matchId: ID, resumeToken: str({ min: 16, max: 128, pattern: /^[A-Za-z0-9_-]+$/ }), lastAckedTick: int(0, LIMITS.maxTick) },
+  'match.resume': {
+    matchId: ID,
+    resumeToken: str({ min: 16, max: 128, pattern: /^[A-Za-z0-9_-]+$/ }),
+    lastAckedTick: int(0, LIMITS.maxTick),
+  },
   /** Ask the server to settle a finished match into your progression. The client never sends results. */
   'progress.settle': { matchId: ID },
   'social.friendRequest': { code: CODE },
@@ -106,7 +110,7 @@ const clientVariants = {
   'social.inviteRespond': { invitationId: ID, accept: bool() },
 } as const;
 
-type ClientShapes = { [K in keyof typeof clientVariants]: (typeof base) & (typeof clientVariants)[K] };
+type ClientShapes = { [K in keyof typeof clientVariants]: typeof base & (typeof clientVariants)[K] };
 const clientShapes = Object.fromEntries(
   Object.entries(clientVariants).map(([k, shape]) => [k, { ...base, ...shape }]),
 ) as ClientShapes;
@@ -114,11 +118,8 @@ const clientShapes = Object.fromEntries(
 const clientSchema = variant('type', clientShapes);
 
 /** Every message a client may send (the discriminated union, derived from the schema). */
-export type ClientMessage = ReturnType<typeof clientSchema.parse> extends infer R
-  ? R extends { value: infer T }
-    ? T
-    : never
-  : never;
+export type ClientMessage =
+  ReturnType<typeof clientSchema.parse> extends infer R ? (R extends { value: infer T } ? T : never) : never;
 export type ClientMessageType = ClientMessage['type'];
 export const CLIENT_MESSAGE_TYPES = Object.keys(clientVariants) as ClientMessageType[];
 
@@ -187,7 +188,12 @@ const serverVariants = {
   'room.update': { room: record() },
   'match.countdown': { matchId: ID, secondsLeft: int(0, 600) },
   'match.snapshot': { snapshot: record(1000) },
-  'match.connection': { matchId: ID, seat: int(0, 63), connected: bool(), graceMs: nullable(int(0, 3_600_000)) },
+  'match.connection': {
+    matchId: ID,
+    seat: int(0, 63),
+    connected: bool(),
+    graceMs: nullable(int(0, 3_600_000)),
+  },
   'match.results': { results: record() },
   'progress.update': { update: record(), profile: record() },
   'social.invitation': { invitation: record() },

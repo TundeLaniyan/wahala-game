@@ -24,7 +24,13 @@ export const SEASONS: readonly SeasonDef[] = [
     theme: 'christmas',
     startsAt: utc(2026, 12, 7),
     endsAt: utc(2027, 1, 31), // 8 weeks
-    tiers: tiers(120, ['banner-christmas-lights', 'emote-jingle-dance', 'skin-ankara-festive', 'finisher-fireworks', 'banner-season-1-gold']),
+    tiers: tiers(120, [
+      'banner-christmas-lights',
+      'emote-jingle-dance',
+      'skin-ankara-festive',
+      'finisher-fireworks',
+      'banner-season-1-gold',
+    ]),
     leaderboardId: 'season-1',
     blurb: 'Placeholder season: festive lights on the board and a faster climb.',
   },
@@ -34,7 +40,13 @@ export const SEASONS: readonly SeasonDef[] = [
     theme: 'eid',
     startsAt: utc(2027, 2, 1),
     endsAt: utc(2027, 3, 14), // 6 weeks
-    tiers: tiers(120, ['banner-eid-crescent', 'emote-greeting-wave', 'skin-agbada-gold', 'vehicle-danfo-lanterns', 'banner-season-2-gold']),
+    tiers: tiers(120, [
+      'banner-eid-crescent',
+      'emote-greeting-wave',
+      'skin-agbada-gold',
+      'vehicle-danfo-lanterns',
+      'banner-season-2-gold',
+    ]),
     leaderboardId: 'season-2',
     blurb: 'Placeholder season: lantern-lit stages.',
   },
@@ -44,7 +56,13 @@ export const SEASONS: readonly SeasonDef[] = [
     theme: 'harmattan',
     startsAt: utc(2027, 3, 15),
     endsAt: utc(2027, 5, 9), // 8 weeks
-    tiers: tiers(130, ['banner-dust-haze', 'emote-scarf-wrap', 'skin-dust-runner', 'vehicle-keke-dust', 'banner-season-3-gold']),
+    tiers: tiers(130, [
+      'banner-dust-haze',
+      'emote-scarf-wrap',
+      'skin-dust-runner',
+      'vehicle-keke-dust',
+      'banner-season-3-gold',
+    ]),
     leaderboardId: 'season-3',
     blurb: 'Placeholder season: dusty orange haze.',
   },
@@ -71,23 +89,112 @@ export function tierReached(season: SeasonDef, points: number): number {
 // ---------------------------------------------------------------- challenges
 
 export const CHALLENGE_POOL: readonly ChallengeDef[] = [
-  { id: 'd-play-3', name: 'Warm up', description: 'Play 3 matches', kind: 'daily', metric: 'matches', target: 3, points: 15 },
-  { id: 'd-win-1', name: 'Take one', description: 'Win a match', kind: 'daily', metric: 'wins', target: 1, points: 20 },
-  { id: 'd-kill-5', name: 'Small wahala', description: 'Credit 5 eliminations', kind: 'daily', metric: 'kills', target: 5, points: 20 },
-  { id: 'd-assist-3', name: 'Team spirit', description: 'Get 3 assists', kind: 'daily', metric: 'assists', target: 3, points: 15 },
-  { id: 'd-survive-120', name: 'Hold on', description: 'Survive 120 seconds in total', kind: 'daily', metric: 'survivalSeconds', target: 120, points: 15 },
-  { id: 'd-streak-1', name: 'Hot streak', description: 'Earn a kill-streak reward', kind: 'daily', metric: 'streakRewards', target: 1, points: 20 },
-  { id: 'w-play-15', name: 'Regular', description: 'Play 15 matches', kind: 'weekly', metric: 'matches', target: 15, points: 60 },
-  { id: 'w-win-7', name: 'Winner winner', description: 'Win 7 matches', kind: 'weekly', metric: 'wins', target: 7, points: 80 },
-  { id: 'w-kill-40', name: 'Big wahala', description: 'Credit 40 eliminations', kind: 'weekly', metric: 'kills', target: 40, points: 80 },
-  { id: 'w-assist-20', name: 'Good neighbour', description: 'Get 20 assists', kind: 'weekly', metric: 'assists', target: 20, points: 60 },
-  { id: 'w-survive-900', name: 'Long day', description: 'Survive 900 seconds in total', kind: 'weekly', metric: 'survivalSeconds', target: 900, points: 60 },
+  {
+    id: 'd-play-3',
+    name: 'Warm up',
+    description: 'Play 3 matches',
+    kind: 'daily',
+    metric: 'matches',
+    target: 3,
+    points: 15,
+  },
+  {
+    id: 'd-win-1',
+    name: 'Take one',
+    description: 'Win a match',
+    kind: 'daily',
+    metric: 'wins',
+    target: 1,
+    points: 20,
+  },
+  {
+    id: 'd-kill-5',
+    name: 'Small wahala',
+    description: 'Credit 5 eliminations',
+    kind: 'daily',
+    metric: 'kills',
+    target: 5,
+    points: 20,
+  },
+  {
+    id: 'd-assist-3',
+    name: 'Team spirit',
+    description: 'Get 3 assists',
+    kind: 'daily',
+    metric: 'assists',
+    target: 3,
+    points: 15,
+  },
+  {
+    id: 'd-survive-120',
+    name: 'Hold on',
+    description: 'Survive 120 seconds in total',
+    kind: 'daily',
+    metric: 'survivalSeconds',
+    target: 120,
+    points: 15,
+  },
+  {
+    id: 'd-streak-1',
+    name: 'Hot streak',
+    description: 'Earn a kill-streak reward',
+    kind: 'daily',
+    metric: 'streakRewards',
+    target: 1,
+    points: 20,
+  },
+  {
+    id: 'w-play-15',
+    name: 'Regular',
+    description: 'Play 15 matches',
+    kind: 'weekly',
+    metric: 'matches',
+    target: 15,
+    points: 60,
+  },
+  {
+    id: 'w-win-7',
+    name: 'Winner winner',
+    description: 'Win 7 matches',
+    kind: 'weekly',
+    metric: 'wins',
+    target: 7,
+    points: 80,
+  },
+  {
+    id: 'w-kill-40',
+    name: 'Big wahala',
+    description: 'Credit 40 eliminations',
+    kind: 'weekly',
+    metric: 'kills',
+    target: 40,
+    points: 80,
+  },
+  {
+    id: 'w-assist-20',
+    name: 'Good neighbour',
+    description: 'Get 20 assists',
+    kind: 'weekly',
+    metric: 'assists',
+    target: 20,
+    points: 60,
+  },
+  {
+    id: 'w-survive-900',
+    name: 'Long day',
+    description: 'Survive 900 seconds in total',
+    kind: 'weekly',
+    metric: 'survivalSeconds',
+    target: 900,
+    points: 60,
+  },
 ];
 
 const dayKey = (t: number): string => new Date(t).toISOString().slice(0, 10);
 
-/** Monday 00:00 UTC of the week containing `now` (1970-01-01 was a Thursday, so shift by 3 days). */
-export const weekStart = (now: number): number => Math.floor((now - 3 * DAY_MS) / WEEK_MS) * WEEK_MS + 3 * DAY_MS;
+/** Monday 00:00 UTC of the week containing `now` (1970-01-01 was a Thursday; the first Monday is day 4). */
+export const weekStart = (now: number): number =>
+  Math.floor((now - 4 * DAY_MS) / WEEK_MS) * WEEK_MS + 4 * DAY_MS;
 
 /** Deterministic hash of a string/number pair into a 32-bit seed. */
 function mix(seed: number, salt: string): number {
@@ -96,7 +203,13 @@ function mix(seed: number, salt: string): number {
   return h || 1;
 }
 
-function pickSet(kind: 'daily' | 'weekly', key: string, endsAt: number, seed: number, count: number): ChallengeSet {
+function pickSet(
+  kind: 'daily' | 'weekly',
+  key: string,
+  endsAt: number,
+  seed: number,
+  count: number,
+): ChallengeSet {
   const pool = CHALLENGE_POOL.filter((c) => c.kind === kind);
   const rng = createRng(mix(seed, `${kind}:${key}`));
   return { key, endsAt, challenges: shuffle(rng, pool).slice(0, count) };

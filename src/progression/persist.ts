@@ -9,8 +9,10 @@ import { PROGRESSION_KEY, PROGRESSION_VERSION } from './types';
 import type { ProgressionProfile } from './types';
 import { unlockedCosmetics } from '../cosmetics';
 
-const num = (v: unknown, fallback = 0): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : fallback);
-const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, 500) : []);
+const num = (v: unknown, fallback = 0): number =>
+  typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : fallback;
+const strs = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, 500) : [];
 
 /** Rebuilds a valid profile from anything (unknown shapes keep only what can be trusted). */
 export function repairProfile(raw: unknown): ProgressionProfile {
@@ -19,7 +21,8 @@ export function repairProfile(raw: unknown): ProgressionProfile {
   const r = raw as Record<string, unknown>;
   const t = (r.totals && typeof r.totals === 'object' ? r.totals : {}) as Record<string, unknown>;
   const s = (r.season && typeof r.season === 'object' ? r.season : {}) as Record<string, unknown>;
-  const st = r.seasonTiers && typeof r.seasonTiers === 'object' ? (r.seasonTiers as Record<string, unknown>) : {};
+  const st =
+    r.seasonTiers && typeof r.seasonTiers === 'object' ? (r.seasonTiers as Record<string, unknown>) : {};
   const xp = Math.floor(num(r.xp));
   const rankPoints = Math.floor(num(r.rankPoints));
   const p: ProgressionProfile = {
@@ -30,7 +33,11 @@ export function repairProfile(raw: unknown): ProgressionProfile {
     rankPoints,
     peakRankPoints: Math.max(rankPoints, Math.floor(num(r.peakRankPoints))),
     eventThemes: strs(r.eventThemes),
-    seasonTiers: Object.fromEntries(Object.entries(st).filter(([, v]) => typeof v === 'number').map(([k, v]) => [k, num(v)])),
+    seasonTiers: Object.fromEntries(
+      Object.entries(st)
+        .filter(([, v]) => typeof v === 'number')
+        .map(([k, v]) => [k, num(v)]),
+    ),
     totals: {
       matches: num(t.matches),
       wins: num(t.wins),
@@ -52,15 +59,23 @@ export function repairProfile(raw: unknown): ProgressionProfile {
     },
     campaignRewards: strs(r.campaignRewards),
     history: Array.isArray(r.history)
-      ? (r.history.filter((h) => h && typeof h === 'object' && typeof (h as { matchId?: unknown }).matchId === 'string').slice(0, 20) as ProgressionProfile['history'])
+      ? (r.history
+          .filter(
+            (h) => h && typeof h === 'object' && typeof (h as { matchId?: unknown }).matchId === 'string',
+          )
+          .slice(0, 20) as ProgressionProfile['history'])
       : [],
   };
-  return { ...p, bestWinStreak: Math.max(p.bestWinStreak, p.winStreak), unlocked: unlockedCosmetics(progressView(p)) };
+  return {
+    ...p,
+    bestWinStreak: Math.max(p.bestWinStreak, p.winStreak),
+    unlocked: unlockedCosmetics(progressView(p)),
+  };
 }
 
 export function loadProgression(store: KeyValueStore | null, key = PROGRESSION_KEY): ProgressionProfile {
   if (!store) return createProfile();
-  let text: string | null = null;
+  let text: string | null;
   try {
     text = store.getItem(key);
   } catch {
@@ -79,7 +94,11 @@ export function loadProgression(store: KeyValueStore | null, key = PROGRESSION_K
   }
 }
 
-export function saveProgression(store: KeyValueStore | null, profile: ProgressionProfile, key = PROGRESSION_KEY): boolean {
+export function saveProgression(
+  store: KeyValueStore | null,
+  profile: ProgressionProfile,
+  key = PROGRESSION_KEY,
+): boolean {
   if (!store) return false;
   try {
     store.setItem(key, JSON.stringify(profile));

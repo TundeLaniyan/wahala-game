@@ -63,7 +63,11 @@ export function createProgressionService(ctx: MockCtx): ProgressionService {
         store(ctx, u.value.id, applied.profile);
         const next = nextMatchPhase(rec.phase, 'resultsPosted');
         if (next) rec.phase = next;
-        ctx.events.emit({ type: 'progress.update', update: applied.update, profile: structuredClone(applied.profile) });
+        ctx.events.emit({
+          type: 'progress.update',
+          update: applied.update,
+          profile: structuredClone(applied.profile),
+        });
         return ok(applied.update);
       }),
   };
@@ -87,7 +91,11 @@ export function createRankingService(ctx: MockCtx): RankingService {
         const p = profileOf(ctx, u.value.id);
         const points = season ? (p.season.seasonId === season.id ? p.season.points : 0) : p.rankPoints;
         const base = seedLeaderboard(fnv1a(boardId), 40);
-        const rows = rankBoard(base, { accountId: u.value.id, displayName: u.value.displayName, points }, Math.max(1, Math.min(50, limit)));
+        const rows = rankBoard(
+          base,
+          { accountId: u.value.id, displayName: u.value.displayName, points },
+          Math.max(1, Math.min(50, limit)),
+        );
         return ok({ boardId, rows, total: base.length + 1 });
       }),
   };

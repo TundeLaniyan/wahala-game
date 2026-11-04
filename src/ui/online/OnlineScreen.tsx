@@ -38,7 +38,14 @@ function GamePicker({ onPick }: { onPick: (g: (typeof ONLINE_GAME_ORDER)[number]
   return (
     <div className="mn-opts ol-games" role="group" aria-label="Game">
       {ONLINE_GAME_ORDER.map((g) => (
-        <Option key={g} value={g} current={game} label={ONLINE_GAME_LABEL[g]} onPick={onPick} testId={`online-game-${g}`} />
+        <Option
+          key={g}
+          value={g}
+          current={game}
+          label={ONLINE_GAME_LABEL[g]}
+          onPick={onPick}
+          testId={`online-game-${g}`}
+        />
       ))}
     </div>
   );
@@ -90,10 +97,19 @@ function Hub() {
         <small className="mn-kicker">Game</small>
         <GamePicker onPick={onlineApi.setGame} />
         <div className="ol-actions">
-          <PrimaryButton testId="online-quick" disabled={s.busy} autoFocus onClick={() => void onlineApi.quickMatch()}>
+          <PrimaryButton
+            testId="online-quick"
+            disabled={s.busy}
+            autoFocus
+            onClick={() => void onlineApi.quickMatch()}
+          >
             Quick Match
           </PrimaryButton>
-          <SecondaryButton testId="online-party" disabled={s.busy} onClick={() => void onlineApi.createParty()}>
+          <SecondaryButton
+            testId="online-party"
+            disabled={s.busy}
+            onClick={() => void onlineApi.createParty()}
+          >
             Create Party
           </SecondaryButton>
         </div>
@@ -174,7 +190,11 @@ function PartyStep() {
         <small className="mn-kicker">Game</small>
         <GamePicker onPick={onlineApi.setGame} />
         <div className="ol-actions">
-          <PrimaryButton testId="online-open-lobby" disabled={!perms.canStart || s.busy} onClick={() => void onlineApi.openLobby()}>
+          <PrimaryButton
+            testId="online-open-lobby"
+            disabled={!perms.canStart || s.busy}
+            onClick={() => void onlineApi.openLobby()}
+          >
             Open lobby
           </PrimaryButton>
         </div>
@@ -218,20 +238,37 @@ function Lobby() {
         <small className="mn-kicker">Your seat</small>
         <div className="ol-actions">
           {a.canStartReadyCheck && (
-            <PrimaryButton testId="online-readycheck" disabled={s.busy} onClick={() => void onlineApi.startReadyCheck()}>
+            <PrimaryButton
+              testId="online-readycheck"
+              disabled={s.busy}
+              onClick={() => void onlineApi.startReadyCheck()}
+            >
               Start ready check
             </PrimaryButton>
           )}
-          <PrimaryButton testId="online-ready" disabled={!a.canReady || s.busy} autoFocus onClick={() => void onlineApi.toggleReady()}>
+          <PrimaryButton
+            testId="online-ready"
+            disabled={!a.canReady || s.busy}
+            autoFocus
+            onClick={() => void onlineApi.toggleReady()}
+          >
             {a.ready ? 'Not ready' : 'Ready'}
           </PrimaryButton>
           {a.showTeams && (
-            <SecondaryButton testId="online-switch-team" disabled={!a.canSwitchTeam} onClick={() => void onlineApi.switchTeam()}>
+            <SecondaryButton
+              testId="online-switch-team"
+              disabled={!a.canSwitchTeam}
+              onClick={() => void onlineApi.switchTeam()}
+            >
               Switch team
             </SecondaryButton>
           )}
           {a.showTeams && a.isHost && (
-            <SecondaryButton testId="online-balance" disabled={room.state !== 'open'} onClick={() => void onlineApi.balanceTeams()}>
+            <SecondaryButton
+              testId="online-balance"
+              disabled={room.state !== 'open'}
+              onClick={() => void onlineApi.balanceTeams()}
+            >
               Balance teams
             </SecondaryButton>
           )}
@@ -249,7 +286,9 @@ function LivePanel({ m }: { m: MatchView }) {
     <section className="ol-card" data-testid="online-live" data-connection={m.connection}>
       <small className="mn-kicker">{m.connection === 'connected' ? 'Server match' : 'Connection lost'}</small>
       <h3 data-testid="online-live-status">
-        {snap ? `${snap.phase} · tick ${snap.tick}${snap.secondsRemaining !== null ? ` · ${snap.secondsRemaining}s left` : ''}` : 'Starting…'}
+        {snap
+          ? `${snap.phase} · tick ${snap.tick}${snap.secondsRemaining !== null ? ` · ${snap.secondsRemaining}s left` : ''}`
+          : 'Starting…'}
       </h3>
       {snap && (
         <ul className="ol-list">
@@ -264,21 +303,29 @@ function LivePanel({ m }: { m: MatchView }) {
       )}
       {m.connection === 'reconnecting' && (
         <p className="ol-note" data-testid="online-dropped">
-          Connection dropped. The server holds your seat for {Math.round((m.graceMs ?? 0) / 1000)} s; a bot is not
-          playing it yet.
+          Connection dropped. The server holds your seat for {Math.round((m.graceMs ?? 0) / 1000)} s; a bot is
+          not playing it yet.
         </p>
       )}
       {m.resync && (
         <p className="ol-note" data-testid="online-resync">
-          Resynced from the server snapshot at tick {m.resync.tick} plus {m.resync.inputs} logged inputs (state hash{' '}
-          {m.resync.hash.toString(16)}).
+          Resynced from the server snapshot at tick {m.resync.tick} plus {m.resync.inputs} logged inputs
+          (state hash {m.resync.hash.toString(16)}).
         </p>
       )}
       <div className="ol-actions">
-        <SecondaryButton testId="online-drop" disabled={m.connection !== 'connected'} onClick={() => onlineApi.simulateDrop()}>
+        <SecondaryButton
+          testId="online-drop"
+          disabled={m.connection !== 'connected'}
+          onClick={() => onlineApi.simulateDrop()}
+        >
           Simulate dropped connection
         </SecondaryButton>
-        <PrimaryButton testId="online-reconnect" disabled={m.connection === 'connected'} onClick={() => void onlineApi.reconnect()}>
+        <PrimaryButton
+          testId="online-reconnect"
+          disabled={m.connection === 'connected'}
+          onClick={() => void onlineApi.reconnect()}
+        >
           Reconnect
         </PrimaryButton>
       </div>
@@ -294,8 +341,8 @@ function MatchStep() {
     <section className="ol-card ol-center" data-testid="online-match-choice">
       <h3>Match ready</h3>
       <p>
-        The mock server has created this match. Play it yourself with the normal game, or let the mock server run it on
-        the real simulation (a bot drives your seat) so you can watch the server-authoritative flow.
+        The mock server has created this match. Play it yourself with the normal game, or let the mock server
+        run it on the real simulation (a bot drives your seat) so you can watch the server-authoritative flow.
       </p>
       <div className="ol-actions">
         <PrimaryButton testId="online-play-local" autoFocus onClick={() => onlineApi.playLocal()}>
@@ -314,7 +361,11 @@ function Results() {
   const { results, update, progress, leaderboard } = s;
   if (!results || !update) return null;
   const mine = results.players.find((p) => p.accountId === s.profile?.id);
-  const headline = results.draw ? 'Draw' : mine?.placement === 1 ? 'Victory' : `Finished #${mine?.placement ?? '-'}`;
+  const headline = results.draw
+    ? 'Draw'
+    : mine?.placement === 1
+      ? 'Victory'
+      : `Finished #${mine?.placement ?? '-'}`;
   return (
     <div className="ol-grid">
       <section className="ol-card" data-testid="online-results">
@@ -358,7 +409,9 @@ function Results() {
             </li>
           ))}
         </ul>
-        {update.newUnlocks.length > 0 && <p className="ol-note">New cosmetics unlocked: {update.newUnlocks.length}</p>}
+        {update.newUnlocks.length > 0 && (
+          <p className="ol-note">New cosmetics unlocked: {update.newUnlocks.length}</p>
+        )}
         {progress && <small>Total {progress.profile.xp} XP</small>}
       </section>
       <section className="ol-card" data-testid="online-leaderboard">
@@ -398,7 +451,13 @@ export function OnlineScreen() {
       onBack={() => {
         if (onlineApi.back()) commands.menuBack();
       }}
-      status={profile ? <span>Signed in as <b>{profile.displayName}</b></span> : null}
+      status={
+        profile ? (
+          <span>
+            Signed in as <b>{profile.displayName}</b>
+          </span>
+        ) : null
+      }
       className="ol-screen"
     >
       <p className="ol-banner" data-testid="online-banner" role="note">

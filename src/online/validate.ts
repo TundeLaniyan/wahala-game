@@ -98,7 +98,11 @@ export function lit<const V extends string>(values: readonly V[]): Schema<V> {
     parse: (v, path, out) =>
       typeof v === 'string' && (values as readonly string[]).includes(v)
         ? { value: v as V }
-        : bad(out, path, `expected one of: ${values.slice(0, 8).join(', ')}${values.length > 8 ? ', ...' : ''}`),
+        : bad(
+            out,
+            path,
+            `expected one of: ${values.slice(0, 8).join(', ')}${values.length > 8 ? ', ...' : ''}`,
+          ),
   };
 }
 
@@ -171,7 +175,12 @@ export function obj<S extends Shape>(shape: S): Schema<ObjOut<S>> {
           if (isOptional(f)) continue;
           return bad(out, path ? `${path}.${key}` : key, 'missing');
         }
-        const r = (isOptional(f) ? f.optional : f).parse(v[key], path ? `${path}.${key}` : key, out, depth + 1);
+        const r = (isOptional(f) ? f.optional : f).parse(
+          v[key],
+          path ? `${path}.${key}` : key,
+          out,
+          depth + 1,
+        );
         if (!r) return null;
         result[key] = r.value;
       }

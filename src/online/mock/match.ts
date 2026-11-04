@@ -41,7 +41,8 @@ const SNAPSHOT_EVERY = 6;
 const MAX_LOG = 60_000;
 const ONE_SHOTS = ['place', 'special', 'action', 'disarm', 'skill', 'detonate'] as const;
 
-const token = (ctx: MockCtx): string => Array.from({ length: 24 }, () => nextInt(ctx.rng, 16).toString(16)).join('');
+const token = (ctx: MockCtx): string =>
+  Array.from({ length: 24 }, () => nextInt(ctx.rng, 16).toString(16)).join('');
 
 // ---------------------------------------------------------------- creation
 
@@ -65,7 +66,12 @@ export function createMatchRec(ctx: MockCtx, room: Room): MatchRec {
     ...(s.team !== null ? { team: s.team } : {}),
   }));
   const seed = 1 + nextInt(ctx.rng, 2_000_000_000);
-  const options: GameOptions = { seed, arenaId: room.arenaId, players, settings: matchSettingsFor(room.game) };
+  const options: GameOptions = {
+    seed,
+    arenaId: room.arenaId,
+    players,
+    settings: matchSettingsFor(room.game),
+  };
   const state = createGame(options);
   const links: SeatLink[] = seats.map((s) => ({
     connected: true,
@@ -104,7 +110,10 @@ export function createMatchRec(ctx: MockCtx, room: Room): MatchRec {
 
 function botObject(rec: MatchRec, seat: number): void {
   if (rec.bots.has(seat)) return;
-  rec.bots.set(seat, createBot({ difficulty: 'rookie', seed: rec.options.seed + seat * 7919, playerId: seat }));
+  rec.bots.set(
+    seat,
+    createBot({ difficulty: 'rookie', seed: rec.options.seed + seat * 7919, playerId: seat }),
+  );
 }
 
 /** A bot takes the seat over for good. */
@@ -230,7 +239,11 @@ function intentsFor(rec: MatchRec): Intents {
     } else if (link.connected) {
       const held = rec.held.get(seat);
       const shots = rec.oneShots.get(seat);
-      intent = { move: held?.move ?? null, ...(held?.placeHeld ? { placeHeld: true } : {}), ...(shots ?? {}) };
+      intent = {
+        move: held?.move ?? null,
+        ...(held?.placeHeld ? { placeHeld: true } : {}),
+        ...(shots ?? {}),
+      };
       rec.oneShots.delete(seat);
     }
     if (intent) {
@@ -304,7 +317,13 @@ export function simulateDrop(ctx: MockCtx, matchId: string): Result<{ graceUntil
   link.connected = false;
   link.graceUntil = ctx.now() + ctx.opts.graceMs;
   ctx.state.connection = 'reconnecting';
-  ctx.events.emit({ type: 'match.connection', matchId, seat: rec.mySeat, connected: false, graceMs: ctx.opts.graceMs });
+  ctx.events.emit({
+    type: 'match.connection',
+    matchId,
+    seat: rec.mySeat,
+    connected: false,
+    graceMs: ctx.opts.graceMs,
+  });
   return ok({ graceUntil: link.graceUntil });
 }
 
@@ -331,7 +350,8 @@ export function fastForward(ctx: MockCtx, matchId: string, maxTicks = 60 * 400):
   const rec = ctx.state.matches.get(matchId);
   if (!rec) return err(E.notFound('No such match.'));
   if (rec.phase === 'ended' || rec.phase === 'resultsPosted') return ok(rec.results!);
-  if (rec.phase === 'lobby' || rec.phase === 'countdown') return err(E.invalidState(rec.phase, 'The match has not started.'));
+  if (rec.phase === 'lobby' || rec.phase === 'countdown')
+    return err(E.invalidState(rec.phase, 'The match has not started.'));
   setAutopilot(ctx, matchId, true);
   stepMatch(ctx, rec, maxTicks);
   return rec.results ? ok(rec.results) : err(E.timeout('The match did not finish in time.'));
@@ -345,7 +365,8 @@ export function fastForward(ctx: MockCtx, matchId: string, maxTicks = 60 * 400):
 export function adoptLocalMatch(ctx: MockCtx, matchId: string, finalState: GameState): Result<MatchResults> {
   const rec = ctx.state.matches.get(matchId);
   if (!rec) return err(E.notFound('No such match.'));
-  if (finalState.match.phase !== 'ended') return err(E.invalidState(finalState.match.phase, 'The match has not ended.'));
+  if (finalState.match.phase !== 'ended')
+    return err(E.invalidState(finalState.match.phase, 'The match has not ended.'));
   if (finalState.players.length !== rec.seats.length) return err(E.conflict('The roster does not match.'));
   if (rec.mySeat !== 0) return err(E.conflict('The preview adopts a local match only for seat 0.'));
   if (rec.phase === 'lobby' || rec.phase === 'countdown') {
@@ -408,7 +429,8 @@ export function createMatchService(ctx: MockCtx): MatchService {
         beginPlaying(ctx, room);
         return ok(descriptorFor(ctx.state.matches.get(room.matchId)!));
       }),
-    join: (matchId) => withMatch('join', matchId, (rec) => ok({ ...descriptorFor(rec), graceMs: ctx.opts.graceMs })),
+    join: (matchId) =>
+      withMatch('join', matchId, (rec) => ok({ ...descriptorFor(rec), graceMs: ctx.opts.graceMs })),
     leave: (matchId) =>
       withMatch('leave', matchId, (rec, seat) => {
         const link = rec.links[seat]!;
@@ -439,11 +461,16 @@ export function createMatchService(ctx: MockCtx): MatchService {
         const parsed = intentSchema.parse(intent, 'intent', issues, 0);
         if (!parsed) return err(E.invalid(issues));
         if (!Number.isInteger(atTick) || Math.abs(atTick - rec.state.tick) > MAX_TICK_SKEW) {
-          return err(E.invalid([{ code: 'invalid', path: 'tick', message: 'tick outside the accepted window' }]));
+          return err(
+            E.invalid([{ code: 'invalid', path: 'tick', message: 'tick outside the accepted window' }]),
+          );
         }
         const i = parsed.value;
         if ('move' in i) {
-          rec.held.set(seat, { move: i.move ?? null, placeHeld: i.placeHeld ?? rec.held.get(seat)?.placeHeld ?? false });
+          rec.held.set(seat, {
+            move: i.move ?? null,
+            placeHeld: i.placeHeld ?? rec.held.get(seat)?.placeHeld ?? false,
+          });
         } else if (i.placeHeld !== undefined) {
           rec.held.set(seat, { move: rec.held.get(seat)?.move ?? null, placeHeld: i.placeHeld });
         }

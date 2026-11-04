@@ -22,7 +22,16 @@ import type { MatchPhase, RoomState } from '../../src/online/types';
 import { createRateLimiter, fnv1a, makeOpaqueToken } from '../../src/online/util';
 
 const ROOM_STATES = Object.keys(ROOM_TRANSITIONS) as RoomState[];
-const ROOM_EVENTS: RoomEvent[] = ['open', 'startReadyCheck', 'allReady', 'readyFailed', 'countdownDone', 'cancelStart', 'matchEnded', 'abort'];
+const ROOM_EVENTS: RoomEvent[] = [
+  'open',
+  'startReadyCheck',
+  'allReady',
+  'readyFailed',
+  'countdownDone',
+  'cancelStart',
+  'matchEnded',
+  'abort',
+];
 
 describe('room state machine', () => {
   it('walks created -> open -> readyCheck -> starting -> inProgress -> finished', () => {
@@ -74,7 +83,8 @@ describe('room state machine', () => {
 describe('match state machine', () => {
   it('walks lobby -> countdown -> playing -> ended -> resultsPosted', () => {
     let p: MatchPhase = 'lobby';
-    for (const e of ['startCountdown', 'countdownDone', 'simEnded', 'resultsPosted'] as MatchEvent[]) p = nextMatchPhase(p, e)!;
+    for (const e of ['startCountdown', 'countdownDone', 'simEnded', 'resultsPosted'] as MatchEvent[])
+      p = nextMatchPhase(p, e)!;
     expect(p).toBe('resultsPosted');
     expect(MATCH_TRANSITIONS.resultsPosted).toEqual({});
   });
@@ -119,8 +129,15 @@ describe('room and team permissions', () => {
   });
 
   it('a ready check needs two players and, in a team game, a player on every team', () => {
-    expect(code(canStartReadyCheck(room({ members: [{ accountId: 'host', team: 0, ready: false }] }), 'host'))).toBe('conflict');
-    const oneSided = room({ members: [{ accountId: 'host', team: 0, ready: false }, { accountId: 'a', team: 0, ready: false }] });
+    expect(
+      code(canStartReadyCheck(room({ members: [{ accountId: 'host', team: 0, ready: false }] }), 'host')),
+    ).toBe('conflict');
+    const oneSided = room({
+      members: [
+        { accountId: 'host', team: 0, ready: false },
+        { accountId: 'a', team: 0, ready: false },
+      ],
+    });
     expect(code(canStartReadyCheck(oneSided, 'host'))).toBe('conflict');
     expect(code(canStartReadyCheck({ ...oneSided, game: 'classic' }, 'host'))).toBe('ok');
   });
@@ -148,7 +165,12 @@ describe('room and team permissions', () => {
   });
 
   it('no switching when ready, when the room is locked, outside team games or for non-members', () => {
-    const ready = room({ members: [{ accountId: 'host', team: 0, ready: true }, { accountId: 'b', team: 1, ready: false }] });
+    const ready = room({
+      members: [
+        { accountId: 'host', team: 0, ready: true },
+        { accountId: 'b', team: 1, ready: false },
+      ],
+    });
     expect(code(canSwitchTeam(ready, 'host'))).toBe('conflict');
     expect(code(canSwitchTeam(room({ state: 'readyCheck' }), 'a'))).toBe('invalidState');
     expect(code(canSwitchTeam(room({ game: 'classic' }), 'a'))).toBe('conflict');
@@ -167,11 +189,28 @@ describe('room and team permissions', () => {
 });
 
 describe('party permissions', () => {
-  const party = { leaderId: 'L', maxSize: 3, roomId: null, members: [{ accountId: 'L' }, { accountId: 'M' }] };
+  const party = {
+    leaderId: 'L',
+    maxSize: 3,
+    roomId: null,
+    members: [{ accountId: 'L' }, { accountId: 'M' }],
+  };
 
   it('the leader manages the party; a member can only leave', () => {
-    expect(partyPermissions(party, 'L')).toEqual({ canInvite: true, canKick: true, canPromote: true, canStart: true, canLeave: true });
-    expect(partyPermissions(party, 'M')).toEqual({ canInvite: false, canKick: false, canPromote: false, canStart: false, canLeave: true });
+    expect(partyPermissions(party, 'L')).toEqual({
+      canInvite: true,
+      canKick: true,
+      canPromote: true,
+      canStart: true,
+      canLeave: true,
+    });
+    expect(partyPermissions(party, 'M')).toEqual({
+      canInvite: false,
+      canKick: false,
+      canPromote: false,
+      canStart: false,
+      canLeave: true,
+    });
     expect(partyPermissions(party, 'X').canLeave).toBe(false);
   });
 

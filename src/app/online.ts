@@ -118,7 +118,7 @@ const mockOf = (): MockOnline | null => (client && client.kind === 'mock' ? (cli
 
 function seedFromUrl(): number {
   const n = Number(new URLSearchParams(location.search).get('seed'));
-  return Number.isFinite(n) && n > 0 ? n : (Date.now() & 0x7fffffff) || 1;
+  return Number.isFinite(n) && n > 0 ? n : Date.now() & 0x7fffffff || 1;
 }
 
 async function ensureClient(): Promise<OnlineClient | null> {
@@ -192,7 +192,8 @@ function onEvent(e: ServerEvent): void {
     case 'room.update':
       if (!isMine(e.room)) break;
       set({ room: e.room });
-      if (e.room.state === 'inProgress' && get().step !== 'match' && get().step !== 'results') void enterMatch(e.room);
+      if (e.room.state === 'inProgress' && get().step !== 'match' && get().step !== 'results')
+        void enterMatch(e.room);
       if (e.room.state === 'open' || e.room.state === 'readyCheck') set({ countdown: null });
       break;
     case 'match.countdown':
@@ -356,13 +357,17 @@ export const onlineApi = {
   async openLobby(): Promise<void> {
     const { party, game, arenaId } = get();
     if (!client || !party) return;
-    await run(client.lobbies.createFromParty(party.id, { game, arenaId }), (room) => set({ room, step: 'lobby' }));
+    await run(client.lobbies.createFromParty(party.id, { game, arenaId }), (room) =>
+      set({ room, step: 'lobby' }),
+    );
   },
   async setLobbyGame(game: OnlineGame): Promise<void> {
     const room = get().room;
     set({ game, arenaId: arenaFor(game) });
     if (!client || !room) return;
-    await run(client.lobbies.setSettings(room.id, { game, arenaId: arenaFor(game) }), (r) => set({ room: r }));
+    await run(client.lobbies.setSettings(room.id, { game, arenaId: arenaFor(game) }), (r) =>
+      set({ room: r }),
+    );
   },
   async startReadyCheck(): Promise<void> {
     const room = get().room;
@@ -415,7 +420,11 @@ export const onlineApi = {
       ...restore,
       play: rumble ? 'rumble' : 'classic',
       ...(rumble
-        ? { rumbleArenaId: room.arenaId, rumbleMode: room.game as 'survival' | 'deathmatch' | 'team', rumbleCompetitors: 8 as const }
+        ? {
+            rumbleArenaId: room.arenaId,
+            rumbleMode: room.game as 'survival' | 'deathmatch' | 'team',
+            rumbleCompetitors: 8 as const,
+          }
         : { arenaId: room.arenaId, competitors: 4 as const }),
     };
     local = { matchId: match.id, restore, done: false };
@@ -460,7 +469,16 @@ export const onlineApi = {
   },
   /** Back to the hub after results. */
   toHub(): void {
-    set({ step: 'hub', room: null, match: null, results: null, update: null, countdown: null, queue: null, error: null });
+    set({
+      step: 'hub',
+      room: null,
+      match: null,
+      results: null,
+      update: null,
+      countdown: null,
+      queue: null,
+      error: null,
+    });
     void refreshAccount();
   },
   dismissError(): void {

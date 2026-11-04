@@ -68,7 +68,13 @@ export function createServerOnline(config: ServerConfig, deps: ServerDeps = {}):
     {
       onOpen() {
         // auth placeholder: the opaque token goes in the first frame (never in the URL)
-        socket.send(encodeClientMessage({ type: 'hello', client: CLIENT_NAME, ...(token ? { token: token.reveal() } : {}) }));
+        socket.send(
+          encodeClientMessage({
+            type: 'hello',
+            client: CLIENT_NAME,
+            ...(token ? { token: token.reveal() } : {}),
+          }),
+        );
       },
       onText(text) {
         const r = decodeServerMessage(text);
@@ -95,9 +101,12 @@ export function createServerOnline(config: ServerConfig, deps: ServerDeps = {}):
     return r.ok ? ok(undefined) : r;
   };
 
-  const startSession = (r: Result<{ profile: Profile; token: string; expiresAt: number }>): Result<Session> => {
+  const startSession = (
+    r: Result<{ profile: Profile; token: string; expiresAt: number }>,
+  ): Result<Session> => {
     if (!r.ok) return r;
-    if (typeof r.value?.token !== 'string' || !r.value.profile) return err(E.internal('Unexpected response.'));
+    if (typeof r.value?.token !== 'string' || !r.value.profile)
+      return err(E.internal('Unexpected response.'));
     token = makeOpaqueToken(r.value.token, r.value.expiresAt);
     socket.connect();
     return ok({ profile: r.value.profile, token });
@@ -154,7 +163,9 @@ export function createServerOnline(config: ServerConfig, deps: ServerDeps = {}):
       submitInput: (matchId: string, tick: number, intent: Intent): Promise<Result<InputAck>> => {
         const frame = encodeClientMessage({ type: 'match.input', matchId, tick, intent });
         return Promise.resolve(
-          socket.send(frame) ? ok({ accepted: true, serverTick: tick }) : err(E.serverUnavailable('Not connected.')),
+          socket.send(frame)
+            ? ok({ accepted: true, serverTick: tick })
+            : err(E.serverUnavailable('Not connected.')),
         );
       },
       snapshot: (matchId) => rpc('/v1/match/snapshot', { matchId }),
@@ -174,7 +185,8 @@ export function createServerOnline(config: ServerConfig, deps: ServerDeps = {}):
       requestFriend: (code) => rpc('/v1/social/request', { code }),
       respondFriend: (requestId, accept) => rpc('/v1/social/respond', { requestId, accept }),
       invitations: () => rpc('/v1/social/invitations'),
-      respondInvitation: (invitationId, accept) => rpc('/v1/social/invitation-respond', { invitationId, accept }),
+      respondInvitation: (invitationId, accept) =>
+        rpc('/v1/social/invitation-respond', { invitationId, accept }),
     },
     events: {
       subscribe(listener) {

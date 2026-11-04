@@ -36,9 +36,24 @@ export interface AdPlacementRule {
 }
 
 export const AD_PLACEMENT_RULES: Readonly<Record<AdSlot, AdPlacementRule>> = {
-  postMatch: { slot: 'postMatch', allowedSurfaces: ['matchResults'], requiresOptIn: false, minIntervalSec: 180 },
-  betweenMatchMenu: { slot: 'betweenMatchMenu', allowedSurfaces: ['mainMenu', 'lobby'], requiresOptIn: false, minIntervalSec: 180 },
-  rewarded: { slot: 'rewarded', allowedSurfaces: ['matchResults', 'mainMenu'], requiresOptIn: true, minIntervalSec: 30 },
+  postMatch: {
+    slot: 'postMatch',
+    allowedSurfaces: ['matchResults'],
+    requiresOptIn: false,
+    minIntervalSec: 180,
+  },
+  betweenMatchMenu: {
+    slot: 'betweenMatchMenu',
+    allowedSurfaces: ['mainMenu', 'lobby'],
+    requiresOptIn: false,
+    minIntervalSec: 180,
+  },
+  rewarded: {
+    slot: 'rewarded',
+    allowedSurfaces: ['matchResults', 'mainMenu'],
+    requiresOptIn: true,
+    minIntervalSec: 30,
+  },
 };
 
 /** Surfaces where no ad may EVER appear, whatever the slot or flags (the product promise). */
@@ -69,12 +84,7 @@ export interface AdContext {
 
 export type AdDecision = { allowed: true } | { allowed: false; reason: AdDenyReason };
 export type AdDenyReason =
-  | 'adsDisabled'
-  | 'adFree'
-  | 'forbiddenSurface'
-  | 'surfaceNotAllowedForSlot'
-  | 'optInRequired'
-  | 'tooSoon';
+  'adsDisabled' | 'adFree' | 'forbiddenSurface' | 'surfaceNotAllowedForSlot' | 'optInRequired' | 'tooSoon';
 
 /** Pure gate: may this ad unit be shown right now? */
 export function canShowAd(ctx: AdContext): AdDecision {
@@ -95,8 +105,7 @@ export function canShowAd(ctx: AdContext): AdDecision {
 // ---------------------------------------------------------------- provider interface
 
 export type AdShowResult =
-  | { shown: false; reason: AdDenyReason | 'noProvider' }
-  | { shown: true; rewarded: boolean };
+  { shown: false; reason: AdDenyReason | 'noProvider' } | { shown: true; rewarded: boolean };
 
 /** A placement request: what the UI asks of whichever provider is installed. */
 export interface AdPlacement {

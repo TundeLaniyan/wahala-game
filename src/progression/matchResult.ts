@@ -43,7 +43,11 @@ function placementOf(state: GameState, playerId: number, outcome: MatchOutcome):
   return order.findIndex((p) => p.id === playerId) + 1;
 }
 
-export function matchResultFrom(state: GameState, playerId: number, meta: MatchResultMeta = {}): MatchResultInput {
+export function matchResultFrom(
+  state: GameState,
+  playerId: number,
+  meta: MatchResultMeta = {},
+): MatchResultInput {
   const me = state.players[playerId];
   if (!me) throw new Error(`no player ${playerId} in this match`);
   const outcome = outcomeOf(state, playerId);

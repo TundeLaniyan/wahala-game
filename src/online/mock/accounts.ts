@@ -23,7 +23,10 @@ const validName = (n: string): boolean => NAME.test(n) && n.trim() === n;
 function issueSession(ctx: MockCtx, profile: Profile): Session {
   let secret = '';
   for (let i = 0; i < 24; i++) secret += nextInt(ctx.rng, 16).toString(16);
-  const session: Session = { profile, token: makeOpaqueToken(`mock.${profile.id}.${secret}`, ctx.now() + TOKEN_TTL_MS) };
+  const session: Session = {
+    profile,
+    token: makeOpaqueToken(`mock.${profile.id}.${secret}`, ctx.now() + TOKEN_TTL_MS),
+  };
   ctx.state.session = session;
   ctx.state.profiles.set(profile.id, profile);
   seedFriends(ctx);
@@ -32,12 +35,18 @@ function issueSession(ctx: MockCtx, profile: Profile): Session {
 
 function seedFriends(ctx: MockCtx): void {
   if (ctx.state.friends.length > 0) return;
-  ctx.state.friends = MOCK_FRIENDS.map((f) => ({ accountId: f.id, displayName: f.displayName, presence: f.presence }));
+  ctx.state.friends = MOCK_FRIENDS.map((f) => ({
+    accountId: f.id,
+    displayName: f.displayName,
+    presence: f.presence,
+  }));
   for (const f of [...MOCK_FRIENDS, ...MOCK_STRANGERS]) {
     ctx.state.profiles.set(f.id, { id: f.id, displayName: f.displayName, guest: true, createdAt: 0 });
   }
   const s = MOCK_STRANGERS[0]!;
-  ctx.state.friendRequests = [{ id: 'freq-halima', fromId: s.id, fromName: s.displayName, createdAt: ctx.now() }];
+  ctx.state.friendRequests = [
+    { id: 'freq-halima', fromId: s.id, fromName: s.displayName, createdAt: ctx.now() },
+  ];
 }
 
 function loadGuest(ctx: MockCtx): Profile | null {
@@ -64,7 +73,9 @@ function saveGuest(ctx: MockCtx, p: Profile): void {
 
 export function createAccountService(ctx: MockCtx): AccountService {
   const badName = (): Result<never> =>
-    err(E.invalid([{ code: 'invalid', path: 'displayName', message: '2-24 letters, numbers, space _ . - \'' }]));
+    err(
+      E.invalid([{ code: 'invalid', path: 'displayName', message: "2-24 letters, numbers, space _ . - '" }]),
+    );
   return {
     signInGuest: (displayName) =>
       ctx.call('accounts', 'signInGuest', () => {
@@ -90,7 +101,9 @@ export function createAccountService(ctx: MockCtx): AccountService {
       ctx.call('accounts', 'signIn', () => {
         if (credentials.kind !== 'placeholder' || !validName(credentials.handle)) return badName();
         const id = `acct-${credentials.handle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-        return ok(issueSession(ctx, { id, displayName: credentials.handle, guest: false, createdAt: ctx.now() }));
+        return ok(
+          issueSession(ctx, { id, displayName: credentials.handle, guest: false, createdAt: ctx.now() }),
+        );
       }),
     signOut: () =>
       ctx.call('accounts', 'signOut', () => {
@@ -130,11 +143,17 @@ export function createSocialService(ctx: MockCtx): SocialService {
       ctx.call('social', 'requestFriend', () => {
         const u = ctx.user();
         if (!u.ok) return u;
-        if (!CODE.test(code)) return err(E.invalid([{ code: 'invalid', path: 'code', message: 'bad friend code' }]));
+        if (!CODE.test(code))
+          return err(E.invalid([{ code: 'invalid', path: 'code', message: 'bad friend code' }]));
         const who = [...MOCK_FRIENDS, ...MOCK_STRANGERS].find((f) => f.code === code);
         if (!who) return err(E.notFound('No player has that code.'));
         if (ctx.state.friends.some((f) => f.accountId === who.id)) return err(E.conflict('Already friends.'));
-        const request: FriendRequest = { id: ctx.id('freq'), fromId: u.value.id, fromName: u.value.displayName, createdAt: ctx.now() };
+        const request: FriendRequest = {
+          id: ctx.id('freq'),
+          fromId: u.value.id,
+          fromName: u.value.displayName,
+          createdAt: ctx.now(),
+        };
         // the scripted player accepts at once (mock): they appear in the friends list
         ctx.state.friends.push({ accountId: who.id, displayName: who.displayName, presence: who.presence });
         return ok(request);
@@ -148,7 +167,11 @@ export function createSocialService(ctx: MockCtx): SocialService {
         const [req] = ctx.state.friendRequests.splice(i, 1);
         if (!accept) return ok(null);
         const def = [...MOCK_FRIENDS, ...MOCK_STRANGERS].find((f) => f.id === req!.fromId);
-        const friend: Friend = { accountId: req!.fromId, displayName: req!.fromName, presence: def?.presence ?? 'online' };
+        const friend: Friend = {
+          accountId: req!.fromId,
+          displayName: req!.fromName,
+          presence: def?.presence ?? 'online',
+        };
         if (!ctx.state.friends.some((f) => f.accountId === friend.accountId)) ctx.state.friends.push(friend);
         return ok(friend);
       }),
@@ -189,4 +212,3 @@ export function receiveInvitation(ctx: MockCtx, partyId: string, fromId: string)
   ctx.events.emit({ type: 'social.invitation', invitation: { ...inv } });
   return inv;
 }
-

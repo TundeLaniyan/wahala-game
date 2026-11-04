@@ -5,7 +5,12 @@ import { mock, val } from './helpers';
 
 type M = ReturnType<typeof mock>;
 
-async function partyRoom(m: M, game: 'classic' | 'team' | 'deathmatch' = 'classic', arenaId = 'danfoBusPark', invite = true) {
+async function partyRoom(
+  m: M,
+  game: 'classic' | 'team' | 'deathmatch' = 'classic',
+  arenaId = 'danfoBusPark',
+  invite = true,
+) {
   val(await m.online.accounts.signInGuest());
   const party = val(await m.online.parties.create());
   if (invite) {
@@ -35,9 +40,15 @@ describe('mock parties', () => {
     const party = val(await m.online.parties.create());
     const inv = val(await m.online.parties.invite(party.id, 'friend-ada'));
     expect(inv.partyId).toBe(party.id);
-    expect(await m.online.parties.invite(party.id, 'friend-ada')).toMatchObject({ error: { code: 'conflict' } });
-    expect(await m.online.parties.invite(party.id, 'friend-zainab')).toMatchObject({ error: { code: 'conflict' } }); // offline
-    expect(await m.online.parties.invite(party.id, 'stranger')).toMatchObject({ error: { code: 'notFound' } });
+    expect(await m.online.parties.invite(party.id, 'friend-ada')).toMatchObject({
+      error: { code: 'conflict' },
+    });
+    expect(await m.online.parties.invite(party.id, 'friend-zainab')).toMatchObject({
+      error: { code: 'conflict' },
+    }); // offline
+    expect(await m.online.parties.invite(party.id, 'stranger')).toMatchObject({
+      error: { code: 'notFound' },
+    });
     m.wait(700);
     let p = val(await m.online.parties.get(party.id));
     expect(p.members).toHaveLength(2);
@@ -50,7 +61,9 @@ describe('mock parties', () => {
     m.wait(1500);
     expect(val(await m.online.parties.get(party.id)).members).toHaveLength(4);
     val(await m.online.social.requestFriend('HALI05'));
-    expect(await m.online.parties.invite(party.id, 'stranger-halima')).toMatchObject({ error: { code: 'roomFull' } });
+    expect(await m.online.parties.invite(party.id, 'stranger-halima')).toMatchObject({
+      error: { code: 'roomFull' },
+    });
   });
 
   it('ready toggles publish party updates', async () => {
@@ -71,10 +84,16 @@ describe('mock parties', () => {
     const joined = val(await m.online.parties.join('REMOTE'));
     expect(joined.members).toHaveLength(2);
     const me = joined.members[1]!.accountId;
-    expect(await m.online.parties.kick(remote.id, 'friend-ada')).toMatchObject({ error: { code: 'forbidden' } });
+    expect(await m.online.parties.kick(remote.id, 'friend-ada')).toMatchObject({
+      error: { code: 'forbidden' },
+    });
     expect(await m.online.parties.promote(remote.id, me)).toMatchObject({ error: { code: 'forbidden' } });
-    expect(await m.online.parties.invite(remote.id, 'friend-femi')).toMatchObject({ error: { code: 'forbidden' } });
-    expect(await m.online.lobbies.createFromParty(remote.id, { game: 'classic', arenaId: 'danfoBusPark' })).toMatchObject({
+    expect(await m.online.parties.invite(remote.id, 'friend-femi')).toMatchObject({
+      error: { code: 'forbidden' },
+    });
+    expect(
+      await m.online.lobbies.createFromParty(remote.id, { game: 'classic', arenaId: 'danfoBusPark' }),
+    ).toMatchObject({
       error: { code: 'forbidden' },
     });
     val(await m.online.parties.leave(remote.id));
@@ -88,10 +107,14 @@ describe('mock parties', () => {
     const party = val(await m.online.parties.create());
     val(await m.online.parties.invite(party.id, 'friend-ada'));
     m.wait(800);
-    expect(await m.online.parties.kick(party.id, party.leaderId)).toMatchObject({ error: { code: 'conflict' } });
+    expect(await m.online.parties.kick(party.id, party.leaderId)).toMatchObject({
+      error: { code: 'conflict' },
+    });
     const promoted = val(await m.online.parties.promote(party.id, 'friend-ada'));
     expect(promoted.leaderId).toBe('friend-ada');
-    expect(await m.online.parties.kick(party.id, 'friend-ada')).toMatchObject({ error: { code: 'forbidden' } });
+    expect(await m.online.parties.kick(party.id, 'friend-ada')).toMatchObject({
+      error: { code: 'forbidden' },
+    });
     expect(await m.online.parties.join('ZZZZZZ')).toMatchObject({ error: { code: 'notFound' } });
   });
 
@@ -125,7 +148,9 @@ describe('mock lobby, ready check and countdown', () => {
     expect(roomEvents(events).map((r) => r.state)).toEqual(
       expect.arrayContaining(['open', 'readyCheck', 'starting', 'inProgress']),
     );
-    expect(events.flatMap((e) => (e.type === 'match.countdown' ? [e.secondsLeft] : []))).toEqual([3, 2, 1, 0]);
+    expect(events.flatMap((e) => (e.type === 'match.countdown' ? [e.secondsLeft] : []))).toEqual([
+      3, 2, 1, 0,
+    ]);
   });
 
   it('the match waits for YOUR ready flag; un-readying during the ready check holds the start', async () => {
@@ -136,15 +161,21 @@ describe('mock lobby, ready check and countdown', () => {
     expect(val(await m.online.lobbies.get(room.id)).state).toBe('readyCheck');
     val(await m.online.lobbies.setReady(room.id, true));
     expect(val(await m.online.lobbies.get(room.id)).state).toBe('starting');
-    expect(await m.online.lobbies.setReady(room.id, false)).toMatchObject({ error: { code: 'invalidState' } });
+    expect(await m.online.lobbies.setReady(room.id, false)).toMatchObject({
+      error: { code: 'invalidState' },
+    });
   });
 
   it('only the host starts the ready check, once; settings lock afterwards', async () => {
     const m = mock();
     const { room } = await partyRoom(m);
     val(await m.online.lobbies.startReadyCheck(room.id));
-    expect(await m.online.lobbies.startReadyCheck(room.id)).toMatchObject({ error: { code: 'invalidState' } });
-    expect(await m.online.lobbies.setSettings(room.id, { game: 'classic', arenaId: 'balogunMarket' })).toMatchObject({
+    expect(await m.online.lobbies.startReadyCheck(room.id)).toMatchObject({
+      error: { code: 'invalidState' },
+    });
+    expect(
+      await m.online.lobbies.setSettings(room.id, { game: 'classic', arenaId: 'balogunMarket' }),
+    ).toMatchObject({
       error: { code: 'invalidState' },
     });
   });
@@ -159,9 +190,15 @@ describe('mock lobby, ready check and countdown', () => {
   it('settings: only valid game / arena pairs; changing them rebuilds the roster and clears ready flags', async () => {
     const m = mock();
     const { room } = await partyRoom(m);
-    expect(await m.online.lobbies.setSettings(room.id, { game: 'classic', arenaId: 'rumbleOshodi' })).toMatchObject({ error: { code: 'conflict' } });
-    expect(await m.online.lobbies.setSettings(room.id, { game: 'team', arenaId: 'danfoBusPark' })).toMatchObject({ error: { code: 'conflict' } });
-    expect(await m.online.lobbies.setSettings(room.id, { game: 'classic', arenaId: 'nowhere' })).toMatchObject({ error: { code: 'notFound' } });
+    expect(
+      await m.online.lobbies.setSettings(room.id, { game: 'classic', arenaId: 'rumbleOshodi' }),
+    ).toMatchObject({ error: { code: 'conflict' } });
+    expect(
+      await m.online.lobbies.setSettings(room.id, { game: 'team', arenaId: 'danfoBusPark' }),
+    ).toMatchObject({ error: { code: 'conflict' } });
+    expect(
+      await m.online.lobbies.setSettings(room.id, { game: 'classic', arenaId: 'nowhere' }),
+    ).toMatchObject({ error: { code: 'notFound' } });
     val(await m.online.lobbies.setReady(room.id, true));
     const next = val(await m.online.lobbies.setSettings(room.id, { game: 'team', arenaId: 'rumbleOshodi' }));
     expect(next.maxPlayers).toBe(8);
@@ -179,7 +216,9 @@ describe('mock lobby, ready check and countdown', () => {
     const r = val(await m.online.lobbies.setCharacter(room.id, 'campusQueen'));
     expect(r.members.find((x) => !x.isBot)!.characterId).toBe('campusQueen');
     val(await m.online.lobbies.startReadyCheck(room.id));
-    expect(await m.online.lobbies.setCharacter(room.id, 'lekkiBoy')).toMatchObject({ error: { code: 'invalidState' } });
+    expect(await m.online.lobbies.setCharacter(room.id, 'lekkiBoy')).toMatchObject({
+      error: { code: 'invalidState' },
+    });
   });
 
   it('leaving as the only real player aborts the room (scripted players keep nothing alive)', async () => {
@@ -262,11 +301,15 @@ describe('mock matchmaking', () => {
     const m = mock();
     val(await m.online.accounts.signInGuest());
     const t = val(await m.online.matchmaking.enqueue({ game: 'team', arenaId: 'rumbleOshodi' }));
-    expect(await m.online.matchmaking.enqueue({ game: 'classic', arenaId: 'danfoBusPark' })).toMatchObject({ error: { code: 'conflict' } });
+    expect(await m.online.matchmaking.enqueue({ game: 'classic', arenaId: 'danfoBusPark' })).toMatchObject({
+      error: { code: 'conflict' },
+    });
     expect(val(await m.online.matchmaking.cancel(t.ticketId)).state).toBe('cancelled');
     m.wait(10_000);
     expect(val(await m.online.matchmaking.status(t.ticketId)).state).toBe('cancelled');
-    expect(await m.online.matchmaking.enqueue({ game: 'classic', arenaId: 'rumbleOshodi' })).toMatchObject({ error: { code: 'conflict' } });
+    expect(await m.online.matchmaking.enqueue({ game: 'classic', arenaId: 'rumbleOshodi' })).toMatchObject({
+      error: { code: 'conflict' },
+    });
     expect(await m.online.matchmaking.status('nope')).toMatchObject({ error: { code: 'notFound' } });
     expect(await m.online.matchmaking.cancel('nope')).toMatchObject({ error: { code: 'notFound' } });
   });

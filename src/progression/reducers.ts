@@ -3,14 +3,7 @@
  */
 import { unlockedCosmetics } from '../cosmetics';
 import type { ProgressView } from '../cosmetics';
-import {
-  MAX_RANK_POINTS,
-  SEASON_POINTS,
-  XP_TABLE,
-  levelForXp,
-  rankDelta,
-  rankInfo,
-} from './tables';
+import { MAX_RANK_POINTS, SEASON_POINTS, XP_TABLE, levelForXp, rankDelta, rankInfo } from './tables';
 import { PROGRESSION_VERSION } from './types';
 import type {
   HistoryEntry,
@@ -32,7 +25,17 @@ export function createProfile(): ProgressionProfile {
     peakRankPoints: 0,
     eventThemes: [],
     seasonTiers: {},
-    totals: { matches: 0, wins: 0, losses: 0, draws: 0, kills: 0, deaths: 0, assists: 0, timePlayedSec: 0, streakRewards: 0 },
+    totals: {
+      matches: 0,
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      kills: 0,
+      deaths: 0,
+      assists: 0,
+      timePlayedSec: 0,
+      streakRewards: 0,
+    },
     winStreak: 0,
     bestWinStreak: 0,
     season: { seasonId: null, points: 0, tier: 0, challengesDone: [] },
@@ -69,7 +72,8 @@ export function xpBreakdown(input: MatchResultInput, winStreakBefore: number): R
   if (input.outcome === 'win' && winStreakBefore > 0) {
     parts.winStreak = Math.min(t.maxStreakSteps, winStreakBefore) * t.perWinStreakStep;
   }
-  if (input.mission && input.mission.result === 'won') parts.missionStars = input.mission.stars * t.perMissionStar;
+  if (input.mission && input.mission.result === 'won')
+    parts.missionStars = input.mission.stars * t.perMissionStar;
   for (const k of Object.keys(parts)) if (!parts[k]) delete parts[k];
   return parts;
 }
@@ -138,7 +142,9 @@ export function applyMatchResult(
         : SEASON_POINTS.loss
     : 0;
   const sameSeason = season !== null && profile.season.seasonId === season.id;
-  const seasonPoints = season ? (sameSeason ? profile.season.points : 0) + seasonPointsGained : profile.season.points;
+  const seasonPoints = season
+    ? (sameSeason ? profile.season.points : 0) + seasonPointsGained
+    : profile.season.points;
   const seasonTier = season ? seasonTierOf(season, seasonPoints) : profile.season.tier;
   const entry: HistoryEntry = {
     matchId: input.matchId,
@@ -210,7 +216,10 @@ export function applyMatchResult(
 }
 
 /** Mirrors the campaign save's reward ids into the profile (read-only link; the campaign save is never written). */
-export function linkCampaignRewards(profile: ProgressionProfile, rewardIds: readonly string[]): ProgressionProfile {
+export function linkCampaignRewards(
+  profile: ProgressionProfile,
+  rewardIds: readonly string[],
+): ProgressionProfile {
   const ids = [...new Set(rewardIds)].sort();
   if (ids.join('|') === [...profile.campaignRewards].sort().join('|')) return profile;
   const next = { ...profile, campaignRewards: ids };
@@ -232,7 +241,12 @@ export function completeChallenge(
   const tier = seasonTierOf(season, total);
   const next: ProgressionProfile = {
     ...profile,
-    season: { ...profile.season, points: total, tier, challengesDone: [...profile.season.challengesDone, challengeId] },
+    season: {
+      ...profile.season,
+      points: total,
+      tier,
+      challengesDone: [...profile.season.challengesDone, challengeId],
+    },
     seasonTiers: { ...profile.seasonTiers, [season.id]: Math.max(profile.seasonTiers[season.id] ?? 0, tier) },
   };
   return { ...next, unlocked: unlockedCosmetics(progressView(next)) };

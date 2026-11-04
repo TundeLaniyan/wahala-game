@@ -16,8 +16,42 @@ export interface BoardRow extends BoardScore {
   isYou: boolean;
 }
 
-const FIRST = ['Ada', 'Femi', 'Zainab', 'Tunde', 'Ngozi', 'Kunle', 'Amaka', 'Bode', 'Sade', 'Emeka', 'Yemi', 'Chidi', 'Halima', 'Dayo', 'Ife', 'Musa', 'Titi', 'Obi', 'Funmi', 'Segun'];
-const TAG = ['Danfo', 'Keke', 'Okada', 'Spark', 'Fuse', 'Blast', 'Lagos', 'Ajah', 'Yaba', 'Eko', 'Gen', 'Volt'];
+const FIRST = [
+  'Ada',
+  'Femi',
+  'Zainab',
+  'Tunde',
+  'Ngozi',
+  'Kunle',
+  'Amaka',
+  'Bode',
+  'Sade',
+  'Emeka',
+  'Yemi',
+  'Chidi',
+  'Halima',
+  'Dayo',
+  'Ife',
+  'Musa',
+  'Titi',
+  'Obi',
+  'Funmi',
+  'Segun',
+];
+const TAG = [
+  'Danfo',
+  'Keke',
+  'Okada',
+  'Spark',
+  'Fuse',
+  'Blast',
+  'Lagos',
+  'Ajah',
+  'Yaba',
+  'Eko',
+  'Gen',
+  'Volt',
+];
 
 /** `size` fictional players with deterministic names and scores (descending-ish, no real person's name). */
 export function seedLeaderboard(seed: number, size = 40): BoardScore[] {
@@ -43,7 +77,11 @@ export function rankBoard(scores: readonly BoardScore[], you: BoardScore | null,
   const rows: BoardRow[] = [];
   all.forEach((s, i) => {
     const prev = rows[i - 1];
-    rows.push({ ...s, rank: prev && prev.points === s.points ? prev.rank : i + 1, isYou: !!you && s.accountId === you.accountId });
+    rows.push({
+      ...s,
+      rank: prev && prev.points === s.points ? prev.rank : i + 1,
+      isYou: !!you && s.accountId === you.accountId,
+    });
   });
   if (limit >= rows.length) return rows;
   const top = rows.slice(0, limit);

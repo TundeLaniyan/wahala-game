@@ -61,10 +61,17 @@ function assignTeams(room: Room): void {
 /** Bots fill the empty seats (the server does it when the ready check starts, or at once for a queue match). */
 function fillRoom(ctx: MockCtx, room: Room): Room {
   const humans = room.members;
-  const extra = fillers(ctx, Math.max(0, room.maxPlayers - humans.length), new Set(humans.map((h) => h.displayName)));
+  const extra = fillers(
+    ctx,
+    Math.max(0, room.maxPlayers - humans.length),
+    new Set(humans.map((h) => h.displayName)),
+  );
   for (const bot of extra) {
     if (room.game === 'team') {
-      const sizes = Array.from({ length: room.teamCount }, (_, t) => room.members.filter((m) => m.team === t).length);
+      const sizes = Array.from(
+        { length: room.teamCount },
+        (_, t) => room.members.filter((m) => m.team === t).length,
+      );
       bot.team = sizes.indexOf(Math.min(...sizes));
     }
     room.members.push(bot);
@@ -140,13 +147,20 @@ function advanceIfReady(ctx: MockCtx, room: Room): void {
 
 const myRoom = (ctx: MockCtx, id: string): Room | null =>
   [...ctx.state.rooms.values()].find(
-    (r) => r.state !== 'finished' && r.state !== 'aborted' && r.members.some((m) => m.accountId === id && !m.isBot),
+    (r) =>
+      r.state !== 'finished' &&
+      r.state !== 'aborted' &&
+      r.members.some((m) => m.accountId === id && !m.isBot),
   ) ?? null;
 
 // ---------------------------------------------------------------- services
 
 export function createLobbyService(ctx: MockCtx): LobbyService {
-  const withRoom = <T>(method: string, roomId: string, fn: (me: string, room: Room) => Result<T>): Promise<Result<T>> =>
+  const withRoom = <T>(
+    method: string,
+    roomId: string,
+    fn: (me: string, room: Room) => Result<T>,
+  ): Promise<Result<T>> =>
     ctx.call('lobbies', method, () => {
       const u = ctx.user();
       if (!u.ok) return u;
@@ -177,7 +191,9 @@ export function createLobbyService(ctx: MockCtx): LobbyService {
       }),
     get: (roomId) =>
       withRoom('get', roomId, (me, room) =>
-        room.members.some((m) => m.accountId === me) ? ok(snap(room)) : err(E.forbidden('You are not in this room.')),
+        room.members.some((m) => m.accountId === me)
+          ? ok(snap(room))
+          : err(E.forbidden('You are not in this room.')),
       ),
     setSettings: (roomId, settings) =>
       withRoom('setSettings', roomId, (me, room) => {
@@ -228,7 +244,8 @@ export function createLobbyService(ctx: MockCtx): LobbyService {
       }),
     leave: (roomId) =>
       withRoom('leave', roomId, (me, room) => {
-        if (!room.members.some((m) => m.accountId === me)) return err(E.forbidden('You are not in this room.'));
+        if (!room.members.some((m) => m.accountId === me))
+          return err(E.forbidden('You are not in this room.'));
         if (room.state === 'inProgress') return err(E.conflict('Leave the running match with match.leave.'));
         const humansLeft = room.members.filter((m) => !m.isBot && m.accountId !== me);
         if (humansLeft.length === 0) {
@@ -253,7 +270,11 @@ export function createLobbyService(ctx: MockCtx): LobbyService {
 }
 
 export function createTeamService(ctx: MockCtx): TeamService {
-  const withRoom = (method: string, roomId: string, fn: (me: string, room: Room) => Result<Room>): Promise<Result<Room>> =>
+  const withRoom = (
+    method: string,
+    roomId: string,
+    fn: (me: string, room: Room) => Result<Room>,
+  ): Promise<Result<Room>> =>
     ctx.call('teams', method, () => {
       const u = ctx.user();
       if (!u.ok) return u;
@@ -353,7 +374,14 @@ export function pumpLobbies(ctx: MockCtx): void {
     if (found === t.found) continue;
     t.found = found;
     if (found >= t.needed) {
-      const room = buildRoom(ctx, 'queue', [humanMember(ctx, me.id, me.displayName, false)], '', t.request, true);
+      const room = buildRoom(
+        ctx,
+        'queue',
+        [humanMember(ctx, me.id, me.displayName, false)],
+        '',
+        t.request,
+        true,
+      );
       room.hostId = room.members.find((m) => m.isBot)?.accountId ?? me.id;
       t.state = 'matched';
       t.roomId = room.id;
@@ -387,4 +415,3 @@ export function pumpLobbies(ctx: MockCtx): void {
     }
   }
 }
-

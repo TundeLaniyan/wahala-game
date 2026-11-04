@@ -73,7 +73,8 @@ describe('mock accounts', () => {
     expect(s.token.reveal().length).toBeGreaterThan(20);
     expect(JSON.stringify(s)).not.toContain(s.token.reveal());
     expect(`${s.token}`).not.toContain(s.token.reveal());
-    for (const store of [m.store, m.progressStore]) expect(JSON.stringify(store.dump())).not.toContain(s.token.reveal());
+    for (const store of [m.store, m.progressStore])
+      expect(JSON.stringify(store.dump())).not.toContain(s.token.reveal());
   });
 
   it('the session expires with the clock, and sign-out ends it', async () => {
@@ -81,7 +82,10 @@ describe('mock accounts', () => {
     val(await m.online.accounts.signInGuest());
     expect(val(await m.online.accounts.currentProfile()).guest).toBe(true);
     m.clock.advance(61 * 60 * 1000);
-    expect(await m.online.accounts.currentProfile()).toMatchObject({ ok: false, error: { code: 'unauthenticated' } });
+    expect(await m.online.accounts.currentProfile()).toMatchObject({
+      ok: false,
+      error: { code: 'unauthenticated' },
+    });
     // signing in again after expiry issues a fresh session
     val(await m.online.accounts.signInGuest());
     expect(val(await m.online.accounts.currentProfile()).guest).toBe(true);
@@ -118,7 +122,9 @@ describe('mock social', () => {
     val(await online.accounts.signInGuest());
     const friend = val(await online.social.respondFriend('freq-halima', true));
     expect(friend?.displayName).toBe('Halima_Gen');
-    expect(await online.social.respondFriend('freq-halima', true)).toMatchObject({ error: { code: 'notFound' } });
+    expect(await online.social.respondFriend('freq-halima', true)).toMatchObject({
+      error: { code: 'notFound' },
+    });
   });
 
   it('a friend invites you to a party; accepting joins it, declining does not, and invitations expire', async () => {

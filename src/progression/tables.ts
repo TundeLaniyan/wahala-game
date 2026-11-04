@@ -48,7 +48,14 @@ export function rankInfo(points: number): RankInfo {
   const p = Math.max(0, Math.floor(points));
   if (p >= MAX_RANK_POINTS) {
     const top = RANK_TIERS.length - 1;
-    return { tierIndex: top, tier: RANK_TIERS[top]!, division: 0, progress: p - MAX_RANK_POINTS, toNext: null, label: RANK_TIERS[top]! };
+    return {
+      tierIndex: top,
+      tier: RANK_TIERS[top]!,
+      division: 0,
+      progress: p - MAX_RANK_POINTS,
+      toNext: null,
+      label: RANK_TIERS[top]!,
+    };
   }
   const tierIndex = Math.floor(p / POINTS_PER_TIER);
   const within = p - tierIndex * POINTS_PER_TIER;
@@ -66,7 +73,9 @@ export function rankInfo(points: number): RankInfo {
 }
 
 /** Rank-point change of a RATED match: placement-based, win bonus, small draw value, clamped - PLACEHOLDER. */
-export function rankDelta(i: Pick<MatchResultInput, 'outcome' | 'placement' | 'competitors' | 'rated'>): number {
+export function rankDelta(
+  i: Pick<MatchResultInput, 'outcome' | 'placement' | 'competitors' | 'rated'>,
+): number {
   if (!i.rated) return 0;
   if (i.outcome === 'draw') return 0;
   const n = Math.max(2, i.competitors);

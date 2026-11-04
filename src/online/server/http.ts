@@ -21,7 +21,8 @@ export interface Http {
 
 /** Status code -> error. Anything unexpected is `internal`; connectivity problems are `serverUnavailable`. */
 export function errorFromStatus(status: number, retryAfterSec?: number): OnlineError {
-  if (status === 400 || status === 422) return E.invalid([{ code: 'invalid', path: '', message: 'rejected by the server' }]);
+  if (status === 400 || status === 422)
+    return E.invalid([{ code: 'invalid', path: '', message: 'rejected by the server' }]);
   if (status === 401) return E.unauthenticated();
   if (status === 403) return E.forbidden();
   if (status === 404) return E.notFound();
@@ -54,12 +55,15 @@ export function createHttp(baseUrl: string, token: () => AuthToken | null, deps:
           credentials: 'omit',
           cache: 'no-store',
         });
-        if (!res.ok) return err(errorFromStatus(res.status, Number(res.headers.get('retry-after')) || undefined));
+        if (!res.ok)
+          return err(errorFromStatus(res.status, Number(res.headers.get('retry-after')) || undefined));
         const text = await res.text();
         if (text.length > 1_000_000) return err(E.internal('Response too large.'));
         return ok(text ? (JSON.parse(text) as unknown) : null);
       } catch (e) {
-        return err((e as { name?: string } | null)?.name === 'AbortError' ? E.timeout() : E.serverUnavailable());
+        return err(
+          (e as { name?: string } | null)?.name === 'AbortError' ? E.timeout() : E.serverUnavailable(),
+        );
       } finally {
         clearTimeout(timer);
       }

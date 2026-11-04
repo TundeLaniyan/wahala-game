@@ -45,7 +45,11 @@ export interface BackoffOptions {
 export const DEFAULT_BACKOFF: BackoffOptions = { baseMs: 500, maxMs: 15_000, jitter: 0.3 };
 
 /** Delay before reconnect attempt `attempt` (0-based): exponential, capped, with jitter. Pure given `random`. */
-export function backoffDelay(attempt: number, random: () => number, o: BackoffOptions = DEFAULT_BACKOFF): number {
+export function backoffDelay(
+  attempt: number,
+  random: () => number,
+  o: BackoffOptions = DEFAULT_BACKOFF,
+): number {
   const exp = Math.min(o.maxMs, o.baseMs * 2 ** Math.max(0, attempt));
   return Math.round(exp * (1 - o.jitter + o.jitter * random()));
 }

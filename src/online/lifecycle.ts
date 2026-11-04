@@ -48,7 +48,8 @@ export const isRoomEditable = (s: RoomState): boolean => s === 'created' || s ==
 
 // ---------------------------------------------------------------- match state machine
 
-export type MatchEvent = 'startCountdown' | 'cancelCountdown' | 'countdownDone' | 'simEnded' | 'resultsPosted' | 'abort';
+export type MatchEvent =
+  'startCountdown' | 'cancelCountdown' | 'countdownDone' | 'simEnded' | 'resultsPosted' | 'abort';
 
 export const MATCH_TRANSITIONS: Readonly<Record<MatchPhase, Partial<Record<MatchEvent, MatchPhase>>>> = {
   lobby: { startCountdown: 'countdown', abort: 'ended' },
@@ -151,7 +152,9 @@ export function balanceTeams(accountIds: readonly AccountId[], teamCount: number
 
 // ---------------------------------------------------------------- party rules
 
-type PartyView = Pick<Party, 'leaderId' | 'maxSize' | 'roomId'> & { members: readonly { accountId: AccountId }[] };
+type PartyView = Pick<Party, 'leaderId' | 'maxSize' | 'roomId'> & {
+  members: readonly { accountId: AccountId }[];
+};
 
 export interface PartyPermissions {
   canInvite: boolean;
@@ -182,6 +185,7 @@ export function checkPartyAction(
   const p = partyPermissions(party, actor);
   if (!party.members.some((m) => m.accountId === actor)) return E.forbidden('You are not in this party.');
   if (p[action]) return null;
-  if (action === 'canInvite' && party.members.length >= party.maxSize) return E.roomFull('The party is full.');
+  if (action === 'canInvite' && party.members.length >= party.maxSize)
+    return E.roomFull('The party is full.');
   return E.forbidden('Only the party leader can do that.');
 }

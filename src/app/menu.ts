@@ -46,6 +46,13 @@ export const MENU_SCREENS: readonly MenuScreen[] = [
   'online',
 ];
 
+/**
+ * The online preview exists only behind the `online` feature flag: with the flag off a stale menu state that
+ * names it (a reload, a patched store) must fall back to home. Pure so it can be tested without a DOM.
+ */
+export const onlineScreenReady = (screen: MenuScreen, onlineFlag: boolean): boolean =>
+  screen !== 'online' || onlineFlag;
+
 /** The campaign screens (they share one frame style and are reached from the Home "Campaign" entry). */
 export const CAMPAIGN_SCREENS: readonly MenuScreen[] = [
   'campaign',

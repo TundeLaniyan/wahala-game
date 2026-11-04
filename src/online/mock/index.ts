@@ -10,8 +10,8 @@ import type { OnlineClient } from '../contracts';
 import type { Result } from '../result';
 import type { MatchResults, Party } from '../types';
 import { createAccountService, createSocialService, receiveInvitation } from './accounts';
-import { Faults, createContext } from './context';
-import type { MatchRec, MockCtx, MockOptions } from './context';
+import { createContext } from './context';
+import type { Faults, MatchRec, MockCtx, MockOptions } from './context';
 import { createLobbyService, createMatchmakingService, createTeamService, pumpLobbies } from './lobbies';
 import {
   adoptLocalMatch,

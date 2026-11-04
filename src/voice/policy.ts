@@ -7,7 +7,13 @@
  *  - a deafened listener hears nobody; a muted speaker is heard by nobody (mute is applied by the caller).
  */
 import { isTeamMode } from '../sim';
-import type { VoiceChannel, VoiceMatchPhase, VoiceParticipant, VoicePermissions, VoicePolicyInput } from './types';
+import type {
+  VoiceChannel,
+  VoiceMatchPhase,
+  VoiceParticipant,
+  VoicePermissions,
+  VoicePolicyInput,
+} from './types';
 
 const ENDED: readonly VoiceMatchPhase[] = ['ended', 'resultsPosted'];
 

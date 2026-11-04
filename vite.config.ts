@@ -10,7 +10,9 @@ export default defineConfig(({ command, isPreview, mode }) => {
   // tests/online/create-online.test.ts runs both on the same inputs.
   const env = loadEnv(mode, process.cwd(), 'WAHALA_');
   const serverOnline =
-    mode !== 'test' && /^(1|true|on|yes)$/i.test((env.WAHALA_ONLINE_ENABLED ?? '').trim()) && !!env.WAHALA_ONLINE_URL;
+    mode !== 'test' &&
+    /^(1|true|on|yes)$/i.test((env.WAHALA_ONLINE_ENABLED ?? '').trim()) &&
+    !!env.WAHALA_ONLINE_URL;
   return {
     base: command === 'build' || isPreview ? '/wahala-game/' : '/',
     plugins: [react()],

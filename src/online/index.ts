@@ -28,7 +28,10 @@ export interface OnlineEnv {
   mock?: MockOptions;
 }
 
-export async function createOnline(flags: Pick<FeatureFlags, 'onlineMode'>, env: OnlineEnv = {}): Promise<OnlineClient | null> {
+export async function createOnline(
+  flags: Pick<FeatureFlags, 'onlineMode'>,
+  env: OnlineEnv = {},
+): Promise<OnlineClient | null> {
   if (flags.onlineMode === 'off') return null;
   if (flags.onlineMode === 'server') {
     if (__WAHALA_SERVER_ONLINE__ && env.serverUrl) {

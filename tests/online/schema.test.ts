@@ -74,14 +74,19 @@ describe('client message validation: well-formed messages', () => {
     good({ ...base, intent: { vehicle: { type: 'auto' } } });
     good({
       ...base,
-      intent: { vehicle: { type: 'launch', entry: { x: 0, y: 4, dir: 'right' }, turn: { atIndex: 2, dir: 'up' } } },
+      intent: {
+        vehicle: { type: 'launch', entry: { x: 0, y: 4, dir: 'right' }, turn: { atIndex: 2, dir: 'up' } },
+      },
     });
   });
 
   it('encode -> decode round-trips and adds the protocol version', () => {
     const text = encodeClientMessage({ type: 'queue.join', game: 'team', arenaId: 'rumbleOshodi' });
     expect(JSON.parse(text).v).toBe(PROTOCOL_VERSION);
-    expect(decodeClientMessage(text)).toMatchObject({ ok: true, value: { type: 'queue.join', game: 'team' } });
+    expect(decodeClientMessage(text)).toMatchObject({
+      ok: true,
+      value: { type: 'queue.join', game: 'team' },
+    });
   });
 });
 
@@ -128,7 +133,9 @@ describe('client message validation: malicious and malformed payloads', () => {
     const polluted = JSON.parse('{"type":"ping","v":1,"t":1,"__proto__":{"admin":true}}') as unknown;
     expect(bad(polluted).code).toBe('unknownField');
     expect(({} as Record<string, unknown>).admin).toBeUndefined();
-    expect(bad({ type: 'match.input', v, matchId: 'm', tick: 1, intent: { constructor: {} } }).code).toBe('unknownField');
+    expect(bad({ type: 'match.input', v, matchId: 'm', tick: 1, intent: { constructor: {} } }).code).toBe(
+      'unknownField',
+    );
   });
 
   it('rejects wrong field types and missing fields', () => {
@@ -139,18 +146,30 @@ describe('client message validation: malicious and malformed payloads', () => {
     expect(bad({ type: 'queue.join', v, game: 'classic', arenaId: '../../etc/passwd' }).code).toBe('invalid');
     expect(bad({ type: 'lobby.character', v, roomId: 'r', characterId: 'god' }).code).toBe('invalid');
     expect(bad({ type: 'match.input', v, matchId: 'm', tick: 1, intent: 'up' }).code).toBe('invalid');
-    expect(bad({ type: 'match.input', v, matchId: 'm', tick: 1, intent: { move: 'north' } }).code).toBe('invalid');
+    expect(bad({ type: 'match.input', v, matchId: 'm', tick: 1, intent: { move: 'north' } }).code).toBe(
+      'invalid',
+    );
     expect(bad({ type: 'match.input', v, matchId: 'm', tick: 1, intent: { place: 1 } }).code).toBe('invalid');
   });
 
   it('rejects out-of-range and non-finite numbers', () => {
     for (const tick of [-1, 1.5, NaN, Infinity, LIMITS.maxTick + 1, '5']) {
-      expect(bad({ type: 'match.input', v, matchId: 'm', tick, intent: {} }).code, String(tick)).toBe('invalid');
+      expect(bad({ type: 'match.input', v, matchId: 'm', tick, intent: {} }).code, String(tick)).toBe(
+        'invalid',
+      );
     }
     expect(
-      bad({ type: 'match.input', v, matchId: 'm', tick: 1, intent: { vehicle: { type: 'launch', entry: { x: 999, y: 0, dir: 'up' } } } }).code,
+      bad({
+        type: 'match.input',
+        v,
+        matchId: 'm',
+        tick: 1,
+        intent: { vehicle: { type: 'launch', entry: { x: 999, y: 0, dir: 'up' } } },
+      }).code,
     ).toBe('invalid');
-    expect(bad({ type: 'match.input', v, matchId: 'm', tick: 1, intent: { vehicle: { type: 'rocket' } } }).code).toBe('unknownType');
+    expect(
+      bad({ type: 'match.input', v, matchId: 'm', tick: 1, intent: { vehicle: { type: 'rocket' } } }).code,
+    ).toBe('unknownType');
   });
 
   it('rejects oversize strings and ids with odd characters', () => {
@@ -159,7 +178,9 @@ describe('client message validation: malicious and malformed payloads', () => {
     expect(bad({ type: 'match.join', v, matchId: '<script>' }).code).toBe('invalid');
     expect(bad({ type: 'match.join', v, matchId: '' }).code).toBe('invalid');
     expect(bad({ type: 'hello', v, client: 'c'.repeat(33) }).code).toBe('tooLarge');
-    expect(bad({ type: 'hello', v, client: 'c', token: 't'.repeat(LIMITS.maxToken + 1) }).code).toBe('tooLarge');
+    expect(bad({ type: 'hello', v, client: 'c', token: 't'.repeat(LIMITS.maxToken + 1) }).code).toBe(
+      'tooLarge',
+    );
     expect(bad({ type: 'party.join', v, code: 'abc' }).code).toBe('invalid');
   });
 
@@ -195,9 +216,14 @@ describe('server messages', () => {
 
   it('rejects unknown types, wrong versions, bad shapes and oversize frames', () => {
     expect(validateServerMessage({ v, type: 'admin.shutdown' }).ok).toBe(false);
-    expect(validateServerMessage({ v: 9, type: 'pong', t: 1 })).toMatchObject({ ok: false, error: { code: 'versionMismatch' } });
+    expect(validateServerMessage({ v: 9, type: 'pong', t: 1 })).toMatchObject({
+      ok: false,
+      error: { code: 'versionMismatch' },
+    });
     expect(validateServerMessage({ v, type: 'room.update', room: 'not an object' }).ok).toBe(false);
-    expect(validateServerMessage({ v, type: 'match.countdown', matchId: 'm', secondsLeft: -3 }).ok).toBe(false);
+    expect(validateServerMessage({ v, type: 'match.countdown', matchId: 'm', secondsLeft: -3 }).ok).toBe(
+      false,
+    );
     expect(decodeServerMessage('x'.repeat(LIMITS.maxServerMessageBytes + 1)).ok).toBe(false);
     expect(decodeServerMessage('[1,2]').ok).toBe(false);
   });

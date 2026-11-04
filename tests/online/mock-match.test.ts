@@ -69,10 +69,18 @@ describe('mock match authority', () => {
     const m = mock();
     const { matchId } = await runningMatch(m);
     const t = val(await m.online.matches.snapshot(matchId)).tick;
-    expect(await m.online.matches.submitInput(matchId, t, { move: 'sideways' } as unknown as Intent)).toMatchObject({ error: { code: 'invalidMessage' } });
-    expect(await m.online.matches.submitInput(matchId, t, { x: 5 } as unknown as Intent)).toMatchObject({ error: { code: 'invalidMessage' } });
-    expect(await m.online.matches.submitInput(matchId, t + 5000, { place: true })).toMatchObject({ error: { code: 'invalidMessage' } });
-    expect(await m.online.matches.submitInput(matchId, -500, { place: true })).toMatchObject({ error: { code: 'invalidMessage' } });
+    expect(
+      await m.online.matches.submitInput(matchId, t, { move: 'sideways' } as unknown as Intent),
+    ).toMatchObject({ error: { code: 'invalidMessage' } });
+    expect(await m.online.matches.submitInput(matchId, t, { x: 5 } as unknown as Intent)).toMatchObject({
+      error: { code: 'invalidMessage' },
+    });
+    expect(await m.online.matches.submitInput(matchId, t + 5000, { place: true })).toMatchObject({
+      error: { code: 'invalidMessage' },
+    });
+    expect(await m.online.matches.submitInput(matchId, -500, { place: true })).toMatchObject({
+      error: { code: 'invalidMessage' },
+    });
     expect(await m.online.matches.submitInput('nope', t, {})).toMatchObject({ error: { code: 'notFound' } });
     expect(await m.online.matches.ready(matchId, true)).toMatchObject({ error: { code: 'invalidState' } });
     expect(await m.online.matches.results(matchId)).toMatchObject({ error: { code: 'invalidState' } });
@@ -128,7 +136,9 @@ describe('mock match authority', () => {
     const rec = m.online.control.inspect(matchId)!;
     rec.seats[0]!.accountId = 'someone-else';
     expect(await m.online.matches.snapshot(matchId)).toMatchObject({ error: { code: 'forbidden' } });
-    expect(await m.online.matches.submitInput(matchId, 0, {})).toMatchObject({ error: { code: 'forbidden' } });
+    expect(await m.online.matches.submitInput(matchId, 0, {})).toMatchObject({
+      error: { code: 'forbidden' },
+    });
     expect(await m.online.matches.join(matchId)).toMatchObject({ error: { code: 'forbidden' } });
   });
 });
@@ -146,7 +156,9 @@ describe('mock match results and progression', () => {
     expect(val(await m.online.matches.results(matchId))).toEqual(results);
     expect(events.filter((e) => e.type === 'match.results')).toHaveLength(1);
     // input after the end is refused
-    expect(await m.online.matches.submitInput(matchId, 0, {})).toMatchObject({ error: { code: 'invalidState' } });
+    expect(await m.online.matches.submitInput(matchId, 0, {})).toMatchObject({
+      error: { code: 'invalidState' },
+    });
 
     const before = val(await m.online.progression.get());
     expect(before.profile.totals.matches).toBe(0);
@@ -203,7 +215,12 @@ describe('mock match results and progression', () => {
     const local = createGame({
       seed: 4242,
       arenaId: 'danfoBusPark',
-      players: [0, 1, 2, 3].map((i) => ({ name: `L${i}`, characterId: 'streetBaller' as const, isBot: i > 0, difficulty: 'rookie' as const })),
+      players: [0, 1, 2, 3].map((i) => ({
+        name: `L${i}`,
+        characterId: 'streetBaller' as const,
+        isBot: i > 0,
+        difficulty: 'rookie' as const,
+      })),
       settings: { game: 'classic', mode: 'crush' },
     });
     const bots = [0, 1, 2, 3].map((i) => createBot({ difficulty: 'rookie', seed: i, playerId: i }));
@@ -211,7 +228,18 @@ describe('mock match results and progression', () => {
       tick(local, Object.fromEntries(bots.map((b, i) => [i, b.decide(observe(local, i))])));
     }
     expect(local.match.phase).toBe('ended');
-    expect(m.online.control.adoptLocalMatch(matchId, createGame({ seed: 1, players: [{ name: 'a', characterId: 'streetBaller', isBot: false }, { name: 'b', characterId: 'streetBaller', isBot: true }] }))).toMatchObject({ ok: false });
+    expect(
+      m.online.control.adoptLocalMatch(
+        matchId,
+        createGame({
+          seed: 1,
+          players: [
+            { name: 'a', characterId: 'streetBaller', isBot: false },
+            { name: 'b', characterId: 'streetBaller', isBot: true },
+          ],
+        }),
+      ),
+    ).toMatchObject({ ok: false });
     const adopted = val(m.online.control.adoptLocalMatch(matchId, local));
     expect(adopted.players).toHaveLength(4);
     expect(val(await m.online.progression.settle(matchId)).xpGained).toBeGreaterThan(0);

@@ -6,7 +6,7 @@
 import { Suspense, lazy, useEffect, useRef } from 'react';
 import { commands } from '../../app/session';
 import { flags } from '../../platform';
-import { currentScreen } from '../../app/menu';
+import { currentScreen, onlineScreenReady } from '../../app/menu';
 import type { MenuScreen } from '../../app/menu';
 import { useGameStore } from '../../app/store';
 import { FLOWFRAME } from '../../render/perf/brand';
@@ -54,7 +54,7 @@ export function MainMenu() {
   const screen = useGameStore((s) => currentScreen(s.menu));
   const loading = useGameStore((s) => s.loading);
   const campaignOk = useGameStore((s) => campaignScreenReady(currentScreen(s.menu), s.campaign));
-  const onlineOk = screen !== 'online' || flags().online;
+  const onlineOk = onlineScreenReady(screen, flags().online);
   const root = useRef<HTMLDivElement>(null);
   useMenuNav(root, () => {
     if (useGameStore.getState().menu.stack.length <= 1) return false;

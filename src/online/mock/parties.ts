@@ -106,7 +106,9 @@ export function createPartyService(ctx: MockCtx): PartyService {
       }),
     get: (partyId) =>
       withParty('get', partyId, (me, party) =>
-        party.members.some((m) => m.accountId === me.id) ? ok(structuredClone(party)) : err(E.forbidden('You are not in this party.')),
+        party.members.some((m) => m.accountId === me.id)
+          ? ok(structuredClone(party))
+          : err(E.forbidden('You are not in this party.')),
       ),
     leave: (partyId) =>
       withParty('leave', partyId, (me, party) => {
@@ -129,7 +131,8 @@ export function createPartyService(ctx: MockCtx): PartyService {
         const friend = ctx.state.friends.find((f) => f.accountId === friendId);
         if (!friend) return err(E.notFound('That player is not your friend.'));
         if (friend.presence !== 'online') return err(E.conflict(`${friend.displayName} is offline.`));
-        if (party.members.some((m) => m.accountId === friendId)) return err(E.conflict('Already in the party.'));
+        if (party.members.some((m) => m.accountId === friendId))
+          return err(E.conflict('Already in the party.'));
         if (ctx.state.pendingJoins.some((p) => p.partyId === partyId && p.friendId === friendId)) {
           return err(E.conflict('Already invited.'));
         }
@@ -187,9 +190,20 @@ export function pumpParties(ctx: MockCtx): void {
     const friend = ctx.state.friends.find((f) => f.accountId === p.friendId);
     if (!party || !friend || party.roomId) continue;
     if (p.kind === 'join') {
-      if (party.members.length >= party.maxSize || party.members.some((m) => m.accountId === p.friendId)) continue;
-      party.members.push({ accountId: friend.accountId, displayName: friend.displayName, ready: false, mock: true });
-      ctx.state.pendingJoins.push({ at: now + ctx.opts.botReadyMs, partyId: p.partyId, friendId: p.friendId, kind: 'ready' });
+      if (party.members.length >= party.maxSize || party.members.some((m) => m.accountId === p.friendId))
+        continue;
+      party.members.push({
+        accountId: friend.accountId,
+        displayName: friend.displayName,
+        ready: false,
+        mock: true,
+      });
+      ctx.state.pendingJoins.push({
+        at: now + ctx.opts.botReadyMs,
+        partyId: p.partyId,
+        friendId: p.friendId,
+        kind: 'ready',
+      });
     } else {
       const m = party.members.find((x) => x.accountId === p.friendId);
       if (m) m.ready = true;

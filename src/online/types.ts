@@ -87,7 +87,8 @@ export interface Party {
 
 // ---------------------------------------------------------------- lobby / rooms
 
-export type RoomState = 'created' | 'open' | 'readyCheck' | 'starting' | 'inProgress' | 'finished' | 'aborted';
+export type RoomState =
+  'created' | 'open' | 'readyCheck' | 'starting' | 'inProgress' | 'finished' | 'aborted';
 export type MatchPhase = 'lobby' | 'countdown' | 'playing' | 'ended' | 'resultsPosted';
 
 export interface RoomMember {

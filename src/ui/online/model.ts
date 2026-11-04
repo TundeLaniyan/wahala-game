@@ -72,8 +72,7 @@ export function lobbyActions(room: Room, meId: string | null) {
   };
 }
 
-export const partyActions = (party: Party, meId: string | null) =>
-  partyPermissions(party, meId ?? '');
+export const partyActions = (party: Party, meId: string | null) => partyPermissions(party, meId ?? '');
 
 const XP_LABEL: Record<string, string> = {
   participation: 'Played',

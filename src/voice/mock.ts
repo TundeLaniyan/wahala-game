@@ -101,7 +101,8 @@ class MockVoiceSession implements VoiceSession {
   setSelfMuted(muted: boolean): VoiceResult<void> {
     if (!this.live()) return fail('notInSession', 'Join voice first.');
     // unmuting needs the right to speak AND an explicit microphone grant
-    if (!muted && !this.permissions.canSpeak) return fail('forbidden', this.permissions.reason || 'Not allowed.');
+    if (!muted && !this.permissions.canSpeak)
+      return fail('forbidden', this.permissions.reason || 'Not allowed.');
     if (!muted && this.micPermission !== 'granted') return fail('forbidden', 'Microphone not allowed yet.');
     this.selfMuted = muted;
     return ok(undefined);
@@ -114,7 +115,8 @@ class MockVoiceSession implements VoiceSession {
   }
 
   setParticipantMuted(participantId: string, muted: boolean): VoiceResult<void> {
-    if (!this.request.participants.some((p) => p.id === participantId)) return fail('notFound', 'No such participant.');
+    if (!this.request.participants.some((p) => p.id === participantId))
+      return fail('notFound', 'No such participant.');
     if (muted) this.muted.add(participantId);
     else this.muted.delete(participantId);
     return ok(undefined);
@@ -128,7 +130,11 @@ class MockVoiceSession implements VoiceSession {
     if (!this.request.participants.some((p) => p.id === participantId)) {
       return Promise.resolve(fail('notFound', 'No such participant.'));
     }
-    this.provider.reports.push({ reporterId: this.request.self.id, participantId, reason: reason.slice(0, 200) });
+    this.provider.reports.push({
+      reporterId: this.request.self.id,
+      participantId,
+      reason: reason.slice(0, 200),
+    });
     return Promise.resolve(ok(undefined));
   }
 

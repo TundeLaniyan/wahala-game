@@ -19,7 +19,9 @@ export function VoiceStatus() {
   return (
     <section className="ol-voice" data-testid="voice-status" data-provider={NullVoiceProvider.status}>
       <b>Voice chat is not available yet</b>
-      <small>Planned: team-only voice in team matches, off until you choose to talk. Nothing is recorded or sent.</small>
+      <small>
+        Planned: team-only voice in team matches, off until you choose to talk. Nothing is recorded or sent.
+      </small>
       <span className="ol-voice-controls">
         {PLANNED.map((c) => (
           <button key={c.id} type="button" className="ol-chip" disabled aria-disabled="true">
