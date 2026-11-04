@@ -24,6 +24,7 @@ import {
   WATCH_RADIUS,
 } from './scale';
 import { aiCounters } from './stats';
+import { applyDirective } from './directive';
 import { isRadial } from './blast';
 import { wouldTrapRival } from './mercy';
 import { Sideline } from './sideline';
@@ -265,6 +266,7 @@ export class Brain implements Bot {
     // large boards: in the final few even a careless bot checks its way out before placing, so a
     // 32-player match rarely ends with the last two blowing each other up on the same tick
     c.placeVerify = world.large && world.rivals.length <= LARGE_CAREFUL_RIVALS ? 1 : profile.placeVerify;
+    if (obs.directive) applyDirective(c); // campaign missions: the crew role's movement preference
 
     const step = stepTicksOf(obs, me);
     bfs.run({

@@ -143,6 +143,32 @@ export const SAMPLES: Record<SimEvent['type'], SimEvent> = {
   stageBlockDropped: { type: 'stageBlockDropped', x: 5, y: 5, style: 'merch' },
   playerTeleported: { type: 'playerTeleported', playerId: 0, fromX: 2, fromY: 4, toX: 12, toY: 6 },
   generatorDoused: { type: 'generatorDoused', generatorId: 1 },
+  missionStarted: { type: 'missionStarted', missionId: 'oshodi', objective: 'dispatchRelays', bossId: 1 },
+  missionPhase: { type: 'missionPhase', phase: 0, change: 'started' },
+  missionNode: { type: 'missionNode', nodeId: 'r1', x: 3, y: 3, state: 'done', fraction: 1 },
+  missionWarning: {
+    type: 'missionWarning',
+    warning: { kind: 'convoy', x: 3, y: 3, tiles: [60, 61], remainingTicks: 180 },
+  },
+  bossExposed: { type: 'bossExposed', bossId: 1, untilTick: 900 },
+  bossShielded: { type: 'bossShielded', bossId: 1, reason: 'expired' },
+  bossDefeated: { type: 'bossDefeated', bossId: 1, creditId: 0, defeat: 'eliminated' },
+  missionOutcome: {
+    type: 'missionOutcome',
+    outcome: {
+      result: 'won',
+      missionId: 'oshodi',
+      modifiers: [],
+      seconds: 200,
+      livesUsed: 0,
+      phasesCleared: 3,
+      defeat: 'eliminated',
+      stars: 3,
+      creditedKills: 2,
+    },
+    phaseState: 'won',
+  },
+  missionCallout: { type: 'missionCallout', text: 'Jam two relays.' },
 };
 
 export interface Rig {

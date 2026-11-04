@@ -1,27 +1,11 @@
 /**
- * Mission runtime public API. STUB written by the integrator so the app / UI layers compile; the `mission-sim`
- * worker replaces the bodies (keep the exported names and signatures).
+ * Mission runtime public API (docs/MISSION_SIM.md). `missionView` is the read-only picture for the HUD and the app;
+ * `buildMissionGame` makes the `GameOptions` of a mission; the data is `MISSION_DEFS`.
  */
-import type { CharacterId, GameOptions, GameState } from '../types';
-import type { MissionId, MissionSpec, MissionView } from './types';
-
 export * from './types';
-
-/** The read-only mission picture for the HUD, or null when this is not a mission match. */
-export function missionView(_state: GameState): MissionView | null {
-  return null;
-}
-
-/** STUB: the arena a mission is played on. */
-export function getMissionArenaId(_id: MissionId): string {
-  return 'rumbleOshodi';
-}
-
-/** STUB: createGame options for a mission match (the real one builds the boss and crew seats). */
-export function buildMissionGame(_args: {
-  spec: MissionSpec;
-  humanCharacter: CharacterId;
-  seed: number;
-}): GameOptions {
-  throw new Error('mission runtime not merged yet');
-}
+export { MISSION_DEFS, FACTION_IDS, getMissionArenaId } from './defs';
+export type { CrewDef, MissionDef, NodeDef, PhaseDef } from './defs';
+export { buildMissionGame, crewOf } from './build';
+export { missionView } from './view';
+export { directiveFor } from './directives';
+export { MODIFIER_NUMBERS, resolveTuning, tuningFor } from './tuning';

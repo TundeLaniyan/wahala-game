@@ -24,11 +24,13 @@ import type { GameState, Player, SimEvent } from '../types';
 import { previewBlast } from './explosions';
 import { groundedGeneratorAt, teammates } from './queries';
 import { isLethalStageEvent } from './stage';
+import { missionMayRespawn } from '../mission/rules';
 
 /** Schedules respawns for this tick's eliminations. */
 export function scheduleRespawns(state: GameState, eliminated: readonly number[]): void {
   if (!state.config.respawn.enabled) return;
   for (const id of eliminated) {
+    if (state.mission && !missionMayRespawn(state, id)) continue; // missions: only the human, while lives last
     const p = state.players[id]!;
     p.respawnAt = state.tick + state.config.respawn.delayTicks;
   }

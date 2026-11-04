@@ -8,6 +8,9 @@ import { tileIndex } from './grid';
 import { nextFloat, nextInt, seedToState, weightedPick } from './rng';
 import { NO_TEAM, Tile } from './types';
 import { assignTeams, modeConfig, modeShrinks } from './modes';
+import { missionConfigLayer } from './mission/build';
+import { getMissionArenaId } from './mission/defs';
+import { createMissionState } from './mission/state';
 import type {
   CrushState,
   EndgameTrapState,
@@ -103,16 +106,20 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
 
 /** Builds a fresh match. Same options + seed always produce an identical state. */
 export function createGame(options: GameOptions): GameState {
-  const arena = getArena(options.arenaId ?? DEFAULT_ARENA_ID);
+  const arena = getArena(
+    options.arenaId ?? (options.mission ? getMissionArenaId(options.mission.id) : DEFAULT_ARENA_ID),
+  );
   const max = Math.min(MAX_PLAYERS, arena.maxPlayers, arena.spawns.length);
   if (options.players.length < MIN_PLAYERS || options.players.length > max) {
     throw new Error(`${arena.name} supports ${MIN_PLAYERS}-${max} competitors`);
   }
   const settings: MatchSettings = { ...DEFAULT_SETTINGS, ...options.settings };
-  // arena rules (Power Yard blasts, City Rumble timing ...), then the ruleset (Rumble modes), then any
-  // test/tutorial override
+  if (options.mission) settings.game = 'mission';
+  // arena rules (Power Yard blasts, City Rumble timing ...), then the ruleset (Rumble modes), then the mission's
+  // clock and crate density, then any test/tutorial override
+  const ruled = mergeConfig(mergeConfig(DEFAULT_CONFIG, arena.config), modeConfig(settings, arena));
   const config = mergeConfig(
-    mergeConfig(mergeConfig(DEFAULT_CONFIG, arena.config), modeConfig(settings, arena)),
+    options.mission ? mergeConfig(ruled, missionConfigLayer(options.mission)) : ruled,
     options.config,
   );
   if (arena.forcedMode) settings.mode = arena.forcedMode;
@@ -168,6 +175,7 @@ export function createGame(options: GameOptions): GameState {
   state.endgameTraps = createEndgameTraps(state, arena);
   if (settings.crowdThrows) state.crowd = { nextThrowTick: config.crowd.firstThrowTicks, throws: [] };
   state.stage = createStage(state, arena);
+  if (options.mission) state.mission = createMissionState(state, arena, options.mission);
   return state;
 }
 

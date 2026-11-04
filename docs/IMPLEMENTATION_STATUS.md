@@ -508,3 +508,11 @@ A diagonal touch thumb is planned as two whole cardinal moves (vertical first, r
 
 Kill-streak classification (AS7): every earned reward survives death. QUICK HANDS is paused by a death and its unspent time is stored (`quickHandsBank`) and resumed on respawn; the one-use rewards stay. Sudden Death's third blast is documented as the final anti-stalemate rule (AS6a).
 
+
+## Campaign mission runtime (worker `mission-sim`, decisions MS1-MS14, `docs/MISSION_SIM.md`)
+
+| Area | State |
+| --- | --- |
+| Runtime | Done: `GameOptions.mission` / `GameState.mission`, `buildMissionGame`, `missionView`, lives, boss shield / exposure / retry loop, strikes, reinforcements, outcome and stars, nine mission events, crew directives for the bots. Normal matches pinned byte-for-byte by `tests/mission-regression.test.ts`. |
+| Mechanics | Oshodi relays: Done with a full scripted playthrough, loss, timeout and retry tests. Mushin, Fadeyi / Somolu, Ebute-Metta, Lagos Island, Lekki: Done and unit-tested (positive and failure paths) but not played through by a script; balance against real play untuned. |
+| Not done | Mission audio cues (events are silent), mission art / markers (renderer worker), HUD mission panel (hud-combat worker), campaign content and UI (other workers). Targeted checks only; the full unit and browser suites were not run. |

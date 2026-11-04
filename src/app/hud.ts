@@ -299,7 +299,7 @@ export interface FeedItem {
 
 export interface RumbleSnapshot {
   /** The ruleset: Survival (last standing), Deathmatch or Team Rumble (timed, respawns). */
-  mode: Exclude<GameKind, 'classic'>;
+  mode: Exclude<GameKind, 'classic' | 'mission'>;
   /** Fallen fighters come back (Deathmatch / Team Rumble). */
   respawns: boolean;
   /** Friendly fire (Team Rumble only). */
@@ -458,7 +458,8 @@ export function buildRumble(state: GameState, localId: number, spectateId: numbe
         ? { phase: 'closing', seconds: Math.ceil((coreAt - t) / 60) }
         : { phase: 'core', seconds: Math.max(0, Math.ceil((cfg.match.durationTicks - t) / 60)) };
 
-  const game = state.settings.game === 'classic' ? 'survival' : state.settings.game;
+  const game =
+    state.settings.game === 'classic' || state.settings.game === 'mission' ? 'survival' : state.settings.game;
   const local = state.players[localId];
   const standings = isTeamMode(state.settings.game) ? teamStandings(state) : [];
   const teams: TeamScore[] = standings.map((t) => ({

@@ -25,6 +25,7 @@ import { blastReach, isRadial } from './blast';
 import { overBudget } from './context';
 import type { Ctx } from './context';
 import { ZONE_WEIGHT } from './zone';
+import { directiveBias } from './directive';
 import { manhattanTiles } from './board';
 import { readyTick, stepTicksOf } from './world';
 
@@ -201,6 +202,7 @@ export function tileValue(c: Ctx, tile: number, prevGoal: number): number {
   const { profile, world, hunt } = c;
   let v = -c.huntWeight * rewardDrive(c) * hunt[tile]!;
   if (c.zoneTick >= 0) v -= ZONE_WEIGHT * c.zone[tile]!;
+  if (c.leash !== null) v += directiveBias(c, tile);
   if (tile === prevGoal) v += 1.2;
   if (profile.refugeMinExits > 0 && world.exits(tile) < profile.refugeMinExits) v -= 1.5;
   // do not loiter right next to a rival unless attacking (rivals on the tile or a neighbour)

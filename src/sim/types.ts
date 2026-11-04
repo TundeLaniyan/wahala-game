@@ -6,6 +6,16 @@
  * Time is always measured in simulation ticks (see TICK_RATE in config.ts).
  */
 import type { DeepPartial, GameConfig } from './config';
+import type {
+  MissionId,
+  MissionOutcome,
+  MissionPhaseState,
+  MissionNodeState,
+  MissionSpec,
+  MissionState,
+  MissionWarningView,
+  ObjectiveKind,
+} from './mission/types';
 
 // ---------------------------------------------------------------- grid primitives
 
@@ -75,7 +85,7 @@ export type MatchMode = 'classic' | 'crush';
  * V2: the match ruleset. `classic` = the 2-4 player standard match (last standing, mandatory Wahala Crush);
  * the three City Rumble modes share the same simulation with different rules (src/sim/modes.ts).
  */
-export type GameKind = 'classic' | 'survival' | 'deathmatch' | 'team';
+export type GameKind = 'classic' | 'survival' | 'deathmatch' | 'team' | 'mission';
 
 /** V2: no team (free-for-all). */
 export const NO_TEAM = -1;
@@ -545,6 +555,11 @@ export interface GameState {
   match: MatchState;
   /** V2 respawn modes: tick each arena spawn was last used for a respawn (anti spawn-camping). */
   spawnUsedAt: number[];
+  /**
+   * Campaign mission runtime state (src/sim/mission). ABSENT (the key does not exist) in every normal match, so a
+   * normal match is byte-for-byte what it was before missions existed.
+   */
+  mission?: MissionState;
 }
 
 export interface TrapTile {
@@ -667,6 +682,8 @@ export interface GameOptions {
   players: PlayerSetup[];
   settings?: Partial<MatchSettings>;
   config?: DeepPartial<GameConfig>;
+  /** Campaign mission (src/sim/mission): seat 0 human, seat 1 the boss, seats 2... the crew. See `buildMissionGame`. */
+  mission?: MissionSpec;
 }
 
 // ---------------------------------------------------------------- input
@@ -895,4 +912,29 @@ export type SimEvent =
   /** An endgame trap wave is telegraphed (wave 0 = the start of the final-30-seconds escalation). */
   | { type: 'trapsWarning'; wave: number; tiles: TrapTile[]; liveTick: number }
   /** An endgame trap wave is live. */
-  | { type: 'trapsActivated'; wave: number; tiles: TrapTile[] };
+  | { type: 'trapsActivated'; wave: number; tiles: TrapTile[] }
+  /** Campaign mission: the first playing tick of a mission match. */
+  | { type: 'missionStarted'; missionId: MissionId; objective: ObjectiveKind; bossId: number }
+  /** Campaign mission: phase `phase` (0-2) started, or its goal was reached (`cleared`). */
+  | { type: 'missionPhase'; phase: 0 | 1 | 2; change: 'started' | 'cleared' }
+  /** Campaign mission: an objective node changed state (progress / done / live / reset). */
+  | {
+      type: 'missionNode';
+      nodeId: string;
+      x: number;
+      y: number;
+      state: MissionNodeState;
+      fraction: number;
+    }
+  /** Campaign mission: a strike, convoy, rail window, contingency or reinforcement is telegraphed. */
+  | { type: 'missionWarning'; warning: MissionWarningView }
+  /** Campaign mission: the third phase is done; the boss can be eliminated until `untilTick`. */
+  | { type: 'bossExposed'; bossId: number; untilTick: number }
+  /** Campaign mission: the boss is protected again (`phase`: a new phase / the window ran out). */
+  | { type: 'bossShielded'; bossId: number; reason: 'start' | 'phase' | 'expired' }
+  /** Campaign mission: the boss was eliminated while exposed (or ousted). */
+  | { type: 'bossDefeated'; bossId: number; creditId: number | null; defeat: 'eliminated' | 'ousted' }
+  /** Campaign mission: the final result (the match ends next). */
+  | { type: 'missionOutcome'; outcome: MissionOutcome; phaseState: MissionPhaseState }
+  /** Campaign mission: the HUD line changed. */
+  | { type: 'missionCallout'; text: string };

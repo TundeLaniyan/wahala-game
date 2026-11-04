@@ -48,6 +48,8 @@ export interface Ctx {
   huntWeight: number;
   /** Probability of verifying a placement's escape (the profile's; 1 in a large match's final few). */
   placeVerify: number;
+  /** Campaign missions: the leash of the current directive (stay within `radius` of `tile`); null otherwise. */
+  leash: { tile: number; radius: number } | null;
 }
 
 /** Records `units` of work; true when the think's budget is spent (never on standard boards). */
@@ -84,5 +86,6 @@ export function createCtx(profile: AiProfile, rng: RngHolder, board: Board): Ctx
     zoneTick: -1,
     huntWeight: profile.huntWeight,
     placeVerify: profile.placeVerify,
+    leash: null,
   };
 }

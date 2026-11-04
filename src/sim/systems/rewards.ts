@@ -25,6 +25,7 @@ import type { GameState, LifePerk, PerkCategory, PickupKind, Player, SimEvent } 
 import { endPerk, perkAllowed, perkSpec, recordPerk, undoPerk } from './lifePerks';
 import { radialRadius, radialSquareRadius } from './blastShape';
 import { applyPickup } from './pickups';
+import { missionRewardEligible } from '../mission/rules';
 
 /** The ladder rung for the `streak`-th elimination of a life (1-based). Empty for 0 / no ladder. */
 export function rewardsFor(state: { config: GameConfig }, streak: number): RewardKind[] {
@@ -229,7 +230,7 @@ export function grantRewards(state: GameState, events: SimEvent[]): void {
   if (state.match.suddenDeath?.finalPhase) return; // the final lethal phase pays nothing (decision AS6)
   const credited = events.filter(
     (e): e is Extract<SimEvent, { type: 'playerEliminated' }> =>
-      e.type === 'playerEliminated' && e.creditId !== null,
+      e.type === 'playerEliminated' && e.creditId !== null && missionRewardEligible(state, e.creditId),
   );
   // a fighter with k eliminations this tick has streak s..s+k-1 -> s+k already counted: pay rungs in order
   const total = new Map<number, number>();

@@ -158,6 +158,16 @@ describe('event mapping', () => {
       'specialUsed',
       // melee: a hit is voiced by skillUsed / playerDazed / playerPushed; only a whiff makes its own (soft) sound
       'attackResolved',
+      // campaign missions: silent until a mission audio pass gives them (synthesised) cues
+      'missionStarted',
+      'missionPhase',
+      'missionNode',
+      'missionWarning',
+      'bossExposed',
+      'bossShielded',
+      'bossDefeated',
+      'missionOutcome',
+      'missionCallout',
     ]);
     // an extra human-less state variant is covered below; here players 0/1 are both "human" sandbox players
     for (const [type, e] of Object.entries(SAMPLES)) {
