@@ -46,7 +46,7 @@ for (const id of ids.split(',')) {
     w.advance(Math.min(n, 240));
   }, Number(ticks));
   await page.waitForTimeout(800);
-  await page.screenshot({ path: `${outDir}/${id}-${device}.png` });
+  await page.screenshot({ path: `${outDir}/${id}-${device}.png`, timeout: 180000 });
   console.log(id, device, errors.length ? `ERRORS: ${errors.slice(0, 3).join(' | ')}` : 'ok');
   await page.close();
 }
