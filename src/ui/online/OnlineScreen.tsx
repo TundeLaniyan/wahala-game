@@ -36,7 +36,7 @@ const STEP_TITLE: Record<OnlineUi['step'], string> = {
 function GamePicker({ onPick }: { onPick: (g: (typeof ONLINE_GAME_ORDER)[number]) => void }) {
   const game = useOnlineStore((s) => s.game);
   return (
-    <div className="mn-opts ol-games" role="group" aria-label="Game">
+    <div className="mn-opts mn-opts-tall ol-games" role="group" aria-label="Game">
       {ONLINE_GAME_ORDER.map((g) => (
         <Option
           key={g}

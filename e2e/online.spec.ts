@@ -53,9 +53,7 @@ async function assertFits(page: Page): Promise<void> {
   expect(overflow).toBeLessThanOrEqual(1);
   const small = await page.evaluate(() => {
     const out: string[] = [];
-    for (const el of document.querySelectorAll<HTMLElement>(
-      '.ol-screen button:not(:disabled), .ol-screen .mn-btn',
-    )) {
+    for (const el of document.querySelectorAll<HTMLElement>('.ol-screen .ol-step button:not(:disabled)')) {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
       if (r.height < 43.5 || r.width < 43.5)

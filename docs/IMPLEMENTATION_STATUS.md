@@ -516,3 +516,8 @@ Kill-streak classification (AS7): every earned reward survives death. QUICK HAND
 | Runtime | Done: `GameOptions.mission` / `GameState.mission`, `buildMissionGame`, `missionView`, lives, boss shield / exposure / retry loop, strikes, reinforcements, outcome and stars, nine mission events, crew directives for the bots. Normal matches pinned byte-for-byte by `tests/mission-regression.test.ts`. |
 | Mechanics | Oshodi relays: Done with a full scripted playthrough, loss, timeout and retry tests. Mushin, Fadeyi / Somolu, Ebute-Metta, Lagos Island, Lekki: Done and unit-tested (positive and failure paths) but not played through by a script; balance against real play untuned. |
 | Not done | Mission audio cues (events are silent), mission art / markers (renderer worker), HUD mission panel (hud-combat worker), campaign content and UI (other workers). Targeted checks only; the full unit and browser suites were not run. |
+
+
+## Online, voice, progression, ads and seasons scaffolds (worker `online-scaffold`)
+
+Disabled by default; see `docs/ONLINE_ARCHITECTURE.md` and decisions ON1-ON12. Complete: service contracts, wire schema and validators, lifecycle rules, the in-memory mock of every service (real simulation behind `MatchService`), progression / cosmetics / seasons / ads data and pure logic, voice policy with a null and a mock provider, the flag-gated Online preview UI and the Settings flag row, tests and an e2e spec. Interface-only or skeleton: the server adapter (fake-transport tests only), voice, ads, cosmetics rendering. Not built: any server, database, accounts, matchmaking service, anti-cheat, moderation. Screenshots: `docs/screenshots/online-preview/`.
