@@ -98,4 +98,4 @@ export {
 export { isSpawnProtected } from './systems/respawn';
 export { canThrow, laneStep, spectatorLane, spectatorLanding, validLanding } from './systems/spectators';
 export type { LaneTile, SpectatorView } from './systems/spectators';
-export * from './mission/types';
+export * from './mission';
