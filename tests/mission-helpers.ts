@@ -1,6 +1,7 @@
 import { buildMissionGame, createGame, missionView, tick } from '../src/sim';
 import type { Dir, GameState, Intent, Intents, MissionSpec, SimEvent } from '../src/sim';
 import { Tile } from '../src/sim/types';
+import { isLethalStageEvent } from '../src/sim';
 import { createBot } from '../src/ai';
 import type { Bot } from '../src/ai';
 import { observe } from '../src/sim';
@@ -186,6 +187,9 @@ export function dangerTiles(state: GameState): Set<number> {
   const v = missionView(state);
   for (const wv of v?.warnings ?? []) if (wv.kind !== 'reinforce') for (const t of wv.tiles) out.add(t);
   for (const f of state.flames) out.add(f.y * state.width + f.x);
+  // telegraphed and running lethal stage hazards (traffic lanes ...): a careful player reads the warning
+  for (const e of state.stage.events)
+    if (isLethalStageEvent(e) && e.endTick > state.tick) for (const t of e.tiles) out.add(t);
   for (const g of state.generators) {
     // a live generator: its own cross and disc is not worth modelling, stay a few tiles away
     for (let dy = -3; dy <= 3; dy++)
