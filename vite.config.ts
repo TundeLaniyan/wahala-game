@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ command, isPreview }) => ({
   base: command === 'build' || isPreview ? '/wahala-game/' : '/',
   plugins: [react()],
+  // WAHALA_* feature flags (src/platform/flags.ts) are public build-time switches, never secrets.
+  envPrefix: ['VITE_', 'WAHALA_'],
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 900,
