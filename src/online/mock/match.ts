@@ -314,6 +314,7 @@ export function simulateDrop(ctx: MockCtx, matchId: string): Result<{ graceUntil
   if (!rec || rec.mySeat < 0) return err(E.notFound('No such match.'));
   const link = rec.links[rec.mySeat]!;
   if (link.bot) return err(E.conflict('A bot already plays this seat.'));
+  if (!acceptsInput(rec.phase)) return err(E.invalidState(rec.phase, 'The match is not running.'));
   link.connected = false;
   link.graceUntil = ctx.now() + ctx.opts.graceMs;
   ctx.state.connection = 'reconnecting';

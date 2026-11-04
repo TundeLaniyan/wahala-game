@@ -102,9 +102,9 @@ export const useOnlineStore = create<OnlineUi>(() => ({ ...initial }));
 const set = (p: Partial<OnlineUi>): void => useOnlineStore.setState(p);
 const get = (): OnlineUi => useOnlineStore.getState();
 
-/** Mock server clock tick (ms) and the sim ticks run per timer tick while "the server plays it". */
+/** Mock server clock tick (ms) and the sim ticks run per timer tick while "the server plays it" (8x real time). */
 const PUMP_MS = 250;
-const ACCELERATED_TICKS = 450;
+const ACCELERATED_TICKS = 120;
 
 let client: OnlineClient | null = null;
 let unsubscribe: (() => void) | null = null;
@@ -117,7 +117,7 @@ let local: { matchId: string; restore: GameSettings; done: boolean } | null = nu
 const mockOf = (): MockOnline | null => (client && client.kind === 'mock' ? (client as MockOnline) : null);
 
 function seedFromUrl(): number {
-  const n = Number(new URLSearchParams(location.search).get('seed'));
+  const n = Number(new URLSearchParams(typeof location === 'undefined' ? '' : location.search).get('seed'));
   return Number.isFinite(n) && n > 0 ? n : Date.now() & 0x7fffffff || 1;
 }
 
@@ -513,8 +513,9 @@ export const onlineApi = {
 
 function watchMain(): void {
   if (unsubMain) return;
-  unsubMain = useGameStore.subscribe((s) => {
-    if (!local) return;
+  unsubMain = useGameStore.subscribe((s, prev) => {
+    // react to screen changes only (our own settings patches must not re-enter this handler)
+    if (!local || s.screen === prev.screen) return;
     if (s.screen === 'results' && !local.done) {
       local.done = true;
       const final = liveMatch()?.state;

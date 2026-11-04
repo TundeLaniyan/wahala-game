@@ -3,7 +3,7 @@
  */
 import type { FeatureFlags } from '../../platform';
 import { TEAM_NAMES } from '../../sim';
-import { canStartReadyCheck, canSwitchTeam, partyPermissions } from '../../online/lifecycle';
+import { canSwitchTeam, partyPermissions } from '../../online/lifecycle';
 import type { OnlineGame, Party, ProgressionUpdate, QueueStatus, Room, RoomState } from '../../online';
 
 export const PREVIEW_BANNER = 'Preview · mock server · no real players';
@@ -65,7 +65,8 @@ export function lobbyActions(room: Room, meId: string | null) {
   return {
     canReady: !!me && (room.state === 'open' || room.state === 'readyCheck'),
     ready: !!me?.ready,
-    canStartReadyCheck: canStartReadyCheck(room, id).ok,
+    // the server fills empty seats with bots first and then checks the rest, so the button only needs host + open
+    canStartReadyCheck: room.state === 'open' && room.hostId === id,
     canSwitchTeam: canSwitchTeam(room, id).ok,
     showTeams: room.game === 'team',
     isHost: room.hostId === meId,
