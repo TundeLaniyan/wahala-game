@@ -190,7 +190,7 @@ export function respawn(state: GameState, p: Player, x: number, y: number): void
   p.knockedUntil = 0;
   p.skillReadyTick = 0;
   p.meleeLock = {};
-  clearStreakRewards(p);
+  clearStreakRewards(state, p);
   clearLifePerks(p);
   p.lastPlaceTick = -1e9;
   // `eliminatedTick` / `elimination` / `eliminatedBy` keep describing the last death (kill feed)

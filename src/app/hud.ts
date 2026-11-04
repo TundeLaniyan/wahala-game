@@ -1,11 +1,4 @@
-import {
-  TEAM_NAMES,
-  getArena,
-  isRespawnMode,
-  isTeamMode,
-  secondsRemaining,
-  teamStandings,
-} from '../sim';
+import { TEAM_NAMES, getArena, isRespawnMode, isTeamMode, secondsRemaining, teamStandings } from '../sim';
 import type {
   CharacterId,
   ContactAbility,
@@ -19,7 +12,7 @@ import type {
   StreakRewardKind,
   VehicleKind,
 } from '../sim';
-import { canThrow, previewRewards, previewSpecial, spectatorLanding } from '../sim';
+import { canThrow, heldStreakRewards, previewRewards, previewSpecial, spectatorLanding } from '../sim';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
 import type { StageAlert } from './stageAlerts';
 
@@ -208,15 +201,20 @@ function buildStreakHud(state: GameState, p: Readonly<Player>, active: number): 
   const cfg = state.config.streaks;
   if (!cfg.enabled) return null;
   const r = p.streakRewards;
+  // a reward already held (running, stored through a death, or unused) is never paid again, so it is not "next"
+  const held = heldStreakRewards(r);
   const next = [...cfg.loadout]
     .sort((a, b) => a.kills - b.kills)
-    .find((s) => !r.earned.includes(s.kills) && s.kills > p.stats.streak);
+    .find((s) => !r.earned.includes(s.kills) && s.kills > p.stats.streak && !held.includes(s.reward));
   return {
     quickHands:
       r.quickHandsUntil > state.tick
         ? {
             seconds: Math.ceil((r.quickHandsUntil - state.tick) / 60),
-            fraction: Math.max(0, (r.quickHandsUntil - state.tick) / Math.max(1, r.quickHandsUntil - r.quickHandsStart)),
+            fraction: Math.max(
+              0,
+              (r.quickHandsUntil - state.tick) / Math.max(1, r.quickHandsUntil - r.quickHandsStart),
+            ),
             charges: Math.max(0, p.capacity - active),
             capacity: p.capacity,
           }
@@ -513,7 +511,8 @@ export function buildHud(
 ): HudSnapshot {
   const local = state.players[localId];
   const active = local
-    ? state.generators.filter((g) => g.ownerId === local.id && g.mode !== 'disabled' && !g.vehicleBorne).length
+    ? state.generators.filter((g) => g.ownerId === local.id && g.mode !== 'disabled' && !g.vehicleBorne)
+        .length
     : 0;
   const cfg = state.config;
   const rumble = getArena(state.arenaId).kind === 'rumble';

@@ -178,11 +178,9 @@ describe('one use, no stacking', () => {
     const s = scene();
     put(s, 0, 3, 4);
     addGenerator(s, { ownerId: 1, x: 3, y: 4, timer: 1 });
-    const ev = run(s, 3);
+    run(s, 3);
     expect(s.players[0]!.alive).toBe(false);
     expect(s.players[0]!.streakRewards.knockdown).toBe(true);
-    // nothing was lost, so the HUD is not told a reward was
-    expect(eventsOf(ev, 'streakRewardsLost')).toHaveLength(0);
   });
 });
 

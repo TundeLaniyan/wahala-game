@@ -506,3 +506,5 @@ A diagonal touch thumb is planned as two whole cardinal moves (vertical first, r
 | Death | Done: an actual death clears temporary perks and the voucher, keeps unused VEHICLE GENERATOR / GLOBAL KNOCKDOWN, never duplicates a reward. |
 | Sudden Death | Done: blast 1 at 60 s, blast 2 at +15 s, a final shield-proof blast at +15 s with no respawns / pickups / rewards. Not tried in a full browser match beyond `e2e/sudden-death.spec.ts`. |
 
+Kill-streak classification (AS7): every earned reward survives death. QUICK HANDS is paused by a death and its unspent time is stored (`quickHandsBank`) and resumed on respawn; the one-use rewards stay. Sudden Death's third blast is documented as the final anti-stalemate rule (AS6a).
+

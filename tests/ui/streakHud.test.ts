@@ -61,6 +61,18 @@ describe('the HUD snapshot', () => {
     expect(me(s).rewards!.next).toBeNull();
   });
 
+  it('a reward already held (stored through a death, or unused) is not shown as the next one to earn', () => {
+    const s = rumble();
+    const r = s.players[0]!.streakRewards;
+    s.players[0]!.stats.streak = 1;
+    r.quickHandsBank = 600; // QUICK HANDS stored by a death
+    expect(me(s).rewards!.next).toEqual({ kills: 5, reward: 'vehicleGenerator', toGo: 4 });
+    r.vehicleGenerator = 'taxi';
+    expect(me(s).rewards!.next).toEqual({ kills: 7, reward: 'globalKnockdown', toGo: 6 });
+    r.knockdown = true;
+    expect(me(s).rewards!.next).toBeNull();
+  });
+
   it('QUICK HANDS shows its remaining seconds, fraction and generator charges', () => {
     const s = rumble();
     const p = s.players[0]!;

@@ -6,9 +6,11 @@
  *   5  VEHICLE GENERATOR  one use: a public vehicle carries a live generator at a rival (systems/vehicleGenerator.ts)
  *   7  GLOBAL KNOCKDOWN   one use: every rival is knocked flat by a thrown object (systems/knockdown.ts)
  *
- * Each threshold pays once per streak and each reward is consumed once. An actual death ends the streak and QUICK HANDS
- * (a timed buff); an earned one-use reward (VEHICLE GENERATOR, GLOBAL KNOCKDOWN) is kept until it is used or the match
- * ends (decision AS5), and a reward already held is never paid a second time. The match score (kills, deaths,
+ * Each threshold pays once per streak and each reward is consumed once. EVERY earned reward survives an actual death until
+ * it is used or the match ends (decision AS7): the one-use rewards (VEHICLE GENERATOR, GLOBAL KNOCKDOWN) as they are, and
+ * QUICK HANDS as its unspent time - it starts the moment it is earned (SK2), a death pauses the running buff and stores
+ * what was left (`quickHandsBank`), the respawn resumes exactly that, never a fresh 18 s. A reward already held (running,
+ * stored or unused) is never paid a second time. The match score (kills, deaths,
  * assists) is never touched. Pure and deterministic: the only randomness is the match RNG choosing a vehicle for the
  * VEHICLE GENERATOR.
  */
@@ -65,6 +67,7 @@ function earn(
   const r = p.streakRewards;
   switch (reward) {
     case 'quickHands': {
+      if (r.quickHandsUntil > 0 || r.quickHandsBank > 0) return; // already held (running or stored): never paid twice
       const q = state.config.streaks.quickHands;
       r.quickHandsStart = state.tick;
       r.quickHandsUntil = state.tick + q.durationTicks;
@@ -92,11 +95,26 @@ function earn(
 export function updateStreaks(state: GameState, events: SimEvent[]): void {
   for (const p of state.players) {
     const r = p.streakRewards;
+    // a respawned fighter gets back the QUICK HANDS time a death had paused - the unspent remainder, not a new reward
+    if (p.alive && r.quickHandsBank > 0 && r.quickHandsUntil === 0) resumeQuickHands(state, p, events);
     if (r.quickHandsUntil > 0 && state.tick >= r.quickHandsUntil) {
       endQuickHands(p);
       if (p.alive) events.push({ type: 'streakRewardEnded', playerId: p.id, reward: 'quickHands' });
     }
   }
+}
+
+/** Resumes the stored QUICK HANDS time from now (the buff was paused by a death). */
+function resumeQuickHands(state: GameState, p: Player, events: SimEvent[]): void {
+  const r = p.streakRewards;
+  const q = state.config.streaks.quickHands;
+  const left = r.quickHandsBank;
+  r.quickHandsBank = 0;
+  r.quickHandsStart = state.tick + left - q.durationTicks; // the HUD ring shows the share of the full duration left
+  r.quickHandsUntil = state.tick + left;
+  r.quickHandsExtra = q.extraCapacity;
+  p.capacity += q.extraCapacity;
+  events.push({ type: 'streakRewardResumed', playerId: p.id, reward: 'quickHands', ticksLeft: left });
 }
 
 function endQuickHands(p: Player): void {
@@ -108,19 +126,23 @@ function endQuickHands(p: Player): void {
 }
 
 /**
- * A death (or a respawn) ends the streak: QUICK HANDS stops (its extra capacity goes with it) and the thresholds can be
- * earned again. An unused one-use reward (VEHICLE GENERATOR, GLOBAL KNOCKDOWN) stays with the fighter (decision AS5).
- * Returns what was lost, for the HUD.
+ * A death (or a respawn) ends the streak - the kill count starts over and the thresholds can be earned again - but loses
+ * no reward (decision AS7). A running QUICK HANDS is PAUSED: its capacity goes away with the death and the unspent time
+ * is stored in `quickHandsBank` (the respawn resumes it; see `updateStreaks`). The one-use rewards stay as they are.
  */
-export function clearStreakRewards(p: Player): StreakRewardKind[] {
-  const lost: StreakRewardKind[] = [];
+export function clearStreakRewards(state: Pick<GameState, 'tick'>, p: Player): void {
   const r = p.streakRewards;
+  let bank = r.quickHandsBank;
   if (r.quickHandsUntil > 0) {
+    bank = Math.max(bank, r.quickHandsUntil - state.tick);
     endQuickHands(p);
-    lost.push('quickHands');
   }
-  p.streakRewards = { ...freshStreakRewards(), vehicleGenerator: r.vehicleGenerator, knockdown: r.knockdown };
-  return lost;
+  p.streakRewards = {
+    ...freshStreakRewards(),
+    quickHandsBank: Math.max(0, bank),
+    vehicleGenerator: r.vehicleGenerator,
+    knockdown: r.knockdown,
+  };
 }
 
 /**

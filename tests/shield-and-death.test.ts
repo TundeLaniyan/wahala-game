@@ -230,12 +230,10 @@ describe('an actual death clears the temporary perks and keeps the earned kill-s
   it('the earned one-use streak rewards are kept through the death', () => {
     const { s, p } = loaded();
     blastUnder(s, 0);
-    const ev = run(s, 3);
+    run(s, 3);
     expect(p.alive).toBe(false);
     expect(p.streakRewards.vehicleGenerator).toBe('taxi');
     expect(p.streakRewards.knockdown).toBe(true);
-    expect(eventsOf(ev, 'streakRewardsLost')[0]?.rewards ?? []).not.toContain('vehicleGenerator');
-    expect(eventsOf(ev, 'streakRewardsLost')[0]?.rewards ?? []).not.toContain('globalKnockdown');
   });
 
   it('kills, deaths and assists are untouched by a death', () => {

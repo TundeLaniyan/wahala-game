@@ -492,16 +492,20 @@ export class MatchController {
           ? { text: `${STREAK_REWARD_DEFS[e.reward].name} USED`, tone: 'info', icon: e.reward }
           : null;
       case 'streakRewardEnded':
+        return e.playerId === LOCAL_ID ? { text: 'QUICK HANDS OVER', tone: 'info', icon: e.reward } : null;
+      case 'streakRewardResumed':
         return e.playerId === LOCAL_ID
-          ? { text: 'QUICK HANDS OVER', tone: 'info', icon: e.reward }
+          ? { text: `${STREAK_REWARD_DEFS[e.reward].name} BACK`, tone: 'good', icon: e.reward }
           : null;
-      case 'streakRewardsLost':
-        return e.playerId === LOCAL_ID ? { text: 'STREAK OVER: QUICK HANDS ENDED', tone: 'bad' } : null;
       // what the others see coming
       case 'vehicleGeneratorLaunched':
         return e.ownerId === LOCAL_ID
           ? null
-          : { text: `${VEHICLE_DEFS[e.kind].name.toUpperCase()} WITH A GENERATOR!`, tone: 'bad', icon: 'vehicleGenerator' };
+          : {
+              text: `${VEHICLE_DEFS[e.kind].name.toUpperCase()} WITH A GENERATOR!`,
+              tone: 'bad',
+              icon: 'vehicleGenerator',
+            };
       case 'knockdownThrown':
         return e.targetId === LOCAL_ID
           ? { text: 'LOCAL CHAMPION! DUCK!', tone: 'bad', icon: 'globalKnockdown' }

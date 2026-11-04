@@ -167,11 +167,11 @@ describe('death ends the streak and QUICK HANDS, keeps unused one-use rewards, n
     expect(p.stats.assists).toBe(2);
     expect(p.streakRewards.vehicleGenerator).not.toBeNull(); // earned, unused: kept
     expect(p.streakRewards.knockdown).toBe(true);
-    expect(p.streakRewards.quickHandsUntil).toBe(0); // the timed buff is over
+    expect(p.streakRewards.quickHandsUntil).toBe(0); // the running buff is paused: its capacity goes with the death
+    expect(p.streakRewards.quickHandsBank).toBeGreaterThan(0); // ...and the unspent time is stored (decision AS7)
     expect(p.streakRewards.earned).toEqual([]); // a new streak can earn the thresholds again
     expect(p.capacity).toBe(capacity - 5);
-    const lost = eventsOf(events, 'streakRewardsLost')[0]!;
-    expect(lost.rewards).toEqual(['quickHands']); // only the timed buff is reported lost
+    expect(events.some((e) => e.type === 'playerEliminated')).toBe(true);
   });
 
   it('a reward earned again while one is still held is not duplicated; the held vehicle is unchanged', () => {
@@ -214,16 +214,133 @@ describe('death ends the streak and QUICK HANDS, keeps unused one-use rewards, n
     run(s, DEFAULT_CONFIG.respawn.delayTicks + 5);
     expect(p.alive).toBe(true);
     expect(p.protectedUntil).toBeGreaterThan(s.tick);
-    expect(p.capacity).toBe(s.config.generator.baseCapacity);
-    expect(p.streakRewards.quickHandsUntil).toBe(0);
-    expect(p.streakRewards.vehicleGenerator).toBeNull(); // nothing earned yet, nothing invented on the respawn
     expect(p.stats.kills).toBe(3); // the scoreboard keeps every kill
-    // a new streak earns QUICK HANDS again at 3
+    expect(p.streakRewards.vehicleGenerator).toBeNull(); // nothing earned yet, nothing invented on the respawn
+    // the earned QUICK HANDS time that was not used is given back (AS7): the base kit plus the +5 again, no more
+    expect(p.streakRewards.quickHandsBank).toBe(0);
+    expect(p.streakRewards.quickHandsUntil).toBeGreaterThan(s.tick);
+    expect(p.capacity).toBe(s.config.generator.baseCapacity + 5);
+    // reaching three kills again does NOT pay it a second time while it is still held
     for (let k = 1; k <= 3; k++) {
       revive(s, 1);
       credit(s, 0, 1);
     }
-    expect(p.streakRewards.quickHandsUntil).toBeGreaterThan(s.tick);
+    expect(p.capacity).toBe(s.config.generator.baseCapacity + 5);
+  });
+});
+
+describe('QUICK HANDS is an earned reward: a death pauses it, the respawn gives the unspent time back (AS7)', () => {
+  const START_AT = 4;
+  /** Earns QUICK HANDS at tick 0, lets `usedTicks` of it run, then kills the fighter with a generator. */
+  function dieAfter(usedTicks: number): { s: GameState; bank: number } {
+    const s = match('deathmatch', 2);
+    for (let k = 1; k <= 3; k++) {
+      revive(s, 1);
+      credit(s, 0, 1);
+    }
+    revive(s, 1);
+    put(s, 1, 14, 0);
+    put(s, 0, 2, START_AT);
+    run(s, usedTicks);
+    const p = s.players[0]!;
+    const left = Math.max(0, p.streakRewards.quickHandsUntil - s.tick);
+    addGenerator(s, { ownerId: 1, x: p.x, y: p.y, timer: 1 });
+    run(s, 3);
+    expect(p.alive).toBe(false);
+    return { s, bank: left };
+  }
+
+  it('the death pauses the running buff and stores the unspent time, to the tick', () => {
+    const { s, bank } = dieAfter(5 * 60);
+    const p = s.players[0]!;
+    expect(p.streakRewards.quickHandsUntil).toBe(0);
+    expect(p.capacity).toBe(s.config.generator.baseCapacity); // the +5 is gone with the death
+    // 18 s minus the 5 s used (the 3 ticks of the blast are used too): stored, not refunded and not topped up
+    expect(p.streakRewards.quickHandsBank).toBeLessThan(18 * 60);
+    expect(p.streakRewards.quickHandsBank).toBeGreaterThan(18 * 60 - 5 * 60 - 20);
+    expect(p.streakRewards.quickHandsBank).toBeLessThanOrEqual(bank);
+  });
+
+  it('after the respawn it comes back for exactly the stored time, once', () => {
+    const { s } = dieAfter(5 * 60);
+    const p = s.players[0]!;
+    const stored = p.streakRewards.quickHandsBank;
+    const resumed: number[] = [];
+    let resumeTick = -1;
+    for (let i = 0; i < DEFAULT_CONFIG.respawn.delayTicks + 40; i++)
+      for (const e of eventsOf(run(s, 1), 'streakRewardResumed')) {
+        resumed.push(e.ticksLeft);
+        resumeTick = s.tick;
+      }
+    expect(p.alive).toBe(true);
+    expect(resumed).toEqual([stored]); // exactly once, for exactly the stored time
+    expect(p.streakRewards.quickHandsBank).toBe(0);
+    expect(p.streakRewards.quickHandsUntil).toBe(resumeTick + stored); // the stored time from the respawn, not a new 18 s
+    expect(p.capacity).toBe(s.config.generator.baseCapacity + 5);
+    // ...and it is not paid again later: no second resume, no second +5
+    const later = run(s, 60);
+    expect(eventsOf(later, 'streakRewardResumed')).toHaveLength(0);
+    expect(eventsOf(later, 'streakRewardEarned')).toHaveLength(0);
+    expect(p.capacity).toBe(s.config.generator.baseCapacity + 5);
+  });
+
+  it('the resumed buff ends when the stored time is spent and is then gone for good', () => {
+    const { s } = dieAfter(5 * 60);
+    const p = s.players[0]!;
+    run(s, DEFAULT_CONFIG.respawn.delayTicks + 20);
+    expect(p.alive).toBe(true);
+    const ev = run(s, 18 * 60);
+    expect(eventsOf(ev, 'streakRewardEnded')).toHaveLength(1);
+    expect(p.capacity).toBe(s.config.generator.baseCapacity);
+    expect(p.streakRewards.quickHandsBank).toBe(0);
+    expect(p.streakRewards.quickHandsUntil).toBe(0);
+  });
+
+  it('a QUICK HANDS that had fully run out before the death has nothing stored: it is not given back', () => {
+    const { s } = dieAfter(18 * 60 + 5);
+    const p = s.players[0]!;
+    expect(p.streakRewards.quickHandsBank).toBe(0);
+    run(s, DEFAULT_CONFIG.respawn.delayTicks + 30);
+    expect(p.streakRewards.quickHandsUntil).toBe(0);
+    expect(p.capacity).toBe(s.config.generator.baseCapacity);
+  });
+
+  it('surviving a hit through a shield is not a death: the buff keeps running untouched', () => {
+    const s = match('deathmatch', 2);
+    for (let k = 1; k <= 3; k++) {
+      revive(s, 1);
+      credit(s, 0, 1);
+    }
+    revive(s, 1);
+    put(s, 1, 14, 0);
+    put(s, 0, 2, START_AT);
+    const p = s.players[0]!;
+    p.armour = 1;
+    const until = p.streakRewards.quickHandsUntil;
+    addGenerator(s, { ownerId: 1, x: p.x, y: p.y, timer: 1 });
+    run(s, 3);
+    expect(p.alive).toBe(true);
+    expect(p.streakRewards.quickHandsUntil).toBe(until);
+    expect(p.streakRewards.quickHandsBank).toBe(0);
+    expect(p.capacity).toBe(s.config.generator.baseCapacity + 5);
+  });
+
+  it('earning it again while it is running or stored pays nothing (no second +5, no new 18 s)', () => {
+    const s = match('deathmatch', 2);
+    for (let k = 1; k <= 3; k++) {
+      revive(s, 1);
+      credit(s, 0, 1);
+    }
+    const p = s.players[0]!;
+    const until = p.streakRewards.quickHandsUntil;
+    p.streakRewards.earned = []; // as if a new streak crossed the threshold again
+    p.stats.streak = 0;
+    for (let k = 1; k <= 3; k++) {
+      revive(s, 1);
+      credit(s, 0, 1);
+    }
+    expect(p.streakRewards.quickHandsUntil).toBe(until);
+    expect(p.capacity).toBe(s.config.generator.baseCapacity + 5);
   });
 });
 
