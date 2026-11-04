@@ -32,7 +32,7 @@ export const SHOTS = {
     ['whole', 'whole'],
   ],
   rumbleFadeyi: [
-    ['follow-footbridge', 48, 16],
+    ['follow-footbridge', 50, 16],
     ['follow-brt', 11, 14],
     ['follow-bank', 27, 29],
     ['whole', 'whole'],
@@ -52,7 +52,7 @@ export const SHOTS = {
   rumbleEbuteMetta: [
     ['follow-station', 31, 17],
     ['follow-yard', 28, 23],
-    ['follow-gantry', 25, 3],
+    ['follow-gantry', 26, 5],
     ['whole', 'whole'],
   ],
 };
@@ -158,6 +158,7 @@ for (const id of ids) {
         },
         [a, b],
       );
+      await page.evaluate(() => window.__WAHALA__.renderer().cutCamera()); // snap the camera to the player (frames are slow under software WebGL)
       if (zoom) await page.evaluate((z) => window.__WAHALA__.renderer().debugInspect(null), zoom);
     }
     await run(page, 1500);
