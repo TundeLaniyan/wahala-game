@@ -12,7 +12,16 @@ import { getArena } from '../../arenas';
 import type { StageHazardDef } from '../../arenas';
 import { tileIndex } from '../../grid';
 import type { GameState, StageEvent } from '../../types';
-import { baseNodeView, completeNode, escapeSteps, livingHuman, newNode, onNode, resetNode, walkTicks } from '../ctx';
+import {
+  baseNodeView,
+  completeNode,
+  escapeSteps,
+  livingHuman,
+  newNode,
+  onNode,
+  resetNode,
+  walkTicks,
+} from '../ctx';
 import type { MissionCtx } from '../ctx';
 import type { MissionRail } from '../types';
 import { nearestNode } from './types';
@@ -36,7 +45,15 @@ export function trainLane(state: GameState, route: number): number[] {
 }
 
 function newRail(state: GameState, delay: number): MissionRail {
-  return { nextCycleAt: state.tick + delay, trainAt: -1, openAt: -1, closeAt: -1, open: false, route: 0, cycles: 0 };
+  return {
+    nextCycleAt: state.tick + delay,
+    trainAt: -1,
+    openAt: -1,
+    closeAt: -1,
+    open: false,
+    route: 0,
+    cycles: 0,
+  };
 }
 
 function startCycle(ctx: MissionCtx, rail: MissionRail): void {

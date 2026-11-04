@@ -52,7 +52,9 @@ export const supplyRoutes: Objective = {
       }
     }
     if (pd.pulseTicks > 0 && m.pulseAt >= 0 && state.tick >= m.pulseAt && human) {
-      const near = m.nodes.some((n) => !n.done && Math.max(Math.abs(n.x - human.x), Math.abs(n.y - human.y)) <= PRESSURE_RANGE);
+      const near = m.nodes.some(
+        (n) => !n.done && Math.max(Math.abs(n.x - human.x), Math.abs(n.y - human.y)) <= PRESSURE_RANGE,
+      );
       if (near) {
         callStrike(ctx, {
           kind: 'strike',
@@ -79,4 +81,3 @@ export const supplyRoutes: Objective = {
     return nearestNode(ctx.m.nodes, runner, (n) => n.done) ?? nearestNode(ctx.m.nodes, runner, () => true);
   },
 };
-

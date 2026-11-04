@@ -43,14 +43,20 @@ export function missionView(state: GameState): MissionView | null {
   }
   const exposed = m.phaseState === 'exposed';
   const goal = ctx.pd.goal;
-  const crewAlive = m.seats.filter((s) => s.role !== 'player' && s.role !== 'boss' && state.players[s.playerId]?.alive).length;
+  const crewAlive = m.seats.filter(
+    (s) => s.role !== 'player' && s.role !== 'boss' && state.players[s.playerId]?.alive,
+  ).length;
   return {
     missionId: m.id,
     objective: m.objective,
     phase: m.phase,
     phaseCount: 3,
     phaseState: m.phaseState,
-    progress: { done: exposed || m.outcome?.result === 'won' ? goal : Math.min(goal, objective.done(ctx)), goal, label: objective.label },
+    progress: {
+      done: exposed || m.outcome?.result === 'won' ? goal : Math.min(goal, objective.done(ctx)),
+      goal,
+      label: objective.label,
+    },
     nodes,
     warnings,
     boss: {

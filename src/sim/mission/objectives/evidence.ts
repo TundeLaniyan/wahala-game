@@ -18,7 +18,8 @@ import type { Objective } from './types';
 
 export const PRESS_ID = 'press';
 
-const pressOf = (ctx: MissionCtx): MissionNodeRuntime | undefined => ctx.m.nodes.find((n) => n.id === PRESS_ID);
+const pressOf = (ctx: MissionCtx): MissionNodeRuntime | undefined =>
+  ctx.m.nodes.find((n) => n.id === PRESS_ID);
 
 function dropCarry(ctx: MissionCtx): void {
   const { m } = ctx;
@@ -36,7 +37,14 @@ export const evidenceRun: Objective = {
     const phase = def.phases[m.phase];
     m.nodes = phase.nodes.map((d) => newNode(d, -1, state.width, 0));
     if (phase.press) {
-      m.nodes.push(newNode({ id: PRESS_ID, x: phase.press.x, y: phase.press.y, label: 'PRESS DROP' }, -1, state.width, 0));
+      m.nodes.push(
+        newNode(
+          { id: PRESS_ID, x: phase.press.x, y: phase.press.y, label: 'PRESS DROP' },
+          -1,
+          state.width,
+          0,
+        ),
+      );
     }
     m.carry = null;
     m.delivered = 0;
@@ -93,7 +101,8 @@ export const evidenceRun: Objective = {
 
   nodeView(ctx, node) {
     if (node.id === PRESS_ID) {
-      if (node.progress > 0) return { state: 'progress', fraction: Math.min(1, node.progress / PRESS_DROP_TICKS) };
+      if (node.progress > 0)
+        return { state: 'progress', fraction: Math.min(1, node.progress / PRESS_DROP_TICKS) };
       return { state: ctx.m.carry ? 'live' : 'idle', fraction: 0 };
     }
     if (node.done) return { state: 'done', fraction: 1 };

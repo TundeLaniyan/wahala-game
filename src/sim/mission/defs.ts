@@ -394,7 +394,8 @@ const EBUTE: MissionDef = {
       cycleTicks: ticks(20),
       openTicks: ticks(7),
       warnTicks: 216,
-      callout: 'All four switches thrown inside twenty-five seconds: they reset when the dispatcher recovers.',
+      callout:
+        'All four switches thrown inside twenty-five seconds: they reset when the dispatcher recovers.',
     },
   ],
 };
@@ -421,11 +422,7 @@ const LAGOS: MissionDef = {
   ],
   phases: [
     {
-      nodes: [
-        n('l1', 10, 8, 'LEDGER 1'),
-        n('l2', 6, 14, 'LEDGER 2'),
-        n('l3', 14, 21, 'LEDGER 3'),
-      ],
+      nodes: [n('l1', 10, 8, 'LEDGER 1'), n('l2', 6, 14, 'LEDGER 2'), n('l3', 14, 21, 'LEDGER 3')],
       press: { x: 4, y: 21 },
       goal: 2,
       holdTicks: 60,

@@ -7,7 +7,8 @@ import { createGame, directiveFor, observe, tick } from '../src/sim';
 import type { GameState } from '../src/sim';
 import { advance, botIntents, makeBots, newMission, put, standOn } from './mission-helpers';
 
-const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number =>
+  Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 
 function runBots(state: GameState, n: number): void {
   const bots = makeBots(state, 'standard');
@@ -43,7 +44,9 @@ describe('directives from roles (pure sim)', () => {
     expect(directiveFor(state, 4)).toMatchObject({ x: post.x, y: post.y });
     expect(directiveFor(state, 2)).toMatchObject({ radius: 3 });
     // a runner heads to the nearest relay, then to a jammed one
-    const relay = state.mission!.nodes.reduce((best, n) => (dist(n, state.players[5]!) < dist(best, state.players[5]!) ? n : best));
+    const relay = state.mission!.nodes.reduce((best, n) =>
+      dist(n, state.players[5]!) < dist(best, state.players[5]!) ? n : best,
+    );
     expect(directiveFor(state, 5)).toMatchObject({ x: relay.x, y: relay.y });
     // an eliminated bot has none
     state.players[3]!.alive = false;
@@ -56,7 +59,11 @@ describe('directives from roles (pure sim)', () => {
     const m = state.mission!;
     m.boss.shielded = false;
     m.phaseState = 'exposed';
-    expect(directiveFor(state, 1)).toMatchObject({ kind: 'flee', x: state.players[0]!.x, y: state.players[0]!.y });
+    expect(directiveFor(state, 1)).toMatchObject({
+      kind: 'flee',
+      x: state.players[0]!.x,
+      y: state.players[0]!.y,
+    });
     expect(directiveFor(state, 2)?.kind).toBe('chase');
   });
 
@@ -126,7 +133,9 @@ describe('roles play differently (bots, 15 seconds)', () => {
       expect(dist(state.players[id]!, node), `marshal ${id}`).toBeLessThanOrEqual(5);
     });
     // and a marshal in a zone stops the human holding it
-    expect(new Set([2, 3, 4].map((id) => nodes.findIndex((n) => dist(state.players[id]!, n) <= 5))).size).toBe(3);
+    expect(
+      new Set([2, 3, 4].map((id) => nodes.findIndex((n) => dist(state.players[id]!, n) <= 5))).size,
+    ).toBe(3);
   });
 
   it('lagos: the boss assistant stands between the boss and the human; the clerk stays with an ally', () => {

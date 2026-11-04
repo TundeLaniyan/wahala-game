@@ -181,7 +181,8 @@ describe('Ebute-Metta dispatch windows: switches count only inside the rail wind
     const trainIdx = state.stage.nextAt.findIndex((t) => t === Infinity);
     expect(trainIdx).toBeGreaterThanOrEqual(0);
     const events: SimEvent[] = [];
-    while (!of(events, 'missionWarning').some((e) => e.warning.kind === 'window')) advance(state, 1, {}, events);
+    while (!of(events, 'missionWarning').some((e) => e.warning.kind === 'window'))
+      advance(state, 1, {}, events);
     const stage = of(events, 'stageWarning').filter((e) => e.event.style === 'train');
     expect(stage).toHaveLength(1);
     expect(stage[0]!.event.startTick - stage[0]!.event.warnTick).toBeGreaterThanOrEqual(MIN_TRAIN_WARN_TICKS);
@@ -350,7 +351,9 @@ describe('Lekki contingency grid: switch off in the signalled order', () => {
     expect(view.callout).toMatch(/order/i);
     const letters = m.sequence.map((id) => id.toUpperCase());
     expect(view.callout!).toContain(letters.join(' > '));
-    m.sequence.forEach((id, i) => expect(m.nodes.find((n) => n.id === id)!.label).toMatch(new RegExp(` ${i + 1}$`)));
+    m.sequence.forEach((id, i) =>
+      expect(m.nodes.find((n) => n.id === id)!.label).toMatch(new RegExp(` ${i + 1}$`)),
+    );
     expect(view.nodes.find((n) => n.id === m.sequence[0])!.state).toBe('live');
     const hold = m.tuning.phases[0].holdTicks;
     for (const id of m.sequence) {
@@ -402,7 +405,9 @@ describe('Lekki contingency grid: switch off in the signalled order', () => {
     const a = newMission({ id: 'lekki' }, { seed: 4 }).mission!.sequence;
     const b = newMission({ id: 'lekki' }, { seed: 4 }).mission!.sequence;
     expect(a).toEqual(b);
-    const others = [5, 6, 7, 8, 9].map((seed) => newMission({ id: 'lekki' }, { seed }).mission!.sequence.join());
+    const others = [5, 6, 7, 8, 9].map((seed) =>
+      newMission({ id: 'lekki' }, { seed }).mission!.sequence.join(),
+    );
     expect(new Set([...others, a.join()]).size).toBeGreaterThan(1);
   });
 });

@@ -28,7 +28,12 @@ export function warningView(state: GameState, s: MissionStrike): MissionWarningV
   const ys = s.tiles.map((i) => Math.floor(i / state.width));
   const avg = (a: number[]): number => Math.round(a.reduce((x, y) => x + y, 0) / Math.max(1, a.length));
   return {
-    kind: s.kind === 'convoy' || s.kind === 'marshal' ? 'convoy' : s.kind === 'contingency' ? 'contingency' : 'strike',
+    kind:
+      s.kind === 'convoy' || s.kind === 'marshal'
+        ? 'convoy'
+        : s.kind === 'contingency'
+          ? 'contingency'
+          : 'strike',
     x: avg(xs),
     y: avg(ys),
     tiles: [...s.tiles],
@@ -72,7 +77,12 @@ export function updateStrikes(ctx: MissionCtx): void {
   const human = livingHuman(state);
   for (const s of m.strikes) {
     if (s.landed || state.tick < s.landTick) continue;
-    if (human && s.postponed < STRIKE_MERCY_MAX && cannotMove(state, human) && s.tiles.includes(human.y * state.width + human.x)) {
+    if (
+      human &&
+      s.postponed < STRIKE_MERCY_MAX &&
+      cannotMove(state, human) &&
+      s.tiles.includes(human.y * state.width + human.x)
+    ) {
       s.postponed++;
       s.landTick += STRIKE_MERCY_TICKS;
       s.endTick += STRIKE_MERCY_TICKS;
@@ -84,7 +94,9 @@ export function updateStrikes(ctx: MissionCtx): void {
 }
 
 function cannotMove(state: GameState, p: GameState['players'][number]): boolean {
-  return state.tick < p.dazedUntil || state.tick < p.knockedUntil || p.slide !== null || p.teleportPending !== null;
+  return (
+    state.tick < p.dazedUntil || state.tick < p.knockedUntil || p.slide !== null || p.teleportPending !== null
+  );
 }
 
 function land(state: GameState, bossId: number, s: MissionStrike, _events: SimEvent[]): void {

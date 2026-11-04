@@ -153,7 +153,14 @@ function syncNodes(ctx: MissionCtx): void {
     const v = objective.nodeView(ctx, node);
     if (v.state === node.shown) continue;
     node.shown = v.state;
-    events.push({ type: 'missionNode', nodeId: node.id, x: node.x, y: node.y, state: v.state, fraction: v.fraction });
+    events.push({
+      type: 'missionNode',
+      nodeId: node.id,
+      x: node.x,
+      y: node.y,
+      state: v.state,
+      fraction: v.fraction,
+    });
   }
 }
 
@@ -168,7 +175,11 @@ function syncCallout(ctx: MissionCtx): void {
 
 // ------------------------------------------------------------------ eliminations, end of the mission
 
-export function missionAfterEliminations(state: GameState, eliminated: readonly number[], events: SimEvent[]): void {
+export function missionAfterEliminations(
+  state: GameState,
+  eliminated: readonly number[],
+  events: SimEvent[],
+): void {
   const m = state.mission;
   if (!m || m.outcome) return;
   for (const id of eliminated) {
@@ -205,11 +216,18 @@ export function evaluateMission(state: GameState, events: SimEvent[]): void {
   else if (state.match.playTicks >= m.tuning.timeLimitTicks) finishMission(state, 'timeout', events);
 }
 
-export function finishMission(state: GameState, result: 'won' | 'lost' | 'timeout', events: SimEvent[]): void {
+export function finishMission(
+  state: GameState,
+  result: 'won' | 'lost' | 'timeout',
+  events: SimEvent[],
+): void {
   const m = state.mission!;
   const ticks = state.match.playTicks;
   const won = result === 'won';
-  const stars = won ? ((1 + (m.livesUsed <= 1 ? 1 : 0) + (m.livesUsed <= 1 && ticks <= m.tuning.parTicks ? 1 : 0)) as 1 | 2 | 3) : 0;
+  const stars = won
+    ? ((1 + (m.livesUsed <= 1 ? 1 : 0) + (m.livesUsed <= 1 && ticks <= m.tuning.parTicks ? 1 : 0)) as
+        1 | 2 | 3)
+    : 0;
   m.outcome = {
     result,
     missionId: m.id,

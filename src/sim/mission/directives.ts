@@ -33,7 +33,12 @@ export function directiveFor(state: GameState, id: number): NpcDirective | undef
   const human = state.players[0]!;
   const post = seat.post ?? { x: p.x, y: p.y };
   const exposed = !m.boss.shielded;
-  const guard = (x: number, y: number, radius = seat.radius ?? DEFAULT_RADIUS): NpcDirective => ({ kind: 'guard', x, y, radius });
+  const guard = (x: number, y: number, radius = seat.radius ?? DEFAULT_RADIUS): NpcDirective => ({
+    kind: 'guard',
+    x,
+    y,
+    radius,
+  });
   const chase: NpcDirective = { kind: 'chase', x: human.x, y: human.y };
 
   switch (seat.role) {
@@ -50,7 +55,9 @@ export function directiveFor(state: GameState, id: number): NpcDirective | undef
       return { kind: 'run', x: target.x, y: target.y };
     }
     case 'escort':
-      return boss.alive ? { kind: 'escort', x: boss.x, y: boss.y, radius: seat.radius ?? 2 } : guard(post.x, post.y);
+      return boss.alive
+        ? { kind: 'escort', x: boss.x, y: boss.y, radius: seat.radius ?? 2 }
+        : guard(post.x, post.y);
     case 'objectiveDefender': {
       if (exposed || m.carry) return chase;
       const spots = m.nodes.filter((n) => !n.done && n.id !== PRESS_ID);
@@ -60,7 +67,9 @@ export function directiveFor(state: GameState, id: number): NpcDirective | undef
     }
     case 'supportUnit': {
       const ally = allyOf(state, seat);
-      return ally ? { kind: 'support', x: ally.x, y: ally.y, radius: seat.radius ?? DEFAULT_RADIUS } : guard(post.x, post.y);
+      return ally
+        ? { kind: 'support', x: ally.x, y: ally.y, radius: seat.radius ?? DEFAULT_RADIUS }
+        : guard(post.x, post.y);
     }
     case 'bossAssistant': {
       if (!human.alive) return guard(boss.x, boss.y, 2);
@@ -87,7 +96,11 @@ function allyOf(state: GameState, seat: MissionSeat): { x: number; y: number } |
 }
 
 /** The floor tile two steps from `from` towards `to` (nearest open tile when that one is blocked). */
-function interpose(state: GameState, from: { x: number; y: number }, to: { x: number; y: number }): [number, number] {
+function interpose(
+  state: GameState,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): [number, number] {
   const dx = Math.sign(to.x - from.x);
   const dy = Math.sign(to.y - from.y);
   const horizontal = Math.abs(to.x - from.x) >= Math.abs(to.y - from.y);

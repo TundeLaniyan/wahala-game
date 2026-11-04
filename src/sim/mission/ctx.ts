@@ -83,9 +83,13 @@ export function resetNode(ctx: MissionCtx, node: MissionNodeRuntime): void {
 }
 
 /** The default node picture: done, being worked, or `idle`; objectives override `idle`. */
-export function baseNodeView(node: MissionNodeRuntime, hold: number): { state: MissionNodeState; fraction: number } {
+export function baseNodeView(
+  node: MissionNodeRuntime,
+  hold: number,
+): { state: MissionNodeState; fraction: number } {
   if (node.done) return { state: 'done', fraction: 1 };
-  if (node.progress > 0) return { state: 'progress', fraction: Math.min(1, node.progress / Math.max(1, hold)) };
+  if (node.progress > 0)
+    return { state: 'progress', fraction: Math.min(1, node.progress / Math.max(1, hold)) };
   return { state: 'idle', fraction: 0 };
 }
 

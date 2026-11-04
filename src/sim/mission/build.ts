@@ -36,7 +36,11 @@ export function missionConfigLayer(spec: MissionSpec): DeepPartial<GameConfig> {
  * The `GameOptions` of a mission: 6 to 9 competitors on the district's City Rumble arena. Seat 0 is the human
  * (team 0), every other seat is a bot of team 1 (the boss and its crew never hurt each other).
  */
-export function buildMissionGame(o: { spec: MissionSpec; humanCharacter: CharacterId; seed: number }): GameOptions {
+export function buildMissionGame(o: {
+  spec: MissionSpec;
+  humanCharacter: CharacterId;
+  seed: number;
+}): GameOptions {
   const { spec } = o;
   const def = MISSION_DEFS[spec.id];
   const crewLevel = spec.difficulty ?? 'rookie';
@@ -49,15 +53,13 @@ export function buildMissionGame(o: { spec: MissionSpec; humanCharacter: Charact
       difficulty: bossDifficulty(spec),
       team: 1,
     },
-    ...crewOf(def, spec).map(
-      (c, i): PlayerSetup => ({
-        name: c.name,
-        characterId: (['streetBaller', 'lekkiBoy', 'campusQueen'] as const)[(i + 1) % 3]!,
-        isBot: true,
-        difficulty: crewLevel,
-        team: 1,
-      }),
-    ),
+    ...crewOf(def, spec).map((c, i): PlayerSetup => ({
+      name: c.name,
+      characterId: (['streetBaller', 'lekkiBoy', 'campusQueen'] as const)[(i + 1) % 3]!,
+      isBot: true,
+      difficulty: crewLevel,
+      team: 1,
+    })),
   ];
   return { seed: o.seed, arenaId: def.arenaId, players, settings: { game: 'mission' }, mission: spec };
 }

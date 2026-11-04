@@ -28,7 +28,16 @@ function callConvoy(ctx: MissionCtx, relay: MissionNodeRuntime): void {
   for (let k = 0; k < lanes.length; k++) {
     const lane = lanes[(start + k) % lanes.length]!;
     const tiles = laneSegment(state, lane, relay.x, pd.strikeSpan);
-    if (callStrike(ctx, { kind: 'convoy', tiles, source: relay.id, warnTicks: pd.warnTicks, activeTicks: pd.activeTicks })) return;
+    if (
+      callStrike(ctx, {
+        kind: 'convoy',
+        tiles,
+        source: relay.id,
+        warnTicks: pd.warnTicks,
+        activeTicks: pd.activeTicks,
+      })
+    )
+      return;
   }
 }
 
@@ -81,8 +90,6 @@ export const dispatchRelays: Objective = {
   },
 
   runnerTarget(ctx, runner) {
-    return (
-      nearestNode(ctx.m.nodes, runner, (n) => n.done) ?? nearestNode(ctx.m.nodes, runner, () => true)
-    );
+    return nearestNode(ctx.m.nodes, runner, (n) => n.done) ?? nearestNode(ctx.m.nodes, runner, () => true);
   },
 };

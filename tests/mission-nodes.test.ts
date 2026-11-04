@@ -43,7 +43,11 @@ describe.each(MISSION_IDS)('mission %s data', (id) => {
     expect(opts.players.length).toBeLessThanOrEqual(9);
     expect(opts.players[0]!.isBot).toBe(false);
     expect(opts.players.slice(1).every((p) => p.isBot && p.team === 1)).toBe(true);
-    const withMods = buildMissionGame({ spec: { id, modifiers: ['marketDay'] }, humanCharacter: 'lekkiBoy', seed: 1 });
+    const withMods = buildMissionGame({
+      spec: { id, modifiers: ['marketDay'] },
+      humanCharacter: 'lekkiBoy',
+      seed: 1,
+    });
     expect(withMods.players.length).toBeLessThanOrEqual(9);
   });
 

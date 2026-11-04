@@ -36,7 +36,8 @@ export function jumpToPhase(state: GameState, n: 0 | 1 | 2): void {
 export function hasNaN(value: unknown): boolean {
   if (typeof value === 'number') return Number.isNaN(value);
   if (Array.isArray(value)) return value.some(hasNaN);
-  if (value !== null && typeof value === 'object') return Object.values(value as Record<string, unknown>).some(hasNaN);
+  if (value !== null && typeof value === 'object')
+    return Object.values(value as Record<string, unknown>).some(hasNaN);
   return false;
 }
 
@@ -93,15 +94,28 @@ export function advance(
 }
 
 /** Puts the human on (x, y) and holds them there for `n` ticks (no intents). */
-export function standOn(state: GameState, x: number, y: number, n: number, sink: SimEvent[] = []): SimEvent[] {
+export function standOn(
+  state: GameState,
+  x: number,
+  y: number,
+  n: number,
+  sink: SimEvent[] = [],
+): SimEvent[] {
   put(state, 0, x, y);
   return advance(state, n, {}, sink);
 }
 
-export const of = <T extends SimEvent['type']>(events: SimEvent[], type: T): Extract<SimEvent, { type: T }>[] =>
+export const of = <T extends SimEvent['type']>(
+  events: SimEvent[],
+  type: T,
+): Extract<SimEvent, { type: T }>[] =>
   events.filter((e): e is Extract<SimEvent, { type: T }> => e.type === type);
 
-export function makeBots(state: GameState, levels: 'standard' | 'rookie' = 'standard', seed = 11): Record<number, Bot> {
+export function makeBots(
+  state: GameState,
+  levels: 'standard' | 'rookie' = 'standard',
+  seed = 11,
+): Record<number, Bot> {
   const bots: Record<number, Bot> = {};
   state.players.forEach((p) => {
     if (p.isBot) bots[p.id] = createBot({ difficulty: levels, seed: seed * 31 + p.id, playerId: p.id });
@@ -174,7 +188,8 @@ export function dangerTiles(state: GameState): Set<number> {
   for (const f of state.flames) out.add(f.y * state.width + f.x);
   for (const g of state.generators) {
     // a live generator: its own cross and disc is not worth modelling, stay a few tiles away
-    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) out.add((g.y + dy) * state.width + g.x + dx);
+    for (let dy = -3; dy <= 3; dy++)
+      for (let dx = -3; dx <= 3; dx++) out.add((g.y + dy) * state.width + g.x + dx);
   }
   return out;
 }

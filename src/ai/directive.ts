@@ -26,7 +26,7 @@ export const FLEE_WEIGHT = 0.45;
 export const FLEE_CAP = 14;
 const HUNT_FAR = 999;
 
-let queue: number[] = [];
+const queue: number[] = [];
 let inQueue = new Uint8Array(0);
 
 /** Replaces the hunt field with the walking distance to `tile` (same costs as the rival hunt field). */
@@ -79,7 +79,9 @@ export function applyDirective(c: Ctx): void {
       c.huntWeight = -FLEE_WEIGHT;
       return;
     case 'guard': {
-      const intruder = world.rivals.some((r) => manhattanTiles(board, tile, r.y * board.width + r.x) <= radius + 2);
+      const intruder = world.rivals.some(
+        (r) => manhattanTiles(board, tile, r.y * board.width + r.x) <= radius + 2,
+      );
       if (!intruder) huntFromTile(c, tile);
       c.huntWeight = Math.max(c.huntWeight, DIRECTIVE_PULL);
       c.leash = { tile, radius };

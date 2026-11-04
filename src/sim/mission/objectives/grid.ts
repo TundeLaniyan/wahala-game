@@ -86,7 +86,8 @@ export const contingencyGrid: Objective = {
 
   nodeView(ctx, node) {
     const v = baseNodeView(node, ctx.pd.holdTicks);
-    if (v.state === 'idle' && ctx.m.sequence[ctx.m.seqIndex] === node.id) return { state: 'live', fraction: 0 };
+    if (v.state === 'idle' && ctx.m.sequence[ctx.m.seqIndex] === node.id)
+      return { state: 'live', fraction: 0 };
     return v;
   },
 

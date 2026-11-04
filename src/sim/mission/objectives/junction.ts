@@ -11,7 +11,16 @@
  */
 import { nextInt } from '../../rng';
 import { Tile } from '../../types';
-import { baseNodeView, completeNode, livingCrew, livingHuman, newNode, nodeDistance, onNode, resetNode } from '../ctx';
+import {
+  baseNodeView,
+  completeNode,
+  livingCrew,
+  livingHuman,
+  newNode,
+  nodeDistance,
+  onNode,
+  resetNode,
+} from '../ctx';
 import type { MissionCtx } from '../ctx';
 import { callStrike } from '../strikes';
 import type { MissionNodeRuntime } from '../types';

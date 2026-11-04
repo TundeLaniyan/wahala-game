@@ -32,8 +32,16 @@ describe('Oshodi dispatch relays: full playthrough', () => {
     expect(m.outcome?.result, JSON.stringify(missionView(state)?.progress)).toBe('won');
     expect(m.outcome!.defeat).toBe('eliminated');
     expect(m.outcome!.phasesCleared).toBe(3);
-    expect(of(events, 'missionPhase').filter((e) => e.change === 'cleared').map((e) => e.phase)).toEqual([0, 1, 2]);
-    expect(of(events, 'missionPhase').filter((e) => e.change === 'started').map((e) => e.phase)).toEqual([0, 1, 2]);
+    expect(
+      of(events, 'missionPhase')
+        .filter((e) => e.change === 'cleared')
+        .map((e) => e.phase),
+    ).toEqual([0, 1, 2]);
+    expect(
+      of(events, 'missionPhase')
+        .filter((e) => e.change === 'started')
+        .map((e) => e.phase),
+    ).toEqual([0, 1, 2]);
     expect(of(events, 'bossExposed')).toHaveLength(1);
     expect(of(events, 'bossDefeated')).toHaveLength(1);
     expect(of(events, 'bossDefeated')[0]).toMatchObject({ creditId: 0, defeat: 'eliminated' });
@@ -224,7 +232,12 @@ describe('Oshodi strikes: telegraphed, fair, credited to the boss', () => {
       [-1, 0],
     ] as const)
       state.tiles[(16 + dy) * state.width + 10 + dx] = 1;
-    const tiles = [16 * state.width + 10, 16 * state.width + 11, 16 * state.width + 12, 16 * state.width + 13];
+    const tiles = [
+      16 * state.width + 10,
+      16 * state.width + 11,
+      16 * state.width + 12,
+      16 * state.width + 13,
+    ];
     const spec = { kind: 'convoy' as const, tiles, source: 'r1', warnTicks: 150, activeTicks: 40 };
     // the way out is 4 tiles (40 ticks + input allowance): fine
     expect(callStrike(ctxOf(state), spec)).not.toBeNull();
@@ -271,7 +284,13 @@ describe('Oshodi strikes: telegraphed, fair, credited to the boss', () => {
     me.mounted = true;
     put(state, 0, 10, 16);
     const call = (): void => {
-      callStrike(ctxOf(state), { kind: 'convoy', tiles: areaTiles(state, me.x, me.y, 1), source: '', warnTicks: 150, activeTicks: 40 });
+      callStrike(ctxOf(state), {
+        kind: 'convoy',
+        tiles: areaTiles(state, me.x, me.y, 1),
+        source: '',
+        warnTicks: 150,
+        activeTicks: 40,
+      });
     };
     call();
     const first = advance(state, 200);

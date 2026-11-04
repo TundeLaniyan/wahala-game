@@ -31,7 +31,12 @@ export function allNodeTiles(def: MissionDef): [number, number][] {
 }
 
 /** The nearest open floor tile to (x, y) that is not claimed (rings of growing Manhattan distance, then row, then column). */
-export function snapToFloor(arena: ArenaDef, x: number, y: number, claimed: ReadonlySet<string>): [number, number] {
+export function snapToFloor(
+  arena: ArenaDef,
+  x: number,
+  y: number,
+  claimed: ReadonlySet<string>,
+): [number, number] {
   for (let r = 0; r < 12; r++) {
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {

@@ -12,7 +12,13 @@
  * | longBlackout     | lekki        | switch-off sequence one longer per phase                      |
  */
 import { ticks } from '../config';
-import { BASE_PHASE, CARRY_SLOW_TICKS, MIN_STRIKE_WARN_TICKS, MIN_TRAIN_WARN_TICKS, MISSION_DEFS } from './defs';
+import {
+  BASE_PHASE,
+  CARRY_SLOW_TICKS,
+  MIN_STRIKE_WARN_TICKS,
+  MIN_TRAIN_WARN_TICKS,
+  MISSION_DEFS,
+} from './defs';
 import type { MissionDef } from './defs';
 import type { MissionModifierId, MissionSpec, MissionTuning, PhaseTuning } from './types';
 import { MODIFIER_FOR } from './types';
@@ -37,17 +43,23 @@ export function resolveTuning(def: MissionDef, spec: MissionSpec): MissionTuning
   const phases = def.phases.map((p): PhaseTuning => {
     const t: PhaseTuning = { ...BASE_PHASE, ...p, callout: p.callout };
     const nodeCount = p.nodes.length;
-    if (has('rushHourDispatch') && t.pulseTicks > 0) t.pulseTicks = Math.round(t.pulseTicks * MODIFIER_NUMBERS.rushHourDispatchPulse);
-    if (has('marketDay') && t.crewTicks > 0) t.crewTicks = Math.round(t.crewTicks * MODIFIER_NUMBERS.marketDayCrew);
+    if (has('rushHourDispatch') && t.pulseTicks > 0)
+      t.pulseTicks = Math.round(t.pulseTicks * MODIFIER_NUMBERS.rushHourDispatchPulse);
+    if (has('marketDay') && t.crewTicks > 0)
+      t.crewTicks = Math.round(t.crewTicks * MODIFIER_NUMBERS.marketDayCrew);
     if (has('tollSeason')) t.holdTicks = Math.round(t.holdTicks * MODIFIER_NUMBERS.tollSeasonHold);
-    if (has('expressTimetable') && t.openTicks > 0) t.openTicks = Math.round(t.openTicks * MODIFIER_NUMBERS.expressTimetableOpen);
+    if (has('expressTimetable') && t.openTicks > 0)
+      t.openTicks = Math.round(t.openTicks * MODIFIER_NUMBERS.expressTimetableOpen);
     if (has('auditWeek')) t.goal = Math.min(t.goal + 1, nodeCount);
     if (has('longBlackout')) {
       t.sequence = Math.min(t.sequence + 1, nodeCount);
       t.goal = t.sequence;
     }
     // lethal telegraphs have floors (decision MS2): data and modifiers can never go below them
-    t.warnTicks = Math.max(t.warnTicks, def.objective === 'dispatchWindows' ? MIN_TRAIN_WARN_TICKS : MIN_STRIKE_WARN_TICKS);
+    t.warnTicks = Math.max(
+      t.warnTicks,
+      def.objective === 'dispatchWindows' ? MIN_TRAIN_WARN_TICKS : MIN_STRIKE_WARN_TICKS,
+    );
     return t;
   }) as MissionTuning['phases'];
   let limit = spec.timeLimitSec ?? def.timeLimitSec;
