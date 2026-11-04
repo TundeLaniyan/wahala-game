@@ -46,7 +46,6 @@ describe('campaign vertical slice: Oshodi, real runtime', () => {
   it('plays from the briefing to the defeated boss, clears the district and persists it', () => {
     const store = new MapStore();
     const human = new ScriptedHuman();
-    let match: MatchController;
     const input: InputPort = {
       navMode: false,
       pollDevices() {},
@@ -54,7 +53,7 @@ describe('campaign vertical slice: Oshodi, real runtime', () => {
       clear() {},
     };
     const idle: Bot = { decide: () => ({}) };
-    match = new MatchController({ renderer, input, botFactory: () => idle });
+    const match = new MatchController({ renderer, input, botFactory: () => idle });
     const campaign = new CampaignController({ store, host: match, now: () => 5_000, seed: () => 7 });
     campaign.load();
     campaign.startNew();
