@@ -253,7 +253,7 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
   return (
     <button
       type="button"
-      className={`abtn special${label.live ? '' : ' dim'}${label.icon && label.icon !== 'knockdown' ? ' vehicle' : ''}${label.icon === 'knockdown' ? ' knockdown' : ''}${holding ? ' holding' : ''}${pressed ? ' pressed' : ''}`}
+      className={`abtn special${label.live ? '' : ' dim'}${label.icon && label.icon !== 'knockdown' && label.icon !== 'localChampion' ? ' vehicle' : ''}${label.icon === 'knockdown' || label.icon === 'localChampion' ? ' knockdown' : ''}${holding ? ' holding' : ''}${pressed ? ' pressed' : ''}`}
       data-testid="btn-special"
       data-state={state}
       aria-disabled={!label.live || undefined}
@@ -282,6 +282,8 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
       <span>
         {label.icon === 'knockdown' ? (
           <StreakIcon kind="globalKnockdown" size={64} />
+        ) : label.icon === 'localChampion' ? (
+          <StreakIcon kind="localChampion" size={64} />
         ) : label.icon ? (
           <img src={pickupIconUrl(label.icon === 'generator' ? 'socket' : 'voucher', 64)} alt="" />
         ) : null}

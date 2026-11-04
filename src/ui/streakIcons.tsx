@@ -36,6 +36,15 @@ export function StreakIcon({ kind, size = 22 }: { kind: StreakRewardKind; size?:
           <path d="M16.5 12 H20 M4 12 H6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </>
       )}
+      {kind === 'localChampion' && (
+        <>
+          <path
+            d="M12 3 L14.2 8.2 L19.8 8.7 L15.6 12.4 L16.9 17.9 L12 15 L7.1 17.9 L8.4 12.4 L4.2 8.7 L9.8 8.2 Z"
+            fill="currentColor"
+          />
+          <path d="M5 21 H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </>
+      )}
       {kind === 'globalKnockdown' && (
         <>
           <path d="M5 3 H8 V7 L9.5 9 V16 H3.5 V9 L5 7 Z" fill="currentColor" transform="rotate(35 8 10)" />

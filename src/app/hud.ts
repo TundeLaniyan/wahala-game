@@ -91,6 +91,10 @@ export interface StreakHud {
   vehicleGenerator: VehicleKind | null;
   /** An unused GLOBAL KNOCKDOWN. */
   knockdown: boolean;
+  /** An unused LOCAL CHAMPION (granted by missions / the optional ladder switch; never on the default ladder). */
+  localChampion: boolean;
+  /** LOCAL CHAMPION running now: whole seconds left (null when it is not running). */
+  localChampionRunning: { seconds: number } | null;
   /** The next threshold of the loadout this streak has not reached yet (null once all are earned). */
   next: { kills: number; reward: StreakRewardKind; toGo: number } | null;
 }
@@ -257,6 +261,11 @@ function buildStreakHud(state: GameState, p: Readonly<Player>, active: number): 
         : null,
     vehicleGenerator: r.vehicleGenerator,
     knockdown: r.knockdown,
+    localChampion: r.localChampion,
+    localChampionRunning:
+      p.localChampion && p.localChampion.endTick > state.tick
+        ? { seconds: Math.ceil((p.localChampion.endTick - state.tick) / 60) }
+        : null,
     next: next ? { kills: next.kills, reward: next.reward, toGo: next.kills - p.stats.streak } : null,
   };
 }

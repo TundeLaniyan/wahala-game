@@ -13,10 +13,13 @@ import { StreakIcon } from './streakIcons';
 export function StreakStatus({ streak, alive = true }: { streak: StreakHud | null; alive?: boolean }) {
   if (!streak) return null;
   // while down only the STORED QUICK HANDS card shows (the other rewards wait unused; nothing can be spent)
-  const live = alive ? streak : { ...streak, vehicleGenerator: null, knockdown: false, next: null };
-  const { vehicleGenerator, knockdown, next } = live;
+  const live = alive
+    ? streak
+    : { ...streak, vehicleGenerator: null, knockdown: false, localChampion: false, next: null };
+  const { vehicleGenerator, knockdown, localChampion, next } = live;
+  const champRun = streak.localChampionRunning;
   const hands = quickHandsCard(streak, alive);
-  if (!hands && !vehicleGenerator && !knockdown && !next) return null;
+  if (!hands && !vehicleGenerator && !knockdown && !localChampion && !champRun && !next) return null;
   return (
     <div className="streak-status" data-testid="streak-status">
       {hands && (
@@ -64,7 +67,23 @@ export function StreakStatus({ streak, alive = true }: { streak: StreakHud | nul
           <small className="streak-sub">tap KNOCKDOWN</small>
         </div>
       )}
-      {next && !hands && !vehicleGenerator && !knockdown && (
+      {localChampion && (
+        <div className="streak-card ready" data-testid="streak-local-champion">
+          <StreakIcon kind="localChampion" />
+          <span className="streak-name">{STREAK_REWARD_DEFS.localChampion.short}</span>
+          <b className="streak-time">READY</b>
+          <small className="streak-sub">tap LOCAL CHAMP · dodgeable</small>
+        </div>
+      )}
+      {champRun && (
+        <div className="streak-card active" data-testid="streak-local-champion-running">
+          <StreakIcon kind="localChampion" />
+          <span className="streak-name">{STREAK_REWARD_DEFS.localChampion.short}</span>
+          <b className="streak-time">{champRun.seconds}s</b>
+          <small className="streak-sub">neighbours are throwing</small>
+        </div>
+      )}
+      {next && !hands && !vehicleGenerator && !knockdown && !localChampion && (
         <div className="streak-card next" data-testid="streak-next">
           <StreakIcon kind={next.reward} size={18} />
           <span className="streak-name">{STREAK_REWARD_DEFS[next.reward].short}</span>

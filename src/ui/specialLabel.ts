@@ -2,7 +2,7 @@ import { SKILL_DEFS, VEHICLE_DEFS } from '../sim';
 import type { HudMe } from '../app/hud';
 
 /** What button B does right now: its label (the position and look never change). */
-export type SpecialIcon = 'voucher' | 'generator' | 'knockdown';
+export type SpecialIcon = 'voucher' | 'generator' | 'knockdown' | 'localChampion';
 
 export function specialLabel(
   me: HudMe,
@@ -19,6 +19,7 @@ export function specialLabel(
       sub: '+ GENERATOR',
     };
   if (me.special === 'globalKnockdown') return { text: 'KNOCKDOWN', icon: 'knockdown', live: true };
+  if (me.special === 'localChampion') return { text: 'LOCAL CHAMP', icon: 'localChampion', live: true };
   const label = SKILL_DEFS[skill as keyof typeof SKILL_DEFS]?.label ?? skill.toUpperCase();
   if (me.special === 'melee') return { text: label, icon: null, live: me.skillReady };
   return { text: label, icon: null, live: false };
