@@ -10,6 +10,9 @@
  * - a FREIGHT SIDING on the east side: a rake of grain and container wagons beside the commuter viaduct;
  * - the MARKET EDGE: a sea of trader umbrellas and low stalls beyond the west edge.
  *
+ * Map identity anchors (docs/MAP_IDENTITY.md): `oshodi-terminal-canopy` (the open interchange terminals) and `oshodi-skywalk`
+ * (the truss skywalk).
+ *
  * Boards say only plain terminal wording ("TERMINAL 2", "TERMINAL 3", "BUS BAYS"); no real brand, bank, telco,
  * operator or logo. Everything goes into `ctx.statics` (baked into a few merged meshes), so the extra pieces
  * cost triangles, not draw calls.

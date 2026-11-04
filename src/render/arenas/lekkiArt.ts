@@ -8,7 +8,6 @@
  */
 import type { ArenaLook } from '../arenaLook';
 import { timeOfDay } from '../timeOfDay';
-import { box, mat } from '../assets/helpers';
 import type { ArenaSet, SetContext } from './common';
 import { STREET } from './common';
 import type { FloorDrawer } from './floorKit';
@@ -16,14 +15,15 @@ import { T } from './floorKit';
 import type { CoverFactory } from './boardCover';
 import { communityCover } from './community/factory';
 import { building, kiosk, lockup, shop, stall } from './community/families';
-import type { Family, Theme } from './community/kit';
+import type { CK, Family, Theme } from './community/kit';
 import { board, box as cbox, cyl as ccyl, drum, pick } from './community/kit';
 import { communityFloor } from './community/floor';
 import { communityEnv } from './community/env';
 import { nightLookOf } from './community/looks';
 import { edgeStalls, streetLife, lampPost, skyline } from './community/setKit';
-import { streetPlane, umbrella as setUmbrella } from './oshodiKit';
-import { layoutOf, mouthTraffic, tileWorld } from './rumbleV2Kit';
+import { streetPlane } from './oshodiKit';
+import { linkBridge } from './lekkiBridge';
+import { floorWords, layoutOf, mouthTraffic, tileWorld } from './rumbleV2Kit';
 import type { StageEnvironment } from '../env/types';
 
 const ID = 'rumbleLekki';
@@ -300,17 +300,142 @@ const sportsClub: Family = (k, g, r, n) => {
   void n;
 };
 
+/**
+ * The north perimeter along the promenade: a low quay apron with a railing, ring buoys and lamp standards, so the lagoon and
+ * the link bridge are open to the camera (the tall blocks stay behind the sports club). Solid tiles as before.
+ */
+const seawall: Family = (k, g, r, n) => {
+  const nz = k.wz(r.y) - 0.5;
+  cbox(k, g, k.concrete, r.w, 0.55, r.h, r.cx, 0, r.cz, 0xb8b2a2);
+  cbox(k, g, k.concrete, r.w, 0.12, 0.34, r.cx, 0.55, nz + 0.2, 0xe0dccc); // the coping
+  for (let x = r.x; x < r.x + r.w; x += 2)
+    ccyl(k, g, k.metal, 0.03, 0.03, 0.55, k.wx(x), 0.67, nz + 0.2, 0xe8e8e0, 5);
+  cbox(k, g, k.metal, r.w, 0.05, 0.05, r.cx, 1.18, nz + 0.2, 0xe8e8e0); // the rail
+  for (let x = r.x + 1; x < r.x + r.w; x += 4) {
+    ccyl(k, g, k.metal, 0.05, 0.07, 2.4, k.wx(x), 0.55, nz + 0.2, 0x3a3c40, 6);
+    cbox(k, g, k.glow, 0.3, 0.12, 0.3, k.wx(x), 2.95, nz + 0.2, 0xffe4ae); // lamp head
+  }
+  // the bridge's name plate on the seawall face, in front of the pylon (anchor lekki-link-bridge, read ahead of the player)
+  if (r.x === 16 || r.x === 24)
+    board(
+      k,
+      g,
+      k.atlas.board('bridgeplate', 256, 40, {
+        bg: '#14509a',
+        fg: '#ffffff',
+        lines: [['LAGOON LINK BRIDGE', 24]],
+        border: '#ffffff',
+      }),
+      2.2,
+      0.34,
+      r.cx,
+      0.3,
+      k.wz(r.y1) + 0.5 + 0.03,
+    );
+  void n;
+};
+
+/** Lekki's perimeter: the promenade side is the seawall, the rest are ordinary tall blocks. */
+const perimeter: Family = (k, g, r, n) =>
+  r.y === 0 && r.x < 40 ? seawall(k, g, r, n) : building(k, g, r, n);
+
+/**
+ * The plaza fountain (anchor lekki-lit-plaza): the two kiosk tiles in the middle of the paved plaza, on the axis of the
+ * boulevard, are drawn as a lit fountain: stone basin, glowing water, a tiered column with jets, a ring of warm lights and
+ * four lamp standards. Other kiosks stay kiosks.
+ */
+const fountainOrKiosk: Family = (k, g, r, n) => {
+  if (!(r.y >= 5 && r.y <= 9 && r.x >= 19 && r.x <= 26)) return kiosk(k, g, r, n);
+  const x = r.cx;
+  const z = r.cz;
+  ccyl(k, g, k.concrete, 1.5, 1.6, 0.14, x, 0, z, 0xd8d2c0, 16); // paved apron
+  ccyl(k, g, k.concrete, 1.25, 1.3, 0.62, x, 0.1, z, 0xe8e4d8, 16); // basin wall
+  ccyl(k, g, k.glow, 1.12, 1.12, 0.05, x, 0.68, z, 0x5ac8e8, 16); // lit water
+  ccyl(k, g, k.concrete, 0.2, 0.34, 1.5, x, 0.7, z, 0xe8e4d8, 8); // column
+  ccyl(k, g, k.concrete, 0.7, 0.25, 0.3, x, 1.9, z, 0xe8e4d8, 12); // upper bowl
+  ccyl(k, g, k.glow, 0.55, 0.55, 0.04, x, 2.18, z, 0x9adcf0, 12);
+  ccyl(k, g, k.glow, 0.06, 0.06, 1.0, x, 2.2, z, 0xd8f4ff, 6); // the central jet
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    ccyl(
+      k,
+      g,
+      k.glow,
+      0.03,
+      0.03,
+      0.95,
+      x + Math.cos(a) * 0.62,
+      1.2,
+      z + Math.sin(a) * 0.62,
+      0xbfe8f8,
+      4,
+      Math.sin(a) * 0.5,
+      -Math.cos(a) * 0.5,
+    );
+  }
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    cbox(k, g, k.glow, 0.17, 0.17, 0.17, x + Math.cos(a) * 1.28, 0.62, z + Math.sin(a) * 1.28, 0xffe9a0); // ring of lights
+  }
+  for (const sx of [-1, 1])
+    for (const sz of [-1, 1]) {
+      ccyl(k, g, k.metal, 0.05, 0.07, 2.0, x + sx * 1.75, 0, z + sz * 1.0, 0x3a3c40, 6);
+      cbox(k, g, k.glow, 0.3, 0.3, 0.3, x + sx * 1.75, 2.0, z + sz * 1.0, 0xfff0c0);
+    }
+  board(
+    k,
+    g,
+    k.atlas.board('plaza', 256, 40, {
+      bg: '#16304e',
+      fg: '#e8e0c8',
+      lines: [['ADMIRALTY PLAZA', 24]],
+      border: '#e8e0c8',
+    }),
+    1.7,
+    0.3,
+    x,
+    0.3,
+    z + 1.33,
+    0,
+    -0.35,
+  );
+};
+
+/** A south-facing blade street-name plate (a public street name, nothing else) on a bracket over the road edge. */
+function streetPlate(k: CK, g: number, x: number, z: number): void {
+  const uv = k.atlas.board('admiralty-way', 256, 56, {
+    bg: '#14509a',
+    fg: '#ffffff',
+    lines: [['ADMIRALTY WAY', 28]],
+    border: '#ffffff',
+  });
+  cbox(k, g, k.metal, 0.06, 0.06, 0.5, x, 2.55, z + 0.25, 0x3a3c40);
+  board(k, g, uv, 2.0, 0.44, x, 2.5, z + 0.5);
+}
+
+/** Wraps a family: blade plates at the corners that flank the boulevard (x 20-23), facing the camera. */
+function withPlates(f: Family): Family {
+  return (k, g, r, n) => {
+    f(k, g, r, n);
+    if (r.y < 9 || r.y > 24) return;
+    const zf = k.wz(r.y1) + 0.5;
+    if (r.x1 === 19)
+      streetPlate(k, g, k.wx(19) + 0.6, zf); // anchor: lekki-admiralty-way
+    else if (r.x === 24) streetPlate(k, g, k.wx(24) - 0.6, zf);
+  };
+}
+
 const FAMILIES: Record<string, Family> = {
-  building,
+  building: perimeter,
   shop,
   lockup,
-  kiosk,
+  kiosk: fountainOrKiosk,
   stall,
-  glassBlock,
-  compoundWall,
-  villa,
+  glassBlock: withPlates(glassBlock),
+  compoundWall: withPlates(compoundWall),
+  villa: withPlates(villa),
   artsShed,
-  hoarding,
+  hoarding: withPlates(hoarding),
   palm,
   fuelCanopy,
   sportsClub,
@@ -340,7 +465,8 @@ export const RUMBLE_LEKKI_COVER: CoverFactory = communityCover({
 export const RUMBLE_LEKKI_LOOK: ArenaLook = {
   // clear coastal afternoon: warm low sun, bluer haze over the lagoon, sharp shadows under the villa balconies
   sky: 0x9ab8cc,
-  fog: { color: 0xa8c0cc, near: 36, far: 126 },
+  // the lagoon bridge must stay readable in the whole-board view: the haze starts far behind it (map identity)
+  fog: { color: 0xa8c0cc, near: 84, far: 300 },
   sun: { color: 0xffe6c0, intensity: 4.6, position: [-9, 21, 11] },
   hemi: { sky: 0xdce8f0, ground: 0x7a7060, intensity: 1.42 },
   envIntensity: 0.62,
@@ -393,6 +519,33 @@ export const RUMBLE_LEKKI_FLOOR: FloorDrawer = communityFloor(ID, {
     g.stroke();
     g.fillStyle = 'rgba(40,36,30,0.55)';
     for (let x = 4; x < 36; x += 6) g.fillRect(x * T + 30, 3 * T + 96, 60, 14); // the drainage gutter along the lagoon wall
+    // the plaza medallion round the fountain (anchor lekki-lit-plaza): paving rings and a ring of inlaid warm lights
+    const mx = 23 * T;
+    const my = 7.5 * T;
+    const ring = (rad: number, col: string, lw: number): void => {
+      g.strokeStyle = col;
+      g.lineWidth = lw;
+      g.beginPath();
+      g.arc(mx, my, rad * T, 0, Math.PI * 2);
+      g.stroke();
+    };
+    g.fillStyle = 'rgba(70,92,120,0.35)';
+    g.beginPath();
+    g.arc(mx, my, 3.3 * T, 0, Math.PI * 2);
+    g.fill();
+    ring(3.3, 'rgba(240,226,180,0.9)', 14);
+    ring(2.6, 'rgba(34,50,78,0.8)', 26);
+    ring(1.95, 'rgba(240,226,180,0.85)', 10);
+    g.fillStyle = 'rgba(255,226,140,0.95)';
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      g.beginPath();
+      g.arc(mx + Math.cos(a) * 3.0 * T, my + Math.sin(a) * 3.0 * T, 7, 0, Math.PI * 2);
+      g.fill();
+    }
+    // the boulevard's name, painted along the lanes (anchor lekki-admiralty-way): read from the south
+    for (const yy of [12.5, 25.5])
+      floorWords(g, 'ADMIRALTY WAY', 21.5, yy, 0.62, 'rgba(240,238,222,0.82)', -Math.PI / 2);
   },
 });
 
@@ -407,9 +560,9 @@ function build(ctx: SetContext): void {
   streetPlane(
     ctx,
     'cr:lekki:lagoon',
-    { x: 0, z: north - 32, w: W + 120, d: 60, ppm: 4, y: STREET - 0.14 },
+    { x: 0, z: north - 30.2, w: W + 120, d: 60, ppm: 4, y: STREET + 0.02 },
     (g, _px, s, r) => {
-      g.fillStyle = '#4a7a8a';
+      g.fillStyle = '#6fb0cc';
       g.fillRect(0, 0, 9999, 9999);
       for (let i = 0; i < 700; i++) {
         g.fillStyle = r() < 0.5 ? 'rgba(210,236,246,0.2)' : 'rgba(20,50,64,0.22)';
@@ -417,25 +570,8 @@ function build(ctx: SetContext): void {
       }
     },
   );
-  ctx.statics.add(box(W + 120, 0.7, 0.6, mat(0xa8a090, { roughness: 1 }), 0, STREET - 0.1, north - 1.3));
-  const px = wx(10);
-  const pz = north - 15;
-  const white = mat(0xe8e8e2, { roughness: 0.6 });
-  ctx.statics.add(box(60, 0.8, 4, mat(0x8a8e92, { roughness: 0.7 }), px + 10, 5.6, pz + 3)); // the bridge deck
-  for (const dx of [-0.9, 0.9]) ctx.statics.add(box(0.7, 26, 1.4, white, px + dx, 6 + 13, pz + 3));
-  ctx.statics.add(box(2.6, 0.9, 1.4, white, px, 6 + 14, pz + 3));
-  ctx.statics.add(box(2.6, 0.9, 1.4, white, px, 6 + 9, pz + 3));
-  // radiating stay cables: thin bars from the pylon head to the deck, both ways
-  for (let i = 0; i < 9; i++) {
-    const run = 6 + i * 3.6;
-    const len = Math.hypot(run, 12);
-    for (const sgn of [-1, 1]) {
-      const bar = box(0.06, 0.06, len, mat(0xcfcfca), px + sgn * (run / 2 + 0.9), 6 + 14 - 6 + 0.4, pz + 3);
-      bar.rotation.y = sgn > 0 ? -Math.atan2(12, run) + Math.PI / 2 : Math.atan2(12, run) - Math.PI / 2;
-      bar.rotation.order = 'YXZ';
-      ctx.statics.add(bar);
-    }
-  }
+  // the link bridge hugs the seawall (lekkiBridge.ts), its pylon on the axis of Admiralty Way and the plaza
+  linkBridge(ctx, { px: wx(22.5), z: north - 2.4, half: W / 2 + 60 });
 
   skyline(ctx, tod, {
     edge: 'east',
@@ -463,10 +599,6 @@ function build(ctx: SetContext): void {
 
   // lamp posts and palms along the promenade, parked cars and dispatch bikes at the expressway mouths
   for (const x of [-W / 2 - 4, W / 2 + 4]) lampPost(ctx, x, wz(24), Math.PI / 2, 0xffe0b0);
-  const tarp = THEME.tarps.map((c) => mat(c, { roughness: 0.88 }));
-  [-26, -12, 8, 22].forEach((x, i) =>
-    setUmbrella(ctx, x, north - 2.4, 0.95, tarp[i % 5]!, tarp[(i + 2) % 5]!, { h: 1.95 }),
-  );
   ctx.vehicles('okada', [
     { x: -W / 2 - 1.6, y: STREET, z: wz(22), ry: 0.4 },
     { x: W / 2 + 1.6, y: STREET, z: wz(8), ry: -0.4 },
@@ -474,7 +606,7 @@ function build(ctx: SetContext): void {
   mouthTraffic(ctx, layoutOf(ID), { kinds: ['taxi', 'danfo', 'taxi', 'keke'], depth: 3 });
   const streetGap = (z: number): boolean => z > wz(17.5) && z < wz(35);
   edgeStalls(ctx, {
-    north: true,
+    north: false, // the north side is the lagoon and its bridge
     east: true,
     west: true,
     goods: ['provisions', 'basins', 'cloth'],

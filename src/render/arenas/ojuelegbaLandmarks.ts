@@ -12,6 +12,9 @@
  *   guardhouse, a small examinations-office block and, beyond them, floodlight masts and the far rim of a
  *   stadium bowl. A backdrop only: nothing there is playable.
  *
+ * Map identity anchors (docs/MAP_IDENTITY.md, src/render/arenas/anchors.ts): `ojuelegba-flyover` (flyover),
+ * `ojuelegba-link-bridges` (linkBridge), `ojuelegba-direction-gantry` (the green gantry on the flyover).
+ *
  * Boards say place names only (Lagos places; the barracks and office are plain lettering, no crest or logo);
  * every other name is fictional. Static pieces go into `ctx.statics` (baked into a few merged meshes);
  * textures are cached canvases. Without a DOM (tests) the boards are left out.

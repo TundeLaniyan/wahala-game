@@ -13,6 +13,9 @@
  * - the skyline: a row of towers of different heights with window grids and red mast lights;
  * - the Cappa Ground's floodlight masts on the east side (lit at night, a soft glow by day).
  *
+ * Map identity anchor (docs/MAP_IDENTITY.md): `oshodi-expressway` (expressway below; the terminal canopy and the skywalk are
+ * `oshodi-terminal-canopy` / `oshodi-skywalk` in oshodiMetroTerminal.ts).
+ *
  * Boards say place names and plain station / terminal wording only; every other name is fictional and no real
  * brand, bank, telco, operator or logo appears. Static pieces go into `ctx.statics` (baked into a few merged
  * meshes); textures are cached canvases, and without a DOM (tests) the boards are left out.

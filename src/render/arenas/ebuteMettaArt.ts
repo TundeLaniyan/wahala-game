@@ -172,20 +172,25 @@ const stationHall: Family = (k, g, r, n) => {
   );
   for (let x = r.x; x < r.x + r.w; x += 2)
     ccyl(k, g, k.paint, 0.1, 0.1, H, k.wx(x) + 0.5, 0, zf + 0.7, 0xd0d4d6, 6);
+  // anchor: ebute-station-sign. The name plate hangs low on the hall front (2.0-2.7 m: the follow camera shows a facade's
+  // lowest ~2.5 m ahead of the player), large, white on green, with a second line for the district.
   board(
     k,
     g,
-    k.atlas.board('stn', 256, 40, {
+    k.atlas.board('stn', 384, 96, {
       bg: '#1d6a40',
       fg: '#f6f2e4',
-      lines: [['EBUTE-METTA STATION', 24]],
+      lines: [
+        ['EBUTE-METTA', 44],
+        ['STATION  •  PLATFORMS 1-4', 18],
+      ],
       border: '#f6f2e4',
     }),
-    Math.min(4, r.w - 0.4),
-    0.5,
+    Math.min(4.6, r.w + 0.6),
+    0.92,
     r.cx,
-    H - 0.5,
-    zf + 0.08,
+    2.35,
+    zf + 0.1,
   );
   void n;
 };
@@ -198,15 +203,54 @@ const portal: Family = (k, g, r) => {
   cbox(k, g, k.paint, r.w - 0.5, 2.2, 0.06, r.cx, 0.05, zf, 0x14181c);
   cbox(k, g, k.paint, r.w - 0.3, 0.3, 0.1, r.cx, 2.3, zf + (north ? 0.03 : -0.03), 0xa8a49a);
   cbox(k, g, k.paint, r.w - 0.7, 0.3, 0.05, r.cx, 3.25, zf + (north ? 0.05 : -0.05), 0xe0b020);
+  // anchor: ebute-signal-gantry. A steel signal gantry on the abutment roof: two masts, a beam, three colour-light heads
+  // (red, amber, green) facing the tracks. The face-mounted double lamp is the part the follow camera can see.
+  const dir = north ? 1 : -1;
+  for (const sgn of [-1, 1]) ccyl(k, g, k.metal, 0.07, 0.09, 2.6, r.cx + sgn * 0.85, 3.2, r.cz, 0xb8bcc0, 6);
+  cbox(k, g, k.metal, 2.3, 0.14, 0.18, r.cx, 5.7, r.cz + dir * 0.1, 0xb8bcc0);
+  const heads: [number, number][] = [
+    [-0.7, 0xff3a2a],
+    [0, 0xffb020],
+    [0.7, 0x3aff5a],
+  ];
+  for (const [dx, col] of heads) {
+    cbox(k, g, k.paint, 0.36, 0.7, 0.26, r.cx + dx, 4.95, r.cz + dir * 0.2, 0x16181a);
+    for (const face of [-1, 1])
+      cbox(k, g, k.glow, 0.2, 0.2, 0.05, r.cx + dx, 5.3, r.cz + dir * 0.2 + face * 0.15, col); // lit on both faces
+  }
+  for (const [dx, col] of [
+    [-0.45, 0xff3a2a],
+    [0.45, 0x3aff5a],
+  ] as const) {
+    cbox(k, g, k.paint, 0.3, 0.62, 0.12, r.cx + dx, 2.62, zf + dir * 0.1, 0x16181a); // face-mounted lamp box over the arch
+    cbox(k, g, k.glow, 0.17, 0.17, 0.04, r.cx + dx, 3.0, zf + dir * 0.17, col);
+    cbox(k, g, k.glow, 0.17, 0.17, 0.04, r.cx + dx, 2.7, zf + dir * 0.17, 0xffb020);
+  }
 };
 
 /** A platform canopy post with its roof slab over the platform. */
 const platformPost: Family = (k, g, r) => {
   ccyl(k, g, k.metal, 0.08, 0.08, 3.0, r.cx, 0, r.cz, 0x4a4e52, 6);
   cbox(k, g, k.paint, 2.4, 0.12, 1.4, r.cx + (r.x < 27 ? 0.6 : -0.6), 3.0, r.cz, 0xd8dcda);
+  // the platform name sign (anchor: ebute-station-sign): blue-and-white board facing the camera
+  board(
+    k,
+    g,
+    k.atlas.board('platform-name', 256, 48, {
+      bg: '#1d4f8a',
+      fg: '#ffffff',
+      lines: [['EBUTE-METTA', 28]],
+      border: '#ffffff',
+    }),
+    1.5,
+    0.3,
+    r.cx,
+    2.1,
+    r.cz + 0.12,
+  );
 };
 
-/** Freight wagons on a siding: boxcars in rust brown and faded blue on black bogies. */
+/** Freight wagons on a siding (anchor: ebute-rail-yard with the ballasted tracks between solid portals and the yard cabin): boxcars in rust brown and faded blue on black bogies. */
 const wagon: Family = (k, g, r, n) => {
   for (let j = 0; j < r.h; j++)
     for (let i = 0; i < r.w; i += 4) {
@@ -235,6 +279,26 @@ const cabin: Family = (k, g, r, n) => {
   cbox(k, g, k.concrete, r.w - 0.2, 2.4, r.h - 0.2, r.cx, 0, r.cz, 0xa05a3a);
   cbox(k, g, k.glow, r.w - 0.8, 0.5, 0.05, r.cx, 1.4, zf, 0xe6c880);
   cbox(k, g, k.zinc, r.w + 0.2, 0.06, r.h + 0.3, r.cx, 2.4, r.cz, 0x7a8a8e, 0, -0.1);
+  // anchor: ebute-rail-yard. The yard's signal cabin carries its board and a semaphore signal mast beside the track.
+  board(
+    k,
+    g,
+    k.atlas.board('cabin', 256, 40, {
+      bg: '#e8e0c8',
+      fg: '#7a1e1e',
+      lines: [['YARD CABIN  •  KEEP CLEAR', 18]],
+      border: '#7a1e1e',
+    }),
+    Math.min(2.0, r.w),
+    0.3,
+    r.cx,
+    2.0,
+    zf + 0.05,
+  );
+  const mx = k.wx(r.x + r.w - 1) + 0.35;
+  ccyl(k, g, k.metal, 0.06, 0.08, 4.0, mx, 0, zf - 0.1, 0x4a4e52, 6);
+  cbox(k, g, k.paint, 1.0, 0.18, 0.05, mx + 0.4, 3.9, zf - 0.1, 0xc83a2a, 0, 0, -0.35); // semaphore arm
+  cbox(k, g, k.glow, 0.18, 0.18, 0.05, mx, 4.1, zf, 0xff3a2a);
   void n;
 };
 
@@ -390,7 +454,7 @@ export const RUMBLE_EBUTE_METTA_COVER: CoverFactory = communityCover({
 export const RUMBLE_EBUTE_METTA_LOOK: ArenaLook = {
   // warm hazy afternoon over rail steel, old brick and the lagoon: long shadows, a copper cast in the haze
   sky: 0xb0a48c,
-  fog: { color: 0xa89c84, near: 34, far: 118 },
+  fog: { color: 0xa89c84, near: 62, far: 220 },
   sun: { color: 0xffd8a8, intensity: 4.4, position: [-9, 21, 12] },
   hemi: { sky: 0xe4d6bc, ground: 0x6a5a48, intensity: 1.4 },
   envIntensity: 0.55,
