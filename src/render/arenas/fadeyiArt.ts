@@ -101,8 +101,8 @@ const bankBlock: Family = (k, g, r, n) => {
       cbox(k, g, k.glow, 1.1, 0.7, 0.05, k.wx(x) + 0.5, 1.1 + f * 1.9, zf + 0.02, 0x9cc4e0);
     }
   cbox(k, g, k.metal, r.w, 0.4, 0.04, r.cx, 0.35, zf + 0.5, 0x3a3e42);
-  // anchor: fadeyi-bank-frontage. A columned portico with steps and its name board at street height (the follow camera
-  // only sees the lowest ~2.5 m of a facade ahead of the player), under a pediment slab.
+  // anchor: fadeyi-bank-frontage. A columned portico with steps; its name board hangs on the front of the entablature (a board
+  // on the wall behind the columns is hidden by the portico roof from the camera's 41 degrees).
   const pw = Math.min(r.w - 1, 6);
   cbox(k, g, k.concrete, pw + 0.6, 0.3, 1.2, r.cx, 0, zf + 0.9, 0xd8d4c6); // the steps
   cbox(k, g, k.concrete, pw + 0.4, 0.16, 1.1, r.cx, 0.3, zf + 0.9, 0xe4e0d2);
@@ -119,11 +119,11 @@ const bankBlock: Family = (k, g, r, n) => {
       lines: [['LAGOON TRUST FINANCE', 26]],
       border: '#16457a',
     }),
-    Math.min(4.6, pw - 0.2),
+    Math.min(4.8, pw),
     0.5,
     r.cx,
-    2.38,
-    zf + 0.06,
+    2.68,
+    zf + 1.58,
   );
   void n;
 };

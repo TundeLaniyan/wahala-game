@@ -27,12 +27,12 @@ export const SHOTS = {
   ],
   rumbleMushin: [
     ['follow-redline', 28, 4],
-    ['follow-footbridge', 1, 17],
+    ['follow-footbridge', 0, 17],
     ['follow-idioro', 26, 28],
     ['whole', 'whole'],
   ],
   rumbleFadeyi: [
-    ['follow-footbridge', 48, 11],
+    ['follow-footbridge', 48, 16],
     ['follow-brt', 11, 14],
     ['follow-bank', 27, 29],
     ['whole', 'whole'],
@@ -52,7 +52,7 @@ export const SHOTS = {
   rumbleEbuteMetta: [
     ['follow-station', 31, 17],
     ['follow-yard', 28, 23],
-    ['follow-gantry', 23, 5],
+    ['follow-gantry', 25, 3],
     ['whole', 'whole'],
   ],
 };
@@ -138,10 +138,10 @@ for (const id of ids) {
         const s = window.__WAHALA__.getState();
         return { w: s.width, h: s.height };
       });
-      const z = id === 'rumbleOshodi' ? 11 : 5.4 * Math.max(dims.w / 41, dims.h / 31);
+      const z = id === 'rumbleOshodi' ? 11 : 5.9 * Math.max(dims.w / 41, dims.h / 31);
       await page.evaluate(
         ([z, o]) => window.__WAHALA__.renderer().debugInspect({ x: 0, z: o, zoom: z }),
-        [z, id === 'rumbleOshodi' ? -1 : -0.6],
+        [z, id === 'rumbleOshodi' ? -1 : -2.6],
       );
     } else {
       await page.evaluate(() => window.__WAHALA__.renderer().debugInspect(null));

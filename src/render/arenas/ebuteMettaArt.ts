@@ -206,8 +206,8 @@ const portal: Family = (k, g, r) => {
   // anchor: ebute-signal-gantry. A steel signal gantry on the abutment roof: two masts, a beam, three colour-light heads
   // (red, amber, green) facing the tracks. The face-mounted double lamp is the part the follow camera can see.
   const dir = north ? 1 : -1;
-  for (const sgn of [-1, 1]) ccyl(k, g, k.metal, 0.07, 0.09, 2.6, r.cx + sgn * 0.85, 3.2, r.cz, 0x4a4e52, 6);
-  cbox(k, g, k.metal, 2.3, 0.14, 0.18, r.cx, 5.7, r.cz + dir * 0.1, 0x4a4e52);
+  for (const sgn of [-1, 1]) ccyl(k, g, k.metal, 0.07, 0.09, 2.6, r.cx + sgn * 0.85, 3.2, r.cz, 0xb8bcc0, 6);
+  cbox(k, g, k.metal, 2.3, 0.14, 0.18, r.cx, 5.7, r.cz + dir * 0.1, 0xb8bcc0);
   const heads: [number, number][] = [
     [-0.7, 0xff3a2a],
     [0, 0xffb020],
@@ -215,7 +215,8 @@ const portal: Family = (k, g, r) => {
   ];
   for (const [dx, col] of heads) {
     cbox(k, g, k.paint, 0.36, 0.7, 0.26, r.cx + dx, 4.95, r.cz + dir * 0.2, 0x16181a);
-    cbox(k, g, k.glow, 0.2, 0.2, 0.05, r.cx + dx, 5.3, r.cz + dir * 0.35, col);
+    for (const face of [-1, 1])
+      cbox(k, g, k.glow, 0.2, 0.2, 0.05, r.cx + dx, 5.3, r.cz + dir * 0.2 + face * 0.15, col); // lit on both faces
   }
   for (const [dx, col] of [
     [-0.45, 0xff3a2a],

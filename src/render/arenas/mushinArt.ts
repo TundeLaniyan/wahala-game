@@ -464,7 +464,7 @@ function build(ctx: SetContext): void {
   // the west mouth, close to the board so the road mouth shows its stairs and deck (footbridge.ts)
   footbridge(ctx, {
     anchor: 'mushin-footbridge',
-    x: -W / 2 - 3.4,
+    x: -W / 2 - 2.9,
     z0: wz(15) - 0.6,
     z1: wz(20) + 0.6,
     deck: 4.0,

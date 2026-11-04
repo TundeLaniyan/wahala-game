@@ -560,9 +560,9 @@ function build(ctx: SetContext): void {
   streetPlane(
     ctx,
     'cr:lekki:lagoon',
-    { x: 0, z: north - 30.2, w: W + 120, d: 60, ppm: 4, y: STREET - 0.14 },
+    { x: 0, z: north - 30.2, w: W + 120, d: 60, ppm: 4, y: STREET + 0.02 },
     (g, _px, s, r) => {
-      g.fillStyle = '#5f9aae';
+      g.fillStyle = '#6fb0cc';
       g.fillRect(0, 0, 9999, 9999);
       for (let i = 0; i < 700; i++) {
         g.fillStyle = r() < 0.5 ? 'rgba(210,236,246,0.2)' : 'rgba(20,50,64,0.22)';
