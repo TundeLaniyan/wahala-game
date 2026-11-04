@@ -20,12 +20,13 @@ function HomeItem(props: {
   text: string;
   icon: string;
   flagship?: boolean;
+  campaign?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
-      className={`mn-home-item${props.flagship ? ' flagship' : ''}`}
+      className={`mn-home-item${props.flagship ? ' flagship' : ''}${props.campaign ? ' campaign' : ''}`}
       data-testid={props.testId}
       data-autofocus={props.flagship ? '' : undefined}
       onClick={props.onClick}
@@ -56,7 +57,10 @@ export function HomeScreen() {
   const campaign = useGameStore((st) => st.campaign);
   const progress = campaign?.started ? campaignProgress(campaign.save) : null;
   return (
-    <section className="mn-screen mn-screen-home" data-testid="menu-home">
+    <section
+      className={`mn-screen mn-screen-home${flags().campaign && campaign ? ' has-campaign' : ''}`}
+      data-testid="menu-home"
+    >
       <header className="mn-home-top">
         <span className="mn-pill">
           <i className="dot" /> Offline · You vs AI bots
@@ -98,6 +102,7 @@ export function HomeScreen() {
             {flags().campaign && campaign && (
               <HomeItem
                 testId="home-campaign"
+                campaign
                 icon="📖"
                 title="Campaign"
                 tag={progress ? `${progress.cleared} / ${progress.total}` : 'Story'}

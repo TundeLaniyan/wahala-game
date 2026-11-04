@@ -303,6 +303,22 @@ describe('campaign flow: new campaign -> prologue -> map -> briefing -> boss int
     expect(ui().active).toBeNull();
     expect(useGameStore.getState().screen).toBe('title');
   });
+
+  it('a failed start from the boss introduction returns to the briefing, where the notice shows', () => {
+    const { campaign } = rig(new MapStore(), {
+      buildMission: () => {
+        throw new Error('boom');
+      },
+    });
+    campaign.load();
+    campaign.startNew();
+    campaign.beginBriefing('oshodi');
+    campaign.startFromBriefing();
+    expect(screen()).toBe('bossIntro');
+    campaign.bossIntroDone();
+    expect(screen()).toBe('briefing');
+    expect(ui().notice).toContain('boom');
+  });
 });
 
 describe('finale and ending', () => {

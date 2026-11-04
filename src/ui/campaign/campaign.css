@@ -156,8 +156,8 @@
   bottom: 3%;
 }
 .cp-sea-b {
-  left: 40%;
-  bottom: 24%;
+  left: 24%;
+  bottom: 19%;
   transform: rotate(-26deg);
 }
 .cp-node {
@@ -680,6 +680,53 @@
 }
 @media (max-width: 700px) {
   .cp-fighter .mn-roster-text small {
+    display: none;
+  }
+}
+
+/* ---------- Home: the Campaign entry is one compact full-width row above the rest ---------- */
+.mn .mn-home-menu .mn-home-item.campaign {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  min-height: 56px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.mn .mn-home-menu .mn-home-item.campaign .mn-home-go {
+  display: block;
+}
+@media (max-width: 700px) {
+  .mn .mn-home-menu .mn-home-item.campaign {
+    min-height: 56px;
+    gap: 12px;
+  }
+  .mn .mn-home-menu .mn-home-item.campaign .mn-home-text small {
+    display: none;
+  }
+}
+/* portrait phones: the extra Campaign row is paid for by a slightly tighter logo and tiles */
+@media (max-width: 700px) and (min-height: 521px) {
+  .mn-screen-home.has-campaign .mn-logo b {
+    font-size: clamp(3.2rem, 17vw, 4.6rem);
+  }
+  .mn-screen-home.has-campaign .mn-home-main,
+  .mn-screen-home.has-campaign .mn-home-left {
+    gap: 10px;
+  }
+  .mn-screen-home.has-campaign .mn-home-menu .mn-home-item:not(.campaign) {
+    min-height: 76px;
+  }
+  .mn-screen-home.has-campaign .mn-home-menu .mn-home-item.flagship {
+    min-height: 82px;
+  }
+  .mn-screen-home.has-campaign .mn-home-card-art {
+    min-height: 150px;
+  }
+  .mn-screen-home.has-campaign .mn-home-card-body {
+    gap: 4px;
+  }
+  .mn-screen-home.has-campaign .mn-logo-kicker {
     display: none;
   }
 }

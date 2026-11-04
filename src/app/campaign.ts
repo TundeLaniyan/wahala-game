@@ -37,7 +37,7 @@ import type {
 } from '../sim';
 import { defaultDistrict, freshCampaignUi } from './campaignState';
 import type { CampaignUi, RewardSummary } from './campaignState';
-import { menuAt, openScreen, replaceScreen } from './menu';
+import { currentScreen, menuAt, openScreen, replaceScreen } from './menu';
 import type { MenuScreen } from './menu';
 import type { MissionHost } from './ports';
 import { patch, useGameStore } from './store';
@@ -314,6 +314,8 @@ export class CampaignController {
       });
       return true;
     } catch (error) {
+      // the boss introduction has no place to say so: go back to the briefing, which shows the notice
+      if (currentScreen(useGameStore.getState().menu) === 'bossIntro') this.setMenu(['campaign', 'briefing']);
       this.update({
         active: null,
         notice: `This mission could not start (${error instanceof Error ? error.message : 'unknown error'}).`,
