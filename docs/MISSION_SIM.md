@@ -51,12 +51,12 @@ Faction ids (strings; the content worker matches them in `src/campaign`):
 
 | Mission | `factionId` of boss and crew | Suggested `FactionKind` |
 | --- | --- | --- |
-| oshodi | `eko-dispatch-collective` | transportEnforcers |
-| mushin | `ladipo-parts-union` | marketCrew |
-| fadeyiSomolu | `brt-route-marshals` | routeMarshals |
-| ebuteMetta | `rail-yard-dispatch` | railDispatch |
-| lagosIsland | `island-audit-bureau` | officials |
-| lekki | `lekki-private-security` | securityContractors |
+| oshodi | `oritaWardens` | transportEnforcers |
+| mushin | `sparehandRunners` | marketCrew |
+| fadeyiSomolu | `koboMarshals` | routeMarshals |
+| ebuteMetta | `ironLaneSwitchmen` | railDispatch |
+| lagosIsland | `ledgerBureau` | officials |
+| lekki | `gatehouseGuard` | securityContractors |
 
 The human's seat has `factionId: 'player'`. Default boss and crew names are in `MISSION_DEFS` (e.g. "Oga Dispatch", "Mama Spare-Parts", "Marshal Toll", "Yard Master", "The Auditor", "Estate Controller") and are only labels: the campaign content may rename a seat's display name. Crew per mission: oshodi 6 (meleeGuard, rangedAttacker, blocker, 2 runners, escort), mushin 5 (3 runners, meleeGuard, blocker), fadeyi 5 (3 objectiveDefenders, meleeGuard, blocker), ebute 5 (2 objectiveDefenders, runner, blocker, supportUnit), lagos 5 (2 objectiveDefenders = auditors, meleeGuard, bossAssistant, supportUnit), lekki 6 (2 objectiveDefenders, rangedAttacker, meleeGuard, bossAssistant, escort). Total competitors 7-8 with the human and the boss (the `marketDay` modifier adds one runner to Mushin: 8). Crew bots play at `MissionSpec.difficulty` (default Rookie); the boss at that level but never below Standard.
 

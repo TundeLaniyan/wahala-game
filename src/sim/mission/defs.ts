@@ -69,12 +69,12 @@ export interface MissionDef {
 }
 
 export const FACTION_IDS = {
-  oshodi: 'eko-dispatch-collective',
-  mushin: 'ladipo-parts-union',
-  fadeyiSomolu: 'brt-route-marshals',
-  ebuteMetta: 'rail-yard-dispatch',
-  lagosIsland: 'island-audit-bureau',
-  lekki: 'lekki-private-security',
+  oshodi: 'oritaWardens',
+  mushin: 'sparehandRunners',
+  fadeyiSomolu: 'koboMarshals',
+  ebuteMetta: 'ironLaneSwitchmen',
+  lagosIsland: 'ledgerBureau',
+  lekki: 'gatehouseGuard',
 } as const satisfies Record<MissionId, string>;
 
 /** The human's seat in the faction map. */
@@ -141,7 +141,7 @@ const OSHODI: MissionDef = {
   exposeSec: 25,
   maxExposures: 3,
   reinforceMax: 3,
-  boss: { name: 'Oga Dispatch', characterId: 'lekkiBoy', post: [27, 12], radius: 3 },
+  boss: { name: 'Oga Sunmola', characterId: 'streetBaller', post: [27, 12], radius: 3 },
   crew: [
     { role: 'meleeGuard', name: 'Dispatch Marshal', post: [26, 13], radius: 3 },
     { role: 'rangedAttacker', name: 'Convoy Spotter', post: [29, 12] },
@@ -210,7 +210,7 @@ const MUSHIN: MissionDef = {
   exposeSec: 25,
   maxExposures: 3,
   reinforceMax: 3,
-  boss: { name: 'Mama Spare-Parts', characterId: 'campusQueen', post: [27, 31], radius: 3 },
+  boss: { name: 'Madam Ronke', characterId: 'campusQueen', post: [27, 31], radius: 3 },
   crew: [
     { role: 'runner', name: 'Market Runner', post: [20, 25] },
     { role: 'runner', name: 'Market Runner', post: [30, 10] },
@@ -279,7 +279,7 @@ const FADEYI: MissionDef = {
   exposeSec: 25,
   maxExposures: 3,
   reinforceMax: 3,
-  boss: { name: 'Marshal Toll', characterId: 'streetBaller', post: [35, 22], radius: 3 },
+  boss: { name: 'Marshal Kobo', characterId: 'lekkiBoy', post: [35, 22], radius: 3 },
   crew: [
     { role: 'objectiveDefender', name: 'Route Marshal', post: [11, 23], anchor: 0, radius: 3 },
     { role: 'objectiveDefender', name: 'Route Marshal', post: [26, 11], anchor: 1, radius: 3 },
@@ -346,7 +346,7 @@ const EBUTE: MissionDef = {
   exposeSec: 25,
   maxExposures: 3,
   reinforceMax: 3,
-  boss: { name: 'Yard Master', characterId: 'lekkiBoy', post: [30, 28], radius: 3 },
+  boss: { name: 'Ikenna Wayside', characterId: 'streetBaller', post: [30, 28], radius: 3 },
   crew: [
     { role: 'objectiveDefender', name: 'Signal Guard', post: [25, 13], anchor: 0, radius: 3 },
     { role: 'objectiveDefender', name: 'Signal Guard', post: [28, 22], anchor: 2, radius: 3 },
@@ -412,7 +412,7 @@ const LAGOS: MissionDef = {
   exposeSec: 25,
   maxExposures: 3,
   reinforceMax: 3,
-  boss: { name: 'The Auditor', characterId: 'campusQueen', post: [29, 20], radius: 3 },
+  boss: { name: 'Barrister Quill', characterId: 'campusQueen', post: [29, 20], radius: 3 },
   crew: [
     { role: 'objectiveDefender', name: 'Auditor', post: [11, 9], anchor: 0, radius: 3 },
     { role: 'objectiveDefender', name: 'Auditor', post: [31, 28], anchor: 1, radius: 3 },
@@ -478,7 +478,7 @@ const LEKKI: MissionDef = {
   exposeSec: 25,
   maxExposures: 3,
   reinforceMax: 3,
-  boss: { name: 'Estate Controller', characterId: 'streetBaller', post: [35, 8], radius: 3 },
+  boss: { name: 'Steward Halcyon', characterId: 'lekkiBoy', post: [35, 8], radius: 3 },
   crew: [
     { role: 'objectiveDefender', name: 'Security Contractor', post: [20, 10], anchor: 0, radius: 3 },
     { role: 'objectiveDefender', name: 'Security Contractor', post: [43, 10], anchor: 2, radius: 3 },
