@@ -215,9 +215,11 @@ export class Brain implements Bot {
     const { world } = c;
     const T = world.tick;
     // a rival for a melee press: next to me, or exactly in the reach of a reach-2 attack (never mistaken for a vehicle press)
+    // (only worked out when a B press is proposed: most ticks there is none)
     const adjacentRival =
-      world.rivals.some((r) => Math.abs(r.x - world.me.x) + Math.abs(r.y - world.me.y) === 1) ||
-      chooseAttack(world.obs, world.me) !== null;
+      intent.special === true &&
+      (world.rivals.some((r) => Math.abs(r.x - world.me.x) + Math.abs(r.y - world.me.y) === 1) ||
+        chooseAttack(world.obs, world.me) !== null);
     const v = intent.vehicle;
     const wantsVehicle =
       (v !== undefined && (v.type === 'begin' || v.type === 'auto')) || (intent.special && !adjacentRival);

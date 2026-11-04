@@ -76,10 +76,10 @@ export class Tactics {
       const startup = obs.config.skills.attacks[primaryOf(me)].startupTicks;
       if (danger.firstHit(world.myTile, T + 1) > T + startup + 14) delete intent.move;
     } else if (
-      loadoutOf(me, obs.config).secondary &&
       profile.useSkill &&
       T >= me.dazedUntil &&
-      intent.special === undefined
+      intent.special === undefined &&
+      loadoutOf(me, obs.config).secondary
     ) {
       // the SECONDARY attack (a reach-2 opener, or the follow-up while the primary recovers): the same B press the
       // human makes (`chooseAttack` is the resolver's own choice), only from a tile that is safe for its startup
