@@ -45,6 +45,8 @@ import {
   viaduct,
 } from './community/setKit';
 import { sign, signTexture, umbrella as setUmbrella } from './oshodiKit';
+import { footbridge } from './footbridge';
+import { tagAnchor } from './anchors';
 import { shophouseRows } from './shared';
 import { layoutOf, mouthTraffic, tileWorld } from './rumbleV2Kit';
 import type { StageEnvironment } from '../env/types';
@@ -232,21 +234,62 @@ const foodHall: Family = (k, g, r, n) => {
       lines: [['IDI-ORO FRESH FOOD HUB', 28]],
       border: '#fff6d8',
     }),
-    Math.min(6.4, r.w - 1),
-    0.7,
+    Math.min(7.4, r.w - 0.6),
+    0.86,
     r.cx,
-    H - 0.25,
+    2.45,
     zf + 0.22,
   );
+  // anchor: mushin-idi-oro-hall. The produce mural: two painted boards low on the front wall (readable ahead of the player)
+  for (const sgn of [-1, 1])
+    board(
+      k,
+      g,
+      k.atlas.board(`idioro-mural${sgn}`, 256, 64, {
+        bg: sgn < 0 ? '#e8c83a' : '#c83a2a',
+        fg: sgn < 0 ? '#2a4a1a' : '#fff6d8',
+        lines: [[sgn < 0 ? 'YAM  •  PLANTAIN' : 'PEPPER  •  TOMATO', 24]],
+        border: sgn < 0 ? '#2a4a1a' : '#fff6d8',
+      }),
+      2.2,
+      0.55,
+      r.cx + sgn * (r.w / 2 - 1.5),
+      1.15,
+      zf + 0.1,
+    );
   // crates of vegetables on the south apron (green, orange, yellow)
   const veg = [0x5aa83a, 0xe08a1e, 0xe8c83a, 0xc83a2a, 0x4a9a4a];
   for (let i = 0; i < r.w * 1.4; i++)
     cbox(k, g, k.paint, 0.42, 0.3, 0.36, r.x ? k.wx(r.x) + i * 0.6 : 0, 0, zf + 0.7, pick(veg, i + n));
 };
 
+/**
+ * The north shop row of the Ojuwoye grid carries the Red Line's red-and-white direction boards (anchor mushin-red-line-station),
+ * so the station reads from ground level, where the viaduct itself is out of the follow camera's frame.
+ */
+const railBoard: Family = (k, g, r, n) => {
+  shop(k, g, r, n);
+  if (r.y !== 2 || r.x < 25) return;
+  board(
+    k,
+    g,
+    k.atlas.board('redline-dir', 256, 48, {
+      bg: '#b8322a',
+      fg: '#ffffff',
+      lines: [['RED LINE STATION  →', 24]],
+      border: '#ffffff',
+    }),
+    Math.min(2.8, r.w - 0.3),
+    0.5,
+    r.cx,
+    2.5,
+    k.wz(r.y1) + 0.5 + 0.05,
+  );
+};
+
 const FAMILIES: Record<string, Family> = {
   building,
-  shop,
+  shop: railBoard,
   lockup,
   stall,
   kiosk,
@@ -288,7 +331,7 @@ export const RUMBLE_MUSHIN_COVER: CoverFactory = communityCover({
 export const RUMBLE_MUSHIN_LOOK: ArenaLook = {
   // hot hazy mainland afternoon: warm ochre light through dust, generator exhaust and cooking smoke
   sky: 0xaa9a84,
-  fog: { color: 0x9a8a74, near: 32, far: 112 },
+  fog: { color: 0x9a8a74, near: 62, far: 220 },
   sun: { color: 0xffd9a8, intensity: 4.4, position: [8, 22, 12] },
   hemi: { sky: 0xe0cdb0, ground: 0x6a5240, intensity: 1.38 },
   envIntensity: 0.5,
@@ -383,7 +426,13 @@ function build(ctx: SetContext): void {
   viaduct(ctx, { z: zv, x0: -W / 2 - 24, x1: W / 2 + 24, deck: 6.6, width: 5.2, pier: 10, track: true });
   railcars(ctx, { x: -16, z: zv, y: 6.7, cars: 3, body: 0xe8e8e2, stripe: 0xb8322a });
   const sx = 12;
-  ctx.statics.add(box(17, 0.4, 7.2, mat(0x2f7a4a, { roughness: 0.6, metalness: 0.2 }), sx, 10.1, zv + 0.4)); // the green roof
+  // anchor: mushin-red-line-station (green roof, red-and-white fascia, the MUSHIN plate, the viaduct and the white-and-red train)
+  ctx.statics.add(
+    tagAnchor(
+      box(17, 0.4, 7.2, mat(0x2f7a4a, { roughness: 0.6, metalness: 0.2 }), sx, 10.1, zv + 0.4),
+      'mushin-red-line-station',
+    ),
+  ); // the green roof
   ctx.statics.add(box(17.2, 0.5, 7.4, mat(0xb8322a, { roughness: 0.6 }), sx, 9.7, zv + 0.4)); // red fascia
   ctx.statics.add(box(17, 0.12, 7.2, mat(0xe8e8e2, { roughness: 0.6 }), sx, 9.42, zv + 0.4)); // white band
   for (const dx of [-7.5, -2.5, 2.5, 7.5])
@@ -399,7 +448,31 @@ function build(ctx: SetContext): void {
       zv - 2.6,
     ),
   ); // glazing
-  plaque(ctx, 'cr:mushin:stn', 5.4, 0.9, sx, 9.1, zv + 4.1, 0, lettered('MUSHIN', '#1d6a40', '#f6f2e4'));
+  plaque(
+    ctx,
+    'cr:mushin:stn',
+    7.4,
+    1.2,
+    sx,
+    9.1,
+    zv + 4.1,
+    0,
+    lettered('MUSHIN  •  RED LINE', '#b8322a', '#ffffff'),
+  );
+
+  // the Red Line access footbridge (anchor mushin-footbridge): a steel bridge in the station's red and white over the main road at
+  // the west mouth, close to the board so the road mouth shows its stairs and deck (footbridge.ts)
+  footbridge(ctx, {
+    anchor: 'mushin-footbridge',
+    x: -W / 2 - 3.4,
+    z0: wz(15) - 0.6,
+    z1: wz(20) + 0.6,
+    deck: 4.0,
+    style: 'steel',
+    sign: 'RED LINE  ←  MUSHIN STATION',
+    signBg: '#b8322a',
+    signFg: '#ffffff',
+  });
 
   // spill-over of the market beyond the walls: umbrellas, tyre stacks, barrels, a few stalls under tarpaulins
   const tarp = THEME.tarps.map((c) => mat(c, { roughness: 0.88 }));
@@ -408,7 +481,9 @@ function build(ctx: SetContext): void {
   );
   [-W / 2 - 2.5, W / 2 + 2.5].forEach((x, side) =>
     [-12, -6, 8, 13].forEach((z, i) =>
-      setUmbrella(ctx, x, z + i, 0.9, tarp[(i + side) % 7]!, tarp[(i + 2) % 7]!, { h: 1.95 }),
+      side === 0 && z === -6
+        ? undefined // the Red Line access footbridge lands here
+        : setUmbrella(ctx, x, z + i, 0.9, tarp[(i + side) % 7]!, tarp[(i + 2) % 7]!, { h: 1.95 }),
     ),
   );
   ctx.instance(

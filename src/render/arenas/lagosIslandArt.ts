@@ -17,7 +17,7 @@ import { T } from './floorKit';
 import type { CoverFactory } from './boardCover';
 import { communityCover } from './community/factory';
 import { building, kiosk, lockup, shop, stall, umbrella } from './community/families';
-import type { Family, Theme } from './community/kit';
+import type { CK, Family, Theme } from './community/kit';
 import { board, box as cbox, cyl as ccyl, pick } from './community/kit';
 import { communityFloor } from './community/floor';
 import { communityEnv } from './community/env';
@@ -25,12 +25,14 @@ import { nightLookOf } from './community/looks';
 import { edgeStalls, streetLife, lampPost, lettered, plaque, skyline, viaduct } from './community/setKit';
 import { streetPlane, umbrella as setUmbrella } from './oshodiKit';
 import { shophouseRows } from './shared';
+import { tagAnchor } from './anchors';
 import { layoutOf, mouthTraffic, tileWorld } from './rumbleV2Kit';
 import type { StageEnvironment } from '../env/types';
 
 const ID = 'rumbleLagosIsland';
 const cream = '#efe6d0';
 
+// anchor: lagos-textile-maze (the Balogun-style cloth stalls: the `stall` family's umbrellas in these tarp colours and the cloth fascias below)
 const THEME: Theme = {
   plaster: [0xd8c8a4, 0xc8b48e, 0xe0d4b4, 0xb89a78, 0xcfa88a, 0xd2c6a6, 0xbfae8a],
   far: [0xd8c8a4, 0xb5654a, 0x9aa89a, 0xe4ddd0, 0xc89a78, 0x8aa0aa],
@@ -237,6 +239,142 @@ const arcade: Family = (k, g, r, n) => {
   }
 };
 
+/** A pointed (lancet) opening: a dark door / window with a diamond head, a stone surround. */
+function lancet(
+  k: CK,
+  g: number,
+  x: number,
+  y0: number,
+  z: number,
+  w: number,
+  h: number,
+  glow = false,
+): void {
+  const dark = glow ? k.glow : k.paint;
+  const col = glow ? 0xe8c878 : 0x14181c;
+  cbox(k, g, k.paint, w + 0.22, h + 0.1, 0.05, x, y0 - 0.05, z - 0.01, 0xd6d0c0); // surround
+  cbox(k, g, dark, w, h, 0.06, x, y0, z + 0.01, col);
+  cbox(k, g, k.paint, w * 0.72, w * 0.72, 0.05, x, y0 + h - w * 0.1, z - 0.01, 0xd6d0c0, 0, 0, Math.PI / 4);
+  cbox(k, g, dark, w * 0.58, w * 0.58, 0.06, x, y0 + h - w * 0.1, z + 0.01, col, 0, 0, Math.PI / 4);
+}
+
+/**
+ * The cathedral frontage on the civic square's north side (anchor lagos-cathedral): a grey neo-gothic west front with a
+ * pointed portal, a rose window, stepped buttresses with pinnacles, lancet windows and a stepped gable. FICTIONAL ("Old Eko
+ * Cathedral"). The lowest 2.5 m (portal, plaque, lancets) are what the follow camera shows; the full silhouette is the tall
+ * cathedral behind it (set) and the gable, rose window and pinnacles above.
+ */
+const cathedralFront: Family = (k, g, r, n) => {
+  const zf = k.wz(r.y1) + 0.5;
+  const stone = pick([0x9a9a96, 0x908f8a, 0xa2a29c], r.v + n);
+  cbox(k, g, k.concrete, r.w - 0.1, 5.6, r.h - 0.1, r.cx, 0, r.cz, stone);
+  cbox(k, g, k.concrete, r.w - 0.1, 0.3, 0.35, r.cx, 0.0, zf + 0.12, 0x7a7a76); // plinth
+  // the stepped gable and a cross
+  for (let i = 0; i < 4; i++)
+    cbox(
+      k,
+      g,
+      k.concrete,
+      Math.max(0.5, r.w * 0.62 - i * 0.78),
+      0.7,
+      r.h - 0.3,
+      r.cx,
+      5.6 + i * 0.7,
+      r.cz,
+      stone,
+    );
+  cbox(k, g, k.paint, 0.12, 0.9, 0.12, r.cx, 8.4, r.cz, 0xe8e0c8);
+  cbox(k, g, k.paint, 0.5, 0.12, 0.12, r.cx, 8.95, r.cz, 0xe8e0c8);
+  // portal, rose window, flanking lancets
+  lancet(k, g, r.cx, 0.05, zf + 0.03, 1.25, 2.1);
+  ccyl(k, g, k.glow, 0.62, 0.62, 0.05, r.cx, 3.5, zf + 0.05, 0xe8c070, 18, Math.PI / 2, 0);
+  ccyl(k, g, k.paint, 0.74, 0.74, 0.04, r.cx, 3.45, zf + 0.02, 0xd6d0c0, 18, Math.PI / 2, 0);
+  for (const sgn of [-1, 1]) {
+    lancet(k, g, r.cx + sgn * 1.9, 1.2, zf + 0.03, 0.55, 1.5, true);
+    // stepped buttress and its pinnacle at each end
+    const bx = r.cx + (sgn * (r.w - 0.5)) / 2;
+    cbox(k, g, k.concrete, 0.55, 3.0, 0.55, bx, 0, zf + 0.25, 0x86857f);
+    cbox(k, g, k.concrete, 0.42, 3.0, 0.42, bx, 3.0, zf + 0.2, 0x86857f);
+    ccyl(k, g, k.paint, 0.02, 0.24, 0.8, bx, 6.0, zf + 0.2, 0x7a7a76, 4);
+  }
+  board(
+    k,
+    g,
+    k.atlas.board('cathedral', 256, 40, {
+      bg: '#2a2e34',
+      fg: '#e8e0c8',
+      lines: [['OLD EKO CATHEDRAL', 22]],
+      border: '#e8e0c8',
+    }),
+    2.2,
+    0.32,
+    r.cx,
+    2.55,
+    zf + 0.1,
+  );
+};
+
+/**
+ * The civic hall on the north side of the square (anchor lagos-civic-dome): a pale columned portico under a pediment, a drum and
+ * a copper-green dome with a lantern rising behind it. FICTIONAL ("Eko Civic Hall").
+ */
+const civicHall: Family = (k, g, r, n) => {
+  const zf = k.wz(r.y1) + 0.5;
+  const H = 5.2;
+  cbox(k, g, k.concrete, r.w - 0.1, H, r.h - 0.1, r.cx, 0, r.cz, pick([0xf0ead8, 0xe8e2cc], r.v + n));
+  cbox(k, g, k.concrete, r.w + 0.2, 0.3, r.h + 0.2, r.cx, H, r.cz, 0xc8c2ae); // cornice
+  cbox(k, g, k.concrete, r.w, 0.3, 1.3, r.cx, 0, zf + 0.7, 0xd8d2be); // steps
+  for (let i = 0; i < 5; i++)
+    ccyl(k, g, k.concrete, 0.16, 0.18, 2.5, r.cx - 1.8 + i * 0.9, 0.3, zf + 1.2, 0xfaf6ea, 10); // portico columns
+  cbox(k, g, k.concrete, 4.4, 0.3, 1.5, r.cx, 2.8, zf + 0.8, 0xf4f0e2); // entablature
+  cbox(k, g, k.paint, 4.0, 0.5, 1.2, r.cx, 3.1, zf + 0.8, 0xe4dec8, 0, -0.5); // pediment sheet
+  cbox(k, g, k.paint, 1.1, 1.7, 0.06, r.cx, 0.3, zf + 0.02, 0x3a2a1a); // door
+  // the drum and the dome (stacked rings), a lantern and a flag mast
+  ccyl(k, g, k.concrete, 1.35, 1.4, 1.3, r.cx, H + 0.3, r.cz, 0xf0ead8, 16);
+  const rings: [number, number][] = [
+    [1.4, 0.3],
+    [1.3, 0.28],
+    [1.12, 0.26],
+    [0.88, 0.24],
+    [0.55, 0.22],
+  ];
+  let y = H + 1.6;
+  for (const [rad, h] of rings) {
+    ccyl(k, g, k.paint, rad * 0.9, rad, h, r.cx, y, r.cz, 0x4e9a84, 16);
+    y += h;
+  }
+  ccyl(k, g, k.glow, 0.2, 0.2, 0.5, r.cx, y, r.cz, 0xf0d890, 8);
+  cbox(k, g, k.paint, 0.05, 1.2, 0.05, r.cx, y + 0.5, r.cz, 0xe8e0c8);
+  board(
+    k,
+    g,
+    k.atlas.board('civic', 256, 40, {
+      bg: '#17405a',
+      fg: '#f4f0e0',
+      lines: [['EKO CIVIC HALL', 24]],
+      border: '#f4f0e0',
+    }),
+    2.4,
+    0.34,
+    r.cx,
+    2.45,
+    zf + 1.58,
+  );
+};
+
+/** The pastel Afro-Brazilian-style frontage next to the cathedral: coloured wash, white trim, arched shuttered windows, a gable. */
+const pastelRow: Family = (k, g, r, n) => {
+  heritage(k, g, r, n);
+  const zf = k.wz(r.y1) + 0.5;
+  const wash = pick([0xe9b6a6, 0xa9d2c6, 0xf1da98], r.v + n);
+  cbox(k, g, k.paint, r.w - 0.06, 2.6, 0.04, r.cx, 0.1, zf + 0.04, wash);
+  for (let x = r.x; x < r.x + r.w; x++) lancet(k, g, k.wx(x) + 0.1, 0.9, zf + 0.12, 0.42, 1.0);
+};
+
+/** The three frontage blocks north of the civic square: the civic hall, the cathedral, the pastel row. */
+const frontage: Family = (k, g, r, n) =>
+  (r.x === 34 ? civicHall : r.x === 41 ? cathedralFront : pastelRow)(k, g, r, n);
+
 const FAMILIES: Record<string, Family> = {
   building,
   shop,
@@ -244,7 +382,7 @@ const FAMILIES: Record<string, Family> = {
   lockup,
   kiosk,
   officeTower,
-  heritage,
+  heritage: frontage,
   parkWall,
   tree,
   quayShed,
@@ -276,7 +414,7 @@ void umbrella;
 export const RUMBLE_LAGOS_ISLAND_LOOK: ArenaLook = {
   // bright hazy island midday: warm masonry, harbour light, pale blue-grey haze
   sky: 0xb4c4cc,
-  fog: { color: 0xb0bcc0, near: 34, far: 120 },
+  fog: { color: 0xb0bcc0, near: 62, far: 220 },
   sun: { color: 0xfff0d0, intensity: 4.5, position: [8, 24, 12] },
   hemi: { sky: 0xe4ecf0, ground: 0x7a6a58, intensity: 1.45 },
   envIntensity: 0.6,
@@ -349,7 +487,7 @@ function build(ctx: SetContext): void {
     hMin: 8,
     hMax: 18,
     tints: ['#8a96a0', '#a08a70', '#6a7a86', '#9a9a90'],
-    gap: boulevardGap,
+    gap: (c) => boulevardGap(c) || (c > wx(36) && c < wx(60)), // the cathedral stands clear
     seed: 5,
   });
   skyline(ctx, tod, {
@@ -375,27 +513,31 @@ function build(ctx: SetContext): void {
     step: 5.6,
   });
 
-  // the cathedral: a grey Gothic nave and clock tower with pinnacles, behind the civic square (protected backdrop)
+  // the cathedral behind the frontage (anchor lagos-cathedral): a grey Gothic nave with lit lancets, a rose window and a clock
+  // tower with pinnacles and a spire (fictional; a protected backdrop). The skyline leaves a gap here so it stands clear.
   const cx = wx(46);
-  const cz = north - 13;
+  const cz = north - 11;
   const grey = mat(0x9a9a98, { roughness: 1, flat: false });
   const dark = mat(0x3a3e44, { roughness: 0.6 });
-  ctx.statics.add(box(16, 8, 9, grey, cx, STREET + 4, cz));
+  const lit = mat(0xf0c878, { emissive: 0xc89030, emissiveIntensity: 0.9, roughness: 0.5 });
+  ctx.statics.add(tagAnchor(box(16, 10, 9, grey, cx, STREET + 5, cz), 'lagos-cathedral'));
   for (const sgn of [-1, 1])
-    ctx.statics.add(box(16.4, 0.5, 4.8, mat(0x7a7a78), cx, STREET + 9, cz + sgn * 2.1));
-  ctx.statics.add(box(16, 1.8, 9, mat(0x7a7a78, { roughness: 1, flat: false }), cx, STREET + 9.4, cz));
+    ctx.statics.add(box(16.4, 0.5, 4.8, mat(0x7a7a78), cx, STREET + 11, cz + sgn * 2.1));
+  ctx.statics.add(box(16, 2.4, 9, mat(0x7a7a78, { roughness: 1, flat: false }), cx, STREET + 11.6, cz));
   for (let i = 0; i < 7; i++) {
-    ctx.statics.add(box(0.9, 2.6, 0.12, dark, cx - 6.6 + i * 2.2, STREET + 4.2, cz + 4.55)); // pointed windows (blocks)
-    ctx.statics.add(box(0.5, 0.5, 0.12, dark, cx - 6.6 + i * 2.2, STREET + 5.9, cz + 4.55));
-    ctx.statics.add(cyl(0.12, 0.2, 5.4, grey, cx - 7.3 + i * 2.2, STREET + 5.2, cz + 4.9, 6)); // buttresses
+    ctx.statics.add(box(0.9, 3.4, 0.12, lit, cx - 6.6 + i * 2.2, STREET + 5.0, cz + 4.55)); // lit pointed windows
+    ctx.statics.add(box(0.5, 0.5, 0.12, dark, cx - 6.6 + i * 2.2, STREET + 7.4, cz + 4.55));
+    ctx.statics.add(cyl(0.12, 0.2, 6.8, grey, cx - 7.3 + i * 2.2, STREET + 6.0, cz + 4.9, 6)); // buttresses
   }
+  ctx.statics.add(cyl(1.5, 1.5, 0.2, lit, cx, STREET + 9.2, cz + 4.6, 20)); // the west rose window
   const tx = cx + 10;
-  ctx.statics.add(box(4.6, 24, 4.6, grey, tx, STREET + 12, cz));
-  ctx.statics.add(box(5.0, 0.6, 5.0, mat(0x7a7a78), tx, STREET + 24.3, cz));
+  ctx.statics.add(box(4.6, 28, 4.6, grey, tx, STREET + 14, cz));
+  ctx.statics.add(box(5.0, 0.6, 5.0, mat(0x7a7a78), tx, STREET + 28.3, cz));
   for (const dx of [-2, 2])
-    for (const dz of [-2, 2]) ctx.statics.add(cyl(0.12, 0.3, 3.2, grey, tx + dx, STREET + 26, cz + dz, 6)); // pinnacles
-  ctx.statics.add(cyl(1.0, 1.0, 0.2, mat(0xf0ecdc, { roughness: 0.4 }), tx, STREET + 20.5, cz + 2.4, 20)); // the clock face (south)
-  ctx.statics.add(box(1.4, 3.4, 0.14, dark, tx, STREET + 15, cz + 2.4));
+    for (const dz of [-2, 2]) ctx.statics.add(cyl(0.12, 0.3, 3.2, grey, tx + dx, STREET + 30, cz + dz, 6)); // pinnacles
+  ctx.statics.add(cyl(0.05, 1.9, 6.5, mat(0x6a6e70, { roughness: 0.8 }), tx, STREET + 32, cz, 4)); // the spire
+  ctx.statics.add(cyl(1.1, 1.1, 0.2, mat(0xf0ecdc, { roughness: 0.4 }), tx, STREET + 22, cz + 2.4, 20)); // the clock face (south)
+  ctx.statics.add(box(1.4, 3.4, 0.14, dark, tx, STREET + 16, cz + 2.4));
   ctx.statics.add(box(1.2, 3.0, 0.14, dark, tx, STREET + 9.0, cz + 2.4));
 
   // the Idumota bridge approach: an elevated deck on piers beyond the north-west corner

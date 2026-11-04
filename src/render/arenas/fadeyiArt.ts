@@ -7,9 +7,7 @@
  */
 import type { ArenaLook } from '../arenaLook';
 import { timeOfDay } from '../timeOfDay';
-import { box, cyl, mat } from '../assets/helpers';
 import type { ArenaSet, SetContext } from './common';
-import { STREET } from './common';
 import { T } from './floorKit';
 import type { FloorDrawer } from './floorKit';
 import type { CoverFactory } from './boardCover';
@@ -20,10 +18,11 @@ import { board, box as cbox, cyl as ccyl } from './community/kit';
 import { communityFloor } from './community/floor';
 import { communityEnv } from './community/env';
 import { nightLookOf } from './community/looks';
-import { edgeStalls, streetLife, lampPost, lettered, plaque, skyline } from './community/setKit';
+import { edgeStalls, streetLife, lampPost, skyline } from './community/setKit';
 import { sign, signTexture } from './oshodiKit';
 import { streetPlane } from './oshodiKit';
 import { shophouseRows } from './shared';
+import { footbridge } from './footbridge';
 import { layoutOf, mouthTraffic, tileWorld, floorWords, zebraTile } from './rumbleV2Kit';
 import { FADEYI_CROSSINGS, FADEYI_ROWS } from '../../sim/arenas/rumbleFadeyi';
 import type { StageEnvironment } from '../env/types';
@@ -54,7 +53,7 @@ const THEME: Theme = {
   seed: 311,
 };
 
-/** A BRT stop shelter on the median: a long blue-roofed canopy on steel posts, benches, a route board. */
+/** A BRT stop shelter on the median: a long blue-roofed canopy on steel posts, benches, a route board (anchor: fadeyi-brt-lane, with the blue lane and the painted BRT words of the floor). */
 const brtShelter: Family = (k, g, r, n) => {
   const x0 = k.wx(r.x) - 0.5;
   const len = r.w;
@@ -102,6 +101,15 @@ const bankBlock: Family = (k, g, r, n) => {
       cbox(k, g, k.glow, 1.1, 0.7, 0.05, k.wx(x) + 0.5, 1.1 + f * 1.9, zf + 0.02, 0x9cc4e0);
     }
   cbox(k, g, k.metal, r.w, 0.4, 0.04, r.cx, 0.35, zf + 0.5, 0x3a3e42);
+  // anchor: fadeyi-bank-frontage. A columned portico with steps and its name board at street height (the follow camera
+  // only sees the lowest ~2.5 m of a facade ahead of the player), under a pediment slab.
+  const pw = Math.min(r.w - 1, 6);
+  cbox(k, g, k.concrete, pw + 0.6, 0.3, 1.2, r.cx, 0, zf + 0.9, 0xd8d4c6); // the steps
+  cbox(k, g, k.concrete, pw + 0.4, 0.16, 1.1, r.cx, 0.3, zf + 0.9, 0xe4e0d2);
+  for (let i = 0; i <= 4; i++)
+    ccyl(k, g, k.concrete, 0.17, 0.2, 2.5, r.cx - pw / 2 + (i * pw) / 4, 0.46, zf + 1.35, 0xf4f0e4, 10);
+  cbox(k, g, k.concrete, pw + 0.7, 0.34, 1.5, r.cx, 2.96, zf + 0.85, 0xf0ecde); // entablature
+  cbox(k, g, k.paint, pw + 0.5, 0.1, 1.4, r.cx, 3.3, zf + 0.85, 0x3a6a9a, 0, -0.12); // blue pediment sheet
   board(
     k,
     g,
@@ -111,11 +119,11 @@ const bankBlock: Family = (k, g, r, n) => {
       lines: [['LAGOON TRUST FINANCE', 26]],
       border: '#16457a',
     }),
-    Math.min(4, r.w - 0.5),
+    Math.min(4.6, pw - 0.2),
     0.5,
     r.cx,
-    H - 0.6,
-    zf + 0.04,
+    2.38,
+    zf + 0.06,
   );
   void n;
 };
@@ -156,7 +164,7 @@ export const RUMBLE_FADEYI_COVER: CoverFactory = communityCover({
 export const RUMBLE_FADEYI_LOOK: ArenaLook = {
   // flat grey-white midday over a busy divided highway: exhaust haze, hard shade only under the awnings
   sky: 0xaeb4b8,
-  fog: { color: 0xa4aaac, near: 34, far: 118 },
+  fog: { color: 0xa4aaac, near: 62, far: 220 },
   sun: { color: 0xfff0dc, intensity: 4.0, position: [-7, 22, 12] },
   hemi: { sky: 0xdce2e8, ground: 0x6a665e, intensity: 1.42 },
   envIntensity: 0.55,
@@ -272,44 +280,19 @@ function build(ctx: SetContext): void {
     step: 5.6,
   });
 
-  // the footbridge (fictional, functional): a steel-railed deck over the highway on two concrete piers, stairs at both ends
-  const fx = W / 2 + 11;
-  const zn = wz(FADEYI_ROWS.top - 1.2);
-  const zs = wz(FADEYI_ROWS.bottom + 1.2);
-  const conc = mat(0xb6b2a8, { roughness: 1, flat: false });
-  const steel = mat(0x4a5258, { roughness: 0.5, metalness: 0.6 });
-  ctx.statics.add(box(2.4, 0.4, zs - zn, conc, fx, 5.1, (zn + zs) / 2));
-  for (const z of [zn, zs]) {
-    ctx.statics.add(box(2.0, 5.2, 1.6, conc, fx, STREET + 2.6, z + (z === zn ? -0.4 : 0.4)));
-    for (let i = 0; i < 6; i++)
-      ctx.statics.add(
-        box(
-          2.0,
-          0.12,
-          0.5,
-          conc,
-          fx,
-          STREET + 0.5 + i * 0.9,
-          z + (z === zn ? -1.4 - i * 0.5 : 1.4 + i * 0.5),
-        ),
-      );
-  }
-  for (const dx of [-1.15, 1.15]) {
-    ctx.statics.add(box(0.08, 0.9, zs - zn, steel, fx + dx, 5.8, (zn + zs) / 2));
-    ctx.statics.add(box(0.1, 0.1, zs - zn, steel, fx + dx, 6.3, (zn + zs) / 2));
-  }
-  ctx.statics.add(box(3.4, 1.2, 0.2, mat(0x2a7fb8, { roughness: 0.6 }), fx, 6.5, zs - 3)); // the BRT sign gantry panel
-  plaque(
-    ctx,
-    'cr:fadeyi:gantry',
-    3.2,
-    0.9,
-    fx,
-    6.5,
-    zs - 2.88,
-    0,
-    lettered('BRT ONLY  •  ONIPANU', '#2a7fb8', '#ffffff'),
-  );
+  // the footbridge (fictional, functional; anchor fadeyi-footbridge): a concrete deck on stair towers across the highway at
+  // the east mouth, close to the board so the road mouth shows its stairs and deck (footbridge.ts)
+  footbridge(ctx, {
+    anchor: 'fadeyi-footbridge',
+    x: W / 2 + 3.6,
+    z0: wz(FADEYI_ROWS.top - 1.2),
+    z1: wz(FADEYI_ROWS.bottom + 1.2),
+    deck: 4.0,
+    style: 'concrete',
+    sign: 'BRT ONLY  •  ONIPANU',
+    signBg: '#2a7fb8',
+    signFg: '#ffffff',
+  });
 
   // wires, lamps, a billboard
   for (const x of [-W / 2 - 6, W / 2 + 6, -W / 2 - 18, W / 2 + 18])
@@ -341,7 +324,6 @@ function build(ctx: SetContext): void {
   streetLife(ctx, { n: 14, gap: streetGap });
   ctx.ambient.exhaust(W / 2 + 6, 0.4, wz(18), 0, 1);
   ctx.ambient.dust(0, north - 1.4, 18, 1);
-  void cyl;
 }
 
 export const RUMBLE_FADEYI_SET: ArenaSet = {
