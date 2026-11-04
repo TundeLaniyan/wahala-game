@@ -1,14 +1,16 @@
 import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { resolveFlags } from './src/platform/flags';
 
 // GitHub Pages project sites are served from /<repo-name>/.
 export default defineConfig(({ command, isPreview, mode }) => {
   // The server online adapter is compiled in ONLY when the build asks for it (WAHALA_ONLINE_ENABLED + WAHALA_ONLINE_URL,
-  // resolved by the same function the app uses for its flags). Tests never include it. docs/ONLINE_ARCHITECTURE.md.
+  // the same rule as the app's flags). Tests never include it. docs/ONLINE_ARCHITECTURE.md.
+  // Same rule as `resolveFlags` in src/platform/flags.ts (kept inline: the config must not import app code);
+  // tests/online/create-online.test.ts runs both on the same inputs.
   const env = loadEnv(mode, process.cwd(), 'WAHALA_');
-  const serverOnline = mode !== 'test' && resolveFlags(env).onlineMode === 'server';
+  const serverOnline =
+    mode !== 'test' && /^(1|true|on|yes)$/i.test((env.WAHALA_ONLINE_ENABLED ?? '').trim()) && !!env.WAHALA_ONLINE_URL;
   return {
     base: command === 'build' || isPreview ? '/wahala-game/' : '/',
     plugins: [react()],

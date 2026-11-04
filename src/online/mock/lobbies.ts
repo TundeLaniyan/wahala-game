@@ -58,9 +58,30 @@ function assignTeams(room: Room): void {
   for (const m of room.members) m.team = map.get(m.accountId) ?? 0;
 }
 
-function buildRoom(ctx: MockCtx, source: Room['source'], humans: RoomMember[], hostId: string, s: LobbySettings): Room {
+/** Bots fill the empty seats (the server does it when the ready check starts, or at once for a queue match). */
+function fillRoom(ctx: MockCtx, room: Room): Room {
+  const humans = room.members;
+  const extra = fillers(ctx, Math.max(0, room.maxPlayers - humans.length), new Set(humans.map((h) => h.displayName)));
+  for (const bot of extra) {
+    if (room.game === 'team') {
+      const sizes = Array.from({ length: room.teamCount }, (_, t) => room.members.filter((m) => m.team === t).length);
+      bot.team = sizes.indexOf(Math.min(...sizes));
+    }
+    room.members.push(bot);
+  }
+  return room;
+}
+
+function buildRoom(
+  ctx: MockCtx,
+  source: Room['source'],
+  humans: RoomMember[],
+  hostId: string,
+  s: LobbySettings,
+  fill: boolean,
+): Room {
   const maxPlayers = roomSize(s);
-  const members = [...humans, ...fillers(ctx, Math.max(0, maxPlayers - humans.length), new Set(humans.map((h) => h.displayName)))];
+  const members = humans;
   const room: Room = {
     id: ctx.id('room'),
     state: 'created',
@@ -75,6 +96,7 @@ function buildRoom(ctx: MockCtx, source: Room['source'], humans: RoomMember[], h
     createdAt: ctx.now(),
   };
   assignTeams(room);
+  if (fill) fillRoom(ctx, room);
   room.state = nextRoomState(room.state, 'open')!;
   ctx.state.rooms.set(room.id, room);
   ctx.state.roomTimers.set(room.id, { readyAt: {}, startAt: null, lastCountdownShown: -1 });
@@ -147,7 +169,7 @@ export function createLobbyService(ctx: MockCtx): LobbyService {
         if (invalid) return err(invalid);
         if (myRoom(ctx, u.value.id)) return err(E.conflict('You are already in a room.'));
         const humans = party.members.map((m) => humanMember(ctx, m.accountId, m.displayName, m.mock));
-        const room = buildRoom(ctx, 'party', humans, u.value.id, settings);
+        const room = buildRoom(ctx, 'party', humans, u.value.id, settings, false);
         party.roomId = room.id;
         publishParty(ctx, party);
         publishRoom(ctx, room);
@@ -163,14 +185,14 @@ export function createLobbyService(ctx: MockCtx): LobbyService {
         if (!denied.ok) return denied;
         const invalid = checkLobby(settings);
         if (invalid) return err(invalid);
-        const humans = room.members.filter((m) => !m.isBot || ctx.state.profiles.has(m.accountId));
+        const humans = room.members.filter((m) => ctx.state.profiles.has(m.accountId));
         const size = roomSize(settings);
         if (humans.length > size) return err(E.roomFull('Too many players for that arena.'));
         room.game = settings.game;
         room.arenaId = settings.arenaId;
         room.maxPlayers = size;
         room.teamCount = teamCountFor(settings.game);
-        room.members = [...humans, ...fillers(ctx, size - humans.length, new Set(humans.map((h) => h.displayName)))];
+        room.members = humans;
         for (const m of room.members) m.ready = false;
         assignTeams(room);
         publishRoom(ctx, room);
@@ -196,8 +218,11 @@ export function createLobbyService(ctx: MockCtx): LobbyService {
       }),
     startReadyCheck: (roomId) =>
       withRoom('startReadyCheck', roomId, (me, room) => {
-        const allowed = canStartReadyCheck(room, me);
+        // the server fills empty seats with bots first; the rules are checked on the filled roster
+        const trial = fillRoom(ctx, structuredClone(room));
+        const allowed = canStartReadyCheck(trial, me);
         if (!allowed.ok) return allowed;
+        room.members = trial.members;
         beginReadyCheck(ctx, room);
         return ok(snap(room));
       }),
@@ -328,7 +353,7 @@ export function pumpLobbies(ctx: MockCtx): void {
     if (found === t.found) continue;
     t.found = found;
     if (found >= t.needed) {
-      const room = buildRoom(ctx, 'queue', [humanMember(ctx, me.id, me.displayName, false)], '', t.request);
+      const room = buildRoom(ctx, 'queue', [humanMember(ctx, me.id, me.displayName, false)], '', t.request, true);
       room.hostId = room.members.find((m) => m.isBot)?.accountId ?? me.id;
       t.state = 'matched';
       t.roomId = room.id;

@@ -31,7 +31,10 @@ export async function quickMatchRoom(
   const o: MockOnline = m.online;
   val(await o.accounts.signInGuest());
   const t = val(await o.matchmaking.enqueue({ game, arenaId }));
-  m.wait(2200);
-  const status = val(await o.matchmaking.status(t.ticketId));
+  let status = val(await o.matchmaking.status(t.ticketId));
+  for (let i = 0; i < 100 && status.state !== 'matched'; i++) {
+    m.wait(100);
+    status = val(await o.matchmaking.status(t.ticketId));
+  }
   return val(await o.lobbies.get(status.roomId!));
 }

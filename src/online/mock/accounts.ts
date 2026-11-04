@@ -68,7 +68,7 @@ export function createAccountService(ctx: MockCtx): AccountService {
   return {
     signInGuest: (displayName) =>
       ctx.call('accounts', 'signInGuest', () => {
-        if (ctx.state.session) return ok(ctx.state.session);
+        if (ctx.state.session && ctx.state.session.token.expiresAt > ctx.now()) return ok(ctx.state.session);
         if (displayName !== undefined && !validName(displayName)) return badName();
         let guest = loadGuest(ctx);
         if (!guest) {
