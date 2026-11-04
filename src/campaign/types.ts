@@ -123,6 +123,12 @@ export interface BossDef {
   /** Played when the mission is won (the empire-collapse beat for this district). */
   defeatSequence: StoryLine[];
   reward: RewardDef;
+  /** Optional: a short nickname the crew uses ("Oga Dispatch"). */
+  nickname?: string;
+  /** Optional: played instead of `defeatSequence` when the sim reports `defeat: 'ousted'` (the boss flees / is removed). */
+  defeatSequenceOusted?: StoryLine[];
+  /** Optional: story flags set on the first clear (`CampaignSave.flags`), e.g. "oshodi.dispatchBroken". */
+  consequenceFlags?: string[];
   /** What winning changes in the campaign world (map changes, broker reaction, next district opens). */
   consequence: string;
   replayModifier: ReplayModifierDef;
@@ -163,7 +169,20 @@ export interface DistrictContent {
   factionIds: string[];
 }
 
+/** The unseen central power broker (fiction notes live in docs/CAMPAIGN_STORY.md). NEVER shown on screen. */
+export interface BrokerDef {
+  /** Fictional name and title. */
+  name: string;
+  title: string;
+  biography: string;
+  /** How the player perceives him: voice on a phone, signage, a silhouette. Never a face or a model. */
+  presence: string[];
+  /** Hard rules for every consumer (UI, art, audio). */
+  neverShown: true;
+}
+
 export interface CampaignContent {
+  broker?: BrokerDef;
   districts: Record<DistrictId, DistrictContent>;
   factions: Record<string, FactionDef>;
   prologue: StoryLine[];
