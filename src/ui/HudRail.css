@@ -274,3 +274,34 @@
 .hud-rail .streak-card.stored .streak-state {
   color: #ffe14a;
 }
+
+/* mission panel + kill feed: one block that is clipped (by an inline max-height) above the touch move pad */
+.hud-rail .rail-combat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+}
+.hud-rail .rail-combat:empty {
+  display: none;
+}
+
+/* landscape phone: the kill feed hangs right of the board, under the right portraits, above the action buttons */
+.hud-rail-side {
+  position: absolute;
+  right: max(10px, env(safe-area-inset-right));
+  top: calc(max(8px, env(safe-area-inset-top)) + clamp(54px, 11vh, 92px) / 0.82 + 8px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hud-rail-side .kill-feed {
+  align-items: flex-end;
+}
+.hud-rail-side .kill-feed .kf-line {
+  text-align: right;
+}

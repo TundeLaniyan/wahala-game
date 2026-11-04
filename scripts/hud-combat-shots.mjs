@@ -27,6 +27,7 @@ const browser = await chromium.launch({
 const failures = [];
 for (const [device, ctx] of Object.entries(VP)) {
   const page = await (await browser.newContext(ctx)).newPage();
+  page.setDefaultTimeout(120000);
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${base}?debug&noattract&q=low&seed=7`);
@@ -53,7 +54,8 @@ for (const [device, ctx] of Object.entries(VP)) {
     await page.waitForTimeout(160);
   };
   // stage: the local player takes out P3; P5 takes out P6; P7 runs over P8; the city takes P9; armour x2, QUICK HANDS stored
-  await page.evaluate(() => {
+  await page.evaluate((g) => {
+    window.__game = g;
     const s = window.__WAHALA__.getState();
     const me = s.players[0];
     me.protectedUntil = 0;
@@ -69,9 +71,42 @@ for (const [device, ctx] of Object.entries(VP)) {
     };
     kill(1, 0);
     kill(2, 3, { kind: 'vehicle', ownerId: 3, vehicleKind: 'danfo', eventId: 0 });
-    kill(3, null, { kind: 'crush', eventId: 0 });
-  });
-  await publish();
+    if (g !== 'classic') kill(3, null, { kind: 'crush', eventId: 0 }); // classic: keep a rival alive
+    window.__WAHALA__.advance(1);
+    // the mission panel is written into the HUD snapshot (a fixture; real missions come from the mission sim)
+    const st = window.__WAHALA__.store;
+    const mission = {
+      missionId: 'oshodi',
+      objective: 'dispatchRelays',
+      phase: 1,
+      phaseCount: 3,
+      phaseState: 'active',
+      progress: { done: 1, goal: 3, label: 'relays jammed' },
+      nodes: [],
+      warnings: [
+        { kind: 'convoy', x: 3, y: 3, tiles: [], remainingTicks: 240 },
+        { kind: 'strike', x: 5, y: 5, tiles: [], remainingTicks: 90 },
+      ],
+      boss: { playerId: 1, shielded: true, exposed: false, exposedRemainingTicks: 0, defeated: false },
+      lives: { used: 1, max: 3 },
+      timeRemainingSec: 252,
+      callout: 'Jam two relays before the next convoy',
+      crewAlive: 3,
+      outcome: null,
+    };
+    const pin = () => {
+      const hud = st.getState().hud;
+      if (hud) st.setState({ hud: { ...hud, mission } });
+      const feed = st.getState().killFeed ?? [];
+      st.setState({ killFeed: feed.map((l) => ({ ...l, expires: Number.MAX_SAFE_INTEGER })) });
+    };
+    pin();
+    setInterval(pin, 30);
+    // every HUD publish keeps the fixture (the game republishes the snapshot without a mission)
+    const set = st.setState.bind(st);
+    st.setState = (p, replace) => set(p && p.hud ? { ...p, hud: { ...p.hud, mission } } : p, replace);
+  }, game);
+  await page.waitForTimeout(400);
   await page.screenshot({ path: `${out}/${game}-${device}-kill-feed.png`, timeout: 180000 });
   const rects = await page.evaluate(() => {
     const r = (q) =>
@@ -79,8 +114,10 @@ for (const [device, ctx] of Object.entries(VP)) {
         .map((e) => e.getBoundingClientRect())
         .filter((b) => b.width > 0 && b.height > 0);
     return {
-      feed: r('[data-testid="kill-feed"] li'),
-      rail: r('[data-testid="hud-rail"] > *'),
+      feed: r('[data-testid="kill-feed"]'),
+      mission: r('[data-testid="mission-panel"]'),
+      rail: r('[data-testid="rail-combat"]'),
+      side: r('[data-testid="rail-side"]'),
       others: [
         '.timer',
         '.portrait',
@@ -95,11 +132,12 @@ for (const [device, ctx] of Object.entries(VP)) {
   });
   console.log(device, game, 'feed lines:', rects.feed.length, 'board:', JSON.stringify(rects.board));
   if (rects.feed.length === 0) failures.push(`${device}: kill feed empty`);
-  for (const f of [...rects.feed, ...rects.rail]) {
+  if (rects.mission.length === 0) failures.push(`${device}: mission panel missing`);
+  for (const f of [...rects.feed, ...rects.rail, ...rects.side]) {
     for (const { q, b } of rects.others)
       if (f.left < b.right && f.right > b.left && f.top < b.bottom && f.bottom > b.top)
         failures.push(`${device}: rail text overlaps ${q}`);
-    if (game === 'classic' && rects.board) {
+    if (game === 'classic' && rects.board && rects.rail.includes(f)) {
       const [far, , , near] = rects.board;
       const t = Math.min(1, Math.max(0, (f.bottom - far.y) / (near.y - far.y)));
       if (f.right > far.x + (near.x - far.x) * t + 0.5)

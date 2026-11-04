@@ -3,7 +3,7 @@ import type { StageAlert, StreakHud, SuddenDeathHud } from '../app/hud';
 import type { MissionView } from '../sim';
 import type { Toast } from '../app/store';
 import { useGameStore } from '../app/store';
-import { railBox } from './hudRail';
+import { RAIL_GAP, railBox, railBoxRight } from './hudRail';
 import type { RailBox } from './hudRail';
 import { KillFeed } from './KillFeed';
 import { MissionPanel } from './MissionPanel';
@@ -33,9 +33,10 @@ export interface HudRailProps {
  * The only place transient text appears during play: essential notices (stage-hazard alerts, the arena rule
  * during the countdown, status toasts) and, when enabled, the subtitle of the voice line playing now. On the
  * standard arenas it is a column beside the board, sized from where the board is on screen so it never covers
- * a playable tile (see hudRail.ts); the crowd's reactions are voice clips, never text. Top to bottom: the sudden-death
- * status, the arena rule, stage alerts, the kill feed (decision HC1), status toasts (shield used, QUICK HANDS stored /
- * resumed ...), the mission panel (HC5), the kill-streak cards, the subtitle. See docs/HUD_COMBAT.md.
+ * a playable tile (see hudRail.ts) and ends above the touch move pad; the crowd's reactions are voice clips, never text.
+ * Top to bottom: the sudden-death status, the arena rule, stage alerts, the mission panel (HC5), the kill feed (HC1),
+ * status toasts (shield used, QUICK HANDS stored / resumed ...), the kill-streak cards, the subtitle. What does not
+ * fit is clipped at the bottom, so the most important blocks come first. See docs/HUD_COMBAT.md.
  */
 export function HudRail({
   alerts,
@@ -53,6 +54,23 @@ export function HudRail({
   const ref = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<RailBox | null>(null);
 
+  // the touch move pad (phones) is an obstruction: the rail ends above it
+  const [padTop, setPadTop] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const measure = (): void => {
+      const pad = document.querySelector('[data-testid="stick-pad"]');
+      const top = pad ? Math.round(pad.getBoundingClientRect().top) : null;
+      setPadTop((prev) => (prev === top ? prev : top));
+    };
+    measure();
+    const raf = requestAnimationFrame(measure); // the pad mounts beside the HUD, maybe after this effect
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', measure);
+    };
+  }, [board, rumble]);
+
   useLayoutEffect(() => {
     const el = ref.current;
     if (rumble || !el) {
@@ -64,43 +82,97 @@ export function HudRail({
     setBox((prev) => (prev?.width === next?.width && prev?.maxHeight === next?.maxHeight ? prev : next));
   }, [board, rumble]);
 
+  // the mission panel and the kill feed (the combat blocks) stop above the touch move pad; the rest of the rail keeps
+  // its own height (the arena rule must fit whole). Measured every render: the block's top depends only on what is above it.
+  const combatRef = useRef<HTMLDivElement>(null);
+  const [combatMax, setCombatMax] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = combatRef.current;
+    const next =
+      !el || padTop === null
+        ? null
+        : Math.max(0, Math.floor(padTop - RAIL_GAP - el.getBoundingClientRect().top));
+    setCombatMax((prev) => (prev === next ? prev : next));
+  });
+
+  // landscape phone with the touch controls: the kill feed moves to the strip right of the board (the left rail is a
+  // short strip shared with the mission panel); it ends above the action buttons
+  const [side, setSide] = useState<RailBox | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (rumble || !el || padTop === null || window.innerHeight > 520 || !board) {
+      setSide(null);
+      return;
+    }
+    const buttons = [...document.querySelectorAll('.abtn')].map((b) => b.getBoundingClientRect().top);
+    const limit = buttons.length > 0 ? Math.min(...buttons) : null;
+    const next = railBoxRight(
+      board,
+      window.innerWidth,
+      10,
+      el.getBoundingClientRect().top,
+      window.innerHeight,
+      limit,
+    );
+    setSide((prev) => (prev?.width === next?.width && prev?.maxHeight === next?.maxHeight ? prev : next));
+  }, [board, rumble, padTop]);
+
   const showSubtitle = subtitle !== null && (mode === 'on' || mode === 'large');
   return (
-    <div
-      ref={ref}
-      className={`hud-rail${rumble ? ' rail-top' : ''}`}
-      data-testid="hud-rail"
-      style={box ? { width: `${box.width}px`, maxHeight: `${box.maxHeight}px` } : undefined}
-    >
-      {suddenDeath && <SuddenDeathClock sd={suddenDeath} />}
-      {ruleBanner && <RuleBanner text={ruleBanner} />}
-      <StageAlerts alerts={alerts} />
-      {/* City Rumble keeps the kill feed in its left panel (RumbleHud); a standard match's is the rail's first list */}
-      {!rumble && <KillFeed />}
-      {toasts.map((t) => (
+    <>
+      <div
+        ref={ref}
+        className={`hud-rail${rumble ? ' rail-top' : ''}`}
+        data-testid="hud-rail"
+        style={box ? { width: `${box.width}px`, maxHeight: `${box.maxHeight}px` } : undefined}
+      >
+        {suddenDeath && <SuddenDeathClock sd={suddenDeath} />}
+        {ruleBanner && <RuleBanner text={ruleBanner} />}
+        <StageAlerts alerts={alerts} />
+        {/* a mission's panel first (its warnings must never be clipped); then the kill feed. City Rumble keeps the kill
+          feed in its left panel (RumbleHud); a standard match's is the rail's own list */}
         <div
-          key={t.id}
-          className={`toast ${t.tone}${t.icon ? ' with-icon' : ''}`}
-          data-testid="toast"
-          role="status"
+          ref={combatRef}
+          className="rail-combat"
+          data-testid="rail-combat"
+          style={combatMax !== null ? { maxHeight: `${combatMax}px` } : undefined}
         >
-          {t.icon && <StreakIcon kind={t.icon} size={18} />}
-          {t.text}
+          <MissionPanel mission={mission} />
+          {!rumble && !side && <KillFeed />}
         </div>
-      ))}
-      <MissionPanel mission={mission} />
-      <StreakStatus streak={streak} alive={alive} />
-      <div className="subtitle-slot" aria-live="polite">
-        {showSubtitle && (
-          <p
-            key={subtitle.id}
-            className={`subtitle${mode === 'large' ? ' large' : ''}${subtitle.urgent ? ' urgent' : ''}${subtitle.ambient ? ' ambient' : ''}`}
-            data-testid="subtitle"
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`toast ${t.tone}${t.icon ? ' with-icon' : ''}`}
+            data-testid="toast"
+            role="status"
           >
-            {subtitle.text}
-          </p>
-        )}
+            {t.icon && <StreakIcon kind={t.icon} size={18} />}
+            {t.text}
+          </div>
+        ))}
+        <StreakStatus streak={streak} alive={alive} />
+        <div className="subtitle-slot" aria-live="polite">
+          {showSubtitle && (
+            <p
+              key={subtitle.id}
+              className={`subtitle${mode === 'large' ? ' large' : ''}${subtitle.urgent ? ' urgent' : ''}${subtitle.ambient ? ' ambient' : ''}`}
+              data-testid="subtitle"
+            >
+              {subtitle.text}
+            </p>
+          )}
+        </div>
       </div>
-    </div>
+      {side && (
+        <div
+          className="hud-rail-side"
+          data-testid="rail-side"
+          style={{ width: `${side.width}px`, maxHeight: `${side.maxHeight}px` }}
+        >
+          <KillFeed />
+        </div>
+      )}
+    </>
   );
 }
