@@ -299,7 +299,10 @@ export class GameRenderer {
       this.stage,
     ];
     // campaign missions only (a normal match builds nothing): objective nodes, strike / rail telegraphs, the boss
-    this.missionMarkers = state.mission ? new MissionViews() : null;
+    // (`?nomarkers` leaves them out, to measure what they cost)
+    const noMarkers =
+      typeof location !== 'undefined' && new URLSearchParams(location.search).has('nomarkers');
+    this.missionMarkers = state.mission && !noMarkers ? new MissionViews() : null;
     if (this.missionMarkers) this.views.push(this.missionMarkers);
     this.living = this.createLiving(state);
     if (this.living) this.views.push(this.living);

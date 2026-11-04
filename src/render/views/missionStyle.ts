@@ -62,7 +62,7 @@ export function nodeLook(state: MissionNodeState, fraction: number, time: number
         pad: 1,
         glow: 0.7 + 0.3 * pulse,
         scale: 1.04,
-        beam: 0.9,
+        beam: 0.5,
         arc: Math.min(1, Math.max(0.04, fraction)),
         tick: false,
       };
@@ -74,7 +74,7 @@ export function nodeLook(state: MissionNodeState, fraction: number, time: number
         pad: 0.8 + 0.2 * pulse,
         glow: 0.45 + 0.4 * pulse,
         scale: 1 + 0.04 * pulse,
-        beam: 0.55 + 0.3 * pulse,
+        beam: 0.28 + 0.14 * pulse,
         arc: 0,
         tick: false,
       };
@@ -151,7 +151,7 @@ export function bossLook(
       radius: 1.25,
       bubble: 0,
       arc: Math.max(0.02, frac),
-      beam: 0.8,
+      beam: 0.5,
     };
   }
   return {

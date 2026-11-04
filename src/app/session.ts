@@ -524,9 +524,7 @@ export function liveMatch(): { state: GameState; focusId: number } | null {
  * Where tile centres are on screen in PAGE pixels, with the canvas rectangle they can appear in (the HUD's mission
  * compass). Read-only; null outside a running match.
  */
-export function projectTilesToPage(
-  tiles: readonly { x: number; y: number }[],
-): {
+export function projectTilesToPage(tiles: readonly { x: number; y: number }[]): {
   points: { x: number; y: number; ahead: boolean }[];
   bounds: { left: number; top: number; right: number; bottom: number };
 } | null {
@@ -554,6 +552,8 @@ function exposeDebugHandle(): void {
     tutorial: () => tutorial,
     store: useGameStore,
     stats: () => renderer?.stats() ?? null,
+    /** Campaign mission markers the renderer holds (nodes, boss); null outside a mission. */
+    missionMarkers: () => renderer?.missionMarkerStats() ?? null,
     /** Smoothed ms per frame spent in sim ticks (including bots), bot decisions per tick, and render. */
     timings: () => controller?.timers.snapshot() ?? null,
     /** Graphics quality: the setting, the rung in use, the capability estimate and the controller state. */

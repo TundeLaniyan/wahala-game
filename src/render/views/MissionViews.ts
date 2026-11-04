@@ -42,7 +42,9 @@ import type { FrameContext, View } from './types';
 
 /** Pad (dark disc with a bright rim) side in tiles: its rim is about one tile wide around the node. */
 const PAD_SIZE = 2.2;
-const BEAM_HEIGHT = 3.4;
+const BEAM_HEIGHT = 3;
+/** The icons are drawn about a tile wide and a tile and a half tall, so they read from the follow camera. */
+const ICON_SCALE = 1.4;
 
 interface NodeMarker {
   group: Group;
@@ -103,7 +105,7 @@ export class MissionViews implements View {
   private readonly icons = new Map<IconKind, BufferGeometry>();
   private readonly plane = new PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
   private readonly sphere = new SphereGeometry(0.85, 18, 12);
-  private readonly beamGeo = new CylinderGeometry(0.3, 0.34, BEAM_HEIGHT, 14, 1, true);
+  private readonly beamGeo = new CylinderGeometry(0.14, 0.2, BEAM_HEIGHT, 14, 1, true);
   private readonly warnGlow = new TileOverlay(tileGlowTexture(), 256, 10, 0.05);
   private readonly warnHatch = new TileOverlay(hatchTexture(), 256, 11, 0.055, false);
   private readonly warnEdge = new TileOverlay(frameTexture(), 256, 12, 0.06);
@@ -256,10 +258,10 @@ export class MissionViews implements View {
     }
     n.tick.visible = look.tick;
     n.tickMat.color.setHex(MARKER_COLORS.done);
-    n.icon.scale.setScalar(look.scale);
+    n.icon.scale.setScalar(look.scale * ICON_SCALE);
     n.iconMat.color.setHex(nv.state === 'locked' ? 0x6f7680 : 0xffffff);
     n.iconMat.emissive.setHex(look.color);
-    n.iconMat.emissiveIntensity = look.glow * 0.7;
+    n.iconMat.emissiveIntensity = look.glow * 0.22;
     n.beam.visible = look.beam > 0;
     n.beamMat.color.setHex(look.color);
     n.beamMat.opacity = look.beam;
