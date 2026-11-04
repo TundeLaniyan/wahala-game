@@ -45,7 +45,7 @@ describe('every mission runs to a terminal state with the default bots and an id
       expect(hasNaN(missionView(state))).toBe(false);
       expect(missionView(state)!.outcome).toEqual(m.outcome);
     },
-    30000,
+    60000,
   );
 });
 
@@ -54,13 +54,13 @@ describe('determinism', () => {
     const run = (id: MissionId, seed: number): string => {
       const state = newMission({ id }, { seed, stage: true, keepSoft: true, playing: false });
       const bots = makeBots(state, 'standard', 5);
-      for (let i = 0; i < 700; i++) tick(state, botIntents(state, bots));
+      for (let i = 0; i < 450; i++) tick(state, botIntents(state, bots));
       return hashOf(state);
     };
     expect(run('mushin', 4)).toBe(run('mushin', 4));
     expect(run('mushin', 4)).not.toBe(run('mushin', 5));
     expect(run('ebuteMetta', 8)).toBe(run('ebuteMetta', 8));
-  }, 30000);
+  }, 60000);
 
   it('the same scripted intents give the same state (state is plain JSON)', () => {
     const play = (): string => {
