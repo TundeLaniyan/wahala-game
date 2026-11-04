@@ -1,0 +1,160 @@
+/**
+ * Mission briefing: the district's briefing text (objectives, intel, warnings, the unseen broker's message), the
+ * boss card, and the loadout: fighter, bot level, replay modifier (only ones the save has unlocked) and lives.
+ * The fighter and level are stored in the campaign save, never in the menu setup (`settings`).
+ */
+import { CAMPAIGN, availableModifiers, replayModifierFor } from '../../campaign';
+import { CHARACTERS } from '../../sim';
+import { MISSION_LIVES, isMissionId } from '../../app/campaign';
+import { commands } from '../../app/session';
+import { DifficultySlider } from '../menu/DifficultyControl';
+import { fighterArt } from '../menu/art';
+import { ROSTER, fighterInfo } from '../menu/fighters';
+import { FighterImage } from '../menu/FighterImage';
+import { Field, Option, PrimaryButton, ScreenFrame } from '../menu/Frame';
+import { districtNumber } from './model';
+import { BossCard, BrokerMessage, useCampaignUi } from './parts';
+
+export function BriefingScreen() {
+  const ui = useCampaignUi();
+  if (!ui || !isMissionId(ui.selected)) return null;
+  const id = ui.selected;
+  const d = CAMPAIGN.districts[id];
+  const b = d.briefing;
+  const boss = d.boss!;
+  const { save } = ui;
+  const modifiers = availableModifiers(save, id);
+  const intro = !save.districts[id].introSeen;
+  const f = fighterInfo(save.character);
+  return (
+    <ScreenFrame
+      id="briefing"
+      kicker={`District ${districtNumber(id)} of 6 · ${d.name}`}
+      title={b.title}
+      className="cp-screen cp-brief-screen"
+      status={
+        <span className="mn-chosen" data-testid="briefing-loadout-summary">
+          <b>{f.name}</b> · {MISSION_LIVES} lives
+          {ui.modifier ? ` · ${replayModifierFor(id).name}` : ''}
+        </span>
+      }
+      actions={
+        <PrimaryButton testId="briefing-start" autoFocus onClick={() => commands.campaignStart()}>
+          {intro ? 'Meet the boss' : 'Start mission'}
+        </PrimaryButton>
+      }
+    >
+      {ui.notice && (
+        <p className="cp-notice" role="status" data-testid="campaign-notice">
+          <span>{ui.notice}</span>
+          <button type="button" className="mn-link" onClick={() => commands.campaignDismissNotice()}>
+            OK
+          </button>
+        </p>
+      )}
+      <div className="cp-brief">
+        <section className="cp-brief-main">
+          <div className="cp-panel mn-panel" data-testid="briefing-text">
+            <small className="mn-kicker">{b.location}</small>
+            <p className="cp-summary">{b.summary}</p>
+            <h4>Objectives</h4>
+            <ul data-testid="briefing-objectives">
+              {b.objectives.map((o) => (
+                <li key={o}>{o}</li>
+              ))}
+            </ul>
+            <h4>Intel</h4>
+            <ul data-testid="briefing-intel">
+              {b.intel.map((o) => (
+                <li key={o}>{o}</li>
+              ))}
+            </ul>
+            <h4 className="warn">Warnings</h4>
+            <ul className="warn" data-testid="briefing-warnings">
+              {b.warnings.map((o) => (
+                <li key={o}>{o}</li>
+              ))}
+            </ul>
+          </div>
+          {b.brokerMessage && <BrokerMessage line={b.brokerMessage} />}
+        </section>
+
+        <section className="cp-brief-side">
+          <BossCard boss={boss} />
+          <div className="cp-panel mn-panel cp-loadout" data-testid="briefing-loadout">
+            <small className="mn-kicker">Loadout</small>
+            <div className="cp-roster" role="group" aria-label="Fighter" data-testid="briefing-roster">
+              {ROSTER.map((c) => {
+                const on = c === save.character;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`mn-roster-card cp-fighter${on ? ' on' : ''}`}
+                    aria-pressed={on}
+                    data-testid={`briefing-char-${c}`}
+                    onClick={() => {
+                      commands.click();
+                      commands.campaignLoadout({ character: c });
+                    }}
+                  >
+                    <span className="mn-roster-pic">
+                      <FighterImage id={c} art={fighterArt(c)} sizes="(max-width: 700px) 24vw, 96px" />
+                    </span>
+                    <span className="mn-roster-text">
+                      <b>{CHARACTERS[c].name}</b>
+                      <small>{fighterInfo(c).skillName}</small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <DifficultySlider
+              value={save.difficulty}
+              onChange={(difficulty) => commands.campaignLoadout({ difficulty })}
+              label="Crew difficulty"
+              testId="briefing-diff"
+              caption="Crew level"
+            />
+            <p className="mn-fineprint">The boss always fights at Standard or harder.</p>
+            <Field
+              label="Replay modifier"
+              hint={
+                modifiers.length
+                  ? 'A small rule tweak for a replay.'
+                  : 'Beat this district to unlock its modifier.'
+              }
+              testId="briefing-modifiers"
+            >
+              <div className="mn-opts">
+                <Option
+                  value={'' as string}
+                  current={ui.modifier ?? ''}
+                  label="None"
+                  testId="modifier-none"
+                  onPick={() => commands.campaignModifier(null)}
+                />
+                {modifiers.map((m) => (
+                  <Option
+                    key={m}
+                    value={m as string}
+                    current={ui.modifier ?? ''}
+                    label={replayModifierFor(id).name}
+                    title={replayModifierFor(id).description}
+                    testId={`modifier-${m}`}
+                    onPick={() => commands.campaignModifier(m)}
+                  />
+                ))}
+              </div>
+              {ui.modifier && <p className="mn-fineprint">{replayModifierFor(id).description}</p>}
+            </Field>
+            <p className="cp-lives" data-testid="briefing-lives">
+              Lives: <b>{MISSION_LIVES}</b>. A life is spent each time you are put down; none left and the
+              mission is lost.
+            </p>
+          </div>
+        </section>
+      </div>
+    </ScreenFrame>
+  );
+}

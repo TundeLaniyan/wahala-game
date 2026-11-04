@@ -10,7 +10,47 @@
  * restarts the whole setup.
  */
 
-export type MenuScreen = 'home' | 'mode' | 'setup' | 'fighter' | 'ready' | 'settings' | 'academy';
+export type MenuScreen =
+  | 'home'
+  | 'mode'
+  | 'setup'
+  | 'fighter'
+  | 'ready'
+  | 'settings'
+  | 'academy'
+  // one-player campaign (docs/CAMPAIGN_UI.md): map -> briefing -> boss introduction -> (mission) -> result
+  | 'campaign'
+  | 'campaignStory'
+  | 'briefing'
+  | 'bossIntro'
+  | 'campaignResult'
+  | 'campaignComplete';
+
+export const MENU_SCREENS: readonly MenuScreen[] = [
+  'home',
+  'mode',
+  'setup',
+  'fighter',
+  'ready',
+  'settings',
+  'academy',
+  'campaign',
+  'campaignStory',
+  'briefing',
+  'bossIntro',
+  'campaignResult',
+  'campaignComplete',
+];
+
+/** The campaign screens (they share one frame style and are reached from the Home "Campaign" entry). */
+export const CAMPAIGN_SCREENS: readonly MenuScreen[] = [
+  'campaign',
+  'campaignStory',
+  'briefing',
+  'bossIntro',
+  'campaignResult',
+  'campaignComplete',
+];
 
 export interface MenuState {
   /** Screens from the home screen (always first) to the one showing (last). */
@@ -24,6 +64,7 @@ const NEXT: Partial<Record<MenuScreen, MenuScreen>> = {
   mode: 'setup',
   setup: 'fighter',
   fighter: 'ready',
+  briefing: 'bossIntro',
 };
 
 export const currentScreen = (m: MenuState): MenuScreen => m.stack[m.stack.length - 1] ?? 'home';
@@ -70,9 +111,14 @@ export function advance(m: MenuState): MenuState {
   return next ? openScreen(m, next) : m;
 }
 
+/** Replaces the screen showing with `screen` (Back from it goes where Back from the old one went). */
+export function replaceScreen(m: MenuState, screen: MenuScreen): MenuState {
+  if (screen === 'home') return MENU_HOME;
+  return m.stack.length > 1 ? { stack: [...m.stack.slice(0, -1), screen] } : { stack: ['home', screen] };
+}
+
 /** Sanitises an untrusted menu state (keeps the app usable whatever was patched in). */
 export function validMenu(m: MenuState | null | undefined): MenuState {
-  const known: readonly MenuScreen[] = ['home', 'mode', 'setup', 'fighter', 'ready', 'settings', 'academy'];
-  const stack = (m?.stack ?? []).filter((s) => known.includes(s));
+  const stack = (m?.stack ?? []).filter((s) => MENU_SCREENS.includes(s));
   return stack[0] === 'home' ? { stack } : menuAt(stack);
 }

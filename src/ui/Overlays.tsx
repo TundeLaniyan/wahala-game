@@ -17,6 +17,7 @@ import { playerCss } from '../assets/palette';
 import { RumbleResults } from './RumbleHud';
 import { useMenuNav } from './menu/focusNav';
 import { SettingsPanel } from './menu/SettingsScreen';
+import { MissionPauseInfo } from './campaign/MissionPauseInfo';
 import { FighterImage } from './menu/FighterImage';
 import { fighterArt } from './menu/art';
 import './menu/menu.css';
@@ -64,6 +65,7 @@ function MatchInfo({ hud }: { hud: HudSnapshot | null }) {
 export function PauseOverlay() {
   const hud = useGameStore((st) => st.hud);
   const settingsOpen = useGameStore((st) => st.pauseSettings);
+  const mission = useGameStore((st) => st.campaign?.active ?? null);
   const root = useRef<HTMLDivElement>(null);
   useMenuNav(
     root,
@@ -113,17 +115,32 @@ export function PauseOverlay() {
                 <b>Settings</b>
                 <small>Audio, graphics, controls, accessibility</small>
               </button>
-              <button type="button" className="mn-pause-item" data-testid="restart" onClick={() => commands.rematch()}>
-                <b>Restart</b>
-                <small>Same setup, fresh match</small>
-              </button>
-              <button type="button" className="mn-pause-item danger" data-testid="quit" onClick={() => commands.toTitle()}>
-                <b>Main menu</b>
-                <small>Leave this match</small>
-              </button>
+              {mission ? (
+                <>
+                  <button type="button" className="mn-pause-item" data-testid="mission-retry" onClick={() => commands.campaignRetry()}>
+                    <b>Retry mission</b>
+                    <small>Same district, a fresh attempt</small>
+                  </button>
+                  <button type="button" className="mn-pause-item danger" data-testid="mission-map" onClick={() => commands.campaignMap()}>
+                    <b>Back to campaign map</b>
+                    <small>Leave the mission; your save stays as it is</small>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="mn-pause-item" data-testid="restart" onClick={() => commands.rematch()}>
+                    <b>Restart</b>
+                    <small>Same setup, fresh match</small>
+                  </button>
+                  <button type="button" className="mn-pause-item danger" data-testid="quit" onClick={() => commands.toTitle()}>
+                    <b>Main menu</b>
+                    <small>Leave this match</small>
+                  </button>
+                </>
+              )}
             </nav>
           </div>
-          <MatchInfo hud={hud} />
+          {mission ? <MissionPauseInfo mission={mission} /> : <MatchInfo hud={hud} />}
         </div>
       )}
     </div>

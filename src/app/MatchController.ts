@@ -1,4 +1,5 @@
 import {
+  DIFFICULTIES,
   createGame,
   entryKey,
   getArena,
@@ -7,13 +8,24 @@ import {
   STREAK_REWARD_DEFS,
   VEHICLE_DEFS,
   movementLocked,
+  missionView,
   quickHandsActive,
   moveWouldAct,
   observe,
   readyToStep,
   tick,
 } from '../sim';
-import type { GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent, VehicleTurn } from '../sim';
+import type {
+  Difficulty,
+  GameOptions,
+  GameState,
+  Intent,
+  Intents,
+  SimEvent,
+  VehicleEntry,
+  VehicleIntent,
+  VehicleTurn,
+} from '../sim';
 import { buildMoveBoard, inputTrace } from '../input';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
@@ -21,7 +33,7 @@ import { buildHud } from './hud';
 import { buildPlayers, matchArenaId, matchRules } from './names';
 import { cycleSpectateTarget, eliminatorOf, pickSpectateTarget } from './spectate';
 import { NULL_AUDIO } from './ports';
-import type { AudioPort, Bot, BotFactory, InputPort, RendererPort } from './ports';
+import type { AudioPort, Bot, BotFactory, InputPort, MissionHost, MissionMeta, RendererPort } from './ports';
 import type { GameSettings } from './settings';
 import { SectionTimers } from './sectionTimers';
 import { patch, useGameStore } from './store';
@@ -41,6 +53,8 @@ const SKIP_RENDER_EVERY = 10;
 const HEAR_TILES = 12;
 /** City Rumble follow camera: events further than this from the focus get no particles / shake. */
 const SEE_TILES = 16;
+/** Campaign mission: pause between the sim's outcome and the result screen (the boss beat plays out). */
+const MISSION_END_DELAY_MS = 1600;
 
 /** The audio engine also takes the arena (its music playlist) and a pause hook; stub ports may not. */
 type MatchAudio = AudioPort & { startMusic(arenaId?: string): void; setPaused?(paused: boolean): void };
@@ -83,7 +97,7 @@ export interface ControllerDeps {
  * renderer / audio / HUD, pause and results flow. It contains no DOM code so it can be tested
  * headlessly with fake ports.
  */
-export class MatchController {
+export class MatchController implements MissionHost {
   state: GameState | null = null;
   private bots = new Map<number, Bot>();
   private readonly entry = new VehicleEntryController(LOCAL_ID);
@@ -109,6 +123,8 @@ export class MatchController {
   private skipFrames = 0;
   private closingAnnounced = false;
   private director: ScenarioDirector | null = null;
+  /** Campaign mission presentation (docs/CAMPAIGN_UI.md): own end flow, no MatchSummary, no saved settings. */
+  private mission: MissionMeta | null = null;
   /** Smoothed ms per frame spent in sim ticks, bot decisions and the renderer (`?fps`, debug handle). */
   readonly timers = new SectionTimers();
 
@@ -120,6 +136,7 @@ export class MatchController {
 
   start(settings: GameSettings, seed = Math.floor(Math.random() * 2 ** 31)): void {
     this.director = null;
+    this.mission = null;
     this.settings = settings;
     const players = buildPlayers(settings, seed);
     const arenaId = matchArenaId(settings);
@@ -166,11 +183,73 @@ export class MatchController {
   }
 
   /**
+   * Campaign: starts a mission match from ready-made options (app/campaign.ts builds them with the sim's
+   * `buildMissionGame`). A sibling of `start`: same loop, HUD and audio path, bots from each seat's level (the
+   * boss, seat 1, at least Standard), but the saved menu settings are never read or written and the end of the
+   * match goes to `meta.onEnd` instead of the normal results screen.
+   */
+  startMission(options: GameOptions, meta: MissionMeta): void {
+    this.director = null;
+    this.settings = null;
+    this.mission = meta;
+    const state = createGame(options);
+    this.state = state;
+    this.rumble = getArena(state.arenaId).kind === 'rumble';
+    if (!this.rumble) this.audio.setListener?.(null);
+    this.spectateId = null;
+    this.skipping = false;
+    this.closingAnnounced = false;
+    this.bots = new Map();
+    const floor = DIFFICULTIES.indexOf('standard');
+    state.players.forEach((p, i) => {
+      if (!p.isBot) return;
+      const level: Difficulty = options.players[i]?.difficulty ?? meta.difficulty;
+      const at = DIFFICULTIES.indexOf(level);
+      this.bots.set(
+        i,
+        this.deps.botFactory({
+          difficulty: i === 1 ? (DIFFICULTIES[Math.max(at, floor)] ?? level) : level,
+          seed: options.seed + i * 7919,
+          playerId: i,
+        }),
+      );
+    });
+    this.accumulator = 0;
+    this.lastMs = -1;
+    this.paused = false;
+    this.frozen = false;
+    this.endedAtMs = null;
+    this.excitement = 0.2;
+    this.countdownShown = -1;
+    this.forced = {};
+    this.entry.sync(state);
+    this.deps.input.clear();
+    this.deps.renderer.loadGame(state);
+    this.audio.startMusic(state.arenaId);
+    this.audio.setIntensity(0);
+    patch({
+      screen: 'playing',
+      paused: false,
+      toasts: [],
+      subtitle: null,
+      summary: null,
+      skipping: false,
+      hud: buildHud(state, LOCAL_ID, null),
+    });
+  }
+
+  /** A campaign mission (not a normal match) is running. */
+  get isMission(): boolean {
+    return this.mission !== null;
+  }
+
+  /**
    * Tutorial: runs a prepared state (already in its playing phase) under a director. No bots, no
    * saved settings are touched and no results screen follows; `start` returns to normal play.
    */
   startScenario(state: GameState, director: ScenarioDirector): void {
     this.director = director;
+    this.mission = null;
     this.settings = null;
     this.state = state;
     this.bots = new Map();
@@ -218,6 +297,7 @@ export class MatchController {
 
   stop(): void {
     this.director = null;
+    this.mission = null;
     this.state = null;
     this.audio.stopMusic();
     patch({ screen: 'title', hud: null, paused: false, summary: null, toasts: [], subtitle: null });
@@ -438,7 +518,27 @@ export class MatchController {
       this.hudClock = nowMs;
       this.publishHud(nowMs);
     }
-    if (state.match.phase === 'ended' && !this.director) this.handleEnded(nowMs);
+    if (this.mission) this.watchMission(state, nowMs);
+    else if (state.match.phase === 'ended' && !this.director) this.handleEnded(nowMs);
+  }
+
+  /**
+   * Mission end: the sim's outcome (or the match ending without one) is reported once to the campaign after a
+   * short beat. The normal results screen and MatchSummary are never used for missions.
+   */
+  private watchMission(state: GameState, nowMs: number): void {
+    const meta = this.mission;
+    if (!meta) return;
+    const outcome = missionView(state)?.outcome ?? null;
+    if (outcome === null && state.match.phase !== 'ended') return;
+    if (this.endedAtMs === null) {
+      this.endedAtMs = nowMs;
+      this.publishHud(nowMs);
+    }
+    if (nowMs - this.endedAtMs < MISSION_END_DELAY_MS) return;
+    this.mission = null; // exactly once
+    this.audio.stopMusic();
+    meta.onEnd(outcome, state);
   }
 
   private countdownBeeps(state: GameState): void {
@@ -670,7 +770,7 @@ export class MatchController {
   skipToResults(): void {
     const state = this.state;
     // respawn modes: being down is temporary and the clock decides; there is nothing to skip to
-    if (!state || this.director || this.respawnMode) return;
+    if (!state || this.director || this.mission || this.respawnMode) return;
     if (this.rumble && state.match.phase !== 'ended') {
       this.skipping = true;
       this.paused = false;

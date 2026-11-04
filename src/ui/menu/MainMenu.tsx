@@ -19,10 +19,17 @@ import { FighterScreen } from './FighterScreen';
 import { ReadyScreen } from './ReadyScreen';
 import { SettingsScreen } from './SettingsScreen';
 import { AcademyScreen } from './AcademyScreen';
+import { BossIntroScreen } from '../campaign/BossIntroScreen';
+import { BriefingScreen } from '../campaign/BriefingScreen';
+import { CampaignMap } from '../campaign/CampaignMap';
+import { CompleteScreen } from '../campaign/CompleteScreen';
+import { ResultScreen } from '../campaign/ResultScreen';
+import { StoryScreen } from '../campaign/StoryScreen';
+import { campaignScreenReady } from '../campaign/model';
 import './menu.css';
 import './flow.css';
 
-const SCREENS: Record<MenuScreen, () => React.JSX.Element> = {
+const SCREENS: Record<MenuScreen, () => React.JSX.Element | null> = {
   home: HomeScreen,
   mode: ModeScreen,
   setup: SetupScreen,
@@ -30,11 +37,18 @@ const SCREENS: Record<MenuScreen, () => React.JSX.Element> = {
   ready: ReadyScreen,
   settings: SettingsScreen,
   academy: AcademyScreen,
+  campaign: CampaignMap,
+  campaignStory: StoryScreen,
+  briefing: BriefingScreen,
+  bossIntro: BossIntroScreen,
+  campaignResult: ResultScreen,
+  campaignComplete: CompleteScreen,
 };
 
 export function MainMenu() {
   const screen = useGameStore((s) => currentScreen(s.menu));
   const loading = useGameStore((s) => s.loading);
+  const campaignOk = useGameStore((s) => campaignScreenReady(currentScreen(s.menu), s.campaign));
   const root = useRef<HTMLDivElement>(null);
   useMenuNav(root, () => {
     if (useGameStore.getState().menu.stack.length <= 1) return false;
@@ -46,6 +60,10 @@ export function MainMenu() {
     const active = document.activeElement as HTMLElement | null;
     if (active && root.current?.contains(active)) active.blur();
   }, [screen]);
+  // a campaign screen without its data (flag off, stale menu state) goes home instead of showing nothing
+  useEffect(() => {
+    if (!campaignOk) commands.menuHome();
+  }, [campaignOk]);
   const Screen = SCREENS[screen];
   const busy = loading !== null && loading.done < loading.total;
   return (

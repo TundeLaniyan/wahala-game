@@ -9,16 +9,19 @@ import { InputManager, inputTrace } from '../input';
 import { GameRenderer, assets, isQualitySetting, renderCastPortraits, resolveShakeMode } from '../render';
 import type { QualityEvent } from '../render';
 import { registerBusts } from '../assets/portraits';
-import type { CharacterId, GameState, SimEvent } from '../sim';
+import { browserStore } from '../campaign';
+import { flags } from '../platform';
+import type { CharacterId, Difficulty, GameState, MissionModifierId, SimEvent } from '../sim';
 import { enterImmersiveMode } from './fullscreen';
 import { AttractController } from './AttractController';
+import { CampaignController } from './campaign';
 import { MatchController } from './MatchController';
 import { TutorialController } from './TutorialController';
 import { advance, back, editScreen, menuAt, openScreen } from './menu';
 import type { MenuScreen, MenuState } from './menu';
 import { routeMenuNav } from './menuNav';
 import { NULL_AUDIO } from './ports';
-import type { AudioPort } from './ports';
+import type { AudioPort, MissionHost } from './ports';
 import { sanitizeSettings, saveSettings } from './settings';
 import type { GameSettings } from './settings';
 import { QualityNotifier } from './qualityNotice';
@@ -29,6 +32,8 @@ import { createSubtitleFeed } from './subtitles';
 let controller: MatchController | null = null;
 let attract: AttractController | null = null;
 let tutorial: TutorialController | null = null;
+/** One-player campaign (null when the `campaign` flag is off). */
+let campaign: CampaignController | null = null;
 let renderer: GameRenderer | null = null;
 let audio: AudioPort = NULL_AUDIO;
 let raf = 0;
@@ -204,6 +209,19 @@ export function mount(canvas: HTMLCanvasElement): () => void {
       (audio as { previewVoice?: (t: string) => boolean }).previewVoice?.(trigger);
     },
   });
+  if (flags().campaign) {
+    campaign = new CampaignController({
+      store: browserStore(),
+      host: missionHost,
+      now: () => Date.now(),
+      seed: () => {
+        const forced = Number(params.get('seed'));
+        return Number.isFinite(forced) && forced > 0 ? forced : Math.floor(Math.random() * 2 ** 31);
+      },
+      startingFighter: () => useGameStore.getState().settings.character,
+    });
+    campaign.load();
+  } else patch({ campaign: null });
   // The live demo behind the menu is skipped for tests (?nobots / ?noattract) and on the lowest quality.
   // Models load once; the live demo behind the menu starts when the rigged cast is ready.
   patch({ loading: { done: 0, total: 1 } });
@@ -266,6 +284,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     renderer = null;
     controller = null;
     tutorial = null;
+    campaign = null;
   };
 }
 
@@ -283,6 +302,23 @@ function settingsAllowAttract(): boolean {
     useGameStore.getState().settings.quality !== 'low'
   );
 }
+
+/** What the campaign controller drives: the match controller, plus the same start-of-match chores as `start`. */
+const missionHost: MissionHost = {
+  startMission(options, meta): void {
+    void audio.unlock();
+    qualityNotifier.newMatch();
+    if (useGameStore.getState().touchCapable) void enterImmersiveMode();
+    audio.playUi('start');
+    attract?.stop();
+    subtitles.clear();
+    controller?.startMission(options, meta);
+  },
+  stop(): void {
+    subtitles.clear();
+    controller?.stop();
+  },
+};
 
 /** Everything the UI can ask the game to do. */
 export const commands = {
@@ -310,6 +346,7 @@ export const commands = {
     audio.playUi('back');
     subtitles.clear();
     patch({ menu: menuAt(path), pauseSettings: false });
+    campaign?.leave();
     controller?.stop();
     if (settingsAllowAttract()) attract?.start();
   },
@@ -335,6 +372,66 @@ export const commands = {
   menuHome(): void {
     audio.playUi('back');
     setMenu(menuAt([]));
+  },
+  // ---- one-player campaign (app/campaign.ts); every screen goes through these, nothing else writes the save
+  campaignOpen(): void {
+    audio.playUi('click');
+    campaign?.open();
+  },
+  campaignNew(): void {
+    audio.playUi('start');
+    campaign?.startNew();
+  },
+  campaignDelete(): void {
+    audio.playUi('back');
+    campaign?.deleteSave();
+  },
+  campaignContinue(): void {
+    audio.playUi('click');
+    campaign?.continue();
+  },
+  campaignStory(kind: 'prologue' | 'finale'): void {
+    audio.playUi('click');
+    campaign?.playStory(kind);
+  },
+  campaignStoryDone(): void {
+    audio.playUi('click');
+    campaign?.storyDone();
+  },
+  campaignSelect(id: Parameters<CampaignController['selectDistrict']>[0]): void {
+    audio.playUi('click');
+    campaign?.selectDistrict(id);
+  },
+  campaignBriefing(id?: Parameters<CampaignController['selectDistrict']>[0], modifier?: MissionModifierId): void {
+    audio.playUi('click');
+    campaign?.beginBriefing(id, modifier ?? null);
+  },
+  campaignModifier(modifier: MissionModifierId | null): void {
+    audio.playUi('click');
+    campaign?.setModifier(modifier);
+  },
+  campaignLoadout(loadout: { character?: CharacterId; difficulty?: Difficulty }): void {
+    campaign?.setLoadout(loadout);
+  },
+  campaignStart(): void {
+    campaign?.startFromBriefing();
+  },
+  campaignBossIntroDone(): void {
+    campaign?.bossIntroDone();
+  },
+  campaignRetry(): void {
+    campaign?.retry();
+  },
+  campaignMap(): void {
+    audio.playUi('back');
+    campaign?.toMap();
+  },
+  campaignNext(): void {
+    audio.playUi('click');
+    campaign?.nextDistrict();
+  },
+  campaignDismissNotice(): void {
+    campaign?.dismissNotice();
   },
   /** The pause menu's Settings panel (the match stays paused behind it). */
   pauseSettings(open: boolean): void {
@@ -430,6 +527,7 @@ function exposeDebugHandle(): void {
   w.__WAHALA__ = {
     getState: (): GameState | null => controller?.state ?? null,
     controller: () => controller,
+    campaign: () => campaign,
     tutorial: () => tutorial,
     store: useGameStore,
     stats: () => renderer?.stats() ?? null,

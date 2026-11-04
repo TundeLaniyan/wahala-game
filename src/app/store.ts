@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { InputSourceName } from '../input';
 import type { CharacterId } from '../sim';
 import type { CameraMode, QualityStatus, RenderStats } from '../render';
+import type { CampaignUi } from './campaignState';
 import type { HudSnapshot } from './hud';
 import { MENU_HOME } from './menu';
 import type { MenuState } from './menu';
@@ -121,6 +122,8 @@ export interface UiState {
   pauseSettings: boolean;
   /** Graphics quality in use (null until the renderer exists): the Settings screen shows it. */
   quality: QualityStatus | null;
+  /** One-player campaign (app/campaign.ts); null when the campaign flag is off or before it has loaded. */
+  campaign: CampaignUi | null;
 }
 
 /** UI-facing state. The simulation state itself is deliberately NOT stored in React state. */
@@ -149,6 +152,7 @@ export const useGameStore = create<UiState>(() => ({
   menu: MENU_HOME,
   pauseSettings: false,
   quality: null,
+  campaign: null,
 }));
 
 export const patch = (p: Partial<UiState>): void => useGameStore.setState(p);
