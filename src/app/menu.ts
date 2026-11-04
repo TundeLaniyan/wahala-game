@@ -24,7 +24,10 @@ export type MenuScreen =
   | 'briefing'
   | 'bossIntro'
   | 'campaignResult'
-  | 'campaignComplete';
+  | 'campaignComplete'
+  // online PREVIEW (docs/ONLINE_ARCHITECTURE.md): one screen whose steps live in app/online.ts; reachable only when
+  // `flags().online` is true (mock or server), never in a default build
+  | 'online';
 
 export const MENU_SCREENS: readonly MenuScreen[] = [
   'home',
@@ -40,7 +43,15 @@ export const MENU_SCREENS: readonly MenuScreen[] = [
   'bossIntro',
   'campaignResult',
   'campaignComplete',
+  'online',
 ];
+
+/**
+ * The online preview exists only behind the `online` feature flag: with the flag off a stale menu state that
+ * names it (a reload, a patched store) must fall back to home. Pure so it can be tested without a DOM.
+ */
+export const onlineScreenReady = (screen: MenuScreen, onlineFlag: boolean): boolean =>
+  screen !== 'online' || onlineFlag;
 
 /** The campaign screens (they share one frame style and are reached from the Home "Campaign" entry). */
 export const CAMPAIGN_SCREENS: readonly MenuScreen[] = [

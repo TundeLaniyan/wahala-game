@@ -144,6 +144,16 @@ export function HomeScreen() {
               text="Interactive lessons: watch it, then play it"
               onClick={() => commands.menuOpen('academy')}
             />
+            {flags().online && (
+              <HomeItem
+                testId="home-online"
+                icon="🌐"
+                title="Online"
+                tag="Preview"
+                text="Mock server · no real players · guest account"
+                onClick={() => commands.menuOpen('online')}
+              />
+            )}
             <HomeItem
               testId="home-settings"
               icon="⚙"

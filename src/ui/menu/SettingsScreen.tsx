@@ -15,6 +15,7 @@ import { audioPrefs } from '../../audio/prefs';
 import { QUALITY_LABEL, QUALITY_SETTINGS } from '../../render/quality';
 import { AudioSettingsPanel } from '../AudioSettings';
 import { LEGEND_ORDER, legendRows } from '../howToPlayControls';
+import { BuildFlags } from '../online/BuildFlags';
 import { Field, Option, PrimaryButton, ScreenFrame, Toggle } from './Frame';
 
 export type SettingsTab = 'audio' | 'graphics' | 'controls' | 'access';
@@ -259,6 +260,7 @@ function AccessTab({ s, set }: { s: GameSettings; set: Set }) {
         Reduced motion: when your device asks for less motion, the menus stop animating and the camera never
         shakes.
       </p>
+      <BuildFlags />
     </>
   );
 }

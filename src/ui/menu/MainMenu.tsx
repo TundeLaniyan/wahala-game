@@ -3,9 +3,10 @@
  * chosen by `UiState.menu` (app/menu.ts). Keyboard and gamepad move focus between the controls of the
  * screen showing (focusNav.ts); Esc / gamepad B goes back.
  */
-import { useEffect, useRef } from 'react';
+import { Suspense, lazy, useEffect, useRef } from 'react';
 import { commands } from '../../app/session';
-import { currentScreen } from '../../app/menu';
+import { flags } from '../../platform';
+import { currentScreen, onlineScreenReady } from '../../app/menu';
 import type { MenuScreen } from '../../app/menu';
 import { useGameStore } from '../../app/store';
 import { FLOWFRAME } from '../../render/perf/brand';
@@ -29,7 +30,10 @@ import { campaignScreenReady } from '../campaign/model';
 import './menu.css';
 import './flow.css';
 
-const SCREENS: Record<MenuScreen, () => React.JSX.Element | null> = {
+// The online PREVIEW is its own chunk: a default build never downloads it (it is only reachable with flags().online).
+const OnlineScreen = lazy(() => import('../online/OnlineScreen').then((m) => ({ default: m.OnlineScreen })));
+
+const SCREENS: Record<MenuScreen, React.ComponentType> = {
   home: HomeScreen,
   mode: ModeScreen,
   setup: SetupScreen,
@@ -43,12 +47,14 @@ const SCREENS: Record<MenuScreen, () => React.JSX.Element | null> = {
   bossIntro: BossIntroScreen,
   campaignResult: ResultScreen,
   campaignComplete: CompleteScreen,
+  online: OnlineScreen,
 };
 
 export function MainMenu() {
   const screen = useGameStore((s) => currentScreen(s.menu));
   const loading = useGameStore((s) => s.loading);
   const campaignOk = useGameStore((s) => campaignScreenReady(currentScreen(s.menu), s.campaign));
+  const onlineOk = onlineScreenReady(screen, flags().online);
   const root = useRef<HTMLDivElement>(null);
   useMenuNav(root, () => {
     if (useGameStore.getState().menu.stack.length <= 1) return false;
@@ -64,6 +70,10 @@ export function MainMenu() {
   useEffect(() => {
     if (!campaignOk) commands.menuHome();
   }, [campaignOk]);
+  // the online preview without its flag (stale menu state) goes home instead of showing anything
+  useEffect(() => {
+    if (!onlineOk) commands.menuHome();
+  }, [onlineOk]);
   const Screen = SCREENS[screen];
   const busy = loading !== null && loading.done < loading.total;
   return (
@@ -74,7 +84,7 @@ export function MainMenu() {
         <i className="mn-grain" />
       </div>
       <div className="mn-stage" key={screen}>
-        <Screen />
+        <Suspense fallback={null}>{onlineOk && <Screen />}</Suspense>
       </div>
       {busy && loading && (
         <div
