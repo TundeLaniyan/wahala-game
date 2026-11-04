@@ -6,6 +6,7 @@ import {
   InstancedMesh,
   Matrix4,
   MeshBasicMaterial,
+  NormalBlending,
   PlaneGeometry,
   Quaternion,
   Vector3,
@@ -36,7 +37,8 @@ export class TileOverlay {
   private readonly s = new Vector3();
   private readonly c = new Color();
 
-  constructor(texture: Texture, capacity: number, renderOrder: number, y = 0.045) {
+  /** `additive: false` = ordinary alpha blending (a hatch that must read on a bright floor); the default glows. */
+  constructor(texture: Texture, capacity: number, renderOrder: number, y = 0.045, additive = true) {
     const geo = new PlaneGeometry(1, 1);
     geo.rotateX(-Math.PI / 2);
     this.mesh = new InstancedMesh(
@@ -44,7 +46,7 @@ export class TileOverlay {
       new MeshBasicMaterial({
         map: texture,
         transparent: true,
-        blending: AdditiveBlending,
+        blending: additive ? AdditiveBlending : NormalBlending,
         depthWrite: false,
         side: DoubleSide,
       }),

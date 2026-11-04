@@ -54,6 +54,7 @@ import { KnockdownViews } from './views/KnockdownViews';
 import { VehicleViews } from './views/VehicleViews';
 import { TrapViews } from './views/TrapViews';
 import { StageHazardViews } from './views/StageHazardViews';
+import { MissionViews } from './views/MissionViews';
 import type { FrameContext, View } from './views/types';
 import { disposeTextures } from './textures';
 
@@ -122,7 +123,9 @@ function pageEnv(): CapabilityEnv {
     screen: w.screen,
     devicePixelRatio: w.devicePixelRatio,
     matchMedia: w.matchMedia?.bind(globalThis),
-    createCanvas: w.document ? () => w.document!.createElement('canvas') as { getContext(t: string): unknown } : undefined,
+    createCanvas: w.document
+      ? () => w.document!.createElement('canvas') as { getContext(t: string): unknown }
+      : undefined,
   };
 }
 
@@ -167,6 +170,7 @@ export class GameRenderer {
   private overlays!: OverlayViews;
   private vehicles!: VehicleViews;
   private stage: StageHazardViews | null = null;
+  private missionMarkers: MissionViews | null = null;
   /** The stage's living environment (ambient traffic, crowds); null for arenas without one or with `?noenv`. */
   private living: LivingEnvironment | null = null;
   private views: View[] = [];
@@ -294,6 +298,9 @@ export class GameRenderer {
       knockdown,
       this.stage,
     ];
+    // campaign missions only (a normal match builds nothing): objective nodes, strike / rail telegraphs, the boss
+    this.missionMarkers = state.mission ? new MissionViews() : null;
+    if (this.missionMarkers) this.views.push(this.missionMarkers);
     this.living = this.createLiving(state);
     if (this.living) this.views.push(this.living);
     this.scene.add(
@@ -312,6 +319,7 @@ export class GameRenderer {
       this.effects.group,
     );
     if (this.living) this.scene.add(this.living.group);
+    if (this.missionMarkers) this.scene.add(this.missionMarkers.group);
 
     const tag = (o: { userData: Record<string, unknown> }, cls: GritClass): void => {
       o.userData.grit = cls;
@@ -330,6 +338,7 @@ export class GameRenderer {
     tag(this.stage.group, 'none');
     tag(this.effects.group, 'none');
     if (this.living) tag(this.living.group, 'none');
+    if (this.missionMarkers) tag(this.missionMarkers.group, 'none');
     this.weather();
 
     this.loaded = true;
@@ -340,10 +349,16 @@ export class GameRenderer {
   /** The arena's living environment, if its art declares one (data in `ArenaArt.env`); `?noenv` turns it off for measuring. */
   private createLiving(state: GameState): LivingEnvironment | null {
     const src = NEW_ARENA_ART()[state.arenaId]?.env;
-    if (!src || (typeof location !== 'undefined' && new URLSearchParams(location.search).has('noenv'))) return null;
+    if (!src || (typeof location !== 'undefined' && new URLSearchParams(location.search).has('noenv')))
+      return null;
     const board = { cols: state.width, rows: state.height };
-    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    return new LivingEnvironment(resolveEnv(src, board), { board, profile: this.profile, reducedMotion: reduced });
+    const reduced =
+      typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return new LivingEnvironment(resolveEnv(src, board), {
+      board,
+      profile: this.profile,
+      reducedMotion: reduced,
+    });
   }
 
   /** What the living environment built (debug / performance report); null when the arena has none. */
@@ -366,6 +381,7 @@ export class GameRenderer {
     this.views = [];
     this.players = null;
     this.stage = null;
+    this.missionMarkers = null;
     this.living = null;
     this.loaded = false;
   }
@@ -784,6 +800,26 @@ export class GameRenderer {
       x: ((p.x + 1) / 2) * this.width,
       y: ((1 - p.y) / 2) * this.height,
     }));
+  }
+
+  /**
+   * Where tile centres are on screen, in CSS pixels of the canvas (`ahead` false = behind the camera). Null before a
+   * match is loaded. The HUD's mission compass uses it; it reads the camera and changes nothing.
+   */
+  projectTiles(
+    tiles: readonly { x: number; y: number }[],
+  ): { x: number; y: number; ahead: boolean }[] | null {
+    if (!this.loaded) return null;
+    return this.rig.projectTilesNdc(tiles).map((p) => ({
+      x: ((p.x + 1) / 2) * this.width,
+      y: ((1 - p.y) / 2) * this.height,
+      ahead: p.ahead,
+    }));
+  }
+
+  /** What the mission markers drew last frame (null outside a mission); debug / performance reports. */
+  missionMarkerStats(): { nodes: number; boss: boolean; visible: boolean } | null {
+    return this.missionMarkers?.stats() ?? null;
   }
 
   stats(): RenderStats {

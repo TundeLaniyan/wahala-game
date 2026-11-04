@@ -402,7 +402,10 @@ export const commands = {
     audio.playUi('click');
     campaign?.selectDistrict(id);
   },
-  campaignBriefing(id?: Parameters<CampaignController['selectDistrict']>[0], modifier?: MissionModifierId): void {
+  campaignBriefing(
+    id?: Parameters<CampaignController['selectDistrict']>[0],
+    modifier?: MissionModifierId,
+  ): void {
     audio.playUi('click');
     campaign?.beginBriefing(id, modifier ?? null);
   },
@@ -515,6 +518,26 @@ export function liveMatch(): { state: GameState; focusId: number } | null {
   const state = controller?.state;
   if (!state) return null;
   return { state, focusId: controller?.spectating ?? 0 };
+}
+
+/**
+ * Where tile centres are on screen in PAGE pixels, with the canvas rectangle they can appear in (the HUD's mission
+ * compass). Read-only; null outside a running match.
+ */
+export function projectTilesToPage(
+  tiles: readonly { x: number; y: number }[],
+): {
+  points: { x: number; y: number; ahead: boolean }[];
+  bounds: { left: number; top: number; right: number; bottom: number };
+} | null {
+  if (!renderer || !canvasEl) return null;
+  const projected = renderer.projectTiles(tiles);
+  if (!projected) return null;
+  const at = canvasEl.getBoundingClientRect();
+  return {
+    points: projected.map((p) => ({ x: p.x + at.left, y: p.y + at.top, ahead: p.ahead })),
+    bounds: { left: at.left, top: at.top, right: at.right, bottom: at.bottom },
+  };
 }
 
 /** Debug/test hook, enabled with `?debug` in the URL (used by the Playwright suite). */

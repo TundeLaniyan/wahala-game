@@ -5,7 +5,7 @@ import { playerCss } from '../assets/palette';
 import { liveMatch } from '../app/session';
 import { useGameStore } from '../app/store';
 import { minimapGeometry, minimapLayers, tileToMinimap } from './minimapModel';
-import type { MinimapGeometry } from './minimapModel';
+import type { MinimapGeometry, MinimapMission } from './minimapModel';
 import './Minimap.css';
 
 /** Redraws per second (the board changes slowly; players move about 6 tiles a second). */
@@ -23,6 +23,15 @@ const C = {
   core: '#ffc61a',
   gen: '#0b0b0b',
   flame: '#ffb347',
+  // campaign mission layer (same legend as the world markers: gold = do this, green = done, grey = not yet)
+  nodeTarget: '#ffd23a',
+  nodeDone: '#4dff88',
+  nodeLocked: '#8d96a3',
+  strike: '#ff2a1a',
+  window: '#ffb300',
+  reinforce: '#4aa8ff',
+  bossShield: '#4aa8ff',
+  bossExposed: '#ff3b1f',
 };
 
 /** The static board (ground, avenues, buildings) for one arena, drawn once. */
@@ -81,6 +90,7 @@ function draw(
     g.strokeRect(L.core.x0 * s + 0.75, L.core.y0 * s + 0.75, L.core.w * s - 1.5, L.core.h * s - 1.5);
     g.setLineDash([]);
   }
+  if (L.mission) drawMission(g, L.mission, geo, time);
   for (const f of L.flames) {
     const p = tileToMinimap(geo, f.x, f.y);
     g.fillStyle = C.flame;
@@ -125,6 +135,74 @@ function draw(
       g.stroke();
     }
   }
+  if (L.mission?.boss) drawBoss(g, L.mission.boss, geo, time);
+}
+
+/** Warning tiles (red strikes and convoys, amber rail lanes, blue reinforcements) and the objective nodes. */
+function drawMission(
+  g: CanvasRenderingContext2D,
+  m: MinimapMission,
+  geo: MinimapGeometry,
+  time: number,
+): void {
+  const s = geo.cell;
+  for (const w of m.warnings) {
+    g.globalAlpha = w.urgent ? 0.55 + 0.45 * Math.sin(time * 18) ** 2 : 0.75;
+    g.fillStyle = w.kind === 'window' ? C.window : w.kind === 'reinforce' ? C.reinforce : C.strike;
+    for (const i of w.tiles) g.fillRect((i % geo.cols) * s, Math.floor(i / geo.cols) * s, s, s);
+  }
+  g.globalAlpha = 1;
+  const pulse = 0.5 + 0.5 * Math.sin(time * 4.2);
+  for (const n of m.nodes) {
+    const p = tileToMinimap(geo, n.x, n.y);
+    const r = Math.max(3, s * 1.15);
+    const color = n.state === 'done' ? C.nodeDone : n.state === 'locked' ? C.nodeLocked : C.nodeTarget;
+    g.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    g.beginPath();
+    g.arc(p.x, p.y, r + 1.2, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = color;
+    g.beginPath();
+    if (n.press) g.rect(p.x - r, p.y - r, r * 2, r * 2);
+    else g.arc(p.x, p.y, r, 0, Math.PI * 2);
+    g.fill();
+    if (n.state === 'progress') {
+      g.strokeStyle = C.nodeDone;
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(p.x, p.y, r + 2.4, 0, Math.PI * 2);
+      g.stroke();
+    } else if (n.state === 'live' || n.state === 'idle') {
+      g.strokeStyle = `rgba(255, 210, 58, ${0.35 + 0.5 * pulse})`;
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.arc(p.x, p.y, r + 1.5 + pulse * 2, 0, Math.PI * 2);
+      g.stroke();
+    }
+  }
+}
+
+/** The boss: a ring round his dot, blue while shielded, flashing red when exposed. */
+function drawBoss(
+  g: CanvasRenderingContext2D,
+  boss: NonNullable<MinimapMission['boss']>,
+  geo: MinimapGeometry,
+  time: number,
+): void {
+  const p = tileToMinimap(geo, boss.x, boss.y);
+  const r = Math.max(4, geo.cell * 1.5);
+  g.lineWidth = 2;
+  g.strokeStyle =
+    boss.mode === 'exposed'
+      ? Math.sin(time * 12) > 0
+        ? C.bossExposed
+        : C.core
+      : boss.mode === 'defeated'
+        ? C.nodeDone
+        : C.bossShield;
+  g.beginPath();
+  g.arc(p.x, p.y, r, 0, Math.PI * 2);
+  g.stroke();
 }
 
 /**

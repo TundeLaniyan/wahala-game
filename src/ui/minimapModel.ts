@@ -3,8 +3,8 @@
  * uses public information: the board, the closing city, live hazards and where everybody stands.
  * Pickups are never drawn (hidden ones must not leak, and revealed ones would only be clutter).
  */
-import { Tile } from '../sim';
-import type { GameState } from '../sim';
+import { Tile, missionView } from '../sim';
+import type { GameState, MissionNodeState, MissionWarningView } from '../sim';
 
 export interface MinimapGeometry {
   cols: number;
@@ -36,6 +36,39 @@ export interface MinimapPlayer {
   kind: 'local' | 'focus' | 'rival';
 }
 
+/** A campaign mission's picture for the map: its objective nodes, telegraphed warning tiles and the boss. */
+export interface MinimapMission {
+  nodes: { id: string; x: number; y: number; state: MissionNodeState; press: boolean }[];
+  warnings: { kind: MissionWarningView['kind']; tiles: number[]; urgent: boolean }[];
+  boss: { x: number; y: number; mode: 'shielded' | 'exposed' | 'defeated' } | null;
+}
+
+/** A warning this close (ticks) to landing blinks fast on the map. */
+export const MINIMAP_URGENT_TICKS = 120;
+
+/** The mission layer of the map (null outside a mission). Public information only: the sim's own mission view. */
+export function minimapMission(state: GameState): MinimapMission | null {
+  const view = missionView(state);
+  if (!view) return null;
+  const b = state.players[view.boss.playerId];
+  return {
+    nodes: view.nodes.map((n) => ({ id: n.id, x: n.x, y: n.y, state: n.state, press: n.id === 'press' })),
+    warnings: view.warnings.map((w) => ({
+      kind: w.kind,
+      tiles: w.tiles,
+      urgent: w.remainingTicks <= MINIMAP_URGENT_TICKS,
+    })),
+    boss:
+      b && (b.alive || view.boss.defeated)
+        ? {
+            x: b.x,
+            y: b.y,
+            mode: view.boss.defeated ? 'defeated' : view.boss.exposed ? 'exposed' : 'shielded',
+          }
+        : null,
+  };
+}
+
 export interface MinimapLayers {
   players: MinimapPlayer[];
   /** Grounded generators and burning tiles near the followed player. */
@@ -53,6 +86,8 @@ export interface MinimapLayers {
   hazards: number[];
   /** The square that never closes, once the city has started closing (null before / without one). */
   core: { x0: number; y0: number; w: number; h: number } | null;
+  /** Campaign mission: objective nodes, warning tiles and the boss (null outside a mission). */
+  mission: MinimapMission | null;
 }
 
 /** Hazards and generators further than this (Chebyshev tiles) from the followed player are left out. */
@@ -137,5 +172,6 @@ export function minimapLayers(
     closingSoon,
     hazards,
     core,
+    mission: minimapMission(state),
   };
 }
