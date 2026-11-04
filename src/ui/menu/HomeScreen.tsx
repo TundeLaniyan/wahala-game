@@ -3,6 +3,8 @@
  * Training Academy, Settings) and the saved-setup card with Quick Play for returning players. Offline,
  * one human against AI bots: no accounts, servers or store.
  */
+import { campaignProgress } from '../../campaign';
+import { flags } from '../../platform';
 import { CHARACTERS, RUMBLE_ARENA_IDS, STANDARD_ARENA_IDS } from '../../sim';
 import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
@@ -18,12 +20,13 @@ function HomeItem(props: {
   text: string;
   icon: string;
   flagship?: boolean;
+  campaign?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
-      className={`mn-home-item${props.flagship ? ' flagship' : ''}`}
+      className={`mn-home-item${props.flagship ? ' flagship' : ''}${props.campaign ? ' campaign' : ''}`}
       data-testid={props.testId}
       data-autofocus={props.flagship ? '' : undefined}
       onClick={props.onClick}
@@ -51,8 +54,13 @@ export function HomeScreen() {
   useGameStore((st) => st.portraitsVersion);
   const busy = loading !== null && loading.done < loading.total;
   const fighter = fighterInfo(s.character);
+  const campaign = useGameStore((st) => st.campaign);
+  const progress = campaign?.started ? campaignProgress(campaign.save) : null;
   return (
-    <section className="mn-screen mn-screen-home" data-testid="menu-home">
+    <section
+      className={`mn-screen mn-screen-home${flags().campaign && campaign ? ' has-campaign' : ''}`}
+      data-testid="menu-home"
+    >
       <header className="mn-home-top">
         <span className="mn-pill">
           <i className="dot" /> Offline · You vs AI bots
@@ -91,6 +99,21 @@ export function HomeScreen() {
             </span>
           </h1>
           <nav className="mn-home-menu" aria-label="Main menu">
+            {flags().campaign && campaign && (
+              <HomeItem
+                testId="home-campaign"
+                campaign
+                icon="📖"
+                title="Campaign"
+                tag={progress ? `${progress.cleared} / ${progress.total}` : 'Story'}
+                text={
+                  progress
+                    ? 'Continue: six districts, six keepers, one Ring'
+                    : 'Six districts, six keepers, one Ring · one player, offline'
+                }
+                onClick={() => commands.campaignOpen()}
+              />
+            )}
             <HomeItem
               testId="home-rumble"
               flagship

@@ -2,7 +2,16 @@
  * Narrow interfaces the match controller depends on. They let the controller be tested without a
  * browser and let each subsystem be swapped or stubbed independently.
  */
-import type { Dir, GameState, Intent, Observation, SimEvent, Difficulty } from '../sim';
+import type {
+  Dir,
+  Difficulty,
+  GameOptions,
+  GameState,
+  Intent,
+  MissionOutcome,
+  Observation,
+  SimEvent,
+} from '../sim';
 import type { ActionName, IntentContext } from '../input';
 import type { EntryPick, FrameInfo, QualitySetting } from '../render';
 
@@ -53,3 +62,19 @@ export const NULL_AUDIO: AudioPort = {
   handleEvents: () => undefined,
   playUi: () => undefined,
 };
+
+/** What a campaign mission hands the match controller besides the game options. */
+export interface MissionMeta {
+  missionId: string;
+  /** Crew bot level (the boss is always played at least at Standard). */
+  difficulty: Difficulty;
+  /** The mission is over (the sim reported an outcome, or the match ended without one: `null`). Called once. */
+  onEnd(outcome: MissionOutcome | null, state: GameState): void;
+}
+
+/** The part of the match controller the campaign controller drives (so tests can fake it). */
+export interface MissionHost {
+  startMission(options: GameOptions, meta: MissionMeta): void;
+  /** Leaves the running mission for the menus (no results screen). */
+  stop(): void;
+}
