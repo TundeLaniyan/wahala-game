@@ -158,15 +158,20 @@ export const OSHODI: DistrictContent = {
       'Jam relay masts by standing on them until they go dead',
       'Survive the telegraphed convoy strikes: read the red lanes',
       'Finish Oga Sunmola when the last relay cluster falls silent',
+      'Earn up to three stars: clear it, lose at most one life, and beat the par time',
     ],
     intel: [
       'Live relays are what call convoy strikes: jam the relay and the strike is cancelled.',
       'Orita Park Wardens block lanes; blast the blocker or step around it.',
       'Ore Street Watch neighbours around the market are on your side: they are never your targets.',
+      'The campaign\u2019s first fight: three phases, each asking for a few more relays than the last. Take the time to learn the lanes.',
+      'Oga Sunmola stays shielded until the final relay cluster is dead: do not waste generators on him early.',
     ],
     warnings: [
       'Convoys have a warning lane but they hit hard: do not channel a relay inside a lit lane.',
       'You have a limited number of lives: a convoy hit costs one.',
+      'The terminal is crowded: a generator dropped near a canopy column blocks your own escape.',
+      'Convoys cross the rail line too: the level crossing is never a safe place to stand.',
     ],
     brokerMessage: {
       speaker: 'UNKNOWN NUMBER',
