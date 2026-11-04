@@ -395,6 +395,19 @@ export class CameraRig {
     });
   }
 
+  /**
+   * Where tile centres (grid x, y, fractional allowed) are on screen, in NDC (-1..1, y up), with `ahead` false when the
+   * point is behind the camera. For HUD pointers (the mission compass); read only, never moves the camera.
+   */
+  projectTilesNdc(tiles: readonly { x: number; y: number }[]): { x: number; y: number; ahead: boolean }[] {
+    return this.steady(() =>
+      tiles.map((t) => {
+        this.v.set(this.layout.wx(t.x), 0.4, this.layout.wz(t.y)).project(this.camera);
+        return { x: this.v.x, y: this.v.y, ahead: this.v.z < 1 };
+      }),
+    );
+  }
+
   /** Jump straight to the goal on the next update (new match). */
   cut(): void {
     this.snap = true;

@@ -397,14 +397,31 @@ const handlers: Handlers = {
     sfx(c, 'hop', panOf(c, e.toX), 0.9, 1.2, 0.15);
   },
   generatorDoused: (e, c) => sfx(c, 'gen_dud', panOf(c, generatorX(c, e.generatorId))),
-  // campaign missions (src/sim/mission): silent here; a mission audio pass gives them synthesised cues
+  // campaign missions (src/sim/mission): a few existing synthesised cues, nothing new (no music, voices or recordings).
+  // The callout and the start are carried by the HUD panel; the outcome by the match-end sting.
   missionStarted: () => undefined,
-  missionPhase: () => undefined,
-  missionNode: () => undefined,
-  missionWarning: () => undefined,
-  bossExposed: () => undefined,
-  bossShielded: () => undefined,
-  bossDefeated: () => undefined,
+  missionPhase: (e, c) => {
+    if (e.change === 'cleared') sfx(c, 'pickup_rare', 0, 0.8, 1.1);
+    else sfx(c, 'ui_start', 0, 0.6);
+  },
+  missionNode: (e, c) => {
+    if (e.state === 'done' && allow(c, `node:${e.nodeId}`, 0.5)) sfx(c, 'pickup_1', panOf(c, e.x), 0.7, 1.2);
+  },
+  missionWarning: (e, c) => {
+    if (!allow(c, 'missionWarning', 0.6)) return;
+    const w = e.warning;
+    if (w.kind === 'window') sfx(c, 'rail_bell', panOf(c, w.x), 0.7);
+    else if (w.kind === 'reinforce') sfx(c, 'ui_count', panOf(c, w.x), 0.6, 0.8);
+    else sfx(c, 'crush_warning', panOf(c, w.x), 0.7);
+  },
+  bossExposed: (_e, c) => {
+    sfx(c, 'ui_go', 0, 0.8, 0.9);
+    c.buses.duck('warning');
+  },
+  bossShielded: (e, c) => {
+    if (e.reason === 'expired') sfx(c, 'ui_back', 0, 0.8, 0.8);
+  },
+  bossDefeated: (_e, c) => sfx(c, 'win_sting', 0, 0.9),
   missionOutcome: () => undefined,
   missionCallout: () => undefined,
   // V2 events (workstreams add their own sounds; silent until then)

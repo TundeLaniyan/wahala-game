@@ -158,14 +158,8 @@ describe('event mapping', () => {
       'specialUsed',
       // melee: a hit is voiced by skillUsed / playerDazed / playerPushed; only a whiff makes its own (soft) sound
       'attackResolved',
-      // campaign missions: silent until a mission audio pass gives them (synthesised) cues
+      // campaign missions: the start and the callout are the HUD panel's, the outcome is the match-end sting's
       'missionStarted',
-      'missionPhase',
-      'missionNode',
-      'missionWarning',
-      'bossExposed',
-      'bossShielded',
-      'bossDefeated',
       'missionOutcome',
       'missionCallout',
     ]);
@@ -212,6 +206,13 @@ describe('event mapping', () => {
     expectIds(SAMPLES.cursed, 'pickup_curse');
     expectIds(SAMPLES.hazardTriggered, 'oil_slip');
     expectIds({ ...SAMPLES.hazardTriggered, kind: 'pothole' } as SimEvent, 'pothole_thud');
+    // campaign missions reuse existing synthesised cues (decision MP5): no new recipe, recording or voice
+    expectIds(SAMPLES.missionNode, 'pickup_1');
+    expectIds(SAMPLES.missionWarning, 'crush_warning');
+    expectIds({ type: 'missionPhase', phase: 1, change: 'cleared' }, 'pickup_rare');
+    expectIds(SAMPLES.bossExposed, 'ui_go');
+    expectIds(SAMPLES.bossShielded, 'ui_back');
+    expectIds(SAMPLES.bossDefeated, 'win_sting');
     expectIds(SAMPLES.crowdLanded, 'bottle_smash');
     expectIds(SAMPLES.crowdWarning, 'crowd_throw_whistle');
     expectIds(SAMPLES.crushLanded, 'crush_slam');

@@ -1,8 +1,25 @@
-/* City Rumble minimap (top right, clear of the pause/mute buttons and the phone's action buttons). */
-.minimap {
+/*
+ * City Rumble right column (top right, clear of the pause/mute buttons and the phone's action buttons): the minimap and,
+ * in a campaign mission, the mission panel under it (MissionDock). Pointer events pass through both.
+ */
+.rumble-right {
   position: absolute;
   top: max(8px, env(safe-area-inset-top));
   right: max(10px, env(safe-area-inset-right));
+  width: clamp(150px, 22vw, 250px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+}
+.rumble-right .mission-dock {
+  width: 100%;
+  overflow: hidden;
+}
+.minimap {
+  position: relative;
+  flex: none;
   padding: 4px;
   border-radius: 8px;
   background: rgba(10, 12, 16, 0.72);

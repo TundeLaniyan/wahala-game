@@ -1,0 +1,72 @@
+/*
+ * Objective compass (campaign missions): a pointer pinned to the screen edge, positioned by script (transform) from the
+ * top-left corner of the page. A dark plate with a gold arrow reads on the day and the night boards. It never takes
+ * pointer events and never sits over the centre of the screen.
+ */
+.mission-compass {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 46px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  pointer-events: none;
+  z-index: 6;
+  will-change: transform;
+}
+.mission-compass .mc-disc {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(10, 12, 16, 0.86);
+  border: 2px solid #ffd23a;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+}
+.mission-compass .mc-arrow {
+  width: 24px;
+  height: 24px;
+  fill: #ffd23a;
+  filter: drop-shadow(0 0 3px rgba(255, 210, 58, 0.7));
+}
+.mission-compass .mc-dist {
+  padding: 0 5px;
+  border-radius: 3px;
+  background: rgba(10, 12, 16, 0.86);
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #f4ecdc;
+}
+.mission-compass[data-kind='boss'] .mc-disc {
+  border-color: #ff3b1f;
+  animation: mc-pulse 0.5s ease-in-out infinite alternate;
+}
+.mission-compass[data-kind='boss'] .mc-arrow {
+  fill: #ff6a4a;
+  filter: drop-shadow(0 0 3px rgba(255, 59, 31, 0.8));
+}
+@keyframes mc-pulse {
+  from {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  }
+  to {
+    box-shadow: 0 0 14px rgba(255, 59, 31, 0.9);
+  }
+}
+@media (max-height: 520px) {
+  .mission-compass .mc-dist {
+    font-size: 0.54rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mission-compass[data-kind='boss'] .mc-disc {
+    animation: none;
+  }
+}

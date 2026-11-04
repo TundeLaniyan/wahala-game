@@ -13,6 +13,8 @@ import { shieldChip } from './combatHudModel';
 import { HudRail } from './HudRail';
 import { SuddenDeathCard } from './SuddenDeath';
 import { Minimap } from './Minimap';
+import { MissionCompass } from './MissionCompass';
+import { MissionDock } from './MissionDock';
 import { ProgressionBadge } from './ProgressionBadge';
 import { RumbleHud } from './RumbleHud';
 
@@ -197,7 +199,11 @@ export function Hud() {
         // City Rumble: a compact roster and the city map instead of one portrait per competitor
         <>
           <RumbleHud r={rumble} phase={hud.phase} localAlive={hud.localAlive} />
-          <Minimap />
+          {/* the right column: the map, and in a campaign mission the mission panel under it */}
+          <div className="rumble-right" data-testid="rumble-right">
+            <Minimap />
+            <MissionDock mission={hud.mission} />
+          </div>
         </>
       ) : (
         <>
@@ -263,8 +269,9 @@ export function Hud() {
         rumble={!!rumble}
         streak={hud.me?.rewards ?? null}
         alive={hud.localAlive}
-        mission={hud.mission}
+        mission={rumble ? null : hud.mission}
       />
+      {hud.mission && hud.phase === 'playing' && <MissionCompass />}
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}
       {/* V2 City Rumble progression (workstream C): kills, next reward, protection, Square Blast */}
       {rumble && hud.me && hud.phase !== 'ended' && hud.localAlive && (
