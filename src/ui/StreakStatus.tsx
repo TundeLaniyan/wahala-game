@@ -1,5 +1,6 @@
 import { STREAK_REWARD_DEFS, VEHICLE_DEFS } from '../sim';
 import type { StreakHud } from '../app/hud';
+import { quickHandsCard } from './combatHudModel';
 import { StreakIcon } from './streakIcons';
 
 /**
@@ -9,26 +10,35 @@ import { StreakIcon } from './streakIcons';
  * board, never over the board, the timer, the portraits or the controls. Renders nothing without a reward or a
  * next threshold.
  */
-export function StreakStatus({ streak }: { streak: StreakHud | null }) {
+export function StreakStatus({ streak, alive = true }: { streak: StreakHud | null; alive?: boolean }) {
   if (!streak) return null;
-  const { quickHands, vehicleGenerator, knockdown, next } = streak;
-  if (!quickHands && !vehicleGenerator && !knockdown && !next) return null;
+  // while down only the STORED QUICK HANDS card shows (the other rewards wait unused; nothing can be spent)
+  const live = alive ? streak : { ...streak, vehicleGenerator: null, knockdown: false, next: null };
+  const { vehicleGenerator, knockdown, next } = live;
+  const hands = quickHandsCard(streak, alive);
+  if (!hands && !vehicleGenerator && !knockdown && !next) return null;
   return (
     <div className="streak-status" data-testid="streak-status">
-      {quickHands && (
+      {hands && (
         <div
-          className="streak-card active"
-          data-testid="streak-quick-hands"
-          data-seconds={quickHands.seconds}
+          className={`streak-card ${hands.state === 'running' ? 'active' : 'stored'}`}
+          data-testid={hands.state === 'running' ? 'streak-quick-hands' : 'streak-quick-hands-stored'}
+          data-state={hands.state}
+          data-seconds={hands.seconds}
         >
           <StreakIcon kind="quickHands" />
           <span className="streak-name">{STREAK_REWARD_DEFS.quickHands.name}</span>
-          <b className="streak-time">{quickHands.seconds}s</b>
-          <span className="streak-bar" aria-hidden="true">
-            <i style={{ width: `${Math.round(quickHands.fraction * 100)}%` }} />
+          <b className="streak-time">{hands.seconds}s</b>
+          <span className="streak-state" data-testid="streak-state">
+            {hands.tag}
           </span>
+          {hands.fraction !== null && (
+            <span className="streak-bar" aria-hidden="true">
+              <i style={{ width: `${Math.round(hands.fraction * 100)}%` }} />
+            </span>
+          )}
           <small className="streak-sub" data-testid="streak-charges">
-            {quickHands.charges}/{quickHands.capacity} generators · hold GENERATOR
+            {hands.hint}
           </small>
         </div>
       )}
@@ -54,7 +64,7 @@ export function StreakStatus({ streak }: { streak: StreakHud | null }) {
           <small className="streak-sub">tap KNOCKDOWN</small>
         </div>
       )}
-      {next && !quickHands && !vehicleGenerator && !knockdown && (
+      {next && !hands && !vehicleGenerator && !knockdown && (
         <div className="streak-card next" data-testid="streak-next">
           <StreakIcon kind={next.reward} size={18} />
           <span className="streak-name">{STREAK_REWARD_DEFS[next.reward].short}</span>

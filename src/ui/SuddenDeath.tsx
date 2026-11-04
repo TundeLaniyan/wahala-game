@@ -1,9 +1,8 @@
 import { CHARACTERS } from '../sim';
 import type { SuddenDeathHud } from '../app/hud';
 import { playerTextStyle } from '../assets/palette';
+import { suddenDeathRule, suddenDeathStatus } from './combatHudModel';
 import './SuddenDeath.css';
-
-const clock = (sec: number): string => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 
 const REASON: Record<SuddenDeathHud['cause'], string> = {
   timeout: 'Time up and level on eliminations.',
@@ -29,30 +28,40 @@ export function SuddenDeathCard({ sd }: { sd: SuddenDeathHud }) {
             </li>
           ))}
         </ul>
-        <p>
-          A full-area blast drops {sd.firstBlastSeconds} seconds in. Only an Okada or Armour plate survives
-          it.
-        </p>
+        <p data-testid="sudden-death-rule">{suddenDeathRule(sd)}</p>
       </div>
     </div>
   );
 }
 
-/** The blast clock beside the board during the countdown, and the flash when a blast falls. */
+/**
+ * The blast clock in the HUD rail during the countdown, and the flash when a blast falls. One status line says which
+ * blast of the round it is, whether shields count (blasts 1-2: an Okada or Armour layer absorbs one blast each; the final
+ * blast ignores them) and the countdown; a second line says what that means for the local fighter.
+ */
 export function SuddenDeathClock({ sd }: { sd: SuddenDeathHud }) {
+  const status = suddenDeathStatus(sd);
   return (
     <>
-      {sd.stage === 'countdown' && sd.secondsToBlast !== null && (
+      {status && (
         <div
-          className={`sd-clock${sd.warning ? ' warn' : ''}`}
+          className={`sd-clock${sd.warning ? ' warn' : ''}${status.final ? ' final' : ''}`}
           data-testid="sudden-death-clock"
           data-seconds={sd.secondsToBlast}
+          data-blast={sd.blast}
+          data-final={status.final}
           role="status"
         >
           <b>SUDDEN DEATH</b>
-          <span>
-            Blast {sd.blast} in <strong>{clock(sd.secondsToBlast)}</strong>
+          <span className="sd-status" data-testid="sudden-death-status">
+            {status.blast} · <em className="sd-shields">{status.shields}</em> ·{' '}
+            <strong>{status.countdown}</strong>
           </span>
+          {status.yours && (
+            <small className="sd-yours" data-testid="sudden-death-yours">
+              {status.yours}
+            </small>
+          )}
           <ol className="sd-rank" data-testid="sudden-death-ranking">
             {sd.ranking
               .filter((r) => r.contender)

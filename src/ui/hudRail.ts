@@ -51,3 +51,36 @@ export function railBox(
     maxHeight: Math.round(bottom - top),
   };
 }
+
+/** X of the board's right edge at screen height y (between its far-right and near-right corners). */
+export function boardRightEdgeAt(board: readonly Point[], y: number): number {
+  const far = board[1]!;
+  const near = board[2]!;
+  const span = near.y - far.y;
+  const t = span === 0 ? 1 : Math.min(1, Math.max(0, (y - far.y) / span));
+  return far.x + (near.x - far.x) * t;
+}
+
+/**
+ * The mirror of `railBox` for the right-hand strip (decision HC1: on a landscape phone the kill feed moves here, because the
+ * left rail is a short strip shared with the mission panel). The strip hangs from the screen's right edge (`rightMargin`
+ * in), starts at `top`, and ends above `limitTop` when something (the action buttons) is in the way. Null without a board.
+ */
+export function railBoxRight(
+  board: readonly Point[] | null,
+  viewportW: number,
+  rightMargin: number,
+  top: number,
+  viewportH: number,
+  limitTop: number | null = null,
+): RailBox | null {
+  if (!board || board.length < 4) return null;
+  const near = board[3]!;
+  let bottom = Math.max(top + 40, Math.min(near.y - RAIL_GAP, top + viewportH * RAIL_HEIGHT_FRACTION));
+  if (limitTop !== null) bottom = Math.max(top + 24, Math.min(bottom, limitTop - RAIL_GAP));
+  const width = viewportW - rightMargin - (boardRightEdgeAt(board, bottom) + RAIL_GAP);
+  return {
+    width: Math.round(Math.min(RAIL_MAX_WIDTH, Math.max(RAIL_MIN_WIDTH, width))),
+    maxHeight: Math.round(bottom - top),
+  };
+}

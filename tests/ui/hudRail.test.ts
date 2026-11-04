@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { RAIL_GAP, RAIL_MIN_WIDTH, boardLeftEdgeAt, railBox } from '../../src/ui/hudRail';
+import {
+  RAIL_GAP,
+  RAIL_MIN_WIDTH,
+  boardLeftEdgeAt,
+  boardRightEdgeAt,
+  railBox,
+  railBoxRight,
+} from '../../src/ui/hudRail';
 
 /** Board corners measured in Chromium (renderer.boardScreenCorners) for the phone and desktop layouts. */
 const BOARDS = {
@@ -50,6 +57,21 @@ describe('HUD rail geometry', () => {
     expect(railBox(BOARDS.desktop720, 10, 112, 720)!.width).toBeGreaterThan(150);
     expect(railBox(BOARDS.phone844, 10, 82, 390)!.width).toBeGreaterThan(120);
     expect(railBox(BOARDS.iphoneSE, 10, 82, 320)!.width).toBeGreaterThanOrEqual(80);
+  });
+
+  it('the right strip (landscape phone kill feed) never reaches the board and ends above the action buttons', () => {
+    const b = BOARDS.phone844;
+    expect(boardRightEdgeAt(b, 64)).toBe(635);
+    expect(boardRightEdgeAt(b, 359)).toBe(717);
+    const top = 82;
+    const buttonsTop = 206;
+    const box = railBoxRight(b, 844, 10, top, 390, buttonsTop)!;
+    const bottom = top + box.maxHeight;
+    expect(bottom).toBeLessThanOrEqual(buttonsTop - RAIL_GAP);
+    // the strip's left edge is right of the board's right edge at the strip's lowest point
+    expect(844 - 10 - box.width).toBeGreaterThanOrEqual(boardRightEdgeAt(b, bottom) + RAIL_GAP - 0.5);
+    expect(box.width).toBeGreaterThanOrEqual(RAIL_MIN_WIDTH);
+    expect(railBoxRight(null, 844, 10, top, 390)).toBeNull();
   });
 
   it('without a board (before a match is drawn) the CSS defaults apply', () => {

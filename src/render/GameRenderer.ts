@@ -557,7 +557,8 @@ export class GameRenderer {
           break;
         }
         case 'okadaBroken':
-          fx.floatText(e.x, e.y, 'OKADA SAVED YOU!', '#ffe14a');
+          // the words ("OKADA SAVED YOU") are a HUD rail notice, never text over the board (decision HC2)
+          fx.sparkle(e.x, e.y, 0xffe14a);
           break;
         case 'vehicleLaunched': {
           const v = state.vehicles.find((o) => o.id === e.vehicleId);
