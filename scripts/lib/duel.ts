@@ -3,11 +3,13 @@
  * with chosen attacks play through the real simulation (no rendering). Both walk up to each other and press B whenever
  * B would throw an attack; nobody can die (the measurement is control, not elimination).
  */
-import { DEFAULT_CONFIG, chooseAttack, createGame, tick } from '../../src/sim';
-import type { AttackKind, GameState, Intents } from '../../src/sim';
+import { chooseAttack, createGame, tick } from '../../src/sim';
+import type { AttackKind, DeepPartial, GameConfig, GameState, Intents } from '../../src/sim';
 import { Tile } from '../../src/sim/types';
 
 export const HZ = 60;
+/** The length of an ENGAGEMENT: the first exchanges of a fight (startup, reach, interrupts) before the long game. */
+export const ENGAGEMENT_SECONDS = 5;
 
 export interface DuelSide {
   hits: number;
@@ -21,9 +23,8 @@ export function duelState(
   a: AttackKind,
   b: AttackKind,
   gap: number,
-  secondary: boolean[] = [false, false],
+  config?: DeepPartial<GameConfig>,
 ): GameState {
-  void secondary;
   const s = createGame({
     seed: 7,
     players: [a, b].map((primary, i) => ({
@@ -33,6 +34,7 @@ export function duelState(
       attacks: { primary, secondary: null },
     })),
     settings: { stageHazards: false },
+    config,
   });
   s.tiles = s.tiles.map((t) => (t === Tile.Soft ? Tile.Empty : t));
   s.match.phase = 'playing';
@@ -58,23 +60,33 @@ export function duelState(
 function intentFor(s: GameState, me: 0 | 1): Intents[number] {
   const a = s.players[me]!;
   const b = s.players[me === 0 ? 1 : 0]!;
-  if (chooseAttack(s, a)) return { special: true };
+  // next to the rival (even while the attack is locked out or recovering) stand and press; in reach-2 range press; else close in
+  if (Math.abs(a.x - b.x) + Math.abs(a.y - b.y) <= 1 || chooseAttack(s, a)) return { special: true };
   if (a.x !== b.x) return { move: a.x < b.x ? 'right' : 'left' };
   return { move: a.y < b.y ? 'down' : 'up' };
 }
 
-/** One duel of `seconds`, fighter 0 vs fighter 1, starting `gap` tiles apart. */
-export function playDuel(a: AttackKind, b: AttackKind, gap: number, seconds = 60): [DuelSide, DuelSide] {
-  const s = duelState(a, b, gap);
+/** One duel of `seconds`, fighter 0 vs fighter 1, starting `gap` tiles apart (`foe`: the rival fights back, stands still or runs). */
+export function playDuel(
+  a: AttackKind,
+  b: AttackKind,
+  gap: number,
+  seconds = 60,
+  foe: 'duel' | 'still' | 'flee' = 'duel',
+  config?: DeepPartial<GameConfig>,
+): [DuelSide, DuelSide] {
+  const s = duelState(a, b, gap, config);
   const out: [DuelSide, DuelSide] = [
     { hits: 0, whiffs: 0, controlSeconds: 0 },
     { hits: 0, whiffs: 0, controlSeconds: 0 },
   ];
-  const m = DEFAULT_CONFIG.movement;
+  const m = s.config.movement;
   for (let t = 0; t < seconds * HZ; t++) {
-    const intents: Intents = { 0: intentFor(s, 0), 1: intentFor(s, 1) };
+    const intents: Intents = { 0: intentFor(s, 0) };
+    if (foe === 'duel') intents[1] = intentFor(s, 1);
+    else if (foe === 'flee') intents[1] = { move: s.players[1]!.x < 13 ? 'right' : 'left' };
     for (const e of tick(s, intents)) {
-      if (e.type === 'attackResolved') e.hit ? out[e.playerId]!.hits++ : out[e.playerId]!.whiffs++;
+      if (e.type === 'attackResolved') out[e.playerId]![e.hit ? 'hits' : 'whiffs']++;
       if (e.type === 'playerPushed') {
         // a displaced fighter loses the push itself and the walk back into the fight
         const v = s.players[e.playerId]!;
@@ -111,16 +123,21 @@ export const DUEL_GAPS = [1, 4] as const;
  * Row attack vs column attack, played from every start with the fighters on both sides of the board (the lower
  * player id acts first within a tick, so seating is swapped to cancel that edge).
  */
-export function matchup(row: AttackKind, col: AttackKind, seconds = 60): Matchup {
+export function matchup(
+  row: AttackKind,
+  col: AttackKind,
+  seconds = 60,
+  config?: DeepPartial<GameConfig>,
+): Matchup {
   const m: Matchup = { hitsRow: 0, hitsCol: 0, controlRow: 0, controlCol: 0, share: 0.5 };
   for (const gap of DUEL_GAPS) {
-    const [x, y] = playDuel(row, col, gap, seconds);
+    const [x, y] = playDuel(row, col, gap, seconds, 'duel', config);
     m.hitsRow += x.hits;
     m.hitsCol += y.hits;
     // control INFLICTED by the row attack = what the column fighter lost
     m.controlRow += y.controlSeconds;
     m.controlCol += x.controlSeconds;
-    const [y2, x2] = playDuel(col, row, gap, seconds);
+    const [y2, x2] = playDuel(col, row, gap, seconds, 'duel', config);
     m.hitsRow += x2.hits;
     m.hitsCol += y2.hits;
     m.controlRow += y2.controlSeconds;

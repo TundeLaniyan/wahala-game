@@ -3,7 +3,7 @@
  * tools for emergencies and close-combat skills. Each decision is verified against the danger map
  * before it is allowed to change the movement intent.
  */
-import { chooseAttack, meleeTarget, primaryOf } from '../sim';
+import { chooseAttack, loadoutOf, meleeTarget, primaryOf } from '../sim';
 import type { Intent } from '../sim';
 import { dirIndex } from './board';
 import type { Ctx } from './context';
@@ -76,7 +76,7 @@ export class Tactics {
       const startup = obs.config.skills.attacks[primaryOf(me)].startupTicks;
       if (danger.firstHit(world.myTile, T + 1) > T + startup + 14) delete intent.move;
     } else if (
-      me.attacks.secondary &&
+      loadoutOf(me, obs.config).secondary &&
       profile.useSkill &&
       T >= me.dazedUntil &&
       intent.special === undefined
@@ -84,7 +84,7 @@ export class Tactics {
       // the SECONDARY attack (a reach-2 opener, or the follow-up while the primary recovers): the same B press the
       // human makes (`chooseAttack` is the resolver's own choice), only from a tile that is safe for its startup
       const pick = chooseAttack(obs, me);
-      if (pick && pick.ready && pick.kind !== me.attacks.primary) {
+      if (pick && pick.ready && pick.kind !== primaryOf(me)) {
         const startup = obs.config.skills.attacks[pick.kind].startupTicks;
         if (danger.firstHit(world.myTile, T + 1) > T + startup + 14) {
           intent.special = true;

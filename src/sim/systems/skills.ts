@@ -19,18 +19,34 @@
 import { DIRS, DIR_VEC, tileAt } from '../grid';
 import type { GridView } from '../grid';
 import type { AttackSpec } from '../config';
-import type { AttackKind, Dir, GameState, Player, SimEvent, SkillKind } from '../types';
+import type { AttackKind, AttackLoadout, Dir, GameState, Player, SimEvent, SkillKind } from '../types';
 import { Tile } from '../types';
 import { CHARACTERS } from '../data/characters';
+import { defaultAttacks } from '../data/fighters';
 import { beginStep, canPlayerEnter } from './stepping';
 import { isActing, playersAt, teammates } from './queries';
 
 /** The fighter's original skill (their character's); kept for the menu and the HUD label. */
 export const skillOf = (p: Pick<Player, 'characterId'>): SkillKind => CHARACTERS[p.characterId].skill;
 
-/** The attacks a fighter throws: the primary of their loadout (falls back to their character's skill). */
+/** The attack B throws next to a rival: an override, else the fighter's definition (their character's skill). */
 export const primaryOf = (p: Pick<Player, 'characterId' | 'attacks'>): AttackKind =>
   p.attacks?.primary ?? skillOf(p);
+
+/**
+ * The attacks `p` throws: the overrides of `PlayerSetup.attacks`, else their `FighterDef` (the secondary only when
+ * `config.skills.secondaryAttacks` is on: off in the deployed game, decision FC5).
+ */
+export function loadoutOf(
+  p: Pick<Player, 'characterId' | 'attacks'>,
+  config: Pick<GameState['config'], 'skills'>,
+): AttackLoadout {
+  const base = defaultAttacks(p.characterId, config.skills.secondaryAttacks);
+  return {
+    primary: p.attacks?.primary ?? base.primary,
+    secondary: p.attacks && 'secondary' in p.attacks ? (p.attacks.secondary ?? null) : base.secondary,
+  };
+}
 
 /** The read-only part of the state attack rules look at (an Observation qualifies, so bots use the same code). */
 export type AttackView = GridView & {
@@ -64,13 +80,29 @@ export function attackable(
   return true;
 }
 
-/** Is `kind` off recovery and off its own cooldown for `p` (it may start now)? */
+/**
+ * May `kind` start now? Not while winding up, not before its own cooldown (`AttackSpec.cooldownTicks`) is over, and not
+ * inside the global recovery of the last attack (`skillReadyTick`) - except a DIFFERENT attack of the loadout, which
+ * waits only the short follow-up gap (`config.skills.followUpGapTicks`) and its own recovery. A fighter with one
+ * attack behaves exactly as before.
+ */
 export const attackReady = (
-  state: { readonly tick: number },
-  p: Readonly<Pick<Player, 'skillReadyTick' | 'attackCooldowns' | 'attack'>>,
+  state: { readonly tick: number; readonly config: GameState['config'] },
+  p: Readonly<
+    Pick<Player, 'skillReadyTick' | 'attackCooldowns' | 'attackRecovery' | 'attack' | 'lastAttack'>
+  >,
   kind: AttackKind,
-): boolean =>
-  p.attack === null && state.tick >= p.skillReadyTick && state.tick >= (p.attackCooldowns?.[kind] ?? 0);
+): boolean => {
+  if (p.attack !== null || state.tick < (p.attackCooldowns?.[kind] ?? 0)) return false;
+  if (state.tick >= p.skillReadyTick) return true;
+  const last = p.lastAttack;
+  return (
+    last !== null &&
+    last.kind !== kind &&
+    state.tick >= last.endTick + state.config.skills.followUpGapTicks &&
+    state.tick >= (p.attackRecovery?.[kind] ?? 0)
+  );
+};
 
 /**
  * V2 melee target: an attackable opponent (never a teammate) on the faced tile, else on another adjacent tile in
@@ -144,9 +176,8 @@ export function chooseAttack<P extends Readonly<Player>>(
   state: AttackView & { readonly players: readonly P[] },
   p: Readonly<Player>,
 ): AttackChoice<P> | null {
-  const kinds: AttackKind[] = p.attacks.secondary
-    ? [p.attacks.primary, p.attacks.secondary]
-    : [p.attacks.primary];
+  const loadout = loadoutOf(p, state.config);
+  const kinds: AttackKind[] = loadout.secondary ? [loadout.primary, loadout.secondary] : [loadout.primary];
   let claimed: AttackChoice<P> | null = null;
   for (const kind of kinds) {
     const adj = meleeTarget(state, p, (o) => attackable(state, state.tick, p, o, kind));
@@ -227,8 +258,8 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
   }
 
   p.facing = dir;
-  // a counter: the victim is in the startup of an attack of their own right now
-  const countering = spec.counterDazeTicks > 0 && target.attack !== null;
+  // a counter: the victim is planted or reeling (rooted by their own Kick / Bottle Strike wind-up, a miss or a Headbutt recoil)
+  const countering = spec.counterDazeTicks > 0 && target.rootedUntil > state.tick;
   if (landing) {
     const fromX = target.x;
     const fromY = target.y;
@@ -252,7 +283,7 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
     target.attack = null; // a hit cuts the victim's wind-up short
     events.push({ type: 'attackInterrupted', playerId: target.id, byId: p.id });
   }
-  p.skillReadyTick = Math.max(p.skillReadyTick, state.tick + spec.hitRecoveryTicks);
+  recover(state, p, pending.skill, spec.hitRecoveryTicks);
   p.meleeLock[target.id] = state.tick + spec.targetLockoutTicks;
   if (spec.hitRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.hitRootTicks); // recoil
   recordHit(state, target, p.id);
@@ -266,8 +297,15 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
   });
 }
 
+/** The attacker's recovery: global (`skillReadyTick`) and for this attack on its own (`attackRecovery`). */
+function recover(state: GameState, p: Player, kind: AttackKind, ticks: number): void {
+  p.skillReadyTick = Math.max(p.skillReadyTick, state.tick + ticks);
+  p.attackRecovery[kind] = Math.max(p.attackRecovery[kind] ?? 0, state.tick + ticks);
+  p.lastAttack = { kind, endTick: state.tick };
+}
+
 function whiff(state: GameState, p: Player, spec: AttackSpec, skill: AttackKind, events: SimEvent[]): void {
-  p.skillReadyTick = Math.max(p.skillReadyTick, state.tick + spec.whiffRecoveryTicks);
+  recover(state, p, skill, spec.whiffRecoveryTicks);
   if (spec.whiffRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.whiffRootTicks); // a committed miss
   events.push({ type: 'attackResolved', playerId: p.id, skill, targetId: null, hit: false });
 }

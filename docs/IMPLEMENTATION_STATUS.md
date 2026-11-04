@@ -508,3 +508,14 @@ A diagonal touch thumb is planned as two whole cardinal moves (vertical first, r
 
 Kill-streak classification (AS7): every earned reward survives death. QUICK HANDS is paused by a death and its unspent time is stored (`quickHandsBank`) and resumed on respawn; the one-use rewards stay. Sudden Death's third blast is documented as the final anti-stalemate rule (AS6a).
 
+
+## Fighters, attack catalogue and Local Champion (branch `claude/wahala-campaign-online-v1`, worker `fighters-combat`; decisions FC1-FC7, `docs/FIGHTERS_AND_ATTACKS.md`)
+
+| Area | State |
+| --- | --- |
+| Fighter definitions | Done (data + tests): `FighterDef` for the three playable fighters and three experimental, data-only ones (hidden unless `experimentalContent`). Text only: no audio, no TTS. Finishing sequences, costume meshes and experimental models are NOT made. `tests/fighters.test.ts`. |
+| Attack catalogue | Done in the simulation: eight non-lethal attacks (Punch, Shove, Daze Punch unchanged; Kick, Bottle Strike, Leg Sweep, Headbutt, Elbow Check new) with reach, slow, cooldown, planted / recoil vulnerability. No new animation, effect or sound exists for the five new ones (the Push / Kick clips play). `tests/attack-catalogue.test.ts`, `npm run combat-balance`. |
+| Secondary attack | Done behind `config.skills.secondaryAttacks` (OFF): the deployed fighters keep one attack. B order documented and tested. Bots use it. |
+| Step grace | Done (ON, FC1): a rival who started stepping away and has not visually left is still hit. |
+| Local Champion | Done in the simulation and bots; separate from Global Knockdown; granted by `grantStreakReward` or the OFF ladder switch. Rendered with the knockdown projectile view. HUD card, icon and B label NOT done (HUD worker). `tests/local-champion.test.ts`, `npm run streak-measure -- --only local`. |
+| Not run | The full unit and browser suites (targeted checks only). |

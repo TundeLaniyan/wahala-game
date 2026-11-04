@@ -191,6 +191,8 @@ export function respawn(state: GameState, p: Player, x: number, y: number): void
   p.skillReadyTick = 0;
   p.meleeLock = {};
   p.attackCooldowns = {};
+  p.attackRecovery = {};
+  p.lastAttack = null;
   p.rootedUntil = 0;
   p.slow = null;
   p.localChampion = null;

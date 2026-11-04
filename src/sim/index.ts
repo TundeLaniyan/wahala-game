@@ -95,7 +95,7 @@ export {
   radialSquareRadius,
 } from './systems/blastShape';
 export type { RadialOffset, RadialOptions } from './systems/blastShape';
-export { attackReady, chooseAttack, lineTarget, meleeTarget, primaryOf } from './systems/skills';
+export { attackReady, chooseAttack, lineTarget, loadoutOf, meleeTarget, primaryOf } from './systems/skills';
 export type { AttackChoice } from './systems/skills';
 export { localChampionTargets, useLocalChampion } from './systems/localChampion';
 export { moveWouldAct } from './systems/contact';

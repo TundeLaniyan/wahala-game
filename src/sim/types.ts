@@ -315,14 +315,21 @@ export interface Player {
    * opponent stays hittable once the attacker's own recovery (`skillReadyTick`) is over.
    */
   meleeLock: Record<number, number>;
-  /** The attacks this fighter throws (from their `FighterDef`, or a mission / test override). */
-  attacks: AttackLoadout;
+  /**
+   * Overrides of the attacks this fighter throws (a mission / test / balance run). Empty = the character's
+   * `FighterDef` (read live, `loadoutOf` in `systems/skills.ts`), so the deployed fighters need no entry.
+   */
+  attacks: Partial<AttackLoadout>;
   /** The attacker cannot take a step until this tick (an attack's planted wind-up or recoil; 0 = free). */
   rootedUntil: number;
   /** Walking is slower (a Sweep): `extraStepTicks` more per tile until `until`. Null = not slowed. */
   slow: { until: number; extraStepTicks: number } | null;
-  /** Per-attack cooldowns (`AttackSpec.cooldownTicks`): the first tick each attack may start again. */
+  /** Per-attack cooldowns (`AttackSpec.cooldownTicks`): the first tick each attack may start again; hard (not cleared by recovery). */
   attackCooldowns: Partial<Record<AttackKind, number>>;
+  /** Per-attack recovery: the first tick each attack may start again after its own last hit / whiff (see `skillReadyTick`). */
+  attackRecovery: Partial<Record<AttackKind, number>>;
+  /** The last attack that resolved (a different attack of the loadout may follow after `skills.followUpGapTicks`). */
+  lastAttack: { kind: AttackKind; endTick: number } | null;
   /** After a slow ends no attack may slow this fighter again before this tick. */
   slowImmuneUntil: number;
   /** A LOCAL CHAMPION use this fighter owns (null = none). Ends on death. */

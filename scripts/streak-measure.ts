@@ -12,7 +12,7 @@
  * uses killed 0 / 1 / 2 / 3 rivals, and how often the user died.
  */
 import { createBot } from '../src/ai';
-import { DEFAULT_CONFIG, createGame, observe, tick } from '../src/sim';
+import { DEFAULT_CONFIG, createGame, grantStreakReward, observe, tick } from '../src/sim';
 import type { Bot } from '../src/ai';
 import type { GameState, Intents, SimEvent, VehicleKind } from '../src/sim';
 
@@ -22,6 +22,8 @@ const flag = (name: string, d: number): number => {
   return i >= 0 ? Number(argv[i + 1]) : d;
 };
 const MATCHES = flag('--matches', 80);
+/** `--only local` prints just the LOCAL CHAMPION comparison (decision FC6); `--only knockdown|vehicle` the others. */
+const ONLY = argv.includes('--only') ? argv[argv.indexOf('--only') + 1] : null;
 const WINDOW = 600; // 10 s after the throw
 const HAND_OUT = 180; // the reward is handed to seat 0 3 s in
 
@@ -56,19 +58,33 @@ interface Use {
   tick: number;
   kills: number;
   died: boolean;
+  /** LOCAL CHAMPION only: objects that dazed a rival / were dodged in the window. */
+  hits: number;
+  misses: number;
 }
 
 /** Plays a match; returns the knockdown use (if the bot threw it) with seat 0's kills in the following window. */
-function treated(seed: number, knockdownTicks: number): Use | null {
+function treated(
+  seed: number,
+  knockdownTicks: number,
+  reward: 'knockdown' | 'localChampion' = 'knockdown',
+): Use | null {
   const { s, bots } = start(seed, knockdownTicks);
   let use: Use | null = null;
   let killsAtUse = 0;
   for (let t = 0; t < 4000 && s.match.phase !== 'ended'; t++) {
-    if (t === HAND_OUT) s.players[0]!.streakRewards.knockdown = true;
+    if (t === HAND_OUT) {
+      if (reward === 'knockdown') s.players[0]!.streakRewards.knockdown = true;
+      else grantStreakReward(s, 0, 'localChampion');
+    }
     const ev = step(s, bots);
     if (!use && ev.some((e) => e.type === 'streakRewardUsed' && e.playerId === 0)) {
-      use = { tick: s.tick, kills: 0, died: false };
+      use = { tick: s.tick, kills: 0, died: false, hits: 0, misses: 0 };
       killsAtUse = s.players[0]!.stats.kills;
+    }
+    if (use) {
+      use.hits += ev.filter((e) => e.type === 'localChampionHit').length;
+      use.misses += ev.filter((e) => e.type === 'localChampionMissed').length;
     }
     if (use && s.tick >= use.tick + WINDOW) break;
   }
@@ -90,82 +106,118 @@ function baseline(seed: number, knockdownTicks: number, from: number): number {
   return kills0 < 0 ? 0 : s.players[0]!.stats.kills - kills0;
 }
 
+/**
+ * LOCAL CHAMPION (decision FC6) against the GLOBAL KNOCKDOWN, in the same matches: extra kills in the next 10 s,
+ * objects that landed / were dodged, and how often the owner died. Same seeds, same bots.
+ */
+function localChampionTable(): void {
+  console.log('\n## LOCAL CHAMPION vs GLOBAL KNOCKDOWN (same seeds, same bots, the next 10 s)\n');
+  console.log(
+    '| reward | uses | kills/use | same match without it | extra kills/use | uses with 0 / 1 / 2 / 3 kills | landed / dodged per use | user died in window |',
+  );
+  console.log('| --- | --- | --- | --- | --- | --- | --- | --- |');
+  for (const reward of ['knockdown', 'localChampion'] as const) {
+    const uses: Use[] = [];
+    let base = 0;
+    for (let seed = 1; seed <= MATCHES; seed++) {
+      const u = treated(seed, DEFAULT_CONFIG.streaks.globalKnockdown.knockdownTicks, reward);
+      if (!u) continue;
+      uses.push(u);
+      base += baseline(seed, DEFAULT_CONFIG.streaks.globalKnockdown.knockdownTicks, u.tick);
+    }
+    const n = uses.length || 1;
+    const kills = uses.reduce((a, u) => a + u.kills, 0);
+    const hist = [0, 1, 2, 3].map((k) => uses.filter((u) => Math.min(3, u.kills) === k).length);
+    const hits = uses.reduce((a, u) => a + u.hits, 0);
+    const misses = uses.reduce((a, u) => a + u.misses, 0);
+    console.log(
+      `| ${reward === 'knockdown' ? 'GLOBAL KNOCKDOWN' : 'LOCAL CHAMPION'} | ${uses.length} | ${(kills / n).toFixed(2)} | ${(base / n).toFixed(2)} | ${((kills - base) / n).toFixed(2)} | ${hist.join(' / ')} | ${reward === 'knockdown' ? 'n/a (cannot be dodged)' : `${(hits / n).toFixed(2)} / ${(misses / n).toFixed(2)}`} | ${uses.filter((u) => u.died).length} |`,
+    );
+  }
+}
+
 console.log(
   `# Streak reward measurements (${MATCHES} seeds per row, Standard bots, Survival, Danfo Bus Park)\n`,
 );
-console.log('## GLOBAL KNOCKDOWN\n');
-console.log(
-  '| knockdown | uses | kills/use | same match without it | extra kills/use | uses with 0 / 1 / 2 / 3 kills | user died in window |',
-);
-console.log('| --- | --- | --- | --- | --- | --- | --- |');
-for (const ticks of [90, 120, 150, 180]) {
-  const uses: Use[] = [];
-  let base = 0;
-  for (let seed = 1; seed <= MATCHES; seed++) {
-    const u = treated(seed, ticks);
-    if (!u) continue;
-    uses.push(u);
-    base += baseline(seed, ticks, u.tick);
-  }
-  const n = uses.length || 1;
-  const kills = uses.reduce((a, u) => a + u.kills, 0);
-  const hist = [0, 1, 2, 3].map((k) => uses.filter((u) => Math.min(3, u.kills) === k).length);
+if (ONLY === null || ONLY === 'knockdown') {
+  console.log('## GLOBAL KNOCKDOWN\n');
   console.log(
-    `| ${ticks / 60} s${ticks === DEFAULT_CONFIG.streaks.globalKnockdown.knockdownTicks ? ' (default)' : ''} | ${uses.length} | ${(kills / n).toFixed(2)} | ${(base / n).toFixed(2)} | ${((kills - base) / n).toFixed(2)} | ${hist.join(' / ')} | ${uses.filter((u) => u.died).length} |`,
+    '| knockdown | uses | kills/use | same match without it | extra kills/use | uses with 0 / 1 / 2 / 3 kills | user died in window |',
   );
+  console.log('| --- | --- | --- | --- | --- | --- | --- |');
+  for (const ticks of [90, 120, 150, 180]) {
+    const uses: Use[] = [];
+    let base = 0;
+    for (let seed = 1; seed <= MATCHES; seed++) {
+      const u = treated(seed, ticks);
+      if (!u) continue;
+      uses.push(u);
+      base += baseline(seed, ticks, u.tick);
+    }
+    const n = uses.length || 1;
+    const kills = uses.reduce((a, u) => a + u.kills, 0);
+    const hist = [0, 1, 2, 3].map((k) => uses.filter((u) => Math.min(3, u.kills) === k).length);
+    console.log(
+      `| ${ticks / 60} s${ticks === DEFAULT_CONFIG.streaks.globalKnockdown.knockdownTicks ? ' (default)' : ''} | ${uses.length} | ${(kills / n).toFixed(2)} | ${(base / n).toFixed(2)} | ${((kills - base) / n).toFixed(2)} | ${hist.join(' / ')} | ${uses.filter((u) => u.died).length} |`,
+    );
+  }
 }
 
-console.log('\n## VEHICLE GENERATOR timeline (a still rival in the middle row, owner in the far corner)\n');
-console.log(
-  '| vehicle | launch to release (ticks) | launch to boom (ticks) | target killed if it stays | target killed if it runs at the release |',
-);
-console.log('| --- | --- | --- | --- | --- |');
-for (const kind of ['danfo', 'taxi', 'keke', 'okada'] as VehicleKind[]) {
-  const row = (flee: boolean) => {
-    const s = createGame({
-      seed: 5,
-      players: ['streetBaller', 'lekkiBoy'].map((characterId, i) => ({
-        name: `P${i}`,
-        characterId: characterId as 'streetBaller',
-        isBot: false,
-      })),
-      settings: { game: 'classic', stageHazards: false },
-      config: { vehicles: { allowed: ['danfo', 'taxi', 'keke', 'okada'] } },
-    });
-    s.tiles = s.tiles.map((t) => (t === 2 ? 0 : t));
-    s.match.phase = 'playing';
-    s.match.countdownRemaining = 0;
-    for (const p of s.players) p.protectedUntil = 0;
-    const [o, r] = [s.players[0]!, s.players[1]!];
-    o.x = o.stepFromX = 14;
-    o.y = o.stepFromY = 10;
-    r.x = r.stepFromX = 7;
-    r.y = r.stepFromY = 4;
-    o.streakRewards.vehicleGenerator = kind;
-    let launch = -1,
-      release = -1,
-      boom = -1,
-      running = false;
-    for (let t = 0; t < 700; t++) {
-      const intents: Intents = t === 0 ? { 0: { special: true } } : {};
-      if (flee && running && r.stepRemaining <= 1) intents[1] = { move: 'left' };
-      const ev = tick(s, intents);
-      for (const e of ev) {
-        if (e.type === 'vehicleGeneratorLaunched') launch = s.tick;
-        if (e.type === 'vehicleGeneratorReleased') {
-          release = s.tick;
-          running = true;
-        }
-        if (e.type === 'generatorExploded' && boom < 0) boom = s.tick;
-      }
-      if (boom >= 0) break;
-    }
-    for (let t = 0; t < 30; t++) tick(s, {});
-    return { launch, release, boom, killed: !r.alive };
-  };
-  const still = row(false);
-  const flee = row(true);
+if (ONLY === null || ONLY === 'local') localChampionTable();
+
+if (ONLY === null || ONLY === 'vehicle') {
+  console.log('\n## VEHICLE GENERATOR timeline (a still rival in the middle row, owner in the far corner)\n');
   console.log(
-    `| ${kind} | ${still.release - still.launch} | ${still.boom - still.launch} | ${still.killed ? 'yes' : 'no'} | ${flee.killed ? 'yes' : 'no'} |`,
+    '| vehicle | launch to release (ticks) | launch to boom (ticks) | target killed if it stays | target killed if it runs at the release |',
   );
+  console.log('| --- | --- | --- | --- | --- |');
+  for (const kind of ['danfo', 'taxi', 'keke', 'okada'] as VehicleKind[]) {
+    const row = (flee: boolean) => {
+      const s = createGame({
+        seed: 5,
+        players: ['streetBaller', 'lekkiBoy'].map((characterId, i) => ({
+          name: `P${i}`,
+          characterId: characterId as 'streetBaller',
+          isBot: false,
+        })),
+        settings: { game: 'classic', stageHazards: false },
+        config: { vehicles: { allowed: ['danfo', 'taxi', 'keke', 'okada'] } },
+      });
+      s.tiles = s.tiles.map((t) => (t === 2 ? 0 : t));
+      s.match.phase = 'playing';
+      s.match.countdownRemaining = 0;
+      for (const p of s.players) p.protectedUntil = 0;
+      const [o, r] = [s.players[0]!, s.players[1]!];
+      o.x = o.stepFromX = 14;
+      o.y = o.stepFromY = 10;
+      r.x = r.stepFromX = 7;
+      r.y = r.stepFromY = 4;
+      o.streakRewards.vehicleGenerator = kind;
+      let launch = -1,
+        release = -1,
+        boom = -1,
+        running = false;
+      for (let t = 0; t < 700; t++) {
+        const intents: Intents = t === 0 ? { 0: { special: true } } : {};
+        if (flee && running && r.stepRemaining <= 1) intents[1] = { move: 'left' };
+        const ev = tick(s, intents);
+        for (const e of ev) {
+          if (e.type === 'vehicleGeneratorLaunched') launch = s.tick;
+          if (e.type === 'vehicleGeneratorReleased') {
+            release = s.tick;
+            running = true;
+          }
+          if (e.type === 'generatorExploded' && boom < 0) boom = s.tick;
+        }
+        if (boom >= 0) break;
+      }
+      for (let t = 0; t < 30; t++) tick(s, {});
+      return { launch, release, boom, killed: !r.alive };
+    };
+    const still = row(false);
+    const flee = row(true);
+    console.log(
+      `| ${kind} | ${still.release - still.launch} | ${still.boom - still.launch} | ${still.killed ? 'yes' : 'no'} | ${flee.killed ? 'yes' : 'no'} |`,
+    );
+  }
 }

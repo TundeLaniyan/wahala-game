@@ -445,7 +445,9 @@ const handlers: Handlers = {
   localChampionMissed: (e, c) => {
     if (allow(c, 'localChampionMiss', 0.3)) sfx(c, 'bottle_smash', panOf(c, e.x), 0.3, 1.3);
   },
-  localChampionEnded: () => undefined,
+  localChampionEnded: (e, c) => {
+    sfx(c, 'pickup_curse', 0, isHuman(c, e.ownerId) ? 0.35 : 0.15, 1.4);
+  },
   // kill-streak rewards (decision SK1): the earned chime is the elimination reward's, a little higher
   streakRewardEarned: (e, c) => {
     const pan = panOf(c, playerX(c, e.playerId));

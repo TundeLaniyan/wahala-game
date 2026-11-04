@@ -86,7 +86,7 @@ export const ATTACK_DEFS: Readonly<Record<AttackKind, AttackDef>> = {
     name: 'Bottle Strike',
     label: 'BOTTLE',
     summary: 'The longest daze there is, once every ten seconds.',
-    role: 'The risky finisher: 2.5 s of daze, a 10 s cooldown, a planted wind-up, and a miss leaves the attacker stuck for a second. Beaten by any faster hit.',
+    role: 'The risky finisher: 2.3 s of daze, a 10 s cooldown, a planted wind-up, and a miss leaves the attacker stuck for a second. Beaten by any faster hit.',
     origin: 'catalogue',
     needs: {
       animation: 'NEW: a bottle-grab and overhead-swing clip; a held-prop socket on the hand',
@@ -98,8 +98,8 @@ export const ATTACK_DEFS: Readonly<Record<AttackKind, AttackDef>> = {
     kind: 'sweep',
     name: 'Leg Sweep',
     label: 'SWEEP',
-    summary: 'No daze: the rival limps for four seconds.',
-    role: 'A control attack for the chase: slows walking by 60% for 4 s, adjacent only, quick recoveries; the rival can still fight back (and a faster hit cancels the sweep).',
+    summary: 'No daze: the rival limps for three seconds.',
+    role: 'A control attack for the chase: slows walking by 60% for 3 s, adjacent only, quick recoveries; the rival can still fight back (and a faster hit cancels the sweep).',
     origin: 'catalogue',
     needs: {
       animation: 'NEW: a low spinning leg sweep; a limp walk cycle for the slowed victim',
@@ -124,8 +124,8 @@ export const ATTACK_DEFS: Readonly<Record<AttackKind, AttackDef>> = {
     kind: 'elbow',
     name: 'Elbow Check',
     label: 'ELBOW',
-    summary: 'A quick bump; doubly effective on a rival who is winding up.',
-    role: 'The counter: a short daze and a one-tile bump, but 42 extra daze ticks when the victim is in an attack startup. Beats the slow heavy attacks, does little to a rival who is not attacking.',
+    summary: 'A quick bump that punishes a rival who is planted or reeling.',
+    role: 'The counter: a short daze and a one-tile bump, with a long extra daze when the victim is planted or reeling (a Kick or Bottle Strike wind-up, a miss, a Headbutt recoil). Does little to a rival who is moving freely.',
     origin: 'catalogue',
     needs: {
       animation: 'NEW: a short elbow clip',

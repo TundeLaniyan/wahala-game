@@ -156,6 +156,11 @@ export interface GameConfig {
      */
     secondaryAttacks: boolean;
     /**
+     * After an attack resolves a DIFFERENT attack of the same fighter's loadout may start this soon (the fighter's
+     * own recoveries stay per attack; a single-attack fighter is unaffected). Decision FC4.
+     */
+    followUpGapTicks: number;
+    /**
      * Step grace (decision FC1): an attack whose rival began stepping away during the startup still connects while
      * that rival has not visually crossed `maxShare` of the step (the board shows them still on the tile).
      */
@@ -554,29 +559,29 @@ export const DEFAULT_CONFIG: GameConfig = {
       },
       // Bottle strike: the longest daze of all, once per ten seconds, and a committed miss leaves the attacker stuck.
       bottle: {
-        startupTicks: 10,
+        startupTicks: 9,
         whiffRecoveryTicks: 90,
         hitRecoveryTicks: 150,
         targetLockoutTicks: ticks(10),
         displacementTiles: 0,
-        dazeTicks: 150,
+        dazeTicks: 128,
         dazeImmunityTicks: ticks(2),
         ...PLAIN,
         cooldownTicks: ticks(10),
         plantedStartup: true,
         whiffRootTicks: 60,
       },
-      // Sweep (leg strike): no daze at all; the victim limps for four seconds. Short range, quick to recover.
+      // Sweep (leg strike): no daze at all; the victim limps for three seconds. Adjacent only, quick to recover.
       sweep: {
-        startupTicks: 14,
+        startupTicks: 15,
         whiffRecoveryTicks: 24,
-        hitRecoveryTicks: ticks(1.5),
+        hitRecoveryTicks: 100,
         targetLockoutTicks: ticks(4),
         displacementTiles: 0,
         dazeTicks: 0,
         dazeImmunityTicks: 0,
         ...PLAIN,
-        slowTicks: ticks(4),
+        slowTicks: ticks(3),
         slowExtraStepTicks: 6,
         slowImmunityTicks: ticks(2),
       },
@@ -584,28 +589,29 @@ export const DEFAULT_CONFIG: GameConfig = {
       headbutt: {
         startupTicks: 8,
         whiffRecoveryTicks: 30,
-        hitRecoveryTicks: ticks(2),
+        hitRecoveryTicks: 110,
         targetLockoutTicks: ticks(5),
         displacementTiles: 0,
-        dazeTicks: 45,
+        dazeTicks: 55,
         dazeImmunityTicks: ticks(1.5),
         ...PLAIN,
         hitRootTicks: 30,
       },
-      // Elbow check: a short bump that nobody can punish, doubly effective on a rival who is winding up an attack.
+      // Elbow check: a short bump; a long extra daze on a rival who is planted or reeling (a Kick / Bottle wind-up, a miss, a Headbutt recoil).
       elbow: {
-        startupTicks: 9,
+        startupTicks: 11,
         whiffRecoveryTicks: 30,
-        hitRecoveryTicks: 100,
-        targetLockoutTicks: ticks(3.5),
+        hitRecoveryTicks: 110,
+        targetLockoutTicks: 190,
         displacementTiles: 1,
-        dazeTicks: 12,
+        dazeTicks: 16,
         dazeImmunityTicks: ticks(1),
         ...PLAIN,
-        counterDazeTicks: 36,
+        counterDazeTicks: 60,
       },
     },
     secondaryAttacks: false,
+    followUpGapTicks: 30,
     stepGrace: { enabled: true, maxShare: 0.5 },
     dazeImmunityTicks: ticks(2),
   },
