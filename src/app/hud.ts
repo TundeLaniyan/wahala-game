@@ -12,7 +12,15 @@ import type {
   StreakRewardKind,
   VehicleKind,
 } from '../sim';
-import { canThrow, heldStreakRewards, previewRewards, previewSpecial, spectatorLanding } from '../sim';
+import {
+  canThrow,
+  heldStreakRewards,
+  missionView,
+  previewRewards,
+  previewSpecial,
+  spectatorLanding,
+} from '../sim';
+import type { MissionView } from '../sim';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
 import type { StageAlert } from './stageAlerts';
 
@@ -74,6 +82,11 @@ export interface HudMe {
 export interface StreakHud {
   /** QUICK HANDS while it runs: seconds and fraction left, and the generator charges left. */
   quickHands: { seconds: number; fraction: number; charges: number; capacity: number } | null;
+  /**
+   * QUICK HANDS stored through a death (decision AS7): the unspent seconds a respawn gives back. Null while it runs,
+   * when none is stored, and in rulesets without respawns (a stored buff would never resume there).
+   */
+  quickHandsStored: { seconds: number } | null;
   /** An unused VEHICLE GENERATOR and the vehicle it will be. */
   vehicleGenerator: VehicleKind | null;
   /** An unused GLOBAL KNOCKDOWN. */
@@ -118,7 +131,19 @@ export interface SuddenDeathHud {
   flash: boolean;
   /** Seconds from the end of the title card to the first blast (from the config). */
   firstBlastSeconds: number;
+  /** Blasts that respect an Okada / Armour layer (the config's schedule: 2); every later blast ignores shields. */
+  shieldBlasts: number;
+  /** All blasts of a round: the shield-respecting ones plus the final, shield-proof one. */
+  totalBlasts: number;
+  /** The local player is one of the contenders, and still standing. */
+  localContender: boolean;
+  localAlive: boolean;
+  /** Protection layers the local player holds (the Okada mount plus Armour plates). */
+  localShield: number;
 }
+
+/** Protection layers a fighter holds: the Okada mount plus the Armour plates (each absorbs one separate lethal hit). */
+const shieldLayers = (p: Readonly<Player> | undefined): number => (p ? (p.mounted ? 1 : 0) + p.armour : 0);
 
 export function buildSuddenDeath(state: GameState, localId: number): SuddenDeathHud | null {
   const sd = state.match.suddenDeath;
@@ -159,6 +184,11 @@ export function buildSuddenDeath(state: GameState, localId: number): SuddenDeath
     warning: pending && left <= cfg.warnTicks,
     flash: sd.lastBlastTick !== null && state.tick - sd.lastBlastTick < 60,
     firstBlastSeconds: Math.round((cfg.blastDelayTicks[0] ?? 0) / 60),
+    shieldBlasts: cfg.blastDelayTicks.length,
+    totalBlasts: cfg.blastDelayTicks.length + 1,
+    localContender: sd.contenders.some((c) => c.playerId === localId),
+    localAlive: state.players[localId]?.alive ?? false,
+    localShield: shieldLayers(state.players[localId]),
   };
 }
 
@@ -185,6 +215,8 @@ export interface HudSnapshot {
   sideline: SidelineHud | null;
   /** Rumble sudden death (decision SD1): the title card and the blast clock; null in every other state. */
   suddenDeath: SuddenDeathHud | null;
+  /** Campaign mission picture (phases, objective, boss, lives, warnings); null in every normal match. */
+  mission: MissionView | null;
 }
 
 /** V2 sideline spectator controls (ui/SpectatorControls.tsx). */
@@ -207,6 +239,10 @@ function buildStreakHud(state: GameState, p: Readonly<Player>, active: number): 
     .sort((a, b) => a.kills - b.kills)
     .find((s) => !r.earned.includes(s.kills) && s.kills > p.stats.streak && !held.includes(s.reward));
   return {
+    quickHandsStored:
+      r.quickHandsUntil <= state.tick && r.quickHandsBank > 0 && isRespawnMode(state.settings.game)
+        ? { seconds: Math.ceil(r.quickHandsBank / 60) }
+        : null,
     quickHands:
       r.quickHandsUntil > state.tick
         ? {
@@ -580,5 +616,6 @@ export function buildHud(
     rumble: rumble ? buildRumble(state, localId, spectateId) : null,
     sideline: buildSideline(state, localId),
     suddenDeath: buildSuddenDeath(state, localId),
+    mission: missionView(state),
   };
 }

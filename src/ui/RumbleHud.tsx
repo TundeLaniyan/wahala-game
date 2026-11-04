@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { isLightTeam, playerCss, playerDotStyle, playerTextStyle } from '../assets/palette';
 import { commands } from '../app/session';
-import type { FeedItem, RumbleEntry, RumbleSnapshot, TeamScore } from '../app/hud';
+import type { RumbleEntry, RumbleSnapshot, TeamScore } from '../app/hud';
 import { useGameStore } from '../app/store';
+import { KillFeed } from './KillFeed';
 import './RumbleHud.css';
 
 const elims = (n: number): string => `${n} elim${n === 1 ? '' : 's'}`;
@@ -14,45 +15,6 @@ function Name({ name, slot, team = -1, you }: { name: string; slot: number; team
     <b className="rh-name" style={playerTextStyle(slot, team)}>
       {you ? 'YOU' : name}
     </b>
-  );
-}
-
-const CAUSE: Record<FeedItem['cause'], string> = {
-  flame: '',
-  vehicle: 'ran over',
-  self: 'own generator',
-  crush: 'the city closed in',
-  hazard: 'traffic',
-  crowd: 'the crowd',
-  spectator: 'a sideline throw',
-  suddenDeath: 'sudden death',
-  friendly: 'friendly fire',
-};
-
-function Feed({ feed }: { feed: FeedItem[] }) {
-  return (
-    <ol className="rh-feed" data-testid="kill-feed">
-      {feed.map((f) => (
-        <li
-          key={f.key}
-          className={f.involvesLocal ? 'mine' : ''}
-          style={{ opacity: Math.min(1, 1.6 - f.age / 5) }}
-        >
-          {f.killer ? (
-            <>
-              <Name name={f.killer} slot={f.killerSlot} team={f.killerTeam} />
-              <span className="rh-arrow">{f.cause === 'vehicle' ? ' ran over ' : ' ▸ '}</span>
-              <Name name={f.victim} slot={f.victimSlot} team={f.victimTeam} />
-            </>
-          ) : (
-            <>
-              <Name name={f.victim} slot={f.victimSlot} team={f.victimTeam} />
-              <span className="rh-cause"> · {CAUSE[f.cause] || 'out'}</span>
-            </>
-          )}
-        </li>
-      ))}
-    </ol>
   );
 }
 
@@ -388,7 +350,7 @@ export function RumbleHud({
             Spawn protection
           </div>
         )}
-        <Feed feed={r.feed} />
+        <KillFeed />
         <div className="rh-lists">
           {r.nearby.length > 0 && (
             <div className="rh-list">

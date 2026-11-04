@@ -3,6 +3,7 @@ import type { InputSourceName } from '../input';
 import type { CharacterId } from '../sim';
 import type { CameraMode, QualityStatus, RenderStats } from '../render';
 import type { HudSnapshot } from './hud';
+import type { KillFeed } from './killFeed';
 import { MENU_HOME } from './menu';
 import type { MenuState } from './menu';
 import { loadSettings } from './settings';
@@ -87,6 +88,8 @@ export interface UiState {
   hud: HudSnapshot | null;
   paused: boolean;
   toasts: Toast[];
+  /** The kill feed in the HUD rail: eliminations and assists, newest first (app/killFeed.ts). */
+  killFeed: KillFeed;
   /** The voice line playing now, for the optional subtitles (shown only when settings.subtitles is on). */
   subtitle: Subtitle | null;
   /**
@@ -130,6 +133,7 @@ export const useGameStore = create<UiState>(() => ({
   hud: null,
   paused: false,
   toasts: [],
+  killFeed: [],
   subtitle: null,
   board: null,
   summary: null,

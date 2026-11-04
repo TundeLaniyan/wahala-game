@@ -256,3 +256,21 @@
   color: #b8c0cc;
   white-space: nowrap;
 }
+
+/* QUICK HANDS: the RUNNING / STORED tag under the name (decision HC3) */
+.hud-rail .streak-state {
+  grid-column: 2 / span 2;
+  font-size: clamp(0.5rem, 2vh, 0.72rem);
+  letter-spacing: 0.1em;
+  color: #6cf0a0;
+}
+.hud-rail .streak-card.stored {
+  border-left-color: #8d96a3;
+}
+.hud-rail .streak-card.stored .streak-icon {
+  color: #c9cfd8;
+  opacity: 0.85;
+}
+.hud-rail .streak-card.stored .streak-state {
+  color: #ffe14a;
+}

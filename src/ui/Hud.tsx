@@ -9,6 +9,7 @@ import { commands, input } from '../app/session';
 import type { HudMe, HudPlayer } from '../app/hud';
 import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
+import { shieldChip } from './combatHudModel';
 import { HudRail } from './HudRail';
 import { SuddenDeathCard } from './SuddenDeath';
 import { Minimap } from './Minimap';
@@ -108,6 +109,28 @@ function ContactChip({ me }: { me: HudMe }) {
   );
 }
 
+/**
+ * The protection layers held, as a counter chip (decision HC2): "SHIELD x2" with the Okada's or the Armour's icon.
+ * Each layer absorbs one separate lethal hit; the chip drops by one when a layer is used (the rail says
+ * ARMOUR USED / OKADA SAVED YOU) and disappears with the last one.
+ */
+function ShieldChip({ me }: { me: HudMe }) {
+  const chip = shieldChip(me);
+  if (!chip) return null;
+  return (
+    <span
+      className="inv good shield-chip"
+      data-testid="shield-chip"
+      data-layers={chip.layers}
+      data-kind={chip.kind}
+      title="Each shield layer absorbs one lethal hit"
+    >
+      <img src={pickupIconUrl(chip.kind, 48)} alt="" />
+      {chip.label}
+    </span>
+  );
+}
+
 function Inventory({ me }: { me: HudMe }) {
   const curseLabel = me.curse ? { slow: 'SLOW', inverted: 'REVERSED', weakFire: 'WEAK' }[me.curse.kind] : '';
   return (
@@ -119,7 +142,7 @@ function Inventory({ me }: { me: HudMe }) {
       {me.remote && <RemoteChip armed={me.hasRemoteGenerator} />}
       {me.sneakers && <Chip kind="sneakers" text="" />}
       {me.hotFuel && <Chip kind="hotfuel" text="" />}
-      {me.mounted && <Chip kind="okada" text="SHIELD" cls="good" />}
+      <ShieldChip me={me} />
       {me.voucher && <Chip kind="voucher" text={VEHICLE_DEFS[me.vehicle].name.toUpperCase()} cls="good" />}
       {me.curse && <Chip kind="curse" text={`${curseLabel} ${me.curse.seconds}s`} cls="bad" />}
     </div>
@@ -238,7 +261,9 @@ export function Hud() {
         ruleBanner={hud.ruleBanner}
         suddenDeath={hud.suddenDeath}
         rumble={!!rumble}
-        streak={hud.localAlive ? (hud.me?.rewards ?? null) : null}
+        streak={hud.me?.rewards ?? null}
+        alive={hud.localAlive}
+        mission={hud.mission}
       />
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}
       {/* V2 City Rumble progression (workstream C): kills, next reward, protection, Square Blast */}

@@ -17,9 +17,11 @@ import type { GameState, Intent, Intents, SimEvent, VehicleEntry, VehicleIntent,
 import { buildMoveBoard, inputTrace } from '../input';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
+import { protectionNotice, quickHandsResumedNotice, quickHandsStoredNotice } from './combatNotices';
 import { buildHud } from './hud';
+import { expireKillLines, isCrowded, newKillLines, pushKillLines } from './killFeed';
 import { buildPlayers, matchArenaId, matchRules } from './names';
-import { cycleSpectateTarget, eliminatorOf, pickSpectateTarget } from './spectate';
+import { cycleSpectateTarget, pickSpectateTarget } from './spectate';
 import { NULL_AUDIO } from './ports';
 import type { AudioPort, Bot, BotFactory, InputPort, RendererPort } from './ports';
 import type { GameSettings } from './settings';
@@ -97,6 +99,9 @@ export class MatchController {
   private settings: GameSettings | null = null;
   private endedAtMs: number | null = null;
   private toastId = 1;
+  /** Kill feed bookkeeping: the game the feed belongs to and the eliminations / assists already listed. */
+  private feedState: GameState | null = null;
+  private readonly feedSeen = new Set<string>();
   private excitement = 0.2;
   private forced: Record<number, Intent> = {};
   private countdownShown = -1;
@@ -415,6 +420,7 @@ export class MatchController {
         : this.excitement * 0.6,
     );
     this.toastsFrom(events, nowMs);
+    this.killFeedFrom(state, events, nowMs);
     this.countdownBeeps(state);
 
     // The renderer interpolates between ticks using the unspent accumulator.
@@ -495,7 +501,7 @@ export class MatchController {
         return e.playerId === LOCAL_ID ? { text: 'QUICK HANDS OVER', tone: 'info', icon: e.reward } : null;
       case 'streakRewardResumed':
         return e.playerId === LOCAL_ID
-          ? { text: `${STREAK_REWARD_DEFS[e.reward].name} BACK`, tone: 'good', icon: e.reward }
+          ? { ...quickHandsResumedNotice(e.ticksLeft), icon: e.reward, ttlMs: 3400 }
           : null;
       // what the others see coming
       case 'vehicleGeneratorLaunched':
@@ -514,33 +520,25 @@ export class MatchController {
         return e.playerId === LOCAL_ID ? { text: 'GET UP AND RUN!', tone: 'info' } : null;
       case 'trapsWarning':
         return { text: e.wave === 0 ? 'FINAL 30s: FLOOR TRAPS!' : 'MORE TRAPS!', tone: 'bad' };
-      case 'okadaBroken': {
-        const me = state.players[LOCAL_ID]!;
-        return me.x === e.x && me.y === e.y ? { text: 'OKADA SAVED YOU!', tone: 'good' } : null;
-      }
+      // a protection layer absorbed a lethal hit: not a death, so no elimination text (decision HC2)
+      case 'protectionBroken':
+        return e.playerId === LOCAL_ID
+          ? { ...protectionNotice(e.layer, state.players[LOCAL_ID]!.armour), ttlMs: 3000 }
+          : null;
       case 'playerTeleported':
         return e.playerId === LOCAL_ID ? { text: 'THROUGH THE MANHOLE!', tone: 'info' } : null;
       case 'generatorDoused': {
         const g = state.generators.find((o) => o.id === e.generatorId);
         return g?.ownerId === LOCAL_ID ? { text: 'YOUR GENERATOR GOT SOAKED!', tone: 'bad' } : null;
       }
+      // kills, deaths and assists are the kill feed's job (killFeedFrom); the rail toasts keep the rest
       case 'playerEliminated': {
-        if (!this.rumble) return null;
-        const victim = state.players[e.playerId]!;
-        if (e.playerId !== LOCAL_ID && eliminatorOf(state, victim)?.id === LOCAL_ID)
-          return { text: `YOU TOOK OUT ${victim.name.toUpperCase()}!`, tone: 'good' };
-        if (e.playerId !== LOCAL_ID && e.assistIds.includes(LOCAL_ID))
-          return { text: `ASSIST ON ${victim.name.toUpperCase()}`, tone: 'good' };
-        if (this.respawnMode) {
-          if (e.playerId === LOCAL_ID) {
-            const by = eliminatorOf(state, victim);
-            return {
-              text: by ? `${by.name.toUpperCase()} GOT YOU · BACK SOON` : 'DOWN! BACK SOON',
-              tone: 'bad',
-            };
-          }
-          return null;
+        if (e.playerId === LOCAL_ID) {
+          // QUICK HANDS paused by the death: its unspent time is stored for the respawn (decision AS7)
+          const bank = state.players[LOCAL_ID]!.streakRewards.quickHandsBank;
+          return bank > 0 && this.respawnMode ? { ...quickHandsStoredNotice(bank), ttlMs: 3400 } : null;
         }
+        if (!this.rumble || this.respawnMode) return null;
         const left = state.players.filter((p) => p.alive).length;
         if (state.players[LOCAL_ID]!.alive && (left === 10 || left === 5 || left === 3 || left === 2))
           return { text: left === 2 ? 'FINAL TWO!' : `${left} LEFT STANDING`, tone: 'info' };
@@ -566,6 +564,24 @@ export class MatchController {
     this.pushToast({ text, tone }, performance.now(), 3600);
   }
 
+  /** The kill feed: this frame's eliminations (from the state) and the local player's assists (from the events). */
+  private killFeedFrom(state: GameState, events: SimEvent[], nowMs: number): void {
+    if (this.feedState !== state) {
+      this.feedState = state; // a new match: start with an empty feed
+      this.feedSeen.clear();
+      patch({ killFeed: [] });
+    }
+    const assistsOn = events.flatMap((e) =>
+      e.type === 'playerEliminated' && e.playerId !== LOCAL_ID && e.assistIds.includes(LOCAL_ID)
+        ? [e.playerId]
+        : [],
+    );
+    const lines = newKillLines(state, LOCAL_ID, this.feedSeen, assistsOn);
+    if (lines.length === 0) return;
+    for (const l of lines) this.feedSeen.add(l.key);
+    patch({ killFeed: pushKillLines(useGameStore.getState().killFeed, lines, nowMs, isCrowded(state)) });
+  }
+
   private pushToast(t: Omit<Toast, 'id' | 'expires'>, nowMs: number, ttlMs = 2200): void {
     const toast: Toast = { ...t, id: this.toastId++, expires: nowMs + ttlMs };
     patch({ toasts: [...useGameStore.getState().toasts.filter((x) => x.expires > nowMs), toast].slice(-3) });
@@ -583,6 +599,9 @@ export class MatchController {
     patch({ hud: buildHud(state, LOCAL_ID, entry, this.spectateId) });
     const toasts = useGameStore.getState().toasts;
     if (toasts.some((t) => t.expires <= nowMs)) patch({ toasts: toasts.filter((t) => t.expires > nowMs) });
+    const feed = useGameStore.getState().killFeed;
+    const live = expireKillLines(feed, nowMs);
+    if (live !== feed) patch({ killFeed: live });
   }
 
   private handleEnded(nowMs: number): void {

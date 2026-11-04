@@ -175,3 +175,22 @@
   color: var(--gold);
   font-weight: 700;
 }
+
+/* one-line status: which blast, whether shields count, the countdown (decision HC4) */
+.sd-clock .sd-status {
+  flex-basis: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.sd-clock .sd-shields {
+  font-style: normal;
+  font-weight: 700;
+  color: #6cf0a0;
+}
+.sd-clock.final .sd-shields {
+  color: #ff8a70;
+}
+.sd-clock .sd-yours {
+  flex-basis: 100%;
+  font-size: 0.72rem;
+  color: #e9dcc4;
+}
