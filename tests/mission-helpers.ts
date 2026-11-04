@@ -4,6 +4,41 @@ import { Tile } from '../src/sim/types';
 import { createBot } from '../src/ai';
 import type { Bot } from '../src/ai';
 import { observe } from '../src/sim';
+import { makeCtx } from '../src/sim/mission/ctx';
+import type { MissionCtx } from '../src/sim/mission/ctx';
+import { OBJECTIVES } from '../src/sim/mission/objectives';
+
+/** FNV-1a over the JSON of any value (a state hash for determinism checks). */
+export function hashOf(value: unknown): string {
+  const text = JSON.stringify(value);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return `${h.toString(16)}:${text.length}`;
+}
+
+/** The mission context of a state (for calling strikes / objectives directly). */
+export function ctxOf(state: GameState, events: SimEvent[] = []): MissionCtx {
+  return makeCtx(state, events);
+}
+
+/** Jumps a fresh mission to phase `n` (0-2) the way a cleared phase does: new nodes, timers from now. */
+export function jumpToPhase(state: GameState, n: 0 | 1 | 2): void {
+  const m = state.mission!;
+  m.phase = n;
+  m.phaseStartTick = state.tick;
+  OBJECTIVES[m.objective].setup(makeCtx(state, []));
+}
+
+/** Every number in a value is a number (Infinity is allowed: it marks "never"); no NaN anywhere. */
+export function hasNaN(value: unknown): boolean {
+  if (typeof value === 'number') return Number.isNaN(value);
+  if (Array.isArray(value)) return value.some(hasNaN);
+  if (value !== null && typeof value === 'object') return Object.values(value as Record<string, unknown>).some(hasNaN);
+  return false;
+}
 
 export interface MissionRig {
   state: GameState;
@@ -55,6 +90,12 @@ export function advance(
     if (state.match.phase === 'ended') break;
   }
   return sink;
+}
+
+/** Puts the human on (x, y) and holds them there for `n` ticks (no intents). */
+export function standOn(state: GameState, x: number, y: number, n: number, sink: SimEvent[] = []): SimEvent[] {
+  put(state, 0, x, y);
+  return advance(state, n, {}, sink);
 }
 
 export const of = <T extends SimEvent['type']>(events: SimEvent[], type: T): Extract<SimEvent, { type: T }>[] =>

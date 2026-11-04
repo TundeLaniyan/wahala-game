@@ -158,7 +158,9 @@ export function createMissionState(state: GameState, arena: ArenaDef, spec: Miss
     callout: tuning.phases[0].callout,
   };
   state.mission = m;
-  OBJECTIVES[def.objective].setup(makeCtx(state, []));
+  const ctx = makeCtx(state, []);
+  OBJECTIVES[def.objective].setup(ctx);
+  m.callout = OBJECTIVES[def.objective].callout?.(ctx) ?? ctx.pd.callout;
   return m;
 }
 
