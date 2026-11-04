@@ -19,6 +19,7 @@ export * from './types';
 export * from './errors';
 export { err, ok, unwrap } from './result';
 export type { Result } from './result';
+export type { ServerEvent } from './schema';
 
 export interface OnlineEnv {
   /** `WAHALA_ONLINE_URL` (public endpoint, never a secret). Only read in a server-enabled build. */

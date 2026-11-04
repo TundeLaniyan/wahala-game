@@ -24,7 +24,10 @@ export type MenuScreen =
   | 'briefing'
   | 'bossIntro'
   | 'campaignResult'
-  | 'campaignComplete';
+  | 'campaignComplete'
+  // online PREVIEW (docs/ONLINE_ARCHITECTURE.md): one screen whose steps live in app/online.ts; reachable only when
+  // `flags().online` is true (mock or server), never in a default build
+  | 'online';
 
 export const MENU_SCREENS: readonly MenuScreen[] = [
   'home',
@@ -40,6 +43,7 @@ export const MENU_SCREENS: readonly MenuScreen[] = [
   'bossIntro',
   'campaignResult',
   'campaignComplete',
+  'online',
 ];
 
 /** The campaign screens (they share one frame style and are reached from the Home "Campaign" entry). */

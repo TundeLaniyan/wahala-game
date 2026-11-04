@@ -183,7 +183,7 @@ export function resultsOf(rec: MatchRec): MatchResults {
       accountId: seat.accountId,
       displayName: seat.displayName,
       isBot: seat.isBot,
-      team: seat.team,
+      team: s.players[seat.seat]!.team >= 0 ? s.players[seat.seat]!.team : null,
       placement: x.placement,
       kills: x.kills,
       deaths: x.deaths,
@@ -347,6 +347,7 @@ export function adoptLocalMatch(ctx: MockCtx, matchId: string, finalState: GameS
   if (!rec) return err(E.notFound('No such match.'));
   if (finalState.match.phase !== 'ended') return err(E.invalidState(finalState.match.phase, 'The match has not ended.'));
   if (finalState.players.length !== rec.seats.length) return err(E.conflict('The roster does not match.'));
+  if (rec.mySeat !== 0) return err(E.conflict('The preview adopts a local match only for seat 0.'));
   if (rec.phase === 'lobby' || rec.phase === 'countdown') {
     return err(E.invalidState(rec.phase, 'The match has not started.'));
   }

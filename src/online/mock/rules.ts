@@ -17,10 +17,10 @@ export function checkLobby(s: LobbySettings): OnlineError | null {
   return null;
 }
 
-/** Seats in a mock room: 4 for Classic, 6 for the Rumble rulesets, never more than the arena holds. */
+/** Seats in a mock room: 4 for Classic, 8 for the Rumble rulesets, never more than the arena holds. */
 export function roomSize(s: LobbySettings): number {
   const arena = ARENAS[s.arenaId]!;
-  const want = s.game === 'classic' ? 4 : 6;
+  const want = s.game === 'classic' ? 4 : 8;
   return Math.max(2, Math.min(want, MAX_PLAYERS, arena.maxPlayers, arena.spawns.length));
 }
 
