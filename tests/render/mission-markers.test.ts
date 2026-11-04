@@ -233,7 +233,7 @@ describe('the mission view draws a simulated mission', () => {
       fx: null,
     } as unknown as FrameContext);
     expect(views.group.visible).toBe(false);
-    expect(views.stats()).toEqual({ nodes: 0, boss: false, visible: false });
+    expect(views.stats()).toMatchObject({ nodes: 0, boss: false, visible: false });
     views.dispose();
   });
 

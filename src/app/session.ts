@@ -554,6 +554,8 @@ function exposeDebugHandle(): void {
     stats: () => renderer?.stats() ?? null,
     /** Campaign mission markers the renderer holds (nodes, boss); null outside a mission. */
     missionMarkers: () => renderer?.missionMarkerStats() ?? null,
+    /** Performance report: stop drawing the mission markers (true) or draw them again (false). */
+    hideMissionMarkers: (hidden: boolean) => renderer?.debugHideMissionMarkers(hidden),
     /** Smoothed ms per frame spent in sim ticks (including bots), bot decisions per tick, and render. */
     timings: () => controller?.timers.snapshot() ?? null,
     /** Graphics quality: the setting, the rung in use, the capability estimate and the controller state. */

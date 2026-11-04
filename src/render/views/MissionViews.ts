@@ -116,9 +116,22 @@ export class MissionViews implements View {
     this.group.add(this.warnGlow.mesh, this.warnHatch.mesh, this.warnEdge.mesh, this.pips.mesh);
   }
 
-  /** What is on the board right now (tests / the debug handle). */
-  stats(): { nodes: number; boss: boolean; visible: boolean } {
-    return { nodes: this.nodes.size, boss: this.boss !== null, visible: this.group.visible };
+  /** Debug / performance report: draw nothing (the update still runs) so a frame can be measured with and without. */
+  private hidden = false;
+  private updateMs = 0;
+  setHidden(hidden: boolean): void {
+    this.hidden = hidden;
+    if (hidden) this.group.visible = false;
+  }
+
+  /** What is on the board right now (tests / the debug handle); `updateMs` is a running average of `update`. */
+  stats(): { nodes: number; boss: boolean; visible: boolean; updateMs: number } {
+    return {
+      nodes: this.nodes.size,
+      boss: this.boss !== null,
+      visible: this.group.visible,
+      updateMs: Math.round(this.updateMs * 1000) / 1000,
+    };
   }
 
   update(ctx: FrameContext): void {
@@ -127,13 +140,15 @@ export class MissionViews implements View {
       if (this.group.visible) this.group.visible = false;
       return;
     }
+    const t0 = performance.now();
     const view = missionView(state);
     if (!view) return;
-    this.group.visible = true;
+    this.group.visible = !this.hidden;
     this.updateNodes(ctx, view);
     this.updateWarnings(ctx, view);
     this.updateBoss(ctx, view);
     this.updatePips(ctx, view);
+    this.updateMs += (performance.now() - t0 - this.updateMs) * 0.1;
   }
 
   // ------------------------------------------------------------------------------------------- nodes
@@ -142,7 +157,7 @@ export class MissionViews implements View {
     let g = this.arcs[step];
     if (!g) {
       const f = step / ARC_STEPS;
-      g = new RingGeometry(0.88, 1, Math.max(2, step), 1, Math.PI / 2 - f * Math.PI * 2, f * Math.PI * 2);
+      g = new RingGeometry(0.78, 1, Math.max(2, step), 1, Math.PI / 2 - f * Math.PI * 2, f * Math.PI * 2);
       g.rotateX(-Math.PI / 2);
       this.arcs[step] = g;
     }
@@ -359,7 +374,8 @@ export class MissionViews implements View {
     b.ringMat.opacity = look.ring;
     const exposed = view.boss.exposed;
     b.halo.visible = exposed;
-    b.halo.scale.setScalar(look.radius * 3.2 * (1 + 0.08 * Math.sin(ctx.time * 9)));
+    b.halo.scale.setScalar(look.radius * 2.6 * (1 + 0.08 * Math.sin(ctx.time * 9)));
+    b.haloMat.opacity = 0.4;
     b.haloMat.color.setHex(look.ringColor);
     b.bubble.visible = look.bubble > 0;
     b.bubbleMat.opacity = look.bubble;

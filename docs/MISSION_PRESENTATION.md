@@ -55,7 +55,16 @@ The warning countdown needs no number: the hatched square fills the tile (30 % t
 
 Measured with `renderer.stats()` on the Oshodi staging of `scripts/mission-presentation-shots.mjs` (software GL, desktop 1280 x 720, Auto quality, camera identical in both runs; draw calls and triangles are deterministic, fps is not):
 
-PERF_TABLE
+| Staging (Oshodi unless named) | Draw calls without / with markers | Triangles added | Markers in view |
+| --- | --- | --- | --- |
+| Spawn, 4 s in (3 relays, all off screen) | 156 / 160 (+4) | about +0.7k | none: the nodes are culled, the boss and 5 crew pips are drawn |
+| A convoy lane telegraphed (12 hatched tiles) and one relay on screen | 212 / 228 (+16) | about +0.9k | lane, relay, boss, pips |
+| Phase 3, four relays, one on screen | 184 / 196 (+12) | about +1.7k | |
+| Ebute-Metta, rail lane telegraphed (about 20 tiles) and a lever | 188 / 201 (+14) | about +1k | |
+| Lagos Island, ledgers and the press | 147 / 165 (+18) | about +0.6k | |
+| Boss exposed (halo, ring, arc, beam) with crew around him | 277 / 296 (+19) | about +1k | |
+
+Each pair is the same frozen frame with the markers hidden (`__WAHALA__.hideMissionMarkers(true)`) and drawn, two samples each, so only the markers differ. The worst case is about **+20 draw calls** (the scenes are 150 to 300 calls, so under 10 %, most of it one call per marker part) and **under 1 % of the triangles** (the whole mission layer is a few thousand). `MissionViews.update` costs 0.05 to 0.45 ms a frame on this software-GL container (running average, `__WAHALA__.missionMarkers().updateMs`), most of it the `missionView(state)` call it shares with the HUD. Nothing is allocated per tile; the three warning layers are single instanced draws however long the lane is.
 
 ## Compass
 
@@ -96,7 +105,19 @@ Existing synthesised cues only (no new recipe, recording, music or voice): `miss
 
 `docs/screenshots/mission-presentation/` (made with `scripts/mission-presentation-shots.mjs`; the state is staged through `__WAHALA__.controller().state`, then the real sim ticks on):
 
-SHOT_LIST
+| File | What it shows |
+| --- | --- |
+| `oshodi-start-desktop.jpg` | 1280 x 720, 4 s into Oshodi at the spawn. The relays are off screen: the compass at the top edge says "26 TILES" with a gold arrow, left of the clock and clear of the buttons. The panel is the right column under the minimap; the minimap shows the three relays (gold), the boss (blue ring) and the player. Nothing of the panel is over the middle of the board, the bottom row is untouched |
+| `oshodi-warn-desktop.jpg` | A convoy called: 12 red hatched tiles with bright edges across the main road, the relay beside it (gold pad, beam, mast icon), the player standing safely off the lane; the panel lists "CONVOY 1S" and the minimap draws the lane as a red line |
+| `oshodi-node-desktop.jpg` | A relay being jammed: the progress ring fills clockwise from 12 o'clock on the gold pad (about 65 %) |
+| `oshodi-done-desktop.jpg` | One relay jammed: green pad and ring, "1/2 RELAYS JAMMED", the minimap dot is green, and the compass now points right to the nearest live relay (22 tiles) at the right edge |
+| `oshodi-exposed-desktop.jpg` | Phase 3 cleared, the boss exposed: gold / red ring and halo under him, the done relay pad green, the panel's "BOSS EXPOSED 0:25" and a green ring on the minimap. (He stands on his guard post between stalls, so a market stall fades over him with the game's usual occlusion dither) |
+| `ebuteMetta-warn-desktop.jpg` | Ebute-Metta: the railcar's lane telegraphed in amber hatch down the track, the dim grey rail-switch lever beside it (the window is closed: locked), "WINDOW 4S" in the panel, the lane on the minimap |
+| `lagosIsland-node-desktop.jpg` | Lagos Island: a ledger folder on its gold pad with the beam; the press drop's pad is below it; the minimap shows ledgers and the press as gold dots |
+| `ebuteMetta-warn-mobile.jpg` | The same on a phone in landscape (844 x 390 at 2x): the compact panel sits under the small minimap and stops above the PUNCH button; nothing over the move pad or the action buttons |
+| `oshodi-p2-mobile.jpg` | Phone landscape, phase 2 of 3: the pips (one green, one gold), the compact panel (the objective line is dropped, the callout stays), a relay marker with the mast icon |
+
+Portrait phones (390 x 844): a match shows the game's "Turn your phone sideways" card, so there is no portrait gameplay HUD to review; the right column and the compass use the same landscape-first layout.
 
 ## Still missing (art and polish)
 

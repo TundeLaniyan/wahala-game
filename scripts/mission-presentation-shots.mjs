@@ -14,8 +14,12 @@
 // --nomarkers adds ?nomarkers (the world markers are left out: the "before" of the cost comparison).
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-const [outDir = 'docs/screenshots/mission-presentation', device = 'desktop', list = 'oshodi:start', ...flags] =
-  process.argv.slice(2);
+const [
+  outDir = 'docs/screenshots/mission-presentation',
+  device = 'desktop',
+  list = 'oshodi:start',
+  ...flags
+] = process.argv.slice(2);
 const ORDER = ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta', 'lagosIsland', 'lekki'];
 const VP = {
   desktop: { viewport: { width: 1280, height: 720 } },
@@ -25,7 +29,13 @@ const VP = {
 mkdirSync(outDir, { recursive: true });
 const browser = await chromium.launch({
   executablePath: process.env.WAHALA_CHROMIUM,
-  args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  args: [
+    '--no-sandbox',
+    '--use-gl=angle',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+    '--ignore-gpu-blocklist',
+  ],
 });
 for (const item of list.split(',')) {
   const [id, scenario = 'start'] = item.split(':');
@@ -33,7 +43,9 @@ for (const item of list.split(',')) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await page.goto(`${process.env.SHOT_URL ?? 'http://localhost:5199/wahala-game/'}?debug&noattract&seed=7${flags.includes('--nomarkers') ? '&nomarkers' : ''}`);
+  await page.goto(
+    `${process.env.SHOT_URL ?? 'http://localhost:5199/wahala-game/'}?debug&noattract&seed=7${flags.includes('--nomarkers') ? '&nomarkers' : ''}`,
+  );
   await page.getByTestId('title-screen').waitFor();
   await page.evaluate(
     ({ id, order }) => {
@@ -42,7 +54,17 @@ for (const item of list.split(',')) {
       c.startNew();
       c.storyDone();
       for (const earlier of order.slice(0, order.indexOf(id))) {
-        c.finishMission({ result: 'won', missionId: earlier, modifiers: [], seconds: 100, livesUsed: 0, phasesCleared: 3, defeat: 'eliminated', stars: 3, creditedKills: 1 });
+        c.finishMission({
+          result: 'won',
+          missionId: earlier,
+          modifiers: [],
+          seconds: 100,
+          livesUsed: 0,
+          phasesCleared: 3,
+          defeat: 'eliminated',
+          stars: 3,
+          creditedKills: 1,
+        });
       }
       c.beginBriefing(id);
       c.startFromBriefing();
@@ -108,7 +130,9 @@ for (const item of list.split(',')) {
       // let the countdown run to about 1.4 s left
       guard = 0;
       while (guard++ < 600 && pending().length > 0 && pending()[0].landTick - s.tick > 84) w.stepTicks(2);
-      log.push(`pending=${pending().length} trainIn=${m.rail ? m.rail.trainAt - s.tick : 'n/a'} phase=${m.phase}`);
+      log.push(
+        `pending=${pending().length} trainIn=${m.rail ? m.rail.trainAt - s.tick : 'n/a'} phase=${m.phase}`,
+      );
     } else if (scenario === 'node' || scenario === 'done') {
       const n = m.nodes[0];
       const q = beside(n.x, n.y);
@@ -145,7 +169,13 @@ for (const item of list.split(',')) {
     }
     // render the staged state with its events, as in play
     c.debugAdvance?.(0);
-    return { log, phase: m.phase, phaseState: m.phaseState, tick: s.tick, me: { x: s.players[0].x, y: s.players[0].y } };
+    return {
+      log,
+      phase: m.phase,
+      phaseState: m.phaseState,
+      tick: s.tick,
+      me: { x: s.players[0].x, y: s.players[0].y },
+    };
   }, scenario);
   await page.evaluate(() => window.__WAHALA__.advance(30));
   await page.waitForTimeout(1200);
@@ -153,13 +183,39 @@ for (const item of list.split(',')) {
   await page.screenshot({ path: file, timeout: 180000 });
   let stats = '';
   if (flags.includes('--stats')) {
-    stats = JSON.stringify(await page.evaluate(() => ({ stats: window.__WAHALA__.stats(), timings: window.__WAHALA__.timings() })));
+    // the same frame with the markers drawn and not drawn, alternating (draw calls and triangles are the last frame's)
+    const sample = async (hidden) => {
+      await page.evaluate((h) => window.__WAHALA__.hideMissionMarkers(h), hidden);
+      await page.waitForTimeout(900);
+      return page.evaluate(() => {
+        const s = window.__WAHALA__.stats();
+        return { calls: s.drawCalls, tris: s.triangles, markers: window.__WAHALA__.missionMarkers() };
+      });
+    };
+    const ab = [];
+    for (let i = 0; i < 2; i++) ab.push({ on: await sample(false), off: await sample(true) });
+    await page.evaluate(() => window.__WAHALA__.hideMissionMarkers(false));
+    stats = JSON.stringify(ab);
   }
   const compass = await page.evaluate(() => {
     const el = document.querySelector('[data-testid="mission-compass"]');
-    return el ? { shown: el.getAttribute('data-shown'), tiles: el.getAttribute('data-tiles'), target: el.getAttribute('data-target') } : null;
+    return el
+      ? {
+          shown: el.getAttribute('data-shown'),
+          tiles: el.getAttribute('data-tiles'),
+          target: el.getAttribute('data-target'),
+        }
+      : null;
   });
-  console.log(id, scenario, device, JSON.stringify(info), JSON.stringify(compass), stats, errors.length ? `ERRORS: ${errors.slice(0, 3).join(' | ')}` : 'ok');
+  console.log(
+    id,
+    scenario,
+    device,
+    JSON.stringify(info),
+    JSON.stringify(compass),
+    stats,
+    errors.length ? `ERRORS: ${errors.slice(0, 3).join(' | ')}` : 'ok',
+  );
   await page.close();
 }
 await browser.close();

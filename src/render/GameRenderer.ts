@@ -821,8 +821,13 @@ export class GameRenderer {
   }
 
   /** What the mission markers drew last frame (null outside a mission); debug / performance reports. */
-  missionMarkerStats(): { nodes: number; boss: boolean; visible: boolean } | null {
+  missionMarkerStats(): { nodes: number; boss: boolean; visible: boolean; updateMs: number } | null {
     return this.missionMarkers?.stats() ?? null;
+  }
+
+  /** Debug / performance report: stop drawing the mission markers (they keep updating) to compare frames. */
+  debugHideMissionMarkers(hidden: boolean): void {
+    this.missionMarkers?.setHidden(hidden);
   }
 
   stats(): RenderStats {
