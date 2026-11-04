@@ -35,7 +35,7 @@ const balconyGeo = new BoxGeometry(0.8, 0.12, 0.5);
 const ringGeo = new RingGeometry(0.34, 0.5, 28);
 
 /**
- * GLOBAL KNOCKDOWN (decision GK1): a visible throw at every rival. Presentation only - the simulation owns the objects
+ * GLOBAL KNOCKDOWN (decision GK1) and LOCAL CHAMPION (FC6, `landX` set): a visible throw at a rival. Presentation only - the simulation owns the objects
  * (`state.knockdowns`: who, from where, when it lands). A figure on the building side winds up and throws a glass
  * bottle that arcs to the rival's head while a pulsing ring marks where they stand; the impact itself (the fall, the
  * shock ring, the thud) comes from the `knockdownHit` event. Bright, additive materials read in the day and at night.
@@ -125,10 +125,11 @@ export class KnockdownViews implements View {
 
   private pose(ctx: FrameContext, k: PendingKnockdown, v: Visual): void {
     const { state, alpha, layout, time } = ctx;
-    const total = state.config.streaks.globalKnockdown.throwTicks;
+    // LOCAL CHAMPION throws (decision FC6) land on a fixed tile the rival can step off; a knockdown follows their head
+    const local = k.landX !== undefined;
+    const total = k.throwTicks ?? state.config.streaks.globalKnockdown.throwTicks;
     const progress = Math.min(1, Math.max(0, 1 - (k.landTick - (state.tick + alpha)) / total));
-    const target = state.players[k.targetId]!;
-    const tp = playerGridPos(target, alpha);
+    const tp = local ? { x: k.landX!, y: k.landY! } : playerGridPos(state.players[k.targetId]!, alpha);
     const from = toWorld(layout, k.fromX, k.fromY);
     const to = toWorld(layout, tp.x, tp.y);
 
@@ -156,6 +157,7 @@ export class KnockdownViews implements View {
     const pulse = 0.5 + 0.5 * Math.sin(time * (10 + progress * 22));
     v.marker.scale.setScalar(1.25 - 0.45 * progress + 0.1 * pulse);
     (v.marker.material as MeshBasicMaterial).opacity = 0.5 + 0.45 * pulse;
+    (v.marker.material as MeshBasicMaterial).color.setHex(local ? 0xff8a3a : 0xffd23a); // orange = dodgeable
   }
 
   dispose(): void {

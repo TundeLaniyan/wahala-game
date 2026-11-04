@@ -5,6 +5,8 @@
  *   3  QUICK HANDS        a timed buff: more generator capacity, hold-to-lay, no placement press is ever lost
  *   5  VEHICLE GENERATOR  one use: a public vehicle carries a live generator at a rival (systems/vehicleGenerator.ts)
  *   7  GLOBAL KNOCKDOWN   one use: every rival is knocked flat by a thrown object (systems/knockdown.ts)
+ *      (LOCAL CHAMPION, systems/localChampion.ts, is a separate reward: `grantStreakReward`, or the 7-kill
+ *      alternative behind `config.streaks.localChampion.ladder`, decision FC6)
  *
  * Each threshold pays once per streak and each reward is consumed once. EVERY earned reward survives an actual death until
  * it is used or the match ends (decision AS7): the one-use rewards (VEHICLE GENERATOR, GLOBAL KNOCKDOWN) as they are, and
@@ -53,9 +55,30 @@ export function grantStreakRewards(state: GameState, events: SimEvent[]): void {
     for (const step of [...cfg.loadout].sort((a, b) => a.kills - b.kills)) {
       if (step.kills <= before || step.kills > after || p.streakRewards.earned.includes(step.kills)) continue;
       p.streakRewards.earned.push(step.kills);
-      earn(state, p, step.reward, step.kills, events);
+      // the alternative 7-kill reward (decision FC6): LOCAL CHAMPION in place of GLOBAL KNOCKDOWN when the ladder switch is on
+      const reward =
+        step.reward === 'globalKnockdown' && cfg.localChampion.ladder ? 'localChampion' : step.reward;
+      earn(state, p, reward, step.kills, events);
     }
   }
+}
+
+/**
+ * Hands `playerId` a reward outside the kill ladder (campaign missions, tutorials, tests). Same rules as earning it:
+ * a reward already held is not paid twice (returns false). Pushes the `streakRewardEarned` event (kills 0) onto
+ * `events` when given. Deterministic (a VEHICLE GENERATOR draws its vehicle from the match RNG).
+ */
+export function grantStreakReward(
+  state: GameState,
+  playerId: number,
+  reward: StreakRewardKind,
+  events: SimEvent[] = [],
+): boolean {
+  const p = state.players[playerId];
+  if (!p || !p.alive) return false;
+  const before = events.length;
+  earn(state, p, reward, 0, events);
+  return events.length > before;
 }
 
 function earn(
@@ -87,6 +110,11 @@ function earn(
     case 'globalKnockdown':
       if (r.knockdown) return; // one unused copy at most
       r.knockdown = true;
+      events.push({ type: 'streakRewardEarned', playerId: p.id, reward, kills });
+      return;
+    case 'localChampion':
+      if (r.localChampion || p.localChampion !== null) return; // one unused or running copy at most
+      r.localChampion = true;
       events.push({ type: 'streakRewardEarned', playerId: p.id, reward, kills });
       return;
   }
@@ -143,6 +171,7 @@ export function clearStreakRewards(state: Pick<GameState, 'tick'>, p: Player): v
     quickHandsBank: Math.max(0, bank),
     vehicleGenerator: r.vehicleGenerator,
     knockdown: r.knockdown,
+    localChampion: r.localChampion,
   };
 }
 

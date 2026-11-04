@@ -34,8 +34,17 @@ export type CharacterId = 'streetBaller' | 'lekkiBoy' | 'campusQueen';
 /** The public vehicles of Lagos. Any fighter may get any of them (decision VG1). */
 export type VehicleKind = 'danfo' | 'taxi' | 'keke' | 'okada';
 export type SkillKind = 'push' | 'daze' | 'shove';
-/** The kill-streak rewards of the fixed initial loadout (decision SK1). */
-export type StreakRewardKind = 'quickHands' | 'vehicleGenerator' | 'globalKnockdown';
+/**
+ * Every close attack of the catalogue (`sim/data/attacks.ts`, decisions FC2-FC4). The first three are the original
+ * attacks (`SkillKind`, one per deployed fighter); the rest extend the catalogue.
+ */
+export type AttackKind = SkillKind | 'kick' | 'bottle' | 'sweep' | 'headbutt' | 'elbow';
+/**
+ * The kill-streak rewards (decision SK1): the fixed loadout pays quickHands / vehicleGenerator / globalKnockdown;
+ * `localChampion` is granted only by `grantStreakReward` (campaign missions) or, behind a config switch, as the
+ * alternative 7-kill reward (decision FC6).
+ */
+export type StreakRewardKind = 'quickHands' | 'vehicleGenerator' | 'globalKnockdown' | 'localChampion';
 export type PickupKind =
   | 'petrol'
   | 'diesel'
@@ -164,14 +173,34 @@ export interface StreakRewards {
   vehicleGenerator: VehicleKind | null;
   /** An unused GLOBAL KNOCKDOWN. */
   knockdown: boolean;
+  /** An unused LOCAL CHAMPION (a separate reward from the knockdown: range-limited, dodgeable). */
+  localChampion: boolean;
 }
 
 /** A melee attack between the press and its effect (the startup). It never roots the attacker. */
 export interface PendingAttack {
-  skill: SkillKind;
-  /** The rival it was aimed at (the effect re-checks who is adjacent when it resolves). */
+  skill: AttackKind;
+  /** The rival it was aimed at (the effect re-checks who is in reach when it resolves). */
   targetId: number;
   resolveTick: number;
+  /** The direction it was thrown in (the line a reach-2 attack checks). */
+  dir: Dir;
+}
+
+/** The attacks a fighter throws: B next to a rival = `primary`; `secondary` is chosen by the B resolver (actions.ts). */
+export interface AttackLoadout {
+  primary: AttackKind;
+  secondary: AttackKind | null;
+}
+
+/** A LOCAL CHAMPION in progress (a time window in which the crowd throws at rivals near the owner). */
+export interface LocalChampionRun {
+  startTick: number;
+  endTick: number;
+  /** First tick the next volley of throws may be chosen. */
+  nextVolleyTick: number;
+  /** Rivals this use has already hit (never targeted again by this use). */
+  hit: number[];
 }
 
 /** A GLOBAL KNOCKDOWN object in the air: it lands on `targetId`'s head at `landTick` (decision GK1). */
@@ -183,6 +212,14 @@ export interface PendingKnockdown {
   fromX: number;
   fromY: number;
   landTick: number;
+  /**
+   * LOCAL CHAMPION throws share this projectile record: the object lands on the FIXED tile (landX, landY) chosen
+   * when it was thrown (so the rival can step off it), over `throwTicks` of flight. Absent for a GLOBAL KNOCKDOWN,
+   * whose object follows the rival's head.
+   */
+  landX?: number;
+  landY?: number;
+  throwTicks?: number;
 }
 
 /** What a kill-earned upgrade is for (decision AS1): one active perk per category. */
@@ -288,6 +325,27 @@ export interface Player {
    * opponent stays hittable once the attacker's own recovery (`skillReadyTick`) is over.
    */
   meleeLock: Record<number, number>;
+  /**
+   * Overrides of the attacks this fighter throws (a mission / test / balance run). Empty = the character's
+   * `FighterDef` (read live, `loadoutOf` in `systems/skills.ts`), so the deployed fighters need no entry.
+   */
+  attacks: Partial<AttackLoadout>;
+  /** The attacker cannot take a step until this tick (an attack's planted wind-up or recoil; 0 = free). */
+  rootedUntil: number;
+  /** Walking is slower (a Sweep): `extraStepTicks` more per tile until `until`. Null = not slowed. */
+  slow: { until: number; extraStepTicks: number } | null;
+  /** Per-attack cooldowns (`AttackSpec.cooldownTicks`): the first tick each attack may start again; hard (not cleared by recovery). */
+  attackCooldowns: Partial<Record<AttackKind, number>>;
+  /** Per-attack recovery: the first tick each attack may start again after its own last hit / whiff (see `skillReadyTick`). */
+  attackRecovery: Partial<Record<AttackKind, number>>;
+  /** The last attack that resolved (a different attack of the loadout may follow after `skills.followUpGapTicks`). */
+  lastAttack: { kind: AttackKind; endTick: number } | null;
+  /** After a slow ends no attack may slow this fighter again before this tick. */
+  slowImmuneUntil: number;
+  /** A LOCAL CHAMPION use this fighter owns (null = none). Ends on death. */
+  localChampion: LocalChampionRun | null;
+  /** After a LOCAL CHAMPION hit nobody's crowd may hit this fighter again before this tick. */
+  localChampionImmuneUntil: number;
   curse: { kind: CurseKind; until: number } | null;
   entryUntil: number | null; // vehicle-entry mode deadline
   immune: ImmuneEntry[];
@@ -645,6 +703,8 @@ export interface PlayerSetup {
   difficulty?: Difficulty;
   /** V2 Team Rumble: team index; omitted = assigned by the ruleset (modes.ts). */
   team?: number;
+  /** Missions / tests / balance runs: replaces the attacks the character's `FighterDef` gives. */
+  attacks?: Partial<AttackLoadout>;
 }
 
 export interface MatchSettings {
@@ -796,7 +856,7 @@ export type SimEvent =
   | {
       type: 'specialUsed';
       playerId: number;
-      action: 'melee' | 'vehicle' | 'vehicleGenerator' | 'globalKnockdown';
+      action: 'melee' | 'vehicle' | 'vehicleGenerator' | 'globalKnockdown' | 'localChampion';
     }
   /** A VEHICLE GENERATOR carrier started driving: the generator's three-second fuse is running. */
   | {
@@ -841,7 +901,7 @@ export type SimEvent =
   | { type: 'playerJumped'; playerId: number }
   | { type: 'okadaMounted'; playerId: number }
   | { type: 'okadaBroken'; playerId: number; x: number; y: number }
-  | { type: 'skillUsed'; playerId: number; skill: SkillKind; targetId: number | null }
+  | { type: 'skillUsed'; playerId: number; skill: AttackKind; targetId: number | null }
   /** A kill streak reached a threshold of the loadout: the reward is earned (`vehicle` for a VEHICLE GENERATOR). */
   | {
       type: 'streakRewardEarned';
@@ -869,10 +929,29 @@ export type SimEvent =
   | { type: 'knockdownHit'; ownerId: number; playerId: number; x: number; y: number; until: number }
   /** The rival got up. */
   | { type: 'knockdownEnded'; playerId: number }
+  /** LOCAL CHAMPION began: the crowd throws at rivals near `ownerId` until `endTick`. */
+  | { type: 'localChampionStarted'; ownerId: number; endTick: number }
+  /** The crowd threw at `targetId`'s tile (landX, landY): the object lands on `landTick`; stepping off dodges it. */
+  | {
+      type: 'localChampionThrow';
+      ownerId: number;
+      targetId: number;
+      fromX: number;
+      fromY: number;
+      landX: number;
+      landY: number;
+      landTick: number;
+    }
+  /** The object hit `playerId`: a short daze until `until` (no knockdown, never lethal). */
+  | { type: 'localChampionHit'; ownerId: number; playerId: number; x: number; y: number; until: number }
+  /** The rival stepped off the landing tile: the object hit the ground. */
+  | { type: 'localChampionMissed'; ownerId: number; playerId: number; x: number; y: number }
+  /** The window is over (`time`) or the owner died (`died`). */
+  | { type: 'localChampionEnded'; ownerId: number; reason: 'time' | 'died' }
   /** A melee press began its startup (the telegraph: a raised fist, a braced shoulder ...). */
-  | { type: 'attackStarted'; playerId: number; skill: SkillKind; targetId: number; resolveTick: number }
+  | { type: 'attackStarted'; playerId: number; skill: AttackKind; targetId: number; resolveTick: number }
   /** A melee attack finished its startup: it connected (`targetId`) or whiffed (null). */
-  | { type: 'attackResolved'; playerId: number; skill: SkillKind; targetId: number | null; hit: boolean }
+  | { type: 'attackResolved'; playerId: number; skill: AttackKind; targetId: number | null; hit: boolean }
   /** A hit that dazed or displaced the target cut a melee startup short. */
   | { type: 'attackInterrupted'; playerId: number; byId: number }
   | { type: 'playerPushed'; playerId: number; byId: number; fromX: number; fromY: number }

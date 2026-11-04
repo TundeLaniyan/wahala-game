@@ -80,11 +80,11 @@ For the nth credited elimination of the current life (`stats.streak`), in every 
 | --- | --- | --- |
 | 3 | QUICK HANDS | 18 s; +5 generator charges (2 -> 7); a held A lays a generator on every tile you step onto; a placement press that cannot be done yet is kept 1.2 s; normal fuse, flames and owner vulnerability |
 | 5 | VEHICLE GENERATOR | one use; a public vehicle (any, drawn when earned and shown on the button) carries a live generator |
-| 7 | GLOBAL KNOCKDOWN / LOCAL CHAMPION | one use; every rival is knocked flat by a thrown object; non-lethal |
+| 7 | GLOBAL KNOCKDOWN | one use; every rival is knocked flat by a thrown object; non-lethal (the separate LOCAL CHAMPION reward is described in `docs/FIGHTERS_AND_ATTACKS.md`) |
 
 Earned once per threshold; consumed once; a death ends the streak but loses no earned reward (decision AS7): unused VEHICLE GENERATOR / GLOBAL KNOCKDOWN stay, and a running QUICK HANDS is paused with its unspent time stored and resumed on the respawn; kills, deaths and assists are never reduced; the respawn is the normal one. The existing elimination ladder (`config.rewards`), supply crates and the rule that ordinary crates drop nothing in Rumble are unchanged. Assists pay nothing (future work; not required by the streak system).
 
-B resolves in this order: an attackable adjacent rival -> melee, else VEHICLE GENERATOR, else GLOBAL KNOCKDOWN, else a voucher vehicle, else nothing. Still exactly two action buttons.
+B resolves in this order: an attackable adjacent rival -> melee, else VEHICLE GENERATOR, else GLOBAL KNOCKDOWN, else a voucher vehicle, else nothing. Still exactly two action buttons. (Extended by decision FC4: secondary attacks, reach-2 attacks and LOCAL CHAMPION; the full order is in `docs/FIGHTERS_AND_ATTACKS.md` section 4.)
 
 ## 4. VEHICLE GENERATOR (decisions VG1-VG4)
 

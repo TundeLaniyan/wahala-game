@@ -45,11 +45,12 @@ export const MAX_PLAYERS = 32;
 export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, config: GameConfig): Player {
   const spawn = arena.spawns[id]!;
   const facing = spawn.x < arena.layout[0]!.length / 2 ? 'right' : 'left';
+  const characterId = setup.characterId in CHARACTERS ? setup.characterId : 'streetBaller';
   return {
     id,
     slot: id,
     name: setup.name,
-    characterId: setup.characterId in CHARACTERS ? setup.characterId : 'streetBaller',
+    characterId,
     isBot: setup.isBot,
     x: spawn.x,
     y: spawn.y,
@@ -96,6 +97,15 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     lastPlaceTick: -1e9,
     attack: null,
     meleeLock: {},
+    attacks: { ...setup.attacks },
+    rootedUntil: 0,
+    slow: null,
+    attackCooldowns: {},
+    attackRecovery: {},
+    lastAttack: null,
+    slowImmuneUntil: 0,
+    localChampion: null,
+    localChampionImmuneUntil: 0,
     curse: null,
     entryUntil: null,
     immune: [],

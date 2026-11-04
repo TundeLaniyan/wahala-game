@@ -440,6 +440,24 @@ const handlers: Handlers = {
   knockdownEnded: (e, c) => {
     if (isHuman(c, e.playerId)) sfx(c, 'pickup_reveal', 0, 0.5, 1.2);
   },
+  // LOCAL CHAMPION (decision FC6): the same synthesised cues as the knockdown, softer; a dodged object hits the ground
+  localChampionStarted: (e, c) => {
+    if (isHuman(c, e.ownerId)) sfx(c, 'pickup_rare', 0, 0.6, 1.1);
+    react(c, { kind: 'cheer', strength: 0.6, chance: 0.7, delay: 0.1 });
+  },
+  localChampionThrow: (_e, c) => {
+    if (allow(c, 'localChampionThrow', 0.3)) sfx(c, 'crowd_throw_whistle', 0, 0.7, 1.1);
+  },
+  localChampionHit: (e, c) => {
+    sfx(c, 'bottle_smash', panOf(c, playerX(c, e.playerId)), isHuman(c, e.playerId) ? 0.8 : 0.6, 1.15);
+    sfx(c, 'daze', panOf(c, playerX(c, e.playerId)), 0.5, 0.9, 0.05);
+  },
+  localChampionMissed: (e, c) => {
+    if (allow(c, 'localChampionMiss', 0.3)) sfx(c, 'bottle_smash', panOf(c, e.x), 0.3, 1.3);
+  },
+  localChampionEnded: (e, c) => {
+    sfx(c, 'pickup_curse', 0, isHuman(c, e.ownerId) ? 0.35 : 0.15, 1.4);
+  },
   // kill-streak rewards (decision SK1): the earned chime is the elimination reward's, a little higher
   streakRewardEarned: (e, c) => {
     const pan = panOf(c, playerX(c, e.playerId));

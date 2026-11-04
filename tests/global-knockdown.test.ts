@@ -1,5 +1,5 @@
 /**
- * GLOBAL KNOCKDOWN / LOCAL CHAMPION (decision GK1): the 7-kill streak reward. Visible projectiles from the building
+ * GLOBAL KNOCKDOWN (decision GK1; LOCAL CHAMPION is a separate reward, tests/local-champion.test.ts): the 7-kill streak reward. Visible projectiles from the building
  * side at EVERY rival, a hit on the head, a fall, about two seconds flat on the ground (tuning range 1.5-3 s); nobody
  * dies of it; the owner is unaffected and may act; rivals cannot move, place or attack while down; one use; no stacking.
  */

@@ -516,3 +516,13 @@ Kill-streak classification (AS7): every earned reward survives death. QUICK HAND
 | Runtime | Done: `GameOptions.mission` / `GameState.mission`, `buildMissionGame`, `missionView`, lives, boss shield / exposure / retry loop, strikes, reinforcements, outcome and stars, nine mission events, crew directives for the bots. Normal matches pinned byte-for-byte by `tests/mission-regression.test.ts`. |
 | Mechanics | Oshodi relays: Done with a full scripted playthrough, loss, timeout and retry tests. Mushin, Fadeyi / Somolu, Ebute-Metta, Lagos Island, Lekki: Done and unit-tested (positive and failure paths) but not played through by a script; balance against real play untuned. |
 | Not done | Mission audio cues (events are silent), mission art / markers (renderer worker), HUD mission panel (hud-combat worker), campaign content and UI (other workers). Targeted checks only; the full unit and browser suites were not run. |
+## Fighters, attack catalogue and Local Champion (branch `claude/wahala-campaign-online-v1`, worker `fighters-combat`; decisions FC1-FC7, `docs/FIGHTERS_AND_ATTACKS.md`)
+
+| Area | State |
+| --- | --- |
+| Fighter definitions | Done (data + tests): `FighterDef` for the three playable fighters and three experimental, data-only ones (hidden unless `experimentalContent`). Text only: no audio, no TTS. Finishing sequences, costume meshes and experimental models are NOT made. `tests/fighters.test.ts`. |
+| Attack catalogue | Done in the simulation: eight non-lethal attacks (Punch, Shove, Daze Punch unchanged; Kick, Bottle Strike, Leg Sweep, Headbutt, Elbow Check new) with reach, slow, cooldown, planted / recoil vulnerability. No new animation, effect or sound exists for the five new ones (the Push / Kick clips play). `tests/attack-catalogue.test.ts`, `npm run combat-balance`. |
+| Secondary attack | Done behind `config.skills.secondaryAttacks` (OFF): the deployed fighters keep one attack. B order documented and tested. Bots use it. |
+| Step grace | Done (ON, FC1): a rival who started stepping away and has not visually left is still hit. |
+| Local Champion | Done in the simulation and bots; separate from Global Knockdown; granted by `grantStreakReward` or the OFF ladder switch. Rendered with the knockdown projectile view. HUD card, icon and B label NOT done (HUD worker). `tests/local-champion.test.ts`, `npm run streak-measure -- --only local`. |
+| Not run | The full unit and browser suites (targeted checks only). |
