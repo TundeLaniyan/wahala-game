@@ -76,7 +76,7 @@ test.describe('raid presentation', () => {
 
   test('desktop: the whole board is visible, the fixed camera, cargo / belts / doors are drawn, no cross', async ({
     page,
-  }) => {
+  }, info) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await open(page, '&noattract');
@@ -95,7 +95,9 @@ test.describe('raid presentation', () => {
     expect(dbg.stats, 'the raid markers exist').not.toBeNull();
     expect(dbg.stats!.cargo).toBeGreaterThan(0);
     expect(dbg.stats!.marked).toBeGreaterThan(0);
-    await expect(page.getByTestId('cross-control')).toHaveCount(0); // no touch device: no cross
+    // no touch device: no cross. This test also runs on the touch (mobile) project, where the cross is the intended
+    // movement control in a raid, so the expectation follows the device instead of being skipped there.
+    await expect(page.getByTestId('cross-control')).toHaveCount(info.project.name === 'mobile' ? 1 : 0);
     mkdirSync(OUT, { recursive: true });
     await page.screenshot({ path: join(OUT, 'raid-desktop.jpg'), quality: 85, timeout: 180_000 });
     expect(errors).toEqual([]);
