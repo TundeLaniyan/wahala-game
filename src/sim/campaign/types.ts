@@ -49,7 +49,8 @@ export interface CampaignHit {
 }
 
 /** What actually happened to a hit (events / HUD / tests). */
-export type CampaignHitResult = 'damaged' | 'dazed' | 'blockedArmour' | 'blockedOkada' | 'invulnerable' | 'defeated';
+export type CampaignHitResult =
+  'damaged' | 'dazed' | 'blockedArmour' | 'blockedOkada' | 'invulnerable' | 'defeated';
 
 /** Enemy kinds: durability and attack set by role (data in src/sim/data/enemies.ts, combat-core). */
 export type EnemyKind = 'agbero' | 'guard' | 'thrower' | 'heavy' | 'lieutenant' | 'boss';

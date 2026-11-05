@@ -94,7 +94,7 @@ export type MatchMode = 'classic' | 'crush';
  * V2: the match ruleset. `classic` = the 2-4 player standard match (last standing, mandatory Wahala Crush);
  * the three City Rumble modes share the same simulation with different rules (src/sim/modes.ts).
  */
-export type GameKind = 'classic' | 'survival' | 'deathmatch' | 'team' | 'mission';
+export type GameKind = 'classic' | 'survival' | 'deathmatch' | 'team' | 'mission' | 'raid';
 
 /** V2: no team (free-for-all). */
 export const NO_TEAM = -1;

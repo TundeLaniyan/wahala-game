@@ -28,9 +28,24 @@ import type { DeepPartial, GameConfig } from './config';
 import { RUMBLE_ECONOMY, ticks } from './config';
 import type { ArenaDef } from './arenas/types';
 import type { GameKind, MatchSettings, TilePos } from './types';
+import type { BombRule } from './campaign/types';
 import { NO_TEAM } from './types';
 
 export const RUMBLE_MODES: readonly GameKind[] = ['survival', 'deathmatch', 'team'];
+
+/**
+ * Bomb geometry by ruleset (docs/CAMPAIGN_EXPANSION_PLAN.md section 2). There is NO player-facing toggle: the ruleset
+ * decides. Exhaustive on purpose: a new GameKind does not compile until it names its rule, so a future mission format
+ * can never silently inherit the wrong bomb. Radial = the Rumble disc; cross = the classic plus.
+ */
+export const BLAST_RULE_BY_GAME: Readonly<Record<GameKind, BombRule>> = {
+  classic: 'cross', // Classic Battle (standard arenas)
+  survival: 'radial', // City Rumble and multiplayer
+  deathmatch: 'radial',
+  team: 'radial',
+  mission: 'radial', // campaign field missions (the City Rumble district arenas)
+  raid: 'cross', // classic raids (compact fixed-screen missions)
+};
 
 export const isRespawnMode = (game: GameKind): boolean => game === 'deathmatch' || game === 'team';
 export const isTeamMode = (game: GameKind): boolean => game === 'team';
@@ -84,12 +99,16 @@ export function modeConfig(settings: MatchSettings, _arena: ArenaDef): DeepParti
         drops: { maxDeathDrops: 0 },
         respawn: { enabled: true, resetOnDeath: true },
       };
+    case 'raid':
+      // placeholder ruleset (raid-sim owns the real one): the classic plus blast (config default), no hidden pickups,
+      // no crush (modeShrinks); the raid runtime decides lives and who respawns
+      return { pickups: { hiddenChance: 0 }, drops: { maxDeathDrops: 0 } };
   }
 }
 
 /** Whether the arena closes in under this ruleset (respawn modes never shrink permanently). */
 export function modeShrinks(settings: MatchSettings): boolean {
-  return settings.game !== 'mission' && !isRespawnMode(settings.game);
+  return settings.game !== 'mission' && settings.game !== 'raid' && !isRespawnMode(settings.game);
 }
 
 /**
