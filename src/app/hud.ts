@@ -343,7 +343,16 @@ export interface FeedItem {
   killer: string | null;
   killerSlot: number;
   cause:
-    'flame' | 'vehicle' | 'crush' | 'hazard' | 'crowd' | 'spectator' | 'suddenDeath' | 'self' | 'friendly';
+    | 'flame'
+    | 'vehicle'
+    | 'crush'
+    | 'hazard'
+    | 'crowd'
+    | 'spectator'
+    | 'suddenDeath'
+    | 'self'
+    | 'friendly'
+    | 'campaign';
   involvesLocal: boolean;
   /** Seconds since it happened. */
   age: number;
@@ -464,7 +473,7 @@ export function buildRumble(state: GameState, localId: number, spectateId: numbe
   for (const p of out) {
     const killer = eliminatorOf(state, p);
     const c = p.elimination!;
-    const owner = 'ownerId' in c ? state.players[c.ownerId] : undefined;
+    const owner = 'ownerId' in c && c.ownerId !== null ? state.players[c.ownerId] : undefined;
     const cause: FeedItem['cause'] =
       owner?.id === p.id
         ? 'self'

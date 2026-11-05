@@ -96,12 +96,16 @@ describe('kill feed sentences', () => {
       [{ kind: 'flame', ownerId: 1, eventId: 1 }, null, 'OWN BLAST'], // victim 1 blew itself up
       [{ kind: 'flame', ownerId: 2, eventId: 1 }, null, 'FRIENDLY FIRE'], // a teammate's blast, nobody credited
       [{ kind: 'spectator', ownerId: 5, eventId: 1 }, null, 'SIDELINE'],
+      [{ kind: 'campaign', source: 'punch', ownerId: 4, eventId: 1 }, 4, 'HIT'], // decision CC1: campaign health ran out
+      [{ kind: 'campaign', source: 'blast', ownerId: 4, eventId: 1 }, 4, 'BLAST'],
+      [{ kind: 'campaign', source: 'hazard', ownerId: null, eventId: 1 }, null, 'HAZARD'],
     ];
     for (const [cause, by, word] of cases) {
       down(s, 1, by, cause);
       expect(eliminationLine(s, s.players[1]!, 0).causeWord, word).toBe(word);
     }
-    expect(Object.values(KILL_CAUSE_WORD)).toHaveLength(9);
+    expect(Object.values(KILL_CAUSE_WORD)).toHaveLength(10);
+    down(s, 1, null, { kind: 'spectator', ownerId: 5, eventId: 1 });
     expect(killCause(s, s.players[1]!)).toBe('sideline');
   });
 

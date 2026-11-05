@@ -5,7 +5,7 @@ import { chooseStage, mutate, open, stepTicks, toRumbleSetup } from './helpers';
 /**
  * City Rumble Evolution (docs/RUMBLE_EVOLUTION.md) in the real game: the five-district Ojuelegba stage starts
  * from the menu, Rumble blasts are radial (a diagonal neighbour is hit) with two starting generators, the
- * Blast shape switch plays the cross, and the signalled Danfo pull-out is telegraphed on the board.
+ * ruleset (not a setting) decides the blast shape, and the signalled Danfo pull-out is telegraphed on the board.
  */
 
 type Live = {
@@ -34,21 +34,18 @@ const live = (page: Page): Promise<Live> =>
     };
   });
 
-/** Home -> City Rumble Survival -> 8 fighters on Ojuelegba with the chosen blast shape -> play. */
-async function startOjuelegba(page: Page, blast: 'radial' | 'cross'): Promise<void> {
+/** Home -> City Rumble Survival -> 8 fighters on Ojuelegba -> play (there is no blast control to set: decision CC2). */
+async function startOjuelegba(page: Page): Promise<void> {
   await toRumbleSetup(page, 'survival');
   await page.getByTestId('rumble-8').click();
-  await expect(page.getByTestId('blast-radial')).toBeVisible();
-  await page.getByTestId(`blast-${blast}`).click();
-  await expect(page.getByTestId(`blast-${blast}`)).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByTestId('blast-note')).toContainText(blast === 'cross' ? 'Classic cross' : 'circle');
+  await expect(page.getByTestId('rumble-8')).toBeVisible();
+  await expect(page.locator('[data-testid^="blast-"]')).toHaveCount(0);
+  await expect(page.getByText('Blast shape')).toHaveCount(0);
   await chooseStage(page, 'rumbleOjuelegba');
   await expect(page.getByTestId('setup-arena')).toContainText('Ojuelegba');
   await page.getByTestId('menu-continue').click();
   await page.getByTestId('menu-continue').click();
-  await expect(page.getByTestId('ready-rules')).toContainText(
-    blast === 'cross' ? 'Cross blasts' : 'Radial blasts',
-  );
+  await expect(page.getByTestId('ready-rules')).toContainText('Radial blasts');
   await page.getByTestId('start-button').click();
   await expect(page.getByTestId('hud')).toBeVisible();
   await stepTicks(page, 170); // past the countdown
@@ -97,7 +94,7 @@ test.describe('City Rumble Evolution', () => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await open(page, '&nobots&noattract');
-    await startOjuelegba(page, 'radial');
+    await startOjuelegba(page);
     const s = await live(page);
     expect(s.arenaId).toBe('rumbleOjuelegba');
     expect(s.blastMode).toBe('radial');
@@ -119,23 +116,6 @@ test.describe('City Rumble Evolution', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Blast shape "Cross" plays City Rumble with the Classic plus: the diagonal is safe', async ({
-    page,
-  }) => {
-    test.setTimeout(600_000);
-    const errors: string[] = [];
-    page.on('pageerror', (e) => errors.push(e.message));
-    await open(page, '&nobots&noattract');
-    await startOjuelegba(page, 'cross');
-    const s = await live(page);
-    expect(s.blastMode).toBe('plus');
-    expect(s.capacities.every((c) => c === 2)).toBe(true);
-    await diagonalSetup(page);
-    await stepTicks(page, 40);
-    expect(await meAlive(page)).toBe(true);
-    expect(errors).toEqual([]);
-  });
-
   test('the Danfo pull-out is telegraphed on the departure strip before it turns lethal', async ({
     page,
   }, info) => {
@@ -143,7 +123,7 @@ test.describe('City Rumble Evolution', () => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await open(page, '&nobots&noattract');
-    await startOjuelegba(page, 'radial');
+    await startOjuelegba(page);
     // keep the local player out of every hazard while the stage clock runs
     await mutate(page, `s.players[0].protectedUntil = 1e9;`);
     let warned: { startTick: number; tick: number } | null = null;

@@ -6,6 +6,9 @@
  * Re-recorded after merging the fighters-and-attacks branch (new Player fields, FC1 step grace, bots that use
  * secondary attacks): that branch deliberately changes normal-match state, the mission runtime still adds nothing
  * to a match without `state.mission` (the mission tests prove the key is absent).
+ *
+ * Decision CC2 removed `settings.rumbleBlast` from the serialised state: the two hashes below were re-recorded on the
+ * integration base 187401d with that one key skipped, so they are the same matches (tests/blast-rules.test.ts).
  */
 import { describe, expect, it } from 'vitest';
 import { createBot } from '../src/ai';
@@ -50,7 +53,7 @@ describe('normal matches are unchanged by the mission runtime', () => {
       })),
       settings: { mode: 'crush' },
     };
-    expect(play(options, ['standard', 'skilled', 'casual'], 2400)).toBe('671f4569:15766');
+    expect(play(options, ['standard', 'skilled', 'casual'], 2400)).toBe('4fb9574d:15743');
   });
 
   it('a Deathmatch on a City Rumble stage (6 bots, 1800 ticks)', () => {
@@ -65,7 +68,7 @@ describe('normal matches are unchanged by the mission runtime', () => {
       settings: { game: 'deathmatch', durationSec: 300 },
     };
     expect(play(options, ['standard', 'rookie', 'skilled', 'casual', 'expert', 'beginner'], 1800)).toBe(
-      'db6b12ff:23568',
+      '27974553:23545',
     );
   });
 });

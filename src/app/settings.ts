@@ -72,8 +72,6 @@ export interface GameSettings {
   moveAssist: MoveAssistSetting;
   /** Decision AS4: the touchscreen thumb's style - standard (cardinal + corner help) or beginner (adds buffering and emergency replanning). */
   moveStyle: MoveStyle;
-  /** Rumble Evolution experiment (decision RE-L2): City Rumble blast shape, radial (default) or the Classic cross. */
-  rumbleBlast: 'radial' | 'cross';
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
@@ -103,7 +101,6 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   campaignListen: true,
   moveAssist: 'auto',
   moveStyle: 'standard',
-  rumbleBlast: 'radial',
 };
 
 export const SETTINGS_KEY = 'wahala.settings.v1';
@@ -161,8 +158,10 @@ export function sanitizeSettings(s: GameSettings): GameSettings {
   const classicArenas = [...STANDARD_ARENA_IDS, ...EXPERIMENTAL_ARENA_IDS];
   const difficulty = migrateDifficulty(s.difficulty, d.difficulty);
   const bots = Array.isArray(s.botDifficulties) ? s.botDifficulties : [];
+  // decision CC2: the blast shape belongs to the ruleset; a `rumbleBlast` key in an old save is silently dropped
+  const { rumbleBlast: _legacyBlast, ...kept } = s as GameSettings & { rumbleBlast?: unknown };
   return {
-    ...s,
+    ...kept,
     play: oneOf(s.play, ['rumble', 'classic'] as const, d.play),
     competitors: oneOf(s.competitors, [2, 3, 4] as const, d.competitors),
     rumbleCompetitors: oneOf(s.rumbleCompetitors, RUMBLE_SIZES, d.rumbleCompetitors),
@@ -187,7 +186,6 @@ export function sanitizeSettings(s: GameSettings): GameSettings {
     campaignListen: bool(s.campaignListen, d.campaignListen),
     moveAssist: oneOf(s.moveAssist, MOVE_ASSIST_SETTINGS, d.moveAssist),
     moveStyle: oneOf(s.moveStyle, MOVE_STYLES, d.moveStyle),
-    rumbleBlast: oneOf(s.rumbleBlast, ['radial', 'cross'] as const, d.rumbleBlast),
   };
 }
 
