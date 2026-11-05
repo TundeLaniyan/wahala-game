@@ -10,6 +10,7 @@ import {
   allReplayModifiers,
   campaignProgress,
   districtStatus,
+  failureSummary,
   finaleAvailable,
 } from '../../campaign';
 import type { BossDef, CampaignSave, DistrictId, DistrictStatus } from '../../campaign';
@@ -144,13 +145,8 @@ export function unlockLabel(id: string): string {
   }
 }
 
-/** Why a mission was not won, in plain words. */
-export function failureText(o: MissionOutcome): string {
-  const phase = Math.min(3, o.phasesCleared + 1);
-  if (o.result === 'timeout')
-    return `Time ran out in phase ${phase} of 3. The district keeps its hold, so go again with a plan.`;
-  return `You were put down for the last time in phase ${phase} of 3 (${o.livesUsed} ${o.livesUsed === 1 ? 'life' : 'lives'} spent).`;
-}
+/** Why a mission was not won, in plain words (the card's summary text lives in campaign/cards.ts). */
+export const failureText = failureSummary;
 
 /** A hint for the next try: the phase's call-out plus the boss's counterplay. */
 export function retryHint(boss: BossDef, o: MissionOutcome): { phase: string; counterplay: string } {

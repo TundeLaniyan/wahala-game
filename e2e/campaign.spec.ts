@@ -68,11 +68,9 @@ test.describe('Campaign', () => {
     await expect(page.getByTestId('campaign-start-card')).toBeVisible();
     await page.getByTestId('campaign-start-new').click();
 
-    // prologue: the broker is only a message card; Skip goes to the map
+    // prologue: one short card (the broker is only a message card inside Read more); Continue goes to the map
     await expect(page.getByTestId('prologue-player')).toBeVisible();
     await page.getByTestId('story-next').click();
-    await page.getByTestId('story-next').click();
-    await page.getByTestId('story-skip').click();
     await expect(page.getByTestId('map-node-oshodi')).toHaveAttribute('data-status', 'available');
     await expect(page.getByTestId('map-node-mushin')).toHaveAttribute('data-status', 'locked');
     await expect(page.getByTestId('campaign-progress-text')).toContainText('0 of 6 districts cleared');
@@ -82,12 +80,13 @@ test.describe('Campaign', () => {
     await page.getByTestId('campaign-briefing').click();
     await expect(page.getByTestId('menu-briefing')).toBeVisible();
     await expect(page.getByTestId('boss-name')).toHaveText('Oga Sunmola');
+    await page.getByTestId('boss-card').getByTestId('card-readmore').click(); // the crew is behind Read more
     await expect(page.getByTestId('boss-crew')).toContainText('Orita Park Wardens');
     await page.getByTestId('briefing-char-lekkiBoy').click();
     await page.getByTestId('briefing-start').click();
 
     await expect(page.getByTestId('boss-intro-player')).toBeVisible();
-    await page.getByTestId('story-skip').click();
+    await page.getByTestId('story-next').click();
 
     // the mission begins on screen, or (until the mission runtime is merged) says plainly that it cannot
     const hud = page.getByTestId('hud');
@@ -159,16 +158,16 @@ test.describe('Campaign', () => {
     await expect(page.getByTestId('home-rumble')).toBeVisible();
   });
 
-  test('keyboard: Enter advances the story; Esc goes back to the map', async ({ page }, info) => {
+  test('keyboard: Enter ends the story card; Esc goes back to the map', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'keyboard');
     await open(page, '&noattract');
     await page.getByTestId('home-campaign').click();
     await page.getByTestId('campaign-start-new').click();
-    await expect(page.getByTestId('story-count')).toContainText('1 /');
-    await page.keyboard.press('Enter'); // completes the typing line
-    await page.keyboard.press('Enter'); // next line
-    await page.keyboard.press('Enter');
-    await expect(page.getByTestId('story-count')).not.toContainText('1 /');
+    await expect(page.getByTestId('prologue-player')).toBeVisible();
+    await page.keyboard.press('Enter'); // Continue
+    await expect(page.getByTestId('menu-campaign')).toBeVisible();
+    await page.getByTestId('campaign-prologue').click();
+    await expect(page.getByTestId('prologue-player')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('menu-campaign')).toBeVisible();
   });
@@ -257,6 +256,19 @@ test.describe('Campaign', () => {
           };
         }, action);
         const where = `${screen} at ${vp.width}x${vp.height}`;
+        const tools = await page.evaluate(() =>
+          [
+            ...document.querySelectorAll<HTMLElement>(
+              '[data-testid="card-readmore"], [data-testid="card-listen"]',
+            ),
+          ]
+            .filter((b) => b.offsetParent)
+            .map((b) => Math.round(b.getBoundingClientRect().height)),
+        );
+        expect(
+          Math.min(...tools, 44),
+          `${where}: Read more / Listen smaller than a finger`,
+        ).toBeGreaterThanOrEqual(44);
         expect(m.wide, `${where}: page scrolls sideways`).toBeLessThanOrEqual(0);
         expect(m.tall, `${where}: page scrolls`).toBeLessThanOrEqual(0);
         expect(m.overflowX, `${where}: content wider than its screen`).toBe(false);
@@ -270,6 +282,29 @@ test.describe('Campaign', () => {
         await page.screenshot({
           path: `${SHOTS}/${info.project.name}-campaign-${shot}-${vp.width}x${vp.height}.png`,
         });
+        // Read more open: the page still never scrolls (the long text scrolls inside the screen body)
+        const toggles = page.getByTestId('card-readmore');
+        for (let i = (await toggles.count()) - 1; i >= 0; i--) await toggles.nth(i).click();
+        if ((await toggles.count()) > 0) {
+          const open = await page.evaluate(() => {
+            const doc = document.scrollingElement!;
+            return {
+              wide: doc.scrollWidth - innerWidth,
+              tall: doc.scrollHeight - innerHeight,
+              action:
+                document.querySelector<HTMLElement>('.mn-actions button')?.getBoundingClientRect().bottom ??
+                0,
+            };
+          });
+          expect(open.wide, `${where} (Read more open): page scrolls sideways`).toBeLessThanOrEqual(0);
+          expect(open.tall, `${where} (Read more open): page scrolls`).toBeLessThanOrEqual(0);
+          expect(open.action, `${where} (Read more open): main action below the screen`).toBeLessThanOrEqual(
+            vp.height + 0.5,
+          );
+          await page.screenshot({
+            path: `${SHOTS}/${info.project.name}-campaign-${shot}-more-${vp.width}x${vp.height}.png`,
+          });
+        }
       }
     }
   });

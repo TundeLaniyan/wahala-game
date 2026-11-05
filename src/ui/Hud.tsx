@@ -202,7 +202,7 @@ export function Hud() {
           {/* the right column: the map, and in a campaign mission the mission panel under it */}
           <div className="rumble-right" data-testid="rumble-right">
             <Minimap />
-            <MissionDock mission={hud.mission} />
+            <MissionDock mission={hud.mission} campaign={hud.campaign} enemies={hud.enemies} />
           </div>
         </>
       ) : (
@@ -270,6 +270,8 @@ export function Hud() {
         streak={hud.me?.rewards ?? null}
         alive={hud.localAlive}
         mission={rumble ? null : hud.mission}
+        campaign={hud.campaign}
+        enemies={hud.enemies}
       />
       {hud.mission && hud.phase === 'playing' && <MissionCompass />}
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}

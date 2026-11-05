@@ -5,7 +5,20 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CAMPAIGN, DISTRICT_ORDER, applyMissionResult, createSave, defeatLines } from '../../src/campaign';
+import {
+  CAMPAIGN,
+  DISTRICT_ORDER,
+  applyMissionResult,
+  briefingCard,
+  bossIntroCard,
+  createSave,
+  defeatCard,
+  defeatLines,
+  endingCard,
+  missionResultCard,
+  storyCard,
+  trimObjective,
+} from '../../src/campaign';
 import type { CampaignSave } from '../../src/campaign';
 import { freshCampaignUi } from '../../src/app/campaignState';
 import type { CampaignUi } from '../../src/app/campaignState';
@@ -26,7 +39,8 @@ const { BossIntroScreen } = await import('../../src/ui/campaign/BossIntroScreen'
 const { ResultScreen } = await import('../../src/ui/campaign/ResultScreen');
 const { CompleteScreen } = await import('../../src/ui/campaign/CompleteScreen');
 const { StoryScreen } = await import('../../src/ui/campaign/StoryScreen');
-const { StoryLineView } = await import('../../src/ui/campaign/parts');
+const { StoryLineView, BossCard } = await import('../../src/ui/campaign/parts');
+const { CardView } = await import('../../src/ui/campaign/CardView');
 const model = await import('../../src/ui/campaign/model');
 
 const win = (over: Partial<MissionOutcome> = {}): MissionOutcome => ({
@@ -41,6 +55,8 @@ const win = (over: Partial<MissionOutcome> = {}): MissionOutcome => ({
   creditedKills: 3,
   ...over,
 });
+
+const esc = (t: string): string => t.replace(/&/g, '&amp;').replace(/'/g, '&#x27;').replace(/"/g, '&quot;');
 
 function render(c: () => React.JSX.Element | null, ui: CampaignUi | null): string {
   Object.assign(useGameStore.getInitialState(), {
@@ -102,23 +118,45 @@ describe('campaign map', () => {
 });
 
 describe('briefing and boss introduction', () => {
-  it('the briefing lists objectives, intel, warnings, the unseen broker message and the full boss card', () => {
+  it('the briefing shows a short summary and one objective line; the rest is behind Read more', () => {
     const html = render(BriefingScreen, started(createSave(1), { selected: 'oshodi' }));
     const d = CAMPAIGN.districts.oshodi;
-    const boss = d.boss!;
-    for (const o of d.briefing.objectives)
-      expect(html).toContain(o.replace(/&/g, '&amp;').replace(/'/g, '&#x27;'));
-    expect(html).toContain('data-testid="briefing-intel"');
-    expect(html).toContain('data-testid="briefing-warnings"');
-    expect(html).toContain('data-testid="story-broker"');
-    expect(html).toContain('UNKNOWN NUMBER');
-    expect(html).toContain(boss.name);
-    expect(html).toContain(boss.title);
-    expect(html).toContain('Orita Park Wardens'); // the protection crew faction
-    expect(html).toContain(boss.signatureAbility.name);
-    expect(html).toContain('data-testid="boss-counterplay"');
+    const card = briefingCard('oshodi');
+    expect(html).toContain('data-testid="briefing-text"');
+    expect(html).toContain('data-testid="card-summary"');
+    expect(html).toContain(esc(card.summary));
+    expect(html).toContain('data-testid="card-objective"');
+    expect(html).toContain(esc(card.objective));
+    expect(html).toContain('data-testid="card-readmore"');
+    expect(html).toContain('aria-expanded="false"');
+    // collapsed: the long text is not on screen yet
+    expect(html).not.toContain('data-testid="card-readmore-body"');
+    for (const t of [...d.briefing.intel, ...d.briefing.warnings]) expect(html).not.toContain(esc(t));
+    expect(html).not.toContain('data-testid="story-broker"');
+    // the boss: name and title up front, the details behind its own Read more
+    expect(html).toContain(d.boss!.name);
+    expect(html).toContain(d.boss!.title);
+    expect(html).toContain(d.boss!.signatureAbility.name);
+    expect(html).not.toContain('data-testid="boss-counterplay"');
     expect(html).toContain('3 lives');
     expect(html).toContain('Meet the boss'); // intro not seen yet
+  });
+
+  it('Read more reveals the objectives, intel, warnings, the unseen broker message and the full boss card', () => {
+    const d = CAMPAIGN.districts.oshodi;
+    const open = renderToStaticMarkup(
+      createElement(CardView, { card: briefingCard('oshodi'), defaultOpen: true }),
+    );
+    expect(open).toContain('aria-expanded="true"');
+    expect(open).toContain('data-testid="card-readmore-body"');
+    for (const o of [...d.briefing.objectives, ...d.briefing.intel, ...d.briefing.warnings])
+      expect(open).toContain(esc(o));
+    expect(open).toContain('data-testid="story-broker"');
+    expect(open).toContain('UNKNOWN NUMBER');
+    const boss = renderToStaticMarkup(createElement(BossCard, { boss: d.boss!, defaultOpen: true }));
+    expect(boss).toContain('Orita Park Wardens'); // the protection crew faction
+    expect(boss).toContain(d.boss!.signatureAbility.description);
+    expect(boss).toContain('data-testid="boss-counterplay"');
   });
 
   it('replay modifiers appear only once the district is cleared; the loadout reads the save, not the menu setup', () => {
@@ -139,13 +177,20 @@ describe('briefing and boss introduction', () => {
     expect(render(BriefingScreen, started(seen, { selected: 'oshodi' }))).toContain('Start mission');
   });
 
-  it('the boss introduction plays the boss lines and starts from the first line', () => {
+  it('the boss introduction is one short card with Continue in the footer; the boss lines are in Read more', () => {
     const html = render(BossIntroScreen, started(createSave(1), { selected: 'oshodi' }));
+    const boss = CAMPAIGN.districts.oshodi.boss!;
     expect(html).toContain('data-testid="boss-intro-player"');
-    expect(html).toContain(
-      CAMPAIGN.districts.oshodi.boss!.introduction[0]!.text.replace(/'/g, '&#x27;').slice(0, 20),
+    expect(html).toContain(esc(bossIntroCard('oshodi')!.summary));
+    expect(html).toContain(esc(trimObjective(boss.phases[0].objective)));
+    expect(html).toContain('data-testid="story-next"');
+    expect(html).toContain('Start mission');
+    expect(html).not.toContain(esc(boss.introduction[1]!.text));
+    const open = renderToStaticMarkup(
+      createElement(CardView, { card: bossIntroCard('oshodi')!, defaultOpen: true }),
     );
-    expect(html).toContain('data-testid="story-skip"');
+    for (const l of boss.introduction) expect(open).toContain(esc(l.text));
+    expect(open).toContain('data-testid="story-broker"'); // the Chairman's line is a message card
   });
 });
 
@@ -174,11 +219,26 @@ describe('result screens', () => {
     expect(html).toContain(model.clock(125));
     expect(html).toContain(boss.reward.name);
     expect(html).toContain('District opened: Mushin');
-    expect(html).toContain('Replay modifier: Rush Hour Dispatch');
-    expect(html).toContain('data-testid="result-consequence"');
+    expect(html).toContain('Next: Mushin is open'); // the objective line
+    expect(html).toContain(esc(defeatCard(boss).summary)); // the summary is the defeat scene's
     expect(html).toContain('data-testid="result-next"');
-    expect(html).toContain(defeatLines(boss, 'eliminated')[0]!.text.replace(/'/g, '&#x27;').slice(0, 15));
     expect(html).not.toContain('data-testid="result-retry"');
+    // the scene itself and the consequence are behind Read more
+    expect(html).not.toContain(esc(defeatLines(boss, 'eliminated')[0]!.text));
+    expect(html).not.toContain('data-testid="card-readmore-body"');
+    const card = missionResultCard({
+      boss,
+      outcome: o,
+      districtName: 'Oshodi',
+      nextName: 'Mushin',
+      finale: false,
+      firstClear: true,
+      rewardLines: [`${boss.reward.name}: ${boss.reward.description}`],
+    });
+    const open = renderToStaticMarkup(createElement(CardView, { card, defaultOpen: true }));
+    expect(open).toContain(esc(defeatLines(boss, 'eliminated')[0]!.text));
+    expect(open).toContain(esc(boss.consequence));
+    expect(open).toContain(esc(boss.reward.description));
   });
 
   it('ousted bosses play their own scene', () => {
@@ -208,9 +268,10 @@ describe('result screens', () => {
     const boss = CAMPAIGN.districts.oshodi.boss!;
     expect(html).toContain('data-testid="result-retry"');
     expect(html).toContain('phase 2 of 3');
-    expect(html).toContain(boss.phases[1]!.title);
-    expect(html).toContain('data-testid="result-hint"');
+    expect(html).toContain('Next try'); // the objective label
+    expect(html).toContain(esc(trimObjective(boss.phases[1]!.objective)));
     expect(html).not.toContain('data-testid="result-rewards"');
+    expect(html).not.toContain(esc(boss.counterplay)); // the hint is behind Read more
     expect(model.failureText(win({ result: 'timeout' }))).toMatch(/Time ran out/);
   });
 
@@ -228,9 +289,12 @@ describe('result screens', () => {
     );
     const html = render(CompleteScreen, started({ ...save, completed: true }));
     expect(html).toContain(CAMPAIGN.ending.title);
-    expect(html).toContain('data-testid="ending-teaser"');
-    expect(html).toContain('UNKNOWN NUMBER');
+    expect(html).toContain(esc(endingCard().summary));
+    expect(html).not.toContain(esc(CAMPAIGN.ending.teaser)); // behind Read more
     expect(html).toContain('Long Blackout');
+    const open = renderToStaticMarkup(createElement(CardView, { card: endingCard(), defaultOpen: true }));
+    expect(open).toContain(esc(CAMPAIGN.ending.teaser));
+    expect(open).toContain('UNKNOWN NUMBER');
     expect(html).toContain(`${model.totalStars(save).got} / 18`);
   });
 });
@@ -255,12 +319,17 @@ describe('story lines', () => {
       expect(renderToStaticMarkup(createElement(StoryLineView, { line }))).toContain('cp-msg');
   });
 
-  it('the story screen plays the prologue or the finale from the content', () => {
+  it('the story screen is one short card for the prologue or the finale, with Continue in the footer', () => {
     const p = render(StoryScreen, started(createSave(1), { story: 'prologue' }));
     expect(p).toContain('data-testid="prologue-player"');
-    expect(p).toContain(`1 / ${CAMPAIGN.prologue.length}`);
+    expect(p).toContain(esc(storyCard('prologue').summary));
+    expect(p).toContain(esc(storyCard('prologue').objective));
+    expect(p).toContain('data-testid="story-next"');
+    expect(p).toContain('To the map');
+    expect(p).not.toContain(esc(CAMPAIGN.prologue[1]!.text)); // the scene is behind Read more
     const f = render(StoryScreen, started(createSave(1), { story: 'finale' }));
     expect(f).toContain('data-testid="finale-player"');
+    expect(f).toContain('The ending');
   });
 });
 

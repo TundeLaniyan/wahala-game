@@ -1,12 +1,21 @@
 /**
- * Campaign complete: the ending title, summary and teaser (text only: the broker escapes and is never shown),
- * the campaign's stats and the replay modifiers that are open, with a way back to the map.
+ * Campaign complete: the ending as one card (a short summary and the objective line; the full summary and the
+ * teaser message are in Read more; text only: the broker escapes and is never shown), the campaign's stats and the
+ * replay modifiers that are open, with a way back to the map.
  */
-import { CAMPAIGN, DISTRICT_ORDER, allRewards, availableModifiers, replayModifierFor } from '../../campaign';
+import {
+  CAMPAIGN,
+  DISTRICT_ORDER,
+  allRewards,
+  availableModifiers,
+  endingCard,
+  replayModifierFor,
+} from '../../campaign';
 import { MISSION_IDS } from '../../sim';
 import { commands } from '../../app/session';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
 import { clock, totalStars } from './model';
+import { CardView } from './CardView';
 import { Stars, useCampaignUi } from './parts';
 
 export function CompleteScreen() {
@@ -35,20 +44,7 @@ export function CompleteScreen() {
     >
       <div className="cp-result-grid">
         <section className="cp-result-main">
-          <div className="cp-panel mn-panel" data-testid="ending-text">
-            <small className="mn-kicker">The Ring breaks</small>
-            <p className="cp-summary">{CAMPAIGN.ending.summary}</p>
-            <div className="cp-msg cp-line" data-testid="ending-teaser">
-              <div className="cp-msg-head">
-                <span className="cp-msg-glyph" aria-hidden>
-                  ☎
-                </span>
-                <b>UNKNOWN NUMBER</b>
-                <small>new message</small>
-              </div>
-              <p>{CAMPAIGN.ending.teaser}</p>
-            </div>
-          </div>
+          <CardView card={endingCard()} testId="ending-text" />
         </section>
         <section className="cp-result-side">
           <div className="cp-panel mn-panel cp-stats" data-testid="ending-stats">
@@ -86,9 +82,7 @@ export function CompleteScreen() {
               {replays.map(({ id, m }) => (
                 <li key={m}>
                   <b>{replayModifierFor(id).name}</b>
-                  <small>
-                    {CAMPAIGN.districts[id].name}: {replayModifierFor(id).description}
-                  </small>
+                  <small>{CAMPAIGN.districts[id].name}</small>
                 </li>
               ))}
             </ul>

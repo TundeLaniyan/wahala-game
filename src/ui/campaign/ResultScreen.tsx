@@ -1,14 +1,22 @@
 /**
- * Mission result (its own screen; the normal match results are never used for missions). Victory: the boss's
- * defeat scene, stars, time, rewards, consequence, newly opened districts and Next district. Defeat or timeout:
- * what went wrong and a hint from the boss's counterplay text, with Retry.
+ * Mission result (its own screen; the normal match results are never used for missions). One result card: a
+ * one or two sentence summary, the next step as the objective line, and Read more (victory: the boss's defeat
+ * scene, what changes and the rewards in full; defeat or timeout: the phase to retry and the boss's counterplay
+ * hint). Stars, time, reward names and the opened districts stay on screen; Retry / Next district are always there.
  */
-import { CAMPAIGN, availableModifiers, defeatLines, nextDistrict, replayModifierFor } from '../../campaign';
+import {
+  CAMPAIGN,
+  availableModifiers,
+  missionResultCard,
+  nextDistrict,
+  replayModifierFor,
+} from '../../campaign';
 import { isMissionId } from '../../app/campaign';
 import { commands } from '../../app/session';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
-import { clock, failureText, retryHint, unlockLabel, victoryTitle } from './model';
-import { Stars, StoryLineView, useCampaignUi } from './parts';
+import { CardView } from './CardView';
+import { clock, unlockLabel } from './model';
+import { Stars, useCampaignUi } from './parts';
 
 export function ResultScreen() {
   const ui = useCampaignUi();
@@ -21,14 +29,23 @@ export function ResultScreen() {
   const won = outcome.result === 'won';
   const nextOpen = reward.unlockedDistricts[0] ?? null;
   const modifiers = availableModifiers(ui.save, id);
-  const hint = retryHint(boss, outcome);
   const unlockLines = reward.unlocks.map(unlockLabel);
-  const hasNext = nextOpen !== null || nextDistrict(id) !== null;
+  const upNext = nextOpen ?? nextDistrict(id);
+  const hasNext = upNext !== null;
+  const card = missionResultCard({
+    boss,
+    outcome,
+    districtName: d.name,
+    nextName: upNext ? CAMPAIGN.districts[upNext].name : null,
+    finale: reward.campaignComplete,
+    firstClear: reward.firstClear,
+    rewardLines: [...reward.rewards.map((r) => `${r.name}: ${r.description}`), ...unlockLines],
+  });
   return (
     <ScreenFrame
       id="campaignResult"
       kicker={`${d.name} · ${won ? 'mission complete' : outcome.result === 'timeout' ? 'time up' : 'mission failed'}`}
-      title={won ? victoryTitle(boss, outcome) : outcome.result === 'timeout' ? 'Out of time' : 'Put down'}
+      title={card.title}
       className={`cp-screen cp-result ${won ? 'won' : 'lost'}`}
       onBack={() => commands.campaignMap()}
       backLabel="Map"
@@ -67,9 +84,9 @@ export function ResultScreen() {
     >
       <div className="cp-result-grid">
         <section className="cp-result-main">
-          {won ? (
-            <>
-              <div className="cp-panel mn-panel cp-stats" data-testid="result-stats">
+          <CardView card={card} testId="result-card">
+            {won && (
+              <div className="cp-stats cp-stats-row" data-testid="result-stats">
                 <Stars n={outcome.stars} big />
                 <dl>
                   <div>
@@ -79,10 +96,6 @@ export function ResultScreen() {
                   <div>
                     <dt>Lives lost</dt>
                     <dd>{outcome.livesUsed}</dd>
-                  </div>
-                  <div>
-                    <dt>Phases</dt>
-                    <dd>{outcome.phasesCleared} of 3</dd>
                   </div>
                   <div>
                     <dt>Eliminations</dt>
@@ -95,31 +108,15 @@ export function ResultScreen() {
                   </p>
                 )}
               </div>
-              <div className="cp-panel mn-panel cp-scene" data-testid="result-scene">
-                <small className="mn-kicker">The scene</small>
-                {defeatLines(boss, outcome.defeat).map((line, i) => (
-                  <StoryLineView key={i} line={line} />
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="cp-panel mn-panel" data-testid="result-failure">
-              <small className="mn-kicker">What went wrong</small>
-              <p className="cp-summary">{failureText(outcome)}</p>
-              <h4>Hint</h4>
-              <p data-testid="result-hint-phase">{hint.phase}</p>
-              <p className="cp-hint" data-testid="result-hint">
-                {hint.counterplay}
-              </p>
-            </div>
-          )}
+            )}
+          </CardView>
         </section>
         <section className="cp-result-side">
           {won && (
             <div className="cp-panel mn-panel" data-testid="result-rewards">
               <small className="mn-kicker">Rewards</small>
               {reward.rewards.length === 0 && reward.unlocks.length === 0 ? (
-                <p>
+                <p className="cp-chip-line">
                   {reward.firstClear
                     ? 'Nothing new this time.'
                     : 'Already earned. Stars and best time are kept.'}
@@ -129,7 +126,6 @@ export function ResultScreen() {
                   {reward.rewards.map((r) => (
                     <li key={r.id} data-testid="result-reward">
                       <b>{r.name}</b>
-                      <small>{r.description}</small>
                     </li>
                   ))}
                   {unlockLines.map((u) => (
@@ -139,10 +135,6 @@ export function ResultScreen() {
                   ))}
                 </ul>
               )}
-              <h4>What changes</h4>
-              <p data-testid="result-consequence">
-                {reward.firstClear ? boss.consequence : 'The district stays as you left it.'}
-              </p>
               {reward.unlockedDistricts.length > 0 && (
                 <p className="cp-chip-line" data-testid="result-unlocked-districts">
                   Opened: <b>{reward.unlockedDistricts.map((u) => CAMPAIGN.districts[u].name).join(', ')}</b>

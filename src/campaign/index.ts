@@ -39,3 +39,28 @@ export {
 } from './progress';
 export type { MissionResultSummary } from './progress';
 export { browserStore, clearSave, loadSave, migrateSave, persistSave, repairSave } from './save';
+export {
+  CARD_LIMITS,
+  FALLBACK_OBJECTIVE,
+  briefingCard,
+  bossIntroCard,
+  cardById,
+  cardIssues,
+  cardNarrationText,
+  cardsFrom,
+  defeatCard,
+  endingCard,
+  failureSummary,
+  firstSentences,
+  lineText,
+  makeCard,
+  missionResultCard,
+  sectionCard,
+  sectionCards,
+  sentenceCount,
+  splitSentences,
+  storyCard,
+  trimObjective,
+  wordCount,
+} from './cards';
+export type { CardInput, CardKind, CardSection, ResultCardInput, SectionLike, StoryCard } from './cards';

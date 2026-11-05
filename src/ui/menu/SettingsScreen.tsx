@@ -256,6 +256,25 @@ function AccessTab({ s, set }: { s: GameSettings; set: Set }) {
           testId="toggle-narration"
         />
       </Field>
+      <Field
+        label="Campaign Listen button"
+        hint="Shown on every campaign briefing and scene. No narration is recorded yet, so it is disabled for now"
+      >
+        <Toggle
+          on={s.campaignListen}
+          label={s.campaignListen ? 'Shown' : 'Hidden'}
+          onChange={(campaignListen) => set({ campaignListen })}
+          testId="toggle-campaign-listen"
+        />
+      </Field>
+      <Field label="Campaign narration auto-play" hint="Play a card's narration by itself when it has one">
+        <Toggle
+          on={s.campaignNarration}
+          label={s.campaignNarration ? 'On' : 'Off'}
+          onChange={(campaignNarration) => set({ campaignNarration })}
+          testId="toggle-campaign-narration"
+        />
+      </Field>
       <p className="mn-note">
         Reduced motion: when your device asks for less motion, the menus stop animating and the camera never
         shakes.
