@@ -87,7 +87,9 @@ export function creditFor(
     creditId = recent[0] ?? null;
     if (creditId !== null) cause = list.find((c) => c.kind !== 'spectator')!;
   }
-  const assistIds = [...new Set([...others, ...recent])].filter((id) => id !== creditId).sort((a, b) => a - b);
+  const assistIds = [...new Set([...others, ...recent])]
+    .filter((id) => id !== creditId)
+    .sort((a, b) => a - b);
   return { creditId, assistIds, cause };
 }
 

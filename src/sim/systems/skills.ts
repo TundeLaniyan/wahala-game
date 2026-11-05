@@ -272,7 +272,14 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
   const dazes = daze > 0 && (state.tick >= target.dazeImmuneUntil || spec.displacementTiles === 0);
   let landed: CampaignHitResult | null = null; // set only for a campaign victim
   if (target.vitals) {
-    landed = campaignMelee(state, p, target, pending.skill, { dir, dazeTicks: dazes ? daze : 0, landing }, events);
+    landed = campaignMelee(
+      state,
+      p,
+      target,
+      pending.skill,
+      { dir, dazeTicks: dazes ? daze : 0, landing },
+      events,
+    );
     if (dazes && landed !== 'invulnerable' && landed !== 'blockedArmour' && landed !== 'blockedOkada')
       target.dazeImmuneUntil = Math.max(target.dazeImmuneUntil, target.dazedUntil + spec.dazeImmunityTicks);
   } else {
@@ -289,7 +296,8 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
       events.push({ type: 'playerDazed', playerId: target.id, byId: p.id });
     }
   }
-  const reached = landed === null || (landed !== 'invulnerable' && landed !== 'blockedArmour' && landed !== 'blockedOkada');
+  const reached =
+    landed === null || (landed !== 'invulnerable' && landed !== 'blockedArmour' && landed !== 'blockedOkada');
   if (reached && target.alive && spec.slowTicks > 0 && state.tick >= target.slowImmuneUntil) {
     const until = Math.max(target.slow?.until ?? 0, state.tick + spec.slowTicks);
     target.slow = { until, extraStepTicks: spec.slowExtraStepTicks };

@@ -36,7 +36,14 @@ export interface EnemyKindDef {
   summary: string;
 }
 
-export const ENEMY_KIND_IDS: readonly EnemyKind[] = ['agbero', 'guard', 'thrower', 'heavy', 'lieutenant', 'boss'];
+export const ENEMY_KIND_IDS: readonly EnemyKind[] = [
+  'agbero',
+  'guard',
+  'thrower',
+  'heavy',
+  'lieutenant',
+  'boss',
+];
 
 export const ENEMY_KINDS: Readonly<Record<EnemyKind, EnemyKindDef>> = {
   agbero: {

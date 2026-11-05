@@ -59,7 +59,9 @@ export function vitalsFor(
   if (setup.enemyKind) {
     const def = enemyDef(setup.enemyKind);
     if (setup.enemyKind !== 'heavy' || setup.maxHp === undefined) return createVitals(def.hp);
-    return createVitals(Math.min(Math.max(setup.maxHp, def.hp), Math.max(campaignConfig(config).heavyMaxHp, def.hp)));
+    return createVitals(
+      Math.min(Math.max(setup.maxHp, def.hp), Math.max(campaignConfig(config).heavyMaxHp, def.hp)),
+    );
   }
   return setup.maxHp !== undefined ? createVitals(setup.maxHp) : undefined;
 }
@@ -84,7 +86,10 @@ export interface CampaignHitOptions {
 }
 
 /** Is the victim's recovery (or spawn protection) running? */
-export function isCampaignInvulnerable(state: Pick<GameState, 'tick'>, p: Pick<Player, 'vitals' | 'protectedUntil'>): boolean {
+export function isCampaignInvulnerable(
+  state: Pick<GameState, 'tick'>,
+  p: Pick<Player, 'vitals' | 'protectedUntil'>,
+): boolean {
   return state.tick < (p.vitals?.invulnUntil ?? 0) || state.tick < p.protectedUntil;
 }
 

@@ -115,7 +115,14 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
   const kills = state.players.map(() => 0);
   const tickMs: number[] = [];
   const survivorsAt: number[] = [];
-  const engage = state.players.map(() => ({ samples: 0, near: 0, dist: 0, late: 0, lateNear: 0, lateDist: 0 }));
+  const engage = state.players.map(() => ({
+    samples: 0,
+    near: 0,
+    dist: 0,
+    late: 0,
+    lateNear: 0,
+    lateDist: 0,
+  }));
   let alive = n;
   const stopAt = spec.maxPlayTicks ?? Infinity;
   // a clock that ran out in a tie goes to sudden death (decisions SD1-SD6): let it finish (it is bounded: 4 s card,
@@ -161,7 +168,8 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
       visited[p.id]!.add(p.y * state.width + p.x);
     }
     for (let k = alive - 1; k >= now; k--) survivorsAt[k] = state.match.playTicks;
-    if (state.match.phase === 'playing' && state.match.playTicks % ENGAGE_EVERY === 0) sampleEngagement(state, engage);
+    if (state.match.phase === 'playing' && state.match.playTicks % ENGAGE_EVERY === 0)
+      sampleEngagement(state, engage);
     alive = now;
   }
   const result = state.match.result;

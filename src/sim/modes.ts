@@ -106,7 +106,12 @@ export function modeConfig(settings: MatchSettings, arena: ArenaDef): DeepPartia
     case 'raid':
       // placeholder ruleset (raid-sim owns the real one): the classic plus (cross), no hidden pickups, no crush
       // (modeShrinks); the raid runtime decides lives and who respawns
-      return { ...blast, campaign: CAMPAIGN_CONFIG, pickups: { hiddenChance: 0 }, drops: { maxDeathDrops: 0 } };
+      return {
+        ...blast,
+        campaign: CAMPAIGN_CONFIG,
+        pickups: { hiddenChance: 0 },
+        drops: { maxDeathDrops: 0 },
+      };
   }
 }
 

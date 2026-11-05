@@ -143,7 +143,12 @@ function campaignSourceOf(cause: EliminationCause): { source: CampaignHitSource;
  * outcome). The wound is the largest of the hits (`config.campaign.damage`); a terminal hit (the closing city with no
  * tile left, the Sudden Death blast) defeats through everything. Returns whether the player was defeated.
  */
-function campaignLethal(state: GameState, p: Player, live: readonly LethalHit[], events: SimEvent[]): boolean {
+function campaignLethal(
+  state: GameState,
+  p: Player,
+  live: readonly LethalHit[],
+  events: SimEvent[],
+): boolean {
   const table = campaignConfig(state.config).damage;
   const causes = live.map((h) => h.cause);
   const terminal = live.some((h) => h.terminal || h.cause.kind === 'crush' || h.cause.kind === 'suddenDeath');

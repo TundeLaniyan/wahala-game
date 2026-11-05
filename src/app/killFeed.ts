@@ -26,7 +26,16 @@ export const KILL_FEED_CROWDED_ABOVE = 4;
 export const KILL_FEED_FRESH_TICKS = 4 * 60;
 
 export type KillCause =
-  'blast' | 'vehicle' | 'crush' | 'hazard' | 'crowd' | 'suddenDeath' | 'self' | 'friendly' | 'sideline' | 'melee';
+  | 'blast'
+  | 'vehicle'
+  | 'crush'
+  | 'hazard'
+  | 'crowd'
+  | 'suddenDeath'
+  | 'self'
+  | 'friendly'
+  | 'sideline'
+  | 'melee';
 
 export const KILL_CAUSE_WORD: Readonly<Record<KillCause, string>> = {
   blast: 'BLAST',
