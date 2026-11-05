@@ -11,6 +11,8 @@ import { assignTeams, modeConfig, modeShrinks } from './modes';
 import { missionConfigLayer } from './mission/build';
 import { getMissionArenaId } from './mission/defs';
 import { createMissionState } from './mission/state';
+import { raidArenaId, raidConfigLayer } from './raid/build';
+import { createRaidState } from './raid/state';
 import type {
   CrushState,
   EndgameTrapState,
@@ -117,7 +119,12 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
 /** Builds a fresh match. Same options + seed always produce an identical state. */
 export function createGame(options: GameOptions): GameState {
   const arena = getArena(
-    options.arenaId ?? (options.mission ? getMissionArenaId(options.mission.id) : DEFAULT_ARENA_ID),
+    options.arenaId ??
+      (options.mission
+        ? getMissionArenaId(options.mission.id)
+        : options.raid
+          ? raidArenaId(options.raid.raidId)
+          : DEFAULT_ARENA_ID),
   );
   const max = Math.min(MAX_PLAYERS, arena.maxPlayers, arena.spawns.length);
   if (options.players.length < MIN_PLAYERS || options.players.length > max) {
@@ -125,13 +132,16 @@ export function createGame(options: GameOptions): GameState {
   }
   const settings: MatchSettings = { ...DEFAULT_SETTINGS, ...options.settings };
   if (options.mission) settings.game = 'mission';
+  if (options.raid) settings.game = 'raid';
   // arena rules (Power Yard blasts, City Rumble timing ...), then the ruleset (Rumble modes), then the mission's
   // clock and crate density, then any test/tutorial override
   const ruled = mergeConfig(mergeConfig(DEFAULT_CONFIG, arena.config), modeConfig(settings, arena));
-  const config = mergeConfig(
-    options.mission ? mergeConfig(ruled, missionConfigLayer(options.mission)) : ruled,
-    options.config,
-  );
+  const layered = options.mission
+    ? mergeConfig(ruled, missionConfigLayer(options.mission))
+    : options.raid
+      ? mergeConfig(ruled, raidConfigLayer(options.raid))
+      : ruled;
+  const config = mergeConfig(layered, options.config);
   if (arena.forcedMode) settings.mode = arena.forcedMode;
   if (!modeShrinks(settings)) settings.mode = 'classic';
   const width = arena.layout[0]!.length;
@@ -186,6 +196,7 @@ export function createGame(options: GameOptions): GameState {
   if (settings.crowdThrows) state.crowd = { nextThrowTick: config.crowd.firstThrowTicks, throws: [] };
   state.stage = createStage(state, arena);
   if (options.mission) state.mission = createMissionState(state, arena, options.mission);
+  if (options.raid) state.raid = createRaidState(state, arena, options.raid);
   return state;
 }
 

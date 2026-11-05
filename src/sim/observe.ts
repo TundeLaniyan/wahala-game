@@ -5,6 +5,7 @@
  */
 import type { GameConfig } from './config';
 import { directiveFor } from './mission/directives';
+import { raidDirectiveFor } from './raid/directives';
 import type { NpcDirective } from './mission/types';
 import type {
   BlastEvent,
@@ -53,7 +54,11 @@ export interface Observation {
 }
 
 export function observe(state: GameState, selfId: number): Observation {
-  const directive = state.mission ? directiveFor(state, selfId) : undefined;
+  const directive = state.mission
+    ? directiveFor(state, selfId)
+    : state.raid
+      ? raidDirectiveFor(state, selfId)
+      : undefined;
   return {
     selfId,
     tick: state.tick,

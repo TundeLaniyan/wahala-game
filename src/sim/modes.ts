@@ -100,9 +100,17 @@ export function modeConfig(settings: MatchSettings, _arena: ArenaDef): DeepParti
         respawn: { enabled: true, resetOnDeath: true },
       };
     case 'raid':
-      // placeholder ruleset (raid-sim owns the real one): the classic plus blast (config default), no hidden pickups,
-      // no crush (modeShrinks); the raid runtime decides lives and who respawns
-      return { pickups: { hiddenChance: 0 }, drops: { maxDeathDrops: 0 } };
+      // a classic raid: the cross blast (config default, BLAST_RULE_BY_GAME), no hidden pickups, no death drops, no
+      // elimination rewards or kill streaks, no Wahala Crush (modeShrinks), no spectators; the raid runtime owns lives
+      // and the human's respawn (src/sim/raid/runtime.ts), so the core respawn stays off and enemies never come back
+      return {
+        pickups: { hiddenChance: 0 },
+        drops: { maxDeathDrops: 0 },
+        rewards: { enabled: false },
+        streaks: { enabled: false },
+        respawn: { enabled: false },
+        spectator: { enabled: false },
+      };
   }
 }
 

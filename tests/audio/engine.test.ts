@@ -162,18 +162,11 @@ describe('event mapping', () => {
       'missionStarted',
       'missionOutcome',
       'missionCallout',
-      // campaign expansion placeholders: silent until the combat / raid workstreams give them cues
+      // campaign expansion placeholders: silent until the combat workstreams give them cues (the raid events have cues)
       'campaignHit',
       'campaignDefeated',
       'projectileLaunched',
       'projectileHit',
-      'cargoHit',
-      'cargoDestroyed',
-      'raidDoorOpened',
-      'raidRoomOpened',
-      'raidWaveStarted',
-      'raidExtractionOpened',
-      'raidOutcome',
     ]);
     // an extra human-less state variant is covered below; here players 0/1 are both "human" sandbox players
     for (const [type, e] of Object.entries(SAMPLES)) {
@@ -225,6 +218,25 @@ describe('event mapping', () => {
     expectIds(SAMPLES.bossExposed, 'ui_go');
     expectIds(SAMPLES.bossShielded, 'ui_back');
     expectIds(SAMPLES.bossDefeated, 'win_sting');
+    // classic raids reuse existing synthesised cues too (decision CR12); the sting itself stays the match end's
+    expectIds(SAMPLES.cargoHit, 'vehicle_hit_gen');
+    expectIds(SAMPLES.cargoDestroyed, 'block_crumble_2', 'pickup_rare'); // a marked crate: break + objective chime
+    expectIds({ ...SAMPLES.cargoDestroyed, kind: 'barrel', marked: false } as SimEvent, 'explosion_2');
+    expectIds(
+      { ...SAMPLES.cargoDestroyed, id: 'shipment-3', kind: 'crate', marked: false } as SimEvent,
+      'vehicle_wreck',
+    );
+    expectIds(SAMPLES.raidDoorOpened, 'gen_kick', 'ui_go');
+    expectIds(SAMPLES.raidRoomOpened, 'pickup_reveal');
+    expectIds(SAMPLES.raidWaveStarted, 'crush_warning');
+    expectIds(SAMPLES.raidExtractionOpened, 'ui_go', 'pickup_rare');
+    expectIds(SAMPLES.raidShipmentWarning, 'rail_bell');
+    expectIds(SAMPLES.raidBonusTaken, 'pickup_rare');
+    expectIds({ ...SAMPLES.raidBonusTaken, kind: 'heal' } as SimEvent, 'pickup_1');
+    rig.traces.length = 0;
+    rig.ctx.advance(10);
+    rig.audio.handleEvents([SAMPLES.raidOutcome], s);
+    expect(rig.ids()).not.toContain('win_sting'); // matchEnded owns the sting
     expectIds(SAMPLES.crowdLanded, 'bottle_smash');
     expectIds(SAMPLES.crowdWarning, 'crowd_throw_whistle');
     expectIds(SAMPLES.crushLanded, 'crush_slam');

@@ -429,13 +429,55 @@ const handlers: Handlers = {
   campaignDefeated: () => undefined,
   projectileLaunched: () => undefined,
   projectileHit: () => undefined,
-  cargoHit: () => undefined,
-  cargoDestroyed: () => undefined,
-  raidDoorOpened: () => undefined,
-  raidRoomOpened: () => undefined,
-  raidWaveStarted: () => undefined,
-  raidExtractionOpened: () => undefined,
-  raidOutcome: () => undefined,
+  // classic raids (docs/CLASSIC_RAIDS.md): existing synthesised cues only, no new recording
+  cargoHit: (e, c) => {
+    if (allow(c, 'cargoHit', 0.08)) sfx(c, 'vehicle_hit_gen', panOf(c, e.x), 0.75, 0.9 + c.rand() * 0.1);
+  },
+  cargoDestroyed: (e, c) => {
+    const pan = panOf(c, e.x);
+    if (e.id.startsWith('shipment-')) {
+      if (allow(c, 'shipmentBreak', 0.1)) sfx(c, 'vehicle_wreck', pan, 0.6, 1.2);
+    } else if (e.kind === 'barrel') {
+      if (allow(c, 'barrelBurst', 0.06)) {
+        sfx(c, 'explosion_2', pan, 0.8, 1.1);
+        c.buses.duck('blast');
+      }
+    } else {
+      if (allow(c, 'cargoBreak', 0.06)) sfx(c, 'block_crumble_2', pan, 0.9, 0.9);
+      if (e.marked) sfx(c, 'pickup_rare', pan, 0.6, 1.1, 0.15); // an objective crate is down
+    }
+  },
+  raidDoorOpened: (e, c) => {
+    sfx(c, 'gen_kick', panOf(c, e.x), 0.9, 0.7);
+    sfx(c, 'ui_go', panOf(c, e.x), 0.45, 1.1, 0.1);
+  },
+  raidRoomOpened: (_e, c) => {
+    sfx(c, 'pickup_reveal', 0, 0.9, 0.9, 0.2);
+  },
+  raidWaveStarted: (_e, c) => {
+    sfx(c, 'crush_warning', 0, 0.7, 1.15);
+    c.buses.duck('warning');
+    react(c, { kind: 'gasp', strength: 0.6, chance: 0.8, delay: 0.3 });
+  },
+  raidExtractionOpened: (e, c) => {
+    sfx(c, 'ui_go', panOf(c, e.x), 0.9);
+    sfx(c, 'pickup_rare', panOf(c, e.x), 0.6, 1, 0.2);
+    react(c, { kind: 'cheer', strength: 0.7, chance: 0.8, delay: 0.5 });
+  },
+  // matchEnded already plays the win / lose sting: the outcome adds only the star chime
+  raidOutcome: (e, c) => {
+    if (e.outcome.stars >= 2) sfx(c, 'pickup_rare', 0, 0.5, 1, 0.5);
+    if (e.outcome.stars >= 3) sfx(c, 'pickup_1', 0, 0.5, 1.25, 0.8);
+  },
+  raidShipmentWarning: (e, c) => {
+    if (!allow(c, 'shipmentWarn', 0.5)) return;
+    sfx(c, 'rail_bell', panOf(c, tileXOf(c, e.tiles[0] ?? 0)), 0.7);
+    c.buses.duck('warning');
+  },
+  raidBonusTaken: (e, c) => {
+    sfx(c, e.kind === 'heal' ? 'pickup_1' : 'pickup_rare', panOf(c, e.x), 0.9);
+    react(c, { kind: 'cheer', strength: 0.5, chance: 0.5, delay: 0.3 });
+  },
   // V2 events (workstreams add their own sounds; silent until then)
   // V2. Contact abilities and the B special make the sounds of what they cause (kick, throw, power-down,
   // push / daze, vehicle warning), so their own events stay silent.

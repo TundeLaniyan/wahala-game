@@ -106,4 +106,6 @@ export interface RaidOutcome {
   hpLeft: number;
   livesUsed: number;
   stars: 0 | 1 | 2 | 3;
+  /** Why a `failed` raid failed (absent otherwise): every life spent, or the clock ran out. */
+  failedBy?: 'lives' | 'time';
 }

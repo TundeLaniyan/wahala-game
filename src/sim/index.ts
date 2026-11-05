@@ -21,6 +21,8 @@ export {
   DEFAULT_ARENA_ID,
   EXPERIMENTAL_ARENA_IDS,
   MOBILE_TEST_ARENA_ID,
+  RAID_ARENAS,
+  RAID_ARENA_IDS,
   RUMBLE_ARENA_IDS,
   STANDARD_ARENA_IDS,
   getArena,
@@ -120,4 +122,4 @@ export { canThrow, laneStep, spectatorLane, spectatorLanding, validLanding } fro
 export type { LaneTile, SpectatorView } from './systems/spectators';
 export * from './mission';
 export * from './campaign/types';
-export * from './raid/types';
+export * from './raid';
