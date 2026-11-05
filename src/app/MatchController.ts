@@ -29,6 +29,7 @@ import type {
 import { buildMoveBoard, inputTrace } from '../input';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
+import { campaignHitNotice } from './campaignHud';
 import { protectionNotice, quickHandsResumedNotice, quickHandsStoredNotice } from './combatNotices';
 import { buildHud } from './hud';
 import { expireKillLines, isCrowded, newKillLines, pushKillLines } from './killFeed';
@@ -563,14 +564,17 @@ export class MatchController implements MissionHost {
    */
   private toastsFrom(events: SimEvent[], nowMs: number): void {
     for (const e of events) {
-      const made = this.toastFor(e);
+      const made = this.toastFor(e, events);
       if (!made) continue;
       const { ttlMs, ...toast } = made;
       this.pushToast(toast, nowMs, ttlMs);
     }
   }
 
-  private toastFor(e: SimEvent): (Omit<Toast, 'id' | 'expires'> & { ttlMs?: number }) | null {
+  private toastFor(
+    e: SimEvent,
+    batch: readonly SimEvent[] = [],
+  ): (Omit<Toast, 'id' | 'expires'> & { ttlMs?: number }) | null {
     const state = this.state!;
     switch (e.type) {
       case 'vehicleWarning': {
@@ -629,6 +633,9 @@ export class MatchController implements MissionHost {
         return e.playerId === LOCAL_ID
           ? { ...protectionNotice(e.layer, state.players[LOCAL_ID]!.armour), ttlMs: 3000 }
           : null;
+      // campaign health: what hurt the player, or which layer took the hit (docs/CAMPAIGN_TEXT_NARRATION.md)
+      case 'campaignHit':
+        return campaignHitNotice(e, batch, LOCAL_ID, state.players[LOCAL_ID]?.armour ?? 0);
       case 'playerTeleported':
         return e.playerId === LOCAL_ID ? { text: 'THROUGH THE MANHOLE!', tone: 'info' } : null;
       case 'generatorDoused': {

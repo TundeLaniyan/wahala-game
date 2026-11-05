@@ -1,0 +1,168 @@
+/*
+ * Campaign health meter, protection chips and boss bars (docs/CAMPAIGN_TEXT_NARRATION.md): blocks of the HUD rail
+ * (standard arenas) or of the City Rumble right column (`.mission-dock`). Same dark plate as the rest of the rail
+ * (tests/ui/campaignHealthContrast.test.ts checks every text colour on it over a white day board and a black night
+ * one). Segments are shapes plus a number, never colour alone. They never sit on the board.
+ */
+.campaign-health-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+}
+.hud-rail .campaign-health,
+.hud-rail .boss-bar,
+.mission-dock .campaign-health,
+.mission-dock .boss-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 100%;
+  padding: 4px 8px 5px 7px;
+  font-family: var(--display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.12;
+  color: #f4ecdc;
+  background: rgba(10, 12, 16, 0.88);
+  border-left: 3px solid #4dff88;
+  border-radius: 4px;
+}
+.hud-rail .boss-bar,
+.mission-dock .boss-bar {
+  border-left-color: #ffb347;
+}
+.hud-rail .boss-bar.boss,
+.mission-dock .boss-bar.boss {
+  border-left-color: #ff6b5e;
+}
+.hud-rail .campaign-health.low,
+.mission-dock .campaign-health.low {
+  border-left-color: #ffe14a;
+}
+.ch-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.ch-title {
+  flex: none;
+  font-size: clamp(0.5rem, 2vh, 0.68rem);
+  color: #b8c0cc;
+}
+.ch-text {
+  flex: 1;
+  min-width: 0;
+  font-size: clamp(0.6rem, 2.3vh, 0.86rem);
+  color: #f4ecdc;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ch-segs {
+  display: flex;
+  gap: 3px;
+}
+.ch-seg {
+  flex: 1 1 0;
+  min-width: 10px;
+  max-width: 26px;
+  height: clamp(10px, 2.6vh, 14px);
+  box-sizing: border-box;
+  border: 2px solid #8d96a3;
+  border-radius: 3px;
+  background: transparent;
+}
+.ch-seg.full {
+  border-color: #4dff88;
+  background: #4dff88;
+}
+.ch-seg.lost {
+  border-color: #ff5a4d;
+  background: #ff5a4d;
+  animation: ch-lost 0.6s ease-out 1;
+}
+.low .ch-seg.full {
+  border-color: #ffe14a;
+  background: #ffe14a;
+}
+.boss-segs .ch-seg.full {
+  border-color: #ff6b5e;
+  background: #ff6b5e;
+}
+.boss-bar.lieutenant .boss-segs .ch-seg.full {
+  border-color: #ffb347;
+  background: #ffb347;
+}
+.campaign-health.flash {
+  animation: ch-flash 0.6s ease-out 1;
+}
+@keyframes ch-lost {
+  0% {
+    transform: scale(1.5);
+    box-shadow: 0 0 8px #ff5a4d;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+}
+@keyframes ch-flash {
+  0% {
+    background: rgba(160, 24, 16, 0.92);
+  }
+  100% {
+    background: rgba(10, 12, 16, 0.88);
+  }
+}
+.ch-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ch-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 1px 6px;
+  border: 1px solid #8d96a3;
+  border-radius: 3px;
+  font-size: clamp(0.5rem, 2vh, 0.68rem);
+  color: #f4ecdc;
+}
+.ch-chip b {
+  font-weight: 700;
+}
+.ch-chip.ready {
+  border-color: #4dff88;
+}
+.ch-chip.active {
+  border-color: #ffe14a;
+  color: #ffe14a;
+}
+.ch-chip.low {
+  border-color: #ff8d85;
+  color: #ff8d85;
+}
+.ch-chip.used {
+  border-style: dashed;
+  border-color: #8d96a3;
+  color: #b8c0cc;
+  text-decoration: line-through;
+}
+.ch-cause {
+  margin: 0;
+  font-size: clamp(0.55rem, 2.1vh, 0.76rem);
+  color: #ff8d85;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ch-seg.lost,
+  .campaign-health.flash {
+    animation: none;
+  }
+}

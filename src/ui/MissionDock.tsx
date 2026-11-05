@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import type { CampaignHud, EnemyHud } from '../app/hud';
 import type { MissionView } from '../sim';
+import { CampaignHealth } from './CampaignHealth';
 import { RAIL_GAP } from './hudRail';
 import { MissionPanel } from './MissionPanel';
 
@@ -9,7 +11,15 @@ import { MissionPanel } from './MissionPanel';
  * the player). On phones it ends above the touch action buttons; what does not fit is clipped at the bottom (the
  * phase and the warnings come first). Renders nothing outside a mission.
  */
-export function MissionDock({ mission }: { mission: MissionView | null }) {
+export function MissionDock({
+  mission,
+  campaign = null,
+  enemies = [],
+}: {
+  mission: MissionView | null;
+  campaign?: CampaignHud | null;
+  enemies?: readonly EnemyHud[];
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
   useLayoutEffect(() => {
@@ -37,6 +47,7 @@ export function MissionDock({ mission }: { mission: MissionView | null }) {
       data-testid="mission-dock"
       style={maxHeight !== null ? { maxHeight: `${maxHeight}px` } : undefined}
     >
+      <CampaignHealth campaign={campaign} enemies={enemies} />
       <MissionPanel mission={mission} />
     </div>
   );

@@ -1,10 +1,11 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { StageAlert, StreakHud, SuddenDeathHud } from '../app/hud';
+import type { CampaignHud, EnemyHud, StageAlert, StreakHud, SuddenDeathHud } from '../app/hud';
 import type { MissionView } from '../sim';
 import type { Toast } from '../app/store';
 import { useGameStore } from '../app/store';
 import { RAIL_GAP, railBox, railBoxRight } from './hudRail';
 import type { RailBox } from './hudRail';
+import { CampaignHealth } from './CampaignHealth';
 import { KillFeed } from './KillFeed';
 import { MissionPanel } from './MissionPanel';
 import { RuleBanner, StageAlerts } from './StageAlerts';
@@ -27,6 +28,9 @@ export interface HudRailProps {
   alive?: boolean;
   /** Campaign mission picture (null in a normal match: the panel renders nothing). */
   mission?: MissionView | null;
+  /** Campaign health of the local player and the enemies with a bar on screen (null / [] in a normal match). */
+  campaign?: CampaignHud | null;
+  enemies?: readonly EnemyHud[];
 }
 
 /**
@@ -47,6 +51,8 @@ export function HudRail({
   streak = null,
   alive = true,
   mission = null,
+  campaign = null,
+  enemies = [],
 }: HudRailProps) {
   const board = useGameStore((s) => s.board);
   const subtitle = useGameStore((s) => s.subtitle);
@@ -137,6 +143,7 @@ export function HudRail({
           data-testid="rail-combat"
           style={combatMax !== null ? { maxHeight: `${combatMax}px` } : undefined}
         >
+          {!rumble && <CampaignHealth campaign={campaign} enemies={enemies} />}
           <MissionPanel mission={mission} />
           {!rumble && !side && <KillFeed />}
         </div>

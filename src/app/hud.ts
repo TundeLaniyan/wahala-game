@@ -21,10 +21,13 @@ import {
   spectatorLanding,
 } from '../sim';
 import type { MissionView } from '../sim';
+import { buildCampaignHud, buildEnemyHud } from './campaignHud';
+import type { CampaignHud, EnemyHud } from './campaignHud';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
 import type { StageAlert } from './stageAlerts';
 
 export type { StageAlert } from './stageAlerts';
+export type { CampaignHud, EnemyHud } from './campaignHud';
 import { eliminatorOf, killCounts } from './spectate';
 
 export interface HudPlayer {
@@ -221,6 +224,10 @@ export interface HudSnapshot {
   suddenDeath: SuddenDeathHud | null;
   /** Campaign mission picture (phases, objective, boss, lives, warnings); null in every normal match. */
   mission: MissionView | null;
+  /** Campaign health of the local player (health segments, Armour, Okada, lives, recovery); null without `Player.vitals`. */
+  campaign: CampaignHud | null;
+  /** Campaign enemies whose health is on screen (bosses always; others when targeted, hurt or near); [] outside a campaign. */
+  enemies: EnemyHud[];
 }
 
 /** V2 sideline spectator controls (ui/SpectatorControls.tsx). */
@@ -627,5 +634,7 @@ export function buildHud(
     sideline: buildSideline(state, localId),
     suddenDeath: buildSuddenDeath(state, localId),
     mission: missionView(state),
+    campaign: buildCampaignHud(state, localId),
+    enemies: buildEnemyHud(state, localId),
   };
 }
