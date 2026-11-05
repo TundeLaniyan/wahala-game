@@ -21,7 +21,14 @@ export {
   defeatLines,
   districtList,
   nextDistrict,
+  getSection,
+  getSectionMission,
+  allSectionMissions,
+  allSections,
+  missionByRef,
   replayModifierFor,
+  sectionOfMission,
+  sectionsOf,
   unlockIdsOfKind,
 } from './content';
 export {
@@ -39,3 +46,14 @@ export {
 } from './progress';
 export type { MissionResultSummary } from './progress';
 export { browserStore, clearSave, loadSave, migrateSave, persistSave, repairSave } from './save';
+export {
+  bossAvailable,
+  canPlayMission,
+  missionStatus,
+  nextMission,
+  sectionStatus,
+  sectionsCleared,
+} from './sectionState';
+export type { NextMission } from './sectionState';
+export { applyRaidResult, applySectionResult } from './sectionProgress';
+export type { SectionResultSummary } from './sectionProgress';
