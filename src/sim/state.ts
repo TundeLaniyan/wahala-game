@@ -1,7 +1,8 @@
 import { freshStreakRewards } from './data/streaks';
-import { DEFAULT_CONFIG, mergeConfig, ticks } from './config';
+import { CAMPAIGN_CONFIG, DEFAULT_CONFIG, mergeConfig, ticks } from './config';
 import type { GameConfig } from './config';
 import { CHARACTERS } from './data/characters';
+import { vitalsFor } from './systems/campaignDamage';
 import { DEFAULT_ARENA_ID, getArena } from './arenas';
 import type { ArenaDef } from './arenas';
 import { tileIndex } from './grid';
@@ -32,7 +33,6 @@ export const DEFAULT_SETTINGS: MatchSettings = {
   mode: 'classic',
   crowdThrows: false,
   stageHazards: true,
-  rumbleBlast: 'radial',
 };
 
 /** `GameState.spawnUsedAt` value of a spawn nobody has respawned on yet. */
@@ -111,7 +111,15 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     immune: [],
     teleportReadyTick: 0,
     teleportPending: null,
+    // campaign seats only (decision CC1): health from the enemy kind or the setup; multiplayer seats carry neither key
+    ...campaignFields(setup, config),
   };
+}
+
+function campaignFields(setup: PlayerSetup, config: GameConfig): Pick<Player, 'vitals' | 'enemyKind'> {
+  const vitals = vitalsFor(setup, config);
+  if (!vitals) return {};
+  return setup.enemyKind ? { vitals, enemyKind: setup.enemyKind } : { vitals };
 }
 
 /** Builds a fresh match. Same options + seed always produce an identical state. */
@@ -127,7 +135,17 @@ export function createGame(options: GameOptions): GameState {
   if (options.mission) settings.game = 'mission';
   // arena rules (Power Yard blasts, City Rumble timing ...), then the ruleset (Rumble modes), then the mission's
   // clock and crate density, then any test/tutorial override
-  const ruled = mergeConfig(mergeConfig(DEFAULT_CONFIG, arena.config), modeConfig(settings, arena));
+  // campaign tuning rides in the config only when the match is a campaign one (mission / raid ruleset, a vitals seat, or a
+  // test override), so a normal match's serialised state is exactly what it was
+  const campaign =
+    settings.game === 'mission' ||
+    settings.game === 'raid' ||
+    options.config?.campaign !== undefined ||
+    options.players.some((p) => p.maxHp !== undefined || p.enemyKind !== undefined);
+  const ruled = mergeConfig(
+    mergeConfig(campaign ? { ...DEFAULT_CONFIG, campaign: CAMPAIGN_CONFIG } : DEFAULT_CONFIG, arena.config),
+    modeConfig(settings, arena),
+  );
   const config = mergeConfig(
     options.mission ? mergeConfig(ruled, missionConfigLayer(options.mission)) : ruled,
     options.config,

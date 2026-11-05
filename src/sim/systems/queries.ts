@@ -3,6 +3,7 @@ import { Tile } from '../types';
 import type { GameState, Generator, Player, Pickup, Vehicle } from '../types';
 import { tileAt } from '../grid';
 import { missionStepPenalty } from '../mission/rules';
+import { ENEMY_KINDS } from '../data/enemies';
 
 export function getPlayer(state: GameState, id: number): Player | undefined {
   return state.players[id];
@@ -60,6 +61,7 @@ export function playerStepTicks(state: GameState, p: Player): number {
   if (p.curse?.kind === 'slow' && state.tick < p.curse.until) ticks += m.slowCurseExtraTicks;
   if (state.mission) ticks += missionStepPenalty(state, p); // carrying a ledger
   if (p.slow && state.tick < p.slow.until) ticks += p.slow.extraStepTicks; // a Leg Sweep (decision FC3)
+  if (p.enemyKind) ticks += ENEMY_KINDS[p.enemyKind].stepPenaltyTicks; // a slow thrower, a heavy (decision CC3)
   return Math.max(m.minStepTicks, ticks);
 }
 
