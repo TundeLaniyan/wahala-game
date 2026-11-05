@@ -40,6 +40,7 @@ import {
   RUMBLE_MUSHIN_SET,
   mushinEnv,
 } from './mushinArt';
+import { RAID_VARIANTS, raidArtTable, raidReviewVariant } from './raidArt';
 import { timeOfDay } from '../timeOfDay';
 import type { StageEnvironmentSource } from '../env/types';
 import { AJEGUNLE_FLOOR, AJEGUNLE_LOOK, AJEGUNLE_SET } from './ajegunle';
@@ -154,7 +155,12 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
     // V2 experimental: the Mobile Test Arena wears Danfo Bus Park's presentation
     mobileTest13x9: mobileTestArt(),
     mobileTest15x9: mobileTestArt(),
+    // classic raids (docs/RAID_PRESENTATION.md): warehouse interior, rail yard, under-bridge storeroom
+    ...raidArtTable(),
   };
+  // art review only (`?raidart=warehouse|yard|storeroom`): the look on a real standard board
+  const review = raidReviewVariant();
+  if (review) cache.oshodiInterchange = RAID_VARIANTS[review];
   return cache;
 }
 
