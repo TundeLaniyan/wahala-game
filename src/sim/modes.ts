@@ -25,7 +25,7 @@
  * | teams             | no      | no       | no         | 2 (or more)|
  */
 import type { DeepPartial, GameConfig } from './config';
-import { RUMBLE_ECONOMY, ticks } from './config';
+import { CAMPAIGN_CONFIG, RUMBLE_ECONOMY, ticks } from './config';
 import type { ArenaDef } from './arenas/types';
 import type { GameKind, MatchSettings, TilePos } from './types';
 import type { BombRule } from './campaign/types';
@@ -98,6 +98,7 @@ export function modeConfig(settings: MatchSettings, arena: ArenaDef): DeepPartia
       // the mission runtime (the human only, while lives last)
       return {
         ...blast,
+        campaign: CAMPAIGN_CONFIG,
         pickups: { hiddenChance: 0 },
         drops: { maxDeathDrops: 0 },
         respawn: { enabled: true, resetOnDeath: true },
@@ -105,7 +106,7 @@ export function modeConfig(settings: MatchSettings, arena: ArenaDef): DeepPartia
     case 'raid':
       // placeholder ruleset (raid-sim owns the real one): the classic plus (cross), no hidden pickups, no crush
       // (modeShrinks); the raid runtime decides lives and who respawns
-      return { ...blast, pickups: { hiddenChance: 0 }, drops: { maxDeathDrops: 0 } };
+      return { ...blast, campaign: CAMPAIGN_CONFIG, pickups: { hiddenChance: 0 }, drops: { maxDeathDrops: 0 } };
   }
 }
 

@@ -26,7 +26,7 @@ export const KILL_FEED_CROWDED_ABOVE = 4;
 export const KILL_FEED_FRESH_TICKS = 4 * 60;
 
 export type KillCause =
-  'blast' | 'vehicle' | 'crush' | 'hazard' | 'crowd' | 'suddenDeath' | 'self' | 'friendly' | 'sideline';
+  'blast' | 'vehicle' | 'crush' | 'hazard' | 'crowd' | 'suddenDeath' | 'self' | 'friendly' | 'sideline' | 'melee';
 
 export const KILL_CAUSE_WORD: Readonly<Record<KillCause, string>> = {
   blast: 'BLAST',
@@ -38,6 +38,7 @@ export const KILL_CAUSE_WORD: Readonly<Record<KillCause, string>> = {
   self: 'OWN BLAST',
   friendly: 'FRIENDLY FIRE',
   sideline: 'SIDELINE',
+  melee: 'HIT',
 };
 
 export interface KillFeedLine {
@@ -65,7 +66,7 @@ const up = (name: string): string => name.toUpperCase();
 export function killCause(state: Pick<GameState, 'players'>, victim: Readonly<Player>): KillCause {
   const c: EliminationCause | null = victim.elimination;
   if (!c) return 'hazard';
-  const owner = 'ownerId' in c ? state.players[c.ownerId] : undefined;
+  const owner = 'ownerId' in c && c.ownerId !== null ? state.players[c.ownerId] : undefined;
   switch (c.kind) {
     case 'flame':
       if (owner?.id === victim.id) return 'self';
@@ -76,6 +77,11 @@ export function killCause(state: Pick<GameState, 'players'>, victim: Readonly<Pl
       return 'vehicle';
     case 'spectator':
       return 'sideline';
+    case 'campaign': // decision CC1: campaign health ran out (see systems/campaignDamage.ts)
+      if (owner?.id === victim.id) return 'self';
+      if (c.source === 'blast') return 'blast';
+      if (c.source === 'vehicle') return 'vehicle';
+      return c.source === 'hazard' || c.source === 'trap' ? 'hazard' : 'melee';
     default:
       return c.kind;
   }

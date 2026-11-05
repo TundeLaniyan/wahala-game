@@ -123,3 +123,17 @@ export type { LaneTile, SpectatorView } from './systems/spectators';
 export * from './mission';
 export * from './campaign/types';
 export * from './raid/types';
+export { CAMPAIGN_CONFIG, campaignConfig } from './config';
+export type { CampaignConfig } from './config';
+export { ENEMY_KINDS, ENEMY_KIND_IDS, enemyDef } from './data/enemies';
+export type { EnemyKindDef } from './data/enemies';
+export {
+  applyCampaignHit,
+  createVitals,
+  isCampaignInvulnerable,
+  resetVitals,
+  vitalsFor,
+} from './systems/campaignDamage';
+export type { CampaignHitOptions } from './systems/campaignDamage';
+export { enemyHealthView, humanPlayerId, playerVitalsView } from './systems/campaignView';
+export type { EnemyHealthView, PlayerVitalsView } from './systems/campaignView';

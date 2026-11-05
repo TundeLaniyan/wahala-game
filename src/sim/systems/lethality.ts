@@ -9,13 +9,20 @@
  * the third. The Rumble sudden-death blast uses the same layers (one per blast) and ignores spawn
  * protection. Wahala Crush: a protected player is shoved to the nearest free tile (a layer is used); when
  * no free tile is left (the final closure) the hit is `terminal` and kills through any protection.
+ *
+ * Campaign players (those carrying `Vitals`, decision CC1) do not die to the first lethal hit: `campaignLethal` below
+ * routes the same hits through `applyCampaignHit` (recovery frames, then Okada, then Armour, then health). Everyone
+ * else is exactly as before.
  */
-import { endLifePerksOnDeath } from './lifePerks';
+import type { CampaignHit, CampaignHitSource } from '../campaign/types';
+import { campaignConfig } from '../config';
 import type { EliminationCause, GameState, Player, SimEvent } from '../types';
-import { creditFor } from './attribution';
+import { applyCampaignHit } from './campaignDamage';
+import { eliminate } from './eliminate';
 import { canHarm } from './queries';
-import { clearStreakRewards } from './streaks';
 import { isShieldedBoss } from '../mission/rules';
+
+export { eliminate };
 
 export interface LethalHit {
   playerId: number;
@@ -80,6 +87,11 @@ export function applyLethalHits(state: GameState, hits: LethalHit[], events: Sim
     )
       continue;
 
+    if (p.vitals) {
+      if (campaignLethal(state, p, live, events)) eliminated.push(p.id);
+      continue;
+    }
+
     // Protection layers: ONE layer absorbs every lethal event of this tick (so one explosion frame can
     // never eat the Okada, the Armour and the life at once); the Okada goes first, then Armour.
     const layer = live.some((h) => h.terminal) ? null : p.mounted ? 'okada' : p.armour > 0 ? 'armour' : null;
@@ -110,56 +122,47 @@ export function applyLethalHits(state: GameState, hits: LethalHit[], events: Sim
   return eliminated;
 }
 
+/** What a lethal cause means for campaign health: who dealt it and which row of `config.campaign.damage` it is. */
+function campaignSourceOf(cause: EliminationCause): { source: CampaignHitSource; byId: number | null } {
+  switch (cause.kind) {
+    case 'flame':
+    case 'spectator':
+      return { source: 'blast', byId: cause.ownerId };
+    case 'vehicle':
+      return { source: 'vehicle', byId: cause.ownerId };
+    case 'campaign':
+      return { source: cause.source, byId: cause.ownerId };
+    default:
+      return { source: 'hazard', byId: null }; // stage hazards, the crowd; crush and sudden death are terminal
+  }
+}
+
 /**
- * Eliminates `p` (once: callers only pass living players). Credit and stats per attribution.ts; the
- * credited eliminator's life streak only grows while they are alive (rewards.ts pays living fighters).
+ * Resolves this tick's live lethal hits on a campaign player as ONE campaign hit (so a single explosion frame can
+ * never take two segments, and each lethal event can hurt once: its id is remembered for its grace window whatever the
+ * outcome). The wound is the largest of the hits (`config.campaign.damage`); a terminal hit (the closing city with no
+ * tile left, the Sudden Death blast) defeats through everything. Returns whether the player was defeated.
  */
-export function eliminate(
-  state: GameState,
-  p: Player,
-  causes: EliminationCause | readonly EliminationCause[],
-  events: SimEvent[],
-): void {
-  const credit = creditFor(state, p, causes);
-  const cause = credit.cause;
-  p.alive = false;
-  p.eliminatedTick = state.tick;
-  p.elimination = cause;
-  p.eliminatedBy = credit.creditId;
-  p.stats.deaths++;
-  p.stats.streak = 0;
-  p.recentHits = [];
-  if (credit.creditId !== null) {
-    const killer = state.players[credit.creditId]!;
-    killer.stats.kills++;
-    killer.stats.lastKillTick = state.tick;
-    if (killer.alive) killer.stats.streak++;
+function campaignLethal(state: GameState, p: Player, live: readonly LethalHit[], events: SimEvent[]): boolean {
+  const table = campaignConfig(state.config).damage;
+  const causes = live.map((h) => h.cause);
+  const terminal = live.some((h) => h.terminal || h.cause.kind === 'crush' || h.cause.kind === 'suddenDeath');
+  const wound = (s: { source: CampaignHitSource }): number => table[s.source as keyof typeof table] ?? 0;
+  let best = campaignSourceOf(causes[0]!);
+  for (const c of causes) {
+    const s = campaignSourceOf(c);
+    if (wound(s) > wound(best)) best = s;
   }
-  for (const id of credit.assistIds) state.players[id]!.stats.assists++;
-  p.entryUntil = null;
-  p.stepRemaining = 0;
-  p.attack = null;
-  p.knockedUntil = 0;
-  // the streak is over, the rewards are not (decision AS7): QUICK HANDS is paused with its unspent time stored, the
-  // one-use rewards stay; the match score stays
-  clearStreakRewards(state, p);
-  endLifePerksOnDeath(state, p);
-  if (p.carrying !== null) {
-    const gen = state.generators.find((g) => g.id === p.carrying);
-    if (gen) {
-      gen.carriedBy = null;
-      gen.stepFromX = gen.x;
-      gen.stepFromY = gen.y;
-    }
-    p.carrying = null;
-  }
-  events.push({
-    type: 'playerEliminated',
-    playerId: p.id,
-    cause,
-    x: p.x,
-    y: p.y,
-    creditId: credit.creditId,
-    assistIds: credit.assistIds,
-  });
+  const hit: CampaignHit = {
+    victimId: p.id,
+    byId: best.byId,
+    source: best.source,
+    damage: wound(best),
+    dazeTicks: 0,
+    knockback: null,
+  };
+  const result = applyCampaignHit(state, hit, events, { causes, terminal });
+  if (result === 'defeated') return true;
+  for (const h of live) p.immune.push({ eventId: h.eventId, until: h.graceUntil }); // one event, one chance
+  return false;
 }

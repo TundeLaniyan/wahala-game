@@ -48,6 +48,7 @@ export function causeCredit(state: GameState, victim: Player, cause: Elimination
       return valid(blast.seedOwnerId) ? blast.seedOwnerId : null;
     }
     case 'vehicle':
+    case 'campaign':
       return valid(cause.ownerId) ? cause.ownerId : null;
     default:
       return null;
@@ -88,4 +89,11 @@ export function creditFor(
   }
   const assistIds = [...new Set([...others, ...recent])].filter((id) => id !== creditId).sort((a, b) => a - b);
   return { creditId, assistIds, cause };
+}
+
+/** Remembers a melee attacker for elimination credit (pruned to the assist window). */
+export function recordHit(state: GameState, target: Player, byId: number): void {
+  const window = state.config.credit.assistWindowTicks;
+  target.recentHits = target.recentHits.filter((h) => state.tick - h.tick <= window && h.byId !== byId);
+  target.recentHits.push({ byId, tick: state.tick });
 }

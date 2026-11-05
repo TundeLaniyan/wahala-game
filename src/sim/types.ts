@@ -124,7 +124,9 @@ export type EliminationCause =
   /** V2: a generator thrown in by an eliminated sideline spectator (never credited to anyone). */
   | { kind: 'spectator'; ownerId: number; eventId: number }
   /** Rumble sudden death: the full-area finishing blast, or standing down after losing the kill count. */
-  | { kind: 'suddenDeath'; eventId: number };
+  | { kind: 'suddenDeath'; eventId: number }
+  /** Campaign (decision CC1): health ran out through `applyCampaignHit` (melee, projectile, a hit with no lethal event of its own). */
+  | { kind: 'campaign'; source: CampaignHitSource; ownerId: number | null; eventId: number };
 
 /** V2: per-player match statistics (scoreboards, Deathmatch / Team ranking, Rumble progression). */
 export interface PlayerStats {

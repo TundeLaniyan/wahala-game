@@ -145,7 +145,12 @@ export function runMatch(spec: MatchSpec): MatchOutcome {
     for (const e of tick(state, intents)) {
       if (e.type === 'generatorPlaced')
         placements.push({ owner: e.ownerId, tick: state.tick, x: e.x, y: e.y });
-      if (e.type === 'playerEliminated' && 'ownerId' in e.cause && e.cause.ownerId !== e.playerId)
+      if (
+        e.type === 'playerEliminated' &&
+        'ownerId' in e.cause &&
+        e.cause.ownerId !== null &&
+        e.cause.ownerId !== e.playerId
+      )
         kills[e.cause.ownerId]!++;
     }
     if (spec.now && state.match.phase !== 'countdown') tickMs.push(spec.now() - tickStart);
