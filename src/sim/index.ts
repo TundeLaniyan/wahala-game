@@ -105,11 +105,13 @@ export { rankPlayers, teamStandings, timedResult } from './systems/match';
 export type { TeamStanding } from './systems/match';
 export { previewRewards, rewardUseful, rewardsFor } from './systems/rewards';
 export {
+  BLAST_RULE_BY_GAME,
   DEFAULT_TIMED_SECONDS,
   RUMBLE_MODES,
   TEAM_NAMES,
   TIMED_MINUTES,
   assignTeams,
+  blastConfig,
   isRespawnMode,
   isTeamMode,
   modeConfig,

@@ -26,7 +26,13 @@ function wall(s: GameState, x: number, y: number): void {
   s.tiles[y * s.width + x] = Tile.Hard;
 }
 
-function blast(s: GameState, x: number, y: number, range = 2, extra: { square?: number; pierce?: boolean } = {}): void {
+function blast(
+  s: GameState,
+  x: number,
+  y: number,
+  range = 2,
+  extra: { square?: number; pierce?: boolean } = {},
+): void {
   addGenerator(s, { ownerId: 0, x, y, timer: 1, range, ...extra });
   run(s, 1);
 }
@@ -68,7 +74,12 @@ describe('radial footprint geometry', () => {
       expect(inDisc(x - 7, y - 5, 2)).toBe(true);
     }
     // axis tiles keep their arm direction (tips at the end), the rest are radial tiles
-    expect(s.flames.filter((f) => f.tip).map((f) => `${f.x},${f.y}`).sort()).toEqual(['5,5', '7,3', '7,7', '9,5']);
+    expect(
+      s.flames
+        .filter((f) => f.tip)
+        .map((f) => `${f.x},${f.y}`)
+        .sort(),
+    ).toEqual(['5,5', '7,3', '7,7', '9,5']);
     expect(s.flames.filter((f) => f.radial)).toHaveLength(21 - 9);
   });
 });
@@ -230,7 +241,11 @@ describe('rulesets', () => {
     createGame({
       seed: 3,
       arenaId,
-      players: Array.from({ length: 4 }, (_, i) => ({ name: `P${i}`, characterId: 'streetBaller', isBot: i > 0 })),
+      players: Array.from({ length: 4 }, (_, i) => ({
+        name: `P${i}`,
+        characterId: 'streetBaller',
+        isBot: i > 0,
+      })),
       settings: { game: kind, stageHazards: false },
     });
 
@@ -240,23 +255,29 @@ describe('rulesets', () => {
     expect(s.players.every((p) => p.capacity === 1)).toBe(true);
   });
 
-  it('the cross experiment variant (RE-L2) plays Rumble with the plus and keeps the two-generator start', () => {
+  it('there is no blast setting any more (CC2): a stale rumbleBlast key changes nothing', () => {
     const s = createGame({
       seed: 3,
       arenaId: 'rumbleOshodi',
-      players: Array.from({ length: 4 }, (_, i) => ({ name: `P${i}`, characterId: 'streetBaller', isBot: i > 0 })),
-      settings: { game: 'survival', stageHazards: false, rumbleBlast: 'cross' },
+      players: Array.from({ length: 4 }, (_, i) => ({
+        name: `P${i}`,
+        characterId: 'streetBaller',
+        isBot: i > 0,
+      })),
+      settings: { game: 'survival', stageHazards: false, rumbleBlast: 'cross' } as never,
     });
-    expect(s.config.generator.blastMode).toBe('plus');
-    expect(s.config.generator.maxRange).toBe(10);
+    expect(s.config.generator.blastMode).toBe('radial');
     expect(s.players.every((p) => p.capacity === 2)).toBe(true);
     expect(s.config.rewards.enabled).toBe(true);
-    // Classic ignores the switch
     const c = createGame({
       seed: 3,
       arenaId: 'danfoBusPark',
-      players: Array.from({ length: 2 }, (_, i) => ({ name: `P${i}`, characterId: 'streetBaller', isBot: i > 0 })),
-      settings: { game: 'classic', rumbleBlast: 'radial' },
+      players: Array.from({ length: 2 }, (_, i) => ({
+        name: `P${i}`,
+        characterId: 'streetBaller',
+        isBot: i > 0,
+      })),
+      settings: { game: 'classic', rumbleBlast: 'radial' } as never,
     });
     expect(c.config.generator.blastMode).toBe('plus');
   });

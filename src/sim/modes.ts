@@ -59,32 +59,35 @@ export const TIMED_MINUTES: readonly number[] = [3, 5];
 export const TEAM_NAMES: readonly string[] = ['Green', 'White', 'Gold', 'Red'];
 
 /**
- * The Rumble economy with the chosen blast shape: radial by default; the 'cross' experiment variant
- * (decision RE-L2) keeps everything else (two starting generators, rewards, caps) but blasts with the plus
- * and its old reach cap of 10.
+ * The bomb geometry a ruleset plays with, as config overrides (decision CC2). Radial = the whole Rumble economy
+ * (the disc, two starting generators, rewards ...), unchanged for Survival / Deathmatch / Team and field missions.
+ * Cross = the classic plus: the config default, kept explicit here; an arena that widens the cross itself (the
+ * Power Yard's full-line blast) keeps its own non-radial shape. Looked up in `BLAST_RULE_BY_GAME`, never a setting.
  */
-function rumbleEconomy(settings: MatchSettings): DeepPartial<GameConfig> {
-  if (settings.rumbleBlast !== 'cross') return RUMBLE_ECONOMY;
-  return { ...RUMBLE_ECONOMY, generator: { ...RUMBLE_ECONOMY.generator, blastMode: 'plus', maxRange: 10 } };
+export function blastConfig(game: GameKind, arena: ArenaDef): DeepPartial<GameConfig> {
+  if (BLAST_RULE_BY_GAME[game] === 'radial') return RUMBLE_ECONOMY;
+  const own = arena.config?.generator?.blastMode;
+  return { generator: { blastMode: own === 'fullLine' ? 'fullLine' : 'plus' } };
 }
 
 /** Config overrides for a ruleset, merged over the arena's own config (tests may override on top). */
-export function modeConfig(settings: MatchSettings, _arena: ArenaDef): DeepPartial<GameConfig> {
+export function modeConfig(settings: MatchSettings, arena: ArenaDef): DeepPartial<GameConfig> {
+  const blast = blastConfig(settings.game, arena);
   switch (settings.game) {
     case 'classic':
       // eliminated players throw generators in from the sideline (systems/spectators.ts)
-      return { spectator: { enabled: true } };
+      return { ...blast, spectator: { enabled: true } };
     case 'survival':
       return {
         // crates open routes; power comes from eliminations, credited straight to the eliminator
-        ...rumbleEconomy(settings),
+        ...blast,
         pickups: { hiddenChance: 0 },
         drops: { maxDeathDrops: 0 },
       };
     case 'deathmatch':
     case 'team':
       return {
-        ...rumbleEconomy(settings),
+        ...blast,
         match: { durationTicks: ticks(settings.durationSec ?? DEFAULT_TIMED_SECONDS) },
         pickups: { hiddenChance: 0 },
         drops: { maxDeathDrops: 0 },
@@ -94,15 +97,15 @@ export function modeConfig(settings: MatchSettings, _arena: ArenaDef): DeepParti
       // the clock and the crate density come from the mission (mission/build.ts); who respawns is decided by
       // the mission runtime (the human only, while lives last)
       return {
-        ...rumbleEconomy(settings),
+        ...blast,
         pickups: { hiddenChance: 0 },
         drops: { maxDeathDrops: 0 },
         respawn: { enabled: true, resetOnDeath: true },
       };
     case 'raid':
-      // placeholder ruleset (raid-sim owns the real one): the classic plus blast (config default), no hidden pickups,
-      // no crush (modeShrinks); the raid runtime decides lives and who respawns
-      return { pickups: { hiddenChance: 0 }, drops: { maxDeathDrops: 0 } };
+      // placeholder ruleset (raid-sim owns the real one): the classic plus (cross), no hidden pickups, no crush
+      // (modeShrinks); the raid runtime decides lives and who respawns
+      return { ...blast, pickups: { hiddenChance: 0 }, drops: { maxDeathDrops: 0 } };
   }
 }
 
