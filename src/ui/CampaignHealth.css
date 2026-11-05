@@ -166,3 +166,31 @@
     animation: none;
   }
 }
+
+/* boss mission defences bar: one segment per defence phase; the last flashes while the boss is exposed */
+.boss-bar .ch-state {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--mn-amber, #ffb800);
+}
+.boss-bar.exposed .ch-seg.full {
+  animation: boss-exposed 0.8s ease-in-out infinite alternate;
+}
+.boss-bar.defeated {
+  opacity: 0.6;
+}
+@keyframes boss-exposed {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.7);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss-bar.exposed .ch-seg.full {
+    animation: none;
+  }
+}

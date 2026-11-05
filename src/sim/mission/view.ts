@@ -63,6 +63,7 @@ export function missionView(state: GameState): MissionView | null {
     warnings,
     boss: {
       playerId: m.bossId,
+      name: state.players[m.bossId]?.name,
       shielded: m.boss.shielded,
       exposed: !m.boss.shielded && !m.boss.defeated,
       exposedRemainingTicks: m.boss.exposedUntil > state.tick ? m.boss.exposedUntil - state.tick : 0,

@@ -185,6 +185,8 @@ export interface MissionView {
   warnings: MissionWarningView[];
   boss: {
     playerId: number;
+    /** The boss's display name (for the HUD boss bar). */
+    name?: string;
     shielded: boolean;
     exposed: boolean;
     exposedRemainingTicks: number;

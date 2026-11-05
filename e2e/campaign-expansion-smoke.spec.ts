@@ -197,6 +197,106 @@ test.describe('campaign expansion smoke', () => {
     expect(errors).toEqual([]);
   });
 
+  test('field mission to raid and back through the real session: the door starts the raid, the field returns on the return tile', async ({
+    page,
+  }) => {
+    const errors = await errorsOf(page);
+    await open(page, '&noattract');
+    await newCampaign(page);
+    expect(
+      await page.evaluate(() => (window as any).__WAHALA__.campaign().startSectionMission('oshodi.approach')),
+    ).toBe(true);
+    await expect(page.getByTestId('hud')).toBeVisible();
+    // staging: the route is at its door leg and the human stands on the door (the real controller does the rest)
+    const door = (await page.evaluate(() => {
+      const s = (window as any).__WAHALA__.getState();
+      s.match.phase = 'playing';
+      s.match.countdownRemaining = 0;
+      const f = s.mission.field;
+      f.leg = 1;
+      const d = f.doors[0];
+      const p = s.players[0];
+      p.x = p.stepFromX = d.x;
+      p.y = p.stepFromY = d.y;
+      p.stepRemaining = 0;
+      return { id: d.id, x: d.x, y: d.y, ret: { x: d.returnTile.x, y: d.returnTile.y } };
+    })) as any;
+    // the game loop holds the door; the controller then swaps in the raid (a different game, cross bombs)
+    await page.waitForFunction(() => (window as any).__WAHALA__.getState().settings.game === 'raid', null, {
+      timeout: 30_000,
+    });
+    const raid = (await state(
+      page,
+      `s => ({ game: s.settings.game, blast: s.config.generator.blastMode, w: s.width })`,
+    )) as any;
+    expect(raid).toMatchObject({ game: 'raid', blast: 'plus' });
+    await expect(page.getByTestId('hud')).toBeVisible();
+    // the raid ends (staged outcome, the real runtime has its own tests): the field comes back on the return tile
+    await page.evaluate(() => {
+      const s = (window as any).__WAHALA__.getState();
+      s.raid.outcome = {
+        raidId: s.raid.raidId,
+        result: 'completed',
+        seconds: 60,
+        optionalRoomsOpened: 1,
+        optionalRoomsTotal: 2,
+        cargoDestroyed: 3,
+        cargoTotal: 3,
+        hpLeft: 3,
+        livesUsed: 0,
+        stars: 3,
+      };
+    });
+    await page.waitForFunction(
+      () => (window as any).__WAHALA__.getState().settings.game === 'mission',
+      null,
+      { timeout: 30_000 },
+    );
+    const back = (await state(
+      page,
+      `s => ({ game: s.settings.game, blast: s.config.generator.blastMode, x: s.players[0].x, y: s.players[0].y, door: s.mission.field.doors[0].status, hp: s.players[0].vitals.hp })`,
+    )) as any;
+    expect(back.game).toBe('mission');
+    expect(back.blast).toBe('radial');
+    expect(back.door).toBe('done');
+    expect({ x: back.x, y: back.y }).toEqual(door.ret);
+    expect(back.hp).toBeGreaterThan(0);
+    expect(errors).toEqual([]);
+  });
+
+  test('boss mission: the boss bar shows the defences in the rail', async ({ page }) => {
+    const errors = await errorsOf(page);
+    await open(page, '&noattract');
+    await newCampaign(page);
+    await page.evaluate(() => {
+      const c = (window as any).__WAHALA__.campaign();
+      // staging: a cleared district lets the boss mission be replayed (the sections gate the first attempt)
+      c.finishMission({
+        result: 'won',
+        missionId: 'oshodi',
+        modifiers: [],
+        seconds: 100,
+        livesUsed: 0,
+        phasesCleared: 3,
+        defeat: 'eliminated',
+        stars: 3,
+        creditedKills: 1,
+      });
+      c.beginBriefing('oshodi');
+      c.startFromBriefing();
+      c.bossIntroDone();
+    });
+    await expect(page.getByTestId('hud')).toBeVisible();
+    const bar = page.getByTestId('boss-bar');
+    await expect(bar).toBeVisible();
+    await expect(bar).toHaveAttribute('data-state', 'shielded');
+    await expect(bar).toContainText(/Sunmola/i);
+    await expect(bar.locator('.ch-seg.full')).toHaveCount(3);
+    // the health meter is there too: the human has segments in a boss mission
+    await expect(page.getByTestId('campaign-health')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
   test('mobile cross control: four arrows, one cardinal step per tap, the two action buttons stay', async ({
     page,
   }, info) => {

@@ -5,6 +5,7 @@
  */
 import { isBossKind, sourceLabel } from '../app/campaignHud';
 import type { CampaignHud, EnemyHud } from '../app/campaignHud';
+import type { MissionView } from '../sim';
 
 /** The cause line stays up this long after a hit (ticks, 3.5 s). */
 export const CAUSE_TICKS = 210;
@@ -118,7 +119,9 @@ export function healthModel(c: CampaignHud, seen: SeenProtection = NOTHING_SEEN)
 export interface BossBarModel {
   id: number;
   name: string;
-  kindLabel: 'BOSS' | 'LIEUTENANT';
+  kindLabel: 'BOSS' | 'LIEUTENANT' | 'BOSS DEFENCES';
+  /** Mission bosses: what the bar is showing right now (hit-point bosses leave it undefined). */
+  state?: 'shielded' | 'exposed' | 'defeated';
   /** Segments drawn, and how many are full. */
   segments: number;
   filled: number;
@@ -141,4 +144,37 @@ export function bossBars(enemies: readonly EnemyHud[]): BossBarModel[] {
         text: `${e.hp} / ${e.maxHp}`,
       };
     });
+}
+
+/**
+ * The boss bar of a BOSS MISSION (docs/CAMPAIGN_EXPANSION_STATUS.md): those bosses are not hit-point fights, they fall to
+ * one blast once the objective exposes them, so the bar shows what really protects them: one segment per defence phase.
+ * Full = all three defences up (shielded); a segment goes as each phase is cleared; the last one flashes while the boss is
+ * exposed; empty = defeated. Pure read of the mission view; null outside a boss mission or when a hit-point boss bar
+ * already shows this boss.
+ */
+export function missionBossBar(
+  view: MissionView | null,
+  alreadyShown: readonly BossBarModel[] = [],
+): BossBarModel | null {
+  if (!view || alreadyShown.some((b) => b.kindLabel === 'BOSS')) return null;
+  const total = view.phaseCount;
+  const state = view.boss.defeated ? 'defeated' : view.boss.exposed ? 'exposed' : 'shielded';
+  // phase = the active phase index (0, 1, 2): that many defences are already down; exposed = only the last one is left
+  const filled = state === 'defeated' ? 0 : state === 'exposed' ? 1 : Math.max(1, total - view.phase);
+  const label =
+    state === 'defeated'
+      ? 'DOWN'
+      : state === 'exposed'
+        ? 'EXPOSED: NOW!'
+        : `${filled} OF ${total} DEFENCES UP`;
+  return {
+    id: view.boss.playerId,
+    name: view.boss.name ?? 'The boss',
+    kindLabel: 'BOSS DEFENCES',
+    state,
+    segments: total,
+    filled,
+    text: label,
+  };
 }

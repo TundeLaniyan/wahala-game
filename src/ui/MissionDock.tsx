@@ -47,7 +47,7 @@ export function MissionDock({
       data-testid="mission-dock"
       style={maxHeight !== null ? { maxHeight: `${maxHeight}px` } : undefined}
     >
-      <CampaignHealth campaign={campaign} enemies={enemies} />
+      <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} />
       <MissionPanel mission={mission} />
     </div>
   );

@@ -143,7 +143,7 @@ export function HudRail({
           data-testid="rail-combat"
           style={combatMax !== null ? { maxHeight: `${combatMax}px` } : undefined}
         >
-          {!rumble && <CampaignHealth campaign={campaign} enemies={enemies} />}
+          {!rumble && <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} />}
           <MissionPanel mission={mission} />
           {!rumble && !side && <KillFeed />}
         </div>

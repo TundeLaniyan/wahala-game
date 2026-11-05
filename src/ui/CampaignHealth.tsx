@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import type { CampaignHud, EnemyHud } from '../app/campaignHud';
-import { NOTHING_SEEN, bossBars, healthModel, seeProtection } from './campaignHealthModel';
+import { NOTHING_SEEN, bossBars, healthModel, missionBossBar, seeProtection } from './campaignHealthModel';
+import type { MissionView } from '../sim';
 import './CampaignHealth.css';
 
 /**
@@ -13,14 +14,19 @@ import './CampaignHealth.css';
 export function CampaignHealth({
   campaign,
   enemies = [],
+  mission = null,
 }: {
   campaign: CampaignHud | null;
   enemies?: readonly EnemyHud[];
+  /** A boss mission's view: its boss gets the defences bar (hit-point bosses use `enemies`). */
+  mission?: MissionView | null;
 }) {
   // the most protection seen this mission: a consumed layer stays visible (struck through)
   const seen = useRef(NOTHING_SEEN);
   seen.current = campaign ? seeProtection(seen.current, campaign) : NOTHING_SEEN;
-  const bars = bossBars(enemies);
+  const hpBars = bossBars(enemies);
+  const defences = missionBossBar(mission, hpBars);
+  const bars = defences ? [...hpBars, defences] : hpBars;
   if (!campaign && bars.length === 0) return null;
   const m = campaign ? healthModel(campaign, seen.current) : null;
   return (
@@ -75,14 +81,16 @@ export function CampaignHealth({
       {bars.map((b) => (
         <section
           key={b.id}
-          className={`boss-bar ${b.kindLabel === 'BOSS' ? 'boss' : 'lieutenant'}`}
+          className={`boss-bar ${b.kindLabel === 'LIEUTENANT' ? 'lieutenant' : 'boss'}${b.state ? ` ${b.state}` : ''}`}
           data-testid="boss-bar"
+          data-state={b.state}
           data-hp={b.filled}
           aria-label={`${b.kindLabel} ${b.name}, ${b.text}`}
         >
           <header className="ch-head">
             <span className="ch-title">{b.kindLabel}</span>
             <b className="ch-text">{b.name}</b>
+            {b.state && <small className="ch-state">{b.text}</small>}
           </header>
           <div className="ch-segs boss-segs" role="img" aria-label={b.text}>
             {Array.from({ length: b.segments }, (_, i) => (
