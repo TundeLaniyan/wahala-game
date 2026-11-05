@@ -7,13 +7,21 @@
  * hold a reward the player did not earn nor miss one they did.
  */
 import type { CharacterId, Difficulty, MissionModifierId } from '../sim';
-import { CHARACTER_IDS, DIFFICULTIES, MODIFIER_FOR } from '../sim';
-import { CAMPAIGN, MODIFIER_IDS } from './content';
+import { CHARACTER_IDS, DIFFICULTIES, MISSION_IDS, MODIFIER_FOR } from '../sim';
+import { CAMPAIGN, MODIFIER_IDS, allSections } from './content';
 import { createSave, freshProgress, grantsForClear } from './progress';
-import type { CampaignSave, DistrictId, DistrictProgress, KeyValueStore } from './types';
+import {
+  clearDistrictSections,
+  earnedSectionRewards,
+  freshMissionProgress,
+  refreshSections,
+  storedMissionsOf,
+} from './sectionState';
+import type { CampaignSave, DistrictId, DistrictProgress, KeyValueStore, MissionProgress } from './types';
 import { CAMPAIGN_SAVE_KEY, DISTRICT_ORDER } from './types';
 
-export const CAMPAIGN_SAVE_VERSION = 1 as const;
+/** 2 = sections (docs/CAMPAIGN_SECTIONS.md). Version 1 (districts only) migrates to it without losing anything. */
+export const CAMPAIGN_SAVE_VERSION = 2 as const;
 
 type Json = Record<string, unknown>;
 
@@ -48,6 +56,7 @@ export function migrateSave(raw: Json): Json | null {
     }
     return { ...raw, version: CAMPAIGN_SAVE_VERSION };
   }
+  if (version === 1) return { ...raw, version: CAMPAIGN_SAVE_VERSION }; // sections are rebuilt from the districts
   if (version === CAMPAIGN_SAVE_VERSION) return raw;
   return null;
 }
@@ -74,6 +83,61 @@ function repairProgress(raw: unknown): DistrictProgress {
     introSeen: src.introSeen === true,
     modifiersCleared: modifiers,
   };
+}
+
+function repairMission(raw: unknown): MissionProgress {
+  const src = isObject(raw) ? raw : {};
+  const clears = int(src.clears, 0, 1_000_000, 0);
+  const seconds = src.bestSeconds;
+  const cleared = src.status === 'cleared' || clears > 0;
+  return {
+    ...freshMissionProgress(cleared ? 'cleared' : 'locked'),
+    attempts: Math.max(clears, int(src.attempts, 0, 1_000_000, 0)),
+    clears,
+    bestStars: int(src.bestStars, 0, 3, 0) as 0 | 1 | 2 | 3,
+    bestSeconds: typeof seconds === 'number' && Number.isFinite(seconds) && seconds >= 0 ? seconds : null,
+  };
+}
+
+/**
+ * Rebuilds `sections`, `missions` and `sectionRewards` from the (already repaired) districts and whatever the raw save
+ * claims: a mission counts as cleared only if the district is open and every earlier mission of the district is cleared
+ * (no skipped sections); a cleared district clears all its sections; statuses and rewards are derived, never trusted.
+ */
+function repairSections(save: CampaignSave, raw: Json): CampaignSave {
+  const rawMissions = isObject(raw.missions) ? raw.missions : {};
+  const rawSections = isObject(raw.sections) ? raw.sections : {};
+  let out: CampaignSave = { ...save, missions: { ...save.missions }, sections: { ...save.sections } };
+  for (const district of MISSION_IDS) {
+    const open = out.districts[district].status !== 'locked';
+    let previousCleared = true;
+    for (const m of storedMissionsOf(district)) {
+      const claimed = repairMission(rawMissions[m.id]);
+      const keep: boolean = claimed.status === 'cleared' && open && previousCleared;
+      previousCleared = keep;
+      out.missions[m.id] = keep
+        ? {
+            ...claimed,
+            clears: Math.max(1, claimed.clears),
+            attempts: Math.max(1, claimed.attempts),
+            bestStars: Math.max(1, claimed.bestStars) as 1 | 2 | 3,
+          }
+        : freshMissionProgress('locked');
+    }
+    if (out.districts[district].status === 'cleared') out = clearDistrictSections(out, district).save;
+  }
+  out = refreshSections(out);
+  for (const sec of allSections()) {
+    const claimed = isObject(rawSections[sec.id]) ? (rawSections[sec.id] as Json) : {};
+    const p = out.sections[sec.id]!;
+    out.sections[sec.id] = {
+      ...p,
+      attempts: Math.max(p.attempts, int(claimed.attempts, 0, 1_000_000, 0)),
+      clears: p.status === 'cleared' ? Math.max(1, p.clears, int(claimed.clears, 0, 1_000_000, 0)) : 0,
+    };
+  }
+  out.sectionRewards = earnedSectionRewards(out).map((r) => r.id);
+  return out;
 }
 
 /**
@@ -142,7 +206,7 @@ export function repairSave(value: unknown): CampaignSave | null {
   save.rewards = rewards;
   save.unlocks = unlocks;
   save.flags = [...new Set(flags)];
-  return save;
+  return repairSections(save, raw);
 }
 
 /** Reads the save. Null when there is none, it is unreadable or from a newer build. Never throws. */

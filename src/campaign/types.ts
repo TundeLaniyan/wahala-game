@@ -18,6 +18,7 @@ import type {
   NpcRole,
   ObjectiveKind,
   Difficulty,
+  RaidId,
 } from '../sim';
 
 export type DistrictId = 'ojuelegba' | MissionId;
@@ -200,9 +201,60 @@ export interface BrokerDef {
   neverShown: true;
 }
 
+// ---------------------------------------------------------------- sections (docs/CAMPAIGN_SECTIONS.md)
+
+/** field = a large scrolling district mission; raid = a compact classic raid; boss = the district's boss mission. */
+export type SectionMissionFormat = 'field' | 'raid' | 'boss';
+
+/** A door of a field mission that opens a raid (the field mission definition in the sim holds the tiles). */
+export interface SectionDoorRef {
+  doorId: string;
+  raidId: RaidId;
+}
+
+export interface SectionMissionDef {
+  /** Unique over the campaign ("oshodi.approach", "oshodi.boss"). A field mission's id is its field spec id. */
+  id: string;
+  format: SectionMissionFormat;
+  name: string;
+  /** The short objective card (at most 12 words). */
+  objectiveCard: string;
+  /** One or two sentences. */
+  summary: string;
+  /** field: the `FIELD_MISSION_DEFS` id; raid: a `RaidId`; boss: the district (`MissionId`). */
+  missionRef: string;
+  /** The doors of a field mission (each opens one raid). */
+  doors?: SectionDoorRef[];
+  /** Paid once, on the first clear. The boss mission's reward is the district boss reward. */
+  reward: RewardDef | null;
+  /** What clearing it opens, by id (`section.oshodi.s2`, the boss reward unlocks ...): informational and tested. */
+  unlocks: string[];
+  /** Optional longer text for the "Read more" card and the story scenes. */
+  readMore?: string;
+  intro?: StoryLine[];
+  outro?: StoryLine[];
+}
+
+export interface SectionDef {
+  /** "oshodi.s1" ... "oshodi.s3". */
+  id: string;
+  districtId: MissionId;
+  /** 1, 2 or 3; the third is always the boss section. */
+  order: 1 | 2 | 3;
+  name: string;
+  /** One or two sentences. */
+  summary: string;
+  /** Section ids that must be cleared first (the district itself must be open too). */
+  requires: string[];
+  /** In play order; every mission is required (a section is cleared when all of them are). */
+  missions: SectionMissionDef[];
+}
+
 export interface CampaignContent {
   broker?: BrokerDef;
   districts: Record<DistrictId, DistrictContent>;
+  /** The three sections of every mission district, in order. */
+  sections: Record<MissionId, SectionDef[]>;
   factions: Record<string, FactionDef>;
   prologue: StoryLine[];
   /** Played after all six districts are cleared: the empire collapses, the central broker escapes unseen. */
@@ -230,8 +282,28 @@ export interface DistrictProgress {
   modifiersCleared: MissionModifierId[];
 }
 
+export type SectionStatus = 'locked' | 'available' | 'cleared';
+
+/** One field or raid mission of a section. Only `cleared` is authoritative (`available` is derived from the save). */
+export interface MissionProgress {
+  status: SectionStatus;
+  attempts: number;
+  clears: number;
+  bestStars: 0 | 1 | 2 | 3;
+  bestSeconds: number | null;
+}
+
+export interface SectionProgress {
+  status: SectionStatus;
+  attempts: number;
+  clears: number;
+  /** The lowest best-stars among the section's missions once it is cleared (0 before). */
+  bestStars: 0 | 1 | 2 | 3;
+}
+
 export interface CampaignSave {
-  version: 1;
+  /** 2 = sections added (docs/CAMPAIGN_SECTIONS.md); a version-1 save is migrated on load (save.ts). */
+  version: 2;
   /** The local save slot this is (one slot; room for more later). */
   startedAt: number;
   updatedAt: number;
@@ -248,6 +320,12 @@ export interface CampaignSave {
   /** Chosen fighter and level for the next mission. */
   character: CharacterId;
   difficulty: Difficulty;
+  /** Per-section status (all 18 sections), keyed by section id. */
+  sections: Record<string, SectionProgress>;
+  /** Per-mission progress of the field and raid missions (the boss missions live in `districts`), keyed by mission id. */
+  missions: Record<string, MissionProgress>;
+  /** Section mission reward ids earned (kept apart from the boss `rewards`). */
+  sectionRewards: string[];
 }
 
 /** What a finished mission hands the campaign (built from the sim's MissionOutcome). */

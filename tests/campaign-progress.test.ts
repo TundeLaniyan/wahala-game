@@ -81,7 +81,7 @@ function winAll(start: CampaignSave, upTo: number = MISSION_IDS.length): Campaig
 describe('createSave', () => {
   it('Ojuelegba is cleared (the hub), Oshodi is available and the rest are locked', () => {
     const s = createSave(5);
-    expect(s.version).toBe(1);
+    expect(s.version).toBe(2);
     expect(s.startedAt).toBe(5);
     expect(s.updatedAt).toBe(5);
     expect(districtStatus(s, 'ojuelegba')).toBe('cleared');
@@ -347,7 +347,7 @@ describe('save and load', () => {
     store.setItem(CAMPAIGN_SAVE_KEY, JSON.stringify(junk));
     const s = loadSave(store)!;
     expect(s).not.toBeNull();
-    expect(s.version).toBe(1);
+    expect(s.version).toBe(2);
     expect(s.startedAt).toBe(0);
     expect(s.updatedAt).toBeGreaterThanOrEqual(s.startedAt);
     expect(s.prologueSeen).toBe(false);
@@ -390,7 +390,7 @@ describe('save and load', () => {
 
   it('migrates the old list-of-cleared shape', () => {
     const s = repairSave({ cleared: ['oshodi', 'mushin'], character: 'campusQueen' })!;
-    expect(s.version).toBe(1);
+    expect(s.version).toBe(2);
     expect(s.districts.oshodi.status).toBe('cleared');
     expect(s.districts.mushin.status).toBe('cleared');
     expect(s.districts.fadeyiSomolu.status).toBe('available');

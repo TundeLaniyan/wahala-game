@@ -35,6 +35,8 @@ export function iconFor(objective: ObjectiveKind, nodeId: string): IconKind {
       return 'cabinet';
     case 'dispatchWindows':
       return 'lever';
+    case 'fieldRoute':
+      return 'barrier'; // section field missions: markers and doors (the presentation pass owns the real icons)
   }
 }
 

@@ -3,9 +3,9 @@
  * only, so the store can import it without a cycle. The save itself is `CampaignSave` (src/campaign); the rest
  * is what the screens need between two commands.
  */
-import type { CampaignSave, DistrictId, RewardDef } from '../campaign';
+import type { CampaignSave, DistrictId, RewardDef, SectionResultSummary } from '../campaign';
 import { DISTRICT_ORDER, districtStatus } from '../campaign';
-import type { MissionId, MissionModifierId, MissionOutcome } from '../sim';
+import type { MissionId, MissionModifierId, MissionOutcome, RaidId, RaidOutcome } from '../sim';
 
 export type StoryKind = 'prologue' | 'finale';
 
@@ -24,10 +24,23 @@ export interface MissionResultView {
   reward: RewardSummary;
 }
 
+/** What a finished section mission (a field mission or a standalone raid) hands the result screen. */
+export interface SectionResultView {
+  /** The section mission id ("oshodi.approach"). */
+  missionId: string;
+  kind: 'field' | 'raid';
+  outcome: MissionOutcome | RaidOutcome;
+  summary: SectionResultSummary;
+}
+
 /** The mission being played right now (null in the menus). */
 export interface ActiveMission {
   missionId: MissionId;
   modifiers: MissionModifierId[];
+  /** Set for a section mission (the field mission or standalone raid); absent for the boss mission. */
+  sectionMissionId?: string;
+  /** Set while a raid is in play: the door of the field mission it came from (null: a standalone raid). */
+  raid?: { doorId: string | null; raidId: RaidId } | null;
 }
 
 export interface CampaignUi {
@@ -47,6 +60,8 @@ export interface CampaignUi {
   active: ActiveMission | null;
   /** The mission result being shown (null outside the result screen). */
   result: MissionResultView | null;
+  /** A section mission's result (the same result screen shows it); null otherwise. */
+  sectionResult: SectionResultView | null;
   /** The last result that paid something new (kept for the map after the result screen). */
   lastReward: RewardSummary | null;
 }
@@ -68,6 +83,7 @@ export function freshCampaignUi(save: CampaignSave, p: Partial<Omit<CampaignUi, 
     story: 'prologue',
     active: null,
     result: null,
+    sectionResult: null,
     lastReward: null,
     ...p,
   };

@@ -15,6 +15,7 @@ import { districtStatus, loadSave } from '../../src/campaign';
 import type { KeyValueStore } from '../../src/campaign';
 import { Tile } from '../../src/sim';
 import { ScriptedHuman } from '../mission-helpers';
+import { clearSectionsOf } from './sectionHelpers';
 
 class MapStore implements KeyValueStore {
   data = new Map<string, string>();
@@ -58,6 +59,7 @@ describe('campaign vertical slice: Oshodi, real runtime', () => {
     campaign.load();
     campaign.startNew();
     campaign.storyDone();
+    clearSectionsOf(campaign, 'oshodi'); // the boss is playable once its earlier sections are cleared
     campaign.beginBriefing('oshodi');
     campaign.startFromBriefing();
     campaign.bossIntroDone();

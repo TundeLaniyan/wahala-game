@@ -3,14 +3,7 @@
  * rules (entry window, legality, launching); this class only tracks which legal option the
  * player has focused and turns keyboard / gamepad / touch / mouse input into sim intents.
  */
-import {
-  allBorderEntries,
-  buildRoute,
-  entryKey,
-  listEntries,
-  listKekeTurns,
-  straightLeg,
-} from '../sim';
+import { allBorderEntries, buildRoute, entryKey, listEntries, listKekeTurns, straightLeg } from '../sim';
 import type { Dir, GameState, TilePos, VehicleEntry, VehicleIntent, VehicleKind, VehicleTurn } from '../sim';
 import type { EntryOverlayModel, EntryPick } from '../render';
 import type { NavCommand } from '../input';

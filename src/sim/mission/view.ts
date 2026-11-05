@@ -1,5 +1,6 @@
 import type { GameState } from '../types';
 import { makeCtx } from './ctx';
+import { fieldMissionView } from './field';
 import { OBJECTIVES } from './objectives';
 import { trainLane } from './objectives/windows';
 import { pendingWarnings } from './strikes';
@@ -9,6 +10,7 @@ import type { MissionNodeView, MissionView, MissionWarningView } from './types';
 export function missionView(state: GameState): MissionView | null {
   const m = state.mission;
   if (!m) return null;
+  if (m.field) return fieldMissionView(state);
   const ctx = makeCtx(state, []);
   const objective = OBJECTIVES[m.objective];
   const nodes: MissionNodeView[] = m.nodes.map((n) => ({

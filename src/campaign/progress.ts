@@ -6,6 +6,7 @@
 import type { CharacterId, Difficulty, MissionId, MissionModifierId, MissionOutcome } from '../sim';
 import { CHARACTER_IDS, DIFFICULTIES, MISSION_IDS, MODIFIER_FOR } from '../sim';
 import { CAMPAIGN, FINALE_UNLOCK, MODIFIER_IDS, nextDistrict } from './content';
+import { clearDistrictSections, initialSectionState, refreshSections } from './sectionState';
 import type { CampaignSave, DistrictId, DistrictProgress, DistrictStatus, RewardDef } from './types';
 import { DISTRICT_ORDER } from './types';
 
@@ -59,8 +60,8 @@ export function createSave(now: number): CampaignSave {
   for (const id of DISTRICT_ORDER) {
     districts[id] = freshProgress(id === 'ojuelegba' ? 'cleared' : id === 'oshodi' ? 'available' : 'locked');
   }
-  return {
-    version: 1,
+  return refreshSections({
+    version: 2,
     startedAt: now,
     updatedAt: now,
     prologueSeen: false,
@@ -71,7 +72,9 @@ export function createSave(now: number): CampaignSave {
     flags: [],
     character: CHARACTER_IDS[0]!,
     difficulty: 'rookie',
-  };
+    ...initialSectionState(),
+    sectionRewards: [],
+  });
 }
 
 /** Status as the campaign map should show it: `cleared` is stored, `available` is derived from `requires`. */
@@ -111,6 +114,8 @@ export interface MissionResultSummary {
   /** True exactly when THIS result cleared the sixth district (the finale just became available). */
   campaignComplete: boolean;
   firstClear: boolean;
+  /** Section mission rewards this first clear paid for the sections the boss win counted as cleared (usually none). */
+  newSectionRewards?: RewardDef[];
 }
 
 /**
@@ -133,6 +138,7 @@ export function applyMissionResult(
     campaignComplete: false,
     firstClear: false,
   };
+  if (outcome.sectionMissionId) return unchanged; // a section field mission: applySectionResult
   if (!isMissionId(id) || !save.districts[id] || districtStatus(save, id) === 'locked') return unchanged;
 
   const before = save.districts[id];
@@ -185,13 +191,23 @@ export function applyMissionResult(
     }
   }
 
+  // a cleared district counts all its sections as cleared (a boss win normally comes after them; this keeps the
+  // invariant for older saves and direct results, and pays any section reward not yet earned)
+  let sectionRewards: RewardDef[] = [];
+  let saved = next;
+  if (firstClear) {
+    const swept = clearDistrictSections(next, id);
+    saved = swept.save;
+    sectionRewards = swept.newRewards;
+  }
   return {
-    save: next,
+    save: refreshSections(saved),
     newRewards,
     newUnlocks,
     unlockedDistricts,
     campaignComplete: !wasComplete && finaleAvailable(next),
     firstClear,
+    ...(sectionRewards.length > 0 ? { newSectionRewards: sectionRewards } : {}),
   };
 }
 

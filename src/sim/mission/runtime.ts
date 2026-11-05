@@ -16,6 +16,7 @@ import { Tile } from '../types';
 import { respawn } from '../systems/respawn';
 import { endMatch } from '../systems/matchResult';
 import { makeCtx } from './ctx';
+import { evaluateFieldMission, fieldAfterEliminations, updateFieldMission } from './field';
 import type { MissionCtx } from './ctx';
 import { REINFORCE_WARN_TICKS } from './defs';
 import { OBJECTIVES } from './objectives';
@@ -29,6 +30,7 @@ const EXPOSED_CALLOUT = 'EXPOSED! Take the boss down before the window closes.';
 export function updateMission(state: GameState, events: SimEvent[]): void {
   const m = state.mission;
   if (!m || m.outcome || state.match.phase !== 'playing') return;
+  if (m.field) return updateFieldMission(state, events); // a section field mission: legs, not phases and a boss
   let ctx = makeCtx(state, events);
   if (!m.announced) announce(ctx);
   updateReinforcements(ctx);
@@ -182,6 +184,7 @@ export function missionAfterEliminations(
 ): void {
   const m = state.mission;
   if (!m || m.outcome) return;
+  if (m.field) return fieldAfterEliminations(state, eliminated);
   for (const id of eliminated) {
     if (id === m.bossId) {
       const boss = state.players[id]!;
@@ -211,6 +214,7 @@ export function missionAfterEliminations(
 export function evaluateMission(state: GameState, events: SimEvent[]): void {
   const m = state.mission;
   if (!m || m.outcome || state.match.phase !== 'playing') return;
+  if (m.field) return evaluateFieldMission(state, events);
   if (m.boss.defeated) finishMission(state, 'won', events);
   else if (m.livesUsed >= m.livesMax) finishMission(state, 'lost', events);
   else if (state.match.playTicks >= m.tuning.timeLimitTicks) finishMission(state, 'timeout', events);

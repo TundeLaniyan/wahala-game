@@ -21,7 +21,14 @@ export {
   defeatLines,
   districtList,
   nextDistrict,
+  getSection,
+  getSectionMission,
+  allSectionMissions,
+  allSections,
+  missionByRef,
   replayModifierFor,
+  sectionOfMission,
+  sectionsOf,
   unlockIdsOfKind,
 } from './content';
 export {
@@ -64,3 +71,14 @@ export {
   wordCount,
 } from './cards';
 export type { CardInput, CardKind, CardSection, ResultCardInput, SectionLike, StoryCard } from './cards';
+export {
+  bossAvailable,
+  canPlayMission,
+  missionStatus,
+  nextMission,
+  sectionStatus,
+  sectionsCleared,
+} from './sectionState';
+export type { NextMission } from './sectionState';
+export { applyRaidResult, applySectionResult } from './sectionProgress';
+export type { SectionResultSummary } from './sectionProgress';

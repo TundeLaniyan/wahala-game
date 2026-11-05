@@ -10,6 +10,7 @@
  * is eliminated (or, for escape-style bosses, `defeat: 'ousted'` when the window completes). Pure, deterministic,
  * ticks only, no DOM / Math.random / Date.now, like the rest of src/sim.
  */
+import type { RaidId, RaidOutcome, RaidRequest } from '../campaign/types';
 import type { CharacterId, Difficulty } from '../types';
 
 /** The six district bosses, in the campaign's order. Ojuelegba is the hub (no mission). */
@@ -36,7 +37,20 @@ export type ObjectiveKind =
   /** Lekki: SWITCH private systems off in the signalled order; a wrong switch triggers a contingency strike. */
   | 'contingencyGrid'
   /** Ebute-Metta: HIT dispatch switches only inside timed rail windows. */
-  | 'dispatchWindows';
+  | 'dispatchWindows'
+  /** Section FIELD missions (src/sim/mission/field.ts): a route of legs (markers, a group, an escape, a door, the way back). */
+  | 'fieldRoute';
+
+/**
+ * What a leg of a section field mission asks (docs/CAMPAIGN_SECTIONS.md). The legs of a mission run in order; the
+ * last one is always `returnRoute`.
+ *   reachMarkers  walk to marked tiles in order
+ *   clearGroup    defeat an enemy group (existing eliminations; campaign damage joins when combat-core is merged)
+ *   escapeRoute   reach an exit before the pursuer (an enemy group set on the player when the leg starts) catches you
+ *   door          stand on a door about a second: raises a `RaidRequest` (`state.mission.pendingRaid`)
+ *   returnRoute   walk to the return marker: the mission is complete
+ */
+export type FieldObjectiveKind = 'reachMarkers' | 'clearGroup' | 'escapeRoute' | 'door' | 'returnRoute';
 
 /** Reusable NPC roles for the protection crew (they drive bot behaviour through a directive, ai/directive.ts). */
 export type NpcRole =
@@ -73,6 +87,11 @@ export interface MissionSpec {
   modifiers?: MissionModifierId[];
   /** Crew bot level (the boss is always at least Standard). Default 'rookie' on the first clear. */
   difficulty?: Difficulty;
+  /**
+   * A SECTION field mission of the district `id` (`FIELD_MISSION_DEFS`): the same arena and match rules, but a route of
+   * legs instead of the boss fight. Absent = the district's boss mission (unchanged).
+   */
+  fieldId?: string;
   /** Human lives (default 3). A life is spent when the human is eliminated; 0 left = mission lost. */
   lives?: number;
   /**
@@ -123,10 +142,37 @@ export interface MissionOutcome {
   /** 0 on a loss; 1 = cleared, 2 = cleared on at most one lost life, 3 = also within the par time. */
   stars: 0 | 1 | 2 | 3;
   creditedKills: number;
+  /** Section field missions: the field mission id (`missionId` is then the district). Absent for the boss missions. */
+  sectionMissionId?: string;
+  /** Section field missions: raids completed with three stars (a bonus that can earn the third star). */
+  raidBonus?: number;
 }
 
 /** The read-only mission picture for HUD, renderer markers and the app (built by `missionView(state)`). */
+export interface MissionDoorView {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+  raidId: RaidId;
+  status: 'idle' | 'inRaid' | 'done' | 'failed';
+  /** 0..1 of the hold that raises the raid request. */
+  fraction: number;
+  required: boolean;
+}
+
 export interface MissionView {
+  /** Optional extension: 'field' for a section field mission; absent for the boss missions (and raids have their own view). */
+  format?: 'field';
+  /** Section field missions: the field mission id, the current leg's text, its position in the route and its doors. */
+  fieldId?: string;
+  phaseText?: string;
+  legIndex?: number;
+  legCount?: number;
+  legKind?: FieldObjectiveKind;
+  doors?: MissionDoorView[];
+  /** A door raised a raid request that the app has not answered yet. */
+  pendingRaid?: RaidRequest | null;
   missionId: MissionId;
   objective: ObjectiveKind;
   /** 0, 1 or 2: the active encounter phase. */
@@ -165,6 +211,8 @@ export interface MissionSeat {
   /** Crew: guard / follow radius in tiles, and for defenders the index of the phase node they stay at. */
   radius?: number;
   anchor?: number;
+  /** Section field missions: the enemy group this seat belongs to (`clearGroup` / `escapeRoute` legs name it). */
+  group?: string;
 }
 
 // ---------------------------------------------------------------- runtime state (plain JSON in `GameState.mission`)
@@ -318,6 +366,50 @@ export interface MissionTuning {
   phases: [PhaseTuning, PhaseTuning, PhaseTuning];
 }
 
+/** A door of a section field mission at run time. */
+export interface FieldDoorRuntime {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+  raidId: RaidId;
+  required: boolean;
+  /** The tile the human is put on when the raid ends (in front of the door). */
+  returnTile: { x: number; y: number };
+  /** idle: unused; inRaid: the raid request is out; done: the raid was completed; failed: retry allowed. */
+  status: 'idle' | 'inRaid' | 'done' | 'failed';
+  /** Ticks stood on the door so far. */
+  hold: number;
+  attempts: number;
+  /** Stars of the completed raid (0 until done). */
+  stars: number;
+  /** The last raid outcome the door received. */
+  last: RaidOutcome | null;
+}
+
+/** Run time of a section field mission (`MissionState.field`; absent in the boss missions). */
+export interface FieldRuntime {
+  fieldId: string;
+  /** Index of the leg in play (the last leg is the return route). */
+  leg: number;
+  legStartTick: number;
+  /** Markers of the current `reachMarkers` leg reached so far. */
+  markersDone: number;
+  /** Where the human restarts after a life is lost: the last marker / door return / start. */
+  checkpoint: { x: number; y: number };
+  doors: FieldDoorRuntime[];
+  /** Escape leg: ticks the pursuer has been next to the human, and how many times it caught them. */
+  catchTicks: number;
+  caught: number;
+  /** Tick of the last catch (the HUD line says so for a few seconds). */
+  caughtAt: number;
+  raidsCompleted: number;
+  /** Raids completed with three stars. */
+  raidBonus: number;
+  /** Set once the return route is walked; the mission result is written on the same tick. */
+  done: boolean;
+}
+
 export interface MissionState {
   id: MissionId;
   objective: ObjectiveKind;
@@ -349,4 +441,8 @@ export interface MissionState {
   announced: boolean;
   outcome: MissionOutcome | null;
   callout: string | null;
+  /** Section field missions only (absent in the boss missions, which stay byte-identical). */
+  field?: FieldRuntime;
+  /** A door raised this raid request; the app starts the raid and answers with `resolveRaid`. Null/absent otherwise. */
+  pendingRaid?: RaidRequest | null;
 }

@@ -5,7 +5,14 @@
  * `finishMission(outcome)` exactly as the match-end hook does.
  */
 import { beforeEach, describe, expect, it } from 'vitest';
-import { CAMPAIGN_SAVE_KEY, CAMPAIGN, DISTRICT_ORDER, districtStatus, loadSave } from '../../src/campaign';
+import {
+  CAMPAIGN_SAVE_KEY,
+  CAMPAIGN,
+  DISTRICT_ORDER,
+  districtStatus,
+  loadSave,
+  nextMission,
+} from '../../src/campaign';
 import type { KeyValueStore } from '../../src/campaign';
 import { CampaignController, outcomeFromMatch } from '../../src/app/campaign';
 import type { CampaignDeps } from '../../src/app/campaign';
@@ -15,6 +22,7 @@ import type { Bot, BotFactory, InputPort, RendererPort } from '../../src/app/por
 import { DEFAULT_GAME_SETTINGS } from '../../src/app/settings';
 import { useGameStore } from '../../src/app/store';
 import { STANDARD_ARENA_IDS } from '../../src/sim';
+import { clearSectionsOf } from './sectionHelpers';
 import type { Difficulty, GameOptions, MissionOutcome } from '../../src/sim';
 
 class MapStore implements KeyValueStore {
@@ -149,6 +157,10 @@ describe('campaign flow: new campaign -> prologue -> map -> briefing -> boss int
     expect(screen()).toBe('campaign');
     expect(ui().save.prologueSeen).toBe(true);
 
+    campaign.beginBriefing('oshodi'); // the boss is gated behind the district's earlier sections
+    expect(screen()).toBe('campaign');
+    expect(ui().notice).toContain('earlier sections');
+    clearSectionsOf(campaign, 'oshodi');
     campaign.beginBriefing('oshodi');
     expect(screen()).toBe('briefing');
     expect(ui().selected).toBe('oshodi');
@@ -181,9 +193,10 @@ describe('campaign flow: new campaign -> prologue -> map -> briefing -> boss int
     expect(districtStatus(ui().save, 'oshodi')).toBe('cleared');
     expect(districtStatus(ui().save, 'mushin')).toBe('available');
 
-    campaign.nextDistrict();
-    expect(screen()).toBe('briefing');
+    campaign.nextDistrict(); // Mushin is open, but its boss waits behind its sections: the map shows them
+    expect(screen()).toBe('campaign');
     expect(ui().selected).toBe('mushin');
+    expect(nextMission(ui().save)!.missionId).toBe('mushin.approach');
     expect(ui().result).toBeNull();
 
     // the save was written after every change: a restart restores the same progress
@@ -198,6 +211,7 @@ describe('campaign flow: new campaign -> prologue -> map -> briefing -> boss int
     const { campaign, built } = rig();
     campaign.load();
     campaign.startNew();
+    clearSectionsOf(campaign, 'oshodi');
     campaign.beginBriefing('oshodi', 'rushHourDispatch'); // locked: the modifier is ignored until Oshodi is cleared
     expect(ui().modifier).toBeNull();
     campaign.bossIntroDone();
@@ -215,6 +229,7 @@ describe('campaign flow: new campaign -> prologue -> map -> briefing -> boss int
     const { campaign, built, match } = rig();
     campaign.load();
     campaign.startNew();
+    clearSectionsOf(campaign, 'oshodi');
     campaign.startMission('oshodi');
     expect(built).toHaveLength(1);
     campaign.finishMission(win({ result: 'lost', stars: 0, defeat: null, phasesCleared: 1, livesUsed: 3 }));
@@ -244,6 +259,7 @@ describe('campaign flow: new campaign -> prologue -> map -> briefing -> boss int
     const { campaign, match, store } = rig();
     campaign.load();
     campaign.startNew();
+    clearSectionsOf(campaign, 'oshodi');
     campaign.startMission('oshodi');
     const settingsBefore = useGameStore.getState().settings;
     match.frame(0);
@@ -264,6 +280,7 @@ describe('campaign flow: new campaign -> prologue -> map -> briefing -> boss int
     const { campaign, botLevels } = rig();
     campaign.load();
     campaign.startNew();
+    clearSectionsOf(campaign, 'oshodi');
     campaign.setLoadout({ difficulty: 'rookie' });
     campaign.startMission('oshodi');
     expect(botLevels).toEqual([{ playerId: 1, difficulty: 'standard' }]);
@@ -273,6 +290,7 @@ describe('campaign flow: new campaign -> prologue -> map -> briefing -> boss int
     const { campaign, match } = rig();
     campaign.load();
     campaign.startNew();
+    clearSectionsOf(campaign, 'oshodi');
     campaign.startMission('oshodi');
     const state = match.state!;
     state.match.phase = 'ended';
@@ -298,6 +316,7 @@ describe('campaign flow: new campaign -> prologue -> map -> briefing -> boss int
     });
     campaign.load();
     campaign.startNew();
+    clearSectionsOf(campaign, 'oshodi');
     expect(campaign.startMission('oshodi')).toBe(false);
     expect(ui().notice).toContain('mission runtime not merged yet');
     expect(ui().active).toBeNull();
@@ -312,6 +331,7 @@ describe('campaign flow: new campaign -> prologue -> map -> briefing -> boss int
     });
     campaign.load();
     campaign.startNew();
+    clearSectionsOf(campaign, 'oshodi');
     campaign.beginBriefing('oshodi');
     campaign.startFromBriefing();
     expect(screen()).toBe('bossIntro');
@@ -326,6 +346,7 @@ describe('finale and ending', () => {
   function clearUpTo(campaign: CampaignController, last: number) {
     const ids = DISTRICT_ORDER.filter((d) => d !== 'ojuelegba');
     for (const id of ids.slice(0, last)) {
+      clearSectionsOf(campaign, id as 'oshodi');
       campaign.startMission(id);
       campaign.finishMission(win({ missionId: id as 'oshodi' }));
     }
@@ -339,6 +360,7 @@ describe('finale and ending', () => {
     expect(ui().result!.reward.campaignComplete).toBe(false);
     campaign.continue();
     expect(ui().selected).toBe('lekki');
+    clearSectionsOf(campaign, 'lekki');
     campaign.startMission('lekki');
     campaign.finishMission(win({ missionId: 'lekki' }));
     expect(ui().result!.reward.campaignComplete).toBe(true);

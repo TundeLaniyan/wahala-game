@@ -79,3 +79,7 @@ Nothing here blocks the code; the maps and render workers use `visualDirection`,
 | The Chairman | No model. Silhouette sprite only (behind glass / on the jetty) | none | Stamped-note UI asset (circuit ring with a lit window) | A single calm anonymous voice may be commissioned later (founder assignment) |
 
 Maps worker: landmark anchors per district are in `DistrictContent.landmarks` (3 each: Ojuelegba overpass mural / Stadium Road junction / danfo stop; Oshodi interchange flyover / terminal canopies / rail and market edge; Mushin Red Line footbridge / Idi-Oro food hub / parts umbrellas; Fadeyi footbridge / BRT lane / bank frontage; Ebute-Metta station sign / yard and signal gantry / Iddo-style terminal; Lagos Island civic dome / bridge approach / Marina and market; Lekki Link Bridge / Admiralty plaza signage / promenade palms).
+
+## Sections (field-sections worker)
+
+Each district is now divided into three sections (approach, middle, boss) that the player reclaims in order; the boss story above is unchanged and plays when section 3 opens. Section text (objective cards, summaries, Oshodi scenes) lives in `src/campaign/content/sections.ts` and is documented in `docs/CAMPAIGN_SECTIONS.md`. Same ethics rules apply: all names are fictional.

@@ -10,6 +10,9 @@ import type {
   Intent,
   MissionOutcome,
   Observation,
+  RaidId,
+  RaidOutcome,
+  RaidRequest,
   SimEvent,
 } from '../sim';
 import type { ActionName, IntentContext } from '../input';
@@ -70,6 +73,17 @@ export interface MissionMeta {
   difficulty: Difficulty;
   /** The mission is over (the sim reported an outcome, or the match ended without one: `null`). Called once. */
   onEnd(outcome: MissionOutcome | null, state: GameState): void;
+  /** A field mission's door raised a raid request (`state.mission.pendingRaid`); called once per request. */
+  onRaid?(request: RaidRequest, state: GameState): void;
+}
+
+/** What the app hands the match controller for a raid (a door of a field mission, or a standalone section raid). */
+export interface RaidMeta {
+  raidId: RaidId;
+  /** Enemy bot level. */
+  difficulty: Difficulty;
+  /** The raid is over (the sim reported an outcome, or the match ended without one). Called once. */
+  onEnd(outcome: RaidOutcome): void;
 }
 
 /** The part of the match controller the campaign controller drives (so tests can fake it). */
@@ -77,4 +91,18 @@ export interface MissionHost {
   startMission(options: GameOptions, meta: MissionMeta): void;
   /** Leaves the running mission for the menus (no results screen). */
   stop(): void;
+  /**
+   * Plays a raid. A running field mission is kept alive and PAUSED underneath (the door case) and comes back with
+   * `resumeField`; with no field mission the raid is standalone. Calling it again during a raid restarts the raid (retry).
+   */
+  playRaid?(options: GameOptions, meta: RaidMeta): void;
+  /**
+   * The raid is over: puts the stashed field mission back as the active game after `resolve` has answered its door
+   * (the events it returns are shown like any tick's). False when no field mission is stashed (a standalone raid).
+   */
+  resumeField?(resolve: (field: GameState) => SimEvent[]): boolean;
+  /** The game being played right now (the raid state during a raid), for the app's pause-menu actions. */
+  current?(): GameState | null;
+  /** A short HUD notice. */
+  notice?(text: string): void;
 }

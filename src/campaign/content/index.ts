@@ -8,6 +8,8 @@ import type {
   DistrictId,
   ReplayModifierDef,
   RewardDef,
+  SectionDef,
+  SectionMissionDef,
   StoryLine,
 } from '../types';
 import { DISTRICT_ORDER } from '../types';
@@ -19,10 +21,12 @@ import { LEKKI } from './lekki';
 import { MUSHIN } from './mushin';
 import { OJUELEGBA } from './ojuelegba';
 import { OSHODI } from './oshodi';
+import { SECTIONS, allSectionMissions, allSections } from './sections';
 import { BROKER, ENDING, FINALE, PROLOGUE } from './story';
 
 export { BROKER, ENDING, FINALE, PROLOGUE } from './story';
 export { FACTIONS, FACTION_IDS, NPC_ROLE_INFO } from './factions';
+export { SECTIONS, allSectionMissions, allSections } from './sections';
 
 export const CAMPAIGN: CampaignContent = {
   broker: BROKER,
@@ -35,6 +39,7 @@ export const CAMPAIGN: CampaignContent = {
     lagosIsland: LAGOS_ISLAND,
     lekki: LEKKI,
   },
+  sections: SECTIONS,
   factions: { ...FACTIONS },
   prologue: PROLOGUE,
   finale: FINALE,
@@ -106,4 +111,29 @@ export function unlockIdsOfKind(kind: string): string[] {
 export function allFlags(): string[] {
   const flags = bossList().flatMap((b) => b.consequenceFlags ?? []);
   return [...new Set([...flags, ...DISTRICT_ORDER.map((d) => `${d}.cleared`), 'campaign.completed'])];
+}
+
+// ---------------------------------------------------------------- sections
+
+/** The three sections of a mission district, in order. */
+export function sectionsOf(id: MissionId): SectionDef[] {
+  return CAMPAIGN.sections[id];
+}
+
+export function getSection(id: string): SectionDef | undefined {
+  return allSections().find((s) => s.id === id);
+}
+
+export function getSectionMission(id: string): SectionMissionDef | undefined {
+  return allSectionMissions().find((m) => m.id === id);
+}
+
+/** The section a mission belongs to. */
+export function sectionOfMission(missionId: string): SectionDef | undefined {
+  return allSections().find((s) => s.missions.some((m) => m.id === missionId));
+}
+
+/** The field or raid mission whose spec/raid id is `ref` of that format (null for an unknown one). */
+export function missionByRef(format: 'field' | 'raid', ref: string): SectionMissionDef | undefined {
+  return allSectionMissions().find((m) => m.format === format && m.missionRef === ref);
 }

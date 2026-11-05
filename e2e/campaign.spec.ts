@@ -52,6 +52,10 @@ const outcome = (missionId: string, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/** A section field mission's outcome (the debug handle finishes it like the match-end hook does). */
+const sectionOutcome = (fieldId: string) =>
+  outcome(fieldId.split('.')[0]!, { defeat: null, sectionMissionId: fieldId, raidBonus: 0 });
+
 const MISSIONS = ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta', 'lagosIsland', 'lekki'];
 
 test.describe('Campaign', () => {
@@ -77,7 +81,32 @@ test.describe('Campaign', () => {
 
     await page.getByTestId('map-node-oshodi').click();
     await expect(page.getByTestId('district-landmarks')).toContainText('Interchange Flyover');
-    await page.getByTestId('campaign-briefing').click();
+    // the district is divided into sections: the first is open, the boss waits behind them
+    await expect(page.getByTestId('district-sections')).toContainText('0 of 3 sections reclaimed');
+    await expect(page.getByTestId('section-oshodi.s1')).toHaveAttribute('data-status', 'available');
+    await expect(page.getByTestId('section-oshodi.s2')).toHaveAttribute('data-status', 'locked');
+    await expect(page.getByTestId('section-start-oshodi.boss')).toBeDisabled();
+    await expect(page.getByTestId('campaign-briefing')).toHaveCount(0);
+
+    // a real field mission starts from the section list (the Terminal Approach)
+    await page.getByTestId('section-start-oshodi.approach').click();
+    await expect(page.getByTestId('hud')).toBeVisible();
+    // back to the map (the pause menu's action; the menu itself is covered by the app tests)
+    await page.evaluate(() =>
+      (window as never as { __WAHALA__: { campaign(): { toMap(): void } } }).__WAHALA__.campaign().toMap(),
+    );
+    await expect(page.getByTestId('menu-campaign')).toBeVisible();
+
+    // the earlier sections cleared (through the real controller), the boss briefing opens
+    await page.evaluate(
+      (outs) => {
+        const c = (window as never as Debug).__WAHALA__.campaign()!;
+        for (const o of outs) c.finishMission(o);
+        c.beginBriefing('oshodi');
+      },
+      [sectionOutcome('oshodi.approach'), sectionOutcome('oshodi.railEdge')],
+    );
+    await expect(page.getByTestId('menu-briefing')).toBeVisible();
     await expect(page.getByTestId('menu-briefing')).toBeVisible();
     await expect(page.getByTestId('boss-name')).toHaveText('Oga Sunmola');
     await page.getByTestId('boss-card').getByTestId('card-readmore').click(); // the crew is behind Read more
@@ -115,8 +144,10 @@ test.describe('Campaign', () => {
     await expect(page.getByTestId('menu-campaignResult')).toBeVisible();
     await expect(page.getByTestId('result-unlocked-districts')).toContainText('Mushin');
     await page.getByTestId('result-next').click();
-    await expect(page.getByTestId('menu-briefing')).toBeVisible();
-    await expect(page.getByTestId('boss-name')).toHaveText('Madam Ronke');
+    // Mushin is open: the map shows its sections (the boss waits behind them)
+    await expect(page.getByTestId('menu-campaign')).toBeVisible();
+    await expect(page.getByTestId('section-mushin.s1')).toHaveAttribute('data-status', 'available');
+    await expect(page.getByTestId('mission-mushin.approach')).toContainText('Spare-Parts Row');
 
     await page.reload();
     await expect(page.getByTestId('title-screen')).toBeVisible();

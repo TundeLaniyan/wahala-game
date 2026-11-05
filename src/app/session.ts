@@ -425,6 +425,20 @@ export const commands = {
   campaignRetry(): void {
     campaign?.retry();
   },
+  /** The map's section list: start a field mission or a standalone raid (the boss goes through its briefing). */
+  campaignStartSection(missionId: string): void {
+    audio.playUi('start');
+    campaign?.startSectionMission(missionId);
+  },
+  /** Pause menu inside a raid. */
+  campaignRetryRaid(): void {
+    audio.playUi('click');
+    campaign?.retryRaid();
+  },
+  campaignLeaveRaid(): void {
+    audio.playUi('back');
+    campaign?.leaveRaid();
+  },
   campaignMap(): void {
     audio.playUi('back');
     campaign?.toMap();

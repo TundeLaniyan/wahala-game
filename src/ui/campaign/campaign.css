@@ -883,3 +883,81 @@
     font-size: 1.5rem;
   }
 }
+
+/* ---- sections of a district (docs/CAMPAIGN_SECTIONS.md) */
+.cp-sections {
+  margin-top: 12px;
+}
+.cp-sections ol {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cp-section {
+  padding: 8px 10px;
+  border: 1px solid var(--mn-line, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  min-width: 0;
+}
+.cp-section.locked {
+  opacity: 0.6;
+}
+.cp-section.cleared {
+  border-color: rgba(120, 200, 140, 0.5);
+}
+.cp-section header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cp-section p {
+  margin: 4px 0 6px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.cp-chip {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mn-muted);
+}
+.cp-smission {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 0 0;
+}
+.cp-smission.next .cp-smission-text b {
+  color: #fff;
+}
+.cp-smission-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.cp-smission-text small {
+  color: var(--mn-muted);
+  line-height: 1.3;
+}
+.cp-format {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+.cp-smission .mn-btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+.cp-opened {
+  margin-top: 8px;
+}

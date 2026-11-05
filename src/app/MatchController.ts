@@ -36,7 +36,17 @@ import { expireKillLines, isCrowded, newKillLines, pushKillLines } from './killF
 import { buildPlayers, matchArenaId, matchRules } from './names';
 import { cycleSpectateTarget, pickSpectateTarget } from './spectate';
 import { NULL_AUDIO } from './ports';
-import type { AudioPort, Bot, BotFactory, InputPort, MissionHost, MissionMeta, RendererPort } from './ports';
+import type {
+  AudioPort,
+  Bot,
+  BotFactory,
+  InputPort,
+  MissionHost,
+  MissionMeta,
+  RaidMeta,
+  RendererPort,
+} from './ports';
+import { raidOutcomeFromMatch, raidOutcomeOf } from './raidOutcome';
 import type { GameSettings } from './settings';
 import { SectionTimers } from './sectionTimers';
 import { patch, useGameStore } from './store';
@@ -58,6 +68,8 @@ const HEAR_TILES = 12;
 const SEE_TILES = 16;
 /** Campaign mission: pause between the sim's outcome and the result screen (the boss beat plays out). */
 const MISSION_END_DELAY_MS = 1600;
+/** Raid: pause between the raid's outcome and the return to the field map (or the result). */
+const RAID_END_DELAY_MS = 1400;
 
 /** The audio engine also takes the arena (its music playlist) and a pause hook; stub ports may not. */
 type MatchAudio = AudioPort & { startMusic(arenaId?: string): void; setPaused?(paused: boolean): void };
@@ -131,6 +143,20 @@ export class MatchController implements MissionHost {
   private director: ScenarioDirector | null = null;
   /** Campaign mission presentation (docs/CAMPAIGN_UI.md): own end flow, no MatchSummary, no saved settings. */
   private mission: MissionMeta | null = null;
+  /** A raid in play (a door of a field mission, or a standalone section raid). */
+  private raid: RaidMeta | null = null;
+  private raidReported = false;
+  /** The door's request was already handed to the campaign (cleared when the field has no request pending). */
+  private raidAsked = false;
+  /** A field mission kept alive and PAUSED underneath while one of its raids is played. */
+  private fieldStash: {
+    state: GameState;
+    bots: Map<number, Bot>;
+    mission: MissionMeta;
+    rumble: boolean;
+  } | null = null;
+  /** Events produced outside a tick (a raid answered at the door) shown with the next frame's. */
+  private pendingEvents: SimEvent[] = [];
   /** Smoothed ms per frame spent in sim ticks, bot decisions and the renderer (`?fps`, debug handle). */
   readonly timers = new SectionTimers();
 
@@ -143,6 +169,7 @@ export class MatchController implements MissionHost {
   start(settings: GameSettings, seed = Math.floor(Math.random() * 2 ** 31)): void {
     this.director = null;
     this.mission = null;
+    this.clearRaid();
     this.settings = settings;
     const players = buildPlayers(settings, seed);
     const arenaId = matchArenaId(settings);
@@ -197,6 +224,7 @@ export class MatchController implements MissionHost {
   startMission(options: GameOptions, meta: MissionMeta): void {
     this.director = null;
     this.settings = null;
+    this.clearRaid();
     this.mission = meta;
     const state = createGame(options);
     this.state = state;
@@ -249,6 +277,122 @@ export class MatchController implements MissionHost {
     return this.mission !== null;
   }
 
+  /** A raid is being played (a door of a field mission, or a standalone section raid). */
+  get isRaid(): boolean {
+    return this.raid !== null;
+  }
+
+  /** The game in play (the raid's state during a raid). */
+  current(): GameState | null {
+    return this.state;
+  }
+
+  private clearRaid(): void {
+    this.raid = null;
+    this.raidReported = false;
+    this.raidAsked = false;
+    this.fieldStash = null;
+    this.pendingEvents = [];
+  }
+
+  /**
+   * Campaign raid. A running field mission is kept alive and paused underneath (its door raised the request) and comes
+   * back with `resumeField`; with none running the raid is standalone. Calling it during a raid restarts the raid (the
+   * stashed field mission stays where it is). Same loop, HUD and audio path as `startMission`.
+   */
+  playRaid(options: GameOptions, meta: RaidMeta): void {
+    if (!this.raid && this.mission && this.state) {
+      this.fieldStash = { state: this.state, bots: this.bots, mission: this.mission, rumble: this.rumble };
+    }
+    this.director = null;
+    this.settings = null;
+    this.mission = null;
+    this.raid = meta;
+    this.raidReported = false;
+    this.raidAsked = false;
+    const state = createGame(options);
+    this.state = state;
+    this.rumble = false;
+    this.audio.setListener?.(null);
+    this.spectateId = null;
+    this.skipping = false;
+    this.closingAnnounced = false;
+    this.bots = new Map();
+    state.players.forEach((p, i) => {
+      if (p.isBot)
+        this.bots.set(
+          i,
+          this.deps.botFactory({
+            difficulty: options.players[i]?.difficulty ?? meta.difficulty,
+            seed: options.seed + i * 7919,
+            playerId: i,
+          }),
+        );
+    });
+    this.resetLoop(state);
+    this.deps.renderer.loadGame(state);
+    this.audio.startMusic(state.arenaId);
+    this.audio.setIntensity(0);
+    patch({
+      screen: 'playing',
+      paused: false,
+      toasts: [],
+      subtitle: null,
+      summary: null,
+      skipping: false,
+      hud: buildHud(state, LOCAL_ID, null),
+    });
+  }
+
+  /**
+   * The raid is over: puts the stashed field mission back as the game in play, after `resolve` answered its door (the
+   * events it returns are shown with the next frame). False (and the raid is left) when no field mission is stashed.
+   */
+  resumeField(resolve: (field: GameState) => SimEvent[]): boolean {
+    const stash = this.fieldStash;
+    this.raid = null;
+    this.raidReported = false;
+    this.fieldStash = null;
+    if (!stash) return false;
+    this.state = stash.state;
+    this.bots = stash.bots;
+    this.mission = stash.mission;
+    this.rumble = stash.rumble;
+    this.director = null;
+    this.spectateId = null;
+    this.skipping = false;
+    this.raidAsked = false;
+    this.resetLoop(stash.state);
+    this.deps.renderer.loadGame(stash.state);
+    this.audio.startMusic(stash.state.arenaId);
+    this.audio.setIntensity(0);
+    this.pendingEvents.push(...resolve(stash.state));
+    patch({
+      screen: 'playing',
+      paused: false,
+      toasts: [],
+      subtitle: null,
+      summary: null,
+      skipping: false,
+      hud: buildHud(stash.state, LOCAL_ID, null),
+    });
+    return true;
+  }
+
+  /** The loop bookkeeping every swap of the game in play resets. */
+  private resetLoop(state: GameState): void {
+    this.accumulator = 0;
+    this.lastMs = -1;
+    this.paused = false;
+    this.frozen = false;
+    this.endedAtMs = null;
+    this.excitement = 0.2;
+    this.countdownShown = -1;
+    this.forced = {};
+    this.entry.sync(state);
+    this.deps.input.clear();
+  }
+
   /**
    * Tutorial: runs a prepared state (already in its playing phase) under a director. No bots, no
    * saved settings are touched and no results screen follows; `start` returns to normal play.
@@ -256,6 +400,7 @@ export class MatchController implements MissionHost {
   startScenario(state: GameState, director: ScenarioDirector): void {
     this.director = director;
     this.mission = null;
+    this.clearRaid();
     this.settings = null;
     this.state = state;
     this.bots = new Map();
@@ -304,6 +449,7 @@ export class MatchController implements MissionHost {
   stop(): void {
     this.director = null;
     this.mission = null;
+    this.clearRaid();
     this.state = null;
     this.audio.stopMusic();
     patch({ screen: 'title', hud: null, paused: false, summary: null, toasts: [], subtitle: null });
@@ -477,8 +623,13 @@ export class MatchController implements MissionHost {
     return this.state !== null && isRespawnMode(this.state.settings.game);
   }
 
-  private afterFrame(events: SimEvent[], nowMs: number, dt: number): void {
+  private afterFrame(frameEvents: SimEvent[], nowMs: number, dt: number): void {
     const state = this.state!;
+    let events = frameEvents;
+    if (this.pendingEvents.length > 0) {
+      events = [...this.pendingEvents, ...frameEvents];
+      this.pendingEvents = [];
+    }
     if (this.rumble) this.updateSpectate(state);
     this.excitement = Math.max(
       state.match.phase === 'playing' && state.match.playTicks > state.config.match.durationTicks - 1800
@@ -525,8 +676,38 @@ export class MatchController implements MissionHost {
       this.hudClock = nowMs;
       this.publishHud(nowMs);
     }
-    if (this.mission) this.watchMission(state, nowMs);
-    else if (state.match.phase === 'ended' && !this.director) this.handleEnded(nowMs);
+    if (this.raid) this.watchRaid(state, nowMs);
+    else if (this.mission) {
+      this.watchMission(state, nowMs);
+      this.watchDoor(state);
+    } else if (state.match.phase === 'ended' && !this.director) this.handleEnded(nowMs);
+  }
+
+  /** A door of the field mission raised a raid request: handed to the campaign once; the campaign starts the raid. */
+  private watchDoor(state: GameState): void {
+    const request = state.mission?.pendingRaid ?? null;
+    if (!request) {
+      this.raidAsked = false;
+      return;
+    }
+    if (this.raidAsked || !this.mission?.onRaid) return;
+    this.raidAsked = true;
+    this.mission.onRaid(request, state);
+  }
+
+  /** Raid end: the runtime's outcome (or the match ending without one) is reported once, after a short beat. */
+  private watchRaid(state: GameState, nowMs: number): void {
+    const meta = this.raid;
+    if (!meta || this.raidReported) return;
+    const outcome = raidOutcomeOf(state);
+    if (outcome === null && state.match.phase !== 'ended') return;
+    if (this.endedAtMs === null) {
+      this.endedAtMs = nowMs;
+      this.publishHud(nowMs);
+    }
+    if (nowMs - this.endedAtMs < RAID_END_DELAY_MS) return;
+    this.raidReported = true; // exactly once
+    meta.onEnd(outcome ?? raidOutcomeFromMatch(state, meta.raidId));
   }
 
   /**

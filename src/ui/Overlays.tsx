@@ -130,7 +130,41 @@ export function PauseOverlay() {
                 <b>Settings</b>
                 <small>Audio, graphics, controls, accessibility</small>
               </button>
-              {mission ? (
+              {mission?.raid ? (
+                <>
+                  <button
+                    type="button"
+                    className="mn-pause-item"
+                    data-testid="raid-retry"
+                    onClick={() => commands.campaignRetryRaid()}
+                  >
+                    <b>Retry raid</b>
+                    <small>Start this raid again</small>
+                  </button>
+                  <button
+                    type="button"
+                    className="mn-pause-item"
+                    data-testid="raid-leave"
+                    onClick={() => commands.campaignLeaveRaid()}
+                  >
+                    <b>{mission.raid.doorId ? 'Leave raid' : 'Leave to the map'}</b>
+                    <small>
+                      {mission.raid.doorId
+                        ? 'Back to the field map; the door stays open'
+                        : 'Leave the raid; your save stays as it is'}
+                    </small>
+                  </button>
+                  <button
+                    type="button"
+                    className="mn-pause-item danger"
+                    data-testid="mission-map"
+                    onClick={() => commands.campaignMap()}
+                  >
+                    <b>Back to campaign map</b>
+                    <small>Leave the mission; your save stays as it is</small>
+                  </button>
+                </>
+              ) : mission ? (
                 <>
                   <button
                     type="button"

@@ -167,6 +167,6 @@ export function campaignScreenReady(screen: MenuScreen, ui: CampaignUi | null): 
   if (!ui) return false;
   if (screen === 'briefing' || screen === 'bossIntro')
     return (MISSION_IDS as readonly string[]).includes(ui.selected);
-  if (screen === 'campaignResult') return ui.result !== null;
+  if (screen === 'campaignResult') return ui.result !== null || ui.sectionResult !== null;
   return true;
 }
