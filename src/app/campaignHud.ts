@@ -1,21 +1,17 @@
 /**
  * Campaign health for the HUD (docs/CAMPAIGN_TEXT_NARRATION.md, goal C; contract: src/sim/campaign/types.ts). Pure
- * and read-only: the sim decides who is hurt and how, these only read `Player.vitals` / `armour` / `mounted` and
- * the sim's events and say it. No rules here. When combat-core's `playerVitalsView` / `enemyHealthView` are
- * merged these readers can delegate to them; the snapshot shape does not change.
+ * and read-only: the sim decides who is hurt and how; these read combat-core's `playerVitalsView` / `enemyHealthView`
+ * (src/sim/systems/campaignView.ts) and the sim's events and say it. No rules here.
  *
  * Nothing is silent (plan section 2): every outcome of a hit has a rail notice ("HIT BY BOTTLE", "ARMOUR USED",
  * "OKADA SAVED YOU", "DAZED BY BRICK"), and the meter flashes for `FLASH_TICKS` after a segment is lost.
  */
-import { missionView } from '../sim';
-import type { CampaignHitSource, EnemyKind, GameState, Player, SimEvent } from '../sim';
+import { enemyHealthView, playerVitalsView } from '../sim';
+import type { CampaignHitSource, EnemyKind, GameState, SimEvent } from '../sim';
 import type { Toast } from './store';
 
-/** Presentation timings (not balance): the segment-loss flash, and how long a hurt enemy keeps its small bar. */
+/** Presentation timing (not balance): how long the meter flashes after a segment is lost. */
 export const FLASH_TICKS = 36;
-export const ENEMY_BAR_TICKS = 240;
-/** An enemy this close (tiles, Manhattan) to the local player shows its bar. */
-export const ENEMY_NEAR_TILES = 3;
 
 /** Boss and lieutenant kinds have the always-visible boss bar in the rail. */
 export const isBossKind = (kind: EnemyKind): boolean => kind === 'boss' || kind === 'lieutenant';
@@ -51,21 +47,20 @@ export interface EnemyHud {
   showBar: boolean;
 }
 
-/** The local campaign player's health picture; null in every normal match (no `vitals`). */
+/** The local campaign player's health picture (from the sim's `playerVitalsView`); null in every normal match. */
 export function buildCampaignHud(state: GameState, localId: number): CampaignHud | null {
-  const p = state.players[localId];
-  const v = p?.vitals;
-  if (!p || !v) return null;
-  const lives = missionView(state)?.lives ?? null;
+  const view = playerVitalsView(state, localId);
+  const v = state.players[localId]?.vitals;
+  if (!view || !v) return null;
   const left = Math.max(0, v.invulnUntil - state.tick);
   return {
-    hp: Math.max(0, Math.min(v.maxHp, v.hp)),
-    maxHp: v.maxHp,
-    armour: p.armour,
-    okada: p.mounted,
-    lives: lives ? { left: Math.max(0, lives.max - lives.used), max: lives.max } : null,
-    invulnerable: left > 0,
-    invulnSeconds: Math.ceil(left / 60),
+    hp: Math.max(0, Math.min(view.maxHp, view.hp)),
+    maxHp: view.maxHp,
+    armour: view.armour,
+    okada: view.okada,
+    lives: view.lives ? { left: view.lives.left, max: view.lives.max } : null,
+    invulnerable: view.invulnerable,
+    invulnSeconds: view.invulnerable ? Math.max(1, Math.ceil(left / 60)) : 0,
     lastHit:
       v.lastHitSource !== null && v.lastHitTick >= 0
         ? { source: v.lastHitSource, tick: v.lastHitTick }
@@ -75,20 +70,22 @@ export function buildCampaignHud(state: GameState, localId: number): CampaignHud
   };
 }
 
-const near = (a: Player, b: Player): boolean => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) <= ENEMY_NEAR_TILES;
-
-/** Enemies whose health should be on screen: bosses always, others when hurt recently, hurt by the player, or near. */
+/** Enemies whose health should be on screen, by the sim's `enemyHealthView` (bosses always; others targeted, hurt or near). */
 export function buildEnemyHud(state: GameState, localId: number): EnemyHud[] {
-  const me = state.players[localId];
-  if (!me?.vitals) return [];
+  if (!state.players[localId]?.vitals) return [];
   const out: EnemyHud[] = [];
   for (const p of state.players) {
-    if (p.id === localId || !p.alive || !p.enemyKind || !p.vitals) continue;
-    const v = p.vitals;
-    const hurt = v.lastHitTick >= 0 && state.tick - v.lastHitTick <= ENEMY_BAR_TICKS;
-    const showBar = isBossKind(p.enemyKind) || hurt || v.lastHitBy === localId || near(me, p);
-    if (showBar)
-      out.push({ id: p.id, name: p.name, kind: p.enemyKind, hp: Math.max(0, v.hp), maxHp: v.maxHp, showBar });
+    if (p.id === localId || !p.alive || !p.enemyKind) continue;
+    const h = enemyHealthView(state, p.id);
+    if (h?.kind && h.showBar)
+      out.push({
+        id: p.id,
+        name: p.name,
+        kind: h.kind,
+        hp: Math.max(0, h.hp),
+        maxHp: h.maxHp,
+        showBar: true,
+      });
   }
   // bosses first (the rail's boss bar), then by id: a stable order
   return out.sort((a, b) => Number(isBossKind(b.kind)) - Number(isBossKind(a.kind)) || a.id - b.id);

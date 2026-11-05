@@ -8,8 +8,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { buildHud } from '../../src/app/hud';
 import {
-  ENEMY_BAR_TICKS,
-  ENEMY_NEAR_TILES,
   FLASH_TICKS,
   buildCampaignHud,
   buildEnemyHud,
@@ -19,6 +17,7 @@ import {
 import type { CampaignHud, EnemyHud } from '../../src/app/campaignHud';
 import { DEFAULT_GAME_SETTINGS } from '../../src/app/settings';
 import type { CampaignHitSource, EnemyKind, GameState, SimEvent, Vitals } from '../../src/sim';
+import { campaignConfig } from '../../src/sim';
 import { put, sandbox } from '../helpers';
 import {
   BOSS_SEGMENTS_MAX,
@@ -37,11 +36,13 @@ const { useGameStore } = await import('../../src/app/store');
 const { CampaignHealth } = await import('../../src/ui/CampaignHealth');
 const { HudRail } = await import('../../src/ui/HudRail');
 
+/** The sim's "never hit" value (campaignDamage.ts). */
+const NEVER = -1e9;
 const vitals = (over: Partial<Vitals> = {}): Vitals => ({
   hp: 4,
   maxHp: 4,
   invulnUntil: 0,
-  lastHitTick: -1,
+  lastHitTick: NEVER,
   lastHitBy: null,
   lastHitSource: null,
   ...over,
@@ -121,6 +122,7 @@ describe('the HUD snapshot', () => {
 });
 
 describe('enemy bars: only the enemies that matter', () => {
+  const BAR = campaignConfig(sandbox({ players: 2 }).config).bar;
   function withEnemy(kind: EnemyKind, at: [number, number], v: Partial<Vitals> = {}): GameState {
     const s = campaignState();
     put(s, 0, 1, 1);
@@ -140,15 +142,15 @@ describe('enemy bars: only the enemies that matter', () => {
   });
 
   it('a near enemy, one the player hurt, and one hurt recently show their bar', () => {
-    expect(buildEnemyHud(withEnemy('guard', [1 + ENEMY_NEAR_TILES, 1]), 0)).toHaveLength(1);
-    expect(buildEnemyHud(withEnemy('guard', [1 + ENEMY_NEAR_TILES + 1, 1]), 0)).toHaveLength(0);
+    expect(buildEnemyHud(withEnemy('guard', [1 + BAR.nearTiles, 1]), 0)).toHaveLength(1);
+    expect(buildEnemyHud(withEnemy('guard', [1 + BAR.nearTiles + 1, 1]), 0)).toHaveLength(0);
     const hurt = withEnemy('thrower', [12, 8], { lastHitTick: 50, lastHitBy: 0, hp: 1 });
     hurt.tick = 60;
     expect(buildEnemyHud(hurt, 0)).toHaveLength(1);
     const hurtByOther = withEnemy('thrower', [12, 8], { lastHitTick: 50, lastHitBy: null, hp: 1 });
-    hurtByOther.tick = 50 + ENEMY_BAR_TICKS;
+    hurtByOther.tick = 50 + BAR.recentTicks;
     expect(buildEnemyHud(hurtByOther, 0)).toHaveLength(1);
-    hurtByOther.tick = 50 + ENEMY_BAR_TICKS + 1;
+    hurtByOther.tick = 50 + BAR.recentTicks + 1;
     expect(buildEnemyHud(hurtByOther, 0)).toHaveLength(0);
   });
 
