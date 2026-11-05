@@ -113,8 +113,7 @@ test.describe('campaign expansion smoke', () => {
         ]) {
           const a = { x: c.x + dx, y: c.y + dy };
           const b = { x: c.x + dx * 2, y: c.y + dy * 2 };
-          const c3 = { x: c.x + dx * 3, y: c.y + dy * 3 };
-          if (free(a.x, a.y) && free(b.x, b.y) && free(c3.x, c3.y)) {
+          if (free(a.x, a.y) && free(b.x, b.y)) {
             const p = s.players[0];
             p.x = p.stepFromX = a.x;
             p.y = p.stepFromY = a.y;
