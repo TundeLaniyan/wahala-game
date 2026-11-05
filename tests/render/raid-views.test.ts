@@ -6,6 +6,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Mesh } from 'three';
 import { Quaternion, Vector3 } from 'three';
+import { enemyHealthView } from '../../src/sim';
 import type { Dir, RaidView, SimEvent, Vitals } from '../../src/sim';
 import { createLayout } from '../../src/render/coords';
 import { QUALITY } from '../../src/render/quality';
@@ -23,16 +24,13 @@ import {
 import {
   HIT_COLORS,
   PIP_MAX,
-  PIP_NEAR_TILES,
-  PIP_RECENT_TICKS,
   hitFeedback,
   impactFor,
-  isTargeted,
   joltOffset,
   moveStartTick,
   pathProgress,
   pipCounts,
-  pipReason,
+  pipsShown,
   pointAlong,
 } from '../../src/render/views/damageModel';
 import { RaidViews, doorSpansZ, isRaidMatch } from '../../src/render/views/RaidViews';
@@ -257,44 +255,33 @@ describe('raid style (pure)', () => {
 });
 
 describe('damage model (pure)', () => {
-  const enemy = (o: Record<string, unknown> = {}) =>
-    ({
-      id: 2,
-      alive: true,
-      x: 8,
-      y: 5,
-      vitals: vitals(2, 2),
-      enemyKind: 'guard' as const,
-      ...o,
-    }) as Parameters<typeof pipReason>[0];
-  const local = { id: 0, alive: true, x: 4, y: 5, facing: 'right' as Dir };
-
-  it('pips show only when targeted, recently hurt or near - never for everyone', () => {
-    expect(pipReason(enemy(), local, 1000)).toBeNull(); // far, healthy, off to the side
-    expect(pipReason(enemy({ x: 7 }), local, 1000)).toBe('targeted'); // straight ahead, 3 tiles
-    expect(pipReason(enemy({ x: 9 }), local, 1000)).toBeNull(); // straight ahead but too far
-    expect(pipReason(enemy({ y: 9, vitals: vitals(1, 2, 950) }), local, 1000)).toBe('recent');
-    expect(
-      pipReason(enemy({ y: 9, vitals: vitals(1, 2, 1000 - PIP_RECENT_TICKS - 1) }), local, 1000),
-    ).toBeNull();
-    expect(pipReason(enemy({ x: 4 + PIP_NEAR_TILES, y: 8 }), local, 1000)).toBe('near');
-    expect(pipReason(enemy({ x: 4 + PIP_NEAR_TILES + 1, y: 9 }), local, 1000)).toBeNull();
+  it('pips follow the sim rule (enemyHealthView.showBar): targeted, recently hurt or near - never for everyone', () => {
+    const state = sandbox({ players: 3 });
+    put(state, 0, 4, 5);
+    state.players[0]!.facing = 'right';
+    put(state, 1, 7, 5);
+    put(state, 2, 12, 9);
+    for (const id of [1, 2]) {
+      state.players[id]!.enemyKind = 'guard';
+      state.players[id]!.vitals = vitals(2, 2);
+    }
+    const shown = (id: number) => pipsShown(enemyHealthView(state, id), state.players[id]!.alive);
+    expect(shown(1)).toBe(true); // straight ahead, 3 tiles
+    expect(shown(2)).toBe(false); // far, healthy
+    state.players[2]!.vitals = vitals(1, 2, state.tick - 10);
+    expect(shown(2)).toBe(true); // hurt a moment ago
+    state.players[2]!.vitals = vitals(1, 2, state.tick - 5000);
+    expect(shown(2)).toBe(false);
   });
 
-  it('never for the dead, the local player, an unhurt-and-far enemy, the boss or a lieutenant (their bar is the rail)', () => {
-    expect(pipReason(enemy({ x: 5, alive: false }), local, 0)).toBeNull();
-    expect(pipReason(enemy({ id: 0, x: 5 }), local, 0)).toBeNull();
-    expect(pipReason(enemy({ x: 5, enemyKind: 'boss' }), local, 0)).toBeNull();
-    expect(pipReason(enemy({ x: 5, enemyKind: 'lieutenant' }), local, 0)).toBeNull();
-    expect(pipReason(enemy({ x: 5, vitals: undefined }), local, 0)).toBeNull();
-  });
-
-  it('targeting is straight ahead in the way the player faces', () => {
-    expect(isTargeted({ x: 4, y: 5, facing: 'right' }, { x: 6, y: 5 })).toBe(true);
-    expect(isTargeted({ x: 4, y: 5, facing: 'right' }, { x: 6, y: 6 })).toBe(false);
-    expect(isTargeted({ x: 4, y: 5, facing: 'left' }, { x: 6, y: 5 })).toBe(false);
-    expect(isTargeted({ x: 4, y: 5, facing: 'up' }, { x: 4, y: 3 })).toBe(true);
-    expect(isTargeted({ x: 4, y: 5, facing: 'down' }, { x: 4, y: 5 })).toBe(false);
+  it('never for the dead, the boss or a lieutenant (their bar is the rail)', () => {
+    const view = (kind: string | null) => ({ showBar: true, kind });
+    expect(pipsShown(view('guard'), true)).toBe(true);
+    expect(pipsShown(view('guard'), false)).toBe(false);
+    expect(pipsShown(view('boss'), true)).toBe(false);
+    expect(pipsShown(view('lieutenant'), true)).toBe(false);
+    expect(pipsShown({ showBar: false, kind: 'guard' }, true)).toBe(false);
+    expect(pipsShown(null, true)).toBe(false);
   });
 
   it('pip counts: one per segment, scaled down past the cap, never zero while alive', () => {

@@ -3,56 +3,21 @@
  * hit result looks like. Presentation only - the numbers come from the sim (`Player.vitals`, `campaignHit`); nothing here
  * decides damage. Tested without WebGL.
  */
-import type { CampaignHitResult, Dir, EnemyAttackKind, Player } from '../../sim';
+import type { CampaignHitResult, EnemyAttackKind } from '../../sim';
 
-/** An enemy within this many tiles (Chebyshev) of the local player shows its pips. */
-export const PIP_NEAR_TILES = 3;
-/** ... and for this long after taking damage (ticks, 3 s). */
-export const PIP_RECENT_TICKS = 180;
-/** An enemy straight ahead of the local player within this many tiles counts as targeted. */
-export const PIP_TARGET_REACH = 3;
 /** Never more pips than this per enemy (a tougher one scales its pips down instead). */
 export const PIP_MAX = 8;
 /** Boss and lieutenant bars belong to the HUD rail (story-hud); regular enemies get world pips. */
 export const RAIL_BAR_KINDS: ReadonlySet<string> = new Set(['boss', 'lieutenant']);
 
-export type PipReason = 'targeted' | 'recent' | 'near';
-
-const AHEAD: Record<Dir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
-
-/** Is `enemy` straight ahead of `local` (same row or column, in the way they face) within `reach` tiles? */
-export function isTargeted(
-  local: Pick<Player, 'x' | 'y' | 'facing'>,
-  enemy: Pick<Player, 'x' | 'y'>,
-  reach = PIP_TARGET_REACH,
-): boolean {
-  const [dx, dy] = AHEAD[local.facing];
-  const ex = enemy.x - local.x;
-  const ey = enemy.y - local.y;
-  const along = ex * dx + ey * dy;
-  const across = Math.abs(ex * dy) + Math.abs(ey * dx);
-  return along >= 1 && along <= reach && across === 0;
-}
-
 /**
- * Why this enemy shows its pips right now, or null when it should stay clean. Thin by design: never for everybody at
- * once, never for the boss or a lieutenant (their bar is in the rail), never for the local player (their own meter is
- * in the HUD), never for the dead.
+ * Do this enemy's world pips show? The WHEN is the sim's `enemyHealthView(...).showBar` (targeted, hurt in the last 3 s,
+ * or near - the same rule the HUD uses, so the two never drift); this adds the presentation rules: never for a boss or
+ * lieutenant (their bar is in the HUD rail), never for the dead.
  */
-export function pipReason(
-  enemy: Pick<Player, 'id' | 'alive' | 'x' | 'y' | 'vitals' | 'enemyKind'>,
-  local: Pick<Player, 'id' | 'alive' | 'x' | 'y' | 'facing'> | undefined,
-  tick: number,
-): PipReason | null {
-  const v = enemy.vitals;
-  if (!v || !enemy.alive || v.maxHp <= 0) return null;
-  if (local && enemy.id === local.id) return null;
-  if (enemy.enemyKind && RAIL_BAR_KINDS.has(enemy.enemyKind)) return null;
-  if (local?.alive && isTargeted(local, enemy)) return 'targeted';
-  if (v.hp < v.maxHp && tick - v.lastHitTick <= PIP_RECENT_TICKS) return 'recent';
-  if (local?.alive && Math.max(Math.abs(enemy.x - local.x), Math.abs(enemy.y - local.y)) <= PIP_NEAR_TILES)
-    return 'near';
-  return null;
+export function pipsShown(view: { showBar: boolean; kind: string | null } | null, alive: boolean): boolean {
+  if (!view || !alive || !view.showBar) return false;
+  return !(view.kind && RAIL_BAR_KINDS.has(view.kind));
 }
 
 /** Filled / total pips (a tough enemy's pips are scaled down to `PIP_MAX`, never fewer filled than 1 while alive). */

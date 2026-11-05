@@ -14,7 +14,8 @@ import {
 import type { GameState, SimEvent } from '../../sim';
 import type { Effects } from '../fx/Effects';
 import type { Layout } from '../coords';
-import { HIT_COLORS, PIP_MAX, hitFeedback, pipColor, pipCounts, pipReason } from './damageModel';
+import { enemyHealthView } from '../../sim';
+import { HIT_COLORS, PIP_MAX, hitFeedback, pipColor, pipCounts, pipsShown } from './damageModel';
 import { playerGridPos } from './motion';
 import type { FrameContext, View } from './types';
 
@@ -59,7 +60,7 @@ function pipTexture(): CanvasTexture {
  * Campaign damage feedback (docs/RAID_PRESENTATION.md): the player must understand why an enemy died, was dazed or lived.
  *
  *  - thin health PIPS above an enemy's head, only when it is targeted (straight ahead of the player), recently hurt, or
- *    close (`pipReason`, never for everybody, never for a boss / lieutenant - their bar is in the HUD rail);
+ *    close (`enemyHealthView.showBar`, never for everybody, never for a boss / lieutenant - their bar is in the HUD rail);
  *  - a hit flash (red on the player, cream on an enemy), a small ring and a flinch on `campaignHit` damage; a yellow
  *    flash on a daze; a distinct WHITE-BLUE spark and ring when Armour or the Okada absorbed it; a poof on
  *    `campaignDefeated`. The dazed halo (stars) is `PlayerViews`' own, driven by `dazedUntil`.
@@ -160,15 +161,15 @@ export class DamageViews implements View {
 
   update(ctx: FrameContext): void {
     const { state, alpha } = ctx;
-    const local = state.players[ctx.info.localPlayerId];
     this.pips.count = 0;
     let n = 0;
     let enemies = 0;
     const cam = ctx.camera?.quaternion ?? NO_ROTATION;
     for (const p of state.players) {
       if (enemies >= PIP_ENEMIES) break;
-      if (!pipReason(p, local, state.tick)) continue;
-      const v = p.vitals!;
+      if (!p.vitals) continue;
+      const v = p.vitals;
+      if (!pipsShown(enemyHealthView(state, p.id), p.alive)) continue;
       const { filled, total } = pipCounts(v.hp, v.maxHp);
       const frac = v.maxHp > 0 ? v.hp / v.maxHp : 0;
       const pos = playerGridPos(p, alpha);
