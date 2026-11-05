@@ -14,6 +14,7 @@
  *     fighter just fell on, minus dangerous neighbours (an escape route must exist);
  *  3. when every arena spawn is unusable, any safe open floor tile (a respawn is never lost).
  */
+import { resetVitals } from './campaignDamage';
 import { clearLifePerks } from './lifePerks';
 import { clearStreakRewards } from './streaks';
 import { getArena } from '../arenas';
@@ -203,6 +204,7 @@ export function respawn(state: GameState, p: Player, x: number, y: number): void
   p.lastPlaceTick = -1e9;
   // `eliminatedTick` / `elimination` / `eliminatedBy` keep describing the last death (kill feed)
   p.protectedUntil = state.tick + cfg.protection.spawnProtectionTicks;
+  resetVitals(p); // campaign: full health and the spawn protection shown as recovery frames (a no-op without vitals)
   if (cfg.respawn.resetOnDeath) {
     p.range = cfg.generator.baseRange;
     p.capacity = cfg.generator.baseCapacity;

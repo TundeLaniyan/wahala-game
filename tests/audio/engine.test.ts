@@ -162,9 +162,7 @@ describe('event mapping', () => {
       'missionStarted',
       'missionOutcome',
       'missionCallout',
-      // campaign expansion placeholders: silent until the combat workstreams give them cues (the raid events have cues)
-      'campaignHit',
-      'campaignDefeated',
+      // campaign expansion placeholders: silent until the raid workstreams give them cues (health has its cues, CC4)
       'projectileLaunched',
       'projectileHit',
     ]);
@@ -237,6 +235,10 @@ describe('event mapping', () => {
     rig.ctx.advance(10);
     rig.audio.handleEvents([SAMPLES.raidOutcome], s);
     expect(rig.ids()).not.toContain('win_sting'); // matchEnded owns the sting
+    // campaign health (decision CC4): a wound, a glancing blow and a defeat reuse existing synthesised cues
+    expectIds(SAMPLES.campaignHit, 'push');
+    expectIds({ ...SAMPLES.campaignHit, result: 'invulnerable' } as SimEvent, 'push');
+    expectIds(SAMPLES.campaignDefeated, 'bottle_smash');
     expectIds(SAMPLES.crowdLanded, 'bottle_smash');
     expectIds(SAMPLES.crowdWarning, 'crowd_throw_whistle');
     expectIds(SAMPLES.crushLanded, 'crush_slam');

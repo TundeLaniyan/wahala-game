@@ -3,16 +3,13 @@
  * and the seats (seat 0 the human, the enemy seats dormant until their wave).
  */
 import type { ArenaDef } from '../arenas/types';
-import type { GameState, Player } from '../types';
+import type { GameState } from '../types';
+import { createVitals } from '../systems/campaignDamage';
 import { ticks } from '../config';
 import { RAID_DEFS } from './defs';
 import { enemyMaxHp } from './enemies';
 import { enemySeats, parseRaidLayout } from './layout';
 import type { RaidSpec, RaidState, RaidWaveState } from './types';
-
-function newVitals(hp: number, maxHp: number): NonNullable<Player['vitals']> {
-  return { hp, maxHp, invulnUntil: 0, lastHitTick: -1, lastHitBy: null, lastHitSource: null };
-}
 
 export function createRaidState(state: GameState, _arena: ArenaDef, spec: RaidSpec): RaidState {
   const def = RAID_DEFS[spec.raidId];
@@ -28,7 +25,8 @@ export function createRaidState(state: GameState, _arena: ArenaDef, spec: RaidSp
   const maxHp = Math.max(1, spec.maxHp ?? def.humanMaxHp);
   const hp = Math.max(1, Math.min(maxHp, spec.hp ?? maxHp));
   const human = state.players[0]!;
-  human.vitals = newVitals(hp, maxHp);
+  human.vitals = createVitals(maxHp);
+  human.vitals.hp = hp;
 
   // the enemies: dormant seats, no generator economy, their kind's health
   const seats: RaidState['seats'] = [];
@@ -37,7 +35,7 @@ export function createRaidState(state: GameState, _arena: ArenaDef, spec: RaidSp
   seatPlans.forEach((plan, i) => {
     const p = state.players[i + 1]!;
     p.enemyKind = plan.kind;
-    p.vitals ??= newVitals(enemyMaxHp(plan.kind), enemyMaxHp(plan.kind));
+    p.vitals ??= createVitals(enemyMaxHp(plan.kind));
     p.team = 1;
     p.capacity = 0;
     p.alive = false;

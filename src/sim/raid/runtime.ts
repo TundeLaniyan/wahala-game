@@ -82,10 +82,6 @@ function updateRespawn(state: GameState, events: SimEvent[]): void {
   }
   if (!spot) return; // try again next tick
   respawn(state, human, spot.x, spot.y);
-  if (human.vitals) {
-    human.vitals.hp = human.vitals.maxHp;
-    human.vitals.invulnUntil = human.protectedUntil;
-  }
   r.respawnAt = null;
   events.push({ type: 'playerRespawned', playerId: human.id, x: human.x, y: human.y });
 }
