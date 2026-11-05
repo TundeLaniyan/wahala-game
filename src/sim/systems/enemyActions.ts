@@ -60,6 +60,14 @@ function beginEnemyMelee(state: GameState, p: Player, events: SimEvent[]): 'star
     return 'claimed';
   const pending = p.attack!;
   pending.resolveTick += spec.extraStartupTicks;
+  // the view reads the wind-up from the event the press just emitted
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i]!;
+    if (e.type === 'attackStarted' && e.playerId === p.id) {
+      e.resolveTick = pending.resolveTick;
+      break;
+    }
+  }
   p.rootedUntil = Math.max(p.rootedUntil, pending.resolveTick); // the wind-up plants the puncher
   fire.nextPunchTick[p.id] = state.tick + spec.cooldownTicks;
   return 'started';

@@ -220,8 +220,9 @@ export function tileValue(c: Ctx, tile: number, prevGoal: number): number {
   if (c.leash !== null) v += directiveBias(c, tile);
   if (tile === prevGoal) v += 1.2;
   if (profile.refugeMinExits > 0 && world.exits(tile) < profile.refugeMinExits) v -= 1.5;
-  // do not loiter right next to a rival unless attacking (rivals on the tile or a neighbour)
-  if (profile.tier !== 'easy') {
+  // do not loiter right next to a rival unless attacking (rivals on the tile or a neighbour); a campaign enemy's job is
+  // to be next to its target (it punches, it does not drop generators), so its tactic tile is never penalised
+  if (profile.tier !== 'easy' && world.me.enemyKind === undefined) {
     let close = world.rivalAt[tile]!;
     for (let d = 0; d < 4; d++) {
       const n = world.board.neighbor[tile * 4 + d]!;

@@ -208,8 +208,10 @@ export function enemyGroupDirective(state: GameState, id: number): NpcDirective 
 
   // 2. melee enemies surround the target
   const melee = group.filter((o) => !blockers.has(o.id) && !ENEMY_ATTACK_SETS[o.enemyKind!].keepsDistance);
-  const ring = [...surroundSlots(state, target, 1), ...surroundSlots(state, target, 2)];
-  const around = assign(melee, ring, taken, w);
+  // the four neighbours first (only these can hit); only when they are taken does a fighter take the second ring
+  const around = assign(melee, surroundSlots(state, target, 1), taken, w);
+  const rest = melee.filter((o) => !around.has(o.id));
+  for (const [id, tile] of assign(rest, surroundSlots(state, target, 2), taken, w)) around.set(id, tile);
   const mine = around.get(me.id);
   if (mine) return { kind: 'surround', x: mine.x, y: mine.y, radius: 0 };
 
