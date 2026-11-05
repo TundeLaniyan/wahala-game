@@ -7,6 +7,14 @@
  */
 import type { DeepPartial, GameConfig } from './config';
 import type {
+  CampaignHitResult,
+  CampaignHitSource,
+  EnemyAttackKind,
+  EnemyKind,
+  RaidOutcome,
+  Vitals,
+} from './campaign/types';
+import type {
   MissionId,
   MissionOutcome,
   MissionPhaseState,
@@ -353,6 +361,10 @@ export interface Player {
   teleportReadyTick: number;
   /** Manholes: set when a step onto a trapdoor began; resolved when that step completes. */
   teleportPending: { toX: number; toY: number } | null;
+  /** Campaign health (docs/CAMPAIGN_EXPANSION_PLAN.md). Absent in multiplayer: the one-hit rules apply unchanged. */
+  vitals?: Vitals;
+  /** Campaign enemy kind (durability, attacks). Absent for players and for multiplayer bots. */
+  enemyKind?: EnemyKind;
 }
 
 export interface Generator {
@@ -705,6 +717,10 @@ export interface PlayerSetup {
   team?: number;
   /** Missions / tests / balance runs: replaces the attacks the character's `FighterDef` gives. */
   attacks?: Partial<AttackLoadout>;
+  /** Campaign: this seat is an enemy of this kind (health and attacks come from src/sim/data/enemies.ts). */
+  enemyKind?: EnemyKind;
+  /** Campaign: health segments for this seat (the human: 3 or 4; enemies: from their kind). Absent = one-hit rules. */
+  maxHp?: number;
 }
 
 export interface MatchSettings {
@@ -883,6 +899,77 @@ export type SimEvent =
     }
   /** V2: a protection layer absorbed a lethal hit (Okada also emits okadaBroken). */
   | { type: 'protectionBroken'; playerId: number; layer: 'okada' | 'armour'; x: number; y: number }
+  /** Campaign: one hit resolved (damage, daze, a shield absorbing it ...). Every outcome is an event: nothing is silent. */
+  | {
+      type: 'campaignHit';
+      victimId: number;
+      byId: number | null;
+      source: CampaignHitSource;
+      result: CampaignHitResult;
+      damage: number;
+      hpAfter: number;
+      maxHp: number;
+      dazeTicks: number;
+      x: number;
+      y: number;
+    }
+  /** Campaign: an enemy or the player ran out of health. */
+  | {
+      type: 'campaignDefeated';
+      victimId: number;
+      byId: number | null;
+      source: CampaignHitSource;
+      enemyKind: EnemyKind | null;
+      x: number;
+      y: number;
+    }
+  /** Raid: marked cargo, crates and barrels take damage from blasts (see raid-sim). */
+  | {
+      type: 'cargoHit';
+      id: string;
+      x: number;
+      y: number;
+      hpAfter: number;
+      maxHp: number;
+      byId: number | null;
+    }
+  | {
+      type: 'cargoDestroyed';
+      id: string;
+      kind: 'cargo' | 'crate' | 'barrel';
+      x: number;
+      y: number;
+      marked: boolean;
+      byId: number | null;
+    }
+  | { type: 'raidDoorOpened'; id: string; x: number; y: number }
+  | { type: 'raidRoomOpened'; id: string }
+  | { type: 'raidWaveStarted'; index: number; total: number }
+  | { type: 'raidExtractionOpened'; x: number; y: number }
+  | { type: 'raidOutcome'; outcome: RaidOutcome }
+  /** A thrown object left its thrower: the cue (warnTicks of telegraph) comes BEFORE it moves. */
+  | {
+      type: 'projectileLaunched';
+      id: number;
+      ownerId: number;
+      kind: EnemyAttackKind;
+      strong: boolean;
+      fromX: number;
+      fromY: number;
+      path: number[];
+      stepTicks: number;
+      launchTick: number;
+      warnTicks: number;
+    }
+  | {
+      type: 'projectileHit';
+      id: number;
+      kind: EnemyAttackKind;
+      victimId: number | null;
+      result: CampaignHitResult | 'wall' | 'blocked' | 'expired';
+      x: number;
+      y: number;
+    }
   /** V2 City Rumble: an elimination reward was granted to the credited eliminator. */
   | { type: 'rewardGranted'; playerId: number; kind: PickupKind; kills: number }
   /** V2 respawn modes. */

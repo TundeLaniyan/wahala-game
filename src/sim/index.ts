@@ -120,3 +120,4 @@ export { canThrow, laneStep, spectatorLane, spectatorLanding, validLanding } fro
 export type { LaneTile, SpectatorView } from './systems/spectators';
 export * from './mission';
 export * from './campaign/types';
+export * from './raid/types';

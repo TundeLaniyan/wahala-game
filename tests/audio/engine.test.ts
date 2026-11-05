@@ -162,6 +162,18 @@ describe('event mapping', () => {
       'missionStarted',
       'missionOutcome',
       'missionCallout',
+      // campaign expansion placeholders: silent until the combat / raid workstreams give them cues
+      'campaignHit',
+      'campaignDefeated',
+      'projectileLaunched',
+      'projectileHit',
+      'cargoHit',
+      'cargoDestroyed',
+      'raidDoorOpened',
+      'raidRoomOpened',
+      'raidWaveStarted',
+      'raidExtractionOpened',
+      'raidOutcome',
     ]);
     // an extra human-less state variant is covered below; here players 0/1 are both "human" sandbox players
     for (const [type, e] of Object.entries(SAMPLES)) {

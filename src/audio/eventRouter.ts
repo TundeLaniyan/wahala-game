@@ -424,6 +424,18 @@ const handlers: Handlers = {
   bossDefeated: (_e, c) => sfx(c, 'win_sting', 0, 0.9),
   missionOutcome: () => undefined,
   missionCallout: () => undefined,
+  // campaign expansion: silent placeholders until the combat / raid workstreams map them to existing synthesised cues
+  campaignHit: () => undefined,
+  campaignDefeated: () => undefined,
+  projectileLaunched: () => undefined,
+  projectileHit: () => undefined,
+  cargoHit: () => undefined,
+  cargoDestroyed: () => undefined,
+  raidDoorOpened: () => undefined,
+  raidRoomOpened: () => undefined,
+  raidWaveStarted: () => undefined,
+  raidExtractionOpened: () => undefined,
+  raidOutcome: () => undefined,
   // V2 events (workstreams add their own sounds; silent until then)
   // V2. Contact abilities and the B special make the sounds of what they cause (kick, throw, power-down,
   // push / daze, vehicle warning), so their own events stay silent.
