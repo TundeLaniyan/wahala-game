@@ -140,7 +140,11 @@ describe('Oshodi section 1, end to end', () => {
     expect(screen()).toBe('campaignResult');
     const sr = ui().sectionResult!;
     expect(sr).toMatchObject({ missionId: 'oshodi.approach', kind: 'field' });
-    expect(sr.summary).toMatchObject({ firstClear: true, sectionCleared: true, unlockedSections: ['oshodi.s2'] });
+    expect(sr.summary).toMatchObject({
+      firstClear: true,
+      sectionCleared: true,
+      unlockedSections: ['oshodi.s2'],
+    });
     expect(sr.outcome).toMatchObject({ result: 'won', sectionMissionId: 'oshodi.approach', raidBonus: 1 });
     expect(ui().result).toBeNull();
     expect(useGameStore.getState().screen).toBe('title');

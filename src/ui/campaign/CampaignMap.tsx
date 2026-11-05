@@ -5,8 +5,9 @@
  * confirm). Text comes from src/campaign content; nothing is invented.
  */
 import { useState } from 'react';
-import { CAMPAIGN, DISTRICT_ORDER } from '../../campaign';
+import { CAMPAIGN, DISTRICT_ORDER, bossAvailable } from '../../campaign';
 import type { DistrictId } from '../../campaign';
+import type { MissionId } from '../../sim';
 import { commands } from '../../app/session';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
 import {
@@ -20,6 +21,7 @@ import {
 } from './model';
 import type { MapNode } from './model';
 import { Stars, useCampaignUi } from './parts';
+import { SectionList } from './SectionList';
 
 /** Coast, lagoon, the island and the Lekki strip behind the nodes (decorative only, 0..100 units). */
 function MapBackdrop({ nodes }: { nodes: MapNode[] }) {
@@ -143,6 +145,7 @@ function DistrictCard({ id, status }: { id: DistrictId; status: MapNode['status'
           ))}
         </ul>
       </div>
+      {d.boss && status !== 'locked' && <SectionList districtId={d.id as MissionId} />}
       {d.boss && status !== 'locked' && (
         <p className="cp-bossline" data-testid="district-boss">
           <small className="mn-kicker">Keeper</small>
@@ -249,7 +252,11 @@ export function CampaignMap() {
   const nodes = mapNodes(save);
   const selected = nodes.find((n) => n.id === ui.selected) ?? nodes[1]!;
   const missionSelected = selected.id !== 'ojuelegba';
-  const canOpen = started && missionSelected && selected.status !== 'locked';
+  const canOpen =
+    started &&
+    missionSelected &&
+    selected.status !== 'locked' &&
+    bossAvailable(save, selected.id as MissionId);
   const stars = totalStars(save);
   const next = nodes.find((n) => !n.hub && n.status !== 'cleared');
   const allClear = !next;

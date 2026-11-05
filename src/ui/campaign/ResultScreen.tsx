@@ -9,10 +9,12 @@ import { commands } from '../../app/session';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
 import { clock, failureText, retryHint, unlockLabel, victoryTitle } from './model';
 import { Stars, StoryLineView, useCampaignUi } from './parts';
+import { SectionResultScreen } from './SectionResultScreen';
 
 export function ResultScreen() {
   const ui = useCampaignUi();
   const result = ui?.result;
+  if (ui?.sectionResult) return <SectionResultScreen />; // a field mission or standalone raid of a section
   if (!ui || !result || !isMissionId(result.outcome.missionId)) return null;
   const { outcome, reward } = result;
   const id = outcome.missionId;

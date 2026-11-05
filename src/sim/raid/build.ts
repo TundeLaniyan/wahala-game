@@ -23,7 +23,13 @@ export function buildRaidGame(o: {
     arenaId: DEFAULT_ARENA_ID,
     players: [
       { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0 },
-      { name: 'Raid enemy', characterId: 'lekkiBoy', isBot: true, difficulty: o.difficulty ?? 'rookie', team: 1 },
+      {
+        name: 'Raid enemy',
+        characterId: 'lekkiBoy',
+        isBot: true,
+        difficulty: o.difficulty ?? 'rookie',
+        team: 1,
+      },
     ],
     settings: { game: 'raid' },
   };
