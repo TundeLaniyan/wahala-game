@@ -86,7 +86,38 @@ const PLAIN = {
   damage: 0,
 } as const;
 
+/**
+ * Campaign health and damage (decisions CC1-CC4, docs/CAMPAIGN_COMBAT.md). Only players that carry `Vitals` use it, so
+ * multiplayer never reads it. `GameConfig.campaign` is present only in campaign rulesets (mission / raid) or when a test
+ * sets it: `campaignConfig(state)` falls back to `CAMPAIGN_CONFIG`, which keeps normal matches' serialised state unchanged.
+ */
+export interface CampaignConfig {
+  /** Health segments of the human when the setup names none (field missions give 4, raids may give 3). */
+  playerMaxHp: number;
+  /** A heavy's health may be raised to this by the setup (the data says 3). */
+  heavyMaxHp: number;
+  /** Invulnerability frames after a damaging hit or an absorbed lethal event (shown as a flash). */
+  invulnTicks: number;
+  /** Segments a lethal-class event takes (after Okada and Armour have had their say), by source. 0 = never used. */
+  damage: Record<'blast' | 'vehicle' | 'hazard' | 'trap', number>;
+  /** Segments each close attack takes from a vitals-carrying victim (its daze / knockback / slow come from `skills.attacks`). */
+  playerDamage: Record<AttackKind, number>;
+  /** An enemy's close attack never takes more than this from the human (enemies are individually weaker than the player). */
+  enemyMeleeDamage: number;
+  /** When an enemy health bar is shown (`enemyHealthView`): never permanent for everyone. */
+  bar: {
+    /** Shown this long after the enemy last lost a segment. */
+    recentTicks: number;
+    /** ... while the enemy is within this many tiles (Manhattan) of the human. */
+    nearTiles: number;
+    /** ... while the human faces them from at most this many tiles away in a clear line (1 = adjacent only). */
+    aimTiles: number;
+  };
+}
+
 export interface GameConfig {
+  /** Campaign health and damage; absent in normal matches (see `CampaignConfig`). */
+  campaign?: CampaignConfig;
   match: {
     durationTicks: number;
     countdownTicks: number;
@@ -443,6 +474,21 @@ export interface GameConfig {
     escapeInputTicks: number;
   };
 }
+
+/** Campaign damage table (decision CC1): 4 segments, a blast or vehicle takes 2, a hazard or trap 1, 1 s of recovery. */
+export const CAMPAIGN_CONFIG: CampaignConfig = {
+  playerMaxHp: 4,
+  heavyMaxHp: 4,
+  invulnTicks: ticks(1),
+  damage: { blast: 2, vehicle: 2, hazard: 1, trap: 1 },
+  playerDamage: { push: 1, shove: 0, daze: 0, kick: 1, bottle: 2, sweep: 1, headbutt: 1, elbow: 1 },
+  enemyMeleeDamage: 1,
+  bar: { recentTicks: ticks(3), nearTiles: 3, aimTiles: 2 },
+};
+
+/** The campaign tuning in force (a ruleset or a test may override it; normal matches use the defaults). */
+export const campaignConfig = (config: Pick<GameConfig, 'campaign'>): CampaignConfig =>
+  config.campaign ?? CAMPAIGN_CONFIG;
 
 export const DEFAULT_CONFIG: GameConfig = {
   match: {

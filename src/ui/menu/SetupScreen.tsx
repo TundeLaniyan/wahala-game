@@ -184,33 +184,6 @@ function RumbleRules({ s, set }: { s: GameSettings; set: Set }) {
           </div>
         </Field>
       )}
-      <Field
-        label="Blast shape"
-        hint={
-          <span data-testid="blast-note">
-            {s.rumbleBlast === 'cross'
-              ? 'Experiment: City Rumble with the Classic cross, to compare.'
-              : 'Generators blast a circle; walls and crates shadow it. Diagonals are not safe.'}
-          </span>
-        }
-      >
-        <div className="mn-opts">
-          <Option
-            value="radial"
-            current={s.rumbleBlast}
-            label="Radial"
-            onPick={() => set({ rumbleBlast: 'radial' })}
-            testId="blast-radial"
-          />
-          <Option
-            value="cross"
-            current={s.rumbleBlast}
-            label="Cross"
-            onPick={() => set({ rumbleBlast: 'cross' })}
-            testId="blast-cross"
-          />
-        </div>
-      </Field>
       <p className="mn-note">
         <b>Power comes from eliminations.</b> Crates drop nothing in City Rumble: take rivals out to grow
         stronger.

@@ -162,9 +162,7 @@ describe('event mapping', () => {
       'missionStarted',
       'missionOutcome',
       'missionCallout',
-      // campaign expansion placeholders: silent until the combat / raid workstreams give them cues
-      'campaignHit',
-      'campaignDefeated',
+      // campaign expansion placeholders: silent until the raid workstreams give them cues (health has its cues, CC4)
       'projectileLaunched',
       'projectileHit',
       'cargoHit',
@@ -225,6 +223,10 @@ describe('event mapping', () => {
     expectIds(SAMPLES.bossExposed, 'ui_go');
     expectIds(SAMPLES.bossShielded, 'ui_back');
     expectIds(SAMPLES.bossDefeated, 'win_sting');
+    // campaign health (decision CC4): a wound, a glancing blow and a defeat reuse existing synthesised cues
+    expectIds(SAMPLES.campaignHit, 'push');
+    expectIds({ ...SAMPLES.campaignHit, result: 'invulnerable' } as SimEvent, 'push');
+    expectIds(SAMPLES.campaignDefeated, 'bottle_smash');
     expectIds(SAMPLES.crowdLanded, 'bottle_smash');
     expectIds(SAMPLES.crowdWarning, 'crowd_throw_whistle');
     expectIds(SAMPLES.crushLanded, 'crush_slam');
