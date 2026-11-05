@@ -13,7 +13,9 @@
  *  - a hit that `interrupts` cuts a pending attack of the victim short (a fast jab beats a slow wind-up);
  *  - STEP GRACE (decision FC1): a rival who began stepping away during the startup but has not yet visually crossed
  *    half the step (`config.skills.stepGrace`) is still hit;
- *  - NOTHING here kills: every effect is a daze, a slow or a displacement (`AttackSpec.damage` is always 0).
+ *  - NOTHING here kills a multiplayer fighter: every effect is a daze, a slow or a displacement (`AttackSpec.damage` is
+ *    always 0). Against a CAMPAIGN victim (one carrying `Vitals`, decision CC4) the same effects land through
+ *    `applyCampaignHit`, which also takes the segments of `config.campaign.playerDamage` (a Punch 1, a Bottle Strike 2 ...).
  * Everything is ticks and the match RNG is never used, so replays are identical.
  */
 import { DIRS, DIR_VEC, tileAt } from '../grid';
@@ -23,7 +25,12 @@ import type { AttackKind, AttackLoadout, Dir, GameState, Player, SimEvent, Skill
 import { Tile } from '../types';
 import { CHARACTERS } from '../data/characters';
 import { defaultAttacks } from '../data/fighters';
-import { beginStep, canPlayerEnter } from './stepping';
+import { campaignConfig } from '../config';
+import type { CampaignHitResult } from '../campaign/types';
+import { recordHit } from './attribution';
+import { applyCampaignHit } from './campaignDamage';
+import { pushLanding } from './pushLanding';
+import { beginStep } from './stepping';
 import { isActing, playersAt, teammates } from './queries';
 
 /** The fighter's original skill (their character's); kept for the menu and the HUD label. */
@@ -260,33 +267,50 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
   p.facing = dir;
   // a counter: the victim is planted or reeling (rooted by their own Kick / Bottle Strike wind-up, a miss or a Headbutt recoil)
   const countering = spec.counterDazeTicks > 0 && target.rootedUntil > state.tick;
-  if (landing) {
-    const fromX = target.x;
-    const fromY = target.y;
-    beginStep(target, landing.x, landing.y, state.config.movement.pushStepTicks * landing.tiles);
-    events.push({ type: 'playerPushed', playerId: target.id, byId: p.id, fromX, fromY });
-  }
   const daze = spec.dazeTicks + (countering ? spec.counterDazeTicks : 0);
   // an attack that is ONLY a daze never reaches an immune rival (pickTarget); a daze that rides on a bump is skipped
-  if (daze > 0 && (state.tick >= target.dazeImmuneUntil || spec.displacementTiles === 0)) {
-    target.dazedUntil = Math.max(target.dazedUntil, state.tick + daze);
-    target.dazeImmuneUntil = Math.max(target.dazeImmuneUntil, target.dazedUntil + spec.dazeImmunityTicks);
-    target.entryUntil = null; // a dazed player drops out of vehicle-entry mode
-    events.push({ type: 'playerDazed', playerId: target.id, byId: p.id });
+  const dazes = daze > 0 && (state.tick >= target.dazeImmuneUntil || spec.displacementTiles === 0);
+  let landed: CampaignHitResult | null = null; // set only for a campaign victim
+  if (target.vitals) {
+    landed = campaignMelee(
+      state,
+      p,
+      target,
+      pending.skill,
+      { dir, dazeTicks: dazes ? daze : 0, landing },
+      events,
+    );
+    if (dazes && landed !== 'invulnerable' && landed !== 'blockedArmour' && landed !== 'blockedOkada')
+      target.dazeImmuneUntil = Math.max(target.dazeImmuneUntil, target.dazedUntil + spec.dazeImmunityTicks);
+  } else {
+    if (landing) {
+      const fromX = target.x;
+      const fromY = target.y;
+      beginStep(target, landing.x, landing.y, state.config.movement.pushStepTicks * landing.tiles);
+      events.push({ type: 'playerPushed', playerId: target.id, byId: p.id, fromX, fromY });
+    }
+    if (dazes) {
+      target.dazedUntil = Math.max(target.dazedUntil, state.tick + daze);
+      target.dazeImmuneUntil = Math.max(target.dazeImmuneUntil, target.dazedUntil + spec.dazeImmunityTicks);
+      target.entryUntil = null; // a dazed player drops out of vehicle-entry mode
+      events.push({ type: 'playerDazed', playerId: target.id, byId: p.id });
+    }
   }
-  if (spec.slowTicks > 0 && state.tick >= target.slowImmuneUntil) {
+  const reached =
+    landed === null || (landed !== 'invulnerable' && landed !== 'blockedArmour' && landed !== 'blockedOkada');
+  if (reached && target.alive && spec.slowTicks > 0 && state.tick >= target.slowImmuneUntil) {
     const until = Math.max(target.slow?.until ?? 0, state.tick + spec.slowTicks);
     target.slow = { until, extraStepTicks: spec.slowExtraStepTicks };
     target.slowImmuneUntil = until + spec.slowImmunityTicks;
   }
-  if (spec.interrupts && target.attack) {
+  if (reached && spec.interrupts && target.attack) {
     target.attack = null; // a hit cuts the victim's wind-up short
     events.push({ type: 'attackInterrupted', playerId: target.id, byId: p.id });
   }
   recover(state, p, pending.skill, spec.hitRecoveryTicks);
   p.meleeLock[target.id] = state.tick + spec.targetLockoutTicks;
   if (spec.hitRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.hitRootTicks); // recoil
-  recordHit(state, target, p.id);
+  if (!target.vitals) recordHit(state, target, p.id); // a campaign victim was recorded by campaignMelee, before the hit
   events.push({ type: 'skillUsed', playerId: p.id, skill: pending.skill, targetId: target.id });
   events.push({
     type: 'attackResolved',
@@ -295,6 +319,37 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
     targetId: target.id,
     hit: true,
   });
+}
+
+/**
+ * A close attack against a campaign victim (decision CC4): the attack's segments (`config.campaign.playerDamage`; an
+ * enemy never takes more than `enemyMeleeDamage` from the human), its daze and its knockback all go through the one
+ * `applyCampaignHit`, so the player gets one `campaignHit` event saying what the hit did and why.
+ */
+function campaignMelee(
+  state: GameState,
+  p: Player,
+  target: Player,
+  kind: AttackKind,
+  effects: { dir: Dir; dazeTicks: number; landing: { tiles: number } | null },
+  events: SimEvent[],
+): CampaignHitResult {
+  const cfg = campaignConfig(state.config);
+  const table = cfg.playerDamage[kind];
+  const damage = p.enemyKind && !target.enemyKind ? Math.min(table, cfg.enemyMeleeDamage) : table;
+  recordHit(state, target, p.id); // before the hit: a defeating blow still credits (and assists) correctly
+  return applyCampaignHit(
+    state,
+    {
+      victimId: target.id,
+      byId: p.id,
+      source: p.enemyKind ? 'punch' : 'player',
+      damage,
+      dazeTicks: effects.dazeTicks,
+      knockback: effects.landing ? { dir: effects.dir, tiles: effects.landing.tiles } : null,
+    },
+    events,
+  );
 }
 
 /** The attacker's recovery: global (`skillReadyTick`) and for this attack on its own (`attackRecovery`). */
@@ -366,26 +421,4 @@ function pickTarget(
   return null;
 }
 
-/** How far (up to `max` tiles) `target` can be pushed along `v`: the last free tile and how many tiles that is. */
-function pushLanding(
-  state: GameState,
-  target: Player,
-  v: { dx: number; dy: number },
-  max: number,
-): { x: number; y: number; tiles: number } | null {
-  let out: { x: number; y: number; tiles: number } | null = null;
-  for (let k = 1; k <= max; k++) {
-    const x = target.x + v.dx * k;
-    const y = target.y + v.dy * k;
-    if (!canPlayerEnter(state, x, y)) break;
-    out = { x, y, tiles: k };
-  }
-  return out;
-}
-
-/** Remembers a melee attacker for elimination credit (pruned to the assist window). */
-export function recordHit(state: GameState, target: Player, byId: number): void {
-  const window = state.config.credit.assistWindowTicks;
-  target.recentHits = target.recentHits.filter((h) => state.tick - h.tick <= window && h.byId !== byId);
-  target.recentHits.push({ byId, tick: state.tick });
-}
+export { recordHit };

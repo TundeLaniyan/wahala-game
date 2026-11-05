@@ -4,7 +4,7 @@
  * command once (repeat presses while it launches are ignored) and waits for the 3D assets if needed.
  */
 import { useRef, useState } from 'react';
-import { ARENAS } from '../../sim';
+import { ARENAS, BLAST_RULE_BY_GAME } from '../../sim';
 import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
 import { competitorCount } from '../../app/names';
@@ -46,11 +46,9 @@ export function matchRulesText(s: GameSettings): string[] {
       'Green (you) v White: the team with most kills wins',
       s.friendlyFire ? 'Friendly fire: on' : 'Friendly fire: off',
     );
-  rules.push(
-    s.rumbleBlast === 'cross'
-      ? 'Cross blasts (experiment): the Classic plus'
-      : 'Radial blasts: a circle around the generator; walls and crates shadow it',
-  );
+  // a plain statement of the ruleset's own bomb (src/sim/modes.ts BLAST_RULE_BY_GAME), not a setting (decision CC2)
+  if (BLAST_RULE_BY_GAME[s.rumbleMode] === 'radial')
+    rules.push('Radial blasts: a circle around the generator; walls and crates shadow it');
   rules.push('Eliminations power you up (crates drop nothing)');
   return rules;
 }

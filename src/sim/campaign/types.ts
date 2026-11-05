@@ -30,6 +30,8 @@ export interface Vitals {
   /** Who dealt the last damage (null: the environment) - explains "why did I lose health". */
   lastHitBy: number | null;
   lastHitSource: CampaignHitSource | null;
+  /** Whether the last damaging hit was `strong` (a strong hit pierces invulnerability frames only after a non-strong one). */
+  lastHitStrong?: boolean;
 }
 
 export type EnemyAttackKind = 'punch' | 'bottle' | 'brick' | 'stone' | 'tool';

@@ -424,9 +424,17 @@ const handlers: Handlers = {
   bossDefeated: (_e, c) => sfx(c, 'win_sting', 0, 0.9),
   missionOutcome: () => undefined,
   missionCallout: () => undefined,
-  // campaign expansion: silent placeholders until the combat / raid workstreams map them to existing synthesised cues
-  campaignHit: () => undefined,
-  campaignDefeated: () => undefined,
+  // campaign health (decision CC4): existing synthesised cues only. A wound is a dull blow; a hit that did nothing is a
+  // soft glancing one; a daze, a shove, a broken Okada / Armour plate and the fall itself have their own events' sounds
+  campaignHit: (e, c) => {
+    const pan = panOf(c, e.x);
+    if (e.result === 'damaged') {
+      sfx(c, 'push', pan, isHuman(c, e.victimId) ? 1 : 0.85, 0.7);
+      if (isHuman(c, e.victimId)) c.buses.duck('blast');
+    } else if (e.result === 'invulnerable' && allow(c, 'campaignGlance', 0.1)) sfx(c, 'push', pan, 0.25, 1.6);
+  },
+  // the enemy (or the player) is out of health: a heavy knock under the elimination sound
+  campaignDefeated: (e, c) => sfx(c, 'bottle_smash', panOf(c, e.x), isHuman(c, e.victimId) ? 0.5 : 0.7, 0.8),
   projectileLaunched: () => undefined,
   projectileHit: () => undefined,
   cargoHit: () => undefined,

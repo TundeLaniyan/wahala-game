@@ -133,20 +133,15 @@ describe('match setup shows only what the chosen mode uses', () => {
     expect(html).not.toContain('data-testid="diff-nightmare"');
   });
 
-  it('every City Rumble ruleset offers the blast-shape experiment (radial by default); Classic does not', () => {
+  it('no ruleset offers a blast-shape control: the ruleset decides (CC2)', () => {
     for (const rumbleMode of ['survival', 'deathmatch', 'team'] as const) {
       const html = render(SetupScreen, { play: 'rumble', rumbleMode });
-      expect(html).toContain('data-testid="blast-radial"');
-      expect(html).toContain('data-testid="blast-cross"');
+      expect(html).not.toMatch(/blast-(radial|cross)|blast-note|Blast shape/);
     }
-    expect(render(SetupScreen, { play: 'classic' })).not.toContain('blast-radial');
+    expect(render(SetupScreen, { play: 'classic' })).not.toMatch(/blast-(radial|cross)|Blast shape/);
     expect(matchRulesText({ ...DEFAULT_GAME_SETTINGS, play: 'rumble' }).join(' ')).toMatch(/Radial blasts/);
-    expect(
-      matchRulesText({ ...DEFAULT_GAME_SETTINGS, play: 'rumble', rumbleBlast: 'cross' }).join(' '),
-    ).toMatch(/Cross blasts/);
-    expect(matchRules({ ...DEFAULT_GAME_SETTINGS, play: 'rumble', rumbleBlast: 'cross' }).rumbleBlast).toBe(
-      'cross',
-    );
+    expect(matchRulesText({ ...DEFAULT_GAME_SETTINGS, play: 'classic' }).join(' ')).not.toMatch(/blast/i);
+    expect('rumbleBlast' in matchRules({ ...DEFAULT_GAME_SETTINGS, play: 'rumble' })).toBe(false);
   });
 
   it('Free-for-All adds the 3 or 5 minute length; Team Deathmatch adds team splits and friendly fire', () => {
