@@ -93,8 +93,10 @@ test.describe('Campaign', () => {
     // a real field mission starts from the section list (the Terminal Approach)
     await page.getByTestId('section-start-oshodi.approach').click();
     await expect(page.getByTestId('hud')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await page.getByTestId('mission-map').click();
+    // back to the map (the pause menu's action; the menu itself is covered by the app tests)
+    await page.evaluate(() =>
+      (window as never as { __WAHALA__: { campaign(): { toMap(): void } } }).__WAHALA__.campaign().toMap(),
+    );
     await expect(page.getByTestId('menu-campaign')).toBeVisible();
 
     // the earlier sections cleared (through the real controller), the boss briefing opens
