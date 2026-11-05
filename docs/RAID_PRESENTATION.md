@@ -90,7 +90,7 @@ No new `QualityProfile` field (decision RR10): the raid layer is a handful of in
 
 ## Tests and screenshots
 
-`tests/render/raid-views.test.ts` (pure looks, the views against hand-made `RaidView` / events), `tests/input-raid-cross.test.ts` (cross, cardinal-only, gamepad snap, layout), `tests/app/raidNotices.test.ts`, `e2e/raid-render.spec.ts` (runs only when `warehouseDispatchDepot` is in the build; otherwise skipped with the reason; screenshots to `docs/screenshots/raid-render/`). Art-review pictures of the three looks on a standard board are in `docs/screenshots/raid-render/` (`look-*.jpg`).
+`tests/render/raid-views.test.ts` (pure looks, the views against hand-made `RaidView` / events), `tests/input-raid-cross.test.ts` (cross, cardinal-only, gamepad snap, layout), `tests/app/raidNotices.test.ts`, `e2e/raid-render.spec.ts` (runs only when `warehouseDispatchDepot` is in the build; otherwise skipped with the reason; screenshots to `docs/screenshots/raid-render/`). Art-review pictures of the three looks on a standard board are in `docs/screenshots/raid-render/` (`look-warehouse-desktop.jpg`, `look-yard-desktop.jpg`, `look-storeroom-phone.jpg`: the three looks on a 15 x 11 standard board, the whole board visible; the storeroom on desktop was dimmer than the others and was brightened after review, so its picture is the phone one). The raid markers themselves (cargo, belts, doors, exit, cross) have no screenshot yet: raid-sim's arena was not in the base, so `e2e/raid-render.spec.ts` was skipped.
 
 ## Still missing
 

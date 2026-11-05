@@ -25,13 +25,13 @@ import type { RaidPalette } from './raidKit';
 
 export const RAID_YARD_LOOK: ArenaLook = {
   // late afternoon through yard smoke: a low orange sun, long hard shadows, grey-brown air
-  sky: 0x8a7a68,
-  fog: { color: 0x86766a, near: 15, far: 58 },
-  sun: { color: 0xffbe84, intensity: 3.7, position: [-9, 10, 8] },
-  hemi: { sky: 0xc4ae94, ground: 0x4c3e32, intensity: 0.88 },
-  envIntensity: 0.42,
-  exposure: 1.05,
-  floorTint: 0xb5aa98,
+  sky: 0xa89480,
+  fog: { color: 0xa08c78, near: 24, far: 90 },
+  sun: { color: 0xffcc98, intensity: 5.2, position: [-8, 13, 9] },
+  hemi: { sky: 0xd8c4a8, ground: 0x6a5846, intensity: 1.25 },
+  envIntensity: 0.5,
+  exposure: 1.22,
+  floorTint: 0xd0c4b0,
   pillarTint: 0xc4baa8,
   softTint: 0xc2b4a0,
   slab: 0x625a4e,
