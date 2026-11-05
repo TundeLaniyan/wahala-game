@@ -357,6 +357,7 @@ describe('the return route and the result', () => {
 
   it('losing every life loses the mission, and an elimination spends one and respawns at the checkpoint', () => {
     const s = newField(APPROACH);
+    s.players[0]!.vitals!.hp = 1; // one segment left: the generator's blast is now lethal (campaign health)
     put(s, 0, 9, 39);
     advance(s, 1);
     const me = s.players[0]!;

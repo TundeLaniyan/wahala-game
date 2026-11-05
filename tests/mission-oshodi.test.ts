@@ -188,8 +188,29 @@ describe('Oshodi relays: jam, decay, re-arm, runners', () => {
 });
 
 describe('Oshodi strikes: telegraphed, fair, credited to the boss', () => {
+  it('a strike costs two health segments, not a life: the human survives with recovery frames (campaign health)', () => {
+    const state = newMission({ id: 'oshodi' });
+    advance(state, 1);
+    const me = state.players[0]!;
+    expect(me.vitals!.hp).toBe(me.vitals!.maxHp);
+    put(state, 0, 10, 16);
+    callStrike(ctxOf(state), {
+      kind: 'convoy',
+      tiles: areaTiles(state, 10, 16, 2),
+      source: '',
+      warnTicks: 150,
+      activeTicks: 40,
+    });
+    const events = advance(state, 200);
+    expect(me.alive).toBe(true);
+    expect(me.vitals!.hp).toBe(me.vitals!.maxHp - 2);
+    expect(of(events, 'campaignHit').some((e) => e.result === 'damaged' && e.damage === 2)).toBe(true);
+    expect(state.mission!.livesUsed).toBe(0);
+  });
+
   it('a strike the human stands in kills them after the warning, credited to the boss; the crew is spared', () => {
     const state = newMission({ id: 'oshodi' });
+    state.players[0]!.vitals!.hp = 1; // one segment left: a lethal-class hit now defeats (campaign health, docs/CAMPAIGN_COMBAT.md)
     const m = state.mission!;
     advance(state, 1); // announce
     put(state, 0, 10, 16);
@@ -256,6 +277,7 @@ describe('Oshodi strikes: telegraphed, fair, credited to the boss', () => {
 
   it('a landing waits (bounded) while the human is dazed on the strike, then lands', () => {
     const state = newMission({ id: 'oshodi' });
+    state.players[0]!.vitals!.hp = 1; // one segment left: a lethal-class hit now defeats (campaign health, docs/CAMPAIGN_COMBAT.md)
     advance(state, 1);
     put(state, 0, 10, 16);
     const strike = callStrike(ctxOf(state), {
@@ -278,6 +300,7 @@ describe('Oshodi strikes: telegraphed, fair, credited to the boss', () => {
 
   it('Armour and the Okada absorb a strike like any other lethal hit', () => {
     const state = newMission({ id: 'oshodi' });
+    state.players[0]!.vitals!.hp = 1; // one segment left: a lethal-class hit now defeats (campaign health, docs/CAMPAIGN_COMBAT.md)
     advance(state, 1);
     const me = state.players[0]!;
     me.armour = 1;

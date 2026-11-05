@@ -318,6 +318,19 @@ const missionHost: MissionHost = {
     subtitles.clear();
     controller?.stop();
   },
+  // classic raids (field door -> raid -> back to the field): the same start-of-match chores, then the controller
+  playRaid(options, meta): void {
+    void audio.unlock();
+    qualityNotifier.newMatch();
+    if (useGameStore.getState().touchCapable) void enterImmersiveMode();
+    audio.playUi('start');
+    attract?.stop();
+    subtitles.clear();
+    controller?.playRaid(options, meta);
+  },
+  resumeField: (resolve) => controller?.resumeField(resolve) ?? false,
+  current: () => controller?.state ?? null,
+  notice: (text) => controller?.notice(text, 'info'),
 };
 
 /** Everything the UI can ask the game to do. */
