@@ -4,6 +4,7 @@
  * The view shares (does not copy) the live arrays for speed: treat everything as read-only.
  */
 import type { GameConfig } from './config';
+import { enemyGroupDirective } from './campaign/tactics';
 import { directiveFor } from './mission/directives';
 import type { NpcDirective } from './mission/types';
 import type {
@@ -48,12 +49,15 @@ export interface Observation {
   readonly settings: Readonly<MatchSettings>;
   /** City Rumble Evolution: marked supply crates still standing (the marking is public, the content is not). */
   readonly supplies: readonly number[];
-  /** Campaign missions: what this crew bot's role asks of it (absent in normal matches and for the human). */
+  /** Campaign: what this bot's role or group tactic asks of it (absent in normal matches and for the human). */
   readonly directive?: NpcDirective;
 }
 
 export function observe(state: GameState, selfId: number): Observation {
-  const directive = state.mission ? directiveFor(state, selfId) : undefined;
+  // a mission role's directive first; a campaign enemy seat without one takes its group tactic (campaign/tactics.ts)
+  const directive =
+    (state.mission ? directiveFor(state, selfId) : undefined) ??
+    (state.players[selfId]?.enemyKind !== undefined ? enemyGroupDirective(state, selfId) : undefined);
   return {
     selfId,
     tick: state.tick,

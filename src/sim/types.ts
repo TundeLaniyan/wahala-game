@@ -10,7 +10,9 @@ import type {
   CampaignHitResult,
   CampaignHitSource,
   EnemyAttackKind,
+  EnemyFireState,
   EnemyKind,
+  Projectile,
   RaidOutcome,
   Vitals,
 } from './campaign/types';
@@ -630,6 +632,10 @@ export interface GameState {
    * normal match is byte-for-byte what it was before missions existed.
    */
   mission?: MissionState;
+  /** Thrown objects in flight (src/sim/systems/projectiles.ts). ABSENT in every normal match. */
+  projectiles?: Projectile[];
+  /** Enemy attack rate limits, calls and tactics data (campaign only). ABSENT in every normal match. */
+  enemyFire?: EnemyFireState;
 }
 
 export interface TrapTile {
@@ -969,6 +975,18 @@ export type SimEvent =
       result: CampaignHitResult | 'wall' | 'blocked' | 'expired';
       x: number;
       y: number;
+    }
+  /** Campaign: a lieutenant or boss called for reinforcements (the mission / raid runtime answers; nothing spawns here). */
+  | {
+      type: 'reinforcementCalled';
+      callId: number;
+      callerId: number;
+      enemyKind: EnemyKind | null;
+      team: number;
+      x: number;
+      y: number;
+      count: number;
+      untilTick: number;
     }
   /** V2 City Rumble: an elimination reward was granted to the credited eliminator. */
   | { type: 'rewardGranted'; playerId: number; kind: PickupKind; kills: number }

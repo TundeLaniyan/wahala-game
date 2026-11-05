@@ -3,6 +3,7 @@
  * tuning never touches rules code. All durations are in ticks; use `ticks(seconds)` to author them.
  */
 import type { AttackKind, CharacterId, Dir, PickupKind, StreakRewardKind, VehicleKind } from './types';
+import type { EnemyKind, ThrownKind } from './campaign/types';
 
 /**
  * V2 elimination reward: a pickup kind, or `contact` = the eliminator's generator-contact ability
@@ -85,6 +86,39 @@ const PLAIN = {
   counterDazeTicks: 0,
   damage: 0,
 } as const;
+
+/**
+ * One thrown object (docs/CAMPAIGN_ATTACKS.md). The thrower is rooted for `warnTicks` (the visible cue), the object then
+ * crosses one path tile per `stepTicks`, at most `range` tiles from the thrower.
+ */
+export interface ProjectileSpec {
+  /** Telegraph between the launch cue and the first movement (never below `enemyAttacks.minWarnTicks`). */
+  warnTicks: number;
+  /** Ticks per path tile (a human walks one tile in 10 at base speed, so every projectile is slower than a walker). */
+  stepTicks: number;
+  range: number;
+  /** Health segments taken (0 = daze / knockback only). */
+  damage: number;
+  dazeTicks: number;
+  knockbackTiles: number;
+  /** A strong projectile: a whole segment, slower, with a longer cue. */
+  strong: boolean;
+  /** The thrower may not throw anything again for this long (their own cooldown). */
+  cooldownTicks: number;
+}
+
+/** An enemy kind's close attack: the catalogue attack gives the animation and the base startup, these numbers the harm. */
+export interface EnemyMeleeSpec {
+  /** The catalogue attack whose startup, reach and animation the punch borrows (`skills.attacks`). */
+  attack: AttackKind;
+  /** Added to that attack's startup: an enemy's wind-up is slower than the player's, so a fast jab beats it. */
+  extraStartupTicks: number;
+  damage: number;
+  dazeTicks: number;
+  knockbackTiles: number;
+  /** Ticks before this enemy may start another punch (hit or miss). */
+  cooldownTicks: number;
+}
 
 export interface GameConfig {
   match: {
@@ -244,6 +278,39 @@ export interface GameConfig {
     warnTicks: number;
     firecrackerChance: number;
     bottleDazeTicks: number;
+  };
+  /** Campaign enemy attacks (decisions EA1-EA5; docs/CAMPAIGN_ATTACKS.md). */
+  enemyAttacks: {
+    /** No projectile moves sooner than this after its cue: a rival can always see it and step off the line. */
+    minWarnTicks: number;
+    /** Throws only happen at least this many tiles away (adjacent rivals are punched instead). */
+    minRange: number;
+    /** The tiles in front of a rival a thrower aims to stand at (the standoff distance of the tactics). */
+    standoffTiles: number;
+    /** Most projectiles in flight in the whole match, and per group (team). */
+    maxInFlight: number;
+    maxInFlightPerGroup: number;
+    /** A group (team) throws at most once per this many ticks: enemies never all throw together. */
+    groupGapTicks: number;
+    /** After an enemy hit's stun ends this victim cannot be hit by an enemy again for this long. */
+    victimFreeTicks: number;
+    /** Enemies only act on a rival within this many tiles (Manhattan); farther away they hold. */
+    aggroTiles: number;
+    projectiles: Record<ThrownKind, ProjectileSpec>;
+    /** Null = this kind has no punch. */
+    melee: Record<EnemyKind, EnemyMeleeSpec | null>;
+    /** Reinforcement calls (lieutenants and bosses): the runtime answers, this sim only announces. */
+    reinforce: {
+      maxCalls: Record<EnemyKind, number>;
+      count: Record<EnemyKind, number>;
+      cooldownTicks: number;
+      /** A call happens when the caller is at or below this share of its health ... */
+      belowHpShare: number;
+      /** ... or when this few of its group (itself included) are still standing. */
+      aloneAtMost: number;
+      /** How long a call stays open for the runtime and for the `reinforce` directive of nearby enemies. */
+      answerTicks: number;
+    };
   };
   hazards: {
     /** Pothole: forced stumble pause. */
@@ -663,6 +730,118 @@ export const DEFAULT_CONFIG: GameConfig = {
     warnTicks: ticks(2),
     firecrackerChance: 0.25,
     bottleDazeTicks: ticks(1.2),
+  },
+  enemyAttacks: {
+    minWarnTicks: 30,
+    minRange: 2,
+    standoffTiles: 3,
+    maxInFlight: 5,
+    maxInFlightPerGroup: 3,
+    groupGapTicks: ticks(1),
+    victimFreeTicks: ticks(1),
+    aggroTiles: 11,
+    projectiles: {
+      // common: small harm, short daze or a nudge; slower than a walking human (10 ticks per tile)
+      bottle: {
+        warnTicks: 36,
+        stepTicks: 12,
+        range: 6,
+        damage: 0,
+        dazeTicks: 36,
+        knockbackTiles: 0,
+        strong: false,
+        cooldownTicks: ticks(2.5),
+      },
+      stone: {
+        warnTicks: 36,
+        stepTicks: 12,
+        range: 6,
+        damage: 0,
+        dazeTicks: 12,
+        knockbackTiles: 1,
+        strong: false,
+        cooldownTicks: ticks(2.3),
+      },
+      brick: {
+        warnTicks: 42,
+        stepTicks: 14,
+        range: 5,
+        damage: 1,
+        dazeTicks: 24,
+        knockbackTiles: 0,
+        strong: false,
+        cooldownTicks: ticks(3.2),
+      },
+      // strong: a whole segment, nearly twice as slow, a one second cue
+      tool: {
+        warnTicks: 60,
+        stepTicks: 20,
+        range: 6,
+        damage: 1,
+        dazeTicks: 36,
+        knockbackTiles: 1,
+        strong: true,
+        cooldownTicks: ticks(4.5),
+      },
+    },
+    melee: {
+      agbero: {
+        attack: 'push',
+        extraStartupTicks: 20,
+        damage: 1,
+        dazeTicks: 24,
+        knockbackTiles: 0,
+        cooldownTicks: ticks(2.5),
+      },
+      guard: {
+        attack: 'push',
+        extraStartupTicks: 14,
+        damage: 1,
+        dazeTicks: 30,
+        knockbackTiles: 0,
+        cooldownTicks: ticks(2),
+      },
+      thrower: {
+        attack: 'shove',
+        extraStartupTicks: 12,
+        damage: 0,
+        dazeTicks: 0,
+        knockbackTiles: 2,
+        cooldownTicks: ticks(3),
+      },
+      heavy: {
+        attack: 'daze',
+        extraStartupTicks: 12,
+        damage: 1,
+        dazeTicks: 40,
+        knockbackTiles: 2,
+        cooldownTicks: ticks(3.3),
+      },
+      lieutenant: {
+        attack: 'push',
+        extraStartupTicks: 10,
+        damage: 1,
+        dazeTicks: 30,
+        knockbackTiles: 1,
+        cooldownTicks: ticks(1.8),
+      },
+      boss: {
+        attack: 'daze',
+        extraStartupTicks: 6,
+        damage: 1,
+        dazeTicks: 45,
+        knockbackTiles: 2,
+        cooldownTicks: ticks(2.5),
+      },
+    },
+    reinforce: {
+      maxCalls: { agbero: 0, guard: 0, thrower: 0, heavy: 0, lieutenant: 1, boss: 2 },
+      count: { agbero: 0, guard: 0, thrower: 0, heavy: 0, lieutenant: 2, boss: 2 },
+      cooldownTicks: ticks(20),
+      belowHpShare: 0.5,
+      aloneAtMost: 1,
+      answerTicks: ticks(8),
+    },
   },
   hazards: {
     potholeStumbleTicks: ticks(0.6),

@@ -15,10 +15,14 @@
  *   6. a Vehicle Voucher                                                                     -> one-press signature vehicle
  *   7. otherwise                                                                             -> nothing
  *
+ * A campaign ENEMY seat (`Player.enemyKind`) has its own short order (enemyActions.ts, decision EA2): an adjacent
+ * rival is punched, else a thrower with a rival in a clear cardinal line throws, else nothing. No rewards, no vehicles.
+ *
  * Holding B is the Remote Detonator (`Intent.detonate`), resolved separately in generators.ts.
  */
 import type { GameState, Player, SimEvent } from '../types';
 import { isActing } from './queries';
+import { enemyMeleeTarget, resolveEnemySpecial } from './enemyActions';
 import { useKnockdown } from './knockdown';
 import { useLocalChampion } from './localChampion';
 import { beginAttack, chooseAttack } from './skills';
@@ -30,6 +34,7 @@ export type SpecialAction =
 /** What a B tap would do right now (HUD label, tutorial, bots). Read-only. */
 export function previewSpecial(state: GameState, p: Player): SpecialAction {
   if (!isActing(state, p) || p.entryUntil !== null) return null;
+  if (p.enemyKind !== undefined) return enemyMeleeTarget(state, p) ? 'melee' : null;
   if (chooseAttack(state, p)) return 'melee';
   if (p.streakRewards.vehicleGenerator !== null && !state.vehicles.some((v) => v.ownerId === p.id))
     return 'vehicleGenerator';
@@ -41,6 +46,11 @@ export function previewSpecial(state: GameState, p: Player): SpecialAction {
 
 export function resolveSpecial(state: GameState, p: Player, events: SimEvent[]): SpecialAction {
   if (!isActing(state, p) || p.entryUntil !== null) return null;
+  if (p.enemyKind !== undefined) {
+    const done = resolveEnemySpecial(state, p, events);
+    if (done) events.push({ type: 'specialUsed', playerId: p.id, action: done });
+    return done;
+  }
   const melee = chooseAttack(state, p);
   if (melee) {
     // an adjacent attackable opponent makes B a melee press, even while it recovers: never a surprise vehicle

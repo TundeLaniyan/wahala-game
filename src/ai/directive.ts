@@ -8,7 +8,8 @@
  *   escort   stay within `radius` of the tile's occupant (the boss);
  *   support  stay within `radius` of an ally;
  *   chase    hunt the rivals (the default hunt field) with at least the directive pull;
- *   flee     keep away from the rival (the exposed boss): the hunt field is inverted and capped.
+ *   flee     keep away from the rival (the exposed boss): the hunt field is inverted and capped;
+ *   surround / standoff / hold / reinforce   (campaign enemy groups) walk to the assigned tile and stay on it.
  *
  * Only the hunt field, its weight and a leash penalty change; every step, placement and escape check is still the
  * normal bot's, so a directed bot obeys the same rules and sees the same observation as any other.
@@ -91,9 +92,14 @@ export function applyDirective(c: Ctx): void {
       huntFromTile(c, tile);
       c.huntWeight = Math.max(c.huntWeight, DIRECTIVE_PULL);
       return;
+    // block / escort / support, and the campaign enemy groups' tactics (sim/campaign/tactics.ts): go to the tile, stay on it
     case 'block':
     case 'escort':
     case 'support':
+    case 'surround':
+    case 'standoff':
+    case 'hold':
+    case 'reinforce':
       huntFromTile(c, tile);
       c.huntWeight = Math.max(c.huntWeight, DIRECTIVE_PULL);
       c.leash = { tile, radius };

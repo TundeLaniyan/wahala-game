@@ -427,8 +427,40 @@ const handlers: Handlers = {
   // campaign expansion: silent placeholders until the combat / raid workstreams map them to existing synthesised cues
   campaignHit: () => undefined,
   campaignDefeated: () => undefined,
-  projectileLaunched: () => undefined,
-  projectileHit: () => undefined,
+  // enemy projectiles (decision EA6): the throw is a soft whistle at the thrower as the cue starts; the landing is the
+  // existing smash / thud / shield sounds. Existing synthesised cues only.
+  projectileLaunched: (e, c) => {
+    if (allow(c, 'projectileCue', 0.12))
+      sfx(c, 'crowd_throw_whistle', panOf(c, e.fromX), e.strong ? 0.8 : 0.5, e.strong ? 0.8 : 1.2);
+  },
+  projectileHit: (e, c) => {
+    const pan = panOf(c, e.x);
+    switch (e.result) {
+      case 'damaged':
+      case 'dazed':
+      case 'defeated':
+        sfx(c, e.kind === 'bottle' ? 'bottle_smash' : 'gen_drop', pan, e.kind === 'tool' ? 1 : 0.8);
+        if (e.kind !== 'bottle') sfx(c, 'daze', pan, 0.5, 1.2, 0.03);
+        break;
+      case 'blockedOkada':
+        sfx(c, 'okada_break', pan, 0.8);
+        break;
+      case 'blockedArmour':
+        sfx(c, 'gen_drop', pan, 0.9, 1.6);
+        break;
+      case 'wall':
+        if (allow(c, 'projectileWall', 0.1))
+          sfx(c, e.kind === 'bottle' ? 'bottle_smash' : 'gen_drop', pan, 0.35, 1.3);
+        break;
+      default: // blocked by an ally, dodged and flown out, expired, inside the free window: nothing lands
+        break;
+    }
+  },
+  // a lieutenant / boss calls for help: the warning cue and a gasp (the runtime answers)
+  reinforcementCalled: (e, c) => {
+    sfx(c, 'crush_warning', panOf(c, e.x), 0.7);
+    react(c, { kind: 'gasp', strength: 0.5, chance: 0.6, delay: 0.2 });
+  },
   cargoHit: () => undefined,
   cargoDestroyed: () => undefined,
   raidDoorOpened: () => undefined,

@@ -23,6 +23,7 @@ import type { AttackKind, AttackLoadout, Dir, GameState, Player, SimEvent, Skill
 import { Tile } from '../types';
 import { CHARACTERS } from '../data/characters';
 import { defaultAttacks } from '../data/fighters';
+import { enemyMeleeHit } from './enemyActions';
 import { beginStep, canPlayerEnter } from './stepping';
 import { isActing, playersAt, teammates } from './queries';
 
@@ -248,6 +249,24 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
   const found = p.alive && isActing(state, p) ? pickTarget(state, p, pending, spec) : null;
   if (!found) return whiff(state, p, spec, pending.skill, events);
   const { target, dir } = found;
+
+  // a campaign enemy's punch on a player with campaign health: the harm is campaign damage (enemyActions.ts)
+  if (p.enemyKind !== undefined && target.vitals !== undefined) {
+    p.facing = dir;
+    enemyMeleeHit(state, p, target, dir, events);
+    recover(state, p, pending.skill, spec.hitRecoveryTicks);
+    p.meleeLock[target.id] = state.tick + spec.targetLockoutTicks;
+    recordHit(state, target, p.id);
+    events.push({ type: 'skillUsed', playerId: p.id, skill: pending.skill, targetId: target.id });
+    events.push({
+      type: 'attackResolved',
+      playerId: p.id,
+      skill: pending.skill,
+      targetId: target.id,
+      hit: true,
+    });
+    return;
+  }
 
   // displacement: a rival who cannot be moved at all makes a push-only attack a whiff (a blocked Shove / Kick)
   const pushOnly = spec.dazeTicks === 0 && spec.slowTicks === 0;

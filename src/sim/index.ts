@@ -121,3 +121,17 @@ export type { LaneTile, SpectatorView } from './systems/spectators';
 export * from './mission';
 export * from './campaign/types';
 export * from './raid/types';
+// campaign enemy attacks: projectiles, punches, group tactics (docs/CAMPAIGN_ATTACKS.md)
+export { chooseThrow, enemyMeleeTarget, throwReach, updateEnemyCalls } from './systems/enemyActions';
+export type { ThrowChoice } from './systems/enemyActions';
+export {
+  arrivalTick,
+  enemyFireOf,
+  launchProjectile,
+  sameSide,
+  throwPath,
+  updateProjectiles,
+} from './systems/projectiles';
+export { enemyGroupDirective, findChokepoint, standoffSlots, surroundSlots } from './campaign/tactics';
+export { ENEMY_ATTACK_SETS, THROWN_KINDS, thrownKindFor } from './data/enemyAttacks';
+export type { EnemyAttackSet } from './data/enemyAttacks';

@@ -175,8 +175,22 @@ export interface NpcDirective {
    * guard: stay within `radius` of (x, y) and fight what comes in; block: stand on the tile; chase: hunt the rival
    * (the AI picks its own target); run: go to the tile (a restock / objective tile); escort: stay with the tile's
    * occupant (the boss); support: stay with an ally; flee: keep away from the human (x, y is the human's tile).
+   * Campaign enemy groups (src/sim/campaign/tactics.ts): surround: take this tile next to the target (each enemy of
+   * the group gets a different one); standoff: take this tile in a clear cardinal line to the target, 2+ tiles away,
+   * to throw from; hold: stay put (nobody in sight); reinforce: go to the caller's tile (a call is open).
    */
-  kind: 'guard' | 'block' | 'chase' | 'run' | 'escort' | 'support' | 'flee';
+  kind:
+    | 'guard'
+    | 'block'
+    | 'chase'
+    | 'run'
+    | 'escort'
+    | 'support'
+    | 'flee'
+    | 'surround'
+    | 'standoff'
+    | 'hold'
+    | 'reinforce';
   x: number;
   y: number;
   radius?: number;

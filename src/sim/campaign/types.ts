@@ -70,6 +70,54 @@ export interface Projectile {
   /** Index of the tile it has reached; the projectile is removed when it hits, is blocked or the path ends. */
   index: number;
   strong: boolean;
+  /**
+   * Ticks of telegraph between the launch (the cue) and the first movement. The projectile reaches path tile `i` at
+   * `launchTick + warnTicks + (i + 1) * stepTicks`. Absent = 0 (a projectile built by hand in a test).
+   */
+  warnTicks?: number;
+  /** Direction of flight (the knockback direction of a hit). */
+  dir?: Dir;
+}
+
+/** The four thrown kinds ('punch' is melee). */
+export type ThrownKind = Exclude<EnemyAttackKind, 'punch'>;
+
+/**
+ * Enemy attack bookkeeping (src/sim/systems/enemyActions.ts, projectiles.ts). ABSENT in every normal match; created on
+ * the first enemy throw / call. Plain JSON, ticks only.
+ */
+export interface EnemyFireState {
+  /** Next tick each enemy may throw again (per-enemy cooldown), by player id. */
+  nextThrowTick: Record<number, number>;
+  /** Next tick each enemy may start a punch again, by player id. */
+  nextPunchTick: Record<number, number>;
+  /** Throws made so far by each enemy (picks the thrown kind in a fixed rotation: no RNG). */
+  throwCount: Record<number, number>;
+  /** Next tick any enemy of a group (team id) may throw: the group's rate limit. */
+  groupNextThrowTick: Record<number, number>;
+  /** No enemy hit lands on this victim before this tick (stun + free window): movement is never impossible. */
+  victimSafeUntil: Record<number, number>;
+  /** Reinforcement calls made so far by each caller, and the next tick it may call again. */
+  callsMade: Record<number, number>;
+  nextCallTick: Record<number, number>;
+  /** Calls still waiting to be answered (the mission / raid runtime answers them; they lapse at `untilTick`). */
+  calls: ReinforcementCall[];
+  /** Tile indices a runtime marks as route chokepoints for `block` tactics (optional, set by the field / raid runtime). */
+  chokepoints?: number[];
+}
+
+/** A lieutenant or boss asking for help. The runtime decides what answers it; this sim never spawns players. */
+export interface ReinforcementCall {
+  id: number;
+  callerId: number;
+  /** Team (group) id of the caller; reinforcements join this group. */
+  team: number;
+  x: number;
+  y: number;
+  /** How many fighters the caller asks for (config). */
+  count: number;
+  tick: number;
+  untilTick: number;
 }
 
 // ---------------------------------------------------------------- field <-> raid transition (sim-level, no UI)

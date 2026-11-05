@@ -168,7 +168,14 @@ export function activeGenerators(c: Ctx): number {
 
 export function canPlaceNow(c: Ctx): boolean {
   const { me } = c.world;
-  return me.alive && me.carrying === null && me.entryUntil === null && activeGenerators(c) < me.capacity;
+  // campaign enemies never use the generator economy (the sim ignores their place intent as well)
+  return (
+    me.alive &&
+    me.enemyKind === undefined &&
+    me.carrying === null &&
+    me.entryUntil === null &&
+    activeGenerators(c) < me.capacity
+  );
 }
 
 const geo: BlastGeometry = {

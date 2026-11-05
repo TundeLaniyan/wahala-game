@@ -16,6 +16,7 @@ export function canPlaceGeneratorAt(state: GameState, x: number, y: number): boo
 
 export function tryPlaceGenerator(state: GameState, p: Player, events: SimEvent[]): Generator | null {
   if (!isActing(state, p) || p.entryUntil !== null || p.carrying !== null) return null;
+  if (p.enemyKind !== undefined) return null; // campaign enemies never use the generator economy (decision EA2)
   if (activeGeneratorCount(state, p.id) >= p.capacity) return null;
   if (!canPlaceGeneratorAt(state, p.x, p.y)) return null;
   // decision AS3: a short interval between generators, so a fast mount cannot lay a continuous trail (QUICK HANDS lifts it)

@@ -39,6 +39,8 @@ import { updateKnockdowns } from './systems/knockdown';
 import { updateLocalChampion } from './systems/localChampion';
 import { grantStreakRewards, quickHandsPlacement, updateStreaks } from './systems/streaks';
 import { missionAfterEliminations, updateMission } from './mission/runtime';
+import { updateEnemyCalls } from './systems/enemyActions';
+import { updateProjectiles } from './systems/projectiles';
 
 export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   const intents: Intents = suddenDeathHoldsInput(state) ? {} : rawIntents; // the SUDDEN DEATH title card
@@ -68,6 +70,8 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   applyIntents(state, intents, events);
   updateMovement(state, intents, events);
   updateAttacks(state, events);
+  updateProjectiles(state, events); // campaign enemies' thrown objects (absent in a normal match)
+  updateEnemyCalls(state, events);
   updateSpectators(state, intents, events);
   updateFloorHazards(state, events);
   armTeleports(state);

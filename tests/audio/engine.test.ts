@@ -165,8 +165,6 @@ describe('event mapping', () => {
       // campaign expansion placeholders: silent until the combat / raid workstreams give them cues
       'campaignHit',
       'campaignDefeated',
-      'projectileLaunched',
-      'projectileHit',
       'cargoHit',
       'cargoDestroyed',
       'raidDoorOpened',
@@ -225,6 +223,12 @@ describe('event mapping', () => {
     expectIds(SAMPLES.bossExposed, 'ui_go');
     expectIds(SAMPLES.bossShielded, 'ui_back');
     expectIds(SAMPLES.bossDefeated, 'win_sting');
+    // enemy projectiles: the throw cue, the smash on a rival, a thud on a wall, silence when nothing lands
+    expectIds(SAMPLES.projectileLaunched, 'crowd_throw_whistle');
+    expectIds(SAMPLES.projectileHit, 'bottle_smash');
+    expectIds({ ...SAMPLES.projectileHit, kind: 'brick' } as SimEvent, 'gen_drop');
+    expectIds({ ...SAMPLES.projectileHit, result: 'blockedOkada' } as SimEvent, 'okada_break');
+    expectIds(SAMPLES.reinforcementCalled, 'crush_warning');
     expectIds(SAMPLES.crowdLanded, 'bottle_smash');
     expectIds(SAMPLES.crowdWarning, 'crowd_throw_whistle');
     expectIds(SAMPLES.crushLanded, 'crush_slam');
