@@ -13,6 +13,7 @@ export const OBJECTIVE_LABEL: Readonly<Record<ObjectiveKind, string>> = {
   evidenceRun: 'COLLECT AND DELIVER THE LEDGERS',
   contingencyGrid: 'SWITCH THE SYSTEMS OFF IN ORDER',
   dispatchWindows: 'HIT THE SWITCHES IN THE RAIL WINDOWS',
+  fieldRoute: 'FOLLOW THE ROUTE',
 };
 
 export const WARNING_LABEL: Readonly<Record<MissionWarningView['kind'], string>> = {

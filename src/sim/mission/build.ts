@@ -3,10 +3,12 @@
  * config layer a mission adds. `createGame` calls `missionConfigLayer` while it builds the state and
  * `createMissionState` (state.ts) once the board exists; the campaign calls `buildMissionGame`.
  */
+import { ticks } from '../config';
 import type { DeepPartial, GameConfig } from '../config';
 import { DIFFICULTIES } from '../types';
 import type { CharacterId, Difficulty, GameOptions, PlayerSetup } from '../types';
 import { MISSION_DEFS, MISSION_SOFT_DENSITY } from './defs';
+import { getFieldMission } from './fieldDefs';
 import type { CrewDef, MissionDef } from './defs';
 import { activeModifiers, resolveTuning } from './tuning';
 import type { MissionSpec } from './types';
@@ -25,6 +27,13 @@ export function bossDifficulty(spec: MissionSpec): Difficulty {
 
 /** The config a mission layers over the arena and the ruleset: the clock and a lighter crate field. */
 export function missionConfigLayer(spec: MissionSpec): DeepPartial<GameConfig> {
+  if (spec.fieldId) {
+    const field = getFieldMission(spec.fieldId);
+    return {
+      match: { durationTicks: ticks(spec.timeLimitSec ?? field.timeLimitSec) },
+      arena: { softDensity: MISSION_SOFT_DENSITY },
+    };
+  }
   const def = MISSION_DEFS[spec.id];
   return {
     match: { durationTicks: resolveTuning(def, spec).timeLimitTicks },
@@ -42,8 +51,28 @@ export function buildMissionGame(o: {
   seed: number;
 }): GameOptions {
   const { spec } = o;
-  const def = MISSION_DEFS[spec.id];
   const crewLevel = spec.difficulty ?? 'rookie';
+  if (spec.fieldId) {
+    const field = getFieldMission(spec.fieldId);
+    const players: PlayerSetup[] = [
+      { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0 },
+      ...field.enemies.map((e, i): PlayerSetup => ({
+        name: e.name,
+        characterId: (['streetBaller', 'lekkiBoy', 'campusQueen'] as const)[(i + 1) % 3]!,
+        isBot: true,
+        difficulty: crewLevel,
+        team: 1,
+      })),
+    ];
+    return {
+      seed: o.seed,
+      arenaId: MISSION_DEFS[field.districtId].arenaId,
+      players,
+      settings: { game: 'mission' },
+      mission: spec,
+    };
+  }
+  const def = MISSION_DEFS[spec.id];
   const players: PlayerSetup[] = [
     { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0 },
     {

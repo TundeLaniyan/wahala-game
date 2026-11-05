@@ -10,6 +10,7 @@ import { NO_TEAM, Tile } from './types';
 import { assignTeams, modeConfig, modeShrinks } from './modes';
 import { missionConfigLayer } from './mission/build';
 import { getMissionArenaId } from './mission/defs';
+import { createFieldMissionState } from './mission/fieldState';
 import { createMissionState } from './mission/state';
 import type {
   CrushState,
@@ -185,7 +186,10 @@ export function createGame(options: GameOptions): GameState {
   state.endgameTraps = createEndgameTraps(state, arena);
   if (settings.crowdThrows) state.crowd = { nextThrowTick: config.crowd.firstThrowTicks, throws: [] };
   state.stage = createStage(state, arena);
-  if (options.mission) state.mission = createMissionState(state, arena, options.mission);
+  if (options.mission)
+    state.mission = options.mission.fieldId
+      ? createFieldMissionState(state, arena, options.mission)
+      : createMissionState(state, arena, options.mission);
   return state;
 }
 

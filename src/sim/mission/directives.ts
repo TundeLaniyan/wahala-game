@@ -17,6 +17,7 @@ import { tileIndex } from '../grid';
 import { Tile } from '../types';
 import type { GameState } from '../types';
 import { makeCtx } from './ctx';
+import { fieldDirective } from './field';
 import { OBJECTIVES } from './objectives';
 import { PRESS_ID } from './objectives/evidence';
 import type { MissionSeat, NpcDirective } from './types';
@@ -29,6 +30,7 @@ export function directiveFor(state: GameState, id: number): NpcDirective | undef
   const seat = m?.seats[id];
   const p = state.players[id];
   if (!m || !seat || !p || !p.alive || seat.role === 'player' || m.outcome) return undefined;
+  if (m.field) return fieldDirective(state, id);
   const boss = state.players[m.bossId]!;
   const human = state.players[0]!;
   const post = seat.post ?? { x: p.x, y: p.y };
