@@ -8,23 +8,33 @@
  * `browserStore()` in the app), the mission host (the MatchController), the mission-game builder and clocks.
  */
 import {
+  CAMPAIGN,
   CAMPAIGN_SAVE_KEY,
   applyMissionResult,
+  applyRaidResult,
+  applySectionResult,
   availableModifiers,
+  bossAvailable,
+  canPlayMission,
   clearSave,
   completeCampaign,
   createSave,
   districtStatus,
   finaleAvailable,
+  getSectionMission,
   loadSave,
   markIntroSeen,
   markPrologueSeen,
+  missionByRef,
   nextDistrict,
+  nextMission,
   persistSave,
+  sectionOfMission,
   setLoadout,
 } from '../campaign';
-import type { CampaignSave, DistrictId, KeyValueStore } from '../campaign';
-import { MISSION_IDS, buildMissionGame } from '../sim';
+import type { CampaignSave, DistrictId, KeyValueStore, SectionMissionDef } from '../campaign';
+import { MISSION_IDS, buildMissionGame, resolveRaid } from '../sim';
+import { buildRaidGame } from '../sim/raid/build';
 import type {
   CharacterId,
   Difficulty,
@@ -34,9 +44,14 @@ import type {
   MissionModifierId,
   MissionOutcome,
   MissionSpec,
+  RaidId,
+  RaidOutcome,
+  RaidRequest,
+  SimEvent,
 } from '../sim';
 import { defaultDistrict, freshCampaignUi } from './campaignState';
 import type { CampaignUi, RewardSummary } from './campaignState';
+import { raidAbandoned } from './raidOutcome';
 import { currentScreen, menuAt, openScreen, replaceScreen } from './menu';
 import type { MenuScreen } from './menu';
 import type { MissionHost } from './ports';
@@ -57,6 +72,22 @@ export interface CampaignDeps {
   buildMission?(args: { spec: MissionSpec; humanCharacter: CharacterId; seed: number }): GameOptions;
   /** The fighter a brand-new campaign starts with (the menu's current pick); read only. */
   startingFighter?(): CharacterId;
+  /** The raid-game builder (raid-sim's `buildRaidGame`; tests inject a fake). */
+  buildRaid?(args: {
+    raidId: RaidId;
+    humanCharacter: CharacterId;
+    seed: number;
+    hp?: number;
+    lives?: number;
+    difficulty?: Difficulty;
+  }): GameOptions;
+}
+
+/** The raid in play: the door request it answers (null: a standalone section raid) and the section mission it belongs to. */
+interface RaidContext {
+  request: RaidRequest | null;
+  raidId: RaidId;
+  missionId: string | null;
 }
 
 export const isMissionId = (id: string): id is MissionId => (MISSION_IDS as readonly string[]).includes(id);
@@ -85,7 +116,31 @@ export function outcomeFromMatch(
   };
 }
 
+/** A short HUD line when a raid hands the player back to the field map. */
+export function raidNotice(outcome: RaidOutcome): string {
+  if (outcome.result === 'completed') return 'RAID DONE: BACK ON THE MAP';
+  if (outcome.result === 'failed') return 'RAID FAILED: THE DOOR IS OPEN, TRY AGAIN';
+  return 'LEFT THE RAID: THE DOOR IS OPEN';
+}
+
+/** A section field mission that ended without the sim reporting an outcome (the same safety net as the boss missions'). */
+export function sectionOutcomeFromMatch(
+  state: GameState,
+  def: SectionMissionDef,
+  districtId: MissionId,
+): MissionOutcome {
+  return {
+    ...outcomeFromMatch(state, districtId, []),
+    sectionMissionId: def.missionRef,
+    phasesCleared: 0,
+    defeat: null,
+  };
+}
+
 export class CampaignController {
+  /** The raid being played (door or standalone); null outside raids. */
+  private raidCtx: RaidContext | null = null;
+
   constructor(private readonly deps: CampaignDeps) {}
 
   // ------------------------------------------------------------------ state access
@@ -164,9 +219,11 @@ export class CampaignController {
 
   // ------------------------------------------------------------------ map and story
 
-  /** Opens the campaign map (Home -> Campaign). */
+  /** Opens the campaign map (Home -> Campaign), on the district of the next available section. */
   open(): void {
-    this.need();
+    const ui = this.need();
+    const next = nextMission(ui.save);
+    if (next && next.districtId !== ui.selected) this.update({ selected: next.districtId });
     patch({ menu: openScreen(useGameStore.getState().menu, 'campaign') });
   }
 
@@ -232,6 +289,14 @@ export class CampaignController {
       this.selectDistrict(id);
       return;
     }
+    if (!bossAvailable(ui.save, id)) {
+      // the boss is playable only after the district's earlier sections are cleared
+      this.update({
+        selected: id,
+        notice: `Clear the earlier sections of ${CAMPAIGN.districts[id].name} first.`,
+      });
+      return;
+    }
     const allowed = modifier && availableModifiers(ui.save, id).includes(modifier) ? modifier : null;
     this.update({ selected: id, modifier: allowed, notice: null });
     this.setMenu(['campaign', 'briefing']);
@@ -245,7 +310,14 @@ export class CampaignController {
       else this.playStory('finale');
       return;
     }
-    this.beginBriefing(defaultDistrict(ui.save));
+    const next = nextMission(ui.save);
+    const def = next ? getSectionMission(next.missionId) : undefined;
+    if (next && def && def.format !== 'boss') {
+      this.update({ selected: next.districtId });
+      this.startSectionMission(def.id);
+      return;
+    }
+    this.beginBriefing(next?.districtId ?? defaultDistrict(ui.save));
   }
 
   // ------------------------------------------------------------------ briefing
@@ -292,6 +364,10 @@ export class CampaignController {
   startMission(id: DistrictId, modifier: MissionModifierId | null = null): boolean {
     const ui = this.need();
     if (!isMissionId(id) || districtStatus(ui.save, id) === 'locked') return false;
+    if (!bossAvailable(ui.save, id)) {
+      this.update({ notice: `Clear the earlier sections of ${CAMPAIGN.districts[id].name} first.` });
+      return false;
+    }
     const modifiers = modifier && availableModifiers(ui.save, id).includes(modifier) ? [modifier] : [];
     const build = this.deps.buildMission ?? buildMissionGame;
     try {
@@ -305,6 +381,7 @@ export class CampaignController {
         selected: id,
         modifier,
         result: null,
+        sectionResult: null,
         notice: null,
       });
       this.deps.host.startMission(options, {
@@ -329,6 +406,7 @@ export class CampaignController {
    * tests (and the match end hook) can finish a mission with an outcome.
    */
   finishMission(outcome: MissionOutcome): void {
+    if (outcome.sectionMissionId) return this.finishSection(outcome);
     const ui = this.need();
     const summary = applyMissionResult(ui.save, outcome, this.deps.now());
     const reward: RewardSummary = {
@@ -345,6 +423,7 @@ export class CampaignController {
       selected: isMissionId(outcome.missionId) ? outcome.missionId : ui.selected,
       modifier: null,
       result: { outcome, reward },
+      sectionResult: null,
       lastReward: paid ? reward : ui.lastReward,
     });
     this.setMenu(['campaign', 'campaignResult']);
@@ -353,6 +432,13 @@ export class CampaignController {
   /** Retry the mission just played (result screen or the pause menu): same modifiers, a fresh seed. */
   retry(): void {
     const ui = this.need();
+    const section = ui.active?.sectionMissionId ?? ui.sectionResult?.missionId;
+    if (section) {
+      this.deps.host.stop();
+      this.raidCtx = null;
+      this.startSectionMission(section);
+      return;
+    }
     const id = ui.active?.missionId ?? ui.result?.outcome.missionId ?? ui.selected;
     const modifiers = ui.active?.modifiers ?? ui.result?.outcome.modifiers ?? [];
     this.deps.host.stop();
@@ -362,8 +448,9 @@ export class CampaignController {
   /** Back to the campaign map from the pause menu or a result: the save is kept as it is. */
   toMap(): void {
     if (this.ui?.active) this.deps.host.stop();
+    this.raidCtx = null;
     this.setMenu(['campaign']); // first: a result screen must never show without its result
-    this.update({ active: null, result: null });
+    this.update({ active: null, result: null, sectionResult: null });
   }
 
   /** Result screen: the next district's briefing (the one this win opened, or the next in order). */
@@ -371,13 +458,251 @@ export class CampaignController {
     const ui = this.need();
     const done = ui.result?.outcome.missionId ?? ui.selected;
     const next = ui.result?.reward.unlockedDistricts[0] ?? nextDistrict(done);
-    if (next && isMissionId(next) && districtStatus(ui.save, next) !== 'locked') this.beginBriefing(next);
-    else this.setMenu(['campaign']);
-    this.update({ result: null });
+    if (next && isMissionId(next) && districtStatus(ui.save, next) !== 'locked') {
+      // the new district opens on its first section; the boss briefing only once the sections before it are cleared
+      if (bossAvailable(ui.save, next)) this.beginBriefing(next);
+      else {
+        this.setMenu(['campaign']);
+        this.update({ selected: next });
+      }
+    } else this.setMenu(['campaign']);
+    this.update({ result: null, sectionResult: null });
   }
 
   /** The match was left some other way (Main menu): drop the running-mission marker. */
   leave(): void {
+    this.raidCtx = null;
     if (this.ui?.active) this.update({ active: null });
+  }
+
+  // ------------------------------------------------------------------ section missions (docs/CAMPAIGN_SECTIONS.md)
+
+  /**
+   * Starts a section mission from the map: a FIELD mission (a district mission with doors) or a standalone RAID. The boss
+   * section goes through the briefing instead. False (with a notice) when it is locked or cannot start.
+   */
+  startSectionMission(missionId: string): boolean {
+    const ui = this.need();
+    const def = getSectionMission(missionId);
+    const sec = sectionOfMission(missionId);
+    if (!def || !sec) return false;
+    if (def.format === 'boss') {
+      this.beginBriefing(sec.districtId);
+      return false;
+    }
+    if (!canPlayMission(ui.save, missionId)) {
+      this.update({ notice: 'Clear the earlier sections first.' });
+      return false;
+    }
+    this.raidCtx = null;
+    return def.format === 'field'
+      ? this.startField(def, sec.districtId)
+      : this.startStandaloneRaid(def, sec.districtId);
+  }
+
+  private startField(def: SectionMissionDef, districtId: MissionId): boolean {
+    const ui = this.need();
+    const build = this.deps.buildMission ?? buildMissionGame;
+    try {
+      const options = build({
+        spec: {
+          id: districtId,
+          fieldId: def.missionRef,
+          difficulty: ui.save.difficulty,
+          lives: MISSION_LIVES,
+        },
+        humanCharacter: ui.save.character,
+        seed: this.deps.seed(),
+      });
+      this.update({
+        active: { missionId: districtId, modifiers: [], sectionMissionId: def.id },
+        selected: districtId,
+        modifier: null,
+        result: null,
+        sectionResult: null,
+        notice: null,
+      });
+      this.deps.host.startMission(options, {
+        missionId: districtId,
+        difficulty: ui.save.difficulty,
+        onEnd: (outcome, state) =>
+          this.finishMission(outcome ?? sectionOutcomeFromMatch(state, def, districtId)),
+        onRaid: (request, state) => this.enterRaid(request, state),
+      });
+      return true;
+    } catch (error) {
+      this.update({
+        active: null,
+        notice: `This mission could not start (${error instanceof Error ? error.message : 'unknown error'}).`,
+      });
+      return false;
+    }
+  }
+
+  private startStandaloneRaid(def: SectionMissionDef, districtId: MissionId): boolean {
+    const ui = this.need();
+    const raidId = def.missionRef as RaidId;
+    this.raidCtx = { request: null, raidId, missionId: def.id };
+    if (!this.playRaid(this.raidCtx, undefined)) {
+      this.raidCtx = null;
+      return false;
+    }
+    this.update({
+      active: {
+        missionId: districtId,
+        modifiers: [],
+        sectionMissionId: def.id,
+        raid: { doorId: null, raidId },
+      },
+      selected: districtId,
+      modifier: null,
+      result: null,
+      sectionResult: null,
+      notice: null,
+    });
+    void ui;
+    return true;
+  }
+
+  /** Builds the raid game for `ctx` and hands it to the host (a fresh seed each time: Retry raid). */
+  private playRaid(ctx: RaidContext, hp: number | undefined): boolean {
+    const ui = this.need();
+    const host = this.deps.host;
+    if (!host.playRaid) {
+      this.update({ notice: 'Raids are not available in this build.' });
+      return false;
+    }
+    try {
+      const options = (this.deps.buildRaid ?? buildRaidGame)({
+        raidId: ctx.raidId,
+        humanCharacter: ui.save.character,
+        seed: this.deps.seed(),
+        ...(hp !== undefined ? { hp } : {}),
+        difficulty: ui.save.difficulty,
+      });
+      host.playRaid(options, {
+        raidId: ctx.raidId,
+        difficulty: ui.save.difficulty,
+        onEnd: (outcome) => this.raidEnded(ctx, outcome),
+      });
+      return true;
+    } catch (error) {
+      this.update({
+        notice: `This raid could not start (${error instanceof Error ? error.message : 'unknown error'}).`,
+      });
+      return false;
+    }
+  }
+
+  /** A door of the field mission raised a request: the field stays paused underneath and the raid is played. */
+  private enterRaid(request: RaidRequest, state: GameState): void {
+    const ui = this.need();
+    const ctx: RaidContext = {
+      request,
+      raidId: request.raidId,
+      missionId: ui.active?.sectionMissionId ?? null,
+    };
+    this.raidCtx = ctx;
+    if (!this.playRaid(ctx, state.players[0]?.vitals?.hp)) {
+      // the raid cannot start: answer the door as left, so the field mission goes on (and the notice says why)
+      this.answerDoor(ctx, raidAbandoned(null, request.raidId));
+      return;
+    }
+    if (ui.active)
+      this.update({ active: { ...ui.active, raid: { doorId: request.doorId, raidId: request.raidId } } });
+  }
+
+  private raidEnded(ctx: RaidContext, outcome: RaidOutcome): void {
+    if (ctx.request) this.answerDoor(ctx, outcome);
+    else this.finishRaidMission(ctx.missionId, outcome);
+  }
+
+  /** Raid -> field: the field mission comes back, its door is answered (`resolveRaid`) and the player is on the return tile. */
+  private answerDoor(ctx: RaidContext, outcome: RaidOutcome): void {
+    const request = ctx.request!;
+    const host = this.deps.host;
+    this.raidCtx = null;
+    const resumed =
+      host.resumeField?.((field) => {
+        const events: SimEvent[] = [];
+        resolveRaid(field, request.doorId, outcome, events);
+        return events;
+      }) ?? false;
+    const ui = this.need();
+    if (ui.active) {
+      const { raid: _raid, ...rest } = ui.active;
+      void _raid;
+      this.update({ active: rest });
+    }
+    if (resumed) host.notice?.(raidNotice(outcome));
+    else this.toMap(); // no field mission underneath (it was left): back to the map
+  }
+
+  /** Pause menu, inside a raid: start the same raid again (the field mission stays paused underneath). */
+  retryRaid(): void {
+    const ctx = this.raidCtx;
+    if (!ctx) return;
+    const hp = this.deps.host.current?.()?.players[0]?.vitals?.hp;
+    this.playRaid(ctx, hp);
+  }
+
+  /** Pause menu, inside a raid: leave it. A door raid returns to the field (the door stays open); a standalone raid to the map. */
+  leaveRaid(): void {
+    const ctx = this.raidCtx;
+    if (!ctx) return;
+    const outcome = raidAbandoned(this.deps.host.current?.() ?? null, ctx.raidId);
+    if (ctx.request) this.answerDoor(ctx, outcome);
+    else this.toMap();
+  }
+
+  /** A section field mission ended: the result is applied, saved and shown (the next section opens). */
+  private finishSection(outcome: MissionOutcome): void {
+    const ui = this.need();
+    const summary = applySectionResult(ui.save, outcome, this.deps.now());
+    const def = outcome.sectionMissionId ? missionByRef('field', outcome.sectionMissionId) : undefined;
+    this.deps.host.stop();
+    this.raidCtx = null;
+    this.commit(summary.save, {
+      active: null,
+      selected: isMissionId(outcome.missionId) ? outcome.missionId : ui.selected,
+      modifier: null,
+      result: null,
+      sectionResult: {
+        missionId: summary.missionId ?? def?.id ?? outcome.sectionMissionId ?? '',
+        kind: 'field',
+        outcome,
+        summary,
+      },
+    });
+    this.setMenu(['campaign', 'campaignResult']);
+  }
+
+  /** A standalone section raid ended (public, like `finishMission`, so tests can finish one with an outcome). */
+  finishRaidMission(missionId: string | null, outcome: RaidOutcome): void {
+    const ui = this.need();
+    const summary = missionId
+      ? applyRaidResult(ui.save, missionId, outcome, this.deps.now())
+      : {
+          save: ui.save,
+          missionId: null,
+          sectionId: null,
+          firstClear: false,
+          newRewards: [],
+          sectionCleared: false,
+          unlockedSections: [],
+          unlockedMissions: [],
+          bossUnlocked: false,
+        };
+    const district = missionId ? sectionOfMission(missionId)?.districtId : undefined;
+    this.deps.host.stop();
+    this.raidCtx = null;
+    this.commit(summary.save, {
+      active: null,
+      selected: district ?? ui.selected,
+      modifier: null,
+      result: null,
+      sectionResult: { missionId: missionId ?? '', kind: 'raid', outcome, summary },
+    });
+    this.setMenu(['campaign', 'campaignResult']);
   }
 }
