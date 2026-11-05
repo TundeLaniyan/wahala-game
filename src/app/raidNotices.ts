@@ -16,7 +16,7 @@ export type RaidNotice = Pick<Toast, 'text' | 'tone'> & { ttlMs: number };
  * Whether `raidWaveStarted.index` counts from 0 (the first wave is index 0) or from 1. The contract does not say, so it is
  * one constant: a test pins it, and the wording follows it.
  */
-export const RAID_WAVE_INDEX_BASE: 0 | 1 = 0;
+export const RAID_WAVE_INDEX_BASE: 0 | 1 = 1;
 
 export function waveNotice(index: number, total: number): RaidNotice {
   const n = Math.min(total, Math.max(1, index + (RAID_WAVE_INDEX_BASE === 0 ? 1 : 0)));

@@ -26,12 +26,13 @@ import type {
   VehicleIntent,
   VehicleTurn,
 } from '../sim';
-import { buildMoveBoard, inputTrace } from '../input';
+import { buildMoveBoard, inputModeFor, inputTrace } from '../input';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
 import { campaignHitNotice } from './campaignHud';
 import { protectionNotice, quickHandsResumedNotice, quickHandsStoredNotice } from './combatNotices';
 import { buildHud } from './hud';
+import { raidNotice } from './raidNotices';
 import { expireKillLines, isCrowded, newKillLines, pushKillLines } from './killFeed';
 import { buildPlayers, matchArenaId, matchRules } from './names';
 import { cycleSpectateTarget, pickSpectateTarget } from './spectate';
@@ -202,6 +203,7 @@ export class MatchController implements MissionHost {
     this.entry.sync(state);
     this.deps.input.clear();
     this.deps.renderer.loadGame(state);
+    this.deps.input.setCardinalOnly?.(inputModeFor(state).cardinalOnly); // raids: cardinal-only input, reset for every other match
     this.audio.startMusic(arenaId);
     this.audio.setIntensity(0);
     patch({
@@ -259,6 +261,7 @@ export class MatchController implements MissionHost {
     this.entry.sync(state);
     this.deps.input.clear();
     this.deps.renderer.loadGame(state);
+    this.deps.input.setCardinalOnly?.(inputModeFor(state).cardinalOnly); // raids: cardinal-only input, reset for every other match
     this.audio.startMusic(state.arenaId);
     this.audio.setIntensity(0);
     patch({
@@ -331,6 +334,7 @@ export class MatchController implements MissionHost {
     });
     this.resetLoop(state);
     this.deps.renderer.loadGame(state);
+    this.deps.input.setCardinalOnly?.(inputModeFor(state).cardinalOnly); // raids: cardinal-only input, reset for every other match
     this.audio.startMusic(state.arenaId);
     this.audio.setIntensity(0);
     patch({
@@ -364,6 +368,7 @@ export class MatchController implements MissionHost {
     this.raidAsked = false;
     this.resetLoop(stash.state);
     this.deps.renderer.loadGame(stash.state);
+    this.deps.input.setCardinalOnly?.(inputModeFor(stash.state).cardinalOnly); // raids: cardinal-only input, reset for every other match
     this.audio.startMusic(stash.state.arenaId);
     this.audio.setIntensity(0);
     this.pendingEvents.push(...resolve(stash.state));
@@ -415,6 +420,7 @@ export class MatchController implements MissionHost {
     this.entry.sync(state);
     this.deps.input.clear();
     this.deps.renderer.loadGame(state);
+    this.deps.input.setCardinalOnly?.(inputModeFor(state).cardinalOnly); // raids: cardinal-only input, reset for every other match
     this.audio.startMusic(state.arenaId);
     this.audio.setIntensity(0);
     patch({
@@ -757,6 +763,8 @@ export class MatchController implements MissionHost {
     batch: readonly SimEvent[] = [],
   ): (Omit<Toast, 'id' | 'expires'> & { ttlMs?: number }) | null {
     const state = this.state!;
+    const raid = raidNotice(e);
+    if (raid) return raid;
     switch (e.type) {
       case 'vehicleWarning': {
         return {

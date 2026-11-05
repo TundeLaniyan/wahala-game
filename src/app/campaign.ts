@@ -539,6 +539,20 @@ export class CampaignController {
     }
   }
 
+  /**
+   * Debug / e2e only (reached through `?debug` -> `__WAHALA__.campaign()`): plays a classic raid on its own, skipping
+   * the section unlock gate. It records nothing in the save beyond what a normal raid result would.
+   */
+  debugStartRaid(raidId: RaidId): boolean {
+    this.need();
+    this.raidCtx = { request: null, raidId, missionId: null };
+    if (!this.playRaid(this.raidCtx, undefined)) {
+      this.raidCtx = null;
+      return false;
+    }
+    return true;
+  }
+
   private startStandaloneRaid(def: SectionMissionDef, districtId: MissionId): boolean {
     const ui = this.need();
     const raidId = def.missionRef as RaidId;

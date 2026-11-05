@@ -4,11 +4,12 @@ import { RAID_WAVE_INDEX_BASE, raidNotice, waveNotice } from '../../src/app/raid
 
 describe('raid rail notices', () => {
   it('a wave is announced as a rail notice (event only), the last one says FINAL', () => {
-    expect(RAID_WAVE_INDEX_BASE).toBe(0);
-    expect(waveNotice(0, 3).text).toBe('WAVE 1 OF 3');
-    expect(waveNotice(1, 3).text).toBe('WAVE 2 OF 3');
-    expect(waveNotice(2, 3).text).toBe('FINAL WAVE 3 OF 3');
-    expect(waveNotice(0, 1).text).toBe('ENEMIES INCOMING');
+    // the sim counts waves from 1 (`raidWaveStarted.index = main.indexOf(w) + 1`, src/sim/raid/waves.ts)
+    expect(RAID_WAVE_INDEX_BASE).toBe(1);
+    expect(waveNotice(1, 3).text).toBe('WAVE 1 OF 3');
+    expect(waveNotice(2, 3).text).toBe('WAVE 2 OF 3');
+    expect(waveNotice(3, 3).text).toBe('FINAL WAVE 3 OF 3');
+    expect(waveNotice(1, 1).text).toBe('ENEMIES INCOMING');
     expect(waveNotice(9, 3).text).toBe('FINAL WAVE 3 OF 3'); // never past the total
     expect(raidNotice({ type: 'raidWaveStarted', index: 1, total: 3 })?.tone).toBe('bad');
   });

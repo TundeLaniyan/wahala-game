@@ -51,6 +51,8 @@ export interface InputPort {
   /** The local player's intent for this tick (`ctx`: can they step, is a remote live, move legality). */
   buildIntent(tick: number, ctx?: IntentContext): Intent;
   clear(): void;
+  /** Classic raids: movement is cardinal only (input/inputMode.ts). Optional so test ports need not implement it. */
+  setCardinalOnly?(on: boolean): void;
 }
 
 export type { Dir, ActionName };
