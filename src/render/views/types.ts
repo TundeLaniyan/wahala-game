@@ -1,3 +1,4 @@
+import type { Camera } from 'three';
 import type { GameState } from '../../sim';
 import type { Layout } from '../coords';
 import type { Effects } from '../fx/Effects';
@@ -17,6 +18,8 @@ export interface FrameContext {
    * frame's view. Views may skip work for what is off screen. Absent = everything counts as visible.
    */
   inView?: (x: number, z: number, radius: number) => boolean;
+  /** The scene camera (last frame's pose), for views that face the camera (health pips). Absent in tests. */
+  camera?: Camera;
 }
 
 /** A self-contained piece of the scene that mirrors one aspect of the simulation. */

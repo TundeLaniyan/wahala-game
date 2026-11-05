@@ -30,6 +30,7 @@ import { CanvasTexture } from 'three';
 import { chevronTexture, glowTexture, labelTexture, ringTexture, starTexture } from '../textures';
 import type { ClipName } from '../assets/rigged';
 import { lerpAngle, playerGridPos, toWorld, yawForDir } from './motion';
+import { JOLT_SECONDS, joltOffset } from './damageModel';
 import { KNOCKDOWN_MAX_S, SLIP_MAX_S, slipPose } from './slip';
 import type { SlipKind, SlipState } from './slip';
 import { TICK_RATE } from '../../sim';
@@ -83,6 +84,9 @@ interface Visual {
   /** A floor trap just got this fighter (stamped with render time on the next frame) / the slip in progress. */
   slipPending: SlipKind | null;
   slip: SlipState | null;
+  /** Campaign hit flinch (damage feedback, `jolt`): stamped with render time on the next frame, then plays out. */
+  joltPending: { dx: number; dz: number; amount: number } | null;
+  jolt: { dx: number; dz: number; amount: number; at: number } | null;
 }
 
 const flat = new PlaneGeometry(1, 1);
@@ -107,6 +111,10 @@ export class PlayerViews implements View {
       else if (e.type === 'contactUsed' && e.ability === 'kick') play(e.playerId, 'Kick');
       else if (e.type === 'contactUsed' && e.ability === 'disarm') play(e.playerId, 'Place');
       else if (e.type === 'playerPushed') play(e.playerId, 'Stumble');
+      // campaign: a hit that took health flinches (a dazed fighter already has the Dazed pose from the sim state);
+      // a thrower winds up (the launch cue is drawn by ProjectileViews)
+      else if (e.type === 'campaignHit' && e.result === 'damaged') play(e.victimId, 'Stumble');
+      else if (e.type === 'projectileLaunched') play(e.ownerId, 'Throw');
       else if (e.type === 'knockdownHit') {
         // hit on the head: down flat for the sim's whole knockdown
         const v = this.visuals.get(e.playerId);
@@ -128,6 +136,16 @@ export class PlayerViews implements View {
         }
       }
     }
+  }
+
+  /**
+   * Damage feedback: a quick shove of the drawn body along (dx, dz) that settles in `JOLT_SECONDS`. Visual only (the
+   * sim's knockback is a real displacement and is drawn by the step interpolation); 0 amount does nothing, which is how
+   * reduced motion switches it off.
+   */
+  jolt(id: number, dx: number, dz: number, amount: number): void {
+    const v = this.visuals.get(id);
+    if (v && amount > 0) v.joltPending = { dx, dz, amount };
   }
 
   update(ctx: FrameContext): void {
@@ -317,6 +335,8 @@ export class PlayerViews implements View {
       protect,
       slipPending: null,
       slip: null,
+      joltPending: null,
+      jolt: null,
     };
   }
 
@@ -341,6 +361,19 @@ export class PlayerViews implements View {
     v.facing = p.facing;
     v.yaw = lerpAngle(v.yaw, yawForDir(face[0]!, face[1]!), Math.min(1, dt * 16));
     m.root.position.set(w.x, 0, w.z);
+    if (v.joltPending) {
+      v.jolt = { ...v.joltPending, at: time };
+      v.joltPending = null;
+    }
+    if (v.jolt) {
+      const t = time - v.jolt.at;
+      if (t >= JOLT_SECONDS) v.jolt = null;
+      else {
+        const off = joltOffset(v.jolt.amount, t);
+        m.root.position.x += v.jolt.dx * off;
+        m.root.position.z += v.jolt.dz * off;
+      }
+    }
     m.root.rotation.set(0, v.yaw, 0);
     m.root.scale.setScalar(m.rigged ? 1 : SCALE);
     m.root.visible = true;

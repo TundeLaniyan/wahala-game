@@ -55,6 +55,10 @@ import { VehicleViews } from './views/VehicleViews';
 import { TrapViews } from './views/TrapViews';
 import { StageHazardViews } from './views/StageHazardViews';
 import { MissionViews } from './views/MissionViews';
+import { RaidViews, isRaidMatch } from './views/RaidViews';
+import type { RaidViewStats } from './views/RaidViews';
+import { DamageViews, hasCampaignFeedback } from './views/DamageViews';
+import { ProjectileViews } from './views/ProjectileViews';
 import type { FrameContext, View } from './views/types';
 import { disposeTextures } from './textures';
 
@@ -171,6 +175,11 @@ export class GameRenderer {
   private vehicles!: VehicleViews;
   private stage: StageHazardViews | null = null;
   private missionMarkers: MissionViews | null = null;
+  /** Classic raid world markers, damage feedback and projectiles (campaign matches only; a normal match builds none). */
+  private raid: RaidViews | null = null;
+  private damage: DamageViews | null = null;
+  private projectiles: ProjectileViews | null = null;
+  private localId = 0;
   /** The stage's living environment (ambient traffic, crowds); null for arenas without one or with `?noenv`. */
   private living: LivingEnvironment | null = null;
   private views: View[] = [];
@@ -304,6 +313,14 @@ export class GameRenderer {
       typeof location !== 'undefined' && new URLSearchParams(location.search).has('nomarkers');
     this.missionMarkers = state.mission && !noMarkers ? new MissionViews() : null;
     if (this.missionMarkers) this.views.push(this.missionMarkers);
+    // classic raids: cargo, belts, doors, extraction; campaign matches: damage feedback and thrown objects (docs/RAID_PRESENTATION.md)
+    this.raid = isRaidMatch(state) ? new RaidViews() : null;
+    if (this.raid) this.views.push(this.raid);
+    if (hasCampaignFeedback(state)) {
+      this.damage = new DamageViews(players);
+      this.projectiles = new ProjectileViews();
+      this.views.push(this.projectiles, this.damage);
+    }
     this.living = this.createLiving(state);
     if (this.living) this.views.push(this.living);
     this.scene.add(
@@ -323,6 +340,9 @@ export class GameRenderer {
     );
     if (this.living) this.scene.add(this.living.group);
     if (this.missionMarkers) this.scene.add(this.missionMarkers.group);
+    if (this.raid) this.scene.add(this.raid.group);
+    if (this.projectiles) this.scene.add(this.projectiles.group);
+    if (this.damage) this.scene.add(this.damage.group);
 
     const tag = (o: { userData: Record<string, unknown> }, cls: GritClass): void => {
       o.userData.grit = cls;
@@ -342,6 +362,9 @@ export class GameRenderer {
     tag(this.effects.group, 'none');
     if (this.living) tag(this.living.group, 'none');
     if (this.missionMarkers) tag(this.missionMarkers.group, 'none');
+    if (this.raid) tag(this.raid.group, 'none');
+    if (this.projectiles) tag(this.projectiles.group, 'none');
+    if (this.damage) tag(this.damage.group, 'none');
     this.weather();
 
     this.loaded = true;
@@ -385,6 +408,9 @@ export class GameRenderer {
     this.players = null;
     this.stage = null;
     this.missionMarkers = null;
+    this.raid = null;
+    this.damage = null;
+    this.projectiles = null;
     this.living = null;
     this.loaded = false;
   }
@@ -535,6 +561,9 @@ export class GameRenderer {
     this.players?.onEvents(events);
     this.stage?.handleEvents(events, state);
     this.living?.handleEvents(events);
+    this.raid?.handleEvents(events, fx, this.layout);
+    this.projectiles?.handleEvents(events, state, fx, this.layout);
+    this.damage?.handleEvents(events, state, fx, this.layout, this.localId);
     for (const e of events) {
       switch (e.type) {
         case 'generatorExploded':
@@ -697,7 +726,9 @@ export class GameRenderer {
       fx: this.effects,
       // follow camera: views may skip what the last frame did not show (the fixed camera shows it all)
       inView: this.mode === 'stadium' && !info.attract ? this.inView : undefined,
+      camera: this.rig.camera,
     };
+    this.localId = info.localPlayerId;
     if (ctx.inView) {
       const cam = this.rig.camera;
       this.frustum.setFromProjectionMatrix(
@@ -828,6 +859,16 @@ export class GameRenderer {
   /** Debug / performance report: stop drawing the mission markers (they keep updating) to compare frames. */
   debugHideMissionMarkers(hidden: boolean): void {
     this.missionMarkers?.setHidden(hidden);
+  }
+
+  /** What the raid markers drew last frame (null outside a raid); debug / performance reports. */
+  raidStats(): RaidViewStats | null {
+    return this.raid?.stats() ?? null;
+  }
+
+  /** Debug / performance report: stop drawing the raid markers (they keep updating) to compare frames. */
+  debugHideRaid(hidden: boolean): void {
+    this.raid?.setHidden(hidden);
   }
 
   stats(): RenderStats {

@@ -9,6 +9,7 @@ import { commands, input } from '../app/session';
 import { VirtualStick, stickConfigFor } from '../input/joystick';
 import { SPECIAL_HOLD_MS, inputTrace } from '../input';
 import { useGameStore } from '../app/store';
+import { CrossControl } from './DpadControl';
 import type { HudMe } from '../app/hud';
 
 /**
@@ -311,18 +312,18 @@ export function TouchControls() {
     (s) => s.hud?.players.find((p) => p.isLocal)?.characterId ?? s.settings.character,
   );
   const localAlive = useGameStore((s) => s.hud?.localAlive ?? true);
+  // a classic raid: the movement control is the four-arrow cross (cardinal only), the two action buttons are unchanged.
+  // The app switches the input layer to cardinal-only when the raid starts (`inputModeFor`, input/inputMode.ts); the
+  // hud snapshot changes every few frames, so this re-reads it in time.
+  const raid = input.isCardinalOnly;
   // out of the match: nothing to steer, and the stick zone must not cover the spectator buttons
   if (!localAlive) return null;
   if (!me || entry)
-    return (
-      <div className="touch">
-        <Joystick entryOpen={!!entry} />
-      </div>
-    );
+    return <div className="touch">{raid ? <CrossControl /> : <Joystick entryOpen={!!entry} />}</div>;
   const skill = CHARACTERS[character].skill;
   return (
     <div className="touch" data-testid="touch-controls">
-      <Joystick entryOpen={false} />
+      {raid ? <CrossControl /> : <Joystick entryOpen={false} />}
       <div className="actions">
         <GeneratorButton
           remoteReady={me.remote && me.hasRemoteGenerator}
