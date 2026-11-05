@@ -232,3 +232,32 @@ export async function thumb(
   await page.mouse.up();
   if (opts.settle) await stepTicks(page, opts.settle);
 }
+
+/**
+ * Campaign progression fixture for the boss-mission specs. The boss of a district is gated behind its earlier sections
+ * (the real rule, `bossAvailable`), so a spec that wants the boss mission clears those sections THROUGH THE CONTROLLER'S
+ * PUBLIC RESULT PATH (`finishMission` with a `sectionMissionId` runs the real `applySectionResult` reducer, exactly like
+ * a played section would): nothing about the gate is bypassed or switched off. Oshodi has two field sections.
+ */
+export async function clearOshodiSections(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const c = (
+      window as unknown as { __WAHALA__: { campaign(): { finishMission(o: unknown): void } } }
+    ).__WAHALA__.campaign();
+    for (const section of ['oshodi.approach', 'oshodi.railEdge']) {
+      c.finishMission({
+        result: 'won',
+        missionId: 'oshodi',
+        modifiers: [],
+        seconds: 120,
+        livesUsed: 0,
+        phasesCleared: 3,
+        defeat: null,
+        stars: 2,
+        creditedKills: 0,
+        sectionMissionId: section,
+        raidBonus: 0,
+      });
+    }
+  });
+}

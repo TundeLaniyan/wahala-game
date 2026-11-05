@@ -9,7 +9,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open } from './helpers';
+import { clearOshodiSections, open } from './helpers';
 
 const SHOTS = process.env.WAHALA_SHOT_DIR || 'e2e-shots';
 
@@ -66,7 +66,10 @@ test.describe('short campaign text', () => {
       const c = (window as unknown as Debug).__WAHALA__.campaign();
       c.startNew();
       c.storyDone();
-      c.beginBriefing('oshodi');
+    });
+    await clearOshodiSections(page); // the boss briefing opens only after the district's sections (the real rule)
+    await page.evaluate(() => {
+      (window as unknown as Debug).__WAHALA__.campaign().beginBriefing('oshodi');
     });
     const card = page.getByTestId('briefing-text');
     await expect(card).toBeVisible();
@@ -151,6 +154,10 @@ test.describe('campaign health HUD', () => {
       c.load();
       c.startNew();
       c.storyDone();
+    });
+    await clearOshodiSections(page); // the boss is gated behind the district's sections (the real rule stays on)
+    await page.evaluate(() => {
+      const c = (window as unknown as Debug).__WAHALA__.campaign();
       c.beginBriefing('oshodi');
       c.startFromBriefing();
       c.bossIntroDone();

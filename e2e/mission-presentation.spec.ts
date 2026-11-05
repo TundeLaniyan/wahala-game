@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open } from './helpers';
+import { clearOshodiSections, open } from './helpers';
 
 type Debug = {
   __WAHALA__: {
@@ -50,6 +50,10 @@ test.describe('mission presentation', () => {
       c.load();
       c.startNew();
       c.storyDone();
+    });
+    await clearOshodiSections(page); // the boss is gated behind the district's sections (the real rule stays on)
+    await page.evaluate(() => {
+      const c = (window as unknown as Debug).__WAHALA__.campaign();
       c.beginBriefing('oshodi');
       c.startFromBriefing();
       c.bossIntroDone();

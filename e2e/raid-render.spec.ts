@@ -41,23 +41,16 @@ type Debug = {
 };
 
 async function startRaid(page: Page): Promise<void> {
+  // the standalone raid entry of the debug handle (reached only through `?debug`): it plays a classic raid on its own,
+  // exactly like a standalone raid mission, without touching the campaign's unlock rules
   const started = await page.evaluate(() => {
     const c = (window as unknown as Debug).__WAHALA__.campaign();
     c.load?.();
     c.startNew?.();
     c.storyDone?.();
-    if (typeof c.startRaid === 'function') return (c.startRaid('warehouseDispatchDepot'), 'startRaid');
-    if (typeof c.beginBriefing === 'function' && typeof c.startFromBriefing === 'function') {
-      c.beginBriefing('warehouseDispatchDepot');
-      c.startFromBriefing();
-      return 'briefing';
-    }
-    return null;
+    return typeof c.debugStartRaid === 'function' ? c.debugStartRaid('warehouseDispatchDepot') : null;
   });
-  expect(
-    started,
-    'no debug raid entry on the campaign controller: wire startRaid() for this spec',
-  ).not.toBeNull();
+  expect(started, 'the debug handle must offer debugStartRaid (app/campaign.ts)').toBe(true);
   await expect(page.getByTestId('hud')).toBeVisible();
   await page.evaluate(() => {
     const w = (window as unknown as Debug).__WAHALA__;
