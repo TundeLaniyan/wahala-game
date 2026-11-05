@@ -221,8 +221,9 @@ test.describe('campaign expansion smoke', () => {
       p.stepRemaining = 0;
       return { id: d.id, x: d.x, y: d.y, ret: { x: d.returnTile.x, y: d.returnTile.y } };
     })) as any;
-    // hold the door through the real event path (not wall-clock frames: software GL is slow); the controller then swaps in the raid
-    await page.evaluate(() => (window as any).__WAHALA__.advance(150));
+    // hold the door with simulation ticks only (`advance` renders every tick: far too slow on software GL); the next real
+    // frame of the controller sees the door's request and swaps in the raid
+    await page.evaluate(() => (window as any).__WAHALA__.stepTicks(150));
     await page.waitForFunction(() => (window as any).__WAHALA__.getState().settings.game === 'raid', null, {
       timeout: 90_000,
     });
