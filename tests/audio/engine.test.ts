@@ -216,7 +216,7 @@ describe('event mapping', () => {
     expectIds(SAMPLES.bossExposed, 'ui_go');
     expectIds(SAMPLES.bossShielded, 'ui_back');
     expectIds(SAMPLES.bossDefeated, 'win_sting');
-    // classic raids reuse existing synthesised cues too (decision CR12); the sting itself stays the match end's
+    // classic raids reuse existing synthesised cues too (decision RD12); the sting itself stays the match end's
     expectIds(SAMPLES.cargoHit, 'vehicle_hit_gen');
     expectIds(SAMPLES.cargoDestroyed, 'block_crumble_2', 'pickup_rare'); // a marked crate: break + objective chime
     expectIds({ ...SAMPLES.cargoDestroyed, kind: 'barrel', marked: false } as SimEvent, 'explosion_2');

@@ -1,5 +1,5 @@
 /**
- * Conveyor belts and moving shipments (docs/CLASSIC_RAIDS.md, decisions CR5-CR6): belts carry a standing player one tile
+ * Conveyor belts and moving shipments (docs/CLASSIC_RAIDS.md, decisions RD5-RD6): belts carry a standing player one tile
  * per `stepTicks` (cardinal), a shipment is telegraphed (`raidShipmentWarning`, `RaidView.warnings`) for at least the minimum
  * warning before it moves, it damages through `applyCampaignHit` (source 'hazard') once per victim, a wall stops it and a
  * blast destroys it. The depot's east lane: belt x = 14, y 5..9 ('v'), 24 ticks per tile, the first shipment at tick 600.

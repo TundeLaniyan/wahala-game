@@ -17,6 +17,44 @@ import {
 import { analyseRaid } from '../src/sim/raid/analysis';
 import { Tile } from '../src/sim/types';
 
+describe('the solvability analysis catches broken layouts', () => {
+  const base = RAID_DEFS.partsStoreroom;
+  const set = (cells: [number, number, string][]) => {
+    const rows = base.layout.map((r) => r.split(''));
+    for (const [x, y, c] of cells) rows[y]![x] = c;
+    return { ...base, layout: rows.map((r) => r.join('')) };
+  };
+
+  it('a marked stack sealed inside concrete can never be destroyed', () => {
+    // the office stack at (12,1): wall in every neighbour
+    const bad = set([
+      [11, 1, '#'],
+      [13, 1, '#'],
+      [12, 2, '#'],
+    ]);
+    expect(analyseRaid(bad).problems.some((p) => p.includes('cargo-0 can never be destroyed'))).toBe(true);
+  });
+
+  it('an exit walled off is reported', () => {
+    const bad = set([
+      [4, 9, '#'],
+      [5, 8, '#'],
+      [6, 9, '#'],
+    ]);
+    expect(analyseRaid(bad).problems).toContain('the extraction tile cannot be reached');
+  });
+
+  it('a door whose condition can never hold is reported', () => {
+    const bad = {
+      ...base,
+      doors: base.doors.map((d) =>
+        d.id === 'officeDoor' ? { ...d, opensWhen: { kind: 'switch' as const, index: 0 } } : d,
+      ),
+    };
+    expect(raidProblems(bad).some((p) => p.includes('no switch'))).toBe(true);
+  });
+});
+
 describe('raid layouts', () => {
   it('there are six raids, one per RaidId, and at least four hand-drawn ones', () => {
     expect([...RAID_IDS].sort()).toEqual(

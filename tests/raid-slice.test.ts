@@ -4,10 +4,10 @@
  * walk into a room, walk to the exit). Also the failure endings of the same raid: every life spent, and the clock.
  */
 import { describe, expect, it } from 'vitest';
-import { raidView, tick } from '../src/sim';
+import { raidView } from '../src/sim';
 import type { SimEvent } from '../src/sim';
 import { RAID_TUNING } from '../src/sim/raid';
-import { ScriptedHuman, advance, newRaid, of, put, until } from './raid-helpers';
+import { ScriptedHuman, advance, fallHuman, newRaid, of, put, until } from './raid-helpers';
 
 /** The whole raid in the order a player would do it; `rooms` chooses the optional side rooms to take. */
 function playDepot(rooms: { armour: boolean; heal: boolean }, seed = 3) {
@@ -117,11 +117,8 @@ describe('failing the depot', () => {
     const state = newRaid('warehouseDispatchDepot', { lives: 2 });
     const sink: SimEvent[] = [];
     const human = state.players[0]!;
-    // a life is lost whenever the human is eliminated: here by a real lethal hit, his own generator under his feet
-    const killHuman = (): void => {
-      sink.push(...tick(state, { 0: { place: true } }));
-      advance(state, state.config.generator.fuseTicks + 5, {}, sink);
-    };
+    // a life is lost whenever the human is defeated: here by a real campaign hit that takes all his health
+    const killHuman = (): void => fallHuman(state, sink);
     killHuman();
     expect(human.alive).toBe(false);
     expect(state.raid!.livesUsed).toBe(1);

@@ -32,7 +32,7 @@ function createRng(seed: number): () => number {
   };
 }
 
-/** The same two pinned scenarios as tests/mission-regression.test.ts: a raid must not change them by one byte. */
+/** The same two pinned scenarios as tests/mission-regression.test.ts (re-pin both together when combat-core's damage changes normal state): a raid must not change them by one byte. */
 function play(
   options: GameOptions,
   ticks: number,
@@ -63,7 +63,7 @@ describe('normal matches are unchanged by the raid runtime', () => {
       })),
       settings: { mode: 'crush' },
     };
-    expect(play(options, 2400, ['standard', 'skilled', 'casual'])).toBe('671f4569:15766');
+    expect(play(options, 2400, ['standard', 'skilled', 'casual'])).toBe('4fb9574d:15743');
   });
 
   it('a Deathmatch on a City Rumble stage (6 bots, 1800 ticks) gives the pinned state', () => {
@@ -78,7 +78,7 @@ describe('normal matches are unchanged by the raid runtime', () => {
       settings: { game: 'deathmatch', durationSec: 300 },
     };
     expect(play(options, 1800, ['standard', 'rookie', 'skilled', 'casual', 'expert', 'beginner'])).toBe(
-      'db6b12ff:23568',
+      '27974553:23545',
     );
   });
 

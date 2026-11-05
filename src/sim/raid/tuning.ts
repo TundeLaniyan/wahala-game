@@ -1,5 +1,5 @@
 /**
- * Raid numbers that are not authored per raid (docs/CLASSIC_RAIDS.md, decisions CR1-CR12). Ticks are 60 per second.
+ * Raid numbers that are not authored per raid (docs/CLASSIC_RAIDS.md, decisions RD1-RD12). Ticks are 60 per second.
  * Per-raid numbers (lives, clock, par, hp of cargo, shipments) live in the raid's `RaidDef`.
  */
 import { ticks } from '../config';

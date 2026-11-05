@@ -1,5 +1,5 @@
 /**
- * Marked cargo, sturdy crates and barrels (docs/CLASSIC_RAIDS.md, decisions CR2-CR4), and the cross blast of a raid:
+ * Marked cargo, sturdy crates and barrels (docs/CLASSIC_RAIDS.md, decisions RD2-RD4), and the cross blast of a raid:
  * a target takes one hit per SEPARATE blast, only flames damage it, a wall or the range stops the flame, a destroyed barrel
  * explodes once a few ticks later and can set off the next one.
  */

@@ -7,7 +7,7 @@
  *   evaluateRaid           replaces `evaluateMatchEnd`: every life spent, or the clock ran out;
  *   finishRaid / abandonRaid   build the `RaidOutcome` (stars, health to carry back) and end the match.
  *
- * Lives (decision CR6): the human has `livesMax`; falling spends one; while lives are left he comes back at the
+ * Lives (decision RD6): the human has `livesMax`; falling spends one; while lives are left he comes back at the
  * entrance after `respawnDelayTicks`, with spawn protection and full health (upgrades stay); enemies never respawn.
  */
 import type { RaidResultKind } from '../campaign/types';

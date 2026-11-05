@@ -10,6 +10,7 @@ import { previewBlast } from '../src/sim/systems/explosions';
 import { Tile } from '../src/sim/types';
 import { RAID_TUNING } from '../src/sim/raid';
 import { addGenerator } from './helpers';
+import { applyCampaignHit } from '../src/sim';
 
 export interface NewRaidOptions {
   seed?: number;
@@ -419,4 +420,17 @@ export function waveSeats(state: GameState, wave: number): number[] {
 /** Plays through the spawn warning of every wave that has started, so its enemies stand on their spots. */
 export function letWavesAppear(state: GameState, sink: SimEvent[] = []): void {
   advance(state, RAID_TUNING.spawnWarnTicks + 3, {}, sink);
+}
+
+/** The human takes a hit that defeats him (a real campaign hit through `applyCampaignHit`, like any lethal event). */
+export function fallHuman(state: GameState, sink: SimEvent[] = []): void {
+  const human = state.players[0]!;
+  human.protectedUntil = 0;
+  if (human.vitals) human.vitals.invulnUntil = 0;
+  applyCampaignHit(
+    state,
+    { victimId: 0, byId: null, source: 'hazard', damage: 99, dazeTicks: 0, knockback: null, strong: true },
+    sink,
+  );
+  sink.push(...tick(state, {}));
 }

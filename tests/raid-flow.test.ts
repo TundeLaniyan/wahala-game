@@ -4,12 +4,22 @@
  * sim uses (`hitCargo`, a seat going down, a tile being stepped on); the full run with real bombs is `raid-slice.test.ts`.
  */
 import { describe, expect, it } from 'vitest';
-import { abandonRaid, raidView, tick } from '../src/sim';
+import { abandonRaid, raidView } from '../src/sim';
 import type { SimEvent } from '../src/sim';
 import { hitCargo } from '../src/sim/raid/cargo';
 import { RAID_TUNING } from '../src/sim/raid';
 import { Tile } from '../src/sim/types';
-import { advance, knockOut, letWavesAppear, newRaid, of, put, until, waveSeats } from './raid-helpers';
+import {
+  advance,
+  fallHuman,
+  knockOut,
+  letWavesAppear,
+  newRaid,
+  of,
+  put,
+  until,
+  waveSeats,
+} from './raid-helpers';
 
 const destroy = (state: ReturnType<typeof newRaid>, id: string, sink: SimEvent[] = []): SimEvent[] => {
   hitCargo(
@@ -334,9 +344,7 @@ describe('extraction and the outcome', () => {
     const state = newRaid('warehouseDispatchDepot', { hp: 1, lives: 3 });
     const human = state.players[0]!;
     const sink: SimEvent[] = [];
-    // a real lethal hit: his own generator under his feet
-    sink.push(...tick(state, { 0: { place: true } }));
-    advance(state, state.config.generator.fuseTicks + 5, {}, sink);
+    fallHuman(state, sink); // a real campaign hit that defeats him
     expect(human.alive).toBe(false);
     expect(state.raid!.livesUsed).toBe(1);
     expect(raidView(state)!.lives).toEqual({ used: 1, max: 3 });
