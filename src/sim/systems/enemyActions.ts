@@ -56,6 +56,13 @@ function beginEnemyMelee(state: GameState, p: Player, events: SimEvent[]): 'star
   const fire = enemyFireOf(state);
   if (state.tick < (fire.nextPunchTick[p.id] ?? 0) || !attackReady(state, p, spec.attack)) return 'claimed';
   if (state.tick < (fire.victimSafeUntil[found.target.id] ?? 0)) return 'claimed'; // the free window: no point
+  // a group never punches all at once: a few wind-ups at a time, staggered
+  const cfg = state.config.enemyAttacks;
+  const winding = state.players.filter(
+    (o) => o.alive && o.enemyKind !== undefined && o.team === p.team && o.attack !== null,
+  );
+  if (winding.length >= cfg.maxGroupPunches || state.tick < (fire.groupNextPunchTick[p.team] ?? 0))
+    return 'claimed';
   if (!beginAttack(state, p, state.players[found.target.id]!, found.dir, events, spec.attack))
     return 'claimed';
   const pending = p.attack!;
@@ -70,6 +77,7 @@ function beginEnemyMelee(state: GameState, p: Player, events: SimEvent[]): 'star
   }
   p.rootedUntil = Math.max(p.rootedUntil, pending.resolveTick); // the wind-up plants the puncher
   fire.nextPunchTick[p.id] = state.tick + spec.cooldownTicks;
+  fire.groupNextPunchTick[p.team] = state.tick + cfg.groupPunchGapTicks;
   return 'started';
 }
 

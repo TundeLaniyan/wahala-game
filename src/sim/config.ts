@@ -292,6 +292,9 @@ export interface GameConfig {
     maxInFlightPerGroup: number;
     /** A group (team) throws at most once per this many ticks: enemies never all throw together. */
     groupGapTicks: number;
+    /** At most this many enemies of a group may be winding up a punch at once, and two punches of a group start this far apart. */
+    maxGroupPunches: number;
+    groupPunchGapTicks: number;
     /** After an enemy hit's stun ends this victim cannot be hit by an enemy again for this long. */
     victimFreeTicks: number;
     /** Enemies only act on a rival within this many tiles (Manhattan); farther away they hold. */
@@ -738,6 +741,8 @@ export const DEFAULT_CONFIG: GameConfig = {
     maxInFlight: 5,
     maxInFlightPerGroup: 3,
     groupGapTicks: ticks(1),
+    maxGroupPunches: 2,
+    groupPunchGapTicks: ticks(0.7),
     victimFreeTicks: ticks(1),
     aggroTiles: 11,
     projectiles: {
@@ -787,51 +792,51 @@ export const DEFAULT_CONFIG: GameConfig = {
     melee: {
       agbero: {
         attack: 'push',
-        extraStartupTicks: 20,
+        extraStartupTicks: 30,
         damage: 1,
         dazeTicks: 24,
         knockbackTiles: 0,
-        cooldownTicks: ticks(2.5),
+        cooldownTicks: ticks(3),
       },
       guard: {
         attack: 'push',
-        extraStartupTicks: 14,
+        extraStartupTicks: 24,
         damage: 1,
         dazeTicks: 30,
         knockbackTiles: 0,
-        cooldownTicks: ticks(2),
+        cooldownTicks: ticks(2.6),
       },
       thrower: {
         attack: 'shove',
-        extraStartupTicks: 12,
+        extraStartupTicks: 18,
         damage: 0,
         dazeTicks: 0,
         knockbackTiles: 2,
-        cooldownTicks: ticks(3),
+        cooldownTicks: ticks(3.5),
       },
       heavy: {
         attack: 'daze',
-        extraStartupTicks: 12,
+        extraStartupTicks: 24,
         damage: 1,
         dazeTicks: 40,
         knockbackTiles: 2,
-        cooldownTicks: ticks(3.3),
+        cooldownTicks: ticks(3.8),
       },
       lieutenant: {
         attack: 'push',
-        extraStartupTicks: 10,
+        extraStartupTicks: 18,
         damage: 1,
         dazeTicks: 30,
         knockbackTiles: 1,
-        cooldownTicks: ticks(1.8),
+        cooldownTicks: ticks(2.4),
       },
       boss: {
         attack: 'daze',
-        extraStartupTicks: 6,
+        extraStartupTicks: 18,
         damage: 1,
         dazeTicks: 45,
         knockbackTiles: 2,
-        cooldownTicks: ticks(2.5),
+        cooldownTicks: ticks(3),
       },
     },
     reinforce: {

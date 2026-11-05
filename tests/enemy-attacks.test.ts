@@ -5,7 +5,15 @@
  */
 import { describe, expect, it } from 'vitest';
 import { createBot } from '../src/ai';
-import { DEFAULT_CONFIG, arrivalTick, chooseThrow, createGame, launchProjectile, observe, tick } from '../src/sim';
+import {
+  DEFAULT_CONFIG,
+  arrivalTick,
+  chooseThrow,
+  createGame,
+  launchProjectile,
+  observe,
+  tick,
+} from '../src/sim';
 import type { EnemyKind, GameState, Intents, SimEvent } from '../src/sim';
 import { enemyScene, openSpot, placeRing } from '../scripts/lib/enemyScene';
 import { addSoft, eventsOf, run, sandbox } from './helpers';
@@ -105,7 +113,7 @@ describe('launch cue, path and collision', () => {
     expect(eventsOf(after, 'campaignHit')).toHaveLength(0);
   });
 
-  it('never passes through the thrower\'s team: an ally in the line stops it harmlessly, and the AI does not throw', () => {
+  it("never passes through the thrower's team: an ally in the line stops it harmlessly, and the AI does not throw", () => {
     const s = enemyScene({
       human: { x: 9, y: 2, hp: 3 },
       enemies: [
@@ -133,7 +141,9 @@ describe('launch cue, path and collision', () => {
       if (layer === 'armour') s.players[0]!.armour = 1;
       else s.players[0]!.mounted = true;
       tick(s, press);
-      expect(eventsOf(run(s, 200), 'projectileHit')[0]!.result).toBe(layer === 'armour' ? 'blockedArmour' : 'blockedOkada');
+      expect(eventsOf(run(s, 200), 'projectileHit')[0]!.result).toBe(
+        layer === 'armour' ? 'blockedArmour' : 'blockedOkada',
+      );
       expect(s.players[0]!.vitals!.hp).toBe(3);
     }
   });
@@ -168,7 +178,9 @@ describe('launch cue, path and collision', () => {
   });
 
   it('never cues for less than minWarnTicks, whatever the data says', () => {
-    const s = lineScene('thrower', 8, { config: { enemyAttacks: { projectiles: { bottle: { warnTicks: 1 } } } } });
+    const s = lineScene('thrower', 8, {
+      config: { enemyAttacks: { projectiles: { bottle: { warnTicks: 1 } } } },
+    });
     expect(eventsOf(tick(s, press), 'projectileLaunched')[0]!.warnTicks).toBe(CFG.minWarnTicks);
   });
 });
@@ -200,7 +212,12 @@ describe('rate limits', () => {
     set(4, 0, 3, 'up');
     return s;
   }
-  const everyone: Intents = { 1: { special: true }, 2: { special: true }, 3: { special: true }, 4: { special: true } };
+  const everyone: Intents = {
+    1: { special: true },
+    2: { special: true },
+    3: { special: true },
+    4: { special: true },
+  };
 
   it('lets a group throw at most once per groupGapTicks: enemies never all throw in the same tick', () => {
     const s = squareOff();
@@ -218,11 +235,13 @@ describe('rate limits', () => {
   it('caps the projectiles in flight per group and in the whole match', () => {
     const perGroup = squareOff({ enemyAttacks: { groupGapTicks: 0, maxInFlightPerGroup: 2 } });
     let count = 0;
-    for (let t = 0; t < 8; t++) for (const e of tick(perGroup, everyone)) if (e.type === 'projectileLaunched') count++;
+    for (let t = 0; t < 8; t++)
+      for (const e of tick(perGroup, everyone)) if (e.type === 'projectileLaunched') count++;
     expect(count).toBe(2);
     const overall = squareOff({ enemyAttacks: { groupGapTicks: 0, maxInFlight: 1 } });
     count = 0;
-    for (let t = 0; t < 8; t++) for (const e of tick(overall, everyone)) if (e.type === 'projectileLaunched') count++;
+    for (let t = 0; t < 8; t++)
+      for (const e of tick(overall, everyone)) if (e.type === 'projectileLaunched') count++;
     expect(count).toBe(1);
   });
 
@@ -230,10 +249,12 @@ describe('rate limits', () => {
     const s = lineScene('thrower', 8, { config: { enemyAttacks: { groupGapTicks: 0 } } });
     s.players[0]!.vitals!.hp = 99;
     const launches: number[] = [];
-    for (let t = 0; t < 900; t++) for (const e of tick(s, press)) if (e.type === 'projectileLaunched') launches.push(s.tick);
+    for (let t = 0; t < 900; t++)
+      for (const e of tick(s, press)) if (e.type === 'projectileLaunched') launches.push(s.tick);
     expect(launches.length).toBeGreaterThanOrEqual(3);
     const shortest = Math.min(CFG.projectiles.bottle.cooldownTicks, CFG.projectiles.stone.cooldownTicks);
-    for (let i = 1; i < launches.length; i++) expect(launches[i]! - launches[i - 1]!).toBeGreaterThanOrEqual(shortest);
+    for (let i = 1; i < launches.length; i++)
+      expect(launches[i]! - launches[i - 1]!).toBeGreaterThanOrEqual(shortest);
   });
 
   it('leaves a free window after a hit: a second object arriving inside it lands harmlessly', () => {
@@ -257,7 +278,7 @@ describe('rate limits', () => {
 });
 
 describe('the B press of an enemy', () => {
-  it('punches an adjacent rival: a slower wind-up than the player\'s, campaign damage on arrival', () => {
+  it("punches an adjacent rival: a slower wind-up than the player's, campaign damage on arrival", () => {
     const s = enemyScene({ human: { x: 6, y: 2, hp: 3 }, enemies: [{ kind: 'guard', x: 7, y: 2 }] });
     s.players[1]!.facing = 'left';
     const ev = tick(s, press);
@@ -268,7 +289,9 @@ describe('the B press of an enemy', () => {
     expect(start!.resolveTick - s.tick).toBeGreaterThan(player * 3);
     const after = run(s, start!.resolveTick - s.tick);
     expect(eventsOf(after, 'attackResolved')[0]).toMatchObject({ playerId: 1, hit: true });
-    expect(eventsOf(after, 'campaignHit').filter((e) => e.victimId === 0 && e.source === 'punch')).toHaveLength(1);
+    expect(
+      eventsOf(after, 'campaignHit').filter((e) => e.victimId === 0 && e.source === 'punch'),
+    ).toHaveLength(1);
     expect(s.players[0]!.vitals!.hp).toBe(2);
     // pressing again at once does nothing (cooldown, free window): no second punch starts
     expect(eventsOf(run(s, 20, press), 'attackStarted')).toHaveLength(0);
@@ -300,11 +323,13 @@ describe('the B press of an enemy', () => {
     expect(eventsOf(ev, 'attackStarted')[0]).toMatchObject({ playerId: 1, skill: 'shove' });
   });
 
-  it('a kind with no throw never throws, and one without a punch never punches', () => {
-    const g = lineScene('guard');
-    expect(eventsOf(run(g, 60, press), 'projectileLaunched')).toHaveLength(0);
+  it('a kind with no thrown object never throws, even with a rival in a clear line; an agbero only punches', () => {
+    for (const kind of ['agbero', 'guard'] as EnemyKind[]) {
+      const g = lineScene(kind);
+      expect(eventsOf(run(g, 120, press), 'projectileLaunched'), kind).toHaveLength(0);
+      expect(g.projectiles, kind).toBeUndefined();
+    }
     const t = enemyScene({ human: { x: 6, y: 2, hp: 3 }, enemies: [{ kind: 'agbero', x: 7, y: 2 }] });
-    expect(CFG.melee.thrower).not.toBeNull();
     expect(eventsOf(tick(t, press), 'attackStarted')).toHaveLength(1);
   });
 
@@ -323,7 +348,9 @@ describe('the B press of an enemy', () => {
       enemies: (['agbero', 'guard', 'thrower', 'heavy'] as EnemyKind[]).map((kind) => ({ kind, x: 0, y: 0 })),
     });
     placeRing(s, openSpot(s, 7, 5));
-    const bots = s.players.slice(1).map((p) => createBot({ difficulty: 'nightmare', seed: 5 + p.id, playerId: p.id }));
+    const bots = s.players
+      .slice(1)
+      .map((p) => createBot({ difficulty: 'nightmare', seed: 5 + p.id, playerId: p.id }));
     let presses = 0;
     for (let t = 0; t < 2400; t++) {
       const intents: Intents = {};
@@ -345,12 +372,21 @@ describe('the B press of an enemy', () => {
 });
 
 describe('reinforcement calls', () => {
-  function callsOver(kind: EnemyKind, ticks: number, withGroup = false): { events: SimEvent[]; s: GameState } {
+  function callsOver(
+    kind: EnemyKind,
+    ticks: number,
+    withGroup = false,
+  ): { events: SimEvent[]; s: GameState } {
     const s = enemyScene({
       human: { x: 8, y: 2, hp: 99 },
       enemies: [
         { kind, x: 4, y: 2, hp: 4 },
-        ...(withGroup ? [{ kind: 'guard' as const, x: 2, y: 2 }, { kind: 'guard' as const, x: 2, y: 4 }] : []),
+        ...(withGroup
+          ? [
+              { kind: 'guard' as const, x: 2, y: 2 },
+              { kind: 'guard' as const, x: 2, y: 4 },
+            ]
+          : []),
       ],
     });
     const n = s.players.length;
@@ -364,7 +400,12 @@ describe('reinforcement calls', () => {
     const calls = eventsOf(boss.events, 'reinforcementCalled');
     expect(calls).toHaveLength(CFG.reinforce.maxCalls.boss);
     expect(calls[1]!.untilTick - calls[0]!.untilTick).toBeGreaterThanOrEqual(CFG.reinforce.cooldownTicks);
-    expect(calls[0]).toMatchObject({ callerId: 1, enemyKind: 'boss', count: CFG.reinforce.count.boss, team: 1 });
+    expect(calls[0]).toMatchObject({
+      callerId: 1,
+      enemyKind: 'boss',
+      count: CFG.reinforce.count.boss,
+      team: 1,
+    });
     expect(boss.s.players).toHaveLength(2); // no player was added
     for (const kind of ['agbero', 'guard', 'thrower', 'heavy'] as EnemyKind[])
       expect(eventsOf(callsOver(kind, 600).events, 'reinforcementCalled')).toHaveLength(0);
@@ -400,7 +441,9 @@ describe('normal matches are untouched', () => {
         })),
         settings: { stageHazards: false },
       });
-      const bots = s.players.map((p) => createBot({ difficulty: 'standard', seed: 3 + p.id, playerId: p.id }));
+      const bots = s.players.map((p) =>
+        createBot({ difficulty: 'standard', seed: 3 + p.id, playerId: p.id }),
+      );
       const types = new Set<string>();
       for (let t = 0; t < 1800; t++) {
         const intents: Intents = {};

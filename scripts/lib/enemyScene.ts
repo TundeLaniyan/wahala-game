@@ -193,14 +193,39 @@ export function humanIntent(s: GameState, policy: HumanPolicy = DODGER): Intent 
     if (floor(s, me.x + DIR_VEC[dir].dx, me.y + DIR_VEC[dir].dy)) return { move: dir };
     return {};
   }
-  // 2. melee wind-ups and anyone adjacent: step away from the nearest enemy
   const foes = s.players.filter((p) => p.alive && p.id !== 0 && p.enemyKind !== undefined);
+  // 2. a punch winding up on me: leave its reach (players do not collide: any open tile that is not next to the puncher
+  //    will do, even through the others) while a step can still finish in time
+  for (const f of foes) {
+    const a = f.attack;
+    if (!a || a.targetId !== 0 || dist(f, me) !== 1) continue;
+    // act on the last 12 ticks of the wind-up (a reaction of the length of the longer wind-ups), but not so late that the
+    // step cannot cross half its length before the punch lands (step grace)
+    const remaining = a.resolveTick - s.tick;
+    if (remaining > 12 || remaining < 6) continue;
+    let best: Dir | null = null;
+    let bestScore = -Infinity;
+    for (const d of DIRS) {
+      const x = me.x + DIR_VEC[d].dx;
+      const y = me.y + DIR_VEC[d].dy;
+      if (!safeFromLines(x, y) || dist(f, { x, y }) <= 1) continue;
+      const others = foes.filter((q) => q !== f);
+      const nearest = others.length > 0 ? Math.min(...others.map((q) => dist(q, { x, y }))) : 9;
+      const score =
+        Math.min(nearest, 4) * 10 - (Math.abs(x - s.width / 2) + Math.abs(y - s.height / 2)) * 0.3;
+      if (score > bestScore) {
+        bestScore = score;
+        best = d;
+      }
+    }
+    if (best) return { move: best };
+  }
+  // 3. keep some distance from the nearest enemy
   const near = foes.reduce<GameState['players'][number] | null>(
     (best, p) => (best === null || dist(p, me) < dist(best, me) ? p : best),
     null,
   );
-  if (!near) return {};
-  if (dist(near, me) <= 1 || (policy.kiteDistance > 0 && dist(near, me) < policy.kiteDistance))
+  if (near && policy.kiteDistance > 0 && dist(near, me) < policy.kiteDistance)
     return stepAway(s, me, foes, safeFromLines);
   return {};
 }
@@ -226,7 +251,9 @@ function stepAway(
     if (!ok(x, y)) continue;
     // also prefer tiles with room to keep going (more open neighbours)
     const room = DIRS.filter((q) => floor(s, x + DIR_VEC[q].dx, y + DIR_VEC[q].dy)).length;
-    const score = nearest(x, y) * 10 + room;
+    // away from the nearest enemy (up to 5 tiles), into open ground, and not into a corner of the board
+    const centre = Math.abs(x - s.width / 2) + Math.abs(y - s.height / 2);
+    const score = Math.min(nearest(x, y), 5) * 10 + room - centre * 0.7;
     if (score > bestScore) {
       bestScore = score;
       best = d;

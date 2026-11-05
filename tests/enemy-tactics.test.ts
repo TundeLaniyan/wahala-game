@@ -4,7 +4,15 @@
  */
 import { describe, expect, it } from 'vitest';
 import { createBot } from '../src/ai';
-import { DEFAULT_CONFIG, chooseThrow, enemyGroupDirective, findChokepoint, observe, tick } from '../src/sim';
+import {
+  DEFAULT_CONFIG,
+  chooseThrow,
+  enemyFireOf,
+  enemyGroupDirective,
+  findChokepoint,
+  observe,
+  tick,
+} from '../src/sim';
 import type { EnemyKind, GameState, Intents, NpcDirective } from '../src/sim';
 import { Tile } from '../src/sim/types';
 import { enemyScene, openSpot, placeRing } from '../scripts/lib/enemyScene';
@@ -17,7 +25,9 @@ const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number 
 /** Runs enemy bots for `ticks` against a human who stands still (and cannot die). */
 function play(s: GameState, ticks: number): { launches: number[]; types: Set<string> } {
   const bots = new Map(
-    s.players.slice(1).map((p) => [p.id, createBot({ difficulty: 'standard', seed: 40 + p.id, playerId: p.id })]),
+    s.players
+      .slice(1)
+      .map((p) => [p.id, createBot({ difficulty: 'standard', seed: 40 + p.id, playerId: p.id })]),
   );
   const launches: number[] = [];
   const types = new Set<string>();
@@ -81,16 +91,9 @@ describe('surround', () => {
     });
     expect(dist(s.players[1]!, s.players[0]!)).toBeGreaterThan(CFG.aggroTiles);
     expect(observe(s, 1).directive).toMatchObject({ kind: 'hold', x: 14, y: 10 });
-    s.enemyFire = {
-      nextThrowTick: {},
-      nextPunchTick: {},
-      throwCount: {},
-      groupNextThrowTick: {},
-      victimSafeUntil: {},
-      callsMade: {},
-      nextCallTick: {},
+    Object.assign(enemyFireOf(s), {
       calls: [{ id: 9, callerId: 7, team: 1, x: 12, y: 6, count: 2, tick: 0, untilTick: 999 }],
-    };
+    });
     expect(observe(s, 1).directive).toMatchObject({ kind: 'reinforce', x: 12, y: 6 });
     expect(observe(s, 0).directive).toBeUndefined(); // the human has none
   });
@@ -115,17 +118,7 @@ describe('block', () => {
       ],
     });
     const choke = { x: 9, y: 4 };
-    s.enemyFire = {
-      nextThrowTick: {},
-      nextPunchTick: {},
-      throwCount: {},
-      groupNextThrowTick: {},
-      victimSafeUntil: {},
-      callsMade: {},
-      nextCallTick: {},
-      calls: [],
-      chokepoints: [choke.y * s.width + choke.x],
-    };
+    Object.assign(enemyFireOf(s), { calls: [], chokepoints: [choke.y * s.width + choke.x] });
     const dirs = [1, 2].map((id) => enemyGroupDirective(s, id)!);
     expect(dirs.filter((d) => d.kind === 'block')).toHaveLength(1);
     expect(dirs.find((d) => d.kind === 'block')).toMatchObject(choke);
@@ -143,24 +136,17 @@ describe('block', () => {
         { kind: 'boss', x: 10, y: 4 },
       ],
     });
-    s.enemyFire = {
-      nextThrowTick: {},
-      nextPunchTick: {},
-      throwCount: {},
-      groupNextThrowTick: {},
-      victimSafeUntil: {},
-      callsMade: {},
-      nextCallTick: {},
-      calls: [],
-      chokepoints: [4 * s.width + 9, 4 * s.width + 10],
-    };
+    Object.assign(enemyFireOf(s), { calls: [], chokepoints: [4 * s.width + 9, 4 * s.width + 10] });
     expect([1, 2].map((id) => enemyGroupDirective(s, id)!.kind)).not.toContain('block');
   });
 });
 
 describe('throwers keep their distance and line up', () => {
   it('a thrower next to the human backs off to a clear cardinal line 2+ tiles away and throws from there', () => {
-    const s = enemyScene({ human: { x: 8, y: 2, hp: 999 }, enemies: [{ kind: 'thrower', x: 8, y: 3, hp: 99 }] });
+    const s = enemyScene({
+      human: { x: 8, y: 2, hp: 999 },
+      enemies: [{ kind: 'thrower', x: 8, y: 3, hp: 99 }],
+    });
     const d = observe(s, 1).directive as NpcDirective;
     expect(d.kind).toBe('standoff');
     expect(d.x === 8 || d.y === 2).toBe(true); // cardinal

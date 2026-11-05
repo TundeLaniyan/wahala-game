@@ -95,6 +95,8 @@ export interface EnemyFireState {
   throwCount: Record<number, number>;
   /** Next tick any enemy of a group (team id) may throw: the group's rate limit. */
   groupNextThrowTick: Record<number, number>;
+  /** Next tick any enemy of a group (team id) may START a punch: punches of one group are staggered. */
+  groupNextPunchTick: Record<number, number>;
   /** No enemy hit lands on this victim before this tick (stun + free window): movement is never impossible. */
   victimSafeUntil: Record<number, number>;
   /** Reinforcement calls made so far by each caller, and the next tick it may call again. */

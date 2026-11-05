@@ -31,6 +31,7 @@ export function enemyFireOf(state: GameState): EnemyFireState {
     nextPunchTick: {},
     throwCount: {},
     groupNextThrowTick: {},
+    groupNextPunchTick: {},
     victimSafeUntil: {},
     callsMade: {},
     nextCallTick: {},
