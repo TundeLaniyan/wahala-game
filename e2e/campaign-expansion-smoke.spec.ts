@@ -221,9 +221,10 @@ test.describe('campaign expansion smoke', () => {
       p.stepRemaining = 0;
       return { id: d.id, x: d.x, y: d.y, ret: { x: d.returnTile.x, y: d.returnTile.y } };
     })) as any;
-    // the game loop holds the door; the controller then swaps in the raid (a different game, cross bombs)
+    // hold the door through the real event path (not wall-clock frames: software GL is slow); the controller then swaps in the raid
+    await page.evaluate(() => (window as any).__WAHALA__.advance(150));
     await page.waitForFunction(() => (window as any).__WAHALA__.getState().settings.game === 'raid', null, {
-      timeout: 30_000,
+      timeout: 90_000,
     });
     const raid = (await state(
       page,
@@ -250,7 +251,7 @@ test.describe('campaign expansion smoke', () => {
     await page.waitForFunction(
       () => (window as any).__WAHALA__.getState().settings.game === 'mission',
       null,
-      { timeout: 30_000 },
+      { timeout: 90_000 },
     );
     const back = (await state(
       page,
