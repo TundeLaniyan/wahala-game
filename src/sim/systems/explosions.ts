@@ -11,6 +11,7 @@ import type { GridView } from '../grid';
 import { Tile } from '../types';
 import type { BlastEvent, Dir, Flame, GameState, Generator, SimEvent } from '../types';
 import { radialFootprint, radialRadius, radialSquareRadius } from './blastShape';
+import { raidOnSoftHit } from '../raid/cargo';
 import { revealPickupAt } from './pickups';
 import { triggerableGeneratorsAt } from './queries';
 
@@ -113,7 +114,11 @@ function buildFlames(
     for (const dir of DIRS) {
       const v = DIR_VEC[dir];
       let last: Flame | null = null;
-      for (let x = gen.x + v.dx, y = gen.y + v.dy; x >= 0 && y >= 0 && x < state.width && y < state.height; x += v.dx, y += v.dy) {
+      for (
+        let x = gen.x + v.dx, y = gen.y + v.dy;
+        x >= 0 && y >= 0 && x < state.width && y < state.height;
+        x += v.dx, y += v.dy
+      ) {
         const kind = tileAt(state, x, y);
         if (kind === Tile.Hard) continue;
         last = { ...base, x, y, dir, tip: false };
@@ -191,11 +196,14 @@ function radialFlames(
     const dy = t.y - gen.y;
     const dir: Dir | null =
       dy === 0 ? (dx > 0 ? 'right' : 'left') : dx === 0 ? (dy > 0 ? 'down' : 'up') : null;
-    const flame: Flame = dir ? { ...base, x: t.x, y: t.y, dir, tip: false } : { ...base, x: t.x, y: t.y, dir, tip: false, radial: true };
+    const flame: Flame = dir
+      ? { ...base, x: t.x, y: t.y, dir, tip: false }
+      : { ...base, x: t.x, y: t.y, dir, tip: false, radial: true };
     flames.push(flame);
     if (dir) {
       const prev = tips.get(dir);
-      if (!prev || Math.abs(dx) + Math.abs(dy) > Math.abs(prev.x - gen.x) + Math.abs(prev.y - gen.y)) tips.set(dir, flame);
+      if (!prev || Math.abs(dx) + Math.abs(dy) > Math.abs(prev.x - gen.x) + Math.abs(prev.y - gen.y))
+        tips.set(dir, flame);
     }
     if (tileAt(state, t.x, t.y) === Tile.Soft) markSoft(t.x, t.y);
   }
@@ -255,6 +263,7 @@ export function destroySoftBlocks(
 ): void {
   for (const [idx, eventId] of [...hits.entries()].sort((a, b) => a[0] - b[0])) {
     if (state.tiles[idx] !== Tile.Soft) continue;
+    if (state.raid && raidOnSoftHit(state, idx, by, eventId, events)) continue; // raid cargo has hit points
     state.tiles[idx] = Tile.Empty;
     const supply = state.supplies.indexOf(idx);
     if (supply >= 0) state.supplies.splice(supply, 1);

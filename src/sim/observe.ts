@@ -6,6 +6,7 @@
 import type { GameConfig } from './config';
 import { enemyGroupDirective } from './campaign/tactics';
 import { directiveFor } from './mission/directives';
+import { raidDirectiveFor } from './raid/directives';
 import type { NpcDirective } from './mission/types';
 import type {
   BlastEvent,
@@ -54,9 +55,11 @@ export interface Observation {
 }
 
 export function observe(state: GameState, selfId: number): Observation {
-  // a mission role's directive first; a campaign enemy seat without one takes its group tactic (campaign/tactics.ts)
+  // a mission role's directive first, then a raid role's; a campaign enemy seat without one takes its group tactic
+  // (campaign/tactics.ts)
   const directive =
     (state.mission ? directiveFor(state, selfId) : undefined) ??
+    (state.raid ? raidDirectiveFor(state, selfId) : undefined) ??
     (state.players[selfId]?.enemyKind !== undefined ? enemyGroupDirective(state, selfId) : undefined);
   return {
     selfId,

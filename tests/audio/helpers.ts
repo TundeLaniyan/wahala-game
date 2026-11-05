@@ -236,6 +236,14 @@ export const SAMPLES: Record<SimEvent['type'], SimEvent> = {
   raidRoomOpened: { type: 'raidRoomOpened', id: 'r1' },
   raidWaveStarted: { type: 'raidWaveStarted', index: 1, total: 3 },
   raidExtractionOpened: { type: 'raidExtractionOpened', x: 5, y: 5 },
+  raidShipmentWarning: {
+    type: 'raidShipmentWarning',
+    shipmentId: 'shipment-1',
+    beltId: 'belt-0',
+    tiles: [20, 21],
+    warnTicks: 90,
+  },
+  raidBonusTaken: { type: 'raidBonusTaken', roomId: 'r1', kind: 'armour', x: 2, y: 2 },
   raidOutcome: {
     type: 'raidOutcome',
     outcome: {

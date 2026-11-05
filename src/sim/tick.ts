@@ -41,6 +41,7 @@ import { grantStreakRewards, quickHandsPlacement, updateStreaks } from './system
 import { missionAfterEliminations, updateMission } from './mission/runtime';
 import { updateEnemyCalls } from './systems/enemyActions';
 import { updateProjectiles } from './systems/projectiles';
+import { raidAfterEliminations, updateRaid } from './raid/runtime';
 
 export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   const intents: Intents = suddenDeathHoldsInput(state) ? {} : rawIntents; // the SUDDEN DEATH title card
@@ -86,6 +87,7 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   updateCrowd(state, hits, events);
   updateStage(state, hits, events);
   if (state.mission) updateMission(state, events);
+  if (state.raid) updateRaid(state, events);
   updateSuddenDeath(state, hits, events);
   resolveExplosions(state, events);
   burnPickups(state, events);
@@ -95,6 +97,7 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   grantRewards(state, events);
   grantStreakRewards(state, events);
   if (state.mission) missionAfterEliminations(state, eliminated, events);
+  if (state.raid) raidAfterEliminations(state, eliminated, events);
   scheduleRespawns(state, eliminated);
   applyBlastExposure(state, events);
   dropLoot(state, eliminated, events);

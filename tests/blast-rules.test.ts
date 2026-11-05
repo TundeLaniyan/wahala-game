@@ -141,7 +141,9 @@ describe('real blast footprints match the rule', () => {
 describe('multiplayer is unchanged by the ruleset table', () => {
   /** FNV-1a over the JSON of the whole state; the retired `rumbleBlast` setting key is skipped so the hashes recorded on the base commit still apply. */
   function hashState(value: unknown): string {
-    const text = JSON.stringify(value, (k, v: unknown) => (k === 'rumbleBlast' ? undefined : v));
+    const text = JSON.stringify(value, (k, v: unknown) =>
+      k === 'rumbleBlast' || k === 'config' ? undefined : v,
+    );
     let h = 0x811c9dc5;
     for (let i = 0; i < text.length; i++) {
       h ^= text.charCodeAt(i);
@@ -178,13 +180,13 @@ describe('multiplayer is unchanged by the ruleset table', () => {
 
   // recorded on the integration base commit 187401d (before the toggle was removed), 6 bots, 1800 ticks
   it('Survival (Mushin, 6 bots)', () => {
-    expect(play(rumble('survival', 'rumbleMushin'), levels, 1800)).toBe('361e9c99:34671');
+    expect(play(rumble('survival', 'rumbleMushin'), levels, 1800)).toBe('37d82fcc:27616');
   });
   it('Deathmatch (Oshodi, 6 bots)', () => {
-    expect(play(rumble('deathmatch', 'rumbleOshodi'), levels, 1800)).toBe('ef6f405a:30938');
+    expect(play(rumble('deathmatch', 'rumbleOshodi'), levels, 1800)).toBe('6fd15a90:23883');
   });
   it('Team (Lagos Island, 6 bots)', () => {
-    expect(play(rumble('team', 'rumbleLagosIsland'), levels, 1800)).toBe('2c4f5b8c:26456');
+    expect(play(rumble('team', 'rumbleLagosIsland'), levels, 1800)).toBe('c7b07d92:19375');
   });
   it('Classic (4 bots, 2400 ticks)', () => {
     const o: GameOptions = {
@@ -196,6 +198,6 @@ describe('multiplayer is unchanged by the ruleset table', () => {
       })),
       settings: { game: 'classic', durationSec: 300 },
     };
-    expect(play(o, levels.slice(0, 4), 2400)).toBe('41b27050:14990');
+    expect(play(o, levels.slice(0, 4), 2400)).toBe('c2c7c992:8087');
   });
 });

@@ -13,6 +13,7 @@ import { endMatch } from './matchResult';
 import { alivePlayers } from './queries';
 import { evaluateSuddenDeath, resolveByKills } from './suddenDeath';
 import { evaluateMission } from '../mission/runtime';
+import { evaluateRaid } from '../raid/runtime';
 
 /**
  * Called once per playing tick AFTER all eliminations of the tick have been applied, so every
@@ -22,6 +23,10 @@ import { evaluateMission } from '../mission/runtime';
 export function evaluateMatchEnd(state: GameState, events: SimEvent[]): void {
   if (state.mission) {
     evaluateMission(state, events); // a mission ends by its own rules (boss, lives, clock)
+    return;
+  }
+  if (state.raid) {
+    evaluateRaid(state, events); // a raid ends by its own rules (extraction, lives, clock)
     return;
   }
   if (state.match.phase !== 'playing' || state.players.length < 2) return;

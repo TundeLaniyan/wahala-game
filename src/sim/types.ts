@@ -16,6 +16,8 @@ import type {
   RaidOutcome,
   Vitals,
 } from './campaign/types';
+import type { RaidSpec, RaidState } from './raid/types';
+import type { BonusKind } from './raid/def';
 import type {
   MissionId,
   MissionOutcome,
@@ -638,6 +640,8 @@ export interface GameState {
   projectiles?: Projectile[];
   /** Enemy attack rate limits, calls and tactics data (campaign only). ABSENT in every normal match. */
   enemyFire?: EnemyFireState;
+  /** Classic raid runtime state (src/sim/raid). ABSENT in every other match (tested byte-for-byte). */
+  raid?: RaidState;
 }
 
 export interface TrapTile {
@@ -762,6 +766,8 @@ export interface GameOptions {
   config?: DeepPartial<GameConfig>;
   /** Campaign mission (src/sim/mission): seat 0 human, seat 1 the boss, seats 2... the crew. See `buildMissionGame`. */
   mission?: MissionSpec;
+  /** Classic raid (src/sim/raid): the arena is the raid's own board. See `buildRaidGame`. */
+  raid?: RaidSpec;
 }
 
 // ---------------------------------------------------------------- input
@@ -949,6 +955,10 @@ export type SimEvent =
   | { type: 'raidWaveStarted'; index: number; total: number }
   | { type: 'raidExtractionOpened'; x: number; y: number }
   | { type: 'raidOutcome'; outcome: RaidOutcome }
+  /** Raid: a conveyor shipment is telegraphed; it starts moving along `tiles` (indices) after `warnTicks`. */
+  | { type: 'raidShipmentWarning'; shipmentId: string; beltId: string; tiles: number[]; warnTicks: number }
+  /** Raid: the player took a side room's bonus (heal segment, Armour plate, star token). */
+  | { type: 'raidBonusTaken'; roomId: string; kind: BonusKind; x: number; y: number }
   /** A thrown object left its thrower: the cue (warnTicks of telegraph) comes BEFORE it moves. */
   | {
       type: 'projectileLaunched';

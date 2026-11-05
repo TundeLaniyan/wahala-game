@@ -4,6 +4,11 @@ import { DANFO_BUS_PARK } from './danfoBusPark';
 import { LAGOON_JETTY } from './lagoonJetty';
 import { LEKKI_ROADWORKS } from './lekkiRoadworks';
 import { MOBILE_TEST_13X9, MOBILE_TEST_15X9 } from './mobileTest';
+import { RAID_PARTS_STOREROOM } from './raidParts';
+import { RAID_RAIL_YARD_GOODS } from './raidRailYard';
+import { RAID_RECORDS_VAULT } from './raidRecords';
+import { RAID_JUNCTION_TOOL_SHED, RAID_STANDBY_PLANT } from './raidTemplates';
+import { RAID_WAREHOUSE_DISPATCH_DEPOT } from './raidWarehouse';
 import { RUMBLE_LAGOS_ISLAND } from './rumbleLagosIsland';
 import { RUMBLE_LEKKI } from './rumbleLekki';
 import { RUMBLE_EBUTE_METTA } from './rumbleEbuteMetta';
@@ -74,8 +79,25 @@ export const MOBILE_TEST_ARENA_ID = MOBILE_TEST_13X9.id;
 
 export const DEFAULT_ARENA_ID = DANFO_BUS_PARK.id;
 
+/**
+ * The classic raid boards (src/sim/raid, docs/CLASSIC_RAIDS.md). Deliberately NOT in `ARENAS`: the menus, the arena
+ * pickers and every "all standard / rumble arenas" test keep seeing exactly the arenas they always did; `getArena`
+ * finds a raid board by id.
+ */
+export const RAID_ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
+  [
+    RAID_WAREHOUSE_DISPATCH_DEPOT,
+    RAID_PARTS_STOREROOM,
+    RAID_JUNCTION_TOOL_SHED,
+    RAID_RAIL_YARD_GOODS,
+    RAID_RECORDS_VAULT,
+    RAID_STANDBY_PLANT,
+  ].map((a) => [a.id, a]),
+);
+export const RAID_ARENA_IDS: readonly string[] = Object.keys(RAID_ARENAS);
+
 export function getArena(id: string): ArenaDef {
-  const arena = ARENAS[id];
+  const arena = ARENAS[id] ?? RAID_ARENAS[id];
   if (!arena) throw new Error(`Unknown arena "${id}"`);
   return arena;
 }

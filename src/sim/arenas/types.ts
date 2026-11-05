@@ -1,7 +1,11 @@
 import type { DeepPartial, GameConfig } from '../config';
 import type { Dir, MatchMode, StageHazardStyle, TilePos } from '../types';
 
-export type ArenaKind = 'standard' | 'rumble';
+/**
+ * `standard` = the 2-4 player whole-arena game; `rumble` = the large City Rumble board; `raid` = a classic raid
+ * (src/sim/raid): a small fixed-screen board, kept out of `ARENAS` and listed in `RAID_ARENAS`.
+ */
+export type ArenaKind = 'standard' | 'rumble' | 'raid';
 
 /**
  * When a scheduled stage hazard fires. All times are seconds of play; `everySec` is the inclusive
