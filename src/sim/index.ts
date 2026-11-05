@@ -119,3 +119,4 @@ export { isSpawnProtected } from './systems/respawn';
 export { canThrow, laneStep, spectatorLane, spectatorLanding, validLanding } from './systems/spectators';
 export type { LaneTile, SpectatorView } from './systems/spectators';
 export * from './mission';
+export * from './campaign/types';
