@@ -9,3 +9,8 @@ export { buildMoveBoard, resolveAssistLevel, MOVE_ASSIST_SETTINGS, MOVE_STYLES }
 export type { AssistLevel, MoveAssistSetting, MoveBoard, MoveStyle } from './moveAssist';
 export { InputTrace, inputTrace } from './trace';
 export type { TraceEvent } from './trace';
+export { inputModeFor } from './inputMode';
+export type { InputMode } from './inputMode';
+export { CROSS_DIRS, CROSS_MIN_BUTTON, CrossPad, actionColumn, crossLayout, overlaps } from './dpad';
+export type { CrossLayout, Rect, Viewport } from './dpad';
+export { snapStick } from './gamepad';

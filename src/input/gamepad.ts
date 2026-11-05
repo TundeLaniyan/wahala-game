@@ -25,6 +25,30 @@ export interface GamepadEvents {
   onUse(): void;
 }
 
+/**
+ * Dominant-axis direction of a stick with a dead zone and hysteresis, so a wobbling stick cannot fake extra taps.
+ * `strict` (raids, cardinal movement only): a NEW direction also needs its axis to be clearly dominant
+ * (`AXIS_HYSTERESIS` times the other), so a thumb resting on a diagonal gives no direction instead of a lucky one.
+ */
+export function snapStick(prev: Dir | null, ax: number, ay: number, strict = false): Dir | null {
+  const horizontal = (d: Dir | null): boolean => d === 'left' || d === 'right';
+  let dir: Dir | null = null;
+  if (prev) {
+    const own = Math.abs(horizontal(prev) ? ax : ay);
+    const other = Math.abs(horizontal(prev) ? ay : ax);
+    if (own > RELEASE_ZONE && other < own * AXIS_HYSTERESIS) {
+      const v = horizontal(prev) ? ax : ay;
+      dir = horizontal(prev) ? (v > 0 ? 'right' : 'left') : v > 0 ? 'down' : 'up';
+    }
+  }
+  const major = Math.max(Math.abs(ax), Math.abs(ay));
+  const minor = Math.min(Math.abs(ax), Math.abs(ay));
+  if (!dir && major > DEADZONE && (!strict || minor * AXIS_HYSTERESIS <= major)) {
+    dir = Math.abs(ax) > Math.abs(ay) ? (ax > 0 ? 'right' : 'left') : ay > 0 ? 'down' : 'up';
+  }
+  return dir;
+}
+
 /** Polls the Gamepad API once per frame. D-pad / left stick move; face buttons act. */
 export class GamepadInput {
   private prev: boolean[] = [];
@@ -50,24 +74,12 @@ export class GamepadInput {
     }
   }
 
-  /** Dominant-axis direction with a dead zone and hysteresis so a wobbling stick cannot fake extra taps. */
+  /** Raids (decision RR7): the stick snaps to one of four cardinals only; an ambiguous diagonal gives nothing. */
+  cardinalOnly = false;
+
   private stickDirection(ax: number, ay: number): Dir | null {
-    const horizontal = (d: Dir | null): boolean => d === 'left' || d === 'right';
-    const prev = this.stickDir;
-    let dir: Dir | null = null;
-    if (prev) {
-      const own = Math.abs(horizontal(prev) ? ax : ay);
-      const other = Math.abs(horizontal(prev) ? ay : ax);
-      if (own > RELEASE_ZONE && other < own * AXIS_HYSTERESIS) {
-        const v = horizontal(prev) ? ax : ay;
-        dir = horizontal(prev) ? (v > 0 ? 'right' : 'left') : v > 0 ? 'down' : 'up';
-      }
-    }
-    if (!dir && Math.max(Math.abs(ax), Math.abs(ay)) > DEADZONE) {
-      dir = Math.abs(ax) > Math.abs(ay) ? (ax > 0 ? 'right' : 'left') : ay > 0 ? 'down' : 'up';
-    }
-    this.stickDir = dir;
-    return dir;
+    this.stickDir = snapStick(this.stickDir, ax, ay, this.cardinalOnly);
+    return this.stickDir;
   }
 
   poll(): void {

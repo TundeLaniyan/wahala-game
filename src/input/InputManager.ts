@@ -51,6 +51,8 @@ export class InputManager {
   private touchWish: Dir | null = null;
   private moveAssist: MoveAssistSetting = 'auto';
   private moveStyle: MoveStyle = 'standard';
+  /** Raids (decisions RR6, RR7): one cardinal direction at a time, no assisted movement of any kind. */
+  private cardinalOnly = false;
   private readonly gate = new MoveGate();
   private readonly a = new PlaceHold();
   private readonly b = new SpecialHold();
@@ -126,7 +128,7 @@ export class InputManager {
    * finger lifts. A new direction is a new press (one tile); holding repeats at the step cadence.
    */
   setTouchDir(dir: Dir | null, wish: Dir | null = null): void {
-    this.touchWish = dir ? wish : null;
+    this.touchWish = dir && !this.cardinalOnly ? wish : null;
     inputTrace.record({ k: 'dir', tick: this.tickNow, dir, wish: this.touchWish });
     if (dir === this.touchDir) return;
     const switching = this.touchDir !== null && dir !== null;
@@ -135,9 +137,28 @@ export class InputManager {
     this.device('touch');
     // a thumb that goes straight from one direction to another may be mid-swipe through the centre: a
     // moment of settling (full assistance only) lets the real direction overwrite a stray one
-    const settle = switching && this.assistLevel === 'full' ? SWITCH_SETTLE_TICKS : 0; // input filtering, both styles
+    const settle = switching && this.assistLevel === 'full' && !this.cardinalOnly ? SWITCH_SETTLE_TICKS : 0; // input filtering, both styles
     this.gate.press(dir, this.tickNow, settle, true);
     this.events.onNav(dir);
+  }
+
+  /**
+   * Raid mode (`inputModeFor(state).cardinalOnly`, set by the app when a match starts): every device sends at most one
+   * cardinal direction, the move gate runs exactly as it does without assistance (a press is one tile, a hold repeats
+   * at the step cadence), and there is no corner buffer, no corner route, no sidestep and no settle. The gate is cleared
+   * so nothing carries over from the previous screen.
+   */
+  setCardinalOnly(on: boolean): void {
+    if (on === this.cardinalOnly) return;
+    this.cardinalOnly = on;
+    this.gamepad.cardinalOnly = on;
+    this.touchDir = null;
+    this.touchWish = null;
+    this.gate.clear();
+  }
+
+  get isCardinalOnly(): boolean {
+    return this.cardinalOnly;
   }
 
   /** Settings > Assisted movement. */
@@ -196,13 +217,14 @@ export class InputManager {
     if (this.navMode) this.gate.clear();
     else {
       const held = this.heldDir();
+      // cardinal-only: no `legal` (so no corner-turn buffer) and no assist (no corner route, sidestep or settle)
       move = this.gate.next(
         tick,
         held,
         this.activeDirs(),
         c.canMove ?? true,
-        c.legal,
-        this.gateAssist(c, held),
+        this.cardinalOnly ? undefined : c.legal,
+        this.cardinalOnly ? undefined : this.gateAssist(c, held),
         c.locked ?? false,
       );
       if (inputTrace.enabled && (move !== null || this.gate.reason !== 'idle'))
@@ -261,6 +283,11 @@ export class InputManager {
   }
 
   private activeDirs(): ReadonlySet<Dir> {
+    // cardinal-only: the one direction being sent, never a pair
+    if (this.cardinalOnly) {
+      const one = this.heldDir();
+      return new Set<Dir>(one ? [one] : []);
+    }
     const set = new Set<Dir>(this.keyboard.heldSet);
     if (this.touchDir) set.add(this.touchDir);
     if (this.gamepad.held) set.add(this.gamepad.held);
