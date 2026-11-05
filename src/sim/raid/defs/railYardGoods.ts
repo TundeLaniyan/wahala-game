@@ -7,7 +7,7 @@
  *
  *      01234567890123456
  *    0 #################
- *    1 #T.1.........2E.#     T star token   1 closet door   2 exit gate   E exit
+ *    1 #Tj1.........2E.#     T star token   j closet agbero   1 closet door   2 exit gate   E exit
  *    2 ####....a....####     a b guards   c thrower   d heavy
  *    3 #.>>>>>>>>>>>>>v#     > < v belts   (the long conveyor starts at the west end of row 3)
  *    4 #.....#.c.#....v#
@@ -31,7 +31,7 @@ export const RAIL_YARD_GOODS: RaidDef = {
   factionId: 'ironLaneSwitchmen',
   layout: [
     '#################',
-    '#T.1.........2E.#',
+    '#Tj1.........2E.#',
     '####....a....####',
     '#.>>>>>>>>>>>>>v#',
     '#.....#.c.#....v#',
@@ -70,7 +70,15 @@ export const RAIL_YARD_GOODS: RaidDef = {
     },
     { glyph: '2', id: 'exitGate', opensWhen: { kind: 'waveCleared', wave: 1 }, hint: 'Clear the switchmen' },
   ],
-  rooms: [{ id: 'closet', name: 'Ticket closet', door: 'closetDoor', rect: [1, 1, 2, 1] }],
+  rooms: [
+    {
+      id: 'closet',
+      name: 'Ticket closet',
+      door: 'closetDoor',
+      rect: [1, 1, 2, 1],
+      enemies: [{ kind: 'agbero', spot: 'j', name: 'Closet Agbero' }],
+    },
+  ],
   conveyors: [
     {
       stepTicks: 20,
