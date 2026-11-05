@@ -62,6 +62,8 @@ describe('surround', () => {
     expect(tiles.size).toBe(4);
     for (const d of dirs) expect(dist(d, human)).toBe(1);
 
+    // (a heavy's punch shoves the human; the squad that must hold still around a stationary target has no knockback)
+    for (const p of s.players.slice(1)) if (p.enemyKind === 'heavy') p.enemyKind = 'guard';
     play(s, 1500);
     const at = new Set(s.players.slice(1).map((p) => `${p.x},${p.y}`));
     expect(at.size).toBe(4);

@@ -28,7 +28,7 @@ Rules in one paragraph: an enemy seat (`Player.enemyKind`) never uses the genera
 | result | meaning |
 | --- | --- |
 | `damaged`, `dazed`, `defeated` | it hit a rival (the matching `campaignHit` is emitted by `applyCampaignHit` in the same tick) |
-| `blockedArmour`, `blockedOkada` | a protection layer absorbed it (combat-core rules) |
+| `blockedArmour`, `blockedOkada` | a protection layer absorbed it. Per combat-core (CC2) only a STRONG object (the tool) meets Okada / Armour; a common object that deals a segment (the brick) is a wound |
 | `invulnerable` | the rival was inside the free window after an earlier enemy hit: nothing happened |
 | `wall` | it hit a wall, a hard block or a crate (x/y is that tile) |
 | `blocked` | an ally of the thrower stood on the tile (`victimId` is the ally): stopped harmlessly, it never passes through its own team |
@@ -90,21 +90,21 @@ The player's Punch starts in 4 ticks (0.07 s) and cuts a pending wind-up short (
 
 A mission role's own directive (`src/sim/mission/directives.ts`) wins when a seat has one.
 
-## Measured balance (`npm run enemy-balance -- --seeds 12`, standard bot level, Ojuelegba rumble map, seed 1..12)
+## Measured balance (`npm run enemy-balance -- --seeds 8`, standard bot level, Ojuelegba rumble map, seeds 1..8; measured with combat-core's real `applyCampaignHit`)
 
 1 human (a scripted player who watches the screen: leaves a line on the cue after 18 ticks, steps out of a punch in its last 12 ticks, keeps 3 tiles from the nearest enemy, never fights back) against 4 enemies for 60 s:
 
 | enemies | health lost per minute | throws | punches | earliest defeat of a human who never moves (3 health) |
 | --- | --- | --- | --- | --- |
-| agbero, agbero, guard, guard | 2.5 | 0 | 10 | 4.8 s |
-| guard, guard, heavy, heavy | 2.2 | 19 | 13 | 5.1 s |
-| guard, thrower, thrower, heavy | 2.0 | 32 | 10 | 6.0 s |
-| heavy, lieutenant, guard, thrower | 1.8 | 30 | 11 | 4.8 s |
-| thrower x 4 | 0.0 | 40 | 2 | never (daze only) |
+| agbero, agbero, guard, guard | 2.4 | 0 | 10 | 4.8 s |
+| guard, guard, heavy, heavy | 2.9 | 14 | 10 | 5.1 s |
+| guard, thrower, thrower, heavy | 2.3 | 28 | 9 | 5.5 s |
+| heavy, lieutenant, guard, thrower | 1.9 | 29 | 13 | 4.8 s |
+| thrower x 4 | 0.0 | 39 | 2 | never (daze only) |
 
 Band asserted by `tests/enemy-balance.test.ts`: 0.3 to 6 health per minute for a dodger, no human defeated before 3.5 s even when standing still, never more than one launch per tick, launches at least 60 ticks apart, at most 3 objects in flight.
 
-Duels (the player's Punch against one enemy, equal 3 health, 48 starts per kind): the player wins every duel (6.3 to 6.9 s on average). Player damage to an enemy is applied by the harness as 1 segment per connected Punch (combat-core defines the real value the same way).
+Duels (the player's Punch against one enemy, equal 3 health, 32 starts per kind): the player wins every duel (6.3 to 6.9 s on average). Player damage to an enemy is combat-core's (`config.campaign.playerDamage`: a Punch takes 1 segment).
 
 ## Using it from a runtime
 

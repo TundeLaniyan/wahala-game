@@ -5,7 +5,7 @@
  */
 import { createBot } from '../../src/ai';
 import type { Bot } from '../../src/ai';
-import { DIR_VEC, DIRS, createGame, observe, tick } from '../../src/sim';
+import { DIR_VEC, DIRS, createGame, createVitals, observe, tick } from '../../src/sim';
 import type {
   DeepPartial,
   Dir,
@@ -20,18 +20,10 @@ import type {
   Vitals,
 } from '../../src/sim';
 import { Tile } from '../../src/sim/types';
-import { applyCampaignHit } from '../../src/sim/systems/campaignDamage';
 
 export const HZ = 60;
 
-export const vitalsOf = (hp: number): Vitals => ({
-  hp,
-  maxHp: hp,
-  invulnUntil: 0,
-  lastHitTick: -1e9,
-  lastHitBy: null,
-  lastHitSource: null,
-});
+export const vitalsOf = (hp: number): Vitals => createVitals(hp);
 
 export interface EnemySpec {
   kind: EnemyKind;
@@ -405,8 +397,8 @@ export interface DuelResult {
 
 /**
  * The player (seat 0, walks up and presses B at every chance, the same tool: the Punch) against one enemy of `kind`, both
- * with `hp` segments. Each Punch that connects takes one segment from the other side (the player's hit is applied by
- * this harness through `applyCampaignHit`, one segment: combat-core defines it the same way). `gap` tiles apart.
+ * with `hp` segments. Each Punch that connects takes its segments from the other side (the player's Punch takes one,
+ * `config.campaign.playerDamage`; an enemy's punch its own `config.enemyAttacks.melee` damage). `gap` tiles apart.
  */
 export function playDuelAgainstEnemy(
   kind: EnemyKind,
@@ -436,16 +428,7 @@ export function playDuelAgainstEnemy(
       if (d) intents[0] = { move: d };
     }
     if (foe.alive) intents[1] = bot.decide(observe(s, 1));
-    const ev = tick(s, intents);
-    for (const e of ev) {
-      if (e.type === 'attackResolved' && e.playerId === 0 && e.hit && e.targetId === 1) {
-        applyCampaignHit(
-          s,
-          { victimId: 1, byId: 0, source: 'player', damage: 1, dazeTicks: 0, knockback: null },
-          [],
-        );
-      }
-    }
+    tick(s, intents);
     if (!me.alive || me.vitals!.hp <= 0) return { winner: 'enemy', tick: s.tick };
     if (!foe.alive || foe.vitals!.hp <= 0) return { winner: 'player', tick: s.tick };
   }

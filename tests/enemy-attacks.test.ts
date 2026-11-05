@@ -135,9 +135,9 @@ describe('launch cue, path and collision', () => {
     expect(s.players[0]!.vitals!.hp).toBe(3);
   });
 
-  it('an Okada or Armour absorbs a damaging projectile (combat-core rules) and the event says so', () => {
+  it('an Okada or Armour absorbs a strong projectile (combat-core rules) and the event says so', () => {
     for (const layer of ['armour', 'okada'] as const) {
-      const s = lineScene('lieutenant'); // brick first: 1 segment
+      const s = lineScene('heavy'); // a strong tool: the only thrown object a shield has to answer (decision CC2)
       if (layer === 'armour') s.players[0]!.armour = 1;
       else s.players[0]!.mounted = true;
       tick(s, press);
