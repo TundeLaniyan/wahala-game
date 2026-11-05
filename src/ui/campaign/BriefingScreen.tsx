@@ -1,9 +1,9 @@
 /**
- * Mission briefing: the district's briefing text (objectives, intel, warnings, the unseen broker's message), the
- * boss card, and the loadout: fighter, bot level, replay modifier (only ones the save has unlocked) and lives.
+ * Mission briefing: the briefing card (a short summary, the objective line, Read more with the objectives, intel,
+ * warnings and the unseen broker's message, Listen), the boss card, and the loadout: fighter, bot level, replay modifier (only ones the save has unlocked) and lives.
  * The fighter and level are stored in the campaign save, never in the menu setup (`settings`).
  */
-import { CAMPAIGN, availableModifiers, replayModifierFor } from '../../campaign';
+import { CAMPAIGN, availableModifiers, briefingCard, replayModifierFor } from '../../campaign';
 import { CHARACTERS } from '../../sim';
 import { MISSION_LIVES, isMissionId } from '../../app/campaign';
 import { commands } from '../../app/session';
@@ -13,14 +13,15 @@ import { ROSTER, fighterInfo } from '../menu/fighters';
 import { FighterImage } from '../menu/FighterImage';
 import { Field, Option, PrimaryButton, ScreenFrame } from '../menu/Frame';
 import { districtNumber } from './model';
-import { BossCard, BrokerMessage, useCampaignUi } from './parts';
+import { CardView } from './CardView';
+import { BossCard, useCampaignUi } from './parts';
 
 export function BriefingScreen() {
   const ui = useCampaignUi();
   if (!ui || !isMissionId(ui.selected)) return null;
   const id = ui.selected;
   const d = CAMPAIGN.districts[id];
-  const b = d.briefing;
+  const card = briefingCard(id);
   const boss = d.boss!;
   const { save } = ui;
   const modifiers = availableModifiers(save, id);
@@ -30,7 +31,7 @@ export function BriefingScreen() {
     <ScreenFrame
       id="briefing"
       kicker={`District ${districtNumber(id)} of 6 · ${d.name}`}
-      title={b.title}
+      title={card.title}
       className="cp-screen cp-brief-screen"
       status={
         <span className="mn-chosen" data-testid="briefing-loadout-summary">
@@ -54,29 +55,7 @@ export function BriefingScreen() {
       )}
       <div className="cp-brief">
         <section className="cp-brief-main">
-          <div className="cp-panel mn-panel" data-testid="briefing-text">
-            <small className="mn-kicker">{b.location}</small>
-            <p className="cp-summary">{b.summary}</p>
-            <h4>Objectives</h4>
-            <ul data-testid="briefing-objectives">
-              {b.objectives.map((o) => (
-                <li key={o}>{o}</li>
-              ))}
-            </ul>
-            <h4>Intel</h4>
-            <ul data-testid="briefing-intel">
-              {b.intel.map((o) => (
-                <li key={o}>{o}</li>
-              ))}
-            </ul>
-            <h4 className="warn">Warnings</h4>
-            <ul className="warn" data-testid="briefing-warnings">
-              {b.warnings.map((o) => (
-                <li key={o}>{o}</li>
-              ))}
-            </ul>
-          </div>
-          {b.brokerMessage && <BrokerMessage line={b.brokerMessage} />}
+          <CardView card={card} testId="briefing-text" />
         </section>
 
         <section className="cp-brief-side">
@@ -149,8 +128,7 @@ export function BriefingScreen() {
               {ui.modifier && <p className="mn-fineprint">{replayModifierFor(id).description}</p>}
             </Field>
             <p className="cp-lives" data-testid="briefing-lives">
-              Lives: <b>{MISSION_LIVES}</b>. A life is spent each time you are put down; none left and the
-              mission is lost.
+              Lives: <b>{MISSION_LIVES}</b>. None left and the mission is lost.
             </p>
           </div>
         </section>

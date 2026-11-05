@@ -61,6 +61,13 @@ export interface GameSettings {
   shake: ShakeSetting;
   /** V2: tutorial narration (approved voice clips) on/off. */
   narration: boolean;
+  /**
+   * Campaign story cards: play a card's narration clip on its own when one exists (default off; no clips ship yet,
+   * so it does nothing today). The text and the Listen button never depend on it.
+   */
+  campaignNarration: boolean;
+  /** Campaign story cards: show the Listen button (disabled when no clip exists). Off hides it. */
+  campaignListen: boolean;
   /** Rumble Evolution: assisted movement (decisions RE-A). Auto = on for touch, the plain corner buffer with keyboard / gamepad. */
   moveAssist: MoveAssistSetting;
   /** Decision AS4: the touchscreen thumb's style - standard (cardinal + corner help) or beginner (adds buffering and emergency replanning). */
@@ -92,6 +99,8 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   subtitles: 'off',
   shake: 'auto',
   narration: true,
+  campaignNarration: false,
+  campaignListen: true,
   moveAssist: 'auto',
   moveStyle: 'standard',
   rumbleBlast: 'radial',
@@ -114,6 +123,8 @@ export const PREFERENCE_KEYS = [
   'subtitles',
   'shake',
   'narration',
+  'campaignNarration',
+  'campaignListen',
   'muted',
   'moveAssist',
   'moveStyle',
@@ -129,6 +140,8 @@ export function preferenceDefaults(): Pick<GameSettings, PreferenceKey> {
     subtitles: d.subtitles,
     shake: d.shake,
     narration: d.narration,
+    campaignNarration: d.campaignNarration,
+    campaignListen: d.campaignListen,
     muted: d.muted,
     moveAssist: d.moveAssist,
     moveStyle: d.moveStyle,
@@ -170,6 +183,8 @@ export function sanitizeSettings(s: GameSettings): GameSettings {
     subtitles: oneOf(s.subtitles, SUBTITLE_MODES, 'off'),
     shake: oneOf(s.shake, ['auto', 'off', 'subtle'] as const, d.shake),
     narration: bool(s.narration, d.narration),
+    campaignNarration: bool(s.campaignNarration, d.campaignNarration),
+    campaignListen: bool(s.campaignListen, d.campaignListen),
     moveAssist: oneOf(s.moveAssist, MOVE_ASSIST_SETTINGS, d.moveAssist),
     moveStyle: oneOf(s.moveStyle, MOVE_STYLES, d.moveStyle),
     rumbleBlast: oneOf(s.rumbleBlast, ['radial', 'cross'] as const, d.rumbleBlast),

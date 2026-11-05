@@ -58,6 +58,18 @@ export interface FactionDef {
   allied?: boolean;
 }
 
+/**
+ * Optional hand-written card copy (docs/CAMPAIGN_TEXT_NARRATION.md). When absent, `src/campaign/cards.ts` derives
+ * the summary (the first one or two sentences) and the objective line from the long text; nothing is removed
+ * either way: the long text goes into the card's Read more.
+ */
+export interface CardCopy {
+  /** One or two sentences (see `CARD_LIMITS`). */
+  summary?: string;
+  /** A short objective line, at most `CARD_LIMITS.objectiveWords` words. */
+  objective?: string;
+}
+
 export interface StoryLine {
   /** Speaker label: a fictional name, "UNKNOWN NUMBER", "RADIO", "NARRATOR" ... */
   speaker: string;
@@ -132,6 +144,10 @@ export interface BossDef {
   /** What winning changes in the campaign world (map changes, broker reaction, next district opens). */
   consequence: string;
   replayModifier: ReplayModifierDef;
+  /** Optional short card copy for the boss introduction, the defeat scene and the ousted defeat scene (cards.ts). */
+  introCard?: CardCopy;
+  defeatCard?: CardCopy;
+  defeatOustedCard?: CardCopy;
 }
 
 export interface DistrictBriefing {
@@ -143,6 +159,9 @@ export interface DistrictBriefing {
   warnings: string[];
   /** A message from the unseen central broker, if this district has one. */
   brokerMessage?: StoryLine;
+  /** Optional short card copy; absent = derived from `summary` / `objectives` (cards.ts). */
+  cardSummary?: string;
+  objectiveCard?: string;
 }
 
 export interface LandmarkAnchor {
@@ -189,6 +208,10 @@ export interface CampaignContent {
   /** Played after all six districts are cleared: the empire collapses, the central broker escapes unseen. */
   finale: StoryLine[];
   ending: { title: string; summary: string; teaser: string };
+  /** Optional short card copy for the prologue, the finale and the ending (cards.ts). */
+  prologueCard?: CardCopy;
+  finaleCard?: CardCopy;
+  endingCard?: CardCopy;
 }
 
 // ---------------------------------------------------------------- progress / save
