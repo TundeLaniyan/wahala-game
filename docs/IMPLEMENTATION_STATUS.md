@@ -549,3 +549,14 @@ Disabled by default; see `docs/ONLINE_ARCHITECTURE.md` and decisions ON1-ON12. C
 ## Campaign story panels (Part D, branch `claude/wahala-lagos-enhancement-v1`)
 
 Done: an illustrated story-panel system (`StoryHero`, `storyImages.ts`) with 19 original in-engine panels (prologue, finale, ending, seven district briefings, six boss arrivals, three section / raid panels), a failure path that never blocks a card, tests and a browser check. Pipeline, table, accessibility and limitations: `docs/STORY_VISUALS.md`. Not done: per-boss costume art (the renderer has none, so boss panels are arrival compositions with a palette-tinted light); hand-illustrated replacements; night-time renders.
+
+## Lagos enhancement pass (branch `claude/wahala-lagos-enhancement-v1`; not merged, not deployed; awaiting founder review)
+
+| Part | State |
+| --- | --- |
+| A Ebute-Metta West | done: board 55x39 -> 75x39, open tiles 1,329 -> 1,774 (+33.5%), `docs/EBUTE_METTA_WEST.md`, decisions EW1-EW10 |
+| B Lekki Amarite Way | **not done**: the founder photographs were not attached and the map has no Amarite Way; `docs/LEKKI_AMARITE_WAY.md` |
+| C Bosses | done for the three approved (Oshodi "Oga Mic", Fadeyi "Oga Footbridge", Ojuelegba non-combat Baba Junction); four provisional candidates researched only (`docs/BOSS_INSPIRATIONS.md`), none implemented |
+| D Story panels | done: `docs/STORY_VISUALS.md`, 19 WebP panels, graceful fallback |
+| E Difficulty | done: `docs/CAMPAIGN_DIFFICULTY.md`, decisions CL1-CL7; tested at all three levels against the respawn hotfix (`tests/app/campaign-level-death.test.ts`) |
+| Hotfix | `a4fe457` (campaign death never spectates) merged in; no conflicts |
