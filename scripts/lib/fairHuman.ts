@@ -577,8 +577,31 @@ function nextCrate(s: GameState, goal: number): number | null {
   return path.find((i) => s.tiles[i] !== Tile.Empty) ?? goal;
 }
 
+/** Tiles reachable from (x, y) in at most `max` steps over open floor (crates and walls block), with their step count. */
+function walkSteps(s: GameState, x: number, y: number, max: number): Map<number, number> {
+  const w = s.width;
+  const out = new Map<number, number>([[y * w + x, 0]]);
+  let frontier = [y * w + x];
+  for (let d = 1; d <= max && frontier.length > 0; d++) {
+    const next: number[] = [];
+    for (const u of frontier) {
+      for (const dir of DIRS) {
+        const nx = (u % w) + DIR_VEC[dir].dx;
+        const ny = Math.floor(u / w) + DIR_VEC[dir].dy;
+        if (nx < 0 || ny < 0 || nx >= s.width || ny >= s.height) continue;
+        const v = ny * w + nx;
+        if (out.has(v) || s.tiles[v] !== Tile.Empty) continue;
+        out.set(v, d);
+        next.push(v);
+      }
+    }
+    frontier = next;
+  }
+  return out;
+}
+
 /**
- * The real raid (its waves, doors, belts and clock): the human fights the active enemies that come within 6 tiles,
+ * The real raid (its waves, doors, belts and clock): the human fights the active enemies within 6 walking steps,
  * otherwise works on the nearest marked crate (blasting the crates in the way), then walks to the open exit.
  * Lives and respawns are the raid's own; `won` is the raid's outcome.
  */
@@ -603,9 +626,10 @@ export function playRaidFight(o: RaidFightOptions): FightStats & { outcome: stri
   const limit = (s.raid!.timeLimitTicks + 600) | 0;
   for (let t = 0; t < limit && !s.raid!.outcome && s.match.phase !== 'ended'; t++) {
     const me = s.players[0]!;
-    const foes = s.players.filter(
-      (p) => p.alive && p.enemyKind !== undefined && Math.abs(p.x - me.x) + Math.abs(p.y - me.y) <= 6,
-    );
+    // foes within 6 WALKING steps (not Manhattan through a pillar: in a maze the closest enemy by straight line can be
+    // on the far side of a wall, and fighting it there only lays generators the pillar stops)
+    const steps = walkSteps(s, me.x, me.y, 6);
+    const foes = s.players.filter((p) => p.alive && p.enemyKind !== undefined && steps.has(p.y * w + p.x));
     let targets = foes.map((p) => p.y * w + p.x);
     let goal: number | null = null;
     if (targets.length === 0 && me.alive) {
