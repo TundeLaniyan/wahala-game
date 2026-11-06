@@ -2,6 +2,16 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Classic grid: raid boards as Bomberman mazes (worker `raid-geometry`, from `a4fe457`)
+
+Reference: `docs/CLASSIC_GRID.md`; decisions CG1-CG8. Not merged, not deployed.
+
+- The depot, rail yard, storeroom and vault are redrawn on the classic pillar lattice (no open 3x3, open 2x2 only in a spawn pocket or a belt corner); every mechanic, id and count kept. The compact template moves one marked crate so the spawn has two ways out and every guard can reach the player.
+- `raidProblems` enforces the shape rule (`src/sim/raid/shape.ts`); `tests/raid-classic-grid.test.ts` (shape, entrance escapes, enemy-spot reach on the bot board, bot board == `canPlayerEnter`, cross blasts, corridor trap vs junction escape) and `tests/input-raid-grid.test.ts` (no corner clipping on the real depot for any device; sim never moves diagonally).
+- Before / after screenshots: `docs/screenshots/classic-grid/`.
+
+Verification: see the final report of the branch (targeted `tsc`, `eslint`, raid / input / campaign Vitest files, the campaign-expansion browser smoke).
+
 ## Kill streaks, close combat and touch input (branch `claude/wahala-streaks-combat-input-v1`, from `8ebf3f4`)
 
 Reference: `docs/STREAKS_AND_COMBAT.md`; decisions MI1-MI5, CB1-CB4, SK1-SK4, VG1-VG4, GK1. Not merged, not deployed.
