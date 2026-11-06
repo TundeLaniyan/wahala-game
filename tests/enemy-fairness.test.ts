@@ -272,6 +272,9 @@ describe('the Normal baseline (casual enemy bots) is winnable and fair (scripts/
     for (const r of runs) {
       expect(r.chained).toBe(0); // never a repeated-interruption chain
       expect(r.deaths).toBeLessThanOrEqual(1); // the human is never overwhelmed
+      // a run that does not complete may only run out of time (a stand-off), never end with the human defeated
+      if (r.outcome !== 'completed') expect(r.failedBy).toBe('time');
     }
+    // the core combat rules behind this rate are pinned deterministically in tests/raid-maze-combat.test.ts
   });
 });

@@ -71,3 +71,21 @@ the two docs (both append; keep both), `src/sim/index.ts` (both add export lines
 Semantic note for the difficulty work: this branch adds campaign-only knobs (`config.enemyAttacks.awareness`, recovery roots,
 `campaign.vsEnemy.targetLockoutTicks`, `pursuitGiveUpTiles`, `ENEMY_KINDS[kind].steadfast`) that Easy / Hard should scale, and sets the
 Normal enemy bot level to Casual.
+
+## Follow-up review: the seed-2 timeout and the meaning of the rate test
+
+**Seed 2 (depot, Casual, the default scripted player) is a scripted-strategy stall, not an AI defect.** Measured over the run:
+the lieutenant attacked throughout (53 throws, 5 punches, the last at 238 s), was hit 4 times, and holds its corridor at x = 11
+(tiles (11,1) / (11,2) / (12,2) / (11,3)). The scripted player stood in the bay mouth ((13,3) / (14,3) / (13,2)) and laid 45 of its
+generators after the first minute on the SAME tile (13,2), whose cross the lieutenant leaves by the corner refuge each time.
+The same seed with only the scripted player's timing changed is completed: slower reactions 140 s; a longer fuse margin 57 s
+(the lieutenant hit 8 times). A bomb-only player (no punches) loses at 101 s. No AI change was made.
+
+**Why "5 of seeds 1-6" stays meaningful.** The runs are deterministic (same seeds, same code, same result), so the rate only moves
+when behaviour changes; it now also requires that a run which does not complete ends by the clock (a stand-off), never by the
+human being defeated, with no interruption chain and at most one death per run. The core rules behind it are pinned exactly in
+`tests/raid-maze-combat.test.ts` with the real enemy bot: a guard in a dead end behind a generator is defeated; a guard at a
+junction escapes a single cross unhurt; a lieutenant shut in a corridor by two generators is hurt and survives (8 health); a
+lieutenant at a junction escapes one predictable bomb; a lieutenant with a clear line throws (with a cue >= the minimum); a guard
+next to the human punches. Negative control: with the enemy bot switched off, the four AI-dependent tests fail and the two trap
+tests still pass.

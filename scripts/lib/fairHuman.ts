@@ -605,7 +605,9 @@ function walkSteps(s: GameState, x: number, y: number, max: number): Map<number,
  * otherwise works on the nearest marked crate (blasting the crates in the way), then walks to the open exit.
  * Lives and respawns are the raid's own; `won` is the raid's outcome.
  */
-export function playRaidFight(o: RaidFightOptions): FightStats & { outcome: string } {
+export function playRaidFight(
+  o: RaidFightOptions,
+): FightStats & { outcome: string; failedBy: string | null } {
   const s = createGame(
     buildRaidGame({
       raidId: o.raidId ?? 'warehouseDispatchDepot',
@@ -661,5 +663,9 @@ export function playRaidFight(o: RaidFightOptions): FightStats & { outcome: stri
   st.laid = human.laid;
   st.laidOnEnemy = human.laidOnEnemy;
   st.won = s.raid!.outcome?.result === 'completed';
-  return { ...st, outcome: s.raid!.outcome?.result ?? 'timeout' };
+  return {
+    ...st,
+    outcome: s.raid!.outcome?.result ?? 'timeout',
+    failedBy: s.raid!.outcome?.failedBy ?? null,
+  };
 }
