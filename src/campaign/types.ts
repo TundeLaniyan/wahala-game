@@ -11,6 +11,7 @@
  * about (messages, silhouettes, phone calls) and he escapes at the end.
  */
 import type {
+  CampaignLevel,
   CharacterId,
   MissionId,
   MissionModifierId,
@@ -108,7 +109,7 @@ export interface BossPhaseText {
 export interface BossDef {
   id: string;
   districtId: MissionId;
-  /** Fictional name and title ("Oga Dispatch", "The Controller of Interchange"). */
+  /** Fictional name and title ("Oga Sunmola", "Park Master of the Interchange"). */
   name: string;
   title: string;
   /** The real cultural texture that inspired the boss (never a real person). */
@@ -136,8 +137,12 @@ export interface BossDef {
   /** Played when the mission is won (the empire-collapse beat for this district). */
   defeatSequence: StoryLine[];
   reward: RewardDef;
-  /** Optional: a short nickname the crew uses ("Oga Dispatch"). */
+  /** Optional: a short nickname the crew uses ("Oga Mic"). */
   nickname?: string;
+  /** Optional presentation: who walks with the boss (shown under Read more, drawn in the boss-intro panel). */
+  entourage?: string;
+  /** Optional presentation: how the boss arrives (the first thing the crowd sees or hears). */
+  entrance?: string;
   /** Optional: played instead of `defeatSequence` when the sim reports `defeat: 'ousted'` (the boss flees / is removed). */
   defeatSequenceOusted?: StoryLine[];
   /** Optional: story flags set on the first clear (`CampaignSave.flags`), e.g. "oshodi.dispatchBroken". */
@@ -171,6 +176,25 @@ export interface LandmarkAnchor {
   note: string;
 }
 
+/**
+ * A non-combat local figure of a district that has no boss (the Ojuelegba hub). Presentation only: it changes no
+ * progression, mission or save, and may become a boss later if the founder decides so.
+ */
+export interface LocalFigureDef {
+  id: string;
+  name: string;
+  nickname: string;
+  title: string;
+  /** The cultural texture behind the figure (never a real person). */
+  culturalInspiration: string;
+  look: { characterId: CharacterId; description: string; palette: { primary: number; accent: number } };
+  entourage: string;
+  entrance: string;
+  personality: string;
+  /** The introduction scene (kept as data for the story panels and a possible future boss). */
+  introduction: StoryLine[];
+}
+
 export interface DistrictContent {
   id: DistrictId;
   name: string;
@@ -183,6 +207,8 @@ export interface DistrictContent {
   /** Three recognisable visual anchors (map identity). */
   landmarks: [LandmarkAnchor, LandmarkAnchor, LandmarkAnchor];
   boss: BossDef | null;
+  /** Optional non-combat local figure (the Ojuelegba hub); changes nothing in progression. */
+  figure?: LocalFigureDef;
   /** Districts that must be cleared first. */
   requires: DistrictId[];
   /** Factions met here. */
@@ -320,6 +346,11 @@ export interface CampaignSave {
   /** Chosen fighter and level for the next mission. */
   character: CharacterId;
   difficulty: Difficulty;
+  /**
+   * Campaign difficulty (Easy / Normal / Hard, docs/CAMPAIGN_DIFFICULTY.md): how forgiving the health and recovery are.
+   * A save without it (made before the levels existed) loads as Normal. Not the crew level above.
+   */
+  campaignLevel: CampaignLevel;
   /** Per-section status (all 18 sections), keyed by section id. */
   sections: Record<string, SectionProgress>;
   /** Per-mission progress of the field and raid missions (the boss missions live in `districts`), keyed by mission id. */

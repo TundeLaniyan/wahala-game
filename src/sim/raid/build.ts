@@ -11,6 +11,8 @@ import { enemySeats } from './layout';
 import { RAID_TUNING } from './tuning';
 import type { RaidSpec } from './types';
 import type { RaidId } from '../campaign/types';
+import { levelConfigLayer, levelMaxHp } from '../campaign/levels';
+import type { CampaignLevel } from '../campaign/levels';
 
 const ENEMY_LOOKS: readonly CharacterId[] = ['lekkiBoy', 'streetBaller', 'campusQueen'];
 
@@ -52,9 +54,12 @@ export function buildRaidGame(o: {
   /** Enemy bot level (default Rookie). */
   difficulty?: Difficulty;
   timeLimitSec?: number;
+  /** Campaign difficulty (Easy / Normal / Hard); absent = Normal. */
+  level?: CampaignLevel;
 }): GameOptions {
   const def = RAID_DEFS[o.raidId];
-  const maxHp = o.maxHp ?? def.humanMaxHp;
+  const maxHp = levelMaxHp(o.maxHp ?? def.humanMaxHp, o.level);
+  const levelConfig = levelConfigLayer(o.level);
   const players: PlayerSetup[] = [
     { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0, maxHp },
     ...enemySeats(def).map((s, i): PlayerSetup => ({
@@ -73,5 +78,12 @@ export function buildRaidGame(o: {
     maxHp,
     ...(o.timeLimitSec !== undefined ? { timeLimitSec: o.timeLimitSec } : {}),
   };
-  return { seed: o.seed, arenaId: def.arenaId, players, settings: { game: 'raid' }, raid };
+  return {
+    seed: o.seed,
+    arenaId: def.arenaId,
+    players,
+    settings: { game: 'raid' },
+    raid,
+    ...(levelConfig ? { config: levelConfig } : {}),
+  };
 }

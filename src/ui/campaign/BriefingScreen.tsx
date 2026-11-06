@@ -4,7 +4,7 @@
  * The fighter and level are stored in the campaign save, never in the menu setup (`settings`).
  */
 import { CAMPAIGN, availableModifiers, briefingCard, replayModifierFor } from '../../campaign';
-import { CHARACTERS } from '../../sim';
+import { CAMPAIGN_LEVEL_DEFS, CHARACTERS } from '../../sim';
 import { MISSION_LIVES, isMissionId } from '../../app/campaign';
 import { commands } from '../../app/session';
 import { DifficultySlider } from '../menu/DifficultyControl';
@@ -35,7 +35,7 @@ export function BriefingScreen() {
       className="cp-screen cp-brief-screen"
       status={
         <span className="mn-chosen" data-testid="briefing-loadout-summary">
-          <b>{f.name}</b> · {MISSION_LIVES} lives
+          <b>{f.name}</b> · {MISSION_LIVES} lives · {CAMPAIGN_LEVEL_DEFS[save.campaignLevel].label}
           {ui.modifier ? ` · ${replayModifierFor(id).name}` : ''}
         </span>
       }
@@ -91,7 +91,7 @@ export function BriefingScreen() {
             <DifficultySlider
               value={save.difficulty}
               onChange={(difficulty) => commands.campaignLoadout({ difficulty })}
-              label="Crew difficulty"
+              label="Crew level"
               testId="briefing-diff"
               caption="Crew level"
             />

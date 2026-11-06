@@ -11,7 +11,7 @@ import type { QualityEvent } from '../render';
 import { registerBusts } from '../assets/portraits';
 import { browserStore } from '../campaign';
 import { flags } from '../platform';
-import type { CharacterId, Difficulty, GameState, MissionModifierId, SimEvent } from '../sim';
+import type { CampaignLevel, CharacterId, Difficulty, GameState, MissionModifierId, SimEvent } from '../sim';
 import { enterImmersiveMode } from './fullscreen';
 import { AttractController } from './AttractController';
 import { CampaignController } from './campaign';
@@ -391,9 +391,13 @@ export const commands = {
     audio.playUi('click');
     campaign?.open();
   },
-  campaignNew(): void {
+  campaignNew(level?: CampaignLevel): void {
     audio.playUi('start');
-    campaign?.startNew();
+    campaign?.startNew(level);
+  },
+  campaignLevel(level: CampaignLevel): void {
+    audio.playUi('click');
+    campaign?.setLevel(level);
   },
   campaignDelete(): void {
     audio.playUi('back');
