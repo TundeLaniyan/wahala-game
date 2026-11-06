@@ -176,25 +176,6 @@ export interface LandmarkAnchor {
   note: string;
 }
 
-/**
- * A non-combat local figure of a district that has no boss (the Ojuelegba hub). Presentation only: it changes no
- * progression, mission or save, and may become a boss later if the founder decides so.
- */
-export interface LocalFigureDef {
-  id: string;
-  name: string;
-  nickname: string;
-  title: string;
-  /** The cultural texture behind the figure (never a real person). */
-  culturalInspiration: string;
-  look: { characterId: CharacterId; description: string; palette: { primary: number; accent: number } };
-  entourage: string;
-  entrance: string;
-  personality: string;
-  /** The introduction scene (kept as data for the story panels and a possible future boss). */
-  introduction: StoryLine[];
-}
-
 export interface DistrictContent {
   id: DistrictId;
   name: string;
@@ -207,8 +188,6 @@ export interface DistrictContent {
   /** Three recognisable visual anchors (map identity). */
   landmarks: [LandmarkAnchor, LandmarkAnchor, LandmarkAnchor];
   boss: BossDef | null;
-  /** Optional non-combat local figure (the Ojuelegba hub); changes nothing in progression. */
-  figure?: LocalFigureDef;
   /** Districts that must be cleared first. */
   requires: DistrictId[];
   /** Factions met here. */

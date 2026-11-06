@@ -736,7 +736,8 @@ Report: `docs/CAMPAIGN_SECTIONS.md`.
 | CL4 | **Changeable only between missions** (map, briefing, section list); the controller refuses it while a mission or raid is active. | `app/campaign.ts` |
 | CL5 | **Stars, rewards, unlocks, flags, boss completion and lives are level-independent.** A harder level earns nothing extra and an easier one costs nothing. | `progress.ts` unchanged |
 | CL6 | **No level touches death, lives, respawn or retry**, and multiplayer/Rumble never see a level. The separate respawn hotfix owns those rules. | tests |
-| CL7 | **Boss presentation pass keeps ids, names of mechanics and rewards**; only nickname, title, look, entourage, entrance, voice change (Oshodi "Oga Mic", Park Master; Fadeyi "Oga Footbridge", Garage Master of the Crossing). Ojuelegba has no boss, so its inspiration is a non-combat `DistrictContent.figure` (Baba Junction). No real names, slogans, regalia or allegations; see `docs/BOSS_INSPIRATIONS.md`. | `campaign/content/*` |
+| CL7 | **Boss presentation pass keeps ids, mechanic names and rewards**; only nickname, title, look, entourage, entrance and voice change (Oshodi "Oga Mic", Park Master; Fadeyi "Oga Footbridge", Garage Master of the Crossing). Provisional, not canon (the story is being redesigned): their story panels are flagged `provisional`. No real names, slogans, regalia or allegations; see `docs/BOSS_INSPIRATIONS.md`. | `campaign/content/*` |
+| CL8 | **Ojuelegba is reserved, not touched**: founder decision (2026-11-06) that Ojuelegba becomes a seventh playable district (opening hub, then a homecoming confrontation after the six). Not implemented here; no progression reorganised. The interim non-combat "Baba Junction" figure was removed so no unfinished identity is canon. | `campaign/content/ojuelegba.ts` unchanged vs release |
 
 ## EW - Ebute Metta West (branch `claude/wahala-lagos-enhancement-v1`, report `docs/EBUTE_METTA_WEST.md`)
 

@@ -58,7 +58,7 @@ Keys: `prologue`, `finale`, `ending`, `district.<id>.briefing`, `boss.<bossId>.i
 | `prologue.webp` | `prologue` | Ojuelegba underbridge at dusk, piers, danfo, sachet stacks | 60.6 |
 | `finale.webp` | `finale` | three fighters on the Lekki promenade at blue hour, the Link Bridge cables | 62.0 |
 | `ending.webp` | `ending` | three fighters walking back to the Ojuelegba underbridge, road-sign gantry | 61.7 |
-| `district-ojuelegba-briefing.webp` | `district.ojuelegba.briefing` | the stop master (local figure) with two conductors and a hawker under the flyover | 61.5 |
+| `district-ojuelegba-briefing.webp` | `district.ojuelegba.briefing` | a place shot of the underbridge: banded piers, crates and bagged water, shopfronts, a danfo (no character; the Ojuelegba boss and figure are developed separately) | 61.5 |
 | `district-oshodi-briefing.webp` | `district.oshodi.briefing` | the interchange terminal and a row of danfo | 61.3 |
 | `district-mushin-briefing.webp` | `district.mushin.briefing` | a parts-market lane above the umbrellas | 61.0 |
 | `district-fadeyiSomolu-briefing.webp` | `district.fadeyiSomolu.briefing` | the BRT lane and shelter | 61.1 |
@@ -75,7 +75,7 @@ Keys: `prologue`, `finale`, `ending`, `district.<id>.briefing`, `boss.<bossId>.i
 | `raid-warehouseDispatchDepot.webp` | `raid.warehouseDispatchDepot` | the dispatch depot crate maze (raid, shown as a second thumbnail on the approach row) | 59.4 |
 | `section-ebuteMetta-railYard.webp` | `section.ebuteMetta.railYard` | the rail-yard goods bay (standalone raid section) | 55.5 |
 
-The boss panels are **arrival compositions** only (the identity shot of each keeper with his or her entourage at the district landmark): no fight, no defeat, no violence. The Oshodi (Oga Sunmola, "Oga Mic"), Fadeyi (Marshal Kobo, "Oga Footbridge") and Ojuelegba (Baba Junction, a non-combat local figure) panels follow the concepts in `visualDirection` / `entourage` / `entrance` / `figure` of `src/campaign/content/{oshodi,fadeyiSomolu,ojuelegba}.ts` as they stand in commit c4a1ba5: entourage in a line or V around the keeper, the district setting behind, no crown or regalia, no text added to the art. They are produced from a parameterised capture config, so they regenerate when that content changes (see below).
+The boss panels are **arrival compositions** only (the identity shot of each keeper with his or her entourage at the district landmark): no fight, no defeat, no violence. The Oshodi (Oga Sunmola, "Oga Mic") and Fadeyi (Marshal Kobo, "Oga Footbridge") panels are **provisional** (`provisional: true` in `storyImages.ts`, alt text kept generic: the identities are not canon while the campaign is redesigned) and follow the concepts in `visualDirection` / `entourage` / `entrance` / `figure` of `src/campaign/content/{oshodi,fadeyiSomolu}.ts` as they stand in commit c4a1ba5: entourage in a line or V around the keeper, the district setting behind, no crown or regalia, no text added to the art. They are produced from a parameterised capture config, so they regenerate when that content changes (see below).
 
 ## Pipeline
 
@@ -96,7 +96,7 @@ Never hand-edit the `.webp` files or the masters.
 
 ### Regenerating after the content changes
 
-The Oshodi, Fadeyi and Ojuelegba presentations are being revised in `src/campaign/content/`. Change `BOSS.oshodi`, `BOSS.fadeyi` or `FIGURE` (position, entourage slots, camera) in `tools/story/shots.config.mjs`, re-shoot with `--only boss-oshodi,boss-fadeyi,district-ojuelegba`, run the grade and commit the three masters and webps.
+The Oshodi and Fadeyi presentations are provisional. Change `BOSS.oshodi` or `BOSS.fadeyi` (position, entourage slots, camera) in `tools/story/shots.config.mjs`, re-shoot with `--only boss-oshodi,boss-fadeyi`, run the grade and commit the masters and webps. (`FIGURE` in that file is the retired Ojuelegba figure shot; nothing uses it.) To retire or replace any panel, edit its row in `storyImages.ts`; a key without a file simply shows no picture.
 
 ## Ethics (docs/CAMPAIGN_STORY.md, section 5)
 

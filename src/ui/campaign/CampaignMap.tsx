@@ -148,14 +148,6 @@ function DistrictCard({ id, status }: { id: DistrictId; status: MapNode['status'
           ))}
         </ul>
       </div>
-      {d.figure && (
-        <p className="cp-bossline" data-testid="district-figure">
-          <small className="mn-kicker">Local figure</small>
-          <b>{d.figure.name}</b>, {d.figure.title}
-          <br />
-          <em>&ldquo;{d.figure.nickname}&rdquo;</em> · {d.figure.entourage}
-        </p>
-      )}
       {d.boss && status !== 'locked' && <SectionList districtId={d.id as MissionId} />}
       {d.boss && status !== 'locked' && (
         <p className="cp-bossline" data-testid="district-boss">

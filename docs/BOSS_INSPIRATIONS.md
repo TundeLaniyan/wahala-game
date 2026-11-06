@@ -2,6 +2,12 @@
 
 Branch `claude/wahala-lagos-enhancement-v1`. Internal design document: real names appear **only here**, never in game content, code, art or audio (`tests/campaign-content.test.ts` and `tests/campaign-bosses-presentation.test.ts` deny them). Research was done by web search on 2026-11-06; **full pages could not be opened for several outlets, so every real-world statement below comes from search-result summaries and must be re-checked before it is relied on.** Nothing here repeats any allegation; only public roles and a neutral risk flag are recorded.
 
+## 0. Founder clarifications (2026-11-06, after review of `a583e0b`)
+- **Fadeyi**: the approved real-world creative reference is "Toba Ijaya". **Oshodi**: "MC Oluomo". Both stay original fictional characters inspired by neighbourhood culture, transport influence, local relationships and personality: no biographical details, likeness, or real-world allegations. The implemented Oshodi ("Oga Mic") and Fadeyi ("Oga Footbridge") presentations already follow this and are unchanged by the clarification.
+- **Ojuelegba / "Igimu"**: the approved reference for a **future** Ojuelegba boss. Ojuelegba will become a **seventh playable campaign district**: the opening hub first, and the location of a major homecoming confrontation after the six existing districts. **Nothing of that is implemented here** (no fight, no missions, no progression change). Its story, missions and character identity are developed separately. The non-combat "Baba Junction" figure this branch had added would have pre-empted that identity, so it was **removed** again (data, card line, panel and tests); Ojuelegba is exactly as it was before this pass.
+- **Nothing here is canon.** The campaign narrative is being redesigned separately: the Oshodi and Fadeyi nicknames, titles, looks, entourages and lines are provisional presentation, and their story panels are flagged `provisional` in `storyImages.ts`.
+- The research caveats below still apply (the name "Igimu" could not be verified by search, and the Fadeyi reference carries the sensitivities noted); both are for the founder's separate Ojuelegba and narrative work.
+
 ## 1. Existing roster (before this pass)
 | District | Boss | Mechanic | Notes |
 | --- | --- | --- | --- |
@@ -20,7 +26,7 @@ Branch `claude/wahala-lagos-enhancement-v1`. Internal design document: real name
 | What research could verify | **"Igimu" could not be verified** as a person or title; the nearest match is *Iganmu*, a neighbourhood in Surulere. Ojuelegba itself is a well-documented Surulere junction (its transport culture and its 2014 song are widely cited). | Toba Ajiboye, called Toba Ijaya, a Lagos transport-union organising secretary strongly associated with Fadeyi/Mushin. Search reports say he was **killed in July 2026** and the matter was open. | Musiliu Akinsanya, a Lagos transport-union figure born in Oshodi, later a national officer of that body; his current status is unverified. |
 | Association strength | place: strong; person: unknown | strong | strong |
 | Public-profile risk (portrayal) | low for the place; unknown for a person | **high** (recent death, open case, family and community) | **high** (living, politically connected, litigious public profile) |
-| Fictional counterpart | **Baba Junction** (Oga Adekola), Stop Master of the Underbridge: a cheerful, non-combat local figure | **Marshal Gbenga Kobo, "Oga Footbridge"**, Garage Master of the Fadeyi Crossing | **Oga Sunmola, "Oga Mic"**, Park Master of the Interchange |
+| Fictional counterpart | **none in this pass** (a future seventh district and boss, developed separately) | **Marshal Gbenga Kobo, "Oga Footbridge"**, Garage Master of the Fadeyi Crossing | **Oga Sunmola, "Oga Mic"**, Park Master of the Interchange |
 | Local connection used | the underbridge danfo stop: conductors calling stops, chalked route board, whistle, kiosk speakers, everyone greets the stop master first | footbridge landing as town square, ticket booklet and whistle, vest and flat cap, hawkers and conductors who greet him first, BRT lane and bank frontage | the microphone and loudspeaker as authority, ceremonial welcomes and a praise-singer, cap-and-vest wardens, a horn-blowing danfo convoy, the interchange and terminal |
 | Look | tinted glasses, print shirt under a sleeveless vest, tipped flat cap, whistle, route board | green reflective vest over a print shirt, flat cap, whistle, ticket booklet, chalk route board, wand | park-yellow kaftan with black trim, flat cap with a fictional crest, tinted glasses, headset mic, handheld mic |
 | Entourage / entrance | two conductors, water hawker, chalk boy; a whistle and the conductors shouting his name | two marshals, a chalk-board runner, a hawker; a long whistle from the stairs, walks down greeting people | umbrella aide, praise-singer with speaker trolley, two wardens, three danfo; speakers announce him first |
@@ -28,11 +34,10 @@ Branch `claude/wahala-lagos-enhancement-v1`. Internal design document: real name
 | Combat | none (Ojuelegba stays a free-play stage) | unchanged `junctionAccess` | unchanged `dispatchRelays` |
 | Deliberately avoided | any boss fight, any claim about a real person | any reference to the real person's death or any violence story; the name, nickname and any likeness cue | royal or chiefly regalia, slogans, real union naming, any biography |
 
-### Decisions needing the founder
-1. **Ojuelegba has no boss in the campaign** (hub and prologue; progression depends on that). The counterpart was therefore added as a non-combat local figure; turning it into a boss needs a story and progression decision.
-2. **"Igimu" is unverified.** Please confirm who or what it refers to; the figure is currently an archetype (a junction stop master), not a likeness.
-3. **Fadeyi reference carries the highest sensitivity** because the reported death is recent. Implemented as a generic bridge "garage master" with no cue to the person. Recommended: confirm you still want this reference before release, or swap it for a place-based reference (the footbridge itself).
-4. The characters keep their ids, mechanic names and rewards, so saves and progression are unaffected; names such as "Oga Sunmola" and "Marshal Kobo" were kept (only nicknames, titles, looks, entourage and voice changed). A rename is a content-only follow-up.
+### Notes
+1. The characters keep their ids, mechanic names and rewards, so saves and progression are unaffected; "Oga Sunmola" and "Marshal Kobo" were kept as names (only nicknames, titles, looks, entourage and voice changed). A rename is a content-only follow-up.
+2. The Ojuelegba column above is intentionally empty of a character: see section 0.
+3. Pre-existing Fadeyi fiction (a Mama Put line that people "must pay to cross", the toll and "Free Crossing" framing) predates this pass. Now that the character is inspired by a real reference, the narrative redesign should re-check it so it cannot read as an allegation about a real person.
 
 ## 3. The four provisional candidates (research only; **not implemented**)
 | Candidate | Verification | Geographic association | Recognition | Mechanic fit (existing) | Portrayal risk | Recommendation |
@@ -47,7 +52,7 @@ Alternative archetypes suggested by the research are generic roles with no named
 ## 4. Comparison across all seven
 | District | Before | Now | Proposed next (not approved) |
 | --- | --- | --- | --- |
-| Ojuelegba | no boss | non-combat Baba Junction | none needed |
+| Ojuelegba | no boss | unchanged (future seventh district and boss, separate work) | - |
 | Oshodi | Oga Dispatch (announcer) | Oga Mic, Park Master | - |
 | Mushin | Madam Ronke | unchanged | parts-market elder archetype (not the named person) |
 | Fadeyi | Oga Green Light (bureaucrat) | Oga Footbridge, Garage Master | - |

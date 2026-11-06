@@ -1,46 +1,4 @@
-import type { DistrictContent, LocalFigureDef, StoryLine } from '../types';
-
-const baba = (text: string): StoryLine => ({ speaker: 'BABA JUNCTION', text });
-
-/**
- * Ojuelegba's local figure: the stop master of the underbridge danfo stop. A hub character, not a boss (Ojuelegba stays
- * a free-play stage with no fight). Inspired by the culture of the junction: conductors calling stops, the chalked route
- * board, the whistle and the ticket for the stop, and the way everyone passing greets the person who runs it. Fiction only.
- */
-export const OJUELEGBA_FIGURE: LocalFigureDef = {
-  id: 'babaJunction',
-  name: 'Oga Adekola',
-  nickname: 'Baba Junction',
-  title: 'Stop Master of the Underbridge',
-  culturalInspiration:
-    'The Ojuelegba junction under the bridge: danfo conductors calling Yaba, Obalende and Oshodi in one breath, chalked route boards, a whistle for every bus, music from kiosk speakers, and the stop master whom every conductor greets first. Inspired by the junction and its stop leadership in general, never by any real person, name or biography.',
-  look: {
-    characterId: 'campusQueen',
-    description:
-      'Round-shouldered and cheerful: oversized tinted glasses, a bright print shirt under a sleeveless vest, a flat cap tipped back, a whistle on a cord and a chalk stub behind one ear. A route board of fictional stops hangs from one arm.',
-    palette: { primary: 0xe0a21b, accent: 0x7a2fa8 },
-  },
-  entourage:
-    'Two young conductors who shout the stops for him, a hawker with a tray of cold water and a boy who erases and rewrites the chalk board every few minutes.',
-  entrance:
-    'A long whistle under the bridge; the conductors fall silent for a breath, then every one of them shouts his name.',
-  personality:
-    'Easy and teasing: jokes first, favours second, and never says what side he is on. Speaks in stops and routes ("na Yaba side or Obalende side?"), mixes Pidgin and Yoruba greetings, and is never in a hurry because the buses wait for him.',
-  introduction: [
-    baba('Eh! Fresh face under my bridge. Which stop you dey go, my person?'),
-    {
-      speaker: 'MAMA PUT',
-      text: 'Na Baba Junction. Every conductor for Ojuelegba greet am first. Watch your mouth.',
-    },
-    baba('Ha, Mama Put, you dey tell her my business? Small one, the bridge sees all. The stop sees more.'),
-    baba('I no take sides. I only know who is late, who is early and who owes the board.'),
-    {
-      speaker: 'NARRATOR',
-      text: 'He blows the whistle once. Somewhere behind you, a whole row of danfo lets you pass.',
-    },
-    baba('Go well. If you need a stop, ask. If you need a favour... that one na another ticket.'),
-  ],
-};
+import type { DistrictContent } from '../types';
 
 /** Ojuelegba: the hub and prologue. No boss; it is "cleared" from the start and always replayable as a stage. */
 export const OJUELEGBA: DistrictContent = {
@@ -87,7 +45,6 @@ export const OJUELEGBA: DistrictContent = {
     },
   ],
   boss: null,
-  figure: OJUELEGBA_FIGURE,
   requires: [],
   factionIds: ['streetWatch', 'mamaPutMutual'],
 };

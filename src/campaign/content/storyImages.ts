@@ -22,6 +22,11 @@ export interface StoryImageDef {
   alt: string;
   /** CSS `object-position` focal point, kept inside the crop when the box is wider or narrower than 16:9. */
   position: string;
+  /**
+   * The picture shows a boss or character identity that is still being developed (the campaign story is being redesigned):
+   * a placeholder arrival shot, not canon. Swap the file and the alt text when the identity is final.
+   */
+  provisional?: boolean;
   /** Optional one-line caption drawn over the scrim at the bottom of the picture (decorative; the card text is the story). */
   caption?: string;
 }
@@ -46,9 +51,14 @@ const district = (
   { file: `district-${id}-briefing.webp`, alt, position, caption },
 ];
 
-const boss = (id: string, alt: string, position = '50% 62%'): [string, StoryImageDef] => [
+const boss = (
+  id: string,
+  alt: string,
+  provisional = false,
+  position = '50% 62%',
+): [string, StoryImageDef] => [
   `boss.${id}.intro`,
-  { file: `boss-${id}-intro.webp`, alt, position },
+  { file: `boss-${id}-intro.webp`, alt, position, ...(provisional ? { provisional } : {}) },
 ];
 
 export const STORY_IMAGES: Readonly<Record<string, StoryImageDef>> = Object.fromEntries([
@@ -81,7 +91,7 @@ export const STORY_IMAGES: Readonly<Record<string, StoryImageDef>> = Object.from
   // ---- district briefings
   district(
     'ojuelegba',
-    'Under the Ojuelegba flyover at dusk: the stop master in a bright print shirt stands with two young conductors and a hawker in front of the concrete piers and stacks of water sachets.',
+    'Under the Ojuelegba flyover at dusk: two concrete piers with black and white bands, crates and stacks of bagged water on the pavement, a vulcaniser and auto-mechanic shopfront behind, and a yellow danfo at the edge.',
     'Ojuelegba · the underbridge stop',
     '45% 60%',
   ),
@@ -120,7 +130,8 @@ export const STORY_IMAGES: Readonly<Record<string, StoryImageDef>> = Object.from
   // of the group and the colour of the light is the keeper's palette)
   boss(
     'ogaSunmola',
-    'Oga Sunmola arrives at the Oshodi interchange: the park master stands at the front of his entourage in a line before the terminal canopy and a parked danfo, in warm yellow dusk light.',
+    'A keeper arrives at the Oshodi interchange: one figure stands at the front of an entourage in a line before the terminal canopy and a parked danfo, in warm yellow dusk light.',
+    true,
   ),
   boss(
     'madamRonke',
@@ -128,7 +139,8 @@ export const STORY_IMAGES: Readonly<Record<string, StoryImageDef>> = Object.from
   ),
   boss(
     'marshalKobo',
-    'Marshal Kobo at the Fadeyi crossing: the garage master stands at the front of a group of marshals and followers before a BRT shelter and its painted sign, in green-tinted evening light.',
+    'A keeper at the Fadeyi crossing: one figure stands at the front of a group of marshals and followers before a BRT shelter and its painted sign, in green-tinted evening light.',
+    true,
   ),
   boss(
     'ikennaWayside',

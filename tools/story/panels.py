@@ -23,7 +23,8 @@ PANELS: dict[str, Panel] = {
     "finale": Panel(mood="night", sky="night"),
     "ending": Panel(master="ending", mood="day", sky="dusk", sun=(0.78, 0.30), crop=(0, 0, 1040)),
     # ---- district briefings
-    "district-ojuelegba-briefing": Panel(master="district-ojuelegba", crop=(0, 40, 1040), sun=(0.15, 0.1)),
+    # a place shot of the underbridge (no character: the Ojuelegba figure and boss identity are being developed separately)
+    "district-ojuelegba-briefing": Panel(master="prologue", crop=(200, 70, 1000), mood="dusk", sky="dusk", sun=(0.7, 0.15), exposure=0.9),
     "district-oshodi-briefing": Panel(master="district-oshodi", sun=(0.12, 0.12)),
     "district-mushin-briefing": Panel(master="district-mushin"),
     "district-fadeyiSomolu-briefing": Panel(master="district-fadeyi", sun=(0.2, 0.05)),
