@@ -544,3 +544,8 @@ Kill-streak classification (AS7): every earned reward survives death. QUICK HAND
 ## Online, voice, progression, ads and seasons scaffolds (worker `online-scaffold`)
 
 Disabled by default; see `docs/ONLINE_ARCHITECTURE.md` and decisions ON1-ON12. Complete: service contracts, wire schema and validators, lifecycle rules, the in-memory mock of every service (real simulation behind `MatchService`), progression / cosmetics / seasons / ads data and pure logic, voice policy with a null and a mock provider, the flag-gated Online preview UI and the Settings flag row, tests and an e2e spec. Interface-only or skeleton: the server adapter (fake-transport tests only), voice, ads, cosmetics rendering. Not built: any server, database, accounts, matchmaking service, anti-cheat, moderation. Screenshots: `docs/screenshots/online-preview/`.
+
+
+## Campaign story panels (Part D, branch `claude/wahala-lagos-enhancement-v1`)
+
+Done: an illustrated story-panel system (`StoryHero`, `storyImages.ts`) with 19 original in-engine panels (prologue, finale, ending, seven district briefings, six boss arrivals, three section / raid panels), a failure path that never blocks a card, tests and a browser check. Pipeline, table, accessibility and limitations: `docs/STORY_VISUALS.md`. Not done: per-boss costume art (the renderer has none, so boss panels are arrival compositions with a palette-tinted light); hand-illustrated replacements; night-time renders.

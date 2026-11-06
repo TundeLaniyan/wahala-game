@@ -50,6 +50,10 @@ On by default. `?campaign=0` or `WAHALA_CAMPAIGN_ENABLED=false` hides the Home "
 
 `tests/app/menu-campaign.test.ts` (state machine), `tests/app/campaign-flow.test.ts` (whole flow with the real MatchController and fake ports; the mission builder is injected), `tests/app/campaign-persistence.test.ts` (Map store: restart, delete, corrupt, unavailable, full), `tests/ui/campaignScreens.test.ts` (content on screen). `e2e/campaign.spec.ts`: journey (the last step skips itself while `buildMissionGame` is the stub), save across reload, corrupt save, `?campaign=0`, keyboard, and the size sweep (desktop and phone portrait / landscape: no page scroll, main action on screen, taps >= 44 px). Reviewed screenshots: `docs/screenshots/campaign-ui/`.
 
+## Story panels
+
+Briefings, boss introductions, the prologue, finale and ending, the map's district card and the section list now carry an illustrated panel (original in-engine renders with a stylised grade; data in `src/campaign/content/storyImages.ts`, component `StoryHero`). A missing or failed picture never blocks a card: see `STORY_VISUALS.md` (pipeline, the image table, accessibility, limitations).
+
 ## Art still needed
 
-Boss costume art and portraits (screens show the base fighter's menu art in the boss's palette, with a note); a drawn Lagos map (the map is an SVG sketch); district postcards for the briefing; story stills for the prologue / finale (text only now; the broker stays a message card); boss defeat illustrations; node and star icons; no audio was added (synthesised UI cues only).
+Boss costume art and portraits (screens show the base fighter's menu art in the boss's palette, with a note); a drawn Lagos map (the map is an SVG sketch); hand-illustrated art to replace the in-engine story panels (the panels exist now, see STORY_VISUALS.md; the broker stays a message card and is never pictured); boss defeat illustrations; node and star icons; no audio was added (synthesised UI cues only).

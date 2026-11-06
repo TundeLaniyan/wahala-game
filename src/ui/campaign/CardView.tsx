@@ -14,6 +14,9 @@ import { useGameStore } from '../../app/store';
 import { createListenControl, createSceneControl, listenView } from './listenModel';
 import type { SceneControl } from './listenModel';
 import { StoryLineView } from './lines';
+import { StoryHero } from './StoryHero';
+import { storyImageKeyForCard } from '../../campaign/content/storyImages';
+import { resolveStoryImage } from './storyImageUrls';
 
 const canPlay = (provider: NarrationProvider, cardId: string): boolean => {
   try {
@@ -116,38 +119,51 @@ export function CardView(props: {
   /** Extra controls beside Read more and Listen. */
   tools?: ReactNode;
   className?: string;
+  /**
+   * The story panel's key (campaign/content/storyImages.ts). Default: the one that goes with this card's id, if any;
+   * `null` shows no picture. A key without a bundled file also shows none: the card is then exactly the text card.
+   */
+  imageKey?: string | null;
 }) {
   const { card } = props;
   const [open, setOpen] = useState(!!props.defaultOpen);
   const bodyId = useId();
+  const imageKey = props.imageKey === undefined ? storyImageKeyForCard(card.id) : props.imageKey;
+  const image = resolveStoryImage(imageKey);
+  // a picture that failed to load is gone: the card goes back to the plain text layout
+  const [goneSrc, setGoneSrc] = useState<string | null>(null);
+  const hasHero = image !== null && goneSrc !== image.src;
   return (
     <article
-      className={`cp-panel mn-panel cp-story-card ${props.className ?? ''}`}
+      className={`cp-panel mn-panel cp-story-card${hasHero ? ' has-hero' : ''} ${props.className ?? ''}`}
       data-testid={props.testId ?? 'story-card'}
       data-card={card.id}
     >
-      <p className="cp-card-summary" data-testid="card-summary">
-        {card.summary}
-      </p>
-      <div className="cp-objective" data-testid="card-objective">
-        <small>{card.objectiveLabel}</small>
-        <strong>{card.objective}</strong>
-      </div>
-      {props.children}
-      <div className="cp-card-tools">
-        {card.sections.length > 0 && (
-          <ReadMoreToggle open={open} onToggle={() => setOpen(!open)} controls={bodyId} />
-        )}
-        <ListenButton cardId={card.narrationId} />
-        {props.tools}
-      </div>
-      {open && (
-        <div id={bodyId} className="cp-readmore-body" data-testid="card-readmore-body">
-          {card.sections.map((s, i) => (
-            <SectionView key={i} section={s} index={i} />
-          ))}
+      <StoryHero imageKey={imageKey} onGone={() => setGoneSrc(image?.src ?? null)} />
+      <div className="cp-card-text">
+        <p className="cp-card-summary" data-testid="card-summary">
+          {card.summary}
+        </p>
+        <div className="cp-objective" data-testid="card-objective">
+          <small>{card.objectiveLabel}</small>
+          <strong>{card.objective}</strong>
         </div>
-      )}
+        {props.children}
+        <div className="cp-card-tools">
+          {card.sections.length > 0 && (
+            <ReadMoreToggle open={open} onToggle={() => setOpen(!open)} controls={bodyId} />
+          )}
+          <ListenButton cardId={card.narrationId} />
+          {props.tools}
+        </div>
+        {open && (
+          <div id={bodyId} className="cp-readmore-body" data-testid="card-readmore-body">
+            {card.sections.map((s, i) => (
+              <SectionView key={i} section={s} index={i} />
+            ))}
+          </div>
+        )}
+      </div>
     </article>
   );
 }

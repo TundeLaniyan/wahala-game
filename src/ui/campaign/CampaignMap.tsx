@@ -22,6 +22,7 @@ import {
 import type { MapNode } from './model';
 import { Stars, useCampaignUi } from './parts';
 import { LevelPicker } from './LevelPicker';
+import { StoryHero } from './StoryHero';
 import { SectionList } from './SectionList';
 
 /** Coast, lagoon, the island and the Lekki strip behind the nodes (decorative only, 0..100 units). */
@@ -118,6 +119,7 @@ function DistrictCard({ id, status }: { id: DistrictId; status: MapNode['status'
   const reason = lockedReason(ui.save, id);
   return (
     <article className="cp-card mn-panel" data-testid="district-card" data-district={id}>
+      {status !== 'locked' && <StoryHero imageKey={`district.${id}.briefing`} variant="banner" />}
       <header>
         <small className="mn-kicker">
           {id === 'ojuelegba' ? 'The hub' : `District ${districtNumber(id)} of 6`} · {statusLabel[status]}
