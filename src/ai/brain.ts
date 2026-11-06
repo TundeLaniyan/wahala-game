@@ -147,6 +147,14 @@ export class Brain implements Bot {
     this.rng = createRng(seed ^ 0x9e3779b1 ^ (playerId * 0x85ebca6b));
   }
 
+  /**
+   * Something the caller's perception just took in (a campaign enemy noticing a generator, ai/enemyBot.ts) makes the
+   * next decision an urgent re-plan. Multiplayer bots never call it.
+   */
+  alert(): void {
+    this.rethinkNow = true;
+  }
+
   decide(obs: Observation): Intent {
     const me = obs.players[this.playerId];
     if (me && !me.alive) {

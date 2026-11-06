@@ -245,10 +245,12 @@ export class MatchController implements MissionHost {
       if (!p.isBot) return;
       const level: Difficulty = options.players[i]?.difficulty ?? meta.difficulty;
       const at = DIFFICULTIES.indexOf(level);
+      // the boss floor is for a boss mission's seat 1; in a field mission seat 1 is an ordinary enemy (decision EF7)
+      const boss = i === 1 && options.players[i]?.enemyKind === undefined;
       this.bots.set(
         i,
         this.deps.botFactory({
-          difficulty: i === 1 ? (DIFFICULTIES[Math.max(at, floor)] ?? level) : level,
+          difficulty: boss ? (DIFFICULTIES[Math.max(at, floor)] ?? level) : level,
           seed: options.seed + i * 7919,
           playerId: i,
         }),

@@ -30,7 +30,8 @@ import type { CampaignHitResult } from '../campaign/types';
 import { recordHit } from './attribution';
 import { applyCampaignHit } from './campaignDamage';
 import { pushLanding } from './pushLanding';
-import { enemyMeleeHit } from './enemyActions';
+import { enemyAfterPunch, enemyMeleeHit } from './enemyActions';
+import { ENEMY_KINDS } from '../data/enemies';
 import { beginStep } from './stepping';
 import { isActing, playersAt, teammates } from './queries';
 
@@ -63,20 +64,32 @@ export type AttackView = GridView & {
   readonly config: GameState['config'];
 };
 
-type Attacker = Readonly<Pick<Player, 'characterId' | 'meleeLock' | 'id' | 'attacks'>>;
+type Attacker = Readonly<Pick<Player, 'characterId' | 'meleeLock' | 'id' | 'attacks' | 'enemyKind'>>;
+
+/**
+ * Decision EF3: the human's attack on a campaign ENEMY seat (never a multiplayer rival, never an enemy's attack) lands
+ * through a fresh daze immunity when it takes a segment (without a new daze), and its per-target lockout is capped
+ * by `config.campaign.vsEnemy`. False in every multiplayer match (no seat has an `enemyKind`).
+ */
+const humanOnEnemy = (
+  attacker: Readonly<Pick<Player, 'enemyKind'>>,
+  victim: Readonly<Pick<Player, 'enemyKind'>>,
+): boolean => attacker.enemyKind === undefined && victim.enemyKind !== undefined;
 
 /** Can `attacker` start `kind` (default: their primary) on `victim` right now? Lockout, immunities - not recovery. */
 export function attackable(
   state: { readonly tick?: number; readonly config: GameState['config'] },
   tick: number,
   attacker: Attacker,
-  victim: Readonly<Pick<Player, 'id' | 'dazeImmuneUntil' | 'slowImmuneUntil'>>,
+  victim: Readonly<Pick<Player, 'id' | 'dazeImmuneUntil' | 'slowImmuneUntil' | 'enemyKind'>>,
   kind: AttackKind = primaryOf(attacker),
 ): boolean {
   if (tick < (attacker.meleeLock[victim.id] ?? 0)) return false; // the per-target lockout
   const spec = state.config.skills.attacks[kind];
-  // a pure daze has nothing to do to a victim who is still immune to one
-  if (spec.dazeTicks > 0 && spec.displacementTiles === 0 && tick < victim.dazeImmuneUntil) return false;
+  // a pure daze has nothing to do to a victim who is still immune to one (a campaign enemy still takes the segment)
+  const segment = humanOnEnemy(attacker, victim) && campaignConfig(state.config).playerDamage[kind] > 0;
+  if (spec.dazeTicks > 0 && spec.displacementTiles === 0 && tick < victim.dazeImmuneUntil && !segment)
+    return false;
   // ... and neither has a pure slow
   if (
     spec.slowTicks > 0 &&
@@ -263,6 +276,7 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
     enemyMeleeHit(state, p, target, dir, events);
     recover(state, p, pending.skill, spec.hitRecoveryTicks);
     p.meleeLock[target.id] = state.tick + spec.targetLockoutTicks;
+    enemyAfterPunch(state, p); // the punishable window (decision EF2)
     recordHit(state, target, p.id);
     events.push({ type: 'skillUsed', playerId: p.id, skill: pending.skill, targetId: target.id });
     events.push({
@@ -288,7 +302,11 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
   const countering = spec.counterDazeTicks > 0 && target.rootedUntil > state.tick;
   const daze = spec.dazeTicks + (countering ? spec.counterDazeTicks : 0);
   // an attack that is ONLY a daze never reaches an immune rival (pickTarget); a daze that rides on a bump is skipped
-  const dazes = daze > 0 && (state.tick >= target.dazeImmuneUntil || spec.displacementTiles === 0);
+  const dazes =
+    daze > 0 &&
+    (state.tick >= target.dazeImmuneUntil || spec.displacementTiles === 0) &&
+    !(humanOnEnemy(p, target) && state.tick < target.dazeImmuneUntil) && // EF3: the segment lands, no new daze
+    !(humanOnEnemy(p, target) && ENEMY_KINDS[target.enemyKind!].steadfast); // EF4: a heavy is never dazed by it
   let landed: CampaignHitResult | null = null; // set only for a campaign victim
   if (target.vitals) {
     landed = campaignMelee(
@@ -322,12 +340,18 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
     target.slow = { until, extraStepTicks: spec.slowExtraStepTicks };
     target.slowImmuneUntil = until + spec.slowImmunityTicks;
   }
-  if (reached && spec.interrupts && target.attack) {
+  const steadfast = humanOnEnemy(p, target) && ENEMY_KINDS[target.enemyKind!].steadfast; // EF4
+  if (reached && spec.interrupts && target.attack && !steadfast) {
     target.attack = null; // a hit cuts the victim's wind-up short
     events.push({ type: 'attackInterrupted', playerId: target.id, byId: p.id });
   }
   recover(state, p, pending.skill, spec.hitRecoveryTicks);
-  p.meleeLock[target.id] = state.tick + spec.targetLockoutTicks;
+  p.meleeLock[target.id] =
+    state.tick +
+    (humanOnEnemy(p, target)
+      ? Math.min(spec.targetLockoutTicks, campaignConfig(state.config).vsEnemy.targetLockoutTicks)
+      : spec.targetLockoutTicks);
+  enemyAfterPunch(state, p);
   if (spec.hitRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.hitRootTicks); // recoil
   if (!target.vitals) recordHit(state, target, p.id); // a campaign victim was recorded by campaignMelee, before the hit
   events.push({ type: 'skillUsed', playerId: p.id, skill: pending.skill, targetId: target.id });
@@ -381,6 +405,7 @@ function recover(state: GameState, p: Player, kind: AttackKind, ticks: number): 
 function whiff(state: GameState, p: Player, spec: AttackSpec, skill: AttackKind, events: SimEvent[]): void {
   recover(state, p, skill, spec.whiffRecoveryTicks);
   if (spec.whiffRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.whiffRootTicks); // a committed miss
+  enemyAfterPunch(state, p);
   events.push({ type: 'attackResolved', playerId: p.id, skill, targetId: null, hit: false });
 }
 

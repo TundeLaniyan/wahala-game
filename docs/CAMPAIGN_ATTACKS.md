@@ -4,6 +4,8 @@ Worker `combat-attacks` of the campaign expansion (`docs/CAMPAIGN_EXPANSION_PLAN
 
 Rules in one paragraph: an enemy seat (`Player.enemyKind`) never uses the generator economy. It acts through the one B press (`Intent.special`, `src/sim/systems/actions.ts` -> `enemyActions.ts`): an adjacent rival is punched, else a thrower with a rival in a clear cardinal line throws, else nothing. Every throw has a visible launch cue before anything moves; the path is known; a rival who leaves it in time is missed. All harm goes through `applyCampaignHit` (combat-core) and is rate limited. Humans keep exactly two buttons.
 
+Fairness update (decisions EF1-EF8, `docs/ENEMY_COMBAT_FAIRNESS.md`): enemy bots heed a generator late while brawling and soon when calm (`enemyAttacks.awareness`), a resolved punch or throw plants the enemy for a recovery (`melee[*].recoveryRootTicks`, `throwRecoveryTicks`), the player's punches on enemy seats lock out for 1.1 s and pass a daze immunity, heavies and bosses are steadfast, field pursuers give up beyond `pursuitGiveUpTiles`.
+
 ## Files
 
 | file | what |
