@@ -4,7 +4,7 @@
  * vehicle lanes, floor traps and endgame waves, the stage hazards, the district graph and 32 balanced starts
  * (never on a hazard, a trap or beside a supply crate). Pure data; no rules live here.
  */
-import type { ArenaDef, ArenaInfo, DistrictDef, DistrictLink, StageHazardDef } from '../types';
+import type { ArenaDef, ArenaInfo, CoverRect, DistrictDef, DistrictLink, StageHazardDef } from '../types';
 import type { Dir, TilePos } from '../../types';
 import type { Board } from './painter';
 import type { CoverLegend } from './painter';
@@ -17,6 +17,11 @@ export interface CommunitySpec {
   name: string;
   board: Board;
   legend: CoverLegend;
+  /**
+   * The object list, when the board is not painted in one piece (Ebute-Metta keeps its original objects' variants and adds the
+   * expansion's own). Default: every connected run of the painted board's letters. Must match the board's letters exactly.
+   */
+  cover?: CoverRect[];
   /** Marked supply crates ('$'), placed on the board. */
   supplies: readonly (readonly [number, number])[];
   /** Authored barrier crates ('x'): blasting one opens a shortcut. */
@@ -147,7 +152,7 @@ export function communityArena(s: CommunitySpec): ArenaDef {
     name: s.name,
     kind: 'rumble',
     layout,
-    cover: s.board.cover(s.legend),
+    cover: s.cover ?? s.board.cover(s.legend),
     spawns: spawnsFor(layout, s.start, avoid),
     spawnClearance: RADIAL_CLEARANCE,
     mirrorSoftBlocks: false,

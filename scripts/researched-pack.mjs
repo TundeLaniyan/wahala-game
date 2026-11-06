@@ -18,7 +18,7 @@ const ARENAS = {
   rumbleFadeyi: [51, 33, 24, 14, 2.2, 'the BRT centreline, median barriers, shelters and crossing'],
   rumbleLagosIsland: [55, 39, 44, 9, 2.2, 'the civic square, monument, heritage frontage and trees'],
   rumbleLekki: [57, 39, 40, 8, 1.5, 'the sports club, the arts-market sheds and the promenade'],
-  rumbleEbuteMetta: [55, 39, 29, 12, 1.5, 'the station hall, platforms, tracks and the colonial terminus'],
+  rumbleEbuteMetta: [75, 39, 49, 12, 1.5, 'the station hall, platforms, tracks and the colonial terminus'],
 };
 const ids = only ? only.split(',') : Object.keys(ARENAS);
 mkdirSync(dir, { recursive: true });
