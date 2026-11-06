@@ -532,3 +532,11 @@ Kill-streak classification (AS7): every earned reward survives death. QUICK HAND
 ## Online, voice, progression, ads and seasons scaffolds (worker `online-scaffold`)
 
 Disabled by default; see `docs/ONLINE_ARCHITECTURE.md` and decisions ON1-ON12. Complete: service contracts, wire schema and validators, lifecycle rules, the in-memory mock of every service (real simulation behind `MatchService`), progression / cosmetics / seasons / ads data and pure logic, voice policy with a null and a mock provider, the flag-gated Online preview UI and the Settings flag row, tests and an e2e spec. Interface-only or skeleton: the server adapter (fake-transport tests only), voice, ads, cosmetics rendering. Not built: any server, database, accounts, matchmaking service, anti-cheat, moderation. Screenshots: `docs/screenshots/online-preview/`.
+
+## Campaign enemy combat fairness (worker `enemy-combat`, from `a4fe457`; decisions EF1-EF8, `docs/ENEMY_COMBAT_FAIRNESS.md`)
+
+| Area | State |
+| --- | --- |
+| Rules | Done: enemy perception (calm `reactTicks` / brawling `alertTicks` / seeded slip), recovery roots after punches and throws, the human's capped lockout and immunity pass-through against enemy seats, steadfast heavies and bosses, field pursuers give up beyond 14 tiles, the boss floor no longer lifts a field enemy. Multiplayer pinned by a bot-vs-bot digest. `tests/enemy-fairness.test.ts`, `tests/app/campaign-enemy-level.test.ts`. |
+| Measurement | `npm run enemy-fairness` (scripted human, ordinary intents, active enemy bots, classic grid + Dispatch Depot raid). Normal baseline = Casual enemy bots. |
+| Not done | No browser feel-test; the recovery roots have no dedicated pose in the view; raid `AGGRO_RANGE` is still a constant in `raid/directives.ts`; the app still passes the save's level (the difficulty branch maps Easy / Normal / Hard). Targeted checks only; the full unit and browser suites were not run. |
