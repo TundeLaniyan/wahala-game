@@ -39,7 +39,9 @@ Detail per part: `CLASSIC_GRID.md` (raid layouts, before/after boards and metric
 ## Verification
 
 - Unit: the integrated targeted set (raids, enemies, field, missions, campaign, app, ui, render, input, audio, blast rules, combat,
-  architecture) 1883 tests, all passing after the harness fix; multiplayer hash and bot-digest regressions unchanged.
+  architecture): 1882 of 1883 passed in the integrated run; the one failure (the depot fairness test on the new maze) was fixed in
+  the harness and that file re-run passes 18/18 (the whole set was not re-run after the fix); multiplayer hash and bot-digest
+  regressions unchanged.
 - Active enemies (real bots, real raid runtime, scripted player using only walk / generator / punch): the maze depot is completed in
   11 of 12 seeds at Normal (Casual) with 0-1 deaths, 0-3 health lost and no interruption chain. The miss (seed 2) is a timeout, not a
   defeat: the lieutenant hovers round a pillar corner, out of every cross, while the scripted player keeps bombing from one corridor
