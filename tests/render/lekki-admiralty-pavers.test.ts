@@ -1,13 +1,22 @@
 /**
- * Amarite Way paving (docs/LEKKI_AMARITE_WAY.md): the interlocking block geometry tiles a row with no gap and no overlap,
- * alternate rows are offset, the scale is the readable one (not sub-pixel), and ONLY Amarite Way's straight road tiles
- * are paved: the map's other roads, both junctions and every non-road tile are untouched.
+ * Admiralty Way paving (docs/LEKKI_ADMIRALTY_WAY.md): the interlocking block geometry tiles a row with no gap and no overlap,
+ * alternate rows are offset, the scale is the readable one (not sub-pixel), and Admiralty Way's WHOLE carriageway (both
+ * directions, plaza to expressway, the approach rows included) is paved while Freedom Way, its crossing, the expressway and
+ * every non-road tile are untouched, with the map's road tiles exactly as they were.
  */
 import { describe, expect, it } from 'vitest';
 import { getArena } from '../../src/sim';
-import { AMARITE_PAVERS, blockOutline, periodOf, rowBlocks } from '../../src/render/arenas/community/pavers';
-import { AMARITE_WAY_PAVED } from '../../src/render/arenas/lekkiAmarite';
+import {
+  ADMIRALTY_PAVERS,
+  blockOutline,
+  periodOf,
+  rowBlocks,
+} from '../../src/render/arenas/community/pavers';
+import { ADMIRALTY_WAY_PAVED } from '../../src/render/arenas/lekkiAdmiralty';
 import { T } from '../../src/render/arenas/floorKit';
+
+/** Road tiles of the Lekki board before the paving work (the sim layout must never change for it). */
+const ROAD_TILES = 524;
 
 type P = [number, number][];
 function inside(poly: P, x: number, y: number): boolean {
@@ -25,7 +34,7 @@ function lcg(seed: number): () => number {
 }
 
 describe('interlocking block geometry', () => {
-  const s = AMARITE_PAVERS;
+  const s = ADMIRALTY_PAVERS;
 
   it('is a stepped Z: a rectangle with two notches, inside its bounding box', () => {
     const o = blockOutline(10, 20, s);
@@ -68,11 +77,12 @@ describe('interlocking block geometry', () => {
   });
 });
 
-describe('only Amarite Way is paved', () => {
+describe('the whole Admiralty Way carriageway is paved, and nothing else', () => {
   const layout = getArena('rumbleLekki').layout;
   const paved = new Set<string>();
-  for (const r of AMARITE_WAY_PAVED)
+  for (const r of ADMIRALTY_WAY_PAVED)
     for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) paved.add(`${x},${y}`);
+  const freedomWay = (y: number) => y >= 18 && y <= 20;
 
   it('every paved tile is a road tile of the existing map, inside the boulevard columns', () => {
     for (const k of paved) {
@@ -81,13 +91,24 @@ describe('only Amarite Way is paved', () => {
       expect(x).toBeGreaterThanOrEqual(20);
       expect(x).toBeLessThanOrEqual(23);
     }
-    expect(paved.size).toBe(4 * (7 + 8));
+    expect(paved.size).toBe(4 * (8 + 9));
   });
 
-  it('Freedom Way, the expressway and both junctions keep their asphalt', () => {
+  it('both directions, end to end: every Admiralty Way road tile from the plaza to the expressway is paved', () => {
+    let n = 0;
+    for (let y = 0; y < 30; y++)
+      for (let x = 20; x <= 23; x++) {
+        if (layout[y]![x] !== '=' || freedomWay(y)) continue;
+        expect(paved.has(`${x},${y}`), `${x},${y}`).toBe(true);
+        n++;
+      }
+    expect(n).toBe(paved.size);
+  });
+
+  it('Freedom Way (its crossing included) and the expressway keep their asphalt', () => {
     for (const k of paved) {
       const y = Number(k.split(',')[1]);
-      expect(y >= 17 && y <= 21, `junction row ${k}`).toBe(false); // Freedom Way (18-20) and its junction
+      expect(freedomWay(y), `Freedom Way row ${k}`).toBe(false);
       expect(y >= 30, `expressway ${k}`).toBe(false);
     }
     let otherRoad = 0;
@@ -101,5 +122,6 @@ describe('only Amarite Way is paved', () => {
     const a = getArena('rumbleLekki');
     expect(a.layout[0]!.length).toBe(57);
     expect(a.layout.length).toBe(39);
+    expect(a.layout.reduce((n, row) => n + [...row].filter((c) => c === '=').length, 0)).toBe(ROAD_TILES);
   });
 });

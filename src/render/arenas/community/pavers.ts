@@ -1,5 +1,5 @@
 /**
- * Interlocking concrete road pavers (presentation only; Lekki's Amarite Way, docs/LEKKI_AMARITE_WAY.md).
+ * Interlocking concrete road pavers (presentation only; Lekki's Admiralty Way, docs/LEKKI_ADMIRALTY_WAY.md).
  *
  * An ORIGINAL procedural material: zig-zag ("Z" / uni-pave) blocks, each a rectangle with two stepped notches so that
  * neighbours in a row lock into each other, laid in rows with every second row shifted by half a period (the pattern of
@@ -28,13 +28,16 @@ export interface PaverStyle {
   jointWidth: number;
 }
 
-/** The Amarite Way paving: pale to medium grey concrete (founder photographs). */
-export const AMARITE_PAVERS: PaverStyle = {
+/**
+ * The Admiralty Way paving: pale to medium grey concrete (founder photographs). A touch darker than the first pass so
+ * the carriageway reads as road against Lekki's pale pavements in daylight, still far from asphalt.
+ */
+export const ADMIRALTY_PAVERS: PaverStyle = {
   length: 0.36 * T,
   height: 0.18 * T,
-  tone: [158, 160, 156],
+  tone: [146, 147, 143],
   variation: 9,
-  joint: 'rgba(92,94,92,0.85)',
+  joint: 'rgba(84,86,84,0.88)',
   jointWidth: 2.4,
 };
 
@@ -105,7 +108,7 @@ export function paintPavers(
   rg: Ctx,
   rect: TileRect,
   r: () => number,
-  s: PaverStyle = AMARITE_PAVERS,
+  s: PaverStyle = ADMIRALTY_PAVERS,
 ): void {
   const px0 = rect.x0 * T;
   const py0 = rect.y0 * T;

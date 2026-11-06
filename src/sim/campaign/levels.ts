@@ -9,6 +9,7 @@
  */
 import { CAMPAIGN_CONFIG, ticks } from '../config';
 import type { CampaignConfig, DeepPartial, GameConfig } from '../config';
+import type { Difficulty } from '../types';
 
 export const CAMPAIGN_LEVELS = ['easy', 'normal', 'hard'] as const;
 export type CampaignLevel = (typeof CAMPAIGN_LEVELS)[number];
@@ -23,6 +24,12 @@ export interface CampaignLevelDef {
   maxHpDelta: number;
   /** The campaign tuning this level changes (absent for Normal). */
   config: DeepPartial<CampaignConfig> | null;
+  /**
+   * The bot level of the campaign's active enemies (field-mission and raid seats with an `enemyKind`; decision CI1).
+   * Normal is Casual, the level the enemy combat fairness work measured as the baseline (EF8); Easy and Hard are one
+   * bot level either side of it. Boss missions keep the crew level and the Standard boss floor (MS4).
+   */
+  enemyLevel: Difficulty;
 }
 
 export const CAMPAIGN_LEVEL_DEFS: Readonly<Record<CampaignLevel, CampaignLevelDef>> = {
@@ -38,6 +45,7 @@ export const CAMPAIGN_LEVEL_DEFS: Readonly<Record<CampaignLevel, CampaignLevelDe
       playerDamage: { bottle: 1 },
       healBonus: 2,
     },
+    enemyLevel: 'beginner',
   },
   normal: {
     id: 'normal',
@@ -45,6 +53,7 @@ export const CAMPAIGN_LEVEL_DEFS: Readonly<Record<CampaignLevel, CampaignLevelDe
     summary: 'The intended campaign: four health segments, one second of recovery after a hit.',
     maxHpDelta: 0,
     config: null,
+    enemyLevel: 'casual',
   },
   hard: {
     id: 'hard',
@@ -55,6 +64,7 @@ export const CAMPAIGN_LEVEL_DEFS: Readonly<Record<CampaignLevel, CampaignLevelDe
       invulnTicks: ticks(0.75),
       damage: { blast: 2, vehicle: 2, hazard: 2, trap: 1 },
     },
+    enemyLevel: 'standard',
   },
 };
 
@@ -64,6 +74,11 @@ export const isCampaignLevel = (v: unknown): v is CampaignLevel =>
 /** The health segments the human starts with at this level, from the mission's own base (never below 2). */
 export function levelMaxHp(base: number, level: CampaignLevel | undefined): number {
   return Math.max(2, base + CAMPAIGN_LEVEL_DEFS[level ?? DEFAULT_CAMPAIGN_LEVEL].maxHpDelta);
+}
+
+/** The bot level of the campaign's active enemies (field missions and raids) at this campaign level (decision CI1). */
+export function campaignEnemyLevel(level: CampaignLevel | undefined): Difficulty {
+  return CAMPAIGN_LEVEL_DEFS[level ?? DEFAULT_CAMPAIGN_LEVEL].enemyLevel;
 }
 
 /**

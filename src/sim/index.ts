@@ -131,6 +131,7 @@ export {
   CAMPAIGN_LEVELS,
   CAMPAIGN_LEVEL_DEFS,
   DEFAULT_CAMPAIGN_LEVEL,
+  campaignEnemyLevel,
   isCampaignLevel,
   levelConfigLayer,
   levelMaxHp,

@@ -1,8 +1,8 @@
-// Lekki Amarite Way paving review (docs/LEKKI_AMARITE_WAY.md): the gameplay-camera view of the paved road and a close-up
+// Lekki Admiralty Way paving review (docs/LEKKI_ADMIRALTY_WAY.md): the gameplay-camera view of the paved road and a close-up
 // of the block pattern, on desktop (1280x720) or a phone (844x390, touch). Needs a preview / dev server (SHOT_URL, default
 // http://localhost:5301/wahala-game/) and WAHALA_CHROMIUM (/opt/pw-browsers/chromium).
-//   node scripts/amarite-shots.mjs <out-dir> <prefix> <desktop|mobile> [low|medium|high]
-// Files: <dir>/<prefix>_<device>_gameplay.jpg and _close.jpg. Prints draw calls and triangles per shot.
+//   node scripts/admiralty-shots.mjs <out-dir> <prefix> <desktop|mobile> [low|medium|high]
+// Files: <dir>/<prefix>_<device>_gameplay.jpg, _close.jpg, _junction.jpg and _junction_close.jpg. Prints draw calls and triangles per shot.
 import { mkdirSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 
@@ -78,4 +78,19 @@ await page.evaluate(() =>
   window.__WAHALA__.renderer().debugInspect({ x: 21.5 - 28.5, z: 25.5 - 19.5, zoom: 0.45 }),
 );
 await shot('close');
+// 3: the gameplay camera on the Freedom Way junction (where the paving meets asphalt), and a close view of its edge
+await page.evaluate(() => {
+  const s = window.__WAHALA__.getState();
+  const p = s.players[0];
+  p.x = p.stepFromX = 25;
+  p.y = p.stepFromY = 19;
+  p.stepRemaining = 0;
+  window.__WAHALA__.renderer().debugInspect(null);
+  window.__WAHALA__.renderer().cutCamera();
+});
+await shot('junction');
+await page.evaluate(() =>
+  window.__WAHALA__.renderer().debugInspect({ x: 22 - 28.5, z: 19.5 - 19.5, zoom: 0.6 }),
+);
+await shot('junction_close');
 await browser.close();

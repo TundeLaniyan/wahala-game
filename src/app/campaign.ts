@@ -34,7 +34,13 @@ import {
   setLoadout,
 } from '../campaign';
 import type { CampaignSave, DistrictId, KeyValueStore, SectionMissionDef } from '../campaign';
-import { DEFAULT_CAMPAIGN_LEVEL, MISSION_IDS, buildMissionGame, resolveRaid } from '../sim';
+import {
+  DEFAULT_CAMPAIGN_LEVEL,
+  MISSION_IDS,
+  buildMissionGame,
+  campaignEnemyLevel,
+  resolveRaid,
+} from '../sim';
 import { buildRaidGame } from '../sim/raid/build';
 import type {
   CampaignLevel,
@@ -527,12 +533,14 @@ export class CampaignController {
   private startField(def: SectionMissionDef, districtId: MissionId): boolean {
     const ui = this.need();
     const build = this.deps.buildMission ?? buildMissionGame;
+    // field enemies play at the campaign level's enemy bot level (decision CI1), not the boss fight's crew level
+    const enemyLevel = campaignEnemyLevel(ui.save.campaignLevel);
     try {
       const options = build({
         spec: {
           id: districtId,
           fieldId: def.missionRef,
-          difficulty: ui.save.difficulty,
+          difficulty: enemyLevel,
           lives: MISSION_LIVES,
         },
         humanCharacter: ui.save.character,
@@ -549,7 +557,7 @@ export class CampaignController {
       });
       this.deps.host.startMission(options, {
         missionId: districtId,
-        difficulty: ui.save.difficulty,
+        difficulty: enemyLevel,
         onEnd: (outcome, state) =>
           this.finishMission(outcome ?? sectionOutcomeFromMatch(state, def, districtId)),
         onRaid: (request, state) => this.enterRaid(request, state),
@@ -617,12 +625,13 @@ export class CampaignController {
         humanCharacter: ui.save.character,
         seed: this.deps.seed(),
         ...(hp !== undefined ? { hp } : {}),
-        difficulty: ui.save.difficulty,
+        // raid enemies play at the campaign level's enemy bot level (decision CI1)
+        difficulty: campaignEnemyLevel(ui.save.campaignLevel),
         level: ui.save.campaignLevel,
       });
       host.playRaid(options, {
         raidId: ctx.raidId,
-        difficulty: ui.save.difficulty,
+        difficulty: campaignEnemyLevel(ui.save.campaignLevel),
         onEnd: (outcome) => this.raidEnded(ctx, outcome),
       });
       return true;

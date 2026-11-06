@@ -95,7 +95,10 @@ export function BriefingScreen() {
               testId="briefing-diff"
               caption="Crew level"
             />
-            <p className="mn-fineprint">The boss always fights at Standard or harder.</p>
+            <p className="mn-fineprint">
+              The crew level is for the boss fight; the boss always fights at Standard or harder. Street and
+              raid enemies follow the campaign difficulty.
+            </p>
             <Field
               label="Replay modifier"
               hint={

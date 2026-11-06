@@ -80,8 +80,8 @@ stood in a fresh cross and were not hurt by that blast.
 **Normal baseline = Casual enemy bots** (EF1-EF4 at the values above). Casual plans properly but late (22-tick reaction,
 re-plan every 18-26 ticks), has no chain awareness and no safety margin (a two-generator box works) and picks a worse
 goal 20 % of the time. Standard adds chains, a margin and a keener hunt (a good Hard); Rookie / Beginner add hesitation
-pauses and wandering (Easy). The app still passes the save's level (default Rookie): the difficulty branch maps
-Easy / Normal / Hard to levels.
+pauses and wandering (Easy). Integration branch (decision CI1): the campaign level now maps Easy / Normal / Hard to Beginner / Casual / Standard for
+field-mission and raid enemies.
 
 ## Before / after at the Normal baseline (Casual bots, 12 seeds)
 

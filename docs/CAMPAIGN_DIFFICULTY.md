@@ -16,7 +16,9 @@ Branch `claude/wahala-lagos-enhancement-v1` (decisions CL1-CL7). One-player camp
 | Thrown bottle | 1 | 2 | 2 |
 | Raid heal room gives | 2 | 1 | 1 |
 
-Okada, Armour, lives, respawn, retry, enemy durability, bot crew level (a separate loadout choice, "Crew level"), mission content, stars, rewards, unlocks and flags are identical on every level. A lethal event never kills from full health on any level (tested).
+Integration branch (decision CI1): the level also picks the bot level of the active enemies in field missions and raids (Easy Beginner, Normal Casual, Hard Standard; Casual is the baseline the enemy fairness work measured). Boss missions keep the crew level below.
+
+Okada, Armour, lives, respawn, retry, enemy durability, the boss-fight crew level (a separate loadout choice, "Crew level"), mission content, stars, rewards, unlocks and flags are identical on every level. A lethal event never kills from full health on any level (tested).
 
 ## Implementation
 - `src/sim/campaign/levels.ts`: the table and `levelMaxHp` / `levelConfigLayer`. Normal returns **no** override, so a Normal match's options and state are byte-for-byte the previous campaign (tested by hash).
