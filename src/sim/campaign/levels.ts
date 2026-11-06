@@ -37,7 +37,7 @@ export const CAMPAIGN_LEVEL_DEFS: Readonly<Record<CampaignLevel, CampaignLevelDe
     id: 'easy',
     label: 'Easy',
     summary:
-      'One extra health segment, longer recovery after a hit, blasts and vehicles hurt less, heal rooms give more.',
+      'One extra health segment, longer recovery after a hit, blasts and vehicles hurt less, heal rooms give more, street and raid enemies are slower.',
     maxHpDelta: 1,
     config: {
       invulnTicks: ticks(1.5),
@@ -58,7 +58,8 @@ export const CAMPAIGN_LEVEL_DEFS: Readonly<Record<CampaignLevel, CampaignLevelDe
   hard: {
     id: 'hard',
     label: 'Hard',
-    summary: 'One health segment fewer, a shorter recovery after a hit and street hazards hit harder.',
+    summary:
+      'One health segment fewer, a shorter recovery after a hit, street hazards hit harder and street and raid enemies are sharper.',
     maxHpDelta: -1,
     config: {
       invulnTicks: ticks(0.75),

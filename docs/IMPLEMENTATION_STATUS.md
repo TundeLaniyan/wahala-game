@@ -589,3 +589,6 @@ Done: an illustrated story-panel system (`StoryHero`, `storyImages.ts`) with 19 
 | D Story panels | done: `docs/STORY_VISUALS.md`, 19 WebP panels, graceful fallback |
 | E Difficulty | done: `docs/CAMPAIGN_DIFFICULTY.md`, decisions CL1-CL7; tested at all three levels against the respawn hotfix (`tests/app/campaign-level-death.test.ts`) |
 | Hotfix | `a4fe457` (campaign death never spectates) merged in; no conflicts |
+
+## Campaign integration (branch `claude/wahala-campaign-integration-v1`)
+Classic grid / combat (`7058ce8`) and Lagos enhancement (`4826700`) merged on the live release `a4fe457`; Normal = Casual enemies (CI1), Admiralty Way whole-carriageway paving (LK6-LK8). Report, tests and screenshots: `docs/CAMPAIGN_INTEGRATION.md`. Not merged to release, not published; release CI still required.
