@@ -1,6 +1,6 @@
 # Classic grid: the raid boards as Bomberman mazes
 
-Worker `raid-geometry`, from the release `a4fe457`. Decisions `DECISIONS.md` CG1-CG8. Screenshots: `docs/screenshots/classic-grid/` (`before_<raid>.jpg` on `a4fe457`, `after_<raid>.jpg` on this branch, desktop 1280 x 720, plus the depot on a phone in landscape, 844 x 390), taken with `scripts/raid-board-shots.mjs` (the real raid through `?debug`'s `campaign().debugStartRaid`).
+Worker `raid-geometry`, from the release `a4fe457`. Decisions `DECISIONS.md` CG1-CG9. Screenshots: `docs/screenshots/classic-grid/` (`before_<raid>.jpg` on `a4fe457`, `after_<raid>.jpg` on this branch, desktop 1280 x 720, plus the depot on a phone in landscape, 844 x 390), taken with `scripts/raid-board-shots.mjs` (the real raid through `?debug`'s `campaign().debugStartRaid`).
 
 ## The problem
 
@@ -136,6 +136,10 @@ Already classic grids; one marked crate moved from (1,5) to (3,3) (replacing a c
 
 - `tests/raid-classic-grid.test.ts` section 4: in the new depot a cross blast stops at pillars and walls, breaks the first crate of an arm and burns nothing behind it, hits the marked cargo once; a bomb at (5,7) traps a rival at (4,7) (crate behind, pillars beside: every tile it can reach burns, it is hit), and a rival at the junction (11,7) next to a bomb at (10,7) escapes round the rack corner to (11,6) or (11,8) unhurt (the diagonal refuge stays legitimate).
 - `tests/input-raid-grid.test.ts`: on the real depot board with full assistance on, keyboard (two arrows), gamepad (diagonal d-pad), the touch stick swept round the clock at a junction and in an aisle, a flick across a pillar corner, and the raid cross never move the player diagonally, round a pillar corner or into a pillar; the match controller turns the input layer cardinal-only when a raid starts; and the simulation, fed random moves on every raid for 30 s, never moves a player more than one orthogonal tile or onto a solid tile. No clipping was found, so no input or movement code changed.
+
+## Presentation
+
+On the full lattice the procedural pillar (person-tall, 1.62 units with its cap) hid most of the one-tile aisle north of it under the fixed whole-board camera. Raid arenas now get `RAID_STYLE` (`src/render/assets/obstacleStyles.ts`): the same pillar models and crates, pillars drawn at 72 % height, still clearly taller than a crate (decision CG9). Nothing else in the raid art changed.
 
 ## Changed coordinates (for other workers' scripts)
 
