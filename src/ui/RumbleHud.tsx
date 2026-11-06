@@ -328,10 +328,13 @@ export function RumbleHud({
   r,
   phase,
   localAlive,
+  inCampaign = false,
 }: {
   r: RumbleSnapshot;
   phase: string;
   localAlive: boolean;
+  /** A one-player campaign run: the downed human sees the respawn bar, never the spectator bar with Skip. */
+  inCampaign?: boolean;
 }) {
   const [rosterOpen, setRosterOpen] = useState(false);
   const leaders = r.respawns ? r.leaderboard.slice(0, 3).filter((e) => e.kills > 0) : r.leaders;
@@ -383,7 +386,9 @@ export function RumbleHud({
         </div>
       </div>
       {rosterOpen && <Roster r={r} onClose={() => setRosterOpen(false)} />}
-      {phase === 'playing' && !localAlive && (r.respawns ? <RespawnBar r={r} /> : <SpectatorBar r={r} />)}
+      {phase === 'playing' &&
+        !localAlive &&
+        (r.respawns || inCampaign ? <RespawnBar r={r} /> : <SpectatorBar r={r} />)}
     </>
   );
 }

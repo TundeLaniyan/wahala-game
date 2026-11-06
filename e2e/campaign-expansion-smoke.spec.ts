@@ -299,6 +299,67 @@ test.describe('campaign expansion smoke', () => {
     expect(errors).toEqual([]);
   });
 
+  test('campaign death (hotfix): the respawn bar shows, never the spectator bar or Skip, and the human respawns', async ({
+    page,
+  }) => {
+    const errors = await errorsOf(page);
+    await open(page, '&noattract');
+    await newCampaign(page);
+    expect(
+      await page.evaluate(() => (window as any).__WAHALA__.campaign().startSectionMission('oshodi.approach')),
+    ).toBe(true);
+    await expect(page.getByTestId('hud')).toBeVisible();
+    // staging: playing, one health segment left, an enemy generator under the human (a real lethal blast through the tick)
+    await page.evaluate(() => {
+      const s = (window as any).__WAHALA__.getState();
+      s.match.phase = 'playing';
+      s.match.countdownRemaining = 0;
+      const me = s.players[0];
+      me.protectedUntil = 0;
+      me.armour = 0;
+      me.mounted = false;
+      me.vitals.hp = 1;
+      me.vitals.invulnUntil = 0;
+      s.generators.push({
+        id: s.nextId++,
+        ownerId: 1,
+        x: me.x,
+        y: me.y,
+        stepFromX: me.x,
+        stepFromY: me.y,
+        range: 2,
+        pierce: false,
+        square: 0,
+        fromSpectator: false,
+        mode: 'timed',
+        timer: 1,
+        carriedBy: null,
+        carryBonusUsed: false,
+        slide: null,
+        flight: null,
+        triggered: false,
+        placedTick: s.tick,
+      });
+      (window as any).__WAHALA__.stepTicks(25);
+    });
+    expect(await state(page, `s => s.players[0].alive`)).toBe(false);
+    // let the controller publish the HUD for the downed human (real frames), then look at the screen
+    await expect(page.getByTestId('respawn-banner')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('spectate')).toHaveCount(0);
+    await expect(page.getByTestId('skip-results')).toHaveCount(0);
+    await expect(page.getByTestId('spectate-prev')).toHaveCount(0);
+    // the campaign respawn rules bring the human back (one life spent) and the bar goes away
+    await page.evaluate(() => (window as any).__WAHALA__.stepTicks(400));
+    const after = (await state(
+      page,
+      `s => ({ alive: s.players[0].alive, used: s.mission.livesUsed })`,
+    )) as any;
+    expect(after.alive).toBe(true);
+    expect(after.used).toBe(1);
+    await expect(page.getByTestId('respawn-banner')).toHaveCount(0, { timeout: 60_000 });
+    expect(errors).toEqual([]);
+  });
+
   test('mobile cross control: four arrows, one cardinal step per tap, the two action buttons stay', async ({
     page,
   }, info) => {
