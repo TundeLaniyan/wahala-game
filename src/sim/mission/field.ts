@@ -19,13 +19,23 @@ import { endMatch } from '../systems/matchResult';
 import type { GameState, Player, SimEvent } from '../types';
 import type { RaidOutcome } from '../campaign/types';
 import { newNode } from './ctx';
-import { CATCH_TICKS, DOOR_HOLD_TICKS, FIELD_MERCY_TICKS, fieldLegCount, getFieldMission } from './fieldDefs';
+import {
+  CATCH_TICKS,
+  DOOR_HOLD_TICKS,
+  FIELD_MERCY_TICKS,
+  fieldLegCount,
+  getFieldMission,
+  returnLegText,
+} from './fieldDefs';
 import type { FieldLegDef, FieldMissionDef } from './fieldDefs';
 import type {
   FieldDoorRuntime,
+  FieldGoalView,
   FieldObjectiveKind,
+  FieldRouteMarkerView,
   FieldRuntime,
   MissionDoorView,
+  MissionNodeKind,
   MissionNodeRuntime,
   MissionNodeView,
   MissionState,
@@ -117,9 +127,7 @@ export function enterLeg(state: GameState, m: MissionState, def: FieldMissionDef
 
 function legText(m: MissionState, def: FieldMissionDef): string {
   const leg = legAt(def, m.field!.leg);
-  return leg.kind === 'returnRoute'
-    ? `Done here. Walk back to ${def.returnMarker.label} to finish.`
-    : leg.text;
+  return leg.kind === 'returnRoute' ? returnLegText(def.returnMarker.label) : leg.text;
 }
 
 function nodeStateOf(f: FieldRuntime, def: FieldMissionDef, n: MissionNodeRuntime): MissionNodeView['state'] {
@@ -451,7 +459,12 @@ export function fieldDirective(state: GameState, id: number): NpcDirective | und
   const pursuerGroups = new Set(def.legs.flatMap((l) => (l.kind === 'escapeRoute' ? [l.group] : [])));
   if (seat.group && pursuerGroups.has(seat.group)) {
     const hunting = leg.kind === 'escapeRoute' && leg.group === seat.group;
-    if (hunting && h.alive) return { kind: 'chase', x: h.x, y: h.y };
+    // decision EF6: a pursuer keeps the pressure on, but a human who has opened a real gap has got away from it - it
+    // holds where it stands (and takes up the chase again if he comes back within reach)
+    const gap = Math.max(Math.abs(h.x - p.x), Math.abs(h.y - p.y));
+    if (hunting && h.alive && gap <= state.config.enemyAttacks.pursuitGiveUpTiles)
+      return { kind: 'chase', x: h.x, y: h.y };
+    if (hunting) return { kind: 'guard', x: p.x, y: p.y, radius: 1 };
     const before = def.legs.findIndex((l) => l.kind === 'escapeRoute' && l.group === seat.group) > f.leg;
     return before
       ? { kind: 'block', x: post.x, y: post.y, radius: 0 }
@@ -481,6 +494,91 @@ const LEG_UNIT: Record<FieldObjectiveKind, string> = {
   returnRoute: 'back at the gate',
 };
 
+/** How a node is completed (presentation hint only; the rules above decide nothing from it). */
+function nodeKindOf(f: FieldRuntime, n: MissionNodeRuntime): MissionNodeKind {
+  if (f.doors.some((d) => d.id === n.id)) return 'hold';
+  if (n.id.startsWith('mk')) return 'checkpoint';
+  if (n.id === 'group') return 'enemies';
+  if (n.id === 'exit') return 'exit';
+  return 'return';
+}
+
+/** Every walk-through checkpoint of the legs played so far and of the current one (later legs stay hidden). */
+function routeView(def: FieldMissionDef, f: FieldRuntime): FieldRouteMarkerView[] {
+  const out: FieldRouteMarkerView[] = [];
+  def.legs.forEach((leg, l) => {
+    if (leg.kind !== 'reachMarkers' || l > f.leg) return;
+    leg.markers.forEach((mk, i) => {
+      const state = l < f.leg || i < f.markersDone ? 'done' : i === f.markersDone ? 'live' : 'locked';
+      out.push({ id: `leg${l}.mk${i}`, x: mk.x, y: mk.y, label: mk.label, state, leg: l, index: i });
+    });
+  });
+  return out;
+}
+
+/** The current objective in plain terms (verb, target node, checkpoint step, door hold): read-only. */
+function goalView(
+  state: GameState,
+  m: MissionState,
+  f: FieldRuntime,
+  def: FieldMissionDef,
+  nodes: readonly MissionNodeView[],
+): FieldGoalView | null {
+  if (m.outcome) return null;
+  const leg = legAt(def, f.leg);
+  const p = state.players[0];
+  const at = (id: string): { nodeId: string | null; x: number; y: number; target: string } => {
+    const n = nodes.find((o) => o.id === id);
+    return n ? { nodeId: n.id, x: n.x, y: n.y, target: n.label } : { nodeId: null, x: 0, y: 0, target: '' };
+  };
+  const enemiesAlive = m.seats.filter((s) => s.role !== 'player' && state.players[s.playerId]?.alive);
+  let goal: Pick<FieldGoalView, 'verb' | 'nodeId' | 'target' | 'x' | 'y' | 'step' | 'enemiesLeft'>;
+  switch (leg.kind) {
+    case 'reachMarkers': {
+      const i = Math.min(f.markersDone, leg.markers.length - 1);
+      goal = { verb: 'goTo', ...at(`mk${i}`), step: { index: i, count: leg.markers.length }, enemiesLeft: 0 };
+      break;
+    }
+    case 'clearGroup': {
+      const left = enemiesAlive.filter((s) => s.group === leg.group).length;
+      goal = { verb: 'defeat', ...at('group'), step: null, enemiesLeft: left };
+      break;
+    }
+    case 'escapeRoute':
+      goal = { verb: 'escape', ...at('exit'), step: null, enemiesLeft: 0 };
+      break;
+    case 'door':
+      goal = { verb: 'hold', ...at(leg.doorId), step: null, enemiesLeft: 0 };
+      break;
+    case 'returnRoute':
+      goal = { verb: 'return', ...at('return'), step: null, enemiesLeft: 0 };
+      break;
+  }
+  const legDoor = leg.kind === 'door' ? f.doors.find((d) => d.id === leg.doorId) : undefined;
+  const door =
+    legDoor && legDoor.status !== 'done'
+      ? legDoor
+      : f.doors
+          .filter((d) => !d.required && d.status !== 'done' && (d.hold > 0 || d.status === 'inRaid'))
+          .sort((a, b) => b.hold - a.hold)[0];
+  const hold: FieldGoalView['hold'] = door
+    ? {
+        doorId: door.id,
+        label: door.label,
+        ticks: door.status === 'inRaid' ? DOOR_HOLD_TICKS : Math.min(DOOR_HOLD_TICKS, door.hold),
+        goalTicks: DOOR_HOLD_TICKS,
+        fraction: nodeFraction(f, { id: door.id } as MissionNodeRuntime),
+        standing: !!p?.alive && standingOn(p, door.x, door.y),
+        optional: !door.required,
+      }
+    : null;
+  return {
+    ...goal,
+    hold,
+    fightsOptional: leg.kind !== 'clearGroup' && leg.kind !== 'escapeRoute' && enemiesAlive.length > 0,
+  };
+}
+
 export function fieldMissionView(state: GameState): MissionView {
   const { m, f, def } = ctxOf(state);
   const leg = legAt(def, f.leg);
@@ -491,6 +589,8 @@ export function fieldMissionView(state: GameState): MissionView {
     label: n.label,
     state: nodeStateOf(f, def, n),
     fraction: nodeFraction(f, n),
+    kind: nodeKindOf(f, n),
+    optional: f.doors.some((d) => d.id === n.id && !d.required),
   }));
   const doors: MissionDoorView[] = f.doors.map((d) => ({
     id: d.id,
@@ -522,6 +622,8 @@ export function fieldMissionView(state: GameState): MissionView {
     legCount: fieldLegCount(def),
     legKind: leg.kind,
     doors,
+    fieldGoal: goalView(state, m, f, def, nodes),
+    route: routeView(def, f),
     pendingRaid: m.pendingRaid ?? null,
     missionId: m.id,
     objective: 'fieldRoute',

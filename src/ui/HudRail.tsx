@@ -6,6 +6,7 @@ import { useGameStore } from '../app/store';
 import { RAIL_GAP, railBox, railBoxRight } from './hudRail';
 import type { RailBox } from './hudRail';
 import { CampaignHealth } from './CampaignHealth';
+import { FieldGoal } from './FieldGoal';
 import { KillFeed } from './KillFeed';
 import { MissionPanel } from './MissionPanel';
 import { RuleBanner, StageAlerts } from './StageAlerts';
@@ -143,6 +144,7 @@ export function HudRail({
           data-testid="rail-combat"
           style={combatMax !== null ? { maxHeight: `${combatMax}px` } : undefined}
         >
+          <FieldGoal mission={mission} />
           {!rumble && <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} />}
           <MissionPanel mission={mission} />
           {!rumble && !side && <KillFeed />}

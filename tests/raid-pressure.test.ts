@@ -51,10 +51,17 @@ function play(seed: number, ticks: number, wave: 1 | 2 = 1) {
     }
     letWavesAppear(state, events);
   }
-  // the human stands in the open middle of the board (a fair target in the lanes the enemies use)
+  // the human stands in the open middle of the board (a fair target in the lanes the enemies use): the floor tile
+  // nearest the centre (the centre itself is a pillar of the classic grid)
   const cx = Math.floor(state.width / 2);
   const cy = Math.floor(state.height / 2);
-  put(state, 0, cx, cy);
+  let mid = { x: cx, y: cy, d: Number.POSITIVE_INFINITY };
+  for (let y = 0; y < state.height; y++)
+    for (let x = 0; x < state.width; x++) {
+      const d = Math.abs(x - cx) + Math.abs(y - cy);
+      if (state.tiles[y * state.width + x] === 0 && d < mid.d) mid = { x, y, d };
+    }
+  put(state, 0, mid.x, mid.y);
   const bots = new Map(
     state.players
       .filter((p) => p.enemyKind !== undefined)

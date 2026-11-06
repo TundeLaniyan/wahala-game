@@ -18,6 +18,7 @@
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
     "combat-balance": "tsx scripts/combat-balance.ts",
     "enemy-balance": "tsx scripts/enemy-balance.ts",
+    "enemy-fairness": "tsx scripts/enemy-fairness.ts",
     "streak-measure": "tsx scripts/streak-measure.ts",
     "check:static": "vite build && node scripts/check-static-build.mjs"
   },

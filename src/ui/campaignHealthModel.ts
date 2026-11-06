@@ -157,7 +157,8 @@ export function missionBossBar(
   view: MissionView | null,
   alreadyShown: readonly BossBarModel[] = [],
 ): BossBarModel | null {
-  if (!view || alreadyShown.some((b) => b.kindLabel === 'BOSS')) return null;
+  // a section field mission has no boss (its view carries an empty boss slot): no bar
+  if (!view || view.format === 'field' || alreadyShown.some((b) => b.kindLabel === 'BOSS')) return null;
   const total = view.phaseCount;
   const state = view.boss.defeated ? 'defeated' : view.boss.exposed ? 'exposed' : 'shielded';
   // phase = the active phase index (0, 1, 2): that many defences are already down; exposed = only the last one is left

@@ -4,13 +4,14 @@ import {
   BASE_PILLARS,
   DEFAULT_STYLE,
   OBSTACLE_STYLES,
+  RAID_STYLE,
   obstacleStyle,
   resolvePillars,
   resolveSoftWeights,
 } from '../../src/render/assets/obstacleStyles';
 import { debrisKindFor, softVariantFor } from '../../src/render/assets/props';
 import { occludingTiles } from '../../src/render/assets/occlusionFade';
-import { ARENAS } from '../../src/sim/arenas';
+import { ARENAS, RAID_ARENA_IDS } from '../../src/sim/arenas';
 
 const MODELS = new URL('../../src/assets/models/', import.meta.url);
 const BUNDLED = readdirSync(MODELS)
@@ -39,6 +40,18 @@ describe('obstacle style registry (presentation only)', () => {
       expect(s!.pillars.length).toBeGreaterThan(0);
       expect(Object.values(s!.soft).some((w) => w > 0)).toBe(true);
     }
+  });
+
+  it('classic raids draw lower pillars (the aisle behind each one stays readable), still taller than a crate', () => {
+    expect(RAID_ARENA_IDS.length).toBeGreaterThanOrEqual(6);
+    for (const id of RAID_ARENA_IDS) expect(obstacleStyle(id), id).toBe(RAID_STYLE);
+    const [, h] = RAID_STYLE.pillarScale;
+    expect(h).toBeLessThan(DEFAULT_STYLE.pillarScale[1]);
+    // the procedural pillar is 1.62 tall with its cap, a crate about 1: keep the pillar clearly the taller block
+    expect(1.62 * h).toBeGreaterThan(1.1 * RAID_STYLE.softScale[1]);
+    // presentation only: the same models and breakables as the default
+    expect(RAID_STYLE.pillars).toEqual(DEFAULT_STYLE.pillars);
+    expect(RAID_STYLE.soft).toEqual(DEFAULT_STYLE.soft);
   });
 
   it('unknown arenas get the default style', () => {

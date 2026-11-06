@@ -128,6 +128,17 @@ export function enemyMeleeHit(
     fire.victimSafeUntil[target.id] = state.tick + spec.dazeTicks + state.config.enemyAttacks.victimFreeTicks;
 }
 
+/**
+ * THE PUNISHABLE WINDOW (decision EF2): an enemy whose punch just resolved (hit or miss) stays planted for its kind's
+ * `recoveryRootTicks`. Called from `skills.ts` for every resolved attack; a seat without `enemyKind` (every multiplayer
+ * fighter, the campaign human) is untouched.
+ */
+export function enemyAfterPunch(state: GameState, p: Player): void {
+  const spec = p.enemyKind ? state.config.enemyAttacks.melee[p.enemyKind] : null;
+  if (!spec || spec.recoveryRootTicks <= 0) return;
+  p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.recoveryRootTicks);
+}
+
 // ---------------------------------------------------------------- throws
 
 /** The shortest range among the objects this kind throws (a line valid for every one of them), 0 = never throws. */

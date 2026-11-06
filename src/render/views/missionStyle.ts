@@ -18,6 +18,8 @@ export const MARKER_COLORS = {
   bossShield: 0x4aa8ff,
   bossExposed: 0xff3b1f,
   bossExposedAlt: 0xffd23a,
+  /** Field-mission doors (hold to interact): cyan, like the HUD's HOLD tag; checkpoints are gold beacons. */
+  hold: 0x6fd3ff,
 } as const;
 
 /** One flat colour per crew role (a small pip ring under each crew fighter). */

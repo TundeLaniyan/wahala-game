@@ -30,9 +30,12 @@ export function MissionPanel({ mission }: { mission: MissionView | null }) {
           {m.time.label}
         </b>
       </header>
-      <div className="mp-objective" data-testid="mission-objective">
-        {m.objective}
-      </div>
+      {/* a field mission's objective is the FieldGoal block above the panel (tag + target) */}
+      {!m.field && (
+        <div className="mp-objective" data-testid="mission-objective">
+          {m.objective}
+        </div>
+      )}
       <div
         className="mp-bar"
         role="progressbar"
@@ -52,13 +55,15 @@ export function MissionPanel({ mission }: { mission: MissionView | null }) {
         </p>
       )}
       <div className="mp-foot">
-        <span
-          className={`mp-boss ${m.boss.state}`}
-          data-testid="mission-boss"
-          data-seconds={m.boss.seconds ?? ''}
-        >
-          {m.boss.label}
-        </span>
+        {m.showBoss && (
+          <span
+            className={`mp-boss ${m.boss.state}`}
+            data-testid="mission-boss"
+            data-seconds={m.boss.seconds ?? ''}
+          >
+            {m.boss.label}
+          </span>
+        )}
         <span className="mp-lives" data-testid="mission-lives" data-left={m.lives.left}>
           {m.lives.label}
         </span>

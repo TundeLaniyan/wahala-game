@@ -31,6 +31,8 @@ import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
 import { campaignHitNotice } from './campaignHud';
 import { protectionNotice, quickHandsResumedNotice, quickHandsStoredNotice } from './combatNotices';
+import { fieldNotices } from './fieldGoal';
+import type { FieldNoticeMemory } from './fieldGoal';
 import { buildHud } from './hud';
 import { raidNotice } from './raidNotices';
 import { expireKillLines, isCrowded, newKillLines, pushKillLines } from './killFeed';
@@ -141,6 +143,8 @@ export class MatchController implements MissionHost {
   private skipping = false;
   private skipFrames = 0;
   private closingAnnounced = false;
+  /** The last field-mission picture seen (checkpoint / leg notices, docs/CHECKPOINT_CLARITY.md). */
+  private fieldMemory: FieldNoticeMemory | null = null;
   private director: ScenarioDirector | null = null;
   /** Campaign mission presentation (docs/CAMPAIGN_UI.md): own end flow, no MatchSummary, no saved settings. */
   private mission: MissionMeta | null = null;
@@ -241,10 +245,12 @@ export class MatchController implements MissionHost {
       if (!p.isBot) return;
       const level: Difficulty = options.players[i]?.difficulty ?? meta.difficulty;
       const at = DIFFICULTIES.indexOf(level);
+      // the boss floor is for a boss mission's seat 1; in a field mission seat 1 is an ordinary enemy (decision EF7)
+      const boss = i === 1 && options.players[i]?.enemyKind === undefined;
       this.bots.set(
         i,
         this.deps.botFactory({
-          difficulty: i === 1 ? (DIFFICULTIES[Math.max(at, floor)] ?? level) : level,
+          difficulty: boss ? (DIFFICULTIES[Math.max(at, floor)] ?? level) : level,
           seed: options.seed + i * 7919,
           playerId: i,
         }),
@@ -896,7 +902,12 @@ export class MatchController implements MissionHost {
           vehicle: this.entry.vehicleKind,
         }
       : null;
-    patch({ hud: buildHud(state, LOCAL_ID, entry, this.spectateId) });
+    const hud = buildHud(state, LOCAL_ID, entry, this.spectateId);
+    patch({ hud });
+    // field missions: "CHECKPOINT A ✓ · NEXT: ..." the moment a checkpoint is walked through (a view diff, not a rule)
+    const field = fieldNotices(this.fieldMemory, hud.mission);
+    this.fieldMemory = field.memory;
+    for (const n of field.notices) this.pushToast(n, nowMs, 3400);
     const toasts = useGameStore.getState().toasts;
     if (toasts.some((t) => t.expires <= nowMs)) patch({ toasts: toasts.filter((t) => t.expires > nowMs) });
     const feed = useGameStore.getState().killFeed;

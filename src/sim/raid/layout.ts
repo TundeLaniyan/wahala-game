@@ -1,11 +1,12 @@
 /**
  * Raid layout parsing and data validation. Pure: turns a `RaidDef` layout (the glyph legend of `def.ts`) into positions
- * and checks the authored data for mistakes. `parseRaidLayout` throws when `raidProblems` finds any, so a broken raid
+ * and checks the authored data for mistakes (including the classic-grid shape rule of `shape.ts`). `parseRaidLayout` throws when `raidProblems` finds any, so a broken raid
  * can never be built; `tests/raid-layouts.test.ts` runs `raidProblems` and the reachability analysis on every raid.
  */
 import type { Dir, TilePos } from '../types';
 import { RAID_MAX_HEIGHT, RAID_MAX_WIDTH } from './def';
 import type { BonusKind, DoorDef, EnemyPlacement, RaidDef } from './def';
+import { raidShapeProblems } from './shape';
 import { RAID_TUNING } from './tuning';
 import type { CargoKind } from './types';
 
@@ -323,6 +324,9 @@ export function raidProblems(def: RaidDef): string[] {
       out.push(`conveyor ${i}: telegraph must be shorter than the launch interval`);
     if (s.maxLive < 1 || s.damage < 0) out.push(`conveyor ${i}: bad shipment numbers`);
   });
+
+  // the classic grid: a pillar maze with corridors, no open floor (docs/CLASSIC_GRID.md)
+  out.push(...raidShapeProblems(def));
 
   // waves must exist for the numbers the view promises
   if (def.lives < 1) out.push('at least one life');

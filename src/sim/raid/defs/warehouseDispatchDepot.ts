@@ -1,24 +1,26 @@
 /**
- * THE VERTICAL SLICE: the Oshodi dispatch depot (docs/CLASSIC_RAIDS.md). Destroy the 3 marked dispatch crates:
- * two in the hall (each behind crates and pillars), the third in the north bay, locked until the depot guards are
- * down. A conveyor carries shipments down the east lane (the way to the exit). Two optional rooms: the Armour locker
- * (north-west, opens when the lock-box crate in the hall is blasted) and the first-aid cupboard (south, opens when the
- * floor switch in the belt lane is stepped on). The second wave (two throwers and a lieutenant) arrives when the first
- * crate goes. The exit (south-east) opens when the third crate is down.
+ * THE VERTICAL SLICE: the Oshodi dispatch depot (docs/CLASSIC_RAIDS.md, docs/CLASSIC_GRID.md). A classic pillar maze:
+ * pallet-rack columns on every (even, even) tile, one-tile aisles between them, crates in some aisles. Destroy the 3
+ * marked dispatch crates: two in the hall (one in the middle aisle between two racks, one boxed in by crates on the
+ * row above the first-aid cupboard), the third in the north bay, locked until the depot guards are down. A conveyor
+ * carries shipments down the aisle beside the east lane (the way to the exit). Two optional rooms: the Armour locker
+ * (north-west, opens when the lock-box crate in the north aisle is blasted) and the first-aid cupboard (south, opens
+ * when the floor switch beside the belt is stepped on). The second wave (two throwers and a lieutenant) arrives when
+ * the first crate goes. The exit (south-east) opens when the third crate is down.
  *
  *      01234567890123456
  *    0 #################
- *    1 #A..#..x..xK#.M.#     A Armour plate (room 1)   K lock-box crate   M marked crates (cargo-0..2 in reading order)
- *    2 #...1.......2...#     1 Armour-locker door   2 bay door
- *    3 #...#.#.#.#.#...#
- *    4 #####.......#####
- *    5 #.....xa...b#dv.#     a b c  depot guards (wave 1)   d e  throwers   f  lieutenant (wave 2)
- *    6 #.....#.#.#.#.v.#     v conveyor belt (east lane, shipments slide south)
- *    7 #......xMx....v.#
- *    8 #.....#.#.#.#*v.#     * floor switch
- *    9 #....e..xMxc..v.#
- *   10 #...#..f.######.#
- *   11 #@..#....3.H.#.E#     3 first-aid door   H heal segment   @ entrance   E exit
+ *    1 #A..#..x...K#.M.#     A Armour plate (room 1)   K lock-box crate   M marked crates (cargo-0..2 in reading order)
+ *    2 #.#.1.#.#.#.2.#.#     1 Armour-locker door   2 bay door   # on (even, even) = a rack column
+ *    3 #...#.....x.#...#
+ *    4 #####.#.#.#.#####
+ *    5 #....x.a...bdv..#     a b c  depot guards (wave 1)   d e  throwers   f  lieutenant (wave 2)
+ *    6 #.#.#.#.#x#.#v#.#     v conveyor belt (x 13, shipments slide south between the racks)
+ *    7 #..x..x.M...*v..#     * floor switch
+ *    8 #.#x#.#.#.#.#v#.#
+ *    9 #.x..e..xMxc.v..#
+ *   10 #.#.#x#f#######.#
+ *   11 #@.......3.H.#.E#     3 first-aid door   H heal segment   @ entrance   E exit
  *   12 #################
  */
 import type { RaidDef } from '../def';
@@ -33,17 +35,17 @@ export const WAREHOUSE_DISPATCH_DEPOT: RaidDef = {
   factionId: 'oritaWardens',
   layout: [
     '#################',
-    '#A..#..x..xK#.M.#',
-    '#...1.......2...#',
-    '#...#.#.#.#.#...#',
-    '#####.......#####',
-    '#.....xa...b#dv.#',
-    '#.....#.#.#.#.v.#',
-    '#......xMx....v.#',
-    '#.....#.#.#.#*v.#',
-    '#....e..xMxc..v.#',
-    '#...#..f.######.#',
-    '#@..#....3.H.#.E#',
+    '#A..#..x...K#.M.#',
+    '#.#.1.#.#.#.2.#.#',
+    '#...#.....x.#...#',
+    '#####.#.#.#.#####',
+    '#....x.a...bdv..#',
+    '#.#.#.#.#x#.#v#.#',
+    '#..x..x.M...*v..#',
+    '#.#x#.#.#.#.#v#.#',
+    '#.x..e..xMxc.v..#',
+    '#.#.#x#f#######.#',
+    '#@.......3.H.#.E#',
     '#################',
   ],
   legend: { markedHp: 2, cargoHp: 1, crateHp: 2, barrelHp: 1 },

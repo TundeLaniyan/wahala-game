@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { CampaignHud, EnemyHud } from '../app/hud';
 import type { MissionView } from '../sim';
 import { CampaignHealth } from './CampaignHealth';
+import { FieldGoal } from './FieldGoal';
 import { RAIL_GAP } from './hudRail';
 import { MissionPanel } from './MissionPanel';
 
@@ -47,6 +48,8 @@ export function MissionDock({
       data-testid="mission-dock"
       style={maxHeight !== null ? { maxHeight: `${maxHeight}px` } : undefined}
     >
+      {/* a field mission's objective first: on a phone the column is short and this is what matters */}
+      <FieldGoal mission={mission} />
       <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} />
       <MissionPanel mission={mission} />
     </div>

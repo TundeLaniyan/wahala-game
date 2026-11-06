@@ -27,7 +27,7 @@ function playDepot(rooms: { armour: boolean; heal: boolean }, seed = 3) {
   me.idle(RAID_TUNING.spawnWarnTicks + 5);
   for (const id of [4, 5, 6]) me.kill(id);
   if (rooms.heal) {
-    me.walkTo(13, 8); // the floor switch in the belt lane's west strip
+    me.walkTo(12, 7); // the floor switch beside the belt
     me.walkTo(11, 11);
   }
   me.destroy({ x: 9, y: 9 });

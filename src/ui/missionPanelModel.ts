@@ -3,7 +3,9 @@
  * progress, the phase's callout, the boss's status, lives, time and the incoming warnings. A pure function of the
  * sim's read-only `MissionView` (src/sim/mission/types.ts); it invents no numbers and no rules.
  */
-import type { MissionView, MissionWarningView, ObjectiveKind } from '../sim';
+import type { FieldGoalVerb, MissionView, MissionWarningView, ObjectiveKind } from '../sim';
+import { FIELD_VERB_TAG, fieldNotes, fieldTargetText, holdReadout } from '../app/fieldGoal';
+import type { HoldReadout } from '../app/fieldGoal';
 
 /** The verb of each district's objective, as the panel's heading says it. */
 export const OBJECTIVE_LABEL: Readonly<Record<ObjectiveKind, string>> = {
@@ -65,6 +67,37 @@ export interface MissionPanelModel {
   warnings: MissionWarningLine[];
   /** The mission is over: the panel says how. */
   outcome: 'won' | 'lost' | 'timeout' | null;
+  /** A boss mission shows the boss status; a section field mission has no boss (the row is left out). */
+  showBoss: boolean;
+  /** Field missions: the current objective in plain terms (docs/CHECKPOINT_CLARITY.md); null otherwise. */
+  field: FieldGoalModel | null;
+}
+
+/** The field objective block: tag + target (+ the checkpoint's place), the door hold, short notes. */
+export interface FieldGoalModel {
+  verb: FieldGoalVerb;
+  /** GO TO / HOLD / DEFEAT / ESCAPE / RETURN */
+  tag: string;
+  /** "CHECKPOINT A", "DISPATCH DEPOT DOOR", "2 ENEMIES LEFT" */
+  target: string;
+  /** "1 OF 3" (checkpoints only) */
+  step: string | null;
+  hold: HoldReadout | null;
+  notes: string[];
+}
+
+/** The field objective block of a field mission view (null for a boss mission or once the mission is over). */
+export function fieldGoalModel(view: MissionView | null): FieldGoalModel | null {
+  const goal = view?.fieldGoal;
+  if (!view || view.format !== 'field' || !goal || view.outcome) return null;
+  return {
+    verb: goal.verb,
+    tag: FIELD_VERB_TAG[goal.verb],
+    target: fieldTargetText(goal),
+    step: goal.step ? `${goal.step.index + 1} OF ${goal.step.count}` : null,
+    hold: goal.hold ? holdReadout(goal.hold) : null,
+    notes: fieldNotes(goal),
+  };
 }
 
 const clock = (sec: number): string => {
@@ -125,5 +158,7 @@ export function missionPanelModel(view: MissionView): MissionPanelModel {
     time: { seconds: view.timeRemainingSec, label: clock(view.timeRemainingSec) },
     warnings,
     outcome: view.outcome?.result ?? null,
+    showBoss: view.format !== 'field',
+    field: fieldGoalModel(view),
   };
 }

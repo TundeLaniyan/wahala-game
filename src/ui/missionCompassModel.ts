@@ -19,9 +19,14 @@ export interface CompassTarget {
 
 const PRESS_ID = 'press';
 
-/** Nodes worth walking to right now: live or being worked; else the idle ones (junctions, ledgers) without the press drop. */
+/**
+ * Nodes worth walking to right now: live or being worked (a required one before an optional bonus door); else the idle
+ * ones (junctions, ledgers) without the press drop.
+ */
 export function candidateNodes(nodes: readonly MissionNodeView[]): MissionNodeView[] {
   const active = nodes.filter((n) => n.state === 'live' || n.state === 'progress');
+  const required = active.filter((n) => !n.optional);
+  if (required.length > 0) return required;
   if (active.length > 0) return active;
   return nodes.filter((n) => n.state === 'idle' && n.id !== PRESS_ID);
 }
@@ -40,6 +45,10 @@ export function compassTarget(
   if (view.boss.exposed && !view.boss.defeated) {
     return boss ? { id: 'boss', kind: 'boss', x: boss.x, y: boss.y, tiles: dist(boss.x, boss.y) } : null;
   }
+  // a field mission: always the CURRENT objective (the current checkpoint, the door, the exit), never a later one
+  const goalId = view.fieldGoal?.nodeId;
+  const goal = goalId ? view.nodes.find((n) => n.id === goalId && n.state !== 'done') : undefined;
+  if (goal) return { id: goal.id, kind: 'node', x: goal.x, y: goal.y, tiles: dist(goal.x, goal.y) };
   let best: CompassTarget | null = null;
   for (const n of candidateNodes(view.nodes)) {
     const tiles = dist(n.x, n.y);

@@ -74,6 +74,26 @@ export function zoneTexture(): CanvasTexture {
   });
 }
 
+/**
+ * A door's hold pad (field missions): a dark square plate with a heavy rim and a door-sill bar across its front edge, so
+ * a "stand here and hold" pad never looks like a round walk-through checkpoint.
+ */
+export function holdPadTexture(): CanvasTexture {
+  return make('holdPad', 128, 128, (g) => {
+    g.fillStyle = 'rgba(0,0,0,0.5)';
+    g.fillRect(8, 8, 112, 112);
+    g.strokeStyle = '#fff';
+    g.lineWidth = 10;
+    g.lineJoin = 'miter';
+    g.strokeRect(10, 10, 108, 108);
+    g.fillStyle = 'rgba(255,255,255,0.85)';
+    g.fillRect(24, 100, 80, 10);
+    g.strokeStyle = 'rgba(255,255,255,0.45)';
+    g.lineWidth = 3;
+    g.strokeRect(26, 26, 76, 76);
+  });
+}
+
 /** Diagonal hazard hatch (white stripes, transparent gaps) that repeats seamlessly tile to tile. */
 export function hatchTexture(): CanvasTexture {
   const t = make('hatch', 64, 64, (g) => {

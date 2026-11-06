@@ -4,7 +4,7 @@
  * Pickups are never drawn (hidden ones must not leak, and revealed ones would only be clutter).
  */
 import { Tile, missionView } from '../sim';
-import type { GameState, MissionNodeState, MissionWarningView } from '../sim';
+import type { GameState, MissionNodeKind, MissionNodeState, MissionWarningView } from '../sim';
 
 export interface MinimapGeometry {
   cols: number;
@@ -38,7 +38,16 @@ export interface MinimapPlayer {
 
 /** A campaign mission's picture for the map: its objective nodes, telegraphed warning tiles and the boss. */
 export interface MinimapMission {
-  nodes: { id: string; x: number; y: number; state: MissionNodeState; press: boolean }[];
+  nodes: {
+    id: string;
+    x: number;
+    y: number;
+    state: MissionNodeState;
+    press: boolean;
+    /** Field missions: how the node completes (a door is drawn as a square) and whether it is the CURRENT objective. */
+    kind: MissionNodeKind | null;
+    current: boolean;
+  }[];
   warnings: { kind: MissionWarningView['kind']; tiles: number[]; urgent: boolean }[];
   boss: { x: number; y: number; mode: 'shielded' | 'exposed' | 'defeated' } | null;
 }
@@ -52,7 +61,15 @@ export function minimapMission(state: GameState): MinimapMission | null {
   if (!view) return null;
   const b = state.players[view.boss.playerId];
   return {
-    nodes: view.nodes.map((n) => ({ id: n.id, x: n.x, y: n.y, state: n.state, press: n.id === 'press' })),
+    nodes: view.nodes.map((n) => ({
+      id: n.id,
+      x: n.x,
+      y: n.y,
+      state: n.state,
+      press: n.id === 'press',
+      kind: n.kind ?? null,
+      current: !!view.fieldGoal && view.fieldGoal.nodeId === n.id,
+    })),
     warnings: view.warnings.map((w) => ({
       kind: w.kind,
       tiles: w.tiles,

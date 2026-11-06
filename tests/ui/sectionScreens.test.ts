@@ -115,7 +115,7 @@ describe('campaign map sections', () => {
     expect(html).toMatch(/data-testid="section-oshodi.s1"[^>]*data-status="available"/);
     expect(html).toMatch(/data-testid="section-oshodi.s2"[^>]*data-status="locked"/);
     expect(html).toContain('Terminal Approach');
-    expect(html).toContain('Walk the checkpoints, raid the depot, come back out.');
+    expect(html).toContain('Walk through 3 checkpoints, stand 1 s on the depot door, return.');
     expect(html).toMatch(/data-testid="section-start-oshodi.approach"[^>]*>Start/);
     expect(html).toMatch(/data-testid="section-start-oshodi.railEdge"[^>]*disabled/);
     expect(html).toMatch(/data-testid="section-start-oshodi.boss"[^>]*disabled/);

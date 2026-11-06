@@ -1,20 +1,21 @@
 /**
- * Ebute-Metta rail-yard goods shed (docs/CLASSIC_RAIDS.md): belts and shipments dominate. One long S-shaped conveyor
- * (east along the top, south down the east side, west along the middle) and a short one along the entrance row carry
- * shipments past the three marked goods wagons in the middle row. A star-token closet (north-west) opens with the
- * floor switch; the exit (north-east) is behind a gate that opens when the second wave (thrower and heavy, called
- * by the second wagon) is down.
+ * Ebute-Metta rail-yard goods shed (docs/CLASSIC_RAIDS.md, docs/CLASSIC_GRID.md): belts and shipments dominate. One long
+ * S-shaped conveyor (east along the top, south down the east side, west along the middle) and a short one along the
+ * entrance row carry shipments past the three marked goods wagons in the middle row; between the belts the floor is a
+ * pillar maze (buffer stops on every (even, even) tile), so the wagon row is reached by one-tile cross aisles. A
+ * star-token closet (north-west) opens with the floor switch; the exit (north-east) is behind a gate that opens when
+ * the second wave (thrower and heavy, called by the second wagon) is down.
  *
  *      01234567890123456
  *    0 #################
  *    1 #Tj1.........2E.#     T star token   j closet agbero   1 closet door   2 exit gate   E exit
- *    2 ####....a....####     a b guards   c thrower   d heavy
+ *    2 #####.#a#.#.#####     a b guards   c thrower   d heavy
  *    3 #.>>>>>>>>>>>>>v#     > < v belts   (the long conveyor starts at the west end of row 3)
- *    4 #.....#.c.#....v#
- *    5 #..x.MSx.M.x.M.v#     M marked goods wagons   S sturdy crate
- *    6 #.....#...#.b..v#
+ *    4 #.#.#.#c#.#x#..v#     (14,4) is open: the belt corner needs a way off within two steps
+ *    5 #...xMS.xM..xM.v#     M marked goods wagons   S sturdy crate
+ *    6 #.#.#.#.#.#.#b#v#
  *    7 #.#<<<<<<<<<<<<<#
- *    8 #.*...#.....d...#     * floor switch
+ *    8 #.#*#.#.#.#d#.#.#     * floor switch
  *    9 #@..>>>>>>>>>#..#     the short conveyor along the entrance row
  *   10 #################
  */
@@ -32,13 +33,13 @@ export const RAIL_YARD_GOODS: RaidDef = {
   layout: [
     '#################',
     '#Tj1.........2E.#',
-    '####....a....####',
+    '#####.#a#.#.#####',
     '#.>>>>>>>>>>>>>v#',
-    '#.....#.c.#....v#',
-    '#..x.MSx.M.x.M.v#',
-    '#.....#...#.b..v#',
+    '#.#.#.#c#.#x#..v#',
+    '#...xMS.xM..xM.v#',
+    '#.#.#.#.#.#.#b#v#',
     '#.#<<<<<<<<<<<<<#',
-    '#.*...#.....d...#',
+    '#.#*#.#.#.#d#.#.#',
     '#@..>>>>>>>>>#..#',
     '#################',
   ],

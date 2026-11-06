@@ -66,6 +66,10 @@ Measured with `renderer.stats()` on the Oshodi staging of `scripts/mission-prese
 
 Each pair is the same frozen frame with the markers hidden (`__WAHALA__.hideMissionMarkers(true)`) and drawn, two samples each, so only the markers differ. The worst case is about **+20 draw calls** (the scenes are 150 to 300 calls, so under 10 %, most of it one call per marker part) and **under 1 % of the triangles** (the whole mission layer is a few thousand). `MissionViews.update` costs 0.05 to 0.45 ms a frame on this software-GL container (running average, `__WAHALA__.missionMarkers().updateMs`), most of it the `missionView(state)` call it shares with the HUD. Nothing is allocated per tile; the three warning layers are single instanced draws however long the lane is.
 
+## Field missions
+
+Section field missions (`state.mission.field`) draw their walk-through checkpoints, exits and return marker as beacons and their doors as square hold pads, and carry a GO TO / HOLD / DEFEAT / ESCAPE / RETURN block with the door hold bar first in the right column: `docs/CHECKPOINT_CLARITY.md` (decisions CK1-CK8).
+
 ## Compass
 
 The follow camera hides most of the district, so a small pointer sits on the **screen edge** towards the nearest live objective node (the exposed boss during his window), with the distance in tiles ("26 tiles").

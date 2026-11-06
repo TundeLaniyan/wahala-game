@@ -60,66 +60,66 @@ All six are validated by `tests/raid-layouts.test.ts` (data, size, belts, and th
 
 ### warehouseDispatchDepot - the vertical slice (Oshodi, 17 x 13)
 
-"Destroy the 3 marked dispatch crates." Wave 1: three guards (`a b c`). Wave 2 (called by the first crate): two throwers (`d e`) and a lieutenant (`f`). One locked area: the north bay (door `2`, opens when wave 1 is down; `cargo-0` inside). Conveyor: belt `v` down the east lane, 24 ticks per tile, first shipment at 10 s, then every 7 s, 1.5 s telegraph. Optional rooms: the Armour locker (door `1` opens when the lock-box crate `K` is blasted; `A`) and the first-aid cupboard (door `3` opens on the floor switch `*`; `H`). The exit opens when the third crate falls (the way there crosses the belt). 240 s, par 150 s. A scripted human with ordinary intents completes it in `tests/raid-slice.test.ts`.
+"Destroy the 3 marked dispatch crates." Wave 1: three guards (`a b c`). Wave 2 (called by the first crate): two throwers (`d e`) and a lieutenant (`f`). One locked area: the north bay (door `2`, opens when wave 1 is down; `cargo-0` inside). Conveyor: belt `v` down the aisle between the racks at x 13 (beside the east lane), 24 ticks per tile, first shipment at 10 s, then every 7 s, 1.5 s telegraph. Optional rooms: the Armour locker (door `1` opens when the lock-box crate `K` is blasted; `A`) and the first-aid cupboard (door `3` opens on the floor switch `*` beside the belt; `H`). The exit opens when the third crate falls (the way there crosses the belt). Since the classic grid (`docs/CLASSIC_GRID.md`) the board is a pallet-rack maze: a rack column on every (even, even) tile. 240 s, par 150 s. A scripted human with ordinary intents completes it in `tests/raid-slice.test.ts`.
 
 ```
      01234567890123456
   0  #################
-  1  #A..#..x..xK#.M.#
-  2  #...1.......2...#
-  3  #...#.#.#.#.#...#
-  4  #####.......#####
-  5  #.....xa...b#dv.#
-  6  #.....#.#.#.#.v.#
-  7  #......xMx....v.#
-  8  #.....#.#.#.#*v.#
-  9  #....e..xMxc..v.#
- 10  #...#..f.######.#
- 11  #@..#....3.H.#.E#
+  1  #A..#..x...K#.M.#
+  2  #.#.1.#.#.#.2.#.#
+  3  #...#.....x.#...#
+  4  #####.#.#.#.#####
+  5  #....x.a...bdv..#
+  6  #.#.#.#.#x#.#v#.#
+  7  #..x..x.M...*v..#
+  8  #.#x#.#.#.#.#v#.#
+  9  #.x..e..xMxc.v..#
+ 10  #.#.#x#f#######.#
+ 11  #@.......3.H.#.E#
  12  #################
 ```
 
 ### partsStoreroom - barrels and shelves (Mushin, 15 x 11)
 
-Three parts stacks: the middle one is hemmed in by two barrels (blow a barrel and its blast hits the stack; two barrels = destroyed), one sits behind crates in the south-west, one in the office (door `2`, opens when two stacks are down; two barrels in a column chain). Guards in the aisles; the office opening wakes a thrower and a heavy. First-aid cupboard (door `3`) opens when the guards are down. 210 s, par 140 s.
+Three parts stacks: the middle one is hemmed in by two barrels (blow a barrel and its blast hits the stack; two barrels = destroyed), one sits between two shelving posts in the south-west, one in the office (door `2`, opens when two stacks are down; two drums side by side just inside the door chain). A shelving-post maze since the classic grid (`docs/CLASSIC_GRID.md`). Guards in the aisles; the office opening wakes a thrower and a heavy. First-aid cupboard (door `3`) opens when the guards are down. 210 s, par 140 s.
 
 ```
      012345678901234
   0  ###############
-  1  #.....2.B...M.#
-  2  #.#S#.#.B.....#
+  1  #.....2BB...M.#
+  2  #.#S#.#.#.#.#.#
   3  #.....#########
-  4  #..b.....a....#
-  5  #.#S#.#S#.#S#.#
-  6  #......BMB..d.#
-  7  #.#.#.#.#.#.#.#
-  8  #.xMx......####
+  4  #.#b#.#.#.#a#.#
+  5  #.S.x..BMB..S.#
+  6  #.#.#.#.#.#.#.#
+  7  #.x...x.x..d..#
+  8  #.#M#.#.#.#.###
   9  #@...E.c...3.H#
  10  ###############
 ```
 
 ### railYardGoods - belts and shipments (Ebute-Metta, 17 x 11)
 
-One long S-shaped conveyor (east along the top, south down the east side, west along the middle; 30 tiles, 20 ticks each, up to two shipments) and a short one along the entrance row. Three goods wagons in the middle row. The floor switch opens the ticket closet (star token `T`, with a closet agbero `j` who appears when it opens); the exit gate (door `2`) opens when the second wave (thrower and heavy, called by the second wagon) is down. 240 s, par 160 s.
+One long S-shaped conveyor (east along the top, south down the east side, west along the middle; 30 tiles, 20 ticks each, up to two shipments) and a short one along the entrance row. Three goods wagons in the middle row, reached by one-tile cross aisles between buffer-stop pillars (the classic grid, `docs/CLASSIC_GRID.md`; (14,4) stays open so the belt corner can be left within two steps). The floor switch opens the ticket closet (star token `T`, with a closet agbero `j` who appears when it opens); the exit gate (door `2`) opens when the second wave (thrower and heavy, called by the second wagon) is down. 240 s, par 160 s.
 
 ```
      01234567890123456
   0  #################
   1  #Tj1.........2E.#
-  2  ####....a....####
+  2  #####.#a#.#.#####
   3  #.>>>>>>>>>>>>>v#
-  4  #.....#.c.#....v#
-  5  #..x.MSx.M.x.M.v#
-  6  #.....#...#.b..v#
+  4  #.#.#.#c#.#x#..v#
+  5  #...xMS.xM..xM.v#
+  6  #.#.#.#.#.#.#b#v#
   7  #.#<<<<<<<<<<<<<#
-  8  #.*...#.....d...#
+  8  #.#*#.#.#.#d#.#.#
   9  #@..>>>>>>>>>#..#
  10  #################
 ```
 
 ### recordsVault - tight rooms and a door sequence (Lagos Island, 15 x 13)
 
-Four chambers, each behind a door: the entrance hall (door `1`: its two guards down) -> the registry (door `2`: its cabinet destroyed; wakes the archive guards and the Chief Clerk lieutenant) -> the archive (door `3`: the lieutenant down) -> the vault with two cabinets and two barrels. An Armour closet in the archive (door `4`: blast the jammed shelf). The exit is in the entrance hall. 270 s, par 180 s.
+Four chambers, each behind a door: the entrance hall (door `1`: its two guards down) -> the registry (door `2`: its cabinet destroyed; wakes the archive guards and the Chief Clerk lieutenant) -> the archive (door `3`: the lieutenant down) -> the vault with two cabinets and two barrels. An Armour closet at the east end of the archive (door `4`: blast the jammed shelf beside it). The exit is in the entrance hall. Since the classic grid (`docs/CLASSIC_GRID.md`) each chamber is a one-tile corridor with alcoves between filing posts; the spawn pocket at (2,10) gives the first bomb two ways out. 270 s, par 180 s.
 
 ```
      012345678901234
@@ -127,13 +127,13 @@ Four chambers, each behind a door: the entrance hall (door `1`: its two guards d
   1  #....BM.MB....#
   2  #.#.#.#.#.#.#.#
   3  #######3#######
-  4  #..h...g.i.4.A#
-  5  #.#S#.#.#S#.#.#
+  4  #.#h#S#g#i#S#A#
+  5  #...........4.#
   6  #######2#######
   7  #....M.....x..#
   8  #.#.#.#.#.#.#.#
   9  #######1#######
- 10  #.............#
+ 10  #..x#.#.#x#.#.#
  11  #@..a.....b..E#
  12  ###############
 ```
@@ -148,9 +148,9 @@ Four chambers, each behind a door: the entrance hall (door `1`: its two guards d
   0  #############          0  #############
   1  #..c..x.1.M.#          1  #..c..x.1.M.#
   2  #.#.#.#.#####          2  #.#.#.#.#####
-  3  #..x..a.xBM*#          3  #.Bx..a.x.M.#
+  3  #..M..a.xBM*#          3  #.BM..a.x.M.#
   4  #.#.#.#.#.#.#          4  #.#.#.#.#.#.#
-  5  #MB.x...b.xd#          5  #M..x...b.xd#
+  5  #.B.x...b.xd#          5  #...x...b.xd#
   6  #.#.#.#.#.#.#          6  #.#.#.#.#.#.#
   7  #@..x...x..E#          7  #@..x>>>x..E#
   8  #############          8  #############
@@ -160,7 +160,7 @@ Four chambers, each behind a door: the entrance hall (door `1`: its two guards d
 
 1. Add the id to `RaidId` (`src/sim/campaign/types.ts`) if it is new.
 2. Write a `RaidDef` in `src/sim/raid/defs/<name>.ts` (or call `compactRaid({...})`): the layout from the legend above, `legend` hit points, `waves` (trigger + enemies by spot letter), `doors` (glyph + condition + hint), `rooms` (rect around exactly one bonus glyph), `conveyors` (one per belt run), lives, clock, par, bombs. Register it in `defs/index.ts` and give it an arena (`src/sim/arenas/raid<Name>.ts` = `raidArena(def)`, listed in `RAID_ARENAS`).
-3. Run `tests/raid-layouts.test.ts`: `raidProblems` names data mistakes; `analyseRaid` names unreachable cargo, exits, rooms, doors that can never open. Draw so that every marked crate has a straight line of at most two tiles from floor with a way out of the blast.
+3. Run `tests/raid-layouts.test.ts`: `raidProblems` names data mistakes; `analyseRaid` names unreachable cargo, exits, rooms, doors that can never open. Draw so that every marked crate has a straight line of at most two tiles from floor with a way out of the blast. `raidProblems` also runs the classic-grid shape rule (`src/sim/raid/shape.ts`, `docs/CLASSIC_GRID.md`): pillars on the (even, even) tiles, no open 3x3, open 2x2 only in a room, by a belt or at the entrance / exit; `tests/raid-classic-grid.test.ts` adds the fairness checks (two escape directions at the entrance, every enemy spot joined to the entrance on the bot's board).
 4. Numbers that are not per raid are in `src/sim/raid/tuning.ts`; log any tuning change in `DECISIONS.md`.
 
 ## What other layers must know

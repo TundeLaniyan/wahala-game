@@ -121,7 +121,8 @@ export function launchProjectile(
   fire.nextThrowTick[p.id] = state.tick + Math.max(spec.cooldownTicks, warnTicks);
   fire.groupNextThrowTick[p.team] = state.tick + cfg.groupGapTicks;
   p.facing = dir;
-  p.rootedUntil = Math.max(p.rootedUntil, state.tick + warnTicks); // the cue: the thrower commits and is planted
+  // the cue: the thrower commits and is planted; then its recovery, the punishable window (decision EF2)
+  p.rootedUntil = Math.max(p.rootedUntil, state.tick + warnTicks + cfg.throwRecoveryTicks[p.enemyKind]);
   events.push({
     type: 'projectileLaunched',
     id: proj.id,

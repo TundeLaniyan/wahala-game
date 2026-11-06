@@ -2,6 +2,27 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Checkpoint clarity in field missions (worker `checkpoint-ux`, from `a4fe457`)
+
+Reference: `docs/CHECKPOINT_CLARITY.md`; decisions CK1-CK8. Not merged, not deployed. Presentation and wording only (no rule, timing or tile changed).
+
+- Walk-through checkpoints are beacons (column, flag, ripple, a waypoint arrow over the CURRENT one; later ones faint; reached ones flash then tick); doors are a square cyan hold pad with a door icon and a hold ring.
+- Objective block first in the right column: GO TO / HOLD / DEFEAT / ESCAPE / RETURN + target + "1 OF 3" + notes, and the door hold bar "HOLD 0.4 / 1.0 s" (fills / drains); "CHECKPOINT A ✓ · NEXT: CHECKPOINT B" rail notices; no boss row / boss bar in field missions; compass = current objective; minimap rings it.
+- Plain leg text for all eleven field missions; Oshodi approach briefing card.
+
+Verification: `npx tsc --noEmit`, `npx eslint src tests e2e`, Vitest field / mission / ui / app / campaign / raid / architecture / render mission markers + checkpoint beacons (66 files, 900 passed), `e2e/checkpoint-clarity.spec.ts` desktop and mobile passed, `e2e/mission-presentation.spec.ts` desktop passed; screenshots in `docs/screenshots/checkpoint-clarity/` reviewed. The full suite (`npm run check`, all Playwright) was not run.
+
+## Classic grid: raid boards as Bomberman mazes (worker `raid-geometry`, from `a4fe457`)
+
+Reference: `docs/CLASSIC_GRID.md`; decisions CG1-CG9. Not merged, not deployed.
+
+- The depot, rail yard, storeroom and vault are redrawn on the classic pillar lattice (no open 3x3, open 2x2 only in a spawn pocket or a belt corner); every mechanic, id and count kept. The compact template moves one marked crate so the spawn has two ways out and every guard can reach the player.
+- `raidProblems` enforces the shape rule (`src/sim/raid/shape.ts`); `tests/raid-classic-grid.test.ts` (shape, entrance escapes, enemy-spot reach on the bot board, bot board == `canPlayerEnter`, cross blasts, corridor trap vs junction escape) and `tests/input-raid-grid.test.ts` (no corner clipping on the real depot for any device; sim never moves diagonally).
+- Raid pillars drawn at 72 % height so every aisle reads under the fixed camera (presentation only).
+- Before / after screenshots: `docs/screenshots/classic-grid/`.
+
+Verification: `npx tsc --noEmit` and `npx eslint src tests e2e scripts` clean; 28 targeted Vitest files (raid, input, campaign slice / sections / death-respawn, blast rules, render raid views and obstacle styles, architecture, corner / mobile movement): 563 passed; Playwright on a preview build: `campaign-expansion-smoke` "classic raid" (desktop) and `raid-render` (4 tests, desktop + mobile) passed. Full `npm run check` not run.
+
 ## Kill streaks, close combat and touch input (branch `claude/wahala-streaks-combat-input-v1`, from `8ebf3f4`)
 
 Reference: `docs/STREAKS_AND_COMBAT.md`; decisions MI1-MI5, CB1-CB4, SK1-SK4, VG1-VG4, GK1. Not merged, not deployed.
@@ -532,3 +553,11 @@ Kill-streak classification (AS7): every earned reward survives death. QUICK HAND
 ## Online, voice, progression, ads and seasons scaffolds (worker `online-scaffold`)
 
 Disabled by default; see `docs/ONLINE_ARCHITECTURE.md` and decisions ON1-ON12. Complete: service contracts, wire schema and validators, lifecycle rules, the in-memory mock of every service (real simulation behind `MatchService`), progression / cosmetics / seasons / ads data and pure logic, voice policy with a null and a mock provider, the flag-gated Online preview UI and the Settings flag row, tests and an e2e spec. Interface-only or skeleton: the server adapter (fake-transport tests only), voice, ads, cosmetics rendering. Not built: any server, database, accounts, matchmaking service, anti-cheat, moderation. Screenshots: `docs/screenshots/online-preview/`.
+
+## Campaign enemy combat fairness (worker `enemy-combat`, from `a4fe457`; decisions EF1-EF8, `docs/ENEMY_COMBAT_FAIRNESS.md`)
+
+| Area | State |
+| --- | --- |
+| Rules | Done: enemy perception (calm `reactTicks` / brawling `alertTicks` / seeded slip), recovery roots after punches and throws, the human's capped lockout and immunity pass-through against enemy seats, steadfast heavies and bosses, field pursuers give up beyond 14 tiles, the boss floor no longer lifts a field enemy. Multiplayer pinned by a bot-vs-bot digest. `tests/enemy-fairness.test.ts`, `tests/app/campaign-enemy-level.test.ts`. |
+| Measurement | `npm run enemy-fairness` (scripted human, ordinary intents, active enemy bots, classic grid + Dispatch Depot raid). Normal baseline = Casual enemy bots. |
+| Not done | No browser feel-test; the recovery roots have no dedicated pose in the view; raid `AGGRO_RANGE` is still a constant in `raid/directives.ts`; the app still passes the save's level (the difficulty branch maps Easy / Normal / Hard). Targeted checks only; the full unit and browser suites were not run. |
