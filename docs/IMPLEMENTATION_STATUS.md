@@ -12,6 +12,17 @@ Reference: `docs/CHECKPOINT_CLARITY.md`; decisions CK1-CK8. Not merged, not depl
 
 Verification: `npx tsc --noEmit`, `npx eslint src tests e2e`, Vitest field / mission / ui / app / campaign / raid / architecture / render mission markers + checkpoint beacons (66 files, 900 passed), `e2e/checkpoint-clarity.spec.ts` desktop and mobile passed, `e2e/mission-presentation.spec.ts` desktop passed; screenshots in `docs/screenshots/checkpoint-clarity/` reviewed. The full suite (`npm run check`, all Playwright) was not run.
 
+## Classic grid: raid boards as Bomberman mazes (worker `raid-geometry`, from `a4fe457`)
+
+Reference: `docs/CLASSIC_GRID.md`; decisions CG1-CG9. Not merged, not deployed.
+
+- The depot, rail yard, storeroom and vault are redrawn on the classic pillar lattice (no open 3x3, open 2x2 only in a spawn pocket or a belt corner); every mechanic, id and count kept. The compact template moves one marked crate so the spawn has two ways out and every guard can reach the player.
+- `raidProblems` enforces the shape rule (`src/sim/raid/shape.ts`); `tests/raid-classic-grid.test.ts` (shape, entrance escapes, enemy-spot reach on the bot board, bot board == `canPlayerEnter`, cross blasts, corridor trap vs junction escape) and `tests/input-raid-grid.test.ts` (no corner clipping on the real depot for any device; sim never moves diagonally).
+- Raid pillars drawn at 72 % height so every aisle reads under the fixed camera (presentation only).
+- Before / after screenshots: `docs/screenshots/classic-grid/`.
+
+Verification: `npx tsc --noEmit` and `npx eslint src tests e2e scripts` clean; 28 targeted Vitest files (raid, input, campaign slice / sections / death-respawn, blast rules, render raid views and obstacle styles, architecture, corner / mobile movement): 563 passed; Playwright on a preview build: `campaign-expansion-smoke` "classic raid" (desktop) and `raid-render` (4 tests, desktop + mobile) passed. Full `npm run check` not run.
+
 ## Kill streaks, close combat and touch input (branch `claude/wahala-streaks-combat-input-v1`, from `8ebf3f4`)
 
 Reference: `docs/STREAKS_AND_COMBAT.md`; decisions MI1-MI5, CB1-CB4, SK1-SK4, VG1-VG4, GK1. Not merged, not deployed.

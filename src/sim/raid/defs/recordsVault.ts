@@ -1,22 +1,23 @@
 /**
- * Island records vault (docs/CLASSIC_RAIDS.md): tight rooms and a sequence of doors. Four chambers stacked south to
- * north, each behind a door: the entrance hall (door 1 opens when its two guards are down) -> the registry (door 2
- * opens when its marked cabinet is destroyed; the archive guards and their lieutenant appear) -> the archive (door 3
- * opens when the lieutenant is down) -> the vault with two marked cabinets and two barrels. A small Armour closet
- * hides in the archive (its door opens when the jammed shelf is destroyed). The exit is in the entrance hall.
+ * Island records vault (docs/CLASSIC_RAIDS.md, docs/CLASSIC_GRID.md): tight rooms and a sequence of doors. Four chambers
+ * stacked south to north, each a one-tile corridor with alcoves between filing posts, each behind a door: the entrance
+ * hall (door 1 opens when its two guards are down) -> the registry (door 2 opens when its marked cabinet is destroyed;
+ * the archive guards and their lieutenant appear) -> the archive (door 3 opens when the lieutenant is down) -> the
+ * vault with two marked cabinets and two barrels. A small Armour closet hides at the east end of the archive (its door
+ * opens when the jammed shelf beside it is destroyed). The exit is in the entrance hall.
  *
  *      012345678901234
  *    0 ###############
  *    1 #....BM.MB....#     the vault: M marked cabinets, B barrels
  *    2 #.#.#.#.#.#.#.#
  *    3 #######3#######     3 vault door
- *    4 #..h...g.i.4.A#     the archive: h i guards, g lieutenant; 4 closet door; A Armour plate
- *    5 #.#S#.#.#S#.#.#     S shelves
+ *    4 #.#h#S#g#i#S#A#     the archive alcoves: h i guards, g lieutenant; S shelves (the east one is jammed); A Armour
+ *    5 #...........4.#     4 closet door
  *    6 #######2#######     2 archive door
  *    7 #....M.....x..#     the registry
  *    8 #.#.#.#.#.#.#.#
  *    9 #######1#######     1 registry door
- *   10 #.............#
+ *   10 #..x#.#.#x#.#.#     (2,10) open: the spawn pocket gives the first bomb two ways out
  *   11 #@..a.....b..E#     a b guards   @ entrance   E exit
  *   12 ###############
  */
@@ -36,13 +37,13 @@ export const RECORDS_VAULT: RaidDef = {
     '#....BM.MB....#',
     '#.#.#.#.#.#.#.#',
     '#######3#######',
-    '#..h...g.i.4.A#',
-    '#.#S#.#.#S#.#.#',
+    '#.#h#S#g#i#S#A#',
+    '#...........4.#',
     '#######2#######',
     '#....M.....x..#',
     '#.#.#.#.#.#.#.#',
     '#######1#######',
-    '#.............#',
+    '#..x#.#.#x#.#.#',
     '#@..a.....b..E#',
     '###############',
   ],
@@ -87,7 +88,7 @@ export const RECORDS_VAULT: RaidDef = {
       hint: 'Blast the jammed shelf',
     },
   ],
-  rooms: [{ id: 'armourCloset', name: 'Armour closet', door: 'closetDoor', rect: [12, 4, 13, 5] }],
+  rooms: [{ id: 'armourCloset', name: 'Armour closet', door: 'closetDoor', rect: [13, 4, 13, 5] }],
   conveyors: [],
   lives: 3,
   humanMaxHp: 4,

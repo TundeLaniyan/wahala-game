@@ -2,7 +2,7 @@
  * Conveyor belts and moving shipments (docs/CLASSIC_RAIDS.md, decisions RD5-RD6): belts carry a standing player one tile
  * per `stepTicks` (cardinal), a shipment is telegraphed (`raidShipmentWarning`, `RaidView.warnings`) for at least the minimum
  * warning before it moves, it damages through `applyCampaignHit` (source 'hazard') once per victim, a wall stops it and a
- * blast destroys it. The depot's east lane: belt x = 14, y 5..9 ('v'), 24 ticks per tile, the first shipment at tick 600.
+ * blast destroys it. The depot's east lane: belt x = 13, y 5..9 ('v'), 24 ticks per tile, the first shipment at tick 600.
  */
 import { describe, expect, it } from 'vitest';
 import { raidView, tick } from '../src/sim';
@@ -14,40 +14,41 @@ const STEP = 24;
 describe('belts carry', () => {
   it('a player standing on a belt is carried one tile per step, in the belt direction, and stops at the wall', () => {
     const state = newRaid();
-    put(state, 0, 14, 5);
+    put(state, 0, 13, 5);
     const human = state.players[0]!;
     const seen: number[] = [];
     for (let i = 0; i < STEP * 6; i++) {
       tick(state, {});
       if (seen[seen.length - 1] !== human.y) seen.push(human.y);
-      expect(human.x).toBe(14); // cardinal: never sideways
+      expect(human.x).toBe(13); // cardinal: never sideways
     }
-    expect(seen).toEqual([5, 6, 7, 8, 9]); // (14,10) is concrete: he waits at the end of the belt
+    expect(seen).toEqual([5, 6, 7, 8, 9]); // (13,10) is concrete: he waits at the end of the belt
   });
 
   it('a player who walks is not carried, and may walk against the belt', () => {
     const state = newRaid();
-    put(state, 0, 14, 7);
+    put(state, 0, 13, 7);
     const human = state.players[0]!;
     advance(state, STEP * 4, { 0: { move: 'up' } });
     expect(human.y).toBeLessThan(7); // walking up the belt beats the belt
-    put(state, 0, 14, 6);
+    put(state, 0, 13, 9); // the foot of the belt: a pillar-free corridor to the west
     advance(state, 40, { 0: { move: 'left' } });
-    expect(human.x).toBe(13);
+    expect(human.x).toBeLessThan(13);
+    const x = human.x;
     const y = human.y;
     advance(state, STEP * 3);
-    expect([human.x, human.y]).toEqual([13, y]); // off the belt: stays put
+    expect([human.x, human.y]).toEqual([x, y]); // off the belt: stays put
   });
 
   it('a generator in front of a rider stops the belt from carrying him', () => {
     const state = newRaid();
-    put(state, 0, 14, 6);
+    put(state, 0, 13, 6);
     state.generators.push({
       id: state.nextId++,
       ownerId: 1,
-      x: 14,
+      x: 13,
       y: 7,
-      stepFromX: 14,
+      stepFromX: 13,
       stepFromY: 7,
       range: 1,
       pierce: false,
@@ -82,7 +83,7 @@ describe('shipments are telegraphed', () => {
     // the view carries the same warning, counting down; the shipment itself waits on the belt's first tile
     const v = raidView(state)!;
     expect(v.warnings.filter((w) => w.kind === 'shipment')).toHaveLength(1);
-    expect(v.shipments[0]!).toMatchObject({ x: 14, y: 5, dir: 'down', warnTicks: belt.warnTicks });
+    expect(v.shipments[0]!).toMatchObject({ x: 13, y: 5, dir: 'down', warnTicks: belt.warnTicks });
     advance(state, 30);
     const later = raidView(state)!;
     expect(later.shipments[0]!.warnTicks).toBe(belt.warnTicks - 30);
@@ -123,12 +124,12 @@ describe('shipments are telegraphed', () => {
 
 describe('shipments damage', () => {
   /**
-   * Stands the human at the foot of the belt (14,9), where the belt cannot carry him on (concrete beyond), and runs to the
+   * Stands the human at the foot of the belt (13,9), where the belt cannot carry him on (concrete beyond), and runs to the
    * tick before the shipment reaches him (it starts at tick 600 and needs four tile-steps of 24 ticks).
    */
   function standingAtTheFoot() {
     const state = newRaid();
-    put(state, 0, 14, 9);
+    put(state, 0, 13, 9);
     const sink = advance(state, 600 + 4 * STEP - 3);
     return { state, sink };
   }
@@ -158,9 +159,9 @@ describe('shipments damage', () => {
   it('stepping aside during the telegraph avoids it completely', () => {
     const { state, sink } = standingAtTheFoot();
     const human = state.players[0]!;
-    advance(state, 1, { 0: { move: 'left' } }, sink); // (13,9): off the belt
+    advance(state, 1, { 0: { move: 'left' } }, sink); // (12,9): off the belt
     advance(state, STEP * 4, {}, sink);
-    expect(human.x).toBe(13);
+    expect(human.x).toBe(12);
     expect(of(sink, 'campaignHit')).toHaveLength(0);
     expect(human.vitals!.hp).toBe(human.vitals!.maxHp);
   });
@@ -170,7 +171,7 @@ describe('shipments damage', () => {
     put(state, 0, 1, 11);
     until(state, () => state.raid!.shipments[0]?.phase === 'stopped', 1200);
     const s = state.raid!.shipments[0]!;
-    expect([s.x, s.y]).toEqual([14, 9]); // (14,10) is concrete
+    expect([s.x, s.y]).toEqual([13, 9]); // (13,10) is concrete
     until(state, () => state.raid!.shipments.length === 0, RAID_TUNING.shipmentRestTicks + 5);
   });
 
@@ -178,10 +179,11 @@ describe('shipments damage', () => {
     const state = newRaid();
     put(state, 0, 1, 11);
     until(state, () => state.raid!.shipments[0]?.phase === 'moving', 800);
-    advance(state, STEP + 2); // it is on (14,6)
+    advance(state, STEP + 2); // it is on (13,6), between two pillars
     const s = state.raid!.shipments[0]!;
     const id = s.id;
-    const ev = explodeAt(state, 13, 6, 0, 1); // the flame reaches (14,6)
+    expect([s.x, s.y]).toEqual([13, 6]);
+    const ev = explodeAt(state, 13, 8, 0, 2); // two tiles down the belt: the up arm reaches (13,6)
     const next = advance(state, 2, {}, ev);
     expect(of(next, 'cargoDestroyed').map((e) => e.id)).toContain(id);
     expect(state.raid!.shipments.find((q) => q.id === id)).toBeUndefined();

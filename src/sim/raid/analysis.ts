@@ -21,6 +21,10 @@ export interface RaidAnalysis {
   reachable: Set<string>;
   /** Destructible ids (cargo ids, or `crate@x,y` for plain crates) in the order they fell. */
   fellInOrder: string[];
+  /** Door ids in the order they opened. */
+  doorsInOrder: string[];
+  /** For each wave (by index): the doors already open when it started (empty when it never starts). */
+  doorsAtWaveStart: string[][];
 }
 
 const DIRS: readonly [number, number][] = [
@@ -51,6 +55,8 @@ export function analyseRaid(def: RaidDef): RaidAnalysis {
   const fell = new Set<string>();
   const fellInOrder: string[] = [];
   const openDoors = new Set<string>();
+  const doorsInOrder: string[] = [];
+  const doorsAtWaveStart: string[][] = def.waves.map(() => []);
   const started = new Set<number>();
   const cleared = new Set<number>();
   const wallAt = (x: number, y: number): boolean =>
@@ -178,6 +184,7 @@ export function analyseRaid(def: RaidDef): RaidAnalysis {
     def.waves.forEach((w, i) => {
       if (!started.has(i) && waveStarted(i)) {
         started.add(i);
+        doorsAtWaveStart[i] = [...doorsInOrder];
         changed = true;
       }
       if (
@@ -195,6 +202,7 @@ export function analyseRaid(def: RaidDef): RaidAnalysis {
     for (const d of parsed.doors) {
       if (!openDoors.has(d.def.id) && conditionHolds(d.def.opensWhen, reach)) {
         openDoors.add(d.def.id);
+        doorsInOrder.push(d.def.id);
         changed = true;
       }
     }
@@ -231,5 +239,5 @@ export function analyseRaid(def: RaidDef): RaidAnalysis {
       if (!reach.has(key(s.x, s.y))) problems.push(`room ${r.id}: spot ${e.spot} is unreachable`);
     }
   }
-  return { problems, reachable: reach, fellInOrder };
+  return { problems, reachable: reach, fellInOrder, doorsInOrder, doorsAtWaveStart };
 }

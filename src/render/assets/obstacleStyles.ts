@@ -8,7 +8,7 @@
  * are missing still renders. Unknown arena ids get `DEFAULT_STYLE`.
  */
 
-import { getArena } from '../../sim';
+import { RAID_ARENA_IDS, getArena } from '../../sim';
 
 export type DebrisKind = 'crate' | 'tyres' | 'sacks' | 'barrier' | 'cartons' | 'kegs' | 'drums' | 'concrete';
 
@@ -148,8 +148,21 @@ const style = (
   ...o,
 });
 
+/**
+ * Classic raids (docs/CLASSIC_GRID.md, decision CG9): the board is a full pillar lattice under the fixed whole-board
+ * camera, so a pillar as tall as a person hides most of the one-tile aisle north of it. Raid pillars are drawn lower
+ * (still clearly taller than any crate) so every aisle of the maze reads. Presentation only: tiles are sim data.
+ */
+export const RAID_PILLAR_SCALE = [1, 0.72, 1] as const;
+export const RAID_STYLE: ObstacleStyle = {
+  ...DEFAULT_STYLE,
+  note: 'classic raid: low precast pillars so the aisle behind each one stays readable; cargo crates',
+  pillarScale: RAID_PILLAR_SCALE,
+};
+
 /** All ten arenas (three exist today; the rest are pre-filled so they render in character on day one). */
 export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
+  ...Object.fromEntries(RAID_ARENA_IDS.map((id) => [id, RAID_STYLE])),
   danfoBusPark: DEFAULT_STYLE,
   // V2 experimental Mobile Test Arena: Danfo Bus Park's obstacles (same presentation)
   mobileTest13x9: DEFAULT_STYLE,

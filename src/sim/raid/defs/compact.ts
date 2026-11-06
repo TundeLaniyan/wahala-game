@@ -1,16 +1,17 @@
 /**
  * The compact raid TEMPLATE (docs/CLASSIC_RAIDS.md, "How to add a raid"): a 13 x 9 board that any district can reuse
  * with a few parameters, so every `RaidId` has a playable raid without a hand-drawn layout. Two waves of two, three
- * marked crates (one in a sealed corner behind a door, two in the lanes), optional barrels, an optional short conveyor
+ * marked crates (one in a sealed corner behind a door, two in the lanes; every enemy spot is joined to the entrance by
+ * open floor, docs/CLASSIC_GRID.md), optional barrels, an optional short conveyor
  * with shipments in the entrance lane, and a corner door that opens by a floor switch or when the first wave is down.
  *
  *      0123456789012
  *    0 #############
  *    1 #..c..x.1.M.#     c d  second-wave spots   a b  first-wave spots   1 corner door   * floor switch (optional)
  *    2 #.#.#.#.#####
- *    3 #..x..a.x.M*#
+ *    3 #..M..a.x.M*#
  *    4 #.#.#.#.#.#.#
- *    5 #M..x...b.xd#
+ *    5 #...x...b.xd#
  *    6 #.#.#.#.#.#.#
  *    7 #@..x...x..E#     the optional belt is three '>' tiles at x 5-7
  *    8 #############
@@ -22,9 +23,9 @@ const BASE: readonly string[] = [
   '#############',
   '#..c..x.1.M.#',
   '#.#.#.#.#####',
-  '#..x..a.x.M*#',
+  '#..M..a.x.M*#',
   '#.#.#.#.#.#.#',
-  '#M..x...b.xd#',
+  '#...x...b.xd#',
   '#.#.#.#.#.#.#',
   '#@..x...x..E#',
   '#############',

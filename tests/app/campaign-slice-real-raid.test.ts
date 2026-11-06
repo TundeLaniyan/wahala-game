@@ -99,7 +99,7 @@ describe('campaign vertical slice with the real classic raid', () => {
     me.destroy({ x: 8, y: 7 });
     me.idle(RAID_TUNING.spawnWarnTicks + 5);
     for (const id of [4, 5, 6]) me.kill(id);
-    me.walkTo(13, 8); // the floor switch: the heal room
+    me.walkTo(12, 7); // the floor switch beside the belt: the heal room
     me.walkTo(11, 11);
     me.destroy({ x: 9, y: 9 });
     me.destroy({ x: 14, y: 1 });
