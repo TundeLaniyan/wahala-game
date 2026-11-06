@@ -33,6 +33,18 @@ no new music or voice.
 old generic Oshodi Rush Hour is gone (code, tests, screenshots); only one Oshodi appears in the picker. Open: a
 player-facing night switch, local review of the geography (`OSHODI_METROPOLIS.md` section 6).
 
+## Ebute Metta West: the Ebute-Metta City Rumble arena expanded westward (branch `claude/wahala-lagos-enhancement-v1`)
+
+Report: `docs/EBUTE_METTA_WEST.md`; decisions EW1-EW10. Pure board data and presentation; no rule, hazard style, bot or camera change. Not deployed.
+
+| Area | Status | Proof |
+| --- | --- | --- |
+| Board | Done: 55 x 39 -> 75 x 39 (`EBUTE_WEST_DX` = 20 new columns on the west), non-wall tiles 1,329 -> 1,774 (+33.5 %); the original board is kept tile for tile (pinned fixture) and shifted with `ebuteX`; four new districts (Abule Ijesha Lanes, Apapa Road, Ilogbo Quarter, Otumara Waterfront), ten in all; Murtala Muhammed Way carries on west as Apapa Road with the traffic / truck sweeps edge to edge; rail corridor and the track-free route unchanged | `tests/ebute-west.test.ts`, `tests/rumble-stages.test.ts`, `tests/rumble-researched.test.ts`, `tests/arenas.test.ts` |
+| Economy | Done: 27 supplies (13 / 13 / 1 per Team Rumble half), 6 new traps, 2 barriers, 2 lagoon washes; the Team half of open floor is 17 % smaller in the west (EW5, tolerance 0.20 for this arena) | `tests/ebute-west.test.ts`, `tests/rumble-economy-evolution.test.ts` |
+| Art | Done: six new cover families (older plastered houses, walled compounds, trailers and tankers, hoarding shop, canoe slips, spur signal post) plus the shared workshop, a west palette and generic invented signs, drain slabs / road words / the disused spur on the floor, west lagoon canoes and jetty, two west crowds | `tests/rumble-researched.test.ts`, `tests/render/*` |
+| Campaign | Same Ebute missions on the same tiles (coordinates shifted through `ebuteX`); lives / respawn / UI untouched | `tests/mission-*.test.ts`, `tests/field-*.test.ts`, `tests/campaign-*.test.ts` |
+| Not done | Real-geography research used search summaries only (the fetch tool could not open the news hosts); Abule Ijero unverified and unused; the west Team half is smaller; no new map anchors (rule: exactly three) | `docs/EBUTE_METTA_WEST.md` sections 2, 6, 11 |
+
 ## Ojuelegba identity pass: audio completion, A-hold detonation, trap readability (branch `claude/wahala-ojuelegba-identity-pass-v1`)
 
 Founder brief of 2026-10-28 (decisions OJ1-OJ6 in `DECISIONS.md`). On top of the approved visual commit `592b409`
