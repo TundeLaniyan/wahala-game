@@ -11,7 +11,7 @@ Reference: `docs/CLASSIC_GRID.md`; decisions CG1-CG9. Not merged, not deployed.
 - Raid pillars drawn at 72 % height so every aisle reads under the fixed camera (presentation only).
 - Before / after screenshots: `docs/screenshots/classic-grid/`.
 
-Verification: see the final report of the branch (targeted `tsc`, `eslint`, raid / input / campaign Vitest files, the campaign-expansion browser smoke).
+Verification: `npx tsc --noEmit` and `npx eslint src tests e2e scripts` clean; 28 targeted Vitest files (raid, input, campaign slice / sections / death-respawn, blast rules, render raid views and obstacle styles, architecture, corner / mobile movement): 563 passed; Playwright on a preview build: `campaign-expansion-smoke` "classic raid" (desktop) and `raid-render` (4 tests, desktop + mobile) passed. Full `npm run check` not run.
 
 ## Kill streaks, close combat and touch input (branch `claude/wahala-streaks-combat-input-v1`, from `8ebf3f4`)
 
