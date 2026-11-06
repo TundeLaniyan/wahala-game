@@ -838,10 +838,10 @@ export const DEFAULT_CONFIG: GameConfig = {
     // decision EF1: calm, a new generator is read after `reactTicks`; brawling (a rival within `focusTiles`) only once
     // its fuse is down to `alertTicks` - basic enemies late, a heavy slow to read it, leaders nearly as sharp as a bot
     awareness: {
-      agbero: { reactTicks: 20, focusTiles: 6, alertTicks: 32, slipChance: 0.3, slipTicks: 12 },
-      guard: { reactTicks: 16, focusTiles: 6, alertTicks: 40, slipChance: 0.2, slipTicks: 12 },
-      thrower: { reactTicks: 16, focusTiles: 6, alertTicks: 45, slipChance: 0.2, slipTicks: 12 },
-      heavy: { reactTicks: 30, focusTiles: 6, alertTicks: 42, slipChance: 0.35, slipTicks: 16 },
+      agbero: { reactTicks: 20, focusTiles: 6, alertTicks: 24, slipChance: 0.3, slipTicks: 12 },
+      guard: { reactTicks: 16, focusTiles: 6, alertTicks: 30, slipChance: 0.2, slipTicks: 12 },
+      thrower: { reactTicks: 16, focusTiles: 6, alertTicks: 36, slipChance: 0.2, slipTicks: 12 },
+      heavy: { reactTicks: 30, focusTiles: 6, alertTicks: 36, slipChance: 0.35, slipTicks: 16 },
       lieutenant: { reactTicks: 10, focusTiles: 4, alertTicks: 80, slipChance: 0.1, slipTicks: 10 },
       boss: { reactTicks: 6, focusTiles: 4, alertTicks: 110, slipChance: 0.05, slipTicks: 8 },
     },
