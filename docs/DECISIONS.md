@@ -725,3 +725,15 @@ Report: `docs/CAMPAIGN_SECTIONS.md`.
 | FS10 | **The field state is kept alive and paused while a raid is played** (`MatchController.playRaid` / `resumeField`); the raid's outcome is `state.raid.outcome` with a match-end fallback. | `app/MatchController.ts`, `app/raidOutcome.ts` |
 | FS11 | **Raid pause menu**: Resume, Retry raid, Leave raid (door stays open), Back to campaign map. | `ui/Overlays.tsx`, `app/campaign.ts` |
 | FS12 | **Raid reuse is placeholder**: only six raid ids exist, so Fadeyi and Ebute share `junctionToolShed` and Mushin's bonus door reuses `partsStoreroom` until more layouts ship. `src/sim/raid/build.ts` here is a stub of raid-sim's signature. | `fieldDefs.ts`, `sim/raid/build.ts` |
+
+## CL - Campaign difficulty levels and approved boss presentations (branch `claude/wahala-lagos-enhancement-v1`)
+
+| # | Decision | Where |
+| --- | --- | --- |
+| CL1 | **Three levels, one table.** Easy / Normal / Hard are small overrides of the existing `CampaignConfig` (health segments, recovery frames, lethal-event damage, bottle, raid heal bonus). No new system. | `sim/campaign/levels.ts` |
+| CL2 | **Normal adds nothing**: `levelConfigLayer('normal')` is `undefined`, so Normal options and states are identical to the campaign as balanced before (hash test). | `levels.ts`, `tests/campaign-levels.test.ts` |
+| CL3 | **Stored in the save as `campaignLevel`**; no version bump, a missing or damaged value loads as Normal. Separate from the crew level (`difficulty`, seven bot levels, shown as "Crew level"). | `campaign/save.ts` |
+| CL4 | **Changeable only between missions** (map, briefing, section list); the controller refuses it while a mission or raid is active. | `app/campaign.ts` |
+| CL5 | **Stars, rewards, unlocks, flags, boss completion and lives are level-independent.** A harder level earns nothing extra and an easier one costs nothing. | `progress.ts` unchanged |
+| CL6 | **No level touches death, lives, respawn or retry**, and multiplayer/Rumble never see a level. The separate respawn hotfix owns those rules. | tests |
+| CL7 | **Boss presentation pass keeps ids, names of mechanics and rewards**; only nickname, title, look, entourage, entrance, voice change (Oshodi "Oga Mic", Park Master; Fadeyi "Oga Footbridge", Garage Master of the Crossing). Ojuelegba has no boss, so its inspiration is a non-combat `DistrictContent.figure` (Baba Junction). No real names, slogans, regalia or allegations; see `docs/BOSS_INSPIRATIONS.md`. | `campaign/content/*` |
