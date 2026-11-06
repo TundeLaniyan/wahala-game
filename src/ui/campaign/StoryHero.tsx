@@ -14,9 +14,21 @@ import './storyHero.css';
 import type { StoryImage } from './storyImageUrls';
 
 type Variant = 'hero' | 'banner' | 'thumb';
+export type HeroState = 'loading' | 'ready' | 'failed';
 
-function Picture({ image, variant, onGone }: { image: StoryImage; variant: Variant; onGone?: () => void }) {
-  const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
+/** The load state machine: a picture that fails stays failed (it is removed, never retried or shown broken). */
+export const heroStateAfter = (state: HeroState, event: 'load' | 'error'): HeroState =>
+  state === 'failed' ? 'failed' : event === 'error' ? 'failed' : 'ready';
+
+/** The figure for a given state: nothing once failed, otherwise the lazy picture over a reserved 16:9 box. */
+export function HeroFigure(props: {
+  image: StoryImage;
+  variant: Variant;
+  state: HeroState;
+  onLoad?: () => void;
+  onError?: () => void;
+}) {
+  const { image, variant, state } = props;
   if (state === 'failed') return null;
   const style = { ['--hero-pos' as string]: image.position } as CSSProperties;
   return (
@@ -35,11 +47,8 @@ function Picture({ image, variant, onGone }: { image: StoryImage; variant: Varia
         loading="lazy"
         decoding="async"
         draggable={false}
-        onLoad={() => setState('ready')}
-        onError={() => {
-          setState('failed');
-          onGone?.();
-        }}
+        onLoad={props.onLoad}
+        onError={props.onError}
       />
       {variant !== 'thumb' && <span className="cp-hero-scrim" aria-hidden />}
       {variant === 'hero' && image.caption && (
@@ -48,6 +57,22 @@ function Picture({ image, variant, onGone }: { image: StoryImage; variant: Varia
         </figcaption>
       )}
     </figure>
+  );
+}
+
+function Picture({ image, variant, onGone }: { image: StoryImage; variant: Variant; onGone?: () => void }) {
+  const [state, setState] = useState<HeroState>('loading');
+  return (
+    <HeroFigure
+      image={image}
+      variant={variant}
+      state={state}
+      onLoad={() => setState((s) => heroStateAfter(s, 'load'))}
+      onError={() => {
+        setState((s) => heroStateAfter(s, 'error'));
+        onGone?.();
+      }}
+    />
   );
 }
 

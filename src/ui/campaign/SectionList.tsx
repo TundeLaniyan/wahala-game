@@ -8,6 +8,8 @@ import { commands } from '../../app/session';
 import { SecondaryButton } from '../menu/Frame';
 import { FORMAT_LABEL, SECTION_STATUS_LABEL, sectionRows, sectionsText } from './sectionModel';
 import { Stars, useCampaignUi } from './parts';
+import { StoryHero } from './StoryHero';
+import { sectionImageKeys } from '../../campaign/content/storyImages';
 
 export function SectionList({ districtId }: { districtId: MissionId }) {
   const ui = useCampaignUi();
@@ -38,6 +40,9 @@ export function SectionList({ districtId }: { districtId: MissionId }) {
                 data-testid={`mission-${m.id}`}
                 data-status={m.status}
               >
+                {sectionImageKeys(m.id).map((k) => (
+                  <StoryHero key={k} imageKey={k} variant="thumb" />
+                ))}
                 <span className="cp-format">{FORMAT_LABEL[m.format]}</span>
                 <span className="cp-smission-text">
                   <b>{m.name}</b>

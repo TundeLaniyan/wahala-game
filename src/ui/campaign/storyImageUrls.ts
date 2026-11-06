@@ -12,7 +12,9 @@ const urls = import.meta.glob('../../assets/story/*.webp', {
   eager: true,
 }) as Record<string, string>;
 
-const URL_BY_FILE = new Map<string, string>(Object.entries(urls).map(([path, url]) => [path.split('/').pop()!, url]));
+const URL_BY_FILE = new Map<string, string>(
+  Object.entries(urls).map(([path, url]) => [path.split('/').pop()!, url]),
+);
 
 /** A story panel ready to draw. */
 export interface StoryImage extends StoryImageDef {
