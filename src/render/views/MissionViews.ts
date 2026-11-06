@@ -14,6 +14,8 @@ import {
 import { missionView } from '../../sim';
 import type { MissionNodeView, MissionView } from '../../sim';
 import { ringTexture, tileGlowTexture } from '../textures';
+import { CheckpointBeacons } from './CheckpointBeacons';
+import type { BeaconInput } from './CheckpointBeacons';
 import { buildIcon, iconFor } from './missionIcons';
 import type { IconKind } from './missionIcons';
 import {
@@ -32,6 +34,7 @@ import {
   frameTexture,
   hatchTexture,
   haloTexture,
+  holdPadTexture,
   padTexture,
   tickTexture,
   zoneTexture,
@@ -40,16 +43,39 @@ import { playerGridPos } from './motion';
 import { TileOverlay } from './TileOverlay';
 import type { FrameContext, View } from './types';
 
+/** What the mission markers drew last frame (tests, `__WAHALA__.missionMarkers()`). */
+export interface MissionMarkerStats {
+  nodes: number;
+  boss: boolean;
+  visible: boolean;
+  updateMs: number;
+  /** Field missions: door hold pads, and the walk-through beacons by state (flashing = reached in the last moment). */
+  holds: number;
+  beacons: number;
+  beaconsLive: number;
+  beaconsDone: number;
+  beaconsLocked: number;
+  beaconsFlashing: number;
+}
+
 /** Pad (dark disc with a bright rim) side in tiles: its rim is about one tile wide around the node. */
 const PAD_SIZE = 2.2;
 const BEAM_HEIGHT = 3;
 /** The icons are drawn about a tile wide and a tile and a half tall, so they read from the follow camera. */
 const ICON_SCALE = 1.4;
+/** A door's hold ring sits wider than a node's progress ring (it is THE thing to watch while holding). */
+const HOLD_RING_SCALE = 1.45;
+
+/** Field-mission nodes completed by stepping on them: drawn as beacons (CheckpointBeacons), never as a pad. */
+const WALK_THROUGH = new Set(['checkpoint', 'exit', 'return']);
 
 interface NodeMarker {
   group: Group;
   pad: Mesh;
   arc: Mesh;
+  /** A door's hold ring track (the dim full circle the progress fills); hidden on other nodes. */
+  track: Mesh;
+  trackMat: MeshBasicMaterial;
   icon: Mesh;
   beam: Mesh;
   tick: Mesh;
@@ -60,6 +86,7 @@ interface NodeMarker {
   tickMat: MeshBasicMaterial;
   kind: IconKind;
   zone: boolean;
+  hold: boolean;
 }
 
 interface BossMarker {
@@ -110,10 +137,18 @@ export class MissionViews implements View {
   private readonly warnHatch = new TileOverlay(hatchTexture(), 256, 11, 0.055, false);
   private readonly warnEdge = new TileOverlay(frameTexture(), 256, 12, 0.06);
   private readonly pips = new TileOverlay(ringTexture(), 16, 6, 0.035);
+  /** Field missions: walk-through checkpoints, exits and the return marker (docs/CHECKPOINT_CLARITY.md). */
+  private readonly beacons = new CheckpointBeacons();
 
   constructor() {
     this.group.visible = false;
-    this.group.add(this.warnGlow.mesh, this.warnHatch.mesh, this.warnEdge.mesh, this.pips.mesh);
+    this.group.add(
+      this.warnGlow.mesh,
+      this.warnHatch.mesh,
+      this.warnEdge.mesh,
+      this.pips.mesh,
+      this.beacons.group,
+    );
   }
 
   /** Debug / performance report: draw nothing (the update still runs) so a frame can be measured with and without. */
@@ -125,12 +160,29 @@ export class MissionViews implements View {
   }
 
   /** What is on the board right now (tests / the debug handle); `updateMs` is a running average of `update`. */
-  stats(): { nodes: number; boss: boolean; visible: boolean; updateMs: number } {
+  stats(): MissionMarkerStats {
+    let holds = 0;
+    for (const n of this.nodes.values()) if (n.hold) holds++;
+    const b = this.beacons.stats();
     return {
       nodes: this.nodes.size,
       boss: this.boss !== null,
       visible: this.group.visible,
       updateMs: Math.round(this.updateMs * 1000) / 1000,
+      holds,
+      beacons: b.beacons,
+      beaconsLive: b.live,
+      beaconsDone: b.done,
+      beaconsLocked: b.locked,
+      beaconsFlashing: b.flashing,
+    };
+  }
+
+  /** Tests: the door pads and the checkpoint beacons are different objects. */
+  debugObjects(): { holds: Group[]; beacons: Group[] } {
+    return {
+      holds: [...this.nodes.values()].filter((n) => n.hold).map((n) => n.group),
+      beacons: this.beacons.objects(),
     };
   }
 
@@ -173,9 +225,9 @@ export class MissionViews implements View {
     return g;
   }
 
-  private createNode(kind: IconKind, zone: boolean): NodeMarker {
+  private createNode(kind: IconKind, zone: boolean, hold: boolean): NodeMarker {
     const padMat = new MeshBasicMaterial({
-      map: zone ? zoneTexture() : padTexture(),
+      map: hold ? holdPadTexture() : zone ? zoneTexture() : padTexture(),
       transparent: true,
       depthWrite: false,
       polygonOffset: true,
@@ -205,10 +257,39 @@ export class MissionViews implements View {
     tick.scale.setScalar(0.9);
     tick.renderOrder = 6;
     pad.position.y = 0.03;
+    const trackMat = new MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.28,
+      depthWrite: false,
+      side: DoubleSide,
+    });
+    const track = new Mesh(this.arcGeometry(ARC_STEPS), trackMat);
+    track.position.y = 0.04;
+    track.renderOrder = 5;
+    track.visible = hold;
     const group = new Group();
-    group.add(pad, arc, tick, icon, beam);
+    group.userData.markerKind = hold ? 'hold' : 'node';
+    group.add(pad, track, arc, tick, icon, beam);
     this.group.add(group);
-    return { group, pad, arc, icon, beam, tick, padMat, arcMat, iconMat, beamMat, tickMat, kind, zone };
+    return {
+      group,
+      pad,
+      arc,
+      track,
+      trackMat,
+      icon,
+      beam,
+      tick,
+      padMat,
+      arcMat,
+      iconMat,
+      beamMat,
+      tickMat,
+      kind,
+      zone,
+      hold,
+    };
   }
 
   private disposeNode(n: NodeMarker): void {
@@ -218,15 +299,36 @@ export class MissionViews implements View {
     n.iconMat.dispose();
     n.beamMat.dispose();
     n.tickMat.dispose();
+    n.trackMat.dispose();
   }
 
   private updateNodes(ctx: FrameContext, view: MissionView): void {
     const { layout, time } = ctx;
     const live = new Set<string>();
+    const beacons: BeaconInput[] = (view.route ?? []).map((r) => ({
+      id: `route:${r.id}`,
+      x: layout.wx(r.x),
+      z: layout.wz(r.y),
+      state: r.state,
+      kind: 'checkpoint',
+    }));
     for (const nv of view.nodes) {
+      if (nv.kind && WALK_THROUGH.has(nv.kind)) {
+        // route checkpoints come from `view.route` (it keeps the reached ones of earlier legs); exits / return here
+        if (nv.kind !== 'checkpoint')
+          beacons.push({
+            id: `node:${nv.id}`,
+            x: layout.wx(nv.x),
+            z: layout.wz(nv.y),
+            state: nv.state === 'done' ? 'done' : nv.state === 'locked' ? 'locked' : 'live',
+            kind: nv.kind === 'exit' ? 'exit' : 'return',
+          });
+        continue;
+      }
       live.add(nv.id);
       this.placeNode(ctx, view, nv, time, layout);
     }
+    this.beacons.update(beacons, time, ctx.inView);
     for (const [id, n] of this.nodes) {
       if (live.has(id)) continue;
       this.disposeNode(n);
@@ -241,16 +343,17 @@ export class MissionViews implements View {
     time: number,
     layout: FrameContext['layout'],
   ): void {
-    const kind = iconFor(view.objective, nv.id);
+    const hold = nv.kind === 'hold';
+    const kind = hold ? 'door' : iconFor(view.objective, nv.id);
     const radius = ctx.state.mission?.nodes.find((n) => n.id === nv.id)?.radius ?? 0;
     const zone = radius > 0;
     let n = this.nodes.get(nv.id);
-    if (n && (n.kind !== kind || n.zone !== zone)) {
+    if (n && (n.kind !== kind || n.zone !== zone || n.hold !== hold)) {
       this.disposeNode(n);
       n = undefined;
     }
     if (!n) {
-      n = this.createNode(kind, zone);
+      n = this.createNode(kind, zone, hold);
       this.nodes.set(nv.id, n);
     }
     const x = layout.wx(nv.x);
@@ -258,17 +361,25 @@ export class MissionViews implements View {
     n.group.position.set(x, 0, z);
     n.group.visible = ctx.inView ? ctx.inView(x, z, 3 + radius) : true;
     if (!n.group.visible) return;
-    const look = nodeLook(nv.state, nv.fraction, time);
+    const base = nodeLook(nv.state, nv.fraction, time);
+    // a door that wants the player is cyan (the HUD's HOLD colour), never the checkpoints' gold
+    const look =
+      hold && (nv.state === 'live' || nv.state === 'progress')
+        ? { ...base, color: MARKER_COLORS.hold }
+        : base;
     const side = zone ? radius * 2 + 1 : PAD_SIZE;
     n.pad.scale.setScalar(side);
     n.padMat.color.setHex(look.color);
+    n.track.visible = hold && nv.state !== 'done' && nv.state !== 'locked';
+    n.track.scale.setScalar(PAD_SIZE * 0.5 * HOLD_RING_SCALE);
+    n.trackMat.color.setHex(look.color);
     n.padMat.opacity = look.pad;
     // the progress ring sits just outside the pad's rim (a square zone: just outside its edge)
     const step = arcStep(look.arc);
     n.arc.visible = step > 0;
     if (step > 0) {
       n.arc.geometry = this.arcGeometry(step);
-      n.arc.scale.setScalar(zone ? side * 0.56 : PAD_SIZE * 0.5);
+      n.arc.scale.setScalar(zone ? side * 0.56 : PAD_SIZE * 0.5 * (hold ? HOLD_RING_SCALE : 1));
       n.arcMat.color.setHex(MARKER_COLORS.progress);
     }
     n.tick.visible = look.tick;
@@ -417,6 +528,7 @@ export class MissionViews implements View {
   dispose(): void {
     for (const n of this.nodes.values()) this.disposeNode(n);
     this.nodes.clear();
+    this.beacons.dispose();
     if (this.boss) {
       this.boss.ringMat.dispose();
       this.boss.haloMat.dispose();

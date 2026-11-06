@@ -18,7 +18,7 @@ import {
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { ObjectiveKind } from '../../sim';
 
-export type IconKind = 'relay' | 'parts' | 'barrier' | 'ledger' | 'press' | 'cabinet' | 'lever';
+export type IconKind = 'relay' | 'parts' | 'barrier' | 'ledger' | 'press' | 'cabinet' | 'lever' | 'door';
 
 /** Which icon a node of this objective wears (`nodeId` tells the press drop from a ledger). */
 export function iconFor(objective: ObjectiveKind, nodeId: string): IconKind {
@@ -144,6 +144,18 @@ function parts(kind: IconKind): Part[] {
         { geo: new SphereGeometry(0.07, 8, 8), color: 0x4dff88, at: [-0.1, 0.62, 0.17] },
         { geo: box(0.05, 0.22, 0.05), color: 0xf4efe4, at: [0, 0.3, 0.2], rot: [0.5, 0, 0] },
         { geo: box(0.58, 0.05, 0.34), color: 0x3a3d44, at: [0, 0.8, 0] },
+      ];
+    case 'door':
+      // a steel door in its frame (field-mission doors: stand on it to start the raid)
+      return [
+        { geo: box(0.7, 0.06, 0.34), color: 0x3a3d44, at: [0, 0.03, 0] },
+        { geo: box(0.08, 1.12, 0.12), color: 0x8a9099, at: [-0.33, 0.6, 0] },
+        { geo: box(0.08, 1.12, 0.12), color: 0x8a9099, at: [0.33, 0.6, 0] },
+        { geo: box(0.74, 0.1, 0.12), color: 0x8a9099, at: [0, 1.18, 0] },
+        { geo: box(0.56, 1.02, 0.05), color: 0x2f6f8f, at: [0, 0.57, 0.02] },
+        { geo: box(0.46, 0.04, 0.06), color: 0x6fd3ff, at: [0, 0.82, 0.05] },
+        { geo: box(0.46, 0.04, 0.06), color: 0x6fd3ff, at: [0, 0.34, 0.05] },
+        { geo: new SphereGeometry(0.05, 8, 6), color: 0xffd23a, at: [0.18, 0.58, 0.07] },
       ];
     case 'lever':
       return [

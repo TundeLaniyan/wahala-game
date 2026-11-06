@@ -1,0 +1,130 @@
+/*
+ * The field mission's objective block (docs/CHECKPOINT_CLARITY.md): the first block of the City Rumble right column
+ * (`.mission-dock`) or of the rail on a standard arena. Same dark plate as the mission panel; every text colour keeps
+ * WCAG AA on it over a white day board and a black night one (tests/ui/fieldGoal.test.ts). Never over the board.
+ */
+.field-goal {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 100%;
+  padding: 4px 8px 5px 7px;
+  font-family: var(--display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: #f4ecdc;
+  background: rgba(10, 12, 16, 0.88);
+  border-left: 4px solid #ffe14a;
+  border-radius: 4px;
+  pointer-events: none;
+}
+.field-goal.verb-defeat {
+  border-left-color: #ff6b5e;
+}
+.field-goal.verb-escape {
+  border-left-color: #ffb347;
+}
+.field-goal.verb-hold {
+  border-left-color: #6fd3ff;
+}
+.fg-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+}
+.fg-tag {
+  flex: none;
+  padding: 1px 5px;
+  font-weight: 400;
+  font-size: clamp(0.62rem, 2.6vh, 0.9rem);
+  color: #0a0c10;
+  background: #ffe14a;
+  border-radius: 3px;
+}
+.verb-defeat .fg-tag {
+  background: #ff6b5e;
+}
+.verb-escape .fg-tag {
+  background: #ffb347;
+}
+.verb-hold .fg-tag {
+  background: #6fd3ff;
+}
+.fg-target {
+  font-size: clamp(0.66rem, 2.8vh, 1rem);
+  color: #ffffff;
+}
+.fg-step {
+  font-size: clamp(0.54rem, 2.2vh, 0.78rem);
+  color: #ffe14a;
+  white-space: nowrap;
+}
+.fg-hold {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fg-hold-bar {
+  position: relative;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(111, 211, 255, 0.7);
+  overflow: hidden;
+}
+.fg-hold-bar i {
+  display: block;
+  height: 100%;
+  background: #6fd3ff;
+  transition: width 0.09s linear;
+}
+.fg-hold.filling .fg-hold-bar i,
+.fg-hold.full .fg-hold-bar i {
+  background: #4dff88;
+}
+.fg-hold.draining .fg-hold-bar i {
+  background: #ffb347;
+}
+.fg-hold-text {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: clamp(0.54rem, 2.2vh, 0.8rem);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fg-hold-text b {
+  font-weight: 400;
+  color: #ffffff;
+  text-transform: none;
+}
+.fg-hold-text span {
+  color: #9fe2ff;
+}
+.fg-hold.draining .fg-hold-text span {
+  color: #ffc98a;
+}
+.fg-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: clamp(0.5rem, 2vh, 0.7rem);
+  color: #c9d0da;
+}
+/* phones in landscape: the column is short; the tag, the target and the hold bar come first */
+@media (max-height: 520px) {
+  .field-goal {
+    gap: 1px;
+    padding: 2px 6px 3px 6px;
+  }
+  .fg-hold-bar {
+    height: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fg-hold-bar i {
+    transition: none;
+  }
+}

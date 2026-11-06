@@ -117,6 +117,67 @@ export interface MissionNodeView {
   state: MissionNodeState;
   /** 0..1 progress of the current action (jam channel, hold, window). */
   fraction: number;
+  /**
+   * Section field missions only (read-only presentation hint, docs/CHECKPOINT_CLARITY.md): how the node is completed.
+   * `checkpoint` / `exit` / `return` complete the moment the human steps on them (walk-through, no waiting); `hold`
+   * (a door) needs the human to stand on it for `DOOR_HOLD_TICKS`; `enemies` marks a group to defeat. Absent on the boss
+   * missions.
+   */
+  kind?: MissionNodeKind;
+  /** Field missions: an optional door (a bonus raid), never needed to finish the route. */
+  optional?: boolean;
+}
+
+/** How a field mission node is completed (see `MissionNodeView.kind`). */
+export type MissionNodeKind = 'checkpoint' | 'hold' | 'enemies' | 'exit' | 'return';
+
+/** What the current field leg asks for, as the HUD tag says it: GO TO / HOLD / DEFEAT / ESCAPE / RETURN. */
+export type FieldGoalVerb = 'goTo' | 'hold' | 'defeat' | 'escape' | 'return';
+
+/**
+ * The current field objective in plain terms (read-only view data for the panel, the compass and the notices; it
+ * decides nothing): the verb, the node to go to (`nodeId`, its label and tile), the checkpoint's place in the leg,
+ * the door hold, and whether enemies on the map are optional right now.
+ */
+export interface FieldGoalView {
+  verb: FieldGoalVerb;
+  /** The node to go to now (the CURRENT checkpoint, the door, the exit, the return marker, the enemy group). */
+  nodeId: string | null;
+  target: string;
+  x: number;
+  y: number;
+  /** reachMarkers: the current checkpoint's index (0-based) and the leg's checkpoint count. */
+  step: { index: number; count: number } | null;
+  /**
+   * The door hold of this leg (or of an optional door being held): ticks held of `goalTicks`, and whether the human is on
+   * the door now (false = the hold drains). Null when no door is in play.
+   */
+  hold: {
+    doorId: string;
+    label: string;
+    ticks: number;
+    goalTicks: number;
+    fraction: number;
+    standing: boolean;
+    optional: boolean;
+  } | null;
+  /** defeat: enemies left of the group (they must all go down). */
+  enemiesLeft: number;
+  /** Enemies are on the map but none has to be defeated on this leg (fighting them is optional). */
+  fightsOptional: boolean;
+}
+
+/** A walk-through checkpoint of the route (every leg up to the current one), for the world beacons and the notices. */
+export interface FieldRouteMarkerView {
+  /** Stable across legs: `leg<L>.mk<i>`. */
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+  /** done = walked through; live = the CURRENT one; locked = later in this leg. */
+  state: 'done' | 'live' | 'locked';
+  leg: number;
+  index: number;
 }
 
 export type MissionPhaseState = 'active' | 'exposed' | 'won' | 'lost';
@@ -171,6 +232,10 @@ export interface MissionView {
   legCount?: number;
   legKind?: FieldObjectiveKind;
   doors?: MissionDoorView[];
+  /** Field missions: what to do now in plain terms (docs/CHECKPOINT_CLARITY.md). */
+  fieldGoal?: FieldGoalView | null;
+  /** Field missions: the route's walk-through checkpoints so far (done, current, later in this leg). */
+  route?: FieldRouteMarkerView[];
   /** A door raised a raid request that the app has not answered yet. */
   pendingRaid?: RaidRequest | null;
   missionId: MissionId;

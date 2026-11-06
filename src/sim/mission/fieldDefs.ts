@@ -82,6 +82,14 @@ const chaser = (name: string, x: number, y: number, group: string): FieldEnemyDe
   group,
 });
 
+/**
+ * The HUD line of the implicit last leg (the return route). Plain words: where to go, nothing else
+ * (docs/CHECKPOINT_CLARITY.md).
+ */
+export function returnLegText(label: string): string {
+  return `Return to ${label} to finish.`;
+}
+
 /** Hold time on a door before it raises the raid request (1 s), and how long a pursuer must stay next to you to catch you. */
 export const DOOR_HOLD_TICKS = 60;
 export const CATCH_TICKS = 40;
@@ -99,10 +107,10 @@ const defs: FieldMissionDef[] = [
     legs: [
       {
         kind: 'reachMarkers',
-        text: 'Walk the bay checkpoints to the depot yard.',
-        markers: [m(9, 39, 'CHECKPOINT A'), m(19, 39, 'CHECKPOINT B'), m(26, 40, 'YARD GATE')],
+        text: 'Walk through the 3 checkpoints. No need to stop.',
+        markers: [m(9, 39, 'CHECKPOINT A'), m(19, 39, 'CHECKPOINT B'), m(26, 40, 'CHECKPOINT C')],
       },
-      { kind: 'door', text: 'Step on the depot door and hold: the warehouse raid.', doorId: 'depot' },
+      { kind: 'door', text: 'Stand on the depot door for 1 second to raid it.', doorId: 'depot' },
     ],
     doors: [
       {
@@ -130,10 +138,10 @@ const defs: FieldMissionDef[] = [
     start: [44, 42],
     returnMarker: m(58, 43, 'PARK GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Put down the hawkers holding the market lane.', group: 'hawkers' },
+      { kind: 'clearGroup', text: 'Defeat the 2 hawkers in the market lane.', group: 'hawkers' },
       {
         kind: 'escapeRoute',
-        text: 'The trailer crew is after you: reach the footbridge first.',
+        text: 'Escape to the footbridge before the trailer hand catches you.',
         group: 'pursuers',
         exit: m(59, 28, 'FOOTBRIDGE'),
       },
@@ -157,10 +165,10 @@ const defs: FieldMissionDef[] = [
     legs: [
       {
         kind: 'reachMarkers',
-        text: 'Follow the row of stalls to the storeroom lane.',
+        text: 'Walk through the 3 checkpoints along the stalls.',
         markers: [m(7, 34, 'STALL ROW'), m(18, 36, 'BACK AISLE'), m(33, 33, 'LOADING BAY')],
       },
-      { kind: 'door', text: 'Hold on the storeroom door: the parts raid.', doorId: 'storeroom' },
+      { kind: 'door', text: 'Stand on the storeroom door for 1 second to raid it.', doorId: 'storeroom' },
     ],
     doors: [
       {
@@ -188,10 +196,10 @@ const defs: FieldMissionDef[] = [
     start: [3, 13],
     returnMarker: m(4, 4, 'MARKET GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Clear the runners working the north aisles.', group: 'runners' },
+      { kind: 'clearGroup', text: 'Defeat the 3 market runners in the north aisles.', group: 'runners' },
       {
         kind: 'reachMarkers',
-        text: 'Check the two far stalls on the top street.',
+        text: 'Walk through the 2 checkpoints on the top street.',
         markers: [m(34, 7, 'FAR STALL'), m(49, 5, 'TOP STREET')],
       },
     ],
@@ -222,13 +230,13 @@ const defs: FieldMissionDef[] = [
     start: [5, 27],
     returnMarker: m(3, 26, 'TOLL GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Move the marshals off the approach road.', group: 'marshals' },
+      { kind: 'clearGroup', text: 'Defeat the 2 marshals on the approach road.', group: 'marshals' },
       {
         kind: 'reachMarkers',
-        text: 'Walk the two toll posts to the shed.',
+        text: 'Walk through the 2 toll posts.',
         markers: [m(9, 27, 'TOLL POST A'), m(22, 27, 'TOLL POST B')],
       },
-      { kind: 'door', text: 'Hold on the tool-shed door: the shed raid.', doorId: 'shed' },
+      { kind: 'door', text: 'Stand on the tool-shed door for 1 second to raid it.', doorId: 'shed' },
     ],
     doors: [
       {
@@ -254,12 +262,12 @@ const defs: FieldMissionDef[] = [
     legs: [
       {
         kind: 'reachMarkers',
-        text: 'Walk the junction posts, west to east.',
+        text: 'Walk through the 3 junction posts, west to east.',
         markers: [m(12, 5, 'JUNCTION 1'), m(28, 4, 'JUNCTION 2'), m(36, 10, 'JUNCTION 3')],
       },
       {
         kind: 'escapeRoute',
-        text: 'The marshals are on you: reach the north slip road.',
+        text: 'Escape to the slip road before the marshal catches you.',
         group: 'pursuers',
         exit: m(37, 3, 'SLIP ROAD'),
       },
@@ -279,10 +287,10 @@ const defs: FieldMissionDef[] = [
     legs: [
       {
         kind: 'reachMarkers',
-        text: 'Follow the yard fence to the signal box.',
+        text: 'Walk through the 3 checkpoints to the signal box.',
         markers: [m(10, 36, 'FENCE'), m(20, 32, 'SIDING'), m(30, 27, 'SIGNAL BOX')],
       },
-      { kind: 'door', text: 'Hold on the shed door: the tool-shed raid.', doorId: 'shed' },
+      { kind: 'door', text: 'Stand on the signal-shed door for 1 second to raid it.', doorId: 'shed' },
     ],
     doors: [
       {
@@ -308,13 +316,13 @@ const defs: FieldMissionDef[] = [
     start: [4, 23],
     returnMarker: m(3, 29, 'ROW GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Move the auditors off the west row.', group: 'auditors' },
+      { kind: 'clearGroup', text: 'Defeat the 2 auditors on the west row.', group: 'auditors' },
       {
         kind: 'reachMarkers',
-        text: 'Walk the two ledger counters.',
+        text: 'Walk through the 2 ledger counters.',
         markers: [m(8, 28, 'COUNTER 1'), m(18, 28, 'COUNTER 2')],
       },
-      { kind: 'door', text: 'Hold on the annexe door: the records raid.', doorId: 'annexe' },
+      { kind: 'door', text: 'Stand on the annexe door for 1 second to raid it.', doorId: 'annexe' },
     ],
     doors: [
       {
@@ -340,12 +348,12 @@ const defs: FieldMissionDef[] = [
     legs: [
       {
         kind: 'reachMarkers',
-        text: 'Collect the audit slips at both desks.',
+        text: 'Walk through the 2 desks to collect the audit slips.',
         markers: [m(10, 7, 'DESK 1'), m(16, 10, 'DESK 2')],
       },
       {
         kind: 'escapeRoute',
-        text: 'The bureau knows: reach the press lane before the auditors.',
+        text: 'Escape to the press lane before the auditor catches you.',
         group: 'pursuers',
         exit: m(22, 21, 'PRESS LANE'),
       },
@@ -365,10 +373,10 @@ const defs: FieldMissionDef[] = [
     legs: [
       {
         kind: 'reachMarkers',
-        text: 'Slip along the garden wall past the gatehouse.',
+        text: 'Walk through the 2 checkpoints along the garden wall.',
         markers: [m(8, 26, 'GARDEN WALL'), m(16, 26, 'POOL EDGE')],
       },
-      { kind: 'door', text: 'Hold on the plant door: the standby-plant raid.', doorId: 'plant' },
+      { kind: 'door', text: 'Stand on the plant door for 1 second to raid it.', doorId: 'plant' },
     ],
     doors: [
       {
@@ -396,15 +404,15 @@ const defs: FieldMissionDef[] = [
     start: [3, 3],
     returnMarker: m(4, 8, 'ESTATE GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Clear the patrol on the north drive.', group: 'patrol' },
+      { kind: 'clearGroup', text: 'Defeat the 2 guards on the north drive.', group: 'patrol' },
       {
         kind: 'reachMarkers',
-        text: 'Check the two security posts on the east lawn.',
+        text: 'Walk through the 2 security posts on the east lawn.',
         markers: [m(33, 3, 'POST 1'), m(44, 8, 'POST 2')],
       },
       {
         kind: 'escapeRoute',
-        text: 'The hounds are loose: get to the service road.',
+        text: 'Escape to the service road before the hound catches you.',
         group: 'pursuers',
         exit: m(53, 13, 'SERVICE ROAD'),
       },

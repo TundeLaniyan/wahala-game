@@ -74,9 +74,9 @@ const OSHODI_SECTIONS: SectionDef[] = [
         id: 'oshodi.approach',
         format: 'field',
         name: 'Terminal Approach',
-        objectiveCard: 'Walk the checkpoints, raid the depot, come back out.',
+        objectiveCard: 'Walk through 3 checkpoints, stand 1 s on the depot door, return.',
         summary:
-          'Park wardens hold three checkpoints between the gate and the depot yard. Reach the yard, raid the warehouse, then walk back out the way you came.',
+          'Three checkpoints lead from the gate to the depot yard: walk straight through them, no waiting (fighting the park wardens is optional). Stand on the depot door for a second to raid the warehouse, then walk back out.',
         missionRef: 'oshodi.approach',
         doors: [{ doorId: 'depot', raidId: 'warehouseDispatchDepot' }],
         reward: title(

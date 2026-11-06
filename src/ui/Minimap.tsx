@@ -153,9 +153,21 @@ function drawMission(
   }
   g.globalAlpha = 1;
   const pulse = 0.5 + 0.5 * Math.sin(time * 4.2);
-  for (const n of m.nodes) {
+  // the current objective last (on top), with a white halo: the one to walk to now
+  const nodes = [...m.nodes].sort((a, b) => Number(a.current) - Number(b.current));
+  for (const n of nodes) {
     const p = tileToMinimap(geo, n.x, n.y);
-    const r = Math.max(3, s * 1.15);
+    const r = Math.max(
+      3,
+      s * (n.current ? 1.5 : n.kind === 'checkpoint' && n.state === 'locked' ? 0.8 : 1.15),
+    );
+    if (n.current) {
+      g.strokeStyle = `rgba(255, 255, 255, ${0.55 + 0.45 * pulse})`;
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(p.x, p.y, r + 3 + pulse * 3, 0, Math.PI * 2);
+      g.stroke();
+    }
     const color = n.state === 'done' ? C.nodeDone : n.state === 'locked' ? C.nodeLocked : C.nodeTarget;
     g.fillStyle = 'rgba(0, 0, 0, 0.8)';
     g.beginPath();
@@ -163,7 +175,7 @@ function drawMission(
     g.fill();
     g.fillStyle = color;
     g.beginPath();
-    if (n.press) g.rect(p.x - r, p.y - r, r * 2, r * 2);
+    if (n.press || n.kind === 'hold') g.rect(p.x - r, p.y - r, r * 2, r * 2);
     else g.arc(p.x, p.y, r, 0, Math.PI * 2);
     g.fill();
     if (n.state === 'progress') {

@@ -55,6 +55,7 @@ import { VehicleViews } from './views/VehicleViews';
 import { TrapViews } from './views/TrapViews';
 import { StageHazardViews } from './views/StageHazardViews';
 import { MissionViews } from './views/MissionViews';
+import type { MissionMarkerStats } from './views/MissionViews';
 import { RaidViews, isRaidMatch } from './views/RaidViews';
 import type { RaidViewStats } from './views/RaidViews';
 import { DamageViews, hasCampaignFeedback } from './views/DamageViews';
@@ -852,7 +853,7 @@ export class GameRenderer {
   }
 
   /** What the mission markers drew last frame (null outside a mission); debug / performance reports. */
-  missionMarkerStats(): { nodes: number; boss: boolean; visible: boolean; updateMs: number } | null {
+  missionMarkerStats(): MissionMarkerStats | null {
     return this.missionMarkers?.stats() ?? null;
   }
 
