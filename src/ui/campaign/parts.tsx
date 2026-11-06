@@ -90,6 +90,18 @@ export function BossCard({
               <dt>Controls</dt>
               <dd data-testid="boss-system">{boss.systemControlled}</dd>
             </div>
+            {boss.entourage && (
+              <div>
+                <dt>With him</dt>
+                <dd data-testid="boss-entourage">{boss.entourage}</dd>
+              </div>
+            )}
+            {boss.entrance && !compact && (
+              <div>
+                <dt>Arrives</dt>
+                <dd data-testid="boss-entrance">{boss.entrance}</dd>
+              </div>
+            )}
             <div>
               <dt>Signature: {boss.signatureAbility.name}</dt>
               <dd data-testid="boss-ability">{boss.signatureAbility.description}</dd>

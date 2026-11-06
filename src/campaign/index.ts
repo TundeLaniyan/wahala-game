@@ -42,6 +42,7 @@ export {
   isUnlockedFighterContent,
   markIntroSeen,
   markPrologueSeen,
+  setCampaignLevel,
   setLoadout,
 } from './progress';
 export type { MissionResultSummary } from './progress';

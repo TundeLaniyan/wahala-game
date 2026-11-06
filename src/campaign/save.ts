@@ -7,7 +7,14 @@
  * hold a reward the player did not earn nor miss one they did.
  */
 import type { CharacterId, Difficulty, MissionModifierId } from '../sim';
-import { CHARACTER_IDS, DIFFICULTIES, MISSION_IDS, MODIFIER_FOR } from '../sim';
+import {
+  CHARACTER_IDS,
+  DEFAULT_CAMPAIGN_LEVEL,
+  DIFFICULTIES,
+  MISSION_IDS,
+  MODIFIER_FOR,
+  isCampaignLevel,
+} from '../sim';
 import { CAMPAIGN, MODIFIER_IDS, allSections } from './content';
 import { createSave, freshProgress, grantsForClear } from './progress';
 import {
@@ -159,6 +166,8 @@ export function repairSave(value: unknown): CampaignSave | null {
   save.difficulty = (DIFFICULTIES as readonly string[]).includes(raw.difficulty as string)
     ? (raw.difficulty as Difficulty)
     : save.difficulty;
+  // saves made before the levels existed have no value: they load as Normal, the campaign as it was balanced
+  save.campaignLevel = isCampaignLevel(raw.campaignLevel) ? raw.campaignLevel : DEFAULT_CAMPAIGN_LEVEL;
 
   const src = isObject(raw.districts) ? raw.districts : {};
   const rewards: string[] = [];

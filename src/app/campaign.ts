@@ -30,12 +30,14 @@ import {
   nextMission,
   persistSave,
   sectionOfMission,
+  setCampaignLevel,
   setLoadout,
 } from '../campaign';
 import type { CampaignSave, DistrictId, KeyValueStore, SectionMissionDef } from '../campaign';
-import { MISSION_IDS, buildMissionGame, resolveRaid } from '../sim';
+import { DEFAULT_CAMPAIGN_LEVEL, MISSION_IDS, buildMissionGame, resolveRaid } from '../sim';
 import { buildRaidGame } from '../sim/raid/build';
 import type {
+  CampaignLevel,
   CharacterId,
   Difficulty,
   GameOptions,
@@ -69,7 +71,12 @@ export interface CampaignDeps {
   /** Seed for the next mission match. */
   seed(): number;
   /** The mission-game builder (the sim's `buildMissionGame`; tests inject a fake while the runtime is missing). */
-  buildMission?(args: { spec: MissionSpec; humanCharacter: CharacterId; seed: number }): GameOptions;
+  buildMission?(args: {
+    spec: MissionSpec;
+    humanCharacter: CharacterId;
+    seed: number;
+    level?: CampaignLevel;
+  }): GameOptions;
   /** The fighter a brand-new campaign starts with (the menu's current pick); read only. */
   startingFighter?(): CharacterId;
   /** The raid-game builder (raid-sim's `buildRaidGame`; tests inject a fake). */
@@ -80,6 +87,7 @@ export interface CampaignDeps {
     hp?: number;
     lives?: number;
     difficulty?: Difficulty;
+    level?: CampaignLevel;
   }): GameOptions;
 }
 
@@ -228,8 +236,8 @@ export class CampaignController {
   }
 
   /** Starts a brand-new campaign (the UI asks first when one exists), then plays the prologue. */
-  startNew(): void {
-    const save = createSave(this.deps.now());
+  startNew(level: CampaignLevel = DEFAULT_CAMPAIGN_LEVEL): void {
+    const save = setCampaignLevel(createSave(this.deps.now()), level, this.deps.now());
     const fighter = this.deps.startingFighter?.();
     const fresh = fighter ? setLoadout(save, { character: fighter }, save.startedAt) : save;
     this.commit(fresh, {
@@ -332,6 +340,21 @@ export class CampaignController {
     this.update({ modifier });
   }
 
+  /**
+   * Changes the campaign difficulty. Only between missions (map, briefing, section list): a live mission, a raid or
+   * the result screen of one never changes level, so a run is always played at the level it started at.
+   */
+  setLevel(level: CampaignLevel): boolean {
+    const ui = this.need();
+    if (ui.active) {
+      this.update({ notice: 'Difficulty can be changed from the campaign map, not during a mission.' });
+      return false;
+    }
+    const save = setCampaignLevel(ui.save, level, this.deps.now());
+    if (save !== ui.save) this.commit(save);
+    return true;
+  }
+
   setLoadout(loadout: { character?: CharacterId; difficulty?: Difficulty }): void {
     const ui = this.need();
     const save = setLoadout(ui.save, loadout, this.deps.now());
@@ -375,6 +398,7 @@ export class CampaignController {
         spec: { id, modifiers, difficulty: ui.save.difficulty, lives: MISSION_LIVES },
         humanCharacter: ui.save.character,
         seed: this.deps.seed(),
+        level: ui.save.campaignLevel,
       });
       this.update({
         active: { missionId: id, modifiers },
@@ -513,6 +537,7 @@ export class CampaignController {
         },
         humanCharacter: ui.save.character,
         seed: this.deps.seed(),
+        level: ui.save.campaignLevel,
       });
       this.update({
         active: { missionId: districtId, modifiers: [], sectionMissionId: def.id },
@@ -593,6 +618,7 @@ export class CampaignController {
         seed: this.deps.seed(),
         ...(hp !== undefined ? { hp } : {}),
         difficulty: ui.save.difficulty,
+        level: ui.save.campaignLevel,
       });
       host.playRaid(options, {
         raidId: ctx.raidId,

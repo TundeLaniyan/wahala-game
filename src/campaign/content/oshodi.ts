@@ -8,22 +8,26 @@ export const OSHODI_BOSS: BossDef = {
   id: 'ogaSunmola',
   districtId: 'oshodi',
   name: 'Oga Sunmola',
-  nickname: 'Oga Dispatch',
-  title: 'Controller of the Interchange',
+  nickname: 'Oga Mic',
+  title: 'Park Master of the Interchange',
   culturalInspiration:
-    'Motor-park culture and bus-terminal dispatch at a great interchange: the loudspeaker voice, the queue order, who loads next, the whistle, the radio net that makes thousands of trips look like one orchestra.',
+    'Park-master culture at Oshodi, the mainland gate of Lagos: the microphone and the loudspeaker as instruments of authority, big-voiced welcomes and praise-singing, a retinue of cap-and-vest wardens with ticket booklets, a convoy of horn-blowing danfo announcing arrival, and a crowd that answers back. Inspired by the showmanship of motor-park leadership in general, never by any real person, slogan or biography.',
   areaConnection:
     'Oshodi is the mainland gate: the flyover feeds the terminal, the terminal feeds the rail line and the market. Control the radio here and every connecting route in Lagos waits on your word.',
   visualDirection: {
     characterId: 'streetBaller',
     description:
-      'Broad, calm, always smiling: a long yellow dispatch coat over a black polo, a lanyard of whistles, a headset with one ear free, a folded loading chart in the back pocket. Moves like a man who has never run for a bus.',
+      'Broad, calm, always smiling and always holding a microphone: a long park-yellow kaftan with black trim over matching trousers, a flat cap with the wardens’ crest (a fictional circuit-and-bus mark), tinted glasses, a wireless headset mic and a beaded wristband. He never carries his own bag: someone always walks one step behind him.',
     palette: { primary: 0xd9a21b, accent: 0x1b1b1f },
     artNeeds:
-      'Boss costume variant of the street fighter rig; headset + whistle-lanyard props; idle: raises a hand to conduct; call-out animation (hand to ear); relay-jam FX; convoy-warning lane decals; defeat: headset drops, speaker crackles to silence.',
+      'Boss costume variant of the street fighter rig (kaftan, flat cap, headset, glasses); props: handheld mic and a speaker-on-a-trolley; idle: raises the mic hand to call the crowd; call-out animation (hand to ear); relay-jam FX; convoy-warning lane decals; defeat: the mic drops, the speakers crackle to silence.',
   },
+  entourage:
+    'An aide with a wide black umbrella, a praise-singer pushing a battered speaker trolley, two cap-and-vest wardens with ticket booklets and a whistle each, and a convoy of three horn-blowing danfo with painted route boards.',
+  entrance:
+    'The loudspeakers announce his name before he is seen; three danfo roll in hooting in rhythm and the crowd answers the call.',
   personality:
-    'Silky and amused. Talks like an announcer, laughs at his own punchlines, calls everyone "unit". Never shouts: when he is angry the volume drops. Believes disorder is only order that has not paid.',
+    'Silky and amused, the host of his own event. Opens every exchange like a ceremony ("distinguished passengers, we have a visitor"), sings praises of the park, calls everyone "my friend" or "unit", laughs at his own punchlines and lets the crowd answer. Never shouts: when he is angry the volume drops and the speaker whines. Believes disorder is only order that has not paid.',
   protectionCrew: {
     factionId: 'oritaWardens',
     roles: [
@@ -73,9 +77,11 @@ export const OSHODI_BOSS: BossDef = {
   introduction: [
     {
       speaker: 'MAMA PUT',
-      text: 'That voice on the loudspeaker na Oga Sunmola. Every bus in Oshodi moves when he says "go".',
+      text: 'That voice on the loudspeaker na Oga Sunmola, Oga Mic. Every bus in Oshodi moves when he says "go", and the crowd dey answer am.',
     },
-    boss('Unit, you are not on my chart. Park the machine, park the attitude. Everybody loads in turn.'),
+    boss(
+      'Mic check, mic check. Distinguished passengers, we have a visitor with no ticket. Welcome to Oshodi, my friend. Everybody loads in turn.',
+    ),
     {
       speaker: 'RADIO',
       text: 'Relay masts sit under the terminal canopies and along the rail edge. Each one is a leash on a convoy.',
@@ -94,7 +100,7 @@ export const OSHODI_BOSS: BossDef = {
       speaker: 'NARRATOR',
       text: 'The speakers snap on. Somewhere under the flyover, a long line of headlights wakes up.',
     },
-    boss('Welcome to Oshodi, unit. Please mind the closing doors.'),
+    boss('Thank you, thank you. Welcome to Oshodi, my friend. Please mind the closing doors.'),
   ],
   defeatSequence: [
     boss('Relay... relay four, come in. Relay five? Anyone?'),
@@ -128,7 +134,7 @@ export const OSHODI_BOSS: BossDef = {
     kind: 'cosmetic',
     name: 'Interchange Hi-Vis',
     description:
-      'A yellow dispatch-coat costume for the Street Baller, taken from the Controller’s own chair.',
+      'A yellow dispatch-coat costume for the Street Baller, taken from the Park Master’s own chair.',
     unlocks: ['costume.streetBaller.interchangeHiVis', 'modifier.rushHourDispatch', 'district.mushin'],
   },
   consequence:
@@ -153,7 +159,7 @@ export const OSHODI: DistrictContent = {
     location:
       'Oshodi Transport Metropolis: the flyover, the bus terminal canopies, the rail line and the market',
     summary:
-      'Every bus in Oshodi loads when the dispatch radio says so, and the radio answers to Oga Sunmola. Jam the relays under the canopies and on the rail edge, dodge the convoys he calls, then take the Controller off his own stage.',
+      'Every bus in Oshodi loads when the dispatch radio says so, and the radio answers to Oga Sunmola. Jam the relays under the canopies and on the rail edge, dodge the convoys he calls, then take the Park Master off his own stage.',
     objectives: [
       'Jam relay masts by standing on them until they go dead',
       'Survive the telegraphed convoy strikes: read the red lanes',
