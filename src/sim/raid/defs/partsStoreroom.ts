@@ -14,7 +14,7 @@
  *    4 #.#b#.#.#.#a#.#     a b guards (wave 1)
  *    5 #.S.x..BMB..S.#
  *    6 #.#.#.#.#.#.#.#
- *    7 #.x...x...xd..#     c thrower, d heavy (wave 2)
+ *    7 #.x...x.x..d..#     c thrower, d heavy (wave 2)
  *    8 #.#M#.#.#.#.###
  *    9 #@...E.c...3.H#     3 cupboard door   H heal segment   @ entrance   E exit
  *   10 ###############
@@ -37,7 +37,7 @@ export const PARTS_STOREROOM: RaidDef = {
     '#.#b#.#.#.#a#.#',
     '#.S.x..BMB..S.#',
     '#.#.#.#.#.#.#.#',
-    '#.x...x...xd..#',
+    '#.x...x.x..d..#',
     '#.#M#.#.#.#.###',
     '#@...E.c...3.H#',
     '###############',

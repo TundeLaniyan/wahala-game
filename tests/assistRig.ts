@@ -32,6 +32,8 @@ export interface RigOptions {
   /** ASCII map (see `carve`); default: the Danfo Bus Park with its crates removed. */
   map?: readonly string[];
   arena?: string;
+  /** A ready-made state to drive instead of the sandbox (e.g. a classic raid, tests/raid-helpers `newRaid`). */
+  state?: GameState;
   start: [number, number];
   assist?: MoveAssistSetting;
   /** The touch movement style (decision AS4); default standard. */
@@ -69,7 +71,7 @@ export class AssistRig {
         },
       ],
     });
-    this.state = sandbox({ players: 2, arenaId: o.arena });
+    this.state = o.state ?? sandbox({ players: 2, arenaId: o.arena });
     if (o.map) carve(this.state, o.map);
     this.input = new InputManager({ onNav: () => undefined, onDeviceChange: () => undefined });
     this.input.setMoveAssist(o.assist ?? 'on');
@@ -77,7 +79,7 @@ export class AssistRig {
     const [w, h] = o.viewport ?? [844, 390];
     this.stick = new VirtualStick(stickConfigFor(w, h));
     put(this.state, 0, o.start[0], o.start[1]);
-    put(this.state, 1, 14, 10);
+    if (!o.state) put(this.state, 1, 14, 10);
     this.trace.push(o.start);
   }
 
