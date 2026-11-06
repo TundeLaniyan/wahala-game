@@ -172,6 +172,11 @@ export interface CampaignConfig {
   vsEnemy: { targetLockoutTicks: number };
   /** An enemy's close attack never takes more than this from the human (enemies are individually weaker than the player). */
   enemyMeleeDamage: number;
+  /**
+   * Segments a raid heal room gives. Absent = `RAID_TUNING.healBonus` (the campaign levels set it: Easy gives more;
+   * Normal leaves it absent so its serialised state is unchanged).
+   */
+  healBonus?: number;
   /** When an enemy health bar is shown (`enemyHealthView`): never permanent for everyone. */
   bar: {
     /** Shown this long after the enemy last lost a segment. */

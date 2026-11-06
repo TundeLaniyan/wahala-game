@@ -961,3 +961,18 @@
 .cp-opened {
   margin-top: 8px;
 }
+
+/* campaign difficulty selector (docs/CAMPAIGN_DIFFICULTY.md) */
+.cp-level {
+  padding: 10px 14px 12px;
+}
+.cp-level .mn-opts {
+  margin-top: 6px;
+}
+.mn .cp-level .chip.mn-opt {
+  min-height: 44px;
+  min-width: 76px;
+}
+.cp-level .mn-fineprint {
+  margin: 8px 0 0;
+}

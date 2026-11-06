@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { CAMPAIGN, DISTRICT_ORDER, bossAvailable } from '../../campaign';
 import type { DistrictId } from '../../campaign';
-import type { MissionId } from '../../sim';
+import type { CampaignLevel, MissionId } from '../../sim';
 import { commands } from '../../app/session';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
 import {
@@ -21,6 +21,8 @@ import {
 } from './model';
 import type { MapNode } from './model';
 import { Stars, useCampaignUi } from './parts';
+import { LevelPicker } from './LevelPicker';
+import { StoryHero } from './StoryHero';
 import { SectionList } from './SectionList';
 
 /** Coast, lagoon, the island and the Lekki strip behind the nodes (decorative only, 0..100 units). */
@@ -117,6 +119,7 @@ function DistrictCard({ id, status }: { id: DistrictId; status: MapNode['status'
   const reason = lockedReason(ui.save, id);
   return (
     <article className="cp-card mn-panel" data-testid="district-card" data-district={id}>
+      {status !== 'locked' && <StoryHero imageKey={`district.${id}.briefing`} variant="banner" />}
       <header>
         <small className="mn-kicker">
           {id === 'ojuelegba' ? 'The hub' : `District ${districtNumber(id)} of 6`} · {statusLabel[status]}
@@ -189,7 +192,7 @@ function Tools() {
               onClick={() => {
                 const what = confirm;
                 setConfirm(null);
-                if (what === 'new') commands.campaignNew();
+                if (what === 'new') commands.campaignNew(save.campaignLevel);
                 else commands.campaignDelete();
               }}
             >
@@ -224,7 +227,7 @@ function Tools() {
             <SecondaryButton
               className="small"
               testId="campaign-new"
-              onClick={() => (askNew ? setConfirm('new') : commands.campaignNew())}
+              onClick={() => (askNew ? setConfirm('new') : commands.campaignNew(save.campaignLevel))}
             >
               New campaign
             </SecondaryButton>
@@ -247,8 +250,10 @@ function Tools() {
 
 export function CampaignMap() {
   const ui = useCampaignUi();
+  const [chosenLevel, setChosenLevel] = useState<CampaignLevel>('normal');
   if (!ui) return null;
   const { save, started } = ui;
+  const level = started ? save.campaignLevel : chosenLevel;
   const nodes = mapNodes(save);
   const selected = nodes.find((n) => n.id === ui.selected) ?? nodes[1]!;
   const missionSelected = selected.id !== 'ojuelegba';
@@ -285,7 +290,11 @@ export function CampaignMap() {
                 : 'Start Oshodi'}
           </PrimaryButton>
         ) : (
-          <PrimaryButton testId="campaign-start-new" autoFocus onClick={() => commands.campaignNew()}>
+          <PrimaryButton
+            testId="campaign-start-new"
+            autoFocus
+            onClick={() => commands.campaignNew(chosenLevel)}
+          >
             New campaign
           </PrimaryButton>
         )
@@ -357,6 +366,10 @@ export function CampaignMap() {
               </p>
             </article>
           )}
+          <LevelPicker
+            value={level}
+            onPick={(l) => (started ? commands.campaignLevel(l) : setChosenLevel(l))}
+          />
           <Tools />
         </div>
       </div>

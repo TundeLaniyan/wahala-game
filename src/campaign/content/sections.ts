@@ -250,7 +250,7 @@ const FADEYI_SECTIONS: SectionDef[] = [
   },
   bossSection(
     'fadeyiSomolu',
-    'The Warden',
+    'The Garage Master',
     'Marshal Kobo controls every crossing. Hold the junctions against his marshals until they open.',
     'Hold the junction zones, then finish Marshal Kobo.',
   ),

@@ -9,6 +9,8 @@ import { DIFFICULTIES } from '../types';
 import type { CharacterId, Difficulty, GameOptions, PlayerSetup } from '../types';
 import type { EnemyKind } from '../campaign/types';
 import { CAMPAIGN_CONFIG } from '../config';
+import { levelConfigLayer, levelMaxHp } from '../campaign/levels';
+import type { CampaignLevel } from '../campaign/levels';
 import { MISSION_DEFS, MISSION_SOFT_DENSITY } from './defs';
 import { getFieldMission } from './fieldDefs';
 import type { CrewDef, MissionDef } from './defs';
@@ -66,8 +68,12 @@ export function buildMissionGame(o: {
   spec: MissionSpec;
   humanCharacter: CharacterId;
   seed: number;
+  /** Campaign difficulty (Easy / Normal / Hard); absent = Normal, which adds nothing to the options. */
+  level?: CampaignLevel;
 }): GameOptions {
   const { spec } = o;
+  const humanHp = levelMaxHp(CAMPAIGN_CONFIG.playerMaxHp, o.level);
+  const levelConfig = levelConfigLayer(o.level);
   const crewLevel = spec.difficulty ?? 'rookie';
   if (spec.fieldId) {
     const field = getFieldMission(spec.fieldId);
@@ -78,7 +84,7 @@ export function buildMissionGame(o: {
         characterId: o.humanCharacter,
         isBot: false,
         team: 0,
-        maxHp: CAMPAIGN_CONFIG.playerMaxHp,
+        maxHp: humanHp,
       },
       ...field.enemies.map((e, i): PlayerSetup => ({
         enemyKind: ENEMY_KIND_FOR_ROLE[e.role],
@@ -95,12 +101,13 @@ export function buildMissionGame(o: {
       players,
       settings: { game: 'mission' },
       mission: spec,
+      ...(levelConfig ? { config: levelConfig } : {}),
     };
   }
   const def = MISSION_DEFS[spec.id];
   const players: PlayerSetup[] = [
     // campaign health for the human (the boss and crew keep the one-hit generator fight)
-    { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0, maxHp: CAMPAIGN_CONFIG.playerMaxHp },
+    { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0, maxHp: humanHp },
     {
       name: def.boss.name,
       characterId: def.boss.characterId,
@@ -116,5 +123,12 @@ export function buildMissionGame(o: {
       team: 1,
     })),
   ];
-  return { seed: o.seed, arenaId: def.arenaId, players, settings: { game: 'mission' }, mission: spec };
+  return {
+    seed: o.seed,
+    arenaId: def.arenaId,
+    players,
+    settings: { game: 'mission' },
+    mission: spec,
+    ...(levelConfig ? { config: levelConfig } : {}),
+  };
 }

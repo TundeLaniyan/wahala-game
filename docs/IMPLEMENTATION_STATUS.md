@@ -54,6 +54,18 @@ no new music or voice.
 old generic Oshodi Rush Hour is gone (code, tests, screenshots); only one Oshodi appears in the picker. Open: a
 player-facing night switch, local review of the geography (`OSHODI_METROPOLIS.md` section 6).
 
+## Ebute Metta West: the Ebute-Metta City Rumble arena expanded westward (branch `claude/wahala-lagos-enhancement-v1`)
+
+Report: `docs/EBUTE_METTA_WEST.md`; decisions EW1-EW10. Pure board data and presentation; no rule, hazard style, bot or camera change. Not deployed.
+
+| Area | Status | Proof |
+| --- | --- | --- |
+| Board | Done: 55 x 39 -> 75 x 39 (`EBUTE_WEST_DX` = 20 new columns on the west), non-wall tiles 1,329 -> 1,774 (+33.5 %); the original board is kept tile for tile (pinned fixture) and shifted with `ebuteX`; four new districts (Abule Ijesha Lanes, Apapa Road, Ilogbo Quarter, Otumara Waterfront), ten in all; Murtala Muhammed Way carries on west as Apapa Road with the traffic / truck sweeps edge to edge; rail corridor and the track-free route unchanged | `tests/ebute-west.test.ts`, `tests/rumble-stages.test.ts`, `tests/rumble-researched.test.ts`, `tests/arenas.test.ts` |
+| Economy | Done: 27 supplies (13 / 13 / 1 per Team Rumble half), 6 new traps, 2 barriers, 2 lagoon washes; the Team half of open floor is 17 % smaller in the west (EW5, tolerance 0.20 for this arena) | `tests/ebute-west.test.ts`, `tests/rumble-economy-evolution.test.ts` |
+| Art | Done: six new cover families (older plastered houses, walled compounds, trailers and tankers, hoarding shop, canoe slips, spur signal post) plus the shared workshop, a west palette and generic invented signs, drain slabs / road words / the disused spur on the floor, west lagoon canoes and jetty, two west crowds | `tests/rumble-researched.test.ts`, `tests/render/*` |
+| Campaign | Same Ebute missions on the same tiles (coordinates shifted through `ebuteX`); lives / respawn / UI untouched | `tests/mission-*.test.ts`, `tests/field-*.test.ts`, `tests/campaign-*.test.ts` |
+| Not done | Real-geography research used search summaries only (the fetch tool could not open the news hosts); Abule Ijero unverified and unused; the west Team half is smaller; no new map anchors (rule: exactly three) | `docs/EBUTE_METTA_WEST.md` sections 2, 6, 11 |
+
 ## Ojuelegba identity pass: audio completion, A-hold detonation, trap readability (branch `claude/wahala-ojuelegba-identity-pass-v1`)
 
 Founder brief of 2026-10-28 (decisions OJ1-OJ6 in `DECISIONS.md`). On top of the approved visual commit `592b409`
@@ -561,3 +573,19 @@ Disabled by default; see `docs/ONLINE_ARCHITECTURE.md` and decisions ON1-ON12. C
 | Rules | Done: enemy perception (calm `reactTicks` / brawling `alertTicks` / seeded slip), recovery roots after punches and throws, the human's capped lockout and immunity pass-through against enemy seats, steadfast heavies and bosses, field pursuers give up beyond 14 tiles, the boss floor no longer lifts a field enemy. Multiplayer pinned by a bot-vs-bot digest. `tests/enemy-fairness.test.ts`, `tests/app/campaign-enemy-level.test.ts`. |
 | Measurement | `npm run enemy-fairness` (scripted human, ordinary intents, active enemy bots, classic grid + Dispatch Depot raid). Normal baseline = Casual enemy bots. |
 | Not done | No browser feel-test; the recovery roots have no dedicated pose in the view; raid `AGGRO_RANGE` is still a constant in `raid/directives.ts`; the app still passes the save's level (the difficulty branch maps Easy / Normal / Hard). Targeted checks only; the full unit and browser suites were not run. |
+
+
+## Campaign story panels (Part D, branch `claude/wahala-lagos-enhancement-v1`)
+
+Done: an illustrated story-panel system (`StoryHero`, `storyImages.ts`) with 19 original in-engine panels (prologue, finale, ending, seven district briefings, six boss arrivals, three section / raid panels), a failure path that never blocks a card, tests and a browser check. Pipeline, table, accessibility and limitations: `docs/STORY_VISUALS.md`. Not done: per-boss costume art (the renderer has none, so boss panels are arrival compositions with a palette-tinted light); hand-illustrated replacements; night-time renders.
+
+## Lagos enhancement pass (branch `claude/wahala-lagos-enhancement-v1`; not merged, not deployed; awaiting founder review)
+
+| Part | State |
+| --- | --- |
+| A Ebute-Metta West | done: board 55x39 -> 75x39, open tiles 1,329 -> 1,774 (+33.5%), `docs/EBUTE_METTA_WEST.md`, decisions EW1-EW10 |
+| B Lekki Amarite Way | done once the photographs arrived: procedural zig-zag pavers on the boulevard's two straight segments (assumed road, flagged for founder review), median and kerb stripes painted, geometry untouched; `docs/LEKKI_AMARITE_WAY.md`, decisions LK1-LK5 |
+| C Bosses | Oshodi "Oga Mic" and Fadeyi "Oga Footbridge" presentations done (provisional, not canon); Ojuelegba untouched (future seventh district and boss, separate work, decision CL8); four provisional candidates researched only (`docs/BOSS_INSPIRATIONS.md`), none implemented |
+| D Story panels | done: `docs/STORY_VISUALS.md`, 19 WebP panels, graceful fallback |
+| E Difficulty | done: `docs/CAMPAIGN_DIFFICULTY.md`, decisions CL1-CL7; tested at all three levels against the respawn hotfix (`tests/app/campaign-level-death.test.ts`) |
+| Hotfix | `a4fe457` (campaign death never spectates) merged in; no conflicts |

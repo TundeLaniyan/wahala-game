@@ -8,22 +8,26 @@ export const FADEYI_SOMOLU_BOSS: BossDef = {
   id: 'marshalKobo',
   districtId: 'fadeyiSomolu',
   name: 'Marshal Gbenga Kobo',
-  nickname: 'Oga Green Light',
-  title: 'Warden of the Toll Junctions',
+  nickname: 'Oga Footbridge',
+  title: 'Garage Master of the Fadeyi Crossing',
   culturalInspiration:
-    'Junction and route control on the busy mainland corridors: reflective-vest marshals, informal "passage" at every crossing, the pedestrian footbridge, the dedicated bus lane, the bank frontages that line the road. Inspired by the texture of a junction, not by any real agency or union.',
+    'Bus-stop and footbridge "garage" culture at Fadeyi: the person everyone at a crossing knows by sight, the ticket booklet and the whistle, reflective vests and flat caps, hawkers and conductors who greet him first, a bridge landing that works as a town square, the BRT lane and the bank frontage beside it. Inspired by the texture of a busy crossing and its bus-stop leadership in general, never by any real person, name or biography.',
   areaConnection:
     'Fadeyi and Somolu sit where three corridors meet. Hold the junction and you hold every route to the lagoon: the Chairman’s trucks, the commuters, the lot.',
   visualDirection: {
     characterId: 'lekkiBoy',
     description:
-      'Crisp and a little too clean: a green reflective vest over a pressed white shirt, a peaked cap, a baton that is really a lit traffic wand, a small ledger tucked in his sleeve. He stands on a painted box and never steps off it unless he has to.',
+      'Easy, loud-friendly and everywhere at once: a green reflective vest over a bright print shirt, a flat cap with the marshals’ crest, a whistle on a cord, a worn ticket booklet and a chalk route board under one arm, a lit traffic wand tucked in his belt. He stands at the foot of the footbridge stairs and everyone passing greets him first.',
     palette: { primary: 0x2fa84f, accent: 0xff7a1a },
     artNeeds:
-      'Boss costume variant of the lekki rig; wand + cap + ledger props; idle: waves a car through then stops it; junction-zone floor decals (green hold ring, orange toll bar); route-open FX; defeat: his box is repainted by the crowd.',
+      'Boss costume variant of the lekki rig (vest, print shirt, flat cap); props: whistle, ticket booklet, chalk route board, wand; idle: tears a ticket, blows the whistle, waves a bus through then stops it; junction-zone floor decals (green hold ring, orange toll bar); route-open FX; defeat: his painted box is scrubbed out by the crowd.',
   },
+  entourage:
+    'Two vest-and-cap marshals with ticket booklets, a young runner with a chalk route board, a hawker who shouts the stops for him, and a small crowd of regulars who greet him before they cross.',
+  entrance:
+    'A long whistle from the top of the footbridge stairs; he walks down greeting people by name, and the crossing quietens as he passes.',
   personality:
-    'Formal, patient, bureaucratic. Speaks in procedures and receipts ("kindly state your business at the crossing") and never hurries. Pidgin only comes out when he is truly offended. Believes a crossing is a courtesy he grants.',
+    'Warm, loud-friendly and unhurried: greets the whole crossing by name ("my people, e kaasan"), then names his price like a favour. Speaks in tickets and favours ("this one na complimentary, next one na ticket"); the formality only arrives with the ledger. Pidgin comes easily; he gets quieter, not louder, when offended. Believes a crossing is a courtesy he grants.',
   protectionCrew: {
     factionId: 'koboMarshals',
     roles: [
@@ -34,7 +38,7 @@ export const FADEYI_SOMOLU_BOSS: BossDef = {
   },
   systemControlled: 'The junction passage grid of Fadeyi and Somolu: who may cross when, and at what price',
   exposeObjective:
-    'Hold each junction zone against the route marshals until it opens; when every junction is held and open, the Warden is exposed at his box and can be eliminated.',
+    'Hold each junction zone against the route marshals until it opens; when every junction is held and open, the Garage Master is exposed at his box and can be eliminated.',
   objectiveKind: 'junctionAccess',
   signatureAbility: {
     name: 'Right of Way',
@@ -61,7 +65,7 @@ export const FADEYI_SOMOLU_BOSS: BossDef = {
     },
     {
       title: 'Closing Time',
-      objective: 'Hold the last junction, then finish the exposed Warden.',
+      objective: 'Hold the last junction, then finish the exposed Garage Master.',
       bossBehaviour: 'Steps off his box to personally contest the last junction, wand raised.',
       pressure: 'The whole crew defends the final zone; the route out is only open while held.',
       callout: 'Last crossing. Hold it and he loses the box. Finish him there.',
@@ -72,13 +76,15 @@ export const FADEYI_SOMOLU_BOSS: BossDef = {
       speaker: 'MAMA PUT',
       text: 'Fadeyi junction na Kobo territory. You must pay to cross a road wey God make free.',
     },
-    marshal('Good evening, passenger. State your business at the crossing.'),
+    marshal(
+      'Good evening, my people, e kaasan. Who dey cross today? Show me your ticket or tell me your business.',
+    ),
     {
       speaker: 'RADIO',
       text: 'Three footbridge routes, one BRT lane, a bank on every corner. Marshals at each. Hold the junctions to open the way.',
     },
     marshal(
-      'You will find that the rules here are simple. You cross when I say. You pay when I say. You smile when I say.',
+      'The rules here are simple. You cross when I say. You pay when I say. You smile when I say, and na me go greet you first.',
     ),
     marshal('Today I say: wait.'),
     chairman('Gbenga, you hold the road. I hold the others. We are in agreement.'),
@@ -103,7 +109,7 @@ export const FADEYI_SOMOLU_BOSS: BossDef = {
   ],
   defeatSequenceOusted: [
     marshal('I will return when the traffic does. The road is not finished with me.'),
-    { speaker: 'RADIO', text: 'The Warden has left his box. The junctions are open.' },
+    { speaker: 'RADIO', text: 'The Garage Master has left his box. The junctions are open.' },
     chairman('A crossing is only a line on a map, Gbenga. We will draw another.'),
   ],
   reward: {
@@ -134,7 +140,7 @@ export const FADEYI_SOMOLU: DistrictContent = {
     title: 'The Toll at the Crossing',
     location: 'Fadeyi and Somolu: the footbridge, the BRT lane and the bank frontage',
     summary:
-      'Three corridors, a lit wand and a ledger. Marshal Kobo decides who crosses and for how much. Hold each junction zone against his route marshals until it opens, then take the Warden off his painted box.',
+      'Three corridors, a lit wand and a ledger. Marshal Kobo decides who crosses and for how much. Hold each junction zone against his route marshals until it opens, then take the Garage Master off his painted box.',
     objectives: [
       'Hold junction zones against the route marshals',
       'Open routes by holding each junction in turn',

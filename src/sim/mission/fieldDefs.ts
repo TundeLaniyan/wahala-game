@@ -10,6 +10,7 @@
 import type { MissionId, NpcRole } from './types';
 import type { RaidId } from '../campaign/types';
 import type { Tile2 } from './defs';
+import { ebuteX } from '../arenas/ebuteWest';
 
 export interface FieldMarkerDef {
   x: number;
@@ -282,28 +283,31 @@ const defs: FieldMissionDef[] = [
     id: 'ebuteMetta.approach',
     districtId: 'ebuteMetta',
     name: 'Yard Approach',
-    start: [3, 32],
-    returnMarker: m(6, 36, 'YARD GATE'),
+    start: [ebuteX(3), 32],
+    returnMarker: m(ebuteX(6), 36, 'YARD GATE'),
     legs: [
       {
         kind: 'reachMarkers',
         text: 'Walk through the 3 checkpoints to the signal box.',
-        markers: [m(10, 36, 'FENCE'), m(20, 32, 'SIDING'), m(30, 27, 'SIGNAL BOX')],
+        markers: [m(ebuteX(10), 36, 'FENCE'), m(ebuteX(20), 32, 'SIDING'), m(ebuteX(30), 27, 'SIGNAL BOX')],
       },
       { kind: 'door', text: 'Stand on the signal-shed door for 1 second to raid it.', doorId: 'shed' },
     ],
     doors: [
       {
         id: 'shed',
-        x: 33,
+        x: ebuteX(33),
         y: 29,
         label: 'SIGNAL SHED',
         raidId: 'junctionToolShed',
-        returnTile: [33, 28],
+        returnTile: [ebuteX(33), 28],
         required: true,
       },
     ],
-    enemies: [guard('Switchman', 12, 34, 'switchmen'), guard('Switchman', 26, 34, 'switchmen')],
+    enemies: [
+      guard('Switchman', ebuteX(12), 34, 'switchmen'),
+      guard('Switchman', ebuteX(26), 34, 'switchmen'),
+    ],
     timeLimitSec: 360,
     parSec: 180,
   },

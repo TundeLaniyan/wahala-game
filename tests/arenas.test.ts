@@ -193,7 +193,7 @@ describe('City Rumble boards', () => {
     rumbleFadeyi: [51, 33],
     rumbleLagosIsland: [55, 39],
     rumbleLekki: [57, 39],
-    rumbleEbuteMetta: [55, 39],
+    rumbleEbuteMetta: [75, 39],
   };
   it.each(Object.entries(SIZE))(
     '%s is a large board for up to 32 competitors with spread-out spawns',

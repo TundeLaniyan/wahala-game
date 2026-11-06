@@ -127,6 +127,15 @@ export * from './campaign/types';
 export * from './raid';
 export { CAMPAIGN_CONFIG, campaignConfig } from './config';
 export type { CampaignConfig, EnemyAwareness, EnemyMeleeSpec } from './config';
+export {
+  CAMPAIGN_LEVELS,
+  CAMPAIGN_LEVEL_DEFS,
+  DEFAULT_CAMPAIGN_LEVEL,
+  isCampaignLevel,
+  levelConfigLayer,
+  levelMaxHp,
+} from './campaign/levels';
+export type { CampaignLevel, CampaignLevelDef } from './campaign/levels';
 export { ENEMY_KINDS, ENEMY_KIND_IDS, enemyDef } from './data/enemies';
 export type { EnemyKindDef } from './data/enemies';
 export {

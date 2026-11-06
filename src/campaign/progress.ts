@@ -3,8 +3,22 @@
  * save and never mutates its input. Rewards, unlocks and story flags are derived from the districts that are
  * cleared, so a save can always be repaired (see save.ts) without losing a paid reward.
  */
-import type { CharacterId, Difficulty, MissionId, MissionModifierId, MissionOutcome } from '../sim';
-import { CHARACTER_IDS, DIFFICULTIES, MISSION_IDS, MODIFIER_FOR } from '../sim';
+import type {
+  CampaignLevel,
+  CharacterId,
+  Difficulty,
+  MissionId,
+  MissionModifierId,
+  MissionOutcome,
+} from '../sim';
+import {
+  CHARACTER_IDS,
+  DEFAULT_CAMPAIGN_LEVEL,
+  DIFFICULTIES,
+  MISSION_IDS,
+  MODIFIER_FOR,
+  isCampaignLevel,
+} from '../sim';
 import { CAMPAIGN, FINALE_UNLOCK, MODIFIER_IDS, nextDistrict } from './content';
 import { clearDistrictSections, initialSectionState, refreshSections } from './sectionState';
 import type { CampaignSave, DistrictId, DistrictProgress, DistrictStatus, RewardDef } from './types';
@@ -72,6 +86,7 @@ export function createSave(now: number): CampaignSave {
     flags: [],
     character: CHARACTER_IDS[0]!,
     difficulty: 'rookie',
+    campaignLevel: DEFAULT_CAMPAIGN_LEVEL,
     ...initialSectionState(),
     sectionRewards: [],
   });
@@ -258,6 +273,15 @@ export function setLoadout(
       : save.difficulty;
   if (character === save.character && difficulty === save.difficulty) return save;
   return { ...save, character, difficulty, updatedAt: now };
+}
+
+/**
+ * Changes the campaign difficulty. Pure (callers decide WHEN: the controller allows it only outside a live mission).
+ * Progress, stars, rewards and flags are untouched: the level never changes what is cleared or earned.
+ */
+export function setCampaignLevel(save: CampaignSave, level: CampaignLevel, now: number): CampaignSave {
+  if (!isCampaignLevel(level) || level === save.campaignLevel) return save;
+  return { ...save, campaignLevel: level, updatedAt: now };
 }
 
 /** Is a reward-granted fighter content id (costume, title, perk, modifier, district, finale) unlocked? */

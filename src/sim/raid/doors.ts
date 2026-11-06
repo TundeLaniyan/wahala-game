@@ -6,6 +6,7 @@
  * `raidRoomOpened`. Side rooms are never required: their bonus (a health segment, an Armour plate, a star token) is
  * picked up by walking onto its tile (`raidBonusTaken`).
  */
+import { campaignConfig } from '../config';
 import { tileIndex } from '../grid';
 import { Tile } from '../types';
 import type { GameState, SimEvent } from '../types';
@@ -70,7 +71,10 @@ export function updateBonuses(state: GameState, events: SimEvent[]): void {
     if (!b.taken && human.alive && human.stepRemaining === 0 && human.x === b.x && human.y === b.y) {
       b.taken = true;
       if (b.kind === 'heal' && human.vitals)
-        human.vitals.hp = Math.min(human.vitals.maxHp, human.vitals.hp + RAID_TUNING.healBonus);
+        human.vitals.hp = Math.min(
+          human.vitals.maxHp,
+          human.vitals.hp + (campaignConfig(state.config).healBonus ?? RAID_TUNING.healBonus),
+        );
       else if (b.kind === 'armour')
         human.armour = Math.min(state.config.protection.maxArmour, human.armour + 1);
       else if (b.kind === 'star') r.bonusStars++;

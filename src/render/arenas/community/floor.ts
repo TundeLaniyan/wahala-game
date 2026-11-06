@@ -23,6 +23,8 @@ export interface FloorOpts {
   /** colour of the plaza pavers ('_' tiles) */
   pavers: [number, number, number];
   lane?: string;
+  /** painted right after the asphalt (before kerbs and lane lines): a road surface that is not asphalt */
+  paved?: (g: Ctx, rg: Ctx, layout: readonly string[], r: () => number) => void;
   /** more painting on top: (g, rg, layout, r) */
   extra?: (g: Ctx, rg: Ctx, layout: readonly string[], r: () => number) => void;
 }
@@ -101,6 +103,7 @@ export function communityFloor(arenaId: string, o: FloorOpts): FloorDrawer {
       }
     // roads
     paintRoads(g, rg, layout, r, o.road);
+    o.paved?.(g, rg, layout, r);
     paintKerbs(g, layout, o.kerb?.[0] ?? 'rgba(206,196,170,0.85)', o.kerb?.[1] ?? 'rgba(40,36,30,0.85)');
     const lane = o.lane ?? 'rgba(232,224,196,0.7)';
     const bands = roadBands(layout);

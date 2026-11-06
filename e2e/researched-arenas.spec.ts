@@ -15,7 +15,7 @@ const STAGES: [id: string, name: RegExp, size: [number, number]][] = [
   ['rumbleFadeyi', /Fadeyi/, [51, 33]],
   ['rumbleLagosIsland', /Lagos Island/, [55, 39]],
   ['rumbleLekki', /Lekki/, [57, 39]],
-  ['rumbleEbuteMetta', /Ebute-Metta/, [55, 39]],
+  ['rumbleEbuteMetta', /Ebute-Metta/, [75, 39]],
 ];
 
 function watchErrors(page: Page): string[] {
@@ -130,6 +130,42 @@ test.describe('City Rumble communities', () => {
     await expect(page.getByTestId('btn-place')).toHaveText(/GENERATOR/);
     expect(await page.locator('.abtn').count()).toBe(2);
     await page.screenshot({ path: `e2e-shots/${info.project.name}-rumble-lekki-vehicle-action.png` });
+    expect(errors).toEqual([]);
+  });
+  // Ebute Metta West (decisions EW1-EW9): the expanded 75 x 39 board on a phone viewport, with the ordinary two action buttons
+  test('phone: Ebute-Metta West (75 x 39) starts on a phone and plays without page errors, with exactly two action buttons', async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== 'mobile', 'phone only');
+    const errors = watchErrors(page);
+    await page.setViewportSize({ width: 844, height: 390 });
+    await open(page, '&nobots&noattract');
+    await page.evaluate(() => {
+      const st = (
+        window as unknown as {
+          __WAHALA__: { store: { getState(): { settings: object }; setState(p: object): void } };
+        }
+      ).__WAHALA__.store;
+      st.setState({
+        settings: {
+          ...st.getState().settings,
+          play: 'rumble',
+          rumbleArenaId: 'rumbleEbuteMetta',
+          rumbleCompetitors: 8,
+          character: 'streetBaller',
+        },
+      });
+    });
+    await page.getByTestId('quick-play').tap();
+    await expect(page.getByTestId('hud')).toBeVisible();
+    await stepTicks(page, 200);
+    expect(await live(page)).toMatchObject({
+      arenaId: 'rumbleEbuteMetta',
+      width: 75,
+      height: 39,
+      phase: 'playing',
+    });
+    expect(await page.locator('.abtn').count()).toBe(2);
     expect(errors).toEqual([]);
   });
 });
