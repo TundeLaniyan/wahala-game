@@ -7,6 +7,7 @@
 //   reached     a third of a second after stepping onto CHECKPOINT A (feedback + the next objective)
 //   door        the three checkpoints walked, standing on the depot door, the hold 40 % done
 //   drain       as `door`, then a step off the door: the hold draining
+//   map         the campaign map with the Oshodi section card (briefing wording; use `portrait`)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 const [outDir = 'docs/screenshots/checkpoint-clarity', device = 'desktop', list = 'start', prefix = ''] =
@@ -34,6 +35,24 @@ for (const scenario of list.split(',')) {
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await page.goto(`${process.env.SHOT_URL ?? 'http://localhost:4931/wahala-game/'}?debug&noattract&seed=7`);
   await page.getByTestId('title-screen').waitFor();
+  if (scenario === 'map') {
+    // the campaign map with the Oshodi section cards (the briefing wording), no match
+    await page.evaluate(() => {
+      const c = window.__WAHALA__.campaign();
+      c.load();
+      c.startNew();
+      c.storyDone();
+    });
+    await page.waitForTimeout(1500);
+    const card = page.getByTestId('section-oshodi.s1');
+    if (await card.count()) await card.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+    const file = `${outDir}/${prefix}${device}-map.jpg`;
+    await page.screenshot({ path: file, type: 'jpeg', quality: 72 });
+    console.log(file, errors.length ? `ERRORS ${errors.join(' | ')}` : '');
+    await page.context().close();
+    continue;
+  }
   await page.evaluate(() => {
     const c = window.__WAHALA__.campaign();
     c.load();

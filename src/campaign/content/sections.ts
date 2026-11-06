@@ -67,7 +67,7 @@ const OSHODI_SECTIONS: SectionDef[] = [
     order: 1,
     name: 'Terminal Approach',
     summary:
-      'The south-west streets feed the bus terminal through Orita gate. Take the checkpoints and break into the dispatch depot behind them.',
+      'The south-west streets feed the bus terminal through Orita gate. Walk through the checkpoints and break into the dispatch depot behind them.',
     requires: [],
     missions: [
       {

@@ -2,6 +2,16 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Checkpoint clarity in field missions (worker `checkpoint-ux`, from `a4fe457`)
+
+Reference: `docs/CHECKPOINT_CLARITY.md`; decisions CK1-CK8. Not merged, not deployed. Presentation and wording only (no rule, timing or tile changed).
+
+- Walk-through checkpoints are beacons (column, flag, ripple, a waypoint arrow over the CURRENT one; later ones faint; reached ones flash then tick); doors are a square cyan hold pad with a door icon and a hold ring.
+- Objective block first in the right column: GO TO / HOLD / DEFEAT / ESCAPE / RETURN + target + "1 OF 3" + notes, and the door hold bar "HOLD 0.4 / 1.0 s" (fills / drains); "CHECKPOINT A ✓ · NEXT: CHECKPOINT B" rail notices; no boss row / boss bar in field missions; compass = current objective; minimap rings it.
+- Plain leg text for all eleven field missions; Oshodi approach briefing card.
+
+Verification: `npx tsc --noEmit`, `npx eslint src tests e2e`, Vitest field / mission / ui / app / campaign / raid / architecture / render mission markers + checkpoint beacons (66 files, 900 passed), `e2e/checkpoint-clarity.spec.ts` desktop and mobile passed, `e2e/mission-presentation.spec.ts` desktop passed; screenshots in `docs/screenshots/checkpoint-clarity/` reviewed. The full suite (`npm run check`, all Playwright) was not run.
+
 ## Kill streaks, close combat and touch input (branch `claude/wahala-streaks-combat-input-v1`, from `8ebf3f4`)
 
 Reference: `docs/STREAKS_AND_COMBAT.md`; decisions MI1-MI5, CB1-CB4, SK1-SK4, VG1-VG4, GK1. Not merged, not deployed.
