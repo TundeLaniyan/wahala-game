@@ -80,7 +80,7 @@ crush-from-2:00 rules. Hazards use existing styles; every lethal event is telegr
 | Fadeyi | 51 x 33 | 5: BRT centreline, shopfronts, neighbourhood, Onipanu approach, recreation | median barriers and BRT shelters, three crossing gaps, bank frontage, walled court, side roads, footbridge | carriageway waves, BRT-lane wave (2.5 s), Danfo bay departure, goods, drop | highway loops beyond both mouths (west / east) and the Onipanu side roads |
 | Lagos Island | 55 x 39 | 6: Balogun, Idumota, Broad Street, civic square, Onikan, Marina | textile stall maze, shop rows, office towers, heritage block, park wall, monument, quay sheds; cathedral and bridge approach behind | boulevard and Marina road waves, shopfront goods, drop, harbour wash (non-lethal) | boulevard loops north, Marina road loops, the elevated bridge deck |
 | Lekki | 57 x 39 | 6: promenade, Ikate, Admiralty, coastal, estates, gateway | palm promenade, glass blocks, compound walls and villas, arts-market sheds, sports club, hoarding, fuel canopy; the Link Bridge on the lagoon | expressway and Freedom Way waves, construction debris, drop, lagoon wash (non-lethal) | expressway and Freedom Way loops, dispatch bikes |
-| Ebute-Metta | 55 x 39 | 6: heritage, station, Oyingbo, residential, rail yard, foreshore | terminus, heritage house, station hall and platforms, rails between solid portals, wagons, signal cabin, market arcade, timber foreshore | road waves, delivery truck, railcar (3.5 s; open walkway beyond both portals), shopfront goods, drop, foreshore wash | road loops, the commuter viaduct behind the terminus |
+| Ebute-Metta (with Ebute Metta West, `docs/EBUTE_METTA_WEST.md`) | 75 x 39 (was 55 x 39) | 10: the six below plus Abule Ijesha Lanes, Apapa Road, Ilogbo Quarter, Otumara Waterfront (west) | terminus, heritage house, station hall and platforms, rails between solid portals, wagons, signal cabin, market arcade, timber foreshore | road waves, delivery truck, railcar (3.5 s; open walkway beyond both portals), shopfront goods, drop, foreshore wash | road loops, the commuter viaduct behind the terminus |
 
 Vehicles: each board carries the road lanes and routes the existing one-press vehicle uses (tested: a legal route exists for every
 character on every board). Which vehicle a character summons, and how it behaves, is not a map rule and is unchanged here.
@@ -141,7 +141,7 @@ settles at capture; treat them as +/- 30 %.
 | Lekki (57x39) | medium desktop 1280x720 | 857 | 2,662,316 | 401 / 1,585,684 (old `rumbleLekkiNight`: replaced map) |
 | Lekki (57x39) | low desktop | 534 | 1,251,654 | 397 / 1,231,809 (old `rumbleLekkiNight`: replaced map) |
 | Lekki (57x39) | low phone 844x390 | 368 | 708,396 | 225 / 689,247 (old `rumbleLekkiNight`: replaced map) |
-| Ebute-Metta (55x39) | medium desktop 1280x720 | 869 | 2,944,711 | none (new arena) |
+| Ebute-Metta (55x39, before Ebute Metta West; 75x39 numbers in `docs/EBUTE_METTA_WEST.md`) | medium desktop 1280x720 | 869 | 2,944,711 | none (new arena) |
 | Ebute-Metta (55x39) | low desktop | 515 | 1,417,297 | none (new arena) |
 | Ebute-Metta (55x39) | low phone 844x390 | 554 | 1,434,397 | none (new arena) |
 

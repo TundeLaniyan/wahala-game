@@ -81,6 +81,7 @@ Only comment lines naming the anchors were added (`ojuelegbaLandmarks.ts`, `osho
 * **Station name plate** (`ebute-station-sign`): the `EBUTE-METTA / STATION  •  PLATFORMS 1-4` plate moved from 4.9 m to 2.35 m, grew to 4.6 x 0.92 m, white on green; the platform posts carry blue-and-white `EBUTE-METTA` name boards. Frame: `follow-station`.
 * **Signal gantry** (`ebute-signal-gantry`, new): each rail portal now carries a steel signal gantry (two masts, a beam, three colour-light heads, lit on both faces) and a face-mounted double lamp over the arch; the signal cabin has a semaphore mast. Frames: `follow-gantry`, `follow-yard`.
 * **Rail yard** (`ebute-rail-yard`): the wagons, ballast and solid portals were already there; the cabin now has a `YARD CABIN  •  KEEP CLEAR` board and the semaphore, and the gantries frame the tracks. Frame: `follow-yard`.
+* **Ebute Metta West** (later expansion, `docs/EBUTE_METTA_WEST.md`, decisions EW1-EW10): the board grew from 55 x 39 to 75 x 39 by 20 columns on the west; the three anchors above are unchanged (still exactly three; the west adds none) and moved with the board (`follow-station` is now tile 51,17, `follow-yard` 48,23, `follow-gantry` 46,5 in `scripts/map-identity-shots.mjs`). The mesh / triangle figures in this document are for the 55 x 39 board; the 75 x 39 figures are in the new report.
 
 ## 4. Haze
 

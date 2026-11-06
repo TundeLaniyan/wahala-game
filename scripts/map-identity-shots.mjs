@@ -49,10 +49,14 @@ export const SHOTS = {
     ['follow-plaza', 24, 10],
     ['whole', 'whole'],
   ],
+  // the board is 75 wide since Ebute Metta West (docs/EBUTE_METTA_WEST.md): the original tiles are x + 20, the west is x < 22
   rumbleEbuteMetta: [
-    ['follow-station', 31, 17],
-    ['follow-yard', 28, 23],
-    ['follow-gantry', 26, 5],
+    ['follow-station', 51, 17],
+    ['follow-yard', 48, 23],
+    ['follow-gantry', 46, 5],
+    ['follow-truck-park', 9, 14],
+    ['follow-ilogbo', 9, 26],
+    ['follow-otumara', 10, 34],
     ['whole', 'whole'],
   ],
 };

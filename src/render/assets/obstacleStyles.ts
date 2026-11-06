@@ -265,7 +265,7 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
     }),
   }),
   rumbleEbuteMetta: style({
-    note: 'permanent cover is drawn whole by the board cover (the colonial terminus, the heritage house, the station hall, the rail portals, freight wagons, the Oyingbo arcade, timber stacks: ebuteMettaArt.ts); crush blocks are wall stubs and precast; per district clutter: crates and cartons at the terminus, barricades and cable drums at the station, crates and sacks at Oyingbo, cartons and kegs in the mainland streets, drums and cable drums in the rail yard, planks (crates) and tyres on the foreshore; barriers are tyre stacks and barricades',
+    note: 'permanent cover is drawn whole by the board cover (the colonial terminus, the heritage house, the station hall, the rail portals, freight wagons, the Oyingbo arcade, timber stacks, and in the west the plastered old houses, walled compounds, trailers and tankers, hoarding shops, canoe slips and the spur signal post: ebuteMettaArt.ts); crush blocks are wall stubs and precast; per district clutter: crates and cartons at the terminus, barricades and cable drums at the station, crates and sacks at Oyingbo, cartons and kegs in the mainland streets, drums and cable drums in the rail yard, planks (crates) and tyres on the foreshore; in the west cartons and kegs in the Abule Ijesha and Ilogbo lanes, tyres, drums and barricades on Apapa Road, fish crates and drums at Otumara; barriers are tyre stacks and barricades',
     pillars: ['prop_pillar_wallstub', 'prop_pillar_c', 'prop_pillar_a'],
     soft: {
       prop_soft_crates: 3,
@@ -281,6 +281,11 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
       residential: ['prop_soft_cartons', 'prop_soft_kegs', 'prop_soft_cartons', 'prop_soft_crates'],
       railYard: ['prop_soft_drums', 'prop_soft_cabledrum', 'prop_soft_crates', 'prop_soft_drums'],
       foreshore: ['prop_soft_crates', 'prop_soft_tyres', 'prop_soft_crates', 'prop_soft_drums'],
+      // Ebute Metta West: cartons and kegs in the old streets, tyres and drums on Apapa Road, fish crates at Otumara
+      abuleIjesha: ['prop_soft_cartons', 'prop_soft_kegs', 'prop_soft_crates', 'prop_soft_cartons'],
+      apapaRoad: ['prop_soft_tyres', 'prop_soft_barrier', 'prop_soft_drums', 'prop_soft_tyres'],
+      ilogbo: ['prop_soft_cartons', 'prop_soft_kegs', 'prop_soft_cartons', 'prop_soft_crates'],
+      otumara: ['prop_soft_fishcrates', 'prop_soft_crates', 'prop_soft_drums', 'prop_soft_tyres'],
     }),
   }),
   rumbleLekki: style({
