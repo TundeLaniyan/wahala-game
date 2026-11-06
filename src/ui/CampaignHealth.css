@@ -194,3 +194,25 @@
     animation: none;
   }
 }
+
+/* phones in landscape: the title / number and the segments share one row (the dock must fit above the action buttons) */
+@media (max-height: 520px) {
+  .mission-dock .campaign-health {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 6px;
+    padding: 2px 6px 3px 6px;
+  }
+  .mission-dock .campaign-health .ch-head {
+    flex: none;
+  }
+  .mission-dock .campaign-health .ch-segs {
+    flex: 1 1 60px;
+    min-width: 60px;
+  }
+  .mission-dock .campaign-health .ch-chips,
+  .mission-dock .campaign-health .ch-cause {
+    flex: 1 0 100%;
+  }
+}

@@ -42,8 +42,22 @@ Each conflicted file had one hunk; nothing from either side was dropped.
 
 ## Known limitations and remaining defects
 - Software GL only (SwiftShader), no real device: frame rate is not representative; paver shimmer in motion is unverified (stills only). Draw calls on the Lekki frame are unchanged within the usual run-to-run spread (about 420-520).
-- Phone 844x390: the objective / health rail is clipped at its bottom (the LIVES row) in the Oshodi field; the gameplay branch's own screenshot shows the same, so it is not from this merge.
+- (Fixed after founder review, see "Mobile HUD fit" below: the phone-landscape dock was clipped.)
 - The bot level is a gentle step on its own in the scripted harness; the per-level awareness / recovery / pressure knobs are not scaled yet (CI2, unmeasured).
 - The boss-intro panel the story spec captures is Mushin's; the Oshodi and Fadeyi provisional boss presentations are unchanged from the Lagos branch and covered by its unit tests, not re-photographed here.
-- `e2e/campaign-difficulty.spec.ts` screenshots right after a click and can catch the button's 0.12 s colour fade (Normal still lit, Hard's text shown); the selector itself is correct (checked settled, `aria-pressed` and colour). Test-only cosmetic.
+- (Fixed: `e2e/campaign-difficulty.spec.ts` now waits for the settled selected state before the picture and asserts it.)
 - No seven-district redesign, no Ojuelegba boss: the district order is the release's (Ojuelegba home + six).
+
+## Mobile HUD fit (final fix)
+**Defect.** On a phone in landscape the campaign dock under the minimap (objective, health, lives, phase) was cut off at the bottom: it ends above the action buttons, and its content was 39-83 px taller than the room (measured at 667x375, 844x390, 915x412, 932x430; worst while holding the depot door, because the hold bar is the tallest content). Portrait and desktop were fine.
+
+**Correction (CSS and two small component changes; the HUD is not redesigned, desktop and portrait are untouched).** All rules apply only below 520 px height (landscape phones):
+- `ui/Minimap.tsx`: with a campaign mission the map is at most 64 px tall (52 px under 400 px tall); a tall board is drawn scaled down smoothly instead of at its 2 px-per-tile floor. That gives the dock about 40 px.
+- `ui/CampaignHealth.css`: the title / number and the segments share one row; chips stay on their own row.
+- `ui/MissionPanel.tsx` / `.css`: a field-mission panel drops its callout (the objective block above says it) and lays the progress text and lives side by side; under 400 px tall the thin progress bar also goes (the count is in the text).
+- `ui/FieldGoal.tsx` / `.css`: while a door hold is showing, the notes ("stand still on it", "fights optional") give way to the bar and "STAY ON IT".
+- Nothing else moved: safe-area insets already applied to the column (`env(safe-area-inset-*)`), `MissionDock` still measures against the action buttons on resize, text sizes (clamped to height) and the 44 px touch rules are unchanged; the dock is `pointer-events: none` and is checked not to overlap `.abtn`.
+
+**Verification.** `scripts/hud-fit-check.mjs` (staged on the depot door after the three checkpoints, hold bar showing) at 667x375, 844x390, 915x412, 932x430 landscape and 390x844, 360x740, 430x932 portrait plus 1280x720 desktop: **0 px clipped, hold and lives present, no overlap with the controls at every size**. Regression test `e2e/mobile-hud-fit.spec.ts` (5 phone sizes) passes. Screenshots `docs/screenshots/mobile-hud-fit/` (`before-*` are the checkpoint state, where the clip was already visible; `after-*` are the door-hold state, the worst case).
+
+Final visual checks: Admiralty Way continuous interlocking blocks distinct from the asphalt (`4-lekki-admiralty-*`); the selector's selected state is checked settled (colour asserted); Oshodi beacons and the door hold readable at 667x375 (`2-*`); the classic raid camera shows all corridors (`1-depot-maze-*`).

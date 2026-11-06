@@ -123,6 +123,13 @@
     height: 8px;
   }
 }
+/* a hold on a phone in landscape: the bar and "STAY ON IT" already say it, so the notes ("stand still", "fights optional")
+   give way and the whole dock (objective, health, lives) fits above the action buttons */
+@media (max-height: 520px) {
+  .field-goal.has-hold .fg-notes {
+    display: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .fg-hold-bar i {
     transition: none;

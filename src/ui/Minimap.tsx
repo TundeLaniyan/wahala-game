@@ -237,18 +237,23 @@ export function Minimap() {
       const { state, focusId } = live;
       const short = window.innerHeight < 480;
       const maxW = short ? 130 : Math.min(230, window.innerWidth * 0.2);
-      const maxH = short ? 96 : 170;
+      // a phone in landscape with a campaign mission: the dock under the map holds the objective, health and lives, which
+      // must all fit above the action buttons, so the map is smaller there (docs/CAMPAIGN_INTEGRATION.md, mobile HUD fit)
+      const maxH = short ? (state.mission ? (window.innerHeight < 400 ? 52 : 64) : 96) : 170;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const g2 = minimapGeometry(state.width, state.height, maxW, maxH);
-      const key = `${state.seed}:${state.arenaId}:${g2.cell}:${dpr}`;
+      // the cell is at least 2 px, so a tall board can still exceed the height: show it scaled down (smooth, not pixelated)
+      const shrink = Math.min(1, maxH / g2.height);
+      const key = `${state.seed}:${state.arenaId}:${g2.cell}:${dpr}:${shrink.toFixed(3)}`;
       if (key !== baseKey) {
         baseKey = key;
         geo = g2;
         base = staticLayer(state, g2, dpr);
         canvas.width = Math.round(g2.width * dpr);
         canvas.height = Math.round(g2.height * dpr);
-        canvas.style.width = `${g2.width}px`;
-        canvas.style.height = `${g2.height}px`;
+        canvas.style.width = `${Math.round(g2.width * shrink)}px`;
+        canvas.style.height = `${Math.round(g2.height * shrink)}px`;
+        canvas.style.imageRendering = shrink < 1 ? 'auto' : '';
       }
       const g = canvas.getContext('2d');
       if (!g || !geo || !base) return;

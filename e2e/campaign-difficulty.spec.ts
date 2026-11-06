@@ -28,6 +28,12 @@ test.describe('Campaign difficulty', () => {
     await page.getByTestId('campaign-level-hard').click();
     await expect(picker).toHaveAttribute('data-level', 'hard');
     await expect(page.getByTestId('campaign-level-summary')).toContainText('One health segment fewer');
+    // the chip's colour fades for 0.12 s: the picture and the check are of the settled state (Hard lit, the others not)
+    await expect(page.getByTestId('campaign-level-hard')).toHaveCSS('background-color', 'rgb(255, 184, 0)');
+    await expect(page.getByTestId('campaign-level-normal')).not.toHaveCSS(
+      'background-color',
+      'rgb(255, 184, 0)',
+    );
     await page.screenshot({
       path: `${SHOTS}/difficulty-select-${info.project.name}.jpg`,
       type: 'jpeg',

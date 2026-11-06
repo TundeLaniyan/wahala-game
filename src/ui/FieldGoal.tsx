@@ -14,7 +14,7 @@ export function FieldGoal({ mission }: { mission: MissionView | null }) {
   if (!g) return null;
   return (
     <section
-      className={`field-goal verb-${g.verb}`}
+      className={`field-goal verb-${g.verb}${g.hold ? ' has-hold' : ''}`}
       data-testid="field-goal"
       data-verb={g.verb}
       aria-label="Objective"

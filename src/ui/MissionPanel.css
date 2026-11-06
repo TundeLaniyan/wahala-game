@@ -189,6 +189,38 @@
     overflow: hidden;
   }
 }
+/*
+ * A field mission on a phone in landscape: the objective block above already says the callout, so the panel drops it and
+ * keeps the pips, phase, time, the progress and the lives (the dock must fit above the action buttons, never clipped).
+ */
+@media (max-height: 520px) {
+  .mission-dock .mission-panel.is-field .mp-callout {
+    display: none;
+  }
+  .mission-dock .mission-panel.is-field {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 6px;
+  }
+  .mission-dock .mission-panel.is-field .mp-head,
+  .mission-dock .mission-panel.is-field .mp-bar,
+  .mission-dock .mission-panel.is-field .mp-warnings {
+    grid-column: 1 / -1;
+  }
+  .mission-dock .mission-panel.is-field .mp-progress-text {
+    grid-column: 1;
+  }
+  .mission-dock .mission-panel.is-field .mp-foot {
+    grid-column: 2;
+  }
+}
+/* the smallest phones (375 px tall): the progress text already says the count, so the thin bar under it goes */
+@media (max-height: 400px) {
+  .mission-dock .mission-panel.is-field .mp-bar {
+    display: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .hud-rail .mp-boss.exposed,
   .mission-dock .mp-boss.exposed,

@@ -13,7 +13,7 @@ export function MissionPanel({ mission }: { mission: MissionView | null }) {
   const m = missionPanelModel(mission);
   return (
     <section
-      className={`mission-panel boss-${m.boss.state}${m.outcome ? ` over ${m.outcome}` : ''}`}
+      className={`mission-panel boss-${m.boss.state}${m.field ? ' is-field' : ''}${m.outcome ? ` over ${m.outcome}` : ''}`}
       data-testid="mission-panel"
       data-phase={mission.phase}
       data-boss={m.boss.state}
