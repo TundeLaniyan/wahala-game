@@ -25,4 +25,6 @@ export { abandonRaid } from './runtime';
 export { enemySeats, parseRaidLayout, raidProblems } from './layout';
 export type { ParsedRaid, SeatPlan } from './layout';
 export { RAID_TUNING } from './tuning';
+export { RAID_SHAPE_RULE, raidShape, raidShapeProblems } from './shape';
+export type { RaidShape } from './shape';
 export { raidDirectiveFor } from './directives';

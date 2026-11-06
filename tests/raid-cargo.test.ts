@@ -28,33 +28,35 @@ describe('the raid blast is the cross', () => {
 
   it('flames run along the row and column only, stop at concrete, and cover nothing diagonal', () => {
     const state = newRaid();
-    // (8,4): the hall's top lane; a pillar above it at (8,3), the lane (8,5) below and a pillar at (8,6)
+    // (11,6): a corridor tile between the pillars (10,6) and (12,6): the row arms stop at once, the column arms run
+    // their two tiles (the lane (11,5)-(11,4) up, (11,7)-(11,8) down)
     put(state, 0, 1, 11);
-    const ev = explodeAt(state, 8, 4);
+    const ev = explodeAt(state, 11, 6);
     expect(of(ev, 'generatorExploded')[0]!.radial).toBeUndefined();
-    expect(flameKeys(state)).toEqual(keys([8, 4], [7, 4], [6, 4], [9, 4], [10, 4], [8, 5]));
-    for (const f of state.flames) expect(f.x === 8 || f.y === 4).toBe(true);
+    expect(flameKeys(state)).toEqual(keys([11, 6], [11, 5], [11, 4], [11, 7], [11, 8]));
+    for (const f of state.flames) expect(f.x === 11 || f.y === 6).toBe(true);
   });
 
   it('a plain crate absorbs the arm and breaks; the range is two tiles', () => {
     const state = newRaid();
     put(state, 0, 1, 11);
-    // (8,5): west arm (7,5) then the crate at (6,5)
-    const ev = explodeAt(state, 8, 5);
-    expect(of(ev, 'blockDestroyed').map((e) => [e.x, e.y])).toEqual([[6, 5]]);
-    expect(at(state, 6, 5)).toBe(Tile.Empty);
+    // (7,5): west arm (6,5) then the crate at (5,5)
+    const ev = explodeAt(state, 7, 5);
+    expect(of(ev, 'blockDestroyed').map((e) => [e.x, e.y])).toEqual([[5, 5]]);
+    expect(at(state, 5, 5)).toBe(Tile.Empty);
     // nothing is more than two tiles from the generator
-    for (const f of state.flames) expect(Math.abs(f.x - 8) + Math.abs(f.y - 5)).toBeLessThanOrEqual(2);
+    for (const f of state.flames) expect(Math.abs(f.x - 7) + Math.abs(f.y - 5)).toBeLessThanOrEqual(2);
   });
 });
 
 describe('marked cargo', () => {
-  /** M1 of the depot at (8,7): pillars above and below; open its east side. */
+  /** M1 of the depot at (8,7): pillars above and below, the lane open on both sides (the crate at (6,7) cleared). */
   function cargoRig() {
     const state = newRaid();
     put(state, 0, 1, 11);
     open(state, 9, 7);
     open(state, 7, 7);
+    open(state, 6, 7);
     return state;
   }
 
@@ -114,12 +116,13 @@ describe('marked cargo', () => {
     const lock = state.raid!.cargo.find((c) => c.kind === 'crate')!;
     expect(lock.marked).toBe(false);
     expect(lock.maxHp).toBe(2);
-    // the shelf at (3,5) in the archive: hit it twice from the archive row (open the door's tile for the setup)
+    // the shelf in the archive alcove at (5,4): hit it twice from the archive corridor below it
+    expect([lock.x, lock.y]).toEqual([5, 4]);
     const events = [] as ReturnType<typeof explodeAt>;
-    events.push(...explodeAt(state, 3, 4));
+    events.push(...explodeAt(state, 5, 5));
     expect(lock.hp).toBe(1);
     advance(state, state.config.generator.flameTicks + 5);
-    events.push(...explodeAt(state, 3, 4));
+    events.push(...explodeAt(state, 5, 5));
     expect(lock.destroyed).toBe(true);
     expect(of(events, 'cargoHit')).toHaveLength(1);
     expect(of(events, 'cargoDestroyed').map((e) => [e.id, e.marked])).toEqual([[lock.id, false]]);
@@ -163,17 +166,17 @@ function mk(state: ReturnType<typeof newRaid>, x: number, y: number) {
 }
 
 describe('barrels', () => {
-  /** The Mushin storeroom: M at (8,6) between the barrels (7,6) and (9,6); barrels (8,1) and (8,2) in the office. */
+  /** The Mushin storeroom: M at (8,5) between the barrels (7,5) and (9,5); barrels (7,1) and (8,1) in the office. */
   it('a destroyed barrel explodes once, a few ticks later, and hits the cargo beside it', () => {
     const state = newRaid('partsStoreroom');
     put(state, 0, 1, 9);
     const stack = state.raid!.cargo.find((c) => c.id === 'cargo-1')!;
-    expect([stack.x, stack.y]).toEqual([8, 6]);
-    const ev = explodeAt(state, 5, 6); // east arm: (6,6), then the barrel at (7,6)
+    expect([stack.x, stack.y]).toEqual([8, 5]);
+    const ev = explodeAt(state, 5, 5); // east arm: (6,5), then the barrel at (7,5)
     const t0 = state.tick;
     expect(of(ev, 'cargoDestroyed').map((e) => [e.id, e.kind])).toEqual([['barrel-2', 'barrel']]);
     expect(state.raid!.barrelBlasts).toEqual([
-      { x: 7, y: 6, atTick: t0 + RAID_TUNING.barrelFuseTicks, ownerId: 0 },
+      { x: 7, y: 5, atTick: t0 + RAID_TUNING.barrelFuseTicks, ownerId: 0 },
     ]);
     expect(stack.hp).toBe(2); // not yet
     const after = advance(state, RAID_TUNING.barrelFuseTicks + 1);
@@ -181,8 +184,8 @@ describe('barrels', () => {
     expect(of(after, 'cargoHit').filter((e) => e.id === 'cargo-1')).toHaveLength(1);
     expect(stack.hp).toBe(1);
     // a plus of flames around the barrel, nothing past a wall
-    expect(state.flames.some((f) => f.x === 7 && f.y === 6)).toBe(true);
-    expect(state.flames.some((f) => f.x === 8 && f.y === 6)).toBe(true);
+    expect(state.flames.some((f) => f.x === 7 && f.y === 5)).toBe(true);
+    expect(state.flames.some((f) => f.x === 8 && f.y === 5)).toBe(true);
     // it exploded once: later ticks add no more hits
     const later = advance(state, 200);
     expect(of(later, 'cargoHit')).toHaveLength(0);
@@ -192,14 +195,14 @@ describe('barrels', () => {
   it('a barrel next to a barrel chains, one after the other', () => {
     const state = newRaid('partsStoreroom');
     put(state, 0, 1, 9);
-    const first = explodeAt(state, 10, 2); // office: west arm (9,2), then the barrel at (8,2)
+    const first = explodeAt(state, 10, 1); // office: west arm (9,1), then the barrel at (8,1)
     const t0 = state.tick;
     expect(of(first, 'cargoDestroyed').map((e) => e.id)).toEqual(['barrel-1']);
     const seen: { id: string; at: number }[] = [];
     for (let i = 0; i < 40; i++) {
       for (const e of of(tick(state, {}), 'cargoDestroyed')) seen.push({ id: e.id, at: state.tick - t0 });
     }
-    expect(seen.map((s) => s.id)).toEqual(['barrel-0']); // the barrel above it went with the first one's blast
+    expect(seen.map((s) => s.id)).toEqual(['barrel-0']); // the barrel beside it went with the first one's blast
     expect(seen[0]!.at).toBeGreaterThanOrEqual(RAID_TUNING.barrelFuseTicks);
     // and its own blast follows one fuse later: nothing is left pending afterwards
     expect(state.raid!.barrelBlasts).toEqual([]);
@@ -207,7 +210,7 @@ describe('barrels', () => {
 
   it('barrel flames hurt a player standing next to it (through the ordinary flame rules)', () => {
     const state = newRaid('partsStoreroom');
-    put(state, 0, 6, 6);
+    put(state, 0, 6, 5);
     const human = state.players[0]!;
     // destroy the barrel next to him with a hit, then let its fuse run
     hitCargo(

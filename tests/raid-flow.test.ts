@@ -151,11 +151,11 @@ describe('locked areas and opened routes', () => {
     const state = newRaid();
     letWavesAppear(state);
     const enemy = state.players[waveSeats(state, 0)[0]!]!;
-    put(state, enemy.id, 13, 8);
+    put(state, enemy.id, 12, 7);
     advance(state, 10);
     expect(state.raid!.switches[0]!.pressed).toBe(false);
     expect(doorOpen(state, 'firstAidDoor')).toBe(false);
-    put(state, 0, 13, 8);
+    put(state, 0, 12, 7);
     const sink = advance(state, 3);
     expect(state.raid!.switches[0]!.pressed).toBe(true);
     expect(of(sink, 'raidDoorOpened').map((e) => e.id)).toEqual(['firstAidDoor']);
@@ -243,13 +243,13 @@ describe('optional side rooms', () => {
     const state = newRaid('warehouseDispatchDepot', { hp: 2 });
     const human = state.players[0]!;
     expect(human.vitals).toMatchObject({ hp: 2, maxHp: 4 });
-    put(state, 0, 13, 8);
+    put(state, 0, 12, 7);
     advance(state, 3); // the switch
     put(state, 0, 11, 11);
     advance(state, 3);
     expect(human.vitals!.hp).toBe(2 + RAID_TUNING.healBonus);
     const full = newRaid();
-    put(full, 0, 13, 8);
+    put(full, 0, 12, 7);
     advance(full, 3);
     put(full, 0, 11, 11);
     advance(full, 3);
@@ -262,7 +262,7 @@ describe('optional side rooms', () => {
     expect(closet.seatIds).toHaveLength(1);
     expect(raidView(state)!.wave.total).toBe(2); // the closet group is not a wave in the numbers
     letWavesAppear(state);
-    put(state, 0, 2, 8); // the switch
+    put(state, 0, 3, 8); // the switch
     advance(state, 3);
     expect(doorOpen(state, 'closetDoor')).toBe(true);
     expect(closet.startedTick).not.toBeNull();
