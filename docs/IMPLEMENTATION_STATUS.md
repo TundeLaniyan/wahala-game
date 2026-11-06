@@ -555,7 +555,7 @@ Done: an illustrated story-panel system (`StoryHero`, `storyImages.ts`) with 19 
 | Part | State |
 | --- | --- |
 | A Ebute-Metta West | done: board 55x39 -> 75x39, open tiles 1,329 -> 1,774 (+33.5%), `docs/EBUTE_METTA_WEST.md`, decisions EW1-EW10 |
-| B Lekki Amarite Way | **not done**: the founder photographs were still not attached on the second request (no files in the session); `docs/LEKKI_AMARITE_WAY.md` |
+| B Lekki Amarite Way | done once the photographs arrived: procedural zig-zag pavers on the boulevard's two straight segments (assumed road, flagged for founder review), median and kerb stripes painted, geometry untouched; `docs/LEKKI_AMARITE_WAY.md`, decisions LK1-LK5 |
 | C Bosses | Oshodi "Oga Mic" and Fadeyi "Oga Footbridge" presentations done (provisional, not canon); Ojuelegba untouched (future seventh district and boss, separate work, decision CL8); four provisional candidates researched only (`docs/BOSS_INSPIRATIONS.md`), none implemented |
 | D Story panels | done: `docs/STORY_VISUALS.md`, 19 WebP panels, graceful fallback |
 | E Difficulty | done: `docs/CAMPAIGN_DIFFICULTY.md`, decisions CL1-CL7; tested at all three levels against the respawn hotfix (`tests/app/campaign-level-death.test.ts`) |

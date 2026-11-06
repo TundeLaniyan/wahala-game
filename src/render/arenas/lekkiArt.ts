@@ -21,6 +21,8 @@ import { communityFloor } from './community/floor';
 import { communityEnv } from './community/env';
 import { nightLookOf } from './community/looks';
 import { edgeStalls, streetLife, lampPost, skyline } from './community/setKit';
+import { paintPavers } from './community/pavers';
+import { AMARITE_WAY_PAVED, paintAmariteWayDetails } from './lekkiAmarite';
 import { streetPlane } from './oshodiKit';
 import { linkBridge } from './lekkiBridge';
 import { floorWords, layoutOf, mouthTraffic, tileWorld } from './rumbleV2Kit';
@@ -497,6 +499,9 @@ export const RUMBLE_LEKKI_FLOOR: FloorDrawer = communityFloor(ID, {
   base: [176, 168, 150],
   dust: 'rgba(160,140,100,',
   road: [66, 66, 68],
+  paved: (g, rg, _layout, r) => {
+    for (const rect of AMARITE_WAY_PAVED) paintPavers(g, rg, rect, r);
+  },
   pavers: [186, 174, 154],
   tint: {
     promenade: 'rgba(230,214,170,0.20)',
@@ -505,7 +510,7 @@ export const RUMBLE_LEKKI_FLOOR: FloorDrawer = communityFloor(ID, {
     coastal: 'rgba(222,200,150,0.22)',
     estates: 'rgba(90,130,90,0.12)',
   },
-  extra: (g, _rg, layout) => {
+  extra: (g, _rg, layout, r) => {
     // interlocking paving on the promenade, the court's painted lines, sand drifting into the coastal lanes
     g.fillStyle = 'rgba(150,170,120,0.28)';
     for (let y = 2; y <= 3; y++)
@@ -546,6 +551,8 @@ export const RUMBLE_LEKKI_FLOOR: FloorDrawer = communityFloor(ID, {
     // the boulevard's name, painted along the lanes (anchor lekki-admiralty-way): read from the south
     for (const yy of [12.5, 25.5])
       floorWords(g, 'ADMIRALTY WAY', 21.5, yy, 0.62, 'rgba(240,238,222,0.82)', -Math.PI / 2);
+    // Amarite Way's median and lane lines go on last, over the paving and the lane lines the generic pass drew
+    paintAmariteWayDetails(g, r);
   },
 });
 

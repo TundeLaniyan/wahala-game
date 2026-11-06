@@ -755,3 +755,13 @@ The City Rumble arena Ebute-Metta grew about 33% by adding genuine new territory
 | EW8 | **No new map anchors.** The identity rule "exactly three visual anchors per area" stands (`tests/render/map-anchors.test.ts`); the west's identity is carried by cover families, floor paint (APAPA RD road words and zebra, drain slabs, the rusted spur) and the lagoon set pieces. | `render/arenas/anchors.ts` (unchanged) |
 | EW9 | **Campaign Ebute is the same mission on the same tiles.** Dispatch-windows nodes, crew posts, boss post and the Yard Approach field mission are authored in the old coordinates and go through `ebuteX`; objectives, windows, tuning and the lives / respawn logic are untouched. | `sim/mission/defs.ts`, `sim/mission/fieldDefs.ts` |
 | EW10 | **Performance.** The expanded board adds about the same number of static objects as the board's area; numbers (static scene budget and per-frame draw calls and triangles, low / medium, desktop and 844 x 390 phone, before / after) are in `docs/EBUTE_METTA_WEST.md`; no new post-processing, light or texture; the west reuses the shared materials and the merged cover builder. `scripts/ebute-perf.mjs` reproduces them. | `scripts/ebute-perf.mjs` |
+
+## LK - Lekki Amarite Way paving (branch `claude/wahala-lagos-enhancement-v1`, `docs/LEKKI_AMARITE_WAY.md`)
+
+| # | Decision | Where |
+| --- | --- | --- |
+| LK1 | **Procedural, original zig-zag interlocking pavers** painted into the arena's one floor canvas; the founder photographs are references only and are not shipped. No new mesh, texture or draw call. | `render/arenas/community/pavers.ts` |
+| LK2 | **Only Amarite Way is paved.** The photographs match the commercial N-S boulevard (the straight run of Admiralty Way); its two straight segments (60 tiles) are paved, Freedom Way, the expressway and both junctions stay asphalt. This is an ASSUMPTION for founder review; `AMARITE_WAY_PAVED` is the single switch. | `render/arenas/lekkiAmarite.ts` |
+| LK3 | **Geometry is untouched**: the median (grass, black-and-white kerb stripes) and the lane dashes are floor paint, not obstacles. | `lekkiAmarite.ts` |
+| LK4 | **Blocks are drawn 0.36 x 0.18 tile**, larger than life, because the floor canvas is about 45 px per tile on Lekki and real-size blocks would shimmer as sub-pixel noise; joints low-contrast. | `pavers.ts` |
+| LK5 | `communityFloor` gains an optional `paved` hook run after the asphalt; no other arena uses it. | `community/floor.ts` |
