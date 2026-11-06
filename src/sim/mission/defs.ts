@@ -8,6 +8,7 @@
  *
  * Fictional faction ids (matched by the campaign content worker): see FACTION_IDS and docs/MISSION_SIM.md.
  */
+import { ebuteX } from '../arenas/ebuteWest';
 import { ticks } from '../config';
 import type { CharacterId } from '../types';
 import type { MissionId, NpcRole, ObjectiveKind, PhaseTuning } from './types';
@@ -336,6 +337,8 @@ const FADEYI: MissionDef = {
 
 // ------------------------------------------------------------------ Ebute-Metta: dispatch windows
 
+// The arena grew westward (EBUTE_WEST_DX columns, docs/EBUTE_METTA_WEST.md): every Ebute tile below is authored in the
+// ORIGINAL board's coordinates and shifted with `ebuteX`.
 const EBUTE: MissionDef = {
   id: 'ebuteMetta',
   arenaId: 'rumbleEbuteMetta',
@@ -346,17 +349,21 @@ const EBUTE: MissionDef = {
   exposeSec: 25,
   maxExposures: 3,
   reinforceMax: 3,
-  boss: { name: 'Ikenna Wayside', characterId: 'streetBaller', post: [30, 28], radius: 3 },
+  boss: { name: 'Ikenna Wayside', characterId: 'streetBaller', post: [ebuteX(30), 28], radius: 3 },
   crew: [
-    { role: 'objectiveDefender', name: 'Signal Guard', post: [25, 13], anchor: 0, radius: 3 },
-    { role: 'objectiveDefender', name: 'Signal Guard', post: [28, 22], anchor: 2, radius: 3 },
-    { role: 'runner', name: 'Yard Runner', post: [31, 27] },
-    { role: 'blocker', name: 'Platform Blocker', post: [29, 20] },
-    { role: 'supportUnit', name: 'Yard Hand', post: [31, 28], radius: 3 },
+    { role: 'objectiveDefender', name: 'Signal Guard', post: [ebuteX(25), 13], anchor: 0, radius: 3 },
+    { role: 'objectiveDefender', name: 'Signal Guard', post: [ebuteX(28), 22], anchor: 2, radius: 3 },
+    { role: 'runner', name: 'Yard Runner', post: [ebuteX(31), 27] },
+    { role: 'blocker', name: 'Platform Blocker', post: [ebuteX(29), 20] },
+    { role: 'supportUnit', name: 'Yard Hand', post: [ebuteX(31), 28], radius: 3 },
   ],
   phases: [
     {
-      nodes: [n('d1', 25, 12, 'SWITCH 1'), n('d2', 28, 15, 'SWITCH 2'), n('d3', 25, 23, 'SWITCH 3')],
+      nodes: [
+        n('d1', ebuteX(25), 12, 'SWITCH 1'),
+        n('d2', ebuteX(28), 15, 'SWITCH 2'),
+        n('d3', ebuteX(25), 23, 'SWITCH 3'),
+      ],
       goal: 2,
       holdTicks: ticks(1.5),
       decayPerTick: 3,
@@ -367,10 +374,10 @@ const EBUTE: MissionDef = {
     },
     {
       nodes: [
-        n('d1', 25, 10, 'SWITCH 1'),
-        n('d2', 28, 13, 'SWITCH 2'),
-        n('d3', 25, 21, 'SWITCH 3'),
-        n('d4', 28, 24, 'SWITCH 4'),
+        n('d1', ebuteX(25), 10, 'SWITCH 1'),
+        n('d2', ebuteX(28), 13, 'SWITCH 2'),
+        n('d3', ebuteX(25), 21, 'SWITCH 3'),
+        n('d4', ebuteX(28), 24, 'SWITCH 4'),
       ],
       goal: 3,
       holdTicks: 100,
@@ -382,10 +389,10 @@ const EBUTE: MissionDef = {
     },
     {
       nodes: [
-        n('d1', 25, 12, 'SWITCH 1'),
-        n('d2', 28, 14, 'SWITCH 2'),
-        n('d3', 25, 22, 'SWITCH 3'),
-        n('d4', 28, 25, 'SWITCH 4'),
+        n('d1', ebuteX(25), 12, 'SWITCH 1'),
+        n('d2', ebuteX(28), 14, 'SWITCH 2'),
+        n('d3', ebuteX(25), 22, 'SWITCH 3'),
+        n('d4', ebuteX(28), 25, 'SWITCH 4'),
       ],
       goal: 4,
       holdTicks: 100,

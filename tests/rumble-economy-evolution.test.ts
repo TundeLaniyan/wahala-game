@@ -299,7 +299,7 @@ describe('marked supply crates (RE-C3, RE-C5)', () => {
     for (const id of RUMBLE_ARENA_IDS) {
       const a = ARENAS[id]!;
       const marks = a.layout.join('').split('$').length - 1;
-      expect(marks, id).toBeLessThanOrEqual(24);
+      expect(marks, id).toBeLessThanOrEqual(id === 'rumbleEbuteMetta' ? 30 : 24); // Ebute Metta West holds 9 more (decision EW6)
       if (STAGES.includes(id)) expect(marks, id).toBeGreaterThanOrEqual(8);
     }
     for (const id of STAGES.filter((s) => ARENAS[s]!.mirrorSoftBlocks)) {

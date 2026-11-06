@@ -40,7 +40,7 @@ const SIZE: Record<(typeof V2)[number], [number, number]> = {
   rumbleFadeyi: [51, 33],
   rumbleLagosIsland: [55, 39],
   rumbleLekki: [57, 39],
-  rumbleEbuteMetta: [55, 39],
+  rumbleEbuteMetta: [75, 39],
 };
 
 /** Every City Rumble community is a multi-district, non-mirrored board (district graph and per-half fairness checked below). */
@@ -128,12 +128,14 @@ describe('Rumble stage registry', () => {
         .join(','),
     );
     expect(new Set(styles).size).toBe(V2.length);
-    // the district graphs: Ojuelegba five districts, Oshodi ten, the others six (Fadeyi five: the compact junction)
+    // the district graphs: Ojuelegba five districts, Oshodi and Ebute-Metta ten, the others six (Fadeyi five: the compact junction)
     expect(getArena('rumbleOjuelegba').districts?.length).toBe(5);
     expect(getArena('rumbleOshodi').districts?.length).toBe(10);
     expect(getArena('rumbleFadeyi').districts?.length).toBe(5);
-    for (const id of ['rumbleMushin', 'rumbleLagosIsland', 'rumbleLekki', 'rumbleEbuteMetta'])
+    for (const id of ['rumbleMushin', 'rumbleLagosIsland', 'rumbleLekki'])
       expect(getArena(id).districts?.length, id).toBe(6);
+    // Ebute-Metta: the six original districts plus the four of Ebute Metta West (decision EW2)
+    expect(getArena('rumbleEbuteMetta').districts?.length).toBe(10);
     // each community reads its own layout statistics (no two share a road share and chokepoint profile)
     const stats = Object.fromEntries(V2.map((id) => [id, layoutStats(getArena(id).layout)]));
     expect(new Set(V2.map((id) => `${Math.round(stats[id]!.roadPct)}:${stats[id]!.chokepoints}`)).size).toBe(
@@ -174,7 +176,10 @@ describe.each(V2.map((id) => [id, getArena(id)] as const))('%s', (id, a) => {
   it.runIf(!a.mirrorSoftBlocks)('is not mirrored but its two team halves hold comparable ground', () => {
     // Oshodi's dense trading streets leave the west with about 12% less open floor than the east (the walking
     // distances to the core and to supply crates are balanced in tests/rumble-oshodi.test.ts)
-    const openTol = id === 'rumbleOshodi' ? 0.12 : 0.1;
+    // Ebute-Metta West (decision EW5): the expansion adds ground strictly west of the original board, whose own open floor
+    // is concentrated east of its centre, so the west half holds about 19% less floor; the supplies and traps are balanced
+    // per half in tests/ebute-west.test.ts
+    const openTol = id === 'rumbleOshodi' ? 0.12 : id === 'rumbleEbuteMetta' ? 0.2 : 0.1;
     // Team Rumble splits west / east by x: each half (the centre column left out) has about as much open
     // floor, road and permanent cover as the other
     const count = (west: boolean, c: (ch: string) => boolean): number => {

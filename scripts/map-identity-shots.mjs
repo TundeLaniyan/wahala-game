@@ -57,6 +57,10 @@ export const SHOTS = {
   ],
 };
 
+// EXTRA_SHOTS='{"rumbleEbuteMetta":[["name",x,y,zoom?],...]}' replaces the shot list of the named arenas (art review of a
+// board region the table above does not cover, or before / after comparisons of a changed board).
+if (process.env.EXTRA_SHOTS) Object.assign(SHOTS, JSON.parse(process.env.EXTRA_SHOTS));
+
 const ids = (only ? only.split(',') : Object.keys(SHOTS)).filter(Boolean);
 const want = new Set(onlyShots.split(',').filter(Boolean));
 mkdirSync(dir, { recursive: true });

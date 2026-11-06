@@ -15,7 +15,7 @@ const STAGES: [id: string, name: RegExp, size: [number, number]][] = [
   ['rumbleFadeyi', /Fadeyi/, [51, 33]],
   ['rumbleLagosIsland', /Lagos Island/, [55, 39]],
   ['rumbleLekki', /Lekki/, [57, 39]],
-  ['rumbleEbuteMetta', /Ebute-Metta/, [55, 39]],
+  ['rumbleEbuteMetta', /Ebute-Metta/, [75, 39]],
 ];
 
 function watchErrors(page: Page): string[] {
