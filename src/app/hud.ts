@@ -209,6 +209,8 @@ export interface HudSnapshot {
   players: HudPlayer[];
   me: HudMe | null;
   localAlive: boolean;
+  /** A one-player campaign run (mission or raid): no spectating and no Skip; the mission's lives and respawn rules apply. */
+  inCampaign: boolean;
   result: MatchResult | null;
   entry: { stage: 'entry' | 'turn'; fraction: number; vehicle: VehicleKind } | null;
   crush: boolean;
@@ -634,6 +636,7 @@ export function buildHud(
     })),
     me,
     localAlive: local?.alive ?? false,
+    inCampaign: !!state.mission || !!state.raid,
     result: state.match.result,
     entry,
     crush: state.crush !== null,

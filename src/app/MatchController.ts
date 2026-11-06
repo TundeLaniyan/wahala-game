@@ -1080,6 +1080,13 @@ export class MatchController implements MissionHost {
 
   /** Keeps the spectator camera on a survivor once the local player is out. */
   private updateSpectate(state: GameState): void {
+    // a one-player campaign run (field / boss mission, raid) never spectates: a downed human respawns under the mission's
+    // lives and checkpoint rules, or the mission ends and the campaign result screen shows (hotfix: this used to pick
+    // another competitor to watch, with the Skip button, on every City Rumble stage)
+    if (state.mission || state.raid) {
+      this.spectateId = null;
+      return;
+    }
     const me = state.players[LOCAL_ID];
     if (!me || me.alive || state.match.phase === 'countdown') {
       this.spectateId = null;

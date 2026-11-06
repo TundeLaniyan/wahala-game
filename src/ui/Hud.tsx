@@ -198,7 +198,7 @@ export function Hud() {
       {rumble ? (
         // City Rumble: a compact roster and the city map instead of one portrait per competitor
         <>
-          <RumbleHud r={rumble} phase={hud.phase} localAlive={hud.localAlive} />
+          <RumbleHud r={rumble} phase={hud.phase} localAlive={hud.localAlive} inCampaign={hud.inCampaign} />
           {/* the right column: the map, and in a campaign mission the mission panel under it */}
           <div className="rumble-right" data-testid="rumble-right">
             <Minimap />
@@ -280,7 +280,7 @@ export function Hud() {
         <ProgressionBadge me={hud.me} floating />
       )}
       {hud.entry && <EntryPanel entry={hud.entry} />}
-      {!rumble && hud.phase === 'playing' && !hud.localAlive && !hud.sideline && (
+      {!rumble && !hud.inCampaign && hud.phase === 'playing' && !hud.localAlive && !hud.sideline && (
         <div className="spectate" data-testid="spectate">
           <span>You&apos;re out! Watching the rest…</span>
           <button
