@@ -118,6 +118,33 @@ export interface EnemyMeleeSpec {
   knockbackTiles: number;
   /** Ticks before this enemy may start another punch (hit or miss). */
   cooldownTicks: number;
+  /**
+   * THE PUNISHABLE WINDOW (decision EF2): after the punch resolves (hit or miss) the enemy stays planted this long. Its
+   * wind-up already plants it; together they are the moment a player who stepped out of reach can punch back or lay
+   * a generator on it.
+   */
+  recoveryRootTicks: number;
+}
+
+/**
+ * How a campaign enemy kind perceives generators (decision EF1). Read by the enemy BOT only (`ai/enemyBot.ts`, through
+ * `Observation.config`): the simulation never looks at it, and it gives no information the observation lacks - it only
+ * takes some away. Multiplayer bots never read it.
+ */
+export interface EnemyAwareness {
+  /** CALM (no rival within `focusTiles`): a new generator is taken seriously this many ticks after it appears. */
+  reactTicks: number;
+  /** A rival this close (Manhattan), or its own wind-up / cue / recovery, puts the enemy in a brawl: TUNNEL VISION. */
+  focusTiles: number;
+  /**
+   * In a brawl a generator counts as a threat only from this many ticks before it blows: a fresh generator at its
+   * feet is walked past like an obstacle while it goes for you (the reaction is part of it).
+   */
+  alertTicks: number;
+  /** Probability (the bot's own seeded RNG, once per generator) that a brawling enemy misjudges the fuse ... */
+  slipChance: number;
+  /** ... and reacts this many ticks later than `alertTicks` says. */
+  slipTicks: number;
 }
 
 /**
@@ -136,6 +163,13 @@ export interface CampaignConfig {
   damage: Record<'blast' | 'vehicle' | 'hazard' | 'trap', number>;
   /** Segments each close attack takes from a vitals-carrying victim (its daze / knockback / slow come from `skills.attacks`). */
   playerDamage: Record<AttackKind, number>;
+  /**
+   * The human's close attacks against a campaign ENEMY seat (decision EF3; never a multiplayer rival, never the human
+   * as a victim): the per-target lockout is capped at `targetLockoutTicks` and a fresh daze immunity does not stop a
+   * punch from landing (it then takes its segment without a new daze), so ordinary punches finish a basic enemy in
+   * a reasonable time. The enemy's own recovery frames (`invulnTicks`) still apply.
+   */
+  vsEnemy: { targetLockoutTicks: number };
   /** An enemy's close attack never takes more than this from the human (enemies are individually weaker than the player). */
   enemyMeleeDamage: number;
   /** When an enemy health bar is shown (`enemyHealthView`): never permanent for everyone. */
@@ -330,6 +364,12 @@ export interface GameConfig {
     victimFreeTicks: number;
     /** Enemies only act on a rival within this many tiles (Manhattan); farther away they hold. */
     aggroTiles: number;
+    /** Field escape legs (decision EF6): a pursuer gives up the chase while the human is farther than this (Chebyshev). */
+    pursuitGiveUpTiles: number;
+    /** THE PUNISHABLE WINDOW of a throw (decision EF2): the thrower stays planted this long after its cue, by kind. */
+    throwRecoveryTicks: Record<EnemyKind, number>;
+    /** How each kind perceives generators (decision EF1; read by the enemy bot only). */
+    awareness: Record<EnemyKind, EnemyAwareness>;
     projectiles: Record<ThrownKind, ProjectileSpec>;
     /** Null = this kind has no punch. */
     melee: Record<EnemyKind, EnemyMeleeSpec | null>;
@@ -552,6 +592,7 @@ export const CAMPAIGN_CONFIG: CampaignConfig = {
   invulnTicks: ticks(1),
   damage: { blast: 2, vehicle: 2, hazard: 1, trap: 1 },
   playerDamage: { push: 1, shove: 0, daze: 0, kick: 1, bottle: 2, sweep: 1, headbutt: 1, elbow: 1 },
+  vsEnemy: { targetLockoutTicks: 66 },
   enemyMeleeDamage: 1,
   bar: { recentTicks: ticks(3), nearTiles: 3, aimTiles: 2 },
 };
@@ -791,6 +832,19 @@ export const DEFAULT_CONFIG: GameConfig = {
     groupPunchGapTicks: ticks(0.7),
     victimFreeTicks: ticks(1),
     aggroTiles: 11,
+    pursuitGiveUpTiles: 14,
+    // decision EF2: the thrower is exposed after the throw (a corridor generator can catch it)
+    throwRecoveryTicks: { agbero: 0, guard: 0, thrower: 36, heavy: 30, lieutenant: 18, boss: 12 },
+    // decision EF1: calm, a new generator is read after `reactTicks`; brawling (a rival within `focusTiles`) only once
+    // its fuse is down to `alertTicks` - basic enemies late, a heavy slow to read it, leaders nearly as sharp as a bot
+    awareness: {
+      agbero: { reactTicks: 20, focusTiles: 6, alertTicks: 32, slipChance: 0.3, slipTicks: 12 },
+      guard: { reactTicks: 16, focusTiles: 6, alertTicks: 40, slipChance: 0.2, slipTicks: 12 },
+      thrower: { reactTicks: 16, focusTiles: 6, alertTicks: 45, slipChance: 0.2, slipTicks: 12 },
+      heavy: { reactTicks: 30, focusTiles: 6, alertTicks: 42, slipChance: 0.35, slipTicks: 16 },
+      lieutenant: { reactTicks: 10, focusTiles: 4, alertTicks: 80, slipChance: 0.1, slipTicks: 10 },
+      boss: { reactTicks: 6, focusTiles: 4, alertTicks: 110, slipChance: 0.05, slipTicks: 8 },
+    },
     projectiles: {
       // common: small harm, short daze or a nudge; slower than a walking human (10 ticks per tile)
       bottle: {
@@ -843,6 +897,7 @@ export const DEFAULT_CONFIG: GameConfig = {
         dazeTicks: 24,
         knockbackTiles: 0,
         cooldownTicks: ticks(3),
+        recoveryRootTicks: 30,
       },
       guard: {
         attack: 'push',
@@ -851,6 +906,7 @@ export const DEFAULT_CONFIG: GameConfig = {
         dazeTicks: 30,
         knockbackTiles: 0,
         cooldownTicks: ticks(2.6),
+        recoveryRootTicks: 24,
       },
       thrower: {
         attack: 'shove',
@@ -859,6 +915,7 @@ export const DEFAULT_CONFIG: GameConfig = {
         dazeTicks: 0,
         knockbackTiles: 2,
         cooldownTicks: ticks(3.5),
+        recoveryRootTicks: 30,
       },
       heavy: {
         attack: 'daze',
@@ -867,6 +924,7 @@ export const DEFAULT_CONFIG: GameConfig = {
         dazeTicks: 40,
         knockbackTiles: 2,
         cooldownTicks: ticks(3.8),
+        recoveryRootTicks: 40,
       },
       lieutenant: {
         attack: 'push',
@@ -875,6 +933,7 @@ export const DEFAULT_CONFIG: GameConfig = {
         dazeTicks: 30,
         knockbackTiles: 1,
         cooldownTicks: ticks(2.4),
+        recoveryRootTicks: 14,
       },
       boss: {
         attack: 'daze',
@@ -883,6 +942,7 @@ export const DEFAULT_CONFIG: GameConfig = {
         dazeTicks: 45,
         knockbackTiles: 2,
         cooldownTicks: ticks(3),
+        recoveryRootTicks: 10,
       },
     },
     reinforce: {

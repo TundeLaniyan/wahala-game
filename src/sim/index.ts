@@ -126,7 +126,7 @@ export * from './mission';
 export * from './campaign/types';
 export * from './raid';
 export { CAMPAIGN_CONFIG, campaignConfig } from './config';
-export type { CampaignConfig } from './config';
+export type { CampaignConfig, EnemyAwareness, EnemyMeleeSpec } from './config';
 export { ENEMY_KINDS, ENEMY_KIND_IDS, enemyDef } from './data/enemies';
 export type { EnemyKindDef } from './data/enemies';
 export {

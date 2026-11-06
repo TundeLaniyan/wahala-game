@@ -57,9 +57,17 @@ export interface FairHumanOptions {
   reactTicks: number;
   /** Ticks of fuse the escape from a freshly laid generator must leave spare. */
   fuseMargin: number;
+  /** Stay and fight inside a cross until its fuse leaves only the walk out plus `fuseMargin` (false: leave at once). */
+  linger: boolean;
+  /** Uses B (the Punch) at all (false: a pure bomber, who only dodges wind-ups). */
+  punch: boolean;
 }
 
-export const FAIR_HUMAN: FairHumanOptions = { reactTicks: 18, fuseMargin: 45 };
+export const FAIR_HUMAN: FairHumanOptions = { reactTicks: 18, fuseMargin: 45, linger: true, punch: true };
+/** A slower player (half a second to read a cue, more fuse to spare): a guard's wind-up lands before his jab. */
+export const SLOW_HUMAN: FairHumanOptions = { ...FAIR_HUMAN, reactTicks: 30, fuseMargin: 60 };
+/** The pure bomber: never punches, so every kill is a generator's (does bomb placement alone work?). */
+export const BOMBER_HUMAN: FairHumanOptions = { ...FAIR_HUMAN, punch: false };
 
 export class FairHuman {
   /** Generators laid, and how many of them had an enemy in the cross when laid. */
@@ -212,11 +220,24 @@ export class FairHuman {
     const lines = this.lines(s);
     const foes = s.players.filter((p) => p.alive && p.enemyKind !== undefined);
 
-    // 1. out of a cross, a flame, or a seen line
+    // 1. out of a cross, a flame, or a seen line - at once, or (`linger`) only when the fuse leaves just the time the
+    //    walk out needs plus a margin: a fighter keeps brawling next to his own generator until then
     if (!this.safeTile(danger, lines, here)) {
       const r = this.route(s, danger, new Set(), (i) => this.safeTile(danger, lines, i));
-      if (r?.first) return { move: r.first };
+      const soonest = Math.min(...(danger.get(here) ?? []).map((win) => win.from));
+      const step = playerStepTicks(s, me);
+      const urgent =
+        !this.opts.linger ||
+        lines.has(here) ||
+        !r ||
+        soonest - s.tick <= (r.steps + 1) * step + this.opts.fuseMargin;
+      if (r?.first && urgent) return { move: r.first };
     }
+    // a tile that is safe for the next moments (a lingering fighter may sidestep inside a cross with a long fuse)
+    const calm = (i: number): boolean =>
+      this.opts.linger
+        ? !lines.has(i) && (danger.get(i) ?? []).every((win) => win.from > s.tick + 90)
+        : this.safeTile(danger, lines, i);
     // 2. a punch winding up on me and no jab of mine ready: leave its reach late in the wind-up
     const kind = primaryOf(me);
     for (const f of foes) {
@@ -224,24 +245,28 @@ export class FairHuman {
       if (!a || a.targetId !== 0 || Math.abs(f.x - me.x) + Math.abs(f.y - me.y) !== 1) continue;
       // the wind-up is acted on only once it has been on screen for the human's reaction time
       const seen = this.windups.get(f.id);
-      if (!seen || seen.resolve !== a.resolveTick) this.windups.set(f.id, { resolve: a.resolveTick, at: s.tick });
+      if (!seen || seen.resolve !== a.resolveTick)
+        this.windups.set(f.id, { resolve: a.resolveTick, at: s.tick });
       if (s.tick - (this.windups.get(f.id)?.at ?? s.tick) < this.opts.reactTicks) continue;
-      const canJab = attackReady(s, me, kind) && attackable(s, s.tick, me, f, kind);
-      if (canJab) return { special: true }; // a jab cuts a slower wind-up short
+      // a jab cuts a slower wind-up short - except a steadfast kind's (a heavy): step out of that one
+      const canJab =
+        !enemyDef(f.enemyKind!).steadfast && attackReady(s, me, kind) && attackable(s, s.tick, me, f, kind);
+      if (canJab && this.opts.punch) return { special: true }; // a jab cuts a slower wind-up short
       const remaining = a.resolveTick - s.tick;
       if (remaining > 12 || remaining < 4) continue;
       for (const d of DIRS) {
         const x = me.x + DIR_VEC[d].dx;
         const y = me.y + DIR_VEC[d].dy;
         const i = y * w + x;
-        if (!this.walkable(s, x, y) || !this.safeTile(danger, lines, i)) continue;
+        if (!this.walkable(s, x, y) || !calm(i)) continue;
         if (Math.abs(f.x - x) + Math.abs(f.y - y) <= 1) continue;
         return { move: d };
       }
     }
     // 3. punch an adjacent enemy
-    for (const f of foes) {
+    for (const f of this.opts.punch ? foes : []) {
       if (Math.abs(f.x - me.x) + Math.abs(f.y - me.y) !== 1) continue;
+      if (f.attack && f.attack.targetId === 0 && enemyDef(f.enemyKind!).steadfast) continue; // never trade with a heavy
       if (attackReady(s, me, kind) && attackable(s, s.tick, me, f, kind)) return { special: true };
     }
     // 4. lay a generator when a target is in the cross and a way out exists

@@ -451,7 +451,12 @@ export function fieldDirective(state: GameState, id: number): NpcDirective | und
   const pursuerGroups = new Set(def.legs.flatMap((l) => (l.kind === 'escapeRoute' ? [l.group] : [])));
   if (seat.group && pursuerGroups.has(seat.group)) {
     const hunting = leg.kind === 'escapeRoute' && leg.group === seat.group;
-    if (hunting && h.alive) return { kind: 'chase', x: h.x, y: h.y };
+    // decision EF6: a pursuer keeps the pressure on, but a human who has opened a real gap has got away from it - it
+    // holds where it stands (and takes up the chase again if he comes back within reach)
+    const gap = Math.max(Math.abs(h.x - p.x), Math.abs(h.y - p.y));
+    if (hunting && h.alive && gap <= state.config.enemyAttacks.pursuitGiveUpTiles)
+      return { kind: 'chase', x: h.x, y: h.y };
+    if (hunting) return { kind: 'guard', x: p.x, y: p.y, radius: 1 };
     const before = def.legs.findIndex((l) => l.kind === 'escapeRoute' && l.group === seat.group) > f.leg;
     return before
       ? { kind: 'block', x: post.x, y: post.y, radius: 0 }
