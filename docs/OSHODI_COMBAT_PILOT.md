@@ -123,8 +123,10 @@ second and reacts in 0.3 s; the slower player taps 3 times a second and reacts i
 Chained interruptions (an enemy hit less than 1 s after the last daze ended): 0 in every run, before and after.
 
 Easy / Hard (`npm run combat-pilot -- --level easy|hard --only fight`): the slower player takes 0 / 11.0 / 39.6 segments
-a minute against one guard (Easy / Normal / Hard), 0 / 7.0 / 22.3 against two guards, and 0 / 4.6 / 19.5 against guard +
-thrower. Human health is 5 / 4 / 3. No run on any level lost a life except the generator-only thrower fight (one death
+a minute against one guard (Easy / Normal / Hard), 0 / 7.0 / 22.4 against two guards, and 0 / 4.6 / 19.5 against guard +
+thrower. Human health is 5 / 4 / 3. One oddity: on Easy the fast player takes about 0.25 segments a guard (10.8 a
+minute; 0 on Normal and Hard). The cause was not investigated: probably the Beginner bot's different timing
+(hesitation pauses) together with Easy's slower counter-swing. The amounts are small. No run on any level lost a life except the generator-only thrower fight (one death
 on Normal and before the pilot). Full tables: `docs/measurements/oshodi-combat-pilot-easy.md`,
 `docs/measurements/oshodi-combat-pilot-hard.md`.
 
@@ -180,3 +182,21 @@ Controls: **keyboard** arrows / WASD move, Space or J = A (generator, hold = rem
 hold = remote). **Touch**: left thumbstick, GENERATOR and B buttons on the right. **Gamepad**: left stick / d-pad,
 A = generator, B / X = punch (`input/gamepad.ts`). All three go through the same `Intent`, so the buffer and the punch
 behave the same on every device.
+
+## Tests (what was run on this branch)
+
+- `npx tsc --noEmit`, `npx eslint .`: clean. Prettier on every changed file.
+- `npx vitest run`: 220 files, 3490 passed, 1 expected fail (the respawn-hotfix tripwire above), 7 skipped. Includes
+  `tests/oshodi-combat-pilot.test.ts` (22: the gate, scenarios 1-8 and 10) and the unchanged regression suites: blast
+  rules, mission regression hashes, the multiplayer digest, enemy fairness, raids, bosses, other field missions,
+  Rumble, audio and app.
+- `npm run build`: passes.
+- Playwright (`--trace off`, served from the build), desktop and mobile (844 x 390 touch): `e2e/oshodi-combat-pilot.spec.ts`
+  (real keyboard and real touch buttons: a swing at the air takes nothing, three punches drop a warden, A lays a
+  generator, a second A is refused, no page errors) and `e2e/checkpoint-clarity.spec.ts` (checkpoints, door hold, raid
+  start). All 4 passed. The full release suite was not run (by instruction).
+- Reconciliation check on a LOCAL scratch merge of this branch with `claude/wahala-respawn-freeze-hotfix-v1`
+  (`5869154`; not pushed): only `docs/DECISIONS.md` conflicts (both append); `tick.ts` merges cleanly; the hotfix's
+  `campaign-respawn-lifecycle` / `campaign-respawn-controller` tests and the pilot tests pass, 46 / 46, with the
+  tripwire flipped to `it`.
+- Screenshots: `docs/screenshots/oshodi-combat-pilot/{desktop,mobile}-windup.png` (a warden winding up: the red ring).
