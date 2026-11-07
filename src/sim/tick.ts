@@ -93,7 +93,7 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   burnPickups(state, events);
   hits.push(...collectFlameHits(state));
 
-  const eliminated = applyLethalHits(state, hits, events);
+  const eliminated = withCampaignDefeats(state, applyLethalHits(state, hits, events));
   grantRewards(state, events);
   grantStreakRewards(state, events);
   if (state.mission) missionAfterEliminations(state, eliminated, events);
@@ -104,6 +104,22 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   expire(state);
   evaluateMatchEnd(state, events);
   return events;
+}
+
+/**
+ * The ids to treat as eliminated this tick: `applyLethalHits`' list plus the campaign human when an enemy attack
+ * (a punch, a thrown object, a belt) defeated them. Those defeats go through `applyCampaignHit` -> `eliminate()` in an
+ * earlier system of the tick, never through `applyLethalHits`, so without this the human was down with no respawn
+ * scheduled and no life spent (the "DOWN - Back in 1" freeze). `eliminate()` stamps `eliminatedTick`, so "defeated this
+ * tick" is read from the player, once: an id already in the list is never added twice (idempotent). Multiplayer seats
+ * have no `vitals` and are never added, so every non-campaign match is unchanged.
+ */
+function withCampaignDefeats(state: GameState, eliminated: number[]): number[] {
+  for (const p of state.players) {
+    if (p.alive || !p.vitals || p.enemyKind !== undefined || p.eliminatedTick !== state.tick) continue;
+    if (!eliminated.includes(p.id)) eliminated.push(p.id);
+  }
+  return eliminated;
 }
 
 function applyIntents(state: GameState, intents: Intents, events: SimEvent[]): void {
