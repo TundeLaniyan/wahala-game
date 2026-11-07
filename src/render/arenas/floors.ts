@@ -10,6 +10,7 @@ import { artRng } from '../textures';
 import { T, crack, makeCanvas, noiseFill, seams, stain, tyreTrack } from './floorKit';
 import type { Ctx, FloorDrawer, FloorMaps } from './floorKit';
 import { NEW_ARENA_FLOORS } from './newArenas';
+import { PAVED_ARENAS } from './paving/arenas';
 
 export type { FloorMaps } from './floorKit';
 
@@ -382,5 +383,6 @@ export function arenaFloorMaps(arenaId: string, cols: number, rows: number): Flo
   const roughnessMap = new CanvasTexture(rc);
   roughnessMap.anisotropy = 4;
   for (const t of [map, roughnessMap]) t.wrapS = t.wrapT = RepeatWrapping;
-  return { map, roughnessMap };
+  const paving = PAVED_ARENAS[arenaId];
+  return paving ? { map, roughnessMap, paving } : { map, roughnessMap };
 }

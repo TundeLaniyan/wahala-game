@@ -24,6 +24,7 @@ import { assets } from '../assets/library';
 import type { ObstacleStyle } from '../assets/obstacleStyles';
 import { MAX_HIDE, occludingTiles } from '../assets/occlusionFade';
 import { arenaFloorMaps } from '../arenas/floors';
+import { installPaving } from '../arenas/paving/material';
 import type { BoardCover } from '../arenas/boardCover';
 import { NEW_ARENA_ART } from '../arenas/newArenas';
 import { InstanceSet } from './InstanceSet';
@@ -119,6 +120,9 @@ export class ArenaView implements View {
       });
       this.ownedTextures.push(maps.map, maps.roughnessMap);
       this.ownedMaterials.push(floorMat);
+      // interlocking road paving (Lekki): drawn by the floor shader, before grit composes its program key with it
+      const pavers = maps.paving ? installPaving(floorMat, { width: W, height: H }, maps.paving) : null;
+      if (pavers) this.ownedTextures.push(pavers);
     } else floorMat = floorMaterial(W, H, state.arenaId);
     const floor = new Mesh(new PlaneGeometry(W, H), floorMat);
     floor.rotation.x = -Math.PI / 2;

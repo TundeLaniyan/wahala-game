@@ -1,5 +1,7 @@
 # Lekki Phase 1: Admiralty Way interlocking road (Part B)
 
+> **Superseded for the road surface** by `docs/LEKKI_INTERLOCK_ROADS.md` (branch `claude/wahala-lekki-interlock-redesign-v1`, decisions LI1-LI6): every local road of Lekki Phase 1 is now paved, with a shader-drawn I-block texture instead of the canvas-painted zig-zag blocks described below. The median, lane lines and stop lines described here remain.
+
 Branch `claude/wahala-lagos-enhancement-v1`, decisions LK1-LK5; integration branch `claude/wahala-campaign-integration-v1`, decisions LK6-LK8.
 
 **Founder clarification (integration).** "Amarite Way" in the first brief was a transcription error for **Admiralty Way** in Lekki Phase 1, and the road chosen here is the right one. Every identifier, file, script and this doc are renamed to Admiralty Way. The founder's requirements, and where each is met:

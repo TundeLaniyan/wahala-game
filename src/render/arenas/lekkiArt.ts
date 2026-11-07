@@ -21,8 +21,9 @@ import { communityFloor } from './community/floor';
 import { communityEnv } from './community/env';
 import { nightLookOf } from './community/looks';
 import { edgeStalls, streetLife, lampPost, skyline } from './community/setKit';
-import { paintPavers } from './community/pavers';
-import { ADMIRALTY_WAY_PAVED, paintAdmiraltyWayDetails } from './lekkiAdmiralty';
+import { paintAdmiraltyWayDetails } from './lekkiAdmiralty';
+import { lekkiPavedAt } from './lekkiRoads';
+import { paintPavedKey } from './paving/floorKey';
 import { streetPlane } from './oshodiKit';
 import { linkBridge } from './lekkiBridge';
 import { floorWords, layoutOf, mouthTraffic, tileWorld } from './rumbleV2Kit';
@@ -499,9 +500,10 @@ export const RUMBLE_LEKKI_FLOOR: FloorDrawer = communityFloor(ID, {
   base: [176, 168, 150],
   dust: 'rgba(160,140,100,',
   road: [66, 66, 68],
-  paved: (g, rg, _layout, r) => {
-    for (const rect of ADMIRALTY_WAY_PAVED) paintPavers(g, rg, rect, r);
-  },
+  // every local road of Lekki Phase 1 is interlocking paving (lekkiRoads.ts): the canvas marks it with the key colour and
+  // the floor shader draws the blocks (paving/material.ts); markings painted after this stay on top
+  paved: (g, rg, layout) => paintPavedKey(g, rg, layout, lekkiPavedAt),
+  pavedAt: lekkiPavedAt,
   pavers: [186, 174, 154],
   tint: {
     promenade: 'rgba(230,214,170,0.20)',

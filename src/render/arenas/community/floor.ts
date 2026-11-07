@@ -25,6 +25,8 @@ export interface FloorOpts {
   lane?: string;
   /** painted right after the asphalt (before kerbs and lane lines): a road surface that is not asphalt */
   paved?: (g: Ctx, rg: Ctx, layout: readonly string[], r: () => number) => void;
+  /** the tiles `paved` covers: asphalt cracks are not drawn on them (block roads do not crack like asphalt) */
+  pavedAt?: (x: number, y: number) => boolean;
   /** more painting on top: (g, rg, layout, r) */
   extra?: (g: Ctx, rg: Ctx, layout: readonly string[], r: () => number) => void;
 }
@@ -118,8 +120,16 @@ export function communityFloor(arenaId: string, o: FloorOpts): FloorDrawer {
       for (let x = x0 + 1; x <= x1; x++) dash(g, x, 0, x, rows, lane, 5, 0.9, 0.9);
     }
     // oil, wear and cracks
-    for (let i = 0; i < cols * rows * 0.2; i++)
-      crack(g, r, r() * w, r() * h, 3 + Math.floor(r() * 5), 'rgba(30,22,16,0.5)', 2);
+    for (let i = 0; i < cols * rows * 0.2; i++) {
+      const cx = r() * w;
+      const cy = r() * h;
+      const n = 3 + Math.floor(r() * 5);
+      if (o.pavedAt?.(Math.floor(cx / T), Math.floor(cy / T))) {
+        for (let k = 0; k < 1 + n; k++) r(); // the draws crack() would make: the rest of the floor stays as it was
+        continue;
+      }
+      crack(g, r, cx, cy, n, 'rgba(30,22,16,0.5)', 2);
+    }
     o.extra?.(g, rg, layout, r);
     litter(g, r, cols, rows, 0.8);
   };
