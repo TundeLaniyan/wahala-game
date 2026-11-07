@@ -27,6 +27,7 @@ import { useKnockdown } from './knockdown';
 import { useLocalChampion } from './localChampion';
 import { beginAttack, chooseAttack } from './skills';
 import { autoLaunch, useVehicleGenerator } from './vehicles';
+import { isPilotHuman, pilotPunchTarget } from './pilotCombat';
 
 export type SpecialAction =
   'melee' | 'vehicle' | 'vehicleGenerator' | 'globalKnockdown' | 'localChampion' | null;
@@ -35,7 +36,8 @@ export type SpecialAction =
 export function previewSpecial(state: GameState, p: Player): SpecialAction {
   if (!isActing(state, p) || p.entryUntil !== null) return null;
   if (p.enemyKind !== undefined) return enemyMeleeTarget(state, p) ? 'melee' : null;
-  if (chooseAttack(state, p)) return 'melee';
+  // the combat pilot's human: an enemy in the pilot punch's reach, else the ordinary order (an air swing is no action)
+  if (isPilotHuman(state, p) ? pilotPunchTarget(state, p) : chooseAttack(state, p)) return 'melee';
   if (p.streakRewards.vehicleGenerator !== null && !state.vehicles.some((v) => v.ownerId === p.id))
     return 'vehicleGenerator';
   if (p.streakRewards.knockdown) return 'globalKnockdown';
@@ -58,6 +60,14 @@ export function resolveSpecial(state: GameState, p: Player, events: SimEvent[]):
     events.push({ type: 'specialUsed', playerId: p.id, action: 'melee' });
     return 'melee';
   }
+  return resolveRewardSpecial(state, p, events);
+}
+
+/**
+ * Steps 3-6 of B's order (the kill-streak rewards, then the voucher's vehicle) on their own: what B does when no rival
+ * is in reach. The combat pilot's human comes here directly (pilotCombat.ts decides the melee step itself).
+ */
+export function resolveRewardSpecial(state: GameState, p: Player, events: SimEvent[]): SpecialAction {
   // the kill-streak rewards, in the order they were earned: VEHICLE GENERATOR, GLOBAL KNOCKDOWN, LOCAL CHAMPION
   if (p.streakRewards.vehicleGenerator !== null && useVehicleGenerator(state, p, events)) {
     events.push({ type: 'specialUsed', playerId: p.id, action: 'vehicleGenerator' });

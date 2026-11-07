@@ -2,6 +2,15 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Oshodi Mission 1 combat pilot (branch `claude/wahala-oshodi-combat-pilot-v1`, from the release `b55e95f`)
+
+Reference: `docs/OSHODI_COMBAT_PILOT.md`; decisions CP1-CP12. An experiment for founder playtesting: not merged, not deployed, gated to `oshodi.approach` only (`sim/mission/combatPilot.ts`).
+
+- One pilot punch against enemies for every fighter (2-3 punches for ordinary enemies, 5 for the heavy), every press swings, diagonal / same-tile reach, an input buffer for A and B, a placement refusal notice, readable enemy wind-ups with counter windows, stagger without stun-lock, enemies off the human's tile, blasts that drop any ordinary enemy, two extra enemies in the mission.
+- Measured before / after on the real mission (`npm run combat-pilot`, tables in the doc and `docs/measurements/oshodi-combat-pilot-*.md`).
+
+Verification: see the doc's "Tests" section. The full Playwright release suite was not run (by instruction).
+
 ## Checkpoint clarity in field missions (worker `checkpoint-ux`, from `a4fe457`)
 
 Reference: `docs/CHECKPOINT_CLARITY.md`; decisions CK1-CK8. Not merged, not deployed. Presentation and wording only (no rule, timing or tile changed).

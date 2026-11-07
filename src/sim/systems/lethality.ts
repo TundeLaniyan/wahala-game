@@ -158,11 +158,14 @@ function campaignLethal(
     const s = campaignSourceOf(c);
     if (wound(s) > wound(best)) best = s;
   }
+  // the combat pilot: a blast takes `blastDamageVsEnemy` from an ENEMY (decision CP3); everyone else as before
+  const pilot = state.config.combatPilot;
+  const pilotBlast = pilot && p.enemyKind !== undefined && best.source === 'blast';
   const hit: CampaignHit = {
     victimId: p.id,
     byId: best.byId,
     source: best.source,
-    damage: wound(best),
+    damage: pilotBlast ? pilot.blastDamageVsEnemy : wound(best),
     dazeTicks: 0,
     knockback: null,
   };

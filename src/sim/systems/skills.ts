@@ -34,6 +34,7 @@ import { enemyAfterPunch, enemyMeleeHit } from './enemyActions';
 import { ENEMY_KINDS } from '../data/enemies';
 import { beginStep } from './stepping';
 import { isActing, playersAt, teammates } from './queries';
+import { resolvePilotPunch } from './pilotCombat';
 
 /** The fighter's original skill (their character's); kept for the menu and the HUD label. */
 export const skillOf = (p: Pick<Player, 'characterId'>): SkillKind => CHARACTERS[p.characterId].skill;
@@ -258,7 +259,10 @@ export function beginAttack(
 /** Resolves every attack whose startup is over. Runs each tick after movement (a rival who stepped away is missed). */
 export function updateAttacks(state: GameState, events: SimEvent[]): void {
   for (const p of state.players) {
-    if (p.attack && state.tick >= p.attack.resolveTick) resolveAttack(state, p, events);
+    if (!p.attack || state.tick < p.attack.resolveTick) continue;
+    if (p.attack.pilot)
+      resolvePilotPunch(state, p, events); // the combat pilot's punch (decision CP2)
+    else resolveAttack(state, p, events);
   }
 }
 
@@ -425,7 +429,10 @@ function reachDir(
   const g = state.config.skills.stepGrace;
   if (g.enabled && o.stepRemaining > 0 && o.stepTotal > 0 && o.stepRemaining / o.stepTotal > 1 - g.maxShare)
     spots.push({ x: o.stepFromX, y: o.stepFromY });
+  // combat pilot (decision CP9): an enemy's punch also reaches a rival on the enemy's own tile
+  const sameTile = state.config.combatPilot !== undefined && p.enemyKind !== undefined;
   for (const s of spots) {
+    if (sameTile && s.x === p.x && s.y === p.y) return p.facing;
     for (const d of DIRS) if (p.x + DIR_VEC[d].dx === s.x && p.y + DIR_VEC[d].dy === s.y) return d;
     if (reach >= 2) {
       const v = DIR_VEC[lineDir];

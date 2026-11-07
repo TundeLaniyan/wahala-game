@@ -89,6 +89,13 @@ export class RiggedCharacter {
     this.activate(name, fade, true);
   }
 
+  /** A one-shot stretched (or squeezed) to last `seconds` (a wind-up whose blow lands as the clip ends). */
+  playOnceOver(name: ClipName, seconds: number, fade = 0.06): void {
+    const a = this.actions.get(name);
+    if (!a) return;
+    this.playOnce(name, fade, Math.min(3, Math.max(0.25, a.getClip().duration / Math.max(0.05, seconds))));
+  }
+
   /** Hold the final pose of a clip (deaths); also stops state changes. */
   playFinal(name: ClipName, speed = 1): void {
     if (this.frozen) return;

@@ -131,6 +131,8 @@ export const SAMPLES: Record<SimEvent['type'], SimEvent> = {
   attackStarted: { type: 'attackStarted', playerId: 0, skill: 'push', targetId: 1, resolveTick: 10 },
   attackResolved: { type: 'attackResolved', playerId: 0, skill: 'push', targetId: 1, hit: true },
   attackInterrupted: { type: 'attackInterrupted', playerId: 1, byId: 0 },
+  punchSwing: { type: 'punchSwing', playerId: 0, dir: 'right', targetId: 1 },
+  placeRefused: { type: 'placeRefused', playerId: 0, reason: 'capacity', x: 3, y: 3 },
   playerPushed: { type: 'playerPushed', playerId: 1, byId: 0, fromX: 1, fromY: 1 },
   playerDazed: { type: 'playerDazed', playerId: 1, byId: 0 },
   cursed: { type: 'cursed', playerId: 0, curse: 'inverted' },

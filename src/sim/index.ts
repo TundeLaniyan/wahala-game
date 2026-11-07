@@ -125,7 +125,8 @@ export type { LaneTile, SpectatorView } from './systems/spectators';
 export * from './mission';
 export * from './campaign/types';
 export * from './raid';
-export { CAMPAIGN_CONFIG, campaignConfig } from './config';
+export { CAMPAIGN_CONFIG, OSHODI_COMBAT_PILOT, campaignConfig } from './config';
+export type { CombatPilotConfig } from './config';
 export type { CampaignConfig, EnemyAwareness, EnemyMeleeSpec } from './config';
 export {
   CAMPAIGN_LEVELS,

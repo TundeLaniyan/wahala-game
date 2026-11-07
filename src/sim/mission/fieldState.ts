@@ -12,6 +12,7 @@ import { DEFAULT_LIVES, BASE_PHASE, PLAYER_FACTION_ID, FACTION_IDS } from './def
 import { getFieldMission } from './fieldDefs';
 import type { FieldMissionDef } from './fieldDefs';
 import { enterLeg } from './field';
+import { fieldEnemiesOf } from './combatPilot';
 import { snapToFloor } from './state';
 import type { FieldRuntime, MissionSeat, MissionSpec, MissionState, PhaseTuning } from './types';
 
@@ -56,9 +57,10 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
   const def = getFieldMission(spec.fieldId!);
   if (def.districtId !== spec.id)
     throw new Error(`field mission ${def.id} belongs to ${def.districtId}, not ${spec.id}`);
-  if (state.players.length !== 1 + def.enemies.length) {
+  const enemies = fieldEnemiesOf(def); // the roster plus the combat pilot's additions (decision CP11)
+  if (state.players.length !== 1 + enemies.length) {
     throw new Error(
-      `field mission ${def.id} needs ${1 + def.enemies.length} competitors, got ${state.players.length}`,
+      `field mission ${def.id} needs ${1 + enemies.length} competitors, got ${state.players.length}`,
     );
   }
   for (const [x, y] of fieldTiles(def)) clearAround(state, x, y, 1);
@@ -77,7 +79,7 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
       name: human.name,
     },
   ];
-  def.enemies.forEach((e, i) => {
+  enemies.forEach((e, i) => {
     const p = state.players[1 + i]!;
     const [x, y] = snapToFloor(arena, e.post[0], e.post[1], claimed);
     claimed.add(`${x},${y}`);
