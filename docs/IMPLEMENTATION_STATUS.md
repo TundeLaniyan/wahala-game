@@ -592,3 +592,6 @@ Done: an illustrated story-panel system (`StoryHero`, `storyImages.ts`) with 19 
 
 ## Campaign integration (branch `claude/wahala-campaign-integration-v1`)
 Classic grid / combat (`7058ce8`) and Lagos enhancement (`4826700`) merged on the live release `a4fe457`; Normal = Casual enemies (CI1), Admiralty Way whole-carriageway paving (LK6-LK8). Report, tests and screenshots: `docs/CAMPAIGN_INTEGRATION.md`. Not merged to release, not published; release CI still required.
+
+## Lekki Phase 1 interlocking roads (branch `claude/wahala-lekki-interlock-redesign-v1`, from production `b55e95f`; awaiting founder visual approval, not merged)
+Every local road of Lekki Phase 1 (Admiralty Way, Freedom Way, their crossing: 239 tiles) and the Freedom Way Estates streets (257 tiles) are interlocking concrete paving; the expressway keeps its asphalt. The pavers are an original seamless I-block texture drawn by the floor shader in world space (no seams or resets at junctions, mip-mapped, no extra draw call, one extra texture); markings, kerbs and the Admiralty median stay on top. Report, before/after screenshots, motion GIFs and performance: `docs/LEKKI_INTERLOCK_ROADS.md`; decisions LI1-LI6; tests `tests/render/lekki-interlock-roads.test.ts`.

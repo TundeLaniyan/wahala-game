@@ -92,18 +92,21 @@ float pvNoise( vec2 p ) {
 `;
 
 // replaces three's map_fragment: the canvas as before, the pavers where the canvas shows the key colour. Both textures
-// are always sampled (no branch around a texture read, so mip selection stays defined everywhere).
+// are always sampled (no branch around a texture read, so mip selection stays defined everywhere); the rest of the paver
+// work runs on paved pixels only.
 const FRAG_MAP = /* glsl */ `
 #ifdef USE_MAP
   vec4 sampledDiffuseColor = texture2D( map, vMapUv );
   // tile coordinates of this point of the floor (x east, y south), the same lattice for every road
   vec2 pvTile = vec2( vMapUv.x * uPaverBoard.x, ( 1.0 - vMapUv.y ) * uPaverBoard.y );
   vec3 pvColor = texture2D( uPaverMap, pvTile / uPaverPeriod ).rgb;
-  // large-scale, world-space tone drift (a few percent) so the 2.6-tile repeat never reads as a pattern
-  float pvMacro = pvNoise( pvTile * 0.31 ) * 0.6 + pvNoise( pvTile * 0.83 + 5.1 ) * 0.4;
-  pvColor *= 0.95 + 0.1 * pvMacro;
   float pvCover = 1.0 - smoothstep( 0.012, 0.06, length( sampledDiffuseColor.rgb - uPaverKey ) );
-  sampledDiffuseColor.rgb = mix( sampledDiffuseColor.rgb, pvColor, pvCover );
+  if ( pvCover > 0.0 ) {
+    // large-scale, world-space tone drift (a few percent) so the 2.6-tile repeat never reads as a pattern; only on paved
+    // pixels (no texture read in here, so the branch cannot disturb mip selection)
+    pvColor *= 0.95 + 0.1 * pvNoise( pvTile * 0.31 );
+    sampledDiffuseColor.rgb = mix( sampledDiffuseColor.rgb, pvColor, pvCover );
+  }
   diffuseColor *= sampledDiffuseColor;
 #endif
 `;
