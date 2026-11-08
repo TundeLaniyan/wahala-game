@@ -1,12 +1,9 @@
 /**
- * Lekki Phase 1: Admiralty Way (presentation only; docs/LEKKI_ADMIRALTY_WAY.md). The founder's photographs show a
- * divided commercial road paved in interlocking concrete blocks, with a planted median edged in black-and-white kerbs,
- * tall streetlights and roadside shops. ("Amarite Way" in the first brief was a transcription error for Admiralty Way,
- * confirmed by the founder.) The map's Admiralty Way is the N-S boulevard at x 20-23 from the plaza (y 10) to the
- * expressway (y 29): its WHOLE carriageway, both directions, is paved, including the two approach rows next to Freedom
- * Way. Freedom Way's own lanes (y 18-20, the crossing included) and the expressway stay asphalt, and each place where
- * the paving meets asphalt has a concrete edge restraint, a soldier course of blocks and a stop line on the lane that
- * approaches the junction, as a real block road ends.
+ * Lekki Phase 1: Admiralty Way's road furniture (presentation only; docs/LEKKI_INTERLOCK_ROADS.md). The carriageway itself
+ * is interlocking paving like every local road of Lekki Phase 1 (`lekkiRoads.ts`, `paving/material.ts`); this module
+ * paints what sits on it: the planted median between black-and-white kerbs (founder photographs), white lane dashes in
+ * each carriageway, stop lines on the lanes approaching Freedom Way and the expressway, and a cast-concrete edge
+ * restraint where the block road meets the expressway's asphalt (the only place the paving ends).
  *
  * The geometry is untouched: this is floor paint only (the median is a painted strip, not an obstacle; every tile
  * stays walkable exactly as before; no mesh, no collision, no draw call).
@@ -14,13 +11,14 @@
 import { dash } from './rumbleV2Kit';
 import { T } from './floorKit';
 import type { Ctx } from './floorKit';
-import { ADMIRALTY_PAVERS } from './community/pavers';
-import type { TileRect } from './community/pavers';
 
-/** The paved tiles (inclusive): Admiralty Way's carriageway north and south of the Freedom Way crossing. */
-export const ADMIRALTY_WAY_PAVED: readonly TileRect[] = [
-  { x0: 20, y0: 10, x1: 23, y1: 17 },
-  { x0: 20, y0: 21, x1: 23, y1: 29 },
+/** Admiralty Way's carriageway (inclusive tiles): from the plaza to the expressway, across the Freedom Way crossing. */
+export const ADMIRALTY_WAY = { x0: 20, y0: 10, x1: 23, y1: 29 } as const;
+
+/** Lane dashes run between the junctions (tile rows): the plaza to Freedom Way, Freedom Way to the expressway. */
+const DASH_RUNS: readonly [number, number][] = [
+  [10, 17.4],
+  [21.6, 29.4],
 ];
 
 /** The painted median runs along the road's centre line (tile boundary 22) and stops short of each junction. */
@@ -32,51 +30,35 @@ const MEDIANS: readonly [number, number][] = [
   [21.75, 29.45],
 ];
 
-/** Where the paving meets an asphalt road: the boundary row, which side is paved (+1 = paved below), the approach lane. */
 const WEST_LANES: [number, number] = [20.08, 22 - MEDIAN_HALF - 0.1];
 const EAST_LANES: [number, number] = [22 + MEDIAN_HALF + 0.1, 23.92];
-const EDGES: readonly { y: number; paved: 1 | -1; stopX: [number, number] }[] = [
-  // the north segment meets Freedom Way at y 18: southbound traffic (west carriageway, drive on the right) stops here
-  { y: 18, paved: -1, stopX: WEST_LANES },
-  // the south segment meets Freedom Way at y 21: northbound traffic (east carriageway) stops here
-  { y: 21, paved: 1, stopX: EAST_LANES },
-  // the south segment meets the expressway at y 30: southbound traffic stops here
-  { y: 30, paved: -1, stopX: WEST_LANES },
+/** Stop lines on the lanes approaching a junction (drive on the right): the boundary row and which side the lane is on. */
+const STOPS: readonly { y: number; from: 1 | -1; x: [number, number] }[] = [
+  { y: 18, from: -1, x: WEST_LANES }, // southbound, at Freedom Way
+  { y: 21, from: 1, x: EAST_LANES }, // northbound, at Freedom Way
+  { y: 30, from: -1, x: WEST_LANES }, // southbound, at the expressway
 ];
 
 const KERB_DARK = 'rgb(24,24,24)';
 const KERB_LIGHT = 'rgb(236,236,230)';
 
-/** The concrete edge restraint and a soldier course (blocks laid across the road) where the paving ends. */
-function paintEdge(g: Ctx, r: () => number, e: (typeof EDGES)[number]): void {
-  const x0 = 20 * T;
-  const x1 = 24 * T;
-  const band = 0.13 * T;
-  const s = ADMIRALTY_PAVERS;
-  // the soldier course: plain rectangular blocks, long side across the direction of the rows
-  const course = s.length * 0.62;
-  const yc = e.paved === 1 ? e.y * T + band : e.y * T - band - course;
-  g.fillStyle = s.joint;
-  g.fillRect(x0, yc, x1 - x0, course);
-  g.lineWidth = s.jointWidth;
-  g.strokeStyle = s.joint;
-  for (let x = x0; x < x1; x += s.height) {
-    const v = (r() - 0.5) * 2 * s.variation;
-    g.fillStyle = `rgb(${Math.round(s.tone[0] - 6 + v)},${Math.round(s.tone[1] - 6 + v)},${Math.round(s.tone[2] - 7 + v)})`;
-    const w = Math.min(s.height, x1 - x);
-    g.fillRect(x, yc, w, course);
-    g.strokeRect(x, yc, w, course);
-  }
-  // the restraint: a cast concrete strip, paler than the blocks, with a dark joint on the asphalt side
-  const yb = e.paved === 1 ? e.y * T : e.y * T - band;
-  g.fillStyle = 'rgb(188,186,178)';
-  g.fillRect(x0, yb, x1 - x0, band);
-  g.fillStyle = 'rgba(40,40,40,0.55)';
-  g.fillRect(x0, e.paved === 1 ? yb : yb + band - 3, x1 - x0, 3);
-  // the stop line on the lane that approaches the junction, just inside the soldier course
-  const ys = e.paved === 1 ? yc + course + 0.05 * T : yc - 0.05 * T - 0.1 * T;
+/** The stop line, a little back from the junction edge. */
+function paintStop(g: Ctx, s: (typeof STOPS)[number]): void {
+  const ys = s.from === 1 ? s.y * T + 0.22 * T : s.y * T - 0.22 * T - 0.1 * T;
   g.fillStyle = 'rgba(244,242,232,0.92)';
-  g.fillRect(e.stopX[0] * T, ys, (e.stopX[1] - e.stopX[0]) * T, 0.1 * T);
+  g.fillRect(s.x[0] * T, ys, (s.x[1] - s.x[0]) * T, 0.1 * T);
+}
+
+/** Where the block road meets the expressway's asphalt: a cast-concrete edge restraint across the road. */
+function paintRestraint(g: Ctx): void {
+  const x0 = ADMIRALTY_WAY.x0 * T;
+  const x1 = (ADMIRALTY_WAY.x1 + 1) * T;
+  const band = 0.12 * T;
+  const yb = (ADMIRALTY_WAY.y1 + 1) * T - band;
+  g.fillStyle = 'rgb(176,174,166)';
+  g.fillRect(x0, yb, x1 - x0, band);
+  g.fillStyle = 'rgba(40,40,40,0.5)';
+  g.fillRect(x0, yb + band - 3, x1 - x0, 3);
 }
 
 /** The planted median between two black-and-white kerbs, with a rounded nose at each end. */
@@ -121,13 +103,11 @@ function roundedStrip(g: Ctx, cx: number, top: number, bot: number, rad: number)
   g.fill();
 }
 
-/** Lane dividers (white dashes) at the middle of each carriageway, the median, and the ends of the paving. */
+/** Lane dividers (white dashes) in each carriageway, the median, the stop lines and the edge restraint. */
 export function paintAdmiraltyWayDetails(g: Ctx, r: () => number): void {
-  for (const rect of ADMIRALTY_WAY_PAVED) {
-    const y0 = rect.y0 + (rect.y0 === 21 ? 0.6 : 0);
-    const y1 = rect.y1 + 1 - (rect.y1 === 17 || rect.y1 === 29 ? 0.6 : 0);
+  for (const [y0, y1] of DASH_RUNS)
     for (const x of [21, 23]) dash(g, x, y0, x, y1, 'rgba(238,236,224,0.8)', 5, 0.7, 0.9);
-  }
   for (const [ya, yb] of MEDIANS) paintMedian(g, r, ya, yb);
-  for (const e of EDGES) paintEdge(g, r, e);
+  for (const st of STOPS) paintStop(g, st);
+  paintRestraint(g);
 }

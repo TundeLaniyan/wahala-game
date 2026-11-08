@@ -4,12 +4,15 @@
  */
 import type { CanvasTexture } from 'three';
 import { artRng } from '../textures';
+import type { PavingSpec } from './paving/material';
 
 export const T = 128; // pixels per tile
 
 export interface FloorMaps {
   map: CanvasTexture;
   roughnessMap: CanvasTexture;
+  /** Interlocking road paving drawn by the floor shader over the canvas's key-coloured tiles (paving/material.ts). */
+  paving?: PavingSpec;
 }
 
 /** Paints one arena floor: albedo into `g`, roughness into `rg`, at `T` pixels per tile. */
@@ -131,4 +134,3 @@ export function tyreTrack(g: Ctx, r: () => number, w: number, h: number, color: 
   );
   g.stroke();
 }
-
