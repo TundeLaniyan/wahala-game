@@ -16,6 +16,7 @@ import type { FieldMissionDef } from '../src/sim';
 import { Tile } from '../src/sim/types';
 import { isOpenFloor } from '../src/sim/mission/state';
 import { fieldTiles } from '../src/sim/mission/fieldState';
+import { fieldEnemiesOf } from '../src/sim/mission/combatPilot';
 
 /** Walking distance over every non-concrete tile from (sx, sy); crates can be blasted open, roads can be crossed. */
 function distances(layout: readonly string[], sx: number, sy: number): Map<string, number> {
@@ -66,7 +67,7 @@ describe.each(FIELD_MISSION_IDS)('field mission %s data', (id) => {
       humanCharacter: 'streetBaller',
       seed: 1,
     });
-    expect(opts.players.length).toBe(1 + def.enemies.length);
+    expect(opts.players.length).toBe(1 + fieldEnemiesOf(def).length); // the combat pilot's additions too (CP11)
     expect(opts.players.length).toBeLessThanOrEqual(9);
     expect(opts.players[0]!.isBot).toBe(false);
     expect(opts.players.slice(1).every((p) => p.isBot && p.team === 1)).toBe(true);
@@ -80,7 +81,7 @@ describe.each(FIELD_MISSION_IDS)('field mission %s data', (id) => {
       expect(isOpenFloor(arena, x, y), `${id} tile ${x},${y} is "${arena.layout[y]?.[x]}"`).toBe(true);
       expect(dist.has(`${x},${y}`), `${id} tile ${x},${y} unreachable from the start`).toBe(true);
     }
-    for (const e of def.enemies) {
+    for (const e of fieldEnemiesOf(def)) {
       expect(isOpenFloor(arena, e.post[0], e.post[1]), `${id} post ${e.post}`).toBe(true);
       expect(dist.has(`${e.post[0]},${e.post[1]}`), `${id} post ${e.post} unreachable`).toBe(true);
     }
@@ -148,6 +149,6 @@ describe.each(FIELD_MISSION_IDS)('field mission %s data', (id) => {
     expect(s.players[0]!.y).toBe(def.start[1]);
     expect(s.mission!.field).toBeDefined();
     expect(s.mission!.bossId).toBe(-1);
-    expect(s.mission!.seats).toHaveLength(1 + def.enemies.length);
+    expect(s.mission!.seats).toHaveLength(1 + fieldEnemiesOf(def).length);
   });
 });

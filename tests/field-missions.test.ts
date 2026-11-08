@@ -46,7 +46,7 @@ describe('a section field mission is not a boss fight', () => {
     expect(v.doors![0]).toMatchObject({ id: 'depot', status: 'idle', required: true });
     expect(of(events, 'missionStarted')).toHaveLength(1);
     expect(of(events, 'bossShielded')).toHaveLength(0);
-    expect(v.crewAlive).toBe(3);
+    expect(v.crewAlive).toBe(5); // three wardens plus the combat pilot's warden and thrower (decision CP11)
   });
 
   it('is deterministic: same spec and seed, same state', () => {

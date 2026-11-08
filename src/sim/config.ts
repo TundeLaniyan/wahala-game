@@ -188,9 +188,59 @@ export interface CampaignConfig {
   };
 }
 
+/**
+ * THE OSHODI MISSION 1 COMBAT PILOT (docs/OSHODI_COMBAT_PILOT.md, decisions CP1-CP12). An EXPERIMENT, not the campaign
+ * baseline: only the field mission(s) listed in `mission/combatPilot.ts` (today only `oshodi.approach`) put it in the
+ * config; every other match (other field missions, raids, boss missions, City Rumble, multiplayer, online) has no
+ * `combatPilot` key at all and runs the rules exactly as before. Removing the pilot = removing that one map entry.
+ * It changes only the fight between the campaign HUMAN and campaign ENEMY seats (`Player.enemyKind`).
+ */
+export interface CombatPilotConfig {
+  /** Names the experiment (measurements, the debug handle). */
+  id: string;
+  /**
+   * The human's B against an enemy: ONE pilot punch whatever the fighter (the multiplayer catalogue keeps its trades;
+   * against enemies three of the six fighters' attacks took no health at all before, decision CP2).
+   */
+  punch: {
+    /** Ticks from the press to the hit (the swing is drawn from the press). */
+    startupTicks: number;
+    /** After a punch connected / swung at the air the next one starts this much later (a press meanwhile is kept). */
+    hitRecoveryTicks: number;
+    whiffRecoveryTicks: number;
+    /** Health segments a punch takes. */
+    damage: number;
+    /** An ordinary enemy hit outside its stagger immunity reels this long: its wind-up is cut short, it cannot act. */
+    staggerTicks: number;
+    /** After a stagger ends the same enemy only takes damage (no new stagger) for this long: no stun-lock. */
+    staggerImmunityTicks: number;
+    /** A steadfast enemy (the heavy) reels only on every n-th punch that lands on it (0 = never). */
+    steadfastPoise: number;
+    /** Reach adds the four diagonals to the four neighbours and the human's own tile (forgiving for the high camera). */
+    diagonal: boolean;
+  };
+  /**
+   * An enemy whose wind-up a stagger cut short may start its next punch this long after the stagger ends (its punch
+   * cooldown is not wasted on the interrupted swing): a staggered guard swings back instead of standing helpless.
+   */
+  counterSwingTicks: number;
+  /** Recovery frames an ENEMY gets after losing health (the human keeps `campaign.invulnTicks`). */
+  enemyFramesTicks: number;
+  /** Health segments by enemy kind (an absent kind keeps `data/enemies.ts`). */
+  enemyHp: Partial<Record<EnemyKind, number>>;
+  /** Segments a blast takes from an ENEMY (the human keeps `campaign.damage.blast`). */
+  blastDamageVsEnemy: number;
+  /** A press of A or B the human could not act on yet (hit-stun, punch recovery) is kept this long and retried. */
+  inputBufferTicks: number;
+  /** Enemies never step onto the human's tile (they used to stand inside the player, out of every punch's reach). */
+  enemiesKeepOffHuman: boolean;
+}
+
 export interface GameConfig {
   /** Campaign health and damage; absent in normal matches (see `CampaignConfig`). */
   campaign?: CampaignConfig;
+  /** The Oshodi Mission 1 combat pilot (`CombatPilotConfig`); ABSENT in every other match. */
+  combatPilot?: CombatPilotConfig;
   match: {
     durationTicks: number;
     countdownTicks: number;
@@ -600,6 +650,87 @@ export const CAMPAIGN_CONFIG: CampaignConfig = {
   vsEnemy: { targetLockoutTicks: 66 },
   enemyMeleeDamage: 1,
   bar: { recentTicks: ticks(3), nearTiles: 3, aimTiles: 2 },
+};
+
+/** A partial enemy-attack tuning (`DeepPartial` cannot reach into the nullable melee specs). */
+export type PilotEnemyAttacks = Omit<DeepPartial<GameConfig['enemyAttacks']>, 'melee'> & {
+  melee?: Partial<Record<EnemyKind, Partial<EnemyMeleeSpec>>>;
+};
+
+/** A config layer of the combat pilot: its own settings (partial) and the enemy-attack tuning it changes. */
+export interface PilotLayer {
+  combatPilot?: Partial<Omit<CombatPilotConfig, 'punch'>> & { punch?: Partial<CombatPilotConfig['punch']> };
+  enemyAttacks?: PilotEnemyAttacks;
+}
+
+/**
+ * The Oshodi Mission 1 combat pilot at the Normal level (decisions CP1-CP12; measured in docs/OSHODI_COMBAT_PILOT.md).
+ * Ordinary enemies: a guard 3 punches, a thrower 2, one blast either; a heavy 5 punches (staggered by every third) or a
+ * blast and two punches.
+ */
+export const OSHODI_COMBAT_PILOT: CombatPilotConfig = {
+  id: 'oshodi.approach/combat-pilot-1',
+  punch: {
+    startupTicks: 5,
+    hitRecoveryTicks: 24,
+    whiffRecoveryTicks: 16,
+    damage: 1,
+    staggerTicks: 12,
+    staggerImmunityTicks: 54,
+    steadfastPoise: 3,
+    diagonal: true,
+  },
+  counterSwingTicks: 2,
+  enemyFramesTicks: 6,
+  enemyHp: { agbero: 2, guard: 3, thrower: 2, heavy: 5 },
+  blastDamageVsEnemy: 3,
+  inputBufferTicks: 15,
+  enemiesKeepOffHuman: true,
+};
+
+/**
+ * What the pilot does to the enemies' own attacks (merged over `enemyAttacks` in the pilot mission only): longer,
+ * readable wind-ups and cues, a real counter window after every swing and throw, a shorter hit-stun on the human, one
+ * wind-up at a time from a group and a longer free window after any enemy hit (decisions CP6-CP8).
+ */
+export const OSHODI_PILOT_ENEMY_ATTACKS: PilotEnemyAttacks = {
+  maxGroupPunches: 1,
+  groupPunchGapTicks: 36,
+  groupGapTicks: ticks(1.4),
+  victimFreeTicks: 75,
+  throwRecoveryTicks: { thrower: 48, heavy: 40 },
+  projectiles: {
+    bottle: { warnTicks: 42, dazeTicks: 20, cooldownTicks: ticks(3) },
+    stone: { warnTicks: 42, cooldownTicks: ticks(3) },
+    brick: { dazeTicks: 18 },
+    tool: { dazeTicks: 24 },
+  },
+  melee: {
+    agbero: { dazeTicks: 18, recoveryRootTicks: 36 },
+    guard: { extraStartupTicks: 30, dazeTicks: 18, recoveryRootTicks: 36 },
+    thrower: { recoveryRootTicks: 40 },
+    heavy: { extraStartupTicks: 30, dazeTicks: 24, knockbackTiles: 1, recoveryRootTicks: 50 },
+  },
+};
+
+/**
+ * The pilot's Easy / Hard adjustments, on top of the ordinary level differences (health, recovery frames, the enemy
+ * bot level Beginner / Casual / Standard). Normal adds nothing.
+ */
+export const OSHODI_PILOT_LEVELS: Readonly<Record<'easy' | 'hard', PilotLayer>> = {
+  easy: {
+    combatPilot: { punch: { staggerTicks: 20 }, counterSwingTicks: 12 },
+    enemyAttacks: { victimFreeTicks: 90, melee: { guard: { recoveryRootTicks: 44 } } },
+  },
+  hard: {
+    combatPilot: { enemyHp: { heavy: 6 }, punch: { staggerTicks: 10, staggerImmunityTicks: 60 } },
+    enemyAttacks: {
+      maxGroupPunches: 2,
+      groupPunchGapTicks: 36,
+      victimFreeTicks: 60,
+      melee: { guard: { extraStartupTicks: 24, recoveryRootTicks: 28 } },
+    },
+  },
 };
 
 /** The campaign tuning in force (a ruleset or a test may override it; normal matches use the defaults). */
@@ -1108,6 +1239,18 @@ export function mergeConfig(base: GameConfig, override?: DeepPartial<GameConfig>
   const out = structuredClone(base) as unknown as Record<string, unknown>;
   if (override) deepAssign(out, override as Record<string, unknown>);
   return out as unknown as GameConfig;
+}
+
+/** Two override layers as one (`b` over `a`; arrays replaced). Either may be absent. */
+export function mergeLayers<T extends object>(
+  a: DeepPartial<T> | undefined,
+  b: DeepPartial<T> | undefined,
+): DeepPartial<T> | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  const out = structuredClone(a) as Record<string, unknown>;
+  deepAssign(out, b as Record<string, unknown>);
+  return out as DeepPartial<T>;
 }
 
 function deepAssign(target: Record<string, unknown>, source: Record<string, unknown>): void {

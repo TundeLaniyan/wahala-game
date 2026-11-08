@@ -10,6 +10,7 @@ import { continueSlide } from './hazards';
 import { resolveTeleport } from './stage';
 import { beginStep, canPlayerEnter } from './stepping';
 import { groundedGeneratorAt, isActing, playerStepTicks } from './queries';
+import { pilotBlocksStep } from './pilotCombat';
 
 /**
  * Whether `updateMovement` will look at this player's move intent on the next tick (the previous
@@ -37,6 +38,7 @@ export function updateMovement(state: GameState, intents: Intents, events: SimEv
     const v = DIR_VEC[dir];
     const tx = p.x + v.dx;
     const ty = p.y + v.dy;
+    if (pilotBlocksStep(state, p, tx, ty)) continue; // combat pilot: an enemy keeps off the human's tile (CP9)
 
     if (canPlayerEnter(state, tx, ty)) {
       beginStep(p, tx, ty, playerStepTicks(state, p));

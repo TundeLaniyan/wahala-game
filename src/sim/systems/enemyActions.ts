@@ -23,6 +23,7 @@ import { applyCampaignHit } from './campaignDamage';
 import { enemyFireOf, canThrowNow, launchProjectile, sameSide } from './projectiles';
 import { alivePlayers } from './queries';
 import { attackReady, attackable, beginAttack, meleeTarget } from './skills';
+import { pilotSameTileRival } from './pilotCombat';
 
 type RivalView = GridView & {
   readonly tick: number;
@@ -40,7 +41,13 @@ export function enemyMeleeTarget<V extends RivalView>(
   const kind = p.enemyKind;
   const spec = kind ? view.config.enemyAttacks.melee[kind] : null;
   if (!spec) return null;
-  return meleeTarget(view, p, (o) => attackable(view, view.tick, p, o, spec.attack) && !sameSide(p, o));
+  const ok = (o: Readonly<Player>): boolean =>
+    attackable(view, view.tick, p, o, spec.attack) && !sameSide(p, o);
+  const found = meleeTarget(view, p, ok);
+  if (found) return found;
+  // combat pilot (decision CP9): a human who walked onto the enemy's own tile is still in reach
+  const inside = pilotSameTileRival(view, p, ok);
+  return inside ? { target: inside, dir: p.facing } : null;
 }
 
 /**

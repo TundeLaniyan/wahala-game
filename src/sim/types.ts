@@ -199,6 +199,19 @@ export interface PendingAttack {
   resolveTick: number;
   /** The direction it was thrown in (the line a reach-2 attack checks). */
   dir: Dir;
+  /** A combat-pilot punch (systems/pilotCombat.ts): resolved by the pilot rules, not the catalogue. Absent elsewhere. */
+  pilot?: true;
+}
+
+/** Per-seat runtime of the Oshodi combat pilot (systems/pilotCombat.ts). */
+export interface PilotCombatState {
+  /** Tick until which a press is kept (-1 = none), per seat. */
+  bufferedSpecial: Record<number, number>;
+  bufferedPlace: Record<number, number>;
+  /** A buffered place whose refusal reason has been announced. */
+  placeAnnounced: Record<number, boolean>;
+  /** Punches landed on each steadfast enemy (its poise count). */
+  poise: Record<number, number>;
 }
 
 /** The attacks a fighter throws: B next to a rival = `primary`; `secondary` is chosen by the B resolver (actions.ts). */
@@ -642,6 +655,8 @@ export interface GameState {
   enemyFire?: EnemyFireState;
   /** Classic raid runtime state (src/sim/raid). ABSENT in every other match (tested byte-for-byte). */
   raid?: RaidState;
+  /** The Oshodi combat pilot's runtime (buffered presses, heavy poise). ABSENT outside a pilot match. */
+  pilotCombat?: PilotCombatState;
 }
 
 export interface TrapTile {
@@ -1063,6 +1078,16 @@ export type SimEvent =
   | { type: 'attackStarted'; playerId: number; skill: AttackKind; targetId: number; resolveTick: number }
   /** A melee attack finished its startup: it connected (`targetId`) or whiffed (null). */
   | { type: 'attackResolved'; playerId: number; skill: AttackKind; targetId: number | null; hit: boolean }
+  /** Combat pilot: an accepted punch press swings (at an enemy in reach, `targetId`, or at the air: null). */
+  | { type: 'punchSwing'; playerId: number; dir: Dir; targetId: number | null }
+  /** Combat pilot: a generator press that could not be done, and why (all sockets in use, the tile taken, hit-stun ...). */
+  | {
+      type: 'placeRefused';
+      playerId: number;
+      reason: 'capacity' | 'occupied' | 'stunned' | 'busy';
+      x: number;
+      y: number;
+    }
   /** A hit that dazed or displaced the target cut a melee startup short. */
   | { type: 'attackInterrupted'; playerId: number; byId: number }
   | { type: 'playerPushed'; playerId: number; byId: number; fromX: number; fromY: number }

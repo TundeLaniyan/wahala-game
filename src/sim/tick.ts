@@ -2,7 +2,7 @@
  * The simulation pipeline. `tick` advances a GameState by exactly one fixed step.
  * The order of the stages below is part of the game rules; see docs/ARCHITECTURE.md.
  */
-import type { GameState, Intents, SimEvent } from './types';
+import type { GameState, Intent, Intents, Player, SimEvent } from './types';
 import { dropLoot } from './systems/drops';
 import { resolveExplosions } from './systems/explosions';
 import {
@@ -29,7 +29,8 @@ import { updateCrowd } from './systems/crowd';
 import { updateCrush } from './systems/crush';
 import { updateEndgameTraps, updateFloorHazards } from './systems/hazards';
 import { armTeleports, updateStage } from './systems/stage';
-import { resolveSpecial } from './systems/actions';
+import { resolveRewardSpecial, resolveSpecial } from './systems/actions';
+import { isPilotHuman, pilotIntents, pilotPending } from './systems/pilotCombat';
 import { updateLifePerks } from './systems/lifePerks';
 import { grantRewards } from './systems/rewards';
 import { scheduleRespawns, updateRespawns } from './systems/respawn';
@@ -128,6 +129,7 @@ function applyIntents(state: GameState, intents: Intents, events: SimEvent[]): v
     if (!p.alive) continue;
     if (!intent) {
       quickHandsPlacement(state, p, {}, events); // a kept press is done as soon as it can be
+      if (isPilotHuman(state, p) && pilotPending(state, p.id)) pilotTurn(state, p, {}, events);
       continue;
     }
     if (intent.vehicle) handleVehicleIntent(state, p, intent.vehicle, events);
@@ -135,10 +137,19 @@ function applyIntents(state: GameState, intents: Intents, events: SimEvent[]): v
     if (intent.disarm) tryDisarm(state, p, events);
     if (intent.action) performAction(state, p, events);
     if (intent.skill) useSkill(state, p, events);
+    // the Oshodi combat pilot's human: B and A go through the pilot (its punch, a short press buffer; CP2-CP5)
+    if (isPilotHuman(state, p) && p.streakRewards.quickHandsUntil <= state.tick) {
+      pilotTurn(state, p, intent, events);
+      continue;
+    }
     if (intent.special) resolveSpecial(state, p, events);
     if (p.streakRewards.quickHandsUntil > state.tick) quickHandsPlacement(state, p, intent, events);
     else if (intent.place) tryPlaceGenerator(state, p, events);
   }
+}
+
+function pilotTurn(state: GameState, p: Player, intent: Intent, events: SimEvent[]): void {
+  pilotIntents(state, p, intent, events, () => resolveRewardSpecial(state, p, events) !== null);
 }
 
 /** Drops flames and blast records whose time is up. */

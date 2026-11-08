@@ -259,6 +259,15 @@ const handlers: Handlers = {
   attackResolved: (e, c) => {
     if (!e.hit && allow(c, 'attackWhiff', 0.1)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.3, 0.8);
   },
+  // the combat pilot (decision CP4): every accepted punch is a whoosh; a refused generator a short dull "no"
+  // (existing synthesised cues only)
+  punchSwing: (e, c) => {
+    if (allow(c, 'punchSwing', 0.06)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.45, 1.9);
+  },
+  placeRefused: (e, c) => {
+    if (isHuman(c, e.playerId) && allow(c, 'placeRefused', 0.25))
+      sfx(c, 'pickup_wasted', panOf(c, e.x), 0.5, 1.2);
+  },
   attackInterrupted: (e, c) => {
     sfx(c, 'daze', panOf(c, playerX(c, e.playerId)), 0.5, 1.3);
   },
@@ -430,6 +439,9 @@ const handlers: Handlers = {
     const pan = panOf(c, e.x);
     if (e.result === 'damaged') {
       sfx(c, 'push', pan, isHuman(c, e.victimId) ? 1 : 0.85, 0.7);
+      // the combat pilot: the human's punch landing on an enemy gets a solid knock on top (decision CP4)
+      if (c.state.config.combatPilot && e.source === 'player' && e.byId !== null && isHuman(c, e.byId))
+        sfx(c, 'gen_kick', pan, 0.7, 0.8);
       if (isHuman(c, e.victimId)) c.buses.duck('blast');
     } else if (e.result === 'invulnerable' && allow(c, 'campaignGlance', 0.1)) sfx(c, 'push', pan, 0.25, 1.6);
   },

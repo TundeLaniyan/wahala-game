@@ -13,6 +13,7 @@ import { levelConfigLayer, levelMaxHp } from '../campaign/levels';
 import type { CampaignLevel } from '../campaign/levels';
 import { MISSION_DEFS, MISSION_SOFT_DENSITY } from './defs';
 import { getFieldMission } from './fieldDefs';
+import { fieldEnemiesOf, pilotConfigLayer, pilotLevelLayer } from './combatPilot';
 import type { CrewDef, MissionDef } from './defs';
 import { activeModifiers, resolveTuning } from './tuning';
 import type { MissionSpec, NpcRole } from './types';
@@ -36,6 +37,8 @@ export function missionConfigLayer(spec: MissionSpec): DeepPartial<GameConfig> {
     return {
       match: { durationTicks: ticks(spec.timeLimitSec ?? field.timeLimitSec) },
       arena: { softDensity: MISSION_SOFT_DENSITY },
+      // the combat pilot (decision CP1): only a field mission listed in mission/combatPilot.ts adds anything here
+      ...pilotConfigLayer(spec.fieldId),
     };
   }
   const def = MISSION_DEFS[spec.id];
@@ -73,10 +76,11 @@ export function buildMissionGame(o: {
 }): GameOptions {
   const { spec } = o;
   const humanHp = levelMaxHp(CAMPAIGN_CONFIG.playerMaxHp, o.level);
-  const levelConfig = levelConfigLayer(o.level);
   const crewLevel = spec.difficulty ?? 'rookie';
   if (spec.fieldId) {
     const field = getFieldMission(spec.fieldId);
+    // the combat pilot's Easy / Hard adjustment joins the level's layer (Normal: none, as before)
+    const levelConfig = pilotLevelLayer(spec.fieldId, o.level, levelConfigLayer(o.level));
     const players: PlayerSetup[] = [
       // campaign health: the human has segments (visible meter), field enemies have hit points by role
       {
@@ -86,7 +90,7 @@ export function buildMissionGame(o: {
         team: 0,
         maxHp: humanHp,
       },
-      ...field.enemies.map((e, i): PlayerSetup => ({
+      ...fieldEnemiesOf(field).map((e, i): PlayerSetup => ({
         enemyKind: ENEMY_KIND_FOR_ROLE[e.role],
         name: e.name,
         characterId: (['streetBaller', 'lekkiBoy', 'campusQueen'] as const)[(i + 1) % 3]!,
@@ -105,6 +109,7 @@ export function buildMissionGame(o: {
     };
   }
   const def = MISSION_DEFS[spec.id];
+  const levelConfig = levelConfigLayer(o.level);
   const players: PlayerSetup[] = [
     // campaign health for the human (the boss and crew keep the one-hit generator fight)
     { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0, maxHp: humanHp },
