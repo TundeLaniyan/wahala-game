@@ -1,7 +1,9 @@
 # Oshodi Mission 1 combat pilot (decisions CP1-CP12)
 
 Branch `claude/wahala-oshodi-combat-pilot-v1`, from the deployed release `b55e95f`. **An experiment for founder
-playtesting: not merged, not deployed, not extended to any other mission.**
+playtesting: not merged, not deployed, not extended to any other mission.** For playtesting it is integrated, with the
+respawn-freeze hotfix, on the review branch `claude/wahala-oshodi-combat-review-v1` (the release `5869154` plus this
+pilot; not merged into the release).
 
 Founder report: in Oshodi Terminal Approach, guards punch and interrupt the player, throwers keep throwing, generators
 are hard to place under pressure and enemies escape them, punching feels slow or ineffective, and the player spends the
@@ -157,11 +159,12 @@ Reading the numbers:
   do not stand beside obvious explosives.
 - Presentation: the rings and arcs reuse existing effects and clips; there is no new animation asset. The procedural
   fallback character (if a model fails to load) shows the rings but no swing clip.
-- **Respawn freeze**: this branch starts from the released `b55e95f`, which does not have the respawn-freeze hotfix
-  (`ce57237` / `5869154`, unreleased when the pilot branched). A death from an enemy punch or thrown object still leaves
-  the human down with no respawn, as on the release. `tests/oshodi-combat-pilot.test.ts` pins this with an `it.fails`
-  tripwire. When the pilot is reconciled with a release that ships the hotfix, that test fails until it becomes an
-  ordinary `it`. The hotfix's own tests then pass on the merged code (checked on a local merge, see below).
+- **Respawn freeze**: the pilot branch starts from the released `b55e95f`, which does not have the respawn-freeze
+  hotfix. On the pilot branch alone, a death from an enemy punch or thrown object still leaves the human down with no
+  respawn, pinned there by an `it.fails` tripwire. The integration-review branch `claude/wahala-oshodi-combat-review-v1`
+  is the pilot merged onto the release `5869154`, which ships the hotfix (RF1-RF4). On that branch the tripwire is an
+  ordinary test: repeated deaths from enemy punches spend a life each, respawn with full health, and the last one ends
+  the mission.
 
 ## Playtest instructions (founder)
 

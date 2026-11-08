@@ -5,7 +5,7 @@
  *   gate        only `oshodi.approach` carries `config.combatPilot`; other field missions, the Dispatch Depot raid, the
  *               boss missions, City Rumble and Classic do not, and their enemies keep their health
  *   1-7         punch-only guard / thrower, generator-only, mixed, two enemies, the heavy, presses under fire
- *   8           repeated deaths and respawns (the lifecycle is not the pilot's: unchanged)
+ *   8           repeated deaths and respawns, by blasts and by enemy punches (with the respawn-freeze hotfix)
  *   10          checkpoints, the door hold, the raid hand-over and the return still work with the pilot on
  */
 import { describe, expect, it } from 'vitest';
@@ -335,21 +335,35 @@ describe('8. repeated deaths and respawns keep the ordinary lifecycle', () => {
     expect(m.outcome?.result).toBe('lost');
   });
 
-  // the respawn-freeze hotfix (ce57237, not yet released when the pilot branched) makes an enemy-caused defeat spend a
-  // life and schedule the respawn. This branch starts from the released b55e95f, where it does not: the test flips to
-  // `it` when the pilot is reconciled with the release that ships the hotfix (docs/OSHODI_COMBAT_PILOT.md).
-  it.fails(
-    'an enemy punch that defeats the human schedules the respawn (needs the respawn-freeze hotfix)',
-    () => {
-      const s = scene([{ kind: 'guard', x: 10, y: 39 }]);
-      const me = s.players[0]!;
+  // RF1-RF4 (the respawn-freeze hotfix, released in 5869154 and integrated on the review branch): a defeat dealt by an
+  // enemy attack spends a life and schedules the respawn. On the pilot branch (from b55e95f) this was an `it.fails`
+  // tripwire; with the release underneath it is an ordinary regression test of the pilot's punches and the lifecycle.
+  it('repeated deaths from enemy punches spend a life each, respawn with full health, the last one ends the mission', () => {
+    const s = scene([{ kind: 'guard', x: 10, y: 39 }]);
+    const m = s.mission!;
+    const me = s.players[0]!;
+    const guard = s.players[1]!;
+    for (let life = 1; life <= m.livesMax; life++) {
+      // the guard right next to the human, the human on its last segment with no protection
+      guard.x = guard.stepFromX = me.x + 1;
+      guard.y = guard.stepFromY = me.y;
+      guard.stepRemaining = 0;
       me.vitals!.hp = 1;
+      me.vitals!.invulnUntil = 0;
+      me.protectedUntil = 0;
+      s.enemyFire = undefined; // no free window left over from the last life
       for (let i = 0; i < 300 && me.alive; i++) tick(s, { 1: { special: true } });
-      expect(me.alive).toBe(false);
-      expect(s.mission!.livesUsed).toBe(1);
-      expect(me.respawnAt).not.toBeNull();
-    },
-  );
+      expect(me.alive, `life ${life}: defeated by the punch`).toBe(false);
+      expect(m.livesUsed).toBe(life);
+      if (life === m.livesMax) break;
+      expect(me.respawnAt, `life ${life}: a respawn is scheduled`).not.toBeNull();
+      for (let i = 0; i < 600 && !me.alive; i++) tick(s, {});
+      expect(me.alive, `life ${life}: back on the map`).toBe(true);
+      expect(me.vitals!.hp).toBe(me.vitals!.maxHp);
+    }
+    for (let i = 0; i < 10; i++) tick(s, {});
+    expect(m.outcome?.result).toBe('lost');
+  });
 });
 
 describe('10. the mission route is untouched: checkpoints, door hold, raid and return', () => {
