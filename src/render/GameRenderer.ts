@@ -51,6 +51,7 @@ import { PickupViews } from './views/PickupViews';
 import { SupplyMarkViews } from './views/SupplyMarkViews';
 import { PlayerViews } from './views/PlayerViews';
 import { KnockdownViews } from './views/KnockdownViews';
+import { CombatPilotViews, hasCombatPilot } from './views/CombatPilotViews';
 import { VehicleViews } from './views/VehicleViews';
 import { TrapViews } from './views/TrapViews';
 import { StageHazardViews } from './views/StageHazardViews';
@@ -180,6 +181,8 @@ export class GameRenderer {
   private raid: RaidViews | null = null;
   private damage: DamageViews | null = null;
   private projectiles: ProjectileViews | null = null;
+  /** The Oshodi combat pilot's telegraphs (only a pilot match builds it). */
+  private pilot: CombatPilotViews | null = null;
   private localId = 0;
   /** The stage's living environment (ambient traffic, crowds); null for arenas without one or with `?noenv`. */
   private living: LivingEnvironment | null = null;
@@ -322,6 +325,9 @@ export class GameRenderer {
       this.projectiles = new ProjectileViews();
       this.views.push(this.projectiles, this.damage);
     }
+    // the combat pilot's wind-up / counter-window rings and swing feedback (decision CP4): pilot matches only
+    this.pilot = hasCombatPilot(state) ? new CombatPilotViews(players) : null;
+    if (this.pilot) this.views.push(this.pilot);
     this.living = this.createLiving(state);
     if (this.living) this.views.push(this.living);
     this.scene.add(
@@ -344,6 +350,7 @@ export class GameRenderer {
     if (this.raid) this.scene.add(this.raid.group);
     if (this.projectiles) this.scene.add(this.projectiles.group);
     if (this.damage) this.scene.add(this.damage.group);
+    if (this.pilot) this.scene.add(this.pilot.group);
 
     const tag = (o: { userData: Record<string, unknown> }, cls: GritClass): void => {
       o.userData.grit = cls;
@@ -412,6 +419,7 @@ export class GameRenderer {
     this.raid = null;
     this.damage = null;
     this.projectiles = null;
+    this.pilot = null;
     this.living = null;
     this.loaded = false;
   }
@@ -565,6 +573,7 @@ export class GameRenderer {
     this.raid?.handleEvents(events, fx, this.layout);
     this.projectiles?.handleEvents(events, state, fx, this.layout);
     this.damage?.handleEvents(events, state, fx, this.layout, this.localId);
+    this.pilot?.handleEvents(events, state, fx, this.layout, this.localId);
     for (const e of events) {
       switch (e.type) {
         case 'generatorExploded':

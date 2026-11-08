@@ -25,6 +25,7 @@ import { Brain } from './brain';
 import { PROFILES } from './profiles';
 import type { AiProfile } from './profiles';
 import type { Bot, BotOptions } from './types';
+import { isRadial, radialTiles } from './blast';
 
 /** After a B press the bot waits this long before pressing again (the sim enforces the real cooldowns). */
 const PRESS_GAP = 12;
@@ -47,9 +48,18 @@ export function enemyProfile(difficulty: Difficulty): AiProfile {
   };
 }
 
-/** Does the plus of `g` (its range, stopped by any non-floor tile) cover (x, y)? */
+/**
+ * Does the plus of `g` (its range, stopped by any non-floor tile) cover (x, y)? In the combat pilot's radial field
+ * mission the real disc is used instead (decision CP10: an enemy never starts a wind-up diagonal to a generator it
+ * heeds); every other match keeps the plus test exactly as before.
+ */
 function inCross(obs: Observation, g: Readonly<Generator>, x: number, y: number): boolean {
   if (g.x === x && g.y === y) return true;
+  if (obs.config.combatPilot && isRadial(obs)) {
+    const tiles: number[] = [];
+    radialTiles(obs, obs, g.x, g.y, g.range, g.pierce, g.square, () => false, tiles);
+    return tiles.includes(y * obs.width + x);
+  }
   if (g.x !== x && g.y !== y) return false;
   const d = Math.abs(g.x - x) + Math.abs(g.y - y);
   if (d > g.range) return false;

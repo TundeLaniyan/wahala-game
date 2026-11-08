@@ -54,9 +54,12 @@ export function createVitals(maxHp: number): Vitals {
  */
 export function vitalsFor(
   setup: { enemyKind?: Player['enemyKind']; maxHp?: number },
-  config: Pick<GameState['config'], 'campaign'>,
+  config: Pick<GameState['config'], 'campaign' | 'combatPilot'>,
 ): Vitals | undefined {
   if (setup.enemyKind) {
+    // the combat pilot's enemy health (decision CP3), only in a pilot match
+    const pilotHp = config.combatPilot?.enemyHp[setup.enemyKind];
+    if (pilotHp !== undefined) return createVitals(pilotHp);
     const def = enemyDef(setup.enemyKind);
     if (setup.enemyKind !== 'heavy' || setup.maxHp === undefined) return createVitals(def.hp);
     return createVitals(
@@ -83,6 +86,11 @@ export interface CampaignHitOptions {
   causes?: readonly EliminationCause[];
   /** Skips frames, shields and health: the victim is defeated (a closing crush with no tile left, the Sudden Death blast). */
   terminal?: boolean;
+  /**
+   * A combat-pilot punch (decision CP3): it is not stopped by an enemy's recovery frames (its own stagger immunity is
+   * what prevents a stun-lock) and it starts none. Only `pilotCombat.ts` passes it.
+   */
+  pilotPunch?: boolean;
 }
 
 /** Is the victim's recovery (or spawn protection) running? */
@@ -104,6 +112,10 @@ export function applyCampaignHit(
   // not a campaign victim (or already down): nothing to resolve, nothing to announce
   if (!p || !v || !p.alive) return 'invulnerable';
   const cfg = campaignConfig(state.config);
+  // recovery frames: the human's `invulnTicks`; an enemy's are the pilot's short ones in a pilot match (CP3)
+  const pilot = state.config.combatPilot;
+  const frameTicks = pilot && p.enemyKind !== undefined ? pilot.enemyFramesTicks : cfg.invulnTicks;
+  const pilotPunch = options.pilotPunch === true && pilot !== undefined;
   const done = (result: CampaignHitResult, taken: number): CampaignHitResult => {
     events.push({
       type: 'campaignHit',
@@ -126,7 +138,8 @@ export function applyCampaignHit(
   // 1. recovery frames and spawn protection
   const frames = state.tick < v.invulnUntil;
   const protectedNow = state.tick < p.protectedUntil;
-  if (protectedNow || (frames && !(hit.strong && !v.lastHitStrong))) return done('invulnerable', 0);
+  if (protectedNow || (frames && !pilotPunch && !(hit.strong && !v.lastHitStrong)))
+    return done('invulnerable', 0);
 
   const damage = Math.max(0, Math.floor(hit.damage));
 
@@ -136,7 +149,7 @@ export function applyCampaignHit(
     if (layer) {
       if (layer === 'okada') p.mounted = false;
       else p.armour--;
-      v.invulnUntil = state.tick + cfg.invulnTicks;
+      v.invulnUntil = state.tick + frameTicks;
       v.lastHitStrong = !!hit.strong;
       v.lastHitBy = hit.byId;
       v.lastHitSource = hit.source;
@@ -154,7 +167,7 @@ export function applyCampaignHit(
   v.lastHitSource = hit.source;
   if (damage > 0) {
     v.lastHitTick = state.tick;
-    v.invulnUntil = state.tick + cfg.invulnTicks;
+    if (!pilotPunch) v.invulnUntil = state.tick + frameTicks;
     v.lastHitStrong = !!hit.strong;
   }
   if (v.hp <= 0) return defeat(state, p, v, hit, events, options, taken, done);

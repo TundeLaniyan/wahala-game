@@ -106,6 +106,8 @@ export class PlayerViews implements View {
       if (e.type === 'generatorPlaced') play(e.ownerId, 'Place');
       else if (e.type === 'generatorThrown') play(e.playerId, 'Throw');
       else if (e.type === 'skillUsed') play(e.playerId, e.skill === 'daze' ? 'Kick' : 'Push');
+      // the combat pilot: every accepted punch swings at once, at the press (decision CP4)
+      else if (e.type === 'punchSwing') this.visuals.get(e.playerId)?.model.rigged?.playOnce('Push', 0.03, 1.6);
       // V2 contact abilities: a kick swings the leg, a disarm crouches over the generator (the punch
       // already plays Throw through its generatorThrown event; walking through needs no gesture)
       else if (e.type === 'contactUsed' && e.ability === 'kick') play(e.playerId, 'Kick');
@@ -136,6 +138,11 @@ export class PlayerViews implements View {
         }
       }
     }
+  }
+
+  /** A one-shot that lasts `seconds` (the combat pilot's enemy wind-ups: the blow lands as the clip ends). */
+  playOver(id: number, clip: ClipName, seconds: number): void {
+    this.visuals.get(id)?.model.rigged?.playOnceOver(clip, seconds);
   }
 
   /**
