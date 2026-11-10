@@ -90,3 +90,9 @@ Draw calls, triangles, geometries and shader programs are unchanged; one texture
 - **Markings** (kerbs, lane lines, words, the median) are still the floor canvas's resolution: slightly softer than the blocks up close.
 - **Grime and decals** from the existing weathering pass and blast scorches still lie over the paving, as on every surface.
 - **Software GL only:** shimmer and frame rate were measured with SwiftShader; a real phone may differ.
+
+## Coverage revised (decision LI7)
+The founder later narrowed the coverage: only Admiralty Way (x 20-23, y 10-29, its Freedom Way crossing box included) is
+paved; Freedom Way outside the box and the expressway are asphalt, the estate streets un-paved. The material described
+above (LI1-LI3) is unchanged. See `docs/integrated-release/task2-lekki-paving.md`.
+

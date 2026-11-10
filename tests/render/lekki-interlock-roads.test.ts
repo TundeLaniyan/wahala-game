@@ -3,8 +3,9 @@
  *  - the block is the I-shaped road paver: flared ends, a waisted middle, courses offset by half a block;
  *  - the texture is seamless, deterministic, calm (thin, not-too-dark joints; restrained block variation, no checkerboard)
  *    and fades to an even grey when minified (what the mip chain shows at a distance: no moire);
- *  - the road classification comes from the map: every local road and estate street is paved, the expressway is not,
- *    nothing else is, and the sim layout (collision, routes) is unchanged;
+ *  - the road classification comes from the map (decision LI7, founder revision): ONLY Admiralty Way is paved, through its
+ *    own crossing box with Freedom Way; Freedom Way outside the box, the estate streets, every other road and the
+ *    expressway are asphalt, nothing else is paved, and the sim layout (collision, routes) is unchanged;
  *  - the floor-shader patch composes with the other patches and only Lekki uses it.
  */
 import { MeshStandardMaterial } from 'three';
@@ -163,37 +164,52 @@ describe('which roads are paved (from the map)', () => {
     expect(tiles((x, y) => layout[y]![x] === '=')).toBe(524);
   });
 
-  it('Admiralty Way, Freedom Way and their crossing are paved, end to end', () => {
+  const inAdmiralty = (x: number, y: number): boolean => x >= 20 && x <= 23 && y >= 10 && y <= 29;
+
+  it('Admiralty Way is paved end to end (x 20-23, y 10-29: 80 tiles), its crossing box with Freedom Way included', () => {
     for (let y = 10; y <= 29; y++)
-      for (let x = 20; x <= 23; x++) expect(lekkiPavedAt(x, y), `${x},${y}`).toBe(true);
-    for (let x = 0; x < 57; x++)
-      for (const y of [18, 19, 20]) expect(lekkiPavedAt(x, y), `${x},${y}`).toBe(true);
+      for (let x = 20; x <= 23; x++) {
+        expect(layout[y]![x], `${x},${y} is road`).toBe('=');
+        expect(cls[y]![x], `${x},${y}`).toBe('admiraltyWay');
+        expect(lekkiPavedAt(x, y), `${x},${y}`).toBe(true);
+      }
+    for (let x = 20; x <= 23; x++)
+      for (const y of [18, 19, 20]) expect(lekkiPavedAt(x, y), `crossing ${x},${y}`).toBe(true);
+    expect(tiles(lekkiPavedAt)).toBe(80);
   });
 
-  it('no road tile outside the expressway is left asphalt, and the expressway (rows 30-34, both board edges) is not paved', () => {
-    for (let y = 0; y < layout.length; y++)
+  it('Freedom Way outside the crossing box is asphalt, edge to edge (rows 18-20)', () => {
+    for (const y of [18, 19, 20])
       for (let x = 0; x < 57; x++) {
-        if (layout[y]![x] !== '=') continue;
-        const express = y >= 30 && y <= 34;
-        expect(cls[y]![x], `${x},${y}`).toBe(express ? 'expressway' : 'localRoad');
-        expect(lekkiPavedAt(x, y), `${x},${y}`).toBe(!express);
+        if (x >= 20 && x <= 23) continue;
+        expect(cls[y]![x], `${x},${y}`).toBe('freedomWay');
+        expect(lekkiPavedAt(x, y), `${x},${y}`).toBe(false);
       }
   });
 
-  it('the estate streets are paved; walls, pavements, plazas, the court, sand and the gateway are not', () => {
+  it('the expressway (rows 30-34, every traffic lane, both board edges) is asphalt', () => {
+    for (let y = 30; y <= 34; y++)
+      for (let x = 0; x < 57; x++) {
+        expect(cls[y]![x], `${x},${y}`).toBe('expressway');
+        expect(lekkiPavedAt(x, y), `${x},${y}`).toBe(false);
+      }
+  });
+
+  it('the estate streets and every other surface are not paved: the only paved tiles are Admiralty Way road tiles', () => {
     const estates = arena.districts!.find((d) => d.id === 'estates')!.rects;
     const inEstates = (x: number, y: number): boolean =>
       estates.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
+    let estateStreets = 0;
     for (let y = 0; y < layout.length; y++)
       for (let x = 0; x < 57; x++) {
         const c = layout[y]![x]!;
-        const expected = c === '=' ? !(y >= 30 && y <= 34) : c !== '#' && inEstates(x, y);
-        expect(lekkiPavedAt(x, y), `${x},${y} '${c}'`).toBe(expected);
+        if (c !== '#' && c !== '=' && inEstates(x, y)) {
+          estateStreets++;
+          expect(cls[y]![x], `${x},${y}`).toBe('estateStreet');
+        }
+        expect(lekkiPavedAt(x, y), `${x},${y} '${c}'`).toBe(c === '=' && inAdmiralty(x, y));
       }
-    expect(tiles(lekkiPavedAt)).toBe(
-      tiles((x, y) => layout[y]![x] === '=' && !(y >= 30 && y <= 34)) +
-        tiles((x, y) => layout[y]![x] !== '#' && layout[y]![x] !== '=' && inEstates(x, y)),
-    );
+    expect(estateStreets).toBeGreaterThan(100); // the estates exist and are all asphalt / open floor now
   });
 });
 

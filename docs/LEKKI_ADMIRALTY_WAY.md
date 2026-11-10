@@ -49,3 +49,12 @@ Floor-canvas paint only: no mesh, no texture, no draw call. Same canvas size and
 
 ## Limitations
 Shimmer in motion is unverified (stills only); the colour and the road choice need a founder look; the blocks are larger than real ones by design; the dusk lighting of the photographs is not reproduced.
+
+## Founder revision (integrated release, decision LI7)
+After the Phase 1 interlock work (LI1-LI6) paved every local road and the estate streets, the founder revised the
+preference: ONLY Admiralty Way keeps the interlocking block material, both carriageways from the plaza (y 10) to the
+expressway (y 29), including its crossing box with Freedom Way (x 20-23, y 18-20). Freedom Way outside the box and the
+expressway are asphalt again; the estate streets are un-paved (their pre-LI4 ground). The block texture, its size and
+the shader are unchanged; an edge restraint now finishes the paving on both sides of the crossing box. Details,
+coverage and screenshots: `docs/integrated-release/task2-lekki-paving.md`, `docs/screenshots/lekki-admiralty-only/`.
+

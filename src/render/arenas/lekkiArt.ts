@@ -500,8 +500,9 @@ export const RUMBLE_LEKKI_FLOOR: FloorDrawer = communityFloor(ID, {
   base: [176, 168, 150],
   dust: 'rgba(160,140,100,',
   road: [66, 66, 68],
-  // every local road of Lekki Phase 1 is interlocking paving (lekkiRoads.ts): the canvas marks it with the key colour and
-  // the floor shader draws the blocks (paving/material.ts); markings painted after this stay on top
+  // Admiralty Way (and only it, through its Freedom Way crossing) is interlocking paving (lekkiRoads.ts, decision LI7): the
+  // canvas marks it with the key colour and the floor shader draws the blocks (paving/material.ts); markings painted after
+  // this stay on top, and every other road keeps the generic asphalt
   paved: (g, rg, layout) => paintPavedKey(g, rg, layout, lekkiPavedAt),
   pavedAt: lekkiPavedAt,
   pavers: [186, 174, 154],
