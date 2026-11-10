@@ -194,3 +194,19 @@
   font-size: 0.72rem;
   color: #e9dcc4;
 }
+
+/* the folded blast clock (decision SD-B1): one short line that keeps the countdown in sight without covering the fight */
+.sd-clock.compact {
+  flex-wrap: nowrap;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 2px 10px;
+  gap: 8px;
+  font-size: 0.74rem;
+  white-space: nowrap;
+  background: rgba(12, 10, 8, 0.78);
+}
+.sd-clock.compact .sd-status {
+  flex-basis: auto;
+}

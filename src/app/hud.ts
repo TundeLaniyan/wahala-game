@@ -132,6 +132,12 @@ export interface SuddenDeathHud {
   }[];
   /** Seconds until the next blast (null while the title card shows or once the sequence is spent). */
   secondsToBlast: number | null;
+  /**
+   * The countdown has just begun (the round's first, or the next one after a blast): the blast clock shows its full
+   * announcement for `SUDDEN_DEATH_ANNOUNCE_TICKS`, then folds into a one-line chip so it never covers the fight
+   * (decision SD-B1). Counted in simulation ticks: a paused game keeps it as it was.
+   */
+  announce: boolean;
   /** Inside the warning window before a blast. */
   warning: boolean;
   /** A blast fell in the last second. */
@@ -149,6 +155,13 @@ export interface SuddenDeathHud {
   localShield: number;
 }
 
+/**
+ * How long (ticks) the blast clock shows its full announcement after a countdown begins, before it folds into the
+ * compact chip (decision SD-B1): long enough to read "BLAST 1 OF 3 · SHIELDS RESPECTED" and the line about your own
+ * shield, short enough that it is gone before the fight gets going.
+ */
+export const SUDDEN_DEATH_ANNOUNCE_TICKS = 180;
+
 /** Protection layers a fighter holds: the Okada mount plus the Armour plates (each absorbs one separate lethal hit). */
 const shieldLayers = (p: Readonly<Player> | undefined): number => (p ? (p.mounted ? 1 : 0) + p.armour : 0);
 
@@ -158,6 +171,8 @@ export function buildSuddenDeath(state: GameState, localId: number): SuddenDeath
   const cfg = state.config.suddenDeath;
   const left = sd.nextBlastTick - state.tick;
   const pending = sd.stage === 'countdown' && Number.isFinite(sd.nextBlastTick);
+  // the current countdown began when the title card ended, or at the last blast (each blast schedules the next one)
+  const countdownFrom = Math.max(sd.transitionEndTick, sd.lastBlastTick ?? -Infinity);
   return {
     stage: sd.stage,
     cause: sd.cause,
@@ -188,6 +203,7 @@ export function buildSuddenDeath(state: GameState, localId: number): SuddenDeath
         isLocal: p.id === localId,
       })),
     secondsToBlast: pending ? Math.max(0, Math.ceil(left / 60)) : null,
+    announce: pending && state.tick - countdownFrom < SUDDEN_DEATH_ANNOUNCE_TICKS,
     warning: pending && left <= cfg.warnTicks,
     flash: sd.lastBlastTick !== null && state.tick - sd.lastBlastTick < 60,
     firstBlastSeconds: Math.round((cfg.blastDelayTicks[0] ?? 0) / 60),
