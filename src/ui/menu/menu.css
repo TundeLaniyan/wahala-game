@@ -11,6 +11,7 @@
 
 .mn,
 .mn-overlay,
+.mn-load,
 .rotate {
   --mn-base: #0b0e14;
   --mn-elev: #141923;

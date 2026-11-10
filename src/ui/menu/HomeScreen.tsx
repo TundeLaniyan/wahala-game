@@ -50,9 +50,7 @@ function HomeItem(props: {
 
 export function HomeScreen() {
   const s = useGameStore((st) => st.settings);
-  const loading = useGameStore((st) => st.loading);
   useGameStore((st) => st.portraitsVersion);
-  const busy = loading !== null && loading.done < loading.total;
   const fighter = fighterInfo(s.character);
   const campaign = useGameStore((st) => st.campaign);
   const progress = campaign?.started ? campaignProgress(campaign.save) : null;
@@ -188,10 +186,9 @@ export function HomeScreen() {
                 type="button"
                 className="mn-btn mn-primary small"
                 data-testid="quick-play"
-                disabled={busy}
                 onClick={() => commands.start()}
               >
-                {busy ? 'Loading…' : 'Quick play'}
+                Quick play
                 <span className="mn-arrow" aria-hidden>
                   →
                 </span>

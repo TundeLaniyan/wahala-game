@@ -1,0 +1,132 @@
+/* The match loading screen (ui/MatchLoading.tsx): the menu's colours and fonts, no artwork, cheap to paint. */
+
+.mn-load {
+  position: absolute;
+  inset: 0;
+  z-index: 60; /* above the HUD, the touch controls and the rotate notice; below nothing in a match */
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: radial-gradient(circle at 50% 40%, #1a2030 0%, var(--mn-base) 70%);
+  color: var(--mn-text);
+  font-family: var(--mn-body);
+}
+.mn-load-card {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+.mn-load h2 {
+  margin: 0;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  letter-spacing: 0.04em;
+  color: var(--mn-amber);
+  line-height: 1;
+}
+.mn-load .mn-kicker {
+  color: var(--mn-sand);
+  letter-spacing: 0.3em;
+}
+.mn-load-step {
+  margin: 4px 0 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--mn-sand);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* an honest "working" sign, not a progress bar: the only number shown is the real model count */
+.mn-load-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mn-amber);
+  animation: mn-load-pulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes mn-load-pulse {
+  from {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mn-load-pulse {
+    animation: none;
+  }
+}
+.mn-load-steps {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.mn-load-steps li {
+  color: var(--mn-muted);
+  opacity: 0.55;
+}
+.mn-load-steps li[data-state='now'] {
+  color: var(--mn-amber);
+  opacity: 1;
+}
+.mn-load-steps li[data-state='done'] {
+  color: var(--mn-green);
+  opacity: 0.9;
+}
+.mn-load-steps li[data-state='done']::before {
+  content: '✓ ';
+}
+.mn-load-error {
+  margin: 4px 0 0;
+  color: var(--mn-text);
+}
+.mn-load-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.mn-load-actions .mn-btn {
+  min-width: 132px;
+  min-height: 48px;
+}
+/* upright phone: the turn-sideways instruction comes first, the loading line under it (both visible, no overlap) */
+.mn-load-rotate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 14px 12px;
+  border: 1px solid var(--mn-border);
+  background: rgba(20, 25, 35, 0.9);
+}
+.mn-load-rotate .phone {
+  font-size: 3rem;
+  display: inline-block;
+  animation: rot 1.6s infinite ease-in-out;
+}
+.mn-load-rotate b {
+  color: var(--yellow, #ffd23f);
+  font-size: 1.2rem;
+}
+.mn-load-rotate small {
+  color: var(--mn-muted);
+}

@@ -1,3 +1,4 @@
+import type { MatchLoadState } from './matchLoader';
 import { create } from 'zustand';
 import type { InputSourceName } from '../input';
 import type { CharacterId } from '../sim';
@@ -125,6 +126,8 @@ export interface UiState {
   pauseSettings: boolean;
   /** Combat test lab level of the running local Rumble (0 = off); the pause menu's selection. */
   combatLab: 0 | 1 | 2 | 3 | 4;
+  /** The match loading screen (app/matchLoader.ts): null when no start is in progress. */
+  matchLoad: MatchLoadState | null;
   /** Graphics quality in use (null until the renderer exists): the Settings screen shows it. */
   quality: QualityStatus | null;
   /** One-player campaign (app/campaign.ts); null when the campaign flag is off or before it has loaded. */
@@ -158,6 +161,7 @@ export const useGameStore = create<UiState>(() => ({
   menu: MENU_HOME,
   pauseSettings: false,
   combatLab: 0,
+  matchLoad: null,
   quality: null,
   campaign: null,
 }));

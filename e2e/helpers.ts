@@ -105,6 +105,8 @@ export async function startMatch(
   if (opts.competitors) await page.getByTestId(`players-${opts.competitors}`).click();
   await launch(page, opts.character);
   await expect(page.getByTestId('hud')).toBeVisible();
+  // the match loading screen goes once the first frames are drawn (docs/MATCH_LOADING.md)
+  await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 30_000 });
   if (opts.waitPlaying !== false) await stepTicks(page, 160);
 }
 

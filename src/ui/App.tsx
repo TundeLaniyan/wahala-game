@@ -5,6 +5,7 @@ import { HowToPlay } from './HowToPlay';
 import { Hud } from './Hud';
 import { PauseOverlay, ResultsOverlay, RotateOverlay } from './Overlays';
 import { MainMenu } from './menu/MainMenu';
+import { MatchLoading } from './MatchLoading';
 import { TouchControls } from './TouchControls';
 import { SpectatorControls } from './SpectatorControls';
 
@@ -19,6 +20,7 @@ export function App() {
   const device = useGameStore((s) => s.device);
   const fatal = useGameStore((s) => s.fatal);
   const tutorial = useGameStore((s) => s.tutorial?.mode ?? null);
+  const matchLoad = useGameStore((s) => s.matchLoad);
 
   useEffect(() => {
     const unmount = mount(canvasRef.current!);
@@ -55,7 +57,9 @@ export function App() {
           </div>
         </div>
       )}
-      {screen === 'playing' && portrait && !paused && <RotateOverlay />}
+      {screen === 'playing' && portrait && !paused && !matchLoad && <RotateOverlay />}
+      {/* the match loading screen, over everything while a start runs (it leads with the rotate hint when upright) */}
+      {matchLoad && <MatchLoading load={matchLoad} />}
     </div>
   );
 }

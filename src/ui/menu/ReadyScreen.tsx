@@ -101,18 +101,16 @@ function Row(props: {
 
 export function ReadyScreen() {
   const s = useGameStore((st) => st.settings);
-  const loading = useGameStore((st) => st.loading);
   useGameStore((st) => st.portraitsVersion);
   const [launching, setLaunching] = useState(false);
   const launched = useRef(false);
-  const busy = loading !== null && loading.done < loading.total;
   const mode = MODE_CARDS.find((m) => m.id === modeOf(s))!;
   const arenaId = selectedArenaId(s);
   const arena = ARENAS[arenaId]!;
   const total = competitorCount(s);
   const f = fighterInfo(s.character);
   const start = () => {
-    if (launched.current || busy) return;
+    if (launched.current) return; // (models still loading: the loading screen shows the real count, ML6)
     launched.current = true;
     setLaunching(true);
     commands.start();
@@ -133,10 +131,10 @@ export function ReadyScreen() {
           className="mn-btn mn-primary mn-start"
           data-testid="start-button"
           data-autofocus=""
-          disabled={busy || launching}
+          disabled={launching}
           onClick={start}
         >
-          {busy ? 'Loading 3D…' : launching ? 'Starting…' : 'Start Match'}
+          {launching ? 'Starting…' : 'Start Match'}
           <span className="mn-arrow" aria-hidden>
             →
           </span>

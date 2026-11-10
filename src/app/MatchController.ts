@@ -129,6 +129,11 @@ export class MatchController implements MissionHost {
   private paused = false;
   /** Debug/test: stop real-time stepping (frames still render) without showing the pause screen. */
   frozen = false;
+  /**
+   * The match loading screen is up (app/matchLoader.ts): the scene renders but no simulation time passes, so the
+   * countdown is not spent behind the loading screen. Released by `setLoadHold(false)`.
+   */
+  private loadHold = false;
   private settings: GameSettings | null = null;
   private endedAtMs: number | null = null;
   private toastId = 1;
@@ -460,6 +465,16 @@ export class MatchController implements MissionHost {
     return this.director !== null && !this.director.humanInput;
   }
 
+  /** Hold (true) or release the simulation while the match loading screen is up; the clock restarts on release. */
+  setLoadHold(held: boolean): void {
+    if (this.loadHold === held) return;
+    this.loadHold = held;
+    if (!held) {
+      this.lastMs = -1;
+      this.accumulator = 0;
+    }
+  }
+
   /** The combat test lab level of local City Rumble matches (0 = off); kept across rematches in this session. */
   private labLevel: CombatLabLevel | 0 = 0;
 
@@ -524,7 +539,7 @@ export class MatchController implements MissionHost {
 
     if (this.skipping) {
       this.fastForward(frameEvents);
-    } else if (!this.paused && !this.frozen) {
+    } else if (!this.paused && !this.frozen && !this.loadHold) {
       this.accumulator += dtMs;
       let steps = 0;
       const t0 = performance.now();

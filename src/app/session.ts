@@ -36,6 +36,8 @@ import { QualityNotifier } from './qualityNotice';
 import { patch, useGameStore } from './store';
 import type { ScreenPoint } from './store';
 import { createSubtitleFeed } from './subtitles';
+import { MatchLoader } from './matchLoader';
+import type { MatchLoadKind } from './matchLoader';
 
 let controller: MatchController | null = null;
 let attract: AttractController | null = null;
@@ -49,6 +51,62 @@ let canvasEl: HTMLCanvasElement | null = null;
 let resizeObserver: ResizeObserver | null = null;
 /** Rate-limits the quiet "graphics changed" notice (Auto mode). */
 const qualityNotifier = new QualityNotifier();
+
+// ---------------------------------------------------------------------------------------- match loading (ML1-ML8)
+/** The boot model preload while it runs (null once it is done). */
+let assetsLoading: Promise<unknown> | null = null;
+/** Frames the renderer has drawn of a match (counted in `frame`), and who waits for a number of them. */
+let framesDrawn = 0;
+let frameWaiters: { target: number; resolve: () => void }[] = [];
+/** Debug (`?debug&loadfail=n`): the next n starts throw, to see the failure screen; `loaddelay=ms` slows the start. */
+let debugLoadFailures = 0;
+let matchStarts = 0;
+
+/** Resolves once the browser has painted: two animation frames, or a timer when frames are throttled. */
+function afterPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (): void => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    requestAnimationFrame(() => requestAnimationFrame(finish));
+    setTimeout(finish, 250);
+  });
+}
+
+const loader = new MatchLoader({
+  publish: (matchLoad) => patch({ matchLoad }),
+  afterPaint,
+  assetsPending: () => assetsLoading,
+  assetCounts: () => useGameStore.getState().loading,
+  framesDrawn: (n) =>
+    new Promise((resolve) => {
+      frameWaiters.push({ target: framesDrawn + n, resolve });
+    }),
+  hold: (held) => controller?.setLoadHold(held),
+  wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+});
+
+/**
+ * Starts a match through the loader: the tap is acknowledged at once, the heavy set-up runs after the loading screen
+ * painted, and the screen goes once the first frames are drawn. A second start while one runs is ignored.
+ */
+function loadMatch(kind: MatchLoadKind, start: () => void, back: () => void): void {
+  void loader.run(
+    kind,
+    () => {
+      matchStarts++;
+      if (debugLoadFailures > 0) {
+        debugLoadFailures--;
+        throw new Error('debug: the start was made to fail (?loadfail)');
+      }
+      start();
+    },
+    back,
+  );
+}
 
 /** Auto moved the graphics quality: refresh what Settings shows and, in a match, say so once in a while. */
 function onQualityChange(e: QualityEvent): void {
@@ -109,6 +167,14 @@ function frame(now: number): void {
   } else {
     controller.frame(now);
     if (useGameStore.getState().tutorial) tutorial?.frame();
+    if (controller.state) {
+      framesDrawn++;
+      if (frameWaiters.length) {
+        const ready = frameWaiters.filter((w) => framesDrawn >= w.target);
+        frameWaiters = frameWaiters.filter((w) => framesDrawn < w.target);
+        for (const w of ready) w.resolve();
+      }
+    }
   }
   if (now - lastBoardCheck > 250) {
     lastBoardCheck = now;
@@ -166,6 +232,10 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   const forced = params.get('q');
   if (isQualitySetting(forced)) patch({ settings: { ...useGameStore.getState().settings, quality: forced } });
   const settings = useGameStore.getState().settings;
+  if (params.has('debug')) {
+    debugLoadFailures = Math.max(0, Number(params.get('loadfail')) || 0);
+    loader.setDebugDelay(Math.max(0, Number(params.get('loaddelay')) || 0));
+  }
   const cameraOverride = params.get('cam') === 'stadium' ? 'stadium' : null;
   patch({ cameraOverride });
   try {
@@ -233,9 +303,10 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   // The live demo behind the menu is skipped for tests (?nobots / ?noattract) and on the lowest quality.
   // Models load once; the live demo behind the menu starts when the rigged cast is ready.
   patch({ loading: { done: 0, total: 1 } });
-  void assets
+  assetsLoading = assets
     .preload(undefined, (done, total) => patch({ loading: { done, total } }))
     .then(() => {
+      assetsLoading = null;
       try {
         registerBusts(renderCastPortraits());
       } catch {
@@ -320,7 +391,11 @@ const missionHost: MissionHost = {
     audio.playUi('start');
     attract?.stop();
     subtitles.clear();
-    controller?.startMission(options, meta);
+    loadMatch(
+      'mission',
+      () => controller?.startMission(options, meta),
+      () => commands.campaignMap(),
+    );
   },
   stop(): void {
     subtitles.clear();
@@ -334,7 +409,11 @@ const missionHost: MissionHost = {
     audio.playUi('start');
     attract?.stop();
     subtitles.clear();
-    controller?.playRaid(options, meta);
+    loadMatch(
+      'raid',
+      () => controller?.playRaid(options, meta),
+      () => commands.campaignMap(),
+    );
   },
   resumeField: (resolve) => controller?.resumeField(resolve) ?? false,
   current: () => controller?.state ?? null,
@@ -344,6 +423,7 @@ const missionHost: MissionHost = {
 /** Everything the UI can ask the game to do. */
 export const commands = {
   start(): void {
+    if (loader.busy) return; // a start is already on its way: a second tap starts nothing
     // a match must always be able to start: repair anything an old save could hold first
     const current = useGameStore.getState().settings;
     const safe = sanitizeSettings(current);
@@ -355,12 +435,33 @@ export const commands = {
     attract?.stop();
     subtitles.clear();
     const seed = Number(new URLSearchParams(location.search).get('seed'));
-    controller?.start(useGameStore.getState().settings, Number.isFinite(seed) && seed > 0 ? seed : undefined);
+    const settings = useGameStore.getState().settings;
+    loadMatch(
+      'match',
+      () => controller?.start(settings, Number.isFinite(seed) && seed > 0 ? seed : undefined),
+      () => commands.toTitle(),
+    );
   },
   rematch(): void {
+    if (loader.busy) return;
+    void audio.unlock();
     audio.playUi('start');
     subtitles.clear();
-    controller?.rematch();
+    loadMatch(
+      'rematch',
+      () => controller?.rematch(),
+      () => commands.toTitle(),
+    );
+  },
+  /** The loading screen's Retry (after a failed start). */
+  loadRetry(): void {
+    audio.playUi('click');
+    void loader.retry();
+  },
+  /** The loading screen's Back (after a failed start): to the menu, or to the campaign map. */
+  loadBack(): void {
+    audio.playUi('back');
+    loader.back();
   },
   /** Leaves the match for the main menu, at `path` below home (default: the home screen). */
   toTitle(path: readonly MenuScreen[] = []): void {
@@ -369,6 +470,7 @@ export const commands = {
     patch({ menu: menuAt(path), pauseSettings: false });
     campaign?.leave();
     controller?.stop();
+    loader.clear(); // never a loading screen left over the menu
     if (settingsAllowAttract()) attract?.start();
   },
   // ---- main-menu navigation (app/menu.ts); the screens edit the real settings through updateSettings
@@ -613,6 +715,8 @@ function exposeDebugHandle(): void {
     renderer: () => renderer,
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
     music: () => (audio as { musicStatus?: () => unknown }).musicStatus?.() ?? null,
+    /** Match loading: the screen's state now and how many starts actually ran (duplicate taps start nothing). */
+    matchLoad: () => ({ state: loader.state, starts: matchStarts }),
     /** Combat test lab: the runtime (level, per-seat diagnostics) of the running match, null when off. */
     combatLab: () => controller?.state?.combatLab ?? null,
     /** Voice registry and per-match loading state, and the lines scheduled so far. */

@@ -4,7 +4,7 @@ _Last updated at the end of the autonomous Phase 1 build session. Everything bel
 
 ## Integrated release: gameplay, mobile controls, combat lab, visual polish (branch `claude/wahala-integrated-release-v1`, from `0c200a7`)
 
-Notes per task in `docs/integrated-release/`; decisions SD-B, LI7-LI9, NV, CL-L and PS in `docs/DECISIONS.md`.
+Notes per task in `docs/integrated-release/`; decisions SD-B, LI7-LI9, NV, CL-L, PS and ML in `docs/DECISIONS.md`.
 
 - **Sudden Death:** the blast clock announces for 3 s, then folds into a one-line chip; nothing on the board takes a touch.
 - **Lekki:** interlock paving on Admiralty Way only (x 20-23, y 10-29, through its Freedom Way crossing); asphalt again elsewhere.
@@ -12,6 +12,7 @@ Notes per task in `docs/integrated-release/`; decisions SD-B, LI7-LI9, NV, CL-L 
 - **Navigation:** held-turn continuation for keyboard and gamepad, D-pad newest-wins, Large controls and vibration options.
 - **Combat Test Lab:** four punch levels in the pause menu of a local City Rumble (`docs/COMBAT_TEST_LAB.md`).
 - **Fighter select and story:** "Playable fighters · 3" label, radio-message cards, text-only scrolling beside story pictures.
+- **Match loading:** Play / Start / Rematch / missions answer at once with a light loading screen (real steps, real model count, turn-sideways hint on an upright phone), one start per tap burst, Retry / Back on failure (`docs/MATCH_LOADING.md`, ML1-ML8).
 
 ## Oshodi Mission 1 combat pilot (branch `claude/wahala-oshodi-combat-pilot-v1`, from the release `b55e95f`)
 
