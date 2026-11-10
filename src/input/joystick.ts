@@ -38,9 +38,14 @@ export interface StickConfig {
   tapMs: number;
 }
 
-/** Sizes scale with the viewport's short side: comfortable on a 320 px tall phone and on a tablet. */
-export function stickConfigFor(width: number, height: number): StickConfig {
-  const radius = Math.round(Math.min(72, Math.max(44, Math.min(width, height) * 0.14)));
+/**
+ * Sizes scale with the viewport's short side: comfortable on a 320 px tall phone and on a tablet. `scale` is the
+ * Settings > Control size factor (decision NV3: Large = 1.15); every zone keeps its share of the radius.
+ */
+export function stickConfigFor(width: number, height: number, scale = 1): StickConfig {
+  const radius = Math.round(
+    Math.min(72 * scale, Math.max(44 * scale, Math.min(width, height) * 0.14 * scale)),
+  );
   return {
     radius,
     deadZone: Math.round(radius * 0.24),

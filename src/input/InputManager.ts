@@ -171,6 +171,11 @@ export class InputManager {
     this.moveStyle = style;
   }
 
+  /** The device used last (keyboard, touch or gamepad). */
+  get activeDevice(): InputSourceName {
+    return this.lastDevice;
+  }
+
   /** What assisted movement does right now (the setting, resolved for the device in use). */
   get assistLevel(): AssistLevel {
     return resolveAssistLevel(this.moveAssist, this.lastDevice);
@@ -290,7 +295,7 @@ export class InputManager {
     }
     const set = new Set<Dir>(this.keyboard.heldSet);
     if (this.touchDir) set.add(this.touchDir);
-    if (this.gamepad.held) set.add(this.gamepad.held);
+    for (const d of this.gamepad.heldSet) set.add(d);
     return set;
   }
 

@@ -29,6 +29,7 @@ import type {
   VehicleTurn,
 } from '../sim';
 import { buildMoveBoard, inputModeFor, inputTrace } from '../input';
+import { hapticFor, vibrate } from '../platform/haptics';
 import type { NavCommand } from '../input';
 import type { EntryOverlayModel, EntryPick } from '../render';
 import { campaignHitNotice } from './campaignHud';
@@ -679,6 +680,9 @@ export class MatchController implements MissionHost {
     this.deps.renderer.handleEvents(seen, state);
     const heard = this.rumble ? this.heardEvents(events, state) : events;
     this.audio.handleEvents(heard, state);
+    // optional vibration when the local player is hurt (decision NV4): touch play only, Settings > Vibration
+    if (this.deps.input.activeDevice === 'touch')
+      vibrate(hapticFor(events, LOCAL_ID), useGameStore.getState().settings.vibration === 'on');
     this.audio.setIntensity(
       state.match.phase === 'playing' && state.match.playTicks > state.config.match.durationTicks - 1800
         ? 1

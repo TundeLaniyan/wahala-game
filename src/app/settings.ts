@@ -72,6 +72,10 @@ export interface GameSettings {
   moveAssist: MoveAssistSetting;
   /** Decision AS4: the touchscreen thumb's style - standard (cardinal + corner help) or beginner (adds buffering and emergency replanning). */
   moveStyle: MoveStyle;
+  /** On-screen controls size (decision NV3): Large grows the two buttons and the thumbstick by 15 %. */
+  controlSize: 'normal' | 'large';
+  /** Short vibration on a touch button press and when you are hurt, where the device supports it (decision NV4). */
+  vibration: 'on' | 'off';
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
@@ -101,6 +105,8 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   campaignListen: true,
   moveAssist: 'auto',
   moveStyle: 'standard',
+  controlSize: 'normal',
+  vibration: 'on',
 };
 
 export const SETTINGS_KEY = 'wahala.settings.v1';
@@ -125,6 +131,8 @@ export const PREFERENCE_KEYS = [
   'muted',
   'moveAssist',
   'moveStyle',
+  'controlSize',
+  'vibration',
 ] as const;
 export type PreferenceKey = (typeof PREFERENCE_KEYS)[number];
 
@@ -142,6 +150,8 @@ export function preferenceDefaults(): Pick<GameSettings, PreferenceKey> {
     muted: d.muted,
     moveAssist: d.moveAssist,
     moveStyle: d.moveStyle,
+    controlSize: d.controlSize,
+    vibration: d.vibration,
   };
 }
 
@@ -186,6 +196,8 @@ export function sanitizeSettings(s: GameSettings): GameSettings {
     campaignListen: bool(s.campaignListen, d.campaignListen),
     moveAssist: oneOf(s.moveAssist, MOVE_ASSIST_SETTINGS, d.moveAssist),
     moveStyle: oneOf(s.moveStyle, MOVE_STYLES, d.moveStyle),
+    controlSize: oneOf(s.controlSize, ['normal', 'large'] as const, d.controlSize),
+    vibration: oneOf(s.vibration, ['on', 'off'] as const, d.vibration),
   };
 }
 

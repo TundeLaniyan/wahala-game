@@ -10,6 +10,7 @@ import { VirtualStick, stickConfigFor } from '../input/joystick';
 import { SPECIAL_HOLD_MS, inputTrace } from '../input';
 import { useGameStore } from '../app/store';
 import { CrossControl } from './DpadControl';
+import { TAP_MS, vibrate } from '../platform/haptics';
 import type { HudMe } from '../app/hud';
 
 /**
@@ -18,9 +19,16 @@ import type { HudMe } from '../app/hud';
  * leaves the dead zone is passed through as a tap on the board, so a tutorial's vehicle entrances under
  * the zone can still be picked by touch.
  */
+/** Settings > Control size: Large (decision NV3) scales the stick by this, and styles.css the buttons by the same. */
+export const LARGE_SCALE = 1.15;
+
+const touchClass = (large: boolean): string => (large ? 'touch large' : 'touch');
+
 export function Joystick({ entryOpen }: { entryOpen: boolean }) {
   const zone = useRef<HTMLDivElement>(null);
-  const stick = useRef(new VirtualStick(stickConfigFor(window.innerWidth, window.innerHeight)));
+  // Settings > Control size (decision NV3): Large grows the stick with the buttons
+  const scale = useGameStore((s) => (s.settings.controlSize === 'large' ? LARGE_SCALE : 1));
+  const stick = useRef(new VirtualStick(stickConfigFor(window.innerWidth, window.innerHeight, scale)));
   const [view, setView] = useState<{ x: number; y: number; kx: number; ky: number; dir: Dir | null } | null>(
     null,
   );
@@ -38,9 +46,10 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
   // a rotation or resize mid-drag invalidates the origin: drop the touch and resize the stick
   useEffect(() => {
     const onResize = (): void => {
-      stick.current.config = stickConfigFor(window.innerWidth, window.innerHeight);
+      stick.current.config = stickConfigFor(window.innerWidth, window.innerHeight, scale);
       if (stick.current.active) release();
     };
+    onResize(); // the size setting changed (or first mount): resize the stick now
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
     return () => {
@@ -48,7 +57,7 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
       window.removeEventListener('orientationchange', onResize);
       input.setTouchDir(null);
     };
-  }, []);
+  }, [scale]);
   const end = (e: RPointerEvent): void => {
     const result = stick.current.end(e.pointerId, e.timeStamp);
     if (!result) return;
@@ -189,6 +198,7 @@ function GeneratorButton({
         e.preventDefault();
         fingers.current.add(`p${e.pointerId}`);
         input.touchDown('place', `p${e.pointerId}`);
+        vibrate(TAP_MS, useGameStore.getState().settings.vibration === 'on'); // optional tick (NV4)
         setPressed(true);
         if (remoteReady) setHolding(true);
         try {
@@ -266,6 +276,7 @@ function SpecialButton({ me, skill }: { me: HudMe; skill: string }) {
         e.preventDefault();
         fingers.current.add(`p${e.pointerId}`);
         input.touchDown('special', `p${e.pointerId}`);
+        vibrate(TAP_MS, useGameStore.getState().settings.vibration === 'on'); // optional tick (NV4)
         setPressed(true);
         if (remoteReady) setHolding(true);
         try {
@@ -312,6 +323,7 @@ export function TouchControls() {
     (s) => s.hud?.players.find((p) => p.isLocal)?.characterId ?? s.settings.character,
   );
   const localAlive = useGameStore((s) => s.hud?.localAlive ?? true);
+  const large = useGameStore((s) => s.settings.controlSize === 'large');
   // a classic raid: the movement control is the four-arrow cross (cardinal only), the two action buttons are unchanged.
   // The app switches the input layer to cardinal-only when the raid starts (`inputModeFor`, input/inputMode.ts); the
   // hud snapshot changes every few frames, so this re-reads it in time.
@@ -319,10 +331,14 @@ export function TouchControls() {
   // out of the match: nothing to steer, and the stick zone must not cover the spectator buttons
   if (!localAlive) return null;
   if (!me || entry)
-    return <div className="touch">{raid ? <CrossControl /> : <Joystick entryOpen={!!entry} />}</div>;
+    return (
+      <div className={touchClass(large)} data-size={large ? 'large' : 'normal'}>
+        {raid ? <CrossControl /> : <Joystick entryOpen={!!entry} />}
+      </div>
+    );
   const skill = CHARACTERS[character].skill;
   return (
-    <div className="touch" data-testid="touch-controls">
+    <div className={touchClass(large)} data-testid="touch-controls" data-size={large ? 'large' : 'normal'}>
       {raid ? <CrossControl /> : <Joystick entryOpen={false} />}
       <div className="actions">
         <GeneratorButton
