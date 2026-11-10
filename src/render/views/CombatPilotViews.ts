@@ -21,7 +21,7 @@ import {
   RingGeometry,
 } from 'three';
 import type { Dir, GameState, Player, SimEvent } from '../../sim';
-import { DIR_VEC } from '../../sim';
+import { DIR_VEC, combatLabAllowed } from '../../sim';
 import type { Effects } from '../fx/Effects';
 import type { Layout } from '../coords';
 import { playerGridPos } from './motion';
@@ -58,7 +58,12 @@ function material(color: number): MeshBasicMaterial {
   });
 }
 
-export const hasCombatPilot = (state: GameState): boolean => state.config.combatPilot !== undefined;
+/**
+ * Built for the Oshodi combat pilot, and for every local City Rumble match (the combat test lab can be switched on in
+ * the pause menu at any time: its swing arcs and impacts are drawn here too; docs/COMBAT_TEST_LAB.md).
+ */
+export const hasCombatPilot = (state: GameState): boolean =>
+  state.config.combatPilot !== undefined || combatLabAllowed(state);
 
 export class CombatPilotViews implements View {
   readonly group = new Group();
@@ -89,6 +94,15 @@ export class CombatPilotViews implements View {
         const x = layout.wx(p.x + v.dx * 0.6);
         const z = layout.wz(p.y + v.dy * 0.6);
         fx.shockwave(x, z, 0.55, 0xffffff);
+      } else if (e.type === 'attackResolved' && e.hit && e.targetId !== null && state.config.combatLab) {
+        // the lab's impact: a ring on every hit, a big flash and a wider ring at the arcade levels
+        const t = state.players[e.targetId];
+        if (!t) continue;
+        const x = layout.wx(t.x);
+        const z = layout.wz(t.y);
+        const big = state.config.combatLab.feedback === 2;
+        fx.shockwave(x, z, big ? 1.6 : 1, big ? 0xffd23f : 0xffffff);
+        if (big) fx.flash(x, 0.9, z, 1.6, 0xfff2b0, 0.18);
       } else if (e.type === 'placeRefused' && e.playerId === localId) {
         fx.floatText(e.x, e.y, REFUSED_TEXT[e.reason], '#ff8a7a');
       }

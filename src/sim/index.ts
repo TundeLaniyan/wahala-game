@@ -164,3 +164,8 @@ export {
 export { enemyGroupDirective, findChokepoint, standoffSlots, surroundSlots } from './campaign/tactics';
 export { ENEMY_ATTACK_SETS, THROWN_KINDS, thrownKindFor } from './data/enemyAttacks';
 export type { EnemyAttackSet } from './data/enemyAttacks';
+// the City Rumble combat test lab (temporary playtest tool, docs/COMBAT_TEST_LAB.md)
+export { COMBAT_LAB_PRESETS } from './config';
+export type { CombatLabLevel, CombatLabPreset } from './config';
+export { combatLabAllowed, labReach, setCombatLabLevel } from './systems/combatLab';
+export type { CombatLabStats } from './types';

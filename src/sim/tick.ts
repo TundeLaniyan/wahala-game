@@ -29,7 +29,7 @@ import { updateCrowd } from './systems/crowd';
 import { updateCrush } from './systems/crush';
 import { updateEndgameTraps, updateFloorHazards } from './systems/hazards';
 import { armTeleports, updateStage } from './systems/stage';
-import { resolveRewardSpecial, resolveSpecial } from './systems/actions';
+import { resolveRewardSpecial, resolveSpecial, retryKeptSpecial } from './systems/actions';
 import { isPilotHuman, pilotIntents, pilotPending } from './systems/pilotCombat';
 import { updateLifePerks } from './systems/lifePerks';
 import { grantRewards } from './systems/rewards';
@@ -130,6 +130,7 @@ function applyIntents(state: GameState, intents: Intents, events: SimEvent[]): v
     if (!intent) {
       quickHandsPlacement(state, p, {}, events); // a kept press is done as soon as it can be
       if (isPilotHuman(state, p) && pilotPending(state, p.id)) pilotTurn(state, p, {}, events);
+      if (state.combatLab) retryKeptSpecial(state, p, events); // the combat test lab's kept B press
       continue;
     }
     if (intent.vehicle) handleVehicleIntent(state, p, intent.vehicle, events);
@@ -143,6 +144,7 @@ function applyIntents(state: GameState, intents: Intents, events: SimEvent[]): v
       continue;
     }
     if (intent.special) resolveSpecial(state, p, events);
+    else if (state.combatLab) retryKeptSpecial(state, p, events); // the combat test lab's kept B press
     if (p.streakRewards.quickHandsUntil > state.tick) quickHandsPlacement(state, p, intent, events);
     else if (intent.place) tryPlaceGenerator(state, p, events);
   }

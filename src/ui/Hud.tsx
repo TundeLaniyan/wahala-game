@@ -17,6 +17,7 @@ import { MissionCompass } from './MissionCompass';
 import { MissionDock } from './MissionDock';
 import { ProgressionBadge } from './ProgressionBadge';
 import { RumbleHud } from './RumbleHud';
+import { CombatLabChip } from './CombatLab';
 
 function Portrait({ p }: { p: HudPlayer }) {
   useGameStore((st) => st.portraitsVersion);
@@ -202,6 +203,7 @@ export function Hud() {
           {/* the right column: the map, and in a campaign mission the mission panel under it */}
           <div className="rumble-right" data-testid="rumble-right">
             <Minimap />
+            <CombatLabChip lab={hud.combatLab} />
             <MissionDock mission={hud.mission} campaign={hud.campaign} enemies={hud.enemies} />
           </div>
         </>

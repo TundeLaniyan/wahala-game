@@ -11,7 +11,15 @@ import type { QualityEvent } from '../render';
 import { registerBusts } from '../assets/portraits';
 import { browserStore } from '../campaign';
 import { flags } from '../platform';
-import type { CampaignLevel, CharacterId, Difficulty, GameState, MissionModifierId, SimEvent } from '../sim';
+import type {
+  CampaignLevel,
+  CharacterId,
+  CombatLabLevel,
+  Difficulty,
+  GameState,
+  MissionModifierId,
+  SimEvent,
+} from '../sim';
 import { enterImmersiveMode } from './fullscreen';
 import { AttractController } from './AttractController';
 import { CampaignController } from './campaign';
@@ -473,6 +481,14 @@ export const commands = {
     patch({ pauseSettings: open });
   },
   togglePause: (): void => controller?.togglePause(),
+  /** Combat test lab (pause menu of a local City Rumble): may this match use it? */
+  combatLabAvailable: (): boolean => controller?.combatLabAvailable() ?? false,
+  /** Combat test lab: switch the running match to level 1-4, or 0 = off, without restarting. */
+  setCombatLab(level: CombatLabLevel | 0): void {
+    if (!controller?.setCombatLab(level)) return;
+    audio.playUi('click');
+    patch({ combatLab: level });
+  },
   resume: (): void => controller?.setPaused(false),
   skipToResults: (): void => controller?.skipToResults(),
   /** City Rumble spectator: watch the next (1) or previous (-1) survivor. */
@@ -597,6 +613,8 @@ function exposeDebugHandle(): void {
     renderer: () => renderer,
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
     music: () => (audio as { musicStatus?: () => unknown }).musicStatus?.() ?? null,
+    /** Combat test lab: the runtime (level, per-seat diagnostics) of the running match, null when off. */
+    combatLab: () => controller?.state?.combatLab ?? null,
     /** Voice registry and per-match loading state, and the lines scheduled so far. */
     voices: () => (audio as { voiceStatus?: () => unknown }).voiceStatus?.() ?? null,
     voiceReport: () => (audio as { whenVoicesLoaded?: () => Promise<unknown> }).whenVoicesLoaded?.() ?? null,

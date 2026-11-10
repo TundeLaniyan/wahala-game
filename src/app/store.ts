@@ -123,6 +123,8 @@ export interface UiState {
   menu: MenuState;
   /** The pause menu's Settings panel is open (Esc / Start close it instead of resuming). */
   pauseSettings: boolean;
+  /** Combat test lab level of the running local Rumble (0 = off); the pause menu's selection. */
+  combatLab: 0 | 1 | 2 | 3 | 4;
   /** Graphics quality in use (null until the renderer exists): the Settings screen shows it. */
   quality: QualityStatus | null;
   /** One-player campaign (app/campaign.ts); null when the campaign flag is off or before it has loaded. */
@@ -155,6 +157,7 @@ export const useGameStore = create<UiState>(() => ({
   tutorial: null,
   menu: MENU_HOME,
   pauseSettings: false,
+  combatLab: 0,
   quality: null,
   campaign: null,
 }));

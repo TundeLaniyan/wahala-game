@@ -236,11 +236,136 @@ export interface CombatPilotConfig {
   enemiesKeepOffHuman: boolean;
 }
 
+/**
+ * THE CITY RUMBLE COMBAT TEST LAB (docs/COMBAT_TEST_LAB.md). A temporary playtest tool: four punch behaviours the
+ * founder switches between from the pause menu of a local City Rumble match. Every level is the SAME combat code
+ * (`systems/skills.ts`) with these numbers and switches; each fighter keeps their own attack (push / shove / daze),
+ * only its timings are scaled and capped, and the reach shape, aim help and press buffer change. Remove the lab =
+ * remove `COMBAT_LAB_PRESETS`, the pause-menu section and `systems/combatLab.ts` (the rules are inert without it).
+ */
+export type CombatLabLevel = 1 | 2 | 3 | 4;
+
+export interface CombatLabPreset {
+  level: CombatLabLevel;
+  /** Short name for the pause menu and the HUD chip. */
+  name: string;
+  /** One line for the pause menu. */
+  summary: string;
+  /** Every catalogue attack's startup x this, then at most `maxStartupTicks` (never below 1). */
+  startupScale: number;
+  maxStartupTicks: number;
+  /** Hit and whiff recovery x this, then clamped to `minRecoveryTicks..maxRecoveryTicks`. */
+  recoveryScale: number;
+  minRecoveryTicks: number;
+  maxRecoveryTicks: number;
+  /** The per-target lockout x this, then at most `maxLockoutTicks` (the victim's daze immunity still applies). */
+  lockoutScale: number;
+  maxLockoutTicks: number;
+  /** Reach adds the two FORWARD diagonals (the faced side's corners). */
+  forwardDiagonals: boolean;
+  /** Reach adds the tile two ahead in the faced line, when the tile between is open floor. */
+  reachTwo: boolean;
+  /** Reach adds the two tiles two ahead and one to the side, through an open tile (never between two walls). */
+  reachTwoWide: boolean;
+  /** The fighter turns to the nearest rival anywhere in its reach (otherwise the faced side comes first). */
+  autoTarget: boolean;
+  /** A B press that cannot start now (recovering, a short daze) is kept this long and done when it can be. */
+  bufferTicks: number;
+  /** Nobody in reach and B does nothing else: a visible swing at the air (a clear miss). */
+  airSwing: boolean;
+  /** Presentation: 1 = swing arc and impact, 2 = a bigger impact flash and ring. */
+  feedback: 1 | 2;
+}
+
+export const COMBAT_LAB_PRESETS: Readonly<Record<CombatLabLevel, CombatLabPreset>> = {
+  1: {
+    level: 1,
+    name: 'Classic+',
+    summary: 'Your fighter’s own push / shove / daze, presses kept, misses shown, shorter recovery.',
+    startupScale: 1,
+    maxStartupTicks: 18,
+    recoveryScale: 0.6,
+    minRecoveryTicks: 8,
+    maxRecoveryTicks: 150,
+    lockoutScale: 0.8,
+    maxLockoutTicks: 192,
+    forwardDiagonals: false,
+    reachTwo: false,
+    reachTwoWide: false,
+    autoTarget: false,
+    bufferTicks: 10,
+    airSwing: true,
+    feedback: 1,
+  },
+  2: {
+    level: 2,
+    name: 'Balanced',
+    summary: 'Quicker attacks, the forward corners in reach, turns to the rival it can hit.',
+    startupScale: 0.8,
+    maxStartupTicks: 14,
+    recoveryScale: 0.4,
+    minRecoveryTicks: 8,
+    maxRecoveryTicks: 90,
+    lockoutScale: 0.6,
+    maxLockoutTicks: 144,
+    forwardDiagonals: true,
+    reachTwo: false,
+    reachTwoWide: false,
+    autoTarget: true,
+    bufferTicks: 12,
+    airSwing: true,
+    feedback: 1,
+  },
+  3: {
+    level: 3,
+    name: 'Arcade',
+    summary: 'Fast punches that reach two tiles ahead, big hits, easy close fighting.',
+    startupScale: 0.6,
+    maxStartupTicks: 8,
+    recoveryScale: 0.25,
+    minRecoveryTicks: 8,
+    maxRecoveryTicks: 45,
+    lockoutScale: 0.4,
+    maxLockoutTicks: 80,
+    forwardDiagonals: true,
+    reachTwo: true,
+    reachTwoWide: false,
+    autoTarget: true,
+    bufferTicks: 15,
+    airSwing: true,
+    feedback: 2,
+  },
+  4: {
+    level: 4,
+    name: 'Maximum Punch',
+    summary: 'Playtest extreme: a wide two-tile reach, strong aim help, almost continuous punching.',
+    startupScale: 0.5,
+    maxStartupTicks: 4,
+    recoveryScale: 0.1,
+    minRecoveryTicks: 10,
+    maxRecoveryTicks: 14,
+    lockoutScale: 0.2,
+    maxLockoutTicks: 40,
+    forwardDiagonals: true,
+    reachTwo: true,
+    reachTwoWide: true,
+    autoTarget: true,
+    bufferTicks: 15,
+    airSwing: true,
+    feedback: 2,
+  },
+};
+
 export interface GameConfig {
   /** Campaign health and damage; absent in normal matches (see `CampaignConfig`). */
   campaign?: CampaignConfig;
   /** The Oshodi Mission 1 combat pilot (`CombatPilotConfig`); ABSENT in every other match. */
   combatPilot?: CombatPilotConfig;
+  /**
+   * The City Rumble COMBAT TEST LAB preset in force (`CombatLabPreset`, decisions CL-L1..), set live from the pause menu
+   * of a LOCAL City Rumble match only (`systems/combatLab.ts`). ABSENT in every other match and until a level is picked.
+   */
+  combatLab?: CombatLabPreset;
   match: {
     durationTicks: number;
     countdownTicks: number;

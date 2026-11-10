@@ -35,6 +35,7 @@ import { ENEMY_KINDS } from '../data/enemies';
 import { beginStep } from './stepping';
 import { isActing, playersAt, teammates } from './queries';
 import { resolvePilotPunch } from './pilotCombat';
+import { labReach, labReachesSpot, labStats } from './combatLab';
 
 /** The fighter's original skill (their character's); kept for the menu and the HUD label. */
 export const skillOf = (p: Pick<Player, 'characterId'>): SkillKind => CHARACTERS[p.characterId].skill;
@@ -200,6 +201,14 @@ export function chooseAttack<P extends Readonly<Player>>(
 ): AttackChoice<P> | null {
   const loadout = loadoutOf(p, state.config);
   const kinds: AttackKind[] = loadout.secondary ? [loadout.primary, loadout.secondary] : [loadout.primary];
+  // the City Rumble combat test lab (systems/combatLab.ts): the level's reach shape and aim help, same attacks
+  if (state.config.combatLab && p.enemyKind === undefined) {
+    for (const kind of kinds) {
+      const found = labReach(state, p, (o) => !teammates(p, o) && attackable(state, state.tick, p, o, kind));
+      if (found) return { kind, target: found.target, dir: found.dir, ready: attackReady(state, p, kind) };
+    }
+    return null;
+  }
   let claimed: AttackChoice<P> | null = null;
   for (const kind of kinds) {
     const adj = meleeTarget(state, p, (o) => attackable(state, state.tick, p, o, kind));
@@ -253,6 +262,37 @@ export function beginAttack(
     targetId: target.id,
     resolveTick: pending.resolveTick,
   });
+  if (state.config.combatLab) {
+    // the lab draws every accepted swing at the press (decision CL-L4)
+    events.push({ type: 'punchSwing', playerId: p.id, dir, targetId: target.id });
+    const st = labStats(state, p.id);
+    if (st) st.started++;
+  }
+  return true;
+}
+
+/**
+ * Combat test lab: B with nobody in reach (and nothing else to do) swings the primary attack at the faced tile. It
+ * resolves like any attack (a rival who steps into reach during the startup is hit), else whiffs: a visible miss.
+ */
+export function beginAirSwing(state: GameState, p: Player, events: SimEvent[]): boolean {
+  const kind = primaryOf(p);
+  if (!attackReady(state, p, kind)) return false;
+  const spec = state.config.skills.attacks[kind];
+  const pending = { skill: kind, targetId: -1, resolveTick: state.tick + spec.startupTicks, dir: p.facing };
+  p.attack = pending;
+  if (spec.cooldownTicks > 0) p.attackCooldowns[kind] = state.tick + spec.cooldownTicks;
+  if (spec.plantedStartup) p.rootedUntil = Math.max(p.rootedUntil, pending.resolveTick);
+  events.push({
+    type: 'attackStarted',
+    playerId: p.id,
+    skill: kind,
+    targetId: -1,
+    resolveTick: pending.resolveTick,
+  });
+  events.push({ type: 'punchSwing', playerId: p.id, dir: p.facing, targetId: null });
+  const st = labStats(state, p.id);
+  if (st) st.airSwings++;
   return true;
 }
 
@@ -350,6 +390,10 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
     events.push({ type: 'attackInterrupted', playerId: target.id, byId: p.id });
   }
   recover(state, p, pending.skill, spec.hitRecoveryTicks);
+  if (state.config.combatLab) {
+    const st = labStats(state, p.id);
+    if (st) st.hits++;
+  }
   p.meleeLock[target.id] =
     state.tick +
     (humanOnEnemy(p, target)
@@ -408,6 +452,10 @@ function recover(state: GameState, p: Player, kind: AttackKind, ticks: number): 
 
 function whiff(state: GameState, p: Player, spec: AttackSpec, skill: AttackKind, events: SimEvent[]): void {
   recover(state, p, skill, spec.whiffRecoveryTicks);
+  if (state.config.combatLab) {
+    const st = labStats(state, p.id);
+    if (st) st.whiffs++;
+  }
   if (spec.whiffRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.whiffRootTicks); // a committed miss
   enemyAfterPunch(state, p);
   events.push({ type: 'attackResolved', playerId: p.id, skill, targetId: null, hit: false });
@@ -431,8 +479,14 @@ function reachDir(
     spots.push({ x: o.stepFromX, y: o.stepFromY });
   // combat pilot (decision CP9): an enemy's punch also reaches a rival on the enemy's own tile
   const sameTile = state.config.combatPilot !== undefined && p.enemyKind !== undefined;
+  // combat test lab: the level's reach shape around the attack's direction (never through walls)
+  const lab = state.config.combatLab !== undefined && p.enemyKind === undefined;
   for (const s of spots) {
     if (sameTile && s.x === p.x && s.y === p.y) return p.facing;
+    if (lab && labReachesSpot(state, p, lineDir, s.x, s.y)) {
+      const adj = DIRS.find((d) => p.x + DIR_VEC[d].dx === s.x && p.y + DIR_VEC[d].dy === s.y);
+      return adj ?? lineDir;
+    }
     for (const d of DIRS) if (p.x + DIR_VEC[d].dx === s.x && p.y + DIR_VEC[d].dy === s.y) return d;
     if (reach >= 2) {
       const v = DIR_VEC[lineDir];

@@ -5,7 +5,7 @@
  * cloned, snapshotted, replayed or later sent over the wire by an authoritative server.
  * Time is always measured in simulation ticks (see TICK_RATE in config.ts).
  */
-import type { DeepPartial, GameConfig } from './config';
+import type { AttackSpec, DeepPartial, GameConfig } from './config';
 import type {
   CampaignHitResult,
   CampaignHitSource,
@@ -657,6 +657,34 @@ export interface GameState {
   raid?: RaidState;
   /** The Oshodi combat pilot's runtime (buffered presses, heavy poise). ABSENT outside a pilot match. */
   pilotCombat?: PilotCombatState;
+  /** The City Rumble combat test lab's runtime (systems/combatLab.ts). ABSENT until a level is picked in a local Rumble. */
+  combatLab?: CombatLabState;
+}
+
+/** Combat test lab diagnostics of one seat (docs/COMBAT_TEST_LAB.md). */
+export interface CombatLabStats {
+  /** B presses that reached the sim (a kept press counts once). */
+  presses: number;
+  /** Attacks that started on a rival in reach. */
+  started: number;
+  /** Swings at the air (nobody in reach). */
+  airSwings: number;
+  hits: number;
+  whiffs: number;
+  /** Presses kept by the buffer (recovering or dazed) and done later. */
+  kept: number;
+  /** Presses that did nothing at all (the buffer ran out). */
+  dropped: number;
+}
+
+export interface CombatLabState {
+  /** 0 = off (the match's own rules). */
+  level: 0 | 1 | 2 | 3 | 4;
+  /** The match's own attack numbers, restored when the lab is switched off. */
+  base: Record<AttackKind, AttackSpec>;
+  stats: Record<number, CombatLabStats>;
+  /** Tick until which a seat's B press is kept (absent = none). */
+  buffered: Record<number, number>;
 }
 
 export interface TrapTile {

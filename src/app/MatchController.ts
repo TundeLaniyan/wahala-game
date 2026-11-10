@@ -15,6 +15,8 @@ import {
   readyToStep,
   tick,
 } from '../sim';
+import { combatLabAllowed, setCombatLabLevel } from '../sim';
+import type { CombatLabLevel } from '../sim';
 import type {
   Difficulty,
   GameOptions,
@@ -205,11 +207,14 @@ export class MatchController implements MissionHost {
     this.countdownShown = -1;
     this.forced = {};
     this.entry.sync(state);
+    // the combat test lab level picked in an earlier local Rumble carries over to the next one (docs/COMBAT_TEST_LAB.md)
+    if (this.labLevel !== 0 && !setCombatLabLevel(state, this.labLevel)) this.labLevel = 0;
     this.deps.input.clear();
     this.deps.renderer.loadGame(state);
     this.deps.input.setCardinalOnly?.(inputModeFor(state).cardinalOnly); // raids: cardinal-only input, reset for every other match
     this.audio.startMusic(arenaId);
     this.audio.setIntensity(0);
+    patch({ combatLab: state.config.combatLab?.level ?? 0 });
     patch({
       screen: 'playing',
       paused: false,
@@ -452,6 +457,22 @@ export class MatchController implements MissionHost {
   /** A demo is playing the local player: human gameplay input is ignored (pause still works). */
   private get scripted(): boolean {
     return this.director !== null && !this.director.humanInput;
+  }
+
+  /** The combat test lab level of local City Rumble matches (0 = off); kept across rematches in this session. */
+  private labLevel: CombatLabLevel | 0 = 0;
+
+  /** Combat test lab: may the running match use it (a local City Rumble, not a mission or raid)? */
+  combatLabAvailable(): boolean {
+    return !!this.state && !this.mission && !this.raid && combatLabAllowed(this.state);
+  }
+
+  /** Combat test lab: switch the running local Rumble to `level` (0 = off) between ticks, no restart. */
+  setCombatLab(level: CombatLabLevel | 0): boolean {
+    if (!this.state || !this.combatLabAvailable()) return false;
+    if (!setCombatLabLevel(this.state, level)) return false;
+    this.labLevel = level;
+    return true;
   }
 
   rematch(): void {

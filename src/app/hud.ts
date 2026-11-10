@@ -20,7 +20,7 @@ import {
   previewSpecial,
   spectatorLanding,
 } from '../sim';
-import type { MissionView } from '../sim';
+import type { CombatLabStats, MissionView } from '../sim';
 import { buildCampaignHud, buildEnemyHud } from './campaignHud';
 import type { CampaignHud, EnemyHud } from './campaignHud';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
@@ -230,6 +230,21 @@ export interface HudSnapshot {
   campaign: CampaignHud | null;
   /** Campaign enemies whose health is on screen (bosses always; others when targeted, hurt or near); [] outside a campaign. */
   enemies: EnemyHud[];
+  /** City Rumble combat test lab (docs/COMBAT_TEST_LAB.md): the level in force and the local fighter's press record. */
+  combatLab: CombatLabHud | null;
+}
+
+export interface CombatLabHud {
+  level: number;
+  name: string;
+  /** The local fighter's diagnostics (presses, attacks started, air swings, hits, whiffs, kept, dropped). */
+  stats: CombatLabStats | null;
+}
+
+function buildCombatLab(state: GameState, localId: number): CombatLabHud | null {
+  const preset = state.config.combatLab;
+  if (!preset) return null;
+  return { level: preset.level, name: preset.name, stats: state.combatLab?.stats[localId] ?? null };
 }
 
 /** V2 sideline spectator controls (ui/SpectatorControls.tsx). */
@@ -648,5 +663,6 @@ export function buildHud(
     mission: missionView(state),
     campaign: buildCampaignHud(state, localId),
     enemies: buildEnemyHud(state, localId),
+    combatLab: buildCombatLab(state, localId),
   };
 }

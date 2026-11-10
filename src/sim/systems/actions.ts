@@ -25,7 +25,8 @@ import { isActing } from './queries';
 import { enemyMeleeTarget, resolveEnemySpecial } from './enemyActions';
 import { useKnockdown } from './knockdown';
 import { useLocalChampion } from './localChampion';
-import { beginAttack, chooseAttack } from './skills';
+import { beginAirSwing, beginAttack, chooseAttack } from './skills';
+import { labStats } from './combatLab';
 import { autoLaunch, useVehicleGenerator } from './vehicles';
 import { isPilotHuman, pilotPunchTarget } from './pilotCombat';
 
@@ -47,6 +48,7 @@ export function previewSpecial(state: GameState, p: Player): SpecialAction {
 }
 
 export function resolveSpecial(state: GameState, p: Player, events: SimEvent[]): SpecialAction {
+  if (state.config.combatLab && p.enemyKind === undefined) return labSpecial(state, p, events, true);
   if (!isActing(state, p) || p.entryUntil !== null) return null;
   if (p.enemyKind !== undefined) {
     const done = resolveEnemySpecial(state, p, events);
@@ -86,4 +88,56 @@ export function resolveRewardSpecial(state: GameState, p: Player, events: SimEve
     return 'vehicle';
   }
   return null;
+}
+
+/**
+ * B in the City Rumble combat test lab (systems/combatLab.ts): the same order as `resolveSpecial` (a rival in reach,
+ * then the rewards and the voucher), but a press that cannot start yet is KEPT for the level's `bufferTicks`, and a
+ * press with nobody in reach and nothing else to do swings at the air. `fresh` = a new press (false: a kept one).
+ */
+function labSpecial(state: GameState, p: Player, events: SimEvent[], fresh: boolean): SpecialAction {
+  const lab = state.config.combatLab!;
+  const runtime = state.combatLab;
+  const st = labStats(state, p.id);
+  if (fresh && st) st.presses++;
+  const keep = (): null => {
+    if (fresh && runtime) runtime.buffered[p.id] = state.tick + lab.bufferTicks;
+    return null;
+  };
+  const done = (action: SpecialAction): SpecialAction => {
+    if (runtime && runtime.buffered[p.id] !== undefined) {
+      delete runtime.buffered[p.id];
+      if (!fresh && st) st.kept++;
+    }
+    if (action) events.push({ type: 'specialUsed', playerId: p.id, action });
+    return action;
+  };
+  if (!p.alive || state.match.phase !== 'playing' || p.entryUntil !== null) return null;
+  if (!isActing(state, p)) return keep(); // a short daze: the press waits for it
+  const melee = chooseAttack(state, p);
+  if (melee) {
+    if (!melee.ready) return keep(); // recovering: the next punch goes as soon as it can
+    return beginAttack(state, p, melee.target, melee.dir, events, melee.kind) ? done('melee') : keep();
+  }
+  const other = resolveRewardSpecial(state, p, events);
+  if (other) {
+    if (runtime) delete runtime.buffered[p.id];
+    return other;
+  }
+  if (!lab.airSwing) return null;
+  return beginAirSwing(state, p, events) ? done('melee') : keep();
+}
+
+/** The lab's kept B press, retried every tick until it is done or runs out (counted as dropped). */
+export function retryKeptSpecial(state: GameState, p: Player, events: SimEvent[]): void {
+  const runtime = state.combatLab;
+  const until = runtime?.buffered[p.id];
+  if (!runtime || until === undefined || !state.config.combatLab) return;
+  if (state.tick > until) {
+    delete runtime.buffered[p.id];
+    const st = labStats(state, p.id);
+    if (st) st.dropped++;
+    return;
+  }
+  labSpecial(state, p, events, false);
 }

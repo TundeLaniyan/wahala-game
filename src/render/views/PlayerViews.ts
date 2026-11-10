@@ -99,15 +99,24 @@ export class PlayerViews implements View {
   /** Team of each player id (Team Rumble), for the end-of-match celebration. */
   private readonly teams = new Map<number, number>();
 
+  /** Fighters whose current attack already swung at the press (`punchSwing`), until it resolves. */
+  private readonly swungAt = new Set<number>();
+
   /** Triggers one-shot animations from simulation events. */
   onEvents(events: readonly SimEvent[]): void {
     const play = (id: number, clip: ClipName): void => this.visuals.get(id)?.model.rigged?.playOnce(clip);
     for (const e of events) {
       if (e.type === 'generatorPlaced') play(e.ownerId, 'Place');
       else if (e.type === 'generatorThrown') play(e.playerId, 'Throw');
-      else if (e.type === 'skillUsed') play(e.playerId, e.skill === 'daze' ? 'Kick' : 'Push');
+      // (a swing already drawn at the press by `punchSwing` is not restarted when it connects)
+      else if (e.type === 'skillUsed') {
+        if (!this.swungAt.has(e.playerId)) play(e.playerId, e.skill === 'daze' ? 'Kick' : 'Push');
+      }
       // the combat pilot: every accepted punch swings at once, at the press (decision CP4)
-      else if (e.type === 'punchSwing') this.visuals.get(e.playerId)?.model.rigged?.playOnce('Push', 0.03, 1.6);
+      else if (e.type === 'punchSwing') {
+        this.visuals.get(e.playerId)?.model.rigged?.playOnce('Push', 0.03, 1.6);
+        this.swungAt.add(e.playerId);
+      } else if (e.type === 'attackResolved') this.swungAt.delete(e.playerId);
       // V2 contact abilities: a kick swings the leg, a disarm crouches over the generator (the punch
       // already plays Throw through its generatorThrown event; walking through needs no gesture)
       else if (e.type === 'contactUsed' && e.ability === 'kick') play(e.playerId, 'Kick');
@@ -122,18 +131,17 @@ export class PlayerViews implements View {
         const v = this.visuals.get(e.playerId);
         if (v) v.slipPending = 'knockdown';
         play(e.playerId, 'Stumble');
-      }
-      else if (e.type === 'hazardTriggered') {
+      } else if (e.type === 'hazardTriggered') {
         // a floor trap got them: the stumble clip plus a fall that lasts as long as the sim's slide / daze
         const v = this.visuals.get(e.playerId);
         if (v) v.slipPending = e.kind;
         play(e.playerId, 'Stumble');
-      }
-      else if (e.type === 'matchEnded') {
+      } else if (e.type === 'matchEnded') {
         const r = e.result;
         for (const [id, v] of this.visuals) {
           if (r.kind === 'win') v.model.rigged?.setLoop(id === r.winnerId ? 'Win' : 'Lose');
-          else if (r.kind === 'teamWin') v.model.rigged?.setLoop(this.teams.get(id) === r.team ? 'Win' : 'Lose');
+          else if (r.kind === 'teamWin')
+            v.model.rigged?.setLoop(this.teams.get(id) === r.team ? 'Win' : 'Lose');
           else v.model.rigged?.setLoop('Lose');
         }
       }
@@ -185,7 +193,17 @@ export class PlayerViews implements View {
         v.culled = true;
         v.model.root.visible = false;
         v.model.root.matrixWorldAutoUpdate = false;
-        for (const o of [v.ring, v.shadow, v.name, v.curse, v.voucher, v.shield, v.badge, v.protect, ...v.stars])
+        for (const o of [
+          v.ring,
+          v.shadow,
+          v.name,
+          v.curse,
+          v.voucher,
+          v.shield,
+          v.badge,
+          v.protect,
+          ...v.stars,
+        ])
           o.visible = false;
         hideArmourVisual(v.armour, true);
         if (v.marker) v.marker.visible = false;

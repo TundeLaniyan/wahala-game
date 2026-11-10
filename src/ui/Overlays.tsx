@@ -19,6 +19,7 @@ import { useMenuNav } from './menu/focusNav';
 import { SettingsPanel } from './menu/SettingsScreen';
 import { MissionPauseInfo } from './campaign/MissionPauseInfo';
 import { FighterImage } from './menu/FighterImage';
+import { CombatLabPauseSection } from './CombatLab';
 import { fighterArt } from './menu/art';
 import './menu/menu.css';
 
@@ -208,6 +209,7 @@ export function PauseOverlay() {
                 </>
               )}
             </nav>
+            {!mission && <CombatLabPauseSection lab={hud?.combatLab ?? null} />}
           </div>
           {mission ? <MissionPauseInfo mission={mission} /> : <MatchInfo hud={hud} />}
         </div>
