@@ -83,7 +83,11 @@ test('an upright phone: the turn-sideways hint and the loading line together, th
   // the whole start (models, build, first frames) on a slow runner: the same allowance as inMatch
   await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 120_000 });
   await expect(page.getByTestId('rotate')).toBeVisible();
-  // turned sideways: the match is there, nothing over it
+  // turned sideways: the match is there, nothing over it. Play asked this touch device for fullscreen, and the test
+  // browser cannot resize a fullscreen window (a real phone just rotates), so leave fullscreen before turning it.
+  await page.evaluate(async () => {
+    if (document.fullscreenElement) await document.exitFullscreen().catch(() => undefined);
+  });
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(page.getByTestId('rotate')).toHaveCount(0);
   await expect(page.getByTestId('hud')).toBeVisible();
