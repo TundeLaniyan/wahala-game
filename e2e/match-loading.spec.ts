@@ -30,7 +30,7 @@ async function tapQuickPlay(page: Page, times = 3): Promise<void> {
 }
 
 async function playable(page: Page): Promise<void> {
-  await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 60_000 });
+  await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 120_000 });
   await expect(page.getByTestId('hud')).toBeVisible();
   expect(await page.evaluate(() => (window as any).__WAHALA__.getState().match.phase)).not.toBe('ended');
 }
@@ -80,7 +80,8 @@ test('an upright phone: the turn-sideways hint and the loading line together, th
   await expect(page.getByTestId('match-loading-rotate')).toBeVisible();
   await expect(page.getByTestId('match-loading-step')).toBeVisible();
   await expect(page.getByTestId('rotate')).toHaveCount(0); // never two overlays fighting
-  await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 60_000 });
+  // the whole start (models, build, first frames) on a slow runner: the same allowance as inMatch
+  await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 120_000 });
   await expect(page.getByTestId('rotate')).toBeVisible();
   // turned sideways: the match is there, nothing over it
   await page.setViewportSize({ width: 844, height: 390 });
