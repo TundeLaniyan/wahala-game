@@ -716,7 +716,15 @@ function exposeDebugHandle(): void {
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
     music: () => (audio as { musicStatus?: () => unknown }).musicStatus?.() ?? null,
     /** Match loading: the screen's state now and how many starts actually ran (duplicate taps start nothing). */
-    matchLoad: () => ({ state: loader.state, starts: matchStarts }),
+    matchLoad: () => ({
+      state: loader.state,
+      starts: matchStarts,
+      busy: loader.busy,
+      frames: framesDrawn,
+      frameWaiters: frameWaiters.length,
+      screen: useGameStore.getState().screen,
+      visibility: document.visibilityState,
+    }),
     /** Combat test lab: the runtime (level, per-seat diagnostics) of the running match, null when off. */
     combatLab: () => controller?.state?.combatLab ?? null,
     /** Voice registry and per-match loading state, and the lines scheduled so far. */

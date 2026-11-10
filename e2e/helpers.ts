@@ -108,6 +108,8 @@ export async function inMatch(page: Page): Promise<void> {
         ),
       )
       .catch(() => 'unavailable');
+    // printed as well as thrown: the list reporter shows a test's output even when its shard runs out of time
+    console.log(`[inMatch] the match loading screen did not go: ${load}`);
     throw new Error(`the match loading screen did not go: ${load}`, { cause: error });
   }
 }
