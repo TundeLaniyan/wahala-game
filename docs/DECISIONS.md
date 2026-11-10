@@ -862,3 +862,55 @@ An experiment for founder playtesting, gated to the Terminal Approach field miss
 | CP10 | **The enemy AI checks the real radius footprint** before committing to a wind-up near a generator it heeds (it used the plus shape on this radius-blast map). Pilot matches only. | `ai/enemyBot.ts` |
 | CP11 | **Pilot roster**: a second Park Warden by the first (two ordinary enemies) and a Bottle Boy thrower by the yard gate (a mixed group), seated after the original three; fights stay optional. | `FIELD_COMBAT_PILOTS.extraEnemies` |
 | CP12 | **Levels**: Easy gives a longer stagger (20), a slower counter-swing (12) and a longer free window. Hard gives a 6-segment heavy, a shorter stagger, two wind-ups at once and a quicker guard. Both sit on top of the ordinary level differences. Normal adds no layer. | `OSHODI_PILOT_LEVELS`, `pilotLevelLayer` |
+
+## Integrated release (branch `claude/wahala-integrated-release-v1`: release 0c200a7 + Oshodi combat pilot + the sections below; notes in `docs/integrated-release/`)
+
+### SD-B - Sudden Death banner lifecycle
+
+| # | Decision | Where |
+| --- | --- | --- |
+| SD-B1 | **The blast clock announces, then folds.** When a countdown begins (the round's first, and the next one after every blast) the clock shows its full announcement for `SUDDEN_DEATH_ANNOUNCE_TICKS` (180 ticks, 3 s), then folds into a one-line chip: SUDDEN DEATH · BLAST n OF 3 (plus SHIELDS IGNORED on the final blast) · the countdown. The chip still pulses in the 5 s warning window; it does not expand again over the fight. The long lines (your shield, the ranking) stay in the chip's accessible label. | `app/hud.ts` (`SuddenDeathHud.announce`), `ui/SuddenDeath.tsx`, `ui/SuddenDeath.css` |
+| SD-B2 | **Counted in simulation ticks, read from the sim state.** `announce` is derived from `transitionEndTick` / `lastBlastTick` (presentation only, no new sim field, no rule change), so a paused game keeps the banner as it was, a resume carries on, a rematch (a new state) starts with no banner, and a fresh round started mid-match (the last contenders fell together) gets its own card and its own announcement. | `app/hud.ts` `buildSuddenDeath` |
+| SD-B3 | **The title card keeps its sim lifecycle.** It shows exactly while input is held and disappears on the first tick of play; it is `pointer-events: none` and has no controls. Not shortened by wall time: the sim holds input for those ticks whatever the device's frame rate. | `ui/SuddenDeath.tsx` (unchanged rule), `tests/ui/sudden-death-banner.test.ts` |
+| SD-B4 | **Nothing on the board takes a touch.** The card, the chip, the rail and the blast flash are all `pointer-events: none`; the e2e checks a tap where the chip is reaches the game, and the fighter moves (keys on desktop, the touch pad on a phone) with the chip up. | `e2e/sudden-death-banner.spec.ts` |
+
+### LI7-LI9 - Lekki: interlock paving on Admiralty Way only (founder revision)
+
+| # | Decision | Where |
+| --- | --- | --- |
+| LI7 | **Founder revision: only Admiralty Way is interlocking paving, through its own crossing with Freedom Way.** Surface classes from the map: `admiraltyWay` (road tiles in `ADMIRALTY_WAY`, x 20-23 y 10-29: paved), `freedomWay` (other road tiles outside the expressway rows: asphalt), `estateStreet` (estate open floor: not paved), `expressway` (rows 30-34: asphalt); `LEKKI_PAVED = {admiraltyWay}`. Supersedes LI4's coverage; LI1-LI3 (shader, block, size) and LI6 (only Lekki) unchanged. | `render/arenas/lekkiRoads.ts`, `tests/render/lekki-interlock-roads.test.ts` |
+| LI8 | **Paving meets asphalt with an edge restraint on both sides of the crossing box** (rows 18-20 at x 20 west and x 23 east), in the existing restraint style; paint only, no geometry. | `render/arenas/lekkiAdmiralty.ts` |
+| LI9 | **Estate streets are un-paved, not turned into asphalt**: they are walkable open floor in the sim, and dark asphalt reads as a traffic lane on this map. Flagged for founder review. | `render/arenas/lekkiRoads.ts` |
+
+### NV - Forgiving navigation and touch controls
+
+| # | Decision | Where |
+| --- | --- | --- |
+| NV1 | **Held-turn continuation (keyboard and gamepad).** A perpendicular turn asked for while it is blocked, with the way the player walks STILL held (a second key or D-pad button), keeps the player walking that way tile after tile; the turn is re-checked every step and taken on the first legal tile. Both directions are the player's own current input, so there is no reach limit and no danger veto. It ends when either is released; a reversal is never continued; Settings > Assisted movement Off keeps the old gate exactly. **Not on the touchscreen**: the thumb's lean is the approved 2-step corner route (MV3 / AS4) and must never become a slide along a wall (a regression test pins that); touch keeps its 2-tile early turn and corner route. | `input/moveGate.ts` `alongHeld` |
+| NV2 | **Gamepad D-pad: newest button wins** and every held D-pad direction is reported (as with keys), so rolling the thumb from UP onto UP+RIGHT asks for RIGHT while UP stays held (NV1). Raids still send one direction (the newest). The analogue stick is unchanged. | `input/gamepad.ts`, `input/InputManager.ts` |
+| NV3 | **Settings > Control size (Normal / Large)**: Large scales the floating stick by 1.15 (radius cap 83 px; dead / release zones keep their share) and the A / B cluster by 15 %. On a landscape phone the cluster stays inside its 36vh strip (no tile is covered); there A grows 23 -> 26vh and B 20.5 -> 23vh, still diagonal and apart. Default Normal (unchanged layout). The raid cross keeps its own sizing. | `ui/TouchControls.tsx`, `ui/styles.css`, `input/joystick.ts` |
+| NV4 | **Settings > Vibration (On / Off)**: a 12 ms tick when a touch action button goes down, 40 ms when the local player is hurt or dazed, a short pattern when knocked out. Only through `navigator.vibrate` (Android Chrome; iOS and desktops have none), only for touch play, never for keyboard / gamepad. Presentation only. | `platform/haptics.ts`, `app/MatchController.ts` |
+
+### CL-L - City Rumble Combat Test Lab (temporary, `docs/COMBAT_TEST_LAB.md`)
+
+| # | Decision | Where |
+| --- | --- | --- |
+| CL-L1 | **Local City Rumble only, off until picked.** `setCombatLabLevel` refuses every match that is not a City Rumble ruleset or that has a campaign mission or raid; the app calls it between ticks from the pause menu. Online code is untouched. A match starts with the lab off (today's rules), so no level is preselected. The picked level carries over to rematches and later local Rumble matches in the same page session. | `sim/systems/combatLab.ts`, `app/MatchController.ts` |
+| CL-L2 | **One combat system, four data presets.** `COMBAT_LAB_PRESETS` scales and caps every catalogue attack's startup, hit / whiff recovery and same-target lockout from the match's own numbers (never slower), and switches the reach shape, aim help, press buffer and air swing. Each fighter keeps their attack (push / shove / daze) and its daze, displacement and immunity. | `sim/config.ts`, `combatLab.ts` |
+| CL-L3 | **Reach shapes never pass walls.** Level 2 adds the forward corners (one open side tile needed), Level 3 the tile two ahead (open tile between), Level 4 the tiles two ahead and one aside (an open route). Aim help (Levels 2-4) turns the fighter to a rival in reach on another side. | `combatLab.ts` `labReach`, `skills.ts` |
+| CL-L4 | **Every accepted press swings.** A punch draws its swing at the press (`punchSwing`); with nobody in reach and nothing else for B to do, the press is a visible swing at the air and a miss. | `skills.ts` `beginAirSwing`, `actions.ts` |
+| CL-L5 | **Presses are kept, not ignored.** A B press during recovery or a short daze is kept for 10 / 12 / 15 / 15 ticks and done the moment it can be; one that outlives the buffer is counted as dropped. | `actions.ts` `labSpecial`, `retryKeptSpecial`, `tick.ts` |
+| CL-L6 | **No stun-lock, no loops.** The victim's daze immunity is untouched at every level; Level 4 mashed every tick for 10 s keeps the victim dazed under 50 % of the time (tested). Hit counts come from sim ticks, never frame rate. | `tests/combat-lab.test.ts` |
+| CL-L7 | **B hold stays the Remote Detonator.** No hold-to-repeat: the input layer decides tap vs hold before the sim; rapid punching is rapid tapping, protected by the buffer. | `input/specialHold.ts` (unchanged) |
+| CL-L8 | **Visible but out of the way.** A small "LAB n Name" chip under the minimap; the picker and the press diagnostics live in the pause menu; nothing is drawn over the board. Bots use the same rules through `chooseAttack`. | `ui/CombatLab.tsx`, `app/hud.ts` |
+
+### PS - Fighter select and story-scene presentation
+
+| # | Decision | Where |
+| --- | --- | --- |
+| PS1 | **The fighter screen says plainly that its roster is the playable heroes**: a "Playable fighters · 3" label (the count is the registry's) and the group label "Playable fighters". The fine print adds that the district bosses appear in the campaign and are not playable. No layout redesign; the three approved portraits stay. | `ui/menu/FighterScreen.tsx`, `ui/menu/flow.css` |
+| PS2 | **RADIO lines are short radio-message cards**: a green-edged dispatch card with a three-bar signal mark and "on the radio". It is distinct from the broker's blue phone card and has no portrait. CSS only, no new asset. | `ui/campaign/lines.tsx`, `speakers.ts`, `campaign.css` |
+| PS3 | **Read more beside a picture: the text column scrolls by itself.** With Read more open (`reading` class) on a wide screen or in phone landscape, the story card fills the screen and only its text column scrolls. The picture stays in view and the last line can be read. Collapsed cards and the phone-portrait single column are unchanged. | `ui/campaign/CardView.tsx`, `storyHero.css` |
+| PS4 | **A playable hero speaks beside their approved menu portrait** (48 px, the existing `fighter-*-360.webp`), recognised by the registry name. No current line uses it; this is the path for approved hero dialogue. | `ui/campaign/speakers.ts`, `lines.tsx` |
+| PS5 | **No boss portraits and no cropping.** Boss and other speakers stay named text lines. The boss introduction art is a group arrival scene and is never cropped into a character picture. The Gemini group portrait is concept art and is not in the game. | `speakers.ts` |
+| PS6 | **Left for separate approval**: new Gemini / Google Flow art, final character artwork, hero dialogue lines, the revised storyline and a multi-panel comic sequence. Today a scene is one card with one optional picture (`STORY_IMAGES`, one key per card), and the Read-more lines are its panels. A panel sequence would extend the registry to several keys per card; nothing here blocks that. | n/a |
