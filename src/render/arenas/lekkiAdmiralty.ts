@@ -1,9 +1,10 @@
 /**
- * Lekki Phase 1: Admiralty Way's road furniture (presentation only; docs/LEKKI_INTERLOCK_ROADS.md). The carriageway itself
- * is interlocking paving like every local road of Lekki Phase 1 (`lekkiRoads.ts`, `paving/material.ts`); this module
- * paints what sits on it: the planted median between black-and-white kerbs (founder photographs), white lane dashes in
- * each carriageway, stop lines on the lanes approaching Freedom Way and the expressway, and a cast-concrete edge
- * restraint where the block road meets the expressway's asphalt (the only place the paving ends).
+ * Lekki Phase 1: Admiralty Way's road furniture (presentation only; docs/LEKKI_ADMIRALTY_WAY.md). Admiralty Way is the ONLY
+ * interlocking-paved road of Lekki Phase 1 (decision LI7; `lekkiRoads.ts`, `paving/material.ts`), through its own crossing
+ * with Freedom Way; this module paints what sits on it: the planted median between black-and-white kerbs (founder
+ * photographs), white lane dashes in each carriageway, stop lines on the lanes approaching Freedom Way and the
+ * expressway, and a cast-concrete edge restraint wherever the block road meets asphalt: across the road at the
+ * expressway, and down each side of the crossing box where Freedom Way's asphalt lanes meet it.
  *
  * The geometry is untouched: this is floor paint only (the median is a painted strip, not an obstacle; every tile
  * stays walkable exactly as before; no mesh, no collision, no draw call).
@@ -14,6 +15,9 @@ import type { Ctx } from './floorKit';
 
 /** Admiralty Way's carriageway (inclusive tiles): from the plaza to the expressway, across the Freedom Way crossing. */
 export const ADMIRALTY_WAY = { x0: 20, y0: 10, x1: 23, y1: 29 } as const;
+
+/** Admiralty Way's intersection box with Freedom Way (inclusive rows): paved, like the rest of Admiralty Way. */
+export const CROSSING = { y0: 18, y1: 20 } as const;
 
 /** Lane dashes run between the junctions (tile rows): the plaza to Freedom Way, Freedom Way to the expressway. */
 const DASH_RUNS: readonly [number, number][] = [
@@ -49,16 +53,37 @@ function paintStop(g: Ctx, s: (typeof STOPS)[number]): void {
   g.fillRect(s.x[0] * T, ys, (s.x[1] - s.x[0]) * T, 0.1 * T);
 }
 
-/** Where the block road meets the expressway's asphalt: a cast-concrete edge restraint across the road. */
+/** Where the block road meets asphalt, a cast-concrete edge strip (paler than the blocks, a dark joint on the asphalt side). */
+function paintRestraintStrip(
+  g: Ctx,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  joint: 'n' | 's' | 'e' | 'w',
+): void {
+  g.fillStyle = 'rgb(176,174,166)';
+  g.fillRect(x, y, w, h);
+  g.fillStyle = 'rgba(40,40,40,0.5)';
+  if (joint === 's') g.fillRect(x, y + h - 3, w, 3);
+  else if (joint === 'n') g.fillRect(x, y, w, 3);
+  else if (joint === 'w') g.fillRect(x, y, 3, h);
+  else g.fillRect(x + w - 3, y, 3, h);
+}
+
+/**
+ * The edge restraints: across Admiralty Way at the expressway, and down the west and east sides of the crossing box
+ * (rows 18-20) where Freedom Way's asphalt carriageways meet the paved crossing (decision LI7).
+ */
 function paintRestraint(g: Ctx): void {
   const x0 = ADMIRALTY_WAY.x0 * T;
   const x1 = (ADMIRALTY_WAY.x1 + 1) * T;
   const band = 0.12 * T;
-  const yb = (ADMIRALTY_WAY.y1 + 1) * T - band;
-  g.fillStyle = 'rgb(176,174,166)';
-  g.fillRect(x0, yb, x1 - x0, band);
-  g.fillStyle = 'rgba(40,40,40,0.5)';
-  g.fillRect(x0, yb + band - 3, x1 - x0, 3);
+  paintRestraintStrip(g, x0, (ADMIRALTY_WAY.y1 + 1) * T - band, x1 - x0, band, 's');
+  const y0 = CROSSING.y0 * T;
+  const h = (CROSSING.y1 + 1 - CROSSING.y0) * T;
+  paintRestraintStrip(g, x0, y0, band, h, 'w');
+  paintRestraintStrip(g, x1 - band, y0, band, h, 'e');
 }
 
 /** The planted median between two black-and-white kerbs, with a rounded nose at each end. */

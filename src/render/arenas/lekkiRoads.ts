@@ -1,28 +1,33 @@
 /**
- * Lekki Phase 1's road network, classified from the arena's own map (presentation only; docs/LEKKI_INTERLOCK_ROADS.md).
- * Decision LI4: every LOCAL road surface of Lekki Phase 1 is interlocking concrete paving; the regional expressway keeps
- * its asphalt.
+ * Lekki Phase 1's road network, classified from the arena's own map (presentation only; docs/LEKKI_ADMIRALTY_WAY.md).
+ * Founder revision (decision LI7): ONLY Admiralty Way is interlocking concrete paving, through its own crossing with
+ * Freedom Way; every other road surface of Lekki keeps (or gets back) its asphalt.
  *
  * The sim board (`src/sim/arenas/rumbleLekki.ts`) has three road bands (`=` tiles) and six districts. From them:
  *
- *   - `expressway`  : road tiles in the rows of the Expressway Gateway district (y 30-34, the full-width six-lane
- *                     Lekki-Epe Expressway; it runs off both board edges). Asphalt: it is the regional road outside the
- *                     Phase 1 street network.
- *   - `localRoad`   : every other road tile: Admiralty Way (x 20-23, the plaza to the expressway), Freedom Way (y 18-20,
- *                     edge to edge) and their crossing. Paved.
- *   - `estateStreet`: the open floor of the Freedom Way Estates district (role "street": the quiet residential streets
- *                     between the walled compounds, including the lane clearings beside Admiralty Way). Paved.
+ *   - `admiraltyWay`: road tiles of Admiralty Way's carriageway (`ADMIRALTY_WAY`, x 20-23 from the plaza at y 10 to the
+ *                     expressway edge at y 29), INCLUDING its intersection box with Freedom Way (x 20-23, y 18-20).
+ *                     Paved: the only paved road.
+ *   - `freedomWay`  : every other road tile outside the expressway rows: Freedom Way (y 18-20) west and east of the
+ *                     crossing box, edge to edge. Asphalt.
+ *   - `estateStreet`: the open floor of the Freedom Way Estates district (role "street": the residential streets between
+ *                     the walled compounds). Asphalt (was paved under LI4).
+ *   - `expressway`  : road tiles in the rows of the Expressway Gateway district (y 30-34, the full-width Lekki-Epe
+ *                     Expressway with its traffic lanes). Asphalt.
  *
- * Not paved: the Admiralty Commerce forecourts and shopfront pavements, the promenade and its plaza (already paved in its
- * own slabs), the Ikate leisure ground and sports court, the sandy coastal access lanes, and the gateway's roadside
- * pavements. They are pavements, plazas and sand, not road.
+ * Never paved (not road): the Admiralty Commerce forecourts and shopfront pavements, the promenade and its plaza (its
+ * own slabs), the Ikate leisure ground and sports court, the sandy coastal access lanes, the gateway's roadside pavements.
  */
 import { getArena } from '../../sim';
+import { ADMIRALTY_WAY } from './lekkiAdmiralty';
 
-export type LekkiSurface = 'localRoad' | 'estateStreet' | 'expressway';
+export type LekkiSurface = 'admiraltyWay' | 'freedomWay' | 'estateStreet' | 'expressway';
 
-/** The classes that receive interlocking paving (one switch per class, for founder review). */
-export const LEKKI_PAVED: ReadonlySet<LekkiSurface> = new Set<LekkiSurface>(['localRoad', 'estateStreet']);
+/** The classes that receive interlocking paving (one switch per class, for founder review): Admiralty Way only (LI7). */
+export const LEKKI_PAVED: ReadonlySet<LekkiSurface> = new Set<LekkiSurface>(['admiraltyWay']);
+
+const inAdmiraltyWay = (x: number, y: number): boolean =>
+  x >= ADMIRALTY_WAY.x0 && x <= ADMIRALTY_WAY.x1 && y >= ADMIRALTY_WAY.y0 && y <= ADMIRALTY_WAY.y1;
 
 const ID = 'rumbleLekki';
 
@@ -44,7 +49,8 @@ export function lekkiSurfaces(): (LekkiSurface | null)[][] {
     rects.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
   classes = layout.map((row, y) =>
     [...row].map((c, x): LekkiSurface | null => {
-      if (c === '=') return inRows(gateway, y) ? 'expressway' : 'localRoad';
+      if (c === '=')
+        return inRows(gateway, y) ? 'expressway' : inAdmiraltyWay(x, y) ? 'admiraltyWay' : 'freedomWay';
       if (c !== '#' && inRect(estates, x, y)) return 'estateStreet';
       return null;
     }),
