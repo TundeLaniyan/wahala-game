@@ -13,6 +13,7 @@ import {
   CHARACTER_IDS,
   DEFAULT_CONFIG,
   EXPERIMENTAL_ARENA_IDS,
+  MISSION_DEFS,
   RUMBLE_ARENA_IDS,
   STANDARD_ARENA_IDS,
   TICK_RATE,
@@ -110,6 +111,15 @@ describe('fighter screen', () => {
     expect(html).toMatch(/aria-pressed="true"[^>]*data-testid="char-lekkiBoy"/);
     expect(html).toContain('Daze Punch');
     expect(html).not.toMatch(/\/ ?100|locked|unlock|rank|tier|volt/i);
+  });
+
+  it('the roster is exactly the playable heroes, labelled as such; no district boss is selectable (decision PS1)', () => {
+    const html = render(FighterScreen, { character: 'streetBaller' });
+    expect((html.match(/data-testid="char-/g) ?? []).length).toBe(CHARACTER_IDS.length);
+    expect(html).toContain(`Playable fighters · ${CHARACTER_IDS.length}`);
+    expect(html).toContain('aria-label="Playable fighters"');
+    for (const d of Object.values(MISSION_DEFS)) expect(html).not.toContain(d.boss.name);
+    expect(html).toContain('not playable');
   });
 
   it('describes skills from the registry and cooldowns from the sim config', () => {

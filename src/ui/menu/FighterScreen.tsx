@@ -2,7 +2,8 @@
  * Fighter select: the roster (read from the character registry, so a new fighter appears without a
  * redesign) beside the selected fighter's portrait, name, one-line description, real stats and abilities.
  * Built to be understood without scrolling on a phone: the selected fighter's card comes first, the roster
- * is a compact strip. No ratings, ranks or locked slots: every fighter is playable and differs only in what
+ * is a compact strip. The roster is exactly the PLAYABLE heroes (`CHARACTER_IDS`); the district bosses are campaign
+ * characters (briefings, boss introductions), never selectable here (decision PS1). No ratings, ranks or locked slots: every fighter is playable and differs only in what
  * the game actually does (melee, recovery and effect come from the sim data and config).
  */
 import { commands } from '../../app/session';
@@ -93,7 +94,10 @@ export function FighterScreen() {
           </div>
         </article>
         <Abilities id={current} />
-        <div className="mn-roster" role="group" aria-label="Fighters" data-testid="roster">
+        <div className="mn-roster" role="group" aria-label="Playable fighters" data-testid="roster">
+          <small className="mn-kicker mn-roster-head" data-testid="roster-count">
+            Playable fighters · {ROSTER.length}
+          </small>
           {ROSTER.map((id) => {
             const on = id === current;
             const info = fighterInfo(id);
@@ -119,8 +123,9 @@ export function FighterScreen() {
             );
           })}
         </div>
-        <p className="mn-fineprint">
-          Menu artwork is concept art; in the match every fighter plays as their 3D model.
+        <p className="mn-fineprint" data-testid="fighter-fineprint">
+          Menu artwork is concept art; in the match every fighter plays as their 3D model. The district bosses
+          appear in the campaign and are not playable.
         </p>
       </div>
     </ScreenFrame>

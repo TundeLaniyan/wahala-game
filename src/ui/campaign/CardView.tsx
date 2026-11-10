@@ -135,7 +135,7 @@ export function CardView(props: {
   const hasHero = image !== null && goneSrc !== image.src;
   return (
     <article
-      className={`cp-panel mn-panel cp-story-card${hasHero ? ' has-hero' : ''} ${props.className ?? ''}`}
+      className={`cp-panel mn-panel cp-story-card${hasHero ? ' has-hero' : ''}${open ? ' reading' : ''} ${props.className ?? ''}`}
       data-testid={props.testId ?? 'story-card'}
       data-card={card.id}
     >

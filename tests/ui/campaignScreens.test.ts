@@ -314,6 +314,15 @@ describe('story lines', () => {
     expect(plain).not.toContain('cp-msg');
   });
 
+  it('Read more open marks the card as reading (its text column scrolls beside the picture: decision PS3)', () => {
+    const open = renderToStaticMarkup(
+      createElement(CardView, { card: storyCard('prologue'), defaultOpen: true }),
+    );
+    expect(open).toMatch(/class="[^"]*cp-story-card[^"]*\breading\b/);
+    const closed = renderToStaticMarkup(createElement(CardView, { card: storyCard('prologue') }));
+    expect(closed).not.toMatch(/class="[^"]*cp-story-card[^"]*\breading\b/);
+  });
+
   it('every prologue and finale broker line renders as a message card', () => {
     for (const line of [...CAMPAIGN.prologue, ...CAMPAIGN.finale].filter((l) => l.fromBroker))
       expect(renderToStaticMarkup(createElement(StoryLineView, { line }))).toContain('cp-msg');

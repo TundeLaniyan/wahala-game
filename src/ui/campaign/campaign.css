@@ -414,6 +414,79 @@
   font-style: italic;
   color: #dfe6f7;
 }
+/* the district radio: a short dispatch card with a signal mark (no portrait), distinct from the broker's phone card */
+.cp-radio {
+  max-width: 600px;
+  padding: 8px 12px 10px;
+  border: 1px solid rgba(91, 214, 170, 0.35);
+  border-left: 4px solid #4fc79d;
+  background: linear-gradient(180deg, rgba(20, 40, 36, 0.92), rgba(13, 26, 24, 0.92));
+}
+.cp-radio-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: #8fe3c4;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+}
+.cp-radio-head b {
+  font-weight: 700;
+}
+.cp-radio-head small {
+  margin-left: auto;
+  color: var(--mn-muted);
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+}
+.cp-radio-glyph {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+.cp-radio-glyph i {
+  display: block;
+  width: 3px;
+  background: currentColor;
+}
+.cp-radio-glyph i:nth-child(1) {
+  height: 4px;
+}
+.cp-radio-glyph i:nth-child(2) {
+  height: 7px;
+}
+.cp-radio-glyph i:nth-child(3) {
+  height: 11px;
+}
+.cp-radio p {
+  color: #dff5ec;
+}
+/* a playable hero's line: the approved menu portrait beside the words */
+.cp-hero-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.cp-line-portrait {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border: 1px solid var(--mn-amber);
+  background: #10141d;
+}
+.cp-line-portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 18%;
+}
+.cp-line-body {
+  min-width: 0;
+}
 .cp-story-bar {
   flex: none;
   display: flex;
