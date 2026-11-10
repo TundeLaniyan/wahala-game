@@ -110,6 +110,22 @@
     justify-content: center;
   }
 }
+/* Read more open beside the picture (wide screens): the card fills the screen and only its text column scrolls, so the
+   picture stays in view instead of scrolling away and leaving an empty column (decision PS3) */
+@media (min-width: 900px) and (min-height: 521px) {
+  .cp-story-screen .cp-story-card.has-hero.reading {
+    height: 100%;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .cp-story-screen .cp-story-card.has-hero.reading .cp-card-text {
+    min-height: 0;
+    justify-content: flex-start;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--mn-border) transparent;
+  }
+}
 /* the briefing's main column is about half the screen: a shorter crop keeps the objective above the fold */
 @media (min-width: 701px) and (min-height: 521px) {
   .cp-brief-main .cp-hero {
@@ -132,6 +148,19 @@
   .cp-story-card.has-hero .cp-card-text {
     gap: 8px;
     padding: 10px 12px 12px;
+  }
+  /* the same on phone landscape: the picture stays beside the scrolling text (decision PS3) */
+  .cp-story-screen .cp-story-card.has-hero.reading {
+    height: 100%;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .cp-story-screen .cp-story-card.has-hero.reading .cp-card-text {
+    align-self: stretch; /* the short-screen grid aligns to the top: the text column must take the card's height */
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--mn-border) transparent;
   }
   /* the small picture needs no caption (the screen's kicker names the place), and the briefing gives its text column more room */
   .cp-hero-caption {

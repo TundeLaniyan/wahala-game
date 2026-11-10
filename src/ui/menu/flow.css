@@ -508,6 +508,12 @@
   display: block;
   padding: 0;
 }
+/* "Playable fighters · 3": the roster is the playable heroes, nothing else (decision PS1) */
+.mn-fighters2 .mn-roster-head {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--mn-muted);
+}
 
 /* ---------- phone landscape (short screens) ---------- */
 @media (max-height: 520px) {
@@ -748,7 +754,11 @@
   }
   .mn-fighters2 .mn-roster {
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 8px;
+  }
+  .mn-fighters2 .mn-roster-head {
+    flex: 0 0 100%;
   }
   .mn-fighters2 .mn-roster-card {
     flex: 1 1 0;
