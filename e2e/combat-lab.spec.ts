@@ -30,7 +30,7 @@ async function pause(page: Page): Promise<void> {
 
 async function resume(page: Page, step: string): Promise<void> {
   await test.step(`resume (${step})`, async () => {
-    await page.getByTestId('resume').click({ timeout: 20_000 });
+    await page.getByTestId('resume').click();
   });
   await expect(page.getByTestId('pause-overlay')).toHaveCount(0);
 }
