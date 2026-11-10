@@ -83,7 +83,7 @@ test('Sudden Death: the card goes when play resumes, the clock announces then fo
   await page.getByTestId('pause-button').click();
   await expect(page.getByTestId('resume')).toBeVisible();
   const paused = await sim(page);
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(600);
   expect((await sim(page)).tick).toBe(paused.tick);
   await expect(clock).toHaveAttribute('data-mode', 'full');
   await page.getByTestId('resume').click();

@@ -114,7 +114,8 @@ test('combat pilot: punches drop a warden, a miss is a miss, A lays a generator 
   for (let i = 0; i < 40 && !(await probe(page)).windup; i++) await stepTicks(page, 1);
   expect((await probe(page)).windup, 'the warden winds up a punch').toBe(true);
   await stepTicks(page, 14);
-  await page.screenshot({ path: `${SHOTS}/${info.project.name}-windup.png` });
+  // the review screenshot only on request (WAHALA_SHOTS=1): a software-WebGL screenshot costs CI time
+  if (process.env.WAHALA_SHOTS) await page.screenshot({ path: `${SHOTS}/${info.project.name}-windup.png` });
   await stepTicks(page, 60);
 
   // a swing at the air: nobody within reach, no health taken
