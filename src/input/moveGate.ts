@@ -216,6 +216,13 @@ export class MoveGate {
         this.why = 'turn-carry';
         return this.deliver(carry, tick);
       }
+      // NV1: the turn is still blocked beyond the carry's reach, but the way the player walks is still held too
+      const along = legal && active.has(dir) ? this.alongHeld(dir, tick, active, legal, assist) : null;
+      if (along) {
+        this.pending = { dir, pressed, until: tick + TURN_CONTINUE_TICKS, notBefore };
+        this.why = 'turn-wait-held';
+        return this.deliver(along, tick);
+      }
       const delayed = this.carried > 0;
       this.pending = null;
       this.carried = 0;
@@ -234,6 +241,12 @@ export class MoveGate {
       if (diagonal) {
         this.why = 'route-first-step';
         return diagonal;
+      }
+      // NV1: a held turn that is blocked here, while the way the player walks is still held: walk on, retry each tile
+      const along = legal ? this.alongHeld(held, tick, active, legal, assist) : null;
+      if (along) {
+        this.why = 'turn-wait-held';
+        return this.deliver(along, tick);
       }
       const dir = assist?.level === 'full' && legal ? this.assistHold(held, legal, assist, tick) : held;
       // bump guard (assisted levels): a direction the simulation already refused is not offered again every
@@ -280,6 +293,31 @@ export class MoveGate {
     }
     if (this.carried >= TURN_BUFFER_TILES) return null;
     return last.dir;
+  }
+
+  /**
+   * NV1 (held-turn continuation, keyboard and gamepad): the player asks for a perpendicular turn `dir` that is blocked
+   * on this tile while STILL holding the direction they are walking (a second key, or a second D-pad button). They
+   * keep walking that way, tile after tile, and the turn is taken on the first tile where it is legal (re-checked
+   * every step). Both directions are the player's own current input, so there is no reach limit and no danger veto;
+   * it ends the moment either is let go, a reversal is never continued, and `off` keeps the old gate exactly.
+   * The touchscreen thumb is NOT included: its lean is the approved two-step corner route (MV3 / AS4) and must never
+   * become a slide along a wall; touch keeps the 2-tile early turn and the corner route.
+   */
+  private alongHeld(
+    dir: Dir,
+    tick: number,
+    active: ReadonlySet<Dir>,
+    legal: (d: Dir) => boolean,
+    assist?: GateAssist,
+  ): Dir | null {
+    if (!assist || assist.touch) return null;
+    const last = this.last;
+    if (!last || tick - last.tick > TURN_CONTINUE_TICKS) return null; // not walking
+    const along = last.dir;
+    if (!PERPENDICULAR[dir].includes(along)) return null;
+    if (!active.has(along) || legal(dir) || !legal(along)) return null;
+    return along;
   }
 
   /**

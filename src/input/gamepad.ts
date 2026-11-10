@@ -9,6 +9,14 @@ const AXIS_HYSTERESIS = 1.25;
 
 // Standard mapping: 0=A 1=B 2=X 3=Y 4=LB 5=RB 9=Start 12-15 = D-pad up/down/left/right
 /** V2 two buttons: A = place; B (and X, for either thumb position) = special, hold = Remote Detonator. */
+
+/** Standard-mapping D-pad buttons and their directions. */
+const DPAD: readonly (readonly [number, Dir])[] = [
+  [12, 'up'],
+  [13, 'down'],
+  [14, 'left'],
+  [15, 'right'],
+];
 export const ACTION_BUTTONS: Readonly<Record<number, ActionName>> = {
   0: 'place',
   1: 'special',
@@ -62,6 +70,17 @@ export class GamepadInput {
     return this.current;
   }
 
+  /**
+   * Every direction held right now (decision NV2): the D-pad buttons that are down, in press order (the newest is
+   * `held`), else the stick's one direction. A thumb rolled from UP onto UP+RIGHT holds both, like two keys.
+   */
+  get heldSet(): ReadonlySet<Dir> {
+    return new Set(this.dpadOrder.length ? this.dpadOrder : this.current ? [this.current] : []);
+  }
+
+  /** D-pad directions currently down, oldest first (NV2). */
+  private dpadOrder: Dir[] = [];
+
   get connected(): boolean {
     return this.pads().length > 0;
   }
@@ -86,18 +105,22 @@ export class GamepadInput {
     const pad = this.pads()[0];
     if (!pad) {
       this.current = null;
+      this.dpadOrder = [];
       this.prevDir = null;
       this.stickDir = null;
       this.releaseAll();
       return;
     }
     const b = (i: number): boolean => !!pad.buttons[i]?.pressed;
-    let dir: Dir | null;
-    if (b(12)) dir = 'up';
-    else if (b(13)) dir = 'down';
-    else if (b(14)) dir = 'left';
-    else if (b(15)) dir = 'right';
-    else dir = null;
+    // D-pad (decision NV2): the NEWEST button down wins, as with the keyboard, so rolling the thumb from UP onto
+    // UP+RIGHT asks for RIGHT while UP stays held (it used to be a fixed up > down > left > right priority, which
+    // swallowed an early turn). Raids still send one direction: the newest.
+    const pressed = DPAD.filter(([i]) => b(i)).map(([, d]) => d);
+    this.dpadOrder = [
+      ...this.dpadOrder.filter((d) => pressed.includes(d)),
+      ...pressed.filter((d) => !this.dpadOrder.includes(d)),
+    ];
+    let dir: Dir | null = this.dpadOrder.length ? this.dpadOrder[this.dpadOrder.length - 1]! : null;
     // The stick only counts while the D-pad is idle; its hysteresis state restarts after D-pad use.
     if (dir) this.stickDir = null;
     else dir = this.stickDirection(pad.axes[0] ?? 0, pad.axes[1] ?? 0);

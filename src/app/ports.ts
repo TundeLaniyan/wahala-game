@@ -15,7 +15,7 @@ import type {
   RaidRequest,
   SimEvent,
 } from '../sim';
-import type { ActionName, IntentContext } from '../input';
+import type { ActionName, InputSourceName, IntentContext } from '../input';
 import type { EntryPick, FrameInfo, QualitySetting } from '../render';
 
 export interface Bot {
@@ -53,6 +53,8 @@ export interface InputPort {
   clear(): void;
   /** Classic raids: movement is cardinal only (input/inputMode.ts). Optional so test ports need not implement it. */
   setCardinalOnly?(on: boolean): void;
+  /** The device the player used last (touch feedback such as vibration only applies to touch). Optional for test ports. */
+  readonly activeDevice?: InputSourceName;
 }
 
 export type { Dir, ActionName };

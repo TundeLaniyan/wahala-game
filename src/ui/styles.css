@@ -946,6 +946,15 @@ button {
   height: clamp(150px, min(60vh, 56vw), 320px);
   pointer-events: none;
 }
+/* Settings > Control size: Large (decision NV3) grows the button cluster by 15 % (the thumbstick grows with it in
+   TouchControls.tsx), and the stick zone gives up the same width so the two never overlap. */
+.touch.large .actions {
+  width: clamp(172px, min(69vh, 64vw), 368px);
+  height: clamp(172px, min(69vh, 64vw), 368px);
+}
+.touch.large .stick-zone {
+  width: min(46vw, calc(100vw - clamp(172px, min(69vh, 64vw), 368px) - 24px));
+}
 .abtn {
   position: absolute;
   pointer-events: auto;
@@ -1206,6 +1215,24 @@ button {
   }
   .stick-hint small {
     font-size: 0.5rem;
+  }
+  /* Control size Large (decision NV3) on a landscape phone: the cluster stays inside its 36vh strip (no tile is ever
+     covered); the two buttons grow within it, still diagonal and apart */
+  .touch.large .actions {
+    width: calc(36vh - 12px);
+    height: 80vh;
+  }
+  .touch.large .stick-zone {
+    width: calc(100vw - 36vh - 16px);
+  }
+  .touch.large .abtn.bomb {
+    width: 26vh;
+    height: 26vh;
+  }
+  .touch.large .abtn.special {
+    bottom: 26.5vh;
+    width: 23vh;
+    height: 23vh;
   }
 }
 

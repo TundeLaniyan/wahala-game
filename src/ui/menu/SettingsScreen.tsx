@@ -166,6 +166,40 @@ function ControlsTab({ s, set }: { s: GameSettings; set: Set }) {
           ))}
         </div>
       </Field>
+      <Field
+        label="Control size"
+        hint="Large makes the on-screen joystick and the two buttons about 15 % bigger, still within thumb reach."
+      >
+        <div className="mn-opts">
+          {(['normal', 'large'] as const).map((c) => (
+            <Option
+              key={c}
+              value={c}
+              current={s.controlSize}
+              label={c === 'normal' ? 'Normal' : 'Large'}
+              onPick={(controlSize) => set({ controlSize })}
+              testId={`controlsize-${c}`}
+            />
+          ))}
+        </div>
+      </Field>
+      <Field
+        label="Vibration"
+        hint="A short buzz when you press a touch button and when you get hit, on phones that support it (most Android phones). Keyboard and gamepad never vibrate."
+      >
+        <div className="mn-opts">
+          {(['on', 'off'] as const).map((v) => (
+            <Option
+              key={v}
+              value={v}
+              current={s.vibration}
+              label={v === 'on' ? 'On' : 'Off'}
+              onPick={(vibration) => set({ vibration })}
+              testId={`vibration-${v}`}
+            />
+          ))}
+        </div>
+      </Field>
       <div className="mn-controls-note">
         <b>Two buttons on every device.</b> A places a generator. B taps for your special (melee when a rival
         is next to you, otherwise your vehicle if you hold a voucher) and, held, fires your remote detonator.
