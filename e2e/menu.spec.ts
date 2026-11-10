@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { chooseStage, mutate, open, setDifficulty, settled, stepTicks } from './helpers';
+import { chooseStage, mutate, open, setDifficulty, settled, stepTicks, inMatch } from './helpers';
 
 type Debug = {
   __WAHALA__: {
@@ -89,7 +89,7 @@ test.describe('Stitch main menu', () => {
     await page.screenshot({ path: `e2e-shots/${info.project.name}-menu-ready.png` });
 
     await page.getByTestId('start-button').click();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 170); // past the countdown (Esc pauses only once play is on)
     expect(await live(page)).toEqual({
       arenaId: 'rumbleLekki',
@@ -105,7 +105,7 @@ test.describe('Stitch main menu', () => {
     await expect(page.getByTestId('menu-home')).toBeVisible();
     await expect(page.getByTestId('setup-summary')).toContainText('Free-for-All · 8 fighters · 3 min');
     await page.getByTestId('quick-play').click();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 30);
     expect((await live(page)).arenaId).toBe('rumbleLekki');
     expect(errors).toEqual([]);
@@ -200,7 +200,7 @@ test.describe('Stitch main menu', () => {
       'Classic Battle · 4 players · Danfo Bus Park',
     );
     await page.getByTestId('quick-play').click();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 30);
     expect(await live(page)).toMatchObject({
       arenaId: 'danfoBusPark',
@@ -218,7 +218,7 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('menu-continue').click();
     await page.getByTestId('menu-continue').click();
     await page.getByTestId('start-button').click();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 170);
     // the only rival is caught by a blast: a real result
     await mutate(page, 'const r = s.players[1]; r.alive = false;');
@@ -233,7 +233,7 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('to-title').click();
     await expect(page.getByTestId('menu-ready')).toBeVisible();
     await page.getByTestId('start-button').click();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 170);
     await mutate(page, 'const r = s.players[1]; r.alive = false;');
     await stepTicks(page, 10);
@@ -382,7 +382,7 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('menu-continue').click();
     await expect(page.getByTestId('ready-difficulty')).toContainText('Expert');
     await page.getByTestId('start-button').click();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     const settings = await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.settings.v1')!));
     expect(settings.botDifficulties).toEqual(['expert', 'beginner', 'expert']);
   });

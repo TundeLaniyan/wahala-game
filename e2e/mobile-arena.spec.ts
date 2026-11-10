@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { stepTicks } from './helpers';
+import { stepTicks, inMatch } from './helpers';
 
 /**
  * Mobile Test Arena (decision WB10): measures the real on-screen tile size of the experimental 13 x 9 and
@@ -33,7 +33,7 @@ async function measure(page: Page, arenaId: string, cols: number, rows: number):
   await page.goto('./?debug&q=low&seed=7&nobots&noattract');
   await expect(page.getByTestId('title-screen')).toBeVisible();
   await page.getByTestId('quick-play').click(); // the saved setup, as a returning player starts it
-  await expect(page.getByTestId('hud')).toBeVisible();
+  await inMatch(page);
   await stepTicks(page, 30);
   const info = await page.evaluate(() => {
     const w = (
@@ -113,7 +113,7 @@ test('an eliminated player throws from the sideline with the THROW button (Mobil
   });
   await page.goto('./?debug&q=low&seed=7&nobots&noattract');
   await page.getByTestId('quick-play').click(); // the saved setup, as a returning player starts it
-  await expect(page.getByTestId('hud')).toBeVisible();
+  await inMatch(page);
   await stepTicks(page, 200);
   // knock the local player out in the middle of the board with a one-tick generator
   await page.evaluate(`(() => {

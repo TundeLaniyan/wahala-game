@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open } from './helpers';
+import { open, inMatch } from './helpers';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function stage(page: Page, x: number, y: number, ticks: number): Promise<void> {
@@ -40,7 +40,7 @@ test('Oshodi approach: the current checkpoint is marked, reaching it says so at 
     c.storyDone();
     if (!c.startSectionMission('oshodi.approach')) throw new Error('mission did not start');
   });
-  await expect(page.getByTestId('hud')).toBeVisible();
+  await inMatch(page);
   await page.evaluate(() => {
     const w = (window as any).__WAHALA__;
     w.controller().frozen = true;
@@ -94,8 +94,10 @@ test('Oshodi approach: the current checkpoint is marked, reaching it says so at 
   await expect(page.getByTestId('field-hold-label')).toHaveText('HOLD 0.2 / 1.0 s');
   // back on for the full second: the raid request goes up and the app starts the warehouse raid
   await stage(page, 25, 44, 62);
+  // the raid is built behind the loading screen now (docs/MATCH_LOADING.md), so the wait covers a whole start
   await expect
-    .poll(() => page.evaluate(() => !!(window as any).__WAHALA__.getState()?.raid), { timeout: 20_000 })
+    .poll(() => page.evaluate(() => !!(window as any).__WAHALA__.getState()?.raid), { timeout: 120_000 })
     .toBe(true);
+  await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 30_000 });
   expect(errors).toEqual([]);
 });

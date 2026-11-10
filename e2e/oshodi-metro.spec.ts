@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { chooseStage, open, stepTicks, toRumbleSetup } from './helpers';
+import { chooseStage, open, stepTicks, toRumbleSetup, inMatch } from './helpers';
 
 /**
  * Lagos arenas, build 1 (docs/OSHODI_METROPOLIS.md): Oshodi Transport Metropolis in the real game on the desktop
@@ -24,7 +24,7 @@ async function startOshodi(page: Page): Promise<void> {
   await page.getByTestId('menu-continue').click();
   await page.getByTestId('menu-continue').click();
   await page.getByTestId('start-button').click();
-  await expect(page.getByTestId('hud')).toBeVisible();
+  await inMatch(page);
   await stepTicks(page, 170);
 }
 

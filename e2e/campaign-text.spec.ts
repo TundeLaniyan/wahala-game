@@ -9,7 +9,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { clearOshodiSections, open } from './helpers';
+import { clearOshodiSections, open, inMatch } from './helpers';
 
 const SHOTS = process.env.WAHALA_SHOT_DIR || 'e2e-shots';
 
@@ -162,7 +162,7 @@ test.describe('campaign health HUD', () => {
       c.startFromBriefing();
       c.bossIntroDone();
     });
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await page.evaluate(() => {
       const w = (window as unknown as Debug).__WAHALA__;
       w.controller().frozen = true;

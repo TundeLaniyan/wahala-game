@@ -7,7 +7,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { openSettings, pauseSettings, startMatch, stepTicks } from './helpers';
+import { openSettings, pauseSettings, startMatch, stepTicks, inMatch } from './helpers';
 
 interface Status {
   setting: string;
@@ -124,7 +124,7 @@ test.describe('adaptive graphics', () => {
     await openAuto(page);
     // start from a mid rung so there is room both ways (the test browser itself is a software renderer)
     await startMatch(page, { competitors: 2, waitPlaying: false });
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     const before = await quality(page);
     expect(before.auto).toBe(true);
     // 1) comfortable 60 fps for a minute: it climbs, one rung at a time, to the ceiling for this device

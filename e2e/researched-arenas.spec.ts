@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { chooseStage, launch, open, stepTicks, toRumbleSetup } from './helpers';
+import { chooseStage, launch, open, stepTicks, toRumbleSetup, inMatch } from './helpers';
 
 const STAGES: [id: string, name: RegExp, size: [number, number]][] = [
   ['rumbleOjuelegba', /Ojuelegba/, [45, 33]],
@@ -69,7 +69,7 @@ test.describe('City Rumble communities', () => {
       await chooseStage(page, id);
       await expect(page.getByTestId('setup-arena')).toContainText(name);
       await launch(page);
-      await expect(page.getByTestId('hud')).toBeVisible();
+      await inMatch(page);
       await stepTicks(page, 200);
       const v = await live(page);
       expect(v).toMatchObject({ arenaId: id, width: size[0], height: size[1], phase: 'playing' });
@@ -87,7 +87,7 @@ test.describe('City Rumble communities', () => {
       await chooseStage(page, id);
       await expect(page.getByTestId('setup-arena')).toContainText(name);
       await launch(page);
-      await expect(page.getByTestId('hud')).toBeVisible();
+      await inMatch(page);
       await stepTicks(page, 60);
       expect((await live(page)).arenaId).toBe(id);
       expect(errors).toEqual([]);
@@ -118,7 +118,7 @@ test.describe('City Rumble communities', () => {
       });
     });
     await page.getByTestId('quick-play').tap();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 200);
     await page.evaluate(() => {
       const w = (window as unknown as W).__WAHALA__;
@@ -157,7 +157,7 @@ test.describe('City Rumble communities', () => {
       });
     });
     await page.getByTestId('quick-play').tap();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 200);
     expect(await live(page)).toMatchObject({
       arenaId: 'rumbleEbuteMetta',

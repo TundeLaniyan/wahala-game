@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, mutate, open, settled, startMatch, stepTicks, toRumbleSetup } from './helpers';
+import { getState, mutate, open, settled, startMatch, stepTicks, toRumbleSetup, inMatch } from './helpers';
 
 type Debug = {
   __WAHALA__: {
@@ -84,7 +84,7 @@ test.describe('main menu', () => {
     const start = (await page.getByTestId('start-button').boundingBox())!;
     expect(start.y + start.height).toBeLessThanOrEqual(360);
     await page.getByTestId('start-button').click();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 160);
     let s = await settingsOf(page);
     expect(s.game).toBe('team');

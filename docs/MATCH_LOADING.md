@@ -52,7 +52,8 @@ the loading screen is up). Once the match is on screen the ordinary rotate notic
   instead.
 - Mobile audio is still unlocked synchronously inside the tap (the gesture is required); the loader never waits on audio,
   so an audio context that will not resume cannot stall the start.
-- The hold only stops the controller from stepping the simulation; nothing in `src/sim` knows about it. On release the
+- The hold starts with the tap (a field mission whose door asked for a raid stops behind the loading screen) and stays
+  under a failure screen until Retry, Back or leaving. It only stops the controller from stepping the simulation; nothing in `src/sim` knows about it. On release the
   frame clock is reset, so the countdown does not jump by the time spent loading.
 - The screen can never outlive the start: it is removed after the first frames or after 12 s, whichever comes first,
   and leaving for the menu clears a failure screen.
@@ -73,3 +74,5 @@ the loading screen is up). Once the match is on screen the ordinary rotate notic
   a slow start shows a real step and the menu is gone at once; an upright phone shows the turn-sideways instruction and
   the loading line together, then the ordinary rotate notice, then the match when turned; a forced failure -> Back to the
   menu, Retry -> playable; every `.glb` download aborted -> drawn fallbacks and the match still starts.
+- Browser specs wait for a start with `inMatch(page)` (`e2e/helpers.ts`): the build used to run inside the click, so a
+  15 s HUD wait came after it; now it runs after the click returns, and the helper's wait covers a whole start.

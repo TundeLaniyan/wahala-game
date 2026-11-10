@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open } from './helpers';
+import { open, inMatch } from './helpers';
 
 const ARENAS_DIR = join(process.cwd(), 'src', 'sim', 'arenas');
 const HAS_RAID =
@@ -51,7 +51,7 @@ async function startRaid(page: Page): Promise<void> {
     return typeof c.debugStartRaid === 'function' ? c.debugStartRaid('warehouseDispatchDepot') : null;
   });
   expect(started, 'the debug handle must offer debugStartRaid (app/campaign.ts)').toBe(true);
-  await expect(page.getByTestId('hud')).toBeVisible();
+  await inMatch(page);
   await page.evaluate(() => {
     const w = (window as unknown as Debug).__WAHALA__;
     w.controller().frozen = true;

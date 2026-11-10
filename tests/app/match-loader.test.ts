@@ -65,6 +65,7 @@ describe('the match loader', () => {
     // acknowledged at once; nothing heavy has run yet
     expect(r.phases()).toEqual(['starting']);
     expect(start).not.toHaveBeenCalled();
+    expect(r.holds).toEqual([true]); // held from the tap: nothing plays on behind the loading screen
     await r.paint(); // the loading screen painted -> the arena is built after one more paint
     await r.paint();
     expect(start).toHaveBeenCalledTimes(1);
@@ -145,7 +146,7 @@ describe('the match loader', () => {
     await r.paint();
     expect(await done).toBe(false);
     expect(r.log.at(-1)).toMatchObject({ phase: 'failed', kind: 'raid', error: 'WebGL context lost' });
-    expect(r.holds).toEqual([true, false]); // never left held
+    expect(r.holds).toEqual([true]); // held under the failure screen (a field mission must not play on behind it)
     expect(loader.busy).toBe(true); // a Play tap behind the failure screen starts nothing
     expect(await loader.run('match', vi.fn(), vi.fn())).toBe(false);
     // Retry: the same start again, this time it works
@@ -165,6 +166,7 @@ describe('the match loader', () => {
     expect(await third).toBe(false);
     loader.back();
     expect(back).toHaveBeenCalledTimes(1);
+    expect(r.holds.at(-1)).toBe(false); // Back releases it
     expect(r.log.at(-1)).toBeNull();
     expect(loader.busy).toBe(false);
   });

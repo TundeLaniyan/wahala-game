@@ -10,7 +10,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, openSettings, startMatch, stepTicks } from './helpers';
+import { open, openSettings, startMatch, stepTicks, inMatch } from './helpers';
 
 const SHOTS = process.env.WAHALA_SHOT_DIR || 'e2e-shots';
 
@@ -257,7 +257,7 @@ test.describe('Online preview (?mockonline)', () => {
     await page.getByTestId('online-ready').click();
     await expect(page.getByTestId('online-play-local')).toBeVisible({ timeout: 40_000 });
     await page.getByTestId('online-play-local').click();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 160);
     const players = await page.evaluate(
       () =>

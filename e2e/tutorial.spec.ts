@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, holdKey, open, stepTicks, thumb } from './helpers';
+import { getState, holdKey, open, stepTicks, thumb, inMatch } from './helpers';
 
 type Debug = {
   __WAHALA__: {
@@ -82,7 +82,7 @@ test.describe('Training Academy', () => {
     await expect(page.getByTestId('how-to-play')).toHaveAttribute('data-mode', 'practice');
     await stepTicks(page, 1); // hold real time still again: only the test's ticks move the world
     await expect(page.getByTestId('htp-instruction')).toContainText('Walk to the glowing marker');
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     if (info.project.use.isMobile) {
       await expect(page.getByTestId('stick-zone')).toBeVisible();
       await expect(page.getByTestId('htp-instruction')).toContainText(

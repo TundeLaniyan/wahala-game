@@ -8,6 +8,7 @@
  *   assets    the game models are still loading from the boot preload: the real count is shown ("8 / 31"); a model
  *             that fails has a drawn fallback, and after `assetWaitMs` the match starts anyway (never an endless wait);
  *   arena     the board, the fighters and the scene are built (`start`, synchronous); an error here is a failure;
+ *             whatever was on screen is held from the tap on (no simulation time passes behind the loading screen);
  *   scene     the match is held (no simulation time passes) until the renderer has drawn `firstFrames` frames of it, so
  *             the countdown is not eaten by shader compiles; after `sceneWaitMs` the screen is removed regardless;
  *   failed    the reason, Retry (the same start again) and Back (to where the player came from).
@@ -120,6 +121,7 @@ export class MatchLoader {
   /** The failure screen's Back. */
   back(): void {
     if (this.inFlight || this.current?.phase !== 'failed') return;
+    this.deps.hold(false);
     this.set(null);
     this.last?.back();
   }
@@ -143,7 +145,9 @@ export class MatchLoader {
   private async go(run: Run): Promise<boolean> {
     const { deps, opts } = this;
     this.seq++;
-    // 1. acknowledge at once and let the loading screen paint before any heavy work
+    // 1. acknowledge at once and let the loading screen paint before any heavy work; whatever is on screen is held from
+    //    here (a field mission whose door asked for a raid must not play on behind the loading screen)
+    deps.hold(true);
     this.phase(run.kind, 'starting');
     await deps.afterPaint();
     if (this.debugDelayMs) await deps.wait(this.debugDelayMs);
@@ -167,11 +171,10 @@ export class MatchLoader {
     // 3. build the arena and the scene (synchronous); the match is held until its first frames are drawn
     this.phase(run.kind, 'arena');
     await deps.afterPaint();
-    deps.hold(true);
     try {
       run.start();
     } catch (error) {
-      deps.hold(false);
+      // still held under the failure screen: Retry, Back or leaving for the menu releases it
       this.phase(run.kind, 'failed', {
         error: error instanceof Error && error.message ? error.message : 'The match could not be set up.',
       });

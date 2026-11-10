@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { chooseStage, mutate, open, stepTicks, toRumbleSetup } from './helpers';
+import { chooseStage, mutate, open, stepTicks, toRumbleSetup, inMatch } from './helpers';
 
 /**
  * City Rumble Evolution (docs/RUMBLE_EVOLUTION.md) in the real game: the five-district Ojuelegba stage starts
@@ -47,7 +47,7 @@ async function startOjuelegba(page: Page): Promise<void> {
   await page.getByTestId('menu-continue').click();
   await expect(page.getByTestId('ready-rules')).toContainText('Radial blasts');
   await page.getByTestId('start-button').click();
-  await expect(page.getByTestId('hud')).toBeVisible();
+  await inMatch(page);
   await stepTicks(page, 170); // past the countdown
 }
 

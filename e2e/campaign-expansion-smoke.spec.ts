@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, toRumbleSetup } from './helpers';
+import { open, toRumbleSetup, inMatch } from './helpers';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const state = (page: Page, fn: string) =>
@@ -34,7 +34,7 @@ async function startRaid(page: Page): Promise<void> {
     (window as any).__WAHALA__.campaign().debugStartRaid('warehouseDispatchDepot'),
   );
   expect(ok).toBe(true);
-  await expect(page.getByTestId('hud')).toBeVisible();
+  await inMatch(page);
   // staging only: skip the 2.5 s countdown so the checks do not wait on software rendering
   await page.evaluate(() => {
     const s = (window as any).__WAHALA__.getState();
@@ -63,7 +63,7 @@ test.describe('campaign expansion smoke', () => {
       (window as any).__WAHALA__.campaign().startSectionMission('oshodi.approach'),
     );
     expect(ok).toBe(true);
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     const info = (await state(
       page,
       `s => ({ game: s.settings.game, blast: s.config.generator.blastMode, arena: s.arenaId, hp: s.players[0].vitals && s.players[0].vitals.hp, maxHp: s.players[0].vitals && s.players[0].vitals.maxHp, field: !!(s.mission && s.mission.field) })`,
@@ -206,7 +206,7 @@ test.describe('campaign expansion smoke', () => {
     expect(
       await page.evaluate(() => (window as any).__WAHALA__.campaign().startSectionMission('oshodi.approach')),
     ).toBe(true);
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     // staging: the route is at its door leg and the human stands on the door (the real controller does the rest)
     const door = (await page.evaluate(() => {
       const s = (window as any).__WAHALA__.getState();
@@ -232,7 +232,7 @@ test.describe('campaign expansion smoke', () => {
       `s => ({ game: s.settings.game, blast: s.config.generator.blastMode, w: s.width })`,
     )) as any;
     expect(raid).toMatchObject({ game: 'raid', blast: 'plus' });
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     // the raid ends (staged outcome, the real runtime has its own tests): the field comes back on the return tile
     await page.evaluate(() => {
       const s = (window as any).__WAHALA__.getState();
@@ -288,7 +288,7 @@ test.describe('campaign expansion smoke', () => {
       c.startFromBriefing();
       c.bossIntroDone();
     });
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     const bar = page.getByTestId('boss-bar');
     await expect(bar).toBeVisible();
     await expect(bar).toHaveAttribute('data-state', 'shielded');
@@ -308,7 +308,7 @@ test.describe('campaign expansion smoke', () => {
     expect(
       await page.evaluate(() => (window as any).__WAHALA__.campaign().startSectionMission('oshodi.approach')),
     ).toBe(true);
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     // staging: playing, one health segment left, an enemy generator under the human (a real lethal blast through the tick)
     await page.evaluate(() => {
       const s = (window as any).__WAHALA__.getState();

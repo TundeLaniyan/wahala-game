@@ -10,7 +10,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, stepTicks } from './helpers';
+import { open, stepTicks, inMatch } from './helpers';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -25,7 +25,7 @@ async function startApproach(page: Page): Promise<void> {
     c.storyDone();
     if (!c.startSectionMission('oshodi.approach')) throw new Error('mission did not start');
   });
-  await expect(page.getByTestId('hud')).toBeVisible();
+  await inMatch(page);
   await page.evaluate(() => {
     const w = (window as any).__WAHALA__;
     w.controller().frozen = true;

@@ -89,6 +89,16 @@ export async function launch(page: Page, character?: string): Promise<void> {
   await page.getByTestId('start-button').click();
 }
 
+/**
+ * A match start has finished: the HUD is up and the loading screen is gone (docs/MATCH_LOADING.md). The model wait and
+ * the scene build run after the tap now (they used to run inside the click), so the HUD wait covers a whole start:
+ * at most 20 s of model loading, the build, then at most 12 s for the first frames.
+ */
+export async function inMatch(page: Page): Promise<void> {
+  await expect(page.getByTestId('hud')).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 30_000 });
+}
+
 /** Starts a match (default: Classic Battle, the 2-4 player game most specs were written for). */
 export async function startMatch(
   page: Page,
@@ -104,9 +114,7 @@ export async function startMatch(
   else await toRumbleSetup(page);
   if (opts.competitors) await page.getByTestId(`players-${opts.competitors}`).click();
   await launch(page, opts.character);
-  await expect(page.getByTestId('hud')).toBeVisible();
-  // the match loading screen goes once the first frames are drawn (docs/MATCH_LOADING.md)
-  await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 30_000 });
+  await inMatch(page);
   if (opts.waitPlaying !== false) await stepTicks(page, 160);
 }
 

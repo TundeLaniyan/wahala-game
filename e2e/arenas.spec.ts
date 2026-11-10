@@ -1,6 +1,15 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, stepTicks, chooseArena, chooseStage, launch, toClassicSetup, toRumbleSetup } from './helpers';
+import {
+  open,
+  stepTicks,
+  chooseArena,
+  chooseStage,
+  launch,
+  toClassicSetup,
+  toRumbleSetup,
+  inMatch,
+} from './helpers';
 
 const STANDARD = [
   'danfoBusPark',
@@ -92,7 +101,7 @@ test.describe('arena picker and stage hazards', () => {
       await chooseArena(page, id);
       await page.getByTestId('players-2').click();
       await launch(page);
-      await expect(page.getByTestId('hud')).toBeVisible();
+      await inMatch(page);
       await stepTicks(page, 200);
       // the simulation is the source of truth here; the HUD's own refresh is covered by the tests below
       const v = await stage(page);
@@ -111,7 +120,7 @@ test.describe('arena picker and stage hazards', () => {
     await chooseArena(page, 'oshodiInterchange');
     await page.getByTestId('players-2').click();
     await launch(page);
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 200);
     const v = await untilStageWarning(page, 14);
     await syncHud(page);
@@ -159,7 +168,7 @@ test.describe('arena picker and stage hazards', () => {
     await page.getByTestId('rumble-8').click();
     await expect(page.getByTestId('rumble-8')).toHaveClass(/on/);
     await launch(page);
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     await stepTicks(page, 200);
     const v = await stage(page);
     expect(v.arenaId).toBe('rumbleMushin');

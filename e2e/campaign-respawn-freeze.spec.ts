@@ -11,7 +11,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open } from './helpers';
+import { open, inMatch } from './helpers';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const get = (page: Page, fn: string) =>
@@ -28,7 +28,7 @@ async function startField(page: Page): Promise<void> {
   expect(
     await page.evaluate(() => (window as any).__WAHALA__.campaign().startSectionMission('oshodi.approach')),
   ).toBe(true);
-  await expect(page.getByTestId('hud')).toBeVisible();
+  await inMatch(page);
   await page.evaluate(() => {
     const s = (window as any).__WAHALA__.getState();
     s.match.phase = 'playing';

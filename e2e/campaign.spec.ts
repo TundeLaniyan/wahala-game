@@ -8,7 +8,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, settled } from './helpers';
+import { open, settled, inMatch } from './helpers';
 
 const SHOTS = process.env.WAHALA_SHOT_DIR || 'e2e-shots';
 
@@ -90,7 +90,7 @@ test.describe('Campaign', () => {
 
     // a real field mission starts from the section list (the Terminal Approach)
     await page.getByTestId('section-start-oshodi.approach').click();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await inMatch(page);
     // back to the map (the pause menu's action; the menu itself is covered by the app tests)
     await page.evaluate(() =>
       (window as never as { __WAHALA__: { campaign(): { toMap(): void } } }).__WAHALA__.campaign().toMap(),
