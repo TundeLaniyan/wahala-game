@@ -35,18 +35,45 @@ export function SuddenDeathCard({ sd }: { sd: SuddenDeathHud }) {
 }
 
 /**
- * The blast clock in the HUD rail during the countdown, and the flash when a blast falls. One status line says which
- * blast of the round it is, whether shields count (blasts 1-2: an Okada or Armour layer absorbs one blast each; the final
- * blast ignores them) and the countdown; a second line says what that means for the local fighter.
+ * The blast clock in the HUD rail during the countdown, and the flash when a blast falls. When a countdown begins
+ * (`sd.announce`, a few seconds) it is the full announcement: which blast of the round it is, whether shields count
+ * (blasts 1-2: an Okada or Armour layer absorbs one blast each; the final blast ignores them), the countdown, what that
+ * means for the local fighter and the kill ranking. Then it folds into a one-line chip (title, blast, countdown; it still
+ * pulses in the warning window) so it never sits over the fight for the whole round (decision SD-B1).
  */
 export function SuddenDeathClock({ sd }: { sd: SuddenDeathHud }) {
   const status = suddenDeathStatus(sd);
+  const compact = !sd.announce;
+  if (status && compact)
+    return (
+      <>
+        <div
+          className={`sd-clock compact${sd.warning ? ' warn' : ''}${status.final ? ' final' : ''}`}
+          data-testid="sudden-death-clock"
+          data-mode="compact"
+          data-seconds={sd.secondsToBlast}
+          data-blast={sd.blast}
+          data-final={status.final}
+          role="status"
+          aria-label={`Sudden death: ${status.line}${status.yours ? `. ${status.yours}` : ''}`}
+        >
+          <b>SUDDEN DEATH</b>
+          <span className="sd-status" data-testid="sudden-death-status">
+            {status.blast}
+            {status.final && <em className="sd-shields"> · {status.shields}</em>} ·{' '}
+            <strong>{status.countdown}</strong>
+          </span>
+        </div>
+        {sd.flash && <div className="sd-flash" data-testid="sudden-death-flash" aria-hidden />}
+      </>
+    );
   return (
     <>
       {status && (
         <div
           className={`sd-clock${sd.warning ? ' warn' : ''}${status.final ? ' final' : ''}`}
           data-testid="sudden-death-clock"
+          data-mode="full"
           data-seconds={sd.secondsToBlast}
           data-blast={sd.blast}
           data-final={status.final}
