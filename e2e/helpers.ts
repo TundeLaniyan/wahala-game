@@ -92,14 +92,15 @@ export async function launch(page: Page, character?: string): Promise<void> {
 /**
  * A match start has finished: the HUD is up and the loading screen is gone (docs/MATCH_LOADING.md). The model wait and
  * the scene build run after the tap now (they used to run inside the click), so the waits cover a whole start: at most
- * 20 s of model loading, the build, then the first frames (capped at 12 s, but the cap can only fire between frames,
- * and a first frame that compiles an arena's shaders on a CI runner's software renderer can itself take many seconds).
- * A failure says which loading phase was still on screen, and the reason when the start failed.
+ * 20 s of model loading, the build, then the first frames. Those are capped at 12 s, but the cap can only act between
+ * frames, and on a CI runner's software renderer a first frame that compiles an arena's shaders can take tens of
+ * seconds (they block the page either way, so the long allowance costs nothing when frames are quick). A failure prints
+ * the loader's phase, the frames drawn and the screen.
  */
 export async function inMatch(page: Page): Promise<void> {
   await expect(page.getByTestId('hud')).toBeVisible({ timeout: 120_000 });
   try {
-    await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 120_000 });
+    await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 240_000 });
   } catch (error) {
     const load = await page
       .evaluate(() =>

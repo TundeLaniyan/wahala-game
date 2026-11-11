@@ -183,9 +183,13 @@ export class MatchLoader {
 
     // 4. wait for the first drawn frames (shader compiles), never longer than `sceneWaitMs`
     this.phase(run.kind, 'scene');
-    await Promise.race([deps.framesDrawn(opts.firstFrames), deps.wait(opts.sceneWaitMs)]);
-    deps.hold(false);
-    this.set(null);
+    try {
+      await Promise.race([deps.framesDrawn(opts.firstFrames), deps.wait(opts.sceneWaitMs)]);
+    } finally {
+      // whatever happens, the match is released and the screen goes: it must never stay over a playable match
+      deps.hold(false);
+      this.set(null);
+    }
     return true;
   }
 }

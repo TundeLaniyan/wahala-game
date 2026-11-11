@@ -98,6 +98,6 @@ test('Oshodi approach: the current checkpoint is marked, reaching it says so at 
   await expect
     .poll(() => page.evaluate(() => !!(window as any).__WAHALA__.getState()?.raid), { timeout: 120_000 })
     .toBe(true);
-  await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 30_000 });
+  await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 240_000 });
   expect(errors).toEqual([]);
 });

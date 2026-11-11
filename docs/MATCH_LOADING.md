@@ -75,4 +75,6 @@ the loading screen is up). Once the match is on screen the ordinary rotate notic
   the loading line together, then the ordinary rotate notice, then the match when turned; a forced failure -> Back to the
   menu, Retry -> playable; every `.glb` download aborted -> drawn fallbacks and the match still starts.
 - Browser specs wait for a start with `inMatch(page)` (`e2e/helpers.ts`): the build used to run inside the click, so a
-  15 s HUD wait came after it; now it runs after the click returns, and the helper's wait covers a whole start.
+  15 s HUD wait came after it; now it runs after the click returns, and the helper waits for a whole start: the HUD,
+  then the loading screen gone. On a CI runner's software renderer a first frame can take tens of seconds and the 12 s
+  cap can only act between frames, so that second wait is long (240 s); it costs nothing when frames are quick.
