@@ -4,6 +4,7 @@ import type { Dir, TilePos, VehicleEntry } from '../../sim';
 import { entryKey } from '../../sim';
 import { chevronTexture, glowTexture, ringTexture, tileGlowTexture } from '../textures';
 import type { EntryOverlayModel, EntryPick } from '../types';
+import { suddenDeathFloor } from './suddenDeathFrontLook';
 import { TileOverlay } from './TileOverlay';
 import type { FrameContext, View } from './types';
 
@@ -164,6 +165,14 @@ export class OverlayViews implements View {
       }
     }
 
+    // --- Sudden Death TEST match: the blast warning over the floor and the front crossing it (state.config.suddenDeath.lab)
+    for (const g of suddenDeathFloor(state, alpha, time)) {
+      const x = wx(g.index % state.width);
+      const z = wz(Math.floor(g.index / state.width));
+      this.fill.push({ x, z, color: g.color, intensity: g.intensity, scale: 0.98 });
+      if (g.edge) this.rings.push({ x, z, color: 0xfff2c0, intensity: g.intensity, scale: 1.25 });
+    }
+
     // --- Mandatory endgame traps being telegraphed: strobing amber tile + a ring closing in until they go live
     const warn = state.config.hazards.endgameWarnTicks;
     for (const w of state.endgameTraps.warnings) {
@@ -298,13 +307,31 @@ export class OverlayViews implements View {
         intensity: (local ? 0.75 : 0.4) + (ready ? 0.25 * Math.sin(time * 8) : 0),
         scale: local ? 1.0 : 0.8,
       });
-      this.fill.push({ x: wx(t.x), z: wz(t.y), color: local ? 0xffd23a : 0x9a948a, intensity: 0.22, scale: 0.7 });
+      this.fill.push({
+        x: wx(t.x),
+        z: wz(t.y),
+        color: local ? 0xffd23a : 0x9a948a,
+        intensity: 0.22,
+        scale: 0.7,
+      });
       if (local && ready) {
         const aim = spectatorLanding(state, s.pos);
         if (aim) {
           const pulse = 0.5 + 0.5 * Math.sin(time * 6);
-          this.fill.push({ x: wx(aim.x), z: wz(aim.y), color: 0xffd23a, intensity: 0.18 + 0.14 * pulse, scale: 0.9 });
-          this.rings.push({ x: wx(aim.x), z: wz(aim.y), color: 0xffe680, intensity: 0.6, scale: 0.9 + 0.1 * pulse });
+          this.fill.push({
+            x: wx(aim.x),
+            z: wz(aim.y),
+            color: 0xffd23a,
+            intensity: 0.18 + 0.14 * pulse,
+            scale: 0.9,
+          });
+          this.rings.push({
+            x: wx(aim.x),
+            z: wz(aim.y),
+            color: 0xffe680,
+            intensity: 0.6,
+            scale: 0.9 + 0.1 * pulse,
+          });
         }
       }
     }
@@ -313,7 +340,13 @@ export class OverlayViews implements View {
       const k = 1 - Math.max(0, g.flight.remaining - alpha) / Math.max(1, g.flight.total);
       const x = wx(g.x);
       const z = wz(g.y);
-      this.fill.push({ x, z, color: 0xff3a1a, intensity: 0.25 + 0.5 * k * (0.7 + 0.3 * Math.sin(time * 20)), scale: 0.96 });
+      this.fill.push({
+        x,
+        z,
+        color: 0xff3a1a,
+        intensity: 0.25 + 0.5 * k * (0.7 + 0.3 * Math.sin(time * 20)),
+        scale: 0.96,
+      });
       this.rings.push({ x, z, color: 0xff7a2a, intensity: 0.9, scale: 1.8 - k * 1.0 });
     }
   }

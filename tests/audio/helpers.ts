@@ -36,6 +36,15 @@ export const SAMPLES: Record<SimEvent['type'], SimEvent> = {
   },
   suddenDeathCountdown: { type: 'suddenDeathCountdown', blast: 1, blastTick: 3600 },
   suddenDeathBlast: { type: 'suddenDeathBlast', blast: 1, survivors: [], eliminated: [] },
+  suddenDeathFront: {
+    type: 'suddenDeathFront',
+    blast: 1,
+    x: 7,
+    y: 5,
+    startTick: 3600,
+    ticksPerRing: 14,
+    maxRing: 7,
+  },
   generatorPlaced: { type: 'generatorPlaced', generatorId: 1, ownerId: 0, x: 3, y: 3 },
   generatorExploded: {
     type: 'generatorExploded',

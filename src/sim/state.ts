@@ -207,10 +207,18 @@ export function createGame(options: GameOptions): GameState {
   };
 
   buildTiles(state, arena);
+  // the Sudden Death TEST match is played on an open floor (no crates): the closing ring and the blast front stay readable
+  if (config.suddenDeath.lab) state.tiles = state.tiles.map((t) => (t === Tile.Soft ? Tile.Empty : t));
   assignHiddenPickups(state);
   placeSupplies(state, arena);
   if (settings.stageHazards) buildFloorHazards(state, arena);
   if (settings.mode === 'crush') state.crush = createCrush(state);
+  else if (config.suddenDeath.lab) {
+    // the Sudden Death TEST match: the closing ring is built now and scheduled when the countdown starts (suddenDeathCollapse.ts)
+    state.crush = createCrush(state);
+    state.crush.warnAt = [];
+    state.crush.nextAtTick = Infinity;
+  }
   state.endgameTraps = createEndgameTraps(state, arena);
   if (settings.crowdThrows) state.crowd = { nextThrowTick: config.crowd.firstThrowTicks, throws: [] };
   state.stage = createStage(state, arena);

@@ -545,7 +545,7 @@ export type MatchResult =
   | { kind: 'teamWin'; team: number; decidedBy?: WinReason };
 
 /** Why a sudden-death round started. */
-export type SuddenDeathCause = 'timeout' | 'simultaneous';
+export type SuddenDeathCause = 'timeout' | 'simultaneous' | 'test';
 
 /** `transition`: the title card (contenders placed, input held, protected); `countdown`: playing to the next blast. */
 export type SuddenDeathStage = 'transition' | 'countdown';
@@ -585,6 +585,26 @@ export interface SuddenDeathState {
    * respawns, no kill rewards, and the next blast kills through Armour and the Okada.
    */
   finalPhase: boolean;
+  /** The Sudden Death TEST match only: the blast front travelling across the floor (null / absent = none, always absent elsewhere). */
+  front?: SuddenDeathFront | null;
+}
+
+/**
+ * A blast that travels (Sudden Death test match). Ring `r` (Chebyshev distance from the origin tile) is struck at tick
+ * `startTick + r * ticksPerRing`: a contender is hit exactly when the front reaches the ring they stand in, and the
+ * renderer draws these same rings, so the visible front is the lethal one.
+ */
+export interface SuddenDeathFront {
+  blast: number;
+  eventId: number;
+  x: number;
+  y: number;
+  startTick: number;
+  ticksPerRing: number;
+  /** The last ring (the farthest board corner): every contender still standing is struck by then. */
+  maxRing: number;
+  /** Contenders already struck by this front. */
+  hit: number[];
 }
 
 export interface CrushState {
@@ -879,7 +899,17 @@ export type SimEvent =
   /** Rumble: the countdown to blast number `blast` (1-based) is running. */
   | { type: 'suddenDeathCountdown'; blast: number; blastTick: number }
   /** Rumble: the full-area finishing blast. `survivors` were not eliminated by it (a protection layer was used). */
-  | { type: 'suddenDeathBlast'; blast: number; survivors: number[]; eliminated: number[] }
+  | { type: 'suddenDeathBlast'; blast: number; survivors: number[]; eliminated: number[]; spread?: true }
+  /** Sudden Death TEST match: a blast front leaves the origin tile (see `SuddenDeathFront`). */
+  | {
+      type: 'suddenDeathFront';
+      blast: number;
+      x: number;
+      y: number;
+      startTick: number;
+      ticksPerRing: number;
+      maxRing: number;
+    }
   | { type: 'generatorPlaced'; generatorId: number; ownerId: number; x: number; y: number }
   | {
       type: 'generatorExploded';

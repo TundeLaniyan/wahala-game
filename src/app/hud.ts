@@ -105,7 +105,7 @@ export interface StreakHud {
 /** The Rumble sudden-death round for the title card and the blast clock (null outside one). */
 export interface SuddenDeathHud {
   stage: 'transition' | 'countdown';
-  cause: 'timeout' | 'simultaneous';
+  cause: 'timeout' | 'simultaneous' | 'test';
   /** The tied contenders with the kill totals that tied them, and whether each still stands. */
   contenders: {
     id: number;

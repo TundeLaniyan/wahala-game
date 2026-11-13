@@ -7,6 +7,7 @@ import './SuddenDeath.css';
 const REASON: Record<SuddenDeathHud['cause'], string> = {
   timeout: 'Time up and level on eliminations.',
   simultaneous: 'The last fighters fell together, level on eliminations.',
+  test: 'Test match: the edge closes in, then the blasts cross the floor.',
 };
 
 /** The SUDDEN DEATH title card: who is left and the kill totals that tied them (held while input waits). */
