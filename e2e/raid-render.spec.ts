@@ -130,13 +130,17 @@ test.describe('raid presentation', () => {
         (window as unknown as Debug).__WAHALA__.renderer().boardScreenCorners(),
       );
       expect(corners).not.toBeNull();
-      expect(goal.right, 'the objective block reaches into the board').toBeLessThanOrEqual(
-        corners![3]!.x + 2,
-      );
+      // the board's left edge slants (narrower rows near the bottom): the block must stay left of the edge at ITS OWN
+      // lowest row, which is what the rail is sized for (not of the near corner, which is far below it)
+      const [far, near] = [corners![0]!, corners![3]!];
+      const edgeAtBottom = far.x + ((near.x - far.x) * (goal.bottom - far.y)) / (near.y - far.y);
+      expect(goal.right, 'the objective block reaches into the board').toBeLessThanOrEqual(edgeAtBottom + 2);
       expect(hits(goal, pad), 'the objective block overlaps the pad').toBe(false);
       for (const id of ['btn-place', 'btn-special'])
         expect(hits(goal, (await rectOf(page, `[data-testid="${id}"]`))!)).toBe(false);
-      // a press moves exactly one tile
+      // a press moves exactly one tile. Only `stepTicks` advances time while the thumb is down: on a software renderer the
+      // real loop would tick many times between the pointer events and walk several tiles (a held stick walks)
+      await page.evaluate(() => ((window as unknown as Debug).__WAHALA__.controller().frozen = true));
       const before = await page.evaluate(() => {
         const p = (window as unknown as Debug).__WAHALA__.controller().state.players[0]!;
         return { x: p.x, y: p.y };

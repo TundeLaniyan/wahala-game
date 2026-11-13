@@ -385,6 +385,9 @@ test.describe('campaign expansion smoke', () => {
       const d = dirs.find(([, dx, dy]) => free(me.x + dx, me.y + dy))!;
       return { name: d[0], dx: d[1], dy: d[2], x: me.x, y: me.y };
     })) as any;
+    // only `stepTicks` advances time while the thumb is down (a held stick walks; a slow software renderer would tick
+    // the real loop many times between the pointer events)
+    await page.evaluate(() => ((window as any).__WAHALA__.controller().frozen = true));
     await thumb(page, dir.name as 'up' | 'down' | 'left' | 'right', 3, { dist: 40 });
     await page.evaluate(() => (window as any).__WAHALA__.stepTicks(30));
     const now = (await state(page, `s => ({ x: s.players[0].x, y: s.players[0].y })`)) as any;
