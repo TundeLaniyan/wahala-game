@@ -24,6 +24,7 @@ import type { Dir, GameState, Player, SimEvent } from '../../sim';
 import { DIR_VEC, combatLabAllowed } from '../../sim';
 import type { Effects } from '../fx/Effects';
 import type { Layout } from '../coords';
+import { impactLook, swingLook, whiffLook } from '../combatLabLook';
 import { playerGridPos } from './motion';
 import type { PlayerViews } from './PlayerViews';
 import type { FrameContext, View } from './types';
@@ -70,6 +71,8 @@ export class CombatPilotViews implements View {
   private readonly marks = new Map<number, Marks>();
   /** When each enemy's current wind-up started (tick), to show how far it has come. */
   private readonly windStart = new Map<number, number>();
+  /** Fighters whose lab punch in flight was aimed at a rival (a miss of it gets the grey puff). */
+  private readonly aimed = new Set<number>();
 
   constructor(private readonly players: PlayerViews | null) {}
 
@@ -91,18 +94,37 @@ export class CombatPilotViews implements View {
         const p = state.players[e.playerId];
         if (!p) continue;
         const v = DIR_VEC[e.dir as Dir];
+        const lab = state.config.combatLab;
+        if (lab) {
+          // the lab: each level's own arc (colour, size, opening); a swing at the air is the thin grey miss
+          if (e.targetId !== null) this.aimed.add(e.playerId);
+          const look = e.targetId === null ? whiffLook(lab) : swingLook(lab);
+          fx.swing(layout.wx(p.x), layout.wz(p.y), v.dx, v.dy, look);
+          if (e.targetId === null) fx.dust(p.x + v.dx * 0.9, p.y + v.dy * 0.9, 2, 0.3);
+          continue;
+        }
         const x = layout.wx(p.x + v.dx * 0.6);
         const z = layout.wz(p.y + v.dy * 0.6);
         fx.shockwave(x, z, 0.55, 0xffffff);
-      } else if (e.type === 'attackResolved' && e.hit && e.targetId !== null && state.config.combatLab) {
-        // the lab's impact: a ring on every hit, a big flash and a wider ring at the arcade levels
-        const t = state.players[e.targetId];
+      } else if (e.type === 'attackResolved' && state.config.combatLab && e.hit) {
+        // the lab's confirmation of a hit: the level's coloured ring, a flash, dust, a flinch and a bounded jolt
+        this.aimed.delete(e.playerId);
+        const t = e.targetId === null ? undefined : state.players[e.targetId];
         if (!t) continue;
         const x = layout.wx(t.x);
         const z = layout.wz(t.y);
-        const big = state.config.combatLab.feedback === 2;
-        fx.shockwave(x, z, big ? 1.6 : 1, big ? 0xffd23f : 0xffffff);
-        if (big) fx.flash(x, 0.9, z, 1.6, 0xfff2b0, 0.18);
+        const look = impactLook(state.config.combatLab);
+        fx.shockwave(x, z, look.ringSize, look.color);
+        fx.flash(x, 0.9, z, look.flashSize, look.color === 0xffffff ? 0xfff2b0 : look.color, look.flashLife);
+        fx.dust(t.x, t.y, look.dust, 0.4);
+        this.players?.playOver(t.id, 'Stumble', look.flinchSeconds);
+        if (e.playerId === localId || t.id === localId) fx.shake = Math.min(1, fx.shake + look.shake);
+      } else if (e.type === 'attackResolved' && state.config.combatLab) {
+        // an AIMED punch that found nobody (the rival stepped away): the grey miss puff where the fist ended
+        const aimed = this.aimed.delete(e.playerId);
+        const p = state.players[e.playerId];
+        const v = p ? DIR_VEC[p.facing] : null;
+        if (aimed && p && v) fx.dust(p.x + v.dx * 0.9, p.y + v.dy * 0.9, 2, 0.3);
       } else if (e.type === 'placeRefused' && e.playerId === localId) {
         fx.floatText(e.x, e.y, REFUSED_TEXT[e.reason], '#ff8a7a');
       }

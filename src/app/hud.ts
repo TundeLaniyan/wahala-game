@@ -21,6 +21,7 @@ import {
   spectatorLanding,
 } from '../sim';
 import type { CombatLabStats, MissionView } from '../sim';
+import { labChipDetail } from './combatLabText';
 import { buildCampaignHud, buildEnemyHud } from './campaignHud';
 import type { CampaignHud, EnemyHud } from './campaignHud';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
@@ -253,6 +254,8 @@ export interface HudSnapshot {
 export interface CombatLabHud {
   level: number;
   name: string;
+  /** What the level reaches, for the chip's second line (from the preset's flags). */
+  detail: string;
   /** The local fighter's diagnostics (presses, attacks started, air swings, hits, whiffs, kept, dropped). */
   stats: CombatLabStats | null;
 }
@@ -260,7 +263,12 @@ export interface CombatLabHud {
 function buildCombatLab(state: GameState, localId: number): CombatLabHud | null {
   const preset = state.config.combatLab;
   if (!preset) return null;
-  return { level: preset.level, name: preset.name, stats: state.combatLab?.stats[localId] ?? null };
+  return {
+    level: preset.level,
+    name: preset.name,
+    detail: labChipDetail(preset),
+    stats: state.combatLab?.stats[localId] ?? null,
+  };
 }
 
 /** V2 sideline spectator controls (ui/SpectatorControls.tsx). */

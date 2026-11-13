@@ -88,3 +88,28 @@
     font-size: 0.72rem;
   }
 }
+
+/* the level's own colour (the same hue as its swing arc and impact ring in the game) */
+.lab-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-color: var(--lab-accent, rgba(255, 196, 64, 0.55));
+}
+.lab-chip b {
+  color: var(--lab-accent, #ffc440);
+}
+.lab-chip small {
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  color: var(--mn-muted, #9aa3b5);
+}
+.lab-level {
+  border-left: 4px solid var(--lab-accent, transparent);
+}
+.lab-delta {
+  margin: 8px 0 0;
+  color: var(--mn-text, #f4f1ea);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
