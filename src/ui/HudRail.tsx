@@ -9,6 +9,8 @@ import { CampaignHealth } from './CampaignHealth';
 import { FieldGoal } from './FieldGoal';
 import { KillFeed } from './KillFeed';
 import { MissionPanel } from './MissionPanel';
+import { RaidGoal } from './RaidGoal';
+import type { RaidHud } from '../app/raidHud';
 import { RuleBanner, StageAlerts } from './StageAlerts';
 import { StreakStatus } from './StreakStatus';
 import { StreakIcon } from './streakIcons';
@@ -32,6 +34,8 @@ export interface HudRailProps {
   /** Campaign health of the local player and the enemies with a bar on screen (null / [] in a normal match). */
   campaign?: CampaignHud | null;
   enemies?: readonly EnemyHud[];
+  /** Classic raid: the current objective and the way to it (null outside a raid). */
+  raid?: RaidHud | null;
 }
 
 /**
@@ -54,6 +58,7 @@ export function HudRail({
   mission = null,
   campaign = null,
   enemies = [],
+  raid = null,
 }: HudRailProps) {
   const board = useGameStore((s) => s.board);
   const subtitle = useGameStore((s) => s.subtitle);
@@ -145,6 +150,7 @@ export function HudRail({
           style={combatMax !== null ? { maxHeight: `${combatMax}px` } : undefined}
         >
           <FieldGoal mission={mission} />
+          <RaidGoal raid={raid} />
           {!rumble && <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} />}
           <MissionPanel mission={mission} />
           {!rumble && !side && <KillFeed />}

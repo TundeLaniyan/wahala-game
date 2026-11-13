@@ -32,4 +32,6 @@ export interface FrameInfo {
   skipping?: boolean;
   /** Training Academy: tiles to mark with a glowing "go here" ring (presentation only). */
   markers?: readonly { x: number; y: number }[];
+  /** Classic raid: the latest "that way is blocked" cue of the local fighter (app/blockedMove.ts); played once per `seq`. */
+  blocked?: { dir: Dir; seq: number } | null;
 }

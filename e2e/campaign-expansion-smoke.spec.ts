@@ -1,12 +1,12 @@
 /**
  * Browser smoke set for the campaign expansion (docs/CAMPAIGN_EXPANSION_STATUS.md): one field mission, one classic raid,
  * bomb geometry chosen by the ruleset (no toggle), cargo destruction by a real cross bomb, an enemy projectile with its
- * cue and a result, the campaign health meter, and the mobile cross control. It is a SMOKE set, not the release gate:
+ * cue and a result, the campaign health meter, and the mobile movement stick. It is a SMOKE set, not the release gate:
  * every assertion reads the real simulation state through the `?debug` handle after the real controllers started it.
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, toRumbleSetup, inMatch } from './helpers';
+import { open, toRumbleSetup, inMatch, thumb } from './helpers';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const state = (page: Page, fn: string) =>
@@ -360,18 +360,14 @@ test.describe('campaign expansion smoke', () => {
     expect(errors).toEqual([]);
   });
 
-  test('mobile cross control: four arrows, one cardinal step per tap, the two action buttons stay', async ({
+  test('mobile raid stick: no arrows, one cardinal step per flick, the two action buttons stay', async ({
     page,
   }, info) => {
     test.skip(info.project.name !== 'mobile', 'touch control: phone project only');
     await open(page, '&noattract');
     await startRaid(page);
-    await expect(page.getByTestId('cross-control')).toBeVisible();
-    for (const d of ['up', 'down', 'left', 'right'])
-      await expect(page.getByTestId(`cross-${d}`)).toBeVisible();
-    const box = await page.getByTestId('cross-right').boundingBox();
-    expect(box!.width).toBeGreaterThanOrEqual(44);
-    expect(box!.height).toBeGreaterThanOrEqual(44);
+    await expect(page.getByTestId('cross-control')).toHaveCount(0);
+    await expect(page.getByTestId('stick-zone')).toBeVisible();
     // exactly two action buttons
     await expect(page.getByTestId('btn-place')).toBeVisible();
     await expect(page.getByTestId('btn-special')).toBeVisible();
@@ -389,7 +385,7 @@ test.describe('campaign expansion smoke', () => {
       const d = dirs.find(([, dx, dy]) => free(me.x + dx, me.y + dy))!;
       return { name: d[0], dx: d[1], dy: d[2], x: me.x, y: me.y };
     })) as any;
-    await page.getByTestId(`cross-${dir.name}`).tap();
+    await thumb(page, dir.name as 'up' | 'down' | 'left' | 'right', 3, { dist: 40 });
     await page.evaluate(() => (window as any).__WAHALA__.stepTicks(30));
     const now = (await state(page, `s => ({ x: s.players[0].x, y: s.players[0].y })`)) as any;
     expect([now.x - dir.x, now.y - dir.y]).toEqual([dir.dx, dir.dy]);

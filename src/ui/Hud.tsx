@@ -274,6 +274,7 @@ export function Hud() {
         mission={rumble ? null : hud.mission}
         campaign={hud.campaign}
         enemies={hud.enemies}
+        raid={hud.raid}
       />
       {hud.mission && hud.phase === 'playing' && <MissionCompass />}
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}

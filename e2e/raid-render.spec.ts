@@ -1,8 +1,8 @@
 /**
  * Classic raid presentation in a real browser (docs/RAID_PRESENTATION.md): the whole board is visible on a desktop and a
  * phone, the cargo / conveyor / door / extraction markers are drawn, and on a touch device the movement control is the
- * four-arrow cross (>= 56 px, clear of the two action buttons and of the board's near row) and moves the player one tile
- * per press. Runs ONLY when raid-sim's `warehouseDispatchDepot` is present in the build; otherwise it is skipped with the
+ * floating thumbstick (the same as every other match, decision TN1; clear of the two action buttons) and moves the player
+ * one cardinal tile per press, and the rail says what to do next (decision TN4). Runs ONLY when raid-sim's `warehouseDispatchDepot` is present in the build; otherwise it is skipped with the
  * reason. Screenshots go to docs/screenshots/raid-render/ (the art-review pictures).
  *
  * How a raid is started is raid-sim's / field-sections' API; `startRaid` below tries the campaign controller's raid entry
@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { open, inMatch } from './helpers';
+import { open, inMatch, thumb } from './helpers';
 
 const ARENAS_DIR = join(process.cwd(), 'src', 'sim', 'arenas');
 const HAS_RAID =
@@ -76,7 +76,7 @@ test.describe('raid presentation', () => {
 
   test('desktop: the whole board is visible, the fixed camera, cargo / belts / doors are drawn, no cross', async ({
     page,
-  }, info) => {
+  }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await open(page, '&noattract');
@@ -95,9 +95,8 @@ test.describe('raid presentation', () => {
     expect(dbg.stats, 'the raid markers exist').not.toBeNull();
     expect(dbg.stats!.cargo).toBeGreaterThan(0);
     expect(dbg.stats!.marked).toBeGreaterThan(0);
-    // no touch device: no cross. This test also runs on the touch (mobile) project, where the cross is the intended
-    // movement control in a raid, so the expectation follows the device instead of being skipped there.
-    await expect(page.getByTestId('cross-control')).toHaveCount(info.project.name === 'mobile' ? 1 : 0);
+    // the four-arrow cross is gone (decision TN1): a raid uses the same stick as every match
+    await expect(page.getByTestId('cross-control')).toHaveCount(0);
     mkdirSync(OUT, { recursive: true });
     await page.screenshot({ path: join(OUT, 'raid-desktop.jpg'), quality: 85, timeout: 180_000 });
     expect(errors).toEqual([]);
@@ -106,46 +105,44 @@ test.describe('raid presentation', () => {
   test.describe('phone landscape', () => {
     test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
 
-    test('the cross replaces the stick: 4 arrows >= 56 px, clear of A / B and of the board, one tile per press', async ({
+    test('the stick drives the raid: clear of A / B, the rail names the objective, one cardinal tile per flick', async ({
       page,
     }) => {
       const errors: string[] = [];
       page.on('pageerror', (e) => errors.push(e.message));
       await open(page, '&noattract');
       await startRaid(page);
-      await expect(page.getByTestId('cross-control')).toBeVisible();
-      await expect(page.getByTestId('stick-zone')).toHaveCount(0);
-      const cross = (await rectOf(page, '[data-testid="cross-control"]'))!;
-      for (const d of ['up', 'down', 'left', 'right']) {
-        const b = (await rectOf(page, `[data-testid="cross-${d}"]`))!;
-        expect(b.right - b.left, `${d} arrow width`).toBeGreaterThanOrEqual(56);
-        expect(b.bottom - b.top, `${d} arrow height`).toBeGreaterThanOrEqual(56);
-      }
-      // exactly two action buttons, on the right, untouched by the cross
+      await expect(page.getByTestId('cross-control')).toHaveCount(0);
+      await expect(page.getByTestId('stick-zone')).toBeVisible();
+      const pad = (await rectOf(page, '[data-testid="stick-pad"]'))!;
+      // exactly two action buttons, on the right, untouched by the pad
       await expect(page.locator('.abtn')).toHaveCount(2);
       for (const id of ['btn-place', 'btn-special']) {
         const b = (await rectOf(page, `[data-testid="${id}"]`))!;
-        expect(hits(cross, b), `${id} overlaps the cross`).toBe(false);
+        expect(hits(pad, b), `${id} overlaps the pad`).toBe(false);
       }
-      // the board's near row (the two bottom corners) is not under the cross
+      // the objective block is in the rail, beside the board and clear of the pad and the buttons
+      await expect(page.getByTestId('raid-goal')).toBeVisible();
+      await expect(page.getByTestId('raid-goal-tag')).toHaveText('DESTROY');
+      await expect(page.getByTestId('raid-goal-cue')).toContainText('TILE');
+      const goal = (await rectOf(page, '[data-testid="raid-goal"]'))!;
       const corners = await page.evaluate(() =>
         (window as unknown as Debug).__WAHALA__.renderer().boardScreenCorners(),
       );
       expect(corners).not.toBeNull();
-      const nearLeft = corners![3]!;
-      expect(cross.right, 'the cross reaches into the board').toBeLessThanOrEqual(nearLeft.x + 2);
+      expect(goal.right, 'the objective block reaches into the board').toBeLessThanOrEqual(
+        corners![3]!.x + 2,
+      );
+      expect(hits(goal, pad), 'the objective block overlaps the pad').toBe(false);
+      for (const id of ['btn-place', 'btn-special'])
+        expect(hits(goal, (await rectOf(page, `[data-testid="${id}"]`))!)).toBe(false);
       // a press moves exactly one tile
       const before = await page.evaluate(() => {
         const p = (window as unknown as Debug).__WAHALA__.controller().state.players[0]!;
         return { x: p.x, y: p.y };
       });
-      const box = (await page.getByTestId('cross-right').boundingBox())!;
-      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
-      await page.evaluate(() => {
-        const w = (window as unknown as Debug).__WAHALA__;
-        w.controller().frozen = false;
-      });
-      await page.waitForTimeout(1500);
+      await thumb(page, 'right', 4, { dist: 40 });
+      await page.evaluate(() => (window as unknown as Debug).__WAHALA__.stepTicks(40));
       const after = await page.evaluate(() => {
         const p = (window as unknown as Debug).__WAHALA__.controller().state.players[0]!;
         return { x: p.x, y: p.y };

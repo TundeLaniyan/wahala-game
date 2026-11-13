@@ -1,4 +1,12 @@
-import { TEAM_NAMES, getArena, isRespawnMode, isTeamMode, secondsRemaining, teamStandings } from '../sim';
+import {
+  TEAM_NAMES,
+  getArena,
+  isRespawnMode,
+  isTeamMode,
+  raidView,
+  secondsRemaining,
+  teamStandings,
+} from '../sim';
 import type {
   CharacterId,
   ContactAbility,
@@ -23,6 +31,8 @@ import {
 import type { CombatLabStats, MissionView } from '../sim';
 import { buildCampaignHud, buildEnemyHud } from './campaignHud';
 import type { CampaignHud, EnemyHud } from './campaignHud';
+import { raidGuidance } from './raidHud';
+import type { RaidHud } from './raidHud';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
 import type { StageAlert } from './stageAlerts';
 
@@ -246,6 +256,8 @@ export interface HudSnapshot {
   campaign: CampaignHud | null;
   /** Campaign enemies whose health is on screen (bosses always; others when targeted, hurt or near); [] outside a campaign. */
   enemies: EnemyHud[];
+  /** Classic raid: the current objective, the way to it and short notes (decision TN4); null outside a raid and once it is over. */
+  raid: RaidHud | null;
   /** City Rumble combat test lab (docs/COMBAT_TEST_LAB.md): the level in force and the local fighter's press record. */
   combatLab: CombatLabHud | null;
 }
@@ -679,6 +691,7 @@ export function buildHud(
     mission: missionView(state),
     campaign: buildCampaignHud(state, localId),
     enemies: buildEnemyHud(state, localId),
+    raid: raidGuidance(raidView(state), local ?? null),
     combatLab: buildCombatLab(state, localId),
   };
 }
