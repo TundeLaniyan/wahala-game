@@ -20,6 +20,7 @@
     "enemy-balance": "tsx scripts/enemy-balance.ts",
     "enemy-fairness": "tsx scripts/enemy-fairness.ts",
     "combat-pilot": "tsx scripts/combat-pilot.ts",
+    "combat-lab-compare": "tsx scripts/combat-lab-compare.ts",
     "streak-measure": "tsx scripts/streak-measure.ts",
     "check:static": "vite build && node scripts/check-static-build.mjs"
   },

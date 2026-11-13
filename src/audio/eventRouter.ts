@@ -12,6 +12,7 @@ import type { GameState, SimEvent, TilePos } from '../sim';
 import type { Ambience } from './ambience';
 import type { Buses } from './buses';
 import type { Mixer } from './mixer';
+import { labHitCue, labMissCue } from './combatLabCue';
 import { createNearMissDetector } from './nearMiss';
 import type { NearMiss, NearMissDetector } from './nearMiss';
 import type { SoundId } from './recipes';
@@ -257,6 +258,19 @@ const handlers: Handlers = {
     if (allow(c, 'attackStart', 0.05)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.35, 1.5);
   },
   attackResolved: (e, c) => {
+    const lab = c.state.config.combatLab;
+    if (lab) {
+      // the combat test lab (decision CL-L9): a hit is a thud that grows with the level, a miss a quiet low swish
+      if (e.hit && e.targetId !== null) {
+        const cue = labHitCue(lab);
+        if (allow(c, 'labHit', 0.04))
+          sfx(c, 'gen_drop', panOf(c, playerX(c, e.targetId)), cue.gain, cue.rate);
+      } else if (!e.hit) {
+        const cue = labMissCue();
+        if (allow(c, 'labMiss', 0.08)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), cue.gain, cue.rate);
+      }
+      return;
+    }
     if (!e.hit && allow(c, 'attackWhiff', 0.1)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.3, 0.8);
   },
   // the combat pilot (decision CP4): every accepted punch is a whoosh; a refused generator a short dull "no"

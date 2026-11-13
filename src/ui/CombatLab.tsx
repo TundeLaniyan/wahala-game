@@ -4,6 +4,8 @@
  * this file, its two call sites (Hud.tsx, Overlays.tsx) and `commands.setCombatLab` when the founder has picked a level.
  */
 import { COMBAT_LAB_PRESETS } from '../sim';
+import { LAB_CSS_COLORS, labChangeText } from '../app/combatLabText';
+import type { CSSProperties } from 'react';
 import type { CombatLabLevel } from '../sim';
 import { commands } from '../app/session';
 import type { CombatLabHud } from '../app/hud';
@@ -16,8 +18,15 @@ const LEVELS: readonly CombatLabLevel[] = [1, 2, 3, 4];
 export function CombatLabChip({ lab }: { lab: CombatLabHud | null }) {
   if (!lab) return null;
   return (
-    <div className="lab-chip" data-testid="combat-lab-chip" data-level={lab.level} aria-live="polite">
+    <div
+      className="lab-chip"
+      data-testid="combat-lab-chip"
+      data-level={lab.level}
+      aria-live="polite"
+      style={{ '--lab-accent': LAB_CSS_COLORS[lab.level] } as CSSProperties}
+    >
       <b>LAB {lab.level}</b> {lab.name}
+      <small data-testid="combat-lab-chip-detail">{lab.detail}</small>
     </div>
   );
 }
@@ -54,6 +63,7 @@ export function CombatLabPauseSection({ lab }: { lab: CombatLabHud | null }) {
             aria-checked={level === l}
             className={`lab-level${level === l ? ' on' : ''}`}
             data-testid={`combat-lab-${l}`}
+            style={{ '--lab-accent': LAB_CSS_COLORS[l] } as CSSProperties}
             title={COMBAT_LAB_PRESETS[l].summary}
             onClick={() => commands.setCombatLab(l)}
           >
@@ -64,6 +74,9 @@ export function CombatLabPauseSection({ lab }: { lab: CombatLabHud | null }) {
           </button>
         ))}
       </div>
+      <p className="lab-delta" data-testid="combat-lab-delta" aria-live="polite">
+        {labChangeText(level)}
+      </p>
       {st && (
         <p className="lab-stats" data-testid="combat-lab-stats">
           Your B presses {st.presses} · punches {st.started} · air swings {st.airSwings} · hits {st.hits} ·

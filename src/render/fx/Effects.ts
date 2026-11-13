@@ -2,11 +2,14 @@ import {
   AdditiveBlending,
   BoxGeometry,
   CanvasTexture,
+  CircleGeometry,
   DoubleSide,
   Group,
   Mesh,
   MeshBasicMaterial,
+  NormalBlending,
   PlaneGeometry,
+  RingGeometry,
   Sprite,
   SpriteMaterial,
 } from 'three';
@@ -548,6 +551,57 @@ export class Effects {
       dispose: () => {
         m.geometry.dispose();
         mat.dispose();
+      },
+    });
+  }
+
+  /**
+   * A punch arc (combat test lab, `render/combatLabLook.ts`): a flat fan on the floor from (x, z) towards the world
+   * direction (dx, dz), a faint fill and a bright rim, sweeping out and fading in `life` seconds.
+   */
+  swing(
+    x: number,
+    z: number,
+    dx: number,
+    dz: number,
+    look: { color: number; radius: number; halfAngle: number; life: number; fill: number; rim: number },
+  ): void {
+    // after the -90 degree turn about X a local angle t points to world (cos t, -sin t)
+    const centre = Math.atan2(-dz, dx);
+    const start = centre - look.halfAngle;
+    const span = look.halfAngle * 2;
+    const group = new Group();
+    const mats: MeshBasicMaterial[] = [];
+    const geos = [new CircleGeometry(1, 20, start, span), new RingGeometry(0.72, 1, 20, 1, start, span)];
+    for (const geo of geos) {
+      const mat = new MeshBasicMaterial({
+        color: look.color,
+        transparent: true,
+        blending: NormalBlending,
+        depthWrite: false,
+        side: DoubleSide,
+      });
+      const m = new Mesh(geo, mat);
+      m.rotation.x = -Math.PI / 2;
+      m.renderOrder = 9;
+      group.add(m);
+      mats.push(mat);
+    }
+    group.position.set(x, 0.07, z);
+    let age = 0;
+    this.add({
+      obj: group,
+      update: (dt) => {
+        age += dt;
+        const k = age / look.life;
+        group.scale.setScalar(look.radius * (0.55 + 0.45 * Math.min(1, k * 2)));
+        mats[0]!.opacity = Math.max(0, look.fill * (1 - k));
+        mats[1]!.opacity = Math.max(0, look.rim * (1 - k * k));
+        return k < 1;
+      },
+      dispose: () => {
+        for (const g of geos) g.dispose();
+        for (const m of mats) m.dispose();
       },
     });
   }
