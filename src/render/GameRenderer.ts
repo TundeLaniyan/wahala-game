@@ -508,6 +508,7 @@ export class GameRenderer {
         else if (m) m.needsUpdate = true;
       });
     }
+    this.arena.setViewClear(p.viewClear > 0);
     this.effects.setQuality(p);
     this.backdrop.setQuality(p);
     this.living?.setProfile(p);

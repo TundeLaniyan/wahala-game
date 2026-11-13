@@ -5,6 +5,8 @@ import type { Toast } from '../app/store';
 import { useGameStore } from '../app/store';
 import { RAIL_GAP, railBox, railBoxRight } from './hudRail';
 import type { RailBox } from './hudRail';
+import { noticeColumn } from './hudZones';
+import type { NoticeColumn } from './hudZones';
 import { CampaignHealth } from './CampaignHealth';
 import { FieldGoal } from './FieldGoal';
 import { KillFeed } from './KillFeed';
@@ -124,16 +126,59 @@ export function HudRail({
     setSide((prev) => (prev?.width === next?.width && prev?.maxHeight === next?.maxHeight ? prev : next));
   }, [board, rumble, padTop]);
 
+  // City Rumble (follow camera): the notices hang in a column on the left edge, under the Rumble panel, and stop above
+  // the play zone around the fighter (hudZones.ts). Measured from the panel's real bottom (it grows with its lists).
+  const [edge, setEdge] = useState<(NoticeColumn & { top: number }) | null>(null);
+  useLayoutEffect(() => {
+    if (!rumble) {
+      setEdge(null);
+      return;
+    }
+    const measure = (): void => {
+      const panel = document.querySelector('.rh-panel');
+      const top = Math.round((panel ? panel.getBoundingClientRect().bottom : 56) + 8);
+      const col = noticeColumn(window.innerWidth, window.innerHeight, top, padTop);
+      setEdge((prev) =>
+        prev && prev.top === top && prev.width === col.width && prev.maxHeight === col.maxHeight
+          ? prev
+          : { ...col, top },
+      );
+    };
+    measure();
+    const raf = requestAnimationFrame(measure);
+    const panel = document.querySelector('.rh-panel');
+    const watch = panel && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (panel) watch?.observe(panel);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      watch?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [rumble, padTop]);
+
   const showSubtitle = subtitle !== null && (mode === 'on' || mode === 'large');
   return (
     <>
+      {rumble && suddenDeath && (
+        // the Sudden Death announcement keeps its own place (top-centre, decision SD-B1): it is not a toast
+        <div className="hud-rail rail-top" data-testid="hud-rail-sd">
+          <SuddenDeathClock sd={suddenDeath} />
+        </div>
+      )}
       <div
         ref={ref}
-        className={`hud-rail${rumble ? ' rail-top' : ''}`}
+        className={`hud-rail${rumble ? ' rail-edge' : ''}`}
         data-testid="hud-rail"
-        style={box ? { width: `${box.width}px`, maxHeight: `${box.maxHeight}px` } : undefined}
+        style={
+          rumble && edge
+            ? { top: `${edge.top}px`, width: `${edge.width}px`, maxHeight: `${edge.maxHeight}px` }
+            : box
+              ? { width: `${box.width}px`, maxHeight: `${box.maxHeight}px` }
+              : undefined
+        }
       >
-        {suddenDeath && <SuddenDeathClock sd={suddenDeath} />}
+        {!rumble && suddenDeath && <SuddenDeathClock sd={suddenDeath} />}
         {ruleBanner && <RuleBanner text={ruleBanner} />}
         <StageAlerts alerts={alerts} />
         {/* a mission's panel first (its warnings must never be clipped); then the kill feed. City Rumble keeps the kill

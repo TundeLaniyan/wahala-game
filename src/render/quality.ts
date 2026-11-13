@@ -67,6 +67,11 @@ export interface QualityProfile {
   ambient: number;
   /** Background animation (crowd, street life, ambient traffic) updates every Nth frame. 1 = every frame. */
   animationStride: number;
+  /**
+   * 1 = scenery standing between the camera and the followed fighter dissolves (render/assets/viewClear.ts),
+   * 0 = only the cheap tile-behind rule runs. LIVE (applied without a rebuild).
+   */
+  viewClear: number;
 }
 
 interface Rung extends Omit<QualityProfile, 'rung'> {
@@ -94,6 +99,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 2,
     ambient: 0.15,
     animationStride: 3,
+    viewClear: 0,
   },
   {
     name: 'Very Low+',
@@ -109,6 +115,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 3,
     ambient: 0.25,
     animationStride: 3,
+    viewClear: 0,
   },
   {
     name: 'Low',
@@ -125,6 +132,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 4,
     ambient: 0.35,
     animationStride: 2,
+    viewClear: 1,
   },
   {
     name: 'Low+',
@@ -140,6 +148,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 6,
     ambient: 0.45,
     animationStride: 2,
+    viewClear: 1,
   },
   {
     name: 'Medium-Low',
@@ -156,6 +165,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 8,
     ambient: 0.55,
     animationStride: 2,
+    viewClear: 1,
   },
   {
     name: 'Medium',
@@ -172,6 +182,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 10,
     ambient: 0.7,
     animationStride: 1,
+    viewClear: 1,
   },
   {
     name: 'Medium-High',
@@ -188,6 +199,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 13,
     ambient: 0.85,
     animationStride: 1,
+    viewClear: 1,
   },
   {
     name: 'High',
@@ -204,6 +216,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 16,
     ambient: 1,
     animationStride: 1,
+    viewClear: 1,
   },
 ];
 

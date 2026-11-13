@@ -14,6 +14,7 @@ import { BufferAttribute, Color, Float32BufferAttribute, Group, Matrix4, Mesh, V
 import type { Material, Object3D, BufferGeometry } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fadeableMaterial } from '../assets/occlusionFade';
+import type { Aabb } from '../assets/viewClear';
 
 /** What the arena view needs from a board cover. */
 export interface BoardCover {
@@ -24,6 +25,11 @@ export interface BoardCover {
   reach(tile: number): number;
   /** The most rows any cover object reaches (bounds the arena view's search). */
   readonly maxReach: number;
+  /**
+   * World-space bounds of every fade group, with one tile the group claims (`setHide(tile, ...)` on it fades the
+   * whole group). The camera-to-fighter view-clear test (`assets/viewClear.ts`) works on these.
+   */
+  readonly bounds: readonly (Aabb & { tile: number })[];
   /** Fade of a covered tile this frame (0 .. MAX_HIDE); its whole group fades with its most hidden tile. */
   setHide(tile: number, value: number): void;
   /** Uploads the fades set since the last commit (once per frame, after every `setHide`). */
@@ -103,6 +109,8 @@ export class CoverBuilder {
   private readonly tileGroup: Int32Array;
   private readonly groupReach: number[] = [];
   private readonly groupChunk: number[] = [];
+  private readonly groupTile: number[] = [];
+  private readonly groupBox: (Aabb | null)[] = [];
   private readonly m = new Matrix4();
   private readonly v = new Vector3();
   private readonly owned: { dispose(): void }[] = [];
@@ -148,6 +156,9 @@ export class CoverBuilder {
     const cols = Math.ceil(this.width / this.chunk[0]);
     this.groupChunk.push(Math.floor(cy / this.chunk[1]) * cols + Math.floor(cx / this.chunk[0]));
     this.groupReach.push(Math.max(1, Math.round(reach)));
+    const [fx, fy] = tiles[0] ?? [0, 0];
+    this.groupTile.push(fy * this.width + fx);
+    this.groupBox.push(null);
     return id;
   }
 
@@ -181,6 +192,25 @@ export class CoverBuilder {
       tx >= 0 && ty >= 0 && tx < this.width && ty < this.height ? this.tileGroup[ty * this.width + tx]! : -1;
     const group = under >= 0 ? under : given;
     const chunk = this.groupChunk[group] ?? 0;
+    const bb = geometry.boundingBox!;
+    const gb = this.groupBox[group];
+    if (!gb)
+      this.groupBox[group] = {
+        minX: bb.min.x,
+        minY: bb.min.y,
+        minZ: bb.min.z,
+        maxX: bb.max.x,
+        maxY: bb.max.y,
+        maxZ: bb.max.z,
+      };
+    else {
+      gb.minX = Math.min(gb.minX, bb.min.x);
+      gb.minY = Math.min(gb.minY, bb.min.y);
+      gb.minZ = Math.min(gb.minZ, bb.min.z);
+      gb.maxX = Math.max(gb.maxX, bb.max.x);
+      gb.maxY = Math.max(gb.maxY, bb.max.y);
+      gb.maxZ = Math.max(gb.maxZ, bb.max.z);
+    }
     let byChunk = this.buckets.get(material);
     if (!byChunk) {
       byChunk = new Map();
@@ -232,8 +262,13 @@ export class CoverBuilder {
     const reach = this.groupReach;
     const want = new Float32Array(reach.length);
     const shown = new Float32Array(reach.length);
+    const bounds: (Aabb & { tile: number })[] = [];
+    this.groupBox.forEach((b, g) => {
+      if (b) bounds.push({ ...b, tile: this.groupTile[g]! });
+    });
     return {
       object: root,
+      bounds,
       maxReach: Math.max(1, ...reach),
       covers: (tile) => (tileGroup[tile] ?? -1) >= 0,
       reach: (tile) => reach[tileGroup[tile] ?? -1] ?? 1,
