@@ -129,6 +129,19 @@ describe('CI shards: duration-balanced test lists', () => {
     expect(balance(tests.slice(0, 2), 4).map((s) => s.lines.length)).toEqual([1, 1, 0, 0]);
   });
 
+  it('ten shards (the release default): every test exactly once, no shard far above the average', () => {
+    // a suite shaped like the real one: a few heavy whole-board specs, many mid ones, a tail of quick ones
+    const weightsMs = [...Array(12).fill(130_000), ...Array(40).fill(60_000), ...Array(60).fill(20_000)];
+    const tests = weightsMs.map((w, i) => ({ line: `t${i}`, weight: w }));
+    const shards = balance(tests, 10);
+    expect(shards).toHaveLength(10);
+    expect(shards.flatMap((s) => s.lines).sort()).toEqual(tests.map((t) => t.line).sort());
+    const total = weightsMs.reduce((a, b) => a + b, 0);
+    const heaviest = Math.max(...shards.map((s) => s.weight));
+    // longest-first onto the least-loaded shard stays within one heaviest test of a perfect split
+    expect(heaviest).toBeLessThanOrEqual(total / 10 + 130_000);
+  });
+
   it('weighs a test with no recorded duration as the median', () => {
     expect(weights(['a', 'b', 'c', 'new'], { a: 10, b: 30, c: 20 })).toEqual([10, 30, 20, 20]);
     expect(weights(['x'], {})).toEqual([60_000]);
