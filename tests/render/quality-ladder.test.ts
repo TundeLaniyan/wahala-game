@@ -20,6 +20,7 @@ const NUMERIC: (keyof QualityProfile)[] = [
   'flameLights',
   'streetLife',
   'ambient',
+  'viewClear',
 ];
 
 describe('quality ladder', () => {

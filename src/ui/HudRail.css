@@ -17,7 +17,17 @@
   overflow: hidden;
   pointer-events: none;
 }
-/* City Rumble: the follow camera keeps the player centred, so the column hangs top-centre above them */
+/*
+ * City Rumble: the follow camera keeps the player centred, so the notices hang in a column on the left edge under the
+ * Rumble panel (width and top are set inline from hudZones.ts) and never enter the play zone. The Sudden Death
+ * announcement keeps its own top-centre column (.rail-top, unchanged).
+ */
+.hud-rail.rail-edge {
+  top: calc(max(8px, env(safe-area-inset-top)) + 96px);
+  width: clamp(180px, 22vw, 250px);
+  max-height: 34vh;
+  align-items: flex-start;
+}
 .hud-rail.rail-top {
   left: 50%;
   top: clamp(112px, 22vh, 150px);
@@ -105,12 +115,6 @@
   font-size: clamp(0.56rem, 2.1vh, 0.95rem);
   line-height: 1.15;
 }
-.hud-rail.rail-top .stage-alerts,
-.hud-rail.rail-top .rule-inner {
-  align-items: center;
-  text-align: center;
-}
-
 /* subtitles: plain, high-contrast text on a dark plate; no speech bubble */
 .subtitle-slot {
   max-width: 100%;
