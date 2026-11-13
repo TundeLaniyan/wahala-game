@@ -515,6 +515,13 @@ export interface GameConfig {
     repeatBlastTicks: number;
     /** The HUD warns this long before each blast. */
     warnTicks: number;
+    /**
+     * The SUDDEN DEATH TEST match only (decisions SD-T1..SD-T7, `suddenDeathTest.ts`): ABSENT in every other match. When
+     * set, the round starts on the first playing tick with every player as a contender, the outer ring closes in
+     * over `collapseTicks` through the ordinary Wahala Crush (telegraphed), and each blast is a front that travels
+     * outward from the middle of the area one ring per `frontTicksPerRing` and hits a contender when it reaches them.
+     */
+    lab?: { collapseTicks: number; frontTicksPerRing: number };
   };
   crowd: {
     firstThrowTicks: number;

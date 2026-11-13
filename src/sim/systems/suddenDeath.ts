@@ -27,6 +27,8 @@ import { endMatch, leadingSides, sideKills, sideOf, winFor } from './matchResult
 import type { LethalHit } from './lethality';
 import { flameAt, groundedGeneratorAt, pickupAt } from './queries';
 import { dangerTiles, respawn } from './respawn';
+import { startCollapse } from './suddenDeathCollapse';
+import { advanceFront, startFront } from './suddenDeathFront';
 
 /** Ticks of protection that outlast the title card, so the first moments of the countdown are fair. */
 const SETTLE_TICKS = 60;
@@ -212,12 +214,23 @@ function scheduleBlast(state: GameState, events: SimEvent[]): void {
 /** Per tick, before lethal hits resolve: ends the title card and queues a due blast's hits. */
 export function updateSuddenDeath(state: GameState, hits: LethalHit[], events: SimEvent[]): void {
   const sd = state.match.suddenDeath;
-  if (!sd) return;
+  const lab = state.config.suddenDeath.lab;
+  if (!sd) {
+    // the Sudden Death TEST match: everyone is a contender from the first playing tick (absent everywhere else)
+    if (lab) enterSuddenDeath(state, state.players, 'test', events);
+    return;
+  }
   if (sd.stage === 'transition' && state.tick >= sd.transitionEndTick) {
     sd.stage = 'countdown';
     scheduleBlast(state, events);
+    if (lab) startCollapse(state, lab.collapseTicks);
   }
+  if (sd.front) advanceFront(state, sd, sd.front, hits);
   if (sd.stage !== 'countdown' || state.tick < sd.nextBlastTick) return;
+  if (lab) {
+    startFront(state, sd, lab.frontTicksPerRing, hits, events);
+    return;
+  }
 
   const eventId = state.nextEventId++;
   for (const c of sd.contenders) {
@@ -272,6 +285,7 @@ export function evaluateSuddenDeath(state: GameState, events: SimEvent[]): void 
   const members = sd.contenders.map((c) => state.players[c.playerId]!);
   const standing = members.filter((p) => p.alive);
   const sides = new Set(standing.map((p) => sideOf(state, p)));
+  if (sd.front) return; // a travelling blast is still crossing the floor: its outcome is reported when it has passed
   const blastFell = sd.blastResolving;
 
   if (blastFell) {
@@ -281,8 +295,14 @@ export function evaluateSuddenDeath(state: GameState, events: SimEvent[]): void 
       blast: sd.blastsFired,
       survivors: standing.map((p) => p.id),
       eliminated: members
-        .filter((p) => !p.alive && p.eliminatedTick === state.tick && p.elimination?.kind === 'suddenDeath')
+        .filter(
+          (p) =>
+            !p.alive &&
+            (p.eliminatedTick ?? -1) >= (sd.lastBlastTick ?? state.tick) &&
+            p.elimination?.kind === 'suddenDeath',
+        )
         .map((p) => p.id),
+      ...(state.config.suddenDeath.lab ? { spread: true as const } : {}),
     });
     if (sides.size > 1) {
       // both sides survived blast 2 (each spent a shield): the next blast is the final, shield-proof one, and nothing may

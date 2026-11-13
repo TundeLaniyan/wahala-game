@@ -128,7 +128,16 @@ const handlers: Handlers = {
     react(c, { kind: 'gasp', strength: 0.8, force: true, delay: 0.3 });
   },
   suddenDeathCountdown: () => undefined, // silent: the HUD carries the countdown
-  suddenDeathBlast: (_e, c) => {
+  // the test match's blast travels: its sound is made when the front leaves, the closing report is silent
+  suddenDeathFront: (_e, c) => {
+    sfx(c, 'crush_slam');
+    sfx(c, 'explosion_rumble', 0, 0.9, 0.9, 0.05);
+    c.buses.duck('blast');
+    c.ambience.swell(1);
+    react(c, { kind: 'gasp', strength: 0.9, force: true, delay: 0.2 });
+  },
+  suddenDeathBlast: (e, c) => {
+    if (e.spread) return;
     sfx(c, 'crush_slam');
     sfx(c, 'explosion_rumble', 0, 0.9, 0.9, 0.05);
     c.buses.duck('blast');

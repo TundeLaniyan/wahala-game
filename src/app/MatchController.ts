@@ -39,7 +39,8 @@ import type { FieldNoticeMemory } from './fieldGoal';
 import { buildHud } from './hud';
 import { raidNotice } from './raidNotices';
 import { expireKillLines, isCrowded, newKillLines, pushKillLines } from './killFeed';
-import { buildPlayers, matchArenaId, matchRules } from './names';
+import { buildPlayers, matchArenaId, matchRules, suddenDeathTestSetup } from './names';
+import type { MatchVariant } from './names';
 import { cycleSpectateTarget, pickSpectateTarget } from './spectate';
 import { NULL_AUDIO } from './ports';
 import type {
@@ -135,6 +136,8 @@ export class MatchController implements MissionHost {
    */
   private loadHold = false;
   private settings: GameSettings | null = null;
+  /** The local test match this one is, if any (kept so a rematch plays the same one). */
+  private variant: MatchVariant | undefined;
   private endedAtMs: number | null = null;
   private toastId = 1;
   /** Kill feed bookkeeping: the game the feed belongs to and the eliminations / assists already listed. */
@@ -179,14 +182,23 @@ export class MatchController implements MissionHost {
 
   // ------------------------------------------------------------------ lifecycle
 
-  start(settings: GameSettings, seed = Math.floor(Math.random() * 2 ** 31)): void {
+  start(settings: GameSettings, seed = Math.floor(Math.random() * 2 ** 31), variant?: MatchVariant): void {
     this.director = null;
     this.mission = null;
     this.clearRaid();
-    this.settings = settings;
-    const players = buildPlayers(settings, seed);
-    const arenaId = matchArenaId(settings);
-    const state = createGame({ seed, arenaId, players, settings: matchRules(settings) });
+    // the Sudden Death test match (decisions SD-T): the same menu settings, one human plus three bots on its own arena
+    const setup = variant === 'suddenDeathTest' ? suddenDeathTestSetup(settings) : null;
+    this.variant = variant;
+    this.settings = setup ? setup.settings : settings;
+    const players = buildPlayers(this.settings, seed);
+    const arenaId = setup ? setup.arenaId : matchArenaId(settings);
+    const state = createGame({
+      seed,
+      arenaId,
+      players,
+      settings: setup ? setup.rules : matchRules(settings),
+      ...(setup ? { config: setup.config } : {}),
+    });
     this.state = state;
     this.rumble = getArena(state.arenaId).kind === 'rumble';
     if (!this.rumble) this.audio.setListener?.(null); // standard arenas pan across the whole board
@@ -492,7 +504,7 @@ export class MatchController implements MissionHost {
   }
 
   rematch(): void {
-    if (this.settings && !this.director) this.start(this.settings);
+    if (this.settings && !this.director) this.start(this.settings, undefined, this.variant);
   }
 
   stop(): void {

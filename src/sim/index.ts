@@ -169,3 +169,12 @@ export { COMBAT_LAB_PRESETS } from './config';
 export type { CombatLabLevel, CombatLabPreset } from './config';
 export { combatLabAllowed, labReach, setCombatLabLevel } from './systems/combatLab';
 export type { CombatLabStats } from './types';
+// the Sudden Death test match (temporary playtest tool, decisions SD-T)
+export {
+  SUDDEN_DEATH_TEST_ARENA,
+  SUDDEN_DEATH_TEST_CONFIG,
+  SUDDEN_DEATH_TEST_PLAYERS,
+  SUDDEN_DEATH_TEST_SETTINGS,
+} from './suddenDeathTest';
+export { frontRadius, frontRing } from './systems/suddenDeathFront';
+export type { SuddenDeathFront } from './types';

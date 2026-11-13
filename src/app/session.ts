@@ -24,6 +24,7 @@ import { enterImmersiveMode } from './fullscreen';
 import { AttractController } from './AttractController';
 import { CampaignController } from './campaign';
 import { MatchController } from './MatchController';
+import type { MatchVariant } from './names';
 import { TutorialController } from './TutorialController';
 import { advance, back, editScreen, menuAt, openScreen } from './menu';
 import type { MenuScreen, MenuState } from './menu';
@@ -422,7 +423,8 @@ const missionHost: MissionHost = {
 
 /** Everything the UI can ask the game to do. */
 export const commands = {
-  start(): void {
+  /** `variant`: a temporary local test match (the Sudden Death test, decisions SD-T); omitted for every ordinary start. */
+  start(variant?: MatchVariant): void {
     if (loader.busy) return; // a start is already on its way: a second tap starts nothing
     // a match must always be able to start: repair anything an old save could hold first
     const current = useGameStore.getState().settings;
@@ -438,9 +440,13 @@ export const commands = {
     const settings = useGameStore.getState().settings;
     loadMatch(
       'match',
-      () => controller?.start(settings, Number.isFinite(seed) && seed > 0 ? seed : undefined),
+      () => controller?.start(settings, Number.isFinite(seed) && seed > 0 ? seed : undefined, variant),
       () => commands.toTitle(),
     );
+  },
+  /** The temporary Sudden Death test match: one human, three bots, straight into the sudden-death round. */
+  startSuddenDeathTest(): void {
+    commands.start('suddenDeathTest');
   },
   rematch(): void {
     if (loader.busy) return;

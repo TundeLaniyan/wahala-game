@@ -1,5 +1,22 @@
-import type { CharacterId, Difficulty, GameKind, MatchSettings, PlayerSetup } from '../sim';
-import { CHARACTER_IDS, DIFFICULTIES, createRng, getArena, shuffle } from '../sim';
+import type {
+  CharacterId,
+  DeepPartial,
+  Difficulty,
+  GameConfig,
+  GameKind,
+  MatchSettings,
+  PlayerSetup,
+} from '../sim';
+import {
+  CHARACTER_IDS,
+  DIFFICULTIES,
+  SUDDEN_DEATH_TEST_ARENA,
+  SUDDEN_DEATH_TEST_CONFIG,
+  SUDDEN_DEATH_TEST_SETTINGS,
+  createRng,
+  getArena,
+  shuffle,
+} from '../sim';
 import type { GameSettings } from './settings';
 
 const BOT_NAMES = [
@@ -62,6 +79,33 @@ export function matchRules(settings: GameSettings): Partial<MatchSettings> & { g
     teamCount: 2,
     durationSec: timed ? settings.rumbleMinutes * 60 : null,
     crowdThrows: settings.crowdThrows,
+  };
+}
+
+/** A temporary local test match the menu can start instead of the saved setup (never saved, never online). */
+export type MatchVariant = 'suddenDeathTest';
+
+/**
+ * The Sudden Death test match (decisions SD-T): the player's own fighter and bot level, on the test's arena, with exactly
+ * three bots. The menu's saved settings are read, never written, so the next ordinary match is the one they chose.
+ */
+export function suddenDeathTestSetup(settings: GameSettings): {
+  settings: GameSettings;
+  arenaId: string;
+  rules: Partial<MatchSettings> & { game: GameKind };
+  config: DeepPartial<GameConfig>;
+} {
+  const test: GameSettings = {
+    ...settings,
+    play: 'classic',
+    competitors: 4, // SUDDEN_DEATH_TEST_PLAYERS: the human and three bots
+    arenaId: SUDDEN_DEATH_TEST_ARENA,
+  };
+  return {
+    settings: test,
+    arenaId: SUDDEN_DEATH_TEST_ARENA,
+    rules: { ...matchRules(test), ...SUDDEN_DEATH_TEST_SETTINGS, game: 'survival' },
+    config: SUDDEN_DEATH_TEST_CONFIG,
   };
 }
 
