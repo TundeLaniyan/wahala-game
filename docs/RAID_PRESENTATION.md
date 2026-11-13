@@ -53,18 +53,18 @@ Reduced motion: the flinch is off, camera shake goes through `fx.shake` whose mo
 | Red-hot cue ring on a throw | A strong projectile (slow, a whole segment) |
 | White-blue spark | A shield absorbed it |
 
-## The cross control (movement only)
+## Movement on touch (decisions TN1-TN4; the four-arrow cross was replaced)
 
-On a touch device in a raid the left control is four arrow buttons instead of the floating stick; **the two action buttons on the right are unchanged** (A generator, B context; the cross is not a third action button).
+On a touch device a raid uses the same floating thumbstick as every other match; **the two action buttons on the right are unchanged** (A generator, B context). The stick quantises the thumb to one cardinal direction (dead zone, hysteresis, following origin), so the grid stays strict: one cardinal tile per step, no diagonal, no corner route, no slide.
 
-- Model `input/dpad.ts` `CrossPad`: one finger per arrow; the newest held arrow wins; a finger sliding onto another arrow switches to it; lifting hands back to the arrow still held. Output: one of up / down / left / right or none, never two, never a diagonal (tested with a random-gesture property test).
-- Layout `crossLayout`: up above, left and right side by side, down below (the control is two buttons wide so it fits the 36 vh movement strip of a landscape phone). Arrows are at least 56 px (58 px on 640x360, 64 px on 844x390), safe areas respected; on roomy screens 56 to 84 px so the board's near corner stays free. `actionColumn` mirrors the CSS of `.actions` so tests prove no overlap with A / B; a camera test proves no tile of a 13 x 9 or 15 x 11 board sits under the cross on 640x360, 740x360, 844x390, 932x430 and 1280x720, and portrait is checked against the bottom row. 568x320 (strip 115 px) gets 56 px arrows and so reaches about 9 px past the strip.
-- Input: `InputManager.setCardinalOnly(on)`. Every device sends one cardinal direction; the move gate runs without `legal` or assist (no corner-turn buffer, no corner route, no sidestep or bend, no settle); the touch wish is ignored; the gamepad stick snaps to four cardinals and a thumb resting on a diagonal gives nothing (`snapStick(..., strict)`); keyboard (arrows / WASD) sends the newest key only. A press is one tile; a hold repeats at the step cadence through the existing gate. Normal modes are unchanged.
-- UI `ui/DpadControl.tsx` (`data-testid` `cross-control`, `cross-up|down|left|right`), shown by `TouchControls` when `input.isCardinalOnly`.
+- Input: `InputManager.setCardinalOnly(on)`. Every device sends one cardinal direction; no corner route, sidestep, bend or settle; the touch wish is ignored; the gamepad stick snaps to four cardinals (`snapStick(..., strict)`); keyboard sends the newest key only. Only a THUMB also gets the plain grid-turn forgiveness (TN2): a turn held while walking is carried one tile and taken at the next opening, a press during a daze / slide is kept, a press waits 14 ticks for a step to end. Keys and gamepad are exactly as before.
+- Blocked move (TN3): a refused request bumps the drawn fighter a little towards the obstacle (`app/blockedMove.ts`, `render/views/bumpModel.ts`); presentation only, nothing over the board.
+- Objective guidance (TN4): the first block of the rail (`ui/RaidGoal.tsx`, `app/raidHud.ts`): DESTROY / EXIT, the target, the count, an arrow and the distance in tiles, up to two notes.
+- `input/dpad.ts` (`CrossPad`, `crossLayout`) is kept with its tests but nothing draws it.
 
 ### Wiring the integrator must add
 
-1. **Input mode** (where a match starts, e.g. `MatchController` start / `session.ts` after `loadGame`): `input.setCardinalOnly(inputModeFor(state).cardinalOnly);` (`import { inputModeFor } from '../input'`). Call it for every match start so a normal match after a raid resets it. `TouchControls` reads `input.isCardinalOnly` to show the cross.
+1. **Input mode** (where a match starts, e.g. `MatchController` start / `session.ts` after `loadGame`): `input.setCardinalOnly(inputModeFor(state).cardinalOnly);` (`import { inputModeFor } from '../input'`). Call it for every match start so a normal match after a raid resets it. (`TouchControls` no longer switches control on it.)
 2. **Rail notices** (`MatchController`'s event-to-toast switch): `const n = raidNotice(e); if (n) return n;` (`import { raidNotice } from './raidNotices'`; a `Toast` also takes `ttlMs`). If raid-sim's `raidWaveStarted.index` counts from 1, set `RAID_WAVE_INDEX_BASE = 1`.
 3. Nothing in `GameRenderer` is left to wire: it builds `RaidViews` when `settings.game === 'raid'` or `state.raid` exists, and `DamageViews` + `ProjectileViews` for any match with campaign vitals or a mission. `RaidViews` reads `sim.raidView` once raid-sim exports it (looked up at run time).
 

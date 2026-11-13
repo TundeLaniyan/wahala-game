@@ -36,6 +36,7 @@ import { campaignHitNotice } from './campaignHud';
 import { protectionNotice, quickHandsResumedNotice, quickHandsStoredNotice } from './combatNotices';
 import { fieldNotices } from './fieldGoal';
 import type { FieldNoticeMemory } from './fieldGoal';
+import { BlockedMoves } from './blockedMove';
 import { buildHud } from './hud';
 import { raidNotice } from './raidNotices';
 import { expireKillLines, isCrowded, newKillLines, pushKillLines } from './killFeed';
@@ -127,6 +128,8 @@ export class MatchController implements MissionHost {
   private accumulator = 0;
   private lastMs = -1;
   private hudClock = 0;
+  /** Classic raids: the cue for a move request the simulation refuses (decision TN3), drawn as a bump. */
+  private readonly blocked = new BlockedMoves();
   private paused = false;
   /** Debug/test: stop real-time stepping (frames still render) without showing the pause screen. */
   frozen = false;
@@ -228,6 +231,7 @@ export class MatchController implements MissionHost {
     // the combat test lab level picked in an earlier local Rumble carries over to the next one (docs/COMBAT_TEST_LAB.md)
     if (this.labLevel !== 0 && !setCombatLabLevel(state, this.labLevel)) this.labLevel = 0;
     this.deps.input.clear();
+    this.blocked.reset();
     this.deps.renderer.loadGame(state);
     this.deps.input.setCardinalOnly?.(inputModeFor(state).cardinalOnly); // raids: cardinal-only input, reset for every other match
     this.audio.startMusic(arenaId);
@@ -415,6 +419,7 @@ export class MatchController implements MissionHost {
 
   /** The loop bookkeeping every swap of the game in play resets. */
   private resetLoop(state: GameState): void {
+    this.blocked.reset();
     this.accumulator = 0;
     this.lastMs = -1;
     this.paused = false;
@@ -632,14 +637,25 @@ export class MatchController implements MissionHost {
       // unless a script opened entry mode)
       this.entry.sync(state);
       this.deps.input.navMode = this.entry.active;
-      intents[LOCAL_ID] = this.deps.input.buildIntent(state.tick, {
+      const locked = movementLocked(state, me);
+      const intent = this.deps.input.buildIntent(state.tick, {
         canMove: readyToStep(me),
         remoteReady: me.remote && state.generators.some((g) => g.ownerId === me.id && g.mode === 'remote'),
         legal: (d) => moveWouldAct(state, me, d),
         board: () => buildMoveBoard(state, me),
-        locked: movementLocked(state, me),
+        locked,
         quickHands: quickHandsActive(state, me),
       });
+      intents[LOCAL_ID] = intent;
+      // a classic raid: a request the simulation refuses is shown as a short bump of the fighter (decision TN3)
+      if (inputModeFor(state).cardinalOnly)
+        this.blocked.observe(
+          state.tick,
+          intent.move ?? null,
+          readyToStep(me),
+          locked,
+          intent.move ? moveWouldAct(state, me, intent.move) : true,
+        );
     } else {
       this.deps.input.navMode = false;
     }
@@ -733,6 +749,7 @@ export class MatchController implements MissionHost {
           markers: this.director?.markers?.(state),
           paused: this.paused,
           skipping: this.skipping,
+          blocked: this.blocked.cue,
         }),
       );
 

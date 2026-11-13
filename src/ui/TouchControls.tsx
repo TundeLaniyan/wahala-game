@@ -9,7 +9,6 @@ import { commands, input } from '../app/session';
 import { VirtualStick, stickConfigFor } from '../input/joystick';
 import { SPECIAL_HOLD_MS, inputTrace } from '../input';
 import { useGameStore } from '../app/store';
-import { CrossControl } from './DpadControl';
 import { TAP_MS, vibrate } from '../platform/haptics';
 import type { HudMe } from '../app/hud';
 
@@ -324,22 +323,20 @@ export function TouchControls() {
   );
   const localAlive = useGameStore((s) => s.hud?.localAlive ?? true);
   const large = useGameStore((s) => s.settings.controlSize === 'large');
-  // a classic raid: the movement control is the four-arrow cross (cardinal only), the two action buttons are unchanged.
-  // The app switches the input layer to cardinal-only when the raid starts (`inputModeFor`, input/inputMode.ts); the
-  // hud snapshot changes every few frames, so this re-reads it in time.
-  const raid = input.isCardinalOnly;
+  // a classic raid uses the same floating thumbstick as every other match (decision TN1): the input layer quantises the
+  // thumb to ONE cardinal direction (`input.isCardinalOnly`, input/inputMode.ts), so the grid stays strict
   // out of the match: nothing to steer, and the stick zone must not cover the spectator buttons
   if (!localAlive) return null;
   if (!me || entry)
     return (
       <div className={touchClass(large)} data-size={large ? 'large' : 'normal'}>
-        {raid ? <CrossControl /> : <Joystick entryOpen={!!entry} />}
+        <Joystick entryOpen={!!entry} />
       </div>
     );
   const skill = CHARACTERS[character].skill;
   return (
     <div className={touchClass(large)} data-testid="touch-controls" data-size={large ? 'large' : 'normal'}>
-      {raid ? <CrossControl /> : <Joystick entryOpen={false} />}
+      <Joystick entryOpen={false} />
       <div className="actions">
         <GeneratorButton
           remoteReady={me.remote && me.hasRemoteGenerator}

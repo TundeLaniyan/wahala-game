@@ -135,3 +135,22 @@
     transition: none;
   }
 }
+/* a classic raid's direction and distance cue (ui/RaidGoal.tsx): one bold line under the target */
+.rg-cue {
+  font-size: clamp(0.66rem, 2.8vh, 1rem);
+  color: #ffe14a;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.raid-goal.verb-escape .rg-cue {
+  color: #ffc98a;
+}
+/* phones in landscape: the cue joins the notes' size and the notes give way first (the target, its count and the way come first) */
+@media (max-height: 520px) {
+  .rg-cue {
+    font-size: clamp(0.6rem, 2.6vh, 0.8rem);
+  }
+  .raid-goal .fg-notes span:nth-child(n + 2) {
+    display: none;
+  }
+}

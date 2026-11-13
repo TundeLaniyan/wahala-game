@@ -124,6 +124,9 @@ export class MoveGate {
    * @param canMove whether the simulation will read the move this tick
    * @param legal  optional: would a move this way do anything right now (step, kick, ...)? Enables the turn buffer.
    * @param assist optional: assisted movement (see `GateAssist`); needs `legal`
+   * @param locked the simulation will ignore a move this tick (daze, slide ...)
+   * @param gridTouch a thumb on a classic raid grid (decision TN2): without any assistance, a press made while locked is
+   *   kept (as `LOCK_BUFFER_TICKS`) and a press waits `ASSIST_BUFFER_TICKS` for a step to finish, like the open-field thumb
    */
   next(
     tick: number,
@@ -133,8 +136,9 @@ export class MoveGate {
     legal?: (dir: Dir) => boolean,
     assist?: GateAssist,
     locked = false,
+    gridTouch = false,
   ): Dir | null {
-    const answer = this.decide(tick, held, active, canMove, legal, assist, locked);
+    const answer = this.decide(tick, held, active, canMove, legal, assist, locked, gridTouch);
     if (this.note && this.why === 'idle') this.why = this.note;
     this.note = null;
     return answer;
@@ -148,6 +152,7 @@ export class MoveGate {
     legal: ((dir: Dir) => boolean) | undefined,
     assist: GateAssist | undefined,
     locked: boolean,
+    gridTouch: boolean,
   ): Dir | null {
     this.why = 'idle';
     for (const dir of [...this.since.keys()]) if (!active.has(dir)) this.since.delete(dir);
@@ -159,7 +164,7 @@ export class MoveGate {
     // the player cannot act (daze, stumble, slide, teleport arrival): nothing is handed over, an owed corner step
     // lapses, and - Beginner Assist only - the newest press waits for them (decision MI1) instead of being spent on a
     // tick that ignores it
-    if (beginner && locked) {
+    if ((beginner || gridTouch) && locked) {
       if (this.route) {
         this.route = null;
         this.why = 'route-lapsed-locked';
@@ -196,7 +201,7 @@ export class MoveGate {
 
     // a press waits `MOVE_BUFFER_TICKS` for the player to be able to step (a little longer when assisted: the
     // slowest step outlasts the plain buffer); a carried turn keeps it alive from tile to tile
-    const buffer = assist && (!touch || beginner) ? ASSIST_BUFFER_TICKS : MOVE_BUFFER_TICKS;
+    const buffer = gridTouch || (assist && (!touch || beginner)) ? ASSIST_BUFFER_TICKS : MOVE_BUFFER_TICKS;
     if (this.pending && tick > Math.max(this.pending.until, this.pending.pressed + buffer))
       this.pending = null;
     if (this.pending && canMove && tick >= this.pending.notBefore) {

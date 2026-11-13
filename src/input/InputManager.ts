@@ -222,15 +222,19 @@ export class InputManager {
     if (this.navMode) this.gate.clear();
     else {
       const held = this.heldDir();
-      // cardinal-only: no `legal` (so no corner-turn buffer) and no assist (no corner route, sidestep or settle)
+      // cardinal-only: no corner route, sidestep, settle or diagonal for any device. A THUMB on the raid grid (decision
+      // TN2) alone also gets the plain grid-turn forgiveness of the open field: the one-tile corner-turn carry (`legal`),
+      // a press kept through a daze and a longer wait for the step to finish. Keys and gamepad stay exactly as they were.
+      const gridTouch = this.cardinalOnly && this.lastDevice === 'touch';
       move = this.gate.next(
         tick,
         held,
         this.activeDirs(),
         c.canMove ?? true,
-        this.cardinalOnly ? undefined : c.legal,
+        this.cardinalOnly && !gridTouch ? undefined : c.legal,
         this.cardinalOnly ? undefined : this.gateAssist(c, held),
         c.locked ?? false,
+        gridTouch,
       );
       if (inputTrace.enabled && (move !== null || this.gate.reason !== 'idle'))
         inputTrace.record({ k: 'gate', tick, move, reason: this.gate.reason });

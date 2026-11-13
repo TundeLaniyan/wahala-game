@@ -38,6 +38,7 @@ import {
 } from './perf';
 import type { AdaptiveStatus, CapabilityEnv, DeviceHints, QualityChange } from './perf';
 import type { EntryPick, FrameInfo } from './types';
+import { BUMP_AMOUNT, bumpVector } from './views/bumpModel';
 import { debrisKindFor } from './assets/props';
 import { NEW_ARENA_ART } from './arenas/newArenas';
 import { LivingEnvironment } from './env/LivingEnvironment';
@@ -188,6 +189,8 @@ export class GameRenderer {
   private living: LivingEnvironment | null = null;
   private views: View[] = [];
   private players: PlayerViews | null = null;
+  /** The last "blocked" cue played (app/blockedMove.ts `seq`); reset with every game. */
+  private bumpSeq = 0;
   private lights!: SceneLights;
   private profile: QualityProfile;
   private auto: boolean;
@@ -268,6 +271,7 @@ export class GameRenderer {
   /** Builds the scene for a freshly created game. Safe to call again for a rematch. */
   loadGame(state: GameState): void {
     this.unload();
+    this.bumpSeq = 0;
     this.layout = createLayout(state.width, state.height);
     this.rig = new CameraRig(this.layout);
     this.mode = cameraModeFor(state.arenaId, this.cameraOverride);
@@ -393,6 +397,18 @@ export class GameRenderer {
       profile: this.profile,
       reducedMotion: reduced,
     });
+  }
+
+  /** A move request the raid refused: a short bump of the local fighter, once per cue (not with reduced motion). */
+  private playBump(info: FrameInfo): void {
+    const cue = info.blocked;
+    if (!cue || cue.seq === this.bumpSeq) return;
+    this.bumpSeq = cue.seq;
+    const reduced =
+      typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || info.paused || info.skipping) return;
+    const v = bumpVector(cue.dir);
+    this.players?.jolt(info.localPlayerId, v.dx, v.dz, BUMP_AMOUNT);
   }
 
   /** What the living environment built (debug / performance report); null when the arena has none. */
@@ -740,6 +756,7 @@ export class GameRenderer {
       camera: this.rig.camera,
     };
     this.localId = info.localPlayerId;
+    this.playBump(info);
     if (ctx.inView) {
       const cam = this.rig.camera;
       this.frustum.setFromProjectionMatrix(
