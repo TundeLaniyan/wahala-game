@@ -136,14 +136,6 @@ export function HomeScreen() {
               }}
             />
             <HomeItem
-              testId="home-sd-test"
-              icon="💥"
-              title="Sudden Death Test"
-              tag="Test"
-              text="You + 3 bots · the edge closes in · blasts cross the floor"
-              onClick={() => commands.startSuddenDeathTest()}
-            />
-            <HomeItem
               testId="home-academy"
               icon="🎓"
               title="Training Academy"

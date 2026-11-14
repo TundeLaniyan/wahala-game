@@ -26,7 +26,12 @@ export function lessonStatus(p: AcademyProgress, id: string, nextId: string | nu
   return id === nextId ? 'next' : 'new';
 }
 
-const STATUS_LABEL: Record<Status, string> = { done: 'Completed', skipped: 'Skipped', next: 'Up next', new: '' };
+const STATUS_LABEL: Record<Status, string> = {
+  done: 'Completed',
+  skipped: 'Skipped',
+  next: 'Up next',
+  new: '',
+};
 
 export function AcademyScreen() {
   const [progress, setProgress] = useState<AcademyProgress>(() => loadProgress(storage()));
@@ -53,7 +58,11 @@ export function AcademyScreen() {
       }
       actions={
         <PrimaryButton testId="academy-continue" autoFocus onClick={() => commands.openTutorial()}>
-          {done === 0 && progress.skipped.length === 0 ? 'Start training' : allDone ? 'Train again' : 'Continue training'}
+          {done === 0 && progress.skipped.length === 0
+            ? 'Start training'
+            : allDone
+              ? 'Train again'
+              : 'Continue training'}
         </PrimaryButton>
       }
     >
@@ -67,12 +76,14 @@ export function AcademyScreen() {
             <p>{nextLesson.summary}</p>
           </div>
           <div className="mn-progress" aria-label={`${pct}% of lessons completed`}>
-            <span className="mn-progress-bar" data-testid="academy-progress" style={{ ['--p' as string]: `${pct}%` }}>
+            <span
+              className="mn-progress-bar"
+              data-testid="academy-progress"
+              style={{ ['--p' as string]: `${pct}%` }}
+            >
               <i />
             </span>
-            <small>
-              {pct}% · progress is kept on this device
-            </small>
+            <small>{pct}% · progress is kept on this device</small>
           </div>
         </div>
         {groups.map((g) => (
@@ -115,7 +126,20 @@ export function AcademyScreen() {
             </div>
           </section>
         ))}
+        {/* the temporary Sudden Death test match (decisions SD-T): here, not on Home, so the Home list keeps its height on phones */}
         <div className="mn-academy-foot">
+          <button
+            type="button"
+            className="mn-btn mn-secondary small"
+            data-testid="academy-sd-test"
+            title="You + 3 bots: the edge closes in over about 30 seconds and the blasts cross the floor"
+            onClick={() => {
+              commands.click();
+              commands.startSuddenDeathTest();
+            }}
+          >
+            Sudden Death Test
+          </button>
           <button
             type="button"
             className={`mn-btn mn-secondary small${confirm ? ' danger' : ''}`}

@@ -34,7 +34,9 @@ test('Sudden Death test: one tap, four fighters, the edge closes in, the blast c
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await open(page);
-  const entry = page.getByTestId('home-sd-test');
+  await page.getByTestId('home-academy').click();
+  const entry = page.getByTestId('academy-sd-test');
+  await entry.scrollIntoViewIfNeeded();
   await expect(entry).toBeVisible();
   const box = await entry.boundingBox();
   expect(box!.height).toBeGreaterThanOrEqual(44);
