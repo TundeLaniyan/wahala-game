@@ -5,6 +5,7 @@
  * front has not reached yet is untouched, and once it has crossed the whole board every contender still standing
  * has been struck (the blast is still "full area"). The renderer draws these same rings from `SuddenDeathFront`.
  */
+import { Tile } from '../types';
 import type { GameState, SimEvent, SuddenDeathFront, SuddenDeathState } from '../types';
 import type { LethalHit } from './lethality';
 
@@ -15,6 +16,20 @@ export const frontRing = (f: Pick<SuddenDeathFront, 'x' | 'y'>, x: number, y: nu
 /** The ring the front has reached at `tick` (0 = just the origin tile). */
 export const frontRadius = (f: Pick<SuddenDeathFront, 'startTick' | 'ticksPerRing'>, tick: number): number =>
   Math.floor((tick - f.startTick) / f.ticksPerRing);
+
+/**
+ * The ring of the farthest tile the blast has to cross: the open floor (not concrete) and any fighter still standing.
+ * On a stage that has closed in this is the open area, so the front ends when it has covered the whole playable space.
+ */
+function farthestRing(state: GameState, ox: number, oy: number): number {
+  let far = 0;
+  for (let i = 0; i < state.tiles.length; i++) {
+    if (state.tiles[i] === Tile.Hard) continue;
+    far = Math.max(far, frontRing({ x: ox, y: oy }, i % state.width, Math.floor(i / state.width)));
+  }
+  for (const p of state.players) if (p.alive) far = Math.max(far, frontRing({ x: ox, y: oy }, p.x, p.y));
+  return far;
+}
 
 export function startFront(
   state: GameState,
@@ -32,7 +47,7 @@ export function startFront(
     y,
     startTick: state.tick,
     ticksPerRing,
-    maxRing: Math.max(x, state.width - 1 - x, y, state.height - 1 - y),
+    maxRing: farthestRing(state, x, y),
     hit: [],
   };
   sd.front = front;

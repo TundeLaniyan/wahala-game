@@ -95,7 +95,28 @@ export function ModeScreen() {
     else commands.menuContinue();
   };
   return (
-    <ScreenFrame id="mode" kicker="Play" title="Select game mode">
+    <ScreenFrame
+      id="mode"
+      kicker="Play"
+      title="Select game mode"
+      status={<span className="mn-test-note">Not a game mode: a one-tap local test.</span>}
+      actions={
+        <button
+          type="button"
+          className="mn-btn mn-secondary mn-test-entry"
+          data-testid="mode-sd-test"
+          title="You + 2 bots on Ojuelegba: the stage closes in over about 30 seconds, then the blasts cross the floor"
+          onClick={() => {
+            commands.click();
+            commands.startSuddenDeathTest();
+          }}
+        >
+          <span className="mn-test-chip">Test</span>
+          Sudden Death Test
+          <span className="mn-test-sub">You + 2 bots</span>
+        </button>
+      }
+    >
       <div className="mn-modes" role="group" aria-label="Game mode. Choose one to continue.">
         {MODE_CARDS.map((m) => {
           const on = m.id === current;

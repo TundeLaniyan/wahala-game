@@ -172,7 +172,9 @@ export type { CombatLabStats } from './types';
 // the Sudden Death test match (temporary playtest tool, decisions SD-T)
 export {
   SUDDEN_DEATH_TEST_ARENA,
+  SUDDEN_DEATH_TEST_COLLAPSE_TICKS,
   SUDDEN_DEATH_TEST_CONFIG,
+  SUDDEN_DEATH_TEST_CORE,
   SUDDEN_DEATH_TEST_PLAYERS,
   SUDDEN_DEATH_TEST_SETTINGS,
 } from './suddenDeathTest';

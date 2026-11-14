@@ -564,13 +564,23 @@ export function buildRumble(state: GameState, localId: number, spectateId: numbe
   const t = state.match.phase === 'countdown' ? 0 : state.match.playTicks;
   const closeAt = cfg.match.durationTicks - cfg.crush.startRemainingTicks;
   const coreAt = cfg.match.durationTicks - cfg.crush.coreClosedRemainingTicks;
+  // the Sudden Death test closes the stage on its own 30 s schedule (the 10 min clock is never reached): say that
+  const labEnd = state.crush?.warnAt.length
+    ? state.crush.warnAt[state.crush.warnAt.length - 1]! + cfg.crush.warnTicks
+    : 0;
   const ring: RumbleSnapshot['ring'] = !state.crush
     ? null
-    : t < closeAt
-      ? { phase: 'open', seconds: Math.ceil((closeAt - t) / 60) }
-      : t < coreAt
-        ? { phase: 'closing', seconds: Math.ceil((coreAt - t) / 60) }
-        : { phase: 'core', seconds: Math.max(0, Math.ceil((cfg.match.durationTicks - t) / 60)) };
+    : cfg.suddenDeath.lab
+      ? labEnd === 0
+        ? null
+        : t < labEnd
+          ? { phase: 'closing', seconds: Math.ceil((labEnd - t) / 60) }
+          : { phase: 'core', seconds: 0 }
+      : t < closeAt
+        ? { phase: 'open', seconds: Math.ceil((closeAt - t) / 60) }
+        : t < coreAt
+          ? { phase: 'closing', seconds: Math.ceil((coreAt - t) / 60) }
+          : { phase: 'core', seconds: Math.max(0, Math.ceil((cfg.match.durationTicks - t) / 60)) };
 
   const game =
     state.settings.game === 'classic' || state.settings.game === 'mission' ? 'survival' : state.settings.game;

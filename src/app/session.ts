@@ -421,6 +421,22 @@ const missionHost: MissionHost = {
   notice: (text) => controller?.notice(text, 'info'),
 };
 
+/**
+ * The Sudden Death test (decisions SD-U): it opens on the whole-stage view so the stage closing in and the blasts are
+ * all in frame (O still switches to the follow camera). The view is changed in the store and the renderer only, never
+ * saved; the next ordinary start puts the player's own camera setting back.
+ */
+let cameraBeforeTest: GameSettings['cameraView'] | null = null;
+function testCameraView(test: boolean): void {
+  const current = useGameStore.getState().settings;
+  if (test && cameraBeforeTest === null) cameraBeforeTest = current.cameraView;
+  const view = test ? 'overview' : cameraBeforeTest;
+  if (view === null) return;
+  if (!test) cameraBeforeTest = null;
+  patch({ settings: { ...current, cameraView: view } });
+  renderer?.setCameraView(view);
+}
+
 /** Everything the UI can ask the game to do. */
 export const commands = {
   /** `variant`: a temporary local test match (the Sudden Death test, decisions SD-T); omitted for every ordinary start. */
@@ -437,6 +453,7 @@ export const commands = {
     attract?.stop();
     subtitles.clear();
     const seed = Number(new URLSearchParams(location.search).get('seed'));
+    testCameraView(variant !== undefined);
     const settings = useGameStore.getState().settings;
     loadMatch(
       'match',
@@ -476,6 +493,7 @@ export const commands = {
     patch({ menu: menuAt(path), pauseSettings: false });
     campaign?.leave();
     controller?.stop();
+    testCameraView(false); // the Sudden Death test's whole-stage view ends with the test
     loader.clear(); // never a loading screen left over the menu
     if (settingsAllowAttract()) attract?.start();
   },

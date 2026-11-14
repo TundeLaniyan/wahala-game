@@ -126,20 +126,7 @@ export function AcademyScreen() {
             </div>
           </section>
         ))}
-        {/* the temporary Sudden Death test match (decisions SD-T): here, not on Home, so the Home list keeps its height on phones */}
         <div className="mn-academy-foot">
-          <button
-            type="button"
-            className="mn-btn mn-secondary small"
-            data-testid="academy-sd-test"
-            title="You + 3 bots: the edge closes in over about 30 seconds and the blasts cross the floor"
-            onClick={() => {
-              commands.click();
-              commands.startSuddenDeathTest();
-            }}
-          >
-            Sudden Death Test
-          </button>
           <button
             type="button"
             className={`mn-btn mn-secondary small${confirm ? ' danger' : ''}`}

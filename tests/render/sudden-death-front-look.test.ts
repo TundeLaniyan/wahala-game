@@ -8,6 +8,7 @@ import { suddenDeathFloor } from '../../src/render/views/suddenDeathFrontLook';
 import {
   SUDDEN_DEATH_TEST_ARENA,
   SUDDEN_DEATH_TEST_CONFIG,
+  SUDDEN_DEATH_TEST_PLAYERS,
   SUDDEN_DEATH_TEST_SETTINGS,
   Tile,
   createGame,
@@ -20,7 +21,7 @@ function atCountdown(): GameState {
   const s = createGame({
     seed: 4,
     arenaId: SUDDEN_DEATH_TEST_ARENA,
-    players: Array.from({ length: 4 }, (_, i) => ({
+    players: Array.from({ length: SUDDEN_DEATH_TEST_PLAYERS }, (_, i) => ({
       name: `P${i}`,
       characterId: 'streetBaller',
       isBot: true,
@@ -75,6 +76,31 @@ describe('suddenDeathFloor', () => {
     }
     expect(
       glow.some((g) => frontRing(f, g.index % s.width, Math.floor(g.index / s.width)) === 3 && hot(g)),
+    ).toBe(true);
+  });
+
+  it('the front reaches every open tile of the stage that is left (the glow ends where the floor ends)', () => {
+    const s = atCountdown();
+    // close the stage the way the ring would: everything outside the open area becomes concrete
+    const { x0, y0, x1, y1 } = s.match.suddenDeath!.area;
+    for (let i = 0; i < s.tiles.length; i++) {
+      const x = i % s.width;
+      const y = Math.floor(i / s.width);
+      if (x < x0 || x > x1 || y < y0 || y > y1) s.tiles[i] = Tile.Hard;
+    }
+    s.match.suddenDeath!.nextBlastTick = s.tick + 2;
+    tick(s);
+    tick(s);
+    tick(s);
+    const f = s.match.suddenDeath!.front!;
+    for (let i = 0; i < s.tiles.length; i++)
+      if (s.tiles[i] !== Tile.Hard)
+        expect(frontRing(f, i % s.width, Math.floor(i / s.width))).toBeLessThanOrEqual(f.maxRing);
+    // at the end of the crossing the outermost open ring is the one lit
+    s.tick = f.startTick + f.maxRing * f.ticksPerRing;
+    const lit = suddenDeathFloor(s, 0, 0).filter((g) => g.intensity === 1);
+    expect(
+      lit.some((g) => frontRing(f, g.index % s.width, Math.floor(g.index / s.width)) === f.maxRing),
     ).toBe(true);
   });
 });

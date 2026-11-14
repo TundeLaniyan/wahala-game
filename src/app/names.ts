@@ -12,6 +12,7 @@ import {
   DIFFICULTIES,
   SUDDEN_DEATH_TEST_ARENA,
   SUDDEN_DEATH_TEST_CONFIG,
+  SUDDEN_DEATH_TEST_PLAYERS,
   SUDDEN_DEATH_TEST_SETTINGS,
   createRng,
   getArena,
@@ -86,8 +87,8 @@ export function matchRules(settings: GameSettings): Partial<MatchSettings> & { g
 export type MatchVariant = 'suddenDeathTest';
 
 /**
- * The Sudden Death test match (decisions SD-T): the player's own fighter and bot level, on the test's arena, with exactly
- * three bots. The menu's saved settings are read, never written, so the next ordinary match is the one they chose.
+ * The Sudden Death test match (decisions SD-T, SD-U): the player's own fighter and bot level, on the test's City Rumble
+ * stage, with exactly two bots. The menu's saved settings are read, never written, so the next ordinary match is the one they chose.
  */
 export function suddenDeathTestSetup(settings: GameSettings): {
   settings: GameSettings;
@@ -97,9 +98,11 @@ export function suddenDeathTestSetup(settings: GameSettings): {
 } {
   const test: GameSettings = {
     ...settings,
-    play: 'classic',
-    competitors: 4, // SUDDEN_DEATH_TEST_PLAYERS: the human and three bots
-    arenaId: SUDDEN_DEATH_TEST_ARENA,
+    play: 'rumble',
+    // SUDDEN_DEATH_TEST_PLAYERS: the human and exactly two bots (not one of the menu's Rumble sizes), all at one level
+    rumbleCompetitors: SUDDEN_DEATH_TEST_PLAYERS as unknown as GameSettings['rumbleCompetitors'],
+    rumbleMixed: false,
+    rumbleArenaId: SUDDEN_DEATH_TEST_ARENA,
   };
   return {
     settings: test,
