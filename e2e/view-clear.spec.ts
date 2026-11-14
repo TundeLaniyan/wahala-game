@@ -18,6 +18,7 @@ const status = (page: Page) =>
         tiles: number;
         points: number;
         fading: number;
+        wanted: number[];
       },
   );
 
@@ -73,17 +74,19 @@ for (const [name, width, height] of [
     expect(q.rung).toBeLessThanOrEqual(2);
     expect((await status(page)).stride).toBeGreaterThanOrEqual(1);
 
-    // a lane north of a big roof: nothing between the camera and the fighter at (14, 26)
-    await place(page, 14, 26);
-    await expect.poll(async () => (await status(page)).tiles, { timeout: 30_000 }).toBe(0);
-
     // under the roof of the Ikate block: the camera looks straight over it at the fighter
     await place(page, 26, 34);
     await expect.poll(async () => (await status(page)).tiles, { timeout: 30_000 }).toBeGreaterThan(0);
     await expect.poll(async () => (await status(page)).fading, { timeout: 30_000 }).toBeGreaterThan(0);
+    const roof = (await status(page)).wanted;
 
-    // step out into the open: the dissolve is released
+    // step out into the open (a lane well away from the roof; Lekki has some low cover everywhere, so the check
+    // is that the roof's own tiles are released, not that nothing at all fades): the dissolve is released
     await place(page, 14, 26);
-    await expect.poll(async () => (await status(page)).tiles, { timeout: 30_000 }).toBe(0);
+    await expect
+      .poll(async () => (await status(page)).wanted.filter((t) => roof.includes(t)).length, {
+        timeout: 30_000,
+      })
+      .toBe(0);
   });
 }
