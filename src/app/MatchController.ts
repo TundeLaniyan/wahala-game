@@ -15,7 +15,7 @@ import {
   readyToStep,
   tick,
 } from '../sim';
-import { combatLabAllowed, setCombatLabLevel } from '../sim';
+import { applyClassicCombat, combatLabAllowed, setCombatLabLevel } from '../sim';
 import type { CombatLabLevel } from '../sim';
 import type {
   Difficulty,
@@ -202,6 +202,9 @@ export class MatchController implements MissionHost {
       settings: setup ? setup.rules : matchRules(settings),
       ...(setup ? { config: setup.config } : {}),
     });
+    // local Classic Battle only (decision CC-F1): the open-field (Level 2) close-combat feel on the cardinal grid; the
+    // Sudden Death test match keeps its own rules
+    if (!setup) applyClassicCombat(state);
     this.state = state;
     this.rumble = getArena(state.arenaId).kind === 'rumble';
     if (!this.rumble) this.audio.setListener?.(null); // standard arenas pan across the whole board
@@ -236,7 +239,7 @@ export class MatchController implements MissionHost {
     this.deps.input.setCardinalOnly?.(inputModeFor(state).cardinalOnly); // raids: cardinal-only input, reset for every other match
     this.audio.startMusic(arenaId);
     this.audio.setIntensity(0);
-    patch({ combatLab: state.config.combatLab?.level ?? 0 });
+    patch({ combatLab: state.combatLab?.classic ? 0 : (state.config.combatLab?.level ?? 0) });
     patch({
       screen: 'playing',
       paused: false,

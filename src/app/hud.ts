@@ -274,7 +274,7 @@ export interface CombatLabHud {
 
 function buildCombatLab(state: GameState, localId: number): CombatLabHud | null {
   const preset = state.config.combatLab;
-  if (!preset) return null;
+  if (!preset || state.combatLab?.classic) return null; // Classic's feel is the ruleset's own, not the lab (no chip)
   return {
     level: preset.level,
     name: preset.name,

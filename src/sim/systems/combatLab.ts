@@ -22,7 +22,7 @@
  * Diagnostics per seat (`state.combatLab.stats`): presses, attacks started, air swings, hits, whiffs, presses kept by
  * the buffer and presses that did nothing. Read by the pause menu and the `?debug` handle; never drawn over the board.
  */
-import { COMBAT_LAB_PRESETS } from '../config';
+import { CLASSIC_COMBAT_PRESET, COMBAT_LAB_PRESETS } from '../config';
 import type { AttackSpec, CombatLabLevel, CombatLabPreset, GameConfig } from '../config';
 import { DIRS, DIR_VEC, OPPOSITE, tileAt } from '../grid';
 import type { GridView } from '../grid';
@@ -112,6 +112,36 @@ export function setCombatLabLevel(state: GameState, level: CombatLabLevel | 0): 
   state.config.skills.attacks = attacks;
   state.config.combatLab = structuredClone(preset);
   return true;
+}
+
+/**
+ * Local CLASSIC BATTLE (decision CC-F1): the lab's Level 2 feel, pinned on for the match and never switchable. Same
+ * mechanism as `setCombatLabLevel` (scaled catalogue attacks, `config.combatLab`, the kept-press runtime) with the
+ * cardinal-only preset `CLASSIC_COMBAT_PRESET`. The app calls it right after `createGame` for a local Classic Battle;
+ * `createGame` itself, raids, missions, City Rumble and online matches never get it. Returns false (nothing changed)
+ * for any other ruleset.
+ */
+export function applyClassicCombat(state: GameState): boolean {
+  if (state.settings.game !== 'classic' || state.mission || state.raid || state.combatLab) return false;
+  const base = structuredClone(state.config.skills.attacks);
+  const attacks = {} as Record<AttackKind, AttackSpec>;
+  for (const kind of Object.keys(base) as AttackKind[])
+    attacks[kind] = labAttackSpec(base[kind], CLASSIC_COMBAT_PRESET);
+  state.config.skills.attacks = attacks;
+  state.config.combatLab = structuredClone(CLASSIC_COMBAT_PRESET);
+  state.combatLab = { level: CLASSIC_COMBAT_PRESET.level, base, stats: {}, buffered: {}, classic: true };
+  return true;
+}
+
+/** The look and sound preset for a seat's close attacks: the lab's, or (a human in a mission or raid) the classic one. */
+export function feelPresetFor(
+  state: Pick<GameState, 'config' | 'mission' | 'raid'>,
+  attacker: Readonly<Player> | undefined,
+): CombatLabPreset | null {
+  if (state.config.combatLab) return state.config.combatLab;
+  if ((state.mission || state.raid) && attacker && attacker.enemyKind === undefined)
+    return CLASSIC_COMBAT_PRESET;
+  return null;
 }
 
 // ------------------------------------------------------------------ reach

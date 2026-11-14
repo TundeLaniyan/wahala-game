@@ -978,3 +978,33 @@ Founder report: the raid's four-arrow cross felt inconsistent and frustrating ne
 | TN4 | **The raid rail names what to do next.** First block of the HUD rail (`ui/RaidGoal.tsx`, the field-goal plate): tag (DESTROY / EXIT), target (MARKED CARGO / REACH THE EXIT), the count ("1 OF 3 DOWN"), an eight-way arrow with the distance in tiles to the nearest standing marked cargo or to the open exit, and at most two notes (next wave within 10 s, enemies on the board, the locked main door and what opens it, a bonus room open). Distance is the straight grid distance (walls can add some). Pure function of `RaidView` and the fighter's tile; null once the raid is over. | `app/raidHud.ts`, `app/hud.ts` (`raid`), `ui/RaidGoal.tsx`, `ui/HudRail.tsx` |
 
 Tests: `tests/input-raid-touch.test.ts`, `tests/ui/raidGoal.test.ts`; specs `e2e/raid-render.spec.ts`, `e2e/campaign-expansion-smoke.spec.ts` (the cross checks became stick checks). Supersedes RR7 (the cross) and the "no corner-turn buffer" clause of RR8 for the touch thumb only.
+
+## CC-F - Classic Battle close-combat feel (branch `claude/wahala-fu-classic`, from the release `453b1a0`)
+
+Founder: Classic combat "still does not feel good"; the open-field (Level 2 Balanced) feel is better and should inform it; movement stays grid-based and the cross blast stays. Smallest effective change, no new tuning pass.
+
+**Findings** (real sim, `danfoBusPark` 15 x 11, a player tapping B every 6 ticks next to a rival who stays put, 30 s; 60 ticks = 1 s). Classic ran with the lab absent (Off): Punch startup 4 / hit recovery 60 / same-target lockout 180, a B press made while recovering is ignored, a miss does nothing, impact = a white ring.
+
+| Measure (Street Baller Punch unless said) | Classic today (Off) | Level 2 feel |
+| --- | --- | --- |
+| Gap between two hits on one rival | 186 ticks (3.1 s) | 115 ticks (1.9 s) |
+| Hits in 30 s | 10 | 16 |
+| Lekki Boy Daze Punch: gap / hits in 30 s | 258 ticks (4.3 s) / 7 | 182 ticks (3.0 s) / 10 |
+| B at nobody in 10 s | 0 swings, nothing shown | 55 visible swings |
+| Press made while recovering | ignored | kept 12 ticks, thrown once |
+| Hit confirmation | white ring (a miss shows nothing) | cyan fan at the press, ring, flash, flinch, thud; a miss is a thin grey arc, dust, quiet swish |
+| Aim help | an adjacent rival on another side was already faced; nothing else to help | same (cardinal only), see CC-F3 |
+
+Why it felt worse: a 3 s recovery between hits on the same rival, a press during it silently lost, and no sign of a hit or a miss (the white ring was the only cue and a whiff had none).
+
+| # | Decision | Where |
+| --- | --- | --- |
+| CC-F1 | **A local Classic Battle (`game: 'classic'`, started by `MatchController.start`) runs the Level 2 feel as part of its ruleset.** The same mechanism as the lab (`config.combatLab` + scaled `config.skills.attacks` + the kept-press runtime), pinned to a preset derived from `COMBAT_LAB_PRESETS[2]` (so it cannot drift; no lab value was edited). Applied by `applyClassicCombat` right after `createGame`; `createGame` itself, tests' sandboxes, City Rumble with the lab off, missions, raids, online and the Sudden Death test match never get it. Not switchable, not shown as LAB (no chip, no pause-menu section: `combatLabAllowed` stays false for Classic, `CombatLabState.classic`). | `CLASSIC_COMBAT_PRESET` (config.ts), `applyClassicCombat` (systems/combatLab.ts), `MatchController.start`, `hud.ts` |
+| CC-F2 | **Timing and buffer = Level 2**: Punch 3 / 24 / 108 (startup, hit recovery, lockout), Shove and Daze Punch scaled the same way, a kept B press of 12 ticks, a visible swing at the air. One press is one punch (the buffer is a single slot, cleared when thrown). | `labAttackSpec` |
+| CC-F3 | **Reach stays the four cardinal neighbours.** Level 2's forward-corner reach is a classic exception (`forwardDiagonals: false`): no diagonal, no two-tile reach; aim help only turns to a rival on another of the four sides. Movement and the cross blast are untouched. | `CLASSIC_COMBAT_PRESET` |
+| CC-F4 | **Hit confirmation is Level 2's**: the swing fan at the press (one tile, narrow: no corner reach to show), cyan ring / flash / dust / flinch on a hit, grey arc on a miss, `gen_drop` thud and quiet swish (all synthesised), camera jolt bounded by `render/shake.ts` (off on touch and with reduced motion). | `CombatPilotViews.ts`, `eventRouter.ts` |
+| CC-F5 | **Raids and field missions: presentation only, no number changes.** The human's punch gets the same fan at the press, the ring / flash / flinch on a hit, the grey puff on a miss and the hit / miss sounds, driven by the existing `attackStarted` / `attackResolved` events (`feelPresetFor`: only a seat without `enemyKind`, and never in the Oshodi combat pilot). No `config.combatLab` there, so the human's punch timing, `config.enemyAttacks`, `config.campaign.*` and the enemy fairness work (docs/ENEMY_COMBAT_FAIRNESS.md) are unchanged. Enemy attacks keep their own wind-up rings. | `feelPresetFor`, `CombatPilotViews.hasCombatPilot` |
+| CC-F6 | **Touch**: B already fires on the press when no remote generator is live (`input/specialHold.ts`); with a live remote the tap waits for release by design (tap vs hold). The kept press is a sim buffer, so it adds no touch-specific path and cannot double-punch. Exactly two action buttons. | unchanged input layer |
+| CC-F7 | **Digests.** The bot-vs-bot multiplayer digest (`scripts/lib/mpDigest.ts`, pinned in `tests/enemy-fairness.test.ts`) builds games through `createGame` and so does not see Classic's feel: both pinned values are unchanged (no deliberate digest change). Online seats and bot batches in `ai/headless.ts` are unchanged for the same reason (a Classic bot batch with the feel needs `applyClassicCombat`). | - |
+
+Tests: `tests/classic-combat-feel.test.ts`.

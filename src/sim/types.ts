@@ -705,6 +705,8 @@ export interface CombatLabState {
   stats: Record<number, CombatLabStats>;
   /** Tick until which a seat's B press is kept (absent = none). */
   buffered: Record<number, number>;
+  /** True in a local Classic Battle (decision CC-F1): the Level 2 feel is part of the ruleset, not the lab (no chip, no switch). */
+  classic?: true;
 }
 
 export interface TrapTile {
