@@ -524,7 +524,7 @@ export class GameRenderer {
         else if (m) m.needsUpdate = true;
       });
     }
-    this.arena.setViewClear(p.viewClear > 0);
+    this.arena.setViewClearStride(p.viewClearStride);
     this.effects.setQuality(p);
     this.backdrop.setQuality(p);
     this.living?.setProfile(p);
@@ -826,6 +826,11 @@ export class GameRenderer {
   /** Jumps the camera straight to its current goal (debug/screenshots; the next frame applies it). */
   cutCamera(): void {
     if (this.loaded) this.rig.cut();
+  }
+
+  /** Debug / e2e: what the view-clear fade (scenery that hides the followed fighter) is doing now. */
+  viewClearStatus(): ReturnType<ArenaView['viewClearStatus']> | null {
+    return this.loaded ? this.arena.viewClearStatus() : null;
   }
 
   /** Debug: camera pose, mode and whether every playable tile is inside the HUD-free band. */
