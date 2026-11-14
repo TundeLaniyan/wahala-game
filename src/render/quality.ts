@@ -68,10 +68,12 @@ export interface QualityProfile {
   /** Background animation (crowd, street life, ambient traffic) updates every Nth frame. 1 = every frame. */
   animationStride: number;
   /**
-   * 1 = scenery standing between the camera and the followed fighter dissolves (render/assets/viewClear.ts),
-   * 0 = only the cheap tile-behind rule runs. LIVE (applied without a rebuild).
+   * The view-clear fade (render/assets/viewClear.ts: scenery between the camera and the followed fighter or the
+   * floor around it dissolves) is ON on every rung; this is how many frames pass between two tests (1 = every
+   * frame, larger = rarer, so it gets cheaper down the ladder but is never switched off). The test is a few dozen
+   * box checks; a slow device renders so few frames that a stride of 2 is still well under a second. LIVE.
    */
-  viewClear: number;
+  viewClearStride: number;
 }
 
 interface Rung extends Omit<QualityProfile, 'rung'> {
@@ -99,7 +101,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 2,
     ambient: 0.15,
     animationStride: 3,
-    viewClear: 0,
+    viewClearStride: 2,
   },
   {
     name: 'Very Low+',
@@ -115,7 +117,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 3,
     ambient: 0.25,
     animationStride: 3,
-    viewClear: 0,
+    viewClearStride: 2,
   },
   {
     name: 'Low',
@@ -132,7 +134,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 4,
     ambient: 0.35,
     animationStride: 2,
-    viewClear: 1,
+    viewClearStride: 2,
   },
   {
     name: 'Low+',
@@ -148,7 +150,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 6,
     ambient: 0.45,
     animationStride: 2,
-    viewClear: 1,
+    viewClearStride: 2,
   },
   {
     name: 'Medium-Low',
@@ -165,7 +167,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 8,
     ambient: 0.55,
     animationStride: 2,
-    viewClear: 1,
+    viewClearStride: 1,
   },
   {
     name: 'Medium',
@@ -182,7 +184,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 10,
     ambient: 0.7,
     animationStride: 1,
-    viewClear: 1,
+    viewClearStride: 1,
   },
   {
     name: 'Medium-High',
@@ -199,7 +201,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 13,
     ambient: 0.85,
     animationStride: 1,
-    viewClear: 1,
+    viewClearStride: 1,
   },
   {
     name: 'High',
@@ -216,7 +218,7 @@ const RUNGS: readonly Rung[] = [
     streetLife: 16,
     ambient: 1,
     animationStride: 1,
-    viewClear: 1,
+    viewClearStride: 1,
   },
 ];
 

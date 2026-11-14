@@ -1,12 +1,20 @@
+import { Matrix4, PerspectiveCamera } from 'three';
 import { describe, expect, it } from 'vitest';
+import { MAX_HIDE, VIEW_HIDE } from '../../src/render/assets/occlusionFade';
 import {
   VIEW_CLEAR,
-  corridorTiles,
+  hidesAny,
   hidesFighter,
+  holdMisses,
+  isNearerThan,
   pickOccluders,
+  pickOccludersFor,
+  projectNdc,
+  regionTiles,
   segmentEnters,
+  viewPoints,
 } from '../../src/render/assets/viewClear';
-import type { Aabb } from '../../src/render/assets/viewClear';
+import type { Aabb, ViewPoint } from '../../src/render/assets/viewClear';
 
 /** A building of 4 x 3 tiles and `h` tall, its north face at z = zn (camera looks north from +z). */
 const building = (x0: number, x1: number, zn: number, h: number, depth = 3): Aabb => ({
@@ -90,30 +98,6 @@ describe('pickOccluders', () => {
   });
 });
 
-describe('corridorTiles', () => {
-  const W = 20;
-  const tileOf = (x: number, z: number): number => {
-    const tx = Math.round(x + W / 2 - 0.5);
-    const ty = Math.round(z + W / 2 - 0.5);
-    return tx < 0 || ty < 0 || tx >= W || ty >= W ? -1 : ty * W + tx;
-  };
-
-  it('lists the tiles from the fighter towards the camera and nothing north of the fighter', () => {
-    const tiles = corridorTiles({ x: 0.5, z: 0.5 }, { x: 0.5, z: 10.5 }, tileOf);
-    const fighterTile = tileOf(0.5, 0.5);
-    expect(tiles.has(fighterTile + W)).toBe(true);
-    expect(tiles.has(fighterTile + 3 * W)).toBe(true);
-    expect(tiles.has(fighterTile - W)).toBe(false);
-  });
-
-  it('is bounded by the corridor reach', () => {
-    const tiles = corridorTiles({ x: 0.5, z: -9.5 }, { x: 0.5, z: 80 }, tileOf);
-    expect(Math.max(...[...tiles].map((t) => Math.floor(t / W)))).toBeLessThanOrEqual(
-      Math.ceil(9.5 + VIEW_CLEAR.reach),
-    );
-  });
-});
-
 describe('Lekki board cover bounds', async () => {
   const { getArena } = await import('../../src/sim');
   const { NEW_ARENA_ART } = await import('../../src/render/arenas/newArenas');
@@ -151,5 +135,288 @@ describe('Lekki board cover bounds', async () => {
       }
     expect(hidden).toBeGreaterThan(50);
     expect(clear).toBeGreaterThan(hidden); // most of the board is in the clear: no needless transparency
+  });
+});
+
+/** The follow camera at a given aspect: 9 up and 7 south of the fighter at the origin, looking at it. */
+function frame(
+  aspect: number,
+  fov = 40,
+): { eye: { x: number; y: number; z: number }; vp: ArrayLike<number> } {
+  const cam = new PerspectiveCamera(fov, aspect, 0.1, 200);
+  cam.position.set(0, 9, 7);
+  cam.lookAt(0, 0.6, 0);
+  cam.updateMatrixWorld(true);
+  const m = new Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+  return { eye: { x: 0, y: 9, z: 7 }, vp: m.elements };
+}
+const open = (): boolean => true;
+const points = (aspect: number, walkable: (x: number, z: number) => boolean = open): ViewPoint[] =>
+  viewPoints({ fighter: { x: 0, z: 0 }, viewProj: frame(aspect).vp, walkable });
+
+describe('viewPoints (what must stay readable)', () => {
+  it('always holds the fighter feet / torso / head, on any aspect', () => {
+    for (const aspect of [844 / 390, 390 / 844, 16 / 9]) {
+      const fighter = points(aspect).filter((p) => p.ring === 0);
+      expect(fighter.map((p) => p.y)).toEqual([...VIEW_CLEAR.heights]);
+    }
+  });
+
+  it('holds the floor disc: three rings of walkable points and an outer halo', () => {
+    const pts = points(844 / 390);
+    const radii = new Set(pts.filter((p) => p.ring > 0).map((p) => p.ring));
+    expect([...radii].sort()).toEqual([...VIEW_CLEAR.ringRadii, VIEW_CLEAR.haloRadius].sort());
+    expect(pts.filter((p) => p.halo).length).toBeGreaterThan(0);
+    expect(pts.filter((p) => p.ring > 0 && !p.halo).length).toBeGreaterThan(20);
+  });
+
+  it('skips floor on a block or building (the object does not hide its own footprint) and off-screen floor', () => {
+    const all = points(844 / 390).length;
+    const east = points(844 / 390, (x) => x < 0.2).length;
+    expect(east).toBeLessThan(all);
+    // a narrow portrait frame shows less of the disc sideways than the landscape phone
+    expect(points(390 / 844).length).toBeLessThanOrEqual(all);
+  });
+
+  it('adds live rivals and generators near the fighter, capped', () => {
+    const extras = Array.from({ length: 30 }, (_, i) => ({ x: -1 + (i % 3) * 0.5, z: -0.5, y: 0.9 }));
+    const pts = viewPoints({
+      fighter: { x: 0, z: 0 },
+      viewProj: frame(844 / 390).vp,
+      walkable: open,
+      extras,
+    });
+    const withExtras = pts.filter((p) => p.ring === 0 && !VIEW_CLEAR.heights.includes(p.y) && p.y !== 0.15);
+    expect(withExtras.length).toBe(VIEW_CLEAR.maxExtras);
+  });
+
+  it('projectNdc puts the looked-at point at the centre and reports a point behind the camera', () => {
+    const { vp } = frame(2);
+    const c = projectNdc(vp, 0, 0.6, 0);
+    expect(Math.abs(c.x)).toBeLessThan(1e-6);
+    expect(Math.abs(c.y)).toBeLessThan(1e-6);
+    expect(projectNdc(vp, 0, 9, 20).ahead).toBe(false);
+  });
+});
+
+describe('pickOccludersFor (screen-space decision)', () => {
+  const eye = { x: 0, y: 9, z: 7 };
+  const F = { x: 0, z: 0 }; // the fighter
+
+  it('fades a tall building that covers the floor beside the fighter although the fighter line is clear', () => {
+    // 1.4 east and 1.5 south of the fighter: the line to the fighter (x = 0) passes it, the floor east of the fighter is behind it
+    const beside = building(1.2, 4, 1.4, 6, 2);
+    expect(pickOccluders(eye, { x: 0, z: 0 }, [beside], null)).toEqual([]); // the old single-line test missed it
+    for (const aspect of [844 / 390, 390 / 844, 1280 / 720])
+      expect(
+        pickOccludersFor(eye, points(aspect), [beside], null, VIEW_CLEAR, F),
+        `aspect ${aspect}`,
+      ).toEqual([0]);
+  });
+
+  it('fades the building in front of the fighter on a phone landscape and a phone portrait frame', () => {
+    const front = building(-2, 2, 2.5, 6);
+    for (const aspect of [844 / 390, 390 / 844])
+      expect(pickOccludersFor(eye, points(aspect), [front], null, VIEW_CLEAR, F)).toEqual([0]);
+  });
+
+  it('fades a rival hidden behind a building even though the fighter stands in the clear', () => {
+    const rival = { x: -3.2, z: -0.5, y: 0.9 };
+    const pts = viewPoints({
+      fighter: { x: 0, z: 0 },
+      viewProj: frame(844 / 390).vp,
+      walkable: () => false,
+      extras: [rival],
+    });
+    const hides = building(-4.5, -2.6, 1.0, 6, 1.6);
+    expect(pickOccludersFor(eye, pts, [hides], null, VIEW_CLEAR, F)).toEqual([0]);
+    expect(
+      pickOccludersFor(
+        eye,
+        pts.filter((p) => p.ring === 0 && VIEW_CLEAR.heights.includes(p.y)),
+        [hides],
+        null,
+      ),
+    ).toEqual([]);
+  });
+
+  it('fades nothing when nothing covers the fighter or the floor around it', () => {
+    const boxes = [
+      building(6, 10, 1, 8), // far to the east
+      building(-2, 2, -9, 9), // wholly behind (north of) the fighter
+      building(-12, -8, 3, 9), // far to the west
+      building(-2, 2, 6.5, 0.4), // a kerb at the camera's feet
+    ];
+    for (const aspect of [844 / 390, 390 / 844, 1280 / 720])
+      expect(pickOccludersFor(eye, points(aspect), boxes, null, VIEW_CLEAR, F), `aspect ${aspect}`).toEqual(
+        [],
+      );
+  });
+
+  it('a low crate only protects the inner rings: far floor behind it does not fade it', () => {
+    const crate = building(2.0, 3.0, 1.5, 1.1, 1); // covers floor at about x 2.4..3.7, z -1.2: ring 2.5 only
+    const asTall = { ...crate, maxY: 3 };
+    const low = pickOccludersFor(eye, points(844 / 390), [crate], null, VIEW_CLEAR, F);
+    const tall = pickOccludersFor(eye, points(844 / 390), [asTall], null, VIEW_CLEAR, F);
+    expect(low).toEqual([]);
+    expect(tall).toEqual([0]);
+  });
+
+  it('hysteresis of the disc: a building that only covers the halo ring never starts fading, but keeps fading', () => {
+    // find a building that covers halo points but no core point
+    const pts = points(844 / 390);
+    const core = pts.filter((p) => !p.halo);
+    const halo = pts.filter((p) => p.halo);
+    let found: Aabb | null = null;
+    for (let x = -6; x <= 6 && !found; x += 0.5)
+      for (let z = -2; z <= 5 && !found; z += 0.5) {
+        const b = building(x, x + 1, z, 6, 1);
+        const coversCore = pickOccludersFor(eye, core, [b], null, VIEW_CLEAR, F).length > 0;
+        const coversHalo = pickOccludersFor(eye, halo, [b], new Set([0]), VIEW_CLEAR, F).length > 0;
+        if (!coversCore && coversHalo) found = b;
+      }
+    expect(found).not.toBeNull();
+    expect(pickOccludersFor(eye, pts, [found!], null, VIEW_CLEAR, F)).toEqual([]);
+    expect(pickOccludersFor(eye, pts, [found!], new Set([0]), VIEW_CLEAR, F)).toEqual([0]);
+  });
+
+  it('returns to clear at once when the fighter steps out from behind (no lingering)', () => {
+    const front = building(-2, 2, 2.5, 6);
+    const at = (x: number): { eye: { x: number; y: number; z: number }; pts: ViewPoint[] } => {
+      // the follow camera moves with the fighter
+      const cam = new PerspectiveCamera(40, 844 / 390, 0.1, 200);
+      cam.position.set(x, 9, 7);
+      cam.lookAt(x, 0.6, 0);
+      cam.updateMatrixWorld(true);
+      const vp = new Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse).elements;
+      return {
+        eye: { x, y: 9, z: 7 },
+        pts: viewPoints({ fighter: { x, z: 0 }, viewProj: vp, walkable: open }),
+      };
+    };
+    expect(pickOccludersFor(at(0).eye, at(0).pts, [front], null)).toEqual([0]);
+    expect(pickOccludersFor(at(9).eye, at(9).pts, [front], new Set([0]))).toEqual([]);
+  });
+
+  it('a lane building one tile over is not picked by the disc either (no flicker walking a lane)', () => {
+    const lane = (x: number, z: number): boolean => Math.abs(x) < 0.5 && z > -9 && z < 9; // a 1-wide lane along z
+    const pts = viewPoints({ fighter: { x: 0, z: 0 }, viewProj: frame(844 / 390).vp, walkable: lane });
+    const next = building(0.5, 4.5, 2, 9);
+    expect(pickOccludersFor(eye, pts, [next], null, VIEW_CLEAR, F)).toEqual([]);
+    expect(pickOccludersFor(eye, pts, [next], new Set([0]), VIEW_CLEAR, F)).toEqual([]);
+  });
+
+  it('an object behind the fighter that only covers floor further back stays solid; in front of it fades', () => {
+    // a hut right behind (north of) the fighter: it hides the floor behind itself, nothing in front of the fighter
+    const hut = building(-1, 1, -2.5, 3, 2.5); // its south face overhangs onto the fighter's own row
+    const pts = points(844 / 390);
+    expect(pickOccludersFor(eye, pts, [hut], null, VIEW_CLEAR, F)).toEqual([]);
+    // without the rule (no fighter given) the disc would dissolve it: this is what the rule prevents
+    expect(pickOccludersFor(eye, pts, [hut], null)).toEqual([0]);
+    // the same hut moved in front of the fighter does fade
+    const front = building(-1, 1, 1.8, 3, 1.6);
+    expect(pickOccludersFor(eye, pts, [front], null, VIEW_CLEAR, F)).toEqual([0]);
+  });
+});
+
+describe('isNearerThan', () => {
+  const cam = { x: 0, z: 7 };
+  it('compares the closest point of the footprint with the fighter, with the slack', () => {
+    const f = { x: 0, z: 0 };
+    expect(isNearerThan(cam, f, building(-1, 1, 2, 3, 1), 0.1)).toBe(true); // in front
+    expect(isNearerThan(cam, f, building(-1, 1, -3, 3, 1.5), 0.1)).toBe(false); // behind
+    expect(isNearerThan(cam, f, building(2, 4, -0.5, 3, 1), 0.1)).toBe(true); // beside, a corner nearer
+    expect(isNearerThan(cam, f, building(-1, 1, -1.2, 1.4, 0.9), 0.1)).toBe(false); // wholly behind the fighter
+    // a group box whose south face overhangs to the fighter's own row is not in front of it (the default margin)
+    const overhang = building(-3, 1, -3.5, 3, 3.5); // z -3.5 .. 0
+    expect(isNearerThan(cam, f, overhang, VIEW_CLEAR.nearerSlack)).toBe(false);
+    expect(isNearerThan(cam, f, building(-3, 1, -3.5, 3, 4.0), VIEW_CLEAR.nearerSlack)).toBe(true); // reaches 0.5 in front
+  });
+});
+
+describe('regionTiles', () => {
+  const W = 30;
+  const tileOf = (x: number, z: number): number => {
+    const tx = Math.round(x + W / 2 - 0.5);
+    const ty = Math.round(z + W / 2 - 0.5);
+    return tx < 0 || ty < 0 || tx >= W || ty >= W ? -1 : ty * W + tx;
+  };
+  it('covers the corridor to the camera, widened by the disc, and the disc itself', () => {
+    const t = regionTiles({ x: 0.5, z: 0.5 }, { x: 0.5, z: 10.5 }, tileOf, 3.3);
+    const f = tileOf(0.5, 0.5);
+    for (const d of [-3, 0, 3]) expect(t.has(f + d)).toBe(true); // beside the fighter
+    expect(t.has(f + 4 * W)).toBe(true);
+    expect(t.has(f + 3 * W + 3)).toBe(true);
+    expect(t.has(f - 5 * W)).toBe(false); // well north of the disc
+  });
+});
+
+describe('dissolve strength', () => {
+  it('an object hiding the fighter dissolves further than a pillar merely standing in front, and keeps an outline', () => {
+    expect(VIEW_HIDE).toBeGreaterThan(MAX_HIDE);
+    expect(VIEW_HIDE).toBeLessThan(1);
+  });
+});
+
+describe('pickOccludersFor prefilter', () => {
+  it('returns exactly what testing every box would (the hull shortcut only skips boxes no line can cross)', () => {
+    const eye = { x: 1, y: 9, z: 7 };
+    const pts = points(844 / 390);
+    let seed = 12345;
+    const rnd = (): number => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+    const boxes: Aabb[] = [];
+    for (let i = 0; i < 200; i++) {
+      const x = rnd() * 30 - 15;
+      const z = rnd() * 24 - 12;
+      boxes.push({
+        minX: x,
+        maxX: x + 1 + rnd() * 3,
+        minZ: z,
+        maxZ: z + 1 + rnd() * 3,
+        minY: 0,
+        maxY: rnd() * 8,
+      });
+    }
+    const active = new Set([3, 40, 77]);
+    const brute = boxes.flatMap((b, i) => (hidesAny(eye, pts, b, active.has(i)) ? [i] : []));
+    expect(pickOccludersFor(eye, pts, boxes, active)).toEqual(brute);
+    expect(brute.length).toBeGreaterThan(0);
+    expect(brute.length).toBeLessThan(boxes.length / 2);
+  });
+});
+
+describe('holdMisses (release debounce)', () => {
+  it('keeps an object for leaveTests - 1 tests without a hit, then lets it go', () => {
+    const misses = new Map<number, number>();
+    const cfg = { ...VIEW_CLEAR, leaveTests: 2 };
+    let faded = new Set([7]);
+    faded = holdMisses(faded, new Set(), misses, cfg); // first miss: still faded
+    expect([...faded]).toEqual([7]);
+    faded = holdMisses(faded, new Set(), misses, cfg); // second miss: released
+    expect([...faded]).toEqual([]);
+    expect(misses.size).toBe(0);
+  });
+
+  it('a hit in between resets the count, so an object blinking at an edge stays faded', () => {
+    const misses = new Map<number, number>();
+    let faded = new Set([3]);
+    const seq = [false, true, false, true, false, true]; // hit / miss / hit ... every other test
+    for (const hit of seq) faded = holdMisses(faded, hit ? new Set([3]) : new Set(), misses);
+    expect([...faded]).toEqual([3]);
+  });
+
+  it('a new hit starts fading at once and an object that was never faded is not invented', () => {
+    const misses = new Map<number, number>();
+    expect([...holdMisses(new Set(), new Set([1, 2]), misses)].sort()).toEqual([1, 2]);
+    expect([...holdMisses(new Set(), new Set(), misses)]).toEqual([]);
+  });
+
+  it('forgets counts of objects that are no longer in play', () => {
+    const misses = new Map<number, number>([[9, 1]]);
+    holdMisses(new Set(), new Set(), misses);
+    expect(misses.size).toBe(0);
   });
 });

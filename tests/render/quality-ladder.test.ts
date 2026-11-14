@@ -20,7 +20,6 @@ const NUMERIC: (keyof QualityProfile)[] = [
   'flameLights',
   'streetLife',
   'ambient',
-  'viewClear',
 ];
 
 describe('quality ladder', () => {
@@ -45,11 +44,23 @@ describe('quality ladder', () => {
       expect(Number(hi.antialias)).toBeGreaterThanOrEqual(Number(lo.antialias));
       // animation updates get rarer (a larger stride) on the way down
       expect(hi.animationStride).toBeLessThanOrEqual(lo.animationStride);
+      // the view-clear test runs at least as often higher up
+      expect(hi.viewClearStride).toBeLessThanOrEqual(lo.viewClearStride);
       // a rung must differ from its neighbour in something, otherwise stepping is pointless
       expect(JSON.stringify({ ...hi, rung: 0, name: '' })).not.toBe(
         JSON.stringify({ ...lo, rung: 0, name: '' }),
       );
     }
+  });
+
+  it('the view-clear fade (scenery that hides the fighter) is on at every rung: only its test rate varies', () => {
+    for (let r = 0; r <= MAX_RUNG; r++) {
+      const stride = profileFor(r).viewClearStride;
+      expect(Number.isInteger(stride), `stride at rung ${r}`).toBe(true);
+      expect(stride, `stride at rung ${r}`).toBeGreaterThanOrEqual(1);
+      expect(stride, `stride at rung ${r}`).toBeLessThanOrEqual(4); // under half a second even at 8 fps
+    }
+    expect(profileFor(MAX_RUNG).viewClearStride).toBe(1);
   });
 
   it('the two lowest tiers draw no shadows and no flame lights', () => {

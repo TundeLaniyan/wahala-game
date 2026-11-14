@@ -13,6 +13,11 @@ import type { Material } from 'three';
 
 /** Max fraction of pixels removed (the rest keeps the obstacle's shape readable). */
 export const MAX_HIDE = 0.72;
+/**
+ * Dissolve of an object that hides the followed fighter or the floor around it (assets/viewClear.ts): clearly more
+ * transparent than the pillar rule, so the fighter reads through it at phone resolution; the rest keeps its outline.
+ */
+export const VIEW_HIDE = 0.88;
 /** Heights (world units) over which the dissolve ramps in: the foot below stays solid. */
 const FOOT = [0.28, 0.7] as const;
 

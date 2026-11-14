@@ -22,15 +22,19 @@ import { contactShadowTexture } from '../textures';
 import { obstacleStyle, pillarIndexFor, resolvePillars } from '../assets/obstacleStyles';
 import { assets } from '../assets/library';
 import type { ObstacleStyle } from '../assets/obstacleStyles';
-import { MAX_HIDE, occludingTiles } from '../assets/occlusionFade';
+import { MAX_HIDE, VIEW_HIDE, occludingTiles } from '../assets/occlusionFade';
 import {
   PILLAR_HEIGHT,
   SOFT_HEIGHT,
   VIEW_CLEAR,
-  corridorTiles,
-  hidesFighter,
-  pickOccluders,
+  hidesAny,
+  holdMisses,
+  pickOccludersFor,
+  regionTiles,
+  viewPoints,
 } from '../assets/viewClear';
+import type { ViewPoint } from '../assets/viewClear';
+import { playerGridPos } from './motion';
 import { arenaFloorMaps } from '../arenas/floors';
 import { installPaving } from '../arenas/paving/material';
 import type { BoardCover } from '../arenas/boardCover';
@@ -43,8 +47,6 @@ const DROP_TIME = 0.28;
 const HIDE_TAU = 0.12;
 /** Seconds to become solid again once nothing stands in front (the view must not stay dotted after the fighter steps clear). */
 const HIDE_RELEASE_TAU = 0.05;
-/** The view-clear test runs every Nth frame (it only moves when the fighter or the camera does). */
-const VIEW_CLEAR_EVERY = 3;
 
 /** Slight deterministic yaw of the breakable on a tile (radians); the supply marks follow it. */
 export const softTilt = (x: number, y: number): number => ((x * 31 + y * 17) % 5) * 0.03 - 0.06;
@@ -106,13 +108,18 @@ export class ArenaView implements View {
   private readonly contact: InstanceSet;
   /** Permanent cover drawn as whole objects (an arena's `ArenaArt.cover`), or null: pillars per tile. */
   private readonly cover: BoardCover | null;
-  /** Live quality knob (`QualityProfile.viewClear`): fade scenery between the camera and the followed fighter. */
-  private viewClear = true;
+  /** Live quality knob (`QualityProfile.viewClearStride`): the view-clear test runs every Nth frame (never off). */
+  private viewStride = 1;
+  private readonly viewProj = new Matrix4();
+  /** What the last view-clear test looked at (debug / e2e: `viewClearStatus`). */
+  private lastPoints = 0;
   /** Tiles the camera-to-fighter test wants faded (cover groups by their representative tile), kept between runs. */
   private readonly rayWant = new Set<number>();
   /** Cover groups (indices of `cover.bounds`) fading from the last test: they use the wider exit pad. */
   private rayBoxes = new Set<number>();
   private rayFrame = 0;
+  /** Tests in a row each faded tile has missed (debounce of the release, `holdMisses`). */
+  private readonly rayMiss = new Map<number, number>();
   private readonly ownedMaterials: Material[] = [];
   private readonly ownedTextures: Texture[] = [];
 
@@ -293,7 +300,8 @@ export class ArenaView implements View {
     const kOut = 1 - Math.exp(-Math.max(0, dt) / HIDE_RELEASE_TAU);
     for (const i of want) if (!this.hideOf.has(i)) this.hideOf.set(i, 0);
     for (const [i, cur] of this.hideOf) {
-      const target = want.has(i) ? MAX_HIDE : 0;
+      // what hides the fighter or the floor around it dissolves further than a pillar that merely stands in front
+      const target = this.rayWant.has(i) ? VIEW_HIDE : want.has(i) ? MAX_HIDE : 0;
       const k = target > cur ? kIn : kOut;
       const next = Math.abs(target - cur) < 0.01 ? target : cur + (target - cur) * k;
       const x = i % state.width;
@@ -308,23 +316,42 @@ export class ArenaView implements View {
     cover?.commit();
   }
 
-  /** Switches the camera-to-fighter fade on or off (quality; live). */
-  setViewClear(on: boolean): void {
-    this.viewClear = on;
-    if (!on) {
-      this.rayWant.clear();
-      this.rayBoxes = new Set();
-    }
+  /** Quality: the view-clear test runs every `stride` frames (1 = every frame). It is never switched off. */
+  setViewClearStride(stride: number): void {
+    this.viewStride = Math.max(1, Math.round(stride));
+  }
+
+  /** Debug / e2e: what the view-clear fade is doing now. */
+  viewClearStatus(): {
+    stride: number;
+    groups: number;
+    tiles: number;
+    points: number;
+    fading: number;
+    wanted: number[];
+  } {
+    let fading = 0;
+    for (const v of this.hideOf.values()) if (v > 0.3) fading++;
+    return {
+      stride: this.viewStride,
+      groups: this.rayBoxes.size,
+      tiles: this.rayWant.size,
+      points: this.lastPoints,
+      fading,
+      wanted: [...this.rayWant],
+    };
   }
 
   /**
-   * Refreshes `rayWant`: the cover groups and per-tile obstacles that stand on the line from the camera to the
-   * followed fighter (assets/viewClear.ts). Throttled; nothing is returned while the line is clear.
+   * Refreshes `rayWant`: the cover groups and per-tile obstacles that stand between the camera and anything that
+   * must stay readable around the followed fighter - the fighter, the floor disc around it, rivals and generators
+   * close by (assets/viewClear.ts, decided from the real camera matrices). Throttled by quality; nothing is
+   * returned while the picture is in the clear.
    */
   private viewClearTiles(ctx: FrameContext): void {
     const cam = ctx.camera;
-    if (!this.viewClear || !cam) return;
-    if (this.rayFrame++ % VIEW_CLEAR_EVERY !== 0) return;
+    if (!cam) return;
+    if (this.rayFrame++ % this.viewStride !== 0) return;
     const { state, layout, info } = ctx;
     const id = state.players.some((p) => p.id === info.localPlayerId && p.alive)
       ? info.localPlayerId
@@ -334,25 +361,59 @@ export class ArenaView implements View {
     this.rayWant.clear();
     if (!me) {
       this.rayBoxes = new Set();
+      this.rayMiss.clear();
+      this.lastPoints = 0;
       return;
     }
-    const at = { x: layout.wx(me.x), z: layout.wz(me.y) };
-    const eye = cam.position;
-    if (this.cover) {
-      const bounds = this.cover.bounds;
-      this.rayBoxes = new Set(pickOccluders(eye, at, bounds, this.rayBoxes));
-      for (const b of this.rayBoxes) this.rayWant.add(bounds[b]!.tile);
-    }
-    // pillars and breakables the board cover does not draw: only the tiles near the line are tested
     const w = state.width;
     const tileOf = (x: number, z: number): number => {
       const tx = Math.round(x + w / 2 - 0.5);
       const ty = Math.round(z + state.height / 2 - 0.5);
       return tx < 0 || ty < 0 || tx >= w || ty >= state.height ? -1 : ty * w + tx;
     };
-    const near = corridorTiles(at, eye, tileOf);
+    const grid = playerGridPos(me, ctx.alpha);
+    const at = { x: layout.wx(grid.x), z: layout.wz(grid.y) };
+    const eye = cam.position;
+    this.viewProj.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    const extras: { x: number; z: number; y: number }[] = [];
+    const near = VIEW_CLEAR.extraNear;
+    for (const q of state.players)
+      if (q.alive && q !== me && Math.abs(q.x - grid.x) <= near && Math.abs(q.y - grid.y) <= near) {
+        const g = playerGridPos(q, ctx.alpha);
+        extras.push({ x: layout.wx(g.x), z: layout.wz(g.y), y: 0.9 });
+      }
+    for (const g of state.generators)
+      if (
+        g.mode !== 'disabled' &&
+        g.carriedBy === null &&
+        Math.abs(g.x - grid.x) <= near &&
+        Math.abs(g.y - grid.y) <= near
+      )
+        extras.push({ x: layout.wx(g.x), z: layout.wz(g.y), y: 0.5 });
+    const points: ViewPoint[] = viewPoints({
+      fighter: at,
+      viewProj: this.viewProj.elements,
+      walkable: (x, z) => {
+        const t = tileOf(x, z);
+        if (t < 0) return false;
+        const kind = this.cache[t];
+        return kind !== Tile.Hard && kind !== Tile.Soft;
+      },
+      extras,
+    });
+    this.lastPoints = points.length;
+    const freshBoxes = new Set<number>();
+    const fresh = new Set<number>();
+    if (this.cover) {
+      const bounds = this.cover.bounds;
+      for (const b of pickOccludersFor(eye, points, bounds, this.rayBoxes, VIEW_CLEAR, at)) {
+        freshBoxes.add(b);
+        fresh.add(bounds[b]!.tile);
+      }
+    }
+    // pillars and breakables the board cover does not draw: only the tiles around the view corridor are tested
     const half = 0.5;
-    for (const t of near) {
+    for (const t of regionTiles(at, eye, tileOf, VIEW_CLEAR.haloRadius)) {
       const kind = this.cache[t];
       const solid = kind === Tile.Hard ? !this.coveredAt(t) : kind === Tile.Soft;
       if (!solid) continue;
@@ -360,8 +421,18 @@ export class ArenaView implements View {
       const cz = layout.wz(Math.floor(t / w));
       const top = kind === Tile.Hard ? PILLAR_HEIGHT : SOFT_HEIGHT;
       const box = { minX: cx - half, maxX: cx + half, minZ: cz - half, maxZ: cz + half, minY: 0, maxY: top };
-      const pad = prev.has(t) ? VIEW_CLEAR.exitPad : VIEW_CLEAR.enterPad; // hysteresis
-      if (hidesFighter(eye, at, box, pad)) this.rayWant.add(t);
+      if (hidesAny(eye, points, box, prev.has(t), VIEW_CLEAR, at)) fresh.add(t); // hysteresis: prev.has(t)
+    }
+    // an object leaves only after missing a couple of tests in a row (no blinking along an edge)
+    for (const t of holdMisses(prev, fresh, this.rayMiss)) this.rayWant.add(t);
+    if (this.cover) {
+      const bounds = this.cover.bounds;
+      this.rayBoxes = new Set(freshBoxes);
+      // a held cover group keeps its wider margin (its box index is looked up by its tile)
+      if (this.rayWant.size > fresh.size)
+        bounds.forEach((b, i) => {
+          if (this.rayWant.has(b.tile) && !fresh.has(b.tile)) this.rayBoxes.add(i);
+        });
     }
   }
 

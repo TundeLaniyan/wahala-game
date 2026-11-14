@@ -27,10 +27,10 @@ export interface BoardCover {
   readonly maxReach: number;
   /**
    * World-space bounds of every fade group, with one tile the group claims (`setHide(tile, ...)` on it fades the
-   * whole group). The camera-to-fighter view-clear test (`assets/viewClear.ts`) works on these.
+   * whole group). The screen-space view-clear test (`assets/viewClear.ts`) works on these.
    */
   readonly bounds: readonly (Aabb & { tile: number })[];
-  /** Fade of a covered tile this frame (0 .. MAX_HIDE); its whole group fades with its most hidden tile. */
+  /** Fade of a covered tile this frame (0 .. VIEW_HIDE); its whole group fades with its most hidden tile. */
   setHide(tile: number, value: number): void;
   /** Uploads the fades set since the last commit (once per frame, after every `setHide`). */
   commit(): void;

@@ -719,6 +719,8 @@ function exposeDebugHandle(): void {
     feedFrames: (frameMs: number, count: number, opts?: { busy?: boolean }) =>
       renderer?.debugFeedFrames(frameMs, count, opts) ?? [],
     renderer: () => renderer,
+    /** The view-clear fade (scenery between the camera and the followed fighter): stride and what fades now. */
+    viewClear: () => renderer?.viewClearStatus() ?? null,
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
     music: () => (audio as { musicStatus?: () => unknown }).musicStatus?.() ?? null,
     /** Match loading: the screen's state now and how many starts actually ran (duplicate taps start nothing). */
