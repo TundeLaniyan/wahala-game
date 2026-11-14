@@ -9,6 +9,7 @@
  * ids; recorded slots with the same ids override them transparently.
  */
 import type { GameState, SimEvent, TilePos } from '../sim';
+import { feelPresetFor } from '../sim';
 import type { Ambience } from './ambience';
 import type { Buses } from './buses';
 import type { Mixer } from './mixer';
@@ -267,9 +268,9 @@ const handlers: Handlers = {
     if (allow(c, 'attackStart', 0.05)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.35, 1.5);
   },
   attackResolved: (e, c) => {
-    const lab = c.state.config.combatLab;
+    const lab = c.state.config.combatPilot ? null : feelPresetFor(c.state, c.state.players[e.playerId]);
     if (lab) {
-      // the combat test lab (decision CL-L9): a hit is a thud that grows with the level, a miss a quiet low swish
+      // the combat test lab, Classic Battle and a human's punch in a raid or mission (decisions CL-L9, CC-F1): a hit is a thud that grows with the level, a miss a quiet low swish
       if (e.hit && e.targetId !== null) {
         const cue = labHitCue(lab);
         if (allow(c, 'labHit', 0.04))

@@ -165,9 +165,16 @@ export { enemyGroupDirective, findChokepoint, standoffSlots, surroundSlots } fro
 export { ENEMY_ATTACK_SETS, THROWN_KINDS, thrownKindFor } from './data/enemyAttacks';
 export type { EnemyAttackSet } from './data/enemyAttacks';
 // the City Rumble combat test lab (temporary playtest tool, docs/COMBAT_TEST_LAB.md)
-export { COMBAT_LAB_PRESETS } from './config';
+export { CLASSIC_COMBAT_PRESET, COMBAT_LAB_PRESETS } from './config';
 export type { CombatLabLevel, CombatLabPreset } from './config';
-export { combatLabAllowed, labAttackSpec, labReach, setCombatLabLevel } from './systems/combatLab';
+export {
+  applyClassicCombat,
+  combatLabAllowed,
+  feelPresetFor,
+  labAttackSpec,
+  labReach,
+  setCombatLabLevel,
+} from './systems/combatLab';
 export type { CombatLabStats } from './types';
 // the Sudden Death test match (temporary playtest tool, decisions SD-T)
 export {

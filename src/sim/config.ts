@@ -356,6 +356,20 @@ export const COMBAT_LAB_PRESETS: Readonly<Record<CombatLabLevel, CombatLabPreset
   },
 };
 
+/**
+ * The CLASSIC BATTLE close-combat feel (decision CC-F1): Level 2 "Balanced" of the lab (its timings, aim help, kept press,
+ * visible swing and miss, hit confirmation), derived from `COMBAT_LAB_PRESETS[2]` so the two cannot drift, with ONE
+ * exception: no forward-corner reach. Classic is a strict cardinal grid, so a punch reaches the four neighbours only.
+ * Applied to local Classic Battle matches by `applyClassicCombat` (systems/combatLab.ts); never user-switchable.
+ */
+export const CLASSIC_COMBAT_PRESET: Readonly<CombatLabPreset> = {
+  ...COMBAT_LAB_PRESETS[2],
+  name: 'Classic',
+  summary:
+    'Quicker attacks on the four sides, turns to the rival it can hit, presses kept, hits and misses shown.',
+  forwardDiagonals: false,
+};
+
 export interface GameConfig {
   /** Campaign health and damage; absent in normal matches (see `CampaignConfig`). */
   campaign?: CampaignConfig;

@@ -120,3 +120,21 @@ test('combat lab: never offered in a Classic match', async ({ page, isMobile }) 
   await expect(page.getByTestId('pause-overlay')).toBeVisible();
   await expect(page.getByTestId('combat-lab')).toHaveCount(0);
 });
+
+test('classic battle: the open-field close-combat feel is on (decision CC-F1), with no lab chip or switch', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await open(page, '&noattract');
+  await startMatch(page);
+  await stepTicks(page, 10);
+  const l = await lab(page);
+  expect(l.pushStartup).toBe(3); // Level 2's Punch (Off is 4)
+  const reach = await page.evaluate(
+    () => (window as any).__WAHALA__.getState().config.combatLab.forwardDiagonals as boolean,
+  );
+  expect(reach).toBe(false); // cardinal neighbours only
+  await expect(page.getByTestId('combat-lab-chip')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

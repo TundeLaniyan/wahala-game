@@ -21,7 +21,8 @@ import {
   RingGeometry,
 } from 'three';
 import type { Dir, GameState, Player, SimEvent } from '../../sim';
-import { DIR_VEC, combatLabAllowed } from '../../sim';
+import { DIR_VEC, combatLabAllowed, feelPresetFor } from '../../sim';
+import type { CombatLabPreset } from '../../sim';
 import type { Effects } from '../fx/Effects';
 import type { Layout } from '../coords';
 import { impactLook, swingLook, whiffLook } from '../combatLabLook';
@@ -64,7 +65,11 @@ function material(color: number): MeshBasicMaterial {
  * the pause menu at any time: its swing arcs and impacts are drawn here too; docs/COMBAT_TEST_LAB.md).
  */
 export const hasCombatPilot = (state: GameState): boolean =>
-  state.config.combatPilot !== undefined || combatLabAllowed(state);
+  state.config.combatPilot !== undefined ||
+  combatLabAllowed(state) ||
+  state.combatLab?.classic === true || // local Classic Battle (decision CC-F1)
+  state.raid !== undefined || // raids and field missions: the human's hit / miss confirmation (presentation only)
+  state.mission !== undefined;
 
 export class CombatPilotViews implements View {
   readonly group = new Group();
@@ -86,6 +91,22 @@ export class CombatPilotViews implements View {
     for (const e of events) {
       if (e.type === 'attackStarted') {
         const p = state.players[e.playerId];
+        if (p && p.enemyKind === undefined && !state.config.combatLab && !state.config.combatPilot) {
+          // a human's punch in a raid or field mission (no lab rules there, so no `punchSwing`): the same fan at the press
+          const look = feelPresetFor(state, p);
+          if (look) {
+            const d = DIR_VEC[p.facing];
+            if (e.targetId >= 0) this.aimed.add(p.id);
+            fx.swing(
+              layout.wx(p.x),
+              layout.wz(p.y),
+              d.dx,
+              d.dy,
+              e.targetId >= 0 ? swingLook(look) : whiffLook(look),
+            );
+          }
+          continue;
+        }
         if (!p || p.enemyKind === undefined) continue;
         this.windStart.set(p.id, state.tick);
         // the enemy's swing is stretched over its wind-up: the blow lands when the sim resolves it
@@ -106,20 +127,20 @@ export class CombatPilotViews implements View {
         const x = layout.wx(p.x + v.dx * 0.6);
         const z = layout.wz(p.y + v.dy * 0.6);
         fx.shockwave(x, z, 0.55, 0xffffff);
-      } else if (e.type === 'attackResolved' && state.config.combatLab && e.hit) {
+      } else if (e.type === 'attackResolved' && this.feel(state, e.playerId) && e.hit) {
         // the lab's confirmation of a hit: the level's coloured ring, a flash, dust, a flinch and a bounded jolt
         this.aimed.delete(e.playerId);
         const t = e.targetId === null ? undefined : state.players[e.targetId];
         if (!t) continue;
         const x = layout.wx(t.x);
         const z = layout.wz(t.y);
-        const look = impactLook(state.config.combatLab);
+        const look = impactLook(this.feel(state, e.playerId)!);
         fx.shockwave(x, z, look.ringSize, look.color);
         fx.flash(x, 0.9, z, look.flashSize, look.color === 0xffffff ? 0xfff2b0 : look.color, look.flashLife);
         fx.dust(t.x, t.y, look.dust, 0.4);
         this.players?.playOver(t.id, 'Stumble', look.flinchSeconds);
         if (e.playerId === localId || t.id === localId) fx.shake = Math.min(1, fx.shake + look.shake);
-      } else if (e.type === 'attackResolved' && state.config.combatLab) {
+      } else if (e.type === 'attackResolved' && this.feel(state, e.playerId)) {
         // an AIMED punch that found nobody (the rival stepped away): the grey miss puff where the fist ended
         const aimed = this.aimed.delete(e.playerId);
         const p = state.players[e.playerId];
@@ -129,6 +150,11 @@ export class CombatPilotViews implements View {
         fx.floatText(e.x, e.y, REFUSED_TEXT[e.reason], '#ff8a7a');
       }
     }
+  }
+
+  /** The look of a seat's close attacks: the lab / Classic preset, or the same look for a human in a raid or mission. */
+  private feel(state: GameState, attackerId: number): CombatLabPreset | null {
+    return state.config.combatPilot ? null : feelPresetFor(state, state.players[attackerId]);
   }
 
   update(ctx: FrameContext): void {
