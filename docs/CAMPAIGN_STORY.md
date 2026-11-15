@@ -1,5 +1,11 @@
 # WAHALA! campaign story, bosses and content (branch `claude/wahala-campaign-online-v1`)
 
+> **SUPERSEDED FOR NARRATIVE (2026-11-15).** The authoritative story reference is now `docs/STORY_BIBLE.md` (BREAK THE
+> RING). This file is kept unchanged below as the record of the shipped content: sections 1–3 (premise, broker,
+> districts) describe what the code currently says and are superseded where the Bible differs (Bible section 12.2);
+> section 4 (rewards, unlocks, flags) and section 6 (art/audio needs) remain accurate code references; section 5 (the
+> ethics checklist) remains in force.
+
 Owner: the `campaign-content` worker. Code: `src/campaign/content/**` (data), `src/campaign/progress.ts` + `save.ts` (pure logic), exported through `src/campaign/index.ts`. Tests: `tests/campaign-content.test.ts`, `tests/campaign-progress.test.ts`. Contracts: `src/campaign/types.ts` (optional fields only were added: `BossDef.nickname`, `defeatSequenceOusted`, `consequenceFlags`, `CampaignContent.broker`).
 
 ## 1. Premise

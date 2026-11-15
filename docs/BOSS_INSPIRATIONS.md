@@ -1,5 +1,8 @@
 # District bosses: inspirations, current roster and comparison
 
+> **Not canon (2026-11-15).** The story reference is `docs/STORY_BIBLE.md`. Its section 12.3 flags this file's
+> real-person references and the nicknames derived from them for founder legal/cultural review.
+
 Branch `claude/wahala-lagos-enhancement-v1`. Internal design document: real names appear **only here**, never in game content, code, art or audio (`tests/campaign-content.test.ts` and `tests/campaign-bosses-presentation.test.ts` deny them). Research was done by web search on 2026-11-06; **full pages could not be opened for several outlets, so every real-world statement below comes from search-result summaries and must be re-checked before it is relied on.** Nothing here repeats any allegation; only public roles and a neutral risk flag are recorded.
 
 ## 0. Founder clarifications (2026-11-06, after review of `a583e0b`)
