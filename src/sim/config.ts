@@ -959,12 +959,12 @@ export const OSHODI_PILOT_LEVELS: Readonly<Record<'easy' | 'hard', PilotLayer>> 
 export const TACTICAL_TRAP_PILOT: TacticalTrapConfig = {
   id: 'academy.tactics/trap-pilot-1',
   perception: {
-    agbero: { visionTiles: 6, reactTicks: 40, memoryTicks: 150, hearingTiles: 4 },
-    guard: { visionTiles: 7, reactTicks: 36, memoryTicks: 150, hearingTiles: 5 },
-    thrower: { visionTiles: 8, reactTicks: 36, memoryTicks: 150, hearingTiles: 5 },
-    heavy: { visionTiles: 6, reactTicks: 48, memoryTicks: 150, hearingTiles: 4 },
-    lieutenant: { visionTiles: 9, reactTicks: 20, memoryTicks: 240, hearingTiles: 7 },
-    boss: { visionTiles: 10, reactTicks: 12, memoryTicks: 240, hearingTiles: 8 },
+    agbero: { visionTiles: 6, reactTicks: 30, memoryTicks: 150, hearingTiles: 4 },
+    guard: { visionTiles: 7, reactTicks: 26, memoryTicks: 150, hearingTiles: 5 },
+    thrower: { visionTiles: 8, reactTicks: 26, memoryTicks: 150, hearingTiles: 5 },
+    heavy: { visionTiles: 6, reactTicks: 36, memoryTicks: 150, hearingTiles: 4 },
+    lieutenant: { visionTiles: 9, reactTicks: 16, memoryTicks: 240, hearingTiles: 7 },
+    boss: { visionTiles: 10, reactTicks: 10, memoryTicks: 240, hearingTiles: 8 },
   },
   memoryHoldFuseTicks: 120,
   caution: { ticks: 36, reactScale: 0.5, investigate: true },

@@ -44,6 +44,9 @@ export function alwaysKnown(g: Readonly<Generator>, selfId: number): boolean {
   );
 }
 
+/** Work counters (tests bound the cost: a decision does at most one sight check per generator and one body scan). */
+export const trapSightStats = { updates: 0, sightChecks: 0, bodyScans: 0 };
+
 export class TrapSight {
   private readonly memory = new Map<number, Memory>();
   private readonly heard = new Set<number>();
@@ -83,6 +86,7 @@ export class TrapSight {
   update(obs: Observation, me: Readonly<Player>, cfg: TacticalTrapConfig): void {
     const per = cfg.perception[me.enemyKind!];
     const T = obs.tick;
+    trapSightStats.updates++;
     this.freshlyKnown = false;
     this.soundDir = null;
     this.known.clear();
@@ -105,8 +109,12 @@ export class TrapSight {
         this.known.add(g.id);
         continue;
       }
-      bodies ??= bodyTiles(obs, me.id);
+      if (bodies === null) {
+        bodies = bodyTiles(obs, me.id);
+        trapSightStats.bodyScans++;
+      }
       let m = this.memory.get(g.id);
+      trapSightStats.sightChecks++;
       if (canSeeTile(obs, me.x, me.y, g.x, g.y, per.visionTiles, bodies)) {
         m = { x: g.x, y: g.y, firstSeen: m?.firstSeen ?? T, lastSeen: T };
         this.memory.set(g.id, m);
