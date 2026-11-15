@@ -292,6 +292,11 @@ export interface TacticalTrapConfig {
    * further, so only a generator blast (or another lethal source) finishes it. Share 0 = down to 1 segment.
    */
   punchFloorShare: Record<EnemyKind, number>;
+  /**
+   * An enemy never steps onto the human's own tile (as in the Oshodi combat pilot, CP9): one standing on a generator the
+   * human has just laid under his feet would see it from the very tile.
+   */
+  enemiesKeepOffHuman: boolean;
   /** The readable attack states (`enemyAttackPhase`). */
   attack: {
     /** The 'attack' phase lasts this many ticks from the moment a punch resolves or a projectile leaves. */
@@ -954,17 +959,18 @@ export const OSHODI_PILOT_LEVELS: Readonly<Record<'easy' | 'hard', PilotLayer>> 
 export const TACTICAL_TRAP_PILOT: TacticalTrapConfig = {
   id: 'academy.tactics/trap-pilot-1',
   perception: {
-    agbero: { visionTiles: 6, reactTicks: 24, memoryTicks: 150, hearingTiles: 4 },
-    guard: { visionTiles: 7, reactTicks: 20, memoryTicks: 150, hearingTiles: 5 },
-    thrower: { visionTiles: 8, reactTicks: 20, memoryTicks: 150, hearingTiles: 5 },
-    heavy: { visionTiles: 6, reactTicks: 30, memoryTicks: 150, hearingTiles: 4 },
-    lieutenant: { visionTiles: 9, reactTicks: 12, memoryTicks: 240, hearingTiles: 7 },
-    boss: { visionTiles: 10, reactTicks: 8, memoryTicks: 240, hearingTiles: 8 },
+    agbero: { visionTiles: 6, reactTicks: 40, memoryTicks: 150, hearingTiles: 4 },
+    guard: { visionTiles: 7, reactTicks: 36, memoryTicks: 150, hearingTiles: 5 },
+    thrower: { visionTiles: 8, reactTicks: 36, memoryTicks: 150, hearingTiles: 5 },
+    heavy: { visionTiles: 6, reactTicks: 48, memoryTicks: 150, hearingTiles: 4 },
+    lieutenant: { visionTiles: 9, reactTicks: 20, memoryTicks: 240, hearingTiles: 7 },
+    boss: { visionTiles: 10, reactTicks: 12, memoryTicks: 240, hearingTiles: 8 },
   },
   memoryHoldFuseTicks: 120,
   caution: { ticks: 36, reactScale: 0.5, investigate: true },
   slow: { levels: [0.25, 0.4], durationTicks: 90, maxTotalTicks: 150, resistTicks: 120 },
   punchFloorShare: { agbero: 0, guard: 0, thrower: 0, heavy: 0, lieutenant: 0.5, boss: 0.5 },
+  enemiesKeepOffHuman: true,
   attack: { activeTicks: 6, responseGapTicks: 36 },
 };
 

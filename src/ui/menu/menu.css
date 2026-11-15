@@ -1212,6 +1212,13 @@ kbd {
 .mn-arena-group + .mn-arena-group {
   margin-top: 14px;
 }
+/* the Generator Tactics pilot group of the Academy: a plain "pilot" tag, nothing louder */
+.mn-pilot-tag {
+  color: #c9cdd8;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
 
 .mn-pic-fallback {
   font-family: var(--mn-display);

@@ -11,8 +11,8 @@
  *      as needed,
  *   7. the next lesson opens only when this one is completed or explicitly skipped.
  *
- * It is isolated from competitive play: it never changes the saved settings, never creates bots and never
- * produces a match result. Progress (completed / skipped lessons) is kept on this device only.
+ * It is isolated from competitive play: it never changes the saved settings, never creates bots except the campaign
+ * ENEMY seats of the Generator Tactics lessons (the real enemy bot, `Actor.enemyKind`) and never produces a match result. Progress (completed / skipped lessons) is kept on this device only.
  */
 import {
   LESSONS,
@@ -27,8 +27,8 @@ import {
   settled,
 } from '../tutorial';
 import type { AcademyProgress, CueTrigger, KeyValueStore, Lesson, PracticeSignal } from '../tutorial';
-import type { CharacterId, GameState, Intents, SimEvent } from '../sim';
-import type { MatchController, ScenarioDirector } from './MatchController';
+import type { CharacterId, Difficulty, GameState, Intents, SimEvent } from '../sim';
+import type { MatchController, ScenarioBot, ScenarioDirector } from './MatchController';
 import { patch, useGameStore } from './store';
 import type { TutorialView } from './store';
 
@@ -37,6 +37,8 @@ const LOCAL_ID = 0;
 const SETTLE_TICKS = 120;
 /** After a failed attempt, the explanation stays this long before the retry. */
 const RESTART_TICKS = 110;
+/** The enemy bot level of a Generator Tactics lesson unless its practice says otherwise (the campaign Normal baseline). */
+const ENEMY_LEVEL: Difficulty = 'casual';
 /** A praise / status notice stays up this long. */
 const NOTICE_TICKS = 150;
 
@@ -49,6 +51,13 @@ export interface TutorialHooks {
   storage?(): KeyValueStore | null;
   /** Plays an approved voice clip for this trigger (only when the narration setting is on). */
   cue?(trigger: CueTrigger): void;
+}
+
+/** The campaign enemy seats of a lesson state: each is played by the real enemy bot (none in the older lessons). */
+function enemySeats(state: GameState, difficulty: Difficulty): ScenarioBot[] {
+  return state.players
+    .filter((p) => p.id !== LOCAL_ID && p.enemyKind !== undefined)
+    .map((p) => ({ id: p.id, difficulty }));
 }
 
 export class TutorialController {
@@ -131,7 +140,7 @@ export class TutorialController {
         }
       },
     };
-    this.match.startScenario(state, director);
+    this.match.startScenario(state, director, enemySeats(state, ENEMY_LEVEL));
     this.publish();
   }
 
@@ -258,7 +267,7 @@ export class TutorialController {
     };
     this.restartIn = null;
     this.restartDue = false;
-    this.match.startScenario(state, director);
+    this.match.startScenario(state, director, enemySeats(state, def.enemyLevel ?? ENEMY_LEVEL));
   }
 
   private practiceTick(state: GameState, events: readonly SimEvent[], intents: Intents): void {

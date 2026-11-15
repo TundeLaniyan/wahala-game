@@ -106,7 +106,10 @@ describe('Academy practices', () => {
   it('every lesson has a practice with at least one task, and a solution test here', () => {
     for (const l of LESSONS) {
       expect(l.practice.tasks.length, l.id).toBeGreaterThan(0);
-      expect(SOLUTIONS[l.id] !== undefined || l.id === 'deathmatch', l.id).toBe(true);
+      // (the Generator Tactics lessons are played by reactive policies in tactics.test.ts)
+      expect(SOLUTIONS[l.id] !== undefined || l.id === 'deathmatch' || l.course === 'tactics', l.id).toBe(
+        true,
+      );
     }
   });
 

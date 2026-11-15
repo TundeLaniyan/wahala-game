@@ -3,6 +3,7 @@ import { CROSS, ESCAPE, MOVE, PLACE, SAFETY } from './lessons/beginner';
 import { MELEE, VEHICLE } from './lessons/combat';
 import { CRUSH, DEATHMATCH, SURVIVAL, TEAM } from './lessons/modes';
 import { MULTIPLE, PROTECTION, RANGE, SQUARE } from './lessons/power';
+import { TACTICS_LESSONS } from './lessons/tactics';
 import { DISARM, KICK, PASS, PUNCH, REMOTE } from './lessons/tricks';
 import type { Course, Lesson } from './types';
 
@@ -12,6 +13,11 @@ export const COURSES: readonly Course[] = [
   { id: 'tricks', title: 'Generator tricks', blurb: 'Kick, punch, disarm, walk through, remote.' },
   { id: 'combat', title: 'Button B', blurb: 'Hit a rival, call in your vehicle.' },
   { id: 'modes', title: 'Match rules', blurb: 'Wahala Crush and the three City Rumble modes.' },
+  {
+    id: 'tactics',
+    title: 'Generator Tactics',
+    blurb: 'Pilot: bait a punch, hide a generator, box an enemy in. Generators are the way to beat enemies.',
+  },
 ];
 
 export const LESSONS: readonly Lesson[] = [
@@ -35,6 +41,7 @@ export const LESSONS: readonly Lesson[] = [
   SURVIVAL,
   DEATHMATCH,
   TEAM,
+  ...TACTICS_LESSONS,
 ];
 
 export const lessonIndex = (id: string): number => LESSONS.findIndex((l) => l.id === id);

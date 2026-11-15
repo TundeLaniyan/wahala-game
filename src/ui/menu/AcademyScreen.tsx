@@ -43,8 +43,14 @@ export function AcademyScreen() {
   const nextLesson = LESSONS[next]!;
   const pct = Math.round((done / LESSONS.length) * 100);
   const groups = [
-    { title: 'Beginner', courses: COURSES.filter((c) => c.id === 'beginner') },
-    { title: 'Advanced', courses: COURSES.filter((c) => c.id !== 'beginner') },
+    { title: 'Beginner', pilot: false, courses: COURSES.filter((c) => c.id === 'beginner') },
+    // the Generator Tactics pilot (docs/TACTICAL_TRAP_PILOT.md): its own group, easy to find, labelled as a pilot
+    { title: 'Generator Tactics', pilot: true, courses: COURSES.filter((c) => c.id === 'tactics') },
+    {
+      title: 'Advanced',
+      pilot: false,
+      courses: COURSES.filter((c) => c.id !== 'beginner' && c.id !== 'tactics'),
+    },
   ];
   return (
     <ScreenFrame
@@ -87,8 +93,15 @@ export function AcademyScreen() {
           </div>
         </div>
         {groups.map((g) => (
-          <section key={g.title} className="mn-academy-group">
-            <h4>{g.title}</h4>
+          <section
+            key={g.title}
+            className="mn-academy-group"
+            data-testid={g.pilot ? 'academy-group-tactics' : undefined}
+          >
+            <h4>
+              {g.title}
+              {g.pilot && <em className="mn-pilot-tag"> · pilot</em>}
+            </h4>
             <div className="mn-courses">
               {g.courses.map((c) => (
                 <div key={c.id} className="mn-course" data-testid={`course-${c.id}`}>

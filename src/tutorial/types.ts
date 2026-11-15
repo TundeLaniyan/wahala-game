@@ -7,6 +7,7 @@
  */
 import type {
   CharacterId,
+  Difficulty,
   Dir,
   GameState,
   Intents,
@@ -145,13 +146,18 @@ export interface PracticeDef {
   /** Scripted (harmless) opponents: acts per actor id, started with the practice. */
   opponents?: Record<number, Act[]>;
   /**
+   * Campaign enemy seats of this practice (`Actor.enemyKind`) are played by the real enemy bot of this level (default
+   * 'casual', the campaign Normal baseline). Scripted `opponents` and bot seats can be mixed.
+   */
+  enemyLevel?: Difficulty;
+  /**
    * What being caught means: 'retry' (default) restarts from the latest checkpoint; 'respawn' lets the
    * respawn rules of the scenario bring the player back (Deathmatch / Team lessons).
    */
   onCaught?: 'retry' | 'respawn';
 }
 
-export type CourseId = 'beginner' | 'power' | 'tricks' | 'combat' | 'modes';
+export type CourseId = 'beginner' | 'power' | 'tricks' | 'combat' | 'modes' | 'tactics';
 
 export interface Course {
   id: CourseId;

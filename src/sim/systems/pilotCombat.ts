@@ -280,11 +280,17 @@ export function pilotPending(state: GameState, id: number): boolean {
 
 // ------------------------------------------------------------------ enemy spacing
 
-/** In a pilot match an enemy never steps onto the tile of the campaign human (CP9). */
+/**
+ * In a pilot match an enemy never steps onto the tile of the campaign human (CP9; the Tactical Trap pilot sets the same
+ * rule through `tacticalTrap.enemiesKeepOffHuman`).
+ */
 export function pilotBlocksStep(state: GameState, p: Readonly<Player>, x: number, y: number): boolean {
-  const pilot = state.config.combatPilot;
-  if (!pilot?.enemiesKeepOffHuman || p.enemyKind === undefined) return false;
-  return state.players.some((o) => o.alive && o.x === x && o.y === y && isPilotHuman(state, o));
+  if (p.enemyKind === undefined) return false;
+  const keepOff = state.config.combatPilot?.enemiesKeepOffHuman || state.config.tacticalTrap?.enemiesKeepOffHuman;
+  if (!keepOff) return false;
+  return state.players.some(
+    (o) => o.alive && o.x === x && o.y === y && o.enemyKind === undefined && o.vitals !== undefined && !o.isBot,
+  );
 }
 
 /** An enemy punch in a pilot match also reaches a rival standing on the enemy's own tile (CP9). */

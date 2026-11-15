@@ -103,6 +103,12 @@ export type ScenarioUi =
   | { kind: 'pickEntry'; entry: VehicleEntry }
   | { kind: 'pickTurn'; turn: VehicleTurn };
 
+/** A bot-controlled seat of a tutorial scenario (Generator Tactics enemies: the real enemy bot of the level). */
+export interface ScenarioBot {
+  id: number;
+  difficulty: Difficulty;
+}
+
 export interface ScenarioStep {
   intents: Intents;
   ui: readonly ScenarioUi[];
@@ -436,16 +442,22 @@ export class MatchController implements MissionHost {
   }
 
   /**
-   * Tutorial: runs a prepared state (already in its playing phase) under a director. No bots, no
-   * saved settings are touched and no results screen follows; `start` returns to normal play.
+   * Tutorial: runs a prepared state (already in its playing phase) under a director. Only the seats the lesson names
+   * in `botSeats` (the Generator Tactics enemies) get a bot; no saved settings are touched and no results screen
+   * follows; `start` returns to normal play.
    */
-  startScenario(state: GameState, director: ScenarioDirector): void {
+  startScenario(state: GameState, director: ScenarioDirector, botSeats: readonly ScenarioBot[] = []): void {
     this.director = director;
     this.mission = null;
     this.clearRaid();
     this.settings = null;
     this.state = state;
     this.bots = new Map();
+    for (const b of botSeats)
+      this.bots.set(
+        b.id,
+        this.deps.botFactory({ difficulty: b.difficulty, seed: state.seed + b.id * 7919, playerId: b.id }),
+      );
     this.accumulator = 0;
     this.lastMs = -1;
     this.paused = false;

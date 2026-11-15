@@ -3,6 +3,7 @@
  * so demos and practices run exactly the code path the browser runs (minus WebGL). A practice is played by
  * a "human" whose presses go through the real input port (the same path as the keyboard / touch controls).
  */
+import { createBot } from '../../src/ai';
 import { MatchController } from '../../src/app/MatchController';
 import type { InputPort, RendererPort } from '../../src/app/ports';
 import { TutorialController } from '../../src/app/TutorialController';
@@ -72,7 +73,8 @@ export interface Rig {
 export function rig(menuCharacter: CharacterId = 'streetBaller', store = new MemoryStore()): Rig {
   const input = new FakeInput();
   const renderer = new FakeRenderer();
-  const match = new MatchController({ renderer, input, botFactory: () => ({ decide: () => ({}) }) });
+  // only the Generator Tactics lessons seat bots (their enemy seats); every older lesson has none
+  const match = new MatchController({ renderer, input, botFactory: createBot });
   const attract = { started: 0, stopped: 0 };
   const cues: CueTrigger[] = [];
   const tutorial = new TutorialController(match, {
@@ -125,6 +127,27 @@ export function drive(r: Rig, acts: Act[], limit = 4000, stopWhenComplete = true
     r.tutorial.frame();
     if (stopWhenComplete && view().practice?.complete) break;
     if (!stopWhenComplete && runner.done) break;
+  }
+  return seen;
+}
+
+/**
+ * Plays a reactive scripted "human" (a policy over the live state; ordinary intents only) through the real input port
+ * until the practice completes, the attempt fails (a restart) or `limit` ticks pass. Returns every event seen.
+ */
+export function drivePolicy(
+  r: Rig,
+  policy: (s: GameState, events: readonly SimEvent[]) => Intent,
+  limit = 2400,
+): SimEvent[] {
+  const seen: SimEvent[] = [];
+  let last: readonly SimEvent[] = [];
+  for (let i = 0; i < limit; i++) {
+    r.input.next = { ...policy(r.match.state!, last) };
+    last = r.match.stepOnce();
+    seen.push(...last);
+    r.tutorial.frame();
+    if (view().practice?.complete) break;
   }
   return seen;
 }

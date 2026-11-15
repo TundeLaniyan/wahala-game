@@ -8,6 +8,7 @@ import type {
   CharacterId,
   DeepPartial,
   Dir,
+  EnemyKind,
   GameConfig,
   GameState,
   Generator,
@@ -25,6 +26,12 @@ export interface Actor {
   facing?: Dir;
   /** Team Rumble lessons: the actor's team (default: assigned by the ruleset). */
   team?: number;
+  /**
+   * Generator Tactics lessons: this seat is a campaign ENEMY of this kind (health from its kind, controlled by the real
+   * enemy bot: `TutorialController` seats one for every enemy). The human of such a lesson carries `maxHp` health.
+   */
+  enemyKind?: EnemyKind;
+  maxHp?: number;
 }
 
 export interface ScenarioOptions {
@@ -53,6 +60,8 @@ export function scenario(opts: ScenarioOptions): GameState {
       characterId: a.characterId,
       isBot: i !== 0,
       ...(a.team !== undefined ? { team: a.team } : {}),
+      ...(a.enemyKind !== undefined ? { enemyKind: a.enemyKind } : {}),
+      ...(a.maxHp !== undefined ? { maxHp: a.maxHp } : {}),
     })),
     settings: { stageHazards: opts.stage ?? false, ...opts.settings },
     config: opts.config,

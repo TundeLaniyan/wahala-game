@@ -33,6 +33,8 @@ export interface BoardOptions {
   settings?: ScenarioOptions['settings'];
   config?: DeepPartial<GameConfig>;
   at?: [number, number];
+  /** Campaign health of the human (Generator Tactics lessons: enemy punches and bottles hurt a segment at a time). */
+  humanHp?: number;
 }
 
 /** A practice board: the human in the bottom-left corner, plus any dummies; then the lesson fills it. */
@@ -43,7 +45,13 @@ export function practiceBoard(
 ): GameState {
   const s = scenario({
     actors: [
-      { name: 'YOU', characterId: character, at: opts.at ?? [0, 10], facing: 'right' },
+      {
+        name: 'YOU',
+        characterId: character,
+        at: opts.at ?? [0, 10],
+        facing: 'right',
+        ...(opts.humanHp !== undefined ? { maxHp: opts.humanHp } : {}),
+      },
       ...(opts.others ?? []),
     ],
     // the lessons teach one vehicle (a Danfo) so they stay predictable; the real game draws any public vehicle
@@ -61,7 +69,10 @@ export function demoBoard(
   opts: Omit<BoardOptions, 'at'> = {},
 ): GameState {
   const s = scenario({
-    actors: [{ ...HERO, at, facing: 'right' }, ...(opts.others ?? [])],
+    actors: [
+      { ...HERO, at, facing: 'right', ...(opts.humanHp !== undefined ? { maxHp: opts.humanHp } : {}) },
+      ...(opts.others ?? []),
+    ],
     config: { vehicles: { allowed: ['danfo'] }, ...opts.config },
     settings: opts.settings,
   });

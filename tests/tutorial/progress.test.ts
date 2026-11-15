@@ -48,8 +48,8 @@ describe('Academy progress (this device only, no account)', () => {
     expect(resumeIndex(ids, { completed: ids, skipped: [] })).toBe(0);
   });
 
-  it('the course starts with a short Beginner block, then the advanced modules', () => {
-    expect(COURSES.map((c) => c.id)).toEqual(['beginner', 'power', 'tricks', 'combat', 'modes']);
+  it('the course starts with a short Beginner block, then the advanced modules, then the Generator Tactics pilot', () => {
+    expect(COURSES.map((c) => c.id)).toEqual(['beginner', 'power', 'tricks', 'combat', 'modes', 'tactics']);
     const order = LESSONS.map((l) => COURSES.findIndex((c) => c.id === l.course));
     expect([...order].sort((a, b) => a - b)).toEqual(order); // grouped, in course order
     expect(LESSONS.filter((l) => l.course === 'beginner').map((l) => l.id)).toEqual([
