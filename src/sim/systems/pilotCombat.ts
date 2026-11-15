@@ -286,10 +286,12 @@ export function pilotPending(state: GameState, id: number): boolean {
  */
 export function pilotBlocksStep(state: GameState, p: Readonly<Player>, x: number, y: number): boolean {
   if (p.enemyKind === undefined) return false;
-  const keepOff = state.config.combatPilot?.enemiesKeepOffHuman || state.config.tacticalTrap?.enemiesKeepOffHuman;
+  const keepOff =
+    state.config.combatPilot?.enemiesKeepOffHuman || state.config.tacticalTrap?.enemiesKeepOffHuman;
   if (!keepOff) return false;
   return state.players.some(
-    (o) => o.alive && o.x === x && o.y === y && o.enemyKind === undefined && o.vitals !== undefined && !o.isBot,
+    (o) =>
+      o.alive && o.x === x && o.y === y && o.enemyKind === undefined && o.vitals !== undefined && !o.isBot,
   );
 }
 

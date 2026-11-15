@@ -419,7 +419,7 @@ export const TRAP_HIDDEN: Lesson = {
   summary:
     'An enemy only reacts to what it saw: compare a generator in plain sight with one under your feet.',
   objective:
-    'First lay a generator in plain sight beside the guard and step aside: he runs. Then lay one under your feet and stay on it: he never sees it.',
+    'First lay a generator in plain sight beside the Agbero and step aside: he runs. Then lay one under your feet and stay on it: he never sees it.',
   facts: [
     'An enemy sees a generator only within its vision range and with a clear line: a wall, a crate or any body in the way hides it, and so does a body standing on it.',
     'It still reacts to flames, warnings and remote generators at once. And it hears a generator laid close by: it stops its next attack for a moment, but does not learn where it is.',
@@ -427,14 +427,14 @@ export const TRAP_HIDDEN: Lesson = {
   ],
   controls: ['move', 'place'],
   demo: {
-    build: () => demo([6, 10], [enemy('guard', [9, 10], 'GUARD'), bystander]),
+    build: () => demo([6, 10], [enemy('agbero', [9, 10], 'AGBERO'), bystander]),
     beats: [
       {
-        caption: 'In plain sight: lay a generator beside the guard and step off the lane...',
+        caption: 'In plain sight: lay a generator beside the Agbero and step off the lane...',
         acts: {
           0: [
             until(
-              'guard close',
+              'he is close',
               (s) => Math.abs(foe(s).x - s.players[0]!.x) + Math.abs(foe(s).y - s.players[0]!.y) <= 1,
               600,
             ),
@@ -454,17 +454,21 @@ export const TRAP_HIDDEN: Lesson = {
           0: [
             walk('down', 3),
             until(
-              'guard close',
+              'he is close',
               (s) => Math.abs(foe(s).x - s.players[0]!.x) + Math.abs(foe(s).y - s.players[0]!.y) <= 1,
               600,
             ),
             place,
+            wait(2),
+            special,
+            wait(70),
+            special,
           ],
         },
-        hold: 60,
+        hold: 10,
       },
       {
-        caption: 'Step off at the last moment. It never saw it.',
+        caption: 'Punches slow him; step off at the last moment. It never saw it.',
         acts: {
           0: [
             until('fuse low', (s) => fuseLeft(s) <= LEAVE_FUSE_TICKS, 400),
@@ -477,13 +481,13 @@ export const TRAP_HIDDEN: Lesson = {
     ],
   },
   practice: {
-    build: (c) => board(c, [6, 10], [enemy('guard', [12, 10], 'GUARD'), bystander]),
+    build: (c) => board(c, [6, 10], [enemy('agbero', [12, 10], 'AGBERO'), bystander]),
     tasks: [
       {
         id: 'plain',
         label: 'In plain sight: lay it and step aside',
         instruction:
-          'Wait until the guard is next to you, lay a generator with {A}, then step up the lane out of the red lanes. Watch what he does.',
+          'Wait until the Agbero is next to you, lay a generator with {A}, then step up the lane out of the red lanes. Watch what he does.',
         controls: ['place', 'move'],
         checkpoint: true,
         done: seenAndSurvived,

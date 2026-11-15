@@ -14,6 +14,10 @@ Notes per task in `docs/integrated-release/`; decisions SD-B, LI7-LI9, NV, CL-L,
 - **Fighter select and story:** "Playable fighters · 3" label, radio-message cards, text-only scrolling beside story pictures.
 - **Match loading:** Play / Start / Rematch / missions answer at once with a light loading screen (real steps, real model count, turn-sideways hint on an upright phone), one start per tap burst, Retry / Back on failure (`docs/MATCH_LOADING.md`, ML1-ML8).
 
+## Tactical Trap pilot (branch `claude/wahala-tactical-trap-v1`, from the release `3e32e90`)
+
+Academy-only pilot (`config.tacticalTrap`, decisions TT1-TT10, `docs/TACTICAL_TRAP_PILOT.md`): enemies react only to generators they saw, remembered or heard, attacks have a 0.8 s recovery, the human's punch slows (25 % then 40 %) but cannot finish, three "Generator Tactics" lessons (Agbero, Bottle Thrower, hidden generator). Pushed nowhere; no other ruleset carries the key. Verification is listed in the document.
+
 ## Oshodi Mission 1 combat pilot (branch `claude/wahala-oshodi-combat-pilot-v1`, from the release `b55e95f`)
 
 Reference: `docs/OSHODI_COMBAT_PILOT.md`; decisions CP1-CP12. An experiment for founder playtesting: not merged, not deployed, gated to `oshodi.approach` only (`sim/mission/combatPilot.ts`).
