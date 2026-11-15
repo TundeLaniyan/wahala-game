@@ -6,9 +6,10 @@
 import { ticks } from '../config';
 import type { DeepPartial, GameConfig } from '../config';
 import { DIFFICULTIES } from '../types';
-import type { CharacterId, Difficulty, GameOptions, PlayerSetup } from '../types';
+import type { CharacterId, Difficulty, GameOptions, LoadoutBonus, PlayerSetup } from '../types';
 import type { EnemyKind } from '../campaign/types';
 import { CAMPAIGN_CONFIG } from '../config';
+import { normaliseLoadoutBonus } from '../systems/loadout';
 import { levelConfigLayer, levelMaxHp } from '../campaign/levels';
 import type { CampaignLevel } from '../campaign/levels';
 import { MISSION_DEFS, MISSION_SOFT_DENSITY } from './defs';
@@ -73,7 +74,11 @@ export function buildMissionGame(o: {
   seed: number;
   /** Campaign difficulty (Easy / Normal / Hard); absent = Normal, which adds nothing to the options. */
   level?: CampaignLevel;
+  /** The human's permanent campaign upgrades (decisions PR1-PR8); absent or all zero = none, options unchanged. */
+  loadoutBonus?: LoadoutBonus;
 }): GameOptions {
+  const bonus = normaliseLoadoutBonus(o.loadoutBonus);
+  const human = bonus ? { loadoutBonus: bonus } : {};
   const { spec } = o;
   const humanHp = levelMaxHp(CAMPAIGN_CONFIG.playerMaxHp, o.level);
   const crewLevel = spec.difficulty ?? 'rookie';
@@ -89,6 +94,7 @@ export function buildMissionGame(o: {
         isBot: false,
         team: 0,
         maxHp: humanHp,
+        ...human,
       },
       ...fieldEnemiesOf(field).map((e, i): PlayerSetup => ({
         enemyKind: ENEMY_KIND_FOR_ROLE[e.role],
@@ -112,7 +118,7 @@ export function buildMissionGame(o: {
   const levelConfig = levelConfigLayer(o.level);
   const players: PlayerSetup[] = [
     // campaign health for the human (the boss and crew keep the one-hit generator fight)
-    { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0, maxHp: humanHp },
+    { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0, maxHp: humanHp, ...human },
     {
       name: def.boss.name,
       characterId: def.boss.characterId,

@@ -23,6 +23,7 @@ import type { MapNode } from './model';
 import { Stars, useCampaignUi } from './parts';
 import { LevelPicker } from './LevelPicker';
 import { StoryHero } from './StoryHero';
+import { Workshop } from './Workshop';
 import { SectionList } from './SectionList';
 
 /** Coast, lagoon, the island and the Lekki strip behind the nodes (decorative only, 0..100 units). */
@@ -130,6 +131,13 @@ function DistrictCard({ id, status }: { id: DistrictId; status: MapNode['status'
       {reason && (
         <p className="cp-locked" data-testid="district-locked">
           {reason}
+        </p>
+      )}
+      {status === 'cleared' && d.boss?.consequenceFlags?.every((f) => ui.save.flags.includes(f)) && (
+        // a visible change driven by the district's existing consequence flag (e.g. oshodi.dispatchBroken)
+        <p className="cp-consequence" data-testid="district-consequence">
+          <small className="mn-kicker">Since you broke the Ring here</small>{' '}
+          {d.boss.consequence.split('. ')[0]}.
         </p>
       )}
       {status === 'cleared' && p && p.clears > 0 && (
@@ -346,6 +354,7 @@ export function CampaignMap() {
           {started ? (
             <>
               <DistrictCard id={selected.id} status={selected.status} />
+              {selected.status !== 'locked' && <Workshop districtId={selected.id as MissionId} />}
               {canOpen && (
                 <SecondaryButton
                   className="cp-open"

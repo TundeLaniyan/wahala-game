@@ -4,6 +4,7 @@
  * suggested mission, or a replay). Short text only; the boss result keeps its own screen.
  */
 import { commands } from '../../app/session';
+import { progressionDistrict } from '../../campaign';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
 import { clock } from './model';
 import { Stars, useCampaignUi } from './parts';
@@ -49,6 +50,13 @@ export function SectionResultScreen() {
         {text.lines.map((l) => (
           <p key={l}>{l}</p>
         ))}
+        {text.won && view.partsGained !== undefined && progressionDistrict(view.missionId.split('.')[0]!) && (
+          <p className="cp-parts" data-testid="result-parts">
+            {view.partsGained > 0
+              ? `+${view.partsGained} Generator Parts`
+              : 'No new Generator Parts: beat your best stars to earn more.'}
+          </p>
+        )}
         {text.opened.length > 0 && (
           <p className="cp-opened" data-testid="section-opened">
             <small className="mn-kicker">Now open</small> {text.opened.join(', ')}

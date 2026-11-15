@@ -1,6 +1,7 @@
 /** Pickup reveal, collection, burning and effects. Effects are data-light switch cases on PickupKind. */
 import { drawVehicle } from './streaks';
 import { pick } from '../rng';
+import { seatMaxCapacity } from './loadout';
 import type { ContactAbility, CurseKind, GameState, PickupKind, Player, SimEvent } from '../types';
 
 const CURSES: readonly CurseKind[] = ['slow', 'inverted', 'weakFire'];
@@ -65,7 +66,7 @@ export function applyPickup(state: GameState, p: Player, kind: PickupKind, event
       p.range = g.dieselRange;
       return true;
     case 'socket':
-      if (p.capacity >= g.maxCapacity) return false;
+      if (p.capacity >= seatMaxCapacity(p, g)) return false;
       p.capacity++;
       return true;
     case 'skates':

@@ -1,6 +1,7 @@
 /** Public API of the simulation. Outer layers import from here, never from systems/ directly. */
 export { createGame, createPlayer, crushSchedule, DEFAULT_SETTINGS, MAX_PLAYERS, MIN_PLAYERS } from './state';
 export { tick } from './tick';
+export { normaliseLoadoutBonus, seatBaseCapacity, seatBaseRange, seatMaxCapacity } from './systems/loadout';
 export { DEFAULT_CONFIG, TICK_RATE, mergeConfig, ticks } from './config';
 export type { AttackSpec, DeepPartial, GameConfig, RewardKind, VehicleSpec } from './config';
 export * from './types';

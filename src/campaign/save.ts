@@ -25,6 +25,7 @@ import {
   storedMissionsOf,
 } from './sectionState';
 import type { CampaignSave, DistrictId, DistrictProgress, KeyValueStore, MissionProgress } from './types';
+import { repairUpgrades } from './upgrades';
 import { CAMPAIGN_SAVE_KEY, DISTRICT_ORDER } from './types';
 
 /** 2 = sections (docs/CAMPAIGN_SECTIONS.md). Version 1 (districts only) migrates to it without losing anything. */
@@ -215,7 +216,10 @@ export function repairSave(value: unknown): CampaignSave | null {
   save.rewards = rewards;
   save.unlocks = unlocks;
   save.flags = [...new Set(flags)];
-  return repairSections(save, raw);
+  const repaired = repairSections(save, raw);
+  // upgrades are checked against the Parts the repaired stars earn (never trusted, never more than they pay for)
+  const upgrades = repairUpgrades(raw.upgrades, repaired);
+  return upgrades ? { ...repaired, upgrades } : repaired;
 }
 
 /** Reads the save. Null when there is none, it is unreadable or from a newer build. Never throws. */

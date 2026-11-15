@@ -102,6 +102,7 @@ export function sectionResultText(view: SectionResultView): SectionResultText {
   const lines: string[] = [];
   if (won) {
     if (view.summary.sectionCleared) lines.push('Section reclaimed.');
+    if (def?.ringWeakened) lines.push(`Ring weakened: ${def.ringWeakened}`);
     for (const r of view.summary.newRewards) lines.push(`${r.name}: ${r.description}`);
     if ('raidBonus' in view.outcome && (view.outcome.raidBonus ?? 0) > 0)
       lines.push('A three-star raid on the way earned the bonus.');

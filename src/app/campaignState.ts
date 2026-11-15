@@ -22,6 +22,8 @@ export interface RewardSummary {
 export interface MissionResultView {
   outcome: MissionOutcome;
   reward: RewardSummary;
+  /** Generator Parts this result paid (first clear or better stars; 0 otherwise; absent outside the progression slice). */
+  partsGained?: number;
 }
 
 /** What a finished section mission (a field mission or a standalone raid) hands the result screen. */
@@ -31,6 +33,8 @@ export interface SectionResultView {
   kind: 'field' | 'raid';
   outcome: MissionOutcome | RaidOutcome;
   summary: SectionResultSummary;
+  /** Generator Parts this result paid (see `MissionResultView.partsGained`). */
+  partsGained?: number;
 }
 
 /** The mission being played right now (null in the menus). */

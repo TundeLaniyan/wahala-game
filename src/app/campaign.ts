@@ -15,6 +15,7 @@ import {
   applySectionResult,
   availableModifiers,
   bossAvailable,
+  buyUpgrade,
   canPlayMission,
   clearSave,
   completeCampaign,
@@ -23,17 +24,19 @@ import {
   finaleAvailable,
   getSectionMission,
   loadSave,
+  loadoutBonusFor,
   markIntroSeen,
   markPrologueSeen,
   missionByRef,
   nextDistrict,
   nextMission,
+  partsGained,
   persistSave,
   sectionOfMission,
   setCampaignLevel,
   setLoadout,
 } from '../campaign';
-import type { CampaignSave, DistrictId, KeyValueStore, SectionMissionDef } from '../campaign';
+import type { CampaignSave, DistrictId, KeyValueStore, SectionMissionDef, UpgradeKind } from '../campaign';
 import {
   DEFAULT_CAMPAIGN_LEVEL,
   MISSION_IDS,
@@ -48,6 +51,7 @@ import type {
   Difficulty,
   GameOptions,
   GameState,
+  LoadoutBonus,
   MissionId,
   MissionModifierId,
   MissionOutcome,
@@ -149,6 +153,12 @@ export function sectionOutcomeFromMatch(
     phasesCleared: 0,
     defeat: null,
   };
+}
+
+/** The human's Generator Parts upgrades for a mission of this district, as build options (none: nothing added). */
+function withLoadout(save: CampaignSave, district: MissionId): { loadoutBonus?: LoadoutBonus } {
+  const bonus = loadoutBonusFor(save, district);
+  return bonus ? { loadoutBonus: bonus } : {};
 }
 
 export class CampaignController {
@@ -361,6 +371,22 @@ export class CampaignController {
     return true;
   }
 
+  /**
+   * Buys the next level of a Generator Parts upgrade (decisions PR1-PR8). Only between missions, like the level: a run
+   * is always played with the loadout it started with. False when it cannot be bought (cap, Parts, slice off).
+   */
+  buyUpgrade(kind: UpgradeKind): boolean {
+    const ui = this.need();
+    if (ui.active) {
+      this.update({ notice: 'Upgrades can be bought from the campaign map, not during a mission.' });
+      return false;
+    }
+    const save = buyUpgrade(ui.save, kind, this.deps.now());
+    if (save === ui.save) return false;
+    this.commit(save);
+    return true;
+  }
+
   setLoadout(loadout: { character?: CharacterId; difficulty?: Difficulty }): void {
     const ui = this.need();
     const save = setLoadout(ui.save, loadout, this.deps.now());
@@ -405,6 +431,7 @@ export class CampaignController {
         humanCharacter: ui.save.character,
         seed: this.deps.seed(),
         level: ui.save.campaignLevel,
+        ...withLoadout(ui.save, id),
       });
       this.update({
         active: { missionId: id, modifiers },
@@ -452,7 +479,7 @@ export class CampaignController {
       active: null,
       selected: isMissionId(outcome.missionId) ? outcome.missionId : ui.selected,
       modifier: null,
-      result: { outcome, reward },
+      result: { outcome, reward, partsGained: partsGained(ui.save, summary.save) },
       sectionResult: null,
       lastReward: paid ? reward : ui.lastReward,
     });
@@ -546,6 +573,7 @@ export class CampaignController {
         humanCharacter: ui.save.character,
         seed: this.deps.seed(),
         level: ui.save.campaignLevel,
+        ...withLoadout(ui.save, districtId),
       });
       this.update({
         active: { missionId: districtId, modifiers: [], sectionMissionId: def.id },
@@ -721,6 +749,7 @@ export class CampaignController {
         kind: 'field',
         outcome,
         summary,
+        partsGained: partsGained(ui.save, summary.save),
       },
     });
     this.setMenu(['campaign', 'campaignResult']);

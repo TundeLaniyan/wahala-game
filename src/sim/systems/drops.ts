@@ -4,13 +4,14 @@ import { shuffle } from '../rng';
 import { Tile } from '../types';
 import type { GameState, PickupKind, Player, SimEvent } from '../types';
 import { flameAt, groundedGeneratorAt, pickupAt } from './queries';
+import { seatBaseCapacity, seatBaseRange } from './loadout';
 
 function inventoryKinds(state: GameState, p: Player): PickupKind[] {
   const g = state.config.generator;
   const out: PickupKind[] = [];
   if (p.range >= g.dieselRange) out.push('diesel');
-  else if (p.range > g.baseRange) out.push('petrol');
-  if (p.capacity > g.baseCapacity) out.push('socket');
+  else if (p.range > seatBaseRange(p, g)) out.push('petrol');
+  if (p.capacity > seatBaseCapacity(p, g)) out.push('socket');
   if (p.speedLevel > 0) out.push('skates');
   if (p.contact === 'kick') out.push('boots');
   if (p.contact === 'punch') out.push('gloves');

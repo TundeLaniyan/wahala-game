@@ -83,3 +83,24 @@ export {
 export type { NextMission } from './sectionState';
 export { applyRaidResult, applySectionResult } from './sectionProgress';
 export type { SectionResultSummary } from './sectionProgress';
+export {
+  CAMPAIGN_PROGRESSION,
+  NO_UPGRADES,
+  UPGRADE_KINDS,
+  bestStarsOf,
+  buyUpgrade,
+  canBuy,
+  loadoutBonusFor,
+  nextCost,
+  partsAvailable,
+  partsEarned,
+  partsForStars,
+  partsGained,
+  partsMissions,
+  partsSpent,
+  progressionDistrict,
+  repairUpgrades,
+  upgradeCap,
+  upgradesOf,
+} from './upgrades';
+export type { CampaignProgressionConfig, UpgradeDef } from './upgrades';

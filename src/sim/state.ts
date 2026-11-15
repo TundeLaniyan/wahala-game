@@ -1,5 +1,6 @@
 import { freshStreakRewards } from './data/streaks';
 import { CAMPAIGN_CONFIG, DEFAULT_CONFIG, mergeConfig, ticks } from './config';
+import { normaliseLoadoutBonus, seatBaseCapacity, seatBaseRange } from './systems/loadout';
 import type { GameConfig } from './config';
 import { CHARACTERS } from './data/characters';
 import { vitalsFor } from './systems/campaignDamage';
@@ -45,11 +46,22 @@ export const MIN_PLAYERS = 1;
 /** The largest supported match (City Rumble). Each arena has its own `maxPlayers` (standard arenas: 4). */
 export const MAX_PLAYERS = 32;
 
+/** Campaign upgrades ride only on mission seats (decision PR3): every other ruleset drops them here. */
+function missionSeat(setup: PlayerSetup, settings: MatchSettings): PlayerSetup {
+  if (setup.loadoutBonus === undefined || settings.game === 'mission') return setup;
+  const { loadoutBonus: _dropped, ...rest } = setup;
+  void _dropped;
+  return rest;
+}
+
 export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, config: GameConfig): Player {
   const spawn = arena.spawns[id]!;
   const facing = spawn.x < arena.layout[0]!.length / 2 ? 'right' : 'left';
   const characterId = setup.characterId in CHARACTERS ? setup.characterId : 'streetBaller';
+  const bonus = normaliseLoadoutBonus(setup.loadoutBonus);
+  const seat = { loadoutBonus: bonus };
   return {
+    ...(bonus ? { loadoutBonus: bonus } : {}),
     id,
     slot: id,
     name: setup.name,
@@ -72,8 +84,8 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
     respawnAt: null,
     protectedUntil: 0,
     spectator: null,
-    range: config.generator.baseRange,
-    capacity: config.generator.baseCapacity,
+    range: seatBaseRange(seat, config.generator),
+    capacity: seatBaseCapacity(seat, config.generator),
     speedLevel: 0,
     contact: null,
     contactReadyTick: 0,
@@ -183,7 +195,7 @@ export function createGame(options: GameOptions): GameState {
     floorHazards: {},
     endgameTraps: { waves: [], liveAt: [], warned: 0, live: 0, warnings: [] },
     players: options.players.map((setup, id) =>
-      createPlayer(id, { ...setup, team: setup.team ?? teams[id]! }, arena, config),
+      createPlayer(id, missionSeat({ ...setup, team: setup.team ?? teams[id]! }, settings), arena, config),
     ),
     generators: [],
     flames: [],

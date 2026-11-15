@@ -237,6 +237,8 @@ export interface SectionMissionDef {
   /** Optional longer text for the "Read more" card and the story scenes. */
   readMore?: string;
   intro?: StoryLine[];
+  /** Optional one line for the result screen: what the Ring lost when this mission was won (docs/STORY_BIBLE.md). */
+  ringWeakened?: string;
   outro?: StoryLine[];
 }
 
@@ -336,7 +338,18 @@ export interface CampaignSave {
   missions: Record<string, MissionProgress>;
   /** Section mission reward ids earned (kept apart from the boss `rewards`). */
   sectionRewards: string[];
+  /**
+   * Generator Parts upgrade levels bought (decisions PR1-PR8, src/campaign/upgrades.ts). Optional: absent = nothing
+   * bought, so older saves load unchanged and no version change is needed. Parts themselves are derived from best stars.
+   */
+  upgrades?: CampaignUpgrades;
 }
+
+/** The two campaign-only upgrades (docs/CAMPAIGN_GAMEPLAY_BIBLE.md section 2.3). */
+export type UpgradeKind = 'capacity' | 'range';
+
+/** Levels bought per upgrade (0 = none). */
+export type CampaignUpgrades = Record<UpgradeKind, number>;
 
 /** What a finished mission hands the campaign (built from the sim's MissionOutcome). */
 export interface MissionResultInput {

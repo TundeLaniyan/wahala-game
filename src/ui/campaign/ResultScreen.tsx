@@ -9,6 +9,7 @@ import {
   availableModifiers,
   missionResultCard,
   nextDistrict,
+  progressionDistrict,
   replayModifierFor,
 } from '../../campaign';
 import { isMissionId } from '../../app/campaign';
@@ -136,6 +137,15 @@ export function ResultScreen() {
                     </li>
                   ))}
                 </ul>
+              )}
+              {result.partsGained !== undefined && progressionDistrict(id) && (
+                <p className="cp-chip-line cp-parts" data-testid="result-parts">
+                  {result.partsGained > 0 ? (
+                    <b>+{result.partsGained} Generator Parts</b>
+                  ) : (
+                    'No new Generator Parts: beat your best stars to earn more.'
+                  )}
+                </p>
               )}
               {reward.unlockedDistricts.length > 0 && (
                 <p className="cp-chip-line" data-testid="result-unlocked-districts">

@@ -311,6 +311,12 @@ export interface Player {
   // Upgrades (all reset every round).
   range: number;
   capacity: number;
+  /**
+   * Campaign only (decisions PR1-PR8, docs/CAMPAIGN_GAMEPLAY_BIBLE.md section 2): permanent Generator Parts upgrades that
+   * raise this seat's BASE range and capacity (and its capacity cap by the same amount, so an Extra Socket still adds
+   * one). Absent everywhere else (createGame drops it outside mission matches), so other states are unchanged.
+   */
+  loadoutBonus?: LoadoutBonus;
   speedLevel: number;
   /** V2: the equipped generator-contact ability (kick / punch / disarm / pass), or none. */
   contact: ContactAbility | null;
@@ -806,6 +812,17 @@ export interface PlayerSetup {
   enemyKind?: EnemyKind;
   /** Campaign: health segments for this seat (the human: 3 or 4; enemies: from their kind). Absent = one-hit rules. */
   maxHp?: number;
+  /**
+   * Campaign missions only: permanent upgrades for this seat (`Player.loadoutBonus`). Ignored by `createGame` unless the
+   * match is a mission, so Classic, City Rumble, raids, tutorials and online can never carry one.
+   */
+  loadoutBonus?: LoadoutBonus;
+}
+
+/** Permanent campaign upgrade steps for one seat (each 0 or more; the campaign caps them). */
+export interface LoadoutBonus {
+  capacity: number;
+  range: number;
 }
 
 export interface MatchSettings {

@@ -1049,3 +1049,25 @@
 .cp-level .mn-fineprint {
   margin: 8px 0 0;
 }
+
+/* Generator Parts upgrades (Workshop.tsx, decisions PR1-PR8) */
+.cp-workshop ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.4rem 0;
+}
+.cp-workshop li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
+}
+.cp-workshop li small {
+  display: block;
+  opacity: 0.8;
+}
+.cp-consequence,
+.cp-parts {
+  margin: 0.4rem 0;
+}

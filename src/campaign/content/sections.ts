@@ -85,6 +85,7 @@ const OSHODI_SECTIONS: SectionDef[] = [
           'Known at the gate: the wardens stop asking for your chit.',
         ),
         unlocks: ['section.oshodi.s2'],
+        ringWeakened: 'The depot’s dispatch cargo is broken: the convoys lose their schedule.',
         readMore:
           'Three checkpoints (A, B and the yard gate) mark the way. The Dispatch Depot door on the yard wall opens the warehouse raid: marked cargo, a wave of wardens and a lane of thrown bottles. Win it, or leave and try again: the door stays open. When the depot is done, walk back to the Orita gate to finish.',
         intro: [
@@ -124,6 +125,7 @@ const OSHODI_SECTIONS: SectionDef[] = [
           'The hawkers wave you across the rail line now.',
         ),
         unlocks: ['section.oshodi.s3'],
+        ringWeakened: 'The trailer crews lose the rail-edge lane: the controller has nowhere left to hide.',
         readMore:
           'Clear the two lane hawkers. Then the trailer hand leaves the rail yard and hunts you: stay ahead of him and reach the footbridge. If he stays next to you for a moment he catches you and you lose a life. Walk to the Park gate to finish.',
         intro: [

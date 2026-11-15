@@ -25,6 +25,7 @@ import type { GameState, Player, SimEvent } from '../types';
 import { previewBlast } from './explosions';
 import { groundedGeneratorAt, teammates } from './queries';
 import { isLethalStageEvent } from './stage';
+import { seatBaseCapacity, seatBaseRange } from './loadout';
 import { missionMayRespawn } from '../mission/rules';
 
 /** Schedules respawns for this tick's eliminations. */
@@ -206,8 +207,8 @@ export function respawn(state: GameState, p: Player, x: number, y: number): void
   p.protectedUntil = state.tick + cfg.protection.spawnProtectionTicks;
   resetVitals(p); // campaign: full health and the spawn protection shown as recovery frames (a no-op without vitals)
   if (cfg.respawn.resetOnDeath) {
-    p.range = cfg.generator.baseRange;
-    p.capacity = cfg.generator.baseCapacity;
+    p.range = seatBaseRange(p, cfg.generator);
+    p.capacity = seatBaseCapacity(p, cfg.generator);
     p.speedLevel = 0;
     p.contact = null;
     p.killSwitchCharges = 0;
