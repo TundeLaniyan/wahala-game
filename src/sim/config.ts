@@ -237,6 +237,71 @@ export interface CombatPilotConfig {
 }
 
 /**
+ * THE TACTICAL TRAP PILOT (docs/TACTICAL_TRAP_PILOT.md, decisions TT1-TT10). An EXPERIMENT, not the campaign baseline:
+ * only the Training Academy "Generator Tactics" scenarios (`tutorial/lessons/tactics.ts`) put it in the config; every
+ * other match (the campaign, Classic Blast, City Rumble, multiplayer, online, raids, boss missions) has no `tacticalTrap`
+ * key at all and runs the rules exactly as before (its serialised state carries no trace of it). It makes a generator a
+ * tactical weapon against campaign ENEMY seats (`Player.enemyKind`): an enemy only knows what it could see or hear
+ * (line of sight, player-body concealment, memory, hearing), a punch staggers and slows but cannot finish, and every
+ * attack has a readable wind-up, attack and recovery. Removing the pilot = deleting this key's constant
+ * (`TACTICAL_TRAP_PILOT`), `tacticalTrapLayer()` and the Academy lessons; the hooks are inert without the key.
+ */
+export interface TrapPerception {
+  /** Vision radius in tiles (straight distance between tile centres): a generator farther away is never seen. */
+  visionTiles: number;
+  /** A visible generator is taken seriously this many ticks after the enemy first sees it (its reaction time). */
+  reactTicks: number;
+  /** A generator that went out of sight is remembered this long after it was last seen (see `memoryHoldFuseTicks`). */
+  memoryTicks: number;
+  /** A fresh generator laid within this many tiles (Manhattan) is HEARD: caution only, never its position or blast. */
+  hearingTiles: number;
+}
+
+export interface TacticalTrapConfig {
+  /** Names the experiment (measurements, the debug handle). */
+  id: string;
+  /** Per enemy kind: how far it sees, how fast it reacts, how long it remembers, how far it hears. */
+  perception: Record<EnemyKind, TrapPerception>;
+  /**
+   * A ticking (timed) generator the enemy has seen is NEVER forgotten once its fuse is down to this many ticks: the
+   * enemy keeps counting it down until it blows. Before that the ordinary `memoryTicks` window applies.
+   */
+  memoryHoldFuseTicks: number;
+  /** What hearing a fresh generator does (without revealing where it is exactly or what it will burn). */
+  caution: {
+    /** The enemy starts no new wind-up or cue for this long. */
+    ticks: number;
+    /** While cautious, the reaction time to a newly visible generator is scaled by this (it is looking harder). */
+    reactScale: number;
+    /** On hearing, one step toward the sound's dominant axis (an investigating step; never a path to the generator). */
+    investigate: boolean;
+  };
+  /** The human's hits slow an enemy (decision TT5): stacking, a cap, a total limit and a resistance window. */
+  slow: {
+    /** Share of walking speed lost after the 1st, then the 2nd (= the cap) hit: 0.25 and 0.4. */
+    levels: number[];
+    /** Every slowing hit keeps the slow running this long from the hit (never shortening it). */
+    durationTicks: number;
+    /** The slow never lasts longer than this from the FIRST hit of the chain: hits cannot refresh it forever. */
+    maxTotalTicks: number;
+    /** After a slow ends the same enemy cannot be slowed again for this long. */
+    resistTicks: number;
+  };
+  /**
+   * What a punch may take (decision TT6): it can take an enemy down to `max(1, ceil(maxHp x share))` segments and no
+   * further, so only a generator blast (or another lethal source) finishes it. Share 0 = down to 1 segment.
+   */
+  punchFloorShare: Record<EnemyKind, number>;
+  /** The readable attack states (`enemyAttackPhase`). */
+  attack: {
+    /** The 'attack' phase lasts this many ticks from the moment a punch resolves or a projectile leaves. */
+    activeTicks: number;
+    /** An enemy's cooldown must exceed wind-up + recovery by at least this (the player always gets a response window). */
+    responseGapTicks: number;
+  };
+}
+
+/**
  * THE CITY RUMBLE COMBAT TEST LAB (docs/COMBAT_TEST_LAB.md). A temporary playtest tool: four punch behaviours the
  * founder switches between from the pause menu of a local City Rumble match. Every level is the SAME combat code
  * (`systems/skills.ts`) with these numbers and switches; each fighter keeps their own attack (push / shove / daze),
@@ -375,6 +440,8 @@ export interface GameConfig {
   campaign?: CampaignConfig;
   /** The Oshodi Mission 1 combat pilot (`CombatPilotConfig`); ABSENT in every other match. */
   combatPilot?: CombatPilotConfig;
+  /** The Tactical Trap pilot (`TacticalTrapConfig`); ABSENT everywhere except the Academy "Generator Tactics" scenarios. */
+  tacticalTrap?: TacticalTrapConfig;
   /**
    * The City Rumble COMBAT TEST LAB preset in force (`CombatLabPreset`, decisions CL-L1..), set live from the pause menu
    * of a LOCAL City Rumble match only (`systems/combatLab.ts`). ABSENT in every other match and until a level is picked.
@@ -878,6 +945,53 @@ export const OSHODI_PILOT_LEVELS: Readonly<Record<'easy' | 'hard', PilotLayer>> 
     },
   },
 };
+
+/**
+ * The Tactical Trap pilot (decisions TT1-TT10; numbers and measurements in docs/TACTICAL_TRAP_PILOT.md). Slow numbers
+ * for the base 10-tick step: 25 % -> +3 ticks (13 per tile, 23 % slower), 40 % -> +7 ticks (17 per tile, 41 % slower);
+ * `slowExtraStepTicks` derives the integer for any other base step.
+ */
+export const TACTICAL_TRAP_PILOT: TacticalTrapConfig = {
+  id: 'academy.tactics/trap-pilot-1',
+  perception: {
+    agbero: { visionTiles: 6, reactTicks: 24, memoryTicks: 150, hearingTiles: 4 },
+    guard: { visionTiles: 7, reactTicks: 20, memoryTicks: 150, hearingTiles: 5 },
+    thrower: { visionTiles: 8, reactTicks: 20, memoryTicks: 150, hearingTiles: 5 },
+    heavy: { visionTiles: 6, reactTicks: 30, memoryTicks: 150, hearingTiles: 4 },
+    lieutenant: { visionTiles: 9, reactTicks: 12, memoryTicks: 240, hearingTiles: 7 },
+    boss: { visionTiles: 10, reactTicks: 8, memoryTicks: 240, hearingTiles: 8 },
+  },
+  memoryHoldFuseTicks: 120,
+  caution: { ticks: 36, reactScale: 0.5, investigate: true },
+  slow: { levels: [0.25, 0.4], durationTicks: 90, maxTotalTicks: 150, resistTicks: 120 },
+  punchFloorShare: { agbero: 0, guard: 0, thrower: 0, heavy: 0, lieutenant: 0.5, boss: 0.5 },
+  attack: { activeTicks: 6, responseGapTicks: 36 },
+};
+
+/**
+ * What the pilot does to the enemies' own attacks (merged over `enemyAttacks`, Academy scenarios only): the recovery
+ * after a punch is 0.8 s (48 ticks) for every ordinary kind and a throw plants the thrower for its cue plus 0.8 s, so a
+ * player who steps out of a swing always has a window to answer (decision TT4).
+ */
+export const TACTICAL_TRAP_ENEMY_ATTACKS: PilotEnemyAttacks = {
+  throwRecoveryTicks: { thrower: 48, heavy: 40, lieutenant: 24, boss: 18 },
+  melee: {
+    agbero: { recoveryRootTicks: 48 },
+    guard: { recoveryRootTicks: 48 },
+    thrower: { recoveryRootTicks: 48 },
+    heavy: { recoveryRootTicks: 48 },
+    lieutenant: { recoveryRootTicks: 30 },
+    boss: { recoveryRootTicks: 24 },
+  },
+};
+
+/** The config layer an Academy tactics scenario passes to `createGame` (a fresh copy every call: never a shared constant). */
+export function tacticalTrapLayer(): DeepPartial<GameConfig> {
+  return structuredClone({
+    tacticalTrap: TACTICAL_TRAP_PILOT,
+    enemyAttacks: TACTICAL_TRAP_ENEMY_ATTACKS,
+  }) as DeepPartial<GameConfig>;
+}
 
 /** The campaign tuning in force (a ruleset or a test may override it; normal matches use the defaults). */
 export const campaignConfig = (config: Pick<GameConfig, 'campaign'>): CampaignConfig =>

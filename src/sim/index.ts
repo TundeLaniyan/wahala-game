@@ -187,3 +187,17 @@ export {
 } from './suddenDeathTest';
 export { frontRadius, frontRing } from './systems/suddenDeathFront';
 export type { SuddenDeathFront } from './types';
+// the Tactical Trap pilot (docs/TACTICAL_TRAP_PILOT.md): line of sight, attack phases, slow arithmetic
+export { TACTICAL_TRAP_ENEMY_ATTACKS, TACTICAL_TRAP_PILOT, tacticalTrapLayer } from './config';
+export type { TacticalTrapConfig, TrapPerception } from './config';
+export { bodyTiles, canSeeTile, traceBlocked } from './systems/sight';
+export type { SightView } from './systems/sight';
+export {
+  enemyAttackPhase,
+  kindStepTicks,
+  punchFloor,
+  realisedSlow,
+  slowExtraStepTicks,
+  windupTicks,
+} from './systems/tacticalTrap';
+export type { AttackPhase } from './systems/tacticalTrap';

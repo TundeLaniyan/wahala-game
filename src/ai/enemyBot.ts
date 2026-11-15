@@ -19,9 +19,10 @@
  *   - its only action is the one B press: an adjacent rival is punched, else a thrower with a rival in a clear
  *     cardinal line throws (sim/systems/enemyActions.ts decides if it may: cooldowns, group gap, caps).
  */
-import { Tile, attackReady, createRng, enemyMeleeTarget, chooseThrow, nextFloat } from '../sim';
-import type { Difficulty, EnemyAwareness, Generator, Intent, Observation, RngHolder } from '../sim';
+import { DIR_VEC, Tile, attackReady, createRng, enemyMeleeTarget, chooseThrow, nextFloat } from '../sim';
+import type { Difficulty, EnemyAwareness, Generator, Intent, Observation, Player, RngHolder } from '../sim';
 import { Brain } from './brain';
+import { TrapSight } from './trapSight';
 import { PROFILES } from './profiles';
 import type { AiProfile } from './profiles';
 import type { Bot, BotOptions } from './types';
@@ -81,6 +82,8 @@ export class EnemyBot implements Bot {
   private readonly seen = new Map<number, number>();
   /** Generators already taken seriously (the moment one joins, the planner re-plans at once). */
   private readonly heeded = new Set<number>();
+  /** Tactical Trap pilot only (`config.tacticalTrap`): sight, memory and hearing instead of the EF1 model above. */
+  private readonly sight = new TrapSight();
 
   constructor(opts: BotOptions) {
     this.brain = new Brain(enemyProfile(opts.difficulty), opts.seed, opts.playerId);
@@ -113,8 +116,10 @@ export class EnemyBot implements Bot {
    */
   perceive(obs: Observation): Observation {
     const me = obs.players[obs.selfId];
+    if (obs.config.tacticalTrap && me?.enemyKind) return this.perceiveTrap(obs, me);
     const aw = me?.enemyKind ? obs.config.enemyAttacks.awareness[me.enemyKind] : undefined;
     if (!aw || obs.generators.length === 0) {
+      this.sight.reset();
       this.slip.clear();
       this.seen.clear();
       this.heeded.clear();
@@ -147,6 +152,39 @@ export class EnemyBot implements Bot {
     return hidden ? { ...obs, generators } : obs;
   }
 
+  /**
+   * The Tactical Trap pilot's perception (decisions TT1-TT3, ai/trapSight.ts): a generator is known when it was seen
+   * (line of sight, vision range, no body or wall in the way), remembered, or always-public; the rest are obstacles with
+   * an unreachable fuse, as under EF1. Hearing only makes the enemy cautious (see `decide`).
+   */
+  private perceiveTrap(obs: Observation, me: Readonly<Player>): Observation {
+    this.sight.update(obs, me, obs.config.tacticalTrap!);
+    if (this.sight.freshlyKnown || this.sight.soundDir !== null) this.brain.alert();
+    let hidden = false;
+    const generators = obs.generators.map((g) => {
+      if (this.sight.isKnown(g.id)) return g;
+      hidden = true;
+      return { ...g, timer: UNHEEDED_FUSE };
+    });
+    return hidden ? { ...obs, generators } : obs;
+  }
+
+  /** The one investigating step toward a sound just heard (pilot only; never a path to the generator). */
+  private investigate(obs: Observation, me: Readonly<Player>, intent: Intent): void {
+    const dir = this.sight.soundDir;
+    const cfg = obs.config.tacticalTrap;
+    if (!dir || !cfg?.caution.investigate) return;
+    if (me.stepRemaining > 1 || me.attack !== null || obs.tick < me.rootedUntil) return;
+    if (obs.generators.some((g) => g.timer < UNHEEDED_FUSE && g.mode !== 'disabled')) return; // it knows one: it flees, not looks
+    const x = me.x + DIR_VEC[dir].dx;
+    const y = me.y + DIR_VEC[dir].dy;
+    if (x < 0 || y < 0 || x >= obs.width || y >= obs.height) return;
+    if (obs.tiles[y * obs.width + x] !== Tile.Empty) return;
+    if (obs.players.some((o) => o.alive && o.id !== me.id && o.x === x && o.y === y)) return;
+    if (obs.flames.some((f) => f.x === x && f.y === y)) return;
+    intent.move = dir;
+  }
+
   decide(raw: Observation): Intent {
     const obs = this.perceive(raw);
     const intent = this.brain.decide(obs);
@@ -169,6 +207,13 @@ export class EnemyBot implements Bot {
     )
       return intent;
     if (obs.tick < this.nextPress) return intent;
+    if (obs.config.tacticalTrap) {
+      // a heard generator: one investigating step, and no new wind-up or cue while the caution lasts (decision TT3)
+      if (this.sight.cautious(obs.tick)) {
+        this.investigate(obs, me, intent);
+        return intent;
+      }
+    }
     // never commit to a wind-up / cue (and the recovery after it) inside a cross it takes seriously
     if (
       obs.generators.some(

@@ -2,7 +2,7 @@
  * Per-think snapshot of what the bot may see: walkability, pickups, rivals and timing helpers.
  * Arrays are reused between refreshes (the arena size is fixed for a match).
  */
-import { DIRS, Tile, manholePartners } from '../sim';
+import { DIRS, ENEMY_KINDS, Tile, manholePartners } from '../sim';
 import type { Dir, Observation, Pickup, Player } from '../sim';
 import { getBoard } from './board';
 import type { AiProfile } from './profiles';
@@ -16,12 +16,20 @@ export function stepTicksOf(obs: Observation, p: Readonly<Player>): number {
   let t = levels[Math.min(p.speedLevel, levels.length - 1)]!;
   if (p.mounted) t -= m.okadaStepBonus;
   if (p.curse?.kind === 'slow' && obs.tick < p.curse.until) t += m.slowCurseExtraTicks;
+  if (obs.config.tacticalTrap) {
+    // Tactical Trap pilot (decision TT8): the planner knows how slow a slowed or heavy enemy really is, so such an
+    // enemy cannot plan an escape it cannot walk (every other match plans as before)
+    if (p.slow && obs.tick < p.slow.until) t += p.slow.extraStepTicks;
+    if (p.enemyKind) t += ENEMY_KINDS[p.enemyKind].stepPenaltyTicks;
+  }
   return Math.max(m.minStepTicks, t);
 }
 
 /** First tick at which a player's next step could begin (the intent is applied on tick + 1 at the earliest). */
 export function readyTick(obs: Observation, p: Readonly<Player>): number {
-  return Math.max(obs.tick + Math.max(p.stepRemaining, 1), p.dazedUntil);
+  const ready = Math.max(obs.tick + Math.max(p.stepRemaining, 1), p.dazedUntil);
+  // Tactical Trap pilot (TT8): a planted enemy (wind-up, recovery, cue) cannot start a step before it is free
+  return obs.config.tacticalTrap ? Math.max(ready, p.rootedUntil) : ready;
 }
 
 export class World {

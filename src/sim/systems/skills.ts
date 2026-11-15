@@ -36,6 +36,7 @@ import { beginStep } from './stepping';
 import { isActing, playersAt, teammates } from './queries';
 import { resolvePilotPunch } from './pilotCombat';
 import { labReach, labReachesSpot, labStats } from './combatLab';
+import { trapPunchDamage, trapSlowOnHit } from './tacticalTrap';
 
 /** The fighter's original skill (their character's); kept for the menu and the HUD label. */
 export const skillOf = (p: Pick<Player, 'characterId'>): SkillKind => CHARACTERS[p.characterId].skill;
@@ -384,6 +385,8 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
     target.slow = { until, extraStepTicks: spec.slowExtraStepTicks };
     target.slowImmuneUntil = until + spec.slowImmunityTicks;
   }
+  // Tactical Trap pilot (TT5): a punch of the human that reached an enemy slows it (inert without `config.tacticalTrap`)
+  if (reached && state.config.tacticalTrap && humanOnEnemy(p, target)) trapSlowOnHit(state, target);
   const steadfast = humanOnEnemy(p, target) && ENEMY_KINDS[target.enemyKind!].steadfast; // EF4
   if (reached && spec.interrupts && target.attack && !steadfast) {
     target.attack = null; // a hit cuts the victim's wind-up short
@@ -427,7 +430,9 @@ function campaignMelee(
 ): CampaignHitResult {
   const cfg = campaignConfig(state.config);
   const table = cfg.playerDamage[kind];
-  const damage = p.enemyKind && !target.enemyKind ? Math.min(table, cfg.enemyMeleeDamage) : table;
+  let damage = p.enemyKind && !target.enemyKind ? Math.min(table, cfg.enemyMeleeDamage) : table;
+  // Tactical Trap pilot (TT6): the human's punch leaves an enemy its last segment(s); only a blast finishes it
+  if (state.config.tacticalTrap && humanOnEnemy(p, target)) damage = trapPunchDamage(state, target, damage);
   recordHit(state, target, p.id); // before the hit: a defeating blow still credits (and assists) correctly
   return applyCampaignHit(
     state,

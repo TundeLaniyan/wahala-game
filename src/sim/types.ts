@@ -214,6 +214,12 @@ export interface PilotCombatState {
   poise: Record<number, number>;
 }
 
+/** Per-enemy runtime of the Tactical Trap pilot (systems/tacticalTrap.ts). */
+export interface TacticalTrapState {
+  /** The human's slow chain on each enemy seat: hits counted (1 or 2 = the cap) and the tick of the first one. */
+  slows: Record<number, { stacks: number; firstTick: number }>;
+}
+
 /** The attacks a fighter throws: B next to a rival = `primary`; `secondary` is chosen by the B resolver (actions.ts). */
 export interface AttackLoadout {
   primary: AttackKind;
@@ -677,6 +683,8 @@ export interface GameState {
   raid?: RaidState;
   /** The Oshodi combat pilot's runtime (buffered presses, heavy poise). ABSENT outside a pilot match. */
   pilotCombat?: PilotCombatState;
+  /** The Tactical Trap pilot's runtime (slow stacks per enemy). ABSENT outside a pilot scenario. */
+  tacticalTrap?: TacticalTrapState;
   /** The City Rumble combat test lab's runtime (systems/combatLab.ts). ABSENT until a level is picked in a local Rumble. */
   combatLab?: CombatLabState;
 }
