@@ -14,6 +14,7 @@ import { FlowFrameMark } from '../FlowFrameMark';
 import { KEY_ART } from './art';
 import { useMenuNav } from './focusNav';
 import { HomeScreen } from './HomeScreen';
+import { FirstVisitCard } from './FirstVisitCard';
 import { ModeScreen } from './ModeScreen';
 import { SetupScreen } from './SetupScreen';
 import { FighterScreen } from './FighterScreen';
@@ -86,6 +87,7 @@ export function MainMenu() {
       <div className="mn-stage" key={screen}>
         <Suspense fallback={null}>{onlineOk && <Screen />}</Suspense>
       </div>
+      {screen === 'home' && <FirstVisitCard />}
       {busy && loading && (
         <div
           className="mn-loading"

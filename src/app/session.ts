@@ -10,6 +10,7 @@ import { GameRenderer, assets, isQualitySetting, renderCastPortraits, resolveSha
 import type { QualityEvent } from '../render';
 import { registerBusts } from '../assets/portraits';
 import { browserStore } from '../campaign';
+import type { UpgradeKind } from '../campaign';
 import { flags } from '../platform';
 import type {
   CampaignLevel,
@@ -532,6 +533,9 @@ export const commands = {
   campaignLevel(level: CampaignLevel): void {
     audio.playUi('click');
     campaign?.setLevel(level);
+  },
+  campaignBuyUpgrade(kind: UpgradeKind): void {
+    audio.playUi(campaign?.buyUpgrade(kind) ? 'click' : 'back');
   },
   campaignDelete(): void {
     audio.playUi('back');

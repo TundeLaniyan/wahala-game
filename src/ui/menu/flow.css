@@ -880,3 +880,41 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
+/* First-visit offer (FirstVisitCard.tsx, decisions OB1-OB5) */
+.mn-firstvisit {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgba(10, 6, 2, 0.72);
+  overflow-y: auto;
+}
+.mn-firstvisit-card {
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+  padding: 20px 22px;
+}
+.mn-firstvisit-card h2 {
+  margin: 2px 0 8px;
+  font-size: clamp(32px, 7vw, 52px);
+}
+.mn-firstvisit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 14px 0 8px;
+}
+.mn-firstvisit-actions .mn-btn {
+  min-height: 44px;
+}
+.mn-firstvisit-note {
+  opacity: 0.8;
+  font-size: 0.9em;
+}

@@ -138,8 +138,8 @@ export function HomeScreen() {
             <HomeItem
               testId="home-academy"
               icon="🎓"
-              title="Training Academy"
-              text="Interactive lessons: watch it, then play it"
+              title="Learn to Play"
+              text="Training Academy: interactive lessons, watch it then play it"
               onClick={() => commands.menuOpen('academy')}
             />
             {flags().online && (
@@ -155,7 +155,7 @@ export function HomeScreen() {
             <HomeItem
               testId="home-settings"
               icon="⚙"
-              title="Settings"
+              title="Settings & Sound"
               text="Audio · Graphics · Controls · Accessibility"
               onClick={() => commands.menuOpen('settings')}
             />
