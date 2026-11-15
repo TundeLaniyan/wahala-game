@@ -623,3 +623,15 @@ Every local road of Lekki Phase 1 (Admiralty Way, Freedom Way, their crossing: 2
 
 ## Follow-camera view clear (branch `claude/wahala-fu-vis`, presentation only; decisions VF-B1-VF-B6)
 Scenery that stands between the follow camera and the fighter, the floor disc around it or a rival / generator close by dissolves, decided in screen space from the real camera matrices (`render/assets/viewClear.ts`), on every quality rung (`QualityProfile.viewClearStride`; it used to be off on the two Very Low rungs, where Auto starts on weak phones). Verified with real-camera harnesses (`scripts/view-clear-matrix.mjs`, `view-clear-walk.mjs`, `view-clear-fight.mjs`; screenshots in `docs/screenshots/view-clear-2/`), unit tests (`tests/render/view-clear.test.ts`, `quality-ladder.test.ts`) and `e2e/view-clear.spec.ts`. Not verified: a real phone GPU (all frames are SwiftShader).
+
+## Story, gameplay bibles, progression slice and onboarding (2026-11-15, release branch `claude/wahala-stitch-uiux-v1`)
+
+| Item | State |
+| --- | --- |
+| Tactical Trap pilot | shipped and deployed at `94d4bcc` (Academy only, TT1-TT10) |
+| `docs/STORY_BIBLE.md` | new canonical story reference (LOCKED / EXISTING / PROPOSED); `CAMPAIGN_STORY.md` marked superseded for narrative; legal flag on reference-derived boss nicknames |
+| `docs/CAMPAIGN_GAMEPLAY_BIBLE.md` | new: generator-first combat (pilot vs proposed parameters), Generator Parts, specials, enemy families, rewards |
+| Generator Parts (Oshodi) | implemented: derived Parts, capacity / range upgrades (cap 1, 6 Parts), map Workshop panel, result-screen Parts and "Ring weakened" lines, consequence line on cleared districts (PR1-PR8) |
+| Onboarding | implemented: static startup display, first-visit START TUTORIAL / SKIP TO MENU, local memory, Home labels (OB1-OB5) |
+| Menu architecture | audit and plan: `docs/MENU_ARCHITECTURE_PLAN.md` |
+| Not done | missions 19-21; campaign-wide combat rollout; Parts outside Oshodi; pause exit confirmation; W-AR art; per-fighter dialogue |

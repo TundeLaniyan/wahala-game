@@ -1060,3 +1060,32 @@ Why: campaign enemies escaped generators too reliably (EF1: a planner that sees 
 | TT8 | **Enemies keep off the human's tile** (as the Oshodi pilot, CP9, through `tacticalTrap.enemiesKeepOffHuman`): one standing on the generator tile would see it. `pilotBlocksStep` now reads either key. | `pilotCombat.ts` |
 | TT9 | **Measured, not claimed** (tests/tactical-trap-evasion.test.ts, `scripts/lib/trapDrill.ts`): the same scripted trap hits the pilot's enemies in 18 of 48 (cover) and 48 of 48 (cover + two punches) runs against 0 of 48 for both perfect knowledge and the EF1 baseline; a free enemy that saw the generator is hit in at most 40 % of runs; one planted by its own swing in every run; leaving at once (no trap) catches nobody. Hits are not guaranteed. | tests |
 | TT10 | **Isolation and removal.** Key absent everywhere but the three Academy lessons (new lesson ids only, `wahala.academy.v1` unchanged). `TutorialController` seats the real enemy bot for `Actor.enemyKind` seats only; the older lessons seat none. Remove the pilot by deleting `tacticalTrap` (type, `TACTICAL_TRAP_PILOT`, `tacticalTrapLayer`), `systems/sight.ts`, `systems/tacticalTrap.ts`, `ai/trapSight.ts`, `lessons/tactics.ts` and the guarded lines in `skills.ts`, `world.ts`, `enemyBot.ts`, `pilotCombat.ts`. | docs/TACTICAL_TRAP_PILOT.md |
+
+## Generator Parts progression slice (branch `claude/wahala-stitch-uiux-v1`, docs/CAMPAIGN_GAMEPLAY_BIBLE.md section 2, decisions PR1-PR8)
+
+Why: the founder asked for one simple campaign resource and the smallest useful progression slice, first on Oshodi, without touching competitive balance or player saves.
+
+| # | Decision | Where |
+| --- | --- | --- |
+| PR1 | **Parts are derived, not stored.** Earned = sum over eligible missions of `partsForStars(bestStars)` (0 / 3 / 4 / 5 for 0-3 stars). A first clear pays 3, each better best-star step pays 1 once, a replay at the same or fewer stars pays nothing: no farming by construction, and an older save gets exactly what its stars are worth. | `campaign/upgrades.ts` |
+| PR2 | **Oshodi only.** `CAMPAIGN_PROGRESSION.districts = ['oshodi']` (approach, rail edge, boss: 9 to 15 Parts). Other districts earn nothing and apply nothing until verified; `enabled: false` turns the slice off without touching a save. | `campaign/upgrades.ts` |
+| PR3 | **Seat bonus, mission matches only.** `PlayerSetup.loadoutBonus` raises the seat's base range and capacity (`systems/loadout.ts`). `createGame` drops it unless the ruleset is `mission`, so Classic, City Rumble, raids, tutorials and online can never carry one; enemies never get one; a zero or absent bonus leaves options and state byte-identical (tested). | `sim/state.ts`, `sim/systems/loadout.ts` |
+| PR4 | **Two upgrades, cap 1 each, 6 Parts each.** Capacity +1 (the seat's capacity cap rises with it, so the Extra Socket still adds one) and range +1 (Petrol / Diesel build on it, radius cap unchanged). Finishing Oshodi at all (9) buys one; an average of two stars (12) buys both. Bought only between missions (refused during a mission, like the campaign level, CL4). | `campaign/upgrades.ts`, `app/campaign.ts` |
+| PR5 | **No save-version change.** `CampaignSave.upgrades` is optional; repair clamps levels to the caps and refunds (range first) down to what the earned Parts pay for; a save that bought nothing keeps its exact shape. Rolling back to an older build keeps all progress and only forgets the bought levels (Parts are re-derived). | `campaign/save.ts` |
+| PR6 | **Pickups stay temporary.** Respawn resets range and capacity to the seat's upgraded base (never below it); death drops compare against that base. | `systems/respawn.ts`, `systems/drops.ts`, `systems/pickups.ts` |
+| PR7 | **Raids not included.** Door and standalone raids keep their own loadout (`raid/build.ts`) in this slice. | `app/campaign.ts` |
+| PR8 | **Result feedback.** Section and boss results show the Parts the result paid (or how to earn more); the two Oshodi field missions show one "Ring weakened" line (`SectionMissionDef.ringWeakened`); a cleared district's map card shows its consequence once its existing consequence flags are set. | `ui/campaign/*` |
+
+Tests: `tests/campaign-upgrades.test.ts`, `tests/app/campaign-upgrades-flow.test.ts`.
+
+## First-visit onboarding (branch `claude/wahala-stitch-uiux-v1`, decisions OB1-OB5)
+
+| # | Decision | Where |
+| --- | --- | --- |
+| OB1 | **Immediate startup display** is static HTML inside `#root` (WAHALA!, Lagos City Rumble, Loading...): visible before any script, replaced by React's first render; no animation, nothing waits for it. | `index.html` |
+| OB2 | **One offer on a first visit**: START TUTORIAL (the Academy's first beginner lesson, `openTutorial(0)`) or SKIP TO MENU, over Home; the adaptive-runtime line reads `render/perf/brand.ts` (FlowFrame today; approved W-AR art and name replace it there in one edit). | `ui/menu/FirstVisitCard.tsx` |
+| OB3 | **Remembered locally** in `wahala.onboarding.v1` (localStorage; no cookies, no tracking). Returning players go straight to Home; blocked storage just shows the card again next time. | `app/onboarding.ts` |
+| OB4 | **Automation sees Home as before** (`navigator.webdriver`) unless the URL carries `?onboarding`; the existing browser suite is unchanged, `e2e/onboarding.spec.ts` forces the card. | `app/onboarding.ts` |
+| OB5 | **Home labels** follow the approved navigation names without moving anything: "Learn to Play" (Training Academy) and "Settings & Sound"; test ids unchanged. | `ui/menu/HomeScreen.tsx` |
+
+Tests: `tests/onboarding.test.ts`, `e2e/onboarding.spec.ts`.
