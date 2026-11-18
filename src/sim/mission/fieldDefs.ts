@@ -576,6 +576,10 @@ const defs: FieldMissionDef[] = [
     parSec: 240,
   },
   // ---------------------------------------------------------------- Lekki
+  // Gate Approach (decision DB6): Ring private security holds the closed stretch of the estate road between its
+  // gatehouses. Take the road and keep it while the guards from the east block come for it; then wreck the standby
+  // feeders that carry the estates' private power, and raid the plant. Two guards walk the garden wall and the pool edge;
+  // a heavy stands in the garden.
   {
     id: 'lekki.approach',
     sectorId: 'lekki.gateApproach',
@@ -585,9 +589,25 @@ const defs: FieldMissionDef[] = [
     returnMarker: m(4, 22, 'SIDE GATE'),
     legs: [
       {
-        kind: 'reachMarkers',
-        text: 'Walk through the 2 checkpoints along the garden wall.',
-        markers: [m(8, 26, 'GARDEN WALL'), m(16, 26, 'POOL EDGE')],
+        kind: 'holdArea',
+        text: 'Keep the gatehouse road clear for 25 seconds.',
+        area: { x: 19, y: 25, radius: 2, label: 'GATEHOUSE ROAD' },
+        holdSec: 25,
+        waves: [
+          { group: 'gatehouse', atSec: 4 },
+          { group: 'gatehouseLate', atSec: 11 },
+        ],
+      },
+      {
+        kind: 'destroyTargets',
+        text: 'Destroy the 4 standby feeders by the estate road.',
+        targets: [
+          { id: 'feederNorth', kind: 'controlPoint', x: 29, y: 22, label: 'STANDBY FEEDER', hp: 2 },
+          { id: 'feederSouth', kind: 'controlPoint', x: 32, y: 28, label: 'STANDBY FEEDER', hp: 2 },
+          { id: 'feederGarden', kind: 'controlPoint', x: 7, y: 29, label: 'STANDBY FEEDER', hp: 2 },
+          { id: 'feederRoad', kind: 'controlPoint', x: 25, y: 22, label: 'STANDBY FEEDER' },
+        ],
+        crew: 'feederCrew',
       },
       { kind: 'door', text: 'Stand on the plant door for 1 second to raid it.', doorId: 'plant' },
     ],
@@ -603,13 +623,24 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Gate Guard', 11, 24, 'gatehouse', patrol('ringSecurity', [5, 23], [11, 23])),
-      guard('Gate Guard', 16, 25, 'gatehouse', patrol('ringSecurity', [16, 23], [22, 23])),
-      blocker('Gate Blocker', 12, 26, 'gatehouse', post('heavyEnforcer', 1)),
+      // the garden wall and the pool edge: two patrols the whole width of the garden
+      guard('Gate Guard', 11, 23, 'garden', patrol('ringSecurity', [4, 23], [17, 23])),
+      guard('Pool Guard', 11, 27, 'garden', patrol('ringSecurity', [17, 27], [4, 27])),
+      blocker('Gate Blocker', 12, 26, 'garden', post('heavyEnforcer', 1)),
+      // the gatehouse guards wait in the east block, then come for the road
+      guard('Gatehouse Guard', 27, 25, 'gatehouse', post('ringSecurity')),
+      chaser('Gatehouse Thrower', 30, 29, 'gatehouseLate', post('bottleThrower', 2)),
+      // the feeder crew
+      guard('Feeder Tech', 31, 25, 'feederCrew', post('ringSecurity')),
     ],
-    timeLimitSec: 360,
-    parSec: 190,
+    timeLimitSec: 480,
+    parSec: 240,
   },
+  // Estate Sweep (decision DB7): two Ring guards walk the north drive, a heavy holds the drive gate and a thrower the
+  // lawn terrace. When they are
+  // down the inner estate gate opens on the east lawn, where the control points that switch the standby grid stand with
+  // their crew. Wreck them and the hounds are loosed from their kennel: back west to the service lane, then on to the
+  // estate gate.
   {
     id: 'lekki.estate',
     sectorId: 'lekki.northEstate',
@@ -618,27 +649,43 @@ const defs: FieldMissionDef[] = [
     start: [3, 3],
     returnMarker: m(4, 8, 'ESTATE GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Defeat the 2 guards on the north drive.', group: 'patrol' },
+      { kind: 'clearGroup', text: 'Defeat the 4 guards on the north drive.', group: 'patrol' },
       {
-        kind: 'reachMarkers',
-        text: 'Walk through the 2 security posts on the east lawn.',
-        markers: [m(33, 3, 'POST 1'), m(44, 8, 'POST 2')],
+        kind: 'destroyTargets',
+        text: 'Destroy the 5 control points on the east lawn.',
+        targets: [
+          { id: 'controlNorth', kind: 'controlPoint', x: 43, y: 7, label: 'CONTROL POINT', hp: 2 },
+          { id: 'controlMid', kind: 'controlPoint', x: 45, y: 11, label: 'CONTROL POINT', hp: 2 },
+          { id: 'controlEast', kind: 'controlPoint', x: 47, y: 8, label: 'CONTROL POINT', hp: 2 },
+          { id: 'controlSouth', kind: 'controlPoint', x: 42, y: 12, label: 'CONTROL POINT' },
+          { id: 'controlGate', kind: 'controlPoint', x: 41, y: 9, label: 'CONTROL POINT', hp: 2 },
+        ],
+        crew: 'lawnCrew',
       },
       {
         kind: 'escapeRoute',
-        text: 'Escape to the service road before the hound catches you.',
+        text: 'Escape to the service lane before a hound catches you.',
         group: 'pursuers',
-        exit: m(53, 13, 'SERVICE ROAD'),
+        exit: m(24, 13, 'SERVICE LANE'),
       },
     ],
     doors: [],
     enemies: [
-      guard('Estate Guard', 14, 8, 'patrol', patrol('ringSecurity', [10, 8], [20, 8])),
-      guard('Estate Guard', 26, 9, 'patrol', patrol('ringSecurity', [20, 9], [32, 9])),
-      chaser('Estate Hound', 26, 13, 'pursuers', { variant: 'bottleThrower' }),
+      // the north drive: two guards walk it end to end between the pillars, out of step
+      guard('Estate Guard', 10, 3, 'patrol', patrol('ringSecurity', [4, 3], [20, 3])),
+      guard('Estate Guard', 28, 3, 'patrol', patrol('ringSecurity', [35, 3], [20, 3])),
+      // the drive gate heavy, and a thrower on the central lawn terrace
+      blocker('Drive Heavy', 12, 8, 'patrol', post('heavyEnforcer', 1)),
+      chaser('Terrace Thrower', 30, 8, 'patrol', post('bottleThrower', 2)),
+      // behind the inner gate: the control point crew
+      guard('Grid Tech', 45, 9, 'lawnCrew', post('ringSecurity')),
+      guard('Grid Tech', 50, 11, 'lawnCrew', post('ringSecurity')),
+      // the hound kennels in the lawn's east corners: loosed when the grid goes down, they run you back west
+      chaser('Estate Hound', 54, 13, 'pursuers', { variant: 'bottleThrower' }),
+      chaser('Estate Hound', 54, 6, 'pursuers', { variant: 'areaBoy' }),
     ],
-    timeLimitSec: 480,
-    parSec: 260,
+    timeLimitSec: 420,
+    parSec: 180,
   },
 ];
 

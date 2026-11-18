@@ -329,6 +329,8 @@ const defs: MissionSectorDef[] = [
       b('south4', 'barrier', row(15, 48, 48)),
       b('serviceGate', 'gate', row(15, 54, 54)),
     ],
+    // the inner estate gate: the east lawn opens once the drive patrol is down (decision DB7)
+    gates: [{ id: 'lawnGate', kind: 'gate', tiles: col(40, 6, 13), opensAfterLeg: 0 }],
     viewMargin: 3,
     hazards: 'inside',
   },

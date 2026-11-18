@@ -405,15 +405,16 @@ const LEKKI_SECTIONS: SectionDef[] = [
     order: 1,
     name: 'Gate Approach',
     summary:
-      'The side gate leads along the garden wall to the standby plant. Slip past the gatehouse guards and raid the plant.',
+      'Ring private security holds the closed stretch of the estate road. Take the road, cut the standby feeders and raid the plant.',
     requires: [],
     missions: [
       {
         id: 'lekki.approach',
         format: 'field',
         name: 'Gate Approach',
-        objectiveCard: 'Walk the garden wall, raid the standby plant, return.',
-        summary: 'Guards watch the wall. Reach the pool edge, hold the plant door and raid it.',
+        objectiveCard: 'Keep the gatehouse road, wreck 4 feeders, raid the standby plant.',
+        summary:
+          'Guards walk the garden wall and the pool edge, and a heavy stands in the garden. Keep the road for 25 seconds while the gatehouse guards come, then blast the four feeders and raid the plant.',
         missionRef: 'lekki.approach',
         doors: [{ doorId: 'plant', raidId: 'standbyPlant' }],
         reward: title('lekki.approach', 'Gate Regular', 'The side gate opens a little faster for you.'),
@@ -429,20 +430,20 @@ const LEKKI_SECTIONS: SectionDef[] = [
     order: 2,
     name: 'Estate Sweep',
     summary:
-      'The estate drive is patrolled. Clear the patrol, check two posts on the lawn and outrun the hounds to the service road.',
+      'Guards walk the north drive; the standby grid’s control points stand on the east lawn behind the inner gate. Clear the drive, wreck the control points and outrun the hounds.',
     requires: ['lekki.s1'],
     missions: [
       {
         id: 'lekki.estate',
         format: 'field',
         name: 'Estate Sweep',
-        objectiveCard: 'Clear the patrol, check two posts, outrun the hounds.',
+        objectiveCard: 'Beat 4 drive guards, wreck 5 control points, outrun the hounds.',
         summary:
-          'Two guards hold the north drive. After the lawn posts the hounds are loosed: reach the service road.',
+          'The inner gate opens when the drive guards are down. Blast the five control points on the lawn, then run back west to the service lane before a hound catches you.',
         missionRef: 'lekki.estate',
         reward: title('lekki.estate', 'Estate Regular', 'The hounds lose interest in your scent.'),
         unlocks: ['section.lekki.s3'],
-        ringWeakened: 'The estate patrol is broken up: the grid’s control house stands unguarded.',
+        ringWeakened: 'The lawn control points are wrecked: the grid’s control house stands unguarded.',
       },
     ],
   },
