@@ -27,6 +27,10 @@ Okada, Armour, lives, respawn, retry, enemy durability, the boss-fight crew leve
 - Multiplayer and Rumble never read it (`GameConfig.campaign` is absent there; tested).
 - The death / respawn / retry rules are not touched by this branch; every level goes through the same code (tested: same defeat events, lives and respawn on all three).
 
+- Campaign tactics layer (decisions SA3-SA12, `docs/CAMPAIGN_SECTOR_AI.md`): every field and boss mission now carries
+  `config.campaignTactics` (Normal from `missionConfigLayer`, Easy / Hard from `campaignTacticsLayer` in the level's
+  layer), so a Normal mission is no longer byte-for-byte the earlier campaign; `levelConfigLayer` itself is unchanged.
+
 ## Tests
 `tests/campaign-levels.test.ts` (table, Normal identity, real mission/raid effect, same death rules, multiplayer, save), `tests/app/campaign-level.test.ts` (controller: default, persistence, builder gets the level, change refused during a mission, old save).
 

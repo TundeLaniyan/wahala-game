@@ -1,5 +1,9 @@
 # Oshodi Mission 1 combat pilot (decisions CP1-CP12)
 
+**Status (2026-11-18): SUPERSEDED by the campaign tactics layer (decision SA3, `docs/CAMPAIGN_SECTOR_AI.md`). No campaign
+mission runs it; the code is an archived replay reachable only through `MissionSpec.archivedPilot` (its tests and
+`npm run combat-pilot`). The text below is the pilot's record.**
+
 Branch `claude/wahala-oshodi-combat-pilot-v1`, from the deployed release `b55e95f`. **An experiment for founder
 playtesting: not merged, not deployed, not extended to any other mission.** For playtesting it is integrated, with the
 respawn-freeze hotfix, on the review branch `claude/wahala-oshodi-combat-review-v1` (the release `5869154` plus this

@@ -14,6 +14,16 @@ Notes per task in `docs/integrated-release/`; decisions SD-B, LI7-LI9, NV, CL-L,
 - **Fighter select and story:** "Playable fighters · 3" label, radio-message cards, text-only scrolling beside story pictures.
 - **Match loading:** Play / Start / Rematch / missions answer at once with a light loading screen (real steps, real model count, turn-sideways hint on an upright phone), one start per tap burst, Retry / Back on failure (`docs/MATCH_LOADING.md`, ML1-ML8).
 
+## Campaign tactics layer (branch `claude/wahala-csa-combat`, from production `46f0781`)
+
+Campaign-wide (field and boss missions; never raids, the Academy, Classic, City Rumble or online): perception with no
+omniscience (sight, body concealment, memory, coarse hearing, a calm view cone, trap sense), one territorial state machine
+(patrol / watch / investigate / alert / pursue / return, leash from the territory, no farming at the boundary), readable
+enemy commitment per level with the `enemyCue` telegraph, and melee that staggers / knocks back / slows once while only a
+blast finishes armoured enemies. Variants and territories on the 11 field missions; the Oshodi combat pilot is archived.
+Reference `docs/CAMPAIGN_SECTOR_AI.md`, decisions SA3-SA12, drills `npm run sector-ai`. Verified with typecheck, ESLint,
+Prettier and the full Vitest suite; no browser check was run on this branch.
+
 ## Tactical Trap pilot (branch `claude/wahala-tactical-trap-v1`, from the release `3e32e90`)
 
 Academy-only pilot (`config.tacticalTrap`, decisions TT1-TT10, `docs/TACTICAL_TRAP_PILOT.md`): enemies react only to generators they saw, remembered or heard, attacks have a 0.8 s recovery, the human's punch slows (25 % then 40 %) but cannot finish, three "Generator Tactics" lessons (Agbero, Bottle Thrower, hidden generator). Pushed nowhere; no other ruleset carries the key. Verification is listed in the document.
