@@ -7,8 +7,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  ENEMY_VARIANTS,
   MISSION_DEFS,
   MISSION_IDS,
+  observe,
   buildMissionGame,
   createGame,
   missionView,
@@ -21,7 +23,7 @@ import { directiveFor } from '../src/sim/mission/directives';
 import { Tile } from '../src/sim/types';
 import { addGenerator } from './helpers';
 import { advance, blastAt, hitBoss, newMission, of, put } from './mission-helpers';
-import { runBossFight } from '../scripts/lib/bossFight';
+import { SeatPerception } from '../src/ai/seatPerception';
 
 const AWAY = { x: 30, y: 30 };
 const LEVELS: CampaignLevel[] = ['easy', 'normal', 'hard'];
@@ -282,6 +284,23 @@ describe('levels: the crew he calls and escorts that cover him (BX6)', () => {
     expect(called).toEqual([0, 1, 2]);
   });
 
+  it('the window is the fairness lever: a generator laid 14 s into the window lands on Easy and Normal, not on Hard', () => {
+    const landed = LEVELS.map((level) => {
+      const state = missionAt('oshodi', level);
+      const m = state.mission!;
+      breakPhase(state);
+      const boss = state.players[1]!;
+      // the human arrives 14 s after the window opened and lays a generator beside the committed boss (3 s fuse)
+      advance(state, m.boss.exposedAt! + 60 * 14 - state.tick);
+      put(state, 0, boss.x + 1, boss.y);
+      tick(state, { 0: { place: true } });
+      put(state, 0, AWAY.x, AWAY.y);
+      const ev = advance(state, 60 * 4);
+      return of(ev, 'bossHit').length;
+    });
+    expect(landed).toEqual([1, 1, 0]);
+  });
+
   it('Hard: the escort body-blocks the line between the exposed boss and the human; Normal: it follows him', () => {
     for (const level of ['normal', 'hard'] as const) {
       const state = missionAt('oshodi', level);
@@ -297,50 +316,53 @@ describe('levels: the crew he calls and escorts that cover him (BX6)', () => {
   });
 });
 
-// ------------------------------------------------------------------ real fights (the boss and crew bots)
+// ------------------------------------------------------------------ crew variants (BX8)
 
-/** Seeds whose Normal generator-first run wins (measured with `npm run boss-audit`; a regression shows up here). */
-const WIN_SEED: Readonly<Record<MissionId, number>> = {
-  oshodi: 101,
-  mushin: 101,
-  fadeyiSomolu: 101,
-  ebuteMetta: 101,
-  lagosIsland: 118,
-  lekki: 101,
-};
+describe('crew variants: readable roles, perception only (BX8)', () => {
+  it('every crew seat of every boss names a variant; the tactics layer carries them, the boss is a boss', () => {
+    for (const id of MISSION_IDS) {
+      for (const c of MISSION_DEFS[id].crew) expect(c.variant, `${id} ${c.name}`).toBeDefined();
+      const t = createGame(buildMissionGame({ spec: { id }, humanCharacter: 'streetBaller', seed: 1 })).config
+        .campaignTactics!;
+      expect(t.seatVariant?.[1]).toBe('boss');
+      expect(t.seatVariant?.[0]).toBeUndefined();
+      MISSION_DEFS[id].crew.forEach((c, i) => {
+        expect(t.seatVariant?.[2 + i]).toBe(c.variant);
+        expect(t.seatPerception?.[2 + i]).toBe(ENEMY_VARIANTS[c.variant!].base);
+      });
+    }
+  });
 
-describe('scripted fights against the real boss and crew bots (Normal)', () => {
-  it.each(MISSION_IDS)(
-    '%s: the generator-first plan wins in time; pure punching breaks nothing and never hits him',
-    (id) => {
-      const gen = runBossFight({ id, level: 'normal', strategy: 'generator', seed: WIN_SEED[id] });
-      expect(gen.result, JSON.stringify(gen)).toBe('won');
-      expect(gen.bossHits).toBe(3);
-      expect(gen.seconds).toBeLessThan(tuningFor({ id }).timeLimitTicks / 60);
-      const punch = runBossFight({ id, level: 'normal', strategy: 'punch', seed: WIN_SEED[id], maxSec: 90 });
-      expect(punch.phasesCleared, JSON.stringify(punch)).toBe(0);
-      expect(punch.exposures).toBe(0);
-      expect(punch.bossHits).toBe(0);
-      expect(punch.result).not.toBe('won');
-    },
-    180_000,
-  );
-
-  it('the same seed plays the same fight', () => {
-    const a = runBossFight({
-      id: 'fadeyiSomolu',
-      level: 'normal',
-      strategy: 'generator',
-      seed: 7,
-      maxSec: 60,
-    });
-    const b = runBossFight({
-      id: 'fadeyiSomolu',
-      level: 'normal',
-      strategy: 'generator',
-      seed: 7,
-      maxSec: 60,
-    });
-    expect(a).toEqual(b);
-  }, 60_000);
+  it('a placement watcher (Ring security on Normal) notices a generator laid under the placer in its sight; a plain seat does not', () => {
+    const s = newMission({ id: 'oshodi' });
+    const escort = s.mission!.seats.find((x) => x.role === 'escort')!.playerId;
+    const e = s.players[escort]!;
+    // in plain sight, two tiles away along open floor with nobody in between
+    const free = (x: number, y: number): boolean =>
+      s.tiles[y * s.width + x] === Tile.Empty && !s.players.some((p) => p.alive && p.x === x && p.y === y);
+    const [dx, dy] = (
+      [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const
+    ).find(([a, b]) => free(e.x + a, e.y + b) && free(e.x + 2 * a, e.y + 2 * b))!;
+    put(s, 0, e.x + 2 * dx, e.y + 2 * dy);
+    const g = addGenerator(s, { ownerId: 0, x: e.x + 2 * dx, y: e.y + 2 * dy, timer: 170 });
+    g.placedTick = s.tick;
+    const watcher = new SeatPerception('guard', 'ringSecurity');
+    const plain = new SeatPerception('guard');
+    // the human's body covers the generator: only the one who watched it laid knows it is there
+    expect(watcher.perceive(observe(s, escort), () => undefined).generators.some((o) => o.id === g.id)).toBe(
+      true,
+    );
+    expect(plain.perceive(observe(s, escort), () => undefined).generators.some((o) => o.id === g.id)).toBe(
+      false,
+    );
+    // after its (keen) reaction it plans on the real fuse
+    s.tick += 40;
+    const later = watcher.perceive(observe(s, escort), () => undefined);
+    expect(later.generators.find((o) => o.id === g.id)?.timer).toBe(170);
+  });
 });

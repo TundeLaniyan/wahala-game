@@ -4,6 +4,7 @@
  */
 import type { AttackKind, CharacterId, Dir, PickupKind, StreakRewardKind, VehicleKind } from './types';
 import type { EnemyKind, ThrownKind } from './campaign/types';
+import type { EnemyVariantId } from './data/enemyVariants';
 
 /**
  * V2 elimination reward: a pickup kind, or `contact` = the eliminator's generator-contact ability
@@ -448,6 +449,11 @@ export interface CampaignTacticsConfig {
    * `missionConfigLayer` from the mission data; absent in field missions.
    */
   seatPerception?: Record<number, EnemyKind>;
+  /**
+   * Boss missions (decision BX8): the variant personality of each generator-bot seat (`CrewDef.variant`, the boss is
+   * 'boss'): its trap sense (reaction, whether it watches a placement) and its vision change, never what it can know.
+   */
+  seatVariant?: Record<number, EnemyVariantId>;
 }
 
 /**

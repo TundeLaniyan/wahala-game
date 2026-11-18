@@ -96,11 +96,14 @@ interface BossMarker {
   bubble: Mesh;
   arc: Mesh;
   beam: Mesh;
+  /** The tile the exposed boss restores his shield on (decision BX1): a pulsing ring on the floor while he is exposed. */
+  anchor: Mesh;
   ringMat: MeshBasicMaterial;
   haloMat: MeshBasicMaterial;
   bubbleMat: MeshBasicMaterial;
   arcMat: MeshBasicMaterial;
   beamMat: MeshBasicMaterial;
+  anchorMat: MeshBasicMaterial;
 }
 
 const additive = (map: MeshBasicMaterial['map']): MeshBasicMaterial =>
@@ -461,7 +464,28 @@ export class MissionViews implements View {
     const group = new Group();
     group.add(halo, ring, arc, bubble, beam);
     this.group.add(group);
-    return { group, ring, halo, bubble, arc, beam, ringMat, haloMat, bubbleMat, arcMat, beamMat };
+    // the restore spot stays on its tile while the boss walks to it (not part of the moving boss group)
+    const anchorMat = additive(ringTexture());
+    const anchor = new Mesh(this.plane, anchorMat);
+    anchor.position.y = 0.04;
+    anchor.renderOrder = 13;
+    anchor.visible = false;
+    this.group.add(anchor);
+    return {
+      group,
+      ring,
+      halo,
+      bubble,
+      arc,
+      beam,
+      anchor,
+      ringMat,
+      haloMat,
+      bubbleMat,
+      arcMat,
+      beamMat,
+      anchorMat,
+    };
   }
 
   private updateBoss(ctx: FrameContext, view: MissionView): void {
@@ -471,7 +495,10 @@ export class MissionViews implements View {
     if (!defeated) this.defeatedAt = null;
     const since = this.defeatedAt === null ? 0 : ctx.time - this.defeatedAt;
     if (!p || (!p.alive && !defeated) || since > 1.6) {
-      if (this.boss) this.boss.group.visible = false;
+      if (this.boss) {
+        this.boss.group.visible = false;
+        this.boss.anchor.visible = false;
+      }
       return;
     }
     if (!this.boss) this.boss = this.createBoss();
@@ -479,7 +506,19 @@ export class MissionViews implements View {
     b.group.visible = true;
     const pos = playerGridPos(p, ctx.alpha);
     b.group.position.set(ctx.layout.wx(pos.x), 0, ctx.layout.wz(pos.y));
-    const look = bossLook(view.boss, ctx.state.mission?.tuning.exposeTicks ?? 0, ctx.time, since);
+    // the arc's full length is the current window (a punch can lengthen it), else the mission's window
+    const total = view.boss.exposeTotalTicks ?? ctx.state.mission?.tuning.exposeTicks ?? 0;
+    const look = bossLook(view.boss, total, ctx.time, since);
+    const a = view.boss.exposed ? view.boss.anchor : null;
+    b.anchor.visible = !!a;
+    if (a) {
+      b.anchor.position.set(ctx.layout.wx(a.x), 0.04, ctx.layout.wz(a.y));
+      b.anchor.scale.setScalar(1.7 * (1 + 0.12 * Math.sin(ctx.time * 6)));
+      b.anchorMat.color.setHex(
+        view.boss.restoring ? MARKER_COLORS.bossExposed : MARKER_COLORS.bossExposedAlt,
+      );
+      b.anchorMat.opacity = view.boss.restoring ? 0.9 : 0.6;
+    }
     b.ring.scale.setScalar(look.radius * 2.1);
     b.ringMat.color.setHex(look.ringColor);
     b.ringMat.opacity = look.ring;
@@ -535,6 +574,7 @@ export class MissionViews implements View {
       this.boss.bubbleMat.dispose();
       this.boss.arcMat.dispose();
       this.boss.beamMat.dispose();
+      this.boss.anchorMat.dispose();
     }
     for (const g of this.arcs) g?.dispose();
     for (const g of this.icons.values()) g.dispose();

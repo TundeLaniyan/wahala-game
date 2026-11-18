@@ -30,7 +30,7 @@ export function createBot(opts: BotOptions): Bot {
         // a campaign boss mission's generator bot sees only what it could see (decision SA4); everyone else as before
         const kind = obs.config.campaignTactics?.seatPerception?.[opts.playerId];
         if (kind === undefined) return brain.decide(obs);
-        perception ??= new SeatPerception(kind);
+        perception ??= new SeatPerception(kind, obs.config.campaignTactics?.seatVariant?.[opts.playerId]);
         return brain.decide(perception.perceive(obs, () => brain.alert()));
       }
       enemy ??= new EnemyBot(opts);

@@ -12,6 +12,7 @@ import { ebuteX } from '../arenas/ebuteWest';
 import { ticks } from '../config';
 import { bossRecipe } from './boss';
 import type { BossRecipe } from './boss';
+import type { EnemyVariantId } from '../data/enemyVariants';
 import type { CharacterId } from '../types';
 import type { MissionId, NpcRole, ObjectiveKind, PhaseTuning } from './types';
 
@@ -39,6 +40,11 @@ export interface PhaseDef extends Partial<Omit<PhaseTuning, 'callout'>> {
 export interface CrewDef {
   role: NpcRole;
   name: string;
+  /**
+   * The crew member's variant personality (data/enemyVariants.ts, decision BX8): its trap sense and vision under the
+   * campaign tactics layer. The seat stays a generator bot of its role; absent = the role's plain perception.
+   */
+  variant?: EnemyVariantId;
   /** Start tile (snapped to the nearest free floor tile if it is not one). */
   post: Tile2;
   /** Defenders: index into the phase's nodes of the node they stay at (wraps). */
@@ -146,12 +152,12 @@ const OSHODI: MissionDef = {
   reinforceMax: 3,
   boss: { name: 'Oga Sunmola', characterId: 'streetBaller', post: [27, 12], radius: 3 },
   crew: [
-    { role: 'meleeGuard', name: 'Dispatch Marshal', post: [26, 13], radius: 3 },
-    { role: 'rangedAttacker', name: 'Convoy Spotter', post: [29, 12] },
-    { role: 'blocker', name: 'Lane Blocker', post: [33, 14] },
-    { role: 'runner', name: 'Relay Runner', post: [24, 14] },
-    { role: 'runner', name: 'Relay Runner', post: [45, 14] },
-    { role: 'escort', name: 'Dispatch Escort', post: [28, 12], radius: 2 },
+    { role: 'meleeGuard', name: 'Dispatch Marshal', variant: 'agbero', post: [26, 13], radius: 3 },
+    { role: 'rangedAttacker', name: 'Convoy Spotter', variant: 'bottleThrower', post: [29, 12] },
+    { role: 'blocker', name: 'Lane Blocker', variant: 'heavyEnforcer', post: [33, 14] },
+    { role: 'runner', name: 'Relay Runner', variant: 'areaBoy', post: [24, 14] },
+    { role: 'runner', name: 'Relay Runner', variant: 'areaBoy', post: [45, 14] },
+    { role: 'escort', name: 'Dispatch Escort', variant: 'ringSecurity', post: [28, 12], radius: 2 },
   ],
   // the four lanes of the main road: convoys run along them
   lanes: [row(15, 0, 62), row(16, 0, 62), row(17, 0, 62), row(18, 0, 62)],
@@ -211,13 +217,13 @@ const MUSHIN: MissionDef = {
   reinforceMax: 3,
   boss: { name: 'Madam Ronke', characterId: 'campusQueen', post: [27, 31], radius: 3 },
   crew: [
-    { role: 'runner', name: 'Market Runner', post: [20, 25] },
-    { role: 'runner', name: 'Market Runner', post: [30, 10] },
-    { role: 'runner', name: 'Market Runner', post: [9, 28] },
-    { role: 'meleeGuard', name: 'Stall Guard', post: [26, 30], radius: 3 },
-    { role: 'blocker', name: 'Aisle Blocker', post: [22, 28] },
+    { role: 'runner', name: 'Market Runner', variant: 'areaBoy', post: [20, 25] },
+    { role: 'runner', name: 'Market Runner', variant: 'areaBoy', post: [30, 10] },
+    { role: 'runner', name: 'Market Runner', variant: 'areaBoy', post: [9, 28] },
+    { role: 'meleeGuard', name: 'Stall Guard', variant: 'marketEnforcer', post: [26, 30], radius: 3 },
+    { role: 'blocker', name: 'Aisle Blocker', variant: 'heavyEnforcer', post: [22, 28] },
   ],
-  modifierCrew: { role: 'runner', name: 'Market Runner', post: [44, 7] },
+  modifierCrew: { role: 'runner', name: 'Market Runner', variant: 'areaBoy', post: [44, 7] },
   phases: [
     {
       nodes: [
@@ -279,11 +285,32 @@ const FADEYI: MissionDef = {
   reinforceMax: 3,
   boss: { name: 'Marshal Kobo', characterId: 'lekkiBoy', post: [35, 22], radius: 3 },
   crew: [
-    { role: 'objectiveDefender', name: 'Route Marshal', post: [11, 23], anchor: 0, radius: 3 },
-    { role: 'objectiveDefender', name: 'Route Marshal', post: [26, 11], anchor: 1, radius: 3 },
-    { role: 'objectiveDefender', name: 'Route Marshal', post: [46, 11], anchor: 2, radius: 3 },
-    { role: 'meleeGuard', name: 'Toll Guard', post: [34, 22], radius: 3 },
-    { role: 'blocker', name: 'Junction Blocker', post: [30, 22] },
+    {
+      role: 'objectiveDefender',
+      name: 'Route Marshal',
+      variant: 'routeMarshal',
+      post: [11, 23],
+      anchor: 0,
+      radius: 3,
+    },
+    {
+      role: 'objectiveDefender',
+      name: 'Route Marshal',
+      variant: 'routeMarshal',
+      post: [26, 11],
+      anchor: 1,
+      radius: 3,
+    },
+    {
+      role: 'objectiveDefender',
+      name: 'Route Marshal',
+      variant: 'routeMarshal',
+      post: [46, 11],
+      anchor: 2,
+      radius: 3,
+    },
+    { role: 'meleeGuard', name: 'Toll Guard', variant: 'routeMarshal', post: [34, 22], radius: 3 },
+    { role: 'blocker', name: 'Junction Blocker', variant: 'heavyEnforcer', post: [30, 22] },
   ],
   phases: [
     {
@@ -341,11 +368,25 @@ const EBUTE: MissionDef = {
   reinforceMax: 3,
   boss: { name: 'Ikenna Wayside', characterId: 'streetBaller', post: [ebuteX(30), 28], radius: 3 },
   crew: [
-    { role: 'objectiveDefender', name: 'Signal Guard', post: [ebuteX(25), 13], anchor: 0, radius: 3 },
-    { role: 'objectiveDefender', name: 'Signal Guard', post: [ebuteX(28), 22], anchor: 2, radius: 3 },
-    { role: 'runner', name: 'Yard Runner', post: [ebuteX(31), 27] },
-    { role: 'blocker', name: 'Platform Blocker', post: [ebuteX(29), 20] },
-    { role: 'supportUnit', name: 'Yard Hand', post: [ebuteX(31), 28], radius: 3 },
+    {
+      role: 'objectiveDefender',
+      name: 'Signal Guard',
+      variant: 'ringSecurity',
+      post: [ebuteX(25), 13],
+      anchor: 0,
+      radius: 3,
+    },
+    {
+      role: 'objectiveDefender',
+      name: 'Signal Guard',
+      variant: 'ringSecurity',
+      post: [ebuteX(28), 22],
+      anchor: 2,
+      radius: 3,
+    },
+    { role: 'runner', name: 'Yard Runner', variant: 'areaBoy', post: [ebuteX(31), 27] },
+    { role: 'blocker', name: 'Platform Blocker', variant: 'heavyEnforcer', post: [ebuteX(29), 20] },
+    { role: 'supportUnit', name: 'Yard Hand', variant: 'agbero', post: [ebuteX(31), 28], radius: 3 },
   ],
   phases: [
     {
@@ -404,11 +445,25 @@ const LAGOS: MissionDef = {
   reinforceMax: 3,
   boss: { name: 'Barrister Quill', characterId: 'campusQueen', post: [29, 20], radius: 3 },
   crew: [
-    { role: 'objectiveDefender', name: 'Auditor', post: [11, 9], anchor: 0, radius: 3 },
-    { role: 'objectiveDefender', name: 'Auditor', post: [31, 28], anchor: 1, radius: 3 },
-    { role: 'meleeGuard', name: 'Records Guard', post: [28, 21], radius: 3 },
-    { role: 'bossAssistant', name: 'Audit Assistant', post: [28, 19] },
-    { role: 'supportUnit', name: 'Clerk', post: [30, 21], radius: 3 },
+    {
+      role: 'objectiveDefender',
+      name: 'Auditor',
+      variant: 'marketEnforcer',
+      post: [11, 9],
+      anchor: 0,
+      radius: 3,
+    },
+    {
+      role: 'objectiveDefender',
+      name: 'Auditor',
+      variant: 'marketEnforcer',
+      post: [31, 28],
+      anchor: 1,
+      radius: 3,
+    },
+    { role: 'meleeGuard', name: 'Records Guard', variant: 'ringSecurity', post: [28, 21], radius: 3 },
+    { role: 'bossAssistant', name: 'Audit Assistant', variant: 'heavyEnforcer', post: [28, 19] },
+    { role: 'supportUnit', name: 'Clerk', variant: 'bottleThrower', post: [30, 21], radius: 3 },
   ],
   phases: [
     {
@@ -471,12 +526,26 @@ const LEKKI: MissionDef = {
   reinforceMax: 3,
   boss: { name: 'Steward Halcyon', characterId: 'lekkiBoy', post: [35, 8], radius: 3 },
   crew: [
-    { role: 'objectiveDefender', name: 'Security Contractor', post: [20, 10], anchor: 0, radius: 3 },
-    { role: 'objectiveDefender', name: 'Security Contractor', post: [43, 10], anchor: 2, radius: 3 },
-    { role: 'rangedAttacker', name: 'Perimeter Marksman', post: [37, 9] },
-    { role: 'meleeGuard', name: 'Gate Guard', post: [34, 8], radius: 3 },
-    { role: 'bossAssistant', name: 'Controller Aide', post: [36, 9] },
-    { role: 'escort', name: 'Estate Escort', post: [35, 9], radius: 2 },
+    {
+      role: 'objectiveDefender',
+      name: 'Security Contractor',
+      variant: 'ringSecurity',
+      post: [20, 10],
+      anchor: 0,
+      radius: 3,
+    },
+    {
+      role: 'objectiveDefender',
+      name: 'Security Contractor',
+      variant: 'ringSecurity',
+      post: [43, 10],
+      anchor: 2,
+      radius: 3,
+    },
+    { role: 'rangedAttacker', name: 'Perimeter Marksman', variant: 'bottleThrower', post: [37, 9] },
+    { role: 'meleeGuard', name: 'Gate Guard', variant: 'ringSecurity', post: [34, 8], radius: 3 },
+    { role: 'bossAssistant', name: 'Controller Aide', variant: 'heavyEnforcer', post: [36, 9] },
+    { role: 'escort', name: 'Estate Escort', variant: 'ringSecurity', post: [35, 9], radius: 2 },
   ],
   phases: [
     {
