@@ -58,12 +58,17 @@ describe('every district has an entry and a middle field mission (except the sta
 });
 
 /**
- * The district layout as the mission sees it: a sector's barricades (and closed gates) are concrete
- * (docs/CAMPAIGN_SECTOR_AI.md), so every walk below goes round them, never through.
+ * The district layout as the mission sees it: a sector's barricades are concrete (docs/CAMPAIGN_SECTOR_AI.md), so
+ * every walk below goes round them, never through. A sector gate opens between legs (decision DB2), so the walks may
+ * pass it; that it is closed until its leg is done is tests/mission-sectors.test.ts's.
  */
 function missionLayout(def: FieldMissionDef): string[] {
   const layout = getArena(MISSION_DEFS[def.districtId].arenaId).layout.map((r) => [...r]);
-  if (def.sectorId) for (const [x, y] of sectorBlockedTiles(getSector(def.sectorId))) layout[y]![x] = '#';
+  if (def.sectorId) {
+    const sector = getSector(def.sectorId);
+    const gates = new Set((sector.gates ?? []).flatMap((g) => g.tiles.map(([x, y]) => `${x},${y}`)));
+    for (const [x, y] of sectorBlockedTiles(sector)) if (!gates.has(`${x},${y}`)) layout[y]![x] = '#';
+  }
   return layout.map((r) => r.join(''));
 }
 
@@ -128,17 +133,38 @@ describe.each(FIELD_MISSION_IDS)('field mission %s data', (id) => {
         const g = def.enemies.filter((e) => e.group === leg.group);
         from = [g[0]!.post[0], g[0]!.post[1]];
       }
+      // the sector leg kinds: the player ends a destroy leg beside any of its pieces (every one is checked), a hold
+      // leg in its zone
+      let starts: [number, number][] = [from];
+      if (leg.kind === 'destroyTargets') {
+        starts = leg.targets.map((t) => {
+          const d = distances(layout, t.x, t.y);
+          // the floor tile beside the piece nearest the start (the piece itself is a solid tile)
+          return [
+            [t.x + 1, t.y],
+            [t.x - 1, t.y],
+            [t.x, t.y + 1],
+            [t.x, t.y - 1],
+          ].find(([x, y]) => d.has(`${x},${y}`) && layout[y]![x] !== '#') as [number, number];
+        });
+        from = starts[starts.length - 1]!;
+      }
+      if (leg.kind === 'holdArea') from = starts[0] = [leg.area.x, leg.area.y];
       if (leg.kind !== 'escapeRoute') continue;
-      const fromPlayer = distances(layout, from[0], from[1]);
-      const own = fromPlayer.get(`${leg.exit.x},${leg.exit.y}`)!;
-      expect(own, `${id} exit unreachable from ${from}`).toBeDefined();
-      for (const e of def.enemies.filter((o) => o.group === leg.group)) {
-        const theirs = distances(layout, e.post[0], e.post[1]).get(`${leg.exit.x},${leg.exit.y}`)!;
-        const toPlayer = fromPlayer.get(`${e.post[0]},${e.post[1]}`)!;
-        expect(toPlayer, `${id} pursuer starts ${toPlayer} tiles from the player`).toBeGreaterThanOrEqual(8);
-        expect(theirs - own, `${id} pursuer ${theirs} vs player ${own} to the exit`).toBeGreaterThanOrEqual(
-          4,
-        );
+      for (const at of starts) {
+        const fromPlayer = distances(layout, at[0], at[1]);
+        const own = fromPlayer.get(`${leg.exit.x},${leg.exit.y}`)!;
+        expect(own, `${id} exit unreachable from ${at}`).toBeDefined();
+        for (const e of def.enemies.filter((o) => o.group === leg.group)) {
+          const theirs = distances(layout, e.post[0], e.post[1]).get(`${leg.exit.x},${leg.exit.y}`)!;
+          const toPlayer = fromPlayer.get(`${e.post[0]},${e.post[1]}`)!;
+          expect(toPlayer, `${id} pursuer starts ${toPlayer} tiles from the player`).toBeGreaterThanOrEqual(
+            8,
+          );
+          expect(theirs - own, `${id} pursuer ${theirs} vs player ${own} to the exit`).toBeGreaterThanOrEqual(
+            4,
+          );
+        }
       }
     }
   });
