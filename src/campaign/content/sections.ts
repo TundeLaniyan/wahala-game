@@ -225,16 +225,16 @@ const FADEYI_SECTIONS: SectionDef[] = [
     order: 1,
     name: 'Toll Approach',
     summary:
-      'Marshals hold the approach road to the tool shed. Move them, walk the toll posts and raid the shed.',
+      'Marshals hold the approach road to the tool shed and toll boxes charge every crossing. Move the marshals, break the toll boxes and raid the shed.',
     requires: [],
     missions: [
       {
         id: 'fadeyiSomolu.approach',
         format: 'field',
         name: 'Toll Approach',
-        objectiveCard: 'Clear the marshals, walk two toll posts, raid the shed.',
+        objectiveCard: 'Clear 3 marshals, wreck 3 toll boxes, raid the shed, return.',
         summary:
-          'Two marshals block the road. Pass the toll posts, hold the tool-shed door, then go back to the toll gate.',
+          'Three marshals hold the road (the one at the shed corner calls the others), and the toll boxes take three blasts each while a heavy minds them. Then stand on the tool-shed door to raid it and go back to the toll gate.',
         missionRef: 'fadeyiSomolu.approach',
         doors: [{ doorId: 'shed', raidId: 'junctionToolShed' }],
         reward: title(
@@ -244,7 +244,7 @@ const FADEYI_SECTIONS: SectionDef[] = [
         ),
         unlocks: ['section.fadeyiSomolu.s2'],
         ringWeakened:
-          'The tool shed’s chains and padlocks are broken: the toll approach cannot be shut again.',
+          'The toll boxes are smashed and the tool shed’s chains broken: the toll approach cannot be shut again.',
       },
     ],
   },
@@ -253,16 +253,17 @@ const FADEYI_SECTIONS: SectionDef[] = [
     districtId: 'fadeyiSomolu',
     order: 2,
     name: 'Junction Run',
-    summary: 'Three junction posts sit along the north road. Walk them while a marshal hunts you.',
+    summary:
+      'Three junction posts sit along the north road and the marshals sell the centre junction by the hour. Walk the posts, take the junction back, then outrun the marshal.',
     requires: ['fadeyiSomolu.s1'],
     missions: [
       {
         id: 'fadeyiSomolu.junctions',
         format: 'field',
         name: 'Junction Run',
-        objectiveCard: 'Walk three junction posts, escape the marshal, return.',
+        objectiveCard: 'Walk 3 junction posts, keep the centre junction 40 s, escape, return.',
         summary:
-          'Visit the junctions in order. At the last one the marshal sets off after you: reach the slip road first.',
+          'Visit the junctions in order, then keep the centre junction clear for 40 seconds while the crossing crews come to take it back. Last, the marshal sets off after you: reach the slip road first.',
         missionRef: 'fadeyiSomolu.junctions',
         reward: title(
           'fadeyiSomolu.junctions',

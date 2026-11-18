@@ -384,11 +384,16 @@ const defs: FieldMissionDef[] = [
     start: [5, 27],
     returnMarker: m(3, 26, 'TOLL GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Defeat the 2 marshals on the approach road.', group: 'marshals' },
+      { kind: 'clearGroup', text: 'Defeat the 3 marshals on the approach road.', group: 'marshals' },
       {
-        kind: 'reachMarkers',
-        text: 'Walk through the 2 toll posts.',
-        markers: [m(9, 27, 'TOLL POST A'), m(22, 27, 'TOLL POST B')],
+        kind: 'destroyTargets',
+        text: 'Destroy the 3 toll boxes by the shed yard.',
+        crew: 'tollCrew',
+        targets: [
+          { id: 'tollRoad', kind: 'tollBox', x: 25, y: 23, label: 'TOLL BOX', hp: 3 },
+          { id: 'tollPlaza', kind: 'tollBox', x: 35, y: 26, label: 'TOLL BOX', hp: 3 },
+          { id: 'tollKerb', kind: 'tollBox', x: 40, y: 30, label: 'TOLL BOX', hp: 3 },
+        ],
       },
       { kind: 'door', text: 'Stand on the tool-shed door for 1 second to raid it.', doorId: 'shed' },
     ],
@@ -404,11 +409,16 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Kobo Marshal', 12, 26, 'marshals', post('routeMarshal')),
-      guard('Kobo Marshal', 20, 29, 'marshals', patrol('routeMarshal', [20, 26], [20, 30])),
+      // route marshals: two walk the approach road, one holds the junction corner by the shed (it calls the others)
+      guard('Kobo Marshal', 9, 22, 'marshals', patrol('routeMarshal', [4, 22], [14, 22])),
+      guard('Kobo Marshal', 22, 21, 'marshals', patrol('routeMarshal', [16, 21], [28, 21])),
+      guard('Kobo Marshal', 20, 25, 'marshals', post('routeMarshal', 1)),
+      // the toll crew: a heavy minds the nearest box, a lookout throws from the plaza corner
+      blocker('Toll Heavy', 33, 28, 'tollCrew', post('heavyEnforcer', 1)),
+      chaser('Toll Lookout', 39, 23, 'lookouts', post('bottleThrower', 2)),
     ],
-    timeLimitSec: 360,
-    parSec: 190,
+    timeLimitSec: 420,
+    parSec: 150,
   },
   {
     id: 'fadeyiSomolu.junctions',
@@ -421,7 +431,18 @@ const defs: FieldMissionDef[] = [
       {
         kind: 'reachMarkers',
         text: 'Walk through the 3 junction posts, west to east.',
-        markers: [m(12, 5, 'JUNCTION 1'), m(28, 4, 'JUNCTION 2'), m(36, 10, 'JUNCTION 3')],
+        markers: [m(14, 10, 'JUNCTION 1'), m(28, 5, 'JUNCTION 2'), m(34, 10, 'JUNCTION 3')],
+      },
+      {
+        kind: 'holdArea',
+        text: 'Keep the centre junction clear for 40 seconds.',
+        area: { x: 24, y: 7, radius: 1, label: 'CENTRE JUNCTION' },
+        holdSec: 40,
+        waves: [
+          { group: 'crossing', atSec: 3 },
+          { group: 'lateCrossing', atSec: 14 },
+          { group: 'lastCrossing', atSec: 26 },
+        ],
       },
       {
         kind: 'escapeRoute',
@@ -432,11 +453,21 @@ const defs: FieldMissionDef[] = [
     ],
     doors: [],
     enemies: [
-      guard('Kobo Marshal', 20, 6, 'posts', patrol('routeMarshal', [15, 6], [27, 6])),
-      chaser('Kobo Marshal', 10, 10, 'pursuers', { variant: 'bottleThrower' }),
+      // junction 1: a marshal walks across the west junction mouth
+      guard('Kobo Marshal', 10, 6, 'posts', patrol('routeMarshal', [10, 4], [10, 10])),
+      // the centre crossing crew: they watch the junction streets, then come to take the junction back
+      guard('Kobo Marshal', 30, 10, 'crossing', patrol('routeMarshal', [27, 10], [34, 10])),
+      guard('Kobo Marshal', 18, 5, 'crossing', post('routeMarshal', 2)),
+      guard('Kobo Marshal', 16, 10, 'lateCrossing', patrol('routeMarshal', [12, 9], [20, 9])),
+      chaser('Kobo Lookout', 31, 2, 'lateCrossing', post('bottleThrower', 2)),
+      guard('Kobo Marshal', 6, 4, 'lastCrossing', patrol('areaBoy', [3, 5], [9, 5])),
+      // the slip-road heavy: stands where the escape runs past (only a blast finishes him)
+      blocker('Slip Heavy', 33, 5, 'slip', post('heavyEnforcer', 1)),
+      // the marshal who sets off after you when the junction is held
+      chaser('Kobo Marshal', 12, 2, 'pursuers', { variant: 'bottleThrower' }),
     ],
-    timeLimitSec: 420,
-    parSec: 220,
+    timeLimitSec: 600,
+    parSec: 255,
   },
   // ---------------------------------------------------------------- Ebute-Metta
   {
