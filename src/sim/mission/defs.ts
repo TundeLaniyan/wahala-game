@@ -10,6 +10,9 @@
  */
 import { ebuteX } from '../arenas/ebuteWest';
 import { ticks } from '../config';
+import { bossRecipe } from './boss';
+import type { BossRecipe } from './boss';
+import type { EnemyVariantId } from '../data/enemyVariants';
 import type { CharacterId } from '../types';
 import type { MissionId, NpcRole, ObjectiveKind, PhaseTuning } from './types';
 
@@ -37,6 +40,11 @@ export interface PhaseDef extends Partial<Omit<PhaseTuning, 'callout'>> {
 export interface CrewDef {
   role: NpcRole;
   name: string;
+  /**
+   * The crew member's variant personality (data/enemyVariants.ts, decision BX8): its trap sense and vision under the
+   * campaign tactics layer. The seat stays a generator bot of its role; absent = the role's plain perception.
+   */
+  variant?: EnemyVariantId;
   /** Start tile (snapped to the nearest free floor tile if it is not one). */
   post: Tile2;
   /** Defenders: index into the phase's nodes of the node they stay at (wraps). */
@@ -54,10 +62,11 @@ export interface MissionDef {
   timeLimitSec: number;
   /** Three stars when cleared within this many seconds without losing more than one life. */
   parSec: number;
-  /** How long the boss stays exposed once the third phase is done. */
-  exposeSec: number;
-  /** Exposure windows allowed (the retry loop): a missed window re-shields the boss and repeats phase 3. */
-  maxExposures: number;
+  /**
+   * The boss fight (decisions BX1-BX8, `boss.ts`): hits, the exposure window per level, the windows allowed, where he
+   * restores his shield, what a punch does to the restore, the crew he calls. Every phase's objective exposes him.
+   */
+  recipe: BossRecipe;
   /** Crew members that may be brought back (runner / escort only) by 'reinforce' events over the whole mission. */
   reinforceMax: number;
   boss: { name: string; characterId: CharacterId; post: Tile2; radius: number };
@@ -139,17 +148,16 @@ const OSHODI: MissionDef = {
   factionId: FACTION_IDS.oshodi,
   timeLimitSec: 420,
   parSec: 240,
-  exposeSec: 25,
-  maxExposures: 3,
+  recipe: bossRecipe({ anchor: 'post', callRoles: ['escort', 'runner', 'meleeGuard'] }),
   reinforceMax: 3,
   boss: { name: 'Oga Sunmola', characterId: 'streetBaller', post: [27, 12], radius: 3 },
   crew: [
-    { role: 'meleeGuard', name: 'Dispatch Marshal', post: [26, 13], radius: 3 },
-    { role: 'rangedAttacker', name: 'Convoy Spotter', post: [29, 12] },
-    { role: 'blocker', name: 'Lane Blocker', post: [33, 14] },
-    { role: 'runner', name: 'Relay Runner', post: [24, 14] },
-    { role: 'runner', name: 'Relay Runner', post: [45, 14] },
-    { role: 'escort', name: 'Dispatch Escort', post: [28, 12], radius: 2 },
+    { role: 'meleeGuard', name: 'Dispatch Marshal', variant: 'agbero', post: [26, 13], radius: 3 },
+    { role: 'rangedAttacker', name: 'Convoy Spotter', variant: 'bottleThrower', post: [29, 12] },
+    { role: 'blocker', name: 'Lane Blocker', variant: 'heavyEnforcer', post: [33, 14] },
+    { role: 'runner', name: 'Relay Runner', variant: 'areaBoy', post: [24, 14] },
+    { role: 'runner', name: 'Relay Runner', variant: 'areaBoy', post: [45, 14] },
+    { role: 'escort', name: 'Dispatch Escort', variant: 'ringSecurity', post: [28, 12], radius: 2 },
   ],
   // the four lanes of the main road: convoys run along them
   lanes: [row(15, 0, 62), row(16, 0, 62), row(17, 0, 62), row(18, 0, 62)],
@@ -157,12 +165,11 @@ const OSHODI: MissionDef = {
     {
       nodes: [n('r1', 8, 14, 'RELAY 1'), n('r2', 28, 19, 'RELAY 2'), n('r3', 52, 14, 'RELAY 3')],
       goal: 2,
-      holdTicks: ticks(2.5),
       rearmTicks: ticks(25),
       pulseTicks: ticks(10),
       warnTicks: ticks(3),
       strikeSpan: 12,
-      callout: 'Jam two of the three dispatch relays before the convoys find you.',
+      callout: 'Blast two of the three dispatch relays to jam them before the convoys find you.',
     },
     {
       nodes: [
@@ -172,13 +179,12 @@ const OSHODI: MissionDef = {
         n('r4', 58, 14, 'RELAY 4'),
       ],
       goal: 3,
-      holdTicks: ticks(3),
       rearmTicks: ticks(20),
       pulseTicks: ticks(7),
       warnTicks: 165,
       strikeSpan: 14,
-      crewTicks: ticks(1.5),
-      callout: 'Faster convoys. Runners re-arm jammed relays: jam three and put the runners down.',
+      crewTicks: ticks(4),
+      callout: 'Faster convoys. Runners re-arm jammed relays: blast three and put the runners down.',
     },
     {
       nodes: [
@@ -188,13 +194,12 @@ const OSHODI: MissionDef = {
         n('r4', 61, 14, 'RELAY 4'),
       ],
       goal: 4,
-      holdTicks: ticks(3),
       rearmTicks: ticks(40),
       pulseTicks: ticks(5),
       warnTicks: ticks(2.5),
       strikeSpan: 16,
-      crewTicks: ticks(1.5),
-      callout: 'Jam all four relays inside the window: every jam wears off after forty seconds.',
+      crewTicks: ticks(4),
+      callout: 'Blast all four relays inside the window: every jam wears off after forty seconds.',
     },
   ],
 };
@@ -208,18 +213,17 @@ const MUSHIN: MissionDef = {
   factionId: FACTION_IDS.mushin,
   timeLimitSec: 420,
   parSec: 270,
-  exposeSec: 25,
-  maxExposures: 3,
+  recipe: bossRecipe({ anchor: 'lastBroken', callRoles: ['runner', 'meleeGuard'] }),
   reinforceMax: 3,
   boss: { name: 'Madam Ronke', characterId: 'campusQueen', post: [27, 31], radius: 3 },
   crew: [
-    { role: 'runner', name: 'Market Runner', post: [20, 25] },
-    { role: 'runner', name: 'Market Runner', post: [30, 10] },
-    { role: 'runner', name: 'Market Runner', post: [9, 28] },
-    { role: 'meleeGuard', name: 'Stall Guard', post: [26, 30], radius: 3 },
-    { role: 'blocker', name: 'Aisle Blocker', post: [22, 28] },
+    { role: 'runner', name: 'Market Runner', variant: 'areaBoy', post: [20, 25] },
+    { role: 'runner', name: 'Market Runner', variant: 'areaBoy', post: [30, 10] },
+    { role: 'runner', name: 'Market Runner', variant: 'areaBoy', post: [9, 28] },
+    { role: 'meleeGuard', name: 'Stall Guard', variant: 'marketEnforcer', post: [26, 30], radius: 3 },
+    { role: 'blocker', name: 'Aisle Blocker', variant: 'heavyEnforcer', post: [22, 28] },
   ],
-  modifierCrew: { role: 'runner', name: 'Market Runner', post: [44, 7] },
+  modifierCrew: { role: 'runner', name: 'Market Runner', variant: 'areaBoy', post: [44, 7] },
   phases: [
     {
       nodes: [
@@ -277,16 +281,36 @@ const FADEYI: MissionDef = {
   factionId: FACTION_IDS.fadeyiSomolu,
   timeLimitSec: 420,
   parSec: 270,
-  exposeSec: 25,
-  maxExposures: 3,
+  recipe: bossRecipe({ anchor: 'post', callRoles: ['objectiveDefender', 'meleeGuard'] }),
   reinforceMax: 3,
   boss: { name: 'Marshal Kobo', characterId: 'lekkiBoy', post: [35, 22], radius: 3 },
   crew: [
-    { role: 'objectiveDefender', name: 'Route Marshal', post: [11, 23], anchor: 0, radius: 3 },
-    { role: 'objectiveDefender', name: 'Route Marshal', post: [26, 11], anchor: 1, radius: 3 },
-    { role: 'objectiveDefender', name: 'Route Marshal', post: [46, 11], anchor: 2, radius: 3 },
-    { role: 'meleeGuard', name: 'Toll Guard', post: [34, 22], radius: 3 },
-    { role: 'blocker', name: 'Junction Blocker', post: [30, 22] },
+    {
+      role: 'objectiveDefender',
+      name: 'Route Marshal',
+      variant: 'routeMarshal',
+      post: [11, 23],
+      anchor: 0,
+      radius: 3,
+    },
+    {
+      role: 'objectiveDefender',
+      name: 'Route Marshal',
+      variant: 'routeMarshal',
+      post: [26, 11],
+      anchor: 1,
+      radius: 3,
+    },
+    {
+      role: 'objectiveDefender',
+      name: 'Route Marshal',
+      variant: 'routeMarshal',
+      post: [46, 11],
+      anchor: 2,
+      radius: 3,
+    },
+    { role: 'meleeGuard', name: 'Toll Guard', variant: 'routeMarshal', post: [34, 22], radius: 3 },
+    { role: 'blocker', name: 'Junction Blocker', variant: 'heavyEnforcer', post: [30, 22] },
   ],
   phases: [
     {
@@ -296,12 +320,10 @@ const FADEYI: MissionDef = {
         n('j3', 47, 10, 'JUNCTION 3', { radius: 1 }),
       ],
       goal: 2,
-      holdTicks: ticks(4),
-      decayPerTick: 1,
       pulseTicks: ticks(9),
       warnTicks: ticks(3),
       strikeSpan: 6,
-      callout: 'Hold two of the three junctions. A marshal inside a zone stops the hold.',
+      callout: 'Blast the toll box of two of the three junctions. A marshal inside the zone shields it.',
     },
     {
       nodes: [
@@ -310,12 +332,10 @@ const FADEYI: MissionDef = {
         n('j3', 27, 27, 'JUNCTION 3', { radius: 1 }),
       ],
       goal: 3,
-      holdTicks: ticks(5),
-      decayPerTick: 1,
       pulseTicks: ticks(7),
       warnTicks: 165,
       strikeSpan: 7,
-      callout: 'Hold all three. A held junction switches its marshal strikes off.',
+      callout: 'Blast all three toll boxes. A broken box switches its marshal strikes off.',
     },
     {
       nodes: [
@@ -324,13 +344,11 @@ const FADEYI: MissionDef = {
         n('j3', 47, 10, 'JUNCTION 3', { radius: 1 }),
       ],
       goal: 3,
-      holdTicks: ticks(5),
-      decayPerTick: 1,
       rearmTicks: ticks(35),
       pulseTicks: ticks(5),
       warnTicks: ticks(2.5),
       strikeSpan: 8,
-      callout: 'Hold all three inside the window: a held junction is retaken after thirty-five seconds.',
+      callout: 'Break all three inside the window: a broken box is rebuilt after thirty-five seconds.',
     },
   ],
 };
@@ -346,16 +364,29 @@ const EBUTE: MissionDef = {
   factionId: FACTION_IDS.ebuteMetta,
   timeLimitSec: 480,
   parSec: 330,
-  exposeSec: 25,
-  maxExposures: 3,
+  recipe: bossRecipe({ anchor: 'post', callRoles: ['runner', 'objectiveDefender'] }),
   reinforceMax: 3,
   boss: { name: 'Ikenna Wayside', characterId: 'streetBaller', post: [ebuteX(30), 28], radius: 3 },
   crew: [
-    { role: 'objectiveDefender', name: 'Signal Guard', post: [ebuteX(25), 13], anchor: 0, radius: 3 },
-    { role: 'objectiveDefender', name: 'Signal Guard', post: [ebuteX(28), 22], anchor: 2, radius: 3 },
-    { role: 'runner', name: 'Yard Runner', post: [ebuteX(31), 27] },
-    { role: 'blocker', name: 'Platform Blocker', post: [ebuteX(29), 20] },
-    { role: 'supportUnit', name: 'Yard Hand', post: [ebuteX(31), 28], radius: 3 },
+    {
+      role: 'objectiveDefender',
+      name: 'Signal Guard',
+      variant: 'ringSecurity',
+      post: [ebuteX(25), 13],
+      anchor: 0,
+      radius: 3,
+    },
+    {
+      role: 'objectiveDefender',
+      name: 'Signal Guard',
+      variant: 'ringSecurity',
+      post: [ebuteX(28), 22],
+      anchor: 2,
+      radius: 3,
+    },
+    { role: 'runner', name: 'Yard Runner', variant: 'areaBoy', post: [ebuteX(31), 27] },
+    { role: 'blocker', name: 'Platform Blocker', variant: 'heavyEnforcer', post: [ebuteX(29), 20] },
+    { role: 'supportUnit', name: 'Yard Hand', variant: 'agbero', post: [ebuteX(31), 28], radius: 3 },
   ],
   phases: [
     {
@@ -365,12 +396,10 @@ const EBUTE: MissionDef = {
         n('d3', ebuteX(25), 23, 'SWITCH 3'),
       ],
       goal: 2,
-      holdTicks: ticks(1.5),
-      decayPerTick: 3,
       cycleTicks: ticks(25),
       openTicks: ticks(10),
       warnTicks: ticks(4),
-      callout: 'Throw two of the three switches, but only while the rail window is open.',
+      callout: 'Blast two of the three switches, but only while the rail window is open.',
     },
     {
       nodes: [
@@ -380,12 +409,10 @@ const EBUTE: MissionDef = {
         n('d4', ebuteX(28), 24, 'SWITCH 4'),
       ],
       goal: 3,
-      holdTicks: 100,
-      decayPerTick: 3,
       cycleTicks: ticks(22),
       openTicks: ticks(8),
       warnTicks: 225,
-      callout: 'Shorter windows. Three switches, and the yard crew stands in your way.',
+      callout: 'Shorter windows. Blast three switches; the yard crew stands in your way.',
     },
     {
       nodes: [
@@ -395,14 +422,12 @@ const EBUTE: MissionDef = {
         n('d4', ebuteX(28), 25, 'SWITCH 4'),
       ],
       goal: 4,
-      holdTicks: 100,
-      decayPerTick: 3,
-      rearmTicks: ticks(25),
+      // 40 s (was 25 with the stand-to-throw switches): a blast needs its fuse inside a window (decision BX4)
+      rearmTicks: ticks(40),
       cycleTicks: ticks(20),
       openTicks: ticks(7),
       warnTicks: 216,
-      callout:
-        'All four switches thrown inside twenty-five seconds: they reset when the dispatcher recovers.',
+      callout: 'Blast all four switches inside forty seconds: they reset when the dispatcher recovers.',
     },
   ],
 };
@@ -414,29 +439,43 @@ const LAGOS: MissionDef = {
   arenaId: 'rumbleLagosIsland',
   objective: 'evidenceRun',
   factionId: FACTION_IDS.lagosIsland,
-  timeLimitSec: 420,
-  parSec: 280,
-  exposeSec: 25,
-  maxExposures: 3,
+  timeLimitSec: 480,
+  parSec: 320,
+  recipe: bossRecipe({ anchor: 'post', callRoles: ['meleeGuard', 'objectiveDefender'] }),
   reinforceMax: 3,
   boss: { name: 'Barrister Quill', characterId: 'campusQueen', post: [29, 20], radius: 3 },
   crew: [
-    { role: 'objectiveDefender', name: 'Auditor', post: [11, 9], anchor: 0, radius: 3 },
-    { role: 'objectiveDefender', name: 'Auditor', post: [31, 28], anchor: 1, radius: 3 },
-    { role: 'meleeGuard', name: 'Records Guard', post: [28, 21], radius: 3 },
-    { role: 'bossAssistant', name: 'Audit Assistant', post: [28, 19] },
-    { role: 'supportUnit', name: 'Clerk', post: [30, 21], radius: 3 },
+    {
+      role: 'objectiveDefender',
+      name: 'Auditor',
+      variant: 'marketEnforcer',
+      post: [11, 9],
+      anchor: 0,
+      radius: 3,
+    },
+    {
+      role: 'objectiveDefender',
+      name: 'Auditor',
+      variant: 'marketEnforcer',
+      post: [31, 28],
+      anchor: 1,
+      radius: 3,
+    },
+    { role: 'meleeGuard', name: 'Records Guard', variant: 'ringSecurity', post: [28, 21], radius: 3 },
+    { role: 'bossAssistant', name: 'Audit Assistant', variant: 'heavyEnforcer', post: [28, 19] },
+    { role: 'supportUnit', name: 'Clerk', variant: 'bottleThrower', post: [30, 21], radius: 3 },
   ],
   phases: [
     {
       nodes: [n('l1', 10, 8, 'LEDGER 1'), n('l2', 6, 14, 'LEDGER 2'), n('l3', 14, 21, 'LEDGER 3')],
       press: { x: 4, y: 21 },
       goal: 2,
-      holdTicks: 60,
+      holdTicks: 1,
       pulseTicks: ticks(9),
       warnTicks: ticks(3),
       strikeSpan: 1,
-      callout: 'Collect a ledger and carry it to the press drop. Auditors chase the carrier.',
+      callout:
+        'Blast a ledger cabinet open, then carry the ledger to the press drop. Auditors chase the carrier.',
     },
     {
       nodes: [
@@ -445,9 +484,10 @@ const LAGOS: MissionDef = {
         n('l3', 30, 28, 'LEDGER 3'),
         n('l4', 45, 21, 'LEDGER 4'),
       ],
-      press: { x: 30, y: 21 },
+      // (was 30,21, one step from the boss's post: under the blast verbs the delivery moved out of his guard ring, BX7)
+      press: { x: 31, y: 28 },
       goal: 3,
-      holdTicks: 60,
+      holdTicks: 1,
       pulseTicks: ticks(7),
       warnTicks: 165,
       strikeSpan: 1,
@@ -462,13 +502,13 @@ const LAGOS: MissionDef = {
         n('l5', 11, 13, 'LEDGER 5'),
       ],
       press: { x: 50, y: 25 },
-      goal: 4,
-      holdTicks: 60,
+      goal: 3, // (was 4: every ledger now takes a blast to free it as well as the carry, decision BX7)
+      holdTicks: 1,
       pulseTicks: ticks(5),
       warnTicks: ticks(2.5),
       strikeSpan: 1,
       carryLimitTicks: ticks(45),
-      callout: 'Four ledgers to the far press. A carried ledger is lost after forty-five seconds.',
+      callout: 'Three ledgers to the far press. A carried ledger is lost after forty-five seconds.',
     },
   ],
 };
@@ -482,17 +522,30 @@ const LEKKI: MissionDef = {
   factionId: FACTION_IDS.lekki,
   timeLimitSec: 420,
   parSec: 260,
-  exposeSec: 25,
-  maxExposures: 3,
+  recipe: bossRecipe({ anchor: 'lastBroken', callRoles: ['escort', 'objectiveDefender', 'meleeGuard'] }),
   reinforceMax: 3,
   boss: { name: 'Steward Halcyon', characterId: 'lekkiBoy', post: [35, 8], radius: 3 },
   crew: [
-    { role: 'objectiveDefender', name: 'Security Contractor', post: [20, 10], anchor: 0, radius: 3 },
-    { role: 'objectiveDefender', name: 'Security Contractor', post: [43, 10], anchor: 2, radius: 3 },
-    { role: 'rangedAttacker', name: 'Perimeter Marksman', post: [37, 9] },
-    { role: 'meleeGuard', name: 'Gate Guard', post: [34, 8], radius: 3 },
-    { role: 'bossAssistant', name: 'Controller Aide', post: [36, 9] },
-    { role: 'escort', name: 'Estate Escort', post: [35, 9], radius: 2 },
+    {
+      role: 'objectiveDefender',
+      name: 'Security Contractor',
+      variant: 'ringSecurity',
+      post: [20, 10],
+      anchor: 0,
+      radius: 3,
+    },
+    {
+      role: 'objectiveDefender',
+      name: 'Security Contractor',
+      variant: 'ringSecurity',
+      post: [43, 10],
+      anchor: 2,
+      radius: 3,
+    },
+    { role: 'rangedAttacker', name: 'Perimeter Marksman', variant: 'bottleThrower', post: [37, 9] },
+    { role: 'meleeGuard', name: 'Gate Guard', variant: 'ringSecurity', post: [34, 8], radius: 3 },
+    { role: 'bossAssistant', name: 'Controller Aide', variant: 'heavyEnforcer', post: [36, 9] },
+    { role: 'escort', name: 'Estate Escort', variant: 'ringSecurity', post: [35, 9], radius: 2 },
   ],
   phases: [
     {
@@ -504,10 +557,9 @@ const LEKKI: MissionDef = {
       ],
       goal: 3,
       sequence: 3,
-      holdTicks: 30,
       warnTicks: ticks(3),
       strikeSpan: 1,
-      callout: 'Switch the private systems off in the signalled order. A wrong switch calls a strike.',
+      callout: 'Blast the private systems in the signalled order. A wrong blast calls a strike.',
     },
     {
       nodes: [
@@ -519,7 +571,6 @@ const LEKKI: MissionDef = {
       ],
       goal: 4,
       sequence: 4,
-      holdTicks: 30,
       pulseTicks: ticks(9),
       warnTicks: 165,
       strikeSpan: 1,
@@ -536,11 +587,10 @@ const LEKKI: MissionDef = {
       ],
       goal: 5,
       sequence: 5,
-      holdTicks: 30,
       pulseTicks: ticks(7),
       warnTicks: ticks(2.5),
       strikeSpan: 1,
-      callout: 'The full blackout order. One wrong switch resets the whole sequence.',
+      callout: 'The full blackout order. One wrong blast resets the whole sequence.',
     },
   ],
 };

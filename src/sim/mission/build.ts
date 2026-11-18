@@ -52,12 +52,17 @@ export function missionConfigLayer(spec: MissionSpec): DeepPartial<GameConfig> {
   const def = MISSION_DEFS[spec.id];
   const tactics = campaignTacticsLayer('normal');
   const seatPerception: Record<number, EnemyKind> = { 1: 'boss' };
-  crewOf(def, spec).forEach((c, i) => (seatPerception[2 + i] = ENEMY_KIND_FOR_ROLE[c.role]));
+  // the crew's variant personalities (decision BX8): perception row from the variant's base kind, trap sense from it
+  const seatVariant: Record<number, EnemyVariantId> = { 1: 'boss' };
+  crewOf(def, spec).forEach((c, i) => {
+    seatPerception[2 + i] = c.variant ? ENEMY_VARIANTS[c.variant].base : ENEMY_KIND_FOR_ROLE[c.role];
+    if (c.variant) seatVariant[2 + i] = c.variant;
+  });
   return {
     match: { durationTicks: resolveTuning(def, spec).timeLimitTicks },
     arena: { softDensity: MISSION_SOFT_DENSITY },
     ...tactics,
-    campaignTactics: { ...tactics.campaignTactics, seatPerception },
+    campaignTactics: { ...tactics.campaignTactics, seatPerception, seatVariant },
   };
 }
 

@@ -96,3 +96,10 @@ Roles become **directives** (`src/sim/mission/directives.ts`, decision MS5) that
 - A strike is only called when it is fair at that moment; when the human is boxed in or a landing is postponed three times over, a pulse is skipped rather than made unfair.
 - Single level: junction "routes" open by clearing authored soft blocks (`NodeDef.opens`, none authored yet); there are no skywalks.
 - Mission audio is silent (the nine events have no cues yet); no voices, music or recordings were added.
+
+## Update: the boss loop (decisions BX1-BX8)
+
+Since `claude/wahala-csa-bosses` every objective node above is broken by the human's BLASTS (standing does nothing) and
+every broken phase exposes the boss for a window (not only the third); three blast hits defeat him. The six verbs, the
+crews and the modifiers stay (Toll Season: one more blast per toll box). The loop, the numbers per level and the
+`BossRecipe` data are in `docs/CAMPAIGN_SECTOR_AI.md` "Part 3. Bosses".

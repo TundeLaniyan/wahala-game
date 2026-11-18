@@ -3,7 +3,7 @@ import type { BossDef, DistrictContent, StoryLine } from '../types';
 const boss = (text: string): StoryLine => ({ speaker: 'OGA SUNMOLA', text });
 const chairman = (text: string): StoryLine => ({ speaker: 'THE CHAIRMAN', text, fromBroker: true });
 
-/** BOSS 1, the vertical slice: richest content. Mechanic: dispatchRelays (jam live relays; live relays call convoy strikes). */
+/** BOSS 1, the vertical slice: richest content. Mechanic: dispatchRelays (blast live relays to jam them; live relays call convoy strikes). */
 export const OSHODI_BOSS: BossDef = {
   id: 'ogaSunmola',
   districtId: 'oshodi',
@@ -39,7 +39,7 @@ export const OSHODI_BOSS: BossDef = {
   systemControlled:
     'The interchange dispatch radio net: relay masts that sequence convoys, buses and market deliveries',
   exposeObjective:
-    'Jam the relay masts (stand on a live relay until it goes dead) in three phases; when the last relay cluster falls silent, Oga Sunmola is exposed and can be eliminated.',
+    'Jam the relay masts with generator blasts in three phases; every phase you silence exposes Oga Sunmola at his dispatch stage for a few seconds, and one blast there breaks his guard. Three blasts and he falls.',
   objectiveKind: 'dispatchRelays',
   signatureAbility: {
     name: 'Open Lines',
@@ -47,7 +47,7 @@ export const OSHODI_BOSS: BossDef = {
       'Every live relay calls a telegraphed convoy strike: a lane across the board lights up and a convoy sweeps it. More live relays, more lanes.',
   },
   counterplay:
-    'Convoy lanes are always warned for at least a few seconds and always have an escape step. Jamming a relay cancels the strike it was about to call. Bait blockers into lanes. Lure the convoy lane and jam the relay behind it.',
+    'Convoy lanes are always warned for at least a few seconds and always have an escape step. Blasting a relay cancels the strike it was about to call. Bait blockers into lanes. Lure the convoy lane and jam the relay behind it.',
   phases: [
     {
       title: 'Tune the Net',
@@ -55,7 +55,7 @@ export const OSHODI_BOSS: BossDef = {
       bossBehaviour:
         'Stays behind the terminal canopy, shielded, calling the first strikes into the radio and chuckling at your route.',
       pressure: 'One convoy lane at a time; two guards and a runner patrol the relays.',
-      callout: 'Stand on a relay to jam it. Keep out of the red lane.',
+      callout: 'Blast a relay to jam it. Keep out of the red lane.',
     },
     {
       title: 'Rush Hour',
@@ -63,11 +63,11 @@ export const OSHODI_BOSS: BossDef = {
       bossBehaviour:
         'Reads out loading orders over the speakers; blockers close the lanes between relays and the escort follows you.',
       pressure: 'Two convoy lanes can be live together; blockers narrow your safe steps.',
-      callout: 'Rush hour: break the blockers, then jam. Do not stand still in a lane.',
+      callout: 'Rush hour: break the blockers, then blast the relays. Do not stand still in a lane.',
     },
     {
       title: 'Dead Air',
-      objective: 'Jam the final relay cluster, then finish the exposed boss.',
+      objective: 'Jam the final relay cluster, then blast the exposed boss a last time.',
       bossBehaviour:
         'Steps off the canopy to rebroadcast from the last mast himself: his own voice becomes the strike signal.',
       pressure: 'Convoys on a short beat; the crew regroups around the cluster.',
@@ -161,20 +161,20 @@ export const OSHODI: DistrictContent = {
     summary:
       'Every bus in Oshodi loads when the dispatch radio says so, and the radio answers to Oga Sunmola. Jam the relays under the canopies and on the rail edge, dodge the convoys he calls, then take the Park Master off his own stage.',
     objectives: [
-      'Jam relay masts by standing on them until they go dead',
+      'Jam relay masts with generator blasts: standing on them does nothing',
       'Survive the telegraphed convoy strikes: read the red lanes',
-      'Finish Oga Sunmola when the last relay cluster falls silent',
+      'Each silenced phase exposes Oga Sunmola at his stage: one blast there each time, three in all',
       'Earn up to three stars: clear it, lose at most one life, and beat the par time',
     ],
     intel: [
-      'Live relays are what call convoy strikes: jam the relay and the strike is cancelled.',
+      'Live relays are what call convoy strikes: blast the relay and the strike is cancelled.',
       'Orita Park Wardens block lanes; blast the blocker or step around it.',
       'Ore Street Watch neighbours around the market are on your side: they are never your targets.',
       'The campaign\u2019s first fight: three phases, each asking for a few more relays than the last. Take the time to learn the lanes.',
-      'Oga Sunmola stays shielded until the final relay cluster is dead: do not waste generators on him early.',
+      'Oga Sunmola stays shielded until a phase of relays is dead; then he hurries back to his stage to restore the shield. Wait for him there: while he restores he cannot step away from a generator.',
     ],
     warnings: [
-      'Convoys have a warning lane but they hit hard: do not channel a relay inside a lit lane.',
+      'Convoys have a warning lane but they hit hard: do not lay a generator inside a lit lane.',
       'You have a limited number of lives: a convoy hit costs one.',
       'The terminal is crowded: a generator dropped near a canopy column blocks your own escape.',
       'Convoys cross the rail line too: the level crossing is never a safe place to stand.',

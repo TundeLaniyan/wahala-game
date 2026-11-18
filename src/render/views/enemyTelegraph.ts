@@ -14,7 +14,7 @@
  * the wind-up) to the live `attack.resolveTick`, so a longer or shorter wind-up from the AI tuning reads the same.
  */
 import { DIRS, DIR_VEC, Tile, enemyAttackPhase, tileAt, windupTicks } from '../../sim';
-import type { Dir, GameState, Player } from '../../sim';
+import type { Dir, EnemyKind, GameState, Player } from '../../sim';
 
 export type TelegraphKind = 'melee' | 'ranged' | 'open' | 'stagger';
 
@@ -58,6 +58,18 @@ function pushTile(list: TilePoint[], n: number, x: number, y: number): number {
 const walkable = (state: GameState, x: number, y: number): boolean =>
   x >= 0 && y >= 0 && x < state.width && y < state.height && tileAt(state, x, y) === Tile.Empty;
 
+/**
+ * The kind a seat's telegraph reads as: a campaign enemy's own kind, or - in a boss mission - the perception kind of a
+ * generator-bot seat (the boss and his crew have no `enemyKind`, decision BX8), so their punches show the same wind-up.
+ * Null for the human and for every seat of any other match.
+ */
+export function telegraphKindOf(state: GameState, p: Readonly<Player>): EnemyKind | null {
+  if (p.enemyKind !== undefined) return p.enemyKind;
+  const m = state.mission;
+  if (!m || m.field) return null;
+  return state.config.campaignTactics?.seatPerception?.[p.id] ?? null;
+}
+
 /** Fraction 0..1 of a span [start, end] reached at `now` (a zero span counts as complete). */
 export function spanProgress(start: number, end: number, now: number): number {
   const total = end - start;
@@ -84,16 +96,22 @@ export function readTelegraph(
   out.aimCount = 0;
   out.zoneCount = 0;
   out.strong = false;
-  if (!p.alive || p.enemyKind === undefined) return out;
+  const kind = telegraphKindOf(state, p);
+  if (!p.alive || kind === null) return out;
   const tick = state.tick;
 
   if (p.attack) {
     const a = p.attack;
-    const start = windStart ?? a.resolveTick - Math.max(1, windupTicks(state.config, p.enemyKind));
+    // an enemy's wind-up is its kind's; a boss-mission generator bot's is its own attack's startup
+    const windup =
+      p.enemyKind !== undefined
+        ? windupTicks(state.config, p.enemyKind)
+        : (state.config.skills.attacks[a.skill]?.startupTicks ?? 1);
+    const start = windStart ?? a.resolveTick - Math.max(1, windup);
     out.kind = 'melee';
     out.progress = spanProgress(Math.min(start, a.resolveTick - 1), a.resolveTick, now);
     out.dir = a.dir;
-    out.strong = STRONG_KINDS.has(p.enemyKind);
+    out.strong = STRONG_KINDS.has(kind);
     const v = DIR_VEC[a.dir];
     out.aimCount = pushTile(out.aim, out.aimCount, p.x + v.dx, p.y + v.dy);
     const reach = state.config.skills.attacks[a.skill]?.reach ?? 1;

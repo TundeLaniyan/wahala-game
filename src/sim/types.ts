@@ -1264,8 +1264,33 @@ export type SimEvent =
     }
   /** Campaign mission: a strike, convoy, rail window, contingency or reinforcement is telegraphed. */
   | { type: 'missionWarning'; warning: MissionWarningView }
-  /** Campaign mission: the third phase is done; the boss can be eliminated until `untilTick`. */
-  | { type: 'bossExposed'; bossId: number; untilTick: number }
+  /**
+   * Campaign mission: a phase's objective is broken; the boss's shield is down until `untilTick` (decisions BX1-BX3).
+   * Boss missions add where he restores it (`anchorX` / `anchorY`) and the blast hits he has left.
+   */
+  | {
+      type: 'bossExposed';
+      bossId: number;
+      untilTick: number;
+      anchorX?: number;
+      anchorY?: number;
+      hitsLeft?: number;
+    }
+  /**
+   * Campaign boss mission (decision BX2): a blast (or another lethal event) reached the exposed boss: he loses one hit,
+   * reels and re-shields; the next phase starts. The last hit is a `bossDefeated` instead.
+   */
+  | {
+      type: 'bossHit';
+      bossId: number;
+      byId: number | null;
+      hitsLeft: number;
+      maxHits: number;
+      x: number;
+      y: number;
+    }
+  /** Campaign boss mission (decision BX3): the human's punch interrupted the boss's restore: the window lasts longer. */
+  | { type: 'bossInterrupted'; bossId: number; byId: number; untilTick: number }
   /** Campaign mission: the boss is protected again (`phase`: a new phase / the window ran out). */
   | { type: 'bossShielded'; bossId: number; reason: 'start' | 'phase' | 'expired' }
   /** Campaign mission: the boss was eliminated while exposed (or ousted). */

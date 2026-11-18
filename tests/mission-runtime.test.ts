@@ -20,7 +20,7 @@ import {
 import type { MissionId, MissionModifierId } from '../src/sim';
 import { finishMission } from '../src/sim/mission/runtime';
 import { MIN_STRIKE_WARN_TICKS, MIN_TRAIN_WARN_TICKS } from '../src/sim/mission/defs';
-import { botIntents, hasNaN, hashOf, makeBots, newMission } from './mission-helpers';
+import { blastAt, botIntents, hasNaN, hashOf, makeBots, newMission, put } from './mission-helpers';
 
 describe('every mission runs to a terminal state with the default bots and an idle human', () => {
   it.each(MISSION_IDS)(
@@ -224,21 +224,15 @@ describe('replay modifiers are small numeric tweaks of their own mission', () =>
     expect(s.mission!.modifiers).toEqual(['marketDay']);
   });
 
-  it('tollSeason: junctions take longer to hold (and the longer hold is what the runtime asks for)', () => {
+  it('tollSeason: every toll box takes one more blast (decision BX5; the runtime asks for it)', () => {
     const [a, b] = [base('fadeyiSomolu'), withMod('fadeyiSomolu')];
-    for (const i of [0, 1, 2] as const)
-      expect(b.phases[i].holdTicks).toBe(Math.round(a.phases[i].holdTicks * 1.5));
+    for (const i of [0, 1, 2] as const) expect(b.phases[i].hp).toBe(a.phases[i].hp + 1);
     const s = newMission({ id: 'fadeyiSomolu', modifiers: ['tollSeason'] });
-    s.players.slice(2).forEach((p, i) => {
-      p.x = p.stepFromX = 3 + i;
-      p.y = p.stepFromY = 31;
-    });
+    s.players.slice(2).forEach((p, i) => put(s, p.id, 3 + i, 31)); // no marshal in the zone
     const j = s.mission!.nodes[0]!;
-    s.players[0]!.x = s.players[0]!.stepFromX = j.x;
-    s.players[0]!.y = s.players[0]!.stepFromY = j.y;
-    for (let i = 0; i < a.phases[0].holdTicks + 5; i++) tick(s, {});
+    for (let k = 0; k < a.phases[0].hp; k++) blastAt(s, j.x, j.y, { x: 25, y: 28 });
     expect(j.done).toBe(false);
-    for (let i = 0; i < b.phases[0].holdTicks - a.phases[0].holdTicks; i++) tick(s, {});
+    blastAt(s, j.x, j.y, { x: 25, y: 28 });
     expect(j.done).toBe(true);
   });
 

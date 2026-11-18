@@ -13,6 +13,8 @@ import { createLayout } from '../../src/render/coords';
 import { Effects } from '../../src/render/fx/Effects';
 import { QUALITY } from '../../src/render/quality';
 import { iconFor } from '../../src/render/views/missionIcons';
+import { hasEnemyTelegraphs } from '../../src/render/views/EnemyTelegraphViews';
+import { emptyTelegraph, readTelegraph, telegraphKindOf } from '../../src/render/views/enemyTelegraph';
 import { MissionViews } from '../../src/render/views/MissionViews';
 import {
   ARC_STEPS,
@@ -326,12 +328,14 @@ describe('the mission view draws a simulated mission', () => {
   });
 
   it('follows a progressing node (a ring appears) and tidies up markers of nodes that left the view', () => {
-    const { state, views, ctx } = rig('oshodi');
+    // a half-broken parts stack (relays have no partial state since they are jammed by one blast, decision BX4)
+    const { state, views, ctx } = rig('mushin');
     const m = state.mission!;
     views.update(ctx());
     const n0 = m.nodes[0]!;
     put(state, 0, n0.x, n0.y);
-    n0.progress = 60;
+    m.tuning.phases[0].hp = 2;
+    n0.hp = 1;
     views.update(ctx(0.2));
     const marker = (views as unknown as { nodes: Map<string, { arc: Mesh; beam: Mesh }> }).nodes.get(n0.id)!;
     expect(marker.arc.visible).toBe(true);
@@ -343,5 +347,52 @@ describe('the mission view draws a simulated mission', () => {
     views.update(ctx(0.4));
     expect(views.stats().nodes).toBe(m.nodes.length);
     views.dispose();
+  });
+
+  // ------------------------------------------------------------ boss exposure cues (decisions BX1, BX8)
+  it('a restore ring on the anchor tile while the boss is exposed; none while he is shielded', () => {
+    const state = newMission({ id: 'oshodi' });
+    const layout = createLayout(state.width, state.height);
+    const fx = new Effects(layout, QUALITY.medium);
+    const views = new MissionViews();
+    const ctx = (time = 0): FrameContext =>
+      ({ state, alpha: 0, time, dt: 1 / 60, info: { excitement: 0 }, layout, fx }) as unknown as FrameContext;
+    views.update(ctx());
+    const boss = (views as unknown as { boss: { anchor: Mesh } | null }).boss!;
+    expect(boss.anchor.visible).toBe(false);
+    const m = state.mission!;
+    const post = m.seats[1]!.post!;
+    m.boss.shielded = false;
+    m.phaseState = 'exposed';
+    m.boss.exposedUntil = state.tick + 600;
+    m.boss.anchor = { ...post };
+    views.update(ctx(0.5));
+    expect(boss.anchor.visible).toBe(true);
+    expect(boss.anchor.position.x).toBeCloseTo(layout.wx(post.x));
+    expect(boss.anchor.position.z).toBeCloseTo(layout.wz(post.y));
+    m.boss.shielded = true;
+    m.phaseState = 'active';
+    views.update(ctx(1));
+    expect(boss.anchor.visible).toBe(false);
+    views.dispose();
+  });
+
+  it('boss-mission seats read as telegraph kinds: the boss as a boss, the crew by variant, the human never', () => {
+    const state = newMission({ id: 'oshodi' });
+    expect(telegraphKindOf(state, state.players[0]!)).toBeNull();
+    expect(telegraphKindOf(state, state.players[1]!)).toBe('boss');
+    for (const p of state.players.slice(2)) expect(telegraphKindOf(state, p)).not.toBeNull();
+    expect(hasEnemyTelegraphs(state)).toBe(true);
+    // a boss punch in its wind-up draws the melee telegraph (the same path as every enemy's)
+    const boss = state.players[1]!;
+    boss.attack = {
+      skill: 'push',
+      dir: 'left',
+      targetId: 0,
+      resolveTick: state.tick + 4,
+    } as typeof boss.attack;
+    const t = readTelegraph(state, boss, state.tick, emptyTelegraph(), state.tick);
+    expect(t.kind).toBe('melee');
+    expect(t.strong).toBe(true);
   });
 });

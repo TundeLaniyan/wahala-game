@@ -24,7 +24,7 @@ import type { Dir, GameState, SimEvent } from '../../sim';
 import { DIR_VEC } from '../../sim';
 import type { Effects } from '../fx/Effects';
 import type { Layout } from '../coords';
-import { emptyTelegraph, pulseRate, readTelegraph } from './enemyTelegraph';
+import { emptyTelegraph, pulseRate, readTelegraph, telegraphKindOf } from './enemyTelegraph';
 import type { Telegraph, TelegraphKind } from './enemyTelegraph';
 import { enemyScaleOf } from '../../assets/enemyLooks';
 import { hasCampaignFeedback } from './DamageViews';
@@ -53,7 +53,7 @@ export interface TelegraphAnimator {
 
 /** Every match with campaign enemy seats (or campaign health) gets the telegraphs; multiplayer never does. */
 export const hasEnemyTelegraphs = (state: GameState): boolean =>
-  hasCampaignFeedback(state) || state.players.some((p) => p.enemyKind !== undefined);
+  hasCampaignFeedback(state) || state.players.some((p) => telegraphKindOf(state, p) !== null);
 
 /** Yaw about +Y that turns a glyph's +X toward a grid direction (+y on the grid is +z in the world). */
 export function dirYaw(dir: Dir): number {
@@ -159,13 +159,13 @@ export class EnemyTelegraphViews implements View {
     for (const e of events) {
       if (e.type === 'attackStarted') {
         const p = state.players[e.playerId];
-        if (!p || p.enemyKind === undefined) continue;
+        if (!p || telegraphKindOf(state, p) === null) continue;
         this.seat(p.id).windStart = state.tick;
         // the enemy's swing is stretched over its wind-up: the blow lands when the sim resolves it
         this.animator?.playOver(p.id, 'Push', Math.max(0.1, (e.resolveTick - state.tick) / 60));
       } else if (e.type === 'attackResolved') {
         const p = state.players[e.playerId];
-        if (!p || p.enemyKind === undefined) continue;
+        if (!p || telegraphKindOf(state, p) === null) continue;
         this.seat(p.id).windStart = undefined;
         if (!e.hit) {
           // a punch at the air: the enemy overreaches and stumbles - its open window is starting
@@ -175,7 +175,7 @@ export class EnemyTelegraphViews implements View {
         }
       } else if (e.type === 'projectileLaunched') {
         const p = state.players[e.ownerId];
-        if (!p || p.enemyKind === undefined) continue;
+        if (!p || telegraphKindOf(state, p) === null) continue;
         // the throw clip lasts the whole cue: the arm comes over as the object leaves
         if (e.warnTicks > 0) this.animator?.playOver(p.id, 'Throw', e.warnTicks / 60);
       }
@@ -189,7 +189,7 @@ export class EnemyTelegraphViews implements View {
     const now = state.tick + alpha;
     let n = 0;
     for (const p of state.players) {
-      if (p.enemyKind === undefined) continue;
+      if (telegraphKindOf(state, p) === null) continue;
       const seat = this.seat(p.id);
       if (!p.alive) {
         seat.last = null;

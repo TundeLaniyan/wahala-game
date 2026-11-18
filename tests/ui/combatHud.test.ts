@@ -212,7 +212,7 @@ describe('mission panel model (HC5)', () => {
     const m = missionPanelModel(view());
     expect(m.pips.map((p) => p.state)).toEqual(['done', 'active', 'todo']);
     expect(m.phaseLabel).toBe('PHASE 2 OF 3');
-    expect(m.objective).toBe('JAM THE RELAYS');
+    expect(m.objective).toBe('BLAST THE RELAYS');
     expect(m.progress).toMatchObject({ done: 1, goal: 3, text: '1/3 relays jammed' });
     expect(m.progress.fraction).toBeCloseTo(1 / 3);
     expect(m.callout).toBe('Jam two relays before the next convoy');
@@ -261,6 +261,45 @@ describe('mission panel model (HC5)', () => {
     expect(defeated.outcome).toBe('won');
   });
 
+  it('boss missions (BX1-BX3): the blasts left and what to do now; the panel shows them', () => {
+    const boss = { playerId: 1, shielded: true, exposed: false, exposedRemainingTicks: 0, defeated: false };
+    const shielded = missionPanelModel(view({ boss: { ...boss, hitsLeft: 3, maxHits: 3 } }));
+    expect(shielded.boss).toMatchObject({
+      state: 'shielded',
+      label: 'BOSS SHIELDED',
+      hits: { left: 3, max: 3, label: 'BLASTS LEFT 3/3' },
+      hint: 'BREAK THE OBJECTIVE TO EXPOSE',
+    });
+    const exposed = {
+      ...boss,
+      shielded: false,
+      exposed: true,
+      exposedRemainingTicks: 12 * 60,
+      hitsLeft: 2,
+      maxHits: 3,
+    };
+    expect(missionPanelModel(view({ phaseState: 'exposed', boss: exposed })).boss.hint).toBe(
+      'RUNNING TO RESTORE',
+    );
+    const restoring = missionPanelModel(
+      view({ phaseState: 'exposed', boss: { ...exposed, restoring: true } }),
+    );
+    expect(restoring.boss).toMatchObject({
+      label: 'BOSS EXPOSED 0:12',
+      hits: { label: 'BLASTS LEFT 2/3' },
+      hint: 'RESTORING: BLAST NOW',
+    });
+    const html = renderToStaticMarkup(
+      createElement(MissionPanel, {
+        mission: view({ phaseState: 'exposed', boss: { ...exposed, restoring: true } }),
+      }),
+    );
+    for (const text of ['BLASTS LEFT 2/3', 'RESTORING: BLAST NOW', 'BOSS EXPOSED 0:12'])
+      expect(html, text).toContain(text);
+    // a view without hits (a field mission, an older view) shows neither
+    expect(missionPanelModel(view()).boss.hits).toBeUndefined();
+  });
+
   it('empty callout, no warnings, an empty goal: nothing broken', () => {
     const m = missionPanelModel(
       view({ callout: null, warnings: [], progress: { done: 0, goal: 0, label: 'x' } }),
@@ -276,7 +315,7 @@ describe('mission panel model (HC5)', () => {
     const html = renderToStaticMarkup(createElement(MissionPanel, { mission: view() }));
     for (const text of [
       'PHASE 2 OF 3',
-      'JAM THE RELAYS',
+      'BLAST THE RELAYS',
       '1/3 relays jammed',
       'Jam two relays before the next convoy',
       'BOSS SHIELDED',

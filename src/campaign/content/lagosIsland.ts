@@ -34,7 +34,7 @@ export const LAGOS_ISLAND_BOSS: BossDef = {
   },
   systemControlled: 'The island ledgers: trade records, receipts and the paper trail of every district',
   exposeObjective:
-    'Collect the Chairman’s ledgers and deliver them to the press drop while the bureau auditors chase the carrier; when the last ledger is delivered, the Registrar is exposed in her own office.',
+    'Blast the archive cabinets open, carry the Chairman’s ledgers to the press drop while the bureau auditors chase the carrier; every phase of delivered ledgers exposes the Registrar at her office, and one blast there breaks her guard. Three blasts and she falls.',
   objectiveKind: 'evidenceRun',
   signatureAbility: {
     name: 'Right of Seizure',
@@ -49,7 +49,7 @@ export const LAGOS_ISLAND_BOSS: BossDef = {
       objective: 'Collect the first ledger and deliver it to the press drop.',
       bossBehaviour: 'Keeps to her office and sends two auditors to shadow the nearest ledger.',
       pressure: 'Auditors pick up your trail the moment you hold a ledger.',
-      callout: 'Pick up the ledger, run it to the press drop. Do not stop in a lane.',
+      callout: 'Blast the cabinet open, run the ledger to the press drop. Do not stop in a lane.',
     },
     {
       title: 'Cross-Examination',
@@ -63,7 +63,7 @@ export const LAGOS_ISLAND_BOSS: BossDef = {
       objective: 'Deliver the final ledger, then finish the exposed Registrar.',
       bossBehaviour: 'Leaves her office to guard the last ledger in the civic square herself.',
       pressure: 'The whole bureau is on the carrier; the route to the press drop is narrow.',
-      callout: 'The last ledger. Get it to the press, then she is exposed.',
+      callout: 'The last ledgers. Get them to the press, then blast her at her office.',
     },
   ],
   introduction: [
@@ -137,9 +137,9 @@ export const LAGOS_ISLAND: DistrictContent = {
     summary:
       'The Chairman’s proof of everything lives in ledgers locked in the island’s old trade houses. Carry them to the press before Barrister Quill’s auditors run you down, then close her office for good.',
     objectives: [
-      'Collect ledgers from the marked locations',
+      'Blast the locked archive cabinets open and collect the ledgers',
       'Deliver them to the press drop while the auditors chase you',
-      'Finish Barrister Quill when the last ledger is delivered',
+      'Each delivered phase exposes Barrister Quill at her office: one blast there each time, three in all',
     ],
     intel: [
       'Auditors lock on to the ledger carrier: break the chase with blasts or by using the market lanes.',

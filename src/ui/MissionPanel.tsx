@@ -49,6 +49,11 @@ export function MissionPanel({ mission }: { mission: MissionView | null }) {
       <div className="mp-progress-text" data-testid="mission-progress-text">
         {m.progress.text}
       </div>
+      {m.showBoss && m.boss.hint && (
+        <p className={`mp-boss-hint ${m.boss.state}`} data-testid="mission-boss-hint">
+          {m.boss.hint}
+        </p>
+      )}
       {m.callout && (
         <p className="mp-callout" data-testid="mission-callout">
           {m.callout}
@@ -62,6 +67,11 @@ export function MissionPanel({ mission }: { mission: MissionView | null }) {
             data-seconds={m.boss.seconds ?? ''}
           >
             {m.boss.label}
+          </span>
+        )}
+        {m.showBoss && m.boss.hits && (
+          <span className="mp-hits" data-testid="mission-boss-hits" data-left={m.boss.hits.left}>
+            {m.boss.hits.label}
           </span>
         )}
         <span className="mp-lives" data-testid="mission-lives" data-left={m.lives.left}>

@@ -35,33 +35,33 @@ export const LEKKI_BOSS: BossDef = {
   systemControlled:
     'The estate standby grid: private generators, lighting rings, gates and cameras behind the plaza',
   exposeObjective:
-    'Switch the private systems off in the order the grid signals, without a wrong switch; when the last system is off, the Steward is exposed in the dark.',
+    'Blast the private systems off in the order the grid signals, without a wrong blast; every dark phase exposes the Steward, who comes to reset the last panel himself: one blast there breaks his guard. Three blasts and he falls.',
   objectiveKind: 'contingencyGrid',
   signatureAbility: {
     name: 'Contingency Plan',
     description:
-      'A wrong switch triggers a contingency strike on the player: the plan has a backup for every mistake, and the backup is always on you.',
+      'A blast on the wrong panel triggers a contingency strike: the plan has a backup for every mistake, and the backup is always on you.',
   },
   counterplay:
     'Read the signalled order, wait for the lamp and hit one switch at a time. A strike is always warned; step out of the ring. Guards cover the switches but cannot see the order: use them as bait.',
   phases: [
     {
       title: 'Soft Launch',
-      objective: 'Switch off the first systems in the signalled order.',
+      objective: 'Blast the first systems off in the signalled order.',
       bossBehaviour: 'Hosts from the plaza, announcing "scheduled maintenance" to calm the guards.',
       pressure: 'A short sequence; a wrong switch triggers a warned strike.',
-      callout: 'Follow the lamp order. A wrong switch calls a strike.',
+      callout: 'Follow the lamp order. A blast on the wrong panel calls a strike.',
     },
     {
       title: 'Peak Demand',
-      objective: 'Switch off a longer sequence while guards defend the panels.',
+      objective: 'Blast a longer sequence off while guards defend the panels.',
       bossBehaviour: 'Adds a second panel and calls security to stand on the lit switches.',
       pressure: 'A longer sequence, ranged guards on the panels, strikes land on the board.',
       callout: 'Longer sequence. Clear the guards off the panel, then follow the order.',
     },
     {
       title: 'Power Cut',
-      objective: 'Switch off the final systems in order, then finish the exposed Steward.',
+      objective: 'Blast the final systems off in order, then blast the exposed Steward a last time.',
       bossBehaviour: 'Cuts his own lights to hide, then sends his assistant to cover him.',
       pressure: 'The full crew and the longest sequence under strike warnings.',
       callout: 'The last switches. Lights out, then take the Steward.',
@@ -146,11 +146,11 @@ export const LEKKI: DistrictContent = {
     location:
       'Lekki: the Link Bridge over the lagoon, the Admiralty Way signage and illuminated plaza, the promenade palms',
     summary:
-      'The Chairman’s last stronghold is a standby plant behind a glowing plaza. Steward Halcyon runs it like a hotel. Switch the private systems off in the order the grid signals, avoid the contingency strikes, and take the Steward in the dark.',
+      'The Chairman’s last stronghold is a standby plant behind a glowing plaza. Steward Halcyon runs it like a hotel. Blast the private systems off in the order the grid signals, avoid the contingency strikes, and take the Steward in the dark.',
     objectives: [
-      'Switch the private systems off in the signalled order',
-      'Avoid the contingency strike a wrong switch calls',
-      'Finish the Steward when the grid is dark',
+      'Blast the private systems off in the signalled order',
+      'Avoid the contingency strike a wrong blast calls',
+      'Each dark phase brings the Steward to reset the last panel: one blast there each time, three in all',
     ],
     intel: [
       'The grid shows the next switch by lamp: follow the order, not the nearest panel.',
@@ -158,7 +158,7 @@ export const LEKKI: DistrictContent = {
       'Estate staff are not the enemy: only the private guard is.',
     ],
     warnings: [
-      'A wrong switch is not a mistake you can undo: a strike lands.',
+      'A wrong blast is not a mistake you can undo: a strike lands.',
       'The promenade is open to the lagoon: do not get cornered against the water.',
     ],
     brokerMessage: {

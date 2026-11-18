@@ -5,6 +5,7 @@ import { OBJECTIVES } from './objectives';
 import { trainLane } from './objectives/windows';
 import { pendingWarnings } from './strikes';
 import type { MissionNodeView, MissionView, MissionWarningView } from './types';
+import { onBossAnchor } from './boss';
 
 /** The read-only mission picture for the HUD, the renderer's markers and the app; null when this is not a mission. */
 export function missionView(state: GameState): MissionView | null {
@@ -61,18 +62,37 @@ export function missionView(state: GameState): MissionView | null {
     },
     nodes,
     warnings,
-    boss: {
-      playerId: m.bossId,
-      name: state.players[m.bossId]?.name,
-      shielded: m.boss.shielded,
-      exposed: !m.boss.shielded && !m.boss.defeated,
-      exposedRemainingTicks: m.boss.exposedUntil > state.tick ? m.boss.exposedUntil - state.tick : 0,
-      defeated: m.boss.defeated,
-    },
+    boss: bossView(state),
     lives: { used: m.livesUsed, max: m.livesMax },
     timeRemainingSec: Math.max(0, Math.ceil((m.tuning.timeLimitTicks - state.match.playTicks) / 60)),
     callout: m.callout,
     crewAlive,
     outcome: m.outcome,
+  };
+}
+
+/** The boss part of the view: shield, window, hits left and where he restores (decisions BX1-BX3). */
+function bossView(state: GameState): MissionView['boss'] {
+  const m = state.mission!;
+  const b = m.boss;
+  const boss = state.players[m.bossId];
+  const exposed = !b.shielded && !b.defeated;
+  const anchor = exposed ? (b.anchor ?? null) : null;
+  return {
+    playerId: m.bossId,
+    name: boss?.name,
+    shielded: b.shielded,
+    exposed,
+    exposedRemainingTicks: b.exposedUntil > state.tick ? b.exposedUntil - state.tick : 0,
+    defeated: b.defeated,
+    ...(b.maxHits !== undefined
+      ? {
+          hitsLeft: b.hp ?? 0,
+          maxHits: b.maxHits,
+          exposeTotalTicks: exposed ? (b.windowTicks ?? m.tuning.exposeTicks) : m.tuning.exposeTicks,
+          anchor,
+          restoring: boss !== undefined && onBossAnchor(boss, anchor, m.tuning.boss?.restoreRadius ?? 0),
+        }
+      : {}),
   };
 }

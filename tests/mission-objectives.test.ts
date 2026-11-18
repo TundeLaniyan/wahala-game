@@ -1,6 +1,7 @@
 /**
  * The five other objective mechanics (Oshodi's relays have their own file): each with a positive path and a failure
- * path, driven by ordinary state changes (a human standing on a tile, generators blasting).
+ * path, driven by ordinary state changes (generators blasting, a human standing on a tile). Every node is broken by the
+ * human's BLASTS (decision BX4): standing on it, or a crew blast, does nothing.
  */
 import { describe, expect, it } from 'vitest';
 import { missionView, playerStepTicks } from '../src/sim';
@@ -8,7 +9,7 @@ import type { SimEvent } from '../src/sim';
 import { MIN_STRIKE_WARN_TICKS, MIN_TRAIN_WARN_TICKS, PRESS_DROP_TICKS } from '../src/sim/mission/defs';
 import { Tile } from '../src/sim/types';
 import { addGenerator } from './helpers';
-import { advance, jumpToPhase, newMission, of, put, standOn } from './mission-helpers';
+import { advance, blastAt, hitBoss, jumpToPhase, newMission, of, put, standOn } from './mission-helpers';
 
 // ------------------------------------------------------------------ Mushin
 
@@ -76,7 +77,7 @@ describe('Mushin supply routes: destroy stacks with blasts, runners restock', ()
     expect(s.done).toBe(true);
   });
 
-  it('two stacks end phase one; goods-fall pressure targets the human near a live stack', () => {
+  it('two stacks expose the boss, a blast on him starts phase two; goods-fall pressure targets the human near a live stack', () => {
     const state = newMission({ id: 'mushin' });
     const m = state.mission!;
     const ev: SimEvent[] = [];
@@ -84,6 +85,10 @@ describe('Mushin supply routes: destroy stacks with blasts, runners restock', ()
       addGenerator(state, { ownerId: 0, x: n.x, y: n.y, timer: 1 });
       advance(state, 60, {}, ev);
     }
+    expect(m.phaseState).toBe('exposed');
+    // Madam Ronke restores at the stack broken last (her recipe's anchor: BX1)
+    expect(m.boss.anchor).toEqual({ x: m.nodes[1]!.x, y: m.nodes[1]!.y });
+    hitBoss(state, { x: 40, y: 30 });
     expect(m.phase).toBe(1);
     // near the live stack s3 of phase two the pressure finds the human
     const s = m.nodes[2]!;
@@ -97,41 +102,54 @@ describe('Mushin supply routes: destroy stacks with blasts, runners restock', ()
 
 // ------------------------------------------------------------------ Fadeyi / Somolu
 
-describe('Fadeyi junction access: hold the zone against marshals', () => {
+describe('Fadeyi junction access: blast the toll box while no marshal shields it', () => {
   const clear = (state: ReturnType<typeof newMission>): void => {
     // the idle crew would stand in the zones: move it out of the way (real marshals are the contest)
     state.players.slice(2).forEach((p, i) => put(state, p.id, 3 + i, 31));
   };
+  const away = { x: 25, y: 28 };
 
-  it('holding a zone for the hold time makes the junction held; leaving lets the progress drain slowly', () => {
+  it('standing in the zone does nothing; a blast of the human breaks the box and holds the junction', () => {
     const state = newMission({ id: 'fadeyiSomolu' });
     const m = state.mission!;
     clear(state);
     const j = m.nodes[0]!;
-    const hold = m.tuning.phases[0].holdTicks;
-    standOn(state, j.x, j.y, 100);
-    expect(j.progress).toBe(100);
-    standOn(state, j.x + 1, j.y + 1, 50); // inside the 3 x 3 zone still counts
-    expect(j.progress).toBe(150);
-    standOn(state, j.x + 5, j.y, 30); // outside: drains by 1 a tick
-    expect(j.progress).toBe(120);
-    const ev = standOn(state, j.x, j.y, hold - 120);
+    standOn(state, j.x, j.y, 600);
+    expect(j.done).toBe(false);
+    expect(missionView(state)!.nodes[0]!.state).toBe('live');
+    const ev = blastAt(state, j.x, j.y, away);
     expect(j.done).toBe(true);
     expect(of(ev, 'missionNode').some((e) => e.nodeId === 'j1' && e.state === 'done')).toBe(true);
+    expect(missionView(state)!.progress).toEqual({ done: 1, goal: 2, label: 'toll boxes broken' });
   });
 
-  it('a marshal inside the zone contests it: no progress while they stand there', () => {
+  it('a marshal inside the zone shields the box: that blast is wasted, the next one (zone clear) counts', () => {
     const state = newMission({ id: 'fadeyiSomolu' });
     const m = state.mission!;
     clear(state);
     const j = m.nodes[0]!;
-    put(state, 2, j.x + 1, j.y); // a marshal
-    standOn(state, j.x, j.y, 200);
-    expect(j.progress).toBe(0);
+    put(state, 2, j.x + 1, j.y + 1); // a marshal in the zone, out of the blast's reach of the box? no matter: shielded
+    expect(missionView(state)!.nodes[0]!.state).toBe('locked');
+    state.players[2]!.armour = 9; // he survives the blast and keeps shielding
+    blastAt(state, j.x, j.y, away);
     expect(j.done).toBe(false);
     put(state, 2, 3, 31); // driven out
-    standOn(state, j.x, j.y, 50);
-    expect(j.progress).toBe(50);
+    expect(missionView(state)!.nodes[0]!.state).toBe('live');
+    blastAt(state, j.x, j.y, away);
+    expect(j.done).toBe(true);
+  });
+
+  it('tollSeason: every toll box takes one more blast', () => {
+    const state = newMission({ id: 'fadeyiSomolu', modifiers: ['tollSeason'] });
+    const m = state.mission!;
+    clear(state);
+    const j = m.nodes[0]!;
+    expect(j.hp).toBe(2);
+    blastAt(state, j.x, j.y, away);
+    expect(j.done).toBe(false);
+    expect(missionView(state)!.nodes[0]).toMatchObject({ state: 'progress', fraction: 0.5 });
+    blastAt(state, j.x, j.y, away);
+    expect(j.done).toBe(true);
   });
 
   it('a held junction opens its routes and stops calling marshal strikes; the others keep calling', () => {
@@ -142,7 +160,7 @@ describe('Fadeyi junction access: hold the zone against marshals', () => {
     const crate = (j1!.y - 4) * state.width + j1!.x;
     state.tiles[crate] = Tile.Soft;
     j1!.opens = [crate];
-    standOn(state, j1!.x, j1!.y, m.tuning.phases[0].holdTicks);
+    blastAt(state, j1!.x, j1!.y, away);
     expect(j1!.done).toBe(true);
     expect(state.tiles[crate]).toBe(Tile.Empty);
     // walk away and watch who calls strikes over a minute
@@ -157,24 +175,25 @@ describe('Fadeyi junction access: hold the zone against marshals', () => {
     expect(sources.has('j2') || sources.has('j3')).toBe(true);
   });
 
-  it('phase three: a held junction is retaken after the window', () => {
+  it('phase three: a broken box is rebuilt after the window', () => {
     const state = newMission({ id: 'fadeyiSomolu' });
     const m = state.mission!;
     clear(state);
     jumpToPhase(state, 2);
     const j = m.nodes[0]!;
-    standOn(state, j.x, j.y, m.tuning.phases[2].holdTicks);
+    blastAt(state, j.x, j.y, away);
     expect(j.done).toBe(true);
-    put(state, 0, 25, 28);
     advance(state, m.tuning.phases[2].rearmTicks + 5);
     expect(j.done).toBe(false);
-    expect(j.progress).toBe(0);
+    expect(j.hp).toBe(m.tuning.phases[2].hp);
   });
 });
 
 // ------------------------------------------------------------------ Ebute-Metta
 
-describe('Ebute-Metta dispatch windows: switches count only inside the rail window', () => {
+describe('Ebute-Metta dispatch windows: a blast throws a switch only inside the rail window', () => {
+  const away = { x: 40, y: 30 };
+
   it('a railcar is telegraphed at least 3.5 s ahead, the arena schedules no train of its own, and the window opens after it', () => {
     const state = newMission({ id: 'ebuteMetta' }, { stage: true });
     const m = state.mission!;
@@ -198,42 +217,28 @@ describe('Ebute-Metta dispatch windows: switches count only inside the rail wind
     expect(of(rest, 'stageStarted').some((e) => e.event.style === 'train')).toBe(true);
   });
 
-  it('a switch thrown inside the window counts; the same stand outside the window does not', () => {
+  it('a blast outside the window is wasted and standing never counts; a blast inside the window throws it', () => {
     const state = newMission({ id: 'ebuteMetta' });
     const m = state.mission!;
     const sw = m.nodes[0]!;
-    const hold = m.tuning.phases[0].holdTicks;
-    // closed: the whole warning stretch
+    // closed: a blast and a long stand on it do nothing
     advance(state, 130);
     expect(m.rail!.trainAt).toBeGreaterThan(state.tick);
-    standOn(state, sw.x, sw.y, hold + 60);
+    blastAt(state, sw.x, sw.y, away);
+    standOn(state, sw.x, sw.y, 120);
     expect(sw.done).toBe(false);
-    expect(sw.progress).toBe(0);
     expect(missionView(state)!.nodes[0]!.state).toBe('locked');
-    // wait for the window, then stand on it
-    put(state, 0, 40, 30);
+    // wait for the window, stand on it (nothing), then blast it
+    put(state, 0, away.x, away.y);
     advance(state, m.rail!.openAt - state.tick + 2);
     expect(m.rail!.open).toBe(true);
     expect(missionView(state)!.nodes[0]!.state).toBe('live');
-    const ev = standOn(state, sw.x, sw.y, hold + 2);
+    standOn(state, sw.x, sw.y, 60);
+    expect(sw.done).toBe(false);
+    const ev = blastAt(state, sw.x, sw.y, away);
     expect(sw.done).toBe(true);
     expect(of(ev, 'missionNode').some((e) => e.nodeId === 'd1' && e.state === 'done')).toBe(true);
     expect(missionView(state)!.progress).toEqual({ done: 1, goal: 2, label: 'switches thrown' });
-  });
-
-  it('half a throw is lost when the window closes', () => {
-    const state = newMission({ id: 'ebuteMetta' });
-    const m = state.mission!;
-    const sw = m.nodes[0]!;
-    m.tuning.phases[0].holdTicks = 100000; // a throw that cannot finish inside any window
-    advance(state, m.rail!.nextCycleAt - state.tick + 1);
-    advance(state, m.rail!.openAt - state.tick + 2);
-    put(state, 0, sw.x, sw.y);
-    advance(state, 40);
-    expect(sw.progress).toBeGreaterThan(30);
-    advance(state, m.rail!.closeAt - state.tick + 2); // still standing there when it shuts
-    expect(sw.progress).toBe(0);
-    expect(sw.done).toBe(false);
   });
 
   it('phase three: a thrown switch resets after the reset time', () => {
@@ -244,9 +249,8 @@ describe('Ebute-Metta dispatch windows: switches count only inside the rail wind
     advance(state, 5);
     advance(state, m.rail!.openAt - state.tick + 2);
     const sw = m.nodes[0]!;
-    standOn(state, sw.x, sw.y, m.tuning.phases[2].holdTicks + 2);
+    blastAt(state, sw.x, sw.y, away);
     expect(sw.done).toBe(true);
-    put(state, 0, 40, 30);
     advance(state, m.tuning.phases[2].rearmTicks + 5);
     expect(sw.done).toBe(false);
   });
@@ -254,16 +258,26 @@ describe('Ebute-Metta dispatch windows: switches count only inside the rail wind
 
 // ------------------------------------------------------------------ Lagos Island
 
-describe('Lagos Island evidence run: collect, carry slowly, deliver', () => {
-  it('collect (stand), carry (slower), deliver at the press', () => {
+describe('Lagos Island evidence run: blast a cabinet open, carry slowly, deliver', () => {
+  const away = { x: 30, y: 30 };
+  /** Opens the cabinet with a blast and steps onto it: the ledger is carried. */
+  const collect = (state: ReturnType<typeof newMission>, n: { x: number; y: number }): void => {
+    blastAt(state, n.x, n.y, away);
+    standOn(state, n.x, n.y, 2);
+  };
+
+  it('a locked cabinet ignores standing; a blast opens it, stepping on collects, the carrier is slower, the press takes it', () => {
     const state = newMission({ id: 'lagosIsland' });
     const m = state.mission!;
     const me = state.players[0]!;
     const base = playerStepTicks(state, me);
     const l1 = m.nodes[0]!;
-    standOn(state, l1.x, l1.y, 30);
+    expect(missionView(state)!.nodes[0]!.state).toBe('locked');
+    standOn(state, l1.x, l1.y, 300);
     expect(m.carry).toBeNull();
-    const ev = standOn(state, l1.x, l1.y, 40);
+    blastAt(state, l1.x, l1.y, away);
+    expect(missionView(state)!.nodes[0]!.state).toBe('live');
+    const ev = standOn(state, l1.x, l1.y, 2);
     expect(m.carry).toMatchObject({ playerId: 0, nodeId: 'l1' });
     expect(l1.done).toBe(true);
     expect(of(ev, 'missionNode').some((e) => e.nodeId === 'l1' && e.state === 'done')).toBe(true);
@@ -278,11 +292,11 @@ describe('Lagos Island evidence run: collect, carry slowly, deliver', () => {
     expect(missionView(state)!.progress).toEqual({ done: 1, goal: 2, label: 'ledgers delivered' });
   });
 
-  it('a daze drops the ledger: it goes back where it was and can be collected again', () => {
+  it('a daze drops the ledger: it goes back to its cabinet, which stays open', () => {
     const state = newMission({ id: 'lagosIsland' });
     const m = state.mission!;
     const l1 = m.nodes[0]!;
-    standOn(state, l1.x, l1.y, 70);
+    collect(state, l1);
     expect(m.carry).not.toBeNull();
     put(state, 0, l1.x + 4, l1.y);
     state.players[0]!.dazedUntil = state.tick + 40;
@@ -290,7 +304,9 @@ describe('Lagos Island evidence run: collect, carry slowly, deliver', () => {
     expect(m.carry).toBeNull();
     expect(l1.done).toBe(false);
     expect(l1.progress).toBe(0);
-    standOn(state, l1.x, l1.y, 70);
+    expect(missionView(state)!.nodes[0]!.state).toBe('live'); // open: no second blast needed
+    advance(state, 40);
+    standOn(state, l1.x, l1.y, 2);
     expect(m.carry).not.toBeNull();
   });
 
@@ -301,7 +317,7 @@ describe('Lagos Island evidence run: collect, carry slowly, deliver', () => {
     standOn(state, press.x, press.y, 80);
     expect(m.delivered).toBe(0);
     const l1 = m.nodes[0]!;
-    standOn(state, l1.x, l1.y, 70);
+    collect(state, l1);
     expect(m.carry).not.toBeNull();
     state.players[0]!.alive = false;
     advance(state, 2);
@@ -313,7 +329,7 @@ describe('Lagos Island evidence run: collect, carry slowly, deliver', () => {
     const state = newMission({ id: 'lagosIsland' });
     const m = state.mission!;
     const l1 = m.nodes[0]!;
-    standOn(state, l1.x, l1.y, 70);
+    collect(state, l1);
     put(state, 0, l1.x + 3, l1.y);
     const ev = advance(state, m.tuning.phases[0].pulseTicks + 5);
     const audits = of(ev, 'missionWarning').filter((e) => e.warning.kind === 'strike');
@@ -329,8 +345,9 @@ describe('Lagos Island evidence run: collect, carry slowly, deliver', () => {
     m.tuning.phases[2].pulseTicks = 0; // no audits in this test
     m.tuning.phases[2].carryLimitTicks = 300;
     const l1 = m.nodes[0]!;
-    standOn(state, l1.x, l1.y, 70);
+    collect(state, l1);
     expect(m.carry).not.toBeNull();
+    put(state, 0, l1.x + 2, l1.y); // off the (open) cabinet: back on it would pick the ledger up again
     advance(state, 280);
     expect(m.carry).not.toBeNull();
     advance(state, 40);
@@ -341,8 +358,10 @@ describe('Lagos Island evidence run: collect, carry slowly, deliver', () => {
 
 // ------------------------------------------------------------------ Lekki
 
-describe('Lekki contingency grid: switch off in the signalled order', () => {
-  it('the order is signalled in the labels and the callout; the right order clears the phase', () => {
+describe('Lekki contingency grid: blast the systems in the signalled order', () => {
+  const away = { x: 30, y: 30 };
+
+  it('the order is signalled in the labels and the callout; standing does nothing; the right order clears the phase', () => {
     const state = newMission({ id: 'lekki' });
     const m = state.mission!;
     expect(m.sequence).toHaveLength(3);
@@ -355,48 +374,51 @@ describe('Lekki contingency grid: switch off in the signalled order', () => {
       expect(m.nodes.find((n) => n.id === id)!.label).toMatch(new RegExp(` ${i + 1}$`)),
     );
     expect(view.nodes.find((n) => n.id === m.sequence[0])!.state).toBe('live');
-    const hold = m.tuning.phases[0].holdTicks;
+    const first = m.nodes.find((q) => q.id === m.sequence[0])!;
+    standOn(state, first.x, first.y, 300);
+    expect(first.done).toBe(false);
     for (const id of m.sequence) {
       const n = m.nodes.find((q) => q.id === id)!;
-      standOn(state, n.x, n.y, hold + 1);
+      blastAt(state, n.x, n.y, away);
       expect(n.done).toBe(true);
     }
+    expect(m.phaseState).toBe('exposed');
+    hitBoss(state, away);
     expect(m.phase).toBe(1);
     expect(m.sequence).toHaveLength(4);
   });
 
-  it('a wrong switch calls a telegraphed contingency strike and resets the sequence', () => {
+  it('a wrong blast calls a telegraphed contingency strike and resets the sequence', () => {
     const state = newMission({ id: 'lekki' });
     const m = state.mission!;
-    const hold = m.tuning.phases[0].holdTicks;
     const first = m.nodes.find((n) => n.id === m.sequence[0])!;
-    standOn(state, first.x, first.y, hold + 1);
+    blastAt(state, first.x, first.y, away);
     expect(m.seqIndex).toBe(1);
     // the third of the order is not next: wrong
     const wrong = m.nodes.find((n) => n.id === m.sequence[2])!;
-    const ev = standOn(state, wrong.x, wrong.y, hold + 1);
+    const ev = blastAt(state, wrong.x, wrong.y, away);
     expect(m.seqIndex).toBe(0);
     expect(m.nodes.every((n) => !n.done)).toBe(true);
     const warn = of(ev, 'missionWarning').filter((e) => e.warning.kind === 'contingency');
     expect(warn).toHaveLength(1);
     expect(warn[0]!.warning.remainingTicks).toBeGreaterThanOrEqual(MIN_STRIKE_WARN_TICKS);
     expect(warn[0]!.warning.tiles).toContain(wrong.y * state.width + wrong.x);
-    // standing there does not trigger it again (the strike lands later: step off first)
+    // one blast is one decision: its flames burning on do not trigger it again
     const more = advance(state, 60);
     expect(of(more, 'missionWarning').filter((e) => e.warning.kind === 'contingency')).toHaveLength(0);
     // and the right order still works afterwards
     for (const id of m.sequence) {
       const n = m.nodes.find((q) => q.id === id)!;
-      standOn(state, n.x, n.y, hold + 1);
+      blastAt(state, n.x, n.y, away);
     }
-    expect(m.phase).toBe(1);
+    expect(m.phaseState).toBe('exposed');
   });
 
   it('a decoy switch is a wrong switch', () => {
     const state = newMission({ id: 'lekki' });
     const m = state.mission!;
     const decoy = m.nodes.find((n) => !m.sequence.includes(n.id))!;
-    const ev = standOn(state, decoy.x, decoy.y, m.tuning.phases[0].holdTicks + 1);
+    const ev = blastAt(state, decoy.x, decoy.y, away);
     expect(of(ev, 'missionWarning').filter((e) => e.warning.kind === 'contingency')).toHaveLength(1);
     expect(m.seqIndex).toBe(0);
   });

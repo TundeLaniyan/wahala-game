@@ -2,16 +2,18 @@
  * Lekki: CONTINGENCY GRID. Private systems are switches on floor tiles of the estate.
  *  - the signalled ORDER (drawn from the match RNG when the phase starts, shown in the callout and as the number on the
  *    switch label) lists which switches go off and in what sequence; some switches are decoys outside it;
- *  - the human switches one off by standing on it for `holdTicks`; the next switch of the order is accepted;
- *  - a WRONG switch (out of order, or a decoy) calls a telegraphed contingency strike (3 x 3, >= 2.5 s) on the human's
- *    tile and RESETS the whole sequence;
+ *  - the human switches one off with a BLAST (decision BX4): a generator blast of the human's that reaches the next
+ *    switch of the order switches it off (a blast that also reaches another switch counts for the right one only);
+ *  - a blast that reaches only WRONG switches (out of order, or a decoy) calls a telegraphed contingency strike (3 x 3,
+ *    >= 2.5 s) on that switch and RESETS the whole sequence;
  *  - from phase 2 a contingency strike is also called on the human every `pulseTicks`;
  *  - phase 1: sequence of 3; phase 2: 4; phase 3: 5 (the `longBlackout` replay modifier adds one).
  */
 import { shuffle } from '../../rng';
-import { areaTiles, baseNodeView, completeNode, livingHuman, newNode, onNode, resetNode } from '../ctx';
+import { areaTiles, completeNode, livingHuman, newNode, resetNode } from '../ctx';
 import type { MissionCtx } from '../ctx';
 import { callStrike } from '../strikes';
+import { freshBlasts } from './types';
 import type { Objective } from './types';
 
 function resetSequence(ctx: MissionCtx): void {
@@ -43,31 +45,33 @@ export const contingencyGrid: Objective = {
   update(ctx) {
     const { state, m, pd } = ctx;
     const human = livingHuman(state);
+    // every fresh blast of the human's, with the switches it reached (in event order: one blast is one decision)
+    const hitsBy = new Map<number, string[]>();
     for (const node of m.nodes) {
       if (node.done) continue;
-      if (!onNode(human, node)) {
-        node.progress = Math.max(0, node.progress - pd.decayPerTick);
-        node.needsRelease = false;
-        continue;
-      }
-      if (node.needsRelease) continue;
-      node.progress++;
-      if (node.progress < pd.holdTicks) continue;
-      if (node.id === m.sequence[m.seqIndex]) {
+      for (const id of freshBlasts(ctx, node)) hitsBy.set(id, [...(hitsBy.get(id) ?? []), node.id]);
+    }
+    for (const id of [...hitsBy.keys()].sort((a, b) => a - b)) {
+      const reached = hitsBy.get(id)!;
+      const expected = m.sequence[m.seqIndex];
+      if (expected !== undefined && reached.includes(expected)) {
+        const node = m.nodes.find((n) => n.id === expected)!;
+        if (node.done) continue;
         completeNode(ctx, node);
         m.seqIndex++;
-      } else {
-        // wrong switch: a contingency strike on the culprit and the sequence starts again
-        callStrike(ctx, {
-          kind: 'contingency',
-          tiles: areaTiles(state, node.x, node.y, 1),
-          source: node.id,
-          warnTicks: pd.warnTicks,
-          activeTicks: pd.activeTicks,
-        });
-        resetSequence(ctx);
-        node.needsRelease = true;
+        continue;
       }
+      const wrong = m.nodes.find((n) => !n.done && reached.includes(n.id));
+      if (!wrong) continue;
+      // wrong switch: a contingency strike on it and the sequence starts again
+      callStrike(ctx, {
+        kind: 'contingency',
+        tiles: areaTiles(state, wrong.x, wrong.y, 1),
+        source: wrong.id,
+        warnTicks: pd.warnTicks,
+        activeTicks: pd.activeTicks,
+      });
+      resetSequence(ctx);
       break;
     }
     if (pd.pulseTicks > 0 && m.pulseAt >= 0 && state.tick >= m.pulseAt && human) {
@@ -85,10 +89,9 @@ export const contingencyGrid: Objective = {
   done: (ctx) => ctx.m.seqIndex,
 
   nodeView(ctx, node) {
-    const v = baseNodeView(node, ctx.pd.holdTicks);
-    if (v.state === 'idle' && ctx.m.sequence[ctx.m.seqIndex] === node.id)
-      return { state: 'live', fraction: 0 };
-    return v;
+    if (node.done) return { state: 'done', fraction: 1 };
+    if (ctx.m.sequence[ctx.m.seqIndex] === node.id) return { state: 'live', fraction: 0 };
+    return { state: 'idle', fraction: 0 };
   },
 
   runnerTarget: () => null,
@@ -98,6 +101,6 @@ export const contingencyGrid: Objective = {
     const letters = m.sequence.map((id) => id.toUpperCase());
     if (letters.length === 0) return null;
     const next = letters[m.seqIndex];
-    return `Switch off in this order: ${letters.join(' > ')}${next ? ` (next: ${next})` : ''}. A wrong switch calls a strike.`;
+    return `Blast in this order: ${letters.join(' > ')}${next ? ` (next: ${next})` : ''}. A wrong blast calls a strike.`;
   },
 };

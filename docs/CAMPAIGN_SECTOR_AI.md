@@ -511,3 +511,142 @@ HUD words (`app/fieldGoal.ts`): DESTROY / SECURE tags, "RELAY BOX (2 LEFT)", "JU
 ### Tests
 
 `tests/mission-sectors.test.ts` (data: sizes, every authored tile inside, barricades on open edge tiles, no leaks; per mission and two seeds: a flood from the start never leaves the rects and reaches every target; the route needs no blasting; no sector, no key; the stamp draws no random number; determinism; hazards / drops / manholes / respawns / vehicle entries; gates), `tests/field-sector-legs.test.ts` (both leg kinds), `tests/render/camera-sector.test.ts` (bounds on desktop and a 740 x 360 phone from every corner, the overview, no change without a sector, the minimap crop), `tests/render/sector-render.test.ts` (barricade objects, merged covers, gate hide, cover / environment clipping), `tests/field-nodes.test.ts` (its walks now go round barricades), `e2e/campaign-sectors.spec.ts` (phone landscape: the sector loads, its barricades are built, the camera stays on it from every corner).
+
+# Part 3. Bosses (decisions BX1-BX8)
+
+Branch `claude/wahala-csa-bosses` (from `4f2d2a9`). Founder direction (2026-11-18): keep the six boss mechanics and
+technical identities (Oga Sunmola, Madam Ronke, Marshal Gbenga Kobo, Ikenna Wayside, Barrister Tolani Quill, Bamidele
+Halcyon; the code labels are unchanged), make generators essential and the vulnerability readable, no boss carried by
+repeated melee. Everything is pure simulation data and rules (`src/sim/mission/`), read by the HUD rail and the
+renderer; the ids, rewards, unlocks, consequence flags and replay modifiers are unchanged (Toll Season reworded, BX5).
+
+## 1. The loop (every boss)
+
+1. **Break the district's equipment with blasts.** The phase's objective (the district verb, section 2) is broken only
+   by the human's generator blasts; standing on a node or punching does nothing to it. One blast counts once.
+2. **The boss is EXPOSED** (`bossExposed`, HUD "BOSS EXPOSED 0:20", gold restore ring on the anchor). His shield is
+   down; he walks to his ANCHOR (his post, or the node broken last) to restore it. The countdown waits while he walks
+   (at most 12 s), then runs for the level's window.
+3. **At his anchor he is committed**: within one tile of it he is rooted until the window ends ("RESTORING: BLAST
+   NOW"), so a generator laid beside him lands. He still punches (normal wind-up, drawn by the telegraph view) and his
+   escorts come for you; on Normal / Hard he calls fallen crew back (telegraphed on their posts).
+4. **A blast that reaches him costs one hit** (`bossHit`; any lethal event: a blast, a vehicle, a train). He reels for
+   1.5 s, re-shields and the next phase starts. Three hits in all; the third eliminates him (`bossDefeated`).
+5. **A punch only interrupts**: a landed punch on the exposed boss adds 1.5 s to the window (twice per window at most,
+   `bossInterrupted`). It never takes a hit.
+6. **A missed window** re-shields him and rebuilds the SAME phase (its nodes reset). Five windows in all (three hits and
+   two misses); then he gets away and the mission is lost. The clock and the lives end a mission as before.
+
+## 2. The six bosses
+
+| boss (code label) | objective broken by blasts | district twist kept | anchor | crew variants (role) |
+| --- | --- | --- | --- | --- |
+| Oga Sunmola (`oshodi`) | relays: one blast jams a relay | live relays call convoy lanes; jams wear off (25 / 20 / 40 s); runners re-arm a jammed relay in 4 s from phase 2 | his post (dispatch stage) | agbero guard, bottle-thrower spotter, heavy blocker, area-boy runners, Ring-security escort |
+| Madam Ronke (`mushin`) | parts stacks: 1 / 2 / 2 separate blasts | runners restock a destroyed stack; goods-fall strikes near live stacks | the stack broken last (she comes to restock it) | area-boy runners, market-enforcer stall guard, heavy blocker |
+| Marshal Gbenga Kobo (`fadeyiSomolu`) | toll boxes: a blast while NO marshal stands in the 3 x 3 zone (a marshal inside shields it) | broken boxes open routes and stop their marshal strikes; phase 3 boxes are rebuilt after 35 s | his post (painted box) | route marshals at the junctions, route-marshal toll guard, heavy blocker |
+| Ikenna Wayside (`ebuteMetta`) | dispatch switches: a blast only inside the open rail window (lay it ~3 s early) | telegraphed railcar windows; phase 3 switches reset after 40 s | his post (signal cabin) | Ring-security signal guards, area-boy runner, heavy blocker, agbero yard hand |
+| Barrister Tolani Quill (`lagosIsland`) | ledger cabinets: a blast opens one; step on it to take the ledger, carry it to the press | auditors chase the carrier; a daze or fall drops it (back to its open cabinet); audit strikes; 45 s carry limit in phase 3 | her post (office) | market-enforcer auditors, Ring-security records guard, heavy assistant, bottle-thrower clerk |
+| Bamidele Halcyon (`lekki`) | private systems: blasted in the signalled order; a blast on a wrong one calls a contingency strike and resets | lettered order, decoys, contingency strikes between switches | the panel broken last (he comes to reset it) | Ring-security contractors, gate guard and escort, bottle-thrower marksman, heavy aide |
+
+The boss himself is the expert `boss` variant (watches placements in sight, sharp reaction, no omniscience).
+
+## 3. Numbers per level
+
+| | Easy | Normal | Hard |
+| --- | --- | --- | --- |
+| window (restore time at the anchor) | 26 s | 20 s | 15 s |
+| walk grace (countdown waits while he walks) | 12 s | 12 s | 12 s |
+| crew called back when a window opens | 0 | 1 | 2 |
+| escorts body-block the line to the human | no | no | yes |
+| punch interrupt | +1.5 s, twice | +1.5 s, twice | +1.5 s, twice |
+| hits / windows allowed | 3 / 5 | 3 / 5 | 3 / 5 |
+| human health, recovery, enemy perception | the campaign level (CL1-CL7, SA9) | | |
+
+The window is the fairness lever: a generator laid 14 s into the window lands on Easy and Normal, not on Hard
+(tested). Travel to the anchor plus a 3 s fuse always fits the Hard window, because the countdown waits for the boss.
+
+## 4. Measurements (`npm run boss-audit`)
+
+A scripted player with ordinary intents (`scripts/lib/bossFight.ts`) plays whole boss missions against the real boss
+and crew bots, crates and stage hazards on, the campaign's three lives. **generator**: breaks every node the way the
+district asks, blasts crew in its way, jabs an adjacent crew member, waits beside the boss's anchor and lays a
+generator when he is restoring; it never punches the boss. **punch**: never lays a generator, stands on nodes, punches
+every adjacent rival. The "before" column replays the old verbs (`--legacy`: stand to jam / hold / throw / collect /
+switch, chase the exposed boss) on the commit before this branch with the same player.
+
+| boss | level | before: generator wins (2 seeds) | after: generator wins (3 seeds) | after: median clear | after: lives lost (all runs) |
+| --- | --- | --- | --- | --- | --- |
+| Oga Sunmola | Easy / Normal / Hard | 0/2, 0/2, 0/2 (stuck in phase 1-2) | 3/3, 3/3, 3/3 | 157 / 178 / 154 s | 0 / 1 / 1 |
+| Madam Ronke | Easy / Normal / Hard | 0/2, 0/2, 1/2 | 2/3, 3/3, 3/3 | 317 / 354 / 239 s | 1 / 3 / 2 |
+| Marshal Gbenga Kobo | Easy / Normal / Hard | 0/2, 0/2, 0/2 | 3/3, 3/3, 3/3 | 113 / 134 / 109 s | 0 / 0 / 0 |
+| Ikenna Wayside | Easy / Normal / Hard | 0/2, 0/2, 0/2 | 3/3, 2/3, 3/3 | 224 / 440 / 209 s | 0 / 2 / 3 |
+| Barrister Tolani Quill | Easy / Normal / Hard | 0/2, 0/2, 0/2 | 3/3, 3/3, 3/3 | 232 / 233 / 279 s | 0 / 1 / 2 |
+| Bamidele Halcyon | Easy / Normal / Hard | 1/2, 1/2, 1/2 | 3/3, 3/3, 3/3 | 155 / 157 / 170 s | 0 / 0 / 1 |
+| **all six** | Easy / Normal / Hard | 1/12, 1/12, 2/12 | 17/18, 17/18, 18/18 | | 1 / 7 / 9 |
+
+| pure punch player (Normal) | before (2 seeds each) | after (2 seeds each) |
+| --- | --- | --- |
+| phases broken | Oshodi 1, Fadeyi 1, Ebute 0-2, Lagos 2, Lekki 3 (every phase, by standing) | 0 everywhere |
+| boss exposures reached | Lekki 3 per fight, Lagos 1.5 | 0 |
+| boss hits / wins | 0 / 0 | 0 / 0 |
+
+Reading it: before, the stand-on verbs made the objectives a crowd-control test (a scripted player standing on a relay
+is punched off it by the crew) and the exposed boss fled, so neither a generator plan nor melee could finish him. After,
+every phase is a short blast job and every exposure a readable ambush at a known spot: the generator plan wins nearly
+every fight at every level, pure punching does nothing. Easy and Hard differ mostly in risk (1 against 9 lives lost
+over 18 fights), not in clear time: the scripted player always reaches the anchor inside even the Hard window. The
+before column's 4 wins over 36 fights (Easy / Normal / Hard, 2 seeds) are Lekki 3 and Mushin 1.
+
+## 5. The boss recipe API (for a new boss, no engine code)
+
+A boss mission is a `MissionDef` (`src/sim/mission/defs.ts`) with an `objective` verb, three `phases` of nodes, a `boss`
+post, a `crew` and a `recipe`. The recipe (`BossRecipe`, `src/sim/mission/boss.ts`) is plain data:
+
+```ts
+recipe: bossRecipe({                       // DEFAULT_BOSS_RECIPE plus the boss's own overrides
+  hits: 3,                                 // blast hits that defeat him: one per exposure window (one per phase)
+  exposeSec: { easy: 26, normal: 20, hard: 15 }, // the restore time at the anchor, per campaign level
+  maxExposures: 5,                         // windows in all (hits + windows he may survive), then he gets away
+  anchor: 'post',                          // 'post' | 'lastBroken': where he restores his shield
+  walkGraceSec: 12,                        // the countdown waits while he walks to the anchor, at most this long
+  restoreRadius: 1,                        // within this many tiles of the anchor he is committed (rooted)
+  interruptSec: 1.5, interruptMax: 2,      // what a landed punch adds to the window, how often per window
+  reelSec: 1.5,                            // the daze after a hit, while the shield closes
+  callRoles: ['escort', 'meleeGuard'],     // fallen crew of these roles come back when a window opens ...
+  callCount: { easy: 0, normal: 1, hard: 2 }, // ... at most this many per window
+  escortCover: { easy: false, normal: false, hard: true }, // escorts body-block the line to the human
+}),
+crew: [{ role: 'escort', name: '...', post: [x, y], variant: 'ringSecurity' }, ...], // variant = perception personality
+```
+
+- **Objective -> exposure link**: any objective verb in `OBJECTIVES` works unchanged: when `done(ctx) >= goal` the runtime
+  exposes the boss (`runtime.clearPhase`). A new verb is a new `Objective` (setup / update / done / nodeView /
+  runnerTarget); break its nodes with `freshBlasts(ctx, node)` (`objectives/types.ts`) so only the human's blasts count.
+- **Exposure window**: resolved per level into `MissionTuning.boss` (`BossTuning`, ticks) by `resolveTuning(def, spec,
+  level)`; the level is read from `config.campaignTactics.level`.
+- **Hits**: `rules.missionBossAbsorbs` (lethality) records one hit per window; `runtime.resolveBossHit` starts the next
+  phase. `hits` above 3 repeat the last phase; fewer end the fight early (the last hit always eliminates).
+- **Escort waves**: `callRoles` / `callCount` per window (telegraphed `reinforce` warnings on the seats' posts, outside the
+  mission's `reinforceMax`, which still governs the runner / escort returns at a phase start).
+- **Crew roles** (`NpcRole`, `directives.ts`): meleeGuard, rangedAttacker, blocker, runner, escort, objectiveDefender,
+  supportUnit, bossAssistant; the boss's own directive is `guard` while shielded and `block` on the anchor while exposed.
+- **Presentation for free**: `missionView(state).boss` carries `hitsLeft`, `maxHits`, `exposeTotalTicks`, `anchor`,
+  `restoring`; events `bossExposed` (anchor, hits), `bossHit`, `bossInterrupted`, `bossShielded`, `bossDefeated`; the HUD
+  rail shows BLASTS LEFT and the hint, the world draws the anchor ring and the boss's shield / countdown arc, and the
+  enemy telegraph view draws the boss's and crew's punch wind-ups (`telegraphKindOf`).
+
+A territorial enforcer (the Ojuelegba finale) can use `anchor: 'lastBroken'` to make him come to the equipment the
+player broke, a longer `walkGraceSec` for a big map, `callRoles` for his waves, and crew `variant`s for readable roles.
+
+## 6. Limits and handover
+
+- The boss and crew are still generator bots without `Vitals` (the campaign's one-hit generator fight); the boss's
+  three hits live in the mission state (`MissionBossState.hp`), not in the enemy health system. `enemyHealthView`
+  does not apply to them; the HUD reads `missionView(state).boss`.
+- The scripted player is a competent bot, not a human: it uses each window once and never baits the escorts. Clear
+  times above are its times; a human should be faster on Easy and slower on Hard. Re-run `npm run boss-audit` after any
+  boss tuning.
+- The crews' variant LOOKS are not drawn (they are generator bots; the look system dresses `enemyKind` seats only):
+  their roles read through the existing role pips; their behaviour reads through the variant perception.
+- No browser screenshots were taken of the anchor ring; the Playwright specs that cover the mission panel and the
+  briefing text were run (see the status entry).
