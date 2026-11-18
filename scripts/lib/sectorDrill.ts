@@ -7,8 +7,8 @@
  * `tests/campaign-tactics-drill.test.ts` and `npm run sector-ai`.
  *
  *   ambush  an UNAWARE patroller walks (2,2) -> (12,2) -> (12,8) and back; the human waits round the pillar block at
- *           (14,6) and, when the patroller reaches the far end (2,2) of its lane, lays a generator at (12,4), just
- *           round the corner where the route turns south, and goes back out of the disc and out of sight
+ *           (14,4) and, when the patroller reaches the far end (2,2) of its lane, lays a generator at (12,4), just
+ *           round the corner where the route turns south (it pauses at the corner facing on), and hides at (14,6)
  *   bait    the human stands next to a pursuing brawler, steps back out of reach when it winds up (a visible miss),
  *           steps in while it is planted in its recovery, lays a generator under his own feet (his body hides it),
  *           punches once (stagger, knockback, slow) and leaves late, when about 0.75 s of fuse is left
@@ -172,7 +172,7 @@ export function ambushDrill(level: CampaignLevel, variant: EnemyVariantId, seed:
   const { s, bots } = tacticsScene({
     level,
     seed,
-    human: [14, 6],
+    human: [14, 4],
     enemies: [
       {
         variant,
@@ -190,7 +190,7 @@ export function ambushDrill(level: CampaignLevel, variant: EnemyVariantId, seed:
   const res: DrillResult = { caught: false, hit: false, defeated: false, selfHit: false, void: true };
   const mind = () => s.territory!.minds[1]!;
   // the human's timing varies a little per seed (a person is not a metronome)
-  const late = (seed % 4) * 4;
+  const late = (seed % 4) * 3;
   let phase: 'wait' | 'go' | 'lay' | 'retreat' = 'wait';
   let laidAt = -1;
   let seenAtEnd = -1;

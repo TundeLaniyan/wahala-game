@@ -245,6 +245,8 @@ export interface EnemyMind {
   coverUntil: number;
   /** The end tick of the last own attack already seen (to notice a new one). */
   attackSeen: number;
+  /** After a hit it chases with no leash until this tick. */
+  hitChaseUntil: number;
 }
 
 /** Runtime of the territorial state machine (systems/territory.ts). ABSENT outside campaign tactics matches. */

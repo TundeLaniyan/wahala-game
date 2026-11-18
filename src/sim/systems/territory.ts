@@ -13,8 +13,9 @@
  *   pursue       chases (group tactics when the level allows: a different side each, throwers line up at range);
  *                out of sight it goes to where it last SAW him; a cover user ducks out of sight after attacking
  *   return       the human left the leash (measured from the TERRITORY's anchors, with hysteresis): it first watches
- *                him (facing him; a thrower keeps throwing) for `returnWatchTicks`, then walks back; a hit or the human
- *                coming back inside its pursuit range re-engages it at once (no farming at the boundary)
+ *                him (facing him; a thrower keeps throwing) for `returnWatchTicks`, then walks back; a hit (it then
+ *                chases with no leash for `hitChaseTicks`) or the human coming back inside its pursuit range re-engages
+ *                it at once (no farming at the boundary)
  *
  * The overlay states (wind-up / attack / recovery, stagger, defeat) are the sim's own and the generator evasion is the
  * AI's (`enemyMindView` combines them for presentation). Everything here is a function of the state and the tick: no
@@ -100,6 +101,7 @@ export function addEnemyMind(state: GameState, id: number, post: TilePos, def?: 
     hpSeen: p.vitals?.hp ?? 0,
     coverUntil: -1,
     attackSeen: p.lastAttack?.endTick ?? -1,
+    hitChaseUntil: -1,
   };
 }
 
@@ -263,6 +265,7 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
     const hp = p.vitals?.hp ?? 0;
     const hit = hp < m.hpSeen;
     m.hpSeen = hp;
+    if (hit) m.hitChaseUntil = T + cfg.territory.hitChaseTicks;
     // calm (patrol, watch, walking back) it looks where it walks: the cone ahead (and the eight tiles around it)
     const calmNow =
       m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil);
@@ -340,8 +343,8 @@ function advance(
         giveUp(state, m, p, events);
         return;
       }
-      // the leash is measured from the TERRITORY, with hysteresis; a hit keeps it on him
-      if (!hit && territoryDistance(m.spec, h) > m.spec.leashTiles) {
+      // the leash is measured from the TERRITORY, with hysteresis; a recent hit keeps it on him with no leash
+      if (T >= m.hitChaseUntil && territoryDistance(m.spec, h) > m.spec.leashTiles) {
         giveUp(state, m, p, events);
         return;
       }

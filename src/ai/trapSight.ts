@@ -198,6 +198,7 @@ export class TrapSight {
     const placer = obs.players[g.ownerId];
     if (!placer || !placer.alive || placer.id === me.id) return false;
     if (tune.calmCone && !inViewCone(me, placer.x, placer.y)) return false;
+    trapSightStats.bodyScans++;
     const bodies = new Set<number>();
     for (const p of obs.players)
       if (p.alive && p.id !== me.id && p.id !== placer.id) bodies.add(p.y * obs.width + p.x);

@@ -400,6 +400,8 @@ export interface CampaignTacticsConfig {
     coverHoldTicks: number;
     /** A watching guard turns a quarter (clockwise) this often: its view cone sweeps, nobody sneaks up forever. */
     lookAroundTicks: number;
+    /** A hit sends it after the human with NO leash for this long (hitting it from beyond the leash is no free kill). */
+    hitChaseTicks: number;
   };
   /** The human's landed hit on an ordinary or armoured enemy, whatever the fighter (decision SA8). */
   punch: {
@@ -1213,6 +1215,7 @@ export const CAMPAIGN_TACTICS: CampaignTacticsConfig = {
     groupTactics: true,
     coverHoldTicks: 45,
     lookAroundTicks: 90,
+    hitChaseTicks: 180,
   },
   punch: {
     damage: 1,
@@ -1357,6 +1360,7 @@ export const CAMPAIGN_TACTICS_LEVELS: Readonly<
       coverTiles: 0,
       groupTactics: false,
       lookAroundTicks: 120,
+      hitChaseTicks: 120,
     },
     punch: { lockoutTicks: 60, staggerTicks: 24, staggerImmunityTicks: 48 },
   },
@@ -1384,6 +1388,7 @@ export const CAMPAIGN_TACTICS_LEVELS: Readonly<
       alertAlliesScale: 1.25,
       coverTiles: 4,
       lookAroundTicks: 60,
+      hitChaseTicks: 240,
     },
     punch: { lockoutTicks: 84, staggerTicks: 14, staggerImmunityTicks: 60 },
   },

@@ -116,7 +116,8 @@ export class EnemyBot implements Bot {
 
   /**
    * Campaign tactics (decision SA5): the movement / escape planner runs at the campaign level's enemy bot level plus
-   * the seat's trap-sense bump (a lieutenant plans its escapes like a sharper bot; a plain agbero like the level's).
+   * the seat's trap-sense bump (a lieutenant plans its escapes like a sharper bot; a plain agbero like the level's),
+   * without the bot levels' random hesitation and wandering: its territory decides where it goes.
    */
   private planner(obs: Observation): Brain {
     const t = obs.config.campaignTactics;
@@ -126,10 +127,12 @@ export class EnemyBot implements Bot {
       const bump = t.trapSense[variantOf(me)!.personality.trapSense].plannerBump;
       const base = DIFFICULTIES.indexOf(this.opts.difficulty);
       const level = DIFFICULTIES[Math.min(DIFFICULTIES.length - 1, Math.max(0, base + bump))]!;
-      this.tacticsBrain =
-        level === this.opts.difficulty
-          ? this.brain
-          : new Brain(enemyProfile(level), this.opts.seed, this.opts.playerId);
+      // the territory drives where it goes: no random hesitation or wandering on top (Easy patrols are clockwork)
+      this.tacticsBrain = new Brain(
+        { ...enemyProfile(level), hesitate: 0, wander: 0 },
+        this.opts.seed,
+        this.opts.playerId,
+      );
     }
     return this.tacticsBrain;
   }
