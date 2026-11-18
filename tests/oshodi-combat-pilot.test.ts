@@ -79,9 +79,11 @@ describe('the pilot is ARCHIVED: only its explicit replay carries it (CP1, super
     expect(s.config.combatPilot?.id).toBe(P.id);
     expect('campaignTactics' in s.config).toBe(false); // never combined with the tactics layer
     const kinds = s.players.filter((p) => p.enemyKind).map((p) => [p.enemyKind, p.vitals!.maxHp]);
+    // the roster of today's Terminal Approach (decision DA2 added the ticket tout) plus the pilot's two extra enemies
     expect(kinds).toEqual([
       ['guard', 3],
       ['guard', 3],
+      ['thrower', 2],
       ['heavy', 5],
       ['guard', 3],
       ['thrower', 2],

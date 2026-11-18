@@ -15,6 +15,31 @@ const RAIL_EDGE = 'oshodi.railEdge';
 
 const m = (s: GameState) => s.mission!;
 const f = (s: GameState) => s.mission!.field!;
+/** The seat ids of an enemy group. */
+const groupIds = (s: GameState, group: string): number[] =>
+  m(s)
+    .seats.filter((x) => x.group === group)
+    .map((x) => x.playerId);
+/** Rail Edge's pursuer seat (the trailer hand). */
+const pursuer = (s: GameState): number => groupIds(s, 'pursuers')[0]!;
+
+/**
+ * Rail Edge up to its escape leg (decision DA3: hawkers, relay boxes, the plaza, then the escape): the hawkers are
+ * taken off the board, the boxes marked wrecked and the plaza's time filled, one leg at a time (staged, like the other
+ * mechanism tests here; the real playthrough is tests/field-districts-oshodi.test.ts).
+ */
+function railEdgeToEscape(s: GameState): void {
+  for (const id of groupIds(s, 'hawkers')) s.players[id]!.alive = false;
+  advance(s, 2);
+  for (const t of f(s).targets ?? []) {
+    t.hp = 0;
+    t.destroyed = true;
+  }
+  advance(s, 2);
+  for (const id of [...groupIds(s, 'trailerCrew'), ...groupIds(s, 'lateCrew')]) s.players[id]!.alive = false;
+  f(s).hold!.ticks = 25 * 60;
+  advance(s, 2);
+}
 
 /** Walks the first leg of the approach mission by placing the human on each marker (one tick each). */
 function reachAllMarkers(s: GameState): void {
@@ -46,8 +71,8 @@ describe('a section field mission is not a boss fight', () => {
     expect(v.doors![0]).toMatchObject({ id: 'depot', status: 'idle', required: true });
     expect(of(events, 'missionStarted')).toHaveLength(1);
     expect(of(events, 'bossShielded')).toHaveLength(0);
-    // the three wardens of the roster (the archived combat pilot's two extra enemies are gone with it: decision SA3)
-    expect(v.crewAlive).toBe(3);
+    // the four wardens of the roster (decision DA2; the archived combat pilot's extra enemies are gone: decision SA3)
+    expect(v.crewAlive).toBe(4);
   });
 
   it('is deterministic: same spec and seed, same state', () => {
@@ -104,12 +129,12 @@ describe('clearGroup', () => {
     s.players[2]!.alive = false;
     advance(s, 2);
     expect(f(s).leg).toBe(1);
-    expect(missionView(s)!.legKind).toBe('escapeRoute');
+    expect(missionView(s)!.legKind).toBe('destroyTargets');
   });
 
   it('failure path: the pursuer (another group) being out does not count, and the human cannot win without them', () => {
     const s = newField(RAIL_EDGE);
-    s.players[3]!.alive = false; // the pursuer only
+    s.players[pursuer(s)]!.alive = false; // the pursuer only
     advance(s, 5);
     expect(f(s).leg).toBe(0);
   });
@@ -118,9 +143,8 @@ describe('clearGroup', () => {
 describe('escapeRoute', () => {
   function atEscape(): GameState {
     const s = newField(RAIL_EDGE);
-    s.players[1]!.alive = false;
-    s.players[2]!.alive = false;
-    advance(s, 2);
+    railEdgeToEscape(s);
+    expect(missionView(s)!.legKind).toBe('escapeRoute');
     return s;
   }
 
@@ -128,47 +152,48 @@ describe('escapeRoute', () => {
     const s = atEscape();
     put(s, 0, 59, 28);
     advance(s, 1);
-    expect(f(s).leg).toBe(2);
+    expect(f(s).leg).toBe(4);
     expect(missionView(s)!.legKind).toBe('returnRoute');
   });
 
   it('a pursuer hunts from the moment the leg starts (a dormant one only waits)', async () => {
     const { directiveFor } = await import('../src/sim');
     const s = newField(RAIL_EDGE);
-    expect(directiveFor(s, 3)).toMatchObject({ kind: 'block' });
-    s.players[1]!.alive = false;
-    s.players[2]!.alive = false;
-    advance(s, 2);
-    expect(directiveFor(s, 3)).toMatchObject({ kind: 'chase' });
+    const id = pursuer(s);
+    expect(directiveFor(s, id)).toMatchObject({ kind: 'block' });
+    railEdgeToEscape(s);
+    expect(directiveFor(s, id)).toMatchObject({ kind: 'chase' });
   });
 
   it('failure path: a pursuer next to you catches you: a life, the checkpoint, the pursuer back at its post', () => {
     const s = atEscape();
+    const id = pursuer(s);
     put(s, 0, 50, 36);
-    const post = { ...m(s).seats[3]!.post! };
-    put(s, 3, 51, 36); // right next to the human
+    const post = { ...m(s).seats[id]!.post! };
+    put(s, id, 51, 36); // right next to the human
     const before = m(s).livesUsed;
     advance(s, CATCH_TICKS + 2);
     expect(f(s).caught).toBe(1);
     expect(m(s).livesUsed).toBe(before + 1);
     const me = s.players[0]!;
     expect({ x: me.x, y: me.y }).toEqual(f(s).checkpoint);
-    expect({ x: s.players[3]!.x, y: s.players[3]!.y }).toEqual(post);
+    expect({ x: s.players[id]!.x, y: s.players[id]!.y }).toEqual(post);
     expect(missionView(s)!.callout).toMatch(/CAUGHT/);
     expect(me.protectedUntil).toBeGreaterThan(s.tick);
   });
 
   it('a pursuer that only passes by does not catch you, and three catches lose the mission', () => {
     const s = atEscape();
+    const id = pursuer(s);
     put(s, 0, 50, 36);
-    put(s, 3, 51, 36);
+    put(s, id, 51, 36);
     advance(s, CATCH_TICKS - 20);
-    put(s, 3, 40, 36); // gone before the catch
+    put(s, id, 40, 36); // gone before the catch
     advance(s, 60);
     expect(f(s).caught).toBe(0);
     for (let i = 0; i < 3 && !m(s).outcome; i++) {
       put(s, 0, 50, 36);
-      put(s, 3, 51, 36);
+      put(s, id, 51, 36);
       advance(s, CATCH_TICKS + 2);
     }
     expect(m(s).outcome?.result).toBe('lost');

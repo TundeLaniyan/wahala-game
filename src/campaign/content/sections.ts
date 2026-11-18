@@ -97,7 +97,7 @@ const OSHODI_SECTIONS: SectionDef[] = [
         unlocks: ['section.oshodi.s2'],
         ringWeakened: 'The depot’s dispatch cargo is broken: the convoys lose their schedule.',
         readMore:
-          'Three checkpoints (A, B and the yard gate) mark the way. The Dispatch Depot door on the yard wall opens the warehouse raid: marked cargo, a wave of wardens and a lane of thrown bottles. Win it, or leave and try again: the door stays open. When the depot is done, walk back to the Orita gate to finish.',
+          'Three checkpoints (A, B and C) mark the way. Two park wardens walk set rounds, one round the ticket kiosk and one down the stall lane: watch where they turn and pass behind them, or lay a generator where they will walk. A tout throws from the forecourt by C, and a heavy walks the depot lane: only a blast finishes him. The Dispatch Depot door opens the warehouse raid: marked cargo, a wave of wardens and a lane of thrown bottles. Win it, or leave and try again: the door stays open. When the depot is done, walk back to the Orita gate to finish.',
         intro: [
           say('MAMA PUT', 'Wardens hold the gate and the depot. Go quiet: checkpoint by checkpoint.'),
           say(
@@ -118,16 +118,16 @@ const OSHODI_SECTIONS: SectionDef[] = [
     order: 2,
     name: 'Rail Edge',
     summary:
-      'The market lane runs beside the rail line, and the trailer crews guard it. Put down the hawkers, then outrun the trailer hand to the footbridge.',
+      'The market lane runs beside the rail line, and the trailer crews guard it. Put down the hawkers, break the relay boxes, keep the rail plaza, then outrun the trailer hand to the footbridge.',
     requires: ['oshodi.s1'],
     missions: [
       {
         id: 'oshodi.railEdge',
         format: 'field',
         name: 'Rail Edge',
-        objectiveCard: 'Clear the hawkers, outrun the trailer hand, walk out.',
+        objectiveCard: 'Clear hawkers, wreck 3 relay boxes, keep the plaza, reach the footbridge.',
         summary:
-          'Two hawkers hold the market lane. When they fall, a trailer hand sets off after you: reach the footbridge first.',
+          'Two hawkers hold the market lane, and the relay boxes by the rail plaza feed the dispatch net: only your blasts break them, three each. Keep the plaza clear while the trailer crew comes for it, then reach the footbridge before the trailer hand.',
         missionRef: 'oshodi.railEdge',
         reward: title(
           'oshodi.railEdge',
@@ -137,9 +137,10 @@ const OSHODI_SECTIONS: SectionDef[] = [
         unlocks: ['section.oshodi.s3'],
         ringWeakened: 'The trailer crews lose the rail-edge lane: the controller has nowhere left to hide.',
         readMore:
-          'Clear the two lane hawkers. Then the trailer hand leaves the rail yard and hunts you: stay ahead of him and reach the footbridge. If he stays next to you for a moment he catches you and you lose a life. Walk to the Park gate to finish.',
+          'Clear the two lane hawkers. Three relay boxes stand by the rail plaza: each takes three separate blasts, a heavy minds the nearest one and a warden walks round the mast block. Then keep the rail plaza clear for 25 seconds while the trailer crew comes to take it back. Last, the trailer hand hunts you: stay ahead of him and reach the footbridge. If he stays next to you for a moment he catches you and you lose a life. Walk to the Park gate to finish.',
         intro: [
           say('MAMA PUT', 'The market lane is the last road before the terminal. The trailer crews run it.'),
+          say('RADIO', 'Relay boxes by the plaza feed the dispatch net. Na blast go break am, not hand.'),
         ],
         outro: [say('RADIO', 'The rail edge is clear. The controller has nowhere left to hide.')],
       },
@@ -162,21 +163,23 @@ const MUSHIN_SECTIONS: SectionDef[] = [
     districtId: 'mushin',
     order: 1,
     name: 'Spare-Parts Row',
-    summary: 'The stall row runs toward the storeroom lane. Walk it and raid the parts storeroom.',
+    summary:
+      'The stall row runs toward the storeroom lane. Walk it, break the parts cages in the loading bay and raid the parts storeroom.',
     requires: [],
     missions: [
       {
         id: 'mushin.approach',
         format: 'field',
         name: 'Spare-Parts Row',
-        objectiveCard: 'Follow the stall row, raid the storeroom, return to the gate.',
-        summary: 'Hawkers watch the row. Reach the loading bay, hold the storeroom door and raid it.',
+        objectiveCard: 'Walk the stall row, wreck 3 parts cages, raid the storeroom, return.',
+        summary:
+          'Hawkers walk the aisles, and the Ring locks hoarded parts in cages in the loading bay: blast each one three times while a heavy minds them. Then stand on the storeroom door to raid it.',
         missionRef: 'mushin.approach',
         doors: [{ doorId: 'storeroom', raidId: 'partsStoreroom' }],
         reward: title('mushin.approach', 'Row Regular', 'The stall owners nod when you pass.'),
         unlocks: ['section.mushin.s2'],
         ringWeakened:
-          'The storeroom shelves are emptied back onto the row: the Ring’s rental stock has a hole in it.',
+          'The parts cages are blown open and the shelves emptied onto the row: the Ring’s rental stock has a hole.',
       },
     ],
   },
@@ -185,21 +188,23 @@ const MUSHIN_SECTIONS: SectionDef[] = [
     districtId: 'mushin',
     order: 2,
     name: 'Aisle Sweep',
-    summary: 'The north aisles are worked by market runners. Clear them and check the far stalls.',
+    summary:
+      'The north aisles are worked by market runners, and a lorry waits on the top street to restock the hoard. Clear the runners, then keep the lorry bay clear.',
     requires: ['mushin.s1'],
     missions: [
       {
         id: 'mushin.market',
         format: 'field',
         name: 'Aisle Sweep',
-        objectiveCard: 'Clear the runners, check two far stalls, walk back.',
+        objectiveCard: 'Clear runners, walk the top street, keep the lorry bay 40 s.',
         summary:
-          'Three runners work the aisles; after them, visit the far stall and the top street. A back stall offers a bonus raid.',
+          'Three runners work the aisles; after them, walk the top street and keep the lorry bay clear for 40 seconds while the loaders come for it: no lorry, no restock. A back stall offers a bonus raid.',
         missionRef: 'mushin.market',
         doors: [{ doorId: 'backStall', raidId: 'partsStoreroom' }],
         reward: title('mushin.market', 'Aisle Regular', 'Runners step aside for you in the north aisles.'),
         unlocks: ['section.mushin.s3'],
-        ringWeakened: 'The runners lose the north aisles: the broker has no one left to restock her stacks.',
+        ringWeakened:
+          'The runners lose the aisles and the lorry leaves empty: the broker has nothing left to restock her stacks.',
       },
     ],
   },
@@ -219,16 +224,16 @@ const FADEYI_SECTIONS: SectionDef[] = [
     order: 1,
     name: 'Toll Approach',
     summary:
-      'Marshals hold the approach road to the tool shed. Move them, walk the toll posts and raid the shed.',
+      'Marshals hold the approach road to the tool shed and toll boxes charge every crossing. Move the marshals, break the toll boxes and raid the shed.',
     requires: [],
     missions: [
       {
         id: 'fadeyiSomolu.approach',
         format: 'field',
         name: 'Toll Approach',
-        objectiveCard: 'Clear the marshals, walk two toll posts, raid the shed.',
+        objectiveCard: 'Clear 3 marshals, wreck 3 toll boxes, raid the shed, return.',
         summary:
-          'Two marshals block the road. Pass the toll posts, hold the tool-shed door, then go back to the toll gate.',
+          'Three marshals hold the road (the one at the shed corner calls the others), and the toll boxes take three blasts each while a heavy minds them. Then stand on the tool-shed door to raid it and go back to the toll gate.',
         missionRef: 'fadeyiSomolu.approach',
         doors: [{ doorId: 'shed', raidId: 'junctionToolShed' }],
         reward: title(
@@ -238,7 +243,7 @@ const FADEYI_SECTIONS: SectionDef[] = [
         ),
         unlocks: ['section.fadeyiSomolu.s2'],
         ringWeakened:
-          'The tool shed’s chains and padlocks are broken: the toll approach cannot be shut again.',
+          'The toll boxes are smashed and the tool shed’s chains broken: the toll approach cannot be shut again.',
       },
     ],
   },
@@ -247,16 +252,17 @@ const FADEYI_SECTIONS: SectionDef[] = [
     districtId: 'fadeyiSomolu',
     order: 2,
     name: 'Junction Run',
-    summary: 'Three junction posts sit along the north road. Walk them while a marshal hunts you.',
+    summary:
+      'Three junction posts sit along the north road and the marshals sell the centre junction by the hour. Walk the posts, take the junction back, then outrun the marshal.',
     requires: ['fadeyiSomolu.s1'],
     missions: [
       {
         id: 'fadeyiSomolu.junctions',
         format: 'field',
         name: 'Junction Run',
-        objectiveCard: 'Walk three junction posts, escape the marshal, return.',
+        objectiveCard: 'Walk 3 junction posts, keep the centre junction 40 s, escape, return.',
         summary:
-          'Visit the junctions in order. At the last one the marshal sets off after you: reach the slip road first.',
+          'Visit the junctions in order, then keep the centre junction clear for 40 seconds while the crossing crews come to take it back. Last, the marshal sets off after you: reach the slip road first.',
         missionRef: 'fadeyiSomolu.junctions',
         reward: title(
           'fadeyiSomolu.junctions',

@@ -179,6 +179,8 @@ export const FIELD_MERCY_TICKS = 120;
 
 const defs: FieldMissionDef[] = [
   // ---------------------------------------------------------------- Oshodi (the vertical slice)
+  // Districts pass A (docs/CAMPAIGN_SECTOR_AI.md "Districts: Oshodi, Mushin, Fadeyi/Somolu", decisions DA1-DA9): the
+  // legs of the campaign's first mission stay (checkpoint clarity reference); its wardens now walk readable routes.
   {
     id: 'oshodi.approach',
     sectorId: 'oshodi.terminalApproach',
@@ -206,12 +208,17 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Park Warden', 14, 39, 'wardens', patrol('agbero', [11, 39], [17, 39])),
-      guard('Park Warden', 27, 41, 'wardens', post('agbero')),
-      blocker('Lane Blocker', 20, 42, 'wardens', post('heavyEnforcer', 1)),
+      // a loop round the ticket kiosk between checkpoints A and B (it turns its back at the far corners)
+      guard('Park Warden', 14, 37, 'wardens', patrol('agbero', [10, 37], [18, 37], [18, 39], [10, 39])),
+      // the stall lane between the two streets: it crosses the start street and the checkpoint street
+      guard('Park Warden', 13, 41, 'wardens', patrol('agbero', [13, 38], [13, 42])),
+      // a lookout on the east forecourt beside checkpoint C: throws down the stall lanes
+      chaser('Ticket Tout', 31, 41, 'wardens', post('bottleThrower', 2)),
+      // the depot lane: walks across the depot door (only a blast finishes it)
+      blocker('Lane Blocker', 23, 42, 'wardens', patrol('heavyEnforcer', [20, 42], [27, 42])),
     ],
     timeLimitSec: 360,
-    parSec: 180,
+    parSec: 90,
   },
   {
     id: 'oshodi.railEdge',
@@ -223,6 +230,26 @@ const defs: FieldMissionDef[] = [
     legs: [
       { kind: 'clearGroup', text: 'Defeat the 2 hawkers in the market lane.', group: 'hawkers' },
       {
+        kind: 'destroyTargets',
+        text: 'Destroy the 3 relay boxes by the rail plaza.',
+        crew: 'relayCrew',
+        targets: [
+          { id: 'relayDepot', kind: 'relayBox', x: 36, y: 34, label: 'RELAY BOX', hp: 3 },
+          { id: 'relayMast', kind: 'relayBox', x: 55, y: 30, label: 'RELAY BOX', hp: 3 },
+          { id: 'relayPlaza', kind: 'relayBox', x: 44, y: 26, label: 'RELAY BOX', hp: 3 },
+        ],
+      },
+      {
+        kind: 'holdArea',
+        text: 'Keep the rail plaza clear for 25 seconds.',
+        area: { x: 37, y: 28, radius: 2, label: 'RAIL PLAZA' },
+        holdSec: 25,
+        waves: [
+          { group: 'trailerCrew', atSec: 3 },
+          { group: 'lateCrew', atSec: 12 },
+        ],
+      },
+      {
         kind: 'escapeRoute',
         text: 'Escape to the footbridge before the trailer hand catches you.',
         group: 'pursuers',
@@ -231,12 +258,21 @@ const defs: FieldMissionDef[] = [
     ],
     doors: [],
     enemies: [
-      guard('Lane Hawker', 50, 39, 'hawkers', patrol('marketEnforcer', [47, 39], [52, 39])),
-      guard('Lane Hawker', 55, 39, 'hawkers', patrol('marketEnforcer', [54, 39], [59, 39])),
-      chaser('Trailer Hand', 36, 30, 'pursuers', { variant: 'bottleThrower' }),
+      // the market lanes: two hawkers walk the cross streets past the stall blocks
+      guard('Lane Hawker', 45, 39, 'hawkers', patrol('marketEnforcer', [38, 39], [48, 39])),
+      guard('Lane Hawker', 54, 37, 'hawkers', patrol('marketEnforcer', [50, 37], [58, 37])),
+      // the relay crew: a heavy stands by the nearest box still working, a warden walks round the mast block
+      blocker('Relay Minder', 47, 34, 'relayCrew', post('heavyEnforcer', 1)),
+      guard('Plaza Warden', 50, 31, 'lookouts', patrol('agbero', [47, 31], [47, 34], [56, 34], [56, 31])),
+      // the trailer crew: they watch the rail buffer, then come to take the plaza back
+      guard('Trailer Crew', 34, 32, 'trailerCrew', patrol('agbero', [31, 31], [38, 31])),
+      chaser('Trailer Crew', 41, 33, 'trailerCrew', post('bottleThrower', 2)),
+      guard('Trailer Crew', 32, 26, 'lateCrew', post('areaBoy', 2)),
+      // the trailer hand who sets off after you when the plaza is held
+      chaser('Trailer Hand', 31, 32, 'pursuers', { variant: 'bottleThrower' }),
     ],
-    timeLimitSec: 420,
-    parSec: 210,
+    timeLimitSec: 600,
+    parSec: 270,
   },
   // ---------------------------------------------------------------- Mushin
   {
@@ -249,8 +285,18 @@ const defs: FieldMissionDef[] = [
     legs: [
       {
         kind: 'reachMarkers',
-        text: 'Walk through the 3 checkpoints along the stalls.',
-        markers: [m(7, 34, 'STALL ROW'), m(18, 36, 'BACK AISLE'), m(33, 33, 'LOADING BAY')],
+        text: 'Walk through the 2 checkpoints along the stalls.',
+        markers: [m(7, 34, 'STALL ROW'), m(18, 36, 'BACK AISLE')],
+      },
+      {
+        kind: 'destroyTargets',
+        text: 'Destroy the 3 parts cages in the loading bay.',
+        crew: 'cageCrew',
+        targets: [
+          { id: 'cageNorth', kind: 'partsCage', x: 34, y: 28, label: 'PARTS CAGE', hp: 3 },
+          { id: 'cageEast', kind: 'partsCage', x: 49, y: 32, label: 'PARTS CAGE', hp: 3 },
+          { id: 'cageSouth', kind: 'partsCage', x: 35, y: 33, label: 'PARTS CAGE', hp: 3 },
+        ],
       },
       { kind: 'door', text: 'Stand on the storeroom door for 1 second to raid it.', doorId: 'storeroom' },
     ],
@@ -266,12 +312,16 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Parts Hawker', 12, 34, 'hawkers', patrol('marketEnforcer', [8, 35], [16, 35])),
-      guard('Stall Guard', 24, 36, 'hawkers', patrol('marketEnforcer', [20, 35], [28, 35])),
-      blocker('Aisle Blocker', 31, 36, 'hawkers', post('heavyEnforcer', 1)),
+      // the stall row and the back aisle: two enforcers walk the aisles the checkpoints sit on
+      guard('Parts Hawker', 12, 35, 'hawkers', patrol('marketEnforcer', [8, 35], [16, 35])),
+      guard('Stall Guard', 25, 36, 'hawkers', patrol('marketEnforcer', [20, 36], [31, 36])),
+      // the loading bay: a runner sweeps the top aisle, a heavy minds the cages, a thrower watches the storeroom
+      guard('Bay Runner', 41, 29, 'runners', patrol('areaBoy', [33, 29], [49, 29])),
+      blocker('Cage Minder', 40, 32, 'cageCrew', post('heavyEnforcer', 1)),
+      chaser('Bay Lookout', 48, 35, 'lookouts', post('bottleThrower', 2)),
     ],
-    timeLimitSec: 360,
-    parSec: 180,
+    timeLimitSec: 480,
+    parSec: 175,
   },
   {
     id: 'mushin.market',
@@ -287,6 +337,17 @@ const defs: FieldMissionDef[] = [
         text: 'Walk through the 2 checkpoints on the top street.',
         markers: [m(34, 7, 'FAR STALL'), m(49, 5, 'TOP STREET')],
       },
+      {
+        kind: 'holdArea',
+        text: 'Keep the lorry bay clear for 40 seconds.',
+        area: { x: 48, y: 10, radius: 1, label: 'LORRY BAY' },
+        holdSec: 40,
+        waves: [
+          { group: 'loaders', atSec: 4 },
+          { group: 'lateLoaders', atSec: 15 },
+          { group: 'lastLoaders', atSec: 26 },
+        ],
+      },
     ],
     doors: [
       {
@@ -300,12 +361,19 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Market Runner', 20, 10, 'runners', patrol('areaBoy', [14, 10], [26, 10])),
+      // the runners work the aisles: two area boys on the cross streets, a thrower on the south street
+      guard('Market Runner', 20, 10, 'runners', patrol('areaBoy', [15, 10], [27, 10])),
       guard('Market Runner', 28, 13, 'runners', patrol('areaBoy', [22, 13], [34, 13])),
-      chaser('Market Runner', 40, 12, 'runners', patrol('bottleThrower', [36, 13], [46, 13])),
+      chaser('Market Runner', 40, 12, 'runners', patrol('bottleThrower', [36, 12], [42, 12])),
+      // the lorry loaders: they watch the top street, then come for the bay
+      guard('Loader', 48, 3, 'loaders', post('marketEnforcer', 2)),
+      guard('Loader', 41, 6, 'loaders', patrol('marketEnforcer', [35, 6], [42, 6])),
+      chaser('Late Loader', 49, 13, 'lateLoaders', post('bottleThrower', 2)),
+      guard('Late Loader', 40, 13, 'lateLoaders', patrol('areaBoy', [36, 13], [44, 13])),
+      guard('Last Loader', 30, 7, 'lastLoaders', patrol('marketEnforcer', [26, 7], [33, 7])),
     ],
-    timeLimitSec: 420,
-    parSec: 220,
+    timeLimitSec: 600,
+    parSec: 255,
   },
   // ---------------------------------------------------------------- Fadeyi / Somolu
   {
@@ -316,11 +384,16 @@ const defs: FieldMissionDef[] = [
     start: [5, 27],
     returnMarker: m(3, 26, 'TOLL GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Defeat the 2 marshals on the approach road.', group: 'marshals' },
+      { kind: 'clearGroup', text: 'Defeat the 3 marshals on the approach road.', group: 'marshals' },
       {
-        kind: 'reachMarkers',
-        text: 'Walk through the 2 toll posts.',
-        markers: [m(9, 27, 'TOLL POST A'), m(22, 27, 'TOLL POST B')],
+        kind: 'destroyTargets',
+        text: 'Destroy the 3 toll boxes by the shed yard.',
+        crew: 'tollCrew',
+        targets: [
+          { id: 'tollRoad', kind: 'tollBox', x: 25, y: 23, label: 'TOLL BOX', hp: 3 },
+          { id: 'tollPlaza', kind: 'tollBox', x: 35, y: 26, label: 'TOLL BOX', hp: 3 },
+          { id: 'tollKerb', kind: 'tollBox', x: 40, y: 30, label: 'TOLL BOX', hp: 3 },
+        ],
       },
       { kind: 'door', text: 'Stand on the tool-shed door for 1 second to raid it.', doorId: 'shed' },
     ],
@@ -336,11 +409,16 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Kobo Marshal', 12, 26, 'marshals', post('routeMarshal')),
-      guard('Kobo Marshal', 20, 29, 'marshals', patrol('routeMarshal', [20, 26], [20, 30])),
+      // route marshals: two walk the approach road, one holds the junction corner by the shed (it calls the others)
+      guard('Kobo Marshal', 9, 22, 'marshals', patrol('routeMarshal', [4, 22], [14, 22])),
+      guard('Kobo Marshal', 22, 21, 'marshals', patrol('routeMarshal', [16, 21], [28, 21])),
+      guard('Kobo Marshal', 20, 25, 'marshals', post('routeMarshal', 1)),
+      // the toll crew: a heavy minds the nearest box, a lookout throws from the plaza corner
+      blocker('Toll Heavy', 33, 28, 'tollCrew', post('heavyEnforcer', 1)),
+      chaser('Toll Lookout', 39, 23, 'lookouts', post('bottleThrower', 2)),
     ],
-    timeLimitSec: 360,
-    parSec: 190,
+    timeLimitSec: 420,
+    parSec: 150,
   },
   {
     id: 'fadeyiSomolu.junctions',
@@ -353,7 +431,18 @@ const defs: FieldMissionDef[] = [
       {
         kind: 'reachMarkers',
         text: 'Walk through the 3 junction posts, west to east.',
-        markers: [m(12, 5, 'JUNCTION 1'), m(28, 4, 'JUNCTION 2'), m(36, 10, 'JUNCTION 3')],
+        markers: [m(14, 10, 'JUNCTION 1'), m(28, 5, 'JUNCTION 2'), m(34, 10, 'JUNCTION 3')],
+      },
+      {
+        kind: 'holdArea',
+        text: 'Keep the centre junction clear for 40 seconds.',
+        area: { x: 24, y: 7, radius: 1, label: 'CENTRE JUNCTION' },
+        holdSec: 40,
+        waves: [
+          { group: 'crossing', atSec: 3 },
+          { group: 'lateCrossing', atSec: 14 },
+          { group: 'lastCrossing', atSec: 26 },
+        ],
       },
       {
         kind: 'escapeRoute',
@@ -364,11 +453,21 @@ const defs: FieldMissionDef[] = [
     ],
     doors: [],
     enemies: [
-      guard('Kobo Marshal', 20, 6, 'posts', patrol('routeMarshal', [15, 6], [27, 6])),
-      chaser('Kobo Marshal', 10, 10, 'pursuers', { variant: 'bottleThrower' }),
+      // junction 1: a marshal walks across the west junction mouth
+      guard('Kobo Marshal', 10, 6, 'posts', patrol('routeMarshal', [10, 4], [10, 10])),
+      // the centre crossing crew: they watch the junction streets, then come to take the junction back
+      guard('Kobo Marshal', 30, 10, 'crossing', patrol('routeMarshal', [27, 10], [34, 10])),
+      guard('Kobo Marshal', 18, 5, 'crossing', post('routeMarshal', 2)),
+      guard('Kobo Marshal', 16, 10, 'lateCrossing', patrol('routeMarshal', [12, 9], [20, 9])),
+      chaser('Kobo Lookout', 31, 2, 'lateCrossing', post('bottleThrower', 2)),
+      guard('Kobo Marshal', 6, 4, 'lastCrossing', patrol('areaBoy', [3, 5], [9, 5])),
+      // the slip-road heavy: stands where the escape runs past (only a blast finishes him)
+      blocker('Slip Heavy', 33, 5, 'slip', post('heavyEnforcer', 1)),
+      // the marshal who sets off after you when the junction is held
+      chaser('Kobo Marshal', 12, 2, 'pursuers', { variant: 'bottleThrower' }),
     ],
-    timeLimitSec: 420,
-    parSec: 220,
+    timeLimitSec: 600,
+    parSec: 255,
   },
   // ---------------------------------------------------------------- Ebute-Metta
   {
