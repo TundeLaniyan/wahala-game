@@ -356,7 +356,8 @@ function buildCover(
   bus: Object3D | null,
   first: number,
 ): BoardCover {
-  const k = createCK(W, H, THEME);
+  // one merge chunk for the whole board: a sector's barricades are few, so one mesh per material (fewest draw calls)
+  const k = createCK(W, H, THEME, [W, H]);
   defs.forEach((def, i) => {
     const g = k.b.group(def.tiles as [number, number][], REACH[def.kind]);
     const r = runOf(k, def, rects);

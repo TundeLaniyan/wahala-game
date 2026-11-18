@@ -4,7 +4,7 @@ Branch family `claude/wahala-csa-*` (base `46f0781` + contract `6359813`). Each 
 
 ## District-sector architecture
 
-Branch `claude/wahala-csa-sectors`. Decisions DS1-DS9 (`docs/DECISIONS.md`). Not merged, not deployed.
+Branch `claude/wahala-csa-sectors`. Decisions DS1-DS10 (`docs/DECISIONS.md`). Not merged, not deployed.
 
 ### Why
 
@@ -82,7 +82,38 @@ No soft `x` barrier (a blast would open the sector), no invisible wall. Names ar
 
 Measurement: `scripts/sector-perf.mjs` loads every field mission through the debug handle `__WAHALA__.startFieldMission(id, { noSector })` with and without its sector, on the low and high presets, and reports the scene build time (`stats().loadMs`, `renderer.loadGame` timed), draw calls and triangles after the camera settled, live geometries / textures, and frame time mean / p95 over 4 s of play; `--leak` loads three missions in one page. Results below. **Software rendering (SwiftShader on 4 shared cores): the numbers compare the two variants on the same machine; they are not phone timings and no claim about real phones is made.**
 
-PERF_TABLE
+| Mission | Quality | Build ms sector / whole | Draw calls | Triangles | Geometries | Textures | Frame mean ms | Frame p95 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `oshodi.approach` | low | 3199 / 2317.7 | 219 / 205 | 876210 / 1282342 (-32 %) | 246 / 295 | 181 / 188 | 796.9 / 498.5 | 1799.9 / 1100 |
+| `oshodi.railEdge` | low | 1508.8 / 1838 | 217 / 210 | 583606 / 905937 (-36 %) | 286 / 292 | 180 / 178 | 371 / 641.4 | 783.2 / 1400 |
+| `mushin.approach` | low | 1903 / 2378.2 | 200 / 185 | 633121 / 738677 (-14 %) | 309 / 290 | 191 / 182 | 662.9 / 682 | 1516.7 / 1550 |
+| `mushin.market` | low | 2538.1 / 2439.9 | 165 / 162 | 550776 / 726299 (-24 %) | 249 / 289 | 173 / 182 | 575.8 / 637.5 | 1299.9 / 1499.9 |
+| `fadeyiSomolu.approach` | low | 2678.5 / 2207.6 | 188 / 185 | 476217 / 578349 (-18 %) | 278 / 261 | 185 / 184 | 642.5 / 534.6 | 1616.7 / 1366.6 |
+| `fadeyiSomolu.junctions` | low | 2082.4 / 2262.7 | 198 / 191 | 505820 / 566616 (-11 %) | 253 / 264 | 173 / 183 | 533.9 / 673.1 | 1116.6 / 1766.6 |
+| `ebuteMetta.approach` | low | 2089.5 / 2438.3 | 192 / 199 | 690086 / 942082 (-27 %) | 249 / 266 | 157 / 157 | 590.2 / 681.7 | 1383.3 / 1483.2 |
+| `lagosIsland.approach` | low | 2655.3 / 2000.1 | 251 / 239 | 670833 / 813396 (-18 %) | 269 / 292 | 173 / 176 | 583.8 / 669 | 1316.7 / 1616.6 |
+| `lagosIsland.press` | low | 2695.2 / 2478.8 | 226 / 211 | 661177 / 716954 (-8 %) | 281 / 295 | 175 / 176 | 618.3 / 405.8 | 1466.6 / 916.7 |
+| `lekki.approach` | low | 1805.2 / 1605.8 | 273 / 244 | 513524 / 655016 (-22 %) | 281 / 279 | 178 / 177 | 305.9 / 314.1 | 666.6 / 700 |
+| `lekki.estate` | low | 1554.4 / 1325.4 | 184 / 177 | 451682 / 505752 (-11 %) | 274 / 276 | 178 / 178 | 341.8 / 347.8 | 750 / 800 |
+| `oshodi.approach` | high | 1763.4 / 2036.5 | 505 / 506 | 2204586 / 3045230 (-28 %) | 286 / 332 | 237 / 290 | 1235.2 / 943.6 | 3249.8 / 1649.9 |
+| `oshodi.railEdge` | high | 1566.7 / 2177.1 | 516 / 515 | 1584131 / 2695772 (-41 %) | 323 / 329 | 241 / 280 | 886.9 / 1146.6 | 1966.6 / 2799.9 |
+| `mushin.approach` | high | 1935.6 / 1901.6 | 563 / 519 | 2080995 / 2221560 (-6 %) | 346 / 346 | 265 / 294 | 794.1 / 798.6 | 2433.1 / 2250 |
+| `mushin.market` | high | 1666 / 1924.7 | 539 / 532 | 1939613 / 2262680 (-14 %) | 321 / 345 | 284 / 294 | 892.5 / 846.6 | 2133.2 / 1416.6 |
+| `fadeyiSomolu.approach` | high | 2043.4 / 1611.6 | 503 / 481 | 2019281 / 2403763 (-16 %) | 287 / 270 | 250 / 274 | 744.1 / 795.2 | 2100 / 2266.6 |
+| `fadeyiSomolu.junctions` | high | 1753.4 / 1479.8 | 457 / 470 | 1854416 / 2310576 (-20 %) | 264 / 273 | 253 / 273 | 802.8 / 1066.8 | 1933.3 / 2783.1 |
+| `ebuteMetta.approach` | high | 2027.2 / 1878.3 | 509 / 512 | 1977958 / 2481499 (-20 %) | 302 / 317 | 230 / 273 | 1023.3 / 943.3 | 2733.3 / 2183.3 |
+| `lagosIsland.approach` | high | 2399.9 / 1793.9 | 575 / 578 | 2046014 / 2540731 (-19 %) | 292 / 323 | 247 / 260 | 1119.7 / 972.8 | 1599.9 / 1966.6 |
+| `lagosIsland.press` | high | 1924.9 / 1605.8 | 569 / 566 | 2126469 / 2499941 (-15 %) | 297 / 326 | 254 / 260 | 671.8 / 1509.7 | 1899.9 / 2349.9 |
+| `lekki.approach` | high | 2673.5 / 2687.9 | 632 / 605 | 2009870 / 2303314 (-13 %) | 312 / 310 | 243 / 252 | 1356.6 / 1490.5 | 3516.6 / 2049.9 |
+| `lekki.estate` | high | 2762.3 / 1986.4 | 514 / 490 | 1757226 / 1885060 (-7 %) | 299 / 299 | 243 / 253 | 1020.1 / 800.1 | 1500 / 2333.2 |
+
+Mean triangle change on low: -20 % (range -36 to -8 %).
+
+Mean triangle change on high: -18 % (range -41 to -6 %).
+
+Reading it: the sector cuts the **triangles** drawn in play (the cover, crates and ambient traffic beyond the clip are gone; the biggest cuts are where the whole district showed busy terminal or yard scenery around the sector) and the live **geometries** in most missions; **draw calls** stay about the same (the follow camera sees the same amount of street; the barricades add a few merged meshes, one per material); **frame times** on software WebGL (300-1500 ms a frame, 4-14 frames a sample) are too noisy to rank either variant, and **build times** vary from run to run by more than the difference (the same mission measured twice differed by up to 1.3 s). Raw rows: `docs/measurements/campaign-sector-perf.md`.
+
+**Leak check** (`--leak`, the same mission loaded three times in one page, low): before this branch every match start left about 118 geometries and 48 textures on the GPU (whole district: 295 -> 413 -> 531 geometries; the sector: 243 -> 335 -> 427). The set's backdrop never released what it built into its tree (baked statics, set pieces, per-match canvas boards); `assets/backdrop.ts` now disposes them on unload: geometries 243 -> 247 -> 251 (sector) and 295 -> 305 -> 315 (whole district). **Still open (pre-existing, not from the sectors):** about 48 textures per start, all library model textures (`ImageBitmap` map / normal / ao of the set's and the arena's GLB props) that each match takes a fresh copy of; to be traced in the asset library. The barricade covers and the equipment view release everything they own (`tests/render/sector-render.test.ts` builds and disposes them).
 
 ### Generator-sensitive objectives (shared leg kinds)
 

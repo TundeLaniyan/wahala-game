@@ -3,7 +3,7 @@
 // the scene build time (`loadMs`, renderer.loadGame), draw calls and triangles once the follow camera has settled,
 // GPU resources alive (geometries / textures) and frame time mean / p95 over a few seconds of real play.
 // `--leak` instead loads three missions one after another in ONE page and prints the GPU resources after each (a leak
-// grows them). Software rendering (SwiftShader): the numbers compare the two variants; they are not phone timings.
+// grows them; `--nosector` does the same on the whole districts, the baseline). Software rendering (SwiftShader): the numbers compare the two variants; they are not phone timings.
 //   SHOT_URL=http://localhost:<port>/wahala-game/ WAHALA_CHROMIUM=/opt/pw-browsers/chromium WAHALA_MULTIPROCESS=1 \
 //   node scripts/sector-perf.mjs [fieldId,...|all] [low,high] [--leak] [--seconds=4]
 import { chromium } from '@playwright/test';
@@ -103,7 +103,7 @@ if (flags.includes('--leak')) {
   const page = await open(qualities.split(',')[0]);
   const picks = ids.length >= 3 ? ids.slice(0, 3) : [ids[0], ids[0], ids[0]];
   for (const [i, id] of picks.entries()) {
-    await start(page, id, false);
+    await start(page, id, flags.includes('--nosector'));
     const s = await page.evaluate(() => window.__WAHALA__.stats());
     console.log(`load ${i + 1} ${id}: geometries ${s.geometries} textures ${s.textures} loadMs ${s.loadMs}`);
   }

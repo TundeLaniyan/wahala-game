@@ -198,9 +198,9 @@ export function smallBoard(k: CK, i: number): UvRect {
   );
 }
 
-/** The shared materials and a new `CK` for a board of `W x H` tiles. */
-export function createCK(W: number, H: number, theme: Theme): CK {
-  const b = new CoverBuilder(W, H);
+/** The shared materials and a new `CK` for a board of `W x H` tiles (`chunk`: merge chunk size, default 23 x 17). */
+export function createCK(W: number, H: number, theme: Theme, chunk?: [number, number]): CK {
+  const b = new CoverBuilder(W, H, chunk);
   const dom = typeof document !== 'undefined';
   const paint = b.own(
     new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.03, flatShading: true }),

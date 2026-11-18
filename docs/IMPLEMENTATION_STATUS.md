@@ -4,7 +4,7 @@ _Last updated at the end of the autonomous Phase 1 build session. Everything bel
 
 ## District sectors for field missions (branch `claude/wahala-csa-sectors`, from `46f0781` + `6359813`)
 
-Reference: `docs/CAMPAIGN_SECTOR_AI.md` ("District-sector architecture"); decisions DS1-DS9. Not merged, not deployed.
+Reference: `docs/CAMPAIGN_SECTOR_AI.md` ("District-sector architecture"); decisions DS1-DS10. Not merged, not deployed.
 
 - All eleven field missions play in a sector of their district (rects, 188-402 walkable tiles, 10-31 % of the district) closed by barricades drawn as danfo ranks, jersey barriers, steel gate walls, rail buffer fences and Ring checkpoint kiosks; the district layout and every other match are unchanged (no `sector` key).
 - Inside a sector: hazards that leave it are off, drops / manholes / respawns / vehicle entries keep to it, the route between objectives needs no blasting; the follow camera, the overview and the minimap stay on it; the renderer builds nothing outside its clip.

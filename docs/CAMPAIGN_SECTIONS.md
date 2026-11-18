@@ -10,7 +10,7 @@ Every mission district (not the Ojuelegba hub) has three sections, played in ord
 2. **Middle**: a second field mission, or a standalone raid.
 3. **Boss**: the existing boss mission, unchanged (reward, unlocks, replay modifier, phases). Playable only once sections 1 and 2 are cleared. Clearing it clears the district, exactly as before.
 
-Two formats live inside sections: a **field mission** is a route on the district's City Rumble arena (follow camera, radial blasts), played inside a **sector** of it: a recognisable part of the district closed by barricades (parked danfos, jersey barriers, gates, Ring checkpoints), with the camera, minimap and renderer kept to it (`docs/CAMPAIGN_SECTOR_AI.md`, decisions DS1-DS9); a **raid** is a compact classic mission (`src/sim/raid`, cross blasts). A field mission can raise a raid through a **door**; the raid is played, and the player returns to the field map on the tile in front of the door.
+Two formats live inside sections: a **field mission** is a route on the district's City Rumble arena (follow camera, radial blasts), played inside a **sector** of it: a recognisable part of the district closed by barricades (parked danfos, jersey barriers, gates, Ring checkpoints), with the camera, minimap and renderer kept to it (`docs/CAMPAIGN_SECTOR_AI.md`, decisions DS1-DS10); a **raid** is a compact classic mission (`src/sim/raid`, cross blasts). A field mission can raise a raid through a **door**; the raid is played, and the player returns to the field map on the tile in front of the door.
 
 ## 2. Table
 

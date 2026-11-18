@@ -3,6 +3,7 @@
  * site ships no image files and every asset can be replaced later by loaded textures.
  */
 import { CanvasTexture, NearestFilter, RepeatWrapping, SRGBColorSpace } from 'three';
+import type { Texture } from 'three';
 
 /** Small deterministic PRNG so generated art (and screenshots) are stable. */
 export function artRng(seed: number): () => number {
@@ -40,6 +41,12 @@ function cached(key: string, make: () => CanvasTexture): CanvasTexture {
     cache.set(key, t);
   }
   return t;
+}
+
+/** Is this one of the shared, cached textures (they live until `disposeTextures`, never with one match)? */
+export function isSharedTexture(t: Texture): boolean {
+  for (const c of cache.values()) if (c === t) return true;
+  return false;
 }
 
 export function disposeTextures(): void {
