@@ -95,6 +95,14 @@ function enemyTell(c: RouteCtx, key: 'enemyWindup' | 'enemyAim'): boolean {
   c.last.set('enemyTell', c.now);
   return true;
 }
+/**
+ * Enemy awareness (decision SV7): one "hey!" sting per alert wave (an ally's call alerts several in the same tick) at
+ * most every 0.6 s; a soft query at most every 0.8 s, never within 0.4 s after a sting (the sting already said it).
+ * Losing the human is silent (the fading mark is enough).
+ */
+const ENEMY_ALERT_GAP = 0.6;
+const ENEMY_QUERY_GAP = 0.8;
+const ENEMY_QUERY_AFTER_ALERT = 0.4;
 const playerX = (c: RouteCtx, id: number): number => c.state.players[id]?.x ?? (c.state.width - 1) / 2;
 const generatorX = (c: RouteCtx, id: number): number =>
   c.state.generators.find((g) => g.id === id)?.x ?? (c.state.width - 1) / 2;
@@ -310,8 +318,18 @@ const handlers: Handlers = {
     if (isHuman(c, e.playerId) && allow(c, 'placeRefused', 0.25))
       sfx(c, 'pickup_wasted', panOf(c, e.x), 0.5, 1.2);
   },
-  // campaign tactics telegraph (docs/CAMPAIGN_SECTOR_AI.md): drawn by the views; no sound of its own yet
-  enemyCue: () => undefined,
+  // campaign tactics beats (docs/CAMPAIGN_SECTOR_AI.md): the wind-up, recovery and stagger are drawn by the views
+  // (their sounds stay attackStarted / campaignHit / attackInterrupted); alert and investigate get their own cue (SV7)
+  enemyCue: (e, c) => {
+    const pan = panOf(c, playerX(c, e.playerId));
+    if (e.cue === 'alert') {
+      if (allow(c, 'enemyAlert', ENEMY_ALERT_GAP)) sfx(c, 'enemy_alert', pan);
+    } else if (e.cue === 'investigate') {
+      const alerted = c.last.get('enemyAlert');
+      if (alerted !== undefined && c.now - alerted < ENEMY_QUERY_AFTER_ALERT) return;
+      if (allow(c, 'enemyQuery', ENEMY_QUERY_GAP)) sfx(c, 'enemy_query', pan);
+    }
+  },
   attackInterrupted: (e, c) => {
     sfx(c, 'daze', panOf(c, playerX(c, e.playerId)), 0.5, 1.3);
   },

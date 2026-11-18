@@ -13,6 +13,7 @@ import {
   DoubleSide,
   DynamicDrawUsage,
   Float32BufferAttribute,
+  InstancedBufferAttribute,
   InstancedMesh,
   Matrix4,
   MeshBasicMaterial,
@@ -55,6 +56,27 @@ class GlyphBuilder {
 
   ring(r0: number, r1: number, shade: number, segments = 40): this {
     return this.arc(r0, r1, 0, Math.PI * 2, shade, segments);
+  }
+
+  /** `arc` centred on (cx, cz) instead of the origin (a disc when r0 = 0). */
+  arcAt(
+    cx: number,
+    cz: number,
+    r0: number,
+    r1: number,
+    a0: number,
+    a1: number,
+    shade: number,
+    segments = 32,
+  ): this {
+    const n = Math.max(2, Math.ceil((segments * (a1 - a0)) / (Math.PI * 2)));
+    for (let i = 0; i < n; i++) {
+      const t0 = a0 + ((a1 - a0) * i) / n;
+      const t1 = a0 + ((a1 - a0) * (i + 1)) / n;
+      const p = (r: number, t: number): P2 => [cx + Math.cos(t) * r, cz + Math.sin(t) * r];
+      this.poly([p(r0, t0), p(r1, t0), p(r1, t1), p(r0, t1)], shade);
+    }
+    return this;
   }
 
   /** A bar from (x0, z0) to (x1, z1) of the given width. */
@@ -283,11 +305,116 @@ function wedge(): BufferGeometry {
   return new GlyphBuilder().arc(0, 0.41, 0, Math.PI / 6, BODY, 12).build('xy');
 }
 
-/** The over-the-head wind-up clock: it fills clockwise from twelve o'clock as the blow (or the throw) comes. */
+// ------------------------------------------------------------------ awareness and armour (decisions SV6-SV8)
+// Billboards: 2D +y is screen up. Each is an outlined plate (dark) with a tinted body and a DARK mark on it, so the
+// SHAPE says what it is: a warning triangle with "!" (spotted you), a round plate with "?" (heard something, going to
+// look), a round plate with three dots (lost you, going back), a heater shield (only a blast finishes it) and a
+// starburst behind the shield (at its punch floor: it needs a blast now). Drawn as geometry: no text, no texture.
+
+/** Scales a convex polygon about (cx, cz) by k (an inset or outset of a regular-ish shape). */
+function scaled(points: readonly P2[], k: number, cx = 0, cz = 0): P2[] {
+  return points.map(([x, z]) => [cx + (x - cx) * k, cz + (z - cz) * k] as const);
+}
+
+/** Warning triangle with a "!": spotted the human (alert). */
+function alertSign(): BufferGeometry {
+  const outer: P2[] = [
+    [0, 0.74],
+    [-0.74, -0.5],
+    [0.74, -0.5],
+  ];
+  // incentre of the isosceles triangle: scaling about it insets every edge by the same width
+  const side = Math.hypot(0.74, 1.24);
+  const r = (0.5 * 1.48 * 1.24) / ((1.48 + 2 * side) / 2);
+  const cz = -0.5 + r;
+  const b = new GlyphBuilder().poly(outer, OUT);
+  b.poly(scaled(outer, 1 - 0.1 / r, 0, cz), BODY);
+  // the "!": a slightly tapered bar and a dot, dark on the tinted plate
+  b.poly(
+    [
+      [-0.095, 0.3],
+      [0.095, 0.3],
+      [0.06, -0.1],
+      [-0.06, -0.1],
+    ],
+    OUT,
+  );
+  return b.arcAt(0, -0.25, 0, 0.08, 0, TAU, OUT, 14).build('xy');
+}
+
+/** Round plate with a "?": heard something, going to look (investigate). */
+function querySign(): BufferGeometry {
+  const b = new GlyphBuilder().ring(0, 0.62, OUT, 36).ring(0, 0.53, BODY, 36);
+  // the hook: from the left, over the top, down the right side to the bottom of its circle
+  b.arcAt(0, 0.14, 0.11, 0.235, -Math.PI / 2, Math.PI * 1.02, OUT, 28);
+  b.bar(0, -0.035, 0, -0.15, 0.125, OUT);
+  return b.arcAt(0, -0.29, 0, 0.075, 0, TAU, OUT, 14).build('xy');
+}
+
+/** Round plate with three dots: lost the human, going back (a brief fade-out). */
+function lostSign(): BufferGeometry {
+  const b = new GlyphBuilder().ring(0, 0.56, OUT, 32).ring(0, 0.47, BODY, 32);
+  for (const x of [-0.22, 0, 0.22]) b.arcAt(x, 0, 0, 0.08, 0, TAU, OUT, 12);
+  return b.build('xy');
+}
+
+const SHIELD: readonly P2[] = [
+  [-0.42, 0.5],
+  [0.42, 0.5],
+  [0.42, 0.08],
+  [0.33, -0.22],
+  [0.15, -0.45],
+  [0, -0.56],
+  [-0.15, -0.45],
+  [-0.33, -0.22],
+  [-0.42, 0.08],
+];
+
+/** A heater shield with a dark inner line: armoured, only a blast finishes it. */
+function shield(): BufferGeometry {
+  const b = new GlyphBuilder().poly(scaled(SHIELD, 1.22, 0, 0.02), OUT).poly(SHIELD, BODY);
+  return b
+    .poly(scaled(SHIELD, 0.66, 0, 0.02), OUT)
+    .poly(scaled(SHIELD, 0.5, 0, 0.02), BODY)
+    .build('xy');
+}
+
+/** A ten-point starburst (behind the shield at the punch floor: a blast is what it needs). */
+function burst(): BufferGeometry {
+  const b = new GlyphBuilder();
+  const star = (ro: number, ri: number, shade: number): void => {
+    b.ring(0, ri, shade, 20);
+    for (let k = 0; k < 10; k++) {
+      const a = (k * TAU) / 10 + Math.PI / 2;
+      const d = TAU / 20;
+      b.poly(
+        [
+          [Math.cos(a - d) * ri, Math.sin(a - d) * ri],
+          [Math.cos(a) * ro, Math.sin(a) * ro],
+          [Math.cos(a + d) * ri, Math.sin(a + d) * ri],
+        ],
+        shade,
+      );
+    }
+  };
+  star(1, 0.6, OUT);
+  star(0.86, 0.52, BODY);
+  return b.build('xy');
+}
+
+/**
+ * Over-the-head billboards: the wind-up clock (fills clockwise from twelve o'clock as the blow or the throw comes), the
+ * awareness marks and the armour shield.
+ */
 export const BILLBOARDS = {
   dialMelee: () => dial(false),
   dialRanged: () => dial(true),
   wedge,
+  alertSign,
+  querySign,
+  lostSign,
+  shield,
+  burst,
 } as const;
 export type BillboardId = keyof typeof BILLBOARDS;
 
@@ -321,10 +448,13 @@ export class GlyphBatch {
   private static readonly UP = new Vector3(0, 1, 0);
   private static readonly FRONT = new Vector3(0, 0, 1);
 
+  /** Per-instance opacity (only with `opts.fade`): marks that fade out on their own. */
+  private readonly alpha: InstancedBufferAttribute | null = null;
+
   constructor(
     geometry: BufferGeometry,
     capacity: number,
-    opts: { renderOrder: number; opacity: number; depthTest: boolean; y: number },
+    opts: { renderOrder: number; opacity: number; depthTest: boolean; y: number; fade?: boolean },
   ) {
     const material = new MeshBasicMaterial({
       vertexColors: true,
@@ -339,6 +469,27 @@ export class GlyphBatch {
       // flat signal colours: no tone mapping or exposure, so a red is red on a bright day and at night
       toneMapped: false,
     });
+    if (opts.fade) {
+      // the geometry must be this batch's own (the attribute lives on it)
+      this.alpha = new InstancedBufferAttribute(new Float32Array(capacity).fill(1), 1);
+      this.alpha.setUsage(DynamicDrawUsage);
+      geometry.setAttribute('instanceAlpha', this.alpha);
+      material.onBeforeCompile = (shader) => {
+        shader.vertexShader = shader.vertexShader
+          .replace(
+            '#include <common>',
+            'attribute float instanceAlpha;\nvarying float vInstanceAlpha;\n#include <common>',
+          )
+          .replace('#include <color_vertex>', '#include <color_vertex>\nvInstanceAlpha = instanceAlpha;');
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', 'varying float vInstanceAlpha;\n#include <common>')
+          .replace(
+            '#include <color_fragment>',
+            '#include <color_fragment>\ndiffuseColor.a *= vInstanceAlpha;',
+          );
+      };
+      material.customProgramCacheKey = () => 'glyph-fade';
+    }
     this.mesh = new InstancedMesh(geometry, material, capacity);
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.mesh.renderOrder = opts.renderOrder;
@@ -374,10 +525,14 @@ export class GlyphBatch {
     if (typeof color === 'number') this.c.setHex(color);
     else this.c.copy(color);
     this.mesh.setColorAt(this.count, this.c);
+    this.alpha?.setX(this.count, 1);
     this.count++;
   }
 
-  /** One billboard instance at world (x, y, z) facing the camera (`cam`), turned `roll` in the screen plane. */
+  /**
+   * One billboard instance at world (x, y, z) facing the camera (`cam`), turned `roll` in the screen plane; `alpha` is
+   * its own opacity (a batch built with `fade`; ignored otherwise).
+   */
   pushFacing(
     x: number,
     y: number,
@@ -386,6 +541,7 @@ export class GlyphBatch {
     roll: number,
     scale: number,
     color: Color | number,
+    alpha = 1,
   ): void {
     if (this.count >= this.capacity) return;
     this.p.set(x, y, z);
@@ -396,7 +552,13 @@ export class GlyphBatch {
     if (typeof color === 'number') this.c.setHex(color);
     else this.c.copy(color);
     this.mesh.setColorAt(this.count, this.c);
+    this.alpha?.setX(this.count, alpha);
     this.count++;
+  }
+
+  /** Opacity of instance `i` as pushed (1 for a batch without `fade`). */
+  alphaAt(i: number): number {
+    return this.alpha ? this.alpha.getX(i) : 1;
   }
 
   end(): void {
@@ -405,6 +567,7 @@ export class GlyphBatch {
     if (this.count === 0) return;
     this.mesh.instanceMatrix.needsUpdate = true;
     if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+    if (this.alpha) this.alpha.needsUpdate = true;
   }
 
   dispose(): void {

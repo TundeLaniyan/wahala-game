@@ -18,6 +18,8 @@ ESLint, Prettier, the full Vitest suite and the Playwright specs `campaign-text`
 
 Presentation only (decisions SV1-SV5, `docs/CAMPAIGN_SECTOR_AI.md` "Enemy telegraphs and looks"): every match with campaign enemies draws readable punch wind-ups (filling ring, arrow, aimed tile, head clock), throw cues (sight, chevrons, X), the open window (broken cyan ring) and the stagger, on every quality rung, read from sim state; synthesised `enemy_windup` / `enemy_aim` warnings, rate-limited; the nine enemy variants dressed apart (palette, headwear, props, scale, leader ring; temporary kit). No armoured glyph yet (SV5, needs a sim field). Not merged, not deployed. Verification: listed in the final report of the branch (tsc, eslint, Vitest, build, the relevant Playwright specs, screenshots in `docs/screenshots/campaign-sector-ai/`).
 
+Awareness markers and armour cue (branch `claude/wahala-csa-polish`, decisions SV6-SV8): brief "!" / "?" / fading three-dot marks over enemies from `enemyCue` + `state.territory.minds`, synthesised `enemy_alert` / `enemy_query` (rate-limited), the armour shield and its "needs a blast" state from `enemyHealthView`, and the browser probe `e2e/campaign-combat-readability.spec.ts` (telegraph + alert + shield in a field mission); not merged, not deployed.
+
 ## District sectors for field missions (branch `claude/wahala-csa-sectors`, from `46f0781` + `6359813`)
 
 Reference: `docs/CAMPAIGN_SECTOR_AI.md` ("District-sector architecture"); decisions DS1-DS10. Not merged, not deployed.

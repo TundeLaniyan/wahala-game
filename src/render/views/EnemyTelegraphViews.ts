@@ -13,6 +13,10 @@
  *   open            after a swing or a throw, while the enemy is planted: a cyan BROKEN ring that shrinks as the
  *                   window closes. A missed punch also stumbles (the Stumble clip) and kicks up dust: punish now.
  *   stagger         reeling from the human's punch: a thin yellow ring (plus PlayerViews' dazed stars).
+ *   awareness       (decision SV6) a brief mark where the clock sits, from the territorial layer (`enemyCue` alert /
+ *                   investigate / lost and the `state.territory.minds` state changes): an orange warning triangle with
+ *                   "!" (spotted you), a pale-blue round "?" (heard something / going to look), a grey three-dot plate
+ *                   that sinks and fades (lost you, going back). Never while the clock shows; each fades on its own.
  *
  * Every glyph has a dark outline baked in and the meaning is carried by its SHAPE and MOTION (fill, pulse, march), not
  * by colour alone. Glyphs are a dozen shared instanced meshes (one draw call each, none while unused): no per-enemy
@@ -26,6 +30,16 @@ import type { Effects } from '../fx/Effects';
 import type { Layout } from '../coords';
 import { emptyTelegraph, pulseRate, readTelegraph, telegraphKindOf } from './enemyTelegraph';
 import type { Telegraph, TelegraphKind } from './enemyTelegraph';
+import {
+  AWARENESS_COLORS,
+  awarenessLook,
+  awarenessOfCue,
+  awarenessOfMind,
+  emptyLook,
+  mindOf,
+} from './enemyAwareness';
+import type { AwarenessKind, AwarenessLook } from './enemyAwareness';
+import type { MindState } from '../../sim';
 import { enemyScaleOf } from '../../assets/enemyLooks';
 import { hasCampaignFeedback } from './DamageViews';
 import { playerGridPos } from './motion';
@@ -45,6 +59,8 @@ export const TELEGRAPH_COLORS = {
 const CLOCK_Y = 2.66;
 const CLOCK_SIZE = 0.62;
 const WEDGES = 12;
+/** Size of an awareness mark (tiles; it sits where the clock does and is about as big: it must read on a phone). */
+const MARK_SIZE = 0.6;
 
 /** What the view needs from the player views (kept small so tests can fake it). */
 export interface TelegraphAnimator {
@@ -69,6 +85,12 @@ interface Seat {
   last: TelegraphKind | null;
   /** Integrated pulse phase (radians). */
   phase: number;
+  /** The awareness mark running (null = none), when it started (tick) and its cue's beat (ticks). */
+  mark: AwarenessKind | null;
+  markFrom: number;
+  markBeat: number;
+  /** The territorial state seen last frame (undefined until first seen, or without the layer). */
+  mind: MindState | undefined;
 }
 
 const ENEMIES_MAX = 24;
@@ -79,6 +101,12 @@ export interface TelegraphStats {
   ranged: number;
   open: number;
   stagger: number;
+  /** Awareness marks drawn this frame (decision SV6). */
+  alert: number;
+  investigate: number;
+  lost: number;
+  /** Awareness marks started since the view was built, by kind (tests, the debug handle). */
+  marksStarted: { alert: number; investigate: number; lost: number };
   /** Instances drawn this frame, over all glyphs. */
   instances: number;
 }
@@ -100,15 +128,20 @@ export class EnemyTelegraphViews implements View {
     | 'thin'
     | 'dialMelee'
     | 'dialRanged'
-    | 'wedge',
+    | 'wedge'
+    | 'alertSign'
+    | 'querySign'
+    | 'lostSign',
     GlyphBatch
   >;
+  private readonly look: AwarenessLook = emptyLook();
+  private readonly started = { alert: 0, investigate: 0, lost: 0 };
   private readonly seats = new Map<number, Seat>();
   private readonly t: Telegraph = emptyTelegraph();
   private readonly c = new Color();
   private readonly hot = new Color();
   private readonly reduced: boolean;
-  private counts: TelegraphStats = { melee: 0, ranged: 0, open: 0, stagger: 0, instances: 0 };
+  private counts: TelegraphStats = this.zeroCounts();
 
   constructor(
     private readonly animator: TelegraphAnimator | null = null,
@@ -130,6 +163,15 @@ export class EnemyTelegraphViews implements View {
       new GlyphBatch(geo(id), cap, { renderOrder: order, opacity, depthTest: true, y: 0.07 });
     const over = (id: GlyphId | BillboardId, cap: number, order: number, opacity = 0.95) =>
       new GlyphBatch(geo(id), cap, { renderOrder: order, opacity, depthTest: false, y: 0.08 });
+    // the awareness marks fade per instance: each gets its own geometry (the fade attribute lives on it)
+    const mark = (id: BillboardId) =>
+      new GlyphBatch(BILLBOARDS[id](), ENEMIES_MAX, {
+        renderOrder: 36,
+        opacity: 1,
+        depthTest: false,
+        y: 0,
+        fade: true,
+      });
     this.b = {
       fill: under('disc', ENEMIES_MAX, 9, 0.5),
       halo: under('halo', ENEMIES_MAX, 10),
@@ -146,6 +188,9 @@ export class EnemyTelegraphViews implements View {
       dialMelee: over('dialMelee', ENEMIES_MAX, 36, 0.92),
       dialRanged: over('dialRanged', ENEMIES_MAX, 36, 0.92),
       wedge: over('wedge', ENEMIES_MAX * WEDGES, 37),
+      alertSign: mark('alertSign'),
+      querySign: mark('querySign'),
+      lostSign: mark('lostSign'),
     };
     for (const batch of Object.values(this.b)) this.group.add(batch.mesh);
   }
@@ -157,7 +202,10 @@ export class EnemyTelegraphViews implements View {
 
   handleEvents(events: readonly SimEvent[], state: GameState, fx: Effects): void {
     for (const e of events) {
-      if (e.type === 'attackStarted') {
+      if (e.type === 'enemyCue') {
+        const kind = awarenessOfCue(e.cue);
+        if (kind) this.startMark(this.seat(e.playerId), kind, e.fromTick, e.untilTick - e.fromTick);
+      } else if (e.type === 'attackStarted') {
         const p = state.players[e.playerId];
         if (!p || telegraphKindOf(state, p) === null) continue;
         this.seat(p.id).windStart = state.tick;
@@ -185,14 +233,25 @@ export class EnemyTelegraphViews implements View {
   update(ctx: FrameContext): void {
     const { state, alpha, layout, dt, time } = ctx;
     for (const batch of Object.values(this.b)) batch.begin();
-    const counts = { melee: 0, ranged: 0, open: 0, stagger: 0, instances: 0 };
+    const counts = this.zeroCounts();
     const now = state.tick + alpha;
+    const cam = ctx.camera?.quaternion ?? NO_ROTATION;
     let n = 0;
     for (const p of state.players) {
       if (telegraphKindOf(state, p) === null) continue;
       const seat = this.seat(p.id);
+      // the territorial state machine: a change of state starts a mark even without its event (sight lost in a
+      // chase, a search that found nothing); the event of the same change is folded in (same kind, same tick)
+      const mind = mindOf(state, p.id);
+      const fromMind = mind !== undefined ? awarenessOfMind(mind, seat.mind) : null;
+      if (fromMind && mind !== undefined) {
+        const since = state.territory?.minds[p.id]?.since ?? state.tick;
+        this.startMark(seat, fromMind, since, state.config.campaignTactics?.awareness.alertTicks ?? 0);
+      }
+      seat.mind = mind;
       if (!p.alive) {
         seat.last = null;
+        seat.mark = null;
         continue;
       }
       if (n >= ENEMIES_MAX) break;
@@ -200,23 +259,21 @@ export class EnemyTelegraphViews implements View {
       const t = readTelegraph(state, p, now, this.t, seat.windStart, seat.openStart);
       if (t.kind !== 'melee') seat.windStart = undefined;
       seat.last = t.kind;
-      if (!t.kind) continue;
+      const clock = t.kind === 'melee' || t.kind === 'ranged';
+      if (!t.kind && !seat.mark) continue;
       n++;
-      counts[t.kind]++;
-      seat.phase += dt * pulseRate(t.kind === 'melee' || t.kind === 'ranged' ? t.progress : 0.15);
       const pos = playerGridPos(p, alpha);
       const x = layout.wx(pos.x);
       const z = layout.wz(pos.y);
+      const headY = (p.mounted ? 0.28 : 0) + CLOCK_Y + (enemyScaleOf(p) - 1) * 1.86;
+      // the awareness mark sits where the clock does: never both (the wind-up is the more urgent read)
+      if (seat.mark && !clock) this.drawMark(seat, x, headY, z, now, cam, counts);
+      if (!t.kind) continue;
+      counts[t.kind]++;
+      seat.phase += dt * pulseRate(clock ? t.progress : 0.15);
       if (t.kind === 'melee') this.drawMelee(t, seat, x, z, layout);
       else if (t.kind === 'ranged') this.drawRanged(t, seat, x, z, layout, time);
-      if (t.kind === 'melee' || t.kind === 'ranged')
-        this.drawClock(
-          t,
-          x,
-          (p.mounted ? 0.28 : 0) + CLOCK_Y + (enemyScaleOf(p) - 1) * 1.86,
-          z,
-          ctx.camera?.quaternion ?? NO_ROTATION,
-        );
+      if (clock) this.drawClock(t, x, headY, z, cam);
       else if (t.kind === 'open') this.drawOpen(t, seat, x, z, time);
       else this.b.thin.push(x, z, 0, 1, 1, TELEGRAPH_COLORS.stagger.base);
     }
@@ -225,6 +282,60 @@ export class EnemyTelegraphViews implements View {
       counts.instances += batch.size;
     }
     this.counts = counts;
+  }
+
+  private zeroCounts(): TelegraphStats {
+    return {
+      melee: 0,
+      ranged: 0,
+      open: 0,
+      stagger: 0,
+      alert: 0,
+      investigate: 0,
+      lost: 0,
+      marksStarted: this.started,
+      instances: 0,
+    };
+  }
+
+  /** Starts (or restarts) an awareness mark; the same change seen twice (its event, then its state) is one mark. */
+  private startMark(seat: Seat, kind: AwarenessKind, from: number, beat: number): void {
+    if (seat.mark === kind && seat.markFrom === from) return;
+    seat.mark = kind;
+    seat.markFrom = from;
+    seat.markBeat = Math.max(0, beat);
+    this.started[kind]++;
+  }
+
+  /** The awareness mark over the head (it pops, holds, then fades on its own; then the seat forgets it). */
+  private drawMark(
+    seat: Seat,
+    x: number,
+    y: number,
+    z: number,
+    now: number,
+    cam: Quaternion,
+    counts: TelegraphStats,
+  ): void {
+    const kind = seat.mark!;
+    const look = awarenessLook(kind, now - seat.markFrom, seat.markBeat, this.reduced, this.look);
+    if (!look.visible) {
+      seat.mark = null;
+      return;
+    }
+    const batch =
+      kind === 'alert' ? this.b.alertSign : kind === 'investigate' ? this.b.querySign : this.b.lostSign;
+    batch.pushFacing(
+      x,
+      y + look.lift,
+      z,
+      cam,
+      look.roll,
+      MARK_SIZE * look.scale,
+      AWARENESS_COLORS[kind],
+      look.alpha,
+    );
+    counts[kind]++;
   }
 
   /** The pulse colour: the base colour brightening toward `hot` on each beat. */
@@ -309,13 +420,14 @@ export class EnemyTelegraphViews implements View {
   private seat(id: number): Seat {
     let s = this.seats.get(id);
     if (!s) {
-      s = { last: null, phase: 0 };
+      s = { last: null, phase: 0, mark: null, markFrom: 0, markBeat: 0, mind: undefined };
       this.seats.set(id, s);
     }
     return s;
   }
 
   dispose(): void {
+    for (const k of ['alertSign', 'querySign', 'lostSign'] as const) this.b[k].mesh.geometry.dispose();
     for (const batch of Object.values(this.b)) batch.dispose();
     for (const g of this.geometries.values()) g.dispose();
     this.geometries.clear();

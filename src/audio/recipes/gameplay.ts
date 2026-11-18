@@ -310,6 +310,53 @@ export const gameplaySounds = {
       return t;
     }),
   }),
+  /**
+   * A campaign enemy SPOTS the human (decision SV7, the "!" over its head): a short bright two-note stab rising a
+   * fourth, square-ish and dry with a click on top - "hey!". Higher and quicker than the wind-up growl, rounder than
+   * the throw's clicks. The router lets one through per alert wave (an ally's call alerts several at once).
+   */
+  enemy_alert: oneShot({
+    bus: 'warn',
+    gain: 0.5,
+    render: simple(({ rate, rng }) => {
+      const t = new Track(rate, 0.3);
+      const stab = (f: number, seconds: number): Float32Array => {
+        const n = len(rate, seconds);
+        const x = lowpass(osc('square', n, rate, f), rate, 2600, 0.9);
+        const h = osc('sine', n, rate, f * 2);
+        for (let i = 0; i < n; i++) x[i] = 0.55 * x[i]! + 0.3 * h[i]!;
+        return mul(x, decayEnv(n, rate, 0.003, seconds * 0.45));
+      };
+      t.add(stab(659, 0.07), 0, 0.55);
+      t.add(stab(880, 0.16), 0.065, 0.75);
+      t.add(nburst(rate, 0.015, rng, 'hp', 3500, null, 0.8, 0.004), 0.065, 0.3);
+      return t;
+    }),
+  }),
+  /**
+   * A campaign enemy goes to look at a noise (decision SV7, the "?"): a soft, breathy sine that glides UP a sixth like
+   * a questioning "hm?" - quiet, no attack click, on the effects bus (a query, not a warning).
+   */
+  enemy_query: oneShot({
+    gain: 0.4,
+    priority: Priority.ambient,
+    render: simple(({ rate, rng }) => {
+      const t = new Track(rate, 0.36);
+      const n = len(rate, 0.3);
+      const env = envelope(n, rate, [
+        [0, 0],
+        [0.06, 1],
+        [0.2, 0.7],
+        [0.3, 0],
+      ]);
+      const tone = osc('sine', n, rate, (tt) => 392 * Math.pow(1.68, Math.min(1, tt / 0.24)));
+      const over = osc('sine', n, rate, (tt) => 784 * Math.pow(1.68, Math.min(1, tt / 0.24)));
+      for (let i = 0; i < n; i++) tone[i] = tone[i]! + 0.18 * over[i]!;
+      t.add(mul(tone, env), 0, 0.6);
+      t.add(mul(nburst(rate, 0.3, rng, 'bp', 900, 1800, 1.2, 1, 0.2), env), 0, 0.12);
+      return t;
+    }),
+  }),
   /** Dazed: cartoon "bonk" and little stars twinkling down. */
   daze: oneShot({
     gain: 0.85,
