@@ -25,6 +25,16 @@ export function stepTicksOf(obs: Observation, p: Readonly<Player>): number {
   return Math.max(m.minStepTicks, t);
 }
 
+/** The match keeps enemies off the campaign human's tile (the same keys as the sim's `pilotBlocksStep`). */
+function keepsOffHuman(obs: Observation): boolean {
+  const c = obs.config;
+  return !!(
+    c.combatPilot?.enemiesKeepOffHuman ||
+    c.tacticalTrap?.enemiesKeepOffHuman ||
+    c.campaignTactics?.enemiesKeepOffHuman
+  );
+}
+
 /** First tick at which a player's next step could begin (the intent is applied on tick + 1 at the earliest). */
 export function readyTick(obs: Observation, p: Readonly<Player>): number {
   const ready = Math.max(obs.tick + Math.max(p.stepRemaining, 1), p.dazedUntil);
@@ -129,6 +139,14 @@ export class World {
     if (profile.avoidFloorHazards) for (let i = 0; i < board.size; i++) if (hazard[i] === 1) walk[i] = 1;
     if (!profile.takeCurses) {
       for (const u of obs.pickups) if (u.kind === 'curse') walk[u.y * board.width + u.x] = 1;
+    }
+    // decision SA13: where an enemy may never step onto the campaign human's tile (`pilotBlocksStep`), its planner
+    // must not count that tile as a way out either, or it plans an escape through the human and stays in the blast
+    if (this.me.enemyKind !== undefined && keepsOffHuman(obs)) {
+      for (const p of obs.players) {
+        if (p.alive && p.enemyKind === undefined && p.vitals !== undefined && !p.isBot)
+          walk[p.y * board.width + p.x] = 1;
+      }
     }
   }
 
