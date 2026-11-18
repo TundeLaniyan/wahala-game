@@ -131,10 +131,16 @@ export function createPlayer(id: number, setup: PlayerSetup, arena: ArenaDef, co
   };
 }
 
-function campaignFields(setup: PlayerSetup, config: GameConfig): Pick<Player, 'vitals' | 'enemyKind'> {
+function campaignFields(
+  setup: PlayerSetup,
+  config: GameConfig,
+): Pick<Player, 'vitals' | 'enemyKind' | 'enemyVariant'> {
   const vitals = vitalsFor(setup, config);
   if (!vitals) return {};
-  return setup.enemyKind ? { vitals, enemyKind: setup.enemyKind } : { vitals };
+  if (!setup.enemyKind) return { vitals };
+  return setup.enemyVariant
+    ? { vitals, enemyKind: setup.enemyKind, enemyVariant: setup.enemyVariant }
+    : { vitals, enemyKind: setup.enemyKind };
 }
 
 /** Builds a fresh match. Same options + seed always produce an identical state. */

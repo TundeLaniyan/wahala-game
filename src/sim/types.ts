@@ -18,6 +18,7 @@ import type {
 } from './campaign/types';
 import type { RaidSpec, RaidState } from './raid/types';
 import type { BonusKind } from './raid/def';
+import type { EnemyVariantId } from './data/enemyVariants';
 import type {
   MissionId,
   MissionOutcome,
@@ -396,6 +397,8 @@ export interface Player {
   vitals?: Vitals;
   /** Campaign enemy kind (durability, attacks). Absent for players and for multiplayer bots. */
   enemyKind?: EnemyKind;
+  /** Campaign enemy variant (look and personality, data/enemyVariants.ts). Absent = the kind's plain behaviour. */
+  enemyVariant?: EnemyVariantId;
 }
 
 export interface Generator {
@@ -810,6 +813,8 @@ export interface PlayerSetup {
   attacks?: Partial<AttackLoadout>;
   /** Campaign: this seat is an enemy of this kind (health and attacks come from src/sim/data/enemies.ts). */
   enemyKind?: EnemyKind;
+  /** Campaign: the enemy's variant (data/enemyVariants.ts); only meaningful with `enemyKind`. */
+  enemyVariant?: EnemyVariantId;
   /** Campaign: health segments for this seat (the human: 3 or 4; enemies: from their kind). Absent = one-hit rules. */
   maxHp?: number;
   /**

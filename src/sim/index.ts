@@ -140,6 +140,13 @@ export {
 } from './campaign/levels';
 export type { CampaignLevel, CampaignLevelDef } from './campaign/levels';
 export { ENEMY_KINDS, ENEMY_KIND_IDS, enemyDef } from './data/enemies';
+export {
+  DEFAULT_VARIANT_OF_KIND,
+  ENEMY_VARIANTS,
+  ENEMY_VARIANT_IDS,
+  isEnemyVariantId,
+} from './data/enemyVariants';
+export type { EnemyVariantDef, EnemyVariantId } from './data/enemyVariants';
 export type { EnemyKindDef } from './data/enemies';
 export {
   applyCampaignHit,
