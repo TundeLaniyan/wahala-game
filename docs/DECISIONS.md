@@ -1089,3 +1089,17 @@ Tests: `tests/campaign-upgrades.test.ts`, `tests/app/campaign-upgrades-flow.test
 | OB5 | **Home labels** follow the approved navigation names without moving anything: "Learn to Play" (Training Academy) and "Settings & Sound"; test ids unchanged. | `ui/menu/HomeScreen.tsx` |
 
 Tests: `tests/onboarding.test.ts`, `e2e/onboarding.spec.ts`.
+
+## Enemy telegraphs and looks (branch `claude/wahala-csa-looks`, docs/CAMPAIGN_SECTOR_AI.md "Enemy telegraphs and looks", decisions SV1-SV5)
+
+Why: founder testing - enemy punches were impossible to anticipate from the elevated camera on a phone. Presentation only: no rule, timing or sim field changed.
+
+| # | Decision | Where |
+| --- | --- | --- |
+| SV1 | **Telegraphs in every match with campaign enemies** (field and boss missions, raids, the Academy's Generator Tactics lessons), never in multiplayer (no `enemyKind` seats). The Oshodi pilot's enemy rings moved into the new view; `CombatPilotViews` keeps the human's swing feedback only. | `render/views/EnemyTelegraphViews.ts`, `render/GameRenderer.ts` |
+| SV2 | **Read from sim state only, never from hard-coded durations**: a punch fills from the press to the LIVE `attack.resolveTick` (joined late: `resolveTick - windupTicks`), a throw over `launchTick..launchTick + warnTicks` of its projectile, the open window from `enemyAttackPhase` + `rootedUntil`, the stagger from `dazedUntil`. **Shape and motion carry the meaning** (solid ring + arrow + framed tile + head clock = punch; sight + marching chevrons + X = throw; broken cyan ring = open; thin ring + stars = stagger), every glyph has a baked dark outline, colours are not tone-mapped, tile marks and the head clock draw over bodies. One instanced draw per glyph (hidden while unused), shared geometry, no per-frame allocation; **not gated by quality** (Very Low draws the same). A missed punch plays the Stumble clip with dust. | `render/views/enemyTelegraph.ts`, `telegraphShapes.ts` |
+| SV3 | **Wind-up warning sound**: synthesised `enemy_windup` (rising growl, punch) and `enemy_aim` (two rising clicks, throw) on the warning bus, each at most every 0.35 s and any two 0.15 s apart (a group winding up makes one warning); the throw whistle now waits for the flight (`warnTicks`). Humans and multiplayer bots keep the old breath. No recording. | `audio/recipes/gameplay.ts`, `audio/eventRouter.ts` |
+| SV4 | **Variant looks** on the cast rigs: two-tone cloth palette, headwear, bone-attached props, silhouette scale, a gold leader ring for lieutenants and bosses (table in the doc). The Ring crews wear an invented plum-and-lime palette; nothing copies a real agency's uniform or insignia. One shared material, one merged mesh per dressed bone cached per variant and rig; the fallback model gets headwear and scale. **Temporary** until dedicated 3D production. | `assets/enemyLooks.ts`, `render/assets/enemyKit.ts`, `render/views/PlayerViews.ts` |
+| SV5 | **No "armoured: only a blast finishes" glyph yet**: no general sim field says it (only the Academy pilot's `punchFloor`). Requested from the AI worker as `Player.punchProof` or `finishableByPunch(state, p)`. | docs/CAMPAIGN_SECTOR_AI.md |
+
+Tests: `tests/render/enemy-telegraphs.test.ts`, `tests/render/enemy-looks.test.ts`, `tests/audio/engine.test.ts` (wind-up warnings).

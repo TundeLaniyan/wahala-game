@@ -2,6 +2,10 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Enemy telegraphs and looks (branch `claude/wahala-csa-looks`, from `6359813`)
+
+Presentation only (decisions SV1-SV5, `docs/CAMPAIGN_SECTOR_AI.md` "Enemy telegraphs and looks"): every match with campaign enemies draws readable punch wind-ups (filling ring, arrow, aimed tile, head clock), throw cues (sight, chevrons, X), the open window (broken cyan ring) and the stagger, on every quality rung, read from sim state; synthesised `enemy_windup` / `enemy_aim` warnings, rate-limited; the nine enemy variants dressed apart (palette, headwear, props, scale, leader ring; temporary kit). No armoured glyph yet (SV5, needs a sim field). Not merged, not deployed. Verification: listed in the final report of the branch (tsc, eslint, Vitest, build, the relevant Playwright specs, screenshots in `docs/screenshots/campaign-sector-ai/`).
+
 ## Integrated release: gameplay, mobile controls, combat lab, visual polish (branch `claude/wahala-integrated-release-v1`, from `0c200a7`)
 
 Notes per task in `docs/integrated-release/`; decisions SD-B, LI7-LI9, NV, CL-L, PS and ML in `docs/DECISIONS.md`.

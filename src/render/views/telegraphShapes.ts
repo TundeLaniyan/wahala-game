@@ -334,6 +334,8 @@ export class GlyphBatch {
       depthWrite: false,
       depthTest: opts.depthTest,
       side: DoubleSide,
+      // a flat glyph needs no back-then-front pass of a transparent double-sided material: one draw call
+      forceSinglePass: true,
       // flat signal colours: no tone mapping or exposure, so a red is red on a bright day and at night
       toneMapped: false,
     });
