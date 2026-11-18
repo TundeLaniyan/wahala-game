@@ -11,7 +11,7 @@ Reference: `docs/CAMPAIGN_SECTOR_AI.md` ("District-sector architecture"); decisi
 - New shared leg kinds `destroyTargets` (Ring equipment only the human's blasts wreck) and `holdArea` (a zone held while enemy waves come in), with HUD words and an equipment view; not assigned to missions yet.
 - `scripts/sector-ascii.ts` (authoring), `scripts/sector-shots.mjs`, `scripts/sector-perf.mjs` (with / without the sector, low / high, leak check); debug `__WAHALA__.startFieldMission`, `__WAHALA__.sector()`, `?nosector`.
 
-Verification: see the doc's "Tests" section and the final report of the branch.
+Verification: `npx tsc --noEmit -p .`, `npx eslint src tests scripts e2e --max-warnings 0`, `vite build`, full Vitest (248 files, 3897 passed, 7 skipped), Playwright `campaign-sectors`, `checkpoint-clarity`, `oshodi-combat-pilot`, `campaign-expansion-smoke`, `mission-presentation` on desktop and mobile (22 passed, 2 skipped by design). Render cost measured on SwiftShader only (`docs/measurements/campaign-sector-perf.md`); no real-phone claim.
 
 ## Integrated release: gameplay, mobile controls, combat lab, visual polish (branch `claude/wahala-integrated-release-v1`, from `0c200a7`)
 
