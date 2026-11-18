@@ -162,7 +162,8 @@ describe('event mapping', () => {
       'missionStarted',
       'missionOutcome',
       'missionCallout',
-      // campaign tactics telegraph (decision SA7): drawn by the views; the wind-up / hit sounds stay attackStarted's
+      // campaign tactics telegraph (decision SA7): the SAMPLE is a wind-up cue, drawn by the views (its sound stays
+      // attackStarted's); alert / investigate have their own cues (SV7), tested below
       'enemyCue',
       // campaign expansion placeholders: silent until the raid workstreams give them cues (health has its cues, CC4)
     ]);
@@ -282,6 +283,40 @@ describe('event mapping', () => {
     rig.audio.handleEvents([{ ...SAMPLES.projectileLaunched, ownerId: 2 } as SimEvent], s);
     expect(rig.ids()).toContain('enemy_aim');
     expect(rig.ids()).toContain('crowd_throw_whistle');
+  });
+
+  it('an enemy spotting you stings once per alert wave; a noise it goes to look at is a soft query (SV7)', async () => {
+    const rig = await started();
+    const s = playState(4);
+    for (const p of s.players.slice(1)) p.enemyKind = 'guard';
+    const cue = (playerId: number, c: 'alert' | 'investigate' | 'lost' | 'recovery' | 'stagger'): SimEvent =>
+      ({ ...SAMPLES.enemyCue, playerId, cue: c, byId: c === 'alert' && playerId > 1 ? 1 : null }) as SimEvent;
+    // an alert and the allies its call alerts in the same tick: one sting, on the warning bus
+    rig.audio.handleEvents([cue(1, 'alert'), cue(2, 'alert'), cue(3, 'alert')], s);
+    expect(rig.ids().filter((id) => id === 'enemy_alert')).toHaveLength(1);
+    expect(rig.traces.find((t) => t.id === 'enemy_alert')?.bus).toBe('warn');
+    // a query right after the sting stays quiet (the sting already said it); later it plays, softly, once per gap
+    rig.traces.length = 0;
+    rig.audio.handleEvents([cue(2, 'investigate')], s);
+    expect(rig.ids()).not.toContain('enemy_query');
+    rig.ctx.advance(1);
+    rig.audio.handleEvents([cue(2, 'investigate'), cue(3, 'investigate')], s);
+    expect(rig.ids().filter((id) => id === 'enemy_query')).toHaveLength(1);
+    expect(rig.traces.find((t) => t.id === 'enemy_query')?.bus).toBe('sfx');
+    // within the alert gap a new alert stays quiet; after it, it stings again
+    rig.traces.length = 0;
+    rig.ctx.advance(0.3);
+    rig.audio.handleEvents([cue(1, 'alert')], s);
+    expect(rig.ids()).toContain('enemy_alert');
+    rig.traces.length = 0;
+    rig.ctx.advance(0.2);
+    rig.audio.handleEvents([cue(1, 'alert')], s);
+    expect(rig.ids()).not.toContain('enemy_alert');
+    // losing you, and the telegraph beats, are silent here (their sounds are attackStarted's / campaignHit's)
+    rig.ctx.advance(2);
+    rig.traces.length = 0;
+    rig.audio.handleEvents([cue(1, 'lost'), cue(2, 'recovery'), cue(3, 'stagger'), SAMPLES.enemyCue], s);
+    expect(rig.ids()).toEqual([]);
   });
 
   it('puts warnings on the warning bus and crowd reactions on the reaction bus', async () => {

@@ -270,6 +270,23 @@ describe('pitch gestures', () => {
   });
 });
 
+describe('enemy awareness cues (SV7)', () => {
+  it('the alert stab rises a fourth and is short; the query glides up, softer and darker than the stab', () => {
+    const a = mono('enemy_alert');
+    const first = peakIn(a.m, a.r.rate, 0, 0.06, 400, 1200);
+    const second = peakIn(a.m, a.r.rate, 0.08, 0.2, 400, 1200);
+    expect(Math.abs(first - 659)).toBeLessThan(40);
+    expect(Math.abs(second - 880)).toBeLessThan(40);
+    expect(a.a.seconds).toBeLessThan(0.4);
+    const q = mono('enemy_query');
+    expect(peakIn(q.m, q.r.rate, 0.18, 0.28, 300, 1200)).toBeGreaterThan(
+      peakIn(q.m, q.r.rate, 0, 0.06, 300, 1200) * 1.4,
+    );
+    expect(q.a.centroid).toBeLessThan(a.a.centroid);
+    expect(SOUND_DEFS.enemy_query.gain).toBeLessThan(SOUND_DEFS.enemy_alert.gain);
+  });
+});
+
 describe('whole bank at full rate: levels and cleanliness', () => {
   it('no sound clips, none is silent, none has a DC offset', () => {
     // a representative cross-section (rendering all 81 at full rate takes several seconds)

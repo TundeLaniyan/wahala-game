@@ -15,7 +15,17 @@ import type { GameState, SimEvent } from '../../sim';
 import type { Effects } from '../fx/Effects';
 import type { Layout } from '../coords';
 import { enemyHealthView } from '../../sim';
-import { HIT_COLORS, PIP_MAX, hitFeedback, pipColor, pipCounts, pipsShown } from './damageModel';
+import {
+  ARMOUR_COLORS,
+  HIT_COLORS,
+  PIP_MAX,
+  armourCue,
+  hitFeedback,
+  pipColor,
+  pipCounts,
+  pipsShown,
+} from './damageModel';
+import { BILLBOARDS, GlyphBatch } from './telegraphShapes';
 import { enemyScaleOf } from '../../assets/enemyLooks';
 import { playerGridPos } from './motion';
 import type { FrameContext, View } from './types';
@@ -26,6 +36,13 @@ const PIP_SIZE = 0.13;
 const PIP_STEP = 0.155;
 /** At most this many enemies show pips at once (the rule already keeps it to a few). */
 const PIP_ENEMIES = 12;
+/**
+ * The armour shield (tiles): a badge at the left end of the name tag (PlayerViews draws the tag 1.22 wide at 2.12),
+ * level with it, so it neither hides the name nor sits where the head clock and the awareness marks go.
+ */
+const SHIELD_SIZE = 0.34;
+const SHIELD_X = -0.7;
+const TAG_Y = 2.12;
 
 /** Does this match carry campaign health at all? Only then is the damage feedback built (a normal match builds nothing). */
 export function hasCampaignFeedback(state: GameState): boolean {
@@ -62,6 +79,10 @@ function pipTexture(): CanvasTexture {
  *
  *  - thin health PIPS above an enemy's head, only when it is targeted (straight ahead of the player), recently hurt, or
  *    close (`enemyHealthView.showBar`, never for everybody, never for a boss / lieutenant - their bar is in the HUD rail);
+ *  - an ARMOUR shield (decision SV8), a badge at the left end of the name tag, with the pips of an enemy only a blast
+ *    can finish (`enemyHealthView(...).blastOnly`); at its punch floor (`hp <= punchFloor`) the shield turns hot, pulses and gets
+ *    a starburst behind it: punches are done, it needs a blast. A boss or lieutenant (no world pips) shows the shield
+ *    over its head only when it matters: at the floor, or just hurt;
  *  - a hit flash (red on the player, cream on an enemy), a small ring and a flinch on `campaignHit` damage; a yellow
  *    flash on a daze; a distinct WHITE-BLUE spark and ring when Armour or the Okada absorbed it; a poof on
  *    `campaignDefeated`. The dazed halo (stars) is `PlayerViews`' own, driven by `dazedUntil`.
@@ -83,8 +104,12 @@ export class DamageViews implements View {
   private readonly p = new Vector3();
   private readonly s = new Vector3();
   private readonly c = new Color();
+  private readonly hot = new Color();
   private readonly reduced: boolean;
   private shown = 0;
+  private readonly shield: GlyphBatch;
+  private readonly burst: GlyphBatch;
+  private armour = { shields: 0, needsBlast: 0 };
 
   constructor(
     private readonly players: JoltTarget | null = null,
@@ -99,6 +124,15 @@ export class DamageViews implements View {
     this.pips.renderOrder = 35;
     this.pips.setColorAt(0, this.c.setHex(0xffffff));
     this.group.add(this.pips);
+    const opts = { opacity: 1, depthTest: false, y: 0 };
+    this.burst = new GlyphBatch(BILLBOARDS.burst(), PIP_ENEMIES, { ...opts, renderOrder: 34 });
+    this.shield = new GlyphBatch(BILLBOARDS.shield(), PIP_ENEMIES, { ...opts, renderOrder: 36 });
+    this.group.add(this.burst.mesh, this.shield.mesh);
+  }
+
+  /** Armour shields drawn last frame, and how many of them say "needs a blast" (tests / the debug handle). */
+  get armourShown(): { shields: number; needsBlast: number } {
+    return this.armour;
   }
 
   /** Enemies whose pips were drawn last frame (tests / the debug handle). */
@@ -166,11 +200,17 @@ export class DamageViews implements View {
     let n = 0;
     let enemies = 0;
     const cam = ctx.camera?.quaternion ?? NO_ROTATION;
+    this.shield.begin();
+    this.burst.begin();
+    const armour = { shields: 0, needsBlast: 0 };
     for (const p of state.players) {
       if (enemies >= PIP_ENEMIES) break;
       if (!p.vitals) continue;
       const v = p.vitals;
-      if (!pipsShown(enemyHealthView(state, p.id), p.alive)) continue;
+      const view = enemyHealthView(state, p.id);
+      const pips = pipsShown(view, p.alive);
+      const cue = armourCue(view, p.alive, pips);
+      if (!pips && !cue) continue;
       const { filled, total } = pipCounts(v.hp, v.maxHp);
       const frac = v.maxHp > 0 ? v.hp / v.maxHp : 0;
       const pos = playerGridPos(p, alpha);
@@ -178,6 +218,32 @@ export class DamageViews implements View {
       const wz = ctx.layout.wz(pos.y);
       // a mounted fighter stands taller
       const y = PIP_Y + (p.mounted ? 0.28 : 0) + 0.06 + (enemyScaleOf(p) - 1) * 1.86; // a bigger enemy's head is higher
+      if (cue) {
+        const ty = TAG_Y + (p.mounted ? 0.28 : 0) + (enemyScaleOf(p) - 1) * 1.86;
+        this.p
+          .set(SHIELD_X, 0, 0)
+          .applyQuaternion(cam)
+          .add(this.s.set(wx, ty, wz));
+        armour.shields++;
+        if (cue === 'needsBlast') {
+          armour.needsBlast++;
+          const beat = this.reduced ? 1 : 0.5 + 0.5 * Math.sin(ctx.time * Math.PI * 2 * 2.2);
+          const k = SHIELD_SIZE * (this.reduced ? 1.15 : 1 + 0.16 * beat);
+          this.burst.pushFacing(
+            this.p.x,
+            this.p.y,
+            this.p.z,
+            cam,
+            this.reduced ? 0 : ctx.time * 0.8,
+            k * 0.8,
+            ARMOUR_COLORS.burst,
+          );
+          this.c.setHex(ARMOUR_COLORS.needsBlast).lerp(this.hot.setHex(ARMOUR_COLORS.needsBlastHot), beat);
+          this.shield.pushFacing(this.p.x, this.p.y, this.p.z, cam, 0, k, this.c);
+        } else
+          this.shield.pushFacing(this.p.x, this.p.y, this.p.z, cam, 0, SHIELD_SIZE, ARMOUR_COLORS.armoured);
+      }
+      if (!pips) continue;
       for (let i = 0; i < total; i++) {
         // pips run along the screen's horizontal (the camera's right axis), centred over the head
         const off = (i - (total - 1) / 2) * PIP_STEP;
@@ -195,11 +261,18 @@ export class DamageViews implements View {
     }
     this.pips.count = n;
     this.shown = enemies;
+    this.shield.end();
+    this.burst.end();
+    this.armour = armour;
     this.pips.instanceMatrix.needsUpdate = true;
     if (this.pips.instanceColor) this.pips.instanceColor.needsUpdate = true;
   }
 
   dispose(): void {
+    this.shield.mesh.geometry.dispose();
+    this.burst.mesh.geometry.dispose();
+    this.shield.dispose();
+    this.burst.dispose();
     this.geo.dispose();
     this.mat.dispose();
     this.pips.dispose();

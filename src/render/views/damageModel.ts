@@ -36,6 +36,44 @@ export function pipColor(filled: boolean, fraction: number): number {
   return 0xff4a3d;
 }
 
+/**
+ * The armour cue (decision SV8) of an enemy only a blast can finish (`enemyHealthView(...).blastOnly`):
+ *   'armoured'    a shield beside its pips (shown with them, never on its own);
+ *   'needsBlast'  at its punch floor (`hp <= punchFloor`): punches cannot take the rest, the shield turns hot, pulses
+ *                 and gets a starburst. A boss / lieutenant has no world pips (its bar is in the HUD rail): it shows the
+ *                 shield over its head only when that matters - at the floor, or just hurt (then 'armoured').
+ * Null: not armoured, dead, or nothing to say now.
+ */
+export type ArmourCue = 'armoured' | 'needsBlast';
+export function armourCue(
+  view: {
+    hp: number;
+    kind: string | null;
+    recentlyHurt: boolean;
+    blastOnly?: boolean;
+    punchFloor?: number;
+  } | null,
+  alive: boolean,
+  pipsShown: boolean,
+): ArmourCue | null {
+  if (!view || !alive || !view.blastOnly || view.hp <= 0) return null;
+  const atFloor = view.punchFloor !== undefined && view.punchFloor > 0 && view.hp <= view.punchFloor;
+  if (pipsShown) return atFloor ? 'needsBlast' : 'armoured';
+  if (!(view.kind && RAIL_BAR_KINDS.has(view.kind))) return null;
+  return atFloor ? 'needsBlast' : view.recentlyHurt ? 'armoured' : null;
+}
+
+/**
+ * Shield body colours: cold steel while punches still work; at the floor a hot amber shield pulsing toward yellow-white
+ * in front of a red-orange starburst (the blast it needs).
+ */
+export const ARMOUR_COLORS = {
+  armoured: 0x9cc4ea,
+  needsBlast: 0xffa21a,
+  needsBlastHot: 0xfff07a,
+  burst: 0xff3d1a,
+} as const;
+
 export type FeedbackKind = 'hit' | 'shield' | 'daze' | 'none';
 
 export interface HitFeedback {

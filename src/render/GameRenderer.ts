@@ -962,6 +962,11 @@ export class GameRenderer {
     return this.telegraphs?.stats() ?? null;
   }
 
+  /** The campaign health marks drawn last frame: enemies with pips, armour shields, shields saying "needs a blast". */
+  damageStats(): { pipEnemies: number; shields: number; needsBlast: number } | null {
+    return this.damage ? { pipEnemies: this.damage.pipEnemies, ...this.damage.armourShown } : null;
+  }
+
   /** Debug / performance report: stop drawing the raid markers (they keep updating) to compare frames. */
   debugHideRaid(hidden: boolean): void {
     this.raid?.setHidden(hidden);
