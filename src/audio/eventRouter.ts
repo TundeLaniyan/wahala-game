@@ -523,6 +523,21 @@ const handlers: Handlers = {
       if (e.marked) sfx(c, 'pickup_rare', pan, 0.6, 1.1, 0.15); // an objective crate is down
     }
   },
+  // field mission equipment (destroyTargets legs): the cargo cues; a wrecked piece adds the objective chime
+  fieldTargetHit: (e, c) => {
+    const pan = panOf(c, e.x);
+    if (e.hpAfter > 0) {
+      if (allow(c, 'cargoHit', 0.08)) sfx(c, 'vehicle_hit_gen', pan, 0.75, 0.9 + c.rand() * 0.1);
+      return;
+    }
+    if (allow(c, 'cargoBreak', 0.06)) sfx(c, 'vehicle_wreck', pan, 0.7, 1.05);
+    sfx(c, 'pickup_rare', pan, 0.6, 1.1, 0.15);
+  },
+  // a mission sector's gate barricade swings open between legs
+  sectorGateOpened: (e, c) => {
+    const i = e.tiles[0] ?? 0;
+    sfx(c, 'gen_kick', panOf(c, i % Math.max(1, c.state.width)), 0.8, 0.6);
+  },
   raidDoorOpened: (e, c) => {
     sfx(c, 'gen_kick', panOf(c, e.x), 0.9, 0.7);
     sfx(c, 'ui_go', panOf(c, e.x), 0.45, 1.1, 0.1);

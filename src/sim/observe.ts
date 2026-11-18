@@ -7,7 +7,7 @@ import type { GameConfig } from './config';
 import { enemyGroupDirective } from './campaign/tactics';
 import { directiveFor } from './mission/directives';
 import { raidDirectiveFor } from './raid/directives';
-import type { NpcDirective } from './mission/types';
+import type { NpcDirective, SectorState } from './mission/types';
 import type {
   BlastEvent,
   CrowdState,
@@ -52,6 +52,8 @@ export interface Observation {
   readonly supplies: readonly number[];
   /** Campaign: what this bot's role or group tactic asks of it (absent in normal matches and for the human). */
   readonly directive?: NpcDirective;
+  /** Campaign: the mission's sector, public like the barricades that close it (absent without one). */
+  readonly sector?: Readonly<SectorState>;
 }
 
 export function observe(state: GameState, selfId: number): Observation {
@@ -84,5 +86,6 @@ export function observe(state: GameState, selfId: number): Observation {
     settings: state.settings,
     supplies: state.supplies,
     ...(directive ? { directive } : {}),
+    ...(state.sector ? { sector: state.sector } : {}),
   };
 }

@@ -28,6 +28,7 @@ import type {
   MissionState,
   MissionWarningView,
   ObjectiveKind,
+  SectorState,
 } from './mission/types';
 
 // ---------------------------------------------------------------- grid primitives
@@ -684,6 +685,11 @@ export interface GameState {
    * normal match is byte-for-byte what it was before missions existed.
    */
   mission?: MissionState;
+  /**
+   * A campaign mission's SECTOR: the part of the district map it is played in, closed by barricades
+   * (src/sim/mission/sector.ts). ABSENT (the key does not exist) in every match without one.
+   */
+  sector?: SectorState;
   /** Thrown objects in flight (src/sim/systems/projectiles.ts). ABSENT in every normal match. */
   projectiles?: Projectile[];
   /** Enemy attack rate limits, calls and tactics data (campaign only). ABSENT in every normal match. */
@@ -1242,4 +1248,21 @@ export type SimEvent =
   /** Campaign mission: the final result (the match ends next). */
   | { type: 'missionOutcome'; outcome: MissionOutcome; phaseState: MissionPhaseState }
   /** Campaign mission: the HUD line changed. */
-  | { type: 'missionCallout'; text: string };
+  | { type: 'missionCallout'; text: string }
+  /**
+   * Field mission `destroyTargets` leg: a blast hit a piece of Ring equipment (`hpAfter` 0 = destroyed; `left` = targets
+   * of the leg still standing after this hit).
+   */
+  | {
+      type: 'fieldTargetHit';
+      targetId: string;
+      label: string;
+      x: number;
+      y: number;
+      hpAfter: number;
+      maxHp: number;
+      left: number;
+      byId: number | null;
+    }
+  /** Mission sector: a gate barricade opened between legs (its tiles are open floor now). */
+  | { type: 'sectorGateOpened'; gateId: string; tiles: number[] };

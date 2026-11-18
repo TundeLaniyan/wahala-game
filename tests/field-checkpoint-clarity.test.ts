@@ -249,6 +249,9 @@ describe('plain objective wording for every field leg (all eleven missions)', ()
     clearGroup: /^Defeat the \d /,
     escapeRoute: /^Escape to the .+ before .+ catches you\.$/,
     door: /^Stand on the .+ door for 1 second/,
+    // the sector leg kinds (docs/CAMPAIGN_SECTOR_AI.md): not assigned to a mission yet; the district worker writes them
+    destroyTargets: /^Destroy the \d /,
+    holdArea: /^Keep the .+ for \d+ seconds/,
   } as const;
 
   it('there are eleven field missions', () => {

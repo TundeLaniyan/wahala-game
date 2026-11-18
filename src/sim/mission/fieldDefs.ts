@@ -28,11 +28,53 @@ export interface FieldEnemyDef {
   radius?: number;
 }
 
+/** What a piece of Ring equipment is (for its look and its HUD name). */
+export type FieldEquipmentKind = 'relayBox' | 'tollBox' | 'switchCabinet' | 'partsCage' | 'controlPoint';
+
+/**
+ * A piece of Ring equipment a `destroyTargets` leg asks to wreck (docs/CAMPAIGN_SECTOR_AI.md, decision DS7). It stands
+ * on its tile from the start of the mission like a crate (it blocks walking and stops a flame arm), but only the
+ * human's blasts damage it: one hit point per separate blast; melee, vehicles, the closing city and stage hazards
+ * cannot, and an enemy's blast only scorches it.
+ */
+export interface FieldTargetDef {
+  id: string;
+  kind: FieldEquipmentKind;
+  x: number;
+  y: number;
+  label: string;
+  /** Separate blasts needed (default 1). */
+  hp?: number;
+}
+
+/** A hold zone: the square of tiles within `radius` (Chebyshev) of (x, y). */
+export interface FieldAreaDef {
+  x: number;
+  y: number;
+  radius: number;
+  label: string;
+}
+
 export type FieldLegDef =
   | { kind: 'reachMarkers'; text: string; markers: FieldMarkerDef[] }
   | { kind: 'clearGroup'; text: string; group: string }
   | { kind: 'escapeRoute'; text: string; group: string; exit: FieldMarkerDef }
-  | { kind: 'door'; text: string; doorId: string };
+  | { kind: 'door'; text: string; doorId: string }
+  /**
+   * Wreck every target with blasts. `crew` (an enemy group) guards the nearest standing target while the leg runs.
+   */
+  | { kind: 'destroyTargets'; text: string; targets: FieldTargetDef[]; crew?: string }
+  /**
+   * Keep the area under control for `holdSec` seconds: time accrues while the human is inside it and no enemy is.
+   * Each wave sends an enemy group into the area `atSec` seconds after the leg starts (before that it holds its post).
+   */
+  | {
+      kind: 'holdArea';
+      text: string;
+      area: FieldAreaDef;
+      holdSec: number;
+      waves?: { group: string; atSec: number }[];
+    };
 
 export interface FieldDoorDef {
   id: string;
@@ -60,6 +102,11 @@ export interface FieldMissionDef {
   timeLimitSec: number;
   /** Three stars when cleared within this many seconds without losing more than one life. */
   parSec: number;
+  /**
+   * The district sector the mission is played in (`MISSION_SECTORS`, src/sim/mission/sectors.ts): the part of the
+   * district map closed by barricades. Absent = the whole district map.
+   */
+  sectorId?: string;
 }
 
 const m = (x: number, y: number, label: string): FieldMarkerDef => ({ x, y, label });
@@ -101,6 +148,7 @@ const defs: FieldMissionDef[] = [
   // ---------------------------------------------------------------- Oshodi (the vertical slice)
   {
     id: 'oshodi.approach',
+    sectorId: 'oshodi.terminalApproach',
     districtId: 'oshodi',
     name: 'Terminal Approach',
     start: [3, 42],
@@ -134,6 +182,7 @@ const defs: FieldMissionDef[] = [
   },
   {
     id: 'oshodi.railEdge',
+    sectorId: 'oshodi.railEdge',
     districtId: 'oshodi',
     name: 'Rail Edge',
     start: [44, 42],
@@ -159,6 +208,7 @@ const defs: FieldMissionDef[] = [
   // ---------------------------------------------------------------- Mushin
   {
     id: 'mushin.approach',
+    sectorId: 'mushin.sparePartsRow',
     districtId: 'mushin',
     name: 'Spare-Parts Row',
     start: [3, 30],
@@ -192,6 +242,7 @@ const defs: FieldMissionDef[] = [
   },
   {
     id: 'mushin.market',
+    sectorId: 'mushin.northAisles',
     districtId: 'mushin',
     name: 'Aisle Sweep',
     start: [3, 13],
@@ -226,6 +277,7 @@ const defs: FieldMissionDef[] = [
   // ---------------------------------------------------------------- Fadeyi / Somolu
   {
     id: 'fadeyiSomolu.approach',
+    sectorId: 'fadeyiSomolu.tollRoad',
     districtId: 'fadeyiSomolu',
     name: 'Toll Approach',
     start: [5, 27],
@@ -256,6 +308,7 @@ const defs: FieldMissionDef[] = [
   },
   {
     id: 'fadeyiSomolu.junctions',
+    sectorId: 'fadeyiSomolu.northJunctions',
     districtId: 'fadeyiSomolu',
     name: 'Junction Run',
     start: [4, 10],
@@ -281,6 +334,7 @@ const defs: FieldMissionDef[] = [
   // ---------------------------------------------------------------- Ebute-Metta
   {
     id: 'ebuteMetta.approach',
+    sectorId: 'ebuteMetta.yardApproach',
     districtId: 'ebuteMetta',
     name: 'Yard Approach',
     start: [ebuteX(3), 32],
@@ -315,6 +369,7 @@ const defs: FieldMissionDef[] = [
   // ---------------------------------------------------------------- Lagos Island
   {
     id: 'lagosIsland.approach',
+    sectorId: 'lagosIsland.ledgerRow',
     districtId: 'lagosIsland',
     name: 'Ledger Row',
     start: [4, 23],
@@ -345,6 +400,7 @@ const defs: FieldMissionDef[] = [
   },
   {
     id: 'lagosIsland.press',
+    sectorId: 'lagosIsland.pressGrid',
     districtId: 'lagosIsland',
     name: 'Press Run',
     start: [4, 4],
@@ -370,6 +426,7 @@ const defs: FieldMissionDef[] = [
   // ---------------------------------------------------------------- Lekki
   {
     id: 'lekki.approach',
+    sectorId: 'lekki.gateApproach',
     districtId: 'lekki',
     name: 'Gate Approach',
     start: [3, 26],
@@ -403,6 +460,7 @@ const defs: FieldMissionDef[] = [
   },
   {
     id: 'lekki.estate',
+    sectorId: 'lekki.northEstate',
     districtId: 'lekki',
     name: 'Estate Sweep',
     start: [3, 3],
