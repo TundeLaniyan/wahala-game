@@ -264,11 +264,9 @@ export class PlayerViews implements View {
     // Team Deathmatch: the team colours are the kit; the per-slot jersey hue would fight them (a purple White
     // team), so teammates keep the character's own look and differ by their headwear shape only
     const base = fighterIdentity(p.slot);
-    const identity = look
-      ? { ...base, hueShift: 0, hueIndex: 0, headwear: 'none' as const }
-      : p.team >= 0
-        ? { ...base, hueShift: 0, hueIndex: 0, headwearColor: teamColor(p.team) }
-        : base;
+    const teamKit =
+      p.team >= 0 ? { ...base, hueShift: 0, hueIndex: 0, headwearColor: teamColor(p.team) } : base;
+    const identity = look ? { ...base, hueShift: 0, hueIndex: 0, headwear: 'none' as const } : teamKit;
     const model =
       createRiggedPlayerModel(modelId, p.id * 0.37, identity) ?? createPlayerModel(p.characterId, identity);
     if (look && model.rigged) applyEnemyKit(model.rigged.body, modelId, look);
