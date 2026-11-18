@@ -284,21 +284,23 @@ const EBUTE_SECTIONS: SectionDef[] = [
     districtId: 'ebuteMetta',
     order: 1,
     name: 'Yard Approach',
-    summary: 'The yard fence leads to the signal box. Follow it and raid the signal shed.',
+    summary:
+      'Switch cabinets in the yard streets route the Ring’s night freight. Wreck them, take the sidings and raid the signal shed.',
     requires: [],
     missions: [
       {
         id: 'ebuteMetta.approach',
         format: 'field',
         name: 'Yard Approach',
-        objectiveCard: 'Follow the yard fence, raid the signal shed, return.',
-        summary: 'Switchmen walk the fence line. Reach the signal box, hold the shed door and raid it.',
+        objectiveCard: 'Wreck 4 cabinets, clear the sidings, keep the cabin, raid the shed.',
+        summary:
+          'Only blasts break the switch cabinets, and the sidings gate opens behind the last one. Beat the freight guards, keep the signal cabin for 25 seconds, then raid the signal shed.',
         missionRef: 'ebuteMetta.approach',
         doors: [{ doorId: 'shed', raidId: 'junctionToolShed' }],
         reward: title('ebuteMetta.approach', 'Fence Regular', 'The switchmen leave you the gate open.'),
         unlocks: ['section.ebuteMetta.s2'],
         ringWeakened:
-          'The signal shed is wrecked: the yard can no longer clear the lines for its night trains.',
+          'The switch cabinets and the signal shed are wrecked: the yard can no longer clear the lines for its night trains.',
       },
     ],
   },

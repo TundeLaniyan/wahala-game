@@ -371,6 +371,12 @@ const defs: FieldMissionDef[] = [
     parSec: 220,
   },
   // ---------------------------------------------------------------- Ebute-Metta
+  // Yard Approach (docs/CAMPAIGN_SECTOR_AI.md "Districts: Ebute Metta, Lagos Island, Lekki Phase 1", decisions
+  // DB1-DB3): the house streets south of the yard are worked by two street patrols; the switch cabinets that route the
+  // Ring's night freight stand in the lanes, minded by the switchmen; the yard lieutenant walks the lock-up yard by the
+  // fence. Wrecking the cabinets opens the sidings gate: the freight guards hold the wagon lanes; the relief crew, then
+  // whoever is left of the street patrols, come up from the streets while you keep the signal cabin. Then the
+  // signal-shed raid, and back out to the yard gate.
   {
     id: 'ebuteMetta.approach',
     sectorId: 'ebuteMetta.yardApproach',
@@ -380,9 +386,26 @@ const defs: FieldMissionDef[] = [
     returnMarker: m(ebuteX(6), 36, 'YARD GATE'),
     legs: [
       {
-        kind: 'reachMarkers',
-        text: 'Walk through the 3 checkpoints to the signal box.',
-        markers: [m(ebuteX(10), 36, 'FENCE'), m(ebuteX(20), 32, 'SIDING'), m(ebuteX(30), 27, 'SIGNAL BOX')],
+        kind: 'destroyTargets',
+        text: 'Destroy the 4 switch cabinets on the yard streets.',
+        targets: [
+          { id: 'cabinetWest', kind: 'switchCabinet', x: ebuteX(1), y: 29, label: 'SWITCH CABINET' },
+          { id: 'cabinetMid', kind: 'switchCabinet', x: ebuteX(12), y: 29, label: 'SWITCH CABINET' },
+          { id: 'cabinetYard', kind: 'switchCabinet', x: ebuteX(27), y: 35, label: 'SWITCH CABINET', hp: 2 },
+          { id: 'cabinetFence', kind: 'switchCabinet', x: ebuteX(36), y: 31, label: 'SWITCH CABINET', hp: 2 },
+        ],
+        crew: 'switchmen',
+      },
+      { kind: 'clearGroup', text: 'Defeat the 2 freight guards on the sidings.', group: 'freight' },
+      {
+        kind: 'holdArea',
+        text: 'Keep the signal cabin clear for 25 seconds.',
+        area: { x: ebuteX(25), y: 22, radius: 1, label: 'SIGNAL CABIN' },
+        holdSec: 25,
+        waves: [
+          { group: 'relief', atSec: 4 },
+          { group: 'streets', atSec: 12 },
+        ],
       },
       { kind: 'door', text: 'Stand on the signal-shed door for 1 second to raid it.', doorId: 'shed' },
     ],
@@ -398,23 +421,34 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
+      // the street patrols: the middle street (between the houses and the lock-ups) and the north street
+      guard('Yard Enforcer', ebuteX(12), 32, 'streets', patrol('agbero', [ebuteX(4), 31], [ebuteX(20), 31])),
+      guard('Yard Runner', ebuteX(14), 27, 'streets', patrol('areaBoy', [ebuteX(2), 27], [ebuteX(22), 27])),
+      // the switchmen mind the cabinets (they stand by the nearest one while the cabinets stand)
+      guard('Switchman', ebuteX(13), 30, 'switchmen', post('agbero')),
+      chaser('Bottle Switchman', ebuteX(28), 34, 'switchmen', post('bottleThrower', 3)),
+      // behind the sidings gate: the freight guards on the wagon lanes
+      blocker('Freight Guard', ebuteX(33), 23, 'freight', post('heavyEnforcer', 2)),
+      chaser('Freight Thrower', ebuteX(34), 20, 'freight', post('bottleThrower', 2)),
+      // the relief enforcer loiters in the south yard until the cabin is taken
       guard(
-        'Switchman',
-        ebuteX(12),
-        34,
-        'switchmen',
-        patrol('ringSecurity', [ebuteX(12), 32], [ebuteX(12), 36]),
+        'Relief Enforcer',
+        ebuteX(20),
+        35,
+        'relief',
+        patrol('agbero', [ebuteX(18), 35], [ebuteX(24), 35]),
       ),
+      // the yard lieutenant walks the lock-up yard by the fence (he reads traps: a long fight, never required)
       guard(
-        'Switchman',
-        ebuteX(26),
-        34,
-        'switchmen',
-        patrol('ringSecurity', [ebuteX(22), 34], [ebuteX(30), 34]),
+        'Yard Lieutenant',
+        ebuteX(32),
+        35,
+        'yard',
+        patrol('lieutenant', [ebuteX(29), 36], [ebuteX(37), 36], [ebuteX(37), 33], [ebuteX(34), 34]),
       ),
     ],
-    timeLimitSec: 360,
-    parSec: 180,
+    timeLimitSec: 540,
+    parSec: 300,
   },
   // Ebute-Metta section 2 is a standalone raid (railYardGoods): no field mission.
   // ---------------------------------------------------------------- Lagos Island
