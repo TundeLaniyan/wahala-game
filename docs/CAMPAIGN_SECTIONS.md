@@ -22,8 +22,15 @@ Two formats live inside sections: a **field mission** is a route on the district
 | Ebute-Metta | `ebuteMetta.approach` Yard Approach: 3 markers, door -> `junctionToolShed` | `ebuteMetta.railYard` Rail Yard Goods: a STANDALONE raid (`railYardGoods`) | Ikenna Wayside |
 | Lagos Island | `lagosIsland.approach` Ledger Row: clear 2 auditors, 2 counters, door -> `recordsVault` | `lagosIsland.press` Press Run (field): 2 desks, escape the bureau auditor | Barrister Quill |
 | Lekki | `lekki.approach` Gate Approach: 2 markers, door -> `standbyPlant` | `lekki.estate` Estate Sweep (field): clear the patrol, 2 posts, escape the hounds | Bamidele Halcyon |
+| Ojuelegba finale (opens after the Lekki boss; FN1-FN10) | `ojuelegba.return` Return to Ojuelegba (field, no door): clear 2 patrols, destroy 2 barrier locks (gate opens), destroy 2 gate locks (gate opens), return | `ojuelegba.junction` Hold the Junction (field): keep the bus stop 25 s against 2 waves, destroy 3 control boxes (a lieutenant guards them), return | The Landlord (working title, `controlPoints`), `ojuelegba.boss` |
 
 Real vs placeholder: all eleven field missions are real sim data (tiles checked for reachability and escape fairness by `tests/field-nodes.test.ts`) but only **Oshodi section 1 has a scripted full playthrough** (`tests/field-missions.test.ts`, `tests/app/campaign-sections-flow.test.ts`); the others are tested per mechanic and for data validity, and are untuned against real play. Oshodi has intro/outro scenes and a Read-more text; the other districts have one-line objective cards and two-sentence summaries. Four districts' doors reuse another district's raid layout (only six raid ids exist): Fadeyi and Ebute both use `junctionToolShed`, Mushin's bonus door reuses `partsStoreroom`. Section rewards are small titles (`reward.section.<mission>`), kept apart from boss rewards.
+
+The Ojuelegba finale (decisions FN1-FN10, `docs/CAMPAIGN_SECTOR_AI.md` "Part: Ojuelegba finale") adds sections
+`ojuelegba.s1`-`s3` and two field missions (21 sections, 14 stored missions, 21 Parts missions): its sections open when all
+six district bosses are cleared; the hub stays the prologue hub; the finale boss's record is the hub's
+`districts.ojuelegba` (status stays `cleared`; clears and stars count only once the chapter is open), optional
+`interimSeen`; no save version change.
 
 ## 3. Field mission legs (`src/sim/mission/field.ts`, data `fieldDefs.ts`)
 

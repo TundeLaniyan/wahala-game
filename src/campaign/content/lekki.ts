@@ -124,8 +124,9 @@ export const LEKKI_BOSS: BossDef = {
       'modifier.longBlackout',
     ],
   },
+  // (decision FN9, provisional wording: the jetty escape moved after the Ojuelegba finale)
   consequence:
-    'The estate grid goes dark. The Ring has no links left. The finale opens: the Chairman leaves by the lagoon jetty and is never seen.',
+    'The estate grid goes dark. The Ring has no district left but one: Ojuelegba is still locked, and the finale opens at home.',
   consequenceFlags: ['lekki.gridDark'],
   replayModifier: {
     id: 'longBlackout',

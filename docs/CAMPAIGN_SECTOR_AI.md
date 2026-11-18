@@ -650,3 +650,114 @@ player broke, a longer `walkGraceSec` for a big map, `callRoles` for his waves, 
   their roles read through the existing role pips; their behaviour reads through the variant perception.
 - No browser screenshots were taken of the anchor ring; the Playwright specs that cover the mission panel and the
   briefing text were run (see the status entry).
+
+# Part: Ojuelegba finale (decisions FN1-FN10)
+
+Branch `claude/wahala-csa-finale` (from `60c7e08`). Founder direction (2026-11-18): build the planned three-part
+Ojuelegba finale (docs/STORY_BIBLE.md 5.2) as the last campaign chapter on the existing mission, sector, boss-recipe and
+generator-objective systems (no escort engine, no open world). The reference arena `rumbleOjuelegba` (45 x 33) and its
+cover map are UNCHANGED: every finale mission is a sector stamped over it (tested: the layout hash, no sector in City
+Rumble). Data: `src/sim/mission/finaleDefs.ts`; content: `src/campaign/content/finale.ts`.
+
+## 1. The chapter
+
+| # | Mission id | Format | Sector (rects) | Legs / loop |
+| --- | --- | --- | --- | --- |
+| 19 | `ojuelegba.return` Return to Ojuelegba | field | `ojuelegba.shopfrontReturn`: the Shopfront Lane and the street corner, [0,22,30,30] + [0,19,8,21], 218 tiles | defeat 2 Ring patrols (agbero, route marshal: patrols to trap) -> destroy the 2 BARRIER LOCKS at the lane bend (a heavy guards them) -> the lane barrier GATE opens -> destroy the 2 GATE LOCKS at the corner (market enforcer, area-boy runner) -> the corner GATE opens -> return to the JUNCTION CORNER |
+| 20 | `ojuelegba.junction` Hold the Junction | field | `ojuelegba.pierJunction`: the pier court and the through road under the flyover, [10,11,30,21], 190 tiles | keep the BUS STOP (5 x 5) for 25 s against two waves (2 area boys at 2 s; agbero + market enforcer at 12 s) -> destroy the 3 CONTROL BOXES guarded by a Ring LIEUTENANT and Ring security -> return to the west pavement |
+| 21 | `ojuelegba.boss` Break the Ring | boss | `ojuelegba.danfoYard`: the danfo pocket (the impound) and the repair court, [31,11,44,32] + [32,2,43,10], 333 tiles | the `controlPoints` verb on the boss recipe: shut the control points down with blasts; exposed, the Landlord walks to the point broken last to re-lock it and is committed there; three blasts on him |
+
+The three sectors share no tile. Barricades are natural street objects (parked danfos on the road and at the crossing,
+jersey barriers on the pavements, Ring checkpoints across the through road, steel gates on the service loop and the
+workshop-yard partition). Hazards: in 19 and 20 every scheduled sweep leaves the sector and is off (drops land inside);
+in 21 the danfo DEPARTURE strip (x 41-42) lies wholly inside and stays on (telegraphed 2.5 s, held while anyone cannot
+walk off), the through-road traffic is off. No door raid: every existing raid layout names another district and faction
+(Fadeyi's tool shed, Lekki's plant ...), so none fits Ojuelegba honestly (FN2).
+
+**Gates between legs (FN3).** Mission 19 is the first mission to use sector gates: `laneBarrier` (column 14, rows 25-30)
+opens after leg 1, `cornerGate` (row 22, x 1-6) after leg 2. The route clearing plans across a closed gate; the data
+tests flood with gates passable (they open in play) and a finale test proves the far lane and the corner are shut until
+their leg is done. **Fix (DS7):** equipment next to an enemy post or on a patrol line used to be cleared with the crates
+around the post (the leg then had nothing to blast); equipment tiles are now claimed (no seat on them) and stood again
+after the posts and patrols are placed.
+
+## 2. The boss: `controlPoints` on the recipe (FN5-FN7)
+
+`src/sim/mission/objectives/controlPoints.ts` (~100 lines, built from the supply and junction verbs): a point takes one
+hit per separate blast of the HUMAN's (`freshBlasts`; an enemy blast, standing or a punch does nothing); a shut point
+clears its authored `opens` crates (the route physically reopens); a LOCKER (runner crew) standing on a shut point re-locks
+it after `crewTicks`; a live point calls a telegraphed LOCKDOWN lane (>= 2.5 s, the `marshal` strike kind) through it.
+
+| phase | points | goal | blasts each | re-lock | lockdown every / warning / lane |
+| --- | --- | --- | --- | --- | --- |
+| 1 Locked Out | 3 (the shop-lane mouth, the road mouth, the return lane) | 2 | 1 | never | 9 s / 3 s / 4 each way |
+| 2 Re-Lock | 4 | 3 | 1 | 6 s | 7 s / 2.75 s / 5 |
+| 3 Last Key | 4 | 3 | 2 | 5 s | 6 s / 2.5 s / 6 |
+
+Recipe: `bossRecipe({ anchor: 'lastBroken', walkGraceSec: 14, callRoles: ['escort', 'runner', 'meleeGuard'] })`, the
+default windows 26 / 20 / 15 s, three hits, five windows. Crew (generator bots with variant perception): Landlord escort
+(Ring security), yard enforcer (agbero), two lockers (area boys), gate heavy (heavy), roof spotter (bottle thrower).
+Clock 480 s, par 300 s. The boss mission reads `MissionDef.sectorId` (`missionSectorOf`) and starts the human on
+`MissionDef.start` (36,30); every seat snaps to free floor inside the sector. The six district bosses carry neither and
+are byte-identical. Replay modifier **Curfew** (provisional): the exposure window x 0.8.
+
+**Look (FN8).** `MissionDef.boss.look: 'boss'` sets `Player.enemyVariant` on the generator-bot boss WITHOUT an
+`enemyKind`: presentation only (no rule reads a variant without a kind; tested), drawn by the existing Boss variant kit
+(the heavier boss rig, cream suit, fedora, shades and chain, gold leader ring). `render`'s `enemyVariantOf` returns such a
+seat's variant. No bespoke art.
+
+## 3. Measured (`npx tsx scripts/finale-audit.ts --seeds 6`)
+
+Harnesses: missions 19-20 `scripts/lib/fieldFight.ts` (new: a scripted human with ordinary intents against the REAL
+enemy bots at the level's bot level, crates and hazards on, three lives; it never stands in danger, jabs a wind-up, lays a
+generator under its feet when an enemy is beside it and it can walk clear, blasts equipment from any tile whose blast
+reaches it, holds the zone and fights intruders); mission 21 `scripts/lib/bossFight.ts` (unchanged; the generator plan
+and the pure punch player).
+
+| mission | level | plan | wins | median win (s) | lives lost (mean) |
+| --- | --- | --- | --- | --- | --- |
+| 19 Return | Easy / Normal / Hard | generator | 6/6, 6/6, 6/6 | 51 / 51 / 62 | 0 / 0 / 0.2 |
+| 20 Junction | Easy / Normal / Hard | generator | 6/6, 6/6, 6/6 | 85 / 130 / 121 | 0 / 0.3 / 0.5 |
+| 21 Break the Ring | Easy / Normal / Hard | generator | 6/6, 6/6, 6/6 | 227 / 225 / 287 | 0 / 1.0 / 0.5 |
+| 21 Break the Ring | Normal | pure punch | 0/3 (no point broken, never exposed) | - | 0.3 |
+
+Over 10 Normal seeds the field plan won 19 in 9/10 (one run boxed in by both lock guards in the corner pocket) and 20 in
+10/10. The scripted player is a competent bot: its 19 and 20 times are short (a small sector; it blasts equipment the
+moment it can) and a human will be slower; par is 150 s (19) and 240 s (20). Tests: `tests/campaign-finale-playthrough.test.ts`
+(19 and 20: a majority of six Normal seeds; 21: the generator plan wins on Easy / Normal / Hard, punching breaks nothing).
+
+## 4. Campaign, save and story (FN1, FN4, FN9, FN10)
+
+- `MissionId` gains `'ojuelegba'` (`DistrictMissionId` = the six; `MISSION_IDS` still means the six district bosses;
+  `CAMPAIGN_MISSION_IDS` = the six then the finale). The hub content stays the hub (`districts.ojuelegba.boss` is null);
+  the chapter is `CAMPAIGN.finaleChapter` (`LANDLORD`, `FINALE_BRIEFING`, `INTERIM`) and `SECTIONS.ojuelegba`.
+- Unlock: the chapter opens when all six district bosses are cleared (`finaleOpen`), missions in order 19 -> 20 -> boss;
+  `nextMission` points to 19 after Lekki. Save version 2 unchanged: the finale boss's attempts / clears / stars / time /
+  intro / modifiers live on the hub record `districts.ojuelegba` (its status stays `cleared` for the prologue), the
+  field missions in `missions`, the sections in `sections`; optional `interimSeen`. Repair: the finale counts only once
+  the six are cleared; mission 20 never without 19; `completed` needs the finale won (a save that watched the old Lekki
+  ending reopens on the chapter: not lost, not auto-cleared).
+- Parts: content-driven, 21 missions, 105 at most (19-21 pay 3 / +1 / +1 like the others); the Workshop seat bonus applies
+  in the finale's field and boss missions (`loadoutBonusFor(save, 'ojuelegba')`), never outside the campaign.
+- Story: after the Lekki boss the result offers "Home to Ojuelegba": the INTERIM beat (the old finale's Lekki opening and
+  the radio roll call, then "the estates go dark, but Ojuelegba is still locked"); Continue plays it once for a save that
+  never saw it. After mission 21 the FINALE scene: the routes reopen, the impounded danfo is released, Mama Put's stall
+  and the junction are lit, Bayo faces the street, THEN the Chairman's three existing lines and his escape by the pale
+  boat from the jetty, then the ending card (teaser unchanged).
+- Map: the hub node shows the final chapter (`data-finale` locked / available / cleared, badge "Final n/3" then
+  "Freed", stars), and its card lists the chapter's liberation, its three sections and the keeper by his working title;
+  the briefing reads "The finale · Ojuelegba"; the Complete screen lists Curfew.
+
+## 5. Screenshots
+
+`docs/screenshots/campaign-sector-ai/finale-19-return.jpg`, `finale-20-junction.jpg`, `finale-21-boss.jpg` (landscape
+phone 740 x 360 CSS px, device scale 2, Low quality), taken with `node scripts/finale-shots.mjs` through the real campaign
+controller.
+
+## 6. Provisional and open
+
+- PROVISIONAL (founder review): the working title "The Landlord" and his title, every new story line (flagged
+  `provisional: true`), the reward "Open Road", the Curfew modifier, the faction "Underbridge Lockmen", Bayo's two lines,
+  the Lekki consequence line, the reuse of the Boss variant look.
+- Not done: bespoke Landlord art, voice lines, a story panel for the interim beat (it reuses the finale's Lekki promenade
+  panel) and for the finale (still the Lekki promenade panel), a door raid of its own, per-fighter finale lines.
