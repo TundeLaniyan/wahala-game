@@ -10,7 +10,7 @@ Every mission district (not the Ojuelegba hub) has three sections, played in ord
 2. **Middle**: a second field mission, or a standalone raid.
 3. **Boss**: the existing boss mission, unchanged (reward, unlocks, replay modifier, phases). Playable only once sections 1 and 2 are cleared. Clearing it clears the district, exactly as before.
 
-Two formats live inside sections: a **field mission** is a route on the district's City Rumble arena (follow camera, radial blasts); a **raid** is a compact classic mission (`src/sim/raid`, cross blasts). A field mission can raise a raid through a **door**; the raid is played, and the player returns to the field map on the tile in front of the door.
+Two formats live inside sections: a **field mission** is a route on the district's City Rumble arena (follow camera, radial blasts), played inside a **sector** of it: a recognisable part of the district closed by barricades (parked danfos, jersey barriers, gates, Ring checkpoints), with the camera, minimap and renderer kept to it (`docs/CAMPAIGN_SECTOR_AI.md`, decisions DS1-DS9); a **raid** is a compact classic mission (`src/sim/raid`, cross blasts). A field mission can raise a raid through a **door**; the raid is played, and the player returns to the field map on the tile in front of the door.
 
 ## 2. Table
 
@@ -40,6 +40,8 @@ A section field mission is a `state.mission` with `field` set (`MissionSpec.fiel
 `resolveRaid` marks the door (done / failed / idle), carries `hpLeft` into the human's vitals when they have them (never above the maximum), counts a three-star raid as a bonus (it can earn the third star), advances the route when the door was the current leg, and puts the human on the return tile with 2 s of protection. A stale or mismatched answer changes nothing. Optional doors (`required: false`) are open from the start and only pay the bonus. `missionView` gains optional fields (`format: 'field'`, `fieldId`, `phaseText`, `legIndex`, `legCount`, `legKind`, `doors`, `pendingRaid`); the objective is the new `ObjectiveKind` member `fieldRoute`. The boss seat is `-1` (no boss); a lost life respawns at the checkpoint.
 
 Stars: 1 cleared; 2 with at most one life lost; 3 also within the par time or with a three-star raid.
+
+Two more leg kinds exist for later missions (not assigned yet, `docs/CAMPAIGN_SECTOR_AI.md`): `destroyTargets` (wreck Ring equipment with your own blasts) and `holdArea` (keep a zone clear for a time while enemy waves come in).
 
 ## 4. Save and resume (`src/campaign`)
 

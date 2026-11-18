@@ -120,7 +120,6 @@ export function enterLeg(state: GameState, m: MissionState, def: FieldMissionDef
       const n = node('area', leg.area.x, leg.area.y, leg.area.label, w);
       n.radius = leg.area.radius;
       nodes.push(n);
-      if (f.hold) f.hold = { ticks: 0, inside: false, contested: false };
       break;
     }
     case 'returnRoute':

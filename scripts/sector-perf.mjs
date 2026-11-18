@@ -61,6 +61,15 @@ async function start(page, id, noSector) {
       timeout: 180_000,
     },
   );
+  // past the countdown (on software WebGL it would take many seconds of slow frames): the follow camera, in play
+  await page.evaluate(() => {
+    const w = window.__WAHALA__;
+    const c = w.controller();
+    c.frozen = true;
+    while (c.state.match.phase !== 'playing') w.stepTicks(10);
+    c.frozen = false;
+    w.renderer().cutCamera();
+  });
   await page.waitForTimeout(1500);
 }
 
