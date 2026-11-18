@@ -237,7 +237,11 @@ export interface SectionMissionDef {
   /** Optional longer text for the "Read more" card and the story scenes. */
   readMore?: string;
   intro?: StoryLine[];
-  /** Optional one line for the result screen: what the Ring lost when this mission was won (docs/STORY_BIBLE.md). */
+  /**
+   * One short line for the result screen and the map: what the Ring lost when this mission was won (docs/STORY_BIBLE.md
+   * section 6). Optional in the type so new content can land first, but every shipped mission has one (decision PR14,
+   * tested in tests/campaign-progression-wide.test.ts).
+   */
   ringWeakened?: string;
   outro?: StoryLine[];
 }

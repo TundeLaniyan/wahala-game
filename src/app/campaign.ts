@@ -32,6 +32,7 @@ import {
   nextMission,
   partsGained,
   persistSave,
+  refundUpgrades,
   sectionOfMission,
   setCampaignLevel,
   setLoadout,
@@ -155,7 +156,11 @@ export function sectionOutcomeFromMatch(
   };
 }
 
-/** The human's Generator Parts upgrades for a mission of this district, as build options (none: nothing added). */
+/**
+ * The human's Generator Parts upgrades for a field or boss mission of this district, as build options (none: nothing
+ * added). Only `startMission` and `startField` call it: raids (door or standalone) keep their own Classic loadout
+ * (decisions PR7, PR11).
+ */
 function withLoadout(save: CampaignSave, district: MissionId): { loadoutBonus?: LoadoutBonus } {
   const bonus = loadoutBonusFor(save, district);
   return bonus ? { loadoutBonus: bonus } : {};
@@ -372,7 +377,7 @@ export class CampaignController {
   }
 
   /**
-   * Buys the next level of a Generator Parts upgrade (decisions PR1-PR8). Only between missions, like the level: a run
+   * Buys the next level of a Generator Parts upgrade (decisions PR1-PR15). Only between missions, like the level: a run
    * is always played with the loadout it started with. False when it cannot be bought (cap, Parts, slice off).
    */
   buyUpgrade(kind: UpgradeKind): boolean {
@@ -382,6 +387,22 @@ export class CampaignController {
       return false;
     }
     const save = buyUpgrade(ui.save, kind, this.deps.now());
+    if (save === ui.save) return false;
+    this.commit(save);
+    return true;
+  }
+
+  /**
+   * Free respec (decision PR12): every bought level is returned; Parts are derived, so buying again costs the same. Only
+   * between missions, like buying. False when nothing was bought or a mission is running.
+   */
+  refundUpgrades(): boolean {
+    const ui = this.need();
+    if (ui.active) {
+      this.update({ notice: 'Upgrades can be changed from the campaign map, not during a mission.' });
+      return false;
+    }
+    const save = refundUpgrades(ui.save, this.deps.now());
     if (save === ui.save) return false;
     this.commit(save);
     return true;
@@ -779,7 +800,13 @@ export class CampaignController {
       selected: district ?? ui.selected,
       modifier: null,
       result: null,
-      sectionResult: { missionId: missionId ?? '', kind: 'raid', outcome, summary },
+      sectionResult: {
+        missionId: missionId ?? '',
+        kind: 'raid',
+        outcome,
+        summary,
+        partsGained: partsGained(ui.save, summary.save),
+      },
     });
     this.setMenu(['campaign', 'campaignResult']);
   }

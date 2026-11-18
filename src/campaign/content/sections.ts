@@ -34,8 +34,17 @@ const BOSS_OF: Record<MissionId, DistrictContent> = {
   lekki: LEKKI,
 };
 
-/** The boss section of a district: the existing boss mission, its reward and unlocks untouched. */
-function bossSection(district: MissionId, name: string, summary: string, card: string): SectionDef {
+/**
+ * The boss section of a district: the existing boss mission, its reward and unlocks untouched. `ringWeakened` is the
+ * one short line the result screen shows for it (what the Ring lost; decision PR14).
+ */
+function bossSection(
+  district: MissionId,
+  name: string,
+  summary: string,
+  card: string,
+  ringWeakened: string,
+): SectionDef {
   const boss = BOSS_OF[district].boss!;
   const mission: SectionMissionDef = {
     id: `${district}.boss`,
@@ -46,6 +55,7 @@ function bossSection(district: MissionId, name: string, summary: string, card: s
     missionRef: district,
     reward: boss.reward,
     unlocks: boss.reward.unlocks ?? [],
+    ringWeakened,
   };
   return {
     id: `${district}.s3`,
@@ -140,6 +150,7 @@ const OSHODI_SECTIONS: SectionDef[] = [
     'The Controller',
     'The terminal canopies and the dispatch radio, with Oga Sunmola behind them. Jam the relays and take him off his own stage.',
     'Jam the relay masts, then finish Oga Sunmola.',
+    'The relay masts are jammed and the dispatch radio goes quiet: buses leave on honest timetables.',
   ),
 ];
 
@@ -164,6 +175,8 @@ const MUSHIN_SECTIONS: SectionDef[] = [
         doors: [{ doorId: 'storeroom', raidId: 'partsStoreroom' }],
         reward: title('mushin.approach', 'Row Regular', 'The stall owners nod when you pass.'),
         unlocks: ['section.mushin.s2'],
+        ringWeakened:
+          'The storeroom shelves are emptied back onto the row: the Ring’s rental stock has a hole in it.',
       },
     ],
   },
@@ -186,6 +199,7 @@ const MUSHIN_SECTIONS: SectionDef[] = [
         doors: [{ doorId: 'backStall', raidId: 'partsStoreroom' }],
         reward: title('mushin.market', 'Aisle Regular', 'Runners step aside for you in the north aisles.'),
         unlocks: ['section.mushin.s3'],
+        ringWeakened: 'The runners lose the north aisles: the broker has no one left to restock her stacks.',
       },
     ],
   },
@@ -194,6 +208,7 @@ const MUSHIN_SECTIONS: SectionDef[] = [
     'The Parts Broker',
     'Madam Ronke keeps the hoard behind her stacks. Blast the stacks while her runners restock them.',
     'Destroy the parts stacks, then finish Madam Ronke.',
+    'The hoarded stacks are blasted open: mechanics take the parts the Ring was renting back.',
   ),
 ];
 
@@ -222,6 +237,8 @@ const FADEYI_SECTIONS: SectionDef[] = [
           'The approach road lets you through without a chit.',
         ),
         unlocks: ['section.fadeyiSomolu.s2'],
+        ringWeakened:
+          'The tool shed’s chains and padlocks are broken: the toll approach cannot be shut again.',
       },
     ],
   },
@@ -247,6 +264,8 @@ const FADEYI_SECTIONS: SectionDef[] = [
           'Marshals know better than to stop you now.',
         ),
         unlocks: ['section.fadeyiSomolu.s3'],
+        ringWeakened:
+          'The junction posts are knocked flat: the marshals lose their count of who crossed and who paid.',
       },
     ],
   },
@@ -255,6 +274,7 @@ const FADEYI_SECTIONS: SectionDef[] = [
     'The Garage Master',
     'Marshal Kobo controls every crossing. Hold the junctions against his marshals until they open.',
     'Hold the junction zones, then finish Marshal Kobo.',
+    'The toll bars at every junction come down: commuters cross without paying by the hour.',
   ),
 ];
 
@@ -277,6 +297,8 @@ const EBUTE_SECTIONS: SectionDef[] = [
         doors: [{ doorId: 'shed', raidId: 'junctionToolShed' }],
         reward: title('ebuteMetta.approach', 'Fence Regular', 'The switchmen leave you the gate open.'),
         unlocks: ['section.ebuteMetta.s2'],
+        ringWeakened:
+          'The signal shed is wrecked: the yard can no longer clear the lines for its night trains.',
       },
     ],
   },
@@ -302,6 +324,8 @@ const EBUTE_SECTIONS: SectionDef[] = [
           'The freight handlers keep your name off the manifest.',
         ),
         unlocks: ['section.ebuteMetta.s3'],
+        ringWeakened:
+          'The marked freight is broken open where it stands: the night cargo never leaves the yard.',
       },
     ],
   },
@@ -310,6 +334,7 @@ const EBUTE_SECTIONS: SectionDef[] = [
     'The Timetable',
     'Ikenna Wayside writes the yard clock. Hit the dispatch switches only when the rail windows are open.',
     'Hit the switches inside the rail windows, then finish Wayside.',
+    'The dispatch switches are dead and the yard bells stop: no more Ring freight by night.',
   ),
 ];
 
@@ -333,6 +358,7 @@ const LAGOS_SECTIONS: SectionDef[] = [
         doors: [{ doorId: 'annexe', raidId: 'recordsVault' }],
         reward: title('lagosIsland.approach', 'Row Regular', 'Clerks stop asking for your receipt.'),
         unlocks: ['section.lagosIsland.s2'],
+        ringWeakened: 'The records annexe is cracked open: the forged ledgers are out of the vault.',
       },
     ],
   },
@@ -354,6 +380,7 @@ const LAGOS_SECTIONS: SectionDef[] = [
         missionRef: 'lagosIsland.press',
         reward: title('lagosIsland.press', 'Press Regular', 'The press room leaves a stool for you.'),
         unlocks: ['section.lagosIsland.s3'],
+        ringWeakened: 'The audit slips reach the press lane: the bureau can no longer bury its paper trail.',
       },
     ],
   },
@@ -362,6 +389,7 @@ const LAGOS_SECTIONS: SectionDef[] = [
     'The Registrar',
     'Barrister Quill guards the receipts. Collect the ledgers and deliver them to the press while the auditors chase.',
     'Deliver the ledgers to the press, then finish Quill.',
+    'The forged ledgers are on the press: the bureau can no longer decide who exists on paper.',
   ),
 ];
 
@@ -385,6 +413,8 @@ const LEKKI_SECTIONS: SectionDef[] = [
         doors: [{ doorId: 'plant', raidId: 'standbyPlant' }],
         reward: title('lekki.approach', 'Gate Regular', 'The side gate opens a little faster for you.'),
         unlocks: ['section.lekki.s2'],
+        ringWeakened:
+          'The standby plant’s switchgear is blasted: the estates’ private feed starts to flicker.',
       },
     ],
   },
@@ -407,6 +437,7 @@ const LEKKI_SECTIONS: SectionDef[] = [
         missionRef: 'lekki.estate',
         reward: title('lekki.estate', 'Estate Regular', 'The hounds lose interest in your scent.'),
         unlocks: ['section.lekki.s3'],
+        ringWeakened: 'The estate patrol is broken up: the grid’s control house stands unguarded.',
       },
     ],
   },
@@ -415,6 +446,7 @@ const LEKKI_SECTIONS: SectionDef[] = [
     'The Steward',
     'Bamidele Halcyon runs the standby grid. Switch the systems off in the signalled order.',
     'Switch the systems off in order, then finish Halcyon.',
+    'The standby grid goes dark: the estates lose the power they bought with the mainland’s blackouts.',
   ),
 ];
 

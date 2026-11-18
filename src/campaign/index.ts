@@ -87,10 +87,13 @@ export {
   CAMPAIGN_PROGRESSION,
   NO_UPGRADES,
   UPGRADE_KINDS,
+  affordableUpgrades,
   bestStarsOf,
   buyUpgrade,
   canBuy,
+  districtParts,
   loadoutBonusFor,
+  maxPartsPerMission,
   nextCost,
   partsAvailable,
   partsEarned,
@@ -99,8 +102,10 @@ export {
   partsMissions,
   partsSpent,
   progressionDistrict,
+  progressionEnabled,
+  refundUpgrades,
   repairUpgrades,
   upgradeCap,
   upgradesOf,
 } from './upgrades';
-export type { CampaignProgressionConfig, UpgradeDef } from './upgrades';
+export type { CampaignProgressionConfig, ProgressionDistricts, UpgradeDef } from './upgrades';

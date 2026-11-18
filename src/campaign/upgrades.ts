@@ -1,5 +1,5 @@
 /**
- * Generator Parts and the campaign-only upgrades (decisions PR1-PR8, docs/CAMPAIGN_GAMEPLAY_BIBLE.md section 2).
+ * Generator Parts and the campaign-only upgrades (decisions PR1-PR15, docs/CAMPAIGN_GAMEPLAY_BIBLE.md section 2).
  *
  * Parts are never stored: they are DERIVED from the best stars the save already keeps for each eligible mission, so
  *   - a first clear pays `firstClear`, each better star pays `perExtraStar` once, and nothing else can pay;
@@ -8,11 +8,14 @@
  * Only the upgrade levels bought are stored (`CampaignSave.upgrades`, optional: no save-version change). They are clamped
  * to the caps and refunded down to what the Parts can pay for when a save is repaired.
  *
- * Scope (PR2): the Oshodi missions only. Everything is data in `CAMPAIGN_PROGRESSION`; `enabled: false` turns the whole
- * slice off (no Parts, no shop, no bonus in missions) without touching a save.
+ * Scope (PR9): every section mission in the campaign content (field, raid and boss) earns Parts, so a mission added to
+ * `src/campaign/content/sections.ts` (e.g. the Ojuelegba finale) earns them with no change here. The upgrades apply to
+ * the human seat of every field and boss mission (never raids: `loadoutBonusFor` is only asked by those two builders).
+ * Everything is data in `CAMPAIGN_PROGRESSION`; `enabled: false` turns it all off (no Parts, no shop, no bonus in
+ * missions) without touching a save.
  */
-import type { LoadoutBonus, MissionId } from '../sim';
-import { allSectionMissions, sectionOfMission } from './content';
+import type { LoadoutBonus } from '../sim';
+import { allSectionMissions, getSectionMission, sectionOfMission } from './content';
 import type { CampaignSave, CampaignUpgrades, UpgradeKind } from './types';
 
 export const UPGRADE_KINDS: readonly UpgradeKind[] = ['capacity', 'range'];
@@ -24,13 +27,18 @@ export interface UpgradeDef {
   effect: string;
   /** Parts for each level, in order; the cap is `costs.length`. */
   costs: readonly number[];
+  /** What the upgrade adds in total at each level (index 0 = level 1), for the shop's "now / next" text. */
+  levelEffects: readonly string[];
 }
 
+/** Which districts earn Parts and apply the upgrades: every one (`'all'`, the default) or a list (tests, a rollback). */
+export type ProgressionDistricts = 'all' | readonly string[];
+
 export const CAMPAIGN_PROGRESSION = {
-  /** The whole slice. False: no Parts shown, no shop, no bonus in any mission; saves are left as they are. */
+  /** The whole system. False: no Parts shown, no shop, no bonus in any mission; saves are left as they are. */
   enabled: true,
-  /** Districts whose missions earn Parts AND whose missions apply the upgrades (PR2: Oshodi only for now). */
-  districts: ['oshodi'] as readonly MissionId[],
+  /** PR9: every district (the Oshodi slice was `['oshodi']`, PR2). */
+  districts: 'all' as ProgressionDistricts,
   parts: {
     /** Paid once, by the first win (every win is at least one star). */
     firstClear: 3,
@@ -41,21 +49,23 @@ export const CAMPAIGN_PROGRESSION = {
     capacity: {
       kind: 'capacity',
       name: 'Generator capacity',
-      effect: '+1 generator down at once (an Extra Socket still adds one more).',
-      costs: [6],
+      effect: '+1 generator down at once per level (an Extra Socket still adds one more).',
+      costs: [6, 14],
+      levelEffects: ['+1 generator at once', '+2 generators at once'],
     },
     range: {
       kind: 'range',
       name: 'Blast range',
-      effect: '+1 blast range (Petrol and Diesel still build on it).',
-      costs: [6],
+      effect: '+1 blast range per level (Petrol and Diesel still build on it).',
+      costs: [6, 14],
+      levelEffects: ['+1 blast range', '+2 blast range'],
     },
   } satisfies Record<UpgradeKind, UpgradeDef>,
 } as const;
 
 type Progression = {
   enabled: boolean;
-  districts: readonly MissionId[];
+  districts: ProgressionDistricts;
   parts: { firstClear: number; perExtraStar: number };
   upgrades: Record<UpgradeKind, UpgradeDef>;
 };
@@ -65,6 +75,9 @@ const DEFAULT: Progression = CAMPAIGN_PROGRESSION;
 
 export const NO_UPGRADES: CampaignUpgrades = { capacity: 0, range: 0 };
 
+const districtIn = (district: string, cfg: Progression): boolean =>
+  cfg.districts === 'all' || cfg.districts.includes(district);
+
 /** Parts a mission is worth at these best stars (0 stars = never won = nothing). */
 export function partsForStars(stars: number, cfg: Progression = DEFAULT): number {
   if (!(stars >= 1)) return 0;
@@ -72,25 +85,44 @@ export function partsForStars(stars: number, cfg: Progression = DEFAULT): number
   return cfg.parts.firstClear + (s - 1) * cfg.parts.perExtraStar;
 }
 
+/** The most Parts one mission can pay (three stars). */
+export const maxPartsPerMission = (cfg: Progression = DEFAULT): number => partsForStars(3, cfg);
+
 /** Every mission that earns Parts: the section missions (field, raid, boss) of the eligible districts, in play order. */
 export function partsMissions(cfg: Progression = DEFAULT): string[] {
   if (!cfg.enabled) return [];
   return allSectionMissions()
-    .filter((m) => cfg.districts.includes(sectionOfMission(m.id)?.districtId as MissionId))
+    .filter((m) => districtIn(sectionOfMission(m.id)?.districtId ?? '', cfg))
     .map((m) => m.id);
 }
 
-/** The best stars the save holds for a section mission (the boss mission's live in `districts`). */
+/** The best stars the save holds for a section mission (a boss mission's live in `districts`). */
 export function bestStarsOf(save: CampaignSave, missionId: string): number {
-  const sec = sectionOfMission(missionId);
-  if (!sec) return 0;
-  if (missionId === `${sec.districtId}.boss`) return save.districts[sec.districtId]?.bestStars ?? 0;
+  const def = getSectionMission(missionId);
+  if (!def) return 0;
+  if (def.format === 'boss') {
+    const record = (save.districts as Record<string, { bestStars?: number } | undefined>)[def.missionRef];
+    return record?.bestStars ?? 0;
+  }
   return save.missions[missionId]?.bestStars ?? 0;
 }
 
 /** Parts earned so far: derived from best stars, so it can only grow by first clears and better stars. */
 export function partsEarned(save: CampaignSave, cfg: Progression = DEFAULT): number {
   return partsMissions(cfg).reduce((sum, id) => sum + partsForStars(bestStarsOf(save, id), cfg), 0);
+}
+
+/** Parts earned in one district and the most it can pay (for the map's district card). */
+export function districtParts(
+  save: CampaignSave,
+  district: string,
+  cfg: Progression = DEFAULT,
+): { earned: number; max: number } {
+  const ids = partsMissions(cfg).filter((id) => sectionOfMission(id)?.districtId === district);
+  return {
+    earned: ids.reduce((sum, id) => sum + partsForStars(bestStarsOf(save, id), cfg), 0),
+    max: ids.length * maxPartsPerMission(cfg),
+  };
 }
 
 export function upgradesOf(save: CampaignSave): CampaignUpgrades {
@@ -124,7 +156,12 @@ export function canBuy(save: CampaignSave, kind: UpgradeKind, cfg: Progression =
   return cost !== null && cost <= partsAvailable(save, cfg);
 }
 
-/** Buys the next level of `kind`. Returns the same save when it cannot (cap, not enough Parts, slice off). */
+/** The upgrades the player could buy right now (for the result screen's "the Workshop has something for you"). */
+export function affordableUpgrades(save: CampaignSave, cfg: Progression = DEFAULT): UpgradeKind[] {
+  return UPGRADE_KINDS.filter((k) => canBuy(save, k, cfg));
+}
+
+/** Buys the next level of `kind`. Returns the same save when it cannot (cap, not enough Parts, system off). */
 export function buyUpgrade(
   save: CampaignSave,
   kind: UpgradeKind,
@@ -137,9 +174,21 @@ export function buyUpgrade(
 }
 
 /**
- * Repairs an untrusted `upgrades` value against a (repaired) save: whole numbers, clamped to the caps, and refunded
- * (range first, then capacity, top level first) until the Parts earned pay for them. Returns undefined when nothing is
- * bought, so a save that never bought anything keeps its exact old shape.
+ * Free respec (PR12): every bought level is returned. Parts are derived, so nothing is lost and buying again costs the
+ * same. Returns the same save when nothing is bought. The field is removed, so the save takes its pre-purchase shape.
+ */
+export function refundUpgrades(save: CampaignSave, now: number): CampaignSave {
+  if (save.upgrades === undefined) return save;
+  const { upgrades: _refunded, ...rest } = save;
+  void _refunded;
+  return { ...rest, updatedAt: now };
+}
+
+/**
+ * Repairs an untrusted `upgrades` value against a (repaired) save: whole numbers, clamped to the caps, and refunded one
+ * level at a time until the Parts earned pay for them: always the highest level first (range on a tie), so the most
+ * expensive level goes before a cheap one. Returns undefined when nothing is bought, so a save that never bought
+ * anything keeps its exact old shape.
  */
 export function repairUpgrades(
   raw: unknown,
@@ -156,22 +205,24 @@ export function repairUpgrades(
   };
   const out: CampaignUpgrades = { capacity: level('capacity'), range: level('range') };
   const earned = partsEarned(save, cfg);
-  for (const k of ['range', 'capacity'] as const) {
-    while (out[k] > 0 && partsSpent(out, cfg) > earned) out[k]--;
+  while (partsSpent(out, cfg) > earned) {
+    const k: UpgradeKind = out.range >= out.capacity ? 'range' : 'capacity';
+    out[k]--;
   }
   return out.capacity === 0 && out.range === 0 ? undefined : out;
 }
 
 /**
- * The bonus the human carries into a mission of `district`: the bought levels when the slice is on and the district is
- * eligible, otherwise undefined (no change to the mission). Raids, the Academy, Classic and Rumble never ask for one.
+ * The bonus the human carries into a field or boss mission of `district`: the bought levels when the system is on and
+ * the district is eligible, otherwise undefined (no change to the mission). Raids, the Academy, Classic and Rumble
+ * never ask for one (and the sim drops one outside mission matches, PR3).
  */
 export function loadoutBonusFor(
   save: CampaignSave,
-  district: MissionId,
+  district: string,
   cfg: Progression = DEFAULT,
 ): LoadoutBonus | undefined {
-  if (!cfg.enabled || !cfg.districts.includes(district)) return undefined;
+  if (!cfg.enabled || !districtIn(district, cfg)) return undefined;
   const u = upgradesOf(save);
   return u.capacity === 0 && u.range === 0 ? undefined : { capacity: u.capacity, range: u.range };
 }
@@ -181,8 +232,11 @@ export function partsGained(before: CampaignSave, after: CampaignSave, cfg: Prog
   return Math.max(0, partsEarned(after, cfg) - partsEarned(before, cfg));
 }
 
-/** Whether the Parts and the shop belong on this district's screens. */
+/** Whether the Parts belong on this district's screens. */
 export const progressionDistrict = (district: string, cfg: Progression = DEFAULT): boolean =>
-  cfg.enabled && cfg.districts.includes(district as MissionId);
+  cfg.enabled && districtIn(district, cfg);
+
+/** Whether the Parts system (and the Workshop) is on at all. */
+export const progressionEnabled = (cfg: Progression = DEFAULT): boolean => cfg.enabled;
 
 export type { Progression as CampaignProgressionConfig };
