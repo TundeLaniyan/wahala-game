@@ -148,7 +148,7 @@ describe('HUD models from the view', () => {
     expect(g.notes).toContain('STAND STILL ON IT');
   });
 
-  it('defeat / escape / return tags on the other legs', () => {
+  it('defeat / destroy / secure / escape / return tags on the other legs', () => {
     const rail = newField('oshodi.railEdge');
     advance(rail, 1);
     const d = fieldGoalModel(view(rail))!;
@@ -158,6 +158,21 @@ describe('HUD models from the view', () => {
     expect(d.notes).not.toContain('FIGHTS OPTIONAL');
     for (const seat of rail.mission!.seats.filter((x) => x.group === 'hawkers'))
       rail.players[seat.playerId]!.alive = false;
+    advance(rail, 2);
+    // Rail Edge since decision DA3: the relay boxes, then the rail plaza, then the escape (staged here)
+    const b = fieldGoalModel(view(rail))!;
+    expect(b).toMatchObject({ tag: 'DESTROY', target: 'RELAY BOX (3 LEFT)' });
+    expect(b.notes).toContain('BLASTS ONLY');
+    for (const t of rail.mission!.field!.targets!) {
+      t.hp = 0;
+      t.destroyed = true;
+    }
+    advance(rail, 2);
+    const k = fieldGoalModel(view(rail))!;
+    expect(k).toMatchObject({ tag: 'SECURE', target: 'RAIL PLAZA 0.0 / 25.0 s' });
+    for (const seat of rail.mission!.seats.filter((x) => x.group !== 'pursuers' && x.role !== 'player'))
+      rail.players[seat.playerId]!.alive = false;
+    rail.mission!.field!.hold!.ticks = 25 * 60;
     advance(rail, 2);
     const e = fieldGoalModel(view(rail))!;
     expect(e).toMatchObject({ tag: 'ESCAPE', target: 'FOOTBRIDGE' });
@@ -233,7 +248,7 @@ describe('rail notices on reach', () => {
     advance(rail, 2);
     mem = fieldNotices(mem, null).memory; // e.g. a raid was playing
     const r = fieldNotices(mem, view(rail));
-    expect(r.notices.map((n) => n.text)).toEqual(['ENEMIES DOWN ✓ · NEXT: ESCAPE TO FOOTBRIDGE']);
+    expect(r.notices.map((n) => n.text)).toEqual(['ENEMIES DOWN ✓ · NEXT: DESTROY RELAY BOX']);
   });
 
   it('next-objective wording', () => {

@@ -179,6 +179,8 @@ export const FIELD_MERCY_TICKS = 120;
 
 const defs: FieldMissionDef[] = [
   // ---------------------------------------------------------------- Oshodi (the vertical slice)
+  // Districts pass A (docs/CAMPAIGN_SECTOR_AI.md "Districts: Oshodi, Mushin, Fadeyi/Somolu", decisions DA1-DA9): the
+  // legs of the campaign's first mission stay (checkpoint clarity reference); its wardens now walk readable routes.
   {
     id: 'oshodi.approach',
     sectorId: 'oshodi.terminalApproach',
@@ -206,12 +208,17 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Park Warden', 14, 39, 'wardens', patrol('agbero', [11, 39], [17, 39])),
-      guard('Park Warden', 27, 41, 'wardens', post('agbero')),
-      blocker('Lane Blocker', 20, 42, 'wardens', post('heavyEnforcer', 1)),
+      // a loop round the ticket kiosk between checkpoints A and B (it turns its back at the far corners)
+      guard('Park Warden', 14, 37, 'wardens', patrol('agbero', [10, 37], [18, 37], [18, 39], [10, 39])),
+      // the stall lane between the two streets: it crosses the start street and the checkpoint street
+      guard('Park Warden', 13, 41, 'wardens', patrol('agbero', [13, 38], [13, 42])),
+      // a lookout on the east forecourt beside checkpoint C: throws down the stall lanes
+      chaser('Ticket Tout', 31, 41, 'wardens', post('bottleThrower', 2)),
+      // the depot lane: walks across the depot door (only a blast finishes it)
+      blocker('Lane Blocker', 23, 42, 'wardens', patrol('heavyEnforcer', [20, 42], [27, 42])),
     ],
     timeLimitSec: 360,
-    parSec: 180,
+    parSec: 90,
   },
   {
     id: 'oshodi.railEdge',
@@ -223,6 +230,26 @@ const defs: FieldMissionDef[] = [
     legs: [
       { kind: 'clearGroup', text: 'Defeat the 2 hawkers in the market lane.', group: 'hawkers' },
       {
+        kind: 'destroyTargets',
+        text: 'Destroy the 3 relay boxes by the rail plaza.',
+        crew: 'relayCrew',
+        targets: [
+          { id: 'relayDepot', kind: 'relayBox', x: 36, y: 34, label: 'RELAY BOX', hp: 3 },
+          { id: 'relayMast', kind: 'relayBox', x: 55, y: 30, label: 'RELAY BOX', hp: 3 },
+          { id: 'relayPlaza', kind: 'relayBox', x: 44, y: 26, label: 'RELAY BOX', hp: 3 },
+        ],
+      },
+      {
+        kind: 'holdArea',
+        text: 'Keep the rail plaza clear for 25 seconds.',
+        area: { x: 37, y: 28, radius: 2, label: 'RAIL PLAZA' },
+        holdSec: 25,
+        waves: [
+          { group: 'trailerCrew', atSec: 3 },
+          { group: 'lateCrew', atSec: 12 },
+        ],
+      },
+      {
         kind: 'escapeRoute',
         text: 'Escape to the footbridge before the trailer hand catches you.',
         group: 'pursuers',
@@ -231,12 +258,21 @@ const defs: FieldMissionDef[] = [
     ],
     doors: [],
     enemies: [
-      guard('Lane Hawker', 50, 39, 'hawkers', patrol('marketEnforcer', [47, 39], [52, 39])),
-      guard('Lane Hawker', 55, 39, 'hawkers', patrol('marketEnforcer', [54, 39], [59, 39])),
-      chaser('Trailer Hand', 36, 30, 'pursuers', { variant: 'bottleThrower' }),
+      // the market lanes: two hawkers walk the cross streets past the stall blocks
+      guard('Lane Hawker', 45, 39, 'hawkers', patrol('marketEnforcer', [38, 39], [48, 39])),
+      guard('Lane Hawker', 54, 37, 'hawkers', patrol('marketEnforcer', [50, 37], [58, 37])),
+      // the relay crew: a heavy stands by the nearest box still working, a warden walks round the mast block
+      blocker('Relay Minder', 47, 34, 'relayCrew', post('heavyEnforcer', 1)),
+      guard('Plaza Warden', 50, 31, 'lookouts', patrol('agbero', [47, 31], [47, 34], [56, 34], [56, 31])),
+      // the trailer crew: they watch the rail buffer, then come to take the plaza back
+      guard('Trailer Crew', 34, 32, 'trailerCrew', patrol('agbero', [31, 31], [38, 31])),
+      chaser('Trailer Crew', 41, 33, 'trailerCrew', post('bottleThrower', 2)),
+      guard('Trailer Crew', 32, 26, 'lateCrew', post('areaBoy', 2)),
+      // the trailer hand who sets off after you when the plaza is held
+      chaser('Trailer Hand', 31, 32, 'pursuers', { variant: 'bottleThrower' }),
     ],
-    timeLimitSec: 420,
-    parSec: 210,
+    timeLimitSec: 600,
+    parSec: 270,
   },
   // ---------------------------------------------------------------- Mushin
   {

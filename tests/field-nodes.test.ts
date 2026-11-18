@@ -128,6 +128,12 @@ describe.each(FIELD_MISSION_IDS)('field mission %s data', (id) => {
         const g = def.enemies.filter((e) => e.group === leg.group);
         from = [g[0]!.post[0], g[0]!.post[1]];
       }
+      // the sector leg kinds: the player leaves from the last piece of equipment listed / the zone's centre
+      if (leg.kind === 'destroyTargets') {
+        const last = leg.targets[leg.targets.length - 1]!;
+        from = [last.x, last.y];
+      }
+      if (leg.kind === 'holdArea') from = [leg.area.x, leg.area.y];
       if (leg.kind !== 'escapeRoute') continue;
       const fromPlayer = distances(layout, from[0], from[1]);
       const own = fromPlayer.get(`${leg.exit.x},${leg.exit.y}`)!;

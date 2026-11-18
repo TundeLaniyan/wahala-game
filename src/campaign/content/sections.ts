@@ -97,7 +97,7 @@ const OSHODI_SECTIONS: SectionDef[] = [
         unlocks: ['section.oshodi.s2'],
         ringWeakened: 'The depot’s dispatch cargo is broken: the convoys lose their schedule.',
         readMore:
-          'Three checkpoints (A, B and the yard gate) mark the way. The Dispatch Depot door on the yard wall opens the warehouse raid: marked cargo, a wave of wardens and a lane of thrown bottles. Win it, or leave and try again: the door stays open. When the depot is done, walk back to the Orita gate to finish.',
+          'Three checkpoints (A, B and C) mark the way. Two park wardens walk set rounds, one round the ticket kiosk and one down the stall lane: watch where they turn and pass behind them, or lay a generator where they will walk. A tout throws from the forecourt by C, and a heavy walks the depot lane: only a blast finishes him. The Dispatch Depot door opens the warehouse raid: marked cargo, a wave of wardens and a lane of thrown bottles. Win it, or leave and try again: the door stays open. When the depot is done, walk back to the Orita gate to finish.',
         intro: [
           say('MAMA PUT', 'Wardens hold the gate and the depot. Go quiet: checkpoint by checkpoint.'),
           say(
@@ -118,16 +118,16 @@ const OSHODI_SECTIONS: SectionDef[] = [
     order: 2,
     name: 'Rail Edge',
     summary:
-      'The market lane runs beside the rail line, and the trailer crews guard it. Put down the hawkers, then outrun the trailer hand to the footbridge.',
+      'The market lane runs beside the rail line, and the trailer crews guard it. Put down the hawkers, break the relay boxes, keep the rail plaza, then outrun the trailer hand to the footbridge.',
     requires: ['oshodi.s1'],
     missions: [
       {
         id: 'oshodi.railEdge',
         format: 'field',
         name: 'Rail Edge',
-        objectiveCard: 'Clear the hawkers, outrun the trailer hand, walk out.',
+        objectiveCard: 'Clear hawkers, wreck 3 relay boxes, keep the plaza, reach the footbridge.',
         summary:
-          'Two hawkers hold the market lane. When they fall, a trailer hand sets off after you: reach the footbridge first.',
+          'Two hawkers hold the market lane, and the relay boxes by the rail plaza feed the dispatch net: only your blasts break them, three each. Keep the plaza clear while the trailer crew comes for it, then reach the footbridge before the trailer hand.',
         missionRef: 'oshodi.railEdge',
         reward: title(
           'oshodi.railEdge',
@@ -135,11 +135,13 @@ const OSHODI_SECTIONS: SectionDef[] = [
           'The hawkers wave you across the rail line now.',
         ),
         unlocks: ['section.oshodi.s3'],
-        ringWeakened: 'The trailer crews lose the rail-edge lane: the controller has nowhere left to hide.',
+        ringWeakened:
+          'The trailer crews lose the rail-edge lane and its relay boxes: the controller has nowhere left to hide.',
         readMore:
-          'Clear the two lane hawkers. Then the trailer hand leaves the rail yard and hunts you: stay ahead of him and reach the footbridge. If he stays next to you for a moment he catches you and you lose a life. Walk to the Park gate to finish.',
+          'Clear the two lane hawkers. Three relay boxes stand by the rail plaza: each takes three separate blasts, a heavy minds the nearest one and a warden walks round the mast block. Then keep the rail plaza clear for 25 seconds while the trailer crew comes to take it back. Last, the trailer hand hunts you: stay ahead of him and reach the footbridge. If he stays next to you for a moment he catches you and you lose a life. Walk to the Park gate to finish.',
         intro: [
           say('MAMA PUT', 'The market lane is the last road before the terminal. The trailer crews run it.'),
+          say('RADIO', 'Relay boxes by the plaza feed the dispatch net. Na blast go break am, not hand.'),
         ],
         outro: [say('RADIO', 'The rail edge is clear. The controller has nowhere left to hide.')],
       },
