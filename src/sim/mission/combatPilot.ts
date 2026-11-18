@@ -1,12 +1,14 @@
 /**
- * Which field missions run the COMBAT PILOT (docs/OSHODI_COMBAT_PILOT.md, decisions CP1-CP12) and what it adds to
- * them. This map is the ONLY switch: a field mission listed here gets `config.combatPilot` (the pilot rules), the
- * pilot's enemy-attack tuning, its campaign-level adjustments and its extra enemies; every other match never sees any
- * of it. Removing the experiment = removing the entry (the rules code is inert without `config.combatPilot`).
+ * The ARCHIVED Oshodi combat pilot (docs/OSHODI_COMBAT_PILOT.md, decisions CP1-CP12), SUPERSEDED by the campaign tactics
+ * layer (decision SA3): no campaign mission runs it any more. A field mission listed here gets `config.combatPilot` (the
+ * pilot rules), the pilot's enemy-attack tuning, its level adjustments and its extra enemies ONLY when its spec asks
+ * for the archived replay (`MissionSpec.archivedPilot`: the pilot's reference tests and `npm run combat-pilot`; the
+ * campaign never sets it). Every other match never sees any of it (the rules code is inert without `config.combatPilot`).
  */
 import { OSHODI_COMBAT_PILOT, OSHODI_PILOT_ENEMY_ATTACKS, OSHODI_PILOT_LEVELS, mergeLayers } from '../config';
 import type { CombatPilotConfig, DeepPartial, GameConfig, PilotEnemyAttacks, PilotLayer } from '../config';
 import type { FieldEnemyDef, FieldMissionDef } from './fieldDefs';
+import type { MissionSpec } from './types';
 
 export interface FieldCombatPilot {
   config: CombatPilotConfig;
@@ -31,12 +33,17 @@ export const FIELD_COMBAT_PILOTS: Readonly<Record<string, FieldCombatPilot>> = {
   },
 };
 
-export const fieldCombatPilot = (fieldId: string | undefined): FieldCombatPilot | null =>
-  (fieldId !== undefined && FIELD_COMBAT_PILOTS[fieldId]) || null;
+/** The archived pilot a mission spec asks for (null unless `archivedPilot` is set on a field mission listed above). */
+export const fieldCombatPilot = (
+  spec: Pick<MissionSpec, 'fieldId' | 'archivedPilot'>,
+): FieldCombatPilot | null =>
+  (spec.archivedPilot === true && spec.fieldId !== undefined && FIELD_COMBAT_PILOTS[spec.fieldId]) || null;
 
 /** The config layer of the pilot for this field mission (a fresh copy every call: never a shared constant). */
-export function pilotConfigLayer(fieldId: string | undefined): DeepPartial<GameConfig> {
-  const pilot = fieldCombatPilot(fieldId);
+export function pilotConfigLayer(
+  spec: Pick<MissionSpec, 'fieldId' | 'archivedPilot'>,
+): DeepPartial<GameConfig> {
+  const pilot = fieldCombatPilot(spec);
   if (!pilot) return {};
   return structuredClone({
     combatPilot: pilot.config,
@@ -46,17 +53,20 @@ export function pilotConfigLayer(fieldId: string | undefined): DeepPartial<GameC
 
 /** The pilot's adjustment for a campaign level (Easy / Hard), merged over the level's own layer; Normal adds nothing. */
 export function pilotLevelLayer(
-  fieldId: string | undefined,
+  spec: Pick<MissionSpec, 'fieldId' | 'archivedPilot'>,
   level: string | undefined,
   base: DeepPartial<GameConfig> | undefined,
 ): DeepPartial<GameConfig> | undefined {
-  const extra = level ? fieldCombatPilot(fieldId)?.levels[level] : undefined;
+  const extra = level ? fieldCombatPilot(spec)?.levels[level] : undefined;
   // (a pilot layer is a partial GameConfig; `DeepPartial` just cannot spell the nullable melee specs)
   return extra ? mergeLayers<GameConfig>(base, structuredClone(extra) as DeepPartial<GameConfig>) : base;
 }
 
-/** Every enemy a field mission seats: its own roster, then the pilot's additions. */
-export function fieldEnemiesOf(def: FieldMissionDef): readonly FieldEnemyDef[] {
-  const pilot = fieldCombatPilot(def.id);
+/** Every enemy a field mission seats: its own roster, then (archived pilot replay only) the pilot's additions. */
+export function fieldEnemiesOf(
+  def: FieldMissionDef,
+  spec: Pick<MissionSpec, 'archivedPilot'> = {},
+): readonly FieldEnemyDef[] {
+  const pilot = fieldCombatPilot({ fieldId: def.id, archivedPilot: spec.archivedPilot });
   return pilot ? [...def.enemies, ...pilot.extraEnemies] : def.enemies;
 }

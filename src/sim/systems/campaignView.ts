@@ -5,6 +5,7 @@
 import { DIR_VEC, tileAt } from '../grid';
 import { campaignConfig } from '../config';
 import type { EnemyKind } from '../campaign/types';
+import { tacticsPunchFloor } from './skills';
 import { ENEMY_KINDS } from '../data/enemies';
 import type { GameState, Player } from '../types';
 import { Tile } from '../types';
@@ -24,6 +25,12 @@ export interface EnemyHealthView {
    * permanent for every enemy.
    */
   showBar: boolean;
+  /**
+   * Campaign tactics layer (decision SA8): ONLY A BLAST FINISHES this enemy (an armoured kind: heavy, lieutenant, boss).
+   * `punchFloor` is the health a punch can never take it below (0 = punches can finish it). Absent outside the layer.
+   */
+  blastOnly?: boolean;
+  punchFloor?: number;
 }
 
 /** The player's own health, protection layers and lives. */
@@ -75,6 +82,7 @@ export function enemyHealthView(state: GameState, id: number): EnemyHealthView |
       near ||
       (human.alive && targetedBy(state, human, p));
   }
+  const tactics = state.config.campaignTactics;
   return {
     hp: v.hp,
     maxHp: v.maxHp,
@@ -82,6 +90,9 @@ export function enemyHealthView(state: GameState, id: number): EnemyHealthView |
     dazed: state.tick < p.dazedUntil,
     recentlyHurt,
     showBar,
+    ...(tactics && kind !== null
+      ? { blastOnly: tactics.armoured[kind], punchFloor: tacticsPunchFloor(state, p) }
+      : {}),
   };
 }
 

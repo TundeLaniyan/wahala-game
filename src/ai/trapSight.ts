@@ -1,8 +1,10 @@
 /**
  * What a campaign enemy KNOWS about generators in a Tactical Trap pilot scenario (decisions TT1-TT3,
- * docs/TACTICAL_TRAP_PILOT.md). It replaces the EF1 tunnel-vision model of `enemyBot.ts` only when
- * `config.tacticalTrap` is present; it reads the Observation alone (never a hidden pickup, never an RNG) and uses no
- * clock or randomness, so what an enemy knows is a pure function of the match so far.
+ * docs/TACTICAL_TRAP_PILOT.md) and, campaign-wide, under the campaign tactics layer (decision SA4,
+ * docs/CAMPAIGN_SECTOR_AI.md; also the boss missions' generator bots). It replaces the EF1 tunnel-vision model of
+ * `enemyBot.ts` only when `config.tacticalTrap` or `config.campaignTactics` is present; it reads the Observation alone
+ * (never a hidden pickup, never an RNG) and uses no clock or randomness, so what an enemy knows is a pure function of
+ * the match so far.
  *
  *   SEEING    a generator is seen when it is within the kind's vision radius and the grid line of sight is clear
  *             (`canSeeTile`: solid tiles and any other living body block it; a body standing on the generator's tile
@@ -19,8 +21,31 @@
  * The planner then sees every unknown generator as an obstacle with an unreachable fuse (enemyBot.ts `UNHEEDED_FUSE`),
  * exactly as under EF1.
  */
-import { bodyTiles, canSeeTile } from '../sim';
-import type { Dir, Generator, Observation, Player, TacticalTrapConfig } from '../sim';
+import { bodyTiles, canSeeTile, inViewCone } from '../sim';
+import type { Dir, EnemyKind, Generator, Observation, Player, TacticalTrapConfig } from '../sim';
+
+/**
+ * The perception rules a sight reads: the Academy pilot's `config.tacticalTrap` or the campaign tactics layer's
+ * `config.campaignTactics` (decision SA4: the same model, campaign-wide).
+ */
+export type SightRules = Pick<TacticalTrapConfig, 'perception' | 'memoryHoldFuseTicks' | 'caution'>;
+
+/** Per-seat adjustments of the campaign tactics layer (never information: they only change how fast and how far). */
+export interface SightTuning {
+  /** The perception row to use (a boss-mission generator bot has no `enemyKind`). Default: the seat's kind. */
+  kind?: EnemyKind;
+  /** Tiles added to the vision radius (a variant's field of attention). */
+  visionDelta?: number;
+  /** Scales the reaction time (trap sense, tunnel vision while brawling). */
+  reactScale?: number;
+  /** Caps the vision radius and limits sight to the cone ahead (a calm stroller's attention, decision SA5). */
+  visionCap?: number;
+  calmCone?: boolean;
+  /** Generators of the seat's own team are known (boss-mission crews lay their own; enemies never hurt each other). */
+  teamKnown?: boolean;
+  /** It notices a generator being laid by a placer in its sight (trap sense; never through a wall or another body). */
+  seesPlacement?: boolean;
+}
 
 /** A generator first observed this many ticks after it was laid still counts as heard being laid. */
 const HEARD_WINDOW_TICKS = 2;
@@ -82,9 +107,25 @@ export class TrapSight {
     return this.memory.has(id);
   }
 
+  /** Does this seat know the generator EXISTS (known, or seen and remembered but not yet reacted to)? */
+  aware(id: number): boolean {
+    return this.known.has(id) || this.memory.has(id);
+  }
+
   /** Takes in the observation: sees, remembers, hears. Call once per decision, before reading `isKnown`. */
-  update(obs: Observation, me: Readonly<Player>, cfg: TacticalTrapConfig): void {
-    const per = cfg.perception[me.enemyKind!];
+  update(obs: Observation, me: Readonly<Player>, cfg: SightRules, tune: SightTuning = {}): void {
+    const base = cfg.perception[tune.kind ?? me.enemyKind!];
+    const per =
+      tune.visionDelta || tune.reactScale !== undefined || tune.visionCap !== undefined
+        ? {
+            ...base,
+            visionTiles: Math.min(
+              tune.visionCap ?? Infinity,
+              Math.max(2, base.visionTiles + (tune.visionDelta ?? 0)),
+            ),
+            reactTicks: Math.round(base.reactTicks * (tune.reactScale ?? 1)),
+          }
+        : base;
     const T = obs.tick;
     trapSightStats.updates++;
     this.freshlyKnown = false;
@@ -104,8 +145,18 @@ export class TrapSight {
         ) {
           this.hear(g, me, cfg, T);
         }
+        // trap sense (decision SA5): it WATCHED the placer lay it (the placer in its sight that very moment), so it
+        // knows the tile even though the placer's body still covers it
+        if (
+          tune.seesPlacement &&
+          T - g.placedTick <= HEARD_WINDOW_TICKS &&
+          this.sawPlacer(obs, me, g, per, tune)
+        ) {
+          this.memory.set(g.id, { x: g.x, y: g.y, firstSeen: T, lastSeen: T });
+          trapSightStats.sightChecks++;
+        }
       }
-      if (alwaysKnown(g, me.id)) {
+      if (alwaysKnown(g, me.id) || (tune.teamKnown && obs.players[g.ownerId]?.team === me.team)) {
         this.known.add(g.id);
         continue;
       }
@@ -115,7 +166,10 @@ export class TrapSight {
       }
       let m = this.memory.get(g.id);
       trapSightStats.sightChecks++;
-      if (canSeeTile(obs, me.x, me.y, g.x, g.y, per.visionTiles, bodies)) {
+      if (
+        (!tune.calmCone || inViewCone(me, g.x, g.y)) &&
+        canSeeTile(obs, me.x, me.y, g.x, g.y, per.visionTiles, bodies)
+      ) {
         m = { x: g.x, y: g.y, firstSeen: m?.firstSeen ?? T, lastSeen: T };
         this.memory.set(g.id, m);
       } else if (m && !this.stillValid(m, g, per.memoryTicks, cfg.memoryHoldFuseTicks, T)) {
@@ -133,7 +187,25 @@ export class TrapSight {
     for (const id of this.known) this.wasKnown.add(id);
   }
 
-  private reaction(base: number, cfg: TacticalTrapConfig, T: number): number {
+  /** Was the placer of `g` in this seat's sight as it laid it (its own body excepted, other bodies conceal it)? */
+  private sawPlacer(
+    obs: Observation,
+    me: Readonly<Player>,
+    g: Readonly<Generator>,
+    per: { visionTiles: number },
+    tune: SightTuning,
+  ): boolean {
+    const placer = obs.players[g.ownerId];
+    if (!placer || !placer.alive || placer.id === me.id) return false;
+    if (tune.calmCone && !inViewCone(me, placer.x, placer.y)) return false;
+    trapSightStats.bodyScans++;
+    const bodies = new Set<number>();
+    for (const p of obs.players)
+      if (p.alive && p.id !== me.id && p.id !== placer.id) bodies.add(p.y * obs.width + p.x);
+    return canSeeTile(obs, me.x, me.y, placer.x, placer.y, per.visionTiles, bodies);
+  }
+
+  private reaction(base: number, cfg: SightRules, T: number): number {
     return this.cautious(T) ? Math.round(base * cfg.caution.reactScale) : base;
   }
 
@@ -150,7 +222,7 @@ export class TrapSight {
     return g.mode === 'timed' && g.timer <= holdFuse;
   }
 
-  private hear(g: Readonly<Generator>, me: Readonly<Player>, cfg: TacticalTrapConfig, T: number): void {
+  private hear(g: Readonly<Generator>, me: Readonly<Player>, cfg: SightRules, T: number): void {
     this.cautionUntil = Math.max(this.cautionUntil, T + cfg.caution.ticks);
     const dx = g.x - me.x;
     const dy = g.y - me.y;

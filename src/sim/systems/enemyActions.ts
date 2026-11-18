@@ -24,6 +24,7 @@ import { enemyFireOf, canThrowNow, launchProjectile, sameSide } from './projecti
 import { alivePlayers } from './queries';
 import { attackReady, attackable, beginAttack, meleeTarget } from './skills';
 import { pilotSameTileRival } from './pilotCombat';
+import { pushEnemyCue, recoveryBonus } from './enemyCues';
 
 type RivalView = GridView & {
   readonly tick: number;
@@ -83,6 +84,16 @@ function beginEnemyMelee(state: GameState, p: Player, events: SimEvent[]): 'star
     }
   }
   p.rootedUntil = Math.max(p.rootedUntil, pending.resolveTick); // the wind-up plants the puncher
+  // the telegraph (campaign tactics only): the threatened tile and the direction, until the swing lands
+  const v = DIR_VEC[found.dir];
+  pushEnemyCue(state, events, {
+    playerId: p.id,
+    cue: 'windup',
+    untilTick: pending.resolveTick,
+    x: p.x + v.dx,
+    y: p.y + v.dy,
+    dir: found.dir,
+  });
   fire.nextPunchTick[p.id] = state.tick + spec.cooldownTicks;
   fire.groupNextPunchTick[p.team] = state.tick + cfg.groupPunchGapTicks;
   return 'started';
@@ -140,10 +151,13 @@ export function enemyMeleeHit(
  * `recoveryRootTicks`. Called from `skills.ts` for every resolved attack; a seat without `enemyKind` (every multiplayer
  * fighter, the campaign human) is untouched.
  */
-export function enemyAfterPunch(state: GameState, p: Player): void {
+export function enemyAfterPunch(state: GameState, p: Player, events: SimEvent[]): void {
   const spec = p.enemyKind ? state.config.enemyAttacks.melee[p.enemyKind] : null;
-  if (!spec || spec.recoveryRootTicks <= 0) return;
-  p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.recoveryRootTicks);
+  if (!spec) return;
+  const total = spec.recoveryRootTicks + recoveryBonus(state, p);
+  if (total <= 0) return;
+  p.rootedUntil = Math.max(p.rootedUntil, state.tick + total);
+  pushEnemyCue(state, events, { playerId: p.id, cue: 'recovery', untilTick: p.rootedUntil, x: p.x, y: p.y });
 }
 
 // ---------------------------------------------------------------- throws

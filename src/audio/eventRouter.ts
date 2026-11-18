@@ -310,6 +310,8 @@ const handlers: Handlers = {
     if (isHuman(c, e.playerId) && allow(c, 'placeRefused', 0.25))
       sfx(c, 'pickup_wasted', panOf(c, e.x), 0.5, 1.2);
   },
+  // campaign tactics telegraph (docs/CAMPAIGN_SECTOR_AI.md): drawn by the views; no sound of its own yet
+  enemyCue: () => undefined,
   attackInterrupted: (e, c) => {
     sfx(c, 'daze', panOf(c, playerX(c, e.playerId)), 0.5, 1.3);
   },

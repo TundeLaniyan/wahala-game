@@ -99,6 +99,11 @@ export interface MissionSpec {
    * clock makes a timeout test cheap). Absent = the mission's own limit from its data (`MISSION_DEFS`).
    */
   timeLimitSec?: number;
+  /**
+   * Replays the ARCHIVED Oshodi combat pilot (decisions CP1-CP12) instead of the campaign tactics layer. Not offered by
+   * the campaign: only the pilot's reference tests and `npm run combat-pilot` set it (decision SA3).
+   */
+  archivedPilot?: boolean;
 }
 
 export type MissionNodeState =
@@ -293,6 +298,8 @@ export interface NpcDirective {
    * Campaign enemy groups (src/sim/campaign/tactics.ts): surround: take this tile next to the target (each enemy of
    * the group gets a different one); standoff: take this tile in a clear cardinal line to the target, 2+ tiles away,
    * to throw from; hold: stay put (nobody in sight); reinforce: go to the caller's tile (a call is open).
+   * Campaign tactics territories (src/sim/systems/territory.ts): patrol: walk to this waypoint; investigate: walk to
+   * this coarse spot to look; return: walk back to this territory anchor.
    */
   kind:
     | 'guard'
@@ -305,7 +312,10 @@ export interface NpcDirective {
     | 'surround'
     | 'standoff'
     | 'hold'
-    | 'reinforce';
+    | 'reinforce'
+    | 'patrol'
+    | 'investigate'
+    | 'return';
   x: number;
   y: number;
   radius?: number;

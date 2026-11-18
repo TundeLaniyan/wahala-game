@@ -14,6 +14,7 @@ import type { FieldMissionDef } from './fieldDefs';
 import { enterLeg } from './field';
 import { fieldEnemiesOf } from './combatPilot';
 import { snapToFloor } from './state';
+import { addEnemyMind } from '../systems/territory';
 import type { FieldRuntime, MissionSeat, MissionSpec, MissionState, PhaseTuning } from './types';
 
 /** Every tile a field mission relies on being open: markers, exits, doors and their return tiles, start, posts. */
@@ -44,6 +45,46 @@ function clearAround(state: GameState, x: number, y: number, radius: number): vo
     }
 }
 
+/**
+ * Opens a patrol route (campaign tactics, decision SA6): the crates on the shortest way (through anything but concrete)
+ * from the post to each waypoint in turn and back to the first, so a patrol never stalls on a random crate.
+ */
+function clearPatrol(state: GameState, route: readonly (readonly [number, number])[]): void {
+  if (route.length < 2) return;
+  const w = state.width;
+  for (let k = 0; k < route.length; k++) {
+    const [ax, ay] = route[k]!;
+    const [bx, by] = route[(k + 1) % route.length]!;
+    const start = ay * w + ax;
+    const goal = by * w + bx;
+    const prev = new Map<number, number>([[start, -1]]);
+    const queue = [start];
+    for (let head = 0; head < queue.length && !prev.has(goal); head++) {
+      const u = queue[head]!;
+      for (const [dx, dy] of [
+        [0, -1],
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+      ] as const) {
+        const nx = (u % w) + dx;
+        const ny = Math.floor(u / w) + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= state.height) continue;
+        const v = ny * w + nx;
+        if (prev.has(v) || state.tiles[v] === Tile.Hard) continue;
+        prev.set(v, u);
+        queue.push(v);
+      }
+    }
+    for (let u = prev.has(goal) ? goal : -1; u !== -1; u = prev.get(u)!) {
+      if (state.tiles[u] === Tile.Soft) {
+        state.tiles[u] = Tile.Empty;
+        delete state.hidden[u];
+      }
+    }
+  }
+}
+
 function placeAt(state: GameState, p: Player, x: number, y: number): void {
   p.x = p.stepFromX = x;
   p.y = p.stepFromY = y;
@@ -57,7 +98,7 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
   const def = getFieldMission(spec.fieldId!);
   if (def.districtId !== spec.id)
     throw new Error(`field mission ${def.id} belongs to ${def.districtId}, not ${spec.id}`);
-  const enemies = fieldEnemiesOf(def); // the roster plus the combat pilot's additions (decision CP11)
+  const enemies = fieldEnemiesOf(def, spec); // the roster (plus the archived pilot's additions in its replay)
   if (state.players.length !== 1 + enemies.length) {
     throw new Error(
       `field mission ${def.id} needs ${1 + enemies.length} competitors, got ${state.players.length}`,
@@ -79,12 +120,18 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
       name: human.name,
     },
   ];
+  const pursuerGroups = new Set(def.legs.flatMap((l) => (l.kind === 'escapeRoute' ? [l.group] : [])));
   enemies.forEach((e, i) => {
     const p = state.players[1 + i]!;
     const [x, y] = snapToFloor(arena, e.post[0], e.post[1], claimed);
     claimed.add(`${x},${y}`);
     placeAt(state, p, x, y);
     clearAround(state, x, y, 1);
+    // campaign tactics (decision SA6): every enemy but an escape leg's pursuers plays its territory
+    if (state.config.campaignTactics && !pursuerGroups.has(e.group)) {
+      clearPatrol(state, [[x, y], ...(e.territory?.patrol ?? [])]);
+      addEnemyMind(state, p.id, { x, y }, e.territory);
+    }
     seats.push({
       playerId: p.id,
       role: e.role,

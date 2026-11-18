@@ -38,6 +38,8 @@ Every section separates three states:
 - Mission generator loadout: base capacity 2 (cap 3), base range 2 (cap 5), radial blasts; temporary pickups as in
   section 2.4. Three-second fuse.
 - The Oshodi combat pilot (`docs/OSHODI_COMBAT_PILOT.md`, decision CP1) adjusts Oshodi field mission 1 only.
+- **CURRENT since 2026-11-18 (founder direction, decisions SA3-SA12):** the campaign tactics layer below (1.6) replaces
+  the two bullets above for every campaign field and boss mission; the Oshodi combat pilot is archived.
 
 ### 1.3 PILOT: Tactical Trap (actual parameters, Training Academy only)
 
@@ -60,7 +62,7 @@ mission, Classic, Rumble, raids and online (tested).
 
 **Not campaign-wide.** Do not apply these numbers to missions without founder gameplay approval.
 
-### 1.4 PROPOSED campaign-wide combat parameters (for a later approved rollout)
+### 1.4 PROPOSED campaign-wide combat parameters (for a later approved rollout) - SUPERSEDED by 1.6 (CURRENT)
 
 | Parameter | Proposal | Reason |
 | --- | --- | --- |
@@ -81,6 +83,20 @@ CURRENT objective kinds: `dispatchRelays` (Oshodi), `supplyRoutes` (Mushin), `ju
 (Ebute Metta), `evidenceRun` (Lagos Island), `contingencyGrid` (Lekki). PROPOSED: every "break the Ring's equipment"
 objective (relays, toll boxes, switches, control points) is destroyed **only by blasts**; melee can only interrupt the
 crews who repair or defend them.
+
+### 1.6 CURRENT: the campaign tactics layer (decisions SA3-SA12, `docs/CAMPAIGN_SECTOR_AI.md`)
+
+Approved by the founder on 2026-11-18 and built campaign-wide (field and boss missions only; never Classic, City Rumble,
+raids, the Academy or online). It differs from the 1.4 proposal where noted.
+
+| Parameter | CURRENT value |
+| --- | --- |
+| Perception | the pilot's sight / memory / hearing for every enemy, plus a calm view cone and trap sense; hearing yields a coarse direction band only; an unseen generator is absent from the enemy's plan; boss-mission bots perceive too |
+| Punch | stagger, 1-tile knockback, ONE 25 % slow (no stacking, then resisted); ordinary enemies CAN be punched out, slowly (per-target lockout) - unlike 1.4 |
+| Blast | one blast defeats any ordinary enemy; ARMOURED kinds (heavy, lieutenant, boss) stop at a punch floor and lose 3 to a blast: only a blast finishes them |
+| Enemy commitment | wind-up about 1.0 / 0.8 / 0.63 s (Easy / Normal / Hard), recovery 0.8 / 0.7 / 0.6 s, cooldowns with a response window, group wind-up limits |
+| Behaviour | one territorial state machine (patrol, watch, investigate, alert, pursue, return) with variant personalities |
+| Fuse | 3 s (unchanged) |
 
 ---
 
@@ -241,7 +257,7 @@ and native-speaker review as other new copy.
 | Item | Status |
 | --- | --- |
 | Tactical Trap pilot (Academy) | PILOT, shipped |
-| Campaign-wide perception/punch-floor rollout | PROPOSED, needs approval |
+| Campaign-wide perception/punch-floor rollout | CURRENT as the campaign tactics layer (1.6, SA3-SA12) |
 | Generator Parts + capacity/range upgrades, Oshodi | CURRENT (slice) |
 | Parts for every mission, level-2 upgrades, bonus in every district, free respec | CURRENT (PR9–PR13) |
 | Parts for rooms, door raids, challenges | PROPOSED (PR15) |

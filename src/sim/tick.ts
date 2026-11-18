@@ -41,6 +41,7 @@ import { updateLocalChampion } from './systems/localChampion';
 import { grantStreakRewards, quickHandsPlacement, updateStreaks } from './systems/streaks';
 import { missionAfterEliminations, updateMission } from './mission/runtime';
 import { updateEnemyCalls } from './systems/enemyActions';
+import { updateTerritory } from './systems/territory';
 import { updateProjectiles } from './systems/projectiles';
 import { raidAfterEliminations, updateRaid } from './raid/runtime';
 
@@ -74,6 +75,7 @@ export function tick(state: GameState, rawIntents: Intents = {}): SimEvent[] {
   updateAttacks(state, events);
   updateProjectiles(state, events); // campaign enemies' thrown objects (absent in a normal match)
   updateEnemyCalls(state, events);
+  if (state.territory) updateTerritory(state, events); // campaign tactics: the territorial state machine
   updateSpectators(state, intents, events);
   updateFloorHazards(state, events);
   armTeleports(state);

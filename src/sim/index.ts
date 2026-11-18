@@ -2,7 +2,7 @@
 export { createGame, createPlayer, crushSchedule, DEFAULT_SETTINGS, MAX_PLAYERS, MIN_PLAYERS } from './state';
 export { tick } from './tick';
 export { normaliseLoadoutBonus, seatBaseCapacity, seatBaseRange, seatMaxCapacity } from './systems/loadout';
-export { DEFAULT_CONFIG, TICK_RATE, mergeConfig, ticks } from './config';
+export { DEFAULT_CONFIG, TICK_RATE, mergeConfig, mergeLayers, ticks } from './config';
 export type { AttackSpec, DeepPartial, GameConfig, RewardKind, VehicleSpec } from './config';
 export * from './types';
 export {
@@ -134,6 +134,7 @@ export {
   CAMPAIGN_LEVEL_DEFS,
   DEFAULT_CAMPAIGN_LEVEL,
   campaignEnemyLevel,
+  campaignTacticsLayer,
   isCampaignLevel,
   levelConfigLayer,
   levelMaxHp,
@@ -145,8 +146,9 @@ export {
   ENEMY_VARIANTS,
   ENEMY_VARIANT_IDS,
   isEnemyVariantId,
+  variantOf,
 } from './data/enemyVariants';
-export type { EnemyVariantDef, EnemyVariantId } from './data/enemyVariants';
+export type { EnemyPersonality, EnemyVariantDef, EnemyVariantId } from './data/enemyVariants';
 export type { EnemyKindDef } from './data/enemies';
 export {
   applyCampaignHit,
@@ -198,7 +200,28 @@ export type { SuddenDeathFront } from './types';
 // the Tactical Trap pilot (docs/TACTICAL_TRAP_PILOT.md): line of sight, attack phases, slow arithmetic
 export { TACTICAL_TRAP_ENEMY_ATTACKS, TACTICAL_TRAP_PILOT, tacticalTrapLayer } from './config';
 export type { TacticalTrapConfig, TrapPerception } from './config';
-export { bodyTiles, canSeeTile, traceBlocked } from './systems/sight';
+export { bodyTiles, canSeePlayer, canSeeTile, inViewCone, traceBlocked } from './systems/sight';
+export {
+  CAMPAIGN_TACTICS,
+  CAMPAIGN_TACTICS_ENEMY_ATTACKS,
+  CAMPAIGN_TACTICS_LEVELS,
+  campaignTacticsFor,
+} from './config';
+export type { CampaignTacticsConfig, TrapSenseSpec, TrapSenseTier } from './config';
+export {
+  addEnemyMind,
+  coverTile,
+  enemyMindView,
+  investigateSpot,
+  noiseBand,
+  resolveTerritory,
+  territoryDirective,
+  territoryDistance,
+  updateTerritory,
+} from './systems/territory';
+export type { EnemyMindViewState } from './systems/territory';
+export { tacticsPunchDamage, tacticsPunchFloor } from './systems/skills';
+export { tacticsBlastDamage } from './systems/lethality';
 export type { SightView } from './systems/sight';
 export {
   enemyAttackPhase,

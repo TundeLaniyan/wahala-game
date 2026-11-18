@@ -14,6 +14,7 @@ import type {
   EnemyKind,
   Projectile,
   RaidOutcome,
+  TerritoryState,
   Vitals,
 } from './campaign/types';
 import type { RaidSpec, RaidState } from './raid/types';
@@ -79,6 +80,9 @@ export type PickupKind =
   /** V2: Square Blast tier up (3 x 3, then 5 x 5) on top of the normal plus. */
   | 'square';
 export type CurseKind = 'slow' | 'inverted' | 'weakFire';
+
+/** The readable enemy beats of the campaign tactics layer (`enemyCue` event). */
+export type EnemyCueKind = 'windup' | 'recovery' | 'stagger' | 'alert' | 'investigate' | 'lost';
 export type GeneratorMode = 'timed' | 'remote' | 'disabled';
 
 /**
@@ -694,6 +698,8 @@ export interface GameState {
   pilotCombat?: PilotCombatState;
   /** The Tactical Trap pilot's runtime (slow stacks per enemy). ABSENT outside a pilot scenario. */
   tacticalTrap?: TacticalTrapState;
+  /** The campaign territorial state machine (systems/territory.ts). ABSENT outside campaign tactics matches. */
+  territory?: TerritoryState;
   /** The City Rumble combat test lab's runtime (systems/combatLab.ts). ABSENT until a level is picked in a local Rumble. */
   combatLab?: CombatLabState;
 }
@@ -1177,6 +1183,25 @@ export type SimEvent =
       reason: 'capacity' | 'occupied' | 'stunned' | 'busy';
       x: number;
       y: number;
+    }
+  /**
+   * Campaign tactics layer only (docs/CAMPAIGN_SECTOR_AI.md, "Telegraph contract"): one readable enemy beat for the
+   * renderer and audio. `windup`: a punch on (x, y) in `dir`, or a throw from (x, y) along `dir`, lands at `untilTick`;
+   * `recovery`: planted from `fromTick` to `untilTick` (the punish window); `stagger`: reeling until `untilTick` (its
+   * wind-up was cut); `alert`: it spotted the human at (x, y) (`byId`: the ally whose call alerted it, else null);
+   * `investigate`: it goes to look at the COARSE spot (x, y) after a noise (never the source tile); `lost`: it gave up
+   * the chase and watches until `untilTick` before walking back to (x, y).
+   */
+  | {
+      type: 'enemyCue';
+      playerId: number;
+      cue: EnemyCueKind;
+      fromTick: number;
+      untilTick: number;
+      dir: Dir | null;
+      x: number;
+      y: number;
+      byId: number | null;
     }
   /** A hit that dazed or displaced the target cut a melee startup short. */
   | { type: 'attackInterrupted'; playerId: number; byId: number }

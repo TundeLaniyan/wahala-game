@@ -7,6 +7,7 @@ import type { GameConfig } from './config';
 import { enemyGroupDirective } from './campaign/tactics';
 import { directiveFor } from './mission/directives';
 import { raidDirectiveFor } from './raid/directives';
+import { territoryDirective } from './systems/territory';
 import type { NpcDirective } from './mission/types';
 import type {
   BlastEvent,
@@ -60,6 +61,7 @@ export function observe(state: GameState, selfId: number): Observation {
   const directive =
     (state.mission ? directiveFor(state, selfId) : undefined) ??
     (state.raid ? raidDirectiveFor(state, selfId) : undefined) ??
+    (state.territory ? territoryDirective(state, selfId) : undefined) ??
     (state.players[selfId]?.enemyKind !== undefined ? enemyGroupDirective(state, selfId) : undefined);
   return {
     selfId,

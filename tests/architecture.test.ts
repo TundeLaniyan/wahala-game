@@ -76,3 +76,82 @@ describe('layering rules', () => {
     }
   });
 });
+
+describe('campaign enemy bots see only what perception allows (decision SA4)', () => {
+  it('the bots never read hidden pickups or the RNG state, and the Observation carries neither', () => {
+    for (const f of files('src/ai')) {
+      const code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+      expect(code, f).not.toMatch(/rngState|\.hidden\b|\bhidden\[/);
+    }
+    const observe = readFileSync('src/sim/observe.ts', 'utf8');
+    const shape = observe.slice(
+      observe.indexOf('export interface Observation'),
+      observe.indexOf('export function observe'),
+    );
+    expect(shape).not.toMatch(/\bhidden\b|rngState/);
+  });
+
+  it('an enemy plays identically whatever lies unseen: hidden pickups, the RNG state, unseen generators', async () => {
+    const { tacticsScene } = await import('../scripts/lib/sectorDrill');
+    const { createBot } = await import('../src/ai');
+    const { observe, tick } = await import('../src/sim');
+    type Twist = 'none' | 'hidden' | 'rng' | 'unseenA' | 'unseenB';
+    const play = (twist: Twist): string[] => {
+      const { s } = tacticsScene({
+        level: 'hard',
+        seed: 9,
+        human: [12, 8],
+        enemies: [
+          {
+            variant: 'lieutenant',
+            at: [2, 2],
+            territory: {
+              patrol: [
+                [2, 2],
+                [8, 2],
+              ],
+            },
+          },
+        ],
+      });
+      if (twist === 'hidden') s.hidden = { [3 * s.width + 3]: 'okada' } as never;
+      if (twist === 'rng') s.rngState = (s.rngState ^ 0xdeadbeef) >>> 0;
+      // a generator far out of every line of sight, in one corner or the other (never lit for 200 ticks)
+      const corner = twist === 'unseenA' ? { x: 14, y: 10 } : twist === 'unseenB' ? { x: 0, y: 10 } : null;
+      if (corner)
+        s.generators.push({
+          id: s.nextId++,
+          ownerId: 0,
+          x: corner.x,
+          y: corner.y,
+          stepFromX: corner.x,
+          stepFromY: corner.y,
+          range: 2,
+          pierce: false,
+          square: 0,
+          fromSpectator: false,
+          mode: 'timed',
+          timer: 100000,
+          carriedBy: null,
+          carryBonusUsed: false,
+          slide: null,
+          flight: null,
+          triggered: false,
+          placedTick: -1000,
+        });
+      const bot = createBot({ difficulty: 'standard', seed: 4, playerId: 1 });
+      const out: string[] = [];
+      for (let i = 0; i < 200; i++) {
+        const intent = bot.decide(observe(s, 1));
+        out.push(JSON.stringify(intent));
+        tick(s, { 1: intent });
+      }
+      return out;
+    };
+    const base = play('none');
+    expect(play('hidden')).toEqual(base);
+    expect(play('rng')).toEqual(base);
+    expect(play('unseenA')).toEqual(base);
+    expect(play('unseenB')).toEqual(base);
+  });
+});

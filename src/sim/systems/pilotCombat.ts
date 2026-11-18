@@ -287,7 +287,9 @@ export function pilotPending(state: GameState, id: number): boolean {
 export function pilotBlocksStep(state: GameState, p: Readonly<Player>, x: number, y: number): boolean {
   if (p.enemyKind === undefined) return false;
   const keepOff =
-    state.config.combatPilot?.enemiesKeepOffHuman || state.config.tacticalTrap?.enemiesKeepOffHuman;
+    state.config.combatPilot?.enemiesKeepOffHuman ||
+    state.config.tacticalTrap?.enemiesKeepOffHuman ||
+    state.config.campaignTactics?.enemiesKeepOffHuman; // the campaign tactics layer too (decision SA8)
   if (!keepOff) return false;
   return state.players.some(
     (o) =>
@@ -295,12 +297,12 @@ export function pilotBlocksStep(state: GameState, p: Readonly<Player>, x: number
   );
 }
 
-/** An enemy punch in a pilot match also reaches a rival standing on the enemy's own tile (CP9). */
+/** An enemy punch in a pilot or campaign tactics match also reaches a rival standing on the enemy's own tile (CP9, SA8). */
 export function pilotSameTileRival<P extends Readonly<Player>>(
   view: { readonly players: readonly P[]; readonly config: GameState['config'] },
   p: Readonly<Player>,
   ok: (o: P) => boolean,
 ): P | null {
-  if (!view.config.combatPilot || p.enemyKind === undefined) return null;
+  if ((!view.config.combatPilot && !view.config.campaignTactics) || p.enemyKind === undefined) return null;
   return view.players.find((o) => o.alive && o.id !== p.id && o.x === p.x && o.y === p.y && ok(o)) ?? null;
 }

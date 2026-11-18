@@ -94,7 +94,9 @@ describe('gating: local City Rumble only (CL-L1)', () => {
       }),
     );
     expect(setCombatLabLevel(field, 4)).toBe(false);
-    expect(field.config.combatPilot).toBeDefined(); // the Oshodi pilot is still its own thing
+    // the Oshodi pilot is superseded by the campaign tactics layer (decision SA3), which is not the lab either
+    expect(field.config.combatPilot).toBeUndefined();
+    expect(field.config.campaignTactics).toBeDefined();
   });
 });
 
