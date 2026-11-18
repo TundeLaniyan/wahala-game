@@ -196,11 +196,25 @@ export class DistrictHuman implements FieldPlayer {
         for (const d of DIRS) {
           const x = (u % w) + DIR_VEC[d].dx;
           const y = Math.floor(u / w) + DIR_VEC[d].dy;
-          const v = y * w + x;
+          let v = y * w + x;
           if (seen.has(v) || !this.walkable(s, x, y) || avoid.has(v)) continue;
           const from = s.tick + (k - 1) * step;
           const to = s.tick + (k + 1) * step;
-          if ((danger.get(v) ?? []).some((win) => win.from <= to && win.to >= from)) continue;
+          const burns = (i: number): boolean =>
+            (danger.get(i) ?? []).some((win) => win.from <= to && win.to >= from);
+          if (burns(v)) continue;
+          // an oil slick carries him on in the same direction while the way is open (`hazards.oilSlideTiles`): the
+          // step lands where the slide ends. (After SA13 the enemies' new paths put him on a slick in Junction Run,
+          // and a route that ignored the slide walked onto it, slid back and tried again for minutes.)
+          if (s.floorHazards[v] === 'oil') {
+            for (let n = 0; n < s.config.hazards.oilSlideTiles; n++) {
+              const nx = (v % w) + DIR_VEC[d].dx;
+              const ny = Math.floor(v / w) + DIR_VEC[d].dy;
+              if (!this.walkable(s, nx, ny) || avoid.has(ny * w + nx) || burns(ny * w + nx)) break;
+              v = ny * w + nx;
+            }
+            if (seen.has(v)) continue;
+          }
           seen.set(v, u === start ? d : seen.get(u)!);
           if (goal(v, k)) return { first: seen.get(v)!, steps: k, tile: v };
           next.push(v);
@@ -301,32 +315,36 @@ export class DistrictHuman implements FieldPlayer {
     const equipment = new Set((s.mission?.field?.targets ?? []).map((t) => t.y * w + t.x));
     const cost = new Int32Array(N).fill(1 << 30);
     const prev = new Int32Array(N).fill(-1);
-    const deque: number[] = [start];
+    const done = new Uint8Array(N);
+    // a 0-1 BFS by cost buckets (a crate costs 1, open floor 0): the first goal tile popped is a fewest-crate one.
+    // (After SA13: the old roughly-sorted queue could pop a crate-costing goal first while a crate-free way existed,
+    // and the human stood still forever in front of a crate he could not safely blast.)
+    const buckets: number[][] = [[start]];
     cost[start] = 0;
     let end = -1;
-    for (let h = 0; h < deque.length; h++) {
-      const u = deque[h]!;
-      if (near(u) && s.tiles[u] === Tile.Empty) {
-        end = u;
-        break;
-      }
-      for (const d of DIRS) {
-        const x = (u % w) + DIR_VEC[d].dx;
-        const y = Math.floor(u / w) + DIR_VEC[d].dy;
-        if (x < 0 || y < 0 || x >= w || y >= s.height) continue;
-        const v = y * w + x;
-        const t = s.tiles[v];
-        if (t === Tile.Hard || equipment.has(v) || (t !== Tile.Empty && t !== Tile.Soft)) continue;
-        const c = cost[u]! + (t === Tile.Soft ? 1 : 0);
-        if (c >= cost[v]!) continue;
-        cost[v] = c;
-        prev[v] = u;
-        deque.push(v);
-      }
-      // keep the queue roughly ordered by cost (small boards: a stable sort of the tail is cheap enough)
-      if (h % 64 === 63) {
-        const tail = deque.splice(h + 1).sort((a2, b2) => cost[a2]! - cost[b2]!);
-        deque.push(...tail);
+    for (let c = 0; c < buckets.length && end < 0; c++) {
+      const bucket = buckets[c] ?? [];
+      for (let h = 0; h < bucket.length; h++) {
+        const u = bucket[h]!;
+        if (done[u] || cost[u] !== c) continue;
+        done[u] = 1;
+        if (near(u) && s.tiles[u] === Tile.Empty) {
+          end = u;
+          break;
+        }
+        for (const d of DIRS) {
+          const x = (u % w) + DIR_VEC[d].dx;
+          const y = Math.floor(u / w) + DIR_VEC[d].dy;
+          if (x < 0 || y < 0 || x >= w || y >= s.height) continue;
+          const v = y * w + x;
+          const t = s.tiles[v];
+          if (t === Tile.Hard || equipment.has(v) || (t !== Tile.Empty && t !== Tile.Soft)) continue;
+          const nc = c + (t === Tile.Soft ? 1 : 0);
+          if (nc >= cost[v]!) continue;
+          cost[v] = nc;
+          prev[v] = u;
+          (buckets[nc] ??= []).push(v);
+        }
       }
     }
     if (end < 0 || cost[end] === 0) return null;

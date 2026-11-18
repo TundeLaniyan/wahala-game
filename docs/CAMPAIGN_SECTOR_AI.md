@@ -903,3 +903,20 @@ Section summaries, objective cards, mission summaries and "Ring weakened" lines 
 - Raid times are par estimates, not played.
 - An oil slick (`floorTraps`) can lie on the only crate-free route (seen on Press Run): DS6 clears crates but does not know a slick slides you off the path. The script handles it (it models the slide and blasts a crate); a person may slide twice before seeing it.
 - No Playwright spec was run for these missions (the campaign specs cover Oshodi only); the gate opening was checked in the real renderer by a debug-staged frame.
+
+### After SA13 (decisions DT1-DT4)
+
+SA13 (`301005b`) made the enemy planner treat the campaign human's tile as closed, so an enemy no longer plans an escape through him and stays in a blast. Two district tests then failed: Estate Sweep won 3 of 6 on Normal, and the Fadeyi/Somolu Easy cost rose above Normal x 1.05. **Cause: the scripted players, not the AI or the data.** Every Estate Sweep timeout was spent in the first leg against the drive heavy at its punch floor: the script laid next to it and walked away, and the heavy (engaged, so it sees all round) walked out of the 3 s fuse; before SA13 it had planned its way out through the human. The Fadeyi cost came from the district-A human standing still for minutes (a crate search that returned a crate-costing way while a free one existed, and routes that ignored oil slides) after the enemies' new paths put him in those spots. Fixed in the harnesses (DT1-DT3): the **bait** (lay under your own feet next to the heavy, or round a corner from one coming for you, stand on it so your body hides it, step out of reach when it commits to a wind-up), blasting out when boxed in by stage crates, a true fewest-crate search and oil-slide-aware routes. No mission data, rule or AI changed; no test threshold changed.
+
+Measured, 6 seeds, wins per level (Easy / Normal / Hard), before (SA13 with the old scripts) -> after:
+
+| Mission | Before | After | Normal field (mean of wins) after |
+| --- | --- | --- | --- |
+| `ebuteMetta.approach` | 6 / 6 / 2 | 6 / 6 / 5 | 158 s |
+| `lagosIsland.approach` | 6 / 6 / 3 | 6 / 6 / 6 | 124 s |
+| `lagosIsland.press` | 6 / 4 / 2 | 6 / 6 / 6 | 144 s |
+| `lekki.approach` | 6 / 5 / 6 | 6 / 6 / 5 | 113 s |
+| `lekki.estate` | 6 / 3 / 2 | 6 / 6 / 6 | 125 s |
+| the six district-A missions | 6 / 6 / 6 each | 6 / 6 / 6 each | 25-126 s |
+
+Fadeyi/Somolu cost (field s + 60 s per life, 12 runs per level): Easy 1320 / Normal 1084 / Hard 1557 before, 1046 / 1142 / 1523 after (Junction Run Easy mean 149 s -> 96 s). Districts B damage over 30 runs: Easy 7, Normal 23, Hard 80 health segments. Hard is now won more often by the script (the bait and crate fixes help there too); it remains the costliest level in damage and time. The bait relies on a published sight rule; on Hard a basic heavy watches placements, so the script lays it out of the heavy's line of sight.
