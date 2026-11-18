@@ -101,6 +101,45 @@ Everything above works from the existing state. Nice to have, never required (ea
    last health, heavy / lieutenant / boss), or a pure exported `finishableByPunch(state, p): boolean`. The view would
    add a small shield glyph to the health pips; without it nothing is drawn.
 
+### Awareness markers and armour cue (SV6-SV8)
+
+Branch `claude/wahala-csa-polish`, presentation only. Screenshots (landscape phone 740 x 360, dsf 2, Low):
+`awareness-alert-low-740x360.jpg`, `awareness-query-lost-low-740x360.jpg`, `field-windup-low-740x360.jpg`,
+`armour-needs-blast-low-740x360.jpg` in `docs/screenshots/campaign-sector-ai/`.
+
+| Mark | Signal | Drawn |
+| --- | --- | --- |
+| **Spotted you** | `enemyCue` `alert`, or the mind entering `alert` | orange warning triangle with a dark "!" where the head clock sits: pops (overshoot), holds the alert beat (clamped 0.6-1.2 s), fades |
+| **Going to look** | `enemyCue` `investigate`, or the mind entering `investigate` (a lost chase has no event) | pale-blue round plate with a dark "?", sways gently for about 1.1 s, fades |
+| **Lost you** | `enemyCue` `lost`, or the mind entering `return` (a search that found nothing has no event) | grey round plate with three dark dots that sinks and fades over 0.9 s |
+| **Armoured** | `enemyHealthView(...).blastOnly` | a steel-blue heater shield, a badge at the left end of the name tag, shown with the pips |
+| **Needs a blast** | the same, with `hp <= punchFloor` | the shield turns amber, pulses, and a red-orange starburst appears behind it; a boss / lieutenant (bar in the rail) shows it over its head only at the floor or just hurt |
+
+`src/render/views/enemyAwareness.ts` (pure, unit-tested) maps the cue or state change to a mark and its look per tick
+of age; `EnemyTelegraphViews` draws it, `DamageViews` the shield (`armourCue` in `damageModel.ts`). An event and the
+state change it reports fold into one mark. Marks are timed in sim ticks (a pause holds them), never drawn while the
+wind-up clock shows (the clock is the more urgent read), and pursuit has none (the chase reads by itself). Each mark is
+outlined geometry, not text or a texture: a world-space icon attached to the enemy, not HUD text over the board.
+Reduced motion keeps only the fade. Not gated by quality.
+
+Sound (SV7): `enemy_alert` (a dry two-note "hey!" rising a fourth, warning bus, at most every 0.6 s: an ally's call
+that alerts a crew in one tick is one sting) and `enemy_query` (a soft breathy glide up, effects bus, at most every
+0.8 s, never within 0.4 s after a sting). `lost` stays silent. Synthesised; no recording.
+
+Cost: three mark batches and two shield batches, each one `InstancedMesh` (one draw call while visible, none while
+unused); the marks carry a per-instance opacity attribute (one shader variant). Headless, `update()` for three enemies
+costs about 1.0 us a frame without marks and 2.3 us with three marks up; no allocation per frame once warm (tested).
+
+Browser probe: `e2e/campaign-combat-readability.spec.ts` (desktop and phone) starts Terminal Approach with
+`__WAHALA__.startFieldMission`, stages a warden in front of the human and asserts the "!" mark, then a punch wind-up
+(`telegraphStats().melee`), then the Lane Blocker's shield and its "needs a blast" state (`renderer().damageStats()`).
+
+Readability judgement from the screenshots: the "!" triangle and the "?" plate read at a glance at phone size; the
+three-dot plate is quieter by design. The shield badge is small (about 17 CSS px) and partly covers the first letters of
+the name tag, and when the human stands beside the enemy it can overlap the human's own tag; the starburst makes the
+"needs a blast" state distinct from the plain shield. A HUD-rail badge on the boss bar would need `blastOnly` in the
+`src/app` HUD snapshot (not done here).
+
 ### Measurements
 
 See `docs/DECISIONS.md` SV2 / SV4 and the final report of this branch: draw calls counted with
@@ -332,6 +371,7 @@ Events (all existing ones stay; ONE new event, emitted only when `campaignTactic
 | `enemyCue` `lost` | it gave up the chase; watches until `untilTick`, then walks back to (x, y) | |
 
 The audio router handles `enemyCue` as a no-op (the wind-up and hit sounds stay `attackStarted` / `campaignHit`).
+Since SV7 the router gives `alert` and `investigate` their own synthesised cues ("Awareness markers and armour cue"); the other kinds stay silent.
 
 ## 9. Measurements
 
