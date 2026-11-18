@@ -37,7 +37,11 @@ import type { ViewPoint } from '../assets/viewClear';
 import { playerGridPos } from './motion';
 import { arenaFloorMaps } from '../arenas/floors';
 import { installPaving } from '../arenas/paving/material';
-import type { BoardCover } from '../arenas/boardCover';
+import { mergeCovers } from '../arenas/boardCover';
+import type { BoardCover, CoverClip } from '../arenas/boardCover';
+import { inClip, renderClip } from '../sectorClip';
+import { buildSectorBarricades } from './SectorBarricades';
+import type { SectorBarricades } from './SectorBarricades';
 import { NEW_ARENA_ART } from '../arenas/newArenas';
 import { InstanceSet } from './InstanceSet';
 import type { FrameContext, View } from './types';
@@ -122,6 +126,11 @@ export class ArenaView implements View {
   private readonly rayMiss = new Map<number, number>();
   private readonly ownedMaterials: Material[] = [];
   private readonly ownedTextures: Texture[] = [];
+  /** A mission sector's render clip (null = the whole board) and its barricades. */
+  private readonly clip: CoverClip | null;
+  private readonly barricades: SectorBarricades | null;
+  /** Soft tiles that are field equipment (drawn by `FieldEquipmentViews`). */
+  private readonly equipment: Set<number>;
 
   constructor(
     state: GameState,
@@ -180,9 +189,19 @@ export class ArenaView implements View {
       ];
     }
     for (const set of this.pillars) this.group.add(set.group);
+    // a mission sector (docs/CAMPAIGN_SECTOR_AI.md): only what can be seen is built, and its barricades are real objects
+    const clip = renderClip(state);
+    this.clip = clip;
+    this.barricades = buildSectorBarricades(state);
     // board cover: grouped concrete drawn as the buildings / buses / piers it stands for
-    this.cover = NEW_ARENA_ART()[state.arenaId]?.cover?.({ width: W, height: H }) ?? null;
+    const arenaCover =
+      NEW_ARENA_ART()[state.arenaId]?.cover?.(
+        clip ? { width: W, height: H, clip } : { width: W, height: H },
+      ) ?? null;
+    this.cover = mergeCovers(arenaCover, this.barricades?.cover);
     if (this.cover) this.group.add(this.cover.object);
+    // field equipment (destroyTargets legs) stands on soft tiles but is drawn by its own view, never as a crate
+    this.equipment = new Set((state.mission?.field?.targets ?? []).map((t) => t.y * W + t.x));
     for (const v of this.variants) {
       const set = new InstanceSet(
         tinted(softBlockParts(v), look.softTint, style.softTint, owned),
@@ -237,18 +256,23 @@ export class ArenaView implements View {
 
   update(ctx: FrameContext): void {
     const { state, time } = ctx;
+    this.barricades?.sync(state);
     for (let i = 0; i < state.tiles.length; i++) {
       const kind = state.tiles[i]!;
       if (this.cache[i] !== kind) {
         const x = i % state.width;
         const y = Math.floor(i / state.width);
+        if (!inClip(this.clip, x, y)) {
+          this.cache[i] = kind; // outside a mission sector's clip: never seen, never built
+          continue;
+        }
         this.removeTile(i, x, y, this.cache[i]!);
         this.cache[i] = kind;
         if (kind === Tile.Hard) {
           if (this.coveredAt(i)) continue; // drawn by the board cover
           if (!this.initialHard.has(i)) this.dropping.set(i, time);
           this.placePillar(i, x, y, this.dropping.has(i) ? 6 : 0);
-        } else if (kind === Tile.Soft) {
+        } else if (kind === Tile.Soft && !this.equipment.has(i)) {
           this.placeSoft(i, x, y);
         }
       }
@@ -444,7 +468,13 @@ export class ArenaView implements View {
   private removeTile(i: number, x: number, y: number, kind: number): void {
     this.contact.remove(i);
     if (kind === Tile.Hard) this.pillars[this.pillarVariant(x, y)]!.remove(i);
-    else if (kind === Tile.Soft) this.soft.get(this.variantOf(i, x, y))!.remove(i);
+    else if (kind === Tile.Soft && !this.equipment.has(i)) this.soft.get(this.variantOf(i, x, y))!.remove(i);
+  }
+
+  /** Debug / tests: the mission sector's render clip and barricades (null without a sector). */
+  sectorStatus(): { clip: { x0: number; y0: number; x1: number; y1: number }; barricades: number } | null {
+    if (!this.clip) return null;
+    return { clip: { ...this.clip }, barricades: this.barricades?.stats().barricades ?? 0 };
   }
 
   private pillarVariant(x: number, y: number): number {

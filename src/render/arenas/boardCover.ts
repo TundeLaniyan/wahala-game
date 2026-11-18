@@ -37,8 +37,55 @@ export interface BoardCover {
   dispose(): void;
 }
 
-/** Builds an arena's board cover for a match (null: draw per-tile pillars as usual). */
-export type CoverFactory = (board: { width: number; height: number }) => BoardCover | null;
+/** A board rectangle in tiles, inclusive (a mission sector's render clip). */
+export interface CoverClip {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/**
+ * Builds an arena's board cover for a match (null: draw per-tile pillars as usual). With `clip` (a mission sector,
+ * docs/CAMPAIGN_SECTOR_AI.md) a factory may leave out every object that has no tile inside it; without it the output
+ * is exactly the whole board's.
+ */
+export type CoverFactory = (board: { width: number; height: number; clip?: CoverClip }) => BoardCover | null;
+
+/** Is any tile of the rectangle (x, y, w, h) inside the clip? Always true without one. */
+export function rectInClip(clip: CoverClip | undefined, x: number, y: number, w: number, h: number): boolean {
+  return !clip || (x <= clip.x1 && x + w - 1 >= clip.x0 && y <= clip.y1 && y + h - 1 >= clip.y0);
+}
+
+/**
+ * Several board covers drawn and faded as one (the arena's own cover plus a mission sector's barricades): a tile is
+ * covered when any of them covers it, its fade goes to the ones that cover it, the view-clear bounds are all of theirs.
+ * Null in, null out; a single cover is returned as it is.
+ */
+export function mergeCovers(...list: (BoardCover | null | undefined)[]): BoardCover | null {
+  const covers = list.filter((c): c is BoardCover => !!c);
+  if (covers.length <= 1) return covers[0] ?? null;
+  const root = new Group();
+  root.name = 'boardCovers';
+  for (const c of covers) root.add(c.object);
+  const owner = (tile: number): BoardCover | undefined => covers.find((c) => c.covers(tile));
+  return {
+    object: root,
+    bounds: covers.flatMap((c) => c.bounds),
+    maxReach: Math.max(...covers.map((c) => c.maxReach)),
+    covers: (tile) => covers.some((c) => c.covers(tile)),
+    reach: (tile) => owner(tile)?.reach(tile) ?? 1,
+    setHide(tile, value) {
+      for (const c of covers) if (c.covers(tile)) c.setHide(tile, value);
+    },
+    commit() {
+      for (const c of covers) c.commit();
+    },
+    dispose() {
+      for (const c of covers) c.dispose();
+    },
+  };
+}
 
 interface Piece {
   geometry: BufferGeometry;

@@ -50,7 +50,16 @@ export type ObjectiveKind =
  *   door          stand on a door about a second: raises a `RaidRequest` (`state.mission.pendingRaid`)
  *   returnRoute   walk to the return marker: the mission is complete
  */
-export type FieldObjectiveKind = 'reachMarkers' | 'clearGroup' | 'escapeRoute' | 'door' | 'returnRoute';
+export type FieldObjectiveKind =
+  | 'reachMarkers'
+  | 'clearGroup'
+  | 'escapeRoute'
+  | 'door'
+  /** wreck named Ring equipment with blasts (docs/CAMPAIGN_SECTOR_AI.md) */
+  | 'destroyTargets'
+  /** keep an area under control for a time while enemy waves come in */
+  | 'holdArea'
+  | 'returnRoute';
 
 /** Reusable NPC roles for the protection crew (they drive bot behaviour through a directive, ai/directive.ts). */
 export type NpcRole =
@@ -104,6 +113,11 @@ export interface MissionSpec {
    * the campaign: only the pilot's reference tests and `npm run combat-pilot` set it (decision SA3).
    */
   archivedPilot?: boolean;
+  /**
+   * Debug / measurement only (`?nosector`): play a field mission on the whole district map, without its sector
+   * (src/sim/mission/sectors.ts). The campaign never sets it.
+   */
+  noSector?: boolean;
 }
 
 export type MissionNodeState =
@@ -133,11 +147,14 @@ export interface MissionNodeView {
   optional?: boolean;
 }
 
-/** How a field mission node is completed (see `MissionNodeView.kind`). */
-export type MissionNodeKind = 'checkpoint' | 'hold' | 'enemies' | 'exit' | 'return';
+/**
+ * How a field mission node is completed (see `MissionNodeView.kind`); `target` = a piece of equipment to blast, `area` =
+ * a zone to keep under control.
+ */
+export type MissionNodeKind = 'checkpoint' | 'hold' | 'enemies' | 'exit' | 'return' | 'target' | 'area';
 
-/** What the current field leg asks for, as the HUD tag says it: GO TO / HOLD / DEFEAT / ESCAPE / RETURN. */
-export type FieldGoalVerb = 'goTo' | 'hold' | 'defeat' | 'escape' | 'return';
+/** What the current field leg asks for, as the HUD tag says it: GO TO / HOLD / DEFEAT / ESCAPE / RETURN / DESTROY / SECURE. */
+export type FieldGoalVerb = 'goTo' | 'hold' | 'defeat' | 'escape' | 'return' | 'destroy' | 'secure';
 
 /**
  * The current field objective in plain terms (read-only view data for the panel, the compass and the notices; it
@@ -170,6 +187,22 @@ export interface FieldGoalView {
   enemiesLeft: number;
   /** Enemies are on the map but none has to be defeated on this leg (fighting them is optional). */
   fightsOptional: boolean;
+  /** destroy: the leg's equipment still standing of its total (absent on other legs). */
+  targets?: { left: number; total: number };
+  /**
+   * secure: the hold zone's progress (ticks held of `goalTicks`), whether the human is inside and whether an enemy
+   * contests it (time accrues only when inside and uncontested). Absent on other legs.
+   */
+  area?: {
+    ticks: number;
+    goalTicks: number;
+    fraction: number;
+    inside: boolean;
+    contested: boolean;
+    x: number;
+    y: number;
+    radius: number;
+  };
 }
 
 /** A walk-through checkpoint of the route (every leg up to the current one), for the world beacons and the notices. */
@@ -485,6 +518,57 @@ export interface FieldRuntime {
   raidBonus: number;
   /** Set once the return route is walked; the mission result is written on the same tick. */
   done: boolean;
+  /**
+   * `destroyTargets` legs: every piece of equipment of the mission (all legs), standing from the start. ABSENT when the
+   * mission has no such leg (so the existing missions' state is unchanged).
+   */
+  targets?: FieldTargetRuntime[];
+  /** `holdArea` leg in play: ticks held so far and what the zone saw last tick. ABSENT when the mission has no such leg. */
+  hold?: { ticks: number; inside: boolean; contested: boolean };
+}
+
+/** A piece of Ring equipment at run time (`FieldRuntime.targets`). */
+export interface FieldTargetRuntime {
+  id: string;
+  /** The leg it belongs to. */
+  leg: number;
+  kind: string;
+  x: number;
+  y: number;
+  label: string;
+  hp: number;
+  maxHp: number;
+  destroyed: boolean;
+}
+
+/** A board rectangle in tiles, inclusive corners. */
+export interface SectorClip {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/**
+ * The mission sector stamped into the board (`GameState.sector`, src/sim/mission/sector.ts). ABSENT (the key does not
+ * exist) in every match without one: City Rumble, Classic, raids, boss missions and multiplayer are unchanged.
+ */
+export interface SectorState {
+  id: string;
+  /** The play area: inclusive [x0, y0, x1, y1] rectangles. */
+  rects: [number, number, number, number][];
+  /** Tile indices the sector turned to concrete that are still closed (barricades and closed gates). */
+  blocked: number[];
+  /** Gates that open between legs (tile indices; `open` once their leg is done). */
+  gates: { id: string; tiles: number[]; opensAfterLeg: number; open: boolean }[];
+  /**
+   * The rects' bounding box grown by `viewMargin`, clamped to the board: what the follow camera may show, what the
+   * minimap shows and what the renderer builds (presentation reads it; no rule does).
+   */
+  clip: SectorClip;
+  viewMargin: number;
+  /** Which scheduled stage hazards stay on: 'inside' (those wholly inside the rects) or 'none'. */
+  hazards: 'inside' | 'none';
 }
 
 export interface MissionState {

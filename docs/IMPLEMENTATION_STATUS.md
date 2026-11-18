@@ -6,6 +6,17 @@ _Last updated at the end of the autonomous Phase 1 build session. Everything bel
 
 Presentation only (decisions SV1-SV5, `docs/CAMPAIGN_SECTOR_AI.md` "Enemy telegraphs and looks"): every match with campaign enemies draws readable punch wind-ups (filling ring, arrow, aimed tile, head clock), throw cues (sight, chevrons, X), the open window (broken cyan ring) and the stagger, on every quality rung, read from sim state; synthesised `enemy_windup` / `enemy_aim` warnings, rate-limited; the nine enemy variants dressed apart (palette, headwear, props, scale, leader ring; temporary kit). No armoured glyph yet (SV5, needs a sim field). Not merged, not deployed. Verification: listed in the final report of the branch (tsc, eslint, Vitest, build, the relevant Playwright specs, screenshots in `docs/screenshots/campaign-sector-ai/`).
 
+## District sectors for field missions (branch `claude/wahala-csa-sectors`, from `46f0781` + `6359813`)
+
+Reference: `docs/CAMPAIGN_SECTOR_AI.md` ("District-sector architecture"); decisions DS1-DS10. Not merged, not deployed.
+
+- All eleven field missions play in a sector of their district (rects, 188-402 walkable tiles, 10-31 % of the district) closed by barricades drawn as danfo ranks, jersey barriers, steel gate walls, rail buffer fences and Ring checkpoint kiosks; the district layout and every other match are unchanged (no `sector` key).
+- Inside a sector: hazards that leave it are off, drops / manholes / respawns / vehicle entries keep to it, the route between objectives needs no blasting; the follow camera, the overview and the minimap stay on it; the renderer builds nothing outside its clip.
+- New shared leg kinds `destroyTargets` (Ring equipment only the human's blasts wreck) and `holdArea` (a zone held while enemy waves come in), with HUD words and an equipment view; not assigned to missions yet.
+- `scripts/sector-ascii.ts` (authoring), `scripts/sector-shots.mjs`, `scripts/sector-perf.mjs` (with / without the sector, low / high, leak check); debug `__WAHALA__.startFieldMission`, `__WAHALA__.sector()`, `?nosector`.
+
+Verification: `npx tsc --noEmit -p .`, `npx eslint src tests scripts e2e --max-warnings 0`, `vite build`, full Vitest (248 files, 3897 passed, 7 skipped), Playwright `campaign-sectors`, `checkpoint-clarity`, `oshodi-combat-pilot`, `campaign-expansion-smoke`, `mission-presentation` on desktop and mobile (22 passed, 2 skipped by design). Render cost measured on SwiftShader only (`docs/measurements/campaign-sector-perf.md`); no real-phone claim.
+
 ## Integrated release: gameplay, mobile controls, combat lab, visual polish (branch `claude/wahala-integrated-release-v1`, from `0c200a7`)
 
 Notes per task in `docs/integrated-release/`; decisions SD-B, LI7-LI9, NV, CL-L, PS and ML in `docs/DECISIONS.md`.

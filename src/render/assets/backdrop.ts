@@ -1,8 +1,8 @@
-import type { InstancedMesh } from 'three';
+import type { CanvasTexture, InstancedMesh } from 'three';
 import { Group, Mesh, PlaneGeometry } from 'three';
 import type { Layout } from '../coords';
 import { arenaLook } from '../arenaLook';
-import { artRng, concreteTexture, hazardStripes } from '../textures';
+import { artRng, concreteTexture, hazardStripes, isSharedTexture } from '../textures';
 import type { QualityProfile } from '../quality';
 import { AmbientFx } from '../fx/Ambient';
 import { StreetLife } from '../life/StreetLife';
@@ -212,6 +212,21 @@ export function createBackdrop(layout: Layout, quality: QualityProfile, arenaId 
       ambient.dispose();
       for (const im of instanced) im.dispose();
       for (const d of disposables) d.dispose();
+      // what the set built straight into the tree (baked statics, set pieces, per-match canvas boards) was never
+      // released: each match start left ~150 geometries and their boards on the GPU (measured by
+      // scripts/sector-perf.mjs --leak). Geometries go; canvas textures go unless they are the shared cache's.
+      // (A geometry or texture still shared with a library model is simply uploaded again when next drawn.)
+      root.traverse((o) => {
+        const mesh = o as Mesh;
+        if (!mesh.isMesh && !(o as { isPoints?: boolean }).isPoints) return;
+        mesh.geometry?.dispose();
+        const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+        for (const m of mats)
+          for (const v of Object.values(m)) {
+            const t = v as CanvasTexture | null;
+            if (t && (t as { isCanvasTexture?: boolean }).isCanvasTexture && !isSharedTexture(t)) t.dispose();
+          }
+      });
     },
   };
 }

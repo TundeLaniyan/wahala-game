@@ -12,6 +12,7 @@ import { Tile } from '../types';
 import type { BlastEvent, Dir, Flame, GameState, Generator, SimEvent } from '../types';
 import { radialFootprint, radialRadius, radialSquareRadius } from './blastShape';
 import { raidOnSoftHit } from '../raid/cargo';
+import { fieldOnSoftHit } from '../mission/equipment';
 import { revealPickupAt } from './pickups';
 import { triggerableGeneratorsAt } from './queries';
 
@@ -264,6 +265,7 @@ export function destroySoftBlocks(
   for (const [idx, eventId] of [...hits.entries()].sort((a, b) => a[0] - b[0])) {
     if (state.tiles[idx] !== Tile.Soft) continue;
     if (state.raid && raidOnSoftHit(state, idx, by, eventId, events)) continue; // raid cargo has hit points
+    if (state.mission && fieldOnSoftHit(state, idx, by, eventId, events)) continue; // field equipment (DS7)
     state.tiles[idx] = Tile.Empty;
     const supply = state.supplies.indexOf(idx);
     if (supply >= 0) state.supplies.splice(supply, 1);

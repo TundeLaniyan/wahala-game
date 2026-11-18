@@ -6,9 +6,16 @@ import { DIR_VEC, perpendiculars, tileAt } from '../grid';
 import type { GridView } from '../grid';
 import { Tile } from '../types';
 import type { Dir, GameState, TilePos, VehicleEntry, VehicleKind, VehicleTurn } from '../types';
+import type { SectorState } from '../mission/types';
+import { rectsContain } from '../mission/sector';
 
-/** Entry geometry only needs the board and the config, so bots can call it with an Observation. */
-export type EntryView = GridView & { readonly config: GameState['config'] };
+/**
+ * Entry geometry only needs the board and the config (and a mission's sector), so bots can call it with an Observation.
+ */
+export type EntryView = GridView & {
+  readonly config: GameState['config'];
+  readonly sector?: Readonly<Pick<SectorState, 'rects'>>;
+};
 
 export function entryKey(e: VehicleEntry): string {
   return `${e.x},${e.y},${e.dir}`;
@@ -41,14 +48,26 @@ export function allBorderEntries(state: EntryView): VehicleEntry[] {
       (dir === 'up' && y === h - 1) ||
       (dir === 'right' && x === 0) ||
       (dir === 'left' && x === w - 1);
-    return lanes.filter(onBorder).map(([x, y, dir]) => ({ x, y, dir }));
+    return inSectorOnly(
+      state,
+      lanes.filter(onBorder).map(([x, y, dir]) => ({ x, y, dir })),
+    );
   }
   const out: VehicleEntry[] = [];
   for (let x = 0; x < w; x++) out.push({ x, y: 0, dir: 'down' });
   for (let y = 0; y < h; y++) out.push({ x: w - 1, y, dir: 'left' });
   for (let x = w - 1; x >= 0; x--) out.push({ x, y: h - 1, dir: 'up' });
   for (let y = h - 1; y >= 0; y--) out.push({ x: 0, y, dir: 'right' });
-  return out;
+  return inSectorOnly(state, out);
+}
+
+/**
+ * A mission sector (decision DS5): a vehicle enters only through a border entry inside the play area (a lane mouth
+ * outside it would drive along closed streets and stop at a barricade). Unchanged without a sector.
+ */
+function inSectorOnly(state: EntryView, entries: VehicleEntry[]): VehicleEntry[] {
+  const sector = state.sector;
+  return sector ? entries.filter((e) => rectsContain(sector.rects, e.x, e.y)) : entries;
 }
 
 export function straightLeg(state: EntryView, entry: VehicleEntry): TilePos[] {

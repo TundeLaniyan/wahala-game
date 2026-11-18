@@ -27,6 +27,7 @@ import { groundedGeneratorAt, teammates } from './queries';
 import { isLethalStageEvent } from './stage';
 import { seatBaseCapacity, seatBaseRange } from './loadout';
 import { missionMayRespawn } from '../mission/rules';
+import { inSector } from '../mission/sector';
 
 /** Schedules respawns for this tick's eliminations. */
 export function scheduleRespawns(state: GameState, eliminated: readonly number[]): void {
@@ -111,6 +112,7 @@ function chooseSpawn(state: GameState, p: Player, danger: Set<number>): Spot | n
       : [];
 
   const usable = (x: number, y: number): boolean =>
+    inSector(state, x, y) && // a mission sector: never a spawn outside the play area
     tileAt(state, x, y) === Tile.Empty &&
     !groundedGeneratorAt(state, x, y) &&
     !danger.has(y * w + x) &&

@@ -13,17 +13,49 @@ export interface MinimapGeometry {
   cell: number;
   width: number;
   height: number;
+  /** The board tile drawn at the map's top-left corner (a mission sector's crop; 0, 0 = the whole board). */
+  x0: number;
+  y0: number;
 }
 
-/** The largest whole-pixel cell that fits the board into maxW x maxH CSS pixels (at least 2). */
-export function minimapGeometry(cols: number, rows: number, maxW: number, maxH: number): MinimapGeometry {
+/**
+ * The largest whole-pixel cell that fits `cols` x `rows` tiles into maxW x maxH CSS pixels (at least 2). `origin` is the
+ * board tile at the map's top-left (a cropped map, `minimapCrop`).
+ */
+export function minimapGeometry(
+  cols: number,
+  rows: number,
+  maxW: number,
+  maxH: number,
+  origin: { x0: number; y0: number } = { x0: 0, y0: 0 },
+): MinimapGeometry {
   const cell = Math.max(2, Math.floor(Math.min(maxW / cols, maxH / rows)));
-  return { cols, rows, cell, width: cols * cell, height: rows * cell };
+  return { cols, rows, cell, width: cols * cell, height: rows * cell, x0: origin.x0, y0: origin.y0 };
 }
 
 /** Centre of tile (x, y) in minimap pixels (fractional tiles allowed for moving players). */
 export function tileToMinimap(geo: MinimapGeometry, x: number, y: number): { x: number; y: number } {
-  return { x: (x + 0.5) * geo.cell, y: (y + 0.5) * geo.cell };
+  return { x: (x - geo.x0 + 0.5) * geo.cell, y: (y - geo.y0 + 0.5) * geo.cell };
+}
+
+/** Is board tile (x, y) on the map (inside its crop)? */
+export function onMinimap(geo: MinimapGeometry, x: number, y: number): boolean {
+  return x >= geo.x0 && y >= geo.y0 && x < geo.x0 + geo.cols && y < geo.y0 + geo.rows;
+}
+
+/**
+ * The part of the board the map shows: a mission sector's clip (its rects plus the margin the camera may show,
+ * docs/CAMPAIGN_SECTOR_AI.md), else the whole board.
+ */
+export function minimapCrop(state: Pick<GameState, 'sector' | 'width' | 'height'>): {
+  x0: number;
+  y0: number;
+  cols: number;
+  rows: number;
+} {
+  const c = state.sector?.clip;
+  if (!c) return { x0: 0, y0: 0, cols: state.width, rows: state.height };
+  return { x0: c.x0, y0: c.y0, cols: c.x1 - c.x0 + 1, rows: c.y1 - c.y0 + 1 };
 }
 
 export interface MinimapPlayer {
@@ -95,6 +127,8 @@ export interface MinimapLayers {
   soft: number[];
   /** Tile indices: concrete that the closing city has added. */
   crushed: number[];
+  /** Tile indices: a mission sector's barricades (drawn as walls, never as the closing city). */
+  barricade: number[];
   /** Tile indices: telegraphed and about to land. */
   warning: number[];
   /** Tile indices: the next stretch of the ring (landing within `soonSeconds`). */
@@ -144,9 +178,12 @@ export function minimapLayers(
 
   const soft: number[] = [];
   const crushed: number[] = [];
+  const barricade: number[] = [];
+  const closed = new Set(state.sector?.blocked ?? []);
   for (let i = 0; i < state.tiles.length; i++) {
     const t = state.tiles[i];
     if (t === Tile.Soft) soft.push(i);
+    else if (t === Tile.Hard && closed.has(i)) barricade.push(i);
     else if (t === Tile.Hard && layout[Math.floor(i / w)]?.[i % w] !== '#') crushed.push(i);
   }
 
@@ -185,6 +222,7 @@ export function minimapLayers(
     flames: state.flames.filter((f) => near(f.x, f.y)).map((f) => ({ x: f.x, y: f.y })),
     soft,
     crushed,
+    barricade,
     warning,
     closingSoon,
     hazards,

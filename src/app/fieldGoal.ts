@@ -7,12 +7,16 @@
  */
 import type { FieldGoalVerb, FieldGoalView, FieldObjectiveKind, MissionView } from '../sim';
 
+const secs = (ticks: number): string => (Math.max(0, ticks) / 60).toFixed(1);
+
 export const FIELD_VERB_TAG: Readonly<Record<FieldGoalVerb, string>> = {
   goTo: 'GO TO',
   hold: 'HOLD',
   defeat: 'DEFEAT',
   escape: 'ESCAPE',
   return: 'RETURN',
+  destroy: 'DESTROY',
+  secure: 'SECURE',
 };
 
 /** "CHECKPOINT A", "DISPATCH DEPOT DOOR", "2 ENEMIES", "FOOTBRIDGE", "ORITA GATE". */
@@ -22,6 +26,12 @@ export function fieldTargetText(goal: FieldGoalView): string {
       return `${goal.enemiesLeft} ${goal.enemiesLeft === 1 ? 'ENEMY' : 'ENEMIES'} LEFT`;
     case 'hold':
       return `${goal.target} DOOR`;
+    case 'destroy':
+      return goal.targets ? `${goal.target} (${goal.targets.left} LEFT)` : goal.target;
+    case 'secure':
+      return goal.area
+        ? `${goal.target} ${secs(goal.area.ticks)} / ${secs(goal.area.goalTicks)} s`
+        : goal.target;
     default:
       return goal.target;
   }
@@ -40,6 +50,10 @@ export function fieldNextText(goal: FieldGoalView): string {
       return `ESCAPE TO ${goal.target}`;
     case 'return':
       return `RETURN TO ${goal.target}`;
+    case 'destroy':
+      return `DESTROY ${goal.target}`;
+    case 'secure':
+      return `SECURE ${goal.target}`;
   }
 }
 
@@ -51,6 +65,9 @@ export function fieldNotes(goal: FieldGoalView): string[] {
   if (goal.verb === 'hold') notes.push('STAND STILL ON IT');
   if (goal.verb === 'defeat') notes.push('ALL MUST GO DOWN');
   if (goal.verb === 'escape') notes.push("DON'T LET THEM CATCH YOU");
+  if (goal.verb === 'destroy') notes.push('BLASTS ONLY');
+  if (goal.verb === 'secure')
+    notes.push(goal.area?.contested ? 'CLEAR THEM OUT OF THE AREA' : 'STAY INSIDE THE AREA');
   if (goal.fightsOptional) notes.push('FIGHTS OPTIONAL');
   return notes;
 }
@@ -67,8 +84,6 @@ export interface HoldReadout {
   /** "DISPATCH DEPOT" (+ BONUS for an optional door). */
   door: string;
 }
-
-const secs = (ticks: number): string => (Math.max(0, ticks) / 60).toFixed(1);
 
 export function holdReadout(hold: NonNullable<FieldGoalView['hold']>): HoldReadout {
   const full = hold.ticks >= hold.goalTicks;
@@ -111,6 +126,8 @@ const LEG_DONE: Readonly<Record<FieldObjectiveKind, string>> = {
   clearGroup: 'ENEMIES DOWN',
   escapeRoute: 'ESCAPED',
   door: 'RAID DONE',
+  destroyTargets: 'EQUIPMENT WRECKED',
+  holdArea: 'AREA SECURED',
   returnRoute: 'ROUTE DONE',
 };
 

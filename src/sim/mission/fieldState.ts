@@ -15,7 +15,15 @@ import { enterLeg } from './field';
 import { fieldEnemiesOf } from './combatPilot';
 import { snapToFloor } from './state';
 import { addEnemyMind } from '../systems/territory';
-import type { FieldRuntime, MissionSeat, MissionSpec, MissionState, PhaseTuning } from './types';
+import { inSector } from './sector';
+import type {
+  FieldRuntime,
+  FieldTargetRuntime,
+  MissionSeat,
+  MissionSpec,
+  MissionState,
+  PhaseTuning,
+} from './types';
 
 /** Every tile a field mission relies on being open: markers, exits, doors and their return tiles, start, posts. */
 export function fieldTiles(def: FieldMissionDef): [number, number][] {
@@ -26,9 +34,45 @@ export function fieldTiles(def: FieldMissionDef): [number, number][] {
   for (const leg of def.legs) {
     if (leg.kind === 'reachMarkers') for (const mk of leg.markers) out.push([mk.x, mk.y]);
     if (leg.kind === 'escapeRoute') out.push([leg.exit.x, leg.exit.y]);
+    if (leg.kind === 'holdArea') out.push([leg.area.x, leg.area.y]);
   }
   for (const d of def.doors) out.push([d.x, d.y], [d.returnTile[0], d.returnTile[1]]);
   return out;
+}
+
+/** The equipment of every `destroyTargets` leg (they stand on authored open floor and are made solid at the start). */
+export function fieldTargetTiles(def: FieldMissionDef): [number, number][] {
+  return def.legs.flatMap((leg) =>
+    leg.kind === 'destroyTargets' ? leg.targets.map((t) => [t.x, t.y]) : [],
+  ) as [number, number][];
+}
+
+/** The equipment at run time (absent = the mission has none, so its state keeps its old shape). */
+function fieldTargets(state: GameState, def: FieldMissionDef): FieldTargetRuntime[] | undefined {
+  const out: FieldTargetRuntime[] = [];
+  def.legs.forEach((leg, l) => {
+    if (leg.kind !== 'destroyTargets') return;
+    for (const t of leg.targets) {
+      const hp = Math.max(1, Math.floor(t.hp ?? 1));
+      out.push({
+        id: t.id,
+        leg: l,
+        kind: t.kind,
+        x: t.x,
+        y: t.y,
+        label: t.label,
+        hp,
+        maxHp: hp,
+        destroyed: false,
+      });
+      // a solid piece of equipment, like a crate: it blocks walking and stops a flame arm; nothing hides inside
+      const i = tileIndex(state, t.x, t.y);
+      state.tiles[i] = Tile.Soft;
+      delete state.hidden[i];
+      state.supplies = state.supplies.filter((o) => o !== i);
+    }
+  });
+  return out.length > 0 ? out : undefined;
 }
 
 function clearAround(state: GameState, x: number, y: number, radius: number): void {
@@ -85,6 +129,86 @@ function clearPatrol(state: GameState, route: readonly (readonly [number, number
   }
 }
 
+/** The tiles a field route visits, in play order (start, every leg's targets, door return tiles, the return marker). */
+export function fieldRouteStops(def: FieldMissionDef): [number, number][] {
+  const out: [number, number][] = [[def.start[0], def.start[1]]];
+  for (const leg of def.legs) {
+    if (leg.kind === 'reachMarkers') for (const mk of leg.markers) out.push([mk.x, mk.y]);
+    else if (leg.kind === 'escapeRoute') out.push([leg.exit.x, leg.exit.y]);
+    else if (leg.kind === 'clearGroup') {
+      const post = def.enemies.find((e) => e.group === leg.group)?.post;
+      if (post) out.push([post[0], post[1]]);
+    } else if (leg.kind === 'door') {
+      const d = def.doors.find((o) => o.id === leg.doorId);
+      if (d) out.push([d.returnTile[0], d.returnTile[1]], [d.x, d.y], [d.returnTile[0], d.returnTile[1]]);
+    } else if (leg.kind === 'destroyTargets') {
+      // the route reaches each piece (it ends beside it: equipment is never walked onto or cleared)
+      for (const t of leg.targets) out.push([t.x, t.y]);
+    } else if (leg.kind === 'holdArea') out.push([leg.area.x, leg.area.y]);
+  }
+  out.push([def.returnMarker.x, def.returnMarker.y]);
+  return out;
+}
+
+/**
+ * A mission sector is small, so its route never depends on blasting crates (decision DS6): between consecutive stops
+ * the path with the fewest crates (then the shortest; fixed neighbour order) is cleared of them. Crates elsewhere stay
+ * as cover and trap material. No random number; only called when the match has a sector.
+ */
+function clearRoute(
+  state: GameState,
+  stops: readonly (readonly [number, number])[],
+  keep: ReadonlySet<number>,
+): void {
+  const W = state.width;
+  const N = W * state.height;
+  const CRATE = 8;
+  for (let k = 1; k < stops.length; k++) {
+    const [ax, ay] = stops[k - 1]!;
+    const [bx, by] = stops[k]!;
+    const from = ay * W + ax;
+    const to = by * W + bx;
+    const cost = new Float64Array(N).fill(Infinity);
+    const prev = new Int32Array(N).fill(-1);
+    const buckets: number[][] = [[from]];
+    cost[from] = 0;
+    for (let c = 0; c < buckets.length; c++) {
+      for (const i of buckets[c] ?? []) {
+        if (cost[i] !== c) continue;
+        if (i === to) break;
+        const x = i % W;
+        const y = Math.floor(i / W);
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= state.height || !inSector(state, nx, ny)) continue;
+          const j = ny * W + nx;
+          const t = state.tiles[j];
+          // concrete never; a piece of equipment only as the stop itself (walked up to, never cleared)
+          if (t === Tile.Hard || (keep.has(j) && j !== to)) continue;
+          const nc = c + 1 + (t === Tile.Soft ? CRATE : 0);
+          if (nc >= cost[j]!) continue;
+          cost[j] = nc;
+          prev[j] = i;
+          (buckets[nc] ??= []).push(j);
+        }
+      }
+      if (cost[to] !== Infinity && cost[to]! <= c) break;
+    }
+    for (let i = to; i !== -1 && i !== from; i = prev[i]!) {
+      if (state.tiles[i] !== Tile.Soft || keep.has(i)) continue;
+      state.tiles[i] = Tile.Empty;
+      delete state.hidden[i];
+      state.supplies = state.supplies.filter((o) => o !== i);
+    }
+  }
+}
+
 function placeAt(state: GameState, p: Player, x: number, y: number): void {
   p.x = p.stepFromX = x;
   p.y = p.stepFromY = y;
@@ -105,10 +229,20 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
     );
   }
   for (const [x, y] of fieldTiles(def)) clearAround(state, x, y, 1);
+  for (const [x, y] of fieldTargetTiles(def)) clearAround(state, x, y, 1);
+  const targets = fieldTargets(state, def);
+  if (state.sector) {
+    const keep = new Set(fieldTargetTiles(def).map(([x, y]) => tileIndex(state, x, y)));
+    clearRoute(state, fieldRouteStops(def), keep);
+    for (const d of def.doors) if (!d.required) clearRoute(state, [def.start, d.returnTile], keep);
+  }
   const claimed = new Set<string>(fieldTiles(def).map(([x, y]) => `${x},${y}`));
 
+  // a sector's barricades are concrete now: nobody is seated on one, or outside the play area
+  const open = (x: number, y: number): boolean =>
+    inSector(state, x, y) && state.tiles[tileIndex(state, x, y)] !== Tile.Hard;
   const human = state.players[0]!;
-  const [sx, sy] = snapToFloor(arena, def.start[0], def.start[1], new Set());
+  const [sx, sy] = snapToFloor(arena, def.start[0], def.start[1], new Set(), open);
   placeAt(state, human, sx, sy);
   claimed.add(`${sx},${sy}`);
   const seats: MissionSeat[] = [
@@ -123,7 +257,7 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
   const pursuerGroups = new Set(def.legs.flatMap((l) => (l.kind === 'escapeRoute' ? [l.group] : [])));
   enemies.forEach((e, i) => {
     const p = state.players[1 + i]!;
-    const [x, y] = snapToFloor(arena, e.post[0], e.post[1], claimed);
+    const [x, y] = snapToFloor(arena, e.post[0], e.post[1], claimed, open);
     claimed.add(`${x},${y}`);
     placeAt(state, p, x, y);
     clearAround(state, x, y, 1);
@@ -171,6 +305,8 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
     raidBonus: 0,
     done: false,
   };
+  if (targets) field.targets = targets;
+  if (def.legs.some((l) => l.kind === 'holdArea')) field.hold = { ticks: 0, inside: false, contested: false };
   const m: MissionState = {
     id: spec.id,
     objective: 'fieldRoute',

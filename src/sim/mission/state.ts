@@ -36,6 +36,7 @@ export function snapToFloor(
   x: number,
   y: number,
   claimed: ReadonlySet<string>,
+  allowed: (x: number, y: number) => boolean = () => true,
 ): [number, number] {
   for (let r = 0; r < 12; r++) {
     for (let dy = -r; dy <= r; dy++) {
@@ -43,7 +44,7 @@ export function snapToFloor(
         if (Math.abs(dx) + Math.abs(dy) !== r) continue;
         const tx = x + dx;
         const ty = y + dy;
-        if (isOpenFloor(arena, tx, ty) && !claimed.has(`${tx},${ty}`)) return [tx, ty];
+        if (isOpenFloor(arena, tx, ty) && !claimed.has(`${tx},${ty}`) && allowed(tx, ty)) return [tx, ty];
       }
     }
   }

@@ -17,6 +17,8 @@ import { Tile } from '../src/sim/types';
 import { isOpenFloor } from '../src/sim/mission/state';
 import { fieldTiles } from '../src/sim/mission/fieldState';
 import { fieldEnemiesOf } from '../src/sim/mission/combatPilot';
+import { getSector } from '../src/sim/mission/sectors';
+import { sectorBlockedTiles } from '../src/sim/mission/sector';
 
 /** Walking distance over every non-concrete tile from (sx, sy); crates can be blasted open, roads can be crossed. */
 function distances(layout: readonly string[], sx: number, sy: number): Map<string, number> {
@@ -55,10 +57,21 @@ describe('every district has an entry and a middle field mission (except the sta
   });
 });
 
+/**
+ * The district layout as the mission sees it: a sector's barricades (and closed gates) are concrete
+ * (docs/CAMPAIGN_SECTOR_AI.md), so every walk below goes round them, never through.
+ */
+function missionLayout(def: FieldMissionDef): string[] {
+  const layout = getArena(MISSION_DEFS[def.districtId].arenaId).layout.map((r) => [...r]);
+  if (def.sectorId) for (const [x, y] of sectorBlockedTiles(getSector(def.sectorId))) layout[y]![x] = '#';
+  return layout.map((r) => r.join(''));
+}
+
 describe.each(FIELD_MISSION_IDS)('field mission %s data', (id) => {
   const def: FieldMissionDef = FIELD_MISSION_DEFS[id]!;
   const arena = getArena(MISSION_DEFS[def.districtId].arenaId);
-  const dist = distances(arena.layout, def.start[0], def.start[1]);
+  const layout = missionLayout(def);
+  const dist = distances(layout, def.start[0], def.start[1]);
 
   it('is a City Rumble district mission with 2-9 competitors and at least one required leg', () => {
     expect(arena.kind).toBe('rumble');
@@ -116,11 +129,11 @@ describe.each(FIELD_MISSION_IDS)('field mission %s data', (id) => {
         from = [g[0]!.post[0], g[0]!.post[1]];
       }
       if (leg.kind !== 'escapeRoute') continue;
-      const fromPlayer = distances(arena.layout, from[0], from[1]);
+      const fromPlayer = distances(layout, from[0], from[1]);
       const own = fromPlayer.get(`${leg.exit.x},${leg.exit.y}`)!;
       expect(own, `${id} exit unreachable from ${from}`).toBeDefined();
       for (const e of def.enemies.filter((o) => o.group === leg.group)) {
-        const theirs = distances(arena.layout, e.post[0], e.post[1]).get(`${leg.exit.x},${leg.exit.y}`)!;
+        const theirs = distances(layout, e.post[0], e.post[1]).get(`${leg.exit.x},${leg.exit.y}`)!;
         const toPlayer = fromPlayer.get(`${e.post[0]},${e.post[1]}`)!;
         expect(toPlayer, `${id} pursuer starts ${toPlayer} tiles from the player`).toBeGreaterThanOrEqual(8);
         expect(theirs - own, `${id} pursuer ${theirs} vs player ${own} to the exit`).toBeGreaterThanOrEqual(

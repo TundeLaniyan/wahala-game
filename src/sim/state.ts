@@ -5,7 +5,7 @@ import type { GameConfig } from './config';
 import { CHARACTERS } from './data/characters';
 import { vitalsFor } from './systems/campaignDamage';
 import { DEFAULT_ARENA_ID, getArena } from './arenas';
-import type { ArenaDef } from './arenas';
+import type { ArenaDef, StageHazardDef } from './arenas';
 import { tileIndex } from './grid';
 import { nextFloat, nextInt, seedToState, weightedPick } from './rng';
 import { NO_TEAM, Tile } from './types';
@@ -14,6 +14,8 @@ import { missionConfigLayer } from './mission/build';
 import { getMissionArenaId } from './mission/defs';
 import { createFieldMissionState } from './mission/fieldState';
 import { createMissionState } from './mission/state';
+import { missionSectorOf } from './mission/sectors';
+import { applySector, inSector } from './mission/sector';
 import { raidArenaId, raidConfigLayer } from './raid/build';
 import { createRaidState } from './raid/state';
 import type {
@@ -227,6 +229,10 @@ export function createGame(options: GameOptions): GameState {
   buildTiles(state, arena);
   assignHiddenPickups(state);
   placeSupplies(state, arena);
+  // a campaign mission's sector (the part of the district it is played in): barricades become concrete before the
+  // floor hazards, the endgame traps and the stage are built from the board; it draws no random number
+  const sector = options.mission ? missionSectorOf(options.mission) : null;
+  if (sector) applySector(state, sector);
   // the Sudden Death TEST match: the open area is cleared of crates (the blast front stays readable); the blocks outside
   // it stay, and the closing ring crushes them
   if (config.suddenDeath.lab) {
@@ -261,9 +267,32 @@ export function createGame(options: GameOptions): GameState {
 function createStage(state: GameState, arena: ArenaDef): StageState {
   const enabled = state.settings.stageHazards;
   const nextAt = arena.stageHazards.map((h) =>
-    enabled && h.kind !== 'teleport' ? ticks(h.firstAtSec) : Infinity,
+    enabled && h.kind !== 'teleport' && hazardFitsSector(state, h) ? ticks(h.firstAtSec) : Infinity,
   );
   return { nextAt, events: [], enabled };
+}
+
+/**
+ * A mission sector keeps only the scheduled hazards it can hold (decision DS4): with the 'inside' policy a sweep whose
+ * every route, a strike / push whose every zone lies inside the rects (a strike on a player and a drop always fit:
+ * drops land inside only, `stage.ts`); with 'none' no scheduled hazard. True without a sector.
+ */
+function hazardFitsSector(state: GameState, h: StageHazardDef): boolean {
+  const sector = state.sector;
+  if (!sector) return true;
+  if (sector.hazards === 'none') return false;
+  const inside = (tiles: readonly (readonly [number, number])[]): boolean =>
+    tiles.every(([x, y]) => inSector(state, x, y));
+  switch (h.kind) {
+    case 'sweep':
+      return h.routes.every(inside);
+    case 'strike':
+      return h.targetPlayers === true || h.zones.every(inside);
+    case 'push':
+      return h.zones.every((z) => inside(z.tiles));
+    default:
+      return true;
+  }
 }
 
 function buildTiles(state: GameState, arena: ArenaDef): void {

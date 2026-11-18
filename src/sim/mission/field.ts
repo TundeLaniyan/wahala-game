@@ -20,6 +20,7 @@ import { territoryDirective } from '../systems/territory';
 import type { GameState, Player, SimEvent } from '../types';
 import type { RaidOutcome } from '../campaign/types';
 import { newNode } from './ctx';
+import { openSectorGates } from './sector';
 import {
   CATCH_TICKS,
   DOOR_HOLD_TICKS,
@@ -35,6 +36,7 @@ import type {
   FieldObjectiveKind,
   FieldRouteMarkerView,
   FieldRuntime,
+  FieldTargetRuntime,
   MissionDoorView,
   MissionNodeKind,
   MissionNodeRuntime,
@@ -112,6 +114,15 @@ export function enterLeg(state: GameState, m: MissionState, def: FieldMissionDef
       if (d) nodes.push(node(d.id, d.x, d.y, d.label, w));
       break;
     }
+    case 'destroyTargets':
+      for (const t of legTargets(f, f.leg)) nodes.push(node(`tg:${t.id}`, t.x, t.y, t.label, w));
+      break;
+    case 'holdArea': {
+      const n = node('area', leg.area.x, leg.area.y, leg.area.label, w);
+      n.radius = leg.area.radius;
+      nodes.push(n);
+      break;
+    }
     case 'returnRoute':
       nodes.push(node('return', def.returnMarker.x, def.returnMarker.y, def.returnMarker.label, w));
       break;
@@ -131,7 +142,21 @@ function legText(m: MissionState, def: FieldMissionDef): string {
   return leg.kind === 'returnRoute' ? returnLegText(def.returnMarker.label) : leg.text;
 }
 
+/** The equipment of leg `leg`. */
+function legTargets(f: FieldRuntime, leg: number): FieldTargetRuntime[] {
+  return (f.targets ?? []).filter((t) => t.leg === leg);
+}
+
+const targetOf = (f: FieldRuntime, nodeId: string): FieldTargetRuntime | undefined =>
+  nodeId.startsWith('tg:') ? f.targets?.find((t) => `tg:${t.id}` === nodeId) : undefined;
+
+/** Ticks the current `holdArea` leg needs. */
+const holdGoalTicks = (leg: Leg): number => (leg.kind === 'holdArea' ? Math.round(leg.holdSec * 60) : 0);
+
 function nodeStateOf(f: FieldRuntime, def: FieldMissionDef, n: MissionNodeRuntime): MissionNodeView['state'] {
+  const target = targetOf(f, n.id);
+  if (target) return target.destroyed ? 'done' : target.hp < target.maxHp ? 'progress' : 'live';
+  if (n.id === 'area' && f.hold) return f.hold.ticks > 0 ? 'progress' : 'live';
   const door = f.doors.find((d) => d.id === n.id);
   if (door) {
     if (door.status === 'done') return 'done';
@@ -146,7 +171,13 @@ function nodeStateOf(f: FieldRuntime, def: FieldMissionDef, n: MissionNodeRuntim
   return 'live';
 }
 
-function nodeFraction(f: FieldRuntime, n: MissionNodeRuntime): number {
+function nodeFraction(f: FieldRuntime, n: MissionNodeRuntime, def?: FieldMissionDef): number {
+  const target = targetOf(f, n.id);
+  if (target) return target.destroyed ? 1 : 1 - target.hp / target.maxHp;
+  if (n.id === 'area' && f.hold && def) {
+    const goal = holdGoalTicks(legAt(def, f.leg));
+    return goal > 0 ? Math.min(1, f.hold.ticks / goal) : 0;
+  }
   const door = f.doors.find((d) => d.id === n.id);
   if (!door) return n.id.startsWith('mk') && Number(n.id.slice(2)) < f.markersDone ? 1 : 0;
   if (door.status === 'done' || door.status === 'inRaid') return 1;
@@ -258,6 +289,23 @@ function updateLeg(
     }
     case 'door':
       return; // completed by resolveRaid
+    case 'destroyTargets':
+      // wrecked by blasts (`fieldOnSoftHit`); a piece wrecked before its leg counts when the leg comes
+      if (legTargets(f, f.leg).every((t) => t.destroyed)) completeLeg(state, m, def, events);
+      return;
+    case 'holdArea': {
+      const hold = (f.hold ??= { ticks: 0, inside: false, contested: false });
+      const { x, y, radius } = leg.area;
+      const inArea = (q: Player): boolean => Math.max(Math.abs(q.x - x), Math.abs(q.y - y)) <= radius;
+      hold.inside = inArea(p);
+      hold.contested = m.seats.some((st) => {
+        const q = st.role !== 'player' ? state.players[st.playerId] : undefined;
+        return !!q && q.alive && inArea(q);
+      });
+      if (hold.inside && !hold.contested) hold.ticks++;
+      if (hold.ticks >= holdGoalTicks(leg)) completeLeg(state, m, def, events);
+      return;
+    }
     case 'returnRoute':
       if (standingOn(p, def.returnMarker.x, def.returnMarker.y)) f.done = true;
       return;
@@ -298,10 +346,12 @@ function updateCatch(state: GameState, m: MissionState, f: FieldRuntime, p: Play
 function completeLeg(state: GameState, m: MissionState, def: FieldMissionDef, events: SimEvent[]): void {
   const f = m.field!;
   events.push({ type: 'missionPhase', phase: pipOf(f.leg, fieldLegCount(def)), change: 'cleared' });
+  openSectorGates(state, f.leg, events); // a sector gate that waits for this leg opens now (none without a sector)
   m.phasesCleared++;
   f.leg++;
   f.markersDone = 0;
   f.catchTicks = 0;
+  if (f.hold) f.hold = { ticks: 0, inside: false, contested: false };
   f.legStartTick = state.tick;
   m.phaseStartTick = state.tick;
   enterLeg(state, m, def, events);
@@ -379,7 +429,7 @@ function syncNodes(m: MissionState, f: FieldRuntime, def: FieldMissionDef, event
       x: n.x,
       y: n.y,
       state: st,
-      fraction: nodeFraction(f, n),
+      fraction: nodeFraction(f, n, def),
     });
   }
 }
@@ -471,6 +521,24 @@ export function fieldDirective(state: GameState, id: number): NpcDirective | und
       ? { kind: 'block', x: post.x, y: post.y, radius: 0 }
       : { kind: 'guard', x: post.x, y: post.y, radius: seat.radius ?? 3 };
   }
+  if (seat.group && leg.kind === 'destroyTargets' && leg.crew === seat.group) {
+    // the crew stands by the nearest piece of its equipment still standing
+    const near = legTargets(f, f.leg)
+      .filter((t) => !t.destroyed)
+      .sort(
+        (a, b) => Math.abs(a.x - p.x) + Math.abs(a.y - p.y) - (Math.abs(b.x - p.x) + Math.abs(b.y - p.y)),
+      )[0];
+    if (near) return { kind: 'guard', x: near.x, y: near.y, radius: 2 };
+  }
+  if (seat.group && leg.kind === 'holdArea') {
+    const wave = leg.waves?.find((wv) => wv.group === seat.group);
+    if (wave) {
+      // before its wave a group holds its post; then it moves into the zone and fights for it
+      return state.tick - f.legStartTick >= Math.round(wave.atSec * 60)
+        ? { kind: 'guard', x: leg.area.x, y: leg.area.y, radius: leg.area.radius }
+        : { kind: 'block', x: post.x, y: post.y, radius: 0 };
+    }
+  }
   // campaign tactics (decision SA6): a seat with a territory plays the territorial state machine
   const territorial = territoryDirective(state, id);
   if (territorial) return territorial;
@@ -495,11 +563,15 @@ const LEG_UNIT: Record<FieldObjectiveKind, string> = {
   clearGroup: 'enemies down',
   escapeRoute: 'at the exit',
   door: 'raid done',
+  destroyTargets: 'equipment wrecked',
+  holdArea: 'seconds held',
   returnRoute: 'back at the gate',
 };
 
 /** How a node is completed (presentation hint only; the rules above decide nothing from it). */
 function nodeKindOf(f: FieldRuntime, n: MissionNodeRuntime): MissionNodeKind {
+  if (targetOf(f, n.id)) return 'target';
+  if (n.id === 'area') return 'area';
   if (f.doors.some((d) => d.id === n.id)) return 'hold';
   if (n.id.startsWith('mk')) return 'checkpoint';
   if (n.id === 'group') return 'enemies';
@@ -554,10 +626,45 @@ function goalView(
     case 'door':
       goal = { verb: 'hold', ...at(leg.doorId), step: null, enemiesLeft: 0 };
       break;
+    case 'destroyTargets': {
+      // the nearest piece still standing is the one to go for
+      const standing = legTargets(f, f.leg).filter((t) => !t.destroyed);
+      const next = p
+        ? [...standing].sort(
+            (a, b) => Math.abs(a.x - p.x) + Math.abs(a.y - p.y) - (Math.abs(b.x - p.x) + Math.abs(b.y - p.y)),
+          )[0]
+        : standing[0];
+      goal = { verb: 'destroy', ...at(next ? `tg:${next.id}` : ''), step: null, enemiesLeft: 0 };
+      break;
+    }
+    case 'holdArea':
+      goal = { verb: 'secure', ...at('area'), step: null, enemiesLeft: 0 };
+      break;
     case 'returnRoute':
       goal = { verb: 'return', ...at('return'), step: null, enemiesLeft: 0 };
       break;
   }
+  const targets =
+    leg.kind === 'destroyTargets'
+      ? {
+          left: legTargets(f, f.leg).filter((t) => !t.destroyed).length,
+          total: legTargets(f, f.leg).length,
+        }
+      : undefined;
+  const goalTicks = holdGoalTicks(leg);
+  const area =
+    leg.kind === 'holdArea'
+      ? {
+          ticks: Math.min(goalTicks, f.hold?.ticks ?? 0),
+          goalTicks,
+          fraction: goalTicks > 0 ? Math.min(1, (f.hold?.ticks ?? 0) / goalTicks) : 0,
+          inside: f.hold?.inside ?? false,
+          contested: f.hold?.contested ?? false,
+          x: leg.area.x,
+          y: leg.area.y,
+          radius: leg.area.radius,
+        }
+      : undefined;
   const legDoor = leg.kind === 'door' ? f.doors.find((d) => d.id === leg.doorId) : undefined;
   const door =
     legDoor && legDoor.status !== 'done'
@@ -579,7 +686,13 @@ function goalView(
   return {
     ...goal,
     hold,
-    fightsOptional: leg.kind !== 'clearGroup' && leg.kind !== 'escapeRoute' && enemiesAlive.length > 0,
+    fightsOptional:
+      leg.kind !== 'clearGroup' &&
+      leg.kind !== 'escapeRoute' &&
+      leg.kind !== 'holdArea' &&
+      enemiesAlive.length > 0,
+    ...(targets ? { targets } : {}),
+    ...(area ? { area } : {}),
   };
 }
 
@@ -592,7 +705,7 @@ export function fieldMissionView(state: GameState): MissionView {
     y: n.y,
     label: n.label,
     state: nodeStateOf(f, def, n),
-    fraction: nodeFraction(f, n),
+    fraction: nodeFraction(f, n, def),
     kind: nodeKindOf(f, n),
     optional: f.doors.some((d) => d.id === n.id && !d.required),
   }));
@@ -615,6 +728,13 @@ export function fieldMissionView(state: GameState): MissionView {
     const members = m.seats.filter((s) => s.group === leg.group);
     goal = members.length;
     done = members.filter((s) => !state.players[s.playerId]?.alive).length;
+  } else if (leg.kind === 'destroyTargets') {
+    const pieces = legTargets(f, f.leg);
+    goal = pieces.length;
+    done = pieces.filter((t) => t.destroyed).length;
+  } else if (leg.kind === 'holdArea') {
+    goal = Math.round(leg.holdSec);
+    done = Math.min(goal, Math.floor((f.hold?.ticks ?? 0) / 60));
   }
   const won = m.outcome?.result === 'won';
   const crewAlive = m.seats.filter((s) => s.role !== 'player' && state.players[s.playerId]?.alive).length;

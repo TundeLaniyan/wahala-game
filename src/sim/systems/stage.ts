@@ -22,6 +22,7 @@ import type { GameState, PickupKind, Player, SimEvent, StageEvent } from '../typ
 import type { LethalHit } from './lethality';
 import { flameAt, groundedGeneratorAt, pickupAt, playerStepTicks, playersAt } from './queries';
 import { beginStep } from './stepping';
+import { inSector, indexInSector } from '../mission/sector';
 
 const sec = (s: number): number => Math.round(s * 60);
 const LETHAL = new Set<StageEvent['kind']>(['sweep', 'strike']);
@@ -148,6 +149,7 @@ function create(state: GameState, def: StageHazardDef, hazard: number): StageEve
         const x = i % state.width;
         const y = Math.floor(i / state.width);
         if (state.tiles[i] !== Tile.Empty || layout[y]![x] === '=' || busy.has(i)) continue;
+        if (!inSector(state, x, y)) continue; // a mission sector: goods fall inside it only
         if (state.floorHazards[i] !== undefined || groundedGeneratorAt(state, x, y) || pickupAt(state, x, y))
           continue;
         if (state.players.some((p) => p.alive && Math.abs(p.x - x) + Math.abs(p.y - y) < min)) continue;
@@ -387,7 +389,8 @@ export function armTeleports(state: GameState): void {
   for (const p of state.players) {
     if (!p.alive || p.stepTotal === 0 || p.stepRemaining !== p.stepTotal) continue;
     const to = partners.get(tileIndex(state, p.x, p.y));
-    if (to === undefined || state.tick < p.teleportReadyTick) {
+    // a mission sector: a manhole whose far end lies outside it carries nobody (the partner map itself is shared)
+    if (to === undefined || state.tick < p.teleportReadyTick || !indexInSector(state, to)) {
       p.teleportPending = null;
       continue;
     }
@@ -410,6 +413,7 @@ export function resolveTeleport(state: GameState, p: Player, events: SimEvent[])
   );
   if (state.tiles[i] !== Tile.Empty || groundedGeneratorAt(state, toX, toY) || flameAt(state, toX, toY) || lethalThere)
     return false;
+  if (!inSector(state, toX, toY)) return false;
   const fromX = p.x;
   const fromY = p.y;
   // an instant move (no interpolation): stepTotal 1 / remaining 0 also means no trap or manhole fires on arrival
