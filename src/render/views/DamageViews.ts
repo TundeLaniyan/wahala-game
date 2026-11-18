@@ -16,6 +16,7 @@ import type { Effects } from '../fx/Effects';
 import type { Layout } from '../coords';
 import { enemyHealthView } from '../../sim';
 import { HIT_COLORS, PIP_MAX, hitFeedback, pipColor, pipCounts, pipsShown } from './damageModel';
+import { enemyScaleOf } from '../../assets/enemyLooks';
 import { playerGridPos } from './motion';
 import type { FrameContext, View } from './types';
 
@@ -176,7 +177,7 @@ export class DamageViews implements View {
       const wx = ctx.layout.wx(pos.x);
       const wz = ctx.layout.wz(pos.y);
       // a mounted fighter stands taller
-      const y = PIP_Y + (p.mounted ? 0.28 : 0) + 0.06;
+      const y = PIP_Y + (p.mounted ? 0.28 : 0) + 0.06 + (enemyScaleOf(p) - 1) * 1.86; // a bigger enemy's head is higher
       for (let i = 0; i < total; i++) {
         // pips run along the screen's horizontal (the camera's right axis), centred over the head
         const off = (i - (total - 1) / 2) * PIP_STEP;
