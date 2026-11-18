@@ -83,6 +83,7 @@ warnings, never ducked), `react` (crowd reactions) and `amb` (ambience beds).
 | `crush_warning`, `crush_slam`, `crowd_throw_whistle`, `bottle_smash`, `firecracker_bang`, `pothole_thud`, `oil_squeak`, `oil_slip` | sfx / warn | arena hazards |
 | `pickup_1`, `pickup_rare`, `pickup_voucher`, `pickup_curse`, `pickup_reveal`, `pickup_burn`, `pickup_drop`, `pickup_wasted` | sfx | pickups |
 | `push`, `daze`, `hop` | sfx | skills and jumps |
+| `enemy_windup`, `enemy_aim` | warn | a campaign enemy starts a punch (rising growl) / takes aim to throw (two clicks) |
 | `elim_slide`, `elim_boing`, `elim_womp` | sfx | comic eliminations |
 | `ui_click`, `ui_back`, `ui_start`, `ui_count`, `ui_go` | sfx | UI |
 | `win_sting`, `lose_sting`, `draw_sting` | sfx | short match-end stingers (not music) |

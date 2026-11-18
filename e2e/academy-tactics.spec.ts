@@ -67,6 +67,13 @@ test.describe('Generator Tactics pilot', () => {
     const later = await live(page);
     expect(later.enemies[0]!.x, 'the enemy bot walks toward you').toBeLessThan(start.enemies[0]!.x);
     await expect(page.getByTestId('htp-instruction')).toContainText('Agbero');
+    // the enemy telegraphs are built for this practice too (decision SV1): its wind-ups are drawn like a mission's
+    const telegraphs = await page.evaluate(() =>
+      (window as unknown as { __WAHALA__: { renderer(): { telegraphStats(): unknown } } }).__WAHALA__
+        .renderer()
+        .telegraphStats(),
+    );
+    expect(telegraphs, 'enemy telegraph view in the Academy').not.toBeNull();
     await page.screenshot({ path: `e2e-shots/${info.project.name}-academy-tactics-practice.png` });
 
     // leaving returns to the Academy; an ordinary match carries no pilot

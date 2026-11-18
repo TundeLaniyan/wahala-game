@@ -253,6 +253,35 @@ describe('event mapping', () => {
     expect(rig.ids().some((id) => id.startsWith('crowd_'))).toBe(true);
   });
 
+  it('warns of an enemy wind-up: a growl for a punch, clicks for a throw; rate-limited when many wind up (SV3)', async () => {
+    const rig = await started();
+    const s = playState(4);
+    for (const p of s.players.slice(1)) p.enemyKind = 'guard';
+    const windup = (id: number): SimEvent => ({ ...SAMPLES.attackStarted, playerId: id }) as SimEvent;
+    // a human's (or a multiplayer bot's) press keeps the quick breath, never the enemy warning
+    rig.audio.handleEvents([windup(0)], s);
+    expect(rig.ids()).not.toContain('enemy_windup');
+    rig.ctx.advance(1);
+    rig.traces.length = 0;
+    rig.audio.handleEvents([windup(1)], s);
+    expect(rig.ids()).toContain('enemy_windup');
+    expect(rig.ids()).not.toContain('push');
+    expect(rig.traces.find((t) => t.id === 'enemy_windup')?.bus).toBe('warn');
+    // several enemies winding up in the same batch: one warning, not one each
+    rig.ctx.advance(1);
+    rig.traces.length = 0;
+    rig.audio.handleEvents([1, 2, 3, 1, 2].map(windup), s);
+    expect(rig.ids().filter((id) => id === 'enemy_windup')).toHaveLength(1);
+    // a throw right after: within the shared gap it stays quiet, later it clicks (and the whistle waits for the flight)
+    rig.audio.handleEvents([{ ...SAMPLES.projectileLaunched, ownerId: 2 } as SimEvent], s);
+    expect(rig.ids()).not.toContain('enemy_aim');
+    rig.ctx.advance(1);
+    rig.traces.length = 0;
+    rig.audio.handleEvents([{ ...SAMPLES.projectileLaunched, ownerId: 2 } as SimEvent], s);
+    expect(rig.ids()).toContain('enemy_aim');
+    expect(rig.ids()).toContain('crowd_throw_whistle');
+  });
+
   it('puts warnings on the warning bus and crowd reactions on the reaction bus', async () => {
     const rig = await started();
     rig.audio.handleEvents([SAMPLES.vehicleWarning, SAMPLES.playerEliminated], playState());

@@ -11,6 +11,9 @@ import {
 } from 'three';
 import type { Player, SimEvent } from '../../sim';
 import { fighterIdentity } from '../../assets/fighterIdentity';
+import { enemyLookOf } from '../../assets/enemyLooks';
+import type { EnemyLook } from '../../assets/enemyLooks';
+import { applyEnemyKit, applyEnemyKitFallback } from '../assets/enemyKit';
 import { SLOT_COLORS, TEAM_OUTLINE } from '../../assets/palette';
 import { drawPickupIcon } from '../../assets/pickupIcons';
 import { OKADA_SCALE, createPlayerModel, createRiggedPlayerModel } from '../assets/characters';
@@ -87,6 +90,12 @@ interface Visual {
   /** Campaign hit flinch (damage feedback, `jolt`): stamped with render time on the next frame, then plays out. */
   joltPending: { dx: number; dz: number; amount: number } | null;
   jolt: { dx: number; dz: number; amount: number; at: number } | null;
+  /** Campaign enemy variant drawn (null = an identity kit); a seat whose variant changes is rebuilt. */
+  look: EnemyLook['variant'] | null;
+  /** Silhouette scale of the look (1 = the cast's size). */
+  scale: number;
+  /** Lieutenants and bosses: the gold leader ring (null for everyone else). */
+  leader: Mesh | null;
 }
 
 const flat = new PlaneGeometry(1, 1);
@@ -166,6 +175,11 @@ export class PlayerViews implements View {
   update(ctx: FrameContext): void {
     for (const p of ctx.state.players) {
       let v = this.visuals.get(p.id);
+      // a seat given a different enemy variant (or none) after it was drawn: dress it again
+      if (v && v.look !== (enemyLookOf(p)?.variant ?? null)) {
+        this.destroy(v);
+        v = undefined;
+      }
       if (!v) {
         v = this.create(p, ctx);
         this.visuals.set(p.id, v);
@@ -220,15 +234,43 @@ export class PlayerViews implements View {
     return false;
   }
 
+  /** Removes a visual from the scene (a seat being dressed again). */
+  private destroy(v: Visual): void {
+    this.group.remove(
+      v.model.root,
+      v.ring,
+      v.shadow,
+      v.name,
+      v.curse,
+      v.voucher,
+      v.shield,
+      v.badge,
+      v.armour.group,
+      v.protect,
+    );
+    if (v.marker) this.group.remove(v.marker);
+    for (const s of v.stars) this.group.remove(s);
+  }
+
   private create(p: Player, ctx: FrameContext): Visual {
-    const modelId = p.slot === 3 && assets.has('char_areaBoss') ? 'areaBoss' : p.characterId;
+    // campaign enemies are dressed by variant (decision SV4): a rig, a palette, headwear and props
+    const look = enemyLookOf(p);
+    const modelId =
+      look?.rig && assets.has(`char_${look.rig}`)
+        ? look.rig
+        : !look && p.slot === 3 && assets.has('char_areaBoss')
+          ? 'areaBoss'
+          : p.characterId;
     // Team Deathmatch: the team colours are the kit; the per-slot jersey hue would fight them (a purple White
     // team), so teammates keep the character's own look and differ by their headwear shape only
     const base = fighterIdentity(p.slot);
-    const identity =
+    const teamKit =
       p.team >= 0 ? { ...base, hueShift: 0, hueIndex: 0, headwearColor: teamColor(p.team) } : base;
+    const identity = look ? { ...base, hueShift: 0, hueIndex: 0, headwear: 'none' as const } : teamKit;
     const model =
       createRiggedPlayerModel(modelId, p.id * 0.37, identity) ?? createPlayerModel(p.characterId, identity);
+    if (look && model.rigged) applyEnemyKit(model.rigged.body, modelId, look);
+    else if (look) applyEnemyKitFallback(model.head, look);
     // Team Rumble: the team colour replaces the slot colour on the ring, the silhouette, the marker and
     // the name tag, and the character wears the team kit (jersey band and armbands)
     const slot = p.team >= 0 ? teamColor(p.team) : SLOT_COLORS[p.slot % SLOT_COLORS.length]!;
@@ -333,6 +375,24 @@ export class PlayerViews implements View {
     badge.visible = false;
     const armour = createArmourVisual();
     const protect = createProtectionRing();
+    let leader: Mesh | null = null;
+    if (look?.leader) {
+      // a lieutenant / boss: a wider gold ring round its own, so the leader of a group reads at a glance
+      leader = new Mesh(
+        flat,
+        new MeshBasicMaterial({
+          map: ringTexture(),
+          color: 0xffc23a,
+          transparent: true,
+          depthWrite: false,
+          opacity: 0.95,
+        }),
+      );
+      leader.scale.setScalar(1.45);
+      leader.position.z = -0.003;
+      leader.renderOrder = 3;
+      ring.add(leader);
+    }
     this.group.add(model.root, ring, shadow, name, curse, voucher, shield, badge, armour.group, protect);
     return {
       model,
@@ -362,6 +422,9 @@ export class PlayerViews implements View {
       slip: null,
       joltPending: null,
       jolt: null,
+      look: look?.variant ?? null,
+      scale: look?.scale ?? 1,
+      leader,
     };
   }
 
@@ -400,7 +463,7 @@ export class PlayerViews implements View {
       }
     }
     m.root.rotation.set(0, v.yaw, 0);
-    m.root.scale.setScalar(m.rigged ? 1 : SCALE);
+    m.root.scale.setScalar((m.rigged ? 1 : SCALE) * v.scale);
     m.root.visible = true;
 
     const moving = pos.moving && state.match.phase !== 'ended';
@@ -569,7 +632,7 @@ export class PlayerViews implements View {
     (v.ring.material as MeshBasicMaterial).opacity =
       state.match.phase === 'countdown' ? 0.55 + 0.4 * Math.sin(time * 6) : 0.98;
     v.shadow.position.set(w.x, 0.02, w.z);
-    v.name.position.set(w.x, 2.12, w.z);
+    v.name.position.set(w.x, 2.12 + (v.scale - 1) * 1.86, w.z);
     v.name.visible = true;
     if (v.marker) {
       v.marker.position.set(w.x, 2.52 + Math.sin(time * 5) * 0.08, w.z);
@@ -611,7 +674,7 @@ export class PlayerViews implements View {
   private poseDead(ctx: FrameContext, p: Player, v: Visual, base: Vector3): void {
     const { time, fx } = ctx;
     const m = v.model;
-    const sc = m.rigged ? 1 : SCALE;
+    const sc = (m.rigged ? 1 : SCALE) * v.scale;
     v.ring.visible = false;
     v.name.visible = false;
     if (v.marker) v.marker.visible = false;

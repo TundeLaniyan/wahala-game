@@ -266,6 +266,50 @@ export const gameplaySounds = {
       return t;
     }),
   }),
+  /**
+   * A campaign enemy starts a punch (decision SV3): a short RISING growl and a swelling breath that stop dead at the
+   * top - "it is coming". Quiet, low and short, so several in a row never become noise (the router rate-limits too).
+   */
+  enemy_windup: oneShot({
+    bus: 'warn',
+    gain: 0.55,
+    render: simple(({ rate, rng }) => {
+      const t = new Track(rate, 0.4);
+      const n = len(rate, 0.3);
+      const swell = envelope(n, rate, [
+        [0, 0],
+        [0.24, 1],
+        [0.27, 0.15],
+        [0.3, 0],
+      ]);
+      const growl = lowpass(
+        osc('saw', n, rate, (tt) => 85 + 95 * (tt / 0.3)),
+        rate,
+        (i) => 300 + 700 * (i / n),
+        1.2,
+      );
+      t.add(mul(growl, swell), 0, 0.5);
+      const breath = nburst(rate, 0.3, rng, 'bp', 450, 1600, 1.4, 1, 0.2);
+      t.add(mul(breath, swell), 0, 0.35);
+      return t;
+    }),
+  }),
+  /**
+   * A campaign enemy takes aim to throw (decision SV3): two dry high clicks rising a step ("tick-TICK"), clearly not
+   * the punch's low growl. The object's whistle follows when it actually flies.
+   */
+  enemy_aim: oneShot({
+    bus: 'warn',
+    gain: 0.5,
+    render: simple(({ rate, rng }) => {
+      const t = new Track(rate, 0.32);
+      t.add(bell(rate, 0.09, 1568, 0.025, [1, 2.4]), 0, 0.5);
+      t.add(nburst(rate, 0.02, rng, 'hp', 4000, null, 0.8, 0.006), 0, 0.25);
+      t.add(bell(rate, 0.12, 2093, 0.035, [1, 2.4]), 0.11, 0.6);
+      t.add(nburst(rate, 0.02, rng, 'hp', 4500, null, 0.8, 0.006), 0.11, 0.3);
+      return t;
+    }),
+  }),
   /** Dazed: cartoon "bonk" and little stars twinkling down. */
   daze: oneShot({
     gain: 0.85,

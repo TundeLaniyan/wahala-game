@@ -46,19 +46,19 @@ export function recolourGeometry(source: BufferGeometry, degrees: number): Buffe
 const isCloth = (m: Material | Material[]): boolean => !Array.isArray(m) && m.name === 'cloth';
 
 /** Head geometry in the head bone's local metres, per character model (measured from the glTF files). */
-interface HeadFit {
+export interface HeadFit {
   /** Height of the head's centre above the bone. */
   centre: number;
   /** Radius the headwear has to clear (hair included). */
   radius: number;
 }
-const HEAD_FIT: Record<string, HeadFit> = {
+export const HEAD_FIT: Record<string, HeadFit> = {
   streetBaller: { centre: 0.17, radius: 0.205 },
   lekkiBoy: { centre: 0.15, radius: 0.19 },
   campusQueen: { centre: 0.15, radius: 0.2 },
   areaBoss: { centre: 0.16, radius: 0.2 },
 };
-const DEFAULT_FIT: HeadFit = HEAD_FIT.streetBaller!;
+export const DEFAULT_FIT: HeadFit = HEAD_FIT.streetBaller!;
 
 const materials = new Map<number, MeshStandardMaterial>();
 function headwearMaterial(color: number): MeshStandardMaterial {
