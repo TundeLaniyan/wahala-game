@@ -1,5 +1,5 @@
 import { MathUtils, PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
-import type { CameraShot } from './cameraDirector';
+import type { CameraBounds, CameraShot } from './cameraDirector';
 import type { Layout } from './coords';
 import type { ShakeOffset } from './shake';
 
@@ -81,6 +81,10 @@ export class CameraRig {
   /** Ground extents of the action view per unit of distance (they scale linearly with it). */
   private unitHalfWidth = 0.6;
   private unitNear = 0.4;
+  /** Ground distance from the look-at point to the far (top) edge of the HUD-free band, per unit distance (< 0). */
+  private unitFar = -0.6;
+  /** A mission sector's overview pose, fitted once per screen layout (key: the bounds). */
+  private sectorOverview: { key: string; pose: Pose } | null = null;
   private actionDistance = 10;
   private margin = MARGIN;
   private readonly v = new Vector3();
@@ -111,8 +115,11 @@ export class CameraRig {
     this.place({ x: 0, z: 0, distance: 1, pitch: ACTION_PITCH, fov: this.actionFov });
     const mid = this.groundAt(0.97, 0);
     const near = this.groundAt(0, -1 + insets.bottom * 2);
+    const far = this.groundAt(0, 1 - insets.top * 2);
     this.unitHalfWidth = mid ? Math.abs(mid.x) : 0.6;
     this.unitNear = near ? near.z : 0.4;
+    this.unitFar = far ? far.z : -0.6;
+    this.sectorOverview = null;
 
     if (this.snap) Object.assign(this.pose, this.overview);
     this.place(this.pose);
@@ -120,29 +127,35 @@ export class CameraRig {
 
   /** The whole arena (plus the far-side scenery) inside the HUD-free band. */
   private fitOverview(aspect: number): void {
+    Object.assign(this.overview, this.fitRect(aspect, 0, 0, this.layout.width, this.layout.height));
+  }
+
+  /**
+   * The pose that fits a W x H rectangle of floor centred on world (cx, cz) (plus the far-side scenery) inside the
+   * HUD-free band: the whole arena, or a mission sector's overview.
+   */
+  private fitRect(aspect: number, cx: number, cz: number, W: number, H: number): Pose {
     const cam = this.camera;
     const insets = this.insets;
     const fov = this.overviewFov;
-    const W = this.layout.width;
-    const H = this.layout.height;
     // Perspective widens the near row. In the short landscape (phone) layout the thumbstick's resting
     // place and the action buttons sit beside the near row, so the near corners are kept between them;
     // the board fills the rest (the scenery above the back wall gives way to it).
     const compact = insets.top >= 0.12 && aspect > 1.2;
     const farTop = compact ? FAR_TOP_COMPACT : FAR_TOP;
     const pts = [
-      new Vector3(-W / 2 - 0.35, farTop, -H / 2 - 0.5),
-      new Vector3(W / 2 + 0.35, farTop, -H / 2 - 0.5),
-      new Vector3(-W / 2 - 0.3, 0, H / 2 + 0.45),
-      new Vector3(W / 2 + 0.3, 0, H / 2 + 0.45),
+      new Vector3(cx - W / 2 - 0.35, farTop, cz - H / 2 - 0.5),
+      new Vector3(cx + W / 2 + 0.35, farTop, cz - H / 2 - 0.5),
+      new Vector3(cx - W / 2 - 0.3, 0, cz + H / 2 + 0.45),
+      new Vector3(cx + W / 2 + 0.3, 0, cz + H / 2 + 0.45),
     ];
     const nearX = compact ? compactNearX(aspect) : 0.97;
-    const maxX = (p: Vector3): number => (p.z > 0 ? nearX : 0.97);
+    const maxX = (p: Vector3): number => (p.z > cz ? nearX : 0.97);
     const yTop = 1 - insets.top * 2;
     const yBottom = -1 + insets.bottom * 2;
     const v = this.v;
     const pose = (d: number, tz: number): void =>
-      this.place({ x: 0, z: tz, distance: d, pitch: OVERVIEW_PITCH, fov });
+      this.place({ x: cx, z: tz, distance: d, pitch: OVERVIEW_PITCH, fov });
     /** Signed vertical imbalance of the framed arena inside the HUD-free band (0 = centred). */
     const imbalance = (d: number, tz: number): number => {
       pose(d, tz);
@@ -158,8 +171,8 @@ export class CameraRig {
     // With strong perspective the far edge shrinks, so the look-at point is re-centred for each
     // distance (bisection on the imbalance, which grows monotonically with tz).
     const centre = (d: number): number => {
-      let a = -H / 2;
-      let b = H / 2;
+      let a = cz - H / 2;
+      let b = cz + H / 2;
       for (let i = 0; i < 24; i++) {
         const mid = (a + b) / 2;
         if (imbalance(d, mid) > 0) b = mid;
@@ -182,7 +195,27 @@ export class CameraRig {
       if (fits(mid)) hi = mid;
       else lo = mid;
     }
-    Object.assign(this.overview, { x: 0, z: centre(hi), distance: hi, pitch: OVERVIEW_PITCH, fov });
+    return { x: cx, z: centre(hi), distance: hi, pitch: OVERVIEW_PITCH, fov };
+  }
+
+  /** A mission sector's overview: its playable box plus its margin, fitted like the whole arena (cached). */
+  private boundsOverview(b: CameraBounds): Pose {
+    const key = `${b.play.x0},${b.play.z0},${b.play.x1},${b.play.z1},${b.margin}`;
+    if (this.sectorOverview?.key === key) return this.sectorOverview.pose;
+    const m = Math.min(b.margin, 1);
+    const w = b.play.x1 - b.play.x0 + 2 * m;
+    const h = b.play.z1 - b.play.z0 + 2 * m;
+    const saved = { ...this.pose };
+    const pose = this.fitRect(
+      this.camera.aspect,
+      (b.play.x0 + b.play.x1) / 2,
+      (b.play.z0 + b.play.z1) / 2,
+      w,
+      h,
+    );
+    this.place(saved); // fitting moved the camera: put it back where it was
+    this.sectorOverview = { key, pose };
+    return pose;
   }
 
   private setFov(fov: number): void {
@@ -267,6 +300,7 @@ export class CameraRig {
     }
     let x = cx;
     let z = cz + lift(distance);
+    if (shot.bounds) return this.inBounds(shot.bounds, x, z, distance, fov);
     if (shot.free) return { x, z, distance, pitch: ACTION_PITCH, fov };
     // Keep the view on the arena: at most a margin of street beyond the side and south walls.
     const W = this.layout.width;
@@ -276,6 +310,27 @@ export class CameraRig {
     z = Math.min(z, H / 2 + this.margin.south - this.unitNear * distance);
     z = Math.max(z, -H / 2 - 1);
     return { x, z, distance, pitch: ACTION_PITCH, fov };
+  }
+
+  /**
+   * A mission sector's follow view (docs/CAMPAIGN_SECTOR_AI.md): the HUD-free band shows at most `margin` world units of
+   * scenery beyond the playable box (never less than the rig's own HUD margin, so a player at the box's edge is never
+   * under the on-screen controls); along an axis where the box is narrower than the view the view is centred on it.
+   */
+  private inBounds(b: CameraBounds, x: number, z: number, distance: number, fov: number): Pose {
+    const side = Math.max(b.margin, this.margin.side);
+    const south = Math.max(b.margin, this.margin.south);
+    const north = b.margin;
+    const half = this.unitHalfWidth * distance;
+    const near = this.unitNear * distance;
+    const far = this.unitFar * distance;
+    const xLo = b.play.x0 - side + half;
+    const xHi = b.play.x1 + side - half;
+    const zLo = b.play.z0 - north - far;
+    const zHi = b.play.z1 + south - near;
+    const cx = xLo <= xHi ? MathUtils.clamp(x, xLo, xHi) : (b.play.x0 + b.play.x1) / 2;
+    const cz = zLo <= zHi ? MathUtils.clamp(z, zLo, zHi) : (b.play.z0 + b.play.z1) / 2 - (near + far) / 2;
+    return { x: cx, z: cz, distance, pitch: ACTION_PITCH, fov };
   }
 
   /**
@@ -290,7 +345,12 @@ export class CameraRig {
     shot: CameraShot | null = null,
     attract = false,
   ): void {
-    const target = shot && shot.kind === 'action' && !attract ? this.actionGoal(shot) : this.overview;
+    const target =
+      shot && shot.kind === 'action' && !attract
+        ? this.actionGoal(shot)
+        : shot?.bounds && !attract
+          ? this.boundsOverview(shot.bounds)
+          : this.overview;
     Object.assign(this.goal, target);
     const p = this.pose;
     if (this.snap) {

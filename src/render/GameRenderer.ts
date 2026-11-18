@@ -21,6 +21,8 @@ import type { SceneLights } from './lighting';
 import type { Backdrop } from './assets/backdrop';
 import { CameraRig } from './cameraRig';
 import { cameraModeFor, selectShot } from './cameraModes';
+import { clipEnvironment, renderClip } from './sectorClip';
+import { FieldEquipmentViews, hasFieldEquipment } from './views/FieldEquipmentViews';
 import type { CameraMode } from './cameraModes';
 import { createLayout } from './coords';
 import type { Layout } from './coords';
@@ -75,6 +77,11 @@ export interface RenderStats {
   /** Name of the ladder rung in use ("Medium-Low"), and whether Auto chose it. */
   qualityName: string;
   auto: boolean;
+  /** GPU resources alive now (`renderer.info.memory`): a leak check across match loads. */
+  geometries?: number;
+  textures?: number;
+  /** How long the last match took to build its scene, ms. */
+  loadMs?: number;
 }
 
 /** What Settings and the debug handle show about graphics quality. */
@@ -215,6 +222,8 @@ export class GameRenderer {
   private disposed = false;
   private loaded = false;
   private overviewPreferred = false;
+  /** How long the last `loadGame` took to build the scene (ms; debug / performance report). */
+  private lastLoadMs = 0;
   private frames = 0;
   /** Debug / art review only: a forced close shot of a world point (null = normal camera). */
   private inspect: { x: number; z: number; zoom: number } | null = null;
@@ -270,6 +279,12 @@ export class GameRenderer {
 
   /** Builds the scene for a freshly created game. Safe to call again for a rematch. */
   loadGame(state: GameState): void {
+    const started = performance.now();
+    this.buildGame(state);
+    this.lastLoadMs = performance.now() - started;
+  }
+
+  private buildGame(state: GameState): void {
     this.unload();
     this.bumpSeq = 0;
     this.layout = createLayout(state.width, state.height);
@@ -332,6 +347,13 @@ export class GameRenderer {
     // the combat pilot's wind-up / counter-window rings and swing feedback (decision CP4): pilot matches only
     this.pilot = hasCombatPilot(state) ? new CombatPilotViews(players) : null;
     if (this.pilot) this.views.push(this.pilot);
+    // field equipment of a destroyTargets leg (docs/CAMPAIGN_SECTOR_AI.md): only a mission with equipment builds it
+    const equipment = hasFieldEquipment(state) ? new FieldEquipmentViews() : null;
+    if (equipment) {
+      this.views.push(equipment);
+      this.scene.add(equipment.group);
+      equipment.group.userData.grit = 'vehicle';
+    }
     this.living = this.createLiving(state);
     if (this.living) this.views.push(this.living);
     this.scene.add(
@@ -392,7 +414,8 @@ export class GameRenderer {
     const board = { cols: state.width, rows: state.height };
     const reduced =
       typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    return new LivingEnvironment(resolveEnv(src, board), {
+    // a mission sector: traffic and crowds nowhere near the part of the district in play are left out
+    return new LivingEnvironment(clipEnvironment(resolveEnv(src, board), renderClip(state)), {
       board,
       profile: this.profile,
       reducedMotion: reduced,
@@ -894,6 +917,31 @@ export class GameRenderer {
     this.missionMarkers?.setHidden(hidden);
   }
 
+  /**
+   * Debug / e2e: the mission sector as drawn - its render clip, its barricades, and the floor tiles (fractional grid
+   * coordinates) where the camera looks now: the top and bottom edge of the HUD-free band at the screen's centre line
+   * and its left / right edge at mid-height (the lines the sector clamp holds). Null without a sector.
+   */
+  sectorStatus(): {
+    clip: { x0: number; y0: number; x1: number; y1: number };
+    barricades: number;
+    view: { top: number; bottom: number; left: number; right: number } | null;
+  } | null {
+    if (!this.loaded) return null;
+    const s = this.arena.sectorStatus();
+    if (!s) return null;
+    const { top, bottom } = this.insets;
+    const at = (fx: number, fy: number): { x: number; y: number } | null =>
+      this.rig.screenToGrid(fx * this.width, fy * this.height, this.width, this.height);
+    const mid = (top + 1 - bottom) / 2;
+    const t = at(0.5, top);
+    const b = at(0.5, 1 - bottom);
+    const l = at(0.015, mid);
+    const r = at(0.985, mid);
+    const view = t && b && l && r ? { top: t.y, bottom: b.y, left: l.x, right: r.x } : null;
+    return { ...s, view };
+  }
+
   /** What the raid markers drew last frame (null outside a raid); debug / performance reports. */
   raidStats(): RaidViewStats | null {
     return this.raid?.stats() ?? null;
@@ -906,7 +954,11 @@ export class GameRenderer {
 
   stats(): RenderStats {
     const info = this.renderer.info.render;
+    const memory = this.renderer.info.memory;
     return {
+      geometries: memory.geometries,
+      textures: memory.textures,
+      loadMs: Math.round(this.lastLoadMs * 10) / 10,
       fps: Math.round(1 / this.frameAvg),
       drawCalls: info.calls,
       triangles: info.triangles,

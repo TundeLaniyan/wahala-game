@@ -23,6 +23,42 @@ export interface CameraShot {
   zoom: number;
   /** Debug / art review: do not clamp the view to the arena. */
   free?: boolean;
+  /**
+   * A mission sector (docs/CAMPAIGN_SECTOR_AI.md): the view stays on it. `play` is the playable rects' bounding box in
+   * world units (tile edges), `margin` the world units of scenery the camera may show beyond it (the sector's
+   * `viewMargin`; the rig never uses less than its own HUD margin). The overview shot frames it instead of the city.
+   */
+  bounds?: CameraBounds;
+}
+
+export interface CameraBounds {
+  play: { x0: number; z0: number; x1: number; z1: number };
+  margin: number;
+}
+
+/** The camera bounds of the match's sector (undefined without one). */
+export function sectorBounds(state: GameState, layout: Layout): CameraBounds | undefined {
+  const s = state.sector;
+  if (!s || s.rects.length === 0) return undefined;
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const r of s.rects) {
+    x0 = Math.min(x0, r[0]);
+    y0 = Math.min(y0, r[1]);
+    x1 = Math.max(x1, r[2]);
+    y1 = Math.max(y1, r[3]);
+  }
+  return {
+    play: {
+      x0: layout.wx(x0) - 0.5,
+      z0: layout.wz(y0) - 0.5,
+      x1: layout.wx(x1) + 0.5,
+      z1: layout.wz(y1) + 0.5,
+    },
+    margin: s.viewMargin,
+  };
 }
 
 /** Fraction of the countdown spent on the establishing (whole-arena) shot before gliding in. */
@@ -113,6 +149,8 @@ function followPlayer(state: GameState, layout: Layout, p: Player, alpha: number
     // large boards: keep the followed player centred even at the city's edge (the street beyond is
     // dressed); clamping the view to the board pushed a player at the edge under the HUD panels
     free: isLargeBoard(state) ? true : undefined,
+    // a mission sector: the view stays on it, with a margin wide enough that the player is never under the HUD
+    ...(state.sector ? { bounds: sectorBounds(state, layout) } : {}),
   };
 }
 
@@ -157,12 +195,14 @@ export function directShot(
   preferOverview: boolean,
   focusId: number | null = null,
 ): CameraShot {
+  const bounds = sectorBounds(state, layout);
   const overview: CameraShot = {
     kind: 'overview',
     focus: { x: 0, z: 0 },
     lead: { x: 0, z: 0 },
     keep: [],
     zoom: 1,
+    ...(bounds ? { bounds } : {}),
   };
   if (preferOverview) return overview;
   const m = state.match;

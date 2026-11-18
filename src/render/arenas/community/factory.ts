@@ -5,6 +5,7 @@
  * ordinary pillars there), which keeps a missing family from breaking a match.
  */
 import { getArena } from '../../../sim';
+import { rectInClip } from '../boardCover';
 import type { CoverFactory } from '../boardCover';
 import { createCK, toRect } from './kit';
 import type { Family, Theme } from './kit';
@@ -30,6 +31,9 @@ export function communityCover(spec: CoverSpec): CoverFactory {
       if (!family) continue;
       const n = counts.get(c.kind) ?? 0;
       counts.set(c.kind, n + 1);
+      // a mission sector: objects with no tile in the clip are never seen, so they are not built (the variant index
+      // `n` still counts them, so what is built looks exactly as on the whole board)
+      if (!rectInClip(board.clip, c.x, c.y, c.w, c.h)) continue;
       const sections = new Map<number, [number, number][]>();
       for (let y = c.y; y < c.y + c.h; y++)
         for (let x = c.x; x < c.x + c.w; x++) {

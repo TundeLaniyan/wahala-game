@@ -69,6 +69,11 @@ import type { MenuScreen } from './menu';
 import type { MissionHost } from './ports';
 import { patch, useGameStore } from './store';
 
+/** `?nosector` (debug / performance comparison): a field mission without its district sector. */
+function debugNoSector(): boolean {
+  return typeof location !== 'undefined' && new URLSearchParams(location.search).has('nosector');
+}
+
 /** Human lives in a mission (the sim's default; shown in the briefing). */
 export const MISSION_LIVES = 3;
 
@@ -569,6 +574,8 @@ export class CampaignController {
           fieldId: def.missionRef,
           difficulty: enemyLevel,
           lives: MISSION_LIVES,
+          // debug / measurement only: `?nosector` plays the mission on the whole district (docs/CAMPAIGN_SECTOR_AI.md)
+          ...(debugNoSector() ? { noSector: true } : {}),
         },
         humanCharacter: ui.save.character,
         seed: this.deps.seed(),

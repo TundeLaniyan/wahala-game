@@ -21,6 +21,7 @@ import type {
   MissionModifierId,
   SimEvent,
 } from '../sim';
+import { FIELD_MISSION_DEFS, buildMissionGame } from '../sim';
 import { enterImmersiveMode } from './fullscreen';
 import { AttractController } from './AttractController';
 import { CampaignController } from './campaign';
@@ -743,6 +744,22 @@ function exposeDebugHandle(): void {
     renderer: () => renderer,
     /** The view-clear fade (scenery between the camera and the followed fighter): stride and what fades now. */
     viewClear: () => renderer?.viewClearStatus() ?? null,
+    /** A mission sector as drawn: render clip, barricades, the floor tiles at the HUD-free band's corners; null without one. */
+    sector: () => renderer?.sectorStatus() ?? null,
+    /**
+     * Measurement / art review: starts a field mission straight away (no campaign lock, nothing saved); `noSector` plays
+     * it on the whole district (scripts/sector-perf.mjs compares the two).
+     */
+    startFieldMission: (fieldId: string, o: { noSector?: boolean; seed?: number } = {}): boolean => {
+      const def = FIELD_MISSION_DEFS[fieldId];
+      if (!def) return false;
+      const spec = { id: def.districtId, fieldId, ...(o.noSector ? { noSector: true } : {}) };
+      missionHost.startMission(
+        buildMissionGame({ spec, humanCharacter: 'streetBaller', seed: o.seed ?? 7 }),
+        { missionId: def.districtId, difficulty: 'rookie', onEnd: () => undefined },
+      );
+      return true;
+    },
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
     music: () => (audio as { musicStatus?: () => unknown }).musicStatus?.() ?? null,
     /** Match loading: the screen's state now and how many starts actually ran (duplicate taps start nothing). */

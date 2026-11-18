@@ -4,7 +4,7 @@ import type { GameState } from '../sim';
 import { playerCss } from '../assets/palette';
 import { liveMatch } from '../app/session';
 import { useGameStore } from '../app/store';
-import { minimapGeometry, minimapLayers, tileToMinimap } from './minimapModel';
+import { minimapCrop, minimapGeometry, minimapLayers, tileToMinimap } from './minimapModel';
 import type { MinimapGeometry, MinimapMission } from './minimapModel';
 import './Minimap.css';
 
@@ -17,6 +17,8 @@ const C = {
   hard: '#16130f',
   soft: '#8a7558',
   crushed: '#4a1d14',
+  barricade: '#e0661c',
+  outside: 'rgba(10, 8, 6, 0.62)',
   warning: '#ff7a1a',
   soon: 'rgba(255, 122, 26, 0.38)',
   hazard: 'rgba(255, 60, 40, 0.75)',
@@ -34,7 +36,7 @@ const C = {
   bossExposed: '#ff3b1f',
 };
 
-/** The static board (ground, avenues, buildings) for one arena, drawn once. */
+/** The static board (ground, avenues, buildings) for one arena, drawn once (only the crop of a mission sector). */
 function staticLayer(state: GameState, geo: MinimapGeometry, dpr: number): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = Math.round(geo.width * dpr);
@@ -43,11 +45,20 @@ function staticLayer(state: GameState, geo: MinimapGeometry, dpr: number): HTMLC
   g.scale(dpr, dpr);
   const layout = getArena(state.arenaId).layout;
   const s = geo.cell;
+  const outside = (x: number, y: number): boolean =>
+    !!state.sector && !state.sector.rects.some((r) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]);
   for (let y = 0; y < geo.rows; y++) {
     for (let x = 0; x < geo.cols; x++) {
-      const ch = layout[y]?.[x];
+      const bx = geo.x0 + x;
+      const by = geo.y0 + y;
+      const ch = layout[by]?.[bx];
       g.fillStyle = ch === '#' ? C.hard : ch === '=' ? C.avenue : C.block;
       g.fillRect(x * s, y * s, s, s);
+      // a mission sector: the streets beyond the barricades are shown dimmed (not part of the mission)
+      if (ch !== '#' && outside(bx, by)) {
+        g.fillStyle = C.outside;
+        g.fillRect(x * s, y * s, s, s);
+      }
     }
   }
   return c;
@@ -66,17 +77,17 @@ function draw(
   const L = minimapLayers(state, layout, 0, focusId);
   g.clearRect(0, 0, geo.width, geo.height);
   g.drawImage(base, 0, 0, geo.width, geo.height);
+  const W = state.width;
   const tile = (i: number, color: string, inset = 0): void => {
+    const x = (i % W) - geo.x0;
+    const y = Math.floor(i / W) - geo.y0;
+    if (x < 0 || y < 0 || x >= geo.cols || y >= geo.rows) return;
     g.fillStyle = color;
-    g.fillRect(
-      (i % geo.cols) * s + inset,
-      Math.floor(i / geo.cols) * s + inset,
-      s - inset * 2,
-      s - inset * 2,
-    );
+    g.fillRect(x * s + inset, y * s + inset, s - inset * 2, s - inset * 2);
   };
   for (const i of L.soft) tile(i, C.soft, s > 3 ? 1 : 0);
   for (const i of L.crushed) tile(i, C.crushed);
+  for (const i of L.barricade) tile(i, C.barricade);
   for (const i of L.closingSoon) tile(i, C.soon);
   const blink = 0.55 + 0.45 * Math.sin(time * 10);
   g.globalAlpha = blink;
@@ -87,10 +98,15 @@ function draw(
     g.strokeStyle = C.core;
     g.lineWidth = 1.5;
     g.setLineDash([3, 2]);
-    g.strokeRect(L.core.x0 * s + 0.75, L.core.y0 * s + 0.75, L.core.w * s - 1.5, L.core.h * s - 1.5);
+    g.strokeRect(
+      (L.core.x0 - geo.x0) * s + 0.75,
+      (L.core.y0 - geo.y0) * s + 0.75,
+      L.core.w * s - 1.5,
+      L.core.h * s - 1.5,
+    );
     g.setLineDash([]);
   }
-  if (L.mission) drawMission(g, L.mission, geo, time);
+  if (L.mission) drawMission(g, L.mission, geo, W, time);
   for (const f of L.flames) {
     const p = tileToMinimap(geo, f.x, f.y);
     g.fillStyle = C.flame;
@@ -143,13 +159,15 @@ function drawMission(
   g: CanvasRenderingContext2D,
   m: MinimapMission,
   geo: MinimapGeometry,
+  boardWidth: number,
   time: number,
 ): void {
   const s = geo.cell;
   for (const w of m.warnings) {
     g.globalAlpha = w.urgent ? 0.55 + 0.45 * Math.sin(time * 18) ** 2 : 0.75;
     g.fillStyle = w.kind === 'window' ? C.window : w.kind === 'reinforce' ? C.reinforce : C.strike;
-    for (const i of w.tiles) g.fillRect((i % geo.cols) * s, Math.floor(i / geo.cols) * s, s, s);
+    for (const i of w.tiles)
+      g.fillRect(((i % boardWidth) - geo.x0) * s, (Math.floor(i / boardWidth) - geo.y0) * s, s, s);
   }
   g.globalAlpha = 1;
   const pulse = 0.5 + 0.5 * Math.sin(time * 4.2);
@@ -241,10 +259,12 @@ export function Minimap() {
       // must all fit above the action buttons, so the map is smaller there (docs/CAMPAIGN_INTEGRATION.md, mobile HUD fit)
       const maxH = short ? (state.mission ? (window.innerHeight < 400 ? 52 : 64) : 96) : 170;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const g2 = minimapGeometry(state.width, state.height, maxW, maxH);
+      // a mission sector: the map shows its part of the district (docs/CAMPAIGN_SECTOR_AI.md)
+      const crop = minimapCrop(state);
+      const g2 = minimapGeometry(crop.cols, crop.rows, maxW, maxH, crop);
       // the cell is at least 2 px, so a tall board can still exceed the height: show it scaled down (smooth, not pixelated)
       const shrink = Math.min(1, maxH / g2.height);
-      const key = `${state.seed}:${state.arenaId}:${g2.cell}:${dpr}:${shrink.toFixed(3)}`;
+      const key = `${state.seed}:${state.arenaId}:${state.sector?.id ?? ''}:${g2.cell}:${dpr}:${shrink.toFixed(3)}`;
       if (key !== baseKey) {
         baseKey = key;
         geo = g2;

@@ -31,7 +31,7 @@ import type { BufferGeometry, Material } from 'three';
 import { assets } from '../assets/library';
 import { createVehicleModel } from '../assets/vehicles';
 import { artRng, concreteTexture, corrugatedTexture } from '../textures';
-import type { BoardCover } from './boardCover';
+import type { BoardCover, CoverClip } from './boardCover';
 import { CoverBuilder } from './boardCover';
 import { OSHODI_COVER_REACH, oshodiCoverGroups } from './oshodiMetroCoverMap';
 import type { OshodiCoverGroup } from './oshodiMetroCoverMap';
@@ -900,7 +900,12 @@ function wall(k: Kit, g: number, grp: OshodiCoverGroup, n: number): void {
 // ---------------------------------------------------------------------------------------- the build
 
 /** Builds the whole board's cover (null if the board is not the 63 x 47 Oshodi grid). */
-export function buildOshodiMetroCover(board: { width: number; height: number }): BoardCover | null {
+export function buildOshodiMetroCover(board: {
+  width: number;
+  height: number;
+  /** A mission sector's render clip: groups with no tile inside it are left out (absent = the whole board). */
+  clip?: CoverClip;
+}): BoardCover | null {
   const groups = oshodiCoverGroups();
   const W = board.width;
   const H = board.height;
@@ -943,9 +948,12 @@ export function buildOshodiMetroCover(board: { width: number; height: number }):
   };
   const bus = assets.has('veh_danfo') || dom ? createVehicleModel('danfo') : null;
   const counts = new Map<string, number>();
+  const clip = board.clip;
   for (const grp of groups) {
     const n = counts.get(grp.kind) ?? 0;
     counts.set(grp.kind, n + 1);
+    if (clip && !grp.tiles.some(([x, y]) => x >= clip.x0 && x <= clip.x1 && y >= clip.y0 && y <= clip.y1))
+      continue;
     // long objects fade in sections of four columns (a bus is never split: buses start on even columns of
     // their group), so one fighter behind a long building does not dissolve the whole row
     const sections = new Map<number, [number, number][]>();
