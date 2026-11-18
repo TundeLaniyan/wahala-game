@@ -261,7 +261,7 @@ export const FINALE_SECTIONS: SectionDef[] = [
         ringWeakened:
           'The control boxes under the bridge are wrecked: the Ring can no longer close the junction from its yard.',
         intro: [
-          say('MAMA PUT', 'Bayo came. He says he wants to help hold the bus stop.'),
+          say('MAMA PUT', 'Hold the bus stop. The whole street is watching from under the bridge.'),
           // Bayo's LOCKED arc (he knowingly helped the Ring and now helps); one provisional line, no new canon
           say('BAYO', 'I helped them lock this junction. Tonight I help you hold it open.'),
         ],

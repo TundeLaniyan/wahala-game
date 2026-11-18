@@ -238,7 +238,10 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
     clearRoute(state, fieldRouteStops(def), keep);
     for (const d of def.doors) if (!d.required) clearRoute(state, [def.start, d.returnTile], keep);
   }
-  const claimed = new Set<string>(fieldTiles(def).map(([x, y]) => `${x},${y}`));
+  // equipment tiles are claimed too: no seat is ever placed on a piece of Ring equipment
+  const claimed = new Set<string>(
+    [...fieldTiles(def), ...fieldTargetTiles(def)].map(([x, y]) => `${x},${y}`),
+  );
 
   // a sector's barricades are concrete now: nobody is seated on one, or outside the play area
   const open = (x: number, y: number): boolean =>
@@ -279,6 +282,14 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
       ...(e.radius !== undefined ? { radius: e.radius } : {}),
     });
   });
+
+  // the crates cleared round the posts and along the patrols must never take a piece of equipment with them (decision
+  // FN3, a fix of DS7: a post beside a piece cleared it, so the leg had nothing to blast): it stands again
+  for (const t of targets ?? []) {
+    const i = tileIndex(state, t.x, t.y);
+    state.tiles[i] = Tile.Soft;
+    delete state.hidden[i];
+  }
 
   const field: FieldRuntime = {
     fieldId: def.id,
