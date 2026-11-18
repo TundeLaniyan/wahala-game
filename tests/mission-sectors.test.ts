@@ -171,8 +171,12 @@ describe('sector data', () => {
       for (const seed of [1, 7]) {
         const s = fieldGame(def.id, seed);
         expect(s.sector?.id).toBe(sid);
-        const reach = flood(s, def.start[0], def.start[1], (i) => s.tiles[i] !== Tile.Hard);
-        for (const i of reach)
+        // a gate that opens between legs (decision DB2): contained while closed AND once open; the targets behind it
+        // are reached through it
+        const gates = new Set(s.sector!.gates.flatMap((g) => g.tiles));
+        const closed = flood(s, def.start[0], def.start[1], (i) => s.tiles[i] !== Tile.Hard);
+        const reach = flood(s, def.start[0], def.start[1], (i) => s.tiles[i] !== Tile.Hard || gates.has(i));
+        for (const i of [...closed, ...reach])
           expect(
             inSector(s, i % s.width, Math.floor(i / s.width)),
             `${sid} leaks at ${i % s.width},${Math.floor(i / s.width)}`,
@@ -188,10 +192,11 @@ describe('sector data', () => {
       const s = fieldGame(def.id, 3);
       const stops = fieldRouteStops(def);
       const targets = new Set(fieldTargetTiles(def).map(([x, y]) => y * s.width + x));
+      const gates = new Set(s.sector!.gates.flatMap((g) => g.tiles)); // open by the time the route crosses them
       for (let k = 1; k < stops.length; k++) {
         const [ax, ay] = stops[k - 1]!;
         const [bx, by] = stops[k]!;
-        const reach = flood(s, ax, ay, (i) => s.tiles[i] === Tile.Empty || targets.has(i));
+        const reach = flood(s, ax, ay, (i) => s.tiles[i] === Tile.Empty || targets.has(i) || gates.has(i));
         expect(reach.has(by * s.width + bx), `${sid}: ${ax},${ay} -> ${bx},${by}`).toBe(true);
       }
     });

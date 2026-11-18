@@ -290,21 +290,23 @@ const EBUTE_SECTIONS: SectionDef[] = [
     districtId: 'ebuteMetta',
     order: 1,
     name: 'Yard Approach',
-    summary: 'The yard fence leads to the signal box. Follow it and raid the signal shed.',
+    summary:
+      'Switch cabinets in the yard streets route the Ring’s night freight. Wreck them, take the sidings and raid the signal shed.',
     requires: [],
     missions: [
       {
         id: 'ebuteMetta.approach',
         format: 'field',
         name: 'Yard Approach',
-        objectiveCard: 'Follow the yard fence, raid the signal shed, return.',
-        summary: 'Switchmen walk the fence line. Reach the signal box, hold the shed door and raid it.',
+        objectiveCard: 'Wreck 4 cabinets, clear the sidings, keep the cabin, raid the shed.',
+        summary:
+          'Only blasts break the switch cabinets, and the sidings gate opens behind the last one. Beat the freight guards, keep the signal cabin for 25 seconds, then raid the signal shed.',
         missionRef: 'ebuteMetta.approach',
         doors: [{ doorId: 'shed', raidId: 'junctionToolShed' }],
         reward: title('ebuteMetta.approach', 'Fence Regular', 'The switchmen leave you the gate open.'),
         unlocks: ['section.ebuteMetta.s2'],
         ringWeakened:
-          'The signal shed is wrecked: the yard can no longer clear the lines for its night trains.',
+          'The switch cabinets and signal shed are wrecked: the yard can no longer clear lines for its night trains.',
       },
     ],
   },
@@ -350,16 +352,17 @@ const LAGOS_SECTIONS: SectionDef[] = [
     districtId: 'lagosIsland',
     order: 1,
     name: 'Ledger Row',
-    summary: 'Auditors work the west row. Clear them, visit the ledger counters and raid the records annexe.',
+    summary:
+      'Ring security walks the alleys of the west row and holds the traders’ counter hall. Take the hall back and raid the records annexe.',
     requires: [],
     missions: [
       {
         id: 'lagosIsland.approach',
         format: 'field',
         name: 'Ledger Row',
-        objectiveCard: 'Clear the auditors, walk two counters, raid the annexe.',
+        objectiveCard: 'Beat 3 auditors, keep the hall, wreck 3 stamp machines, raid.',
         summary:
-          'Two auditors hold the row. Reach both counters, hold the annexe door, then return to the row gate.',
+          'Two auditors walk loops round the office blocks and a heavy holds the side street. Keep the counter hall for 25 seconds, blast the stamp machines, then raid the annexe.',
         missionRef: 'lagosIsland.approach',
         doors: [{ doorId: 'annexe', raidId: 'recordsVault' }],
         reward: title('lagosIsland.approach', 'Row Regular', 'Clerks stop asking for your receipt.'),
@@ -373,20 +376,22 @@ const LAGOS_SECTIONS: SectionDef[] = [
     districtId: 'lagosIsland',
     order: 2,
     name: 'Press Run',
-    summary: 'Audit slips lie on two desks. Collect them and outrun the bureau to the press lane.',
+    summary:
+      'The Ring’s receipt presses print the forged licences in the press grid. Wreck them and outrun the bureau to the press lane.',
     requires: ['lagosIsland.s1'],
     missions: [
       {
         id: 'lagosIsland.press',
         format: 'field',
         name: 'Press Run',
-        objectiveCard: 'Collect both desk slips, outrun the auditors, walk out.',
+        objectiveCard: 'Wreck 5 presses, open the press lane, outrun the auditor.',
         summary:
-          'Visit the two desks. When the second slip is yours, an auditor sets off after you: reach the press lane.',
+          'Ring security walks the grid while the pressmen mind five presses: wreck them with generators. Then break the guards blocking the press lane and get down it before the auditor catches you.',
         missionRef: 'lagosIsland.press',
         reward: title('lagosIsland.press', 'Press Regular', 'The press room leaves a stool for you.'),
         unlocks: ['section.lagosIsland.s3'],
-        ringWeakened: 'The audit slips reach the press lane: the bureau can no longer bury its paper trail.',
+        ringWeakened:
+          'The receipt presses are scrap: the bureau can no longer print who is allowed to trade.',
       },
     ],
   },
@@ -406,15 +411,16 @@ const LEKKI_SECTIONS: SectionDef[] = [
     order: 1,
     name: 'Gate Approach',
     summary:
-      'The side gate leads along the garden wall to the standby plant. Slip past the gatehouse guards and raid the plant.',
+      'Ring private security holds the closed stretch of the estate road. Take the road, cut the standby feeders and raid the plant.',
     requires: [],
     missions: [
       {
         id: 'lekki.approach',
         format: 'field',
         name: 'Gate Approach',
-        objectiveCard: 'Walk the garden wall, raid the standby plant, return.',
-        summary: 'Guards watch the wall. Reach the pool edge, hold the plant door and raid it.',
+        objectiveCard: 'Keep the gatehouse road, wreck 4 feeders, raid the standby plant.',
+        summary:
+          'Guards walk the garden wall and the pool edge, and a heavy stands in the garden. Keep the road for 25 seconds while the gatehouse guards come, then blast the four feeders and raid the plant.',
         missionRef: 'lekki.approach',
         doors: [{ doorId: 'plant', raidId: 'standbyPlant' }],
         reward: title('lekki.approach', 'Gate Regular', 'The side gate opens a little faster for you.'),
@@ -430,20 +436,20 @@ const LEKKI_SECTIONS: SectionDef[] = [
     order: 2,
     name: 'Estate Sweep',
     summary:
-      'The estate drive is patrolled. Clear the patrol, check two posts on the lawn and outrun the hounds to the service road.',
+      'Guards walk the north drive; the standby grid’s control points stand on the east lawn behind the inner gate. Clear the drive, wreck the control points and outrun the hounds.',
     requires: ['lekki.s1'],
     missions: [
       {
         id: 'lekki.estate',
         format: 'field',
         name: 'Estate Sweep',
-        objectiveCard: 'Clear the patrol, check two posts, outrun the hounds.',
+        objectiveCard: 'Beat 4 drive guards, wreck 5 control points, outrun the hounds.',
         summary:
-          'Two guards hold the north drive. After the lawn posts the hounds are loosed: reach the service road.',
+          'The inner gate opens when the drive guards are down. Blast the five control points on the lawn, then run back west to the service lane before a hound catches you.',
         missionRef: 'lekki.estate',
         reward: title('lekki.estate', 'Estate Regular', 'The hounds lose interest in your scent.'),
         unlocks: ['section.lekki.s3'],
-        ringWeakened: 'The estate patrol is broken up: the grid’s control house stands unguarded.',
+        ringWeakened: 'The lawn control points are wrecked: the grid’s control house stands unguarded.',
       },
     ],
   },

@@ -75,14 +75,21 @@ function fieldTargets(state: GameState, def: FieldMissionDef): FieldTargetRuntim
   return out.length > 0 ? out : undefined;
 }
 
-function clearAround(state: GameState, x: number, y: number, radius: number): void {
+/** Clears the crates within `radius` of (x, y); never a piece of field equipment (`keep`). */
+function clearAround(
+  state: GameState,
+  x: number,
+  y: number,
+  radius: number,
+  keep: ReadonlySet<number> = new Set(),
+): void {
   for (let dy = -radius; dy <= radius; dy++)
     for (let dx = -radius; dx <= radius; dx++) {
       const tx = x + dx;
       const ty = y + dy;
       if (tx < 0 || ty < 0 || tx >= state.width || ty >= state.height) continue;
       const i = tileIndex(state, tx, ty);
-      if (state.tiles[i] === Tile.Soft) {
+      if (state.tiles[i] === Tile.Soft && !keep.has(i)) {
         state.tiles[i] = Tile.Empty;
         delete state.hidden[i];
       }
@@ -90,10 +97,15 @@ function clearAround(state: GameState, x: number, y: number, radius: number): vo
 }
 
 /**
- * Opens a patrol route (campaign tactics, decision SA6): the crates on the shortest way (through anything but concrete)
- * from the post to each waypoint in turn and back to the first, so a patrol never stalls on a random crate.
+ * Opens a patrol route (campaign tactics, decision SA6): the crates on the shortest way (through anything but concrete
+ * and field equipment, `keep`) from the post to each waypoint in turn and back to the first, so a patrol never stalls
+ * on a random crate.
  */
-function clearPatrol(state: GameState, route: readonly (readonly [number, number])[]): void {
+function clearPatrol(
+  state: GameState,
+  route: readonly (readonly [number, number])[],
+  keep: ReadonlySet<number>,
+): void {
   if (route.length < 2) return;
   const w = state.width;
   for (let k = 0; k < route.length; k++) {
@@ -115,7 +127,7 @@ function clearPatrol(state: GameState, route: readonly (readonly [number, number
         const ny = Math.floor(u / w) + dy;
         if (nx < 0 || ny < 0 || nx >= w || ny >= state.height) continue;
         const v = ny * w + nx;
-        if (prev.has(v) || state.tiles[v] === Tile.Hard) continue;
+        if (prev.has(v) || state.tiles[v] === Tile.Hard || keep.has(v)) continue;
         prev.set(v, u);
         queue.push(v);
       }
@@ -163,6 +175,8 @@ function clearRoute(
   const W = state.width;
   const N = W * state.height;
   const CRATE = 8;
+  // a sector gate that opens between legs (decision DB2) is closed now but walked through later: the route may cross it
+  const gates = new Set(state.sector?.gates.flatMap((g) => g.tiles) ?? []);
   for (let k = 1; k < stops.length; k++) {
     const [ax, ay] = stops[k - 1]!;
     const [bx, by] = stops[k]!;
@@ -190,7 +204,7 @@ function clearRoute(
           const j = ny * W + nx;
           const t = state.tiles[j];
           // concrete never; a piece of equipment only as the stop itself (walked up to, never cleared)
-          if (t === Tile.Hard || (keep.has(j) && j !== to)) continue;
+          if ((t === Tile.Hard && !gates.has(j)) || (keep.has(j) && j !== to)) continue;
           const nc = c + 1 + (t === Tile.Soft ? CRATE : 0);
           if (nc >= cost[j]!) continue;
           cost[j] = nc;
@@ -231,12 +245,15 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
   for (const [x, y] of fieldTiles(def)) clearAround(state, x, y, 1);
   for (const [x, y] of fieldTargetTiles(def)) clearAround(state, x, y, 1);
   const targets = fieldTargets(state, def);
+  // the equipment stands: no later clearing (route, posts, patrols) may take it away (decision DB1)
+  const keep = new Set(fieldTargetTiles(def).map(([x, y]) => tileIndex(state, x, y)));
   if (state.sector) {
-    const keep = new Set(fieldTargetTiles(def).map(([x, y]) => tileIndex(state, x, y)));
     clearRoute(state, fieldRouteStops(def), keep);
     for (const d of def.doors) if (!d.required) clearRoute(state, [def.start, d.returnTile], keep);
   }
-  const claimed = new Set<string>(fieldTiles(def).map(([x, y]) => `${x},${y}`));
+  const claimed = new Set<string>(
+    [...fieldTiles(def), ...fieldTargetTiles(def)].map(([x, y]) => `${x},${y}`),
+  );
 
   // a sector's barricades are concrete now: nobody is seated on one, or outside the play area
   const open = (x: number, y: number): boolean =>
@@ -260,10 +277,10 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
     const [x, y] = snapToFloor(arena, e.post[0], e.post[1], claimed, open);
     claimed.add(`${x},${y}`);
     placeAt(state, p, x, y);
-    clearAround(state, x, y, 1);
+    clearAround(state, x, y, 1, keep);
     // campaign tactics (decision SA6): every enemy but an escape leg's pursuers plays its territory
     if (state.config.campaignTactics && !pursuerGroups.has(e.group)) {
-      clearPatrol(state, [[x, y], ...(e.territory?.patrol ?? [])]);
+      clearPatrol(state, [[x, y], ...(e.territory?.patrol ?? [])], keep);
       addEnemyMind(state, p.id, { x, y }, e.territory);
     }
     seats.push({

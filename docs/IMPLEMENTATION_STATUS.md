@@ -31,6 +31,10 @@ Reference: `docs/CAMPAIGN_SECTOR_AI.md` ("District-sector architecture"); decisi
 
 Verification: `npx tsc --noEmit -p .`, `npx eslint src tests scripts e2e --max-warnings 0`, `vite build`, full Vitest (248 files, 3897 passed, 7 skipped), Playwright `campaign-sectors`, `checkpoint-clarity`, `oshodi-combat-pilot`, `campaign-expansion-smoke`, `mission-presentation` on desktop and mobile (22 passed, 2 skipped by design). Render cost measured on SwiftShader only (`docs/measurements/campaign-sector-perf.md`); no real-phone claim.
 
+## Districts B: Ebute Metta, Lagos Island, Lekki Phase 1 field missions (branch `claude/wahala-csa-districts-b`, from `31cb5dc`)
+
+- The five field missions re-authored (decisions DB1-DB9, `docs/CAMPAIGN_SECTOR_AI.md` "Districts: Ebute Metta, Lagos Island, Lekki Phase 1"): patrols on real lanes, switch cabinets / stamp machines / receipt presses / feeders / control points wrecked by blasts only, three hold zones, two sector gates that open between legs (Ebute sidings, Lekki east lawn), an equipment-clearing bug fixed; scripted playthroughs complete all five 8/8 at every level (field 77-136 s Normal), 67 % open field par-vs-par over the three districts; not merged, not deployed.
+
 ## Integrated release: gameplay, mobile controls, combat lab, visual polish (branch `claude/wahala-integrated-release-v1`, from `0c200a7`)
 
 Notes per task in `docs/integrated-release/`; decisions SD-B, LI7-LI9, NV, CL-L, PS and ML in `docs/DECISIONS.md`.

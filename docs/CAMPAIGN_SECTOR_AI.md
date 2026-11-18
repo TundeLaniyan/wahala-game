@@ -806,3 +806,100 @@ Looked at: the equipment reads as cabinets with a hazard band apart from the cra
 - Hard is harder in time and lives, but the scripted human still wins every Hard run: the layer's Hard (placement watchers, wider senses) is not a wall for a careful player. If Hard should fail more, the lever is the tactics layer or more armoured crew, not these routes.
 - About half the scripted defeats are punches (the agbero and thrower kinds have 2 health). Equipment and armoured heavies need blasts; the brawlers do not.
 - No sector gate opens (DA10).
+
+## Districts: Ebute Metta, Lagos Island, Lekki Phase 1
+
+Branch `claude/wahala-csa-districts-b` (from `31cb5dc`). Decisions DB1-DB9 (`docs/DECISIONS.md`). Scope: `ebuteMetta.approach` (the standalone Classic raid section `ebuteMetta.railYard` is kept and was not tuned), `lagosIsland.approach`, `lagosIsland.press`, `lekki.approach`, `lekki.estate` (Admiralty Way's paving, traffic rules, camera behaviour and building-visibility work are untouched; no Admiralty Way traffic was added). Mission ids, door raids and their door / return logic are kept; boss missions are out of scope. Not merged, not deployed.
+
+### How it was measured
+
+- **Scripted full playthrough** (`scripts/lib/generatorPlaythrough.ts`, `npx tsx scripts/field-play.ts [ids] --seeds N`): the mission built exactly as the campaign builds it (`buildMissionGame` at the level, the level's enemy bot level, 3 lives, the sector, the seed's crates) against the real enemy bots (`createBot`, seeded as `MatchController` seeds them). The human uses ordinary intents only and a generator-first strategy: it sees the real radial footprints, flames, wind-ups and thrown paths and never walks into them; it wrecks equipment by laying beside it and leaving; it jabs a wind-up (stagger) or steps out of reach, lays under its own feet when an adjacent enemy is staggered, planted, slowed or armoured, punches only ordinary enemies, holds a zone without chasing out of it, runs an escape. It reacts to each cue after 0.3-0.6 s (a hash of the seed and the cue). No teleport, no AI state written, no enemy put in a blast.
+- **Door raids** are answered with `resolveRaid` (a completed raid, the human's health carried), the precedent of the scripted Oshodi playthrough in `tests/field-missions.test.ts`. The raid is not played: its time is **estimated from the raid's par time** (`RAID_DEFS[id].parSec`: junctionToolShed 110 s, recordsVault 180 s, standbyPlant 120 s, railYardGoods 160 s).
+- **Field time** is match play time (the field is paused during a raid). The script walks at full speed and never hesitates: a person will be slower (par is set at about twice the scripted Normal time, decision DB8).
+- **Seen drill on the real boards** (`seenInMission`): the human walks up to an enemy seat, and when it is at most two tiles away with an open line and free to move (not winding up, planted, reeling or slowed), lays a generator on his own tile in plain view and walks away from it (never past it, never next to it) out of the footprint; "seen" = the enemy had the generator in sight (in its cone or while engaged) before the blast.
+
+### Ebute Metta: `ebuteMetta.approach` Yard Approach
+
+| | |
+| --- | --- |
+| Sector | `ebuteMetta.yardApproach`: the yard streets (rect [15, 26, 57, 36], unchanged) plus, new, the sidings north of them ([38, 20, 57, 25]: the wagon lanes between the freight wagons, the signal cabin, the track end at the buffer stop). 462 walkable tiles (was 375). The wall on row 25 between the two is barricades (danfo, jersey barriers, the buffer stop) with its east end the **sidings gate** (x 53-57, opens after leg 1); Murtala Muhammed Way (row 19), the cabin street (37, 22) and the timber yard (x 58) close the sidings. The train sweep stays off (its lane leaves the sector, DS4). |
+| Encounter | Leg 1, the yard streets: the middle street between the houses and the lock-ups and the north street are each walked end to end by a patrol (an agbero, a runner of the area-boy variant): watch one turn at the end of its street and lay round the corner. The switchmen crew (an agbero, a bottle thrower) stand by the nearest standing cabinet. The yard lieutenant walks a loop through the lock-up yard by the fence (never a required kill, DB3). Leg 2, the gate opens: a heavy freight guard (blast only) and a thrower hold the wagon lanes. Leg 3, keep the signal cabin (3 x 3 beside the cabin): a relief enforcer comes up after 4 s, then whatever is left of the two street patrols after 12 s. Leg 4, the signal-shed door raid; return to the yard gate. 8 enemies. |
+| Objectives | Destroy the 4 switch cabinets on the yard streets (two take 2 blasts) / Defeat the 2 freight guards on the sidings / Keep the signal cabin clear for 25 seconds / Stand on the signal-shed door for 1 second to raid it / Return |
+| Clock / par | 540 s / 300 s (was 360 / 180) |
+
+### Lagos Island: `lagosIsland.approach` Ledger Row
+
+| | |
+| --- | --- |
+| Sector | `lagosIsland.ledgerRow`, unchanged: the south-west office block (224 tiles): the north street, the wide counter hall (rows 21-25) between two rows of office blocks cut by one-tile alleys, the south street with the annexe door. |
+| Encounter | Two Ring security auditors walk loops round the office blocks (north of the hall and south of it): from a corner you see one pass and know where it will be in a few seconds. The row's heavy holds the side street. The counter hall (5 x 5) must then be kept while the hall guard (Ring security, 3 s), the ledger thrower from the side street (10 s) and a runner from the south row (17 s) come for it. Then 3 stamp machines (2 blasts each), one in the hall and two flanking the annexe door, minded by the annexe heavy (lure him off or blast him); the annexe raid; return. 7 enemies. |
+| Objectives | Defeat the 3 auditors in the row alleys / Keep the counter hall clear for 25 seconds / Destroy the 3 stamp machines on the row / Stand on the annexe door for 1 second to raid it / Return |
+| Clock / par | 420 s / 210 s (was 360 / 190) |
+
+### Lagos Island: `lagosIsland.press` Press Run
+
+| | |
+| --- | --- |
+| Sector | `lagosIsland.pressGrid`, unchanged: the tight north-west grid (198 tiles; one-tile streets, two-tile blocks, the wide south street) and the two-wide press lane down the side street. Recognisably different from Ledger Row: no open hall, every fight is in a one-tile street or an alley mouth. |
+| Encounter | Ring security walks the middle street end to end; a thrower watches the wide south street; two pressmen (market enforcers, who duck out of sight after attacking) stand by the nearest press. Five receipt presses (the machines that print the forged licences; four take 2 blasts) sit in the alleys and the lane mouth. Then the press lane, the only way out, is opened: a Ring security guard walks it and a heavy stands across its narrow end (a two-tile lane: lure him and blast him). Then the bureau auditor hunts you down the lane. 7 enemies. |
+| Objectives | Destroy the 5 receipt presses in the press grid / Defeat the 2 guards blocking the press lane / Escape to the press lane before the auditor catches you / Return (the "collect the audit slips at two desks" leg is gone: Story Bible 7) |
+| Clock / par | 480 s / 240 s (was 420 / 220) |
+
+### Lekki Phase 1: `lekki.approach` Gate Approach
+
+| | |
+| --- | --- |
+| Sector | `lekki.gateApproach`, unchanged (225 tiles): the garden with its planter posts, the closed stretch of Admiralty Way between the two Ring gatehouses, the east block. |
+| Encounter | Two Ring security walk the garden wall and the pool edge in opposite directions, a heavy stands in the garden. Leg 1, the gatehouse road (5 x 5 on the verge and the two west lanes): the gatehouse guard (4 s) and the gatehouse thrower (11 s) come from the east block. Leg 2, 4 standby feeders (three take 2 blasts): two in the east block's nooks, one at the road, one in the garden's south bay, the feeder tech minding the nearest. The standby-plant raid; return. 6 enemies. |
+| Objectives | Keep the gatehouse road clear for 25 seconds / Destroy the 4 standby feeders by the estate road / Stand on the plant door for 1 second to raid it / Return |
+| Clock / par | 480 s / 240 s (was 360 / 190) |
+
+### Lekki Phase 1: `lekki.estate` Estate Sweep
+
+| | |
+| --- | --- |
+| Sector | `lekki.northEstate`, same rects (402 tiles), now with the **inner estate gate** (`lawnGate`, column 40, rows 6-13): the east lawn is closed until the drive guards are down. |
+| Encounter | Two Ring security walk the pillared north drive end to end, out of step; the drive-gate heavy and the terrace thrower complete the group of 4. The gate opens on the east lawn: 5 control points (three take 2 blasts) with two grid techs (Ring security). When the last falls, the hounds (a bottle thrower and a fast runner) are loosed from kennels in the lawn's east corners and you run west through the gate to the service lane (moved from the lawn corner, where the "escape" was one step). Return to the estate gate. 9 enemies (seats 1 + 8). |
+| Objectives | Defeat the 4 guards on the north drive / Destroy the 5 control points on the east lawn / Escape to the service lane before a hound catches you / Return |
+| Clock / par | 420 s / 180 s (was 480 / 260) |
+
+### Measured (8 seeds per mission and level; scripted field time, mean of the wins)
+
+| Mission | Easy won / s / damage | Normal won / s / damage | Hard won / s / damage | Raid (par) | Classic share (Normal field vs raid par) |
+| --- | --- | --- | --- | --- | --- |
+| `ebuteMetta.approach` | 8/8, 101 s, 0.1 | 8/8, 136 s, 0.5 | 8/8, 180 s, 1.3 | 110 s | 45 % |
+| `lagosIsland.approach` | 8/8, 92 s, 0.0 | 8/8, 91 s, 0.3 | 8/8, 101 s, 1.0 | 180 s | 66 % |
+| `lagosIsland.press` | 8/8, 83 s, 0.1 | 8/8, 107 s, 0.8 | 8/8, 89 s, 0.1 | - | 0 % |
+| `lekki.approach` | 8/8, 111 s, 0.4 | 8/8, 91 s, 0.4 | 8/8, 101 s, 0.5 | 120 s | 57 % |
+| `lekki.estate` | 8/8, 70 s, 0.0 | 8/8, 77 s, 0.1 | 8/8, 82 s, 0.3 | - | 0 % |
+
+"damage" is health segments lost per run. Over the five missions Hard costs about 4x the damage of Easy (3.2 vs 0.6 per five runs) and the most time; completions are all 8/8 at every level for this script (an earlier Hard run of Press Run timed out once against the lane heavy, who watches placements on Hard). Lives lost: at most 0.3 per run at any level. Before this branch the same harness played these missions in 13-38 s of field time (a walk past two or three enemies).
+
+**Classic vs open field.** Ebute Metta as a district: field 136 s vs Classic 270 s (the door raid 110 + the standalone `railYardGoods` 160) = 33 % open field. Lagos Island: 198 s vs 180 s = 52 %. Lekki: 168 s vs 120 s = 58 %. The three districts: 502 s field vs 570 s Classic = **47 % open field (scripted field time vs raid par)**. Compared like for like, par vs par (field par 1170 s vs raid par 570 s), it is **67 % open field**. The scripted field time understates a person's (no hesitation, perfect routes); the par-vs-par figure is the better estimate of what a player feels, and it lands inside the 65-75 % target. Ebute Metta is the Classic-heavy district because of its standalone raid section: if the campaign-wide split comes out low, that raid is the lever (it was not tuned here).
+
+**Seen drill** (Normal, 6 seeds, every seat reachable from the start): 142 of 144 runs in which the enemy saw the badly placed generator ended with it escaping (98.6 %; one hit on the Ledger Row heavy, one on an estate guard). Seats behind a closed gate at the start (freight guards, grid techs) are not drilled. Observation for the AI owner: an enemy whose escape path runs through the human's tile does not take the other way round (the planner does not know the sim keeps enemies off the human's tile, SA8), so a human standing in its way corners it; the drill walks away from the enemy to measure a bad placement, not a cornering.
+
+### Generator relevance
+
+Every win wrecks every piece of equipment by blasts only (11 pieces, 18 hit points in Ebute + Lagos; 9 pieces, 14 hit points in Lekki) and finishes every required heavy by a blast (they stop at a punch floor). The script lays 13-22 generators a mission at Normal and defeats 2-4 enemies by blasts; the rest fall to the jab-then-lay pattern or punches (ordinary enemies may be punched out, slowly: SA9).
+
+### Content (story text written for this milestone)
+
+Section summaries, objective cards, mission summaries and "Ring weakened" lines of `ebuteMetta.s1`, `lagosIsland.s1`, `lagosIsland.s2`, `lekki.s1` and `lekki.s2` in `src/campaign/content/sections.ts` were rewritten for the new objectives (fictional names only; no Pidgin was needed). The boss sections and `ebuteMetta.s2` (the standalone raid) are unchanged. Leg texts follow the CHECKPOINT_CLARITY rules ("Destroy the N ...", "Keep the ... for N seconds", "Defeat the N ...", no "hold").
+
+### Screenshots
+
+`docs/screenshots/campaign-sector-ai/` (landscape phone 740 x 360, device scale 2; the human staged by the debug handle for the frame): `phone-ebute-yard-streets-cabinets.jpg` (the middle street, a switch cabinet, the street patrol and the switchmen; DESTROY SWITCH CABINET (4 LEFT)), `phone-lagos-press-grid-presses.jpg` (the press grid between the stalls, three receipt presses and the pressmen), `phone-lekki-east-lawn-gate-open.jpg` (the inner estate gate just opened, the control points on the east lawn; "ENEMIES DOWN ✓ · NEXT: DESTROY CONTROL POINT").
+
+### Fixes and shared changes
+
+- DB1: equipment beside an enemy post or on a patrol route was cleared away at creation (an un-finishable leg); fixed in `mission/fieldState.ts`, regression test.
+- Route clearing (DS6) crosses a sector gate; `tests/field-nodes.test.ts` and `tests/mission-sectors.test.ts` walk through gates (containment is still checked with every gate closed and with every gate open); `tests/render/sector-render.test.ts` counts one object per gate too; the escape-fairness test also starts from every piece of a destroy leg and from a hold zone.
+
+### Limits and handover
+
+- The scripted human is strong: it rarely loses health, so "Hard is harder" shows as damage and time, not as failed missions. A founder playtest should judge whether Normal is hard enough.
+- Field times are scripted (superhuman); the human estimate is par. A per-mission human playtest on a phone would replace the factor of two.
+- Raid times are par estimates, not played.
+- An oil slick (`floorTraps`) can lie on the only crate-free route (seen on Press Run): DS6 clears crates but does not know a slick slides you off the path. The script handles it (it models the slide and blasts a crate); a person may slide twice before seeing it.
+- No Playwright spec was run for these missions (the campaign specs cover Oshodi only); the gate opening was checked in the real renderer by a debug-staged frame.
