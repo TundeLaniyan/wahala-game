@@ -511,3 +511,119 @@ HUD words (`app/fieldGoal.ts`): DESTROY / SECURE tags, "RELAY BOX (2 LEFT)", "JU
 ### Tests
 
 `tests/mission-sectors.test.ts` (data: sizes, every authored tile inside, barricades on open edge tiles, no leaks; per mission and two seeds: a flood from the start never leaves the rects and reaches every target; the route needs no blasting; no sector, no key; the stamp draws no random number; determinism; hazards / drops / manholes / respawns / vehicle entries; gates), `tests/field-sector-legs.test.ts` (both leg kinds), `tests/render/camera-sector.test.ts` (bounds on desktop and a 740 x 360 phone from every corner, the overview, no change without a sector, the minimap crop), `tests/render/sector-render.test.ts` (barricade objects, merged covers, gate hide, cover / environment clipping), `tests/field-nodes.test.ts` (its walks now go round barricades), `e2e/campaign-sectors.spec.ts` (phone landscape: the sector loads, its barricades are built, the camera stays on it from every corner).
+
+## Districts: Oshodi (oshodi.approach, oshodi.railEdge), Mushin (mushin.approach, mushin.market), Fadeyi/Somolu (fadeyiSomolu.approach, fadeyiSomolu.junctions)
+
+Branch `claude/wahala-csa-districts-a` (district pass A, from `31cb5dc`). Decisions DA1-DA11 (`docs/DECISIONS.md`). Data only: the six missions' entries in `src/sim/mission/fieldDefs.ts` and their text in `src/campaign/content/sections.ts`; no rule, AI, sector or render code changed. The sectors (rects, barricades) are unchanged from DS1-DS10.
+
+### Before
+
+Measured with the harness below on `31cb5dc` (Normal, 3 seeds): every mission ended in 15-50 s of field play, the enemies fell to a few punches and no leg needed a generator. The missions were walks past posted guards.
+
+### How it was measured
+
+`scripts/lib/districtPlay.ts` (DA11) plays the REAL mission (`buildMissionGame` at the campaign level: sector, crates, territories, campaign health, the level's tactics layer) against the REAL enemy bots (`createBot` at `campaignEnemyLevel(level)`, seeded like `MatchController.startMission`). The scripted human sends ordinary intents only and uses generators as the weapon: he leaves every real blast footprint (chains included) in time, jabs or sidesteps a wind-up aimed at him, punches an adjacent enemy, lays a generator when a target is inside its footprint and a safe way out exists (lingering beside his own long fuse), bombs crates that shut his way (drops can land on the route), and after two blasts in a row that hurt nobody walks up to the dodger and punches it. Targets per leg: the group (defeat), the standing equipment (destroy), enemies in or next to the zone (keep), and any enemy hunting him within three tiles (every other leg). Nothing moves an enemy, writes an AI state or forces a blast. Door raids are answered with a completed outcome through `resolveRaid`, exactly as the scripted Oshodi playthrough in `tests/field-missions.test.ts` does; the raid's time is measured separately (below). `npx tsx scripts/district-play.ts play|raids|seen [ids] [levels] [seeds]`.
+
+### Terminal Approach (`oshodi.approach`, sector `oshodi.terminalApproach`)
+
+- **Sector**: the two southern stall streets from the Orita gate to the dispatch depot (unchanged).
+- **Legs (unchanged, DA2)**: walk through checkpoints A, B, C; stand 1 s on the depot door (warehouse raid); return to the Orita gate. It stays the checkpoint-clarity reference and the mission the app flows and e2e specs walk.
+- **Encounter**: four wardens on readable routes. A **park warden** (agbero) loops round the ticket kiosk between A and B (10,37)-(18,37)-(18,39)-(10,39) and turns its back at the far corners; a second **park warden** walks the stall lane x = 13 from the checkpoint street to the start street, crossing your path twice; a **ticket tout** (bottle thrower) watches checkpoint C from the east forecourt; a **lane blocker** (heavy enforcer, blast-only finish) walks the depot lane (20,42)-(27,42) straight across the door. Watch the kiosk loop turn, pass behind it or lay at its corner; draw the heavy along its walk onto a generator before the door.
+- **Clock / par**: 360 s / 90 s (par was 180 s).
+
+### Rail Edge (`oshodi.railEdge`, sector `oshodi.railEdge`)
+
+- **Sector**: the interchange plaza at the end of the rail line, the east market lanes and the footbridge stairs (unchanged).
+- **Legs (DA3)**: defeat the 2 hawkers in the market lane -> **destroy the 3 relay boxes by the rail plaza** (each 3 separate blasts: by the depot corner (36,34), on the mast block (55,30), on the plaza (44,26)) -> **keep the rail plaza clear for 25 seconds** (zone (37,28) radius 2 on the paved plaza) -> escape to the footbridge before the trailer hand catches you -> return to the Park gate.
+- **Encounter**: two **lane hawkers** (market enforcers, duck out of sight after a swing) patrol the market cross streets (38..48, 39) and (50..58, 37); the **relay minder** (heavy, the leg's crew) stands by the nearest working box; a **plaza warden** (agbero) walks round the mast block (47,31)-(47,34)-(56,34)-(56,31); the **trailer crew** (an agbero patrolling the rail buffer row and a bottle thrower) comes for the plaza 3 s into the hold, an **area boy** at 12 s; the **trailer hand** (bottle thrower, the pursuer) waits by the buffer fence.
+- **Clock / par**: 600 s / 270 s (was 420 / 210).
+
+### Spare-Parts Row (`mushin.approach`, sector `mushin.sparePartsRow`)
+
+- **Sector**: the southern stall rows, the back aisle and the loading bay to the parts storeroom (unchanged).
+- **Legs (DA4)**: walk through the 2 checkpoints along the stalls (STALL ROW, BACK AISLE) -> **destroy the 3 parts cages in the loading bay** (3 blasts each: (34,28), (49,32), (35,33)) -> stand 1 s on the storeroom door (parts raid) -> return to the Row gate.
+- **Encounter**: a **parts hawker** and a **stall guard** (market enforcers) patrol the stall row (8..16, 35) and the back aisle (20..31, 36), the aisles the checkpoints sit on; a **bay runner** (area boy: fast, reckless, chases far) sweeps the bay's top aisle (33..49, 29); the **cage minder** (heavy, crew) stands by the nearest standing cage; a **bay lookout** (bottle thrower) watches the storeroom door from (48,35).
+- **Clock / par**: 480 s / 175 s.
+
+### Aisle Sweep (`mushin.market`, sector `mushin.northAisles`)
+
+- **Sector**: the northern market blocks from the market gate to the top street (unchanged).
+- **Legs (DA5)**: defeat the 3 market runners in the north aisles -> walk through the 2 checkpoints on the top street -> **keep the lorry bay clear for 40 seconds** (zone (48,10) radius 1: stop the hoard's restock) -> return to the Market gate. The optional back-stall door (bonus `partsStoreroom` raid) is unchanged.
+- **Encounter**: two **market runners** (area boys) patrol the cross streets (15..27, 10) and (22..34, 13), a third (bottle thrower) the south street east (36..42, 12); the **loaders** (two market enforcers, one watching the top street from (48,3), one walking (35..42, 6)) come for the bay 4 s into the hold, the **late loaders** (a thrower and an area boy on the south street) at 15 s, the **last loader** (enforcer walking the aisle row 7) at 26 s.
+- **Clock / par**: 600 s / 255 s.
+
+### Toll Approach (`fadeyiSomolu.approach`, sector `fadeyiSomolu.tollRoad`)
+
+- **Sector**: the toll approach road, the tool shed and the plaza (unchanged).
+- **Legs (DA6)**: defeat the 3 marshals on the approach road -> **destroy the 3 toll boxes by the shed yard** (3 blasts each: on the road (25,23), on the plaza (35,26), at the kerb (40,30)) -> stand 1 s on the tool-shed door (shed raid) -> return to the Toll gate.
+- **Encounter**: two **Kobo marshals** (route marshals: hold junctions, call the crew within 8 tiles) walk the approach road (4..14, 22) and (16..28, 21); the third holds the junction corner between the stalls and the shed (20,25) and calls the others when he sees you; the **toll heavy** (crew) minds the nearest box; a **toll lookout** (bottle thrower) throws from the plaza corner (39,23).
+- **Clock / par**: 420 s / 150 s.
+
+### Junction Run (`fadeyiSomolu.junctions`, sector `fadeyiSomolu.northJunctions`)
+
+- **Sector**: the northern block of junction streets and the route office up to the slip road (unchanged).
+- **Legs (DA7)**: walk through the 3 junction posts, west to east ((14,10), (28,5), (34,10)) -> **keep the centre junction clear for 40 seconds** (zone (24,7) radius 1: the junction mouth between the two streets) -> escape to the slip road before the marshal catches you -> return to the Route office.
+- **Encounter**: a **Kobo marshal** walks across the west junction mouth (10,4)-(10,10); the **crossing crew** (a marshal on the south street (27..34, 10), one watching the north street from (18,5)) comes for the junction 3 s into the hold, the **late crossing** (a marshal on the south street west (12..20, 9) and a lookout throwing from the north alcove (31,2)) at 14 s, the **last crossing** (an area boy from the route office street) at 26 s; the **slip heavy** stands on the escape line by the slip road (33,5); the pursuing **marshal** (bottle thrower) waits in the north-west alcove (12,2).
+- **Clock / par**: 600 s / 255 s.
+
+### Measured (8 seeds per level; `npx tsx scripts/district-play.ts play`)
+
+Won = all legs and the return within the clock. Field = mean field seconds of the won runs (the field clock; a raid pauses it). Lives = mean lives used per run. Blast kills = enemies defeated by the human's generators / all his defeats.
+
+| Mission | Easy won / field / lives | Normal won / field / lives | Hard won / field / lives | Normal blast kills |
+| --- | --- | --- | --- | --- |
+| `oshodi.approach` | 8/8, 22.6 s, 0 | 8/8, 27.4 s, 0 | 8/8, 40.9 s, 0.13 | 10/26 |
+| `oshodi.railEdge` | 8/8, 113.9 s, 0 | 8/8, 122.1 s, 0 | 8/8, 135.2 s, 0.38 | 26/56 |
+| `mushin.approach` | 8/8, 69.3 s, 0 | 8/8, 78.5 s, 0 | 8/8, 91.7 s, 0.13 | 17/40 |
+| `mushin.market` | 8/8, 116.5 s, 0 | 8/8, 116.1 s, 0 | 8/8, 159.8 s, 0 | 27/64 |
+| `fadeyiSomolu.approach` | 8/8, 66.1 s, 0 | 8/8, 68.8 s, 0 | 8/8, 75.2 s, 0.13 | 29/40 |
+| `fadeyiSomolu.junctions` | 8/8, 105.3 s, 0 | 8/8, 114.9 s, 0.13 | 8/8, 121.7 s, 0.50 | 41/63 |
+
+- **Easy / Normal / Hard**: every level completes; Hard takes longer in every mission (field time +6 % to +49 %) and costs lives in five of the six (0.13-0.5 per run against 0-0.13 on Normal); Easy is never slower than Normal by more than noise. Tested as a cost per district (field seconds + 60 s per life + a failure's whole clock): Hard above Normal x 1.05, Easy at most Normal x 1.05.
+- **Seen generator** (`npx tsx scripts/district-play.ts seen`, 6 seeds): the ordinary enemies of the six missions (agbero, market enforcer, area boy, route marshal, bottle thrower; 33 seats) escape a generator laid two tiles in front of them in plain view when the human walks away: 195 of 196 stagings on Normal and on Hard, 193 of 196 on Easy (the misses are all in Aisle Sweep: an area boy, and on Easy two throwers). An enemy that is fighting a human who stays at the footprint's edge is caught far more often (it lingers in the footprint to reach him): that is the bait the founder wants, and why the walk-away matters in the drill.
+- **Escapes and timing are deterministic**: the same seed gives the same run (the harness uses no clock and no `Math.random`).
+
+### Pacing and the Classic share
+
+The door raids, played by the existing fair-fight raid player (`scripts/lib/fairHuman.ts` `playRaidFight`, Normal, 8 seeds): Dispatch Depot 67.9 s (7/8 completed), Parts Storeroom 48.8 s (8/8), Junction Tool Shed 38.2 s (7/8). Their par times (150 / 140 / 110 s) are 2.2-2.9 x those scripted times, which is the factor used to estimate a person's field time (DA9).
+
+| Mission | Scripted field (Normal) | Door raid scripted / par | Estimated mission for a person (field x 2.2-2.9 + raid par) | Open-field share, scripted vs scripted | Open-field share, par vs par |
+| --- | --- | --- | --- | --- | --- |
+| `oshodi.approach` | 27.4 s | 67.9 s / 150 s | 3.5-3.8 min | 29 % | 38 % |
+| `oshodi.railEdge` | 122.1 s | none | 4.5-5.9 min | 100 % | 100 % |
+| `mushin.approach` | 78.5 s | 48.8 s / 140 s | 5.2-6.1 min | 62 % | 56 % |
+| `mushin.market` | 116.1 s | (bonus door only) | 4.3-5.6 min | 100 % | 100 % |
+| `fadeyiSomolu.approach` | 68.8 s | 38.2 s / 110 s | 4.4-5.2 min | 64 % | 58 % |
+| `fadeyiSomolu.junctions` | 114.9 s | none | 4.2-5.6 min | 100 % | 100 % |
+| **the three districts** | 527.8 s | 154.9 s / 400 s | | **77 %** | **75 %** (field par 1195 s) |
+
+Per district (scripted vs scripted): Oshodi 69 %, Mushin 80 %, Fadeyi/Somolu 83 % open field. Compared the unfair way (scripted field against raid PAR) the three districts are 57 % open field; both raw sums are above for the lead's campaign-wide split.
+
+### Content (written for this milestone)
+
+`src/campaign/content/sections.ts`, Oshodi / Mushin / Fadeyi-Somolu entries only: new objective cards and one-line summaries for Rail Edge, Spare-Parts Row, Aisle Sweep, Toll Approach and Junction Run; the five section summaries; the Terminal Approach "Read more" (routes, the tout, the depot-lane heavy; "the yard gate" corrected to C); the Rail Edge "Read more", a RADIO intro line ("Relay boxes by the plaza feed the dispatch net. Na blast go break am, not hand.") and its ring-weakened line; the Mushin and Fadeyi ring-weakened lines. Every name stays fictional (Kobo marshals, trailer crew, loaders, the Ring); no ordinary worker is an enemy.
+
+### Tests
+
+- `tests/field-districts-{oshodi,mushin,fadeyi}.test.ts` (checks in `tests/field-districts-a.ts`): per mission, data (posts and patrol waypoints on open floor inside the sector and reachable after the stamp; every enemy has a variant; equipment on open floor, off authored tiles, at least two blasts; hold zones inside, waves real groups, no post inside a zone; the "Destroy the N ..." / "Keep the ... for N seconds" wording); 6 seeds at Easy, Normal and Hard: Normal wins every leg within the clock in a majority (measured 6/6 each), Easy at least as often, Hard costlier per district; the seen-generator escape for every ordinary seat (majority; measured 195 of 196 on Normal).
+- Updated deliberately: `tests/field-missions.test.ts` (Terminal Approach now has four wardens; Rail Edge's escape tests reach the escape through its new legs, seats found by group), `tests/field-checkpoint-clarity.test.ts` (Rail Edge HUD tags DEFEAT -> DESTROY "RELAY BOX (3 LEFT)" -> SECURE "RAIL PLAZA 0.0 / 25.0 s" -> ESCAPE -> RETURN; the notice "ENEMIES DOWN ✓ · NEXT: DESTROY RELAY BOX"), `tests/field-nodes.test.ts` (an escape's fairness is measured from the last piece of equipment or the zone when those legs precede it), `tests/oshodi-combat-pilot.test.ts` (the archived replay's kinds include the new tout).
+- Browser: `e2e/checkpoint-clarity.spec.ts`, `e2e/campaign-sectors.spec.ts`, `e2e/campaign-expansion-smoke.spec.ts` pass unchanged (desktop and mobile).
+
+### Screenshots
+
+`docs/screenshots/campaign-sector-ai/` (740 x 360 CSS px, device scale 2, `scripts/sector-shots.mjs`, follow camera, the human staged on the tile, the sim frozen at the start: the equipment stands from the start, the zones show only in their leg):
+
+| File | What it shows |
+| --- | --- |
+| `phone-district-oshodi-railEdge-plaza.jpg` | Rail Edge from (42,29): the paved rail plaza (the hold zone), two relay boxes (on the plaza, by the depot corner), the relay minder (heavy), the plaza warden, a trailer crewman on the buffer row; DEFEAT 2 ENEMIES LEFT |
+| `phone-district-mushin-approach-bay.jpg` | Spare-Parts Row from (36,29): two parts cages in the loading bay, the bay runner winding up a punch (red ring and arrow), the cage minder; GO TO STALL ROW 1 OF 2 |
+| `phone-district-fadeyi-approach-tollyard.jpg` | Toll Approach from (36,29): two toll boxes on the shed plaza, the toll heavy and the lookout; DEFEAT 3 ENEMIES LEFT |
+
+Looked at: the equipment reads as cabinets with a hazard band apart from the crates and stalls, the enemies' variant looks are distinct, and the HUD names the current leg. On the plaza shot the occlusion dither of the stall row hides part of the human's tile from this angle (existing view-clear behaviour, not changed here).
+
+### Open / risky
+
+- The scripted human is a speedrunner with perfect information; the person-time estimate leans on the raid par / scripted-raid ratio. A founder playtest should check the 3-6 minute target, especially Spare-Parts Row (upper end) and Terminal Approach (lower end, its legs kept for clarity).
+- Hard is harder in time and lives, but the scripted human still wins every Hard run: the layer's Hard (placement watchers, wider senses) is not a wall for a careful player. If Hard should fail more, the lever is the tactics layer or more armoured crew, not these routes.
+- About half the scripted defeats are punches (the agbero and thrower kinds have 2 health). Equipment and armoured heavies need blasts; the brawlers do not.
+- No sector gate opens (DA10).

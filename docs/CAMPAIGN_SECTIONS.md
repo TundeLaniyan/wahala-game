@@ -16,14 +16,14 @@ Two formats live inside sections: a **field mission** is a route on the district
 
 | District | Section 1 (field, door -> raid) | Section 2 | Boss |
 | --- | --- | --- | --- |
-| Oshodi | `oshodi.approach` Terminal Approach: 3 checkpoints, door `depot` -> `warehouseDispatchDepot`, return | `oshodi.railEdge` Rail Edge (field): clear 2 hawkers, escape the trailer hand to the footbridge, return | Oga Sunmola (`dispatchRelays`) |
-| Mushin | `mushin.approach` Spare-Parts Row: 3 markers, door -> `partsStoreroom`, return | `mushin.market` Aisle Sweep (field): clear 3 runners, 2 markers, optional bonus door -> `partsStoreroom` | Madam Ronke |
-| Fadeyi/Somolu | `fadeyiSomolu.approach` Toll Approach: clear 2 marshals, 2 posts, door -> `junctionToolShed` | `fadeyiSomolu.junctions` Junction Run (field): 3 posts, escape the marshal | Marshal Kobo |
+| Oshodi | `oshodi.approach` Terminal Approach: 3 checkpoints past two patrolling wardens, a tout and a depot-lane heavy, door `depot` -> `warehouseDispatchDepot`, return | `oshodi.railEdge` Rail Edge (field): clear 2 hawkers, destroy 3 relay boxes (3 blasts each), keep the rail plaza 25 s against two waves, escape the trailer hand to the footbridge, return | Oga Sunmola (`dispatchRelays`) |
+| Mushin | `mushin.approach` Spare-Parts Row: 2 checkpoints, destroy 3 parts cages (3 blasts each), door -> `partsStoreroom`, return | `mushin.market` Aisle Sweep (field): clear 3 runners, 2 checkpoints, keep the lorry bay 40 s against three waves, return; optional bonus door -> `partsStoreroom` | Madam Ronke |
+| Fadeyi/Somolu | `fadeyiSomolu.approach` Toll Approach: clear 3 marshals, destroy 3 toll boxes (3 blasts each), door -> `junctionToolShed`, return | `fadeyiSomolu.junctions` Junction Run (field): 3 junction posts, keep the centre junction 40 s against three waves, escape the marshal to the slip road, return | Marshal Kobo |
 | Ebute-Metta | `ebuteMetta.approach` Yard Approach: 3 markers, door -> `junctionToolShed` | `ebuteMetta.railYard` Rail Yard Goods: a STANDALONE raid (`railYardGoods`) | Ikenna Wayside |
 | Lagos Island | `lagosIsland.approach` Ledger Row: clear 2 auditors, 2 counters, door -> `recordsVault` | `lagosIsland.press` Press Run (field): 2 desks, escape the bureau auditor | Barrister Quill |
 | Lekki | `lekki.approach` Gate Approach: 2 markers, door -> `standbyPlant` | `lekki.estate` Estate Sweep (field): clear the patrol, 2 posts, escape the hounds | Bamidele Halcyon |
 
-Real vs placeholder: all eleven field missions are real sim data (tiles checked for reachability and escape fairness by `tests/field-nodes.test.ts`) but only **Oshodi section 1 has a scripted full playthrough** (`tests/field-missions.test.ts`, `tests/app/campaign-sections-flow.test.ts`); the others are tested per mechanic and for data validity, and are untuned against real play. Oshodi has intro/outro scenes and a Read-more text; the other districts have one-line objective cards and two-sentence summaries. Four districts' doors reuse another district's raid layout (only six raid ids exist): Fadeyi and Ebute both use `junctionToolShed`, Mushin's bonus door reuses `partsStoreroom`. Section rewards are small titles (`reward.section.<mission>`), kept apart from boss rewards.
+Real vs placeholder: all eleven field missions are real sim data (tiles checked for reachability and escape fairness by `tests/field-nodes.test.ts`) but only **Oshodi section 1 has a scripted full playthrough** (`tests/field-missions.test.ts`, `tests/app/campaign-sections-flow.test.ts`); the others are tested per mechanic and for data validity, and are untuned against real play. (District pass A, decisions DA1-DA11: the six field missions of Oshodi, Mushin and Fadeyi/Somolu now have measured scripted playthroughs against the real enemy bots at Easy, Normal and Hard, `tests/field-districts-{oshodi,mushin,fadeyi}.test.ts`, numbers in `docs/CAMPAIGN_SECTOR_AI.md`.) Oshodi has intro/outro scenes and a Read-more text; the other districts have one-line objective cards and two-sentence summaries. Four districts' doors reuse another district's raid layout (only six raid ids exist): Fadeyi and Ebute both use `junctionToolShed`, Mushin's bonus door reuses `partsStoreroom`. Section rewards are small titles (`reward.section.<mission>`), kept apart from boss rewards.
 
 ## 3. Field mission legs (`src/sim/mission/field.ts`, data `fieldDefs.ts`)
 
@@ -41,7 +41,7 @@ A section field mission is a `state.mission` with `field` set (`MissionSpec.fiel
 
 Stars: 1 cleared; 2 with at most one life lost; 3 also within the par time or with a three-star raid.
 
-Two more leg kinds exist for later missions (not assigned yet, `docs/CAMPAIGN_SECTOR_AI.md`): `destroyTargets` (wreck Ring equipment with your own blasts) and `holdArea` (keep a zone clear for a time while enemy waves come in).
+Two more leg kinds exist for later missions (not assigned yet, `docs/CAMPAIGN_SECTOR_AI.md`): `destroyTargets` (wreck Ring equipment with your own blasts) and `holdArea` (keep a zone clear for a time while enemy waves come in). (District pass A assigns them: `destroyTargets` in Rail Edge, Spare-Parts Row and Toll Approach; `holdArea` in Rail Edge, Aisle Sweep and Junction Run.)
 
 ## 4. Save and resume (`src/campaign`)
 
