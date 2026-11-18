@@ -196,6 +196,8 @@ export function storyImageDef(
 /** The image key of a story card id (`briefing.oshodi` -> `district.oshodi.briefing`), or null when the card has none. */
 export function storyImageKeyForCard(cardId: string): string | null {
   if (cardId === 'prologue' || cardId === 'finale' || cardId === 'ending') return cardId;
+  // the interim beat after Lekki (FN9) is the Lekki promenade scene the finale panel shows
+  if (cardId === 'interim') return 'finale';
   const [kind, ...rest] = cardId.split('.');
   const tail = rest.join('.');
   if (!tail) return null;

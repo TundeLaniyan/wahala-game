@@ -171,7 +171,9 @@ describe('sector data', () => {
       for (const seed of [1, 7]) {
         const s = fieldGame(def.id, seed);
         expect(s.sector?.id).toBe(sid);
-        const reach = flood(s, def.start[0], def.start[1], (i) => s.tiles[i] !== Tile.Hard);
+        // a sector gate opens during the mission (its leg, decision FN3): the flood may pass it
+        const gates = new Set(s.sector!.gates.flatMap((g) => g.tiles));
+        const reach = flood(s, def.start[0], def.start[1], (i) => s.tiles[i] !== Tile.Hard || gates.has(i));
         for (const i of reach)
           expect(
             inSector(s, i % s.width, Math.floor(i / s.width)),
@@ -188,10 +190,11 @@ describe('sector data', () => {
       const s = fieldGame(def.id, 3);
       const stops = fieldRouteStops(def);
       const targets = new Set(fieldTargetTiles(def).map(([x, y]) => y * s.width + x));
+      const gates = new Set(s.sector!.gates.flatMap((g) => g.tiles)); // open once their leg is done (FN3)
       for (let k = 1; k < stops.length; k++) {
         const [ax, ay] = stops[k - 1]!;
         const [bx, by] = stops[k]!;
-        const reach = flood(s, ax, ay, (i) => s.tiles[i] === Tile.Empty || targets.has(i));
+        const reach = flood(s, ax, ay, (i) => s.tiles[i] === Tile.Empty || targets.has(i) || gates.has(i));
         expect(reach.has(by * s.width + bx), `${sid}: ${ax},${ay} -> ${bx},${by}`).toBe(true);
       }
     });

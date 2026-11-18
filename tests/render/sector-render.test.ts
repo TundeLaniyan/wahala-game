@@ -36,7 +36,8 @@ describe('sector barricades are drawn as objects', () => {
     const blocked = new Set(s.sector!.blocked);
     for (const i of blocked) expect(b.cover.covers(i), `${id} tile ${i}`).toBe(true);
     for (let i = 0; i < s.tiles.length; i++) if (!blocked.has(i)) expect(b.cover.covers(i)).toBe(false);
-    expect(b.cover.bounds.length).toBe(getSector(s.sector!.id).barricades.length);
+    const def = getSector(s.sector!.id);
+    expect(b.cover.bounds.length).toBe(def.barricades.length + (def.gates?.length ?? 0)); // a gate is an object too
     // tall objects (a bus, a gate, a kiosk) can hide the row behind them; every object has a bounding box above floor
     for (const box of b.cover.bounds) expect(box.maxY).toBeGreaterThan(0.5);
     b.cover.dispose();

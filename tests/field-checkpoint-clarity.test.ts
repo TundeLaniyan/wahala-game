@@ -254,8 +254,8 @@ describe('plain objective wording for every field leg (all eleven missions)', ()
     holdArea: /^Keep the .+ for \d+ seconds/,
   } as const;
 
-  it('there are eleven field missions', () => {
-    expect(FIELD_MISSION_IDS).toHaveLength(11);
+  it('there are eleven district field missions and the Ojuelegba finale’s two', () => {
+    expect(FIELD_MISSION_IDS).toHaveLength(13);
   });
 
   it.each(FIELD_MISSION_IDS)(

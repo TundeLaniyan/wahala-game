@@ -14,6 +14,7 @@ import {
 } from '../../campaign';
 import type { CampaignSave, SectionMissionFormat, SectionStatus } from '../../campaign';
 import type { MissionId } from '../../sim';
+import { FINALE_MISSION_ID } from '../../sim';
 import type { SectionResultView } from '../../app/campaignState';
 
 export const FORMAT_LABEL: Readonly<Record<SectionMissionFormat, string>> = {
@@ -143,6 +144,11 @@ export function upNextLine(save: CampaignSave): string | null {
   const def = next ? getSectionMission(next.missionId) : undefined;
   if (next && def) {
     const district = CAMPAIGN.districts[next.districtId].name;
+    // the Ojuelegba finale chapter (FN10): named as the finale, never "the keeper of" the hub
+    if (next.districtId === FINALE_MISSION_ID)
+      return def.format === 'boss'
+        ? `Up next: the finale, ${def.name}. ${def.objectiveCard}`
+        : `Up next: the ${district} finale, ${def.name}. ${def.objectiveCard}`;
     return def.format === 'boss'
       ? `Up next: ${def.name}, the keeper of ${district}. ${def.objectiveCard}`
       : `Up next: ${def.name} in ${district}. ${def.objectiveCard}`;
@@ -170,7 +176,8 @@ export function districtLiberation(save: CampaignSave, id: MissionId): DistrictL
   return {
     reclaimed: sections.filter((s) => sectionStatus(save, s.id) === 'cleared').length,
     total: sections.length,
-    freed: save.districts[id]?.status === 'cleared',
+    // the keeper fell (for the Ojuelegba finale: its enforcer; the hub record itself is always `cleared`)
+    freed: missionStatus(save, `${id}.boss`) === 'cleared',
     losses,
   };
 }

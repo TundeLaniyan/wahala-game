@@ -15,12 +15,20 @@ import {
   CHARACTER_IDS,
   DEFAULT_CAMPAIGN_LEVEL,
   DIFFICULTIES,
+  FINALE_MISSION_ID,
   MISSION_IDS,
   MODIFIER_FOR,
   isCampaignLevel,
 } from '../sim';
-import { CAMPAIGN, FINALE_UNLOCK, MODIFIER_IDS, nextDistrict } from './content';
-import { clearDistrictSections, initialSectionState, refreshSections } from './sectionState';
+import { CAMPAIGN, FINALE_UNLOCK, MODIFIER_IDS, bossFor, nextDistrict } from './content';
+import {
+  bossAvailable,
+  clearDistrictSections,
+  finaleCleared,
+  finaleOpen,
+  initialSectionState,
+  refreshSections,
+} from './sectionState';
 import type { CampaignSave, DistrictId, DistrictProgress, DistrictStatus, RewardDef } from './types';
 import { DISTRICT_ORDER } from './types';
 
@@ -38,8 +46,14 @@ export function freshProgress(status: DistrictStatus): DistrictProgress {
   };
 }
 
+/** A district boss (the six) or the finale's (`ojuelegba`): the ids a boss result can carry. */
 function isMissionId(id: string): id is MissionId {
-  return (MISSION_IDS as readonly string[]).includes(id);
+  return (MISSION_IDS as readonly string[]).includes(id) || id === FINALE_MISSION_ID;
+}
+
+/** The boss whose clear a district (or the finale, for the hub id) grants: null for the hub before the finale. */
+function clearBoss(id: DistrictId) {
+  return id === FINALE_MISSION_ID ? bossFor(FINALE_MISSION_ID) : CAMPAIGN.districts[id].boss;
 }
 
 function isModifierId(id: unknown): id is MissionModifierId {
@@ -50,20 +64,22 @@ function union(a: readonly string[], b: readonly string[]): string[] {
   return [...new Set([...a, ...b])];
 }
 
-/** The story flags a cleared district sets (the `.cleared` flag plus its boss consequence flags). */
+/**
+ * The story flags a cleared district sets (the `.cleared` flag plus its boss consequence flags). For `ojuelegba` these are
+ * the FINALE's (its boss won: `ojuelegba.cleared`, `ojuelegba.routesReopened`; decision FN4).
+ */
 export function flagsForClear(id: DistrictId): string[] {
-  const boss = CAMPAIGN.districts[id].boss;
-  return [`${id}.cleared`, ...(boss?.consequenceFlags ?? [])];
+  return [`${id}.cleared`, ...(clearBoss(id)?.consequenceFlags ?? [])];
 }
 
-/** Everything a first clear of this district grants. */
+/** Everything a first clear of this district (or, for `ojuelegba`, of the finale's boss) grants. */
 export function grantsForClear(id: DistrictId): {
   reward: RewardDef | null;
   unlocks: string[];
   flags: string[];
 } {
-  const reward = CAMPAIGN.districts[id].boss?.reward ?? null;
-  const next = nextDistrict(id);
+  const reward = clearBoss(id)?.reward ?? null;
+  const next = id === FINALE_MISSION_ID ? null : nextDistrict(id);
   const unlocks = union(reward?.unlocks ?? [], next ? [`district.${next}`] : []);
   return { reward, unlocks, flags: flagsForClear(id) };
 }
@@ -116,9 +132,22 @@ export function campaignProgress(save: CampaignSave): { cleared: number; total: 
   };
 }
 
-/** All six bosses are down: the finale scene can be played (and replayed). */
+/** All six district bosses are down: the Ojuelegba finale chapter (missions 19-21) is open (decision FN1). */
+export const finaleChapterOpen = finaleOpen;
+
+/**
+ * The finale's boss has fallen: the finale SCENE (the routes reopen, the Chairman escapes) can be played and replayed.
+ * Before the Ojuelegba finale existed this meant "all six bosses are down" (`finaleChapterOpen` now; decision FN9).
+ */
 export function finaleAvailable(save: CampaignSave): boolean {
-  return clearedCount(save) === CAMPAIGN_DISTRICT_TOTAL;
+  return finaleCleared(save);
+}
+
+export type FinaleStatus = 'locked' | 'available' | 'cleared';
+
+/** The finale chapter on the map: locked until Lekki falls, available, cleared once its boss falls. */
+export function finaleStatus(save: CampaignSave): FinaleStatus {
+  return finaleCleared(save) ? 'cleared' : finaleOpen(save) ? 'available' : 'locked';
 }
 
 export interface MissionResultSummary {
@@ -126,8 +155,10 @@ export interface MissionResultSummary {
   newRewards: RewardDef[];
   newUnlocks: string[];
   unlockedDistricts: DistrictId[];
-  /** True exactly when THIS result cleared the sixth district (the finale just became available). */
+  /** True exactly when THIS result first won the finale's boss (the finale scene just became available). */
   campaignComplete: boolean;
+  /** True exactly when THIS result cleared the sixth district: the Ojuelegba finale chapter just opened (FN9). */
+  finaleOpened?: boolean;
   firstClear: boolean;
   /** Section mission rewards this first clear paid for the sections the boss win counted as cleared (usually none). */
   newSectionRewards?: RewardDef[];
@@ -155,12 +186,17 @@ export function applyMissionResult(
   };
   if (outcome.sectionMissionId) return unchanged; // a section field mission: applySectionResult
   if (!isMissionId(id) || !save.districts[id] || districtStatus(save, id) === 'locked') return unchanged;
+  // the finale's boss is played only once its chapter's sections before it are cleared (the hub record is always open)
+  if (id === FINALE_MISSION_ID && !bossAvailable(save, id)) return unchanged;
 
   const before = save.districts[id];
   const districts = { ...save.districts };
   const won = outcome.result === 'won';
-  const wasCleared = before.status === 'cleared';
+  // the hub record is always `cleared` (prologue); the finale's boss is cleared by its first win (FN4)
+  const finale = id === FINALE_MISSION_ID;
+  const wasCleared = finale ? before.clears > 0 : before.status === 'cleared';
   const wasComplete = finaleAvailable(save);
+  const wasOpen = finaleOpen(save);
 
   const progress: DistrictProgress = { ...before, attempts: before.attempts + 1 };
   const next: CampaignSave = { ...save, districts, updatedAt: now };
@@ -199,7 +235,7 @@ export function applyMissionResult(
     next.unlocks = union(save.unlocks, grants.unlocks);
     next.flags = union(save.flags, grants.flags);
 
-    const following = nextDistrict(id);
+    const following = finale ? null : nextDistrict(id);
     if (following && districts[following] && districts[following].status === 'locked') {
       districts[following] = { ...districts[following], status: 'available' };
       unlockedDistricts.push(following);
@@ -215,6 +251,7 @@ export function applyMissionResult(
     saved = swept.save;
     sectionRewards = swept.newRewards;
   }
+  const opened = !wasOpen && finaleOpen(next);
   return {
     save: refreshSections(saved),
     newRewards,
@@ -222,6 +259,7 @@ export function applyMissionResult(
     unlockedDistricts,
     campaignComplete: !wasComplete && finaleAvailable(next),
     firstClear,
+    ...(opened ? { finaleOpened: true } : {}),
     ...(sectionRewards.length > 0 ? { newSectionRewards: sectionRewards } : {}),
   };
 }
@@ -245,7 +283,12 @@ export function markPrologueSeen(save: CampaignSave, now: number): CampaignSave 
   return save.prologueSeen ? save : { ...save, prologueSeen: true, updatedAt: now };
 }
 
-/** The finale was watched. Ignored (returns the same save) until all six districts are cleared. */
+/** The interim beat after Lekki was watched (FN9). Ignored until the finale chapter is open. */
+export function markInterimSeen(save: CampaignSave, now: number): CampaignSave {
+  return save.interimSeen || !finaleOpen(save) ? save : { ...save, interimSeen: true, updatedAt: now };
+}
+
+/** The finale was watched. Ignored (returns the same save) until the finale's boss has fallen. */
 export function completeCampaign(save: CampaignSave, now: number): CampaignSave {
   if (!finaleAvailable(save) || save.completed) return save;
   return { ...save, completed: true, flags: union(save.flags, ['campaign.completed']), updatedAt: now };
@@ -289,4 +332,4 @@ export function isUnlockedFighterContent(save: CampaignSave, unlockId: string): 
   return save.unlocks.includes(unlockId);
 }
 
-export { FINALE_UNLOCK };
+export { FINALE_UNLOCK, finaleCleared, finaleOpen };

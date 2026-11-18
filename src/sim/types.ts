@@ -402,7 +402,10 @@ export interface Player {
   vitals?: Vitals;
   /** Campaign enemy kind (durability, attacks). Absent for players and for multiplayer bots. */
   enemyKind?: EnemyKind;
-  /** Campaign enemy variant (look and personality, data/enemyVariants.ts). Absent = the kind's plain behaviour. */
+  /**
+   * Campaign enemy variant (look and personality, data/enemyVariants.ts). Absent = the kind's plain behaviour. A boss
+   * mission's generator-bot boss may carry one WITHOUT `enemyKind`: its look only (the Ojuelegba finale, decision FN8).
+   */
   enemyVariant?: EnemyVariantId;
 }
 

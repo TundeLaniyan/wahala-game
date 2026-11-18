@@ -8,10 +8,11 @@
  */
 import type { CharacterId, Difficulty, MissionModifierId } from '../sim';
 import {
+  CAMPAIGN_MISSION_IDS,
   CHARACTER_IDS,
   DEFAULT_CAMPAIGN_LEVEL,
   DIFFICULTIES,
-  MISSION_IDS,
+  FINALE_MISSION_ID,
   MODIFIER_FOR,
   isCampaignLevel,
 } from '../sim';
@@ -20,6 +21,8 @@ import { createSave, freshProgress, grantsForClear } from './progress';
 import {
   clearDistrictSections,
   earnedSectionRewards,
+  finaleCleared,
+  finaleOpen,
   freshMissionProgress,
   refreshSections,
   storedMissionsOf,
@@ -116,8 +119,10 @@ function repairSections(save: CampaignSave, raw: Json): CampaignSave {
   const rawMissions = isObject(raw.missions) ? raw.missions : {};
   const rawSections = isObject(raw.sections) ? raw.sections : {};
   let out: CampaignSave = { ...save, missions: { ...save.missions }, sections: { ...save.sections } };
-  for (const district of MISSION_IDS) {
-    const open = out.districts[district].status !== 'locked';
+  // the six districts, then the Ojuelegba finale: its missions open after Lekki, its boss record is the hub's (FN4)
+  for (const district of CAMPAIGN_MISSION_IDS) {
+    const finale = district === FINALE_MISSION_ID;
+    const open = finale ? finaleOpen(out) : out.districts[district].status !== 'locked';
     let previousCleared = true;
     for (const m of storedMissionsOf(district)) {
       const claimed = repairMission(rawMissions[m.id]);
@@ -132,7 +137,8 @@ function repairSections(save: CampaignSave, raw: Json): CampaignSave {
           }
         : freshMissionProgress('locked');
     }
-    if (out.districts[district].status === 'cleared') out = clearDistrictSections(out, district).save;
+    if (finale ? finaleCleared(out) : out.districts[district].status === 'cleared')
+      out = clearDistrictSections(out, district).save;
   }
   out = refreshSections(out);
   for (const sec of allSections()) {
@@ -210,8 +216,32 @@ export function repairSave(value: unknown): CampaignSave | null {
     );
     save.districts[id] = p;
   }
+  // the Ojuelegba finale (decisions FN1-FN4): its boss record is the hub's (`districts.ojuelegba`, always `cleared` for
+  // the prologue). Its clears, stars and time count only once the chapter is open (all six districts cleared); a save
+  // from before the finale (all six cleared, hub clears 0) loads with the chapter open and nothing in it won.
+  const hub = save.districts.ojuelegba;
+  const claimed = repairProgress(src.ojuelegba);
+  if (finaleOpen(save) && claimed.clears > 0) {
+    save.districts.ojuelegba = {
+      ...hub,
+      attempts: Math.max(claimed.clears, claimed.attempts),
+      clears: claimed.clears,
+      bestStars: Math.max(1, claimed.bestStars) as 1 | 2 | 3,
+      bestSeconds: claimed.bestSeconds,
+      modifiersCleared: claimed.modifiersCleared.filter((m) => m === MODIFIER_FOR[FINALE_MISSION_ID]),
+    };
+    const g = grantsForClear(FINALE_MISSION_ID);
+    if (g.reward) rewards.push(g.reward.id);
+    unlocks = [...new Set([...unlocks, ...g.unlocks])];
+    flags.push(...g.flags);
+  } else if (finaleOpen(save)) {
+    // tried but not won: attempts only (no clear, no stars, no time)
+    save.districts.ojuelegba = { ...hub, attempts: claimed.attempts };
+  }
+  if (raw.interimSeen === true && finaleOpen(save)) save.interimSeen = true;
+  // complete = the finale's boss is down too (a save that watched the old Lekki ending reopens on the finale chapter)
   const allCleared = DISTRICT_ORDER.every((id) => save.districts[id].status === 'cleared');
-  save.completed = raw.completed === true && allCleared;
+  save.completed = raw.completed === true && allCleared && finaleCleared(save);
   if (save.completed) flags.push('campaign.completed');
   save.rewards = rewards;
   save.unlocks = unlocks;

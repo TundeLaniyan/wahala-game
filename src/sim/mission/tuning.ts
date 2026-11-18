@@ -10,6 +10,7 @@
  * | expressTimetable | ebuteMetta   | rail window length x 0.7                                      |
  * | auditWeek        | lagosIsland  | one more ledger to deliver per phase, clock x 0.85            |
  * | longBlackout     | lekki        | switch-off sequence one longer per phase                      |
+ * | curfew           | ojuelegba    | the boss's exposure window x 0.8 (provisional, decision FN6)  |
  *
  * The boss fight's numbers come from the mission's `recipe` at the campaign level (`boss.ts`, decisions BX1-BX8).
  */
@@ -34,6 +35,8 @@ export const MODIFIER_NUMBERS = {
   tollSeasonBoxHits: 1,
   expressTimetableOpen: 0.7,
   auditWeekClock: 0.85,
+  /** The finale's replay modifier (provisional, FN6): the Landlord re-locks faster, so his windows are shorter. */
+  curfewWindow: 0.8,
 } as const;
 
 /** The modifiers of `spec` that belong to its own mission (others are ignored, duplicates dropped). */
@@ -74,6 +77,7 @@ export function resolveTuning(
   let limit = spec.timeLimitSec ?? def.timeLimitSec;
   if (has('auditWeek') && spec.timeLimitSec === undefined) limit = limit * MODIFIER_NUMBERS.auditWeekClock;
   const boss = resolveBossRecipe(def.recipe, level);
+  if (has('curfew')) boss.exposeTicks = Math.round(boss.exposeTicks * MODIFIER_NUMBERS.curfewWindow);
   return {
     timeLimitTicks: ticks(limit),
     parTicks: ticks(def.parSec),

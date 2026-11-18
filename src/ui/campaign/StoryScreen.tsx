@@ -13,7 +13,8 @@ import { useCampaignUi } from './parts';
 export function StoryScreen() {
   const ui = useCampaignUi();
   const finale = ui?.story === 'finale';
-  const card = storyCard(finale ? 'finale' : 'prologue');
+  const interim = ui?.story === 'interim'; // after Lekki: the estates go dark, Ojuelegba is still locked (FN9)
+  const card = storyCard(finale ? 'finale' : interim ? 'interim' : 'prologue');
   const scene = useScene(() => commands.campaignStoryDone(), card.id);
   if (!ui) return null;
   return (
@@ -22,9 +23,17 @@ export function StoryScreen() {
       kicker={card.kicker ?? ''}
       title={card.title}
       className="cp-screen cp-story-screen"
-      actions={<ContinueButton scene={scene} label={finale ? 'The ending' : 'To the map'} />}
+      actions={
+        <ContinueButton
+          scene={scene}
+          label={finale ? 'The ending' : interim ? 'Home to Ojuelegba' : 'To the map'}
+        />
+      }
     >
-      <CardView card={card} testId={finale ? 'finale-player' : 'prologue-player'} />
+      <CardView
+        card={card}
+        testId={finale ? 'finale-player' : interim ? 'interim-player' : 'prologue-player'}
+      />
     </ScreenFrame>
   );
 }

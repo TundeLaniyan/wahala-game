@@ -4,6 +4,7 @@ import {
   CAMPAIGN_SAVE_KEY,
   DISTRICT_ORDER,
   applyMissionResult,
+  applySectionResult,
   availableModifiers,
   bossFor,
   browserStore,
@@ -78,6 +79,18 @@ function winAll(start: CampaignSave, upTo: number = MISSION_IDS.length): Campaig
   return save;
 }
 
+/** Wins the Ojuelegba finale (missions 19-21: its two field missions, then its boss) on a save with the six cleared. */
+function winFinale(start: CampaignSave): CampaignSave {
+  let save = start;
+  for (const ref of ['ojuelegba.return', 'ojuelegba.junction'])
+    save = applySectionResult(
+      save,
+      { ...outcome('ojuelegba'), defeat: null, sectionMissionId: ref, raidBonus: 0 },
+      2000,
+    ).save;
+  return applyMissionResult(save, outcome('ojuelegba'), 2001).save;
+}
+
 describe('createSave', () => {
   it('Ojuelegba is cleared (the hub), Oshodi is available and the rest are locked', () => {
     const s = createSave(5);
@@ -106,7 +119,9 @@ describe('applyMissionResult', () => {
       const next = DISTRICT_ORDER[DISTRICT_ORDER.indexOf(id) + 1];
       expect(r.unlockedDistricts).toEqual(next ? [next] : []);
       if (next) expect(districtStatus(r.save, next)).toBe('available');
-      expect(r.campaignComplete).toBe(i === MISSION_IDS.length - 1);
+      // the sixth district opens the Ojuelegba finale chapter; the campaign completes after it (FN9)
+      expect(r.campaignComplete).toBe(false);
+      expect(r.finaleOpened ?? false).toBe(i === MISSION_IDS.length - 1);
       save = r.save;
     });
     expect(campaignProgress(save)).toEqual({ cleared: 6, total: 6, percent: 100 });
@@ -115,8 +130,11 @@ describe('applyMissionResult', () => {
     expect(save.flags).toContain('lekki.gridDark');
   });
 
-  it('a full six-win run ends complete after completeCampaign', () => {
-    const won = winAll(createSave(0));
+  it('a full run (six districts, then the Ojuelegba finale) ends complete after completeCampaign', () => {
+    const six = winAll(createSave(0));
+    expect(finaleAvailable(six)).toBe(false); // the finale scene waits for the finale's boss (FN9)
+    expect(completeCampaign(six, 4000)).toBe(six);
+    const won = winFinale(six);
     expect(finaleAvailable(won)).toBe(true);
     expect(won.completed).toBe(false);
     const done = completeCampaign(won, 5000);
@@ -400,8 +418,10 @@ describe('save and load', () => {
     expect(v0.districts.oshodi.status).toBe('cleared');
   });
 
-  it('completed only survives when all six are cleared', () => {
-    const full = winAll(createSave(0));
+  it('completed only survives when all six are cleared and the finale is won', () => {
+    const six = winAll(createSave(0));
+    expect(repairSave({ ...six, completed: true })!.completed).toBe(false); // the finale chapter is still to play
+    const full = winFinale(six);
     expect(repairSave({ ...full, completed: true })!.completed).toBe(true);
     const partial = winAll(createSave(0), 4);
     expect(repairSave({ ...partial, completed: true })!.completed).toBe(false);

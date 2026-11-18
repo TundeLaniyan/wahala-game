@@ -15,7 +15,7 @@ export const CARD_COPY: Readonly<Record<string, CardCopy>> = {
   },
   finale: {
     summary:
-      'Six keepers have fallen and the whole island can see the stars. The Chairman says a ring is only a shape, then slips away by boat.',
+      'Ojuelegba’s routes are open, the danfo is released and the junction is lit. The Chairman says a ring is only a shape, then slips away by boat.',
     objective: 'Watch the Ring end',
   },
   ending: {

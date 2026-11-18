@@ -143,6 +143,23 @@ export const FACTIONS: Readonly<Record<string, FactionDef>> = {
       { role: 'meleeGuard', count: 1 },
     ],
   },
+  // the Ojuelegba finale's crew (decisions FN1-FN10; provisional content, FN8)
+  underbridgeLockmen: {
+    id: 'underbridgeLockmen',
+    kind: 'transportEnforcers',
+    name: 'Underbridge Lockmen',
+    description:
+      'The enforcer’s crew at Ojuelegba (fictional): they chain gates, guard the control boxes and re-lock any route somebody opens. Not the drivers, conductors or traders under the bridge: the people who lock them out. Provisional.',
+    palette: { primary: 0x5b2463, accent: 0xa8dc3a },
+    emblem: 'A closed padlock on a ring of keys',
+    roles: [
+      { role: 'runner', count: 2 },
+      { role: 'escort', count: 1 },
+      { role: 'meleeGuard', count: 1 },
+      { role: 'blocker', count: 1 },
+      { role: 'rangedAttacker', count: 1 },
+    ],
+  },
 };
 
 export const FACTION_IDS: readonly string[] = Object.keys(FACTIONS);

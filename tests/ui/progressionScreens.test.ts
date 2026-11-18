@@ -90,10 +90,10 @@ function render(c: () => React.JSX.Element | null, ui: CampaignUi | null): strin
 const started = (save: CampaignSave, p: Partial<CampaignUi> = {}) =>
   freshCampaignUi(save, { started: true, ...p });
 
-/** Every district before `upTo` cleared at two stars. */
+/** Every district before `upTo` cleared at two stars (the Ojuelegba finale comes after all six). */
 function clearedBefore(upTo: MissionId): CampaignSave {
   let s = createSave(1);
-  for (const d of MISSION_IDS.slice(0, MISSION_IDS.indexOf(upTo)))
+  for (const d of MISSION_IDS.slice(0, upTo === 'ojuelegba' ? MISSION_IDS.length : MISSION_IDS.indexOf(upTo)))
     for (const sec of sectionsOf(d))
       for (const m of sec.missions) {
         if (m.format === 'field') s = applySectionResult(s, fieldWin(m.missionRef), 2).save;
@@ -179,7 +179,11 @@ describe('boss results: Ring lost, Parts, up next (every district)', () => {
     expect(html).toMatch(/data-testid="result-parts"[^>]*>.*\+5 Generator Parts/);
     const next = model.upNextLine(summary.save)!;
     expect(html).toContain(esc(next));
-    if (d === 'lekki') expect(next).toBe('Up next: the finale.');
+    // after Lekki the Ojuelegba finale chapter is next (FN10)
+    if (d === 'lekki')
+      expect(next).toBe(
+        'Up next: the Ojuelegba finale, Return to Ojuelegba. Trap the patrols, blast the gate locks, open the corner.',
+      );
     else {
       const nextDistrict = MISSION_IDS[MISSION_IDS.indexOf(d) + 1]!;
       expect(next).toContain(CAMPAIGN.districts[nextDistrict].name);
@@ -225,7 +229,18 @@ describe('boss results: Ring lost, Parts, up next (every district)', () => {
       bossWin('lekki'),
       2,
     ).save;
-    expect(model.upNextLine({ ...all, completed: true })).toBeNull();
+    // six districts down: the finale chapter is up next until its boss falls, then nothing once complete
+    expect(model.upNextLine({ ...all, completed: true })).toContain('Ojuelegba finale');
+    const finale = applyMissionResult(
+      ['ojuelegba.return', 'ojuelegba.junction'].reduce(
+        (acc, ref) => applySectionResult(acc, fieldWin(ref), 2).save,
+        all,
+      ),
+      bossWin('ojuelegba'),
+      2,
+    ).save;
+    expect(model.upNextLine({ ...finale, completed: false })).toBe('Up next: the finale.');
+    expect(model.upNextLine({ ...finale, completed: true })).toBeNull();
   });
 });
 

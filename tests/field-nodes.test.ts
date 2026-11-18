@@ -45,8 +45,8 @@ function distances(layout: readonly string[], sx: number, sy: number): Map<strin
 }
 
 describe('every district has an entry and a middle field mission (except the standalone-raid section)', () => {
-  it('lists eleven field missions over six districts', () => {
-    expect(FIELD_MISSION_IDS).toHaveLength(11);
+  it('lists eleven field missions over six districts, then the Ojuelegba finale’s two', () => {
+    expect(FIELD_MISSION_IDS).toHaveLength(13);
     const byDistrict = new Map<string, number>();
     for (const id of FIELD_MISSION_IDS) {
       const d = FIELD_MISSION_DEFS[id]!.districtId;
@@ -58,12 +58,17 @@ describe('every district has an entry and a middle field mission (except the sta
 });
 
 /**
- * The district layout as the mission sees it: a sector's barricades (and closed gates) are concrete
- * (docs/CAMPAIGN_SECTOR_AI.md), so every walk below goes round them, never through.
+ * The district layout as the mission sees it: a sector's barricades are concrete (docs/CAMPAIGN_SECTOR_AI.md), so every
+ * walk below goes round them, never through. A sector GATE opens during the mission (when its leg is done, decision FN3),
+ * so the walks may pass it; tests/campaign-finale-data.test.ts checks what lies behind a gate stays shut until then.
  */
 function missionLayout(def: FieldMissionDef): string[] {
   const layout = getArena(MISSION_DEFS[def.districtId].arenaId).layout.map((r) => [...r]);
-  if (def.sectorId) for (const [x, y] of sectorBlockedTiles(getSector(def.sectorId))) layout[y]![x] = '#';
+  if (def.sectorId) {
+    const sector = getSector(def.sectorId);
+    const gates = new Set((sector.gates ?? []).flatMap((g) => g.tiles.map(([x, y]) => `${x},${y}`)));
+    for (const [x, y] of sectorBlockedTiles(sector)) if (!gates.has(`${x},${y}`)) layout[y]![x] = '#';
+  }
   return layout.map((r) => r.join(''));
 }
 

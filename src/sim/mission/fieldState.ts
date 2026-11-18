@@ -163,6 +163,8 @@ function clearRoute(
   const W = state.width;
   const N = W * state.height;
   const CRATE = 8;
+  // a sector gate is concrete until its leg is done, then the route runs through it (decision FN3): plan across it
+  const gates = new Set((state.sector?.gates ?? []).flatMap((g) => g.tiles));
   for (let k = 1; k < stops.length; k++) {
     const [ax, ay] = stops[k - 1]!;
     const [bx, by] = stops[k]!;
@@ -190,7 +192,7 @@ function clearRoute(
           const j = ny * W + nx;
           const t = state.tiles[j];
           // concrete never; a piece of equipment only as the stop itself (walked up to, never cleared)
-          if (t === Tile.Hard || (keep.has(j) && j !== to)) continue;
+          if ((t === Tile.Hard && !gates.has(j)) || (keep.has(j) && j !== to)) continue;
           const nc = c + 1 + (t === Tile.Soft ? CRATE : 0);
           if (nc >= cost[j]!) continue;
           cost[j] = nc;

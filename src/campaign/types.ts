@@ -78,6 +78,11 @@ export interface StoryLine {
   text: string;
   /** The central power broker speaking through a message (never shown on screen). */
   fromBroker?: boolean;
+  /**
+   * Content written for a milestone and NOT yet founder-approved canon (docs/STORY_BIBLE.md: PROPOSED, e.g. the Ojuelegba
+   * finale lines, decision FN8). The text ships; the flag keeps it findable for review.
+   */
+  provisional?: boolean;
 }
 
 export interface RewardDef {
@@ -154,6 +159,11 @@ export interface BossDef {
   introCard?: CardCopy;
   defeatCard?: CardCopy;
   defeatOustedCard?: CardCopy;
+  /**
+   * The boss's name, look or story is NOT approved canon yet (the Ojuelegba enforcer's working title "The Landlord",
+   * docs/STORY_BIBLE.md 12.3, decision FN8). Screens show the name plainly; the docs and data keep the flag.
+   */
+  provisional?: boolean;
 }
 
 export interface DistrictBriefing {
@@ -236,6 +246,8 @@ export interface SectionMissionDef {
   unlocks: string[];
   /** Optional longer text for the "Read more" card and the story scenes. */
   readMore?: string;
+  /** Written for a milestone and not yet founder-approved canon (the Ojuelegba finale, decision FN8). */
+  provisional?: boolean;
   intro?: StoryLine[];
   /**
    * One short line for the result screen and the map: what the Ring lost when this mission was won (docs/STORY_BIBLE.md
@@ -261,14 +273,33 @@ export interface SectionDef {
   missions: SectionMissionDef[];
 }
 
+/**
+ * The Ojuelegba FINALE chapter (missions 19-21, decisions FN1-FN10): played at the hub once Lekki falls. The hub's own
+ * content (`districts.ojuelegba`) stays the prologue hub; the chapter brings its own boss, briefing and the interim beat.
+ */
+export interface FinaleChapterContent {
+  /** The territorial enforcer (working title, `provisional`). Never the Chairman. */
+  boss: BossDef;
+  /** The boss mission's briefing (the hub keeps its own briefing). */
+  briefing: DistrictBriefing;
+  /** Played after Lekki falls, before the chapter: the estates go dark, but Ojuelegba is still locked. */
+  interim: StoryLine[];
+  interimCard?: CardCopy;
+}
+
 export interface CampaignContent {
   broker?: BrokerDef;
   districts: Record<DistrictId, DistrictContent>;
-  /** The three sections of every mission district, in order. */
+  /** The three sections of every mission district (and of the Ojuelegba finale), in order. */
   sections: Record<MissionId, SectionDef[]>;
+  /** The Ojuelegba finale chapter (optional so test fixtures without it still type-check). */
+  finaleChapter?: FinaleChapterContent;
   factions: Record<string, FactionDef>;
   prologue: StoryLine[];
-  /** Played after all six districts are cleared: the empire collapses, the central broker escapes unseen. */
+  /**
+   * Played after the Ojuelegba finale's boss falls (decision FN9; it played after Lekki before the finale existed): the
+   * routes reopen, then the central broker escapes unseen.
+   */
   finale: StoryLine[];
   ending: { title: string; summary: string; teaser: string };
   /** Optional short card copy for the prologue, the finale and the ending (cards.ts). */
@@ -347,6 +378,12 @@ export interface CampaignSave {
    * bought, so older saves load unchanged and no version change is needed. Parts themselves are derived from best stars.
    */
   upgrades?: CampaignUpgrades;
+  /**
+   * The interim beat after Lekki ("the estates go dark, but Ojuelegba is still locked", decision FN9) was watched.
+   * Optional: absent = not yet (an older save that cleared Lekki sees it once on Continue). Repaired on load: only kept
+   * while the finale chapter is open. The finale boss's own record is `districts.ojuelegba` (FN4).
+   */
+  interimSeen?: boolean;
 }
 
 /** The two campaign-only upgrades (docs/CAMPAIGN_GAMEPLAY_BIBLE.md section 2.3). */

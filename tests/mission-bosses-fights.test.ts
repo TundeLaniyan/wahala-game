@@ -6,13 +6,13 @@
  */
 import { describe, expect, it } from 'vitest';
 import { MISSION_IDS, tuningFor } from '../src/sim';
-import type { MissionId } from '../src/sim';
+import type { DistrictMissionId } from '../src/sim';
 import { runBossFight } from '../scripts/lib/bossFight';
 
 // ------------------------------------------------------------------ real fights (the boss and crew bots)
 
 /** Seeds whose Normal generator-first run wins (measured with `npm run boss-audit`; a regression shows up here). */
-const WIN_SEED: Readonly<Record<MissionId, number>> = {
+const WIN_SEED: Readonly<Record<DistrictMissionId, number>> = {
   oshodi: 101,
   mushin: 118,
   fadeyiSomolu: 101,

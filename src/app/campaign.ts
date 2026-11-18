@@ -22,9 +22,11 @@ import {
   createSave,
   districtStatus,
   finaleAvailable,
+  finaleOpen,
   getSectionMission,
   loadSave,
   loadoutBonusFor,
+  markInterimSeen,
   markIntroSeen,
   markPrologueSeen,
   missionByRef,
@@ -39,8 +41,9 @@ import {
 } from '../campaign';
 import type { CampaignSave, DistrictId, KeyValueStore, SectionMissionDef, UpgradeKind } from '../campaign';
 import {
+  CAMPAIGN_MISSION_IDS,
   DEFAULT_CAMPAIGN_LEVEL,
-  MISSION_IDS,
+  FINALE_MISSION_ID,
   buildMissionGame,
   campaignEnemyLevel,
   resolveRaid,
@@ -114,7 +117,9 @@ interface RaidContext {
   missionId: string | null;
 }
 
-export const isMissionId = (id: string): id is MissionId => (MISSION_IDS as readonly string[]).includes(id);
+/** A district with a boss mission: the six districts and, for its finale chapter, Ojuelegba (decision FN1). */
+export const isMissionId = (id: string): id is MissionId =>
+  (CAMPAIGN_MISSION_IDS as readonly string[]).includes(id);
 
 /**
  * The outcome of a mission match that ended without the sim reporting one (a plain win or loss of the match): used
@@ -288,10 +293,11 @@ export class CampaignController {
     this.setMenu(['campaign']);
   }
 
-  /** Replays the prologue (or the finale) from the map without changing progress. */
-  playStory(kind: 'prologue' | 'finale'): void {
+  /** Replays the prologue (or the interim beat, or the finale) from the map without changing progress. */
+  playStory(kind: 'prologue' | 'interim' | 'finale'): void {
     const ui = this.need();
     if (kind === 'finale' && !finaleAvailable(ui.save)) return;
+    if (kind === 'interim' && !finaleOpen(ui.save)) return;
     this.update({ story: kind });
     this.setMenu(['campaign', 'campaignStory']);
   }
@@ -302,6 +308,14 @@ export class CampaignController {
     if (ui.story === 'prologue') {
       const save = markPrologueSeen(ui.save, this.deps.now());
       if (save !== ui.save) this.commit(save);
+      this.setMenu(['campaign']);
+      return;
+    }
+    if (ui.story === 'interim') {
+      // the estates went dark, but Ojuelegba is still locked: home to the finale chapter on the map (FN9)
+      const save = markInterimSeen(ui.save, this.deps.now());
+      if (save !== ui.save) this.commit(save);
+      this.update({ selected: FINALE_MISSION_ID });
       this.setMenu(['campaign']);
       return;
     }
@@ -323,6 +337,11 @@ export class CampaignController {
       this.selectDistrict(id);
       return;
     }
+    if (id === FINALE_MISSION_ID && !finaleOpen(ui.save)) {
+      // the hub: its finale chapter opens once all six districts are cleared
+      this.update({ selected: id, notice: 'The Ojuelegba finale opens once Lekki is cleared.' });
+      return;
+    }
     if (!bossAvailable(ui.save, id)) {
       // the boss is playable only after the district's earlier sections are cleared
       this.update({
@@ -342,6 +361,11 @@ export class CampaignController {
     if (finaleAvailable(ui.save)) {
       if (ui.save.completed) this.setMenu(['campaign', 'campaignComplete']);
       else this.playStory('finale');
+      return;
+    }
+    // Lekki has fallen but the interim beat was never watched (an older save, or the result screen was left): play it
+    if (finaleOpen(ui.save) && !ui.save.interimSeen) {
+      this.playStory('interim');
       return;
     }
     const next = nextMission(ui.save);
@@ -498,6 +522,7 @@ export class CampaignController {
       unlockedDistricts: summary.unlockedDistricts,
       firstClear: summary.firstClear,
       campaignComplete: summary.campaignComplete,
+      ...(summary.finaleOpened ? { finaleOpened: true } : {}),
     };
     const paid = reward.rewards.length + reward.unlocks.length + reward.unlockedDistricts.length > 0;
     this.deps.host.stop();

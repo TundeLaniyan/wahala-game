@@ -14,9 +14,17 @@ import type { RaidId, RaidOutcome, RaidRequest } from '../campaign/types';
 import type { CharacterId, Difficulty } from '../types';
 import type { BossTuning } from './boss';
 
-/** The six district bosses, in the campaign's order. Ojuelegba is the hub (no mission). */
-export type MissionId = 'oshodi' | 'mushin' | 'fadeyiSomolu' | 'ebuteMetta' | 'lagosIsland' | 'lekki';
-export const MISSION_IDS: readonly MissionId[] = [
+/** The six district bosses, in the campaign's order. */
+export type DistrictMissionId = 'oshodi' | 'mushin' | 'fadeyiSomolu' | 'ebuteMetta' | 'lagosIsland' | 'lekki';
+/**
+ * Every mission district: the six district bosses and the Ojuelegba FINALE (missions 19-21, decisions FN1-FN10). The hub
+ * stays the hub for the prologue; once Lekki falls its finale chapter opens (two field missions and the boss mission
+ * "Break the Ring" against the territorial enforcer). `MISSION_IDS` keeps meaning the six district bosses.
+ */
+export type MissionId = DistrictMissionId | 'ojuelegba';
+/** The finale district (decision FN1): its boss mission's id, its field missions' district. */
+export const FINALE_MISSION_ID = 'ojuelegba' as const satisfies MissionId;
+export const MISSION_IDS: readonly DistrictMissionId[] = [
   'oshodi',
   'mushin',
   'fadeyiSomolu',
@@ -24,6 +32,8 @@ export const MISSION_IDS: readonly MissionId[] = [
   'lagosIsland',
   'lekki',
 ];
+/** The six district bosses then the finale, in campaign order. */
+export const CAMPAIGN_MISSION_IDS: readonly MissionId[] = [...MISSION_IDS, FINALE_MISSION_ID];
 
 /** One distinct verb per district (never "kill the wave"). */
 export type ObjectiveKind =
@@ -39,6 +49,11 @@ export type ObjectiveKind =
   | 'contingencyGrid'
   /** Ebute-Metta: HIT dispatch switches only inside timed rail windows. */
   | 'dispatchWindows'
+  /**
+   * Ojuelegba finale (decision FN5): SHUT DOWN the enforcer's control points with blasts; a shut point reopens its route,
+   * lockers re-lock it, live points call telegraphed lockdown strikes.
+   */
+  | 'controlPoints'
   /** Section FIELD missions (src/sim/mission/field.ts): a route of legs (markers, a group, an escape, a door, the way back). */
   | 'fieldRoute';
 
@@ -80,7 +95,8 @@ export type MissionModifierId =
   | 'tollSeason' // fadeyiSomolu: junctions take longer to hold
   | 'expressTimetable' // ebuteMetta: shorter rail windows
   | 'auditWeek' // lagosIsland: one more ledger and a shorter clock
-  | 'longBlackout'; // lekki: a longer switch sequence
+  | 'longBlackout' // lekki: a longer switch sequence
+  | 'curfew'; // ojuelegba finale (provisional, FN6): shorter exposure windows
 
 export const MODIFIER_FOR: Readonly<Record<MissionId, MissionModifierId>> = {
   oshodi: 'rushHourDispatch',
@@ -89,6 +105,7 @@ export const MODIFIER_FOR: Readonly<Record<MissionId, MissionModifierId>> = {
   ebuteMetta: 'expressTimetable',
   lagosIsland: 'auditWeek',
   lekki: 'longBlackout',
+  ojuelegba: 'curfew',
 };
 
 /** What `GameOptions.mission` carries (everything else is resolved inside the sim from the mission's data). */

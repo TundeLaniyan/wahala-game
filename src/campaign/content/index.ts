@@ -1,6 +1,6 @@
 /** All campaign content, assembled. Pure data (see docs/CAMPAIGN_STORY.md). */
 import type { MissionId, MissionModifierId } from '../../sim';
-import { MISSION_IDS, MODIFIER_FOR } from '../../sim';
+import { CAMPAIGN_MISSION_IDS, FINALE_MISSION_ID, MISSION_IDS, MODIFIER_FOR } from '../../sim';
 import type {
   BossDef,
   CampaignContent,
@@ -14,6 +14,7 @@ import type {
 } from '../types';
 import { DISTRICT_ORDER } from '../types';
 import { EBUTE_METTA } from './ebuteMetta';
+import { FINALE_CHAPTER } from './finale';
 import { FACTIONS } from './factions';
 import { FADEYI_SOMOLU } from './fadeyiSomolu';
 import { LAGOS_ISLAND } from './lagosIsland';
@@ -25,6 +26,7 @@ import { SECTIONS, allSectionMissions, allSections } from './sections';
 import { BROKER, ENDING, FINALE, PROLOGUE } from './story';
 
 export { BROKER, ENDING, FINALE, PROLOGUE } from './story';
+export { FINALE_CHAPTER, FINALE_SECTIONS, INTERIM, LANDLORD } from './finale';
 export { FACTIONS, FACTION_IDS, NPC_ROLE_INFO } from './factions';
 export { SECTIONS, allSectionMissions, allSections } from './sections';
 
@@ -40,6 +42,7 @@ export const CAMPAIGN: CampaignContent = {
     lekki: LEKKI,
   },
   sections: SECTIONS,
+  finaleChapter: FINALE_CHAPTER,
   factions: { ...FACTIONS },
   prologue: PROLOGUE,
   finale: FINALE,
@@ -54,13 +57,34 @@ export function districtList(): DistrictContent[] {
   return DISTRICT_ORDER.map((id) => CAMPAIGN.districts[id]);
 }
 
-/** The six bosses in campaign order. */
+/** The six district bosses in campaign order (the finale's enforcer is `finaleBoss()`). */
 export function bossList(): BossDef[] {
   return MISSION_IDS.map((id) => CAMPAIGN.districts[id].boss!);
 }
 
-export function bossFor(id: MissionId): BossDef {
-  return CAMPAIGN.districts[id].boss!;
+/** The Ojuelegba finale's territorial enforcer (working title, provisional: decision FN8). */
+export function finaleBoss(content: CampaignContent = CAMPAIGN): BossDef {
+  return content.finaleChapter!.boss;
+}
+
+/** The boss of a mission district: a district's keeper, or the finale's enforcer for `ojuelegba` (the hub has none). */
+export function bossFor(id: MissionId, content: CampaignContent = CAMPAIGN): BossDef {
+  return id === FINALE_MISSION_ID ? finaleBoss(content) : content.districts[id].boss!;
+}
+
+/** Every boss of the campaign: the six keepers, then the finale's enforcer. */
+export function campaignBosses(): BossDef[] {
+  return CAMPAIGN_MISSION_IDS.map((id) => bossFor(id));
+}
+
+/** The briefing of a mission's boss fight (the hub keeps its own briefing; the finale has the chapter's). */
+export function bossBriefingOf(
+  id: DistrictId,
+  content: CampaignContent = CAMPAIGN,
+): DistrictContent['briefing'] {
+  return id === FINALE_MISSION_ID && content.finaleChapter
+    ? content.finaleChapter.briefing
+    : content.districts[id].briefing;
 }
 
 /** The district that opens after this one is cleared; null for the last. */
@@ -90,7 +114,8 @@ export function replayModifierFor(id: MissionId): ReplayModifierDef {
   return bossFor(id).replayModifier;
 }
 
-export const MODIFIER_IDS: readonly MissionModifierId[] = MISSION_IDS.map((id) => MODIFIER_FOR[id]);
+/** Every replay modifier id, the finale's included (curfew, provisional: FN6). */
+export const MODIFIER_IDS: readonly MissionModifierId[] = CAMPAIGN_MISSION_IDS.map((id) => MODIFIER_FOR[id]);
 
 /** Every reward id (`reward.*`). */
 export function allRewardIds(): string[] {
@@ -109,13 +134,13 @@ export function unlockIdsOfKind(kind: string): string[] {
 
 /** Story flags the consequences can set (plus the per-district `.cleared` flags and `campaign.completed`). */
 export function allFlags(): string[] {
-  const flags = bossList().flatMap((b) => b.consequenceFlags ?? []);
+  const flags = campaignBosses().flatMap((b) => b.consequenceFlags ?? []);
   return [...new Set([...flags, ...DISTRICT_ORDER.map((d) => `${d}.cleared`), 'campaign.completed'])];
 }
 
 // ---------------------------------------------------------------- sections
 
-/** The three sections of a mission district, in order. */
+/** The three sections of a mission district (or of the Ojuelegba finale), in order. */
 export function sectionsOf(id: MissionId): SectionDef[] {
   return CAMPAIGN.sections[id];
 }

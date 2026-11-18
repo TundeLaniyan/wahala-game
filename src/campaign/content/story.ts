@@ -57,15 +57,33 @@ export const PROLOGUE: StoryLine[] = [
   },
 ];
 
+/** A line written for the Ojuelegba finale milestone (provisional, decision FN8). */
+const provisional = (speaker: string, text: string): StoryLine => ({ speaker, text, provisional: true });
+
+/**
+ * The finale scene, played after the Ojuelegba finale's boss falls (decision FN9). Before the finale chapter existed it
+ * played after Lekki; its Lekki opening is now the interim beat (`INTERIM`, content/finale.ts). The operational victory
+ * comes first (the routes reopen, the impounded danfo is released, the stall and the junction are lit), then the
+ * Chairman's lines and his escape by the lagoon-side jetty (kept as shipped), then the teaser (`ENDING`).
+ */
 export const FINALE: StoryLine[] = [
-  {
-    speaker: 'NARRATOR',
-    text: 'Lekki, after midnight. The estates go dark one by one, and for the first time in years the whole island can see the stars over the lagoon.',
-  },
-  {
-    speaker: 'RADIO',
-    text: 'All districts: Oshodi dispatch is off the air. Mushin stock is on the ground. The junctions are open. The yard is on its own clock. The ledgers are in the press. The estate grid is dark.',
-  },
+  provisional(
+    'NARRATOR',
+    'Ojuelegba, dawn. The gate across the corner lies open, and the whole street walks through it.',
+  ),
+  provisional(
+    'RADIO',
+    'Ojuelegba to all units: every route into the junction is open. The impounded danfo has been released. The bus stop is lit.',
+  ),
+  provisional(
+    'MAMA PUT',
+    'Look am. My stall get light, the junction get light, and nobody paid anybody for it.',
+  ),
+  // Bayo's LOCKED arc: he faces the community (provisional wording; nothing more is invented)
+  provisional(
+    'NARRATOR',
+    'Bayo walks up to the stall and tells the street, out loud, what he did for the Ring. Then he waits for their answer.',
+  ),
   {
     speaker: 'MAMA PUT',
     text: 'You hear that? That is not a generator. That is the whole of Lagos exhaling.',
@@ -77,6 +95,7 @@ export const FINALE: StoryLine[] = [
   broker(
     'I leave the keys where you found them. I am not in any of your districts. I was never in any of them.',
   ),
+  provisional('NARRATOR', 'Far across the lagoon, at the end of a pale jetty, an engine starts.'),
   {
     speaker: 'NARRATOR',
     text: 'A pale boat slides out from the jetty with its lights off. Behind the glass, only a silhouette. By the time the drones reach the water it is gone.',
@@ -87,10 +106,11 @@ export const FINALE: StoryLine[] = [
   },
 ];
 
+/** The ending card (its summary names the Ojuelegba finale since FN9; the teaser is unchanged). */
 export const ENDING = {
   title: 'The Ring Breaks',
   summary:
-    'Six keepers fall, the dispatch radio goes quiet, the parts hoard is broken open, the junctions are free, the yard runs on honest timetables, the ledgers reach the press and the estate grid goes dark. The Oruka Ring collapses. The Chairman steps out of the lagoon-side jetty and vanishes: the empire is gone, the man is not.',
+    'Six keepers fall, the dispatch radio goes quiet, the parts hoard is broken open, the junctions are free, the yard runs on honest timetables, the ledgers reach the press and the estate grid goes dark. Then Ojuelegba takes its own corner back: the routes reopen, the danfo is released and the junction is lit. The Oruka Ring collapses. The Chairman steps out of the lagoon-side jetty and vanishes: the empire is gone, the man is not.',
   teaser:
     'A message arrives on a phone that does not belong to you: "Eko is bigger than six districts. Come and see the other side of the bridge. - C." Season two travels beyond the lagoon.',
 };

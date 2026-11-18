@@ -352,7 +352,7 @@ describe('finale and ending', () => {
     }
   }
 
-  it('clearing the sixth district offers the finale; the finale completes the campaign', () => {
+  it('clearing the sixth district opens the Ojuelegba finale (the interim beat first); its boss completes the campaign', () => {
     const { campaign, store } = rig();
     campaign.load();
     campaign.startNew();
@@ -363,6 +363,24 @@ describe('finale and ending', () => {
     clearSectionsOf(campaign, 'lekki');
     campaign.startMission('lekki');
     campaign.finishMission(win({ missionId: 'lekki' }));
+    // Lekki opens the finale chapter (FN9): the interim beat, not the finale scene
+    expect(ui().result!.reward.campaignComplete).toBe(false);
+    expect(ui().result!.reward.finaleOpened).toBe(true);
+    campaign.playStory('finale'); // refused: the finale scene waits for the finale's boss
+    expect(screen()).toBe('campaignResult');
+    campaign.playStory('interim');
+    expect([screen(), ui().story]).toEqual(['campaignStory', 'interim']);
+    campaign.storyDone();
+    expect([screen(), ui().selected, ui().save.interimSeen]).toEqual(['campaign', 'ojuelegba', true]);
+    // Continue goes to mission 19, then 20, then the boss briefing
+    campaign.continue();
+    expect(ui().active?.sectionMissionId).toBe('ojuelegba.return');
+    clearSectionsOf(campaign, 'ojuelegba');
+    campaign.continue();
+    expect(screen()).toBe('briefing');
+    expect(ui().selected).toBe('ojuelegba');
+    expect(campaign.startMission('ojuelegba')).toBe(true);
+    campaign.finishMission(win({ missionId: 'ojuelegba' }));
     expect(ui().result!.reward.campaignComplete).toBe(true);
     expect(ui().save.completed).toBe(false);
 

@@ -2,7 +2,7 @@
  * Boss introduction: a short card (summary, first objective, Read more with the boss's lines, Listen) beside the
  * boss card, then the mission starts. Shown the first time a district is played; Continue always works.
  */
-import { CAMPAIGN, bossIntroCard } from '../../campaign';
+import { CAMPAIGN, bossFor, bossIntroCard } from '../../campaign';
 import { commands } from '../../app/session';
 import { ScreenFrame } from '../menu/Frame';
 import { isMissionId as isMission } from '../../app/campaign';
@@ -13,7 +13,7 @@ export function BossIntroScreen() {
   const ui = useCampaignUi();
   const scene = useScene(() => commands.campaignBossIntroDone(), ui?.selected ?? '');
   if (!ui || !isMission(ui.selected)) return null;
-  const boss = CAMPAIGN.districts[ui.selected].boss;
+  const boss = bossFor(ui.selected); // a district's keeper or the Ojuelegba finale's enforcer
   const card = bossIntroCard(ui.selected);
   if (!boss || !card) return null;
   return (

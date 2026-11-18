@@ -13,6 +13,7 @@ import type { MissionDef } from './defs';
 import { OBJECTIVES } from './objectives';
 import { activeModifiers, resolveTuning } from './tuning';
 import { matchLevel } from './boss';
+import { inSector } from './sector';
 import type { MissionSeat, MissionSpec, MissionState } from './types';
 
 /** Open authored floor: the only ground a post, a node or a respawned crew member stands on. */
@@ -85,6 +86,17 @@ export function createMissionState(state: GameState, arena: ArenaDef, spec: Miss
   for (const [x, y] of allNodeTiles(def)) clearAround(state, x, y, 1);
   const claimed = new Set<string>(allNodeTiles(def).map(([x, y]) => `${x},${y}`));
   const human = state.players[0]!;
+  // a boss mission played in a sector (decision FN7): the human starts on the mission's own tile, and every seat snaps
+  // to free floor inside the sector, never onto a barricade (no sector: the arena spawn, snapping unchanged)
+  const allowed = state.sector
+    ? (x: number, y: number): boolean =>
+        inSector(state, x, y) && state.tiles[tileIndex(state, x, y)] !== Tile.Hard
+    : undefined;
+  if (def.start) {
+    const [hx, hy] = snapToFloor(arena, def.start[0], def.start[1], claimed, allowed);
+    place(state, human, hx, hy);
+    clearAround(state, hx, hy, 1);
+  }
   claimed.add(`${human.x},${human.y}`);
 
   const seats: MissionSeat[] = [
@@ -97,10 +109,12 @@ export function createMissionState(state: GameState, arena: ArenaDef, spec: Miss
     },
   ];
   const bossPlayer = state.players[1]!;
-  const [bx, by] = snapToFloor(arena, def.boss.post[0], def.boss.post[1], claimed);
+  const [bx, by] = snapToFloor(arena, def.boss.post[0], def.boss.post[1], claimed, allowed);
   claimed.add(`${bx},${by}`);
   place(state, bossPlayer, bx, by);
   clearAround(state, bx, by, 1);
+  // presentation only (FN8): the look the boss is drawn in; with no `enemyKind` no rule reads it
+  if (def.boss.look) bossPlayer.enemyVariant = def.boss.look;
   seats.push({
     playerId: 1,
     role: 'boss',
@@ -112,7 +126,7 @@ export function createMissionState(state: GameState, arena: ArenaDef, spec: Miss
   });
   crew.forEach((c, i) => {
     const p = state.players[2 + i]!;
-    const [x, y] = snapToFloor(arena, c.post[0], c.post[1], claimed);
+    const [x, y] = snapToFloor(arena, c.post[0], c.post[1], claimed, allowed);
     claimed.add(`${x},${y}`);
     place(state, p, x, y);
     clearAround(state, x, y, 1);

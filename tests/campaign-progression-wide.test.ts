@@ -38,7 +38,7 @@ import {
   upgradesOf,
 } from '../src/campaign';
 import type { CampaignProgressionConfig, CampaignSave, KeyValueStore, UpgradeKind } from '../src/campaign';
-import { MISSION_IDS, createGame } from '../src/sim';
+import { CAMPAIGN_MISSION_IDS, MISSION_IDS, createGame } from '../src/sim';
 import type { GameOptions, MissionId, MissionOutcome, RaidId, RaidOutcome } from '../src/sim';
 import { buildMissionGame } from '../src/sim/mission/build';
 import { buildRaidGame } from '../src/sim/raid/build';
@@ -101,21 +101,23 @@ function win(save: CampaignSave, missionId: string, stars: Stars): CampaignSave 
   return applyMissionResult(save, bossWin(def.missionRef as MissionId, stars), 1).save;
 }
 
-/** Clears the first `districts` districts in order, every mission at `stars`. */
+/** Clears the first `districts` districts in order (7 = the six and the Ojuelegba finale), every mission at `stars`. */
 function clearDistricts(districts: number, stars: (missionId: string) => Stars): CampaignSave {
   let s = createSave(0);
-  for (const d of MISSION_IDS.slice(0, districts))
+  for (const d of CAMPAIGN_MISSION_IDS.slice(0, districts))
     for (const sec of sectionsOf(d)) for (const m of sec.missions) s = win(s, m.id, stars(m.id));
   return s;
 }
 
 describe('Parts for every campaign mission (PR9)', () => {
-  it('every section mission in the content earns, in play order: 18 missions today, 90 Parts at most', () => {
+  it('every section mission in the content earns, in play order: 18 district missions and the finale’s 3, 105 Parts at most', () => {
     const ids = allSectionMissions().map((m) => m.id);
     expect(partsMissions()).toEqual(ids);
-    expect(ids).toHaveLength(18);
-    expect(ids.filter((id) => id.endsWith('.boss'))).toHaveLength(6);
+    expect(ids).toHaveLength(21);
+    expect(ids.slice(18)).toEqual(['ojuelegba.return', 'ojuelegba.junction', 'ojuelegba.boss']);
+    expect(ids.filter((id) => id.endsWith('.boss'))).toHaveLength(7);
     expect(maxPartsPerMission()).toBe(5);
+    expect(partsEarned(clearDistricts(7, () => 3))).toBe(105);
     expect(partsEarned(clearDistricts(6, () => 3))).toBe(90);
     expect(partsEarned(clearDistricts(6, () => 2))).toBe(72);
     expect(partsEarned(clearDistricts(6, () => 1))).toBe(54);
@@ -138,7 +140,7 @@ describe('Parts for every campaign mission (PR9)', () => {
       expect(partsGained(best, replayed), `${m.id} replays`).toBe(0);
       s = replayed;
     }
-    expect(partsEarned(s)).toBe(90);
+    expect(partsEarned(s)).toBe(105);
   });
 
   it('a loss or timeout never pays, and a locked mission pays nothing', () => {
@@ -158,7 +160,9 @@ describe('Parts for every campaign mission (PR9)', () => {
     expect(districtParts(s, 'oshodi')).toEqual({ earned: 15, max: 15 });
     expect(districtParts(s, 'mushin')).toEqual({ earned: 9, max: 15 });
     expect(districtParts(s, 'lekki')).toEqual({ earned: 0, max: 15 });
-    expect(districtParts(s, 'ojuelegba')).toEqual({ earned: 0, max: 0 }); // the hub has no missions (yet)
+    expect(districtParts(s, 'ojuelegba')).toEqual({ earned: 0, max: 15 }); // the finale chapter's three missions
+    const all = clearDistricts(7, (id) => (id.startsWith('ojuelegba') ? 2 : 1));
+    expect(districtParts(all, 'ojuelegba')).toEqual({ earned: 12, max: 15 });
   });
 
   it('turning the system off pays and applies nothing, saves untouched', () => {

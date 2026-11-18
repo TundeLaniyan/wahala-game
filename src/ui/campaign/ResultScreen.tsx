@@ -7,10 +7,12 @@
 import {
   CAMPAIGN,
   availableModifiers,
+  bossFor,
   missionResultCard,
   nextDistrict,
   replayModifierFor,
 } from '../../campaign';
+import { FINALE_MISSION_ID } from '../../sim';
 import { isMissionId } from '../../app/campaign';
 import { commands } from '../../app/session';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
@@ -29,12 +31,14 @@ export function ResultScreen() {
   const { outcome, reward } = result;
   const id = outcome.missionId;
   const d = CAMPAIGN.districts[id];
-  const boss = d.boss!;
+  // a district's keeper, or the Ojuelegba finale's enforcer (the hub content has no boss)
+  const boss = bossFor(id);
   const won = outcome.result === 'won';
   const nextOpen = reward.unlockedDistricts[0] ?? null;
   const modifiers = availableModifiers(ui.save, id);
   const unlockLines = reward.unlocks.map(unlockLabel);
-  const upNext = nextOpen ?? nextDistrict(id);
+  // the finale is the last chapter: no district follows it
+  const upNext = id === FINALE_MISSION_ID ? null : (nextOpen ?? nextDistrict(id));
   const hasNext = upNext !== null;
   const ringLost = won ? ringLostLine(`${id}.boss`) : null;
   const upNextText = won ? upNextLine(ui.save) : null;
@@ -60,6 +64,15 @@ export function ResultScreen() {
           reward.campaignComplete ? (
             <PrimaryButton testId="result-finale" autoFocus onClick={() => commands.campaignStory('finale')}>
               Watch the finale
+            </PrimaryButton>
+          ) : reward.finaleOpened ? (
+            // Lekki has fallen: the interim beat leads home to the Ojuelegba finale (FN9)
+            <PrimaryButton
+              testId="result-interim"
+              autoFocus
+              onClick={() => commands.campaignStory('interim')}
+            >
+              Home to Ojuelegba
             </PrimaryButton>
           ) : hasNext ? (
             <PrimaryButton testId="result-next" autoFocus onClick={() => commands.campaignNext()}>
