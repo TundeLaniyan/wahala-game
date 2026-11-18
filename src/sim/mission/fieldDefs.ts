@@ -285,8 +285,18 @@ const defs: FieldMissionDef[] = [
     legs: [
       {
         kind: 'reachMarkers',
-        text: 'Walk through the 3 checkpoints along the stalls.',
-        markers: [m(7, 34, 'STALL ROW'), m(18, 36, 'BACK AISLE'), m(33, 33, 'LOADING BAY')],
+        text: 'Walk through the 2 checkpoints along the stalls.',
+        markers: [m(7, 34, 'STALL ROW'), m(18, 36, 'BACK AISLE')],
+      },
+      {
+        kind: 'destroyTargets',
+        text: 'Destroy the 3 parts cages in the loading bay.',
+        crew: 'cageCrew',
+        targets: [
+          { id: 'cageNorth', kind: 'partsCage', x: 34, y: 28, label: 'PARTS CAGE', hp: 3 },
+          { id: 'cageEast', kind: 'partsCage', x: 49, y: 32, label: 'PARTS CAGE', hp: 3 },
+          { id: 'cageSouth', kind: 'partsCage', x: 35, y: 33, label: 'PARTS CAGE', hp: 3 },
+        ],
       },
       { kind: 'door', text: 'Stand on the storeroom door for 1 second to raid it.', doorId: 'storeroom' },
     ],
@@ -302,12 +312,16 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Parts Hawker', 12, 34, 'hawkers', patrol('marketEnforcer', [8, 35], [16, 35])),
-      guard('Stall Guard', 24, 36, 'hawkers', patrol('marketEnforcer', [20, 35], [28, 35])),
-      blocker('Aisle Blocker', 31, 36, 'hawkers', post('heavyEnforcer', 1)),
+      // the stall row and the back aisle: two enforcers walk the aisles the checkpoints sit on
+      guard('Parts Hawker', 12, 35, 'hawkers', patrol('marketEnforcer', [8, 35], [16, 35])),
+      guard('Stall Guard', 25, 36, 'hawkers', patrol('marketEnforcer', [20, 36], [31, 36])),
+      // the loading bay: a runner sweeps the top aisle, a heavy minds the cages, a thrower watches the storeroom
+      guard('Bay Runner', 41, 29, 'runners', patrol('areaBoy', [33, 29], [49, 29])),
+      blocker('Cage Minder', 40, 32, 'cageCrew', post('heavyEnforcer', 1)),
+      chaser('Bay Lookout', 48, 35, 'lookouts', post('bottleThrower', 2)),
     ],
-    timeLimitSec: 360,
-    parSec: 180,
+    timeLimitSec: 480,
+    parSec: 175,
   },
   {
     id: 'mushin.market',
@@ -323,6 +337,17 @@ const defs: FieldMissionDef[] = [
         text: 'Walk through the 2 checkpoints on the top street.',
         markers: [m(34, 7, 'FAR STALL'), m(49, 5, 'TOP STREET')],
       },
+      {
+        kind: 'holdArea',
+        text: 'Keep the lorry bay clear for 40 seconds.',
+        area: { x: 48, y: 10, radius: 1, label: 'LORRY BAY' },
+        holdSec: 40,
+        waves: [
+          { group: 'loaders', atSec: 4 },
+          { group: 'lateLoaders', atSec: 15 },
+          { group: 'lastLoaders', atSec: 26 },
+        ],
+      },
     ],
     doors: [
       {
@@ -336,12 +361,19 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Market Runner', 20, 10, 'runners', patrol('areaBoy', [14, 10], [26, 10])),
+      // the runners work the aisles: two area boys on the cross streets, a thrower on the south street
+      guard('Market Runner', 20, 10, 'runners', patrol('areaBoy', [15, 10], [27, 10])),
       guard('Market Runner', 28, 13, 'runners', patrol('areaBoy', [22, 13], [34, 13])),
-      chaser('Market Runner', 40, 12, 'runners', patrol('bottleThrower', [36, 13], [46, 13])),
+      chaser('Market Runner', 40, 12, 'runners', patrol('bottleThrower', [36, 12], [42, 12])),
+      // the lorry loaders: they watch the top street, then come for the bay
+      guard('Loader', 48, 3, 'loaders', post('marketEnforcer', 2)),
+      guard('Loader', 41, 6, 'loaders', patrol('marketEnforcer', [35, 6], [42, 6])),
+      chaser('Late Loader', 49, 13, 'lateLoaders', post('bottleThrower', 2)),
+      guard('Late Loader', 40, 13, 'lateLoaders', patrol('areaBoy', [36, 13], [44, 13])),
+      guard('Last Loader', 30, 7, 'lastLoaders', patrol('marketEnforcer', [26, 7], [33, 7])),
     ],
-    timeLimitSec: 420,
-    parSec: 220,
+    timeLimitSec: 600,
+    parSec: 255,
   },
   // ---------------------------------------------------------------- Fadeyi / Somolu
   {
