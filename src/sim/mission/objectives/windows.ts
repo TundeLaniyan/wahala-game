@@ -3,8 +3,9 @@
  *  - a switch only counts inside a timed rail WINDOW: every `cycleTicks` a railcar is telegraphed on a track lane
  *    (the arena's own `train` stage hazard: lane lights, bell and horn, >= 3.5 s ahead, one step from a track-free tile),
  *    runs through, and once the lane is clear the window opens for `openTicks`;
- *  - inside the window the human throws a switch by standing on it for `holdTicks`; outside it the switch is locked
- *    and its progress drains;
+ *  - inside the window the human throws a switch with a BLAST (decision BX4): a generator blast of the human's that
+ *    reaches the switch while the window is open throws it; outside the window the switch is locked and a blast is
+ *    wasted (time the fuse: lay it about three seconds before the window opens, or as it opens);
  *  - phase 1: 2 of 3; phase 2: 3 of 4 (shorter windows); phase 3: all 4, a thrown switch resets after `rearmTicks`.
  * The arena's own scheduled trains are switched off for this mission: the windows are the trains.
  */
@@ -12,19 +13,10 @@ import { getArena } from '../../arenas';
 import type { StageHazardDef } from '../../arenas';
 import { tileIndex } from '../../grid';
 import type { GameState, StageEvent } from '../../types';
-import {
-  baseNodeView,
-  completeNode,
-  escapeSteps,
-  livingHuman,
-  newNode,
-  onNode,
-  resetNode,
-  walkTicks,
-} from '../ctx';
+import { completeNode, escapeSteps, livingHuman, newNode, resetNode, walkTicks } from '../ctx';
 import type { MissionCtx } from '../ctx';
 import type { MissionRail } from '../types';
-import { nearestNode } from './types';
+import { freshBlasts, nearestNode } from './types';
 import type { Objective } from './types';
 
 type TrainDef = Extract<StageHazardDef, { kind: 'sweep' }>;
@@ -126,31 +118,26 @@ export const dispatchWindows: Objective = {
   update(ctx) {
     const { state, m, pd } = ctx;
     const rail = m.rail ?? (m.rail = newRail(state, 120));
-    const human = livingHuman(state);
     if (!rail.open && rail.trainAt < 0 && state.tick >= rail.nextCycleAt) startCycle(ctx, rail);
     if (rail.trainAt >= 0 && !rail.open && state.tick >= rail.openAt) rail.open = true;
     if (rail.open && state.tick >= rail.closeAt) {
       rail.open = false;
       rail.trainAt = -1;
       rail.cycles++;
-      for (const n of m.nodes) if (!n.done) n.progress = 0;
     }
     for (const node of m.nodes) {
       if (node.done) {
         if (pd.rearmTicks > 0 && state.tick - node.doneAt >= pd.rearmTicks) resetNode(ctx, node);
         continue;
       }
-      if (rail.open && onNode(human, node)) node.progress++;
-      else node.progress = Math.max(0, node.progress - pd.decayPerTick);
-      if (node.progress >= pd.holdTicks) completeNode(ctx, node);
+      if (freshBlasts(ctx, node).length > 0 && rail.open) completeNode(ctx, node);
     }
   },
 
   done: (ctx) => ctx.m.nodes.filter((n) => n.done).length,
 
   nodeView(ctx, node) {
-    const v = baseNodeView(node, ctx.pd.holdTicks);
-    if (v.state !== 'idle') return v;
+    if (node.done) return { state: 'done', fraction: 1 };
     return { state: ctx.m.rail?.open ? 'live' : 'locked', fraction: 0 };
   },
 

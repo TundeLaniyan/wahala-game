@@ -3,7 +3,7 @@ import type { BossDef, DistrictContent, StoryLine } from '../types';
 const marshal = (text: string): StoryLine => ({ speaker: 'MARSHAL KOBO', text });
 const chairman = (text: string): StoryLine => ({ speaker: 'THE CHAIRMAN', text, fromBroker: true });
 
-/** BOSS 3. Mechanic: junctionAccess (hold junction zones against route marshals; held junctions open routes). */
+/** BOSS 3. Mechanic: junctionAccess (blast the toll box of each junction while no route marshal shields it; broken boxes open routes). */
 export const FADEYI_SOMOLU_BOSS: BossDef = {
   id: 'marshalKobo',
   districtId: 'fadeyiSomolu',
@@ -38,37 +38,37 @@ export const FADEYI_SOMOLU_BOSS: BossDef = {
   },
   systemControlled: 'The junction passage grid of Fadeyi and Somolu: who may cross when, and at what price',
   exposeObjective:
-    'Hold each junction zone against the route marshals until it opens; when every junction is held and open, the Garage Master is exposed at his box and can be eliminated.',
+    'Blast the toll box of each junction while no route marshal stands in its zone; every phase of open junctions exposes the Garage Master at his painted box, and one blast there breaks his guard. Three blasts and he falls.',
   objectiveKind: 'junctionAccess',
   signatureAbility: {
     name: 'Right of Way',
     description:
-      'The marshals contest every junction you stand on and press you off it: you must clear them from the zone to keep your hold.',
+      'A marshal standing in a junction zone shields its toll box: a blast that lands while he is inside is wasted. Draw him out, push him out or blast him first.',
   },
   counterplay:
     'Draw the marshals out of a zone with a generator or a bait, then hold it. Hold the junction nearest the market first: the neighbourhood watch will cover your back.',
   phases: [
     {
       title: 'First Crossing',
-      objective: 'Hold the first junction zone until it opens a route.',
+      objective: 'Blast the first toll boxes until their junctions open a route.',
       bossBehaviour: 'Watches from his box, signalling marshals to the contested zone with the wand.',
       pressure: 'Marshals walk in a loop and re-contest any zone you leave.',
-      callout: 'Stand in the zone to hold it. Clear the marshals out first.',
+      callout: 'Clear the marshals out of the zone, then blast the toll box.',
     },
     {
       title: 'Rush Hour Toll',
-      objective: 'Hold two junctions in turn while marshals close the opened routes behind you.',
+      objective: 'Break the toll boxes in turn while marshals close the opened routes behind you.',
       bossBehaviour:
         'Raises the toll: marshals stack up on the second junction and sweep the routes you have already opened.',
       pressure: 'Two zones contested; blockers narrow the route between them.',
-      callout: 'Hold, open, move on. Do not let the marshals box you in.',
+      callout: 'Blast, open, move on. Do not let the marshals box you in.',
     },
     {
       title: 'Closing Time',
-      objective: 'Hold the last junction, then finish the exposed Garage Master.',
+      objective: 'Break the last toll boxes, then blast the exposed Garage Master a last time.',
       bossBehaviour: 'Steps off his box to personally contest the last junction, wand raised.',
       pressure: 'The whole crew defends the final zone; the route out is only open while held.',
-      callout: 'Last crossing. Hold it and he loses the box. Finish him there.',
+      callout: 'Last crossing. Break it and he runs back to his box. Finish him there.',
     },
   ],
   introduction: [
@@ -140,19 +140,19 @@ export const FADEYI_SOMOLU: DistrictContent = {
     title: 'The Toll at the Crossing',
     location: 'Fadeyi and Somolu: the footbridge, the BRT lane and the bank frontage',
     summary:
-      'Three corridors, a lit wand and a ledger. Marshal Kobo decides who crosses and for how much. Hold each junction zone against his route marshals until it opens, then take the Garage Master off his painted box.',
+      'Three corridors, a lit wand and a ledger. Marshal Kobo decides who crosses and for how much. Blast each junction\u2019s toll box out from under his route marshals, then take the Garage Master off his painted box.',
     objectives: [
-      'Hold junction zones against the route marshals',
-      'Open routes by holding each junction in turn',
-      'Finish Marshal Kobo when the last junction is open',
+      'Blast the toll boxes: a marshal inside the zone shields his box',
+      'Open routes by breaking each junction in turn',
+      'Each open phase exposes Marshal Kobo at his box: one blast there each time, three in all',
     ],
     intel: [
-      'A junction only holds while you stand in its zone and the marshals are cleared from it.',
+      'A toll box only breaks while the marshals are cleared from its zone: standing in it does nothing.',
       'Opened routes help you move: use them to stay ahead of the crew.',
       'The footbridge crowd and Ore Street Watch cheer when you open a route: they are never targets.',
     ],
     warnings: [
-      'Marshals loop on a fixed path: learn the loop and hold the zone on the quiet side.',
+      'Marshals loop on a fixed path: learn the loop and time your blast for the quiet side.',
       'Blast carefully: the bank frontage glass is a hazard, not cover.',
     ],
     brokerMessage: {

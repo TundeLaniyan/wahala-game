@@ -1,7 +1,8 @@
 /**
- * Oshodi, the vertical slice (dispatch relays): a scripted human (ordinary intents only) completes all three relay
- * phases and eliminates the exposed boss; the retry loop, the loss (lives spent), the timeout, the shielded boss, the
- * strikes (fair, credited to the boss, protection layers, mercy), lives, respawns and reinforcements.
+ * Oshodi, the vertical slice (dispatch relays): a scripted human (ordinary intents only) blasts the relays of every
+ * phase, and each broken phase exposes the boss for a window in which one blast costs him a hit (decisions BX1-BX4);
+ * the retry loop, the loss (lives spent), the timeout, the shielded boss, the strikes (fair, credited to the boss,
+ * protection layers, mercy), lives, respawns and reinforcements.
  */
 import { describe, expect, it } from 'vitest';
 import { missionView, tick } from '../src/sim';
@@ -10,7 +11,17 @@ import { MIN_STRIKE_WARN_TICKS, REINFORCE_WARN_TICKS } from '../src/sim/mission/
 import { callStrike } from '../src/sim/mission/strikes';
 import { areaTiles } from '../src/sim/mission/ctx';
 import { addGenerator } from './helpers';
-import { advance, ctxOf, jumpToPhase, newMission, of, put, ScriptedHuman, standOn } from './mission-helpers';
+import {
+  advance,
+  blastAt,
+  ctxOf,
+  jumpToPhase,
+  newMission,
+  of,
+  put,
+  ScriptedHuman,
+  standOn,
+} from './mission-helpers';
 
 /** Plays the scripted human until the match ends, `max` ticks pass or `stop` says so; returns every event. */
 function playScripted(state: GameState, max: number, stop?: (events: SimEvent[]) => boolean): SimEvent[] {
@@ -25,7 +36,7 @@ function playScripted(state: GameState, max: number, stop?: (events: SimEvent[])
 }
 
 describe('Oshodi dispatch relays: full playthrough', () => {
-  it('three phases, the boss is exposed, and eliminating it wins the mission', () => {
+  it('three phases, each one exposes the boss, and the third blast on him wins the mission (BX1-BX2)', () => {
     const state = newMission({ id: 'oshodi' }, { seed: 7 });
     const events = playScripted(state, 60 * 200);
     const m = state.mission!;
@@ -42,13 +53,17 @@ describe('Oshodi dispatch relays: full playthrough', () => {
         .filter((e) => e.change === 'started')
         .map((e) => e.phase),
     ).toEqual([0, 1, 2]);
-    expect(of(events, 'bossExposed')).toHaveLength(1);
+    // every broken phase exposed him once, and each window ended in a blast hit (the last one eliminated him)
+    expect(of(events, 'bossExposed')).toHaveLength(3);
+    expect(of(events, 'bossHit').map((e) => e.hitsLeft)).toEqual([2, 1]);
+    expect(of(events, 'bossHit').every((e) => e.byId === 0)).toBe(true);
+    expect(of(events, 'bossShielded').map((e) => e.reason)).toEqual(['start', 'phase', 'phase']);
     expect(of(events, 'bossDefeated')).toHaveLength(1);
     expect(of(events, 'bossDefeated')[0]).toMatchObject({ creditId: 0, defeat: 'eliminated' });
     expect(of(events, 'missionOutcome')).toHaveLength(1);
     expect(of(events, 'missionStarted')).toHaveLength(1);
     expect(state.match.result).toEqual({ kind: 'win', winnerId: 0 });
-    expect(m.outcome!.stars).toBe(3);
+    expect(m.outcome!.stars).toBeGreaterThanOrEqual(2);
     // the relays called convoys: every one telegraphed at least 2.5 s ahead
     const warnings = of(events, 'missionWarning').filter((e) => e.warning.kind === 'convoy');
     expect(warnings.length).toBeGreaterThan(5);
@@ -60,29 +75,31 @@ describe('Oshodi dispatch relays: full playthrough', () => {
     expect(v.boss.defeated).toBe(true);
   });
 
-  it('a boss window that runs out re-shields the boss and phase three starts again; the next window wins', () => {
+  it('a boss window that runs out re-shields the boss and the same phase starts again; the next windows win', () => {
     const state = newMission({ id: 'oshodi' }, { seed: 9 });
     const m = state.mission!;
     const events = playScripted(state, 60 * 100, (e) => e.some((x) => x.type === 'bossExposed'));
     expect(m.phaseState).toBe('exposed');
     expect(m.boss.shielded).toBe(false);
     expect(missionView(state)!.boss).toMatchObject({ shielded: false, exposed: true });
-    // the human does nothing: the window runs out
+    expect(m.phase).toBe(0);
+    // the human does nothing: the window runs out (the boss stands at his post, his anchor: no walk to wait for)
     const idle = advance(state, m.tuning.exposeTicks + 5);
     expect(of(idle, 'bossShielded').map((e) => e.reason)).toEqual(['expired']);
     expect(m.boss.shielded).toBe(true);
+    expect(m.boss.hp).toBe(3); // a missed window costs him nothing
     expect(m.phaseState).toBe('active');
-    expect(m.phase).toBe(2);
-    expect(m.phasesCleared).toBe(2);
-    expect(m.nodes.length).toBe(4);
+    expect(m.phase).toBe(0);
+    expect(m.phasesCleared).toBe(0);
+    expect(m.nodes.length).toBe(3);
     expect(m.nodes.every((n) => !n.done)).toBe(true);
     expect(m.boss.exposures).toBe(1);
-    expect(of(idle, 'missionPhase')).toEqual([{ type: 'missionPhase', phase: 2, change: 'started' }]);
-    // second time lucky
+    expect(of(idle, 'missionPhase')).toEqual([{ type: 'missionPhase', phase: 0, change: 'started' }]);
+    // the next windows win
     const more = playScripted(state, 60 * 200);
     expect(m.outcome?.result).toBe('won');
-    expect(m.boss.exposures).toBe(2);
-    expect(of([...events, ...more], 'bossExposed')).toHaveLength(2);
+    expect(m.boss.exposures).toBe(4);
+    expect(of([...events, ...more], 'bossExposed')).toHaveLength(4);
   });
 
   it('when the allowed number of windows is used up the boss gets away: the mission is lost', () => {
@@ -98,7 +115,7 @@ describe('Oshodi dispatch relays: full playthrough', () => {
 });
 
 describe('Oshodi: the boss is protected until the objective exposes it', () => {
-  it('a shielded boss survives a blast; an exposed one does not (and the kill is credited)', () => {
+  it('a shielded boss survives a blast; an exposed one on his last hit does not (and the kill is credited)', () => {
     const state = newMission({ id: 'oshodi' });
     const m = state.mission!;
     const boss = state.players[1]!;
@@ -107,8 +124,9 @@ describe('Oshodi: the boss is protected until the objective exposes it', () => {
     expect(boss.alive).toBe(true);
     expect(of(ev, 'playerEliminated').some((e) => e.playerId === 1)).toBe(false);
     expect(missionView(state)!.boss.shielded).toBe(true);
-    // expose it by hand (the runtime does exactly this when phase three is done) and repeat
+    // expose it by hand on its last hit (the runtime does this when a phase is broken) and repeat
     m.boss.shielded = false;
+    m.boss.hp = 1;
     m.phaseState = 'exposed';
     m.boss.exposedUntil = state.tick + 600;
     addGenerator(state, { ownerId: 0, x: boss.x, y: boss.y, timer: 1 });
@@ -120,18 +138,18 @@ describe('Oshodi: the boss is protected until the objective exposes it', () => {
   });
 });
 
-describe('Oshodi relays: jam, decay, re-arm, runners', () => {
-  it('standing on a relay for the hold time jams it; stepping off drains the progress', () => {
+describe('Oshodi relays: blast to jam, re-arm, runners (BX4)', () => {
+  const away = { x: 30, y: 30 };
+
+  it('standing on a relay does nothing; a blast of the human jams it; a crew blast does not', () => {
     const state = newMission({ id: 'oshodi' });
     const m = state.mission!;
-    const [r1] = m.nodes;
-    const hold = m.tuning.phases[0].holdTicks;
-    standOn(state, r1!.x, r1!.y, 100);
-    expect(r1!.progress).toBe(100);
+    const [r1, r2] = m.nodes;
+    standOn(state, r1!.x, r1!.y, 600); // ten seconds on it
     expect(r1!.done).toBe(false);
-    standOn(state, 20, 14, 20); // walked away
-    expect(r1!.progress).toBe(100 - 20 * m.tuning.phases[0].decayPerTick);
-    const ev = standOn(state, r1!.x, r1!.y, hold);
+    blastAt(state, r2!.x, r2!.y, away, [], 2); // a crew member's generator
+    expect(r2!.done).toBe(false);
+    const ev = blastAt(state, r1!.x, r1!.y, away);
     expect(r1!.done).toBe(true);
     expect(of(ev, 'missionNode').some((e) => e.nodeId === 'r1' && e.state === 'done')).toBe(true);
     expect(missionView(state)!.progress).toEqual({ done: 1, goal: 2, label: 'relays jammed' });
@@ -141,9 +159,8 @@ describe('Oshodi relays: jam, decay, re-arm, runners', () => {
     const state = newMission({ id: 'oshodi' });
     const m = state.mission!;
     const r1 = m.nodes[0]!;
-    standOn(state, r1.x, r1.y, m.tuning.phases[0].holdTicks);
+    blastAt(state, r1.x, r1.y, away);
     expect(r1.done).toBe(true);
-    put(state, 0, 30, 30);
     const ev = advance(state, m.tuning.phases[0].rearmTicks + 5);
     expect(r1.done).toBe(false);
     expect(of(ev, 'missionNode').some((e) => e.nodeId === 'r1' && e.state === 'live')).toBe(true);
@@ -155,18 +172,16 @@ describe('Oshodi relays: jam, decay, re-arm, runners', () => {
     const runner = state.players[5]!;
     // phase one: the runner standing on a jammed relay does nothing
     const r1 = m.nodes[0]!;
-    standOn(state, r1.x, r1.y, m.tuning.phases[0].holdTicks);
+    blastAt(state, r1.x, r1.y, away);
     expect(r1.done).toBe(true);
-    put(state, 0, 30, 30);
     put(state, 5, r1.x, r1.y);
     advance(state, 400);
     expect(r1.done).toBe(true);
-    // phase two: ninety ticks on it bring the relay back
+    // phase two: `crewTicks` on it bring the relay back
     jumpToPhase(state, 1);
     const q1 = m.nodes[0]!;
-    standOn(state, q1.x, q1.y, m.tuning.phases[1].holdTicks);
+    blastAt(state, q1.x, q1.y, away);
     expect(q1.done).toBe(true);
-    put(state, 0, 30, 30);
     put(state, runner.id, q1.x, q1.y);
     advance(state, m.tuning.phases[1].crewTicks - 2);
     expect(q1.done).toBe(true);
@@ -174,15 +189,14 @@ describe('Oshodi relays: jam, decay, re-arm, runners', () => {
     expect(q1.done).toBe(false);
   });
 
-  it('phase three needs all four relays jammed at the same time', () => {
+  it('phase three needs all four relays jammed at the same time; then the boss is exposed', () => {
     const state = newMission({ id: 'oshodi' });
     const m = state.mission!;
     jumpToPhase(state, 2);
-    const hold = m.tuning.phases[2].holdTicks;
-    for (const n of m.nodes.slice(0, 3)) standOn(state, n.x, n.y, hold);
+    for (const n of m.nodes.slice(0, 3)) blastAt(state, n.x, n.y, away);
     expect(m.nodes.filter((n) => n.done)).toHaveLength(3);
     expect(m.phaseState).toBe('active');
-    standOn(state, m.nodes[3]!.x, m.nodes[3]!.y, hold);
+    blastAt(state, m.nodes[3]!.x, m.nodes[3]!.y, away);
     expect(m.phaseState).toBe('exposed');
   });
 });
@@ -392,26 +406,39 @@ describe('Oshodi: lives, respawns, reinforcements, loss and timeout', () => {
     expect(runner.alive).toBe(false);
   });
 
-  it('a new phase reinforces a fallen runner after a telegraphed warning', () => {
+  it('the exposed boss calls a fallen crew member back, and a new phase reinforces a fallen runner (telegraphed)', () => {
     const state = newMission({ id: 'oshodi' });
     const m = state.mission!;
     const runner = state.players[5]!;
     addGenerator(state, { ownerId: 0, x: runner.x, y: runner.y, timer: 1 });
     advance(state, 60);
     expect(runner.alive).toBe(false);
-    // clear phase one
+    const fallen = state.players.filter((p) => !p.alive).map((p) => p.id);
+    // break phase one: the boss is exposed and calls one fallen crew member (Normal: `callCount` 1, BX6)
     const events: SimEvent[] = [];
-    for (const n of m.nodes.slice(0, 2)) standOn(state, n.x, n.y, m.tuning.phases[0].holdTicks, events);
-    expect(m.phase).toBe(1);
+    for (const n of m.nodes.slice(0, 2)) blastAt(state, n.x, n.y, { x: 30, y: 30 }, events);
+    expect(m.phaseState).toBe('exposed');
     const warn = of(events, 'missionWarning').filter((e) => e.warning.kind === 'reinforce');
     expect(warn).toHaveLength(1);
     expect(warn[0]!.warning.remainingTicks).toBe(REINFORCE_WARN_TICKS);
     expect(missionView(state)!.warnings.some((w) => w.kind === 'reinforce')).toBe(true);
-    expect(runner.alive).toBe(false);
+    const called = state.players[m.reinforcements[0]!.playerId]!;
+    expect(fallen).toContain(called.id);
     const back = advance(state, REINFORCE_WARN_TICKS + 2);
-    expect(runner.alive).toBe(true);
-    expect(of(back, 'playerRespawned').some((e) => e.playerId === 5)).toBe(true);
-    expect(m.reinforcementsUsed).toBe(1);
+    expect(called.alive).toBe(true);
+    expect(of(back, 'playerRespawned').some((e) => e.playerId === called.id)).toBe(true);
+    expect(m.reinforcementsUsed).toBe(0); // the boss's call is not the mission's reinforcement budget
+    // the hit on the boss starts phase two, which reinforces the fallen runner from the budget
+    const boss = state.players[1]!;
+    const hit = blastAt(state, boss.x, boss.y, { x: 30, y: 30 });
+    expect(of(hit, 'bossHit')).toHaveLength(1);
+    expect(m.phase).toBe(1);
+    if (!runner.alive) {
+      expect(of(hit, 'missionWarning').some((e) => e.warning.kind === 'reinforce')).toBe(true);
+      advance(state, REINFORCE_WARN_TICKS + 2);
+      expect(runner.alive).toBe(true);
+      expect(m.reinforcementsUsed).toBeGreaterThanOrEqual(1); // the blast on the boss may also have felled his escort
+    }
   });
 
   it('the clock ends the mission in a timeout', () => {

@@ -10,7 +10,7 @@
  */
 import { areaTiles, completeNode, livingHuman, newNode, resetNode } from '../ctx';
 import { callStrike } from '../strikes';
-import { nearestNode, runnerOn } from './types';
+import { freshBlasts, nearestNode, runnerOn } from './types';
 import type { Objective } from './types';
 
 /** The human has to be this close (Chebyshev tiles) to a live stack for the goods-fall pressure to find them. */
@@ -36,15 +36,8 @@ export const supplyRoutes: Objective = {
         continue;
       }
       // separate blasts of the human's, each counted once (event ids only grow)
-      const fresh = new Set<number>();
-      for (const f of state.flames) {
-        if (f.x !== node.x || f.y !== node.y || f.ownerId !== 0) continue;
-        if (state.tick < f.startTick || state.tick >= f.endTick || f.eventId <= node.lastEvent) continue;
-        fresh.add(f.eventId);
-      }
-      for (const id of [...fresh].sort((a, b) => a - b)) {
+      for (const _id of freshBlasts(ctx, node)) {
         node.hp--;
-        node.lastEvent = id;
         if (node.hp <= 0) {
           completeNode(ctx, node);
           break;

@@ -34,7 +34,7 @@ export const EBUTE_METTA_BOSS: BossDef = {
   },
   systemControlled: 'The yard’s dispatch switches and timetable: when each wagon is allowed to leave',
   exposeObjective:
-    'Hit the dispatch switches only inside the timed rail windows (a switch hit outside its window does nothing); when every switch has fallen, the Timekeeper is exposed in his signal cabin.',
+    'Blast the dispatch switches only inside the timed rail windows (a blast outside its window does nothing); every phase of fallen switches exposes the Timekeeper at his signal cabin, and one blast there breaks his guard. Three blasts and he falls.',
   objectiveKind: 'dispatchWindows',
   signatureAbility: {
     name: 'On the Minute',
@@ -46,24 +46,25 @@ export const EBUTE_METTA_BOSS: BossDef = {
   phases: [
     {
       title: 'First Departure',
-      objective: 'Hit the first dispatch switch inside its open window.',
+      objective: 'Blast the first dispatch switches inside their open window.',
       bossBehaviour: 'Checks his watch and reads out the minute: windows are short and far apart.',
       pressure: 'One switch at a time; railcars sweep a warned track lane.',
-      callout: 'Wait for the green bar. Hit the switch inside the window.',
+      callout: 'Wait for the green bar. Time the fuse so the blast lands inside the window.',
     },
     {
       title: 'Peak Timetable',
-      objective: 'Hit two switches whose windows overlap and alternate.',
+      objective: 'Blast the switches whose windows overlap and alternate.',
       bossBehaviour: 'Tightens the timetable: windows overlap and blockers stand on the switches.',
       pressure: 'Two track lanes live; defenders contest the switches.',
       callout: 'Two windows, one pair of hands. Pick the one that closes first.',
     },
     {
       title: 'The Last Train',
-      objective: 'Hit the final switches in the shortest windows, then finish the exposed Keeper.',
+      objective:
+        'Blast the final switches in the shortest windows, then blast the exposed Keeper a last time.',
       bossBehaviour: 'Throws the master lever: every wagon rolls and the windows are at their shortest.',
       pressure: 'Short windows, several lanes live at once, the full crew in the yard.',
-      callout: 'Last train. Hit the master switch in its window, then take the Timekeeper.',
+      callout: 'Last train. Blast the switches in their window, then take the Timekeeper.',
     },
   ],
   introduction: [
@@ -130,11 +131,11 @@ export const EBUTE_METTA: DistrictContent = {
     title: 'The Last Train',
     location: 'Ebute-Metta: the railway station, the rail yard and signal gantry, the Iddo-style terminal',
     summary:
-      'The old railway yard runs on a timetable the Chairman wrote. Ikenna Wayside opens and closes the windows. Hit the dispatch switches only when their window is open, and learn to be in the right place at exactly the right minute.',
+      'The old railway yard runs on a timetable the Chairman wrote. Ikenna Wayside opens and closes the windows. Blast the dispatch switches only when their window is open, and learn to lay the generator at exactly the right minute.',
     objectives: [
-      'Hit dispatch switches only inside their open rail windows',
+      'Blast dispatch switches only inside their open rail windows',
       'Avoid the wagons that roll through the track lanes',
-      'Finish Ikenna Wayside when the last switch falls',
+      'Each fallen phase exposes Ikenna Wayside at his signal cabin: one blast there each time, three in all',
     ],
     intel: [
       'Each switch shows a countdown ring: green when its window is open.',
@@ -142,7 +143,7 @@ export const EBUTE_METTA: DistrictContent = {
       'Station staff and the neighbourhood watch are bystanders: do not blast the platform.',
     ],
     warnings: [
-      'A switch hit outside its window does nothing and wastes the generator.',
+      'A blast outside the window does nothing and wastes the generator: lay it about three seconds before the window opens.',
       'Wagons are heavy. Do not stand on a rail when the bell rings.',
     ],
     brokerMessage: {

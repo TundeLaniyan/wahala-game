@@ -7,11 +7,13 @@
  *   rangedAttacker     chase the human wherever they are (generators from range, never tied to a post)
  *   blocker            stand on its lane / choke tile
  *   runner             run to the objective's restock / re-arm tile (a destroyed stack, a jammed relay)
- *   escort             stay within radius 2 of the boss
+ *   escort             stay within radius 2 of the boss; on a level with `escortCover` (Hard) body-block the line between
+ *                      the exposed boss and the human
  *   objectiveDefender  guard the node it is assigned to; chases the carrier in the evidence run
  *   supportUnit        stay near a runner / defender ally (else the boss)
  *   bossAssistant      interpose: stand on the tile two steps from the boss towards the human
- *   boss               guard its post (radius 3) while shielded; flee from the human while exposed
+ *   boss               guard its post (radius 3) while shielded; while exposed walk to the anchor and stand on it to
+ *                      restore the shield (the runtime roots him there: decision BX1)
  */
 import { tileIndex } from '../grid';
 import { Tile } from '../types';
@@ -44,8 +46,11 @@ export function directiveFor(state: GameState, id: number): NpcDirective | undef
   const chase: NpcDirective = { kind: 'chase', x: human.x, y: human.y };
 
   switch (seat.role) {
-    case 'boss':
+    case 'boss': {
+      const anchor = m.boss.anchor;
+      if (exposed && anchor) return { kind: 'block', x: anchor.x, y: anchor.y, radius: 0 };
       return exposed && human.alive ? { kind: 'flee', x: human.x, y: human.y } : guard(post.x, post.y);
+    }
     case 'meleeGuard':
       return exposed ? chase : guard(post.x, post.y);
     case 'rangedAttacker':
@@ -57,6 +62,10 @@ export function directiveFor(state: GameState, id: number): NpcDirective | undef
       return { kind: 'run', x: target.x, y: target.y };
     }
     case 'escort':
+      if (exposed && boss.alive && human.alive && m.tuning.boss?.escortCover) {
+        const [x, y] = interpose(state, boss, human);
+        return { kind: 'block', x, y, radius: 0 };
+      }
       return boss.alive
         ? { kind: 'escort', x: boss.x, y: boss.y, radius: seat.radius ?? 2 }
         : guard(post.x, post.y);

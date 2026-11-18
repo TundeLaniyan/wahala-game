@@ -1,9 +1,12 @@
 /**
- * Lagos Island: EVIDENCE RUN. Ledgers lie on plaza and street tiles; the press drop is a tile of its own.
- *  - the human COLLECTS a ledger by standing on it for `holdTicks` (one at a time) and then CARRIES it: each step takes
- *    `tuning.carrySlowTicks` longer;
+ * Lagos Island: EVIDENCE RUN. Ledgers are locked in archive cabinets on plaza and street tiles; the press drop is a
+ *  tile of its own.
+ *  - a generator blast of the human's that reaches a cabinet BREAKS IT OPEN (decision BX4; standing or melee does
+ *    nothing to a locked cabinet); it stays open for the rest of the phase;
+ *  - the human COLLECTS the ledger of an open cabinet by stepping onto it (`holdTicks`, 1 tick) and then CARRIES it
+ *    (one at a time): each step takes `tuning.carrySlowTicks` longer;
  *  - auditors (the crew's defenders) chase the carrier; a daze, a knockdown or a fall DROPS the ledger (it goes back
- *    to where it was); phase 3 also loses a ledger carried for `carryLimitTicks`;
+ *    to its open cabinet); phase 3 also loses a ledger carried for `carryLimitTicks`;
  *  - while carrying, a telegraphed audit strike (3 x 3, >= 2.5 s) is called on the carrier's tile every `pulseTicks`:
  *    keep moving;
  *  - the carrier DELIVERS by standing on the press drop for `PRESS_DROP_TICKS`; phase 1: 2 of 3 ledgers; phase 2: 3 of 4;
@@ -14,6 +17,7 @@ import { areaTiles, baseNodeView, completeNode, livingHuman, newNode, onNode, re
 import type { MissionCtx } from '../ctx';
 import { callStrike } from '../strikes';
 import type { MissionNodeRuntime } from '../types';
+import { freshBlasts } from './types';
 import type { Objective } from './types';
 
 export const PRESS_ID = 'press';
@@ -25,7 +29,10 @@ function dropCarry(ctx: MissionCtx): void {
   const { m } = ctx;
   if (!m.carry) return;
   const node = m.nodes.find((n) => n.id === m.carry!.nodeId);
-  if (node) resetNode(ctx, node);
+  if (node) {
+    resetNode(ctx, node);
+    node.hp = 0; // back in its cabinet, which stays open
+  }
   m.carry = null;
 }
 
@@ -35,7 +42,7 @@ export const evidenceRun: Objective = {
   setup(ctx) {
     const { m, def, state } = ctx;
     const phase = def.phases[m.phase];
-    m.nodes = phase.nodes.map((d) => newNode(d, -1, state.width, 0));
+    m.nodes = phase.nodes.map((d) => newNode(d, -1, state.width, ctx.pd.hp)); // hp 1 = a locked cabinet
     if (phase.press) {
       m.nodes.push(
         newNode(
@@ -55,6 +62,11 @@ export const evidenceRun: Objective = {
     const { state, m, pd } = ctx;
     const human = livingHuman(state);
     const press = pressOf(ctx);
+    // a blast breaks a locked cabinet open (whether or not a ledger is being carried)
+    for (const node of m.nodes) {
+      if (node.id === PRESS_ID || node.done || node.hp <= 0) continue;
+      if (freshBlasts(ctx, node).length > 0) node.hp = 0;
+    }
     if (m.carry) {
       const lost =
         !human ||
@@ -86,6 +98,7 @@ export const evidenceRun: Objective = {
     // not carrying: collect the ledger they stand on
     for (const node of m.nodes) {
       if (node.id === PRESS_ID || node.done) continue;
+      if (node.hp > 0) continue; // still locked
       if (human && onNode(human, node)) node.progress++;
       else node.progress = Math.max(0, node.progress - pd.decayPerTick);
       if (node.progress >= pd.holdTicks && human) {
@@ -106,7 +119,9 @@ export const evidenceRun: Objective = {
       return { state: ctx.m.carry ? 'live' : 'idle', fraction: 0 };
     }
     if (node.done) return { state: 'done', fraction: 1 };
-    return baseNodeView(node, ctx.pd.holdTicks);
+    if (node.hp > 0) return { state: 'locked', fraction: 0 }; // a locked cabinet: blast it open
+    const v = baseNodeView(node, ctx.pd.holdTicks);
+    return v.state === 'idle' ? { state: 'live', fraction: 0 } : v;
   },
 
   runnerTarget: () => null,

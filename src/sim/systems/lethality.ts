@@ -20,7 +20,7 @@ import type { EliminationCause, GameState, Player, SimEvent } from '../types';
 import { applyCampaignHit } from './campaignDamage';
 import { eliminate } from './eliminate';
 import { canHarm } from './queries';
-import { isShieldedBoss } from '../mission/rules';
+import { isShieldedBoss, missionBossAbsorbs } from '../mission/rules';
 
 export { eliminate };
 
@@ -80,6 +80,11 @@ export function applyLethalHits(state: GameState, hits: LethalHit[], events: Sim
     const live = mine.filter((h) => !isImmune(state, p, h.eventId));
     if (live.length === 0) continue;
     if (isShieldedBoss(state, p)) continue; // a mission boss cannot be hurt until the objective exposes it
+    // an exposed boss loses one hit per window to a lethal event, the last one eliminates him (decision BX2)
+    if (missionBossAbsorbs(state, p, causeOwner(live[0]!.cause))) {
+      for (const h of live) p.immune.push({ eventId: h.eventId, until: h.graceUntil });
+      continue;
+    }
     // spawn protection (respawn modes): ignore everything but the closing walls
     if (
       state.tick < p.protectedUntil &&
@@ -120,6 +125,11 @@ export function applyLethalHits(state: GameState, hits: LethalHit[], events: Sim
     eliminated.push(p.id);
   }
   return eliminated;
+}
+
+/** Who dealt a lethal cause (null for the environment: crush, crowd, a stage hazard, sudden death). */
+function causeOwner(cause: EliminationCause): number | null {
+  return 'ownerId' in cause ? cause.ownerId : null;
 }
 
 /** What a lethal cause means for campaign health: who dealt it and which row of `config.campaign.damage` it is. */

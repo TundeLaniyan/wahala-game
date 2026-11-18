@@ -1,5 +1,5 @@
 import { buildMissionGame, createGame, missionView, tick } from '../src/sim';
-import type { Dir, GameState, Intent, Intents, MissionSpec, SimEvent } from '../src/sim';
+import type { Dir, GameState, Intents, MissionSpec, SimEvent } from '../src/sim';
 import { Tile } from '../src/sim/types';
 import { isLethalStageEvent } from '../src/sim';
 import { createBot } from '../src/ai';
@@ -8,6 +8,8 @@ import { observe } from '../src/sim';
 import { makeCtx } from '../src/sim/mission/ctx';
 import type { MissionCtx } from '../src/sim/mission/ctx';
 import { OBJECTIVES } from '../src/sim/mission/objectives';
+import { BossAgent } from '../scripts/lib/bossFight';
+import { addGenerator } from './helpers';
 
 /** FNV-1a over the JSON of any value (a state hash for determinism checks). */
 export function hashOf(value: unknown): string {
@@ -199,62 +201,35 @@ export function dangerTiles(state: GameState): Set<number> {
 }
 
 /**
- * A scripted human: walks to the nearest unfinished node of the mission, never onto a telegraphed tile, and when the
- * boss is exposed walks to a tile two steps from it, lays a generator and retreats. Uses only ordinary intents.
+ * A scripted human for the boss missions: the generator-first player of `scripts/lib/bossFight.ts` (decisions BX1-BX8).
+ * It breaks every objective node with blasts, waits beside the boss's anchor once he is exposed and lays a generator
+ * when he is restoring; ordinary intents only.
  */
-export class ScriptedHuman {
-  private plan: 'seek' | 'retreat' = 'seek';
-  private retreat: Dir | null = null;
-  private retreatLeft = 0;
-  placed = 0;
-
-  decide(state: GameState): Intent {
-    const me = state.players[0]!;
-    if (!me.alive) return {};
-    const view = missionView(state)!;
-    const danger = dangerTiles(state);
-    const here = me.y * state.width + me.x;
-
-    if (this.plan === 'retreat') {
-      if (this.retreatLeft-- > 0 && this.retreat) return { move: this.retreat };
-      this.plan = 'seek';
-    }
-    if (danger.has(here)) {
-      const out = firstStep(state, me.x, me.y, (x, y) => !danger.has(y * state.width + x), new Set());
-      return out ? { move: out } : {};
-    }
-    if (view.phaseState === 'exposed') return this.hunt(state, view.boss.playerId);
-
-    const targets = view.nodes.filter((n) => n.state !== 'done' && n.id !== 'press');
-    if (targets.length === 0) return {};
-    const goals = new Set(targets.map((n) => n.y * state.width + n.x));
-    if (goals.has(here)) return {};
-    const dir = firstStep(state, me.x, me.y, (x, y) => goals.has(y * state.width + x), danger);
-    return dir ? { move: dir } : {};
+export class ScriptedHuman extends BossAgent {
+  constructor() {
+    super('generator');
   }
+}
 
-  private hunt(state: GameState, bossId: number): Intent {
-    const me = state.players[0]!;
-    const boss = state.players[bossId]!;
-    const w = state.width;
-    const free = (x: number, y: number): boolean => state.tiles[y * w + x] === Tile.Empty;
-    // a launch tile two steps from the boss along an axis, with the boss's line and four tiles of retreat free
-    for (const [dir, dx, dy] of DIRS) {
-      const lx = boss.x + dx * 2;
-      const ly = boss.y + dy * 2;
-      const line = [1, 2, 3, 4, 5, 6].every((k) => free(boss.x + dx * k, boss.y + dy * k));
-      if (!line) continue;
-      if (me.x === lx && me.y === ly) {
-        if (state.generators.some((g) => g.ownerId === 0)) return {};
-        this.plan = 'retreat';
-        this.retreat = dir;
-        this.retreatLeft = 5;
-        this.placed++;
-        return { place: true };
-      }
-      const step = firstStep(state, me.x, me.y, (x, y) => x === lx && y === ly, new Set());
-      if (step) return { move: step };
-    }
-    return {};
-  }
+/**
+ * A blast of the human's (a generator with a one-tick fuse) on (x, y), the human standing well away at (hx, hy) while it
+ * burns out. Returns the events.
+ */
+export function blastAt(
+  state: GameState,
+  x: number,
+  y: number,
+  away: { x: number; y: number },
+  sink: SimEvent[] = [],
+  ownerId = 0,
+): SimEvent[] {
+  put(state, 0, away.x, away.y);
+  addGenerator(state, { ownerId, x, y, timer: 1 });
+  return advance(state, 45, {}, sink);
+}
+
+/** Breaks the exposed boss's guard with a blast on his tile (the human well away): the next phase starts (BX2). */
+export function hitBoss(state: GameState, away: { x: number; y: number }, sink: SimEvent[] = []): SimEvent[] {
+  const boss = state.players[state.mission!.bossId]!;
+  return blastAt(state, boss.x, boss.y, away, sink);
 }

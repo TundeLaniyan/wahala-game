@@ -48,3 +48,21 @@ export function runnerOn(ctx: MissionCtx, node: MissionNodeRuntime): boolean {
     return p !== undefined && p.alive && p.x === node.x && p.y === node.y;
   });
 }
+
+/**
+ * The separate blasts of the HUMAN's that reached the node's tile and have not counted against it yet (event ids,
+ * ascending: one blast counts once however long it burns; a chain is one event). Marks them as counted.
+ * Decision BX4: every boss-mission objective node is broken by blasts, never by standing or melee.
+ */
+export function freshBlasts(ctx: MissionCtx, node: MissionNodeRuntime): number[] {
+  const { state } = ctx;
+  const fresh = new Set<number>();
+  for (const f of state.flames) {
+    if (f.x !== node.x || f.y !== node.y || f.ownerId !== 0) continue;
+    if (state.tick < f.startTick || state.tick >= f.endTick || f.eventId <= node.lastEvent) continue;
+    fresh.add(f.eventId);
+  }
+  const ids = [...fresh].sort((a, b) => a - b);
+  if (ids.length > 0) node.lastEvent = ids[ids.length - 1]!;
+  return ids;
+}

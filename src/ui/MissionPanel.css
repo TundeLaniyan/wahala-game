@@ -125,6 +125,23 @@
 .mission-dock .mp-boss.defeated {
   color: #4dff88;
 }
+/* decisions BX1-BX3: the blasts the boss still needs, and what to do in the exposed window */
+.hud-rail .mp-hits,
+.mission-dock .mp-hits {
+  font-size: clamp(0.52rem, 2.1vh, 0.76rem);
+  color: #ffb27a;
+}
+.hud-rail .mp-boss-hint,
+.mission-dock .mp-boss-hint {
+  margin: 0;
+  font-size: clamp(0.52rem, 2.1vh, 0.76rem);
+  letter-spacing: 0.04em;
+  color: #9ec7ff;
+}
+.hud-rail .mp-boss-hint.exposed,
+.mission-dock .mp-boss-hint.exposed {
+  color: #ffe14a;
+}
 .hud-rail .mp-lives,
 .mission-dock .mp-lives {
   font-size: clamp(0.52rem, 2.1vh, 0.76rem);

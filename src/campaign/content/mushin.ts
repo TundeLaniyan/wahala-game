@@ -34,7 +34,7 @@ export const MUSHIN_BOSS: BossDef = {
   },
   systemControlled: 'The Mushin parts supply chain: stacks of hoarded parts and the runners who restock them',
   exposeObjective:
-    'Destroy the hoarded parts stacks with generator blasts, and eliminate the runners who restock them, until her shelves are bare and she is exposed.',
+    'Destroy the hoarded parts stacks with generator blasts, and eliminate the runners who restock them; every bare shelf exposes Madam Ronke, who comes to restock the last stack herself: one blast there breaks her guard. Three blasts and she falls.',
   objectiveKind: 'supplyRoutes',
   signatureAbility: {
     name: 'Sold Out, Restocked',
@@ -63,7 +63,7 @@ export const MUSHIN_BOSS: BossDef = {
       objective: 'Break the last stacks, then finish the exposed broker.',
       bossBehaviour: 'Abandons her counter to guard the last stack herself, her keys ringing with each step.',
       pressure: 'A tight cluster of stacks and a full crew defending it.',
-      callout: 'Last stacks. When the shelves are empty she is exposed. Clear her out.',
+      callout: 'Last stacks. When the shelves are empty she comes to restock. Blast her there.',
     },
   ],
   introduction: [
@@ -140,7 +140,7 @@ export const MUSHIN: DistrictContent = {
     objectives: [
       'Destroy parts stacks with generator blasts',
       'Eliminate runners before they restock a broken stack',
-      'Finish Madam Ronke when the shelves are bare',
+      'Each bare phase brings Madam Ronke to restock the last stack herself: one blast there each time, three in all',
     ],
     intel: [
       'Stacks are marked under red umbrellas: honest stalls are plain and never targets.',

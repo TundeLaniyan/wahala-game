@@ -12,6 +12,7 @@
  */
 import type { RaidId, RaidOutcome, RaidRequest } from '../campaign/types';
 import type { CharacterId, Difficulty } from '../types';
+import type { BossTuning } from './boss';
 
 /** The six district bosses, in the campaign's order. Ojuelegba is the hub (no mission). */
 export type MissionId = 'oshodi' | 'mushin' | 'fadeyiSomolu' | 'ebuteMetta' | 'lagosIsland' | 'lekki';
@@ -261,6 +262,18 @@ export interface MissionView {
     exposed: boolean;
     exposedRemainingTicks: number;
     defeated: boolean;
+    /**
+     * Boss missions (decisions BX1-BX8, `mission/boss.ts`): blast hits left before the boss falls, of `maxHits` (one per
+     * exposure window). Absent in field missions.
+     */
+    hitsLeft?: number;
+    maxHits?: number;
+    /** The full length of the current exposure window (ticks; grows when a punch interrupts the restore). */
+    exposeTotalTicks?: number;
+    /** Where the exposed boss restores his shield (he is committed - rooted - while he stands on it). */
+    anchor?: { x: number; y: number } | null;
+    /** The exposed boss is on the anchor restoring his shield right now: a generator laid beside him lands. */
+    restoring?: boolean;
   };
   lives: { used: number; max: number };
   timeRemainingSec: number;
@@ -394,6 +407,20 @@ export interface MissionBossState {
   /** Windows opened so far (retry loop bound: `tuning.maxExposures`). */
   exposures: number;
   defeated: boolean;
+  /**
+   * Boss missions (decisions BX1-BX8, `mission/boss.ts`; optional so the field missions' state is unchanged): blast hits
+   * left before the boss falls (the last one eliminates him), of `maxHits`.
+   */
+  hp?: number;
+  maxHits?: number;
+  /** Tick the current window opened, its full length (punch interrupts lengthen it) and the interrupts it has had. */
+  exposedAt?: number;
+  windowTicks?: number;
+  interrupts?: number;
+  /** The tile the exposed boss restores his shield on (his post, or the node broken last). */
+  anchor?: { x: number; y: number } | null;
+  /** A blast reached the exposed boss this tick (lethality records it; the runtime resolves it the same tick). */
+  pendingHit?: { byId: number | null } | null;
 }
 
 export interface MissionReinforcement {
@@ -435,12 +462,15 @@ export interface PhaseTuning {
 export interface MissionTuning {
   timeLimitTicks: number;
   parTicks: number;
+  /** The exposure window at the match's campaign level (= `boss.exposeTicks`; 0 in field missions). */
   exposeTicks: number;
   maxExposures: number;
   reinforceMax: number;
   /** Extra ticks per step while carrying a ledger. */
   carrySlowTicks: number;
   phases: [PhaseTuning, PhaseTuning, PhaseTuning];
+  /** Boss missions: the boss recipe resolved at the campaign level (decisions BX1-BX8). Absent in field missions. */
+  boss?: BossTuning;
 }
 
 /** A door of a section field mission at run time. */

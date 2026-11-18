@@ -475,6 +475,9 @@ const handlers: Handlers = {
     if (e.reason === 'expired') sfx(c, 'ui_back', 0, 0.8, 0.8);
   },
   bossDefeated: (_e, c) => sfx(c, 'win_sting', 0, 0.9),
+  // decisions BX2-BX3: existing synthesised cues only (a heavy blow for a hit on the boss, a short count for the interrupt)
+  bossHit: (e, c) => sfx(c, 'pickup_rare', panOf(c, e.x), 0.9, 0.7),
+  bossInterrupted: (_e, c) => sfx(c, 'ui_count', 0, 0.6, 1.2),
   missionOutcome: () => undefined,
   missionCallout: () => undefined,
   // campaign health (decision CC4): existing synthesised cues only. A wound is a dull blow; a hit that did nothing is a

@@ -189,6 +189,8 @@ export const SAMPLES: Record<SimEvent['type'], SimEvent> = {
   bossExposed: { type: 'bossExposed', bossId: 1, untilTick: 900 },
   bossShielded: { type: 'bossShielded', bossId: 1, reason: 'expired' },
   bossDefeated: { type: 'bossDefeated', bossId: 1, creditId: 0, defeat: 'eliminated' },
+  bossHit: { type: 'bossHit', bossId: 1, byId: 0, hitsLeft: 2, maxHits: 3, x: 4, y: 4 },
+  bossInterrupted: { type: 'bossInterrupted', bossId: 1, byId: 0, untilTick: 950 },
   missionOutcome: {
     type: 'missionOutcome',
     outcome: {

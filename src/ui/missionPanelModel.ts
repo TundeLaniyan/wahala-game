@@ -9,12 +9,13 @@ import type { HoldReadout } from '../app/fieldGoal';
 
 /** The verb of each district's objective, as the panel's heading says it. */
 export const OBJECTIVE_LABEL: Readonly<Record<ObjectiveKind, string>> = {
-  dispatchRelays: 'JAM THE RELAYS',
+  // every boss objective is broken by blasts (decision BX4)
+  dispatchRelays: 'BLAST THE RELAYS',
   supplyRoutes: 'DESTROY THE PARTS STACKS',
-  junctionAccess: 'HOLD THE JUNCTIONS',
-  evidenceRun: 'COLLECT AND DELIVER THE LEDGERS',
-  contingencyGrid: 'SWITCH THE SYSTEMS OFF IN ORDER',
-  dispatchWindows: 'HIT THE SWITCHES IN THE RAIL WINDOWS',
+  junctionAccess: 'BLAST THE TOLL BOXES',
+  evidenceRun: 'BLAST THE CABINETS, DELIVER THE LEDGERS',
+  contingencyGrid: 'BLAST THE SYSTEMS IN ORDER',
+  dispatchWindows: 'BLAST THE SWITCHES IN THE RAIL WINDOWS',
   fieldRoute: 'FOLLOW THE ROUTE',
 };
 
@@ -42,6 +43,13 @@ export interface MissionBossStatus {
   label: string;
   /** Seconds of the exposed window left (only while exposed). */
   seconds: number | null;
+  /**
+   * Boss missions (decisions BX1-BX3; absent when the view carries no hits): the blasts still needed ("BLASTS LEFT 2/3")
+   * and, while exposed, what to do now in a few words.
+   */
+  hits?: { left: number; max: number; label: string };
+  /** "BREAK THE OBJECTIVE TO EXPOSE" / "RUNNING TO RESTORE" / "RESTORING: BLAST NOW" */
+  hint?: string;
 }
 
 export interface MissionWarningLine {
@@ -123,7 +131,7 @@ export function missionPanelModel(view: MissionView): MissionPanelModel {
   const fraction = goal > 0 ? Math.min(1, Math.max(0, done / goal)) : 0;
 
   const b = view.boss;
-  const boss: MissionBossStatus = b.defeated
+  const base: MissionBossStatus = b.defeated
     ? { state: 'defeated', label: 'BOSS DEFEATED', seconds: null }
     : b.exposed
       ? {
@@ -132,6 +140,18 @@ export function missionPanelModel(view: MissionView): MissionPanelModel {
           seconds: seconds(b.exposedRemainingTicks),
         }
       : { state: 'shielded', label: 'BOSS SHIELDED', seconds: null };
+  const boss: MissionBossStatus =
+    b.maxHits !== undefined && b.hitsLeft !== undefined && !b.defeated
+      ? {
+          ...base,
+          hits: { left: b.hitsLeft, max: b.maxHits, label: `BLASTS LEFT ${b.hitsLeft}/${b.maxHits}` },
+          hint: b.exposed
+            ? b.restoring
+              ? 'RESTORING: BLAST NOW'
+              : 'RUNNING TO RESTORE'
+            : 'BREAK THE OBJECTIVE TO EXPOSE',
+        }
+      : base;
 
   const left = Math.max(0, view.lives.max - view.lives.used);
   const warnings = view.warnings

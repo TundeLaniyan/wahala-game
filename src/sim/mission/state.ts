@@ -12,6 +12,7 @@ import { DEFAULT_LIVES, MISSION_DEFS, PLAYER_FACTION_ID } from './defs';
 import type { MissionDef } from './defs';
 import { OBJECTIVES } from './objectives';
 import { activeModifiers, resolveTuning } from './tuning';
+import { matchLevel } from './boss';
 import type { MissionSeat, MissionSpec, MissionState } from './types';
 
 /** Open authored floor: the only ground a post, a node or a respawned crew member stands on. */
@@ -77,7 +78,7 @@ export function createMissionState(state: GameState, arena: ArenaDef, spec: Miss
   if (state.players.length !== 2 + crew.length) {
     throw new Error(`mission ${spec.id} needs ${2 + crew.length} competitors, got ${state.players.length}`);
   }
-  const tuning = resolveTuning(def, spec);
+  const tuning = resolveTuning(def, spec, matchLevel(state)); // the boss recipe at the campaign level (BX1)
 
   // the board around every node is open floor (a crate on a node tile would make the objective impossible)
   for (const [x, y] of allNodeTiles(def)) clearAround(state, x, y, 1);
@@ -153,7 +154,19 @@ export function createMissionState(state: GameState, arena: ArenaDef, spec: Miss
     carry: null,
     delivered: 0,
     pulseAt: -1,
-    boss: { shielded: true, exposedUntil: 0, exposures: 0, defeated: false },
+    boss: {
+      shielded: true,
+      exposedUntil: 0,
+      exposures: 0,
+      defeated: false,
+      hp: tuning.boss!.hits,
+      maxHits: tuning.boss!.hits,
+      exposedAt: 0,
+      windowTicks: 0,
+      interrupts: 0,
+      anchor: null,
+      pendingHit: null,
+    },
     livesUsed: 0,
     livesMax: Math.max(1, Math.floor(spec.lives ?? DEFAULT_LIVES)),
     reinforcements: [],

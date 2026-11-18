@@ -10,6 +10,22 @@ export function isShieldedBoss(state: GameState, p: Pick<Player, 'id'>): boolean
   return m !== undefined && p.id === m.bossId && m.boss.shielded;
 }
 
+/**
+ * A lethal event reached the boss while he is EXPOSED (decisions BX1-BX3): does it cost him one hit instead of his life?
+ * True while he has more than one hit left - the hit is recorded for the runtime (one per window: the first lethal event
+ * of the window counts, the rest of that tick is absorbed with it) and lethality skips the elimination. False for the
+ * last hit (he is eliminated as before), outside boss missions, and for anyone else.
+ */
+export function missionBossAbsorbs(state: GameState, p: Pick<Player, 'id'>, byId: number | null): boolean {
+  const m = state.mission;
+  if (!m || m.field || p.id !== m.bossId || m.boss.shielded || m.boss.defeated) return false;
+  if (m.boss.hp === undefined) return false;
+  if (byId === m.bossId) return true; // his own generator never costs him a hit (it is absorbed)
+  if (m.boss.hp <= 1) return false;
+  m.boss.pendingHit ??= { byId };
+  return true;
+}
+
 /** May an eliminated player come back (respawn.ts)? Only the human, while lives are left; the crew never does. */
 export function missionMayRespawn(state: GameState, id: number): boolean {
   const m = state.mission;

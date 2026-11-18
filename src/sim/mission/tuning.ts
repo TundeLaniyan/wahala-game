@@ -6,10 +6,12 @@
  * | ---------------- | ------------ | ------------------------------------------------------------- |
  * | rushHourDispatch | oshodi       | relay pulse interval x 0.75 (convoys come faster)             |
  * | marketDay        | mushin       | restock time x 0.7 and one extra market runner (crew list)    |
- * | tollSeason       | fadeyiSomolu | hold time x 1.5                                               |
+ * | tollSeason       | fadeyiSomolu | every toll box takes one more blast (decision BX5)            |
  * | expressTimetable | ebuteMetta   | rail window length x 0.7                                      |
  * | auditWeek        | lagosIsland  | one more ledger to deliver per phase, clock x 0.85            |
  * | longBlackout     | lekki        | switch-off sequence one longer per phase                      |
+ *
+ * The boss fight's numbers come from the mission's `recipe` at the campaign level (`boss.ts`, decisions BX1-BX8).
  */
 import { ticks } from '../config';
 import {
@@ -20,13 +22,16 @@ import {
   MISSION_DEFS,
 } from './defs';
 import type { MissionDef } from './defs';
+import { resolveBossRecipe } from './boss';
+import type { CampaignLevel } from '../campaign/levels';
 import type { MissionModifierId, MissionSpec, MissionTuning, PhaseTuning } from './types';
 import { MODIFIER_FOR } from './types';
 
 export const MODIFIER_NUMBERS = {
   rushHourDispatchPulse: 0.75,
   marketDayCrew: 0.7,
-  tollSeasonHold: 1.5,
+  /** Extra blasts every toll box takes (it replaced the x 1.5 hold of the stand-in-the-zone junctions: decision BX5). */
+  tollSeasonBoxHits: 1,
   expressTimetableOpen: 0.7,
   auditWeekClock: 0.85,
 } as const;
@@ -37,7 +42,11 @@ export function activeModifiers(spec: MissionSpec): MissionModifierId[] {
   return (spec.modifiers ?? []).filter((m, i, all) => m === own && all.indexOf(m) === i);
 }
 
-export function resolveTuning(def: MissionDef, spec: MissionSpec): MissionTuning {
+export function resolveTuning(
+  def: MissionDef,
+  spec: MissionSpec,
+  level: CampaignLevel = 'normal',
+): MissionTuning {
   const mods = activeModifiers(spec);
   const has = (m: MissionModifierId): boolean => mods.includes(m);
   const phases = def.phases.map((p): PhaseTuning => {
@@ -47,7 +56,7 @@ export function resolveTuning(def: MissionDef, spec: MissionSpec): MissionTuning
       t.pulseTicks = Math.round(t.pulseTicks * MODIFIER_NUMBERS.rushHourDispatchPulse);
     if (has('marketDay') && t.crewTicks > 0)
       t.crewTicks = Math.round(t.crewTicks * MODIFIER_NUMBERS.marketDayCrew);
-    if (has('tollSeason')) t.holdTicks = Math.round(t.holdTicks * MODIFIER_NUMBERS.tollSeasonHold);
+    if (has('tollSeason')) t.hp += MODIFIER_NUMBERS.tollSeasonBoxHits;
     if (has('expressTimetable') && t.openTicks > 0)
       t.openTicks = Math.round(t.openTicks * MODIFIER_NUMBERS.expressTimetableOpen);
     if (has('auditWeek')) t.goal = Math.min(t.goal + 1, nodeCount);
@@ -64,18 +73,20 @@ export function resolveTuning(def: MissionDef, spec: MissionSpec): MissionTuning
   }) as MissionTuning['phases'];
   let limit = spec.timeLimitSec ?? def.timeLimitSec;
   if (has('auditWeek') && spec.timeLimitSec === undefined) limit = limit * MODIFIER_NUMBERS.auditWeekClock;
+  const boss = resolveBossRecipe(def.recipe, level);
   return {
     timeLimitTicks: ticks(limit),
     parTicks: ticks(def.parSec),
-    exposeTicks: ticks(def.exposeSec),
-    maxExposures: def.maxExposures,
+    exposeTicks: boss.exposeTicks,
+    maxExposures: boss.maxExposures,
     reinforceMax: def.reinforceMax,
     carrySlowTicks: def.objective === 'evidenceRun' ? CARRY_SLOW_TICKS : 0,
     phases,
+    boss,
   };
 }
 
-/** Convenience for tests and docs: the resolved tuning of a mission. */
-export function tuningFor(spec: MissionSpec): MissionTuning {
-  return resolveTuning(MISSION_DEFS[spec.id], spec);
+/** Convenience for tests and docs: the resolved tuning of a mission (at a campaign level, default Normal). */
+export function tuningFor(spec: MissionSpec, level: CampaignLevel = 'normal'): MissionTuning {
+  return resolveTuning(MISSION_DEFS[spec.id], spec, level);
 }

@@ -212,7 +212,7 @@ describe('mission panel model (HC5)', () => {
     const m = missionPanelModel(view());
     expect(m.pips.map((p) => p.state)).toEqual(['done', 'active', 'todo']);
     expect(m.phaseLabel).toBe('PHASE 2 OF 3');
-    expect(m.objective).toBe('JAM THE RELAYS');
+    expect(m.objective).toBe('BLAST THE RELAYS');
     expect(m.progress).toMatchObject({ done: 1, goal: 3, text: '1/3 relays jammed' });
     expect(m.progress.fraction).toBeCloseTo(1 / 3);
     expect(m.callout).toBe('Jam two relays before the next convoy');
@@ -276,7 +276,7 @@ describe('mission panel model (HC5)', () => {
     const html = renderToStaticMarkup(createElement(MissionPanel, { mission: view() }));
     for (const text of [
       'PHASE 2 OF 3',
-      'JAM THE RELAYS',
+      'BLAST THE RELAYS',
       '1/3 relays jammed',
       'Jam two relays before the next convoy',
       'BOSS SHIELDED',

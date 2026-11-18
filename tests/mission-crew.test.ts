@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, directiveFor, observe, tick } from '../src/sim';
 import type { GameState } from '../src/sim';
-import { advance, botIntents, makeBots, newMission, put, standOn } from './mission-helpers';
+import { advance, blastAt, botIntents, makeBots, newMission, put, standOn } from './mission-helpers';
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number =>
   Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
@@ -77,7 +77,9 @@ describe('directives from roles (pure sim)', () => {
     advance(lagos, 1);
     expect(directiveFor(lagos, 2)?.kind).toBe('guard');
     const l1 = lagos.mission!.nodes[0]!;
-    standOn(lagos, l1.x, l1.y, 70);
+    put(lagos, 2, 20, 21); // the auditor steps clear of the blast
+    blastAt(lagos, l1.x, l1.y, { x: 30, y: 30 }); // the cabinet is blasted open (BX4), then the ledger is picked up
+    standOn(lagos, l1.x, l1.y, 2);
     expect(lagos.mission!.carry).not.toBeNull();
     expect(directiveFor(lagos, 2)?.kind).toBe('chase');
     expect(directiveFor(lagos, 4)?.kind).toBe('guard'); // the records guard stays with the boss
