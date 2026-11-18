@@ -2,6 +2,18 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Campaign bosses: generator-first boss loop (branch `claude/wahala-csa-bosses`, from `4f2d2a9`)
+
+The six boss missions keep their mechanics, ids, rewards, flags and replay modifiers, but every objective node is now
+broken by blasts and EVERY broken phase exposes the boss: he walks to his anchor and is committed there while he
+restores his shield; one blast costs him one of three hits (the third eliminates him); a punch only interrupts the
+restore; a missed window rebuilds the same phase. Windows 26 / 20 / 15 s by level, crew called back 0 / 1 / 2, escorts
+cover him on Hard; crew variants for the boss-mission bots; boss seats use the enemy telegraphs; HUD "BLASTS LEFT" and a
+short hint; an anchor ring. A data-driven `BossRecipe` (`src/sim/mission/boss.ts`) for the finale boss. Reference
+`docs/CAMPAIGN_SECTOR_AI.md` "Part 3. Bosses", decisions BX1-BX8, audit `npm run boss-audit`. Verified with typecheck,
+ESLint, Prettier, the full Vitest suite and the Playwright specs `campaign-text`, `hud-combat` and
+`mission-presentation` (desktop and mobile); no screenshots of the new anchor ring were reviewed.
+
 ## Enemy telegraphs and looks (branch `claude/wahala-csa-looks`, from `6359813`)
 
 Presentation only (decisions SV1-SV5, `docs/CAMPAIGN_SECTOR_AI.md` "Enemy telegraphs and looks"): every match with campaign enemies draws readable punch wind-ups (filling ring, arrow, aimed tile, head clock), throw cues (sight, chevrons, X), the open window (broken cyan ring) and the stagger, on every quality rung, read from sim state; synthesised `enemy_windup` / `enemy_aim` warnings, rate-limited; the nine enemy variants dressed apart (palette, headwear, props, scale, leader ring; temporary kit). No armoured glyph yet (SV5, needs a sim field). Not merged, not deployed. Verification: listed in the final report of the branch (tsc, eslint, Vitest, build, the relevant Playwright specs, screenshots in `docs/screenshots/campaign-sector-ai/`).

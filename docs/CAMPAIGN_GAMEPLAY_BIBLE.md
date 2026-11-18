@@ -84,6 +84,10 @@ CURRENT objective kinds: `dispatchRelays` (Oshodi), `supplyRoutes` (Mushin), `ju
 objective (relays, toll boxes, switches, control points) is destroyed **only by blasts**; melee can only interrupt the
 crews who repair or defend them.
 
+**CURRENT since 2026-11-18 for the six boss missions (decisions BX1-BX8, `docs/CAMPAIGN_SECTOR_AI.md` "Part 3. Bosses"):**
+every boss objective node is broken only by blasts, each broken phase exposes the boss, and three blast hits defeat him;
+melee only interrupts his restore. Field missions are unchanged.
+
 ### 1.6 CURRENT: the campaign tactics layer (decisions SA3-SA12, `docs/CAMPAIGN_SECTOR_AI.md`)
 
 Approved by the founder on 2026-11-18 and built campaign-wide (field and boss missions only; never Classic, City Rumble,
