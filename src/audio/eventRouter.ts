@@ -82,6 +82,19 @@ const panOf = (c: RouteCtx, x: number): number => {
   return half > 0 ? Math.max(-1, Math.min(1, (x - half) / half)) * PAN_WIDTH : 0;
 };
 const isHuman = (c: RouteCtx, playerId: number): boolean => c.state.players[playerId]?.isBot === false;
+const isEnemy = (c: RouteCtx, playerId: number): boolean =>
+  c.state.players[playerId]?.enemyKind !== undefined;
+
+/** Enemy wind-up warnings (decision SV3): each kind at most every 0.35 s, and any two at least 0.15 s apart. */
+const ENEMY_TELL_GAP = 0.35;
+const ENEMY_TELL_ANY_GAP = 0.15;
+function enemyTell(c: RouteCtx, key: 'enemyWindup' | 'enemyAim'): boolean {
+  const any = c.last.get('enemyTell');
+  if (any !== undefined && c.now - any < ENEMY_TELL_ANY_GAP) return false;
+  if (!allow(c, key, ENEMY_TELL_GAP)) return false;
+  c.last.set('enemyTell', c.now);
+  return true;
+}
 const playerX = (c: RouteCtx, id: number): number => c.state.players[id]?.x ?? (c.state.width - 1) / 2;
 const generatorX = (c: RouteCtx, id: number): number =>
   c.state.generators.find((g) => g.id === id)?.x ?? (c.state.width - 1) / 2;
@@ -265,6 +278,11 @@ const handlers: Handlers = {
   },
   // the telegraph of a melee press (a quick breath of air), and the empty swing of one that found nobody
   attackStarted: (e, c) => {
+    // a campaign enemy's wind-up has its own warning (decision SV3); everyone else's press is the quick breath
+    if (isEnemy(c, e.playerId)) {
+      if (enemyTell(c, 'enemyWindup')) sfx(c, 'enemy_windup', panOf(c, playerX(c, e.playerId)));
+      return;
+    }
     if (allow(c, 'attackStart', 0.05)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.35, 1.5);
   },
   attackResolved: (e, c) => {
@@ -473,9 +491,18 @@ const handlers: Handlers = {
   campaignDefeated: (e, c) => sfx(c, 'bottle_smash', panOf(c, e.x), isHuman(c, e.victimId) ? 0.5 : 0.7, 0.8),
   // enemy projectiles (decision EA6): the throw is a soft whistle at the thrower as the cue starts; the landing is the
   // existing smash / thud / shield sounds. Existing synthesised cues only.
+  // decision SV3: the aim clicks as the cue starts, the whistle when the object actually leaves the hand (warnTicks on)
   projectileLaunched: (e, c) => {
+    if (isEnemy(c, e.ownerId) && enemyTell(c, 'enemyAim')) sfx(c, 'enemy_aim', panOf(c, e.fromX));
     if (allow(c, 'projectileCue', 0.12))
-      sfx(c, 'crowd_throw_whistle', panOf(c, e.fromX), e.strong ? 0.8 : 0.5, e.strong ? 0.8 : 1.2);
+      sfx(
+        c,
+        'crowd_throw_whistle',
+        panOf(c, e.fromX),
+        e.strong ? 0.8 : 0.5,
+        e.strong ? 0.8 : 1.2,
+        Math.max(0, e.warnTicks) / 60,
+      );
   },
   projectileHit: (e, c) => {
     const pan = panOf(c, e.x);
