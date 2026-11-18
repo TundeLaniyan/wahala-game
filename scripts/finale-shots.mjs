@@ -15,7 +15,7 @@ const SHOTS = [
   // mission 20: the bus stop under the flyover, the waves on their way
   { name: 'finale-20-junction', mission: 'ojuelegba.junction', at: [20, 19], play: 240 },
   // mission 21: the danfo pocket, a control point and the Landlord at the impound
-  { name: 'finale-21-boss', mission: 'ojuelegba.boss', at: [35, 26], play: 120 },
+  { name: 'finale-21-boss', mission: 'ojuelegba.boss', at: [35, 26], play: 120, nearBoss: true },
 ];
 const win = (missionId, extra = {}) => ({
   result: 'won',
@@ -68,11 +68,10 @@ for (const shot of SHOTS) {
       mission: shot.mission,
       wins: [
         ...['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta', 'lagosIsland', 'lekki'].map((d) => win(d)),
-        ...(shot.mission.endsWith('.boss')
-          ? ['ojuelegba.return', 'ojuelegba.junction'].map((ref) =>
-              win('ojuelegba', { defeat: null, sectionMissionId: ref, raidBonus: 0 }),
-            )
-          : []),
+        // the finale's own missions before this one (in order: 19, 20, then the boss)
+        ...['ojuelegba.return', 'ojuelegba.junction', 'ojuelegba.boss']
+          .slice(0, ['ojuelegba.return', 'ojuelegba.junction', 'ojuelegba.boss'].indexOf(shot.mission))
+          .map((ref) => win('ojuelegba', { defeat: null, sectionMissionId: ref, raidBonus: 0 })),
       ],
     },
   );
@@ -84,7 +83,7 @@ for (const shot of SHOTS) {
   );
   await page.waitForTimeout(800);
   const info = await page.evaluate(
-    ({ at, play }) => {
+    ({ at, play, nearBoss }) => {
       const w = window.__WAHALA__;
       const c = w.controller();
       c.frozen = true;
@@ -93,14 +92,24 @@ for (const shot of SHOTS) {
       const p = s.players[0];
       p.protectedUntil = s.tick + 100000; // staging only: the shot, not a fight
       w.advance(play);
-      p.x = p.stepFromX = at[0];
-      p.y = p.stepFromY = at[1];
+      // the boss shot frames the Landlord himself: the human on the first open tile beside him
+      const b = s.players[1];
+      const free = (x, y) => s.tiles[y * s.width + x] === 0 && !s.players.some((q) => q.x === x && q.y === y);
+      const beside = [
+        [b.x - 1, b.y],
+        [b.x + 1, b.y],
+        [b.x, b.y + 1],
+        [b.x - 2, b.y],
+      ].find(([x, y]) => free(x, y));
+      const near = nearBoss && beside ? beside : at;
+      p.x = p.stepFromX = near[0];
+      p.y = p.stepFromY = near[1];
       p.stepRemaining = 0;
       w.renderer().cutCamera();
       w.advance(4);
-      return { sector: s.sector?.id ?? null, tick: s.tick };
+      return { sector: s.sector?.id ?? null, tick: s.tick, boss: [b.x, b.y, b.enemyVariant ?? null] };
     },
-    { at: shot.at, play: shot.play },
+    { at: shot.at, play: shot.play, nearBoss: !!shot.nearBoss },
   );
   await page.waitForTimeout(2600);
   const file = `${outDir}/${shot.name}.jpg`;
