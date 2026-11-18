@@ -30,6 +30,12 @@ Screens (`src/ui/campaign/`, registered in `ui/menu/MainMenu.tsx`; styles `campa
 
 `app/menu.ts` stays a pure stack machine: new screens, `MENU_SCREENS`, `CAMPAIGN_SCREENS`, `replaceScreen`, `briefing -> bossIntro` as the only new `advance` step; `validMenu` accepts them. `app/menuNav.ts` gained `setScreenNavHandler` (a screen-level handler consulted before the menu's focus navigation; the story player uses it for Enter / Space / A). A campaign screen without its data sends the menu home (`campaignScreenReady`).
 
+## Generator Parts and world-state feedback (decisions PR1-PR15)
+
+- **Workshop** (`Workshop.tsx`): on the map beside any selected district once a campaign is started (Parts and levels are campaign-wide): Parts to spend, earned in the campaign and "n of m here" for the selected district, each upgrade's level (0-2), "Now ... · next: ... for N Parts" (`upgradeLevelText`), Buy / Maxed, and "Refund all (free)" once something is bought (`commands.campaignBuyUpgrade`, `commands.campaignRefundUpgrades`; both refused during a mission).
+- **Results** (`SectionResultScreen`, `ResultScreen`, `PartsLine.tsx`): every win shows "Ring weakened: ..." (the mission's `ringWeakened` line; the boss line on the boss result as `result-ring-lost`), "+N Generator Parts" or how to earn more (`result-parts`), the Parts to spend with a Workshop nudge when an upgrade is affordable (`result-parts-total`), and the next reason to continue (`result-up-next`: the next mission and its objective, or the finale). Standalone raid results report their Parts too.
+- **Map liberation** (`Liberation.tsx`, `districtLiberation` in `sectionModel.ts`): each open district node carries "n/3" sections reclaimed, a cleared one "Freed" (`map-node-lib-<id>`; hidden on a narrow map except for the selected node); the district card lists what the Ring lost there in play order (`district-liberation`) above the PR8 consequence line. All derived from the save; no world-state engine.
+
 ## Store and commands
 
 `UiState.campaign: CampaignUi | null` (`app/campaignState.ts`): `save`, `started`, `storage` (`ok` / `unavailable`), `notice`, `selected`, `modifier`, `story`, `active` (the running mission), `result` (pending result: outcome + reward summary), `lastReward`. Null when the flag is off.

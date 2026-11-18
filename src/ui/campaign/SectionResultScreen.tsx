@@ -4,11 +4,11 @@
  * suggested mission, or a replay). Short text only; the boss result keeps its own screen.
  */
 import { commands } from '../../app/session';
-import { progressionDistrict } from '../../campaign';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
 import { clock } from './model';
+import { PartsLine } from './PartsLine';
 import { Stars, useCampaignUi } from './parts';
-import { sectionResultText, suggestedMission } from './sectionModel';
+import { districtOfMission, sectionResultText, suggestedMission, upNextLine } from './sectionModel';
 
 export function SectionResultScreen() {
   const ui = useCampaignUi();
@@ -17,6 +17,7 @@ export function SectionResultScreen() {
   const text = sectionResultText(view);
   const next = suggestedMission(ui.save);
   const stars = 'stars' in view.outcome ? view.outcome.stars : 0;
+  const upNext = text.won ? upNextLine(ui.save) : null;
   return (
     <ScreenFrame
       id="campaignResult"
@@ -50,16 +51,22 @@ export function SectionResultScreen() {
         {text.lines.map((l) => (
           <p key={l}>{l}</p>
         ))}
-        {text.won && view.partsGained !== undefined && progressionDistrict(view.missionId.split('.')[0]!) && (
-          <p className="cp-parts" data-testid="result-parts">
-            {view.partsGained > 0
-              ? `+${view.partsGained} Generator Parts`
-              : 'No new Generator Parts: beat your best stars to earn more.'}
-          </p>
+        {text.won && (
+          <PartsLine
+            gained={view.partsGained}
+            district={districtOfMission(view.missionId)}
+            save={ui.save}
+            className="cp-parts"
+          />
         )}
         {text.opened.length > 0 && (
           <p className="cp-opened" data-testid="section-opened">
             <small className="mn-kicker">Now open</small> {text.opened.join(', ')}
+          </p>
+        )}
+        {upNext && (
+          <p className="cp-upnext" data-testid="result-up-next">
+            {upNext}
           </p>
         )}
         <div className="cp-result-actions">

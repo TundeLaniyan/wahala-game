@@ -12,10 +12,12 @@ import {
   districtStatus,
   failureSummary,
   finaleAvailable,
+  sectionsCleared,
+  sectionsOf,
 } from '../../campaign';
 import type { BossDef, CampaignSave, DistrictId, DistrictStatus } from '../../campaign';
 import { MISSION_IDS } from '../../sim';
-import type { MissionModifierId, MissionOutcome } from '../../sim';
+import type { MissionId, MissionModifierId, MissionOutcome } from '../../sim';
 import type { CampaignUi } from '../../app/campaignState';
 import { CAMPAIGN_SCREENS } from '../../app/menu';
 import type { MenuScreen } from '../../app/menu';
@@ -42,6 +44,9 @@ export interface MapNode {
   landmarks: string[];
   /** The previous node in campaign order (the road to it is drawn lit once this one is cleared). */
   after: DistrictId | null;
+  /** Sections reclaimed and the district's section count (0 / 0 for the hub), decision PR14. */
+  reclaimed: number;
+  sectionCount: number;
 }
 
 /** The seven map nodes in campaign order, with the save's status and stars. */
@@ -59,6 +64,8 @@ export function mapNodes(save: CampaignSave): MapNode[] {
       hub: d.boss === null,
       landmarks: d.landmarks.map((l) => l.name),
       after: i > 0 ? DISTRICT_ORDER[i - 1]! : null,
+      reclaimed: d.boss ? sectionsCleared(save, id as MissionId) : 0,
+      sectionCount: d.boss ? sectionsOf(id as MissionId).length : 0,
     };
   });
 }

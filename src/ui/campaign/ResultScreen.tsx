@@ -9,7 +9,6 @@ import {
   availableModifiers,
   missionResultCard,
   nextDistrict,
-  progressionDistrict,
   replayModifierFor,
 } from '../../campaign';
 import { isMissionId } from '../../app/campaign';
@@ -17,8 +16,10 @@ import { commands } from '../../app/session';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
 import { CardView } from './CardView';
 import { clock, unlockLabel } from './model';
+import { PartsLine } from './PartsLine';
 import { Stars, useCampaignUi } from './parts';
 import { SectionResultScreen } from './SectionResultScreen';
+import { ringLostLine, upNextLine } from './sectionModel';
 
 export function ResultScreen() {
   const ui = useCampaignUi();
@@ -35,6 +36,8 @@ export function ResultScreen() {
   const unlockLines = reward.unlocks.map(unlockLabel);
   const upNext = nextOpen ?? nextDistrict(id);
   const hasNext = upNext !== null;
+  const ringLost = won ? ringLostLine(`${id}.boss`) : null;
+  const upNextText = won ? upNextLine(ui.save) : null;
   const card = missionResultCard({
     boss,
     outcome,
@@ -138,18 +141,25 @@ export function ResultScreen() {
                   ))}
                 </ul>
               )}
-              {result.partsGained !== undefined && progressionDistrict(id) && (
-                <p className="cp-chip-line cp-parts" data-testid="result-parts">
-                  {result.partsGained > 0 ? (
-                    <b>+{result.partsGained} Generator Parts</b>
-                  ) : (
-                    'No new Generator Parts: beat your best stars to earn more.'
-                  )}
-                </p>
-              )}
+              <PartsLine
+                gained={result.partsGained}
+                district={id}
+                save={ui.save}
+                className="cp-chip-line cp-parts"
+              />
               {reward.unlockedDistricts.length > 0 && (
                 <p className="cp-chip-line" data-testid="result-unlocked-districts">
                   Opened: <b>{reward.unlockedDistricts.map((u) => CAMPAIGN.districts[u].name).join(', ')}</b>
+                </p>
+              )}
+              {ringLost && (
+                <p className="cp-chip-line cp-ringlost" data-testid="result-ring-lost">
+                  Ring weakened: {ringLost}
+                </p>
+              )}
+              {upNextText && (
+                <p className="cp-chip-line cp-upnext" data-testid="result-up-next">
+                  {upNextText}
                 </p>
               )}
             </div>

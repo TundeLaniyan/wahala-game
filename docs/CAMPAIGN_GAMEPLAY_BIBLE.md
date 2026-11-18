@@ -86,7 +86,7 @@ crews who repair or defend them.
 
 ## 2. Campaign progression: Generator Parts
 
-### 2.1 One resource (PROPOSED design; Oshodi slice CURRENT, see 2.6)
+### 2.1 One resource (CURRENT campaign-wide, see 2.6 and 2.7)
 
 **Generator Parts** is the only campaign resource. No crafting, loot boxes, timers, purchases or second currency.
 
@@ -94,10 +94,11 @@ crews who repair or defend them.
 
 | Source | Parts | Status |
 | --- | --- | --- |
-| First clear of a mission (any win = 1 star) | 3 | CURRENT for the three Oshodi missions |
-| Improving best stars to 2 | +1 (once) | CURRENT for Oshodi |
-| Improving best stars to 3 | +1 (once) | CURRENT for Oshodi |
-| Hidden optional rooms | 1–2 each, once | PROPOSED |
+| First clear of a mission (any win = 1 star) | 3 | CURRENT for all 18 missions (PR9; new content missions included automatically) |
+| Improving best stars to 2 | +1 (once) | CURRENT for all missions |
+| Improving best stars to 3 | +1 (once) | CURRENT for all missions |
+| Hidden optional rooms | 1–2 each, once | PROPOSED (PR15: raid side rooms already pay their own bonus) |
+| Three-star door raid | 1 once | PROPOSED (PR15: it already earns the field mission's third star) |
 | Selected optional challenges | 1–2 each, once | PROPOSED |
 
 Parts are **derived from best stars**, not counted per clear: replaying a cleared mission at the same or fewer stars
@@ -107,8 +108,8 @@ pays nothing, and improving stars pays exactly the difference. Maximum per missi
 
 | Upgrade | Effect | Cap | Status |
 | --- | --- | --- | --- |
-| Generator capacity | +1 generator at once, and the seat's own capacity cap rises by the same amount so the Extra Socket pickup still adds one | slice: +1 (1 level) · proposed campaign cap: +2 | CURRENT (Oshodi slice) |
-| Blast range | +1 range | slice: +1 (1 level) · proposed campaign cap: +2 | CURRENT (Oshodi slice) |
+| Generator capacity | +1 generator at once per level, and the seat's own capacity cap rises by the same amount so the Extra Socket pickup still adds one | +2 (2 levels: 6, then 14 Parts) | CURRENT (PR10) |
+| Blast range | +1 range per level (radius cap unchanged) | +2 (2 levels: 6, then 14 Parts) | CURRENT (PR10) |
 
 Costs and earning rate (slice):
 
@@ -120,9 +121,19 @@ Costs and earning rate (slice):
 | Both | 12 Parts = an average of 2 stars over the three Oshodi missions |
 
 Reasoning: finishing Oshodi at all buys one upgrade; buying both needs better play (stars), which is the intended pull to
-replay. PROPOSED level-2 costs (campaign-wide, not implemented): 14 Parts each; with 18 missions × 5 = 90 Parts plus
-optional rooms, both level-2 upgrades are reachable around district 4 at average play. Refunds/respec: PROPOSED free
-respec (Parts are never lost), not implemented.
+replay. Level-2 costs (CURRENT since PR10, was PROPOSED): 14 Parts each; with 18 missions × 5 = 90 Parts, both level-2
+upgrades are reachable around district 4 at average play (arithmetic below). Refunds/respec: CURRENT free respec
+(PR12, "Refund all (free)" on the Workshop; Parts are never lost).
+
+Campaign-wide arithmetic (CURRENT, PR10). Everything costs 6 + 6 + 14 + 14 = 40 Parts.
+
+| Play | Parts per district | After district 1 | 2 | 3 | 4 | 5 | 6 | Everything (40) bought |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| One star everywhere | 9 | 9 | 18 | 27 | 36 | 45 | 54 | during district 5 |
+| Two stars (average) | 12 | 12 | 24 | 36 | 48 | 60 | 72 | district 4, first mission (36 + 4) |
+| Three stars everywhere | 15 | 15 | 30 | 45 | 60 | 75 | 90 | during district 3 |
+
+The Parts above 40 are deliberate headroom for the Ojuelegba finale missions and any approved bonus sources.
 
 ### 2.4 Temporary pickups stay temporary (CURRENT)
 
@@ -132,16 +143,23 @@ raise the seat's *base*, which pickups build on; an upgrade is never dropped as 
 
 ### 2.5 Mode isolation (LOCKED)
 
-Permanent campaign upgrades never reach City Rumble, Classic standalone matches, raids (slice), the Training Academy,
-multiplayer or any future online mode. Enforced in the sim (`createGame` ignores a seat bonus outside mission matches) and
-in the app (only the campaign controller passes one, only for eligible districts).
+Permanent campaign upgrades never reach City Rumble, Classic standalone matches, raids (door and standalone, PR11), the
+Training Academy, multiplayer or any future online mode. Enforced in the sim (`createGame` ignores a seat bonus outside
+mission matches) and in the app (only the campaign controller passes one, only to its field and boss mission builders).
 
 ### 2.6 What the Oshodi slice implements (CURRENT)
 
 See `docs/DECISIONS.md` PR1–PR8: Parts derived from the save's best stars for `oshodi.approach`, `oshodi.railEdge` and
 `oshodi.boss`; upgrade levels stored in the campaign save (optional field, no version bump, repaired and clamped on
 load); capacity and range +1 each; applied to the human seat in Oshodi field and boss missions only; the result screen
-shows Parts earned. Other districts earn and use nothing yet.
+shows Parts earned. Other districts earn and use nothing yet. (Superseded by 2.7.)
+
+### 2.7 Campaign-wide rollout (CURRENT)
+
+See `docs/DECISIONS.md` PR9–PR15: every section mission of every district earns Parts by best stars (the standalone
+Ebute Metta raid too); capacity and range have two levels each (6 and 14 Parts, +2 at most); the bonus applies to the
+human seat in every district's field and boss missions, never in raids; free refund; no save-version change (repair
+refunds the highest level first). Hidden rooms, door raids and optional challenges stay PROPOSED (PR15).
 
 ---
 
@@ -177,15 +195,44 @@ A few reusable AI behaviour families, many visually distinct characters. Familie
 
 ## 5. Campaign rewards
 
-Every mission victory provides (PROPOSED as a standard; Oshodi slice CURRENT):
+Every mission victory provides (CURRENT for all 18 missions, PR14):
 
 1. **A clear result**: mission complete, stars, time.
-2. **Progression or an unlock**: Parts (Oshodi now), next mission, titles/costumes (CURRENT titles and costumes).
-3. **A narrative consequence**: one line on what the Ring lost (Oshodi result now shows it; other districts PROPOSED).
+2. **Progression or an unlock**: Parts (CURRENT for every mission), next mission ("Up next" line, CURRENT), titles/costumes
+   (CURRENT titles and costumes).
+3. **A narrative consequence**: one line on what the Ring lost (CURRENT on every section and boss result; the 16 lines
+   outside the two Oshodi field missions are content written for this milestone).
 
-Visible world changes after district victories (PROPOSED): consequence flags (`oshodi.dispatchBroken` etc., CURRENT in
-the save) drive presentation-only changes on the campaign map and in the district's arena dressing (e.g. Oshodi's impound
-gate shown open). No rule or balance changes from world state.
+Visible world changes after district victories: the campaign map shows each district's liberation state (sections
+reclaimed n/3 or FREED, and the list of what the Ring lost there) and the existing consequence line, all derived from the
+save (CURRENT, PR14). Changes to the district's arena dressing (e.g. Oshodi's impound gate shown open) stay PROPOSED. No
+rule or balance changes from world state.
+
+"What the Ring lost" lines (`SectionMissionDef.ringWeakened`, shown on the result and in the map's district card). Short,
+physical, about what the Ring loses and what reopens for ordinary people; consistent with `docs/STORY_BIBLE.md` section 6
+(existing consequences) and fictional only. Lines marked NEW were written for this milestone and need the same founder
+and native-speaker review as other new copy.
+
+| Mission | Name | Line | Status |
+| --- | --- | --- | --- |
+| `oshodi.approach` | Terminal Approach | The depot’s dispatch cargo is broken: the convoys lose their schedule. | EXISTING (PR8) |
+| `oshodi.railEdge` | Rail Edge | The trailer crews lose the rail-edge lane: the controller has nowhere left to hide. | EXISTING (PR8) |
+| `oshodi.boss` | Oga Sunmola | The relay masts are jammed and the dispatch radio goes quiet: buses leave on honest timetables. | NEW (written for this milestone, PR14) |
+| `mushin.approach` | Spare-Parts Row | The storeroom shelves are emptied back onto the row: the Ring’s rental stock has a hole in it. | NEW (written for this milestone, PR14) |
+| `mushin.market` | Aisle Sweep | The runners lose the north aisles: the broker has no one left to restock her stacks. | NEW (written for this milestone, PR14) |
+| `mushin.boss` | Madam Ronke | The hoarded stacks are blasted open: mechanics take the parts the Ring was renting back. | NEW (written for this milestone, PR14) |
+| `fadeyiSomolu.approach` | Toll Approach | The tool shed’s chains and padlocks are broken: the toll approach cannot be shut again. | NEW (written for this milestone, PR14) |
+| `fadeyiSomolu.junctions` | Junction Run | The junction posts are knocked flat: the marshals lose their count of who crossed and who paid. | NEW (written for this milestone, PR14) |
+| `fadeyiSomolu.boss` | Marshal Gbenga Kobo | The toll bars at every junction come down: commuters cross without paying by the hour. | NEW (written for this milestone, PR14) |
+| `ebuteMetta.approach` | Yard Approach | The signal shed is wrecked: the yard can no longer clear the lines for its night trains. | NEW (written for this milestone, PR14) |
+| `ebuteMetta.railYard` | Rail Yard Goods | The marked freight is broken open where it stands: the night cargo never leaves the yard. | NEW (written for this milestone, PR14) |
+| `ebuteMetta.boss` | Ikenna Wayside | The dispatch switches are dead and the yard bells stop: no more Ring freight by night. | NEW (written for this milestone, PR14) |
+| `lagosIsland.approach` | Ledger Row | The records annexe is cracked open: the forged ledgers are out of the vault. | NEW (written for this milestone, PR14) |
+| `lagosIsland.press` | Press Run | The audit slips reach the press lane: the bureau can no longer bury its paper trail. | NEW (written for this milestone, PR14) |
+| `lagosIsland.boss` | Barrister Tolani Quill | The forged ledgers are on the press: the bureau can no longer decide who exists on paper. | NEW (written for this milestone, PR14) |
+| `lekki.approach` | Gate Approach | The standby plant’s switchgear is blasted: the estates’ private feed starts to flicker. | NEW (written for this milestone, PR14) |
+| `lekki.estate` | Estate Sweep | The estate patrol is broken up: the grid’s control house stands unguarded. | NEW (written for this milestone, PR14) |
+| `lekki.boss` | Bamidele Halcyon | The standby grid goes dark: the estates lose the power they bought with the mainland’s blackouts. | NEW (written for this milestone, PR14) |
 
 ---
 
@@ -196,7 +243,8 @@ gate shown open). No rule or balance changes from world state.
 | Tactical Trap pilot (Academy) | PILOT, shipped |
 | Campaign-wide perception/punch-floor rollout | PROPOSED, needs approval |
 | Generator Parts + capacity/range upgrades, Oshodi | CURRENT (slice) |
-| Parts for other districts, rooms, challenges, level-2 upgrades | PROPOSED |
+| Parts for every mission, level-2 upgrades, bonus in every district, free respec | CURRENT (PR9–PR13) |
+| Parts for rooms, door raids, challenges | PROPOSED (PR15) |
 | Football Volley, counter, disruption specials | PROPOSED |
-| Visible world-state changes | PROPOSED (map/arena dressing) |
+| Visible world-state changes | CURRENT on the map and result screens (PR14); arena dressing PROPOSED |
 | Missions 19–21 | PLANNED (`docs/STORY_BIBLE.md` 5.2) |

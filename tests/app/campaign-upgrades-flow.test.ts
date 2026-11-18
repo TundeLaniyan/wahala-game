@@ -1,7 +1,8 @@
 /**
  * Generator Parts through the real CampaignController (decisions PR1-PR8): a saved Oshodi run earns Parts, buying an
- * upgrade persists, the bonus reaches the Oshodi mission options (human seat only) and never a Mushin one, buying is
- * refused during a mission, and a finished mission reports the Parts it paid.
+ * upgrade persists, the bonus reaches the field and boss mission options (human seat only) of every district (PR11),
+ * buying is refused during a mission, and a finished mission reports the Parts it paid. Campaign-wide coverage (every
+ * district, raids, refund) is in tests/app/campaign-progression-wide-flow.test.ts.
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -59,11 +60,11 @@ const ui = () => useGameStore.getState().campaign!;
 describe('Generator Parts in the campaign controller', () => {
   beforeEach(() => useGameStore.setState({ campaign: null }));
 
-  it('buys, persists and applies the upgrade to Oshodi missions only (human seat)', () => {
+  it('buys, persists and applies the upgrade to field and boss missions (human seat)', () => {
     const { campaign, store, started } = rig(oshodiCleared());
     expect(campaign.buyUpgrade('capacity')).toBe(true);
     expect(campaign.buyUpgrade('range')).toBe(true);
-    expect(campaign.buyUpgrade('range')).toBe(false); // cap
+    expect(campaign.buyUpgrade('range')).toBe(false); // level 2 costs 14: 0 Parts left
     expect(loadSave(store)!.upgrades).toEqual({ capacity: 1, range: 1 });
 
     expect(campaign.startSectionMission('oshodi.approach')).toBe(true);
@@ -81,7 +82,7 @@ describe('Generator Parts in the campaign controller', () => {
     campaign.toMap();
 
     expect(campaign.startSectionMission('mushin.approach')).toBe(true);
-    expect(started.at(-1)!.players[0]!.loadoutBonus).toBeUndefined();
+    expect(started.at(-1)!.players[0]!.loadoutBonus).toEqual({ capacity: 1, range: 1 });
   });
 
   it('refuses to buy during a mission', () => {

@@ -1,6 +1,7 @@
 /**
  * Generator Parts and the campaign-only upgrades (decisions PR1-PR8, src/campaign/upgrades.ts, src/sim/systems/loadout.ts):
- * Parts derive from best stars (first clear, star improvements, no farming), the Oshodi-only scope, buying and caps,
+ * Parts derive from best stars (first clear, star improvements, no farming), the scope (campaign-wide since PR9; the
+ * Oshodi-only slice config still works as a rollback), buying and caps,
  * save compatibility (older saves keep everything, tampered upgrades are clamped and refunded), and the sim bonus
  * (human only, mission matches only, pickups still stack, respawn keeps the upgrade).
  */
@@ -85,14 +86,19 @@ describe('Generator Parts are derived from best stars (PR1)', () => {
     expect([0, 1, 2, 3].map((s) => partsForStars(s))).toEqual([0, 3, 4, 5]);
   });
 
-  it('earns only from the three Oshodi missions', () => {
-    expect(partsMissions()).toEqual(['oshodi.approach', 'oshodi.railEdge', 'oshodi.boss']);
-    expect(partsEarned(createSave(0))).toBe(0);
-    expect(partsEarned(oshodi(1, 1, 1))).toBe(9);
-    expect(partsEarned(oshodi(3, 3, 3))).toBe(15);
-    // Mushin missions pay nothing in this slice
+  it('the Oshodi-only slice config (PR2) still earns only from the three Oshodi missions', () => {
+    const slice: CampaignProgressionConfig = { ...CAMPAIGN_PROGRESSION, districts: ['oshodi'] };
+    expect(partsMissions(slice)).toEqual(['oshodi.approach', 'oshodi.railEdge', 'oshodi.boss']);
+    expect(partsEarned(createSave(0), slice)).toBe(0);
+    expect(partsEarned(oshodi(1, 1, 1), slice)).toBe(9);
+    expect(partsEarned(oshodi(3, 3, 3), slice)).toBe(15);
     const mushin = field(oshodi(1, 1, 1), 'mushin.approach', 3);
-    expect(partsEarned(mushin)).toBe(9);
+    expect(partsEarned(mushin, slice)).toBe(9);
+    expect(
+      loadoutBonusFor({ ...mushin, upgrades: { capacity: 1, range: 0 } }, 'mushin', slice),
+    ).toBeUndefined();
+    // campaign-wide (PR9): the Mushin clear pays too
+    expect(partsEarned(mushin)).toBe(9 + 5);
   });
 
   it('a first clear pays once; a replay pays only the star difference; losses and same stars pay nothing', () => {
@@ -137,8 +143,8 @@ describe('Buying upgrades (PR4)', () => {
     expect(partsAvailable(s)).toBe(3);
     expect(canBuy(s, 'range')).toBe(false);
     expect(buyUpgrade(s, 'range', 11)).toBe(s);
-    expect(buyUpgrade(s, 'capacity', 11)).toBe(s); // at the cap
-    expect(nextCost(s, 'capacity')).toBeNull();
+    expect(nextCost(s, 'capacity')).toBe(14); // level 2 (PR10)
+    expect(buyUpgrade(s, 'capacity', 11)).toBe(s); // 3 Parts left: not enough for level 2
   });
 
   it('better stars pay for the second upgrade (an average of two stars buys both)', () => {
@@ -154,10 +160,10 @@ describe('Buying upgrades (PR4)', () => {
     expect(buyUpgrade(s, 'range', 1)).toBe(s);
   });
 
-  it('the bonus is for Oshodi missions only', () => {
+  it('the bonus applies in every district once bought (PR11), and is absent before', () => {
     const s = buyUpgrade(oshodi(1, 1, 1), 'range', 10);
     expect(loadoutBonusFor(s, 'oshodi')).toEqual({ capacity: 0, range: 1 });
-    expect(loadoutBonusFor(s, 'mushin')).toBeUndefined();
+    expect(loadoutBonusFor(s, 'mushin')).toEqual({ capacity: 0, range: 1 });
     expect(loadoutBonusFor(oshodi(1, 1, 1), 'oshodi')).toBeUndefined();
   });
 });

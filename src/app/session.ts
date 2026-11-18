@@ -537,6 +537,9 @@ export const commands = {
   campaignBuyUpgrade(kind: UpgradeKind): void {
     audio.playUi(campaign?.buyUpgrade(kind) ? 'click' : 'back');
   },
+  campaignRefundUpgrades(): void {
+    audio.playUi(campaign?.refundUpgrades() ? 'click' : 'back');
+  },
   campaignDelete(): void {
     audio.playUi('back');
     campaign?.deleteSave();

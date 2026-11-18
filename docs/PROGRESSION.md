@@ -2,6 +2,8 @@
 
 `src/progression` is pure data and reducers: no clock, no network, no DOM. **The profile never affects the local game.** Nothing in `src/sim`, `src/ai`, `src/input`, `src/render`, `src/audio`, the match controller or the composition root imports it (`tests/platform-static.test.ts`); results are recorded only by the online preview / a future server, i.e. only when `flags().online` is true. The local menu match start path is untouched by this work (`session.ts`, `MatchController.ts`, `names.ts`, `settings.ts`, `store.ts` have no diff).
 
+Not to be confused with the campaign's **Generator Parts** (`src/campaign/upgrades.ts`, decisions PR1-PR15, `docs/CAMPAIGN_GAMEPLAY_BIBLE.md` section 2): those are derived from the campaign save's best stars, spent only on the two campaign-only upgrades and never seen by this profile, City Rumble, Classic, online or the Academy.
+
 ## Data model
 
 `ProgressionProfile` (version 1): `xp`, `level`, `rankPoints`, `peakRankPoints` (so a rank drop never removes a cosmetic), `totals` (matches, wins, losses, draws, kills, deaths, assists, time played, streak rewards), `winStreak`, `bestWinStreak`, `season` (current season id, points, tier, challenges done), `seasonTiers` (highest tier per season, kept), `eventThemes`, `campaignRewards` (**read-only mirror** of the campaign save's reward ids via `linkCampaignRewards`; never written back), `unlocked` (cosmetic ids), `history` (last 20 matches, newest first).

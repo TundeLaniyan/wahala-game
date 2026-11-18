@@ -2,7 +2,16 @@
  * Pure view model of a district's sections for the campaign map and the section result (unit-tested without React).
  * Everything comes from the section content and the save; nothing is invented.
  */
-import { getSectionMission, missionStatus, nextMission, sectionStatus, sectionsOf } from '../../campaign';
+import {
+  CAMPAIGN,
+  finaleAvailable,
+  getSectionMission,
+  missionStatus,
+  nextMission,
+  sectionOfMission,
+  sectionStatus,
+  sectionsOf,
+} from '../../campaign';
 import type { CampaignSave, SectionMissionFormat, SectionStatus } from '../../campaign';
 import type { MissionId } from '../../sim';
 import type { SectionResultView } from '../../app/campaignState';
@@ -117,3 +126,55 @@ export function sectionResultText(view: SectionResultView): SectionResultText {
     opened,
   };
 }
+
+// ---------------------------------------------------------------- world-state feedback (decision PR14)
+
+/** The one short "what the Ring lost" line of a section mission (field, raid or boss); null when it has none. */
+export function ringLostLine(missionId: string): string | null {
+  return getSectionMission(missionId)?.ringWeakened ?? null;
+}
+
+/**
+ * The next reason to continue, after any result: the mission Continue would start (its district and objective), the
+ * finale once all six districts are cleared, or null when the campaign is complete.
+ */
+export function upNextLine(save: CampaignSave): string | null {
+  const next = nextMission(save);
+  const def = next ? getSectionMission(next.missionId) : undefined;
+  if (next && def) {
+    const district = CAMPAIGN.districts[next.districtId].name;
+    return def.format === 'boss'
+      ? `Up next: ${def.name}, the keeper of ${district}. ${def.objectiveCard}`
+      : `Up next: ${def.name} in ${district}. ${def.objectiveCard}`;
+  }
+  return finaleAvailable(save) && !save.completed ? 'Up next: the finale.' : null;
+}
+
+export interface DistrictLiberation {
+  /** Sections reclaimed (0..total). */
+  reclaimed: number;
+  total: number;
+  /** The boss is beaten: the district is free of the Ring. */
+  freed: boolean;
+  /** "What the Ring lost" lines of every mission won here, in play order. */
+  losses: string[];
+}
+
+/** How far a district is reclaimed, derived from the save only (no world-state engine). */
+export function districtLiberation(save: CampaignSave, id: MissionId): DistrictLiberation {
+  const sections = sectionsOf(id);
+  const losses = sections
+    .flatMap((s) => s.missions)
+    .filter((m) => missionStatus(save, m.id) === 'cleared' && m.ringWeakened)
+    .map((m) => m.ringWeakened!);
+  return {
+    reclaimed: sections.filter((s) => sectionStatus(save, s.id) === 'cleared').length,
+    total: sections.length,
+    freed: save.districts[id]?.status === 'cleared',
+    losses,
+  };
+}
+
+/** The district a section mission belongs to (for the result screens). */
+export const districtOfMission = (missionId: string): MissionId | null =>
+  sectionOfMission(missionId)?.districtId ?? null;

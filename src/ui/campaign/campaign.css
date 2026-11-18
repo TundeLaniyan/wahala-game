@@ -245,7 +245,8 @@
 /* a narrow map shows only the selected district's name and stars (the card names the rest) */
 @container (max-width: 540px) {
   .cp-node:not(.on) .cp-node-name,
-  .cp-node:not(.on) .cp-stars {
+  .cp-node:not(.on) .cp-stars,
+  .cp-node:not(.on) .cp-node-lib {
     display: none;
   }
 }
@@ -1070,4 +1071,43 @@
 .cp-consequence,
 .cp-parts {
   margin: 0.4rem 0;
+}
+
+/* liberation state and world-state feedback (decision PR14) */
+.cp-node-lib {
+  padding: 0 5px;
+  background: rgba(11, 14, 20, 0.82);
+  border: 1px solid var(--mn-border);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mn-sand);
+}
+.cp-node-lib.freed {
+  border-color: var(--mn-green);
+  color: var(--mn-green);
+}
+.cp-liberation {
+  margin: 0.4rem 0;
+}
+.cp-liberation ul {
+  margin: 0.2rem 0 0;
+  padding-left: 1.1rem;
+}
+.cp-liberation li,
+.cp-liberation p {
+  margin: 0.15rem 0;
+  font-size: 0.85rem;
+}
+.cp-liberation.freed .mn-kicker {
+  color: var(--mn-green);
+}
+.cp-upnext,
+.cp-ringlost,
+.cp-parts-total {
+  margin: 0.4rem 0;
+}
+.cp-upnext {
+  color: var(--mn-sand);
 }
