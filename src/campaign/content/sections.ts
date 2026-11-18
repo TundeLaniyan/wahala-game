@@ -346,16 +346,17 @@ const LAGOS_SECTIONS: SectionDef[] = [
     districtId: 'lagosIsland',
     order: 1,
     name: 'Ledger Row',
-    summary: 'Auditors work the west row. Clear them, visit the ledger counters and raid the records annexe.',
+    summary:
+      'Ring security walks the alleys of the west row and holds the traders’ counter hall. Take the hall back and raid the records annexe.',
     requires: [],
     missions: [
       {
         id: 'lagosIsland.approach',
         format: 'field',
         name: 'Ledger Row',
-        objectiveCard: 'Clear the auditors, walk two counters, raid the annexe.',
+        objectiveCard: 'Beat 3 auditors, keep the hall, wreck 3 stamp machines, raid.',
         summary:
-          'Two auditors hold the row. Reach both counters, hold the annexe door, then return to the row gate.',
+          'Two auditors walk loops round the office blocks and a heavy holds the side street. Keep the counter hall for 25 seconds, blast the stamp machines, then raid the annexe.',
         missionRef: 'lagosIsland.approach',
         doors: [{ doorId: 'annexe', raidId: 'recordsVault' }],
         reward: title('lagosIsland.approach', 'Row Regular', 'Clerks stop asking for your receipt.'),
@@ -369,20 +370,22 @@ const LAGOS_SECTIONS: SectionDef[] = [
     districtId: 'lagosIsland',
     order: 2,
     name: 'Press Run',
-    summary: 'Audit slips lie on two desks. Collect them and outrun the bureau to the press lane.',
+    summary:
+      'The Ring’s receipt presses print the forged licences in the press grid. Wreck them and outrun the bureau to the press lane.',
     requires: ['lagosIsland.s1'],
     missions: [
       {
         id: 'lagosIsland.press',
         format: 'field',
         name: 'Press Run',
-        objectiveCard: 'Collect both desk slips, outrun the auditors, walk out.',
+        objectiveCard: 'Wreck 5 presses, open the press lane, outrun the auditor.',
         summary:
-          'Visit the two desks. When the second slip is yours, an auditor sets off after you: reach the press lane.',
+          'Ring security walks the grid while the pressmen mind five presses: wreck them with generators. Then break the guards blocking the press lane and get down it before the auditor catches you.',
         missionRef: 'lagosIsland.press',
         reward: title('lagosIsland.press', 'Press Regular', 'The press room leaves a stool for you.'),
         unlocks: ['section.lagosIsland.s3'],
-        ringWeakened: 'The audit slips reach the press lane: the bureau can no longer bury its paper trail.',
+        ringWeakened:
+          'The receipt presses are scrap: the bureau can no longer print who is allowed to trade.',
       },
     ],
   },

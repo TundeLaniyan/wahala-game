@@ -452,6 +452,9 @@ const defs: FieldMissionDef[] = [
   },
   // Ebute-Metta section 2 is a standalone raid (railYardGoods): no field mission.
   // ---------------------------------------------------------------- Lagos Island
+  // Ledger Row (decision DB4): Ring security walks loops round the office blocks of the west row; when they are down the
+  // traders' counter hall must be kept while the hall watch and a thrower come to take it back; a heavy minds the
+  // records annexe door. Then the annexe raid, and out by the row gate.
   {
     id: 'lagosIsland.approach',
     sectorId: 'lagosIsland.ledgerRow',
@@ -460,11 +463,27 @@ const defs: FieldMissionDef[] = [
     start: [4, 23],
     returnMarker: m(3, 29, 'ROW GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Defeat the 2 auditors on the west row.', group: 'auditors' },
+      { kind: 'clearGroup', text: 'Defeat the 3 auditors in the row alleys.', group: 'auditors' },
       {
-        kind: 'reachMarkers',
-        text: 'Walk through the 2 ledger counters.',
-        markers: [m(8, 28, 'COUNTER 1'), m(18, 28, 'COUNTER 2')],
+        kind: 'holdArea',
+        text: 'Keep the counter hall clear for 25 seconds.',
+        area: { x: 9, y: 23, radius: 2, label: 'COUNTER HALL' },
+        holdSec: 25,
+        waves: [
+          { group: 'hallWatch', atSec: 3 },
+          { group: 'hallLate', atSec: 10 },
+          { group: 'hallLast', atSec: 17 },
+        ],
+      },
+      {
+        kind: 'destroyTargets',
+        text: 'Destroy the 3 stamp machines on the row.',
+        targets: [
+          { id: 'stampHall', kind: 'controlPoint', x: 15, y: 22, label: 'STAMP MACHINE', hp: 2 },
+          { id: 'stampWest', kind: 'controlPoint', x: 9, y: 29, label: 'STAMP MACHINE', hp: 2 },
+          { id: 'stampEast', kind: 'controlPoint', x: 19, y: 29, label: 'STAMP MACHINE', hp: 2 },
+        ],
+        crew: 'annexe',
       },
       { kind: 'door', text: 'Stand on the annexe door for 1 second to raid it.', doorId: 'annexe' },
     ],
@@ -480,12 +499,38 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Ledger Auditor', 10, 21, 'auditors', patrol('ringSecurity', [5, 21], [15, 21])),
-      guard('Ledger Auditor', 14, 25, 'auditors', patrol('ringSecurity', [9, 25], [16, 25])),
+      // two loops round the office blocks: north of the hall and south of it (watch a corner, lay on the loop)
+      guard(
+        'Ledger Auditor',
+        8,
+        18,
+        'auditors',
+        patrol('ringSecurity', [2, 18], [11, 18], [11, 21], [2, 21]),
+      ),
+      guard(
+        'Ledger Auditor',
+        16,
+        28,
+        'auditors',
+        patrol('ringSecurity', [10, 25], [19, 25], [19, 28], [10, 28]),
+      ),
+      // the row's heavy holds the side street (a blast puts him down: lure him into an alley)
+      blocker('Row Heavy', 22, 24, 'auditors', post('heavyEnforcer', 2)),
+      // the hall watch (east end of the hall), a thrower on the side street and a runner from the south row come in
+      // once the hall is taken
+      guard('Hall Guard', 18, 22, 'hallWatch', post('ringSecurity')),
+      chaser('Ledger Thrower', 22, 19, 'hallLate', post('bottleThrower', 2)),
+      guard('Row Runner', 6, 29, 'hallLast', post('areaBoy')),
+      // a heavy minds the annexe door and its stamp machines: lure him off them or blast him
+      blocker('Annexe Heavy', 16, 29, 'annexe', post('heavyEnforcer', 1)),
     ],
-    timeLimitSec: 360,
-    parSec: 190,
+    timeLimitSec: 420,
+    parSec: 210,
   },
+  // Press Run (decision DB5): the Ring's receipt presses (machines that print the forged licences) stand in the press
+  // grid; Ring security walks the middle street and the pressmen mind the machines. Then the press lane, the only way
+  // out, must be opened: a guard walks it and a heavy stands across its narrow end. When they are down the bureau sends
+  // its auditor after you: down the press lane, then back to the press gate.
   {
     id: 'lagosIsland.press',
     sectorId: 'lagosIsland.pressGrid',
@@ -495,10 +540,18 @@ const defs: FieldMissionDef[] = [
     returnMarker: m(4, 10, 'PRESS GATE'),
     legs: [
       {
-        kind: 'reachMarkers',
-        text: 'Walk through the 2 desks to collect the audit slips.',
-        markers: [m(10, 7, 'DESK 1'), m(16, 10, 'DESK 2')],
+        kind: 'destroyTargets',
+        text: 'Destroy the 5 receipt presses in the press grid.',
+        targets: [
+          { id: 'pressNorth', kind: 'controlPoint', x: 11, y: 6, label: 'RECEIPT PRESS' },
+          { id: 'pressMid', kind: 'controlPoint', x: 10, y: 12, label: 'RECEIPT PRESS', hp: 2 },
+          { id: 'pressSouth', kind: 'controlPoint', x: 17, y: 14, label: 'RECEIPT PRESS', hp: 2 },
+          { id: 'pressCorner', kind: 'controlPoint', x: 3, y: 14, label: 'RECEIPT PRESS', hp: 2 },
+          { id: 'pressLane', kind: 'controlPoint', x: 20, y: 8, label: 'RECEIPT PRESS', hp: 2 },
+        ],
+        crew: 'pressmen',
       },
+      { kind: 'clearGroup', text: 'Defeat the 2 guards blocking the press lane.', group: 'laneGuards' },
       {
         kind: 'escapeRoute',
         text: 'Escape to the press lane before the auditor catches you.',
@@ -509,10 +562,18 @@ const defs: FieldMissionDef[] = [
     doors: [],
     enemies: [
       chaser('Bureau Auditor', 2, 8, 'pursuers', { variant: 'bottleThrower' }),
-      guard('Ledger Auditor', 7, 12, 'desks', patrol('marketEnforcer', [7, 10], [7, 14])),
+      // the press lane is blocked: Ring security walks it, a heavy stands across its narrow end (lure him, blast him)
+      guard('Lane Guard', 23, 17, 'laneGuards', patrol('ringSecurity', [23, 14], [23, 20])),
+      blocker('Lane Heavy', 22, 18, 'laneGuards', post('heavyEnforcer', 1)),
+      // Ring security walks the middle street end to end; a thrower watches the wide south street
+      guard('Lane Security', 6, 10, 'lanes', patrol('ringSecurity', [2, 10], [19, 10])),
+      chaser('Lane Thrower', 20, 14, 'lanes', post('bottleThrower', 2)),
+      // the pressmen stand by the nearest press while the presses stand
+      guard('Pressman', 13, 7, 'pressmen', post('marketEnforcer')),
+      guard('Pressman', 8, 13, 'pressmen', post('marketEnforcer')),
     ],
-    timeLimitSec: 420,
-    parSec: 220,
+    timeLimitSec: 480,
+    parSec: 240,
   },
   // ---------------------------------------------------------------- Lekki
   {
