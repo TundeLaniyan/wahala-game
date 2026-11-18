@@ -135,8 +135,7 @@ const OSHODI_SECTIONS: SectionDef[] = [
           'The hawkers wave you across the rail line now.',
         ),
         unlocks: ['section.oshodi.s3'],
-        ringWeakened:
-          'The trailer crews lose the rail-edge lane and its relay boxes: the controller has nowhere left to hide.',
+        ringWeakened: 'The trailer crews lose the rail-edge lane: the controller has nowhere left to hide.',
         readMore:
           'Clear the two lane hawkers. Three relay boxes stand by the rail plaza: each takes three separate blasts, a heavy minds the nearest one and a warden walks round the mast block. Then keep the rail plaza clear for 25 seconds while the trailer crew comes to take it back. Last, the trailer hand hunts you: stay ahead of him and reach the footbridge. If he stays next to you for a moment he catches you and you lose a life. Walk to the Park gate to finish.',
         intro: [
@@ -180,7 +179,7 @@ const MUSHIN_SECTIONS: SectionDef[] = [
         reward: title('mushin.approach', 'Row Regular', 'The stall owners nod when you pass.'),
         unlocks: ['section.mushin.s2'],
         ringWeakened:
-          'The parts cages are blown open and the storeroom shelves emptied back onto the row: the Ring’s rental stock has a hole in it.',
+          'The parts cages are blown open and the shelves emptied onto the row: the Ring’s rental stock has a hole.',
       },
     ],
   },
@@ -205,7 +204,7 @@ const MUSHIN_SECTIONS: SectionDef[] = [
         reward: title('mushin.market', 'Aisle Regular', 'Runners step aside for you in the north aisles.'),
         unlocks: ['section.mushin.s3'],
         ringWeakened:
-          'The runners lose the north aisles and the lorry leaves empty: the broker has nothing left to restock her stacks.',
+          'The runners lose the aisles and the lorry leaves empty: the broker has nothing left to restock her stacks.',
       },
     ],
   },

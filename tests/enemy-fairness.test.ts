@@ -216,14 +216,25 @@ describe('EF3 / EF4 the player against enemies', () => {
 describe('EF6 field pursuers give up a human who got away', () => {
   it('chases within pursuitGiveUpTiles, holds where it stands beyond', () => {
     const s = newField('oshodi.railEdge');
-    s.players[1]!.alive = false;
-    s.players[2]!.alive = false;
+    // Rail Edge reaches its escape after the hawkers, the relay boxes and the plaza (decision DA3): staged here
+    const seats = (g: string): number[] =>
+      s.mission!.seats.filter((x) => x.group === g).map((x) => x.playerId);
+    for (const id of seats('hawkers')) s.players[id]!.alive = false;
     advance(s, 2);
-    const p = s.players[3]!;
+    for (const t of s.mission!.field!.targets ?? []) {
+      t.hp = 0;
+      t.destroyed = true;
+    }
+    advance(s, 2);
+    for (const id of [...seats('trailerCrew'), ...seats('lateCrew')]) s.players[id]!.alive = false;
+    s.mission!.field!.hold!.ticks = 25 * 60;
+    advance(s, 2);
+    const id = seats('pursuers')[0]!;
+    const p = s.players[id]!;
     put(s, 0, p.x + 4, p.y);
-    expect(directiveFor(s, 3)).toMatchObject({ kind: 'chase' });
+    expect(directiveFor(s, id)).toMatchObject({ kind: 'chase' });
     put(s, 0, Math.min(s.width - 2, p.x + CFG.pursuitGiveUpTiles + 1), p.y);
-    expect(directiveFor(s, 3)).toMatchObject({ kind: 'guard', x: p.x, y: p.y });
+    expect(directiveFor(s, id)).toMatchObject({ kind: 'guard', x: p.x, y: p.y });
   });
 });
 
