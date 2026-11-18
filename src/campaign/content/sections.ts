@@ -300,7 +300,7 @@ const EBUTE_SECTIONS: SectionDef[] = [
         reward: title('ebuteMetta.approach', 'Fence Regular', 'The switchmen leave you the gate open.'),
         unlocks: ['section.ebuteMetta.s2'],
         ringWeakened:
-          'The switch cabinets and the signal shed are wrecked: the yard can no longer clear the lines for its night trains.',
+          'The switch cabinets and signal shed are wrecked: the yard can no longer clear lines for its night trains.',
       },
     ],
   },
