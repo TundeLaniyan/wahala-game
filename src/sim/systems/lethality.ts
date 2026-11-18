@@ -161,16 +161,34 @@ function campaignLethal(
   // the combat pilot: a blast takes `blastDamageVsEnemy` from an ENEMY (decision CP3); everyone else as before
   const pilot = state.config.combatPilot;
   const pilotBlast = pilot && p.enemyKind !== undefined && best.source === 'blast';
+  // campaign tactics (decision SA8): one blast defeats any ordinary enemy; an armoured one loses `blastVsArmoured`
+  const tacticsBlast = tacticsBlastDamage(state, p, best.source);
   const hit: CampaignHit = {
     victimId: p.id,
     byId: best.byId,
     source: best.source,
-    damage: pilotBlast ? pilot.blastDamageVsEnemy : wound(best),
+    damage: pilotBlast ? pilot.blastDamageVsEnemy : (tacticsBlast ?? wound(best)),
     dazeTicks: 0,
     knockback: null,
+    ...(tacticsBlast !== null ? { strong: true } : {}),
   };
   const result = applyCampaignHit(state, hit, events, { causes, terminal });
   if (result === 'defeated') return true;
   for (const h of live) p.immune.push({ eventId: h.eventId, until: h.graceUntil }); // one event, one chance
   return false;
+}
+
+/**
+ * Campaign tactics layer (decision SA8): what a blast takes from an ENEMY - all its health when it is ordinary (one
+ * blast defeats any ordinary enemy), `blastVsArmoured` when it is armoured. Null for everyone else (the human, any
+ * match without the layer, any other source).
+ */
+export function tacticsBlastDamage(
+  state: Pick<GameState, 'config'>,
+  p: Readonly<Player>,
+  source: CampaignHitSource,
+): number | null {
+  const t = state.config.campaignTactics;
+  if (!t || p.enemyKind === undefined || source !== 'blast' || !p.vitals) return null;
+  return t.armoured[p.enemyKind] ? t.blastVsArmoured : Math.max(1, p.vitals.hp);
 }

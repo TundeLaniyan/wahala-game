@@ -76,7 +76,14 @@ export interface SceneOptions {
 export function oshodiScene(o: SceneOptions): { state: GameState; bots: Record<number, Bot> } {
   const level = o.level ?? 'normal';
   const options: GameOptions = buildMissionGame({
-    spec: { id: 'oshodi', fieldId: FIELD_ID, difficulty: campaignEnemyLevel(level), lives: 3 },
+    // the ARCHIVED pilot replay (decision SA3: the campaign itself now runs the campaign tactics layer)
+    spec: {
+      id: 'oshodi',
+      fieldId: FIELD_ID,
+      difficulty: campaignEnemyLevel(level),
+      lives: 3,
+      archivedPilot: true,
+    },
     humanCharacter: o.character ?? 'streetBaller',
     seed: o.seed,
     level,

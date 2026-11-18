@@ -13,7 +13,7 @@
  *     the two traces does not;
  *   - a body standing ON the target tile conceals it (the observer sees the person, not what is under them).
  */
-import { inBounds } from '../grid';
+import { DIR_VEC, inBounds } from '../grid';
 import type { GridView } from '../grid';
 import { Tile } from '../types';
 import type { Player } from '../types';
@@ -82,4 +82,40 @@ export function canSeeTile(
   if (dx === 0 && dy === 0) return true;
   if (bodies.has(by * view.width + bx)) return false; // a body on the tile hides what is under it
   return !traceBlocked(view, ax, ay, bx, by, bodies) || !traceBlocked(view, bx, by, ax, ay, bodies);
+}
+
+/**
+ * Can `observer` see the PERSON `target` within `range` tiles (campaign tactics, decision SA6)? The same grid rule as
+ * for a generator, except that the target's own body is what is being looked at (it does not hide itself); every other
+ * living body on the line still conceals it. One body scan per call.
+ */
+export function canSeePlayer(
+  view: SightView,
+  observer: Readonly<Player>,
+  target: Readonly<Player>,
+  range: number,
+): boolean {
+  const bodies = new Set<number>();
+  for (const p of view.players)
+    if (p.alive && p.id !== observer.id && p.id !== target.id) bodies.add(p.y * view.width + p.x);
+  return canSeeTile(view, observer.x, observer.y, target.x, target.y, range, bodies);
+}
+
+/**
+ * The calm field of view (campaign tactics, decision SA5): a calm enemy looks where it walks. True for the eight tiles
+ * around it, and for tiles in the 90-degree cone ahead of its facing (forward distance > 0 and at least the sideways
+ * distance). Pure geometry on tile coordinates.
+ */
+export function inViewCone(
+  observer: Readonly<Pick<Player, 'x' | 'y' | 'facing'>>,
+  tx: number,
+  ty: number,
+): boolean {
+  const dx = tx - observer.x;
+  const dy = ty - observer.y;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) <= 1) return true;
+  const v = DIR_VEC[observer.facing];
+  const forward = dx * v.dx + dy * v.dy;
+  const lateral = Math.abs(dx * v.dy - dy * v.dx);
+  return forward > 0 && forward >= lateral;
 }

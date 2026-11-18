@@ -161,3 +161,96 @@ export interface RaidOutcome {
   /** Why a `failed` raid failed (absent otherwise): every life spent, or the clock ran out. */
   failedBy?: 'lives' | 'time';
 }
+
+// ---------------------------------------------------------------- territories (decision SA6, docs/CAMPAIGN_SECTOR_AI.md)
+
+/**
+ * A campaign enemy's TERRITORY, as authored on a field seat (`FieldEnemyDef.territory`). Every field is optional: the
+ * level (`config.campaignTactics.territory`) and the seat's variant personality fill the rest (`resolveTerritory`).
+ * Tiles are [x, y] open floor of the arena.
+ */
+export interface TerritoryDef {
+  /** Patrol waypoints walked as a loop (absent, empty or one tile = it holds its post and watches). */
+  patrol?: readonly (readonly [number, number])[];
+  /** Guard area centre (default: the post) and radius in tiles (default 2). */
+  centre?: readonly [number, number];
+  radius?: number;
+  /** Investigations stay within this many tiles of the territory. */
+  investigateRadius?: number;
+  /** It pursues a seen human while he is within this many tiles (Chebyshev) of the territory. */
+  pursuitTiles?: number;
+  /** After giving up: 'watch' (face him for a while, ranged ones keep throwing, then walk back) or 'walk' (at once). */
+  onReturn?: 'watch' | 'walk';
+  /** Alerts allies within this many tiles when it spots the human (0 = never; default: its variant's). */
+  alertAllies?: number;
+  /** Escaping a known generator: 'free' (any refuge) or 'territory' (prefers refuges inside its area). */
+  escape?: 'free' | 'territory';
+}
+
+/** A territory resolved for one seat (plain JSON in `GameState.territory`). */
+export interface TerritorySpec {
+  /** Centre and patrol waypoints: the leash and the investigation radius are measured from these, never the post alone. */
+  anchors: TilePos[];
+  patrol: TilePos[];
+  centre: TilePos;
+  radius: number;
+  investigateRadius: number;
+  pursuitTiles: number;
+  /** Gives up when the human is farther than this from every anchor (`pursuitTiles` + the level's slack). */
+  leashTiles: number;
+  /** Watches this long after giving up (0 = walks back at once). */
+  watchTicks: number;
+  alertAllies: number;
+  escape: 'free' | 'territory';
+  usesCover: boolean;
+  /** Keeps its distance to throw (a ranged variant), at this many tiles. 0 = a brawler. */
+  preferredRange: number;
+  /** Notice time of the human, in ticks (the level's, scaled by the variant). */
+  noticeTicks: number;
+  /** Notice radius of the human (tiles). */
+  noticeTiles: number;
+  /** Hearing radius (Manhattan) of a generator being laid. */
+  hearingTiles: number;
+}
+
+/**
+ * The ONE territorial state machine's states (shared by every variant; decision SA6). The sim stores these; the
+ * readable overlay states (wind-up / attack / recovery, stagger, defeat) come from the sim state itself and the AI's
+ * generator evasion from the planner (`enemyMindView`).
+ */
+export type MindState = 'patrol' | 'watch' | 'investigate' | 'alert' | 'pursue' | 'return';
+
+export interface EnemyMind {
+  spec: TerritorySpec;
+  state: MindState;
+  /** Tick the state was entered. */
+  since: number;
+  /** Patrol: the waypoint it walks to, the direction it walks the loop, laps done, and its pause at a waypoint. */
+  waypoint: number;
+  dirSign: 1 | -1;
+  lap: number;
+  pauseUntil: number;
+  /** Investigate: the coarse spot it walks to (never the hidden source tile). Return: the anchor it walks back to. */
+  target: TilePos | null;
+  /** The human's tile when this enemy (or an ally that alerted it) last SAW him, and when. */
+  lastSeen: TilePos | null;
+  lastSeenTick: number;
+  /** Accumulated sight of the human (ticks) towards `spec.noticeTicks`. */
+  notice: number;
+  /** The watch after giving up lasts until this tick. */
+  watchUntil: number;
+  /** Health at the last update: a drop is a hit, which re-engages it at once. */
+  hpSeen: number;
+  /** A cover-using variant stays behind cover until this tick after its attack (then pursues again). */
+  coverUntil: number;
+  /** The end tick of the last own attack already seen (to notice a new one). */
+  attackSeen: number;
+}
+
+/** Runtime of the territorial state machine (systems/territory.ts). ABSENT outside campaign tactics matches. */
+export interface TerritoryState {
+  minds: Record<number, EnemyMind>;
+  /** Noises already heard: generators and blasts with an id up to these were processed. */
+  heardGeneratorId: number;
+  heardBlastId: number;
+}

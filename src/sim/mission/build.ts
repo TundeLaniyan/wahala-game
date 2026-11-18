@@ -10,11 +10,14 @@ import type { CharacterId, Difficulty, GameOptions, LoadoutBonus, PlayerSetup } 
 import type { EnemyKind } from '../campaign/types';
 import { CAMPAIGN_CONFIG } from '../config';
 import { normaliseLoadoutBonus } from '../systems/loadout';
-import { levelConfigLayer, levelMaxHp } from '../campaign/levels';
+import { campaignTacticsLayer, levelConfigLayer, levelMaxHp } from '../campaign/levels';
 import type { CampaignLevel } from '../campaign/levels';
+import type { EnemyVariantId } from '../data/enemyVariants';
 import { MISSION_DEFS, MISSION_SOFT_DENSITY } from './defs';
 import { getFieldMission } from './fieldDefs';
 import { fieldEnemiesOf, pilotConfigLayer, pilotLevelLayer } from './combatPilot';
+import { mergeLayers } from '../config';
+import { ENEMY_VARIANTS } from '../data/enemyVariants';
 import type { CrewDef, MissionDef } from './defs';
 import { activeModifiers, resolveTuning } from './tuning';
 import type { MissionSpec, NpcRole } from './types';
@@ -31,22 +34,47 @@ export function bossDifficulty(spec: MissionSpec): Difficulty {
   return DIFFICULTIES[Math.max(level, DIFFICULTIES.indexOf('standard'))]!;
 }
 
-/** The config a mission layers over the arena and the ruleset: the clock and a lighter crate field. */
+/**
+ * The config a mission layers over the arena and the ruleset: the clock, a lighter crate field and the campaign tactics
+ * layer at the Normal level (decision SA3; `buildMissionGame` adds the Easy / Hard layer over it). A boss mission's
+ * layer also names the perception kind of each generator-bot seat (the boss and its crew have no `enemyKind`). The
+ * archived combat pilot replay (`spec.archivedPilot`) carries the pilot instead, never both.
+ */
 export function missionConfigLayer(spec: MissionSpec): DeepPartial<GameConfig> {
   if (spec.fieldId) {
     const field = getFieldMission(spec.fieldId);
     return {
       match: { durationTicks: ticks(spec.timeLimitSec ?? field.timeLimitSec) },
       arena: { softDensity: MISSION_SOFT_DENSITY },
-      // the combat pilot (decision CP1): only a field mission listed in mission/combatPilot.ts adds anything here
-      ...pilotConfigLayer(spec.fieldId),
+      ...(spec.archivedPilot ? pilotConfigLayer(spec) : campaignTacticsLayer('normal')),
     };
   }
   const def = MISSION_DEFS[spec.id];
+  const tactics = campaignTacticsLayer('normal');
+  const seatPerception: Record<number, EnemyKind> = { 1: 'boss' };
+  crewOf(def, spec).forEach((c, i) => (seatPerception[2 + i] = ENEMY_KIND_FOR_ROLE[c.role]));
   return {
     match: { durationTicks: resolveTuning(def, spec).timeLimitTicks },
     arena: { softDensity: MISSION_SOFT_DENSITY },
+    ...tactics,
+    campaignTactics: { ...tactics.campaignTactics, seatPerception },
   };
+}
+
+/** The level's layers of a campaign mission: health / damage (`levelConfigLayer`) and the Easy / Hard tactics. */
+function missionLevelLayer(level: CampaignLevel | undefined): DeepPartial<GameConfig> | undefined {
+  const tactics = level && level !== 'normal' ? campaignTacticsLayer(level) : undefined;
+  return mergeLayers<GameConfig>(levelConfigLayer(level), tactics);
+}
+
+/** The kind and variant of a field seat: the variant's base kind when it names one, else the role's kind. */
+export function fieldSeatKind(e: { role: NpcRole; variant?: EnemyVariantId }): {
+  enemyKind: EnemyKind;
+  enemyVariant?: EnemyVariantId;
+} {
+  return e.variant
+    ? { enemyKind: ENEMY_VARIANTS[e.variant].base, enemyVariant: e.variant }
+    : { enemyKind: ENEMY_KIND_FOR_ROLE[e.role] };
 }
 
 /**
@@ -84,8 +112,10 @@ export function buildMissionGame(o: {
   const crewLevel = spec.difficulty ?? 'rookie';
   if (spec.fieldId) {
     const field = getFieldMission(spec.fieldId);
-    // the combat pilot's Easy / Hard adjustment joins the level's layer (Normal: none, as before)
-    const levelConfig = pilotLevelLayer(spec.fieldId, o.level, levelConfigLayer(o.level));
+    // the level's layers: health / damage and the Easy / Hard tactics (the archived pilot replay: its own adjustment)
+    const levelConfig = spec.archivedPilot
+      ? pilotLevelLayer(spec, o.level, levelConfigLayer(o.level))
+      : missionLevelLayer(o.level);
     const players: PlayerSetup[] = [
       // campaign health: the human has segments (visible meter), field enemies have hit points by role
       {
@@ -96,8 +126,8 @@ export function buildMissionGame(o: {
         maxHp: humanHp,
         ...human,
       },
-      ...fieldEnemiesOf(field).map((e, i): PlayerSetup => ({
-        enemyKind: ENEMY_KIND_FOR_ROLE[e.role],
+      ...fieldEnemiesOf(field, spec).map((e, i): PlayerSetup => ({
+        ...(spec.archivedPilot ? { enemyKind: ENEMY_KIND_FOR_ROLE[e.role] } : fieldSeatKind(e)),
         name: e.name,
         characterId: (['streetBaller', 'lekkiBoy', 'campusQueen'] as const)[(i + 1) % 3]!,
         isBot: true,
@@ -115,7 +145,7 @@ export function buildMissionGame(o: {
     };
   }
   const def = MISSION_DEFS[spec.id];
-  const levelConfig = levelConfigLayer(o.level);
+  const levelConfig = missionLevelLayer(o.level);
   const players: PlayerSetup[] = [
     // campaign health for the human (the boss and crew keep the one-hit generator fight)
     { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0, maxHp: humanHp, ...human },

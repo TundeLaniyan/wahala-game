@@ -8,7 +8,8 @@
  * by `tests/field-nodes.test.ts`. Numbers (clock, par) live here; the mechanics are in `field.ts`.
  */
 import type { MissionId, NpcRole } from './types';
-import type { RaidId } from '../campaign/types';
+import type { RaidId, TerritoryDef } from '../campaign/types';
+import type { EnemyVariantId } from '../data/enemyVariants';
 import type { Tile2 } from './defs';
 import { ebuteX } from '../arenas/ebuteWest';
 
@@ -26,6 +27,13 @@ export interface FieldEnemyDef {
   /** The enemy group a `clearGroup` / `escapeRoute` leg names. */
   group: string;
   radius?: number;
+  /**
+   * The recognisable variant (data/enemyVariants.ts): its base kind replaces the role's default kind, its personality
+   * drives the campaign tactics layer (decision SA2 / SA10). Absent = the role's kind and that kind's default variant.
+   */
+  variant?: EnemyVariantId;
+  /** Campaign tactics territory (patrol route, guard area, pursuit, alerts; decision SA6). Absent = level defaults. */
+  territory?: TerritoryDef;
 }
 
 export type FieldLegDef =
@@ -63,25 +71,50 @@ export interface FieldMissionDef {
 }
 
 const m = (x: number, y: number, label: string): FieldMarkerDef => ({ x, y, label });
-const guard = (name: string, x: number, y: number, group: string, radius = 3): FieldEnemyDef => ({
+/** A seat's campaign tactics data: its variant and territory (decision SA10; the sector re-authoring replaces these). */
+type Tactics = Pick<FieldEnemyDef, 'variant' | 'territory'>;
+const guard = (
+  name: string,
+  x: number,
+  y: number,
+  group: string,
+  tactics: Tactics = {},
+  radius = 3,
+): FieldEnemyDef => ({
   role: 'meleeGuard',
   name,
   post: [x, y],
   group,
   radius,
+  ...tactics,
 });
-const blocker = (name: string, x: number, y: number, group: string): FieldEnemyDef => ({
+const blocker = (
+  name: string,
+  x: number,
+  y: number,
+  group: string,
+  tactics: Tactics = {},
+): FieldEnemyDef => ({
   role: 'blocker',
   name,
   post: [x, y],
   group,
+  ...tactics,
 });
-const chaser = (name: string, x: number, y: number, group: string): FieldEnemyDef => ({
+const chaser = (name: string, x: number, y: number, group: string, tactics: Tactics = {}): FieldEnemyDef => ({
   role: 'rangedAttacker',
   name,
   post: [x, y],
   group,
+  ...tactics,
 });
+/** A patrol loop between `tiles` (walked back and forth for two tiles). */
+const patrol = (variant: Tactics['variant'], ...tiles: [number, number][]): Tactics => ({
+  variant,
+  territory: { patrol: tiles },
+});
+/** Holds its post (radius `radius`) and watches. */
+const post = (variant: Tactics['variant'], radius = 2): Tactics => ({ variant, territory: { radius } });
 
 /**
  * The HUD line of the implicit last leg (the return route). Plain words: where to go, nothing else
@@ -125,9 +158,9 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Park Warden', 14, 39, 'wardens'),
-      guard('Park Warden', 27, 41, 'wardens'),
-      blocker('Lane Blocker', 20, 42, 'wardens'),
+      guard('Park Warden', 14, 39, 'wardens', patrol('agbero', [11, 39], [17, 39])),
+      guard('Park Warden', 27, 41, 'wardens', post('agbero')),
+      blocker('Lane Blocker', 20, 42, 'wardens', post('heavyEnforcer', 1)),
     ],
     timeLimitSec: 360,
     parSec: 180,
@@ -149,9 +182,9 @@ const defs: FieldMissionDef[] = [
     ],
     doors: [],
     enemies: [
-      guard('Lane Hawker', 50, 39, 'hawkers'),
-      guard('Lane Hawker', 55, 39, 'hawkers'),
-      chaser('Trailer Hand', 36, 30, 'pursuers'),
+      guard('Lane Hawker', 50, 39, 'hawkers', patrol('marketEnforcer', [47, 39], [52, 39])),
+      guard('Lane Hawker', 55, 39, 'hawkers', patrol('marketEnforcer', [54, 39], [59, 39])),
+      chaser('Trailer Hand', 36, 30, 'pursuers', { variant: 'bottleThrower' }),
     ],
     timeLimitSec: 420,
     parSec: 210,
@@ -183,9 +216,9 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Parts Hawker', 12, 34, 'hawkers'),
-      guard('Stall Guard', 24, 36, 'hawkers'),
-      blocker('Aisle Blocker', 31, 36, 'hawkers'),
+      guard('Parts Hawker', 12, 34, 'hawkers', patrol('marketEnforcer', [8, 35], [16, 35])),
+      guard('Stall Guard', 24, 36, 'hawkers', patrol('marketEnforcer', [20, 35], [28, 35])),
+      blocker('Aisle Blocker', 31, 36, 'hawkers', post('heavyEnforcer', 1)),
     ],
     timeLimitSec: 360,
     parSec: 180,
@@ -216,9 +249,9 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Market Runner', 20, 10, 'runners'),
-      guard('Market Runner', 28, 13, 'runners'),
-      chaser('Market Runner', 40, 12, 'runners'),
+      guard('Market Runner', 20, 10, 'runners', patrol('areaBoy', [14, 10], [26, 10])),
+      guard('Market Runner', 28, 13, 'runners', patrol('areaBoy', [22, 13], [34, 13])),
+      chaser('Market Runner', 40, 12, 'runners', patrol('bottleThrower', [36, 13], [46, 13])),
     ],
     timeLimitSec: 420,
     parSec: 220,
@@ -250,7 +283,10 @@ const defs: FieldMissionDef[] = [
         required: true,
       },
     ],
-    enemies: [guard('Kobo Marshal', 12, 26, 'marshals'), guard('Kobo Marshal', 20, 29, 'marshals')],
+    enemies: [
+      guard('Kobo Marshal', 12, 26, 'marshals', post('routeMarshal')),
+      guard('Kobo Marshal', 20, 29, 'marshals', patrol('routeMarshal', [20, 26], [20, 30])),
+    ],
     timeLimitSec: 360,
     parSec: 190,
   },
@@ -274,7 +310,10 @@ const defs: FieldMissionDef[] = [
       },
     ],
     doors: [],
-    enemies: [guard('Kobo Marshal', 20, 6, 'posts'), chaser('Kobo Marshal', 10, 10, 'pursuers')],
+    enemies: [
+      guard('Kobo Marshal', 20, 6, 'posts', patrol('routeMarshal', [15, 6], [27, 6])),
+      chaser('Kobo Marshal', 10, 10, 'pursuers', { variant: 'bottleThrower' }),
+    ],
     timeLimitSec: 420,
     parSec: 220,
   },
@@ -305,8 +344,20 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Switchman', ebuteX(12), 34, 'switchmen'),
-      guard('Switchman', ebuteX(26), 34, 'switchmen'),
+      guard(
+        'Switchman',
+        ebuteX(12),
+        34,
+        'switchmen',
+        patrol('ringSecurity', [ebuteX(12), 32], [ebuteX(12), 36]),
+      ),
+      guard(
+        'Switchman',
+        ebuteX(26),
+        34,
+        'switchmen',
+        patrol('ringSecurity', [ebuteX(22), 34], [ebuteX(30), 34]),
+      ),
     ],
     timeLimitSec: 360,
     parSec: 180,
@@ -339,7 +390,10 @@ const defs: FieldMissionDef[] = [
         required: true,
       },
     ],
-    enemies: [guard('Ledger Auditor', 10, 21, 'auditors'), guard('Ledger Auditor', 14, 25, 'auditors')],
+    enemies: [
+      guard('Ledger Auditor', 10, 21, 'auditors', patrol('ringSecurity', [5, 21], [15, 21])),
+      guard('Ledger Auditor', 14, 25, 'auditors', patrol('ringSecurity', [9, 25], [16, 25])),
+    ],
     timeLimitSec: 360,
     parSec: 190,
   },
@@ -363,7 +417,10 @@ const defs: FieldMissionDef[] = [
       },
     ],
     doors: [],
-    enemies: [chaser('Bureau Auditor', 2, 8, 'pursuers'), guard('Ledger Auditor', 7, 12, 'desks')],
+    enemies: [
+      chaser('Bureau Auditor', 2, 8, 'pursuers', { variant: 'bottleThrower' }),
+      guard('Ledger Auditor', 7, 12, 'desks', patrol('marketEnforcer', [7, 10], [7, 14])),
+    ],
     timeLimitSec: 420,
     parSec: 220,
   },
@@ -394,9 +451,9 @@ const defs: FieldMissionDef[] = [
       },
     ],
     enemies: [
-      guard('Gate Guard', 11, 24, 'gatehouse'),
-      guard('Gate Guard', 16, 25, 'gatehouse'),
-      blocker('Gate Blocker', 12, 26, 'gatehouse'),
+      guard('Gate Guard', 11, 24, 'gatehouse', patrol('ringSecurity', [5, 23], [11, 23])),
+      guard('Gate Guard', 16, 25, 'gatehouse', patrol('ringSecurity', [16, 23], [22, 23])),
+      blocker('Gate Blocker', 12, 26, 'gatehouse', post('heavyEnforcer', 1)),
     ],
     timeLimitSec: 360,
     parSec: 190,
@@ -423,9 +480,9 @@ const defs: FieldMissionDef[] = [
     ],
     doors: [],
     enemies: [
-      guard('Estate Guard', 14, 8, 'patrol'),
-      guard('Estate Guard', 26, 9, 'patrol'),
-      chaser('Estate Hound', 26, 13, 'pursuers'),
+      guard('Estate Guard', 14, 8, 'patrol', patrol('ringSecurity', [10, 8], [20, 8])),
+      guard('Estate Guard', 26, 9, 'patrol', patrol('ringSecurity', [20, 9], [32, 9])),
+      chaser('Estate Hound', 26, 13, 'pursuers', { variant: 'bottleThrower' }),
     ],
     timeLimitSec: 480,
     parSec: 260,

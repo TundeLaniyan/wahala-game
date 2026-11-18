@@ -307,6 +307,148 @@ export interface TacticalTrapConfig {
 }
 
 /**
+ * Trap sense (decision SA5): how well an enemy reasons about the generators it KNOWS. A variant names its tier
+ * (`data/enemyVariants.ts`); a seat without a variant uses its kind's default. Never information: an enemy with the
+ * best trap sense still knows only what it saw, remembered or heard.
+ */
+export type TrapSenseTier = 'none' | 'basic' | 'keen' | 'expert';
+
+export interface TrapSenseSpec {
+  /** Scales the reaction time (`TrapPerception.reactTicks`) to a newly seen generator. */
+  reactScale: number;
+  /** Scales it again while brawling (pursuing, winding up, recovering): tunnel vision. 1 = none. */
+  brawlReactScale: number;
+  /** Bot levels added to the campaign level's enemy bot level for the movement / escape planner (`DIFFICULTIES`). */
+  plannerBump: number;
+  /**
+   * While CALM (patrolling, holding its post, walking back; not engaged, not cautious) it only notices a generator this
+   * close: a stroller does not scan the ground far ahead (an engaged or cautious enemy uses its full vision).
+   */
+  calmVisionTiles: number;
+  /**
+   * It notices a generator being LAID by someone it can see at that moment (line of sight, vision; never through a wall
+   * or another body; not while it reels from a stagger), so a generator laid under the placer's feet in its plain sight
+   * is not hidden from it. The placement is information it watched, never a guess.
+   */
+  seesPlacement: boolean;
+}
+
+/**
+ * THE CAMPAIGN TACTICS LAYER (docs/CAMPAIGN_SECTOR_AI.md, decisions SA3-SA12). The campaign-wide successor of the Tactical
+ * Trap and Oshodi combat pilots: perception (sight, memory, hearing), generator evasion by commitment and trap sense,
+ * the territorial state machine, readable enemy commitment and the melee-vs-generator balance. Present ONLY in campaign
+ * FIELD and BOSS missions (`mission/build.ts` `missionConfigLayer`, levels from `campaign/levels.ts`
+ * `campaignTacticsLayer`); ABSENT in raids, the Training Academy, Classic, City Rumble, multiplayer and online (tested),
+ * whose rules are therefore exactly as before. Every hook is guarded by this key.
+ */
+export interface CampaignTacticsConfig {
+  /** Names the layer (measurements, the debug handle). */
+  id: string;
+  /** The campaign level these numbers are for (documentation and tests; rules read the numbers, never this). */
+  level: 'easy' | 'normal' | 'hard';
+  /** Generator perception per enemy kind (vision, reaction, memory, hearing), as in the Academy pilot (TT1-TT3). */
+  perception: Record<EnemyKind, TrapPerception>;
+  /** A seen ticking generator with at most this much fuse left is never forgotten before it blows. */
+  memoryHoldFuseTicks: number;
+  /** Hearing a fresh generator: caution (no new wind-up / cue, faster reaction). Investigation is the territory's. */
+  caution: TacticalTrapConfig['caution'];
+  /** Trap sense tiers (decision SA5). */
+  trapSense: Record<TrapSenseTier, TrapSenseSpec>;
+  /** Noticing the HUMAN (the territorial state machine, `systems/territory.ts`; decision SA6). */
+  awareness: {
+    /** A human in grid line of sight within this many tiles (straight distance) is being noticed, by kind. */
+    noticeTiles: Record<EnemyKind, number>;
+    /** Ticks of (accumulated) sight before the enemy is alerted; sight lost decays it twice as fast. */
+    noticeTicks: number;
+    /** A human this close (Manhattan) is noticed at once, seen or not (footsteps, breathing). */
+    closeTiles: number;
+    /** The alert beat: the enemy turns to the human this long before it pursues (the readable "!"). */
+    alertTicks: number;
+    /** A pursuer that has not seen the human for this long goes to look where it last saw him. */
+    loseTicks: number;
+    /** Ticks spent looking around at an investigated spot before going back. */
+    searchTicks: number;
+    /** A heard noise sends the enemy this many tiles along its COARSE direction band (8 bands; never the tile). */
+    investigateStep: number;
+    /** A blast is heard this many times farther than a generator being laid. */
+    blastHearingScale: number;
+    /** An investigation that never arrives (a blocked way) gives up and searches where it stands after this long. */
+    investigateTimeoutTicks: number;
+  };
+  /** Territory defaults (a seat's `territory` data and its variant's personality add to these; decision SA6). */
+  territory: {
+    /** A pursuer chases while the human is within this many tiles (Chebyshev) of the TERRITORY (its anchors). */
+    pursuitTiles: number;
+    /** Hysteresis: it gives up only when the human is this much farther than `pursuitTiles` (no boundary dance). */
+    leashSlack: number;
+    /** After giving up it watches the human (facing him, ranged ones still throw) this long before walking back. */
+    returnWatchTicks: number;
+    /** How far from its territory an investigation may lead. */
+    investigateRadius: number;
+    /** Pause at each patrol waypoint, and the deterministic variation added per waypoint visit (0 = clockwork). */
+    patrolPauseTicks: number;
+    patrolJitterTicks: number;
+    /** A patrol walks its route back the other way on every other lap (less predictable). */
+    reversePatrol: boolean;
+    /** Scales a variant's ally-alert radius (0 = nobody calls for help). */
+    alertAlliesScale: number;
+    /** A cover-using variant repositions out of the human's sight up to this many tiles after attacking (0 = never). */
+    coverTiles: number;
+    /** Pursuers coordinate (each brawler takes a different side, throwers line up): `campaign/tactics.ts`. */
+    groupTactics: boolean;
+    /** A cover user stays behind its cover this long after its recovery ends, then pursues again. */
+    coverHoldTicks: number;
+    /** A watching guard turns a quarter (clockwise) this often: its view cone sweeps, nobody sneaks up forever. */
+    lookAroundTicks: number;
+  };
+  /** The human's landed hit on an ordinary or armoured enemy, whatever the fighter (decision SA8). */
+  punch: {
+    /** Segments a landed hit takes (never below the armoured floor). */
+    damage: number;
+    /** The same enemy can be hit again only this long after (punched out, but slowly). */
+    lockoutTicks: number;
+    /** The human's own recovery after a hit on an enemy is at most this (every fighter can follow up). */
+    maxHitRecoveryTicks: number;
+    /** An ordinary enemy reels this long (its wind-up is cut short) ... */
+    staggerTicks: number;
+    /** ... and then cannot be staggered again for this long (no stun-lock; damage still lands). */
+    staggerImmunityTicks: number;
+    /** Tiles an ordinary enemy is knocked straight back when the tile is free (never a wall, a body or a generator). */
+    knockbackTiles: number;
+    /** One simple slow: this share of speed lost for `slowTicks`, never stacked or refreshed ... */
+    slowShare: number;
+    slowTicks: number;
+    /** ... and then resisted this long. */
+    slowResistTicks: number;
+  };
+  /** Health segments by kind (a variant may override; decision SA8). */
+  enemyHp: Record<EnemyKind, number>;
+  /** ARMOURED kinds: only a blast (or another lethal source) finishes them; punches stop at the floor. */
+  armoured: Record<EnemyKind, boolean>;
+  /** The floor of an armoured kind: max(1, ceil(maxHp x share)). */
+  punchFloorShare: Record<EnemyKind, number>;
+  /** Segments one blast takes from an armoured enemy (an ordinary enemy is always defeated by a blast). */
+  blastVsArmoured: number;
+  /** Recovery frames an ENEMY gets after losing health (short: a punch then a blast both land). */
+  enemyFramesTicks: number;
+  /** Enemies never step onto the human's tile (the reach rule of the pilots, CP9 / TT). */
+  enemiesKeepOffHuman: boolean;
+  attack: {
+    /** The 'attack' phase lasts this many ticks after a punch resolves or an object leaves. */
+    activeTicks: number;
+    /** Every enemy cooldown exceeds wind-up + recovery by at least this (the human always gets a response window). */
+    responseGapTicks: number;
+    /** A thrower throws only after standing still this long (never while dodging; AI rule). */
+    throwSettleTicks: number;
+  };
+  /**
+   * Boss missions: the generator-bot seats (boss and crew have no `enemyKind`) and the perception kind each uses. Set by
+   * `missionConfigLayer` from the mission data; absent in field missions.
+   */
+  seatPerception?: Record<number, EnemyKind>;
+}
+
+/**
  * THE CITY RUMBLE COMBAT TEST LAB (docs/COMBAT_TEST_LAB.md). A temporary playtest tool: four punch behaviours the
  * founder switches between from the pause menu of a local City Rumble match. Every level is the SAME combat code
  * (`systems/skills.ts`) with these numbers and switches; each fighter keeps their own attack (push / shove / daze),
@@ -447,6 +589,8 @@ export interface GameConfig {
   combatPilot?: CombatPilotConfig;
   /** The Tactical Trap pilot (`TacticalTrapConfig`); ABSENT everywhere except the Academy "Generator Tactics" scenarios. */
   tacticalTrap?: TacticalTrapConfig;
+  /** The campaign tactics layer (`CampaignTacticsConfig`); present ONLY in campaign field and boss missions. */
+  campaignTactics?: CampaignTacticsConfig;
   /**
    * The City Rumble COMBAT TEST LAB preset in force (`CombatLabPreset`, decisions CL-L1..), set live from the pause menu
    * of a LOCAL City Rumble match only (`systems/combatLab.ts`). ABSENT in every other match and until a level is picked.
@@ -997,6 +1141,260 @@ export function tacticalTrapLayer(): DeepPartial<GameConfig> {
     tacticalTrap: TACTICAL_TRAP_PILOT,
     enemyAttacks: TACTICAL_TRAP_ENEMY_ATTACKS,
   }) as DeepPartial<GameConfig>;
+}
+
+// ------------------------------------------------------------------ the campaign tactics layer (decisions SA3-SA12)
+
+const TACTICS_PERCEPTION_NORMAL: Record<EnemyKind, TrapPerception> = {
+  agbero: { visionTiles: 6, reactTicks: 30, memoryTicks: 150, hearingTiles: 4 },
+  guard: { visionTiles: 7, reactTicks: 26, memoryTicks: 150, hearingTiles: 5 },
+  thrower: { visionTiles: 8, reactTicks: 24, memoryTicks: 150, hearingTiles: 5 },
+  heavy: { visionTiles: 6, reactTicks: 36, memoryTicks: 150, hearingTiles: 4 },
+  lieutenant: { visionTiles: 9, reactTicks: 16, memoryTicks: 240, hearingTiles: 7 },
+  boss: { visionTiles: 10, reactTicks: 10, memoryTicks: 240, hearingTiles: 8 },
+};
+
+/** The same table with every kind shifted (Easy sees and hears less and reacts later; Hard the opposite). */
+function shiftedPerception(d: {
+  vision: number;
+  react: number;
+  memory: number;
+  hearing: number;
+}): Record<EnemyKind, TrapPerception> {
+  const out = {} as Record<EnemyKind, TrapPerception>;
+  for (const [kind, p] of Object.entries(TACTICS_PERCEPTION_NORMAL) as [EnemyKind, TrapPerception][]) {
+    out[kind] = {
+      visionTiles: Math.max(3, p.visionTiles + d.vision),
+      reactTicks: Math.max(8, p.reactTicks + d.react),
+      memoryTicks: Math.max(90, p.memoryTicks + d.memory),
+      hearingTiles: Math.max(2, p.hearingTiles + d.hearing),
+    };
+  }
+  return out;
+}
+
+/**
+ * The campaign tactics layer at the NORMAL level (decisions SA3-SA12; every number and its measurement in
+ * docs/CAMPAIGN_SECTOR_AI.md). Easy / Hard: `CAMPAIGN_TACTICS_LEVELS` below.
+ */
+export const CAMPAIGN_TACTICS: CampaignTacticsConfig = {
+  id: 'campaign.tactics/1',
+  level: 'normal',
+  perception: TACTICS_PERCEPTION_NORMAL,
+  memoryHoldFuseTicks: 120,
+  caution: { ticks: 36, reactScale: 0.5, investigate: false },
+  trapSense: {
+    none: { reactScale: 1.25, brawlReactScale: 2, plannerBump: 0, calmVisionTiles: 2, seesPlacement: false },
+    basic: { reactScale: 1, brawlReactScale: 1.5, plannerBump: 0, calmVisionTiles: 3, seesPlacement: false },
+    keen: { reactScale: 0.8, brawlReactScale: 1, plannerBump: 1, calmVisionTiles: 5, seesPlacement: true },
+    expert: { reactScale: 0.6, brawlReactScale: 1, plannerBump: 2, calmVisionTiles: 99, seesPlacement: true },
+  },
+  awareness: {
+    noticeTiles: { agbero: 7, guard: 8, thrower: 9, heavy: 6, lieutenant: 10, boss: 10 },
+    noticeTicks: 20,
+    closeTiles: 2,
+    alertTicks: 12,
+    loseTicks: 120,
+    searchTicks: 90,
+    investigateStep: 3,
+    blastHearingScale: 2,
+    investigateTimeoutTicks: 360,
+  },
+  territory: {
+    pursuitTiles: 8,
+    leashSlack: 2,
+    returnWatchTicks: 90,
+    investigateRadius: 6,
+    patrolPauseTicks: 36,
+    patrolJitterTicks: 12,
+    reversePatrol: false,
+    alertAlliesScale: 1,
+    coverTiles: 3,
+    groupTactics: true,
+    coverHoldTicks: 45,
+    lookAroundTicks: 90,
+  },
+  punch: {
+    damage: 1,
+    lockoutTicks: 72,
+    maxHitRecoveryTicks: 30,
+    staggerTicks: 18,
+    staggerImmunityTicks: 54,
+    knockbackTiles: 1,
+    slowShare: 0.25,
+    slowTicks: 90,
+    slowResistTicks: 120,
+  },
+  enemyHp: { agbero: 2, guard: 3, thrower: 2, heavy: 4, lieutenant: 8, boss: 14 },
+  armoured: { agbero: false, guard: false, thrower: false, heavy: true, lieutenant: true, boss: true },
+  punchFloorShare: { agbero: 0, guard: 0, thrower: 0, heavy: 0, lieutenant: 0.5, boss: 0.5 },
+  blastVsArmoured: 3,
+  enemyFramesTicks: 6,
+  enemiesKeepOffHuman: true,
+  attack: { activeTicks: 6, responseGapTicks: 36, throwSettleTicks: 12 },
+};
+
+/** One level's enemy commitment (decision SA7): wind-up = catalogue startup + extra, recovery, cooldown, group limits. */
+function tacticsEnemyAttacks(o: {
+  extra: Record<EnemyKind, number>;
+  recovery: Record<EnemyKind, number>;
+  cooldown: Record<EnemyKind, number>;
+  throwRecovery: Record<EnemyKind, number>;
+  warn: Record<ThrownKind, number>;
+  throwCooldown: number;
+  maxGroupPunches: number;
+  groupPunchGapTicks: number;
+  groupGapTicks: number;
+  victimFreeTicks: number;
+}): PilotEnemyAttacks {
+  const melee = (kind: EnemyKind, daze: number, knockback: number): Partial<EnemyMeleeSpec> => ({
+    extraStartupTicks: o.extra[kind],
+    recoveryRootTicks: o.recovery[kind],
+    cooldownTicks: o.cooldown[kind],
+    dazeTicks: daze,
+    knockbackTiles: knockback,
+  });
+  return {
+    maxGroupPunches: o.maxGroupPunches,
+    groupPunchGapTicks: o.groupPunchGapTicks,
+    groupGapTicks: o.groupGapTicks,
+    victimFreeTicks: o.victimFreeTicks,
+    throwRecoveryTicks: o.throwRecovery,
+    projectiles: {
+      bottle: { warnTicks: o.warn.bottle, cooldownTicks: o.throwCooldown },
+      stone: { warnTicks: o.warn.stone, cooldownTicks: o.throwCooldown },
+      brick: { warnTicks: o.warn.brick },
+      tool: { warnTicks: o.warn.tool },
+    },
+    melee: {
+      agbero: melee('agbero', 20, 0),
+      guard: melee('guard', 24, 0),
+      thrower: melee('thrower', 0, 2),
+      heavy: melee('heavy', 30, 1),
+      lieutenant: melee('lieutenant', 24, 1),
+      boss: melee('boss', 36, 1),
+    },
+  };
+}
+
+/**
+ * Enemy commitment per level (decision SA7). Wind-ups (catalogue startup + extra; push 4, shove 12, daze 18 ticks):
+ * ordinary punches 60 / 48 / 38 ticks (1.0 / 0.8 / 0.63 s), the heavy 66 / 54 / 44; recovery 48 / 42 / 36 (heavy
+ * 54 / 48 / 42); every cooldown exceeds wind-up + recovery + `attack.responseGapTicks` (tested).
+ */
+export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' | 'hard', PilotEnemyAttacks>> =
+  {
+    easy: tacticsEnemyAttacks({
+      extra: { agbero: 56, guard: 56, thrower: 42, heavy: 48, lieutenant: 44, boss: 30 },
+      recovery: { agbero: 48, guard: 48, thrower: 48, heavy: 54, lieutenant: 36, boss: 30 },
+      cooldown: { agbero: 180, guard: 180, thrower: 210, heavy: 240, lieutenant: 168, boss: 180 },
+      throwRecovery: { agbero: 0, guard: 0, thrower: 54, heavy: 48, lieutenant: 30, boss: 24 },
+      warn: { bottle: 54, stone: 54, brick: 60, tool: 78 },
+      throwCooldown: ticks(3.5),
+      maxGroupPunches: 1,
+      groupPunchGapTicks: 60,
+      groupGapTicks: 90,
+      victimFreeTicks: 90,
+    }),
+    normal: tacticsEnemyAttacks({
+      extra: { agbero: 44, guard: 44, thrower: 32, heavy: 36, lieutenant: 36, boss: 22 },
+      recovery: { agbero: 42, guard: 42, thrower: 42, heavy: 48, lieutenant: 30, boss: 24 },
+      cooldown: { agbero: 156, guard: 156, thrower: 210, heavy: 228, lieutenant: 144, boss: 156 },
+      throwRecovery: { agbero: 0, guard: 0, thrower: 42, heavy: 42, lieutenant: 24, boss: 18 },
+      warn: { bottle: 42, stone: 42, brick: 48, tool: 66 },
+      throwCooldown: ticks(3),
+      maxGroupPunches: 2,
+      groupPunchGapTicks: 48,
+      groupGapTicks: 72,
+      victimFreeTicks: 66,
+    }),
+    hard: tacticsEnemyAttacks({
+      extra: { agbero: 34, guard: 34, thrower: 24, heavy: 26, lieutenant: 30, boss: 16 },
+      recovery: { agbero: 36, guard: 36, thrower: 36, heavy: 42, lieutenant: 26, boss: 20 },
+      cooldown: { agbero: 132, guard: 132, thrower: 180, heavy: 198, lieutenant: 120, boss: 132 },
+      throwRecovery: { agbero: 0, guard: 0, thrower: 36, heavy: 36, lieutenant: 20, boss: 16 },
+      warn: { bottle: 36, stone: 36, brick: 42, tool: 60 },
+      throwCooldown: ticks(2.5),
+      maxGroupPunches: 2,
+      groupPunchGapTicks: 30,
+      groupGapTicks: 54,
+      victimFreeTicks: 54,
+    }),
+  };
+
+/**
+ * The Easy / Hard tactics (decision SA9): more strategic depth on Hard (sharper senses, longer pursuit, coordination,
+ * cover, varied patrols, better trap sense through the planner level of `campaignEnemyLevel`), never information about
+ * unseen generators; Easy is clockwork and forgiving. Merged over `CAMPAIGN_TACTICS` (`campaignTacticsFor`).
+ */
+export const CAMPAIGN_TACTICS_LEVELS: Readonly<
+  Record<
+    'easy' | 'hard',
+    DeepPartial<CampaignTacticsConfig> & { perception: Record<EnemyKind, TrapPerception> }
+  >
+> = {
+  easy: {
+    level: 'easy',
+    perception: shiftedPerception({ vision: -1, react: 12, memory: -30, hearing: -1 }),
+    trapSense: {
+      none: { calmVisionTiles: 2 },
+      basic: { calmVisionTiles: 2 },
+      keen: { calmVisionTiles: 4, seesPlacement: false },
+    },
+    awareness: {
+      noticeTiles: { agbero: 6, guard: 7, thrower: 8, heavy: 5, lieutenant: 9, boss: 9 },
+      noticeTicks: 36,
+      alertTicks: 20,
+      loseTicks: 60,
+      searchTicks: 60,
+    },
+    territory: {
+      pursuitTiles: 6,
+      returnWatchTicks: 60,
+      patrolPauseTicks: 48,
+      patrolJitterTicks: 0,
+      alertAlliesScale: 0,
+      coverTiles: 0,
+      groupTactics: false,
+      lookAroundTicks: 120,
+    },
+    punch: { lockoutTicks: 60, staggerTicks: 24, staggerImmunityTicks: 48 },
+  },
+  hard: {
+    level: 'hard',
+    perception: shiftedPerception({ vision: 1, react: -8, memory: 60, hearing: 1 }),
+    trapSense: {
+      none: { calmVisionTiles: 3 },
+      basic: { calmVisionTiles: 4, seesPlacement: true },
+      keen: { calmVisionTiles: 6 },
+    },
+    awareness: {
+      noticeTiles: { agbero: 8, guard: 9, thrower: 10, heavy: 7, lieutenant: 11, boss: 11 },
+      noticeTicks: 10,
+      alertTicks: 8,
+      loseTicks: 180,
+      searchTicks: 120,
+    },
+    territory: {
+      pursuitTiles: 11,
+      returnWatchTicks: 120,
+      patrolPauseTicks: 24,
+      patrolJitterTicks: 18,
+      reversePatrol: true,
+      alertAlliesScale: 1.25,
+      coverTiles: 4,
+      lookAroundTicks: 60,
+    },
+    punch: { lockoutTicks: 84, staggerTicks: 14, staggerImmunityTicks: 60 },
+  },
+};
+
+/** The full tactics config of a level (a fresh copy every call: never a shared constant). */
+export function campaignTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignTacticsConfig {
+  const base = structuredClone(CAMPAIGN_TACTICS) as unknown as Record<string, unknown>;
+  if (level !== 'normal')
+    deepAssign(base, structuredClone(CAMPAIGN_TACTICS_LEVELS[level]) as Record<string, unknown>);
+  return base as unknown as CampaignTacticsConfig;
 }
 
 /** The campaign tuning in force (a ruleset or a test may override it; normal matches use the defaults). */

@@ -7,8 +7,8 @@
  *
  * Not to be confused with the crew level (`Difficulty`, the seven bot levels), which stays a separate loadout choice.
  */
-import { CAMPAIGN_CONFIG, ticks } from '../config';
-import type { CampaignConfig, DeepPartial, GameConfig } from '../config';
+import { CAMPAIGN_CONFIG, CAMPAIGN_TACTICS_ENEMY_ATTACKS, campaignTacticsFor, ticks } from '../config';
+import type { CampaignConfig, CampaignTacticsConfig, DeepPartial, GameConfig } from '../config';
 import type { Difficulty } from '../types';
 
 export const CAMPAIGN_LEVELS = ['easy', 'normal', 'hard'] as const;
@@ -99,4 +99,24 @@ export function levelConfigLayer(level: CampaignLevel | undefined): DeepPartial<
     vsEnemy: { ...CAMPAIGN_CONFIG.vsEnemy, ...config.vsEnemy },
   };
   return { campaign };
+}
+
+/**
+ * The campaign TACTICS layer of a level (decisions SA3-SA12, docs/CAMPAIGN_SECTOR_AI.md): `config.campaignTactics` and the
+ * enemy commitment of `config.enemyAttacks` (wind-ups, recoveries, cooldowns, group limits). Campaign field and boss
+ * missions only: `missionConfigLayer` adds the Normal layer to every mission, `buildMissionGame` adds the Easy / Hard one
+ * over it. Raids, the Academy, Classic, City Rumble and online never carry it. A fresh copy every call.
+ */
+export function campaignTacticsLayer(level: CampaignLevel | undefined): {
+  campaignTactics: CampaignTacticsConfig;
+  enemyAttacks: DeepPartial<GameConfig['enemyAttacks']>;
+} {
+  const id = level ?? DEFAULT_CAMPAIGN_LEVEL;
+  return {
+    campaignTactics: campaignTacticsFor(id),
+    // (a partial enemy-attack table: `DeepPartial` cannot spell the nullable melee specs)
+    enemyAttacks: structuredClone(CAMPAIGN_TACTICS_ENEMY_ATTACKS[id]) as DeepPartial<
+      GameConfig['enemyAttacks']
+    >,
+  };
 }

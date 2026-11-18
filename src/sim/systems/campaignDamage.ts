@@ -54,12 +54,15 @@ export function createVitals(maxHp: number): Vitals {
  */
 export function vitalsFor(
   setup: { enemyKind?: Player['enemyKind']; maxHp?: number },
-  config: Pick<GameState['config'], 'campaign' | 'combatPilot'>,
+  config: Pick<GameState['config'], 'campaign' | 'combatPilot' | 'campaignTactics'>,
 ): Vitals | undefined {
   if (setup.enemyKind) {
     // the combat pilot's enemy health (decision CP3), only in a pilot match
     const pilotHp = config.combatPilot?.enemyHp[setup.enemyKind];
     if (pilotHp !== undefined) return createVitals(pilotHp);
+    // the campaign tactics layer's enemy health (decision SA8)
+    const tacticsHp = config.campaignTactics?.enemyHp[setup.enemyKind];
+    if (tacticsHp !== undefined) return createVitals(tacticsHp);
     const def = enemyDef(setup.enemyKind);
     if (setup.enemyKind !== 'heavy' || setup.maxHp === undefined) return createVitals(def.hp);
     return createVitals(
@@ -114,7 +117,15 @@ export function applyCampaignHit(
   const cfg = campaignConfig(state.config);
   // recovery frames: the human's `invulnTicks`; an enemy's are the pilot's short ones in a pilot match (CP3)
   const pilot = state.config.combatPilot;
-  const frameTicks = pilot && p.enemyKind !== undefined ? pilot.enemyFramesTicks : cfg.invulnTicks;
+  const tactics = state.config.campaignTactics;
+  const frameTicks =
+    p.enemyKind === undefined
+      ? cfg.invulnTicks
+      : pilot
+        ? pilot.enemyFramesTicks
+        : tactics
+          ? tactics.enemyFramesTicks // campaign tactics (SA8): short, so a punch and a blast both land
+          : cfg.invulnTicks;
   const pilotPunch = options.pilotPunch === true && pilot !== undefined;
   const done = (result: CampaignHitResult, taken: number): CampaignHitResult => {
     events.push({

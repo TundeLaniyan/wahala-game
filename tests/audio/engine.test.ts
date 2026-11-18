@@ -162,6 +162,8 @@ describe('event mapping', () => {
       'missionStarted',
       'missionOutcome',
       'missionCallout',
+      // campaign tactics telegraph (decision SA7): drawn by the views; the wind-up / hit sounds stay attackStarted's
+      'enemyCue',
       // campaign expansion placeholders: silent until the raid workstreams give them cues (health has its cues, CC4)
     ]);
     // an extra human-less state variant is covered below; here players 0/1 are both "human" sandbox players

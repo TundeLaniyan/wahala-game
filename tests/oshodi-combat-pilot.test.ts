@@ -9,6 +9,8 @@
  *   10          checkpoints, the door hold, the raid hand-over and the return still work with the pilot on
  */
 import { describe, expect, it } from 'vitest';
+// ARCHIVED (decision SA3): the campaign now runs the campaign tactics layer; this suite replays the pilot through
+// `MissionSpec.archivedPilot` so its code stays measured until it is deleted.
 import {
   CAMPAIGN_CONFIG,
   CHARACTER_IDS,
@@ -16,7 +18,6 @@ import {
   buildMissionGame,
   buildRaidGame,
   createGame,
-  enemyDef,
   missionView,
   tick,
 } from '../src/sim';
@@ -63,19 +64,20 @@ function punchOut(s: GameState, every = 8, max = 600): { landed: number; ticks: 
   };
 }
 
-describe('the pilot is gated to the Oshodi Terminal Approach field mission (CP1)', () => {
-  const field = (fieldId: string) =>
+describe('the pilot is ARCHIVED: only its explicit replay carries it (CP1, superseded by decision SA3)', () => {
+  const field = (fieldId: string, archivedPilot = false) =>
     createGame(
       buildMissionGame({
-        spec: { id: fieldId.split('.')[0] as never, fieldId },
+        spec: { id: fieldId.split('.')[0] as never, fieldId, ...(archivedPilot ? { archivedPilot } : {}) },
         humanCharacter: 'streetBaller',
         seed: 1,
       }),
     );
 
-  it('Terminal Approach carries the pilot and its enemies have the pilot health', () => {
-    const s = field('oshodi.approach');
+  it('the archived replay of Terminal Approach carries the pilot and its enemies have the pilot health', () => {
+    const s = field('oshodi.approach', true);
     expect(s.config.combatPilot?.id).toBe(P.id);
+    expect('campaignTactics' in s.config).toBe(false); // never combined with the tactics layer
     const kinds = s.players.filter((p) => p.enemyKind).map((p) => [p.enemyKind, p.vitals!.maxHp]);
     expect(kinds).toEqual([
       ['guard', 3],
@@ -86,11 +88,16 @@ describe('the pilot is gated to the Oshodi Terminal Approach field mission (CP1)
     ]);
   });
 
-  it('every other field mission, the depot raid, the boss missions, Rumble and Classic have no pilot at all', () => {
+  it('the campaign Terminal Approach, other field missions, the depot raid, the boss missions, Rumble and Classic have no pilot', () => {
     for (const def of Object.keys(FIELD_COMBAT_PILOTS)) expect(def).toBe('oshodi.approach');
+    const approach = field('oshodi.approach');
+    expect('combatPilot' in approach.config).toBe(false);
+    expect(approach.config.campaignTactics).toBeDefined(); // the layer that superseded it
+    expect(fieldEnemiesOf(getFieldMission('oshodi.approach'))).toBe(
+      getFieldMission('oshodi.approach').enemies,
+    );
     const rail = field('oshodi.railEdge');
     expect('combatPilot' in rail.config).toBe(false);
-    for (const p of rail.players) if (p.enemyKind) expect(p.vitals!.maxHp).toBe(enemyDef(p.enemyKind).hp);
     expect(fieldEnemiesOf(getFieldMission('oshodi.railEdge'))).toBe(
       getFieldMission('oshodi.railEdge').enemies,
     );
@@ -117,9 +124,9 @@ describe('the pilot is gated to the Oshodi Terminal Approach field mission (CP1)
     expect('pilotCombat' in rumble).toBe(false);
   });
 
-  it('the pilot field mission keeps its radius blasts and Normal adds no level layer', () => {
+  it('the pilot replay keeps its radius blasts and Normal adds no level layer', () => {
     const o = buildMissionGame({
-      spec: { id: 'oshodi', fieldId: 'oshodi.approach' },
+      spec: { id: 'oshodi', fieldId: 'oshodi.approach', archivedPilot: true },
       humanCharacter: 'streetBaller',
       seed: 1,
       level: 'normal',
@@ -370,7 +377,7 @@ describe('10. the mission route is untouched: checkpoints, door hold, raid and r
   it('walks A, B, C, holds the depot door, plays the raid, returns to the gate and wins', () => {
     const s = createGame(
       buildMissionGame({
-        spec: { id: 'oshodi', fieldId: 'oshodi.approach' },
+        spec: { id: 'oshodi', fieldId: 'oshodi.approach', archivedPilot: true },
         humanCharacter: 'streetBaller',
         seed: 2,
       }),

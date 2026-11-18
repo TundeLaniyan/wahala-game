@@ -23,6 +23,7 @@ import type { EnemyFireState, Projectile, ThrownKind } from '../campaign/types';
 import { thrownKindFor } from '../data/enemyAttacks';
 import { applyCampaignHit } from './campaignDamage';
 import { teammates } from './queries';
+import { pushEnemyCue, recoveryBonus } from './enemyCues';
 
 /** The bookkeeping object, created on first use (never in a normal match). */
 export function enemyFireOf(state: GameState): EnemyFireState {
@@ -122,7 +123,28 @@ export function launchProjectile(
   fire.groupNextThrowTick[p.team] = state.tick + cfg.groupGapTicks;
   p.facing = dir;
   // the cue: the thrower commits and is planted; then its recovery, the punishable window (decision EF2)
-  p.rootedUntil = Math.max(p.rootedUntil, state.tick + warnTicks + cfg.throwRecoveryTicks[p.enemyKind]);
+  p.rootedUntil = Math.max(
+    p.rootedUntil,
+    state.tick + warnTicks + cfg.throwRecoveryTicks[p.enemyKind] + recoveryBonus(state, p),
+  );
+  // the telegraph (campaign tactics only): the cue, then the recovery after the object has left
+  pushEnemyCue(state, events, {
+    playerId: p.id,
+    cue: 'windup',
+    untilTick: state.tick + warnTicks,
+    x: p.x,
+    y: p.y,
+    dir,
+  });
+  if (p.rootedUntil > state.tick + warnTicks)
+    pushEnemyCue(state, events, {
+      playerId: p.id,
+      cue: 'recovery',
+      fromTick: state.tick + warnTicks,
+      untilTick: p.rootedUntil,
+      x: p.x,
+      y: p.y,
+    });
   events.push({
     type: 'projectileLaunched',
     id: proj.id,

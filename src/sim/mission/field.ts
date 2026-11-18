@@ -16,6 +16,7 @@
  * Math.random or the clock: it is a function of the state and the tick.
  */
 import { endMatch } from '../systems/matchResult';
+import { territoryDirective } from '../systems/territory';
 import type { GameState, Player, SimEvent } from '../types';
 import type { RaidOutcome } from '../campaign/types';
 import { newNode } from './ctx';
@@ -470,6 +471,9 @@ export function fieldDirective(state: GameState, id: number): NpcDirective | und
       ? { kind: 'block', x: post.x, y: post.y, radius: 0 }
       : { kind: 'guard', x: post.x, y: post.y, radius: seat.radius ?? 3 };
   }
+  // campaign tactics (decision SA6): a seat with a territory plays the territorial state machine
+  const territorial = territoryDirective(state, id);
+  if (territorial) return territorial;
   switch (seat.role) {
     case 'blocker':
       return { kind: 'block', x: post.x, y: post.y, radius: 0 };

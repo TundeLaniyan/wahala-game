@@ -9,7 +9,8 @@
  *   support  stay within `radius` of an ally;
  *   chase    hunt the rivals (the default hunt field) with at least the directive pull;
  *   flee     keep away from the rival (the exposed boss): the hunt field is inverted and capped;
- *   surround / standoff / hold / reinforce   (campaign enemy groups) walk to the assigned tile and stay on it.
+ *   surround / standoff / hold / reinforce   (campaign enemy groups) walk to the assigned tile and stay on it;
+ *   patrol / investigate / return   (campaign territories) walk to the tile (a radius leashes escapes to the area).
  *
  * Only the hunt field, its weight and a leash penalty change; every step, placement and escape check is still the
  * normal bot's, so a directed bot obeys the same rules and sees the same observation as any other.
@@ -91,6 +92,15 @@ export function applyDirective(c: Ctx): void {
     case 'run':
       huntFromTile(c, tile);
       c.huntWeight = Math.max(c.huntWeight, DIRECTIVE_PULL);
+      return;
+    // campaign tactics territories (sim/systems/territory.ts): walk to the waypoint / coarse spot / anchor; a radius
+    // keeps escapes inside the area (`TerritoryDef.escape: 'territory'`)
+    case 'patrol':
+    case 'investigate':
+    case 'return':
+      huntFromTile(c, tile);
+      c.huntWeight = Math.max(c.huntWeight, DIRECTIVE_PULL);
+      if (d.radius !== undefined) c.leash = { tile, radius };
       return;
     // block / escort / support, and the campaign enemy groups' tactics (sim/campaign/tactics.ts): go to the tile, stay on it
     case 'block':

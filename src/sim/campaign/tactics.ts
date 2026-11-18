@@ -162,8 +162,15 @@ function assign(members: Player[], slots: TilePos[], taken: Set<number>, w: numb
   return out;
 }
 
-/** The directive of enemy seat `id` (undefined: not an enemy, not alive, or no rival exists at all). */
-export function enemyGroupDirective(state: GameState, id: number): NpcDirective | undefined {
+/**
+ * The directive of enemy seat `id` (undefined: not an enemy, not alive, or no rival exists at all). `member` narrows the
+ * group to the enemies it accepts (the campaign tactics layer: only those pursuing take part); default: every enemy.
+ */
+export function enemyGroupDirective(
+  state: GameState,
+  id: number,
+  member: (o: Player) => boolean = () => true,
+): NpcDirective | undefined {
   const me = state.players[id];
   if (!me || !me.alive || me.enemyKind === undefined) return undefined;
   const cfg = state.config.enemyAttacks;
@@ -182,6 +189,7 @@ export function enemyGroupDirective(state: GameState, id: number): NpcDirective 
       o.alive &&
       o.enemyKind !== undefined &&
       o.team === me.team &&
+      member(o) &&
       nearestRival(state, o)?.id === target.id &&
       manhattan(o, target) <= cfg.aggroTiles,
   );

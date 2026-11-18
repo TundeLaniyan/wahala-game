@@ -33,10 +33,11 @@ import { pushLanding } from './pushLanding';
 import { enemyAfterPunch, enemyMeleeHit } from './enemyActions';
 import { ENEMY_KINDS } from '../data/enemies';
 import { beginStep } from './stepping';
-import { isActing, playersAt, teammates } from './queries';
+import { isActing, playerStepTicks, playersAt, teammates } from './queries';
 import { resolvePilotPunch } from './pilotCombat';
 import { labReach, labReachesSpot, labStats } from './combatLab';
-import { trapPunchDamage, trapSlowOnHit } from './tacticalTrap';
+import { slowExtraStepTicks, trapPunchDamage, trapSlowOnHit } from './tacticalTrap';
+import { pushEnemyCue } from './enemyCues';
 
 /** The fighter's original skill (their character's); kept for the menu and the HUD label. */
 export const skillOf = (p: Pick<Player, 'characterId'>): SkillKind => CHARACTERS[p.characterId].skill;
@@ -90,7 +91,10 @@ export function attackable(
   if (tick < (attacker.meleeLock[victim.id] ?? 0)) return false; // the per-target lockout
   const spec = state.config.skills.attacks[kind];
   // a pure daze has nothing to do to a victim who is still immune to one (a campaign enemy still takes the segment)
-  const segment = humanOnEnemy(attacker, victim) && campaignConfig(state.config).playerDamage[kind] > 0;
+  // (under the campaign tactics layer every landed hit takes its segment: decision SA8)
+  const segment =
+    humanOnEnemy(attacker, victim) &&
+    (state.config.campaignTactics !== undefined || campaignConfig(state.config).playerDamage[kind] > 0);
   if (spec.dazeTicks > 0 && spec.displacementTiles === 0 && tick < victim.dazeImmuneUntil && !segment)
     return false;
   // ... and neither has a pure slow
@@ -219,6 +223,22 @@ export function chooseAttack<P extends Readonly<Player>>(
     claimed ??= choice; // an adjacent rival claims B even while everything recovers
   }
   if (claimed) return claimed;
+  // campaign tactics (decision SA8): an enemy on the human's own tile is in reach (enemies keep off it; he may not)
+  if (state.config.campaignTactics && p.enemyKind === undefined) {
+    for (const kind of kinds) {
+      const inside = state.players.find(
+        (o: P) =>
+          o.alive &&
+          o.id !== p.id &&
+          o.enemyKind !== undefined &&
+          o.x === p.x &&
+          o.y === p.y &&
+          !teammates(p, o) &&
+          attackable(state, state.tick, p, o, kind),
+      );
+      if (inside) return { kind, target: inside, dir: p.facing, ready: attackReady(state, p, kind) };
+    }
+  }
   for (const kind of kinds) {
     if (state.config.skills.attacks[kind].reach < 2 || !attackReady(state, p, kind)) continue;
     const target = lineTarget(state, p, p.facing, (o) => attackable(state, state.tick, p, o, kind));
@@ -321,7 +341,7 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
     enemyMeleeHit(state, p, target, dir, events);
     recover(state, p, pending.skill, spec.hitRecoveryTicks);
     p.meleeLock[target.id] = state.tick + spec.targetLockoutTicks;
-    enemyAfterPunch(state, p); // the punishable window (decision EF2)
+    enemyAfterPunch(state, p, events); // the punishable window (decision EF2)
     recordHit(state, target, p.id);
     events.push({ type: 'skillUsed', playerId: p.id, skill: pending.skill, targetId: target.id });
     events.push({
@@ -333,6 +353,10 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
     });
     return;
   }
+
+  // the campaign tactics layer: the human's landed hit on an enemy is the one tactics hit, whatever the fighter (SA8)
+  if (state.config.campaignTactics && humanOnEnemy(p, target))
+    return tacticsHit(state, p, target, pending.skill, spec, dir, events);
 
   // displacement: a rival who cannot be moved at all makes a push-only attack a whiff (a blocked Shove / Kick)
   const pushOnly = spec.dazeTicks === 0 && spec.slowTicks === 0;
@@ -402,7 +426,7 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
     (humanOnEnemy(p, target)
       ? Math.min(spec.targetLockoutTicks, campaignConfig(state.config).vsEnemy.targetLockoutTicks)
       : spec.targetLockoutTicks);
-  enemyAfterPunch(state, p);
+  enemyAfterPunch(state, p, events);
   if (spec.hitRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.hitRootTicks); // recoil
   if (!target.vitals) recordHit(state, target, p.id); // a campaign victim was recorded by campaignMelee, before the hit
   events.push({ type: 'skillUsed', playerId: p.id, skill: pending.skill, targetId: target.id });
@@ -413,6 +437,98 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
     targetId: target.id,
     hit: true,
   });
+}
+
+/**
+ * THE CAMPAIGN TACTICS HIT (decision SA8, docs/CAMPAIGN_SECTOR_AI.md): the human's landed close attack on a campaign
+ * enemy, the same for every fighter. It takes `punch.damage` segments (never below an armoured kind's floor: only a
+ * blast finishes those), staggers an ordinary enemy (its wind-up or throw cue is cut short) unless it is still immune
+ * from its last stagger, knocks it `knockbackTiles` straight back when the tile is free (into a generator's reach, never
+ * onto a wall, a body or a generator) and slows it once (`slowShare` for `slowTicks`, never stacked or refreshed, then
+ * resisted). A steadfast enemy (the heavy, the boss) is neither staggered nor moved. The human's recovery is capped
+ * (`maxHitRecoveryTicks`) and the same enemy can be hit again only after `lockoutTicks`.
+ */
+function tacticsHit(
+  state: GameState,
+  p: Player,
+  target: Player,
+  kind: AttackKind,
+  spec: AttackSpec,
+  dir: Dir,
+  events: SimEvent[],
+): void {
+  const t = state.config.campaignTactics!;
+  const enemyKind = target.enemyKind!;
+  const steadfast = ENEMY_KINDS[enemyKind].steadfast;
+  p.facing = dir;
+  const stagger = !steadfast && state.tick >= target.dazeImmuneUntil && t.punch.staggerTicks > 0;
+  const knock =
+    !steadfast &&
+    t.punch.knockbackTiles > 0 &&
+    pushLanding(state, target, DIR_VEC[dir], t.punch.knockbackTiles);
+  recordHit(state, target, p.id); // before the hit: a defeating blow still credits correctly
+  const landed = applyCampaignHit(
+    state,
+    {
+      victimId: target.id,
+      byId: p.id,
+      source: 'player',
+      damage: tacticsPunchDamage(state, target),
+      dazeTicks: stagger ? t.punch.staggerTicks : 0,
+      knockback: knock ? { dir, tiles: knock.tiles } : null,
+    },
+    events,
+  );
+  const reached = landed !== 'invulnerable' && landed !== 'blockedArmour' && landed !== 'blockedOkada';
+  if (reached && target.alive) {
+    if (stagger) {
+      target.dazeImmuneUntil = Math.max(
+        target.dazeImmuneUntil,
+        target.dazedUntil + t.punch.staggerImmunityTicks,
+      );
+      if (target.attack) {
+        target.attack = null; // the stagger cuts the wind-up short
+        events.push({ type: 'attackInterrupted', playerId: target.id, byId: p.id });
+      }
+      pushEnemyCue(state, events, {
+        playerId: target.id,
+        cue: 'stagger',
+        untilTick: target.dazedUntil,
+        x: target.x,
+        y: target.y,
+        dir,
+        byId: p.id,
+      });
+    }
+    const slowing = target.slow !== null && state.tick < target.slow.until;
+    if (!slowing && state.tick >= target.slowImmuneUntil && t.punch.slowTicks > 0) {
+      const until = state.tick + t.punch.slowTicks;
+      target.slow = {
+        until,
+        extraStepTicks: slowExtraStepTicks(playerStepTicks(state, target), t.punch.slowShare),
+      };
+      target.slowImmuneUntil = until + t.punch.slowResistTicks;
+    }
+  }
+  recover(state, p, kind, Math.min(spec.hitRecoveryTicks, t.punch.maxHitRecoveryTicks));
+  p.meleeLock[target.id] = state.tick + t.punch.lockoutTicks;
+  if (spec.hitRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.hitRootTicks); // recoil
+  events.push({ type: 'skillUsed', playerId: p.id, skill: kind, targetId: target.id });
+  events.push({ type: 'attackResolved', playerId: p.id, skill: kind, targetId: target.id, hit: true });
+}
+
+/** Segments a tactics hit takes from `target`: `punch.damage`, never below an armoured kind's floor (decision SA8). */
+export function tacticsPunchDamage(state: Pick<GameState, 'config'>, target: Readonly<Player>): number {
+  const t = state.config.campaignTactics;
+  if (!t || !target.vitals || !target.enemyKind) return 0;
+  return Math.max(0, Math.min(t.punch.damage, target.vitals.hp - tacticsPunchFloor(state, target)));
+}
+
+/** The health a punch can never take an enemy below under the tactics layer: 0 (ordinary) or its armoured floor. */
+export function tacticsPunchFloor(state: Pick<GameState, 'config'>, p: Readonly<Player>): number {
+  const t = state.config.campaignTactics;
+  if (!t || !p.enemyKind || !t.armoured[p.enemyKind]) return 0;
+  return Math.max(1, Math.ceil((p.vitals?.maxHp ?? 1) * t.punchFloorShare[p.enemyKind]));
 }
 
 /**
@@ -462,7 +578,7 @@ function whiff(state: GameState, p: Player, spec: AttackSpec, skill: AttackKind,
     if (st) st.whiffs++;
   }
   if (spec.whiffRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.whiffRootTicks); // a committed miss
-  enemyAfterPunch(state, p);
+  enemyAfterPunch(state, p, events);
   events.push({ type: 'attackResolved', playerId: p.id, skill, targetId: null, hit: false });
 }
 
@@ -482,8 +598,12 @@ function reachDir(
   const g = state.config.skills.stepGrace;
   if (g.enabled && o.stepRemaining > 0 && o.stepTotal > 0 && o.stepRemaining / o.stepTotal > 1 - g.maxShare)
     spots.push({ x: o.stepFromX, y: o.stepFromY });
-  // combat pilot (decision CP9): an enemy's punch also reaches a rival on the enemy's own tile
-  const sameTile = state.config.combatPilot !== undefined && p.enemyKind !== undefined;
+  // combat pilot (decision CP9): an enemy's punch also reaches a rival on the enemy's own tile; under the campaign
+  // tactics layer the same holds both ways between the human and an enemy (enemies keep off his tile, he may not)
+  const sameTile =
+    (state.config.combatPilot !== undefined && p.enemyKind !== undefined) ||
+    (state.config.campaignTactics !== undefined &&
+      (p.enemyKind !== undefined) !== (o.enemyKind !== undefined));
   // combat test lab: the level's reach shape around the attack's direction (never through walls)
   const lab = state.config.combatLab !== undefined && p.enemyKind === undefined;
   for (const s of spots) {

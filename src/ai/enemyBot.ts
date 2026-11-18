@@ -19,8 +19,27 @@
  *   - its only action is the one B press: an adjacent rival is punched, else a thrower with a rival in a clear
  *     cardinal line throws (sim/systems/enemyActions.ts decides if it may: cooldowns, group gap, caps).
  */
-import { DIR_VEC, Tile, attackReady, createRng, enemyMeleeTarget, chooseThrow, nextFloat } from '../sim';
-import type { Difficulty, EnemyAwareness, Generator, Intent, Observation, Player, RngHolder } from '../sim';
+import {
+  DIFFICULTIES,
+  DIR_VEC,
+  Tile,
+  attackReady,
+  createRng,
+  enemyMeleeTarget,
+  chooseThrow,
+  nextFloat,
+  variantOf,
+} from '../sim';
+import type {
+  CampaignTacticsConfig,
+  Difficulty,
+  EnemyAwareness,
+  Generator,
+  Intent,
+  Observation,
+  Player,
+  RngHolder,
+} from '../sim';
 import { Brain } from './brain';
 import { TrapSight } from './trapSight';
 import { PROFILES } from './profiles';
@@ -51,12 +70,12 @@ export function enemyProfile(difficulty: Difficulty): AiProfile {
 
 /**
  * Does the plus of `g` (its range, stopped by any non-floor tile) cover (x, y)? In the combat pilot's radial field
- * mission the real disc is used instead (decision CP10: an enemy never starts a wind-up diagonal to a generator it
- * heeds); every other match keeps the plus test exactly as before.
+ * mission and under the campaign tactics layer the real disc is used instead (decisions CP10, SA7: an enemy never
+ * starts a wind-up diagonal to a generator it heeds); every other match keeps the plus test exactly as before.
  */
 function inCross(obs: Observation, g: Readonly<Generator>, x: number, y: number): boolean {
   if (g.x === x && g.y === y) return true;
-  if (obs.config.combatPilot && isRadial(obs)) {
+  if ((obs.config.combatPilot || obs.config.campaignTactics) && isRadial(obs)) {
     const tiles: number[] = [];
     radialTiles(obs, obs, g.x, g.y, g.range, g.pierce, g.square, () => false, tiles);
     return tiles.includes(y * obs.width + x);
@@ -82,12 +101,37 @@ export class EnemyBot implements Bot {
   private readonly seen = new Map<number, number>();
   /** Generators already taken seriously (the moment one joins, the planner re-plans at once). */
   private readonly heeded = new Set<number>();
-  /** Tactical Trap pilot only (`config.tacticalTrap`): sight, memory and hearing instead of the EF1 model above. */
+  /** Tactical Trap pilot / campaign tactics: sight, memory and hearing instead of the EF1 model above. */
   private readonly sight = new TrapSight();
+  /** Campaign tactics: the planner at this seat's trap-sense level (created on the first decision that needs it). */
+  private tacticsBrain: Brain | null = null;
+  /** Campaign tactics: the tick this enemy last moved (a thrower throws only after standing still a while). */
+  private lastMoveTick = -1e9;
+  private lastTile = -1;
 
-  constructor(opts: BotOptions) {
+  constructor(private readonly opts: BotOptions) {
     this.brain = new Brain(enemyProfile(opts.difficulty), opts.seed, opts.playerId);
     this.rng = createRng((opts.seed ^ 0x5bd1e995 ^ (opts.playerId * 0x27d4eb2d)) >>> 0);
+  }
+
+  /**
+   * Campaign tactics (decision SA5): the movement / escape planner runs at the campaign level's enemy bot level plus
+   * the seat's trap-sense bump (a lieutenant plans its escapes like a sharper bot; a plain agbero like the level's).
+   */
+  private planner(obs: Observation): Brain {
+    const t = obs.config.campaignTactics;
+    const me = obs.players[obs.selfId];
+    if (!t || !me?.enemyKind) return this.brain;
+    if (!this.tacticsBrain) {
+      const bump = t.trapSense[variantOf(me)!.personality.trapSense].plannerBump;
+      const base = DIFFICULTIES.indexOf(this.opts.difficulty);
+      const level = DIFFICULTIES[Math.min(DIFFICULTIES.length - 1, Math.max(0, base + bump))]!;
+      this.tacticsBrain =
+        level === this.opts.difficulty
+          ? this.brain
+          : new Brain(enemyProfile(level), this.opts.seed, this.opts.playerId);
+    }
+    return this.tacticsBrain;
   }
 
   /** Is generator `g` a threat to this enemy yet (decision EF1)? Once it is, it stays one. */
@@ -117,6 +161,8 @@ export class EnemyBot implements Bot {
   perceive(obs: Observation): Observation {
     const me = obs.players[obs.selfId];
     if (obs.config.tacticalTrap && me?.enemyKind) return this.perceiveTrap(obs, me);
+    if (obs.config.campaignTactics && me?.enemyKind)
+      return this.perceiveTactics(obs, me, obs.config.campaignTactics);
     const aw = me?.enemyKind ? obs.config.enemyAttacks.awareness[me.enemyKind] : undefined;
     if (!aw || obs.generators.length === 0) {
       this.sight.reset();
@@ -169,6 +215,52 @@ export class EnemyBot implements Bot {
     return hidden ? { ...obs, generators } : obs;
   }
 
+  /**
+   * The campaign tactics layer's perception (decisions SA4-SA5): the pilot's sight, memory and hearing on the layer's
+   * per-kind table, the variant's field of attention, and its trap sense: the reaction time scaled by its tier, and
+   * again while brawling (pursuing, winding up, recovering) for the tiers with tunnel vision; while calm it notices a
+   * generator only within its tier's `calmVisionTiles`. Never more than it saw.
+   */
+  private perceiveTactics(obs: Observation, me: Readonly<Player>, t: CampaignTacticsConfig): Observation {
+    const pers = variantOf(me)!.personality;
+    const sense = t.trapSense[pers.trapSense];
+    const d = obs.directive?.kind;
+    const brawling =
+      me.attack !== null ||
+      obs.tick < me.rootedUntil ||
+      d === 'chase' ||
+      d === 'surround' ||
+      d === 'standoff' ||
+      d === 'block';
+    // calm (patrolling, holding its post, walking back; not engaged, not cautious): it looks where it walks, near
+    const calm = !brawling && !this.sight.cautious(obs.tick) && d !== 'investigate';
+    this.sight.update(obs, me, t, {
+      visionDelta: pers.visionDelta,
+      reactScale: sense.reactScale * (brawling ? sense.brawlReactScale : 1),
+      ...(calm ? { visionCap: sense.calmVisionTiles, calmCone: true } : {}),
+      seesPlacement: sense.seesPlacement && obs.tick >= me.dazedUntil,
+    });
+    if (this.sight.freshlyKnown) this.planner(obs).alert();
+    return perceivedObservation(obs, this.sight);
+  }
+
+  /**
+   * Campaign tactics (decision SA7): may this enemy start a throw now? Never from a calm state (it has not engaged),
+   * never while dodging (a known generator's reach touches its tile or a neighbour) and only after standing still for
+   * `attack.throwSettleTicks` (no throwing on the run).
+   */
+  private mayThrow(obs: Observation, me: Readonly<Player>, t: CampaignTacticsConfig): boolean {
+    const d = obs.directive?.kind;
+    if (d === 'patrol' || d === 'investigate' || d === 'return') return false;
+    if (obs.tick - this.lastMoveTick < t.attack.throwSettleTicks) return false;
+    for (const g of obs.generators) {
+      if (g.timer >= UNHEEDED_FUSE || g.mode === 'disabled') continue;
+      if (inCross(obs, g, me.x, me.y)) return false;
+      for (const v of Object.values(DIR_VEC)) if (inCross(obs, g, me.x + v.dx, me.y + v.dy)) return false;
+    }
+    return true;
+  }
+
   /** The one investigating step toward a sound just heard (pilot only; never a path to the generator). */
   private investigate(obs: Observation, me: Readonly<Player>, intent: Intent): void {
     const dir = this.sight.soundDir;
@@ -187,7 +279,13 @@ export class EnemyBot implements Bot {
 
   decide(raw: Observation): Intent {
     const obs = this.perceive(raw);
-    const intent = this.brain.decide(obs);
+    const self = raw.players[raw.selfId];
+    if (self && raw.config.campaignTactics) {
+      const tile = self.y * raw.width + self.x;
+      if (tile !== this.lastTile || self.stepRemaining > 0) this.lastMoveTick = raw.tick;
+      this.lastTile = tile;
+    }
+    const intent = this.planner(obs).decide(obs);
     // an enemy is not a generator player: scrub everything but movement
     delete intent.place;
     delete intent.placeHeld;
@@ -214,6 +312,8 @@ export class EnemyBot implements Bot {
         return intent;
       }
     }
+    // campaign tactics: the same caution (the investigation itself is the territory's: sim/systems/territory.ts)
+    if (obs.config.campaignTactics && this.sight.cautious(obs.tick)) return intent;
     // never commit to a wind-up / cue (and the recovery after it) inside a cross it takes seriously
     if (
       obs.generators.some(
@@ -234,6 +334,8 @@ export class EnemyBot implements Bot {
       return intent;
     }
     // 2. a rival in a clear cardinal line: throw (stand still for the cue)
+    const t = obs.config.campaignTactics;
+    if (t && !this.mayThrow(obs, me, t)) return intent;
     if (chooseThrow(obs, me)) {
       intent.special = true;
       delete intent.move;
@@ -241,6 +343,25 @@ export class EnemyBot implements Bot {
     }
     return intent;
   }
+}
+
+/**
+ * The campaign tactics layer's view of the generators (decision SA4): a generator this seat has NEVER SEEN (nor heard
+ * as its own team's) is not in its observation at all - not even as an obstacle on its route; one it has seen but not
+ * yet reacted to is an obstacle with an unreachable fuse; one it knows is shown as it is. An unseen generator next to
+ * it is always seen (the eight tiles around a seat are in view), so it never walks into one blindly.
+ */
+export function perceivedObservation(obs: Observation, sight: TrapSight): Observation {
+  let changed = false;
+  const generators: Generator[] = [];
+  for (const g of obs.generators) {
+    if (sight.isKnown(g.id)) generators.push(g);
+    else {
+      changed = true;
+      if (sight.aware(g.id)) generators.push({ ...g, timer: UNHEEDED_FUSE });
+    }
+  }
+  return changed ? { ...obs, generators } : obs;
 }
 
 export function createEnemyBot(opts: BotOptions): Bot {

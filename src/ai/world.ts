@@ -16,9 +16,9 @@ export function stepTicksOf(obs: Observation, p: Readonly<Player>): number {
   let t = levels[Math.min(p.speedLevel, levels.length - 1)]!;
   if (p.mounted) t -= m.okadaStepBonus;
   if (p.curse?.kind === 'slow' && obs.tick < p.curse.until) t += m.slowCurseExtraTicks;
-  if (obs.config.tacticalTrap) {
-    // Tactical Trap pilot (decision TT7): the planner knows how slow a slowed or heavy enemy really is, so such an
-    // enemy cannot plan an escape it cannot walk (every other match plans as before)
+  if (obs.config.tacticalTrap || obs.config.campaignTactics) {
+    // Tactical Trap pilot (decision TT7) and the campaign tactics layer (SA7): the planner knows how slow a slowed or
+    // heavy enemy really is, so such an enemy cannot plan an escape it cannot walk (every other match plans as before)
     if (p.slow && obs.tick < p.slow.until) t += p.slow.extraStepTicks;
     if (p.enemyKind) t += ENEMY_KINDS[p.enemyKind].stepPenaltyTicks;
   }
@@ -28,8 +28,9 @@ export function stepTicksOf(obs: Observation, p: Readonly<Player>): number {
 /** First tick at which a player's next step could begin (the intent is applied on tick + 1 at the earliest). */
 export function readyTick(obs: Observation, p: Readonly<Player>): number {
   const ready = Math.max(obs.tick + Math.max(p.stepRemaining, 1), p.dazedUntil);
-  // Tactical Trap pilot (TT7): a planted enemy (wind-up, recovery, cue) cannot start a step before it is free
-  return obs.config.tacticalTrap ? Math.max(ready, p.rootedUntil) : ready;
+  // Tactical Trap pilot (TT7) / campaign tactics (SA7): a planted enemy (wind-up, recovery, cue) cannot start a step
+  // before it is free
+  return obs.config.tacticalTrap || obs.config.campaignTactics ? Math.max(ready, p.rootedUntil) : ready;
 }
 
 export class World {
