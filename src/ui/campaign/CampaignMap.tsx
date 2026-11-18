@@ -25,6 +25,7 @@ import { LevelPicker } from './LevelPicker';
 import { StoryHero } from './StoryHero';
 import { Workshop } from './Workshop';
 import { SectionList } from './SectionList';
+import { Liberation, liberationBadge } from './Liberation';
 
 /** Coast, lagoon, the island and the Lekki strip behind the nodes (decorative only, 0..100 units). */
 function MapBackdrop({ nodes }: { nodes: MapNode[] }) {
@@ -88,8 +89,9 @@ function NodeButton(props: { node: MapNode; selected: boolean; enabled: boolean;
       : node.hub
         ? 'hub'
         : node.status === 'cleared'
-          ? `${node.stars} of 3 stars`
-          : 'open';
+          ? `freed, ${node.stars} of 3 stars`
+          : `open, ${node.reclaimed} of ${node.sectionCount} sections reclaimed`;
+  const badge = liberationBadge(node);
   return (
     <button
       type="button"
@@ -107,6 +109,11 @@ function NodeButton(props: { node: MapNode; selected: boolean; enabled: boolean;
         {node.hub ? '⌂' : node.status === 'locked' ? '🔒' : districtNumber(node.id)}
       </span>
       <span className="cp-node-name">{node.name}</span>
+      {badge && (
+        <span className={`cp-node-lib ${badge.tone}`} data-testid={`map-node-lib-${node.id}`}>
+          {badge.text}
+        </span>
+      )}
       {node.status === 'cleared' && !node.hub && <Stars n={node.stars} />}
     </button>
   );
@@ -140,6 +147,7 @@ function DistrictCard({ id, status }: { id: DistrictId; status: MapNode['status'
           {d.boss.consequence.split('. ')[0]}.
         </p>
       )}
+      {d.boss && status !== 'locked' && <Liberation districtId={d.id as MissionId} />}
       {status === 'cleared' && p && p.clears > 0 && (
         <p className="cp-best" data-testid="district-best">
           <Stars n={p.bestStars} /> best {p.bestSeconds !== null ? clock(p.bestSeconds) : '-'} · {p.clears}{' '}
@@ -354,7 +362,7 @@ export function CampaignMap() {
           {started ? (
             <>
               <DistrictCard id={selected.id} status={selected.status} />
-              {selected.status !== 'locked' && <Workshop districtId={selected.id as MissionId} />}
+              <Workshop districtId={selected.id} />
               {canOpen && (
                 <SecondaryButton
                   className="cp-open"

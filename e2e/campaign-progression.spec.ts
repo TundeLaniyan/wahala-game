@@ -1,7 +1,8 @@
 /**
- * Generator Parts in a real browser (decisions PR1-PR8): Oshodi results show the Parts they paid and a "Ring weakened"
- * line, the map's Workshop shows the Parts and buys both upgrades, the purchase survives a reload, and the cleared
- * district's card shows its consequence (driven by the existing `oshodi.dispatchBroken` flag).
+ * Generator Parts in a real browser (decisions PR1-PR15): Oshodi results show the Parts they paid, a "Ring weakened"
+ * line and the next reason to continue; the map's Workshop shows the Parts and buys both level-1 upgrades (level 2 is
+ * offered at 14), the purchase survives a reload, the cleared district's card shows its consequence and liberation
+ * state, and the Workshop is campaign-wide (Mushin shows the same levels).
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -55,6 +56,8 @@ test('Oshodi pays Generator Parts, the Workshop spends them and the purchase is 
   await finish(page, outcome('oshodi'));
   await expect(page.getByTestId('result-parts')).toContainText('+4 Generator Parts');
   await expect(page.getByTestId('result-unlocked-districts')).toContainText('Mushin');
+  await expect(page.getByTestId('result-ring-lost')).toContainText('dispatch radio goes quiet');
+  await expect(page.getByTestId('result-up-next')).toContainText('Up next: Spare-Parts Row in Mushin');
 
   await page.evaluate(() =>
     (window as never as { __WAHALA__: { campaign(): Campaign } }).__WAHALA__.campaign().toMap(),
@@ -64,6 +67,8 @@ test('Oshodi pays Generator Parts, the Workshop spends them and the purchase is 
   await expect(shop).toBeVisible();
   await expect(page.getByTestId('workshop-parts')).toHaveText('12');
   await expect(page.getByTestId('district-consequence')).toContainText('radio net goes quiet');
+  await expect(page.getByTestId('map-node-lib-oshodi')).toHaveText('Freed');
+  await expect(page.getByTestId('district-liberation')).toHaveAttribute('data-freed', 'true');
   for (const kind of ['capacity', 'range']) {
     const buy = page.getByTestId(`workshop-buy-${kind}`);
     const box = (await buy.boundingBox())!;
@@ -73,6 +78,7 @@ test('Oshodi pays Generator Parts, the Workshop spends them and the purchase is 
   }
   await expect(page.getByTestId('workshop-parts')).toHaveText('0');
   await expect(page.getByTestId('workshop-buy-capacity')).toBeDisabled();
+  await expect(page.getByTestId('workshop-buy-capacity')).toHaveText('Buy · 14');
   expect(
     await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.campaign.v1')!).upgrades as unknown),
   ).toEqual({ capacity: 1, range: 1 });
@@ -83,8 +89,10 @@ test('Oshodi pays Generator Parts, the Workshop spends them and the purchase is 
   await page.getByTestId('map-node-oshodi').click();
   await expect(page.getByTestId('workshop-capacity')).toHaveAttribute('data-level', '1');
   await expect(page.getByTestId('workshop-range')).toHaveAttribute('data-level', '1');
-  // Mushin is outside the slice: no Workshop there
+  // campaign-wide (PR9): Mushin shows the same Workshop and its own liberation state
   await page.getByTestId('map-node-mushin').click();
-  await expect(page.getByTestId('campaign-workshop')).toHaveCount(0);
+  await expect(page.getByTestId('workshop-range')).toHaveAttribute('data-level', '1');
+  await expect(page.getByTestId('map-node-lib-mushin')).toHaveText('0/3');
+  await expect(page.getByTestId('district-liberation')).toHaveAttribute('data-reclaimed', '0');
   expect(errors).toEqual([]);
 });
