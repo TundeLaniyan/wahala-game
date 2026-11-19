@@ -364,6 +364,14 @@ describe('raids: follow when the board does not fit the screen, fixed when it do
     }
   });
 
+  it('844 x 390 phone: the 17-wide raids fit as well as Classic does on the smallest phone (25 px): fixed', () => {
+    for (const id of ['warehouseDispatchDepot', 'railYardGoods'] as const) {
+      const { rig } = settle(raid(id), PHONE2);
+      expect(rig.framing, id).toBe('fixed');
+      expect(rig.framesWholeArena(), id).toBe(true);
+    }
+  });
+
   it('desktop 1280 x 720: every raid fits, so every raid keeps the fixed framing', () => {
     for (const id of [
       'warehouseDispatchDepot',
@@ -379,7 +387,7 @@ describe('raids: follow when the board does not fit the screen, fixed when it do
     }
   });
 
-  for (const vp of [PHONE, PHONE2]) {
+  for (const vp of [PHONE]) {
     it(`${vp.name}: following a raid, the fighter on any open tile is on screen, clear of the screen edges`, () => {
       for (const id of ['warehouseDispatchDepot', 'railYardGoods'] as const) {
         const s = raid(id);

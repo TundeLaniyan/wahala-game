@@ -59,10 +59,11 @@ export function compactNearX(aspect: number): number {
 /** A board keeps the fixed framing while its tiles are at least this share of the standard board's (CF5). */
 const FIT_SHARE = 0.95;
 /**
- * A fixed whole-board view with tiles at least this big (CSS px, at the board's centre) needs no follow camera: the
- * campaign follow camera's own tile on a 740 x 360 phone, measured (docs/CAMPAIGN_CAMERA.md, "Raids"). CF5.
+ * A fixed whole-board view with tiles at least this big (CSS px, at the board's centre) needs no follow camera: what the
+ * standard 15 x 11 board gets on a 740 x 360 phone (25.5 px measured), the size Classic Battle is played at on the
+ * smallest supported phone (docs/CAMPAIGN_CAMERA.md, "Raids"). CF5.
  */
-const READABLE_TILE_PX = 40;
+const READABLE_TILE_PX = 25;
 /** World units over which a bounded follow view eases into its limit instead of stopping dead (CF3). */
 const BOUNDS_KNEE = 1.6;
 
@@ -382,8 +383,8 @@ export class CameraRig {
   /**
    * Would the fixed whole-board framing (the Classic camera) do on this screen for this board? Yes when its tiles are at
    * least `FIT_SHARE` of the size the standard `ref` board (15 x 11) gets on the same screen (as readable as Classic
-   * Battle there), or at least `READABLE_TILE_PX` CSS pixels (a big screen), or at least as big as the follow camera's
-   * (following would then only show less). Cached per screen layout. Decision CF5.
+   * Battle there), or at least `READABLE_TILE_PX` CSS pixels (as readable as Classic on the smallest phone), or at least
+   * as big as the follow camera's (following would then only show less). Cached per screen layout. Decision CF5.
    */
   boardFitsFixed(ref: { w: number; h: number }): boolean {
     const key = `${ref.w}x${ref.h}`;

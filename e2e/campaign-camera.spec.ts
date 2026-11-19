@@ -4,8 +4,8 @@
  * - a campaign mission opens framed on the fighter: the floor the HUD-free band shows (`__WAHALA__.camera().view`) is a
  *   small part of the district and holds the fighter, from the first frame of the countdown;
  * - walking (real movement: forced intents through the match controller's own tick) moves the camera with the fighter;
- * - a 17 x 13 raid follows on a 740 x 360 phone and keeps the fixed whole-board framing on desktop; a 13 x 9 raid is
- *   fixed everywhere;
+ * - a 17 x 13 raid follows on a 740 x 360 phone; a 13 x 9 raid keeps the fixed whole-board framing (desktop and 844 x 390
+ *   keep every raid fixed: tests/render/campaign-camera.test.ts);
  * - starting the same mission again, and A -> B -> A, keeps the live GPU geometries and textures flat (before the fix
  *   every start left about 42 bone textures and 4 geometries behind);
  * - no page errors.
@@ -29,22 +29,32 @@ interface CameraStatus {
 const camera = (page: Page): Promise<CameraStatus | null> =>
   page.evaluate(() => (window as any).__WAHALA__.camera());
 
-/** Polls until two reads of the camera pose agree (the smoothed camera has arrived). */
+/**
+ * Polls until the camera pose stops changing across rendered frames (software WebGL can take seconds a frame, so two
+ * reads between the same two frames prove nothing): at least 3 frames after the call, then two reads with a new frame
+ * between them and the same pose.
+ */
 async function settled(page: Page): Promise<CameraStatus> {
+  const frames = (): Promise<number> => page.evaluate(() => (window as any).__WAHALA__.matchLoad().frames);
+  const start = await frames();
   let last = '';
+  let lastFrame = -1;
   let status: CameraStatus | null = null;
   await expect
     .poll(
       async () => {
         status = await camera(page);
+        const frame = await frames();
+        if (frame < start + 3 || frame === lastFrame) return false;
         const key = status
           ? `${status.framing}:${status.pose.x.toFixed(2)}:${status.pose.z.toFixed(2)}:${status.pose.distance.toFixed(2)}`
           : 'null';
         const same = key === last && key !== 'null';
         last = key;
+        lastFrame = frame;
         return same;
       },
-      { timeout: 90_000, intervals: [500] },
+      { timeout: 120_000, intervals: [500] },
     )
     .toBe(true);
   return status!;
@@ -202,45 +212,29 @@ test.describe('landscape phone 740 x 360', () => {
 });
 
 test.describe('desktop', () => {
-  test('raids keep the fixed framing; restarts keep the GPU resources flat', async ({ page }, info) => {
+  test('restarting a mission keeps the GPU resources flat; A -> B -> A too', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'desktop run only');
-    test.setTimeout(600_000); // five match loads on software WebGL
+    test.setTimeout(600_000); // four match loads on software WebGL
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await open(page, '&noattract');
-    await startRaid(page, 'warehouseDispatchDepot');
-    await freeze(page);
-    await toPlay(page);
-    expect((await settled(page)).framing).toBe('fixed');
-
-    // the same field mission three times, then another mission and back (A, A, A, B, A)
+    // the same field mission twice, then another mission and back (A, A, B, A)
     const counts: { geometries: number; textures: number }[] = [];
-    for (const id of [
-      'oshodi.approach',
-      'oshodi.approach',
-      'oshodi.approach',
-      'mushin.approach',
-      'oshodi.approach',
-    ]) {
+    for (const id of ['oshodi.approach', 'oshodi.approach', 'mushin.approach', 'oshodi.approach']) {
       await startField(page, id);
       await freeze(page);
       await settled(page);
       counts.push(await gpu(page));
     }
     console.log(`GPU after each start: ${JSON.stringify(counts)}`);
-    const [a1, a2, a3, , a4] = counts as [
-      (typeof counts)[0],
-      (typeof counts)[0],
-      (typeof counts)[0],
-      unknown,
-      (typeof counts)[0],
-    ];
-    // a few lazily made resources (an effect's first texture) may come on the second start; never 40 a start
-    expect(Math.abs(a3.textures - a2.textures), 'textures, restart').toBeLessThanOrEqual(3);
-    expect(Math.abs(a3.geometries - a2.geometries), 'geometries, restart').toBeLessThanOrEqual(3);
-    expect(Math.abs(a4.textures - a3.textures), 'textures, A -> B -> A').toBeLessThanOrEqual(3);
-    expect(Math.abs(a4.geometries - a3.geometries), 'geometries, A -> B -> A').toBeLessThanOrEqual(6);
-    expect(a2.textures - a1.textures).toBeLessThan(10);
+    const [a1, a2, , a3] = counts as [(typeof counts)[0], (typeof counts)[0], unknown, (typeof counts)[0]];
+    // before the fix every start left about 42 textures and 4 geometries; a mission seen once may leave a few shared,
+    // cached resources (another mission's enemy looks: 10 textures, 7 geometries measured for Mushin) that later visits
+    // reuse; the old leak would add about 84 textures over A -> B -> A
+    expect(Math.abs(a2.textures - a1.textures), 'textures, restart').toBeLessThanOrEqual(3);
+    expect(Math.abs(a2.geometries - a1.geometries), 'geometries, restart').toBeLessThanOrEqual(3);
+    expect(Math.abs(a3.textures - a2.textures), 'textures, A -> B -> A').toBeLessThanOrEqual(20);
+    expect(Math.abs(a3.geometries - a2.geometries), 'geometries, A -> B -> A').toBeLessThanOrEqual(20);
     expect(errors).toEqual([]);
   });
 });

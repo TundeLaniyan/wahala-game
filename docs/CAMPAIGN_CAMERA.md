@@ -39,7 +39,7 @@ Founder: missions still opened on too much of the environment; the player should
 
 ### Raids (CF5)
 
-A raid that fits the screen keeps the fixed whole-board camera, identical to Classic Battle; a raid that does not follows the fighter, bounded to its board, with exact grid movement unchanged (the camera is presentation only). "Fits" is decided per screen by the rig (`boardFitsFixed`): the whole-board view's tiles are at least 95 % of the size the standard 15 x 11 board gets on that same screen, or at least 40 px (the campaign follow camera's own tile on a 740 x 360 phone), or at least as big as the follow camera's.
+A raid that fits the screen keeps the fixed whole-board camera, identical to Classic Battle; a raid that does not follows the fighter, bounded to its board, with exact grid movement unchanged (the camera is presentation only). "Fits" is decided per screen by the rig (`boardFitsFixed`): the whole-board view's tiles are at least 95 % of the size the standard 15 x 11 board gets on that same screen, or at least 25 px (what the standard board gets on a 740 x 360 phone, 25.5 px: the size Classic Battle is played at on the smallest supported phone), or at least as big as the follow camera's. In practice only the two 17-wide raids follow, and only on phones narrower than about 800 px.
 
 Measured tile size at the board's centre (CSS px):
 
@@ -48,10 +48,10 @@ Measured tile size at the board's centre (CSS px):
 | 13 x 9 (Junction Tool Shed, Standby Plant) | 64.3 | 29.5 | 34.0 | 40.0 / 43.3 / 79.4 | fixed everywhere |
 | 15 x 11 (Parts Storeroom; the standard board) | 56.3 | 25.5 | 29.4 | | fixed everywhere |
 | 15 x 13 (Records Vault) | 50.0 | 24.8 (97 %) | 28.5 (97 %) | | fixed everywhere |
-| 17 x 11 (Rail Yard Goods) | 56.3 | 23.0 (90 %) | 26.6 (90 %) | | follows on phones, fixed on desktop |
-| 17 x 13 (Warehouse Dispatch Depot) | 50.0 | 22.4 (88 %) | 25.9 (88 %) | | follows on phones, fixed on desktop |
+| 17 x 11 (Rail Yard Goods) | 56.3 | 23.0 (90 %) | 26.6 (90 %, >= 25 px) | | follows at 740 x 360; fixed at 844 x 390 and on desktop |
+| 17 x 13 (Warehouse Dispatch Depot) | 50.0 | 22.4 (88 %) | 25.9 (88 %, >= 25 px) | | follows at 740 x 360; fixed at 844 x 390 and on desktop |
 
-Following a raid on a phone, the fighter on every open tile of both following raids stays within 0.75 of the screen centre horizontally (clear of the raid cross and the action buttons) and inside the HUD-free band (`tests/render/campaign-camera.test.ts`). Standalone Classic is untouched.
+Following a raid on a 740 x 360 phone, the fighter on every open tile of both following raids stays within 0.75 of the screen centre horizontally (clear of the raid cross and the action buttons) and inside the HUD-free band (`tests/render/campaign-camera.test.ts`). Standalone Classic is untouched.
 
 ## 3. Framing measurements (CF2)
 
@@ -93,7 +93,7 @@ At the start of the Oshodi rail edge mission the map knows under 30 % of the dis
 
 Found by the restart runs as well: each raid door's 18 boxes and the crowd zones' pose geometries (section 6), both now released with their views.
 
-**Proved:** `e2e/campaign-camera.spec.ts` (five starts in one page, A A A B A: the counts stay flat) and `scripts/campaign-perf.mjs --restarts=3` (section 6).
+**Proved:** `e2e/campaign-camera.spec.ts` (four starts in one page, A A B A: the counts stay flat) and `scripts/campaign-perf.mjs --restarts=3` (section 6).
 
 ## 6. Measurements
 
@@ -140,20 +140,20 @@ Two more owners were found by the restart runs: each raid start left its doors' 
 
 `docs/screenshots/campaign-guidance-expansion/camera/` (taken with `scripts/campaign-camera-shots.mjs`): `before/` is production `0b89d09`, `after/` this branch; `<mission>-<screen>-start.jpg` is the first frame of the mission (the countdown's opening shot) and `-play.jpg` the follow camera in play, on a 740 x 360 and an 844 x 390 phone (device scale 2) and a 1280 x 720 desktop.
 
-What they show (740 x 360): **before**, the Oshodi approach opens on the whole sector (the fighters are a few pixels tall) and the Oshodi boss on the **whole 63 x 47 district**; the warehouse raid is the fixed whole-board view with 22 px tiles. **After**, every mission opens on the fighter and the few streets round them (the boss: the "You" fighter at the depot corner, the buses and stalls next to them, the minimap showing only the discovered streets and the route), play follows them, and the warehouse raid scrolls with 40 px tiles. On desktop the raid keeps the fixed view.
+What they show (740 x 360): **before**, the Oshodi approach opens on the whole sector (the fighters are a few pixels tall) and the Oshodi boss on the **whole 63 x 47 district**; the warehouse raid is the fixed whole-board view with 22 px tiles. **After**, every mission opens on the fighter and the few streets round them (the boss: the "You" fighter at the depot corner, the buses and stalls next to them, the minimap showing only the discovered streets and the route), play follows them, and the warehouse raid scrolls with 40 px tiles. At 844 x 390 and on desktop the raid keeps the fixed view.
 
 Known look: where the fighter stands at a sector's south edge (the Oshodi approach start is two rows from it), the bound lets the view show the sector's 3-tile `viewMargin` of street beyond it (sector data), so the lower part of the screen is wall and pavement; the stadium camera, with its focus lower on screen, rarely reached that bound. The world worker's maps can set a smaller `viewMargin` (the rig never uses less than its own HUD margin, 2.2 on a phone).
 
 ## 8. Tests
 
-- `tests/render/campaign-camera.test.ts`: the modes (campaign / arena / stadium, override), standalone Classic framing and City Rumble's shot unchanged; every listed mission's first frame centred on the fighter, a small part of the board and smaller than the old establishing view (740 x 360 and desktop); the countdown glide; the whole-view setting; at least 4.8 / 6 / 6 / 6 tiles south / north / west / east (740 x 360, 844 x 390, desktop); a real-movement walk to the sector's far end with no jump and never past the edge; `softClamp`; raids follow or stay fixed as in the table and keep the fighter clear of the screen edges on every open tile; `releaseSkeletons`.
+- `tests/render/campaign-camera.test.ts`: the modes (campaign / arena / stadium, override), standalone Classic framing and City Rumble's shot unchanged; every listed mission's first frame centred on the fighter, a small part of the board and smaller than the old establishing view (740 x 360 and desktop); the countdown glide; the whole-view setting; at least 4.8 / 6 / 6 / 6 tiles south / north / west / east (740 x 360, 844 x 390, desktop); a real-movement walk to the sector's far end with no jump and never past the edge; `softClamp`; raids follow or stay fixed as in the table (740 x 360, 844 x 390, desktop) and keep the fighter clear of the screen edges on every open tile; `releaseSkeletons`.
 - `tests/render/minimap-discovery.test.ts`: the sector, the surroundings and the objective route are known, the district's far corners are not; discovery grows with a real walk; the route is not recomputed every frame; the map's layers leave out undiscovered crates, rivals and hazards but keep the objectives; no discovery in City Rumble or Classic; the match state is untouched.
-- `e2e/campaign-camera.spec.ts`: on a 740 x 360 phone a field mission's first frames show under 40 % of the district and hold the fighter, a walk moves the camera, a 17 x 13 raid scrolls and a 13 x 9 raid stays fixed; on desktop the raid stays fixed and five starts (A A A B A) keep the GPU counts flat; no page errors.
+- `e2e/campaign-camera.spec.ts`: on a 740 x 360 phone a field mission's first frames show under 40 % of the district and hold the fighter, a walk moves the camera, a 17 x 13 raid scrolls and a 13 x 9 raid stays fixed; on desktop four starts (A A B A) keep the GPU counts flat; no page errors. `e2e/raid-render.spec.ts` now expects the `campaign` mode for a raid (it was `arena`) and still requires the whole board in view at 1280 x 720 and 844 x 390.
 - Existing camera tests unchanged and passing: `tests/render/camera.test.ts`, `tests/render/camera-sector.test.ts`, `tests/rumble-camera.test.ts`, `tests/input-raid-cross.test.ts`, `e2e/campaign-sectors.spec.ts`, `e2e/rumble.spec.ts`.
 
 ## 9. For the other workers and the integrator
 
 - A campaign-only map needs nothing for the camera: a mission state (`state.mission`) gets the campaign camera, its sector (or its whole board) bounds the view, and the minimap discovers it.
-- In a raid that follows (phones, 17-wide raids), the board's screen corners leave the screen: `renderer.boardScreenCorners()` (the HUD rail's sizing, `ui/HudRail.tsx`) then reports off-screen points and the rail falls back to its minimum width. The guidance worker's rail should treat a following raid like the Rumble follow camera.
+- **HUD rail in a following raid (open, for the guidance worker):** in a raid that follows (the 17-wide raids on a 740 x 360 phone), the board's screen corners leave the screen, so `renderer.boardScreenCorners()` (the HUD rail's sizing, `ui/HudRail.tsx`) reports off-screen points and the rail falls back to its minimum width over the board's upper-left tiles (visible in `after/warehouseDispatchDepot-phone740-play.jpg`: the DESTROY MARKED CARGO block). The rail should treat a following raid like the Rumble follow camera (`__WAHALA__.camera().framing === 'follow'`; the renderer's `cameraStatus()`). Not changed here: `ui/HudRail.tsx` is the guidance worker's. `e2e/raid-render.spec.ts` checks the rail at 844 x 390, where every raid is fixed.
 - `__WAHALA__.camera()` reports the mode, the framing (`fixed` / `follow` / `overview`) and the visible floor in grid tiles, for e2e checks of new maps.
 - `scripts/campaign-perf.mjs [missions] [low,high] [--restarts=N] [--dist=<dir>]` compares maps; pass `--dist` pointing at the build that is being served so the gzip column is right.

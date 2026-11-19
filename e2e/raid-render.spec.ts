@@ -90,7 +90,8 @@ test.describe('raid presentation', () => {
       };
     });
     expect(dbg.game).toBe('raid');
-    expect(dbg.cam.mode, 'raids use the fixed whole-arena camera').toBe('arena');
+    // raids use the campaign camera (decision CF1), which keeps the fixed whole-board framing where the board fits (CF5)
+    expect(dbg.cam.mode, 'raids use the campaign camera').toBe('campaign');
     expect(dbg.cam.arenaInView, 'the whole board is visible').toBe(true);
     expect(dbg.stats, 'the raid markers exist').not.toBeNull();
     expect(dbg.stats!.cargo).toBeGreaterThan(0);
