@@ -798,6 +798,8 @@ function exposeDebugHandle(): void {
       );
       return true;
     },
+    /** e2e / art review: a field mission's data (start, markers, doors, return), so specs stage on the data's own tiles. */
+    fieldMissionDef: (fieldId: string) => FIELD_MISSION_DEFS[fieldId] ?? null,
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
     music: () => (audio as { musicStatus?: () => unknown }).musicStatus?.() ?? null,
     /** Match loading: the screen's state now and how many starts actually ran (duplicate taps start nothing). */

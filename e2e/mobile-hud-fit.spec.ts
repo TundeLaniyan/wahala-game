@@ -38,19 +38,17 @@ for (const [name, width, height] of SIZES) {
       w.stepTicks(120);
       const p = s.players[0];
       p.protectedUntil = s.tick + 100000;
-      const legs = [
-        [9, 39],
-        [19, 39],
-        [26, 40],
-      ];
+      // the checkpoints and the depot door of the mission data (decision WX5)
+      const def = w.fieldMissionDef('oshodi.approach');
+      const legs = def.legs[0].markers.map((m: { x: number; y: number }) => [m.x, m.y]);
       for (const [lx, ly] of legs) {
         p.x = p.stepFromX = lx;
         p.y = p.stepFromY = ly;
         p.stepRemaining = 0;
         w.stepTicks(2);
       }
-      p.x = p.stepFromX = 25;
-      p.y = p.stepFromY = 44;
+      p.x = p.stepFromX = def.doors[0].x;
+      p.y = p.stepFromY = def.doors[0].y;
       p.stepRemaining = 0;
       w.stepTicks(24);
     });

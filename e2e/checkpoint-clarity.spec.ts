@@ -27,6 +27,20 @@ async function stage(page: Page, x: number, y: number, ticks: number): Promise<v
 
 const markers = (page: Page) => page.evaluate(() => (window as any).__WAHALA__.missionMarkers());
 
+/** Terminal Approach's checkpoints, door and the tile in front of it, from the mission data (decision WX5). */
+async function route(
+  page: Page,
+): Promise<{ mk: [number, number][]; door: [number, number]; front: [number, number] }> {
+  return page.evaluate(() => {
+    const d = (window as any).__WAHALA__.fieldMissionDef('oshodi.approach');
+    return {
+      mk: d.legs[0].markers.map((m: { x: number; y: number }) => [m.x, m.y]),
+      door: [d.doors[0].x, d.doors[0].y],
+      front: [d.doors[0].returnTile[0], d.doors[0].returnTile[1]],
+    };
+  });
+}
+
 test('Oshodi approach: the current checkpoint is marked, reaching it says so at once, the door hold fills and starts the raid', async ({
   page,
 }) => {
@@ -64,7 +78,8 @@ test('Oshodi approach: the current checkpoint is marked, reaching it says so at 
   expect(await markers(page)).toMatchObject({ beacons: 3, beaconsLocked: 2, holds: 0 });
 
   // checkpoint A: walked through, the notice and the next objective at once
-  await stage(page, 9, 39, 2);
+  const r = await route(page);
+  await stage(page, r.mk[0]![0], r.mk[0]![1], 2);
   await expect(page.getByTestId('toast').filter({ hasText: 'CHECKPOINT A ✓' })).toContainText(
     'NEXT: CHECKPOINT B',
   );
@@ -76,24 +91,24 @@ test('Oshodi approach: the current checkpoint is marked, reaching it says so at 
     await expect(compass).toHaveAttribute('data-target', 'mk1');
 
   // B and C, then the door: HOLD, the bar fills while standing on it
-  await stage(page, 19, 39, 1);
-  await stage(page, 26, 40, 1);
+  await stage(page, r.mk[1]![0], r.mk[1]![1], 1);
+  await stage(page, r.mk[2]![0], r.mk[2]![1], 1);
   await expect(page.getByTestId('field-goal')).toHaveAttribute('data-verb', 'hold');
   await expect(page.getByTestId('field-goal-target')).toHaveText('DISPATCH DEPOT DOOR');
   await expect(page.getByTestId('field-hold')).toHaveAttribute('data-state', 'idle');
   await expect.poll(async () => (await markers(page))?.holds).toBe(1);
-  await stage(page, 25, 44, 24);
+  await stage(page, r.door[0], r.door[1], 24);
   const hold = page.getByTestId('field-hold');
   await expect(hold).toHaveAttribute('data-state', 'filling');
   await expect(page.getByTestId('field-hold-label')).toHaveText('HOLD 0.4 / 1.0 s');
   const holdBox = (await hold.boundingBox())!;
   expect(holdBox.x).toBeGreaterThan(vp.width * 0.55);
   // a step off drains it
-  await stage(page, 25, 43, 6);
+  await stage(page, r.front[0], r.front[1], 6);
   await expect(hold).toHaveAttribute('data-state', 'draining');
   await expect(page.getByTestId('field-hold-label')).toHaveText('HOLD 0.2 / 1.0 s');
   // back on for the full second: the raid request goes up and the app starts the warehouse raid
-  await stage(page, 25, 44, 62);
+  await stage(page, r.door[0], r.door[1], 62);
   // the raid is built behind the loading screen now (docs/MATCH_LOADING.md), so the wait covers a whole start
   await expect
     .poll(() => page.evaluate(() => !!(window as any).__WAHALA__.getState()?.raid), { timeout: 120_000 })

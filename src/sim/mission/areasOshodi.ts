@@ -56,7 +56,7 @@ export const OSHODI_ORITA: CampaignAreaDef = {
     barricades: [],
     // the depot's steel gate opens once the three checkpoints are walked (a sector transition, decision WX6)
     gates: [{ id: 'depotGate', kind: 'gate', tiles: areaCol(31, 20, 22), opensAfterLeg: 0 }],
-    viewMargin: 2,
+    viewMargin: 3,
     hazards: 'inside',
   },
   entry: [3, 21],
@@ -136,7 +136,7 @@ export const OSHODI_RAILSIDE: CampaignAreaDef = {
     barricades: [],
     // the station's barrier lifts once the plaza is held: the way to the footbridge (a sector transition, decision WX8)
     gates: [{ id: 'stationBarrier', kind: 'checkpoint', tiles: areaCol(36, 10, 12), opensAfterLeg: 2 }],
-    viewMargin: 2,
+    viewMargin: 3,
     hazards: 'inside',
   },
   entry: [3, 24],
