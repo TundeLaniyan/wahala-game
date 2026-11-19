@@ -29,7 +29,7 @@ const { useGameStore } = await import('../../src/app/store');
 const { ArenaPicker } = await import('../../src/ui/menu/ArenaPicker');
 const { FighterScreen } = await import('../../src/ui/menu/FighterScreen');
 const { SetupScreen } = await import('../../src/ui/menu/SetupScreen');
-const { ModeScreen } = await import('../../src/ui/menu/ModeScreen');
+const { PlayScreen, PLAY_CHOICES } = await import('../../src/ui/menu/PlayScreen');
 const { ReadyScreen, matchRulesText, botLevelText } = await import('../../src/ui/menu/ReadyScreen');
 const { HomeScreen } = await import('../../src/ui/menu/HomeScreen');
 const { SettingsPanel } = await import('../../src/ui/menu/SettingsScreen');
@@ -187,16 +187,29 @@ describe('match setup shows only what the chosen mode uses', () => {
 });
 
 describe('mode, ready and home screens', () => {
-  it('offers the three City Rumble rulesets and Classic Battle; a tap is enough (no Continue button)', () => {
-    const html = render(ModeScreen);
-    for (const m of ['survival', 'deathmatch', 'team', 'classic'])
-      expect(html).toContain(`data-testid="mode-${m}"`);
+  it('Choose How to Play shows Quick Match, Classic Blast and City Rumble at once, with no Story Campaign', () => {
+    const html = render(PlayScreen);
+    for (const t of ['play-quick', 'play-quick-customise', 'home-classic', 'home-rumble'])
+      expect(html).toContain(`data-testid="${t}"`);
+    expect(html).toContain('Start here');
+    expect(html).toContain(PLAY_CHOICES.classic.text);
+    expect(html).toContain(PLAY_CHOICES.rumble.text);
+    expect(html).not.toMatch(/Story Campaign|home-campaign|carousel/i);
     expect(html).not.toContain('menu-continue');
-    expect(html).not.toMatch(/Continue to setup/i);
+  });
+
+  it('Match Setup names the battle style and offers the three City Rumble rulesets', () => {
+    const rumble = render(SetupScreen, { play: 'rumble', rumbleMode: 'team' });
+    for (const m of ['survival', 'deathmatch', 'team']) expect(rumble).toContain(`data-testid="mode-${m}"`);
+    expect(rumble).toContain('Battle style');
+    expect(rumble).toContain('data-testid="setup-start"');
+    const classic = render(SetupScreen, { play: 'classic' });
+    expect(classic).not.toContain('data-testid="mode-team"');
+    expect(classic).toContain('Grid battles. Cross-shaped explosions.');
   });
 
   it('shows no numbered step strip on any flow screen', () => {
-    for (const screen of [ModeScreen, SetupScreen, FighterScreen, ReadyScreen]) {
+    for (const screen of [PlayScreen, SetupScreen, FighterScreen, ReadyScreen]) {
       const html = render(screen);
       expect(html).not.toContain('menu-steps');
       expect(html).not.toMatch(/Step [1-4]/);
@@ -245,10 +258,13 @@ describe('mode, ready and home screens', () => {
     ).toBe('Mixed roster: Casual to Nightmare');
   });
 
-  it('Home has the four main choices and Quick play, and no invented online features', () => {
+  it('Home has one Play button, Learn to Play and the two small utilities, and no invented online features', () => {
     const html = render(HomeScreen);
-    for (const t of ['home-rumble', 'home-classic', 'home-academy', 'home-settings', 'quick-play'])
+    for (const t of ['home-play', 'home-academy', 'home-settings-icon', 'home-mute'])
       expect(html).toContain(`data-testid="${t}"`);
+    // not five or six competing actions: the old mode rows and the quick-play card are gone from Home
+    for (const t of ['home-rumble', 'home-classic', 'quick-play'])
+      expect(html).not.toContain(`data-testid="${t}"`);
     expect(html).not.toMatch(/online|pvp|server status|reward|coins|₦|battle pass/i);
   });
 });
@@ -263,11 +279,13 @@ describe('settings and academy', () => {
     expect(html).toContain('data-testid="settings-restore"');
   });
 
-  it('the academy lists every real lesson with this device progress', () => {
+  it('the academy opens on Quick Start, lists the sections and shows this device progress', () => {
     const html = render(AcademyScreen);
-    for (const l of LESSONS) expect(html).toContain(`data-testid="academy-lesson-${l.id}"`);
-    expect(html).toContain('Beginner');
-    expect(html).toContain('Advanced');
+    for (const l of LESSONS.slice(0, 5)) expect(html).toContain(`data-testid="academy-lesson-${l.id}"`);
+    for (const sec of ['quick', 'generators', 'classic', 'rumble', 'combat', 'advanced'])
+      expect(html).toContain(`data-testid="academy-section-${sec}"`);
+    expect(html).toContain('Quick Start');
+    expect(html).toContain('Advanced Training');
     expect(html).toContain(`0 / ${LESSONS.length} lessons completed`);
     const p = { completed: ['a'], skipped: ['b'] };
     expect(lessonStatus(p, 'a', 'c')).toBe('done');

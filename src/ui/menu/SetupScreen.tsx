@@ -1,5 +1,6 @@
 /**
- * Arena and match settings on one screen (the step after choosing a mode):
+ * Match Setup, one screen (the step after Choose How to Play):
+ *  - Battle style: Classic Blast or City Rumble (and its ruleset), already selected from the previous screen;
  *  - "Select Arena": the arena / stage cards of the chosen game (ArenaPicker.tsx), always in view;
  *  - Opponents: how many fighters and the bot difficulty (one slider, "same for all" or mixed / per bot);
  *  - Match rules: only what the chosen mode has (length, friendly fire, blast shape, crowd throws ...).
@@ -10,8 +11,8 @@ import { useState } from 'react';
 import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
 import { RUMBLE_SIZES } from '../../app/settings';
-import { TIMED_MINUTES } from '../../sim';
-import type { GameSettings } from '../../app/settings';
+import { CHARACTERS, TIMED_MINUTES } from '../../sim';
+import type { GameSettings, RumbleModeSetting } from '../../app/settings';
 import {
   LEVEL_LABEL,
   allBotsPatch,
@@ -23,8 +24,8 @@ import {
 } from '../difficultyPicker';
 import { ArenaPicker } from './ArenaPicker';
 import { DifficultySlider } from './DifficultyControl';
-import { MODE_CARDS, modeOf } from './ModeScreen';
-import { Field, Option, PrimaryButton, ScreenFrame, Toggle } from './Frame';
+import { MODE_CARDS, modeOf } from './modes';
+import { Field, Option, PrimaryButton, ScreenFrame, SecondaryButton, Toggle } from './Frame';
 
 type Set = (p: Partial<GameSettings>) => void;
 
@@ -241,37 +242,100 @@ function ClassicRules({ s, set }: { s: GameSettings; set: Set }) {
   );
 }
 
+/** Battle Style: Classic Blast or City Rumble (and, for City Rumble, its ruleset). Writes the real `play` / `rumbleMode`. */
+function BattleStyle({ s, set }: { s: GameSettings; set: Set }) {
+  const rumbleModes = MODE_CARDS.filter((m) => m.id !== 'classic');
+  return (
+    <section className="mn-group mn-panel mn-style" aria-labelledby="style-title" data-testid="battle-style">
+      <header className="mn-group-head">
+        <h3 id="style-title">Battle style</h3>
+      </header>
+      <div className="mn-opts mn-seg" role="group" aria-label="Battle style">
+        <Option
+          value="classic"
+          current={s.play}
+          label="Classic Blast"
+          onPick={(play) => set({ play })}
+          testId="setup-style-classic"
+        />
+        <Option
+          value="rumble"
+          current={s.play}
+          label="City Rumble"
+          onPick={(play) => set({ play })}
+          testId="setup-style-rumble"
+        />
+      </div>
+      <p className="mn-style-blurb" data-testid="style-blurb">
+        {s.play === 'classic'
+          ? 'Grid battles. Cross-shaped explosions. Tactical generator action.'
+          : 'Open 3D arenas. Generators, special attacks and rival fighters.'}
+      </p>
+      {s.play === 'rumble' && (
+        <div className="mn-opts mn-seg mn-rumble-modes" role="group" aria-label="City Rumble mode">
+          {rumbleModes.map((m) => (
+            <Option
+              key={m.id}
+              value={m.id as RumbleModeSetting}
+              current={s.rumbleMode}
+              label={m.name}
+              title={m.rule}
+              onPick={(rumbleMode) => set({ rumbleMode })}
+              testId={`mode-${m.id}`}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function SetupScreen() {
   const s = useGameStore((st) => st.settings);
+  useGameStore((st) => st.portraitsVersion);
   const set: Set = (p) => commands.updateSettings(p);
   const rumble = s.play === 'rumble';
   const mode = MODE_CARDS.find((m) => m.id === modeOf(s))!;
+  const fighter = CHARACTERS[s.character];
   // opened with Edit from the review: the button goes back there instead of on to the fighters
   const editing = useGameStore((st) => st.menu.stack.includes('ready'));
   return (
     <ScreenFrame
       id="setup"
-      kicker={rumble ? `City Rumble · ${mode.name}` : 'Classic Battle'}
-      title="Arena & settings"
+      kicker={rumble ? `City Rumble · ${mode.name}` : 'Classic Blast'}
+      title="Match setup"
       status={
         <button
           type="button"
-          className="mn-link"
-          data-testid="setup-change-mode"
-          onClick={() => commands.menuOpen('mode')}
+          className="mn-link mn-fighter-chip"
+          data-testid="setup-fighter"
+          aria-label={`Your fighter: ${fighter.name}. Change fighter`}
+          onClick={() => commands.menuOpen('fighter')}
         >
-          Mode: <b>{rumble ? mode.name : 'Classic Battle'}</b> · change
+          Fighter: <b>{fighter.name}</b> · change
         </button>
       }
       actions={
-        <PrimaryButton testId="menu-continue" onClick={() => commands.menuContinue()}>
-          {editing ? 'Back to review' : 'Choose fighter'}
-        </PrimaryButton>
+        editing ? (
+          <PrimaryButton testId="menu-continue" onClick={() => commands.menuContinue()}>
+            Back to review
+          </PrimaryButton>
+        ) : (
+          <>
+            <SecondaryButton testId="menu-continue" onClick={() => commands.menuContinue()}>
+              Review
+            </SecondaryButton>
+            <PrimaryButton testId="setup-start" onClick={() => commands.start()}>
+              Start match
+            </PrimaryButton>
+          </>
+        )
       }
     >
       <div className="mn-setup2" data-testid={rumble ? 'rumble-setup' : 'classic-setup'}>
         <ArenaPicker />
         <div className="mn-setup2-side">
+          <BattleStyle s={s} set={set} />
           <section className="mn-group mn-panel" aria-labelledby="opp-title">
             <header className="mn-group-head">
               <h3 id="opp-title">Opponents</h3>

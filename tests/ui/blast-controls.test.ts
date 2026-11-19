@@ -19,7 +19,7 @@ vi.mock('../../src/app/session', () => ({
 const { useGameStore } = await import('../../src/app/store');
 const { SetupScreen } = await import('../../src/ui/menu/SetupScreen');
 const { ReadyScreen } = await import('../../src/ui/menu/ReadyScreen');
-const { ModeScreen } = await import('../../src/ui/menu/ModeScreen');
+const { PlayScreen } = await import('../../src/ui/menu/PlayScreen');
 const { HomeScreen } = await import('../../src/ui/menu/HomeScreen');
 const { SettingsPanel } = await import('../../src/ui/menu/SettingsScreen');
 const { CampaignMap } = await import('../../src/ui/campaign/CampaignMap');
@@ -40,7 +40,7 @@ function render(c: () => React.JSX.Element | null, settings: Partial<GameSetting
 beforeEach(() => Object.assign(useGameStore.getInitialState(), { campaign: null }));
 
 describe('no blast-geometry control anywhere (CC2)', () => {
-  it('Setup, Ready, Mode, Home and Settings show none for any play / ruleset', () => {
+  it('Setup, Ready, Play, Home and Settings show none for any play / ruleset', () => {
     const variants: Partial<GameSettings>[] = [
       { play: 'classic' },
       { play: 'rumble', rumbleMode: 'survival' },
@@ -51,7 +51,7 @@ describe('no blast-geometry control anywhere (CC2)', () => {
       for (const screen of [
         SetupScreen,
         ReadyScreen,
-        ModeScreen,
+        PlayScreen,
         HomeScreen,
         () => createElement(SettingsPanel),
       ]) {

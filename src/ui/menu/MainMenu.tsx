@@ -15,7 +15,7 @@ import { KEY_ART } from './art';
 import { useMenuNav } from './focusNav';
 import { HomeScreen } from './HomeScreen';
 import { FirstVisitCard } from './FirstVisitCard';
-import { ModeScreen } from './ModeScreen';
+import { PlayScreen } from './PlayScreen';
 import { SetupScreen } from './SetupScreen';
 import { FighterScreen } from './FighterScreen';
 import { ReadyScreen } from './ReadyScreen';
@@ -30,13 +30,14 @@ import { StoryScreen } from '../campaign/StoryScreen';
 import { campaignScreenReady } from '../campaign/model';
 import './menu.css';
 import './flow.css';
+import './redesign.css';
 
 // The online PREVIEW is its own chunk: a default build never downloads it (it is only reachable with flags().online).
 const OnlineScreen = lazy(() => import('../online/OnlineScreen').then((m) => ({ default: m.OnlineScreen })));
 
 const SCREENS: Record<MenuScreen, React.ComponentType> = {
   home: HomeScreen,
-  mode: ModeScreen,
+  play: PlayScreen,
   setup: SetupScreen,
   fighter: FighterScreen,
   ready: ReadyScreen,

@@ -48,11 +48,11 @@ describe('menu state machine: the online preview screen', () => {
   });
 
   it('the existing flow is unchanged: home -> mode -> setup -> fighter -> ready', () => {
-    let m = openScreen(MENU_HOME, 'mode');
+    let m = openScreen(MENU_HOME, 'play');
     for (const s of ['setup', 'fighter', 'ready']) {
       m = advance(m);
       expect(currentScreen(m)).toBe(s);
     }
-    expect(m.stack).toEqual(['home', 'mode', 'setup', 'fighter', 'ready']);
+    expect(m.stack).toEqual(['home', 'play', 'setup', 'fighter', 'ready']);
   });
 });
