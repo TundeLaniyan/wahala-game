@@ -160,6 +160,11 @@ export class CrowdZones {
   private readonly life: StreetLife;
   private readonly figures: Figure[] = [];
   private readonly variants: Variant[] = [];
+  /**
+   * Every pose geometry `poseSets` made for this crowd (`assets.parts` hands out baked copies): this crowd's own, released
+   * with it (the chosen ones leaked once per match; docs/CAMPAIGN_CAMERA.md, "Asset lifecycle").
+   */
+  private readonly poseGeometries = new Set<BufferGeometry>();
   private readonly rand: () => number;
   private readonly m4 = new Matrix4();
   private readonly q = new Quaternion();
@@ -269,6 +274,8 @@ export class CrowdZones {
   private buildFigures(list: { zone: PlannedZone; person: PlannedPerson }[]): void {
     if (list.length === 0) return;
     const poses = poseSets();
+    for (const sets of poses.values())
+      for (const set of sets) for (const f of set.frames) this.poseGeometries.add(f.geometry);
     const roleOf = (f: { zone: PlannedZone }): Role => ROLE_OF_MOOD[f.zone.def.mood];
     const roles = [...new Set(list.map(roleOf))];
     // at most MAX_FIGURE_VARIANTS variants: the commonest roles get the spare ones
@@ -544,5 +551,7 @@ export class CrowdZones {
     }
     this.variants.length = 0;
     this.figures.length = 0;
+    for (const g of this.poseGeometries) g.dispose();
+    this.poseGeometries.clear();
   }
 }

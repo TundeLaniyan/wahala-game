@@ -1,6 +1,6 @@
 import { RUMBLE_ARENA_IDS } from '../sim';
 import type { GameState } from '../sim';
-import { directShot } from './cameraDirector';
+import { campaignShot, directShot, usesCampaignCamera } from './cameraDirector';
 import type { CameraShot } from './cameraDirector';
 import type { Layout } from './coords';
 
@@ -16,9 +16,15 @@ import type { Layout } from './coords';
  *   spectating), keeping nearby rivals and incoming danger in frame, with the whole-arena overview
  *   as a toggle.
  *
- * Only the City Rumble stages use `stadium`; it can be forced for testing with the `?cam=stadium` URL flag.
+ * - `campaign` (campaign field, boss and finale missions, and classic raids; docs/CAMPAIGN_CAMERA.md, decisions CF1-CF6):
+ *   the follow camera framed on the fighter and the few tiles round them, bounded to the mission's sector (or its
+ *   board) with a soft edge, never a whole-district establishing view. A raid that fits the screen as well as a standard
+ *   board keeps the fixed whole-board framing. Chosen from the match itself, so a campaign-only map needs no entry here.
+ *
+ * Only the City Rumble stages use `stadium`; it can be forced for testing with the `?cam=stadium` URL flag (which also
+ * overrides `campaign`). Standalone Classic Battle and City Rumble never use `campaign`.
  */
-export type CameraMode = 'arena' | 'stadium';
+export type CameraMode = 'arena' | 'stadium' | 'campaign';
 
 /** Arena ids that need the follow camera: every City Rumble stage (41 x 31 and larger boards). */
 export const STADIUM_ARENAS: ReadonlySet<string> = new Set<string>(RUMBLE_ARENA_IDS);
@@ -26,6 +32,12 @@ export const STADIUM_ARENAS: ReadonlySet<string> = new Set<string>(RUMBLE_ARENA_
 export function cameraModeFor(arenaId: string, override?: CameraMode | null): CameraMode {
   if (override) return override;
   return STADIUM_ARENAS.has(arenaId) ? 'stadium' : 'arena';
+}
+
+/** The camera mode of a loaded match: `campaign` for a campaign mission or a raid, else by arena (`cameraModeFor`). */
+export function cameraModeForMatch(state: GameState, override?: CameraMode | null): CameraMode {
+  if (override) return override;
+  return usesCampaignCamera(state) ? 'campaign' : cameraModeFor(state.arenaId);
 }
 
 /**
@@ -42,6 +54,8 @@ export function selectShot(
   opts: { preferOverview: boolean; choosingEntry: boolean; attract: boolean; focusId?: number | null },
 ): CameraShot | null {
   if (mode === 'arena' || opts.attract) return null;
+  if (mode === 'campaign')
+    return campaignShot(state, layout, localId, alpha, opts.preferOverview || opts.choosingEntry);
   return directShot(
     state,
     layout,

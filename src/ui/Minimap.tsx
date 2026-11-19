@@ -5,6 +5,8 @@ import { playerCss } from '../assets/palette';
 import { liveMatch } from '../app/session';
 import { useGameStore } from '../app/store';
 import { minimapCrop, minimapGeometry, minimapLayers, tileToMinimap } from './minimapModel';
+import { discoveryFor } from './minimapDiscovery';
+import type { MinimapDiscovery } from './minimapDiscovery';
 import type { MinimapGeometry, MinimapMission } from './minimapModel';
 import './Minimap.css';
 
@@ -19,6 +21,8 @@ const C = {
   crushed: '#4a1d14',
   barricade: '#e0661c',
   outside: 'rgba(10, 8, 6, 0.62)',
+  // a campaign mission: not discovered yet (decision CF7): flat, no streets or buildings
+  unknown: '#0d0b09',
   warning: '#ff7a1a',
   soon: 'rgba(255, 122, 26, 0.38)',
   hazard: 'rgba(255, 60, 40, 0.75)',
@@ -37,7 +41,12 @@ const C = {
 };
 
 /** The static board (ground, avenues, buildings) for one arena, drawn once (only the crop of a mission sector). */
-function staticLayer(state: GameState, geo: MinimapGeometry, dpr: number): HTMLCanvasElement {
+function staticLayer(
+  state: GameState,
+  geo: MinimapGeometry,
+  dpr: number,
+  discovery: MinimapDiscovery | null,
+): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = Math.round(geo.width * dpr);
   c.height = Math.round(geo.height * dpr);
@@ -52,6 +61,11 @@ function staticLayer(state: GameState, geo: MinimapGeometry, dpr: number): HTMLC
       const bx = geo.x0 + x;
       const by = geo.y0 + y;
       const ch = layout[by]?.[bx];
+      if (discovery && !discovery.known(bx, by)) {
+        g.fillStyle = C.unknown;
+        g.fillRect(x * s, y * s, s, s);
+        continue;
+      }
       g.fillStyle = ch === '#' ? C.hard : ch === '=' ? C.avenue : C.block;
       g.fillRect(x * s, y * s, s, s);
       // a mission sector: the streets beyond the barricades are shown dimmed (not part of the mission)
@@ -71,10 +85,18 @@ function draw(
   geo: MinimapGeometry,
   base: HTMLCanvasElement,
   time: number,
+  discovery: MinimapDiscovery | null,
 ): void {
   const s = geo.cell;
   const layout = getArena(state.arenaId).layout;
-  const L = minimapLayers(state, layout, 0, focusId);
+  const L = minimapLayers(
+    state,
+    layout,
+    0,
+    focusId,
+    8,
+    discovery ? (x, y) => discovery.known(x, y) : undefined,
+  );
   g.clearRect(0, 0, geo.width, geo.height);
   g.drawImage(base, 0, 0, geo.width, geo.height);
   const W = state.width;
@@ -123,13 +145,15 @@ function draw(
     g.arc(p.x, p.y, Math.max(0.9, s * 0.24), 0, Math.PI * 2);
     g.fill();
   }
-  // the follow camera's rough field of view around whoever it follows
+  // the follow camera's rough field of view around whoever it follows (a campaign mission's framing shows more round
+  // the fighter: about 9 tiles each side, 6.5 north and 5 south on a phone; docs/CAMPAIGN_CAMERA.md)
   const f = state.players[focusId];
   if (f?.alive) {
     const p = tileToMinimap(geo, f.x, f.y);
     g.strokeStyle = 'rgba(255, 255, 255, 0.35)';
     g.lineWidth = 1;
-    g.strokeRect(p.x - 6 * s, p.y - 4.5 * s, 12 * s, 8 * s);
+    if (discovery) g.strokeRect(p.x - 9 * s, p.y - 6.5 * s, 18 * s, 11.5 * s);
+    else g.strokeRect(p.x - 6 * s, p.y - 4.5 * s, 12 * s, 8 * s);
   }
   for (const pl of L.players) {
     const p = tileToMinimap(geo, pl.x, pl.y);
@@ -264,11 +288,14 @@ export function Minimap() {
       const g2 = minimapGeometry(crop.cols, crop.rows, maxW, maxH, crop);
       // the cell is at least 2 px, so a tall board can still exceed the height: show it scaled down (smooth, not pixelated)
       const shrink = Math.min(1, maxH / g2.height);
-      const key = `${state.seed}:${state.arenaId}:${state.sector?.id ?? ''}:${g2.cell}:${dpr}:${shrink.toFixed(3)}`;
+      // a campaign mission: what the map has discovered so far (redrawn when it grows)
+      const discovery = discoveryFor(state);
+      discovery?.update(state, 0);
+      const key = `${state.seed}:${state.arenaId}:${state.sector?.id ?? ''}:${g2.cell}:${dpr}:${shrink.toFixed(3)}:${discovery?.version ?? ''}`;
       if (key !== baseKey) {
         baseKey = key;
         geo = g2;
-        base = staticLayer(state, g2, dpr);
+        base = staticLayer(state, g2, dpr, discovery);
         canvas.width = Math.round(g2.width * dpr);
         canvas.height = Math.round(g2.height * dpr);
         canvas.style.width = `${Math.round(g2.width * shrink)}px`;
@@ -278,7 +305,7 @@ export function Minimap() {
       const g = canvas.getContext('2d');
       if (!g || !geo || !base) return;
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      draw(g, state, focusId, geo, base, performance.now() / 1000);
+      draw(g, state, focusId, geo, base, performance.now() / 1000, discovery);
     };
     tick();
     const id = window.setInterval(tick, 1000 / FPS);

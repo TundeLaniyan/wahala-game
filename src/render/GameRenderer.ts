@@ -12,6 +12,7 @@ import {
 import { PICKUP_DEFS } from '../sim';
 import type { GameState, SimEvent } from '../sim';
 import { createBackdrop } from './assets/backdrop';
+import { releaseSkeletons } from './assets/library';
 import { createSceneLights } from './lighting';
 import { arenaLook } from './arenaLook';
 import { installGrading } from './grading';
@@ -20,7 +21,7 @@ import type { GritClass } from './grit';
 import type { SceneLights } from './lighting';
 import type { Backdrop } from './assets/backdrop';
 import { CameraRig } from './cameraRig';
-import { cameraModeFor, selectShot } from './cameraModes';
+import { cameraModeForMatch, selectShot } from './cameraModes';
 import { clipEnvironment, renderClip } from './sectorClip';
 import { FieldEquipmentViews, hasFieldEquipment } from './views/FieldEquipmentViews';
 import type { CameraMode } from './cameraModes';
@@ -296,7 +297,7 @@ export class GameRenderer {
     this.bumpSeq = 0;
     this.layout = createLayout(state.width, state.height);
     this.rig = new CameraRig(this.layout);
-    this.mode = cameraModeFor(state.arenaId, this.cameraOverride);
+    this.mode = cameraModeForMatch(state, this.cameraOverride);
     this.effects = new Effects(this.layout, this.profile);
     this.effects.shaker.mode = this.shakeMode;
     this.appliedShadows = null;
@@ -469,6 +470,9 @@ export class GameRenderer {
     this.effects.dispose();
     this.lights.dispose();
     this.backdrop.dispose();
+    // every rigged character of the match (fighters, enemies, street life, crowds) owns its skeleton's bone texture:
+    // without this each match start left about 42 of them on the GPU (docs/CAMPAIGN_CAMERA.md, "Asset lifecycle")
+    releaseSkeletons(this.scene);
     this.scene.clear();
     this.views = [];
     this.players = null;
@@ -486,7 +490,7 @@ export class GameRenderer {
 
   setInsets(top: number, bottom: number): void {
     this.insets = { top, bottom };
-    if (this.loaded) this.rig.fit(this.width / this.height, this.insets);
+    if (this.loaded) this.rig.fit(this.width / this.height, this.insets, this.height);
   }
 
   resize(width: number, height: number): void {
@@ -496,7 +500,7 @@ export class GameRenderer {
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(this.width, this.height, false);
     if (this.loaded) {
-      this.rig.fit(this.width / this.height, this.insets);
+      this.rig.fit(this.width / this.height, this.insets, this.height);
       this.effects.setPixelScale(this.rig.pixelScale(this.height * dpr));
       this.backdrop.setPixelScale(this.rig.pixelScale(this.height * dpr));
       this.stage?.setPixelScale(this.rig.pixelScale(this.height * dpr));
@@ -526,7 +530,7 @@ export class GameRenderer {
     return { mode: this.shakeMode, trauma: this.loaded ? this.effects.shaker.trauma : 0 };
   }
 
-  /** Camera mode of the loaded match: 'arena' (whole arena, fixed) or 'stadium' (follow camera). */
+  /** Camera mode of the loaded match: 'arena' (whole arena, fixed), 'stadium' (City Rumble follow) or 'campaign'. */
   cameraMode(): CameraMode {
     return this.mode;
   }
@@ -797,7 +801,7 @@ export class GameRenderer {
       layout: this.layout,
       fx: this.effects,
       // follow camera: views may skip what the last frame did not show (the fixed camera shows it all)
-      inView: this.mode === 'stadium' && !info.attract ? this.inView : undefined,
+      inView: this.mode !== 'arena' && !info.attract ? this.inView : undefined,
       camera: this.rig.camera,
     };
     this.localId = info.localPlayerId;
@@ -967,6 +971,40 @@ export class GameRenderer {
   /** The objective pins standing now (null without a field mission or a raid); debug / e2e. */
   objectiveMarkerStats(): ObjectiveMarkerStats | null {
     return this.pins?.stats() ?? null;
+  }
+
+  /**
+   * Debug / e2e (docs/CAMPAIGN_CAMERA.md): the camera mode, what it framed last frame, the floor it shows (the HUD-free
+   * band's four corners as fractional grid tiles, min / max) and the board size. Null before a match is loaded.
+   */
+  cameraStatus(): {
+    mode: CameraMode;
+    framing: 'fixed' | 'follow' | 'overview';
+    view: { x0: number; y0: number; x1: number; y1: number } | null;
+    board: { w: number; h: number };
+    pose: { x: number; z: number; distance: number };
+  } | null {
+    if (!this.loaded) return null;
+    const { top, bottom } = this.insets;
+    const pts = [
+      [0, top],
+      [1, top],
+      [0, 1 - bottom],
+      [1, 1 - bottom],
+    ].map(([fx, fy]) => this.rig.screenToGrid(fx! * this.width, fy! * this.height, this.width, this.height));
+    const ok = pts.every((p) => p !== null);
+    const xs = pts.map((p) => p?.x ?? 0);
+    const ys = pts.map((p) => p?.y ?? 0);
+    const pose = this.rig.currentPose();
+    return {
+      mode: this.mode,
+      framing: this.rig.framing,
+      view: ok
+        ? { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) }
+        : null,
+      board: { w: this.layout.width, h: this.layout.height },
+      pose: { x: pose.x, z: pose.z, distance: pose.distance },
+    };
   }
 
   /** What the raid markers drew last frame (null outside a raid); debug / performance reports. */

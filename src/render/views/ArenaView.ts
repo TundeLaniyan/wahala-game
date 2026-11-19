@@ -10,7 +10,7 @@ import {
   Group,
   Color,
 } from 'three';
-import type { Material, Texture } from 'three';
+import type { BufferGeometry, Material, Texture } from 'three';
 import { arenaLook } from '../arenaLook';
 import type { GameState } from '../../sim';
 import { Tile } from '../../sim';
@@ -18,7 +18,7 @@ import { modelledPillars, pillarParts, softBlockParts, softVariantFor, softVaria
 import type { SoftVariant } from '../assets/props';
 import type { Layout } from '../coords';
 import { floorMaterial } from '../assets/floor';
-import { contactShadowTexture } from '../textures';
+import { contactShadowTexture, isSharedTexture } from '../textures';
 import { obstacleStyle, pillarIndexFor, resolvePillars } from '../assets/obstacleStyles';
 import { assets } from '../assets/library';
 import type { ObstacleStyle } from '../assets/obstacleStyles';
@@ -126,6 +126,7 @@ export class ArenaView implements View {
   private readonly rayMiss = new Map<number, number>();
   private readonly ownedMaterials: Material[] = [];
   private readonly ownedTextures: Texture[] = [];
+  private readonly ownedGeometries: BufferGeometry[] = [];
   /** A mission sector's render clip (null = the whole board) and its barricades. */
   private readonly clip: CoverClip | null;
   private readonly barricades: SectorBarricades | null;
@@ -158,8 +159,16 @@ export class ArenaView implements View {
       // interlocking road paving (Lekki): drawn by the floor shader, before grit composes its program key with it
       const pavers = maps.paving ? installPaving(floorMat, { width: W, height: H }, maps.paving) : null;
       if (pavers) this.ownedTextures.push(pavers);
-    } else floorMat = floorMaterial(W, H, state.arenaId);
-    const floor = new Mesh(new PlaneGeometry(W, H), floorMat);
+    } else {
+      // the slab atlas: its loaded maps are this match's own (a cached fallback texture is shared and kept)
+      floorMat = floorMaterial(W, H, state.arenaId);
+      this.ownedMaterials.push(floorMat);
+      for (const t of [floorMat.map, floorMat.normalMap, floorMat.roughnessMap])
+        if (t && !isSharedTexture(t)) this.ownedTextures.push(t);
+    }
+    const floorGeo = new PlaneGeometry(W, H);
+    this.ownedGeometries.push(floorGeo);
+    const floor = new Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     floor.userData.grit = 'floor';
@@ -212,21 +221,17 @@ export class ArenaView implements View {
       this.group.add(set.group);
     }
     const contactGeo = new PlaneGeometry(1.5, 1.5).rotateX(-Math.PI / 2).translate(0.06, 0.006, -0.03); // nudged down-sun
-    this.contact = new InstanceSet(
-      [
-        {
-          geometry: contactGeo,
-          material: new MeshBasicMaterial({
-            map: contactShadowTexture(),
-            color: 0x000000,
-            transparent: true,
-            opacity: 0.42,
-            depthWrite: false,
-          }),
-        },
-      ],
-      W * H,
-    );
+    const contactMat = new MeshBasicMaterial({
+      map: contactShadowTexture(),
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.42,
+      depthWrite: false,
+    });
+    // the set does not own unfaded parts: the view does (they leaked once per match)
+    this.ownedGeometries.push(contactGeo);
+    owned.push(contactMat);
+    this.contact = new InstanceSet([{ geometry: contactGeo, material: contactMat }], W * H);
     for (const m of this.contact.group.children) {
       m.castShadow = false;
       m.receiveShadow = false;
@@ -518,5 +523,6 @@ export class ArenaView implements View {
     this.cover?.dispose();
     for (const m of this.ownedMaterials) m.dispose();
     for (const t of this.ownedTextures) t.dispose();
+    for (const g of this.ownedGeometries) g.dispose();
   }
 }

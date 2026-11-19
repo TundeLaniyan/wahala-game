@@ -5,7 +5,7 @@
  *
  * Conventions: Y-up, metres, front = +Z, origin on the ground at the model's centre.
  */
-import type { AnimationClip, BufferGeometry, Material, Mesh, Object3D } from 'three';
+import type { AnimationClip, BufferGeometry, Material, Mesh, Object3D, Skeleton, SkinnedMesh } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 
@@ -80,7 +80,14 @@ export class AssetLibrary {
     return [...this.failed];
   }
 
-  /** A fresh, independently animatable copy (skeletons are re-bound). Returns null if the asset is unavailable. */
+  /**
+   * A fresh, independently animatable copy (skeletons are re-bound). Returns null if the asset is unavailable.
+   *
+   * Ownership (docs/CAMPAIGN_CAMERA.md, "Asset lifecycle"): geometries, materials and their textures stay the library's
+   * and are shared by every copy; each copy's SKELETON is new and belongs to the caller. The renderer gives a skeleton a
+   * bone texture the first time it draws it, and only `Skeleton.dispose()` releases it, so whoever drops a copy calls
+   * `releaseSkeletons` on it (the renderer sweeps the whole scene when a match is unloaded).
+   */
   instance(id: string): Object3D | null {
     const a = this.assets.get(id);
     if (!a) return null;
@@ -159,6 +166,23 @@ export class AssetLibrary {
     }
     this.assets.clear();
   }
+}
+
+/**
+ * Releases the bone textures of every skeleton under `root` (each skinned copy from `AssetLibrary.instance` has its own;
+ * the renderer makes them lazily, so a copy that is drawn again simply gets a new one). Returns how many skeletons it
+ * released. Geometry and materials are left alone: they are the library's, shared by every match.
+ */
+export function releaseSkeletons(root: Object3D): number {
+  const seen = new Set<Skeleton>();
+  root.traverse((o) => {
+    const s = (o as SkinnedMesh).isSkinnedMesh ? (o as SkinnedMesh).skeleton : undefined;
+    if (s && !seen.has(s)) {
+      seen.add(s);
+      s.dispose();
+    }
+  });
+  return seen.size;
 }
 
 /** Process-wide library: models are loaded once and shared by every match. */
