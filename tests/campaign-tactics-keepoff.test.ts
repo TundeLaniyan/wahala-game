@@ -1,7 +1,7 @@
 /**
  * Decision SA13 (regression, found by the district playthroughs): where the sim keeps an enemy off the campaign human's
  * tile (`pilotBlocksStep`), the enemy's planner must not count that tile as a way out of a blast, or it plans an escape
- * through the human and stays in the blast. Multiplayer bots plan exactly as before.
+ * through the human and stays in the blast. Multiplayer bots and the Academy pilot plan exactly as before.
  */
 import { describe, expect, it } from 'vitest';
 import { PROFILES } from '../src/ai/profiles';

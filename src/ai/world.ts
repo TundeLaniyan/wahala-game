@@ -25,14 +25,12 @@ export function stepTicksOf(obs: Observation, p: Readonly<Player>): number {
   return Math.max(m.minStepTicks, t);
 }
 
-/** The match keeps enemies off the campaign human's tile (the same keys as the sim's `pilotBlocksStep`). */
+/**
+ * The campaign tactics layer keeps enemies off the campaign human's tile (`pilotBlocksStep`). Only that layer: the
+ * Academy's Tactical Trap lessons and the archived Oshodi pilot keep their shipped, play-tested enemy planning.
+ */
 function keepsOffHuman(obs: Observation): boolean {
-  const c = obs.config;
-  return !!(
-    c.combatPilot?.enemiesKeepOffHuman ||
-    c.tacticalTrap?.enemiesKeepOffHuman ||
-    c.campaignTactics?.enemiesKeepOffHuman
-  );
+  return obs.config.campaignTactics?.enemiesKeepOffHuman === true;
 }
 
 /** First tick at which a player's next step could begin (the intent is applied on tick + 1 at the earliest). */
