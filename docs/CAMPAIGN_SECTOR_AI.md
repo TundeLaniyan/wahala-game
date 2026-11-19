@@ -1037,3 +1037,23 @@ Fadeyi/Somolu cost (field s + 60 s per life, 12 runs per level): Easy 1320 / Nor
 With SA13 (enemies plan round the human they may not step on) the finale's scripted generator player wins
 `ojuelegba.return` 10/10 and `ojuelegba.junction` 9/10 on Normal (seeds 1-10; seed 2 of the junction times out against
 its last wave). The majority tests stand unchanged; the single-seed "the junction is really held" check now uses seed 1.
+
+## Campaign-wide measurements (lead, 2026-11-19)
+
+**Open-field vs Classic (par times of the main path, `MISSION_DEFS`, `fieldDefs`, `RAID_DEFS`):** 13 field missions
+2755 s, 7 boss missions 1990 s (open-field, follow camera), required Classic raids 970 s (5 required door raids +
+`ebuteMetta.railYard`). Open-field share of main-mission time **83 %** counting the bosses, **74 %** field missions vs
+raids only. Classic is therefore about 17 % of the main path, below the 25-35 % design target: the bosses are
+open-field by identity, and raising the share means adding raids (optional bonus door raids already exist, e.g.
+`mushin.market`). Left for a founder decision rather than adding raids unasked. Per-district scripted splits are in the
+district sections (Ebute Metta is the most Classic-heavy district).
+
+**Download size (production build, `npm run build`, this branch vs production 46f0781):** initial JavaScript 2,714,508 B
+(831,476 B gzip) vs 2,583,465 B (790,075 B gzip): **+131 KB raw, +41 KB gzip (+5.2 %)**; no new model, texture or audio
+file (every enemy look, barricade and equipment object is procedural or reuses the existing glTF set), so per-mission
+asset transfer is unchanged; total `dist` +132 KB. Render costs per sector (draw calls, triangles, build time, leak
+check) are in `docs/measurements/campaign-sector-perf.md` (software rendering in a container: no real-phone claim).
+
+**Headless bot cost:** a 16-bot City Rumble survival simulation (`npm run simulate`, rumbleOshodi, 2 matches) gives
+identical results on this branch and production (determinism unchanged outside the campaign) and runs within about
+10 % of production's wall time (dominated by start-up).
