@@ -5,11 +5,12 @@
 // seconds of real play (the human stands still, the enemies are live), and the AI cost per tick (`timings().ai`, the
 // smoothed ms of one tick's bot decisions; `sim` is the whole sim step of a frame, bots included).
 // `--restarts=N` instead plays the first mission N times in ONE page, then the A -> B -> A sequence of the first two,
-// and prints the GPU resources after each start (flat = no leak).
+// and prints the GPU resources after each start (flat = no leak); `--cycles=K` repeats the B -> A part K times.
 // Software rendering (SwiftShader on shared cores): frame times compare builds on the same machine, never phones.
 //
 //   SHOT_URL=http://localhost:<port>/wahala-game/ WAHALA_CHROMIUM=/opt/pw-browsers/chromium \
-//   node scripts/campaign-perf.mjs [missions|default] [low,high] [--seconds=4] [--restarts=N] [--dist=dist] [--json]
+//   node scripts/campaign-perf.mjs [missions|default] [low,high] [--seconds=4] [--restarts=N] [--cycles=K]
+//     [--dist=dist] [--json]
 //
 // A mission is `field:<fieldId>` (FIELD_MISSION_DEFS, through `__WAHALA__.startFieldMission`), `boss:<districtId>` (the
 // district's boss through the campaign controller, with the districts before it won) or `raid:<raidId>` (a classic
@@ -37,6 +38,7 @@ const [list = 'default', qualities = 'low,high'] = args.filter((a) => !a.startsW
 const missions = list === 'default' ? DEFAULT : list.split(',');
 const seconds = Number(flag('seconds', 4));
 const restarts = Number(flag('restarts', 0));
+const cycles = Number(flag('cycles', 1));
 const distDir = flag('dist', 'dist');
 const json = flags.includes('--json');
 const base = process.env.SHOT_URL ?? 'http://localhost:5199/wahala-game/';
@@ -185,7 +187,7 @@ const kb = (b) => `${Math.round(b / 1024)}`;
 if (restarts > 0) {
   const { page, errors } = await open(qualities.split(',')[0]);
   const [a, b = a] = missions;
-  const seq = [...Array(restarts).fill(a), b, a];
+  const seq = [...Array(restarts).fill(a), ...Array.from({ length: cycles }, () => [b, a]).flat()];
   const out = [];
   for (const [i, m] of seq.entries()) {
     await start(page, m);
