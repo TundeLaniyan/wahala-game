@@ -658,6 +658,7 @@ export class RaidViews implements View {
     for (const [id, m] of this.doors)
       if (!live.has(id)) {
         this.group.remove(m.group);
+        disposeDoorGeometry(m);
         this.doors.delete(id);
       }
     this.doorFrames.end();
@@ -727,7 +728,10 @@ export class RaidViews implements View {
     for (const b of this.batches()) b.dispose();
     for (const b of this.belts.values()) this.disposeBelt(b);
     this.belts.clear();
-    for (const d of this.doors.values()) this.group.remove(d.group);
+    for (const d of this.doors.values()) {
+      this.group.remove(d.group);
+      disposeDoorGeometry(d);
+    }
     this.doors.clear();
     for (const o of [this.rings, this.warnGlow, this.warnHatch, this.warnEdge, this.doorFrames]) o.dispose();
     for (const g of [
@@ -745,6 +749,16 @@ export class RaidViews implements View {
     this.extraction?.chevTex.dispose();
     disposeRaidTextures();
   }
+}
+
+/**
+ * A door's own boxes (posts, lintel, shutter, chain bars): built per door, so released with it (each raid start left 18
+ * behind; docs/CAMPAIGN_CAMERA.md, "Asset lifecycle"). Its materials are shared (`mat`) or tracked by the view.
+ */
+function disposeDoorGeometry(d: DoorMarker): void {
+  d.group.traverse((o) => {
+    if ((o as Mesh).isMesh) (o as Mesh).geometry.dispose();
+  });
 }
 
 /** A small stable number from an id (a deterministic per-item yaw, never a rule). */

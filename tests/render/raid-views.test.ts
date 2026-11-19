@@ -4,7 +4,7 @@
  * functions, then the views driven headlessly with a fake canvas. Nothing here needs WebGL.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { Mesh } from 'three';
+import type { Group, Mesh } from 'three';
 import { Quaternion, Vector3 } from 'three';
 import { enemyHealthView } from '../../src/sim';
 import type { Dir, RaidView, SimEvent, Vitals } from '../../src/sim';
@@ -562,6 +562,26 @@ describe('RaidViews', () => {
     const r = rig(raidFixture());
     r.views.update(r.ctx());
     expect(() => r.views.dispose()).not.toThrow();
+  });
+
+  it('dispose releases each door’s own boxes (regression: 18 geometries left per raid start, CF6)', () => {
+    const r = rig(raidFixture());
+    r.views.update(r.ctx());
+    const doors = (r.views as unknown as { doors: Map<string, { group: Group }> }).doors;
+    const count = doors.size;
+    expect(count).toBeGreaterThan(0);
+    let boxes = 0;
+    let released = 0;
+    for (const d of doors.values())
+      d.group.traverse((o) => {
+        const m = o as Mesh;
+        if (!m.isMesh) return;
+        boxes++;
+        m.geometry.addEventListener('dispose', () => released++);
+      });
+    r.views.dispose();
+    expect(boxes).toBe(count * 6);
+    expect(released).toBe(boxes);
   });
 });
 
