@@ -14,6 +14,8 @@ import { FighterImage } from '../menu/FighterImage';
 import { Field, Option, PrimaryButton, ScreenFrame } from '../menu/Frame';
 import { districtNumber } from './model';
 import { CardView } from './CardView';
+import { MissionBriefCard } from './MissionBriefCard';
+import { bossMissionId, missionBrief } from '../../app/missionBrief';
 import { BossCard, useCampaignUi } from './parts';
 
 export function BriefingScreen() {
@@ -27,6 +29,7 @@ export function BriefingScreen() {
   const modifiers = availableModifiers(save, id);
   const intro = !save.districts[id].introSeen;
   const f = fighterInfo(save.character);
+  const brief = missionBrief(bossMissionId(id));
   return (
     <ScreenFrame
       id="briefing"
@@ -59,6 +62,8 @@ export function BriefingScreen() {
       )}
       <div className="cp-brief">
         <section className="cp-brief-main">
+          {/* the visual briefing (decision MG1): the target, the one objective, how blasts do it; compact on a replay */}
+          {brief && <MissionBriefCard brief={brief} compact={save.districts[id].clears > 0} />}
           <CardView card={card} testId="briefing-text" />
         </section>
 

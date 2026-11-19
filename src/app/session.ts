@@ -424,6 +424,7 @@ const missionHost: MissionHost = {
   resumeField: (resolve) => controller?.resumeField(resolve) ?? false,
   current: () => controller?.state ?? null,
   notice: (text) => controller?.notice(text, 'info'),
+  holdBriefing: (held) => controller?.holdBriefing(held),
 };
 
 /**
@@ -619,6 +620,21 @@ export const commands = {
   campaignStartSection(missionId: string): void {
     audio.playUi('start');
     campaign?.startSectionMission(missionId);
+  },
+  /** The map's section list / Continue: the short visual briefing of a field mission or standalone raid (decision MG1). */
+  campaignBrief(missionId: string): void {
+    audio.playUi('click');
+    campaign?.openBrief(missionId);
+  },
+  /** The briefing's START MISSION. */
+  campaignStartBriefed(): void {
+    audio.playUi('start');
+    campaign?.startBriefed();
+  },
+  /** The raid briefing at the door hand-over: START releases the held raid (decision MG3). */
+  campaignRaidBriefStart(): void {
+    audio.playUi('start');
+    campaign?.startRaidFromBrief();
   },
   /** Pause menu inside a raid. */
   campaignRetryRaid(): void {

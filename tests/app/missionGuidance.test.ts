@@ -56,7 +56,7 @@ describe('raid guidance', () => {
     // the route cue walks open floor, one tile at a time from the human
     const cue = hud.raid!.cue!;
     expect(cue.via).toBe('walk');
-    for (const [i, step] of (cue as { steps: { x: number; y: number }[] }).steps.entries()) {
+    for (const [i, step] of (cue as unknown as { steps: { x: number; y: number }[] }).steps.entries()) {
       expect(s.tiles[step.y * s.width + step.x], `step ${i}`).toBe(Tile.Empty);
     }
 

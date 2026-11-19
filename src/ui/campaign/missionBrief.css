@@ -1,0 +1,294 @@
+/*
+ * The visual mission briefing card (docs/MISSION_GUIDANCE.md): the menu's panel language (menu.css tokens), a dark plate
+ * with the target picture on the left and one big objective line. Phone landscape (max-height 520px) keeps the picture
+ * and the objective on top and lets the steps wrap; portrait stacks. Never wider than its column.
+ */
+.mb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: rgba(11, 14, 20, 0.86);
+  border: 1px solid var(--mn-border, #2e384d);
+  border-left: 4px solid var(--mn-amber, #ffb800);
+  color: var(--mn-text, #e9eaf0);
+}
+.mb-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.mb-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.mb-kicker {
+  color: var(--mn-amber, #ffb800);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.mb-objective {
+  font-family: var(--mn-display, 'Bebas Neue', Impact, sans-serif);
+  font-weight: 400;
+  font-size: clamp(1.4rem, 3.4vw, 2.1rem);
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+.mb-action {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  color: var(--mn-text, #e9eaf0);
+}
+.mb-blasts {
+  padding: 0 4px;
+  background: #ffd23a;
+  color: #0a0c10;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.mb-blast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  color: var(--mn-sand, #d5c4ab);
+}
+.mb-blast-grid {
+  flex: none;
+}
+.mb-blast-grid rect.off {
+  fill: rgba(255, 255, 255, 0.08);
+}
+.mb-blast-grid rect.on {
+  fill: #ff8a3a;
+}
+.mb-blast-grid rect.gen {
+  fill: #ffd23a;
+}
+
+/* the picture: the rendered in-game object (or its glyph) on a dark floor plate, with the pin it wears in play */
+.mb-pic {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  background: radial-gradient(60% 55% at 50% 60%, rgba(255, 210, 58, 0.14), transparent 70%), #141923;
+  border: 1px solid rgba(255, 210, 58, 0.45);
+  color: #ffd23a;
+}
+.mb-pic.big {
+  width: clamp(104px, 15vw, 150px);
+  aspect-ratio: 1;
+}
+.mb-pic.small {
+  width: 64px;
+  aspect-ratio: 1;
+}
+.mb-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.mb-pin {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border-radius: 50% 50% 50% 2px;
+  background: #ffd23a;
+  color: #0a0c10;
+}
+.mb-pic figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2px 4px;
+  background: rgba(10, 12, 16, 0.82);
+  color: #f4ecdc;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mb-pic.small figcaption {
+  display: none;
+}
+
+/* raids: the target against the ordinary obstacles and the exit */
+.mb-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+.mb-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.mb-legend b {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+}
+.mb-legend-cargo {
+  color: #ffd23a;
+}
+.mb-legend-crate {
+  color: #c9b79a;
+}
+.mb-legend-exit {
+  color: #4dff88;
+}
+.mb-legend li span {
+  color: var(--mn-text, #e9eaf0);
+}
+.mb-exit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.86rem;
+  color: #b8ffd0;
+}
+
+/* the route, in order: the main objective's step is the gold one */
+.mb-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mb-steps li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px 3px 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mn-muted, #9aa3b5);
+}
+.mb-steps li.main {
+  color: #0a0c10;
+  background: #ffd23a;
+  border-color: #ffd23a;
+}
+.mb-step-n {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  font-size: 0.64rem;
+}
+
+/* a replay / the pause menu: the picture and one line */
+.mb-card.compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+}
+.mb-card.compact .mb-objective {
+  font-size: clamp(1.05rem, 2.6vw, 1.4rem);
+}
+.mb-compact {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--mn-sand, #d5c4ab);
+}
+
+@media (max-height: 520px) {
+  .mb-card {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .mb-pic.big {
+    width: 88px;
+  }
+  .mb-objective {
+    font-size: 1.3rem;
+  }
+  .mb-action,
+  .mb-blast,
+  .mb-legend,
+  .mb-exit {
+    font-size: 0.74rem;
+  }
+  .mb-steps li {
+    font-size: 0.62rem;
+  }
+}
+@media (max-width: 520px) {
+  .mb-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mb-pic.big {
+    width: 96px;
+  }
+}
+
+/* the raid briefing at the door hand-over: a centred card over the held raid (the match runs no tick under it) */
+.raid-brief-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(760px, 100%);
+}
+.raid-brief-head small {
+  display: block;
+  color: var(--mn-amber);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.raid-brief-head h2 {
+  margin: 2px 0 0;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  line-height: 1;
+  color: #ffffff;
+}
+.raid-brief-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+@media (max-height: 520px) {
+  .raid-brief-card {
+    gap: 6px;
+  }
+  .raid-brief-head h2 {
+    font-size: 1.5rem;
+  }
+}

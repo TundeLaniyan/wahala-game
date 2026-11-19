@@ -145,6 +145,11 @@ export class MatchController implements MissionHost {
    * countdown is not spent behind the loading screen. Released by `setLoadHold(false)`.
    */
   private loadHold = false;
+  /**
+   * A mandatory briefing covers the match (the raid briefing at the door hand-over, decision MG3): like the load hold, no
+   * simulation time passes until it is released. Cleared by every new match start and by `stop`.
+   */
+  private briefHold = false;
   private settings: GameSettings | null = null;
   /** The local test match this one is, if any (kept so a rematch plays the same one). */
   private variant: MatchVariant | undefined;
@@ -194,6 +199,7 @@ export class MatchController implements MissionHost {
 
   start(settings: GameSettings, seed = Math.floor(Math.random() * 2 ** 31), variant?: MatchVariant): void {
     this.director = null;
+    this.briefHold = false;
     this.mission = null;
     this.clearRaid();
     // the Sudden Death test match (decisions SD-T): the same menu settings, one human plus three bots on its own arena
@@ -266,6 +272,7 @@ export class MatchController implements MissionHost {
    */
   startMission(options: GameOptions, meta: MissionMeta): void {
     this.director = null;
+    this.briefHold = false;
     this.settings = null;
     this.clearRaid();
     this.mission = meta;
@@ -449,6 +456,7 @@ export class MatchController implements MissionHost {
    */
   startScenario(state: GameState, director: ScenarioDirector, botSeats: readonly ScenarioBot[] = []): void {
     this.director = director;
+    this.briefHold = false;
     this.mission = null;
     this.clearRaid();
     this.settings = null;
@@ -508,6 +516,22 @@ export class MatchController implements MissionHost {
     }
   }
 
+  /** Hold (true) or release the simulation under a mandatory briefing; on release the clock restarts and input is clear. */
+  holdBriefing(held: boolean): void {
+    if (this.briefHold === held) return;
+    this.briefHold = held;
+    if (!held) {
+      this.lastMs = -1;
+      this.accumulator = 0;
+      this.deps.input.clear(); // a press made on the briefing must not become a move
+    }
+  }
+
+  /** A mandatory briefing holds the match right now (tests / debug). */
+  get briefHeld(): boolean {
+    return this.briefHold;
+  }
+
   /** The combat test lab level of local City Rumble matches (0 = off); kept across rematches in this session. */
   private labLevel: CombatLabLevel | 0 = 0;
 
@@ -530,6 +554,7 @@ export class MatchController implements MissionHost {
 
   stop(): void {
     this.director = null;
+    this.briefHold = false;
     this.mission = null;
     this.clearRaid();
     this.state = null;
@@ -572,7 +597,7 @@ export class MatchController implements MissionHost {
 
     if (this.skipping) {
       this.fastForward(frameEvents);
-    } else if (!this.paused && !this.frozen && !this.loadHold) {
+    } else if (!this.paused && !this.frozen && !this.loadHold && !this.briefHold) {
       this.accumulator += dtMs;
       let steps = 0;
       const t0 = performance.now();

@@ -160,8 +160,11 @@ describe('Oshodi section 1, end to end', () => {
     expect(nextMission(loadSave(r.store)!)).toMatchObject({ missionId: 'oshodi.railEdge' });
     restarted.campaign.open();
     expect(restarted.campaign.ui!.selected).toBe('oshodi');
-    // Continue starts the next suggested mission: Rail Edge
+    // Continue opens the next suggested mission's briefing (decision MG1), and its START plays it: Rail Edge
     restarted.campaign.continue();
+    expect(currentScreen(useGameStore.getState().menu)).toBe('missionBrief');
+    expect(restarted.campaign.ui!.brief).toBe('oshodi.railEdge');
+    expect(restarted.campaign.startBriefed()).toBe(true);
     expect(restarted.match.state!.mission!.field!.fieldId).toBe('oshodi.railEdge');
   });
 

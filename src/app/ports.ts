@@ -109,4 +109,9 @@ export interface MissionHost {
   current?(): GameState | null;
   /** A short HUD notice. */
   notice?(text: string): void;
+  /**
+   * Holds (true) or releases the simulation of the game in play while a mandatory briefing covers it (the raid briefing at
+   * the door hand-over, decision MG3): no tick runs, so nothing can hurt the player under it.
+   */
+  holdBriefing?(held: boolean): void;
 }

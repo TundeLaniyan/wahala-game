@@ -6,6 +6,7 @@ import { Hud } from './Hud';
 import { PauseOverlay, ResultsOverlay, RotateOverlay } from './Overlays';
 import { MainMenu } from './menu/MainMenu';
 import { MatchLoading } from './MatchLoading';
+import { RaidBriefOverlay } from './campaign/RaidBriefOverlay';
 import { TouchControls } from './TouchControls';
 import { SpectatorControls } from './SpectatorControls';
 
@@ -21,6 +22,7 @@ export function App() {
   const fatal = useGameStore((s) => s.fatal);
   const tutorial = useGameStore((s) => s.tutorial?.mode ?? null);
   const matchLoad = useGameStore((s) => s.matchLoad);
+  const raidBrief = useGameStore((s) => !!s.campaign?.raidBrief);
 
   useEffect(() => {
     const unmount = mount(canvasRef.current!);
@@ -46,6 +48,8 @@ export function App() {
       {screen === 'playing' && showTouch && !paused && tutorial !== 'demo' && <TouchControls />}
       {screen === 'playing' && !paused && !tutorial && <SpectatorControls touch={showTouch} />}
       {screen === 'playing' && paused && !tutorial && <PauseOverlay />}
+      {/* the raid briefing at the door hand-over (decision MG3): over the held raid, after its loading screen */}
+      {screen === 'playing' && !paused && !matchLoad && raidBrief && <RaidBriefOverlay />}
       {screen === 'playing' && tutorial && <HowToPlay />}
       {screen === 'results' && <ResultsOverlay />}
       {screen === 'title' && !fatal && <MainMenu />}

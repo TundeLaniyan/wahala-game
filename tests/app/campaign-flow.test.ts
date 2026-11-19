@@ -372,8 +372,10 @@ describe('finale and ending', () => {
     expect([screen(), ui().story]).toEqual(['campaignStory', 'interim']);
     campaign.storyDone();
     expect([screen(), ui().selected, ui().save.interimSeen]).toEqual(['campaign', 'ojuelegba', true]);
-    // Continue goes to mission 19, then 20, then the boss briefing
+    // Continue goes to mission 19 (through its briefing, decision MG1), then 20, then the boss briefing
     campaign.continue();
+    expect([screen(), ui().brief]).toEqual(['missionBrief', 'ojuelegba.return']);
+    campaign.startBriefed();
     expect(ui().active?.sectionMissionId).toBe('ojuelegba.return');
     clearSectionsOf(campaign, 'ojuelegba');
     campaign.continue();

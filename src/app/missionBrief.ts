@@ -32,16 +32,13 @@ import type {
   RaidId,
 } from '../sim';
 import type { GlyphId } from '../render/objectiveGlyphs';
+import type { PreviewModel } from '../render/briefPreview';
 
 /** The phrase that marks "only generator blasts do this" (the tests look for it). */
 export const BLASTS_ONLY = 'USE GENERATOR BLASTS';
 
 /** Which in-game object the briefing previews in 3D (null: the glyph is the picture). */
-export type BriefModel =
-  | { kind: 'equipment'; equipment: string }
-  | { kind: 'cargo' }
-  | { kind: 'door' }
-  | { kind: 'bossNode'; objective: ObjectiveKind };
+export type BriefModel = PreviewModel;
 
 export interface BriefPicture {
   glyph: GlyphId;

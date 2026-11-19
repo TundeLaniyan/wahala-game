@@ -171,7 +171,7 @@ interface DoorMarker {
 export class RaidViews implements View {
   readonly group = new Group();
   // ---- shared geometry and materials (one per kind, never per item)
-  private readonly boxGeo = new BoxGeometry(0.8, 0.8, 0.8).translate(0, 0.4, 0);
+  private readonly boxGeo = cargoBoxGeometry();
   private readonly crackBoxGeo = new BoxGeometry(0.815, 0.815, 0.815).translate(0, 0.4, 0);
   private readonly barrelGeo = new CylinderGeometry(0.34, 0.34, 0.8, 14).translate(0, 0.4, 0);
   private readonly crackBarrelGeo = new CylinderGeometry(0.35, 0.35, 0.81, 14, 1, true).translate(0, 0.4, 0);
@@ -222,14 +222,7 @@ export class RaidViews implements View {
     const crate = this.track(
       new MeshStandardMaterial({ map: crateFaceTexture(), roughness: 0.88, metalness: 0.02 }),
     );
-    const marked = this.track(
-      new MeshStandardMaterial({
-        map: markedFaceTexture(),
-        roughness: 0.7,
-        emissive: RAID_COLORS.marked,
-        emissiveIntensity: 0.16,
-      }),
-    );
+    const marked = this.track(markedCargoMaterial());
     const barrel = this.track(
       new MeshStandardMaterial({ map: barrelTexture(), roughness: 0.6, metalness: 0.3 }),
     );
@@ -746,6 +739,22 @@ export class RaidViews implements View {
     disposeRaidTextures();
   }
 }
+
+/**
+ * The marked cargo's material (dispatch yellow, the black target cross, a faint glow): the raid view's and the briefing
+ * preview's (`render/briefPreview.ts`), so the briefing shows the in-game crate. `map` defaults to the shared texture.
+ */
+export function markedCargoMaterial(map: Texture = markedFaceTexture()): MeshStandardMaterial {
+  return new MeshStandardMaterial({
+    map,
+    roughness: 0.7,
+    emissive: RAID_COLORS.marked,
+    emissiveIntensity: 0.16,
+  });
+}
+
+/** The cargo box (0.8 tiles, standing on the floor) every crate of a raid is drawn with. */
+export const cargoBoxGeometry = (): BoxGeometry => new BoxGeometry(0.8, 0.8, 0.8).translate(0, 0.4, 0);
 
 /** A small stable number from an id (a deterministic per-item yaw, never a rule). */
 export function hashId(id: string): number {

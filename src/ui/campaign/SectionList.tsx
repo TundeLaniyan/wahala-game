@@ -56,7 +56,7 @@ export function SectionList({ districtId }: { districtId: MissionId }) {
                   onClick={() =>
                     m.format === 'boss'
                       ? commands.campaignBriefing(districtId)
-                      : commands.campaignStartSection(m.id)
+                      : commands.campaignBrief(m.id)
                   }
                 >
                   {m.format === 'boss'

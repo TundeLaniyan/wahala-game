@@ -2,6 +2,7 @@
  * Pure helpers behind the campaign screens (unit-tested without React): map nodes, result wording, unlock
  * names, times and colours. Everything is derived from the campaign content and the save; nothing is invented.
  */
+import { missionBrief } from '../../app/missionBrief';
 import {
   CAMPAIGN,
   DISTRICT_ORDER,
@@ -197,5 +198,6 @@ export function campaignScreenReady(screen: MenuScreen, ui: CampaignUi | null): 
       ? finaleOpen(ui.save)
       : (CAMPAIGN_MISSION_IDS as readonly string[]).includes(ui.selected);
   if (screen === 'campaignResult') return ui.result !== null || ui.sectionResult !== null;
+  if (screen === 'missionBrief') return !!ui.brief && missionBrief(ui.brief) !== null;
   return true;
 }

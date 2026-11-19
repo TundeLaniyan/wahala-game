@@ -26,6 +26,7 @@ import {
   getSectionMission,
   loadSave,
   loadoutBonusFor,
+  missionStatus,
   markInterimSeen,
   markIntroSeen,
   markPrologueSeen,
@@ -372,7 +373,7 @@ export class CampaignController {
     const def = next ? getSectionMission(next.missionId) : undefined;
     if (next && def && def.format !== 'boss') {
       this.update({ selected: next.districtId });
-      this.startSectionMission(def.id);
+      this.openBrief(def.id); // the short visual briefing first (decision MG1), START from there
       return;
     }
     this.beginBriefing(next?.districtId ?? defaultDistrict(ui.save));
@@ -555,6 +556,7 @@ export class CampaignController {
 
   /** Back to the campaign map from the pause menu or a result: the save is kept as it is. */
   toMap(): void {
+    this.dropRaidBrief();
     if (this.ui?.active) this.deps.host.stop();
     this.raidCtx = null;
     this.setMenu(['campaign']); // first: a result screen must never show without its result
@@ -579,11 +581,55 @@ export class CampaignController {
 
   /** The match was left some other way (Main menu): drop the running-mission marker. */
   leave(): void {
+    this.dropRaidBrief();
     this.raidCtx = null;
     if (this.ui?.active) this.update({ active: null });
   }
 
   // ------------------------------------------------------------------ section missions (docs/CAMPAIGN_SECTIONS.md)
+
+  /**
+   * The short visual briefing of a field mission or a standalone raid (docs/MISSION_GUIDANCE.md, decision MG1): the map's
+   * Start / Replay and Continue open it, its START begins the mission. The boss section goes to the boss briefing (which
+   * shows the same card). False (with a notice) when the mission is locked.
+   */
+  openBrief(missionId: string): boolean {
+    const ui = this.need();
+    const def = getSectionMission(missionId);
+    const sec = sectionOfMission(missionId);
+    if (!def || !sec) return false;
+    if (def.format === 'boss') {
+      this.beginBriefing(sec.districtId);
+      return false;
+    }
+    if (!canPlayMission(ui.save, missionId)) {
+      this.update({ notice: 'Clear the earlier sections first.' });
+      return false;
+    }
+    this.update({ brief: missionId, selected: sec.districtId, notice: null });
+    this.setMenu(['campaign', 'missionBrief']);
+    return true;
+  }
+
+  /** The briefing's START: the mission it shows. */
+  startBriefed(): boolean {
+    const id = this.need().brief;
+    return id ? this.startSectionMission(id) : false;
+  }
+
+  /** The raid briefing at the door was read: the held raid starts (its countdown runs from here). */
+  startRaidFromBrief(): void {
+    if (!this.ui?.raidBrief) return;
+    this.update({ raidBrief: null });
+    this.deps.host.holdBriefing?.(false);
+  }
+
+  /** Drops a raid briefing that is still up (the raid was left, retried or the match stopped) and releases the hold. */
+  private dropRaidBrief(): void {
+    if (!this.ui?.raidBrief) return;
+    this.update({ raidBrief: null });
+    this.deps.host.holdBriefing?.(false);
+  }
 
   /**
    * Starts a section mission from the map: a FIELD mission (a district mission with doors) or a standalone RAID. The boss
@@ -740,6 +786,10 @@ export class CampaignController {
     }
     if (ui.active)
       this.update({ active: { ...ui.active, raid: { doorId: request.doorId, raidId: request.raidId } } });
+    // the SAFE hand-over (decision MG3): the field is already held; the raid waits under its briefing until START
+    const replay = !!ctx.missionId && missionStatus(ui.save, ctx.missionId) === 'cleared';
+    this.update({ raidBrief: { raidId: request.raidId, compact: replay } });
+    this.deps.host.holdBriefing?.(true);
   }
 
   private raidEnded(ctx: RaidContext, outcome: RaidOutcome): void {
@@ -750,6 +800,7 @@ export class CampaignController {
   /** Raid -> field: the field mission comes back, its door is answered (`resolveRaid`) and the player is on the return tile. */
   private answerDoor(ctx: RaidContext, outcome: RaidOutcome): void {
     const request = ctx.request!;
+    this.dropRaidBrief();
     const host = this.deps.host;
     this.raidCtx = null;
     const resumed =
@@ -772,6 +823,7 @@ export class CampaignController {
   retryRaid(): void {
     const ctx = this.raidCtx;
     if (!ctx) return;
+    this.dropRaidBrief();
     const hp = this.deps.host.current?.()?.players[0]?.vitals?.hp;
     this.playRaid(ctx, hp);
   }

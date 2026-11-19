@@ -23,6 +23,7 @@ import { SettingsScreen } from './SettingsScreen';
 import { AcademyScreen } from './AcademyScreen';
 import { BossIntroScreen } from '../campaign/BossIntroScreen';
 import { BriefingScreen } from '../campaign/BriefingScreen';
+import { MissionBriefScreen } from '../campaign/MissionBriefScreen';
 import { CampaignMap } from '../campaign/CampaignMap';
 import { CompleteScreen } from '../campaign/CompleteScreen';
 import { ResultScreen } from '../campaign/ResultScreen';
@@ -47,6 +48,7 @@ const SCREENS: Record<MenuScreen, React.ComponentType> = {
   campaignStory: StoryScreen,
   briefing: BriefingScreen,
   bossIntro: BossIntroScreen,
+  missionBrief: MissionBriefScreen,
   campaignResult: ResultScreen,
   campaignComplete: CompleteScreen,
   online: OnlineScreen,

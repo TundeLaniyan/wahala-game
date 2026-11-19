@@ -71,6 +71,13 @@ export interface CampaignUi {
   sectionResult: SectionResultView | null;
   /** The last result that paid something new (kept for the map after the result screen). */
   lastReward: RewardSummary | null;
+  /** The section mission the briefing screen shows (`missionBrief`, decision MG1); null elsewhere. */
+  brief?: string | null;
+  /**
+   * The raid briefing at the door hand-over (decision MG3): shown over the held raid until START; `compact` on a replay
+   * of the field mission. Null / absent otherwise.
+   */
+  raidBrief?: { raidId: RaidId; compact: boolean } | null;
 }
 
 /**

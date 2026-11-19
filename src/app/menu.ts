@@ -24,6 +24,8 @@ export type MenuScreen =
   | 'campaignStory'
   | 'briefing'
   | 'bossIntro'
+  // the short visual briefing before a field mission or a standalone raid (docs/MISSION_GUIDANCE.md, decision MG1)
+  | 'missionBrief'
   | 'campaignResult'
   | 'campaignComplete'
   // online PREVIEW (docs/ONLINE_ARCHITECTURE.md): one screen whose steps live in app/online.ts; reachable only when
@@ -42,6 +44,7 @@ export const MENU_SCREENS: readonly MenuScreen[] = [
   'campaignStory',
   'briefing',
   'bossIntro',
+  'missionBrief',
   'campaignResult',
   'campaignComplete',
   'online',
@@ -60,6 +63,7 @@ export const CAMPAIGN_SCREENS: readonly MenuScreen[] = [
   'campaignStory',
   'briefing',
   'bossIntro',
+  'missionBrief',
   'campaignResult',
   'campaignComplete',
 ];

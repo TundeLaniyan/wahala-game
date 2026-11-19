@@ -53,6 +53,6 @@ describe('campaign screens in the menu state machine', () => {
 
   it('the campaign screen list matches the screens that exist', () => {
     for (const s of CAMPAIGN_SCREENS) expect(MENU_SCREENS).toContain(s);
-    expect(CAMPAIGN_SCREENS).toHaveLength(6);
+    expect(CAMPAIGN_SCREENS).toHaveLength(7); // + missionBrief, the visual briefing (decision MG1)
   });
 });

@@ -4,6 +4,8 @@ import { MISSION_LIVES } from '../../app/campaign';
 import type { ActiveMission } from '../../app/campaignState';
 import { missionView } from '../../sim';
 import { liveMatch } from '../../app/session';
+import { bossMissionId, missionBrief, raidBrief } from '../../app/missionBrief';
+import { MissionBriefCard } from './MissionBriefCard';
 import './campaign.css';
 
 export function MissionPauseInfo({ mission }: { mission: ActiveMission }) {
@@ -14,10 +16,15 @@ export function MissionPauseInfo({ mission }: { mission: ActiveMission }) {
     const m = liveMatch();
     return m ? missionView(m.state) : null;
   })();
+  // the same briefing card as before the mission, compact (decision MG8): the raid's while a raid is played
+  const brief = mission.raid
+    ? raidBrief(mission.raid.raidId)
+    : missionBrief(mission.sectionMissionId ?? bossMissionId(mission.missionId));
   return (
     <aside className="mn-panel mn-pause-info" data-testid="pause-mission-info">
       <small className="mn-kicker">Campaign mission</small>
       <h3>{d.name}</h3>
+      {brief && <MissionBriefCard brief={brief} compact testId="pause-mission-brief" />}
       <p className="mn-pause-summary">
         {section ? `${section.name}: ${section.objectiveCard}` : `${boss.name}, ${boss.title}`}
       </p>
