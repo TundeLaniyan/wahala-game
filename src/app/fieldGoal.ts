@@ -19,22 +19,32 @@ export const FIELD_VERB_TAG: Readonly<Record<FieldGoalVerb, string>> = {
   secure: 'SECURE',
 };
 
-/** "CHECKPOINT A", "DISPATCH DEPOT DOOR", "2 ENEMIES", "FOOTBRIDGE", "ORITA GATE". */
+/**
+ * "CHECKPOINT A", "DISPATCH DEPOT DOOR", "2 ENEMIES", "FOOTBRIDGE", "ORITA GATE", "RELAY BOX", "RAIL PLAZA". The count of
+ * a destroy or secure leg is its counter (`fieldCounter`), shown beside it.
+ */
 export function fieldTargetText(goal: FieldGoalView): string {
   switch (goal.verb) {
     case 'defeat':
       return `${goal.enemiesLeft} ${goal.enemiesLeft === 1 ? 'ENEMY' : 'ENEMIES'} LEFT`;
     case 'hold':
       return `${goal.target} DOOR`;
-    case 'destroy':
-      return goal.targets ? `${goal.target} (${goal.targets.left} LEFT)` : goal.target;
-    case 'secure':
-      return goal.area
-        ? `${goal.target} ${secs(goal.area.ticks)} / ${secs(goal.area.goalTicks)} s`
-        : goal.target;
     default:
       return goal.target;
   }
+}
+
+/**
+ * The counter of the current leg (decision MG5): "1 OF 3" for the checkpoint on the way, "1/3" pieces wrecked, "12/25 s"
+ * held. Null for a leg without one. It changes on the tick the sim's view changes.
+ */
+export function fieldCounter(goal: FieldGoalView): string | null {
+  if (goal.step) return `${goal.step.index + 1} OF ${goal.step.count}`;
+  if (goal.verb === 'destroy' && goal.targets)
+    return `${goal.targets.total - goal.targets.left}/${goal.targets.total}`;
+  if (goal.verb === 'secure' && goal.area)
+    return `${Math.floor(goal.area.ticks / 60)}/${Math.round(goal.area.goalTicks / 60)} s`;
+  return null;
 }
 
 /** One short line for "what next": "CHECKPOINT B", "HOLD THE DISPATCH DEPOT DOOR", "RETURN TO ORITA GATE". */
@@ -113,6 +123,8 @@ export interface FieldNoticeMemory {
   done: ReadonlySet<string>;
   leg: number;
   legKind: FieldObjectiveKind | undefined;
+  /** Equipment already wrecked (`MissionNodeView.id` of `target` nodes): one notice per piece (decision MG7). */
+  wrecked?: ReadonlySet<string>;
 }
 
 export interface FieldNotice {
@@ -144,11 +156,13 @@ export function fieldNotices(
   if (!view) return { memory: prev, notices: [] };
   if (view.format !== 'field' || !view.fieldId) return { memory: null, notices: [] };
   const done = new Set((view.route ?? []).filter((r) => r.state === 'done').map((r) => r.id));
+  const wrecked = new Set(view.nodes.filter((n) => n.kind === 'target' && n.state === 'done').map((n) => n.id));
   const memory: FieldNoticeMemory = {
     fieldId: view.fieldId,
     done,
     leg: view.legIndex ?? 0,
     legKind: view.legKind,
+    wrecked,
   };
   if (!prev || prev.fieldId !== view.fieldId || view.outcome) return { memory, notices: [] };
   const goal = view.fieldGoal ?? null;
@@ -164,5 +178,12 @@ export function fieldNotices(
   }
   if (reached.length === 0 && memory.leg > prev.leg && prev.legKind)
     notices.push({ text: `${LEG_DONE[prev.legKind]} ✓${next}`, tone: 'good' });
+  // one piece of a destroy leg wrecked (not the last: the leg's own notice says that one): the counter and the next
+  if (memory.leg === prev.leg && goal?.verb === 'destroy' && goal.targets) {
+    const fresh = view.nodes.filter((n) => wrecked.has(n.id) && !(prev.wrecked?.has(n.id) ?? false));
+    const { left, total } = goal.targets;
+    for (const n of fresh)
+      notices.push({ text: `${n.label} WRECKED ${total - left}/${total} ✓${next}`, tone: 'good' });
+  }
   return { memory, notices };
 }

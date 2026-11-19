@@ -47,7 +47,7 @@ describe('raidGuidance on the dispatch depot', () => {
     expect(g.verb).toBe('destroy');
     expect(g.tag).toBe('DESTROY');
     expect(g.target).toBe('MARKED CARGO');
-    expect(g.step).toBe(`0 OF ${marked.length} DOWN`);
+    expect(g.step).toBe(`0/${marked.length}`); // decision MG5: the done/total counter
     const nearest = Math.min(...marked.map((c) => Math.abs(c.x - me.x) + Math.abs(c.y - me.y)));
     expect(g.cue!.tiles).toBe(nearest);
     expect(g.notes.length).toBeLessThanOrEqual(2);
@@ -64,7 +64,7 @@ describe('raidGuidance on the dispatch depot', () => {
     // that one goes down: the cue moves to the next one
     state.raid!.cargo.find((c) => c.id === first.id)!.destroyed = true;
     const after = raidGuidance(raidView(state), { x: first.x, y: first.y + 1 })!;
-    expect(after.step).toBe(`1 OF ${marked.length} DOWN`);
+    expect(after.step).toBe(`1/${marked.length}`);
     expect(after.cue!.tiles).toBe(Math.abs(next.x - first.x) + Math.abs(next.y - (first.y + 1)));
   });
 

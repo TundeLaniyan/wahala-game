@@ -30,7 +30,7 @@
 }
 .fg-line {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   gap: 2px 6px;
 }
@@ -51,6 +51,19 @@
 }
 .verb-hold .fg-tag {
   background: #6fd3ff;
+}
+.fg-glyph {
+  flex: none;
+  color: #ffe14a;
+}
+.verb-defeat .fg-glyph {
+  color: #ff6b5e;
+}
+.verb-escape .fg-glyph {
+  color: #ffb347;
+}
+.verb-hold .fg-glyph {
+  color: #6fd3ff;
 }
 .fg-target {
   font-size: clamp(0.66rem, 2.8vh, 1rem);
@@ -141,6 +154,9 @@
   color: #ffe14a;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+.rg-cue.via-none {
+  color: #c9d0da;
 }
 .raid-goal.verb-escape .rg-cue {
   color: #ffc98a;

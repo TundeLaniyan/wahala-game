@@ -161,7 +161,7 @@ describe('HUD models from the view', () => {
     advance(rail, 2);
     // Rail Edge since decision DA3: the relay boxes, then the rail plaza, then the escape (staged here)
     const b = fieldGoalModel(view(rail))!;
-    expect(b).toMatchObject({ tag: 'DESTROY', target: 'RELAY BOX (3 LEFT)' });
+    expect(b).toMatchObject({ tag: 'DESTROY', target: 'RELAY BOX', step: '0/3' }); // decision MG5: done/total
     expect(b.notes).toContain('BLASTS ONLY');
     for (const t of rail.mission!.field!.targets!) {
       t.hp = 0;
@@ -169,7 +169,7 @@ describe('HUD models from the view', () => {
     }
     advance(rail, 2);
     const k = fieldGoalModel(view(rail))!;
-    expect(k).toMatchObject({ tag: 'SECURE', target: 'RAIL PLAZA 0.0 / 25.0 s' });
+    expect(k).toMatchObject({ tag: 'SECURE', target: 'RAIL PLAZA', step: '0/25 s' }); // decision MG5
     for (const seat of rail.mission!.seats.filter((x) => x.group !== 'pursuers' && x.role !== 'player'))
       rail.players[seat.playerId]!.alive = false;
     rail.mission!.field!.hold!.ticks = 25 * 60;

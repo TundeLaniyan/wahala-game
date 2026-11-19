@@ -13,6 +13,7 @@ import { KillFeed } from './KillFeed';
 import { MissionPanel } from './MissionPanel';
 import { RaidGoal } from './RaidGoal';
 import type { RaidHud } from '../app/raidHud';
+import type { RouteCue } from '../app/routeGuide';
 import { RuleBanner, StageAlerts } from './StageAlerts';
 import { StreakStatus } from './StreakStatus';
 import { StreakIcon } from './streakIcons';
@@ -38,6 +39,8 @@ export interface HudRailProps {
   enemies?: readonly EnemyHud[];
   /** Classic raid: the current objective and the way to it (null outside a raid). */
   raid?: RaidHud | null;
+  /** Field mission: the way to the current objective along the walkable route (decision MG6). */
+  fieldCue?: RouteCue | null;
 }
 
 /**
@@ -61,6 +64,7 @@ export function HudRail({
   campaign = null,
   enemies = [],
   raid = null,
+  fieldCue = null,
 }: HudRailProps) {
   const board = useGameStore((s) => s.board);
   const subtitle = useGameStore((s) => s.subtitle);
@@ -194,7 +198,7 @@ export function HudRail({
           data-testid="rail-combat"
           style={combatMax !== null ? { maxHeight: `${combatMax}px` } : undefined}
         >
-          <FieldGoal mission={mission} />
+          <FieldGoal mission={mission} cue={fieldCue} />
           <RaidGoal raid={raid} />
           {!rumble && <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} />}
           <MissionPanel mission={mission} />

@@ -7,7 +7,7 @@
  * Integrator hook (one `case` group in `MatchController`'s event-to-toast switch):
  *   `const n = raidNotice(e); return n;`
  */
-import type { SimEvent } from '../sim';
+import type { RaidView, SimEvent } from '../sim';
 import type { Toast } from './store';
 
 export type RaidNotice = Pick<Toast, 'text' | 'tone'> & { ttlMs: number };
@@ -28,8 +28,21 @@ export function waveNotice(index: number, total: number): RaidNotice {
   };
 }
 
-/** The rail notice for a raid event, or null when the event has none (most are drawn in the world only). */
-export function raidNotice(e: SimEvent): RaidNotice | null {
+/**
+ * "MARKED CARGO DOWN 1/3 ✓ · NEXT: MARKED CARGO" / "... 3/3 ✓ · NEXT: REACH THE EXIT" (decision MG7): the success notice
+ * with the counter and the pointer to what comes next, from the raid's view after the hit.
+ */
+export function cargoDownNotice(view: RaidView): RaidNotice {
+  const { done, goal } = view.progress;
+  const next = done >= goal ? 'REACH THE EXIT' : 'MARKED CARGO';
+  return { text: `MARKED CARGO DOWN ${done}/${goal} ✓ · NEXT: ${next}`, tone: 'good', ttlMs: 3000 };
+}
+
+/**
+ * The rail notice for a raid event, or null when the event has none (most are drawn in the world only). With the raid's
+ * view (the HUD passes it) the marked-cargo notice carries the counter and the next step.
+ */
+export function raidNotice(e: SimEvent, view: RaidView | null = null): RaidNotice | null {
   switch (e.type) {
     case 'raidWaveStarted':
       return waveNotice(e.index, e.total);
@@ -40,7 +53,8 @@ export function raidNotice(e: SimEvent): RaidNotice | null {
     case 'raidExtractionOpened':
       return { text: 'EXIT OPEN: GET OUT!', tone: 'good', ttlMs: 3400 };
     case 'cargoDestroyed':
-      return e.marked ? { text: 'MARKED CARGO DOWN', tone: 'good', ttlMs: 2200 } : null;
+      if (!e.marked) return null;
+      return view ? cargoDownNotice(view) : { text: 'MARKED CARGO DOWN', tone: 'good', ttlMs: 2200 };
     default:
       return null;
   }

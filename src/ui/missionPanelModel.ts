@@ -4,7 +4,7 @@
  * sim's read-only `MissionView` (src/sim/mission/types.ts); it invents no numbers and no rules.
  */
 import type { FieldGoalVerb, MissionView, MissionWarningView, ObjectiveKind } from '../sim';
-import { FIELD_VERB_TAG, fieldNotes, fieldTargetText, holdReadout } from '../app/fieldGoal';
+import { FIELD_VERB_TAG, fieldCounter, fieldNotes, fieldTargetText, holdReadout } from '../app/fieldGoal';
 import type { HoldReadout } from '../app/fieldGoal';
 
 /** The verb of each district's objective, as the panel's heading says it. */
@@ -103,7 +103,7 @@ export function fieldGoalModel(view: MissionView | null): FieldGoalModel | null 
     verb: goal.verb,
     tag: FIELD_VERB_TAG[goal.verb],
     target: fieldTargetText(goal),
-    step: goal.step ? `${goal.step.index + 1} OF ${goal.step.count}` : null,
+    step: fieldCounter(goal),
     hold: goal.hold ? holdReadout(goal.hold) : null,
     notes: fieldNotes(goal),
   };

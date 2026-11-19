@@ -9,7 +9,7 @@ import { FIELD_MISSION_DEFS, directiveFor, missionView, tick } from '../src/sim'
 import type { FieldMissionDef, GameState, SimEvent } from '../src/sim';
 import { Tile } from '../src/sim/types';
 import { fieldOnSoftHit } from '../src/sim/mission/equipment';
-import { fieldNextText, fieldNotes, fieldTargetText } from '../src/app/fieldGoal';
+import { fieldCounter, fieldNextText, fieldNotes, fieldTargetText } from '../src/app/fieldGoal';
 import { newMission, put } from './mission-helpers';
 import { addGenerator } from './helpers';
 
@@ -95,7 +95,8 @@ describe('destroyTargets: Ring equipment only the human blasts wreck', () => {
     expect(v.fieldGoal!.targets).toEqual({ left: 2, total: 2 });
     expect(v.progress).toEqual({ done: 0, goal: 2, label: 'equipment wrecked' });
     expect(v.nodes.filter((n) => n.kind === 'target').map((n) => n.label)).toEqual(['RELAY BOX', 'TOLL BOX']);
-    expect(fieldTargetText(v.fieldGoal!)).toBe('RELAY BOX (2 LEFT)'); // the nearest one first
+    expect(fieldTargetText(v.fieldGoal!)).toBe('RELAY BOX'); // the nearest one first
+    expect(fieldCounter(v.fieldGoal!)).toBe('0/2'); // decision MG5: a done/total counter beside the target
     expect(fieldNextText(v.fieldGoal!)).toBe('DESTROY RELAY BOX');
     expect(fieldNotes(v.fieldGoal!)).toContain('BLASTS ONLY');
   });
@@ -167,7 +168,8 @@ describe('holdArea: keep the zone under control', () => {
     expect(v.fieldGoal!.area!.inside).toBe(true);
     expect(v.fieldGoal!.area!.ticks).toBeGreaterThanOrEqual(115);
     expect(v.progress.label).toBe('seconds held');
-    expect(fieldTargetText(v.fieldGoal!)).toMatch(/^JUNCTION \d\.\d \/ 5\.0 s$/);
+    expect(fieldTargetText(v.fieldGoal!)).toBe('JUNCTION');
+    expect(fieldCounter(v.fieldGoal!)).toMatch(/^[12]\/5 s$/); // decision MG5: seconds held / needed
     expect(v.nodes.find((n) => n.kind === 'area')!.state).toBe('progress');
     for (let i = 0; i < 200; i++) tick(s, {});
     expect(s.mission!.field!.leg).toBe(2); // held 5 s: on to the return route

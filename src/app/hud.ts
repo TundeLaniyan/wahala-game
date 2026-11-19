@@ -34,6 +34,8 @@ import { buildCampaignHud, buildEnemyHud } from './campaignHud';
 import type { CampaignHud, EnemyHud } from './campaignHud';
 import { raidGuidance } from './raidHud';
 import type { RaidHud } from './raidHud';
+import { RouteCache } from './routeGuide';
+import type { RouteCue } from './routeGuide';
 import { buildStageAlerts, ruleBannerFor } from './stageAlerts';
 import type { StageAlert } from './stageAlerts';
 
@@ -259,6 +261,11 @@ export interface HudSnapshot {
   enemies: EnemyHud[];
   /** Classic raid: the current objective, the way to it and short notes (decision TN4); null outside a raid and once it is over. */
   raid: RaidHud | null;
+  /**
+   * Field mission: the way to the current objective along the walkable route (decision MG6), shown in the objective
+   * block; null outside a field mission, once it is over, or while the local fighter is down.
+   */
+  fieldCue: RouteCue | null;
   /** City Rumble combat test lab (docs/COMBAT_TEST_LAB.md): the level in force and the local fighter's press record. */
   combatLab: CombatLabHud | null;
 }
@@ -641,6 +648,7 @@ export function buildHud(
     : 0;
   const cfg = state.config;
   const rumble = getArena(state.arenaId).kind === 'rumble';
+  const mission = missionView(state);
   const me: HudMe | null = local
     ? {
         range: Math.min(local.range, cfg.generator.maxRange),
@@ -706,10 +714,41 @@ export function buildHud(
     rumble: rumble ? buildRumble(state, localId, spectateId) : null,
     sideline: buildSideline(state, localId),
     suddenDeath: buildSuddenDeath(state, localId),
-    mission: missionView(state),
+    mission,
     campaign: buildCampaignHud(state, localId),
     enemies: buildEnemyHud(state, localId),
-    raid: raidGuidance(raidView(state), local ?? null),
+    raid: raidGuidance(
+      raidView(state),
+      local ?? null,
+      local ? (to) => routeFor(state, local, to) : undefined,
+    ),
+    fieldCue: fieldCueOf(state, mission, local ?? null),
     combatLab: buildCombatLab(state, localId),
   };
 }
+
+// ------------------------------------------------------------------ the way to the objective (decision MG6)
+
+/** One route cache per game: a BFS only when the human's tile, the target or the half-second board revision changes. */
+const routeCaches = new WeakMap<GameState, RouteCache>();
+/** The board is re-read at most this often (ticks) for the same tiles and target: crates broken meanwhile re-route. */
+const ROUTE_REVISION_TICKS = 30;
+
+function routeFor(state: GameState, from: { x: number; y: number }, to: { x: number; y: number }): RouteCue {
+  let cache = routeCaches.get(state);
+  if (!cache) {
+    cache = new RouteCache();
+    routeCaches.set(state, cache);
+  }
+  return cache.get(state, from, to, Math.floor(state.tick / ROUTE_REVISION_TICKS));
+}
+
+function fieldCueOf(state: GameState, view: MissionView | null, local: Player | null): RouteCue | null {
+  const goal = view?.format === 'field' && !view.outcome ? view.fieldGoal : null;
+  if (!goal || !local?.alive) return null;
+  // a defeat leg points at the group's marker; every other leg at its node (or the area's centre)
+  const to = goal.area ? { x: goal.area.x, y: goal.area.y } : { x: goal.x, y: goal.y };
+  if (!goal.nodeId && !goal.area) return null;
+  return routeFor(state, local, to);
+}
+

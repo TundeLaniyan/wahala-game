@@ -12,6 +12,7 @@ import {
   quickHandsActive,
   moveWouldAct,
   observe,
+  raidView,
   readyToStep,
   tick,
 } from '../sim';
@@ -853,7 +854,7 @@ export class MatchController implements MissionHost {
     batch: readonly SimEvent[] = [],
   ): (Omit<Toast, 'id' | 'expires'> & { ttlMs?: number }) | null {
     const state = this.state!;
-    const raid = raidNotice(e);
+    const raid = raidNotice(e, e.type === 'cargoDestroyed' && e.marked ? raidView(state) : null);
     if (raid) return raid;
     switch (e.type) {
       case 'vehicleWarning': {

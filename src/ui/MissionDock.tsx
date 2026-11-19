@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { CampaignHud, EnemyHud } from '../app/hud';
 import type { MissionView } from '../sim';
+import type { RouteCue } from '../app/routeGuide';
 import { CampaignHealth } from './CampaignHealth';
 import { FieldGoal } from './FieldGoal';
 import { RAIL_GAP } from './hudRail';
@@ -16,10 +17,13 @@ export function MissionDock({
   mission,
   campaign = null,
   enemies = [],
+  cue = null,
 }: {
   mission: MissionView | null;
   campaign?: CampaignHud | null;
   enemies?: readonly EnemyHud[];
+  /** The way to the current objective (decision MG6). */
+  cue?: RouteCue | null;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
@@ -49,7 +53,7 @@ export function MissionDock({
       style={maxHeight !== null ? { maxHeight: `${maxHeight}px` } : undefined}
     >
       {/* a field mission's objective first: on a phone the column is short and this is what matters */}
-      <FieldGoal mission={mission} />
+      <FieldGoal mission={mission} cue={cue} />
       <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} />
       <MissionPanel mission={mission} />
     </div>

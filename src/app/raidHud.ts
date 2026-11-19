@@ -6,6 +6,7 @@
  * same targets without words.
  */
 import type { RaidView } from '../sim';
+import type { RouteVia } from './routeGuide';
 
 export type RaidVerb = 'destroy' | 'exit';
 
@@ -19,7 +20,12 @@ export interface RaidCue {
   tiles: number;
   /** "↗ 6 TILES", or "HERE" when standing on it. */
   text: string;
+  /** With a board (decision MG6): how the route goes (open floor, through crates, none); absent = the straight cue. */
+  via?: RouteVia;
 }
+
+/** The walkable-route cue to a tile (`routeGuide.ts`, given the board), used instead of the straight one. */
+export type RaidRoute = (to: { x: number; y: number }) => RaidCue;
 
 export interface RaidHud {
   verb: RaidVerb;
@@ -27,7 +33,7 @@ export interface RaidHud {
   tag: string;
   /** "MARKED CARGO", "REACH THE EXIT". */
   target: string;
-  /** "2 OF 3 DOWN", null when there is no count. */
+  /** The counter "0/3" (decision MG5), null when there is no count. */
   step: string | null;
   /** The way to the nearest target; null when there is none to point at. */
   cue: RaidCue | null;
@@ -70,9 +76,18 @@ const nearest = <T extends { x: number; y: number }>(
   return best;
 };
 
-/** The guidance for this moment of the raid, or null when it is over (the outcome screen takes the stage). */
-export function raidGuidance(view: RaidView | null, me: { x: number; y: number } | null): RaidHud | null {
+/**
+ * The guidance for this moment of the raid, or null when it is over (the outcome screen takes the stage). With `route`
+ * (the HUD passes the board's walkable-route cue) the arrow follows the corridors round the pillars; without it the
+ * arrow is the straight compass direction.
+ */
+export function raidGuidance(
+  view: RaidView | null,
+  me: { x: number; y: number } | null,
+  route?: RaidRoute,
+): RaidHud | null {
   if (!view || view.outcome || view.stage === 'done' || view.stage === 'failed') return null;
+  const cueTo = (to: { x: number; y: number }): RaidCue => (route ? route(to) : raidCue(me!, to));
   const notes: string[] = [];
   const enemies = view.wave.enemiesAlive;
   const secondsToWave =
@@ -91,7 +106,7 @@ export function raidGuidance(view: RaidView | null, me: { x: number; y: number }
       tag: 'EXIT',
       target: open ? 'REACH THE EXIT' : 'EXIT OPENS SOON',
       step: null,
-      cue: me && open ? raidCue(me, view.extraction) : null,
+      cue: me && open ? cueTo(view.extraction) : null,
       notes: notes.slice(0, 2),
     };
   }
@@ -108,8 +123,8 @@ export function raidGuidance(view: RaidView | null, me: { x: number; y: number }
     verb: 'destroy',
     tag: 'DESTROY',
     target: 'MARKED CARGO',
-    step: `${view.progress.done} OF ${view.progress.goal} DOWN`,
-    cue: target && me ? raidCue(me, target) : null,
+    step: `${view.progress.done}/${view.progress.goal}`,
+    cue: target && me ? cueTo(target) : null,
     notes: notes.slice(0, 2),
   };
 }

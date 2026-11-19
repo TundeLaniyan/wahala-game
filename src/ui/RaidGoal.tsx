@@ -1,4 +1,6 @@
 import type { RaidHud } from '../app/raidHud';
+import { RouteCueLine } from './FieldGoal';
+import { GlyphIcon } from './GlyphIcon';
 import './FieldGoal.css';
 
 /**
@@ -17,6 +19,7 @@ export function RaidGoal({ raid }: { raid: RaidHud | null }) {
       aria-label="Objective"
     >
       <div className="fg-line">
+        <GlyphIcon id={raid.verb === 'exit' ? 'exit' : 'cargo'} className="fg-glyph" size={16} />
         <b className="fg-tag" data-testid="raid-goal-tag">
           {raid.tag}
         </b>
@@ -29,16 +32,7 @@ export function RaidGoal({ raid }: { raid: RaidHud | null }) {
           </span>
         )}
       </div>
-      {raid.cue && (
-        <div
-          className="rg-cue"
-          data-testid="raid-goal-cue"
-          data-tiles={raid.cue.tiles}
-          aria-label={`${raid.cue.word}, ${raid.cue.tiles} tiles`}
-        >
-          {raid.cue.text}
-        </div>
-      )}
+      <RouteCueLine cue={raid.cue} testId="raid-goal-cue" />
       {raid.notes.length > 0 && (
         <div className="fg-notes" data-testid="raid-goal-notes">
           {raid.notes.map((n) => (

@@ -204,7 +204,12 @@ export function Hud() {
           <div className="rumble-right" data-testid="rumble-right">
             <Minimap />
             <CombatLabChip lab={hud.combatLab} />
-            <MissionDock mission={hud.mission} campaign={hud.campaign} enemies={hud.enemies} />
+            <MissionDock
+              mission={hud.mission}
+              campaign={hud.campaign}
+              enemies={hud.enemies}
+              cue={hud.fieldCue}
+            />
           </div>
         </>
       ) : (
@@ -275,6 +280,7 @@ export function Hud() {
         campaign={hud.campaign}
         enemies={hud.enemies}
         raid={hud.raid}
+        fieldCue={rumble ? null : hud.fieldCue}
       />
       {hud.mission && hud.phase === 'playing' && <MissionCompass />}
       {hud.me && hud.phase !== 'ended' && !(rumble && !hud.localAlive) && <Inventory me={hud.me} />}

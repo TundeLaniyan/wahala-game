@@ -1,6 +1,43 @@
-import type { MissionView } from '../sim';
+import type { FieldGoalVerb, MissionView } from '../sim';
+import type { RouteCue } from '../app/routeGuide';
+import type { GlyphId } from '../render/objectiveGlyphs';
+import { GlyphIcon } from './GlyphIcon';
 import { fieldGoalModel } from './missionPanelModel';
 import './FieldGoal.css';
+
+/** The glyph of each field verb: the same shape the briefing and the world pin use (decision MG4). */
+export const FIELD_VERB_GLYPH: Readonly<Record<FieldGoalVerb, GlyphId>> = {
+  goTo: 'checkpoint',
+  hold: 'door',
+  defeat: 'enemies',
+  escape: 'exit',
+  return: 'exit',
+  destroy: 'equipment',
+  secure: 'area',
+};
+
+/** The way to the objective (decision MG6): the arrow of the route's first steps and its length. */
+export function RouteCueLine({
+  cue,
+  testId,
+}: {
+  cue: Pick<RouteCue, 'text' | 'tiles' | 'word'> & { via?: RouteCue['via'] } | null | undefined;
+  testId: string;
+}) {
+  if (!cue) return null;
+  return (
+    <div
+      className={`rg-cue via-${cue.via ?? 'walk'}`}
+      data-testid={testId}
+      data-tiles={cue.tiles}
+      data-word={cue.word}
+      data-via={cue.via ?? 'walk'}
+      aria-label={cue.via === 'none' ? `${cue.word}, no open route` : `${cue.word}, ${cue.tiles} tiles`}
+    >
+      {cue.text}
+    </div>
+  );
+}
 
 /**
  * The field mission's "what now" block (docs/CHECKPOINT_CLARITY.md, decisions CK4-CK6): a tag (GO TO / HOLD / DEFEAT /
@@ -9,7 +46,7 @@ import './FieldGoal.css';
  * right column (and of the rail on a standard arena), so it stays visible on a phone where the column is short. Renders
  * nothing outside a field mission. Never over the board.
  */
-export function FieldGoal({ mission }: { mission: MissionView | null }) {
+export function FieldGoal({ mission, cue = null }: { mission: MissionView | null; cue?: RouteCue | null }) {
   const g = fieldGoalModel(mission);
   if (!g) return null;
   return (
@@ -20,6 +57,7 @@ export function FieldGoal({ mission }: { mission: MissionView | null }) {
       aria-label="Objective"
     >
       <div className="fg-line">
+        <GlyphIcon id={FIELD_VERB_GLYPH[g.verb]} className="fg-glyph" size={16} />
         <b className="fg-tag" data-testid="field-goal-tag">
           {g.tag}
         </b>
@@ -55,6 +93,7 @@ export function FieldGoal({ mission }: { mission: MissionView | null }) {
           </div>
         </div>
       )}
+      <RouteCueLine cue={cue} testId="field-goal-cue" />
       {g.notes.length > 0 && (
         <div className="fg-notes" data-testid="field-goal-notes">
           {g.notes.map((n) => (
