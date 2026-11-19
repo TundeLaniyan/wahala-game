@@ -15,6 +15,7 @@ import { ebuteX } from '../arenas/ebuteWest';
 import { FINALE_FIELD_DEFS } from './finaleDefs';
 import { ARCHIVED_FIELD_DEFS } from './archivedFieldDefs';
 import { ORITA_ARENA_ID } from '../arenas/campaign/oshodiOrita';
+import { RAILSIDE_ARENA_ID } from '../arenas/campaign/oshodiRailside';
 
 export interface FieldMarkerDef {
   x: number;
@@ -235,28 +236,32 @@ const defs: FieldMissionDef[] = [
     parSec: 120,
   },
   {
+    // Campaign area `oshodi.railside` (decisions WX5, WX8): the same legs, groups and story on the area's own board. The
+    // hawkers loop the market blocks, the relay boxes stand by the buffer stop, the mast shed and the service yard, the
+    // trailer crews come back for the siding plaza, and the station's barrier gate lifts for the escape to the footbridge.
     id: 'oshodi.railEdge',
-    sectorId: 'oshodi.railEdge',
+    arenaId: RAILSIDE_ARENA_ID,
+    sectorId: 'oshodi.railside',
     districtId: 'oshodi',
     name: 'Rail Edge',
-    start: [44, 42],
-    returnMarker: m(58, 43, 'PARK GATE'),
+    start: [3, 24],
+    returnMarker: m(44, 24, 'PARK GATE'),
     legs: [
       { kind: 'clearGroup', text: 'Defeat the 2 hawkers in the market lane.', group: 'hawkers' },
       {
         kind: 'destroyTargets',
-        text: 'Destroy the 3 relay boxes by the rail plaza.',
+        text: 'Destroy the 3 relay boxes along the siding.',
         crew: 'relayCrew',
         targets: [
-          { id: 'relayDepot', kind: 'relayBox', x: 36, y: 34, label: 'RELAY BOX', hp: 3 },
-          { id: 'relayMast', kind: 'relayBox', x: 55, y: 30, label: 'RELAY BOX', hp: 3 },
-          { id: 'relayPlaza', kind: 'relayBox', x: 44, y: 26, label: 'RELAY BOX', hp: 3 },
+          { id: 'relayDepot', kind: 'relayBox', x: 29, y: 17, label: 'RELAY BOX', hp: 3 },
+          { id: 'relayMast', kind: 'relayBox', x: 30, y: 7, label: 'RELAY BOX', hp: 3 },
+          { id: 'relayPlaza', kind: 'relayBox', x: 15, y: 5, label: 'RELAY BOX', hp: 3 },
         ],
       },
       {
         kind: 'holdArea',
         text: 'Keep the rail plaza clear for 25 seconds.',
-        area: { x: 37, y: 28, radius: 2, label: 'RAIL PLAZA' },
+        area: { x: 8, y: 8, radius: 2, label: 'RAIL PLAZA' },
         holdSec: 25,
         waves: [
           { group: 'trailerCrew', atSec: 3 },
@@ -267,23 +272,24 @@ const defs: FieldMissionDef[] = [
         kind: 'escapeRoute',
         text: 'Escape to the footbridge before the trailer hand catches you.',
         group: 'pursuers',
-        exit: m(59, 28, 'FOOTBRIDGE'),
+        exit: m(42, 6, 'FOOTBRIDGE'),
       },
     ],
     doors: [],
     enemies: [
-      // the market lanes: two hawkers walk the cross streets past the stall blocks
-      guard('Lane Hawker', 45, 39, 'hawkers', patrol('marketEnforcer', [38, 39], [48, 39])),
-      guard('Lane Hawker', 54, 37, 'hawkers', patrol('marketEnforcer', [50, 37], [58, 37])),
-      // the relay crew: a heavy stands by the nearest box still working, a warden walks round the mast block
-      blocker('Relay Minder', 47, 34, 'relayCrew', post('heavyEnforcer', 1)),
-      guard('Plaza Warden', 50, 31, 'lookouts', patrol('agbero', [47, 31], [47, 34], [56, 34], [56, 31])),
-      // the trailer crew: they watch the rail buffer, then come to take the plaza back
-      guard('Trailer Crew', 34, 32, 'trailerCrew', patrol('agbero', [31, 31], [38, 31])),
-      chaser('Trailer Crew', 41, 33, 'trailerCrew', post('bottleThrower', 2)),
-      guard('Trailer Crew', 32, 26, 'lateCrew', patrol('areaBoy', [32, 26], [38, 26], [38, 31], [32, 31])),
-      // the trailer hand who sets off after you when the plaza is held
-      chaser('Trailer Hand', 31, 32, 'pursuers', { variant: 'bottleThrower' }),
+      // the market lanes: two hawkers loop the stall blocks
+      guard('Lane Hawker', 7, 12, 'hawkers', patrol('marketEnforcer', [7, 12], [16, 12], [16, 15], [7, 15])),
+      guard('Lane Hawker', 10, 19, 'hawkers', patrol('marketEnforcer', [3, 19], [14, 19], [14, 16], [3, 16])),
+      // the relay crew: a heavy stands by the nearest box still working, a warden walks round the mast shed
+      blocker('Relay Minder', 29, 10, 'relayCrew', post('heavyEnforcer', 1)),
+      guard('Plaza Warden', 23, 5, 'lookouts', patrol('agbero', [23, 5], [29, 5], [29, 9], [23, 9])),
+      // the trailer crew: they walk the siding and watch the plaza, then come to take it back
+      guard('Trailer Crew', 12, 4, 'trailerCrew', patrol('agbero', [3, 4], [16, 4])),
+      chaser('Trailer Crew', 16, 10, 'trailerCrew', post('bottleThrower', 2)),
+      guard('Trailer Crew', 4, 11, 'lateCrew', patrol('areaBoy', [3, 11], [17, 11])),
+      // the trailer hand waits at the market's corner below the plaza and sets off after you when the plaza is held (8 tiles
+      // from it, and 4 tiles further from the footbridge than you: a fair start)
+      chaser('Trailer Hand', 2, 10, 'pursuers', { variant: 'bottleThrower' }),
     ],
     timeLimitSec: 600,
     parSec: 270,

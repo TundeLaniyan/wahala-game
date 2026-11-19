@@ -22,6 +22,11 @@ const [A, B, C] = APPROACH_MARKERS as [
   readonly [number, number],
   readonly [number, number],
 ];
+
+const PLAZA = ((): readonly [number, number] => {
+  const hold = getFieldMission('oshodi.railEdge').legs.find((l) => l.kind === 'holdArea')!;
+  return hold.kind === 'holdArea' ? [hold.area.x, hold.area.y] : [0, 0];
+})();
 import { newField, raidOutcome, walkField } from './field-helpers';
 
 const APPROACH = 'oshodi.approach';
@@ -34,6 +39,13 @@ const groupIds = (s: GameState, group: string): number[] =>
   m(s)
     .seats.filter((x) => x.group === group)
     .map((x) => x.playerId);
+/**
+ * Rail Edge staging tiles on the siding along the north fence (track tiles never hold a crate: decision WX8): the human,
+ * the tile next to him, and one ten tiles away.
+ */
+const SIDING_HUMAN = [20, 3] as const;
+const SIDING_NEXT = [21, 3] as const;
+const SIDING_FAR = [10, 3] as const;
 /** Rail Edge's pursuer seat (the trailer hand). */
 const pursuer = (s: GameState): number => groupIds(s, 'pursuers')[0]!;
 
@@ -172,15 +184,17 @@ describe('escapeRoute', () => {
     const id = pursuer(s);
     expect(directiveFor(s, id)).toMatchObject({ kind: 'block' });
     railEdgeToEscape(s);
+    // the escape starts where the hold ended: on the rail plaza (the campaign area's pursuer waits by it, decision WX8)
+    put(s, 0, PLAZA[0], PLAZA[1]);
     expect(directiveFor(s, id)).toMatchObject({ kind: 'chase' });
   });
 
   it('failure path: a pursuer next to you catches you: a life, the checkpoint, the pursuer back at its post', () => {
     const s = atEscape();
     const id = pursuer(s);
-    put(s, 0, 50, 36);
+    put(s, 0, ...SIDING_HUMAN);
     const post = { ...m(s).seats[id]!.post! };
-    put(s, id, 51, 36); // right next to the human
+    put(s, id, ...SIDING_NEXT); // right next to the human
     const before = m(s).livesUsed;
     advance(s, CATCH_TICKS + 2);
     expect(f(s).caught).toBe(1);
@@ -195,15 +209,15 @@ describe('escapeRoute', () => {
   it('a pursuer that only passes by does not catch you, and three catches lose the mission', () => {
     const s = atEscape();
     const id = pursuer(s);
-    put(s, 0, 50, 36);
-    put(s, id, 51, 36);
+    put(s, 0, ...SIDING_HUMAN);
+    put(s, id, ...SIDING_NEXT);
     advance(s, CATCH_TICKS - 20);
-    put(s, id, 40, 36); // gone before the catch
+    put(s, id, ...SIDING_FAR); // gone before the catch
     advance(s, 60);
     expect(f(s).caught).toBe(0);
     for (let i = 0; i < 3 && !m(s).outcome; i++) {
-      put(s, 0, 50, 36);
-      put(s, id, 51, 36);
+      put(s, 0, ...SIDING_HUMAN);
+      put(s, id, ...SIDING_NEXT);
       advance(s, CATCH_TICKS + 2);
     }
     expect(m(s).outcome?.result).toBe('lost');

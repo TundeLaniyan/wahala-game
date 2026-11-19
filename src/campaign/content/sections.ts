@@ -128,7 +128,7 @@ const OSHODI_SECTIONS: SectionDef[] = [
         name: 'Rail Edge',
         objectiveCard: 'Clear hawkers, wreck 3 relay boxes, keep the plaza, reach the footbridge.',
         summary:
-          'Two hawkers hold the market lane, and the relay boxes by the rail plaza feed the dispatch net: only your blasts break them, three each. Keep the plaza clear while the trailer crew comes for it, then reach the footbridge before the trailer hand.',
+          'Two hawkers hold the market lanes, and the relay boxes along the siding feed the dispatch net: only your blasts break them, three each. Keep the rail plaza clear while the trailer crew comes for it, then reach the footbridge before the trailer hand.',
         missionRef: 'oshodi.railEdge',
         reward: title(
           'oshodi.railEdge',
@@ -138,7 +138,7 @@ const OSHODI_SECTIONS: SectionDef[] = [
         unlocks: ['section.oshodi.s3'],
         ringWeakened: 'The trailer crews lose the rail-edge lane: the controller has nowhere left to hide.',
         readMore:
-          'Clear the two lane hawkers. Three relay boxes stand by the rail plaza: each takes three separate blasts, a heavy minds the nearest one and a warden walks round the mast block. Then keep the rail plaza clear for 25 seconds while the trailer crew comes to take it back. Last, the trailer hand hunts you: stay ahead of him and reach the footbridge. If he stays next to you for a moment he catches you and you lose a life. Walk to the Park gate to finish.',
+          'Clear the two hawkers who loop the market stalls. Three relay boxes stand along the siding: one by the buffer stop on the rail plaza, one by the mast shed and one in the service yard. Each takes three separate blasts; a heavy minds the nearest one and a warden walks round the mast shed. Then keep the rail plaza clear for 25 seconds while the trailer crew comes to take it back. Last, the station barrier lifts and the trailer hand, waiting at the market corner below the plaza, hunts you: stay ahead of him and reach the footbridge. If he stays next to you for a moment he catches you and you lose a life. Walk to the Park gate to finish.',
         intro: [
           say('MAMA PUT', 'The market lane is the last road before the terminal. The trailer crews run it.'),
           say('RADIO', 'Relay boxes by the plaza feed the dispatch net. Na blast go break am, not hand.'),

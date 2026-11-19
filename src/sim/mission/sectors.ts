@@ -70,30 +70,7 @@ const col = (x: number, y0: number, y1: number): T[] =>
 const b = (id: string, kind: BarricadeKind, tiles: T[]): SectorBarricadeDef => ({ id, kind, tiles });
 
 const defs: MissionSectorDef[] = [
-  // Oshodi mission 1 plays on its own campaign area now (decisions WX5-WX7, `campaignAreas.ts`)
-  {
-    id: 'oshodi.railEdge',
-    districtId: 'oshodi',
-    name: 'Rail edge, market and footbridge',
-    area: 'The interchange plaza at the end of the rail line, the east market lanes and the footbridge stairs; closed by the rail buffer fence north, a bus and a yard fence west, the depot wall south-west.',
-    rects: [
-      [31, 26, 60, 34],
-      [37, 35, 60, 44],
-    ],
-    barricades: [
-      b('railFenceW', 'rail', row(25, 32, 35)),
-      b('railFenceE', 'rail', row(25, 38, 40)),
-      b('northLane', 'barrier', row(25, 45, 47)),
-      b('northBus', 'bus', row(25, 55, 58)),
-      b('plazaBus', 'bus', col(30, 26, 28)),
-      b('plazaFence', 'gate', col(30, 29, 32)),
-      b('depotCorner', 'barrier', row(35, 35, 36)),
-      b('depotWall', 'gate', col(36, 36, 39)),
-      b('depotBus', 'bus', col(36, 41, 44)),
-    ],
-    viewMargin: 3,
-    hazards: 'inside',
-  },
+  // Oshodi's two field missions play on their own campaign areas now (decisions WX5-WX9, `campaignAreas.ts`)
   // ---------------------------------------------------------------- Mushin
   {
     id: 'mushin.sparePartsRow',

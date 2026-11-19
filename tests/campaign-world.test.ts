@@ -159,7 +159,7 @@ describe('Oshodi', () => {
 
   it('every Oshodi field mission plays on its own campaign area; two missions never share a board', () => {
     const ids = Object.values(FIELD_MISSION_DEFS)
-      .filter((d) => d.districtId === 'oshodi' && d.arenaId !== undefined) // mission 1 moved first (WX5)
+      .filter((d) => d.districtId === 'oshodi')
       .map((d) => d.id);
     const boards = ids.map((id) => fieldArenaId(FIELD_MISSION_DEFS[id]!));
     for (const b of boards) expect(getArena(b).campaignOnly, b).toBe(true);

@@ -112,14 +112,31 @@ describe('render cost: only what the sector can show is built', () => {
     },
   );
 
-  it('Oshodi cover takes the clip too', () => {
-    const s = field('oshodi.railEdge');
+  it('Oshodi cover takes the clip too (the Transport Metropolis board and a campaign area board)', () => {
+    // the Rumble map in a district sector: the archived pilot's replay still plays Terminal Approach's old sector (WX8)
+    const s = createGame(
+      buildMissionGame({
+        spec: { id: 'oshodi', fieldId: 'oshodi.approach', archivedPilot: true },
+        humanCharacter: 'streetBaller',
+        seed: 2,
+      }),
+    );
+    expect(s.arenaId).toBe('rumbleOshodi');
     const factory = NEW_ARENA_ART()[s.arenaId]!.cover!;
     const whole = factory({ width: s.width, height: s.height })!;
     const clipped = factory({ width: s.width, height: s.height, clip: renderClip(s)! })!;
     expect(clipped.bounds.length).toBeLessThan(whole.bounds.length);
     whole.dispose();
     clipped.dispose();
+    // a campaign area's board: the same builder on its own letter map, clipped to a corner
+    const c = field('oshodi.railEdge');
+    const area = NEW_ARENA_ART()[c.arenaId]!.cover!;
+    const all = area({ width: c.width, height: c.height })!;
+    const corner = area({ width: c.width, height: c.height, clip: { x0: 0, y0: 0, x1: 12, y1: 10 } })!;
+    expect(all.bounds.length).toBeGreaterThan(0);
+    expect(corner.bounds.length).toBeLessThan(all.bounds.length);
+    all.dispose();
+    corner.dispose();
   });
 
   it('the living environment keeps only traffic, crowds and lights near the sector', () => {

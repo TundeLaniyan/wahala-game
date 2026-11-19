@@ -9,6 +9,7 @@
  * Fictional names only (the Bible's naming rule): Orita Gate, Papa Kekere market, the Ayo Bridge footbridge.
  */
 import { ORITA_ARENA_ID, ORITA_SUB_AREAS } from '../arenas/campaign/oshodiOrita';
+import { RAILSIDE_ARENA_ID, RAILSIDE_SUB_AREAS } from '../arenas/campaign/oshodiRailside';
 import type { CampaignAreaDef, CampaignSubArea } from './areas';
 import { areaCol } from './areas';
 
@@ -98,4 +99,86 @@ export const OSHODI_ORITA: CampaignAreaDef = {
   ],
 };
 
-export const OSHODI_AREAS: readonly CampaignAreaDef[] = [OSHODI_ORITA];
+/** Mission 2, Rail Edge: the siding rail plaza, the Ayo market lanes, the relay service corridor, the footbridge approach. */
+export const OSHODI_RAILSIDE: CampaignAreaDef = {
+  id: 'oshodi.railside',
+  districtId: 'oshodi',
+  arenaId: RAILSIDE_ARENA_ID,
+  name: 'The Railside Streets',
+  summary:
+    'East of the depot, where the commuter line leaves the interchange: the siding and its rail plaza, the Ayo market lanes beside it, the relay service corridor and, behind the station barrier, the footbridge approach.',
+  format: 'field',
+  missions: ['oshodi.railEdge'],
+  place: {
+    compass: 'SE',
+    from: 'the interchange (the City Rumble map)',
+    neighbours: [
+      { areaId: 'oshodi.orita', dir: 'W', via: 'the depot back lane (the west end of the market lanes)' },
+      { areaId: 'interchange', dir: 'N', via: 'the commuter line along the north fence' },
+      { areaId: 'interchange', dir: 'NE', via: 'the Ayo footbridge over the line' },
+    ],
+  },
+  subAreas: purposes(RAILSIDE_SUB_AREAS, {
+    plaza: 'The relay box by the buffer stop and the plaza to hold; the trailer crews walk the siding.',
+    market: 'The entry: two hawkers loop the stall blocks (the first leg).',
+    service:
+      'Two relay boxes by the mast shed and in the yard; a warden rounds the shed, a heavy minds the boxes.',
+    footbridge:
+      'Behind the station barrier (it lifts once the plaza is held): the escape to the footbridge, the park gate.',
+  }),
+  sector: {
+    id: 'oshodi.railside',
+    districtId: 'oshodi',
+    arenaId: RAILSIDE_ARENA_ID,
+    name: 'The railside streets',
+    area: 'The whole campaign board: the siding rail plaza, the Ayo market lanes, the relay service corridor and the footbridge approach; closed by the rail fence and buildings north, buildings east and west, lock-ups south.',
+    rects: [[2, 2, 45, 25]],
+    barricades: [],
+    // the station's barrier lifts once the plaza is held: the way to the footbridge (a sector transition, decision WX8)
+    gates: [{ id: 'stationBarrier', kind: 'checkpoint', tiles: areaCol(36, 10, 12), opensAfterLeg: 2 }],
+    viewMargin: 2,
+    hazards: 'inside',
+  },
+  entry: [3, 24],
+  exits: [
+    { id: 'footbridge', x: 42, y: 6, label: 'FOOTBRIDGE', leadsTo: 'interchange' },
+    { id: 'parkGate', x: 44, y: 24, label: 'PARK GATE', leadsTo: 'oshodi.boss' },
+  ],
+  landmarks: [
+    {
+      id: 'line',
+      name: 'The commuter line',
+      kind: 'railViaduct',
+      at: [12, 0],
+      side: 'north',
+      story:
+        'The line out of the interchange runs past the siding on its viaduct; the relay boxes signal its convoys.',
+    },
+    {
+      id: 'footbridge',
+      name: 'Ayo footbridge',
+      kind: 'footbridge',
+      at: [45, 6],
+      side: 'east',
+      story: 'The footbridge over the line: the way out when the trailer hand comes after you.',
+    },
+    {
+      id: 'rank',
+      name: 'Park gate danfo rank',
+      kind: 'danfoRank',
+      at: [45, 20],
+      side: 'east',
+      story: 'Danfos waiting by the park gate for the interchange run.',
+    },
+    {
+      id: 'market',
+      name: 'Ayo market',
+      kind: 'marketUmbrellas',
+      at: [2, 18],
+      side: 'west',
+      story: 'The hawkers who work for the trailer crews sell along these lanes.',
+    },
+  ],
+};
+
+export const OSHODI_AREAS: readonly CampaignAreaDef[] = [OSHODI_ORITA, OSHODI_RAILSIDE];
