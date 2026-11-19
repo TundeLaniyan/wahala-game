@@ -63,6 +63,8 @@ import { StageHazardViews } from './views/StageHazardViews';
 import { MissionViews } from './views/MissionViews';
 import type { MissionMarkerStats } from './views/MissionViews';
 import { RaidViews, isRaidMatch } from './views/RaidViews';
+import { ObjectiveMarkers, hasObjectivePins } from './views/ObjectiveMarkers';
+import type { ObjectiveMarkerStats } from './views/ObjectiveMarkers';
 import type { RaidViewStats } from './views/RaidViews';
 import { DamageViews, hasCampaignFeedback } from './views/DamageViews';
 import { ProjectileViews } from './views/ProjectileViews';
@@ -189,6 +191,8 @@ export class GameRenderer {
   private missionMarkers: MissionViews | null = null;
   /** Classic raid world markers, damage feedback and projectiles (campaign matches only; a normal match builds none). */
   private raid: RaidViews | null = null;
+  /** Field missions and raids: the pins over every live target (docs/MISSION_GUIDANCE.md, decision MG4). */
+  private pins: ObjectiveMarkers | null = null;
   private damage: DamageViews | null = null;
   private projectiles: ProjectileViews | null = null;
   /** The human's swing feedback (combat pilot, lab, Classic, raids and missions). */
@@ -360,6 +364,13 @@ export class GameRenderer {
       this.scene.add(equipment.group);
       equipment.group.userData.grit = 'vehicle';
     }
+    // the objective pins of a field mission or a raid (after the objects they hang over)
+    this.pins = hasObjectivePins(state) ? new ObjectiveMarkers() : null;
+    if (this.pins) {
+      this.views.push(this.pins);
+      this.scene.add(this.pins.group);
+      this.pins.group.userData.grit = 'none';
+    }
     this.living = this.createLiving(state);
     if (this.living) this.views.push(this.living);
     this.scene.add(
@@ -464,6 +475,7 @@ export class GameRenderer {
     this.stage = null;
     this.missionMarkers = null;
     this.raid = null;
+    this.pins = null;
     this.damage = null;
     this.projectiles = null;
     this.pilot = null;
@@ -950,6 +962,11 @@ export class GameRenderer {
     const r = at(0.985, mid);
     const view = t && b && l && r ? { top: t.y, bottom: b.y, left: l.x, right: r.x } : null;
     return { ...s, view };
+  }
+
+  /** The objective pins standing now (null without a field mission or a raid); debug / e2e. */
+  objectiveMarkerStats(): ObjectiveMarkerStats | null {
+    return this.pins?.stats() ?? null;
   }
 
   /** What the raid markers drew last frame (null outside a raid); debug / performance reports. */

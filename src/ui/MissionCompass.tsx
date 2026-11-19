@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { missionView } from '../sim';
 import { liveMatch, projectTilesToPage } from '../app/session';
+import { RouteCache } from '../app/routeGuide';
 import { compassTarget, placeCompass, tilesLabel } from './missionCompassModel';
 import type { Rect } from './missionCompassModel';
 import './MissionCompass.css';
@@ -50,6 +51,8 @@ export function MissionCompass() {
     const dist = el.querySelector<HTMLElement>('.mc-dist')!;
     let avoid: Rect[] = [];
     let avoidAt = -Infinity;
+    // the walkable route (decision MG6): the pointer follows its first steps; recomputed only when a tile changes
+    const routes = new RouteCache();
     const hide = (): void => {
       if (el.dataset.shown !== 'no') {
         el.dataset.shown = 'no';
@@ -64,7 +67,9 @@ export function MissionCompass() {
       const boss = live.state.players[view.boss.playerId];
       const target = compassTarget(view, me, boss ? { x: boss.x, y: boss.y } : null);
       if (!target) return hide();
-      const proj = projectTilesToPage([me, target]);
+      const route = routes.get(live.state, me, target, Math.floor(live.state.tick / 30));
+      const step = route.via !== 'none' ? route.steps[route.steps.length - 1] : undefined;
+      const proj = projectTilesToPage(step ? [me, target, step] : [me, target]);
       if (!proj) return hide();
       const now = performance.now();
       if (now - avoidAt > 500) {
@@ -77,6 +82,7 @@ export function MissionCompass() {
         target: proj.points[1]!,
         size: SIZE,
         avoid,
+        ...(proj.points[2]?.ahead ? { heading: proj.points[2] } : {}),
       });
       if (!placed) return hide();
       el.style.display = '';
@@ -84,6 +90,7 @@ export function MissionCompass() {
       el.dataset.target = target.id;
       el.dataset.kind = target.kind;
       el.dataset.tiles = String(target.tiles);
+      el.dataset.route = route.via;
       el.style.transform = `translate(${Math.round(placed.x - SIZE / 2)}px, ${Math.round(placed.y - SIZE / 2)}px)`;
       arrow.style.transform = `rotate(${placed.angle.toFixed(3)}rad)`;
       const label = tilesLabel(target.tiles);

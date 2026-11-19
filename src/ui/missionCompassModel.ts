@@ -85,6 +85,11 @@ export interface PlaceInput {
   avoid?: readonly Rect[];
   /** The target counts as on screen this far inside the bounds (the marker in the world is enough then). */
   visibleInset?: number;
+  /**
+   * A point a few steps along the WALKABLE route to the target (decision MG6), on screen: the pointer then shows the way
+   * the route leaves the player (round a wall), not the straight line to the target. Absent = the straight line.
+   */
+  heading?: { x: number; y: number };
 }
 
 const intersects = (a: Rect, b: Rect): boolean =>
@@ -139,8 +144,9 @@ export function placeCompass(input: PlaceInput): CompassPlacement | null {
 
   const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
   const origin = { x: clamp(player.x, area.left, area.right), y: clamp(player.y, area.top, area.bottom) };
-  let dx = target.x - player.x;
-  let dy = target.y - player.y;
+  const toward = input.heading && ahead ? input.heading : target;
+  let dx = toward.x - player.x;
+  let dy = toward.y - player.y;
   if (!ahead) {
     dx = -dx;
     dy = -dy;
@@ -177,8 +183,9 @@ export function placeCompass(input: PlaceInput): CompassPlacement | null {
     if (!best) return null;
     p = best;
   }
-  const toward = Math.atan2(target.y - p.y, target.x - p.x);
-  return { x: p.x, y: p.y, angle: ahead ? toward : toward + Math.PI };
+  if (input.heading && ahead) return { x: p.x, y: p.y, angle: Math.atan2(dy, dx) };
+  const angle = Math.atan2(target.y - p.y, target.x - p.x);
+  return { x: p.x, y: p.y, angle: ahead ? angle : angle + Math.PI };
 }
 
 /** "12 tiles" / "1 tile" (the badge's small caption). */
