@@ -20,6 +20,7 @@ import {
   DEFAULT_ARENA_ID,
   DIR_VEC,
   FIELD_MISSION_DEFS,
+  getArena,
   Tile,
   buildMissionGame,
   buildRaidGame,
@@ -141,10 +142,14 @@ describe('a campaign mission opens on the fighter, not the district', () => {
         expect(Math.abs(v.x), 'fighter on screen').toBeLessThan(0.9);
         expect(v.y).toBeLessThan(yTop);
         expect(v.y).toBeGreaterThan(yBottom);
-        // the visible floor is a small part of the map: at most 40 % of the board, at most 34 x 22 tiles
+        // the visible floor is a small part of the map: at most 34 x 22 tiles, and at most 40 % of a district board. A
+        // campaign-only area (WX1) is the mission's own, smaller board (46 x 26 for the Oshodi approach): its view's
+        // bounding box may reach half of it, never most of its width
         const r = visible(rig, vp);
         const area = (r.x1 - r.x0) * (r.z1 - r.z0);
-        expect(area / (s.width * s.height), `${name} share of the board`).toBeLessThan(0.4);
+        const ownArea = getArena(s.arenaId).campaignOnly === true;
+        expect(area / (s.width * s.height), `${name} share of the board`).toBeLessThan(ownArea ? 0.5 : 0.4);
+        if (ownArea) expect((r.x1 - r.x0) / s.width, `${name} share of the width`).toBeLessThan(0.75);
         expect(r.x1 - r.x0).toBeLessThan(34);
         expect(r.z1 - r.z0).toBeLessThan(22);
         // and it is smaller than what the old establishing shot showed
@@ -197,8 +202,14 @@ describe('the follow framing keeps about 5 tiles on every side', () => {
       s.match.phase = 'playing';
       s.match.countdownRemaining = 0;
       const me = s.players[0]!;
-      me.x = me.stepFromX = Math.floor(s.width / 2);
-      me.y = me.stepFromY = Math.floor(s.height / 2);
+      // the middle of the play area: the boss's corridor (WX9) when it has one, else the board
+      const rs = s.sector?.rects ?? [[0, 0, s.width - 1, s.height - 1]];
+      const x0 = Math.min(...rs.map((r) => r[0]));
+      const x1 = Math.max(...rs.map((r) => r[2]));
+      const y0 = Math.min(...rs.map((r) => r[1]));
+      const y1 = Math.max(...rs.map((r) => r[3]));
+      me.x = me.stepFromX = Math.floor((x0 + x1) / 2);
+      me.y = me.stepFromY = Math.floor((y0 + y1) / 2);
       const { rig, layout } = rigFor(s, vp);
       const shot = campaignShot(s, layout, 0, 0, false);
       shot.keep = [];

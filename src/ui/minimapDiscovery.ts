@@ -3,7 +3,9 @@
  * the active area and the routes found, never distant, not-yet-reached streets as if they were playable. A cheap rule,
  * kept per match in the UI (a bitset of tiles, never in the simulation, so determinism and digests are untouched):
  *
- * - the mission's sector (its rects: the playable area the barricades close) is known from the start;
+ * - on a district map, the mission's sector (its rects: the playable area the barricades close) is known from the start;
+ * - on a campaign-only area (`ArenaDef.campaignOnly`, docs/CAMPAIGN_WORLD.md) the sector is the whole board, so instead each
+ *   named part of the area (`ArenaDef.districts`) becomes known when the human first stands in it (CF9);
  * - every tile within `DISCOVER_RADIUS` (Chebyshev) of a tile the human has stood on (about what the follow camera
  *   shows round the fighter);
  * - the route to the current objective: the shortest path through anything but concrete from where the human stands
@@ -12,7 +14,7 @@
  * Outside a campaign mission (City Rumble) nothing is hidden. Public information only: the board and the mission's
  * own view.
  */
-import { Tile, missionView } from '../sim';
+import { Tile, getArena, missionView } from '../sim';
 import type { GameState } from '../sim';
 
 /** Tiles round every place the human has stood that the map reveals. */
@@ -29,6 +31,9 @@ export class MinimapDiscovery {
   private lastX = -1;
   private lastY = -1;
   private targetKey = '';
+  /** The named parts of a campaign-only area, revealed whole on entry (empty on a district map). */
+  private parts: readonly (readonly (readonly [number, number, number, number])[])[] = [];
+  private partsSeen = new Set<number>();
 
   constructor(
     readonly width: number,
@@ -39,6 +44,11 @@ export class MinimapDiscovery {
 
   known(x: number, y: number): boolean {
     return x >= 0 && y >= 0 && x < this.width && y < this.height && this.bits[y * this.width + x] === 1;
+  }
+
+  /** The parts of a campaign-only area: each is revealed whole when the human first stands in it. */
+  setParts(parts: readonly (readonly (readonly [number, number, number, number])[])[]): void {
+    this.parts = parts;
   }
 
   /** Reveals the tiles of a rectangle (inclusive, clamped to the board); true when any was new. */
@@ -69,6 +79,12 @@ export class MinimapDiscovery {
         me.x + DISCOVER_RADIUS,
         me.y + DISCOVER_RADIUS,
       );
+      this.parts.forEach((rects, i) => {
+        if (this.partsSeen.has(i)) return;
+        if (!rects.some((r) => me.x >= r[0] && me.x <= r[2] && me.y >= r[1] && me.y <= r[3])) return;
+        this.partsSeen.add(i);
+        for (const r of rects) this.revealRect(r[0], r[1], r[2], r[3]);
+      });
     }
     const targets = objectiveTiles(state);
     const key = targets.map((t) => `${t.x},${t.y}`).join(';');
@@ -153,7 +169,9 @@ export function discoveryFor(state: GameState): MinimapDiscovery | null {
   let d = byState.get(state);
   if (!d) {
     d = new MinimapDiscovery(state.width, state.height);
-    for (const r of state.sector?.rects ?? []) d.revealRect(r[0], r[1], r[2], r[3]);
+    const arena = getArena(state.arenaId);
+    if (arena.campaignOnly) d.setParts((arena.districts ?? []).map((p) => p.rects));
+    else for (const r of state.sector?.rects ?? []) d.revealRect(r[0], r[1], r[2], r[3]);
     byState.set(state, d);
   }
   return d;
