@@ -154,6 +154,11 @@ on High, a throw cue, the open window, and two lineups of the nine variants.
 
 # Part 2. the campaign tactics layer (decisions SA3-SA12)
 
+> **Reliability pass (decisions RC1-RC8, 2026-11, `docs/CAMPAIGN_COMBAT_RELIABILITY.md`):** enemy step times, the calm patrol pace, the
+> patrol routes of every ordinary roamer, the chase break-off rules (walking gap, maximum chase, re-notice cooldown), the calm notice
+> range, brawler recovery windows and the brawl reaction time changed after this part was written; the numbers below that differ
+> (pace 10 ticks for an agbero, recovery 48 / 42 / 36, reversing Hard laps, notice ranges) are superseded by that document.
+
 Branch `claude/wahala-csa-combat` (from production `46f0781` + the sector contract `6359813`, decision SA2: the enemy
 variant roster in `src/sim/data/enemyVariants.ts`). Founder direction (2026-11-18, authorised campaign-wide): generators
 are the primary weapon; melee assists (interrupt, knockback, stagger, reposition) without a two-punch slowdown ritual or

@@ -26,7 +26,10 @@ export interface FlowResult {
 export function playOshodiFlow(level: CampaignLevel, seed: number): FlowResult {
   const sc = trapScene('oshodi.approach', level, seed, 1, 0);
   const s = sc.s;
-  const bait = baitFromHere(sc, seed, {}, 60);
+  // a player who misses with the bait tries again (up to three tries, as he would before moving on)
+  let bait = baitFromHere(sc, seed, {}, 50);
+  for (let again = 1; again < 3 && !bait.result.killed && sc.s.players[1]!.alive; again++)
+    bait = baitFromHere(sc, seed + 100 * again, {}, 50);
   const human = new GeneratorPlayer(seed);
   let agberoBlastKills = bait.result.killed ? 1 : 0;
   let blastKills = bait.result.killed ? 1 : 0;

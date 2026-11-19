@@ -54,12 +54,12 @@ const put = (s: GameState, id: number, x: number, y: number): void => {
   p.stepRemaining = 0;
 };
 
-/** A watcher at (4, 6) facing a human at (10, 6) on the open bus park row: it notices him within the second. */
+/** A watcher at (4, 6) facing a human at (8, 6) on the open bus park row: it notices him within the second (decision RC4: a calm enemy notices within 5 tiles). */
 function watcher(): GameState {
   const { s } = tacticsScene({
     level: 'normal',
     seed: 1,
-    human: [10, 6],
+    human: [8, 6],
     enemies: [{ variant: 'agbero', at: [4, 6], territory: { radius: 2 } }],
   });
   s.players[1]!.facing = 'right';
@@ -181,11 +181,12 @@ describe('awareness marks in EnemyTelegraphViews (from the real territorial laye
     });
     expect(view.stats().marksStarted.investigate).toBe(1);
     expect(query).toBe(1);
-    // neither change has an event of its own (the chase lost sight; the search found nothing): the marks came from
-    // the minds
-    expect(ev.some((e) => e.type === 'enemyCue' && e.cue !== 'windup')).toBe(false);
+    // the search that finds nothing has no event of its own (the mark came from the mind); decision RC3: a chase that breaks off (the
+    // human out of reach for a second) emits the existing `lost` cue, and the mark folds the cue and the state change into one
+    expect(ev.some((e) => e.type === 'enemyCue' && e.cue !== 'windup' && e.cue !== 'lost')).toBe(false);
     expect(['watch', 'patrol']).toContain(s.territory!.minds[1]!.state);
-    expect(view.stats().marksStarted.lost).toBe(1);
+    // two "sinking ?" in this episode: the break-off's own cue (decision RC3) and the walk back after the search
+    expect(view.stats().marksStarted.lost).toBe(2);
     expect(lost).toBe(1);
     view.dispose();
   });

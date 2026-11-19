@@ -317,8 +317,13 @@ export type TrapSenseTier = 'none' | 'basic' | 'keen' | 'expert';
 export interface TrapSenseSpec {
   /** Scales the reaction time (`TrapPerception.reactTicks`) to a newly seen generator. */
   reactScale: number;
-  /** Scales it again while brawling (pursuing, winding up, recovering): tunnel vision. 1 = none. */
+  /** Scales it again while brawling (pursuing, winding up, recovering): tunnel vision. 1 = none. (Boss and crew generator bots.) */
   brawlReactScale: number;
+  /**
+   * The same for a campaign FIELD enemy seat (`Player.enemyKind`; decision RC4): a brawler in a fight takes a generator that was
+   * hidden under a rival's feet seriously later than the boss missions' crews do (their `brawlReactScale` is unchanged).
+   */
+  enemyBrawlReactScale: number;
   /** Bot levels added to the campaign level's enemy bot level for the movement / escape planner (`DIFFICULTIES`). */
   plannerBump: number;
   /**
@@ -1232,14 +1237,36 @@ export const CAMPAIGN_TACTICS: CampaignTacticsConfig = {
   trapSense: {
     none: {
       reactScale: 1.25,
-      brawlReactScale: 2.4,
+      brawlReactScale: 2,
+      enemyBrawlReactScale: 2.4,
       plannerBump: 0,
       calmVisionTiles: 2,
       seesPlacement: false,
     },
-    basic: { reactScale: 1, brawlReactScale: 2, plannerBump: 0, calmVisionTiles: 3, seesPlacement: false },
-    keen: { reactScale: 0.8, brawlReactScale: 1, plannerBump: 1, calmVisionTiles: 5, seesPlacement: true },
-    expert: { reactScale: 0.6, brawlReactScale: 1, plannerBump: 2, calmVisionTiles: 99, seesPlacement: true },
+    basic: {
+      reactScale: 1,
+      brawlReactScale: 1.5,
+      enemyBrawlReactScale: 2,
+      plannerBump: 0,
+      calmVisionTiles: 3,
+      seesPlacement: false,
+    },
+    keen: {
+      reactScale: 0.8,
+      brawlReactScale: 1,
+      enemyBrawlReactScale: 1,
+      plannerBump: 1,
+      calmVisionTiles: 5,
+      seesPlacement: true,
+    },
+    expert: {
+      reactScale: 0.6,
+      brawlReactScale: 1,
+      enemyBrawlReactScale: 1,
+      plannerBump: 2,
+      calmVisionTiles: 99,
+      seesPlacement: true,
+    },
   },
   awareness: {
     noticeTiles: { agbero: 7, guard: 8, thrower: 9, heavy: 6, lieutenant: 10, boss: 10 },

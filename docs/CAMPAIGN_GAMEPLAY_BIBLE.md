@@ -93,6 +93,13 @@ melee only interrupts his restore. Field missions are unchanged.
 Approved by the founder on 2026-11-18 and built campaign-wide (field and boss missions only; never Classic, City Rumble,
 raids, the Academy or online). It differs from the 1.4 proposal where noted.
 
+**CURRENT since the reliability pass (decisions RC1-RC8, `docs/CAMPAIGN_COMBAT_RELIABILITY.md`):** ordinary enemies are slower than the
+player on every level (12 ticks a tile on Normal against the player's 10; 9 % slower even on Hard), a calm patrol walks slower still,
+every ordinary roamer walks a readable route, and a chase breaks off (walking gap, maximum chase 7 / 10 / 15 s) and returns to its
+route. Brawlers stay planted longer after a swing (about a second on Normal). The numbers in the table below that these change
+(step time, recovery, patrol pause, notice range) are listed in that document; the hidden-generator, fuse and generator-first
+rules are unchanged.
+
 | Parameter | CURRENT value |
 | --- | --- |
 | Perception | the pilot's sight / memory / hearing for every enemy, plus a calm view cone and trap sense; hearing yields a coarse direction band only; an unseen generator is absent from the enemy's plan; boss-mission bots perceive too |

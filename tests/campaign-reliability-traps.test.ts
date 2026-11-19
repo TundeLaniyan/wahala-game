@@ -108,16 +108,21 @@ describe('real runs on real field missions (seeded, human model on)', () => {
     expect(killed, 'at most one of four').toBeLessThanOrEqual(1);
   }, 120_000);
 
-  it('the bait catches an ordinary patroller in the Mushin market most of the time on Normal', () => {
+  it('the bait catches the kiosk warden of the Oshodi terminal approach most of the time on Normal', () => {
     let killed = 0;
-    const seeds = [1, 2, 3, 4, 5, 6];
+    const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
     for (const seed of seeds) {
       if (
-        runTrap({ fieldId: 'mushin.market', level: 'normal', seed, strategy: 'bait', model: { attempts: 2 } })
-          .within
+        runTrap({
+          fieldId: 'oshodi.approach',
+          level: 'normal',
+          seed,
+          strategy: 'bait',
+          model: { attempts: 2 },
+        }).within
       )
         killed++;
     }
-    expect(killed, `${killed} of ${seeds.length} within two attempts`).toBeGreaterThanOrEqual(4);
+    expect(killed, `${killed} of ${seeds.length} within two attempts`).toBeGreaterThanOrEqual(6);
   }, 240_000);
 });

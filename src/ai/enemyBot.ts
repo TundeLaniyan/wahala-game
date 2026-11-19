@@ -239,7 +239,7 @@ export class EnemyBot implements Bot {
     const calm = !brawling && !this.sight.cautious(obs.tick) && d !== 'investigate';
     this.sight.update(obs, me, t, {
       visionDelta: pers.visionDelta,
-      reactScale: sense.reactScale * (brawling ? sense.brawlReactScale : 1),
+      reactScale: sense.reactScale * (brawling ? sense.enemyBrawlReactScale : 1),
       ...(calm ? { visionCap: sense.calmVisionTiles, calmCone: true } : {}),
       seesPlacement: sense.seesPlacement && obs.tick >= me.dazedUntil,
     });
