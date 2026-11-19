@@ -110,14 +110,12 @@ export function vehicleTactic(c: Ctx, mem: VehicleMemory, intent: Intent, safeHe
   // the auto route must run over (or right beside) a rival to be worth a look at all
   if (!choice || choice.score < 2) return;
   // Team Rumble with friendly fire: never drive through a teammate (with it off, the vehicle passes them)
-  if (world.friendlyFire && choice.route.some((t) => world.friendAt[t.y * world.board.width + t.x]! > 0))
-    return;
+  if (world.friendlyFire && choice.route.some((t) => world.friendAt[t.y * world.board.width + t.x]! > 0)) return;
   if (profile.vehicle === 'naive') {
     if (choice.score < 10) return; // a rival on the road
   } else if (
     generatorKind === null &&
-    routeValue(c, choice.route, T + obs.config.vehicles.entryWarnTicks, kind) <
-      threshold(c, T - mem.haveSince)
+    routeValue(c, choice.route, T + obs.config.vehicles.entryWarnTicks, kind) < threshold(c, T - mem.haveSince)
   )
     return; // (a generator carrier never rams, so only a voucher's route is judged as a ram)
   intent.special = true;

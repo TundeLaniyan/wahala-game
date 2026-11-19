@@ -17,11 +17,7 @@ import { previewBlast } from './explosions';
 import { groundedGeneratorAt, teammates } from './queries';
 
 /** The rival a route is aimed at: the nearest to any tile of it (ties: lower id). Never the owner or a teammate. */
-export function pickRouteTarget(
-  state: GameState,
-  owner: Readonly<Player>,
-  route: readonly TilePos[],
-): number | null {
+export function pickRouteTarget(state: GameState, owner: Readonly<Player>, route: readonly TilePos[]): number | null {
   let best: { id: number; d: number } | null = null;
   for (const o of state.players) {
     if (!o.alive || o.id === owner.id || teammates(owner, o)) continue;
@@ -185,10 +181,7 @@ function chooseLanding(
   const dist = Math.abs(aim.x - from.x) + Math.abs(aim.y - from.y);
   if (target && dist > reach) {
     const k = reach / dist;
-    aim = {
-      x: Math.round(from.x + (target.x - from.x) * k),
-      y: Math.round(from.y + (target.y - from.y) * k),
-    };
+    aim = { x: Math.round(from.x + (target.x - from.x) * k), y: Math.round(from.y + (target.y - from.y) * k) };
   }
   const spots = candidates(aim).filter(free);
   if (spots.length === 0) return null;

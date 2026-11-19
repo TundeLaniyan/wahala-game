@@ -3,15 +3,7 @@ import { blastGeometry, protectionLayers } from './analysis';
 import type { BlastGeometry } from './analysis';
 import type { Ctx } from './context';
 
-const geo: BlastGeometry = {
-  soft: 0,
-  rivals: 0,
-  mountedRivals: 0,
-  pickups: 0,
-  chains: 0,
-  chainRivals: 0,
-  supplies: 0,
-};
+const geo: BlastGeometry = { soft: 0, rivals: 0, mountedRivals: 0, pickups: 0, chains: 0, chainRivals: 0, supplies: 0 };
 
 /** Returns true (and sets `detonate`) when detonating now is a good idea and safe for the bot. */
 export function decideRemote(c: Ctx, standingOn: readonly number[]): boolean {
@@ -32,8 +24,7 @@ export function decideRemote(c: Ctx, standingOn: readonly number[]): boolean {
 
   const w = world.board.width;
   // Team Rumble with friendly fire: never set off a blast that would catch a teammate
-  if (world.friendlyFire)
-    for (const f of world.friends) if (c.tmp.hit(f.y * w + f.x, T + 1, T + flameLen)) return false;
+  if (world.friendlyFire) for (const f of world.friends) if (c.tmp.hit(f.y * w + f.x, T + 1, T + flameLen)) return false;
   let kills = 0;
   let maybes = 0;
   for (const r of world.rivals) {

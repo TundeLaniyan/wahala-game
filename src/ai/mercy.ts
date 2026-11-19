@@ -42,18 +42,8 @@ export function wouldTrapRival(c: Ctx, tile: number, a0: number): boolean {
     if (!built) {
       const placeTick = Math.max(world.tick + 1, a0 + 1);
       // a Remote Starter generator may be set off long before its failsafe: judge the earliest the bot would
-      const explodeAt = Math.min(
-        explodeTickFor(c, placeTick),
-        world.me.remote ? placeTick + REMOTE_EARLIEST : Infinity,
-      );
-      const hypo: HypoGen = {
-        x: tx,
-        y: ty,
-        range,
-        pierce: world.me.hotFuel,
-        explodeAt,
-        ...(radial ? { square } : {}),
-      };
+      const explodeAt = Math.min(explodeTickFor(c, placeTick), world.me.remote ? placeTick + REMOTE_EARLIEST : Infinity);
+      const hypo: HypoGen = { x: tx, y: ty, range, pierce: world.me.hotFuel, explodeAt, ...(radial ? { square } : {}) };
       c.builder.build(c.tmp, world, fullAwareness(profile), { extraGens: [hypo] });
       built = true;
     }

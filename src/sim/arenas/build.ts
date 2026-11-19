@@ -81,11 +81,7 @@ export function inAndOut(a: XY, b: XY): [number, number][] {
 }
 
 /** Trap rows from marks in the top-left quadrant, mirrored. 'o' pothole, '~' oil. */
-export function trapRows(
-  marks: readonly (readonly [number, number, 'o' | '~'])[],
-  cols = COLS,
-  rows = ROWS,
-): string[] {
+export function trapRows(marks: readonly (readonly [number, number, 'o' | '~'])[], cols = COLS, rows = ROWS): string[] {
   const grid = Array.from({ length: rows }, () => '.'.repeat(cols).split(''));
   for (const [x, y, c] of marks) for (const [mx, my] of mirror4([[x, y]], cols, rows)) grid[my]![mx] = c;
   return grid.map((r) => r.join(''));

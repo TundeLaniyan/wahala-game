@@ -22,8 +22,7 @@ function mobileArena(id: string, cols: number, rows: number): ArenaDef {
     { x: 0, y: 0 },
     { x: cols - 1, y: rows - 1 },
   ];
-  const traps = (marks: readonly (readonly [number, number, 'o' | '~'])[]): string[] =>
-    trapRows(marks, cols, rows);
+  const traps = (marks: readonly (readonly [number, number, 'o' | '~'])[]): string[] => trapRows(marks, cols, rows);
   return {
     id,
     name: `Mobile Test Arena ${cols} x ${rows}`,
@@ -60,22 +59,12 @@ function mobileArena(id: string, cols: number, rows: number): ArenaDef {
       ]),
     ],
     stageHazards: [
-      {
-        kind: 'sweep',
-        style: 'danfo',
-        routes: bays,
-        stepTicks: 9,
-        firstAtSec: 14,
-        everySec: [14, 20],
-        warnSec: 2,
-      },
+      { kind: 'sweep', style: 'danfo', routes: bays, stepTicks: 9, firstAtSec: 14, everySec: [14, 20], warnSec: 2 },
     ],
     info: {
       tagline: `EXPERIMENTAL - a compact ${cols} x ${rows} Bus Park for phones: bigger tiles, shorter runs.`,
       lighting: 'Warm late afternoon',
-      hazards: [
-        'A Danfo noses into the middle row from either side street and reverses out - lane flashes 2 s before.',
-      ],
+      hazards: ['A Danfo noses into the middle row from either side street and reverses out - lane flashes 2 s before.'],
     },
   };
 }

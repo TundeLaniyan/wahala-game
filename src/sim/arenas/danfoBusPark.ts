@@ -21,14 +21,7 @@ export const DANFO_BUS_PARK: ArenaDef = {
   id: 'danfoBusPark',
   name: 'Danfo Bus Park',
   kind: 'standard',
-  layout: makeLayout({
-    roads: mirror4([
-      [0, 4],
-      [1, 4],
-      [2, 4],
-      [3, 4],
-    ]),
-  }),
+  layout: makeLayout({ roads: mirror4([[0, 4], [1, 4], [2, 4], [3, 4]]) }),
   spawns: CORNER_SPAWNS,
   spawnClearance: CORNER_CLEARANCE,
   mirrorSoftBlocks: true,
@@ -53,15 +46,7 @@ export const DANFO_BUS_PARK: ArenaDef = {
     ]),
   ],
   stageHazards: [
-    {
-      kind: 'sweep',
-      style: 'danfo',
-      routes: BAYS,
-      stepTicks: 9,
-      firstAtSec: 12,
-      everySec: [13, 19],
-      warnSec: 2,
-    },
+    { kind: 'sweep', style: 'danfo', routes: BAYS, stepTicks: 9, firstAtSec: 12, everySec: [13, 19], warnSec: 2 },
   ],
   info: {
     tagline: 'A rough Lagos transport terminal: conductors, traders and exhaust smoke.',
