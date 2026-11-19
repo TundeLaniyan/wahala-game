@@ -39,7 +39,7 @@ import { fieldNotices } from './fieldGoal';
 import type { FieldNoticeMemory } from './fieldGoal';
 import { BlockedMoves } from './blockedMove';
 import { buildHud } from './hud';
-import { raidNotice } from './raidNotices';
+import { raidNotice, supersededCargoNotice } from './raidNotices';
 import { expireKillLines, isCrowded, newKillLines, pushKillLines } from './killFeed';
 import { buildPlayers, matchArenaId, matchRules, suddenDeathTestSetup } from './names';
 import type { MatchVariant } from './names';
@@ -879,6 +879,7 @@ export class MatchController implements MissionHost {
     batch: readonly SimEvent[] = [],
   ): (Omit<Toast, 'id' | 'expires'> & { ttlMs?: number }) | null {
     const state = this.state!;
+    if (supersededCargoNotice(e, batch)) return null; // two crates in one blast: one notice, the final count
     const raid = raidNotice(e, e.type === 'cargoDestroyed' && e.marked ? raidView(state) : null);
     if (raid) return raid;
     switch (e.type) {

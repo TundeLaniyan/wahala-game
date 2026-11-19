@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { buildHud } from '../../src/app/hud';
-import { raidNotice } from '../../src/app/raidNotices';
+import { raidNotice, supersededCargoNotice } from '../../src/app/raidNotices';
 import { fieldNotices } from '../../src/app/fieldGoal';
 import { fieldGoalModel } from '../../src/ui/missionPanelModel';
 import { missionView, raidView } from '../../src/sim';
@@ -131,5 +131,19 @@ describe('field guidance', () => {
     // nothing new: no second notice
     expect(fieldNotices(memory, missionView(s)!).notices).toEqual([]);
     expect(sink.some((e) => e.type === 'fieldTargetHit')).toBe(true);
+  });
+});
+
+describe('one notice per blast (regression: a blast that took two crates showed the line twice)', () => {
+  it('only the last marked cargoDestroyed of a batch has a notice', () => {
+    const base = { type: 'cargoDestroyed', kind: 'cargo', y: 1, byId: 0 } as const;
+    const a: SimEvent = { ...base, id: 'a', x: 1, marked: true };
+    const plain: SimEvent = { ...base, id: 'p', x: 2, marked: false };
+    const b: SimEvent = { ...base, id: 'b', x: 3, marked: true };
+    const batch = [a, plain, b];
+    expect(supersededCargoNotice(a, batch)).toBe(true);
+    expect(supersededCargoNotice(plain, batch)).toBe(false);
+    expect(supersededCargoNotice(b, batch)).toBe(false);
+    expect(supersededCargoNotice(a, [a])).toBe(false);
   });
 });

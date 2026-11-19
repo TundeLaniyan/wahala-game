@@ -39,6 +39,16 @@ export function cargoDownNotice(view: RaidView): RaidNotice {
 }
 
 /**
+ * One blast can take two marked crates in the same tick: only the LAST marked `cargoDestroyed` of a batch gets the
+ * notice (it already carries the final count), so the rail never shows the same line twice (decision MG7).
+ */
+export function supersededCargoNotice(e: SimEvent, batch: readonly SimEvent[]): boolean {
+  if (e.type !== 'cargoDestroyed' || !e.marked) return false;
+  const at = batch.indexOf(e);
+  return at >= 0 && batch.slice(at + 1).some((o) => o.type === 'cargoDestroyed' && o.marked);
+}
+
+/**
  * The rail notice for a raid event, or null when the event has none (most are drawn in the world only). With the raid's
  * view (the HUD passes it) the marked-cargo notice carries the counter and the next step.
  */

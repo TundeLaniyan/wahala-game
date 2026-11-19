@@ -215,15 +215,15 @@ test.describe('mission guidance', () => {
     await shot(page, info, 'raid-pins');
 
     // a generator laid by the human (the real place intent) beside each marked crate, until it is down
-    const destroyOne = async (): Promise<void> => {
-      const ok = await page.evaluate(() => {
+    const destroyOne = async (): Promise<number> => {
+      const down = await page.evaluate(() => {
         const w = (window as any).__WAHALA__;
         const s = w.getState();
         const width = s.width;
         const free = (x: number, y: number): boolean =>
           x >= 0 && y >= 0 && x < width && y < s.height && s.tiles[y * width + x] === 0;
         const c = s.raid.cargo.find((k: any) => k.marked && !k.destroyed);
-        if (!c) return false;
+        if (!c) return -1;
         const me = s.players[0];
         for (let attempt = 0; attempt < 4 && !c.destroyed; attempt++) {
           const spot = [
@@ -234,7 +234,7 @@ test.describe('mission guidance', () => {
           ]
             .map(([dx, dy]) => ({ x: c.x + dx!, y: c.y + dy! }))
             .find((a) => free(a.x, a.y) && !s.generators.some((g: any) => g.x === a.x && g.y === a.y));
-          if (!spot) return false;
+          if (!spot) return -1;
           const stand = (x: number, y: number): void => {
             me.x = me.stepFromX = x;
             me.y = me.stepFromY = y;
@@ -252,27 +252,32 @@ test.describe('mission guidance', () => {
           w.advance(30);
           w.stepTicks(60);
         }
-        return c.destroyed;
+        return c.destroyed ? s.raid.cargo.filter((k: any) => k.marked && k.destroyed).length : -1;
       });
-      expect(ok, 'a marked crate went down to the human’s generators').toBe(true);
+      expect(down, 'a marked crate went down to the human’s generators').toBeGreaterThan(0);
+      return down;
     };
 
-    await destroyOne();
-    await expect(page.getByTestId('raid-goal-step')).toHaveText('1/3');
-    await expect(page.getByTestId('toast').filter({ hasText: 'MARKED CARGO DOWN 1/3 ✓' })).toContainText(
-      'NEXT: MARKED CARGO',
-    );
-    await expect
-      .poll(() => page.evaluate(() => (window as any).__WAHALA__.objectivePins()?.byGlyph?.cargo ?? 0))
-      .toBe(2);
-    await destroyOne();
-    await expect(page.getByTestId('raid-goal-step')).toHaveText('2/3');
-    await destroyOne();
+    // one blast may take two crates that stand close: the counter must say what the state says, every time
+    let down = 0;
+    for (let guard = 0; guard < 3 && down < 3; guard++) {
+      down = await destroyOne();
+      if (down >= 3) break;
+      await expect(page.getByTestId('raid-goal-step')).toHaveText(`${down}/3`);
+      await expect(
+        page.getByTestId('toast').filter({ hasText: `MARKED CARGO DOWN ${down}/3 ✓` }),
+      ).toContainText('NEXT: MARKED CARGO');
+      await expect
+        .poll(() => page.evaluate(() => (window as any).__WAHALA__.objectivePins()?.byGlyph?.cargo ?? 0))
+        .toBe(3 - down);
+    }
+    expect(down).toBe(3);
 
     // the last one: the exit opens with its pin, the guidance points at it
     await expect(page.getByTestId('raid-goal')).toHaveAttribute('data-verb', 'exit');
     await expect(page.getByTestId('raid-goal-target')).toHaveText('REACH THE EXIT');
     await expect(page.getByTestId('raid-goal-cue')).toBeVisible();
+    await expect(page.getByTestId('toast').filter({ hasText: 'MARKED CARGO DOWN 3/3 ✓' })).toHaveCount(1);
     await expect(page.getByTestId('toast').filter({ hasText: 'MARKED CARGO DOWN 3/3 ✓' })).toContainText(
       'NEXT: REACH THE EXIT',
     );
