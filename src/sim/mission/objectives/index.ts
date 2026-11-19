@@ -1,5 +1,6 @@
 import type { ObjectiveKind } from '../types';
 import { contingencyGrid } from './grid';
+import { controlPoints } from './controlPoints';
 import { dispatchRelays } from './relays';
 import { dispatchWindows } from './windows';
 import { fieldRoute } from './fieldRoute';
@@ -18,5 +19,6 @@ export const OBJECTIVES: Readonly<Record<ObjectiveKind, Objective>> = {
   evidenceRun,
   contingencyGrid,
   dispatchWindows,
+  controlPoints,
   fieldRoute,
 };

@@ -11,6 +11,7 @@
  * card's Read more (`lines` keep `fromBroker`): the UI draws those as UNKNOWN NUMBER cards, never a face.
  */
 import type { MissionOutcome } from '../sim';
+import { FINALE_MISSION_ID } from '../sim';
 import { CAMPAIGN, defeatLines } from './content';
 import { CARD_COPY } from './content/cardCopy';
 import type { BossDef, CampaignContent, CardCopy, DistrictId, StoryLine } from './types';
@@ -28,6 +29,7 @@ export const FALLBACK_OBJECTIVE = 'Read the brief, then go';
 
 export type CardKind =
   | 'prologue'
+  | 'interim'
   | 'finale'
   | 'ending'
   | 'briefing'
@@ -236,22 +238,44 @@ const copyOf = (
 
 // ---------------------------------------------------------------- cards from the content
 
+const STORY_CARD = {
+  prologue: {
+    title: 'Ojuelegba, evening',
+    kicker: 'Prologue',
+    objective: 'Pick a fighter and head to Oshodi',
+  },
+  // the interim beat after Lekki (decision FN9): the old Lekki ending, leading home to the Ojuelegba finale
+  interim: { title: 'Still Locked', kicker: 'Interlude', objective: 'Go home to Ojuelegba' },
+  finale: { title: 'The Ring Breaks', kicker: 'Finale', objective: 'See how the Ring ends' },
+} as const;
+
 export function storyCard(
-  which: 'prologue' | 'finale',
+  which: 'prologue' | 'interim' | 'finale',
   content: CampaignContent = CAMPAIGN,
   table: Readonly<Record<string, CardCopy>> = CARD_COPY,
 ): StoryCard {
-  const lines = which === 'finale' ? content.finale : content.prologue;
-  const inline = which === 'finale' ? content.finaleCard : content.prologueCard;
+  const lines =
+    which === 'finale'
+      ? content.finale
+      : which === 'interim'
+        ? (content.finaleChapter?.interim ?? [])
+        : content.prologue;
+  const inline =
+    which === 'finale'
+      ? content.finaleCard
+      : which === 'interim'
+        ? content.finaleChapter?.interimCard
+        : content.prologueCard;
+  const meta = STORY_CARD[which];
   return makeCard({
     id: which,
     kind: which,
-    title: which === 'finale' ? 'The Ring Breaks' : 'Ojuelegba, evening',
-    kicker: which === 'finale' ? 'Finale' : 'Prologue',
+    title: meta.title,
+    kicker: meta.kicker,
     summaryText: lines.map((l) => l.text).join(' '),
     summaryInSections: true,
     copy: copyOf(which, inline, table),
-    objectiveFrom: [which === 'finale' ? 'See how the Ring ends' : 'Pick a fighter and head to Oshodi'],
+    objectiveFrom: [meta.objective],
     sections: [{ heading: 'The scene', items: [], lines }],
     speaker: 'NARRATOR',
   });
@@ -287,13 +311,34 @@ export function briefingCard(
   content: CampaignContent = CAMPAIGN,
   table: Readonly<Record<string, CardCopy>> = CARD_COPY,
 ): StoryCard {
-  const b = content.districts[id].briefing;
+  return briefingCardOf(`briefing.${id}`, content.districts[id].briefing, table);
+}
+
+/**
+ * The briefing a boss mission opens with: the district's, or for `ojuelegba` the finale chapter's own (`briefing.finale`;
+ * the hub keeps its prologue briefing, `briefing.ojuelegba`).
+ */
+export function bossBriefingCard(
+  id: DistrictId,
+  content: CampaignContent = CAMPAIGN,
+  table: Readonly<Record<string, CardCopy>> = CARD_COPY,
+): StoryCard {
+  return id === FINALE_MISSION_ID && content.finaleChapter
+    ? briefingCardOf('briefing.finale', content.finaleChapter.briefing, table)
+    : briefingCard(id, content, table);
+}
+
+function briefingCardOf(
+  id: string,
+  b: CampaignContent['districts'][DistrictId]['briefing'],
+  table: Readonly<Record<string, CardCopy>>,
+): StoryCard {
   return makeCard({
-    id: `briefing.${id}`,
+    id,
     kind: 'briefing',
     title: b.title,
     summaryText: b.summary,
-    copy: copyOf(`briefing.${id}`, { summary: b.cardSummary, objective: b.objectiveCard }, table),
+    copy: copyOf(id, { summary: b.cardSummary, objective: b.objectiveCard }, table),
     objectiveFrom: b.objectives,
     remainderHeading: 'The brief',
     sections: [
@@ -313,7 +358,8 @@ export function bossIntroCard(
   content: CampaignContent = CAMPAIGN,
   table: Readonly<Record<string, CardCopy>> = CARD_COPY,
 ): StoryCard | null {
-  const boss = content.districts[id].boss;
+  // the hub has no keeper; its id names the finale's enforcer once a finale chapter exists (FN8)
+  const boss = id === FINALE_MISSION_ID ? (content.finaleChapter?.boss ?? null) : content.districts[id].boss;
   if (!boss) return null;
   return makeCard({
     id: `intro.${id}`,
@@ -365,7 +411,8 @@ export function cardsFrom(
   ];
   for (const id of DISTRICT_ORDER) {
     cards.push(briefingCard(id, content, table));
-    const intro = bossIntroCard(id, content, table);
+    // the hub has no keeper of its own (its finale chapter's cards are `finaleCards`)
+    const intro = content.districts[id].boss ? bossIntroCard(id, content, table) : null;
     if (intro) cards.push(intro);
     const boss = content.districts[id].boss;
     if (boss) {
@@ -376,10 +423,30 @@ export function cardsFrom(
   return cards;
 }
 
+/**
+ * The Ojuelegba finale chapter's cards (decisions FN8-FN9): the interim beat, the boss briefing, the enforcer's
+ * introduction and defeat. Kept apart from `cardsFrom` (whose set the story-panel tests pin); the same limits apply
+ * (tests/campaign-finale.test.ts).
+ */
+export function finaleCards(
+  content: CampaignContent = CAMPAIGN,
+  table: Readonly<Record<string, CardCopy>> = CARD_COPY,
+): StoryCard[] {
+  const chapter = content.finaleChapter;
+  if (!chapter) return [];
+  const intro = bossIntroCard(FINALE_MISSION_ID, content, table);
+  return [
+    storyCard('interim', content, table),
+    bossBriefingCard(FINALE_MISSION_ID, content, table),
+    ...(intro ? [intro] : []),
+    defeatCard(chapter.boss, 'eliminated', table),
+  ];
+}
+
 const staticCards = new Map<string, StoryCard>();
 /** A static card by id (memoised, from the shipped content). */
 export function cardById(id: string): StoryCard | null {
-  if (staticCards.size === 0) for (const c of cardsFrom()) staticCards.set(c.id, c);
+  if (staticCards.size === 0) for (const c of [...cardsFrom(), ...finaleCards()]) staticCards.set(c.id, c);
   return staticCards.get(id) ?? null;
 }
 

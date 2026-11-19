@@ -165,12 +165,15 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyVariantId, EnemyLook>> = {
   },
 };
 
-/** The variant a seat is drawn as: its own, else its kind's default; null for a seat that is not a campaign enemy. */
+/**
+ * The variant a seat is drawn as: its own, else its kind's default; null for a seat that is not a campaign enemy. A boss
+ * mission's generator-bot boss may name a look without a kind (the Ojuelegba finale's enforcer, decision FN8).
+ */
 export function enemyVariantOf(p: {
   enemyKind?: EnemyKind;
   enemyVariant?: EnemyVariantId;
 }): EnemyVariantId | null {
-  if (p.enemyKind === undefined) return null;
+  if (p.enemyKind === undefined) return p.enemyVariant ?? null;
   return p.enemyVariant ?? DEFAULT_VARIANT_OF_KIND[p.enemyKind];
 }
 

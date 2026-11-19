@@ -12,6 +12,7 @@ import { ebuteX } from '../arenas/ebuteWest';
 import { ticks } from '../config';
 import { bossRecipe } from './boss';
 import type { BossRecipe } from './boss';
+import { FINALE_FACTION_ID, OJUELEGBA_BOSS } from './finaleDefs';
 import type { EnemyVariantId } from '../data/enemyVariants';
 import type { CharacterId } from '../types';
 import type { MissionId, NpcRole, ObjectiveKind, PhaseTuning } from './types';
@@ -69,13 +70,31 @@ export interface MissionDef {
   recipe: BossRecipe;
   /** Crew members that may be brought back (runner / escort only) by 'reinforce' events over the whole mission. */
   reinforceMax: number;
-  boss: { name: string; characterId: CharacterId; post: Tile2; radius: number };
+  boss: {
+    name: string;
+    characterId: CharacterId;
+    post: Tile2;
+    radius: number;
+    /**
+     * Presentation only (decision FN8): the boss seat is drawn in this campaign enemy variant's look (the Ojuelegba
+     * finale's enforcer reuses the existing Boss variant until a bespoke look is approved). The seat stays a generator
+     * bot: `Player.enemyVariant` without `enemyKind` changes no rule. Absent = the character's own look.
+     */
+    look?: EnemyVariantId;
+  };
   crew: CrewDef[];
   /** Oshodi: the road lanes (tile lists) the convoy strikes run along. */
   lanes?: Tile2[][];
   phases: [PhaseDef, PhaseDef, PhaseDef];
   /** The extra crew member the replay modifier brings (marketDay). */
   modifierCrew?: CrewDef;
+  /**
+   * The boss mission's sector (`BOSS_SECTORS`, src/sim/mission/sectors.ts; decision FN7). Absent = the whole district map
+   * (the six district bosses).
+   */
+  sectorId?: string;
+  /** The human's start tile (needed when the arena's own spawn lies outside the sector). Absent = the arena spawn. */
+  start?: Tile2;
 }
 
 export const FACTION_IDS = {
@@ -85,6 +104,7 @@ export const FACTION_IDS = {
   ebuteMetta: 'ironLaneSwitchmen',
   lagosIsland: 'ledgerBureau',
   lekki: 'gatehouseGuard',
+  ojuelegba: FINALE_FACTION_ID,
 } as const satisfies Record<MissionId, string>;
 
 /** The human's seat in the faction map. */
@@ -602,6 +622,8 @@ export const MISSION_DEFS: Readonly<Record<MissionId, MissionDef>> = {
   ebuteMetta: EBUTE,
   lagosIsland: LAGOS,
   lekki: LEKKI,
+  // the Ojuelegba finale's boss, "Break the Ring" (decisions FN1-FN10; data in finaleDefs.ts)
+  ojuelegba: OJUELEGBA_BOSS,
 };
 
 /** The City Rumble arena a mission is played on. */

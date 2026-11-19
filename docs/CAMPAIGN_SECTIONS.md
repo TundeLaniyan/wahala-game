@@ -22,8 +22,15 @@ Two formats live inside sections: a **field mission** is a route on the district
 | Ebute-Metta | `ebuteMetta.approach` Yard Approach: destroy 4 switch cabinets, the sidings gate opens, defeat 2 freight guards, keep the signal cabin 25 s, door -> `junctionToolShed`, return (decisions DB2-DB3) | `ebuteMetta.railYard` Rail Yard Goods: a STANDALONE raid (`railYardGoods`), unchanged | Ikenna Wayside |
 | Lagos Island | `lagosIsland.approach` Ledger Row: defeat 3 auditors, keep the counter hall 25 s, destroy 3 stamp machines, door -> `recordsVault`, return (DB4) | `lagosIsland.press` Press Run (field): destroy 5 receipt presses, defeat the 2 press-lane guards, escape the bureau auditor, return (DB5) | Barrister Quill |
 | Lekki | `lekki.approach` Gate Approach: keep the gatehouse road 25 s, destroy 4 standby feeders, door -> `standbyPlant`, return (DB6) | `lekki.estate` Estate Sweep (field): defeat 4 drive guards, the inner gate opens, destroy 5 control points, escape the hounds, return (DB7) | Bamidele Halcyon |
+| Ojuelegba finale (opens after the Lekki boss; FN1-FN10) | `ojuelegba.return` Return to Ojuelegba (field, no door): clear 2 patrols, destroy 2 barrier locks (gate opens), destroy 2 gate locks (gate opens), return | `ojuelegba.junction` Hold the Junction (field): keep the bus stop 25 s against 2 waves, destroy 3 control boxes (a lieutenant guards them), return | The Landlord (working title, `controlPoints`), `ojuelegba.boss` |
 
 Real vs placeholder: all eleven field missions are real sim data (tiles checked for reachability and escape fairness by `tests/field-nodes.test.ts`) but only **Oshodi section 1 has a scripted full playthrough** (`tests/field-missions.test.ts`, `tests/app/campaign-sections-flow.test.ts`); the others are tested per mechanic and for data validity, and are untuned against real play. (District pass A, decisions DA1-DA11: the six field missions of Oshodi, Mushin and Fadeyi/Somolu now have measured scripted playthroughs against the real enemy bots at Easy, Normal and Hard, `tests/field-districts-{oshodi,mushin,fadeyi}.test.ts`, numbers in `docs/CAMPAIGN_SECTOR_AI.md`.) Oshodi has intro/outro scenes and a Read-more text; the other districts have one-line objective cards and two-sentence summaries. Four districts' doors reuse another district's raid layout (only six raid ids exist): Fadeyi and Ebute both use `junctionToolShed`, Mushin's bonus door reuses `partsStoreroom`. Section rewards are small titles (`reward.section.<mission>`), kept apart from boss rewards.
+
+The Ojuelegba finale (decisions FN1-FN10, `docs/CAMPAIGN_SECTOR_AI.md` "Part: Ojuelegba finale") adds sections
+`ojuelegba.s1`-`s3` and two field missions (21 sections, 14 stored missions, 21 Parts missions): its sections open when all
+six district bosses are cleared; the hub stays the prologue hub; the finale boss's record is the hub's
+`districts.ojuelegba` (status stays `cleared`; clears and stars count only once the chapter is open), optional
+`interimSeen`; no save version change.
 
 ## 3. Field mission legs (`src/sim/mission/field.ts`, data `fieldDefs.ts`)
 

@@ -136,6 +136,15 @@ No mission ids, save fields, arenas or content exist for 19–21. Proposed ids f
 (`ojuelegba.return`, `ojuelegba.junction`, `ojuelegba.boss`) but **must not be added** until the finale is built and a
 save migration is designed (`ojuelegba` is currently a hub that is always "cleared" in the save).
 
+**Implementation note (2026-11-18).** Missions 19-21 are now IMPLEMENTED by founder direction (branch
+`claude/wahala-csa-finale`, decisions FN1-FN10, `docs/CAMPAIGN_SECTOR_AI.md` "Part: Ojuelegba finale") with the ids above:
+`ojuelegba.return` (field: trap the Ring patrols, blast the barrier and gate locks, two gates open), `ojuelegba.junction`
+(field: keep the bus stop against waves, wreck the control boxes a lieutenant guards) and `ojuelegba.boss` ("Break the
+Ring": shut the enforcer's control points down with blasts, then blast him). They open after the Lekki boss; the save
+needed no version change (the hub record holds the finale boss's stars, repaired on load). Still PROVISIONAL: the
+enforcer's name ("The Landlord" is shown as a working title and flagged provisional in the data), his look (the existing
+Boss variant kit), every new line (flagged `provisional`), the reward, the replay modifier and Bayo's two lines.
+
 ---
 
 ## 6. District stakes and consequences
@@ -217,6 +226,14 @@ tests; it is a future content task, not part of this Bible.
 - PROPOSED reconciliation: when missions 19–21 exist, the jetty escape moves to **after Break the Ring**; the Lekki
   ending becomes an interim beat ("the estates go dark, but Ojuelegba is still locked") that leads home. Until then, the
   existing Lekki finale stays as shipped.
+
+**Implementation note (2026-11-18).** The reconciliation above is now IMPLEMENTED by founder direction (decision FN9):
+after the Lekki boss the interim beat plays (the old finale's Lekki opening and radio roll call, then "The estates go dark,
+but Ojuelegba is still locked. Come home."); after mission 21 the finale scene opens with the operational victory (every
+route into the junction open, the impounded danfo released, Mama Put's stall and the junction lit, Bayo telling the
+street what he did), then the Chairman's existing lines and his escape by the pale boat from the jetty; the ending card's
+summary names Ojuelegba and the season-two teaser is unchanged. The Chairman is never fought. All new lines are
+PROVISIONAL content written for this milestone (flagged `provisional: true`), pending founder review.
 
 ---
 

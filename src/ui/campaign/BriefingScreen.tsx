@@ -3,8 +3,8 @@
  * warnings and the unseen broker's message, Listen), the boss card, and the loadout: fighter, bot level, replay modifier (only ones the save has unlocked) and lives.
  * The fighter and level are stored in the campaign save, never in the menu setup (`settings`).
  */
-import { CAMPAIGN, availableModifiers, briefingCard, replayModifierFor } from '../../campaign';
-import { CAMPAIGN_LEVEL_DEFS, CHARACTERS } from '../../sim';
+import { CAMPAIGN, availableModifiers, bossBriefingCard, bossFor, replayModifierFor } from '../../campaign';
+import { CAMPAIGN_LEVEL_DEFS, CHARACTERS, FINALE_MISSION_ID } from '../../sim';
 import { MISSION_LIVES, isMissionId } from '../../app/campaign';
 import { commands } from '../../app/session';
 import { DifficultySlider } from '../menu/DifficultyControl';
@@ -21,8 +21,8 @@ export function BriefingScreen() {
   if (!ui || !isMissionId(ui.selected)) return null;
   const id = ui.selected;
   const d = CAMPAIGN.districts[id];
-  const card = briefingCard(id);
-  const boss = d.boss!;
+  const card = bossBriefingCard(id); // the Ojuelegba finale has its own briefing (the hub keeps the prologue's)
+  const boss = bossFor(id);
   const { save } = ui;
   const modifiers = availableModifiers(save, id);
   const intro = !save.districts[id].introSeen;
@@ -30,7 +30,11 @@ export function BriefingScreen() {
   return (
     <ScreenFrame
       id="briefing"
-      kicker={`District ${districtNumber(id)} of 6 · ${d.name}`}
+      kicker={
+        id === FINALE_MISSION_ID
+          ? `The finale · ${d.name}`
+          : `District ${districtNumber(id)} of 6 · ${d.name}`
+      }
       title={card.title}
       className="cp-screen cp-brief-screen"
       status={

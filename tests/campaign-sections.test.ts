@@ -25,7 +25,7 @@ import {
   sectionsOf,
 } from '../src/campaign';
 import type { CampaignSave, KeyValueStore } from '../src/campaign';
-import { FIELD_MISSION_DEFS, MISSION_IDS } from '../src/sim';
+import { CAMPAIGN_MISSION_IDS, FIELD_MISSION_DEFS, MISSION_IDS } from '../src/sim';
 import type { MissionId, MissionOutcome, RaidId, RaidOutcome } from '../src/sim';
 
 const RAID_IDS: RaidId[] = [
@@ -120,7 +120,8 @@ describe('section content', () => {
       expect(secs[2]!.missions).toHaveLength(1);
       expect(secs[2]!.missions[0]).toMatchObject({ format: 'boss', missionRef: id });
     }
-    expect(allSections()).toHaveLength(18);
+    // the six districts' 18, then the Ojuelegba finale's three (decision FN2: no door, tests/campaign-finale.test.ts)
+    expect(allSections()).toHaveLength(21);
     expect(CAMPAIGN.sections.oshodi).toBe(sectionsOf('oshodi'));
   });
 
@@ -201,8 +202,8 @@ describe('section and mission status', () => {
     expect(bossAvailable(s, 'oshodi')).toBe(false);
     expect(s.sections['oshodi.s1']!.status).toBe('available'); // stored values are refreshed too
     expect(s.missions['oshodi.approach']!.status).toBe('available');
-    expect(Object.keys(s.sections)).toHaveLength(18);
-    expect(Object.keys(s.missions)).toHaveLength(12); // 11 field + 1 raid
+    expect(Object.keys(s.sections)).toHaveLength(21); // 18 + the finale's 3
+    expect(Object.keys(s.missions)).toHaveLength(14); // 11 field + 1 raid + the finale's 2 field
     expect(nextMission(s)).toEqual({
       districtId: 'oshodi',
       sectionId: 'oshodi.s1',
@@ -389,20 +390,22 @@ describe('result safety', () => {
     expect(r.save.missions['oshodi.approach']!.bestSeconds).toBeNull();
   });
 
-  it('a full run through every section and boss ends with the campaign complete', () => {
+  it('a full run through every section and boss ends with the campaign complete (the finale last)', () => {
     let s = createSave(0);
     let complete = false;
-    for (const id of MISSION_IDS) {
+    for (const id of CAMPAIGN_MISSION_IDS) {
       s = clearSections(s, id);
       expect(bossAvailable(s, id)).toBe(true);
       const r = applyMissionResult(s, bossWin(id), 1);
       s = r.save;
       complete = r.campaignComplete;
+      // the sixth district opens the finale chapter, it does not complete the campaign (FN9)
+      if (id === 'lekki') expect([r.campaignComplete, r.finaleOpened]).toEqual([false, true]);
     }
     expect(complete).toBe(true);
     expect(campaignProgress(s).cleared).toBe(6);
     expect(allSections().every((sec) => sectionStatus(s, sec.id) === 'cleared')).toBe(true);
-    expect(s.sectionRewards).toHaveLength(12);
+    expect(s.sectionRewards).toHaveLength(14);
     expect(nextMission(s)).toBeNull();
   });
 });

@@ -1,6 +1,9 @@
 import type { DistrictContent } from '../types';
 
-/** Ojuelegba: the hub and prologue. No boss; it is "cleared" from the start and always replayable as a stage. */
+/**
+ * Ojuelegba: the hub and prologue. No boss of its own here; it is "cleared" from the start and always replayable as a
+ * stage. Once Lekki falls its FINALE chapter opens (missions 19-21, content/finale.ts, decisions FN1-FN10).
+ */
 export const OJUELEGBA: DistrictContent = {
   id: 'ojuelegba',
   name: 'Ojuelegba',
@@ -46,5 +49,6 @@ export const OJUELEGBA: DistrictContent = {
   ],
   boss: null,
   requires: [],
-  factionIds: ['streetWatch', 'mamaPutMutual'],
+  // the finale chapter's Ring crew (missions 19-21, decision FN1) is met here too
+  factionIds: ['streetWatch', 'mamaPutMutual', 'underbridgeLockmen'],
 };

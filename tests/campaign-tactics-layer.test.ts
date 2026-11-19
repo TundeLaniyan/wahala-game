@@ -67,8 +67,8 @@ function play(
 }
 
 describe('present in every campaign field and boss mission (SA3)', () => {
-  it('all eleven field missions carry the Normal layer, minds for their territorial enemies and variants', () => {
-    expect(FIELD_MISSION_IDS).toHaveLength(11);
+  it('all field missions (eleven, and the finale’s two) carry the Normal layer, minds for their territorial enemies and variants', () => {
+    expect(FIELD_MISSION_IDS).toHaveLength(13);
     for (const id of FIELD_MISSION_IDS) {
       const s = createGame(field(id));
       expect(s.config.campaignTactics?.id, id).toBe(CAMPAIGN_TACTICS.id);

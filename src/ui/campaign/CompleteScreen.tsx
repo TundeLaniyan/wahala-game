@@ -11,7 +11,7 @@ import {
   endingCard,
   replayModifierFor,
 } from '../../campaign';
-import { MISSION_IDS } from '../../sim';
+import { CAMPAIGN_MISSION_IDS } from '../../sim';
 import { commands } from '../../app/session';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
 import { clock, totalStars } from './model';
@@ -27,7 +27,8 @@ export function CompleteScreen() {
   const attempts = missions.reduce((n, d) => n + save.districts[d].attempts, 0);
   const seconds = missions.reduce((n, d) => n + (save.districts[d].bestSeconds ?? 0), 0);
   const rewards = allRewards().filter((r) => save.rewards.includes(r.id));
-  const replays = MISSION_IDS.flatMap((id) => availableModifiers(save, id).map((m) => ({ id, m })));
+  // the six districts' modifiers and the Ojuelegba finale's (FN6)
+  const replays = CAMPAIGN_MISSION_IDS.flatMap((id) => availableModifiers(save, id).map((m) => ({ id, m })));
   return (
     <ScreenFrame
       id="campaignComplete"

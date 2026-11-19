@@ -17,6 +17,8 @@
  * the rects, that every authored tile is inside, and that every leg target is reachable.
  */
 import { FIELD_MISSION_DEFS } from './fieldDefs';
+import { MISSION_DEFS } from './defs';
+import { FINALE_BOSS_SECTORS, FINALE_SECTORS } from './finaleDefs';
 import type { MissionId, MissionSpec } from './types';
 
 /** Inclusive tile rectangle [x0, y0, x1, y1]. */
@@ -336,24 +338,33 @@ const defs: MissionSectorDef[] = [
   },
 ];
 
+// the Ojuelegba finale's field sectors (19, 20) follow the districts' (decision FN3; data in finaleDefs.ts)
+const fieldSectors: readonly MissionSectorDef[] = [...defs, ...FINALE_SECTORS];
+
+/** The field missions' sectors, one per field mission. */
 export const MISSION_SECTORS: Readonly<Record<string, MissionSectorDef>> = Object.fromEntries(
-  defs.map((d) => [d.id, d]),
+  fieldSectors.map((d) => [d.id, d]),
 );
 
-export const MISSION_SECTOR_IDS: readonly string[] = defs.map((d) => d.id);
+export const MISSION_SECTOR_IDS: readonly string[] = fieldSectors.map((d) => d.id);
+
+/** Boss-mission sectors (`MissionDef.sectorId`, decision FN7): only the Ojuelegba finale's boss has one. */
+export const BOSS_SECTORS: Readonly<Record<string, MissionSectorDef>> = Object.fromEntries(
+  FINALE_BOSS_SECTORS.map((d) => [d.id, d]),
+);
 
 export function getSector(id: string): MissionSectorDef {
-  const def = MISSION_SECTORS[id];
+  const def = MISSION_SECTORS[id] ?? BOSS_SECTORS[id];
   if (!def) throw new Error(`unknown mission sector ${id}`);
   return def;
 }
 
 /**
- * The sector a mission is played in, or null: a field mission's own `sectorId` (unless `noSector`, a debug flag). Boss
- * missions have none in this pass (a `MissionDef.sectorId` can be read here later without touching the stamp).
+ * The sector a mission is played in, or null: a field mission's own `sectorId`, or a boss mission's `MissionDef.sectorId`
+ * (only the Ojuelegba finale's boss has one, decision FN7), unless `noSector` (a debug flag).
  */
 export function missionSectorOf(spec: MissionSpec): MissionSectorDef | null {
-  if (spec.noSector || !spec.fieldId) return null;
-  const id = FIELD_MISSION_DEFS[spec.fieldId]?.sectorId;
+  if (spec.noSector) return null;
+  const id = spec.fieldId ? FIELD_MISSION_DEFS[spec.fieldId]?.sectorId : MISSION_DEFS[spec.id]?.sectorId;
   return id ? getSector(id) : null;
 }

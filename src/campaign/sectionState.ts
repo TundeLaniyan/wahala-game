@@ -8,7 +8,7 @@
  * derived values back so a reader of the raw save sees them, and repair (save.ts) can always recompute them.
  */
 import type { MissionId } from '../sim';
-import { MISSION_IDS } from '../sim';
+import { CAMPAIGN_MISSION_IDS, FINALE_MISSION_ID, MISSION_IDS } from '../sim';
 import {
   CAMPAIGN,
   allSectionMissions,
@@ -56,20 +56,45 @@ function districtOpen(save: CampaignSave, id: DistrictId): boolean {
   return CAMPAIGN.districts[id].requires.every((r) => districtCleared(save, r));
 }
 
+// ---------------------------------------------------------------- the Ojuelegba finale chapter (decisions FN1-FN4)
+
+/**
+ * The finale chapter is open: all six district bosses are down (Lekki last). The hub record (`districts.ojuelegba`) stays
+ * `cleared` for the prologue; the chapter's own state is derived from the six districts and the hub record's clears.
+ */
+export function finaleOpen(save: CampaignSave): boolean {
+  return MISSION_IDS.every((d) => save.districts[d]?.status === 'cleared');
+}
+
+/** The finale's boss ("Break the Ring") has been won: its clears live on the hub record (FN4). */
+export function finaleCleared(save: CampaignSave): boolean {
+  return finaleOpen(save) && (save.districts[FINALE_MISSION_ID]?.clears ?? 0) > 0;
+}
+
+/** A mission district's chapter is cleared: its boss fell (the finale's enforcer for Ojuelegba). */
+function chapterCleared(save: CampaignSave, id: MissionId): boolean {
+  return id === FINALE_MISSION_ID ? finaleCleared(save) : districtCleared(save, id);
+}
+
+/** A mission district's sections can be played: the district is open (the finale: after Lekki). */
+function chapterOpen(save: CampaignSave, id: MissionId): boolean {
+  return id === FINALE_MISSION_ID ? finaleOpen(save) : districtOpen(save, id);
+}
+
 // ---------------------------------------------------------------- derived status
 
 const missionCleared = (save: CampaignSave, m: SectionMissionDef): boolean => {
   const sec = sectionOfMission(m.id);
   if (!sec) return false;
-  if (districtCleared(save, sec.districtId)) return true;
+  if (chapterCleared(save, sec.districtId)) return true;
   return m.format === 'boss' ? false : save.missions[m.id]?.status === 'cleared';
 };
 
 export function sectionStatus(save: CampaignSave, sectionId: string): SectionStatus {
   const s = getSection(sectionId);
   if (!s) return 'locked';
-  if (districtCleared(save, s.districtId)) return 'cleared';
-  if (!districtOpen(save, s.districtId)) return 'locked';
+  if (chapterCleared(save, s.districtId)) return 'cleared';
+  if (!chapterOpen(save, s.districtId)) return 'locked';
   if (s.missions.every((m) => missionCleared(save, m))) return 'cleared';
   return s.requires.every((r) => sectionStatus(save, r) === 'cleared') ? 'available' : 'locked';
 }
@@ -104,13 +129,15 @@ export interface NextMission {
 }
 
 /**
- * Where "Continue" and a reopened campaign map go: the first mission, in campaign order, that is available and not
- * cleared. Null when every district is cleared or the next district is still locked behind an uncleared one.
+ * Where "Continue" and a reopened campaign map go: the first mission, in campaign order (the six districts, then the
+ * Ojuelegba finale), that is available and not cleared. Null when everything is cleared or the next district is still
+ * locked behind an uncleared one.
  */
 export function nextMission(save: CampaignSave): NextMission | null {
-  for (const districtId of MISSION_IDS) {
-    if (districtCleared(save, districtId)) continue;
-    if (!districtOpen(save, districtId)) return null;
+  // the six districts in order, then the Ojuelegba finale (it opens after Lekki)
+  for (const districtId of CAMPAIGN_MISSION_IDS) {
+    if (chapterCleared(save, districtId)) continue;
+    if (!chapterOpen(save, districtId)) return null;
     for (const sec of CAMPAIGN.sections[districtId]) {
       if (sectionStatus(save, sec.id) === 'cleared') continue;
       const m = sec.missions.find((o) => missionStatus(save, o.id) === 'available');

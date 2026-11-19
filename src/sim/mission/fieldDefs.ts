@@ -12,6 +12,7 @@ import type { RaidId, TerritoryDef } from '../campaign/types';
 import type { EnemyVariantId } from '../data/enemyVariants';
 import type { Tile2 } from './defs';
 import { ebuteX } from '../arenas/ebuteWest';
+import { FINALE_FIELD_DEFS } from './finaleDefs';
 
 export interface FieldMarkerDef {
   x: number;
@@ -788,11 +789,14 @@ const defs: FieldMissionDef[] = [
   },
 ];
 
+// the Ojuelegba finale's two field missions (19, 20) follow the districts' (decision FN2; data in finaleDefs.ts)
+const all: readonly FieldMissionDef[] = [...defs, ...FINALE_FIELD_DEFS];
+
 export const FIELD_MISSION_DEFS: Readonly<Record<string, FieldMissionDef>> = Object.fromEntries(
-  defs.map((d) => [d.id, d]),
+  all.map((d) => [d.id, d]),
 );
 
-export const FIELD_MISSION_IDS: readonly string[] = defs.map((d) => d.id);
+export const FIELD_MISSION_IDS: readonly string[] = all.map((d) => d.id);
 
 export function getFieldMission(id: string): FieldMissionDef {
   const def = FIELD_MISSION_DEFS[id];

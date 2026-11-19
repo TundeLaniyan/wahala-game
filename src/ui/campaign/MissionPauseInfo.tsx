@@ -1,5 +1,5 @@
 /** The pause menu's side panel during a campaign mission: district, keeper, lives (HUD facts come from the HUD rail). */
-import { CAMPAIGN, getSectionMission, replayModifierFor } from '../../campaign';
+import { CAMPAIGN, bossFor, getSectionMission, replayModifierFor } from '../../campaign';
 import { MISSION_LIVES } from '../../app/campaign';
 import type { ActiveMission } from '../../app/campaignState';
 import { missionView } from '../../sim';
@@ -8,6 +8,7 @@ import './campaign.css';
 
 export function MissionPauseInfo({ mission }: { mission: ActiveMission }) {
   const d = CAMPAIGN.districts[mission.missionId];
+  const boss = bossFor(mission.missionId); // the Ojuelegba finale: its enforcer (the hub content has no keeper)
   const section = mission.sectionMissionId ? getSectionMission(mission.sectionMissionId) : undefined;
   const view = (() => {
     const m = liveMatch();
@@ -18,7 +19,7 @@ export function MissionPauseInfo({ mission }: { mission: ActiveMission }) {
       <small className="mn-kicker">Campaign mission</small>
       <h3>{d.name}</h3>
       <p className="mn-pause-summary">
-        {section ? `${section.name}: ${section.objectiveCard}` : `${d.boss?.name}, ${d.boss?.title}`}
+        {section ? `${section.name}: ${section.objectiveCard}` : `${boss.name}, ${boss.title}`}
       </p>
       <dl className="mn-pause-stats">
         <div>

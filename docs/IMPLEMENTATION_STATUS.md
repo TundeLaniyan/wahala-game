@@ -2,6 +2,19 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Ojuelegba finale: missions 19-21 (branch `claude/wahala-csa-finale`, from `60c7e08`)
+
+The last campaign chapter (decisions FN1-FN10, `docs/CAMPAIGN_SECTOR_AI.md` "Part: Ojuelegba finale"): after the Lekki
+boss, the interim beat leads home; Return to Ojuelegba (trap the patrols, blast the barrier and gate locks: two sector
+gates open), Hold the Junction (keep the bus stop against two waves, wreck the control boxes a lieutenant guards) and
+Break the Ring (the `controlPoints` verb on the boss recipe, in a boss sector) on three sectors of the unchanged
+Ojuelegba arena; then the finale scene (routes reopen, danfo released, the Chairman escapes by the jetty). "The Landlord"
+is a provisional working title (Boss variant look reused); all new lines are flagged provisional. Save v2 unchanged (hub
+record + optional `interimSeen`, repaired on load); Parts and the seat bonus cover the three missions. Measured with
+`scripts/finale-audit.ts` (6/6 wins per level for all three; punching 0/3). Verified with typecheck, ESLint, Prettier,
+the full Vitest suite, the Playwright campaign specs and `e2e/campaign-finale.spec.ts` (desktop and mobile); three phone
+screenshots reviewed.
+
 ## Campaign bosses: generator-first boss loop (branch `claude/wahala-csa-bosses`, from `4f2d2a9`)
 
 The six boss missions keep their mechanics, ids, rewards, flags and replay modifiers, but every objective node is now

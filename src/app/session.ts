@@ -549,7 +549,7 @@ export const commands = {
     audio.playUi('click');
     campaign?.continue();
   },
-  campaignStory(kind: 'prologue' | 'finale'): void {
+  campaignStory(kind: 'prologue' | 'interim' | 'finale'): void {
     audio.playUi('click');
     campaign?.playStory(kind);
   },

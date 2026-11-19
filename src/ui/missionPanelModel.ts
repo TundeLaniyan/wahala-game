@@ -16,6 +16,7 @@ export const OBJECTIVE_LABEL: Readonly<Record<ObjectiveKind, string>> = {
   evidenceRun: 'BLAST THE CABINETS, DELIVER THE LEDGERS',
   contingencyGrid: 'BLAST THE SYSTEMS IN ORDER',
   dispatchWindows: 'BLAST THE SWITCHES IN THE RAIL WINDOWS',
+  controlPoints: 'BLAST THE CONTROL POINTS',
   fieldRoute: 'FOLLOW THE ROUTE',
 };
 

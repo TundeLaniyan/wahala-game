@@ -6,10 +6,11 @@
  * Oshodi is the fully written vertical slice (intro and outro scenes, "Read more"); the other districts carry short
  * real text with real objectives. All names are fictional (docs/CAMPAIGN_STORY.md, ethics checklist).
  */
-import type { MissionId } from '../../sim';
-import { MISSION_IDS } from '../../sim';
+import type { DistrictMissionId, MissionId } from '../../sim';
+import { CAMPAIGN_MISSION_IDS } from '../../sim';
 import type { DistrictContent, RewardDef, SectionDef, SectionMissionDef, StoryLine } from '../types';
 import { EBUTE_METTA } from './ebuteMetta';
+import { FINALE_SECTIONS } from './finale';
 import { FADEYI_SOMOLU } from './fadeyiSomolu';
 import { LAGOS_ISLAND } from './lagosIsland';
 import { LEKKI } from './lekki';
@@ -25,7 +26,7 @@ const title = (id: string, name: string, description: string): RewardDef => ({
 
 const say = (speaker: string, text: string): StoryLine => ({ speaker, text });
 
-const BOSS_OF: Record<MissionId, DistrictContent> = {
+const BOSS_OF: Record<DistrictMissionId, DistrictContent> = {
   oshodi: OSHODI,
   mushin: MUSHIN,
   fadeyiSomolu: FADEYI_SOMOLU,
@@ -39,7 +40,7 @@ const BOSS_OF: Record<MissionId, DistrictContent> = {
  * one short line the result screen shows for it (what the Ring lost; decision PR14).
  */
 function bossSection(
-  district: MissionId,
+  district: DistrictMissionId,
   name: string,
   summary: string,
   card: string,
@@ -469,11 +470,13 @@ export const SECTIONS: Record<MissionId, SectionDef[]> = {
   ebuteMetta: EBUTE_SECTIONS,
   lagosIsland: LAGOS_SECTIONS,
   lekki: LEKKI_SECTIONS,
+  // the Ojuelegba finale (missions 19-21, decision FN2; content in finale.ts)
+  ojuelegba: FINALE_SECTIONS,
 };
 
-/** Every section in campaign order. */
+/** Every section in campaign order (the six districts, then the Ojuelegba finale). */
 export function allSections(): SectionDef[] {
-  return MISSION_IDS.flatMap((d) => SECTIONS[d]);
+  return CAMPAIGN_MISSION_IDS.flatMap((d) => SECTIONS[d]);
 }
 
 /** Every mission of every section in campaign order. */

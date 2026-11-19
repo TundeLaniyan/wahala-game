@@ -4,10 +4,11 @@
  * is what the screens need between two commands.
  */
 import type { CampaignSave, DistrictId, RewardDef, SectionResultSummary } from '../campaign';
-import { DISTRICT_ORDER, districtStatus } from '../campaign';
+import { DISTRICT_ORDER, districtStatus, finaleCleared, finaleOpen } from '../campaign';
 import type { MissionId, MissionModifierId, MissionOutcome, RaidId, RaidOutcome } from '../sim';
 
-export type StoryKind = 'prologue' | 'finale';
+/** prologue; the interim beat after Lekki (FN9); the finale scene after the Ojuelegba finale's boss. */
+export type StoryKind = 'prologue' | 'interim' | 'finale';
 
 /** What a finished mission paid, for the result screen and the map's "new" badges. */
 export interface RewardSummary {
@@ -15,8 +16,10 @@ export interface RewardSummary {
   unlocks: string[];
   unlockedDistricts: DistrictId[];
   firstClear: boolean;
-  /** This result cleared the sixth district: the finale just became available. */
+  /** This result first won the Ojuelegba finale's boss: the finale scene just became available. */
   campaignComplete: boolean;
+  /** This result cleared the sixth district: the Ojuelegba finale chapter just opened (the interim beat is next). */
+  finaleOpened?: boolean;
 }
 
 export interface MissionResultView {
@@ -70,10 +73,15 @@ export interface CampaignUi {
   lastReward: RewardSummary | null;
 }
 
-/** The district a "Continue" opens: the first mission not yet cleared, or the last one when all are. */
+/**
+ * The district a "Continue" opens: the first mission not yet cleared; then the Ojuelegba finale chapter while it is open
+ * and not won (FN1); the last district when all is done.
+ */
 export function defaultDistrict(save: CampaignSave): DistrictId {
   const next = DISTRICT_ORDER.find((id) => id !== 'ojuelegba' && districtStatus(save, id) !== 'cleared');
-  return next ?? DISTRICT_ORDER[DISTRICT_ORDER.length - 1]!;
+  if (next) return next;
+  if (finaleOpen(save) && !finaleCleared(save)) return 'ojuelegba';
+  return DISTRICT_ORDER[DISTRICT_ORDER.length - 1]!;
 }
 
 export function freshCampaignUi(save: CampaignSave, p: Partial<Omit<CampaignUi, 'save'>> = {}): CampaignUi {

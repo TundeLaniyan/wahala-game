@@ -5,9 +5,10 @@
  * confirm). Text comes from src/campaign content; nothing is invented.
  */
 import { useState } from 'react';
-import { CAMPAIGN, DISTRICT_ORDER, bossAvailable } from '../../campaign';
+import { CAMPAIGN, DISTRICT_ORDER, bossAvailable, finaleBoss, finaleStatus } from '../../campaign';
 import type { DistrictId } from '../../campaign';
 import type { CampaignLevel, MissionId } from '../../sim';
+import { FINALE_MISSION_ID } from '../../sim';
 import { commands } from '../../app/session';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../menu/Frame';
 import {
@@ -83,11 +84,16 @@ function MapBackdrop({ nodes }: { nodes: MapNode[] }) {
 
 function NodeButton(props: { node: MapNode; selected: boolean; enabled: boolean; onPick: () => void }) {
   const { node } = props;
+  const finale = node.finale && node.finale.status !== 'locked' ? node.finale : null;
   const sub =
     node.status === 'locked'
       ? 'locked'
       : node.hub
-        ? 'hub'
+        ? finale
+          ? finale.status === 'cleared'
+            ? `hub, final chapter freed, ${finale.stars} of 3 stars`
+            : `hub, final chapter open, ${finale.reclaimed} of ${finale.sectionCount} sections reclaimed`
+          : 'hub'
         : node.status === 'cleared'
           ? `freed, ${node.stars} of 3 stars`
           : `open, ${node.reclaimed} of ${node.sectionCount} sections reclaimed`;
@@ -95,10 +101,11 @@ function NodeButton(props: { node: MapNode; selected: boolean; enabled: boolean;
   return (
     <button
       type="button"
-      className={`cp-node ${node.status}${props.selected ? ' on' : ''}${node.hub ? ' hub' : ''}`}
+      className={`cp-node ${node.status}${props.selected ? ' on' : ''}${node.hub ? ' hub' : ''}${finale ? ' finale' : ''}`}
       style={{ left: `${node.x}%`, top: `${node.y}%` }}
       data-testid={`map-node-${node.id}`}
       data-status={node.status}
+      {...(node.finale ? { 'data-finale': node.finale.status } : {})}
       aria-pressed={props.selected}
       aria-label={`${node.name}, ${sub}. Landmarks: ${node.landmarks.join(', ')}`}
       title={node.landmarks.join(' · ')}
@@ -115,7 +122,46 @@ function NodeButton(props: { node: MapNode; selected: boolean; enabled: boolean;
         </span>
       )}
       {node.status === 'cleared' && !node.hub && <Stars n={node.stars} />}
+      {finale?.status === 'cleared' && <Stars n={finale.stars} />}
     </button>
+  );
+}
+
+/**
+ * The hub's FINAL CHAPTER on its card (decision FN10): locked until Lekki falls; then its liberation, its sections
+ * (missions 19-21) and the keeper, shown by his working title plainly.
+ */
+function FinaleChapter() {
+  const ui = useCampaignUi();
+  if (!ui) return null;
+  const status = finaleStatus(ui.save);
+  const boss = finaleBoss();
+  if (status === 'locked')
+    return (
+      <p className="cp-locked" data-testid="finale-locked">
+        <small className="mn-kicker">Final chapter</small> Ojuelegba is still locked. It opens once Lekki is
+        cleared.
+      </p>
+    );
+  const p = ui.save.districts.ojuelegba;
+  return (
+    <div className="cp-finale" data-testid="finale-chapter" data-status={status}>
+      <small className="mn-kicker">
+        Final chapter · {status === 'cleared' ? 'Ojuelegba is free' : 'Break the Ring'}
+      </small>
+      <Liberation districtId={FINALE_MISSION_ID} />
+      {status === 'cleared' && p && p.clears > 0 && (
+        <p className="cp-best" data-testid="finale-best">
+          <Stars n={p.bestStars} /> best {p.bestSeconds !== null ? clock(p.bestSeconds) : '-'} · {p.clears}{' '}
+          {p.clears === 1 ? 'clear' : 'clears'}
+        </p>
+      )}
+      <SectionList districtId={FINALE_MISSION_ID} />
+      <p className="cp-bossline" data-testid="finale-boss">
+        <small className="mn-kicker">Keeper</small>
+        <b>{boss.name}</b>, {boss.title}
+      </p>
+    </div>
   );
 }
 
@@ -164,6 +210,7 @@ function DistrictCard({ id, status }: { id: DistrictId; status: MapNode['status'
           ))}
         </ul>
       </div>
+      {id === FINALE_MISSION_ID && <FinaleChapter />}
       {d.boss && status !== 'locked' && <SectionList districtId={d.id as MissionId} />}
       {d.boss && status !== 'locked' && (
         <p className="cp-bossline" data-testid="district-boss">
@@ -272,7 +319,8 @@ export function CampaignMap() {
   const level = started ? save.campaignLevel : chosenLevel;
   const nodes = mapNodes(save);
   const selected = nodes.find((n) => n.id === ui.selected) ?? nodes[1]!;
-  const missionSelected = selected.id !== 'ojuelegba';
+  // the hub opens a briefing only for its finale chapter's boss (FN10)
+  const missionSelected = selected.id !== 'ojuelegba' || finaleStatus(save) !== 'locked';
   const canOpen =
     started &&
     missionSelected &&
@@ -280,7 +328,8 @@ export function CampaignMap() {
     bossAvailable(save, selected.id as MissionId);
   const stars = totalStars(save);
   const next = nodes.find((n) => !n.hub && n.status !== 'cleared');
-  const allClear = !next;
+  // everything is done only once the finale chapter is won too
+  const allClear = !next && finaleStatus(save) === 'cleared';
   const hasProgress =
     started && DISTRICT_ORDER.some((d) => d !== 'ojuelegba' && save.districts[d].attempts > 0);
   return (
@@ -369,7 +418,9 @@ export function CampaignMap() {
                   testId="campaign-briefing"
                   onClick={() => commands.campaignBriefing(selected.id)}
                 >
-                  {selected.status === 'cleared' ? 'Replay: open briefing' : 'Open briefing'}
+                  {(selected.id === FINALE_MISSION_ID ? finaleStatus(save) : selected.status) === 'cleared'
+                    ? 'Replay: open briefing'
+                    : 'Open briefing'}
                 </SecondaryButton>
               )}
             </>

@@ -45,8 +45,8 @@ function distances(layout: readonly string[], sx: number, sy: number): Map<strin
 }
 
 describe('every district has an entry and a middle field mission (except the standalone-raid section)', () => {
-  it('lists eleven field missions over six districts', () => {
-    expect(FIELD_MISSION_IDS).toHaveLength(11);
+  it('lists eleven field missions over six districts, then the Ojuelegba finale’s two', () => {
+    expect(FIELD_MISSION_IDS).toHaveLength(13);
     const byDistrict = new Map<string, number>();
     for (const id of FIELD_MISSION_IDS) {
       const d = FIELD_MISSION_DEFS[id]!.districtId;

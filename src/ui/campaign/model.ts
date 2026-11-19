@@ -12,11 +12,13 @@ import {
   districtStatus,
   failureSummary,
   finaleAvailable,
+  finaleOpen,
+  finaleStatus,
   sectionsCleared,
   sectionsOf,
 } from '../../campaign';
-import type { BossDef, CampaignSave, DistrictId, DistrictStatus } from '../../campaign';
-import { MISSION_IDS } from '../../sim';
+import type { BossDef, CampaignSave, DistrictId, DistrictStatus, FinaleStatus } from '../../campaign';
+import { CAMPAIGN_MISSION_IDS, FINALE_MISSION_ID } from '../../sim';
 import type { MissionId, MissionModifierId, MissionOutcome } from '../../sim';
 import type { CampaignUi } from '../../app/campaignState';
 import { CAMPAIGN_SCREENS } from '../../app/menu';
@@ -47,6 +49,11 @@ export interface MapNode {
   /** Sections reclaimed and the district's section count (0 / 0 for the hub), decision PR14. */
   reclaimed: number;
   sectionCount: number;
+  /**
+   * The hub only: its FINALE chapter (missions 19-21, decision FN10): locked until Lekki falls, then the final chapter
+   * with its own sections reclaimed and the enforcer's best stars.
+   */
+  finale?: { status: FinaleStatus; reclaimed: number; sectionCount: number; stars: 0 | 1 | 2 | 3 };
 }
 
 /** The seven map nodes in campaign order, with the save's status and stars. */
@@ -66,8 +73,20 @@ export function mapNodes(save: CampaignSave): MapNode[] {
       after: i > 0 ? DISTRICT_ORDER[i - 1]! : null,
       reclaimed: d.boss ? sectionsCleared(save, id as MissionId) : 0,
       sectionCount: d.boss ? sectionsOf(id as MissionId).length : 0,
+      ...(id === FINALE_MISSION_ID ? { finale: finaleNode(save) } : {}),
     };
   });
+}
+
+/** The hub's finale chapter on the map (FN10). */
+export function finaleNode(save: CampaignSave): NonNullable<MapNode['finale']> {
+  const status = finaleStatus(save);
+  return {
+    status,
+    reclaimed: status === 'locked' ? 0 : sectionsCleared(save, FINALE_MISSION_ID),
+    sectionCount: sectionsOf(FINALE_MISSION_ID).length,
+    stars: status === 'cleared' ? (save.districts.ojuelegba?.bestStars ?? 0) : 0,
+  };
 }
 
 /** "Clear Oshodi first" for a locked district; null otherwise. */
@@ -140,7 +159,7 @@ export function unlockLabel(id: string): string {
     case 'modifier':
       return `Replay modifier: ${modifierName(tail as MissionModifierId)}`;
     case 'finale':
-      return 'The finale scene is unlocked';
+      return 'The Ojuelegba finale is open';
     case 'costume':
       return `Costume: ${words(tail)}`;
     case 'title':
@@ -173,7 +192,10 @@ export function campaignScreenReady(screen: MenuScreen, ui: CampaignUi | null): 
   if (!CAMPAIGN_SCREENS.includes(screen)) return true;
   if (!ui) return false;
   if (screen === 'briefing' || screen === 'bossIntro')
-    return (MISSION_IDS as readonly string[]).includes(ui.selected);
+    // the hub has a boss briefing only for its finale chapter, once it is open (FN10)
+    return ui.selected === FINALE_MISSION_ID
+      ? finaleOpen(ui.save)
+      : (CAMPAIGN_MISSION_IDS as readonly string[]).includes(ui.selected);
   if (screen === 'campaignResult') return ui.result !== null || ui.sectionResult !== null;
   return true;
 }
