@@ -10,7 +10,8 @@
  *   - Ring equipment: it walks next to the piece, lays a generator and leaves the footprint (one blast per hit point);
  *   - a fight: an adjacent enemy winding up is jabbed (stagger) or stepped away from; a staggered, rooted or slowed
  *     enemy next to it gets a generator laid under the human's feet before he leaves; ordinary enemies are punched when
- *     nothing better is open; armoured enemies are only ever finished by a blast (they are lured onto the generator);
+ *     nothing better is open; armoured enemies are only ever finished by a blast: at its punch floor one gets the bait
+ *     (a generator under his own feet, hidden by his body, held until it commits to a wind-up: decision DT1);
  *   - a hold zone: it walks in and fights whoever contests it; an escape: it runs for the exit, jabbing a pursuer that
  *     catches up;
  *   - a door raises the raid: it is answered with `resolveRaid` (a completed raid, the human's health carried), the
@@ -149,6 +150,14 @@ export class GeneratorPlayer {
   punches = 0;
   /** When each enemy wind-up / thrown object was first seen (a person needs a moment to react to it). */
   private readonly firstSeen = new Map<string, number>();
+  /**
+   * The bait against an armoured enemy at its punch floor (decision DT1): the generator he laid under his own feet and
+   * now stands on (his body hides it from an enemy that did not watch the placement), waiting for the enemy to commit
+   * to a wind-up next to him. Null when not baiting.
+   */
+  private cover: { gen: number; foe: number } | null = null;
+  /** Since when he has been boxed in by crates with no way out of his own blast (see `walk`). */
+  private boxedSince: number | null = null;
 
   /**
    * @param seed varies the reaction to each cue (deterministically: a person is not a metronome)
@@ -183,8 +192,17 @@ export class GeneratorPlayer {
     const here = idx(s, me.x, me.y);
     const leg = view.legKind;
 
+    // 0. the bait (decision DT1): keep standing on the generator while the armoured enemy has not committed
+    const bait = this.holdBait(s, me, enemies, clock, threat);
+    if (bait) return bait;
+
     // 1. standing in danger: leave by the shortest safe way
     if (clock.has(here) || threat.has(here) || s.flames.some((f) => f.x === me.x && f.y === me.y)) {
+      // leaving the bait as the enemy winds up: out of its reach first (a first step still in its reach is a hit)
+      if (threat.has(here) && s.generators.some((g) => g.ownerId === 0 && g.x === me.x && g.y === me.y)) {
+        const out = this.route(s, me, (i) => !clock.has(i) && !threat.has(i), clock, threat);
+        if (out) return { move: out };
+      }
       const d = this.route(s, me, (i) => !clock.has(i) && !threat.has(i), clock, threat, true);
       if (d) return { move: d };
     }
@@ -382,6 +400,16 @@ export class GeneratorPlayer {
       }
       return null;
     }
+    // an armoured enemy at its punch floor, free to move: the bait (it must not be planted already: then it would
+    // only see the generator later, and walk out after its recovery)
+    if (
+      !mine &&
+      this.blastOnly(s, e) &&
+      !e.attack &&
+      s.tick >= e.rootedUntil &&
+      this.canLayHere(s, me, clock)
+    )
+      return this.layBait(e);
     // staggered / planted / slowed next to us: the generator goes down under our feet, then we leave
     if (!mine && (staggered || armoured) && this.canLayHere(s, me, clock)) {
       this.generatorsLaid++;
@@ -396,6 +424,70 @@ export class GeneratorPlayer {
       return { place: true };
     }
     return null;
+  }
+
+  /**
+   * The bait (decision DT1). An armoured enemy at its punch floor sees every generator once it is engaged and walks out
+   * of a 3 s fuse with time to spare (it plans round the human since SA13). What it cannot see is a generator under the
+   * human's own body (Part 2, sight rule 1) when it did not watch the placement (Easy and Normal). So he lays under his
+   * feet and STAYS on it until the enemy commits to a wind-up next to him (it is rooted for the wind-up and its
+   * recovery), then steps out of its reach and out of the footprint. If it never commits he leaves while the way out is
+   * still long enough. Ordinary intents only: he stands still, then walks.
+   */
+  private holdBait(
+    s: GameState,
+    me: Player,
+    enemies: Player[],
+    clock: Map<number, number>,
+    threat: Set<number>,
+  ): Intent | null {
+    const c = this.cover;
+    if (!c) return null;
+    const here = idx(s, me.x, me.y);
+    const g =
+      c.gen < 0
+        ? s.generators.find((o) => o.ownerId === 0 && o.x === me.x && o.y === me.y)
+        : s.generators.find((o) => o.id === c.gen);
+    const foe = enemies.find((e) => e.id === c.foe);
+    if (!g || g.x !== me.x || g.y !== me.y || !foe || threat.has(here)) {
+      this.cover = null;
+      return null;
+    }
+    c.gen = g.id;
+    const bodies = new Set(enemies.map((e) => idx(s, e.x, e.y)));
+    const out = this.stepsTo(s, me, (i) => !clock.has(i) && !threat.has(i) && !bodies.has(i), bodies);
+    if (g.timer <= (out + 1) * STEP + 24) {
+      this.cover = null;
+      return null;
+    }
+    return {};
+  }
+
+  /** No open tile outside the footprint of a generator laid here can be walked to at all (crates, walls, bodies). */
+  private boxedIn(s: GameState, me: Player): boolean {
+    const fp = wouldBlast(s, me, me.x, me.y);
+    const bodies = new Set(s.players.filter((p) => p.id !== 0 && p.alive).map((p) => idx(s, p.x, p.y)));
+    return this.stepsTo(s, me, (i) => !fp.has(i) && !bodies.has(i), bodies) === Infinity;
+  }
+
+  /** Lays the bait under his feet against an armoured enemy at its punch floor (see `holdBait`). */
+  private layBait(e: Player): Intent {
+    this.generatorsLaid++;
+    this.cover = { gen: -1, foe: e.id };
+    return { place: true };
+  }
+
+  /** An armoured enemy that punches can no longer finish (only a blast can). */
+  private blastOnly(s: GameState, e: Player): boolean {
+    const armoured = e.enemyKind === 'heavy' || e.enemyKind === 'lieutenant' || e.enemyKind === 'boss';
+    return armoured && this.punchFloorReached(s, e);
+  }
+
+  /** The tiles of every living body but the human and `but` (they hide what lies behind them). */
+  private bodiesBut(s: GameState, but: number): Set<number> {
+    return new Set(
+      s.players.filter((p) => p.alive && p.id !== 0 && p.id !== but).map((p) => idx(s, p.x, p.y)),
+    );
   }
 
   private punchFloorReached(s: GameState, e: Player): boolean {
@@ -465,6 +557,22 @@ export class GeneratorPlayer {
         const near = [...targets].sort(
           (a, b) => manhattan(a.x, a.y, me.x, me.y) - manhattan(b.x, b.y, me.x, me.y) || a.id - b.id,
         )[0]!;
+        // the bait laid round a corner (decision DT1): an armoured enemy at its punch floor coming for him (its "!" is
+        // up) and a few steps away with no clear line to him cannot watch the placement; it walks up to the generator
+        // hidden under his body and commits to a wind-up there
+        const mind = s.territory?.minds[near.id]?.state;
+        const dist = manhattan(near.x, near.y, me.x, me.y);
+        if (
+          !mine &&
+          !area &&
+          (mind === 'pursue' || mind === 'alert') &&
+          dist >= 2 &&
+          dist <= 5 &&
+          this.blastOnly(s, near) &&
+          !canSeeTile(s, near.x, near.y, me.x, me.y, 12, this.bodiesBut(s, near.id)) &&
+          this.canLayHere(s, me, clock)
+        )
+          return this.layBait(near);
         return this.walk(
           s,
           me,
@@ -495,13 +603,21 @@ export class GeneratorPlayer {
     const first = this.crateStep(s, me, ok);
     if (!first) return null;
     if (first.crate) {
-      if (
-        !s.generators.some((g) => g.ownerId === 0 && g.mode !== 'disabled') &&
-        this.canLayHere(s, me, clock)
-      ) {
+      const ticking = s.generators.some((g) => g.ownerId === 0 && g.mode !== 'disabled');
+      if (!ticking && this.canLayHere(s, me, clock)) {
         this.generatorsLaid++;
         return { place: true };
       }
+      // boxed in by crates with no tile out of the blast to step to (a respawn between stage crates): after a moment
+      // he blasts his way out and takes the knock, as a person would, instead of standing there to the end of the clock
+      if (!ticking && this.boxedIn(s, me)) {
+        this.boxedSince ??= s.tick;
+        if (s.tick - this.boxedSince >= 120) {
+          this.boxedSince = null;
+          this.generatorsLaid++;
+          return { place: true };
+        }
+      } else this.boxedSince = null;
       return null;
     }
     const i = idx(s, me.x + DIR_VEC[first.dir].dx, me.y + DIR_VEC[first.dir].dy);
