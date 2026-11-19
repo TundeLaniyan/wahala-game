@@ -229,6 +229,19 @@ test.describe('City Rumble: 32 competitors (Survival)', () => {
     // stop real-time play so the chosen killer cannot fall before the spectator camera picks it
     await page.evaluate(() => ((window as never as Debug).__WAHALA__.controller().frozen = true));
 
+    // The kill-feed line lives KILL_FEED_TTL_MS (4 s of wall clock) and a software-rendered 32-fighter frame takes seconds,
+    // so the later assertions can run after it has gone. Watch the feed from here on and assert that the line DID show
+    // (a MutationObserver sees it the moment it renders, however slowly this page is polled).
+    await page.evaluate(() => {
+      const w = window as never as { __feedYou: boolean };
+      w.__feedYou = false;
+      const check = (): void => {
+        if (document.querySelector('[data-testid="kill-feed"]')?.textContent?.includes('YOU')) w.__feedYou = true;
+      };
+      new MutationObserver(check).observe(document.body, { subtree: true, childList: true, characterData: true });
+      check();
+    });
+
     // the local player is knocked out by the nearest bot: the camera rides with that bot
     await mutate(
       page,
@@ -252,7 +265,7 @@ test.describe('City Rumble: 32 competitors (Survival)', () => {
     expect(await page.evaluate(() => (window as never as Debug).__WAHALA__.controller().spectating)).toBe(
       killer,
     );
-    await expect(page.getByTestId('kill-feed')).toContainText('YOU');
+    await expect.poll(() => page.evaluate(() => (window as never as { __feedYou: boolean }).__feedYou)).toBe(true);
     await shot(page, info.project.name, 'rumble-spectate');
 
     // cycle to another survivor (key on desktop, button on the phone)
