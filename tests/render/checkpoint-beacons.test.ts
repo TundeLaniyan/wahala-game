@@ -14,6 +14,7 @@ import { BEACON_COLORS, BEACON_FLASH_SEC, beaconLook } from '../../src/render/vi
 import { MARKER_COLORS } from '../../src/render/views/missionStyle';
 import type { FrameContext } from '../../src/render/views/types';
 import { advance, put } from '../mission-helpers';
+import { APPROACH_DOOR, APPROACH_MARKERS } from '../oshodi-route';
 import { newField } from '../field-helpers';
 
 function fakeContext(canvas: { width: number; height: number }): CanvasRenderingContext2D {
@@ -115,7 +116,7 @@ describe('the mission view draws a simulated field mission', () => {
     const { state, views, ctx } = rig();
     advance(state, 1);
     views.update(ctx(0.1));
-    put(state, 0, 9, 39);
+    put(state, 0, ...APPROACH_MARKERS[0]!);
     advance(state, 1);
     views.update(ctx(0.2));
     expect(views.stats()).toMatchObject({
@@ -127,11 +128,11 @@ describe('the mission view draws a simulated field mission', () => {
     views.update(ctx(0.2 + BEACON_FLASH_SEC + 0.1));
     expect(views.stats().beaconsFlashing).toBe(0);
 
-    put(state, 0, 19, 39);
+    put(state, 0, ...APPROACH_MARKERS[1]!);
     advance(state, 1);
-    put(state, 0, 26, 40);
+    put(state, 0, ...APPROACH_MARKERS[2]!);
     advance(state, 1);
-    put(state, 0, 25, 44);
+    put(state, 0, ...APPROACH_DOOR);
     advance(state, 20);
     views.update(ctx(3));
     const stats = views.stats();
@@ -153,11 +154,7 @@ describe('the mission view draws a simulated field mission', () => {
 
   it('beacons and pads are distinct object types in the scene graph', () => {
     const { state, views, ctx } = rig();
-    for (const [x, y] of [
-      [9, 39],
-      [19, 39],
-      [26, 40],
-    ] as const) {
+    for (const [x, y] of APPROACH_MARKERS) {
       put(state, 0, x, y);
       advance(state, 1);
     }

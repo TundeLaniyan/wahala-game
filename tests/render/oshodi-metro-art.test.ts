@@ -16,6 +16,7 @@ import { buildStageAlerts } from '../../src/app/stageAlerts';
 import { createGame, getArena } from '../../src/sim';
 import type { GameState, StageEvent } from '../../src/sim';
 import { SOUND_DEFS } from '../../src/audio/recipes';
+import { CAMPAIGN_ARENA_IDS } from '../../src/sim';
 import { moodGradient } from '../../src/ui/menu/arenaInfo';
 
 const lum = (c: number): number =>
@@ -39,7 +40,8 @@ describe('day and night looks', () => {
     expect(timeOfDay('?q=low&tod=night')).toBe('night');
     expect(timeOfDay('?tod=banana')).toBe('day');
     expect(arenaLook('rumbleOshodi')).toBe(OSHODI_METRO_LOOK);
-    // only the researched communities (Oshodi and the five later ones) ship a night look behind the flag
+    // only the researched communities (Oshodi and the five later ones) ship a night look behind the flag, and the campaign
+    // areas drawn with their kits (the district's own night look on the area's geometry, decision WX3)
     const NIGHT = [
       'rumbleOshodi',
       'rumbleMushin',
@@ -47,6 +49,7 @@ describe('day and night looks', () => {
       'rumbleLagosIsland',
       'rumbleLekki',
       'rumbleEbuteMetta',
+      ...CAMPAIGN_ARENA_IDS,
     ];
     for (const [id, art] of Object.entries(NEW_ARENA_ART()))
       if (!NIGHT.includes(id)) expect(art.nightLook, id).toBeUndefined();

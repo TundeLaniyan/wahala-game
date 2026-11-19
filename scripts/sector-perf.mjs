@@ -5,7 +5,9 @@
 // `--leak` instead loads three missions one after another in ONE page and prints the GPU resources after each (a leak
 // grows them; `--nosector` does the same on the whole districts, the baseline). Software rendering (SwiftShader): the numbers compare the two variants; they are not phone timings.
 //   SHOT_URL=http://localhost:<port>/wahala-game/ WAHALA_CHROMIUM=/opt/pw-browsers/chromium WAHALA_MULTIPROCESS=1 \
-//   node scripts/sector-perf.mjs [fieldId,...|all] [low,high] [--leak] [--seconds=4]
+//   node scripts/sector-perf.mjs [fieldId,...|all] [low,high] [--leak] [--seconds=4] [--sector-only]
+// `--sector-only` measures the mission as the campaign plays it and skips the whole-district variant (a campaign area's
+// board IS its whole map: docs/CAMPAIGN_WORLD.md compares it with the old sector measured on the base build).
 import { chromium } from '@playwright/test';
 
 const ALL = [
@@ -121,7 +123,7 @@ console.log(
 console.log('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
 for (const q of qualities.split(',')) {
   for (const id of ids) {
-    for (const noSector of [false, true]) {
+    for (const noSector of flags.includes('--sector-only') ? [false] : [false, true]) {
       const page = await open(q);
       await start(page, id, noSector);
       const f = await frames(page);

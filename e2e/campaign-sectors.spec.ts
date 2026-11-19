@@ -62,7 +62,7 @@ function inside(a: number, b: number, lo: number, hi: number, what: string): voi
   }
 }
 
-test('Oshodi approach on a landscape phone: the sector loads with its barricades and the camera stays on it', async ({
+test('Oshodi approach on a landscape phone: the campaign area loads with its gate and the camera stays on it', async ({
   page,
 }, info) => {
   test.skip(info.project.name !== 'mobile', 'one phone run is enough (the viewport is fixed above)');
@@ -86,9 +86,11 @@ test('Oshodi approach on a landscape phone: the sector loads with its barricades
       ? { id: s.sector.id, margin: s.sector.viewMargin as number, rects: s.sector.rects as number[][] }
       : null;
   });
-  expect(sector?.id).toBe('oshodi.terminalApproach');
+  // Terminal Approach plays on its campaign area now (decision WX5): the board's edges are its own buildings, the sector
+  // draws only the depot's steel gate
+  expect(sector?.id).toBe('oshodi.orita');
   const drawn = await page.evaluate(() => (window as any).__WAHALA__.sector());
-  expect(drawn.barricades).toBeGreaterThanOrEqual(8);
+  expect(drawn.barricades).toBeGreaterThanOrEqual(1);
   await expect(page.getByTestId('minimap')).toBeVisible();
 
   const [r] = sector!.rects as [number[]];

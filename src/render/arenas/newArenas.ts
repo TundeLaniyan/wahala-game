@@ -41,6 +41,7 @@ import {
   mushinEnv,
 } from './mushinArt';
 import { RAID_VARIANTS, raidArtTable, raidReviewVariant } from './raidArt';
+import { campaignArtTable } from './campaign/register';
 import { timeOfDay } from '../timeOfDay';
 import type { StageEnvironmentSource } from '../env/types';
 import { AJEGUNLE_FLOOR, AJEGUNLE_LOOK, AJEGUNLE_SET } from './ajegunle';
@@ -157,6 +158,8 @@ export function NEW_ARENA_ART(): Record<string, ArenaArt> {
     mobileTest15x9: mobileTestArt(),
     // classic raids (docs/RAID_PRESENTATION.md): warehouse interior, rail yard, under-bridge storeroom
     ...raidArtTable(),
+    // campaign-only areas (docs/CAMPAIGN_WORLD.md): each drawn with its district's kit and its own landmarks
+    ...campaignArtTable(),
   };
   // art review only (`?raidart=warehouse|yard|storeroom`): the look on a real standard board
   const review = raidReviewVariant();

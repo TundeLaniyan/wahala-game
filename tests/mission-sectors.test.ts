@@ -89,8 +89,9 @@ describe('sector data', () => {
 
   it('two missions of one district use different, recognisable parts of the map (they never share most tiles)', () => {
     const byDistrict = new Map<string, MissionSectorDef[]>();
+    // sectors of one district MAP (a campaign area is its own board: tests/campaign-world.test.ts checks those differ)
     for (const s of Object.values(MISSION_SECTORS))
-      byDistrict.set(s.districtId, [...(byDistrict.get(s.districtId) ?? []), s]);
+      if (!s.arenaId) byDistrict.set(s.districtId, [...(byDistrict.get(s.districtId) ?? []), s]);
     for (const [district, list] of byDistrict) {
       if (list.length < 2) continue;
       const layout = getArena(MISSION_DEFS[list[0]!.districtId].arenaId).layout;
@@ -110,7 +111,7 @@ describe('sector data', () => {
   describe.each(MISSION_SECTOR_IDS)('%s', (sid) => {
     const sector = getSector(sid);
     const def = Object.values(FIELD_MISSION_DEFS).find((d) => d.sectorId === sid)!;
-    const arena = getArena(MISSION_DEFS[sector.districtId].arenaId);
+    const arena = getArena(sector.arenaId ?? MISSION_DEFS[sector.districtId].arenaId);
     const W = arena.layout[0]!.length;
     const H = arena.layout.length;
 
@@ -125,7 +126,10 @@ describe('sector data', () => {
         }),
       );
       expect(open, sid).toBeGreaterThanOrEqual(180);
-      expect(open / all, sid).toBeLessThan(0.5);
+      // a district sector is a part of the City Rumble map; a campaign area's sector is its own board's play area (only
+      // the mission's area is built: decision WX2), so the share rule is the district maps' only
+      if (!sector.arenaId) expect(open / all, sid).toBeLessThan(0.5);
+      else expect(getArena(sector.arenaId).campaignOnly, sid).toBe(true);
       for (const r of sector.rects) {
         expect(r[0]).toBeLessThanOrEqual(r[2]);
         expect(r[1]).toBeLessThanOrEqual(r[3]);
@@ -204,11 +208,12 @@ describe('sector data', () => {
 });
 
 describe('no sector, no change', () => {
-  it('City Rumble, Classic and the boss missions carry no sector key; neither does a ?nosector field mission', () => {
+  it('City Rumble, Classic and a boss mission without one carry no sector key; neither does a ?nosector field mission', () => {
     const rumble = sandbox({ players: 8, arenaId: 'rumbleOshodi' });
     const classic = sandbox({ players: 2 });
+    // (Oshodi's boss plays in its dispatch corridor since decision WX9: Mushin's keeps the whole map)
     const boss = createGame(
-      buildMissionGame({ spec: { id: 'oshodi' }, humanCharacter: 'streetBaller', seed: 1 }),
+      buildMissionGame({ spec: { id: 'mushin' }, humanCharacter: 'streetBaller', seed: 1 }),
     );
     const plain = fieldGame('oshodi.approach', 5, { noSector: true });
     for (const s of [rumble, classic, boss, plain]) {

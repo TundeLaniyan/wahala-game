@@ -161,7 +161,9 @@ describe('roles play differently (bots, 15 seconds)', () => {
   });
 
   it('the exposed boss runs away from the human', () => {
-    const state = newMission({ id: 'oshodi' });
+    // the flee directive on the whole district map, as recorded (Oshodi's boss plays in its dispatch corridor since
+    // decision WX9; the corridor fights are tests/mission-bosses-fights.test.ts and tests/campaign-world.test.ts)
+    const state = newMission({ id: 'oshodi', noSector: true });
     const m = state.mission!;
     advance(state, 1);
     const boss = state.players[1]!;

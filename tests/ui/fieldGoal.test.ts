@@ -11,6 +11,7 @@ import { missionView } from '../../src/sim';
 import { FieldGoal } from '../../src/ui/FieldGoal';
 import { MissionPanel } from '../../src/ui/MissionPanel';
 import { advance, put } from '../mission-helpers';
+import { APPROACH_DOOR, APPROACH_DOOR_RETURN, APPROACH_MARKERS } from '../oshodi-route';
 import { newField } from '../field-helpers';
 
 const html = (mission: ReturnType<typeof missionView>): string =>
@@ -31,15 +32,11 @@ describe('FieldGoal block', () => {
 
   it('HOLD the depot door: the bar fills while standing and drains after a step off', () => {
     const s = newField('oshodi.approach');
-    for (const [x, y] of [
-      [9, 39],
-      [19, 39],
-      [26, 40],
-    ] as const) {
+    for (const [x, y] of APPROACH_MARKERS) {
       put(s, 0, x, y);
       advance(s, 1);
     }
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, 24);
     let out = html(missionView(s));
     expect(out).toContain('data-verb="hold"');
@@ -47,7 +44,7 @@ describe('FieldGoal block', () => {
     expect(out).toContain('data-state="filling"');
     expect(out).toContain('HOLD 0.4 / 1.0 s');
     expect(out).toContain('width:40%');
-    put(s, 0, 25, 43);
+    put(s, 0, ...APPROACH_DOOR_RETURN);
     advance(s, 6);
     out = html(missionView(s));
     expect(out).toContain('data-state="draining"');

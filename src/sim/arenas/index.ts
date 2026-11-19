@@ -21,6 +21,9 @@ import { SURULERE_POWER_YARD } from './surulerePowerYard';
 import { THIRD_MAINLAND } from './thirdMainland';
 import { YABA_AFTER_DARK } from './yabaAfterDark';
 import type { ArenaDef } from './types';
+import { CAMPAIGN_ARENAS } from './campaign';
+
+export { CAMPAIGN_ARENAS, CAMPAIGN_ARENA_IDS } from './campaign';
 
 export type {
   ArenaDef,
@@ -97,7 +100,7 @@ export const RAID_ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntrie
 export const RAID_ARENA_IDS: readonly string[] = Object.keys(RAID_ARENAS);
 
 export function getArena(id: string): ArenaDef {
-  const arena = ARENAS[id] ?? RAID_ARENAS[id];
+  const arena = ARENAS[id] ?? RAID_ARENAS[id] ?? CAMPAIGN_ARENAS[id];
   if (!arena) throw new Error(`Unknown arena "${id}"`);
   return arena;
 }

@@ -20,6 +20,7 @@ import { useGameStore } from '../../src/app/store';
 import { Tile } from '../../src/sim';
 import type { GameState, RaidOutcome } from '../../src/sim';
 import { FieldWalker } from '../field-helpers';
+import { APPROACH_DOOR_RETURN } from '../oshodi-route';
 import { raidWin } from './sectionHelpers';
 
 class MapStore implements KeyValueStore {
@@ -131,7 +132,7 @@ describe('Oshodi section 1, end to end', () => {
     const f = field.mission!.field!;
     expect(f.doors[0]).toMatchObject({ status: 'done', stars: 3 });
     expect(field.mission!.pendingRaid).toBeNull();
-    expect([field.players[0]!.x, field.players[0]!.y]).toEqual([25, 43]); // the return tile
+    expect([field.players[0]!.x, field.players[0]!.y]).toEqual([...APPROACH_DOOR_RETURN]); // the return tile
     expect(ui().active!.raid).toBeUndefined();
     expect(f.leg).toBe(2); // the way back
 
@@ -179,7 +180,7 @@ describe('Oshodi section 1, end to end', () => {
     expect(f.doors[0]).toMatchObject({ status: 'failed', attempts: 1 });
     expect(field.mission!.livesUsed).toBe(1);
     expect(f.leg).toBe(1); // still on the door leg
-    expect([field.players[0]!.x, field.players[0]!.y]).toEqual([25, 43]);
+    expect([field.players[0]!.x, field.players[0]!.y]).toEqual([...APPROACH_DOOR_RETURN]);
 
     // the walker steps back on the door: a second raid, this one completed
     r.until(() => r.match.isRaid);
@@ -229,7 +230,7 @@ describe('the pause menu inside a raid', () => {
     expect(r.match.state).toBe(field);
     expect(field.mission!.livesUsed).toBe(0);
     expect(field.mission!.field!.doors[0]).toMatchObject({ status: 'idle', attempts: 1 });
-    expect([field.players[0]!.x, field.players[0]!.y]).toEqual([25, 43]);
+    expect([field.players[0]!.x, field.players[0]!.y]).toEqual([...APPROACH_DOOR_RETURN]);
     expect(ui().active!.raid).toBeUndefined();
     // and the door can be entered again
     r.until(() => r.match.isRaid);

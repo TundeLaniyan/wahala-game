@@ -17,7 +17,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   FIELD_MISSION_DEFS,
-  MISSION_DEFS,
+  fieldArenaId,
   buildMissionGame,
   createGame,
   enemyDef,
@@ -40,7 +40,9 @@ export function runCost(r: PlayResult, limitSec: number): number {
   return (r.result === 'won' ? r.fieldSec : limitSec + 180) + 60 * r.livesUsed;
 }
 
+/** Open tiles reachable from (sx, sy); the sector's gates count as open (they open in leg order, decision WX6). */
 function flood(s: GameState, sx: number, sy: number): Set<number> {
+  const gates = new Set((s.sector?.gates ?? []).flatMap((g) => g.tiles));
   const seen = new Set<number>([sy * s.width + sx]);
   const queue = [sy * s.width + sx];
   for (let q = 0; q < queue.length; q++) {
@@ -55,7 +57,7 @@ function flood(s: GameState, sx: number, sy: number): Set<number> {
       const y = Math.floor(i / s.width) + dy;
       if (x < 0 || y < 0 || x >= s.width || y >= s.height) continue;
       const j = y * s.width + x;
-      if (seen.has(j) || s.tiles[j] === Tile.Hard) continue;
+      if (seen.has(j) || (s.tiles[j] === Tile.Hard && !gates.has(j))) continue;
       seen.add(j);
       queue.push(j);
     }
@@ -67,7 +69,7 @@ function flood(s: GameState, sx: number, sy: number): Set<number> {
 export function describeMissionData(id: string): void {
   const def: FieldMissionDef = FIELD_MISSION_DEFS[id]!;
   const sector = getSector(def.sectorId!);
-  const layout = getArena(MISSION_DEFS[def.districtId].arenaId).layout;
+  const layout = getArena(fieldArenaId(def)).layout;
   const floor = (x: number, y: number): boolean => {
     const c = layout[y]?.[x];
     return c === '.' || c === '_';

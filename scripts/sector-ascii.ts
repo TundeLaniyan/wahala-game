@@ -4,7 +4,7 @@
 //   npx tsx scripts/sector-ascii.ts <fieldId> ['[[x0,y0,x1,y1],...]']
 // Legend: S start, R return, 1-9 markers, X exit, D door, E enemy post, B barricade, G gate, '+' rect edge leak.
 // Tiles outside the sector are printed lower-contrast: '#' as ':' and floor as ' '.
-import { FIELD_MISSION_DEFS, MISSION_DEFS, getArena } from '../src/sim';
+import { FIELD_MISSION_DEFS, fieldArenaId, getArena } from '../src/sim';
 import { fieldEnemiesOf } from '../src/sim/mission/combatPilot';
 import { MISSION_SECTORS } from '../src/sim/mission/sectors';
 import type { MissionSectorDef, SectorRect } from '../src/sim/mission/sectors';
@@ -12,7 +12,7 @@ import { rectsContain, sectorLeaks } from '../src/sim/mission/sector';
 
 const id = process.argv[2] ?? 'oshodi.approach';
 const def = FIELD_MISSION_DEFS[id]!;
-const arena = getArena(MISSION_DEFS[def.districtId].arenaId);
+const arena = getArena(fieldArenaId(def));
 const trial = process.argv[3] ? (JSON.parse(process.argv[3]) as SectorRect[]) : null;
 const own = def.sectorId ? MISSION_SECTORS[def.sectorId] : undefined;
 const sector: MissionSectorDef | null = trial

@@ -419,8 +419,9 @@ describe('the generic builder', () => {
     expect(env.stats().vehicles).toBe(0);
   });
 
-  it('the seven City Rumble communities declare an environment; the standard arenas get nothing', async () => {
+  it('the seven City Rumble communities and the campaign areas declare an environment; the standard arenas get nothing', async () => {
     const { NEW_ARENA_ART } = await import('../src/render/arenas/newArenas');
+    const { CAMPAIGN_ARENA_IDS } = await import('../src/sim');
     const art = NEW_ARENA_ART();
     const WITH_ENV = [
       'rumbleOjuelegba',
@@ -430,6 +431,8 @@ describe('the generic builder', () => {
       'rumbleLagosIsland',
       'rumbleLekki',
       'rumbleEbuteMetta',
+      // a campaign area is drawn with its district's environment kit (decision WX3)
+      ...CAMPAIGN_ARENA_IDS,
     ];
     for (const id of WITH_ENV) expect(art[id]!.env, id).toBeDefined();
     for (const [id, a] of Object.entries(art)) if (!WITH_ENV.includes(id)) expect(a.env, id).toBeUndefined();

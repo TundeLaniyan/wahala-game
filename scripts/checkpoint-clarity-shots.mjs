@@ -77,26 +77,27 @@ for (const scenario of list.split(',')) {
     // the countdown passes and the match starts
     while (s.match.phase !== 'playing') w.stepTicks(10);
     w.stepTicks(120);
-    const legs = [
-      [9, 39],
-      [19, 39],
-      [26, 40],
+    const def = w.fieldMissionDef('oshodi.approach'); // the mission data's own tiles (decision WX5)
+    const legs = def.legs[0].markers.map((m) => [m.x, m.y]);
+    const [door, front] = [
+      [def.doors[0].x, def.doors[0].y],
+      [def.doors[0].returnTile[0], def.doors[0].returnTile[1]],
     ];
     if (scenario === 'checkpoint') {
-      put(6, 39);
+      put(legs[0][0], legs[0][1] - 1);
       w.stepTicks(2);
     } else if (scenario === 'reached') {
-      put(9, 39);
+      put(legs[0][0], legs[0][1]);
       w.stepTicks(20);
     } else if (scenario === 'door' || scenario === 'drain') {
       for (const [x, y] of legs) {
         put(x, y);
         w.stepTicks(2);
       }
-      put(25, 44);
+      put(door[0], door[1]);
       w.stepTicks(scenario === 'door' ? 24 : 40);
       if (scenario === 'drain') {
-        put(25, 43);
+        put(front[0], front[1]);
         w.stepTicks(6);
       }
     }

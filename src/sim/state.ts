@@ -11,7 +11,7 @@ import { nextFloat, nextInt, seedToState, weightedPick } from './rng';
 import { NO_TEAM, Tile } from './types';
 import { assignTeams, modeConfig, modeShrinks } from './modes';
 import { missionConfigLayer } from './mission/build';
-import { getMissionArenaId } from './mission/defs';
+import { missionArenaId } from './mission/arena';
 import { createFieldMissionState } from './mission/fieldState';
 import { createMissionState } from './mission/state';
 import { missionSectorOf } from './mission/sectors';
@@ -150,7 +150,7 @@ export function createGame(options: GameOptions): GameState {
   const arena = getArena(
     options.arenaId ??
       (options.mission
-        ? getMissionArenaId(options.mission.id)
+        ? missionArenaId(options.mission)
         : options.raid
           ? raidArenaId(options.raid.raidId)
           : DEFAULT_ARENA_ID),

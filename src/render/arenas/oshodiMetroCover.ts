@@ -33,7 +33,7 @@ import { createVehicleModel } from '../assets/vehicles';
 import { artRng, concreteTexture, corrugatedTexture } from '../textures';
 import type { BoardCover, CoverClip } from './boardCover';
 import { CoverBuilder } from './boardCover';
-import { OSHODI_COVER_REACH, oshodiCoverGroups } from './oshodiMetroCoverMap';
+import { OSHODI_COVER, OSHODI_COVER_REACH, oshodiCoverGroups } from './oshodiMetroCoverMap';
 import type { OshodiCoverGroup } from './oshodiMetroCoverMap';
 import {
   CABIN_BOARD,
@@ -899,14 +899,20 @@ function wall(k: Kit, g: number, grp: OshodiCoverGroup, n: number): void {
 
 // ---------------------------------------------------------------------------------------- the build
 
-/** Builds the whole board's cover (null if the board is not the 63 x 47 Oshodi grid). */
-export function buildOshodiMetroCover(board: {
-  width: number;
-  height: number;
-  /** A mission sector's render clip: groups with no tile inside it are left out (absent = the whole board). */
-  clip?: CoverClip;
-}): BoardCover | null {
-  const groups = oshodiCoverGroups();
+/**
+ * Builds a board's cover from an Oshodi cover map: the Transport Metropolis map by default, or a campaign area's own map
+ * painted with the same letters (`render/arenas/campaign/`, decision WX3).
+ */
+export function buildOshodiMetroCover(
+  board: {
+    width: number;
+    height: number;
+    /** A mission sector's render clip: groups with no tile inside it are left out (absent = the whole board). */
+    clip?: CoverClip;
+  },
+  map: readonly string[] = OSHODI_COVER,
+): BoardCover | null {
+  const groups = oshodiCoverGroups(map);
   const W = board.width;
   const H = board.height;
   const b = new CoverBuilder(W, H);

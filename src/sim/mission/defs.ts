@@ -170,6 +170,10 @@ const OSHODI: MissionDef = {
   parSec: 240,
   recipe: bossRecipe({ anchor: 'post', callRoles: ['escort', 'runner', 'meleeGuard'] }),
   reinforceMax: 3,
+  // the dispatch corridor of the district map (decision WX9): the relays, the convoy lanes and the boss territory, the
+  // rest of the city closed by Ring cordons; the human comes in at the west end of the market front
+  sectorId: 'oshodi.dispatchCorridor',
+  start: [2, 19],
   boss: { name: 'Oga Sunmola', characterId: 'streetBaller', post: [27, 12], radius: 3 },
   crew: [
     { role: 'meleeGuard', name: 'Dispatch Marshal', variant: 'agbero', post: [26, 13], radius: 3 },

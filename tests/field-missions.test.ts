@@ -8,6 +8,25 @@ import { CATCH_TICKS, DOOR_HOLD_TICKS, missionView, resolveRaid, tick } from '..
 import type { GameState } from '../src/sim';
 import { addGenerator } from './helpers';
 import { advance, hashOf, of, put } from './mission-helpers';
+import {
+  APPROACH_DOOR,
+  APPROACH_DOOR_RETURN,
+  APPROACH_MARKERS,
+  APPROACH_RETURN,
+  RAIL_EXIT,
+} from './oshodi-route';
+import { getFieldMission } from '../src/sim';
+
+const [A, B, C] = APPROACH_MARKERS as [
+  readonly [number, number],
+  readonly [number, number],
+  readonly [number, number],
+];
+
+const PLAZA = ((): readonly [number, number] => {
+  const hold = getFieldMission('oshodi.railEdge').legs.find((l) => l.kind === 'holdArea')!;
+  return hold.kind === 'holdArea' ? [hold.area.x, hold.area.y] : [0, 0];
+})();
 import { newField, raidOutcome, walkField } from './field-helpers';
 
 const APPROACH = 'oshodi.approach';
@@ -20,6 +39,13 @@ const groupIds = (s: GameState, group: string): number[] =>
   m(s)
     .seats.filter((x) => x.group === group)
     .map((x) => x.playerId);
+/**
+ * Rail Edge staging tiles on the siding along the north fence (track tiles never hold a crate: decision WX8): the human,
+ * the tile next to him, and one ten tiles away.
+ */
+const SIDING_HUMAN = [20, 3] as const;
+const SIDING_NEXT = [21, 3] as const;
+const SIDING_FAR = [10, 3] as const;
 /** Rail Edge's pursuer seat (the trailer hand). */
 const pursuer = (s: GameState): number => groupIds(s, 'pursuers')[0]!;
 
@@ -43,11 +69,7 @@ function railEdgeToEscape(s: GameState): void {
 
 /** Walks the first leg of the approach mission by placing the human on each marker (one tick each). */
 function reachAllMarkers(s: GameState): void {
-  for (const [x, y] of [
-    [9, 39],
-    [19, 39],
-    [26, 40],
-  ] as const) {
+  for (const [x, y] of APPROACH_MARKERS) {
     put(s, 0, x, y);
     advance(s, 1);
   }
@@ -71,8 +93,8 @@ describe('a section field mission is not a boss fight', () => {
     expect(v.doors![0]).toMatchObject({ id: 'depot', status: 'idle', required: true });
     expect(of(events, 'missionStarted')).toHaveLength(1);
     expect(of(events, 'bossShielded')).toHaveLength(0);
-    // the four wardens of the roster (decision DA2; the archived combat pilot's extra enemies are gone: decision SA3)
-    expect(v.crewAlive).toBe(4);
+    // the wardens of the roster (decisions DA2, WX7; the archived combat pilot's extra enemies are gone: decision SA3)
+    expect(v.crewAlive).toBe(getFieldMission(APPROACH).enemies.length);
   });
 
   it('is deterministic: same spec and seed, same state', () => {
@@ -90,22 +112,22 @@ describe('a section field mission is not a boss fight', () => {
 describe('reachMarkers', () => {
   it('lights the markers one at a time and completes after the last, in order', () => {
     const s = newField(APPROACH);
-    put(s, 0, 19, 39); // the SECOND marker first: does not count
+    put(s, 0, ...B); // the SECOND marker first: does not count
     advance(s, 3);
     expect(f(s).markersDone).toBe(0);
-    put(s, 0, 9, 39);
+    put(s, 0, ...A);
     const events = advance(s, 1);
     expect(f(s).markersDone).toBe(1);
     expect(missionView(s)!.nodes.map((n) => n.state)).toEqual(['done', 'live', 'locked']);
     expect(of(events, 'missionNode').some((e) => e.nodeId === 'mk0' && e.state === 'done')).toBe(true);
-    put(s, 0, 19, 39);
+    put(s, 0, ...B);
     advance(s, 1);
-    put(s, 0, 26, 40);
+    put(s, 0, ...C);
     const last = advance(s, 1);
     expect(f(s).leg).toBe(1);
     expect(of(last, 'missionPhase').map((e) => `${e.phase}:${e.change}`)).toEqual(['0:cleared', '1:started']);
     expect(missionView(s)!.legKind).toBe('door');
-    expect(f(s).checkpoint).toEqual({ x: 26, y: 40 });
+    expect(f(s).checkpoint).toEqual({ x: C[0], y: C[1] });
   });
 
   it('failure path: an idle human does not progress and the clock ends the mission', () => {
@@ -150,7 +172,7 @@ describe('escapeRoute', () => {
 
   it('reaching the exit completes the leg and the return route follows', () => {
     const s = atEscape();
-    put(s, 0, 59, 28);
+    put(s, 0, ...RAIL_EXIT);
     advance(s, 1);
     expect(f(s).leg).toBe(4);
     expect(missionView(s)!.legKind).toBe('returnRoute');
@@ -162,15 +184,17 @@ describe('escapeRoute', () => {
     const id = pursuer(s);
     expect(directiveFor(s, id)).toMatchObject({ kind: 'block' });
     railEdgeToEscape(s);
+    // the escape starts where the hold ended: on the rail plaza (the campaign area's pursuer waits by it, decision WX8)
+    put(s, 0, PLAZA[0], PLAZA[1]);
     expect(directiveFor(s, id)).toMatchObject({ kind: 'chase' });
   });
 
   it('failure path: a pursuer next to you catches you: a life, the checkpoint, the pursuer back at its post', () => {
     const s = atEscape();
     const id = pursuer(s);
-    put(s, 0, 50, 36);
+    put(s, 0, ...SIDING_HUMAN);
     const post = { ...m(s).seats[id]!.post! };
-    put(s, id, 51, 36); // right next to the human
+    put(s, id, ...SIDING_NEXT); // right next to the human
     const before = m(s).livesUsed;
     advance(s, CATCH_TICKS + 2);
     expect(f(s).caught).toBe(1);
@@ -185,15 +209,15 @@ describe('escapeRoute', () => {
   it('a pursuer that only passes by does not catch you, and three catches lose the mission', () => {
     const s = atEscape();
     const id = pursuer(s);
-    put(s, 0, 50, 36);
-    put(s, id, 51, 36);
+    put(s, 0, ...SIDING_HUMAN);
+    put(s, id, ...SIDING_NEXT);
     advance(s, CATCH_TICKS - 20);
-    put(s, id, 40, 36); // gone before the catch
+    put(s, id, ...SIDING_FAR); // gone before the catch
     advance(s, 60);
     expect(f(s).caught).toBe(0);
     for (let i = 0; i < 3 && !m(s).outcome; i++) {
-      put(s, 0, 50, 36);
-      put(s, id, 51, 36);
+      put(s, 0, ...SIDING_HUMAN);
+      put(s, id, ...SIDING_NEXT);
       advance(s, CATCH_TICKS + 2);
     }
     expect(m(s).outcome?.result).toBe('lost');
@@ -211,7 +235,7 @@ describe('door and RaidRequest', () => {
 
   it('holding a door raises the raid request after about a second, with the return tile', () => {
     const s = atDoor();
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, DOOR_HOLD_TICKS - 5);
     expect(m(s).pendingRaid).toBeNull();
     expect(missionView(s)!.doors![0]!.fraction).toBeGreaterThan(0.5);
@@ -219,7 +243,7 @@ describe('door and RaidRequest', () => {
     expect(m(s).pendingRaid).toEqual({
       doorId: 'depot',
       raidId: 'warehouseDispatchDepot',
-      returnTile: { x: 25, y: 43 },
+      returnTile: { x: APPROACH_DOOR_RETURN[0], y: APPROACH_DOOR_RETURN[1] },
     });
     expect(f(s).doors[0]!.status).toBe('inRaid');
     expect(missionView(s)!.pendingRaid?.doorId).toBe('depot');
@@ -227,23 +251,23 @@ describe('door and RaidRequest', () => {
 
   it('a pass-by does not count: stepping off drains the hold, and a required door waits for its leg', () => {
     const early = newField(APPROACH);
-    put(early, 0, 25, 44);
+    put(early, 0, ...APPROACH_DOOR);
     advance(early, DOOR_HOLD_TICKS + 20);
     expect(m(early).pendingRaid).toBeNull(); // markers not done: the door is locked
 
     const s = atDoor();
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, 40);
-    put(s, 0, 25, 43);
+    put(s, 0, ...APPROACH_DOOR_RETURN);
     advance(s, 40);
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, 30);
     expect(m(s).pendingRaid).toBeNull();
   });
 
   it('only one request is out at a time and the field mission waits while it is', () => {
     const s = atDoor();
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, DOOR_HOLD_TICKS + 2);
     const request = m(s).pendingRaid;
     expect(request).not.toBeNull();
@@ -259,7 +283,7 @@ describe('resolveRaid', () => {
   function raised(): GameState {
     const s = newField(APPROACH);
     reachAllMarkers(s);
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, DOOR_HOLD_TICKS + 2);
     expect(m(s).pendingRaid).not.toBeNull();
     return s;
@@ -274,11 +298,11 @@ describe('resolveRaid', () => {
     expect(f(s).leg).toBe(2);
     expect(missionView(s)!.legKind).toBe('returnRoute');
     const me = s.players[0]!;
-    expect([me.x, me.y]).toEqual([25, 43]);
+    expect([me.x, me.y]).toEqual([...APPROACH_DOOR_RETURN]);
     expect(me.protectedUntil).toBeGreaterThan(s.tick);
     expect(missionView(s)!.doors![0]!.status).toBe('done');
     // a completed door does not raise again
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, DOOR_HOLD_TICKS + 5);
     expect(m(s).pendingRaid).toBeNull();
   });
@@ -290,8 +314,8 @@ describe('resolveRaid', () => {
     expect(m(s).livesUsed).toBe(1);
     expect(f(s).leg).toBe(1);
     const me = s.players[0]!;
-    expect([me.x, me.y]).toEqual([25, 43]);
-    put(s, 0, 25, 44);
+    expect([me.x, me.y]).toEqual([...APPROACH_DOOR_RETURN]);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, DOOR_HOLD_TICKS + 2);
     expect(m(s).pendingRaid?.doorId).toBe('depot');
   });
@@ -301,7 +325,7 @@ describe('resolveRaid', () => {
     resolveRaid(s, 'depot', raidOutcome('warehouseDispatchDepot', { result: 'abandoned', stars: 0 }));
     expect(f(s).doors[0]!.status).toBe('idle');
     expect(m(s).livesUsed).toBe(0);
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, DOOR_HOLD_TICKS + 2);
     expect(m(s).pendingRaid?.doorId).toBe('depot');
   });
@@ -348,7 +372,7 @@ describe('resolveRaid', () => {
       const s = raised();
       if (slow) s.match.playTicks = m(s).tuning.parTicks + 600;
       resolveRaid(s, 'depot', raidOutcome('warehouseDispatchDepot', { stars }));
-      put(s, 0, 4, 38);
+      put(s, 0, ...APPROACH_RETURN);
       advance(s, 3);
       return m(s).outcome!.stars;
     };
@@ -362,11 +386,11 @@ describe('the return route and the result', () => {
   it('walking to the return marker completes the mission with a section outcome', () => {
     const s = newField(APPROACH);
     reachAllMarkers(s);
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, DOOR_HOLD_TICKS + 2);
     resolveRaid(s, 'depot', raidOutcome('warehouseDispatchDepot'));
     expect(m(s).outcome).toBeNull(); // not yet: the way back
-    put(s, 0, 4, 38);
+    put(s, 0, ...APPROACH_RETURN);
     const events = advance(s, 3);
     expect(m(s).outcome).toMatchObject({
       result: 'won',
@@ -384,7 +408,7 @@ describe('the return route and the result', () => {
   it('losing every life loses the mission, and an elimination spends one and respawns at the checkpoint', () => {
     const s = newField(APPROACH);
     s.players[0]!.vitals!.hp = 1; // one segment left: the generator's blast is now lethal (campaign health)
-    put(s, 0, 9, 39);
+    put(s, 0, ...A);
     advance(s, 1);
     const me = s.players[0]!;
     // the sim path: an enemy generator on the human's tile (the human is not protected)

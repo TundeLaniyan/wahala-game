@@ -1,7 +1,7 @@
 // District-sector screenshots (docs/CAMPAIGN_SECTOR_AI.md): a field mission started through the debug handle, the human
 // staged on a tile next to the sector's barricades, the follow camera settled, a JPEG of the frame.
 //   SHOT_URL=http://localhost:<port>/wahala-game/ WAHALA_CHROMIUM=/opt/pw-browsers/chromium WAHALA_MULTIPROCESS=1 \
-//   node scripts/sector-shots.mjs <out-dir> <phone|desktop> <fieldId@XxY[:overview],...> [--nosector]
+//   node scripts/sector-shots.mjs <out-dir> <phone|phoneWide|desktop> <fieldId@XxY[:overview],...> [--nosector]
 // `:overview` takes the sector overview (the establishing shot) instead of the follow camera; `:inspect` an unclamped
 // close-up of the tile (art review of the barricade objects).
 import { chromium } from '@playwright/test';
@@ -15,6 +15,7 @@ const [
 ] = process.argv.slice(2);
 const VP = {
   phone: { viewport: { width: 740, height: 360 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+  phoneWide: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
   desktop: { viewport: { width: 1280, height: 720 } },
 };
 mkdirSync(outDir, { recursive: true });
