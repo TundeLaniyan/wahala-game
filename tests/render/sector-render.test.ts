@@ -10,7 +10,7 @@ import { FIELD_MISSION_DEFS, FIELD_MISSION_IDS, buildMissionGame, createGame } f
 import type { GameState } from '../../src/sim';
 import { Tile } from '../../src/sim/types';
 import { getSector } from '../../src/sim/mission/sectors';
-import { applySector, openSectorGates } from '../../src/sim/mission/sector';
+import { openSectorGates } from '../../src/sim/mission/sector';
 import { buildSectorBarricades } from '../../src/render/views/SectorBarricades';
 import { mergeCovers, rectInClip } from '../../src/render/arenas/boardCover';
 import { NEW_ARENA_ART } from '../../src/render/arenas/newArenas';
@@ -49,32 +49,19 @@ describe('sector barricades are drawn as objects', () => {
   });
 
   it('a gate barricade hides when its gate opens', () => {
+    // the depot's steel gate of the Orita Gate campaign area (decision WX6): a real gate of the mission data now
     const s = field('oshodi.approach');
-    const def = getSector('oshodi.terminalApproach');
-    const withGate = {
-      ...def,
-      barricades: def.barricades.filter((x) => x.id !== 'depotGate'),
-      gates: [
-        {
-          id: 'depotGate',
-          kind: 'gate' as const,
-          tiles: [
-            [36, 37],
-            [36, 38],
-            [36, 39],
-          ] as const,
-          opensAfterLeg: 0,
-        },
-      ],
-    };
-    applySector(s, withGate);
-    const b = buildSectorBarricades(s, withGate)!;
-    expect(b.stats()).toEqual({ barricades: def.barricades.length, gates: 1, open: 0 });
+    const def = getSector('oshodi.orita');
+    expect(def.gates).toHaveLength(1);
+    const [gx, gy] = def.gates![0]!.tiles[0]!;
+    const b = buildSectorBarricades(s, def)!;
+    // `barricades` counts every drawn object, the gate included
+    expect(b.stats()).toEqual({ barricades: def.barricades.length + 1, gates: 1, open: 0 });
     b.sync(s);
     expect(b.gateObject('depotGate')!.visible).toBe(true);
-    expect(b.cover.covers(37 * s.width + 36)).toBe(true);
+    expect(b.cover.covers(gy * s.width + gx)).toBe(true);
     openSectorGates(s, 0, []);
-    expect(s.tiles[37 * s.width + 36]).toBe(Tile.Empty);
+    expect(s.tiles[gy * s.width + gx]).toBe(Tile.Empty);
     b.sync(s);
     expect(b.gateObject('depotGate')!.visible).toBe(false);
     expect(b.stats().open).toBe(1);

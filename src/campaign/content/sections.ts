@@ -98,7 +98,7 @@ const OSHODI_SECTIONS: SectionDef[] = [
         unlocks: ['section.oshodi.s2'],
         ringWeakened: 'The depot’s dispatch cargo is broken: the convoys lose their schedule.',
         readMore:
-          'Three checkpoints (A, B and C) mark the way. Two park wardens walk set rounds, one round the ticket kiosk and one down the stall lane: watch where they turn and pass behind them, or lay a generator where they will walk. A tout throws from the forecourt by C, and a heavy walks the depot lane: only a blast finishes him. The Dispatch Depot door opens the warehouse raid: marked cargo, a wave of wardens and a lane of thrown bottles. Win it, or leave and try again: the door stays open. When the depot is done, walk back to the Orita gate to finish.',
+          'Three checkpoints (A, B and C) mark the way: two on the terminal forecourt, the third at the end of the Papa Kekere market by the depot fence. Two park wardens walk set rounds, one round the ticket kiosk by the gate and one round a stall block in the market: watch where they turn and pass behind them, or lay a generator where they will walk. A fare tout throws from under the forecourt canopy and a ticket tout from the market end. Once the checkpoints are walked the depot’s steel gate opens, and a heavy walks the lane in front of the depot door: only a blast finishes him. The Dispatch Depot door opens the warehouse raid: marked cargo, a wave of wardens and a lane of thrown bottles. Win it, or leave and try again: the door stays open. When the depot is done, walk back to the Orita gate to finish.',
         intro: [
           say('MAMA PUT', 'Wardens hold the gate and the depot. Go quiet: checkpoint by checkpoint.'),
           say(

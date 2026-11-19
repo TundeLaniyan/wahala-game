@@ -70,26 +70,7 @@ const col = (x: number, y0: number, y1: number): T[] =>
 const b = (id: string, kind: BarricadeKind, tiles: T[]): SectorBarricadeDef => ({ id, kind, tiles });
 
 const defs: MissionSectorDef[] = [
-  // ---------------------------------------------------------------- Oshodi
-  {
-    id: 'oshodi.terminalApproach',
-    districtId: 'oshodi',
-    name: 'Terminal approach streets',
-    area: 'The two southern stall streets from the Orita gate to the dispatch depot entrance; closed by the terminal wall, a danfo rank and a Ring checkpoint on the alleys north, the depot gate and a parked bus east.',
-    rects: [[2, 37, 35, 44]],
-    barricades: [
-      b('alley1', 'barrier', row(36, 2, 2)),
-      b('alley2', 'barrier', row(36, 7, 8)),
-      b('alley3', 'checkpoint', row(36, 13, 14)),
-      b('alley4', 'barrier', row(36, 19, 20)),
-      b('rank', 'bus', row(36, 25, 27)),
-      b('alley5', 'barrier', row(36, 35, 35)),
-      b('depotGate', 'gate', col(36, 37, 39)),
-      b('depotBus', 'bus', col(36, 41, 44)),
-    ],
-    viewMargin: 3,
-    hazards: 'inside',
-  },
+  // Oshodi mission 1 plays on its own campaign area now (decisions WX5-WX7, `campaignAreas.ts`)
   {
     id: 'oshodi.railEdge',
     districtId: 'oshodi',
@@ -350,6 +331,25 @@ const defs: MissionSectorDef[] = [
  * `getSector`, never in `MISSION_SECTOR_IDS`.
  */
 const LEGACY_SECTORS: readonly MissionSectorDef[] = [
+  {
+    id: 'oshodi.terminalApproach',
+    districtId: 'oshodi',
+    name: 'Terminal approach streets',
+    area: 'The two southern stall streets from the Orita gate to the dispatch depot entrance; closed by the terminal wall, a danfo rank and a Ring checkpoint on the alleys north, the depot gate and a parked bus east.',
+    rects: [[2, 37, 35, 44]],
+    barricades: [
+      b('alley1', 'barrier', row(36, 2, 2)),
+      b('alley2', 'barrier', row(36, 7, 8)),
+      b('alley3', 'checkpoint', row(36, 13, 14)),
+      b('alley4', 'barrier', row(36, 19, 20)),
+      b('rank', 'bus', row(36, 25, 27)),
+      b('alley5', 'barrier', row(36, 35, 35)),
+      b('depotGate', 'gate', col(36, 37, 39)),
+      b('depotBus', 'bus', col(36, 41, 44)),
+    ],
+    viewMargin: 3,
+    hazards: 'inside',
+  },
 ];
 
 // the Ojuelegba finale's field sectors (19, 20) follow the districts' (decision FN3; data in finaleDefs.ts); the campaign

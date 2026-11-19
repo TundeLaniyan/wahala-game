@@ -1,0 +1,211 @@
+/**
+ * CAMPAIGN AREAS (docs/CAMPAIGN_WORLD.md, decisions WX1-WX9): the campaign-only boards and their area data (the board kit
+ * itself: tests/campaign-kit.test.ts).
+ *
+ *   isolation  every campaign arena is campaign-only: in no menu list (Classic, City Rumble, Team, experimental, raids)
+ *   areas      every registered area against its board and its missions: the same arena and sector, the entry is the
+ *              mission's start, the sub-areas cover the play area, the landmarks lie on or by the board, and the area is
+ *              larger than the old district sector it replaces (the measured walkable tiles are printed)
+ *   oshodi     the two Oshodi field maps are different boards; the City Rumble Oshodi map is unchanged
+ *   saves      an old save with Oshodi progress loads and unlocks the same missions (mission ids unchanged)
+ *
+ * The play-area checks every sector gets (authored tiles inside, no leak, every target reachable with the gates opened in
+ * leg order, the route needs no blasting) run for the areas' sectors in tests/mission-sectors.test.ts.
+ */
+import { createHash } from 'node:crypto';
+import { describe, expect, it } from 'vitest';
+import {
+  ARENAS,
+  CAMPAIGN_AREA_DEFS,
+  CAMPAIGN_ARENAS,
+  CAMPAIGN_ARENA_IDS,
+  EXPERIMENTAL_ARENA_IDS,
+  FIELD_MISSION_DEFS,
+  RAID_ARENA_IDS,
+  RUMBLE_ARENA_IDS,
+  STANDARD_ARENA_IDS,
+  buildMissionGame,
+  createGame,
+  fieldArenaId,
+  getArena,
+  missionArenaId,
+} from '../src/sim';
+import { getSector } from '../src/sim/mission/sectors';
+import { rectsContain } from '../src/sim/mission/sector';
+import { createSave } from '../src/campaign/progress';
+import { repairSave } from '../src/campaign/save';
+import { missionStatus } from '../src/campaign/sectionState';
+
+// ------------------------------------------------------------------------------------------- isolation
+
+describe('campaign arenas never appear in a competitive list', () => {
+  it('none is in ARENAS, the Classic / Rumble / experimental / raid lists; getArena finds each', () => {
+    expect(CAMPAIGN_ARENA_IDS.length).toBeGreaterThan(0);
+    const lists = [
+      Object.keys(ARENAS),
+      STANDARD_ARENA_IDS,
+      RUMBLE_ARENA_IDS,
+      EXPERIMENTAL_ARENA_IDS,
+      RAID_ARENA_IDS,
+    ];
+    for (const id of CAMPAIGN_ARENA_IDS) {
+      for (const list of lists) expect(list, id).not.toContain(id);
+      expect(getArena(id)).toBe(CAMPAIGN_ARENAS[id]);
+      expect(getArena(id).campaignOnly).toBe(true);
+    }
+    // and nothing in the menus' lists is campaign-only
+    for (const id of Object.keys(ARENAS)) expect(ARENAS[id]!.campaignOnly, id).toBeUndefined();
+  });
+});
+
+// ------------------------------------------------------------------------------------------- the areas
+
+/** Walkable tiles of the old district sectors the Oshodi areas replace (docs/CAMPAIGN_SECTOR_AI.md, DS1). */
+const OLD_SECTOR_TILES: Readonly<Record<string, number>> = {
+  'oshodi.approach': 188,
+  'oshodi.railEdge': 368,
+};
+
+const walkable = (
+  layout: readonly string[],
+  rects: readonly (readonly [number, number, number, number])[],
+): number => {
+  let n = 0;
+  layout.forEach((row, y) => [...row].forEach((c, x) => c !== '#' && rectsContain(rects, x, y) && n++));
+  return n;
+};
+
+describe.each(CAMPAIGN_AREA_DEFS.map((a) => [a.id, a] as const))('area %s', (_id, area) => {
+  const arena = getArena(area.arenaId);
+
+  it('is drawn on its own campaign-only board, with its sector on that board', () => {
+    expect(arena.campaignOnly).toBe(true);
+    expect(area.sector.arenaId).toBe(area.arenaId);
+    expect(area.sector.districtId).toBe(area.districtId);
+    expect(getSector(area.sector.id)).toBe(area.sector);
+    expect(arena.coverMap).toBeDefined();
+  });
+
+  it('its missions point at it: the same arena and sector, the entry is the start, the exits are real markers', () => {
+    expect(area.missions.length).toBeGreaterThan(0);
+    for (const id of area.missions) {
+      const def = FIELD_MISSION_DEFS[id]!;
+      expect(def, id).toBeDefined();
+      expect(def.arenaId).toBe(area.arenaId);
+      expect(def.sectorId).toBe(area.sector.id);
+      expect(def.districtId).toBe(area.districtId);
+      expect(fieldArenaId(def)).toBe(area.arenaId);
+      expect(missionArenaId({ id: def.districtId, fieldId: id })).toBe(area.arenaId);
+      expect([...def.start]).toEqual([...area.entry]);
+      // the return marker is one of the area's exits, and every exit is open floor of the board
+      expect(area.exits.some((e) => e.x === def.returnMarker.x && e.y === def.returnMarker.y)).toBe(true);
+      // a real match is built on the board
+      const s = createGame(
+        buildMissionGame({
+          spec: { id: def.districtId, fieldId: id },
+          humanCharacter: 'streetBaller',
+          seed: 1,
+        }),
+      );
+      expect(s.arenaId).toBe(area.arenaId);
+      expect(s.sector?.id).toBe(area.sector.id);
+    }
+    for (const e of area.exits) expect('._', `${e.id}`).toContain(arena.layout[e.y]?.[e.x]);
+  });
+
+  it('its sub-areas are the board districts and together cover every walkable tile of the play area', () => {
+    expect(arena.districts!.map((d) => d.id)).toEqual(area.subAreas.map((d) => d.id));
+    expect(area.subAreas.length).toBeGreaterThanOrEqual(3);
+    for (const d of area.subAreas) expect(d.purpose.length, d.id).toBeGreaterThan(10);
+    arena.layout.forEach((row, y) =>
+      [...row].forEach((c, x) => {
+        if (c === '#' || !rectsContain(area.sector.rects, x, y)) return;
+        expect(
+          area.subAreas.some((d) => rectsContain(d.rects, x, y)),
+          `${x},${y} in no sub-area`,
+        ).toBe(true);
+      }),
+    );
+  });
+
+  it('its landmarks are anchored on or beside the board, with a story', () => {
+    const W = arena.layout[0]!.length;
+    const H = arena.layout.length;
+    for (const l of area.landmarks) {
+      expect(l.at[0] >= 0 && l.at[0] < W && l.at[1] >= 0 && l.at[1] < H, l.id).toBe(true);
+      expect(l.story.length).toBeGreaterThan(10);
+    }
+    expect(new Set(area.landmarks.map((l) => l.id)).size).toBe(area.landmarks.length);
+  });
+
+  it('is clearly larger than the old district sector it replaces (measured walkable tiles)', () => {
+    const tiles = walkable(arena.layout, area.sector.rects);
+    for (const id of area.missions) {
+      const old = OLD_SECTOR_TILES[id];
+      console.log(`[campaign-world] ${area.id} (${id}): ${tiles} walkable tiles, old sector ${old ?? '-'}`);
+      if (old !== undefined) expect(tiles, id).toBeGreaterThan(old * 1.5);
+    }
+    expect(area.subAreas.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ------------------------------------------------------------------------------------------- Oshodi
+
+describe('Oshodi', () => {
+  it('the City Rumble Oshodi map is unchanged (its layout hash is the one before the campaign areas)', () => {
+    const h = createHash('sha256').update(getArena('rumbleOshodi').layout.join('\n')).digest('hex');
+    expect(h.slice(0, 16)).toBe(RUMBLE_OSHODI_LAYOUT);
+  });
+
+  it('every Oshodi field mission plays on its own campaign area; two missions never share a board', () => {
+    const ids = Object.values(FIELD_MISSION_DEFS)
+      .filter((d) => d.districtId === 'oshodi' && d.arenaId !== undefined) // mission 1 moved first (WX5)
+      .map((d) => d.id);
+    const boards = ids.map((id) => fieldArenaId(FIELD_MISSION_DEFS[id]!));
+    for (const b of boards) expect(getArena(b).campaignOnly, b).toBe(true);
+    expect(new Set(boards).size).toBe(boards.length);
+    // and the boards themselves differ: different layouts, no sub-area of one is in the other
+    for (let i = 0; i < boards.length; i++)
+      for (let j = i + 1; j < boards.length; j++) {
+        const a = getArena(boards[i]!);
+        const b = getArena(boards[j]!);
+        expect(a.layout.join('\n')).not.toBe(b.layout.join('\n'));
+        const names = new Set(a.districts!.map((d) => d.name));
+        for (const d of b.districts!) expect(names.has(d.name), d.name).toBe(false);
+      }
+  });
+});
+
+/** sha256 (first 16 hex) of the rumbleOshodi layout on 0b89d09. */
+const RUMBLE_OSHODI_LAYOUT = '4a76c2f857d6e2bd';
+
+// ------------------------------------------------------------------------------------------- saves
+
+describe('saves keep working (mission ids unchanged)', () => {
+  it('an old save with Oshodi progress loads and unlocks the same missions', () => {
+    // a version-2 save as the last release wrote it: Terminal Approach and its raid cleared, Rail Edge not yet
+    const old = createSave(1000);
+    old.missions['oshodi.approach'] = {
+      ...old.missions['oshodi.approach']!,
+      status: 'cleared',
+      clears: 1,
+      attempts: 1,
+      bestStars: 2,
+    };
+    const loaded = repairSave(JSON.parse(JSON.stringify(old)))!;
+    expect(loaded).not.toBeNull();
+    expect(missionStatus(loaded, 'oshodi.approach')).toBe('cleared');
+    expect(missionStatus(loaded, 'oshodi.railEdge')).toBe('available');
+    expect(missionStatus(loaded, 'oshodi.boss')).toBe('locked');
+    // and with Rail Edge cleared too, the boss is next
+    loaded.missions['oshodi.railEdge'] = {
+      ...loaded.missions['oshodi.railEdge']!,
+      status: 'cleared',
+      clears: 1,
+      attempts: 1,
+    };
+    const again = repairSave(JSON.parse(JSON.stringify(loaded)))!;
+    expect(missionStatus(again, 'oshodi.railEdge')).toBe('cleared');
+    expect(missionStatus(again, 'oshodi.boss')).not.toBe('locked');
+  });
+});

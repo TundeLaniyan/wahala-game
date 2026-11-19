@@ -14,6 +14,7 @@ import type { Tile2 } from './defs';
 import { ebuteX } from '../arenas/ebuteWest';
 import { FINALE_FIELD_DEFS } from './finaleDefs';
 import { ARCHIVED_FIELD_DEFS } from './archivedFieldDefs';
+import { ORITA_ARENA_ID } from '../arenas/campaign/oshodiOrita';
 
 export interface FieldMarkerDef {
   x: number;
@@ -189,43 +190,49 @@ const defs: FieldMissionDef[] = [
   // Districts pass A (docs/CAMPAIGN_SECTOR_AI.md "Districts: Oshodi, Mushin, Fadeyi/Somolu", decisions DA1-DA9): the
   // legs of the campaign's first mission stay (checkpoint clarity reference); its wardens now walk readable routes.
   {
+    // Campaign area `oshodi.orita` (decisions WX5-WX7): the same legs on the area's own board. The kiosk warden still teaches
+    // the first trap by the start; a fare tout in the forecourt, the market warden and the lane tout make each sub-area an
+    // encounter; the depot's steel gate opens once the checkpoints are walked.
     id: 'oshodi.approach',
-    sectorId: 'oshodi.terminalApproach',
+    arenaId: ORITA_ARENA_ID,
+    sectorId: 'oshodi.orita',
     districtId: 'oshodi',
     name: 'Terminal Approach',
-    start: [3, 42],
-    returnMarker: m(4, 38, 'ORITA GATE'),
+    start: [3, 21],
+    returnMarker: m(4, 18, 'ORITA GATE'),
     legs: [
       {
         kind: 'reachMarkers',
         text: 'Walk through the 3 checkpoints. No need to stop.',
-        markers: [m(9, 39, 'CHECKPOINT A'), m(19, 39, 'CHECKPOINT B'), m(26, 40, 'CHECKPOINT C')],
+        markers: [m(12, 6, 'CHECKPOINT A'), m(28, 7, 'CHECKPOINT B'), m(29, 21, 'CHECKPOINT C')],
       },
       { kind: 'door', text: 'Stand on the depot door for 1 second to raid it.', doorId: 'depot' },
     ],
     doors: [
       {
         id: 'depot',
-        x: 25,
-        y: 44,
+        x: 36,
+        y: 13,
         label: 'DISPATCH DEPOT',
         raidId: 'warehouseDispatchDepot',
-        returnTile: [25, 43],
+        returnTile: [36, 14],
         required: true,
       },
     ],
     enemies: [
-      // a loop round the ticket kiosk between checkpoints A and B (it turns its back at the far corners)
-      guard('Park Warden', 14, 37, 'wardens', patrol('agbero', [10, 37], [18, 37], [18, 39], [10, 39])),
-      // the stall lane between the two streets: it crosses the start street and the checkpoint street
-      guard('Park Warden', 13, 41, 'wardens', patrol('agbero', [12, 42], [21, 42], [21, 44], [12, 44])),
-      // a lookout on the east forecourt beside checkpoint C: throws down the stall lanes
-      chaser('Ticket Tout', 31, 41, 'wardens', post('bottleThrower', 2)),
+      // the ticket kiosk by the gate: a loop round it, turning its back at the far corners (the first trap is taught here)
+      guard('Park Warden', 3, 13, 'wardens', patrol('agbero', [3, 13], [9, 13], [9, 16], [3, 16])),
+      // a fare tout under the forecourt canopy, between checkpoints A and B: throws at whoever crosses the queue lines
+      chaser('Fare Tout', 20, 4, 'wardens', post('bottleThrower', 2)),
+      // the market lanes: a warden loops the middle stall block
+      guard('Park Warden', 17, 14, 'wardens', patrol('agbero', [17, 14], [22, 14], [22, 18], [17, 18])),
+      // a lookout at the market's east end by the depot fence: throws down the lanes
+      chaser('Ticket Tout', 30, 14, 'wardens', post('bottleThrower', 2)),
       // the depot lane: walks across the depot door (only a blast finishes it)
-      blocker('Lane Blocker', 23, 42, 'wardens', patrol('heavyEnforcer', [20, 42], [27, 42])),
+      blocker('Lane Blocker', 37, 15, 'wardens', patrol('heavyEnforcer', [33, 15], [41, 15])),
     ],
     timeLimitSec: 360,
-    parSec: 90,
+    parSec: 120,
   },
   {
     id: 'oshodi.railEdge',

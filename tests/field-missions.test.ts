@@ -237,7 +237,7 @@ describe('door and RaidRequest', () => {
 
   it('a pass-by does not count: stepping off drains the hold, and a required door waits for its leg', () => {
     const early = newField(APPROACH);
-    put(early, 0, 25, 44);
+    put(early, 0, ...APPROACH_DOOR);
     advance(early, DOOR_HOLD_TICKS + 20);
     expect(m(early).pendingRaid).toBeNull(); // markers not done: the door is locked
 

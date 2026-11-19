@@ -3,9 +3,10 @@
  * no menu, picker, preview, City Rumble / Classic / Team list or multiplayer test sees them; `getArena` finds them by id.
  */
 import type { ArenaDef } from '../types';
+import { CAMPAIGN_OSHODI_ORITA } from './oshodiOrita';
 
 export const CAMPAIGN_ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
-  ([] as ArenaDef[]).map((a) => [a.id, a]),
+  [CAMPAIGN_OSHODI_ORITA].map((a) => [a.id, a]),
 );
 
 export const CAMPAIGN_ARENA_IDS: readonly string[] = Object.keys(CAMPAIGN_ARENAS);
