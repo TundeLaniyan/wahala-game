@@ -51,7 +51,7 @@ Normal and equal to it on Hard (the floor). Boss missions' bots have no enemy ki
   missions owns a real route: at least 2 waypoints, one circuit at least 12 tiles of walking (6 each way), inside the sector, off
   every objective tile, never on a floor trap (the bots never step on one: Late Loader's waypoint (36,13) in `mushin.market` was
   an oil slick and its patrol stalled; moved to (37,13)). Equipment crews, throwers, heavies and an escape leg's pursuers hold posts
-  by design. Eleven new or rewritten routes (mostly 3-4 waypoint LOOPS round a block); Section 3 lists them all.
+  by design. Twelve new or rewritten routes (3-4 waypoint LOOPS round a block where the geometry allows) and two waypoint fixes; section 3 lists them all.
 - Patrols never freeze: a crate dropped on a lane by a stage hazard used to stop a patroller for the rest of the mission (its route
   planner priced a crate at 4 but the enemy never blasts one). A campaign enemy's route planner now treats a crate as a wall
   (`ai/directive.ts`), and a patrol that has not reached its waypoint 720 ticks after setting off goes on to the next one.
