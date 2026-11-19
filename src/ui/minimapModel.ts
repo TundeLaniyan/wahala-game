@@ -154,15 +154,24 @@ export function minimapLayers(
   localId: number,
   focusId: number,
   soonSeconds = 8,
+  /**
+   * A campaign mission's discovered tiles (ui/minimapDiscovery.ts): crates, concrete, barricades, hazards, generators,
+   * flames and rivals on tiles not yet discovered are left out. Warnings, the closing city and the mission layer
+   * (objectives, telegraphed strikes, the boss) always show. Absent = everything is known (City Rumble).
+   */
+  known?: (x: number, y: number) => boolean,
 ): MinimapLayers {
   const w = state.width;
   const focus = state.players[focusId] ?? state.players[localId];
+  const seen = known ?? (() => true);
+  const seenAt = (i: number): boolean => seen(i % w, Math.floor(i / w));
   const near = (x: number, y: number): boolean =>
-    !focus || (Math.abs(x - focus.x) <= NEAR_TILES && Math.abs(y - focus.y) <= NEAR_TILES);
+    seen(x, y) && (!focus || (Math.abs(x - focus.x) <= NEAR_TILES && Math.abs(y - focus.y) <= NEAR_TILES));
 
   const players: MinimapPlayer[] = [];
   for (const p of state.players) {
     if (!p.alive) continue;
+    if (p.id !== localId && p.id !== focusId && !seen(p.x, p.y)) continue;
     players.push({
       id: p.id,
       slot: p.slot,
@@ -182,6 +191,7 @@ export function minimapLayers(
   const closed = new Set(state.sector?.blocked ?? []);
   for (let i = 0; i < state.tiles.length; i++) {
     const t = state.tiles[i];
+    if (known && !seenAt(i)) continue;
     if (t === Tile.Soft) soft.push(i);
     else if (t === Tile.Hard && closed.has(i)) barricade.push(i);
     else if (t === Tile.Hard && layout[Math.floor(i / w)]?.[i % w] !== '#') crushed.push(i);
@@ -211,7 +221,7 @@ export function minimapLayers(
   const hazards: number[] = [];
   for (const e of state.stage.events) {
     if (e.kind === 'drop') continue;
-    for (const t of e.tiles) hazards.push(t);
+    for (const t of e.tiles) if (seenAt(t)) hazards.push(t);
   }
 
   return {
