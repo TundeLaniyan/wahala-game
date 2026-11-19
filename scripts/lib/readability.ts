@@ -96,8 +96,12 @@ export function patrolTrace(
   const moving = new Map<number, number>();
   const last = new Map<number, string>();
   const states = new Map<number, Record<string, number>>();
-  for (const p of s.players)
-    if (p.id !== 0) (seen.set(p.id, new Set()), moving.set(p.id, 0), states.set(p.id, {}));
+  for (const p of s.players) {
+    if (p.id === 0) continue;
+    seen.set(p.id, new Set());
+    moving.set(p.id, 0);
+    states.set(p.id, {});
+  }
   for (let i = 0; i < seconds * 60 && s.match.phase !== 'ended'; i++) {
     step(r);
     for (const p of s.players) {
@@ -174,7 +178,10 @@ export function chaseProbe(
     let room = 0;
     for (let j = 0; j < dm.length; j++) if (dm[j]! >= 0 && de[j]! > dm[j]!) room++;
     const score = -room;
-    if (score < bestScore) ((bestScore = score), (best = i));
+    if (score < bestScore) {
+      bestScore = score;
+      best = i;
+    }
   }
   if (best < 0) throw new Error(`no tile at gap ${gap} from enemy ${enemyId}`);
   me.x = me.stepFromX = best % s.width;
@@ -184,7 +191,6 @@ export function chaseProbe(
   let pursueStart = -1;
   let chaseEnd: number | null = null;
   let minGap = 99;
-  let target = -1;
   let path: Dir[] = [];
   let humanSteps = 0;
   let enemySteps = 0;
@@ -209,14 +215,16 @@ export function chaseProbe(
         let bv = -1;
         for (let j = 0; j < dm.length; j++) {
           if (dm[j]! <= 0 || dm[j]! > 40 || dn[j]! <= dm[j]! + 0) continue;
-          if (dn[j]! > bv) ((bv = dn[j]!), (bt = j));
+          if (dn[j]! > bv) {
+            bv = dn[j]!;
+            bt = j;
+          }
         }
-        target = bt;
         path = [];
-        if (target >= 0) {
+        if (bt >= 0) {
           // walk back from the target along decreasing distance from me
           const seen = bfsFrom(s, me.x, me.y);
-          let cur = target;
+          let cur = bt;
           const rev: Dir[] = [];
           while (cur !== me.y * s.width + me.x && cur >= 0) {
             const cx = cur % s.width;
