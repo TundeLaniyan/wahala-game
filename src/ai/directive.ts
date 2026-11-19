@@ -36,6 +36,7 @@ function huntFromTile(c: Ctx, tile: number): void {
   const { world, hunt } = c;
   const { board, obs } = world;
   hunt.fill(HUNT_FAR);
+  const enemyWalksAround = obs.config.campaignTactics !== undefined && world.me.enemyKind !== undefined;
   queue.length = 0;
   if (inQueue.length < board.size) inQueue = new Uint8Array(board.size);
   inQueue.fill(0, 0, board.size);
@@ -50,6 +51,9 @@ function huntFromTile(c: Ctx, tile: number): void {
       if (v < 0) continue;
       const kind = obs.tiles[v];
       if (kind === Tile.Hard) continue;
+      // decision RC2: a campaign enemy never blasts a crate (it places nothing), so a crate is a wall to its route: a stage
+      // drop on a lane sends it round, never into a crate it cannot pass (every other bot prices a crate at 4)
+      if (kind === Tile.Soft && enemyWalksAround) continue;
       const cost = kind === Tile.Soft ? 4 : world.genAt[v]! >= 0 ? 3 : 1;
       if (hunt[u]! + cost < hunt[v]!) {
         hunt[v] = hunt[u]! + cost;

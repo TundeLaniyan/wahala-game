@@ -38,7 +38,7 @@ const wait = (s: GameState, n: number): SimEvent[] => {
   return out;
 };
 
-describe('patrol: predictable on Easy, varied on Normal, reversing on Hard', () => {
+describe('patrol: predictable on Easy, a little varied on Normal and Hard, one readable loop on every level', () => {
   /** The ticks at which the patroller started each pause, over `ticks`, with the human tucked away out of sight. */
   function pauses(level: CampaignLevel, ticks: number): { at: number[]; waypoints: number[] } {
     const { s, bots } = scene({
@@ -115,23 +115,24 @@ describe('patrol: predictable on Easy, varied on Normal, reversing on Hard', () 
     expect(lengths('normal')).toEqual(normal); // deterministic
   });
 
-  it('Hard walks the loop the other way on every second lap', () => {
+  it('Hard keeps the same readable loop on every lap (decision RC2: no reversing laps) with a shorter pause', () => {
     const { waypoints } = pauses('hard', 60 * 40);
     const loop = [202, 208, 608];
     expect(waypoints.slice(0, 3)).toEqual(loop);
-    // after the first lap it turns round: the order is no longer the same rotation
-    const later = waypoints.slice(3, 6);
-    expect(later).not.toEqual(loop);
+    // lap after lap the order is the same rotation: a route a player can learn
+    expect(waypoints.slice(3, 6)).toEqual(loop);
+    expect(waypoints.slice(6, 9)).toEqual(loop);
   });
 });
 
 describe('noticing the human: sight in the calm cone, closeness, the alert beat', () => {
   it('a watcher facing the human notices him after the notice time, then pursues after the alert beat', () => {
-    const { s } = scene({ human: [10, 6], enemies: [{ at: [4, 6], territory: { radius: 2 } }] });
+    // (decision RC4: a calm walker notices within `calmNoticeTiles`, 5 for an agbero on Normal: he stands 4 tiles off)
+    const { s } = scene({ human: [8, 6], enemies: [{ at: [4, 6], territory: { radius: 2 } }] });
     s.players[1]!.facing = 'right';
     const ev = wait(s, 40);
     const alert = eventsOf(ev, 'enemyCue').find((e) => e.cue === 'alert')!;
-    expect(alert).toMatchObject({ playerId: 1, x: 10, y: 6, byId: null });
+    expect(alert).toMatchObject({ playerId: 1, x: 8, y: 6, byId: null });
     expect(alert.fromTick).toBeGreaterThanOrEqual(s.config.campaignTactics!.awareness.noticeTicks - 1);
     expect(mind(s).state).toBe('pursue');
     expect(territoryDirective(s, 1)?.kind).not.toBe('hold');
@@ -165,7 +166,7 @@ describe('noticing the human: sight in the calm cone, closeness, the alert beat'
     const crew = (level: CampaignLevel) => {
       const { s } = scene({
         level,
-        human: [10, 2],
+        human: [8, 2],
         enemies: [
           { variant: 'routeMarshal', at: [4, 2], territory: { radius: 2 } },
           { variant: 'agbero', at: [4, 8], territory: { radius: 2 } },

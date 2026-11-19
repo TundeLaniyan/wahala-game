@@ -359,6 +359,12 @@ export interface CampaignTacticsConfig {
   awareness: {
     /** A human in grid line of sight within this many tiles (straight distance) is being noticed, by kind. */
     noticeTiles: Record<EnemyKind, number>;
+    /**
+     * Decision RC4: the same while it is CALM (patrolling, holding its post, walking back): a walker looks at the road
+     * ahead, not at everything within earshot, so a human out of its calm cone or beyond this range walks past unseen.
+     * Never more than `noticeTiles`; engaged enemies (alert, pursuing) use `noticeTiles`.
+     */
+    calmNoticeTiles: Record<EnemyKind, number>;
     /** Ticks of (accumulated) sight before the enemy is alerted; sight lost decays it twice as fast. */
     noticeTicks: number;
     /** A human this close (Manhattan) is noticed at once, seen or not (footsteps, breathing). */
@@ -433,6 +439,8 @@ export interface CampaignTacticsConfig {
     /** A walk back to its route that has not arrived this long after the watch ends counts as done (a blocked way, a guard
      * held at its equipment by the mission): it is back on its route state, never stuck in `return` forever. */
     returnTimeoutTicks: number;
+    /** A patrol that has not reached its waypoint this long after setting off (a crate dropped on the lane) goes on to the next. */
+    patrolStuckTicks: number;
   };
   /** The human's landed hit on an ordinary or armoured enemy, whatever the fighter (decision SA8). */
   punch: {
@@ -1222,13 +1230,14 @@ export const CAMPAIGN_TACTICS: CampaignTacticsConfig = {
   memoryHoldFuseTicks: 120,
   caution: { ticks: 36, reactScale: 0.5, investigate: false },
   trapSense: {
-    none: { reactScale: 1.25, brawlReactScale: 2, plannerBump: 0, calmVisionTiles: 2, seesPlacement: false },
-    basic: { reactScale: 1, brawlReactScale: 1.5, plannerBump: 0, calmVisionTiles: 3, seesPlacement: false },
+    none: { reactScale: 1.25, brawlReactScale: 2.4, plannerBump: 0, calmVisionTiles: 2, seesPlacement: false },
+    basic: { reactScale: 1, brawlReactScale: 2, plannerBump: 0, calmVisionTiles: 3, seesPlacement: false },
     keen: { reactScale: 0.8, brawlReactScale: 1, plannerBump: 1, calmVisionTiles: 5, seesPlacement: true },
     expert: { reactScale: 0.6, brawlReactScale: 1, plannerBump: 2, calmVisionTiles: 99, seesPlacement: true },
   },
   awareness: {
     noticeTiles: { agbero: 7, guard: 8, thrower: 9, heavy: 6, lieutenant: 10, boss: 10 },
+    calmNoticeTiles: { agbero: 5, guard: 6, thrower: 7, heavy: 4, lieutenant: 8, boss: 8 },
     noticeTicks: 20,
     closeTiles: 2,
     alertTicks: 12,
@@ -1262,6 +1271,7 @@ export const CAMPAIGN_TACTICS: CampaignTacticsConfig = {
     maxChaseTicks: 600,
     reNoticeCooldownTicks: 90,
     returnTimeoutTicks: 480,
+    patrolStuckTicks: 720,
   },
   punch: {
     damage: 1,
@@ -1335,7 +1345,7 @@ export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' |
   {
     easy: tacticsEnemyAttacks({
       extra: { agbero: 56, guard: 56, thrower: 42, heavy: 48, lieutenant: 44, boss: 30 },
-      recovery: { agbero: 48, guard: 48, thrower: 48, heavy: 54, lieutenant: 36, boss: 30 },
+      recovery: { agbero: 72, guard: 72, thrower: 48, heavy: 54, lieutenant: 36, boss: 30 },
       cooldown: { agbero: 180, guard: 180, thrower: 210, heavy: 240, lieutenant: 168, boss: 180 },
       throwRecovery: { agbero: 0, guard: 0, thrower: 54, heavy: 48, lieutenant: 30, boss: 24 },
       warn: { bottle: 54, stone: 54, brick: 60, tool: 78 },
@@ -1347,7 +1357,7 @@ export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' |
     }),
     normal: tacticsEnemyAttacks({
       extra: { agbero: 44, guard: 44, thrower: 32, heavy: 36, lieutenant: 36, boss: 22 },
-      recovery: { agbero: 42, guard: 42, thrower: 42, heavy: 48, lieutenant: 30, boss: 24 },
+      recovery: { agbero: 60, guard: 60, thrower: 42, heavy: 48, lieutenant: 30, boss: 24 },
       cooldown: { agbero: 156, guard: 156, thrower: 210, heavy: 228, lieutenant: 144, boss: 156 },
       throwRecovery: { agbero: 0, guard: 0, thrower: 42, heavy: 42, lieutenant: 24, boss: 18 },
       warn: { bottle: 42, stone: 42, brick: 48, tool: 66 },
@@ -1359,7 +1369,7 @@ export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' |
     }),
     hard: tacticsEnemyAttacks({
       extra: { agbero: 34, guard: 34, thrower: 24, heavy: 26, lieutenant: 30, boss: 16 },
-      recovery: { agbero: 36, guard: 36, thrower: 36, heavy: 42, lieutenant: 26, boss: 20 },
+      recovery: { agbero: 48, guard: 48, thrower: 36, heavy: 42, lieutenant: 26, boss: 20 },
       cooldown: { agbero: 132, guard: 132, thrower: 180, heavy: 198, lieutenant: 120, boss: 132 },
       throwRecovery: { agbero: 0, guard: 0, thrower: 36, heavy: 36, lieutenant: 20, boss: 16 },
       warn: { bottle: 36, stone: 36, brick: 42, tool: 60 },
@@ -1392,6 +1402,7 @@ export const CAMPAIGN_TACTICS_LEVELS: Readonly<
     },
     awareness: {
       noticeTiles: { agbero: 6, guard: 7, thrower: 8, heavy: 5, lieutenant: 9, boss: 9 },
+      calmNoticeTiles: { agbero: 4, guard: 5, thrower: 6, heavy: 3, lieutenant: 7, boss: 7 },
       noticeTicks: 36,
       alertTicks: 20,
       loseTicks: 60,
@@ -1430,6 +1441,7 @@ export const CAMPAIGN_TACTICS_LEVELS: Readonly<
     },
     awareness: {
       noticeTiles: { agbero: 8, guard: 9, thrower: 10, heavy: 7, lieutenant: 11, boss: 11 },
+      calmNoticeTiles: { agbero: 6, guard: 7, thrower: 8, heavy: 5, lieutenant: 9, boss: 9 },
       noticeTicks: 10,
       alertTicks: 8,
       loseTicks: 180,

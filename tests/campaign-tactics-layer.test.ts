@@ -218,7 +218,7 @@ describe('readable commitment at every level (SA7)', () => {
     for (const level of LEVELS) expect(cfgOf(level).enemyAttacks.victimFreeTicks).toBeGreaterThanOrEqual(54);
   });
 
-  it('Hard adds strategy, not just speed: wider senses, longer pursuit, coordination, cover, varied patrols', () => {
+  it('Hard adds strategy, not just speed: wider senses, longer pursuit, coordination, cover, livelier patrols', () => {
     const [e, n, h] = LEVELS.map(campaignTacticsFor);
     for (const kind of ENEMY_KIND_IDS) {
       expect(e!.perception[kind].visionTiles).toBeLessThan(n!.perception[kind].visionTiles);
@@ -234,8 +234,14 @@ describe('readable commitment at every level (SA7)', () => {
     ]);
     expect([e!.territory.alertAlliesScale, h!.territory.alertAlliesScale]).toEqual([0, 1.25]);
     expect([e!.territory.coverTiles, n!.territory.coverTiles, h!.territory.coverTiles]).toEqual([0, 3, 4]);
-    expect([e!.territory.patrolJitterTicks, n!.territory.patrolJitterTicks]).toEqual([0, 12]);
-    expect(h!.territory.reversePatrol).toBe(true);
+    // decision RC2/RC5: routes stay readable on every level (clockwork on Easy, a little jitter on Normal and Hard; no
+    // reversing laps), so Hard's difficulty is sharper senses and a longer chase, never an unreadable route
+    expect([
+      e!.territory.patrolJitterTicks,
+      n!.territory.patrolJitterTicks,
+      h!.territory.patrolJitterTicks,
+    ]).toEqual([0, 6, 12]);
+    expect(h!.territory.reversePatrol).toBe(false);
     expect(h!.trapSense.basic.seesPlacement).toBe(true);
     expect(n!.trapSense.basic.seesPlacement).toBe(false);
   });

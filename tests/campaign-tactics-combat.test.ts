@@ -172,7 +172,8 @@ describe('readable commitment in the sim (SA7)', () => {
 describe('the human hit: stagger, knockback, one slow - no ritual, no stun-lock (SA8)', () => {
   it('a jab cuts a wind-up short, staggers, knocks back one free tile and slows 25 % once', () => {
     const s = duel('marketEnforcer');
-    const base = 10;
+    // decision RC1: a chasing market enforcer (a guard) walks a tile in `enemyStepTicks.guard` ticks under the layer
+    const base = campaignTacticsFor('normal').enemyStepTicks.guard;
     const ev = run(s, 8, (t) =>
       t === 0 ? { 1: { special: true } } : t === 1 ? { 0: { special: true } } : {},
     );

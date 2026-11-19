@@ -209,6 +209,8 @@ export interface TerritorySpec {
   noticeTicks: number;
   /** Notice radius of the human (tiles). */
   noticeTiles: number;
+  /** The same while it is calm (decision RC4). */
+  calmNoticeTiles: number;
   /** Hearing radius (Manhattan) of a generator being laid. */
   hearingTiles: number;
 }

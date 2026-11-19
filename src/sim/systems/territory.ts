@@ -84,6 +84,7 @@ export function resolveTerritory(
     preferredRange: pers.preferredRange || (keepsDistance ? state.config.enemyAttacks.standoffTiles : 0),
     noticeTicks: Math.max(1, Math.round(cfg.awareness.noticeTicks * pers.noticeScale)),
     noticeTiles: cfg.awareness.noticeTiles[kind],
+    calmNoticeTiles: Math.min(cfg.awareness.noticeTiles[kind], cfg.awareness.calmNoticeTiles[kind]),
     hearingTiles: cfg.perception[kind].hearingTiles,
   };
 }
@@ -363,7 +364,9 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
     const calmNow =
       m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil);
     const sees =
-      h !== null && (!calmNow || inViewCone(p, h.x, h.y)) && canSeePlayer(state, p, h, m.spec.noticeTiles);
+      h !== null &&
+      (!calmNow || inViewCone(p, h.x, h.y)) &&
+      canSeePlayer(state, p, h, calmNow ? m.spec.calmNoticeTiles : m.spec.noticeTiles);
     const close = h !== null && manhattan(p, h) <= cfg.awareness.closeTiles;
     if (h && (sees || close)) {
       m.lastSeen = { x: h.x, y: h.y };
@@ -504,6 +507,13 @@ function advance(
       }
       if (T < m.pauseUntil) return;
       const wp = route[m.waypoint % route.length]!;
+      // decision RC2: a lane blocked for good (a crate dropped on it) must not freeze the patrol: after
+      // `patrolStuckTicks` of not arriving it goes on to its next waypoint
+      if (T - m.pauseUntil > cfg.chase.patrolStuckTicks && !(p.x === wp.x && p.y === wp.y)) {
+        m.waypoint = (m.waypoint + m.dirSign + route.length) % route.length;
+        m.pauseUntil = T;
+        return;
+      }
       if (p.x === wp.x && p.y === wp.y && p.stepRemaining === 0) {
         const pause =
           cfg.territory.patrolPauseTicks + jitter(p.id, m.lap, m.waypoint, cfg.territory.patrolJitterTicks);

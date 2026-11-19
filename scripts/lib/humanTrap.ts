@@ -25,6 +25,7 @@
 import { enemyMindView, canSeeTile, inViewCone, tick as simTick, observe } from '../../src/sim';
 import type { CampaignLevel, Dir, GameState, Intent, SimEvent } from '../../src/sim';
 import { Tile } from '../../src/sim/types';
+import { inSector } from '../../src/sim/mission/sector';
 import { footprintAt } from './fieldFight';
 import { rig } from './readability';
 import type { Rig } from './readability';
@@ -151,7 +152,7 @@ function walkable(s: GameState, x: number, y: number, extra?: ReadonlySet<number
 }
 
 /** A pothole or an oil slick is walked round when there is a way round (this many extra tiles) and over otherwise. */
-const HAZARD_COST = 5;
+const HAZARD_COST = 15;
 
 interface Walk {
   dist: Int16Array;
@@ -243,47 +244,63 @@ export function tickScene(sc: TrapScene, human: Intent): SimEvent[] {
 
 /** Where the human stages: far from every enemy's route (he is not seen), close enough to watch the target. */
 export function stageTile(s: GameState, target: number): { x: number; y: number } {
-  const anchors: number[] = [];
-  for (const m of Object.values(s.territory!.minds))
-    for (const a of m.spec.anchors) anchors.push(idx(s, a.x, a.y));
-  for (const p of s.players) if (p.id !== 0) anchors.push(idx(s, p.x, p.y));
-  // distance from the nearest anchor of ANY enemy, by walking
-  const best = new Int16Array(s.width * s.height).fill(32000);
-  for (const a of anchors) {
-    const w = walkFrom(s, a % s.width, Math.floor(a / s.width));
-    for (let i = 0; i < best.length; i++) if (w.dist[i]! >= 0 && w.dist[i]! < best[i]!) best[i] = w.dist[i]!;
+  // every tile any enemy walks (the paths between its waypoints, closed) and stands on
+  const route = new Set<number>();
+  for (const [id, m] of Object.entries(s.territory!.minds)) {
+    const pts = m.spec.patrol.length >= 2 ? m.spec.patrol : [m.spec.centre];
+    route.add(idx(s, s.players[Number(id)]!.x, s.players[Number(id)]!.y));
+    for (let k = 0; k < pts.length; k++) {
+      const a = pts[k]!;
+      const b = pts[(k + 1) % pts.length]!;
+      const w = walkFrom(s, a.x, a.y);
+      for (const t of pathOf(w, idx(s, b.x, b.y)) ?? []) route.add(t);
+      route.add(idx(s, a.x, a.y));
+    }
   }
-  const t = s.players[target]!;
-  const mind = s.territory!.minds[target]!;
-  const home = mind.spec.anchors[0]!;
-  const reach = walkFrom(s, s.players[0]!.x, s.players[0]!.y);
+  const routeList = [...route];
+  // a stage in a walled-in pocket is no stage: it must be on the same walkable ground as the target's route
+  const homeWalk = walkFrom(
+    s,
+    s.territory!.minds[target]!.spec.anchors[0]!.x,
+    s.territory!.minds[target]!.spec.anchors[0]!.y,
+  );
+  const connected = (i: number): boolean => homeWalk.dist[i]! >= 0;
+  const home = s.territory!.minds[target]!.spec.anchors[0]!;
   let pick: { x: number; y: number } | null = null;
   let pickScore = -1e9;
-  for (let i = 0; i < best.length; i++) {
-    if (reach.dist[i] === -1 && i !== idx(s, s.players[0]!.x, s.players[0]!.y)) continue;
+  for (let i = 0; i < s.width * s.height; i++) {
     const x = i % s.width;
     const y = Math.floor(i / s.width);
-    if (!walkable(s, x, y)) continue;
-    const d = Math.min(best[i]!, 12);
-    if (d < 8 || cheb({ x, y }, home) > 11 || cheb({ x, y }, t) > 12) continue;
-    // far enough to be unseen, as near the target's lane as that allows
-    const score = d * 2 - manh({ x, y }, home);
+    if (!walkable(s, x, y) || route.has(i) || !s.sector || !inSectorTile(s, x, y)) continue;
+    if (cheb({ x, y }, home) > 13 || !connected(i)) continue;
+    // out of sight of every tile an enemy walks (a wall or a crate in between), and no nearer than 4 tiles to one
+    let seen = 0;
+    let near = 99;
+    for (const r of routeList) {
+      const rx = r % s.width;
+      const ry = Math.floor(r / s.width);
+      near = Math.min(near, Math.abs(rx - x) + Math.abs(ry - y));
+      if (canSeeTile(s, rx, ry, x, y, 9, NO_BODIES)) seen++;
+    }
+    if (near < 5) continue;
+    // hidden first, then as close to its lane as that allows (a short hop to the generator tile, still unseen)
+    const score = -seen * 10 - (near - 5);
     if (score > pickScore) {
       pickScore = score;
       pick = { x, y };
     }
   }
-  if (pick) return pick;
-  // a crowded sector: the tile farthest from every enemy
-  let far = -1;
-  for (let i = 0; i < best.length; i++) {
-    if (reach.dist[i] === -1 || !walkable(s, i % s.width, Math.floor(i / s.width))) continue;
-    if (best[i]! > far && cheb({ x: i % s.width, y: Math.floor(i / s.width) }, home) <= 14) {
-      far = best[i]!;
-      pick = { x: i % s.width, y: Math.floor(i / s.width) };
-    }
-  }
   return pick ?? { x: s.players[0]!.x, y: s.players[0]!.y };
+}
+
+/** Where the fighting strategies start: well clear of the target (he walks up to it), out of its sight. */
+function stageNear(sc: TrapScene): { x: number; y: number } {
+  return stageTile(sc.s, sc.target);
+}
+
+/** Is the tile inside the mission's sector (the part of the district map that is the play area)? */
+function inSectorTile(s: GameState, x: number, y: number): boolean {
+  return inSector(s, x, y);
 }
 
 function teleportHuman(s: GameState, x: number, y: number): void {
@@ -340,7 +357,7 @@ export class RouteModel {
     if (this.cachedPeriod !== undefined) return this.cachedPeriod;
     const ratios: [number, number][] = [];
     const n = this.span;
-    for (let P = 120; P <= Math.min(1200, n - 100); P += 2) {
+    for (let P = 200; P <= Math.min(1200, n - 100); P += 2) {
       let match = 0;
       let total = 0;
       for (let t = this.first; t + P <= this.last; t += 3) {
@@ -357,10 +374,11 @@ export class RouteModel {
     const hit = top >= 0.72 ? ratios.find((r) => r[1] >= top - 0.05) : undefined;
     let best = hit ? hit[0] : null;
     // ... then the exact lap time: the delay at which it is on the very same tile most often (steps are 14 ticks long)
+    let exact = 0;
     if (best !== null) {
       let bestScore = -1;
       for (let P = best - 24; P <= best + 24; P++) {
-        if (P < 100 || P > n - 60) continue;
+        if (P < 200 || P > n - 60) continue;
         let match = 0;
         let total = 0;
         for (let t = this.first; t + P <= this.last; t += 2) {
@@ -376,8 +394,12 @@ export class RouteModel {
           best = P;
         }
       }
+      exact = bestScore;
     }
-    this.cachedPeriod = best;
+    // a lap goes somewhere: an enemy that stands still (or shuffles) for a while has no lap to learn
+    const tiles = new Set<number>();
+    for (const smp of this.at.values()) tiles.add(smp.y * 4096 + smp.x);
+    this.cachedPeriod = best !== null && exact >= 0.6 && tiles.size >= 6 ? best : null;
     return this.cachedPeriod;
   }
 
@@ -489,15 +511,19 @@ export interface TrapRunOptions {
 const FUSE = 180;
 /** He lays no generator within this many tiles (walking, Manhattan) of the enemy: it is noisy (a player knows enemies hear it). */
 const HEARING_MARGIN = 5;
+/** Within this many tiles of another enemy's route he lays nothing (it would come to look). */
+const OTHERS_MARGIN = 3;
 /** How far he assumes an enemy notices a person (tiles), how far it notices a generator, and the glimpses he accepts (samples of 4 ticks). */
-const NOTICE_RANGE = 8;
-const GENERATOR_RANGE = 4;
+const NOTICE_RANGE = 6;
+const GENERATOR_RANGE = 3;
 /** A generator it first sees fewer ticks than this before it goes off is seen too late to be walked away from. */
 const SEEN_TOO_LATE = 60;
 /** He aims to be standing at the generator tile this long before he means to lay (latency, an overshoot, a step back). */
 const ARRIVE_EARLY = 70;
+/** It comes within this many tiles of him before he has laid: he gives the approach up. */
+const ABORT_TILES = 4;
 /** The view time (ticks of sight, as it builds up and drains) he will not risk: noticing takes 20 on Normal. */
-const NOTICE_METER = 14;
+const NOTICE_METER = 16;
 /** Why candidates were rejected (a debugging aid for the planner). */
 export const DBG = {
   cands: 0,
@@ -534,7 +560,7 @@ interface AmbushPlan {
 /** Is (x, y) within earshot of another enemy's route? */
 function nearOthers(s: GameState, model: RouteModel, x: number, y: number): boolean {
   for (const t of model.others)
-    if (Math.abs((t % s.width) - x) + Math.abs(Math.floor(t / s.width) - y) <= HEARING_MARGIN) return true;
+    if (Math.abs((t % s.width) - x) + Math.abs(Math.floor(t / s.width) - y) <= OTHERS_MARGIN) return true;
   return false;
 }
 
@@ -558,7 +584,7 @@ function planAmbush(
   const footprints = new Map<number, Set<number>>();
   for (let g = 0; g < from.dist.length; g++) {
     const d = from.dist[g]!;
-    if (d < 0 || d > 18) continue;
+    if (d < 0 || d > 24) continue;
     const gx = g % s.width;
     const gy = Math.floor(g / s.width);
     if (!walkable(s, gx, gy) || model.traffic.has(g) || model.others.has(g)) continue;
@@ -595,7 +621,7 @@ function planAmbush(
           width,
           latencyMean,
         );
-        if (plan) best.push({ plan, score: plan.width * 2 - plan.walkTicks * 0.3 - (centre - now) * 0.01 });
+        if (plan) best.push({ plan, score: plan.width - plan.walkTicks * 1.5 - (centre - now) * 0.01 });
       }
     }
   }
@@ -658,6 +684,8 @@ function evaluate(
       const h = timeline(t, tDepart, refuge);
       for (let k = 0; k < 3; k++) {
         const e = pred(t + (k - 1) * 10);
+        // within two tiles it feels him whichever way it faces (a margin on top: the model is not exact)
+        if (h >= 0 && manh(e, { x: h % s.width, y: Math.floor(h / s.width) }) <= 5) return 'human';
         const seen = h >= 0 && calmSees(s, e, h % s.width, Math.floor(h / s.width), NOTICE_RANGE);
         meter[k] = Math.max(0, meter[k]! + (seen ? 4 : -8));
         if (meter[k]! >= NOTICE_METER) return 'human';
@@ -741,6 +769,25 @@ function scoreEvents(ev: SimEvent[], target: number, res: AttemptResult): void {
   }
 }
 
+/** The tile to run to from the target: the one it is farthest from (by walking) that he reaches first. */
+function fleeTile(sc: TrapScene): number {
+  const s = sc.s;
+  const me = s.players[0]!;
+  const e = s.players[sc.target]!;
+  const dm = walkFrom(s, me.x, me.y);
+  const de = walkFrom(s, e.x, e.y);
+  let best = -1;
+  let bestV = -1;
+  for (let i = 0; i < dm.dist.length; i++) {
+    if (dm.dist[i]! <= 0 || dm.dist[i]! > 40 || de.dist[i]! <= dm.dist[i]!) continue;
+    if (de.dist[i]! > bestV) {
+      bestV = de.dist[i]!;
+      best = i;
+    }
+  }
+  return best;
+}
+
 /** Danger he walks out of: the blast footprint of any generator on the board (his own included) near its end. */
 function dangerMove(c: Ctx, fuseMargin: number): Dir | null {
   const s = c.sc.s;
@@ -778,6 +825,8 @@ export function runAmbushAttempt(
   const s = sc.s;
   const me = s.players[0]!;
   const res: AttemptResult = { killed: false, laid: false, noticed: false, selfHit: false, why: 'timeout' };
+  // a life lost on the way back puts him at the mission start: the scenario returns him to his stage
+  if (me.x !== stage.x || me.y !== stage.y) teleportHuman(s, stage.x, stage.y);
   const latMean = (c.model.latency[0] + c.model.latency[1]) / 2;
   const minWidth = 36;
   let phase: Phase = 'watch';
@@ -789,6 +838,8 @@ export function runAmbushAttempt(
   const recent: Sample[] = [];
   let laidAt = -1;
   let fleeUntil = -1;
+  let fleeTo = -1;
+  let walkPath: number[] = [];
   const start = s.tick;
   const watchStart = s.tick;
   while (s.match.phase !== 'ended' && s.tick - start < 60 * 120) {
@@ -797,7 +848,7 @@ export function runAmbushAttempt(
     if (v && phase !== 'done') learned.record(t, v);
     if (v) {
       recent.push({ x: v.x, y: v.y, f: v.facing });
-      if (recent.length > 60) recent.shift();
+      if (recent.length > 120) recent.shift();
     }
     // closed loop: where is the enemy on its circuit NOW? the moment the blast should land moves with it
     if (
@@ -832,17 +883,86 @@ export function runAmbushAttempt(
         v?.y,
         'shift',
         shift,
+        'mind',
+        enemyMindView(s, sc.target),
+        JSON.stringify({ ...s.territory!.minds[sc.target]!, spec: undefined }).slice(0, 260),
+        'gens',
+        s.generators.map((o) => `${o.x},${o.y}:${o.ownerId}:${o.timer}`).join(';'),
+        'dir',
+        JSON.stringify(observe(s, sc.target).directive),
+        'intent',
+        JSON.stringify(sc.r.bots[sc.target]!.decide(observe(s, sc.target))),
+        'step',
+        s.players[sc.target]!.stepRemaining,
+        'root',
+        s.players[sc.target]!.rootedUntil - t,
+        'dazed',
+        s.players[sc.target]!.dazedUntil - t,
+        'players',
+        s.players
+          .filter((q) => q.alive)
+          .map((q) => `${q.id}@${q.x},${q.y}`)
+          .join(' '),
+        'pickups',
+        s.pickups
+          .filter((q) => Math.abs(q.x - 52) < 8 && Math.abs(q.y - 31) < 3)
+          .map((q) => `${q.x},${q.y}:${q.kind}`)
+          .join(';'),
         'lay at',
         plan.tLay + shift + eps,
         'settled',
         c.pilot.settled(),
       );
+    // he sees it coming at him before it has noticed him: he backs off and tries again (not a failed generator, a failed approach)
+    if (
+      v &&
+      (phase === 'go' || phase === 'lay' || phase === 'wait') &&
+      manh(v, me) <= ABORT_TILES &&
+      !res.noticed
+    ) {
+      log(
+        c,
+        'abort',
+        phase,
+        'H',
+        me.x,
+        me.y,
+        'E',
+        JSON.stringify(v),
+        'G',
+        plan ? [plan.g % s.width, Math.floor(plan.g / s.width)] : null,
+        'shift',
+        shift,
+        'tLay',
+        plan?.tLay,
+        'tDepart',
+        plan?.tDepart,
+        'walk',
+        plan?.walkTicks,
+      );
+      res.why = 'aborted';
+      return res;
+    }
     let want: Intent = {};
     // never stand in a blast (a visible footprint) or a flame
     const out = phase === 'watch' || phase === 'wait' ? dangerMove(c, 0) : null;
     if (out) want = { move: out };
     else if (phase === 'watch') {
-      const P = learned.period();
+      const P = (t - watchStart) % 30 === 0 ? learned.period() : null;
+      if (c.trace && (t - watchStart) % 240 === 0)
+        log(
+          c,
+          'watch span',
+          learned.span,
+          'period',
+          P,
+          'target view',
+          JSON.stringify(v),
+          'me',
+          me.x,
+          me.y,
+          enemyMindView(s, sc.target),
+        );
       if (P !== null && learned.span >= P + 60) {
         plan = planAmbush(sc, learned, t, me, latMean, minWidth);
         if (!plan) {
@@ -872,10 +992,17 @@ export function runAmbushAttempt(
       if (t >= plan!.tDepart + shift) phase = 'go';
     }
     if (phase === 'go') {
-      const w = walkFrom(s, me.x, me.y);
-      const p = pathOf(w, plan!.g);
-      if (!p || p.length === 0) phase = 'lay';
-      else if (p.length > 1 || c.pilot.settled()) want = { move: dirTo(s, me, p[0]!) }; // lets go a tile early: his press reaches the game late
+      // he keeps to his route: the planned path, re-made only when he is off it (a person does not dither at forks)
+      const here = idx(s, me.x, me.y);
+      let k = walkPath.indexOf(here);
+      if (k < 0) {
+        const w = walkFrom(s, me.x, me.y);
+        walkPath = [here, ...(pathOf(w, plan!.g) ?? [])];
+        k = 0;
+      }
+      const rest = walkPath.length - 1 - k;
+      if (rest <= 0) phase = 'lay';
+      else if (rest > 1 || c.pilot.settled()) want = { move: dirTo(s, me, walkPath[k + 1]!) }; // lets go a tile early: his press reaches the game late
     }
     if (phase === 'lay') {
       // there: lay it when his own judgement says the moment has come
@@ -895,9 +1022,10 @@ export function runAmbushAttempt(
       }
     }
     if (phase === 'flee') {
+      // run from the enemy: to the tile it is farthest from that he reaches first, kept until he gets there
+      if (fleeTo < 0 || idx(s, me.x, me.y) === fleeTo) fleeTo = fleeTile(sc);
       const w = walkFrom(s, me.x, me.y);
-      // away from the target, towards the stage
-      const p = pathOf(w, idx(s, stage.x, stage.y));
+      const p = fleeTo >= 0 ? pathOf(w, fleeTo) : null;
       if (p && p.length > 0) want = { move: dirTo(s, me, p[0]!) };
       if (t > fleeUntil) {
         res.why = 'noticed';
@@ -967,10 +1095,23 @@ export function runAmbushAttempt(
       !res.killed &&
       s.generators.every((o) => o.ownerId !== 0)
     ) {
+      const before = phase;
       phase = 'flee';
       fleeUntil = s.tick + 60 * 6;
       c.pilot.flush();
-      log(c, 'noticed: flee');
+      log(
+        c,
+        'noticed: flee',
+        'H',
+        me.x,
+        me.y,
+        'E',
+        JSON.stringify(targetView(c)),
+        'phase before',
+        before,
+        'enemy mind',
+        enemyMindView(s, sc.target),
+      );
     }
     if (laidAt >= 0 && !s.generators.some((o) => o.ownerId === 0) && s.tick > laidAt + 30) {
       // the blast went off: a short look at the aftermath, then the verdict
@@ -980,6 +1121,281 @@ export function runAmbushAttempt(
     }
   }
   return res;
+}
+
+// ------------------------------------------------------------------------------------------------ the other strategies
+
+/** The state of the target as the human reads it off the screen (glyphs and poses): never its mind's internals. */
+type Pose = ReturnType<typeof enemyMindView>;
+
+/** The neighbour tile of `from` that is farthest from `e` and free (a step away from danger), or null. */
+function stepAway(s: GameState, from: { x: number; y: number }, e: { x: number; y: number }): Dir | null {
+  let best: Dir | null = null;
+  let bestD = -1;
+  for (const d of DIR_LIST) {
+    const x = from.x + DIRV[d][0];
+    const y = from.y + DIRV[d][1];
+    if (!walkable(s, x, y) || s.players.some((p) => p.alive && p.x === x && p.y === y)) continue;
+    const dist = Math.abs(x - e.x) + Math.abs(y - e.y);
+    if (dist > bestD) {
+      bestD = dist;
+      best = d;
+    }
+  }
+  return best;
+}
+
+/** Runs the shared attempt loop for the fighting strategies: `decide` returns the human's wish for this tick. */
+function fightAttempt(
+  c: Ctx,
+  stage: { x: number; y: number },
+  limitSec: number,
+  decide: (st: FightState) => Intent,
+): AttemptResult {
+  const { sc } = c;
+  const s = sc.s;
+  const me = s.players[0]!;
+  const res: AttemptResult = { killed: false, laid: false, noticed: false, selfHit: false, why: 'timeout' };
+  if (me.x !== stage.x || me.y !== stage.y) teleportHuman(s, stage.x, stage.y);
+  const st: FightState = { c, res, laidAt: -1, phase: 'approach', anchor: null, exit: null, note: 0 };
+  const start = s.tick;
+  while (s.match.phase !== 'ended' && s.tick - start < limitSec * 60) {
+    const t = s.tick;
+    let want = decide(st);
+    // never stand in a blast it is too late to be in: out of any footprint with little fuse left
+    const d = dangerMove(c, 0);
+    if (d && st.phase !== 'hold' && st.phase !== 'lay') want = { move: d };
+    const exec = c.pilot.drive(want, t);
+    if (c.trace && st.laidAt >= 0 && t % 6 === 0 && t < st.laidAt + 220)
+      log(
+        c,
+        st.phase,
+        'H',
+        me.x,
+        me.y,
+        'E',
+        s.players[sc.target]!.x,
+        s.players[sc.target]!.y,
+        enemyMindView(s, sc.target),
+        'gen',
+        s.generators.find((o) => o.ownerId === 0)?.timer ?? '-',
+        'want',
+        JSON.stringify(want),
+        'hp',
+        me.vitals?.hp,
+      );
+    const ev = tickScene(sc, exec);
+    scoreEvents(ev, sc.target, res);
+    if (st.laidAt < 0 && s.generators.some((o) => o.ownerId === 0)) {
+      st.laidAt = s.tick;
+      res.laid = true;
+      c.pilot.cancelPresses();
+      log(c, 'laid', me.x, me.y);
+    }
+    if (st.laidAt >= 0 && !s.generators.some((o) => o.ownerId === 0) && s.tick > st.laidAt + 20) {
+      for (let k = 0; k < 40; k++) scoreEvents(tickScene(sc, {}), sc.target, res);
+      res.why = res.killed ? 'killed' : 'missed';
+      return res;
+    }
+    if (!s.players[sc.target]!.alive) {
+      res.why = res.killed ? 'killed' : 'missed';
+      return res;
+    }
+  }
+  return res;
+}
+
+interface FightState {
+  c: Ctx;
+  res: AttemptResult;
+  laidAt: number;
+  phase: string;
+  anchor: { x: number; y: number } | null;
+  exit: { x: number; y: number } | null;
+  note: number;
+}
+
+const ATTACKING = new Set<Pose>(['windup', 'attack']);
+
+/**
+ * bait: let it swing at the air, lay under his own feet in its recovery, hold (his body hides the generator), and walk out
+ * late. Needs a brawler that commits to a wind-up (every ordinary kind does).
+ */
+function baitDecide(st: FightState): Intent {
+  const { c, res } = st;
+  const s = c.sc.s;
+  const me = s.players[0]!;
+  const e = s.players[c.sc.target]!;
+  const pose = enemyMindView(s, c.sc.target);
+  const adjacent = manh(me, e) === 1;
+  const g = s.generators.find((o) => o.ownerId === 0);
+  if (g && st.phase !== 'leave' && st.phase !== 'hold') st.phase = 'hold';
+  switch (st.phase) {
+    case 'approach': {
+      // walk up until it has noticed him and is on him
+      if (
+        manh(me, e) > 2 ||
+        !(pose === 'alert' || pose === 'pursue' || ATTACKING.has(pose) || pose === 'recovery')
+      ) {
+        const w = walkFrom(s, me.x, me.y, new Set([idx(s, e.x, e.y)]));
+        const near = pathOf(w, nearestTo(s, w, e));
+        if (near && near.length > 0 && manh(me, e) > 2) return { move: dirTo(s, me, near[0]!) };
+        return {};
+      }
+      st.phase = 'dance';
+      return {};
+    }
+    case 'dance': {
+      if (ATTACKING.has(pose) && manh(me, e) <= 2) {
+        // a wind-up on him: out of reach (the swing then hits the air and it is planted)
+        if (!st.anchor) st.anchor = { x: me.x, y: me.y };
+        const d = stepAway(s, me, e);
+        return d && me.stepRemaining === 0 ? { move: d } : {};
+      }
+      if (pose === 'recovery') {
+        // planted: back in beside it, and lay at its feet
+        if (adjacent && c.pilot.settled() && me.stepRemaining === 0) {
+          st.phase = 'lay';
+          return { place: true };
+        }
+        const w = walkFrom(s, me.x, me.y, new Set([idx(s, e.x, e.y)]));
+        const p = pathOf(w, nearestTo(s, w, e));
+        return p && p.length > 0 && !adjacent ? { move: dirTo(s, me, p[0]!) } : {};
+      }
+      return {};
+    }
+    case 'lay':
+      return adjacent && c.pilot.settled() ? { place: true } : {};
+    case 'hold': {
+      if (!g) return {};
+      // he stands on it (it is hidden under him) and leaves when about 0.75 s of fuse is left
+      const leaveAt = 60 + Math.round((c.rnd() * 2 - 1) * c.model.timingTol * 0.5);
+      st.note = st.note || leaveAt;
+      if (g.timer <= st.note) {
+        st.phase = 'leave';
+        res.laid = true;
+      }
+      // out of reach of a wind-up that lands on him
+      if (ATTACKING.has(pose) && adjacent && g.timer > st.note + 40) {
+        const d = stepAway(s, me, e);
+        if (d && me.stepRemaining === 0) return { move: d };
+      }
+      return {};
+    }
+    case 'leave': {
+      const gen = g ?? s.generators.find((o) => o.ownerId === 0);
+      if (!gen) return {};
+      if (!st.exit) {
+        // three tiles out along a lane, the one farthest from the enemy (chosen once: no dithering)
+        const fp = footprintAt(s, gen.x, gen.y);
+        const w = walkFrom(s, me.x, me.y);
+        let best = -1;
+        let bestD = -1;
+        for (let i = 0; i < w.dist.length; i++) {
+          if (w.dist[i]! < 2 || w.dist[i]! > 7 || fp.has(i)) continue;
+          const d = Math.abs((i % s.width) - e.x) + Math.abs(Math.floor(i / s.width) - e.y) - w.dist[i]!;
+          if (d > bestD) {
+            bestD = d;
+            best = i;
+          }
+        }
+        st.exit = best >= 0 ? { x: best % s.width, y: Math.floor(best / s.width) } : { x: me.x, y: me.y };
+      }
+      const w = walkFrom(s, me.x, me.y);
+      const p = pathOf(w, idx(s, st.exit.x, st.exit.y));
+      return p && p.length > 0 ? { move: dirTo(s, me, p[0]!) } : {};
+    }
+  }
+  return {};
+}
+
+/** The tile next to `target` that the walk `w` reaches first (null-safe: -1 when none). */
+function nearestTo(s: GameState, w: Walk, target: { x: number; y: number }): number {
+  let best = -1;
+  let bestD = 1e9;
+  for (const d of DIR_LIST) {
+    const x = target.x + DIRV[d][0];
+    const y = target.y + DIRV[d][1];
+    if (!inB(s, x, y)) continue;
+    const i = idx(s, x, y);
+    if (w.dist[i]! >= 0 && w.dist[i]! < bestD) {
+      bestD = w.dist[i]!;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/**
+ * lure: get noticed, run past a corner and lay a generator on the tile behind you without stopping, keep running. A pursuer
+ * that follows through the blast zone dies (the lane it follows is the one the generator stands in).
+ */
+function lureDecide(st: FightState): Intent {
+  const { c } = st;
+  const s = c.sc.s;
+  const me = s.players[0]!;
+  const e = s.players[c.sc.target]!;
+  const pose = enemyMindView(s, c.sc.target);
+  const hunting =
+    pose === 'alert' || pose === 'pursue' || pose === 'windup' || pose === 'attack' || pose === 'recovery';
+  const g = s.generators.find((o) => o.ownerId === 0);
+  if (st.phase === 'approach') {
+    if (hunting) {
+      st.phase = 'run';
+      return {};
+    }
+    const w = walkFrom(s, me.x, me.y, new Set([idx(s, e.x, e.y)]));
+    const p = pathOf(w, nearestTo(s, w, e));
+    return p && p.length > 0 && manh(me, e) > 5 ? { move: dirTo(s, me, p[0]!) } : {};
+  }
+  // run to the tile it is farthest from, kept until reached
+  const here = idx(s, me.x, me.y);
+  if (st.note <= 0 || here === st.note - 1) st.note = fleeTile(c.sc) + 1;
+  const w = walkFrom(s, me.x, me.y);
+  const path = st.note > 0 ? pathOf(w, st.note - 1) : null;
+  const gap = walkFrom(s, e.x, e.y).dist[here]!;
+  // in a lane (two ways only), with it a few tiles behind: lay on this tile and go on
+  const exits = DIR_LIST.filter((d) => walkable(s, me.x + DIRV[d][0], me.y + DIRV[d][1])).length;
+  if (
+    !g &&
+    st.laidAt < 0 &&
+    exits <= 2 &&
+    gap >= 3 &&
+    gap <= 5 &&
+    hunting &&
+    me.stepRemaining <= 2 &&
+    c.pilot.settled() === false
+  )
+    return { place: true, ...(path && path.length > 0 ? { move: dirTo(s, me, path[0]!) } : {}) };
+  return path && path.length > 0 ? { move: dirTo(s, me, path[0]!) } : {};
+}
+
+/** plain: the deliberately bad setup - laid under his feet in plain sight in the lane it walks, 6 tiles from it, then off. */
+function plainDecide(st: FightState): Intent {
+  const { c } = st;
+  const s = c.sc.s;
+  const me = s.players[0]!;
+  const e = s.players[c.sc.target]!;
+  const g = s.generators.find((o) => o.ownerId === 0);
+  if (!g && st.laidAt < 0) return c.pilot.settled() ? { place: true } : {};
+  // off, directly away from it
+  const d = stepAway(s, me, e);
+  return d ? { move: d } : {};
+}
+
+/** Puts the human 6 walking tiles from the target, in the line it faces (the "bad setup" geometry), when it has one. */
+function plainStage(sc: TrapScene): { x: number; y: number } | null {
+  const s = sc.s;
+  const e = s.players[sc.target]!;
+  const w = walkFrom(s, e.x, e.y);
+  for (let i = 0; i < w.dist.length; i++) {
+    if (w.dist[i] !== 6) continue;
+    const x = i % s.width;
+    const y = Math.floor(i / s.width);
+    if ((x === e.x || y === e.y) && inViewCone(e, x, y) && canSeeTile(s, e.x, e.y, x, y, 8, NO_BODIES))
+      return { x, y };
+  }
+  return null;
 }
 
 /** The full run of one strategy: staging, the attempt, and the retry after disengaging. */
@@ -1000,16 +1416,69 @@ export function runTrap(o: TrapRunOptions): TrapRunResult {
     learned.clear();
     let r: AttemptResult;
     if (o.strategy === 'ambush') r = runAmbushAttempt(c, stage, learned);
-    else r = { killed: false, laid: false, noticed: false, selfHit: false, why: 'todo' };
+    else if (o.strategy === 'bait') r = fightAttempt(c, stageNear(sc), 70, baitDecide);
+    else if (o.strategy === 'lure') r = fightAttempt(c, stageNear(sc), 70, lureDecide);
+    else {
+      // wait for the geometry: a straight lane, the enemy walking along it, facing the spot 6 tiles ahead
+      let st = plainStage(sc);
+      for (let i = 0; i < 60 * 90 && !st && sc.s.match.phase !== 'ended'; i++) {
+        tickScene(sc, {});
+        st = plainStage(sc);
+      }
+      r = st
+        ? fightAttempt(c, st, 25, plainDecide)
+        : { killed: false, laid: false, noticed: false, selfHit: false, why: 'noSetup' };
+    }
     attempts.push(r);
     if (r.killed || sc.s.match.phase === 'ended') break;
-    // disengage and settle: back to the stage, let the enemy return to its route
-    for (let i = 0; i < model.settleSec * 60; i++) {
+    if (o.trace)
+      console.log(
+        'attempt ended',
+        r.why,
+        'human',
+        sc.s.players[0]!.x,
+        sc.s.players[0]!.y,
+        'alive',
+        sc.s.players[0]!.alive,
+        'hp',
+        sc.s.players[0]!.vitals?.hp,
+        'stage',
+        stage.x,
+        stage.y,
+        'tick',
+        sc.s.tick,
+        'phase',
+        sc.s.match.phase,
+      );
+    // disengage and settle: run if it is after him, go back to the stage (out of its sight), and give it a moment to settle
+    let calm = 0;
+    let fleeTo = -1;
+    for (let i = 0; i < 60 * 60 && calm < model.settleSec * 60; i++) {
       const me = sc.s.players[0]!;
       let want: Intent = {};
+      const mind = enemyMindView(sc.s, target);
+      const hunting =
+        mind === 'alert' ||
+        mind === 'pursue' ||
+        mind === 'windup' ||
+        mind === 'attack' ||
+        mind === 'recovery';
       const w = walkFrom(sc.s, me.x, me.y);
-      const p = pathOf(w, idx(sc.s, stage.x, stage.y));
-      if (p && p.length > 0) want = { move: dirTo(sc.s, me, p[0]!) };
+      if (hunting) {
+        calm = 0;
+        if (fleeTo < 0 || idx(sc.s, me.x, me.y) === fleeTo) fleeTo = fleeTile(sc);
+        const p = fleeTo >= 0 ? pathOf(w, fleeTo) : null;
+        if (p && p.length > 0) want = { move: dirTo(sc.s, me, p[0]!) };
+      } else {
+        fleeTo = -1;
+        const p = pathOf(w, idx(sc.s, stage.x, stage.y));
+        if (p && p.length > 0) {
+          want = { move: dirTo(sc.s, me, p[0]!) };
+          calm = 0;
+        } else if (w.dist[idx(sc.s, stage.x, stage.y)] === -1)
+          teleportHuman(sc.s, stage.x, stage.y); // a life lost: the scenario puts him back
+        else calm++;
+      }
       tickScene(sc, pilot.drive(want, sc.s.tick));
     }
   }
