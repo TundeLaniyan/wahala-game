@@ -176,6 +176,18 @@ export interface ArenaDef {
    */
   experimental?: boolean;
   /**
+   * A CAMPAIGN-ONLY board (docs/CAMPAIGN_WORLD.md, decision WX1): a field mission's own map, painted for the campaign
+   * and never offered by a menu. Kept out of `ARENAS` (so out of `STANDARD_ARENA_IDS` / `RUMBLE_ARENA_IDS`, every arena
+   * picker and every multiplayer list) and listed in `CAMPAIGN_ARENAS`; `getArena` still finds it by id.
+   */
+  campaignOnly?: true;
+  /**
+   * Presentation data of a board painted with a district's letter kit (the Oshodi cover letters): one letter per tile,
+   * '.' where there is no permanent object. Every '#' of the layout has a letter and every letter sits on a '#'
+   * (tested). The renderer draws each connected run of a letter as one real object; the simulation never reads it.
+   */
+  coverMap?: string[];
+  /**
    * Reserved, NOT implemented: the identity slot of this area's future one-player boss (an original
    * character loosely inspired by a locally iconic public figure, chosen and approved later). Metadata
    * only: nothing in the simulation, the renderer or the menus reads it.

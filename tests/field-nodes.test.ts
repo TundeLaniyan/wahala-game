@@ -8,6 +8,7 @@ import {
   FIELD_MISSION_DEFS,
   FIELD_MISSION_IDS,
   MISSION_DEFS,
+  fieldArenaId,
   buildMissionGame,
   createGame,
   getArena,
@@ -63,7 +64,7 @@ describe('every district has an entry and a middle field mission (except the sta
  * pass it; that it is closed until its leg is done is tests/mission-sectors.test.ts's.
  */
 function missionLayout(def: FieldMissionDef): string[] {
-  const layout = getArena(MISSION_DEFS[def.districtId].arenaId).layout.map((r) => [...r]);
+  const layout = getArena(fieldArenaId(def)).layout.map((r) => [...r]);
   if (def.sectorId) {
     const sector = getSector(def.sectorId);
     const gates = new Set((sector.gates ?? []).flatMap((g) => g.tiles.map(([x, y]) => `${x},${y}`)));
@@ -74,7 +75,7 @@ function missionLayout(def: FieldMissionDef): string[] {
 
 describe.each(FIELD_MISSION_IDS)('field mission %s data', (id) => {
   const def: FieldMissionDef = FIELD_MISSION_DEFS[id]!;
-  const arena = getArena(MISSION_DEFS[def.districtId].arenaId);
+  const arena = getArena(fieldArenaId(def));
   const layout = missionLayout(def);
   const dist = distances(layout, def.start[0], def.start[1]);
 

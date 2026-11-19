@@ -12,7 +12,7 @@
  *   - ordinary enemies escape a badly placed generator they saw.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
-import { FIELD_MISSION_DEFS, MISSION_DEFS, buildMissionGame, createGame, getArena } from '../src/sim';
+import { FIELD_MISSION_DEFS, buildMissionGame, createGame, fieldArenaId, getArena } from '../src/sim';
 import { Tile } from '../src/sim/types';
 import type { CampaignLevel, FieldMissionDef, FieldLegDef } from '../src/sim';
 import { getSector } from '../src/sim/mission/sectors';
@@ -42,7 +42,7 @@ const N4 = [
 /** Tiles reachable from (sx, sy) over the layout: barricades are concrete; gates open (they open between legs) unless
  * `closed`. */
 function reach(def: FieldMissionDef, sx: number, sy: number, closed = false): Set<string> {
-  const layout = getArena(MISSION_DEFS[def.districtId].arenaId).layout;
+  const layout = getArena(fieldArenaId(def)).layout;
   const sector = getSector(def.sectorId!);
   const gates = new Set(
     closed ? [] : (sector.gates ?? []).flatMap((g) => g.tiles.map(([x, y]) => `${x},${y}`)),
@@ -66,7 +66,7 @@ function reach(def: FieldMissionDef, sx: number, sy: number, closed = false): Se
 describe.each(MISSIONS)('%s: data', (id) => {
   const def = FIELD_MISSION_DEFS[id]!;
   const sector = getSector(def.sectorId!);
-  const layout = getArena(MISSION_DEFS[def.districtId].arenaId).layout;
+  const layout = getArena(fieldArenaId(def)).layout;
   const walls = new Set(sectorBlockedTiles(sector).map(([x, y]) => `${x},${y}`));
   const authored = new Set(fieldTiles(def).map(([x, y]) => `${x},${y}`));
   const fromStart = reach(def, def.start[0], def.start[1]);

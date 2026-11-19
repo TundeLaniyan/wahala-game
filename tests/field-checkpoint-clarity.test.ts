@@ -20,14 +20,11 @@ import { compassTarget } from '../src/ui/missionCompassModel';
 import { minimapMission } from '../src/ui/minimapModel';
 import { missionBossBar } from '../src/ui/campaignHealthModel';
 import { advance, put } from './mission-helpers';
+import { APPROACH_DOOR, APPROACH_DOOR_RETURN, APPROACH_MARKERS, RAIL_EXIT } from './oshodi-route';
 import { newField } from './field-helpers';
 
 const APPROACH = 'oshodi.approach';
-const MARKERS = [
-  [9, 39],
-  [19, 39],
-  [26, 40],
-] as const;
+const MARKERS = APPROACH_MARKERS;
 const view = (s: GameState): MissionView => missionView(s)!;
 
 /** Walks the human onto checkpoint `i` (staged position, one tick). */
@@ -59,7 +56,13 @@ describe('field view: walk-through checkpoints and hold doors are told apart', (
     const s = newField(APPROACH);
     advance(s, 1);
     let g = view(s).fieldGoal!;
-    expect(g).toMatchObject({ verb: 'goTo', nodeId: 'mk0', target: 'CHECKPOINT A', x: 9, y: 39 });
+    expect(g).toMatchObject({
+      verb: 'goTo',
+      nodeId: 'mk0',
+      target: 'CHECKPOINT A',
+      x: MARKERS[0]![0],
+      y: MARKERS[0]![1],
+    });
     expect(g.step).toEqual({ index: 0, count: 3 });
     expect(g.fightsOptional).toBe(true);
     reach(s, 0);
@@ -73,7 +76,7 @@ describe('field view: walk-through checkpoints and hold doors are told apart', (
 
   it('a later checkpoint does nothing: only the current one counts (unchanged rule)', () => {
     const s = newField(APPROACH);
-    put(s, 0, 19, 39); // checkpoint B before A
+    put(s, 0, ...MARKERS[1]!); // checkpoint B before A
     advance(s, 5);
     expect(view(s).fieldGoal!.nodeId).toBe('mk0');
     expect(s.mission!.field!.markersDone).toBe(0);
@@ -84,14 +87,14 @@ describe('field view: walk-through checkpoints and hold doors are told apart', (
     for (const i of [0, 1, 2]) reach(s, i);
     let h = view(s).fieldGoal!.hold!;
     expect(h).toMatchObject({ doorId: 'depot', ticks: 0, goalTicks: DOOR_HOLD_TICKS, standing: false });
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, 24);
     h = view(s).fieldGoal!.hold!;
     expect(h.standing).toBe(true);
     expect(h.ticks).toBe(24);
     expect(h.fraction).toBeCloseTo(24 / DOOR_HOLD_TICKS);
     expect(holdReadout(h)).toMatchObject({ label: 'HOLD 0.4 / 1.0 s', state: 'filling', hint: 'STAY ON IT' });
-    put(s, 0, 25, 43);
+    put(s, 0, ...APPROACH_DOOR_RETURN);
     advance(s, 4);
     h = view(s).fieldGoal!.hold!;
     expect(h.standing).toBe(false);
@@ -101,7 +104,7 @@ describe('field view: walk-through checkpoints and hold doors are told apart', (
       state: 'draining',
       hint: 'STEP BACK ON',
     });
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, DOOR_HOLD_TICKS);
     expect(s.mission!.pendingRaid?.doorId).toBe('depot');
     expect(holdReadout(view(s).fieldGoal!.hold!).state).toBe('full');
@@ -140,7 +143,7 @@ describe('HUD models from the view', () => {
   it('panel: HOLD + door target + the hold readout on the door leg', () => {
     const s = newField(APPROACH);
     for (const i of [0, 1, 2]) reach(s, i);
-    put(s, 0, 25, 44);
+    put(s, 0, ...APPROACH_DOOR);
     advance(s, 30);
     const g = fieldGoalModel(view(s))!;
     expect(g).toMatchObject({ tag: 'HOLD', target: 'DISPATCH DEPOT DOOR', step: null });
@@ -176,7 +179,7 @@ describe('HUD models from the view', () => {
     advance(rail, 2);
     const e = fieldGoalModel(view(rail))!;
     expect(e).toMatchObject({ tag: 'ESCAPE', target: 'FOOTBRIDGE' });
-    put(rail, 0, 59, 28);
+    put(rail, 0, ...RAIL_EXIT);
     advance(rail, 2);
     expect(fieldGoalModel(view(rail))).toMatchObject({ tag: 'RETURN', target: 'PARK GATE' });
     expect(view(rail).callout).toBe('Return to PARK GATE to finish.');
@@ -186,11 +189,11 @@ describe('HUD models from the view', () => {
     const s = newField(APPROACH);
     advance(s, 1);
     // stand right beside checkpoint B: the compass still points at A
-    const t = compassTarget(view(s), { x: 19, y: 40 }, null)!;
+    const t = compassTarget(view(s), { x: MARKERS[1]![0], y: MARKERS[1]![1] + 1 }, null)!;
     expect(t.id).toBe('mk0');
-    expect([t.x, t.y]).toEqual([9, 39]);
+    expect([t.x, t.y]).toEqual([...MARKERS[0]!]);
     reach(s, 0);
-    expect(compassTarget(view(s), { x: 9, y: 39 }, null)!.id).toBe('mk1');
+    expect(compassTarget(view(s), { x: MARKERS[0]![0], y: MARKERS[0]![1] }, null)!.id).toBe('mk1');
 
     // Mushin market: an optional bonus door is open from the start; the compass prefers the route
     const mk = newField('mushin.market');

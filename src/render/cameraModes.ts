@@ -1,4 +1,4 @@
-import { RUMBLE_ARENA_IDS } from '../sim';
+import { CAMPAIGN_ARENA_IDS, RUMBLE_ARENA_IDS } from '../sim';
 import type { GameState } from '../sim';
 import { directShot } from './cameraDirector';
 import type { CameraShot } from './cameraDirector';
@@ -20,8 +20,14 @@ import type { Layout } from './coords';
  */
 export type CameraMode = 'arena' | 'stadium';
 
-/** Arena ids that need the follow camera: every City Rumble stage (41 x 31 and larger boards). */
-export const STADIUM_ARENAS: ReadonlySet<string> = new Set<string>(RUMBLE_ARENA_IDS);
+/**
+ * Arena ids that need the follow camera: every City Rumble stage (41 x 31 and larger boards) and every campaign-only area
+ * board (its field mission is played on it like on a district map: decision WX1).
+ */
+export const STADIUM_ARENAS: ReadonlySet<string> = new Set<string>([
+  ...RUMBLE_ARENA_IDS,
+  ...CAMPAIGN_ARENA_IDS,
+]);
 
 export function cameraModeFor(arenaId: string, override?: CameraMode | null): CameraMode {
   if (override) return override;

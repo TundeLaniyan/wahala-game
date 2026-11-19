@@ -16,9 +16,10 @@
  * `tests/mission-sectors.test.ts` floods every sector from its mission's start and proves the play area never leaves
  * the rects, that every authored tile is inside, and that every leg target is reachable.
  */
-import { FIELD_MISSION_DEFS } from './fieldDefs';
+import { fieldMissionOf } from './fieldDefs';
 import { MISSION_DEFS } from './defs';
 import { FINALE_BOSS_SECTORS, FINALE_SECTORS } from './finaleDefs';
+import { CAMPAIGN_AREA_DEFS } from './campaignAreas';
 import type { MissionId, MissionSpec } from './types';
 
 /** Inclusive tile rectangle [x0, y0, x1, y1]. */
@@ -43,6 +44,11 @@ export type SectorHazardPolicy = 'inside' | 'none';
 export interface MissionSectorDef {
   id: string;
   districtId: MissionId;
+  /**
+   * The board the sector is stamped on: a campaign area's own campaign-only arena (`areas.ts`, decision WX2). Absent = the
+   * district's City Rumble arena (the district sectors, DS1-DS8).
+   */
+  arenaId?: string;
   /** Short name of the portion of the district ("Terminal approach streets"). */
   name: string;
   /** One line on what part of the district it is and what bounds it (docs table). */
@@ -338,8 +344,21 @@ const defs: MissionSectorDef[] = [
   },
 ];
 
-// the Ojuelegba finale's field sectors (19, 20) follow the districts' (decision FN3; data in finaleDefs.ts)
-const fieldSectors: readonly MissionSectorDef[] = [...defs, ...FINALE_SECTORS];
+/**
+ * RETIRED district sectors, kept only where something still replays them: the old Terminal Approach sector of the Oshodi
+ * City Rumble map is the board of the ARCHIVED combat pilot's replay (decision WX8, `archivedFieldDefs.ts`). Found by
+ * `getSector`, never in `MISSION_SECTOR_IDS`.
+ */
+const LEGACY_SECTORS: readonly MissionSectorDef[] = [
+];
+
+// the Ojuelegba finale's field sectors (19, 20) follow the districts' (decision FN3; data in finaleDefs.ts); the campaign
+// areas' play areas last (decision WX2: a campaign area's sector is its whole board's play area and its gates)
+const fieldSectors: readonly MissionSectorDef[] = [
+  ...defs,
+  ...FINALE_SECTORS,
+  ...CAMPAIGN_AREA_DEFS.filter((a) => a.format === 'field').map((a) => a.sector),
+];
 
 /** The field missions' sectors, one per field mission. */
 export const MISSION_SECTORS: Readonly<Record<string, MissionSectorDef>> = Object.fromEntries(
@@ -350,11 +369,17 @@ export const MISSION_SECTOR_IDS: readonly string[] = fieldSectors.map((d) => d.i
 
 /** Boss-mission sectors (`MissionDef.sectorId`, decision FN7): only the Ojuelegba finale's boss has one. */
 export const BOSS_SECTORS: Readonly<Record<string, MissionSectorDef>> = Object.fromEntries(
-  FINALE_BOSS_SECTORS.map((d) => [d.id, d]),
+  [...FINALE_BOSS_SECTORS, ...CAMPAIGN_AREA_DEFS.filter((a) => a.format === 'boss').map((a) => a.sector)].map(
+    (d) => [d.id, d],
+  ),
+);
+
+const LEGACY: Readonly<Record<string, MissionSectorDef>> = Object.fromEntries(
+  LEGACY_SECTORS.map((d) => [d.id, d]),
 );
 
 export function getSector(id: string): MissionSectorDef {
-  const def = MISSION_SECTORS[id] ?? BOSS_SECTORS[id];
+  const def = MISSION_SECTORS[id] ?? BOSS_SECTORS[id] ?? LEGACY[id];
   if (!def) throw new Error(`unknown mission sector ${id}`);
   return def;
 }
@@ -365,6 +390,6 @@ export function getSector(id: string): MissionSectorDef {
  */
 export function missionSectorOf(spec: MissionSpec): MissionSectorDef | null {
   if (spec.noSector) return null;
-  const id = spec.fieldId ? FIELD_MISSION_DEFS[spec.fieldId]?.sectorId : MISSION_DEFS[spec.id]?.sectorId;
+  const id = spec.fieldId ? fieldMissionOf(spec).sectorId : MISSION_DEFS[spec.id]?.sectorId;
   return id ? getSector(id) : null;
 }

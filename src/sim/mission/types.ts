@@ -552,6 +552,8 @@ export interface FieldDoorRuntime {
 /** Run time of a section field mission (`MissionState.field`; absent in the boss missions). */
 export interface FieldRuntime {
   fieldId: string;
+  /** The archived combat pilot's replay (decision WX8): the runtime reads the frozen mission data. Absent otherwise. */
+  archivedPilot?: true;
   /** Index of the leg in play (the last leg is the return route). */
   leg: number;
   legStartTick: number;

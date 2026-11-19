@@ -104,6 +104,11 @@ export class Board {
     return x >= 0 && y >= 0 && x < this.w && y < this.h ? this.g[y]![x]! : '#';
   }
 
+  /** The painted rows as they are (object letters kept): a campaign board's source (`arenas/campaign/kit.ts`). */
+  rows(): string[] {
+    return this.g.map((row) => row.join(''));
+  }
+
   /** The simulation layout: every object letter becomes '#'. */
   layout(legend: CoverLegend): string[] {
     return this.g.map((row) => row.map((c) => (legend[c] ? '#' : c)).join(''));

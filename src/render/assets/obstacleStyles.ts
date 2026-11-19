@@ -8,7 +8,7 @@
  * are missing still renders. Unknown arena ids get `DEFAULT_STYLE`.
  */
 
-import { RAID_ARENA_IDS, getArena } from '../../sim';
+import { CAMPAIGN_ARENA_IDS, MISSION_DEFS, RAID_ARENA_IDS, campaignAreaOfArena, getArena } from '../../sim';
 
 export type DebrisKind = 'crate' | 'tyres' | 'sacks' | 'barrier' | 'cartons' | 'kegs' | 'drums' | 'concrete';
 
@@ -322,8 +322,50 @@ export const OBSTACLE_STYLES: Readonly<Record<string, ObstacleStyle>> = {
   }),
 };
 
+/** What a crate is in a campaign area, by its sub-area's role (the district's own families, decision WX3). */
+const CAMPAIGN_CLUTTER: Readonly<Record<string, readonly string[]>> = {
+  park: ['prop_soft_tyres', 'prop_soft_crates', 'prop_soft_cartons', 'prop_soft_tyres'],
+  concourse: ['prop_soft_cartons', 'prop_soft_crates', 'prop_soft_barrier', 'prop_soft_cartons'],
+  plaza: ['prop_soft_crates', 'prop_soft_cartons', 'prop_soft_tyres', 'prop_soft_crates'],
+  street: ['prop_soft_cartons', 'prop_soft_crates', 'prop_soft_cartons', 'prop_soft_tyres'],
+  lane: ['prop_soft_cartons', 'prop_soft_crates', 'prop_soft_cartons', 'prop_soft_barrier'],
+  works: ['prop_soft_drums', 'prop_soft_tyres', 'prop_soft_drums', 'prop_soft_crates'],
+  service: ['prop_soft_drums', 'prop_soft_crates', 'prop_soft_barrier', 'prop_soft_drums'],
+  rail: ['prop_soft_crates', 'prop_soft_barrier', 'prop_soft_crates', 'prop_soft_drums'],
+};
+
+/**
+ * A campaign area's style: its district's City Rumble style (the same pillars and breakable families), each sub-area's clutter
+ * by its role. Built on first use (an arena id that is not a campaign area gets nothing).
+ */
+const campaignStyles = new Map<string, ObstacleStyle>();
+function campaignStyle(arenaId: string): ObstacleStyle | undefined {
+  if (!CAMPAIGN_ARENA_IDS.includes(arenaId)) return undefined;
+  let s = campaignStyles.get(arenaId);
+  if (!s) {
+    const area = campaignAreaOfArena(arenaId);
+    const base = (area && OBSTACLE_STYLES[MISSION_DEFS[area.districtId].arenaId]) || DEFAULT_STYLE;
+    s = {
+      ...base,
+      note: `campaign area: ${base.note}`,
+      softFor: (x, y) => {
+        const a = getArena(arenaId);
+        const h = tileHash(x, y);
+        if (a.layout[y]?.[x] === 'x') return h % 2 ? 'prop_soft_barrier' : 'prop_soft_tyres';
+        const d = a.districts?.find((z) =>
+          z.rects.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1),
+        );
+        const family = d ? CAMPAIGN_CLUTTER[d.role] : undefined;
+        return family ? family[h % family.length] : undefined;
+      },
+    };
+    campaignStyles.set(arenaId, s);
+  }
+  return s;
+}
+
 export function obstacleStyle(arenaId: string | undefined): ObstacleStyle {
-  return (arenaId && OBSTACLE_STYLES[arenaId]) || DEFAULT_STYLE;
+  return (arenaId && (OBSTACLE_STYLES[arenaId] ?? campaignStyle(arenaId))) || DEFAULT_STYLE;
 }
 
 /**

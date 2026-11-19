@@ -9,7 +9,7 @@ import { tileIndex } from '../grid';
 import { Tile } from '../types';
 import type { GameState, Player } from '../types';
 import { DEFAULT_LIVES, BASE_PHASE, PLAYER_FACTION_ID, FACTION_IDS } from './defs';
-import { getFieldMission } from './fieldDefs';
+import { archivedReplay, fieldMissionOf } from './fieldDefs';
 import type { FieldMissionDef } from './fieldDefs';
 import { enterLeg } from './field';
 import { fieldEnemiesOf } from './combatPilot';
@@ -233,7 +233,7 @@ function placeAt(state: GameState, p: Player, x: number, y: number): void {
 const FIELD_PHASE: PhaseTuning = { ...BASE_PHASE, callout: '' };
 
 export function createFieldMissionState(state: GameState, arena: ArenaDef, spec: MissionSpec): MissionState {
-  const def = getFieldMission(spec.fieldId!);
+  const def = fieldMissionOf(spec);
   if (def.districtId !== spec.id)
     throw new Error(`field mission ${def.id} belongs to ${def.districtId}, not ${spec.id}`);
   const enemies = fieldEnemiesOf(def, spec); // the roster (plus the archived pilot's additions in its replay)
@@ -306,6 +306,7 @@ export function createFieldMissionState(state: GameState, arena: ArenaDef, spec:
 
   const field: FieldRuntime = {
     fieldId: def.id,
+    ...(archivedReplay(spec) ? { archivedPilot: true as const } : {}),
     leg: 0,
     legStartTick: 0,
     markersDone: 0,

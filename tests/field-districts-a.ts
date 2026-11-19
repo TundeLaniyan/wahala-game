@@ -17,7 +17,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   FIELD_MISSION_DEFS,
-  MISSION_DEFS,
+  fieldArenaId,
   buildMissionGame,
   createGame,
   enemyDef,
@@ -67,7 +67,7 @@ function flood(s: GameState, sx: number, sy: number): Set<number> {
 export function describeMissionData(id: string): void {
   const def: FieldMissionDef = FIELD_MISSION_DEFS[id]!;
   const sector = getSector(def.sectorId!);
-  const layout = getArena(MISSION_DEFS[def.districtId].arenaId).layout;
+  const layout = getArena(fieldArenaId(def)).layout;
   const floor = (x: number, y: number): boolean => {
     const c = layout[y]?.[x];
     return c === '.' || c === '_';

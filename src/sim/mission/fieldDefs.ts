@@ -13,6 +13,7 @@ import type { EnemyVariantId } from '../data/enemyVariants';
 import type { Tile2 } from './defs';
 import { ebuteX } from '../arenas/ebuteWest';
 import { FINALE_FIELD_DEFS } from './finaleDefs';
+import { ARCHIVED_FIELD_DEFS } from './archivedFieldDefs';
 
 export interface FieldMarkerDef {
   x: number;
@@ -113,9 +114,14 @@ export interface FieldMissionDef {
   parSec: number;
   /**
    * The district sector the mission is played in (`MISSION_SECTORS`, src/sim/mission/sectors.ts): the part of the
-   * district map closed by barricades. Absent = the whole district map.
+   * district map closed by barricades, or a campaign area's play area and gates. Absent = the whole district map.
    */
   sectorId?: string;
+  /**
+   * The campaign-only arena the mission is played on: its campaign area's own board (`src/sim/mission/areas.ts`,
+   * `CAMPAIGN_ARENAS`; decision WX1). Absent = the district's City Rumble arena (`MISSION_DEFS[districtId].arenaId`).
+   */
+  arenaId?: string;
 }
 
 const m = (x: number, y: number, label: string): FieldMarkerDef => ({ x, y, label });
@@ -820,6 +826,25 @@ export function getFieldMission(id: string): FieldMissionDef {
   const def = FIELD_MISSION_DEFS[id];
   if (!def) throw new Error(`unknown field mission ${id}`);
   return def;
+}
+
+/**
+ * The field mission a spec plays: its own data, or (the archived combat pilot's replay only, decision WX8) the frozen data
+ * the pilot was tuned on.
+ */
+export function fieldMissionOf(spec: { fieldId?: string; archivedPilot?: boolean }): FieldMissionDef {
+  const archived = spec.archivedPilot && spec.fieldId ? ARCHIVED_FIELD_DEFS[spec.fieldId] : undefined;
+  return archived ?? getFieldMission(spec.fieldId!);
+}
+
+/** Does this spec replay frozen mission data (the archived combat pilot, decision WX8)? */
+export function archivedReplay(spec: { fieldId?: string; archivedPilot?: boolean }): boolean {
+  return !!(spec.archivedPilot && spec.fieldId && ARCHIVED_FIELD_DEFS[spec.fieldId]);
+}
+
+/** The field mission a running match plays (its runtime remembers whether it is the archived replay). */
+export function fieldMissionOfRuntime(f: { fieldId: string; archivedPilot?: true }): FieldMissionDef {
+  return fieldMissionOf({ fieldId: f.fieldId, archivedPilot: f.archivedPilot === true });
 }
 
 /** The legs of a mission including the implicit last one. */

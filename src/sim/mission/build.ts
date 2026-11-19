@@ -14,7 +14,8 @@ import { campaignTacticsLayer, levelConfigLayer, levelMaxHp } from '../campaign/
 import type { CampaignLevel } from '../campaign/levels';
 import type { EnemyVariantId } from '../data/enemyVariants';
 import { MISSION_DEFS, MISSION_SOFT_DENSITY } from './defs';
-import { getFieldMission } from './fieldDefs';
+import { fieldMissionOf } from './fieldDefs';
+import { fieldArenaId } from './arena';
 import { fieldEnemiesOf, pilotConfigLayer, pilotLevelLayer } from './combatPilot';
 import { mergeLayers } from '../config';
 import { ENEMY_VARIANTS } from '../data/enemyVariants';
@@ -42,7 +43,7 @@ export function bossDifficulty(spec: MissionSpec): Difficulty {
  */
 export function missionConfigLayer(spec: MissionSpec): DeepPartial<GameConfig> {
   if (spec.fieldId) {
-    const field = getFieldMission(spec.fieldId);
+    const field = fieldMissionOf(spec);
     return {
       match: { durationTicks: ticks(spec.timeLimitSec ?? field.timeLimitSec) },
       arena: { softDensity: MISSION_SOFT_DENSITY },
@@ -98,7 +99,8 @@ export const ENEMY_KIND_FOR_ROLE: Readonly<Record<NpcRole, EnemyKind>> = {
 };
 
 /**
- * The `GameOptions` of a mission: 6 to 9 competitors on the district's City Rumble arena. Seat 0 is the human
+ * The `GameOptions` of a mission: 6 to 9 competitors on the district's City Rumble arena (a field mission: on its campaign
+ * area's own board when it has one, decision WX1). Seat 0 is the human
  * (team 0), every other seat is a bot of team 1 (the boss and its crew never hurt each other).
  */
 export function buildMissionGame(o: {
@@ -116,7 +118,7 @@ export function buildMissionGame(o: {
   const humanHp = levelMaxHp(CAMPAIGN_CONFIG.playerMaxHp, o.level);
   const crewLevel = spec.difficulty ?? 'rookie';
   if (spec.fieldId) {
-    const field = getFieldMission(spec.fieldId);
+    const field = fieldMissionOf(spec);
     // the level's layers: health / damage and the Easy / Hard tactics (the archived pilot replay: its own adjustment)
     const levelConfig = spec.archivedPilot
       ? pilotLevelLayer(spec, o.level, levelConfigLayer(o.level))
@@ -142,7 +144,7 @@ export function buildMissionGame(o: {
     ];
     return {
       seed: o.seed,
-      arenaId: MISSION_DEFS[field.districtId].arenaId,
+      arenaId: fieldArenaId(field),
       players,
       settings: { game: 'mission' },
       mission: spec,

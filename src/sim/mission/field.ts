@@ -26,7 +26,7 @@ import {
   DOOR_HOLD_TICKS,
   FIELD_MERCY_TICKS,
   fieldLegCount,
-  getFieldMission,
+  fieldMissionOfRuntime,
   returnLegText,
 } from './fieldDefs';
 import type { FieldLegDef, FieldMissionDef } from './fieldDefs';
@@ -62,7 +62,7 @@ export function legAt(def: FieldMissionDef, index: number): Leg {
 function ctxOf(state: GameState): { m: MissionState; f: FieldRuntime; def: FieldMissionDef } {
   const m = state.mission!;
   const f = m.field!;
-  return { m, f, def: getFieldMission(f.fieldId) };
+  return { m, f, def: fieldMissionOfRuntime(f) };
 }
 
 /** The phase (0-2) the three HUD pips show for leg `leg` of `count`. */
@@ -378,7 +378,7 @@ export function resolveRaid(
   if (!m || !f || m.outcome) return false;
   const door = f.doors.find((d) => d.id === doorId);
   if (!door || door.status !== 'inRaid' || outcome.raidId !== door.raidId) return false;
-  const def = getFieldMission(f.fieldId);
+  const def = fieldMissionOfRuntime(f);
   const p = state.players[0]!;
 
   m.pendingRaid = null;

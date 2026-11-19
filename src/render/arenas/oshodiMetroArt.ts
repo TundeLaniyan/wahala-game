@@ -120,7 +120,8 @@ function districtAt(x: number, y: number): string {
 
 const isTrackTile = (x: number, y: number): boolean => TRACK_X.includes(x) && y >= TRACK_Y0 && y <= TRACK_Y1;
 
-function pavers(g: Ctx, r: () => number, x: number, y: number): void {
+/** Trodden clay-red and grey pavers (the trading streets; reused by the campaign areas). */
+export function pavers(g: Ctx, r: () => number, x: number, y: number): void {
   const pw = T / 4;
   const ph = T / 8;
   for (let j = 0; j < 8; j++)
@@ -134,7 +135,8 @@ function pavers(g: Ctx, r: () => number, x: number, y: number): void {
     }
 }
 
-function slabs(g: Ctx, r: () => number, x: number, y: number, tone: number, joint: string): void {
+/** Concrete slabs with joints every two tiles (reused by the campaign areas). */
+export function slabs(g: Ctx, r: () => number, x: number, y: number, tone: number, joint: string): void {
   g.fillStyle = `rgba(${tone + r() * 12},${tone - 4 + r() * 10},${tone - 12 + r() * 8},0.35)`;
   g.fillRect(x * T, y * T, T, T);
   g.strokeStyle = joint;
@@ -153,7 +155,7 @@ function slabs(g: Ctx, r: () => number, x: number, y: number, tone: number, join
   }
 }
 
-function hatch(g: Ctx, x0: number, y0: number, x1: number, y1: number, color: string): void {
+export function hatch(g: Ctx, x0: number, y0: number, x1: number, y1: number, color: string): void {
   g.save();
   g.beginPath();
   g.rect(x0 * T, y0 * T, (x1 - x0 + 1) * T, (y1 - y0 + 1) * T);
@@ -202,7 +204,7 @@ function boxJunction(g: Ctx, x0: number, y0: number, x1: number, y1: number): vo
   }
 }
 
-function barrierFrame(g: Ctx, x: number, y: number): void {
+export function barrierFrame(g: Ctx, x: number, y: number): void {
   const k = 12;
   for (let i = 0; i < 8; i++) {
     g.fillStyle = i % 2 ? 'rgba(20,20,20,0.85)' : 'rgba(236,190,30,0.85)';
@@ -215,7 +217,7 @@ function barrierFrame(g: Ctx, x: number, y: number): void {
 }
 
 /** Ballast, sleepers and two steel rails along one track tile (the lane runs north-south). */
-function trackTile(g: Ctx, r: () => number, x: number, y: number): void {
+export function trackTile(g: Ctx, r: () => number, x: number, y: number): void {
   g.fillStyle = `rgba(${96 + r() * 18},${92 + r() * 16},${86 + r() * 14},1)`;
   g.fillRect(x * T, y * T, T, T);
   for (let i = 0; i < 70; i++) {
