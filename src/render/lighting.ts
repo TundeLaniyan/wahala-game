@@ -16,7 +16,7 @@ import {
   ShaderMaterial,
   SphereGeometry,
 } from 'three';
-import type { Texture, WebGLRenderer } from 'three';
+import type { Material, Texture, WebGLRenderer } from 'three';
 import type { ArenaLook } from './arenaLook';
 
 export interface SceneLights {
@@ -57,6 +57,16 @@ function buildSkyScene(look?: ArenaLook): Scene {
   sun.position.set(-30, 26, 18);
   sky.add(sun);
   return sky;
+}
+
+/** Releases the geometry and materials of a sky scene built by `buildSkyScene`. */
+function disposeSkyScene(sky: Scene): void {
+  sky.traverse((o) => {
+    const m = o as Mesh;
+    if (!m.isMesh) return;
+    m.geometry.dispose();
+    (m.material as Material).dispose();
+  });
 }
 
 export function createSceneLights(
@@ -100,10 +110,13 @@ export function createSceneLights(
   });
 
   const pmrem = new PMREMGenerator(renderer);
-  const rt = pmrem.fromScene(buildSkyScene(look), 0.02);
+  const sky = buildSkyScene(look);
+  const rt = pmrem.fromScene(sky, 0.02);
   scene.environment = rt.texture;
   scene.environmentIntensity = look?.envIntensity ?? 0.6;
   pmrem.dispose();
+  // the sky scene was only drawn into the environment map: release its two spheres (they leaked once per match)
+  disposeSkyScene(sky);
 
   return {
     sun,
@@ -118,6 +131,9 @@ export function createSceneLights(
     },
     dispose() {
       rt.dispose();
+      // the sun's shadow map is a render target of its own (high quality): released with the match
+      sun.shadow.map?.dispose();
+      sun.shadow.map = null;
       scene.remove(hemi, sun, sun.target, ...lamps);
     },
   };

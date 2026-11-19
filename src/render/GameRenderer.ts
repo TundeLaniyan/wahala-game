@@ -12,6 +12,7 @@ import {
 import { PICKUP_DEFS } from '../sim';
 import type { GameState, SimEvent } from '../sim';
 import { createBackdrop } from './assets/backdrop';
+import { releaseSkeletons } from './assets/library';
 import { createSceneLights } from './lighting';
 import { arenaLook } from './arenaLook';
 import { installGrading } from './grading';
@@ -458,6 +459,9 @@ export class GameRenderer {
     this.effects.dispose();
     this.lights.dispose();
     this.backdrop.dispose();
+    // every rigged character of the match (fighters, enemies, street life, crowds) owns its skeleton's bone texture:
+    // without this each match start left about 42 of them on the GPU (docs/CAMPAIGN_CAMERA.md, "Asset lifecycle")
+    releaseSkeletons(this.scene);
     this.scene.clear();
     this.views = [];
     this.players = null;
