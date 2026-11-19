@@ -128,8 +128,9 @@ describe('the calm view cone and trap sense (SA5)', () => {
   });
 
   it('watching a placement: a keen guard sees a generator laid under the human in its sight; a basic one does not', () => {
-    const lay = (variant: EnemyVariantId, level: CampaignLevel = 'normal') => {
+    const lay = (variant: EnemyVariantId, level: CampaignLevel = 'normal', planted = false) => {
       const { s, bot } = scene({ human: [7, 6], enemy: [4, 6], variant, level, mind: false });
+      if (planted) s.players[1]!.rootedUntil = s.tick + 90; // in the middle of the recovery of its own swing
       bot.perceive(observe(s, 1));
       tick(s, { 0: { place: true } });
       const g = s.generators.find((o) => o.ownerId === 0)!;
@@ -137,10 +138,10 @@ describe('the calm view cone and trap sense (SA5)', () => {
     };
     expect(lay('ringSecurity')).toBe('known'); // keen: watched him lay it
     expect(lay('agbero')).toBe('absent'); // basic on Normal: the body still hides it
-    // decision RC10: a brawling Hard enemy has tunnel vision too (it still watches placements while calm, and keen / expert
-    // tiers always do): it reacts to the generator it then sees late, instead of knowing it at once
-    expect(lay('agbero', 'hard')).toBe('absent');
-    expect(lay('ringSecurity', 'hard')).toBe('known');
+    expect(lay('agbero', 'hard')).toBe('known'); // Hard: basic enemies watch placements too ...
+    // ... unless planted in their own swing (decision RC10: tunnel vision); the keen tiers always watch
+    expect(lay('agbero', 'hard', true)).toBe('absent');
+    expect(lay('ringSecurity', 'hard', true)).toBe('known');
     expect(lay('areaBoy', 'hard')).toBe('absent'); // no trap sense at all
   });
 

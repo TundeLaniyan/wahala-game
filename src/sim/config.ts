@@ -338,8 +338,8 @@ export interface TrapSenseSpec {
    */
   seesPlacement: boolean;
   /**
-   * Decision RC10: it keeps watching placements while it is BRAWLING (pursuing, winding up, recovering). False = tunnel vision: a
-   * brawler in a fight does not look at the ground under its rival's feet, so the bait works on it, and it reacts to a generator it
+   * Decision RC10: it keeps watching placements while it is COMMITTED (winding up, swinging, recovering). False = tunnel vision:
+   * a brawler planted in its own swing does not look at the ground under its rival's feet, so the bait works on it, and it reacts to a generator it
    * sees late (`enemyBrawlReactScale`) instead. Absent = true (the tiers that read traps well).
    */
   watchesWhileBrawling?: boolean;
@@ -1413,7 +1413,7 @@ export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' |
       victimFreeTicks: 66,
     }),
     hard: tacticsEnemyAttacks({
-      extra: { agbero: 34, guard: 34, thrower: 24, heavy: 26, lieutenant: 30, boss: 16 },
+      extra: { agbero: 40, guard: 40, thrower: 24, heavy: 32, lieutenant: 30, boss: 16 },
       recovery: { agbero: 56, guard: 56, thrower: 36, heavy: 42, lieutenant: 26, boss: 20 },
       cooldown: { agbero: 150, guard: 150, thrower: 180, heavy: 198, lieutenant: 120, boss: 132 },
       throwRecovery: { agbero: 0, guard: 0, thrower: 36, heavy: 36, lieutenant: 20, boss: 16 },
@@ -1422,7 +1422,7 @@ export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' |
       maxGroupPunches: 2,
       groupPunchGapTicks: 30,
       groupGapTicks: 54,
-      victimFreeTicks: 54,
+      victimFreeTicks: 66,
     }),
   };
 

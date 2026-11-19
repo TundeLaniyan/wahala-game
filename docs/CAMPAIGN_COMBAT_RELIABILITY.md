@@ -118,12 +118,17 @@ range and surviving). Not the timing step. First attempt / within two, Normal, n
   192 / 180 / 150 so every cooldown still exceeds wind-up + recovery + miss + 36. Why: the second swing starts a cooldown after
   the first and plants it for wind-up + swing + recovery; to still be planted when a generator laid in the first recovery goes off
   that planted time has to reach the end of the 3 s fuse.
-- **RC10, tunnel vision (game, Hard).** A brawling Hard enemy of the basic and no-trap-sense tiers does not watch the ground under its
-  rival's feet (`TrapSenseSpec.watchesWhileBrawling: false`); it reacts to a generator it then sees by the Normal brawl scale (x2 /
-  x2.4). It still watches placements when calm, and the keen and expert tiers (Ring security, lieutenants, bosses) always do.
-  Hard bait first try: 0-10 % (three of four missions 0-10 %) -> 65-85 %. Making Hard react later only (`enemyBrawlReactScale` 3.2
+- **RC10, tunnel vision (game, Hard).** A Hard enemy of the basic and no-trap-sense tiers that is COMMITTED (winding up, swinging or
+  planted in its recovery) does not watch the ground under its rival's feet (`TrapSenseSpec.watchesWhileBrawling: false`); it reacts
+  to a generator it then sees by the Normal brawl scale (x2 / x2.4). Pursuing, calm or free it still watches placements, and the
+  keen and expert tiers (Ring security, lieutenants, bosses) always do. (A first version applied to every brawling enemy, pursuit
+  included: bait 65-85 %, but the Hard missions then cost less than Normal for the scripted playthrough and
+  `field-districts-fadeyi` failed; committed-only keeps Hard dearer.) Hard bait first try: 0-10 % (three of four missions) -> 60-85 %. Making Hard react later only (`enemyBrawlReactScale` 3.2
   and 3.4, measured) lifted `approach` from 0 to 45 % and the others not at all: the enemy that sees the placement simply walks out
   when it is free.
+- **RC13, Hard commitment and breathing room (game).** Hard agbero / guard wind-up 44 ticks (extra 40, was 34; Normal 48), heavy 36
+  (extra 32, was 26), free window after an enemy hit 66 (was 54, = Normal). Without it the Hard Oshodi flow finished 5-8 of 12 seeds and
+  lost its lives to the heavy and to the bait's own cost; now 16 of 20.
 - **RC11, Hard speed (game).** Hard step times 12 / 12 / 13 / 14 (lieutenant 11), as Normal: the Hard probe's "reached an adjacent
   tile" falls from 10.4 % to 8.0 %.
 - **RC12, the human (harness).** Two things a real player does and the first-round human did not: he picks the lone patroller, and he
@@ -270,12 +275,12 @@ marshal #2).
 
 | mission | Easy | Normal | Hard | production Normal | production Hard |
 | --- | --- | --- | --- | --- | --- |
-| oshodi.approach | 100 / 100 | 95 / 100 | 85 / 95 | 75 / 95 | 0 / 0 |
-| oshodi.railEdge | 85 / 100 | 85 / 95 | 65 / 70 | 85 / 95 | 20 / 20 |
-| mushin.market | 100 / 100 | 100 / 100 | 70 / 90 | 70 / 90 | 80 / 90 |
-| fadeyiSomolu.junctions | 100 / 100 | 85 / 95 | 80 / 85 | 80 / 85 | 0 / 0 |
+| oshodi.approach | 100 / 100 | 95 / 100 | 60 / 95 | 75 / 95 | 0 / 0 |
+| oshodi.railEdge | 85 / 100 | 85 / 95 | 60 / 70 | 85 / 95 | 20 / 20 |
+| mushin.market | 100 / 100 | 100 / 100 | 85 / 100 | 70 / 90 | 80 / 90 |
+| fadeyiSomolu.junctions | 100 / 100 | 85 / 95 | 60 / 65 | 80 / 85 | 0 / 0 |
 
-Targets: Normal at least 70 / 90 on all four, met (lowest 85 first, 95 within two). Hard at least 35 / 60, met (lowest 65 first, 70
+Targets: Normal at least 70 / 90 on all four, met (lowest 85 first, 95 within two). Hard at least 35 / 60, met (lowest 60 first, 65
 within two). Easy >= Normal >= Hard in every cell, both columns. Production Easy (same human): 95 / 100, 85 / 95, 100 / 100, 95 / 100.
 Reading the production columns honestly: the same improved human trapping on production Normal gets 70-85 % first try, so against
 production the game changes add 0 to +30 points on Normal (`approach` 75 to 95, `market` 70 to 100, `junctions` 80 to 85, `railEdge` unchanged at 85); what they do change is Hard: production Hard has no bait on three of four missions (it watches the
@@ -305,9 +310,10 @@ playthroughs).
 | --- | --- | --- |
 | Easy | 8 | 8 |
 | Normal | 8 | 8 |
-| Hard | 6 | 8 |
+| Hard | 5 (16 of 20 seeds) | 7 (19 of 20) |
 
-Hard finishes 6 of 8 (a clear majority; the two misses lost all three lives in the crowded lane after the bait), first round 3 of 8.
+Hard finishes 16 of 20 seeds (80 %; the first 8 seeds happen to give 5), first round 3 of 8; the others lose all three lives in the crowded lane
+after the bait. The test runs 20 Hard seeds.
 
 ## 7. HOW TO BEAT ENEMIES WITH GENERATORS (for players)
 
@@ -345,7 +351,7 @@ chasing, goes to look where it last saw you, and returns to its route. A hit on 
 then the same rules apply). Come back after it has settled and try the ambush on the next lap.
 
 **5. On Hard** enemies react faster and chase longer, and a calm one watches you lay a generator, but a brawler in the middle of a fight
-has tunnel vision: the same bait works (65-85 % first try, 70-95 % within two in the four missions), with less room for a late step
+has tunnel vision while it swings: the same bait works (60-85 % first try, 65-100 % within two in the four missions), with less room for a late step
 out. Ring security and lieutenants always watch the ground; for them use the ambush.
 
 ## 8. Tests added or changed
@@ -373,7 +379,7 @@ patroller), `scripts/lib/readability.ts` (the committed runner, `hurtByIt`, the 
   with the same human, is in the table. Against production the game changes are 0 to +30 points on Normal and decisive on Hard.
 - The ambush needs room: 0-60 % in the four missions (it works on the open market, not in the tight streets), the lure does not work
   (1 of 40). Bait is the strategy; the ambush is the answer to Ring security and lieutenants, which watch the ground.
-- Hard bait is 65-85 % first try, so Hard is only a little harder than Normal for a human who knows the bait; its pressure is the
+- Hard bait is 60-85 % first try, so Hard is only a little harder than Normal for a human who knows the bait; its pressure is the
   chase, the notice time, the crowd and the keen tiers. A founder playtest should decide whether Hard needs a sharper edge (a shorter
   recovery or a later whiff bonus are the next numbers).
 - Sample sizes are 20 seeds per cell (ambush, lure 10) on four of 13 missions, and the stage tile of the ambush is a scenario shortcut.

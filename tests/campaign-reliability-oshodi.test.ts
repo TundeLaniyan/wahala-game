@@ -17,22 +17,23 @@ const kills = (r: FlowResult[]): number => r.filter((x) => x.agberoBlastKills > 
 describe('the human-like Oshodi flow (V5)', () => {
   const normal = run('normal', 8);
   const easy = run('easy', 8);
-  const hard = run('hard', 8);
+  const hard = run('hard', 20);
 
   it('Normal: he finishes the mission and traps a patrolling warden with his own generator in a majority of 8 seeds', () => {
     expect(wins(normal), 'finished').toBeGreaterThanOrEqual(5);
     expect(kills(normal), 'a warden trapped').toBeGreaterThanOrEqual(5);
   });
 
-  it('Hard: he finishes the mission in a clear majority of the 8 seeds, and traps the warden in most', () => {
-    expect(wins(hard), 'finished').toBeGreaterThanOrEqual(5);
-    expect(kills(hard), 'a warden trapped').toBeGreaterThanOrEqual(5);
+  it('Hard: he finishes the mission in a clear majority of 20 seeds (16 measured), and traps the warden in most', () => {
+    expect(wins(hard), 'finished').toBeGreaterThanOrEqual(14);
+    expect(kills(hard), 'a warden trapped').toBeGreaterThanOrEqual(15);
   });
 
   it('Easy >= Normal >= Hard in completion and in traps', () => {
-    expect(wins(easy)).toBeGreaterThanOrEqual(wins(normal));
-    expect(wins(normal)).toBeGreaterThanOrEqual(wins(hard));
-    expect(kills(easy)).toBeGreaterThanOrEqual(kills(normal));
-    expect(kills(normal)).toBeGreaterThanOrEqual(kills(hard));
+    // rates (Hard has 20 seeds, the others 8)
+    expect(wins(easy) / 8).toBeGreaterThanOrEqual(wins(normal) / 8);
+    expect(wins(normal) / 8).toBeGreaterThanOrEqual(wins(hard) / 20);
+    expect(kills(easy) / 8).toBeGreaterThanOrEqual(kills(normal) / 8);
+    expect(kills(normal) / 8).toBeGreaterThanOrEqual(kills(hard) / 20);
   });
 }, 600_000);

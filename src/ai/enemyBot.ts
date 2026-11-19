@@ -243,7 +243,7 @@ export class EnemyBot implements Bot {
       ...(calm ? { visionCap: sense.calmVisionTiles, calmCone: true } : {}),
       seesPlacement:
         sense.seesPlacement &&
-        (!brawling || sense.watchesWhileBrawling !== false) &&
+        (!(me.attack !== null || obs.tick < me.rootedUntil) || sense.watchesWhileBrawling !== false) &&
         obs.tick >= me.dazedUntil,
     });
     if (this.sight.freshlyKnown) this.planner(obs).alert();
