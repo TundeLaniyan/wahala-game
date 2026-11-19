@@ -23,14 +23,7 @@ import {
   RAID_DEFS,
   tuningFor,
 } from '../sim';
-import type {
-  FieldLegDef,
-  FieldMissionDef,
-  MissionId,
-  ObjectiveKind,
-  RaidDef,
-  RaidId,
-} from '../sim';
+import type { FieldLegDef, FieldMissionDef, MissionId, ObjectiveKind, RaidDef, RaidId } from '../sim';
 import type { GlyphId } from '../render/objectiveGlyphs';
 import type { PreviewModel } from '../render/briefPreview';
 
@@ -166,12 +159,20 @@ function legWords(def: FieldMissionDef, leg: FieldLegDef): LegWords {
     case 'reachMarkers': {
       const n = leg.markers.length;
       const unit = pluralLabel('CHECKPOINT', n);
-      return { objective: obj('WALK THROUGH', n, unit, `WALK THROUGH ${n} ${unit}`), glyph: 'checkpoint', blastsOnly: false };
+      return {
+        objective: obj('WALK THROUGH', n, unit, `WALK THROUGH ${n} ${unit}`),
+        glyph: 'checkpoint',
+        blastsOnly: false,
+      };
     }
     case 'clearGroup': {
       const n = enemiesOf(def, leg.group);
       const unit = n === 1 ? 'ENEMY' : 'ENEMIES';
-      return { objective: obj('DEFEAT', n, unit, `DEFEAT ${n} ${unit}`), glyph: 'enemies', blastsOnly: false };
+      return {
+        objective: obj('DEFEAT', n, unit, `DEFEAT ${n} ${unit}`),
+        glyph: 'enemies',
+        blastsOnly: false,
+      };
     }
     case 'escapeRoute':
       return {
@@ -187,7 +188,11 @@ function legWords(def: FieldMissionDef, leg: FieldLegDef): LegWords {
     case 'destroyTargets': {
       const n = leg.targets.length;
       const unit = pluralLabel(targetsLabel(leg), n);
-      return { objective: obj('DESTROY', n, unit, `DESTROY ${n} ${unit}`), glyph: 'equipment', blastsOnly: true };
+      return {
+        objective: obj('DESTROY', n, unit, `DESTROY ${n} ${unit}`),
+        glyph: 'equipment',
+        blastsOnly: true,
+      };
     }
     case 'holdArea': {
       const s = Math.round(leg.holdSec);
@@ -249,7 +254,10 @@ function fieldAction(def: FieldMissionDef, leg: FieldLegDef): string[] {
     case 'destroyTargets': {
       const hp = targetsHp(leg);
       const each = hp && hp > 1 ? ` Each one takes ${hp} separate blasts.` : '';
-      return [`${BLASTS_ONLY}: lay a generator next to each one.${each}`, 'Punches and vehicles do nothing to them.'];
+      return [
+        `${BLASTS_ONLY}: lay a generator next to each one.${each}`,
+        'Punches and vehicles do nothing to them.',
+      ];
     }
     case 'door': {
       const door = def.doors.find((d) => d.id === leg.doorId);
@@ -393,7 +401,8 @@ function obstaclesText(def: RaidDef): string {
   if (countOf(def, 'S') > 0) parts.push('sturdy crates');
   if (countOf(def, 'B') > 0) parts.push('barrels');
   if (parts.length === 0) return '';
-  const list = parts.length === 1 ? parts[0]! : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+  const list =
+    parts.length === 1 ? parts[0]! : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
   return list.charAt(0).toUpperCase() + list.slice(1);
 }
 
@@ -411,7 +420,9 @@ export function raidBrief(raidId: RaidId, section?: SectionMissionDef): MissionB
   const barrels = countOf(def, 'B') > 0;
   const each = def.legend.markedHp > 1 ? ` (${def.legend.markedHp} blasts each)` : '';
   const rule = BLAST_RULE_BY_GAME.raid;
-  const legend: BriefLegend[] = [{ glyph: 'cargo', tag: 'TARGET', text: 'Marked cargo: yellow, target cross' }];
+  const legend: BriefLegend[] = [
+    { glyph: 'cargo', tag: 'TARGET', text: 'Marked cargo: yellow, target cross' },
+  ];
   if (obstacles) legend.push({ glyph: 'crate', tag: 'OBSTACLE', text: `${obstacles}: only in the way` });
   legend.push({ glyph: 'exit', tag: 'EXIT', text: 'Opens when the cargo is gone' });
   return {
@@ -424,7 +435,9 @@ export function raidBrief(raidId: RaidId, section?: SectionMissionDef): MissionB
     action: [
       `${BLASTS_ONLY}: only blasts break the marked cargo${each}.`,
       ...(obstacles
-        ? [`${obstacles} are only obstacles: blast them to open a path${barrels ? ' (barrels explode)' : ''}.`]
+        ? [
+            `${obstacles} are only obstacles: blast them to open a path${barrels ? ' (barrels explode)' : ''}.`,
+          ]
         : []),
     ],
     blast: `${BLAST_TEXT[rule]} Range ${def.bombs.range} tiles each way.`,

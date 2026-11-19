@@ -20,6 +20,8 @@ describe('placeCompass with a route heading', () => {
   });
 
   it('a target on screen still hides the pointer (its pin in the world is enough)', () => {
-    expect(placeCompass({ bounds, player, target: { x: 500, y: 220 }, size: 46, heading: { x: 400, y: 120 } })).toBeNull();
+    expect(
+      placeCompass({ bounds, player, target: { x: 500, y: 220 }, size: 46, heading: { x: 400, y: 120 } }),
+    ).toBeNull();
   });
 });

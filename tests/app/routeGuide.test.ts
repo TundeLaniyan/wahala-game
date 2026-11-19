@@ -15,7 +15,9 @@ function grid(rows: string[]): RouteGrid {
   return {
     width: rows[0]!.length,
     height: rows.length,
-    tiles: rows.flatMap((r) => [...r].map((c) => (c === '#' ? Tile.Hard : c === 'x' ? Tile.Soft : Tile.Empty))),
+    tiles: rows.flatMap((r) =>
+      [...r].map((c) => (c === '#' ? Tile.Hard : c === 'x' ? Tile.Soft : Tile.Empty)),
+    ),
   };
 }
 
@@ -48,8 +50,16 @@ describe('routeCue', () => {
 
   it('open floor: straight at it', () => {
     const g = grid(['.....', '.....', '.....']);
-    expect(routeCue(g, { x: 0, y: 1 }, { x: 4, y: 1 })).toMatchObject({ word: 'RIGHT', tiles: 4, text: '→ 4 TILES' });
-    expect(routeCue(g, { x: 2, y: 1 }, { x: 2, y: 1 })).toMatchObject({ word: 'HERE', tiles: 0, text: 'HERE' });
+    expect(routeCue(g, { x: 0, y: 1 }, { x: 4, y: 1 })).toMatchObject({
+      word: 'RIGHT',
+      tiles: 4,
+      text: '→ 4 TILES',
+    });
+    expect(routeCue(g, { x: 2, y: 1 }, { x: 2, y: 1 })).toMatchObject({
+      word: 'HERE',
+      tiles: 0,
+      text: 'HERE',
+    });
   });
 
   it('a solid target (a crate, equipment) is reached from a neighbour', () => {
@@ -92,7 +102,11 @@ describe('RouteCache: recomputes only on change', () => {
   it('one BFS on a whole district board costs well under a millisecond', () => {
     const def = FIELD_MISSION_DEFS['oshodi.railEdge']!;
     const state = createGame(
-      buildMissionGame({ spec: { id: def.districtId, fieldId: def.id, noSector: true }, humanCharacter: 'streetBaller', seed: 1 }),
+      buildMissionGame({
+        spec: { id: def.districtId, fieldId: def.id, noSector: true },
+        humanCharacter: 'streetBaller',
+        seed: 1,
+      }),
     );
     const me = state.players[0]!;
     const target = { x: state.width - 3, y: 2 };

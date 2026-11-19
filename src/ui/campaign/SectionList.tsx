@@ -54,9 +54,7 @@ export function SectionList({ districtId }: { districtId: MissionId }) {
                   testId={`section-start-${m.id}`}
                   disabled={m.status === 'locked'}
                   onClick={() =>
-                    m.format === 'boss'
-                      ? commands.campaignBriefing(districtId)
-                      : commands.campaignBrief(m.id)
+                    m.format === 'boss' ? commands.campaignBriefing(districtId) : commands.campaignBrief(m.id)
                   }
                 >
                   {m.format === 'boss'

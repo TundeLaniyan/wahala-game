@@ -19,17 +19,24 @@ export function RaidBriefOverlay() {
   if (!brief) return null;
   const b = raidBrief(brief.raidId);
   return (
-    <div className="mn-overlay raid-brief-overlay" data-testid="raid-brief" data-raid={brief.raidId} ref={root}>
+    <div
+      className="mn-overlay raid-brief-overlay"
+      data-testid="raid-brief"
+      data-raid={brief.raidId}
+      ref={root}
+    >
       <div className="mn-overlay-card raid-brief-card">
         <header className="raid-brief-head">
-          <small className="mn-kicker">
-            {b.district} · Classic raid
-          </small>
+          <small className="mn-kicker">{b.district} · Classic raid</small>
           <h2>{b.title}</h2>
         </header>
         <MissionBriefCard brief={b} compact={brief.compact} testId="raid-brief-card" />
         <div className="raid-brief-actions">
-          <PrimaryButton testId="raid-brief-start" autoFocus onClick={() => commands.campaignRaidBriefStart()}>
+          <PrimaryButton
+            testId="raid-brief-start"
+            autoFocus
+            onClick={() => commands.campaignRaidBriefStart()}
+          >
             Start raid
           </PrimaryButton>
         </div>

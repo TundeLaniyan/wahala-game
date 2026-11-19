@@ -45,7 +45,8 @@ function fieldPins(state: GameState): ObjectivePin[] {
   if (!leg) {
     // the way back: the return marker
     const r = node('return');
-    if (r) pins.push({ key: 'return', x: r.x, y: r.y, glyph: 'exit', tone: 'exit', height: 1.6, small: false });
+    if (r)
+      pins.push({ key: 'return', x: r.x, y: r.y, glyph: 'exit', tone: 'exit', height: 1.6, small: false });
     return pins;
   }
   switch (leg.kind) {
@@ -65,11 +66,27 @@ function fieldPins(state: GameState): ObjectivePin[] {
     case 'door': {
       const d = f.doors.find((o) => o.id === leg.doorId);
       if (d && d.status !== 'done')
-        pins.push({ key: `door:${d.id}`, x: d.x, y: d.y, glyph: 'door', tone: 'door', height: 1.75, small: false });
+        pins.push({
+          key: `door:${d.id}`,
+          x: d.x,
+          y: d.y,
+          glyph: 'door',
+          tone: 'door',
+          height: 1.75,
+          small: false,
+        });
       break;
     }
     case 'holdArea':
-      pins.push({ key: 'area', x: leg.area.x, y: leg.area.y, glyph: 'area', tone: 'area', height: 1.3, small: false });
+      pins.push({
+        key: 'area',
+        x: leg.area.x,
+        y: leg.area.y,
+        glyph: 'area',
+        tone: 'area',
+        height: 1.3,
+        small: false,
+      });
       break;
     case 'escapeRoute': {
       const e = node('exit') ?? leg.exit;
@@ -88,10 +105,26 @@ function raidPins(state: GameState): ObjectivePin[] {
   const pins: ObjectivePin[] = [];
   for (const c of r.cargo)
     if (c.marked && !c.destroyed)
-      pins.push({ key: `cargo:${c.id}`, x: c.x, y: c.y, glyph: 'cargo', tone: 'target', height: 1.25, small: false });
+      pins.push({
+        key: `cargo:${c.id}`,
+        x: c.x,
+        y: c.y,
+        glyph: 'cargo',
+        tone: 'target',
+        height: 1.25,
+        small: false,
+      });
   r.switches.forEach((s, i) => {
     if (!s.pressed)
-      pins.push({ key: `switch:${i}`, x: s.x, y: s.y, glyph: 'switch', tone: 'switch', height: 0.85, small: true });
+      pins.push({
+        key: `switch:${i}`,
+        x: s.x,
+        y: s.y,
+        glyph: 'switch',
+        tone: 'switch',
+        height: 0.85,
+        small: true,
+      });
   });
   if (r.extraction.open)
     pins.push({

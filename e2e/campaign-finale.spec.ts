@@ -54,8 +54,9 @@ test('six districts cleared: the finale node, the interim beat and mission 19 in
     await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.campaign.v1')!).interimSeen as unknown),
   ).toBe(true);
 
-  // mission 19 starts in its sector of the reference arena
+  // mission 19 starts in its sector of the reference arena, through its visual briefing (decision MG1)
   await page.getByTestId('section-start-ojuelegba.return').click();
+  await page.getByTestId('mission-brief-start').click();
   await inMatch(page);
   const s = await page.evaluate(() => {
     const st = (window as any).__WAHALA__.getState();

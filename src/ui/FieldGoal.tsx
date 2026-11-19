@@ -21,7 +21,7 @@ export function RouteCueLine({
   cue,
   testId,
 }: {
-  cue: Pick<RouteCue, 'text' | 'tiles' | 'word'> & { via?: RouteCue['via'] } | null | undefined;
+  cue: (Pick<RouteCue, 'text' | 'tiles' | 'word'> & { via?: RouteCue['via'] }) | null | undefined;
   testId: string;
 }) {
   if (!cue) return null;

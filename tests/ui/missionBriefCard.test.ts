@@ -40,11 +40,18 @@ describe('MissionBriefCard', () => {
   });
 
   it('compact (a replay, the pause menu): the picture and one line', () => {
-    const out = html({ brief: missionBrief('oshodi.railEdge')!, compact: true, testId: 'pause-mission-brief' });
+    const out = html({
+      brief: missionBrief('oshodi.railEdge')!,
+      compact: true,
+      testId: 'pause-mission-brief',
+    });
     expect(out).toContain('data-testid="pause-mission-brief"');
     expect(out).toContain('data-compact="yes"');
     expect(out).toContain('DESTROY 3 RELAY BOXES · BLASTS ONLY');
     expect(out).not.toContain('mission-brief-steps');
     expect(out).not.toContain('mission-brief-action');
+    // a line that adds nothing to the objective is not repeated
+    const door = html({ brief: missionBrief('oshodi.approach')!, compact: true });
+    expect(door.match(/RAID THE DISPATCH DEPOT/g)).toHaveLength(1);
   });
 });

@@ -36,7 +36,11 @@ export type PreviewModel =
   | { kind: 'bossNode'; objective: ObjectiveKind };
 
 export const previewKey = (m: PreviewModel): string =>
-  m.kind === 'equipment' ? `equipment:${m.equipment}` : m.kind === 'bossNode' ? `boss:${m.objective}` : m.kind;
+  m.kind === 'equipment'
+    ? `equipment:${m.equipment}`
+    : m.kind === 'bossNode'
+      ? `boss:${m.objective}`
+      : m.kind;
 
 const cache = new Map<string, Promise<string | null>>();
 
@@ -93,7 +97,12 @@ function render(model: PreviewModel, size: number): string | null {
     holder.rotation.y = -0.55; // a three-quarter view, like the game camera's angle on it
     // a soft contact shadow on the floor
     const shadowGeo = new CircleGeometry(0.62, 28).rotateX(-Math.PI / 2);
-    const shadowMat = new MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false });
+    const shadowMat = new MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+    });
     owned.push(shadowGeo, shadowMat);
     const shadow = new Mesh(shadowGeo, shadowMat);
     shadow.position.y = 0.002;

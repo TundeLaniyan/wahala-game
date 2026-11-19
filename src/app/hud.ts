@@ -751,4 +751,3 @@ function fieldCueOf(state: GameState, view: MissionView | null, local: Player | 
   if (!goal.nodeId && !goal.area) return null;
   return routeFor(state, local, to);
 }
-

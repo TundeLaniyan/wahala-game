@@ -124,9 +124,8 @@
   letter-spacing: 0.08em;
   text-align: center;
   text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 .mb-pic.small figcaption {
   display: none;

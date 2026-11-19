@@ -2,6 +2,14 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Mission guidance: briefings, objective HUD and target pins (branch `claude/wahala-cg-guidance`, from `0b89d09`)
+
+A short visual briefing before every campaign mission (field, boss, finale and the standalone raid; compact on a replay),
+the raid's instructions at the door hand-over over the held raid, the same card compact in pause, done / total counters,
+a walkable-route arrow (BFS), "N/M ✓ · NEXT" notices and a glyph pin over every live target (`docs/MISSION_GUIDANCE.md`,
+decisions MG1-MG9). Verified with typecheck, ESLint, the unit tests listed there and `e2e/mission-guidance.spec.ts`
+(desktop and mobile); screenshots in `docs/screenshots/campaign-guidance-expansion/guidance/`.
+
 ## Ojuelegba finale: missions 19-21 (branch `claude/wahala-csa-finale`, from `60c7e08`)
 
 The last campaign chapter (decisions FN1-FN10, `docs/CAMPAIGN_SECTOR_AI.md` "Part: Ojuelegba finale"): after the Lekki

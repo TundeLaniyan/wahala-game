@@ -48,7 +48,11 @@ export const GLYPHS: Readonly<Record<GlyphId, Glyph>> = {
   cargo: {
     id: 'cargo',
     name: 'Marked cargo',
-    parts: [{ d: 'M4 5h16v14H4z' }, { d: 'M4 5l16 14M20 5L4 19' }, { d: 'M12 9.4a2.6 2.6 0 1 0 0.01 0z', fill: true }],
+    parts: [
+      { d: 'M4 5h16v14H4z' },
+      { d: 'M4 5l16 14M20 5L4 19' },
+      { d: 'M12 9.4a2.6 2.6 0 1 0 0.01 0z', fill: true },
+    ],
   },
   crate: {
     id: 'crate',
@@ -78,7 +82,10 @@ export const GLYPHS: Readonly<Record<GlyphId, Glyph>> = {
   area: {
     id: 'area',
     name: 'Area to hold',
-    parts: [{ d: 'M4 4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M4 8V4' }, { d: 'M12 8.6a3.4 3.4 0 1 0 0.01 0z', fill: true }],
+    parts: [
+      { d: 'M4 4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M4 8V4' },
+      { d: 'M12 8.6a3.4 3.4 0 1 0 0.01 0z', fill: true },
+    ],
   },
   enemies: {
     id: 'enemies',

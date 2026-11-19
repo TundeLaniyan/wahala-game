@@ -85,7 +85,11 @@ export class FieldEquipmentViews implements View {
   }
 
   private build(kind: string): Piece {
-    const piece = buildEquipmentPiece(kind, { stripe: this.stripe, scorch: this.scorch, light: this.lightOn }, this.owned);
+    const piece = buildEquipmentPiece(
+      kind,
+      { stripe: this.stripe, scorch: this.scorch, light: this.lightOn },
+      this.owned,
+    );
     this.group.add(piece.root);
     return piece;
   }

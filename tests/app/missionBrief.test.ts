@@ -22,7 +22,9 @@ import { GLYPHS } from '../../src/render/objectiveGlyphs';
 
 const missions = allSectionMissions();
 const text = (b: MissionBrief): string =>
-  [b.objective.line, ...b.action, b.blast, b.exit ?? '', b.compact, ...b.steps.map((s) => s.text)].join(' | ');
+  [b.objective.line, ...b.action, b.blast, b.exit ?? '', b.compact, ...b.steps.map((s) => s.text)].join(
+    ' | ',
+  );
 
 describe('every campaign mission has a briefing', () => {
   it('21 missions, each with a briefing of its own format', () => {
@@ -37,7 +39,10 @@ describe('every campaign mission has a briefing', () => {
       expect(b!.action.length, m.id).toBeGreaterThanOrEqual(1);
       expect(b!.action.length, m.id).toBeLessThanOrEqual(2);
       expect(GLYPHS[b!.picture.glyph], m.id).toBeDefined();
-      expect(b!.steps.filter((s) => s.main), m.id).toHaveLength(1);
+      expect(
+        b!.steps.filter((s) => s.main),
+        m.id,
+      ).toHaveLength(1);
     }
     expect(missionBrief('nope.mission')).toBeNull();
   });
@@ -81,7 +86,9 @@ describe('every campaign mission has a briefing', () => {
       expect(b.steps[b.steps.length - 1]!.text).toBe(`RETURN TO ${def.returnMarker.label}`);
       for (const [i, l] of def.legs.entries()) {
         if (l.kind === 'clearGroup')
-          expect(b.steps[i]!.text).toContain(`DEFEAT ${def.enemies.filter((e) => e.group === l.group).length}`);
+          expect(b.steps[i]!.text).toContain(
+            `DEFEAT ${def.enemies.filter((e) => e.group === l.group).length}`,
+          );
         if (l.kind === 'reachMarkers') expect(b.steps[i]!.text).toContain(`${l.markers.length} CHECKPOINT`);
         if (l.kind === 'destroyTargets') expect(b.steps[i]!.text).toContain(`DESTROY ${l.targets.length} `);
       }
@@ -97,8 +104,12 @@ describe('every campaign mission has a briefing', () => {
       const b = missionBrief(m.id)!;
       expect(b.objective.count, m.id).toBe(def.phases[0].goal ?? tuning.phases[0].goal);
       tuning.phases.forEach((p, i) => {
-        expect(b.steps[i]!.text, `${m.id} phase ${i}`).toMatch(new RegExp(`^PHASE ${i + 1}: .*\\b${p.goal}\\b`));
-        expect(b.steps[i]!.text).toContain(p.goal === def.phases[i].nodes.length ? 'ALL' : `OF ${def.phases[i].nodes.length}`);
+        expect(b.steps[i]!.text, `${m.id} phase ${i}`).toMatch(
+          new RegExp(`^PHASE ${i + 1}: .*\\b${p.goal}\\b`),
+        );
+        expect(b.steps[i]!.text).toContain(
+          p.goal === def.phases[i].nodes.length ? 'ALL' : `OF ${def.phases[i].nodes.length}`,
+        );
       });
       expect(b.steps[3]!.text).toContain(`${def.recipe.hits} TIMES`);
       expect(b.picture.model).toEqual({ kind: 'bossNode', objective: def.objective });
@@ -127,7 +138,9 @@ describe('every campaign mission has a briefing', () => {
       expect(b.compact.includes('BLASTS ONLY'), m.id).toBe(expected);
       if (def)
         def.legs.forEach((l, i) =>
-          expect(b.steps[i]!.blastsOnly, `${m.id} step ${i}`).toBe(l.kind === 'destroyTargets' || l.kind === 'door'),
+          expect(b.steps[i]!.blastsOnly, `${m.id} step ${i}`).toBe(
+            l.kind === 'destroyTargets' || l.kind === 'door',
+          ),
         );
     }
   });
@@ -148,12 +161,17 @@ describe('every raid has a briefing', () => {
     for (const id of RAID_IDS) {
       const def = RAID_DEFS[id];
       const b = raidBrief(id);
-      const n = def.layout.join('').split('').filter((c) => c === 'M').length;
+      const n = def.layout
+        .join('')
+        .split('')
+        .filter((c) => c === 'M').length;
       expect(n, id).toBeGreaterThan(0);
       expect(b.objective.line).toBe(`DESTROY ${n} MARKED CARGO`);
       expect(b.objective.count).toBe(n);
       expect(b.blastRule).toBe('cross');
-      expect(b.blast).toMatch(/^CROSS-SHAPED BLASTS: a generator blasts along its row and column, walls stop it\./);
+      expect(b.blast).toMatch(
+        /^CROSS-SHAPED BLASTS: a generator blasts along its row and column, walls stop it\./,
+      );
       expect(b.blast).toContain(`Range ${def.bombs.range} tiles`);
       expect(text(b)).not.toMatch(/radial|round|disc/i);
       expect(b.action[0]).toContain(BLASTS_ONLY);

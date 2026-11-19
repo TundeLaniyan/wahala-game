@@ -111,9 +111,12 @@ export function MissionBriefCard({
           <b className="mb-objective" data-testid="mission-brief-objective">
             {brief.objective.line}
           </b>
-          <span className="mb-compact" data-testid="mission-brief-compact">
-            {brief.compact}
-          </span>
+          {/* the extra of the one-line version ("· BLASTS ONLY", the boss): never the objective said twice */}
+          {brief.compact !== brief.objective.line && (
+            <span className="mb-compact" data-testid="mission-brief-compact">
+              {brief.compact}
+            </span>
+          )}
         </div>
       </section>
     );
@@ -169,7 +172,11 @@ export function MissionBriefCard({
       )}
       <ol className="mb-steps" data-testid="mission-brief-steps">
         {brief.steps.map((s, i) => (
-          <li key={`${i}:${s.text}`} className={s.main ? 'main' : undefined} data-blasts={s.blastsOnly ? 'yes' : 'no'}>
+          <li
+            key={`${i}:${s.text}`}
+            className={s.main ? 'main' : undefined}
+            data-blasts={s.blastsOnly ? 'yes' : 'no'}
+          >
             <span className="mb-step-n">{i + 1}</span>
             <GlyphIcon id={s.glyph} size={14} />
             <span>{s.text}</span>

@@ -38,7 +38,8 @@ describe('objectivePins', () => {
     const s = newMission({ id: 'oshodi', fieldId: 'oshodi.railEdge' }, { keepSoft: true });
     advance(s, 2);
     expect(objectivePins(s)).toEqual([]); // the hawkers first: no target pins yet
-    for (const seat of s.mission!.seats.filter((x) => x.group === 'hawkers')) s.players[seat.playerId]!.alive = false;
+    for (const seat of s.mission!.seats.filter((x) => x.group === 'hawkers'))
+      s.players[seat.playerId]!.alive = false;
     advance(s, 2);
     const leg = s.mission!.field!.leg;
     const pieces = s.mission!.field!.targets!.filter((t) => t.leg === leg);
@@ -61,7 +62,13 @@ describe('ObjectiveMarkers view', () => {
   afterAll(() => vi.unstubAllGlobals());
 
   const ctx = (state: GameState, time: number): FrameContext =>
-    ({ state, time, alpha: 0, dt: 1 / 60, layout: createLayout(state.width, state.height) }) as unknown as FrameContext;
+    ({
+      state,
+      time,
+      alpha: 0,
+      dt: 1 / 60,
+      layout: createLayout(state.width, state.height),
+    }) as unknown as FrameContext;
 
   it('one sprite per live target, over it and above the floor; a destroyed target pops away', () => {
     const s = newRaid('warehouseDispatchDepot');

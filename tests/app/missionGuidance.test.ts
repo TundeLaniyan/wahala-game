@@ -25,7 +25,10 @@ function besides(s: GameState, x: number, y: number): { x: number; y: number } {
   ] as const) {
     const nx = x + dx;
     const ny = y + dy;
-    if (s.tiles[ny * s.width + nx] === Tile.Empty && !s.players.some((p) => p.alive && p.x === nx && p.y === ny))
+    if (
+      s.tiles[ny * s.width + nx] === Tile.Empty &&
+      !s.players.some((p) => p.alive && p.x === nx && p.y === ny)
+    )
       return { x: nx, y: ny };
   }
   throw new Error(`no floor beside ${x},${y}`);
@@ -52,7 +55,12 @@ describe('raid guidance', () => {
     shield(s);
     const marked = s.raid!.cargo.filter((c) => c.marked);
     let hud = buildHud(s, 0, null);
-    expect(hud.raid).toMatchObject({ verb: 'destroy', tag: 'DESTROY', target: 'MARKED CARGO', step: `0/${marked.length}` });
+    expect(hud.raid).toMatchObject({
+      verb: 'destroy',
+      tag: 'DESTROY',
+      target: 'MARKED CARGO',
+      step: `0/${marked.length}`,
+    });
     // the route cue walks open floor, one tile at a time from the human
     const cue = hud.raid!.cue!;
     expect(cue.via).toBe('walk');
@@ -75,7 +83,9 @@ describe('raid guidance', () => {
         expect(notice.text).toBe(`MARKED CARGO DOWN ${i + 1}/${marked.length} ✓ · NEXT: MARKED CARGO`);
       } else {
         // the last one: the exit is open and the guidance points at it
-        expect(notice.text).toBe(`MARKED CARGO DOWN ${marked.length}/${marked.length} ✓ · NEXT: REACH THE EXIT`);
+        expect(notice.text).toBe(
+          `MARKED CARGO DOWN ${marked.length}/${marked.length} ✓ · NEXT: REACH THE EXIT`,
+        );
         expect(raidView(s)!.extraction.open).toBe(true);
         expect(hud.raid).toMatchObject({ verb: 'exit', tag: 'EXIT', target: 'REACH THE EXIT', step: null });
         expect(hud.raid!.cue).not.toBeNull();
@@ -91,7 +101,8 @@ describe('field guidance', () => {
     const s = newMission({ id: 'oshodi', fieldId: 'oshodi.railEdge' }, { keepSoft: true });
     advance(s, 2);
     // the hawkers are a clearGroup leg: put them down to reach the relay boxes (the leg order is the data's)
-    for (const seat of s.mission!.seats.filter((x) => x.group === 'hawkers')) s.players[seat.playerId]!.alive = false;
+    for (const seat of s.mission!.seats.filter((x) => x.group === 'hawkers'))
+      s.players[seat.playerId]!.alive = false;
     advance(s, 2);
     shield(s);
     let view = missionView(s)!;

@@ -156,7 +156,9 @@ export function fieldNotices(
   if (!view) return { memory: prev, notices: [] };
   if (view.format !== 'field' || !view.fieldId) return { memory: null, notices: [] };
   const done = new Set((view.route ?? []).filter((r) => r.state === 'done').map((r) => r.id));
-  const wrecked = new Set(view.nodes.filter((n) => n.kind === 'target' && n.state === 'done').map((n) => n.id));
+  const wrecked = new Set(
+    view.nodes.filter((n) => n.kind === 'target' && n.state === 'done').map((n) => n.id),
+  );
   const memory: FieldNoticeMemory = {
     fieldId: view.fieldId,
     done,

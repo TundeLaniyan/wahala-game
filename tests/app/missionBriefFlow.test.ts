@@ -40,7 +40,12 @@ function rig() {
   };
   const idle: Bot = { decide: () => ({}) };
   const match = new MatchController({ renderer, input, botFactory: () => idle });
-  const campaign = new CampaignController({ store: new MapStore(), host: match, now: () => 5_000, seed: () => 7 });
+  const campaign = new CampaignController({
+    store: new MapStore(),
+    host: match,
+    now: () => 5_000,
+    seed: () => 7,
+  });
   let t = 0;
   const frame = (n = 1): void => {
     for (let i = 0; i < n; i++) {

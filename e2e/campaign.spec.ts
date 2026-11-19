@@ -88,8 +88,10 @@ test.describe('Campaign', () => {
     await expect(page.getByTestId('section-start-oshodi.boss')).toBeDisabled();
     await expect(page.getByTestId('campaign-briefing')).toHaveCount(0);
 
-    // a real field mission starts from the section list (the Terminal Approach)
+    // a real field mission starts from the section list (the Terminal Approach), through its visual briefing (MG1)
     await page.getByTestId('section-start-oshodi.approach').click();
+    await expect(page.getByTestId('mission-brief-objective')).toHaveText('RAID THE DISPATCH DEPOT');
+    await page.getByTestId('mission-brief-start').click();
     await inMatch(page);
     // back to the map (the pause menu's action; the menu itself is covered by the app tests)
     await page.evaluate(() =>
