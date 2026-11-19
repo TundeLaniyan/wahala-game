@@ -1,4 +1,5 @@
 import type { GameState, Player } from '../sim';
+import { MathUtils } from 'three';
 import type { Layout } from './coords';
 import { playerGridPos } from './views/motion';
 
@@ -21,6 +22,13 @@ export interface CameraShot {
   keep: WorldPoint[];
   /** Distance multiplier for the action camera (below 1 = closer, e.g. the winner close-up). */
   zoom: number;
+  /** Where the focus sits inside the HUD-free band (0 = centre, negative = lower); default: the rig's own. */
+  bandY?: number;
+  /**
+   * A campaign raid (decision CF5): use the fixed whole-board framing instead whenever the board fits this screen about as
+   * well as the standard board of this size (`CameraRig.boardFitsFixed`); follow otherwise.
+   */
+  fixedIfFits?: { w: number; h: number };
   /** Debug / art review: do not clamp the view to the arena. */
   free?: boolean;
   /**
@@ -230,4 +238,101 @@ export function directShot(
     z: pts.reduce((s, p) => s + p.z, 0) / pts.length,
   };
   return { kind: 'action', focus, lead: { x: 0, z: 0 }, keep: pts, zoom: 1 };
+}
+
+// ------------------------------------------------------------------ campaign (docs/CAMPAIGN_CAMERA.md, decisions CF1-CF6)
+
+/**
+ * The campaign follow framing, from measurements at 740 x 360 (docs/CAMPAIGN_CAMERA.md "Framing"): the standard action
+ * camera showed 7.2 tiles north of the fighter but only 2.8 south (the focus sat low in the band). Lifting the focus to
+ * `bandY` 0.2 of the band and pulling back to `zoom` 1.15 keeps at least 5 tiles visible on every side of the fighter
+ * on a 740 x 360 phone (about 5.0 south, 6.6 north, 9 east and west; desktop 1280 x 720: 5.1 / 6.9 / 7.8), with tiles
+ * still about 1.7 times the size the whole-board Classic camera gives the standard board there.
+ */
+export const CAMPAIGN_FRAMING = {
+  zoom: 1.15,
+  bandY: 0.2,
+  /** The countdown opens this much further back (still centred on the fighter) and glides in by mid-countdown. */
+  establishLift: 1.3,
+  /** World units of scenery a board without a sector may show beyond its edge (bosses, the finale, new maps). */
+  boardMargin: 2,
+  /** The same for a classic raid's board (its set is close round it). */
+  raidMargin: 1.2,
+  /** Close-up on a campaign winner. */
+  winZoom: 0.8,
+} as const;
+
+/** The standard board size (every standard arena): a raid no larger than it keeps the fixed framing (CF5). */
+export const STANDARD_BOARD = { w: 15, h: 11 } as const;
+
+/** The camera bounds of a whole board plus `margin` world units (a campaign map without a sector, or a raid). */
+export function boardBounds(state: Pick<GameState, 'width' | 'height'>, margin: number): CameraBounds {
+  return {
+    play: { x0: -state.width / 2, z0: -state.height / 2, x1: state.width / 2, z1: state.height / 2 },
+    margin,
+  };
+}
+
+/** Is this a classic raid (its own small board)? */
+const isRaid = (state: GameState): boolean =>
+  state.settings.game === 'raid' || !!(state as { raid?: unknown }).raid;
+
+/** Does this match use the campaign camera: a campaign mission (field, boss, finale) or a classic raid? (CF1) */
+export function usesCampaignCamera(state: GameState): boolean {
+  return !!state.mission || isRaid(state);
+}
+
+/** Smoothstep 0..1. */
+const ease = (t: number): number => t * t * (3 - 2 * t);
+
+/**
+ * The campaign shot (decisions CF1-CF5). Never a whole-district or whole-sector establishing view: the countdown opens on
+ * the fighter from a little further back and glides in; play follows the fighter inside the sector (or the board), widening
+ * only for dangers close by; a respawn wait keeps watching the fighter's spot; a raid uses the fixed framing when it fits
+ * the screen. `preferOverview` (the player's own camera setting, or the vehicle-entry picker) gives the bounded overview.
+ */
+export function campaignShot(
+  state: GameState,
+  layout: Layout,
+  localId: number,
+  alpha: number,
+  preferOverview: boolean,
+): CameraShot {
+  const raid = isRaid(state);
+  const bounds =
+    sectorBounds(state, layout) ??
+    boardBounds(state, raid ? CAMPAIGN_FRAMING.raidMargin : CAMPAIGN_FRAMING.boardMargin);
+  const fixedIfFits = raid ? { w: STANDARD_BOARD.w, h: STANDARD_BOARD.h } : undefined;
+  if (preferOverview)
+    return { kind: 'overview', focus: { x: 0, z: 0 }, lead: { x: 0, z: 0 }, keep: [], zoom: 1, bounds };
+  const m = state.match;
+  let p = state.players[localId];
+  let zoom: number = CAMPAIGN_FRAMING.zoom;
+  if (m.phase === 'countdown') {
+    const total = state.config.match.countdownTicks;
+    const glide = total * ESTABLISH;
+    const t = glide > 0 ? MathUtils.clamp((m.countdownRemaining - (total - glide)) / glide, 0, 1) : 0;
+    zoom *= 1 + (CAMPAIGN_FRAMING.establishLift - 1) * ease(t);
+  } else if (m.phase === 'ended' && m.result?.kind === 'win' && state.players[m.result.winnerId]) {
+    p = state.players[m.result.winnerId];
+    zoom *= CAMPAIGN_FRAMING.winZoom;
+  }
+  if (!p) return { kind: 'overview', focus: { x: 0, z: 0 }, lead: { x: 0, z: 0 }, keep: [], zoom: 1, bounds };
+  const pos = playerGridPos(p, alpha);
+  const d = DIRS[p.facing];
+  const lead = pos.moving && p.alive ? 0.55 : 0;
+  const focus = world(layout, pos.x, pos.y);
+  // dangers that can reach the fighter widen the view, never beyond a box round the fighter
+  const keep =
+    m.phase === 'playing' && p.alive ? clampKeep(threatsNear(state, layout, pos.x, pos.y, p.id), focus) : [];
+  return {
+    kind: 'action',
+    focus,
+    lead: { x: d[0] * lead, z: d[1] * lead },
+    keep,
+    zoom,
+    bandY: CAMPAIGN_FRAMING.bandY,
+    bounds,
+    ...(fixedIfFits ? { fixedIfFits } : {}),
+  };
 }

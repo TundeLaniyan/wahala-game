@@ -1,4 +1,5 @@
 import { MathUtils, PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
+import { CAMPAIGN_FRAMING } from './cameraDirector';
 import type { CameraBounds, CameraShot } from './cameraDirector';
 import type { Layout } from './coords';
 import type { ShakeOffset } from './shake';
@@ -55,6 +56,28 @@ export function compactNearX(aspect: number): number {
   return MathUtils.clamp(1 - (2 * PHONE_CONTROL_STRIP) / aspect, 0.55, 0.76);
 }
 
+/** A board keeps the fixed framing while its tiles are at least this share of the standard board's (CF5). */
+const FIT_SHARE = 0.95;
+/**
+ * A fixed whole-board view with tiles at least this big (CSS px, at the board's centre) needs no follow camera: the
+ * campaign follow camera's own tile on a 740 x 360 phone, measured (docs/CAMPAIGN_CAMERA.md, "Raids"). CF5.
+ */
+const READABLE_TILE_PX = 40;
+/** World units over which a bounded follow view eases into its limit instead of stopping dead (CF3). */
+const BOUNDS_KNEE = 1.6;
+
+/**
+ * `v` kept inside [lo, hi], easing in over the last `knee` units instead of stopping dead: continuous with a continuous
+ * slope (the camera decelerates into a bound), identity in the middle, never past either limit.
+ */
+export function softClamp(v: number, lo: number, hi: number, knee: number): number {
+  const k = Math.min(knee, (hi - lo) / 2);
+  if (k <= 0) return (lo + hi) / 2;
+  if (v > hi - k) return hi - k * Math.exp(-(v - (hi - k)) / k);
+  if (v < lo + k) return lo + k * Math.exp(-(lo + k - v) / k);
+  return v;
+}
+
 interface Pose {
   x: number;
   z: number;
@@ -86,15 +109,25 @@ export class CameraRig {
   /** A mission sector's overview pose, fitted once per screen layout (key: the bounds). */
   private sectorOverview: { key: string; pose: Pose } | null = null;
   private actionDistance = 10;
+  /** What the last `update` framed: the fixed whole board, a follow shot, or a (sector / board) overview. */
+  framing: 'fixed' | 'follow' | 'overview' = 'fixed';
+  /** Screen height in CSS pixels (null = unknown), from `fit`. */
+  private viewportHeight: number | null = null;
+  /** `boardFitsFixed` answers for this screen layout (key: the reference board). */
+  private readonly fitCache = new Map<string, boolean>();
   private margin = MARGIN;
   private readonly v = new Vector3();
 
   constructor(private readonly layout: Layout) {}
 
-  /** `insets` are the fractions of the screen covered by HUD at the top/bottom (0..0.4). */
-  fit(aspect: number, insets = { top: 0.1, bottom: 0.06 }): void {
+  /**
+   * `insets` are the fractions of the screen covered by HUD at the top/bottom (0..0.4); `viewportHeight` is the screen
+   * height in CSS pixels when known (only `boardFitsFixed` uses it).
+   */
+  fit(aspect: number, insets = { top: 0.1, bottom: 0.06 }, viewportHeight?: number): void {
     const cam = this.camera;
     this.insets = insets;
+    this.viewportHeight = viewportHeight ?? null;
     cam.aspect = aspect;
     cam.updateProjectionMatrix();
     this.actionFov = aspect < 1.2 ? FOV + PORTRAIT_FOV_BOOST : FOV;
@@ -120,6 +153,7 @@ export class CameraRig {
     this.unitNear = near ? near.z : 0.4;
     this.unitFar = far ? far.z : -0.6;
     this.sectorOverview = null;
+    this.fitCache.clear();
 
     if (this.snap) Object.assign(this.pose, this.overview);
     this.place(this.pose);
@@ -246,7 +280,7 @@ export class CameraRig {
     const tanHalf = Math.tan(MathUtils.degToRad(fov) / 2);
     const yTop = 1 - this.insets.top * 2;
     const yBottom = -1 + this.insets.bottom * 2;
-    const yFocus = (yTop + yBottom) / 2 + FOCUS_BAND_Y * (yTop - yBottom) * 0.5;
+    const yFocus = (yTop + yBottom) / 2 + (shot.bandY ?? FOCUS_BAND_Y) * (yTop - yBottom) * 0.5;
     const lift = (d: number): number => (yFocus * d * tanHalf) / Math.sin(ACTION_PITCH);
 
     let cx = shot.focus.x + shot.lead.x;
@@ -318,19 +352,57 @@ export class CameraRig {
    * under the on-screen controls); along an axis where the box is narrower than the view the view is centred on it.
    */
   private inBounds(b: CameraBounds, x: number, z: number, distance: number, fov: number): Pose {
+    const box = this.boundsBox(b, distance);
+    const cx = box.xLo <= box.xHi ? softClamp(x, box.xLo, box.xHi, BOUNDS_KNEE) : box.cx;
+    const cz = box.zLo <= box.zHi ? softClamp(z, box.zLo, box.zHi, BOUNDS_KNEE) : box.cz;
+    return { x: cx, z: cz, distance, pitch: ACTION_PITCH, fov };
+  }
+
+  /** The look-at points a bounded view at `distance` may use (and the centre used along an axis it cannot fit). */
+  private boundsBox(
+    b: CameraBounds,
+    distance: number,
+  ): { xLo: number; xHi: number; zLo: number; zHi: number; cx: number; cz: number } {
     const side = Math.max(b.margin, this.margin.side);
     const south = Math.max(b.margin, this.margin.south);
     const north = b.margin;
     const half = this.unitHalfWidth * distance;
     const near = this.unitNear * distance;
     const far = this.unitFar * distance;
-    const xLo = b.play.x0 - side + half;
-    const xHi = b.play.x1 + side - half;
-    const zLo = b.play.z0 - north - far;
-    const zHi = b.play.z1 + south - near;
-    const cx = xLo <= xHi ? MathUtils.clamp(x, xLo, xHi) : (b.play.x0 + b.play.x1) / 2;
-    const cz = zLo <= zHi ? MathUtils.clamp(z, zLo, zHi) : (b.play.z0 + b.play.z1) / 2 - (near + far) / 2;
-    return { x: cx, z: cz, distance, pitch: ACTION_PITCH, fov };
+    return {
+      xLo: b.play.x0 - side + half,
+      xHi: b.play.x1 + side - half,
+      zLo: b.play.z0 - north - far,
+      zHi: b.play.z1 + south - near,
+      cx: (b.play.x0 + b.play.x1) / 2,
+      cz: (b.play.z0 + b.play.z1) / 2 - (near + far) / 2,
+    };
+  }
+
+  /**
+   * Would the fixed whole-board framing (the Classic camera) do on this screen for this board? Yes when its tiles are at
+   * least `FIT_SHARE` of the size the standard `ref` board (15 x 11) gets on the same screen (as readable as Classic
+   * Battle there), or at least `READABLE_TILE_PX` CSS pixels (a big screen), or at least as big as the follow camera's
+   * (following would then only show less). Cached per screen layout. Decision CF5.
+   */
+  boardFitsFixed(ref: { w: number; h: number }): boolean {
+    const key = `${ref.w}x${ref.h}`;
+    const hit = this.fitCache.get(key);
+    if (hit !== undefined) return hit;
+    const saved = { ...this.pose };
+    const tile = (p: Pose): number => 1 / (p.distance * Math.tan(MathUtils.degToRad(p.fov) / 2));
+    const fixed = tile(this.overview);
+    const classic = tile(this.fitRect(this.camera.aspect, 0, 0, ref.w, ref.h));
+    const follow = tile({
+      ...this.overview,
+      distance: this.actionDistance * CAMPAIGN_FRAMING.zoom,
+      fov: this.actionFov,
+    });
+    this.place(saved);
+    const px = this.viewportHeight !== null ? (fixed * this.viewportHeight) / 2 : 0;
+    const fits = fixed >= classic * FIT_SHARE || px >= READABLE_TILE_PX || fixed >= follow;
+    this.fitCache.set(key, fits);
+    return fits;
   }
 
   /**
@@ -345,9 +417,14 @@ export class CameraRig {
     shot: CameraShot | null = null,
     attract = false,
   ): void {
+    const fixed =
+      !!shot && shot.kind === 'action' && !!shot.fixedIfFits && this.boardFitsFixed(shot.fixedIfFits);
+    this.framing = !shot || attract || fixed ? 'fixed' : shot.kind === 'action' ? 'follow' : 'overview';
     const target =
       shot && shot.kind === 'action' && !attract
-        ? this.actionGoal(shot)
+        ? fixed
+          ? this.overview
+          : this.actionGoal(shot)
         : shot?.bounds && !attract
           ? this.boundsOverview(shot.bounds)
           : this.overview;
@@ -363,6 +440,14 @@ export class CameraRig {
       p.distance += (this.goal.distance - p.distance) * k(TAU_ZOOM);
       p.pitch += (this.goal.pitch - p.pitch) * k(TAU_PITCH);
       p.fov += (this.goal.fov - p.fov) * k(TAU_ZOOM);
+      // a bounded follow view: position and distance ease at different rates, so while the distance is still easing
+      // (the opening glide, a danger leaving the frame) the smoothed position is held inside the bounds for the
+      // distance the camera has NOW. It only binds in those moments, and moves continuously with the distance.
+      if (shot?.bounds && shot.kind === 'action' && !attract && !fixed) {
+        const box = this.boundsBox(shot.bounds, p.distance);
+        if (box.xLo <= box.xHi) p.x = MathUtils.clamp(p.x, box.xLo, box.xHi);
+        if (box.zLo <= box.zHi) p.z = MathUtils.clamp(p.z, box.zLo, box.zHi);
+      }
     }
     this.place(p);
     // Title-screen demo: a slow cinematic drift (part of the framing, not shake).

@@ -332,7 +332,9 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   // Standard matches always show the whole arena, so the key does nothing there.
   const onCameraKey = (e: KeyboardEvent): void => {
     if (e.code !== 'KeyO' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (useGameStore.getState().screen !== 'playing' || renderer?.cameraMode() !== 'stadium') return;
+    // the follow cameras (City Rumble, campaign missions) toggle; the fixed Classic camera does not
+    if (useGameStore.getState().screen !== 'playing' || !renderer || renderer.cameraMode() === 'arena')
+      return;
     // in the tutorial the view toggles for this lesson only; the saved preference is untouched
     if (useGameStore.getState().tutorial) {
       tutorialView = tutorialView === 'overview' ? 'action' : 'overview';
@@ -784,6 +786,8 @@ function exposeDebugHandle(): void {
     viewClear: () => renderer?.viewClearStatus() ?? null,
     /** A mission sector as drawn: render clip, barricades, the floor tiles at the HUD-free band's corners; null without one. */
     sector: () => renderer?.sectorStatus() ?? null,
+    /** The camera (docs/CAMPAIGN_CAMERA.md): its mode, what it framed last frame and the floor tiles it shows. */
+    camera: () => renderer?.cameraStatus() ?? null,
     /**
      * Measurement / art review: starts a field mission straight away (no campaign lock, nothing saved); `noSector` plays
      * it on the whole district (scripts/sector-perf.mjs compares the two).
