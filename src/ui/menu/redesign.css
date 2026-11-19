@@ -1,0 +1,643 @@
+/*
+ * Six-screen redesign (approved Gemini direction): cinematic Home, Choose How to Play, Match Setup additions, Learn
+ * to Play, the Story Campaign "now" strip and the Exit confirmation. Loaded after menu.css / flow.css, so it only
+ * overrides what the redesign changes. Mobile landscape first (max-height 520px), then portrait (max-width 700px).
+ * Plain CSS, no new dependency; decorative art is the existing key art and fighter portraits.
+ */
+
+/* ---------- Home ---------- */
+.mn-backdrop.hero img {
+  filter: brightness(1.05) contrast(1.08) saturate(1.15);
+  object-position: 50% 55%;
+}
+/* a warm Lagos dusk wash over the key art (bright enough to read, never gloomy) */
+.mn-backdrop.hero .mn-shade {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(88, 46, 120, 0.55) 0%,
+      rgba(214, 112, 46, 0.22) 45%,
+      rgba(11, 14, 20, 0) 70%
+    ),
+    linear-gradient(0deg, rgba(11, 14, 20, 0.92) 0%, rgba(11, 14, 20, 0.35) 38%, transparent 62%),
+    linear-gradient(90deg, rgba(11, 14, 20, 0.55) 0%, rgba(11, 14, 20, 0.05) 50%, rgba(11, 14, 20, 0.45) 100%);
+}
+.mn-screen-home {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-items: stretch;
+}
+.mn-screen-home .mn-home-main {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2.2vh, 22px);
+  min-height: 0;
+  grid-template-columns: none;
+}
+.mn-screen-home .mn-logo {
+  text-align: center;
+}
+.mn-screen-home .mn-logo b {
+  margin: 0;
+  font-size: clamp(2.8rem, 21vh, 8.4rem);
+  transform: skew(-6deg);
+  transform-origin: center bottom;
+  -webkit-text-stroke: 2px rgba(60, 30, 0, 0.55);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 5px 0 rgba(120, 60, 0, 0.7)) drop-shadow(0 10px 26px rgba(0, 0, 0, 0.55));
+}
+.mn-screen-home .mn-logo-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: clamp(0.95rem, 4.4vh, 1.6rem);
+  letter-spacing: 0.22em;
+  color: #7fe9d6;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+.mn-screen-home .mn-home-menu {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.6vh, 12px);
+  width: min(100%, 340px);
+}
+.mn-home-play,
+.mn-home-second {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-family: var(--mn-display) !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  border-radius: 6px;
+  transition:
+    transform 0.08s,
+    filter 0.15s,
+    box-shadow 0.15s;
+}
+.mn-home-play {
+  min-height: clamp(56px, 17vh, 84px);
+  color: #2a1700;
+  background: linear-gradient(180deg, #ffe58a 0%, #ffb800 55%, #e08700 100%);
+  border-color: #fff0b0;
+  box-shadow:
+    0 0 0 3px rgba(255, 184, 0, 0.25),
+    0 8px 28px rgba(255, 150, 0, 0.45),
+    inset 0 -4px 0 rgba(150, 70, 0, 0.45);
+}
+.mn-home-play b {
+  font-size: clamp(2rem, 8.5vh, 3.1rem);
+  font-weight: 400;
+}
+.mn-home-play small {
+  font-family: var(--mn-body) !important;
+  font-weight: 700;
+  font-size: clamp(0.7rem, 2.4vh, 0.9rem);
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+.mn-home-second {
+  min-height: max(46px, 9.5vh);
+  color: #f1f3f8;
+  background: linear-gradient(180deg, #3a4254 0%, #232a38 100%);
+  border-color: #5b6479;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.mn-home-second b {
+  font-size: clamp(1.1rem, 4.6vh, 1.5rem);
+  font-weight: 400;
+}
+.mn-home-second small {
+  font-family: var(--mn-body) !important;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: #c3cadb;
+  margin-top: 2px;
+}
+.mn-home-second.learn {
+  color: #fff;
+  background: linear-gradient(180deg, #ff8a3d 0%, #e0561a 100%);
+  border-color: #ffc08f;
+  box-shadow: inset 0 -3px 0 rgba(110, 30, 0, 0.4);
+}
+.mn-home-play:hover,
+.mn-home-play:focus-visible,
+.mn-home-second:hover,
+.mn-home-second:focus-visible {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+.mn-home-play:active,
+.mn-home-second:active {
+  transform: translateY(1px);
+}
+.mn-home-heroes {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 86%;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+  padding: 0 clamp(0px, 2vw, 40px);
+}
+.mn-home-hero {
+  position: relative;
+  display: block;
+  width: clamp(88px, 19vw, 300px);
+  height: 100%;
+  overflow: hidden;
+  opacity: 0.95;
+  -webkit-mask-image:
+    linear-gradient(180deg, #000 55%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(180deg, #000 55%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  mask-composite: intersect;
+}
+.mn-home-hero .mn-fighter-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 8%;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.6));
+}
+.mn-home-hero i {
+  display: none;
+}
+/* the heroes flank the buttons: first on the left, the other two on the right (the centre stays free for the menu) */
+.mn-home-hero:nth-child(1) {
+  order: 0;
+  margin-right: auto;
+}
+.mn-home-hero:nth-child(2) {
+  order: 2;
+}
+.mn-home-hero:nth-child(3) {
+  order: 3;
+}
+.mn-screen-home .mn-home-tools {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0 2px;
+}
+.mn-util {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: #e9eaf0;
+  cursor: pointer;
+  border-radius: 8px;
+  border: 2px solid #4a5368;
+  background: linear-gradient(180deg, #2c3446, #1a202c);
+}
+.mn-util.off {
+  color: #ff8a80;
+  border-color: #8a3a35;
+}
+.mn-util:hover,
+.mn-util:focus-visible {
+  border-color: var(--mn-amber);
+}
+.mn-screen-home .mn-keys {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: #c3cadb;
+}
+@media (hover: none), (pointer: coarse) {
+  .mn-screen-home .mn-keys {
+    display: none;
+  }
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .mn-home-heroes {
+    height: 50%;
+  }
+  .mn-screen-home .mn-logo b {
+    font-size: clamp(3rem, 18vw, 6rem);
+  }
+}
+@media (max-height: 420px) {
+  .mn-screen-home .mn-home-menu {
+    width: min(100%, 300px);
+  }
+}
+
+/* ---------- Choose How to Play ---------- */
+.mn-play {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(8px, 1.6vw, 22px);
+  align-items: stretch;
+  padding: 2px;
+}
+.mn-play-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 2px solid #3a4458;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(34, 42, 58, 0.96), rgba(18, 23, 33, 0.96));
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+.mn-play-card.quick {
+  border-color: var(--mn-amber);
+  box-shadow:
+    0 0 0 2px rgba(255, 184, 0, 0.3),
+    0 6px 26px rgba(255, 160, 0, 0.3);
+}
+.mn-play-main {
+  appearance: none;
+  font-family: var(--mn-body) !important;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 0 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.mn-play-main:hover:not(:disabled),
+.mn-play-main:focus-visible {
+  background: rgba(255, 184, 0, 0.08);
+}
+.mn-play-main:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.mn-play-pic {
+  position: relative;
+  flex: 0 0 38%;
+  min-height: 56px;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.mn-play-pic.fighter {
+  background: radial-gradient(circle at 50% 30%, #3a5a78, #141b27 75%);
+}
+.mn-play-pic .mn-fighter-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 12%;
+}
+.mn-play-tag {
+  align-self: center;
+  padding: 2px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #d9deea;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+.mn-play-card.quick .mn-play-tag {
+  color: #2a1700;
+  background: var(--mn-amber);
+}
+.mn-play-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 clamp(8px, 1.4vw, 16px);
+}
+.mn-play-text b {
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: clamp(1.35rem, 5vh, 2rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mn-play-text span {
+  font-size: clamp(0.72rem, 2.5vh, 0.92rem);
+  line-height: 1.3;
+  color: #c3cadb;
+}
+.mn-play-go {
+  margin-top: auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 70%;
+  padding: 0 16px;
+  font-family: var(--mn-display);
+  font-size: 1.2rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #e9eaf0;
+  background: linear-gradient(180deg, #2f6b5e, #1e4a42);
+  border: 1px solid #4fb59f;
+  border-radius: 5px;
+}
+.mn-play-card.quick .mn-play-go {
+  color: #2a1700;
+  background: linear-gradient(180deg, #ffe58a, #ffb800);
+  border-color: #fff0b0;
+}
+.mn-play-sub {
+  appearance: none;
+  font-family: var(--mn-display) !important;
+  min-height: 44px;
+  border: 0;
+  border-top: 1px solid #3a4458;
+  background: rgba(0, 0, 0, 0.25);
+  color: #ffd36a;
+  font-family: var(--mn-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.mn-play-sub:hover,
+.mn-play-sub:focus-visible {
+  background: rgba(255, 184, 0, 0.14);
+}
+.mn-screen-play .mn-body {
+  overflow: hidden;
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .mn-play {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .mn-play-main {
+    flex-direction: row;
+    align-items: center;
+    padding: 0;
+  }
+  .mn-play-pic {
+    flex: 0 0 34%;
+    align-self: stretch;
+    border-bottom: 0;
+  }
+  .mn-play-go {
+    display: none;
+  }
+  .mn-screen-play .mn-body {
+    overflow-y: auto;
+  }
+}
+@media (max-height: 420px) and (orientation: landscape) {
+  .mn-play-text span {
+    font-size: 0.7rem;
+  }
+  .mn-play-go {
+    min-height: 40px;
+    font-size: 1.05rem;
+  }
+}
+
+/* ---------- Match Setup additions ---------- */
+.mn-style {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mn-style-blurb {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #c3cadb;
+}
+.mn-rumble-modes {
+  flex-wrap: wrap;
+}
+.mn-fighter-chip {
+  min-height: 44px;
+}
+
+/* ---------- Learn to Play ---------- */
+.mn-academy2 {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.34fr) minmax(0, 1fr);
+  gap: clamp(8px, 1.6vw, 20px);
+  min-height: 0;
+  align-items: start;
+}
+.mn-academy-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+}
+.mn-academy-tab {
+  appearance: none;
+  font-family: var(--mn-body) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 12px;
+  text-align: left;
+  color: #e9eaf0;
+  background: linear-gradient(180deg, #2a3243, #1b212e);
+  border: 2px solid #3d475c;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.mn-academy-tab b {
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mn-academy-tab small {
+  font-size: 0.75rem;
+  color: #aab3c6;
+}
+.mn-academy-tab.on {
+  border-color: var(--mn-amber);
+  box-shadow: 0 0 14px rgba(255, 184, 0, 0.3);
+}
+.mn-academy-tab.done small {
+  color: var(--mn-green);
+}
+.mn-academy-pane header h3 {
+  margin: 0 0 4px;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mn-academy-pane header p {
+  margin: 0 0 8px;
+  color: #c3cadb;
+  font-size: 0.9rem;
+}
+.mn-academy-lab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed #4a5368;
+}
+.mn-academy-lab .mn-test-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #aab3c6;
+}
+.mn-lesson {
+  min-height: 46px;
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .mn-academy2 {
+    grid-template-columns: 1fr;
+  }
+  .mn-academy-rail {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+/* ---------- Story Campaign: where am I / what next / what I gain ---------- */
+.cp-now {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 6px 18px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-left: 4px solid var(--mn-amber);
+  background: linear-gradient(90deg, rgba(255, 184, 0, 0.13), rgba(20, 25, 35, 0.9) 60%);
+}
+.cp-now b {
+  display: block;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.35rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.cp-now span {
+  display: block;
+  font-size: 0.85rem;
+  color: #d3d9e6;
+}
+@media (max-width: 700px), (max-height: 420px) {
+  .cp-now {
+    grid-template-columns: 1fr 1.6fr;
+  }
+  .cp-now-gain {
+    display: none;
+  }
+}
+
+/* ---------- Pause: exit confirmation ---------- */
+.mn-pause {
+  position: relative;
+}
+.mn-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(5, 7, 12, 0.8);
+}
+.mn-confirm-card {
+  width: min(100%, 440px);
+  padding: 18px 20px;
+  text-align: center;
+  border: 2px solid #6a3a35;
+}
+.mn-confirm-card h3 {
+  margin: 0 0 6px;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.9rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mn-confirm-card p {
+  margin: 0 0 14px;
+  color: #d3d9e6;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.mn-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.mn-confirm-actions .mn-btn {
+  min-height: 48px;
+  font-size: 1.25rem;
+  padding: 0 20px;
+}
+
+/* ---------- Small landscape phones: keep the action bar and controls reachable ---------- */
+@media (max-height: 420px) and (orientation: landscape) {
+  .mn-pause-item {
+    min-height: 44px;
+  }
+}
+
+/* short landscape phones: the seven section buttons sit in two columns so all are visible without scrolling */
+@media (max-height: 520px) and (orientation: landscape) {
+  .mn-academy2 {
+    grid-template-columns: minmax(250px, 0.46fr) minmax(0, 1fr);
+  }
+  .mn-academy-rail {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+  .mn-academy-tab {
+    min-height: 44px;
+    padding: 0 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+  }
+  .mn-academy-tab b {
+    font-size: 0.98rem;
+    line-height: 1.05;
+  }
+}

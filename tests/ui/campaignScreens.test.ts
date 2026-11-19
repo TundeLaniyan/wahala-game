@@ -368,14 +368,15 @@ describe('model helpers', () => {
 });
 
 describe('Home entry', () => {
-  it('shows a Campaign entry first when the flag is on, with progress once a campaign exists', () => {
+  it('shows a Story Campaign entry second (after Play) when the flag is on, with progress once a campaign exists', () => {
     const fresh = render(HomeScreen, freshCampaignUi(createSave(1)));
     expect(fresh).toContain('data-testid="home-campaign"');
-    expect(fresh.indexOf('data-testid="home-campaign"')).toBeLessThan(
-      fresh.indexOf('data-testid="home-rumble"'),
+    expect(fresh.indexOf('data-testid="home-play"')).toBeLessThan(
+      fresh.indexOf('data-testid="home-campaign"'),
     );
+    expect(fresh).toContain('STORY CAMPAIGN');
     const progressed = render(HomeScreen, started(afterOshodi().save));
-    expect(progressed).toMatch(/data-testid="home-campaign"[\s\S]*1 \/ 6/);
+    expect(progressed).toMatch(/data-testid="home-campaign"[\s\S]*CONTINUE STORY[\s\S]*1 \/ 6/);
   });
 
   it('is absent when the campaign flag is off or the campaign has not loaded: the menu is as it was', () => {

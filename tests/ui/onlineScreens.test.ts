@@ -58,7 +58,7 @@ describe('default flags: nothing online is reachable', () => {
     const out = html(HomeScreen);
     expect(out).not.toContain('home-online');
     expect(out).not.toMatch(/online|pvp|server status|mock server/i);
-    for (const t of ['home-rumble', 'home-classic', 'home-academy', 'home-settings', 'quick-play'])
+    for (const t of ['home-play', 'home-academy', 'home-settings-icon', 'home-mute'])
       expect(out).toContain(`data-testid="${t}"`);
   });
 

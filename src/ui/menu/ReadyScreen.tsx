@@ -15,7 +15,7 @@ import { fighterArt } from './art';
 import { selectedArenaId, stagePreviewUrl, hasPreview, moodGradient } from './arenaInfo';
 import { fighterInfo } from './fighters';
 import { FighterImage } from './FighterImage';
-import { MODE_CARDS, modeOf } from './ModeScreen';
+import { MODE_CARDS, modeOf } from './modes';
 import { ScreenFrame } from './Frame';
 
 /** The rules the chosen game plays by (pure: unit-tested). */
@@ -158,9 +158,9 @@ export function ReadyScreen() {
         </div>
         <div className="mn-panel mn-ready-list" data-testid="ready-summary">
           <Row
-            label="Mode"
-            value={s.play === 'rumble' ? `City Rumble · ${mode.name}` : 'Classic Battle'}
-            screen="mode"
+            label="Battle style"
+            value={s.play === 'rumble' ? `City Rumble · ${mode.name}` : 'Classic Blast'}
+            screen="setup"
             id="mode"
             testId="ready-mode"
           />

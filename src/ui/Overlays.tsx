@@ -4,7 +4,7 @@
  * Change setup, Main menu) and the rotate-your-phone notice. Keyboard and gamepad navigate them like the
  * main menu; Esc / Start in the pause menu's Settings closes Settings and keeps the match paused.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ARENAS, CHARACTERS } from '../sim';
 import { commands } from '../app/session';
 import { useGameStore, patch } from '../app/store';
@@ -17,6 +17,7 @@ import { playerCss } from '../assets/palette';
 import { RumbleResults } from './RumbleHud';
 import { useMenuNav } from './menu/focusNav';
 import { SettingsPanel } from './menu/SettingsScreen';
+import type { SettingsTab } from './menu/SettingsScreen';
 import { MissionPauseInfo } from './campaign/MissionPauseInfo';
 import { FighterImage } from './menu/FighterImage';
 import { CombatLabPauseSection } from './CombatLab';
@@ -35,7 +36,7 @@ function MatchInfo({ hud }: { hud: HudSnapshot | null }) {
   const total = r ? r.total : (hud?.players.length ?? 0);
   return (
     <aside className="mn-panel mn-pause-info" data-testid="pause-info">
-      <small className="mn-kicker">{s.play === 'rumble' ? 'City Rumble' : 'Classic Battle'}</small>
+      <small className="mn-kicker">{s.play === 'rumble' ? 'City Rumble' : 'Classic Blast'}</small>
       <h3>{arena?.name ?? ''}</h3>
       <p className="mn-pause-summary">{setupSummary(s)}</p>
       <dl className="mn-pause-stats">
@@ -62,21 +63,83 @@ function MatchInfo({ hud }: { hud: HudSnapshot | null }) {
   );
 }
 
+/** What EXIT MATCH does for each kind of match (decision: always behind the "Leave this match?" confirmation). */
+type ExitKind = 'match' | 'mission' | 'raid';
+
+/** The confirmation copy. A campaign only stores cleared missions, so it never promises a mid-mission save. */
+export const EXIT_COPY: Record<ExitKind, string> = {
+  match: 'Progress in this match will be lost.',
+  mission:
+    'This attempt and its checkpoints will be lost. Missions you have already cleared stay saved. You go back to the campaign map.',
+  raid: 'This raid attempt will be lost. Missions you have already cleared stay saved.',
+};
+
+function ExitConfirm({ kind, onStay, onLeave }: { kind: ExitKind; onStay: () => void; onLeave: () => void }) {
+  return (
+    <div
+      className="mn-confirm"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="exit-title"
+      aria-describedby="exit-text"
+      data-testid="exit-confirm"
+    >
+      <div className="mn-panel mn-confirm-card">
+        <h3 id="exit-title">Leave this match?</h3>
+        <p id="exit-text">{EXIT_COPY[kind]}</p>
+        <div className="mn-confirm-actions">
+          <button
+            type="button"
+            className="mn-btn mn-primary"
+            data-testid="exit-confirm-stay"
+            data-autofocus=""
+            onClick={onStay}
+          >
+            KEEP PLAYING
+          </button>
+          <button
+            type="button"
+            className="mn-btn mn-secondary danger"
+            data-testid="exit-confirm-leave"
+            onClick={onLeave}
+          >
+            EXIT MATCH
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PauseOverlay() {
   const hud = useGameStore((st) => st.hud);
   const settingsOpen = useGameStore((st) => st.pauseSettings);
   const mission = useGameStore((st) => st.campaign?.active ?? null);
+  const [confirm, setConfirm] = useState(false);
+  const [tab, setTab] = useState<SettingsTab>('audio');
   const root = useRef<HTMLDivElement>(null);
+  const kind: ExitKind = mission?.raid ? 'raid' : mission ? 'mission' : 'match';
+  const confirmRef = useRef(false);
+  confirmRef.current = confirm;
   useMenuNav(
     root,
     () => {
+      // Esc closes the confirmation first (the match stays paused), then Settings, and only then resumes
+      if (confirmRef.current) {
+        setConfirm(false);
+        return true;
+      }
       if (!useGameStore.getState().pauseSettings) return false; // Esc resumes the match
       commands.pauseSettings(false);
       return true;
     },
     {
-      // Start / P with Settings open: close Settings first, never resume behind it
+      // Start / P with the confirmation or Settings open: close it first, never resume behind it
       onPause: () => {
+        if (confirmRef.current) {
+          setConfirm(false);
+          return true;
+        }
         if (!useGameStore.getState().pauseSettings) return false;
         commands.pauseSettings(false);
         return true;
@@ -85,6 +148,16 @@ export function PauseOverlay() {
   );
   // the next pause always opens on the pause menu itself
   useEffect(() => () => patch({ pauseSettings: false }), []);
+  const leave = (): void => {
+    setConfirm(false);
+    if (kind === 'raid') commands.campaignLeaveRaid();
+    else if (kind === 'mission') commands.campaignMap();
+    else commands.toTitle();
+  };
+  const openSettings = (t: SettingsTab): void => {
+    setTab(t);
+    commands.pauseSettings(true);
+  };
   return (
     <div className="mn-overlay" data-testid="pause-overlay" ref={root}>
       {settingsOpen ? (
@@ -101,7 +174,7 @@ export function PauseOverlay() {
             <h2>Settings</h2>
             <small className="mn-kicker">Match paused</small>
           </header>
-          <SettingsPanel />
+          <SettingsPanel key={tab} initialTab={tab} />
         </div>
       ) : (
         <div className="mn-overlay-card mn-pause">
@@ -109,109 +182,97 @@ export function PauseOverlay() {
             <header>
               <small className="mn-kicker">Match paused</small>
               <h2>Paused</h2>
-              <p>Take your time, oga.</p>
             </header>
-            <nav className="mn-pause-list" aria-label="Pause menu">
+            <nav className="mn-pause-list" aria-label="Pause menu" aria-hidden={confirm || undefined}>
               <button
                 type="button"
                 className="mn-pause-item primary"
                 data-testid="resume"
                 data-autofocus=""
+                disabled={confirm}
                 onClick={() => commands.resume()}
               >
                 <b>Resume</b>
                 <small>Back into the fight</small>
               </button>
+              {mission?.raid ? (
+                <button
+                  type="button"
+                  className="mn-pause-item"
+                  data-testid="raid-retry"
+                  disabled={confirm}
+                  onClick={() => commands.campaignRetryRaid()}
+                >
+                  <b>Restart</b>
+                  <small>Start this raid again</small>
+                </button>
+              ) : mission ? (
+                <button
+                  type="button"
+                  className="mn-pause-item"
+                  data-testid="mission-retry"
+                  disabled={confirm}
+                  onClick={() => commands.campaignRetry()}
+                >
+                  <b>Restart</b>
+                  <small>Same district, a fresh attempt</small>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="mn-pause-item"
+                  data-testid="restart"
+                  disabled={confirm}
+                  onClick={() => commands.rematch()}
+                >
+                  <b>Restart</b>
+                  <small>Same setup, fresh match</small>
+                </button>
+              )}
+              <button
+                type="button"
+                className="mn-pause-item"
+                data-testid="pause-controls-open"
+                disabled={confirm}
+                onClick={() => openSettings('controls')}
+              >
+                <b>Controls</b>
+                <small>Buttons, movement and touch layout</small>
+              </button>
               <button
                 type="button"
                 className="mn-pause-item"
                 data-testid="pause-settings-open"
-                onClick={() => commands.pauseSettings(true)}
+                disabled={confirm}
+                onClick={() => openSettings('audio')}
               >
-                <b>Settings</b>
-                <small>Audio, graphics, controls, accessibility</small>
+                <b>Settings &amp; Sound</b>
+                <small>Audio, graphics, accessibility</small>
               </button>
-              {mission?.raid ? (
-                <>
-                  <button
-                    type="button"
-                    className="mn-pause-item"
-                    data-testid="raid-retry"
-                    onClick={() => commands.campaignRetryRaid()}
-                  >
-                    <b>Retry raid</b>
-                    <small>Start this raid again</small>
-                  </button>
-                  <button
-                    type="button"
-                    className="mn-pause-item"
-                    data-testid="raid-leave"
-                    onClick={() => commands.campaignLeaveRaid()}
-                  >
-                    <b>{mission.raid.doorId ? 'Leave raid' : 'Leave to the map'}</b>
-                    <small>
-                      {mission.raid.doorId
-                        ? 'Back to the field map; the door stays open'
-                        : 'Leave the raid; your save stays as it is'}
-                    </small>
-                  </button>
-                  <button
-                    type="button"
-                    className="mn-pause-item danger"
-                    data-testid="mission-map"
-                    onClick={() => commands.campaignMap()}
-                  >
-                    <b>Back to campaign map</b>
-                    <small>Leave the mission; your save stays as it is</small>
-                  </button>
-                </>
-              ) : mission ? (
-                <>
-                  <button
-                    type="button"
-                    className="mn-pause-item"
-                    data-testid="mission-retry"
-                    onClick={() => commands.campaignRetry()}
-                  >
-                    <b>Retry mission</b>
-                    <small>Same district, a fresh attempt</small>
-                  </button>
-                  <button
-                    type="button"
-                    className="mn-pause-item danger"
-                    data-testid="mission-map"
-                    onClick={() => commands.campaignMap()}
-                  >
-                    <b>Back to campaign map</b>
-                    <small>Leave the mission; your save stays as it is</small>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="mn-pause-item"
-                    data-testid="restart"
-                    onClick={() => commands.rematch()}
-                  >
-                    <b>Restart</b>
-                    <small>Same setup, fresh match</small>
-                  </button>
-                  <button
-                    type="button"
-                    className="mn-pause-item danger"
-                    data-testid="quit"
-                    onClick={() => commands.toTitle()}
-                  >
-                    <b>Main menu</b>
-                    <small>Leave this match</small>
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                className="mn-pause-item danger"
+                data-testid={kind === 'match' ? 'quit' : kind === 'raid' ? 'raid-leave' : 'mission-map'}
+                disabled={confirm}
+                onClick={() => {
+                  commands.click();
+                  setConfirm(true);
+                }}
+              >
+                <b>Exit match</b>
+                <small>
+                  {kind === 'match'
+                    ? 'Back to the main menu'
+                    : mission?.raid?.doorId
+                      ? 'Back to the field map'
+                      : 'Back to the campaign map'}
+                </small>
+              </button>
             </nav>
             {!mission && <CombatLabPauseSection lab={hud?.combatLab ?? null} />}
           </div>
           {mission ? <MissionPauseInfo mission={mission} /> : <MatchInfo hud={hud} />}
+          {confirm && <ExitConfirm kind={kind} onStay={() => commands.resume()} onLeave={leave} />}
         </div>
       )}
     </div>

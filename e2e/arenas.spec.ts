@@ -9,6 +9,7 @@ import {
   toClassicSetup,
   toRumbleSetup,
   inMatch,
+  exitMatch,
 } from './helpers';
 
 const STANDARD = [
@@ -108,7 +109,7 @@ test.describe('arena picker and stage hazards', () => {
       expect(v.arenaId).toBe(id);
       expect(v.phase).toBe('playing');
       await page.keyboard.press('Escape');
-      await page.getByTestId('quit').click();
+      await exitMatch(page);
       await expect(page.getByTestId('title-screen')).toBeVisible();
     }
     expect(errors).toEqual([]);

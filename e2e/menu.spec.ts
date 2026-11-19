@@ -6,7 +6,17 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { chooseStage, mutate, open, setDifficulty, settled, stepTicks, inMatch } from './helpers';
+import {
+  chooseStage,
+  exitMatch,
+  mutate,
+  open,
+  setDifficulty,
+  settled,
+  stepTicks,
+  inMatch,
+  toSavedSetup,
+} from './helpers';
 
 type Debug = {
   __WAHALA__: {
@@ -44,17 +54,19 @@ function watchErrors(page: Page): string[] {
 test.describe('Stitch main menu', () => {
   test.beforeEach(() => test.setTimeout(6 * 60_000));
 
-  test('Home -> mode -> setup -> fighter -> ready -> play; Edit changes one choice and returns to Ready', async ({
+  test('Home -> play -> setup -> fighter -> ready -> play; Edit changes one choice and returns to Ready', async ({
     page,
   }, info) => {
     test.skip(info.project.name !== 'desktop', 'one viewport is enough for the full journey');
     const errors = watchErrors(page);
     await open(page, '&nobots&noattract');
     await expect(page.getByTestId('menu-home')).toBeVisible();
-    await page.getByTestId('home-rumble').click();
-    // tapping a mode is enough: it opens the arena and settings at once (no Continue, no numbered steps)
-    await page.getByTestId('mode-deathmatch').click();
+    await page.getByTestId('home-play').click();
+    await expect(page.getByTestId('menu-play')).toBeVisible();
+    await page.getByTestId('home-rumble').click(); // City Rumble opens Match Setup with that battle style selected
     await expect(page.getByTestId('menu-setup')).toBeVisible();
+    await expect(page.getByTestId('setup-style-rumble')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('mode-deathmatch').click();
     await expect(page.getByTestId('menu-steps')).toHaveCount(0);
     await expect(page.getByTestId('setup-arena')).toContainText('Select Arena');
     // only the Free-for-All rules: a length (3 or 5 minutes), no friendly fire
@@ -99,12 +111,15 @@ test.describe('Stitch main menu', () => {
       me: 'lekkiBoy',
     });
 
-    // Main menu, then Quick play starts the saved setup in one press
+    // Main menu, then Home -> Play -> City Rumble keeps the saved setup, and START MATCH starts it
     await page.keyboard.press('Escape');
-    await page.getByTestId('quit').click();
+    await exitMatch(page);
     await expect(page.getByTestId('menu-home')).toBeVisible();
-    await expect(page.getByTestId('setup-summary')).toContainText('Free-for-All · 8 fighters · 3 min');
-    await page.getByTestId('quick-play').click();
+    await toSavedSetup(page);
+    await expect(page.getByTestId('mode-deathmatch')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('minutes-3')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('rumble-8')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('setup-start').click();
     await inMatch(page);
     await stepTicks(page, 30);
     expect((await live(page)).arenaId).toBe('rumbleLekki');
@@ -114,22 +129,21 @@ test.describe('Stitch main menu', () => {
   test('keyboard: arrows move focus, Enter selects, Esc goes back', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'keyboard');
     await open(page, '&nobots&noattract');
-    await page.keyboard.press('ArrowDown'); // lands on the flagship entry first
-    await expect(page.getByTestId('home-rumble')).toBeFocused();
-    await page.keyboard.press('ArrowDown');
-    await expect(page.getByTestId('home-classic')).toBeFocused();
-    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowDown'); // lands on PLAY first
+    await expect(page.getByTestId('home-play')).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(page.getByTestId('menu-mode')).toBeVisible();
-    await page.keyboard.press('ArrowRight'); // the saved mode (Free-for-All) first, then the next card
+    await expect(page.getByTestId('menu-play')).toBeVisible();
+    await page.keyboard.press('ArrowDown'); // lands on Quick Match
+    await expect(page.getByTestId('play-quick')).toBeFocused();
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('mode-team')).toBeFocused();
-    await page.keyboard.press('Enter'); // choosing a mode opens the arena and settings
+    await expect(page.getByTestId('home-classic')).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByTestId('home-rumble')).toBeFocused();
+    await page.keyboard.press('Enter'); // City Rumble opens Match Setup
     await expect(page.getByTestId('menu-setup')).toBeVisible();
     await expect(page.getByTestId('rumble-setup')).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.getByTestId('menu-mode')).toBeVisible();
-    await expect(page.getByTestId('mode-team')).toHaveAttribute('aria-current', 'true');
+    await expect(page.getByTestId('menu-play')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('menu-home')).toBeVisible();
     // Esc on Home does nothing harmful
@@ -169,15 +183,15 @@ test.describe('Stitch main menu', () => {
       );
       await page.waitForTimeout(700);
     };
-    await press(13); // D-pad down: focus lands on City Rumble
-    await expect(page.getByTestId('home-rumble')).toBeFocused();
+    await press(13); // D-pad down: focus lands on PLAY
+    await expect(page.getByTestId('home-play')).toBeFocused();
     await press(0); // A
-    await expect(page.getByTestId('menu-mode')).toBeVisible();
+    await expect(page.getByTestId('menu-play')).toBeVisible();
     await press(1); // B
     await expect(page.getByTestId('menu-home')).toBeVisible();
   });
 
-  test('a broken or outdated save is repaired, and Quick play still starts a valid match', async ({
+  test('a broken or outdated save is repaired, and Match Setup still starts a valid match', async ({
     page,
   }) => {
     await page.addInitScript(() => {
@@ -196,10 +210,9 @@ test.describe('Stitch main menu', () => {
     });
     const errors = watchErrors(page);
     await open(page, '&nobots&noattract');
-    await expect(page.getByTestId('setup-summary')).toContainText(
-      'Classic Battle · 4 players · Danfo Bus Park',
-    );
-    await page.getByTestId('quick-play').click();
+    await toSavedSetup(page);
+    await expect(page.getByTestId('classic-setup')).toBeVisible();
+    await page.getByTestId('setup-start').click();
     await inMatch(page);
     await stepTicks(page, 30);
     expect(await live(page)).toMatchObject({
@@ -213,6 +226,7 @@ test.describe('Stitch main menu', () => {
 
   test('results: Change setup opens Ready, Main menu goes home, Rematch replays', async ({ page }) => {
     await open(page, '&nobots&noattract');
+    await page.getByTestId('home-play').click();
     await page.getByTestId('home-classic').click();
     await page.getByTestId('players-2').click();
     await page.getByTestId('menu-continue').click();
@@ -263,9 +277,9 @@ test.describe('Stitch main menu', () => {
           ];
     await open(page, '&nobots&noattract');
     const screens: [string, string, string][] = [
-      ['home', 'menu-home', 'quick-play'],
-      ['mode', 'menu-mode', 'mode-survival'],
-      ['setup', 'menu-setup', 'menu-continue'],
+      ['home', 'menu-home', 'home-play'],
+      ['play', 'menu-play', 'home-rumble'],
+      ['setup', 'menu-setup', 'setup-start'],
       ['fighter', 'menu-fighter', 'menu-continue'],
       ['ready', 'menu-ready', 'start-button'],
       ['settings', 'menu-settings', 'settings-close'],
@@ -321,6 +335,7 @@ test.describe('Stitch main menu', () => {
   }, info) => {
     test.skip(info.project.name !== 'desktop', 'one viewport is enough; touch is covered below');
     await open(page, '&nobots&noattract');
+    await page.getByTestId('home-play').click();
     await page.getByTestId('home-rumble').click();
     await page.getByTestId('mode-survival').click();
     // the seven boxes are gone: one slider, every level named and explained as it is chosen
@@ -352,6 +367,7 @@ test.describe('Stitch main menu', () => {
     expect(saved).toMatchObject({ difficulty: 'standard', rumbleMixed: false });
     await page.reload();
     await page.getByTestId('title-screen').waitFor();
+    await page.getByTestId('home-play').click();
     await page.getByTestId('home-rumble').click();
     await page.getByTestId('mode-survival').click();
     await expect(page.getByTestId('diff-slider-name')).toHaveText('Standard');
@@ -364,6 +380,7 @@ test.describe('Stitch main menu', () => {
   test('Classic Battle: one level for all bots, or a level for each bot', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'one viewport is enough');
     await open(page, '&nobots&noattract');
+    await page.getByTestId('home-play').click();
     await page.getByTestId('home-classic').click();
     await page.getByTestId('players-4').click();
     await setDifficulty(page, 5);
@@ -390,11 +407,13 @@ test.describe('Stitch main menu', () => {
   test('screen-reader and keyboard structure of the setup flow', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'structure is the same on every device');
     await open(page, '&nobots&noattract');
+    await page.getByTestId('home-play').click();
+    await expect(page.getByRole('heading', { name: 'Choose how to play', level: 2 })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Choose how to play' })).toBeVisible();
     await page.getByTestId('home-rumble').click();
-    await expect(page.getByRole('heading', { name: 'Select game mode', level: 2 })).toBeVisible();
-    await expect(page.getByRole('group', { name: /Game mode/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Match setup', level: 2 })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Battle style' })).toBeVisible();
     await page.getByTestId('mode-team').click();
-    await expect(page.getByRole('heading', { name: 'Arena & settings', level: 2 })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Select Arena', level: 3 })).toBeVisible();
     await expect(page.getByRole('group', { name: 'City Rumble stages' })).toBeVisible();
     await expect(page.getByRole('slider', { name: 'Difficulty of all bots' })).toBeVisible();
@@ -431,6 +450,7 @@ test.describe('Stitch main menu', () => {
             { width: 915, height: 412 },
           ];
     await open(page, '&nobots&noattract');
+    await page.getByTestId('home-play').click();
     await page.getByTestId('home-classic').click();
     await page.getByTestId('menu-continue').click();
     await expect(page.getByTestId('menu-fighter')).toBeVisible();
@@ -488,8 +508,11 @@ test.describe('Stitch main menu', () => {
     test.skip(info.project.name !== 'mobile', 'touch');
     await page.setViewportSize({ width: 390, height: 844 });
     await open(page, '&nobots&noattract');
+    await page.getByTestId('home-play').tap();
     await page.getByTestId('home-rumble').tap();
     await page.getByTestId('mode-survival').tap();
+    // the Battle style chips sit below the arena cards on a portrait phone: scroll back up to the arena cards
+    await page.getByRole('heading', { name: 'Select Arena' }).scrollIntoViewIfNeeded();
     await expect(page.getByRole('heading', { name: 'Select Arena' })).toBeInViewport();
     await page.getByTestId('rumble-stage-rumbleMushin').tap();
     await expect(page.getByTestId('arena-selected')).toHaveText('Mushin');

@@ -91,7 +91,7 @@ describe('the map: Ojuelegba becomes the final chapter (FN10)', () => {
     expect(html).toContain('The corner gate is open'); // the Ring-lost line of mission 19
     expect(html).toContain(`<b>The Landlord</b>, Enforcer of the Locked Routes (working title)`);
     // the map's main button continues into the chapter (it is not over yet)
-    expect(html).toMatch(/data-testid="campaign-continue"[^>]*>Continue</);
+    expect(html).toMatch(/data-testid="campaign-continue"[^>]*>Continue story</);
   });
 
   it('once the Landlord falls: freed, with the best stars, and the map offers the finale scene', () => {

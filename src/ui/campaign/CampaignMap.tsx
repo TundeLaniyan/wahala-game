@@ -27,6 +27,7 @@ import { StoryHero } from './StoryHero';
 import { Workshop } from './Workshop';
 import { SectionList } from './SectionList';
 import { Liberation, liberationBadge } from './Liberation';
+import { currentMission, storyInProgress } from './currentMission';
 
 /** Coast, lagoon, the island and the Lekki strip behind the nodes (decorative only, 0..100 units). */
 function MapBackdrop({ nodes }: { nodes: MapNode[] }) {
@@ -311,6 +312,33 @@ function Tools() {
   );
 }
 
+/** Where am I, what do I do next, what do I gain: the mission Continue starts, from the existing save and content. */
+function CurrentMissionStrip() {
+  const ui = useCampaignUi();
+  if (!ui || !ui.started) return null;
+  const cur = currentMission(ui.save);
+  if (!cur) return null;
+  return (
+    <section className="cp-now" data-testid="campaign-current" data-format={cur.format}>
+      <div className="cp-now-where">
+        <small className="mn-kicker">{cur.finale ? 'Final chapter' : 'Current district'}</small>
+        <b data-testid="campaign-current-district">{cur.districtName}</b>
+      </div>
+      <div className="cp-now-what">
+        <small className="mn-kicker">Next mission · {cur.style}</small>
+        <b data-testid="campaign-current-mission">{cur.missionName}</b>
+        <span data-testid="campaign-current-objective">{cur.objective}</span>
+      </div>
+      {cur.reward && (
+        <div className="cp-now-gain">
+          <small className="mn-kicker">First clear</small>
+          <span data-testid="campaign-current-reward">{cur.reward}</span>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function CampaignMap() {
   const ui = useCampaignUi();
   const [chosenLevel, setChosenLevel] = useState<CampaignLevel>('normal');
@@ -331,12 +359,14 @@ export function CampaignMap() {
   // everything is done only once the finale chapter is won too
   const allClear = !next && finaleStatus(save) === 'cleared';
   const hasProgress =
-    started && DISTRICT_ORDER.some((d) => d !== 'ojuelegba' && save.districts[d].attempts > 0);
+    started &&
+    (storyInProgress(save) ||
+      DISTRICT_ORDER.some((d) => d !== 'ojuelegba' && save.districts[d].attempts > 0));
   return (
     <ScreenFrame
       id="campaign"
-      kicker="Story mode · offline"
-      title="Break the Ring"
+      kicker="One player · offline"
+      title="Story campaign"
       className="cp-screen"
       status={
         <span className="cp-progress" data-testid="campaign-progress-text">
@@ -351,7 +381,7 @@ export function CampaignMap() {
                 ? 'The ending'
                 : 'Play the finale'
               : hasProgress
-                ? 'Continue'
+                ? 'Continue story'
                 : 'Start Oshodi'}
           </PrimaryButton>
         ) : (
@@ -373,6 +403,7 @@ export function CampaignMap() {
           </button>
         </p>
       )}
+      <CurrentMissionStrip />
       <div
         className="cp-progress-bar"
         role="progressbar"

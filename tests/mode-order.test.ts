@@ -24,7 +24,7 @@ import { addGenerator } from './helpers';
 vi.mock('../src/app/session', () => ({
   commands: new Proxy({}, { get: () => () => undefined }),
 }));
-const { MODE_CARDS } = await import('../src/ui/menu/ModeScreen');
+const { MODE_CARDS } = await import('../src/ui/menu/modes');
 
 const rumble = (p: Partial<GameSettings>): GameSettings => ({
   ...DEFAULT_GAME_SETTINGS,
@@ -33,12 +33,12 @@ const rumble = (p: Partial<GameSettings>): GameSettings => ({
 });
 
 describe('mode order and wording', () => {
-  it('Free-for-All is first, then Team Deathmatch, then Last Player Standing; Classic Battle stays separate, last', () => {
+  it('Free-for-All is first, then Team Deathmatch, then Last Player Standing; Classic Blast stays separate, last', () => {
     expect(MODE_CARDS.map((m) => m.name)).toEqual([
       'Free-for-All',
       'Team Deathmatch',
       'Last Player Standing',
-      'Classic Battle',
+      'Classic Blast',
     ]);
     expect(RUMBLE_MODE_INFO.map((m) => m.id)).toEqual(['deathmatch', 'team', 'survival']);
   });

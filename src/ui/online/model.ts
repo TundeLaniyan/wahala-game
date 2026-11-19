@@ -9,7 +9,7 @@ import type { OnlineGame, Party, ProgressionUpdate, QueueStatus, Room, RoomState
 export const PREVIEW_BANNER = 'Preview · mock server · no real players';
 
 export const ONLINE_GAME_LABEL: Record<OnlineGame, string> = {
-  classic: 'Classic Battle',
+  classic: 'Classic Blast',
   survival: 'Last Player Standing',
   deathmatch: 'Free-for-All',
   team: 'Team Deathmatch',

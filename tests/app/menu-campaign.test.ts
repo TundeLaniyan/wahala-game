@@ -36,9 +36,9 @@ describe('campaign screens in the menu state machine', () => {
   });
 
   it('existing flows are unchanged: mode -> setup -> fighter -> ready', () => {
-    let m = openScreen(MENU_HOME, 'mode');
+    let m = openScreen(MENU_HOME, 'play');
     m = advance(advance(advance(m)));
-    expect(m.stack).toEqual(['home', 'mode', 'setup', 'fighter', 'ready']);
+    expect(m.stack).toEqual(['home', 'play', 'setup', 'fighter', 'ready']);
   });
 
   it('validMenu keeps every known screen (campaign ones too) and drops unknown ones', () => {

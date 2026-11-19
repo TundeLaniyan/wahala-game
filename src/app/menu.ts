@@ -4,15 +4,16 @@
  * `UiState.menu`. The match settings themselves stay in `GameSettings` (every screen edits the real
  * settings directly, so a choice always reaches the next match).
  *
- * New-player flow: home -> mode -> setup (arena and match settings) -> fighter -> ready -> play. There are
- * no numbered steps: choosing a mode moves straight on to setup, and each later screen has one clear next
+ * New-player flow: home -> play (Choose How to Play: Quick Match / Classic Blast / City Rumble) -> setup (battle
+ * style, arena and match settings) -> fighter -> ready -> play. Quick Match skips all of it. There are no
+ * numbered steps: choosing a style moves straight on to setup, and each later screen has one clear next
  * action. Any screen opened from Ready to edit one choice returns to Ready, so changing one decision never
  * restarts the whole setup.
  */
 
 export type MenuScreen =
   | 'home'
-  | 'mode'
+  | 'play'
   | 'setup'
   | 'fighter'
   | 'ready'
@@ -31,7 +32,7 @@ export type MenuScreen =
 
 export const MENU_SCREENS: readonly MenuScreen[] = [
   'home',
-  'mode',
+  'play',
   'setup',
   'fighter',
   'ready',
@@ -72,7 +73,7 @@ export const MENU_HOME: MenuState = { stack: ['home'] };
 
 /** The step after each flow screen when it is continued. */
 const NEXT: Partial<Record<MenuScreen, MenuScreen>> = {
-  mode: 'setup',
+  play: 'setup',
   setup: 'fighter',
   fighter: 'ready',
   briefing: 'bossIntro',
@@ -80,7 +81,7 @@ const NEXT: Partial<Record<MenuScreen, MenuScreen>> = {
 
 export const currentScreen = (m: MenuState): MenuScreen => m.stack[m.stack.length - 1] ?? 'home';
 
-/** A menu at `path` below home (e.g. ['mode', 'setup']). */
+/** A menu at `path` below home (e.g. ['play', 'setup']). */
 export function menuAt(path: readonly MenuScreen[]): MenuState {
   return { stack: ['home', ...path.filter((s) => s !== 'home')] };
 }

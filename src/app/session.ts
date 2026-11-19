@@ -34,6 +34,7 @@ import { routeMenuNav } from './menuNav';
 import { NULL_AUDIO } from './ports';
 import type { AudioPort, MissionHost } from './ports';
 import { sanitizeSettings, saveSettings } from './settings';
+import { quickMatchPatch, splitQuickWrite } from './quickMatch';
 import type { GameSettings } from './settings';
 import { QualityNotifier } from './qualityNotice';
 import { patch, useGameStore } from './store';
@@ -388,6 +389,7 @@ function settingsAllowAttract(): boolean {
 /** What the campaign controller drives: the match controller, plus the same start-of-match chores as `start`. */
 const missionHost: MissionHost = {
   startMission(options, meta): void {
+    endQuickMatch();
     void audio.unlock();
     qualityNotifier.newMatch();
     if (useGameStore.getState().touchCapable) void enterImmersiveMode();
@@ -406,6 +408,7 @@ const missionHost: MissionHost = {
   },
   // classic raids (field door -> raid -> back to the field): the same start-of-match chores, then the controller
   playRaid(options, meta): void {
+    endQuickMatch();
     void audio.unlock();
     qualityNotifier.newMatch();
     if (useGameStore.getState().touchCapable) void enterImmersiveMode();
@@ -439,11 +442,38 @@ function testCameraView(test: boolean): void {
   renderer?.setCameraView(view);
 }
 
+/**
+ * Quick Match (decision SX11): the beginner defaults hold only for the one match. `quickBase` is the player's own settings
+ * from before it (the ones that are saved); it is set while a Quick Match is on or loading and put back at the menu, so
+ * the saved Classic arena, player count and bot levels are never overwritten.
+ */
+let quickBase: GameSettings | null = null;
+let quickStarting = false;
+function endQuickMatch(): void {
+  if (quickBase === null) return;
+  const base = quickBase;
+  quickBase = null;
+  patch({ settings: base });
+}
+
 /** Everything the UI can ask the game to do. */
 export const commands = {
+  /** Choose How to Play, QUICK MATCH: one tap, a beginner Classic match; the saved match preferences stay as they were. */
+  startQuickMatch(): void {
+    if (loader.busy) return; // a second tap starts nothing (and never captures the quick values as the player's own)
+    if (quickBase === null) quickBase = useGameStore.getState().settings;
+    patch({ settings: { ...quickBase, ...quickMatchPatch() } });
+    quickStarting = true;
+    try {
+      commands.start();
+    } finally {
+      quickStarting = false;
+    }
+  },
   /** `variant`: a temporary local test match (the Sudden Death test, decisions SD-T); omitted for every ordinary start. */
   start(variant?: MatchVariant): void {
     if (loader.busy) return; // a start is already on its way: a second tap starts nothing
+    if (!quickStarting) endQuickMatch(); // an ordinary start plays the player's own settings
     // a match must always be able to start: repair anything an old save could hold first
     const current = useGameStore.getState().settings;
     const safe = sanitizeSettings(current);
@@ -492,6 +522,7 @@ export const commands = {
   toTitle(path: readonly MenuScreen[] = []): void {
     audio.playUi('back');
     subtitles.clear();
+    endQuickMatch();
     patch({ menu: menuAt(path), pauseSettings: false });
     campaign?.leave();
     controller?.stop();
@@ -634,7 +665,11 @@ export const commands = {
   updateSettings(p: Partial<GameSettings>): void {
     const settings = { ...useGameStore.getState().settings, ...p };
     patch({ settings });
-    saveSettings(settings);
+    if (quickBase !== null) {
+      // a Quick Match is on: save the player's own settings with this change, never the match's temporary defaults
+      quickBase = { ...quickBase, ...splitQuickWrite(p).saved };
+      saveSettings(quickBase);
+    } else saveSettings(settings);
     applyAudioSettings(settings);
     if (p.quality && renderer) {
       renderer.setQuality(p.quality);

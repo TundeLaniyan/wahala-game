@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { inMatch, open, stepTicks } from './helpers';
+import { exitMatch, inMatch, open, stepTicks } from './helpers';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -30,14 +30,21 @@ const sd = (page: Page) =>
     };
   });
 
-test('Sudden Death test: visible on the mode screen, one tap, three fighters, the stage closes in, the blast crosses the floor', async ({
+/** Home -> Learn to Play -> Advanced Training: the test sits with the testing tools, apart from the lessons. */
+async function openSuddenDeathTest(page: Page): Promise<void> {
+  await page.getByTestId('home-academy').click();
+  await page.getByTestId('academy-section-advanced').click();
+  await expect(page.getByTestId('academy-testing')).toBeVisible();
+}
+
+test('Sudden Death test: visible under Learn to Play > Advanced Training, one tap, three fighters, the stage closes in, the blast crosses the floor', async ({
   page,
 }, info) => {
   test.setTimeout(600_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await open(page);
-  await page.getByTestId('home-rumble').click();
+  await openSuddenDeathTest(page);
   const entry = page.getByTestId('mode-sd-test');
   await expect(entry).toBeVisible();
   await expect(entry).toContainText('Test');
@@ -92,7 +99,7 @@ test('Sudden Death test: leaving it puts the saved camera view back and writes n
   test.setTimeout(300_000);
   await open(page, '&nobots&noattract');
   const saved = await page.evaluate(() => localStorage.getItem('wahala.settings.v1'));
-  await page.getByTestId('home-rumble').click();
+  await openSuddenDeathTest(page);
   await page.getByTestId('mode-sd-test').click();
   await inMatch(page);
   expect(await page.evaluate(() => (window as any).__WAHALA__.store.getState().settings.cameraView)).toBe(
@@ -106,7 +113,7 @@ test('Sudden Death test: leaving it puts the saved camera view back and writes n
   await stepTicks(page, 400); // past the countdown and the title card, where Escape opens the pause menu
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('pause-overlay')).toBeVisible();
-  await page.getByTestId('quit').click();
+  await exitMatch(page);
   await expect(page.getByTestId('menu-home')).toBeVisible();
   expect(await page.evaluate(() => (window as any).__WAHALA__.store.getState().settings.cameraView)).toBe(
     JSON.parse(saved ?? '{}').cameraView ?? 'action',

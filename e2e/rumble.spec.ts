@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, mutate, open, settled, startMatch, stepTicks, toRumbleSetup, inMatch } from './helpers';
+import { exitMatch, getState, mutate, open, settled, startMatch, stepTicks, toRumbleSetup, inMatch } from './helpers';
 
 type Debug = {
   __WAHALA__: {
@@ -37,7 +37,7 @@ const settingsOf = (page: Page) =>
   });
 
 test.describe('main menu', () => {
-  test('City Rumble is the main entry; Team Rumble from a phone; Classic Battle still one tap away', async ({
+  test('City Rumble is the main entry; Team Rumble from a phone; Classic Blast one choice away', async ({
     page,
   }, info) => {
     test.setTimeout(600_000); // software WebGL on a busy shared machine
@@ -46,27 +46,32 @@ test.describe('main menu', () => {
     await page.setViewportSize({ width: 640, height: 360 });
     await open(page);
 
-    // Home: City Rumble is the flagship entry, first and on screen without scrolling
+    // Home: Play is the one dominant entry, on screen without scrolling; City Rumble is one tap further
     await settled(page);
-    const entry = (await page.getByTestId('home-rumble').boundingBox())!;
+    const entry = (await page.getByTestId('home-play').boundingBox())!;
     expect(entry.y + entry.height).toBeLessThanOrEqual(360);
     expect(entry.x + entry.width).toBeLessThanOrEqual(640);
     await shot(page, info.project.name, 'menu-phone-home');
+    await page.getByTestId('home-play').click();
+    await shot(page, info.project.name, 'menu-phone-play');
     await page.getByTestId('home-rumble').click();
-    await expect(page.getByTestId('mode-deathmatch')).toHaveAttribute('aria-current', 'true'); // Free-for-All is the default
-    await expect(page.getByTestId('mode-rule-deathmatch')).toHaveText('Respawn enabled · highest kills wins');
-    await expect(page.getByTestId('mode-rule-team')).toHaveText(
+    await expect(page.getByTestId('mode-deathmatch')).toHaveAttribute('aria-pressed', 'true'); // Free-for-All is the default
+    await expect(page.getByTestId('mode-deathmatch')).toHaveAttribute(
+      'title',
+      'Respawn enabled · highest kills wins',
+    );
+    await expect(page.getByTestId('mode-team')).toHaveAttribute(
+      'title',
       'Respawn enabled · team with most kills wins',
     );
-    await expect(page.getByTestId('mode-rule-survival')).toHaveText('No respawn · last survivor wins');
+    await expect(page.getByTestId('mode-survival')).toHaveAttribute('title', 'No respawn · last survivor wins');
     await shot(page, info.project.name, 'menu-phone-rumble');
 
     // Last Player Standing has no length and no friendly fire; Team Deathmatch adds both (and team splits)
-    await page.getByTestId('mode-survival').click(); // a tap opens the arena and settings
+    await page.getByTestId('mode-survival').click();
     await expect(page.getByTestId('rumble-setup')).toBeVisible();
     await expect(page.getByTestId('minutes-5')).toHaveCount(0);
     await expect(page.getByTestId('ff-on')).toHaveCount(0);
-    await page.getByTestId('setup-change-mode').click();
     await page.getByTestId('mode-team').click();
     await page.getByTestId('rumble-8').click();
     await expect(page.getByTestId('rumble-8')).toContainText('4 v 4');
@@ -102,11 +107,13 @@ test.describe('main menu', () => {
 
     // back to the menu: the saved setup is remembered; Classic Battle keeps the quick four-player game
     await page.getByTestId('pause-button').click();
-    await page.getByTestId('quit').click();
+    await exitMatch(page);
     await expect(page.getByTestId('menu-home')).toBeVisible();
-    await expect(page.getByTestId('setup-summary')).toContainText(
-      'Team Deathmatch · 4 v 4 · 5 min · friendly fire',
-    );
+    await page.getByTestId('home-play').click();
+    await page.getByTestId('home-rumble').click();
+    await expect(page.getByTestId('mode-team')).toHaveAttribute('aria-pressed', 'true'); // the saved setup is remembered
+    await expect(page.getByTestId('rumble-8')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('menu-back').click();
     await page.getByTestId('home-classic').click();
     await expect(page.getByTestId('players-4')).toBeVisible();
     await expect(page.getByTestId('setup-arena')).toContainText('Danfo Bus Park');
