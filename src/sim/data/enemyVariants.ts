@@ -46,6 +46,11 @@ export interface EnemyPersonality {
   preferredRange: number;
   /** Ticks added to its recovery after its own punch or throw (an overcommitting brawler). */
   recoveryBonusTicks: number;
+  /**
+   * Ticks taken off its step time (decision RC1: a fast runner), never below the level's `enemyMinStepTicks`, so even the
+   * fastest ordinary enemy is slower than the human.
+   */
+  stepBonusTicks: number;
 }
 
 export interface EnemyVariantDef {
@@ -69,6 +74,7 @@ const plain: EnemyPersonality = {
   usesCover: false,
   preferredRange: 0,
   recoveryBonusTicks: 0,
+  stepBonusTicks: 0,
 };
 
 export const ENEMY_VARIANTS: Readonly<Record<EnemyVariantId, EnemyVariantDef>> = {
@@ -92,6 +98,7 @@ export const ENEMY_VARIANTS: Readonly<Record<EnemyVariantId, EnemyVariantDef>> =
       noticeScale: 0.5,
       visionDelta: -1,
       recoveryBonusTicks: 12,
+      stepBonusTicks: 1,
     },
   },
   bottleThrower: {

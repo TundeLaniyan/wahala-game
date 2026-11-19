@@ -17,6 +17,12 @@
  *                chases with no leash for `hitChaseTicks`) or the human coming back inside its pursuit range re-engages
  *                it at once (no farming at the boundary)
  *
+ * Decision RC3 (docs/CAMPAIGN_COMBAT_RELIABILITY.md): a pursuer also BREAKS OFF when the human has been farther than
+ * `chase.breakOffGapTiles` walking tiles for `chase.breakOffTicks`, or it has chased for `chase.maxChaseTicks` without
+ * landing a hit on him: it goes to look where it last saw him (investigate), searches, walks back and resumes its route
+ * (a ranged unit watches from its post instead, as after a leash give-up), and for `chase.reNoticeCooldownTicks` it does not
+ * notice him by sight again (a human within `closeTiles`, or a hit, engages it at once).
+ *
  * The overlay states (wind-up / attack / recovery, stagger, defeat) are the sim's own and the generator evasion is the
  * AI's (`enemyMindView` combines them for presentation). Everything here is a function of the state and the tick: no
  * RNG, no clock. Sight uses the grid rule of `sight.ts` (walls, crates and other bodies block).
@@ -35,6 +41,9 @@ import { pushEnemyCue } from './enemyCues';
 import { throwReach } from './enemyActions';
 import { enemyAttackPhase } from './tacticalTrap';
 import type { AttackPhase } from './tacticalTrap';
+
+/** How often a pursuer re-measures its walking gap to the human (ticks; a breadth-first search of at most a few dozen tiles). */
+const GAP_CHECK_TICKS = 6;
 
 const chebyshev = (a: TilePos, b: TilePos): number => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 const floor = (state: GameState, x: number, y: number): boolean => tileAt(state, x, y) === Tile.Empty;
@@ -102,6 +111,11 @@ export function addEnemyMind(state: GameState, id: number, post: TilePos, def?: 
     coverUntil: -1,
     attackSeen: p.lastAttack?.endTick ?? -1,
     hitChaseUntil: -1,
+    chaseSince: -1,
+    farSince: -1,
+    gapCheckedTick: -1,
+    humanHpSeen: -1,
+    noticeBlockedUntil: -1,
   };
 }
 
@@ -186,6 +200,9 @@ function alert(
   if (was === 'alert' || was === 'pursue') return;
   setState(m, 'alert', T);
   m.notice = 0;
+  m.chaseSince = T;
+  m.farSince = -1;
+  m.gapCheckedTick = -1;
   if (seen) {
     m.lastSeen = { x: seen.x, y: seen.y };
     m.lastSeenTick = T;
@@ -217,6 +234,71 @@ function giveUp(state: GameState, m: EnemyMind, p: Player, events: SimEvent[]): 
   for (const a of m.spec.anchors) if (manhattan(a, p) < manhattan(best, p)) best = a;
   m.target = { x: best.x, y: best.y };
   pushEnemyCue(state, events, { playerId: p.id, cue: 'lost', untilTick: m.watchUntil, x: best.x, y: best.y });
+}
+
+/** Tiles of the walking gap scan (a reused buffer: it is fully overwritten before every use). */
+let gapSeen = new Int16Array(0);
+let gapQueue: number[] = [];
+
+/**
+ * Is the walking distance (open floor only; bodies and generators ignored) from `a` to `b` more than `limit` tiles? A
+ * breadth-first search that stops at depth `limit`: cheap, deterministic, and never farther than the real walk is.
+ */
+export function walkGapExceeds(state: GameState, a: TilePos, b: TilePos, limit: number): boolean {
+  if (a.x === b.x && a.y === b.y) return false;
+  const w = state.width;
+  if (gapSeen.length < state.tiles.length) gapSeen = new Int16Array(state.tiles.length);
+  gapSeen.fill(-1, 0, state.tiles.length);
+  const goal = b.y * w + b.x;
+  const start = a.y * w + a.x;
+  gapSeen[start] = 0;
+  gapQueue = [start];
+  for (let head = 0; head < gapQueue.length; head++) {
+    const u = gapQueue[head]!;
+    const d = gapSeen[u]!;
+    if (d >= limit) continue;
+    const ux = u % w;
+    const uy = (u - ux) / w;
+    for (const dir of DIRS) {
+      const x = ux + DIR_VEC[dir].dx;
+      const y = uy + DIR_VEC[dir].dy;
+      if (!floor(state, x, y)) continue;
+      const v = y * w + x;
+      if (gapSeen[v] !== -1) continue;
+      if (v === goal) return false;
+      gapSeen[v] = d + 1;
+      gapQueue.push(v);
+    }
+  }
+  return true;
+}
+
+/**
+ * Decision RC3: the chase ends. A brawler goes to look where it last saw the human (the readable "?"), searches there,
+ * walks back and resumes its route; a ranged unit watches from where it stands (and keeps throwing), then walks back.
+ * For `reNoticeCooldownTicks` it does not notice him by sight again.
+ */
+function breakOff(state: GameState, m: EnemyMind, p: Player, events: SimEvent[]): void {
+  const cfg = state.config.campaignTactics!;
+  const T = state.tick;
+  m.noticeBlockedUntil = T + cfg.chase.reNoticeCooldownTicks;
+  m.chaseSince = -1;
+  m.farSince = -1;
+  m.notice = 0;
+  if (m.spec.preferredRange > 0) {
+    giveUp(state, m, p, events);
+    return;
+  }
+  setState(m, 'investigate', T);
+  m.target = m.lastSeen ? { x: m.lastSeen.x, y: m.lastSeen.y } : { x: p.x, y: p.y };
+  m.pauseUntil = -1;
+  pushEnemyCue(state, events, {
+    playerId: p.id,
+    cue: 'lost',
+    untilTick: T + cfg.awareness.searchTicks,
+    x: m.target.x,
+    y: m.target.y,
+  });
 }
 
 /** The noises of this tick: generators just laid and blasts just set off, by anyone not on the listener's side. */
@@ -265,7 +347,18 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
     const hp = p.vitals?.hp ?? 0;
     const hit = hp < m.hpSeen;
     m.hpSeen = hp;
-    if (hit) m.hitChaseUntil = T + cfg.territory.hitChaseTicks;
+    if (hit) {
+      m.hitChaseUntil = T + cfg.territory.hitChaseTicks;
+      m.noticeBlockedUntil = -1; // a hit always engages it again (decision RC3)
+      if (m.state === 'pursue' || m.state === 'alert') {
+        m.chaseSince = T; // a bounded chase, restarted
+        m.farSince = -1;
+      }
+    }
+    const humanHp = h?.vitals?.hp ?? -1;
+    if (h && m.state === 'pursue' && m.humanHpSeen >= 0 && humanHp < m.humanHpSeen) m.chaseSince = T; // it landed a hit
+    m.humanHpSeen = humanHp;
+    const blocked = T < m.noticeBlockedUntil;
     // calm (patrol, watch, walking back) it looks where it walks: the cone ahead (and the eight tiles around it)
     const calmNow =
       m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil);
@@ -287,7 +380,7 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
       const inside = h !== null && territoryDistance(m.spec, h) <= m.spec.pursuitTiles;
       if (h && (hit || close)) {
         alert(state, m, p, h, events, null);
-      } else if (h && sees) {
+      } else if (h && sees && !blocked) {
         // sight builds up (faster while it is already looking: investigating, or a returning enemy he re-enters on)
         const keen = m.state === 'investigate' || (m.state === 'return' && inside) ? 3 : 1;
         m.notice += keen;
@@ -348,6 +441,21 @@ function advance(
         giveUp(state, m, p, events);
         return;
       }
+      // decision RC3: no forever-chase. The human out of reach (walking gap) long enough, or a chase that has gone on
+      // too long without a hit on him, ends here
+      if (T - m.gapCheckedTick >= GAP_CHECK_TICKS) {
+        m.gapCheckedTick = T;
+        const far = walkGapExceeds(state, p, h, cfg.chase.breakOffGapTiles);
+        if (!far) m.farSince = -1;
+        else if (m.farSince < 0) m.farSince = T;
+      }
+      if (
+        (m.farSince >= 0 && T - m.farSince >= cfg.chase.breakOffTicks) ||
+        (m.chaseSince >= 0 && T - m.chaseSince >= cfg.chase.maxChaseTicks)
+      ) {
+        breakOff(state, m, p, events);
+        return;
+      }
       if (!sees && T - m.lastSeenTick > cfg.awareness.loseTicks) {
         setState(m, 'investigate', T);
         m.target = m.lastSeen ? { ...m.lastSeen } : { x: p.x, y: p.y };
@@ -372,12 +480,14 @@ function advance(
       if (T < m.watchUntil) {
         face(p, h ?? m.lastSeen);
         // the human came back inside its pursuit range while it watches: it takes up the chase at once
-        if (h && sees && territoryDistance(m.spec, h) <= m.spec.pursuitTiles)
+        if (h && sees && T >= m.noticeBlockedUntil && territoryDistance(m.spec, h) <= m.spec.pursuitTiles)
           alert(state, m, p, h, events, null);
         return;
       }
       const t = m.target ?? m.spec.centre;
-      if (chebyshev(p, t) <= 0) {
+      // arrived, or (decision RC3) it has been walking back too long: a mission that holds it at its equipment, or a
+      // blocked way, never leaves it stuck in `return`
+      if (chebyshev(p, t) <= 0 || T - m.watchUntil >= cfg.chase.returnTimeoutTicks) {
         if (m.spec.patrol.length > 0) {
           setState(m, 'patrol', T);
           m.waypoint = nearestWaypoint(m.spec.patrol, p);
@@ -493,13 +603,19 @@ export function territoryDirective(state: GameState, id: number): NpcDirective |
   const here = (radius = 0): NpcDirective => ({ kind: 'hold', x: p.x, y: p.y, radius });
   switch (m.state) {
     case 'watch':
-      return { kind: 'hold', x: m.spec.centre.x, y: m.spec.centre.y, radius: leash ?? 1 };
+      return { kind: 'hold', x: m.spec.centre.x, y: m.spec.centre.y, radius: leash ?? 1, calm: true };
     case 'alert':
       return here();
     case 'patrol': {
-      if (state.tick < m.pauseUntil || m.spec.patrol.length === 0) return here(leash ?? 0);
+      if (state.tick < m.pauseUntil || m.spec.patrol.length === 0) return { ...here(leash ?? 0), calm: true };
       const wp = m.spec.patrol[m.waypoint % m.spec.patrol.length]!;
-      return { kind: 'patrol', x: wp.x, y: wp.y, ...(leash !== undefined ? { radius: leash } : {}) };
+      return {
+        kind: 'patrol',
+        x: wp.x,
+        y: wp.y,
+        calm: true,
+        ...(leash !== undefined ? { radius: leash } : {}),
+      };
     }
     case 'investigate': {
       const t = m.target ?? { x: p.x, y: p.y };
@@ -508,7 +624,13 @@ export function territoryDirective(state: GameState, id: number): NpcDirective |
     case 'return': {
       if (state.tick < m.watchUntil) return here();
       const t = m.target ?? m.spec.centre;
-      return { kind: 'return', x: t.x, y: t.y, ...(leash !== undefined ? { radius: leash } : {}) };
+      return {
+        kind: 'return',
+        x: t.x,
+        y: t.y,
+        calm: true,
+        ...(leash !== undefined ? { radius: leash } : {}),
+      };
     }
     case 'pursue': {
       const h = quarry(state, p);

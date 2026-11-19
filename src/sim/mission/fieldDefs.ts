@@ -212,7 +212,7 @@ const defs: FieldMissionDef[] = [
       // a loop round the ticket kiosk between checkpoints A and B (it turns its back at the far corners)
       guard('Park Warden', 14, 37, 'wardens', patrol('agbero', [10, 37], [18, 37], [18, 39], [10, 39])),
       // the stall lane between the two streets: it crosses the start street and the checkpoint street
-      guard('Park Warden', 13, 41, 'wardens', patrol('agbero', [13, 38], [13, 42])),
+      guard('Park Warden', 13, 41, 'wardens', patrol('agbero', [12, 42], [21, 42], [21, 44], [12, 44])),
       // a lookout on the east forecourt beside checkpoint C: throws down the stall lanes
       chaser('Ticket Tout', 31, 41, 'wardens', post('bottleThrower', 2)),
       // the depot lane: walks across the depot door (only a blast finishes it)
@@ -268,7 +268,7 @@ const defs: FieldMissionDef[] = [
       // the trailer crew: they watch the rail buffer, then come to take the plaza back
       guard('Trailer Crew', 34, 32, 'trailerCrew', patrol('agbero', [31, 31], [38, 31])),
       chaser('Trailer Crew', 41, 33, 'trailerCrew', post('bottleThrower', 2)),
-      guard('Trailer Crew', 32, 26, 'lateCrew', post('areaBoy', 2)),
+      guard('Trailer Crew', 32, 26, 'lateCrew', patrol('areaBoy', [32, 26], [38, 26], [38, 31], [32, 31])),
       // the trailer hand who sets off after you when the plaza is held
       chaser('Trailer Hand', 31, 32, 'pursuers', { variant: 'bottleThrower' }),
     ],
@@ -367,10 +367,10 @@ const defs: FieldMissionDef[] = [
       guard('Market Runner', 28, 13, 'runners', patrol('areaBoy', [22, 13], [34, 13])),
       chaser('Market Runner', 40, 12, 'runners', patrol('bottleThrower', [36, 12], [42, 12])),
       // the lorry loaders: they watch the top street, then come for the bay
-      guard('Loader', 48, 3, 'loaders', post('marketEnforcer', 2)),
+      guard('Loader', 48, 3, 'loaders', patrol('marketEnforcer', [42, 7], [48, 7], [48, 12], [42, 12])),
       guard('Loader', 41, 6, 'loaders', patrol('marketEnforcer', [35, 6], [42, 6])),
       chaser('Late Loader', 49, 13, 'lateLoaders', post('bottleThrower', 2)),
-      guard('Late Loader', 40, 13, 'lateLoaders', patrol('areaBoy', [36, 13], [44, 13])),
+      guard('Late Loader', 40, 13, 'lateLoaders', patrol('areaBoy', [37, 13], [44, 13])),
       guard('Last Loader', 30, 7, 'lastLoaders', patrol('marketEnforcer', [26, 7], [33, 7])),
     ],
     timeLimitSec: 600,
@@ -413,7 +413,13 @@ const defs: FieldMissionDef[] = [
       // route marshals: two walk the approach road, one holds the junction corner by the shed (it calls the others)
       guard('Kobo Marshal', 9, 22, 'marshals', patrol('routeMarshal', [4, 22], [14, 22])),
       guard('Kobo Marshal', 22, 21, 'marshals', patrol('routeMarshal', [16, 21], [28, 21])),
-      guard('Kobo Marshal', 20, 25, 'marshals', post('routeMarshal', 1)),
+      guard(
+        'Kobo Marshal',
+        20,
+        25,
+        'marshals',
+        patrol('routeMarshal', [15, 22], [20, 22], [20, 26], [15, 26]),
+      ),
       // the toll crew: a heavy minds the nearest box, a lookout throws from the plaza corner
       blocker('Toll Heavy', 33, 28, 'tollCrew', post('heavyEnforcer', 1)),
       chaser('Toll Lookout', 39, 23, 'lookouts', post('bottleThrower', 2)),
@@ -458,7 +464,7 @@ const defs: FieldMissionDef[] = [
       guard('Kobo Marshal', 10, 6, 'posts', patrol('routeMarshal', [10, 4], [10, 10])),
       // the centre crossing crew: they watch the junction streets, then come to take the junction back
       guard('Kobo Marshal', 30, 10, 'crossing', patrol('routeMarshal', [27, 10], [34, 10])),
-      guard('Kobo Marshal', 18, 5, 'crossing', post('routeMarshal', 2)),
+      guard('Kobo Marshal', 18, 5, 'crossing', patrol('routeMarshal', [14, 4], [26, 4], [26, 6], [14, 6])),
       guard('Kobo Marshal', 16, 10, 'lateCrossing', patrol('routeMarshal', [12, 9], [20, 9])),
       chaser('Kobo Lookout', 31, 2, 'lateCrossing', post('bottleThrower', 2)),
       guard('Kobo Marshal', 6, 4, 'lastCrossing', patrol('areaBoy', [3, 5], [9, 5])),
@@ -618,9 +624,15 @@ const defs: FieldMissionDef[] = [
       blocker('Row Heavy', 22, 24, 'auditors', post('heavyEnforcer', 2)),
       // the hall watch (east end of the hall), a thrower on the side street and a runner from the south row come in
       // once the hall is taken
-      guard('Hall Guard', 18, 22, 'hallWatch', post('ringSecurity')),
+      guard(
+        'Hall Guard',
+        18,
+        22,
+        'hallWatch',
+        patrol('ringSecurity', [19, 22], [23, 22], [23, 28], [19, 28]),
+      ),
       chaser('Ledger Thrower', 22, 19, 'hallLate', post('bottleThrower', 2)),
-      guard('Row Runner', 6, 29, 'hallLast', post('areaBoy')),
+      guard('Row Runner', 6, 29, 'hallLast', patrol('areaBoy', [7, 22], [10, 22], [10, 30], [7, 30])),
       // a heavy minds the annexe door and its stamp machines: lure him off them or blast him
       blocker('Annexe Heavy', 16, 29, 'annexe', post('heavyEnforcer', 1)),
     ],
@@ -728,7 +740,13 @@ const defs: FieldMissionDef[] = [
       guard('Pool Guard', 11, 27, 'garden', patrol('ringSecurity', [17, 27], [4, 27])),
       blocker('Gate Blocker', 12, 26, 'garden', post('heavyEnforcer', 1)),
       // the gatehouse guards wait in the east block, then come for the road
-      guard('Gatehouse Guard', 27, 25, 'gatehouse', post('ringSecurity')),
+      guard(
+        'Gatehouse Guard',
+        27,
+        25,
+        'gatehouse',
+        patrol('ringSecurity', [27, 25], [33, 25], [33, 29], [27, 29]),
+      ),
       chaser('Gatehouse Thrower', 30, 29, 'gatehouseLate', post('bottleThrower', 2)),
       // the feeder crew
       guard('Feeder Tech', 31, 25, 'feederCrew', post('ringSecurity')),

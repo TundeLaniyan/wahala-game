@@ -56,7 +56,10 @@ export interface SpectatorView extends GridView {
 const lanes = new Map<string, readonly LaneTile[]>();
 
 /** The sideline lane of a `width` x `height` board (cached; never mutate the result). */
-export function spectatorLane(view: { readonly width: number; readonly height: number }): readonly LaneTile[] {
+export function spectatorLane(view: {
+  readonly width: number;
+  readonly height: number;
+}): readonly LaneTile[] {
   const { width: w, height: h } = view;
   const key = `${w}x${h}`;
   let lane = lanes.get(key);
@@ -159,7 +162,11 @@ export function updateSpectators(state: GameState, intents: Intents, events: Sim
     if (p.alive || p.eliminatedTick === null) continue;
     if (!p.spectator) {
       // just eliminated: step onto the sideline nearest to where it happened
-      p.spectator = { pos: nearestLanePos(lane, p.x, p.y), readyTick: state.tick + cfg.cooldownTicks, stepRemaining: 0 };
+      p.spectator = {
+        pos: nearestLanePos(lane, p.x, p.y),
+        readyTick: state.tick + cfg.cooldownTicks,
+        stepRemaining: 0,
+      };
       continue;
     }
     const s = p.spectator;

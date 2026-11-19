@@ -40,7 +40,8 @@ export class Sideline {
       const next = lane[s.pos + Math.sign(desired - s.pos)]!;
       return { move: dirTo(here.x, here.y, next.x, next.y) };
     }
-    if (obs.tick < s.readyTick + BOT_EXTRA_WAIT || !canThrow(obs, me) || !spectatorLanding(obs, s.pos)) return {};
+    if (obs.tick < s.readyTick + BOT_EXTRA_WAIT || !canThrow(obs, me) || !spectatorLanding(obs, s.pos))
+      return {};
     this.throws++;
     return { place: true };
   }

@@ -238,12 +238,40 @@ export const JUNCTION_MISSION: FieldMissionDef = {
   ],
   doors: [],
   enemies: [
-    enemy('meleeGuard', 'Area Boy', 30, 14, 'waveEast', 'areaBoy', { radius: 1, pursuitTiles: 2 }),
-    enemy('meleeGuard', 'Area Boy', 29, 19, 'waveEast', 'areaBoy', { radius: 1, pursuitTiles: 2 }),
-    enemy('meleeGuard', 'Ring Agbero', 15, 11, 'waveNorth', 'agbero', { radius: 1, pursuitTiles: 2 }),
+    enemy('meleeGuard', 'Area Boy', 30, 14, 'waveEast', 'areaBoy', {
+      patrol: [
+        [30, 11],
+        [30, 14],
+        [27, 14],
+      ],
+      pursuitTiles: 4,
+    }),
+    enemy('meleeGuard', 'Area Boy', 29, 19, 'waveEast', 'areaBoy', {
+      patrol: [
+        [26, 19],
+        [30, 19],
+        [30, 21],
+        [26, 21],
+      ],
+      pursuitTiles: 4,
+    }),
+    enemy('meleeGuard', 'Ring Agbero', 15, 11, 'waveNorth', 'agbero', {
+      patrol: [
+        [14, 11],
+        [19, 11],
+        [19, 14],
+        [14, 14],
+      ],
+      pursuitTiles: 4,
+    }),
     enemy('meleeGuard', 'Market Enforcer', 27, 11, 'waveNorth', 'marketEnforcer', {
-      radius: 1,
-      pursuitTiles: 2,
+      patrol: [
+        [21, 11],
+        [27, 11],
+        [27, 14],
+        [21, 14],
+      ],
+      pursuitTiles: 4,
     }),
     enemy('meleeGuard', 'Ring Lieutenant', 25, 12, 'ringCrew', 'lieutenant', { radius: 2, pursuitTiles: 3 }),
     enemy('meleeGuard', 'Ring Security', 28, 19, 'ringCrew', 'ringSecurity', { radius: 2, pursuitTiles: 3 }),

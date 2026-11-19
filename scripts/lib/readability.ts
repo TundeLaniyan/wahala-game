@@ -7,7 +7,7 @@
 import { createBot } from '../../src/ai';
 import type { Bot } from '../../src/ai';
 import { campaignEnemyLevel, enemyMindView, observe, tick } from '../../src/sim';
-import type { CampaignLevel, Dir, GameState, Intents } from '../../src/sim';
+import type { CampaignLevel, Dir, GameState, Intents, SimEvent } from '../../src/sim';
 import { Tile } from '../../src/sim/types';
 import { fieldGame } from './fieldFight';
 
@@ -38,14 +38,14 @@ export function rig(fieldId: string, level: CampaignLevel, seed: number): Rig {
 }
 
 /** One tick: every bot decides from its observation; `human` is the human's intent. */
-export function step(r: Rig, human: Intents[number] = {}): void {
+export function step(r: Rig, human: Intents[number] = {}): SimEvent[] {
   const intents: Intents = {};
   for (const [id, bot] of Object.entries(r.bots)) {
     const n = Number(id);
     if (r.state.players[n]!.alive) intents[n] = bot.decide(observe(r.state, n));
   }
   intents[0] = human;
-  tick(r.state, intents);
+  return tick(r.state, intents);
 }
 
 const open = (s: GameState, x: number, y: number): boolean =>
@@ -138,18 +138,23 @@ export interface ChaseResult {
   /** Smallest and final walking distance between them while it pursued. */
   minGap: number;
   finalGap: number;
-  /** Segments the human lost. */
+  /** Segments the human lost (from anyone), and the share of them this enemy dealt (its punches and throws). */
   hurt: number;
+  hurtByIt: number;
   /** Tiles the human covered per second while running, and the enemy's while pursuing. */
   humanTilesPerSec: number;
   enemyTilesPerSec: number;
   /** Tiles per second while it was only walking after him (the pursue state, no swings or recoveries). */
   walkTilesPerSec: number;
+  /** Seconds from the end of the chase until the enemy is on a patrol / watch state again (null = not within the run). */
+  backSec: number | null;
 }
 
 /**
  * The disengage probe: the human stands within sight of `enemyId` until it pursues, then runs to the reachable tile that
- * is farthest from the enemy (re-planned every 20 ticks, always a tile it reaches first) and keeps going. Reports how
+ * is farthest from the enemy (always a tile it reaches first) and keeps going. `runner: 'committed'` (default) keeps to its
+ * plan until it arrives; `'legacy'` is the first version (a plan re-made every 20 ticks and one direction consumed per
+ * tick, so it dithers at corners), kept so the first baseline reproduces. Reports how
  * the chase ends. `startGap`: walking distance of the human from the enemy when the probe starts.
  */
 export function chaseProbe(
@@ -157,8 +162,9 @@ export function chaseProbe(
   level: CampaignLevel,
   seed: number,
   enemyId: number,
-  opts: { startGap?: number; maxSec?: number; preWalkSec?: number } = {},
+  opts: { startGap?: number; maxSec?: number; preWalkSec?: number; runner?: 'legacy' | 'committed' } = {},
 ): ChaseResult {
+  const runner = opts.runner ?? 'committed';
   const r = rig(fieldId, level, seed);
   const s = r.state;
   const me = s.players[0]!;
@@ -190,6 +196,8 @@ export function chaseProbe(
   const hp0 = me.vitals?.hp ?? 0;
   let pursueStart = -1;
   let chaseEnd: number | null = null;
+  let backAt = -1;
+  let hurtByIt = 0;
   let minGap = 99;
   let path: Dir[] = [];
   let humanSteps = 0;
@@ -205,53 +213,25 @@ export function chaseProbe(
       st === 'pursue' || st === 'alert' || st === 'windup' || st === 'recovery' || st === 'stagger';
     if (pursuing && pursueStart < 0) pursueStart = i;
     if (pursueStart >= 0 && chaseEnd === null && !pursuing) chaseEnd = i;
+    if (chaseEnd !== null && backAt < 0 && (st === 'patrol' || st === 'watch')) backAt = i;
     // the human waits (facing the enemy's way) until it pursues, then runs
     let mv: Dir | null = null;
     if (pursueStart >= 0) {
-      if (i % 20 === 0 || path.length === 0) {
-        const dm = bfs(s, me.x, me.y);
-        const dn = bfs(s, en.x, en.y);
-        let bt = -1;
-        let bv = -1;
-        for (let j = 0; j < dm.length; j++) {
-          if (dm[j]! <= 0 || dm[j]! > 40 || dn[j]! <= dm[j]! + 0) continue;
-          if (dn[j]! > bv) {
-            bv = dn[j]!;
-            bt = j;
-          }
-        }
-        path = [];
-        if (bt >= 0) {
-          // walk back from the target along decreasing distance from me
-          const seen = bfsFrom(s, me.x, me.y);
-          let cur = bt;
-          const rev: Dir[] = [];
-          while (cur !== me.y * s.width + me.x && cur >= 0) {
-            const cx = cur % s.width;
-            const cy = Math.floor(cur / s.width);
-            let moved = false;
-            for (const [d, dx, dy] of DIRS) {
-              const nx = cx - dx;
-              const ny = cy - dy;
-              if (nx < 0 || ny < 0 || nx >= s.width || ny >= s.height) continue;
-              const v = ny * s.width + nx;
-              if (seen[v] !== -1 && seen[v]! === seen[cur]! - 1) {
-                rev.push(d);
-                cur = v;
-                moved = true;
-                break;
-              }
-            }
-            if (!moved) break;
-          }
-          path = rev.reverse();
-        }
-      }
-      mv = path.shift() ?? null;
+      if (runner === 'legacy' ? i % 20 === 0 || path.length === 0 : path.length === 0)
+        path = runPath(s, me.x, me.y, en.x, en.y);
+      // legacy: one direction consumed per TICK (the original probe, kept to reproduce the first baseline); committed: one
+      // per tile walked, so the runner keeps to its plan (a person runs down the street, he does not dither)
+      mv = runner === 'legacy' ? (path.shift() ?? null) : (path[0] ?? null);
     }
-    step(r, mv ? { move: mv } : {});
+    for (const e of step(r, mv ? { move: mv } : {}))
+      if (e.type === 'campaignHit' && e.victimId === 0 && e.byId === enemyId) hurtByIt += e.damage;
+    if (process.env.TRACE && i % 6 === 0)
+      console.log(
+        `${i} H${me.x},${me.y} E${en.x},${en.y} ${st} gap=${bfs(s, en.x, en.y)[me.y * s.width + me.x]} hp=${me.vitals?.hp} mv=${mv ?? '-'}`,
+      );
     const km = `${me.x},${me.y}`;
     const ke = `${en.x},${en.y}`;
+    if (runner === 'committed' && km !== lastMe) path.shift();
     if (pursueStart >= 0 && chaseEnd === null) {
       if (km !== lastMe) humanSteps++;
       if (ke !== lastEn) enemySteps++;
@@ -276,12 +256,48 @@ export function chaseProbe(
     minGap: minGap === 99 ? -1 : minGap,
     finalGap: dEnd,
     hurt: hp0 - (me.vitals?.hp ?? 0),
+    hurtByIt,
     humanTilesPerSec: secs > 0 ? Math.round((humanSteps / secs) * 10) / 10 : 0,
     enemyTilesPerSec: secs > 0 ? Math.round((enemySteps / secs) * 10) / 10 : 0,
     walkTilesPerSec: pursueTicks > 0 ? Math.round((pursueSteps / (pursueTicks / 60)) * 10) / 10 : 0,
+    backSec: chaseEnd !== null && backAt >= 0 ? Math.round(((backAt - chaseEnd) / 60) * 10) / 10 : null,
   };
 }
 
-function bfsFrom(s: GameState, x: number, y: number): Int16Array {
-  return bfs(s, x, y);
+/** The directions from (mx, my) to the reachable tile farthest from the enemy at (ex, ey) that the human reaches first. */
+function runPath(s: GameState, mx: number, my: number, ex: number, ey: number): Dir[] {
+  const dm = bfs(s, mx, my);
+  const dn = bfs(s, ex, ey);
+  let bt = -1;
+  let bv = -1;
+  for (let j = 0; j < dm.length; j++) {
+    if (dm[j]! <= 0 || dm[j]! > 40 || dn[j]! <= dm[j]!) continue;
+    if (dn[j]! > bv) {
+      bv = dn[j]!;
+      bt = j;
+    }
+  }
+  if (bt < 0) return [];
+  // walk back from the target along decreasing distance from the human
+  let cur = bt;
+  const rev: Dir[] = [];
+  while (cur !== my * s.width + mx && cur >= 0) {
+    const cx = cur % s.width;
+    const cy = Math.floor(cur / s.width);
+    let moved = false;
+    for (const [d, dx, dy] of DIRS) {
+      const nx = cx - dx;
+      const ny = cy - dy;
+      if (nx < 0 || ny < 0 || nx >= s.width || ny >= s.height) continue;
+      const v = ny * s.width + nx;
+      if (dm[v] !== -1 && dm[v]! === dm[cur]! - 1) {
+        rev.push(d);
+        cur = v;
+        moved = true;
+        break;
+      }
+    }
+    if (!moved) break;
+  }
+  return rev.reverse();
 }

@@ -14,7 +14,12 @@ export const BALOGUN_MARKET: ArenaDef = {
   id: 'balogunMarket',
   name: 'Balogun Market',
   kind: 'standard',
-  layout: makeLayout({ addHard: mirror4([[2, 3], [6, 1]]) }),
+  layout: makeLayout({
+    addHard: mirror4([
+      [2, 3],
+      [6, 1],
+    ]),
+  }),
   spawns: CORNER_SPAWNS,
   spawnClearance: CORNER_CLEARANCE,
   mirrorSoftBlocks: true,

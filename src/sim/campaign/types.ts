@@ -247,6 +247,15 @@ export interface EnemyMind {
   attackSeen: number;
   /** After a hit it chases with no leash until this tick. */
   hitChaseUntil: number;
+  /** Decision RC3: the tick the current chase started (or last landed a hit on the human: the max-chase clock). */
+  chaseSince: number;
+  /** Decision RC3: the tick the human first got farther than the break-off gap (-1 = he is within it), and its last check. */
+  farSince: number;
+  gapCheckedTick: number;
+  /** Decision RC3: the human's health when last seen by this mind (a drop while it pursues is a hit it landed). */
+  humanHpSeen: number;
+  /** Decision RC3: after breaking off it does not notice the human by sight before this tick (close / a hit still do). */
+  noticeBlockedUntil: number;
 }
 
 /** Runtime of the territorial state machine (systems/territory.ts). ABSENT outside campaign tactics matches. */

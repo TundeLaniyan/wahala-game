@@ -41,7 +41,8 @@ export function updateEndgameTraps(state: GameState, events: SimEvent[]): void {
   const warn = state.config.hazards.endgameWarnTicks;
   const open = (i: number): boolean => state.tiles[i] !== Tile.Hard && state.floorHazards[i] === undefined;
   // a wave only claims tiles that are open floor when it is telegraphed: never a trap hidden under a crate
-  const visible = (i: number): boolean => state.tiles[i] === Tile.Empty && state.floorHazards[i] === undefined;
+  const visible = (i: number): boolean =>
+    state.tiles[i] === Tile.Empty && state.floorHazards[i] === undefined;
 
   while (t.warned < t.waves.length && now >= t.liveAt[t.warned]! - warn) {
     const wave = t.warned++;

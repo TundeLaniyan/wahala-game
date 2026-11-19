@@ -75,7 +75,7 @@ const cheb = (a: { x: number; y: number }, b: { x: number; y: number }): number 
   Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 
 /** The blast of a generator the human would lay on (x, y) right now (its real snapshot of range and shape). */
-function footprintAt(state: GameState, x: number, y: number): Set<number> {
+export function footprintAt(state: GameState, x: number, y: number): Set<number> {
   const me = state.players[0]!;
   const gen: Generator = {
     id: -1,

@@ -20,8 +20,15 @@ export const OSHODI_INTERCHANGE: ArenaDef = {
   name: 'Oshodi Interchange',
   kind: 'standard',
   layout: makeLayout({
-    removeHard: [[5, 5], [7, 5], [9, 5]],
-    addHard: [[6, 5], [8, 5]],
+    removeHard: [
+      [5, 5],
+      [7, 5],
+      [9, 5],
+    ],
+    addHard: [
+      [6, 5],
+      [8, 5],
+    ],
     roads,
   }),
   spawns: CORNER_SPAWNS,

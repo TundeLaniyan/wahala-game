@@ -2,7 +2,7 @@
  * Per-think snapshot of what the bot may see: walkability, pickups, rivals and timing helpers.
  * Arrays are reused between refreshes (the arena size is fixed for a match).
  */
-import { DIRS, ENEMY_KINDS, Tile, manholePartners } from '../sim';
+import { DIRS, ENEMY_KINDS, Tile, manholePartners, tacticsEnemyStepTicks } from '../sim';
 import type { Dir, Observation, Pickup, Player } from '../sim';
 import { getBoard } from './board';
 import type { AiProfile } from './profiles';
@@ -20,7 +20,15 @@ export function stepTicksOf(obs: Observation, p: Readonly<Player>): number {
     // Tactical Trap pilot (decision TT7) and the campaign tactics layer (SA7): the planner knows how slow a slowed or
     // heavy enemy really is, so such an enemy cannot plan an escape it cannot walk (every other match plans as before)
     if (p.slow && obs.tick < p.slow.until) t += p.slow.extraStepTicks;
-    if (p.enemyKind) t += ENEMY_KINDS[p.enemyKind].stepPenaltyTicks;
+    if (p.enemyKind) {
+      const ct = obs.config.campaignTactics;
+      if (ct) {
+        // decisions RC1-RC2: the step time the sim really gives this enemy (the data pace; a calm walk is slower, and
+        // `directive.calm` is set by the territory exactly when the sim applies that)
+        t += tacticsEnemyStepTicks(ct, p) - levels[0]!;
+        if (p.id === obs.selfId && obs.directive?.calm) t += ct.territory.patrolStepExtraTicks;
+      } else t += ENEMY_KINDS[p.enemyKind].stepPenaltyTicks;
+    }
   }
   return Math.max(m.minStepTicks, t);
 }

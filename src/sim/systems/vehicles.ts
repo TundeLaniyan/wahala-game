@@ -105,7 +105,12 @@ export function useVehicleGenerator(state: GameState, p: Player, events: SimEven
   const route = buildRoute(state, kind, choice.entry, choice.turn);
   if (!route) return false;
   p.streakRewards.vehicleGenerator = null;
-  launchVehicle(state, p, route, events, kind, { generatorId: -1, targetId: pickRouteTarget(state, p, route), releaseTick: 0, released: false });
+  launchVehicle(state, p, route, events, kind, {
+    generatorId: -1,
+    targetId: pickRouteTarget(state, p, route),
+    releaseTick: 0,
+    released: false,
+  });
   events.push({ type: 'streakRewardUsed', playerId: p.id, reward: 'vehicleGenerator' });
   return true;
 }
@@ -190,7 +195,11 @@ export function updateVehicles(state: GameState, hits: LethalHit[], events: SimE
         break;
     }
     // a carrier lets its generator go at the release tick, or at once when it has crashed
-    if (v.payload && !v.payload.released && (v.phase === 'crashing' || (v.payload.generatorId >= 0 && state.tick >= v.payload.releaseTick)))
+    if (
+      v.payload &&
+      !v.payload.released &&
+      (v.phase === 'crashing' || (v.payload.generatorId >= 0 && state.tick >= v.payload.releaseTick))
+    )
       releaseGenerator(state, v, events);
     if (v.phase === 'driving') collide(state, v, hits, events);
   }

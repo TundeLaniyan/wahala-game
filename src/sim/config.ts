@@ -403,6 +403,36 @@ export interface CampaignTacticsConfig {
     lookAroundTicks: number;
     /** A hit sends it after the human with NO leash for this long (hitting it from beyond the leash is no free kill). */
     hitChaseTicks: number;
+    /**
+     * Decision RC2: a CALM walk (patrol, watch repositioning, walking back to its route) is slower than a chase by this
+     * many ticks per tile, so a route is readable and a patroller can be followed and timed. Not applied while it
+     * investigates, alerts or pursues (a chase, and a dodge in a chase, run at the full `enemyStepTicks`).
+     */
+    patrolStepExtraTicks: number;
+  };
+  /**
+   * Decision RC1: ticks per tile of every ordinary campaign enemy while the layer is present, by kind (absolute: they
+   * REPLACE `ENEMY_KINDS[kind].stepPenaltyTicks`; the human walks a tile in 10, 9, 8 or 7 ticks). Every ordinary kind is
+   * slower than the human on every level, so a player can always disengage; a variant may shave
+   * `EnemyPersonality.stepBonusTicks` off it, never below `enemyMinStepTicks`. Boss missions' bots have no enemy kind.
+   */
+  enemyStepTicks: Record<EnemyKind, number>;
+  /** The floor of an ordinary enemy's step time on this level (above the human's 10: the human always keeps a lead). */
+  enemyMinStepTicks: number;
+  /**
+   * Decision RC3: no forever-chase and no boundary dance. A pursuer breaks off (investigates where it last saw the human,
+   * searches, returns and resumes its route) when the human has been farther than `breakOffGapTiles` WALKING tiles for
+   * `breakOffTicks`, or it has chased for `maxChaseTicks` without landing a hit; for `reNoticeCooldownTicks` afterwards it
+   * does not notice him again by sight (a human within `closeTiles` or a hit still engages it at once).
+   */
+  chase: {
+    breakOffGapTiles: number;
+    breakOffTicks: number;
+    maxChaseTicks: number;
+    reNoticeCooldownTicks: number;
+    /** A walk back to its route that has not arrived this long after the watch ends counts as done (a blocked way, a guard
+     * held at its equipment by the mission): it is back on its route state, never stuck in `return` forever. */
+    returnTimeoutTicks: number;
   };
   /** The human's landed hit on an ordinary or armoured enemy, whatever the fighter (decision SA8). */
   punch: {
@@ -1213,8 +1243,8 @@ export const CAMPAIGN_TACTICS: CampaignTacticsConfig = {
     leashSlack: 2,
     returnWatchTicks: 90,
     investigateRadius: 6,
-    patrolPauseTicks: 36,
-    patrolJitterTicks: 12,
+    patrolPauseTicks: 42,
+    patrolJitterTicks: 6,
     reversePatrol: false,
     alertAlliesScale: 1,
     coverTiles: 3,
@@ -1222,6 +1252,16 @@ export const CAMPAIGN_TACTICS: CampaignTacticsConfig = {
     coverHoldTicks: 45,
     lookAroundTicks: 90,
     hitChaseTicks: 180,
+    patrolStepExtraTicks: 2,
+  },
+  enemyStepTicks: { agbero: 12, guard: 12, thrower: 13, heavy: 14, lieutenant: 11, boss: 10 },
+  enemyMinStepTicks: 11,
+  chase: {
+    breakOffGapTiles: 6,
+    breakOffTicks: 60,
+    maxChaseTicks: 600,
+    reNoticeCooldownTicks: 90,
+    returnTimeoutTicks: 480,
   },
   punch: {
     damage: 1,
@@ -1367,6 +1407,16 @@ export const CAMPAIGN_TACTICS_LEVELS: Readonly<
       groupTactics: false,
       lookAroundTicks: 120,
       hitChaseTicks: 120,
+      patrolStepExtraTicks: 3,
+    },
+    enemyStepTicks: { agbero: 13, guard: 13, thrower: 14, heavy: 15, lieutenant: 12, boss: 10 },
+    enemyMinStepTicks: 12,
+    chase: {
+      breakOffGapTiles: 5,
+      breakOffTicks: 45,
+      maxChaseTicks: 420,
+      reNoticeCooldownTicks: 150,
+      returnTimeoutTicks: 480,
     },
     punch: { lockoutTicks: 60, staggerTicks: 24, staggerImmunityTicks: 48 },
   },
@@ -1388,13 +1438,22 @@ export const CAMPAIGN_TACTICS_LEVELS: Readonly<
     territory: {
       pursuitTiles: 11,
       returnWatchTicks: 120,
-      patrolPauseTicks: 24,
-      patrolJitterTicks: 18,
-      reversePatrol: true,
+      patrolPauseTicks: 36,
+      patrolJitterTicks: 12,
       alertAlliesScale: 1.25,
       coverTiles: 4,
       lookAroundTicks: 60,
       hitChaseTicks: 240,
+      patrolStepExtraTicks: 1,
+    },
+    enemyStepTicks: { agbero: 11, guard: 11, thrower: 12, heavy: 13, lieutenant: 11, boss: 10 },
+    enemyMinStepTicks: 11,
+    chase: {
+      breakOffGapTiles: 8,
+      breakOffTicks: 75,
+      maxChaseTicks: 900,
+      reNoticeCooldownTicks: 60,
+      returnTimeoutTicks: 480,
     },
     punch: { lockoutTicks: 84, staggerTicks: 14, staggerImmunityTicks: 60 },
   },

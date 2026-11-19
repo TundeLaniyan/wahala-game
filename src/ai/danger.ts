@@ -304,7 +304,11 @@ export class DangerBuilder {
       // Power Yard: the whole row and column, through everything (mirrors explosions.ts)
       for (const d of DIRS) {
         const v = DIR_VEC[d];
-        for (let cx = n.x + v.dx, cy = n.y + v.dy; cx >= 0 && cy >= 0 && cx < w && cy < board.height; cx += v.dx, cy += v.dy) {
+        for (
+          let cx = n.x + v.dx, cy = n.y + v.dy;
+          cx >= 0 && cy >= 0 && cx < w && cy < board.height;
+          cx += v.dx, cy += v.dy
+        ) {
           const t = cy * w + cx;
           if (obs.tiles[t] === Tile.Hard) continue;
           n.tiles.push(t);
@@ -372,12 +376,20 @@ export class DangerBuilder {
   private blockIdx = -1;
   /** One function object for every footprint (no per-node closure); reads blockW / blockIdx. */
   private readonly blocks = (x: number, y: number): boolean => {
-    for (let o = this.head[y * this.blockW + x]!; o >= 0; o = this.next[o]!) if (o !== this.blockIdx) return true;
+    for (let o = this.head[y * this.blockW + x]!; o >= 0; o = this.next[o]!)
+      if (o !== this.blockIdx) return true;
     return false;
   };
 
   /** Is any (x, y) of `list` (pairs, or tile indices when `stride` is 1) inside the box of half-size `box`? */
-  private near(list: readonly number[], stride: 1 | 2, cx: number, cy: number, box: number, w: number): boolean {
+  private near(
+    list: readonly number[],
+    stride: 1 | 2,
+    cx: number,
+    cy: number,
+    box: number,
+    w: number,
+  ): boolean {
     for (let i = 0; i < list.length; i += stride) {
       const x = stride === 2 ? list[i]! : list[i]! % w;
       const y = stride === 2 ? list[i + 1]! : Math.floor(list[i]! / w);
@@ -398,16 +410,42 @@ export class DangerBuilder {
     if (local && !gone) {
       // nothing this build changes reaches the footprint: the observation's own footprint (cached)
       const e = this.radialCache.get(n.id);
-      if (e && e.obs === obs && e.x === n.x && e.y === n.y && e.range === n.range && e.pierce === n.pierce && e.square === n.square) {
+      if (
+        e &&
+        e.obs === obs &&
+        e.x === n.x &&
+        e.y === n.y &&
+        e.range === n.range &&
+        e.pierce === n.pierce &&
+        e.square === n.square
+      ) {
         tiles = e.tiles;
       } else {
         tiles = [];
         radialTiles(obs, obs, n.x, n.y, n.range, n.pierce, n.square, this.blocker(w, idx), tiles);
-        this.radialCache.set(n.id, { obs, x: n.x, y: n.y, range: n.range, pierce: n.pierce, square: n.square, tiles });
+        this.radialCache.set(n.id, {
+          obs,
+          x: n.x,
+          y: n.y,
+          range: n.range,
+          pierce: n.pierce,
+          square: n.square,
+          tiles,
+        });
       }
     } else {
       tiles = [];
-      radialTiles(obs, this.grid(world, useGone), n.x, n.y, n.range, n.pierce, n.square, this.blocker(w, idx), tiles);
+      radialTiles(
+        obs,
+        this.grid(world, useGone),
+        n.x,
+        n.y,
+        n.range,
+        n.pierce,
+        n.square,
+        this.blocker(w, idx),
+        tiles,
+      );
     }
     for (const t of tiles) {
       n.tiles.push(t);
@@ -426,7 +464,8 @@ export class DangerBuilder {
       const t = p.y * w + p.x;
       if (n.tiles.includes(t)) continue;
       n.tiles.push(t);
-      for (let o = this.head[t]!; o >= 0; o = this.next[o]!) if (o !== idx && !n.hits.includes(o)) n.hits.push(o);
+      for (let o = this.head[t]!; o >= 0; o = this.next[o]!)
+        if (o !== idx && !n.hits.includes(o)) n.hits.push(o);
     }
   }
 

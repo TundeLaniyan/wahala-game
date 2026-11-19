@@ -382,6 +382,11 @@ export interface NpcDirective {
   x: number;
   y: number;
   radius?: number;
+  /**
+   * Campaign tactics territories (decision RC2): the seat is walking calmly (patrolling, holding its post, walking
+   * back), so the sim gives its step the calm-walk pace (`enemyPace.ts`). The bot's planner plans with the same pace.
+   */
+  calm?: true;
 }
 
 /** One telegraphed mission strike (a convoy lane, an audit, a contingency...). Lethal flames land at `landTick`. */

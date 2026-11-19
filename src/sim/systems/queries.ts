@@ -4,6 +4,7 @@ import type { GameState, Generator, Player, Pickup, Vehicle } from '../types';
 import { tileAt } from '../grid';
 import { missionStepPenalty } from '../mission/rules';
 import { ENEMY_KINDS } from '../data/enemies';
+import { isCalmMind, tacticsEnemyStepTicks } from './enemyPace';
 
 export function getPlayer(state: GameState, id: number): Player | undefined {
   return state.players[id];
@@ -61,7 +62,16 @@ export function playerStepTicks(state: GameState, p: Player): number {
   if (p.curse?.kind === 'slow' && state.tick < p.curse.until) ticks += m.slowCurseExtraTicks;
   if (state.mission) ticks += missionStepPenalty(state, p); // carrying a ledger
   if (p.slow && state.tick < p.slow.until) ticks += p.slow.extraStepTicks; // a Leg Sweep (decision FC3)
-  if (p.enemyKind) ticks += ENEMY_KINDS[p.enemyKind].stepPenaltyTicks; // a slow thrower, a heavy (decision CC3)
+  if (p.enemyKind) {
+    const t = state.config.campaignTactics;
+    if (t) {
+      // decisions RC1-RC2: under the campaign tactics layer an enemy's step time is data (slower than the human), and a
+      // calm walk is slower still; everything else keeps the kind's penalty (decision CC3)
+      ticks += tacticsEnemyStepTicks(t, p) - levels[0]!;
+      const mind = state.territory?.minds[p.id];
+      if (mind && isCalmMind(mind, state.tick)) ticks += t.territory.patrolStepExtraTicks;
+    } else ticks += ENEMY_KINDS[p.enemyKind].stepPenaltyTicks; // a slow thrower, a heavy (decision CC3)
+  }
   return Math.max(m.minStepTicks, ticks);
 }
 

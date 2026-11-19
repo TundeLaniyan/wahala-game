@@ -307,7 +307,8 @@ export function blastGeometry(
     if (gi < 0) continue;
     out.chainRivals += rivalsInBlast(c, obs.generators[gi]!);
     // friendly fire: a teammate caught by the chain counts against the placement like one in the blast
-    if (world.friendlyFire) out.rivals -= FRIEND_IN_BLAST * rivalsInBlast(c, obs.generators[gi]!, world.friendAt);
+    if (world.friendlyFire)
+      out.rivals -= FRIEND_IN_BLAST * rivalsInBlast(c, obs.generators[gi]!, world.friendAt);
   }
 }
 
@@ -358,7 +359,8 @@ function radialGeometry(
   }
   for (const gi of chained) {
     out.chainRivals += rivalsInBlast(c, obs.generators[gi]!);
-    if (world.friendlyFire) out.rivals -= FRIEND_IN_BLAST * rivalsInBlast(c, obs.generators[gi]!, world.friendAt);
+    if (world.friendlyFire)
+      out.rivals -= FRIEND_IN_BLAST * rivalsInBlast(c, obs.generators[gi]!, world.friendAt);
   }
 }
 
