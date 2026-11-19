@@ -344,11 +344,57 @@ export const MISSION_SECTORS: Readonly<Record<string, MissionSectorDef>> = Objec
 
 export const MISSION_SECTOR_IDS: readonly string[] = fieldSectors.map((d) => d.id);
 
-/** Boss-mission sectors (`MissionDef.sectorId`, decision FN7): only the Ojuelegba finale's boss has one. */
+/**
+ * Oshodi's boss mission, "Dispatch relays" (decision WX9): played on the City Rumble map's DISPATCH CORRIDOR, the band
+ * of the main road, the interchange plaza, the expressway junction, the railway edge and the market front (rows 10-22),
+ * where every relay node, the convoy lanes, the boss post and his crew are. Ring cordons close every street north
+ * (the skywalk quarter) and south (the Cappa works, the bus park): jersey barriers, parked danfos, steel gates, Ring
+ * checkpoints and a rail barrier by the platforms. The main road's mouths stay the board's own edges; the railcar,
+ * the traffic waves and the bus departures run wholly inside, so the stage hazards stay on.
+ */
+const OSHODI_BOSS_SECTOR: MissionSectorDef = {
+  id: 'oshodi.dispatchCorridor',
+  districtId: 'oshodi',
+  name: 'The dispatch corridor',
+  area: 'The main road band of the interchange: the plaza, the junction, the railway edge and the market front, where the dispatch relays and the boss are; Ring cordons close the skywalk quarter north and the Cappa works and the bus park south.',
+  rects: [[0, 10, 62, 22]],
+  barricades: [
+    // north: the skywalk quarter's streets
+    b('northWest', 'barrier', row(9, 2, 9)),
+    b('arcadeGap', 'gate', row(9, 14, 15)),
+    b('towerQueue', 'checkpoint', row(9, 20, 25)),
+    b('skywalkRank', 'bus', row(9, 29, 35)),
+    b('platformNorth', 'barrier', row(9, 38, 41)),
+    b('marketGate', 'gate', row(9, 45, 48)),
+    b('marketAlley1', 'barrier', row(9, 50, 50)),
+    b('marketAlley2', 'barrier', row(9, 56, 56)),
+    b('marketAlley3', 'barrier', row(9, 60, 60)),
+    // south: the Cappa works, the pitch and the freight yard
+    b('worksRank', 'bus', row(23, 2, 9)),
+    b('worksLane', 'barrier', row(23, 12, 14)),
+    b('worksGate', 'gate', row(23, 17, 18)),
+    b('pitchWest', 'barrier', row(23, 22, 26)),
+    b('pitchCordon', 'barrier', row(23, 28, 31)),
+    b('pitchPost', 'checkpoint', row(23, 32, 35)),
+    b('platformSouth', 'rail', row(23, 38, 40)),
+    b('yardFence', 'barrier', row(23, 45, 52)),
+    b('yardRank', 'bus', row(23, 53, 56)),
+    b('yardGate', 'gate', row(23, 57, 60)),
+  ],
+  viewMargin: 3,
+  hazards: 'inside',
+};
+
+/**
+ * Boss-mission sectors (`MissionDef.sectorId`, decision FN7): the Ojuelegba finale's boss and Oshodi's dispatch corridor
+ * (WX9); a campaign area of the boss format would add its own.
+ */
 export const BOSS_SECTORS: Readonly<Record<string, MissionSectorDef>> = Object.fromEntries(
-  [...FINALE_BOSS_SECTORS, ...CAMPAIGN_AREA_DEFS.filter((a) => a.format === 'boss').map((a) => a.sector)].map(
-    (d) => [d.id, d],
-  ),
+  [
+    ...FINALE_BOSS_SECTORS,
+    OSHODI_BOSS_SECTOR,
+    ...CAMPAIGN_AREA_DEFS.filter((a) => a.format === 'boss').map((a) => a.sector),
+  ].map((d) => [d.id, d]),
 );
 
 const LEGACY: Readonly<Record<string, MissionSectorDef>> = Object.fromEntries(

@@ -208,11 +208,12 @@ describe('sector data', () => {
 });
 
 describe('no sector, no change', () => {
-  it('City Rumble, Classic and the boss missions carry no sector key; neither does a ?nosector field mission', () => {
+  it('City Rumble, Classic and a boss mission without one carry no sector key; neither does a ?nosector field mission', () => {
     const rumble = sandbox({ players: 8, arenaId: 'rumbleOshodi' });
     const classic = sandbox({ players: 2 });
+    // (Oshodi's boss plays in its dispatch corridor since decision WX9: Mushin's keeps the whole map)
     const boss = createGame(
-      buildMissionGame({ spec: { id: 'oshodi' }, humanCharacter: 'streetBaller', seed: 1 }),
+      buildMissionGame({ spec: { id: 'mushin' }, humanCharacter: 'streetBaller', seed: 1 }),
     );
     const plain = fieldGame('oshodi.approach', 5, { noSector: true });
     for (const s of [rumble, classic, boss, plain]) {

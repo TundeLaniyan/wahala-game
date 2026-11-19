@@ -127,8 +127,10 @@ describe('three distinct Ojuelegba sectors with natural barricades (FN3, FN7)', 
     expect(BOSS_SECTORS['ojuelegba.danfoYard']).toBeDefined();
     expect(missionSectorOf({ id: 'ojuelegba' })?.id).toBe('ojuelegba.danfoYard');
     expect(missionSectorOf({ id: 'ojuelegba', noSector: true })).toBeNull();
-    // the six district bosses keep their whole maps
-    for (const id of MISSION_IDS) expect(missionSectorOf({ id }), id).toBeNull();
+    // the district bosses keep their whole maps, except Oshodi's: its dispatch corridor (decision WX9)
+    for (const id of MISSION_IDS)
+      if (id === 'oshodi') expect(missionSectorOf({ id })?.id).toBe('oshodi.dispatchCorridor');
+      else expect(missionSectorOf({ id }), id).toBeNull();
   });
 });
 

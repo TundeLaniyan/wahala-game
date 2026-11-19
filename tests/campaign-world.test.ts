@@ -21,6 +21,7 @@ import {
   CAMPAIGN_ARENA_IDS,
   EXPERIMENTAL_ARENA_IDS,
   FIELD_MISSION_DEFS,
+  MISSION_DEFS,
   RAID_ARENA_IDS,
   RUMBLE_ARENA_IDS,
   STANDARD_ARENA_IDS,
@@ -31,6 +32,10 @@ import {
   missionArenaId,
 } from '../src/sim';
 import { getSector } from '../src/sim/mission/sectors';
+import { allNodeTiles } from '../src/sim/mission/state';
+import { inSector, sectorLeaks } from '../src/sim/mission/sector';
+import { Tile } from '../src/sim/types';
+import { runBossFight } from '../scripts/lib/bossFight';
 import { rectsContain } from '../src/sim/mission/sector';
 import { createSave } from '../src/campaign/progress';
 import { repairSave } from '../src/campaign/save';
@@ -174,6 +179,71 @@ describe('Oshodi', () => {
         for (const d of b.districts!) expect(names.has(d.name), d.name).toBe(false);
       }
   });
+});
+
+describe('the Oshodi boss in its dispatch corridor (decision WX9)', () => {
+  const def = MISSION_DEFS.oshodi;
+  const sector = getSector(def.sectorId!);
+  const arena = getArena(def.arenaId);
+  const open = (x: number, y: number): boolean => '._$x'.includes(arena.layout[y]?.[x] ?? '#');
+
+  it('every relay node of every phase, the convoy lanes, the boss and crew posts and the start lie inside it', () => {
+    expect(def.arenaId).toBe('rumbleOshodi');
+    expect(sector.arenaId).toBeUndefined(); // the district map itself, bounded: no campaign board
+    const tiles = [...allNodeTiles(def), def.start!, def.boss.post, ...def.crew.map((c) => c.post)];
+    for (const [x, y] of tiles) {
+      expect(rectsContain(sector.rects, x, y), `${x},${y}`).toBe(true);
+      expect(open(x, y), `${x},${y} open`).toBe(true);
+    }
+    for (const lane of def.lanes ?? [])
+      for (const [x, y] of lane) expect(rectsContain(sector.rects, x, y)).toBe(true);
+    expect(sectorLeaks(arena.layout, sector)).toEqual([]);
+  });
+
+  it('a real match: the human starts on the start tile, everyone and everything is reachable inside, the stage stays on', () => {
+    for (const seed of [1, 7]) {
+      const s = createGame(
+        buildMissionGame({ spec: { id: 'oshodi' }, humanCharacter: 'streetBaller', seed }),
+      );
+      expect(s.sector?.id).toBe(sector.id);
+      const me = s.players[0]!;
+      expect([me.x, me.y]).toEqual([...def.start!]);
+      for (const p of s.players) expect(inSector(s, p.x, p.y), `seat ${p.id}`).toBe(true);
+      // the flood from the start never leaves the corridor and reaches every node
+      const seen = new Set([me.y * s.width + me.x]);
+      const q = [...seen];
+      for (let i = 0; i < q.length; i++) {
+        const t = q[i]!;
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const) {
+          const x = (t % s.width) + dx;
+          const y = Math.floor(t / s.width) + dy;
+          const j = y * s.width + x;
+          if (x < 0 || y < 0 || x >= s.width || y >= s.height || seen.has(j) || s.tiles[j] === Tile.Hard)
+            continue;
+          seen.add(j);
+          q.push(j);
+        }
+      }
+      for (const i of seen) expect(inSector(s, i % s.width, Math.floor(i / s.width))).toBe(true);
+      for (const [x, y] of allNodeTiles(def)) expect(seen.has(y * s.width + x), `${x},${y}`).toBe(true);
+      // traffic, bus departures, the railcar and the drops run wholly inside: every scheduled hazard stays on
+      expect(
+        s.stage.nextAt.every((t, k) => arena.stageHazards[k]!.kind === 'teleport' || Number.isFinite(t)),
+      ).toBe(true);
+    }
+  });
+
+  it('the boss stays completable: the generator-first plan wins on Easy, Normal and Hard', () => {
+    for (const level of ['easy', 'normal', 'hard'] as const) {
+      const r = runBossFight({ id: 'oshodi', level, strategy: 'generator', seed: 101 });
+      expect(r.result, `${level} ${JSON.stringify(r)}`).toBe('won');
+    }
+  }, 300_000);
 });
 
 /** sha256 (first 16 hex) of the rumbleOshodi layout on 0b89d09. */
