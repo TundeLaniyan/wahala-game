@@ -407,6 +407,9 @@ describe('raids: follow when the board does not fit the screen, fixed when it do
             expect(Math.abs(v.x), `${id} ${x},${y}`).toBeLessThan(0.75);
             expect(v.y, `${id} ${x},${y}`).toBeLessThan(yTop);
             expect(v.y, `${id} ${x},${y}`).toBeGreaterThan(yBottom);
+            // CF8: never under the HUD rail's top-left column (about 120 x 160 CSS px under the portraits at 740 x 360)
+            const underRail = v.x < -1 + (2 * 120) / vp.w && v.y > 1 - (2 * 160) / vp.h;
+            expect(underRail, `${id} ${x},${y} under the HUD rail`).toBe(false);
           }
       }
     });
