@@ -11,7 +11,7 @@
  *      bottom row or the fighter.
  *
  * Every coordinate is read from the running state (the checkpoints, the door, the cargo): nothing here depends on where
- * a district's sector places them. Screenshots: docs/screenshots/campaign-guidance-expansion/guidance/.
+ * a district's sector places them. Screenshots go to e2e-shots/ (the reviewed set is made by scripts/guidance-shots.mjs).
  */
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,7 +20,7 @@ import type { Page, TestInfo } from '@playwright/test';
 import { inMatch, open } from './helpers';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const OUT = join(process.cwd(), 'docs', 'screenshots', 'campaign-guidance-expansion', 'guidance');
+const OUT = join(process.cwd(), 'e2e-shots');
 
 async function shot(page: Page, info: TestInfo, name: string): Promise<void> {
   mkdirSync(OUT, { recursive: true });

@@ -202,7 +202,7 @@ for (const device of devices.split(',')) {
     }
     await page.waitForTimeout(1200);
     const file = `${outDir}/${scenario}-${device}.jpg`;
-    await page.screenshot({ path: file, type: 'jpeg', quality: 78 });
+    await page.screenshot({ path: file, type: 'jpeg', quality: 78, timeout: 180_000 });
     console.log(file, errors.length ? `ERRORS ${errors.join(' | ')}` : '');
     await page.context().close();
   }

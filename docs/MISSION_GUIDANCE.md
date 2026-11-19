@@ -55,7 +55,7 @@ Pin colour repeats the meaning (gold = destroy / hold, cyan = door, green = exit
 
 ## Screenshots
 
-`docs/screenshots/campaign-guidance-expansion/guidance/`, from `e2e/mission-guidance.spec.ts` (desktop 1280 x 720, phone landscape 844 x 390) and `scripts/guidance-shots.mjs` (740 x 360 and 844 x 390 at scale 2, 1280 x 720, the Low preset).
+`docs/screenshots/campaign-guidance-expansion/guidance/`, made with `scripts/guidance-shots.mjs` on the Low preset (`?q=low`): phone landscape 740 x 360 and 844 x 390 at device scale 2 (`-phone740`, `-phone844`) and desktop 1280 x 720 (`-desktop`). Scenarios: `brief` (the first field mission's briefing), `boss` (the Oshodi boss briefing with the card), `railedge` (Rail Edge on its relay-box leg: equipment pins, "DESTROY RELAY BOX 0/3", "← 2 TILES"), `raidbrief` (the depot raid's instructions over the held raid), `raid` (cargo pins, 0/3, the route cue), `raidexit` (after the last cargo: the exit pin, "EXIT REACH THE EXIT"), `pause` (the compact card in the pause menu). Reviewed: the cards fit both phone sizes without a page scroll; the raid briefing fills a 740 x 360 screen with START RAID on it; the rail's objective block stays left of the board and above its bottom row; the pins read at phone size (small: about half a tile). `e2e/mission-guidance.spec.ts` also writes its own pictures to `e2e-shots/` (not committed).
 
 ## Tests
 
