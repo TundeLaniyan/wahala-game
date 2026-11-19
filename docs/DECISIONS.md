@@ -1211,5 +1211,5 @@ every level (median 51-62 s), mission 20 6/6 (85-130 s), the boss 6/6 on Easy / 
 punching 0/3. Tests: `tests/campaign-finale-data.test.ts`, `campaign-finale-playthrough.test.ts`, `campaign-finale.test.ts`,
 `ui/campaign-finale-screens.test.ts`, `e2e/campaign-finale.spec.ts`; updated deliberately: `campaign-progress`,
 `campaign-sections`, `campaign-progression-wide`, `field-nodes`, `field-checkpoint-clarity`, `campaign-tactics-layer`,
-`mission-sectors`, `render/sector-render`, `ui/progressionScreens`, `app/campaign-flow` (counts and the new finale order).
+`mission-sectors`, `render/sector-render`, `render/enemy-looks`, `ui/progressionScreens`, `app/campaign-flow` (counts, the new finale order, the boss look).
 

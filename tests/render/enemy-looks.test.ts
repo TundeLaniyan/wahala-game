@@ -26,10 +26,11 @@ describe('enemy looks (data)', () => {
     expect(enemyLookOf({ enemyKind: 'guard', enemyVariant: 'ringSecurity' })!.variant).toBe('ringSecurity');
   });
 
-  it('never dresses a multiplayer fighter or the human (no enemyKind)', () => {
+  it('never dresses a multiplayer fighter or the human (no enemyKind, no variant)', () => {
     expect(enemyLookOf({})).toBeNull();
-    expect(enemyLookOf({ enemyVariant: 'boss' })).toBeNull();
     expect(enemyScaleOf({})).toBe(1);
+    // a boss mission's generator-bot boss may name a look without a kind: the Ojuelegba finale's enforcer (FN8)
+    expect(enemyLookOf({ enemyVariant: 'boss' })?.variant).toBe('boss');
   });
 
   it('reads apart: no two variants share headwear, and no two share a clothing colour', () => {
