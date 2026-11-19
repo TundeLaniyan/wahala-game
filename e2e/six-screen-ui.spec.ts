@@ -6,7 +6,16 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { clearOshodiSections, exitMatch, getState, inMatch, open, settled, stepTicks } from './helpers';
+import {
+  clearOshodiSections,
+  exitMatch,
+  getState,
+  inMatch,
+  open,
+  pauseSettings,
+  settled,
+  stepTicks,
+} from './helpers';
 
 const SHOTS = process.env.WAHALA_SHOT_DIR || 'e2e-shots';
 
@@ -167,9 +176,11 @@ test.describe('Six-screen UI', () => {
       difficulty: 'casual',
     });
     // a setting changed in the pause menu while the Quick Match runs is saved, without the match defaults
-    await page.keyboard.press('Escape');
-    await page.getByTestId('pause-settings-open').click();
-    await page.getByTestId('settings-tab-access').click();
+    await stepTicks(page, 200); // past the countdown: Esc pauses only once play is on
+    await page.evaluate(() => {
+      (window as never as { __WAHALA__: { controller(): { frozen: boolean } } }).__WAHALA__.controller().frozen = false;
+    });
+    await pauseSettings(page, 'access');
     await page.getByTestId('shake-off').click();
     const midMatch = await savedSettings(page);
     expect(midMatch).toMatchObject({ play: 'rumble', arenaId: 'balogunMarket', competitors: 4, shake: 'off' });
