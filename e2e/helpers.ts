@@ -32,9 +32,16 @@ export async function open(page: Page, query = ''): Promise<void> {
  * arena, opponents, rules; City Rumble has its three rulesets there) -> fighter -> review -> play. These helpers walk
  * the real journey; nothing is set behind the menu's back.
  */
+/** Choose How to Play, from Home or from Match Setup (Back goes there). */
+async function openPlay(page: Page): Promise<void> {
+  if ((await page.getByTestId('menu-play').count()) > 0) return;
+  if ((await page.getByTestId('menu-home').count()) === 0) await page.getByTestId('menu-back').click();
+  if ((await page.getByTestId('menu-play').count()) === 0) await page.getByTestId('home-play').click();
+}
+
 export async function toClassicSetup(page: Page): Promise<void> {
   if ((await page.getByTestId('classic-setup').count()) > 0) return;
-  await page.getByTestId('home-play').click();
+  await openPlay(page);
   await page.getByTestId('home-classic').click();
   await expect(page.getByTestId('classic-setup')).toBeVisible();
 }
@@ -44,7 +51,7 @@ export async function toRumbleSetup(
   mode: 'survival' | 'deathmatch' | 'team' = 'survival',
 ): Promise<void> {
   if ((await page.getByTestId('rumble-setup').count()) > 0) return;
-  await page.getByTestId('home-play').click();
+  await openPlay(page);
   await page.getByTestId('home-rumble').click();
   await page.getByTestId(`mode-${mode}`).click();
   await expect(page.getByTestId('rumble-setup')).toBeVisible();

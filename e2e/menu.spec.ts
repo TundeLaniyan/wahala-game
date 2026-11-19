@@ -511,6 +511,8 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('home-play').tap();
     await page.getByTestId('home-rumble').tap();
     await page.getByTestId('mode-survival').tap();
+    // the Battle style chips sit below the arena cards on a portrait phone: scroll back up to the arena cards
+    await page.getByRole('heading', { name: 'Select Arena' }).scrollIntoViewIfNeeded();
     await expect(page.getByRole('heading', { name: 'Select Arena' })).toBeInViewport();
     await page.getByTestId('rumble-stage-rumbleMushin').tap();
     await expect(page.getByTestId('arena-selected')).toHaveText('Mushin');

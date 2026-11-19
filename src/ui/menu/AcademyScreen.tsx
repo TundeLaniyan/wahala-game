@@ -117,6 +117,26 @@ export function AcademyScreen() {
               </small>
             </div>
           </header>
+          {open === 'advanced' && (
+            <div className="mn-academy-lab" data-testid="academy-testing">
+              <small className="mn-kicker">Testing tools · not lessons</small>
+              <SecondaryButton
+                testId="mode-sd-test"
+                className="mn-test-entry"
+                onClick={() => {
+                  commands.click();
+                  commands.startSuddenDeathTest();
+                }}
+              >
+                <span className="mn-test-chip">Test</span>
+                Sudden Death Test
+                <span className="mn-test-sub">You + 2 bots</span>
+              </SecondaryButton>
+              <p className="mn-test-note">
+                Combat Test Lab: in a local City Rumble match, open Pause and scroll to Combat Test Lab.
+              </p>
+            </div>
+          )}
           <ol className="mn-lessons">
             {rows.map(({ l, i }) => {
               const st = lessonStatus(progress, l.id, allDone ? null : nextLesson.id);
@@ -140,26 +160,6 @@ export function AcademyScreen() {
               );
             })}
           </ol>
-          {open === 'advanced' && (
-            <div className="mn-academy-lab" data-testid="academy-testing">
-              <small className="mn-kicker">Testing tools · not lessons</small>
-              <SecondaryButton
-                testId="mode-sd-test"
-                className="mn-test-entry"
-                onClick={() => {
-                  commands.click();
-                  commands.startSuddenDeathTest();
-                }}
-              >
-                <span className="mn-test-chip">Test</span>
-                Sudden Death Test
-                <span className="mn-test-sub">You + 2 bots</span>
-              </SecondaryButton>
-              <p className="mn-test-note">
-                Combat Test Lab: in a local City Rumble match, open Pause and scroll to Combat Test Lab.
-              </p>
-            </div>
-          )}
         </div>
       </div>
       <div className="mn-academy-foot">
