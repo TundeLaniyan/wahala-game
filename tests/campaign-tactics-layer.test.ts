@@ -181,15 +181,20 @@ describe('readable commitment at every level (SA7)', () => {
     }
   });
 
-  it('a visible recovery of 0.6-0.8 s after every ordinary punch, and every cooldown leaves a response window', () => {
+  it('a visible recovery of 0.8-1.2 s after every ordinary punch, and every cooldown leaves a response window', () => {
     for (const level of LEVELS) {
       const cfg = cfgOf(level);
       const gap = cfg.campaignTactics!.attack.responseGapTicks;
       for (const kind of ENEMY_KIND_IDS) {
         const m = cfg.enemyAttacks.melee[kind]!;
-        if (kind === 'agbero' || kind === 'guard' || kind === 'thrower') {
+        if (kind === 'thrower') {
           expect(m.recoveryRootTicks, `${level} ${kind}`).toBeGreaterThanOrEqual(36);
           expect(m.recoveryRootTicks, `${level} ${kind}`).toBeLessThanOrEqual(48);
+        }
+        // decision RC4: an ordinary brawler stays planted 0.8-1.2 s after its swing (Hard 48, Normal 60, Easy 72 ticks)
+        if (kind === 'agbero' || kind === 'guard') {
+          expect(m.recoveryRootTicks, `${level} ${kind}`).toBeGreaterThanOrEqual(48);
+          expect(m.recoveryRootTicks, `${level} ${kind}`).toBeLessThanOrEqual(72);
         }
         expect(m.cooldownTicks, `${level} ${kind}`).toBeGreaterThan(
           windup(cfg, kind) + m.recoveryRootTicks + gap,

@@ -1,4 +1,4 @@
-/** Human-like trap harness runner: `npx tsx scripts/trap-reliability.ts <fieldId> <level> <strategy> [seeds] [target]` (TRACE=1 traces every seed, ONLY=n runs only seed n). */
+/** Human-like trap harness runner: `npx tsx scripts/trap-reliability.ts <fieldId> <level> <strategy> [seeds] [target]` (TRACE=1 traces every seed, ONLY=n runs only seed n, TOL=ticks sets the timing tolerance). */
 import { runTrap } from './lib/humanTrap';
 import type { Strategy } from './lib/humanTrap';
 import type { CampaignLevel } from '../src/sim';
@@ -15,6 +15,7 @@ for (let seed = 1; seed <= n; seed++) {
     seed,
     strategy: strategy as Strategy,
     ...(target ? { target: Number(target) } : {}),
+    ...(process.env.TOL ? { model: { timingTol: Number(process.env.TOL) } } : {}),
     trace: process.env.TRACE === '1',
   });
   if (r.first) first++;

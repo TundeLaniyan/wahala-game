@@ -41,11 +41,17 @@ describe('a reasonable generator strategy defeats ordinary enemies on Normal (SA
     }
   });
 
-  it('baiting a wind-up then laying under your feet wins in a majority of seeds', () => {
-    for (const v of ['agbero', 'marketEnforcer'] as const) {
+  it('baiting a wind-up then laying under your feet wins in a majority of seeds (brawlers that stand their ground)', () => {
+    for (const v of ['agbero', 'areaBoy'] as const) {
       const t = measure('bait', 'normal', v);
       expect(t.defeated, v).toBeGreaterThan(SEEDS / 2);
     }
+  });
+
+  it('a market enforcer ducks out of sight after its swing (decision SA6): the ambush, not the bait, is the answer', () => {
+    // RC4: longer enemy recoveries made the bait a sure thing against brawlers; a cover user still walks out of the blast
+    expect(measure('ambush', 'normal', 'marketEnforcer').defeated).toBeGreaterThan(SEEDS / 2);
+    expect(measure('bait', 'normal', 'marketEnforcer').defeated).toBeLessThanOrEqual(SEEDS / 2);
   });
 });
 
@@ -74,7 +80,8 @@ describe('difficulty: Easy is approachable, Hard is harder - by strategy, not he
   it('the same human strategies trap clearly fewer enemies on Hard than on Easy', () => {
     const easy = total('easy');
     const hard = total('hard');
-    expect(easy - hard).toBeGreaterThanOrEqual(SEEDS * 2);
+    // (RC4: the longer enemy recoveries and the patrol pace moved the margin from 2 to 1.5 traps per seed)
+    expect(easy - hard).toBeGreaterThanOrEqual(SEEDS * 1.5);
     // print the measured table for docs/CAMPAIGN_SECTOR_AI.md (npm run sector-ai prints the same, with more seeds)
     const rows = LEVELS.flatMap((l) =>
       ORDINARY.map((v) =>

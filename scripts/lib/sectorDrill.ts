@@ -28,6 +28,7 @@ import {
   observe,
   tick,
   ENEMY_VARIANTS,
+  tacticsEnemyStepTicks,
 } from '../../src/sim';
 import type {
   CampaignLevel,
@@ -167,6 +168,9 @@ function trace(s: GameState, label: string, ev: SimEvent[]): void {
     );
 }
 
+/** Ticks from the far end of the ambush route to standing at its corner for the Normal agbero (pause 42, 11 tiles of 14 ticks). */
+const NORMAL_TO_CORNER = 42 + 11 * 14;
+
 /** ambush: lay just round the corner of an unaware patroller's route and wait out of sight (see the file header). */
 export function ambushDrill(level: CampaignLevel, variant: EnemyVariantId, seed: number): DrillResult {
   const { s, bots } = tacticsScene({
@@ -189,8 +193,20 @@ export function ambushDrill(level: CampaignLevel, variant: EnemyVariantId, seed:
   });
   const res: DrillResult = { caught: false, hit: false, defeated: false, selfHit: false, void: true };
   const mind = () => s.territory!.minds[1]!;
+  // the human learned this patroller's pace by watching it (decisions RC1-RC2: a calm walk of the level's step time + the
+  // calm extra): he lays the generator on its lane far enough down that the 3 s fuse ends as it walks through, whatever
+  // the level (Easy walks slower, Hard faster), and waits a little when it is slow
+  const cfg = s.config.campaignTactics!;
+  const calm =
+    tacticsEnemyStepTicks(cfg, { enemyKind: ENEMY_VARIANTS[variant].base, enemyVariant: variant }) +
+    cfg.territory.patrolStepExtraTicks;
+  const toCorner = cfg.territory.patrolPauseTicks + 11 * calm; // from reaching the far end to standing at (12, 3)
+  const early = NORMAL_TO_CORNER - toCorner; // ticks the fuse would end BEFORE it gets there, against the Normal agbero the drill was made for
+  // a slow patroller (Easy) is waited for; a faster one is caught at the same corner (the blast is wide enough)
+  const gy = 4;
+  const wait = early < 0 ? -early : 0;
   // the human's timing varies a little per seed (a person is not a metronome)
-  const late = (seed % 4) * 3;
+  const late = (seed % 4) * 3 + wait;
   let phase: 'wait' | 'go' | 'lay' | 'retreat' = 'wait';
   let laidAt = -1;
   let seenAtEnd = -1;
@@ -206,7 +222,7 @@ export function ambushDrill(level: CampaignLevel, variant: EnemyVariantId, seed:
       if (seenAtEnd >= 0 && s.tick >= seenAtEnd + late) phase = 'go';
     }
     if (phase === 'go') {
-      const d = stepToward(s, 12, 4);
+      const d = stepToward(s, 12, gy);
       if (d) intent = { move: d };
       else phase = 'lay';
     }
@@ -220,7 +236,7 @@ export function ambushDrill(level: CampaignLevel, variant: EnemyVariantId, seed:
     }
     if (phase === 'retreat') {
       // round the pillar block, out of the disc and out of the corner's sight
-      const d = me.x < 14 ? stepToward(s, 14, 4) : stepToward(s, 14, 6);
+      const d = me.x < 14 ? stepToward(s, 14, gy) : stepToward(s, 14, Math.min(8, gy + 2));
       intent = d ? { move: d } : {};
     }
     if (!e.alive) break;

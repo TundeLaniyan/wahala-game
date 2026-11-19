@@ -463,7 +463,7 @@ const defs: FieldMissionDef[] = [
       // junction 1: a marshal walks across the west junction mouth
       guard('Kobo Marshal', 10, 6, 'posts', patrol('routeMarshal', [10, 4], [10, 10])),
       // the centre crossing crew: they watch the junction streets, then come to take the junction back
-      guard('Kobo Marshal', 30, 10, 'crossing', patrol('routeMarshal', [27, 10], [34, 10])),
+      guard('Kobo Marshal', 30, 10, 'crossing', patrol('routeMarshal', [27, 10], [33, 10])),
       guard('Kobo Marshal', 18, 5, 'crossing', patrol('routeMarshal', [14, 4], [26, 4], [26, 6], [14, 6])),
       guard('Kobo Marshal', 16, 10, 'lateCrossing', patrol('routeMarshal', [12, 9], [20, 9])),
       chaser('Kobo Lookout', 31, 2, 'lateCrossing', post('bottleThrower', 2)),

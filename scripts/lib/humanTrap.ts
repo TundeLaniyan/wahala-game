@@ -1130,19 +1130,33 @@ type Pose = ReturnType<typeof enemyMindView>;
 
 /** The neighbour tile of `from` that is farthest from `e` and free (a step away from danger), or null. */
 function stepAway(s: GameState, from: { x: number; y: number }, e: { x: number; y: number }): Dir | null {
+  const lines = thrownTiles(s);
+  const swingers = s.players.filter(
+    (p) => p.id !== 0 && p.alive && ATTACKING.has(enemyMindView(s, p.id)) && manh(p, from) <= 3,
+  );
   let best: Dir | null = null;
-  let bestD = -1;
+  let bestD = -1e9;
   for (const d of DIR_LIST) {
     const x = from.x + DIRV[d][0];
     const y = from.y + DIRV[d][1];
     if (!walkable(s, x, y) || s.players.some((p) => p.alive && p.x === x && p.y === y)) continue;
-    const dist = Math.abs(x - e.x) + Math.abs(y - e.y);
+    // away from the one it is about (and from every other swinging enemy), and never onto a thrown object's line
+    let dist = Math.abs(x - e.x) + Math.abs(y - e.y);
+    for (const q of swingers) dist = Math.min(dist, Math.abs(x - q.x) + Math.abs(y - q.y) + 1);
+    if (lines.has(idx(s, x, y))) dist -= 5;
     if (dist > bestD) {
       bestD = dist;
       best = d;
     }
   }
   return best;
+}
+
+/** The tiles a thrown object is about to cross (the marked path on the ground): a person steps off them. */
+function thrownTiles(s: GameState): Set<number> {
+  const out = new Set<number>();
+  for (const pr of s.projectiles ?? []) for (const t of pr.path.slice(pr.index)) out.add(t);
+  return out;
 }
 
 /** Runs the shared attempt loop for the fighting strategies: `decide` returns the human's wish for this tick. */
@@ -1157,10 +1171,36 @@ function fightAttempt(
   const me = s.players[0]!;
   const res: AttemptResult = { killed: false, laid: false, noticed: false, selfHit: false, why: 'timeout' };
   if (me.x !== stage.x || me.y !== stage.y) teleportHuman(s, stage.x, stage.y);
-  const st: FightState = { c, res, laidAt: -1, phase: 'approach', anchor: null, exit: null, note: 0 };
+  const st: FightState = {
+    c,
+    res,
+    laidAt: -1,
+    phase: 'approach',
+    anchor: null,
+    exit: null,
+    note: 0,
+    dodged: new Set(),
+  };
   const start = s.tick;
   while (s.match.phase !== 'ended' && s.tick - start < limitSec * 60) {
     const t = s.tick;
+    if (c.trace && st.laidAt < 0 && t % 60 === 0)
+      log(
+        c,
+        'fight',
+        st.phase,
+        'H',
+        me.x,
+        me.y,
+        'E',
+        s.players[sc.target]!.x,
+        s.players[sc.target]!.y,
+        enemyMindView(s, sc.target),
+        'hp',
+        me.vitals?.hp,
+        'root',
+        s.players[sc.target]!.rootedUntil - t,
+      );
     let want = decide(st);
     // never stand in a blast it is too late to be in: out of any footprint with little fuse left
     const d = dangerMove(c, 0);
@@ -1213,6 +1253,8 @@ interface FightState {
   anchor: { x: number; y: number } | null;
   exit: { x: number; y: number } | null;
   note: number;
+  /** The wind-ups he has already stepped out of (one step each: he does not run off). */
+  dodged: Set<number>;
 }
 
 const ATTACKING = new Set<Pose>(['windup', 'attack']);
@@ -1246,10 +1288,24 @@ function baitDecide(st: FightState): Intent {
       return {};
     }
     case 'dance': {
-      if (ATTACKING.has(pose) && manh(me, e) <= 2) {
-        // a wind-up on him: out of reach (the swing then hits the air and it is planted)
+      const anySwing = s.players.some(
+        (p) => p.id !== 0 && p.alive && ATTACKING.has(enemyMindView(s, p.id)) && manh(p, me) <= 2,
+      );
+      if (thrownTiles(s).has(idx(s, me.x, me.y)) && me.stepRemaining === 0) {
+        const d = stepAway(s, me, e);
+        if (d) return { move: d };
+      }
+      if ((ATTACKING.has(pose) && manh(me, e) <= 2) || anySwing) {
+        // a wind-up on him: ONE step out of reach (the swing then hits the air and it is planted); he does not run off
+        const key =
+          e.attack?.resolveTick ?? s.players.find((p) => p.id !== 0 && p.attack)?.attack?.resolveTick ?? -1;
+        if (st.dodged.has(key)) return {};
         if (!st.anchor) st.anchor = { x: me.x, y: me.y };
         const d = stepAway(s, me, e);
+        if (d && me.stepRemaining === 0 && c.pilot.settled()) {
+          st.dodged.add(key);
+          return { move: d };
+        }
         return d && me.stepRemaining === 0 ? { move: d } : {};
       }
       if (pose === 'recovery') {
@@ -1286,16 +1342,21 @@ function baitDecide(st: FightState): Intent {
       const gen = g ?? s.generators.find((o) => o.ownerId === 0);
       if (!gen) return {};
       if (!st.exit) {
-        // three tiles out along a lane, the one farthest from the enemy (chosen once: no dithering)
+        // out of the blast, on the far side of the generator from the enemy: to reach him it has to walk through the footprint
+        // (a pursuer follows him, so he picks the way that makes it cross the blast zone), chosen once: no dithering
         const fp = footprintAt(s, gen.x, gen.y);
         const w = walkFrom(s, me.x, me.y);
+        const we = walkFrom(s, e.x, e.y);
         let best = -1;
-        let bestD = -1;
+        let bestScore = -1e9;
         for (let i = 0; i < w.dist.length; i++) {
-          if (w.dist[i]! < 2 || w.dist[i]! > 7 || fp.has(i)) continue;
-          const d = Math.abs((i % s.width) - e.x) + Math.abs(Math.floor(i / s.width) - e.y) - w.dist[i]!;
-          if (d > bestD) {
-            bestD = d;
+          if (w.dist[i]! < 2 || w.dist[i]! > 6 || fp.has(i)) continue;
+          const path = pathOf(we, i);
+          if (!path) continue;
+          const inside = path.filter((t) => fp.has(t)).length;
+          const score = inside * 10 + we.dist[i]! - w.dist[i]!;
+          if (score > bestScore) {
+            bestScore = score;
             best = i;
           }
         }
@@ -1396,6 +1457,24 @@ function plainStage(sc: TrapScene): { x: number; y: number } | null {
       return { x, y };
   }
   return null;
+}
+
+/**
+ * One bait attempt on the target from where the human stands now (no staging): used by the Oshodi flow test, which then goes on
+ * with the mission. Returns the attempt result and the pilot (his input latency carries on into the rest of the play).
+ */
+export function baitFromHere(
+  sc: TrapScene,
+  seed: number,
+  model: Partial<HumanModel> = {},
+  limitSec = 60,
+): { result: AttemptResult; pilot: Pilot; rnd: () => number; model: HumanModel } {
+  const m: HumanModel = { ...HUMAN_MODEL, ...model };
+  const rnd = seeded(seed * 1009 + 17);
+  const pilot = new Pilot(rnd, m);
+  const c: Ctx = { sc, model: m, rnd, pilot, trace: false };
+  const me = sc.s.players[0]!;
+  return { result: fightAttempt(c, { x: me.x, y: me.y }, limitSec, baitDecide), pilot, rnd, model: m };
 }
 
 /** The full run of one strategy: staging, the attempt, and the retry after disengaging. */

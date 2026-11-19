@@ -1230,7 +1230,13 @@ export const CAMPAIGN_TACTICS: CampaignTacticsConfig = {
   memoryHoldFuseTicks: 120,
   caution: { ticks: 36, reactScale: 0.5, investigate: false },
   trapSense: {
-    none: { reactScale: 1.25, brawlReactScale: 2.4, plannerBump: 0, calmVisionTiles: 2, seesPlacement: false },
+    none: {
+      reactScale: 1.25,
+      brawlReactScale: 2.4,
+      plannerBump: 0,
+      calmVisionTiles: 2,
+      seesPlacement: false,
+    },
     basic: { reactScale: 1, brawlReactScale: 2, plannerBump: 0, calmVisionTiles: 3, seesPlacement: false },
     keen: { reactScale: 0.8, brawlReactScale: 1, plannerBump: 1, calmVisionTiles: 5, seesPlacement: true },
     expert: { reactScale: 0.6, brawlReactScale: 1, plannerBump: 2, calmVisionTiles: 99, seesPlacement: true },
@@ -1338,7 +1344,8 @@ function tacticsEnemyAttacks(o: {
 
 /**
  * Enemy commitment per level (decision SA7). Wind-ups (catalogue startup + extra; push 4, shove 12, daze 18 ticks):
- * ordinary punches 60 / 48 / 38 ticks (1.0 / 0.8 / 0.63 s), the heavy 66 / 54 / 44; recovery 48 / 42 / 36 (heavy
+ * ordinary punches 60 / 48 / 38 ticks (1.0 / 0.8 / 0.63 s), the heavy 66 / 54 / 44; recovery of an agbero or guard 72 / 60 / 48
+ * (decision RC4: the window in which a generator laid at its feet cannot be walked away from; thrower 48 / 42 / 36, heavy
  * 54 / 48 / 42); every cooldown exceeds wind-up + recovery + `attack.responseGapTicks` (tested).
  */
 export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' | 'hard', PilotEnemyAttacks>> =
