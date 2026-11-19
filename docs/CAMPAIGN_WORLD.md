@@ -236,7 +236,7 @@ Reading it: although each area is 2.3-3.9 times the old sector's playable size, 
 built the 63 x 47 district's backdrop, set and the cover inside its render clip; a campaign board builds only its own
 46 x 26 / 48 x 28 world. Fewer draw calls, 20-46 % fewer triangles, fewer live geometries and textures, shorter builds and
 lower frame times in every row. The boss mission (the dispatch corridor) has no debug start path in the script; its render
-clip is the corridor's (rows 4-25 of the district map after the clip margins) instead of the whole map.
+clip is the corridor's (rows 1-27 of the 47-row district map, after the view and render margins) instead of the whole map.
 
 Readability probe (`scripts/readability.ts normal`, both Oshodi missions): old -> new, ordinary roamers patrolling 7/7 ->
 7/7; disengage probes: pursued 17 -> 21, reached adjacent 0 % -> 0 %, human hurt by anyone 41 % -> 19 %, chase length mean
