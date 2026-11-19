@@ -337,6 +337,12 @@ export interface TrapSenseSpec {
    * is not hidden from it. The placement is information it watched, never a guess.
    */
   seesPlacement: boolean;
+  /**
+   * Decision RC10: it keeps watching placements while it is BRAWLING (pursuing, winding up, recovering). False = tunnel vision: a
+   * brawler in a fight does not look at the ground under its rival's feet, so the bait works on it, and it reacts to a generator it
+   * sees late (`enemyBrawlReactScale`) instead. Absent = true (the tiers that read traps well).
+   */
+  watchesWhileBrawling?: boolean;
 }
 
 /**
@@ -486,6 +492,11 @@ export interface CampaignTacticsConfig {
     responseGapTicks: number;
     /** A thrower throws only after standing still this long (never while dodging; AI rule). */
     throwSettleTicks: number;
+    /**
+     * Decision RC9: a punch that finds nobody (the human stepped out of the wind-up) plants an ordinary enemy this much LONGER
+     * than one that lands: a committed miss is the punishable window a generator laid at its feet needs.
+     */
+    whiffRecoveryExtraTicks: number;
   };
   /**
    * Boss missions: the generator-bot seats (boss and crew have no `enemyKind`) and the perception kind each uses. Set by
@@ -1323,7 +1334,7 @@ export const CAMPAIGN_TACTICS: CampaignTacticsConfig = {
   blastVsArmoured: 3,
   enemyFramesTicks: 6,
   enemiesKeepOffHuman: true,
-  attack: { activeTicks: 6, responseGapTicks: 36, throwSettleTicks: 12 },
+  attack: { activeTicks: 6, responseGapTicks: 36, throwSettleTicks: 12, whiffRecoveryExtraTicks: 12 },
 };
 
 /** One level's enemy commitment (decision SA7): wind-up = catalogue startup + extra, recovery, cooldown, group limits. */
@@ -1380,7 +1391,7 @@ export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' |
     easy: tacticsEnemyAttacks({
       extra: { agbero: 56, guard: 56, thrower: 42, heavy: 48, lieutenant: 44, boss: 30 },
       recovery: { agbero: 72, guard: 72, thrower: 48, heavy: 54, lieutenant: 36, boss: 30 },
-      cooldown: { agbero: 180, guard: 180, thrower: 210, heavy: 240, lieutenant: 168, boss: 180 },
+      cooldown: { agbero: 192, guard: 192, thrower: 210, heavy: 240, lieutenant: 168, boss: 180 },
       throwRecovery: { agbero: 0, guard: 0, thrower: 54, heavy: 48, lieutenant: 30, boss: 24 },
       warn: { bottle: 54, stone: 54, brick: 60, tool: 78 },
       throwCooldown: ticks(3.5),
@@ -1391,8 +1402,8 @@ export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' |
     }),
     normal: tacticsEnemyAttacks({
       extra: { agbero: 44, guard: 44, thrower: 32, heavy: 36, lieutenant: 36, boss: 22 },
-      recovery: { agbero: 60, guard: 60, thrower: 42, heavy: 48, lieutenant: 30, boss: 24 },
-      cooldown: { agbero: 156, guard: 156, thrower: 210, heavy: 228, lieutenant: 144, boss: 156 },
+      recovery: { agbero: 72, guard: 72, thrower: 42, heavy: 48, lieutenant: 30, boss: 24 },
+      cooldown: { agbero: 180, guard: 180, thrower: 210, heavy: 228, lieutenant: 144, boss: 156 },
       throwRecovery: { agbero: 0, guard: 0, thrower: 42, heavy: 42, lieutenant: 24, boss: 18 },
       warn: { bottle: 42, stone: 42, brick: 48, tool: 66 },
       throwCooldown: ticks(3),
@@ -1403,8 +1414,8 @@ export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' |
     }),
     hard: tacticsEnemyAttacks({
       extra: { agbero: 34, guard: 34, thrower: 24, heavy: 26, lieutenant: 30, boss: 16 },
-      recovery: { agbero: 48, guard: 48, thrower: 36, heavy: 42, lieutenant: 26, boss: 20 },
-      cooldown: { agbero: 132, guard: 132, thrower: 180, heavy: 198, lieutenant: 120, boss: 132 },
+      recovery: { agbero: 56, guard: 56, thrower: 36, heavy: 42, lieutenant: 26, boss: 20 },
+      cooldown: { agbero: 150, guard: 150, thrower: 180, heavy: 198, lieutenant: 120, boss: 132 },
       throwRecovery: { agbero: 0, guard: 0, thrower: 36, heavy: 36, lieutenant: 20, boss: 16 },
       warn: { bottle: 36, stone: 36, brick: 42, tool: 60 },
       throwCooldown: ticks(2.5),
@@ -1469,8 +1480,13 @@ export const CAMPAIGN_TACTICS_LEVELS: Readonly<
     level: 'hard',
     perception: shiftedPerception({ vision: 1, react: -8, memory: 60, hearing: 1 }),
     trapSense: {
-      none: { calmVisionTiles: 3 },
-      basic: { calmVisionTiles: 4, seesPlacement: true },
+      none: { calmVisionTiles: 3, enemyBrawlReactScale: 2.4 },
+      basic: {
+        calmVisionTiles: 4,
+        seesPlacement: true,
+        watchesWhileBrawling: false,
+        enemyBrawlReactScale: 2,
+      },
       keen: { calmVisionTiles: 6 },
     },
     awareness: {
@@ -1492,7 +1508,7 @@ export const CAMPAIGN_TACTICS_LEVELS: Readonly<
       hitChaseTicks: 240,
       patrolStepExtraTicks: 1,
     },
-    enemyStepTicks: { agbero: 11, guard: 11, thrower: 12, heavy: 13, lieutenant: 11, boss: 10 },
+    enemyStepTicks: { agbero: 12, guard: 12, thrower: 13, heavy: 14, lieutenant: 11, boss: 10 },
     enemyMinStepTicks: 11,
     chase: {
       breakOffGapTiles: 8,

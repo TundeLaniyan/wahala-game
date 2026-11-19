@@ -137,7 +137,10 @@ describe('the calm view cone and trap sense (SA5)', () => {
     };
     expect(lay('ringSecurity')).toBe('known'); // keen: watched him lay it
     expect(lay('agbero')).toBe('absent'); // basic on Normal: the body still hides it
-    expect(lay('agbero', 'hard')).toBe('known'); // Hard: basic enemies watch placements too
+    // decision RC10: a brawling Hard enemy has tunnel vision too (it still watches placements while calm, and keen / expert
+    // tiers always do): it reacts to the generator it then sees late, instead of knowing it at once
+    expect(lay('agbero', 'hard')).toBe('absent');
+    expect(lay('ringSecurity', 'hard')).toBe('known');
     expect(lay('areaBoy', 'hard')).toBe('absent'); // no trap sense at all
   });
 

@@ -481,6 +481,8 @@ export interface AttemptResult {
   selfHit: boolean;
   /** Why it ended: 'killed' | 'missed' (the blast went off without the target in it) | 'noticed' | 'noPlan' | 'timeout'. */
   why: string;
+  /** Why a bait missed or timed out (a debugging aid): where the enemy was against the blast, what it was doing, how the human fared. */
+  diag?: string;
 }
 
 export interface TrapRunResult {
@@ -1180,6 +1182,8 @@ function fightAttempt(
     exit: null,
     note: 0,
     dodged: new Set(),
+    windupAt: -1,
+    lastPose: null,
   };
   const start = s.tick;
   while (s.match.phase !== 'ended' && s.tick - start < limitSec * 60) {
@@ -1201,6 +1205,12 @@ function fightAttempt(
         'root',
         s.players[sc.target]!.rootedUntil - t,
       );
+    {
+      const g0 = s.generators.find((o) => o.ownerId === 0);
+      const e0 = s.players[sc.target]!;
+      if (g0 && g0.timer <= 6)
+        st.snap = `dist ${Math.hypot(e0.x - g0.x, e0.y - g0.y).toFixed(1)} mind ${enemyMindView(s, sc.target)} planted ${e0.rootedUntil > t ? e0.rootedUntil - t : 0} human ${me.x},${me.y} hp ${me.vitals?.hp} laidAtFuse ${st.note}`;
+    }
     let want = decide(st);
     // never stand in a blast it is too late to be in: out of any footprint with little fuse left
     const d = dangerMove(c, 0);
@@ -1225,6 +1235,10 @@ function fightAttempt(
         me.vitals?.hp,
       );
     const ev = tickScene(sc, exec);
+    if (c.trace)
+      for (const e of ev)
+        if (e.type === 'campaignHit' && e.victimId === 0)
+          log(c, 'HUMAN HIT by', e.byId, e.source, 'phase', st.phase, 'laid', st.laidAt >= 0);
     scoreEvents(ev, sc.target, res);
     if (st.laidAt < 0 && s.generators.some((o) => o.ownerId === 0)) {
       st.laidAt = s.tick;
@@ -1235,6 +1249,7 @@ function fightAttempt(
     if (st.laidAt >= 0 && !s.generators.some((o) => o.ownerId === 0) && s.tick > st.laidAt + 20) {
       for (let k = 0; k < 40; k++) scoreEvents(tickScene(sc, {}), sc.target, res);
       res.why = res.killed ? 'killed' : 'missed';
+      res.diag = st.snap ?? 'nosnap';
       return res;
     }
     if (!s.players[sc.target]!.alive) {
@@ -1253,10 +1268,15 @@ interface FightState {
   anchor: { x: number; y: number } | null;
   exit: { x: number; y: number } | null;
   note: number;
+  snap?: string;
   /** The wind-ups he has already stepped out of (one step each: he does not run off). */
   dodged: Set<number>;
+  windupAt: number;
+  lastPose: Pose | null;
 }
 
+/** Ticks an ordinary brawler stays committed from the first frame of a swing (wind-up, swing, recovery) as a player learns it. */
+const PLANTED_ESTIMATE = 110;
 const ATTACKING = new Set<Pose>(['windup', 'attack']);
 
 /**
@@ -1325,9 +1345,14 @@ function baitDecide(st: FightState): Intent {
     case 'hold': {
       if (!g) return {};
       // he stands on it (it is hidden under him) and leaves when about 0.75 s of fuse is left
-      const leaveAt = 60 + Math.round((c.rnd() * 2 - 1) * c.model.timingTol * 0.5);
+      const leaveAt = 40 + Math.round((c.rnd() * 2 - 1) * c.model.timingTol * 0.5);
       st.note = st.note || leaveAt;
-      if (g.timer <= st.note) {
+      // he has learned that a swing plants an enemy for about 1.8 s from its first frame: when the fuse is no longer than
+      // that, whatever it does next it is still planted when the generator goes off, so he walks out
+      if (pose === 'windup' && st.lastPose !== 'windup') st.windupAt = s.tick;
+      st.lastPose = pose;
+      const plantedLeft = st.windupAt >= 0 ? st.windupAt + PLANTED_ESTIMATE - s.tick : -1;
+      if (g.timer <= st.note || (plantedLeft > 0 && g.timer <= plantedLeft)) {
         st.phase = 'leave';
         res.laid = true;
       }
@@ -1578,16 +1603,28 @@ export function runTrap(o: TrapRunOptions): TrapRunResult {
 /** The first ordinary roaming enemy with a patrol route (the one a player would trap first). */
 export function defaultTarget(s: GameState): number {
   const roamers = new Set(['agbero', 'areaBoy', 'marketEnforcer', 'routeMarshal', 'ringSecurity']);
+  // a player picks off the LONE patroller: fewest other enemies within earshot (8 tiles) of any tile of its route, then loops
+  // before shuttles, then the first
+  let best = 1;
+  let bestKey = [1e9, 1e9];
   for (const p of s.players) {
     if (p.id === 0 || !roamers.has(p.enemyVariant ?? '')) continue;
     const m = s.territory?.minds[p.id];
-    if (m && m.spec.patrol.length >= 3) return p.id;
+    if (!m || m.spec.patrol.length === 0) continue;
+    let near = 0;
+    for (const o of s.players) {
+      if (o.id === 0 || o.id === p.id || !o.alive) continue;
+      const om = s.territory?.minds[o.id];
+      const pts = om ? om.spec.anchors : [{ x: o.x, y: o.y }];
+      if (pts.some((a) => m.spec.anchors.some((b) => manh(a, b) <= 8))) near++;
+    }
+    const key = [near, m.spec.patrol.length >= 3 ? 0 : 1];
+    if (key[0]! < bestKey[0]! || (key[0] === bestKey[0] && key[1]! < bestKey[1]!)) {
+      best = p.id;
+      bestKey = key;
+    }
   }
-  for (const p of s.players) {
-    if (p.id === 0 || !roamers.has(p.enemyVariant ?? '')) continue;
-    if (s.territory?.minds[p.id]?.spec.patrol.length) return p.id;
-  }
-  return 1;
+  return best;
 }
 
 export { enemyMindView };

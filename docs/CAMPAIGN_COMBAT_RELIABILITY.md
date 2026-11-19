@@ -35,10 +35,10 @@ planner plans the pace the enemy walks. A variant may shave `personality.stepBon
 | --- | --- | --- | --- | --- | --- | --- |
 | Easy | 13 | 13 | 14 | 15 | 12 | 10 (9 / 8 / 7 with Roller Skates) |
 | Normal | 12 | 12 | 13 | 14 | 11 | 10 |
-| Hard | 11 | 11 | 12 | 13 | 11 | 10 |
+| Hard (second round: was 11 / 11 / 12 / 13 / 11) | 12 | 12 | 13 | 14 | 11 | 10 |
 
-The human keeps a 9 % lead on Hard (10 against 11), 17 % on Normal. The area boy is 1 tick faster than an agbero on Easy and
-Normal and equal to it on Hard (the floor). Boss missions' bots have no enemy kind: unaffected.
+The human keeps a 17 % lead on Normal and Hard (10 against 12; 9 % against a lieutenant's 11). The area boy is 1 tick faster than an
+agbero on Easy and Normal and equal to it on Hard. Boss missions' bots have no enemy kind: unaffected.
 
 ### RC2 - patrol pace and readable routes
 
@@ -83,20 +83,55 @@ removed (the measurements say stagger and knockback help the counter-jab on Hard
 
 | number | was (E / N / H) | now (E / N / H) | why |
 | --- | --- | --- | --- |
-| recovery of an agbero / guard after its swing | 48 / 42 / 36 ticks | 72 / 60 / 48 | the planted window of a swing is when a generator laid at its feet cannot be walked away from; 42 ticks was shorter than the human's own step in, lay and step out, and the bait succeeded in about half of the runs |
+| recovery of an agbero / guard after its swing (second round: 72 / 72 / 56, plus 12 more after a swing that hits nobody, cooldowns 192 / 180 / 150; see RC9) | 48 / 42 / 36 ticks | 72 / 60 / 48 | the planted window of a swing is when a generator laid at its feet cannot be walked away from; 42 ticks was shorter than the human's own step in, lay and step out, and the bait succeeded in about half of the runs |
 | calm notice range of the human (a calm enemy; engaged ones keep `noticeTiles`) | = notice range 6 / 7 / 8 (agbero) | 4 / 5 / 6 (guard 5 / 6 / 7, thrower 6 / 7 / 8, heavy 3 / 4 / 5, lieutenant 7 / 8 / 9) | a walker looks at the road ahead, not at everything within earshot: a human behind the cone or beyond it walks past, so there is room to reposition (`awareness.calmNoticeTiles`) |
 | reaction to a generator while brawling (trap sense `none` / `basic`; field enemy seats only: `enemyBrawlReactScale`, the boss missions' crews keep x2 / x1.5, a retune of them lost the Ebute and Lagos boss fights) | x2 / x1.5 | x2.4 / x2 | a brawler in a fight takes a generator under a rival's feet seriously later: the planted-and-pursuing enemy that walks out of a freshly revealed generator is the single most common miss |
 
-The cooldown between swings is unchanged (the data rule "every cooldown exceeds wind-up + recovery + 36" holds). Calm view cone (90
+The cooldown between swings was unchanged in the first round; the second round changes it with the recovery (RC9; the data rule "every cooldown exceeds wind-up + recovery + miss bonus + 36" holds). Calm view cone (90
 degrees), generator vision (`calmVisionTiles`), hearing, notice time (36 / 20 / 10 ticks) and alert beat are unchanged.
 
 ### RC5 - fair difficulty
 
 Easy: slower enemies (13 / 14 / 15), longer calm pace (+3), longer pause, a short chase (7 s, 5-tile gap), longer recoveries,
-nobody calls for help. Hard: closer speed (11 / 12 / 13, still slower than the human), a longer chase (15 s, 8-tile gap),
-quicker re-notice (60 ticks), jittery pauses, shorter reaction (react ticks -8), a longer search, cover for cover users, and it WATCHES
-the placement of a generator (basic trap sense too: the under-your-feet bait stops working on Hard; ambush and the counter-jab
-still do). Nothing on any level knows about a generator it did not see or hear.
+nobody calls for help. Hard: the same speed as Normal (12 / 13 / 14, still 17 % slower than the human), a longer chase (15 s, 8-tile
+gap), quicker re-notice (60 ticks), jittery pauses, shorter reaction (react ticks -8), a longer search, cover for cover users, a
+shorter recovery (56 against 72), and it still WATCHES a generator being laid unless it is brawling (RC10). Nothing on any level knows
+about a generator it did not see or hear.
+
+### RC9-RC12 - the second round (what was tuned, one lever at a time)
+
+The first round left Normal bait at 40-70 % first try (production, same human, 50-58 %) and Hard at 0-8 %. The failures were read
+off the bait attempts (`DIAG=1`, 134 misses of the Normal and Hard runs of the first tuning step): in 98 the blast went off with the enemy
+FREE (not planted), 2-3 tiles from the generator and walking after the human; in 16 the human had been killed by other enemies of
+the crowd before the blast (`hp 0`: Mushin market, the marshal crew); in 20 it was something else (planted but out of range, or in
+range and surviving). Not the timing step. First attempt / within two, Normal, n = 20 per mission, approach / railEdge / market / junctions:
+
+| step | Normal result |
+| --- | --- |
+| round 1 final (first / two, from section 5) | 60 / 80, 70 / 75, 40 / 70, 50 / 75 |
+| RC9: recovery 72, +12 after a swing that hits nobody, cooldown 180 | 80 / 100, 80 / 90, 25 / 55, 50 / 80 |
+| RC12: the human picks the LONE patroller (the one with fewest enemies within earshot of its route) | 80 / 100, 70 / 90, 90 / 95, 80 / 85 |
+| RC12: the human leaves when the swing has started and the fuse is no longer than the 1.8 s it stays committed (deadline: 40 ticks) | 95 / 100, 85 / 95, 100 / 100, 85 / 95 |
+
+- **RC9, longer commitment (game).** Ordinary brawler (agbero, guard) recovery Normal 72 (was 60), Easy 72, Hard 56 (was 48); a swing
+  that finds nobody plants it `attack.whiffRecoveryExtraTicks` 12 ticks longer (`systems/enemyActions.ts`, layer only); cooldowns
+  192 / 180 / 150 so every cooldown still exceeds wind-up + recovery + miss + 36. Why: the second swing starts a cooldown after
+  the first and plants it for wind-up + swing + recovery; to still be planted when a generator laid in the first recovery goes off
+  that planted time has to reach the end of the 3 s fuse.
+- **RC10, tunnel vision (game, Hard).** A brawling Hard enemy of the basic and no-trap-sense tiers does not watch the ground under its
+  rival's feet (`TrapSenseSpec.watchesWhileBrawling: false`); it reacts to a generator it then sees by the Normal brawl scale (x2 /
+  x2.4). It still watches placements when calm, and the keen and expert tiers (Ring security, lieutenants, bosses) always do.
+  Hard bait first try: 0-10 % (three of four missions 0-10 %) -> 65-85 %. Making Hard react later only (`enemyBrawlReactScale` 3.2
+  and 3.4, measured) lifted `approach` from 0 to 45 % and the others not at all: the enemy that sees the placement simply walks out
+  when it is free.
+- **RC11, Hard speed (game).** Hard step times 12 / 12 / 13 / 14 (lieutenant 11), as Normal: the Hard probe's "reached an adjacent
+  tile" falls from 10.4 % to 8.0 %.
+- **RC12, the human (harness).** Two things a real player does and the first-round human did not: he picks the lone patroller, and he
+  does not walk away from the generator until the enemy has committed to its second swing (then it cannot follow him out of the
+  blast). Production, with the same improved human, is in the tables below: most of the Normal gain over the first round is this.
+
+Not changed, deliberately: nothing was made to path badly or ignore a generator it knows. The suggested "less efficient escape"
+lever was not needed: an enemy that is free when the blast goes off is the miss, and no enemy escape code is involved.
 
 ## 3. Patrol routes of the 13 field missions
 
@@ -163,8 +198,8 @@ same script on `0830ee8` for "old". Reached adjacent = a pursuer got to a tile n
 | --- | --- | --- |
 | probes that were pursued | 120 | 118 |
 | pursuer reached an adjacent tile | 5.8 % (7) | 2.5 % (3) |
-| hurt by that enemy | 1.7 % (2) | 0.8 % (1) |
-| hurt by anyone (other enemies on the way, hazards) | 30.8 % | 31.4 % |
+| hurt by that enemy | 1.7 % (2) | 1.7 % (2) |
+| hurt by anyone (other enemies on the way, hazards) | 30.8 % | 39.0 % |
 | pursuer walking speed / human's (tiles per second, measured) | 3.8 / 6.3 | 3.5 / 6.3 (sim: 5.0 against 6.0) |
 | chase length median / 95 % / longest | 2.0 / 4.0 / 40 s (never ended) | 1.4 / 3.7 / 10.0 s |
 | back on patrol or watch after the chase, median / 95 % / longest | 2.7 / 4.0 / 18.1 s | 3.0 / 15.5 / 27.0 s |
@@ -174,10 +209,10 @@ same script on `0830ee8` for "old". Reached adjacent = a pursuer got to a tile n
 | | old Easy | new Easy | old Hard | new Hard |
 | --- | --- | --- | --- | --- |
 | pursued | 107 | 102 | 122 | 125 |
-| reached adjacent / hurt by it | 6.5 % / 2.8 % | 1.0 % / 1.0 % | 7.4 % / 6.6 % | 10.4 % / 7.2 % |
-| chase median / 95 % / longest | 1.4 / 3.4 / 4.0 s | 1.2 / 2.5 / 3.5 s | 2.5 / 5.7 / 40 s | 2.4 / 5.0 / 15.0 s |
-| back on route median / 95 % / longest | 1.9 / 4.0 / 19.7 s | 2.2 / 9.0 / 15.0 s | 3.7 / 10.0 / 21.5 s | 4.0 / 16.0 / 30.7 s |
-| never back within 40 s | 12 | 0 | 13 | 5 |
+| reached adjacent / hurt by it | 6.5 % / 2.8 % | 1.0 % / 1.0 % | 7.4 % / 6.6 % | 8.0 % / 4.8 % (first round 10.4 % / 7.2 %) |
+| chase median / 95 % / longest | 1.4 / 3.4 / 4.0 s | 1.2 / 2.5 / 3.5 s | 2.5 / 5.7 / 40 s | 2.5 / 4.7 / 15.0 s |
+| back on route median / 95 % / longest | 1.9 / 4.0 / 19.7 s | 2.2 / 9.0 / 15.0 s | 3.7 / 10.0 / 21.5 s | 3.9 / 16.0 / 29.5 s |
+| never back within 40 s | 12 | 0 | 13 | 3 |
 
 The original (dithering) runner, Normal: production 31.7 % reached adjacent and 29.2 % hurt (any enemy; the lead's baseline); new
 23.7 % and 22.0 % hurt by that enemy (33.9 % by anyone). That runner gets caught at every corner whatever the enemy does, so it
@@ -195,7 +230,7 @@ in at most 10 % (2.5 %) yes; hurts the human in at most 10 % (0.8 %) yes; chase 
 some enemies re-notice him before they settle; the slowest 5 % are walks back from a long investigation plus a 1.5 s search);
 ordinary-roamer coverage at least 70 % in every mission: 100 % by data (tested), 40-100 % per mission by what the probe sees moving
 (the rest are equipment guards and posts held by the mission); Easy at least as forgiving as Normal yes; Hard keeps a real speed
-lead (9 %) yes.
+lead (17 % against an agbero, 9 % against a lieutenant) yes, and on Hard 8.0 % reached an adjacent tile (the target 10 %).
 
 ## 5. The human-like trap harness
 
@@ -225,69 +260,71 @@ Success = the target dies from the human's blast. "first" = on the first attempt
 Final code. Four missions: `oshodi.approach` (tight road sector, two loops), `oshodi.railEdge` (open rail plaza), `mushin.market`
 (stalls and aisles), `fadeyiSomolu.junctions` (streets, a marshal crew).
 
-**BAIT, the strongest strategy (first / within two):**
+Success = the target dies from the human's blast. first = on the first attempt, two = within two attempts. n = 20 seeds per cell
+(10 for ambush and lure). FINAL code and human; four missions: `oshodi.approach` (tight road sector, two loops), `oshodi.railEdge`
+(open rail plaza), `mushin.market` (stalls and aisles), `fadeyiSomolu.junctions` (streets, a marshal crew). The target is the lone
+patroller of each (approach: the kiosk warden #1; railEdge: a lane hawker #2; market: a market runner #1; junctions: a Kobo
+marshal #2).
 
-| mission | Easy (n 12) | Normal (n 20) | Hard (n 12) | production Normal (n 12) |
-| --- | --- | --- | --- | --- |
-| oshodi.approach | 11 / 11 (92 %) | 12 / 16 (60 % / 80 %) | 0 / 1 | 6 / 9 (50 % / 75 %) |
-| oshodi.railEdge | 11 / 12 (92 %) | 14 / 15 (70 % / 75 %) | 1 / 1 | 7 / 11 (58 % / 92 %) |
-| mushin.market | 11 / 12 (92 %) | 8 / 14 (40 % / 70 %) | 0 / 0 | 5 / 9 (42 % / 75 %) |
-| fadeyiSomolu.junctions | 12 / 12 (100 %) | 10 / 15 (50 % / 75 %) | 0 / 0 | 7 / 8 (58 % / 67 %) |
+**BAIT (first / within two, % of 20):**
 
-Easy >= Normal >= Hard with a clear gap (Easy 92-100 % first try, Normal 40-70 %, Hard 0-8 %). Production with the same human is
-50-58 % first try; the new numbers are better on `approach` and `railEdge` (+10 and +12 points first try) and in the second attempt on
-`approach` and `market`, not better on `junctions`. The first-try target of 70 % is met on `railEdge` only, the two-attempt target of
-90 % on none: see the limits. Where bait fails: 'missed' (the pursuer walks out of the blast: a market enforcer ducks out of sight
-after its swing on purpose, a marshal's crew joins in), 'timeout' (a corridor with no room to dodge, an ally in the way).
+| mission | Easy | Normal | Hard | production Normal | production Hard |
+| --- | --- | --- | --- | --- | --- |
+| oshodi.approach | 100 / 100 | 95 / 100 | 85 / 95 | 75 / 95 | 0 / 0 |
+| oshodi.railEdge | 85 / 100 | 85 / 95 | 65 / 70 | 85 / 95 | 20 / 20 |
+| mushin.market | 100 / 100 | 100 / 100 | 70 / 90 | 70 / 90 | 80 / 90 |
+| fadeyiSomolu.junctions | 100 / 100 | 85 / 95 | 80 / 85 | 80 / 85 | 0 / 0 |
 
-**AMBUSH, Normal / Easy / Hard (n 10, first):** approach 1 / 0 / 0, railEdge 6 / 3 / 2, market 0 / 0 / 0, junctions 0 / 2 (4 within two) /
-0; production Normal (n 8): 0, 1, 0, 0. In the open rail plaza an ambush works 60 % of the time on Normal; in the tight sectors the
-human model finds no tile out of its sight to lay on and be hidden (it refuses to be in an enemy's view for more than 16 ticks of
-sight). It is the way to beat a cover user and, on Hard, the only strategy that does not rely on a hidden generator being laid
-under you.
+Targets: Normal at least 70 / 90 on all four, met (lowest 85 first, 95 within two). Hard at least 35 / 60, met (lowest 65 first, 70
+within two). Easy >= Normal >= Hard in every cell, both columns. Production Easy (same human): 95 / 100, 85 / 95, 100 / 100, 95 / 100.
+Reading the production columns honestly: the same improved human trapping on production Normal gets 70-85 % first try, so against
+production the game changes add 0 to +30 points on Normal (`approach` 75 to 95, `market` 70 to 100, `junctions` 80 to 85, `railEdge` unchanged at 85); what they do change is Hard: production Hard has no bait on three of four missions (it watches the
+placement), now it does. The first-round "production 50-58 %" was measured with the weaker human.
 
-**LURE (n 8, Normal):** 0, 1, 0, 0 of 8. A pursuer that sees a generator laid behind a runner reacts (36-52 ticks) and has most of
-the 3 s fuse left to walk out: a lure cannot be made reliable without making the enemy stupid, so it is not given to players as a
-way to kill.
+**AMBUSH, Normal (n 10, first / two):** approach 10 / 10, railEdge 0 / 0, market 60 / 70, junctions 0 / 0 % (production, same human: not
+rerun; first round 0-6 of 8). It needs open ground and a lone patroller; a tight street offers no tile out of its view for the human to
+lay on and hide behind.
 
-**PLAIN (laid in plain sight, in the lane, 6 tiles from an enemy that faces it; n 8 per mission):** 0 of 32 on the new code (the enemy
-escaped a generator it saw in every run; Normal fairness target: 70 % or more escape) and 4 of 32 on production.
+**LURE (Normal, n 10):** 1 of 40. A pursuer that sees a generator laid behind a runner reacts (36-52 ticks) and has most of the 3 s
+fuse left; it is not given to players as a way to kill.
 
-**Timing window** (bait, Normal, n 12, first attempt, timing tolerance +-10 / +-20 / +-30 ticks): approach 10 / 8 / 9, railEdge 9 / 9 / 9,
-market 3 / 6 / 4, junctions 5 / 6 / 7 (the +-20 column is the 20-seed run scaled to 12). The success does not depend on the tolerance
-within +-30 ticks (half a second each way): the window that matters is the enemy's planted time (about 1.1 s after a swing on
-Normal) and the fuse, not the human's trigger. The ambush window is the time the enemy spends in the blast footprint: 54-106
-ticks wide (the plans the human accepted), so +-20 ticks is comfortable and +-30 is the limit.
+**PLAIN (laid in plain sight, in the lane, 6 tiles from an enemy that faces it; n 20 per mission):** Normal 1 of 80 first attempt (2 of 80
+within two) and Hard 0 of 80: the enemy escaped a generator it saw in 99-100 % of runs (target: at least 70 %). The enemy still
+notices, chases and swings: bait success needs it to commit to a swing.
+
+**Timing window** (first round, bait): the success did not depend on the human's timing tolerance within +-30 ticks; the binding window
+is the enemy's planted time (about 1.5 s on Normal now) against the fuse, not the human's trigger. Not re-swept on the final numbers.
 
 ## 6. The Oshodi flow (V5)
 
 `npx tsx scripts/oshodi-flow.ts <level> 8`; `tests/campaign-reliability-oshodi.test.ts`. The human model plays `oshodi.approach`
 end to end (bait on the kiosk warden, up to three tries, then checkpoints A-B-C and the depot door resolved like the existing scripted
-playthroughs). | level | finished (of 8) | a warden defeated by his own blast (of 8) |
+playthroughs).
+
+| level | finished (of 8) | a warden defeated by his own blast (of 8) |
 | --- | --- | --- |
 | Easy | 8 | 8 |
 | Normal | 8 | 8 |
-| Hard | 3 | 1 |
+| Hard | 6 | 8 |
 
-Normal: all 8 seeds finish, and every one traps the kiosk warden with his own generator (the bait, within three tries) on the way, 1
-life lost in 4 of them (the lane is crowded). Hard finishes 3 of 8 for this human: the enemies are not stupid and he has no counter
-to a placement-watching brawler in the flow.
+Hard finishes 6 of 8 (a clear majority; the two misses lost all three lives in the crowded lane after the bait), first round 3 of 8.
 
 ## 7. HOW TO BEAT ENEMIES WITH GENERATORS (for players)
 
 What the measurements show works, in short steps. Numbers are Normal; Easy is easier, Hard is in the last paragraph.
 
-**1. The bait-a-swing (the strongest: 60-70 % on the first try on open streets, about 3 in 4 within two tries; 90 % on Easy).**
-Works on a street tout, an Area Boy, a route marshal, a heavy; a Market Enforcer ducks away, use the ambush on him.
+**1. The bait-a-swing (the strongest: 85-100 % on the first try on Normal in the four tested missions, 65-85 % on Hard, 85-100 % on Easy).**
+Works on a street tout, an Area Boy, a market enforcer, a route marshal. Pick the patroller that walks alone: other enemies within
+earshot join in and hit you.
 
 1. Walk up to the enemy until its "!" shows and it comes at you. Keep a wall behind you and no other enemy within five tiles.
 2. When it raises its arm (the red wind-up on the ground shows the tile), take ONE step out of reach. It swings at the air and stands
    planted for about a second (do not run off: stay one step away).
 3. Step back in beside it and lay a generator on the tile you stand on. Your own body hides it from the enemy. Stand still on it.
-4. It will swing again: step out of its reach once more, step back on the generator tile. Do not leave yet.
-5. When the generator shows about one second of fuse, walk out to the FAR side of the generator, so the enemy has to cross the blast
-   to follow you, and keep walking until it goes off. The enemy takes a generator that was hidden under you seriously only after about
-   a second, and it is still planted or on its way through the blast.
+4. It will swing again (about three seconds after the first): step out of its reach once more and come back. Do NOT leave yet.
+5. When it has started that second swing it is stuck for about 1.8 s, and once the generator's counter shows no more than that,
+   walk out to the FAR side of the generator and keep going until it goes off. If it never swings again, walk out at about 0.7 s
+   of fuse. A brawler that is free when the generator goes off simply follows you out of the blast: that is the one way this fails.
 
 **2. The ambush (60 % on open ground such as the rail plaza; no tile to hide on in a tight street).**
 
@@ -307,9 +344,9 @@ noticed you, keep walking away in a straight line: it breaks off after 6 tiles o
 chasing, goes to look where it last saw you, and returns to its route. A hit on it, or a blast, calls it back at once (for 3 s,
 then the same rules apply). Come back after it has settled and try the ambush on the next lap.
 
-**5. On Hard** enemies watch you lay a generator and react faster: the bait under your own feet no longer works. The ambush
-(out of its sight) and the counter-jab (punch its wind-up so it reels, lay during the stagger, leave late) do; both are
-timing-sensitive, and the measured success is low (ambush 0-20 % in the harness, counter-jab 5 in 12 on the Academy drill board).
+**5. On Hard** enemies react faster and chase longer, and a calm one watches you lay a generator, but a brawler in the middle of a fight
+has tunnel vision: the same bait works (65-85 % first try, 70-95 % within two in the four missions), with less room for a late step
+out. Ring security and lieutenants always watch the ground; for them use the ambush.
 
 ## 8. Tests added or changed
 
@@ -321,6 +358,7 @@ bounded chase; the leash is the territory's), `campaign-reliability-data.test.ts
 `campaign-reliability-traps.test.ts` (the harness: latency, the route a human learns, a fairness run and a bait run on real
 missions), `campaign-reliability-oshodi.test.ts` (the flow, 24 seeded plays).
 
+Second round: `campaign-tactics-layer` (recovery range 54-72, the cooldown rule includes the miss bonus; Hard watches while calm only), `-combat` (72 / 72 / 56), `-perception` (a brawling Hard agbero does not see a placement; Ring security does), `-drill` (Hard bait works on brawlers with tunnel vision, Ring security still watches; only the Easy >= Hard order is asserted for this fixed script), `campaign-reliability-oshodi` (Hard finishes at least 5 of 8). First round:
 Changed deliberately (never a threshold weakened to hide a regression): `campaign-tactics-layer` (Hard: jitter 12, no reversing laps;
 brawler recovery 48-72 ticks), `campaign-tactics-territory` (Hard keeps the same loop every lap; the two "notices" tests stand a human
 inside the calm notice range), `campaign-tactics-combat` (the slow's base step is the guard's 12 ticks; recoveries 72 / 60 / 48),
@@ -330,18 +368,17 @@ patroller), `scripts/lib/readability.ts` (the committed runner, `hurtByIt`, the 
 
 ## 9. Limits and risks
 
-- The first-attempt target of 70 % is met on one of the four tested missions and the within-two target of 90 % on none (Normal bait
-  40-70 % and 70-80 %). The measured levers that moved it (longer brawler recovery, slower brawl reaction, the far-side exit) are
-  in; the remaining misses are the enemy walking out of the blast after its recovery, cover users, crews that join in and corridors with
-  no room to dodge. A bigger lever (a longer recovery still, or a pursuer that does not leave the blast zone of a generator it
-  knows) was not taken: it starts to make the enemy stupid, which the brief rules out.
-- The ambush needs room: 0-10 % in three of four tested missions with this human (it will not lay a generator where it would be seen
-  for more than 16 ticks of sight). Placing it better is a human skill; the harness's human is cautious.
-- Hard has no reliable generator strategy in the harness (bait 0-8 %, ambush 0-20 %); the counter-jab exists on the drill board (5 in
-  12) but was not implemented in the real-mission harness. The Oshodi flow finishes 3 of 8 on Hard. Hard is meant to be harder; this
-  is a numbers question for a founder playtest, not a rule gap.
-- Sample sizes are 12-20 seeds per cell on four missions (of 13), and the stage tile is a scenario shortcut (stated above).
-- Faster missions: with slower enemies, clocks and pars of the field missions are now generous; none was retuned in this pass (the
-  scripted playthroughs still win).
-- The probe's "back on route within 12 s" misses at the 95 % mark (15.5 s on Normal); the first 4 s cover most of it.
+- All the bait numbers use ONE human policy (the one in `humanTrap.ts`, which includes picking the lone patroller and waiting for the
+  second swing). A player who walks away from the generator early, or fights in a crowd, will do worse; that is why production, run
+  with the same human, is in the table. Against production the game changes are 0 to +30 points on Normal and decisive on Hard.
+- The ambush needs room: 0-60 % in the four missions (it works on the open market, not in the tight streets), the lure does not work
+  (1 of 40). Bait is the strategy; the ambush is the answer to Ring security and lieutenants, which watch the ground.
+- Hard bait is 65-85 % first try, so Hard is only a little harder than Normal for a human who knows the bait; its pressure is the
+  chase, the notice time, the crowd and the keen tiers. A founder playtest should decide whether Hard needs a sharper edge (a shorter
+  recovery or a later whiff bonus are the next numbers).
+- Sample sizes are 20 seeds per cell (ambush, lure 10) on four of 13 missions, and the stage tile of the ambush is a scenario shortcut.
+- The Hard probe's "back on route" 95 % is 16 s (target 12; Normal 15.5 s): the probe's runner stays in the sector and the enemy
+  re-notices it before it settles.
+- Faster missions: with slower enemies, clocks and pars of the field missions are generous; none was retuned in this pass (the scripted
+  playthroughs still win).
 - Not touched: boss missions' bots (no enemy kind), the archived Oshodi pilot, raids.

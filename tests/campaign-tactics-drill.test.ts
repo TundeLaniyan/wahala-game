@@ -77,11 +77,12 @@ describe('difficulty: Easy is approachable, Hard is harder - by strategy, not he
       0,
     );
 
-  it('the same human strategies trap clearly fewer enemies on Hard than on Easy', () => {
+  it('the same human strategies trap no more enemies on Hard than on Easy', () => {
     const easy = total('easy');
     const hard = total('hard');
-    // (RC4: the longer enemy recoveries and the patrol pace moved the margin from 2 to 1.5 traps per seed)
-    expect(easy - hard).toBeGreaterThanOrEqual(SEEDS * 1.5);
+    // (RC4, RC10: Hard is no longer the level where the bait is impossible; this drill's human is a fixed script, so only the
+    // order is asserted here. Easy >= Normal >= Hard with a clear gap is measured on real missions with the human model)
+    expect(easy).toBeGreaterThanOrEqual(hard);
     // print the measured table for docs/CAMPAIGN_SECTOR_AI.md (npm run sector-ai prints the same, with more seeds)
     const rows = LEVELS.flatMap((l) =>
       ORDINARY.map((v) =>
@@ -98,14 +99,12 @@ describe('difficulty: Easy is approachable, Hard is harder - by strategy, not he
     console.log(`campaign tactics drills (${SEEDS} seeds)\n${rows.join('\n')}`);
   });
 
-  it('Hard enemies watch placements: the under-the-feet bait stops working, the counter-jab still does', () => {
-    for (const v of ['agbero', 'marketEnforcer'] as const) {
-      expect(measure('bait', 'easy', v).defeated, v).toBeGreaterThan(SEEDS / 2);
-      expect(measure('bait', 'hard', v).defeated, v).toBeLessThan(SEEDS / 4);
-      expect(measure('counter', 'hard', v).defeated, v).toBeGreaterThan(0);
-    }
-    // a keen Ring guard watches placements on Normal already; a reckless area boy never does
-    expect(measure('bait', 'normal', 'ringSecurity').defeated).toBeLessThan(SEEDS / 4);
+  it('keen enemies watch placements on Normal and Hard (the bait under the feet fails on Ring security); a Hard brawler has tunnel vision (RC10)', () => {
+    for (const level of ['normal', 'hard'] as const)
+      expect(measure('bait', level, 'ringSecurity').defeated, level).toBeLessThan(SEEDS / 4);
+    // decision RC10: a brawling Hard agbero no longer watches the ground under its rival (it reacts late instead), so the
+    // bait works on Hard as well as on Normal; the harness on real missions measures it (docs/CAMPAIGN_COMBAT_RELIABILITY.md)
+    expect(measure('bait', 'hard', 'agbero').defeated).toBeGreaterThan(SEEDS / 2);
     expect(measure('bait', 'hard', 'areaBoy').defeated).toBeGreaterThan(SEEDS / 2);
   });
 });

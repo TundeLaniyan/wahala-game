@@ -23,7 +23,9 @@ for (let seed = 1; seed <= n; seed++) {
   console.log(
     seed,
     r.target,
-    r.attempts.map((a) => `${a.why}${a.selfHit ? '+self' : ''}`).join(' > '),
+    r.attempts
+      .map((a) => `${a.why}${a.selfHit ? '+self' : ''}${process.env.DIAG && a.diag ? ` [${a.diag}]` : ''}`)
+      .join(' > '),
     `${r.seconds}s`,
   );
 }

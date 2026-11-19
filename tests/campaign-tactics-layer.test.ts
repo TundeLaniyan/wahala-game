@@ -181,7 +181,7 @@ describe('readable commitment at every level (SA7)', () => {
     }
   });
 
-  it('a visible recovery of 0.8-1.2 s after every ordinary punch, and every cooldown leaves a response window', () => {
+  it('a visible recovery of 0.9-1.4 s after every ordinary punch, and every cooldown leaves a response window', () => {
     for (const level of LEVELS) {
       const cfg = cfgOf(level);
       const gap = cfg.campaignTactics!.attack.responseGapTicks;
@@ -191,13 +191,14 @@ describe('readable commitment at every level (SA7)', () => {
           expect(m.recoveryRootTicks, `${level} ${kind}`).toBeGreaterThanOrEqual(36);
           expect(m.recoveryRootTicks, `${level} ${kind}`).toBeLessThanOrEqual(48);
         }
-        // decision RC4: an ordinary brawler stays planted 0.8-1.2 s after its swing (Hard 48, Normal 60, Easy 72 ticks)
+        // decisions RC4, RC9: an ordinary brawler stays planted 0.9-1.2 s after its swing (Hard 56, Normal 72, Easy 72 ticks), and
+        // `whiffRecoveryExtraTicks` longer after a miss
         if (kind === 'agbero' || kind === 'guard') {
-          expect(m.recoveryRootTicks, `${level} ${kind}`).toBeGreaterThanOrEqual(48);
+          expect(m.recoveryRootTicks, `${level} ${kind}`).toBeGreaterThanOrEqual(54);
           expect(m.recoveryRootTicks, `${level} ${kind}`).toBeLessThanOrEqual(72);
         }
         expect(m.cooldownTicks, `${level} ${kind}`).toBeGreaterThan(
-          windup(cfg, kind) + m.recoveryRootTicks + gap,
+          windup(cfg, kind) + m.recoveryRootTicks + cfg.campaignTactics!.attack.whiffRecoveryExtraTicks + gap,
         );
       }
       // throwers: a readable cue and a recovery; a throw cooldown that leaves the window too

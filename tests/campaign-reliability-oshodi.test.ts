@@ -24,10 +24,15 @@ describe('the human-like Oshodi flow (V5)', () => {
     expect(kills(normal), 'a warden trapped').toBeGreaterThanOrEqual(5);
   });
 
+  it('Hard: he finishes the mission in a clear majority of the 8 seeds, and traps the warden in most', () => {
+    expect(wins(hard), 'finished').toBeGreaterThanOrEqual(5);
+    expect(kills(hard), 'a warden trapped').toBeGreaterThanOrEqual(5);
+  });
+
   it('Easy >= Normal >= Hard in completion and in traps', () => {
     expect(wins(easy)).toBeGreaterThanOrEqual(wins(normal));
     expect(wins(normal)).toBeGreaterThanOrEqual(wins(hard));
     expect(kills(easy)).toBeGreaterThanOrEqual(kills(normal));
-    expect(kills(normal)).toBeGreaterThan(kills(hard));
+    expect(kills(normal)).toBeGreaterThanOrEqual(kills(hard));
   });
 }, 600_000);

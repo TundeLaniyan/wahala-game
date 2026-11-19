@@ -241,7 +241,10 @@ export class EnemyBot implements Bot {
       visionDelta: pers.visionDelta,
       reactScale: sense.reactScale * (brawling ? sense.enemyBrawlReactScale : 1),
       ...(calm ? { visionCap: sense.calmVisionTiles, calmCone: true } : {}),
-      seesPlacement: sense.seesPlacement && obs.tick >= me.dazedUntil,
+      seesPlacement:
+        sense.seesPlacement &&
+        (!brawling || sense.watchesWhileBrawling !== false) &&
+        obs.tick >= me.dazedUntil,
     });
     if (this.sight.freshlyKnown) this.planner(obs).alert();
     return perceivedObservation(obs, this.sight);

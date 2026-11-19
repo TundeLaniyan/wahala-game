@@ -151,10 +151,12 @@ export function enemyMeleeHit(
  * `recoveryRootTicks`. Called from `skills.ts` for every resolved attack; a seat without `enemyKind` (every multiplayer
  * fighter, the campaign human) is untouched.
  */
-export function enemyAfterPunch(state: GameState, p: Player, events: SimEvent[]): void {
+export function enemyAfterPunch(state: GameState, p: Player, events: SimEvent[], whiffed = false): void {
   const spec = p.enemyKind ? state.config.enemyAttacks.melee[p.enemyKind] : null;
   if (!spec) return;
-  const total = spec.recoveryRootTicks + recoveryBonus(state, p);
+  // decision RC9: a miss plants it longer than a hit (campaign tactics layer only)
+  const missExtra = whiffed ? (state.config.campaignTactics?.attack.whiffRecoveryExtraTicks ?? 0) : 0;
+  const total = spec.recoveryRootTicks + recoveryBonus(state, p) + missExtra;
   if (total <= 0) return;
   p.rootedUntil = Math.max(p.rootedUntil, state.tick + total);
   pushEnemyCue(state, events, { playerId: p.id, cue: 'recovery', untilTick: p.rootedUntil, x: p.x, y: p.y });

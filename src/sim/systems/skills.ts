@@ -578,7 +578,7 @@ function whiff(state: GameState, p: Player, spec: AttackSpec, skill: AttackKind,
     if (st) st.whiffs++;
   }
   if (spec.whiffRootTicks > 0) p.rootedUntil = Math.max(p.rootedUntil, state.tick + spec.whiffRootTicks); // a committed miss
-  enemyAfterPunch(state, p, events);
+  enemyAfterPunch(state, p, events, true);
   events.push({ type: 'attackResolved', playerId: p.id, skill, targetId: null, hit: false });
 }
 
