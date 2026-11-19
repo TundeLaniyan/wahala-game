@@ -11,6 +11,7 @@ import {
   chooseArena,
   setDifficulty,
   toClassicSetup,
+  exitMatch,
 } from './helpers';
 
 /**
@@ -81,7 +82,7 @@ test.describe('menus and match flow', () => {
     await expect(page.getByTestId('pause-overlay')).toBeHidden();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
-    await page.getByTestId('quit').click();
+    await exitMatch(page);
     await expect(page.getByTestId('title-screen')).toBeVisible();
     await expect(page.getByTestId('menu-home')).toBeVisible();
   });

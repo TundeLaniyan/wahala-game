@@ -28,12 +28,13 @@ export async function open(page: Page, query = ''): Promise<void> {
 }
 
 /**
- * The menu journey: Home -> (City Rumble -> tap a mode) -> arena and settings -> fighter -> review -> play.
- * Tapping a mode moves straight on (no Continue). These helpers walk the real journey; nothing is set behind
- * the menu's back.
+ * The menu journey: Home -> Play (Choose How to Play) -> Classic Blast or City Rumble -> Match Setup (battle style,
+ * arena, opponents, rules; City Rumble has its three rulesets there) -> fighter -> review -> play. These helpers walk
+ * the real journey; nothing is set behind the menu's back.
  */
 export async function toClassicSetup(page: Page): Promise<void> {
   if ((await page.getByTestId('classic-setup').count()) > 0) return;
+  await page.getByTestId('home-play').click();
   await page.getByTestId('home-classic').click();
   await expect(page.getByTestId('classic-setup')).toBeVisible();
 }
@@ -43,6 +44,7 @@ export async function toRumbleSetup(
   mode: 'survival' | 'deathmatch' | 'team' = 'survival',
 ): Promise<void> {
   if ((await page.getByTestId('rumble-setup').count()) > 0) return;
+  await page.getByTestId('home-play').click();
   await page.getByTestId('home-rumble').click();
   await page.getByTestId(`mode-${mode}`).click();
   await expect(page.getByTestId('rumble-setup')).toBeVisible();
@@ -71,15 +73,45 @@ export async function setDifficulty(page: Page, index: number, testId = 'diff-sl
 }
 
 /**
- * Starts the match from wherever the menu is: Home uses Quick play (the saved setup); a setup / fighter
+ * A returning player's start: Home -> Play -> the game they last set up (Classic Blast or City Rumble) -> START MATCH
+ * on Match Setup, which keeps every saved choice. `tap` uses touch taps (phone specs).
+ */
+export async function playSavedSetup(page: Page, tap = false): Promise<void> {
+  await toSavedSetup(page, tap);
+  await (tap ? page.getByTestId('setup-start').tap() : page.getByTestId('setup-start').click());
+}
+
+/** Home -> Play -> the saved game's card: Match Setup with every saved choice kept. */
+export async function toSavedSetup(page: Page, tap = false): Promise<void> {
+  const press = (id: string) => (tap ? page.getByTestId(id).tap() : page.getByTestId(id).click());
+  const play = await page.evaluate(() => {
+    const w = window as unknown as {
+      __WAHALA__?: { store: { getState(): { settings: { play: string } } } };
+    };
+    return w.__WAHALA__?.store.getState().settings.play ?? 'rumble';
+  });
+  await press('home-play');
+  await press(play === 'classic' ? 'home-classic' : 'home-rumble');
+}
+
+/** In a match: the pause menu's EXIT MATCH, confirmed ("Leave this match?" -> EXIT MATCH). */
+export async function exitMatch(page: Page): Promise<void> {
+  if ((await page.getByTestId('pause-overlay').count()) === 0) await page.keyboard.press('Escape');
+  await page.getByTestId('quit').click();
+  await expect(page.getByTestId('exit-confirm')).toBeVisible();
+  await page.getByTestId('exit-confirm-leave').click();
+}
+
+/**
+ * Starts the match from wherever the menu is: Home replays the saved setup; a setup / fighter
  * screen continues to Ready (picking `character` on the way) and presses Start.
  */
 export async function launch(page: Page, character?: string): Promise<void> {
   if (!character && (await page.getByTestId('menu-home').count()) > 0) {
-    await page.getByTestId('quick-play').click();
+    await playSavedSetup(page);
     return;
   }
-  if ((await page.getByTestId('menu-home').count()) > 0) await page.getByTestId('quick-review').click();
+  if ((await page.getByTestId('menu-home').count()) > 0) await toSavedSetup(page);
   if ((await page.getByTestId('menu-setup').count()) > 0) await page.getByTestId('menu-continue').click();
   if (character) {
     if ((await page.getByTestId('menu-ready').count()) > 0) await page.getByTestId('edit-fighter').click();
@@ -148,7 +180,7 @@ export async function openSettings(
   page: Page,
   tab: 'audio' | 'graphics' | 'controls' | 'access' = 'audio',
 ): Promise<void> {
-  await page.getByTestId('home-settings').click();
+  await page.getByTestId('home-settings-icon').click();
   await page.getByTestId(`settings-tab-${tab}`).click();
 }
 

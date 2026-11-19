@@ -18,13 +18,18 @@ const load = (page: Page) => page.evaluate(() => (window as any).__WAHALA__.matc
 async function openMenu(page: Page, query = ''): Promise<void> {
   await page.goto(`./?debug&q=low&seed=7&noattract${query}`);
   await expect(page.getByTestId('title-screen')).toBeVisible();
-  await expect(page.getByTestId('quick-play')).toBeVisible();
+  await expect(page.getByTestId('home-play')).toBeVisible();
 }
 
-/** Three quick taps on Quick play, as fast as the page takes them (each runs the button's own handler). */
+/**
+ * Home -> Play -> Quick Match, tapped N times as fast as the page takes them (each runs the button's own handler):
+ * a second tap while a start is on its way must start nothing.
+ */
 async function tapQuickPlay(page: Page, times = 3): Promise<void> {
+  if ((await page.getByTestId('menu-home').count()) > 0) await page.getByTestId('home-play').click();
+  await expect(page.getByTestId('play-quick')).toBeVisible();
   await page.evaluate((n) => {
-    const b = document.querySelector('[data-testid="quick-play"]') as HTMLButtonElement;
+    const b = document.querySelector('[data-testid="play-quick"]') as HTMLButtonElement;
     for (let i = 0; i < n; i++) b.click();
   }, times);
 }

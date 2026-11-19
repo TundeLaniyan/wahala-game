@@ -186,7 +186,7 @@ test.describe('Campaign', () => {
     await open(page, '&noattract&campaign=0');
     await expect(page.getByTestId('menu-home')).toBeVisible();
     await expect(page.getByTestId('home-campaign')).toHaveCount(0);
-    await expect(page.getByTestId('home-rumble')).toBeVisible();
+    await expect(page.getByTestId('home-play')).toBeVisible();
   });
 
   test('keyboard: Enter ends the story card; Esc goes back to the map', async ({ page }, info) => {

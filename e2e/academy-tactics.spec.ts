@@ -33,7 +33,8 @@ test.describe('Generator Tactics pilot', () => {
     await page.getByTestId('home-academy').click({ timeout: 120_000 });
     await expect(page.getByTestId('menu-academy')).toBeVisible();
 
-    const group = page.getByTestId('academy-group-tactics');
+    await page.getByTestId('academy-section-advanced').click(); // Advanced Training holds the Generator Tactics pilot
+    const group = page.getByTestId('academy-pane-advanced');
     await group.scrollIntoViewIfNeeded();
     await expect(group).toBeVisible();
     await expect(group).toContainText('Generator Tactics');

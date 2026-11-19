@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { inMatch, stepTicks } from './helpers';
+import { inMatch, playSavedSetup, stepTicks } from './helpers';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const status = (page: Page) =>
@@ -61,7 +61,7 @@ for (const [name, width, height] of [
     });
     await page.goto('./?debug&noattract&nobots&seed=7'); // no ?q=: Auto, as a phone runs it
     await page.getByTestId('title-screen').waitFor();
-    await page.getByTestId('quick-play').click();
+    await playSavedSetup(page);
     await inMatch(page);
     await stepTicks(page, 400);
     await page.evaluate(() => {

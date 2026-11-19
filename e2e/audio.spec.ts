@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { chooseArena, mutate, open, openSettings, startMatch } from './helpers';
+import { chooseArena, exitMatch, mutate, open, openSettings, startMatch } from './helpers';
 
 /** Records every AudioContext and every started buffer source so the test can see what really played. */
 const TRACK = `
@@ -106,9 +106,11 @@ test.describe('audio settings, persistence and music start', () => {
 
   test('Restore defaults resets the audio mix and the device preferences, never the match setup', async ({ page }) => {
     await open(page, '&nobots');
+    await page.getByTestId('home-play').click();
     await page.getByTestId('home-classic').click();
     await page.getByTestId('players-2').click();
     await page.getByTestId('menu-back').click();
+    await page.getByTestId('menu-back').click(); // Play, then Home
     await openSettings(page);
     await page.getByTestId('audio-music').fill('20');
     await page.getByTestId('toggle-voices').click();
@@ -187,7 +189,7 @@ test.describe('audio settings, persistence and music start', () => {
     expect(before.contexts).toBe(0); // browsers block audio until a gesture, and so do we
     expect(before.started).toEqual([]);
 
-    await page.getByTestId('home-settings').click(); // first user interaction (a menu click)
+    await page.getByTestId('home-settings-icon').click(); // first user interaction (a menu click)
     await expect.poll(async () => (await probe(page)).contexts, { timeout: 10_000 }).toBe(1);
     await page.getByTestId('settings-close').click();
 
@@ -293,7 +295,7 @@ test.describe('the approved soundtrack in a real browser', () => {
   }) => {
     test.setTimeout(420_000); // three matches on software WebGL
     await open(page, '&nobots');
-    await page.getByTestId('home-settings').click(); // the first gesture unlocks audio
+    await page.getByTestId('home-settings-icon').click(); // the first gesture unlocks audio
     await page.getByTestId('settings-close').click();
     await chooseArena(page, 'danfoBusPark');
     await startMatch(page, { competitors: 2 });
@@ -349,7 +351,7 @@ test.describe('the approved soundtrack in a real browser', () => {
     // quit, then another arena: its own starting track; back to the bus park: a different track, tempo reset
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
-    await page.getByTestId('quit').click();
+    await exitMatch(page);
     await expect(page.getByTestId('title-screen')).toBeVisible();
     await chooseArena(page, 'balogunMarket');
     await startMatch(page, { competitors: 2 });
@@ -357,7 +359,7 @@ test.describe('the approved soundtrack in a real browser', () => {
     expect((await musicState(page)).rate).toBe(1);
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
-    await page.getByTestId('quit').click();
+    await exitMatch(page);
     await expect(page.getByTestId('menu-home')).toBeVisible();
     await chooseArena(page, 'danfoBusPark');
     await startMatch(page, { competitors: 2 });

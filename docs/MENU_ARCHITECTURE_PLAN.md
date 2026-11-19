@@ -42,3 +42,9 @@ in `CLAUDE.md` ("Stitch menu") still apply: no invented stats, ranks, currencies
 6. **Story Campaign header**: a "current mission + objective" strip above the map from `nextMission()` (no new data).
 
 Each step is one commit with its own tests; none needs a save or sim change.
+
+## 4. Status (2026-11-19, branch `claude/wahala-ui-redesign-v1`)
+
+Plan steps 1 (Pause exit confirmation), 2 (Play row and Choose How to Play), 3 (Classic Blast / Story campaign names) and 6
+(Story Campaign current-mission strip) are implemented, plus the visual pass of step 4 from the existing assets (the Gemini
+masters are still not in the repository). Step 5 (W-AR branding) stays open. See `docs/SIX_SCREEN_UI.md` and decisions SX1-SX10.

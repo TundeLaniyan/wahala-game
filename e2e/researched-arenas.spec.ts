@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { chooseStage, launch, open, stepTicks, toRumbleSetup, inMatch } from './helpers';
+import { chooseStage, launch, open, playSavedSetup, stepTicks, toRumbleSetup, inMatch } from './helpers';
 
 const STAGES: [id: string, name: RegExp, size: [number, number]][] = [
   ['rumbleOjuelegba', /Ojuelegba/, [45, 33]],
@@ -117,7 +117,7 @@ test.describe('City Rumble communities', () => {
         },
       });
     });
-    await page.getByTestId('quick-play').tap();
+    await playSavedSetup(page, true);
     await inMatch(page);
     await stepTicks(page, 200);
     await page.evaluate(() => {
@@ -156,7 +156,7 @@ test.describe('City Rumble communities', () => {
         },
       });
     });
-    await page.getByTestId('quick-play').tap();
+    await playSavedSetup(page, true);
     await inMatch(page);
     await stepTicks(page, 200);
     expect(await live(page)).toMatchObject({

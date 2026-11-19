@@ -158,7 +158,7 @@ test.describe('Nigerian voice clips', () => {
       if (r.url().includes('/audio/voices/recorded/')) requested.push(r.url().split('/').pop()!);
     });
     await open(page, '&nobots&noattract');
-    await page.getByTestId('home-settings').click(); // first gesture: audio unlocks, manifests load
+    await page.getByTestId('home-settings-icon').click(); // first gesture: audio unlocks, manifests load
     await page.waitForTimeout(1500);
     expect(requested).toEqual([]); // the menu loads no clip
     await page.getByTestId('settings-close').click();
