@@ -1413,7 +1413,7 @@ export const CAMPAIGN_TACTICS_ENEMY_ATTACKS: Readonly<Record<'easy' | 'normal' |
       victimFreeTicks: 66,
     }),
     hard: tacticsEnemyAttacks({
-      extra: { agbero: 40, guard: 40, thrower: 24, heavy: 32, lieutenant: 30, boss: 16 },
+      extra: { agbero: 34, guard: 34, thrower: 24, heavy: 32, lieutenant: 30, boss: 16 },
       recovery: { agbero: 56, guard: 56, thrower: 36, heavy: 42, lieutenant: 26, boss: 20 },
       cooldown: { agbero: 150, guard: 150, thrower: 180, heavy: 198, lieutenant: 120, boss: 132 },
       throwRecovery: { agbero: 0, guard: 0, thrower: 36, heavy: 36, lieutenant: 20, boss: 16 },

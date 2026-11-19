@@ -50,7 +50,7 @@ describe('readable commitment in the sim (SA7)', () => {
   for (const [level, windup, recovery] of [
     ['easy', 60, 72],
     ['normal', 48, 72],
-    ['hard', 44, 56],
+    ['hard', 38, 56],
   ] as const) {
     it(`${level}: an ordinary punch winds up ${windup} ticks, telegraphs its tile, then plants it ${recovery} ticks`, () => {
       const s = duel('marketEnforcer', { level });
