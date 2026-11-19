@@ -1031,3 +1031,9 @@ Measured, 6 seeds, wins per level (Easy / Normal / Hard), before (SA13 with the 
 | the six district-A missions | 6 / 6 / 6 each | 6 / 6 / 6 each | 25-126 s |
 
 Fadeyi/Somolu cost (field s + 60 s per life, 12 runs per level): Easy 1320 / Normal 1084 / Hard 1557 before, 1046 / 1142 / 1523 after (Junction Run Easy mean 149 s -> 96 s). Districts B damage over 30 runs: Easy 7, Normal 23, Hard 80 health segments. Hard is now won more often by the script (the bait and crate fixes help there too); it remains the costliest level in damage and time. The bait relies on a published sight rule; on Hard a basic heavy watches placements, so the script lays it out of the heavy's line of sight.
+
+### After SA13: the finale field missions (lead check, 2026-11-19)
+
+With SA13 (enemies plan round the human they may not step on) the finale's scripted generator player wins
+`ojuelegba.return` 10/10 and `ojuelegba.junction` 9/10 on Normal (seeds 1-10; seed 2 of the junction times out against
+its last wave). The majority tests stand unchanged; the single-seed "the junction is really held" check now uses seed 1.

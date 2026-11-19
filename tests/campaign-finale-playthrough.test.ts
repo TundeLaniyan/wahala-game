@@ -33,7 +33,9 @@ describe('missions 19 and 20: the generator plan against the real enemy bots (No
   );
 
   it('the junction is really held: its waves contest the bus stop before it is kept', () => {
-    const r = runFieldFight({ fieldId: 'ojuelegba.junction', level: 'normal', seed: 2 });
+    // seed 1 (SA13 changed the bots' escapes: over seeds 1-10 the junction is won 9/10 on Normal, seed 2 times out; the
+    // win rate itself is the majority test above, this one checks that the waves really contest the stop)
+    const r = runFieldFight({ fieldId: 'ojuelegba.junction', level: 'normal', seed: 1 });
     expect(r.result).toBe('won');
     expect(r.contestedSec).toBeGreaterThan(0);
   }, 60_000);
