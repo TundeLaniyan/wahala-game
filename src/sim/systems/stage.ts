@@ -210,7 +210,12 @@ export function laneEscapeSteps(
  * ticks, and needs their own step time per tile plus the input allowance. A tile that is blocked by a crate, a
  * generator, flames or another lethal event is not an exit.
  */
-function laneIsEscapable(state: GameState, lane: readonly number[], warn: number, stepTicks: number): boolean {
+function laneIsEscapable(
+  state: GameState,
+  lane: readonly number[],
+  warn: number,
+  stepTicks: number,
+): boolean {
   const onLane = new Set(lane);
   const busy = new Set(state.stage.events.filter(isLethalStageEvent).flatMap((e) => e.tiles));
   const open = (i: number): boolean => {
@@ -283,7 +288,13 @@ function advance(state: GameState, ev: StageEvent, hits: LethalHit[], events: Si
   }
 }
 
-function strikeTiles(state: GameState, ev: StageEvent, tiles: number[], graceUntil: number, hits: LethalHit[]): void {
+function strikeTiles(
+  state: GameState,
+  ev: StageEvent,
+  tiles: number[],
+  graceUntil: number,
+  hits: LethalHit[],
+): void {
   for (const p of state.players) {
     if (!p.alive || !tiles.includes(tileIndex(state, p.x, p.y))) continue;
     hits.push({
@@ -309,7 +320,12 @@ function advanceSweep(state: GameState, ev: StageEvent, hits: LethalHit[], event
     }
     ev.index++;
     ev.stepRemaining = ev.stepTicks;
-    events.push({ type: 'stageSweepStep', id: ev.id, x: next % state.width, y: Math.floor(next / state.width) });
+    events.push({
+      type: 'stageSweepStep',
+      id: ev.id,
+      x: next % state.width,
+      y: Math.floor(next / state.width),
+    });
   }
   const cur = ev.tiles[ev.index]!;
   const lethal = [cur];
@@ -411,7 +427,12 @@ export function resolveTeleport(state: GameState, p: Player, events: SimEvent[])
   const lethalThere = state.stage.events.some(
     (e) => isLethalStageEvent(e) && state.tick >= e.warnTick && e.tiles.includes(i),
   );
-  if (state.tiles[i] !== Tile.Empty || groundedGeneratorAt(state, toX, toY) || flameAt(state, toX, toY) || lethalThere)
+  if (
+    state.tiles[i] !== Tile.Empty ||
+    groundedGeneratorAt(state, toX, toY) ||
+    flameAt(state, toX, toY) ||
+    lethalThere
+  )
     return false;
   if (!inSector(state, toX, toY)) return false;
   const fromX = p.x;
