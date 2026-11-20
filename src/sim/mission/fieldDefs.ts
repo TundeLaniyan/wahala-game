@@ -16,6 +16,8 @@ import { FINALE_FIELD_DEFS } from './finaleDefs';
 import { ARCHIVED_FIELD_DEFS } from './archivedFieldDefs';
 import { ORITA_ARENA_ID } from '../arenas/campaign/oshodiOrita';
 import { RAILSIDE_ARENA_ID } from '../arenas/campaign/oshodiRailside';
+import { ESTATE_GATE_ARENA_ID } from '../arenas/campaign/lekkiEstateGate';
+import { INNER_ESTATE_ARENA_ID } from '../arenas/campaign/lekkiInnerEstate';
 
 export interface FieldMarkerDef {
   x: number;
@@ -707,22 +709,24 @@ const defs: FieldMissionDef[] = [
     parSec: 240,
   },
   // ---------------------------------------------------------------- Lekki
-  // Gate Approach (decision DB6): Ring private security holds the closed stretch of the estate road between its
-  // gatehouses. Take the road and keep it while the guards from the east block come for it; then wreck the standby
-  // feeders that carry the estates' private power, and raid the plant. Two guards walk the garden wall and the pool edge;
-  // a heavy stands in the garden.
+  // Gate Approach (decision DB6), on its own campaign area `lekki.estateGate` (decisions WL1-WL3): the same legs, groups and
+  // raid. Ring private security holds the estate gate road; keep it under the palms while the gatehouse guards come from the
+  // staff quarters, then the checkpoint boom lifts on the back service road where the standby feeders carry the estates'
+  // private power (one more on the garden walk); wreck them and raid the plant. Two guards loop the villa compounds of the
+  // garden walk and a heavy watches its mouth.
   {
     id: 'lekki.approach',
-    sectorId: 'lekki.gateApproach',
+    arenaId: ESTATE_GATE_ARENA_ID,
+    sectorId: 'lekki.estateGate',
     districtId: 'lekki',
     name: 'Gate Approach',
-    start: [3, 26],
-    returnMarker: m(4, 22, 'SIDE GATE'),
+    start: [3, 24],
+    returnMarker: m(3, 16, 'SIDE GATE'),
     legs: [
       {
         kind: 'holdArea',
         text: 'Keep the gatehouse road clear for 25 seconds.',
-        area: { x: 19, y: 25, radius: 2, label: 'GATEHOUSE ROAD' },
+        area: { x: 23, y: 13, radius: 2, label: 'GATEHOUSE ROAD' },
         holdSec: 25,
         waves: [
           { group: 'gatehouse', atSec: 4 },
@@ -733,10 +737,10 @@ const defs: FieldMissionDef[] = [
         kind: 'destroyTargets',
         text: 'Destroy the 4 standby feeders by the estate road.',
         targets: [
-          { id: 'feederNorth', kind: 'controlPoint', x: 29, y: 22, label: 'STANDBY FEEDER', hp: 2 },
-          { id: 'feederSouth', kind: 'controlPoint', x: 32, y: 28, label: 'STANDBY FEEDER', hp: 2 },
-          { id: 'feederGarden', kind: 'controlPoint', x: 7, y: 29, label: 'STANDBY FEEDER', hp: 2 },
-          { id: 'feederRoad', kind: 'controlPoint', x: 25, y: 22, label: 'STANDBY FEEDER' },
+          { id: 'feederNorth', kind: 'controlPoint', x: 38, y: 9, label: 'STANDBY FEEDER', hp: 2 },
+          { id: 'feederSouth', kind: 'controlPoint', x: 40, y: 18, label: 'STANDBY FEEDER', hp: 2 },
+          { id: 'feederGarden', kind: 'controlPoint', x: 13, y: 3, label: 'STANDBY FEEDER', hp: 2 },
+          { id: 'feederRoad', kind: 'controlPoint', x: 35, y: 12, label: 'STANDBY FEEDER' },
         ],
         crew: 'feederCrew',
       },
@@ -745,57 +749,66 @@ const defs: FieldMissionDef[] = [
     doors: [
       {
         id: 'plant',
-        x: 14,
-        y: 29,
+        x: 39,
+        y: 6,
         label: 'STANDBY PLANT',
         raidId: 'standbyPlant',
-        returnTile: [14, 28],
+        returnTile: [39, 7],
         required: true,
       },
     ],
     enemies: [
-      // the garden wall and the pool edge: two patrols the whole width of the garden
-      guard('Gate Guard', 11, 23, 'garden', patrol('ringSecurity', [4, 23], [17, 23])),
-      guard('Pool Guard', 11, 27, 'garden', patrol('ringSecurity', [17, 27], [4, 27])),
-      blocker('Gate Blocker', 12, 26, 'garden', post('heavyEnforcer', 1)),
-      // the gatehouse guards wait in the east block, then come for the road
+      // the garden walk: two guards loop the villa compounds, a heavy watches the walk's mouth onto the gate road
+      guard('Gate Tout', 17, 3, 'garden', patrol('agbero', [17, 3], [22, 3], [22, 6], [17, 6])),
+      guard('Pool Guard', 6, 7, 'garden', patrol('ringSecurity', [6, 7], [11, 7], [11, 10], [6, 10])),
+      blocker('Gate Blocker', 8, 10, 'garden', post('heavyEnforcer', 1)),
+      // the gatehouse guard loops the staff quarters by the service road, then comes for the gate road
       guard(
         'Gatehouse Guard',
-        27,
-        25,
+        18,
+        16,
         'gatehouse',
-        patrol('ringSecurity', [27, 25], [33, 25], [33, 29], [27, 29]),
+        patrol('ringSecurity', [18, 16], [23, 16], [23, 20], [18, 20]),
       ),
-      chaser('Gatehouse Thrower', 30, 29, 'gatehouseLate', post('bottleThrower', 2)),
-      // the feeder crew
-      guard('Feeder Tech', 31, 25, 'feederCrew', post('ringSecurity')),
+      chaser('Gatehouse Thrower', 27, 20, 'gatehouseLate', post('bottleThrower', 2)),
+      // the feeder crew, behind the boom: the Ring's road marshal walks round the estate office on the back service road
+      // (then minds the feeders)
+      guard(
+        'Road Marshal',
+        34,
+        14,
+        'feederCrew',
+        patrol('routeMarshal', [34, 11], [40, 11], [40, 16], [34, 16]),
+      ),
     ],
     timeLimitSec: 480,
     parSec: 240,
   },
-  // Estate Sweep (decision DB7): two Ring guards walk the north drive, a heavy holds the drive gate and a thrower the
-  // lawn terrace. When they are
-  // down the inner estate gate opens on the east lawn, where the control points that switch the standby grid stand with
-  // their crew. Wreck them and the hounds are loosed from their kennel: back west to the service lane, then on to the
-  // estate gate.
+  // Estate Sweep (decision DB7), on its own campaign area `lekki.innerEstate` (decisions WL1, WL4-WL5): the same legs, groups
+  // and story. An estate marshal loops the villa compounds of the Palmgrove drive, a tanker tout the pump house of the water
+  // works, a heavy holds the drive by the inner gate and a thrower the terrace. When they are down the inner estate gate opens
+  // on the Coralview substation, where the control points that switch the standby grid stand with their crew. Wreck them and
+  // the hounds are loosed from their kennels: back out of the gate (or through the blasted back fence) to the service lane,
+  // then on to the estate gate.
   {
     id: 'lekki.estate',
-    sectorId: 'lekki.northEstate',
+    arenaId: INNER_ESTATE_ARENA_ID,
+    sectorId: 'lekki.innerEstate',
     districtId: 'lekki',
     name: 'Estate Sweep',
     start: [3, 3],
-    returnMarker: m(4, 8, 'ESTATE GATE'),
+    returnMarker: m(3, 6, 'ESTATE GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Defeat the 4 guards on the north drive.', group: 'patrol' },
+      { kind: 'clearGroup', text: 'Defeat the 4 guards on the drive and the water works.', group: 'patrol' },
       {
         kind: 'destroyTargets',
-        text: 'Destroy the 5 control points on the east lawn.',
+        text: 'Destroy the 5 control points in the substation.',
         targets: [
-          { id: 'controlNorth', kind: 'controlPoint', x: 43, y: 7, label: 'CONTROL POINT', hp: 2 },
-          { id: 'controlMid', kind: 'controlPoint', x: 45, y: 11, label: 'CONTROL POINT', hp: 2 },
-          { id: 'controlEast', kind: 'controlPoint', x: 47, y: 8, label: 'CONTROL POINT', hp: 2 },
-          { id: 'controlSouth', kind: 'controlPoint', x: 42, y: 12, label: 'CONTROL POINT' },
-          { id: 'controlGate', kind: 'controlPoint', x: 41, y: 9, label: 'CONTROL POINT', hp: 2 },
+          { id: 'controlNorth', kind: 'controlPoint', x: 37, y: 4, label: 'CONTROL POINT', hp: 2 },
+          { id: 'controlMid', kind: 'controlPoint', x: 37, y: 10, label: 'CONTROL POINT', hp: 2 },
+          { id: 'controlEast', kind: 'controlPoint', x: 42, y: 7, label: 'CONTROL POINT', hp: 2 },
+          { id: 'controlSouth', kind: 'controlPoint', x: 34, y: 13, label: 'CONTROL POINT' },
+          { id: 'controlGate', kind: 'controlPoint', x: 31, y: 8, label: 'CONTROL POINT', hp: 2 },
         ],
         crew: 'lawnCrew',
       },
@@ -803,23 +816,24 @@ const defs: FieldMissionDef[] = [
         kind: 'escapeRoute',
         text: 'Escape to the service lane before a hound catches you.',
         group: 'pursuers',
-        exit: m(24, 13, 'SERVICE LANE'),
+        exit: m(32, 24, 'SERVICE LANE'),
       },
     ],
     doors: [],
     enemies: [
-      // the north drive: two guards walk it end to end between the pillars, out of step
-      guard('Estate Guard', 10, 3, 'patrol', patrol('ringSecurity', [4, 3], [20, 3])),
-      guard('Estate Guard', 28, 3, 'patrol', patrol('ringSecurity', [35, 3], [20, 3])),
-      // the drive gate heavy, and a thrower on the central lawn terrace
-      blocker('Drive Heavy', 12, 8, 'patrol', post('heavyEnforcer', 1)),
-      chaser('Terrace Thrower', 30, 8, 'patrol', post('bottleThrower', 2)),
-      // behind the inner gate: the control point crew
-      guard('Grid Tech', 45, 9, 'lawnCrew', post('ringSecurity')),
-      guard('Grid Tech', 50, 11, 'lawnCrew', post('ringSecurity')),
-      // the hound kennels in the lawn's east corners: loosed when the grid goes down, they run you back west
-      chaser('Estate Hound', 54, 13, 'pursuers', { variant: 'bottleThrower' }),
-      chaser('Estate Hound', 54, 6, 'pursuers', { variant: 'areaBoy' }),
+      // the drive: an estate marshal loops the villa compound nearest the gate house, a tanker tout (he sells the water the
+      // Ring cuts off) the water works' pump house, a heavy holds the drive by the inner gate and a thrower the terrace
+      guard('Estate Marshal', 8, 6, 'patrol', patrol('routeMarshal', [8, 6], [13, 6], [13, 9], [8, 9])),
+      guard('Tanker Tout', 3, 13, 'patrol', patrol('agbero', [3, 13], [9, 13], [9, 17], [3, 17])),
+      blocker('Drive Heavy', 27, 6, 'patrol', post('heavyEnforcer', 1)),
+      chaser('Terrace Thrower', 20, 9, 'patrol', post('bottleThrower', 2)),
+      // behind the inner gate: the grid techs walk round the transformer pads (then mind the control points)
+      guard('Grid Tech', 32, 3, 'lawnCrew', patrol('ringSecurity', [32, 3], [42, 3], [42, 6], [32, 6])),
+      guard('Grid Tech', 32, 12, 'lawnCrew', patrol('ringSecurity', [32, 12], [42, 12], [42, 9], [32, 9])),
+      // the hound kennels in the substation's north-east corner: loosed when the grid goes down, they run you out (the
+      // back fence's barrier is the short way to the service lane)
+      chaser('Estate Hound', 44, 2, 'pursuers', { variant: 'bottleThrower' }),
+      chaser('Estate Hound', 45, 6, 'pursuers', { variant: 'areaBoy' }),
     ],
     timeLimitSec: 420,
     parSec: 180,

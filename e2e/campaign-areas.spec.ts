@@ -183,3 +183,108 @@ test('Rail Edge: the Railside area loads its own board and the mission is comple
   expect(out).toMatchObject({ result: 'won', sectionMissionId: 'oshodi.railEdge' });
   expect(errors).toEqual([]);
 });
+
+// ---------------------------------------------------------------- Lekki Phase 1 and the Ojuelegba finale (WL1-WL9)
+
+/** A boss win of a district (it counts the district's sections cleared, so its field missions replay from the map). */
+const bossWin = (missionId: string): Record<string, unknown> => ({
+  result: 'won',
+  missionId,
+  modifiers: [],
+  seconds: 150,
+  livesUsed: 0,
+  phasesCleared: 3,
+  defeat: 'eliminated',
+  stars: 2,
+  creditedKills: 3,
+});
+
+/** Each new area, its board, its sector and its gates (closed at the start); `after` = the field wins it needs first. */
+const AREAS: readonly {
+  fieldId: string;
+  arenaId: string;
+  sector: string;
+  gates: string[];
+  after: string[];
+}[] = [
+  {
+    fieldId: 'lekki.approach',
+    arenaId: 'campaignLekkiEstateGate',
+    sector: 'lekki.estateGate',
+    gates: ['gateBoom'],
+    after: [],
+  },
+  {
+    fieldId: 'lekki.estate',
+    arenaId: 'campaignLekkiInnerEstate',
+    sector: 'lekki.innerEstate',
+    gates: ['lawnGate'],
+    after: [],
+  },
+  {
+    fieldId: 'ojuelegba.return',
+    arenaId: 'campaignOjuelegbaSouthStreets',
+    sector: 'ojuelegba.southStreets',
+    gates: ['laneBarrier', 'cornerGate'],
+    after: [],
+  },
+  {
+    fieldId: 'ojuelegba.junction',
+    arenaId: 'campaignOjuelegbaBusInterchange',
+    sector: 'ojuelegba.busInterchange',
+    gates: [],
+    after: ['ojuelegba.return'],
+  },
+];
+
+for (const a of AREAS)
+  test(`${a.fieldId}: its campaign area loads through the campaign map, its own board drawn with no page error`, async ({
+    page,
+  }) => {
+    test.setTimeout(300_000);
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await open(page, '&noattract');
+    const started = await page.evaluate(
+      ({ wins, after, fieldId }) => {
+        const c = (window as any).__WAHALA__.campaign();
+        c.load();
+        c.startNew();
+        c.storyDone();
+        for (const w of wins) c.finishMission(w);
+        for (const ref of after)
+          c.finishMission({
+            ...wins[0],
+            missionId: ref.split('.')[0],
+            defeat: null,
+            sectionMissionId: ref,
+            raidBonus: 0,
+          });
+        c.toMap();
+        return c.startSectionMission(fieldId);
+      },
+      {
+        wins: ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta', 'lagosIsland', 'lekki'].map(bossWin),
+        after: a.after,
+        fieldId: a.fieldId,
+      },
+    );
+    expect(started).toBe(true);
+    await inMatch(page);
+    await playing(page);
+    const at = await scene(page);
+    expect(at.arenaId).toBe(a.arenaId);
+    expect(at.sector).toBe(a.sector);
+    expect(at.gates).toEqual(a.gates.map((id) => ({ id, open: false })));
+    expect(at.drawn?.barricades ?? 0).toBe(a.gates.length);
+    await expect.poll(async () => (await scene(page)).stats?.triangles ?? 0).toBeGreaterThan(10_000);
+    await expect(page.getByTestId('minimap')).toBeVisible();
+    // the human stands on the mission's start, on the area's own board
+    const me = await page.evaluate(() => {
+      const s = (window as any).__WAHALA__.getState();
+      return [s.players[0].x, s.players[0].y, s.mission.field.fieldId];
+    });
+    const def = await page.evaluate((id) => (window as any).__WAHALA__.fieldMissionDef(id), a.fieldId);
+    expect(me).toEqual([def.start[0], def.start[1], a.fieldId]);
+    expect(errors).toEqual([]);
+  });

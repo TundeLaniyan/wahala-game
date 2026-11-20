@@ -26,11 +26,16 @@ const VIEWPORTS = [
   { name: 'phone landscape 740x360', aspect: 740 / 360, insets: { top: 0.13, bottom: 0.03 } },
 ];
 
-function field(id: string, o: { noSector?: boolean } = {}): GameState {
+function field(id: string, o: { noSector?: boolean; archivedPilot?: boolean } = {}): GameState {
   const def = FIELD_MISSION_DEFS[id]!;
   const s = createGame(
     buildMissionGame({
-      spec: { id: def.districtId, fieldId: id, ...(o.noSector ? { noSector: true } : {}) },
+      spec: {
+        id: def.districtId,
+        fieldId: id,
+        ...(o.noSector ? { noSector: true } : {}),
+        ...(o.archivedPilot ? { archivedPilot: true } : {}),
+      },
       humanCharacter: 'streetBaller',
       seed: 3,
     }),
@@ -150,7 +155,9 @@ describe('follow camera inside a sector', () => {
 
 describe('minimap crop', () => {
   it('shows the sector clip only, maps its corner to the top-left and draws barricades as walls', () => {
-    const s = field('lekki.approach');
+    // a district sector of a City Rumble map: the archived pilot's replay of Terminal Approach (decision WX8; Lekki's missions
+    // play on their own campaign areas now, WL1)
+    const s = field('oshodi.approach', { archivedPilot: true });
     const crop = minimapCrop(s);
     const clip = s.sector!.clip;
     expect(crop).toEqual({

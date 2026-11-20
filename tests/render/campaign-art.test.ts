@@ -7,6 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import { CAMPAIGN_ARENA_IDS, MISSION_DEFS, campaignAreaOfArena, getArena } from '../../src/sim';
 import { OSHODI_KIT } from '../../src/sim/arenas/campaign/oshodiKit';
+import { OJUELEGBA_KIT } from '../../src/sim/arenas/campaign/ojuelegbaKit';
+import { COVER_LETTERS as OJUELEGBA_COVER_LETTERS } from '../../src/render/arenas/ojuelegbaCoverMap';
 import { NEW_ARENA_ART } from '../../src/render/arenas/newArenas';
 import { OSHODI_COVER_LETTERS } from '../../src/render/arenas/oshodiMetroCoverMap';
 import { OSHODI_METRO_LOOK, OSHODI_METRO_NIGHT_LOOK } from '../../src/render/arenas/oshodiMetroArt';
@@ -17,6 +19,10 @@ import { STADIUM_ARENAS } from '../../src/render/cameraModes';
 describe('campaign areas are drawn with their district kit', () => {
   it('the sim Oshodi kit is the cover map kit, letter for letter', () => {
     expect(OSHODI_KIT).toEqual(OSHODI_COVER_LETTERS);
+  });
+
+  it('the sim Ojuelegba kit is the Underbridge cover map kit, letter for letter (decision WL6)', () => {
+    expect(OJUELEGBA_KIT).toEqual(OJUELEGBA_COVER_LETTERS);
   });
 
   it.each(CAMPAIGN_ARENA_IDS.map((id) => [id] as const))(

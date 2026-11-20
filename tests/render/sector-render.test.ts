@@ -17,11 +17,16 @@ import { NEW_ARENA_ART } from '../../src/render/arenas/newArenas';
 import { clipEnvironment, renderClip } from '../../src/render/sectorClip';
 import { resolveEnv } from '../../src/render/env/plan';
 
-function field(id: string, noSector = false): GameState {
+function field(id: string, noSector = false, archivedPilot = false): GameState {
   const def = FIELD_MISSION_DEFS[id]!;
   return createGame(
     buildMissionGame({
-      spec: { id: def.districtId, fieldId: id, ...(noSector ? { noSector: true } : {}) },
+      spec: {
+        id: def.districtId,
+        fieldId: id,
+        ...(noSector ? { noSector: true } : {}),
+        ...(archivedPilot ? { archivedPilot: true } : {}),
+      },
       humanCharacter: 'streetBaller',
       seed: 2,
     }),
@@ -86,18 +91,19 @@ describe('sector barricades are drawn as objects', () => {
 
 describe('render cost: only what the sector can show is built', () => {
   it('the render clip is the sector clip grown most to the north, and absent without a sector', () => {
-    const s = field('lekki.approach');
+    // a district sector of a City Rumble map: the archived pilot's replay (WX8; Lekki plays on campaign areas now, WL1)
+    const s = field('oshodi.approach', false, true);
     const c = renderClip(s)!;
     const k = s.sector!.clip;
     expect(c.y0).toBeLessThan(k.y0);
     expect(k.y0 - c.y0).toBeGreaterThanOrEqual(c.y1 - k.y1);
-    expect(renderClip(field('lekki.approach', true))).toBeNull();
+    expect(renderClip(field('oshodi.approach', true))).toBeNull();
     expect(rectInClip(undefined, 0, 0, 1, 1)).toBe(true);
     expect(rectInClip(c, c.x1 + 1, c.y0, 3, 3)).toBe(false);
     expect(rectInClip(c, c.x1, c.y0, 3, 3)).toBe(true);
   });
 
-  it.each(['mushin.approach', 'lagosIsland.press', 'lekki.estate'])(
+  it.each(['mushin.approach', 'lagosIsland.press'])(
     '%s: the arena cover leaves out the objects outside the clip (and is unchanged without one)',
     (id) => {
       const s = field(id);

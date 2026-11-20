@@ -134,19 +134,30 @@ function piece(
  * The overhead for a W x H board: fascia girders over the north and south edges of the road band, soffit
  * strips, and the upper pier shafts with their hammerheads over every pier group. Returns a group and its disposer.
  */
+/** Where the deck runs over a board: its tile columns and the row over which it is cut off (the south bent). */
+export interface DeckSpan {
+  x0: number;
+  x1: number;
+  end: number;
+}
+
+/** The reference arena's deck (the Rumble board); a campaign area passes its own span (render/arenas/campaign/). */
+export const RUMBLE_DECK: DeckSpan = { x0: DECK_X0, x1: DECK_X1, end: DECK_END };
+
 export function buildDeck(
   W: number,
   H: number,
   piers: readonly CoverGroup[],
+  span: DeckSpan = RUMBLE_DECK,
 ): { object: Group; dispose(): void } {
   const wx = (x: number): number => x - W / 2 + 0.5;
   const wz = (y: number): number => y - H / 2 + 0.5;
   // the deck runs north-south over the pier court (tile columns 15-29), on from the north edge of the board
   // to its cut end over the south bent (row 21); the set carries it on north of the board
-  const xW = wx(DECK_X0) - 0.3;
-  const xE = wx(DECK_X1) + 0.3;
+  const xW = wx(span.x0) - 0.3;
+  const xE = wx(span.x1) + 0.3;
   const zTop = -H / 2;
-  const zEnd = wz(DECK_END) + 0.5;
+  const zEnd = wz(span.end) + 0.5;
   const len = zEnd - zTop;
   const zc = (zTop + zEnd) / 2;
   const tone = 0xb8b8b4; // soot concrete, cool grey (research palette #5E5A55, lit)

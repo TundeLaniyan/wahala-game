@@ -1,26 +1,30 @@
 /**
  * The OJUELEGBA FINALE (missions 19-21 of the campaign, docs/CAMPAIGN_SECTOR_AI.md "Part: Ojuelegba finale", decisions
- * FN1-FN10): two field missions and the boss mission "Break the Ring", all on the Ojuelegba Underbridge City Rumble arena
- * (`rumbleOjuelegba`, 45 x 33), which stays UNCHANGED: each mission is a SECTOR stamped over it (the reference layout and
- * its cover map are never edited).
+ * FN1-FN10): two field missions and the boss mission "Break the Ring". The Ojuelegba Underbridge City Rumble arena
+ * (`rumbleOjuelegba`, 45 x 33, the reference arena) stays UNCHANGED. The two field missions play on their own campaign areas
+ * (docs/CAMPAIGN_WORLD.md "The Ojuelegba finale", decisions WL6-WL9: `areasOjuelegba.ts`), streets round the junction that the
+ * Rumble map does not have, drawn with its own pieces; the boss stays a SECTOR stamped over the reference arena.
  *
- *   19 `ojuelegba.return`    Return to Ojuelegba   the shop lane and the street corner: trap the Ring patrols, blast the two
- *                                                  gate locks, and the Ring's steel gate across the corner opens (a sector
- *                                                  gate that opens between legs); no door raid (no existing raid layout fits)
- *   20 `ojuelegba.junction`  Hold the Junction     the pier court under the flyover: keep the bus stop against waves, then
- *                                                  wreck the Ring control boxes a lieutenant guards
+ *   19 `ojuelegba.return`    Return to Ojuelegba   the south streets: trap the Ring patrols in the motor park and the shop
+ *                                                  street, blast the barrier locks (the lane barrier opens), blast the gate
+ *                                                  locks (the Ring's gate across the ramp corner opens), walk to the corner;
+ *                                                  no door raid (no existing raid layout fits)
+ *   20 `ojuelegba.junction`  Hold the Junction     the underbridge interchange: keep the bus stop under the deck against
+ *                                                  waves, then wreck the Ring control boxes a lieutenant guards
  *   21 `ojuelegba` (boss)    Break the Ring        the danfo pocket and the repair court: shut the enforcer's control points
  *                                                  down with blasts (the `controlPoints` verb on the boss recipe), blast him
  *                                                  when he comes to re-lock the one broken last
  *
  * The enforcer's name is a WORKING TITLE ("The Landlord", provisional: founder decision pending, docs/STORY_BIBLE.md
- * 12.3); nothing here gives him a biography. Every tile is authored open floor of the arena ('.' or '_'), inside its
- * sector, checked by tests/campaign-finale-data.test.ts. Pure data; types are imported only (no runtime cycle).
+ * 12.3); nothing here gives him a biography. Every tile is authored open floor of its board ('.' or '_'), inside its
+ * sector, checked by tests/campaign-finale-data.test.ts and tests/campaign-world.test.ts. Pure data.
  */
 import { ticks } from '../config';
 import { bossRecipe } from './boss';
 import type { MissionDef, NodeDef } from './defs';
 import type { FieldEnemyDef, FieldMarkerDef, FieldMissionDef } from './fieldDefs';
+import { SOUTH_STREETS_ARENA_ID } from '../arenas/campaign/ojuelegbaSouthStreets';
+import { BUS_INTERCHANGE_ARENA_ID } from '../arenas/campaign/ojuelegbaBusInterchange';
 import type { BarricadeKind, MissionSectorDef, SectorBarricadeDef } from './sectors';
 
 type T = readonly [number, number];
@@ -31,55 +35,10 @@ const col = (x: number, y0: number, y1: number): T[] =>
 const b = (id: string, kind: BarricadeKind, tiles: T[]): SectorBarricadeDef => ({ id, kind, tiles });
 const m = (x: number, y: number, label: string): FieldMarkerDef => ({ x, y, label });
 
-// ------------------------------------------------------------------ sectors (three distinct parts of the junction)
-
-/** Mission 19: the Shopfront Lane and the street corner north of it, closed from the junction by a Ring gate. */
-export const RETURN_SECTOR: MissionSectorDef = {
-  id: 'ojuelegba.shopfrontReturn',
-  districtId: 'ojuelegba',
-  name: 'Shopfront lane and the street corner',
-  area: 'The shop lane from the danfo pocket crossing to its west end, and the street corner above it; the Ring has chained a steel gate across the corner, parked danfos and a checkpoint close the road beyond and the crossing east.',
-  rects: [
-    [0, 22, 30, 30],
-    [0, 19, 8, 21],
-  ],
-  barricades: [
-    b('roadDanfos', 'bus', row(18, 0, 4)),
-    b('roadCheckpoint', 'checkpoint', row(18, 5, 8)),
-    b('pavement', 'barrier', row(19, 9, 9)),
-    b('laneMouth', 'barrier', row(25, 31, 31)),
-    b('refugeDanfos', 'bus', col(31, 28, 30)),
-  ],
-  // the Ring's two gates (decision FN3): the steel barrier across the lane bend opens when its two locks are blasted
-  // (leg 1); the gate across the corner when its two gate locks are (leg 2)
-  gates: [
-    { id: 'laneBarrier', kind: 'gate', tiles: col(14, 25, 30), opensAfterLeg: 1 },
-    { id: 'cornerGate', kind: 'gate', tiles: row(22, 1, 6), opensAfterLeg: 2 },
-  ],
-  viewMargin: 3,
-  hazards: 'inside',
-};
-
-/** Mission 20: the pier court under the flyover and the through road between the piers (the junction itself). */
-export const JUNCTION_SECTOR: MissionSectorDef = {
-  id: 'ojuelegba.pierJunction',
-  districtId: 'ojuelegba',
-  name: 'The junction under the flyover',
-  area: 'The pier court and the through road between the bridge piers, with the bus stop on the south pavement; Ring checkpoints close the road at both ends, barriers the pavements, a steel gate the workshop-yard partition.',
-  rects: [[10, 11, 30, 21]],
-  barricades: [
-    b('yardPartition', 'gate', row(10, 22, 22)),
-    b('westKerb', 'barrier', col(9, 13, 14)),
-    b('westRoad', 'checkpoint', col(9, 15, 18)),
-    b('westPavement', 'barrier', row(19, 9, 9)),
-    b('eastCorner', 'barrier', row(11, 31, 31)),
-    b('eastKerb', 'barrier', row(14, 31, 31)),
-    b('eastRoad', 'checkpoint', col(31, 15, 18)),
-    b('eastPavement', 'bus', col(31, 19, 21)),
-  ],
-  viewMargin: 3,
-  hazards: 'inside',
-};
+// ------------------------------------------------------------------ sectors
+// Missions 19 and 20 play on their own campaign areas (decisions WL6-WL9): their play areas and the Ring's gates are the
+// areas' sectors (`areasOjuelegba.ts`, registered through `CAMPAIGN_AREA_DEFS`). The old sectors of the reference arena
+// (`ojuelegba.shopfrontReturn`, `ojuelegba.pierJunction`) are retired.
 
 /**
  * Mission 21 (the boss, decision FN7): the eastern danfo pocket (the impound) and the repair court of the rear service
@@ -110,7 +69,8 @@ export const BOSS_SECTOR: MissionSectorDef = {
   hazards: 'inside',
 };
 
-export const FINALE_SECTORS: readonly MissionSectorDef[] = [RETURN_SECTOR, JUNCTION_SECTOR];
+/** The finale's field sectors on the reference arena: none now (missions 19 and 20 are campaign areas, WL6). */
+export const FINALE_SECTORS: readonly MissionSectorDef[] = [];
 /** Sectors of boss missions (looked up by `MissionDef.sectorId`; kept apart from the field missions' one-to-one list). */
 export const FINALE_BOSS_SECTORS: readonly MissionSectorDef[] = [BOSS_SECTOR];
 
@@ -136,69 +96,80 @@ const enemy = (
 });
 
 /**
- * 19: home along the shop lane from the danfo-pocket end: trap the Ring patrols, blast the locks of the barrier across
- * the lane bend (it opens), blast the gate locks at the corner (the gate opens), walk through to the junction corner.
+ * 19: home through the south streets (campaign area `ojuelegba.southStreets`, decisions WL6-WL8): trap the Ring patrols in
+ * the motor park and the shop street, blast the locks of the barrier across the lane at the street's west end (it opens),
+ * blast the gate locks in the vulcanisers' yard (the gate across the ramp corner opens), walk through to the junction corner.
  */
 export const RETURN_MISSION: FieldMissionDef = {
   id: 'ojuelegba.return',
-  sectorId: RETURN_SECTOR.id,
+  arenaId: SOUTH_STREETS_ARENA_ID,
+  sectorId: 'ojuelegba.southStreets',
   districtId: 'ojuelegba',
   name: 'Return to Ojuelegba',
-  start: [29, 29],
-  returnMarker: m(4, 20, 'JUNCTION CORNER'),
+  start: [44, 24],
+  returnMarker: m(7, 3, 'JUNCTION CORNER'),
   legs: [
-    { kind: 'clearGroup', text: 'Defeat the 2 Ring patrols on the shop lane.', group: 'patrol' },
+    { kind: 'clearGroup', text: 'Defeat the 2 Ring patrols on the shop street.', group: 'patrol' },
     {
       kind: 'destroyTargets',
-      text: 'Destroy the 2 barrier locks at the lane bend.',
+      text: 'Destroy the 2 barrier locks at the lane barrier.',
       crew: 'barrierGuard',
       targets: [
-        { id: 'barrierNorth', kind: 'controlPoint', x: 15, y: 26, label: 'BARRIER LOCK' },
-        { id: 'barrierSouth', kind: 'controlPoint', x: 15, y: 29, label: 'BARRIER LOCK' },
+        { id: 'barrierNorth', kind: 'controlPoint', x: 14, y: 18, label: 'BARRIER LOCK' },
+        { id: 'barrierSouth', kind: 'controlPoint', x: 14, y: 23, label: 'BARRIER LOCK' },
       ],
     },
     {
       kind: 'destroyTargets',
-      text: 'Destroy the 2 gate locks at the lane corner.',
+      text: 'Destroy the 2 gate locks at the corner gate.',
       crew: 'lockGuards',
       targets: [
-        { id: 'lockWest', kind: 'controlPoint', x: 2, y: 23, label: 'GATE LOCK' },
-        { id: 'lockEast', kind: 'controlPoint', x: 5, y: 23, label: 'GATE LOCK' },
+        { id: 'lockWest', kind: 'controlPoint', x: 2, y: 13, label: 'GATE LOCK' },
+        { id: 'lockEast', kind: 'controlPoint', x: 7, y: 13, label: 'GATE LOCK' },
       ],
     },
   ],
   doors: [],
   enemies: [
-    enemy('meleeGuard', 'Ring Patrol', 22, 25, 'patrol', 'agbero', {
+    // the motor park: a Ring patrol loops the danfo row by the start
+    enemy('meleeGuard', 'Ring Patrol', 35, 14, 'patrol', 'agbero', {
       patrol: [
-        [26, 25],
-        [17, 25],
+        [35, 14],
+        [40, 14],
+        [40, 16],
+        [35, 16],
       ],
     }),
-    enemy('meleeGuard', 'Ring Patrol', 20, 29, 'patrol', 'routeMarshal', {
+    // the shop street: a Ring route marshal loops the middle shop block
+    enemy('meleeGuard', 'Ring Patrol', 21, 13, 'patrol', 'routeMarshal', {
       patrol: [
-        [17, 29],
-        [25, 29],
+        [21, 13],
+        [27, 13],
+        [27, 17],
+        [21, 17],
       ],
     }),
-    enemy('blocker', 'Barrier Heavy', 17, 27, 'barrierGuard', 'heavyEnforcer', {
+    // the barrier heavy minds the barrier locks at the street's west end
+    enemy('blocker', 'Barrier Heavy', 16, 21, 'barrierGuard', 'heavyEnforcer', {
       radius: 1,
       pursuitTiles: 3,
     }),
-    enemy(
-      'meleeGuard',
-      'Lock Guard',
-      4,
-      25,
-      'lockGuards',
-      'marketEnforcer',
-      { radius: 2, pursuitTiles: 5 },
-      2,
-    ),
-    enemy('meleeGuard', 'Lane Runner', 10, 26, 'lockGuards', 'areaBoy', {
+    // the vulcanisers' yard: the lock guard loops the tyre racks by the gate locks, the lane runner the workshop
+    enemy('meleeGuard', 'Lock Guard', 3, 14, 'lockGuards', 'marketEnforcer', {
       patrol: [
-        [12, 26],
-        [3, 26],
+        [3, 14],
+        [6, 14],
+        [6, 17],
+        [3, 17],
+      ],
+      pursuitTiles: 5,
+    }),
+    enemy('meleeGuard', 'Lane Runner', 8, 14, 'lockGuards', 'areaBoy', {
+      patrol: [
+        [8, 14],
+        [12, 14],
+        [12, 17],
+        [8, 17],
       ],
     }),
   ],
@@ -206,23 +177,30 @@ export const RETURN_MISSION: FieldMissionDef = {
   parSec: 150,
 };
 
-/** 20: keep the bus stop against the Ring's waves, then wreck the control boxes the lieutenant guards. */
+/**
+ * 20: keep the bus stop under the deck against the Ring's waves, then wreck the control boxes the lieutenant guards
+ * (campaign area `ojuelegba.busInterchange`, decisions WL6, WL9). The waves now come once the hold is under way: the yard
+ * crew at 18 s, the roof thrower at 26 s (a wave holds its post until it is sent, so the waves are the yard's thrower and
+ * one area boy, and the junction's street muscle - the Ring agbero under the north girder, the market enforcer - walk their
+ * rounds from the start, where the player can watch and time them, and come for the bus stop when they see you on it).
+ */
 export const JUNCTION_MISSION: FieldMissionDef = {
   id: 'ojuelegba.junction',
-  sectorId: JUNCTION_SECTOR.id,
+  arenaId: BUS_INTERCHANGE_ARENA_ID,
+  sectorId: 'ojuelegba.busInterchange',
   districtId: 'ojuelegba',
   name: 'Hold the Junction',
-  start: [11, 19],
-  returnMarker: m(14, 19, 'WEST PAVEMENT'),
+  start: [4, 19],
+  returnMarker: m(5, 14, 'WEST PAVEMENT'),
   legs: [
     {
       kind: 'holdArea',
       text: 'Keep the bus stop for 25 seconds.',
-      area: { x: 20, y: 19, radius: 2, label: 'BUS STOP' },
+      area: { x: 22, y: 8, radius: 2, label: 'BUS STOP' },
       holdSec: 25,
       waves: [
-        { group: 'waveEast', atSec: 2 },
-        { group: 'waveNorth', atSec: 12 },
+        { group: 'waveEast', atSec: 18 },
+        { group: 'waveNorth', atSec: 26 },
       ],
     },
     {
@@ -230,51 +208,57 @@ export const JUNCTION_MISSION: FieldMissionDef = {
       text: 'Destroy the 3 Ring control boxes under the bridge.',
       crew: 'ringCrew',
       targets: [
-        { id: 'boxNorth', kind: 'switchCabinet', x: 20, y: 12, label: 'CONTROL BOX' },
-        { id: 'boxPier', kind: 'switchCabinet', x: 26, y: 13, label: 'CONTROL BOX' },
-        { id: 'boxEast', kind: 'switchCabinet', x: 30, y: 20, label: 'CONTROL BOX' },
+        { id: 'boxNorth', kind: 'switchCabinet', x: 25, y: 4, label: 'CONTROL BOX' },
+        { id: 'boxPier', kind: 'switchCabinet', x: 15, y: 15, label: 'CONTROL BOX' },
+        { id: 'boxEast', kind: 'switchCabinet', x: 37, y: 7, label: 'CONTROL BOX' },
       ],
     },
   ],
   doors: [],
   enemies: [
-    enemy('meleeGuard', 'Area Boy', 30, 14, 'waveEast', 'areaBoy', {
+    // the east wave from the Ring yard: an area boy walks round the workshops, a thrower watches from the yard's lamp
+    enemy('meleeGuard', 'Area Boy', 37, 2, 'waveEast', 'areaBoy', {
       patrol: [
-        [30, 11],
-        [30, 14],
-        [27, 14],
+        [37, 2],
+        [44, 2],
+        [44, 6],
+        [37, 6],
       ],
       pursuitTiles: 4,
     }),
-    enemy('meleeGuard', 'Area Boy', 29, 19, 'waveEast', 'areaBoy', {
+    enemy('rangedAttacker', 'Yard Thrower', 42, 7, 'waveEast', 'bottleThrower', { radius: 2 }),
+    // the north wave: a thrower on the kiosk roofs under the north girder
+    enemy('rangedAttacker', 'Roof Thrower', 30, 2, 'waveNorth', 'bottleThrower', { radius: 2 }),
+    // the junction's street muscle: a Ring agbero loops the west kiosks, a market enforcer the market's stall block
+    enemy('meleeGuard', 'Ring Agbero', 12, 5, 'street', 'agbero', {
       patrol: [
-        [26, 19],
-        [30, 19],
+        [12, 5],
+        [15, 5],
+        [15, 8],
+        [12, 8],
+      ],
+      pursuitTiles: 4,
+    }),
+    enemy('meleeGuard', 'Market Enforcer', 21, 19, 'street', 'marketEnforcer', {
+      patrol: [
+        [21, 19],
+        [25, 19],
+        [25, 22],
+        [21, 22],
+      ],
+      pursuitTiles: 4,
+    }),
+    // the Ring crew: the lieutenant beside the control box by the south-west pier, a Ring guard loops the container shop
+    enemy('meleeGuard', 'Ring Lieutenant', 14, 16, 'ringCrew', 'lieutenant', { radius: 2, pursuitTiles: 3 }),
+    enemy('meleeGuard', 'Ring Security', 30, 18, 'ringCrew', 'ringSecurity', {
+      patrol: [
+        [30, 18],
+        [34, 18],
+        [34, 21],
         [30, 21],
-        [26, 21],
       ],
-      pursuitTiles: 4,
+      pursuitTiles: 3,
     }),
-    enemy('meleeGuard', 'Ring Agbero', 15, 11, 'waveNorth', 'agbero', {
-      patrol: [
-        [14, 11],
-        [19, 11],
-        [19, 14],
-        [14, 14],
-      ],
-      pursuitTiles: 4,
-    }),
-    enemy('meleeGuard', 'Market Enforcer', 27, 11, 'waveNorth', 'marketEnforcer', {
-      patrol: [
-        [21, 11],
-        [27, 11],
-        [27, 14],
-        [21, 14],
-      ],
-      pursuitTiles: 4,
-    }),
-    enemy('meleeGuard', 'Ring Lieutenant', 25, 12, 'ringCrew', 'lieutenant', { radius: 2, pursuitTiles: 3 }),
-    enemy('meleeGuard', 'Ring Security', 28, 19, 'ringCrew', 'ringSecurity', { radius: 2, pursuitTiles: 3 }),
   ],
   timeLimitSec: 480,
   parSec: 240,

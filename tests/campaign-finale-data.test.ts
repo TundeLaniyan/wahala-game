@@ -1,7 +1,8 @@
 /**
- * The Ojuelegba finale's simulation data (docs/CAMPAIGN_SECTOR_AI.md "Part: Ojuelegba finale", decisions FN1-FN10):
- * three distinct sectors stamped over the UNCHANGED reference arena, gates that open between legs, equipment that stands
- * on open floor from the start, the boss in a sector with a human start, and the `controlPoints` verb (blasts only).
+ * The Ojuelegba finale's simulation data (docs/CAMPAIGN_SECTOR_AI.md "Part: Ojuelegba finale", decisions FN1-FN10, WL6-WL9):
+ * the field missions on their own campaign-only boards round the UNCHANGED reference arena (the boss in a sector stamped
+ * over it), gates that open between legs, equipment that stands on open floor from the start, the boss in a sector with a
+ * human start, and the `controlPoints` verb (blasts only).
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -12,6 +13,7 @@ import {
   MISSION_IDS,
   buildMissionGame,
   createGame,
+  fieldArenaId,
   getArena,
   missionView,
   tick,
@@ -60,7 +62,9 @@ const boss = (seed = 3): GameState =>
   createGame(buildMissionGame({ spec: { id: 'ojuelegba' }, humanCharacter: 'streetBaller', seed }));
 
 const arena = getArena('rumbleOjuelegba');
-const SECTOR_IDS = ['ojuelegba.shopfrontReturn', 'ojuelegba.pierJunction', 'ojuelegba.danfoYard'];
+/** The finale's three places: the two field missions' campaign areas (WL6) and the boss's sector of the reference arena. */
+const FIELD_SECTOR_IDS = ['ojuelegba.southStreets', 'ojuelegba.busInterchange'];
+const BOSS_SECTOR_ID = 'ojuelegba.danfoYard';
 const tilesOf = (id: string): Set<string> => {
   const out = new Set<string>();
   arena.layout.forEach((row, y) =>
@@ -94,35 +98,43 @@ describe('the finale is wired as the seventh mission district (FN1)', () => {
   });
 });
 
-describe('three distinct Ojuelegba sectors with natural barricades (FN3, FN7)', () => {
-  it('each is sized for play, closed (no leak) and barricaded on open ground at its edge', () => {
+describe('three distinct Ojuelegba places (FN3, FN7, WL6)', () => {
+  it('the boss sector of the reference arena is sized for play, closed (no leak) and barricaded on open ground', () => {
     let all = 0;
     arena.layout.forEach((row) => [...row].forEach((c) => c !== '#' && all++));
-    for (const id of SECTOR_IDS) {
-      const def = getSector(id);
-      expect(def.districtId).toBe('ojuelegba');
-      const size = tilesOf(id).size;
-      expect(size, id).toBeGreaterThanOrEqual(180);
-      expect(size / all, id).toBeLessThan(0.5);
-      expect(sectorLeaks(arena.layout, def), id).toEqual([]);
-      for (const b of [...def.barricades, ...(def.gates ?? [])])
-        for (const [x, y] of b.tiles) expect(arena.layout[y]![x], `${id} ${b.id} ${x},${y}`).not.toBe('#');
-    }
+    const def = getSector(BOSS_SECTOR_ID);
+    expect(def.districtId).toBe('ojuelegba');
+    expect(def.arenaId).toBeUndefined(); // the reference arena itself
+    const size = tilesOf(BOSS_SECTOR_ID).size;
+    expect(size).toBeGreaterThanOrEqual(180);
+    expect(size / all).toBeLessThan(0.5);
+    expect(sectorLeaks(arena.layout, def)).toEqual([]);
+    for (const b of [...def.barricades, ...(def.gates ?? [])])
+      for (const [x, y] of b.tiles) expect(arena.layout[y]![x], `${b.id} ${x},${y}`).not.toBe('#');
   });
 
-  it('the three never share a tile: the return lane, the junction and the danfo yard are different places', () => {
-    const [a, b, c] = SECTOR_IDS.map(tilesOf) as [Set<string>, Set<string>, Set<string>];
-    for (const [x, y] of [
-      [a, b],
-      [a, c],
-      [b, c],
-    ] as const)
-      expect([...x].filter((k) => y.has(k))).toEqual([]);
+  it('the two field missions play on their own campaign-only boards: two different places, neither the reference arena', () => {
+    const boards = FIELD_SECTOR_IDS.map((id) => getSector(id).arenaId!);
+    expect(new Set(boards).size).toBe(2);
+    for (const [i, id] of FIELD_SECTOR_IDS.entries()) {
+      const def = getSector(id);
+      expect(def.districtId).toBe('ojuelegba');
+      const board = getArena(boards[i]!);
+      expect(board.campaignOnly).toBe(true);
+      expect(board.layout.join('\n')).not.toBe(arena.layout.join('\n'));
+      expect(sectorLeaks(board.layout, def), id).toEqual([]);
+      for (const g of def.gates ?? [])
+        for (const [x, y] of g.tiles) expect(board.layout[y]![x], `${id} ${g.id} ${x},${y}`).not.toBe('#');
+    }
+    expect(getArena(boards[0]!).layout.join('\n')).not.toBe(getArena(boards[1]!).layout.join('\n'));
   });
 
   it('the field sectors are the field missions’ own, the boss sector is looked up by the boss mission', () => {
-    expect(MISSION_SECTORS['ojuelegba.shopfrontReturn']).toBeDefined();
-    expect(MISSION_SECTORS['ojuelegba.pierJunction']).toBeDefined();
+    expect(MISSION_SECTORS['ojuelegba.southStreets']).toBeDefined();
+    expect(MISSION_SECTORS['ojuelegba.busInterchange']).toBeDefined();
+    // the reference arena's old field sectors are retired (WL6)
+    expect(MISSION_SECTORS['ojuelegba.shopfrontReturn']).toBeUndefined();
+    expect(MISSION_SECTORS['ojuelegba.pierJunction']).toBeUndefined();
     expect(MISSION_SECTORS['ojuelegba.danfoYard']).toBeUndefined();
     expect(BOSS_SECTORS['ojuelegba.danfoYard']).toBeDefined();
     expect(missionSectorOf({ id: 'ojuelegba' })?.id).toBe('ojuelegba.danfoYard');
@@ -134,22 +146,23 @@ describe('three distinct Ojuelegba sectors with natural barricades (FN3, FN7)', 
   });
 });
 
-describe('mission 19: the Ring gates open between legs (FN3)', () => {
-  it('the lane barrier and the corner gate are concrete at the start, and the far lane and the corner are shut', () => {
+describe('mission 19: the Ring gates open between legs (FN3, on the south streets: WL7)', () => {
+  it('the lane barrier and the corner gate are concrete at the start, and the yard and the corner are shut', () => {
     const s = field('ojuelegba.return');
     const [sx, sy] = RETURN_MISSION.start;
     const reach = flood(s, sx, sy, (i) => s.tiles[i] !== Tile.Hard);
     const at = (x: number, y: number): number => y * s.width + x;
-    expect(reach.has(at(4, 20))).toBe(false); // the return marker, beyond both gates
-    expect(reach.has(at(4, 25))).toBe(false); // the west lane, beyond the barrier
-    expect(reach.has(at(16, 26))).toBe(true);
+    const [rx, ry] = [RETURN_MISSION.returnMarker.x, RETURN_MISSION.returnMarker.y];
+    expect(reach.has(at(rx, ry))).toBe(false); // the return marker, beyond both gates
+    expect(reach.has(at(6, 22))).toBe(false); // the vulcanisers' yard, beyond the barrier
+    expect(reach.has(at(20, 22))).toBe(true); // the shop street
     const events: SimEvent[] = [];
     openSectorGates(s, 1, events); // the barrier locks are blasted
     const mid = flood(s, sx, sy, (i) => s.tiles[i] !== Tile.Hard);
-    expect([mid.has(at(4, 25)), mid.has(at(4, 20))]).toEqual([true, false]);
+    expect([mid.has(at(6, 22)), mid.has(at(rx, ry))]).toEqual([true, false]);
     openSectorGates(s, 2, events); // the gate locks are blasted
     const open = flood(s, sx, sy, (i) => s.tiles[i] !== Tile.Hard);
-    expect(open.has(at(4, 20))).toBe(true);
+    expect(open.has(at(rx, ry))).toBe(true);
     for (const i of open) expect(inSector(s, i % s.width, Math.floor(i / s.width))).toBe(true);
     expect(events.map((e) => (e.type === 'sectorGateOpened' ? e.gateId : ''))).toEqual([
       'laneBarrier',
@@ -161,7 +174,8 @@ describe('mission 19: the Ring gates open between legs (FN3)', () => {
 describe('equipment stands on open floor from the start (DS7 fix, FN3)', () => {
   it.each(['ojuelegba.return', 'ojuelegba.junction'])('%s', (id) => {
     const def = FIELD_MISSION_DEFS[id]!;
-    for (const [x, y] of fieldTargetTiles(def)) expect(isOpenFloor(arena, x, y), `${x},${y}`).toBe(true);
+    const board = getArena(fieldArenaId(def));
+    for (const [x, y] of fieldTargetTiles(def)) expect(isOpenFloor(board, x, y), `${x},${y}`).toBe(true);
     for (const seed of [1, 2, 3, 4]) {
       const s = field(id, seed);
       for (const [x, y] of fieldTargetTiles(def)) {

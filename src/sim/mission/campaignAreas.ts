@@ -5,8 +5,14 @@
  */
 import type { CampaignAreaDef } from './areas';
 import { OSHODI_AREAS } from './areasOshodi';
+import { LEKKI_AREAS } from './areasLekki';
+import { OJUELEGBA_AREAS } from './areasOjuelegba';
 
-export const CAMPAIGN_AREA_DEFS: readonly CampaignAreaDef[] = [...OSHODI_AREAS];
+export const CAMPAIGN_AREA_DEFS: readonly CampaignAreaDef[] = [
+  ...OSHODI_AREAS,
+  ...LEKKI_AREAS,
+  ...OJUELEGBA_AREAS,
+];
 
 export const CAMPAIGN_AREAS: Readonly<Record<string, CampaignAreaDef>> = Object.fromEntries(
   CAMPAIGN_AREA_DEFS.map((a) => [a.id, a]),

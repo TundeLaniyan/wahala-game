@@ -30,6 +30,7 @@ import type { BoardCover } from './boardCover';
 import { CoverBuilder } from './boardCover';
 import { COVER_REACH, coverGroups } from './ojuelegbaCoverMap';
 import { PIER_CUT, buildDeck } from './ojuelegbaDeck';
+import type { DeckSpan } from './ojuelegbaDeck';
 import type { CoverGroup } from './ojuelegbaCoverMap';
 import {
   BUS_STOP_BOARD,
@@ -696,9 +697,15 @@ function skip(k: Kit, g: number, grp: CoverGroup, n: number): void {
     );
 }
 
-/** Builds the whole board's cover (null if the board is not the 45 x 33 Ojuelegba grid). */
-export function buildOjuelegbaCover(board: { width: number; height: number }): BoardCover | null {
-  const groups = coverGroups();
+/**
+ * Builds the whole board's cover from a cover map (default: the reference arena's, `OJUELEGBA_COVER`) and the flyover overhead
+ * over its piers (default: the reference arena's deck span; a campaign area passes its own map and span, or `null` for none).
+ */
+export function buildOjuelegbaCover(
+  board: { width: number; height: number },
+  o: { map?: readonly string[]; deck?: DeckSpan | null } = {},
+): BoardCover | null {
+  const groups = coverGroups(o.map);
   const W = board.width;
   const H = board.height;
   const b = new CoverBuilder(W, H);
@@ -819,10 +826,12 @@ export function buildOjuelegbaCover(board: { width: number; height: number }): B
   });
   const cover = b.build();
   // the flyover's outer edges, crossheads and upper pier shafts overhead (cut away round the fighter)
+  if (o.deck === null) return cover;
   const deck = buildDeck(
     W,
     H,
     groups.filter((g) => g.kind === 'pier'),
+    o.deck,
   );
   cover.object.add(deck.object);
   const dispose = cover.dispose.bind(cover);

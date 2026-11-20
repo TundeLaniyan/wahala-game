@@ -17,6 +17,8 @@ import {
 } from './oshodiCampaign';
 import { communityCampaignKit } from './communityKit';
 import { MUSHIN_CAMPAIGN_ART } from './mushinCampaign';
+import { LEKKI_CAMPAIGN_ART } from './lekkiCampaign';
+import { ojuelegbaCampaignArt } from './ojuelegbaCampaign';
 
 /** A district's campaign kit: how its areas are drawn. */
 export type DistrictKit = (area: CampaignAreaDef) => ArenaArt;
@@ -32,6 +34,9 @@ export const KITS: Readonly<Partial<Record<string, DistrictKit>>> = {
   }),
   // community districts (decision WM1): the community kit with the district's own pieces
   mushin: communityCampaignKit(MUSHIN_CAMPAIGN_ART),
+  lekki: communityCampaignKit(LEKKI_CAMPAIGN_ART),
+  // the Ojuelegba finale (decision WL6): its own cover builder, the Oshodi pattern
+  ojuelegba: ojuelegbaCampaignArt,
 };
 
 /** The presentation of every campaign arena whose district has a kit (an area without one draws the defaults). */
