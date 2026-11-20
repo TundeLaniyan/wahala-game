@@ -277,6 +277,180 @@ platform posts, 27x10 the service corridor, 41x8 the footbridge stair tower) and
 - The rail sub-area's siding is walkable track (no train runs into the area); a train on it would need a `train` sweep and
   its warnings.
 
+## Mushin
+
+Branch `claude/wahala-cg-mushin` (decisions WM1-WM6). Mushin is the first community district on the shared community
+campaign kit (WM1, "How to add a campaign area" step 2): its boards are painted with the Rumble map's own letters
+(`MUSHIN_LEGEND`) and drawn by the community cover factory, floor and environment with the Rumble Mushin looks, cover
+families and ground, and a set of the Rumble set's pieces placed from each area's landmarks (`mushinCampaign.ts`).
+
+```
+            (the Red Line and the Mushin shop rows north)
+   mushin.partsRow (NW) ---- the yard service lane ---- mushin.marketHall (NE)
+   mission 1                                             mission 2
+            \____ the Idi-Oro road and the transit square = the City Rumble map ____/
+                         boss: the whole Rumble map (unchanged, WM6)
+```
+
+Legend of the maps below: the Mushin letters (B building, S shop, L lock-up, P parts stall, H tyre heap, W workshop, M stall,
+G warehouse, T timber / goods stack, K kiosk, C wall, D stall canopy), `.` floor, `_` kept clear, `=` service lane, `x`
+barrier crate, `$` supply crate.
+
+### Mission 1, Spare-Parts Row: the Ladipo side streets and the supplier yard (`mushin.partsRow`, `campaignMushinPartsRow`, 48 x 26)
+
+```
+    0         1         2         3         4
+    012345678901234567890123456789012345678901234567
+  0 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  1 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  2 BB...........SSSSSSSSSSSSSSSSSS.C.............BB
+  3 BBWW...PP.SS....................C.GGGGG..GGGGGBB
+  4 BBWW...PP.SS..PPP..PPP..PPP..HH.C.GGGGG..GGGGGBB
+  5 BBWW......SS..PPP..PPP..PPP..HH.C.GGGGG..GGGGGBB
+  6 BB........SS...........1........C.GGGGG..GGGGGBB
+  7 BB.....PP.SS.HH..PPP..PPP..PPP..C.............BB
+  8 BBWW...PP.SS.HH..PPP..PPP..PPP..C......KK.....BB
+  9 BBWW......SS...................xC_____________BB
+ 10 BBWW...H..SS..PPP...PPP...PPP...C___t_________BB
+ 11 BB..............................C_____________BB
+ 12 BB.........x....................C...........t.BB
+ 13 BB...$..........................C.C...........BB
+ 14 BBWW...PP....WWW...WWW...WWWW...C.C.GGGGGGG.HHBB
+ 15 BBWW...PP....WWW...WWW...WWWW...C.C.GGGGGGG.HHBB
+ 16 BBWW............................C...GGGGGGG...BB
+ 17 BB...........................HH.C......D......BB
+ 18 BB....KK....LLL..LLL...LLL...HH.G.............BB
+ 19 BB..........LLL..LLL...LLL......G..........HH.BB
+ 20 BB..R.........................2.G....WWWW..HH.BB
+ 21 BB.......LLL...WW...WWW...K$....C....WWWW.....BB
+ 22 BB.@.....LLL...WW...WWW.........C.KK......t...BB
+ 23 BB..............................C.KK..........BB
+ 24 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 25 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+(`@` start, `R` ROW GATE return, `1` STALL ROW, `2` BACK AISLE, `t` parts cage, `D` the storeroom door, `G` the yard's
+steel gate, a sector gate: closed until the checkpoints are walked.)
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| Row Gate street (x 2-11) | street | The entry and the way out: a narrow side street of workshops and parts stalls, a kiosk, the ROW GATE return; the back of the stall row's shops is its east frontage. |
+| Spare-parts row (x 12-31, y 2-11) | works | Shopfronts north, parts stalls and tyre heaps in a staggered grid; checkpoint STALL ROW on the parts hawker's 18-tile loop. |
+| Engine back aisle (x 12-31, y 12-23) | lane | The cross street, workshops, lock-ups and a heap; the stall guard's 32-tile loop; checkpoint BACK AISLE by the yard gate. |
+| Supplier yard (x 32-45) | service | Behind the steel gate: two warehouses, the kept-clear loading apron with the first cage, the parts storeroom and its door, the second and third cages; the bay runner's 34-tile loop, the cage minder (heavy) and the bay lookout (thrower). |
+
+Landmarks (`areasMushin.ts`): the Mushin Red Line station on its viaduct (north), the Row Gate Spares Association board
+(north), the parts spill of umbrellas, tyre stacks and drums (west), the engine-testing smoke (north), the supplier yard
+floodlights (east).
+
+### Mission 2, Aisle Sweep: the covered market, the warehouses and the service lane (`mushin.marketHall`, `campaignMushinMarketHall`, 50 x 26)
+
+```
+    0         1         2         3         4
+    01234567890123456789012345678901234567890123456789
+  0 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  1 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  2 BBS..SSSSSSSSSSSS..............C===============.BB
+  3 BB.R..............LLL...LLL..KKC===============.BB
+  4 BB.MM..MM..MM..DD.LLL...LLL..KKC......2..._____.BB
+  5 BB.MM..MM..MM..DD..............CGGGGGGGGG.__h__.BB
+  6 BB.............................C.........._____.BB
+  7 BB......MM..DD.....MM..MM..MM..C..TTTT...C......BB
+  8 BB......MM..DD.....MM..MM..MM..C..TTTT...C.GGG..BB
+  9 BB.........SSS.................C.........C.GGG..BB
+ 10 BB.MM..DD.DSSS.MM..............C.x...1..........BB
+ 11 BB.MM..DD..MM..MMKKK..LLLL..KKKC......TT........BB
+ 12 BB....................LLLL.....G..TT..TT.C.GGGG.BB
+ 13 BB..DD..MM..MM..x..........$...G..TT..TT.C.GGGG.BB
+ 14 BB..DD..MM..MM.................G.........C......BB
+ 15 BB.................MM..MM..MM..CCCCC..CCCCCC..C.BB
+ 16 BB.MM..MM..MM..DD..MM..MM..MM..C................BB
+ 17 BB.MM..MM..MM..DD..............C..............$.BB
+ 18 BB.............................C..WWWW...HH.....BB
+ 19 BB..MM..MM..DD....LLL...LLL..DDC..WWWW...HH.....BB
+ 20 BB..MM..MM..DD....LLL...LLL..DDC................BB
+ 21 BB.............................CLL..........WWW.BB
+ 22 BB.@..LLLL....$................CLL....KK....WWW.BB
+ 23 BB....LLLL.....................CLL..............BB
+ 24 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 25 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+(`@` start, `R` MARKET GATE return, `D` at 10,10 the BACK STALL door (optional raid), `1` FAR STALL, `2` TOP STREET, `h` the
+LORRY BAY hold zone (radius 1), `G` at x 31 the hall's steel gate, a sector gate: closed until the runners are down.)
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| Oloja covered market (x 2-16) | street | The entry and the way out: 2 x 2 stall blocks and canopies with one-stall aisles, the back stall and its door, a runner's 30-tile loop, the MARKET GATE in the north shop row. |
+| Provisions aisles (x 17-30) | lane | Kiosks, lock-ups and stall pairs; a runner's 24-tile loop, a thrower runner on the south aisle (26 tiles), the last loader's 24-tile loop north. |
+| Warehouse interiors (x 31-47, y 5-15) | works | Behind the hall gate: goods stacks between walls and a warehouse bay; the FAR STALL checkpoint; a loader's 18-tile loop round the goods bay. |
+| Service lane and lorry bay (y 2-4, the yard y 16-23) | service | The top street (the service lane, TOP STREET checkpoint), the kept-clear lorry bay at its east end to hold for 40 s, a loader on the kerb; the late loaders (a thrower, an area boy on a 16-tile loop round the tyre heap) in the loaders' yard south. |
+
+Landmarks: the Oloja Covered Market board (north), the market street's lock-up stalls (west), the Red Line behind the
+service lane (north), the lorry bay floodlights (east), the loaders' danfo rank (east).
+
+### Mission 3, the Mushin boss: unchanged on the Rumble map (WM6)
+
+The Parts Broker's recipe places its stacks across the whole district map in every phase (phase 1: Ladipo 11,8, Idi-Oro
+25,22, Daleko 44,7; phase 2: the courtyards 9,28 to Timber Row 49,30; phase 3: 6,36 to 49,10), the runners restock from all
+six quarters and the traffic and truck sweeps run the main road edge to edge. No coherent part of the map holds every stack
+of the three phases without moving them (which would change the recipe), so the boss is not bounded: it plays the whole
+Rumble map as before. A bounded Mushin boss needs the stacks re-authored first.
+
+### What is new, expanded, reused, unchanged
+
+| Item | Status |
+| --- | --- |
+| The Parts Row board: Row Gate street, spare-parts row, engine back aisle, supplier yard and its gate (48 x 26) | NEW (campaign-only geography) |
+| The Market Hall board: covered market, provisions aisles, warehouse interiors, service lane and lorry bay, loaders' yard, the hall gate (50 x 26) | NEW (campaign-only geography) |
+| Spare-Parts Row and Aisle Sweep play area | EXPANDED: 349 -> 684 and 369 -> 734 walkable tiles, 4 sub-areas each |
+| The two missions' routes, enemy posts and patrols, cages, markers, door and hold zone positions | NEW (re-authored on the new boards) |
+| Leg kinds, labels, door / raid ids (`storeroom`, `backStall` / `partsStoreroom`), groups, clocks and pars | UNCHANGED |
+| The boss mission | UNCHANGED (whole Rumble map, WM6) |
+| Cover objects, looks, night looks, ground, Red Line station, footbridge, umbrellas, stalls, tyre stacks | REUSED (the Rumble Mushin pieces through the community kit; no new model, texture or audio) |
+| The City Rumble Mushin map, Classic, City Rumble, multiplayer | UNCHANGED (layout and cover hashes pinned) |
+
+### Mushin measurements
+
+The same scripts as Oshodi's, old = the integration branch at `77e128f` (the missions in their Rumble-map sectors).
+
+| Measure | Spare-Parts Row old -> new | Aisle Sweep old -> new |
+| --- | --- | --- |
+| Walkable tiles of the play area | 349 -> 684 | 369 -> 734 |
+| Scripted playthrough (6 seeds) Easy / Normal / Hard won | 6/6/6 -> 6/6/6 | 6/6/6 -> 6/6/6 |
+| Field seconds Easy / Normal / Hard (mean of wins) | 61.5 / 77.0 / 81.9 -> 71.7 / 66.7 / 76.0 | 104.1 / 108.5 / 130.9 -> 99.3 / 107.1 / 120.9 |
+| Lives used Easy / Normal / Hard (mean) | 0 / 0 / 0.17 -> 0 / 0 / 0.17 | 0 / 0 / 0.17 -> 0 / 0 / 0 |
+| Human-like bait on the default target, Normal (8 seeds): first try / within two | 8/8, 8/8 -> 7/8, 8/8 | 8/8, 8/8 -> 8/8, 8/8 |
+| Plain-sight fairness probe (4 seeds, at most 1 caught) | 0/4 -> 0/4 | 0/4 -> 0/4 |
+| Ordinary roamers on a real route (readability) | 3/3 -> 3/3 | 6/6 -> 6/6 |
+
+District cost Hard > Normal x 1.05 and Easy <= Normal x 1.05 (`tests/field-districts-mushin.test.ts`): passes on the new
+boards. Readability probe (`scripts/readability.ts normal`, old both missions together -> new per mission): pursued 24 of
+26 probes -> 10 of 10 / 10 of 16; human hurt by anyone 25 % -> 20 % / 20 %; chase mean 2.3 s -> 1.7 / 2.1 s (p95 3.8 ->
+2.9 / 5.2 s); back on route median 3.4 s -> 3.8 / 3.7 s.
+
+Render cost (`scripts/campaign-perf.mjs field:mushin.approach,field:mushin.market low,high --dist=dist`, a 740 x 360 page;
+old = the `field:mushin.approach` rows of docs/measurements/campaign-guidance-expansion-baseline.md, `0b89d09` / the camera
+branch; Aisle Sweep has no old row there). **Software rendering on a shared 4-core machine with other workers running: frame
+times are noisy and are not phone timings.**
+
+| Mission | Quality | Draw calls old -> new | Triangles old -> new | Geometries old -> new | Textures old -> new | Build ms new | Frame mean / p95 ms new |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `mushin.approach` | low | 216-220 -> 137 | 684344-686978 -> 428020 (-37 %) | 212-316 -> 166 | 148-202 -> 158 | 3921 | 1044 / 3417 |
+| `mushin.market` | low | - -> 162 | - -> 500772 | - -> 161 | - -> 147 | 5771 | 867 / 2267 |
+| `mushin.approach` | high | 559-563 -> 388 | 2097902-2100532 -> 1381399 (-34 %) | 303-353 -> 201 | 242-276 -> 228 | 6775 | 2530 / 6316 |
+| `mushin.market` | high | - -> 403 | - -> 1440972 | - -> 198 | - -> 227 | 3843 | 2411 / 6566 |
+
+As with Oshodi, the campaign board builds only its own 48 x 26 / 50 x 26 world instead of the 53 x 39 district's backdrop,
+set and clipped cover: about a third fewer triangles and draw calls although the play area is about twice the old sector.
+
+Screenshots: `docs/screenshots/campaign-guidance-expansion/world/mushin/` (30 shots, `phone-` 740 x 360 and `phoneWide-`
+844 x 390 at device scale 2, `desktop-` 1280 x 720): Parts Row 4x20 the gate street, 22x6 the stall row, 22x17 the back
+aisle, 39x10 the supplier yard, the overview; Market Hall 5x18 the covered market, 24x9 the provisions aisles, 36x10 the
+warehouses, 44x5 the lorry bay, the overview. Far teleports were shot with `SHOT_SETTLE_MS=9000` (`scripts/sector-shots.mjs`:
+the follow camera glides per frame and a software frame takes about a second).
+
+What is left for Mushin: the boss (WM6, its stacks would need re-authoring first).
 
 ## Fadeyi/Somolu
 

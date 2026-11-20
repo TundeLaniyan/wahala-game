@@ -215,6 +215,20 @@ const COMMUNITY_AREAS: readonly {
   before: Record<string, unknown>[];
 }[] = [
   {
+    fieldId: 'mushin.approach',
+    arenaId: 'campaignMushinPartsRow',
+    sector: 'mushin.partsRow',
+    gate: 'yardGate',
+    before: [won('oshodi')],
+  },
+  {
+    fieldId: 'mushin.market',
+    arenaId: 'campaignMushinMarketHall',
+    sector: 'mushin.marketHall',
+    gate: 'hallGate',
+    before: [won('oshodi'), won('mushin', 'mushin.approach')],
+  },
+  {
     fieldId: 'fadeyiSomolu.approach',
     arenaId: 'campaignFadeyiTollCorridor',
     sector: 'fadeyiSomolu.tollCorridor',

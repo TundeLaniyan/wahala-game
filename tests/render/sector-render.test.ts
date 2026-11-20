@@ -10,7 +10,8 @@ import { FIELD_MISSION_DEFS, FIELD_MISSION_IDS, buildMissionGame, createGame } f
 import type { GameState } from '../../src/sim';
 import { Tile } from '../../src/sim/types';
 import { getSector } from '../../src/sim/mission/sectors';
-import { openSectorGates } from '../../src/sim/mission/sector';
+import { applySector, openSectorGates } from '../../src/sim/mission/sector';
+import type { MissionSectorDef } from '../../src/sim/mission/sectors';
 import { buildSectorBarricades } from '../../src/render/views/SectorBarricades';
 import { mergeCovers, rectInClip } from '../../src/render/arenas/boardCover';
 import { NEW_ARENA_ART } from '../../src/render/arenas/newArenas';
@@ -26,6 +27,44 @@ function field(id: string, noSector = false): GameState {
       seed: 2,
     }),
   );
+}
+
+/**
+ * A district sector of the Mushin City Rumble map: the retired North Aisles sector of Aisle Sweep (the mission plays on its own
+ * campaign area now, decision WM4), kept here as a fixture of a community Rumble board clipped to a sector with barricades.
+ */
+const MUSHIN_AISLES: MissionSectorDef = {
+  id: 'fixture.mushinAisles',
+  districtId: 'mushin',
+  name: 'North market aisles (fixture)',
+  area: 'test fixture',
+  rects: [[2, 2, 50, 13]],
+  barricades: (
+    [
+      [8, 'gate'],
+      [17, 'barrier'],
+      [25, 'checkpoint'],
+      [34, 'barrier'],
+      [42, 'gate'],
+    ] as const
+  ).map(([x, kind], i) => ({
+    id: `mouth${i + 1}`,
+    kind,
+    tiles: [
+      [x, 14],
+      [x + 1, 14],
+    ],
+  })),
+  viewMargin: 3,
+  hazards: 'inside',
+};
+/** The Mushin boss match on its City Rumble map, with a district sector stamped on it (a render fixture). */
+function mushinSector(def: MissionSectorDef = MUSHIN_AISLES): GameState {
+  const s = createGame(
+    buildMissionGame({ spec: { id: 'mushin', noSector: true }, humanCharacter: 'streetBaller', seed: 2 }),
+  );
+  applySector(s, def);
+  return s;
 }
 
 describe('sector barricades are drawn as objects', () => {
@@ -69,9 +108,10 @@ describe('sector barricades are drawn as objects', () => {
   });
 
   it('merged covers: a tile is covered by any, its fade goes to the one that covers it', () => {
-    const s = field('mushin.market');
+    const s = mushinSector();
+    expect(s.arenaId).toBe('rumbleMushin');
     const arena = NEW_ARENA_ART()[s.arenaId]!.cover!({ width: s.width, height: s.height })!;
-    const b = buildSectorBarricades(s)!;
+    const b = buildSectorBarricades(s, MUSHIN_AISLES)!;
     const merged = mergeCovers(arena, b.cover)!;
     const someBuilding = s.tiles.findIndex((t, i) => t === Tile.Hard && arena.covers(i));
     expect(merged.covers(someBuilding)).toBe(true);
@@ -97,10 +137,10 @@ describe('render cost: only what the sector can show is built', () => {
     expect(rectInClip(c, c.x1, c.y0, 3, 3)).toBe(true);
   });
 
-  it.each(['mushin.approach', 'lagosIsland.press', 'lekki.estate'])(
+  it.each(['mushin (Rumble map, fixture sector)', 'lagosIsland.press', 'lekki.estate'])(
     '%s: the arena cover leaves out the objects outside the clip (and is unchanged without one)',
     (id) => {
-      const s = field(id);
+      const s = id.startsWith('mushin') ? mushinSector() : field(id);
       const factory = NEW_ARENA_ART()[s.arenaId]!.cover!;
       const whole = factory({ width: s.width, height: s.height })!;
       const again = factory({ width: s.width, height: s.height })!;
@@ -140,8 +180,8 @@ describe('render cost: only what the sector can show is built', () => {
   });
 
   it('the living environment keeps only traffic, crowds and lights near the sector', () => {
-    for (const id of ['mushin.market', 'lekki.approach', 'oshodi.approach']) {
-      const s = field(id);
+    for (const id of ['mushin', 'lekki.approach', 'oshodi.approach']) {
+      const s = id === 'mushin' ? mushinSector() : field(id);
       const src = NEW_ARENA_ART()[s.arenaId]!.env!;
       const env = resolveEnv(src, { cols: s.width, rows: s.height });
       const clipped = clipEnvironment(env, renderClip(s));

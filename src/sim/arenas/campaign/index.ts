@@ -7,6 +7,8 @@ import { CAMPAIGN_OSHODI_ORITA } from './oshodiOrita';
 import { CAMPAIGN_OSHODI_RAILSIDE } from './oshodiRailside';
 import { CAMPAIGN_FADEYI_TOLL_CORRIDOR } from './fadeyiTollCorridor';
 import { CAMPAIGN_FADEYI_SIDE_ROUTES } from './fadeyiSideRoutes';
+import { CAMPAIGN_MUSHIN_PARTS_ROW } from './mushinPartsRow';
+import { CAMPAIGN_MUSHIN_MARKET_HALL } from './mushinMarketHall';
 
 export const CAMPAIGN_ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
   [
@@ -15,6 +17,8 @@ export const CAMPAIGN_ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEn
     // Fadeyi/Somolu (decisions WF1-WF4)
     CAMPAIGN_FADEYI_TOLL_CORRIDOR,
     CAMPAIGN_FADEYI_SIDE_ROUTES,
+    CAMPAIGN_MUSHIN_PARTS_ROW,
+    CAMPAIGN_MUSHIN_MARKET_HALL,
   ].map((a) => [a.id, a]),
 );
 

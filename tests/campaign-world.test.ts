@@ -69,6 +69,9 @@ describe('campaign arenas never appear in a competitive list', () => {
 const OLD_SECTOR_TILES: Readonly<Record<string, number>> = {
   'oshodi.approach': 188,
   'oshodi.railEdge': 368,
+  // Mushin (decisions WM2-WM5): the old district sectors of the Rumble map
+  'mushin.approach': 349,
+  'mushin.market': 369,
   // Fadeyi/Somolu (decisions WF1-WF4): the old toll-road and north-junction sectors of the Rumble map
   'fadeyiSomolu.approach': 309,
   'fadeyiSomolu.junctions': 302,
@@ -248,6 +251,35 @@ describe('the Oshodi boss in its dispatch corridor (decision WX9)', () => {
     }
   }, 300_000);
 });
+
+// ------------------------------------------------------------------------------------------- Mushin
+
+describe('Mushin', () => {
+  it('the City Rumble Mushin map is unchanged (its layout hash is the one before the campaign areas)', () => {
+    const h = createHash('sha256').update(getArena('rumbleMushin').layout.join('\n')).digest('hex');
+    expect(h.slice(0, 16)).toBe(RUMBLE_MUSHIN_LAYOUT);
+  });
+
+  it('every Mushin field mission plays on its own campaign area; two missions never share a board', () => {
+    const ids = Object.values(FIELD_MISSION_DEFS)
+      .filter((d) => d.districtId === 'mushin')
+      .map((d) => d.id);
+    const boards = ids.map((id) => fieldArenaId(FIELD_MISSION_DEFS[id]!));
+    for (const b of boards) expect(getArena(b).campaignOnly, b).toBe(true);
+    expect(new Set(boards).size).toBe(boards.length);
+    for (let i = 0; i < boards.length; i++)
+      for (let j = i + 1; j < boards.length; j++) {
+        const a = getArena(boards[i]!);
+        const b = getArena(boards[j]!);
+        expect(a.layout.join('\n')).not.toBe(b.layout.join('\n'));
+        const names = new Set(a.districts!.map((d) => d.name));
+        for (const d of b.districts!) expect(names.has(d.name), d.name).toBe(false);
+      }
+  });
+});
+
+/** sha256 (first 16 hex) of the rumbleMushin layout on 77e128f (before the Mushin campaign areas). */
+const RUMBLE_MUSHIN_LAYOUT = 'f4a5b1aec9257cfb';
 
 /** sha256 (first 16 hex) of the rumbleOshodi layout on 0b89d09. */
 const RUMBLE_OSHODI_LAYOUT = '4a76c2f857d6e2bd';

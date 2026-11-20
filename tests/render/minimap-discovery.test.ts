@@ -44,8 +44,16 @@ const count = (d: MinimapDiscovery): number => d.bits.reduce((a, b) => a + b, 0)
 
 describe('minimap discovery', () => {
   it('a sector mission on a district map knows its sector, the fighter’s surroundings and the route to the objective, nothing far', () => {
-    // a field mission still played on its district's City Rumble map (Oshodi's now have their own areas, below)
-    const s = field('mushin.approach');
+    // a field mission on its district's City Rumble map: the archived combat pilot's replay of Terminal Approach in its old
+    // sector of the Oshodi map (WX8; the campaign's field missions have their own areas now, below; Mushin's since WM2)
+    const s = createGame(
+      buildMissionGame({
+        spec: { id: 'oshodi', fieldId: 'oshodi.approach', archivedPilot: true },
+        humanCharacter: 'streetBaller',
+        seed: 3,
+      }),
+    );
+    expect(s.sector).toBeDefined();
     expect(getArena(s.arenaId).campaignOnly).toBeUndefined();
     const d = discoveryFor(s)!;
     d.update(s);
@@ -60,11 +68,11 @@ describe('minimap discovery', () => {
     expect(goal).toBeDefined();
     expect(d.known(goal!.x, goal!.y)).toBe(true);
     for (const p of routeTo(s, me.x, me.y, goal!.x, goal!.y)) expect(d.known(p.x, p.y)).toBe(true);
-    // the far corners of the district are not
+    // the far corners of the district are not (the sector is the south streets: the north corners and the middle east)
     for (const [x, y] of [
       [0, 0],
       [s.width - 1, 0],
-      [0, s.height - 1],
+      [s.width - 1, Math.floor(s.height / 3)],
     ])
       expect(d.known(x!, y!), `${x},${y}`).toBe(false);
     expect(count(d) / (s.width * s.height)).toBeLessThan(0.3);
