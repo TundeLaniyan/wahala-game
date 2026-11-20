@@ -11,11 +11,11 @@ import type { MissionId, NpcRole } from './types';
 import type { RaidId, TerritoryDef } from '../campaign/types';
 import type { EnemyVariantId } from '../data/enemyVariants';
 import type { Tile2 } from './defs';
-import { ebuteX } from '../arenas/ebuteWest';
 import { FINALE_FIELD_DEFS } from './finaleDefs';
 import { ARCHIVED_FIELD_DEFS } from './archivedFieldDefs';
 import { ORITA_ARENA_ID } from '../arenas/campaign/oshodiOrita';
 import { RAILSIDE_ARENA_ID } from '../arenas/campaign/oshodiRailside';
+import { FREIGHT_YARD_ARENA_ID } from '../arenas/campaign/ebuteFreightYard';
 
 export interface FieldMarkerDef {
   x: number;
@@ -496,28 +496,29 @@ const defs: FieldMissionDef[] = [
     parSec: 255,
   },
   // ---------------------------------------------------------------- Ebute-Metta
-  // Yard Approach (docs/CAMPAIGN_SECTOR_AI.md "Districts: Ebute Metta, Lagos Island, Lekki Phase 1", decisions
-  // DB1-DB3): the house streets south of the yard are worked by two street patrols; the switch cabinets that route the
-  // Ring's night freight stand in the lanes, minded by the switchmen; the yard lieutenant walks the lock-up yard by the
-  // fence. Wrecking the cabinets opens the sidings gate: the freight guards hold the wagon lanes; the relief crew, then
-  // whoever is left of the street patrols, come up from the streets while you keep the signal cabin. Then the
-  // signal-shed raid, and back out to the yard gate.
+  // Yard Approach on its own campaign area `ebuteMetta.freightYard` (decisions WE1-WE3; before: DB1-DB3 on the Rumble map):
+  // the same legs, groups and story on the freight yard's board. The street patrols loop the warehouses and lock-ups of the
+  // cargo streets; the switch cabinets that route the Ring's night freight stand in the streets, by the level crossing and
+  // in the works, minded by the switchmen. Wrecking them opens the sidings gate in the yard fence: the freight guards hold
+  // the wagon lanes; the relief crew from round the goods shed, then whoever is left of the street patrols, come for the
+  // signal cabin while you keep it. Then the signal-shed raid (its lieutenant walks round the shed), and back to the yard gate.
   {
     id: 'ebuteMetta.approach',
-    sectorId: 'ebuteMetta.yardApproach',
+    arenaId: FREIGHT_YARD_ARENA_ID,
+    sectorId: 'ebuteMetta.freightYard',
     districtId: 'ebuteMetta',
     name: 'Yard Approach',
-    start: [ebuteX(3), 32],
-    returnMarker: m(ebuteX(6), 36, 'YARD GATE'),
+    start: [3, 26],
+    returnMarker: m(3, 24, 'YARD GATE'),
     legs: [
       {
         kind: 'destroyTargets',
         text: 'Destroy the 4 switch cabinets on the yard streets.',
         targets: [
-          { id: 'cabinetWest', kind: 'switchCabinet', x: ebuteX(1), y: 29, label: 'SWITCH CABINET' },
-          { id: 'cabinetMid', kind: 'switchCabinet', x: ebuteX(12), y: 29, label: 'SWITCH CABINET' },
-          { id: 'cabinetYard', kind: 'switchCabinet', x: ebuteX(27), y: 35, label: 'SWITCH CABINET', hp: 2 },
-          { id: 'cabinetFence', kind: 'switchCabinet', x: ebuteX(36), y: 31, label: 'SWITCH CABINET', hp: 2 },
+          { id: 'cabinetWest', kind: 'switchCabinet', x: 8, y: 19, label: 'SWITCH CABINET' },
+          { id: 'cabinetMid', kind: 'switchCabinet', x: 19, y: 9, label: 'SWITCH CABINET' },
+          { id: 'cabinetYard', kind: 'switchCabinet', x: 24, y: 21, label: 'SWITCH CABINET', hp: 2 },
+          { id: 'cabinetFence', kind: 'switchCabinet', x: 36, y: 24, label: 'SWITCH CABINET', hp: 2 },
         ],
         crew: 'switchmen',
       },
@@ -525,7 +526,7 @@ const defs: FieldMissionDef[] = [
       {
         kind: 'holdArea',
         text: 'Keep the signal cabin clear for 25 seconds.',
-        area: { x: ebuteX(25), y: 22, radius: 1, label: 'SIGNAL CABIN' },
+        area: { x: 39, y: 9, radius: 1, label: 'SIGNAL CABIN' },
         holdSec: 25,
         waves: [
           { group: 'relief', atSec: 4 },
@@ -537,40 +538,28 @@ const defs: FieldMissionDef[] = [
     doors: [
       {
         id: 'shed',
-        x: ebuteX(33),
-        y: 29,
+        x: 41,
+        y: 24,
         label: 'SIGNAL SHED',
         raidId: 'junctionToolShed',
-        returnTile: [ebuteX(33), 28],
+        returnTile: [41, 25],
         required: true,
       },
     ],
     enemies: [
-      // the street patrols: the middle street (between the houses and the lock-ups) and the north street
-      guard('Yard Enforcer', ebuteX(12), 32, 'streets', patrol('agbero', [ebuteX(4), 31], [ebuteX(20), 31])),
-      guard('Yard Runner', ebuteX(14), 27, 'streets', patrol('areaBoy', [ebuteX(2), 27], [ebuteX(22), 27])),
+      // the street patrols: a loop round the lock-ups by the yard gate, a loop round the cargo lock-ups north of the road
+      guard('Yard Enforcer', 6, 18, 'streets', patrol('agbero', [3, 18], [10, 18], [10, 23], [3, 23])),
+      guard('Yard Runner', 12, 11, 'streets', patrol('areaBoy', [2, 11], [18, 11], [18, 6], [2, 6])),
       // the switchmen mind the cabinets (they stand by the nearest one while the cabinets stand)
-      guard('Switchman', ebuteX(13), 30, 'switchmen', post('agbero')),
-      chaser('Bottle Switchman', ebuteX(28), 34, 'switchmen', post('bottleThrower', 3)),
+      guard('Switchman', 20, 7, 'switchmen', post('agbero')),
+      chaser('Bottle Switchman', 30, 22, 'switchmen', post('bottleThrower', 3)),
       // behind the sidings gate: the freight guards on the wagon lanes
-      blocker('Freight Guard', ebuteX(33), 23, 'freight', post('heavyEnforcer', 2)),
-      chaser('Freight Thrower', ebuteX(34), 20, 'freight', post('bottleThrower', 2)),
-      // the relief enforcer loiters in the south yard until the cabin is taken
-      guard(
-        'Relief Enforcer',
-        ebuteX(20),
-        35,
-        'relief',
-        patrol('agbero', [ebuteX(18), 35], [ebuteX(24), 35]),
-      ),
-      // the yard lieutenant walks the lock-up yard by the fence (he reads traps: a long fight, never required)
-      guard(
-        'Yard Lieutenant',
-        ebuteX(32),
-        35,
-        'yard',
-        patrol('lieutenant', [ebuteX(29), 36], [ebuteX(37), 36], [ebuteX(37), 33], [ebuteX(34), 34]),
-      ),
+      blocker('Freight Guard', 36, 8, 'freight', post('heavyEnforcer', 2)),
+      chaser('Freight Thrower', 44, 9, 'freight', post('bottleThrower', 2)),
+      // the relief enforcer loops round the goods shed by the crossing until the cabin is taken
+      guard('Relief Enforcer', 30, 18, 'relief', patrol('agbero', [25, 16], [30, 16], [30, 26], [25, 26])),
+      // the yard lieutenant walks round the signal shed (he reads traps: a long fight, never required)
+      guard('Yard Lieutenant', 44, 20, 'yard', patrol('lieutenant', [37, 20], [47, 20], [47, 26], [37, 26])),
     ],
     timeLimitSec: 540,
     parSec: 300,

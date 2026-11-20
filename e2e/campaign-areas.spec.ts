@@ -183,3 +183,138 @@ test('Rail Edge: the Railside area loads its own board and the mission is comple
   expect(out).toMatchObject({ result: 'won', sectionMissionId: 'oshodi.railEdge' });
   expect(errors).toEqual([]);
 });
+
+// ------------------------------------------------------------------------------------------------ the community areas
+
+/**
+ * The community districts' campaign areas (Ebute Metta and Lagos Island, decisions WE1-WE8): each field mission starts
+ * through the real campaign flow (a save with the earlier districts cleared, `startSectionMission`), loads its own
+ * campaign-only board with its sector gate closed, builds the scene and the minimap with no page error, and is completed:
+ * each leg staged in the sim state (their rules have unit tests), the gate open after its leg, a door's raid handed over
+ * and back (staged outcome), the escape exit and the return marker.
+ */
+const AREAS: readonly { fieldId: string; arena: string; sector: string; gate: string; through: string[] }[] =
+  [
+    {
+      fieldId: 'ebuteMetta.approach',
+      arena: 'campaignEbuteFreightYard',
+      sector: 'ebuteMetta.freightYard',
+      gate: 'sidingsGate',
+      through: ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta'],
+    },
+  ];
+
+const bossWin = (missionId: string): Record<string, unknown> => ({
+  result: 'won',
+  missionId,
+  modifiers: [],
+  seconds: 150,
+  livesUsed: 0,
+  phasesCleared: 3,
+  defeat: 'eliminated',
+  stars: 2,
+  creditedKills: 3,
+});
+
+for (const a of AREAS)
+  test(`${a.fieldId}: its campaign area loads through the campaign and the mission is completed`, async ({
+    page,
+  }) => {
+    test.setTimeout(600_000);
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await open(page, '&noattract');
+    await page.evaluate(
+      ({ wins, fieldId }) => {
+        const c = (window as any).__WAHALA__.campaign();
+        c.load();
+        c.startNew();
+        c.storyDone();
+        for (const w of wins) c.finishMission(w);
+        c.toMap();
+        if (!c.startSectionMission(fieldId)) throw new Error('mission did not start');
+      },
+      { wins: a.through.map(bossWin), fieldId: a.fieldId },
+    );
+    await inMatch(page);
+    await playing(page);
+    const at = await scene(page);
+    expect(at.arenaId).toBe(a.arena);
+    expect(at.sector).toBe(a.sector);
+    expect(at.gates).toEqual([{ id: a.gate, open: false }]);
+    expect(at.drawn.barricades).toBe(1);
+    await expect.poll(async () => (await scene(page)).stats?.triangles ?? 0).toBeGreaterThan(10_000);
+    await expect(page.getByTestId('minimap')).toBeVisible();
+
+    const def = await page.evaluate((id) => (window as any).__WAHALA__.fieldMissionDef(id), a.fieldId);
+    const sector = await page.evaluate(() => (window as any).__WAHALA__.getState().sector);
+    const gateLeg: number = sector.gates[0].opensAfterLeg;
+    const leg = (): Promise<number> =>
+      page.evaluate(() => (window as any).__WAHALA__.getState().mission.field.leg);
+    for (let i = 0; i < def.legs.length; i++) {
+      const l = def.legs[i];
+      expect(await leg()).toBe(i);
+      if (l.kind === 'door') {
+        const door = def.doors.find((d: any) => d.id === l.doorId);
+        await stage(page, door.x, door.y, 150);
+        await page.waitForFunction(
+          () => (window as any).__WAHALA__.getState().settings.game === 'raid',
+          null,
+          { timeout: 120_000 },
+        );
+        await inMatch(page);
+        await page.evaluate(() => {
+          const s = (window as any).__WAHALA__.getState();
+          s.raid.outcome = {
+            raidId: s.raid.raidId,
+            result: 'completed',
+            seconds: 60,
+            optionalRoomsOpened: 1,
+            optionalRoomsTotal: 2,
+            cargoDestroyed: 3,
+            cargoTotal: 3,
+            hpLeft: 3,
+            livesUsed: 0,
+            stars: 3,
+          };
+        });
+        await page.waitForFunction(
+          () => (window as any).__WAHALA__.getState().settings.game === 'mission',
+          null,
+          { timeout: 120_000 },
+        );
+        await inMatch(page);
+        expect((await scene(page)).arenaId).toBe(a.arena);
+        await page.evaluate(() => ((window as any).__WAHALA__.controller().frozen = true));
+      } else if (l.kind === 'escapeRoute') {
+        await stage(page, l.exit.x, l.exit.y, 2);
+      } else {
+        await page.evaluate((l) => {
+          const w = (window as any).__WAHALA__;
+          const s = w.getState();
+          const down = (pred: (seat: any) => boolean): void => {
+            for (const seat of s.mission.seats.filter((x: any) => x.role !== 'player' && pred(x)))
+              s.players[seat.playerId].alive = false;
+          };
+          if (l.kind === 'clearGroup') down((x) => x.group === l.group);
+          if (l.kind === 'destroyTargets')
+            for (const t of s.mission.field.targets) {
+              t.hp = 0;
+              t.destroyed = true;
+            }
+          if (l.kind === 'holdArea') {
+            down((x) => x.group !== 'pursuers');
+            s.mission.field.hold.ticks = l.holdSec * 60;
+          }
+          w.stepTicks(2);
+        }, l);
+      }
+      expect(await leg()).toBe(i + 1);
+      // the sector gate opens after its leg (a sector transition)
+      expect((await scene(page)).gates).toEqual([{ id: a.gate, open: i >= gateLeg }]);
+    }
+    await stage(page, def.returnMarker.x, def.returnMarker.y, 4);
+    const out = await page.evaluate(() => (window as any).__WAHALA__.getState().mission.outcome);
+    expect(out).toMatchObject({ result: 'won', sectionMissionId: a.fieldId });
+    expect(errors).toEqual([]);
+  });

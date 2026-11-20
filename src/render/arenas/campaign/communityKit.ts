@@ -76,6 +76,11 @@ export interface CommunityDistrictArt {
   /** The district's ground (its Rumble floor's colours) and a tint per sub-area role. */
   floor: Pick<FloorOpts, 'seed' | 'base' | 'dust' | 'road' | 'kerb' | 'pavers' | 'lane'> & {
     roleTint: Partial<Record<DistrictDef['role'], string>>;
+    /**
+     * Optional (decision WE4): the district's own floor marks on an area's layout, drawn after the kit's (Ebute Metta: rails
+     * and ballast on its track lanes). Absent = the kit's floor only.
+     */
+    extra?: FloorOpts['extra'];
   };
   env: Pick<EnvSpec, 'kinds' | 'beds'> & {
     seed: number;
@@ -108,7 +113,8 @@ function floorOf(art: CommunityDistrictArt, area: CampaignAreaDef, arena: () => 
     ...art.floor,
     tint,
     arena,
-    extra: (g, _rg, layout) => {
+    extra: (g, rg, layout, r) => {
+      art.floor.extra?.(g, rg, layout, r);
       const at = (x: number, y: number): string => layout[y]?.[x] ?? '#';
       // every authored barrier in a painted frame (breakable, and it says so)
       layout.forEach((row, y) => [...row].forEach((c, x) => c === 'x' && barrierFrame(g, x, y)));

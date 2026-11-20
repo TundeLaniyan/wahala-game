@@ -153,45 +153,7 @@ const defs: MissionSectorDef[] = [
     viewMargin: 3,
     hazards: 'inside',
   },
-  // ---------------------------------------------------------------- Ebute-Metta
-  {
-    id: 'ebuteMetta.yardApproach',
-    districtId: 'ebuteMetta',
-    name: 'Yard streets and the sidings',
-    area: 'The southern yard streets from the yard gate past the lock-ups to the signal shed, and behind the sidings gate the wagon lanes, the signal cabin and the track end; the rail line ends at a buffer stop, the yard fence closes the east, Murtala Muhammed Way is lined with barriers and a parked bus.',
-    // the yard streets, then the sidings north of them (closed until the switch cabinets are wrecked: decision DB2)
-    rects: [
-      [15, 26, 57, 36],
-      [38, 20, 57, 25],
-    ],
-    barricades: [
-      b('mouth1', 'barrier', row(25, 17, 19)),
-      b('mouth2', 'barrier', row(25, 26, 27)),
-      b('mouth3', 'checkpoint', row(25, 31, 33)),
-      // the wall between the streets and the sidings (the sidings gate is its east end)
-      b('yardBus', 'bus', row(25, 38, 40)),
-      b('yardBar', 'barrier', row(25, 41, 45)),
-      b('bufferStop', 'rail', row(25, 46, 47)),
-      b('yardBar2', 'barrier', row(25, 48, 48)),
-      b('westN', 'barrier', col(14, 26, 27)),
-      b('westM', 'gate', col(14, 31, 32)),
-      b('westS', 'barrier', col(14, 35, 36)),
-      b('yardFenceN', 'gate', col(58, 27, 31)),
-      b('yardFenceS', 'gate', col(58, 32, 36)),
-      // the sidings: the street west of the signal cabin, Murtala Muhammed Way north, the timber yard east
-      b('cabinStreet', 'barrier', row(22, 37, 37)),
-      b('roadBarW', 'barrier', row(19, 42, 45)),
-      b('trackBuffer', 'rail', row(19, 46, 47)),
-      b('roadBus', 'bus', row(19, 48, 51)),
-      b('roadBarE', 'barrier', row(19, 52, 55)),
-      b('roadBarEnd', 'barrier', row(19, 57, 57)),
-      b('timberN', 'barrier', col(58, 20, 20)),
-      b('timberS', 'gate', col(58, 23, 24)),
-    ],
-    gates: [{ id: 'sidingsGate', kind: 'gate', tiles: row(25, 53, 57), opensAfterLeg: 0 }],
-    viewMargin: 3,
-    hazards: 'inside',
-  },
+  // Ebute-Metta's field mission plays on its own campaign area now (decisions WE1-WE3, `campaignAreas.ts`)
   // ---------------------------------------------------------------- Lagos Island
   {
     id: 'lagosIsland.ledgerRow',

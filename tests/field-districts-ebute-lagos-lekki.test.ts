@@ -181,7 +181,7 @@ describe('the five missions: generator-sensitive and varied', () => {
   it('the existing door raids and their return tiles are kept', () => {
     const doors = (id: string) =>
       FIELD_MISSION_DEFS[id]!.doors.map((d) => `${d.id}:${d.raidId}:${d.returnTile}`);
-    expect(doors('ebuteMetta.approach')).toEqual(['shed:junctionToolShed:53,28']);
+    expect(doors('ebuteMetta.approach')).toEqual(['shed:junctionToolShed:41,25']);
     expect(doors('lagosIsland.approach')).toEqual(['annexe:recordsVault:14,29']);
     expect(doors('lekki.approach')).toEqual(['plant:standbyPlant:14,28']);
     expect(doors('lagosIsland.press')).toEqual([]);
@@ -189,7 +189,7 @@ describe('the five missions: generator-sensitive and varied', () => {
   });
 
   it('the sidings gate (Ebute Metta) and the inner estate gate (Lekki) open after the first leg', () => {
-    expect(getSector('ebuteMetta.yardApproach').gates?.map((g) => [g.id, g.opensAfterLeg])).toEqual([
+    expect(getSector('ebuteMetta.freightYard').gates?.map((g) => [g.id, g.opensAfterLeg])).toEqual([
       ['sidingsGate', 0],
     ]);
     expect(getSector('lekki.northEstate').gates?.map((g) => [g.id, g.opensAfterLeg])).toEqual([

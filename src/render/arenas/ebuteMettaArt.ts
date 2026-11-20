@@ -44,7 +44,7 @@ const cream = '#efe6d0';
 /** Half the board width in metres (the board is `EBUTE_OLD_W + EBUTE_WEST_DX` = 75 tiles wide): world x of its west / east edge. */
 const W_HALF = (55 + EBUTE_WEST_DX) / 2;
 
-const THEME: Theme = {
+export const EBUTE_THEME: Theme = {
   plaster: [0xc8b48e, 0xd2c6a6, 0xb88a64, 0xcfa88a, 0x9fb0a6, 0xc8c0a8, 0xb4a090],
   far: [0xb5654a, 0xd2c6a6, 0x9a4a32, 0xc89a78, 0x7a8aa0, 0xc8c0a8],
   tarps: [0xc83a2a, 0xe0b020, 0x2a6aa8, 0x2f8a4a, 0xe07a20, 0x7a3a8a],
@@ -67,12 +67,12 @@ const THEME: Theme = {
 
 /**
  * The west's palette and boards (Ebute Metta West): older plastered houses in washed ochres, greens and pinks, corrugated
- * roofs, hand-painted generic shop names. The east objects keep THEME exactly (their variants and signs are unchanged).
+ * roofs, hand-painted generic shop names. The east objects keep EBUTE_THEME exactly (their variants and signs are unchanged).
  */
 const THEME_WEST: Theme = {
   plaster: [0xcdb48a, 0xb8b894, 0xd4a890, 0xa8b49c, 0xc8a070, 0xd8ccb0, 0xb89a84],
-  far: THEME.far,
-  tarps: THEME.tarps,
+  far: EBUTE_THEME.far,
+  tarps: EBUTE_THEME.tarps,
   roofs: [0x8a4a30, 0x7a6a5a, 0x6a7478, 0xa05a3a],
   accent: [0x2e5a34, 0x7a1e1e, 0x2a5a8a, 0xc8a02a, 0x5a3a2a],
   shops: [
@@ -680,7 +680,7 @@ const signalPost: Family = (k, g, r) => {
     cbox(k, g, k.paint, 1.3, 0.16, 0.04, r.cx, 2.3, r.cz + 0.12, 0xe8c828, 0, 0, rz); // cross-buck
 };
 
-const FAMILIES: Record<string, Family> = {
+export const EBUTE_FAMILIES: Record<string, Family> = {
   building: forWest(building),
   shop: forWest(shop),
   lockup: forWest(lockup),
@@ -707,7 +707,7 @@ const FAMILIES: Record<string, Family> = {
   boatSlip,
   signalPost,
 };
-const REACH: Record<string, number> = {
+export const EBUTE_REACH: Record<string, number> = {
   building: 3,
   shop: 3,
   lockup: 1,
@@ -736,9 +736,9 @@ const REACH: Record<string, number> = {
 };
 export const RUMBLE_EBUTE_METTA_COVER: CoverFactory = communityCover({
   arenaId: ID,
-  theme: THEME,
-  families: FAMILIES,
-  reach: REACH,
+  theme: EBUTE_THEME,
+  families: EBUTE_FAMILIES,
+  reach: EBUTE_REACH,
 });
 
 export const RUMBLE_EBUTE_METTA_LOOK: ArenaLook = {
@@ -770,12 +770,17 @@ export const RUMBLE_EBUTE_METTA_NIGHT_LOOK: ArenaLook = nightLookOf(RUMBLE_EBUTE
   [10, 2.6, 19.4, 0xffa850],
 ]);
 
-export const RUMBLE_EBUTE_METTA_FLOOR: FloorDrawer = communityFloor(ID, {
+/** The Ebute Metta ground: warm dust over worn concrete and rail ballast (shared with the campaign area, ebuteMettaCampaign.ts). */
+export const EBUTE_GROUND = {
   seed: 3411,
-  base: [168, 144, 118],
+  base: [168, 144, 118] as [number, number, number],
   dust: 'rgba(150,100,60,',
-  road: [60, 58, 56],
-  pavers: [172, 156, 136],
+  road: [60, 58, 56] as [number, number, number],
+  pavers: [172, 156, 136] as [number, number, number],
+};
+
+export const RUMBLE_EBUTE_METTA_FLOOR: FloorDrawer = communityFloor(ID, {
+  ...EBUTE_GROUND,
   tint: {
     heritage: 'rgba(90,130,80,0.18)',
     station: 'rgba(170,170,160,0.16)',
@@ -973,7 +978,7 @@ function build(ctx: SetContext): void {
     color: 0x8a8e90,
   }); // the far bridge across the lagoon
 
-  const tarp = THEME.tarps.map((c) => mat(c, { roughness: 0.88 }));
+  const tarp = EBUTE_THEME.tarps.map((c) => mat(c, { roughness: 0.88 }));
   [-34, -24, -16, -2, 20, 34].forEach((x, i) =>
     setUmbrella(ctx, x, north - 2.4, 0.95, tarp[i % 6]!, tarp[(i + 2) % 6]!, { h: 1.95 }),
   );
