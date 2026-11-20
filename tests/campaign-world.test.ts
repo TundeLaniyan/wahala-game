@@ -69,6 +69,9 @@ describe('campaign arenas never appear in a competitive list', () => {
 const OLD_SECTOR_TILES: Readonly<Record<string, number>> = {
   'oshodi.approach': 188,
   'oshodi.railEdge': 368,
+  // Fadeyi/Somolu (decisions WF1-WF4): the old toll-road and north-junction sectors of the Rumble map
+  'fadeyiSomolu.approach': 309,
+  'fadeyiSomolu.junctions': 302,
 };
 
 const walkable = (
@@ -248,6 +251,48 @@ describe('the Oshodi boss in its dispatch corridor (decision WX9)', () => {
 
 /** sha256 (first 16 hex) of the rumbleOshodi layout on 0b89d09. */
 const RUMBLE_OSHODI_LAYOUT = '4a76c2f857d6e2bd';
+
+// ------------------------------------------------------------------------------------------- Fadeyi/Somolu
+
+describe('Fadeyi/Somolu (decisions WF1-WF4)', () => {
+  const ids = Object.values(FIELD_MISSION_DEFS)
+    .filter((d) => d.districtId === 'fadeyiSomolu')
+    .map((d) => d.id);
+
+  it('the City Rumble Fadeyi map is unchanged (its layout hash is the one before the campaign areas)', () => {
+    const h = createHash('sha256').update(getArena('rumbleFadeyi').layout.join('\n')).digest('hex');
+    expect(h.slice(0, 16)).toBe(RUMBLE_FADEYI_LAYOUT);
+  });
+
+  it('both field missions play on their own campaign areas; the two boards and their parts differ', () => {
+    expect(ids).toEqual(['fadeyiSomolu.approach', 'fadeyiSomolu.junctions']);
+    const boards = ids.map((id) => fieldArenaId(FIELD_MISSION_DEFS[id]!));
+    for (const b of boards) expect(getArena(b).campaignOnly, b).toBe(true);
+    expect(new Set(boards).size).toBe(2);
+    const [a, b] = boards.map((id) => getArena(id));
+    expect(a!.layout.join('\n')).not.toBe(b!.layout.join('\n'));
+    const names = new Set(a!.districts!.map((d) => d.name));
+    for (const d of b!.districts!) expect(names.has(d.name), d.name).toBe(false);
+    // the boss mission keeps the district's Rumble map (decision WF5)
+    expect(MISSION_DEFS.fadeyiSomolu.arenaId).toBe('rumbleFadeyi');
+  });
+
+  it('every gate opens on a leg of its mission and stands on open floor between two sub-areas', () => {
+    for (const id of ids) {
+      const def = FIELD_MISSION_DEFS[id]!;
+      const sector = getSector(def.sectorId!);
+      const arena = getArena(fieldArenaId(def));
+      expect(sector.gates?.length, id).toBe(1);
+      for (const g of sector.gates!) {
+        expect(g.opensAfterLeg).toBeLessThan(def.legs.length);
+        for (const [x, y] of g.tiles) expect('._', `${id} ${g.id} ${x},${y}`).toContain(arena.layout[y]![x]);
+      }
+    }
+  });
+});
+
+/** sha256 (first 16 hex) of the rumbleFadeyi layout on 0b89d09 (the same pin as tests/campaign-community-kit.test.ts). */
+const RUMBLE_FADEYI_LAYOUT = 'cbc989bc71726421';
 
 // ------------------------------------------------------------------------------------------- saves
 

@@ -5,9 +5,17 @@
 import type { ArenaDef } from '../types';
 import { CAMPAIGN_OSHODI_ORITA } from './oshodiOrita';
 import { CAMPAIGN_OSHODI_RAILSIDE } from './oshodiRailside';
+import { CAMPAIGN_FADEYI_TOLL_CORRIDOR } from './fadeyiTollCorridor';
+import { CAMPAIGN_FADEYI_SIDE_ROUTES } from './fadeyiSideRoutes';
 
 export const CAMPAIGN_ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
-  [CAMPAIGN_OSHODI_ORITA, CAMPAIGN_OSHODI_RAILSIDE].map((a) => [a.id, a]),
+  [
+    CAMPAIGN_OSHODI_ORITA,
+    CAMPAIGN_OSHODI_RAILSIDE,
+    // Fadeyi/Somolu (decisions WF1-WF4)
+    CAMPAIGN_FADEYI_TOLL_CORRIDOR,
+    CAMPAIGN_FADEYI_SIDE_ROUTES,
+  ].map((a) => [a.id, a]),
 );
 
 export const CAMPAIGN_ARENA_IDS: readonly string[] = Object.keys(CAMPAIGN_ARENAS);
