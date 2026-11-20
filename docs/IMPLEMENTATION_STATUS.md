@@ -717,3 +717,6 @@ Campaign missions and raids use a new `campaign` camera mode (from the match, no
 
 ## Campaign world: campaign-only areas (branch `claude/wahala-cg-world`, from `0b89d09`; decisions WX1-WX9; not merged, not deployed)
 Framework for campaign-only boards (`sim/arenas/campaign/`, `sim/mission/areas.ts`, `render/arenas/campaign/`; docs/CAMPAIGN_WORLD.md "How to add a campaign area"); Oshodi missions 1 and 2 on new boards (Orita Gate and the Dispatch Depot, 728 tiles; the Railside Streets, 854 tiles), the Oshodi boss bounded to the Rumble map's dispatch corridor. Remaining districts follow the same pattern.
+
+## Mushin campaign areas + the community campaign kit (branch `claude/wahala-cg-mushin`, from the integration branch at `77e128f`; decisions WM1-WM6; not merged, not deployed)
+One community-district campaign kit (`render/arenas/campaign/communityKit.ts`; `campaignArena({ legend: communityLegend(L), cover: board.cover(L) })`) so Fadeyi/Somolu, Ebute Metta, Lagos Island and Lekki add a `KITS` line plus their data. Mushin missions 1 and 2 on new boards (the Ladipo side streets and the supplier yard, 684 tiles; the covered market, warehouses and service lane, 734 tiles); the Mushin boss stays on the whole Rumble map (WM6). Details: docs/CAMPAIGN_WORLD.md "Mushin".

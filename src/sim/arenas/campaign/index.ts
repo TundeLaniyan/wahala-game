@@ -9,7 +9,12 @@ import { CAMPAIGN_MUSHIN_PARTS_ROW } from './mushinPartsRow';
 import { CAMPAIGN_MUSHIN_MARKET_HALL } from './mushinMarketHall';
 
 export const CAMPAIGN_ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
-  [CAMPAIGN_OSHODI_ORITA, CAMPAIGN_OSHODI_RAILSIDE, CAMPAIGN_MUSHIN_PARTS_ROW, CAMPAIGN_MUSHIN_MARKET_HALL].map((a) => [a.id, a]),
+  [
+    CAMPAIGN_OSHODI_ORITA,
+    CAMPAIGN_OSHODI_RAILSIDE,
+    CAMPAIGN_MUSHIN_PARTS_ROW,
+    CAMPAIGN_MUSHIN_MARKET_HALL,
+  ].map((a) => [a.id, a]),
 );
 
 export const CAMPAIGN_ARENA_IDS: readonly string[] = Object.keys(CAMPAIGN_ARENAS);

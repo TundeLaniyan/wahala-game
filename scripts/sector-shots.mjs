@@ -73,7 +73,8 @@ for (const item of list.split(',')) {
     },
     { x, y, mode },
   );
-  await page.waitForTimeout(2400);
+  // SHOT_SETTLE_MS: a longer settle for a far teleport on a slow software renderer (the follow camera glides per frame)
+  await page.waitForTimeout(Number(process.env.SHOT_SETTLE_MS) || 2400);
   const status = await page.evaluate(() => window.__WAHALA__.sector());
   const file = `${outDir}/${device}-${id.replace('.', '-')}-${Number.isFinite(x) ? `${x}x${y}` : 'start'}${mode === 'follow' ? '' : `-${mode}`}${noSector ? '-nosector' : ''}.jpg`;
   await page.screenshot({ path: file, type: 'jpeg', quality: 74 });
