@@ -182,7 +182,7 @@ describe('the five missions: generator-sensitive and varied', () => {
     const doors = (id: string) =>
       FIELD_MISSION_DEFS[id]!.doors.map((d) => `${d.id}:${d.raidId}:${d.returnTile}`);
     expect(doors('ebuteMetta.approach')).toEqual(['shed:junctionToolShed:41,25']);
-    expect(doors('lagosIsland.approach')).toEqual(['annexe:recordsVault:14,29']);
+    expect(doors('lagosIsland.approach')).toEqual(['annexe:recordsVault:44,25']);
     expect(doors('lekki.approach')).toEqual(['plant:standbyPlant:14,28']);
     expect(doors('lagosIsland.press')).toEqual([]);
     expect(doors('lekki.estate')).toEqual([]);

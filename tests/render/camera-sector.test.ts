@@ -26,11 +26,16 @@ const VIEWPORTS = [
   { name: 'phone landscape 740x360', aspect: 740 / 360, insets: { top: 0.13, bottom: 0.03 } },
 ];
 
-function field(id: string, o: { noSector?: boolean } = {}): GameState {
+function field(id: string, o: { noSector?: boolean; archivedPilot?: boolean } = {}): GameState {
   const def = FIELD_MISSION_DEFS[id]!;
   const s = createGame(
     buildMissionGame({
-      spec: { id: def.districtId, fieldId: id, ...(o.noSector ? { noSector: true } : {}) },
+      spec: {
+        id: def.districtId,
+        fieldId: id,
+        ...(o.noSector ? { noSector: true } : {}),
+        ...(o.archivedPilot ? { archivedPilot: true } : {}),
+      },
       humanCharacter: 'streetBaller',
       seed: 3,
     }),
@@ -110,7 +115,9 @@ describe('follow camera inside a sector', () => {
   }
 
   it('the establishing / overview shot frames the sector, much closer than the whole city', () => {
-    const s = field('lagosIsland.press');
+    // a sector of a district's City Rumble map: the archived pilot's frozen Terminal Approach sector (the district field
+    // missions moved to their own campaign boards, whose sector is the whole board: decisions WX5, WE1-WE8)
+    const s = field('oshodi.approach', { archivedPilot: true });
     const layout = createLayout(s.width, s.height);
     const rig = new CameraRig(layout);
     rig.fit(VIEWPORTS[1]!.aspect, VIEWPORTS[1]!.insets);

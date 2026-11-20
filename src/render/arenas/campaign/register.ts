@@ -18,6 +18,7 @@ import {
 import { communityCampaignKit } from './communityKit';
 import { MUSHIN_CAMPAIGN_ART } from './mushinCampaign';
 import { EBUTE_METTA_CAMPAIGN_ART } from './ebuteMettaCampaign';
+import { LAGOS_ISLAND_CAMPAIGN_ART } from './lagosIslandCampaign';
 
 /** A district's campaign kit: how its areas are drawn. */
 export type DistrictKit = (area: CampaignAreaDef) => ArenaArt;
@@ -34,6 +35,7 @@ export const KITS: Readonly<Partial<Record<string, DistrictKit>>> = {
   // community districts (decision WM1): the community kit with the district's own pieces
   mushin: communityCampaignKit(MUSHIN_CAMPAIGN_ART),
   ebuteMetta: communityCampaignKit(EBUTE_METTA_CAMPAIGN_ART),
+  lagosIsland: communityCampaignKit(LAGOS_ISLAND_CAMPAIGN_ART),
 };
 
 /** The presentation of every campaign arena whose district has a kit (an area without one draws the defaults). */

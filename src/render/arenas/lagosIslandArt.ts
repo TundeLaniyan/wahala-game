@@ -33,7 +33,7 @@ const ID = 'rumbleLagosIsland';
 const cream = '#efe6d0';
 
 // anchor: lagos-textile-maze (the Balogun-style cloth stalls: the `stall` family's umbrellas in these tarp colours and the cloth fascias below)
-const THEME: Theme = {
+export const LAGOS_ISLAND_THEME: Theme = {
   plaster: [0xd8c8a4, 0xc8b48e, 0xe0d4b4, 0xb89a78, 0xcfa88a, 0xd2c6a6, 0xbfae8a],
   far: [0xd8c8a4, 0xb5654a, 0x9aa89a, 0xe4ddd0, 0xc89a78, 0x8aa0aa],
   tarps: [0xc83a2a, 0xe0b020, 0x2a6aa8, 0x2f8a4a, 0x7a3a8a, 0xe07a20, 0x2a9a9a],
@@ -375,7 +375,7 @@ const pastelRow: Family = (k, g, r, n) => {
 const frontage: Family = (k, g, r, n) =>
   (r.x === 34 ? civicHall : r.x === 41 ? cathedralFront : pastelRow)(k, g, r, n);
 
-const FAMILIES: Record<string, Family> = {
+export const LAGOS_ISLAND_FAMILIES: Record<string, Family> = {
   building,
   shop,
   stall,
@@ -389,7 +389,7 @@ const FAMILIES: Record<string, Family> = {
   monument,
   arcade,
 };
-const REACH: Record<string, number> = {
+export const LAGOS_ISLAND_REACH: Record<string, number> = {
   building: 3,
   shop: 3,
   stall: 1,
@@ -405,9 +405,9 @@ const REACH: Record<string, number> = {
 };
 export const RUMBLE_LAGOS_ISLAND_COVER: CoverFactory = communityCover({
   arenaId: ID,
-  theme: THEME,
-  families: FAMILIES,
-  reach: REACH,
+  theme: LAGOS_ISLAND_THEME,
+  families: LAGOS_ISLAND_FAMILIES,
+  reach: LAGOS_ISLAND_REACH,
 });
 void umbrella;
 
@@ -440,12 +440,17 @@ export const RUMBLE_LAGOS_ISLAND_NIGHT_LOOK: ArenaLook = nightLookOf(RUMBLE_LAGO
   [12, 2.6, -19.4, 0xffc880],
 ]);
 
-export const RUMBLE_LAGOS_ISLAND_FLOOR: FloorDrawer = communityFloor(ID, {
+/** The Lagos Island ground: warm masonry dust over pavers (shared with the campaign areas, lagosIslandCampaign.ts). */
+export const LAGOS_ISLAND_GROUND = {
   seed: 3211,
-  base: [176, 150, 124],
+  base: [176, 150, 124] as [number, number, number],
   dust: 'rgba(150,110,70,',
-  road: [62, 60, 58],
-  pavers: [170, 160, 140],
+  road: [62, 60, 58] as [number, number, number],
+  pavers: [170, 160, 140] as [number, number, number],
+};
+
+export const RUMBLE_LAGOS_ISLAND_FLOOR: FloorDrawer = communityFloor(ID, {
+  ...LAGOS_ISLAND_GROUND,
   tint: {
     balogun: 'rgba(150,80,50,0.10)',
     idumota: 'rgba(110,100,90,0.10)',
@@ -596,7 +601,7 @@ function build(ctx: SetContext): void {
   ctx.statics.add(box(60, 8, 12, mat(0x5a6a76, { roughness: 0.7 }), -10, STREET + 4, south + 62));
 
   // textile canopies beyond the market edges, the park's heritage trees, lamps
-  const tarp = THEME.tarps.map((c) => mat(c, { roughness: 0.88 }));
+  const tarp = LAGOS_ISLAND_THEME.tarps.map((c) => mat(c, { roughness: 0.88 }));
   [-W / 2 - 2.5].forEach((x) =>
     [-14, -9, -3, 3, 9, 14].forEach((z, i) =>
       setUmbrella(ctx, x, z, 0.95, tarp[i % 7]!, tarp[(i + 2) % 7]!, { h: 1.95 }),

@@ -71,6 +71,8 @@ const OLD_SECTOR_TILES: Readonly<Record<string, number>> = {
   'oshodi.railEdge': 368,
   // Ebute Metta and Lagos Island (decisions WE1-WE8; the old sectors of their Rumble maps, sector-ascii on 662f8e2)
   'ebuteMetta.approach': 462,
+  'lagosIsland.approach': 224,
+  'lagosIsland.press': 198,
 };
 
 const walkable = (
@@ -253,6 +255,7 @@ describe('the Oshodi boss in its dispatch corridor (decision WX9)', () => {
 /** sha256 (first 16 hex) of the districts' City Rumble layouts on 0b89d09 (unchanged by their campaign areas, WE1). */
 const RUMBLE_LAYOUTS: Readonly<Record<string, readonly [string, string]>> = {
   ebuteMetta: ['rumbleEbuteMetta', '59ac5f018337b330'],
+  lagosIsland: ['rumbleLagosIsland', '95fb253ba0b58d54'],
 };
 
 describe.each(Object.keys(RUMBLE_LAYOUTS))('%s (decisions WE1-WE8)', (district) => {

@@ -97,7 +97,8 @@ describe('render cost: only what the sector can show is built', () => {
     expect(rectInClip(c, c.x1, c.y0, 3, 3)).toBe(true);
   });
 
-  it.each(['mushin.approach', 'lagosIsland.press', 'lekki.estate'])(
+  // (Lagos Island's Press Run moved to its own campaign board, decision WE7: Fadeyi's toll road is the community sector here)
+  it.each(['mushin.approach', 'fadeyiSomolu.approach', 'lekki.estate'])(
     '%s: the arena cover leaves out the objects outside the clip (and is unchanged without one)',
     (id) => {
       const s = field(id);

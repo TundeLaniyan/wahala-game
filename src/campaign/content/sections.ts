@@ -292,7 +292,7 @@ const EBUTE_SECTIONS: SectionDef[] = [
     order: 1,
     name: 'Yard Approach',
     summary:
-      'Switch cabinets in the yard streets route the Ring’s night freight. Wreck them, take the sidings and raid the signal shed.',
+      'Switch cabinets in the freight yard’s streets route the Ring’s night freight. Wreck them, take the sidings and raid the signal shed.',
     requires: [],
     missions: [
       {
@@ -354,7 +354,7 @@ const LAGOS_SECTIONS: SectionDef[] = [
     order: 1,
     name: 'Ledger Row',
     summary:
-      'Ring security walks the alleys of the west row and holds the traders’ counter hall. Take the hall back and raid the records annexe.',
+      'Ring security walks the cloth lanes and the market road to the records office, and holds the traders’ counter hall. Take the hall back and raid the records annexe.',
     requires: [],
     missions: [
       {
@@ -363,7 +363,7 @@ const LAGOS_SECTIONS: SectionDef[] = [
         name: 'Ledger Row',
         objectiveCard: 'Beat 3 auditors, keep the hall, wreck 3 stamp machines, raid.',
         summary:
-          'Two auditors walk loops round the office blocks and a heavy holds the side street. Keep the counter hall for 25 seconds, blast the stamp machines, then raid the annexe.',
+          'Two auditors loop the counter hall court and the market road, and a heavy holds the road. Keep the counter hall for 25 seconds; the records gate opens: blast the stamp machines in the yard, then raid the annexe.',
         missionRef: 'lagosIsland.approach',
         doors: [{ doorId: 'annexe', raidId: 'recordsVault' }],
         reward: title('lagosIsland.approach', 'Row Regular', 'Clerks stop asking for your receipt.'),
@@ -378,7 +378,7 @@ const LAGOS_SECTIONS: SectionDef[] = [
     order: 2,
     name: 'Press Run',
     summary:
-      'The Ring’s receipt presses print the forged licences in the press grid. Wreck them and outrun the bureau to the press lane.',
+      'The Ring’s receipt presses print the forged licences in the island’s substation and pump house yard. Wreck them and outrun the bureau to the press lane.',
     requires: ['lagosIsland.s1'],
     missions: [
       {
@@ -387,7 +387,7 @@ const LAGOS_SECTIONS: SectionDef[] = [
         name: 'Press Run',
         objectiveCard: 'Wreck 5 presses, open the press lane, outrun the auditor.',
         summary:
-          'Ring security walks the grid while the pressmen mind five presses: wreck them with generators. Then break the guards blocking the press lane and get down it before the auditor catches you.',
+          'An enforcer walks the back streets while the pressmen mind five presses in the compounds: wreck them with generators. The lane’s checkpoint lifts; break the guards blocking the press lane and get down it before the auditor catches you.',
         missionRef: 'lagosIsland.press',
         reward: title('lagosIsland.press', 'Press Regular', 'The press room leaves a stool for you.'),
         unlocks: ['section.lagosIsland.s3'],
