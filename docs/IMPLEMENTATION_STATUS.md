@@ -717,3 +717,6 @@ Campaign missions and raids use a new `campaign` camera mode (from the match, no
 
 ## Campaign world: campaign-only areas (branch `claude/wahala-cg-world`, from `0b89d09`; decisions WX1-WX9; not merged, not deployed)
 Framework for campaign-only boards (`sim/arenas/campaign/`, `sim/mission/areas.ts`, `render/arenas/campaign/`; docs/CAMPAIGN_WORLD.md "How to add a campaign area"); Oshodi missions 1 and 2 on new boards (Orita Gate and the Dispatch Depot, 728 tiles; the Railside Streets, 854 tiles), the Oshodi boss bounded to the Rumble map's dispatch corridor. Remaining districts follow the same pattern.
+
+## Lekki Phase 1 and the Ojuelegba finale on campaign areas (branch `claude/wahala-cg-lekki-finale`, from `662f8e2`; decisions WL1-WL10; not merged, not deployed)
+Lekki's Gate Approach and Estate Sweep and the finale's Return to Ojuelegba and Hold the Junction each play on their own campaign-only board (834 / 854 / 821 / 863 walkable tiles against 225 / 402 / 218 / 190); Lekki through the community kit (plus a substation piece), Ojuelegba through its own cover builder (the Oshodi pattern); the Rumble Lekki and Ojuelegba maps and the finale boss unchanged (docs/CAMPAIGN_WORLD.md "Lekki Phase 1", "The Ojuelegba finale").

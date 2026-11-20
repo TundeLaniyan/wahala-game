@@ -276,3 +276,251 @@ platform posts, 27x10 the service corridor, 41x8 the footbridge stair tower) and
   map's corridor (WX9).
 - The rail sub-area's siding is walkable track (no train runs into the area); a train on it would need a `train` sweep and
   its warnings.
+
+
+## Lekki Phase 1
+
+Decisions WL1-WL5. Lekki is a community district: its areas are painted with its own Rumble letters (`LEKKI_LEGEND`, plus the
+campaign-only substation `T`) and drawn by the community campaign kit (`lekki: communityCampaignKit(LEKKI_CAMPAIGN_ART)`,
+`render/arenas/campaign/lekkiCampaign.ts`): the Rumble Lekki looks, its glass-and-plaster blocks, compound walls with steel
+gates and hedges, white villas, palms, kiosks and lock-ups, its pale sand-and-concrete ground. Neither area includes Admiralty
+Way, so its interlocking paving (LI7) is not used: every road here is asphalt, as LI7 wants for every road but the boulevard.
+
+```
+        (Admiralty Way, Freedom Way, the promenade = the City Rumble map)
+                         |                                  |
+   lekki.estateGate (S): the Seabreeze gate,  --- back service road ---  lekki.innerEstate (E): the Palmgrove drive,
+   its service roads and the standby plant                                the water works and the Coralview substation
+```
+
+Legend of the maps below: letters are objects (`B` building, `G` glass block, `S` shop, `V` compound wall, `R` villa, `K`
+kiosk / gatehouse booth, `H` hoarding, `P` palm, `L` lock-up, `M` stall, `T` substation), `.` floor, `_` kept clear, `=`
+road, `x` barrier crate, `$` supply crate; `@` start, `R` return (on the floor), `D` door, `t` equipment, `h` hold zone
+centre, `>` escape exit, `e` an enemy's post, `|` / `-` a sector gate (closed until its leg is done).
+
+### Mission 1, Gate Approach: the Seabreeze Estate Gate (`lekki.estateGate`, `campaignLekkiEstateGate`, 48 x 28)
+
+```
+    0         1         2         3         4       
+    012345678901234567890123456789012345678901234567
+  0 BBBBBBBBBBGGGGGGBBBBBBBBBBBBBBBBBBGGGGGGBBBBBBBB
+  1 BBBBBBBBBBGGGGGGBBBBBBBBBBBBBBBBBBGGGGGGBBBBBBBB
+  2 BB............................V.==............BB
+  3 BB...........t...e............V.==..BBBBBBB...BB
+  4 BB..RRRR.P.VVVV...RRRR.P.VVVV.V.==..BBBBBBB...BB
+  5 BB..RRRR...VVVV.P.RRRR...VVVV.V.==..BBBBBBB...BB
+  6 BB............................V.==.____D____..BB
+  7 BB....e......................xV.==._________..BB
+  8 BBRR.P.VVVV...RRRR.P.VVVV..RR.V.==............BB
+  9 BBRR...VVVV.P.RRRR...VVVV.PRR.V.==P...t.......BB
+ 10 BB......e.....................V.==..HHH...TTT.BB
+ 11 BB..P....P....P....P.......KK.|.==........TTT.BB
+ 12 BB==================__________|.==.t..........BB
+ 13 BB==================___h______|.==..GGGG....K.BB
+ 14 BB==================__________|.==e.GGGG......BB
+ 15 BB....P....P....P....P.....KK.|.==..GGGG..HHH.BB
+ 16 BB.R......$.......e...........V.==........HHH.BB
+ 17 BB..SSSS...LLLL....SSSS...GGG.V.==............BB
+ 18 BB..SSSS...LLLL....SSSS...GGG.V.==P.....t.....BB
+ 19 BB..SSSS...........SSSS...GGG.V.==..LLLL......BB
+ 20 BB........x................e..V.==..LLLL..LLL.BB
+ 21 BB============================V.==........LLL.BB
+ 22 BB============================V.==............BB
+ 23 BB............................V.==......$.....BB
+ 24 BB.@..KK....MM....KK....MM....V.==..KK........BB
+ 25 BB..........MM..........MM....V.==............BB
+ 26 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 27 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| Seabreeze garden walk (x 2-29, y 2-10) | plaza | Two staggered rows of villa compounds between two-tile walks; a gate tout and a Ring guard loop two compounds, a heavy watches the walk's mouth onto the gate road; one standby feeder stands on the north walk. |
+| Estate gate road (x 2-29, y 11-15) | approach | A palm avenue up to the Ring's gatehouse booths; the GATEHOUSE ROAD to keep for 25 s on the checkpoint apron while the gatehouse guard (18-tile loop round the staff quarters, sent at 4 s) and the thrower (11 s) come for it. |
+| Coral Close service road (x 2-29, y 16-25) | street | The entry and the way out: the staff quarters, the staff bus kiosks, the SIDE GATE return. |
+| Standby plant yard (x 30-45) | works | Behind the checkpoint boom (it lifts once the road is held): the back service road, three standby feeders, the Ring road marshal's 22-tile loop round the estate office, the plant hall and its door (the `standbyPlant` raid, unchanged). |
+
+Landmarks (`areasLekki.ts`): the Phase One glass towers north (the boulevard beyond the wall), the Coral Close staff bus stop
+(west), the Seabreeze gatehouse name board (west), the plant floodlights (east).
+
+### Mission 2, Estate Sweep: Palmgrove and the Coralview Substation (`lekki.innerEstate`, `campaignLekkiInnerEstate`, 48 x 28)
+
+```
+    0         1         2         3         4       
+    012345678901234567890123456789012345678901234567
+  0 BBBBRRRRRRRRBBBBBBRRRRRRRRBBBBGGGGGGGGBBBBBBBBBB
+  1 BBBBRRRRRRRRBBBBBBRRRRRRRRBBBBGGGGGGGGBBBBBBBBBB
+  2 BB...........................V..............e.BB
+  3 BB.@.........................|..e.............BB
+  4 BB===========================|...TTT.t.TTT....BB
+  5 BB===========================|...TTT...TTT....BB
+  6 BB.R....e..................e.|...............eBB
+  7 BB.RRRR..VVVV..RRRR..VVVV....V......___...t...BB
+  8 BB.RRRR..VVVV..RRRR..VVVV.P..V.t....___....BB.BB
+  9 BB..................e........V.............BB.BB
+ 10 BB.VVV.P.....KK....RRRR......V...TTT.t.TTT.BB.BB
+ 11 BB.VVV.$.....KK....RRRR..P...V...TTT...TTT.BB.BB
+ 12 BB...........................V..e..........BB.BB
+ 13 BB.e........LLL...HHHHHH.HHH.V....t...........BB
+ 14 BB..BBBBB...LLL...TT.........V................BB
+ 15 BB..BBBBB.........TT.........V..LLLLL...HH....BB
+ 16 BB..BBBBB.........TT...GGGG..V..LLLLL...HH....BB
+ 17 BB..........LLL........GGGG..V..........HH....BB
+ 18 BB..........LLL........GGGG..V..............$.BB
+ 19 BB..LLL...P..........P.......V................BB
+ 20 BB..............x............VVxVVVVVVVVVVVVVVBB
+ 21 BB........................$...................BB
+ 22 BB============================================BB
+ 23 BB============================================BB
+ 24 BB..............................>.............BB
+ 25 BB......MM..........KK............MM..........BB
+ 26 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 27 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| Palmgrove north drive (x 2-28, y 2-11) | street | The entry: an estate marshal loops a villa compound (16 tiles), the drive heavy holds the inner gate, a thrower the terrace; ESTATE GATE return by the start. |
+| Palmgrove water works (x 2-28, y 12-20) | service | The pump house, borehole sheds and treatment tanks; a tanker tout loops the pump house (20 tiles). |
+| Coralview substation (x 29-45, y 2-20) | works | Behind the inner estate gate (`lawnGate`, open once the four are down): four transformer pads, five control points, two grid techs looping the pads (26 tiles each), the hound kennels in the north-east corner. |
+| Estate service lane (x 2-45, y 21-25) | lane | The escape: SERVICE LANE at the lane's east end, past the back fence (its barrier crate is the short way, the inner gate the long one). |
+
+Landmarks: the Coralview 33 kV line on its masts (north), the Palmgrove water tower (west), the Palmgrove Estate name board
+(west), the substation floodlights (east).
+
+### What is new, expanded, reused, unchanged (Lekki)
+
+| Item | Status |
+| --- | --- |
+| The Seabreeze Estate Gate board: garden walk, gate road and checkpoint, service road, plant yard (48 x 28) | NEW (campaign-only geography) |
+| The Palmgrove board: north drive, water works, Coralview substation, service lane (48 x 28) | NEW (campaign-only geography) |
+| Gate Approach and Estate Sweep play area | EXPANDED: 225 -> 834 and 402 -> 854 walkable tiles, 4 sub-areas each |
+| Routes, posts, patrols, equipment, hold zone, gates, exits | NEW (re-authored on the new boards) |
+| Leg kinds, door / raid (`plant` / `standbyPlant`), groups, clock, par, the `lawnGate` id | UNCHANGED (two leg texts name the new places) |
+| The substation piece (`T`) | NEW presentation piece (procedural, no texture or model) |
+| Looks, cover pieces, ground, set kit | REUSED (Rumble Lekki pieces; the Rumble output unchanged) |
+| The City Rumble Lekki map, Admiralty Way and its paving, the boss | UNCHANGED (layout and cover hashes pinned) |
+
+## The Ojuelegba finale
+
+Decisions WL6-WL10. Ojuelegba is the reference arena the story opens on and has its own cover builder, so its areas follow the
+Oshodi pattern, not the community kit: a letter kit equal to the Underbridge cover letters (`OJUELEGBA_KIT`) and the reference
+builder drawing the area's letter map (`render/arenas/campaign/ojuelegbaCampaign.ts`), with the flyover's girders and pier
+shafts carried on over the area's own piers, the late-afternoon look and the reference floor materials. The City Rumble
+Ojuelegba arena is untouched (layout pinned); the finale boss keeps its sector of it (`ojuelegba.danfoYard`, FN7).
+
+```
+                 ojuelegba.busInterchange (N): the flyover running on north over the bus stops,
+                 the under-bridge market and the Ring control yard (mission 20)
+                                     |
+                 the junction (the City Rumble map; the boss's danfo yard is its east pocket, mission 21)
+                                     |
+                 ojuelegba.southStreets (S): the motor park, the shop street, the vulcanisers' yard
+                 and the corner under the flyover's south ramp (mission 19)
+```
+
+Legend: `P` pier (the deck overhead), `D` / `N` parked danfos, `H` shop, `Q` building, `O` workshop, `C` container shop,
+`W` wall, `I` kerb island, `K` kiosk, `T` stall, `L` lock-up, `S` shed, `Y` tyre rack, `B` bus stop, `G` generator house,
+`J` skip; the markers as above.
+
+### Mission 19, Return to Ojuelegba: the South Streets (`ojuelegba.southStreets`, `campaignOjuelegbaSouthStreets`, 48 x 28)
+
+```
+    0         1         2         3         4       
+    012345678901234567890123456789012345678901234567
+  0 QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+  1 QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+  2 QQ...........W................................QQ
+  3 QQ..PP.R..PP.W.TTT...CCC...TTT.....DDDDDD.....QQ
+  4 QQ..PP....PP.W.TTT...CCC...TTT............NN..QQ
+  5 QQ...........W............................NN..QQ
+  6 QQI...BBB...IW................................QQ
+  7 QQ...........W....CCC...TTT........DDDD.......QQ
+  8 QQ..PP....PP.W....CCC...TTT...................QQ
+  9 QQ..PP....PP.W..................$.............QQ
+ 10 QQ...........W.TTT...TTT...CCC.............NN.QQ
+ 11 QQ...........W.TTT...TTT...CCC.....NN..NN..NN.QQ
+ 12 QQ------HHHHHW......x..............NN..NN.....QQ
+ 13 QQt....t.....W.......e...........x............QQ
+ 14 QQ.e....e....W.HHHHH..HHHHH..HHH...e..........QQ
+ 15 QQ..YY...OOO.W.HHHHH..HHHHH..HHH....DDDD..SSS.QQ
+ 16 QQ..YY...OOO.W.HHHHH..HHHHH..HHH..........SSS.QQ
+ 17 QQ...........W................................QQ
+ 18 QQ....$......Wt............................NN.QQ
+ 19 QQ.....OOO...|....................KK.......NN.QQ
+ 20 QQYYY..OOO...|..TTT..K...TTT..CC........KK..Y.QQ
+ 21 QQ.....OOO...|..e...........$.................QQ
+ 22 QQ...........|................................QQ
+ 23 QQ.GG........Wt.....................DDDD......QQ
+ 24 QQ.GG.....JJ.W..TTT....TTT....TT............@.QQ
+ 25 QQ...........W..TTT....TTT....TT..............QQ
+ 26 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 27 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| Ijoko motor park (x 34-45) | park | The entry: the danfos drop you here; a Ring patrol (agbero) loops a danfo row. |
+| Kekere shop street (x 13-33) | lane | The shop street with its row of stalls down the middle and the back street's stall blocks; a Ring route marshal loops the middle shops; the barrier heavy minds the two barrier locks at the lane barrier. |
+| Vulcanisers yard (x 2-13, y 12-25) | works | Behind the lane barrier (open once its locks are blasted): tyre racks, workshops, the generator house; the lock guard and the lane runner loop it; the two gate locks by the corner gate. |
+| Flyover ramp corner (x 2-12, y 2-11) | underbridge | Behind the corner gate (open once the gate locks are blasted): two bents of piers under the deck, the bus stop, the JUNCTION CORNER. |
+
+Landmarks: the flyover running on north over the ramp, the Ijoko danfo rank (east), the Kekere traders (north), the
+vulcaniser's smoke (west).
+
+### Mission 20, Hold the Junction: the Underbridge Interchange (`ojuelegba.busInterchange`, `campaignOjuelegbaBusInterchange`, 48 x 28)
+
+```
+    0         1         2         3         4       
+    012345678901234567890123456789012345678901234567
+  0 QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+  1 QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+  2 QQ............................e....W.e........QQ
+  3 QQ..............PP..TTTT....PP.....W..OOOOOO..QQ
+  4 QQ.KK...CCC.....PP.......t..PP.....W..OOOOOO..QQ
+  5 QQ.KK...CCC.e......................W..OOOOOO..QQ
+  6 QQ...........KK......BBB.......KK..W..........QQ
+  7 QQ...........KK...........$....KK..W.t....e...QQ
+  8 QQ.TTT................h............W...CCC..$.QQ
+  9 QQ.........YY.......IIIII..........W...CCC....QQ
+ 10 QQ............................................QQ
+ 11 QQ=======II===================================QQ
+ 12 QQ=======II===================================QQ
+ 13 QQ=======II===================================QQ
+ 14 QQ...R.............x..........................QQ
+ 15 QQ.............t...................W..........QQ
+ 16 QQ..CCC.......e.PP..TTT.CCC.PP.....W..GGG..JJ.QQ
+ 17 QQ..CCC..KK.....PP..TTT.CCC.PP.....W..GGG.....QQ
+ 18 QQ.......KK...................e....W..GGG.....QQ
+ 19 QQ..@........TTT.....e.........CCC.W..........QQ
+ 20 QQ.....$.....TTT......TTT......CCC........NN..QQ
+ 21 QQ.SSS............CCC.TTT..TTT............NN..QQ
+ 22 QQ.SSS...TTT......CCC......TTT.....x..YY..NN..QQ
+ 23 QQ.......TTT..TTT.....................YY..NN..QQ
+ 24 QQ............TTT.......TTT...................QQ
+ 25 QQ......................TTT...................QQ
+ 26 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 27 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| West approach road (x 2-12) | approach | The entry and the way out: kiosks, a container shop, the kerb island at the road's mouth, the WEST PAVEMENT. |
+| Underbridge bus stop (x 13-34, y 2-13) | underbridge | Under the deck: the bus stop island and shelter to keep for 25 s; a Ring agbero loops the kiosks by the north girder; one control box. |
+| Underbridge market (x 13-34, y 14-25) | street | Stall blocks and container shops between the south piers; the lieutenant beside the control box at the south-west pier, a market enforcer and a Ring guard loop the stalls. |
+| Ring control yard (x 35-45) | service | Behind its wall: workshops, the generator house, a danfo rank; the east wave (an area boy, a thrower, sent at 18 s) and a control box. |
+
+Landmarks: the flyover running on north, the interchange danfo rank (west), the under-bridge market traders (west), the
+Ring yard floodlights (east).
+
+### What is new, expanded, reused, unchanged (the finale)
+
+| Item | Status |
+| --- | --- |
+| The South Streets board: motor park, shop street, vulcanisers yard, ramp corner (48 x 28) | NEW (campaign-only streets the Rumble map does not have) |
+| The Underbridge Interchange board: west road, bus stop under the deck, market, Ring yard (48 x 28) | NEW (campaign-only) |
+| Return to Ojuelegba and Hold the Junction play area | EXPANDED: 218 -> 821 and 190 -> 863 walkable tiles, 4 sub-areas each |
+| Routes, posts, patrols, equipment, hold zone, gates, exits; the junction's wave make-up (WL9) | NEW (re-authored) |
+| Leg kinds, the Ring gates (`laneBarrier`, `cornerGate`), equipment ids and labels, groups, clock, par | UNCHANGED (the leg texts and briefings name the new places) |
+| Piers and deck, danfos, shops, workshops, kiosks, stalls, look, floor materials, flyover set | REUSED (reference arena pieces; its output unchanged) |
+| The City Rumble Ojuelegba arena, the finale boss and its sector | UNCHANGED (layout pinned; WL10) |

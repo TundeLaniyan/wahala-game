@@ -215,7 +215,7 @@ export const FINALE_SECTIONS: SectionDef[] = [
     order: 1,
     name: 'Return to Ojuelegba',
     summary:
-      'The Ring has chained a gate across the corner where the shop lane meets the junction. Trap its patrols, blast the two gate locks and walk through.',
+      'The Ring has barred the way home: a barrier across the shop street and a chained gate across the corner under the flyover ramp. Trap its patrols, blast the locks and walk through.',
     requires: [],
     missions: [
       {
@@ -224,7 +224,7 @@ export const FINALE_SECTIONS: SectionDef[] = [
         name: 'Return to Ojuelegba',
         objectiveCard: 'Trap the patrols, blast the gate locks, open the corner.',
         summary:
-          'Two Ring patrols walk the shop lane and two lock guards stand at the corner gate. Blast both locks and the gate opens.',
+          'Ring patrols walk the motor park and the shop street, a heavy minds the lane barrier and two lock guards walk the vulcanisers yard. Blast the barrier locks, then the gate locks, and the corner opens.',
         missionRef: 'ojuelegba.return',
         provisional: true,
         reward: title('ojuelegba.return', 'Corner Regular', 'The shop lane waves you through again.'),
@@ -232,7 +232,7 @@ export const FINALE_SECTIONS: SectionDef[] = [
         ringWeakened: 'The corner gate is open: the shop lane reaches the junction again.',
         intro: [
           say('MAMA PUT', 'Welcome home. See that gate? Two padlocks and a chain, on our own corner.'),
-          say('RADIO', 'Ring patrols on the shop lane. Lock guards at the corner. Blasts open locks.'),
+          say('RADIO', 'Ring patrols on the shop street. Lock guards in the tyre yard. Blasts open locks.'),
         ],
         outro: [say('NARRATOR', 'The chain drops. Shopkeepers drag the gate back and leave it open.')],
       },
@@ -253,7 +253,7 @@ export const FINALE_SECTIONS: SectionDef[] = [
         name: 'Hold the Junction',
         objectiveCard: 'Keep the bus stop, then wreck the three control boxes.',
         summary:
-          'Two waves come for the bus stop. Once it is yours, a Ring lieutenant guards the control boxes under the bridge: blast all three.',
+          'The Ring yard sends its crew for the bus stop under the deck and its street muscle walks the market. Once the stop is yours, a Ring lieutenant guards the control boxes under the bridge: blast all three.',
         missionRef: 'ojuelegba.junction',
         provisional: true,
         reward: title('ojuelegba.junction', 'Bus Stop Regular', 'The conductors call your stop first.'),
