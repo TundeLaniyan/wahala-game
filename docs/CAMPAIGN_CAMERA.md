@@ -93,7 +93,9 @@ At the start of the Oshodi rail edge mission the map knows under 30 % of the dis
 
 Found by the restart runs as well: each raid door's 18 boxes and the crowd zones' pose geometries (section 6), both now released with their views.
 
-**Proved:** `e2e/campaign-camera.spec.ts` (four starts in one page, A A B A: the counts stay flat) and `scripts/campaign-perf.mjs --restarts=3` (section 6).
+**Proved:** `e2e/campaign-camera.spec.ts` (six starts in one page, A A B A B A: a restart and a second B -> A cycle stay flat) and `scripts/campaign-perf.mjs --restarts=3` (section 6).
+
+**The cache across districts (CF10, measured at integration with every district on its own map, software WebGL, 1280 x 720, one page):** the first visit to another district's map leaves that district's shared assets in the asset library's cache (models and enemy looks a later map reuses), and later visits reuse them. Textures / geometries after each start: oshodi.approach 115 / 143, again 115 / 143; mushin.approach then oshodi.approach 134 / 147; a second Mushin -> Oshodi cycle 134 / 147 (flat). A tour of all 13 field maps and back to oshodi.approach: 154 / 180, and the same after a further Mushin and Lekki visit (flat). So the cache is bounded by the asset set (+39 textures, +37 geometries over the whole campaign) and nothing grows per start or per visit. Each match still builds and disposes its own board, cover and set; only the shared library assets stay. These are counts of GPU objects on a software renderer, not phone memory figures.
 
 ## 6. Measurements
 

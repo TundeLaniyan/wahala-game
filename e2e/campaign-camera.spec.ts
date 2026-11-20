@@ -90,23 +90,57 @@ async function toPlay(page: Page): Promise<void> {
   });
 }
 
-/** Walks (forced intents, real movement rules) along the longest open straight line from the human; returns tiles. */
+/**
+ * Walks (forced intents, real movement rules) along a shortest open path to a floor tile 6 steps away (a campaign area's
+ * start can sit in a short bay, so a straight line is not enough); returns the tiles moved from the start.
+ */
 async function walk(page: Page): Promise<number> {
   return page.evaluate(() => {
     const w = (window as any).__WAHALA__;
     const s = w.getState();
     const me = s.players[0];
+    const blocked = new Set<number>(s.sector?.blocked ?? []);
+    const open = (x: number, y: number): boolean =>
+      x >= 0 &&
+      y >= 0 &&
+      x < s.width &&
+      y < s.height &&
+      s.tiles[y * s.width + x] === 0 &&
+      !blocked.has(y * s.width + x);
     const dirs = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] } as const;
-    const run = (d: keyof typeof dirs): number => {
-      let n = 0;
-      const [dx, dy] = dirs[d];
-      while (s.tiles[(me.y + dy * (n + 1)) * s.width + me.x + dx * (n + 1)] === 0 && n < 8) n++;
-      return n;
-    };
-    const best = (Object.keys(dirs) as (keyof typeof dirs)[]).sort((a, b) => run(b) - run(a))[0]!;
+    // breadth-first from the human: the first tile 6 steps out, and the way back to it
     const from = { x: me.x, y: me.y };
-    for (let t = 0; t < 240; t++) {
-      w.controller().forceIntent(0, { move: best });
+    const prev = new Map<number, number>([[from.y * s.width + from.x, -1]]);
+    let frontier = [from.y * s.width + from.x];
+    for (let d = 0; d < 6 && frontier.length; d++) {
+      const next: number[] = [];
+      for (const i of frontier)
+        for (const [dx, dy] of Object.values(dirs)) {
+          const x = (i % s.width) + dx;
+          const y = Math.floor(i / s.width) + dy;
+          const j = y * s.width + x;
+          if (open(x, y) && !prev.has(j)) {
+            prev.set(j, i);
+            next.push(j);
+          }
+        }
+      frontier = next;
+    }
+    // the tile 6 steps out that lies farthest in a straight line (a winding path may end next to the start)
+    const far = (i: number): number =>
+      Math.abs((i % s.width) - from.x) + Math.abs(Math.floor(i / s.width) - from.y);
+    const goal = [...frontier].sort((a, b) => far(b) - far(a))[0] ?? [...prev.keys()].at(-1)!;
+    const path: number[] = [];
+    for (let i = goal; i !== -1; i = prev.get(i)!) path.unshift(i);
+    let k = 1;
+    for (let t = 0; t < 600 && k < path.length; t++) {
+      const here = me.y * s.width + me.x;
+      if (here === path[k] && me.stepRemaining === 0) k++;
+      if (k >= path.length) break;
+      const tx = path[k]! % s.width;
+      const ty = Math.floor(path[k]! / s.width);
+      const move = tx > me.x ? 'right' : tx < me.x ? 'left' : ty > me.y ? 'down' : 'up';
+      w.controller().forceIntent(0, { move });
       w.stepTicks(1);
     }
     return Math.abs(me.x - from.x) + Math.abs(me.y - from.y);
@@ -214,27 +248,40 @@ test.describe('landscape phone 740 x 360', () => {
 test.describe('desktop', () => {
   test('restarting a mission keeps the GPU resources flat; A -> B -> A too', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'desktop run only');
-    test.setTimeout(600_000); // four match loads on software WebGL
+    test.setTimeout(900_000); // six match loads on software WebGL
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await open(page, '&noattract');
-    // the same field mission twice, then another mission and back (A, A, B, A)
+    // the same field mission twice, then another district's map and back, twice (A, A, B, A, B, A)
     const counts: { geometries: number; textures: number }[] = [];
-    for (const id of ['oshodi.approach', 'oshodi.approach', 'mushin.approach', 'oshodi.approach']) {
+    for (const id of [
+      'oshodi.approach',
+      'oshodi.approach',
+      'mushin.approach',
+      'oshodi.approach',
+      'mushin.approach',
+      'oshodi.approach',
+    ]) {
       await startField(page, id);
       await freeze(page);
       await settled(page);
       counts.push(await gpu(page));
     }
     console.log(`GPU after each start: ${JSON.stringify(counts)}`);
-    const [a1, a2, , a3] = counts as [(typeof counts)[0], (typeof counts)[0], unknown, (typeof counts)[0]];
-    // before the fix every start left about 42 textures and 4 geometries; a mission seen once may leave a few shared,
-    // cached resources (another mission's enemy looks: 10 textures, 7 geometries measured for Mushin) that later visits
-    // reuse; the old leak would add about 84 textures over A -> B -> A
-    expect(Math.abs(a2.textures - a1.textures), 'textures, restart').toBeLessThanOrEqual(3);
-    expect(Math.abs(a2.geometries - a1.geometries), 'geometries, restart').toBeLessThanOrEqual(3);
-    expect(Math.abs(a3.textures - a2.textures), 'textures, A -> B -> A').toBeLessThanOrEqual(20);
-    expect(Math.abs(a3.geometries - a2.geometries), 'geometries, A -> B -> A').toBeLessThanOrEqual(20);
+    const [a1, a2, , a3, , a4] = counts as { geometries: number; textures: number }[];
+    // before the fix every start left about 42 textures and 4 geometries (CF6). A restart is flat; a district seen once
+    // leaves its shared, cached assets (models and enemy looks the asset library keeps for the next map that uses them:
+    // 19 textures measured for Mushin's map, 39 after all 13 campaign maps, then flat: docs/CAMPAIGN_CAMERA.md CF10);
+    // a second B -> A cycle adds nothing (the old leak added about 84 textures per cycle)
+    expect(Math.abs(a2!.textures - a1!.textures), 'textures, restart').toBeLessThanOrEqual(3);
+    expect(Math.abs(a2!.geometries - a1!.geometries), 'geometries, restart').toBeLessThanOrEqual(3);
+    expect(a3!.textures - a2!.textures, 'textures cached by the first visit to B').toBeLessThanOrEqual(30);
+    expect(Math.abs(a3!.geometries - a2!.geometries), 'geometries, A -> B -> A').toBeLessThanOrEqual(20);
+    expect(Math.abs(a4!.textures - a3!.textures), 'textures, a second B -> A cycle').toBeLessThanOrEqual(3);
+    expect(
+      Math.abs(a4!.geometries - a3!.geometries),
+      'geometries, a second B -> A cycle',
+    ).toBeLessThanOrEqual(3);
     expect(errors).toEqual([]);
   });
 });

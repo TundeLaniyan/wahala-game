@@ -60,7 +60,7 @@ export function BriefingScreen() {
           </button>
         </p>
       )}
-      <div className="cp-brief">
+      <div className={`cp-brief${brief ? ' has-visual-brief' : ''}`}>
         <section className="cp-brief-main">
           {/* the visual briefing (decision MG1): the target, the one objective, how blasts do it; compact on a replay */}
           {brief && <MissionBriefCard brief={brief} compact={save.districts[id].clears > 0} />}

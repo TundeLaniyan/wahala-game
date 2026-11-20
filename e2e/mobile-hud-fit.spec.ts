@@ -53,20 +53,43 @@ for (const [name, width, height] of SIZES) {
       w.stepTicks(24);
     });
     const dock = page.getByTestId('mission-dock');
+    const overflow = (): Promise<number> =>
+      page.evaluate(() => {
+        const d = document.querySelector('[data-testid="mission-dock"]')!;
+        const box = d.getBoundingClientRect();
+        const kids = [...d.children].map((k) => k.getBoundingClientRect().bottom);
+        return Math.round(Math.max(...kids) - box.bottom);
+      });
+    // walking to the door (the hold not started, the route cue showing the way): the whole dock fits too (MG6)
+    await page.evaluate(() => {
+      const w = (window as any).__WAHALA__;
+      const s = w.controller().state;
+      const p = s.players[0];
+      const m = w.fieldMissionDef('oshodi.approach').legs[0].markers.at(-1);
+      p.x = p.stepFromX = m.x;
+      p.y = p.stepFromY = m.y;
+      p.stepRemaining = 0;
+      w.stepTicks(240);
+    });
+    await expect(page.getByTestId('field-hold')).toHaveAttribute('data-state', 'idle');
+    await expect(page.getByTestId('field-goal-cue')).toBeVisible();
+    await expect.poll(overflow).toBeLessThanOrEqual(1);
+    // back on the door
+    await page.evaluate(() => {
+      const w = (window as any).__WAHALA__;
+      const s = w.controller().state;
+      const p = s.players[0];
+      const d = w.fieldMissionDef('oshodi.approach').doors[0];
+      p.x = p.stepFromX = d.x;
+      p.y = p.stepFromY = d.y;
+      p.stepRemaining = 0;
+      w.stepTicks(24);
+    });
     await expect(dock).toBeVisible();
     await expect(page.getByTestId('mission-lives')).toBeVisible();
     await expect(page.getByTestId('field-hold')).toBeVisible();
     // measured after the dock has sized itself against the action buttons
-    await expect
-      .poll(async () =>
-        page.evaluate(() => {
-          const d = document.querySelector('[data-testid="mission-dock"]')!;
-          const box = d.getBoundingClientRect();
-          const kids = [...d.children].map((k) => k.getBoundingClientRect().bottom);
-          return Math.round(Math.max(...kids) - box.bottom);
-        }),
-      )
-      .toBeLessThanOrEqual(1);
+    await expect.poll(overflow).toBeLessThanOrEqual(1);
     const clear = await page.evaluate(() => {
       const d = document.querySelector('[data-testid="mission-dock"]')!.getBoundingClientRect();
       const lives = document.querySelector('[data-testid="mission-lives"]')!.getBoundingClientRect();

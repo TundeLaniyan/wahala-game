@@ -99,7 +99,35 @@ test.describe('mission presentation', () => {
     expect(marks.markers!.nodes).toBe(marks.nodes);
     expect(marks.markers!.boss).toBe(true);
 
-    // the compass: the relays are not on screen at the spawn, so it points the way, at the edge
+    // the compass: with the fighter where the nearest relay is farthest away (the boss plays in its bounded dispatch
+    // corridor since WX9, so the relays can be on screen at the spawn), it points the way, at the edge
+    await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the debug hook's raw state
+      const w = (window as unknown as { __WAHALA__: any }).__WAHALA__;
+      const s = w.getState();
+      type N = { x: number; y: number; state: string };
+      const all: N[] = s.mission.nodes;
+      const live = all.filter((n) => n.state === 'live' || n.state === 'progress');
+      const nodes = live.length ? live : all.filter((n) => n.state !== 'done');
+      const blocked = new Set<number>(s.sector?.blocked ?? []);
+      const rects: number[][] = s.sector?.rects ?? [[0, 0, s.width - 1, s.height - 1]];
+      const inside = (x: number, y: number): boolean =>
+        rects.some((r) => x >= r[0]! && x <= r[2]! && y >= r[1]! && y <= r[3]!);
+      let best = { x: s.players[0].x, y: s.players[0].y, d: -1 };
+      for (let y = 0; y < s.height; y++)
+        for (let x = 0; x < s.width; x++) {
+          const i = y * s.width + x;
+          if (s.tiles[i] !== 0 || blocked.has(i) || !inside(x, y)) continue;
+          const d = Math.min(...nodes.map((n) => Math.hypot(n.x - x, n.y - y)));
+          if (d > best.d) best = { x, y, d };
+        }
+      const p = s.players[0];
+      p.x = p.stepFromX = best.x;
+      p.y = p.stepFromY = best.y;
+      p.stepRemaining = 0;
+      w.stepTicks(2);
+      w.advance(30);
+    });
     const compass = page.getByTestId('mission-compass');
     await expect(compass).toHaveAttribute('data-shown', 'yes');
     expect(Number(await compass.getAttribute('data-tiles'))).toBeGreaterThan(0);

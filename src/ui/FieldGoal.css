@@ -137,9 +137,15 @@
   }
 }
 /* a hold on a phone in landscape: the bar and "STAY ON IT" already say it, so the notes ("stand still", "fights optional")
-   give way and the whole dock (objective, health, lives) fits above the action buttons */
+   give way and the whole dock (objective, health, lives, phase) fits above the action buttons. The hold readout and the
+   route cue (MG6) share one row there: the cue while walking to the door (the bar is still empty), the bar once the fighter
+   is on it or has just stepped off (the cue would read "HERE"; "STEP BACK ON" says the rest). */
 @media (max-height: 520px) {
-  .field-goal.has-hold .fg-notes {
+  .field-goal.has-hold .fg-notes,
+  .field-goal.hold-idle .fg-hold,
+  .field-goal.hold-filling .rg-cue,
+  .field-goal.hold-draining .rg-cue,
+  .field-goal.hold-full .rg-cue {
     display: none;
   }
 }

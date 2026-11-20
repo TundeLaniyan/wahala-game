@@ -51,7 +51,7 @@ export function FieldGoal({ mission, cue = null }: { mission: MissionView | null
   if (!g) return null;
   return (
     <section
-      className={`field-goal verb-${g.verb}${g.hold ? ' has-hold' : ''}`}
+      className={`field-goal verb-${g.verb}${g.hold ? ` has-hold hold-${g.hold.state}` : ''}`}
       data-testid="field-goal"
       data-verb={g.verb}
       aria-label="Objective"

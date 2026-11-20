@@ -169,6 +169,27 @@
   .cp-brief {
     grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
   }
+  /* with the visual briefing (decision MG1) the short screen cannot stack it over the story card without pushing the
+     card's objective below the fold: the brief heads the right column (over the boss card), the story keeps the left */
+  .cp-brief.has-visual-brief {
+    grid-template-areas:
+      'story brief'
+      'story side';
+    grid-template-rows: auto minmax(0, 1fr);
+    row-gap: 12px;
+  }
+  .cp-brief.has-visual-brief > .cp-brief-main {
+    display: contents;
+  }
+  .cp-brief.has-visual-brief > .cp-brief-main > .mb-card {
+    grid-area: brief;
+  }
+  .cp-brief.has-visual-brief > .cp-brief-main > .cp-story-card {
+    grid-area: story;
+  }
+  .cp-brief.has-visual-brief > .cp-brief-side {
+    grid-area: side;
+  }
   .cp-story-card.has-hero .cp-card-summary {
     font-size: 0.92rem;
     line-height: 1.32;
