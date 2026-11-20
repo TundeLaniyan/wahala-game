@@ -524,3 +524,57 @@ Ring yard floodlights (east).
 | Leg kinds, the Ring gates (`laneBarrier`, `cornerGate`), equipment ids and labels, groups, clock, par | UNCHANGED (the leg texts and briefings name the new places) |
 | Piers and deck, danfos, shops, workshops, kiosks, stalls, look, floor materials, flyover set | REUSED (reference arena pieces; its output unchanged) |
 | The City Rumble Ojuelegba arena, the finale boss and its sector | UNCHANGED (layout pinned; WL10) |
+
+### Measurements (Lekki and the finale)
+
+The same scripts as the Oshodi rows; the old numbers are the old district sectors on `662f8e2` (scripted play, bait, probes)
+and on the base build `0b89d09` (render cost: the scratchpad base build serving the old sectors).
+
+| Measure | Gate Approach old -> new | Estate Sweep old -> new | Return to Ojuelegba old -> new | Hold the Junction old -> new |
+| --- | --- | --- | --- | --- |
+| Walkable tiles of the play area | 225 -> 834 | 402 -> 854 | 218 -> 821 | 190 -> 863 |
+| Scripted playthrough (6 seeds) Easy / Normal / Hard won | 6/6/6 -> 6/6/6 | 6/6/6 -> 6/6/6 | 6/6/6 -> 6/6/6 | 6/6/6 -> 6/6/6 |
+| Field seconds Easy / Normal / Hard (mean of wins) | 88.5 / 97.7 / 106.8 -> 98.3 / 115.5 / 149.8 | 82.5 / 83.5 / 105.2 -> 91.7 / 109.4 / 118.8 | 47.3 / 51.4 / 79.3 -> 51.5 / 50.7 / 74.9 | 72.7 / 97.0 / 128.4 -> 85.8 / 83.1 / 89.9 |
+| Human-like bait on the default target, Normal (8 seeds): first try / within two | 0/8, 0/8 -> 8/8, 8/8 | 0/8, 0/8 -> 7/8, 8/8 | 8/8, 8/8 -> 8/8, 8/8 | 4/8, 5/8 -> 8/8, 8/8 |
+| Plain-sight fairness probe (4 seeds, at most 1 caught) | 0/4 -> 0/4 | 0/4 -> 0/4 | 0/4 -> 0/4 | 0/4 -> 0/4 |
+| Ordinary roamers patrolling (`readability.ts normal`) | 2/4 -> 3/4 | 2/5 -> 4/5 | 3/4 -> 4/4 | 0/5 -> 3/4 |
+
+The scripted playthroughs win every level on every seed before and after; the Lekki areas take longer (the boards are 2.1-3.7
+times the old sectors and the walk to the plant or the substation is real), the junction is quicker on Hard (its waves come
+once the hold is under way, WL9). The bait's default target is the most isolated patroller; on Lekki it used to be Ring
+Security, whose keen trap sense walks off a generator at its feet by design (WL3). Every ordinary roamer has an authored
+route of 12+ tiles (RC2c); the ones not counted as patrolling are hold-wave members, who hold their post until sent (`field.ts`).
+
+Render cost: `scripts/campaign-perf.mjs <missions> low,high` on a 740 x 360 page, the old sector (base build) against the new
+area (this branch), back to back. **Software rendering (SwiftShader) on cores shared with three other workers' builds,
+shots and perf runs: the frame times sampled only 2-6 frames and are noise; build ms are too. The scene counters are
+deterministic and are the comparison. Never a phone claim.**
+
+| Mission | Quality | Draw calls old / new | Triangles old / new | Geometries old / new | Textures old / new |
+| --- | --- | --- | --- | --- | --- |
+| `lekki.approach` | low | 268 / 147 | 541358 / 427808 (-21 %) | 299 / 159 | 197 / 159 |
+| `lekki.estate` | low | 216 / 131 | 465586 / 405226 (-13 %) | 309 / 139 | 206 / 136 |
+| `ojuelegba.return` | low | 235 / 142 | 676391 / 676154 (0 %) | 298 / 182 | 201 / 151 |
+| `ojuelegba.junction` | low | 210 / 174 | 428839 / 502682 (+17 %) | 230 / 180 | 181 / 143 |
+| `lekki.approach` | high | 644 / 389 | 2030610 / 1310181 (-35 %) | 330 / 208 | 262 / 237 |
+| `lekki.estate` | high | 549 / 340 | 1767513 / 1184084 (-33 %) | 334 / 189 | 271 / 207 |
+| `ojuelegba.return` | high | 518 / 405 | 1668075 / 1861680 (+12 %) | 321 / 244 | 257 / 230 |
+| `ojuelegba.junction` | high | 486 / 452 | 1388937 / 1646620 (+19 %) | 267 / 240 | 233 / 222 |
+
+Reading it: fewer draw calls, geometries and textures in every row (a campaign board builds only its own world, not the
+district's backdrop). Triangles fall on Lekki; on the finale they stay level or rise by 12-19 %: each area is about four
+times the old sector and both carry the flyover overhead (girders and pier shafts) and dense danfo rows, where the old
+sectors showed a corner of the Rumble map. The mission fetch is small on the new areas (87-162 KB; the old sector's
+mission fetched 1.6-2.3 MB of the Rumble set's models on some rows).
+
+Screenshots: `docs/screenshots/campaign-guidance-expansion/world/lekki/` and `.../world/ojuelegba/`, `phone-` 740 x 360 and
+`phoneWide-` 844 x 390 (device scale 2) and `desktop-` 1280 x 720: the follow camera in the sub-areas (Gate Approach 4x22 the
+service road, 12x6 the garden walk, 23x13 the checkpoint apron, 38x9 the plant yard; Estate Sweep 8x3 the drive, 6x18 the
+water works, 37x7 the substation; Return 42x20 the motor park, 22x19 the shop street, 7x18 the vulcanisers yard, 7x6 the ramp
+corner; Junction 22x8 the bus stop under the deck, 24x18 the market, 40x10 the Ring yard) and the overviews (`-overview`).
+
+### What is left (Lekki and the finale)
+
+- The finale boss stays in its sector of the reference arena (WL10); the Lekki boss on the Rumble map (not in this brief).
+- The substation, water tower and power line are procedural pieces; a founder art pass may want models.
+- Frame times of the new areas need a quiet machine (or a real device) to compare.
