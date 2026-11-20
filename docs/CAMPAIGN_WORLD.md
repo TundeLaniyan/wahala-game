@@ -1,6 +1,41 @@
-# Campaign world: campaign-only areas (framework + Oshodi)
+# Campaign world: campaign-only areas
 
-Branch `claude/wahala-cg-world`, from production `0b89d09`. Decisions WX1-WX9 (`docs/DECISIONS.md`). Not merged, not deployed.
+Framework + Oshodi: branch `claude/wahala-cg-world`, from production `0b89d09` (decisions WX1-WX9). The other districts
+(sections below): the community campaign kit and Mushin (WM1-WM6), Fadeyi/Somolu (WF1-WF5), Ebute Metta and Lagos Island
+(WE1-WE8), Lekki Phase 1 and the Ojuelegba finale (WL1-WL10), merged into `claude/wahala-campaign-guidance-expansion-v1`.
+
+## Status of the 21 missions
+
+NEW = the mission plays on a newly authored campaign-only board (a place the City Rumble map does not have); REUSED = the
+existing board, bounded to a part of it; UNCHANGED = the board and its extent as before (the campaign follow camera is a
+camera change, not a new environment). Walkable tiles: the old sector of the Rumble map -> the new board.
+
+| # | Mission | Board | Status | Walkable tiles |
+| --- | --- | --- | --- | --- |
+| 1 | Oshodi: Terminal Approach | `campaignOshodiOrita` (Orita Gate) | NEW | 188 -> 728 |
+| 2 | Oshodi: Rail Edge | `campaignOshodiRailside` (Railside) | NEW | 368 -> 854 |
+| 3 | Oshodi: The Controller (boss) | `rumbleOshodi`, bounded to the dispatch corridor (WX9) | REUSED (bounded) | - |
+| 4 | Mushin: Spare-Parts Row | `campaignMushinPartsRow` | NEW | 349 -> 684 |
+| 5 | Mushin: Aisle Sweep | `campaignMushinMarketHall` | NEW | 369 -> 734 |
+| 6 | Mushin: The Parts Broker (boss) | `rumbleMushin`, whole map (WM6) | UNCHANGED | - |
+| 7 | Fadeyi/Somolu: Toll Approach | `campaignFadeyiTollCorridor` | NEW | 309 -> 697 |
+| 8 | Fadeyi/Somolu: Junction Run | `campaignFadeyiSideRoutes` | NEW | 302 -> 731 |
+| 9 | Fadeyi/Somolu: The Garage Master (boss) | `rumbleFadeyi`, whole map (WF5) | UNCHANGED | - |
+| 10 | Ebute Metta: Yard Approach | `campaignEbuteFreightYard` | NEW | 462 -> 879 |
+| 11 | Ebute Metta: Goods Yard (raid section) | the raid's own board | UNCHANGED | - |
+| 12 | Ebute Metta: The Timetable (boss) | `rumbleEbuteMetta`, whole map (WE8) | UNCHANGED | - |
+| 13 | Lagos Island: Ledger Row | `campaignLagosLedgerLanes` | NEW | 224 -> 831 |
+| 14 | Lagos Island: Press Run | `campaignLagosPressYards` | NEW | 198 -> 736 |
+| 15 | Lagos Island: The Registrar (boss) | `rumbleLagosIsland`, whole map (WE8) | UNCHANGED | - |
+| 16 | Lekki Phase 1: Gate Approach | `campaignLekkiEstateGate` | NEW | 225 -> 834 |
+| 17 | Lekki Phase 1: Estate Sweep | `campaignLekkiInnerEstate` | NEW | 402 -> 854 |
+| 18 | Lekki Phase 1: The Steward (boss) | `rumbleLekki`, whole map (bounding not attempted) | UNCHANGED | - |
+| 19 | Ojuelegba: Return to Ojuelegba | `campaignOjuelegbaSouthStreets` | NEW | 218 -> 821 |
+| 20 | Ojuelegba: Hold the Junction | `campaignOjuelegbaBusInterchange` | NEW | 190 -> 863 |
+| 21 | Ojuelegba: Break the Ring (boss) | `rumbleOjuelegba`, its existing bounded sector (WL10) | UNCHANGED | - |
+
+The raids entered from field-mission doors keep their own boards (UNCHANGED). Every City Rumble layout is pinned by hash
+(`tests/campaign-world.test.ts`, `tests/campaign-community-kit.test.ts`).
 
 ## Why
 
@@ -270,10 +305,11 @@ platform posts, 27x10 the service corridor, 41x8 the footbridge stair tower) and
 
 ## What is left
 
-- The other districts (Mushin, Fadeyi/Somolu, Ebute Metta, Lagos Island, Lekki Phase 1, the Ojuelegba finale): the pattern
-  above; a community district needs its entry in `KITS` (step 2).
+- Every field mission now has its own board (the table at the top); the district sections below list what is left in each.
 - A campaign-only board for a boss needs the boss recipe's strike lanes on that board; Oshodi's boss stays on the Rumble
-  map's corridor (WX9).
+  map's corridor (WX9); the Mushin, Fadeyi/Somolu, Ebute Metta and Lagos Island bosses stay on their whole Rumble maps
+  (their strike points span the map: WM6, WF5, WE8), the finale boss in its existing sector (WL10); bounding the Lekki boss
+  was not attempted.
 - The rail sub-area's siding is walkable track (no train runs into the area); a train on it would need a `train` sweep and
   its warnings.
 
