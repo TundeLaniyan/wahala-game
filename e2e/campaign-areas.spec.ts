@@ -279,10 +279,18 @@ const COMMUNITY_AREAS: readonly {
   },
 ];
 
-for (const area of COMMUNITY_AREAS) {
+/**
+ * Each area runs on ONE project, alternating within a district (the first area of a district on desktop, the second on
+ * the phone), so every district is loaded on both and the suite does not pay for each area twice: in CI run 295 the ten
+ * shards averaged about 37 of their 45 minutes and two ran out.
+ */
+const PROJECT_OF = (i: number): 'desktop' | 'mobile' => (i % 2 === 0 ? 'desktop' : 'mobile');
+
+COMMUNITY_AREAS.forEach((area, i) => {
   test(`${area.fieldId}: its campaign area loads through the campaign, is drawn, and its gates open on their legs`, async ({
     page,
-  }) => {
+  }, info) => {
+    test.skip(info.project.name !== PROJECT_OF(i), `run once, on ${PROJECT_OF(i)}`);
     test.setTimeout(300_000);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -354,7 +362,7 @@ for (const area of COMMUNITY_AREAS) {
     expect((await scene(page)).gates).toEqual(area.gates.map((id) => ({ id, open: true })));
     expect(errors).toEqual([]);
   });
-}
+});
 
 // ------------------------------------------------------------- Ebute Metta and Lagos Island, played to the end
 
@@ -407,10 +415,12 @@ const bossWin = (missionId: string): Record<string, unknown> => ({
   creditedKills: 3,
 });
 
-for (const a of COMPLETED_AREAS)
+COMPLETED_AREAS.forEach((a, i) =>
   test(`${a.fieldId}: its campaign area loads through the campaign and the mission is completed`, async ({
     page,
-  }) => {
+  }, info) => {
+    // once per area, alternating projects (PROJECT_OF above): Ebute Metta and Press Run on desktop, Ledger Row on the phone
+    test.skip(info.project.name !== PROJECT_OF(i), `run once, on ${PROJECT_OF(i)}`);
     test.setTimeout(600_000);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -508,4 +518,5 @@ for (const a of COMPLETED_AREAS)
     const out = await page.evaluate(() => (window as any).__WAHALA__.getState().mission.outcome);
     expect(out).toMatchObject({ result: 'won', sectionMissionId: a.fieldId });
     expect(errors).toEqual([]);
-  });
+  }),
+);
