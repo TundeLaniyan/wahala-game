@@ -214,6 +214,26 @@ test.describe('mission guidance', () => {
       ).toBe(false);
     await shot(page, info, 'raid-pins');
 
+    // every rail notice posted from here on, in order (a notice lives 3 s of wall clock; a software-rendered frame can take
+    // a second, so reading the DOM afterwards races its expiry: the record is what the player was shown)
+    await page.evaluate(() => {
+      const w = (window as any).__WAHALA__;
+      const seen = new Set<number>();
+      w.toastsSeen = [] as string[];
+      w.store.subscribe((st: { toasts: { id: number; text: string }[] }) => {
+        for (const t of st.toasts)
+          if (!seen.has(t.id)) {
+            seen.add(t.id);
+            w.toastsSeen.push(t.text);
+          }
+      });
+    });
+    const notices = (text: string): Promise<string[]> =>
+      page.evaluate(
+        (q) => ((window as any).__WAHALA__.toastsSeen as string[]).filter((t) => t.includes(q)),
+        text,
+      );
+
     // a generator laid by the human (the real place intent) beside each marked crate, until it is down
     const destroyOne = async (): Promise<number> => {
       const down = await page.evaluate(() => {
@@ -264,9 +284,9 @@ test.describe('mission guidance', () => {
       down = await destroyOne();
       if (down >= 3) break;
       await expect(page.getByTestId('raid-goal-step')).toHaveText(`${down}/3`);
-      await expect(
-        page.getByTestId('toast').filter({ hasText: `MARKED CARGO DOWN ${down}/3 ✓` }),
-      ).toContainText('NEXT: MARKED CARGO');
+      await expect
+        .poll(() => notices(`MARKED CARGO DOWN ${down}/3 ✓`))
+        .toEqual([expect.stringContaining('NEXT: MARKED CARGO')]);
       await expect
         .poll(() => page.evaluate(() => (window as any).__WAHALA__.objectivePins()?.byGlyph?.cargo ?? 0))
         .toBe(3 - down);
@@ -277,10 +297,10 @@ test.describe('mission guidance', () => {
     await expect(page.getByTestId('raid-goal')).toHaveAttribute('data-verb', 'exit');
     await expect(page.getByTestId('raid-goal-target')).toHaveText('REACH THE EXIT');
     await expect(page.getByTestId('raid-goal-cue')).toBeVisible();
-    await expect(page.getByTestId('toast').filter({ hasText: 'MARKED CARGO DOWN 3/3 ✓' })).toHaveCount(1);
-    await expect(page.getByTestId('toast').filter({ hasText: 'MARKED CARGO DOWN 3/3 ✓' })).toContainText(
-      'NEXT: REACH THE EXIT',
-    );
+    // exactly one success notice for the last crate, naming what comes next
+    await expect
+      .poll(() => notices('MARKED CARGO DOWN 3/3 ✓'))
+      .toEqual([expect.stringContaining('NEXT: REACH THE EXIT')]);
     await expect
       .poll(() => page.evaluate(() => (window as any).__WAHALA__.objectivePins()?.byGlyph?.exit ?? 0))
       .toBe(1);
