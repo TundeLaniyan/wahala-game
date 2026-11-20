@@ -183,7 +183,7 @@ describe('the five missions: generator-sensitive and varied', () => {
       FIELD_MISSION_DEFS[id]!.doors.map((d) => `${d.id}:${d.raidId}:${d.returnTile}`);
     expect(doors('ebuteMetta.approach')).toEqual(['shed:junctionToolShed:53,28']);
     expect(doors('lagosIsland.approach')).toEqual(['annexe:recordsVault:14,29']);
-    expect(doors('lekki.approach')).toEqual(['plant:standbyPlant:14,28']);
+    expect(doors('lekki.approach')).toEqual(['plant:standbyPlant:39,7']);
     expect(doors('lagosIsland.press')).toEqual([]);
     expect(doors('lekki.estate')).toEqual([]);
   });
@@ -192,7 +192,7 @@ describe('the five missions: generator-sensitive and varied', () => {
     expect(getSector('ebuteMetta.yardApproach').gates?.map((g) => [g.id, g.opensAfterLeg])).toEqual([
       ['sidingsGate', 0],
     ]);
-    expect(getSector('lekki.northEstate').gates?.map((g) => [g.id, g.opensAfterLeg])).toEqual([
+    expect(getSector('lekki.innerEstate').gates?.map((g) => [g.id, g.opensAfterLeg])).toEqual([
       ['lawnGate', 0],
     ]);
   });

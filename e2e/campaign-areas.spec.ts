@@ -200,17 +200,24 @@ const won = (missionId: string, sectionMissionId?: string): Record<string, unkno
   ...(sectionMissionId ? { sectionMissionId, raidBonus: 0 } : {}),
 });
 
+/** The districts before the finale, won (their field missions then replay from the map). */
+const BEFORE_FINALE = ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta', 'lagosIsland', 'lekki'].map((d) =>
+  won(d),
+);
+
 /**
- * The community districts' campaign areas (docs/CAMPAIGN_WORLD.md, decision WM1 and the district prefixes): each field
- * mission is started through the real campaign flow (a save in which the earlier districts and sections are cleared through
- * the real controller), loads its own campaign-only board, builds the scene with its gate closed, and the gate opens once
- * the legs before it are done (staged in the sim state; the legs' rules have their own unit tests). Extend this list.
+ * Every other district's campaign areas (docs/CAMPAIGN_WORLD.md, decisions WM1, WF, WE, WL): each field mission is started
+ * through the real campaign flow (a save in which the earlier districts and sections are cleared through the real
+ * controller), loads its own campaign-only board with the human on the mission's start, builds the scene with its gates
+ * closed, and every gate opens once the legs before it are done (staged in the sim state; the legs' rules have their own
+ * unit tests). One entry per area; extend this list.
  */
 const COMMUNITY_AREAS: readonly {
   fieldId: string;
   arenaId: string;
   sector: string;
-  gate: string;
+  /** The sector's gates, closed at the start (an area may have none). */
+  gates: string[];
   /** Outcomes finished before the start: the districts and sections the mission needs. */
   before: Record<string, unknown>[];
 }[] = [
@@ -218,34 +225,62 @@ const COMMUNITY_AREAS: readonly {
     fieldId: 'mushin.approach',
     arenaId: 'campaignMushinPartsRow',
     sector: 'mushin.partsRow',
-    gate: 'yardGate',
+    gates: ['yardGate'],
     before: [won('oshodi')],
   },
   {
     fieldId: 'mushin.market',
     arenaId: 'campaignMushinMarketHall',
     sector: 'mushin.marketHall',
-    gate: 'hallGate',
+    gates: ['hallGate'],
     before: [won('oshodi'), won('mushin', 'mushin.approach')],
   },
   {
     fieldId: 'fadeyiSomolu.approach',
     arenaId: 'campaignFadeyiTollCorridor',
     sector: 'fadeyiSomolu.tollCorridor',
-    gate: 'yardTollBar',
+    gates: ['yardTollBar'],
     before: [won('oshodi'), won('mushin')],
   },
   {
     fieldId: 'fadeyiSomolu.junctions',
     arenaId: 'campaignFadeyiSideRoutes',
     sector: 'fadeyiSomolu.sideRoutes',
-    gate: 'routeCheckpoint',
+    gates: ['routeCheckpoint'],
     before: [won('oshodi'), won('mushin'), won('fadeyiSomolu', 'fadeyiSomolu.approach')],
+  },
+  {
+    fieldId: 'lekki.approach',
+    arenaId: 'campaignLekkiEstateGate',
+    sector: 'lekki.estateGate',
+    gates: ['gateBoom'],
+    before: BEFORE_FINALE,
+  },
+  {
+    fieldId: 'lekki.estate',
+    arenaId: 'campaignLekkiInnerEstate',
+    sector: 'lekki.innerEstate',
+    gates: ['lawnGate'],
+    before: BEFORE_FINALE,
+  },
+  {
+    fieldId: 'ojuelegba.return',
+    arenaId: 'campaignOjuelegbaSouthStreets',
+    sector: 'ojuelegba.southStreets',
+    gates: ['laneBarrier', 'cornerGate'],
+    before: BEFORE_FINALE,
+  },
+  {
+    fieldId: 'ojuelegba.junction',
+    arenaId: 'campaignOjuelegbaBusInterchange',
+    sector: 'ojuelegba.busInterchange',
+    gates: [],
+    before: [...BEFORE_FINALE, won('ojuelegba', 'ojuelegba.return')],
   },
 ];
 
 for (const area of COMMUNITY_AREAS) {
-  test(`${area.fieldId}: its campaign area loads through the campaign and its gate opens on its leg`, async ({
+  test(`${area.fieldId}: its campaign area loads through the campaign, is drawn, and its gates open on their legs`, async ({
     page,
   }) => {
     test.setTimeout(300_000);
@@ -259,6 +294,7 @@ for (const area of COMMUNITY_AREAS) {
         c.startNew();
         c.storyDone();
         for (const o of before) c.finishMission(o);
+        c.toMap();
         return c.startSectionMission(fieldId);
       },
       { fieldId: area.fieldId, before: area.before },
@@ -270,15 +306,21 @@ for (const area of COMMUNITY_AREAS) {
     expect(at.arenaId).toBe(area.arenaId);
     expect(at.game).toBe('mission');
     expect(at.sector).toBe(area.sector);
-    expect(at.gates).toEqual([{ id: area.gate, open: false }]);
-    expect(at.drawn.barricades).toBe(1);
+    expect(at.gates).toEqual(area.gates.map((id) => ({ id, open: false })));
+    expect(at.drawn?.barricades ?? 0).toBe(area.gates.length);
     await expect.poll(async () => (await scene(page)).stats?.triangles ?? 0).toBeGreaterThan(10_000);
     await expect(page.getByTestId('minimap')).toBeVisible();
-
-    // the legs before the gate, staged one at a time in the sim state
+    // the human stands on the mission's start, on the area's own board
     const def = await page.evaluate((id) => (window as any).__WAHALA__.fieldMissionDef(id), area.fieldId);
+    const me = await page.evaluate(() => {
+      const s = (window as any).__WAHALA__.getState();
+      return [s.players[0].x, s.players[0].y, s.mission.field.fieldId];
+    });
+    expect(me).toEqual([def.start[0], def.start[1], area.fieldId]);
+
+    // the legs before the last gate, staged one at a time in the sim state
     const sector = await page.evaluate(() => (window as any).__WAHALA__.getState().sector);
-    const opensAfter: number = sector.gates[0].opensAfterLeg;
+    const opensAfter: number = Math.max(-1, ...(sector.gates ?? []).map((g: any) => g.opensAfterLeg));
     for (let k = 0; k <= opensAfter; k++) {
       const leg = def.legs[k];
       if (leg.kind === 'reachMarkers') for (const m of leg.markers) await stage(page, m.x, m.y, 2);
@@ -305,7 +347,7 @@ for (const area of COMMUNITY_AREAS) {
         }, leg);
       expect(await page.evaluate(() => (window as any).__WAHALA__.getState().mission.field.leg)).toBe(k + 1);
     }
-    expect((await scene(page)).gates).toEqual([{ id: area.gate, open: true }]);
+    expect((await scene(page)).gates).toEqual(area.gates.map((id) => ({ id, open: true })));
     expect(errors).toEqual([]);
   });
 }

@@ -16,7 +16,7 @@ import { buildStageAlerts } from '../../src/app/stageAlerts';
 import { createGame, getArena } from '../../src/sim';
 import type { GameState, StageEvent } from '../../src/sim';
 import { SOUND_DEFS } from '../../src/audio/recipes';
-import { CAMPAIGN_ARENA_IDS } from '../../src/sim';
+import { CAMPAIGN_ARENA_IDS, campaignAreaOfArena } from '../../src/sim';
 import { moodGradient } from '../../src/ui/menu/arenaInfo';
 
 const lum = (c: number): number =>
@@ -41,7 +41,8 @@ describe('day and night looks', () => {
     expect(timeOfDay('?tod=banana')).toBe('day');
     expect(arenaLook('rumbleOshodi')).toBe(OSHODI_METRO_LOOK);
     // only the researched communities (Oshodi and the five later ones) ship a night look behind the flag, and the campaign
-    // areas drawn with their kits (the district's own night look on the area's geometry, decision WX3)
+    // areas drawn with their kits (the district's own night look on the area's geometry, decision WX3); the Ojuelegba
+    // finale's areas use the reference arena's looks, and it has no night look (decision WL6)
     const NIGHT = [
       'rumbleOshodi',
       'rumbleMushin',
@@ -49,7 +50,7 @@ describe('day and night looks', () => {
       'rumbleLagosIsland',
       'rumbleLekki',
       'rumbleEbuteMetta',
-      ...CAMPAIGN_ARENA_IDS,
+      ...CAMPAIGN_ARENA_IDS.filter((id) => campaignAreaOfArena(id)?.districtId !== 'ojuelegba'),
     ];
     for (const [id, art] of Object.entries(NEW_ARENA_ART()))
       if (!NIGHT.includes(id)) expect(art.nightLook, id).toBeUndefined();

@@ -29,7 +29,7 @@ import { painted } from './oshodiKit';
 import type { Paint } from './oshodiKit';
 import type { SiteLights } from './roadworksKit';
 import { tileWorld } from './rumbleV2Kit';
-import { DECK_TOP, DECK_X0, DECK_X1, SOFFIT } from './ojuelegbaDeck';
+import { DECK_TOP, RUMBLE_DECK, SOFFIT } from './ojuelegbaDeck';
 
 const hasDom = (): boolean => typeof document !== 'undefined';
 
@@ -259,14 +259,18 @@ function board(
  * The flyover running on north of the board over the deck columns. Deck top at `DECK_TOP` (the same level the
  * living environment's traffic drives on and the overhead over the board uses).
  */
-export function flyover(ctx: SetContext, L: SiteLights): void {
+export function flyover(
+  ctx: SetContext,
+  L: SiteLights,
+  span: { x0: number; x1: number } = RUMBLE_DECK,
+): void {
   const { W, H } = ctx;
   const P = palette();
   const s = ctx.statics;
   const { wx } = tileWorld(W, H);
   const north = -H / 2;
-  const x0 = wx(DECK_X0) - 0.5;
-  const x1 = wx(DECK_X1) + 0.5;
+  const x0 = wx(span.x0) - 0.5;
+  const x1 = wx(span.x1) + 0.5;
   const width = x1 - x0;
   const cx = (x0 + x1) / 2;
   const z0 = north - 0.45;

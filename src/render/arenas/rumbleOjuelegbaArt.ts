@@ -82,7 +82,7 @@ function districtAt(x: number, y: number): string {
 }
 
 /** Interlocking pavers over one tile (the shop lane). */
-function pavers(g: Ctx, r: () => number, x: number, y: number): void {
+export function pavers(g: Ctx, r: () => number, x: number, y: number): void {
   const pw = T / 4;
   const ph = T / 8;
   for (let j = 0; j < 8; j++)
@@ -97,7 +97,7 @@ function pavers(g: Ctx, r: () => number, x: number, y: number): void {
 }
 
 /** Cast concrete slabs with joints (pavements, the service court). */
-function slabs(g: Ctx, r: () => number, x: number, y: number, tone: number, joint: string): void {
+export function slabs(g: Ctx, r: () => number, x: number, y: number, tone: number, joint: string): void {
   g.fillStyle = `rgba(${tone + r() * 12},${tone - 4 + r() * 10},${tone - 12 + r() * 8},0.35)`;
   g.fillRect(x * T, y * T, T, T);
   g.strokeStyle = joint;
@@ -117,7 +117,7 @@ function slabs(g: Ctx, r: () => number, x: number, y: number, tone: number, join
 }
 
 /** Yellow hatching over a tile rectangle. */
-function hatch(g: Ctx, x0: number, y0: number, x1: number, y1: number, color: string): void {
+export function hatch(g: Ctx, x0: number, y0: number, x1: number, y1: number, color: string): void {
   g.save();
   g.beginPath();
   g.rect(x0 * T, y0 * T, (x1 - x0 + 1) * T, (y1 - y0 + 1) * T);
@@ -256,7 +256,7 @@ function goreIsland(g: Ctx, x0: number, x1: number, y: number): void {
 }
 
 /** The painted frame round a breakable barrier: yellow-and-black chevrons on the tile edge. */
-function barrierFrame(g: Ctx, x: number, y: number): void {
+export function barrierFrame(g: Ctx, x: number, y: number): void {
   const k = 12;
   for (let i = 0; i < 8; i++) {
     g.fillStyle = i % 2 ? 'rgba(20,20,20,0.85)' : 'rgba(236,190,30,0.85)';

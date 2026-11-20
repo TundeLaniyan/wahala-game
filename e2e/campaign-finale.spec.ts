@@ -2,7 +2,7 @@
  * The Ojuelegba finale in a real browser (decisions FN1-FN10): a campaign that has cleared all six districts is saved,
  * the page reloads (the save is read back), the map shows Ojuelegba as the final chapter, Continue plays the interim
  * beat once ("the estates go dark, but Ojuelegba is still locked"), the chapter's sections list on the hub card, and
- * mission 19 starts in its own sector of the unchanged Ojuelegba arena. Desktop and phone.
+ * mission 19 starts on its own campaign area beside the unchanged Ojuelegba arena (WL6). Desktop and phone.
  */
 import { expect, test } from '@playwright/test';
 import { inMatch, open } from './helpers';
@@ -54,7 +54,7 @@ test('six districts cleared: the finale node, the interim beat and mission 19 in
     await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.campaign.v1')!).interimSeen as unknown),
   ).toBe(true);
 
-  // mission 19 starts in its sector of the reference arena, through its visual briefing (decision MG1)
+  // mission 19 starts on its campaign area, through its visual briefing (decision MG1)
   await page.getByTestId('section-start-ojuelegba.return').click();
   await page.getByTestId('mission-brief-start').click();
   await inMatch(page);
@@ -68,9 +68,10 @@ test('six districts cleared: the finale node, the interim beat and mission 19 in
       leg: st.mission?.field?.leg,
     };
   });
+  // (on its own campaign area: the south streets, decision WL6)
   expect(s).toEqual({
-    arena: 'rumbleOjuelegba',
-    sector: 'ojuelegba.shopfrontReturn',
+    arena: 'campaignOjuelegbaSouthStreets',
+    sector: 'ojuelegba.southStreets',
     gates: ['laneBarrier:false', 'cornerGate:false'],
     field: 'ojuelegba.return',
     leg: 0,

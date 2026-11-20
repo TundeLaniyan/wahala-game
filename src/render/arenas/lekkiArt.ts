@@ -32,7 +32,8 @@ import type { StageEnvironment } from '../env/types';
 const ID = 'rumbleLekki';
 const cream = '#efe6d0';
 
-const THEME: Theme = {
+/** Lekki's cover theme (shared with the campaign areas, `campaign/lekkiCampaign.ts`). */
+export const LEKKI_THEME: Theme = {
   plaster: [0xe4e0d4, 0xd8d0bc, 0xcfc8b8, 0xe8e0c8, 0xc8d0c8, 0xd4c4a8],
   far: [0xe4e0d4, 0x8aa0aa, 0xd8d0bc, 0x9ab0a0, 0xc8c0b0],
   tarps: [0x2a9a9a, 0xe0b020, 0xc83a2a, 0x2a6aa8, 0xe07a20],
@@ -428,6 +429,26 @@ function withPlates(f: Family): Family {
   };
 }
 
+/**
+ * Lekki's cover pieces as they are, without the Rumble board's positional touches (the seawall on the promenade edge, the
+ * plaza fountain, the Admiralty Way blade plates): the campaign areas draw their own boards with them (lekkiCampaign.ts).
+ */
+export const LEKKI_PIECES: Readonly<Record<string, Family>> = {
+  building,
+  shop,
+  lockup,
+  kiosk,
+  stall,
+  glassBlock,
+  compoundWall,
+  villa,
+  artsShed,
+  hoarding,
+  palm,
+  fuelCanopy,
+  sportsClub,
+};
+
 const FAMILIES: Record<string, Family> = {
   building: perimeter,
   shop,
@@ -443,7 +464,7 @@ const FAMILIES: Record<string, Family> = {
   fuelCanopy,
   sportsClub,
 };
-const REACH: Record<string, number> = {
+export const LEKKI_REACH: Readonly<Record<string, number>> = {
   building: 3,
   shop: 3,
   lockup: 1,
@@ -460,9 +481,9 @@ const REACH: Record<string, number> = {
 };
 export const RUMBLE_LEKKI_COVER: CoverFactory = communityCover({
   arenaId: ID,
-  theme: THEME,
+  theme: LEKKI_THEME,
   families: FAMILIES,
-  reach: REACH,
+  reach: LEKKI_REACH,
 });
 
 export const RUMBLE_LEKKI_LOOK: ArenaLook = {
@@ -495,17 +516,26 @@ export const RUMBLE_LEKKI_NIGHT_LOOK: ArenaLook = nightLookOf(RUMBLE_LEKKI_LOOK,
   [0, 2.6, -19.4, 0xffd9a0],
 ]);
 
-export const RUMBLE_LEKKI_FLOOR: FloorDrawer = communityFloor(ID, {
+/** The Lekki ground: pale coastal sand-and-concrete, asphalt roads (shared with the campaign areas, lekkiCampaign.ts). */
+export const LEKKI_GROUND = {
   seed: 3311,
-  base: [176, 168, 150],
+  base: [176, 168, 150] as [number, number, number],
   dust: 'rgba(160,140,100,',
-  road: [66, 66, 68],
+  road: [66, 66, 68] as [number, number, number],
+  pavers: [186, 174, 154] as [number, number, number],
+};
+
+export const RUMBLE_LEKKI_FLOOR: FloorDrawer = communityFloor(ID, {
+  seed: LEKKI_GROUND.seed,
+  base: LEKKI_GROUND.base,
+  dust: LEKKI_GROUND.dust,
+  road: LEKKI_GROUND.road,
   // Admiralty Way (and only it, through its Freedom Way crossing) is interlocking paving (lekkiRoads.ts, decision LI7): the
   // canvas marks it with the key colour and the floor shader draws the blocks (paving/material.ts); markings painted after
   // this stay on top, and every other road keeps the generic asphalt
   paved: (g, rg, layout) => paintPavedKey(g, rg, layout, lekkiPavedAt),
   pavedAt: lekkiPavedAt,
-  pavers: [186, 174, 154],
+  pavers: LEKKI_GROUND.pavers,
   tint: {
     promenade: 'rgba(230,214,170,0.20)',
     ikate: 'rgba(200,150,90,0.12)',

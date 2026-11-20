@@ -168,59 +168,7 @@ const defs: MissionSectorDef[] = [
     hazards: 'inside',
   },
   // ---------------------------------------------------------------- Lekki
-  {
-    id: 'lekki.gateApproach',
-    districtId: 'lekki',
-    name: 'Garden wall approach',
-    area: 'The south-west estate block: the garden, the pool edge and the standby plant, with the closed stretch of the estate road; Ring gatehouses close the road at both ends, barriers line the expressway kerbs.',
-    rects: [[2, 21, 33, 29]],
-    barricades: [
-      b('gardenGate1', 'gate', row(20, 8, 9)),
-      b('gardenGate2', 'gate', row(20, 14, 15)),
-      b('gatehouseN', 'checkpoint', row(20, 20, 23)),
-      b('kerbN', 'barrier', row(20, 24, 25)),
-      b('kerbNBus', 'bus', row(20, 28, 30)),
-      b('eastLawn', 'barrier', col(34, 24, 25)),
-      b('eastCorner', 'barrier', col(34, 29, 29)),
-      b('kerbS0', 'barrier', row(30, 2, 2)),
-      b('kerbS1', 'barrier', row(30, 5, 9)),
-      b('kerbS2', 'bus', row(30, 12, 14)),
-      b('kerbS3', 'barrier', row(30, 15, 16)),
-      b('kerbS4', 'barrier', row(30, 19, 19)),
-      b('gatehouseS', 'checkpoint', row(30, 20, 23)),
-      b('kerbS5', 'barrier', row(30, 24, 29)),
-      b('kerbSBus', 'bus', row(30, 30, 33)),
-    ],
-    viewMargin: 3,
-    hazards: 'inside',
-  },
-  {
-    id: 'lekki.northEstate',
-    districtId: 'lekki',
-    name: 'North drive and east lawn',
-    area: 'The north drive, the central lawn and the east lawn down to the service road; a Ring gatehouse closes the estate road, the estate wall and barriers close the lawn edges.',
-    rects: [
-      [2, 2, 36, 9],
-      [24, 6, 54, 14],
-    ],
-    barricades: [
-      b('westLawn', 'barrier', row(10, 5, 7)),
-      b('lawnEdge', 'barrier', row(10, 12, 15)),
-      b('estateWall', 'gate', row(10, 16, 19)),
-      b('gatehouse', 'checkpoint', row(10, 20, 23)),
-      b('roadSide', 'barrier', col(23, 13, 14)),
-      b('south1', 'barrier', row(15, 24, 25)),
-      b('south2', 'barrier', row(15, 30, 31)),
-      b('southBus', 'bus', row(15, 34, 36)),
-      b('south3', 'barrier', row(15, 42, 42)),
-      b('south4', 'barrier', row(15, 48, 48)),
-      b('serviceGate', 'gate', row(15, 54, 54)),
-    ],
-    // the inner estate gate: the east lawn opens once the drive patrol is down (decision DB7)
-    gates: [{ id: 'lawnGate', kind: 'gate', tiles: col(40, 6, 13), opensAfterLeg: 0 }],
-    viewMargin: 3,
-    hazards: 'inside',
-  },
+  // Lekki's two field missions play on their own campaign areas now (decisions WL1-WL5, `areasLekki.ts`)
 ];
 
 /**

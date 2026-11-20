@@ -75,6 +75,12 @@ const OLD_SECTOR_TILES: Readonly<Record<string, number>> = {
   // Fadeyi/Somolu (decisions WF1-WF4): the old toll-road and north-junction sectors of the Rumble map
   'fadeyiSomolu.approach': 309,
   'fadeyiSomolu.junctions': 302,
+  // Lekki (`lekki.gateApproach`, `lekki.northEstate`) and the Ojuelegba finale (`ojuelegba.shopfrontReturn`,
+  // `ojuelegba.pierJunction`), measured on 662f8e2 (decisions WL1, WL6)
+  'lekki.approach': 225,
+  'lekki.estate': 402,
+  'ojuelegba.return': 218,
+  'ojuelegba.junction': 190,
 };
 
 const walkable = (
@@ -325,6 +331,43 @@ describe('Fadeyi/Somolu (decisions WF1-WF4)', () => {
 
 /** sha256 (first 16 hex) of the rumbleFadeyi layout on 0b89d09 (the same pin as tests/campaign-community-kit.test.ts). */
 const RUMBLE_FADEYI_LAYOUT = 'cbc989bc71726421';
+
+// ------------------------------------------------------------------------------------------- Lekki and the Ojuelegba finale
+
+/** sha256 (first 16 hex) of the City Rumble layouts the Lekki and finale areas sit beside (662f8e2: unchanged, WL1, WL6). */
+const RUMBLE_LAYOUTS: Readonly<Record<string, string>> = {
+  rumbleLekki: 'a2e2cc51fe36b5f0',
+  rumbleOjuelegba: 'cfba1de3c4012c43',
+};
+
+describe.each([
+  ['lekki', 'rumbleLekki'],
+  ['ojuelegba', 'rumbleOjuelegba'],
+] as const)('%s (decisions WL1-WL9)', (district, rumble) => {
+  it('the City Rumble map is unchanged (its layout hash is the one before the campaign areas)', () => {
+    const h = createHash('sha256').update(getArena(rumble).layout.join('\n')).digest('hex');
+    expect(h.slice(0, 16)).toBe(RUMBLE_LAYOUTS[rumble]);
+  });
+
+  it('every field mission plays on its own campaign area; two missions never share a board or a sub-area', () => {
+    const ids = Object.values(FIELD_MISSION_DEFS)
+      .filter((d) => d.districtId === district)
+      .map((d) => d.id);
+    expect(ids).toHaveLength(2);
+    const boards = ids.map((id) => fieldArenaId(FIELD_MISSION_DEFS[id]!));
+    for (const b of boards) expect(getArena(b).campaignOnly, b).toBe(true);
+    expect(new Set(boards).size).toBe(boards.length);
+    const [a, b] = boards.map((id) => getArena(id)) as [
+      ReturnType<typeof getArena>,
+      ReturnType<typeof getArena>,
+    ];
+    expect(a.layout.join('\n')).not.toBe(b.layout.join('\n'));
+    const names = new Set(a.districts!.map((d) => d.name));
+    for (const d of b.districts!) expect(names.has(d.name), d.name).toBe(false);
+    // and neither is the district's City Rumble map
+    for (const x of [a, b]) expect(x.layout.join('\n')).not.toBe(getArena(rumble).layout.join('\n'));
+  });
+});
 
 // ------------------------------------------------------------------------------------------- saves
 
