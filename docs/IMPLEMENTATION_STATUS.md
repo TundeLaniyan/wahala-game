@@ -717,3 +717,6 @@ Campaign missions and raids use a new `campaign` camera mode (from the match, no
 
 ## Campaign world: campaign-only areas (branch `claude/wahala-cg-world`, from `0b89d09`; decisions WX1-WX9; not merged, not deployed)
 Framework for campaign-only boards (`sim/arenas/campaign/`, `sim/mission/areas.ts`, `render/arenas/campaign/`; docs/CAMPAIGN_WORLD.md "How to add a campaign area"); Oshodi missions 1 and 2 on new boards (Orita Gate and the Dispatch Depot, 728 tiles; the Railside Streets, 854 tiles), the Oshodi boss bounded to the Rumble map's dispatch corridor. Remaining districts follow the same pattern.
+
+## Ebute Metta and Lagos Island campaign areas (branch `claude/wahala-cg-ebute-island`, from `662f8e2`; decisions WE1-WE8; not merged, not deployed)
+Yard Approach on the Iron Lane Freight Yard (879 tiles), Ledger Row on the Ledger Lanes (831), Press Run on the Press Yards (736), each with 4 sub-areas, a sector gate and re-authored encounters, drawn with the community kit (`KITS.ebuteMetta`, `KITS.lagosIsland`; one backward-compatible kit option, `floor.extra`); both bosses unchanged (WE8). docs/CAMPAIGN_WORLD.md "Ebute Metta and Lagos Island".
