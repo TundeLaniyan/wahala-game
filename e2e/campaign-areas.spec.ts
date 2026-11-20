@@ -202,6 +202,20 @@ const AREAS: readonly { fieldId: string; arena: string; sector: string; gate: st
       gate: 'sidingsGate',
       through: ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta'],
     },
+    {
+      fieldId: 'lagosIsland.approach',
+      arena: 'campaignLagosLedgerLanes',
+      sector: 'lagosIsland.ledgerLanes',
+      gate: 'recordsGate',
+      through: ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta', 'lagosIsland'],
+    },
+    {
+      fieldId: 'lagosIsland.press',
+      arena: 'campaignLagosPressYards',
+      sector: 'lagosIsland.pressYards',
+      gate: 'laneCheckpoint',
+      through: ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta', 'lagosIsland'],
+    },
   ];
 
 const bossWin = (missionId: string): Record<string, unknown> => ({
