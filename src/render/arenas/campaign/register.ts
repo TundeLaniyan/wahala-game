@@ -2,7 +2,8 @@
  * Registers every campaign-only arena with its district's presentation (docs/CAMPAIGN_WORLD.md "How to add a campaign
  * area", decision WX3): the district's look and night look, its floor materials, its cover builder on the area's own letter
  * map, its environment and a set built from its set kit with the area's landmark anchors (data). A new area needs no code
- * here once its district has a kit: its painted board and its landmarks are enough.
+ * here once its district has a kit: its painted board and its landmarks are enough. A COMMUNITY district (Mushin, Fadeyi/Somolu,
+ * Ebute Metta, Lagos Island, Lekki) is one line: `<district>: communityCampaignKit(<DISTRICT>_CAMPAIGN_ART)` (communityKit.ts).
  */
 import { CAMPAIGN_ARENA_IDS, campaignAreaOfArena } from '../../../sim';
 import type { CampaignAreaDef } from '../../../sim';
@@ -14,11 +15,13 @@ import {
   oshodiCampaignFloor,
   oshodiCampaignSet,
 } from './oshodiCampaign';
+import { communityCampaignKit } from './communityKit';
+import { MUSHIN_CAMPAIGN_ART } from './mushinCampaign';
 
 /** A district's campaign kit: how its areas are drawn. */
-type DistrictKit = (area: CampaignAreaDef) => ArenaArt;
+export type DistrictKit = (area: CampaignAreaDef) => ArenaArt;
 
-const KITS: Readonly<Partial<Record<string, DistrictKit>>> = {
+export const KITS: Readonly<Partial<Record<string, DistrictKit>>> = {
   oshodi: (area) => ({
     look: OSHODI_METRO_LOOK,
     nightLook: OSHODI_METRO_NIGHT_LOOK,
@@ -27,6 +30,8 @@ const KITS: Readonly<Partial<Record<string, DistrictKit>>> = {
     cover: oshodiCampaignCover(area.arenaId),
     env: oshodiCampaignEnv(area),
   }),
+  // community districts (decision WM1): the community kit with the district's own pieces
+  mushin: communityCampaignKit(MUSHIN_CAMPAIGN_ART),
 };
 
 /** The presentation of every campaign arena whose district has a kit (an area without one draws the defaults). */

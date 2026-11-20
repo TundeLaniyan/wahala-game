@@ -36,10 +36,28 @@ pinned (`tests/campaign-world.test.ts`).
 1. **Choose the place.** A part of the district the Rumble map compresses or leaves out, with 3-4 parts that each have a
    job in the mission. Write the area's place: compass bearing from the district core, neighbours and the way through.
 2. **Check the kit.** A district needs a letter kit and a presentation kit once: Oshodi has `OSHODI_KIT` and
-   `oshodiCampaign.ts`. For a community district (Mushin, Fadeyi/Somolu, Ebute Metta, Lagos Island, Lekki) the kit is its
-   `CoverLegend` and the community cover factory (`community/factory.ts` reads `ArenaDef.cover`): add the district to
-   `KITS` in `render/arenas/campaign/register.ts` with its look, night look, `communityCover`-style factory on the area's
-   arena id, `communityFloor`-style drawer and env, and give `campaignArena` a `cover` built with `Board.cover(legend)`.
+   `oshodiCampaign.ts`. A **community district** (Mushin, Fadeyi/Somolu, Ebute Metta, Lagos Island, Lekki) uses the shared
+   community campaign kit (decision WM1); Mushin is the worked example:
+   - **Sim:** paint the board with the community `Board` and the district's own `CoverLegend` (exported by its Rumble module,
+     e.g. `MUSHIN_LEGEND`), then
+     `campaignArena({ ..., rows: b.rows(), legend: communityLegend(LEGEND), cover: b.cover(LEGEND) })`
+     (`arenas/campaign/kit.ts`). `checkCover` refuses at import a cover that drifts from the letters. The Rumble arena module
+     is not changed.
+   - **Render:** export the district's cover theme, families and reach (and its ground colours) from its `*Art.ts` without
+     changing the Rumble output (`MUSHIN_THEME`, `MUSHIN_FAMILIES`, `MUSHIN_REACH`, `MUSHIN_GROUND`), write
+     `render/arenas/campaign/<district>Campaign.ts` with one `CommunityDistrictArt` (`communityKit.ts`): `look`, `nightLook`,
+     `theme`, `families`, `reach`, `floor` (ground + `roleTint` per sub-area role), `env` (`seed`, vehicle `kinds`, `beds`,
+     `crowdAt` / `lightAt`: which landmark kinds gather people or cast light), `set` (`backdrop` round every area and
+     `landmarks`: the district's existing set pieces BY LANDMARK KIND, each placed from the area's landmark anchors with
+     `landmarkPlace`). Then add ONE line to `KITS` in `register.ts`: `<districtId>: communityCampaignKit(<DISTRICT>_CAMPAIGN_ART)`.
+     No other code: `campaignArtTable()` draws every area of the district with it (cover = the community cover factory on
+     the area's `ArenaDef.cover`, floor = the community floor tinted by role with barriers framed and sub-area names
+     stencilled, env = the community env, set = backdrop + landmarks + lamp posts and street life on the sides).
+   - **Landmarks:** `CampaignLandmark.kind` is open (`CampaignLandmarkKind`): use the shared kinds or the district's own piece
+     names (Mushin: `redLine`, `footbridge`, `partsSpill`, `edgeStalls`, `signBoard`, `smoke`, `danfoRank`, `floodlight`); a
+     kind the kit does not draw is skipped.
+   - **Tests:** `tests/campaign-community-kit.test.ts` (the kit on a test board, the Rumble community boards' layout and
+     cover hashes); `tests/render/campaign-art.test.ts` checks every registered area uses its district's Rumble looks.
 3. **Paint the board** in `src/sim/arenas/campaign/<district><Area>.ts` with the community `Board` (`fill`, `set`,
    `rows()`): edges of real objects (tall north, low lock-ups south), sub-areas joined by 2-wide lanes round blocks of cover,
    no plaza bigger than a hold zone needs, supply / barrier crates where a player can count on them, a few floor traps off

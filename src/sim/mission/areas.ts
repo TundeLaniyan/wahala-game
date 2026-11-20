@@ -33,6 +33,14 @@ export interface CampaignSubArea extends DistrictDef {
 }
 
 /**
+ * What a landmark is: the shared kinds every district kit may draw, or a district's own set piece (a community district's
+ * kit names its pieces in `CommunityDistrictArt.set.landmarks`, render/arenas/campaign/communityKit.ts). Open: a kind the
+ * district's kit does not draw is skipped.
+ */
+export type CampaignLandmarkKind =
+  'footbridge' | 'flyover' | 'railViaduct' | 'danfoRank' | 'marketUmbrellas' | 'floodlight' | (string & {});
+
+/**
  * A landmark anchor: presentation and story data. `at` is a tile; off-board anchors (a footbridge over the north street, the
  * flyover beyond the edge) use the nearest board tile and a `side`. The renderer's campaign set builder draws `kind` with the
  * district's set kit (`render/arenas/campaign/`); a kind it does not know is skipped, never an error.
@@ -41,7 +49,7 @@ export interface CampaignLandmark {
   id: string;
   /** Fictional name shown nowhere yet (docs, future briefings). */
   name: string;
-  kind: 'footbridge' | 'flyover' | 'railViaduct' | 'danfoRank' | 'marketUmbrellas' | 'floodlight';
+  kind: CampaignLandmarkKind;
   at: Tile2;
   /** Off the board on this side (beyond the edge objects); absent = on the board's edge objects. */
   side?: 'north' | 'east' | 'west';

@@ -56,7 +56,7 @@ const cream = '#efe6d0';
 
 // ------------------------------------------------------------------------------------------ theme
 
-const THEME: Theme = {
+export const MUSHIN_THEME: Theme = {
   plaster: [0xc8b48e, 0xb89a78, 0x9fb0a6, 0xd2c6a6, 0xb88a64, 0xcfa88a, 0xa6a07c, 0x8ea0b4],
   far: [0xb5654a, 0x4a8a8c, 0xd0a040, 0xe4ddd0, 0x7a8aa0, 0x9a4a32, 0x8aa070, 0xc89a78],
   tarps: [0xc83a2a, 0xe0b020, 0x2a6aa8, 0x2f8a4a, 0xe07a20, 0x7a3a8a, 0xd8d0b8],
@@ -287,7 +287,7 @@ const railBoard: Family = (k, g, r, n) => {
   );
 };
 
-const FAMILIES: Record<string, Family> = {
+export const MUSHIN_FAMILIES: Record<string, Family> = {
   building,
   shop: railBoard,
   lockup,
@@ -303,7 +303,7 @@ const FAMILIES: Record<string, Family> = {
   timber,
   foodHall,
 };
-const REACH: Record<string, number> = {
+export const MUSHIN_REACH: Record<string, number> = {
   building: 3,
   shop: 3,
   lockup: 1,
@@ -321,9 +321,9 @@ const REACH: Record<string, number> = {
 };
 export const RUMBLE_MUSHIN_COVER: CoverFactory = communityCover({
   arenaId: ID,
-  theme: THEME,
-  families: FAMILIES,
-  reach: REACH,
+  theme: MUSHIN_THEME,
+  families: MUSHIN_FAMILIES,
+  reach: MUSHIN_REACH,
 });
 
 // ------------------------------------------------------------------------------------------ look
@@ -362,12 +362,17 @@ export const RUMBLE_MUSHIN_NIGHT_LOOK: ArenaLook = nightLookOf(RUMBLE_MUSHIN_LOO
 
 // ------------------------------------------------------------------------------------------ floor
 
-export const RUMBLE_MUSHIN_FLOOR: FloorDrawer = communityFloor(ID, {
+/** The Mushin ground: laterite dust over worn concrete (shared with the campaign areas, mushinCampaign.ts). */
+export const MUSHIN_GROUND = {
   seed: 3101,
-  base: [170, 138, 112],
+  base: [170, 138, 112] as [number, number, number],
   dust: 'rgba(150,74,40,',
-  road: [58, 54, 50],
-  pavers: [150, 136, 118],
+  road: [58, 54, 50] as [number, number, number],
+  pavers: [150, 136, 118] as [number, number, number],
+};
+
+export const RUMBLE_MUSHIN_FLOOR: FloorDrawer = communityFloor(ID, {
+  ...MUSHIN_GROUND,
   tint: {
     ladipo: 'rgba(60,50,48,0.16)',
     ojuwoye: 'rgba(120,70,40,0.10)',
@@ -379,6 +384,56 @@ export const RUMBLE_MUSHIN_FLOOR: FloorDrawer = communityFloor(ID, {
 });
 
 // ---------------------------------------------------------------------------------------- the set
+
+/**
+ * The Red Line behind the north edge at depth `zv`: the viaduct, a white-and-red train on it (at `trainX`) and the
+ * green-roofed MUSHIN station (centred on `sx`). Shared by the Rumble set and the campaign areas (mushinCampaign.ts).
+ */
+export function redLineStation(ctx: SetContext, zv: number, sx = 12, trainX = -16): void {
+  viaduct(ctx, {
+    z: zv,
+    x0: -ctx.W / 2 - 24,
+    x1: ctx.W / 2 + 24,
+    deck: 6.6,
+    width: 5.2,
+    pier: 10,
+    track: true,
+  });
+  railcars(ctx, { x: trainX, z: zv, y: 6.7, cars: 3, body: 0xe8e8e2, stripe: 0xb8322a });
+  // anchor: mushin-red-line-station (green roof, red-and-white fascia, the MUSHIN plate, the viaduct and the white-and-red train)
+  ctx.statics.add(
+    tagAnchor(
+      box(17, 0.4, 7.2, mat(0x2f7a4a, { roughness: 0.6, metalness: 0.2 }), sx, 10.1, zv + 0.4),
+      'mushin-red-line-station',
+    ),
+  ); // the green roof
+  ctx.statics.add(box(17.2, 0.5, 7.4, mat(0xb8322a, { roughness: 0.6 }), sx, 9.7, zv + 0.4)); // red fascia
+  ctx.statics.add(box(17, 0.12, 7.2, mat(0xe8e8e2, { roughness: 0.6 }), sx, 9.42, zv + 0.4)); // white band
+  for (const dx of [-7.5, -2.5, 2.5, 7.5])
+    ctx.statics.add(cyl(0.22, 0.22, 3.2, mat(0xc8c4b8, { roughness: 0.8 }), sx + dx, 8.2, zv + 3.6, 8));
+  ctx.statics.add(
+    box(
+      14,
+      2.6,
+      0.2,
+      mat(0x5a8ab0, { roughness: 0.2, metalness: 0.4, emissive: 0x1a3a58, emissiveIntensity: 0.4 }),
+      sx,
+      7.9,
+      zv - 2.6,
+    ),
+  ); // glazing
+  plaque(
+    ctx,
+    'cr:mushin:stn',
+    7.4,
+    1.2,
+    sx,
+    9.1,
+    zv + 4.1,
+    0,
+    lettered('MUSHIN  •  RED LINE', '#b8322a', '#ffffff'),
+  );
+}
 
 function build(ctx: SetContext): void {
   const { W, H } = ctx;
@@ -422,43 +477,7 @@ function build(ctx: SetContext): void {
   });
 
   // the Red Line: a viaduct behind the north edge, a white-and-red train on it, the green-roofed station
-  const zv = north - 11.5;
-  viaduct(ctx, { z: zv, x0: -W / 2 - 24, x1: W / 2 + 24, deck: 6.6, width: 5.2, pier: 10, track: true });
-  railcars(ctx, { x: -16, z: zv, y: 6.7, cars: 3, body: 0xe8e8e2, stripe: 0xb8322a });
-  const sx = 12;
-  // anchor: mushin-red-line-station (green roof, red-and-white fascia, the MUSHIN plate, the viaduct and the white-and-red train)
-  ctx.statics.add(
-    tagAnchor(
-      box(17, 0.4, 7.2, mat(0x2f7a4a, { roughness: 0.6, metalness: 0.2 }), sx, 10.1, zv + 0.4),
-      'mushin-red-line-station',
-    ),
-  ); // the green roof
-  ctx.statics.add(box(17.2, 0.5, 7.4, mat(0xb8322a, { roughness: 0.6 }), sx, 9.7, zv + 0.4)); // red fascia
-  ctx.statics.add(box(17, 0.12, 7.2, mat(0xe8e8e2, { roughness: 0.6 }), sx, 9.42, zv + 0.4)); // white band
-  for (const dx of [-7.5, -2.5, 2.5, 7.5])
-    ctx.statics.add(cyl(0.22, 0.22, 3.2, mat(0xc8c4b8, { roughness: 0.8 }), sx + dx, 8.2, zv + 3.6, 8));
-  ctx.statics.add(
-    box(
-      14,
-      2.6,
-      0.2,
-      mat(0x5a8ab0, { roughness: 0.2, metalness: 0.4, emissive: 0x1a3a58, emissiveIntensity: 0.4 }),
-      sx,
-      7.9,
-      zv - 2.6,
-    ),
-  ); // glazing
-  plaque(
-    ctx,
-    'cr:mushin:stn',
-    7.4,
-    1.2,
-    sx,
-    9.1,
-    zv + 4.1,
-    0,
-    lettered('MUSHIN  •  RED LINE', '#b8322a', '#ffffff'),
-  );
+  redLineStation(ctx, north - 11.5);
 
   // the Red Line access footbridge (anchor mushin-footbridge): a steel bridge in the station's red and white over the main road at
   // the west mouth, close to the board so the road mouth shows its stairs and deck (footbridge.ts)
@@ -475,7 +494,7 @@ function build(ctx: SetContext): void {
   });
 
   // spill-over of the market beyond the walls: umbrellas, tyre stacks, barrels, a few stalls under tarpaulins
-  const tarp = THEME.tarps.map((c) => mat(c, { roughness: 0.88 }));
+  const tarp = MUSHIN_THEME.tarps.map((c) => mat(c, { roughness: 0.88 }));
   [-22, -14, 6, 17, 24].forEach((x, i) =>
     setUmbrella(ctx, x, north - 2.4 - (i % 2) * 0.6, 0.95, tarp[i % 7]!, tarp[(i + 3) % 7]!, { h: 1.95 }),
   );

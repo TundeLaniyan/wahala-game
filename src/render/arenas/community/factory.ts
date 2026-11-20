@@ -5,6 +5,7 @@
  * ordinary pillars there), which keeps a missing family from breaking a match.
  */
 import { getArena } from '../../../sim';
+import type { ArenaDef } from '../../../sim';
 import { rectInClip } from '../boardCover';
 import type { CoverFactory } from '../boardCover';
 import { createCK, toRect } from './kit';
@@ -16,11 +17,13 @@ export interface CoverSpec {
   families: Readonly<Record<string, Family>>;
   /** Rows north of a tile its object can hide from the camera (occlusion fade), per kind (default 2). */
   reach: Readonly<Record<string, number>>;
+  /** The arena to draw (default `getArena(arenaId)`): a campaign kit resolves its board itself (communityKit.ts). */
+  arena?: () => ArenaDef;
 }
 
 export function communityCover(spec: CoverSpec): CoverFactory {
   return (board) => {
-    const arena = getArena(spec.arenaId);
+    const arena = spec.arena ? spec.arena() : getArena(spec.arenaId);
     const rects = arena.cover;
     if (!rects || board.width !== arena.layout[0]!.length || board.height !== arena.layout.length)
       return null;

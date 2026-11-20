@@ -5,7 +5,7 @@
  * its own (zebra crossings, rail ballast, market words) through `extra`.
  */
 import { getArena } from '../../../sim';
-import type { DistrictDef } from '../../../sim';
+import type { ArenaDef, DistrictDef } from '../../../sim';
 import { artRng } from '../../textures';
 import { T, crack, noiseFill, stain } from '../floorKit';
 import type { Ctx, FloorDrawer } from '../floorKit';
@@ -29,6 +29,8 @@ export interface FloorOpts {
   pavedAt?: (x: number, y: number) => boolean;
   /** more painting on top: (g, rg, layout, r) */
   extra?: (g: Ctx, rg: Ctx, layout: readonly string[], r: () => number) => void;
+  /** The arena to draw (default `getArena(arenaId)`): a campaign kit resolves its board itself (communityKit.ts). */
+  arena?: () => ArenaDef;
 }
 
 /** Bands of road rows (and columns) of at least two tiles: where lane lines run. */
@@ -58,7 +60,7 @@ function roadBands(layout: readonly string[]): {
 
 export function communityFloor(arenaId: string, o: FloorOpts): FloorDrawer {
   return (g, rg, cols, rows) => {
-    const arena = getArena(arenaId);
+    const arena = o.arena ? o.arena() : getArena(arenaId);
     const layout = arena.layout;
     const r = artRng(o.seed);
     const w = cols * T;
