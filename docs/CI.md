@@ -53,8 +53,12 @@ Actions-tab "Run workflow" button only lists workflows present on the default br
 - **Balance.** Playwright's `--shard=i/N` splits the ordered list by count. Measured in run 103 (8 shards): shards
   from 3.5 to 24 minutes, because desktop tests are about twice as slow as phone ones and the device-specific
   skips cluster. `scripts/ci/shards.ts` instead assigns every listed test to exactly one shard, longest first,
-  using the durations of the last fully passing run (unknown tests count as the median); shards run
-  `--test-list`. The report job's exactly-once check guards the split.
+  using the durations of the last fully passing run; shards run `--test-list`. The report job's exactly-once check
+  guards the split. A test with no recorded duration counts as the mean of its spec file on its project, or as the
+  90th percentile of every recorded test when its file is new. Until 2026-11-20 it counted as the median: a release
+  that added several long scenario files (the campaign guidance and world tests) put a few of them on one shard,
+  which ran past the 45-minute step limit with every test passing (runs 295-297), and no fully passing run could
+  record the new durations.
 - **Workers.** Run 107 (8 x 2 workers) took about as long as run 106 (8 x 1): one software-WebGL Chromium already
   keeps a runner's CPUs busy, so a second worker adds contention, not speed. One worker per shard stays.
 - **Runner speed varies.** The same test takes up to 2-3x longer on one runner than another, and the old

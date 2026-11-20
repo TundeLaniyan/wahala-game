@@ -142,8 +142,25 @@ describe('CI shards: duration-balanced test lists', () => {
     expect(heaviest).toBeLessThanOrEqual(total / 10 + 130_000);
   });
 
-  it('weighs a test with no recorded duration as the median', () => {
-    expect(weights(['a', 'b', 'c', 'new'], { a: 10, b: 30, c: 20 })).toEqual([10, 30, 20, 20]);
+  it('weighs a test with no recorded duration by its spec file, or as a long test when the file is new', () => {
+    const t = {
+      '[desktop] › a.spec.ts › one': 10,
+      '[desktop] › a.spec.ts › two': 30,
+      '[mobile] › a.spec.ts › one': 4,
+      '[desktop] › b.spec.ts › x': 20,
+      '[desktop] › c.spec.ts › y': 100,
+    };
+    expect(
+      weights(
+        [
+          '[desktop] › a.spec.ts › one',
+          '[desktop] › a.spec.ts › three', // new test, known file and project: the file's mean
+          '[mobile] › a.spec.ts › three', // the same file on the phone: the phone mean
+          '[desktop] › new.spec.ts › z', // a new file: the 90th percentile of every recorded test
+        ],
+        t,
+      ),
+    ).toEqual([10, 20, 4, 100]);
     expect(weights(['x'], {})).toEqual([60_000]);
   });
 });

@@ -5,7 +5,7 @@
  * as slow as the phone ones and the skipped-by-design tests cluster, so a count split left one shard of eight
  * at 23 minutes and another at 3. Instead every test from `playwright test --list` goes to exactly one shard,
  * longest first, onto the shard with the least work so far (LPT), using the per-test durations the previous
- * successful run recorded (`timings` below). A test with no recorded duration counts as the median. Each shard
+ * successful run recorded (`timings` below); a test with none is estimated (`weights`). Each shard
  * then runs `playwright test --test-list shard-i.txt`; the report job checks that every listed test ran once.
  *
  *   node --experimental-strip-types scripts/ci/shards.ts split <listed.json> <timings.json|-> <N> <outdir>
@@ -56,11 +56,32 @@ export function balance(
   return shards;
 }
 
+/** `[project] › file` of a list line: tests in one spec file on one project cost alike (same setup, same page loads). */
+const fileOf = (line: string): string => line.split(' › ').slice(0, 2).join(' › ');
+
+/**
+ * A test's expected cost: its recorded duration; else the mean of the recorded tests of its spec file on its project
+ * (a new test in a known file); else the 90th percentile of every recorded test (a new file: its tests are often long
+ * scenario runs, and counting them as the median put several on one shard, which then ran past the step limit with
+ * every test passing: CI runs 295-297). Overestimating an unknown test only leaves a shard a little short.
+ */
 export function weights(lines: readonly string[], timings: Readonly<Record<string, number>>): number[] {
-  const known = lines.map((l) => timings[l]).filter((d): d is number => typeof d === 'number');
-  const sorted = [...known].sort((a, b) => a - b);
-  const median = sorted.length ? sorted[Math.floor(sorted.length / 2)]! : 60_000;
-  return lines.map((l) => timings[l] ?? median);
+  const recorded = Object.entries(timings).filter(([, d]) => typeof d === 'number');
+  const sorted = recorded.map(([, d]) => d).sort((a, b) => a - b);
+  const p90 = sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.9))]! : 60_000;
+  const byFile = new Map<string, { sum: number; n: number }>();
+  for (const [line, d] of recorded) {
+    const f = byFile.get(fileOf(line)) ?? { sum: 0, n: 0 };
+    f.sum += d;
+    f.n++;
+    byFile.set(fileOf(line), f);
+  }
+  return lines.map((l) => {
+    const own = timings[l];
+    if (typeof own === 'number') return own;
+    const f = byFile.get(fileOf(l));
+    return f ? f.sum / f.n : p90;
+  });
 }
 
 const minutes = (ms: number) => `${(ms / 60_000).toFixed(1)} min`;
@@ -81,7 +102,7 @@ function split(listedPath: string, timingsPath: string, n: number, outdir: strin
   const md = [
     '### E2E shard plan',
     '',
-    `${lines.length} tests over ${n} shards, longest first; ${known} with a duration from the last successful run (others count as the median).`,
+    `${lines.length} tests over ${n} shards, longest first; ${known} with a duration from the last successful run (others: their spec file's mean, or the 90th percentile for a new file).`,
     '',
     '| Shard | Tests | Expected (last run speed) |',
     '| --- | --- | --- |',
