@@ -17,6 +17,7 @@ import { ARCHIVED_FIELD_DEFS } from './archivedFieldDefs';
 import { ORITA_ARENA_ID } from '../arenas/campaign/oshodiOrita';
 import { RAILSIDE_ARENA_ID } from '../arenas/campaign/oshodiRailside';
 import { PARTS_ROW_ARENA_ID } from '../arenas/campaign/mushinPartsRow';
+import { MARKET_HALL_ARENA_ID } from '../arenas/campaign/mushinMarketHall';
 
 export interface FieldMarkerDef {
   x: number;
@@ -356,23 +357,28 @@ const defs: FieldMissionDef[] = [
     parSec: 175,
   },
   {
+    // Campaign area `mushin.marketHall` (decisions WM4-WM5): the same legs, groups and story on the area's own board, the
+    // inside of the market. The runners work the covered hall and the provisions aisles; the hall's steel gate opens once
+    // they are down; the far stall stands in the warehouse interiors, the top street is the service lane, and the lorry bay
+    // at its east end is held while the loaders come out of the warehouses and the loaders' yard.
     id: 'mushin.market',
-    sectorId: 'mushin.northAisles',
+    arenaId: MARKET_HALL_ARENA_ID,
+    sectorId: 'mushin.marketHall',
     districtId: 'mushin',
     name: 'Aisle Sweep',
-    start: [3, 13],
-    returnMarker: m(4, 4, 'MARKET GATE'),
+    start: [3, 22],
+    returnMarker: m(3, 3, 'MARKET GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Defeat the 3 market runners in the north aisles.', group: 'runners' },
+      { kind: 'clearGroup', text: 'Defeat the 3 market runners in the market aisles.', group: 'runners' },
       {
         kind: 'reachMarkers',
-        text: 'Walk through the 2 checkpoints on the top street.',
-        markers: [m(34, 7, 'FAR STALL'), m(49, 5, 'TOP STREET')],
+        text: 'Walk through the 2 checkpoints to the top street.',
+        markers: [m(37, 10, 'FAR STALL'), m(38, 4, 'TOP STREET')],
       },
       {
         kind: 'holdArea',
         text: 'Keep the lorry bay clear for 40 seconds.',
-        area: { x: 48, y: 10, radius: 1, label: 'LORRY BAY' },
+        area: { x: 44, y: 5, radius: 1, label: 'LORRY BAY' },
         holdSec: 40,
         waves: [
           { group: 'loaders', atSec: 4 },
@@ -384,25 +390,33 @@ const defs: FieldMissionDef[] = [
     doors: [
       {
         id: 'backStall',
-        x: 14,
+        x: 10,
         y: 10,
         label: 'BACK STALL',
         raidId: 'partsStoreroom',
-        returnTile: [13, 10],
+        returnTile: [9, 10],
         required: false,
       },
     ],
     enemies: [
-      // the runners work the aisles: two area boys on the cross streets, a thrower on the south street
-      guard('Market Runner', 20, 10, 'runners', patrol('areaBoy', [15, 10], [27, 10])),
-      guard('Market Runner', 28, 13, 'runners', patrol('areaBoy', [22, 13], [34, 13])),
-      chaser('Market Runner', 40, 12, 'runners', patrol('bottleThrower', [36, 12], [42, 12])),
-      // the lorry loaders: they watch the top street, then come for the bay
-      guard('Loader', 48, 3, 'loaders', patrol('marketEnforcer', [42, 7], [48, 7], [48, 12], [42, 12])),
-      guard('Loader', 41, 6, 'loaders', patrol('marketEnforcer', [35, 6], [42, 6])),
-      chaser('Late Loader', 49, 13, 'lateLoaders', post('bottleThrower', 2)),
-      guard('Late Loader', 40, 13, 'lateLoaders', patrol('areaBoy', [37, 13], [44, 13])),
-      guard('Last Loader', 30, 7, 'lastLoaders', patrol('marketEnforcer', [26, 7], [33, 7])),
+      // the runners: an area boy loops the hall's stall blocks, another the provisions aisles, a thrower walks the south aisle
+      guard('Market Runner', 9, 12, 'runners', patrol('areaBoy', [5, 6], [14, 6], [14, 12], [5, 12])),
+      guard('Market Runner', 24, 13, 'runners', patrol('areaBoy', [21, 6], [26, 6], [26, 13], [21, 13])),
+      chaser('Market Runner', 24, 17, 'runners', patrol('bottleThrower', [17, 17], [30, 17])),
+      // the lorry loaders: one rounds the warehouse goods bay, one walks the service lane; then they come for the bay
+      guard('Loader', 44, 10, 'loaders', patrol('marketEnforcer', [42, 10], [47, 10], [47, 14], [42, 14])),
+      guard('Loader', 36, 4, 'loaders', patrol('marketEnforcer', [32, 4], [41, 4])),
+      // the late loaders: a thrower at the loaders' yard, an area boy round the tyre heap
+      chaser('Late Loader', 46, 19, 'lateLoaders', post('bottleThrower', 2)),
+      guard('Late Loader', 40, 20, 'lateLoaders', patrol('areaBoy', [39, 17], [44, 17], [44, 20], [39, 20])),
+      // the last loader works the provisions aisles north and comes through the hall gate last
+      guard(
+        'Last Loader',
+        26,
+        9,
+        'lastLoaders',
+        patrol('marketEnforcer', [22, 5], [30, 5], [30, 9], [22, 9]),
+      ),
     ],
     timeLimitSec: 600,
     parSec: 255,

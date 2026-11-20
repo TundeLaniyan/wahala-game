@@ -6,9 +6,10 @@
  *                                    |
  *   mushin.partsRow (NW) ---- the yard service lane ---- mushin.market (NE)
  *
- * Fictional names only (the Bible's naming rule): Row Gate, the Iya Ronke supplier yard, the Alaba Ojo market hall.
+ * Fictional names only (the Bible's naming rule): Row Gate, the Iya Ronke supplier yard, the Oloja covered market.
  */
 import { PARTS_ROW_ARENA_ID, PARTS_ROW_SUB_AREAS } from '../arenas/campaign/mushinPartsRow';
+import { MARKET_HALL_ARENA_ID, MARKET_HALL_SUB_AREAS } from '../arenas/campaign/mushinMarketHall';
 import type { CampaignAreaDef, CampaignSubArea } from './areas';
 import { areaCol } from './areas';
 
@@ -105,4 +106,93 @@ export const MUSHIN_PARTS_ROW: CampaignAreaDef = {
   ],
 };
 
-export const MUSHIN_AREAS: readonly CampaignAreaDef[] = [MUSHIN_PARTS_ROW];
+/** Mission 2, Aisle Sweep: the covered market, the provisions aisles, the warehouse interiors and the service lane. */
+export const MUSHIN_MARKET_HALL: CampaignAreaDef = {
+  id: 'mushin.marketHall',
+  districtId: 'mushin',
+  arenaId: MARKET_HALL_ARENA_ID,
+  name: 'The Covered Market, the Warehouses and the Service Lane',
+  summary:
+    'Inside the market north-east of the Idi-Oro road: the Oloja covered market with its one-stall aisles, the provisions aisles, and behind the hall gate the warehouse interiors, the service lane on top and its lorry bay.',
+  format: 'field',
+  missions: ['mushin.market'],
+  place: {
+    compass: 'NE',
+    from: 'the Idi-Oro road (the City Rumble map)',
+    neighbours: [
+      { areaId: 'mushin.partsRow', dir: 'W', via: 'the yard service lane behind the warehouses' },
+      { areaId: 'interchange', dir: 'S', via: 'the market gate lanes down to the transit square' },
+    ],
+  },
+  subAreas: purposes(MARKET_HALL_SUB_AREAS, {
+    hall: 'The entry: the covered stall blocks where a runner loops the aisles; the back stall (a bonus raid) and the MARKET GATE return.',
+    provisions:
+      'Kiosks, lock-ups and stall pairs; a runner loops the cross aisles, a thrower walks the south aisle.',
+    warehouses:
+      'Behind the hall gate (open once the runners are down): goods stacks between walls, the FAR STALL checkpoint, a loader.',
+    serviceLane:
+      'The top street with the TOP STREET checkpoint and the lorry bay to hold; the late loaders wait in the yard south.',
+  }),
+  sector: {
+    id: 'mushin.marketHall',
+    districtId: 'mushin',
+    arenaId: MARKET_HALL_ARENA_ID,
+    name: 'The covered market, the warehouses and the service lane',
+    area: 'The whole campaign board: the covered market, the provisions aisles, the warehouse interiors, the service lane and the loaders yard; closed by the buildings north, east and west and the lock-ups south.',
+    rects: [[2, 2, 47, 23]],
+    barricades: [],
+    // the hall's steel gate opens once the runners are down (a sector transition, decision WM4)
+    gates: [{ id: 'hallGate', kind: 'gate', tiles: areaCol(31, 12, 14), opensAfterLeg: 0 }],
+    viewMargin: 3,
+    hazards: 'inside',
+  },
+  entry: [3, 22],
+  exits: [
+    { id: 'marketGate', x: 3, y: 3, label: 'MARKET GATE', leadsTo: 'interchange' },
+    { id: 'backStall', x: 10, y: 10, label: 'BACK STALL', leadsTo: 'raid:partsStoreroom' },
+  ],
+  landmarks: [
+    {
+      id: 'marketBoard',
+      name: 'Oloja Covered Market',
+      kind: 'signBoard',
+      at: [9, 0],
+      side: 'north',
+      story: 'The market hall the runners work for the Parts Broker.',
+    },
+    {
+      id: 'stalls',
+      name: 'The market street',
+      kind: 'edgeStalls',
+      at: [0, 12],
+      side: 'west',
+      story: 'The market does not end at its wall: lock-up stalls line the street outside the hall.',
+    },
+    {
+      id: 'line',
+      name: 'Mushin Red Line',
+      kind: 'redLine',
+      at: [38, 0],
+      side: 'north',
+      story: 'The Red Line passes behind the service lane: the same line the parts row looks up at.',
+    },
+    {
+      id: 'bayLights',
+      name: 'Lorry bay floodlights',
+      kind: 'floodlight',
+      at: [49, 5],
+      side: 'east',
+      story: 'The bay where the restock lorry backs in: no lorry, no restock.',
+    },
+    {
+      id: 'rank',
+      name: 'Loaders danfo rank',
+      kind: 'danfoRank',
+      at: [49, 19],
+      side: 'east',
+      story: 'The loaders ride in from the transit square on these danfos.',
+    },
+  ],
+};
+
+export const MUSHIN_AREAS: readonly CampaignAreaDef[] = [MUSHIN_PARTS_ROW, MUSHIN_MARKET_HALL];

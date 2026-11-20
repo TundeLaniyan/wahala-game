@@ -72,23 +72,8 @@ const b = (id: string, kind: BarricadeKind, tiles: T[]): SectorBarricadeDef => (
 const defs: MissionSectorDef[] = [
   // Oshodi's two field missions play on their own campaign areas now (decisions WX5-WX9, `campaignAreas.ts`)
   // ---------------------------------------------------------------- Mushin
-  // Spare-Parts Row plays on its own campaign area now (`mushin.partsRow`, decisions WM2-WM3, `areasMushin.ts`)
-  {
-    id: 'mushin.northAisles',
-    districtId: 'mushin',
-    name: 'North market aisles and top street',
-    area: 'The northern market blocks from the market gate to the top street; the five alley mouths onto the motor road are closed by steel gates, barriers and a Ring checkpoint.',
-    rects: [[2, 2, 50, 13]],
-    barricades: [
-      b('mouth1', 'gate', row(14, 8, 9)),
-      b('mouth2', 'barrier', row(14, 17, 18)),
-      b('mouth3', 'checkpoint', row(14, 25, 26)),
-      b('mouth4', 'barrier', row(14, 34, 35)),
-      b('mouth5', 'gate', row(14, 42, 43)),
-    ],
-    viewMargin: 3,
-    hazards: 'inside',
-  },
+  // Spare-Parts Row and Aisle Sweep play on their own campaign areas now (`mushin.partsRow`, `mushin.marketHall`, decisions
+  // WM2-WM5, `areasMushin.ts`)
   // ---------------------------------------------------------------- Fadeyi / Somolu
   {
     id: 'fadeyiSomolu.tollRoad',

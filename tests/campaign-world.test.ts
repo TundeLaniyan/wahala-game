@@ -71,6 +71,7 @@ const OLD_SECTOR_TILES: Readonly<Record<string, number>> = {
   'oshodi.railEdge': 368,
   // Mushin (decisions WM2-WM5): the old district sectors of the Rumble map
   'mushin.approach': 349,
+  'mushin.market': 369,
 };
 
 const walkable = (
@@ -254,6 +255,23 @@ describe('Mushin', () => {
   it('the City Rumble Mushin map is unchanged (its layout hash is the one before the campaign areas)', () => {
     const h = createHash('sha256').update(getArena('rumbleMushin').layout.join('\n')).digest('hex');
     expect(h.slice(0, 16)).toBe(RUMBLE_MUSHIN_LAYOUT);
+  });
+
+  it('every Mushin field mission plays on its own campaign area; two missions never share a board', () => {
+    const ids = Object.values(FIELD_MISSION_DEFS)
+      .filter((d) => d.districtId === 'mushin')
+      .map((d) => d.id);
+    const boards = ids.map((id) => fieldArenaId(FIELD_MISSION_DEFS[id]!));
+    for (const b of boards) expect(getArena(b).campaignOnly, b).toBe(true);
+    expect(new Set(boards).size).toBe(boards.length);
+    for (let i = 0; i < boards.length; i++)
+      for (let j = i + 1; j < boards.length; j++) {
+        const a = getArena(boards[i]!);
+        const b = getArena(boards[j]!);
+        expect(a.layout.join('\n')).not.toBe(b.layout.join('\n'));
+        const names = new Set(a.districts!.map((d) => d.name));
+        for (const d of b.districts!) expect(names.has(d.name), d.name).toBe(false);
+      }
   });
 });
 

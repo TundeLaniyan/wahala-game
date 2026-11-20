@@ -183,3 +183,77 @@ test('Rail Edge: the Railside area loads its own board and the mission is comple
   expect(out).toMatchObject({ result: 'won', sectionMissionId: 'oshodi.railEdge' });
   expect(errors).toEqual([]);
 });
+
+/**
+ * Every other district's campaign areas through the real campaign flow (the districts before it won, the missions before it
+ * cleared, then `startSectionMission`): the mission loads its own campaign-only board, its sector and closed gates, the
+ * scene is built and drawn, no page error. One entry per area; each district worker adds its own (docs/CAMPAIGN_WORLD.md).
+ */
+const AREAS: readonly {
+  fieldId: string;
+  arenaId: string;
+  sector: string;
+  gates: string[];
+  /** Section missions cleared first (in order), after the districts before this one are won. */
+  before: string[];
+  /** District ids won first (the campaign order). */
+  districts: string[];
+}[] = [
+  {
+    fieldId: 'mushin.approach',
+    arenaId: 'campaignMushinPartsRow',
+    sector: 'mushin.partsRow',
+    gates: ['yardGate'],
+    before: [],
+    districts: ['oshodi'],
+  },
+  {
+    fieldId: 'mushin.market',
+    arenaId: 'campaignMushinMarketHall',
+    sector: 'mushin.marketHall',
+    gates: ['hallGate'],
+    before: ['mushin.approach'],
+    districts: ['oshodi'],
+  },
+];
+
+for (const a of AREAS)
+  test(`${a.fieldId}: its campaign area loads through the campaign flow and is drawn`, async ({ page }) => {
+    test.setTimeout(300_000);
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await open(page, '&noattract');
+    await page.evaluate((a) => {
+      const c = (window as any).__WAHALA__.campaign();
+      c.load();
+      c.startNew();
+      c.storyDone();
+      const won = (missionId: string, over: Record<string, unknown> = {}) => ({
+        result: 'won',
+        missionId,
+        modifiers: [],
+        seconds: 118,
+        livesUsed: 0,
+        phasesCleared: 3,
+        defeat: null,
+        stars: 2,
+        creditedKills: 3,
+        ...over,
+      });
+      for (const d of a.districts) c.finishMission(won(d, { defeat: 'eliminated' }));
+      for (const id of a.before)
+        c.finishMission(won(id.split('.')[0]!, { sectionMissionId: id, raidBonus: 0 }));
+      if (!c.startSectionMission(a.fieldId)) throw new Error(`${a.fieldId} did not start`);
+    }, a);
+    await inMatch(page);
+    await playing(page);
+    const at = await scene(page);
+    expect(at.arenaId).toBe(a.arenaId);
+    expect(at.game).toBe('mission');
+    expect(at.sector).toBe(a.sector);
+    expect(at.gates).toEqual(a.gates.map((id) => ({ id, open: false })));
+    expect(at.drawn.barricades).toBe(a.gates.length);
+    await expect.poll(async () => (await scene(page)).stats?.triangles ?? 0).toBeGreaterThan(10_000);
+    await expect(page.getByTestId('minimap')).toBeVisible();
+    expect(errors).toEqual([]);
+  });

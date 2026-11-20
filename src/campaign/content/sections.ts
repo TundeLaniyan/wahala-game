@@ -165,7 +165,7 @@ const MUSHIN_SECTIONS: SectionDef[] = [
     order: 1,
     name: 'Spare-Parts Row',
     summary:
-      'The stall row runs toward the storeroom lane. Walk it, break the parts cages in the loading bay and raid the parts storeroom.',
+      'The parts market side streets lead to a supplier yard. Walk the stall row, break the parts cages in the yard and raid the parts storeroom.',
     requires: [],
     missions: [
       {
@@ -174,7 +174,7 @@ const MUSHIN_SECTIONS: SectionDef[] = [
         name: 'Spare-Parts Row',
         objectiveCard: 'Walk the stall row, wreck 3 parts cages, raid the storeroom, return.',
         summary:
-          'Hawkers walk the aisles, and the Ring locks hoarded parts in cages in the loading bay: blast each one three times while a heavy minds them. Then stand on the storeroom door to raid it.',
+          'Hawkers walk the side streets, and the Ring locks hoarded parts in cages in the supplier yard behind its steel gate: blast each one three times while a heavy minds them. Then stand on the storeroom door to raid it.',
         missionRef: 'mushin.approach',
         doors: [{ doorId: 'storeroom', raidId: 'partsStoreroom' }],
         reward: title('mushin.approach', 'Row Regular', 'The stall owners nod when you pass.'),
@@ -190,7 +190,7 @@ const MUSHIN_SECTIONS: SectionDef[] = [
     order: 2,
     name: 'Aisle Sweep',
     summary:
-      'The north aisles are worked by market runners, and a lorry waits on the top street to restock the hoard. Clear the runners, then keep the lorry bay clear.',
+      'The covered market is worked by market runners, and a lorry waits at the end of the service lane to restock the hoard. Clear the runners, then keep the lorry bay clear.',
     requires: ['mushin.s1'],
     missions: [
       {
@@ -199,10 +199,10 @@ const MUSHIN_SECTIONS: SectionDef[] = [
         name: 'Aisle Sweep',
         objectiveCard: 'Clear runners, walk the top street, keep the lorry bay 40 s.',
         summary:
-          'Three runners work the aisles; after them, walk the top street and keep the lorry bay clear for 40 seconds while the loaders come for it: no lorry, no restock. A back stall offers a bonus raid.',
+          'Three runners work the market aisles; after them, the hall gate opens: walk through the warehouses to the top street and keep the lorry bay clear for 40 seconds while the loaders come for it: no lorry, no restock. A back stall offers a bonus raid.',
         missionRef: 'mushin.market',
         doors: [{ doorId: 'backStall', raidId: 'partsStoreroom' }],
-        reward: title('mushin.market', 'Aisle Regular', 'Runners step aside for you in the north aisles.'),
+        reward: title('mushin.market', 'Aisle Regular', 'Runners step aside for you in the market aisles.'),
         unlocks: ['section.mushin.s3'],
         ringWeakened:
           'The runners lose the aisles and the lorry leaves empty: the broker has nothing left to restock her stacks.',
