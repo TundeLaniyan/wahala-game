@@ -16,6 +16,7 @@ import { FINALE_FIELD_DEFS } from './finaleDefs';
 import { ARCHIVED_FIELD_DEFS } from './archivedFieldDefs';
 import { ORITA_ARENA_ID } from '../arenas/campaign/oshodiOrita';
 import { RAILSIDE_ARENA_ID } from '../arenas/campaign/oshodiRailside';
+import { PARTS_ROW_ARENA_ID } from '../arenas/campaign/mushinPartsRow';
 
 export interface FieldMarkerDef {
   x: number;
@@ -296,26 +297,30 @@ const defs: FieldMissionDef[] = [
   },
   // ---------------------------------------------------------------- Mushin
   {
+    // Campaign area `mushin.partsRow` (decisions WM2-WM3): the same legs, groups and story on the area's own board, the
+    // Ladipo side streets and the supplier yard. A hawker loops the stall grid, a stall guard the engine back aisle; the
+    // yard's steel gate opens once the checkpoints are walked; the cages stand on the loading apron and by the storeroom.
     id: 'mushin.approach',
-    sectorId: 'mushin.sparePartsRow',
+    arenaId: PARTS_ROW_ARENA_ID,
+    sectorId: 'mushin.partsRow',
     districtId: 'mushin',
     name: 'Spare-Parts Row',
-    start: [3, 30],
-    returnMarker: m(4, 36, 'ROW GATE'),
+    start: [3, 22],
+    returnMarker: m(4, 20, 'ROW GATE'),
     legs: [
       {
         kind: 'reachMarkers',
         text: 'Walk through the 2 checkpoints along the stalls.',
-        markers: [m(7, 34, 'STALL ROW'), m(18, 36, 'BACK AISLE')],
+        markers: [m(23, 6, 'STALL ROW'), m(30, 20, 'BACK AISLE')],
       },
       {
         kind: 'destroyTargets',
-        text: 'Destroy the 3 parts cages in the loading bay.',
+        text: 'Destroy the 3 parts cages in the supplier yard.',
         crew: 'cageCrew',
         targets: [
-          { id: 'cageNorth', kind: 'partsCage', x: 34, y: 28, label: 'PARTS CAGE', hp: 3 },
-          { id: 'cageEast', kind: 'partsCage', x: 49, y: 32, label: 'PARTS CAGE', hp: 3 },
-          { id: 'cageSouth', kind: 'partsCage', x: 35, y: 33, label: 'PARTS CAGE', hp: 3 },
+          { id: 'cageNorth', kind: 'partsCage', x: 36, y: 10, label: 'PARTS CAGE', hp: 3 },
+          { id: 'cageEast', kind: 'partsCage', x: 44, y: 12, label: 'PARTS CAGE', hp: 3 },
+          { id: 'cageSouth', kind: 'partsCage', x: 42, y: 22, label: 'PARTS CAGE', hp: 3 },
         ],
       },
       { kind: 'door', text: 'Stand on the storeroom door for 1 second to raid it.', doorId: 'storeroom' },
@@ -323,22 +328,29 @@ const defs: FieldMissionDef[] = [
     doors: [
       {
         id: 'storeroom',
-        x: 42,
-        y: 35,
+        x: 39,
+        y: 17,
         label: 'PARTS STOREROOM',
         raidId: 'partsStoreroom',
-        returnTile: [42, 36],
+        returnTile: [39, 18],
         required: true,
       },
     ],
     enemies: [
-      // the stall row and the back aisle: two enforcers walk the aisles the checkpoints sit on
-      guard('Parts Hawker', 12, 35, 'hawkers', patrol('marketEnforcer', [8, 35], [16, 35])),
-      guard('Stall Guard', 25, 36, 'hawkers', patrol('marketEnforcer', [20, 36], [31, 36])),
-      // the loading bay: a runner sweeps the top aisle, a heavy minds the cages, a thrower watches the storeroom
-      guard('Bay Runner', 41, 29, 'runners', patrol('areaBoy', [33, 29], [49, 29])),
-      blocker('Cage Minder', 40, 32, 'cageCrew', post('heavyEnforcer', 1)),
-      chaser('Bay Lookout', 48, 35, 'lookouts', post('bottleThrower', 2)),
+      // the stall row: a hawker loops the middle stall blocks (the checkpoint's aisle is on its route)
+      guard('Parts Hawker', 20, 9, 'hawkers', patrol('marketEnforcer', [20, 6], [26, 6], [26, 9], [20, 9])),
+      // the engine back aisle: a stall guard loops the workshops and lock-ups by the yard gate
+      guard(
+        'Stall Guard',
+        22,
+        17,
+        'hawkers',
+        patrol('marketEnforcer', [16, 17], [28, 17], [28, 20], [16, 20]),
+      ),
+      // the supplier yard: a runner rounds the loading apron, a heavy minds the cages, a thrower watches the storeroom
+      guard('Bay Runner', 41, 7, 'runners', patrol('areaBoy', [33, 7], [45, 7], [45, 12], [33, 12])),
+      blocker('Cage Minder', 39, 12, 'cageCrew', post('heavyEnforcer', 1)),
+      chaser('Bay Lookout', 44, 18, 'lookouts', post('bottleThrower', 2)),
     ],
     timeLimitSec: 480,
     parSec: 175,

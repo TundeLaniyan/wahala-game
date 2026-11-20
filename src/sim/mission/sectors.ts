@@ -72,28 +72,7 @@ const b = (id: string, kind: BarricadeKind, tiles: T[]): SectorBarricadeDef => (
 const defs: MissionSectorDef[] = [
   // Oshodi's two field missions play on their own campaign areas now (decisions WX5-WX9, `campaignAreas.ts`)
   // ---------------------------------------------------------------- Mushin
-  {
-    id: 'mushin.sparePartsRow',
-    districtId: 'mushin',
-    name: 'Spare-parts row and loading bay',
-    area: 'The southern stall rows, the back aisle and the loading bay to the parts storeroom; the lanes north to the motor road are closed by parked danfos, barriers and a Ring checkpoint.',
-    rects: [[2, 28, 50, 36]],
-    barricades: [
-      b('lane1', 'barrier', row(27, 2, 3)),
-      b('plazaBus', 'bus', row(27, 7, 9)),
-      b('plazaBar', 'barrier', row(27, 10, 11)),
-      b('rowBusW', 'bus', row(27, 13, 15)),
-      b('rowBusE', 'bus', row(27, 16, 18)),
-      b('lane2', 'barrier', row(27, 22, 22)),
-      b('lane3', 'barrier', row(27, 26, 26)),
-      b('ringPost', 'checkpoint', row(27, 29, 30)),
-      b('bayBus', 'bus', row(27, 33, 35)),
-      b('lane4', 'barrier', row(27, 42, 42)),
-      b('eastBus', 'bus', row(27, 48, 50)),
-    ],
-    viewMargin: 3,
-    hazards: 'inside',
-  },
+  // Spare-Parts Row plays on its own campaign area now (`mushin.partsRow`, decisions WM2-WM3, `areasMushin.ts`)
   {
     id: 'mushin.northAisles',
     districtId: 'mushin',
