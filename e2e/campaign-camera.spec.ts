@@ -91,8 +91,9 @@ async function toPlay(page: Page): Promise<void> {
 }
 
 /**
- * Walks (forced intents, real movement rules) along a shortest open path to a floor tile 6 steps away (a campaign area's
- * start can sit in a short bay, so a straight line is not enough); returns the tiles moved from the start.
+ * Walks (forced intents, real movement rules) along a shortest open path to a floor tile 10 steps away, toward the middle
+ * of the board (a campaign area's start can sit in a short bay in a corner, where the follow camera rightly holds still at
+ * the clamped edge); returns the tiles moved from the start.
  */
 async function walk(page: Page): Promise<number> {
   return page.evaluate(() => {
@@ -108,11 +109,11 @@ async function walk(page: Page): Promise<number> {
       s.tiles[y * s.width + x] === 0 &&
       !blocked.has(y * s.width + x);
     const dirs = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] } as const;
-    // breadth-first from the human: the first tile 6 steps out, and the way back to it
+    // breadth-first from the human: the tiles 10 steps out, and the way back to them
     const from = { x: me.x, y: me.y };
     const prev = new Map<number, number>([[from.y * s.width + from.x, -1]]);
     let frontier = [from.y * s.width + from.x];
-    for (let d = 0; d < 6 && frontier.length; d++) {
+    for (let d = 0; d < 10 && frontier.length; d++) {
       const next: number[] = [];
       for (const i of frontier)
         for (const [dx, dy] of Object.values(dirs)) {
@@ -126,16 +127,18 @@ async function walk(page: Page): Promise<number> {
         }
       frontier = next;
     }
-    // the tile 6 steps out that lies farthest in a straight line (a winding path may end next to the start)
-    const far = (i: number): number =>
-      Math.abs((i % s.width) - from.x) + Math.abs(Math.floor(i / s.width) - from.y);
-    const goal = [...frontier].sort((a, b) => far(b) - far(a))[0] ?? [...prev.keys()].at(-1)!;
+    // the tile that far out nearest the middle of the board (a start in a corner walks away from the clamped edge, where
+    // the follow camera rightly holds still)
+    const mid = (i: number): number =>
+      Math.abs((i % s.width) - s.width / 2) + Math.abs(Math.floor(i / s.width) - s.height / 2);
+    const goal = [...frontier].sort((a, b) => mid(a) - mid(b))[0] ?? [...prev.keys()].at(-1)!;
     const path: number[] = [];
     for (let i = goal; i !== -1; i = prev.get(i)!) path.unshift(i);
     let k = 1;
-    for (let t = 0; t < 600 && k < path.length; t++) {
+    for (let t = 0; t < 900 && k < path.length; t++) {
+      // the tile changes when a step starts: on the next path tile, aim at the one after it
       const here = me.y * s.width + me.x;
-      if (here === path[k] && me.stepRemaining === 0) k++;
+      if (here === path[k]) k++;
       if (k >= path.length) break;
       const tx = path[k]! % s.width;
       const ty = Math.floor(path[k]! / s.width);
