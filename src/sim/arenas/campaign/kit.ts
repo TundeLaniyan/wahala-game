@@ -14,14 +14,24 @@
  * cover map, so the two cannot drift apart. Pure data: no rules, no random numbers (the endgame marks use a seeded
  * generator at authoring time, like the community boards).
  */
-import type { ArenaDef, ArenaInfo, DistrictDef, StageHazardDef } from '../types';
+import type { ArenaDef, ArenaInfo, CoverRect, DistrictDef, StageHazardDef } from '../types';
 import type { TilePos } from '../../types';
+import type { CoverLegend } from '../community/painter';
 import { RADIAL_CLEARANCE, around, balancedSpawns, rumbleStageConfig, trapGrid } from '../rumbleKit';
 
 export type TrapMark = readonly [number, number, 'o' | '~'];
 
 /** The object letters of a district kit: letter -> the renderer's object kind (presentation data). */
 export type CampaignLegend = Readonly<Record<string, string>>;
+
+/**
+ * A COMMUNITY district's letter kit as a campaign legend (docs/CAMPAIGN_WORLD.md "How to add a campaign area", step 2): the
+ * district's own `CoverLegend` (Mushin, Fadeyi/Somolu, Ebute Metta, Lagos Island, Lekki: exported by its Rumble arena
+ * module), letter -> family kind. Pass it as `legend` with `cover: board.cover(LEGEND)`.
+ */
+export function communityLegend(legend: CoverLegend): CampaignLegend {
+  return Object.fromEntries(Object.entries(legend).map(([c, d]) => [c, d.kind]));
+}
 
 export interface CampaignBoardSpec {
   id: string;
@@ -45,6 +55,12 @@ export interface CampaignBoardSpec {
   info: ArenaInfo;
   /** Spawn slots (at least the mission's 1 + enemies; the field runtime seats everyone on their authored tiles). */
   spawns?: number;
+  /**
+   * A COMMUNITY district's objects: `board.cover(LEGEND)` of the same painted `Board` the rows come from (the community cover
+   * factory draws `ArenaDef.cover`, one object per rectangle). Checked at import: every rectangle stands on its own letters
+   * and every letter tile is in exactly one rectangle. Absent = a district with a letter-map cover builder (Oshodi).
+   */
+  cover?: readonly CoverRect[];
 }
 
 /** The sim layout of painted rows: every legend letter becomes '#'. */
@@ -55,6 +71,30 @@ export function layoutOf(rows: readonly string[], legend: CampaignLegend): strin
 /** The cover map of painted rows: legend letters kept, everything else '.'. */
 export function coverMapOf(rows: readonly string[], legend: CampaignLegend): string[] {
   return rows.map((r) => [...r].map((c) => (legend[c] ? c : '.')).join(''));
+}
+
+/** Throws unless `cover` draws exactly the legend letters of `rows`: one rectangle per tile, of that letter's kind. */
+export function checkCover(
+  id: string,
+  rows: readonly string[],
+  legend: CampaignLegend,
+  cover: readonly CoverRect[],
+): void {
+  const W = rows[0]!.length;
+  const seen = new Uint8Array(W * rows.length);
+  for (const c of cover)
+    for (let y = c.y; y < c.y + c.h; y++)
+      for (let x = c.x; x < c.x + c.w; x++) {
+        const ch = rows[y]?.[x];
+        if (ch === undefined || legend[ch] !== c.kind)
+          throw new Error(`${id}: cover ${c.kind} at ${x},${y} stands on '${ch ?? 'off board'}'`);
+        if (seen[y * W + x]++) throw new Error(`${id}: two cover objects on ${x},${y}`);
+      }
+  rows.forEach((r, y) =>
+    [...r].forEach((ch, x) => {
+      if (legend[ch] && !seen[y * W + x]) throw new Error(`${id}: '${ch}' at ${x},${y} has no cover object`);
+    }),
+  );
 }
 
 /** `count` endgame marks on open floor inside `rect`, spread out, from a seeded generator (authoring time). */
@@ -106,6 +146,7 @@ export function campaignArena(s: CampaignBoardSpec): ArenaDef {
     // every solid tile is a real object of the kit: no raw concrete, no invisible edge
     if (r.includes('#')) throw new Error(`${s.id}: raw '#' in "${r}" (paint a kit object instead)`);
   }
+  if (s.cover) checkCover(s.id, s.rows, s.legend, s.cover);
   const layout = layoutOf(s.rows, s.legend);
   const traps = s.traps ?? [];
   const used = new Set(traps.map(([x, y]) => `${x},${y}`));
@@ -143,6 +184,7 @@ export function campaignArena(s: CampaignBoardSpec): ArenaDef {
     campaignOnly: true,
     layout,
     coverMap: coverMapOf(s.rows, s.legend),
+    ...(s.cover ? { cover: s.cover.map((c) => ({ ...c })) } : {}),
     spawns,
     spawnClearance: RADIAL_CLEARANCE,
     mirrorSoftBlocks: false,

@@ -16,6 +16,8 @@ import { FINALE_FIELD_DEFS } from './finaleDefs';
 import { ARCHIVED_FIELD_DEFS } from './archivedFieldDefs';
 import { ORITA_ARENA_ID } from '../arenas/campaign/oshodiOrita';
 import { RAILSIDE_ARENA_ID } from '../arenas/campaign/oshodiRailside';
+import { TOLL_CORRIDOR_ARENA_ID } from '../arenas/campaign/fadeyiTollCorridor';
+import { SIDE_ROUTES_ARENA_ID } from '../arenas/campaign/fadeyiSideRoutes';
 
 export interface FieldMarkerDef {
   x: number;
@@ -397,22 +399,31 @@ const defs: FieldMissionDef[] = [
   },
   // ---------------------------------------------------------------- Fadeyi / Somolu
   {
+    // Campaign area `fadeyiSomolu.tollCorridor` (decisions WF1-WF3): the same legs, groups and story on the area's own board.
+    // A marshal loops the slip's shop block, two more loop the blocks either side of the checkpoint street's barrier lines; the
+    // toll boxes stand by the kiosk gap and north and south of the plaza's booth islands; the yard's toll bar lifts once they
+    // are smashed, and a lookout covers the tool-shed door.
     id: 'fadeyiSomolu.approach',
-    sectorId: 'fadeyiSomolu.tollRoad',
+    arenaId: TOLL_CORRIDOR_ARENA_ID,
+    sectorId: 'fadeyiSomolu.tollCorridor',
     districtId: 'fadeyiSomolu',
     name: 'Toll Approach',
-    start: [5, 27],
-    returnMarker: m(3, 26, 'TOLL GATE'),
+    start: [3, 21],
+    returnMarker: m(3, 2, 'TOLL GATE'),
     legs: [
-      { kind: 'clearGroup', text: 'Defeat the 3 marshals on the approach road.', group: 'marshals' },
+      {
+        kind: 'clearGroup',
+        text: 'Defeat the 3 marshals on the slip and the checkpoint street.',
+        group: 'marshals',
+      },
       {
         kind: 'destroyTargets',
-        text: 'Destroy the 3 toll boxes by the shed yard.',
+        text: 'Destroy the 3 toll boxes along the checkpoint corridor.',
         crew: 'tollCrew',
         targets: [
-          { id: 'tollRoad', kind: 'tollBox', x: 25, y: 23, label: 'TOLL BOX', hp: 3 },
-          { id: 'tollPlaza', kind: 'tollBox', x: 35, y: 26, label: 'TOLL BOX', hp: 3 },
-          { id: 'tollKerb', kind: 'tollBox', x: 40, y: 30, label: 'TOLL BOX', hp: 3 },
+          { id: 'tollRoad', kind: 'tollBox', x: 23, y: 8, label: 'TOLL BOX', hp: 3 },
+          { id: 'tollPlaza', kind: 'tollBox', x: 30, y: 7, label: 'TOLL BOX', hp: 3 },
+          { id: 'tollKerb', kind: 'tollBox', x: 30, y: 14, label: 'TOLL BOX', hp: 3 },
         ],
       },
       { kind: 'door', text: 'Stand on the tool-shed door for 1 second to raid it.', doorId: 'shed' },
@@ -420,49 +431,54 @@ const defs: FieldMissionDef[] = [
     doors: [
       {
         id: 'shed',
-        x: 30,
-        y: 27,
+        x: 41,
+        y: 18,
         label: 'TOOL SHED',
         raidId: 'junctionToolShed',
-        returnTile: [29, 27],
+        returnTile: [41, 19],
         required: true,
       },
     ],
     enemies: [
-      // route marshals: two walk the approach road, one holds the junction corner by the shed (it calls the others)
-      guard('Kobo Marshal', 9, 22, 'marshals', patrol('routeMarshal', [4, 22], [14, 22])),
-      guard('Kobo Marshal', 22, 21, 'marshals', patrol('routeMarshal', [16, 21], [28, 21])),
+      // route marshals: one loops the slip's shop block, two loop the blocks either side of the checkpoint street
+      guard('Kobo Marshal', 5, 4, 'marshals', patrol('routeMarshal', [5, 4], [10, 4], [10, 8], [5, 8])),
+      guard('Kobo Marshal', 17, 5, 'marshals', patrol('routeMarshal', [17, 5], [22, 5], [22, 8], [17, 8])),
       guard(
         'Kobo Marshal',
-        20,
-        25,
+        22,
+        17,
         'marshals',
-        patrol('routeMarshal', [15, 22], [20, 22], [20, 26], [15, 26]),
+        patrol('routeMarshal', [22, 17], [17, 17], [17, 13], [22, 13]),
       ),
-      // the toll crew: a heavy minds the nearest box, a lookout throws from the plaza corner
-      blocker('Toll Heavy', 33, 28, 'tollCrew', post('heavyEnforcer', 1)),
-      chaser('Toll Lookout', 39, 23, 'lookouts', post('bottleThrower', 2)),
+      // the toll crew: a heavy minds the nearest box still standing
+      blocker('Toll Heavy', 32, 14, 'tollCrew', post('heavyEnforcer', 1)),
+      // the yard lookout behind the toll bar: throws across the apron at the tool-shed door
+      chaser('Toll Lookout', 44, 14, 'lookouts', post('bottleThrower', 2)),
     ],
     timeLimitSec: 420,
     parSec: 150,
   },
   {
+    // Campaign area `fadeyiSomolu.sideRoutes` (decisions WF1, WF4): the same legs, groups and story on the area's own board.
+    // The junction posts stand at the lane junctions west to east, the crossing crews walk the back lanes and come out of the
+    // vehicle pound for the kept-clear centre junction, and the route checkpoint lifts for the escape up the slip road.
     id: 'fadeyiSomolu.junctions',
-    sectorId: 'fadeyiSomolu.northJunctions',
+    arenaId: SIDE_ROUTES_ARENA_ID,
+    sectorId: 'fadeyiSomolu.sideRoutes',
     districtId: 'fadeyiSomolu',
     name: 'Junction Run',
-    start: [4, 10],
-    returnMarker: m(4, 4, 'ROUTE OFFICE'),
+    start: [4, 12],
+    returnMarker: m(5, 7, 'ROUTE OFFICE'),
     legs: [
       {
         kind: 'reachMarkers',
         text: 'Walk through the 3 junction posts, west to east.',
-        markers: [m(14, 10, 'JUNCTION 1'), m(28, 5, 'JUNCTION 2'), m(34, 10, 'JUNCTION 3')],
+        markers: [m(12, 9, 'JUNCTION 1'), m(24, 5, 'JUNCTION 2'), m(32, 10, 'JUNCTION 3')],
       },
       {
         kind: 'holdArea',
         text: 'Keep the centre junction clear for 40 seconds.',
-        area: { x: 24, y: 7, radius: 1, label: 'CENTRE JUNCTION' },
+        area: { x: 24, y: 13, radius: 1, label: 'CENTRE JUNCTION' },
         holdSec: 40,
         waves: [
           { group: 'crossing', atSec: 3 },
@@ -474,23 +490,31 @@ const defs: FieldMissionDef[] = [
         kind: 'escapeRoute',
         text: 'Escape to the slip road before the marshal catches you.',
         group: 'pursuers',
-        exit: m(37, 3, 'SLIP ROAD'),
+        exit: m(45, 2, 'SLIP ROAD'),
       },
     ],
     doors: [],
     enemies: [
-      // junction 1: a marshal walks across the west junction mouth
-      guard('Kobo Marshal', 10, 6, 'posts', patrol('routeMarshal', [10, 4], [10, 10])),
-      // the centre crossing crew: they watch the junction streets, then come to take the junction back
-      guard('Kobo Marshal', 30, 10, 'crossing', patrol('routeMarshal', [27, 10], [33, 10])),
-      guard('Kobo Marshal', 18, 5, 'crossing', patrol('routeMarshal', [14, 4], [26, 4], [26, 6], [14, 6])),
-      guard('Kobo Marshal', 16, 10, 'lateCrossing', patrol('routeMarshal', [12, 9], [20, 9])),
-      chaser('Kobo Lookout', 31, 2, 'lateCrossing', post('bottleThrower', 2)),
-      guard('Kobo Marshal', 6, 4, 'lastCrossing', patrol('areaBoy', [3, 5], [9, 5])),
+      // junction 1: a marshal loops the house block at the west lane mouth
+      guard('Kobo Marshal', 12, 6, 'posts', patrol('routeMarshal', [12, 6], [16, 6], [16, 10], [12, 10])),
+      // the crossing crew: they walk the back lanes, then come to take the junction back
+      guard('Kobo Marshal', 23, 6, 'crossing', patrol('routeMarshal', [23, 6], [28, 6], [28, 9], [23, 9])),
+      guard('Kobo Marshal', 18, 2, 'crossing', patrol('routeMarshal', [14, 2], [31, 2])),
+      // the late crews loop the pound's sheds; a lookout throws from the garage corner
+      guard(
+        'Kobo Marshal',
+        14,
+        16,
+        'lateCrossing',
+        patrol('routeMarshal', [14, 16], [20, 16], [20, 20], [14, 20]),
+      ),
+      chaser('Kobo Lookout', 30, 17, 'lateCrossing', post('bottleThrower', 2)),
+      guard('Kobo Marshal', 20, 22, 'lastCrossing', patrol('areaBoy', [13, 22], [32, 22])),
       // the slip-road heavy: stands where the escape runs past (only a blast finishes him)
-      blocker('Slip Heavy', 33, 5, 'slip', post('heavyEnforcer', 1)),
-      // the marshal who sets off after you when the junction is held
-      chaser('Kobo Marshal', 12, 2, 'pursuers', { variant: 'bottleThrower' }),
+      blocker('Slip Heavy', 44, 8, 'slip', post('heavyEnforcer', 1)),
+      // the marshal who waits in the pound and sets off after you when the junction is held (10 tiles from it, and further
+      // from the slip road than you: a fair start)
+      chaser('Kobo Marshal', 21, 20, 'pursuers', { variant: 'bottleThrower' }),
     ],
     timeLimitSec: 600,
     parSec: 255,

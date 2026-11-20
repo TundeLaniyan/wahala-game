@@ -8,7 +8,14 @@ export type { CrewDef, MissionDef, NodeDef, PhaseDef } from './defs';
 export { buildMissionGame, crewOf } from './build';
 export { fieldArenaId, missionArenaId } from './arena';
 export { CAMPAIGN_AREAS, CAMPAIGN_AREA_DEFS, campaignAreaOfArena } from './campaignAreas';
-export type { CampaignAreaDef, CampaignLandmark, CampaignSubArea, CampaignExit, Compass } from './areas';
+export type {
+  CampaignAreaDef,
+  CampaignLandmark,
+  CampaignLandmarkKind,
+  CampaignSubArea,
+  CampaignExit,
+  Compass,
+} from './areas';
 export { missionView } from './view';
 export { resolveRaid } from './field';
 export {

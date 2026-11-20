@@ -31,7 +31,7 @@ const ID = 'rumbleFadeyi';
 const cream = '#efe6d0';
 const BRT_BLUE = 0x2a7fb8;
 
-const THEME: Theme = {
+export const FADEYI_THEME: Theme = {
   plaster: [0xc4bfb0, 0xb8b4a6, 0xd2cab4, 0xa8b0a8, 0xc8b8a0, 0xb4a89a, 0x9aa4ac],
   far: [0xb8b4a6, 0x9aa4ac, 0xc8b8a0, 0xd0cab8, 0x8a96a0, 0xb0a090],
   tarps: [0x2a6aa8, 0xe0b020, 0xc83a2a, 0xd8d0b8, 0x2f8a4a],
@@ -128,7 +128,7 @@ const bankBlock: Family = (k, g, r, n) => {
   void n;
 };
 
-const FAMILIES: Record<string, Family> = {
+export const FADEYI_FAMILIES: Record<string, Family> = {
   building,
   shop,
   lockup,
@@ -141,7 +141,7 @@ const FAMILIES: Record<string, Family> = {
   median,
   bankBlock,
 };
-const REACH: Record<string, number> = {
+export const FADEYI_REACH: Record<string, number> = {
   building: 3,
   shop: 3,
   lockup: 1,
@@ -156,9 +156,9 @@ const REACH: Record<string, number> = {
 };
 export const RUMBLE_FADEYI_COVER: CoverFactory = communityCover({
   arenaId: ID,
-  theme: THEME,
-  families: FAMILIES,
-  reach: REACH,
+  theme: FADEYI_THEME,
+  families: FADEYI_FAMILIES,
+  reach: FADEYI_REACH,
 });
 
 export const RUMBLE_FADEYI_LOOK: ArenaLook = {
@@ -189,12 +189,17 @@ export const RUMBLE_FADEYI_NIGHT_LOOK: ArenaLook = nightLookOf(RUMBLE_FADEYI_LOO
   [10, 2.6, 14, 0xffc880],
 ]);
 
-export const RUMBLE_FADEYI_FLOOR: FloorDrawer = communityFloor(ID, {
+/** The Fadeyi ground: grey highway concrete and pavers (shared with the campaign areas, fadeyiCampaign.ts). */
+export const FADEYI_GROUND = {
   seed: 3111,
-  base: [158, 154, 146],
+  base: [158, 154, 146] as [number, number, number],
   dust: 'rgba(120,112,100,',
-  road: [64, 64, 66],
-  pavers: [168, 164, 154],
+  road: [64, 64, 66] as [number, number, number],
+  pavers: [168, 164, 154] as [number, number, number],
+};
+
+export const RUMBLE_FADEYI_FLOOR: FloorDrawer = communityFloor(ID, {
+  ...FADEYI_GROUND,
   tint: {
     shopfronts: 'rgba(110,100,86,0.10)',
     neighbourhood: 'rgba(120,130,110,0.10)',

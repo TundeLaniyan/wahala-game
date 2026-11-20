@@ -36,10 +36,28 @@ pinned (`tests/campaign-world.test.ts`).
 1. **Choose the place.** A part of the district the Rumble map compresses or leaves out, with 3-4 parts that each have a
    job in the mission. Write the area's place: compass bearing from the district core, neighbours and the way through.
 2. **Check the kit.** A district needs a letter kit and a presentation kit once: Oshodi has `OSHODI_KIT` and
-   `oshodiCampaign.ts`. For a community district (Mushin, Fadeyi/Somolu, Ebute Metta, Lagos Island, Lekki) the kit is its
-   `CoverLegend` and the community cover factory (`community/factory.ts` reads `ArenaDef.cover`): add the district to
-   `KITS` in `render/arenas/campaign/register.ts` with its look, night look, `communityCover`-style factory on the area's
-   arena id, `communityFloor`-style drawer and env, and give `campaignArena` a `cover` built with `Board.cover(legend)`.
+   `oshodiCampaign.ts`. A **community district** (Mushin, Fadeyi/Somolu, Ebute Metta, Lagos Island, Lekki) uses the shared
+   community campaign kit (decision WM1); Mushin is the worked example:
+   - **Sim:** paint the board with the community `Board` and the district's own `CoverLegend` (exported by its Rumble module,
+     e.g. `MUSHIN_LEGEND`), then
+     `campaignArena({ ..., rows: b.rows(), legend: communityLegend(LEGEND), cover: b.cover(LEGEND) })`
+     (`arenas/campaign/kit.ts`). `checkCover` refuses at import a cover that drifts from the letters. The Rumble arena module
+     is not changed.
+   - **Render:** export the district's cover theme, families and reach (and its ground colours) from its `*Art.ts` without
+     changing the Rumble output (`MUSHIN_THEME`, `MUSHIN_FAMILIES`, `MUSHIN_REACH`, `MUSHIN_GROUND`), write
+     `render/arenas/campaign/<district>Campaign.ts` with one `CommunityDistrictArt` (`communityKit.ts`): `look`, `nightLook`,
+     `theme`, `families`, `reach`, `floor` (ground + `roleTint` per sub-area role), `env` (`seed`, vehicle `kinds`, `beds`,
+     `crowdAt` / `lightAt`: which landmark kinds gather people or cast light), `set` (`backdrop` round every area and
+     `landmarks`: the district's existing set pieces BY LANDMARK KIND, each placed from the area's landmark anchors with
+     `landmarkPlace`). Then add ONE line to `KITS` in `register.ts`: `<districtId>: communityCampaignKit(<DISTRICT>_CAMPAIGN_ART)`.
+     No other code: `campaignArtTable()` draws every area of the district with it (cover = the community cover factory on
+     the area's `ArenaDef.cover`, floor = the community floor tinted by role with barriers framed and sub-area names
+     stencilled, env = the community env, set = backdrop + landmarks + lamp posts and street life on the sides).
+   - **Landmarks:** `CampaignLandmark.kind` is open (`CampaignLandmarkKind`): use the shared kinds or the district's own piece
+     names (Mushin: `redLine`, `footbridge`, `partsSpill`, `edgeStalls`, `signBoard`, `smoke`, `danfoRank`, `floodlight`); a
+     kind the kit does not draw is skipped.
+   - **Tests:** `tests/campaign-community-kit.test.ts` (the kit on a test board, the Rumble community boards' layout and
+     cover hashes); `tests/render/campaign-art.test.ts` checks every registered area uses its district's Rumble looks.
 3. **Paint the board** in `src/sim/arenas/campaign/<district><Area>.ts` with the community `Board` (`fill`, `set`,
    `rows()`): edges of real objects (tall north, low lock-ups south), sub-areas joined by 2-wide lanes round blocks of cover,
    no plaza bigger than a hold zone needs, supply / barrier crates where a player can count on them, a few floor traps off
@@ -258,3 +276,178 @@ platform posts, 27x10 the service corridor, 41x8 the footbridge stair tower) and
   map's corridor (WX9).
 - The rail sub-area's siding is walkable track (no train runs into the area); a train on it would need a `train` sweep and
   its warnings.
+
+
+## Fadeyi/Somolu
+
+Branch `claude/wahala-cg-fadeyi`, from the community campaign kit (`662f8e2`). Decisions WF1-WF5. Painted with the community
+kit as is (step 2): the Rumble `FADEYI_LEGEND` plus `H` (the community warehouse) in `FADEYI_CAMPAIGN_LEGEND`
+(`sim/arenas/campaign/fadeyiKit.ts`), drawn by `KITS.fadeyiSomolu = communityCampaignKit(FADEYI_CAMPAIGN_ART)`
+(`render/arenas/campaign/fadeyiCampaign.ts`: the Rumble Fadeyi looks, cover pieces, grey highway ground, and the set pieces
+`ikoroduRoad`, `footbridge`, `signBoard`, `edgeStalls`, `danfoRank`, `floodlight`).
+
+```
+                  (the Fadeyi junction: Ikorodu Road and the BRT centreline = the City Rumble map)
+                         |                                                  |
+   fadeyiSomolu.tollCorridor (S of the highway)            fadeyiSomolu.sideRoutes (NE, the Onipanu side)
+   mission 1: slip, checkpoint street, toll plaza, yard    mission 2: route office, back lanes, pound, slip road
+                  \_ boss: the whole compact Rumble junction, unchanged (WF5) _/
+```
+
+Legend as for Oshodi; `D` here is the median / jersey barrier, `V` a compound wall, `H` a warehouse, `K` a kiosk or toll
+booth, `G` the sector gate.
+
+### Mission 1, Toll Approach: the Kobo Toll Corridor (`fadeyiSomolu.tollCorridor`, `campaignFadeyiTollCorridor`, 48 x 26)
+
+```
+    0         1         2         3         4       
+    012345678901234567890123456789012345678901234567
+  0 BBDDDDBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  1 BBDDDDBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  2 BB_R__..............................V.........BB
+  3 BB.==.KK....SSSS..WWW.MMM..BBBBBBB..V.WWW..HHHBB
+  4 BB.==e......SSSS..WWW.MMM..BBBBBBB..V.WWW..HHHBB
+  5 BB.==.SSSS.......e.........BBBBBBB..V......HHHBB
+  6 BB.==.SSSS..MMM...SSSS..............V.........BB
+  7 BB.==.SSSS..MMM...SSSS........t.....V..HHHH...BB
+  8 BB.==..................t.===========V..HHHH...BB
+  9 BB.==...DDDDDDD..DDDD.KDD==DDDKDDD==V.........BB
+ 10 BB==================================G=====....BB
+ 11 BB==================================G=====....BB
+ 12 BB......DDDDD.DDDD.K.DDDD==DDDKDDD==V......WW.BB
+ 13 BB....KK.................===========V......WW.BB
+ 14 BB..........LLLL..RRRR.LL.....t.e...V.......e.BB
+ 15 BB....RRRR..LLLL..RRRR.LL.WWW...MMM.V..WWWWW..BB
+ 16 BB....RRRR........RRRR....WWW...MMM.V..WWWWW..BB
+ 17 BB.KK.RRRR............e...........x.V..WWWWW..BB
+ 18 BB..........RRR..WWWW..MM...SSSS....V.___D___.BB
+ 19 BB..........RRR..WWWW..MM...SSSS....V._______.BB
+ 20 BB.....LLL..RRR.......x.......$.....V.........BB
+ 21 BB.@...LLL................LL....KK..V.LL...HH.BB
+ 22 BB.......$.......LLL................V.........BB
+ 23 BB..................................V.........BB
+ 24 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 25 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+(`G` = the yard's toll bar, a Ring checkpoint gate: closed until the toll boxes are smashed.)
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| Ikorodu Road slip (x 2-10) | approach | The entry and the way out: the slip road down from the highway barrier (the TOLL GATE), a kiosk, the shop block a marshal loops, houses and lock-ups by the start. |
+| Kobo checkpoint street (x 11-24) | street | The access-control street: the approach road between two jersey-barrier lines with gaps and toll kiosks; two marshals loop the blocks either side; the first toll box by the kiosk gap. |
+| Toll plaza corridor (x 25-35) | concourse | The checkpoint corridor: the road widened into lanes between two booth islands under the Ring toll office; toll boxes north and south of the islands, the toll heavy minding the nearest. |
+| Tool-shed yard (x 36-45) | works | Behind the compound wall and its toll bar: garages, stores, the TOOL SHED door on its kept-clear apron (the junction tool-shed raid, unchanged) and the yard lookout. |
+
+Landmarks (`areasFadeyi.ts`): Ikorodu Road beyond the north barrier, the Kobo toll point board, the Fadeyi footbridge and
+the slip-side stalls (west), the Onipanu danfo rank and the yard lamps (east). Encounters: three route marshals (16-18-tile
+loops round the slip shop block and the checkpoint-street blocks), the toll heavy (post by the plaza boxes), the toll
+lookout (thrower post in the yard, covering the door).
+
+### Mission 2, Junction Run: the Somolu Side Routes (`fadeyiSomolu.sideRoutes`, `campaignFadeyiSideRoutes`, 50 x 27)
+
+```
+0         1         2         3         4         
+    01234567890123456789012345678901234567890123456789
+  0 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBDDDDDBBBB
+  1 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBDDDDDBBBB
+  2 BB................e...............V..........>__BB
+  3 BB.BBBBBB....RRRR..RRR...SSSS..RR.V.WWW..SSS.==.BB
+  4 BB.BBBBBB.K..RRRR..RRR...SSSS..RR.V.WWW..SSS.==.BB
+  5 BB.BBBBBB....RRRR.......2.SSSS....V..........==.BB
+  6 BB.BBBBBB...e......RRR.e.........RV.KK..LLLL.==.BB
+  7 BB.._R____...RRR...RRR..RRRR...RRRV..........==.BB
+  8 BB..______...RRR........RRRR...RRRV.SSS..WWWe==.BB
+  9 BB..........1RRR..VVVV..........RRV.SSS..WWW.==.BB
+ 10 BB.VVV..VVV.......VVVV..RRR..R..3.V..........==.BB
+ 11 BB............RRRR......RRR..R..RRV.MMM..KK..==.BB
+ 12 BB..@.........RRRR.....___.......RV..........==.BB
+ 13 BB....................._h_........G============.BB
+ 14 BB..RRR................___........G============.BB
+ 15 BB..RRR..KK..VVVVVVxxVVV..VVVVVV..V..........SS.BB
+ 16 BB..RRR......Ve.........V......V..V.LLL..WW..SS.BB
+ 17 BB...........V.HHHHH....V.WWW.eV..V.LLL..WW.....BB
+ 18 BB.WWW.........HHHHH.......WWW....V.............BB
+ 19 BB.WWW..RRR..V.HHHHH....V......V..V..HHH...KK...BB
+ 20 BB..$...RRR..V.......e..V.HHHH.V..V..HHH........BB
+ 21 BB...........VVVV..VVVVV..HHHH.V..V.............BB
+ 22 BB.LL..KK...........e.............V.WW...LLL....BB
+ 23 BB.............RRRR..RRR..RRRR.$..V.WW...LLL....BB
+ 24 BB.............RRRR..RRR..RRRR....V.............BB
+ 25 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 26 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+(`G` = the route checkpoint, a Ring checkpoint gate: closed until the centre junction is held.)
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| Ring route office (x 2-11) | service | The entry and the way back: the office block and its kept-clear forecourt (ROUTE OFFICE), compound walls, a garage, houses down the west lane. |
+| Somolu back lanes (x 12-33, y 2-14) | lane | Irregular house blocks, a corner shop row and a walled plot: junctions 1-3 west to east, a marshal looping the west block, the crossing crew on the lanes, the kept-clear CENTRE JUNCTION where the north-south lane crosses the route. |
+| Kobo vehicle pound (x 12-33, y 15-24) | works | The walled pound (the crossing crews' base): a late marshal loops the sheds, a lookout on the garage corner, the last crew on the back lane, the pursuer waiting by the gate; a blastable barrier pair on its north gate. |
+| Onipanu slip road (x 34-47) | approach | Behind the route checkpoint (it lifts once the junction is held): the slip up to the highway barrier (SLIP ROAD), garages, shops and stores, the slip heavy beside the escape. |
+
+Landmarks: Ikorodu Road and the Kobo route office board (north), the pound lamps (west), the Onipanu footbridge and the slip
+road danfo rank (east). Encounters: five route marshals / area boy on 16-34-tile routes, the lookout (thrower post), the
+slip heavy (post), the pursuer (10 tiles from the junction, further from the slip road than the player).
+
+### Mission 3, the Fadeyi/Somolu boss: unchanged (WF5)
+
+Not bounded. The recipe's junction nodes span x 6-47, y 5-27 of the 51 x 33 board and the traffic, BRT and bus-departure
+sweeps run the full width, so a cordon keeping every node and hazard would trim only the outer rows: no coherent part exists
+without moving the recipe. The Rumble Fadeyi is already the compact junction.
+
+### What is new, expanded, reused, unchanged (Fadeyi/Somolu)
+
+| Item | Status |
+| --- | --- |
+| The Kobo Toll Corridor board: slip, checkpoint street, toll plaza corridor, tool-shed yard and its toll bar (48 x 26) | NEW (campaign-only geography) |
+| The Somolu Side Routes board: route office, back lanes, vehicle pound, Onipanu slip road and its checkpoint (50 x 27) | NEW (campaign-only geography) |
+| Toll Approach and Junction Run play area | EXPANDED: 309 -> 697 and 302 -> 731 walkable tiles, 4 sub-areas each |
+| The two missions' routes, enemy posts and patrols, equipment, hold zone and exit positions, briefing text | NEW (re-authored on the new boards) |
+| Leg kinds, labels, door / raid ids (`shed` / `junctionToolShed`), groups, clocks and par | UNCHANGED |
+| The boss mission | UNCHANGED (the whole Rumble map, WF5) |
+| Cover objects, looks, night looks, ground, footbridge, danfos, stalls, signs | REUSED (Fadeyi Rumble art + the community warehouse; no new model, texture or audio) |
+| The City Rumble Fadeyi map, Classic, City Rumble, multiplayer | UNCHANGED (layout and cover hashes pinned) |
+
+### Measurements (Fadeyi/Somolu)
+
+Same scripts and seeds as Oshodi; old = the same scripts on the kit base `662f8e2` (the old Rumble sectors).
+
+| Measure | Toll Approach old -> new | Junction Run old -> new |
+| --- | --- | --- |
+| Walkable tiles of the play area | 309 -> 697 | 302 -> 731 |
+| Scripted playthrough (6 seeds) Easy / Normal / Hard won | 6/6/6 -> 6/6/6 | 6/6/6 -> 6/6/6 |
+| Field seconds Easy / Normal / Hard (mean of wins) | 68.0 / 72.5 / 70.3 -> 71.7 / 77.7 / 91.4 | 93.3 / 104.2 / 111.7 -> 93.9 / 99.6 / 128.2 |
+| Lives used per run Easy / Normal / Hard | 0 / 0 / 0.17 -> 0 / 0 / 0 | 0 / 0.17 / 0.17 -> 0 / 0 / 0 |
+| Human-like bait on the default target, Normal (8 seeds): first try / within two | 8/8, 8/8 -> 8/8, 8/8 | 6/8, 7/8 -> 7/8, 8/8 |
+| Plain-sight fairness probe (4 seeds, at most 1 caught) | 0/4 -> 0/4 | 0/4 -> 0/4 |
+| Ordinary roamers on a real route (readability) | 3/3 -> 3/3 | 5/5 -> 5/5 |
+
+Hard costs more than Normal over both missions (field seconds Normal 177 -> Hard 220, 1.24 x; before 177 -> 182, 1.03 x); Easy no more than Normal.
+Junction Run's old bait missed the 90 % within-two bar (7/8); the new board meets it.
+Readability probe (`scripts/readability.ts normal`, both missions): pursued 22 -> 17, reached adjacent 0 % -> 6 % (one probe),
+hurt by the chased enemy 0 % -> 0 %, hurt by anyone 9 % -> 35 % (all on Junction Run, where the probe's run to the farthest
+tile passes the pound's lookout and the waiting pursuer), chase length mean 1.8 -> 1.9 s, back on route median 2.9 -> 3.3 s.
+
+Render cost (`scripts/campaign-perf.mjs field:fadeyiSomolu.approach,field:fadeyiSomolu.junctions low,high`, one pass each;
+old = the base build with the old sectors of the Rumble map, new = this branch). **Software rendering (SwiftShader) on
+cores shared with three other workers' screenshot runs: frame times and build times are noisy and are not phone timings; no
+claim about real phones is made.** Draw calls, triangles, geometries and textures are the steady numbers.
+
+| Mission | Quality | Build ms old / new | Draw calls old / new | Triangles old / new | Geometries old / new | Textures old / new | Frame mean ms old / new | Frame p95 ms old / new |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `fadeyiSomolu.approach` | low | 5060 / 3943 | 200 / 116 | 537287 / 359528 (-33 %) | 298 / 159 | 201 / 156 | 1678 / 1214 | 4717 / 3517 |
+| `fadeyiSomolu.junctions` | low | 6477 / 6879 | 264 / 154 | 658638 / 454723 (-31 %) | 263 / 140 | 203 / 140 | 1163 / 1468 | 3050 / 2250 |
+| `fadeyiSomolu.approach` | high | 4946 / 7337 | 515 / 375 | 2091512 / 1304886 (-38 %) | 307 / 215 | 266 / 265 | 2507 / 1888 | 3617 / 3133 |
+| `fadeyiSomolu.junctions` | high | 6468 / 7855 | 571 / 368 | 2364550 / 1296260 (-45 %) | 274 / 199 | 283 / 235 | 2058 / 2267 | 3450 / 6683 |
+
+As for Oshodi, each area is 2.3-2.4 times the old sector's playable size yet the scene is lighter: 27-42 % fewer draw calls,
+31-45 % fewer triangles, fewer live geometries and textures (a campaign board builds only its own 48 x 26 / 50 x 27 world,
+the old sector built the 51 x 33 district's set and highway). Build and frame times moved both ways run to run on the busy
+machine. Bytes fetched at the mission start: 43-136 KB old, 48-244 KB new; the initial load is 22 KB larger (the two boards' data).
+
+Screenshots: `docs/screenshots/campaign-guidance-expansion/world/fadeyiSomolu/` (`phone-` 740 x 360, `phoneWide-` 844 x 390 at
+device scale 2, `desktop-` 1280 x 720): Toll Corridor 4x20 the slip, 20x13 the checkpoint street, 30x10 the toll plaza,
+41x20 the yard, and the overview; Side Routes 5x11 the route office, 20x5 the back lanes, 24x14 the centre junction, 21x18
+the pound, 43x12 the slip road (staged behind the closed checkpoint, hence the arrow's "no open route"), and the overview.

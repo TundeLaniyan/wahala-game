@@ -5,7 +5,7 @@
  * solid tile of the board as an object and nothing else; the environment is valid on every quality budget.
  */
 import { describe, expect, it } from 'vitest';
-import { CAMPAIGN_ARENA_IDS, getArena } from '../../src/sim';
+import { CAMPAIGN_ARENA_IDS, MISSION_DEFS, campaignAreaOfArena, getArena } from '../../src/sim';
 import { OSHODI_KIT } from '../../src/sim/arenas/campaign/oshodiKit';
 import { NEW_ARENA_ART } from '../../src/render/arenas/newArenas';
 import { OSHODI_COVER_LETTERS } from '../../src/render/arenas/oshodiMetroCoverMap';
@@ -24,8 +24,14 @@ describe('campaign areas are drawn with their district kit', () => {
     (id) => {
       const art = NEW_ARENA_ART()[id]!;
       expect(art).toBeDefined();
-      expect(art.look).toBe(OSHODI_METRO_LOOK);
-      expect(art.nightLook).toBe(OSHODI_METRO_NIGHT_LOOK);
+      // the district's own looks: those of its City Rumble map (Oshodi: the Transport Metropolis)
+      const rumble = NEW_ARENA_ART()[MISSION_DEFS[campaignAreaOfArena(id)!.districtId].arenaId]!;
+      expect(art.look).toBe(rumble.look);
+      expect(art.nightLook).toBe(rumble.nightLook);
+      if (campaignAreaOfArena(id)!.districtId === 'oshodi') {
+        expect(art.look).toBe(OSHODI_METRO_LOOK);
+        expect(art.nightLook).toBe(OSHODI_METRO_NIGHT_LOOK);
+      }
       expect(typeof art.set.build).toBe('function');
       expect(art.set.crowdEdges.south).toBe(false); // the camera side stays clear
       expect(typeof art.floor).toBe('function');

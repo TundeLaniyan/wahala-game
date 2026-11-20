@@ -183,3 +183,115 @@ test('Rail Edge: the Railside area loads its own board and the mission is comple
   expect(out).toMatchObject({ result: 'won', sectionMissionId: 'oshodi.railEdge' });
   expect(errors).toEqual([]);
 });
+
+// ------------------------------------------------------------------------------- the community districts' areas
+
+/** A won outcome the campaign controller accepts (as e2e/campaign.spec.ts builds them): a boss, or a section mission. */
+const won = (missionId: string, sectionMissionId?: string): Record<string, unknown> => ({
+  result: 'won',
+  missionId,
+  modifiers: [],
+  seconds: 118,
+  livesUsed: 1,
+  phasesCleared: 3,
+  defeat: sectionMissionId ? null : 'eliminated',
+  stars: 2,
+  creditedKills: 3,
+  ...(sectionMissionId ? { sectionMissionId, raidBonus: 0 } : {}),
+});
+
+/**
+ * The community districts' campaign areas (docs/CAMPAIGN_WORLD.md, decision WM1 and the district prefixes): each field
+ * mission is started through the real campaign flow (a save in which the earlier districts and sections are cleared through
+ * the real controller), loads its own campaign-only board, builds the scene with its gate closed, and the gate opens once
+ * the legs before it are done (staged in the sim state; the legs' rules have their own unit tests). Extend this list.
+ */
+const COMMUNITY_AREAS: readonly {
+  fieldId: string;
+  arenaId: string;
+  sector: string;
+  gate: string;
+  /** Outcomes finished before the start: the districts and sections the mission needs. */
+  before: Record<string, unknown>[];
+}[] = [
+  {
+    fieldId: 'fadeyiSomolu.approach',
+    arenaId: 'campaignFadeyiTollCorridor',
+    sector: 'fadeyiSomolu.tollCorridor',
+    gate: 'yardTollBar',
+    before: [won('oshodi'), won('mushin')],
+  },
+  {
+    fieldId: 'fadeyiSomolu.junctions',
+    arenaId: 'campaignFadeyiSideRoutes',
+    sector: 'fadeyiSomolu.sideRoutes',
+    gate: 'routeCheckpoint',
+    before: [won('oshodi'), won('mushin'), won('fadeyiSomolu', 'fadeyiSomolu.approach')],
+  },
+];
+
+for (const area of COMMUNITY_AREAS) {
+  test(`${area.fieldId}: its campaign area loads through the campaign and its gate opens on its leg`, async ({
+    page,
+  }) => {
+    test.setTimeout(300_000);
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await open(page, '&noattract');
+    const started = await page.evaluate(
+      ({ fieldId, before }) => {
+        const c = (window as any).__WAHALA__.campaign();
+        c.load();
+        c.startNew();
+        c.storyDone();
+        for (const o of before) c.finishMission(o);
+        return c.startSectionMission(fieldId);
+      },
+      { fieldId: area.fieldId, before: area.before },
+    );
+    expect(started).toBe(true);
+    await inMatch(page);
+    await playing(page);
+    const at = await scene(page);
+    expect(at.arenaId).toBe(area.arenaId);
+    expect(at.game).toBe('mission');
+    expect(at.sector).toBe(area.sector);
+    expect(at.gates).toEqual([{ id: area.gate, open: false }]);
+    expect(at.drawn.barricades).toBe(1);
+    await expect.poll(async () => (await scene(page)).stats?.triangles ?? 0).toBeGreaterThan(10_000);
+    await expect(page.getByTestId('minimap')).toBeVisible();
+
+    // the legs before the gate, staged one at a time in the sim state
+    const def = await page.evaluate((id) => (window as any).__WAHALA__.fieldMissionDef(id), area.fieldId);
+    const sector = await page.evaluate(() => (window as any).__WAHALA__.getState().sector);
+    const opensAfter: number = sector.gates[0].opensAfterLeg;
+    for (let k = 0; k <= opensAfter; k++) {
+      const leg = def.legs[k];
+      if (leg.kind === 'reachMarkers') for (const m of leg.markers) await stage(page, m.x, m.y, 2);
+      else
+        await page.evaluate((l) => {
+          const w = (window as any).__WAHALA__;
+          const s = w.getState();
+          if (l.kind === 'clearGroup')
+            for (const seat of s.mission.seats.filter((x: any) => x.group === l.group))
+              s.players[seat.playerId].alive = false;
+          if (l.kind === 'destroyTargets')
+            for (const t of s.mission.field.targets) {
+              t.hp = 0;
+              t.destroyed = true;
+            }
+          if (l.kind === 'holdArea') {
+            for (const seat of s.mission.seats.filter(
+              (x: any) => x.group !== 'pursuers' && x.role !== 'player',
+            ))
+              s.players[seat.playerId].alive = false;
+            s.mission.field.hold.ticks = l.holdSec * 60;
+          }
+          w.stepTicks(2);
+        }, leg);
+      expect(await page.evaluate(() => (window as any).__WAHALA__.getState().mission.field.leg)).toBe(k + 1);
+    }
+    expect((await scene(page)).gates).toEqual([{ id: area.gate, open: true }]);
+    expect(errors).toEqual([]);
+  });
+}

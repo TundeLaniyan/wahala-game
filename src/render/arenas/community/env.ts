@@ -29,11 +29,13 @@ export interface EnvSpec {
   boost?: StageEnvironment['boost'];
   cutaway?: readonly { x0: number; y0: number; x1: number; y1: number }[];
   budget?: StageEnvironment['budget'];
+  /** The board's layout (default `getArena(arenaId).layout`): a campaign kit resolves its board itself. */
+  layout?: () => readonly string[];
 }
 
 /** One in / out route pair per road mouth (a mouth is a run of road tiles on the board's edge). */
 function mouthRoutes(arenaId: string, o: EnvSpec): TrafficRouteDef[] {
-  const layout = getArena(arenaId).layout;
+  const layout = o.layout ? o.layout() : getArena(arenaId).layout;
   const H = layout.length;
   const W = layout[0]!.length;
   const out: TrafficRouteDef[] = [];

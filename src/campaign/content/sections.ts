@@ -225,7 +225,7 @@ const FADEYI_SECTIONS: SectionDef[] = [
     order: 1,
     name: 'Toll Approach',
     summary:
-      'Marshals hold the approach road to the tool shed and toll boxes charge every crossing. Move the marshals, break the toll boxes and raid the shed.',
+      'Marshals walk the slip and the checkpoint street, and toll boxes along the corridor charge every crossing. Move the marshals, break the toll boxes and raid the tool shed behind the toll bar.',
     requires: [],
     missions: [
       {
@@ -234,7 +234,7 @@ const FADEYI_SECTIONS: SectionDef[] = [
         name: 'Toll Approach',
         objectiveCard: 'Clear 3 marshals, wreck 3 toll boxes, raid the shed, return.',
         summary:
-          'Three marshals hold the road (the one at the shed corner calls the others), and the toll boxes take three blasts each while a heavy minds them. Then stand on the tool-shed door to raid it and go back to the toll gate.',
+          'Three marshals walk the slip and the checkpoint street, and the toll boxes along the corridor take three blasts each while a heavy minds them. Then the yard’s toll bar lifts: stand on the tool-shed door to raid it and go back to the toll gate.',
         missionRef: 'fadeyiSomolu.approach',
         doors: [{ doorId: 'shed', raidId: 'junctionToolShed' }],
         reward: title(
@@ -254,7 +254,7 @@ const FADEYI_SECTIONS: SectionDef[] = [
     order: 2,
     name: 'Junction Run',
     summary:
-      'Three junction posts sit along the north road and the marshals sell the centre junction by the hour. Walk the posts, take the junction back, then outrun the marshal.',
+      'Three junction posts sit in the back lanes and the marshals sell the centre junction by the hour. Walk the posts, take the junction back, then outrun the marshal.',
     requires: ['fadeyiSomolu.s1'],
     missions: [
       {
@@ -263,7 +263,7 @@ const FADEYI_SECTIONS: SectionDef[] = [
         name: 'Junction Run',
         objectiveCard: 'Walk 3 junction posts, keep the centre junction 40 s, escape, return.',
         summary:
-          'Visit the junctions in order, then keep the centre junction clear for 40 seconds while the crossing crews come to take it back. Last, the marshal sets off after you: reach the slip road first.',
+          'Visit the junctions in order, then keep the centre junction clear for 40 seconds while the crossing crews come out of the vehicle pound to take it back. Last, the route checkpoint lifts and the marshal sets off after you: reach the slip road first.',
         missionRef: 'fadeyiSomolu.junctions',
         reward: title(
           'fadeyiSomolu.junctions',
