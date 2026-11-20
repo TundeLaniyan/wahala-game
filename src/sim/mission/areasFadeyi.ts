@@ -10,10 +10,7 @@
  *
  * Fictional names only (the Bible's naming rule): the Kobo checkpoint street, the Kobo vehicle pound, the Ring route office.
  */
-import {
-  TOLL_CORRIDOR_ARENA_ID,
-  TOLL_CORRIDOR_SUB_AREAS,
-} from '../arenas/campaign/fadeyiTollCorridor';
+import { TOLL_CORRIDOR_ARENA_ID, TOLL_CORRIDOR_SUB_AREAS } from '../arenas/campaign/fadeyiTollCorridor';
 import { SIDE_ROUTES_ARENA_ID, SIDE_ROUTES_SUB_AREAS } from '../arenas/campaign/fadeyiSideRoutes';
 import type { CampaignAreaDef, CampaignSubArea } from './areas';
 import { areaCol } from './areas';
@@ -37,7 +34,11 @@ export const FADEYI_TOLL_CORRIDOR: CampaignAreaDef = {
     compass: 'S',
     from: 'the Fadeyi junction (the City Rumble map)',
     neighbours: [
-      { areaId: 'interchange', dir: 'N', via: 'the slip road up to the Ikorodu Road barrier (the toll gate)' },
+      {
+        areaId: 'interchange',
+        dir: 'N',
+        via: 'the slip road up to the Ikorodu Road barrier (the toll gate)',
+      },
       {
         areaId: 'fadeyiSomolu.sideRoutes',
         dir: 'NE',
@@ -78,7 +79,8 @@ export const FADEYI_TOLL_CORRIDOR: CampaignAreaDef = {
       kind: 'ikoroduRoad',
       at: [12, 0],
       side: 'north',
-      story: 'The divided highway and its BRT lanes beyond the barrier: the junction the slip comes down from.',
+      story:
+        'The divided highway and its BRT lanes beyond the barrier: the junction the slip comes down from.',
     },
     {
       id: 'tollSign',
@@ -94,7 +96,8 @@ export const FADEYI_TOLL_CORRIDOR: CampaignAreaDef = {
       kind: 'footbridge',
       at: [0, 6],
       side: 'west',
-      story: 'The concrete footbridge over the slip, where commuters cross rather than pay at the checkpoint.',
+      story:
+        'The concrete footbridge over the slip, where commuters cross rather than pay at the checkpoint.',
     },
     {
       id: 'stalls',
@@ -146,7 +149,8 @@ export const FADEYI_SIDE_ROUTES: CampaignAreaDef = {
     ],
   },
   subAreas: purposes(SIDE_ROUTES_SUB_AREAS, {
-    office: 'The entry and the way back: the route office forecourt (ROUTE OFFICE); junction 1 at the lane mouth.',
+    office:
+      'The entry and the way back: the route office forecourt (ROUTE OFFICE); junction 1 at the lane mouth.',
     lanes:
       'Junctions 1-3 and the kept-clear centre junction; a marshal loops the west block, the crossing crews walk the lanes.',
     pound: 'The crossing crews’ base: the late crews loop the sheds and come out for the centre junction.',

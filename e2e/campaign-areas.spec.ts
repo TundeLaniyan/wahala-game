@@ -281,7 +281,9 @@ for (const area of COMMUNITY_AREAS) {
               t.destroyed = true;
             }
           if (l.kind === 'holdArea') {
-            for (const seat of s.mission.seats.filter((x: any) => x.group !== 'pursuers' && x.role !== 'player'))
+            for (const seat of s.mission.seats.filter(
+              (x: any) => x.group !== 'pursuers' && x.role !== 'player',
+            ))
               s.players[seat.playerId].alive = false;
             s.mission.field.hold.ticks = l.holdSec * 60;
           }
