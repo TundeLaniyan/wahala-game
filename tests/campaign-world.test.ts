@@ -81,6 +81,10 @@ const OLD_SECTOR_TILES: Readonly<Record<string, number>> = {
   'lekki.estate': 402,
   'ojuelegba.return': 218,
   'ojuelegba.junction': 190,
+  // Ebute Metta and Lagos Island (decisions WE1-WE8; the old sectors of their Rumble maps, sector-ascii on 662f8e2)
+  'ebuteMetta.approach': 462,
+  'lagosIsland.approach': 224,
+  'lagosIsland.press': 198,
 };
 
 const walkable = (
@@ -272,6 +276,44 @@ describe('Mushin', () => {
       .map((d) => d.id);
     const boards = ids.map((id) => fieldArenaId(FIELD_MISSION_DEFS[id]!));
     for (const b of boards) expect(getArena(b).campaignOnly, b).toBe(true);
+    expect(new Set(boards).size).toBe(boards.length);
+    for (let i = 0; i < boards.length; i++)
+      for (let j = i + 1; j < boards.length; j++) {
+        const a = getArena(boards[i]!);
+        const b = getArena(boards[j]!);
+        expect(a.layout.join('\n')).not.toBe(b.layout.join('\n'));
+        const names = new Set(a.districts!.map((d) => d.name));
+        for (const d of b.districts!) expect(names.has(d.name), d.name).toBe(false);
+      }
+  });
+});
+
+// ------------------------------------------------------------------------------------------- Ebute Metta, Lagos Island
+
+/** sha256 (first 16 hex) of the districts' City Rumble layouts on 0b89d09 (unchanged by their campaign areas, WE1). */
+const RUMBLE_LAYOUTS_WE: Readonly<Record<string, readonly [string, string]>> = {
+  ebuteMetta: ['rumbleEbuteMetta', '59ac5f018337b330'],
+  lagosIsland: ['rumbleLagosIsland', '95fb253ba0b58d54'],
+};
+
+describe.each(Object.keys(RUMBLE_LAYOUTS_WE))('%s (decisions WE1-WE8)', (district) => {
+  const [rumbleId, hash] = RUMBLE_LAYOUTS_WE[district]!;
+
+  it('the City Rumble map is unchanged (its layout hash is the one before the campaign areas)', () => {
+    const h = createHash('sha256').update(getArena(rumbleId).layout.join('\n')).digest('hex');
+    expect(h.slice(0, 16)).toBe(hash);
+  });
+
+  it('every field mission plays on its own campaign-only board; two missions never share a board or a place', () => {
+    const ids = Object.values(FIELD_MISSION_DEFS)
+      .filter((d) => d.districtId === district)
+      .map((d) => d.id);
+    expect(ids.length).toBeGreaterThan(0);
+    const boards = ids.map((id) => fieldArenaId(FIELD_MISSION_DEFS[id]!));
+    for (const b of boards) {
+      expect(getArena(b).campaignOnly, b).toBe(true);
+      expect(b).not.toBe(rumbleId);
+    }
     expect(new Set(boards).size).toBe(boards.length);
     for (let i = 0; i < boards.length; i++)
       for (let j = i + 1; j < boards.length; j++) {

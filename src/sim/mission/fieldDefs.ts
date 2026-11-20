@@ -11,7 +11,6 @@ import type { MissionId, NpcRole } from './types';
 import type { RaidId, TerritoryDef } from '../campaign/types';
 import type { EnemyVariantId } from '../data/enemyVariants';
 import type { Tile2 } from './defs';
-import { ebuteX } from '../arenas/ebuteWest';
 import { FINALE_FIELD_DEFS } from './finaleDefs';
 import { ARCHIVED_FIELD_DEFS } from './archivedFieldDefs';
 import { ORITA_ARENA_ID } from '../arenas/campaign/oshodiOrita';
@@ -22,6 +21,9 @@ import { TOLL_CORRIDOR_ARENA_ID } from '../arenas/campaign/fadeyiTollCorridor';
 import { SIDE_ROUTES_ARENA_ID } from '../arenas/campaign/fadeyiSideRoutes';
 import { ESTATE_GATE_ARENA_ID } from '../arenas/campaign/lekkiEstateGate';
 import { INNER_ESTATE_ARENA_ID } from '../arenas/campaign/lekkiInnerEstate';
+import { FREIGHT_YARD_ARENA_ID } from '../arenas/campaign/ebuteFreightYard';
+import { LEDGER_LANES_ARENA_ID } from '../arenas/campaign/lagosLedgerLanes';
+import { PRESS_YARDS_ARENA_ID } from '../arenas/campaign/lagosPressYards';
 
 export interface FieldMarkerDef {
   x: number;
@@ -548,28 +550,29 @@ const defs: FieldMissionDef[] = [
     parSec: 255,
   },
   // ---------------------------------------------------------------- Ebute-Metta
-  // Yard Approach (docs/CAMPAIGN_SECTOR_AI.md "Districts: Ebute Metta, Lagos Island, Lekki Phase 1", decisions
-  // DB1-DB3): the house streets south of the yard are worked by two street patrols; the switch cabinets that route the
-  // Ring's night freight stand in the lanes, minded by the switchmen; the yard lieutenant walks the lock-up yard by the
-  // fence. Wrecking the cabinets opens the sidings gate: the freight guards hold the wagon lanes; the relief crew, then
-  // whoever is left of the street patrols, come up from the streets while you keep the signal cabin. Then the
-  // signal-shed raid, and back out to the yard gate.
+  // Yard Approach on its own campaign area `ebuteMetta.freightYard` (decisions WE1-WE3; before: DB1-DB3 on the Rumble map):
+  // the same legs, groups and story on the freight yard's board. The street patrols loop the warehouses and lock-ups of the
+  // cargo streets; the switch cabinets that route the Ring's night freight stand in the streets, by the level crossing and
+  // in the works, minded by the switchmen. Wrecking them opens the sidings gate in the yard fence: the freight guards hold
+  // the wagon lanes; the relief crew from round the goods shed, then whoever is left of the street patrols, come for the
+  // signal cabin while you keep it. Then the signal-shed raid (its lieutenant walks round the shed), and back to the yard gate.
   {
     id: 'ebuteMetta.approach',
-    sectorId: 'ebuteMetta.yardApproach',
+    arenaId: FREIGHT_YARD_ARENA_ID,
+    sectorId: 'ebuteMetta.freightYard',
     districtId: 'ebuteMetta',
     name: 'Yard Approach',
-    start: [ebuteX(3), 32],
-    returnMarker: m(ebuteX(6), 36, 'YARD GATE'),
+    start: [3, 26],
+    returnMarker: m(3, 24, 'YARD GATE'),
     legs: [
       {
         kind: 'destroyTargets',
         text: 'Destroy the 4 switch cabinets on the yard streets.',
         targets: [
-          { id: 'cabinetWest', kind: 'switchCabinet', x: ebuteX(1), y: 29, label: 'SWITCH CABINET' },
-          { id: 'cabinetMid', kind: 'switchCabinet', x: ebuteX(12), y: 29, label: 'SWITCH CABINET' },
-          { id: 'cabinetYard', kind: 'switchCabinet', x: ebuteX(27), y: 35, label: 'SWITCH CABINET', hp: 2 },
-          { id: 'cabinetFence', kind: 'switchCabinet', x: ebuteX(36), y: 31, label: 'SWITCH CABINET', hp: 2 },
+          { id: 'cabinetWest', kind: 'switchCabinet', x: 8, y: 19, label: 'SWITCH CABINET' },
+          { id: 'cabinetMid', kind: 'switchCabinet', x: 19, y: 9, label: 'SWITCH CABINET' },
+          { id: 'cabinetYard', kind: 'switchCabinet', x: 24, y: 21, label: 'SWITCH CABINET', hp: 2 },
+          { id: 'cabinetFence', kind: 'switchCabinet', x: 36, y: 24, label: 'SWITCH CABINET', hp: 2 },
         ],
         crew: 'switchmen',
       },
@@ -577,7 +580,7 @@ const defs: FieldMissionDef[] = [
       {
         kind: 'holdArea',
         text: 'Keep the signal cabin clear for 25 seconds.',
-        area: { x: ebuteX(25), y: 22, radius: 1, label: 'SIGNAL CABIN' },
+        area: { x: 39, y: 9, radius: 1, label: 'SIGNAL CABIN' },
         holdSec: 25,
         waves: [
           { group: 'relief', atSec: 4 },
@@ -589,62 +592,54 @@ const defs: FieldMissionDef[] = [
     doors: [
       {
         id: 'shed',
-        x: ebuteX(33),
-        y: 29,
+        x: 41,
+        y: 24,
         label: 'SIGNAL SHED',
         raidId: 'junctionToolShed',
-        returnTile: [ebuteX(33), 28],
+        returnTile: [41, 25],
         required: true,
       },
     ],
     enemies: [
-      // the street patrols: the middle street (between the houses and the lock-ups) and the north street
-      guard('Yard Enforcer', ebuteX(12), 32, 'streets', patrol('agbero', [ebuteX(4), 31], [ebuteX(20), 31])),
-      guard('Yard Runner', ebuteX(14), 27, 'streets', patrol('areaBoy', [ebuteX(2), 27], [ebuteX(22), 27])),
+      // the street patrols: a loop round the lock-ups by the yard gate, a loop round the cargo lock-ups north of the road
+      guard('Yard Enforcer', 6, 18, 'streets', patrol('agbero', [3, 18], [10, 18], [10, 23], [3, 23])),
+      guard('Yard Runner', 12, 11, 'streets', patrol('areaBoy', [2, 11], [18, 11], [18, 6], [2, 6])),
       // the switchmen mind the cabinets (they stand by the nearest one while the cabinets stand)
-      guard('Switchman', ebuteX(13), 30, 'switchmen', post('agbero')),
-      chaser('Bottle Switchman', ebuteX(28), 34, 'switchmen', post('bottleThrower', 3)),
+      guard('Switchman', 20, 7, 'switchmen', post('agbero')),
+      chaser('Bottle Switchman', 30, 22, 'switchmen', post('bottleThrower', 3)),
       // behind the sidings gate: the freight guards on the wagon lanes
-      blocker('Freight Guard', ebuteX(33), 23, 'freight', post('heavyEnforcer', 2)),
-      chaser('Freight Thrower', ebuteX(34), 20, 'freight', post('bottleThrower', 2)),
-      // the relief enforcer loiters in the south yard until the cabin is taken
-      guard(
-        'Relief Enforcer',
-        ebuteX(20),
-        35,
-        'relief',
-        patrol('agbero', [ebuteX(18), 35], [ebuteX(24), 35]),
-      ),
-      // the yard lieutenant walks the lock-up yard by the fence (he reads traps: a long fight, never required)
-      guard(
-        'Yard Lieutenant',
-        ebuteX(32),
-        35,
-        'yard',
-        patrol('lieutenant', [ebuteX(29), 36], [ebuteX(37), 36], [ebuteX(37), 33], [ebuteX(34), 34]),
-      ),
+      blocker('Freight Guard', 36, 8, 'freight', post('heavyEnforcer', 2)),
+      chaser('Freight Thrower', 44, 9, 'freight', post('bottleThrower', 2)),
+      // the relief enforcer loops round the goods shed by the crossing until the cabin is taken
+      guard('Relief Enforcer', 30, 18, 'relief', patrol('agbero', [25, 16], [30, 16], [30, 26], [25, 26])),
+      // the yard lieutenant walks round the signal shed (he reads traps: a long fight, never required)
+      guard('Yard Lieutenant', 44, 20, 'yard', patrol('lieutenant', [37, 20], [47, 20], [47, 26], [37, 26])),
     ],
     timeLimitSec: 540,
     parSec: 300,
   },
   // Ebute-Metta section 2 is a standalone raid (railYardGoods): no field mission.
   // ---------------------------------------------------------------- Lagos Island
-  // Ledger Row (decision DB4): Ring security walks loops round the office blocks of the west row; when they are down the
-  // traders' counter hall must be kept while the hall watch and a thrower come to take it back; a heavy minds the
-  // records annexe door. Then the annexe raid, and out by the row gate.
+  // Ledger Row on its own campaign area `lagosIsland.ledgerLanes` (decisions WE5-WE6; before: DB4 on the Rumble map): the
+  // same legs, groups and story through the commercial lanes to the records office. Ring security walks loops round the
+  // counter hall court and the market road's stall block, a heavy holds the market road; when they are down the traders'
+  // counter hall must be kept while the hall watch, a thrower and a runner from the cloth lanes come to take it back. Then
+  // the records gate opens: the stamp machines in the records yard, minded by a heavy, the annexe raid, and out by the row
+  // gate.
   {
     id: 'lagosIsland.approach',
-    sectorId: 'lagosIsland.ledgerRow',
+    arenaId: LEDGER_LANES_ARENA_ID,
+    sectorId: 'lagosIsland.ledgerLanes',
     districtId: 'lagosIsland',
     name: 'Ledger Row',
-    start: [4, 23],
-    returnMarker: m(3, 29, 'ROW GATE'),
+    start: [3, 24],
+    returnMarker: m(3, 21, 'ROW GATE'),
     legs: [
       { kind: 'clearGroup', text: 'Defeat the 3 auditors in the row alleys.', group: 'auditors' },
       {
         kind: 'holdArea',
         text: 'Keep the counter hall clear for 25 seconds.',
-        area: { x: 9, y: 23, radius: 2, label: 'COUNTER HALL' },
+        area: { x: 30, y: 8, radius: 2, label: 'COUNTER HALL' },
         holdSec: 25,
         waves: [
           { group: 'hallWatch', atSec: 3 },
@@ -656,9 +651,9 @@ const defs: FieldMissionDef[] = [
         kind: 'destroyTargets',
         text: 'Destroy the 3 stamp machines on the row.',
         targets: [
-          { id: 'stampHall', kind: 'controlPoint', x: 15, y: 22, label: 'STAMP MACHINE', hp: 2 },
-          { id: 'stampWest', kind: 'controlPoint', x: 9, y: 29, label: 'STAMP MACHINE', hp: 2 },
-          { id: 'stampEast', kind: 'controlPoint', x: 19, y: 29, label: 'STAMP MACHINE', hp: 2 },
+          { id: 'stampHall', kind: 'controlPoint', x: 41, y: 14, label: 'STAMP MACHINE', hp: 2 },
+          { id: 'stampWest', kind: 'controlPoint', x: 40, y: 21, label: 'STAMP MACHINE', hp: 2 },
+          { id: 'stampEast', kind: 'controlPoint', x: 48, y: 15, label: 'STAMP MACHINE', hp: 2 },
         ],
         crew: 'annexe',
       },
@@ -667,70 +662,72 @@ const defs: FieldMissionDef[] = [
     doors: [
       {
         id: 'annexe',
-        x: 14,
-        y: 30,
+        x: 44,
+        y: 24,
         label: 'RECORDS ANNEXE',
         raidId: 'recordsVault',
-        returnTile: [14, 29],
+        returnTile: [44, 25],
         required: true,
       },
     ],
     enemies: [
-      // two loops round the office blocks: north of the hall and south of it (watch a corner, lay on the loop)
+      // two auditors loop the counter hall court and the market road's stall block (watch a corner, lay on the loop)
       guard(
         'Ledger Auditor',
-        8,
-        18,
+        30,
+        5,
         'auditors',
-        patrol('ringSecurity', [2, 18], [11, 18], [11, 21], [2, 21]),
+        patrol('ringSecurity', [26, 5], [34, 5], [34, 12], [26, 12]),
       ),
       guard(
         'Ledger Auditor',
-        16,
-        28,
+        24,
+        20,
         'auditors',
-        patrol('ringSecurity', [10, 25], [19, 25], [19, 28], [10, 28]),
+        patrol('ringSecurity', [22, 20], [27, 20], [27, 24], [22, 24]),
       ),
-      // the row's heavy holds the side street (a blast puts him down: lure him into an alley)
-      blocker('Row Heavy', 22, 24, 'auditors', post('heavyEnforcer', 2)),
-      // the hall watch (east end of the hall), a thrower on the side street and a runner from the south row come in
-      // once the hall is taken
+      // the row's heavy holds the market road at the arcade's mouth (a blast puts him down: lure him into a lane)
+      blocker('Row Heavy', 19, 16, 'auditors', post('heavyEnforcer', 2)),
+      // the hall watch rounds the kiosks east of the court, a thrower waits under the arcade by the road and a runner loops
+      // the cloth lanes alone; they come in once the hall is taken
       guard(
         'Hall Guard',
-        18,
-        22,
+        35,
+        13,
         'hallWatch',
-        patrol('ringSecurity', [19, 22], [23, 22], [23, 28], [19, 28]),
+        patrol('ringSecurity', [31, 13], [37, 13], [37, 17], [31, 17]),
       ),
-      chaser('Ledger Thrower', 22, 19, 'hallLate', post('bottleThrower', 2)),
-      guard('Row Runner', 6, 29, 'hallLast', patrol('areaBoy', [7, 22], [10, 22], [10, 30], [7, 30])),
-      // a heavy minds the annexe door and its stamp machines: lure him off them or blast him
-      blocker('Annexe Heavy', 16, 29, 'annexe', post('heavyEnforcer', 1)),
+      chaser('Ledger Thrower', 22, 13, 'hallLate', post('bottleThrower', 2)),
+      guard('Row Runner', 6, 13, 'hallLast', patrol('areaBoy', [2, 13], [11, 13], [11, 17], [2, 17])),
+      // a heavy minds the records yard and its stamp machines: lure him off them or blast him
+      blocker('Annexe Heavy', 44, 19, 'annexe', post('heavyEnforcer', 1)),
     ],
     timeLimitSec: 420,
     parSec: 210,
   },
-  // Press Run (decision DB5): the Ring's receipt presses (machines that print the forged licences) stand in the press
-  // grid; Ring security walks the middle street and the pressmen mind the machines. Then the press lane, the only way
-  // out, must be opened: a guard walks it and a heavy stands across its narrow end. When they are down the bureau sends
-  // its auditor after you: down the press lane, then back to the press gate.
+  // Press Run on its own campaign area `lagosIsland.pressYards` (decisions WE7-WE8; before: DB5 on the Rumble map): the
+  // Ring's receipt presses (machines that print the forged licences) stand in the substation and the pump house yard; Ring
+  // security walks the back streets and the pressmen mind the machines. Wrecking them lifts the press lane's checkpoint:
+  // a guard walks its head and a heavy stands at its narrow end. When they are down the bureau sends its auditor after you:
+  // down the press lane, then back to the press gate.
   {
     id: 'lagosIsland.press',
-    sectorId: 'lagosIsland.pressGrid',
+    arenaId: PRESS_YARDS_ARENA_ID,
+    sectorId: 'lagosIsland.pressYards',
     districtId: 'lagosIsland',
     name: 'Press Run',
-    start: [4, 4],
-    returnMarker: m(4, 10, 'PRESS GATE'),
+    start: [3, 3],
+    returnMarker: m(3, 8, 'PRESS GATE'),
     legs: [
       {
         kind: 'destroyTargets',
         text: 'Destroy the 5 receipt presses in the press grid.',
         targets: [
-          { id: 'pressNorth', kind: 'controlPoint', x: 11, y: 6, label: 'RECEIPT PRESS' },
-          { id: 'pressMid', kind: 'controlPoint', x: 10, y: 12, label: 'RECEIPT PRESS', hp: 2 },
-          { id: 'pressSouth', kind: 'controlPoint', x: 17, y: 14, label: 'RECEIPT PRESS', hp: 2 },
-          { id: 'pressCorner', kind: 'controlPoint', x: 3, y: 14, label: 'RECEIPT PRESS', hp: 2 },
-          { id: 'pressLane', kind: 'controlPoint', x: 20, y: 8, label: 'RECEIPT PRESS', hp: 2 },
+          { id: 'pressNorth', kind: 'controlPoint', x: 24, y: 6, label: 'RECEIPT PRESS' },
+          { id: 'pressMid', kind: 'controlPoint', x: 31, y: 9, label: 'RECEIPT PRESS', hp: 2 },
+          { id: 'pressSouth', kind: 'controlPoint', x: 26, y: 17, label: 'RECEIPT PRESS', hp: 2 },
+          { id: 'pressCorner', kind: 'controlPoint', x: 36, y: 22, label: 'RECEIPT PRESS', hp: 2 },
+          { id: 'pressLane', kind: 'controlPoint', x: 40, y: 10, label: 'RECEIPT PRESS', hp: 2 },
         ],
         crew: 'pressmen',
       },
@@ -739,21 +736,29 @@ const defs: FieldMissionDef[] = [
         kind: 'escapeRoute',
         text: 'Escape to the press lane before the auditor catches you.',
         group: 'pursuers',
-        exit: m(22, 21, 'PRESS LANE'),
+        exit: m(41, 24, 'PRESS LANE'),
       },
     ],
     doors: [],
     enemies: [
-      chaser('Bureau Auditor', 2, 8, 'pursuers', { variant: 'bottleThrower' }),
-      // the press lane is blocked: Ring security walks it, a heavy stands across its narrow end (lure him, blast him)
-      guard('Lane Guard', 23, 17, 'laneGuards', patrol('ringSecurity', [23, 14], [23, 20])),
-      blocker('Lane Heavy', 22, 18, 'laneGuards', post('heavyEnforcer', 1)),
-      // Ring security walks the middle street end to end; a thrower watches the wide south street
-      guard('Lane Security', 6, 10, 'lanes', patrol('ringSecurity', [2, 10], [19, 10])),
-      chaser('Lane Thrower', 20, 14, 'lanes', post('bottleThrower', 2)),
-      // the pressmen stand by the nearest press while the presses stand
-      guard('Pressman', 13, 7, 'pressmen', post('marketEnforcer')),
-      guard('Pressman', 8, 13, 'pressmen', post('marketEnforcer')),
+      // the bureau's auditor waits in the substation office until the lane is open
+      chaser('Bureau Auditor', 30, 2, 'pursuers', { variant: 'bottleThrower' }),
+      // the press lane is blocked: Ring security walks its head, a heavy stands at its narrow end (lure him, blast him)
+      guard(
+        'Lane Guard',
+        40,
+        16,
+        'laneGuards',
+        patrol('ringSecurity', [40, 14], [41, 14], [41, 19], [40, 19]),
+      ),
+      blocker('Lane Heavy', 41, 22, 'laneGuards', post('heavyEnforcer', 1)),
+      // a hired back-street enforcer walks the middle street end to end alone; a thrower watches the pump yard
+      guard('Street Enforcer', 10, 13, 'lanes', patrol('agbero', [2, 13], [17, 13])),
+      chaser('Lane Thrower', 36, 17, 'lanes', post('bottleThrower', 2)),
+      // the pressmen mind the presses: a heavy by the transformer hall, a thrower by the pump hall; each stands by the
+      // nearest press while the presses stand
+      blocker('Press Minder', 20, 3, 'pressmen', post('heavyEnforcer', 2)),
+      chaser('Bottle Pressman', 29, 22, 'pressmen', post('bottleThrower', 3)),
     ],
     timeLimitSec: 480,
     parSec: 240,

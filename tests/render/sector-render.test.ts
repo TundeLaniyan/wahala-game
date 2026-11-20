@@ -143,7 +143,8 @@ describe('render cost: only what the sector can show is built', () => {
     expect(rectInClip(c, c.x1, c.y0, 3, 3)).toBe(true);
   });
 
-  it.each(['mushin (Rumble map, fixture sector)', 'lagosIsland.press'])(
+  // every community field mission plays on its own campaign board now (WM, WF, WE, WL): the fixture sector on the Rumble map
+  it.each(['mushin (Rumble map, fixture sector)'])(
     '%s: the arena cover leaves out the objects outside the clip (and is unchanged without one)',
     (id) => {
       const s = id.startsWith('mushin') ? mushinSector() : field(id);

@@ -7,6 +7,8 @@ import type { CampaignAreaDef } from './areas';
 import { OSHODI_AREAS } from './areasOshodi';
 import { MUSHIN_AREAS } from './areasMushin';
 import { FADEYI_AREAS } from './areasFadeyi';
+import { EBUTE_METTA_AREAS } from './areasEbuteMetta';
+import { LAGOS_ISLAND_AREAS } from './areasLagosIsland';
 import { LEKKI_AREAS } from './areasLekki';
 import { OJUELEGBA_AREAS } from './areasOjuelegba';
 
@@ -14,6 +16,8 @@ export const CAMPAIGN_AREA_DEFS: readonly CampaignAreaDef[] = [
   ...OSHODI_AREAS,
   ...MUSHIN_AREAS,
   ...FADEYI_AREAS,
+  ...EBUTE_METTA_AREAS,
+  ...LAGOS_ISLAND_AREAS,
   ...LEKKI_AREAS,
   ...OJUELEGBA_AREAS,
 ];

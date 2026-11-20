@@ -626,6 +626,254 @@ device scale 2, `desktop-` 1280 x 720): Toll Corridor 4x20 the slip, 20x13 the c
 41x20 the yard, and the overview; Side Routes 5x11 the route office, 20x5 the back lanes, 24x14 the centre junction, 21x18
 the pound, 43x12 the slip road (staged behind the closed checkpoint, hence the arrow's "no open route"), and the overview.
 
+## Ebute Metta and Lagos Island
+
+Branch `claude/wahala-cg-ebute-island`, from the community-kit commit `662f8e2`. Decisions WE1-WE8 (`docs/DECISIONS.md`).
+Both districts use the shared community kit (WM1) as it is: each is a `KITS` entry (`ebuteMettaCampaign.ts`,
+`lagosIslandCampaign.ts`) with the district's own `CoverLegend` (`EBUTE_LEGEND`, `LAGOS_ISLAND_LEGEND`), its Rumble looks,
+cover theme / families / reach and ground, exported from its `*Art.ts` without changing the Rumble output. One small,
+backward-compatible kit option was added: `CommunityDistrictArt.floor.extra`, the district's own floor marks drawn after the
+kit's (Ebute Metta: ballast, sleepers and rails on its track lanes, the level crossing striped).
+
+```
+            (the station, Oyingbo, the foreshore = the Ebute Metta City Rumble map)
+                                     |  the freight line south
+          ebuteMetta.freightYard (S): cargo streets - level crossing - goods sidings / works compounds
+
+        (Balogun, Broad Street, the civic square, the Marina = the Lagos Island City Rumble map)
+                     |                                              |
+   lagosIsland.ledgerLanes (NW): cloth lanes, market      lagosIsland.pressYards (NE): back streets,
+   road, counter hall, Ledger House records yard          substation, pump house yard, press lane
+                     \_______ the back streets behind the records yard _______/
+```
+
+Legend of the maps below: as Oshodi's, with the district's own letters (`EBUTE_LEGEND`: B building, L lock-up, Y timber /
+goods stack, F trailer, W wagon, G compound wall, V workshop, U utility, C cabin, K kiosk, Z signal post, Q rail portal;
+`LAGOS_ISLAND_LEGEND`: O office tower, H heritage frontage, S shop, M stall, L lock-up, A arcade, K kiosk, V compound
+wall, Q corrugated hall, T tree, B building); `+` is a sector gate, `t` a piece of equipment.
+
+### Ebute Metta: Yard Approach in the Iron Lane Freight Yard (`ebuteMetta.freightYard`, `campaignEbuteFreightYard`, 50 x 30)
+
+```
+    0         1         2         3         4
+    01234567890123456789012345678901234567890123456789
+  0 BBBBBBBBBBBBBBBBBBBBBBQQBBBBBBBBBBBBBBBBBBBBBBBBBB
+  1 BBBBBBBBBBBBBBBBBBBBBBQQBBBBBBBBBBBBBBBBBBBBBBBBBB
+  2 BB....................==.......G................BB
+  3 BB..BBBBB...BBBBB.YY..==..WWWW.G.WWWW....WWWW...BB
+  4 BB..BBBBB...BBBBB.YY.Z==..WWWW.G.WWWW....WWWW...BB
+  5 BB..BBBBB...BBBBB.....==.......G................BB
+  6 BB....................==.......G.......CC.......BB
+  7 BB..................e.==..WWWW.G.YY....CC...WWW.BB
+  8 BB..LLLL...LLL..YY....==..WWWW.G.YY.e.____..WWW.BB
+  9 BB..LLLL...LLL..YY.t..==.......G......_h__..e...BB
+ 10 BB..LLLL...LLL..YY....==.......G.WWWZ.____..YYY.BB
+ 11 BB..........e......KK.==Z.UU...G.WWW.......ZYYY.BB
+ 12 BB.......FFFF......KK.==..UU...G................BB
+ 13 BB..$.............x...==.......GGGGGG+++GGGGGGGGBB
+ 14 BB=========================FFFF=================BB
+ 15 BB====FFFF=================================FFFF=BB
+ 16 BB....................==.............x..........BB
+ 17 BB...FFFF.............==.........GGGG.....VVVVV.BB
+ 18 BB....e....BBBBB...LLZ==..VVVVe..GGGG.....VVVVV.BB
+ 19 BB......t..BBBBB...LL.==..VVVV...GGGG.....VVVVV.BB
+ 20 BB..LLLL...BBBBB...LL.==..VVVV..............e...BB
+ 21 BB..LLLL...BBBBB...LL.==t..............VVVVV....BB
+ 22 BB..LLLL..........$...==......e..UUU...VVVVV.GG.BB
+ 23 BB....................==..YYY....UUU...VVVVV.GG.BB
+ 24 BB.R......YY...LLL.UU.==Z.YYY.......t..__D__.GG.BB
+ 25 BB....KK..YY...LLL.UU.==........$......_____....BB
+ 26 BB.@..KK.......LLL.UU.==.........GGGG...........BB
+ 27 BB....................==........................BB
+ 28 LLLLLLLLLLLLLLLLLLLLLLQQLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 29 LLLLLLLLLLLLLLLLLLLLLLQQLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+(`+` = the sidings gate in the yard fence: closed until the four switch cabinets are wrecked.)
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| Iron Lane cargo streets (x 2-18) | street | The entry and the YARD GATE return; bonded warehouses, cargo lock-ups and goods stacks, trailers on the freight road; two cabinets; the yard enforcer loops the lock-ups by the gate (24 tiles), the yard runner loops the cargo block north of the road (42 tiles). |
+| Alafia level crossing (x 19-30) | rail | The freight line (x 22-23) under its two bridge portals, the freight road crossing it, signal posts, the keeper's hut, wagons on the loop siding, the goods shed; a cabinet by the track, the switchman, the relief enforcer looping the goods shed (32 tiles). |
+| Oyingbo goods sidings (x 31-47, y 2-13) | service | Behind the yard fence and its steel gate: wagons on the sidings, timber, the signal cabin and its kept-clear apron (the hold zone); the freight guards (heavy, thrower). |
+| Ajao works compounds (x 31-47, y 14-27) | works | Walled compounds and workshops, the last cabinet, the SIGNAL SHED door (the `junctionToolShed` raid, unchanged) on its apron and the yard lieutenant looping the shed (32 tiles). |
+
+Landmarks: the freight line viaduct with the green-and-white train (north), the Iron Lane trailer park and the Iron Lane
+Cargo Terminal board (west), the goods sidings floodlights and the Ajao works smoke (east). The freight line is walkable
+track; no train runs into the area (as on Oshodi's siding). The `railYardGoods` raid stays the district's standalone
+section 2 (it has no door on this mission).
+
+### Lagos Island mission 1: Ledger Row in the Ledger Lanes (`lagosIsland.ledgerLanes`, `campaignLagosLedgerLanes`, 52 x 28)
+
+```
+    0         1         2         3         4         5
+    0123456789012345678901234567890123456789012345678901
+  0 OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOHHHHHHHHHHHOO
+  1 OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOHHHHHHHHHHHOO
+  2 BB..................==................V...........BB
+  3 BB.SSSSS..SSSSSS..AA==..AAAAAAAAAAAAA.V...OOOOOOO.BB
+  4 BB.SSSSS..SSSSSS..AA==..AAAAAAAAAAAAA.V...OOOOOOO.BB
+  5 BB................AA==........e.......V...OOOOOOO.BB
+  6 BB................AA==....._______....V...OOOOOOO.BB
+  7 BB.MMM..MM..LLLL..AA==..SS._______.SS.V...OOOOOOO.BB
+  8 BB.MMM..MM..LLLL..AA==..SS.___h___.SS.V...........BB
+  9 BB..................==..SS._______.SS.V...........BB
+ 10 BB.$................==x.SS._______.SS.V.HHHH..VVV.BB
+ 11 BB...MMM..LLL..MM...==..SS.........SS.V.HHHH..VVV.BB
+ 12 BB...MMM..LLL..MM.AA==................V.HHHH..VVV.BB
+ 13 BB....e...........AA==e.....T...T..e..V.......VVV.BB
+ 14 BB................AA==................V..t........BB
+ 15 BB.MM..SSSS..MM...AA==..KK..MM...KK...V.........t.BB
+ 16 BB.MM..SSSS..MM....e==..KK..MM...KK...V.K....LLL..BB
+ 17 BB..................==....x...........+.K....LLL..BB
+ 18 BB..................==================+.........T.BB
+ 19 BB...LLLL..SSSS...AA==================+.....e.....BB
+ 20 BB...LLLL..SSSS...AA==..e.............V...........BB
+ 21 BB.R.......SSSS...AA==.MMMM..SSS..MMM.V.t.HHHHH...BB
+ 22 BB................AA==.MMMM..SSS..MMM.V...HHHHH...BB
+ 23 BB.....MMM.......$..==.......SSS......V...HHHHH...BB
+ 24 BB.@...MMM....KKK...==......KKKK....$.V.....D...T.BB
+ 25 BB..................==................V...........BB
+ 26 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 27 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+(`+` = the records gate in the compound wall: closed until the counter hall is kept.)
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| Ileri cloth lanes (x 2-19) | street | The entry and the ROW GATE: stall blocks, lock-ups and shopfronts in narrow lanes, the arcade along the road; the row runner loops the lanes alone (26 tiles) and joins the last wave. |
+| Oke-Ayo market road (x 20-37, y 14-25) | lane | The hand-cart road from the lanes to the records gate, stalls and kiosks; an auditor loops its stall block (18 tiles), the row heavy holds the arcade's mouth. |
+| Counter hall court (x 20-37, y 2-13) | plaza | The counter hall's arcade round its kept-clear court (the hold zone, radius 2); an auditor loops the court (30 tiles), the hall watch rounds the kiosks east of it (20 tiles), a thrower waits under the arcade. |
+| Ledger House records yard (x 38-49) | service | Behind the records gate: the records office tower, the old registry, the archive stores, the three stamp machines, the RECORDS ANNEXE door (`recordsVault`, unchanged) and the annexe heavy. |
+
+Landmarks: the Broad Street office towers and the island bridge approach (north), the Ileri cloth market (west), the
+Ledger House board (east).
+
+### Lagos Island mission 2: Press Run in the Press Yards (`lagosIsland.pressYards`, `campaignLagosPressYards`, 50 x 28)
+
+```
+    0         1         2         3         4
+    01234567890123456789012345678901234567890123456789
+  0 OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+  1 OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+  2 BB...BBBB.........V...........e.....BB..........BB
+  3 BB.@.BBBB..BBBB...V.eQQQQQ...QQQQQQ.BB.....OOOO.BB
+  4 BB...BBBB..BBBB...V..QQQQQ...QQQQQQ.BB.....OOOO.BB
+  5 BB.........BBBB.....................BB.....OOOO.BB
+  6 BB.$....................t...........BB..........BB
+  7 BB................V..KK...QQQQ...KK.BB..KK......BB
+  8 BB.R..............V..KK...QQQQ...KK.BB..KK..LLL.BB
+  9 BB.....BBB..LLLL..V...........$t....BB......LLL.BB
+ 10 BBBBB..BBB..LLLL..V.....................t...LLL.BB
+ 11 BBBBB..BBB..LLLL..VVVVVV..VVVVVV..VV............BB
+ 12 BBBBB..BBB......x....................x..........BB
+ 13 BB........e...........................VV++VVVVVVBB
+ 14 BB........KK........QQQQQ...QQQQQQ....BB..BBBBBBBB
+ 15 BB..BBBB..KK.BBBB...QQQQQ...QQQQQQ..T.BB..BBBBBBBB
+ 16 BB..BBBB.....BBBB...QQQQQ.............BBe.BBBBBBBB
+ 17 BB..BBBB.....BBBB.........t.........e.BB..K..BBBBB
+ 18 BB...........BBBB..............QQQ....BB..K..BBBBB
+ 19 BB........T.........LL...VVVV..QQQ..T.BB.....BBBBB
+ 20 BBLL................LL...VVVV..QQQ....BB.....BBBBB
+ 21 BBLL..BBBB..........LL.........QQQ....BB.....BBBBB
+ 22 BBLL..BBBB..BBBB..........$..e......t.BB.e...BBBBB
+ 23 BB....BBBB..BBBB...........LLL........BB.....BBBBB
+ 24 BB..........BBBB...VVVVV...LLL...LLL..BB.>...BBBBB
+ 25 BB....................................BB.....BBBBB
+ 26 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+ 27 LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+```
+
+(`+` = the press lane's Ring checkpoint: closed until the five presses are wrecked.)
+
+| Sub-area | Role | What happens there |
+| --- | --- | --- |
+| Back streets (x 2-17) | lane | The entry and the PRESS GATE: old houses, lock-ups and kiosks on narrow secondary streets; a hired street enforcer walks the middle street end to end (15 tiles each way). |
+| Ireti substation (x 18-47, y 2-12) | works | A walled compound of transformer halls and switch kiosks with three gateways, the lane head yard east of it; three presses, the press minder (heavy), the bureau auditor's office corner. |
+| Olumo pump house yard (x 18-37, y 13-25) | service | Pump halls, stores, the tank plinths' wall and a tree line; two presses, the bottle pressman, the lane thrower watching the yard. |
+| The press lane (x 38-47, y 13-25) | street | The only way out: a 2-wide lane between the houses behind its checkpoint, a back court; the lane guard loops its head (12 tiles), the lane heavy stands at its narrow end, the PRESS LANE exit at its foot. |
+
+Landmarks: the Ireti substation gantry (north), the substation board and the pump house's raised tank over the lane
+(east), the back-street traders (west).
+
+### The bosses (unchanged, decision WE8)
+
+Neither boss was bounded. The Ebute Metta boss (dispatch windows) has its switches and crew in the station / rail yard
+column, but its stage hazards span the whole board: traffic and trucks on the full width of Murtala Muhammed Way / Apapa
+Road, goods strikes at the Oyingbo arcade (row 7), the washes on the Oko-Baba and Otumara foreshore (row 36). A corridor
+that keeps every hazard firing would be rows 7-36 of the 39-row map, i.e. nearly all of it; a smaller one would switch
+hazards off. The Lagos Island boss (evidence run) places its ledgers and presses across the whole map (x 6-50, y 2-34) in
+its three phases; there is no coherent part that holds them. Both stay on their whole district maps, recipe and numbers
+unchanged (never half-moved).
+
+### What is new, expanded, reused, unchanged
+
+| Item | Status |
+| --- | --- |
+| The Iron Lane Freight Yard board: cargo streets, level crossing, goods sidings and their gate, works compounds (50 x 30) | NEW (campaign-only geography) |
+| The Ledger Lanes board: cloth lanes, market road, counter hall court, records yard and its gate (52 x 28) | NEW (campaign-only geography) |
+| The Press Yards board: back streets, substation, pump house yard, press lane and its checkpoint (50 x 28) | NEW (campaign-only geography) |
+| Yard Approach, Ledger Row and Press Run play areas | EXPANDED: 462 -> 879, 224 -> 831 and 198 -> 736 walkable tiles, 4 sub-areas each |
+| The three missions' routes, enemy posts and patrols, equipment, hold zones, doors and exits | NEW (re-authored on the new boards) |
+| Leg kinds, labels, door / raid ids (`shed` / `junctionToolShed`, `annexe` / `recordsVault`), groups, clocks and pars | UNCHANGED |
+| Press Run's "lanes" street walker (Ring security -> a hired agbero) and its pressmen (two market enforcers -> a heavy and a thrower) | CHANGED encounters (WE7) |
+| The two district bosses | UNCHANGED (whole district maps, WE8) |
+| Cover objects, looks, night looks, floor colours, viaduct, skyline, signs, umbrellas, stalls | REUSED (the districts' Rumble kits; the trailers, water tank and gantry are a few procedural boxes; no new model, texture or audio) |
+| The City Rumble Ebute Metta and Lagos Island maps, Classic, City Rumble, multiplayer | UNCHANGED (layout hashes and digests pinned) |
+
+### Measurements
+
+Same scripts and seeds as Oshodi's; "old" = the old sectors of the Rumble maps on `662f8e2`.
+
+| Measure | Yard Approach old -> new | Ledger Row old -> new | Press Run old -> new |
+| --- | --- | --- | --- |
+| Walkable tiles of the play area | 462 -> 879 | 224 -> 831 | 198 -> 736 |
+| Scripted playthrough (6 seeds) Easy / Normal / Hard won | 6/6/5 -> 6/6/6 | 6/6/5 -> 6/6/6 | 5/4/5 -> 6/6/6 |
+| Field seconds Easy / Normal / Hard (mean of wins) | 103.6 / 112.0 / 130.4 -> 110.9 / 109.0 / 159.7 | 83.4 / 100.0 / 118.3 -> 115.5 / 125.3 / 125.6 | 99.0 / 115.1 / 142.0 -> 91.4 / 106.7 / 150.8 |
+| Lives used Easy / Normal / Hard (mean) | 0 / 0 / 1.50 -> 0 / 0 / 0.50 | 0 / 0 / 0.83 -> 0 / 0 / 0.50 | 0 / 0 / 0.17 -> 0 / 0 / 0.17 |
+| Human-like bait on the default target, Normal (8 seeds): first try / within two | 5/8, 7/8 (area boy) -> 8/8, 8/8 (agbero) | 1/8, 1/8 (Ring security) -> 7/8, 8/8 (area boy) | 1/8, 1/8 (Ring security) -> 8/8, 8/8 (agbero) |
+| Plain-sight fairness probe (4 seeds, at most 1 caught) | 0/4 -> 0/4 | 0/4 -> 0/4 | 0/4 -> 0/4 |
+| Ordinary roamers on a moving patrol (readability probe) | 2/4 -> 3/4 | 4/4 -> 4/4 | 2/4 -> 2/2 |
+
+Readability probe (`scripts/readability.ts normal`, the three missions): pursued 34 -> 30 of 44 probes, reached adjacent
+2.9 % -> 10.0 %, human hurt by that enemy 2.9 % -> 6.7 %, by anyone 55.9 % -> 13.3 %, chase length mean 2.1 -> 2.0 s (p95
+6.9 -> 3.8 s), back on route median 3.4 -> 3.4 s. The "badly placed generator" drill (`tests/field-districts-ebute-lagos-lekki.test.ts`)
+passes for every tested seat. The field-mission Hard / Easy comparison over the five missions of that file still holds.
+
+### Render cost
+
+`node scripts/campaign-perf.mjs field:ebuteMetta.approach,field:lagosIsland.approach,field:lagosIsland.press low,high` on a
+740 x 360 page (device scale 1): old = the base `662f8e2` build (the old sectors of the Rumble maps), new = this branch's
+build, one pass each. **Software rendering (SwiftShader on shared cores): the columns compare the two builds on the same
+machine; they are not phone timings and no claim about real phones is made.** Draw calls, triangles, geometries and
+textures are the deterministic columns; build and frame times vary between identical runs.
+
+| Mission | Quality | Build ms old / new | Draw calls old / new | Triangles old / new | Geometries old / new | Textures old / new | Frame mean ms old / new | Frame p95 ms old / new | AI ms / tick old / new |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `ebuteMetta.approach` | low | 2445 / 2360 | 269 / 155 | 818298 / 448540 (-45 %) | 209 / 165 | 172 / 168 | 779 / 582 | 1900 / 1217 | 0.78 / 0.45 |
+| `lagosIsland.approach` | low | 2505 / 2718 | 292 / 160 | 722791 / 506317 (-30 %) | 260 / 162 | 180 / 140 | 470 / 670 | 1117 / 1550 | 0.39 / 0.56 |
+| `lagosIsland.press` | low | 2218 / 2592 | 276 / 116 | 717682 / 417912 (-42 %) | 263 / 142 | 173 / 139 | 431 / 520 | 950 / 1250 | 0.30 / 0.32 |
+| `ebuteMetta.approach` | high | 1921 / 2150 | 608 / 390 | 2182173 / 1315299 (-40 %) | 281 / 206 | 246 / 247 | 824 / 1366 | 2400 / 3717 | 0.56 / 0.93 |
+| `lagosIsland.approach` | high | 1926 / 2402 | 592 / 411 | 2038549 / 1468819 (-28 %) | 295 / 210 | 256 / 221 | 1328 / 1603 | 1817 / 3733 | 0.57 / 0.56 |
+| `lagosIsland.press` | high | 2124 / 1724 | 613 / 323 | 2199763 / 1233902 (-44 %) | 302 / 203 | 254 / 225 | 1539 / 813 | 2350 / 2400 | 0.46 / 0.52 |
+
+Reading it: as with Oshodi's areas (the "Render cost" rows above), each new board is 1.9-3.7 times the old sector's playable
+size and the scene is still cheaper: 28-45 % fewer triangles, 33-58 % fewer draw calls, fewer live geometries and textures
+in every row (the old sector built the 75 x 39 / 55 x 39 district's backdrop and the cover inside its render clip). Frame
+times on this software renderer are a handful of frames per 4 s sample and move in both directions between runs; the build
+times are within the run-to-run spread. The AI cost per tick stays under 1 ms. (`mission fetch KB`, not in the table, is the
+scene's audio, which the boards do not change; it was 262-3319 KB new and 262-427 KB old.)
+
+### Screenshots
+
+`docs/screenshots/campaign-guidance-expansion/world/ebuteMetta/` and `.../world/lagosIsland/`: `phone-` 740 x 360 and
+`phoneWide-` 844 x 390 (device scale 2) and `desktop-` 1280 x 720; the follow camera in each sub-area (Freight Yard: 8x22
+the cargo streets, 25x10 the level crossing, 39x10 the sidings, 40x26 the works; Ledger Lanes: 8x18 the lanes, 24x20 the
+market road, 30x11 the counter hall, 44x15 the records yard; Press Yards: 8x13 the back streets, 24x9 the substation, 26x22
+the pump yard, 41x20 the press lane) and the overview (`-overview`). Taken with `scripts/sector-shots.mjs` on the built game; the
+human is staged on the tile, so a shot behind a still-closed gate shows the compass's "no open route".
+
 ## Lekki Phase 1
 
 Decisions WL1-WL5. Lekki is a community district: its areas are painted with its own Rumble letters (`LEKKI_LEGEND`, plus the

@@ -20,6 +20,8 @@ import { MUSHIN_CAMPAIGN_ART } from './mushinCampaign';
 import { FADEYI_CAMPAIGN_ART } from './fadeyiCampaign';
 import { LEKKI_CAMPAIGN_ART } from './lekkiCampaign';
 import { ojuelegbaCampaignArt } from './ojuelegbaCampaign';
+import { EBUTE_METTA_CAMPAIGN_ART } from './ebuteMettaCampaign';
+import { LAGOS_ISLAND_CAMPAIGN_ART } from './lagosIslandCampaign';
 
 /** A district's campaign kit: how its areas are drawn. */
 export type DistrictKit = (area: CampaignAreaDef) => ArenaArt;
@@ -39,6 +41,8 @@ export const KITS: Readonly<Partial<Record<string, DistrictKit>>> = {
   lekki: communityCampaignKit(LEKKI_CAMPAIGN_ART),
   // the Ojuelegba finale (decision WL6): its own cover builder, the Oshodi pattern
   ojuelegba: ojuelegbaCampaignArt,
+  ebuteMetta: communityCampaignKit(EBUTE_METTA_CAMPAIGN_ART),
+  lagosIsland: communityCampaignKit(LAGOS_ISLAND_CAMPAIGN_ART),
 };
 
 /** The presentation of every campaign arena whose district has a kit (an area without one draws the defaults). */

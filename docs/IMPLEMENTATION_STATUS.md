@@ -724,3 +724,6 @@ One community-district campaign kit (`render/arenas/campaign/communityKit.ts`; `
 
 ## Lekki Phase 1 and the Ojuelegba finale on campaign areas (branch `claude/wahala-cg-lekki-finale`, from `662f8e2`; decisions WL1-WL10; not merged, not deployed)
 Lekki's Gate Approach and Estate Sweep and the finale's Return to Ojuelegba and Hold the Junction each play on their own campaign-only board (834 / 854 / 821 / 863 walkable tiles against 225 / 402 / 218 / 190); Lekki through the community kit (plus a substation piece), Ojuelegba through its own cover builder (the Oshodi pattern); the Rumble Lekki and Ojuelegba maps and the finale boss unchanged (docs/CAMPAIGN_WORLD.md "Lekki Phase 1", "The Ojuelegba finale").
+
+## Ebute Metta and Lagos Island campaign areas (branch `claude/wahala-cg-ebute-island`, from `662f8e2`; decisions WE1-WE8; not merged, not deployed)
+Yard Approach on the Iron Lane Freight Yard (879 tiles), Ledger Row on the Ledger Lanes (831), Press Run on the Press Yards (736), each with 4 sub-areas, a sector gate and re-authored encounters, drawn with the community kit (`KITS.ebuteMetta`, `KITS.lagosIsland`; one backward-compatible kit option, `floor.extra`); both bosses unchanged (WE8). docs/CAMPAIGN_WORLD.md "Ebute Metta and Lagos Island".

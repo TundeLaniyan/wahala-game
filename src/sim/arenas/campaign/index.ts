@@ -13,6 +13,9 @@ import { CAMPAIGN_LEKKI_ESTATE_GATE } from './lekkiEstateGate';
 import { CAMPAIGN_LEKKI_INNER_ESTATE } from './lekkiInnerEstate';
 import { CAMPAIGN_OJUELEGBA_SOUTH_STREETS } from './ojuelegbaSouthStreets';
 import { CAMPAIGN_OJUELEGBA_BUS_INTERCHANGE } from './ojuelegbaBusInterchange';
+import { CAMPAIGN_EBUTE_FREIGHT_YARD } from './ebuteFreightYard';
+import { CAMPAIGN_LAGOS_LEDGER_LANES } from './lagosLedgerLanes';
+import { CAMPAIGN_LAGOS_PRESS_YARDS } from './lagosPressYards';
 
 export const CAMPAIGN_ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEntries(
   [
@@ -29,6 +32,10 @@ export const CAMPAIGN_ARENAS: Readonly<Record<string, ArenaDef>> = Object.fromEn
     CAMPAIGN_LEKKI_INNER_ESTATE,
     CAMPAIGN_OJUELEGBA_SOUTH_STREETS,
     CAMPAIGN_OJUELEGBA_BUS_INTERCHANGE,
+    // Ebute Metta and Lagos Island (decisions WE1-WE7)
+    CAMPAIGN_EBUTE_FREIGHT_YARD,
+    CAMPAIGN_LAGOS_LEDGER_LANES,
+    CAMPAIGN_LAGOS_PRESS_YARDS,
   ].map((a) => [a.id, a]),
 );
 

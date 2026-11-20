@@ -315,18 +315,13 @@ describe('the campaign Ebute coordinates went through ebuteX', () => {
       expect(Math.abs(n.x - EBUTE_TRACK_X[0]!)).toBeLessThanOrEqual(3);
   });
 
-  it('the Yard Approach field mission starts, walks and raids inside the original footprint, all on open floor', () => {
+  // Yard Approach moved off the Rumble map onto its own campaign area (decision WE1): its tiles are checked against that
+  // board in tests/campaign-world.test.ts and tests/field-districts-ebute-lagos-lekki.test.ts; here only that the Rumble map
+  // no longer carries it.
+  it('the Yard Approach field mission plays on its own campaign board, not on the Rumble map', () => {
     const f = FIELD_MISSION_DEFS['ebuteMetta.approach']!;
-    expect(f.start[0]).toBe(ebuteX(3));
-    expect(floor(f.start[0], f.start[1])).toBe(true);
-    expect(floor(f.returnMarker.x, f.returnMarker.y)).toBe(true);
-    for (const leg of f.legs)
-      if (leg.kind === 'reachMarkers')
-        for (const mk of leg.markers) expect(floor(mk.x, mk.y), mk.label).toBe(true);
-    for (const d of f.doors) {
-      expect(d.x).toBe(ebuteX(33));
-      expect(floor(d.returnTile[0], d.returnTile[1])).toBe(true);
-    }
-    for (const e of f.enemies) expect(floor(e.post[0], e.post[1]), e.name).toBe(true);
+    expect(f.arenaId).toBe('campaignEbuteFreightYard');
+    expect(getArena(f.arenaId!).campaignOnly).toBe(true);
+    for (const d of f.doors) expect(d.raidId).toBe('junctionToolShed');
   });
 });
