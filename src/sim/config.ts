@@ -1600,7 +1600,11 @@ export const RAID_TACTICS_LEVELS: Readonly<
     id: 'raid.tactics/1',
     // the raid lieutenant (expert trap sense) plans like its level's bot, a little quicker to react: the crew's
     // bruiser, not a second boss (decision RA6)
-    trapSense: { expert: { plannerBump: 0, reactScale: 0.8 } },
+    trapSense: {
+      none: { enemyBrawlReactScale: 4.5 },
+      basic: { enemyBrawlReactScale: 4 },
+      expert: { plannerBump: 0, reactScale: 0.8 },
+    },
     perception: {
       agbero: { hearingTiles: 1 },
       guard: { hearingTiles: 1 },
@@ -1647,7 +1651,11 @@ export const RAID_TACTICS_LEVELS: Readonly<
     id: 'raid.tactics/1',
     // the raid lieutenant (expert trap sense) plans like its level's bot, a little quicker to react: the crew's
     // bruiser, not a second boss (decision RA6)
-    trapSense: { expert: { plannerBump: 0, reactScale: 0.8 } },
+    trapSense: {
+      none: { enemyBrawlReactScale: 4 },
+      basic: { enemyBrawlReactScale: 3.5 },
+      expert: { plannerBump: 0, reactScale: 0.8 },
+    },
     perception: {
       agbero: { hearingTiles: 2 },
       guard: { hearingTiles: 2 },
@@ -1694,7 +1702,11 @@ export const RAID_TACTICS_LEVELS: Readonly<
     id: 'raid.tactics/1',
     // a raid board is a small maze: a calm Hard walker looks as far ahead as a Normal one, it just reacts faster; the
     // lieutenant plans one bot level above the level's (decision RA6)
-    trapSense: { basic: { calmVisionTiles: 3 }, expert: { plannerBump: 1, reactScale: 0.8 } },
+    trapSense: {
+      none: { enemyBrawlReactScale: 3 },
+      basic: { calmVisionTiles: 3, enemyBrawlReactScale: 2.5 },
+      expert: { plannerBump: 1, reactScale: 0.8 },
+    },
     perception: {
       agbero: { hearingTiles: 3, reactTicks: 26 },
       guard: { hearingTiles: 3, reactTicks: 22 },

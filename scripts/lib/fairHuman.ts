@@ -65,7 +65,7 @@ export interface FairHumanOptions {
   /**
    * Raids (decision RA, docs/CLASSIC_RAID_AI.md): with no safe way to a firing tile, walk up to within two tiles of the
    * target instead of waiting for it to come (an enemy holding a post behind belts or crates is gone for, as a player
-   * would). Absent = waits, as before.
+   * would, crossing a thrower's line on the way). Absent = waits, as before.
    */
   approach?: boolean;
 }
@@ -303,7 +303,8 @@ export class FairHuman {
           targets.some(
             (t) => Math.abs((t % w) - (i % w)) + Math.abs(Math.floor(t / w) - Math.floor(i / w)) <= 2,
           );
-        const a = this.route(s, danger, avoid, near, 60);
+        // (it walks through a thrower's line to get there: a player does, for a moment)
+        const a = this.route(s, danger, new Set(danger.keys()), near, 60);
         if (a?.first) return { move: a.first };
       }
     }
@@ -667,8 +668,10 @@ export function playRaidFight(
             (Math.abs((b % w) - me.x) + Math.abs(Math.floor(b / w) - me.y)),
         );
       const reachable = marked.map((m) => nextCrate(s, m)).find((c) => c !== null);
+      const exit = r.extraction.y * w + r.extraction.x;
       if (reachable !== undefined && reachable !== null) targets = [reachable];
-      else if (r.extraction.open) goal = r.extraction.y * w + r.extraction.x;
+      // the exit is open but maybe still behind a locked gate (a wave to clear first): only a walkable exit is a goal
+      else if (r.extraction.open && walkSteps(s, me.x, me.y, 99).has(exit)) goal = exit;
       else {
         // nothing to blast yet (a door is closed): hunt the nearest active enemy
         targets = s.players.filter((p) => p.alive && p.enemyKind !== undefined).map((p) => p.y * w + p.x);
