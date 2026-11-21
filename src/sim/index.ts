@@ -214,6 +214,7 @@ export {
   CAMPAIGN_TACTICS,
   CAMPAIGN_TACTICS_ENEMY_ATTACKS,
   CAMPAIGN_TACTICS_LEVELS,
+  NIGHT_SIGHT_LEVELS,
   RAID_TACTICS_LEVELS,
   campaignTacticsFor,
   raidTacticsFor,
@@ -222,6 +223,7 @@ export {
 export type {
   CampaignTacticsConfig,
   ClassicRaidTactics,
+  NightSightConfig,
   RaidRouteStyle,
   TrapSenseSpec,
   TrapSenseTier,

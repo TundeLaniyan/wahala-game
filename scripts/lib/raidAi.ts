@@ -152,17 +152,30 @@ export function idlePatrol(
   return tr;
 }
 
-/** The raid played by the fair-fight scripted human, with the movement tracker on. */
-export function fullRaid(raidId: RaidId, level: CampaignLevel, seed: number) {
+/**
+ * The raid played by the fair-fight scripted human, with the movement tracker on. `detections` counts the times an
+ * enemy's mind turned `alert` (the "!"). `night: false` plays a night raid without its light-based detection (the raid
+ * AI's own sight; decision NL13 measurements).
+ */
+export function fullRaid(raidId: RaidId, level: CampaignLevel, seed: number, o: { night?: boolean } = {}) {
   const tr = new MovementTracker();
+  const was = new Map<string, string>();
+  let detections = 0;
   const r = playRaidFight({
     raidId,
     seed,
     difficulty: campaignEnemyLevel(level),
     level,
-    onTick: (s) => tr.onTick(s),
+    ...(o.night === false ? { config: { nightSight: undefined } } : {}),
+    onTick: (s) => {
+      tr.onTick(s);
+      for (const [id, m] of Object.entries(s.territory?.minds ?? {})) {
+        if (m.state === 'alert' && was.get(id) !== 'alert') detections++;
+        was.set(id, m.state);
+      }
+    },
   });
-  return { ...r, tracker: tr };
+  return { ...r, tracker: tr, detections };
 }
 
 const WARMUP = RAID_TUNING.spawnWarnTicks + 3 + 240;

@@ -699,6 +699,11 @@ export interface GameConfig {
   /** The campaign tactics layer (`CampaignTacticsConfig`); present ONLY in campaign field and boss missions. */
   campaignTactics?: CampaignTacticsConfig;
   /**
+   * Light-based detection of a NIGHT raid (`NightSightConfig`, decisions NL10-NL13); present ONLY in a raid whose data
+   * turns it on (`RaidDef.lighting.detection`). Absent everywhere else, so no other match changes.
+   */
+  nightSight?: NightSightConfig;
+  /**
    * The City Rumble COMBAT TEST LAB preset in force (`CombatLabPreset`, decisions CL-L1..), set live from the pause menu
    * of a LOCAL City Rumble match only (`systems/combatLab.ts`). ABSENT in every other match and until a level is picked.
    */
@@ -1583,6 +1588,30 @@ export function campaignTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignT
  * forgets sooner, Hard notices and decides faster, pursues further and coordinates, never sees through a wall.
  * The combat keys of the level stay in the object but a raid never reads them (`tacticsCombat`).
  */
+/**
+ * LIGHT-BASED DETECTION of a night raid (decisions NL10-NL13, docs/CLASSIC_LIGHTING.md "P1b"; `systems/nightSight.ts`).
+ * A CALM torch carrier notices the fighter only on its own lit torch tiles (`raid/light.ts`, the cone the player sees),
+ * after a reaction delay that grows with distance and restarts when the fighter leaves the cone; the fighter's own beam
+ * seen by the guard lengthens that cone by `beamBonusTiles`; in the dark a calm guard notices only at contact. Engaged
+ * guards (alert, pursuing, investigating) keep the raid AI's rules. Integer ticks; per level.
+ */
+export interface NightSightConfig {
+  /** Reaction ticks at 1-2 tiles. */
+  reactNearTicks: number;
+  /** Reaction ticks at the torch's full reach (linear in between). */
+  reactFarTicks: number;
+  /** Extra torch-cone tiles when the guard sees a lit tile of the fighter's beam. */
+  beamBonusTiles: number;
+  /** In the dark a calm guard notices the fighter only within this Chebyshev distance (contact). */
+  contactTiles: number;
+}
+
+export const NIGHT_SIGHT_LEVELS: Readonly<Record<'easy' | 'normal' | 'hard', NightSightConfig>> = {
+  easy: { reactNearTicks: 20, reactFarTicks: 36, beamBonusTiles: 1, contactTiles: 1 },
+  normal: { reactNearTicks: 15, reactFarTicks: 30, beamBonusTiles: 1, contactTiles: 1 },
+  hard: { reactNearTicks: 12, reactFarTicks: 24, beamBonusTiles: 1, contactTiles: 1 },
+};
+
 const RAID_ROUTES: ClassicRaidTactics['routes'] = {
   // a lap longer than the 3 s fuse: the player can lay a generator round a corner while the walker is on the far side
   agbero: { style: 'loop', loopTiles: 12, maxLoopTiles: 16, runTiles: 7, keepsDistance: false },

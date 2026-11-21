@@ -8,7 +8,10 @@ Every raid now wears its designed art (the table was keyed by raid id, so all si
 NL1), readability measured on the rendered picture and guarded by a code index on Low and High (NL2), warnings fog-free
 (NL3). One deliberately dark raid, the Records Vault night break-in (NL4-NL9): a pure lit-tile rule
 (`sim/raid/light.ts`), a darkness mask in the grit patch, an always-on flashlight that follows the fighter, guard torch
-beams clipped by walls, enemies hidden outside the light; light-based detection designed, not built.
+beams clipped by walls, enemies hidden outside the light, the maze kept as dim silhouettes and saturated red blast lanes
+(NL14-NL15). Light-based detection is live in that raid on the merged raid AI (NL10-NL13: calm torch guards notice only
+on their own lit torch tiles after a 0.25-0.5 s reaction, the fighter's beam costs one tile, the dark only contact),
+measured fair (8/8 completed at every level) and isolated (lit raids and every other mode byte-identical).
 `docs/CLASSIC_LIGHTING.md`; screenshots in `docs/screenshots/classic-lighting/`.
 
 ## Mission guidance: briefings, objective HUD and target pins (branch `claude/wahala-cg-guidance`, from `0b89d09`)

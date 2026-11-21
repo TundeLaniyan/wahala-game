@@ -56,7 +56,7 @@ export const RAID_STOREROOM_NIGHT_LOOK: ArenaLook = {
   sun: { color: 0xdce4f2, intensity: 3.2, position: [-6, 15, 8] },
   hemi: { sky: 0xa4b0c8, ground: 0x5a5044, intensity: 1.45 },
   envIntensity: 0.3,
-  exposure: 1.32,
+  exposure: 1.5,
   floorTint: 0xc8bfb0,
   pillarTint: 0xbcb4a6,
   softTint: 0xc0b4a0,

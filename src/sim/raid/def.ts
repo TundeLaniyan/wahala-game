@@ -118,6 +118,11 @@ export interface RaidLighting {
   practicals: { x: number; y: number; radius: number }[];
   /** Enemy kinds that carry a torch (others stand in the dark). */
   torchKinds: EnemyKind[];
+  /**
+   * Light-based detection (decisions NL10-NL13): calm guards notice the fighter by torch light (`config.nightSight`).
+   * False = the dark is presentation only and the raid AI's own sight rules apply unchanged.
+   */
+  detection: boolean;
 }
 
 export interface RaidDef {

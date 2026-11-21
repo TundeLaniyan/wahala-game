@@ -4,7 +4,7 @@
  * `createRaidState` once the board exists; the campaign calls `buildRaidGame`.
  */
 import type { CampaignTacticsConfig, DeepPartial, GameConfig } from '../config';
-import { mergeLayers, raidTacticsFor, ticks } from '../config';
+import { NIGHT_SIGHT_LEVELS, mergeLayers, raidTacticsFor, ticks } from '../config';
 import type { CharacterId, Difficulty, GameOptions, PlayerSetup } from '../types';
 import { RAID_DEFS } from './defs';
 import { enemySeats } from './layout';
@@ -50,6 +50,8 @@ export function raidConfigLayer(spec: RaidSpec): DeepPartial<GameConfig> {
     generator: { baseRange: def.bombs.range, baseCapacity: def.bombs.capacity, blastMode: 'plus' },
     respawn: { resetOnDeath: false },
     ...raidTacticsLayer('normal'),
+    // a night raid with light-based detection (decision NL10): its Normal numbers (`buildRaidGame` adds Easy / Hard)
+    ...(def.lighting?.detection ? { nightSight: { ...NIGHT_SIGHT_LEVELS.normal } } : {}),
   };
 }
 
@@ -74,8 +76,14 @@ export function buildRaidGame(o: {
   const maxHp = levelMaxHp(o.maxHp ?? def.humanMaxHp, o.level);
   // the level's health / damage, and its raid tactics (Normal adds nothing: `raidConfigLayer` carries it)
   const levelConfig = mergeLayers<GameConfig>(
-    levelConfigLayer(o.level),
-    o.level && o.level !== 'normal' ? raidTacticsLayer(o.level) : undefined,
+    mergeLayers<GameConfig>(
+      levelConfigLayer(o.level),
+      o.level && o.level !== 'normal' ? raidTacticsLayer(o.level) : undefined,
+    ),
+    // a night raid's detection reacts slower on Easy, faster on Hard (decision NL12)
+    o.level && o.level !== 'normal' && def.lighting?.detection
+      ? { nightSight: { ...NIGHT_SIGHT_LEVELS[o.level] } }
+      : undefined,
   );
   const players: PlayerSetup[] = [
     { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0, maxHp },

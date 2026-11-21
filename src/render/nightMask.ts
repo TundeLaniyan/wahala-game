@@ -24,8 +24,11 @@ EMPTY.needsUpdate = true;
 
 /** What full darkness and each light do to a lit material's colour (multipliers). */
 export const NIGHT_TINTS = {
-  /** Fully dark: a cold, very low residue so walls and corridors stay a faint silhouette. */
-  shade: 0x2a3a52,
+  /**
+   * Fully dark: a cold residue of about 20% of the lit light (linear; decision NL14), so the pillar lattice, walls and
+   * corridors read as dim silhouettes (Classic play plans its escapes on the grid) while enemies in the dark stay hidden.
+   */
+  shade: 0x6a7c9c,
   /** The fighter's flashlight: warm white. */
   player: 0xfff0d8,
   /** Guard torches: a cold blue-white (reads as "their" light). */

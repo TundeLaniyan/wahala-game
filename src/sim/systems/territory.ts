@@ -36,6 +36,7 @@ import { ENEMY_ATTACK_SETS } from '../data/enemyAttacks';
 import { variantOf } from '../data/enemyVariants';
 import { enemyGroupDirective, standoffSlots } from '../campaign/tactics';
 import { canSeePlayer, enemySeesPerson } from './sight';
+import { nightNotice } from './nightSight';
 import { sameSide } from './projectiles';
 import { pushEnemyCue } from './enemyCues';
 import { throwReach } from './enemyActions';
@@ -390,13 +391,18 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
     // calm (patrol, watch, walking back) it looks where it walks: the cone ahead (and the eight tiles around it)
     const calmNow =
       m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil);
+    // a night raid (decisions NL10-NL13): a calm enemy sees only by its own torch light, and in the dark notices only at
+    // contact; null everywhere else (no `config.nightSight`), so every other match is unchanged
+    const night = h !== null && calmNow ? nightNotice(state, p, h) : null;
     const sees =
       h !== null &&
-      enemySeesPerson(state, p, h, {
-        range: calmNow ? m.spec.calmNoticeTiles : m.spec.noticeTiles,
-        calm: calmNow,
-      });
-    const close = h !== null && manhattan(p, h) <= cfg.awareness.closeTiles;
+      (night
+        ? night.sees
+        : enemySeesPerson(state, p, h, {
+            range: calmNow ? m.spec.calmNoticeTiles : m.spec.noticeTiles,
+            calm: calmNow,
+          }));
+    const close = h !== null && (night ? night.close : manhattan(p, h) <= cfg.awareness.closeTiles);
     if (h && (sees || close)) {
       m.lastSeen = { x: h.x, y: h.y };
       m.lastSeenTick = T;
@@ -416,10 +422,11 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
         // sight builds up (faster while it is already looking: investigating, or a returning enemy he re-enters on)
         const keen = m.state === 'investigate' || (m.state === 'return' && inside) ? 3 : 1;
         m.notice += keen;
-        if (m.notice >= m.spec.noticeTicks && (inside || m.state !== 'return'))
-          alert(state, m, p, h, events, null);
+        const needed = night ? night.reactTicks : m.spec.noticeTicks;
+        if (m.notice >= needed && (inside || m.state !== 'return')) alert(state, m, p, h, events, null);
       } else {
-        m.notice = Math.max(0, m.notice - 2);
+        // by night, leaving the torch cone restarts the reaction (decision NL11)
+        m.notice = night ? 0 : Math.max(0, m.notice - 2);
       }
     }
     if (m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil)) {

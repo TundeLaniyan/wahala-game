@@ -106,5 +106,6 @@ export const RECORDS_VAULT: RaidDef = {
       { x: 9, y: 7, radius: 1.5 },
     ],
     torchKinds: ['guard', 'lieutenant'],
+    detection: true,
   },
 };

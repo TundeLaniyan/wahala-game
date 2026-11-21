@@ -104,7 +104,7 @@ him does.
   eased per tile at ~14/s so a turning cone sweeps instead of snapping (`render/views/NightLightViews.ts`).
 - The grit patch (`render/grit.ts`), which every lit material of the scene already carries, gained one block before
   `opaque_fragment`: from the fragment's world position it samples the map and multiplies the lit colour by a cold
-  shade (`0x2a3a52`) where the tile is dark and by the light's tint (warm white flashlight, pale blue-white torches,
+  shade (`0x6a7c9c`, about 20% of the lit light, NL14) where the tile is dark and by the light's tint (warm white flashlight, pale blue-white torches,
   sodium lamps) where it is lit. In every other match one uniform test skips it. Off the board everything is dark
   (unlit set bulbs and signs keep glowing).
 - Per-material share `uNightK` from an ancestor's `userData.nightK`: generators keep part of their own light (0.45), so
@@ -130,51 +130,88 @@ always legible in the dark.
 may be added; the flashlight is always on and needs no aiming (it follows movement). `?nonight` (URL, measurement only)
 renders the vault without its dark for comparisons; it is not a setting.
 
-**Evidence** (`docs/screenshots/classic-lighting/night-recordsVault-*`: desktop 1280 x 720 and phone 844 x 390 at scale
-2, Low and High, the fighter walking east along the entrance hall; and a generator laid at the entrance with its blast
-lanes in the dark):
+**Evidence** (`docs/screenshots/classic-lighting/night-recordsVault-*`: desktop 1280 x 720 Low and High, phone 844 x 390
+at scale 2 Low, the fighter walking east along the entrance hall; and a generator laid at the entrance with its blast
+lanes in the dark, Low and High). "Dark" = tiles no light reaches (`night.level` < 0.05), screen values 0-255:
 
-| Shot | Floor mean / p90 | Lit tiles: flashlight / torches / lamps | Hidden enemies | Fighter contrast |
-| --- | --- | --- | --- | --- |
-| Low desktop, walking east | 31 / 81 | 15 / 12 / 24 | 1 of 2 | 0.46 |
-| Low phone | 30 / 83 | 15 / 12 / 24 | 1 of 2 | 0.09 (the warden stands on him) |
-| High desktop | 28 / 70 | 15 / 6 / 24 | 1 of 2 | 0.31 |
-| High phone | 28 / 70 | 15 / 6 / 24 | 1 of 2 | 0.24 |
-| Low / High, blast warning | 25 / 64 | 9 / 7 / 24 | 1 of 2 | 0.62 / 0.68 |
+| Shot | Dark floor / dark solid (contrast) | Lit floor | Dark / lit | Lit tiles: flashlight / torches / lamps | Hidden |
+| --- | --- | --- | --- | --- | --- |
+| Low desktop, walking east | 24.4 / 23.4 (0.04) | 62.6 | 0.39 | 15 / 10 / 24 | 0 of 2 (both in a torch) |
+| High desktop | 27.9 / 23.7 (0.15) | 57.2 | 0.49 | 15 / 10 / 24 | 0 of 2 |
+| Low phone | 23.4 / 23.0 (0.01) | 63.9 | 0.37 | 15 / 10 / 24 | 0 of 2 |
+| Low / High, blast warning | 23 / 21 (0.10) | 55 | 0.43 | 9 / 7 / 24 | 1 of 2 |
 
-(The torch counts differ between the Low and High runs because the wardens had turned differently in real time; the
-frozen same-tick comparison in `e2e/night-raid.spec.ts` checks Low and High light the same tiles.) Judged on the
-pictures: the board is genuinely dark (floor median 15 / 255, the cold residue), the hall reads along the flashlight
-and around the entrance lamp, the registry desk lamp and the exit sign are islands of warm light, the warden standing
-in the dark east of the hall is not drawn while his torch cone shows where he looks, the fighter and the warden next to
-him read, and the blast lanes of a generator in the dark read in red over the black floor. The tuning took three
-passes: the first beams were bright paper wedges hiding the floor (now a soft-edged cone at a fraction of the
-strength), the first shade (`0x16202e`) left no trace of the maze (now `0x2a3a52`), and the lit-area look was raised
-(exposure 1.18 -> 1.32, fill 1.2 -> 1.45) so a lit tile reads like a normal stage.
+Before the NL14 retune the unlit floor measured a median of 15 (near black) and the maze outside the light could not be
+seen at all. Now (shade `0x6a7c9c`, about 20% of the lit light in linear terms; night look exposure 1.5) the pillar
+lattice, the chamber walls and the corridors read as dim cold silhouettes on desktop and phone, enemies outside the
+light are still not drawn, and the lit hall, the entrance lamp, the registry desk lamp and the exit sign read like a
+normal stage. The top-face contrast number stays low because a block and the floor at the same light have similar
+tops; they separate by their dark sides and shadows, which the number does not sample. Blast lanes in a night raid are
+a separate alpha-blended, non-tone-mapped overlay in full red (NL15): the earlier additive red over the cold floor read
+pale magenta. The vault's entrance cross shows its whole extent (centre, one up, two east): its other arms end at walls
+(range 2), which is why it looks short; no tile was missing. Lit matches' lanes are unchanged. (The torch counts vary
+between runs because the wardens turn in real time; `e2e/night-raid.spec.ts` compares Low and High on one frozen tick.)
+The tuning took four passes: bright paper-wedge beams (now soft-edged at a fraction of the strength), a black maze
+(shade `0x16202e` -> `0x2a3a52` -> `0x6a7c9c`), and a dim lit area (exposure 1.18 -> 1.32 -> 1.5, fill 1.2 -> 1.45).
 
 Not done / limits: the lit cone is tile-based, so its edge is soft but blocky at a wall's corner; the fighter's
 flashlight points where he last moved or acted (`facing`), so standing still it keeps its direction; the "!" mark of an
 enemy hidden in the dark still shows (a warning about the fighter, by design).
 
-## P1b: light-based detection (designed, not implemented)
+## P1b: light-based detection (implemented, on the raid AI)
 
-To be built after the raid enemy AI (territories, patrols, sight, facing) lands, on exactly the tile sets above:
+Built on the merged raid AI (`785f84c`, decisions RA1-RA9, docs/CLASSIC_RAID_AI.md) without changing its shape:
+`src/sim/systems/nightSight.ts` (`nightNotice`), called from `updateTerritory` for a CALM enemy only (the territory's
+`calmNow`: patrolling, holding its post, walking back). Decisions NL10-NL13.
 
-- **Seen in a torch:** a guard notices the fighter when the fighter's tile is in THAT guard's lit torch set
-  (`lightCone` with `torchFacing`, the same occlusion: no detection through walls or crates), within 4 tiles, in front
-  of him (the cone is the facing), for a reaction time before the alert: about 0.5 s at the far end of the cone, 0.25 s
-  at 1-2 tiles; leaving the cone before it elapses resets it (no instant detection).
-- **Seen by his own light:** the fighter's beam is visible to a guard who has line of light (`lineOfLight`) to any tile
-  of the fighter's lit cone within the guard's view; it extends the guard's detection range modestly (+1 tile, and
-  +0.15 s slower reaction), never through walls. A fighter standing still facing a wall lights only the wall.
-- **Dark is not invisible:** adjacent (Chebyshev 1) a guard notices by contact as today; noise rules (generators,
-  blasts) stay the AI worker's.
-- **Fairness:** the guard's cone the player sees is the cone that detects (same `raidLightMap` channel), every alert
-  shows the "!" mark, and detection never depends on quality. Tests: detection only inside the drawn cone, never
-  through a wall, the reaction time holds, the fighter's beam extends range by exactly one tile.
+- **Only in a night raid with detection on.** `RaidDef.lighting.detection` (the Records Vault: `true`) makes
+  `raidConfigLayer` / `buildRaidGame` add `config.nightSight` (`NIGHT_SIGHT_LEVELS`, `config.ts`). Without it
+  `nightNotice` returns null and the territory runs its own code path untouched: lit raids, field missions, bosses,
+  Academy, Classic, Rumble and multiplayer are byte-identical (`tests/raid-ai-isolation.test.ts`,
+  `tests/mission-regression.test.ts`, and new full-raid digests of the lit raids at every level recorded on `785f84c`).
+  Setting `detection: false` keeps the night visuals with the raid AI's own sight (the off switch).
+- **Seen in a torch:** a calm torch carrier sees the fighter only when the fighter's tile is one of ITS OWN lit torch
+  tiles (`lightCone` with `torchFacing`, the cone the renderer draws: 4 ahead, 1 / 3 / 3 / 3 wide, occluded on the grid)
+  AND the raid AI's person-sight rule holds (`enemySeesPerson`, calm cone, Bresenham line, bodies block) with a range
+  one tile past the cone (the cone is measured along / across the facing, the sight range is Euclidean). RA7 holds: the
+  light term only narrows where and how far, the line rule is the AI's. Never through a wall or a crate (both lines).
+- **Reaction:** the alert needs `reactNearTicks` consecutive ticks of sight at 1-2 tiles, rising linearly (integer) to
+  `reactFarTicks` at the cone's reach; leaving the cone resets the count to 0 (the lit rule only decays it). Normal
+  15-30 ticks (0.25-0.5 s), Easy 20-36, Hard 12-24: the only difficulty term (NL12). The existing "!" (`enemyCue`
+  `alert`) is the alert; no meter, no new UI.
+- **Seen by his own light:** when the guard has a line of light to a lit FLOOR tile of the fighter's beam (his cone,
+  not his personal radius; a wall he shines into does not count) inside the guard's calm view cone, the torch cone is
+  `beamBonusTiles` (1) longer: 5 ahead instead of 4, never 6, never through a wall. The extra row is not drawn as torch
+  light, but a fighter standing there is in his own personal light, so he is only ever noticed where light is.
+- **In the dark:** a calm guard without a torch (the file thrower), or with the fighter outside its torch tiles,
+  notices him only at contact (Chebyshev 1, `contactTiles`, instead of the lit raid's Manhattan `closeTiles` 2) or by
+  the territory's unchanged hearing (a generator laid within its hearing range sends it to investigate).
+- **Engaged enemies** (alert, pursuing, investigating, watching him after a leash) are not asked: the AI worker's
+  all-round sight and memory apply unchanged, so a chase in the dark is as before.
+- **Deterministic** (integer ticks, no RNG, no quality input: the sim has none).
 
-Implemented now for it: `src/sim/raid/light.ts` (`raidLightMap`, `lightCone`, `lineOfLight`, `tileRevealed`,
-`torchFacing`, `carriesTorch`), exported from `src/sim`.
+**Tests** (`tests/raid-night-detection.test.ts`, 11 scenarios on the vault with its interior cleared): on every tile of
+the board a calm warden notices the fighter exactly on its torch tiles (and those are the renderer's guard channel); a
+tile inside the 90-degree calm cone but outside the narrow torch is noticed by the lit rule and not by night; a wall or a
+crate in between stops it (removing it restores it); the reaction is exactly 15 ticks at 2 tiles, longer at 4, and a
+one-tick exit restarts it; Easy / Normal / Hard numbers per level; the fighter's beam takes the reach from 4 to 5, never
+6, and not through a wall; touching his back alerts at once, two tiles behind does not; a torchless thrower never sees
+him; a pursuing warden keeps all-round sight; only the vault carries `nightSight`; the lit raids' full-raid digests are
+unchanged.
+
+**Measured** (`npx tsx scripts/raid-ai.ts --seeds 8 --only play --raids recordsVault [--nonight]`: the fair-fight
+scripted player, 8 seeds a level; `detections` counts minds turning `alert`):
+
+| Records Vault | Completed | Mean s | Health lost / run | Lives lost / run | Detections / run |
+| --- | --- | --- | --- | --- | --- |
+| Easy, night / no night detection | 8/8 / 8/8 | 71 / 65 | 3.00 / 2.75 | 0.00 / 0.00 | 5.3 / 5.6 |
+| Normal, night / no night detection | 8/8 / 8/8 | 66 / 66 | 1.63 / 2.25 | 0.00 / 0.25 | 10.1 / 11.5 |
+| Hard, night / no night detection | 8/8 / 8/8 | 56 / 64 | 1.00 / 1.25 | 0.13 / 0.25 | 5.6 / 5.5 |
+
+The night raid stays beatable at every level and the light does not give the fighter away: detections are within one
+of the lit rule's, health lost is about the same (the scripted player fights in the open and never sneaks, so most
+alerts come from contact and fights, which the night does not change). Verdict: fair, shipped ON. What it does not
+show: a sneaking player's advantage (no stealth script exists); that is the next measurement if stealth becomes a goal.
 
 ## Performance
 
@@ -205,6 +242,9 @@ Bundle: main chunk +10.2 KB raw / +3.6 KB gzip (2,114,687 -> 2,124,895 bytes), t
 `src/render/nightMask.ts`, `src/render/grit.ts`, `src/render/views/NightLightViews.ts`, `src/render/GameRenderer.ts`,
 `src/render/views/{PlayerViews,DamageViews,RaidViews,ObjectiveMarkers,TileOverlay,types}.ts`,
 `src/render/arenas/raidArt.ts`, `src/render/arenas/raidStoreroom.ts` (`RAID_STOREROOM_NIGHT_LOOK`),
-`src/render/readability.ts`; tests `tests/raid-light.test.ts`, `tests/render/{raid-art,night-raid,classic-readability}.test.ts`,
-`e2e/night-raid.spec.ts`; tools `scripts/classic-lighting-shots.mjs`, `scripts/campaign-perf.mjs` (`QUERY`).
+`src/render/readability.ts`, `src/sim/systems/nightSight.ts` (+ the hook in `systems/territory.ts`, `config.ts`
+`NIGHT_SIGHT_LEVELS`, `raid/build.ts`), `src/render/views/OverlayViews.ts` (night lanes); tests `tests/raid-light.test.ts`,
+`tests/raid-night-detection.test.ts`, `tests/render/{raid-art,night-raid,classic-readability}.test.ts`,
+`e2e/night-raid.spec.ts`; tools `scripts/classic-lighting-shots.mjs`, `scripts/campaign-perf.mjs` (`QUERY`), `scripts/raid-ai.ts` (`--nonight`,
+detections).
 Screenshots: `docs/screenshots/classic-lighting/`.

@@ -5,7 +5,9 @@
 //   solid      mean luminance of the solid tiles (walls, crates, cargo) at their top face
 //   contrast   |solid - floor| / max(solid, floor): can an obstacle be told from the floor
 //   fighter    the local fighter's 9 x 9 px window at chest height vs the floor around it (same formula)
-//   enemies    the same for every enemy on the board (mean, min); `lit` counts the ones the night mask shows
+//   enemies    the same for every enemy on the board (mean, min)
+//   dark       a night raid: mean of the floor and the solid tiles no light reaches, their contrast, the lit floor's mean and
+//              the dark / lit floor ratio (screen values)
 // Targets: `raid:<raidId>` (a classic raid through `campaign().debugStartRaid`) or `arena:<arenaId>` (a standard Classic
 // match through the real menu). Needs a preview server (SHOT_URL, default http://localhost:4451/wahala-game/):
 //
@@ -115,11 +117,20 @@ async function measure(page, png) {
     const L = r.layout;
     const floor = [];
     const solid = [];
+    // a night raid: the same split for the tiles the light does not reach (`night.level` < 0.05) and those it does
+    const nightView = r.night ?? null;
+    const dark = { floor: [], solid: [] };
+    const litFloor = [];
     for (let y = 0; y < s.height; y++)
       for (let x = 0; x < s.width; x++) {
         const t = s.tiles[y * s.width + x];
         const p = t === 0 ? proj(L.wx(x), 0.02, L.wz(y)) : proj(L.wx(x), 0.9, L.wz(y));
-        (t === 0 ? floor : solid).push(win(p.x, p.y, Math.round(3 * k)));
+        const v = win(p.x, p.y, Math.round(3 * k));
+        (t === 0 ? floor : solid).push(v);
+        if (!nightView) continue;
+        const lv = nightView.level(x, y);
+        if (lv < 0.05) (t === 0 ? dark.floor : dark.solid).push(v);
+        else if (lv > 0.5 && t === 0) litFloor.push(v);
       }
     floor.sort((a, b) => a - b);
     const pct = (arr, q) => (arr.length ? arr[Math.min(arr.length - 1, Math.floor(q * arr.length))] : 0);
@@ -151,6 +162,15 @@ async function measure(page, png) {
     const enemies = s.players.filter((p) => p.isBot && p.alive);
     const ec = enemies.map(body);
     const night = r.nightStatus?.() ?? null;
+    const darkStats = nightView
+      ? {
+          floor: +mean(dark.floor).toFixed(1),
+          solid: +mean(dark.solid).toFixed(1),
+          contrast: +contrast(mean(dark.solid), mean(dark.floor)).toFixed(3),
+          litFloor: +mean(litFloor).toFixed(1),
+          ratio: +(mean(dark.floor) / Math.max(1, mean(litFloor))).toFixed(3),
+        }
+      : null;
     return {
       board: {
         mean: +fm.toFixed(1),
@@ -167,6 +187,7 @@ async function measure(page, png) {
         min: ec.length ? +Math.min(...ec).toFixed(3) : null,
       },
       night,
+      dark: darkStats,
       stats: w.stats(),
     };
   }, png);
