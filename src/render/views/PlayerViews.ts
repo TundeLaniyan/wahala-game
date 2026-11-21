@@ -11,7 +11,8 @@ import {
 } from 'three';
 import type { Player, SimEvent } from '../../sim';
 import { fighterIdentity } from '../../assets/fighterIdentity';
-import { enemyLookOf } from '../../assets/enemyLooks';
+import { dedicatedModelsEnabled, enemyLookOf } from '../../assets/enemyLooks';
+import { mindOf } from './enemyAwareness';
 import type { EnemyLook } from '../../assets/enemyLooks';
 import { applyEnemyKit, applyEnemyKitFallback } from '../assets/enemyKit';
 import { SLOT_COLORS, TEAM_OUTLINE } from '../../assets/palette';
@@ -131,6 +132,9 @@ export class PlayerViews implements View {
       else if (e.type === 'contactUsed' && e.ability === 'kick') play(e.playerId, 'Kick');
       else if (e.type === 'contactUsed' && e.ability === 'disarm') play(e.playerId, 'Place');
       else if (e.type === 'playerPushed') play(e.playerId, 'Stumble');
+      // a dedicated enemy model points at what it noticed (a generator, the human): never cuts a wind-up or a flinch
+      else if (e.type === 'enemyCue' && (e.cue === 'alert' || e.cue === 'investigate'))
+        this.visuals.get(e.playerId)?.model.rigged?.playCue('Alert');
       // campaign: a hit that took health flinches (a dazed fighter already has the Dazed pose from the sim state);
       // a thrower winds up (the launch cue is drawn by ProjectileViews)
       else if (e.type === 'campaignHit' && e.result === 'damaged') play(e.victimId, 'Stumble');
@@ -255,12 +259,17 @@ export class PlayerViews implements View {
   private create(p: Player, ctx: FrameContext): Visual {
     // campaign enemies are dressed by variant (decision SV4): a rig, a palette, headwear and props
     const look = enemyLookOf(p);
+    // a variant with a dedicated, fully dressed model uses it when the file loaded; otherwise (file missing or failed,
+    // or `?legacyEnemies`) it keeps the rig + kit look below: the safe fallback
+    const dedicated =
+      look?.model && dedicatedModelsEnabled() && assets.has(`char_${look.model}`) ? look.model : null;
     const modelId =
-      look?.rig && assets.has(`char_${look.rig}`)
+      dedicated ??
+      (look?.rig && assets.has(`char_${look.rig}`)
         ? look.rig
         : !look && p.slot === 3 && assets.has('char_areaBoss')
           ? 'areaBoss'
-          : p.characterId;
+          : p.characterId);
     // Team Deathmatch: the team colours are the kit; the per-slot jersey hue would fight them (a purple White
     // team), so teammates keep the character's own look and differ by their headwear shape only
     const base = fighterIdentity(p.slot);
@@ -269,8 +278,8 @@ export class PlayerViews implements View {
     const identity = look ? { ...base, hueShift: 0, hueIndex: 0, headwear: 'none' as const } : teamKit;
     const model =
       createRiggedPlayerModel(modelId, p.id * 0.37, identity) ?? createPlayerModel(p.characterId, identity);
-    if (look && model.rigged) applyEnemyKit(model.rigged.body, modelId, look);
-    else if (look) applyEnemyKitFallback(model.head, look);
+    if (look && model.rigged && !dedicated) applyEnemyKit(model.rigged.body, modelId, look);
+    else if (look && !model.rigged) applyEnemyKitFallback(model.head, look);
     // Team Rumble: the team colour replaces the slot colour on the ring, the silhouette, the marker and
     // the name tag, and the character wears the team kit (jersey band and armbands)
     const slot = p.team >= 0 ? teamColor(p.team) : SLOT_COLORS[p.slot % SLOT_COLORS.length]!;
@@ -524,8 +533,12 @@ export class PlayerViews implements View {
     let clip: ClipName = 'Idle';
     if (p.mounted) clip = 'Ride';
     else if (dazed) clip = 'Dazed';
-    else if (moving) clip = p.carrying ? 'RunCarry' : 'Run';
-    else if (p.carrying) clip = 'IdleCarry';
+    else if (moving) {
+      // patrol (and walking back to the post) is a strut on a dedicated enemy model; a chase is the full run
+      const mind = mindOf(state, p.id);
+      const calm = mind === 'patrol' || mind === 'watch' || mind === 'return';
+      clip = p.carrying ? 'RunCarry' : calm && r.has('Walk') ? 'Walk' : 'Run';
+    } else if (p.carrying) clip = 'IdleCarry';
     else if (state.match.phase === 'countdown') clip = 'Idle';
     if (!ended) r.setLoop(clip, 0.12, moving ? MathUtils.clamp(speed * 0.52, 0.8, 1.7) : 1);
     v.model.rig.position.y = 0;

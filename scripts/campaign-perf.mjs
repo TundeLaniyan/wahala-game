@@ -14,7 +14,7 @@
 //
 // A mission is `field:<fieldId>` (FIELD_MISSION_DEFS, through `__WAHALA__.startFieldMission`), `boss:<districtId>` (the
 // district's boss through the campaign controller, with the districts before it won) or `raid:<raidId>` (a classic
-// raid on its own, `campaign().debugStartRaid`). Everything it calls exists on production `0b89d09`, so the same script
+// raid on its own, `campaign().debugStartRaid`). `PERF_QUERY="&legacyEnemies"` appends URL flags (the Agbero comparison). Everything it calls exists on production `0b89d09`, so the same script
 // measures the baseline and a branch.
 import { chromium } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
@@ -90,7 +90,7 @@ async function open(q) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const net = await meter(page);
-  await page.goto(`${base}?debug&noattract&seed=7&q=${q}`);
+  await page.goto(`${base}?debug&noattract&seed=7&q=${q}${process.env.PERF_QUERY ?? ''}`);
   await page.getByTestId('title-screen').waitFor();
   // the initial load ends when every bundled model has loaded (the title screen's loading bar is gone)
   await page.waitForFunction(() => window.__WAHALA__?.store.getState().loading === null, null, {

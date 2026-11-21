@@ -13,6 +13,16 @@ import type { EnemyKind } from '../sim/campaign/types';
 import type { EnemyVariantId } from '../sim/data/enemyVariants';
 import { DEFAULT_VARIANT_OF_KIND } from '../sim/data/enemyVariants';
 
+/** Enemy variants that have a dedicated 3D model (docs/CHARACTER_PRODUCTION_AGBERO.md). */
+export type DedicatedEnemyModel = 'agbero';
+
+/** `?legacyEnemies` keeps the temporary kit looks (art comparison, and the safe switch back). */
+export function dedicatedModelsEnabled(
+  search: string = typeof location === 'undefined' ? '' : location.search,
+): boolean {
+  return !new URLSearchParams(search).has('legacyEnemies');
+}
+
 export type EnemyHeadwear =
   'cap' | 'bandana' | 'bucket' | 'beanie' | 'hardhat' | 'beret' | 'patrolCap' | 'flatCap' | 'fedora';
 
@@ -46,6 +56,11 @@ export interface EnemyLook {
   variant: EnemyVariantId;
   /** Rig to use instead of the seat's character: the bulky Area Boss rig, or null = the seat's own character. */
   rig: 'areaBoss' | null;
+  /**
+   * A DEDICATED, fully dressed model (`char_<model>.glb`, tools/assets/enemies.py): when it is loaded it replaces the
+   * rig + kit above; when it is missing or failed to load (or `?legacyEnemies` is in the URL) the rig + kit are used.
+   */
+  model?: DedicatedEnemyModel;
   /** Uniform scale of the whole model (silhouette): > 1 bigger, < 1 slighter. */
   scale: number;
   /** Clothing recolour: saturated cloth -> `primary`, dark cloth -> `secondary`, light trims -> `trim`. */
@@ -67,6 +82,7 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyVariantId, EnemyLook>> = {
   agbero: {
     variant: 'agbero',
     rig: null,
+    model: 'agbero',
     scale: 1.0,
     palette: { primary: 0xb4552a, secondary: 0x2b3a4e, trim: 0xd9cfb8 },
     headwear: 'cap',

@@ -16,6 +16,10 @@ export type ClipName =
   | 'Kick'
   | 'Throw'
   | 'Push'
+  | 'Walk'
+  | 'Windup'
+  | 'Strike'
+  | 'Alert'
   | 'Stumble'
   | 'Dazed'
   | 'Cheer'
@@ -69,6 +73,27 @@ export class RiggedCharacter {
     return rc;
   }
 
+  /** Whether the model has this clip (enemy models carry Walk / Windup / Strike / Alert, the hero cast does not). */
+  has(name: ClipName): boolean {
+    return this.actions.has(name);
+  }
+
+  /**
+   * An enemy model with a dedicated `Windup` clip draws the punch as two clips: the wind-up (stretched over the sim's
+   * wind-up, ending on the extended blow) and the `Strike` follow-through that starts on that pose. The callers keep
+   * asking for the generic `Push`; the rig decides (presentation only, no timing is read or changed here).
+   */
+  private resolve(name: ClipName, windup: boolean): ClipName {
+    if (name === 'Push' && this.actions.has('Windup')) return windup ? 'Windup' : 'Strike';
+    return name;
+  }
+
+  /** A cue pose (e.g. `Alert`): played only if no one-shot is running, so it never cuts a wind-up or a flinch short. */
+  playCue(name: ClipName, fade = 0.12): void {
+    if (this.oneShot || this.frozen || !this.actions.has(name)) return;
+    this.playOnce(name, fade);
+  }
+
   /** Select the looping state clip (Idle/Run/...). A running one-shot finishes first. */
   setLoop(name: ClipName, fade = 0.14, speed = 1): void {
     const a = this.actions.get(name);
@@ -79,7 +104,8 @@ export class RiggedCharacter {
     if (!this.oneShot) this.activate(name, fade);
   }
 
-  playOnce(name: ClipName, fade = 0.06, speed = 1): void {
+  playOnce(requested: ClipName, fade = 0.06, speed = 1, windup = false): void {
+    const name = this.resolve(requested, windup);
     const a = this.actions.get(name);
     if (!a) return;
     a.setLoop(LoopOnce, 1);
@@ -90,7 +116,8 @@ export class RiggedCharacter {
   }
 
   /** A one-shot stretched (or squeezed) to last `seconds` (a wind-up whose blow lands as the clip ends). */
-  playOnceOver(name: ClipName, seconds: number, fade = 0.06): void {
+  playOnceOver(requested: ClipName, seconds: number, fade = 0.06): void {
+    const name = this.resolve(requested, true);
     const a = this.actions.get(name);
     if (!a) return;
     this.playOnce(name, fade, Math.min(3, Math.max(0.25, a.getClip().duration / Math.max(0.05, seconds))));
@@ -139,6 +166,9 @@ export class RiggedCharacter {
       name === 'Kick' ||
       name === 'Throw' ||
       name === 'Push' ||
+      name === 'Windup' ||
+      name === 'Strike' ||
+      name === 'Alert' ||
       name === 'Stumble' ||
       name === 'Lose' ||
       name === 'DieBlast' ||

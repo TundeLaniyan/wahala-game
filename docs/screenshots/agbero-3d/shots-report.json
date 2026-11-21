@@ -1,0 +1,58 @@
+[
+ {
+  "look": "new",
+  "vp": "desktop",
+  "quality": "high",
+  "variant": "agbero",
+  "errors": []
+ },
+ {
+  "look": "legacy",
+  "vp": "desktop",
+  "quality": "high",
+  "variant": "agbero",
+  "errors": []
+ },
+ {
+  "look": "new",
+  "vp": "desktop",
+  "quality": "low",
+  "variant": "agbero",
+  "errors": []
+ },
+ {
+  "look": "legacy",
+  "vp": "desktop",
+  "quality": "low",
+  "variant": "agbero",
+  "errors": []
+ },
+ {
+  "look": "new",
+  "vp": "phone844",
+  "quality": "high",
+  "variant": "agbero",
+  "errors": []
+ },
+ {
+  "look": "legacy",
+  "vp": "phone844",
+  "quality": "high",
+  "variant": "agbero",
+  "errors": []
+ },
+ {
+  "look": "new",
+  "vp": "phone844",
+  "quality": "low",
+  "variant": "agbero",
+  "errors": []
+ },
+ {
+  "look": "legacy",
+  "vp": "phone844",
+  "quality": "low",
+  "variant": "agbero",
+  "errors": []
+ }
+]
