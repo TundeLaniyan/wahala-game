@@ -145,7 +145,9 @@ export class ObjectiveMarkers implements View {
       pin.sprite.scale.set(size, size * 1.25, 1);
       // never hide the fighter: next to the target the pin goes faint
       const near = !!me?.alive && Math.max(Math.abs(me.x - p.x), Math.abs(me.y - p.y)) <= 1;
-      pin.material.opacity = near ? 0.35 : 1;
+      // a night raid: a pin over a dark target is fainter (still found: it is guidance), full once light reaches it (NL7)
+      const dark = ctx.night ? 0.55 + 0.45 * Math.min(1, 2 * ctx.night.level(p.x, p.y)) : 1;
+      pin.material.opacity = near ? 0.35 : dark;
       pin.sprite.visible = true;
     }
     for (const [key, pin] of this.pins) {

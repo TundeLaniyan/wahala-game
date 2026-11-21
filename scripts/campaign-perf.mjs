@@ -11,6 +11,7 @@
 //   SHOT_URL=http://localhost:<port>/wahala-game/ WAHALA_CHROMIUM=/opt/pw-browsers/chromium \
 //   node scripts/campaign-perf.mjs [missions|default] [low,high] [--seconds=4] [--restarts=N] [--cycles=K]
 //     [--dist=dist] [--json]
+// QUERY='&nonight' appends to every page URL (e.g. the night raid without its dark, docs/CLASSIC_LIGHTING.md).
 //
 // A mission is `field:<fieldId>` (FIELD_MISSION_DEFS, through `__WAHALA__.startFieldMission`), `boss:<districtId>` (the
 // district's boss through the campaign controller, with the districts before it won) or `raid:<raidId>` (a classic
@@ -90,7 +91,7 @@ async function open(q) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const net = await meter(page);
-  await page.goto(`${base}?debug&noattract&seed=7&q=${q}`);
+  await page.goto(`${base}?debug&noattract&seed=7&q=${q}${process.env.QUERY ?? ''}`);
   await page.getByTestId('title-screen').waitFor();
   // the initial load ends when every bundled model has loaded (the title screen's loading bar is gone)
   await page.waitForFunction(() => window.__WAHALA__?.store.getState().loading === null, null, {

@@ -108,6 +108,18 @@ export interface RaidLegend {
   barrelHp: number;
 }
 
+/**
+ * A NIGHT raid (docs/CLASSIC_LIGHTING.md, decision NL4): the board is dark but for the fighter's flashlight, the
+ * torches of `torchKinds` enemies and the fixed `practicals`; `light.ts` computes the lit tiles. Absent = a lit raid.
+ */
+export interface RaidLighting {
+  mode: 'night';
+  /** Fixed lamps: tile and radius in tiles (lit tiles around them, occluded by walls). */
+  practicals: { x: number; y: number; radius: number }[];
+  /** Enemy kinds that carry a torch (others stand in the dark). */
+  torchKinds: EnemyKind[];
+}
+
 export interface RaidDef {
   id: RaidId;
   /** The arena id (`raid...`) the layout registers under. */
@@ -135,4 +147,6 @@ export interface RaidDef {
   parSec: number;
   /** The human's generator range and capacity in this raid. */
   bombs: { range: number; capacity: number };
+  /** Night raid data (presentation of light; absent = a normally lit raid). */
+  lighting?: RaidLighting;
 }

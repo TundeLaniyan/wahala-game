@@ -13,11 +13,25 @@
  * renderer only has to tag the roots it builds (scenery, vehicles, crowd, players). Materials are
  * patched once; a tag on the material (`userData.gritPatched`) prevents double patching. Presentation
  * only: nothing here reads or changes game state.
+ *
+ * The same patch carries the darkness mask of a night raid (`nightMask.ts`, decision NL5): off (one uniform test) in
+ * every other match. An ancestor's `userData.nightK` (0..1) sets how much of the mask a material takes (default 1).
  */
 import { Color, MeshPhysicalMaterial, MeshStandardMaterial } from 'three';
 import type { Material, Object3D } from 'three';
+import { NIGHT_FRAG_APPLY, NIGHT_FRAG_DECL, nightWorld } from './nightMask';
 
-export type GritClass = 'scenery' | 'floor' | 'vehicle' | 'paint' | 'crowd' | 'player' | 'skin' | 'none';
+export type GritClass =
+  | 'scenery'
+  | 'floor'
+  | 'vehicle'
+  | 'paint'
+  | 'crowd'
+  | 'player'
+  | 'skin'
+  /** No weathering at all, only a night raid's darkness mask (raid cargo and doors in the dark, decision NL5). */
+  | 'night'
+  | 'none';
 
 interface GritParams {
   /** 0 = keep colour, 1 = fully mixed to the dusty tone. */
@@ -41,6 +55,7 @@ export const GRIT_CLASSES: Readonly<Record<Exclude<GritClass, 'none'>, GritParam
   crowd: { desat: 0.66, grime: 0.36, ground: 0.3, dust: 0.08, rough: 0.1 },
   player: { desat: 0.3, grime: 0.34, ground: 0.4, dust: 0.08, rough: 0.22 },
   skin: { desat: 0.06, grime: 0.06, ground: 0, dust: 0, rough: 0.02 },
+  night: { desat: 0, grime: 0, ground: 0, dust: 0, rough: 0 },
 };
 
 /** Arena-wide grit settings shared by every patched material (set per arena by the renderer). */
@@ -101,6 +116,7 @@ float gritField( vec3 p ) {
   float up = abs( vGritNormal.y );
   return mix( m, n, up );
 }
+${NIGHT_FRAG_DECL}
 `;
 
 const FRAG_COLOR = /* glsl */ `
@@ -133,8 +149,11 @@ function isLit(m: Material): m is MeshStandardMaterial {
   return m instanceof MeshStandardMaterial || m instanceof MeshPhysicalMaterial;
 }
 
-/** Patches one material for a grit class (once). Returns true if it was patched now. */
-export function patchMaterial(material: Material, cls: GritClass): boolean {
+/**
+ * Patches one material for a grit class (once). Returns true if it was patched now. `nightK` is the material's share of
+ * a night raid's darkness mask (1 = all of it).
+ */
+export function patchMaterial(material: Material, cls: GritClass, nightK = 1): boolean {
   if (cls === 'none' || !isLit(material)) return false;
   const ud = material.userData as { gritPatched?: boolean; noGrit?: boolean };
   if (ud.gritPatched || ud.noGrit) return false;
@@ -143,6 +162,7 @@ export function patchMaterial(material: Material, cls: GritClass): boolean {
   const own = {
     uGrit: { value: [p.desat, p.grime, p.ground, p.dust] as [number, number, number, number] },
     uGritRough: { value: p.rough },
+    uNightK: { value: nightK },
   };
   const prev = material.onBeforeCompile;
   material.onBeforeCompile = (shader, renderer) => {
@@ -154,19 +174,28 @@ export function patchMaterial(material: Material, cls: GritClass): boolean {
     shader.uniforms.uGritDust = gritWorld.dustColor;
     shader.uniforms.uGritScale = gritWorld.scale;
     shader.uniforms.uGritAmount = gritWorld.amount;
+    shader.uniforms.uNightK = own.uNightK;
+    shader.uniforms.uNightOn = nightWorld.on;
+    shader.uniforms.uNightMap = nightWorld.map;
+    shader.uniforms.uNightBoard = nightWorld.board;
+    shader.uniforms.uNightShade = nightWorld.shade;
+    shader.uniforms.uNightPlayer = nightWorld.player;
+    shader.uniforms.uNightGuard = nightWorld.guard;
+    shader.uniforms.uNightLamp = nightWorld.lamp;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>\n${VERT_DECL}`)
       .replace('#include <project_vertex>', `${VERT_BODY}\n#include <project_vertex>`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>\n${FRAG_DECL}`)
       .replace('#include <color_fragment>', `#include <color_fragment>\n${FRAG_COLOR}`)
-      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\n${FRAG_ROUGH}`);
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\n${FRAG_ROUGH}`)
+      .replace('#include <opaque_fragment>', `${NIGHT_FRAG_APPLY}\n#include <opaque_fragment>`);
   };
   // uGrit is a vec4 uniform: three accepts a plain array of 4 numbers; values differ per material
   // but the GLSL is identical, so every patched material shares one program per base variant.
   // other shader patches on the same material (e.g. occlusionFade.ts) extend the key
   const extra = (material.userData.programKey as string | undefined) ?? '';
-  material.customProgramCacheKey = () => `grit2${extra}`;
+  material.customProgramCacheKey = () => `grit3${extra}`;
   material.needsUpdate = true;
   return true;
 }
@@ -187,15 +216,17 @@ function classFor(material: Material, inherited: GritClass): GritClass {
  */
 export function applyGrit(root: Object3D, fallback: GritClass = 'scenery'): number {
   let patched = 0;
-  const visit = (o: Object3D, cls: GritClass): void => {
-    const own = (o.userData as { grit?: GritClass }).grit ?? cls;
+  const visit = (o: Object3D, cls: GritClass, nightK: number): void => {
+    const ud = o.userData as { grit?: GritClass; nightK?: number };
+    const own = ud.grit ?? cls;
+    const k = ud.nightK ?? nightK;
     const m = (o as { material?: Material | Material[] }).material;
     if (m) {
-      for (const mm of Array.isArray(m) ? m : [m]) if (patchMaterial(mm, classFor(mm, own))) patched++;
+      for (const mm of Array.isArray(m) ? m : [m]) if (patchMaterial(mm, classFor(mm, own), k)) patched++;
     }
-    for (const c of o.children) visit(c, own);
+    for (const c of o.children) visit(c, own, k);
   };
-  visit(root, fallback);
+  visit(root, fallback, 1);
   return patched;
 }
 

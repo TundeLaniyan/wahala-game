@@ -49,6 +49,9 @@ export class TileOverlay {
         blending: additive ? AdditiveBlending : NormalBlending,
         depthWrite: false,
         side: DoubleSide,
+        // a warning is gameplay: never washed by the arena's fog (decision NL3), and never darkened by a night mask
+        // (an unlit material: the mask lives in the grit patch of lit materials only)
+        fog: false,
       }),
       capacity,
     );

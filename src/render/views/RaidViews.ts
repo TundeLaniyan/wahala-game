@@ -381,7 +381,9 @@ export class RaidViews implements View {
       if (c.state === 'destroyed') continue;
       alive.add(c.id);
       n++;
-      this.placeCargo(c, ctx.time, layout);
+      // a night raid: a marked crate's floor ring glows only as far as light reaches it (a local cue, decision NL7)
+      const glow = ctx.night ? Math.min(1, 0.15 + 1.2 * ctx.night.level(c.x, c.y)) : 1;
+      this.placeCargo(c, ctx.time, layout, glow);
     }
     for (const id of this.hitAt.keys())
       if (!alive.has(id) && ctx.time - (this.hitAt.get(id) ?? 0) > 1) this.hitAt.delete(id);
@@ -390,7 +392,7 @@ export class RaidViews implements View {
     this.counts.cargo = n;
   }
 
-  private placeCargo(c: RaidCargoView, time: number, layout: Layout): void {
+  private placeCargo(c: RaidCargoView, time: number, layout: Layout, glow = 1): void {
     const x = layout.wx(c.x);
     const z = layout.wz(c.y);
     const hit = this.hitAt.get(c.id);
@@ -411,7 +413,7 @@ export class RaidViews implements View {
         x,
         z,
         color: look.ringColor,
-        intensity: look.ring,
+        intensity: look.ring * glow,
         scale: 1.55 + 0.08 * Math.sin(time * 3.4),
       });
   }
