@@ -44,18 +44,26 @@ export interface MatchLoaderDeps {
   hold: (held: boolean) => void;
   /** Resolves after `ms` (injected so tests use fake time). */
   wait: (ms: number) => Promise<void>;
+  /**
+   * On-demand character models the new match asked for while drawing its first frames (`AssetLibrary.lazyPending`), or
+   * null when none are loading. Optional: without it the screen goes after the first frames, as before.
+   */
+  modelsPending?: () => Promise<unknown> | null;
 }
 
 export interface MatchLoaderOptions {
   assetWaitMs: number;
   sceneWaitMs: number;
   firstFrames: number;
+  /** The longest the screen waits for the match's on-demand character models (then their fallback look plays on). */
+  modelWaitMs?: number;
 }
 
 export const DEFAULT_LOADER_OPTIONS: MatchLoaderOptions = {
   assetWaitMs: 20_000,
   sceneWaitMs: 12_000,
   firstFrames: 2,
+  modelWaitMs: 6_000,
 };
 
 interface Run {
@@ -185,6 +193,14 @@ export class MatchLoader {
     this.phase(run.kind, 'scene');
     try {
       await Promise.race([deps.framesDrawn(opts.firstFrames), deps.wait(opts.sceneWaitMs)]);
+      // 5. the first frames asked for the match's on-demand character models (enemies, bosses): wait for them, never
+      //    longer than `modelWaitMs`, then for the frames that draw them, so the match does not open on the fallback
+      //    look and swap models in front of the player (a slow connection still plays on with the fallback)
+      const models = deps.modelsPending?.() ?? null;
+      if (models) {
+        await Promise.race([models, deps.wait(opts.modelWaitMs ?? 6_000)]);
+        await Promise.race([deps.framesDrawn(opts.firstFrames), deps.wait(opts.sceneWaitMs)]);
+      }
     } finally {
       // whatever happens, the match is released and the screen goes: it must never stay over a playable match
       deps.hold(false);

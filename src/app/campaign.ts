@@ -116,6 +116,8 @@ interface RaidContext {
   request: RaidRequest | null;
   raidId: RaidId;
   missionId: string | null;
+  /** The QA entry's own enemy level (`qaStartRaid`); absent = the save's level. */
+  level?: CampaignLevel | null;
 }
 
 /** A district with a boss mission: the six districts and, for its finale chapter, Ojuelegba (decision FN1). */
@@ -738,6 +740,28 @@ export class CampaignController {
     return true;
   }
 
+  /**
+   * TEMPORARY founder QA entry (`?qaraid=`, docs/QA_ENTRY.md, decision QA1): plays a classic raid on its own at `level`
+   * (the save's level when null), with Restart / Leave in the pause menu. Nothing is written to the save: the raid's
+   * result is shown and forgotten (`finishRaidMission(null, ...)`), and leaving goes back to the map.
+   */
+  qaStartRaid(raidId: RaidId, level: CampaignLevel | null): boolean {
+    const ui = this.need();
+    this.raidCtx = { request: null, raidId, missionId: null, level };
+    if (!this.playRaid(this.raidCtx, undefined)) {
+      this.raidCtx = null;
+      return false;
+    }
+    this.update({
+      active: { missionId: ui.selected, modifiers: [], raid: { doorId: null, raidId } },
+      modifier: null,
+      result: null,
+      sectionResult: null,
+      notice: null,
+    });
+    return true;
+  }
+
   /** Builds the raid game for `ctx` and hands it to the host (a fresh seed each time: Retry raid). */
   private playRaid(ctx: RaidContext, hp: number | undefined): boolean {
     const ui = this.need();
@@ -746,6 +770,8 @@ export class CampaignController {
       this.update({ notice: 'Raids are not available in this build.' });
       return false;
     }
+    // the QA entry may name its own level; every campaign raid plays at the save's level
+    const level = ctx.level ?? ui.save.campaignLevel;
     try {
       const options = (this.deps.buildRaid ?? buildRaidGame)({
         raidId: ctx.raidId,
@@ -753,12 +779,12 @@ export class CampaignController {
         seed: this.deps.seed(),
         ...(hp !== undefined ? { hp } : {}),
         // raid enemies play at the campaign level's enemy bot level (decision CI1)
-        difficulty: campaignEnemyLevel(ui.save.campaignLevel),
-        level: ui.save.campaignLevel,
+        difficulty: campaignEnemyLevel(level),
+        level,
       });
       host.playRaid(options, {
         raidId: ctx.raidId,
-        difficulty: campaignEnemyLevel(ui.save.campaignLevel),
+        difficulty: campaignEnemyLevel(level),
         onEnd: (outcome) => this.raidEnded(ctx, outcome),
       });
       return true;
@@ -879,7 +905,7 @@ export class CampaignController {
     const district = missionId ? sectionOfMission(missionId)?.districtId : undefined;
     this.deps.host.stop();
     this.raidCtx = null;
-    this.commit(summary.save, {
+    const shown: Partial<CampaignUi> = {
       active: null,
       selected: district ?? ui.selected,
       modifier: null,
@@ -891,7 +917,10 @@ export class CampaignController {
         summary,
         partsGained: partsGained(ui.save, summary.save),
       },
-    });
+    };
+    // a raid played on its own (the QA entry, debug) belongs to no mission: its result is shown, never saved
+    if (missionId) this.commit(summary.save, shown);
+    else this.update(shown);
     this.setMenu(['campaign', 'campaignResult']);
   }
 }

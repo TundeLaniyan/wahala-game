@@ -93,6 +93,15 @@ export class AssetLibrary {
     return Promise.all(jobs).then(() => undefined);
   }
 
+  /**
+   * The on-demand loads still in flight (settled together, never rejecting), or null when none: the match loader holds
+   * its screen on it for a bounded time so a match's character models are drawn from its first visible frame.
+   */
+  lazyPending(): Promise<void> | null {
+    if (this.inFlight.size === 0) return null;
+    return Promise.all([...this.inFlight.values()]).then(() => undefined);
+  }
+
   /** Is the model bundled (so `ensure` can load it) and not known to have failed? */
   canEnsure(id: string): boolean {
     return (LAZY_URL_BY_ID.has(id) || URL_BY_ID.has(id)) && !this.lazyFailed.has(id);

@@ -40,6 +40,7 @@ import { QualityNotifier } from './qualityNotice';
 import { patch, useGameStore } from './store';
 import type { ScreenPoint } from './store';
 import { createSubtitleFeed } from './subtitles';
+import { qaRaidEntry } from './qaEntry';
 import { MatchLoader } from './matchLoader';
 import type { MatchLoadKind } from './matchLoader';
 
@@ -91,6 +92,7 @@ const loader = new MatchLoader({
     }),
   hold: (held) => controller?.setLoadHold(held),
   wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  modelsPending: () => assets.lazyPending(),
 });
 
 /**
@@ -637,6 +639,15 @@ export const commands = {
   campaignRaidBriefStart(): void {
     audio.playUi('start');
     campaign?.startRaidFromBrief();
+  },
+  /**
+   * TEMPORARY founder QA entry (`?qaraid=`, docs/QA_ENTRY.md): starts that raid on its own; the save is never written.
+   */
+  qaStartRaid(): void {
+    const qa = qaRaidEntry();
+    if (!qa || !campaign) return;
+    audio.playUi('start');
+    campaign.qaStartRaid(qa.raidId, qa.level);
   },
   /** Pause menu inside a raid. */
   campaignRetryRaid(): void {

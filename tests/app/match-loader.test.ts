@@ -10,7 +10,11 @@ import type { MatchLoadState } from '../../src/app/matchLoader';
 
 /** A manually driven clock: `wait(ms)` resolves when `advance` passes it. */
 function rig(
-  o: { assets?: Promise<unknown> | null; counts?: () => { done: number; total: number } | null } = {},
+  o: {
+    assets?: Promise<unknown> | null;
+    counts?: () => { done: number; total: number } | null;
+    models?: () => Promise<unknown> | null;
+  } = {},
 ) {
   const log: (MatchLoadState | null)[] = [];
   const holds: boolean[] = [];
@@ -26,6 +30,7 @@ function rig(
     framesDrawn: () => new Promise<void>((r) => (frames = r)),
     hold: (h: boolean) => holds.push(h),
     wait: (ms: number) => new Promise<void>((r) => timers.push({ at: now + ms, resolve: r })),
+    modelsPending: o.models,
   };
   const flush = async (): Promise<void> => {
     for (let i = 0; i < 20; i++) await Promise.resolve();
@@ -213,5 +218,38 @@ describe('the match loader', () => {
     expect(loadTitle('rematch')).toBe('Setting up the rematch');
     expect(loadTitle('mission')).toBe('Heading into the district');
     expect(loadTitle('raid')).toBe('Breaking into the raid');
+  });
+
+  it('waits for the on-demand character models the first frames asked for, then for the frames that draw them', async () => {
+    let arrive!: () => void;
+    const models = new Promise<void>((r) => (arrive = r));
+    let pending: Promise<void> | null = null;
+    const r = rig({ models: () => pending });
+    const loader = new MatchLoader(r.deps, { ...opts, modelWaitMs: 6_000 });
+    const done = loader.run('mission', () => (pending = models), vi.fn());
+    await r.paint();
+    await r.paint();
+    await r.frame(); // the first frames requested the models
+    expect(r.phases().at(-1)).toBe('scene'); // still up: the models are loading
+    expect(r.holds).toEqual([true]);
+    arrive();
+    await r.frame(); // the frames that draw them
+    expect(await done).toBe(true);
+    expect(r.phases().at(-1)).toBeNull();
+    expect(r.holds).toEqual([true, false]);
+  });
+
+  it('a slow model download never keeps the screen: it goes after modelWaitMs with the fallback look', async () => {
+    const r = rig({ models: () => new Promise(() => {}) });
+    const loader = new MatchLoader(r.deps, { ...opts, modelWaitMs: 6_000 });
+    const done = loader.run('raid', vi.fn(), vi.fn());
+    await r.paint();
+    await r.paint();
+    await r.frame();
+    expect(r.phases().at(-1)).toBe('scene');
+    await r.advance(6_000);
+    await r.frame();
+    expect(await done).toBe(true);
+    expect(r.phases().at(-1)).toBeNull();
   });
 });

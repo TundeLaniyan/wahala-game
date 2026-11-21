@@ -18,7 +18,7 @@ import { applyEnemyKit, applyEnemyKitFallback } from '../assets/enemyKit';
 import { SLOT_COLORS, TEAM_OUTLINE } from '../../assets/palette';
 import { drawPickupIcon } from '../../assets/pickupIcons';
 import { OKADA_SCALE, createPlayerModel, createRiggedPlayerModel } from '../assets/characters';
-import { assets } from '../assets/library';
+import { assets, releaseSkeletons } from '../assets/library';
 import {
   ARMOUR_COLOR,
   createArmourVisual,
@@ -81,6 +81,11 @@ interface Visual {
   facing: Player['facing'];
   /** LOD: off screen this frame (follow camera only): no animation or matrix updates. */
   culled: boolean;
+  /**
+   * Created this frame: drawn once before the follow camera may cull it, so its skeleton and shaders are set up while
+   * the match loads (a seat re-dressed when its on-demand model arrives would otherwise first draw mid-play on screen).
+   */
+  fresh: boolean;
   /** LOD: animation time skipped while off screen, applied when the player comes back into view. */
   catchUp: number;
   /** V2 respawn modes: blinking ring while spawn protection lasts. */
@@ -221,10 +226,11 @@ export class PlayerViews implements View {
   private cull(ctx: FrameContext, p: Player, v: Visual): boolean {
     const inView = ctx.inView;
     let off = false;
-    if (inView && p.alive) {
+    if (inView && p.alive && !v.fresh) {
       const pos = playerGridPos(p, ctx.alpha);
       off = !inView(ctx.layout.wx(pos.x), ctx.layout.wz(pos.y), 2.4);
     }
+    v.fresh = false;
     // a night raid: an enemy the dark hides is drawn like one off screen (model, ring, name, marks; decision NL7)
     if (!off && p.alive && ctx.night?.concealed(p)) off = true;
     if (off) {
@@ -261,6 +267,9 @@ export class PlayerViews implements View {
 
   /** Removes a visual from the scene (a seat being dressed again). */
   private destroy(v: Visual): void {
+    // the old body's skeleton owns a bone texture on the GPU: the renderer releases skeletons only of what is still in
+    // the scene when the match unloads, so a seat re-dressed mid-match (its on-demand model arrived) must free it here
+    releaseSkeletons(v.model.root);
     this.group.remove(
       v.model.root,
       v.ring,
@@ -446,6 +455,7 @@ export class PlayerViews implements View {
       dustAt: 0,
       facing: p.facing,
       culled: false,
+      fresh: true,
       catchUp: 0,
       protect,
       slipPending: null,
