@@ -173,7 +173,7 @@ Everything below is pure simulation (`src/sim`) and bots (`src/ai`), determinist
 | --- | --- |
 | Campaign FIELD missions (all 11) | yes, at the save's level (`missionConfigLayer` adds Normal, `buildMissionGame` the Easy / Hard layer) |
 | Campaign BOSS missions (all 6) | yes, plus `seatPerception` (the boss and crew are generator bots without `enemyKind`) |
-| Raids (door and standalone) | no: Classic raids keep their rules |
+| Raids (door and standalone) | the raid layer (decision RA1, docs/CLASSIC_RAID_AI.md): perception, territory with derived routes, pace, cues; NOT the combat model (`tacticsCombat`) |
 | Training Academy | no: its "Generator Tactics" lessons keep the Tactical Trap pilot (`config.tacticalTrap`), unchanged |
 | Classic, City Rumble (Survival / Deathmatch / Team), multiplayer, online | no (tested; the pinned digests are unchanged) |
 

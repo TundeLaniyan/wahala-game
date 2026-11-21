@@ -202,17 +202,37 @@ export type { SuddenDeathFront } from './types';
 // the Tactical Trap pilot (docs/TACTICAL_TRAP_PILOT.md): line of sight, attack phases, slow arithmetic
 export { TACTICAL_TRAP_ENEMY_ATTACKS, TACTICAL_TRAP_PILOT, tacticalTrapLayer } from './config';
 export type { TacticalTrapConfig, TrapPerception } from './config';
-export { bodyTiles, canSeePlayer, canSeeTile, inViewCone, traceBlocked } from './systems/sight';
+export {
+  bodyTiles,
+  canSeePlayer,
+  canSeeTile,
+  enemySeesPerson,
+  inViewCone,
+  traceBlocked,
+} from './systems/sight';
 export {
   CAMPAIGN_TACTICS,
   CAMPAIGN_TACTICS_ENEMY_ATTACKS,
   CAMPAIGN_TACTICS_LEVELS,
+  NIGHT_SIGHT_LEVELS,
+  RAID_TACTICS_LEVELS,
   campaignTacticsFor,
+  raidTacticsFor,
+  tacticsCombat,
 } from './config';
-export type { CampaignTacticsConfig, TrapSenseSpec, TrapSenseTier } from './config';
+export type {
+  CampaignTacticsConfig,
+  ClassicRaidTactics,
+  NightSightConfig,
+  RaidRouteStyle,
+  TrapSenseSpec,
+  TrapSenseTier,
+} from './config';
 export {
   addEnemyMind,
+  callEnemyIn,
   coverTile,
+  enemyLookout,
   enemyMindView,
   investigateSpot,
   noiseBand,

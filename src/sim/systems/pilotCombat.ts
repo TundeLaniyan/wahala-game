@@ -20,6 +20,7 @@
  */
 import { DIRS, DIR_VEC } from '../grid';
 import type { CombatPilotConfig } from '../config';
+import { tacticsCombat } from '../config';
 import type { Dir, GameState, PilotCombatState, Player, SimEvent } from '../types';
 import { ENEMY_KINDS } from '../data/enemies';
 import { applyCampaignHit } from './campaignDamage';
@@ -289,7 +290,7 @@ export function pilotBlocksStep(state: GameState, p: Readonly<Player>, x: number
   const keepOff =
     state.config.combatPilot?.enemiesKeepOffHuman ||
     state.config.tacticalTrap?.enemiesKeepOffHuman ||
-    state.config.campaignTactics?.enemiesKeepOffHuman; // the campaign tactics layer too (decision SA8)
+    tacticsCombat(state.config)?.enemiesKeepOffHuman; // the campaign tactics layer too (SA8; not a raid's, RA1)
   if (!keepOff) return false;
   return state.players.some(
     (o) =>
@@ -303,6 +304,6 @@ export function pilotSameTileRival<P extends Readonly<Player>>(
   p: Readonly<Player>,
   ok: (o: P) => boolean,
 ): P | null {
-  if ((!view.config.combatPilot && !view.config.campaignTactics) || p.enemyKind === undefined) return null;
+  if ((!view.config.combatPilot && !tacticsCombat(view.config)) || p.enemyKind === undefined) return null;
   return view.players.find((o) => o.alive && o.id !== p.id && o.x === p.x && o.y === p.y && ok(o)) ?? null;
 }

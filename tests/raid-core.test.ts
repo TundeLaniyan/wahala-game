@@ -128,17 +128,35 @@ describe('raid rules', () => {
     expect(raidView(state)!.timeRemainingSec).toBe(RAID_DEFS.railYardGoods.timeLimitSec);
   });
 
-  it('enemy bots are told to hold their spot and chase only when the player is close', () => {
+  // decision RA1 (docs/CLASSIC_RAID_AI.md) replaced "hold the spot, chase within AGGRO_RANGE" by the tactics layer's
+  // territory: the guard wakes on its route and chases once it has NOTICED the player (here: he stands close to it)
+  it('enemy bots are told to walk their route, and chase once they notice the player (RA1)', () => {
     const state = newRaid();
     letWavesAppear(state);
     const guard = state.raid!.seats[0]!.playerId;
+    expect(raidDirectiveFor(state, guard)).toMatchObject({ kind: 'patrol', calm: true });
+    expect(observe(state, guard).directive).toEqual(raidDirectiveFor(state, guard));
+    state.players[0]!.x = state.players[guard]!.x + 2;
+    state.players[0]!.y = state.players[guard]!.y;
+    advance(state, 1);
+    expect(state.territory!.minds[guard]!.state).toBe('alert');
+    advance(state, state.config.campaignTactics!.awareness.alertTicks);
+    expect(state.territory!.minds[guard]!.state).toBe('pursue');
+    // a plain chase, or (Normal and Hard: group tactics) its side of the player
+    expect(['chase', 'surround']).toContain(raidDirectiveFor(state, guard)!.kind);
+    expect(raidDirectiveFor(state, 0)).toBeUndefined(); // the human has none
+    expect(observe(state, 0).directive).toBeUndefined();
+  });
+
+  it('a raid without the tactics layer keeps the old rule: hold the spot, chase only when the player is close', () => {
+    const state = newRaid();
+    letWavesAppear(state);
+    delete state.territory; // what a raid built without `config.campaignTactics` looks like
+    const guard = state.raid!.seats[0]!.playerId;
     expect(raidDirectiveFor(state, guard)).toMatchObject({ kind: 'guard', radius: 2 });
-    expect(observe(state, guard).directive).toMatchObject({ kind: 'guard' });
     state.players[0]!.x = state.players[guard]!.x + 2;
     state.players[0]!.y = state.players[guard]!.y;
     expect(raidDirectiveFor(state, guard)).toMatchObject({ kind: 'chase' });
-    expect(raidDirectiveFor(state, 0)).toBeUndefined(); // the human has none
-    expect(observe(state, 0).directive).toBeUndefined();
   });
 });
 

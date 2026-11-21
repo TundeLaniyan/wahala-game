@@ -119,3 +119,23 @@ export function inViewCone(
   const lateral = Math.abs(dx * v.dy - dy * v.dx);
   return forward > 0 && forward >= lateral;
 }
+
+/**
+ * THE ENEMY'S SIGHT OF A PERSON (decisions SA6, RA7): the one rule the territorial state machine uses to notice the
+ * human (`systems/territory.ts`), pure and deterministic. Calm (patrolling, holding its post, walking back) it sees only
+ * in the 90-degree cone ahead of `observer.facing` (and the eight tiles round it); engaged, all round. Then the grid line
+ * of sight above (walls, crates and other bodies block) within `range` tiles (`awareness.noticeTiles` /
+ * `calmNoticeTiles` of the kind, in the config). Never through a wall at any level.
+ *
+ * Extension point for light (the night raid): a lit target can be seen farther, an unlit one nearer, by changing the
+ * RANGE handed to `canSeePlayer` here (a light-exposure term with its numbers in the config), never the line rule.
+ */
+export function enemySeesPerson(
+  view: SightView,
+  observer: Readonly<Player>,
+  target: Readonly<Player>,
+  o: { range: number; calm: boolean },
+): boolean {
+  if (o.calm && !inViewCone(observer, target.x, target.y)) return false;
+  return canSeePlayer(view, observer, target, o.range);
+}

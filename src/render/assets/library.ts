@@ -9,21 +9,32 @@ import type { AnimationClip, BufferGeometry, Material, Mesh, Object3D, Skeleton,
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 
-const urls = import.meta.glob('../../assets/models/**/*.glb', {
+const urls = import.meta.glob('../../assets/models/*.glb', {
+  query: '?url',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+/**
+ * Character models fetched ON DEMAND (docs/CHARACTER_PRODUCTION_ROSTER.md): `models/lazy/*.glb`. Only their URLs are bundled;
+ * the boot preload skips them, and the renderer asks for the ones a match needs (`ensure`). A model that fails to load is
+ * simply never `has()`, so its caller keeps the existing look.
+ */
+const lazyUrls = import.meta.glob('../../assets/models/lazy/*.glb', {
   query: '?url',
   import: 'default',
   eager: true,
 }) as Record<string, string>;
 
 /** Asset id = file name without extension, e.g. `char_streetBaller`. */
-const URL_BY_ID = new Map<string, string>(
-  Object.entries(urls).map(([path, url]) => [
-    path
-      .split('/')
-      .pop()!
-      .replace(/\.glb$/, ''),
-    url,
-  ]),
+const idOf = (path: string): string =>
+  path
+    .split('/')
+    .pop()!
+    .replace(/\.glb$/, '');
+const URL_BY_ID = new Map<string, string>(Object.entries(urls).map(([path, url]) => [idOf(path), url]));
+const LAZY_URL_BY_ID = new Map<string, string>(
+  Object.entries(lazyUrls).map(([path, url]) => [idOf(path), url]),
 );
 
 export interface LoadedAsset {
@@ -36,9 +47,64 @@ export class AssetLibrary {
   private readonly loader = new GLTFLoader();
   private failed: string[] = [];
 
-  /** Ids of every model file bundled with the build. */
+  /** Ids of every eagerly preloaded model file bundled with the build (lazy character models are not included). */
   static availableIds(): string[] {
     return [...URL_BY_ID.keys()];
+  }
+
+  /** Ids of the on-demand character models bundled with the build. */
+  static lazyIds(): string[] {
+    return [...LAZY_URL_BY_ID.keys()];
+  }
+
+  private readonly inFlight = new Map<string, Promise<void>>();
+  private readonly lazyFailed = new Set<string>();
+  /** Fires when an on-demand model finished loading (views re-dress their seats). */
+  onLazyLoaded: (() => void) | null = null;
+
+  /**
+   * Loads on-demand character models (once each); resolves when all settled. Never throws: a failure is remembered and the
+   * model is simply never `has()`.
+   */
+  ensure(ids: readonly string[]): Promise<void> {
+    const jobs: Promise<void>[] = [];
+    for (const id of ids) {
+      if (this.assets.has(id) || this.lazyFailed.has(id)) continue;
+      let job = this.inFlight.get(id);
+      if (!job) {
+        const url = LAZY_URL_BY_ID.get(id) ?? URL_BY_ID.get(id);
+        job = (async () => {
+          try {
+            if (!url) throw new Error('not bundled');
+            const gltf = await this.loader.loadAsync(url);
+            this.assets.set(id, { scene: gltf.scene, clips: gltf.animations });
+            this.onLazyLoaded?.();
+          } catch (error) {
+            console.warn(`[assets] ${id} failed to load`, error);
+            this.lazyFailed.add(id);
+          } finally {
+            this.inFlight.delete(id);
+          }
+        })();
+        this.inFlight.set(id, job);
+      }
+      jobs.push(job);
+    }
+    return Promise.all(jobs).then(() => undefined);
+  }
+
+  /**
+   * The on-demand loads still in flight (settled together, never rejecting), or null when none: the match loader holds
+   * its screen on it for a bounded time so a match's character models are drawn from its first visible frame.
+   */
+  lazyPending(): Promise<void> | null {
+    if (this.inFlight.size === 0) return null;
+    return Promise.all([...this.inFlight.values()]).then(() => undefined);
+  }
+
+  /** Is the model bundled (so `ensure` can load it) and not known to have failed? */
+  canEnsure(id: string): boolean {
+    return (LAZY_URL_BY_ID.has(id) || URL_BY_ID.has(id)) && !this.lazyFailed.has(id);
   }
 
   /** Ids of the models that finished loading (sorted, so derived choices are stable). */

@@ -35,7 +35,8 @@ import type { NpcDirective } from '../mission/types';
 import { ENEMY_ATTACK_SETS } from '../data/enemyAttacks';
 import { variantOf } from '../data/enemyVariants';
 import { enemyGroupDirective, standoffSlots } from '../campaign/tactics';
-import { canSeePlayer, inViewCone } from './sight';
+import { canSeePlayer, enemySeesPerson } from './sight';
+import { nightNotice } from './nightSight';
 import { sameSide } from './projectiles';
 import { pushEnemyCue } from './enemyCues';
 import { throwReach } from './enemyActions';
@@ -118,6 +119,33 @@ export function addEnemyMind(state: GameState, id: number, post: TilePos, def?: 
     humanHpSeen: -1,
     noticeBlockedUntil: -1,
   };
+}
+
+/**
+ * Decision RA6 (Classic raids): enemy seat `id` was called in by the player's own action. It wakes alerted to where he
+ * is now (the readable "!", allies within its call radius hear it) and hunts him with no leash, walking-gap or
+ * maximum-chase break-off until `until` (a bounded hunt); losing sight of him (it searches where it last saw him) and
+ * the rest of the machine apply as ever. No-op without a mind or a living human.
+ */
+export function callEnemyIn(state: GameState, id: number, until: number, events: SimEvent[]): void {
+  const m = state.territory?.minds[id];
+  const p = state.players[id];
+  if (!m || !p?.alive) return;
+  const h = quarry(state, p);
+  if (!h) return;
+  m.calledUntil = until;
+  alert(state, m, p, h, events, null);
+}
+
+/**
+ * The distance this enemy keeps to throw (0 = it closes in like a brawler): its territory's, except in a Classic raid
+ * (decision RA6), where only a kind whose raid style `keepsDistance` (the thrower) keeps one, read from its kind NOW.
+ */
+function keptRange(state: GameState, m: EnemyMind, p: Readonly<Player>): number {
+  const raid = state.config.campaignTactics?.classicRaid;
+  if (!raid || !p.enemyKind) return m.spec.preferredRange;
+  if (!raid.routes[p.enemyKind].keepsDistance) return 0;
+  return m.spec.preferredRange || state.config.enemyAttacks.standoffTiles;
 }
 
 /** The campaign human this enemy reacts to: the nearest living rival without an enemy kind (ties: lowest id). */
@@ -286,7 +314,7 @@ function breakOff(state: GameState, m: EnemyMind, p: Player, events: SimEvent[])
   m.chaseSince = -1;
   m.farSince = -1;
   m.notice = 0;
-  if (m.spec.preferredRange > 0) {
+  if (keptRange(state, m, p) > 0) {
     giveUp(state, m, p, events);
     return;
   }
@@ -363,11 +391,18 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
     // calm (patrol, watch, walking back) it looks where it walks: the cone ahead (and the eight tiles around it)
     const calmNow =
       m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil);
+    // a night raid (decisions NL10-NL13): a calm enemy sees only by its own torch light, and in the dark notices only at
+    // contact; null everywhere else (no `config.nightSight`), so every other match is unchanged
+    const night = h !== null && calmNow ? nightNotice(state, p, h) : null;
     const sees =
       h !== null &&
-      (!calmNow || inViewCone(p, h.x, h.y)) &&
-      canSeePlayer(state, p, h, calmNow ? m.spec.calmNoticeTiles : m.spec.noticeTiles);
-    const close = h !== null && manhattan(p, h) <= cfg.awareness.closeTiles;
+      (night
+        ? night.sees
+        : enemySeesPerson(state, p, h, {
+            range: calmNow ? m.spec.calmNoticeTiles : m.spec.noticeTiles,
+            calm: calmNow,
+          }));
+    const close = h !== null && (night ? night.close : manhattan(p, h) <= cfg.awareness.closeTiles);
     if (h && (sees || close)) {
       m.lastSeen = { x: h.x, y: h.y };
       m.lastSeenTick = T;
@@ -387,10 +422,11 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
         // sight builds up (faster while it is already looking: investigating, or a returning enemy he re-enters on)
         const keen = m.state === 'investigate' || (m.state === 'return' && inside) ? 3 : 1;
         m.notice += keen;
-        if (m.notice >= m.spec.noticeTicks && (inside || m.state !== 'return'))
-          alert(state, m, p, h, events, null);
+        const needed = night ? night.reactTicks : m.spec.noticeTicks;
+        if (m.notice >= needed && (inside || m.state !== 'return')) alert(state, m, p, h, events, null);
       } else {
-        m.notice = Math.max(0, m.notice - 2);
+        // by night, leaving the torch cone restarts the reaction (decision NL11)
+        m.notice = night ? 0 : Math.max(0, m.notice - 2);
       }
     }
     if (m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil)) {
@@ -439,8 +475,10 @@ function advance(
         giveUp(state, m, p, events);
         return;
       }
-      // the leash is measured from the TERRITORY, with hysteresis; a recent hit keeps it on him with no leash
-      if (T >= m.hitChaseUntil && territoryDistance(m.spec, h) > m.spec.leashTiles) {
+      // the leash is measured from the TERRITORY, with hysteresis; a recent hit (or a raid's call, RA6) keeps it on
+      // him with no leash
+      const called = T < (m.calledUntil ?? -1);
+      if (T >= m.hitChaseUntil && !called && territoryDistance(m.spec, h) > m.spec.leashTiles) {
         giveUp(state, m, p, events);
         return;
       }
@@ -453,8 +491,9 @@ function advance(
         else if (m.farSince < 0) m.farSince = T;
       }
       if (
-        (m.farSince >= 0 && T - m.farSince >= cfg.chase.breakOffTicks) ||
-        (m.chaseSince >= 0 && T - m.chaseSince >= cfg.chase.maxChaseTicks)
+        !called &&
+        ((m.farSince >= 0 && T - m.farSince >= cfg.chase.breakOffTicks) ||
+          (m.chaseSince >= 0 && T - m.chaseSince >= cfg.chase.maxChaseTicks))
       ) {
         breakOff(state, m, p, events);
         return;
@@ -651,17 +690,45 @@ export function territoryDirective(state: GameState, id: number): NpcDirective |
         const c = coverTile(state, p, h, cfg.territory.coverTiles);
         if (c) return { kind: 'hold', x: c.x, y: c.y, radius: 0 };
       }
-      if (m.spec.preferredRange > 0) {
-        const slot = throwSlot(state, p, h, m.spec.preferredRange);
+      const range = keptRange(state, m, p);
+      if (range > 0) {
+        const slot = throwSlot(state, p, h, range);
         if (slot) return { kind: 'standoff', x: slot.x, y: slot.y, radius: 0 };
       }
       if (cfg.territory.groupTactics) {
         const d = enemyGroupDirective(state, id, (o) => state.territory?.minds[o.id]?.state === 'pursue');
-        if (d && d.kind !== 'hold' && d.kind !== 'reinforce') return d;
+        // (a mind told to close in, a raid lieutenant (decision RA6), never takes a throwing slot of the group's)
+        const closesIn = range === 0 && d?.kind === 'standoff';
+        if (d && d.kind !== 'hold' && d.kind !== 'reinforce' && !closesIn) return d;
       }
       return { kind: 'chase', x: h.x, y: h.y };
     }
   }
+}
+
+/**
+ * Decision RA7: WHERE A MINDED ENEMY LOOKS, for presentation (a guard's torch beam on a night raid) and tests. `facing`
+ * is `Player.facing`, the direction its calm view cone opens (`inViewCone`); `calm` says whether the cone applies now
+ * (patrolling, holding its post, walking back) or it looks all round (alerted, pursuing, investigating); `noticeTiles`
+ * is how far it notices the human right now (the kind's calm or engaged `awareness` range from the config). Exactly the
+ * inputs `updateTerritory` hands `enemySeesPerson` this tick. Null for a seat without a mind or not alive. Pure.
+ */
+export function enemyLookout(
+  state: GameState,
+  id: number,
+): { x: number; y: number; facing: Player['facing']; calm: boolean; noticeTiles: number } | null {
+  const m = state.territory?.minds[id];
+  const p = state.players[id];
+  if (!m || !p?.alive) return null;
+  const calm =
+    m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && state.tick >= m.watchUntil);
+  return {
+    x: p.x,
+    y: p.y,
+    facing: p.facing,
+    calm,
+    noticeTiles: calm ? m.spec.calmNoticeTiles : m.spec.noticeTiles,
+  };
 }
 
 /** The readable state of an enemy for presentation and tests (decision SA6): the sim's overlay first, then the mind. */
