@@ -2,6 +2,12 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Classic lighting (branch `claude/wahala-cl-night`, from `514be88`)
+
+Every raid now wears its designed art (the table was keyed by raid id, so all six fell back to Danfo Bus Park; decision
+NL1), readability measured on the rendered picture and guarded by a code index on Low and High (NL2), warnings fog-free
+(NL3). `docs/CLASSIC_LIGHTING.md`; screenshots in `docs/screenshots/classic-lighting/`.
+
 ## Mission guidance: briefings, objective HUD and target pins (branch `claude/wahala-cg-guidance`, from `0b89d09`)
 
 A short visual briefing before every campaign mission (field, boss, finale and the standalone raid; compact on a replay),

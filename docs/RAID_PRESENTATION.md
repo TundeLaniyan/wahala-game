@@ -70,9 +70,9 @@ On a touch device a raid uses the same floating thumbstick as every other match;
 
 ## Arena art
 
-One generic raid look, three variants, registered by arena id in `render/arenas/newArenas.ts` (`raidArt.ts` `RAID_VARIANT_BY_ARENA`; any sim arena of kind `raid` not listed gets the warehouse). Everything is drawn around and over the small fixed board and reads the board size, off the board, tall things north, the camera side below a metre; fictional signage only.
+One generic raid look, three variants, chosen per raid id (`raidArt.ts` `RAID_VARIANT_BY_RAID`) and registered in `render/arenas/newArenas.ts` under the raid's SIM arena id (`RaidDef.arenaId`, `raidWarehouseDispatchDepot` ...; every id in `RAID_ARENA_IDS`, a raid board without a variant gets the warehouse). Until decision NL1 the table was keyed by raid id, so every raid fell back to the Danfo Bus Park look (docs/CLASSIC_LIGHTING.md). Everything is drawn around and over the small fixed board and reads the board size, off the board, tall things north, the camera side below a metre; fictional signage only.
 
-| Variant | Arena ids | Look |
+| Variant | Raids | Look |
 | --- | --- | --- |
 | Warehouse interior | `warehouseDispatchDepot`, `standbyPlant` | Cold tube light and dust; steel racking three to four tiers high behind and beside the board; four roller doors half open on a glare of yard light with "BAY n" boards and a "DISPATCH DEPOT" sign; strip lights; a forklift, wrapped pallets, containers; yellow floor lines |
 | Rail / goods yard | `railYardGoods`, `junctionToolShed` | Low orange sun through yard smoke; two tracks with a rusted boxcar, a flat wagon with a container, a semaphore signal, a floodlight tower, sheet fence; sacks under tarpaulins, drums, timber; sleepers, buffer stops, a points lever on the camera side |
