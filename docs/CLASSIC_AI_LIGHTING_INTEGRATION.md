@@ -35,3 +35,10 @@ Founder review first. Detail: `CLASSIC_RAID_AI.md` (decisions RA1-RA7), `CLASSIC
 
 Whether the patrols, traps and the night raid are fun, whether the dark board reads on a real phone screen in daylight, and
 how much a deliberately sneaking player gains from the dark (the scripted player never sneaks).
+
+## Remote branch (founder-authorised 2026-11-21)
+
+Pushed to `origin/claude/wahala-classic-ai-lighting-v1` only (not the publishing branch). The head commit carries
+`[skip ci]`, so GitHub starts no push workflow: no CI run, and therefore no `deploy.yml` (it runs only when CI calls it,
+and on any branch but `PUBLISH_BRANCH` it is a dry run that publishes nothing). Full release validation runs before any
+production integration.
