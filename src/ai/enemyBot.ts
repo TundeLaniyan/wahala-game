@@ -21,6 +21,7 @@
  */
 import {
   DIFFICULTIES,
+  DIRS,
   DIR_VEC,
   Tile,
   attackReady,
@@ -33,6 +34,7 @@ import {
 import type {
   CampaignTacticsConfig,
   Difficulty,
+  Dir,
   EnemyAwareness,
   Generator,
   Intent,
@@ -307,6 +309,14 @@ export class EnemyBot implements Bot {
       this.lastDirective = key;
     }
     const intent = this.planner(obs).decide(obs);
+    // decision CR1 (Classic raids): a calm patrol walks its route like clockwork. The planner re-thinks on its own
+    // cadence and could stand a beat on a corridor tile between two waypoints, so the next step towards the waypoint is
+    // taken the moment the seat is free to move, unless a generator it knows of (or a flame) is about: then the
+    // planner's own danger handling decides
+    if (d?.kind === 'patrol') {
+      const step = patrolStep(obs, d.x, d.y);
+      if (step) intent.move = step;
+    }
     // an enemy is not a generator player: scrub everything but movement
     delete intent.place;
     delete intent.placeHeld;
@@ -364,6 +374,50 @@ export class EnemyBot implements Bot {
     }
     return intent;
   }
+}
+
+/**
+ * Decision CR1: the first step of the shortest walk from this seat to its patrol waypoint (x, y) over open floor (no
+ * generator it is aware of, no other body), ties broken in the fixed `DIRS` order; null when it cannot step now (in a
+ * step, planted, dazed), is there already, a known generator or a flame is within reach of its tile or the next one,
+ * or no walk exists. Pure: the same observation gives the same step.
+ */
+export function patrolStep(obs: Observation, x: number, y: number): Dir | null {
+  const me = obs.players[obs.selfId];
+  if (!me || !me.alive || me.stepRemaining > 1 || obs.tick < me.rootedUntil || obs.tick < me.dazedUntil)
+    return null;
+  if (me.x === x && me.y === y) return null;
+  const w = obs.width;
+  const blocked = new Set<number>();
+  for (const g of obs.generators) blocked.add(g.y * w + g.x);
+  for (const p of obs.players) if (p.alive && p.id !== me.id) blocked.add(p.y * w + p.x);
+  const near = (tx: number, ty: number): boolean =>
+    obs.generators.some((g) => inCross(obs, g, tx, ty)) ||
+    obs.flames.some((f) => Math.abs(f.x - tx) + Math.abs(f.y - ty) <= 1);
+  if (near(me.x, me.y)) return null;
+  const goal = y * w + x;
+  const start = me.y * w + me.x;
+  const first = new Map<number, Dir>();
+  let frontier = [start];
+  const seen = new Set([start]);
+  while (frontier.length > 0 && !first.has(goal)) {
+    const next: number[] = [];
+    for (const u of frontier)
+      for (const dir of DIRS) {
+        const nx = (u % w) + DIR_VEC[dir].dx;
+        const ny = Math.floor(u / w) + DIR_VEC[dir].dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= obs.height) continue;
+        const v = ny * w + nx;
+        if (seen.has(v) || obs.tiles[v] !== Tile.Empty || blocked.has(v)) continue;
+        seen.add(v);
+        first.set(v, u === start ? dir : first.get(u)!);
+        next.push(v);
+      }
+    frontier = next;
+  }
+  const dir = first.get(goal);
+  if (!dir) return null;
+  return near(me.x + DIR_VEC[dir].dx, me.y + DIR_VEC[dir].dy) ? null : dir;
 }
 
 /**

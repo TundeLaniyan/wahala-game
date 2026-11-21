@@ -172,7 +172,8 @@ function campaignLethal(
   const pilot = state.config.combatPilot;
   const pilotBlast = pilot && p.enemyKind !== undefined && best.source === 'blast';
   // campaign tactics (decision SA8): one blast defeats any ordinary enemy; an armoured one loses `blastVsArmoured`
-  const tacticsBlast = tacticsBlastDamage(state, p, best.source);
+  const tacticsBlast =
+    tacticsBlastDamage(state, p, best.source) ?? raidBlastDamage(state, p, best.source, wound(best));
   const hit: CampaignHit = {
     victimId: p.id,
     byId: best.byId,
@@ -186,6 +187,23 @@ function campaignLethal(
   if (result === 'defeated') return true;
   for (const h of live) p.immune.push({ eventId: h.eventId, until: h.graceUntil }); // one event, one chance
   return false;
+}
+
+/**
+ * Classic raids (decision CR6): what a blast takes from an ENEMY - all its health for the kinds in `blastDefeats`, at
+ * least `blastVsTough` from any other. Null for everyone else (the human, any match that is not a raid, any other source).
+ */
+export function raidBlastDamage(
+  state: Pick<GameState, 'config'>,
+  p: Readonly<Player>,
+  source: CampaignHitSource,
+  base: number,
+): number | null {
+  const raid = state.config.campaignTactics?.classicRaid;
+  if (!raid || p.enemyKind === undefined || source !== 'blast' || !p.vitals) return null;
+  return raid.blastDefeats.includes(p.enemyKind)
+    ? Math.max(1, p.vitals.hp)
+    : Math.max(base, raid.blastVsTough);
 }
 
 /**

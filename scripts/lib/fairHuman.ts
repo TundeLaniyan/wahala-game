@@ -560,10 +560,12 @@ export interface RaidFightOptions {
   level?: CampaignLevel;
   /** Called after every tick (the raid AI measurements read the movement). */
   onTick?: (s: GameState) => void;
+  /** Called after every tick with that tick's events (the live combat measurements, scripts/raid-live.ts). */
+  onEvents?: (s: GameState, events: SimEvent[]) => void;
 }
 
 /** The first soft tile on the quickest walk (crates count as passable, at a cost) from the human to next to `goal`. */
-function nextCrate(s: GameState, goal: number): number | null {
+export function nextCrate(s: GameState, goal: number): number | null {
   const w = s.width;
   const me = s.players[0]!;
   const start = me.y * w + me.x;
@@ -598,7 +600,7 @@ function nextCrate(s: GameState, goal: number): number | null {
 }
 
 /** Tiles reachable from (x, y) in at most `max` steps over open floor (crates and walls block), with their step count. */
-function walkSteps(s: GameState, x: number, y: number, max: number): Map<number, number> {
+export function walkSteps(s: GameState, x: number, y: number, max: number): Map<number, number> {
   const w = s.width;
   const out = new Map<number, number>([[y * w + x, 0]]);
   let frontier = [y * w + x];
@@ -681,8 +683,10 @@ export function playRaidFight(
     for (const [id, bot] of Object.entries(bots)) {
       if (s.players[Number(id)]!.alive) intents[Number(id)] = bot.decide(observe(s, Number(id)));
     }
-    rec.onTick(s, tick(s, intents));
+    const events = tick(s, intents);
+    rec.onTick(s, events);
     o.onTick?.(s);
+    o.onEvents?.(s, events);
   }
   st.seconds = s.tick / HZ;
   st.laid = human.laid;
