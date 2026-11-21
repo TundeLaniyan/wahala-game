@@ -62,6 +62,12 @@ export interface FairHumanOptions {
   linger: boolean;
   /** Uses B (the Punch) at all (false: a pure bomber, who only dodges wind-ups). */
   punch: boolean;
+  /**
+   * Raids (decision RA, docs/CLASSIC_RAID_AI.md): with no safe way to a firing tile, walk up to within two tiles of the
+   * target instead of waiting for it to come (an enemy holding a post behind belts or crates is gone for, as a player
+   * would). Absent = waits, as before.
+   */
+  approach?: boolean;
 }
 
 export const FAIR_HUMAN: FairHumanOptions = { reactTicks: 18, fuseMargin: 45, linger: true, punch: true };
@@ -292,6 +298,14 @@ export class FairHuman {
       const r = this.route(s, danger, avoid, firing, 40);
       if (r?.first) return { move: r.first };
       if (r && r.first === null) return {}; // already on a firing tile, waiting for a way out
+      if (!r && this.opts.approach) {
+        const near = (i: number): boolean =>
+          targets.some(
+            (t) => Math.abs((t % w) - (i % w)) + Math.abs(Math.floor(t / w) - Math.floor(i / w)) <= 2,
+          );
+        const a = this.route(s, danger, avoid, near, 60);
+        if (a?.first) return { move: a.first };
+      }
     }
     if (goal !== null) {
       const r = this.route(s, danger, avoid, (i) => i === goal, 60);
@@ -627,7 +641,8 @@ export function playRaidFight(
   s.players.slice(1).forEach((p, i) => {
     bots[p.id] = createBot({ difficulty: o.difficulty, seed: o.seed + (i + 1) * 7919, playerId: p.id });
   });
-  const human = new FairHuman(o.human ?? FAIR_HUMAN);
+  // a raid player goes for an enemy he cannot fire at from where he is (`approach`)
+  const human = new FairHuman({ ...(o.human ?? FAIR_HUMAN), approach: true });
   const st = emptyStats(s.raid!.seats.length);
   const rec = new Recorder(st);
   const w = s.width;

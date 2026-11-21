@@ -25,7 +25,7 @@ import type { AttackKind, AttackLoadout, Dir, GameState, Player, SimEvent, Skill
 import { Tile } from '../types';
 import { CHARACTERS } from '../data/characters';
 import { defaultAttacks } from '../data/fighters';
-import { campaignConfig } from '../config';
+import { campaignConfig, tacticsCombat } from '../config';
 import type { CampaignHitResult } from '../campaign/types';
 import { recordHit } from './attribution';
 import { applyCampaignHit } from './campaignDamage';
@@ -94,7 +94,7 @@ export function attackable(
   // (under the campaign tactics layer every landed hit takes its segment: decision SA8)
   const segment =
     humanOnEnemy(attacker, victim) &&
-    (state.config.campaignTactics !== undefined || campaignConfig(state.config).playerDamage[kind] > 0);
+    (tacticsCombat(state.config) !== undefined || campaignConfig(state.config).playerDamage[kind] > 0);
   if (spec.dazeTicks > 0 && spec.displacementTiles === 0 && tick < victim.dazeImmuneUntil && !segment)
     return false;
   // ... and neither has a pure slow
@@ -224,7 +224,7 @@ export function chooseAttack<P extends Readonly<Player>>(
   }
   if (claimed) return claimed;
   // campaign tactics (decision SA8): an enemy on the human's own tile is in reach (enemies keep off it; he may not)
-  if (state.config.campaignTactics && p.enemyKind === undefined) {
+  if (tacticsCombat(state.config) && p.enemyKind === undefined) {
     for (const kind of kinds) {
       const inside = state.players.find(
         (o: P) =>
@@ -355,7 +355,7 @@ function resolveAttack(state: GameState, p: Player, events: SimEvent[]): void {
   }
 
   // the campaign tactics layer: the human's landed hit on an enemy is the one tactics hit, whatever the fighter (SA8)
-  if (state.config.campaignTactics && humanOnEnemy(p, target))
+  if (tacticsCombat(state.config) && humanOnEnemy(p, target))
     return tacticsHit(state, p, target, pending.skill, spec, dir, events);
 
   // displacement: a rival who cannot be moved at all makes a push-only attack a whiff (a blocked Shove / Kick)
@@ -519,14 +519,14 @@ function tacticsHit(
 
 /** Segments a tactics hit takes from `target`: `punch.damage`, never below an armoured kind's floor (decision SA8). */
 export function tacticsPunchDamage(state: Pick<GameState, 'config'>, target: Readonly<Player>): number {
-  const t = state.config.campaignTactics;
+  const t = tacticsCombat(state.config);
   if (!t || !target.vitals || !target.enemyKind) return 0;
   return Math.max(0, Math.min(t.punch.damage, target.vitals.hp - tacticsPunchFloor(state, target)));
 }
 
 /** The health a punch can never take an enemy below under the tactics layer: 0 (ordinary) or its armoured floor. */
 export function tacticsPunchFloor(state: Pick<GameState, 'config'>, p: Readonly<Player>): number {
-  const t = state.config.campaignTactics;
+  const t = tacticsCombat(state.config);
   if (!t || !p.enemyKind || !t.armoured[p.enemyKind]) return 0;
   return Math.max(1, Math.ceil((p.vitals?.maxHp ?? 1) * t.punchFloorShare[p.enemyKind]));
 }
@@ -602,7 +602,7 @@ function reachDir(
   // tactics layer the same holds both ways between the human and an enemy (enemies keep off his tile, he may not)
   const sameTile =
     (state.config.combatPilot !== undefined && p.enemyKind !== undefined) ||
-    (state.config.campaignTactics !== undefined &&
+    (tacticsCombat(state.config) !== undefined &&
       (p.enemyKind !== undefined) !== (o.enemyKind !== undefined));
   // combat test lab: the level's reach shape around the attack's direction (never through walls)
   const lab = state.config.combatLab !== undefined && p.enemyKind === undefined;

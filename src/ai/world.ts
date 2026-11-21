@@ -2,7 +2,7 @@
  * Per-think snapshot of what the bot may see: walkability, pickups, rivals and timing helpers.
  * Arrays are reused between refreshes (the arena size is fixed for a match).
  */
-import { DIRS, ENEMY_KINDS, Tile, manholePartners, tacticsEnemyStepTicks } from '../sim';
+import { DIRS, ENEMY_KINDS, Tile, manholePartners, tacticsCombat, tacticsEnemyStepTicks } from '../sim';
 import type { Dir, Observation, Pickup, Player } from '../sim';
 import { getBoard } from './board';
 import type { AiProfile } from './profiles';
@@ -38,7 +38,8 @@ export function stepTicksOf(obs: Observation, p: Readonly<Player>): number {
  * Academy's Tactical Trap lessons and the archived Oshodi pilot keep their shipped, play-tested enemy planning.
  */
 function keepsOffHuman(obs: Observation): boolean {
-  return obs.config.campaignTactics?.enemiesKeepOffHuman === true;
+  // (the same switch as the sim's `pilotBlocksStep`: never a Classic raid's layer, decision RA1)
+  return tacticsCombat(obs.config)?.enemiesKeepOffHuman === true;
 }
 
 /** First tick at which a player's next step could begin (the intent is applied on tick + 1 at the earliest). */

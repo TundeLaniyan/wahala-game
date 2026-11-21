@@ -10,7 +10,7 @@
  *         lives, escapes from a fresh cross, reversals per calm minute).
  */
 import type { CampaignLevel, RaidId } from '../src/sim';
-import { LEVELS, RAIDS, ambushDrill, fullRaid, idlePatrol, seenDrill } from './lib/raidAi';
+import { LEVELS, RAIDS, ambushDrill, cornerDrill, fullRaid, idlePatrol, seenDrill } from './lib/raidAi';
 
 const arg = (name: string, fallback: string): string => {
   const i = process.argv.indexOf(`--${name}`);
@@ -26,11 +26,12 @@ const pct = (a: number, b: number): string => (b ? `${a}/${b} (${Math.round((100
 if (ONLY === 'all' || ONLY === 'patrol') {
   console.log('# Patrol (human idle at the entrance, 60 s)\n');
   console.log(
-    '| level | calm reversals / enemy-min | calm steps / enemy-min | predictable calm steps (same way as last time from the same approach) |',
+    '| level | calm reversals / enemy-min | of which not at a route end (churn) | calm steps / enemy-min | predictable calm steps (same way as last time from the same approach) |',
   );
-  console.log('| --- | --- | --- | --- |');
+  console.log('| --- | --- | --- | --- | --- |');
   for (const level of levels) {
     let rev = 0;
+    let churn = 0;
     let steps = 0;
     let ticks = 0;
     let seen = 0;
@@ -39,6 +40,7 @@ if (ONLY === 'all' || ONLY === 'patrol') {
       for (const seed of SEEDS) {
         const t = idlePatrol(raidId, level, seed);
         rev += t.calmReversals;
+        churn += t.calmChurn;
         steps += t.calmSteps;
         ticks += t.calmTicks;
         seen += t.repeatSeen;
@@ -46,7 +48,7 @@ if (ONLY === 'all' || ONLY === 'patrol') {
       }
     const min = ticks / 3600;
     console.log(
-      `| ${level} | ${(rev / min).toFixed(2)} | ${(steps / min).toFixed(1)} | ${pct(same, seen)} |`,
+      `| ${level} | ${(rev / min).toFixed(2)} | ${(churn / min).toFixed(2)} | ${(steps / min).toFixed(1)} | ${pct(same, seen)} |`,
     );
   }
 }
@@ -54,14 +56,16 @@ if (ONLY === 'all' || ONLY === 'patrol') {
 if (ONLY === 'all' || ONLY === 'drill') {
   console.log('\n# Drills (first wave, calm, not armoured)\n');
   console.log(
-    '| level | ambush: trapped by an unseen generator on its path | path: trapped by one on its path (seen or not) | seen: caught by one laid next to it |',
+    '| level | corner ambush on its route: trapped | ambush: trapped by an unseen generator on its path | path: trapped by one on its path (seen or not) | seen: caught by one laid next to it |',
   );
-  console.log('| --- | --- | --- | --- |');
+  console.log('| --- | --- | --- | --- | --- |');
   for (const level of levels) {
     let as = 0;
     let at = 0;
     let ps = 0;
     let pt = 0;
+    let cs = 0;
+    let ct = 0;
     let ss = 0;
     let st = 0;
     for (const raidId of raids)
@@ -69,6 +73,9 @@ if (ONLY === 'all' || ONLY === 'drill') {
         const a = ambushDrill(raidId, level, seed);
         as += a.staged;
         at += a.trapped;
+        const c = cornerDrill(raidId, level, seed);
+        cs += c.staged;
+        ct += c.trapped;
         const q = ambushDrill(raidId, level, seed, false);
         ps += q.staged;
         pt += q.trapped;
@@ -76,7 +83,7 @@ if (ONLY === 'all' || ONLY === 'drill') {
         ss += v.staged;
         st += v.trapped;
       }
-    console.log(`| ${level} | ${pct(at, as)} | ${pct(pt, ps)} | ${pct(st, ss)} |`);
+    console.log(`| ${level} | ${pct(ct, cs)} | ${pct(at, as)} | ${pct(pt, ps)} | ${pct(st, ss)} |`);
   }
 }
 

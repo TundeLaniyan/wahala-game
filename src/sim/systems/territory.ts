@@ -35,7 +35,7 @@ import type { NpcDirective } from '../mission/types';
 import { ENEMY_ATTACK_SETS } from '../data/enemyAttacks';
 import { variantOf } from '../data/enemyVariants';
 import { enemyGroupDirective, standoffSlots } from '../campaign/tactics';
-import { canSeePlayer, inViewCone } from './sight';
+import { canSeePlayer, enemySeesPerson } from './sight';
 import { sameSide } from './projectiles';
 import { pushEnemyCue } from './enemyCues';
 import { throwReach } from './enemyActions';
@@ -81,7 +81,9 @@ export function resolveTerritory(
     alertAllies: Math.round((def.alertAllies ?? pers.alertAllies) * cfg.territory.alertAlliesScale),
     escape: def.escape ?? 'free',
     usesCover: pers.usesCover && cfg.territory.coverTiles > 0,
-    preferredRange: pers.preferredRange || (keepsDistance ? state.config.enemyAttacks.standoffTiles : 0),
+    preferredRange:
+      def.preferredRange ??
+      (pers.preferredRange || (keepsDistance ? state.config.enemyAttacks.standoffTiles : 0)),
     noticeTicks: Math.max(1, Math.round(cfg.awareness.noticeTicks * pers.noticeScale)),
     noticeTiles: cfg.awareness.noticeTiles[kind],
     calmNoticeTiles: Math.min(cfg.awareness.noticeTiles[kind], cfg.awareness.calmNoticeTiles[kind]),
@@ -118,6 +120,22 @@ export function addEnemyMind(state: GameState, id: number, post: TilePos, def?: 
     humanHpSeen: -1,
     noticeBlockedUntil: -1,
   };
+}
+
+/**
+ * Decision RA6 (Classic raids): enemy seat `id` was called in by the player's own action. It wakes alerted to where he
+ * is now (the readable "!", allies within its call radius hear it) and hunts him with no leash or walking-gap break-off
+ * until `until`; the maximum chase, losing sight of him and the rest of the machine apply as ever. No-op without a mind
+ * or a living human.
+ */
+export function callEnemyIn(state: GameState, id: number, until: number, events: SimEvent[]): void {
+  const m = state.territory?.minds[id];
+  const p = state.players[id];
+  if (!m || !p?.alive) return;
+  const h = quarry(state, p);
+  if (!h) return;
+  m.calledUntil = until;
+  alert(state, m, p, h, events, null);
 }
 
 /** The campaign human this enemy reacts to: the nearest living rival without an enemy kind (ties: lowest id). */
@@ -365,8 +383,10 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
       m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil);
     const sees =
       h !== null &&
-      (!calmNow || inViewCone(p, h.x, h.y)) &&
-      canSeePlayer(state, p, h, calmNow ? m.spec.calmNoticeTiles : m.spec.noticeTiles);
+      enemySeesPerson(state, p, h, {
+        range: calmNow ? m.spec.calmNoticeTiles : m.spec.noticeTiles,
+        calm: calmNow,
+      });
     const close = h !== null && manhattan(p, h) <= cfg.awareness.closeTiles;
     if (h && (sees || close)) {
       m.lastSeen = { x: h.x, y: h.y };
@@ -439,8 +459,10 @@ function advance(
         giveUp(state, m, p, events);
         return;
       }
-      // the leash is measured from the TERRITORY, with hysteresis; a recent hit keeps it on him with no leash
-      if (T >= m.hitChaseUntil && territoryDistance(m.spec, h) > m.spec.leashTiles) {
+      // the leash is measured from the TERRITORY, with hysteresis; a recent hit (or a raid's call, RA6) keeps it on
+      // him with no leash
+      const called = T < (m.calledUntil ?? -1);
+      if (T >= m.hitChaseUntil && !called && territoryDistance(m.spec, h) > m.spec.leashTiles) {
         giveUp(state, m, p, events);
         return;
       }
@@ -453,7 +475,7 @@ function advance(
         else if (m.farSince < 0) m.farSince = T;
       }
       if (
-        (m.farSince >= 0 && T - m.farSince >= cfg.chase.breakOffTicks) ||
+        (!called && m.farSince >= 0 && T - m.farSince >= cfg.chase.breakOffTicks) ||
         (m.chaseSince >= 0 && T - m.chaseSince >= cfg.chase.maxChaseTicks)
       ) {
         breakOff(state, m, p, events);

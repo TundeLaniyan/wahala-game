@@ -4,6 +4,7 @@
  */
 import type { Dir, EnemyCueKind, GameState, Player, SimEvent } from '../types';
 import { variantOf } from '../data/enemyVariants';
+import { tacticsCombat } from '../config';
 
 export function pushEnemyCue(
   state: Pick<GameState, 'config' | 'tick'>,
@@ -33,8 +34,11 @@ export function pushEnemyCue(
   });
 }
 
-/** Campaign tactics: an overcommitting variant stays planted longer after its own attack (decision SA10); 0 elsewhere. */
+/**
+ * Campaign tactics: an overcommitting variant stays planted longer after its own attack (decision SA10); 0 elsewhere (a
+ * Classic raid included: its combat timings are its own, decision RA1).
+ */
 export function recoveryBonus(state: Pick<GameState, 'config'>, p: Readonly<Player>): number {
-  if (!state.config.campaignTactics || p.enemyKind === undefined) return 0;
+  if (!tacticsCombat(state.config) || p.enemyKind === undefined) return 0;
   return variantOf(p)?.personality.recoveryBonusTicks ?? 0;
 }

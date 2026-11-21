@@ -3,7 +3,7 @@
  * state only: no rules, no events. The HUD and the renderer must use these instead of reaching into `Player.vitals`.
  */
 import { DIR_VEC, tileAt } from '../grid';
-import { campaignConfig } from '../config';
+import { campaignConfig, tacticsCombat } from '../config';
 import type { EnemyKind } from '../campaign/types';
 import { tacticsPunchFloor } from './skills';
 import { ENEMY_KINDS } from '../data/enemies';
@@ -82,7 +82,7 @@ export function enemyHealthView(state: GameState, id: number): EnemyHealthView |
       near ||
       (human.alive && targetedBy(state, human, p));
   }
-  const tactics = state.config.campaignTactics;
+  const tactics = tacticsCombat(state.config);
   return {
     hp: v.hp,
     maxHp: v.maxHp,

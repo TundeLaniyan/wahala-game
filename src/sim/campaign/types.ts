@@ -185,6 +185,11 @@ export interface TerritoryDef {
   alertAllies?: number;
   /** Escaping a known generator: 'free' (any refuge) or 'territory' (prefers refuges inside its area). */
   escape?: 'free' | 'territory';
+  /**
+   * Decision RA6 (Classic raids): the distance it keeps to throw, overriding its variant's (0 = it closes in like a
+   * brawler: a raid lieutenant is the crew's bruiser, only a thrower keeps its distance). Absent = the variant's.
+   */
+  preferredRange?: number;
 }
 
 /** A territory resolved for one seat (plain JSON in `GameState.territory`). */
@@ -258,6 +263,12 @@ export interface EnemyMind {
   humanHpSeen: number;
   /** Decision RC3: after breaking off it does not notice the human by sight before this tick (close / a hit still do). */
   noticeBlockedUntil: number;
+  /**
+   * Decision RA6 (Classic raids only; absent elsewhere): a wave the player's own action called in (a crate, a door) wakes
+   * alerted to where he was, and until this tick it hunts him with no leash and no walking-gap break-off (the
+   * maximum chase still ends it).
+   */
+  calledUntil?: number;
 }
 
 /** Runtime of the territorial state machine (systems/territory.ts). ABSENT outside campaign tactics matches. */

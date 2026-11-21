@@ -350,8 +350,10 @@ export interface TrapSenseSpec {
  * Trap and Oshodi combat pilots: perception (sight, memory, hearing), generator evasion by commitment and trap sense,
  * the territorial state machine, readable enemy commitment and the melee-vs-generator balance. Present ONLY in campaign
  * FIELD and BOSS missions (`mission/build.ts` `missionConfigLayer`, levels from `campaign/levels.ts`
- * `campaignTacticsLayer`); ABSENT in raids, the Training Academy, Classic, City Rumble, multiplayer and online (tested),
- * whose rules are therefore exactly as before. Every hook is guarded by this key.
+ * `campaignTacticsLayer`), and in Classic raids WITHOUT its combat model (`classicRaid`, decision RA1:
+ * `raid/build.ts` `raidTacticsLayer`); ABSENT in the Training Academy, Classic, City Rumble, multiplayer and online
+ * (tested), whose rules are therefore exactly as before. Every hook is guarded by this key; the combat hooks by
+ * `tacticsCombat`.
  */
 export interface CampaignTacticsConfig {
   /** Names the layer (measurements, the debug handle). */
@@ -508,6 +510,42 @@ export interface CampaignTacticsConfig {
    * 'boss'): its trap sense (reaction, whether it watches a placement) and its vision change, never what it can know.
    */
   seatVariant?: Record<number, EnemyVariantId>;
+  /**
+   * Decision RA1 (docs/CLASSIC_RAID_AI.md): present ONLY in a Classic raid. The layer then runs its perception (sight,
+   * memory, hearing), the territorial state machine with the raid's derived patrol routes, the enemy pace and the cues,
+   * but NOT its combat model (`punch`, `enemyHp`, `armoured`, `punchFloorShare`, `blastVsArmoured`, `enemyFramesTicks`,
+   * `enemiesKeepOffHuman`, `attack.whiffRecoveryExtraTicks`, variant recovery bonuses, same-tile reach): a raid keeps its
+   * own combat rules (decisions RD, EF, CG). Read through `tacticsCombat`.
+   */
+  classicRaid?: ClassicRaidTactics;
+}
+
+/** Decision RA2: how an enemy kind walks its ground in a Classic raid (`raid/routes.ts` derives the route at its wake). */
+export interface RaidRouteStyle {
+  /**
+   * `loop`: a rectangle of open floor round 1-4 pillar blocks through its spot, walked one way (else a corridor run);
+   * `beat`: a short straight run walked back and forth; `post`: it holds its spot and sweeps its view (a lane post).
+   */
+  style: 'loop' | 'beat' | 'post';
+  /** loop: the perimeter (tiles) it prefers and the largest it accepts (8 = round one pillar, 12 = two, 16 = four). */
+  loopTiles: number;
+  maxLoopTiles: number;
+  /** beat, and a loop kind's corridor run when no loop fits: tiles of the straight run, its spot included. */
+  runTiles: number;
+}
+
+/** The Classic raid's part of the tactics layer (decisions RA1-RA2). */
+export interface ClassicRaidTactics {
+  routes: Record<EnemyKind, RaidRouteStyle>;
+  /** No route tile within this many tiles (Manhattan) of the entrance: the player's first steps are his own. */
+  entranceClearTiles: number;
+  /** Conveyor belts carry a standing enemy off its route: never a route tile on a belt. */
+  avoidBelts: boolean;
+  /**
+   * Decision RA6: a wave the player's own action calls in (a marked crate, a door, a cleared wave) wakes alerted to him
+   * and hunts him with no leash for this long (0 = it wakes calm on its route, like the waves present from the start).
+   */
+  calledChaseTicks: number;
 }
 
 /**
@@ -1528,6 +1566,192 @@ export function campaignTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignT
     deepAssign(base, structuredClone(CAMPAIGN_TACTICS_LEVELS[level]) as Record<string, unknown>);
   return base as unknown as CampaignTacticsConfig;
 }
+
+/**
+ * THE CLASSIC RAID TACTICS (decisions RA1-RA6, docs/CLASSIC_RAID_AI.md): the field layer's level numbers
+ * (`campaignTacticsFor`) with the raid's own pace, notice, pursuit and patrol numbers on top. A raid board is small
+ * (13 x 9 to 17 x 13) and a maze of pillars, so the ranges are shorter than in the open field (a generator being laid is
+ * heard only one to three tiles away, through walls: a loop of 8 tiles is never more than 4 away); every ordinary enemy is
+ * slower than the human (10 ticks a tile) on every level, slower still on its calm patrol; Easy waits longer and
+ * forgets sooner, Hard notices and decides faster, pursues further and coordinates, never sees through a wall.
+ * The combat keys of the level stay in the object but a raid never reads them (`tacticsCombat`).
+ */
+const RAID_ROUTES: ClassicRaidTactics['routes'] = {
+  // a lap longer than the 3 s fuse: the player can lay a generator round a corner while the walker is on the far side
+  agbero: { style: 'loop', loopTiles: 12, maxLoopTiles: 16, runTiles: 7 },
+  guard: { style: 'loop', loopTiles: 12, maxLoopTiles: 16, runTiles: 7 },
+  thrower: { style: 'post', loopTiles: 0, maxLoopTiles: 0, runTiles: 1 },
+  heavy: { style: 'beat', loopTiles: 0, maxLoopTiles: 0, runTiles: 3 },
+  lieutenant: { style: 'loop', loopTiles: 16, maxLoopTiles: 20, runTiles: 7 },
+  boss: { style: 'post', loopTiles: 0, maxLoopTiles: 0, runTiles: 1 },
+};
+
+export const RAID_TACTICS_LEVELS: Readonly<
+  Record<'easy' | 'normal' | 'hard', DeepPartial<CampaignTacticsConfig>>
+> = {
+  easy: {
+    id: 'raid.tactics/1',
+    perception: {
+      agbero: { hearingTiles: 1 },
+      guard: { hearingTiles: 1 },
+      thrower: { hearingTiles: 1 },
+      heavy: { hearingTiles: 1 },
+      lieutenant: { hearingTiles: 2 },
+      boss: { hearingTiles: 3 },
+    },
+    awareness: {
+      noticeTiles: { agbero: 5, guard: 5, thrower: 6, heavy: 4, lieutenant: 6, boss: 7 },
+      calmNoticeTiles: { agbero: 3, guard: 3, thrower: 4, heavy: 3, lieutenant: 4, boss: 5 },
+      noticeTicks: 36,
+      alertTicks: 30,
+      loseTicks: 60,
+      searchTicks: 60,
+      investigateTimeoutTicks: 240,
+    },
+    territory: {
+      pursuitTiles: 4,
+      returnWatchTicks: 60,
+      investigateRadius: 3,
+      patrolPauseTicks: 48,
+      patrolJitterTicks: 0,
+      reversePatrol: false,
+      alertAlliesScale: 0,
+      coverTiles: 0,
+      groupTactics: false,
+      lookAroundTicks: 120,
+      hitChaseTicks: 120,
+      patrolStepExtraTicks: 3,
+    },
+    enemyStepTicks: { agbero: 12, guard: 12, thrower: 14, heavy: 15, lieutenant: 12, boss: 11 },
+    enemyMinStepTicks: 12,
+    chase: {
+      breakOffGapTiles: 4,
+      breakOffTicks: 45,
+      maxChaseTicks: 360,
+      reNoticeCooldownTicks: 150,
+      returnTimeoutTicks: 360,
+      patrolStuckTicks: 300,
+    },
+  },
+  normal: {
+    id: 'raid.tactics/1',
+    perception: {
+      agbero: { hearingTiles: 2 },
+      guard: { hearingTiles: 2 },
+      thrower: { hearingTiles: 2 },
+      heavy: { hearingTiles: 2 },
+      lieutenant: { hearingTiles: 3 },
+      boss: { hearingTiles: 4 },
+    },
+    awareness: {
+      noticeTiles: { agbero: 6, guard: 6, thrower: 7, heavy: 5, lieutenant: 7, boss: 8 },
+      calmNoticeTiles: { agbero: 4, guard: 4, thrower: 5, heavy: 3, lieutenant: 5, boss: 6 },
+      noticeTicks: 20,
+      alertTicks: 20,
+      loseTicks: 90,
+      searchTicks: 60,
+      investigateTimeoutTicks: 240,
+    },
+    territory: {
+      pursuitTiles: 5,
+      returnWatchTicks: 60,
+      investigateRadius: 3,
+      patrolPauseTicks: 36,
+      patrolJitterTicks: 0,
+      reversePatrol: false,
+      alertAlliesScale: 1,
+      coverTiles: 0,
+      groupTactics: true,
+      lookAroundTicks: 90,
+      hitChaseTicks: 150,
+      patrolStepExtraTicks: 2,
+    },
+    enemyStepTicks: { agbero: 11, guard: 11, thrower: 13, heavy: 13, lieutenant: 11, boss: 10 },
+    enemyMinStepTicks: 11,
+    chase: {
+      breakOffGapTiles: 5,
+      breakOffTicks: 60,
+      maxChaseTicks: 480,
+      reNoticeCooldownTicks: 90,
+      returnTimeoutTicks: 360,
+      patrolStuckTicks: 300,
+    },
+  },
+  hard: {
+    id: 'raid.tactics/1',
+    // a raid board is a small maze: a calm Hard walker looks as far ahead as a Normal one, it just reacts faster
+    trapSense: { basic: { calmVisionTiles: 3 } },
+    perception: {
+      agbero: { hearingTiles: 3, reactTicks: 26 },
+      guard: { hearingTiles: 3, reactTicks: 22 },
+      thrower: { hearingTiles: 3, reactTicks: 22 },
+      heavy: { hearingTiles: 3, reactTicks: 30 },
+      lieutenant: { hearingTiles: 4 },
+      boss: { hearingTiles: 5 },
+    },
+    awareness: {
+      noticeTiles: { agbero: 7, guard: 7, thrower: 8, heavy: 6, lieutenant: 8, boss: 9 },
+      calmNoticeTiles: { agbero: 5, guard: 5, thrower: 6, heavy: 4, lieutenant: 6, boss: 7 },
+      noticeTicks: 10,
+      alertTicks: 12,
+      loseTicks: 150,
+      searchTicks: 90,
+      investigateTimeoutTicks: 240,
+    },
+    territory: {
+      pursuitTiles: 7,
+      returnWatchTicks: 90,
+      investigateRadius: 4,
+      patrolPauseTicks: 24,
+      patrolJitterTicks: 0,
+      reversePatrol: false,
+      alertAlliesScale: 1.25,
+      coverTiles: 2,
+      groupTactics: true,
+      lookAroundTicks: 60,
+      hitChaseTicks: 210,
+      patrolStepExtraTicks: 1,
+    },
+    enemyStepTicks: { agbero: 11, guard: 11, thrower: 12, heavy: 13, lieutenant: 11, boss: 10 },
+    enemyMinStepTicks: 11,
+    chase: {
+      breakOffGapTiles: 6,
+      breakOffTicks: 75,
+      maxChaseTicks: 720,
+      reNoticeCooldownTicks: 60,
+      returnTimeoutTicks: 360,
+      patrolStuckTicks: 300,
+    },
+  },
+};
+
+/** Decision RA6: how long a called-in wave hunts the player with no leash, by level. */
+const RAID_CALLED_CHASE_TICKS = { easy: 240, normal: 360, hard: 480 } as const;
+
+/** The full tactics config of a Classic raid at a level (decision RA1; a fresh copy every call). */
+export function raidTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignTacticsConfig {
+  const base = campaignTacticsFor(level) as unknown as Record<string, unknown>;
+  deepAssign(base, structuredClone(RAID_TACTICS_LEVELS[level]) as Record<string, unknown>);
+  const t = base as unknown as CampaignTacticsConfig;
+  t.classicRaid = {
+    routes: structuredClone(RAID_ROUTES),
+    entranceClearTiles: 3,
+    avoidBelts: true,
+    calledChaseTicks: RAID_CALLED_CHASE_TICKS[level],
+  };
+  return t;
+}
+
+/**
+ * The tactics layer's COMBAT model (enemy health, the tactics hit, armour, enemy recovery frames, keep-off-human,
+ * same-tile reach, recovery bonuses): the layer when present and not a Classic raid's (decision RA1), else undefined.
+ */
+export const tacticsCombat = (
+  config: Pick<GameConfig, 'campaignTactics'>,
+): CampaignTacticsConfig | undefined => {
+  const t = config.campaignTactics;
+  return t && !t.classicRaid ? t : undefined;
+};
 
 /** The campaign tuning in force (a ruleset or a test may override it; normal matches use the defaults). */
 export const campaignConfig = (config: Pick<GameConfig, 'campaign'>): CampaignConfig =>

@@ -18,6 +18,7 @@ import type { GridView } from '../grid';
 import { Tile } from '../types';
 import type { Dir, GameState, Player, SimEvent } from '../types';
 import type { GameConfig } from '../config';
+import { tacticsCombat } from '../config';
 import { ENEMY_ATTACK_SETS } from '../data/enemyAttacks';
 import { applyCampaignHit } from './campaignDamage';
 import { enemyFireOf, canThrowNow, launchProjectile, sameSide } from './projectiles';
@@ -155,7 +156,7 @@ export function enemyAfterPunch(state: GameState, p: Player, events: SimEvent[],
   const spec = p.enemyKind ? state.config.enemyAttacks.melee[p.enemyKind] : null;
   if (!spec) return;
   // decision RC9: a miss plants it longer than a hit (campaign tactics layer only)
-  const missExtra = whiffed ? (state.config.campaignTactics?.attack.whiffRecoveryExtraTicks ?? 0) : 0;
+  const missExtra = whiffed ? (tacticsCombat(state.config)?.attack.whiffRecoveryExtraTicks ?? 0) : 0;
   const total = spec.recoveryRootTicks + recoveryBonus(state, p) + missExtra;
   if (total <= 0) return;
   p.rootedUntil = Math.max(p.rootedUntil, state.tick + total);

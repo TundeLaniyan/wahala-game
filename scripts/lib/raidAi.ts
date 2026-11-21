@@ -16,11 +16,11 @@
 import { createBot } from '../../src/ai';
 import type { Bot } from '../../src/ai';
 import { buildRaidGame, campaignEnemyLevel, createGame, observe, tick } from '../../src/sim';
-import type { CampaignLevel, GameState, Generator, Intents, RaidId } from '../../src/sim';
+import type { CampaignLevel, GameState, Generator, Intents, Player, RaidId } from '../../src/sim';
 import { raidDirectiveFor } from '../../src/sim/raid/directives';
 import { RAID_TUNING } from '../../src/sim/raid/tuning';
 import { isCalmMind } from '../../src/sim/systems/enemyPace';
-import { bodyTiles, canSeeTile } from '../../src/sim/systems/sight';
+import { bodyTiles, canSeeTile, inViewCone } from '../../src/sim/systems/sight';
 import { previewBlast } from '../../src/sim/systems/explosions';
 import { Tile } from '../../src/sim/types';
 import { playRaidFight } from './fairHuman';
@@ -47,6 +47,8 @@ export class MovementTracker {
   private readonly last = new Map<number, { x: number; y: number; dx: number; dy: number }>();
   calmTicks = 0;
   calmReversals = 0;
+  /** Calm reversals that are not at a waypoint of its route (no reason: churn). */
+  calmChurn = 0;
   calmSteps = 0;
   allTicks = 0;
   allReversals = 0;
@@ -80,6 +82,9 @@ export class MovementTracker {
       if (calm) {
         this.calmSteps++;
         if (reversed) this.calmReversals++;
+        // a turn-back on a waypoint of its route (the end of a run or a beat) has a reason; anywhere else it is churn
+        const route = s.territory?.minds[p.id]?.spec.patrol ?? [];
+        if (reversed && !route.some((w) => w.x === prev.x && w.y === prev.y)) this.calmChurn++;
       }
       this.last.set(p.id, { x: p.x, y: p.y, dx, dy });
       const v = this.visits.get(p.id) ?? [];
@@ -165,7 +170,8 @@ const WARMUP = RAID_TUNING.spawnWarnTicks + 3 + 240;
 /** The raid walked to `t0` (warm-up with the human idle at the entrance). */
 function atT0(raidId: RaidId, level: CampaignLevel, seed: number): { s: GameState; bots: Map<number, Bot> } {
   const r = raidWithBots(raidId, level, seed);
-  for (let t = 0; t < WARMUP; t++) step(r.s, r.bots);
+  // the seed also moves the moment of the drill (routes are deterministic: a later moment is a different situation)
+  for (let t = 0; t < WARMUP + (seed - 1) * 23; t++) step(r.s, r.bots);
   return r;
 }
 
@@ -200,6 +206,9 @@ export interface DrillResult {
   trapped: number;
 }
 
+/** Debug: set to an array to receive one line per drill run (victim's moves and mind states). */
+export const drillLog: { lines: string[] | null } = { lines: null };
+
 /** Lays the generator at t0 and reports whether enemy `id` lost health to it. */
 function trapRun(
   raidId: RaidId,
@@ -208,13 +217,24 @@ function trapRun(
   id: number,
   x: number,
   y: number,
+  after = 0,
 ): boolean {
   const { s, bots } = atT0(raidId, level, seed);
+  for (let t = 0; t < after; t++) step(s, bots);
   const victim = s.players[id]!;
   const hp0 = victim.vitals?.hp ?? 0;
   s.generators.push(generatorAt(s, x, y));
-  for (let t = 0; t < s.config.generator.fuseTicks + 20; t++) step(s, bots);
-  return !victim.alive || (victim.vitals?.hp ?? 0) < hp0;
+  const trace: string[] = [];
+  for (let t = 0; t < s.config.generator.fuseTicks + 20; t++) {
+    step(s, bots);
+    if (drillLog.lines && t % 10 === 0)
+      trace.push(`${t}:${victim.x},${victim.y}:${s.territory?.minds[id]?.state ?? '-'}`);
+  }
+  const hit = !victim.alive || (victim.vitals?.hp ?? 0) < hp0;
+  drillLog.lines?.push(
+    `${raidId} ${level} seed ${seed} seat ${id} gen ${x},${y} after ${after} ${hit ? 'TRAPPED' : 'escaped'} | ${trace.join(' ')}`,
+  );
+  return hit;
 }
 
 /**
@@ -270,7 +290,7 @@ export function ambushDrill(
 
 /**
  * SEEN: a generator appears on an open tile next to a calm first-wave enemy (not armoured), in its plain view (the
- * eight tiles round a seat are always in view). Escaped = not hurt by it.
+ * eight tiles round a seat are always in view), when a way out of its cross exists within 4 steps. Escaped = not hurt.
  */
 export function seenDrill(raidId: RaidId, level: CampaignLevel, seed: number): DrillResult {
   const out: DrillResult = { staged: 0, trapped: 0 };
@@ -293,9 +313,126 @@ export function seenDrill(raidId: RaidId, level: CampaignLevel, seed: number): D
           s.tiles[t.y * w + t.x] === Tile.Empty &&
           !s.players.some((o) => o.alive && o.x === t.x && o.y === t.y),
       );
-    if (!spot) continue;
+    if (!spot || !escapable(s, e.x, e.y, spot.x, spot.y)) continue;
     out.staged++;
     if (trapRun(raidId, level, seed, e.id, spot.x, spot.y)) out.trapped++;
+  }
+  return out;
+}
+
+/** Can a walker on (x, y) reach a tile outside the cross of a generator on (gx, gy) within 4 steps (a fair drill)? */
+function escapable(s: GameState, x: number, y: number, gx: number, gy: number): boolean {
+  const blast = previewBlast(
+    { ...s, generators: [] } as GameState,
+    generatorAt({ ...s } as GameState, gx, gy),
+  );
+  const w = s.width;
+  let frontier = [{ x, y }];
+  const seen = new Set([y * w + x]);
+  for (let d = 1; d <= 4; d++) {
+    const next: { x: number; y: number }[] = [];
+    for (const t of frontier)
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const) {
+        const nx = t.x + dx;
+        const ny = t.y + dy;
+        const i = ny * w + nx;
+        if (seen.has(i) || s.tiles[i] !== Tile.Empty || (nx === gx && ny === gy)) continue;
+        if (s.players.some((o) => o.alive && o.x === nx && o.y === ny)) continue;
+        if (!blast.has(i)) return true;
+        seen.add(i);
+        next.push({ x: nx, y: ny });
+      }
+    frontier = next;
+  }
+  return false;
+}
+
+/** The blast comes as the enemy reaches the corner, or this many ticks later (while it takes its look round it). */
+const CORNER_DELAYS = [0, 12] as const;
+
+/**
+ * CORNER AMBUSH (the readable-route trap a player prepares): the generator goes two tiles past a corner of the
+ * enemy's route (hidden behind the corner pillar from its approach; else the first tile past it), laid while the enemy cannot see that tile (walls, bodies, its calm view
+ * cone) and is beyond hearing, timed to blow as it reaches the corner or `CORNER_DELAYS[1]` ticks later (two runs).
+ * The first such corner of the next 10 s of its undisturbed walk is used. Trapped = it lost health to that blast.
+ * Raids whose enemies have no route (before decision RA2) stage nothing.
+ */
+export function cornerDrill(raidId: RaidId, level: CampaignLevel, seed: number): DrillResult {
+  const out: DrillResult = { staged: 0, trapped: 0 };
+  for (const delay of CORNER_DELAYS) {
+    const r = cornerDrillAt(raidId, level, seed, delay);
+    out.staged += r.staged;
+    out.trapped += r.trapped;
+  }
+  return out;
+}
+
+function cornerDrillAt(raidId: RaidId, level: CampaignLevel, seed: number, delay: number): DrillResult {
+  const out: DrillResult = { staged: 0, trapped: 0 };
+  const dry = atT0(raidId, level, seed);
+  if (dry.s.generators.length > 0) return out;
+  const fuse = dry.s.config.generator.fuseTicks;
+  const horizon = 600;
+  const track: { x: number; y: number; facing: Player['facing']; alive: boolean; calm: boolean }[][] = [];
+  const views: { tiles: number[]; players: Player[] }[] = [];
+  for (let t = 0; t <= horizon; t++) {
+    track.push(
+      dry.s.players.map((p) => ({
+        x: p.x,
+        y: p.y,
+        facing: p.facing,
+        alive: p.alive,
+        calm: p.alive && calmOf(dry.s, p.id),
+      })),
+    );
+    views.push({ tiles: [...dry.s.tiles], players: dry.s.players.map((p) => ({ ...p })) });
+    step(dry.s, dry.bots);
+  }
+  const t0 = dry.s; // the board after the dry run (only its size and config are read)
+  for (const p of t0.players) {
+    if (p.enemyKind === undefined || ARMOURED.has(p.enemyKind) || !track[0]![p.id]!.calm) continue;
+    const route = dry.s.territory?.minds[p.id]?.spec.patrol ?? [];
+    if (route.length < 2) continue;
+    const hearing = t0.config.campaignTactics?.perception[p.enemyKind].hearingTiles ?? 0;
+    let pick: { x: number; y: number; lay: number } | null = null;
+    for (let tc = fuse - delay + 1; tc <= horizon - delay && !pick; tc++) {
+      const now = track[tc]![p.id]!;
+      const prev = track[tc - 1]![p.id]!;
+      if (!now.calm || (prev.x === now.x && prev.y === now.y)) continue;
+      const i = route.findIndex((w) => w.x === now.x && w.y === now.y);
+      if (i < 0) continue;
+      const next = route[(i + 1) % route.length]!;
+      const lay = tc + delay - fuse;
+      const at = track[lay]![p.id]!;
+      const v = views[lay]!;
+      const view = { tiles: v.tiles, width: t0.width, height: t0.height, players: v.players };
+      // two tiles past the corner (hidden behind the corner pillar from the approach), else the first tile past it
+      const leg = Math.abs(next.x - now.x) + Math.abs(next.y - now.y);
+      for (const k of [2, 1]) {
+        if (k > leg || pick) continue;
+        const g = { x: now.x + Math.sign(next.x - now.x) * k, y: now.y + Math.sign(next.y - now.y) * k };
+        if (t0.tiles[g.y * t0.width + g.x] !== Tile.Empty) continue;
+        if (v.players.some((o) => o.alive && o.x === g.x && o.y === g.y)) continue;
+        // never a tile it walks over before the blast (a generator there would block its walk: a different drill)
+        let crossed = false;
+        for (let k2 = lay; k2 <= tc && !crossed; k2++)
+          crossed = track[k2]![p.id]!.x === g.x && track[k2]![p.id]!.y === g.y;
+        if (crossed) continue;
+        if (Math.abs(at.x - g.x) + Math.abs(at.y - g.y) <= hearing) continue;
+        const looker = { ...v.players[p.id]!, x: at.x, y: at.y, facing: at.facing };
+        const cone = !at.calm || inViewCone(looker, g.x, g.y);
+        if (cone && canSeeTile(view, at.x, at.y, g.x, g.y, 99, bodyTiles(view, p.id))) continue;
+        pick = { ...g, lay };
+      }
+    }
+    if (!pick) continue;
+    out.staged++;
+    if (trapRun(raidId, level, seed, p.id, pick.x, pick.y, pick.lay)) out.trapped++;
   }
   return out;
 }
