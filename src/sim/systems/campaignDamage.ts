@@ -20,7 +20,7 @@
  * of it and kills.
  */
 import { DIR_VEC } from '../grid';
-import { campaignConfig } from '../config';
+import { campaignConfig, tacticsCombat } from '../config';
 import type { CampaignHit, CampaignHitResult, CampaignHitSource, Vitals } from '../campaign/types';
 import { enemyDef } from '../data/enemies';
 import type { EliminationCause, GameState, Player, SimEvent } from '../types';
@@ -61,7 +61,7 @@ export function vitalsFor(
     const pilotHp = config.combatPilot?.enemyHp[setup.enemyKind];
     if (pilotHp !== undefined) return createVitals(pilotHp);
     // the campaign tactics layer's enemy health (decision SA8)
-    const tacticsHp = config.campaignTactics?.enemyHp[setup.enemyKind];
+    const tacticsHp = tacticsCombat(config)?.enemyHp[setup.enemyKind];
     if (tacticsHp !== undefined) return createVitals(tacticsHp);
     const def = enemyDef(setup.enemyKind);
     if (setup.enemyKind !== 'heavy' || setup.maxHp === undefined) return createVitals(def.hp);
@@ -117,7 +117,7 @@ export function applyCampaignHit(
   const cfg = campaignConfig(state.config);
   // recovery frames: the human's `invulnTicks`; an enemy's are the pilot's short ones in a pilot match (CP3)
   const pilot = state.config.combatPilot;
-  const tactics = state.config.campaignTactics;
+  const tactics = tacticsCombat(state.config);
   const frameTicks =
     p.enemyKind === undefined
       ? cfg.invulnTicks

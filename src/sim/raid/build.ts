@@ -3,8 +3,8 @@
  * until their wave) and the config layer a raid adds. `createGame` calls `raidConfigLayer` while it builds the state and
  * `createRaidState` once the board exists; the campaign calls `buildRaidGame`.
  */
-import type { DeepPartial, GameConfig } from '../config';
-import { ticks } from '../config';
+import type { CampaignTacticsConfig, DeepPartial, GameConfig } from '../config';
+import { NIGHT_SIGHT_LEVELS, mergeLayers, raidTacticsFor, ticks } from '../config';
 import type { CharacterId, Difficulty, GameOptions, PlayerSetup } from '../types';
 import { RAID_DEFS } from './defs';
 import { enemySeats } from './layout';
@@ -22,9 +22,21 @@ export function raidArenaId(raidId: RaidId): string {
 }
 
 /**
+ * The Classic raid's tactics layer at a level (decision RA1, docs/CLASSIC_RAID_AI.md): `config.campaignTactics` with
+ * the raid's own numbers and `classicRaid` set, so the enemies get sight, memory, hearing, a territory with a readable
+ * route, a fair pace and bounded pursuit, and keep the raid's own combat rules. A fresh copy every call.
+ */
+export function raidTacticsLayer(level: CampaignLevel | undefined): {
+  campaignTactics: CampaignTacticsConfig;
+} {
+  return { campaignTactics: raidTacticsFor(level ?? 'normal') };
+}
+
+/**
  * The config a raid layers over the defaults: the clock, no random crates (every crate is authored), no hidden
- * pickups, the cross blast of the 'plus' mode (the default), the raid's generator numbers and a respawn that keeps the
- * player's upgrades. There is no Wahala Crush (`modeShrinks`) and no streak or elimination economy.
+ * pickups, the cross blast of the 'plus' mode (the default), the raid's generator numbers, a respawn that keeps the
+ * player's upgrades and the raid tactics layer at the Normal level (`buildRaidGame` adds the Easy / Hard one over it).
+ * There is no Wahala Crush (`modeShrinks`) and no streak or elimination economy.
  */
 export function raidConfigLayer(spec: RaidSpec): DeepPartial<GameConfig> {
   const def = RAID_DEFS[spec.raidId];
@@ -37,6 +49,9 @@ export function raidConfigLayer(spec: RaidSpec): DeepPartial<GameConfig> {
     pickups: { hiddenChance: 0 },
     generator: { baseRange: def.bombs.range, baseCapacity: def.bombs.capacity, blastMode: 'plus' },
     respawn: { resetOnDeath: false },
+    ...raidTacticsLayer('normal'),
+    // a night raid with light-based detection (decision NL10): its Normal numbers (`buildRaidGame` adds Easy / Hard)
+    ...(def.lighting?.detection ? { nightSight: { ...NIGHT_SIGHT_LEVELS.normal } } : {}),
   };
 }
 
@@ -59,7 +74,17 @@ export function buildRaidGame(o: {
 }): GameOptions {
   const def = RAID_DEFS[o.raidId];
   const maxHp = levelMaxHp(o.maxHp ?? def.humanMaxHp, o.level);
-  const levelConfig = levelConfigLayer(o.level);
+  // the level's health / damage, and its raid tactics (Normal adds nothing: `raidConfigLayer` carries it)
+  const levelConfig = mergeLayers<GameConfig>(
+    mergeLayers<GameConfig>(
+      levelConfigLayer(o.level),
+      o.level && o.level !== 'normal' ? raidTacticsLayer(o.level) : undefined,
+    ),
+    // a night raid's detection reacts slower on Easy, faster on Hard (decision NL12)
+    o.level && o.level !== 'normal' && def.lighting?.detection
+      ? { nightSight: { ...NIGHT_SIGHT_LEVELS[o.level] } }
+      : undefined,
+  );
   const players: PlayerSetup[] = [
     { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0, maxHp },
     ...enemySeats(def).map((s, i): PlayerSetup => ({

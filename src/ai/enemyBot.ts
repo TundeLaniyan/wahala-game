@@ -51,6 +51,8 @@ import { isRadial, radialTiles } from './blast';
 const PRESS_GAP = 12;
 /** The fuse an unheeded generator is shown with: far beyond every planning horizon (an obstacle, not a threat). */
 export const UNHEEDED_FUSE = 1_000_000;
+/** Classic raid (decision RA4): a known generator is avoided whatever its fuse (below `UNHEEDED_FUSE`, which stays inert). */
+const RAID_KNOWN_LOOKAHEAD = 100_000;
 
 /** The ordinary profile of a level with everything that needs a generator or a reward switched off. */
 export function enemyProfile(difficulty: Difficulty): AiProfile {
@@ -108,6 +110,8 @@ export class EnemyBot implements Bot {
   /** Campaign tactics: the tick this enemy last moved (a thrower throws only after standing still a while). */
   private lastMoveTick = -1e9;
   private lastTile = -1;
+  /** Classic raid (decision RA5): the directive last followed (kind, and the tile for every kind but a chase). */
+  private lastDirective = '';
 
   constructor(private readonly opts: BotOptions) {
     this.brain = new Brain(enemyProfile(opts.difficulty), opts.seed, opts.playerId);
@@ -127,9 +131,12 @@ export class EnemyBot implements Bot {
       const bump = t.trapSense[variantOf(me)!.personality.trapSense].plannerBump;
       const base = DIFFICULTIES.indexOf(this.opts.difficulty);
       const level = DIFFICULTIES[Math.min(DIFFICULTIES.length - 1, Math.max(0, base + bump))]!;
-      // the territory drives where it goes: no random hesitation or wandering on top (Easy patrols are clockwork)
+      // the territory drives where it goes: no random hesitation or wandering on top (Easy patrols are clockwork).
+      // Classic raid (decision RA4): a generator it KNOWS is respected for its whole fuse (no bot-level lookahead): it
+      // never waits beside one it has seen to step out at the last moment; what it has not seen it cannot dodge
+      const raid = t.classicRaid ? { lookahead: RAID_KNOWN_LOOKAHEAD } : {};
       this.tacticsBrain = new Brain(
-        { ...enemyProfile(level), hesitate: 0, wander: 0 },
+        { ...enemyProfile(level), hesitate: 0, wander: 0, ...raid },
         this.opts.seed,
         this.opts.playerId,
       );
@@ -290,6 +297,14 @@ export class EnemyBot implements Bot {
       const tile = self.y * raw.width + self.x;
       if (tile !== this.lastTile || self.stepRemaining > 0) this.lastMoveTick = raw.tick;
       this.lastTile = tile;
+    }
+    // Classic raid (decision RA5): a new order from its territory (the next waypoint, a pause over, a chase begun or
+    // given up) is acted on at once, not at the next routine re-plan: patrols keep their exact clockwork timing
+    const d = raw.config.campaignTactics?.classicRaid ? raw.directive : undefined;
+    if (d) {
+      const key = d.kind === 'chase' ? d.kind : `${d.kind}:${d.x},${d.y}`;
+      if (key !== this.lastDirective) this.planner(obs).alert();
+      this.lastDirective = key;
     }
     const intent = this.planner(obs).decide(obs);
     // an enemy is not a generator player: scrub everything but movement

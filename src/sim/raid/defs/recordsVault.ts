@@ -4,7 +4,8 @@
  * hall (door 1 opens when its two guards are down) -> the registry (door 2 opens when its marked cabinet is destroyed;
  * the archive guards and their lieutenant appear) -> the archive (door 3 opens when the lieutenant is down) -> the
  * vault with two marked cabinets and two barrels. A small Armour closet hides at the east end of the archive (its door
- * opens when the jammed shelf beside it is destroyed). The exit is in the entrance hall.
+ * opens when the jammed shelf beside it is destroyed). The exit is in the entrance hall. It is the one NIGHT raid: the
+ * power is off and the fighter works by flashlight (`lighting`, docs/CLASSIC_LIGHTING.md).
  *
  *      012345678901234
  *    0 ###############
@@ -95,4 +96,16 @@ export const RECORDS_VAULT: RaidDef = {
   timeLimitSec: 270,
   parSec: 180,
   bombs: { range: 2, capacity: 2 },
+  // the night break-in (docs/CLASSIC_LIGHTING.md, decision NL4): the power is off; the fighter's flashlight, the
+  // wardens' and the archive guards' torches and three small lamps (the entrance, the exit sign, the registry desk)
+  lighting: {
+    mode: 'night',
+    practicals: [
+      { x: 1, y: 11, radius: 1.2 },
+      { x: 13, y: 11, radius: 1.2 },
+      { x: 9, y: 7, radius: 1.5 },
+    ],
+    torchKinds: ['guard', 'lieutenant'],
+    detection: true,
+  },
 };

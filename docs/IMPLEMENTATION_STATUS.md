@@ -2,6 +2,18 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Classic lighting (branch `claude/wahala-cl-night`, from `514be88`)
+
+Every raid now wears its designed art (the table was keyed by raid id, so all six fell back to Danfo Bus Park; decision
+NL1), readability measured on the rendered picture and guarded by a code index on Low and High (NL2), warnings fog-free
+(NL3). One deliberately dark raid, the Records Vault night break-in (NL4-NL9): a pure lit-tile rule
+(`sim/raid/light.ts`), a darkness mask in the grit patch, an always-on flashlight that follows the fighter, guard torch
+beams clipped by walls, enemies hidden outside the light, the maze kept as dim silhouettes and saturated red blast lanes
+(NL14-NL15). Light-based detection is live in that raid on the merged raid AI (NL10-NL13: calm torch guards notice only
+on their own lit torch tiles after a 0.25-0.5 s reaction, the fighter's beam costs one tile, the dark only contact),
+measured fair (8/8 completed at every level) and isolated (lit raids and every other mode byte-identical).
+`docs/CLASSIC_LIGHTING.md`; screenshots in `docs/screenshots/classic-lighting/`.
+
 ## Mission guidance: briefings, objective HUD and target pins (branch `claude/wahala-cg-guidance`, from `0b89d09`)
 
 A short visual briefing before every campaign mission (field, boss, finale and the standalone raid; compact on a replay),
@@ -727,3 +739,5 @@ Lekki's Gate Approach and Estate Sweep and the finale's Return to Ojuelegba and 
 
 ## Ebute Metta and Lagos Island campaign areas (branch `claude/wahala-cg-ebute-island`, from `662f8e2`; decisions WE1-WE8; not merged, not deployed)
 Yard Approach on the Iron Lane Freight Yard (879 tiles), Ledger Row on the Ledger Lanes (831), Press Run on the Press Yards (736), each with 4 sub-areas, a sector gate and re-authored encounters, drawn with the community kit (`KITS.ebuteMetta`, `KITS.lagosIsland`; one backward-compatible kit option, `floor.extra`); both bosses unchanged (WE8). docs/CAMPAIGN_WORLD.md "Ebute Metta and Lagos Island".
+
+- Classic raid enemy AI (branch `claude/wahala-cl-raid-ai`, from `514be88`; decisions RA1-RA7; docs/CLASSIC_RAID_AI.md; not merged, not deployed): raids run the campaign tactics layer without its combat model: deterministic routes derived from the board (loops round pillar blocks, corridor runs, beats, posts), sight / memory / short hearing, slower-than-player pace that planner and sim agree on, bounded pursuit, called waves; churn 31-66 -> 0 reversals per enemy-minute, corner ambushes on routes trap 100 / 72 / 25 % (Easy / Normal / Hard); every other match type byte-identical (`tests/raid-ai-isolation.test.ts`).

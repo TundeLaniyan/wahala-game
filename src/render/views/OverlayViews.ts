@@ -1,4 +1,5 @@
 import { Group, Sprite, SpriteMaterial, AdditiveBlending } from 'three';
+import type { MeshBasicMaterial } from 'three';
 import { DIR_VEC, canThrow, previewBlast, spectatorLane, spectatorLanding } from '../../sim';
 import type { Dir, TilePos, VehicleEntry } from '../../sim';
 import { entryKey } from '../../sim';
@@ -30,12 +31,19 @@ export class OverlayViews implements View {
   private readonly fill = new TileOverlay(tileGlowTexture(), 2048, 7);
   private readonly chevrons = new TileOverlay(chevronTexture(), 300, 8);
   private readonly rings = new TileOverlay(ringTexture(), 260, 9);
+  /**
+   * A NIGHT raid only (decision NL15): the blast danger lanes as a saturated red, alpha-blended (an additive red over the
+   * cold dark floor read pale magenta) and not tone-mapped, so a lane reads at full strength over the dark. Lit matches
+   * never use it: their lanes are drawn exactly as before.
+   */
+  private readonly nightDanger = new TileOverlay(tileGlowTexture(), 512, 7, 0.046, false);
   private readonly gates: Sprite[] = [];
   private pickTargets: { key: string; kind: 'entry' | 'turn'; x: number; y: number }[] = [];
   private readonly projectiles = new Map<number, Sprite>();
 
   constructor() {
-    this.group.add(this.fill.mesh, this.chevrons.mesh, this.rings.mesh);
+    this.group.add(this.fill.mesh, this.chevrons.mesh, this.rings.mesh, this.nightDanger.mesh);
+    (this.nightDanger.mesh.material as MeshBasicMaterial).toneMapped = false;
     for (let i = 0; i < 4; i++) {
       const s = new Sprite(
         new SpriteMaterial({
@@ -56,6 +64,7 @@ export class OverlayViews implements View {
   update(ctx: FrameContext): void {
     const { state, time, alpha, layout, info } = ctx;
     this.fill.begin();
+    this.nightDanger.begin();
     this.chevrons.begin();
     this.rings.begin();
     const wx = layout.wx;
@@ -85,6 +94,16 @@ export class OverlayViews implements View {
       for (const idx of previewBlast(state, g)) danger.set(idx, Math.max(danger.get(idx) ?? 0, intensity));
     }
     for (const [idx, intensity] of danger) {
+      if (ctx.night) {
+        this.nightDanger.push({
+          x: wx(idx % state.width),
+          z: wz(Math.floor(idx / state.width)),
+          color: 0xff1c0c,
+          intensity: Math.min(1, 0.72 + 0.45 * intensity),
+          scale: 0.94,
+        });
+        continue;
+      }
       this.fill.push({
         x: wx(idx % state.width),
         z: wz(Math.floor(idx / state.width)),
@@ -278,6 +297,7 @@ export class OverlayViews implements View {
     this.drawSideline(ctx);
     this.drawEntry(ctx, info.entryOverlay);
     this.fill.end();
+    this.nightDanger.end();
     this.chevrons.end();
     this.rings.end();
   }
@@ -450,6 +470,7 @@ export class OverlayViews implements View {
 
   dispose(): void {
     this.fill.dispose();
+    this.nightDanger.dispose();
     this.chevrons.dispose();
     this.rings.dispose();
     for (const s of this.gates) s.material.dispose();

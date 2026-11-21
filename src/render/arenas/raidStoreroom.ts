@@ -44,6 +44,28 @@ export const RAID_STOREROOM_LOOK: ArenaLook = {
   ],
 };
 
+/**
+ * The NIGHT break-in (Records Vault, decision NL4): the same storeroom with the power off. This is the look of what a
+ * light falls on (a neutral, readable interior key); the darkness itself is the mask of the night raid
+ * (`nightMask.ts`), which leaves only the lit tiles at this level. No point lamps (the raid's lamps are tiles of its
+ * light map), black sky, fog pushed past the board so a lit tile is never fogged.
+ */
+export const RAID_STOREROOM_NIGHT_LOOK: ArenaLook = {
+  sky: 0x06080b,
+  fog: { color: 0x07090d, near: 26, far: 70 },
+  sun: { color: 0xdce4f2, intensity: 3.2, position: [-6, 15, 8] },
+  hemi: { sky: 0xa4b0c8, ground: 0x5a5044, intensity: 1.45 },
+  envIntensity: 0.3,
+  exposure: 1.5,
+  floorTint: 0xc8bfb0,
+  pillarTint: 0xbcb4a6,
+  softTint: 0xc0b4a0,
+  slab: 0x4e4a46,
+  street: 0x1a1816,
+  grit: { tone: 0x625a4e, dirt: 0x3e3830, dust: 0x7a7266 },
+  lamps: [],
+};
+
 // ------------------------------------------------------------------------------------------- floor
 
 export const RAID_STOREROOM_FLOOR: FloorDrawer = (g, rg, cols, rows) => {

@@ -2,7 +2,8 @@
  * THE CAMPAIGN TACTICS LAYER: where it is and where it is not (decisions SA3, SA9; docs/CAMPAIGN_SECTOR_AI.md).
  *
  *   present   every campaign FIELD mission and every BOSS mission, at the save's level (Easy / Normal / Hard)
- *   absent    raids (Classic raids keep their rules), the Training Academy (its Tactical Trap pilot is untouched), Classic,
+ *   raids     the raid tactics layer WITHOUT the combat model (decision RA1, docs/CLASSIC_RAID_AI.md)
+ *   absent    the Training Academy (its Tactical Trap pilot is untouched), Classic,
  *             City Rumble (Survival / Deathmatch / Team), multiplayer and online: no key, no runtime, no telegraph event
  *   numbers   the readable commitment of every level: wind-ups, recoveries, cooldowns with a response window, group limits
  */
@@ -19,8 +20,11 @@ import {
   campaignTacticsFor,
   campaignTacticsLayer,
   createGame,
+  enemyDef,
   mergeConfig,
   observe,
+  raidTacticsFor,
+  tacticsCombat,
   tick,
 } from '../src/sim';
 import type { DeepPartial, GameConfig, GameOptions, Intents, MissionId, SimEvent } from '../src/sim';
@@ -112,17 +116,30 @@ describe('present in every campaign field and boss mission (SA3)', () => {
   });
 });
 
-describe('absent everywhere else (SA3): rules, state and events exactly as before', () => {
+// Decision RA1 (docs/CLASSIC_RAID_AI.md) deliberately changed this: until then every raid was asserted to carry NO
+// layer. Classic raids now carry the raid's own tactics layer (perception, territory, pace, cues) WITHOUT its combat
+// model, so a raid keeps its enemy health, punches and recovery frames.
+describe('Classic raids carry the raid tactics layer without its combat model (RA1)', () => {
   it('every raid, standalone or behind a door, at every level', () => {
     for (const raidId of RAID_IDS) {
       for (const level of LEVELS) {
         const s = createGame(buildRaidGame({ raidId, humanCharacter: 'streetBaller', seed: 1, level }));
-        expect('campaignTactics' in s.config, raidId).toBe(false);
+        expect(s.config.campaignTactics, raidId).toEqual(raidTacticsFor(level));
+        expect(s.config.campaignTactics?.classicRaid, raidId).toBeDefined();
+        expect(tacticsCombat(s.config), raidId).toBeUndefined();
+        // the raid's own enemy health, never the layer's table; minds only once a wave wakes
+        for (const p of s.players.slice(1)) expect(p.vitals!.maxHp).toBe(enemyDef(p.enemyKind!).hp);
         expect('territory' in s, raidId).toBe(false);
+        // the raid keeps its own enemy commitment (no tactics wind-ups / recoveries)
+        expect(s.config.enemyAttacks).toEqual(
+          createGame(buildRaidGame({ raidId, humanCharacter: 'streetBaller', seed: 1 })).config.enemyAttacks,
+        );
       }
     }
   });
+});
 
+describe('absent everywhere else (SA3): rules, state and events exactly as before', () => {
   it('the Training Academy: the Generator Tactics lessons keep the pilot, no lesson carries the campaign layer', () => {
     for (const l of LESSONS) {
       const s = l.practice.build('streetBaller');

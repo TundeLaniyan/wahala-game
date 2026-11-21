@@ -258,6 +258,12 @@ export interface EnemyMind {
   humanHpSeen: number;
   /** Decision RC3: after breaking off it does not notice the human by sight before this tick (close / a hit still do). */
   noticeBlockedUntil: number;
+  /**
+   * Decision RA6 (Classic raids only; absent elsewhere): a wave the player's own action called in (a crate, a door) wakes
+   * alerted to where he was, and until this tick it hunts him with no leash, walking-gap or maximum-chase break-off
+   * (losing sight of him still sends it to search).
+   */
+  calledUntil?: number;
 }
 
 /** Runtime of the territorial state machine (systems/territory.ts). ABSENT outside campaign tactics matches. */

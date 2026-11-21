@@ -15,7 +15,7 @@
  * else is exactly as before.
  */
 import type { CampaignHit, CampaignHitSource } from '../campaign/types';
-import { campaignConfig } from '../config';
+import { campaignConfig, tacticsCombat } from '../config';
 import type { EliminationCause, GameState, Player, SimEvent } from '../types';
 import { applyCampaignHit } from './campaignDamage';
 import { eliminate } from './eliminate';
@@ -198,7 +198,7 @@ export function tacticsBlastDamage(
   p: Readonly<Player>,
   source: CampaignHitSource,
 ): number | null {
-  const t = state.config.campaignTactics;
+  const t = tacticsCombat(state.config);
   if (!t || p.enemyKind === undefined || source !== 'blast' || !p.vitals) return null;
   return t.armoured[p.enemyKind] ? t.blastVsArmoured : Math.max(1, p.vitals.hp);
 }
