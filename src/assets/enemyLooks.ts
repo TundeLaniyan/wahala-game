@@ -14,7 +14,29 @@ import type { EnemyVariantId } from '../sim/data/enemyVariants';
 import { DEFAULT_VARIANT_OF_KIND } from '../sim/data/enemyVariants';
 
 /** Enemy variants that have a dedicated 3D model (docs/CHARACTER_PRODUCTION_AGBERO.md). */
-export type DedicatedEnemyModel = 'agbero';
+export type DedicatedEnemyModel =
+  | 'agbero'
+  | 'areaBoy'
+  | 'bottleThrower'
+  | 'marketEnforcer'
+  | 'heavyEnforcer'
+  | 'routeMarshal'
+  | 'ringSecurity'
+  | 'lieutenant';
+
+/**
+ * Dedicated boss models, by the boss seat's name (presentation only; mission data is untouched). The Landlord is a PROVISIONAL
+ * working title (docs/STORY_BIBLE.md); the model follows the name in the data.
+ */
+export const BOSS_MODELS: Readonly<Record<string, string>> = {
+  'Oga Sunmola': 'bossOgaSunmola',
+  'Madam Ronke': 'bossMadamRonke',
+  'Marshal Kobo': 'bossMarshalKobo',
+  'Ikenna Wayside': 'bossIkennaWayside',
+  'Barrister Quill': 'bossBarristerQuill',
+  'Steward Halcyon': 'bossStewardHalcyon',
+  'The Landlord': 'bossTheLandlord',
+};
 
 /** `?legacyEnemies` keeps the temporary kit looks (art comparison, and the safe switch back). */
 export function dedicatedModelsEnabled(
@@ -93,6 +115,7 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyVariantId, EnemyLook>> = {
   },
   areaBoy: {
     variant: 'areaBoy',
+    model: 'areaBoy',
     rig: null,
     scale: 0.95,
     palette: { primary: 0xc9a227, secondary: 0x1d1d20, trim: 0xe8e2d0 },
@@ -104,6 +127,7 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyVariantId, EnemyLook>> = {
   },
   bottleThrower: {
     variant: 'bottleThrower',
+    model: 'bottleThrower',
     rig: null,
     scale: 0.98,
     palette: { primary: 0x3a6c9a, secondary: 0x3a3a3c, trim: 0xd8d2c0 },
@@ -115,6 +139,7 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyVariantId, EnemyLook>> = {
   },
   marketEnforcer: {
     variant: 'marketEnforcer',
+    model: 'marketEnforcer',
     rig: null,
     scale: 1.03,
     palette: { primary: 0x2f6a3e, secondary: 0x2a2420, trim: 0xd8ccb0 },
@@ -126,6 +151,7 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyVariantId, EnemyLook>> = {
   },
   heavyEnforcer: {
     variant: 'heavyEnforcer',
+    model: 'heavyEnforcer',
     rig: 'areaBoss',
     scale: 1.16,
     palette: { primary: 0x7a4a2a, secondary: 0x1e1c1a, trim: 0xb8ab90 },
@@ -137,6 +163,7 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyVariantId, EnemyLook>> = {
   },
   routeMarshal: {
     variant: 'routeMarshal',
+    model: 'routeMarshal',
     rig: null,
     scale: 1.02,
     palette: { primary: RING_PLUM, secondary: 0x24232a, trim: 0xcfc8d6 },
@@ -148,6 +175,7 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyVariantId, EnemyLook>> = {
   },
   ringSecurity: {
     variant: 'ringSecurity',
+    model: 'ringSecurity',
     rig: null,
     scale: 1.05,
     palette: { primary: 0x34363c, secondary: 0x161618, trim: 0x8a8c94 },
@@ -159,6 +187,7 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyVariantId, EnemyLook>> = {
   },
   lieutenant: {
     variant: 'lieutenant',
+    model: 'lieutenant',
     rig: null,
     scale: 1.08,
     palette: { primary: 0x8c1c2a, secondary: 0x141416, trim: 0xe9e1cf },
@@ -191,6 +220,21 @@ export function enemyVariantOf(p: {
 }): EnemyVariantId | null {
   if (p.enemyKind === undefined) return p.enemyVariant ?? null;
   return p.enemyVariant ?? DEFAULT_VARIANT_OF_KIND[p.enemyKind];
+}
+
+/**
+ * The dedicated model a seat wants (an enemy variant's, or a named boss's), or null: the temporary kit / hero look is used.
+ * Whether the file is loaded is the library's business; the caller falls back when it is not.
+ */
+export function dedicatedModelOf(p: {
+  name?: string;
+  enemyKind?: EnemyKind;
+  enemyVariant?: EnemyVariantId;
+}): string | null {
+  if (!dedicatedModelsEnabled()) return null;
+  const boss = p.name !== undefined ? BOSS_MODELS[p.name] : undefined;
+  if (boss) return boss;
+  return enemyLookOf(p)?.model ?? null;
 }
 
 /** The look of a seat (null = not a campaign enemy: multiplayer fighters and the human keep their identity kit). */

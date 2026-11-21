@@ -46,20 +46,23 @@ for (const vpName of vps.split(',')) {
       await page.waitForFunction(() => window.__WAHALA__?.store.getState().loading === null, null, {
         timeout: 180_000,
       });
-      await page.evaluate(() => window.__WAHALA__.startFieldMission('oshodi.approach'));
+      await page.evaluate(
+        (m) => window.__WAHALA__.startFieldMission(m),
+        process.env.MISSION ?? 'oshodi.approach',
+      );
       await page.waitForFunction(
         () => window.__WAHALA__.matchLoad().state === null && !!window.__WAHALA__.getState(),
         null,
         { timeout: 180_000 },
       );
       // stage: the human beside an Agbero, everyone else frozen out of the way; the camera follows the human
-      const staged = await page.evaluate(() => {
+      const staged = await page.evaluate((variant) => {
         const w = window.__WAHALA__;
         const s = w.getState();
         const c = w.controller();
         c.frozen = true;
         while (s.match.phase === 'countdown') w.stepTicks(10);
-        const foe = s.players.find((p) => p.enemyKind === 'agbero' && p.alive);
+        const foe = s.players.find((p) => (p.enemyVariant ?? p.enemyKind) === variant && p.alive);
         if (!foe) return null;
         const me = s.players[0];
         me.x = foe.x;
@@ -68,8 +71,8 @@ for (const vpName of vps.split(',')) {
         foe.facing = 'down';
         w.renderer().cutCamera();
         return { id: foe.id, variant: foe.enemyVariant ?? null, assets: w.assets() };
-      });
-      if (!staged) throw new Error('no agbero in the mission');
+      }, process.env.VARIANT ?? 'agbero');
+      if (!staged) throw new Error(`no ${process.env.VARIANT ?? 'agbero'} in the mission`);
       for (const pose of poseList.split(',')) {
         await page.evaluate(
           ({ id, pose }) => {

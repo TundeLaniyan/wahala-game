@@ -52,6 +52,8 @@ export class RiggedCharacter {
   private oneShot: { name: ClipName; left: number } | null = null;
   private frozen = false;
   private readonly head: Object3D | null;
+  /** The drawn head scale: the cast's 0.82 (its heads are modelled 1.2x), or the model's own `headScale` (node extras). */
+  private readonly headScale: number;
 
   private constructor(body: Object3D, clips: readonly AnimationClip[]) {
     this.body = body;
@@ -60,6 +62,8 @@ export class RiggedCharacter {
     this.mixer = new AnimationMixer(body);
     for (const c of clips) this.actions.set(c.name as ClipName, this.mixer.clipAction(c));
     this.head = body.getObjectByName('head') ?? null;
+    const own = this.head?.userData?.headScale;
+    this.headScale = typeof own === 'number' ? own : ADULT_HEAD_SCALE;
     this.setLoop('Idle', 0);
   }
 
@@ -153,7 +157,7 @@ export class RiggedCharacter {
       }
     }
     this.mixer.update(dt);
-    this.head?.scale.setScalar(ADULT_HEAD_SCALE);
+    this.head?.scale.setScalar(this.headScale);
   }
 
   private activate(name: ClipName, fade: number, restart = false): void {

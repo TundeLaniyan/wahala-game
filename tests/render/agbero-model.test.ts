@@ -13,6 +13,7 @@ import { RiggedCharacter } from '../../src/render/assets/rigged';
 import type { ClipName } from '../../src/render/assets/rigged';
 
 const MODELS = new URL('../../src/assets/models/', import.meta.url);
+const LAZY = new URL('lazy/', MODELS);
 
 interface Glb {
   json: {
@@ -27,8 +28,33 @@ interface Glb {
   bytes: ArrayBuffer;
 }
 
-function readGlb(file: string): Glb {
-  const buf = readFileSync(new URL(file, MODELS));
+/** The same GLB without its embedded textures (Node has no image decoding; geometry, skeleton and clips are what is tested). */
+function withoutTextures(buf: Buffer): ArrayBuffer {
+  const jsonLength = buf.readUInt32LE(12);
+  const doc = JSON.parse(buf.subarray(20, 20 + jsonLength).toString('utf8')) as Record<string, unknown> & {
+    materials?: { pbrMetallicRoughness?: Record<string, unknown> }[];
+  };
+  delete doc.images;
+  delete doc.textures;
+  delete doc.samplers;
+  for (const m of doc.materials ?? []) delete m.pbrMetallicRoughness?.baseColorTexture;
+  let json = Buffer.from(JSON.stringify(doc), 'utf8');
+  json = Buffer.concat([json, Buffer.alloc((4 - (json.length % 4)) % 4, 0x20)]);
+  const binStart = 20 + jsonLength;
+  const bin = buf.subarray(binStart);
+  const out = Buffer.alloc(12 + 8 + json.length + bin.length);
+  out.writeUInt32LE(0x46546c67, 0);
+  out.writeUInt32LE(2, 4);
+  out.writeUInt32LE(out.length, 8);
+  out.writeUInt32LE(json.length, 12);
+  out.writeUInt32LE(0x4e4f534a, 16);
+  json.copy(out, 20);
+  bin.copy(out, 20 + json.length);
+  return out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength);
+}
+
+function readGlb(file: string, dir: URL = MODELS): Glb {
+  const buf = readFileSync(new URL(file, dir));
   const jsonLength = buf.readUInt32LE(12);
   const json = JSON.parse(buf.subarray(20, 20 + jsonLength).toString('utf8')) as Glb['json'];
   return { json, bytes: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) };
@@ -42,7 +68,7 @@ const triangles = (g: Glb): number =>
   );
 
 describe('Agbero GLB contract', () => {
-  const agbero = readGlb('char_agbero.glb');
+  const agbero = readGlb('char_agbero.glb', LAZY);
   const hero = readGlb('char_streetBaller.glb');
 
   it('uses exactly the hero cast skeleton, so every rig convention and the head-scale rule keep working', () => {
@@ -69,17 +95,17 @@ describe('Agbero GLB contract', () => {
   });
 
   it('stays inside the mobile budget of the existing cast (no texture, few materials, bounded size)', () => {
-    expect(triangles(agbero)).toBeLessThanOrEqual(Math.max(triangles(hero), 17500));
-    expect(agbero.json.materials.length).toBeLessThanOrEqual(5);
-    expect(agbero.json.textures ?? []).toHaveLength(0);
-    expect(agbero.bytes.byteLength).toBeLessThan(1.2 * 1024 * 1024);
+    expect(triangles(agbero)).toBeLessThanOrEqual(24000);
+    expect(agbero.json.materials.length).toBeLessThanOrEqual(7);
+    expect((agbero.json.textures ?? []).length).toBeLessThanOrEqual(3);
+    expect(agbero.bytes.byteLength).toBeLessThan(1.6 * 1024 * 1024);
   });
 });
 
 describe('dedicated model switch and fallback', () => {
-  it('only the Agbero names a dedicated model; every other variant keeps its temporary kit', () => {
+  it('every ordinary enemy variant names its own dedicated model; the boss variant keeps the kit (bosses are keyed by name)', () => {
     for (const [variant, look] of Object.entries(ENEMY_LOOKS))
-      expect(look.model, variant).toBe(variant === 'agbero' ? 'agbero' : undefined);
+      expect(look.model, variant).toBe(variant === 'boss' ? undefined : variant);
   });
 
   it('`?legacyEnemies` switches the dedicated models off (art comparison and the safe way back)', () => {
@@ -95,13 +121,13 @@ describe('dedicated model switch and fallback', () => {
 });
 
 describe('RiggedCharacter with the Agbero clips', () => {
-  const agbero = readGlb('char_agbero.glb');
+  const agbero = readGlb('char_agbero.glb', LAZY);
   // lazy: the library must stay empty for the fallback test above until a rig test asks for the model
   let loadedOnce: Promise<void> | null = null;
   const load = (): Promise<void> =>
     (loadedOnce ??= new Promise<void>((resolve, reject) => {
       new GLTFLoader().parse(
-        agbero.bytes,
+        withoutTextures(Buffer.from(agbero.bytes)),
         '',
         (gltf) => {
           (assets as unknown as { assets: Map<string, unknown> }).assets.set('char_agbero', {

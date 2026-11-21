@@ -11,7 +11,7 @@ import {
 } from 'three';
 import type { Player, SimEvent } from '../../sim';
 import { fighterIdentity } from '../../assets/fighterIdentity';
-import { dedicatedModelsEnabled, enemyLookOf } from '../../assets/enemyLooks';
+import { dedicatedModelOf, enemyLookOf } from '../../assets/enemyLooks';
 import { mindOf } from './enemyAwareness';
 import type { EnemyLook } from '../../assets/enemyLooks';
 import { applyEnemyKit, applyEnemyKitFallback } from '../assets/enemyKit';
@@ -93,6 +93,8 @@ interface Visual {
   jolt: { dx: number; dz: number; amount: number; at: number } | null;
   /** Campaign enemy variant drawn (null = an identity kit); a seat whose variant changes is rebuilt. */
   look: EnemyLook['variant'] | null;
+  /** The dedicated model drawn (`char_<id>.glb`), or null for the temporary look; a seat whose model arrives is rebuilt. */
+  dedicated: string | null;
   /** Silhouette scale of the look (1 = the cast's size). */
   scale: number;
   /** Lieutenants and bosses: the gold leader ring (null for everyone else). */
@@ -179,8 +181,10 @@ export class PlayerViews implements View {
   update(ctx: FrameContext): void {
     for (const p of ctx.state.players) {
       let v = this.visuals.get(p.id);
-      // a seat given a different enemy variant (or none) after it was drawn: dress it again
-      if (v && v.look !== (enemyLookOf(p)?.variant ?? null)) {
+      // an on-demand character model this seat wants is requested once; the seat is dressed again when it arrives
+      const want = this.wantedModel(p);
+      // a seat given a different enemy variant (or none) after it was drawn, or whose dedicated model has just loaded: dress it again
+      if (v && (v.look !== (enemyLookOf(p)?.variant ?? null) || v.dedicated !== want)) {
         this.destroy(v);
         v = undefined;
       }
@@ -191,6 +195,21 @@ export class PlayerViews implements View {
       if (this.cull(ctx, p, v)) continue;
       this.pose(ctx, p, v);
     }
+  }
+
+  private readonly requested = new Set<string>();
+
+  /** The dedicated model this seat should be drawn with now (loaded), requesting it first when it is bundled but not yet loaded. */
+  private wantedModel(p: Player): string | null {
+    const id = dedicatedModelOf(p);
+    if (!id) return null;
+    const key = `char_${id}`;
+    if (assets.has(key)) return id;
+    if (!this.requested.has(key) && assets.canEnsure(key)) {
+      this.requested.add(key);
+      void assets.ensure([key]);
+    }
+    return null;
   }
 
   /**
@@ -261,8 +280,7 @@ export class PlayerViews implements View {
     const look = enemyLookOf(p);
     // a variant with a dedicated, fully dressed model uses it when the file loaded; otherwise (file missing or failed,
     // or `?legacyEnemies`) it keeps the rig + kit look below: the safe fallback
-    const dedicated =
-      look?.model && dedicatedModelsEnabled() && assets.has(`char_${look.model}`) ? look.model : null;
+    const dedicated = this.wantedModel(p);
     const modelId =
       dedicated ??
       (look?.rig && assets.has(`char_${look.rig}`)
@@ -275,7 +293,8 @@ export class PlayerViews implements View {
     const base = fighterIdentity(p.slot);
     const teamKit =
       p.team >= 0 ? { ...base, hueShift: 0, hueIndex: 0, headwearColor: teamColor(p.team) } : base;
-    const identity = look ? { ...base, hueShift: 0, hueIndex: 0, headwear: 'none' as const } : teamKit;
+    const identity =
+      look || dedicated ? { ...base, hueShift: 0, hueIndex: 0, headwear: 'none' as const } : teamKit;
     const model =
       createRiggedPlayerModel(modelId, p.id * 0.37, identity) ?? createPlayerModel(p.characterId, identity);
     if (look && model.rigged && !dedicated) applyEnemyKit(model.rigged.body, modelId, look);
@@ -432,7 +451,8 @@ export class PlayerViews implements View {
       joltPending: null,
       jolt: null,
       look: look?.variant ?? null,
-      scale: look?.scale ?? 1,
+      dedicated,
+      scale: dedicated ? 1 : (look?.scale ?? 1),
       leader,
     };
   }
