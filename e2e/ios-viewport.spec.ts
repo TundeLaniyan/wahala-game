@@ -363,6 +363,13 @@ test.describe('Android viewport regression (Pixel, real viewport tag)', () => {
     expect((await getState(page)).generators.length).toBeGreaterThan(0);
     await pinch(cdp, await centreOf(page, 'stick-pad'), a, 120);
     await expectFits(page);
+    // an Android phone enters immersive fullscreen at the first tap (`enterImmersiveMode`) and keeps it through a
+    // rotation; the emulated rotation below resizes the browser window, which a fullscreen window refuses (CI's
+    // Chromium grants fullscreen, the container's did not), so the test leaves fullscreen first
+    await page.evaluate(async () => {
+      if (document.fullscreenElement) await document.exitFullscreen();
+    });
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement === null)).toBe(true);
     await page.setViewportSize({ width: 412, height: 915 });
     await expectFits(page, { controls: false, hud: false });
     await page.setViewportSize({ width: 915, height: 412 });
