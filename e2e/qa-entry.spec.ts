@@ -36,10 +36,10 @@ test('phone: ?qaraid=recordsVault starts the night raid from Home and never writ
   expect(s.raid).toBe('recordsVault');
 
   // pause -> leave the raid: back out of the match, nothing saved
-  await page.keyboard.press('Escape');
+  await page.getByTestId('pause-button').tap(); // the phone's own pause button
   await expect(page.getByTestId('pause-overlay')).toBeVisible();
   await expect(page.getByTestId('raid-retry')).toBeVisible(); // Restart is offered, as in any campaign raid
-  await page.getByTestId('raid-leave').click();
+  await page.getByTestId('raid-leave').tap();
   if ((await page.getByTestId('exit-confirm-leave').count()) > 0)
     await page.getByTestId('exit-confirm-leave').click();
   await expect(page.getByTestId('hud')).toHaveCount(0, { timeout: 60_000 });
