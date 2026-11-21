@@ -30,6 +30,7 @@ import {
   tick,
 } from '../../src/sim';
 import type {
+  CampaignLevel,
   DeepPartial,
   Dir,
   Difficulty,
@@ -540,6 +541,10 @@ export interface RaidFightOptions {
   difficulty: Difficulty;
   config?: DeepPartial<GameConfig>;
   human?: FairHumanOptions;
+  /** Campaign level (Easy / Normal / Hard) handed to `buildRaidGame`; absent = Normal (decision RA, raid AI measurements). */
+  level?: CampaignLevel;
+  /** Called after every tick (the raid AI measurements read the movement). */
+  onTick?: (s: GameState) => void;
 }
 
 /** The first soft tile on the quickest walk (crates count as passable, at a cost) from the human to next to `goal`. */
@@ -614,6 +619,7 @@ export function playRaidFight(
       humanCharacter: 'streetBaller',
       seed: o.seed,
       difficulty: o.difficulty,
+      ...(o.level ? { level: o.level } : {}),
     }),
   );
   if (o.config) Object.assign(s.config, o.config); // shallow: only used for whole-section overrides
@@ -658,6 +664,7 @@ export function playRaidFight(
       if (s.players[Number(id)]!.alive) intents[Number(id)] = bot.decide(observe(s, Number(id)));
     }
     rec.onTick(s, tick(s, intents));
+    o.onTick?.(s);
   }
   st.seconds = s.tick / HZ;
   st.laid = human.laid;
