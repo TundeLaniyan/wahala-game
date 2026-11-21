@@ -228,7 +228,9 @@ export type {
 } from './config';
 export {
   addEnemyMind,
+  callEnemyIn,
   coverTile,
+  enemyLookout,
   enemyMindView,
   investigateSpot,
   noiseBand,

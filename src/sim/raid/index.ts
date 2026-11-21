@@ -28,3 +28,6 @@ export { RAID_TUNING } from './tuning';
 export { RAID_SHAPE_RULE, raidShape, raidShapeProblems } from './shape';
 export type { RaidShape } from './shape';
 export { raidDirectiveFor } from './directives';
+export { raidTacticsLayer } from './build';
+export { raidRoute, raidTerritory, routeTiles } from './routes';
+export type { RaidRoute } from './routes';

@@ -686,6 +686,31 @@ export function territoryDirective(state: GameState, id: number): NpcDirective |
   }
 }
 
+/**
+ * Decision RA7: WHERE A MINDED ENEMY LOOKS, for presentation (a guard's torch beam on a night raid) and tests. `facing`
+ * is `Player.facing`, the direction its calm view cone opens (`inViewCone`); `calm` says whether the cone applies now
+ * (patrolling, holding its post, walking back) or it looks all round (alerted, pursuing, investigating); `noticeTiles`
+ * is how far it notices the human right now (the kind's calm or engaged `awareness` range from the config). Exactly the
+ * inputs `updateTerritory` hands `enemySeesPerson` this tick. Null for a seat without a mind or not alive. Pure.
+ */
+export function enemyLookout(
+  state: GameState,
+  id: number,
+): { x: number; y: number; facing: Player['facing']; calm: boolean; noticeTiles: number } | null {
+  const m = state.territory?.minds[id];
+  const p = state.players[id];
+  if (!m || !p?.alive) return null;
+  const calm =
+    m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && state.tick >= m.watchUntil);
+  return {
+    x: p.x,
+    y: p.y,
+    facing: p.facing,
+    calm,
+    noticeTiles: calm ? m.spec.calmNoticeTiles : m.spec.noticeTiles,
+  };
+}
+
 /** The readable state of an enemy for presentation and tests (decision SA6): the sim's overlay first, then the mind. */
 export type EnemyMindViewState = MindState | 'defeated' | 'stagger' | AttackPhase;
 
