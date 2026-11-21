@@ -77,8 +77,9 @@ Normal / Hard, the ordinary trap sense; the field's x2): tunnel vision, so a gen
 (the next waypoint, a pause over, a chase begun or ended) is acted on at once instead of at the next routine re-plan, so
 the clockwork keeps its timing; goals are sticky because the directive is.
 
-**RA6 - roles.** Only the thrower keeps its distance in a raid (`RaidRouteStyle.keepsDistance`): a lieutenant closes in
-as raid lieutenants always did (it still throws from a clear line) and never takes a group throwing slot; it plans at its
+**RA6 - roles.** Only the thrower keeps its distance in a raid (`RaidRouteStyle.keepsDistance`, read from the seat's kind
+at the moment it pursues): a lieutenant closes in as raid lieutenants always did (it still throws from a clear line) and
+never takes a group throwing slot; it plans at its
 level's bot (+1 on Hard) instead of +2 levels. A wave the player's own action calls in (a marked crate, a door, a cleared
 wave) wakes alerted to him and hunts him for at most `calledChaseTicks` (480 / 600 / 720) with no leash, gap or max-chase
 break-off; losing sight of him still sends it to search. Waves present from the start (`start`, `ticks`) wake calm.

@@ -81,9 +81,7 @@ export function resolveTerritory(
     alertAllies: Math.round((def.alertAllies ?? pers.alertAllies) * cfg.territory.alertAlliesScale),
     escape: def.escape ?? 'free',
     usesCover: pers.usesCover && cfg.territory.coverTiles > 0,
-    preferredRange:
-      def.preferredRange ??
-      (pers.preferredRange || (keepsDistance ? state.config.enemyAttacks.standoffTiles : 0)),
+    preferredRange: pers.preferredRange || (keepsDistance ? state.config.enemyAttacks.standoffTiles : 0),
     noticeTicks: Math.max(1, Math.round(cfg.awareness.noticeTicks * pers.noticeScale)),
     noticeTiles: cfg.awareness.noticeTiles[kind],
     calmNoticeTiles: Math.min(cfg.awareness.noticeTiles[kind], cfg.awareness.calmNoticeTiles[kind]),
@@ -136,6 +134,17 @@ export function callEnemyIn(state: GameState, id: number, until: number, events:
   if (!h) return;
   m.calledUntil = until;
   alert(state, m, p, h, events, null);
+}
+
+/**
+ * The distance this enemy keeps to throw (0 = it closes in like a brawler): its territory's, except in a Classic raid
+ * (decision RA6), where only a kind whose raid style `keepsDistance` (the thrower) keeps one, read from its kind NOW.
+ */
+function keptRange(state: GameState, m: EnemyMind, p: Readonly<Player>): number {
+  const raid = state.config.campaignTactics?.classicRaid;
+  if (!raid || !p.enemyKind) return m.spec.preferredRange;
+  if (!raid.routes[p.enemyKind].keepsDistance) return 0;
+  return m.spec.preferredRange || state.config.enemyAttacks.standoffTiles;
 }
 
 /** The campaign human this enemy reacts to: the nearest living rival without an enemy kind (ties: lowest id). */
@@ -304,7 +313,7 @@ function breakOff(state: GameState, m: EnemyMind, p: Player, events: SimEvent[])
   m.chaseSince = -1;
   m.farSince = -1;
   m.notice = 0;
-  if (m.spec.preferredRange > 0) {
+  if (keptRange(state, m, p) > 0) {
     giveUp(state, m, p, events);
     return;
   }
@@ -674,14 +683,15 @@ export function territoryDirective(state: GameState, id: number): NpcDirective |
         const c = coverTile(state, p, h, cfg.territory.coverTiles);
         if (c) return { kind: 'hold', x: c.x, y: c.y, radius: 0 };
       }
-      if (m.spec.preferredRange > 0) {
-        const slot = throwSlot(state, p, h, m.spec.preferredRange);
+      const range = keptRange(state, m, p);
+      if (range > 0) {
+        const slot = throwSlot(state, p, h, range);
         if (slot) return { kind: 'standoff', x: slot.x, y: slot.y, radius: 0 };
       }
       if (cfg.territory.groupTactics) {
         const d = enemyGroupDirective(state, id, (o) => state.territory?.minds[o.id]?.state === 'pursue');
         // (a mind told to close in, a raid lieutenant (decision RA6), never takes a throwing slot of the group's)
-        const closesIn = m.spec.preferredRange === 0 && d?.kind === 'standoff';
+        const closesIn = range === 0 && d?.kind === 'standoff';
         if (d && d.kind !== 'hold' && d.kind !== 'reinforce' && !closesIn) return d;
       }
       return { kind: 'chase', x: h.x, y: h.y };

@@ -287,15 +287,10 @@ export function raidRoute(
   return { style: 'post', waypoints: [], facing: laneDir(spot, sightFloor) };
 }
 
-/**
- * The territory a raid enemy plays (the route as patrol waypoints; a post has none and watches its spot). Only a kind
- * whose raid style `keepsDistance` (the thrower) keeps its distance to throw (decision RA6): every other raid kind
- * closes in, as it always has in a raid.
- */
-export function raidTerritory(route: RaidRoute, kind: EnemyKind, cfg: ClassicRaidTactics): TerritoryDef {
+/** The territory a raid enemy plays (the route as patrol waypoints; a post has none and watches its spot). */
+export function raidTerritory(route: RaidRoute): TerritoryDef {
   return {
     patrol: route.waypoints.map((t) => [t.x, t.y] as const),
     radius: route.style === 'post' ? 1 : 2,
-    ...(cfg.routes[kind].keepsDistance ? {} : { preferredRange: 0 }),
   };
 }

@@ -185,11 +185,6 @@ export interface TerritoryDef {
   alertAllies?: number;
   /** Escaping a known generator: 'free' (any refuge) or 'territory' (prefers refuges inside its area). */
   escape?: 'free' | 'territory';
-  /**
-   * Decision RA6 (Classic raids): the distance it keeps to throw, overriding its variant's (0 = it closes in like a
-   * brawler: a raid lieutenant is the crew's bruiser, only a thrower keeps its distance). Absent = the variant's.
-   */
-  preferredRange?: number;
 }
 
 /** A territory resolved for one seat (plain JSON in `GameState.territory`). */

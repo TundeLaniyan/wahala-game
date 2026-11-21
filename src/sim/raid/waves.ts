@@ -94,7 +94,7 @@ function activate(state: GameState, r: RaidState, w: RaidWaveState, events: SimE
     if (tactics) {
       const route = raidRoute(state, seat.kind, id, { x, y }, tactics);
       p.facing = route.facing;
-      addEnemyMind(state, id, { x, y }, raidTerritory(route, seat.kind, tactics));
+      addEnemyMind(state, id, { x, y }, raidTerritory(route));
       if (calledIn(w) && tactics.calledChaseTicks > 0)
         callEnemyIn(state, id, state.tick + tactics.calledChaseTicks, events);
     }
