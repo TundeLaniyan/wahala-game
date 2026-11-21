@@ -8,6 +8,8 @@ import { tileAt } from '../grid';
 import { Tile } from '../types';
 import type { GameState, SimEvent } from '../types';
 import { RAID_TUNING } from './tuning';
+import { addEnemyMind, callEnemyIn } from '../systems/territory';
+import { raidRoute, raidTerritory } from './routes';
 import type { RaidState, RaidWaveState } from './types';
 
 export function mainWaves(r: RaidState): RaidWaveState[] {
@@ -44,7 +46,7 @@ export function updateWaves(state: GameState, events: SimEvent[]): void {
         events.push({ type: 'raidWaveStarted', index: main.indexOf(w) + 1, total: main.length });
     }
     if (w.startedTick !== null && !w.activated && state.tick >= w.startedTick + RAID_TUNING.spawnWarnTicks) {
-      activate(state, r, w);
+      activate(state, r, w, events);
     }
     if (w.activated && w.clearedTick === null && w.seatIds.every((id) => !state.players[id]!.alive)) {
       w.clearedTick = state.tick;
@@ -62,7 +64,12 @@ function blocked(state: GameState, x: number, y: number): boolean {
   );
 }
 
-function activate(state: GameState, r: RaidState, w: RaidWaveState): void {
+/** Decision RA6: waves the player's own action brings (a crate, a door, a cleared wave) come in hunting him. */
+function calledIn(w: RaidWaveState): boolean {
+  return w.trigger.kind !== 'start' && w.trigger.kind !== 'ticks';
+}
+
+function activate(state: GameState, r: RaidState, w: RaidWaveState, events: SimEvent[]): void {
   const waited = state.tick - (w.startedTick! + RAID_TUNING.spawnWarnTicks);
   for (const id of w.seatIds) {
     const seat = r.seats.find((s) => s.playerId === id)!;
@@ -82,6 +89,15 @@ function activate(state: GameState, r: RaidState, w: RaidWaveState): void {
     p.protectedUntil = state.tick + RAID_TUNING.enemyAppearProtectTicks;
     p.facing = x < state.width / 2 ? 'right' : 'left';
     seat.active = true;
+    // decision RA2: it wakes into its territory, a readable route derived from the board round where it stands
+    const tactics = state.config.campaignTactics?.classicRaid;
+    if (tactics) {
+      const route = raidRoute(state, seat.kind, id, { x, y }, tactics);
+      p.facing = route.facing;
+      addEnemyMind(state, id, { x, y }, raidTerritory(route));
+      if (calledIn(w) && tactics.calledChaseTicks > 0)
+        callEnemyIn(state, id, state.tick + tactics.calledChaseTicks, events);
+    }
   }
   w.activated = w.seatIds.every((id) => r.seats.find((s) => s.playerId === id)!.active);
   if (w.room !== undefined && w.activated) {

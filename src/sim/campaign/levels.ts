@@ -105,7 +105,8 @@ export function levelConfigLayer(level: CampaignLevel | undefined): DeepPartial<
  * The campaign TACTICS layer of a level (decisions SA3-SA12, docs/CAMPAIGN_SECTOR_AI.md): `config.campaignTactics` and the
  * enemy commitment of `config.enemyAttacks` (wind-ups, recoveries, cooldowns, group limits). Campaign field and boss
  * missions only: `missionConfigLayer` adds the Normal layer to every mission, `buildMissionGame` adds the Easy / Hard one
- * over it. Raids, the Academy, Classic, City Rumble and online never carry it. A fresh copy every call.
+ * over it. Raids carry their own version (`raid/build.ts` `raidTacticsLayer`, decision RA1); the Academy, Classic, City
+ * Rumble and online never carry it. A fresh copy every call.
  */
 export function campaignTacticsLayer(level: CampaignLevel | undefined): {
   campaignTactics: CampaignTacticsConfig;

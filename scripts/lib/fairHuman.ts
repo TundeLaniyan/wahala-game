@@ -30,6 +30,7 @@ import {
   tick,
 } from '../../src/sim';
 import type {
+  CampaignLevel,
   DeepPartial,
   Dir,
   Difficulty,
@@ -61,6 +62,12 @@ export interface FairHumanOptions {
   linger: boolean;
   /** Uses B (the Punch) at all (false: a pure bomber, who only dodges wind-ups). */
   punch: boolean;
+  /**
+   * Raids (decision RA, docs/CLASSIC_RAID_AI.md): with no safe way to a firing tile, walk up to within two tiles of the
+   * target instead of waiting for it to come (an enemy holding a post behind belts or crates is gone for, as a player
+   * would, crossing a thrower's line on the way). Absent = waits, as before.
+   */
+  approach?: boolean;
 }
 
 export const FAIR_HUMAN: FairHumanOptions = { reactTicks: 18, fuseMargin: 45, linger: true, punch: true };
@@ -291,6 +298,15 @@ export class FairHuman {
       const r = this.route(s, danger, avoid, firing, 40);
       if (r?.first) return { move: r.first };
       if (r && r.first === null) return {}; // already on a firing tile, waiting for a way out
+      if (!r && this.opts.approach) {
+        const near = (i: number): boolean =>
+          targets.some(
+            (t) => Math.abs((t % w) - (i % w)) + Math.abs(Math.floor(t / w) - Math.floor(i / w)) <= 2,
+          );
+        // (it walks through a thrower's line to get there: a player does, for a moment)
+        const a = this.route(s, danger, new Set(danger.keys()), near, 60);
+        if (a?.first) return { move: a.first };
+      }
     }
     if (goal !== null) {
       const r = this.route(s, danger, avoid, (i) => i === goal, 60);
@@ -540,6 +556,10 @@ export interface RaidFightOptions {
   difficulty: Difficulty;
   config?: DeepPartial<GameConfig>;
   human?: FairHumanOptions;
+  /** Campaign level (Easy / Normal / Hard) handed to `buildRaidGame`; absent = Normal (decision RA, raid AI measurements). */
+  level?: CampaignLevel;
+  /** Called after every tick (the raid AI measurements read the movement). */
+  onTick?: (s: GameState) => void;
 }
 
 /** The first soft tile on the quickest walk (crates count as passable, at a cost) from the human to next to `goal`. */
@@ -614,6 +634,7 @@ export function playRaidFight(
       humanCharacter: 'streetBaller',
       seed: o.seed,
       difficulty: o.difficulty,
+      ...(o.level ? { level: o.level } : {}),
     }),
   );
   if (o.config) Object.assign(s.config, o.config); // shallow: only used for whole-section overrides
@@ -621,7 +642,8 @@ export function playRaidFight(
   s.players.slice(1).forEach((p, i) => {
     bots[p.id] = createBot({ difficulty: o.difficulty, seed: o.seed + (i + 1) * 7919, playerId: p.id });
   });
-  const human = new FairHuman(o.human ?? FAIR_HUMAN);
+  // a raid player goes for an enemy he cannot fire at from where he is (`approach`)
+  const human = new FairHuman({ ...(o.human ?? FAIR_HUMAN), approach: true });
   const st = emptyStats(s.raid!.seats.length);
   const rec = new Recorder(st);
   const w = s.width;
@@ -646,8 +668,10 @@ export function playRaidFight(
             (Math.abs((b % w) - me.x) + Math.abs(Math.floor(b / w) - me.y)),
         );
       const reachable = marked.map((m) => nextCrate(s, m)).find((c) => c !== null);
+      const exit = r.extraction.y * w + r.extraction.x;
       if (reachable !== undefined && reachable !== null) targets = [reachable];
-      else if (r.extraction.open) goal = r.extraction.y * w + r.extraction.x;
+      // the exit is open but maybe still behind a locked gate (a wave to clear first): only a walkable exit is a goal
+      else if (r.extraction.open && walkSteps(s, me.x, me.y, 99).has(exit)) goal = exit;
       else {
         // nothing to blast yet (a door is closed): hunt the nearest active enemy
         targets = s.players.filter((p) => p.alive && p.enemyKind !== undefined).map((p) => p.y * w + p.x);
@@ -658,6 +682,7 @@ export function playRaidFight(
       if (s.players[Number(id)]!.alive) intents[Number(id)] = bot.decide(observe(s, Number(id)));
     }
     rec.onTick(s, tick(s, intents));
+    o.onTick?.(s);
   }
   st.seconds = s.tick / HZ;
   st.laid = human.laid;

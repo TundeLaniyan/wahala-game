@@ -168,7 +168,7 @@ Four chambers, each behind a door: the entrance hall (door `1`: its two guards d
 - Seat 0 is the human; enemy seats are `players[1..]` with `enemyKind`; a dormant seat is `alive: false` with a position on its spot, so renderers must use `RaidView.seats[].active` (or the wave warnings) rather than `alive` to decide whether to draw an enemy.
 - The doors, cargo and shipments are drawn from `RaidView`; the tile map shows doors and cargo as solid, a destroyed one as floor. A shipment in `warn` phase has `warnTicks > 0` and is not yet dangerous.
 - The field mission hands health in with `buildRaidGame({ hp })` and reads `state.raid.outcome.hpLeft` back; `abandonRaid` ends a raid from the pause menu.
-- Enemy behaviour: raid enemies have no generator economy (`capacity` 0). Until `combat-attacks` provides group tactics they follow `raidDirectiveFor` through `Observation.directive`.
+- Enemy behaviour: raid enemies have no generator economy (`capacity` 0). Since decisions RA1-RA7 (docs/CLASSIC_RAID_AI.md) each plays a territory with a route derived from the board when it wakes (`raid/routes.ts`), the tactics layer's perception and pace, through `raidDirectiveFor` -> `territoryDirective` and `Observation.directive`.
 - Shipment damage goes through `applyCampaignHit` (combat-core), so armour, Okada, recovery frames and health apply as everywhere.
 
 ## Known limits
