@@ -8,6 +8,7 @@ import { minimapCrop, minimapGeometry, minimapLayers, tileToMinimap } from './mi
 import { discoveryFor } from './minimapDiscovery';
 import type { MinimapDiscovery } from './minimapDiscovery';
 import type { MinimapGeometry, MinimapMission } from './minimapModel';
+import { rootSize } from '../platform/viewport';
 import './Minimap.css';
 
 /** Redraws per second (the board changes slowly; players move about 6 tiles a second). */
@@ -277,11 +278,12 @@ export function Minimap() {
       const live = liveMatch();
       if (!live) return;
       const { state, focusId } = live;
-      const short = window.innerHeight < 480;
-      const maxW = short ? 130 : Math.min(230, window.innerWidth * 0.2);
+      const view = rootSize();
+      const short = view.height < 480;
+      const maxW = short ? 130 : Math.min(230, view.width * 0.2);
       // a phone in landscape with a campaign mission: the dock under the map holds the objective, health and lives, which
       // must all fit above the action buttons, so the map is smaller there (docs/CAMPAIGN_INTEGRATION.md, mobile HUD fit)
-      const maxH = short ? (state.mission ? (window.innerHeight < 400 ? 52 : 64) : 96) : 170;
+      const maxH = short ? (state.mission ? (view.height < 400 ? 52 : 64) : 96) : 170;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       // a mission sector: the map shows its part of the district (docs/CAMPAIGN_SECTOR_AI.md)
       const crop = minimapCrop(state);

@@ -2,6 +2,10 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## iOS viewport (branch `claude/wahala-ios-viewport`, from `acaeae7`)
+
+No persistent page zoom in an iPhone landscape match: gestures blocked during play, refit after every viewport change, a zoomed page counter-scaled into view with a pause-menu escape (`docs/IOS_VIEWPORT.md`, decisions IV1-IV6); tested in Chromium iPhone emulation and Vitest, real-iPhone confirmation pending.
+
 ## Classic lighting (branch `claude/wahala-cl-night`, from `514be88`)
 
 Every raid now wears its designed art (the table was keyed by raid id, so all six fell back to Danfo Bus Park; decision
