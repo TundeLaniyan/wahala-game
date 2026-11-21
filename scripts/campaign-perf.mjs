@@ -92,7 +92,9 @@ async function open(q) {
   page.on('pageerror', (e) => errors.push(e.message));
   const net = await meter(page);
   // QUERY (night raid, docs/CLASSIC_LIGHTING.md) and PERF_QUERY (character roster, ?legacyEnemies) both append flags
-  await page.goto(`${base}?debug&noattract&seed=7&q=${q}${process.env.QUERY ?? ''}${process.env.PERF_QUERY ?? ''}`);
+  await page.goto(
+    `${base}?debug&noattract&seed=7&q=${q}${process.env.QUERY ?? ''}${process.env.PERF_QUERY ?? ''}`,
+  );
   await page.getByTestId('title-screen').waitFor();
   // the initial load ends when every bundled model has loaded (the title screen's loading bar is gone)
   await page.waitForFunction(() => window.__WAHALA__?.store.getState().loading === null, null, {
