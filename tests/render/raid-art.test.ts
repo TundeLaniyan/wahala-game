@@ -11,8 +11,10 @@ import { arenaSet } from '../../src/render/arenas';
 import { BUS_PARK_SET } from '../../src/render/arenas/busPark';
 import { NEW_ARENA_ART, NEW_ARENA_FLOORS } from '../../src/render/arenas/newArenas';
 import {
+  RAID_NIGHT_LOOKS,
   RAID_VARIANTS,
   RAID_VARIANT_BY_RAID,
+  isNightRaidArena,
   raidArtTable,
   raidVariantOfArena,
 } from '../../src/render/arenas/raidArt';
@@ -35,14 +37,22 @@ describe('raid arena -> raid art (NL1)', () => {
       const variant = RAID_VARIANT_BY_RAID[raidId];
       expect(raidVariantOfArena(arenaId)).toBe(variant);
       const art = RAID_VARIANTS[variant];
-      expect(arenaLook(arenaId)).toBe(art.look);
+      // a night raid (decision NL4) wears its variant's night look on the same set and floor
+      const look = isNightRaidArena(arenaId) ? RAID_NIGHT_LOOKS[variant] : art.look;
+      expect(look).toBeDefined();
+      expect(arenaLook(arenaId)).toBe(look);
       expect(arenaLook(arenaId)).not.toBe(DANFO_LOOK);
       expect(arenaSet(arenaId)).toBe(art.set);
       expect(arenaSet(arenaId)).not.toBe(BUS_PARK_SET);
       expect(NEW_ARENA_FLOORS()[arenaId]).toBe(art.floor);
-      expect(NEW_ARENA_ART()[arenaId]).toBe(art);
+      // the raid's own lighting, never the `?tod=night` review look
+      expect(NEW_ARENA_ART()[arenaId]!.nightLook).toBeUndefined();
     },
   );
+
+  it('only the Records Vault board is a night raid', () => {
+    expect(RAID_ARENA_IDS.filter(isNightRaidArena)).toEqual(['raidRecordsVault']);
+  });
 
   it('a raid id is not an arena id and an unknown id is not a raid', () => {
     expect(raidVariantOfArena('warehouseDispatchDepot')).toBeNull();

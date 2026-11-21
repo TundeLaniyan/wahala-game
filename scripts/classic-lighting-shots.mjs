@@ -56,14 +56,8 @@ async function startArena(page, arenaId) {
   await card.scrollIntoViewIfNeeded();
   await card.click();
   await page.getByTestId('players-4').click();
+  // START MATCH on Match Setup starts the saved setup (fighter and all): the HUD follows once the match has loaded
   await page.getByTestId('setup-start').click();
-  for (let i = 0; i < 4 && (await page.getByTestId('hud').count()) === 0; i++) {
-    if ((await page.getByTestId('menu-continue').count()) > 0)
-      await page.getByTestId('menu-continue').click();
-    else if ((await page.getByTestId('start-button').count()) > 0)
-      await page.getByTestId('start-button').click();
-    else await page.waitForTimeout(500);
-  }
 }
 
 /** In the page: the readability numbers of the frame `png` (a data URL of the screenshot). */

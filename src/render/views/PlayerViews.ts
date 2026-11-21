@@ -202,6 +202,8 @@ export class PlayerViews implements View {
       const pos = playerGridPos(p, ctx.alpha);
       off = !inView(ctx.layout.wx(pos.x), ctx.layout.wz(pos.y), 2.4);
     }
+    // a night raid: an enemy the dark hides is drawn like one off screen (model, ring, name, marks; decision NL7)
+    if (!off && p.alive && ctx.night?.concealed(p)) off = true;
     if (off) {
       if (!v.culled) {
         v.culled = true;

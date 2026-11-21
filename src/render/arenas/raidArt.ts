@@ -17,7 +17,12 @@ import type { RaidId } from '../../sim/campaign/types';
 import type { ArenaArt } from './newArenas';
 import { RAID_WAREHOUSE_FLOOR, RAID_WAREHOUSE_LOOK, RAID_WAREHOUSE_SET } from './raidWarehouse';
 import { RAID_YARD_FLOOR, RAID_YARD_LOOK, RAID_YARD_SET } from './raidYard';
-import { RAID_STOREROOM_FLOOR, RAID_STOREROOM_LOOK, RAID_STOREROOM_SET } from './raidStoreroom';
+import {
+  RAID_STOREROOM_FLOOR,
+  RAID_STOREROOM_LOOK,
+  RAID_STOREROOM_NIGHT_LOOK,
+  RAID_STOREROOM_SET,
+} from './raidStoreroom';
 
 export type RaidArtVariant = 'warehouse' | 'yard' | 'storeroom';
 
@@ -44,10 +49,32 @@ export function raidVariantOfArena(arenaId: string): RaidArtVariant | null {
   return RAID_ARENA_IDS.includes(arenaId) ? 'warehouse' : null;
 }
 
-/** The art of every raid board, keyed by its sim arena id (every id in `RAID_ARENA_IDS`). */
+/**
+ * The look of a NIGHT raid on each variant (decision NL4): what a light falls on; the dark is the night mask. Only the
+ * storeroom has one today (the Records Vault); a night raid on another variant would use its lit look under the mask.
+ */
+export const RAID_NIGHT_LOOKS: Partial<Readonly<Record<RaidArtVariant, ArenaArt['look']>>> = {
+  storeroom: RAID_STOREROOM_NIGHT_LOOK,
+};
+
+/** Is the raid board `arenaId` a night raid (raid data `lighting`)? */
+export function isNightRaidArena(arenaId: string): boolean {
+  return Object.values(RAID_DEFS).some((d) => d.arenaId === arenaId && d.lighting?.mode === 'night');
+}
+
+/**
+ * The art of every raid board, keyed by its sim arena id (every id in `RAID_ARENA_IDS`). A night raid keeps its
+ * variant's set and floor and wears the variant's night look (it is the raid's own lighting, not the `?tod` review
+ * flag, so it is not an `ArenaArt.nightLook`).
+ */
 export function raidArtTable(): Record<string, ArenaArt> {
   const out: Record<string, ArenaArt> = {};
-  for (const id of RAID_ARENA_IDS) out[id] = RAID_VARIANTS[raidVariantOfArena(id) ?? 'warehouse'];
+  for (const id of RAID_ARENA_IDS) {
+    const variant = raidVariantOfArena(id) ?? 'warehouse';
+    const art = RAID_VARIANTS[variant];
+    const night = isNightRaidArena(id) ? RAID_NIGHT_LOOKS[variant] : undefined;
+    out[id] = night ? { ...art, look: night } : art;
+  }
   return out;
 }
 

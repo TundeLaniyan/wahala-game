@@ -6,7 +6,10 @@ _Last updated at the end of the autonomous Phase 1 build session. Everything bel
 
 Every raid now wears its designed art (the table was keyed by raid id, so all six fell back to Danfo Bus Park; decision
 NL1), readability measured on the rendered picture and guarded by a code index on Low and High (NL2), warnings fog-free
-(NL3). `docs/CLASSIC_LIGHTING.md`; screenshots in `docs/screenshots/classic-lighting/`.
+(NL3). One deliberately dark raid, the Records Vault night break-in (NL4-NL9): a pure lit-tile rule
+(`sim/raid/light.ts`), a darkness mask in the grit patch, an always-on flashlight that follows the fighter, guard torch
+beams clipped by walls, enemies hidden outside the light; light-based detection designed, not built.
+`docs/CLASSIC_LIGHTING.md`; screenshots in `docs/screenshots/classic-lighting/`.
 
 ## Mission guidance: briefings, objective HUD and target pins (branch `claude/wahala-cg-guidance`, from `0b89d09`)
 

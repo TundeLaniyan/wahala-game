@@ -64,6 +64,8 @@ import { StageHazardViews } from './views/StageHazardViews';
 import { MissionViews } from './views/MissionViews';
 import type { MissionMarkerStats } from './views/MissionViews';
 import { RaidViews, isRaidMatch } from './views/RaidViews';
+import { NightLightViews, nightLightingOf } from './views/NightLightViews';
+import type { NightStatus } from './views/NightLightViews';
 import { ObjectiveMarkers, hasObjectivePins } from './views/ObjectiveMarkers';
 import type { ObjectiveMarkerStats } from './views/ObjectiveMarkers';
 import type { RaidViewStats } from './views/RaidViews';
@@ -199,6 +201,8 @@ export class GameRenderer {
   /** The human's swing feedback (combat pilot, lab, Classic, raids and missions). */
   private pilot: CombatPilotViews | null = null;
   private telegraphs: EnemyTelegraphViews | null = null;
+  /** A night raid's darkness mask, beams and hiding (null in every other match, decision NL4). */
+  private night: NightLightViews | null = null;
   private localId = 0;
   /** The stage's living environment (ambient traffic, crowds); null for arenas without one or with `?noenv`. */
   private living: LivingEnvironment | null = null;
@@ -347,6 +351,12 @@ export class GameRenderer {
     // classic raids: cargo, belts, doors, extraction; campaign matches: damage feedback and thrown objects (docs/RAID_PRESENTATION.md)
     this.raid = isRaidMatch(state) ? new RaidViews() : null;
     if (this.raid) this.views.push(this.raid);
+    // a night raid (raid data `lighting`): the darkness mask and the beams, updated before the views that hide in it
+    const lighting = nightLightingOf(state);
+    // (only the beams' segment count follows the preset: the mask, the lit tiles and the hiding never do)
+    const coarse = this.profile.level === 'low' || this.profile.level === 'veryLow';
+    this.night = lighting ? new NightLightViews(state, lighting, coarse ? 10 : 16) : null;
+    if (this.night) this.views.unshift(this.night);
     if (hasCampaignFeedback(state)) {
       this.damage = new DamageViews(players);
       this.projectiles = new ProjectileViews();
@@ -396,6 +406,7 @@ export class GameRenderer {
     if (this.damage) this.scene.add(this.damage.group);
     if (this.pilot) this.scene.add(this.pilot.group);
     if (this.telegraphs) this.scene.add(this.telegraphs.group);
+    if (this.night) this.scene.add(this.night.group);
 
     const tag = (o: { userData: Record<string, unknown> }, cls: GritClass): void => {
       o.userData.grit = cls;
@@ -405,6 +416,8 @@ export class GameRenderer {
     tag(supplies.group, 'none');
     tag(traps.group, 'none');
     tag(generators.group, 'vehicle');
+    // a night raid: a generator keeps part of its own light in the dark (its body stays findable, decision NL6)
+    generators.group.userData.nightK = 0.45;
     tag(flames.group, 'none');
     tag(pickups.group, 'none');
     tag(players.group, 'player');
@@ -415,10 +428,12 @@ export class GameRenderer {
     tag(this.effects.group, 'none');
     if (this.living) tag(this.living.group, 'none');
     if (this.missionMarkers) tag(this.missionMarkers.group, 'none');
-    if (this.raid) tag(this.raid.group, 'none');
+    // a night raid's cargo, doors and belts take the darkness mask (no weathering: class `night`); lit raids unchanged
+    if (this.raid) tag(this.raid.group, this.night ? 'night' : 'none');
     if (this.projectiles) tag(this.projectiles.group, 'none');
     if (this.damage) tag(this.damage.group, 'none');
     if (this.telegraphs) tag(this.telegraphs.group, 'none');
+    if (this.night) tag(this.night.group, 'none');
     this.weather();
 
     this.loaded = true;
@@ -484,6 +499,7 @@ export class GameRenderer {
     this.projectiles = null;
     this.pilot = null;
     this.telegraphs = null;
+    this.night = null;
     this.living = null;
     this.loaded = false;
   }
@@ -803,6 +819,7 @@ export class GameRenderer {
       // follow camera: views may skip what the last frame did not show (the fixed camera shows it all)
       inView: this.mode !== 'arena' && !info.attract ? this.inView : undefined,
       camera: this.rig.camera,
+      night: this.night ?? undefined,
     };
     this.localId = info.localPlayerId;
     this.playBump(info);
@@ -1010,6 +1027,11 @@ export class GameRenderer {
   /** What the raid markers drew last frame (null outside a raid); debug / performance reports. */
   raidStats(): RaidViewStats | null {
     return this.raid?.stats() ?? null;
+  }
+
+  /** What a night raid's light drew last frame (null in every other match); debug / e2e (docs/CLASSIC_LIGHTING.md). */
+  nightStatus(): NightStatus | null {
+    return this.night?.stats() ?? null;
   }
 
   /** What the enemy telegraphs drew last frame (null in a match without campaign enemies); debug / tests. */

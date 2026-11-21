@@ -206,6 +206,8 @@ export class DamageViews implements View {
     for (const p of state.players) {
       if (enemies >= PIP_ENEMIES) break;
       if (!p.vitals) continue;
+      // a night raid: no health pips over an enemy the dark hides (decision NL7)
+      if (ctx.night?.concealed(p)) continue;
       const v = p.vitals;
       const view = enemyHealthView(state, p.id);
       const pips = pipsShown(view, p.alive);
