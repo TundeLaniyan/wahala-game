@@ -115,7 +115,8 @@ for (const scenario of list.split(',')) {
       await page.evaluate((n) => {
         const w = window.__WAHALA__;
         w.controller().frozen = true;
-        w.advance(n);
+        w.stepTicks(Math.max(0, n - 30)); // the sim and every bot, without per-tick presentation (fast)
+        w.advance(Math.min(n, 30)); // the last half second with its events reaching the renderer (poses, cues)
         w.controller().frozen = false;
       }, ticks);
       const t0 = await page.evaluate(() => performance.now());
