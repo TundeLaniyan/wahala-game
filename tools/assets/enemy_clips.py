@@ -236,3 +236,45 @@ CLIP_DEFS = {
 SHARED = ("Win", "Lose", "DieBlast", "DieVehicle")
 
 AGBERO_CLIPS = list(CLIP_DEFS.values()) + [c for c in rig.CLIPS if c.name in SHARED]
+
+
+# ------------------------------------------------------------------------------------------------ hero-specific variants
+
+
+def place_fast(t: float) -> dict:
+    """Campus Queen: a FAST STANDING generator drop (docs: not the deep crouch): a quick shallow dip, one hand swings the
+    generator down in front of her, back upright."""
+    k = min(1.0, t / 0.30)
+    c = sin(np.pi * k) ** 0.8
+    out = {"spine": (16 * c, 0, 0), "chest": (8 * c, 0, 0), "head": (-8 * c, 0, 0)}
+    out["thigh_L"] = (-24 * c, 0, 0)
+    out["shin_L"] = (30 * c, 0, 0)
+    out["thigh_R"] = (10 * c, 0, 0)
+    out["shin_R"] = (22 * c, 0, 0)
+    out["upperarm_L"] = (-48 * c, 0, 6)
+    out["forearm_L"] = (-24 * c, 0, 0)
+    out["upperarm_R"] = (-80 * c, 0, -10)  # the dropping arm
+    out["forearm_R"] = (-18 * c, 0, 0)
+    out["_t"] = {"hips": (0, -0.10 * c, 0.02 * c)}
+    return out
+
+
+def daze_punch(t: float) -> dict:
+    """Lekki Boy: the DAZE PUNCH (a heavy straight, not a spinning kick): quick coil, driven blow, held follow-through."""
+    D = 0.62
+    k = min(1.0, t / D)
+    if k < 0.46:
+        return windup((k / 0.46) * 0.985)
+    return strike(((k - 0.46) / 0.54) * 0.55)
+
+
+def hero_clip_set(name: str) -> list:
+    """The shared fighter clips with the hero-specific replacements applied (names unchanged, so the game needs no mapping)."""
+    out = []
+    for c in rig.CLIPS:
+        if name == "campusQueen" and c.name == "Place":
+            c = Clip("Place", 0.34, place_fast, loop=False)
+        if name == "lekkiBoy" and c.name == "Kick":
+            c = Clip("Kick", 0.62, daze_punch, loop=False)
+        out.append(c)
+    return out

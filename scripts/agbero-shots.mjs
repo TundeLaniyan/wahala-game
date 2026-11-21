@@ -47,14 +47,36 @@ for (const vpName of vps.split(',')) {
         timeout: 180_000,
       });
       await page.evaluate(
-        (m) => window.__WAHALA__.startFieldMission(m),
-        process.env.MISSION ?? 'oshodi.approach',
+        ({ m, order }) => {
+          const w = window.__WAHALA__;
+          const [kind, id] = m.includes(':') ? m.split(':') : ['field', m];
+          if (kind === 'field') return w.startFieldMission(id);
+          const c = w.campaign();
+          c.load();
+          c.startNew();
+          c.storyDone();
+          for (const d of order.slice(0, order.indexOf(id) + 1))
+            c.finishMission({
+              result: 'won',
+              missionId: d,
+              modifiers: [],
+              seconds: 100,
+              livesUsed: 0,
+              phasesCleared: 3,
+              defeat: 'eliminated',
+              stars: 3,
+              creditedKills: 1,
+            });
+          c.toMap();
+          return c.startMission(id);
+        },
+        {
+          m: process.env.MISSION ?? 'oshodi.approach',
+          order: ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta', 'lagosIsland', 'lekki'],
+        },
       );
-      await page.waitForFunction(
-        () => window.__WAHALA__.matchLoad().state === null && !!window.__WAHALA__.getState(),
-        null,
-        { timeout: 180_000 },
-      );
+      await page.waitForFunction(() => !!window.__WAHALA__.getState(), null, { timeout: 180_000 });
+      await page.waitForTimeout(Number(process.env.SETTLE_MS ?? 4000));
       // stage: the human beside an Agbero, everyone else frozen out of the way; the camera follows the human
       const staged = await page.evaluate((variant) => {
         const w = window.__WAHALA__;
@@ -62,7 +84,12 @@ for (const vpName of vps.split(',')) {
         const c = w.controller();
         c.frozen = true;
         while (s.match.phase === 'countdown') w.stepTicks(10);
-        const foe = s.players.find((p) => (p.enemyVariant ?? p.enemyKind) === variant && p.alive);
+        const foe = s.players.find(
+          (p) =>
+            (variant.startsWith('name:')
+              ? p.name === variant.slice(5)
+              : (p.enemyVariant ?? p.enemyKind) === variant) && p.alive,
+        );
         if (!foe) return null;
         const me = s.players[0];
         me.x = foe.x;

@@ -23,6 +23,8 @@ from charkit import Part, hexrgb
 from costume import Ctx
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "src", "assets", "models", "lazy")
+OUT_EAGER = os.path.join(os.path.dirname(__file__), "..", "..", "src", "assets", "models")  # heroes: always needed (menus, every match)
+HEROES = ("streetBaller", "campusQueen", "lekkiBoy")
 
 
 def stripes(draw_cb):
@@ -133,27 +135,37 @@ def market_enforcer() -> Ctx:
 
 def heavy_enforcer() -> Ctx:
     bulk = {
-        "torso/torso-scale-horiz-decr|incr": 0.55, "torso/torso-scale-depth-decr|incr": 0.45, "torso/torso-muscle-dorsi-decr|incr": 0.9,
+        "torso/torso-scale-horiz-decr|incr": 0.60, "torso/torso-scale-depth-decr|incr": 0.50, "torso/torso-muscle-dorsi-decr|incr": 0.9,
         "torso/torso-muscle-pectoral-decr|incr": 0.9, "torso/torso-vshape-decr|incr": 0.6, "measure/measure-neck-circ-decr|incr": 0.9,
-        "measure/measure-upperarm-circ-decr|incr": 0.8, "measure/measure-thigh-circ-decr|incr": 0.6, "measure/measure-waist-circ-decr|incr": 0.5,
-        "measure/measure-shoulder-dist-decr|incr": 0.5, "head/head-scale-horiz-decr|incr": 0.2, "chin/chin-width-decr|incr": 0.5,
+        "measure/measure-upperarm-circ-decr|incr": 0.9, "measure/measure-thigh-circ-decr|incr": 0.9, "measure/measure-calf-circ-decr|incr": 0.7,
+        "measure/measure-waist-circ-decr|incr": 0.6, "measure/measure-shoulder-dist-decr|incr": 0.6, "head/head-scale-horiz-decr|incr": 0.2,
+        "chin/chin-width-decr|incr": 0.6,
     }
-    c = Ctx(spec_of(gender=1.0, age=0.58, muscle=0.92, weight=0.78, height=0.80, detail=bulk), 1.95)
+    c = Ctx(spec_of(gender=1.0, age=0.58, muscle=0.95, weight=0.80, height=0.78, detail=bulk), 1.95)
     j, H = c.j, c.H
-    olive, dark = 0x707658, 0x4c5040
-    c.trousers("trousers", olive, hem=0.12, base=0.024, loose=0.022, budget=1500)
-    c.top("jacket", olive, hem=0.10, sleeve=1.0, base=0.020, loose=0.020, neck_r=0.072, budget=2000)
-    c.top("vest", dark, hem=0.02, sleeve=0.0, base=0.052, loose=0.020, neck_r=0.070, budget=1700)
+    olive, plate, pad, strap = 0x6b7152, 0x2a2d24, 0x4a4f3a, 0x1d1f19
+    c.trousers("trousers", olive, hem=0.12, base=0.034, loose=0.030, budget=1500)
+    jk = c.top("jacket", olive, hem=0.10, sleeve=1.0, base=0.030, loose=0.026, neck_r=0.074, budget=2000)
+    vest = c.top("plate_carrier", plate, hem=0.00, sleeve=0.0, base=0.075, loose=0.016, neck_r=0.072, budget=1700)
+    rx, rz, cz = c.torso_radii(j["chest"][1] - 0.02)
+    # front plate and pouches on the carrier
+    c.box("front_plate", (0.0, j["chest"][1] + 0.02, cz + rz + 0.095), (0.24, 0.30, 0.030), "chest", hexrgb(0x383c2e), radius=0.012)
+    for x in (-0.095, 0.0, 0.095):
+        c.box("mag_pouch", (x, j["chest"][1] - 0.20, cz + rz + 0.095), (0.075, 0.090, 0.040), "chest", hexrgb(strap), radius=0.010)
     for s_ in ("L", "R"):
         sgn = 1 if s_ == "L" else -1
         sh = j[f"upperarm_{s_}"]
-        c.add(ck.prim_ellipsoid("shoulder_pad", "cloth", (sgn * (sh[0] * 0.98 + 0.006), sh[1] + 0.024, sh[2]), (0.082, 0.046, 0.075), f"upperarm_{s_}", hexrgb(dark), lat=10, lon=16, R=ck.rotmat("z", -sgn * 22)))
-        c.limb_ring("arm_guard", s_, f"forearm_{s_}", f"hand_{s_}", 0.5, 0.20, 0.020, 0x464a3a, bone=f"forearm_{s_}")
-        c.limb_ring("glove", s_, f"hand_{s_}", f"hand_{s_}", 0.0, 0.05, 0.016, 0x16171a, bone=f"hand_{s_}") if False else None
-    c.belt("belt", 0x2a2a28, c.hip_y - 0.03, 0.060, grow=0.062)
-    c.shoes("boot", leather=0x2c2a27, sole=0x151516, toecap=0x3d3a35, shaft=0.24)
-    kh.helmet(c, 0x4d5340, rim_color=0x3a3e30)
-    return c, dict(base=0x4a2e1c, kw=dict(brow_thick=1.25, beard=0.4, mustache=0.45, seed=13, scalp=dict(color=0x0c0a09, line=0.12), eye_shadow=0.25))
+        c.add(ck.prim_ellipsoid("shoulder_plate", "cloth", (sgn * (sh[0] + 0.012), sh[1] + 0.045, sh[2]), (0.100, 0.060, 0.100), f"upperarm_{s_}", hexrgb(pad), lat=10, lon=16, R=ck.rotmat("z", -sgn * 24)))
+        c.add(ck.prim_ellipsoid("shoulder_plate2", "cloth", (sgn * (sh[0] + 0.040), sh[1] - 0.030, sh[2]), (0.085, 0.060, 0.090), f"upperarm_{s_}", hexrgb(pad), lat=10, lon=16, R=ck.rotmat("z", -sgn * 40)))
+        c.limb_ring("arm_guard", s_, f"forearm_{s_}", f"hand_{s_}", 0.5, 0.22, 0.026, pad, bone=f"forearm_{s_}")
+        c.limb_ring("elbow_pad", s_, f"upperarm_{s_}", f"forearm_{s_}", 0.96, 0.07, 0.030, strap, bone=f"forearm_{s_}")
+        kn = j[f"shin_{s_}"]
+        c.add(ck.prim_ellipsoid("knee_pad", "cloth", (kn[0], kn[1] + 0.01, kn[2] + 0.085), (0.080, 0.085, 0.040), f"shin_{s_}", hexrgb(pad), lat=8, lon=14))
+    c.gloves(0x1b1c18, cuff=0.05, grow=0.010)
+    c.belt("belt", 0x2e2e2a, c.hip_y - 0.03, 0.065, grow=0.075)
+    c.shoes("boot", leather=0x34312c, sole=0x161617, toecap=0x4a463f, shaft=0.26)
+    kh.helmet(c, 0x59604a, rim_color=0x3a3e2f)
+    return c, dict(base=0x4a2e1c, kw=dict(brow_thick=1.3, beard=0.4, mustache=0.45, seed=13, scalp=dict(color=0x0c0a09, line=0.12), eye_shadow=0.25))
 
 
 def route_marshal() -> Ctx:
@@ -240,10 +252,14 @@ BUILDERS = {
 }
 
 
-def clips_for(kind: str):
+def clips_for(kind: str, name: str = ""):
     from enemy_clips import AGBERO_CLIPS
     import rig
 
+    if kind == "fighter":
+        from enemy_clips import hero_clip_set
+
+        return hero_clip_set(name)
     if kind == "thrower":
         extra = [cl for cl in rig.CLIPS if cl.name == "Throw"]
         return AGBERO_CLIPS + extra
@@ -255,6 +271,7 @@ def build(name: str, tex_res: int = 1024, head_scale: float = 1.06) -> dict:
 
     fn, kind = BUILDERS[name]
     c, tex_cfg = fn()
+    tex_extra = {}
     skin = ck.finish_skin(c.skin, c.G, c.j, 4300)
     skin.mat = "skin"
     skin.c[:] = 1.0
@@ -262,10 +279,20 @@ def build(name: str, tex_res: int = 1024, head_scale: float = 1.06) -> dict:
     atlas = c.decal_atlas()
     if atlas is not None:
         tex["decal"] = atlas
+    if getattr(c, "pattern_img", None) is not None:
+        tex["pattern"] = c.pattern_img
     parts = [skin] + c.G + ck.make_eyes(c.b)
-    os.makedirs(OUT, exist_ok=True)
-    return ck.export_glb(os.path.join(OUT, f"char_{name}.glb"), name, parts, c.j, clips_for(kind), textures=tex, head_scale=head_scale)
+    out_dir = OUT_EAGER if name in HEROES else OUT
+    os.makedirs(out_dir, exist_ok=True)
+    jh = c.j["head"][1]
+    fit = dict(centre=round(float((c.H["top"] + c.H["eye_y"] - 0.04) / 2 - jh), 3), radius=round(float(max(c.H["rx"], c.H["rz"], (c.H["top"] - c.H["eye_y"] + 0.09) / 2) + 0.02), 3))
+    return ck.export_glb(os.path.join(out_dir, f"char_{name}.glb"), name, parts, c.j, clips_for(kind, name), textures=tex, head_scale=head_scale, head_fit=fit)
 
+
+import roster_fighters as _rf  # noqa: E402  (registers heroes and bosses)
+
+for _n, _fn in _rf.FIGHTERS.items():
+    BUILDERS[_n] = (_fn, "fighter")
 
 if __name__ == "__main__":
     for n in sys.argv[1:] or list(BUILDERS):

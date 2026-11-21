@@ -17,6 +17,7 @@ import {
 } from '../src/assets/fighterIdentity';
 import { applyOutfit, buildHeadwear } from '../src/render/assets/outfit';
 import { CHARACTER_IDS } from '../src/sim';
+import { withoutTextures } from './glbNoTextures';
 
 const hueGap = (a: number, b: number): number => {
   const d = Math.abs(a - b) % 360;
@@ -87,8 +88,8 @@ describe('hue rotation', () => {
 describe('applied to the real character models', () => {
   async function load(id: string): Promise<{ scene: Object3D }> {
     const buf = readFileSync(new URL(`../src/assets/models/char_${id}.glb`, import.meta.url));
-    const data = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-    return new GLTFLoader().parseAsync(data, '');
+    // the dedicated hero models embed textures; Node cannot decode images, and this test is about vertex colours
+    return new GLTFLoader().parseAsync(withoutTextures(buf), '');
   }
   const meshes = (root: Object3D): Mesh[] => {
     const out: Mesh[] = [];

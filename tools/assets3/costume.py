@@ -112,12 +112,15 @@ class Ctx:
         self.add(g, budget)
         return self.G[-1]
 
-    def trousers(self, name, color, *, top_off=0.0, hem=0.05, base=0.014, flare=0.0, loose=0.0, budget=1400, mat="cloth", knee=None, taper=0.0) -> Part:
+    def trousers(self, name, color, *, top_off=0.0, hem=0.05, base=0.014, flare=0.0, loose=0.0, budget=1400, mat="cloth", knee=None, taper=0.0, side=None) -> Part:
         """Long trousers / shorts: from the waist to `hem` metres above the ground (shorts: hem = knee height)."""
         top_y = self.hip_y + 0.045 + top_off
 
         def sdf(p):
-            return np.minimum(p[:, 1] - hem, top_y - p[:, 1])
+            f = np.minimum(p[:, 1] - hem, top_y - p[:, 1])
+            if side is not None:  # one leg only (asymmetric kit)
+                f = np.minimum(f, (p[:, 0] if side == "L" else -p[:, 0]) + 0.012)
+            return f
 
         def off(p):
             t = np.clip((self.hip_y - p[:, 1]) / max(self.hip_y - hem, 0.1), 0, 1)
@@ -288,3 +291,140 @@ def _init(self, *a, **kw):
 
 
 Ctx.__init__ = _init
+
+
+# ------------------------------------------------------------------------------------------------ patterns, gloves, beads
+
+
+def pattern(self, part: Part, scale: float = 0.10) -> None:
+    """Printed garment: cylindrical UVs (torso axis for the trunk, the arm axis for sleeves) into this character's pattern tile,
+    seam triangles duplicated so the tile wraps cleanly; the part moves to the 'pattern' material (tile x vertex colour)."""
+    j = self.j
+    v = part.v
+    n = len(v)
+    cz = j["spine"][2]
+    R = 0.17
+    ang = np.arctan2(v[:, 0], v[:, 2] - cz)  # 0 = front, +-pi = back (the seam)
+    u = ang * R / scale
+    vv = v[:, 1] / scale
+    period = np.full(n, 2 * np.pi * R / scale)
+    armw = self.armw(v)
+    for s_, sg in (("L", 1.0), ("R", -1.0)):
+        sel = (armw > 0.4) & ((v[:, 0] * sg) > 0.12)
+        if not sel.any():
+            continue
+        p0, p1 = j[f"upperarm_{s_}"], j[f"hand_{s_}"]
+        d = (p1 - p0) / np.linalg.norm(p1 - p0)
+        out = np.array([sg, 0.0, 0.0])
+        e1 = out - (out @ d) * d
+        e1 /= np.linalg.norm(e1)
+        e2 = np.cross(d, e1)
+        rel = v[sel] - p0
+        along = rel @ d
+        perp = rel - along[:, None] * d
+        a = np.arctan2(perp @ e2, perp @ e1)  # 0 = outward, +-pi = inward (seam hidden)
+        ra = 0.05
+        u[sel] = a * ra / scale + 7.0
+        vv[sel] = along / scale
+        period[sel] = 2 * np.pi * ra / scale
+    uv = np.stack([u, vv], axis=1)
+    # duplicate vertices of triangles that cross the seam
+    tris = part.t.copy()
+    newv, neww, newc, newuv, remap = [], [], [], [], {}
+    for k, t in enumerate(tris):
+        us = uv[t, 0]
+        per = period[t].max()
+        if us.max() - us.min() > per * 0.5:
+            hi = us.max()
+            for c in range(3):
+                if us[c] < hi - per * 0.5:
+                    key = int(t[c])
+                    if key not in remap:
+                        remap[key] = n + len(newv)
+                        newv.append(part.v[key]); neww.append(part.w[key]); newc.append(part.c[key]); newuv.append([uv[key, 0] + per, uv[key, 1]])
+                    tris[k, c] = remap[key]
+    if newv:
+        part.v = np.concatenate([part.v, np.array(newv)])
+        part.w = np.concatenate([part.w, np.array(neww)])
+        part.c = np.concatenate([part.c, np.array(newc)])
+        uv = np.concatenate([uv, np.array(newuv)])
+    part.t = tris
+    part.uv = uv
+    part.mat = "pattern"
+
+
+def gloves(self, color, cuff: float = 0.045, grow: float = 0.006, budget: int = 500) -> list[Part]:
+    out = []
+    for s_ in ("L", "R"):
+        sh, wr = self.j[f"forearm_{s_}"], self.j[f"hand_{s_}"]
+        d = (wr - sh) / np.linalg.norm(wr - sh)
+        pt = wr - d * cuff
+        side = (self.v[:, 0] > 0) == (s_ == "L")
+        reg = ((self.M["hands"] > 0.3) | (self.armw(self.v) > 0.5)) & side & (np.abs(self.v[:, 0]) > 0.2)
+        g = ck.garment(self.skin, reg, lambda p, pt=pt, d=d: (p - pt) @ d, grow, f"glove_{s_}", "leather", color=_col(color), relax_iters=1)
+        g.covers = True
+        self.add(g, budget)
+        out.append(g)
+    return out
+
+
+def necklace(self, name, color, drop: float = 0.08, radius: float = 0.0075, y_off: float = -0.01, mat: str = "plastic") -> None:
+    j = self.j
+    rx, rz, cz = self.torso_radii(self.neck_y - 0.07, 0.03)
+    pts = []
+    for th in np.linspace(-np.pi * 0.92, np.pi * 0.92, 22):
+        x = (rx * 0.42 + 0.03) * np.sin(th)
+        z = cz + (rz * 0.85 + 0.03) * np.cos(th)
+        y = self.neck_y - 0.04 + y_off - drop * max(0.0, np.cos(th)) ** 1.5
+        pts.append((x, y, z))
+    p = ck.prim_path(name, mat, pts, [radius] * len(pts), "chest", _col(color), sides=6, caps=False, rings=len(pts) * 2)
+    self.add(p)
+
+
+def sash(self, name, color, width: float = 0.11, side: str = "L", off: float = 0.045, budget: int = 900, mat="cloth") -> Part:
+    """A diagonal band across the chest from one shoulder to the opposite hip, cut exactly from the torso surface."""
+    j = self.j
+    sg = 1.0 if side == "L" else -1.0
+    a = np.array([sg * 0.17, self.neck_y - 0.04])
+    b = np.array([-sg * 0.14, self.hip_y - 0.02])
+    dvec = (b - a) / np.linalg.norm(b - a)
+    nvec = np.array([-dvec[1], dvec[0]])
+
+    def sdf(p):
+        d = np.abs((p[:, 0] - a[0]) * nvec[0] + (p[:, 1] - a[1]) * nvec[1])
+        inside = np.where(d < width / 2, 1.0, -1.0) * (width / 2 - d + 0.0) * 0 + (width / 2 - d)
+        along = (p[:, 0] - a[0]) * dvec[0] + (p[:, 1] - a[1]) * dvec[1]
+        return np.minimum(inside, np.minimum(along + 0.02, np.linalg.norm(b - a) + 0.02 - along))
+
+    g = ck.garment(self.skin, (self.M["torso"] > 0.3) & (self.M["arms"] < 0.5), sdf, off, name, mat, color=_col(color), relax_iters=2)
+    self.add(g, budget)
+    return self.G[-1]
+
+
+Ctx.pattern = pattern
+Ctx.gloves = gloves
+Ctx.necklace = necklace
+Ctx.sash = sash
+
+
+def sleeve(self, side: str, color, start: float = 0.10, end: float = 0.97, off: float = 0.006, budget: int = 700, name="sleeve", mat="cloth") -> Part:
+    """One sleeve / arm band on a single arm (compression sleeve, arm guard)."""
+    sh, wr = self.j[f"upperarm_{side}"], self.j[f"hand_{side}"]
+    d = wr - sh
+    L = np.linalg.norm(d)
+    d = d / L
+    p_end = sh + d * L * end
+    p_start = sh + d * L * start
+    sg = 1.0 if side == "L" else -1.0
+
+    def sdf(p):
+        f = np.minimum(-((p - p_end) @ d), (p - p_start) @ d)
+        return np.minimum(f, np.where((p[:, 0] * sg) > 0.10, 1.0, -1.0))
+
+    reg = ((self.M["arms"] > 0.3)) & ((self.v[:, 0] * sg) > 0.1)
+    g = ck.garment(self.skin, reg, sdf, off, name, mat, color=_col(color), relax_iters=1)
+    self.add(g, budget)
+    return self.G[-1]
+
+
+Ctx.sleeve = sleeve

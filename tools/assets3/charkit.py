@@ -440,6 +440,7 @@ MATERIAL_PROPS = {
     "skin": dict(roughness=0.58, metallic=0.0),
     "cloth": dict(roughness=0.86, metallic=0.0),
     "leather": dict(roughness=0.55, metallic=0.0),
+    "pattern": dict(roughness=0.86, metallic=0.0),
     "hair": dict(roughness=0.5, metallic=0.0, double_sided=True),
     "metal": dict(roughness=0.32, metallic=0.7),
     "plastic": dict(roughness=0.4, metallic=0.0),
@@ -449,7 +450,7 @@ MATERIAL_PROPS = {
 }
 
 
-def export_glb(path: str, name: str, parts: list[Part], joints: dict, clips: list, textures: dict | None = None, head_scale: float = 1.0) -> dict:
+def export_glb(path: str, name: str, parts: list[Part], joints: dict, clips: list, textures: dict | None = None, head_scale: float = 1.0, head_fit: dict | None = None) -> dict:
     """Skinned GLB on the shared 22-bone skeleton. `textures`: material name -> PIL image (base colour)."""
     import io
 
@@ -466,7 +467,7 @@ def export_glb(path: str, name: str, parts: list[Part], joints: dict, clips: lis
     nodes: dict[str, int] = {}
     for bone, parent in HIERARCHY:
         nodes[bone] = g.add_node(bone, nodes.get(parent) if parent else None, translation=rest[bone], rotation=(0, 0, 0, 1))
-    g.nodes[nodes["head"]]["extras"] = {"headScale": head_scale}
+    g.nodes[nodes["head"]]["extras"] = {"headScale": head_scale, **({"headFit": head_fit} if head_fit else {})}
     joint_nodes = [nodes[b] for b in BONES]
     ibm = np.array([np.linalg.inv(np.block([[np.eye(3), world[b][:, None]], [np.zeros((1, 3)), np.ones((1, 1))]])) for b in BONES])
     skin_i = g.add_skin(f"{name}_skin", joint_nodes, ibm, nodes["root"])

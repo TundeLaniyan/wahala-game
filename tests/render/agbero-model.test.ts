@@ -10,6 +10,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { dedicatedModelsEnabled, ENEMY_LOOKS } from '../../src/assets/enemyLooks';
 import { assets } from '../../src/render/assets/library';
 import { RiggedCharacter } from '../../src/render/assets/rigged';
+import { withoutTextures } from '../glbNoTextures';
 import type { ClipName } from '../../src/render/assets/rigged';
 
 const MODELS = new URL('../../src/assets/models/', import.meta.url);
@@ -26,31 +27,6 @@ interface Glb {
     animations: { name: string }[];
   };
   bytes: ArrayBuffer;
-}
-
-/** The same GLB without its embedded textures (Node has no image decoding; geometry, skeleton and clips are what is tested). */
-function withoutTextures(buf: Buffer): ArrayBuffer {
-  const jsonLength = buf.readUInt32LE(12);
-  const doc = JSON.parse(buf.subarray(20, 20 + jsonLength).toString('utf8')) as Record<string, unknown> & {
-    materials?: { pbrMetallicRoughness?: Record<string, unknown> }[];
-  };
-  delete doc.images;
-  delete doc.textures;
-  delete doc.samplers;
-  for (const m of doc.materials ?? []) delete m.pbrMetallicRoughness?.baseColorTexture;
-  let json = Buffer.from(JSON.stringify(doc), 'utf8');
-  json = Buffer.concat([json, Buffer.alloc((4 - (json.length % 4)) % 4, 0x20)]);
-  const binStart = 20 + jsonLength;
-  const bin = buf.subarray(binStart);
-  const out = Buffer.alloc(12 + 8 + json.length + bin.length);
-  out.writeUInt32LE(0x46546c67, 0);
-  out.writeUInt32LE(2, 4);
-  out.writeUInt32LE(out.length, 8);
-  out.writeUInt32LE(json.length, 12);
-  out.writeUInt32LE(0x4e4f534a, 16);
-  json.copy(out, 20);
-  bin.copy(out, 20 + json.length);
-  return out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength);
 }
 
 function readGlb(file: string, dir: URL = MODELS): Glb {

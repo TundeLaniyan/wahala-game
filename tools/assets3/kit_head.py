@@ -117,9 +117,8 @@ def afro(ctx, color, size=1.0, noise=0.010, seed=4):
     p = ck.clip(p, p.v[:, 1] - (base_y - 0.015))
     n = ck.normals(p)
     bump = rng.normal(0, 1, len(p.v))
-    from scipy.ndimage import gaussian_filter1d
-
-    p.v = p.v + n * (noise * np.sin(p.v[:, 0] * 90 + p.v[:, 2] * 70) * 0.5 + noise * 0.4 * bump[:, None]).reshape(-1, 1)
+    disp = noise * 0.5 * np.sin(p.v[:, 0] * 90 + p.v[:, 2] * 70) + noise * 0.4 * bump
+    p.v = p.v + n * disp[:, None]
     p.c = p.c * (0.85 + 0.3 * rng.random((len(p.v), 1)))
     ctx.add(p)
 
@@ -136,7 +135,7 @@ def locs(ctx, color, count=26, length=0.30, ponytail=True, radius=0.0115, seed=7
         mid = tie + (start - tie) * 0.35 + np.array([0, 0.015, -0.01])
         end = tie + np.array([rng.uniform(-0.04, 0.04), -length * rng.uniform(0.6, 1.0), -0.05 - rng.uniform(0, 0.05)])
         pts = [start, mid, tie, (tie + end) / 2 + np.array([0, 0, -0.03]), end]
-        w = ck.prim_path("loc", "hair", pts, [radius, radius * 0.9, radius, radius * 0.95, radius * 0.7], "head", hexrgb(color) * (0.85 + 0.25 * rng.random()), sides=6, caps=True, rings=14)
+        w = ck.prim_path("loc", "hair", pts, [radius, radius * 0.9, radius, radius * 0.95, radius * 0.7], "head", hexrgb(color) * (0.85 + 0.25 * rng.random()), sides=5, caps=True, rings=10)
         # the lower half hangs from the head / neck: blend weights toward the chest with the drop below the head joint
         t = np.clip((ctx.j["head"][1] - w.v[:, 1] + 0.05) / 0.3, 0, 1)
         w.w = w.w * (1 - t)[:, None] + ck.bone_w(len(w.v), "chest") * t[:, None]
