@@ -265,8 +265,8 @@ export interface EnemyMind {
   noticeBlockedUntil: number;
   /**
    * Decision RA6 (Classic raids only; absent elsewhere): a wave the player's own action called in (a crate, a door) wakes
-   * alerted to where he was, and until this tick it hunts him with no leash and no walking-gap break-off (the
-   * maximum chase still ends it).
+   * alerted to where he was, and until this tick it hunts him with no leash, walking-gap or maximum-chase break-off
+   * (losing sight of him still sends it to search).
    */
   calledUntil?: number;
 }

@@ -532,6 +532,12 @@ export interface RaidRouteStyle {
   maxLoopTiles: number;
   /** beat, and a loop kind's corridor run when no loop fits: tiles of the straight run, its spot included. */
   runTiles: number;
+  /**
+   * Decision RA6: pursuing, it keeps its distance and lines up a throw (the thrower) instead of closing in. False for
+   * every other raid kind, whatever its field variant does: a raid lieutenant is the crew's bruiser (it still throws
+   * when the player stands in a clear line).
+   */
+  keepsDistance: boolean;
 }
 
 /** The Classic raid's part of the tactics layer (decisions RA1-RA2). */
@@ -543,7 +549,8 @@ export interface ClassicRaidTactics {
   avoidBelts: boolean;
   /**
    * Decision RA6: a wave the player's own action calls in (a marked crate, a door, a cleared wave) wakes alerted to him
-   * and hunts him with no leash for this long (0 = it wakes calm on its route, like the waves present from the start).
+   * and hunts him for at most this long with no leash, walking-gap or maximum-chase break-off (losing sight of him still
+   * sends it to search where it last saw him); 0 = it wakes calm on its route, like the waves present from the start.
    */
   calledChaseTicks: number;
 }
@@ -1578,12 +1585,12 @@ export function campaignTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignT
  */
 const RAID_ROUTES: ClassicRaidTactics['routes'] = {
   // a lap longer than the 3 s fuse: the player can lay a generator round a corner while the walker is on the far side
-  agbero: { style: 'loop', loopTiles: 12, maxLoopTiles: 16, runTiles: 7 },
-  guard: { style: 'loop', loopTiles: 12, maxLoopTiles: 16, runTiles: 7 },
-  thrower: { style: 'post', loopTiles: 0, maxLoopTiles: 0, runTiles: 1 },
-  heavy: { style: 'beat', loopTiles: 0, maxLoopTiles: 0, runTiles: 3 },
-  lieutenant: { style: 'loop', loopTiles: 16, maxLoopTiles: 20, runTiles: 7 },
-  boss: { style: 'post', loopTiles: 0, maxLoopTiles: 0, runTiles: 1 },
+  agbero: { style: 'loop', loopTiles: 12, maxLoopTiles: 16, runTiles: 7, keepsDistance: false },
+  guard: { style: 'loop', loopTiles: 12, maxLoopTiles: 16, runTiles: 7, keepsDistance: false },
+  thrower: { style: 'post', loopTiles: 0, maxLoopTiles: 0, runTiles: 1, keepsDistance: true },
+  heavy: { style: 'beat', loopTiles: 0, maxLoopTiles: 0, runTiles: 3, keepsDistance: false },
+  lieutenant: { style: 'loop', loopTiles: 16, maxLoopTiles: 20, runTiles: 7, keepsDistance: false },
+  boss: { style: 'post', loopTiles: 0, maxLoopTiles: 0, runTiles: 1, keepsDistance: false },
 };
 
 export const RAID_TACTICS_LEVELS: Readonly<
@@ -1591,6 +1598,9 @@ export const RAID_TACTICS_LEVELS: Readonly<
 > = {
   easy: {
     id: 'raid.tactics/1',
+    // the raid lieutenant (expert trap sense) plans like its level's bot, a little quicker to react: the crew's
+    // bruiser, not a second boss (decision RA6)
+    trapSense: { expert: { plannerBump: 0, reactScale: 0.8 } },
     perception: {
       agbero: { hearingTiles: 1 },
       guard: { hearingTiles: 1 },
@@ -1635,6 +1645,9 @@ export const RAID_TACTICS_LEVELS: Readonly<
   },
   normal: {
     id: 'raid.tactics/1',
+    // the raid lieutenant (expert trap sense) plans like its level's bot, a little quicker to react: the crew's
+    // bruiser, not a second boss (decision RA6)
+    trapSense: { expert: { plannerBump: 0, reactScale: 0.8 } },
     perception: {
       agbero: { hearingTiles: 2 },
       guard: { hearingTiles: 2 },
@@ -1679,8 +1692,9 @@ export const RAID_TACTICS_LEVELS: Readonly<
   },
   hard: {
     id: 'raid.tactics/1',
-    // a raid board is a small maze: a calm Hard walker looks as far ahead as a Normal one, it just reacts faster
-    trapSense: { basic: { calmVisionTiles: 3 } },
+    // a raid board is a small maze: a calm Hard walker looks as far ahead as a Normal one, it just reacts faster; the
+    // lieutenant plans one bot level above the level's (decision RA6)
+    trapSense: { basic: { calmVisionTiles: 3 }, expert: { plannerBump: 1, reactScale: 0.8 } },
     perception: {
       agbero: { hearingTiles: 3, reactTicks: 26 },
       guard: { hearingTiles: 3, reactTicks: 22 },
@@ -1726,7 +1740,7 @@ export const RAID_TACTICS_LEVELS: Readonly<
 };
 
 /** Decision RA6: how long a called-in wave hunts the player with no leash, by level. */
-const RAID_CALLED_CHASE_TICKS = { easy: 240, normal: 360, hard: 480 } as const;
+const RAID_CALLED_CHASE_TICKS = { easy: 480, normal: 600, hard: 720 } as const;
 
 /** The full tactics config of a Classic raid at a level (decision RA1; a fresh copy every call). */
 export function raidTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignTacticsConfig {

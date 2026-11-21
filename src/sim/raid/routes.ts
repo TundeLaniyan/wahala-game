@@ -18,7 +18,6 @@
  */
 import type { ClassicRaidTactics } from '../config';
 import type { EnemyKind, TerritoryDef } from '../campaign/types';
-import { ENEMY_ATTACK_SETS } from '../data/enemyAttacks';
 import { DIRS, DIR_VEC } from '../grid';
 import { Tile } from '../types';
 import type { Dir, GameState, TilePos } from '../types';
@@ -289,13 +288,14 @@ export function raidRoute(
 }
 
 /**
- * The territory a raid enemy plays (the route as patrol waypoints; a post has none and watches its spot). Only a
- * thrower keeps its distance to throw (decision RA6): every other raid kind closes in, as it always has in a raid.
+ * The territory a raid enemy plays (the route as patrol waypoints; a post has none and watches its spot). Only a kind
+ * whose raid style `keepsDistance` (the thrower) keeps its distance to throw (decision RA6): every other raid kind
+ * closes in, as it always has in a raid.
  */
-export function raidTerritory(route: RaidRoute, kind: EnemyKind): TerritoryDef {
+export function raidTerritory(route: RaidRoute, kind: EnemyKind, cfg: ClassicRaidTactics): TerritoryDef {
   return {
     patrol: route.waypoints.map((t) => [t.x, t.y] as const),
     radius: route.style === 'post' ? 1 : 2,
-    ...(ENEMY_ATTACK_SETS[kind].keepsDistance ? {} : { preferredRange: 0 }),
+    ...(cfg.routes[kind].keepsDistance ? {} : { preferredRange: 0 }),
   };
 }

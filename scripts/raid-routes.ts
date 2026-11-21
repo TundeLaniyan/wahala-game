@@ -25,7 +25,7 @@ for (const raidId of only ? [only] : RAID_IDS) {
   for (const seat of seats) {
     const r = raidRoute(s, seat.kind, seat.playerId, seat.spot, cfg);
     s.players[seat.playerId]!.alive = true;
-    addEnemyMind(s, seat.playerId, seat.spot, raidTerritory(r, seat.kind));
+    addEnemyMind(s, seat.playerId, seat.spot, raidTerritory(r, seat.kind, cfg));
     const mark = String.fromCharCode(64 + seat.playerId);
     rows[seat.spot.y]![seat.spot.x] = mark.toLowerCase();
     for (const w of r.waypoints) rows[w.y]![w.x] = mark;

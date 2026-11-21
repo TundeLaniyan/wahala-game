@@ -124,9 +124,9 @@ export function addEnemyMind(state: GameState, id: number, post: TilePos, def?: 
 
 /**
  * Decision RA6 (Classic raids): enemy seat `id` was called in by the player's own action. It wakes alerted to where he
- * is now (the readable "!", allies within its call radius hear it) and hunts him with no leash or walking-gap break-off
- * until `until`; the maximum chase, losing sight of him and the rest of the machine apply as ever. No-op without a mind
- * or a living human.
+ * is now (the readable "!", allies within its call radius hear it) and hunts him with no leash, walking-gap or
+ * maximum-chase break-off until `until` (a bounded hunt); losing sight of him (it searches where it last saw him) and
+ * the rest of the machine apply as ever. No-op without a mind or a living human.
  */
 export function callEnemyIn(state: GameState, id: number, until: number, events: SimEvent[]): void {
   const m = state.territory?.minds[id];
@@ -475,8 +475,9 @@ function advance(
         else if (m.farSince < 0) m.farSince = T;
       }
       if (
-        (!called && m.farSince >= 0 && T - m.farSince >= cfg.chase.breakOffTicks) ||
-        (m.chaseSince >= 0 && T - m.chaseSince >= cfg.chase.maxChaseTicks)
+        !called &&
+        ((m.farSince >= 0 && T - m.farSince >= cfg.chase.breakOffTicks) ||
+          (m.chaseSince >= 0 && T - m.chaseSince >= cfg.chase.maxChaseTicks))
       ) {
         breakOff(state, m, p, events);
         return;
@@ -679,7 +680,9 @@ export function territoryDirective(state: GameState, id: number): NpcDirective |
       }
       if (cfg.territory.groupTactics) {
         const d = enemyGroupDirective(state, id, (o) => state.territory?.minds[o.id]?.state === 'pursue');
-        if (d && d.kind !== 'hold' && d.kind !== 'reinforce') return d;
+        // (a mind told to close in, a raid lieutenant (decision RA6), never takes a throwing slot of the group's)
+        const closesIn = m.spec.preferredRange === 0 && d?.kind === 'standoff';
+        if (d && d.kind !== 'hold' && d.kind !== 'reinforce' && !closesIn) return d;
       }
       return { kind: 'chase', x: h.x, y: h.y };
     }
