@@ -4,7 +4,7 @@
  * `createRaidState` once the board exists; the campaign calls `buildRaidGame`.
  */
 import type { CampaignTacticsConfig, DeepPartial, GameConfig } from '../config';
-import { NIGHT_SIGHT_LEVELS, mergeLayers, raidTacticsFor, ticks } from '../config';
+import { NIGHT_SIGHT_LEVELS, RAID_ENEMY_ATTACKS, mergeLayers, raidTacticsFor, ticks } from '../config';
 import type { CharacterId, Difficulty, GameOptions, PlayerSetup } from '../types';
 import { RAID_DEFS } from './defs';
 import { enemySeats } from './layout';
@@ -28,8 +28,13 @@ export function raidArenaId(raidId: RaidId): string {
  */
 export function raidTacticsLayer(level: CampaignLevel | undefined): {
   campaignTactics: CampaignTacticsConfig;
+  enemyAttacks: DeepPartial<GameConfig['enemyAttacks']>;
 } {
-  return { campaignTactics: raidTacticsFor(level ?? 'normal') };
+  return {
+    campaignTactics: raidTacticsFor(level ?? 'normal'),
+    // decision AM4: the raid's punches (readable wind-ups, committed strikes, one at a time)
+    enemyAttacks: structuredClone(RAID_ENEMY_ATTACKS[level ?? 'normal']),
+  };
 }
 
 /**

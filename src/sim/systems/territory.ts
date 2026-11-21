@@ -216,6 +216,26 @@ function face(p: Player, t: TilePos | null): void {
   p.facing = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
 }
 
+/** Decision AM2: the kinds the Classic raid chaser cap counts (lieutenants and bosses are never capped). */
+const CAPPED_KINDS: ReadonlySet<string> = new Set(['agbero', 'guard', 'thrower', 'heavy']);
+
+/** Decision AM2: are `max` ordinary enemies other than `p` already hunting (alert / pursue)? */
+function chasersFull(state: GameState, p: Player, max: number): boolean {
+  let n = 0;
+  for (const [key, q] of Object.entries(state.territory!.minds)) {
+    const o = state.players[Number(key)]!;
+    if (o.id === p.id || !o.alive || o.enemyKind === undefined || !CAPPED_KINDS.has(o.enemyKind)) continue;
+    if (q.state === 'alert' || q.state === 'pursue') n++;
+  }
+  return n >= max;
+}
+
+/**
+ * `force`: a hit or the human at arm's length (`closeTiles`) always turns it, cap or not (self-defence). Otherwise, in
+ * a Classic raid with the chaser cap full (decision AM2), an ordinary enemy does not join the hunt: it watches him from
+ * where it stands for `returnWatchTicks` (the "?" over it), does not notice him again for that long, then walks back to
+ * its route.
+ */
 function alert(
   state: GameState,
   m: EnemyMind,
@@ -223,10 +243,22 @@ function alert(
   seen: TilePos | null,
   events: SimEvent[],
   byId: number | null,
+  force = false,
 ): void {
   const T = state.tick;
   const was = m.state;
   if (was === 'alert' || was === 'pursue') return;
+  const raid = state.config.campaignTactics!.classicRaid;
+  if (
+    !force &&
+    raid !== undefined &&
+    p.enemyKind !== undefined &&
+    CAPPED_KINDS.has(p.enemyKind) &&
+    chasersFull(state, p, raid.maxChasers)
+  ) {
+    holdBack(state, m, p, seen, events);
+    return;
+  }
   setState(m, 'alert', T);
   m.notice = 0;
   m.chaseSince = T;
@@ -253,6 +285,31 @@ function alert(
     if (manhattan(ally, p) > m.spec.alertAllies) continue;
     alert(state, q, ally, m.lastSeen, events, p.id);
   }
+}
+
+/** Decision AM2: no chase slot. It watches where it saw him from its ground, then walks back to its route. */
+function holdBack(state: GameState, m: EnemyMind, p: Player, seen: TilePos | null, events: SimEvent[]): void {
+  const cfg = state.config.campaignTactics!;
+  const T = state.tick;
+  if (seen) {
+    m.lastSeen = { x: seen.x, y: seen.y };
+    m.lastSeenTick = T;
+  }
+  m.notice = 0;
+  m.noticeBlockedUntil = Math.max(m.noticeBlockedUntil, T + cfg.territory.returnWatchTicks);
+  if (m.state === 'return' && T < m.watchUntil) return;
+  setState(m, 'return', T);
+  m.watchUntil = T + cfg.territory.returnWatchTicks;
+  let best = m.spec.anchors[0]!;
+  for (const a of m.spec.anchors) if (manhattan(a, p) < manhattan(best, p)) best = a;
+  m.target = { x: best.x, y: best.y };
+  pushEnemyCue(state, events, {
+    playerId: p.id,
+    cue: 'investigate',
+    untilTick: m.watchUntil,
+    x: m.lastSeen?.x ?? p.x,
+    y: m.lastSeen?.y ?? p.y,
+  });
 }
 
 function giveUp(state: GameState, m: EnemyMind, p: Player, events: SimEvent[]): void {
@@ -417,7 +474,7 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
     if (calm) {
       const inside = h !== null && territoryDistance(m.spec, h) <= m.spec.pursuitTiles;
       if (h && (hit || close)) {
-        alert(state, m, p, h, events, null);
+        alert(state, m, p, h, events, null, true);
       } else if (h && sees && !blocked) {
         // sight builds up (faster while it is already looking: investigating, or a returning enemy he re-enters on)
         const keen = m.state === 'investigate' || (m.state === 'return' && inside) ? 3 : 1;

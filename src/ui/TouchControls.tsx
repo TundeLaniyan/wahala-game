@@ -11,6 +11,7 @@ import { SPECIAL_HOLD_MS, inputTrace } from '../input';
 import { useGameStore } from '../app/store';
 import { TAP_MS, vibrate } from '../platform/haptics';
 import type { HudMe } from '../app/hud';
+import { clientToRoot, rootRect, rootSize } from '../platform/viewport';
 
 /**
  * Floating thumbstick: a touch anywhere in the bottom-left activation zone becomes the stick's centre
@@ -27,14 +28,15 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
   const zone = useRef<HTMLDivElement>(null);
   // Settings > Control size (decision NV3): Large grows the stick with the buttons
   const scale = useGameStore((s) => (s.settings.controlSize === 'large' ? LARGE_SCALE : 1));
-  const stick = useRef(new VirtualStick(stickConfigFor(window.innerWidth, window.innerHeight, scale)));
+  const stick = useRef(new VirtualStick(stickConfigFor(rootSize().width, rootSize().height, scale)));
   const [view, setView] = useState<{ x: number; y: number; kx: number; ky: number; dir: Dir | null } | null>(
     null,
   );
   const show = (): void => {
     const s = stick.current;
     if (!s.active || !zone.current) return setView(null);
-    const r = zone.current.getBoundingClientRect();
+    // root px (platform/viewport.ts): the same space as the stick's origin, even on a counter-scaled zoomed page
+    const r = rootRect(zone.current);
     setView({ x: s.originX - r.left, y: s.originY - r.top, kx: s.knobX, ky: s.knobY, dir: s.dir });
   };
   const release = (): void => {
@@ -45,7 +47,8 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
   // a rotation or resize mid-drag invalidates the origin: drop the touch and resize the stick
   useEffect(() => {
     const onResize = (): void => {
-      stick.current.config = stickConfigFor(window.innerWidth, window.innerHeight, scale);
+      const view = rootSize();
+      stick.current.config = stickConfigFor(view.width, view.height, scale);
       if (stick.current.active) release();
     };
     onResize(); // the size setting changed (or first mount): resize the stick now
@@ -80,7 +83,8 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
       data-testid="stick-zone"
       data-dir={view?.dir ?? ''}
       onPointerDown={(e) => {
-        if (!stick.current.begin(e.pointerId, e.clientX, e.clientY, e.timeStamp)) return;
+        const at = clientToRoot(e.clientX, e.clientY);
+        if (!stick.current.begin(e.pointerId, at.x, at.y, e.timeStamp)) return;
         inputTrace.record({
           k: 'raw',
           ms: Math.round(e.timeStamp),
@@ -104,7 +108,8 @@ export function Joystick({ entryOpen }: { entryOpen: boolean }) {
           x: e.clientX,
           y: e.clientY,
         });
-        input.setTouchDir(stick.current.move(e.pointerId, e.clientX, e.clientY), stick.current.wish);
+        const at = clientToRoot(e.clientX, e.clientY);
+        input.setTouchDir(stick.current.move(e.pointerId, at.x, at.y), stick.current.wish);
         show();
       }}
       onPointerUp={end}

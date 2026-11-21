@@ -5,6 +5,7 @@ import type { RouteCue } from '../app/routeGuide';
 import { CampaignHealth } from './CampaignHealth';
 import { FieldGoal } from './FieldGoal';
 import { RAIL_GAP } from './hudRail';
+import { rootRect, rootSize } from '../platform/viewport';
 import { MissionPanel } from './MissionPanel';
 
 /**
@@ -31,9 +32,9 @@ export function MissionDock({
     const el = ref.current;
     if (!el) return;
     const measure = (): void => {
-      const buttons = [...document.querySelectorAll('.abtn')].map((b) => b.getBoundingClientRect().top);
-      const limit = buttons.length > 0 ? Math.min(...buttons) : window.innerHeight - 8;
-      const next = Math.max(0, Math.floor(limit - RAIL_GAP - el.getBoundingClientRect().top));
+      const buttons = [...document.querySelectorAll('.abtn')].map((b) => rootRect(b).top);
+      const limit = buttons.length > 0 ? Math.min(...buttons) : rootSize().height - 8;
+      const next = Math.max(0, Math.floor(limit - RAIL_GAP - rootRect(el).top));
       setMaxHeight((prev) => (prev === next ? prev : next));
     };
     measure();

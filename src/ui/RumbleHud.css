@@ -182,6 +182,9 @@ li.me .nm {
 }
 .rh-roster ul {
   overflow-y: auto;
+  /* a scroll list over a live match: scrolls, never zooms (WebKit resets touch-action at scrollers, IV2) */
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 /* spectator bar (replaces the inventory once the local player is out) */

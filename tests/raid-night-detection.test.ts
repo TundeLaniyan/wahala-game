@@ -4,7 +4,8 @@
  * where a test puts them) and one calm hall warden holding his post: he notices the fighter only on his own lit torch
  * tiles, never through a wall or a crate, after a reaction delay that restarts when the fighter leaves the cone; the
  * fighter's beam seen by the warden lengthens the cone by exactly one tile; in the dark only contact counts. The lit
- * raids play byte-for-byte as before (digests of the scripted player's full raid at every level, recorded on 785f84c).
+ * raids play byte-for-byte as recorded (digests of the scripted player's full raid at every level; first recorded on
+ * 785f84c, re-recorded for the Classic raid combat correction, decisions AM1-AM6, which deliberately changed every raid).
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -252,7 +253,7 @@ describe('isolation', () => {
   });
 
   it(
-    'the lit raids play byte-for-byte as before (scripted full raid, every level, recorded on 785f84c)',
+    'the lit raids play byte-for-byte as recorded (scripted full raid, every level; re-recorded for AM1-AM6)',
     { timeout: 180_000 },
     () => {
       const out: Record<string, string> = {};
@@ -269,15 +270,15 @@ describe('isolation', () => {
           out[`${raidId}/${level}`] = `${hashOf(last)}/${r.outcome}`;
         }
       expect(out).toEqual({
-        'warehouseDispatchDepot/easy': '49152af2:32558/completed',
-        'warehouseDispatchDepot/normal': 'b2167df7:32103/completed',
-        'warehouseDispatchDepot/hard': 'a9da4f1a:32562/completed',
-        'partsStoreroom/easy': 'abfe2a8a:27532/completed',
-        'partsStoreroom/normal': 'e9640b24:27504/completed',
-        'partsStoreroom/hard': 'df5bcdac:27536/completed',
-        'standbyPlant/easy': '839c160:27713/completed',
-        'standbyPlant/normal': 'a0ce6ed1:26854/completed',
-        'standbyPlant/hard': '7846d500:26700/completed',
+        'warehouseDispatchDepot/easy': '9a1c328c:32520/completed',
+        'warehouseDispatchDepot/normal': '8892ab9c:32415/completed',
+        'warehouseDispatchDepot/hard': '14e952d5:32548/completed',
+        'partsStoreroom/easy': '297c5854:27580/completed',
+        'partsStoreroom/normal': 'd89b58b7:27683/completed',
+        'partsStoreroom/hard': 'a9d4d738:27622/completed',
+        'standbyPlant/easy': 'f3befffb:26890/completed',
+        'standbyPlant/normal': 'cca660e1:27569/completed',
+        'standbyPlant/hard': '5ad98089:27037/completed',
       });
     },
   );

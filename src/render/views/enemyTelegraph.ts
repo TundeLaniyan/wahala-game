@@ -114,6 +114,8 @@ export function readTelegraph(
     out.strong = STRONG_KINDS.has(kind);
     const v = DIR_VEC[a.dir];
     out.aimCount = pushTile(out.aim, out.aimCount, p.x + v.dx, p.y + v.dy);
+    // a Classic raid's committed punch (decision AM4) lands only on the aimed tile: the warning shows exactly that
+    if (p.enemyKind !== undefined && state.config.enemyAttacks.committedMelee) return out;
     const reach = state.config.skills.attacks[a.skill]?.reach ?? 1;
     if (
       reach >= 2 &&

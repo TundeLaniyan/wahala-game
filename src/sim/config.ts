@@ -553,6 +553,18 @@ export interface ClassicRaidTactics {
    * sends it to search where it last saw him); 0 = it wakes calm on its route, like the waves present from the start.
    */
   calledChaseTicks: number;
+  /**
+   * Decision AM2: at most this many ORDINARY enemies (agbero, guard, thrower, heavy) hunt the player at once (`alert` /
+   * `pursue`). Another that notices him, hears a call or is called in watches him from its ground and goes back to its
+   * route instead; a hit or a player at arm's length still turns it. Lieutenants and bosses are never capped.
+   */
+  maxChasers: number;
+  /**
+   * Decision AM6: a blast defeats an enemy of these kinds outright (a sprung ambush is a kill at every level, whatever
+   * `campaign.damage.blast` the level gives the human); any other kind loses at least `blastVsTough` segments.
+   */
+  blastDefeats: EnemyKind[];
+  blastVsTough: number;
 }
 
 /**
@@ -891,6 +903,12 @@ export interface GameConfig {
     groupPunchGapTicks: number;
     /** After an enemy hit's stun ends this victim cannot be hit by an enemy again for this long. */
     victimFreeTicks: number;
+    /**
+     * Decision AM4 (Classic raids): an enemy punch is COMMITTED to the tile its wind-up telegraphs (the enemy's tile
+     * plus the wind-up's direction). At impact it hits only a rival on that tile (or still under half-way out of it);
+     * it never turns to another neighbour or reaches along a line. Absent = the catalogue reach (every other match).
+     */
+    committedMelee?: boolean;
     /** Enemies only act on a rival within this many tiles (Manhattan); farther away they hold. */
     aggroTiles: number;
     /** Field escape legs (decision EF6): a pursuer gives up the chase while the human is farther than this (Chebyshev). */
@@ -1629,9 +1647,10 @@ export const RAID_TACTICS_LEVELS: Readonly<
     id: 'raid.tactics/1',
     // the raid lieutenant (expert trap sense) plans like its level's bot, a little quicker to react: the crew's
     // bruiser, not a second boss (decision RA6)
+    // decision AM5: a calm walker sees a generator on its way only from 1 tile and takes it in slowly
     trapSense: {
-      none: { enemyBrawlReactScale: 4.5 },
-      basic: { enemyBrawlReactScale: 4 },
+      none: { enemyBrawlReactScale: 4.5, calmVisionTiles: 1, reactScale: 1.6 },
+      basic: { enemyBrawlReactScale: 4, calmVisionTiles: 1, reactScale: 1.5 },
       expert: { plannerBump: 0, reactScale: 0.8 },
     },
     perception: {
@@ -1643,16 +1662,16 @@ export const RAID_TACTICS_LEVELS: Readonly<
       boss: { hearingTiles: 3 },
     },
     awareness: {
-      noticeTiles: { agbero: 5, guard: 5, thrower: 6, heavy: 4, lieutenant: 6, boss: 7 },
+      noticeTiles: { agbero: 4, guard: 4, thrower: 5, heavy: 4, lieutenant: 6, boss: 7 },
       calmNoticeTiles: { agbero: 3, guard: 3, thrower: 4, heavy: 3, lieutenant: 4, boss: 5 },
-      noticeTicks: 36,
+      noticeTicks: 45,
       alertTicks: 30,
-      loseTicks: 60,
+      loseTicks: 45,
       searchTicks: 60,
-      investigateTimeoutTicks: 240,
+      investigateTimeoutTicks: 180,
     },
     territory: {
-      pursuitTiles: 4,
+      pursuitTiles: 3,
       returnWatchTicks: 60,
       investigateRadius: 3,
       patrolPauseTicks: 48,
@@ -1665,13 +1684,13 @@ export const RAID_TACTICS_LEVELS: Readonly<
       hitChaseTicks: 120,
       patrolStepExtraTicks: 3,
     },
-    enemyStepTicks: { agbero: 12, guard: 12, thrower: 14, heavy: 15, lieutenant: 12, boss: 11 },
-    enemyMinStepTicks: 12,
+    enemyStepTicks: { agbero: 15, guard: 15, thrower: 17, heavy: 18, lieutenant: 14, boss: 13 },
+    enemyMinStepTicks: 13,
     chase: {
-      breakOffGapTiles: 4,
-      breakOffTicks: 45,
-      maxChaseTicks: 360,
-      reNoticeCooldownTicks: 150,
+      breakOffGapTiles: 3,
+      breakOffTicks: 30,
+      maxChaseTicks: 240,
+      reNoticeCooldownTicks: 300,
       returnTimeoutTicks: 360,
       patrolStuckTicks: 300,
     },
@@ -1680,9 +1699,10 @@ export const RAID_TACTICS_LEVELS: Readonly<
     id: 'raid.tactics/1',
     // the raid lieutenant (expert trap sense) plans like its level's bot, a little quicker to react: the crew's
     // bruiser, not a second boss (decision RA6)
+    // decision AM5: a calm walker sees a generator on its way from 2 tiles and takes it in a little slowly
     trapSense: {
-      none: { enemyBrawlReactScale: 4 },
-      basic: { enemyBrawlReactScale: 3.5 },
+      none: { enemyBrawlReactScale: 4, calmVisionTiles: 2, reactScale: 1.3 },
+      basic: { enemyBrawlReactScale: 3.5, calmVisionTiles: 2, reactScale: 1.2 },
       expert: { plannerBump: 0, reactScale: 0.8 },
     },
     perception: {
@@ -1694,16 +1714,16 @@ export const RAID_TACTICS_LEVELS: Readonly<
       boss: { hearingTiles: 4 },
     },
     awareness: {
-      noticeTiles: { agbero: 6, guard: 6, thrower: 7, heavy: 5, lieutenant: 7, boss: 8 },
+      noticeTiles: { agbero: 5, guard: 5, thrower: 6, heavy: 4, lieutenant: 7, boss: 8 },
       calmNoticeTiles: { agbero: 4, guard: 4, thrower: 5, heavy: 3, lieutenant: 5, boss: 6 },
-      noticeTicks: 20,
+      noticeTicks: 30,
       alertTicks: 20,
-      loseTicks: 90,
+      loseTicks: 60,
       searchTicks: 60,
       investigateTimeoutTicks: 240,
     },
     territory: {
-      pursuitTiles: 5,
+      pursuitTiles: 4,
       returnWatchTicks: 60,
       investigateRadius: 3,
       patrolPauseTicks: 36,
@@ -1714,15 +1734,15 @@ export const RAID_TACTICS_LEVELS: Readonly<
       groupTactics: true,
       lookAroundTicks: 90,
       hitChaseTicks: 150,
-      patrolStepExtraTicks: 2,
+      patrolStepExtraTicks: 3,
     },
-    enemyStepTicks: { agbero: 11, guard: 11, thrower: 13, heavy: 13, lieutenant: 11, boss: 10 },
-    enemyMinStepTicks: 11,
+    enemyStepTicks: { agbero: 13, guard: 13, thrower: 15, heavy: 16, lieutenant: 12, boss: 11 },
+    enemyMinStepTicks: 12,
     chase: {
-      breakOffGapTiles: 5,
-      breakOffTicks: 60,
-      maxChaseTicks: 480,
-      reNoticeCooldownTicks: 90,
+      breakOffGapTiles: 4,
+      breakOffTicks: 45,
+      maxChaseTicks: 360,
+      reNoticeCooldownTicks: 180,
       returnTimeoutTicks: 360,
       patrolStuckTicks: 300,
     },
@@ -1745,16 +1765,16 @@ export const RAID_TACTICS_LEVELS: Readonly<
       boss: { hearingTiles: 5 },
     },
     awareness: {
-      noticeTiles: { agbero: 7, guard: 7, thrower: 8, heavy: 6, lieutenant: 8, boss: 9 },
+      noticeTiles: { agbero: 6, guard: 6, thrower: 7, heavy: 5, lieutenant: 8, boss: 9 },
       calmNoticeTiles: { agbero: 5, guard: 5, thrower: 6, heavy: 4, lieutenant: 6, boss: 7 },
-      noticeTicks: 10,
+      noticeTicks: 15,
       alertTicks: 12,
-      loseTicks: 150,
+      loseTicks: 120,
       searchTicks: 90,
       investigateTimeoutTicks: 240,
     },
     territory: {
-      pursuitTiles: 7,
+      pursuitTiles: 6,
       returnWatchTicks: 90,
       investigateRadius: 4,
       patrolPauseTicks: 24,
@@ -1767,21 +1787,80 @@ export const RAID_TACTICS_LEVELS: Readonly<
       hitChaseTicks: 210,
       patrolStepExtraTicks: 1,
     },
-    enemyStepTicks: { agbero: 11, guard: 11, thrower: 12, heavy: 13, lieutenant: 11, boss: 10 },
+    enemyStepTicks: { agbero: 12, guard: 12, thrower: 13, heavy: 14, lieutenant: 11, boss: 10 },
     enemyMinStepTicks: 11,
     chase: {
-      breakOffGapTiles: 6,
-      breakOffTicks: 75,
-      maxChaseTicks: 720,
-      reNoticeCooldownTicks: 60,
+      breakOffGapTiles: 5,
+      breakOffTicks: 60,
+      maxChaseTicks: 540,
+      reNoticeCooldownTicks: 120,
       returnTimeoutTicks: 360,
       patrolStuckTicks: 300,
     },
   },
 };
 
-/** Decision RA6: how long a called-in wave hunts the player with no leash, by level. */
-const RAID_CALLED_CHASE_TICKS = { easy: 480, normal: 600, hard: 720 } as const;
+/**
+ * Decision RA6, amended by AM2: how long a called-in wave hunts the player with no leash, by level. Easy: a called wave
+ * wakes calm on its route (0); every hunt is also bound by the chaser cap.
+ */
+const RAID_CALLED_CHASE_TICKS = { easy: 0, normal: 240, hard: 480 } as const;
+
+/** Decision AM2: ordinary enemies hunting the player at once in a Classic raid, by level. */
+const RAID_MAX_CHASERS = { easy: 1, normal: 2, hard: 3 } as const;
+
+/**
+ * Decision AM4: the enemy punches of a Classic raid, by level. A wind-up (catalogue startup + extra) the player can
+ * read and step out of: an agbero / guard 60 / 54 (Easy), 50 / 44 (Normal), 40 / 34 ticks (Hard); a reaction of
+ * 0.25 s plus half a step (6 ticks) is 21 ticks. The strike is committed to its telegraphed tile; one wind-up at a time
+ * (two on Hard) with a gap between a group's punches; after a hit, `victimFreeTicks` of no enemy hit.
+ */
+export const RAID_ENEMY_ATTACKS: Readonly<
+  Record<'easy' | 'normal' | 'hard', DeepPartial<GameConfig['enemyAttacks']>>
+> = {
+  easy: {
+    committedMelee: true,
+    maxGroupPunches: 1,
+    groupPunchGapTicks: 90,
+    victimFreeTicks: 150,
+    melee: {
+      agbero: { extraStartupTicks: 56 },
+      guard: { extraStartupTicks: 50 },
+      thrower: { extraStartupTicks: 42 },
+      heavy: { extraStartupTicks: 48 },
+      lieutenant: { extraStartupTicks: 44 },
+      boss: { extraStartupTicks: 30 },
+    } as DeepPartial<GameConfig['enemyAttacks']>['melee'],
+  },
+  normal: {
+    committedMelee: true,
+    maxGroupPunches: 1,
+    groupPunchGapTicks: 60,
+    victimFreeTicks: 120,
+    melee: {
+      agbero: { extraStartupTicks: 46 },
+      guard: { extraStartupTicks: 40 },
+      thrower: { extraStartupTicks: 34 },
+      heavy: { extraStartupTicks: 38 },
+      lieutenant: { extraStartupTicks: 36 },
+      boss: { extraStartupTicks: 22 },
+    } as DeepPartial<GameConfig['enemyAttacks']>['melee'],
+  },
+  hard: {
+    committedMelee: true,
+    maxGroupPunches: 2,
+    groupPunchGapTicks: 40,
+    victimFreeTicks: 90,
+    melee: {
+      agbero: { extraStartupTicks: 36 },
+      guard: { extraStartupTicks: 30 },
+      thrower: { extraStartupTicks: 24 },
+      heavy: { extraStartupTicks: 28 },
+      lieutenant: { extraStartupTicks: 28 },
+      boss: { extraStartupTicks: 14 },
+    } as DeepPartial<GameConfig['enemyAttacks']>['melee'],
+  },
+};
 
 /** The full tactics config of a Classic raid at a level (decision RA1; a fresh copy every call). */
 export function raidTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignTacticsConfig {
@@ -1793,6 +1872,9 @@ export function raidTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignTacti
     entranceClearTiles: 3,
     avoidBelts: true,
     calledChaseTicks: RAID_CALLED_CHASE_TICKS[level],
+    maxChasers: RAID_MAX_CHASERS[level],
+    blastDefeats: ['agbero', 'guard', 'thrower'],
+    blastVsTough: 2,
   };
   return t;
 }

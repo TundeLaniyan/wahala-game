@@ -28,7 +28,7 @@ import {
   tick,
 } from '../src/sim';
 import type { DeepPartial, GameConfig, GameOptions, Intents, MissionId, SimEvent } from '../src/sim';
-import { DEFAULT_CONFIG } from '../src/sim/config';
+import { DEFAULT_CONFIG, RAID_ENEMY_ATTACKS } from '../src/sim/config';
 import { getFieldMission } from '../src/sim/mission/fieldDefs';
 import { RAID_IDS } from '../src/sim/raid';
 import { LESSONS } from '../src/tutorial';
@@ -130,10 +130,16 @@ describe('Classic raids carry the raid tactics layer without its combat model (R
         // the raid's own enemy health, never the layer's table; minds only once a wave wakes
         for (const p of s.players.slice(1)) expect(p.vitals!.maxHp).toBe(enemyDef(p.enemyKind!).hp);
         expect('territory' in s, raidId).toBe(false);
-        // the raid keeps its own enemy commitment (no tactics wind-ups / recoveries)
-        expect(s.config.enemyAttacks).toEqual(
-          createGame(buildRaidGame({ raidId, humanCharacter: 'streetBaller', seed: 1 })).config.enemyAttacks,
-        );
+        // decision AM4 deliberately changed this (it asserted the raid's own, unlayered enemy commitment): a raid's
+        // punches are its own readable, committed ones (RAID_ENEMY_ATTACKS), never the field tactics' wind-ups
+        const want = RAID_ENEMY_ATTACKS[level];
+        expect(s.config.enemyAttacks.committedMelee, raidId).toBe(true);
+        expect(s.config.enemyAttacks.maxGroupPunches, raidId).toBe(want.maxGroupPunches);
+        expect(s.config.enemyAttacks.victimFreeTicks, raidId).toBe(want.victimFreeTicks);
+        for (const kind of ['agbero', 'guard', 'thrower', 'heavy', 'lieutenant', 'boss'] as const)
+          expect(s.config.enemyAttacks.melee[kind]?.extraStartupTicks, `${raidId} ${kind}`).toBe(
+            want.melee?.[kind]?.extraStartupTicks,
+          );
       }
     }
   });
