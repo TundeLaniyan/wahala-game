@@ -167,6 +167,11 @@ for every raid enemy and a planted enemy cannot plan a step; `enemyLookout`; det
 the six boss missions, every Academy lesson, Classic and two City Rumble rulesets, recorded on `514be88` before this work:
 unchanged. With `tests/enemy-fairness.test.ts` EF8 (multiplayer) and `tests/mission-regression.test.ts` also unchanged.
 
+Browser (Playwright, port 4450, one worker): `e2e/raid-render.spec.ts` and the raid tests of
+`e2e/campaign-expansion-smoke.spec.ts` (classic raid, enemy projectile cue, mobile raid stick) pass on desktop and mobile.
+Its "field mission to raid and back" test times out on the desktop project before the raid starts; it fails the same way
+on production `514be88` (checked), and passes on the mobile project.
+
 Changed on purpose: `tests/campaign-tactics-layer.test.ts` asserted the layer ABSENT in raids; it now asserts the raid
 layer is present with `classicRaid`, `tacticsCombat` off, raid enemy health and the raid's own enemy attacks.
 `tests/raid-core.test.ts` asserted the old hold/chase directive; it now asserts the route directive and a chase once the
