@@ -1,10 +1,10 @@
 // Release-integration review (docs/RELEASE_INTEGRATION.md): the Classic raid AI / night lighting and the 18-character
 // roster together, in real matches with live bots. One fresh page per scenario, quality and device; after the start the
-// countdown is skipped and the match plays `--ticks` frames of live AI (no staging), then a screenshot and the numbers:
+// countdown is skipped and the match plays `--ticks` ticks of live AI (no staging), then a screenshot and the numbers:
 // page errors, on-demand models loaded / failed, draw calls, triangles, GPU geometries / textures, frame mean.
 //
 //   SHOT_URL=http://localhost:<port>/wahala-game/ WAHALA_CHROMIUM=/opt/pw-browsers/chromium \
-//   node scripts/release-shots.mjs <outDir> [scenarios] [low,high] [desktop,phone] [--seconds=6]
+//   node scripts/release-shots.mjs <outDir> [scenarios] [low,high] [desktop,phone] [--ticks=900] [--seconds=6]
 //
 // Scenarios: `raid:<raidId>` (a classic raid on its own), `field:<fieldId>`, `boss:<districtId>` (the district's boss,
 // the districts before it won in a throw-away save), `rumble` (City Rumble Survival from the real menu). Software
@@ -23,6 +23,7 @@ const [
   devices = 'desktop,phone',
 ] = args.filter((a) => !a.startsWith('--'));
 const seconds = Number(flag('seconds', 6));
+const ticks = Number(flag('ticks', 900));
 const base = process.env.SHOT_URL ?? 'http://localhost:4470/wahala-game/';
 const ORDER = ['oshodi', 'mushin', 'fadeyiSomolu', 'ebuteMetta', 'lagosIsland', 'lekki'];
 const DEVICES = {
@@ -109,6 +110,14 @@ for (const scenario of list.split(',')) {
           s.match.countdownRemaining = 0;
         }
       });
+      // the match plays `--ticks` simulation ticks with every bot deciding (the real loop, frozen to the step), then
+      // runs freely for the frame measurement: enemies have entered, patrolled and reacted by the screenshot
+      await page.evaluate((n) => {
+        const w = window.__WAHALA__;
+        w.controller().frozen = true;
+        w.advance(n);
+        w.controller().frozen = false;
+      }, ticks);
       const t0 = await page.evaluate(() => performance.now());
       const f0 = await page.evaluate(() => window.__WAHALA__.matchLoad().frames);
       await page.waitForTimeout(seconds * 1000);
@@ -137,7 +146,7 @@ for (const scenario of list.split(',')) {
         { t0, f0 },
       );
       const name = `${scenario.replace(':', '-')}-${q}-${device}.jpg`;
-      await page.screenshot({ path: join(outDir, name), type: 'jpeg', quality: 72 });
+      await page.screenshot({ path: join(outDir, name), type: 'jpeg', quality: 72, timeout: 180_000 });
       rows.push({ scenario, q, device, ...stats, errors });
       console.log(JSON.stringify({ scenario, q, device, ...stats, models: stats.models.length, errors }));
       await ctx.close();
