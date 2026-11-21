@@ -80,6 +80,16 @@ describe('readTelegraph (from the sim state)', () => {
     expect(readTelegraph(s, p, end, emptyTelegraph(), start).progress).toBe(1);
   });
 
+  it('a Classic raid punch is committed (decision CR4): the warning marks only the aimed tile, no other reach', () => {
+    const s = duel();
+    s.config.enemyAttacks.committedMelee = true;
+    pressUntil(s, 'attackStarted');
+    const t = readTelegraph(s, s.players[1]!, s.tick, emptyTelegraph(), s.tick);
+    expect(t.kind).toBe('melee');
+    expect(t.aim.slice(0, t.aimCount)).toEqual([{ x: 4, y: 2 }]);
+    expect(t.zoneCount, 'no brackets on tiles the punch cannot hit').toBe(0);
+  });
+
   it('joins a wind-up late without the event: the kind catalogue wind-up stands in', () => {
     const s = duel();
     pressUntil(s, 'attackStarted');

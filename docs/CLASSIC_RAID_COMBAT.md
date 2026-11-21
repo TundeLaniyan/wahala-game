@@ -33,6 +33,7 @@ opportunity. Measured on the live raids (`scripts/raid-live.ts`, `scripts/raid-a
 | CR3 | **Pace and pursuit.** Ordinary enemies 15 / 13 / 12 ticks a tile chasing (the player 10), +3 / +3 / +2 on a calm walk; chases end sooner (4 / 6 / 9 s maximum, a smaller leash and walking gap) and a given-up enemy does not re-notice him for 5 / 3 / 2 s; it notices from 4 / 5 / 6 tiles (calm 3 / 4 / 5) after 0.75 / 0.5 / 0.25 s of sight. | `RAID_TACTICS_LEVELS` |
 | CR4 | **Escapable, committed punches.** Ordinary wind-ups 54-60 / 44-50 / 34-40 ticks (agbero / guard); the strike lands only on the telegraphed tile (or on a player still under half-way off it); one wind-up at a time (two on Hard), 1.5 / 1 / 0.7 s apart within a group, and after a hit no enemy can hit him again for 2.5 / 2 / 1.5 s. | `RAID_ENEMY_ATTACKS`, `skills.ts` `committedTarget` |
 | CR5 | **Fair generator awareness.** A calm walker sees a generator on its way only from 1 / 2 / 3 tiles (in its view cone, walls block) and takes it in 1.5 / 1.2 / 1 x slower. A generator it never saw is still not in its plan; one it legitimately sees in time is escaped. | `RAID_TACTICS_LEVELS.trapSense` |
+| CR7 | **The warning matches the hit.** The raid punch telegraph marks only the committed tile; the brackets on the enemy's other neighbours (the old any-side reach) are gone in raids. | `render/views/enemyTelegraph.ts` |
 | CR6 | **A sprung ambush is a kill at every level.** A blast defeats an agbero, guard or thrower outright; a heavy, lieutenant or boss loses at least 2. The human's own damage table per level is unchanged. | `lethality.ts` `raidBlastDamage`, `classicRaid.blastDefeats` |
 
 ## Measurements (before = production `acaeae7`, same scripts, 6 raids x 4 seeds = 24 runs per level)
@@ -69,6 +70,13 @@ and escapes it (Normal, Hard); D with six enemies called in and the player stand
 for self-defence) hunt him, and 25 s after he slips away none does; E the wind-up leaves a reaction plus half a step,
 stepping off the telegraphed tile makes it miss, and a player who ends up on another side of the enemy is not hit; F the
 ambusher completes three raids on Normal with ambushes that kill, at most 2 punches landing.
+
+## Rendered evidence
+
+`docs/screenshots/classic-raid-combat/` (`scripts/ambush-shots.mjs`: the real game in a browser, phone landscape, Low;
+the only staging is the generator drop itself): 1 the guard on its rounds and the generator ticking where it will walk,
+the player waiting at the entrance; 2 the blast catches it at the corner (its HUD card crossed out); 3 after, nobody
+hunting; 4 a punch wind-up telegraph (the arrow and the one threatened tile).
 
 ## Not established by tests
 
