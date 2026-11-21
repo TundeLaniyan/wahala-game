@@ -120,6 +120,8 @@ export function applyOutfit(body: Object3D, characterId: string, identity: Fight
   }
   const head = body.getObjectByName('head');
   if (!head) return;
-  const wear = buildHeadwear(identity.headwear, identity.headwearColor, HEAD_FIT[characterId]);
+  // a dedicated model carries its own head fit (GLB node extras); the original cast uses the table
+  const own = head.userData?.headFit as HeadFit | undefined;
+  const wear = buildHeadwear(identity.headwear, identity.headwearColor, own ?? HEAD_FIT[characterId]);
   if (wear) head.add(wear);
 }

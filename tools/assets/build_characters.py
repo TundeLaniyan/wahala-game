@@ -33,20 +33,22 @@ MATERIALS = {
 HEAD_SCALE = 1.2
 
 
-def enlarge_heads(spec: dict) -> None:
+def enlarge_heads(spec: dict, scale: float = HEAD_SCALE) -> None:
     b = spec["body"]
     pivot = np.array([0.0, b.head_y - b.head[1] * 0.92, 0.012])
     for group in ("skin", "cloth", "hair", "eyes", "accessory"):
         for m in spec.get(group) or []:
             sel = np.array([r == "head" for r in m.region])
             if sel.any():
-                m.v[sel] = pivot + (m.v[sel] - pivot) * HEAD_SCALE
+                m.v[sel] = pivot + (m.v[sel] - pivot) * scale
 
 
-def build(name: str) -> str:
-    spec = characters.CAST[name]()
+def build(name: str, spec: dict | None = None, clips=None, head_scale: float | None = None) -> str:
+    """Export one character. `spec`/`clips` default to the hero cast and the shared clip set; a dedicated enemy passes its own."""
+    spec = spec if spec is not None else characters.CAST[name]()
+    clips = CLIPS if clips is None else clips
     body = spec["body"]
-    enlarge_heads(spec)
+    enlarge_heads(spec, HEAD_SCALE if head_scale is None else head_scale)
     g = GltfBuilder()
     rest, world = rest_translations(body)
     nodes: dict[str, int] = {}
@@ -70,13 +72,13 @@ def build(name: str) -> str:
         total += len(m.f)
     mesh = g.add_mesh(name, prims)
     g.add_node(f"{name}_mesh", None, mesh=mesh, skin=skin)
-    for clip in CLIPS:
+    for clip in clips:
         chans = [(nodes[b], path, t, v) for b, path, t, v in sample_clip(clip, rest)]
         g.add_animation(clip.name, chans)
     path = os.path.join(OUT, f"char_{name}.glb")
     os.makedirs(OUT, exist_ok=True)
     size = g.save(path)
-    print(f"{name}: {total} tris, {len(prims)} materials, {len(CLIPS)} clips, {size / 1024:.0f} KB -> {path}")
+    print(f"{name}: {total} tris, {len(prims)} materials, {len(clips)} clips, {size / 1024:.0f} KB -> {path}")
     return path
 
 
