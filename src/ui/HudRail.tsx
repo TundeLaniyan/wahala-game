@@ -3,6 +3,7 @@ import type { CampaignHud, EnemyHud, StageAlert, StreakHud, SuddenDeathHud } fro
 import type { MissionView } from '../sim';
 import type { Toast } from '../app/store';
 import { useGameStore } from '../app/store';
+import { rootRect, rootSize } from '../platform/viewport';
 import { RAIL_GAP, railBox, railBoxRight } from './hudRail';
 import type { RailBox } from './hudRail';
 import { noticeColumn } from './hudZones';
@@ -77,7 +78,7 @@ export function HudRail({
   useLayoutEffect(() => {
     const measure = (): void => {
       const pad = document.querySelector('[data-testid="stick-pad"]');
-      const top = pad ? Math.round(pad.getBoundingClientRect().top) : null;
+      const top = pad ? Math.round(rootRect(pad).top) : null;
       setPadTop((prev) => (prev === top ? prev : top));
     };
     measure();
@@ -95,8 +96,8 @@ export function HudRail({
       setBox(null);
       return;
     }
-    const r = el.getBoundingClientRect();
-    const next = railBox(board, r.left, r.top, window.innerHeight);
+    const r = rootRect(el);
+    const next = railBox(board, r.left, r.top, rootSize().height);
     setBox((prev) => (prev?.width === next?.width && prev?.maxHeight === next?.maxHeight ? prev : next));
   }, [board, rumble]);
 
@@ -107,9 +108,7 @@ export function HudRail({
   useLayoutEffect(() => {
     const el = combatRef.current;
     const next =
-      !el || padTop === null
-        ? null
-        : Math.max(0, Math.floor(padTop - RAIL_GAP - el.getBoundingClientRect().top));
+      !el || padTop === null ? null : Math.max(0, Math.floor(padTop - RAIL_GAP - rootRect(el).top));
     setCombatMax((prev) => (prev === next ? prev : next));
   });
 
@@ -118,20 +117,14 @@ export function HudRail({
   const [side, setSide] = useState<RailBox | null>(null);
   useLayoutEffect(() => {
     const el = ref.current;
-    if (rumble || !el || padTop === null || window.innerHeight > 520 || !board) {
+    if (rumble || !el || padTop === null || rootSize().height > 520 || !board) {
       setSide(null);
       return;
     }
-    const buttons = [...document.querySelectorAll('.abtn')].map((b) => b.getBoundingClientRect().top);
+    const buttons = [...document.querySelectorAll('.abtn')].map((b) => rootRect(b).top);
     const limit = buttons.length > 0 ? Math.min(...buttons) : null;
-    const next = railBoxRight(
-      board,
-      window.innerWidth,
-      10,
-      el.getBoundingClientRect().top,
-      window.innerHeight,
-      limit,
-    );
+    const view = rootSize();
+    const next = railBoxRight(board, view.width, 10, rootRect(el).top, view.height, limit);
     setSide((prev) => (prev?.width === next?.width && prev?.maxHeight === next?.maxHeight ? prev : next));
   }, [board, rumble, padTop]);
 
@@ -145,8 +138,9 @@ export function HudRail({
     }
     const measure = (): void => {
       const panel = document.querySelector('.rh-panel');
-      const top = Math.round((panel ? panel.getBoundingClientRect().bottom : 56) + 8);
-      const col = noticeColumn(window.innerWidth, window.innerHeight, top, padTop);
+      const top = Math.round((panel ? rootRect(panel).bottom : 56) + 8);
+      const view = rootSize();
+      const col = noticeColumn(view.width, view.height, top, padTop);
       setEdge((prev) =>
         prev && prev.top === top && prev.width === col.width && prev.maxHeight === col.maxHeight
           ? prev

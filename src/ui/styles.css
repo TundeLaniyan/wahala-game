@@ -24,6 +24,18 @@
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
+/* iOS / WebKit viewport guard (docs/IOS_VIEWPORT.md, decisions IV1-IV6). WebKit resets the effective touch-action to
+   auto at every scroll container, so a list without its own value would accept a double-tap zoom: every element
+   defaults to `manipulation` (pan and pinch as before, never double-tap zoom). Zero specificity: any explicit value
+   (the game surface's none, a menu list's pan-y) still wins. */
+:where(*) {
+  touch-action: manipulation;
+}
+html {
+  /* no automatic text inflation when an iPhone turns to landscape; 100% (not none) keeps the browser's text zoom */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 html,
 body,
 #root {
@@ -34,6 +46,13 @@ body,
   overflow: hidden;
   overscroll-behavior: none;
   touch-action: none;
+}
+/* The page is already zoomed (WebKit ignored user-scalable=no) and no match is being played: let the player pinch
+   back out from the pause menu, the results or the menus. While playing, the guard blocks every page gesture. */
+html[data-vv='zoomed']:not([data-play='active']),
+html[data-vv='zoomed']:not([data-play='active']) body,
+html[data-vv='zoomed']:not([data-play='active']) #root {
+  touch-action: pan-x pan-y pinch-zoom;
 }
 body {
   user-select: none;
@@ -49,6 +68,14 @@ button {
 .game-root {
   position: fixed;
   inset: 0;
+  overscroll-behavior: none;
+}
+/* A match on a page that is still zoomed (WebKit ignored user-scalable=no): the game root moves to the visible area
+   and scales by 1 / zoom (platform/viewport.ts), so the whole board, the HUD and the controls show at their normal size
+   and hit exactly where they are drawn. Its layout size is unchanged: the canvas, vw / vh and the HUD do not reflow. */
+html[data-vv-fit] .game-root {
+  transform-origin: 0 0;
+  transform: translate(var(--vv-left, 0px), var(--vv-top, 0px)) scale(var(--vv-scale, 1));
 }
 .game-canvas {
   position: absolute;

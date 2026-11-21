@@ -12,6 +12,8 @@ import { registerBusts } from '../assets/portraits';
 import { browserStore } from '../campaign';
 import type { UpgradeKind } from '../campaign';
 import { flags } from '../platform';
+import { installViewportGuard, rootRect } from '../platform/viewport';
+import type { ViewportGuard } from '../platform/viewport';
 import type {
   CampaignLevel,
   CharacterId,
@@ -54,6 +56,8 @@ let audio: AudioPort = NULL_AUDIO;
 let raf = 0;
 let canvasEl: HTMLCanvasElement | null = null;
 let resizeObserver: ResizeObserver | null = null;
+/** iOS / WebKit page-zoom guard and visual-viewport refit (docs/IOS_VIEWPORT.md, decisions IV1-IV6). */
+let viewportGuard: ViewportGuard | null = null;
 /** Rate-limits the quiet "graphics changed" notice (Auto mode). */
 const qualityNotifier = new QualityNotifier();
 
@@ -199,7 +203,7 @@ function publishBoard(): void {
   const st = useGameStore.getState();
   // the renderer reports canvas pixels; the canvas is not always at the page origin (the Academy column
   // sits left of it), so shift them into page coordinates, which is what the HUD lays itself out in
-  const at = canvasEl?.getBoundingClientRect();
+  const at = canvasEl ? rootRect(canvasEl) : null;
   const ox = at?.left ?? 0;
   const oy = at?.top ?? 0;
   const corners: ScreenPoint[] | null =
@@ -324,6 +328,16 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   resizeObserver = new ResizeObserver(sizeCanvas);
   resizeObserver.observe(canvas);
   sizeCanvas();
+  // page gestures blocked while a match is played; the game refits to the visible area after any viewport change
+  viewportGuard = installViewportGuard(window);
+  const viewportMode = (s: { screen: string; paused: boolean }) => ({
+    match: s.screen !== 'title',
+    active: s.screen === 'playing' && !s.paused,
+  });
+  viewportGuard.setMode(viewportMode(useGameStore.getState()));
+  const unsubViewport = useGameStore.subscribe((s, prev) => {
+    if (s.screen !== prev.screen || s.paused !== prev.paused) viewportGuard?.setMode(viewportMode(s));
+  });
   patch({ touchCapable: window.matchMedia?.('(pointer: coarse)').matches || 'ontouchstart' in window });
   raf = requestAnimationFrame(frame);
 
@@ -367,6 +381,9 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     window.removeEventListener('keydown', onCameraKey);
     window.removeEventListener('keydown', onSpectateKey);
     resizeObserver?.disconnect();
+    unsubViewport();
+    viewportGuard?.dispose();
+    viewportGuard = null;
     renderer?.dispose();
     renderer = null;
     controller = null;
@@ -776,7 +793,7 @@ export function projectTilesToPage(tiles: readonly { x: number; y: number }[]): 
   if (!renderer || !canvasEl) return null;
   const projected = renderer.projectTiles(tiles);
   if (!projected) return null;
-  const at = canvasEl.getBoundingClientRect();
+  const at = rootRect(canvasEl);
   return {
     points: projected.map((p) => ({ x: p.x + at.left, y: p.y + at.top, ahead: p.ahead })),
     bounds: { left: at.left, top: at.top, right: at.right, bottom: at.bottom },
@@ -813,6 +830,8 @@ function exposeDebugHandle(): void {
     feedFrames: (frameMs: number, count: number, opts?: { busy?: boolean }) =>
       renderer?.debugFeedFrames(frameMs, count, opts) ?? [],
     renderer: () => renderer,
+    /** The iOS viewport guard's current fit (docs/IOS_VIEWPORT.md): zoomed, fitted box, visual-viewport scale. */
+    viewport: () => viewportGuard?.current() ?? null,
     /** The view-clear fade (scenery between the camera and the followed fighter): stride and what fades now. */
     viewClear: () => renderer?.viewClearStatus() ?? null,
     /** A mission sector as drawn: render clip, barricades, the floor tiles at the HUD-free band's corners; null without one. */

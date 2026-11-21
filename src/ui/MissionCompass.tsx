@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { missionView } from '../sim';
 import { liveMatch, projectTilesToPage } from '../app/session';
+import { rootRect } from '../platform/viewport';
 import { RouteCache } from '../app/routeGuide';
 import { compassTarget, placeCompass, tilesLabel } from './missionCompassModel';
 import type { Rect } from './missionCompassModel';
@@ -27,7 +28,7 @@ function obstacles(): Rect[] {
   const out: Rect[] = [];
   for (const sel of AVOID)
     for (const el of document.querySelectorAll(sel)) {
-      const r = el.getBoundingClientRect();
+      const r = rootRect(el);
       if (r.width > 0 && r.height > 0)
         out.push({ left: r.left - 4, top: r.top - 4, right: r.right + 4, bottom: r.bottom + 4 });
     }
