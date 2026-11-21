@@ -1,5 +1,5 @@
 /**
- * THE CLASSIC RAID COMBAT ACCEPTANCE TESTS (docs/CLASSIC_RAID_COMBAT.md, decisions CR1-CR6): the player's
+ * THE CLASSIC RAID COMBAT ACCEPTANCE TESTS (docs/CLASSIC_RAID_COMBAT.md, decisions AM1-AM6): the player's
  * opportunities, measured with the REAL raid, its waves and its real enemy bots, never an isolated system.
  *
  *   A  a guard's patrol is clockwork: learned by watching two laps, it predicts where the guard will be
@@ -221,7 +221,7 @@ describe('E. a telegraphed punch can be escaped and never turns to follow', () =
       expect(r.hpLost).toBe(0);
     });
   }
-  it('the wind-up per level matches the data (decision CR4)', () => {
+  it('the wind-up per level matches the data (decision AM4)', () => {
     expect(RAID_ENEMY_ATTACKS.easy.melee?.guard?.extraStartupTicks).toBeGreaterThan(
       RAID_ENEMY_ATTACKS.normal.melee?.guard?.extraStartupTicks ?? 0,
     );

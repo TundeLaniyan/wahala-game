@@ -627,7 +627,7 @@ function reachDir(
 }
 
 /**
- * Decision CR4: the rival on the committed tile (the attacker's tile plus the wind-up's direction), or one still under
+ * Decision AM4: the rival on the committed tile (the attacker's tile plus the wind-up's direction), or one still under
  * half-way out of it (the step grace), the aimed one first. Nothing else: a rival who stepped to any other tile, a
  * neighbour on another side or one further along the line is missed. The attacker is planted for its wind-up.
  */
@@ -664,7 +664,7 @@ function pickTarget(
 ): { target: Player; dir: Dir } | null {
   const ok = (o: Player): boolean =>
     o.alive && o.id !== p.id && !teammates(p, o) && attackable(state, state.tick, p, o, pending.skill);
-  // decision CR4 (Classic raids): an enemy's punch lands only on the tile its wind-up telegraphed
+  // decision AM4 (Classic raids): an enemy's punch lands only on the tile its wind-up telegraphed
   if (p.enemyKind !== undefined && state.config.enemyAttacks.committedMelee)
     return committedTarget(state, p, pending, ok);
   const first = state.players[pending.targetId];

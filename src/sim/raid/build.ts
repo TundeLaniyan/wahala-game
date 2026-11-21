@@ -32,7 +32,7 @@ export function raidTacticsLayer(level: CampaignLevel | undefined): {
 } {
   return {
     campaignTactics: raidTacticsFor(level ?? 'normal'),
-    // decision CR4: the raid's punches (readable wind-ups, committed strikes, one at a time)
+    // decision AM4: the raid's punches (readable wind-ups, committed strikes, one at a time)
     enemyAttacks: structuredClone(RAID_ENEMY_ATTACKS[level ?? 'normal']),
   };
 }

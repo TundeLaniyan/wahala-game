@@ -5,7 +5,7 @@
  * tiles, never through a wall or a crate, after a reaction delay that restarts when the fighter leaves the cone; the
  * fighter's beam seen by the warden lengthens the cone by exactly one tile; in the dark only contact counts. The lit
  * raids play byte-for-byte as recorded (digests of the scripted player's full raid at every level; first recorded on
- * 785f84c, re-recorded for the Classic raid combat correction, decisions CR1-CR6, which deliberately changed every raid).
+ * 785f84c, re-recorded for the Classic raid combat correction, decisions AM1-AM6, which deliberately changed every raid).
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -253,7 +253,7 @@ describe('isolation', () => {
   });
 
   it(
-    'the lit raids play byte-for-byte as recorded (scripted full raid, every level; re-recorded for CR1-CR6)',
+    'the lit raids play byte-for-byte as recorded (scripted full raid, every level; re-recorded for AM1-AM6)',
     { timeout: 180_000 },
     () => {
       const out: Record<string, string> = {};

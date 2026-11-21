@@ -216,10 +216,10 @@ function face(p: Player, t: TilePos | null): void {
   p.facing = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
 }
 
-/** Decision CR2: the kinds the Classic raid chaser cap counts (lieutenants and bosses are never capped). */
+/** Decision AM2: the kinds the Classic raid chaser cap counts (lieutenants and bosses are never capped). */
 const CAPPED_KINDS: ReadonlySet<string> = new Set(['agbero', 'guard', 'thrower', 'heavy']);
 
-/** Decision CR2: are `max` ordinary enemies other than `p` already hunting (alert / pursue)? */
+/** Decision AM2: are `max` ordinary enemies other than `p` already hunting (alert / pursue)? */
 function chasersFull(state: GameState, p: Player, max: number): boolean {
   let n = 0;
   for (const [key, q] of Object.entries(state.territory!.minds)) {
@@ -232,7 +232,7 @@ function chasersFull(state: GameState, p: Player, max: number): boolean {
 
 /**
  * `force`: a hit or the human at arm's length (`closeTiles`) always turns it, cap or not (self-defence). Otherwise, in
- * a Classic raid with the chaser cap full (decision CR2), an ordinary enemy does not join the hunt: it watches him from
+ * a Classic raid with the chaser cap full (decision AM2), an ordinary enemy does not join the hunt: it watches him from
  * where it stands for `returnWatchTicks` (the "?" over it), does not notice him again for that long, then walks back to
  * its route.
  */
@@ -287,7 +287,7 @@ function alert(
   }
 }
 
-/** Decision CR2: no chase slot. It watches where it saw him from its ground, then walks back to its route. */
+/** Decision AM2: no chase slot. It watches where it saw him from its ground, then walks back to its route. */
 function holdBack(state: GameState, m: EnemyMind, p: Player, seen: TilePos | null, events: SimEvent[]): void {
   const cfg = state.config.campaignTactics!;
   const T = state.tick;

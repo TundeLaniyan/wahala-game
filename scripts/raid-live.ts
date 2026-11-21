@@ -59,7 +59,7 @@ for (const level of levels) {
             enemyTicks++;
             states.set(m.state, (states.get(m.state) ?? 0) + 1);
             if (!ENGAGED.has(m.state)) calm++;
-            // the chaser cap counts ordinary kinds (decision CR2): lieutenants and bosses apart
+            // the chaser cap counts ordinary kinds (decision AM2): lieutenants and bosses apart
             if (CHASING.has(m.state) && ORDINARY.has(q.enemyKind ?? '')) chasing++;
           }
           ticks++;

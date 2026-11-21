@@ -1,6 +1,6 @@
-// Rendered evidence of a Classic raid generator ambush (docs/CLASSIC_RAID_COMBAT.md, decisions CR1-CR6): the real game
+// Rendered evidence of a Classic raid generator ambush (docs/CLASSIC_RAID_COMBAT.md, decisions AM1-AM6): the real game
 // in a browser, the Dispatch Depot at the save's level (Normal), its real enemy bots. Guard A walks clockwise round the
-// pillar at (8,4); its lap is clockwork (CR1), so the player times a generator on (7,7) to blow as the guard reaches the
+// pillar at (8,4); its lap is clockwork (AM1), so the player times a generator on (7,7) to blow as the guard reaches the
 // corner (7,5). The only staging is the drop itself (the human is moved to (7,7), the generator laid, the human moved back
 // to the entrance, out of the guard's sight): everything else is the live simulation. Shots, phone landscape:
 //   1 the guard on its rounds, the generator ticking where it will walk;  2 the blast catches it at the corner;

@@ -309,7 +309,7 @@ export class EnemyBot implements Bot {
       this.lastDirective = key;
     }
     const intent = this.planner(obs).decide(obs);
-    // decision CR1 (Classic raids): a calm patrol walks its route like clockwork. The planner re-thinks on its own
+    // decision AM1 (Classic raids): a calm patrol walks its route like clockwork. The planner re-thinks on its own
     // cadence and could stand a beat on a corridor tile between two waypoints, so the next step towards the waypoint is
     // taken the moment the seat is free to move, unless a generator it knows of (or a flame) is about: then the
     // planner's own danger handling decides
@@ -377,7 +377,7 @@ export class EnemyBot implements Bot {
 }
 
 /**
- * Decision CR1: the first step of the shortest walk from this seat to its patrol waypoint (x, y) over open floor (no
+ * Decision AM1: the first step of the shortest walk from this seat to its patrol waypoint (x, y) over open floor (no
  * generator it is aware of, no other body), ties broken in the fixed `DIRS` order; null when it cannot step now (in a
  * step, planted, dazed), is there already, a known generator or a flame is within reach of its tile or the next one,
  * or no walk exists. Pure: the same observation gives the same step.

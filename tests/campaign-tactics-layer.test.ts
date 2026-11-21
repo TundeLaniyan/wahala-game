@@ -130,7 +130,7 @@ describe('Classic raids carry the raid tactics layer without its combat model (R
         // the raid's own enemy health, never the layer's table; minds only once a wave wakes
         for (const p of s.players.slice(1)) expect(p.vitals!.maxHp).toBe(enemyDef(p.enemyKind!).hp);
         expect('territory' in s, raidId).toBe(false);
-        // decision CR4 deliberately changed this (it asserted the raid's own, unlayered enemy commitment): a raid's
+        // decision AM4 deliberately changed this (it asserted the raid's own, unlayered enemy commitment): a raid's
         // punches are its own readable, committed ones (RAID_ENEMY_ATTACKS), never the field tactics' wind-ups
         const want = RAID_ENEMY_ATTACKS[level];
         expect(s.config.enemyAttacks.committedMelee, raidId).toBe(true);

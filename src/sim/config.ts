@@ -554,13 +554,13 @@ export interface ClassicRaidTactics {
    */
   calledChaseTicks: number;
   /**
-   * Decision CR2: at most this many ORDINARY enemies (agbero, guard, thrower, heavy) hunt the player at once (`alert` /
+   * Decision AM2: at most this many ORDINARY enemies (agbero, guard, thrower, heavy) hunt the player at once (`alert` /
    * `pursue`). Another that notices him, hears a call or is called in watches him from its ground and goes back to its
    * route instead; a hit or a player at arm's length still turns it. Lieutenants and bosses are never capped.
    */
   maxChasers: number;
   /**
-   * Decision CR6: a blast defeats an enemy of these kinds outright (a sprung ambush is a kill at every level, whatever
+   * Decision AM6: a blast defeats an enemy of these kinds outright (a sprung ambush is a kill at every level, whatever
    * `campaign.damage.blast` the level gives the human); any other kind loses at least `blastVsTough` segments.
    */
   blastDefeats: EnemyKind[];
@@ -904,7 +904,7 @@ export interface GameConfig {
     /** After an enemy hit's stun ends this victim cannot be hit by an enemy again for this long. */
     victimFreeTicks: number;
     /**
-     * Decision CR4 (Classic raids): an enemy punch is COMMITTED to the tile its wind-up telegraphs (the enemy's tile
+     * Decision AM4 (Classic raids): an enemy punch is COMMITTED to the tile its wind-up telegraphs (the enemy's tile
      * plus the wind-up's direction). At impact it hits only a rival on that tile (or still under half-way out of it);
      * it never turns to another neighbour or reaches along a line. Absent = the catalogue reach (every other match).
      */
@@ -1647,7 +1647,7 @@ export const RAID_TACTICS_LEVELS: Readonly<
     id: 'raid.tactics/1',
     // the raid lieutenant (expert trap sense) plans like its level's bot, a little quicker to react: the crew's
     // bruiser, not a second boss (decision RA6)
-    // decision CR5: a calm walker sees a generator on its way only from 1 tile and takes it in slowly
+    // decision AM5: a calm walker sees a generator on its way only from 1 tile and takes it in slowly
     trapSense: {
       none: { enemyBrawlReactScale: 4.5, calmVisionTiles: 1, reactScale: 1.6 },
       basic: { enemyBrawlReactScale: 4, calmVisionTiles: 1, reactScale: 1.5 },
@@ -1699,7 +1699,7 @@ export const RAID_TACTICS_LEVELS: Readonly<
     id: 'raid.tactics/1',
     // the raid lieutenant (expert trap sense) plans like its level's bot, a little quicker to react: the crew's
     // bruiser, not a second boss (decision RA6)
-    // decision CR5: a calm walker sees a generator on its way from 2 tiles and takes it in a little slowly
+    // decision AM5: a calm walker sees a generator on its way from 2 tiles and takes it in a little slowly
     trapSense: {
       none: { enemyBrawlReactScale: 4, calmVisionTiles: 2, reactScale: 1.3 },
       basic: { enemyBrawlReactScale: 3.5, calmVisionTiles: 2, reactScale: 1.2 },
@@ -1801,16 +1801,16 @@ export const RAID_TACTICS_LEVELS: Readonly<
 };
 
 /**
- * Decision RA6, amended by CR2: how long a called-in wave hunts the player with no leash, by level. Easy: a called wave
+ * Decision RA6, amended by AM2: how long a called-in wave hunts the player with no leash, by level. Easy: a called wave
  * wakes calm on its route (0); every hunt is also bound by the chaser cap.
  */
 const RAID_CALLED_CHASE_TICKS = { easy: 0, normal: 240, hard: 480 } as const;
 
-/** Decision CR2: ordinary enemies hunting the player at once in a Classic raid, by level. */
+/** Decision AM2: ordinary enemies hunting the player at once in a Classic raid, by level. */
 const RAID_MAX_CHASERS = { easy: 1, normal: 2, hard: 3 } as const;
 
 /**
- * Decision CR4: the enemy punches of a Classic raid, by level. A wind-up (catalogue startup + extra) the player can
+ * Decision AM4: the enemy punches of a Classic raid, by level. A wind-up (catalogue startup + extra) the player can
  * read and step out of: an agbero / guard 60 / 54 (Easy), 50 / 44 (Normal), 40 / 34 ticks (Hard); a reaction of
  * 0.25 s plus half a step (6 ticks) is 21 ticks. The strike is committed to its telegraphed tile; one wind-up at a time
  * (two on Hard) with a gap between a group's punches; after a hit, `victimFreeTicks` of no enemy hit.

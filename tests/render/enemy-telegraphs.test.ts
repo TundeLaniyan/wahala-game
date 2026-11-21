@@ -80,7 +80,7 @@ describe('readTelegraph (from the sim state)', () => {
     expect(readTelegraph(s, p, end, emptyTelegraph(), start).progress).toBe(1);
   });
 
-  it('a Classic raid punch is committed (decision CR4): the warning marks only the aimed tile, no other reach', () => {
+  it('a Classic raid punch is committed (decision AM4): the warning marks only the aimed tile, no other reach', () => {
     const s = duel();
     s.config.enemyAttacks.committedMelee = true;
     pressUntil(s, 'attackStarted');

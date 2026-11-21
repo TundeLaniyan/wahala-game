@@ -190,7 +190,7 @@ function campaignLethal(
 }
 
 /**
- * Classic raids (decision CR6): what a blast takes from an ENEMY - all its health for the kinds in `blastDefeats`, at
+ * Classic raids (decision AM6): what a blast takes from an ENEMY - all its health for the kinds in `blastDefeats`, at
  * least `blastVsTough` from any other. Null for everyone else (the human, any match that is not a raid, any other source).
  */
 export function raidBlastDamage(
