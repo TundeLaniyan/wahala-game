@@ -42,6 +42,16 @@ import type { FrameContext, View } from './types';
 import { addTeamKit, createProtectionRing, protectionBlink, teamColor } from './teamMarkings';
 
 const DEATH_TIME = 1.7;
+
+/**
+ * The death clock of a newly created figure: null when the seat is alive; when it is already down (a raid wave not yet
+ * on the board, an eliminated rival, a seat re-dressed when its on-demand model arrives) its death is long over, so it
+ * starts hidden instead of replaying the tumble and the puff where nothing happened (in a night raid that would also
+ * show where hidden enemies wait). Coming back still plays the appear effect (`revive`).
+ */
+export function initialDeadAt(alive: boolean): number | null {
+  return alive ? null : -Infinity;
+}
 /** Characters are drawn tall and heroic so they read as active 3D characters, not board tokens. */
 const SCALE = 1.85;
 /** The seated Okada rider sits on the (enlarged) bike's seat: offsets in model metres. */
@@ -444,7 +454,7 @@ export class PlayerViews implements View {
       voucher,
       yaw: 0,
       phase: Math.random() * 6,
-      deadAt: null,
+      deadAt: initialDeadAt(p.alive),
       deathDir: new Vector3(0, 0, 1),
       wasMounted: false,
       shield,

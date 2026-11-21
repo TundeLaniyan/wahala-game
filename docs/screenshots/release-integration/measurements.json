@@ -1,0 +1,56 @@
+[
+  {
+    "scenario": "raid:recordsVault",
+    "q": "low",
+    "device": "phone",
+    "drawCalls": 194,
+    "triangles": 246749,
+    "geometries": 170,
+    "textures": 151,
+    "frameMs": 2008,
+    "frames": 2,
+    "tick": 910,
+    "arena": "raidRecordsVault",
+    "players": 6,
+    "alive": 3,
+    "generators": 0,
+    "models": [
+      "char_areaBoss",
+      "char_bottleThrower",
+      "char_campusQueen",
+      "char_lekkiBoy",
+      "char_lieutenant",
+      "char_marketEnforcer",
+      "char_streetBaller"
+    ],
+    "failed": [],
+    "errors": []
+  },
+  {
+    "scenario": "raid:warehouseDispatchDepot",
+    "q": "low",
+    "device": "phone",
+    "drawCalls": 192,
+    "triangles": 290567,
+    "geometries": 154,
+    "textures": 149,
+    "frameMs": 2030,
+    "frames": 2,
+    "tick": 912,
+    "arena": "raidWarehouseDispatchDepot",
+    "players": 7,
+    "alive": 4,
+    "generators": 0,
+    "models": [
+      "char_areaBoss",
+      "char_bottleThrower",
+      "char_campusQueen",
+      "char_lekkiBoy",
+      "char_lieutenant",
+      "char_marketEnforcer",
+      "char_streetBaller"
+    ],
+    "failed": [],
+    "errors": []
+  }
+]
