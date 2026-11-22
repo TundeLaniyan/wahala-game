@@ -41,7 +41,7 @@ import { BlockedMoves } from './blockedMove';
 import { buildHud } from './hud';
 import { raidNotice, supersededCargoNotice } from './raidNotices';
 import { expireKillLines, isCrowded, newKillLines, pushKillLines } from './killFeed';
-import { buildPlayers, matchArenaId, matchRules, suddenDeathTestSetup } from './names';
+import { buildMatchOptions, buildPlayers, suddenDeathTestSetup } from './names';
 import type { MatchVariant } from './names';
 import { cycleSpectateTarget, pickSpectateTarget } from './spectate';
 import { NULL_AUDIO } from './ports';
@@ -206,15 +206,18 @@ export class MatchController implements MissionHost {
     const setup = variant === 'suddenDeathTest' ? suddenDeathTestSetup(settings) : null;
     this.variant = variant;
     this.settings = setup ? setup.settings : settings;
-    const players = buildPlayers(this.settings, seed);
-    const arenaId = setup ? setup.arenaId : matchArenaId(settings);
-    const state = createGame({
-      seed,
-      arenaId,
-      players,
-      settings: setup ? setup.rules : matchRules(settings),
-      ...(setup ? { config: setup.config } : {}),
-    });
+    const options: GameOptions = setup
+      ? {
+          seed,
+          arenaId: setup.arenaId,
+          players: buildPlayers(this.settings, seed),
+          settings: setup.rules,
+          config: setup.config,
+        }
+      : buildMatchOptions(settings, seed);
+    const players = options.players;
+    const arenaId = options.arenaId!;
+    const state = createGame(options);
     // local Classic Battle only (decision CC-F1): the open-field (Level 2) close-combat feel on the cardinal grid; the
     // Sudden Death test match keeps its own rules
     if (!setup) applyClassicCombat(state);

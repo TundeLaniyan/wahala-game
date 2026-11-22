@@ -22,19 +22,21 @@ import {
   setLevel,
   startEntry,
 } from '../../testlab/controller';
+import { setVariant } from '../../testlab/labActions';
 import { FEEDBACK_LABEL, LAB_LEVELS, LEVEL_LABEL } from '../../testlab/feedback';
-import { levelOf, useLab } from '../../testlab/labStore';
-import { entriesIn, entryById } from '../../testlab/registry';
+import { labPatch, levelOf, useLab, variantOf } from '../../testlab/labStore';
+import { entriesOf, entryById } from '../../testlab/registry';
 import type { LabEntry } from '../../testlab/registry';
 import { FeedbackPanel } from './FeedbackPanel';
 import { MarkerSwitch } from './MarkerSwitch';
+import { RumbleSetup, RumbleSummary } from './RumbleSetup';
 import { endedText } from './endedText';
 import '../menu/menu.css';
 import '../menu/flow.css';
 import '../menu/redesign.css';
 import './testlab.css';
 
-function EntryRow({ entry }: { entry: LabEntry }) {
+function EntryRow({ entry, number }: { entry: LabEntry; number?: number }) {
   const f = useLab((s) => s.feedback[entry.id]);
   const status = f?.status ?? 'notTested';
   return (
@@ -49,7 +51,10 @@ function EntryRow({ entry }: { entry: LabEntry }) {
         }}
       >
         <span>
-          <b>{entry.title}</b>
+          <b>
+            {number !== undefined && <i className="tl-num">{number}</i>}
+            {entry.title}
+          </b>
           <small>{entry.objective}</small>
         </span>
         <span className={`tl-status ${status}`} data-testid={`testlab-status-${entry.id}`}>
@@ -92,6 +97,9 @@ function CopyButton() {
 
 function HomeView() {
   const ok = isolationOk();
+  const completedOpen = useLab((s) => s.completedOpen);
+  const review = entriesOf('review');
+  const completed = entriesOf('completed');
   return (
     <section className="mn-screen tl-screen" data-testid="testlab-home">
       <header className="mn-top">
@@ -111,21 +119,41 @@ function HomeView() {
         </p>
       )}
       <div className="mn-body tl-cols">
-        <section className="tl-col" aria-labelledby="tl-h-play">
-          <h3 id="tl-h-play">Full Playtests</h3>
-          <ul className="tl-list" data-testid="testlab-list-playtest">
-            {entriesIn('playtest').map((e) => (
-              <EntryRow key={e.id} entry={e} />
+        <section className="tl-col tl-review" aria-labelledby="tl-h-review">
+          <h3 id="tl-h-review">
+            Tests Requiring Review <span className="tl-count">{review.length}</span>
+          </h3>
+          <ul className="tl-list" data-testid="testlab-list-review">
+            {review.map((e, i) => (
+              <EntryRow key={e.id} entry={e} number={i + 1} />
             ))}
           </ul>
         </section>
-        <section className="tl-col" aria-labelledby="tl-h-scen">
-          <h3 id="tl-h-scen">Isolated Scenarios</h3>
-          <ul className="tl-list" data-testid="testlab-list-scenario">
-            {entriesIn('scenario').map((e) => (
-              <EntryRow key={e.id} entry={e} />
-            ))}
-          </ul>
+        <section className="tl-col tl-done" aria-labelledby="tl-h-done">
+          <h3 id="tl-h-done">
+            <button
+              type="button"
+              className="tl-fold"
+              data-testid="testlab-completed-toggle"
+              aria-expanded={completedOpen}
+              onClick={() => {
+                commands.click();
+                labPatch({ completedOpen: !completedOpen });
+              }}
+            >
+              <span aria-hidden>{completedOpen ? '▾' : '▸'}</span> Completed Tests{' '}
+              <span className="tl-count">{completed.length}</span>
+            </button>
+          </h3>
+          {completedOpen ? (
+            <ul className="tl-list" data-testid="testlab-list-completed">
+              {completed.map((e) => (
+                <EntryRow key={e.id} entry={e} />
+              ))}
+            </ul>
+          ) : (
+            <p className="tl-hint">Approved tests stay here and can still be started.</p>
+          )}
         </section>
       </div>
     </section>
@@ -135,6 +163,7 @@ function HomeView() {
 function EntryView({ entry }: { entry: LabEntry }) {
   const level = useLab((s) => levelOf(s, entry.id));
   const fighter = useGameStore((s) => s.settings.character);
+  const variant = useLab((s) => variantOf(s, entry.id)) ?? entry.variants?.[0]?.id;
   const ok = isolationOk();
   return (
     <section className="mn-screen tl-screen" data-testid="testlab-entry">
@@ -143,7 +172,10 @@ function EntryView({ entry }: { entry: LabEntry }) {
           <span aria-hidden>‹</span> Test Lab
         </button>
         <div className="mn-heading">
-          <small>{entry.section === 'playtest' ? 'Full playtest' : 'Isolated scenario'}</small>
+          <small>
+            {entry.group === 'review' ? 'Needs review · ' : 'Completed · '}
+            {entry.section === 'playtest' ? 'Full playtest' : 'Isolated scenario'}
+          </small>
           <h2>{entry.title}</h2>
         </div>
         <button
@@ -164,7 +196,36 @@ function EntryView({ entry }: { entry: LabEntry }) {
         <div className="mn-panel tl-card">
           <h4>Objective</h4>
           <p data-testid="testlab-objective">{entry.objective}</p>
+          {entry.lookFor && (
+            <>
+              <h4>What to look for</h4>
+              <p data-testid="testlab-lookfor">{entry.lookFor}</p>
+            </>
+          )}
           <p className="dim">{entry.launches}</p>
+          {entry.launch.kind === 'rumbleConfigured' && <RumbleSetup />}
+          {entry.variants && (
+            <>
+              <h4>Enemy</h4>
+              <div className="mn-opts" role="group" aria-label="Enemy">
+                {entry.variants.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    className={`chip mn-opt${v.id === variant ? ' on' : ''}`}
+                    data-testid={`testlab-variant-${v.id}`}
+                    aria-pressed={v.id === variant}
+                    onClick={() => {
+                      commands.click();
+                      setVariant(entry.id, v.id);
+                    }}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           {entry.levels && (
             <>
               <h4>Difficulty</h4>
@@ -211,9 +272,12 @@ function EntryView({ entry }: { entry: LabEntry }) {
           )}
           {entry.id === 'identifyPlayer' && <MarkerSwitch />}
         </div>
-        <div className="mn-panel tl-card">
-          <h4>How did it go?</h4>
-          <FeedbackPanel entryId={entry.id} />
+        <div className="tl-side">
+          {entry.launch.kind === 'rumbleConfigured' && <RumbleSummary />}
+          <div className="mn-panel tl-card">
+            <h4>How did it go?</h4>
+            <FeedbackPanel entryId={entry.id} />
+          </div>
         </div>
       </div>
     </section>

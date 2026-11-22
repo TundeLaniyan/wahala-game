@@ -1,12 +1,12 @@
 /**
- * The seven isolated scenarios (docs/TEST_LAB.md). Each is a REAL raid (the Oshodi dispatch depot, or the Records Vault
+ * The isolated scenarios (docs/TEST_LAB.md). Each is a REAL raid (the Oshodi dispatch depot, or the Records Vault
  * at night) built by `buildRaidGame` at the level the founder picks, then prepared once: the extra enemies are stood down
  * and a few starting positions are chosen (`kit.ts`). Everything after the countdown is the real game: the enemies wake
  * through the sim's wave code and decide with the real bots, the player has the real controls and the real rules decide
  * every outcome. The `setup` lines are what each scenario prepares; nothing else is touched.
  */
 import { inViewCone, canSeeTile, bodyTiles, routeTiles } from '../../sim';
-import type { Dir, GameState, RaidId, TilePos } from '../../sim';
+import type { Dir, EnemyKind, GameState, RaidId, TilePos } from '../../sim';
 import {
   behind,
   floorByDistance,
@@ -20,7 +20,15 @@ import {
 } from './kit';
 
 export type ScenarioId =
-  'rearApproach' | 'patrolAmbush' | 'oneHit' | 'punchDodge' | 'pursuit' | 'flashlight' | 'identifyPlayer';
+  | 'rearApproach'
+  | 'patrolAmbush'
+  | 'oneHitAgbero'
+  | 'oneHitGuard'
+  | 'oneHitThrower'
+  | 'punchDodge'
+  | 'pursuit'
+  | 'flashlight'
+  | 'identifyPlayer';
 
 export interface ScenarioDef {
   id: ScenarioId;
@@ -97,6 +105,36 @@ function lessThan(a: readonly number[], b: readonly number[]): boolean {
   return false;
 }
 
+/**
+ * One-hit lethality (decision TL9): ONE ordinary, unarmoured enemy at its post by the entrance, facing into the depot along
+ * the bottom lane, with the player two tiles behind it. A calm raid enemy sees nothing behind it (CV1) and does not hear a
+ * generator laid there on Easy and Normal (CV2); the player walks to the tile behind it, lays a generator and steps out of
+ * the cross, and the real blast decides. No enemy is stood still by force: the sim gives a post its spot, the real bot holds
+ * it (and turns a quarter every few seconds, so there is a window of a few seconds to lay it). Hard hears the generator: by
+ * design it does not work there.
+ */
+export const ONE_HIT_POST: TilePos = { x: 2, y: 11 };
+export const ONE_HIT_START: TilePos = { x: 1, y: 9 };
+
+function oneHit(id: ScenarioId, kind: EnemyKind): ScenarioDef {
+  return {
+    id,
+    raidId: DEPOT,
+    seed: 4103,
+    timeLimitSec: 600,
+    setup: [
+      `Dispatch Depot with ONE ordinary ${kind} at the entrance post (2, 11), facing east into the depot (the other five enemies are stood down).`,
+      'The player starts at (1, 9), two steps from the tile directly behind it (1, 11); the blast is the real cross of a generator laid there.',
+      'The enemy wakes 1.5 s after GO and holds its post with the real bot (a quarter turn every few seconds); nothing is forced.',
+    ],
+    prepare(state) {
+      keepEnemies(state, [1]);
+      placeEnemy(state, 1, ONE_HIT_POST, kind);
+      placeHuman(state, ONE_HIT_START, 'down');
+    },
+  };
+}
+
 export const SCENARIOS: readonly ScenarioDef[] = [
   {
     id: 'rearApproach',
@@ -140,23 +178,9 @@ export const SCENARIOS: readonly ScenarioDef[] = [
       placeHuman(state, at, 'right');
     },
   },
-  {
-    id: 'oneHit',
-    raidId: DEPOT,
-    seed: 4103,
-    timeLimitSec: 600,
-    setup: [
-      'Dispatch Depot with three ordinary enemies standing in a row on the open lane of the east aisle: an agbero, a guard and a thrower (the other three seats are stood down).',
-      'The player starts at the east end of the lane with two generators available, facing the row.',
-    ],
-    prepare(state) {
-      keepEnemies(state, [1, 2, 3]);
-      placeEnemy(state, 2, { x: 9, y: 5 }, 'agbero');
-      placeEnemy(state, 1, { x: 10, y: 5 }, 'guard');
-      placeEnemy(state, 3, { x: 11, y: 5 }, 'thrower');
-      placeHuman(state, { x: 14, y: 5 }, 'left');
-    },
-  },
+  oneHit('oneHitAgbero', 'agbero'),
+  oneHit('oneHitGuard', 'guard'),
+  oneHit('oneHitThrower', 'thrower'),
   {
     id: 'punchDodge',
     raidId: DEPOT,

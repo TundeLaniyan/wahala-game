@@ -10,6 +10,13 @@ import { createSave, persistSave, loadSave } from '../../src/campaign';
 import { FEEDBACK_KEY } from '../../src/testlab/feedbackKey';
 import { loadFeedback, saveFeedback, withFeedback } from '../../src/testlab/feedback';
 import { createIsolatedStorage, installIsolation, resetIsolationForTests } from '../../src/testlab/isolation';
+import {
+  REAL_SETTINGS_KEY,
+  captureRealSettings,
+  realSettingsText,
+  resetRealSnapshotForTests,
+} from '../../src/testlab/realSnapshot';
+import { SETTINGS_KEY } from '../../src/app/settings';
 import type { StorageLike } from '../../src/testlab/isolation';
 
 class RealStore implements StorageLike {
@@ -28,6 +35,7 @@ class RealStore implements StorageLike {
 
 afterEach(() => {
   resetIsolationForTests();
+  resetRealSnapshotForTests();
   delete (globalThis as { localStorage?: unknown }).localStorage;
 });
 
@@ -108,5 +116,58 @@ describe('installIsolation', () => {
     campaign.setLevel('easy');
     campaign.deleteSave();
     expect(real.writes).toEqual([]);
+  });
+});
+
+describe('the real-settings snapshot (decision TL6)', () => {
+  it('reads the same key the game saves its settings under', () => {
+    expect(REAL_SETTINGS_KEY).toBe(SETTINGS_KEY);
+  });
+
+  it('is taken once, from the real storage, BEFORE the swap, and only ever by reading', () => {
+    const real = new RealStore();
+    real.data.set(
+      SETTINGS_KEY,
+      JSON.stringify({ play: 'rumble', difficulty: 'rookie', rumbleCompetitors: 24 }),
+    );
+    real.data.set('wahala.campaign.v1', 'the player’s real save');
+    const reads: string[] = [];
+    const spy: StorageLike = {
+      getItem: (k) => {
+        reads.push(k);
+        return real.getItem(k);
+      },
+      setItem: real.setItem,
+      removeItem: real.removeItem,
+    };
+    const win: { localStorage?: unknown } = { localStorage: spy };
+    const iso = installIsolation(win);
+    expect(iso.ok).toBe(true);
+    // the lab's own storage still starts empty (isolation unchanged) ...
+    expect((win.localStorage as StorageLike).getItem(SETTINGS_KEY)).toBeNull();
+    // ... while the snapshot kept what the player really had
+    expect(JSON.parse(realSettingsText()!)).toMatchObject({ rumbleCompetitors: 24, difficulty: 'rookie' });
+    // read-only: one read of the settings key, no write, no removal, nothing else touched
+    expect(reads).toEqual([SETTINGS_KEY]);
+    expect(real.writes).toEqual([]);
+    expect(real.data.get(SETTINGS_KEY)).toContain('"rumbleCompetitors":24');
+    // a later game write goes to memory and the snapshot does not change
+    (win.localStorage as StorageLike).setItem(SETTINGS_KEY, '{"play":"classic"}');
+    expect(real.writes).toEqual([]);
+    expect(JSON.parse(realSettingsText()!).play).toBe('rumble');
+  });
+
+  it('is null when nothing is saved or the storage cannot be read, and a second capture is ignored', () => {
+    captureRealSettings({ getItem: () => null });
+    expect(realSettingsText()).toBeNull();
+    captureRealSettings({ getItem: () => '{"play":"rumble"}' }); // ignored: taken once
+    expect(realSettingsText()).toBeNull();
+    resetRealSnapshotForTests();
+    captureRealSettings({
+      getItem: () => {
+        throw new Error('blocked');
+      },
+    });
+    expect(realSettingsText()).toBeNull();
   });
 });

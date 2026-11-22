@@ -31,6 +31,7 @@ export const LEVEL_LABEL: Readonly<Record<LabLevel, string>> = {
 };
 
 export const NOTE_MAX = 200;
+export const DETAIL_MAX = 160;
 
 export interface FeedbackEntry {
   status: FeedbackStatus;
@@ -38,6 +39,8 @@ export interface FeedbackEntry {
   note: string;
   /** The level the test was marked at, when the test has levels. */
   level?: LabLevel;
+  /** The set-up the test was marked at when it has one (the City Rumble configuration, the one-hit enemy): one line. */
+  detail?: string;
 }
 export type FeedbackMap = Record<string, FeedbackEntry>;
 
@@ -58,7 +61,8 @@ export function sanitizeFeedback(raw: unknown): FeedbackMap {
       : 'notTested';
     const note = typeof e.note === 'string' ? cleanNote(e.note) : '';
     const level = LAB_LEVELS.includes(e.level as LabLevel) ? (e.level as LabLevel) : undefined;
-    out[id] = { status, note, ...(level ? { level } : {}) };
+    const detail = typeof e.detail === 'string' ? cleanNote(e.detail).slice(0, DETAIL_MAX) : '';
+    out[id] = { status, note, ...(level ? { level } : {}), ...(detail ? { detail } : {}) };
   }
   return out;
 }
@@ -99,12 +103,12 @@ export function withFeedback(map: FeedbackMap, id: string, change: Partial<Feedb
 export interface SummaryEntry {
   id: string;
   title: string;
-  section: 'playtest' | 'scenario';
+  group: 'review' | 'completed';
 }
 
-const SECTION_TITLE = { playtest: 'FULL PLAYTESTS', scenario: 'ISOLATED SCENARIOS' } as const;
+const GROUP_TITLE = { review: 'TESTS REQUIRING REVIEW', completed: 'COMPLETED TESTS' } as const;
 
-/** The compact plain-text summary (pure, so it is unit-tested): a header, the two sections, the totals. */
+/** The compact plain-text summary (pure, so it is unit-tested): a header, the two groups (review first), the totals. */
 export function summarizeFeedback(
   map: FeedbackMap,
   entries: readonly SummaryEntry[],
@@ -113,13 +117,14 @@ export function summarizeFeedback(
   const lines = [`WAHALA! TEST LAB (${meta.when})`];
   if (meta.device) lines.push(`Device: ${meta.device}`);
   const counts: Record<FeedbackStatus, number> = { pass: 0, needsWork: 0, failed: 0, notTested: 0 };
-  for (const section of ['playtest', 'scenario'] as const) {
-    lines.push('', SECTION_TITLE[section]);
-    for (const e of entries.filter((x) => x.section === section)) {
+  for (const group of ['review', 'completed'] as const) {
+    lines.push('', GROUP_TITLE[group]);
+    for (const e of entries.filter((x) => x.group === group)) {
       const f = map[e.id];
       const status = f?.status ?? 'notTested';
       counts[status]++;
-      const level = f?.level ? ` (${LEVEL_LABEL[f.level]})` : '';
+      const parts = [f?.level ? LEVEL_LABEL[f.level] : '', f?.detail ?? ''].filter((x) => x !== '');
+      const level = parts.length > 0 ? ` (${parts.join('; ')})` : '';
       const note = f?.note ? `: ${f.note}` : '';
       lines.push(`- [${TAG[status]}] ${e.title}${level}${note}`);
     }
