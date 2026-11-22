@@ -1,0 +1,273 @@
+/*
+ * The Test Lab (docs/TEST_LAB.md): a temporary founder screen in the approved menu's look. It reuses menu.css / flow.css
+ * (frame, buttons, chips, pause cards) and adds only the two section lists, the entry card and the feedback controls.
+ * Phone landscape first: the page never scrolls, the two lists scroll inside their own columns.
+ */
+.tl .mn-body.tl-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  overflow: hidden;
+  padding: 10px 2px;
+}
+.tl-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.tl-col > h3 {
+  margin: 0 0 6px;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.5rem;
+  letter-spacing: 0.08em;
+  color: var(--mn-amber);
+}
+.tl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  margin: 0;
+  padding: 0 4px 0 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mn-border) transparent;
+}
+.tl-row {
+  appearance: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 12px;
+  border: 1px solid var(--mn-border);
+  background: rgba(30, 38, 56, 0.9);
+  color: var(--mn-text);
+  text-align: left;
+  cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+.tl-row:hover,
+.tl-row:focus-visible {
+  border-color: var(--mn-amber);
+}
+.tl-row b {
+  display: block;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.3rem;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+  color: #fff;
+}
+.tl-row small {
+  display: block;
+  overflow: hidden;
+  color: var(--mn-muted);
+  font-size: 0.74rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tl-status {
+  padding: 3px 8px;
+  border: 1px solid var(--mn-border);
+  color: var(--mn-muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.tl-status.pass {
+  border-color: var(--mn-green);
+  color: var(--mn-green);
+}
+.tl-status.needsWork {
+  border-color: var(--mn-amber);
+  color: var(--mn-amber);
+}
+.tl-status.failed {
+  border-color: var(--mn-red);
+  color: #ff8a80;
+}
+
+/* the entry card */
+.tl .mn-body.tl-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-content: start;
+}
+.tl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+}
+.tl-card h4 {
+  margin: 0;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.25rem;
+  letter-spacing: 0.08em;
+  color: var(--mn-amber);
+}
+.tl-card p {
+  margin: 0;
+  color: var(--mn-text);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+.tl-card p.dim {
+  color: var(--mn-muted);
+  font-size: 0.82rem;
+}
+.tl-note {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--mn-border);
+  background: rgba(11, 14, 20, 0.8);
+  color: var(--mn-text);
+  font: inherit;
+  font-size: 16px; /* 16px: iOS does not zoom the page when the field is focused */
+}
+.tl-warn {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--mn-red);
+  background: rgba(255, 59, 48, 0.12);
+  color: #ffc9c4;
+  font-size: 0.85rem;
+}
+.tl-summary-box {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: rgba(5, 7, 12, 0.88);
+}
+.tl-summary-box > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(100%, 560px);
+  max-height: 100%;
+  padding: 14px;
+  border: 1px solid var(--mn-border);
+  background: var(--mn-panel);
+}
+.tl-summary-box textarea {
+  min-height: 160px;
+  max-height: 50vh;
+  padding: 8px;
+  border: 1px solid var(--mn-border);
+  background: rgba(11, 14, 20, 0.9);
+  color: var(--mn-text);
+  font:
+    13px/1.35 ui-monospace,
+    monospace;
+}
+.tl-ended {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  min-height: 0;
+  margin: auto 0;
+}
+.tl-ended h2 {
+  margin: 0;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: clamp(2.4rem, 7vh, 4rem);
+  letter-spacing: 0.06em;
+  color: var(--mn-amber);
+}
+.tl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tl-marker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.tl-marker small {
+  flex-basis: 100%;
+  color: var(--mn-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* touch targets and the short landscape phone */
+.tl .mn-back,
+.tl .mn-btn.small {
+  min-height: 44px;
+}
+@media (max-height: 520px) {
+  .tl-col > h3 {
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+  }
+  .tl-row {
+    min-height: 48px;
+    padding: 4px 10px;
+  }
+  .tl-row b {
+    font-size: 1.15rem;
+  }
+  .tl-card {
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .tl .mn-btn {
+    min-height: 48px;
+    font-size: 1.3rem;
+    padding: 0 20px;
+  }
+}
+/* portrait phones and narrow windows: the sections stack and the page body scrolls */
+@media (max-width: 700px) and (orientation: portrait) {
+  .tl .mn-body.tl-cols {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .tl-list {
+    overflow: visible;
+  }
+  .tl .mn-body.tl-entry {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* the in-match marker button of the "Who am I?" scenario sits with the HUD's round buttons */
+.tl-hud-btn {
+  width: 44px;
+  height: 44px;
+  font-size: 0.7rem;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+/* the menu's short-screen rules shrink the chips: the Test Lab keeps every tap target at 44 px */
+.tl .chip.mn-opt,
+.mn-overlay.tl .chip.mn-opt {
+  min-height: 44px;
+}

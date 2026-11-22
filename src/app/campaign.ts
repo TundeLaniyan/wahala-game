@@ -108,7 +108,14 @@ export interface CampaignDeps {
     lives?: number;
     difficulty?: Difficulty;
     level?: CampaignLevel;
+    /** TEMPORARY Test Lab: a longer clock for a scenario. */
+    timeLimitSec?: number;
   }): GameOptions;
+  /**
+   * TEMPORARY Test Lab (docs/TEST_LAB.md): every mission can be started at once (the boss gate is open) because the whole
+   * save is in memory for the page session. False / absent in the real game.
+   */
+  testLabUnlocked?: boolean;
 }
 
 /** The raid in play: the door request it answers (null: a standalone section raid) and the section mission it belongs to. */
@@ -116,8 +123,12 @@ interface RaidContext {
   request: RaidRequest | null;
   raidId: RaidId;
   missionId: string | null;
-  /** The QA entry's own enemy level (`qaStartRaid`); absent = the save's level. */
+  /** The Test Lab's own enemy level (`qaStartRaid`); absent = the save's level. */
   level?: CampaignLevel | null;
+  /** TEMPORARY Test Lab: the scenario's set-up of the created raid state, its fixed seed and its clock. */
+  prepare?: (state: GameState) => void;
+  seed?: number;
+  timeLimitSec?: number;
 }
 
 /** A district with a boss mission: the six districts and, for its finale chapter, Ojuelegba (decision FN1). */
@@ -472,7 +483,7 @@ export class CampaignController {
   startMission(id: DistrictId, modifier: MissionModifierId | null = null): boolean {
     const ui = this.need();
     if (!isMissionId(id) || districtStatus(ui.save, id) === 'locked') return false;
-    if (!bossAvailable(ui.save, id)) {
+    if (!bossAvailable(ui.save, id) && !this.deps.testLabUnlocked) {
       this.update({ notice: `Clear the earlier sections of ${CAMPAIGN.districts[id].name} first.` });
       return false;
     }
@@ -741,13 +752,18 @@ export class CampaignController {
   }
 
   /**
-   * TEMPORARY founder QA entry (`?qaraid=`, docs/QA_ENTRY.md, decision QA1): plays a classic raid on its own at `level`
-   * (the save's level when null), with Restart / Leave in the pause menu. Nothing is written to the save: the raid's
-   * result is shown and forgotten (`finishRaidMission(null, ...)`), and leaving goes back to the map.
+   * TEMPORARY founder Test Lab (docs/TEST_LAB.md, decisions TL1, TL3; it superseded the `?qaraid=` entry, QA1): plays a
+   * classic raid on its own at `level` (the save's level when null), with Restart / Leave. Nothing is written to the
+   * save: the raid's result is shown and forgotten (`finishRaidMission(null, ...)`), and leaving goes back to the map.
+   * `opts` is for the isolated scenarios: a set-up of the created state, a fixed seed and a longer clock.
    */
-  qaStartRaid(raidId: RaidId, level: CampaignLevel | null): boolean {
+  qaStartRaid(
+    raidId: RaidId,
+    level: CampaignLevel | null,
+    opts: { prepare?: (state: GameState) => void; seed?: number; timeLimitSec?: number } = {},
+  ): boolean {
     const ui = this.need();
-    this.raidCtx = { request: null, raidId, missionId: null, level };
+    this.raidCtx = { request: null, raidId, missionId: null, level, ...opts };
     if (!this.playRaid(this.raidCtx, undefined)) {
       this.raidCtx = null;
       return false;
@@ -776,8 +792,9 @@ export class CampaignController {
       const options = (this.deps.buildRaid ?? buildRaidGame)({
         raidId: ctx.raidId,
         humanCharacter: ui.save.character,
-        seed: this.deps.seed(),
+        seed: ctx.seed ?? this.deps.seed(),
         ...(hp !== undefined ? { hp } : {}),
+        ...(ctx.timeLimitSec !== undefined ? { timeLimitSec: ctx.timeLimitSec } : {}),
         // raid enemies play at the campaign level's enemy bot level (decision CI1)
         difficulty: campaignEnemyLevel(level),
         level,
@@ -785,6 +802,7 @@ export class CampaignController {
       host.playRaid(options, {
         raidId: ctx.raidId,
         difficulty: campaignEnemyLevel(level),
+        ...(ctx.prepare ? { prepare: ctx.prepare } : {}),
         onEnd: (outcome) => this.raidEnded(ctx, outcome),
       });
       return true;
