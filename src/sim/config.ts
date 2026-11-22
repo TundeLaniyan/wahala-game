@@ -577,6 +577,13 @@ export interface ClassicRaidTactics {
    */
   nearRing: 'frontSides' | 'front';
   /**
+   * Decision CV8: the tiles round a calm guard where the player is noticed INSTANTLY (arm's length, `closeTiles`) and
+   * where a calm guard will swing at him. Beyond them `nearRing` sight still notices him after the usual reaction
+   * (`awareness.noticeTicks`): a guard at its post that turns its shoulder to a player laying a generator behind it
+   * gives him that reaction to step away instead of catching him on the very tick it turns.
+   */
+  closeRing: 'frontSides' | 'front';
+  /**
    * Decision CV2: how far the quiet click of a generator being LAID is heard (tiles, Manhattan). A blast stays loud
    * (`perception[kind].hearingTiles` x `awareness.blastHearingScale`).
    */
@@ -1901,6 +1908,7 @@ export function raidTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignTacti
     blastVsTough: { easy: 4, normal: 3, hard: 2 }[level],
     capsLieutenant: level !== 'hard',
     nearRing: level === 'easy' ? 'front' : 'frontSides',
+    closeRing: level === 'hard' ? 'frontSides' : 'front',
     placeHearingTiles: { easy: 0, normal: 0, hard: 1 }[level],
     trapRing: level === 'hard' ? 'frontSides' : 'front',
   };
