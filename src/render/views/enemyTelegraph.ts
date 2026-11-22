@@ -13,7 +13,7 @@
  * The wind-up length is never hard-coded: it is the time from the press (`attackStarted`, or when the view first saw
  * the wind-up) to the live `attack.resolveTick`, so a longer or shorter wind-up from the AI tuning reads the same.
  */
-import { DIRS, DIR_VEC, Tile, enemyAttackPhase, tileAt, windupTicks } from '../../sim';
+import { DIRS, DIR_VEC, Tile, enemyAttackPhase, meleeStartupTicks, tileAt, windupTicks } from '../../sim';
 import type { Dir, EnemyKind, GameState, Player } from '../../sim';
 
 export type TelegraphKind = 'melee' | 'ranged' | 'open' | 'stagger';
@@ -102,11 +102,14 @@ export function readTelegraph(
 
   if (p.attack) {
     const a = p.attack;
-    // an enemy's wind-up is its kind's; a boss-mission generator bot's is its own attack's startup
+    // an enemy's wind-up is its kind's; a boss-mission generator bot's is its own attack's startup, lengthened by the
+    // boss balance's readable wind-up where the fight has one (decision BB2): the whole wind-up is drawn, not its tail
     const windup =
       p.enemyKind !== undefined
         ? windupTicks(state.config, p.enemyKind)
-        : (state.config.skills.attacks[a.skill]?.startupTicks ?? 1);
+        : state.config.skills.attacks[a.skill]
+          ? meleeStartupTicks(state.config, p, a.skill)
+          : 1;
     const start = windStart ?? a.resolveTick - Math.max(1, windup);
     out.kind = 'melee';
     out.progress = spanProgress(Math.min(start, a.resolveTick - 1), a.resolveTick, now);

@@ -24,6 +24,7 @@ import { tryPlaceGenerator } from '../src/sim/systems/generators';
 import { Tile } from '../src/sim/types';
 import { addGenerator } from './helpers';
 import { advance, blastAt, firstStep, newMission, of, put } from './mission-helpers';
+import { emptyTelegraph, readTelegraph } from '../src/render/views/enemyTelegraph';
 
 const AWAY = { x: 30, y: 30 };
 const LEVELS: CampaignLevel[] = ['easy', 'normal', 'hard'];
@@ -179,6 +180,22 @@ describe('BB2: every bot seat of the boss fight winds up readably', () => {
       expect(beginAttack(state, me, boss, 'left', ev, 'push')).toBe(true);
       expect(me.attack!.resolveTick - state.tick).toBe(state.config.skills.attacks.push.startupTicks);
     }
+  });
+
+  it("the boss's punch warning is drawn over the whole level wind-up, not its last catalogue ticks", () => {
+    const state = missionAt('oshodi', 'normal');
+    const boss = state.players[1]!;
+    const me = state.players[0]!;
+    put(state, 0, boss.x + 1, boss.y);
+    expect(beginAttack(state, boss, me, 'right', [], 'push')).toBe(true);
+    const windup = BOSS_BALANCE.meleeWindupTicks.normal;
+    // the view joined late (no attackStarted tick seen): the wind-up stands in for the start
+    const t = readTelegraph(state, boss, state.tick, emptyTelegraph());
+    expect(t.kind).toBe('melee');
+    expect(t.progress).toBeLessThan(0.05);
+    const half = readTelegraph(state, boss, state.tick + windup / 2, emptyTelegraph());
+    expect(half.progress).toBeGreaterThan(0.4);
+    expect(half.progress).toBeLessThan(0.6);
   });
 
   it('a boss fight without a balance keeps the catalogue wind-up', () => {
