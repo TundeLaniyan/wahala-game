@@ -810,21 +810,32 @@ export function youTagTexture(color: number): CanvasTexture {
   });
 }
 
-/** Floor-contact emphasis of the experimental `indicatorGround` mode: a faint tint with a thin crescent toward the camera. */
+/**
+ * Floor-contact emphasis of the experimental `indicatorGround` mode (decision TL8): a soft disc with a crisp ring in the
+ * fighter's colour and a dark outline under it (so it reads on a pale and on a dark floor), wider than the fighter's own
+ * ring. The first version was a 30 % tint with a one-pixel crescent: at the fixed camera it was invisible.
+ */
 export function groundMarkTexture(): CanvasTexture {
-  return cached('groundmark', () => {
+  return cached('groundmark2', () => {
     const [c, g] = canvas(128, 128);
-    const tint = g.createRadialGradient(64, 64, 6, 64, 64, 62);
+    const tint = g.createRadialGradient(64, 64, 8, 64, 64, 56);
     tint.addColorStop(0, 'rgba(255,255,255,0)');
-    tint.addColorStop(0.55, 'rgba(255,255,255,0.3)');
-    tint.addColorStop(1, 'rgba(255,255,255,0)');
+    tint.addColorStop(0.5, 'rgba(255,255,255,0.22)');
+    tint.addColorStop(1, 'rgba(255,255,255,0.5)');
     g.fillStyle = tint;
-    g.fillRect(0, 0, 128, 128);
-    g.strokeStyle = 'rgba(255,255,255,0.9)';
-    g.lineWidth = 3.5;
-    g.lineCap = 'round';
     g.beginPath();
-    g.arc(64, 64, 50, Math.PI * 0.14, Math.PI * 0.86);
+    g.arc(64, 64, 56, 0, Math.PI * 2);
+    g.fill();
+    // dark outline first (black stays black under the colour multiply), then the bright ring on top of it
+    g.strokeStyle = 'rgba(0,0,0,0.6)';
+    g.lineWidth = 11;
+    g.beginPath();
+    g.arc(64, 64, 55, 0, Math.PI * 2);
+    g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,1)';
+    g.lineWidth = 6;
+    g.beginPath();
+    g.arc(64, 64, 55, 0, Math.PI * 2);
     g.stroke();
     return tex(c);
   });

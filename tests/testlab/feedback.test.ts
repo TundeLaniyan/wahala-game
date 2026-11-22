@@ -57,7 +57,7 @@ describe('feedback map', () => {
 });
 
 describe('summary', () => {
-  it('lists both sections in registry order, the level, the notes and the totals', () => {
+  it('lists the review group first, then the completed one, with the level, the notes and the totals', () => {
     const map = withFeedback(
       withFeedback({}, 'classicRaid', { status: 'pass', level: 'normal', note: 'felt fair' }),
       'recordsVault',
@@ -67,17 +67,42 @@ describe('summary', () => {
     const lines = text.split('\n');
     expect(lines[0]).toBe('WAHALA! TEST LAB (2026-11-22 14:03)');
     expect(lines[1]).toBe('Device: 844x390, touch');
-    expect(text).toContain('\nFULL PLAYTESTS\n- [PASS] Classic Campaign Raid (Normal): felt fair\n');
+    expect(text).toContain('\nTESTS REQUIRING REVIEW\n- [NOT TESTED] City Rumble parity\n');
+    expect(text.indexOf('TESTS REQUIRING REVIEW')).toBeLessThan(text.indexOf('COMPLETED TESTS'));
+    expect(text).toContain('\nCOMPLETED TESTS\n- [PASS] Classic Campaign Raid (Normal): felt fair\n');
     expect(text).toContain(
       '- [NEEDS IMPROVEMENT] Records Vault, night raid (Hard): too dark near the vault door\n',
     );
     expect(text).toContain('- [NOT TESTED] Classic Blast\n');
-    expect(text).toContain('\nISOLATED SCENARIOS\n- [NOT TESTED] Rear approach\n');
-    expect(lines.at(-1)).toBe('Totals: 1 pass, 1 needs improvement, 0 failed, 12 not tested');
+    expect(lines.at(-1)).toBe('Totals: 1 pass, 1 needs improvement, 0 failed, 15 not tested');
     expect(lines.filter((l) => l.startsWith('- ['))).toHaveLength(LAB_ENTRIES.length);
   });
 
-  it('is compact plain text: no markup, short lines', () => {
+  it('carries the set-up a test was marked at (the City Rumble configuration, the one-hit enemy) after the level', () => {
+    const map = withFeedback(
+      withFeedback({}, 'cityRumble', {
+        status: 'needsWork',
+        note: 'bots too sharp',
+        detail: 'Free-for-All · 16 fighters · 5 min · Oshodi Transport Metropolis · Rookie bots',
+      }),
+      'oneHit',
+      { status: 'pass', level: 'normal', detail: 'Guard' },
+    );
+    const text = summarizeFeedback(map, LAB_ENTRIES, { when: 'now' });
+    expect(text).toContain(
+      '- [NEEDS IMPROVEMENT] City Rumble parity (Free-for-All · 16 fighters · 5 min · Oshodi Transport Metropolis · Rookie bots): bots too sharp\n',
+    );
+    expect(text).toContain('- [PASS] One-hit lethality (Normal; Guard)\n');
+    // stored feedback survives a reload with its detail, and a bad detail is dropped
+    const back = sanitizeFeedback(JSON.parse(JSON.stringify(map)));
+    expect(back.oneHit).toEqual({ status: 'pass', note: '', level: 'normal', detail: 'Guard' });
+    expect(sanitizeFeedback({ x: { status: 'pass', note: '', detail: 7 } }).x).toEqual({
+      status: 'pass',
+      note: '',
+    });
+  });
+
+  it('is compact plain text: no markup, short lines (the set-up lines of a Rumble are the longest)', () => {
     const text = summarizeFeedback({}, LAB_ENTRIES, { when: 'now' });
     expect(text).not.toMatch(/[<>*#]/);
     expect(Math.max(...text.split('\n').map((l) => l.length))).toBeLessThan(90);

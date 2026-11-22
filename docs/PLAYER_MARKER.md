@@ -50,3 +50,19 @@ The ground mark and the tag are the only additions; a stacked scene remains hard
 ## Tests
 
 `tests/render/player-marker.test.ts`: the style switch and default; `original` unchanged; only the local human; prominence rises with rivals and relaxes without popping; hidden when dead; drawn on top (no depth test, highest render order). Run: `npx vitest run tests/render/player-marker.test.ts`.
+
+## v2: the Ground style was invisible (Test Lab round 2, decision TL8)
+
+The founder liked Indicator and Indicator + Ground, but switching between the styles in the Test Lab showed no obvious
+difference. Checked in a real browser (phone landscape, the Test Lab's "Player-identification variants" scene): the switch
+was never broken. The entry card, the pause menu and the HUD button all call `setPlayerMarkerMode`, `PlayerViews` reads
+`playerMarkerMode()` every frame (one module instance, no stale React state), `__WAHALA__.playerMarker()` followed every tap,
+and Original showed the old chevron and "You" name tag while Indicator showed the YOU plate in their place. What could not be
+seen was Ground against Indicator: a 30 % white tint under a one-pixel crescent at 0.34-0.54 opacity. The floor mark is now a
+soft disc with a dark-outlined ring in the fighter's colour, 1.75 tiles wide (the fighter's own ring: 0.96) at about
+0.6-0.85 opacity with a slow small pulse. Still render-only, a flat decal with no light or depth write, and `indicator`
+remains the default. Screenshots: `docs/screenshots/player-marker/lab-*-v2.jpg` (Test Lab depot scene, phone landscape
+844x390 at 2x; `scripts/player-marker-v2-shots.mjs`). Tests: `tests/render/player-marker.test.ts` (three styles, three sets of
+visible parts; mark size and opacity), `tests/testlab/marker-switch.test.ts` (the switch reaches the renderer),
+`e2e/testlab.spec.ts` (real pixels around the player differ between the three styles).
+

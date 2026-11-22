@@ -19,7 +19,7 @@ import {
   tagScale,
 } from '../../src/render/playerMarker';
 import { PlayerViews } from '../../src/render/views/PlayerViews';
-import { YOU_RENDER_ORDER } from '../../src/render/views/youMarker';
+import { GROUND_OPACITY, GROUND_SCALE, YOU_RENDER_ORDER } from '../../src/render/views/youMarker';
 import type { FrameContext } from '../../src/render/views/types';
 import { put, sandbox } from '../helpers';
 
@@ -139,19 +139,42 @@ describe('style switch', () => {
 
   it('indicatorGround adds a floor mark under the player; indicator does not', () => {
     const r = rig();
-    const floorMarks = () =>
-      r
-        .meshes()
-        .filter(
-          (m) => m.visible && m.position.y === 0.025 && (m.material as { opacity: number }).opacity < 0.6,
-        );
+    // the floor decals the marker adds: flat meshes at the marker's height (the rings and shadows sit at other heights)
+    const floorMarks = () => r.meshes().filter((m) => m.visible && m.position.y === 0.025 && m.scale.x > 1.5);
     r.settle(1);
     expect(floorMarks()).toHaveLength(0);
     setPlayerMarkerMode('indicatorGround');
     r.settle(1);
     expect(floorMarks()).toHaveLength(1);
-    // understated: well below the existing ring's 0.98
-    expect((floorMarks()[0]!.material as { opacity: number }).opacity).toBeLessThan(0.6);
+    // decision TL8: it must be seen at the fixed camera (the first version, 0.34-0.54 over a 30 % tint, was not) and still
+    // stay a restrained decal: clearly below the ring's 0.98, wider than the fighter's ring (0.96)
+    const mark = floorMarks()[0]!;
+    const opacity = (mark.material as { opacity: number }).opacity;
+    expect(opacity).toBeGreaterThanOrEqual(GROUND_OPACITY - 0.1);
+    expect(opacity).toBeLessThan(0.95);
+    expect(mark.scale.x).toBeGreaterThanOrEqual(GROUND_SCALE);
+    expect(mark.scale.x).toBeGreaterThan(0.96 * 1.5);
+  });
+
+  it('the three styles are three different pictures: original = chevron + name tag, indicator = tag, ground = tag + floor mark', () => {
+    const r = rig();
+    const look = (): string => {
+      const chev = r.chevrons().some((c) => c.visible);
+      const names = r.names().filter((n) => n.visible).length;
+      const tag = r.tags().some((t) => t.visible);
+      const ground = r.meshes().some((m) => m.visible && m.position.y === 0.025 && m.scale.x >= GROUND_SCALE);
+      return JSON.stringify({ chev, names, tag, ground });
+    };
+    const seen: Record<string, string> = {};
+    for (const mode of ['original', 'indicator', 'indicatorGround'] as const) {
+      setPlayerMarkerMode(mode);
+      r.settle(1);
+      seen[mode] = look();
+    }
+    expect(seen.original).toBe('{"chev":true,"names":4,"tag":false,"ground":false}');
+    expect(seen.indicator).toBe('{"chev":false,"names":3,"tag":true,"ground":false}');
+    expect(seen.indicatorGround).toBe('{"chev":false,"names":3,"tag":true,"ground":true}');
+    expect(new Set(Object.values(seen)).size).toBe(3);
   });
 });
 

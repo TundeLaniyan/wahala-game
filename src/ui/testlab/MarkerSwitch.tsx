@@ -1,14 +1,7 @@
 /** The live player-marker switch of the "Who am I?" scenario (decision PI1): Original / Indicator / Indicator + Ground. */
 import { commands } from '../../app/session';
-import type { PlayerMarkerMode } from '../../render/playerMarker';
-import { setMarker } from '../../testlab/controller';
+import { MARKER_MODES, setMarker } from '../../testlab/labActions';
 import { useLab } from '../../testlab/labStore';
-
-export const MARKER_MODES: readonly { mode: PlayerMarkerMode; label: string }[] = [
-  { mode: 'original', label: 'Original' },
-  { mode: 'indicator', label: 'Indicator' },
-  { mode: 'indicatorGround', label: 'Indicator + Ground' },
-];
 
 export function MarkerSwitch() {
   const marker = useLab((s) => s.marker);

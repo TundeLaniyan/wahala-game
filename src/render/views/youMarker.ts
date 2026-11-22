@@ -22,6 +22,15 @@ const TIP_Y = 2.04;
 /** The pointer tip sits this fraction of the sprite height below the sprite's centre (texture layout). */
 const TIP_DROP = 0.3;
 
+/**
+ * The floor mark of `indicatorGround` (decision TL8): wider than the fighter's own ring (scale 0.96) and clearly visible
+ * (the first version, a 30 % tint at 0.34-0.54, could not be told from `indicator` at the fixed camera). Still a flat
+ * decal: no light, no depth write, no glow.
+ */
+export const GROUND_SCALE = 1.75;
+export const GROUND_OPACITY = 0.62;
+const GROUND_PULSE = 0.06;
+
 const flat = new PlaneGeometry(1, 1);
 
 export class YouMarker {
@@ -52,11 +61,11 @@ export class YouMarker {
         transparent: true,
         depthWrite: false,
         fog: false,
-        opacity: 0.4,
+        opacity: GROUND_OPACITY,
       }),
     );
     this.ground.rotation.x = -Math.PI / 2;
-    this.ground.scale.setScalar(1.32);
+    this.ground.scale.setScalar(GROUND_SCALE);
     this.ground.renderOrder = 3;
     this.ground.visible = false;
     parent.add(this.tag, this.ground);
@@ -104,7 +113,9 @@ export class YouMarker {
     this.ground.visible = g;
     if (g) {
       this.ground.position.set(x, 0.025, z);
-      (this.ground.material as MeshBasicMaterial).opacity = 0.34 + 0.2 * p;
+      // a slow, small pulse keeps it alive without flashing; it brightens a little when rivals crowd the player
+      (this.ground.material as MeshBasicMaterial).opacity =
+        GROUND_OPACITY + 0.18 * p + GROUND_PULSE * Math.sin(time * 3);
     }
   }
 

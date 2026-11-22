@@ -4,6 +4,7 @@ import type {
   Difficulty,
   GameConfig,
   GameKind,
+  GameOptions,
   MatchSettings,
   PlayerSetup,
 } from '../sim';
@@ -152,4 +153,18 @@ export function buildPlayers(settings: GameSettings, seed: number): PlayerSetup[
     });
   }
   return players;
+}
+
+/**
+ * The `createGame` options of an ordinary local match (not a variant, mission or raid) for these settings and seed: the
+ * arena, the roster and the rules. The one place both the main menu's Start Match and the Test Lab's City Rumble reach
+ * (decision TL6), so the same settings and seed are always the same match.
+ */
+export function buildMatchOptions(settings: GameSettings, seed: number): GameOptions {
+  return {
+    seed,
+    arenaId: matchArenaId(settings),
+    players: buildPlayers(settings, seed),
+    settings: matchRules(settings),
+  };
 }

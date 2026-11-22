@@ -1,29 +1,50 @@
 # Founder Test Lab (temporary)
 
-Decisions TL1-TL5. Open `https://tundelaniyan.github.io/wahala-game/?testlab=1` (any flags may be added, e.g. `&debug`). The
-Test Lab replaces the main menu with two sections and launches real gameplay at once: nothing to unlock, no console.
+Decisions TL1-TL9. Open `https://tundelaniyan.github.io/wahala-game/?testlab=1` (any flags may be added, e.g. `&debug`). The
+Test Lab replaces the main menu with the tests and launches real gameplay at once: nothing to unlock, no console.
 Without `?testlab=1` the game and its six-screen menu are unchanged.
 
 ## Using it
-Home lists **Full Playtests** and **Isolated Scenarios**. Tap an entry: its card shows the objective, what it launches, a
-difficulty (Easy / Normal / Hard, default Normal), **Start Test** and the feedback buttons. In a test the pause menu has
-Resume, **Restart Test** (clean start, same level), Controls, Settings and **Return to Test Lab** (asks first). A finished
-raid, mission or boss shows its result with Restart and Return; Classic Blast and City Rumble use their real results with the
-same two buttons. Esc / back returns one level. **Exit Test Lab** reloads the normal game URL. Layout is for phone landscape:
-the page never scrolls, the two lists scroll inside their columns, tap targets are at least 44 px, safe areas are kept.
+Home lists **Tests Requiring Review** (prominent, numbered, in the order to try them) and a collapsed **Completed Tests**
+list (tap its header to open it; the approved tests stay launchable). Tap an entry: its card shows the objective, **what to
+look for**, what it launches, a difficulty (Easy / Normal / Hard, default Normal; City Rumble has its own set-up instead),
+**Start Test** and the feedback buttons. In a test the pause menu has Resume, **Restart Test** (clean start, same level and
+set-up), Controls, Settings and **Return to Test Lab** (asks first). A finished raid, mission or boss shows its result with
+Restart and Return; Classic Blast and City Rumble use their real results with the same two buttons. Esc / back returns one
+level. **Exit Test Lab** reloads the normal game URL. Layout is for phone landscape: the page never scrolls, the lists scroll
+inside their columns, tap targets are at least 44 px, safe areas are kept.
 
-## Entries
-Level means the campaign level for raids, field and boss (enemy level, health, damage) and the bot level for Classic / Rumble.
+## Tests Requiring Review (decisions TL6-TL9)
+| # | Entry (id) | Launches | What to look for |
+| --- | --- | --- | --- |
+| 1 | City Rumble parity (`cityRumble`) | A real City Rumble through `commands.start` with the set-up on the card (below) | With **Use Current Rumble Settings** it should feel as hard as your normal match |
+| 2 | Occluded building visibility (`occludedBuildings`) | A real City Rumble on the Lekki stage (Free-for-All, 8 fighters, Rookie bots, follow camera), the arena whose buildings fade (`e2e/view-clear.spec.ts`) | A building covering you fades out and comes back solid when you step out |
+| 3 | Sudden Death banner and victory (`suddenDeath`) | The game's own Sudden Death test match (`commands.start('suddenDeathTest')`, decisions SD-T): a real City Rumble on Ojuelegba, you and two bots, straight into the sudden-death round | The SUDDEN DEATH banner and card, the blast clock, a clear victory or defeat screen |
+| 4 | Boss encounter (`boss`) | The Oshodi boss mission through the campaign controller (unlocked here, nothing saved); try Easy and Normal | His model and attacks, readable wind-ups, the crew, Easy kinder than Normal |
+| 5 | Classic rear ambush (`classicRearAmbush`) | The real first raid (Dispatch Depot), nothing prepared | A calm guard does not see or hear you behind it; one blast defeats it |
+| 6 | One-hit lethality (`oneHit`) | Depot, ONE enemy at the entrance post facing into the depot (pick Agbero, Guard or Thrower), you two steps behind it | One generator laid from behind kills it on Easy and Normal; Hard hears it by design |
+| 7 | Player-identification variants (`identifyPlayer`) | Depot, five enemies waking close around you; live marker switch | Original = chevron + "You" tag; Indicator = YOU plate; Indicator + Ground = plate + a ring on the floor |
 
-| Entry | Launches |
-| --- | --- |
-| Classic Campaign Raid | `warehouseDispatchDepot` (the depot door raid of `oshodi.approach`) through `CampaignController.qaStartRaid` |
-| Records Vault, night raid | the complete `recordsVault` raid (flashlight, guard beams, detection), same path |
-| Classic Blast | `commands.start` with Classic, Danfo Bus Park, 4 players (1 human, 3 bots), normal rules |
-| City Rumble | `commands.start`, Free-for-All, Oshodi Transport Metropolis, 16 fighters |
-| Campaign field mission | `startSectionMission('oshodi.approach')` through the real campaign controller (its depot door raises the real raid) |
-| Boss encounter | `startMission('oshodi')` through the campaign controller (boss gate opened by `testLabUnlocked`) |
-| Characters and performance | Team City Rumble, Lagos Island, 24 fighters, fighter picker, fps line on |
+### City Rumble set-up (TL6)
+The card holds the same choices a normal match reads: mode (Free-for-All, Team Deathmatch, Last Player Standing), stage (every
+City Rumble stage), fighters (8 / 16 / 24 / 32), **bot level (all seven, Rookie first)**, one level or a mixed roster, 3 or
+5 minutes (the respawn modes), friendly fire (Team) and your fighter. **Use Current Rumble Settings** copies the player's real
+saved `GameSettings` (these fields plus the camera view, touch assist, movement style and control size); the lab opens on them
+when something is saved (the game's defaults otherwise, said on the card), and any change marks the set-up Custom. **Will
+start** lists the exact configuration, line by line, before Start; the copied feedback summary carries the same one-line
+configuration. Start runs the normal `commands.start` with those settings; the seed is random like the normal game (`?seed=N`
+fixes it). The real saved settings are read once, read-only (`realSnapshot.ts`, below) and never written.
+
+Why the lab felt harder (decision TL6): it mapped Easy / Normal / Hard to Beginner / Casual / Standard bots, a normal match
+defaults to Rookie. Nothing in the engine or the AI differed, and none changed. `tests/testlab/rumble-parity.test.ts` proves the
+lab's launch and the normal menu's launch with the same settings and seed build identical `GameOptions` and initial state and
+play identically for 240 ticks with the real bots.
+
+## Completed Tests
+Launchable exactly as before: Classic Campaign Raid, Records Vault night raid, Classic Blast, Campaign field mission,
+Characters and performance (Team Rumble, Lagos Island, 24 fighters, fighter picker, fps line) and the five isolated scenarios
+below (rear approach, patrol ambush, punch dodge, pursuit, flashlight). Level means the campaign level for raids, field and
+boss (enemy level, health, damage) and the bot level for Classic Blast and the Characters entry.
 
 Isolated scenarios are real raids prepared by `testlab/scenarios/defs.ts` (fixed seed, 600 s clock, one life count as the raid).
 Each definition's `setup` lines are the whole preparation; outcomes are never scripted.
@@ -32,26 +53,38 @@ Each definition's `setup` lines are the whole preparation; outcomes are never sc
 | --- | --- |
 | Rear approach | Depot, one guard (others stood down); player 3 tiles directly behind it, outside its view cone |
 | Patrol-route ambush | Depot, one guard on its derived loop; player on the open tile within 3 steps of a corner from which fewest loop tiles see it |
-| One-hit lethality | Depot, agbero + guard + thrower in a row on one lane (row 5); player at the lane's east end |
+| One-hit lethality (agbero / guard / thrower) | Depot, ONE ordinary enemy of the chosen kind at the entrance post (2, 11) facing east; player at (1, 9), two steps from the tile behind it (1, 11) |
 | Punch warning and dodge | Depot, one guard waking adjacent to the player at (9,5), two free tiles to step to |
 | Pursuit and disengaging | Depot, 3 guards + 2 throwers (throwers start with the guards); player in the open east lane |
 | Flashlight and detection | Records Vault, night, one torch guard; player at the entrance in the dark |
-| Who am I? Surrounded | Depot, 5 enemies waking on the 5 nearest open tiles (2+ steps) around the player at (11,7); marker switch Original / Indicator / Indicator + Ground (default Indicator) in the entry card, the pause menu and a HUD button |
+| Player-identification variants | Depot, 5 enemies waking on the 5 nearest open tiles (2+ steps) around the player at (11,7); marker switch Original / Indicator / Indicator + Ground (default Indicator) in the entry card, the pause menu and a HUD button |
+
+### Why one-hit lethality is a post (TL9)
+A calm raid enemy sees nothing behind it (CV1) and does not hear a generator laid beside it on Easy and Normal (CV2); a
+generator's cross (range 2, 3 s fuse) then kills an agbero, guard or thrower in one blast (`blastDefeats`). Patrolling guards walk
+away, so the scenario uses the posts the sim gives the entrance tiles (no loop or run fits within 3 tiles of the entrance, so
+the route is `post`). The post turns a quarter every 4 s (Easy) / 2.5 s (Normal): lay within about 1.5 s of its waking on
+Normal. The column-13 posts are on a conveyor belt and walk away; the entrance post is not. `tests/testlab/one-hit.test.ts`
+plays each kind at Easy and Normal with intents only and checks the kill is the human's blast and nothing was forced.
 
 ## Isolation guarantees and how they are enforced
 With `?testlab=1` nothing may change the player's campaign save, unlocks, progression, economy, achievements, match
 preferences, audio preferences or any other persisted state.
 - `testlab/boot.ts` (the first import of `main.tsx`) replaces `window.localStorage` with an in-memory store before the
   settings store, audio prefs, graphics learner, onboarding and campaign load read it. Writes land in a `Map` and die with
-  the page; the real save is not even readable (the lab starts from defaults). Only the feedback key passes through.
+  the page; the real save is not readable by the game (the lab starts from defaults). Only the feedback key passes through.
+- The one exception is a read-only snapshot of the player's real saved MATCH SETTINGS (`wahala.settings.v1`), taken once by
+  `installIsolation` before the swap (`testlab/realSnapshot.ts`: one `getItem`, no write, no removal) so City Rumble can
+  reproduce a normal match. Nothing else is read; the snapshot is never written back.
 - If the replacement fails, the lab shows a warning and disables Start Test.
 - Every start begins from a fresh in-memory campaign; Restart never inherits the last attempt.
 - No backend and no new debug commands are added.
-- Tests: `tests/testlab/isolation.test.ts` (writes never reach the real store), `e2e/testlab.spec.ts` (the browser's real
-  localStorage is compared before and after play, Restart, Return and Exit).
+- Tests: `tests/testlab/isolation.test.ts` (writes never reach the real store; the snapshot is taken once, by reading only),
+  `e2e/testlab.spec.ts` (the browser's real localStorage is compared before and after play, Restart, Return, Exit and a
+  Use Current Rumble Settings run).
 
 ## Feedback format
-Key `wahala.testlab.feedback.v1`: `{ [entryId]: { status: 'pass'|'needsWork'|'failed'|'notTested', note, level? } }`. Notes
+Key `wahala.testlab.feedback.v1`: `{ [entryId]: { status: 'pass'|'needsWork'|'failed'|'notTested', note, level?, detail? } }` (`detail` is the City Rumble configuration or the chosen one-hit enemy at the time of marking; ids never change, so earlier feedback stays attached). Notes
 are one line, 200 characters at most. Nothing is ever set automatically. **Copy summary** (Home) puts this on the clipboard
 (or in a select-all box if the browser blocks it):
 
@@ -59,16 +92,19 @@ are one line, 200 characters at most. Nothing is ever set automatically. **Copy 
 WAHALA! TEST LAB (2026-11-22 14:03)
 Device: 844x390, touch
 
-FULL PLAYTESTS
-- [PASS] Classic Campaign Raid (Normal): felt fair
-- [NEEDS IMPROVEMENT] Records Vault, night raid (Hard): too dark near the vault door
-- [NOT TESTED] Classic Blast
+TESTS REQUIRING REVIEW
+- [NEEDS IMPROVEMENT] City Rumble parity (Free-for-All · 16 fighters · 5 min · Oshodi Transport Metropolis · Rookie bots): bots sharper than normal
+- [NOT TESTED] Occluded building visibility
 ...
-Totals: 1 pass, 1 needs improvement, 0 failed, 12 not tested
+COMPLETED TESTS
+- [PASS] Classic Campaign Raid (Normal): felt fair
+...
+Totals: 1 pass, 1 needs improvement, 0 failed, 15 not tested
 ```
 
 ## Removal
-1. Delete `src/testlab/`, `src/ui/testlab/`, `tests/testlab/`, `e2e/testlab.spec.ts` and this file.
+1. Delete `src/testlab/`, `src/ui/testlab/`, `tests/testlab/`, `e2e/testlab.spec.ts` and this file. Keep `buildMatchOptions`
+   (`app/names.ts`) and `parseSettings` (`app/settings.ts`): the normal game uses them.
 2. `src/main.tsx`: remove the `./testlab/boot` import. `src/ui/App.tsx` and `src/ui/Hud.tsx`: remove the `lab` / `LAB` lazy
    components and the `testLabActive()` branches (marked TEMPORARY).
 3. `src/app/session.ts`: remove `labCampaign`, the `testLabActive` import and the `testLabUnlocked` dep.

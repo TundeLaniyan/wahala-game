@@ -6,6 +6,7 @@
  * Test Lab's own feedback key, which is passed through to the real storage.
  */
 import { FEEDBACK_KEY } from './feedbackKey';
+import { captureRealSettings } from './realSnapshot';
 
 /** The slice of `Storage` the game (and the Test Lab) use. */
 export interface StorageLike {
@@ -92,6 +93,7 @@ function realStorageOf(win: { localStorage?: unknown }): StorageLike | null {
 export function installIsolation(win: { localStorage?: unknown }): Isolation {
   if (installed) return installed;
   const real = realStorageOf(win);
+  captureRealSettings(real); // read-only: the player's own match settings, for "Use Current Rumble Settings"
   const storage = createIsolatedStorage(real);
   let ok: boolean;
   try {
