@@ -42,7 +42,7 @@ import { QualityNotifier } from './qualityNotice';
 import { patch, useGameStore } from './store';
 import type { ScreenPoint } from './store';
 import { createSubtitleFeed } from './subtitles';
-import { qaRaidEntry } from './qaEntry';
+import { testLabActive } from '../testlab/params';
 import { MatchLoader } from './matchLoader';
 import type { MatchLoadKind } from './matchLoader';
 
@@ -301,6 +301,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     campaign = new CampaignController({
       store: browserStore(),
       host: missionHost,
+      testLabUnlocked: testLabActive(), // TEMPORARY Test Lab (docs/TEST_LAB.md)
       now: () => Date.now(),
       seed: () => {
         const forced = Number(params.get('seed'));
@@ -657,15 +658,6 @@ export const commands = {
     audio.playUi('start');
     campaign?.startRaidFromBrief();
   },
-  /**
-   * TEMPORARY founder QA entry (`?qaraid=`, docs/QA_ENTRY.md): starts that raid on its own; the save is never written.
-   */
-  qaStartRaid(): void {
-    const qa = qaRaidEntry();
-    if (!qa || !campaign) return;
-    audio.playUi('start');
-    campaign.qaStartRaid(qa.raidId, qa.level);
-  },
   /** Pause menu inside a raid. */
   campaignRetryRaid(): void {
     audio.playUi('click');
@@ -755,6 +747,14 @@ export const commands = {
 };
 
 export { input };
+
+/**
+ * TEMPORARY Test Lab (docs/TEST_LAB.md): the campaign controller (its in-memory save in the Test Lab) for the Test Lab's
+ * launcher. Only `src/testlab/controller.ts` calls it.
+ */
+export function labCampaign(): CampaignController | null {
+  return campaign;
+}
 
 function setMenu(menu: MenuState): void {
   patch({ menu });

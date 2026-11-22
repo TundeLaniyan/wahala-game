@@ -88,6 +88,11 @@ export interface RaidMeta {
   difficulty: Difficulty;
   /** The raid is over (the sim reported an outcome, or the match ended without one). Called once. */
   onEnd(outcome: RaidOutcome): void;
+  /**
+   * TEMPORARY Test Lab hook (docs/TEST_LAB.md, decision TL3): called once with the freshly created raid state, before the
+   * renderer loads it, so a scenario can choose who stands where. Setup only (it never ticks the game); absent in play.
+   */
+  prepare?(state: GameState): void;
 }
 
 /** The part of the match controller the campaign controller drives (so tests can fake it). */

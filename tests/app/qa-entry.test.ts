@@ -8,7 +8,6 @@ import { createSave, persistSave } from '../../src/campaign';
 import type { KeyValueStore } from '../../src/campaign';
 import { CampaignController } from '../../src/app/campaign';
 import type { MissionHost } from '../../src/app/ports';
-import { parseQaRaid } from '../../src/app/qaEntry';
 import { useGameStore } from '../../src/app/store';
 import { raidWin } from './sectionHelpers';
 
@@ -26,17 +25,22 @@ class CountingStore implements KeyValueStore {
   };
 }
 
-function rig(withSave: boolean) {
+function rig(withSave: boolean, testLabUnlocked = false) {
   const store = new CountingStore();
   if (withSave) persistSave(store, createSave(0));
   const before = new Map(store.data);
   store.writes = 0;
   const raidArgs: Record<string, unknown>[] = [];
+  const raidMetas: Record<string, unknown>[] = [];
+  const missionStarts: Record<string, unknown>[] = [];
   let stops = 0;
   let ended: ((o: ReturnType<typeof raidWin>) => void) | null = null;
   const host: MissionHost = {
-    startMission: () => {},
-    playRaid: (_o, meta) => void (ended = meta.onEnd as typeof ended),
+    startMission: (_o, meta) => void missionStarts.push({ ...meta }),
+    playRaid: (_o, meta) => {
+      raidMetas.push({ ...meta });
+      ended = meta.onEnd as typeof ended;
+    },
     stop: () => void stops++,
   };
   const campaign = new CampaignController({
@@ -44,6 +48,7 @@ function rig(withSave: boolean) {
     host,
     now: () => 9_000,
     seed: () => 4,
+    ...(testLabUnlocked ? { testLabUnlocked } : {}),
     buildRaid: (args) => {
       raidArgs.push({ ...args });
       return {
@@ -59,28 +64,15 @@ function rig(withSave: boolean) {
     store,
     before,
     raidArgs,
+    raidMetas,
+    missionStarts,
     stops: () => stops,
     end: (o: ReturnType<typeof raidWin>) => ended!(o),
   };
 }
 
-describe('the founder QA raid entry', () => {
+describe('the no-save raid path', () => {
   beforeEach(() => useGameStore.setState({ campaign: null }));
-
-  it('parses only a raid of this build, and an optional known level', () => {
-    expect(parseQaRaid('?qaraid=recordsVault')).toEqual({ raidId: 'recordsVault', level: null });
-    expect(parseQaRaid('?qaraid=recordsVault&qalevel=hard')).toEqual({
-      raidId: 'recordsVault',
-      level: 'hard',
-    });
-    expect(parseQaRaid('?qaraid=recordsVault&qalevel=insane')).toEqual({
-      raidId: 'recordsVault',
-      level: null,
-    });
-    expect(parseQaRaid('?qaraid=nowhere')).toBeNull();
-    expect(parseQaRaid('?debug')).toBeNull();
-    expect(parseQaRaid('')).toBeNull();
-  });
 
   for (const withSave of [true, false])
     it(`plays the raid at the asked level and never writes the save (${withSave ? 'a saved campaign' : 'no campaign yet'})`, () => {
@@ -102,5 +94,32 @@ describe('the founder QA raid entry', () => {
     r.campaign.leaveRaid();
     expect(r.stops()).toBeGreaterThan(0);
     expect(r.store.writes).toBe(0);
+  });
+
+  it('the Test Lab passes a scenario set-up, a fixed seed and a clock through; a real raid passes none', () => {
+    const r = rig(false);
+    const prepare = () => {};
+    expect(r.campaign.qaStartRaid('warehouseDispatchDepot', 'normal')).toBe(true);
+    expect(r.raidMetas.at(-1)).not.toHaveProperty('prepare');
+    expect(r.raidArgs.at(-1)).toMatchObject({ seed: 4 }); // the controller's own seed
+    expect(r.raidArgs.at(-1)).not.toHaveProperty('timeLimitSec');
+    expect(
+      r.campaign.qaStartRaid('warehouseDispatchDepot', 'easy', { prepare, seed: 4101, timeLimitSec: 600 }),
+    ).toBe(true);
+    expect(r.raidMetas.at(-1)!.prepare).toBe(prepare);
+    expect(r.raidArgs.at(-1)).toMatchObject({ seed: 4101, timeLimitSec: 600, level: 'easy' });
+    // and a restart (Retry raid) replays the same set-up
+    r.campaign.retryRaid();
+    expect(r.raidMetas.at(-1)!.prepare).toBe(prepare);
+    expect(r.store.writes).toBe(0);
+  });
+
+  it('the boss gate stays shut in the real game and is open only when the Test Lab unlocks it', () => {
+    const shut = rig(true);
+    expect(shut.campaign.startMission('oshodi')).toBe(false);
+    expect(shut.missionStarts).toHaveLength(0);
+    const open = rig(true, true);
+    expect(open.campaign.startMission('oshodi')).toBe(true);
+    expect(open.missionStarts).toHaveLength(1);
   });
 });
