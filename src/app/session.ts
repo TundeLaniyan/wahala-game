@@ -2,6 +2,8 @@
  * Composition root: the only place that knows every layer. It creates the renderer, input,
  * audio, bots and match controller, runs the animation loop, and exposes `commands` to the UI.
  */
+import { playerMarkerMode, setPlayerMarkerMode } from '../render/playerMarker';
+import type { PlayerMarkerMode } from '../render/playerMarker';
 import { createBot } from '../ai';
 import { createAudio } from '../audio';
 import type { SpokenTrace } from '../audio';
@@ -826,6 +828,11 @@ function exposeDebugHandle(): void {
     timings: () => controller?.timers.snapshot() ?? null,
     /** Graphics quality: the setting, the rung in use, the capability estimate and the controller state. */
     quality: () => renderer?.qualityStatus() ?? null,
+    /** Player identification marker style (decision PI1): read it, or switch it live (screenshots, review). */
+    playerMarker: (m?: PlayerMarkerMode): PlayerMarkerMode => {
+      if (m) setPlayerMarkerMode(m);
+      return playerMarkerMode();
+    },
     /** e2e: feeds synthetic frames (ms each) to Auto's controller on a virtual clock; returns what it changed. */
     feedFrames: (frameMs: number, count: number, opts?: { busy?: boolean }) =>
       renderer?.debugFeedFrames(frameMs, count, opts) ?? [],

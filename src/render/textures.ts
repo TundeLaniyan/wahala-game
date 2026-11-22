@@ -754,3 +754,78 @@ export function sootStreakTexture(): CanvasTexture {
     return tex(c);
   });
 }
+
+/**
+ * The local player's overhead "YOU" tag (decision PI1): a dark plate with a warm hairline in the fighter's colour, a
+ * small pointer toward the head and a dark outer halo, so it reads on a pale day floor and on a night raid alike.
+ * One texture per colour (shared and cached).
+ */
+export function youTagTexture(color: number): CanvasTexture {
+  const hex = `#${color.toString(16).padStart(6, '0')}`;
+  return cached(`youtag:${hex}`, () => {
+    const [c, g] = canvas(256, 128);
+    const x0 = 36;
+    const x1 = 220;
+    const y0 = 18;
+    const y1 = 78;
+    g.lineJoin = 'round';
+    // dark outer halo (contrast on a bright floor)
+    g.strokeStyle = 'rgba(8, 6, 4, 0.55)';
+    g.lineWidth = 12;
+    g.beginPath();
+    g.roundRect(x0, y0, x1 - x0, y1 - y0, 14);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(112, y1);
+    g.lineTo(144, y1);
+    g.lineTo(128, y1 + 24);
+    g.closePath();
+    g.stroke();
+    // plate + pointer
+    g.fillStyle = 'rgba(14, 11, 8, 0.9)';
+    g.beginPath();
+    g.roundRect(x0, y0, x1 - x0, y1 - y0, 14);
+    g.fill();
+    g.fillStyle = hex;
+    g.beginPath();
+    g.moveTo(112, y1 - 1);
+    g.lineTo(144, y1 - 1);
+    g.lineTo(128, y1 + 22);
+    g.closePath();
+    g.fill();
+    // hairline in the fighter's colour
+    g.strokeStyle = hex;
+    g.lineWidth = 3;
+    g.beginPath();
+    g.roundRect(x0 + 3, y0 + 3, x1 - x0 - 6, y1 - y0 - 6, 11);
+    g.stroke();
+    // the word
+    g.font = '800 40px "Arial Narrow", system-ui, sans-serif';
+    (g as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = '6px';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#f2e9d4';
+    g.fillText('YOU', 131, (y0 + y1) / 2 + 2);
+    return tex(c);
+  });
+}
+
+/** Floor-contact emphasis of the experimental `indicatorGround` mode: a faint tint with a thin crescent toward the camera. */
+export function groundMarkTexture(): CanvasTexture {
+  return cached('groundmark', () => {
+    const [c, g] = canvas(128, 128);
+    const tint = g.createRadialGradient(64, 64, 6, 64, 64, 62);
+    tint.addColorStop(0, 'rgba(255,255,255,0)');
+    tint.addColorStop(0.55, 'rgba(255,255,255,0.3)');
+    tint.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = tint;
+    g.fillRect(0, 0, 128, 128);
+    g.strokeStyle = 'rgba(255,255,255,0.9)';
+    g.lineWidth = 3.5;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.arc(64, 64, 50, Math.PI * 0.14, Math.PI * 0.86);
+    g.stroke();
+    return tex(c);
+  });
+}

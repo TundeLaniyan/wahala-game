@@ -39,6 +39,8 @@ import { KNOCKDOWN_MAX_S, SLIP_MAX_S, slipPose } from './slip';
 import type { SlipKind, SlipState } from './slip';
 import { TICK_RATE } from '../../sim';
 import type { FrameContext, View } from './types';
+import { playerMarkerMode } from '../playerMarker';
+import { YouMarker } from './youMarker';
 import { addTeamKit, createProtectionRing, protectionBlink, teamColor } from './teamMarkings';
 
 const DEATH_TIME = 1.7;
@@ -72,6 +74,8 @@ interface Visual {
   shadow: Mesh;
   name: Sprite;
   marker: Sprite | null;
+  /** The local human's identification tag (decision PI1); the original chevron above is the `original` style. */
+  you: YouMarker | null;
   stars: Sprite[];
   curse: Sprite;
   voucher: Sprite;
@@ -262,6 +266,7 @@ export class PlayerViews implements View {
           o.visible = false;
         hideArmourVisual(v.armour, true);
         if (v.marker) v.marker.visible = false;
+        v.you?.hide();
       }
       v.catchUp = Math.min(1, v.catchUp + ctx.dt);
       return true;
@@ -293,6 +298,7 @@ export class PlayerViews implements View {
       v.protect,
     );
     if (v.marker) this.group.remove(v.marker);
+    if (v.you) this.group.remove(v.you.tag, v.you.ground);
     for (const s of v.stars) this.group.remove(s);
   }
 
@@ -383,7 +389,9 @@ export class PlayerViews implements View {
     name.scale.set(1.22, 0.45, 1);
     name.renderOrder = 31;
     let marker: Sprite | null = null;
+    let you: YouMarker | null = null;
     if (p.id === ctx.info.localPlayerId) {
+      you = new YouMarker(this.group, slot);
       marker = new Sprite(
         new SpriteMaterial({ map: chevronTexture(), color: slot, transparent: true, depthTest: false }),
       );
@@ -449,6 +457,7 @@ export class PlayerViews implements View {
       shadow,
       name,
       marker,
+      you,
       stars,
       curse,
       voucher,
@@ -688,10 +697,17 @@ export class PlayerViews implements View {
       state.match.phase === 'countdown' ? 0.55 + 0.4 * Math.sin(time * 6) : 0.98;
     v.shadow.position.set(w.x, 0.02, w.z);
     v.name.position.set(w.x, 2.12 + (v.scale - 1) * 1.86, w.z);
-    v.name.visible = true;
+    const style = v.you ? playerMarkerMode() : 'original';
+    // the identification tag replaces the "You" name tag and the small chevron (decision PI1); `original` draws both
+    v.name.visible = style === 'original';
     if (v.marker) {
       v.marker.position.set(w.x, 2.52 + Math.sin(time * 5) * 0.08, w.z);
-      v.marker.visible = true;
+      v.marker.visible = style === 'original';
+    }
+    if (v.you) {
+      const crowd = style === 'original' ? 0 : YouMarker.crowding(state.players, p, ctx.alpha);
+      const lift = (mounted ? 0.28 : 0) + (v.scale - 1) * 1.86;
+      v.you.update(style, w.x, w.z, lift, crowd, ctx.dt, time, shielded);
     }
     const dazed = state.tick < p.dazedUntil;
     v.stars.forEach((s, i) => {
@@ -733,6 +749,7 @@ export class PlayerViews implements View {
     v.ring.visible = false;
     v.name.visible = false;
     if (v.marker) v.marker.visible = false;
+    v.you?.hide();
     v.curse.visible = false;
     v.voucher.visible = false;
     v.badge.visible = false;
