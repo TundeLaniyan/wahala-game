@@ -32,6 +32,7 @@ import type { CombatLabStats, MissionView } from '../sim';
 import { labChipDetail } from './combatLabText';
 import { buildCampaignHud, buildEnemyHud } from './campaignHud';
 import type { CampaignHud, EnemyHud } from './campaignHud';
+import type { BossFeedback } from './bossBar';
 import { raidGuidance } from './raidHud';
 import type { RaidHud } from './raidHud';
 import { RouteCache } from './routeGuide';
@@ -41,6 +42,7 @@ import type { StageAlert } from './stageAlerts';
 
 export type { StageAlert } from './stageAlerts';
 export type { CampaignHud, EnemyHud } from './campaignHud';
+export type { BossFeedback } from './bossBar';
 import { eliminatorOf, killCounts } from './spectate';
 
 export interface HudPlayer {
@@ -255,6 +257,8 @@ export interface HudSnapshot {
   suddenDeath: SuddenDeathHud | null;
   /** Campaign mission picture (phases, objective, boss, lives, warnings); null in every normal match. */
   mission: MissionView | null;
+  /** A boss mission's bar cues (a hit just landed, a blast bounced off the shield); set by the controller, absent when nothing recent. */
+  bossFeedback?: BossFeedback;
   /** Campaign health of the local player (health segments, Armour, Okada, lives, recovery); null without `Player.vitals`. */
   campaign: CampaignHud | null;
   /** Campaign enemies whose health is on screen (bosses always; others when targeted, hurt or near); [] outside a campaign. */

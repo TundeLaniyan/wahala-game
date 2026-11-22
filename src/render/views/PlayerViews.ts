@@ -35,6 +35,7 @@ import { chevronTexture, glowTexture, labelTexture, ringTexture, starTexture } f
 import type { ClipName } from '../assets/rigged';
 import { lerpAngle, playerGridPos, toWorld, yawForDir } from './motion';
 import { JOLT_SECONDS, joltOffset } from './damageModel';
+import { bossDefeatPose } from './bossFeedback';
 import { KNOCKDOWN_MAX_S, SLIP_MAX_S, slipPose } from './slip';
 import type { SlipKind, SlipState } from './slip';
 import { TICK_RATE } from '../../sim';
@@ -796,7 +797,9 @@ export class PlayerViews implements View {
       m.root.rotation.set(0, v.yaw, 0);
     } else {
       const air = 0.62;
-      const h = t < air ? 3.4 * t * (1 - t / air) * 2 : 0;
+      // the mission boss (decision BH5) is flung higher and stays down, circled by stars, before he shrinks away
+      const boss = ctx.state.mission?.bossId === p.id ? bossDefeatPose(t, DEATH_TIME) : null;
+      const h = boss ? boss.lift : t < air ? 3.4 * t * (1 - t / air) * 2 : 0;
       const slide = Math.min(t, 1.1);
       m.root.position.set(base.x + v.deathDir.x * slide * 1.4, h, base.z + v.deathDir.z * slide * 1.4);
       if (m.rigged)
@@ -807,7 +810,7 @@ export class PlayerViews implements View {
           v.yaw + t * (cause === 'vehicle' ? 0 : 8) * (t < air ? 1 : 0),
           cause === 'vehicle' ? t * 5 : 0,
         );
-      m.root.scale.setScalar(sc * (k > 0.75 ? Math.max(0, 1 - (k - 0.75) * 4) : 1));
+      m.root.scale.setScalar(sc * (boss ? boss.scale : k > 0.75 ? Math.max(0, 1 - (k - 0.75) * 4) : 1));
     }
     v.shadow.position.set(
       base.x + v.deathDir.x * Math.min(t, 1.1) * 1.4,

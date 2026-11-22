@@ -2,6 +2,10 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Boss health bar and fight readability (branch `claude/wahala-boss-hud`, from `b6b2367`)
+
+The boss mission's bar now shows his real health (the sim's hits left of three), SHIELDED vs EXPOSED vs a blocked blast, a drained segment with "HIT -1" on each real hit, and DEFEATED; board beats and a longer defeat pose come from the sim's boss events (decisions BH1-BH6). Presentation only. Screenshots in `docs/screenshots/boss-hud/` (`scripts/boss-hud-shots.mjs`).
+
 ## iOS viewport (branch `claude/wahala-ios-viewport`, from `acaeae7`)
 
 No persistent page zoom in an iPhone landscape match: gestures blocked during play, refit after every viewport change, a zoomed page counter-scaled into view with a pause-menu escape (`docs/IOS_VIEWPORT.md`, decisions IV1-IV6); tested in Chromium iPhone emulation and Vitest, real-iPhone confirmation pending.

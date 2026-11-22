@@ -5,7 +5,7 @@ import './MissionPanel.css';
 /**
  * The campaign mission panel (decision HC5), a block of the HUD rail beside the board: three phase pips, the
  * objective with a progress bar, the phase's callout, the boss status (SHIELDED / EXPOSED with a countdown /
- * DEFEATED), lives, time left and the incoming warnings with their seconds. Renders nothing without a mission, so a
+ * DEFEATED; in a boss mission the boss BAR above it says that and his health, so the panel keeps the hint), lives, time left and the incoming warnings with their seconds. Renders nothing without a mission, so a
  * normal match is unchanged. Never over the board: it only lives in the rail's column.
  */
 export function MissionPanel({ mission }: { mission: MissionView | null }) {
@@ -60,18 +60,14 @@ export function MissionPanel({ mission }: { mission: MissionView | null }) {
         </p>
       )}
       <div className="mp-foot">
-        {m.showBoss && (
+        {/* a boss mission's health, shield and window are the boss bar above (decisions BH1-BH4): not said twice */}
+        {m.showBoss && !m.boss.hits && (
           <span
             className={`mp-boss ${m.boss.state}`}
             data-testid="mission-boss"
             data-seconds={m.boss.seconds ?? ''}
           >
             {m.boss.label}
-          </span>
-        )}
-        {m.showBoss && m.boss.hits && (
-          <span className="mp-hits" data-testid="mission-boss-hits" data-left={m.boss.hits.left}>
-            {m.boss.hits.label}
           </span>
         )}
         <span className="mp-lives" data-testid="mission-lives" data-left={m.lives.left}>

@@ -167,31 +167,191 @@
   }
 }
 
-/* boss mission defences bar: one segment per defence phase; the last flashes while the boss is exposed */
-.boss-bar .ch-state {
-  margin-left: auto;
-  font-size: 0.7rem;
+/*
+ * The boss bar (decisions BH1-BH4): HEALTH is one segment per hit he still has (the sim's hits left), the state is a
+ * tag beside it. SHIELDED = blue plate, blue-hatched segments, "BLASTS DO NOTHING"; EXPOSED = gold plate, a window
+ * timer, "BLAST HIM NOW"; a real hit drains its segment (white flash, hollow red) with a "HIT -1" chip and a shake of the
+ * plate; a blast that bounces off the shield flashes the plate blue with "NO DAMAGE"; DEFEATED = every segment empty.
+ * State is always a word and a shape (hatch / timer / hollow), never colour alone.
+ */
+.boss-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.boss-row .boss-segs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.boss-segs .ch-seg {
+  max-width: 40px;
+  height: clamp(12px, 3.4vh, 18px);
+}
+.boss-bar .ch-seg.empty {
+  border-style: dashed;
+  border-color: #8d96a3;
+  background: rgba(255, 255, 255, 0.06);
+}
+.boss-hp {
+  flex: none;
+  font-size: clamp(0.62rem, 2.6vh, 0.95rem);
+  font-weight: 700;
+  color: #f4ecdc;
+}
+.boss-hit {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: clamp(0.55rem, 2.2vh, 0.78rem);
+  color: #ffffff;
+  background: #c4210f;
+  animation: boss-hit-pop 0.9s ease-out 1;
+}
+.boss-status {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 1px 6px;
+  margin: 0;
+  font-size: clamp(0.5rem, 2vh, 0.68rem);
+  color: #f4ecdc;
+}
+.bs-tag {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 3px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: var(--mn-amber, #ffb800);
+  color: #04101e;
+  background: #9cc4ea;
 }
-.boss-bar.exposed .ch-seg.full {
+.bs-note {
+  min-width: 0;
+  color: #b8c0cc;
+}
+.boss-bar.shielded {
+  border-left-color: #4aa8ff;
+}
+.boss-bar.shielded .boss-segs .ch-seg.full {
+  border-color: #9cc4ea;
+  background: repeating-linear-gradient(135deg, #2f7fd0 0 3px, #ff6b5e 3px 6px);
+}
+.boss-bar.exposed {
+  border-left-color: #ffd23a;
+}
+.boss-bar.exposed .bs-tag {
+  color: #1b1200;
+  background: #ffd23a;
   animation: boss-exposed 0.8s ease-in-out infinite alternate;
 }
+.boss-bar.exposed .bs-note {
+  color: #ffd23a;
+  font-weight: 700;
+}
+.boss-window {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+.boss-window > i {
+  display: block;
+  height: 100%;
+  background: #ffd23a;
+}
+.boss-bar .ch-seg.lost {
+  border-color: #ffffff;
+  background: #ffffff;
+  animation: boss-seg-lost 0.9s ease-out 1 forwards;
+}
+.boss-bar.struck {
+  animation: boss-struck 0.5s ease-out 1;
+}
+.boss-bar.blocked {
+  animation: boss-blocked 0.6s ease-out 1;
+}
+.boss-bar.blocked .bs-tag {
+  background: #ffffff;
+}
 .boss-bar.defeated {
-  opacity: 0.6;
+  border-left-color: #8d96a3;
+}
+.boss-bar.defeated .ch-text {
+  text-decoration: line-through;
+}
+.boss-bar.defeated .bs-tag {
+  color: #f4ecdc;
+  background: #5a2a26;
 }
 @keyframes boss-exposed {
   from {
     filter: brightness(1);
   }
   to {
-    filter: brightness(1.7);
+    filter: brightness(1.5);
+  }
+}
+@keyframes boss-seg-lost {
+  0% {
+    transform: scale(1.7);
+    box-shadow: 0 0 10px #ffffff;
+  }
+  45% {
+    transform: scale(1);
+    border-color: #ff5a4d;
+    background: #ff5a4d;
+    box-shadow: none;
+  }
+  100% {
+    border-color: #ff5a4d;
+    background: transparent;
+  }
+}
+@keyframes boss-struck {
+  0% {
+    background: rgba(170, 28, 16, 0.95);
+    transform: translateX(-4px);
+  }
+  20% {
+    transform: translateX(4px);
+  }
+  40% {
+    transform: translateX(-2px);
+  }
+  100% {
+    background: rgba(10, 12, 16, 0.88);
+    transform: none;
+  }
+}
+@keyframes boss-blocked {
+  0% {
+    background: rgba(40, 110, 190, 0.95);
+  }
+  100% {
+    background: rgba(10, 12, 16, 0.88);
+  }
+}
+@keyframes boss-hit-pop {
+  0% {
+    transform: scale(1.6);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .boss-bar.exposed .ch-seg.full {
+  .boss-bar.exposed .bs-tag,
+  .boss-bar .ch-seg.lost,
+  .boss-bar.struck,
+  .boss-bar.blocked,
+  .boss-hit {
     animation: none;
+  }
+  .boss-bar .ch-seg.lost {
+    border-color: #ff5a4d;
+    background: #ff5a4d;
   }
 }
 

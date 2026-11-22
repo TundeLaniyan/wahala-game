@@ -212,6 +212,7 @@ export function Hud() {
               mission={hud.mission}
               campaign={hud.campaign}
               enemies={hud.enemies}
+              bossFeedback={hud.bossFeedback ?? null}
               cue={hud.fieldCue}
             />
           </div>
@@ -288,6 +289,7 @@ export function Hud() {
         mission={rumble ? null : hud.mission}
         campaign={hud.campaign}
         enemies={hud.enemies}
+        bossFeedback={hud.bossFeedback ?? null}
         raid={hud.raid}
         fieldCue={rumble ? null : hud.fieldCue}
       />
