@@ -1,0 +1,482 @@
+[
+  {
+    "scene": "day",
+    "q": "low",
+    "device": "phone",
+    "mode": "original",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 259,
+    "triangles": 435179
+  },
+  {
+    "scene": "day",
+    "q": "low",
+    "device": "phone",
+    "mode": "indicator",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 260,
+    "triangles": 435246
+  },
+  {
+    "scene": "day",
+    "q": "low",
+    "device": "phone",
+    "mode": "indicatorGround",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 261,
+    "triangles": 435162
+  },
+  {
+    "scene": "day",
+    "q": "low",
+    "device": "phone",
+    "mode": "indicator",
+    "crowd": false,
+    "drawCalls": 259,
+    "triangles": 435189
+  },
+  {
+    "scene": "day",
+    "q": "low",
+    "device": "desktop",
+    "mode": "original",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 255,
+    "triangles": 433260
+  },
+  {
+    "scene": "day",
+    "q": "low",
+    "device": "desktop",
+    "mode": "indicator",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 254,
+    "triangles": 433279
+  },
+  {
+    "scene": "day",
+    "q": "low",
+    "device": "desktop",
+    "mode": "indicatorGround",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 255,
+    "triangles": 433247
+  },
+  {
+    "scene": "day",
+    "q": "low",
+    "device": "desktop",
+    "mode": "indicator",
+    "crowd": false,
+    "drawCalls": 257,
+    "triangles": 433305
+  },
+  {
+    "scene": "day",
+    "q": "high",
+    "device": "phone",
+    "mode": "original",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 539,
+    "triangles": 1416269
+  },
+  {
+    "scene": "day",
+    "q": "high",
+    "device": "phone",
+    "mode": "indicator",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 536,
+    "triangles": 1284940
+  },
+  {
+    "scene": "day",
+    "q": "high",
+    "device": "phone",
+    "mode": "indicatorGround",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 532,
+    "triangles": 1284928
+  },
+  {
+    "scene": "day",
+    "q": "high",
+    "device": "phone",
+    "mode": "indicator",
+    "crowd": false,
+    "drawCalls": 534,
+    "triangles": 1284933
+  },
+  {
+    "scene": "day",
+    "q": "high",
+    "device": "desktop",
+    "mode": "original",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 529,
+    "triangles": 1283042
+  },
+  {
+    "scene": "day",
+    "q": "high",
+    "device": "desktop",
+    "mode": "indicator",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 531,
+    "triangles": 1283073
+  },
+  {
+    "scene": "day",
+    "q": "high",
+    "device": "desktop",
+    "mode": "indicatorGround",
+    "crowd": true,
+    "staged": {
+      "me": [
+        8,
+        5
+      ],
+      "rivals": 3,
+      "near": 3
+    },
+    "drawCalls": 530,
+    "triangles": 1282984
+  },
+  {
+    "scene": "day",
+    "q": "high",
+    "device": "desktop",
+    "mode": "indicator",
+    "crowd": false,
+    "drawCalls": 534,
+    "triangles": 1283103
+  },
+  {
+    "scene": "night",
+    "q": "low",
+    "device": "phone",
+    "mode": "original",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 237,
+    "triangles": 317825
+  },
+  {
+    "scene": "night",
+    "q": "low",
+    "device": "phone",
+    "mode": "indicator",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 233,
+    "triangles": 317817
+  },
+  {
+    "scene": "night",
+    "q": "low",
+    "device": "phone",
+    "mode": "indicatorGround",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 233,
+    "triangles": 317817
+  },
+  {
+    "scene": "night",
+    "q": "low",
+    "device": "phone",
+    "mode": "indicator",
+    "crowd": false,
+    "drawCalls": 154,
+    "triangles": 155385
+  },
+  {
+    "scene": "night",
+    "q": "low",
+    "device": "desktop",
+    "mode": "original",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 237,
+    "triangles": 317825
+  },
+  {
+    "scene": "night",
+    "q": "low",
+    "device": "desktop",
+    "mode": "indicator",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 233,
+    "triangles": 317817
+  },
+  {
+    "scene": "night",
+    "q": "low",
+    "device": "desktop",
+    "mode": "indicatorGround",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 232,
+    "triangles": 317815
+  },
+  {
+    "scene": "night",
+    "q": "low",
+    "device": "desktop",
+    "mode": "indicator",
+    "crowd": false,
+    "drawCalls": 233,
+    "triangles": 317817
+  },
+  {
+    "scene": "night",
+    "q": "high",
+    "device": "phone",
+    "mode": "original",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 354,
+    "triangles": 570889
+  },
+  {
+    "scene": "night",
+    "q": "high",
+    "device": "phone",
+    "mode": "indicator",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 350,
+    "triangles": 570881
+  },
+  {
+    "scene": "night",
+    "q": "high",
+    "device": "phone",
+    "mode": "indicatorGround",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 349,
+    "triangles": 570879
+  },
+  {
+    "scene": "night",
+    "q": "high",
+    "device": "phone",
+    "mode": "indicator",
+    "crowd": false,
+    "drawCalls": 350,
+    "triangles": 570881
+  },
+  {
+    "scene": "night",
+    "q": "high",
+    "device": "desktop",
+    "mode": "original",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 354,
+    "triangles": 570889
+  },
+  {
+    "scene": "night",
+    "q": "high",
+    "device": "desktop",
+    "mode": "indicator",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 350,
+    "triangles": 570881
+  },
+  {
+    "scene": "night",
+    "q": "high",
+    "device": "desktop",
+    "mode": "indicatorGround",
+    "crowd": true,
+    "staged": {
+      "me": [
+        2,
+        10
+      ],
+      "rivals": 5,
+      "near": 4
+    },
+    "drawCalls": 349,
+    "triangles": 570879
+  },
+  {
+    "scene": "night",
+    "q": "high",
+    "device": "desktop",
+    "mode": "indicator",
+    "crowd": false,
+    "drawCalls": 350,
+    "triangles": 570881
+  }
+]
