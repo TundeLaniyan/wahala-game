@@ -168,3 +168,70 @@ describe('the blast clock announces, then folds into a chip (SD-B1)', () => {
     }
   });
 });
+
+describe('the banner never lingers or covers the board (decision SU1)', () => {
+  it('the title card is a compact rail card, not a full-screen overlay', async () => {
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync(new URL('../../src/ui/SuddenDeath.css', import.meta.url), 'utf8');
+    const block = css.slice(css.indexOf('.sd-card {'), css.indexOf('}', css.indexOf('.sd-card {')));
+    expect(block).not.toMatch(/position:\s*absolute/);
+    expect(block).not.toMatch(/inset:/);
+    expect(block).toMatch(/pointer-events:\s*none/);
+    expect(css).not.toMatch(/radial-gradient\(ellipse at center, rgba\(40, 0, 0/); // no dark scrim over the arena
+  });
+
+  it('lists a few contenders at most, then how many more', () => {
+    const s = rumble('survival', 6);
+    s.players.forEach((p) => (p.stats.kills = 1));
+    s.match.playTicks = s.config.match.durationTicks - 1;
+    run(s, 1);
+    expect(sd(s).stage).toBe('transition');
+    const html = cardHtml(s);
+    expect((html.match(/data-testid="sudden-death-contender"/g) ?? []).length).toBe(4);
+    expect(html).toContain('+2 more');
+  });
+
+  it('the card and the announcement have identities that change per round and per countdown', () => {
+    const s = tied();
+    const first = sd(s);
+    expect(first.cardKey).toBe(s.match.suddenDeath!.transitionEndTick);
+    runUntil(s, (ev) => eventsOf(ev, 'suddenDeathCountdown').length > 0, 600);
+    const a = sd(s).announceKey;
+    for (const p of s.players) p.armour = 2;
+    runUntil(s, (ev) => eventsOf(ev, 'suddenDeathBlast').length > 0, 5000);
+    expect(sd(s).announceKey).toBeGreaterThan(a); // the next blast's countdown is a new announcement
+    expect(sd(s).cardKey).toBe(first.cardKey); // the same round, the same card
+  });
+
+  it('its own safety nets are real, short and longer than the normal sim-driven lifecycle', async () => {
+    const { SD_ANNOUNCE_MAX_MS, SD_CARD_MAX_MS } = await import('../../src/ui/SuddenDeath');
+    const cfg = tied().config.suddenDeath;
+    expect(SD_CARD_MAX_MS).toBeGreaterThan((cfg.transitionTicks / 60) * 1000);
+    expect(SD_ANNOUNCE_MAX_MS).toBeGreaterThan((SUDDEN_DEATH_ANNOUNCE_TICKS / 60) * 1000);
+    expect(SD_CARD_MAX_MS).toBeLessThanOrEqual(8000);
+    expect(SD_ANNOUNCE_MAX_MS).toBeLessThanOrEqual(8000);
+  });
+
+  it('nothing of the round stays up once the match has ended (the end moment and the result screen)', () => {
+    const s = tied();
+    expect(buildHud(s, 0, null).suddenDeath).not.toBeNull();
+    s.match.phase = 'ended';
+    s.match.result = { kind: 'win', winnerId: 0, decidedBy: 'simultaneousKills' };
+    expect(buildHud(s, 0, null).suddenDeath).toBeNull();
+    // ... also in the middle of the announcement
+    const t = tied();
+    runUntil(t, (ev) => eventsOf(ev, 'suddenDeathCountdown').length > 0, 600);
+    expect(sd(t).announce).toBe(true);
+    t.match.phase = 'ended';
+    expect(buildHud(t, 0, null).suddenDeath).toBeNull();
+  });
+
+  it('a held match (stalled simulation) keeps the sim-derived state: the UI timeout is what ends it', () => {
+    const s = tied();
+    const a = sd(s);
+    // no tick() for a long time: the same snapshot, the same keys
+    const b = buildHud(s, 0, null).suddenDeath!;
+    expect(b.stage).toBe(a.stage);
+    expect(b.cardKey).toBe(a.cardKey);
+  });
+});

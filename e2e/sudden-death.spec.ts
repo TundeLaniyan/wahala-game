@@ -25,7 +25,7 @@ test.describe('City Rumble: sudden death', () => {
     test.setTimeout(600_000); // software WebGL on a busy shared machine
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    await open(page, '&nobots');
+    await open(page, '&nobots&sdhold');
     await toRumbleSetup(page, 'survival');
     await page.getByTestId('rumble-8').click();
     await startMatch(page, { game: 'rumble' });
@@ -77,7 +77,7 @@ test.describe('City Rumble: sudden death', () => {
 
   test('a genuinely exhausted sequence ends in a draw that says so', async ({ page }) => {
     test.setTimeout(600_000);
-    await open(page, '&nobots');
+    await open(page, '&nobots&sdhold');
     await toRumbleSetup(page, 'survival');
     await page.getByTestId('rumble-8').click();
     await startMatch(page, { game: 'rumble' });

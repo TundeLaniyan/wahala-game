@@ -153,6 +153,13 @@ export interface SuddenDeathHud {
    * (decision SD-B1). Counted in simulation ticks: a paused game keeps it as it was.
    */
   announce: boolean;
+  /**
+   * Identity of the title card / of the current countdown's announcement (sim ticks: the card's `transitionEndTick`,
+   * the countdown's start). The UI times each one out on its own, so neither can outlive its moment however the
+   * simulation clock behaves (decision SU1); a new round or the next blast's countdown gets a new key.
+   */
+  cardKey: number;
+  announceKey: number;
   /** Inside the warning window before a blast. */
   warning: boolean;
   /** A blast fell in the last second. */
@@ -219,6 +226,8 @@ export function buildSuddenDeath(state: GameState, localId: number): SuddenDeath
       })),
     secondsToBlast: pending ? Math.max(0, Math.ceil(left / 60)) : null,
     announce: pending && state.tick - countdownFrom < SUDDEN_DEATH_ANNOUNCE_TICKS,
+    cardKey: sd.transitionEndTick,
+    announceKey: countdownFrom,
     warning: pending && left <= cfg.warnTicks,
     flash: sd.lastBlastTick !== null && state.tick - sd.lastBlastTick < 60,
     firstBlastSeconds: Math.round((cfg.blastDelayTicks[0] ?? 0) / 60),
@@ -717,7 +726,8 @@ export function buildHud(
     ruleBanner: ruleBannerFor(state),
     rumble: rumble ? buildRumble(state, localId, spectateId) : null,
     sideline: buildSideline(state, localId),
-    suddenDeath: buildSuddenDeath(state, localId),
+    // the round is over with the match: nothing of its banner stays up on the end screen (decision SU1)
+    suddenDeath: state.match.phase === 'ended' ? null : buildSuddenDeath(state, localId),
     mission,
     campaign: buildCampaignHud(state, localId),
     enemies: buildEnemyHud(state, localId),

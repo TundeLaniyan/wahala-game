@@ -16,6 +16,9 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fadeableMaterial } from '../assets/occlusionFade';
 import type { Aabb } from '../assets/viewClear';
 
+/** One fade group: its world box, a tile that fades it, and every tile it blocks (row-major). */
+export type CoverBounds = Aabb & { tile: number; tiles: readonly number[] };
+
 /** What the arena view needs from a board cover. */
 export interface BoardCover {
   readonly object: Object3D;
@@ -27,9 +30,10 @@ export interface BoardCover {
   readonly maxReach: number;
   /**
    * World-space bounds of every fade group, with one tile the group claims (`setHide(tile, ...)` on it fades the
-   * whole group). The screen-space view-clear test (`assets/viewClear.ts`) works on these.
+   * whole group) and the row-major tiles the group blocks (its footprint, drawn on the ground while it is faded:
+   * `assets/occlusionFootprint.ts`). The screen-space view-clear test (`assets/viewClear.ts`) works on these.
    */
-  readonly bounds: readonly (Aabb & { tile: number })[];
+  readonly bounds: readonly CoverBounds[];
   /** Fade of a covered tile this frame (0 .. VIEW_HIDE); its whole group fades with its most hidden tile. */
   setHide(tile: number, value: number): void;
   /** Uploads the fades set since the last commit (once per frame, after every `setHide`). */
@@ -157,6 +161,7 @@ export class CoverBuilder {
   private readonly groupReach: number[] = [];
   private readonly groupChunk: number[] = [];
   private readonly groupTile: number[] = [];
+  private readonly groupTiles: number[][] = [];
   private readonly groupBox: (Aabb | null)[] = [];
   private readonly m = new Matrix4();
   private readonly v = new Vector3();
@@ -205,6 +210,7 @@ export class CoverBuilder {
     this.groupReach.push(Math.max(1, Math.round(reach)));
     const [fx, fy] = tiles[0] ?? [0, 0];
     this.groupTile.push(fy * this.width + fx);
+    this.groupTiles.push(tiles.map(([x, y]) => y * this.width + x));
     this.groupBox.push(null);
     return id;
   }
@@ -309,9 +315,14 @@ export class CoverBuilder {
     const reach = this.groupReach;
     const want = new Float32Array(reach.length);
     const shown = new Float32Array(reach.length);
-    const bounds: (Aabb & { tile: number })[] = [];
+    const bounds: CoverBounds[] = [];
     this.groupBox.forEach((b, g) => {
-      if (b) bounds.push({ ...b, tile: this.groupTile[g]! });
+      if (b)
+        bounds.push({
+          ...b,
+          tile: this.groupTile[g]!,
+          tiles: this.groupTiles[g]!.filter((t) => tileGroup[t] === g),
+        });
     });
     return {
       object: root,

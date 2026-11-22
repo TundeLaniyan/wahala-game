@@ -2,7 +2,8 @@
  * View clear in a real City Rumble match (decision VF-B): at phone size, on Auto quality (which a phone often runs
  * on its lowest rungs), scenery that stands between the follow camera and the fighter - or the floor around it -
  * dissolves, and goes solid again once the fighter steps out from behind it. Time is driven with stepTicks; the
- * fade state is read from the debug handle (`__WAHALA__.viewClear()`), never from pixels.
+ * fade state is read from the debug handle (`__WAHALA__.viewClear()`), never from pixels. Decisions OX1-OX2: the fade is
+ * restrained (a ghost, never invisible) and a faded building shows its footprint on the ground.
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -19,6 +20,8 @@ const status = (page: Page) =>
         points: number;
         fading: number;
         wanted: number[];
+        hide: number;
+        footprints: { drawn: number; tracked: number };
       },
   );
 
@@ -80,6 +83,16 @@ for (const [name, width, height] of [
     await expect.poll(async () => (await status(page)).fading, { timeout: 30_000 }).toBeGreaterThan(0);
     const roof = (await status(page)).wanted;
 
+    // restrained, not invisible (decision OX1): the faded building keeps a ghost of itself (at most 80% of its pixels
+    // dissolved), and the tiles it still blocks are drawn on the ground (decision OX2)
+    await expect
+      .poll(async () => (await status(page)).footprints.drawn, { timeout: 30_000 })
+      .toBeGreaterThan(0);
+    // (the dither eases in over a moment: on the software renderer of the test browser that takes a few seconds)
+    await expect.poll(async () => (await status(page)).hide, { timeout: 60_000 }).toBeGreaterThan(0.5);
+    const faded = await status(page);
+    expect(faded.hide).toBeLessThanOrEqual(0.8);
+
     // step out into the open (a lane well away from the roof; Lekki has some low cover everywhere, so the check
     // is that the roof's own tiles are released, not that nothing at all fades): the dissolve is released
     await place(page, 14, 26);
@@ -88,5 +101,9 @@ for (const [name, width, height] of [
         timeout: 30_000,
       })
       .toBe(0);
+    // ... and its footprint goes with it (the rest, if any, belongs to other cover near the lane)
+    await expect
+      .poll(async () => (await status(page)).footprints.drawn, { timeout: 30_000 })
+      .toBeLessThanOrEqual(faded.footprints.drawn);
   });
 }

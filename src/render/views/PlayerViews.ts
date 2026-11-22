@@ -41,6 +41,7 @@ import type { SlipKind, SlipState } from './slip';
 import { TICK_RATE } from '../../sim';
 import type { FrameContext, View } from './types';
 import { playerMarkerMode } from '../playerMarker';
+import { shownStanding, victoryTile } from './victoryPose';
 import { YouMarker } from './youMarker';
 import { addTeamKit, createProtectionRing, protectionBlink, teamColor } from './teamMarkings';
 
@@ -491,11 +492,14 @@ export class PlayerViews implements View {
 
   private pose(ctx: FrameContext, p: Player, v: Visual): void {
     const { state, time, alpha, layout, dt } = ctx;
-    const pos = playerGridPos(p, alpha);
+    // a winner who is down when the match ends is drawn standing in the victory pose (decision SU2): the result must not
+    // contradict the picture. Presentation only: the simulation keeps them down.
+    const stand = !p.alive && shownStanding(state, p);
+    const pos = stand ? { ...victoryTile(state, p), moving: false } : playerGridPos(p, alpha);
     const w = toWorld(layout, pos.x, pos.y);
     const m = v.model;
 
-    if (!p.alive) {
+    if (!p.alive && !stand) {
       v.slip = null;
       v.slipPending = null;
       m.root.rotation.order = 'XYZ';
@@ -503,8 +507,10 @@ export class PlayerViews implements View {
       return;
     }
     if (v.deadAt !== null) this.revive(ctx, v, w);
+    if (stand) m.rigged?.setLoop('Win', 0.12);
 
-    const face = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] }[p.facing];
+    const facing = stand ? 'down' : p.facing; // toward the camera
+    const face = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] }[facing];
     // a sharp turn while running plants the feet: a small scuff of dust sells the direction change
     if (p.facing !== v.facing && pos.moving && !p.mounted) ctx.fx.dust(pos.x, pos.y, 2, 0.32);
     v.facing = p.facing;
