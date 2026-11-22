@@ -43,10 +43,21 @@ export function isImmune(state: GameState, p: Player, eventId: number): boolean 
 /** Collects flame hits for every player currently standing in fire. */
 export function collectFlameHits(state: GameState): LethalHit[] {
   const hits: LethalHit[] = [];
+  // decision CV3 (Classic raids): an enemy that has only just started a step is still drawn on the tile it is leaving
+  // (a raid enemy takes 12-18 ticks a tile), so fire there catches it too: a blast never seems to pass through a guard
+  const raid = state.config.campaignTactics?.classicRaid !== undefined;
+  const grace = state.config.skills.stepGrace;
   for (const p of state.players) {
     if (!p.alive) continue;
+    const leaving =
+      raid &&
+      p.enemyKind !== undefined &&
+      p.stepRemaining > 0 &&
+      p.stepTotal > 0 &&
+      p.stepRemaining / p.stepTotal > 1 - grace.maxShare;
     for (const f of state.flames) {
-      if (f.x === p.x && f.y === p.y && state.tick >= f.startTick && state.tick < f.endTick) {
+      const on = (f.x === p.x && f.y === p.y) || (leaving && f.x === p.stepFromX && f.y === p.stepFromY);
+      if (on && state.tick >= f.startTick && state.tick < f.endTick) {
         if (!canHarm(state, f.ownerId, p)) continue; // teammate's fire, friendly fire off
         if (f.ownerSafe && f.ownerId === p.id) continue; // a VEHICLE GENERATOR never catches its owner
         hits.push({

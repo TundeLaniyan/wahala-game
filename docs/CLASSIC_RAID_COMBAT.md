@@ -83,3 +83,52 @@ hunting; 4 a punch wind-up telegraph (the arrow and the one threatened tile).
 Whether this FEELS right in a human's hands on a phone; how readable the routes are without a visual aid (no route
 marking was added: the routes are now learnable by watching, a marking is a possible next step if the founder wants one);
 Hard's ambush rate rests on 12 planted ambushes.
+
+## v3: rear approaches, one-blast kills, room to breathe (decisions CV1-CV7)
+
+Branch `claude/wahala-classic-raid-v3`, from production `ee939a3`, after the founder's Android test of the AM build.
+Same scope rule: Classic raids only, everything through `classicRaid` / `RAID_ENEMY_ATTACKS`.
+
+### What the founder saw, and the cause in the sim
+
+| Founder report | Cause |
+| --- | --- |
+| Enemies detect him while facing away | "Too close" was 2 tiles (Manhattan) whatever the facing; the eight tiles round a calm guard, the three behind it included, were always in view; a calm guard punched anyone next to it, which turned it round and alerted it. |
+| A rear approach to lay a generator is impossible | The above, plus the click of a generator being laid was heard 1-3 tiles away. |
+| Ordinary enemies survive direct blasts | A raid enemy takes 12-18 ticks a tile. The flame test used only the tile it had just stepped onto, while it was still drawn on the tile it was leaving. A guard that knew a generator could also stand beside it and step out at the last moment. (Spawn protection, about 2 s after a wave appears, is real and unchanged.) |
+| Gangs attack continuously, no room to disengage | The lieutenant hunted on top of the chaser cap; on Normal a called wave was two throwers plus the lieutenant. |
+| Punches hard to evade | Easy / Normal wind-ups left 19-33 ticks over a 21-tick phone reaction. |
+| Opening raid too demanding | The above, and the depot's "Shift Lead" (8 health) needed 4 blasts at every level. |
+
+### What changed
+
+CV1 no eyes in the back of the head (the near ring and "too close" need the player in front or beside; Easy: in front
+only; a calm guard swings only at someone it sees); CV2 a laid generator is silent on Easy and Normal (1 tile on Hard),
+and a calm guard sees a generator only ahead (Hard: and beside it); CV3 fire also catches an enemy in the first half of
+leaving a tile; CV4 Easy takes a seen generator in more slowly, posts turn every 4 / 2.5 s; CV5 a guard that knows a
+generator leaves its cross at once and never walks into a known one; CV6 the lieutenant shares the chaser cap on Easy and
+Normal and falls to 2 / 3 / 4 blasts; CV7 Easy and Normal wind-ups 8 ticks longer. Details and numbers:
+docs/DECISIONS.md "CV".
+
+### The rear approach (acceptance test G)
+
+Depot guard C holds its post at (11,9) and turns a quarter every few seconds; guard B walks the column above it. The
+player waits at (9,7), out of both sights. When he has seen C face the wall (a 0.25 s reaction) and B walking away, he
+walks (10,7), (11,7), (11,8) up behind C, lays a generator, and walks back. Every input is a real intent. Easy and Normal:
+C never notices him and the blast kills it. Hard: the click is heard and C gets clear.
+
+### Measurements (before = production `ee939a3`)
+
+Opening raid (`scripts/raid-first.ts`, 8 seeds a level, a fair 0.3 s player and a slow 0.5 s one): all completed
+before and after; time with nobody hunting the fair player 54 / 54 / 45 % -> 69 / 59 / 51 % (Easy / Normal / Hard); most
+enemies hunting at once 2 / 3 / 3 -> 2 / 2 / 3. All raids: enemy time calm with the fair-fight player 62 / 40 / 32 % ->
+76 / 52 / 29 %, punches landed 1 / 12 / 5 -> 4 / 4 / 1 (24 runs a level); the ambusher's ambushes killing their guard
+71 / 94 / 67 % -> 73 / 100 / 100 %, its damage per run 1.00 / 0.83 / 1.58 -> 0.46 / 0.21 / 1.13, the mean spell with
+nobody hunting it 11.8 / 10.3 / 9.3 s -> 18.9 / 15.3 / 9.7 s. Easy punches landed on the ambusher rose 1 -> 8 in
+24 runs: it now walks up behind guards, and one that turns finds it at arm's length.
+
+### Not established
+
+The scripted players were not in difficulty before either (they completed every opening raid unhurt before and after);
+they measure pressure and opportunity, not how it feels. No physical phone playtest was possible here: the founder's
+test remains the acceptance gate.

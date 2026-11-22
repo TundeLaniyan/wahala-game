@@ -5,7 +5,8 @@
  * tiles, never through a wall or a crate, after a reaction delay that restarts when the fighter leaves the cone; the
  * fighter's beam seen by the warden lengthens the cone by exactly one tile; in the dark only contact counts. The lit
  * raids play byte-for-byte as recorded (digests of the scripted player's full raid at every level; first recorded on
- * 785f84c, re-recorded for the Classic raid combat correction, decisions AM1-AM6, which deliberately changed every raid).
+ * 785f84c, re-recorded for the Classic raid combat correction, decisions AM1-AM6, and for CV1-CV7, both of which
+ * deliberately changed every raid).
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -207,11 +208,15 @@ describe("the fighter's own beam", () => {
 });
 
 describe('in the dark', () => {
-  it('an adjacent fighter is noticed at once, even behind the warden; two tiles behind him is not', () => {
+  it('an adjacent fighter beside the warden is noticed at once; touching his back or two tiles behind him is not (decision CV1)', () => {
     const { s, g } = vault();
     post(s, g, 6, 6, 'right');
-    fighter(s, 5, 6, 'left'); // touching his back
+    fighter(s, 6, 7, 'up'); // at his side
     expect(watch(s, g, 1)).toBe(1);
+    const back = vault();
+    post(back.s, back.g, 6, 6, 'right');
+    fighter(back.s, 5, 6, 'left'); // touching his back: a calm warden does not feel a quiet fighter behind him
+    expect(watch(back.s, back.g, 120)).toBeNull();
     const two = vault();
     post(two.s, two.g, 6, 6, 'right');
     fighter(two.s, 4, 6, 'left'); // the lit raid's `closeTiles` (2) would alert; the dark does not
@@ -253,7 +258,7 @@ describe('isolation', () => {
   });
 
   it(
-    'the lit raids play byte-for-byte as recorded (scripted full raid, every level; re-recorded for AM1-AM6)',
+    'the lit raids play byte-for-byte as recorded (scripted full raid, every level; re-recorded for AM1-AM6 and CV1-CV7)',
     { timeout: 180_000 },
     () => {
       const out: Record<string, string> = {};
@@ -270,15 +275,15 @@ describe('isolation', () => {
           out[`${raidId}/${level}`] = `${hashOf(last)}/${r.outcome}`;
         }
       expect(out).toEqual({
-        'warehouseDispatchDepot/easy': '9a1c328c:32520/completed',
-        'warehouseDispatchDepot/normal': '8892ab9c:32415/completed',
-        'warehouseDispatchDepot/hard': '14e952d5:32548/completed',
-        'partsStoreroom/easy': '297c5854:27580/completed',
-        'partsStoreroom/normal': 'd89b58b7:27683/completed',
-        'partsStoreroom/hard': 'a9d4d738:27622/completed',
-        'standbyPlant/easy': 'f3befffb:26890/completed',
-        'standbyPlant/normal': 'cca660e1:27569/completed',
-        'standbyPlant/hard': '5ad98089:27037/completed',
+        'warehouseDispatchDepot/easy': '2324dde6:32301/completed',
+        'warehouseDispatchDepot/normal': '82991376:33610/completed',
+        'warehouseDispatchDepot/hard': 'e992f210:32690/completed',
+        'partsStoreroom/easy': 'd45c5b0b:27499/completed',
+        'partsStoreroom/normal': '2ca7f40a:27687/completed',
+        'partsStoreroom/hard': '833bac23:28095/completed',
+        'standbyPlant/easy': 'a5ded5c5:26878/completed',
+        'standbyPlant/normal': '90aa081c:27625/completed',
+        'standbyPlant/hard': 'd542d406:27268/completed',
       });
     },
   );

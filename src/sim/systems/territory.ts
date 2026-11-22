@@ -35,7 +35,7 @@ import type { NpcDirective } from '../mission/types';
 import { ENEMY_ATTACK_SETS } from '../data/enemyAttacks';
 import { variantOf } from '../data/enemyVariants';
 import { enemyGroupDirective, standoffSlots } from '../campaign/tactics';
-import { canSeePlayer, enemySeesPerson } from './sight';
+import { canSeePlayer, enemySeesPerson, inViewCone } from './sight';
 import { nightNotice } from './nightSight';
 import { sameSide } from './projectiles';
 import { pushEnemyCue } from './enemyCues';
@@ -219,12 +219,21 @@ function face(p: Player, t: TilePos | null): void {
 /** Decision AM2: the kinds the Classic raid chaser cap counts (lieutenants and bosses are never capped). */
 const CAPPED_KINDS: ReadonlySet<string> = new Set(['agbero', 'guard', 'thrower', 'heavy']);
 
-/** Decision AM2: are `max` ordinary enemies other than `p` already hunting (alert / pursue)? */
+/** Decisions AM2, CV6: does this enemy kind take one of the raid's hunting places? */
+function capped(state: GameState, kind: string | undefined): boolean {
+  if (kind === undefined) return false;
+  return (
+    CAPPED_KINDS.has(kind) ||
+    (kind === 'lieutenant' && state.config.campaignTactics?.classicRaid?.capsLieutenant === true)
+  );
+}
+
+/** Decision AM2: are `max` capped enemies other than `p` already hunting (alert / pursue)? */
 function chasersFull(state: GameState, p: Player, max: number): boolean {
   let n = 0;
   for (const [key, q] of Object.entries(state.territory!.minds)) {
     const o = state.players[Number(key)]!;
-    if (o.id === p.id || !o.alive || o.enemyKind === undefined || !CAPPED_KINDS.has(o.enemyKind)) continue;
+    if (o.id === p.id || !o.alive || !capped(state, o.enemyKind)) continue;
     if (q.state === 'alert' || q.state === 'pursue') n++;
   }
   return n >= max;
@@ -249,13 +258,7 @@ function alert(
   const was = m.state;
   if (was === 'alert' || was === 'pursue') return;
   const raid = state.config.campaignTactics!.classicRaid;
-  if (
-    !force &&
-    raid !== undefined &&
-    p.enemyKind !== undefined &&
-    CAPPED_KINDS.has(p.enemyKind) &&
-    chasersFull(state, p, raid.maxChasers)
-  ) {
+  if (!force && raid !== undefined && capped(state, p.enemyKind) && chasersFull(state, p, raid.maxChasers)) {
     holdBack(state, m, p, seen, events);
     return;
   }
@@ -448,6 +451,8 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
     // calm (patrol, watch, walking back) it looks where it walks: the cone ahead (and the eight tiles around it)
     const calmNow =
       m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil);
+    // decision CV1: a Classic raid guard is blind right behind it (undefined everywhere else: all eight tiles)
+    const ring = cfg.classicRaid?.nearRing;
     // a night raid (decisions NL10-NL13): a calm enemy sees only by its own torch light, and in the dark notices only at
     // contact; null everywhere else (no `config.nightSight`), so every other match is unchanged
     const night = h !== null && calmNow ? nightNotice(state, p, h) : null;
@@ -458,8 +463,15 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
         : enemySeesPerson(state, p, h, {
             range: calmNow ? m.spec.calmNoticeTiles : m.spec.noticeTiles,
             calm: calmNow,
+            ...(ring ? { ring } : {}),
           }));
-    const close = h !== null && (night ? night.close : manhattan(p, h) <= cfg.awareness.closeTiles);
+    // decision CV1 (Classic raids): "too close" needs him in front of a calm guard or at its side, never behind it
+    const close =
+      h !== null &&
+      (night
+        ? night.close
+        : manhattan(p, h) <= cfg.awareness.closeTiles &&
+          (!ring || !calmNow || inViewCone(p, h.x, h.y, ring)));
     if (h && (sees || close)) {
       m.lastSeen = { x: h.x, y: h.y };
       m.lastSeenTick = T;
@@ -490,7 +502,9 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
       // hearing: a noise it did not see sends it to look, along a coarse band only
       for (const n of noises) {
         if (n.ownerTeam === p.team) continue;
-        const range = n.loud ? m.spec.hearingTiles * cfg.awareness.blastHearingScale : m.spec.hearingTiles;
+        // decision CV2 (Classic raids): the click of a generator being laid carries `placeHearingTiles`; a blast is loud
+        const quiet = cfg.classicRaid?.placeHearingTiles ?? m.spec.hearingTiles;
+        const range = n.loud ? m.spec.hearingTiles * cfg.awareness.blastHearingScale : quiet;
         if (Math.abs(n.x - p.x) + Math.abs(n.y - p.y) > range) continue;
         const band = noiseBand(p, n.x, n.y);
         if (band.dx === 0 && band.dy === 0) continue;

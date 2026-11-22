@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 import { createBot } from '../src/ai';
 import { observe, tick } from '../src/sim';
 import type { GameState, Intents, SimEvent } from '../src/sim';
+import { callEnemyIn } from '../src/sim/systems/territory';
 import { addGenerator } from './helpers';
 import { advance, explodeAt, knockOut, letWavesAppear, newRaid, put, waveSeats } from './raid-helpers';
 
@@ -73,6 +74,9 @@ describe('the classic maze traps, and the enemy AI still dodges what it can see 
   it('a guard at a junction steps out of a single cross and is unhurt (the AI is not helpless)', () => {
     const { s, id } = depotWith(firstGuard);
     put(s, id, 7, 5); // junction: exits up (7,4) and down (7,6) leave the row the generator burns
+    // looking at it (decision CV2: a generator is SEEN, in its view cone, or not known at all: its laying is silent on
+    // Normal, so a guard looking away would rightly walk into this one)
+    s.players[id]!.facing = 'right';
     addGenerator(s, { ownerId: 0, x: 9, y: 5, timer: 180 });
     run(s, id, 260);
     const g = s.players[id]!;
@@ -109,6 +113,9 @@ describe('enemies commit to attacks instead of hovering', () => {
     const { s, id } = depotWith(lieutenant, true);
     put(s, id, 9, 5);
     put(s, 0, 13, 5); // a clear row: (10,5) .. (12,5)
+    // hunting him (on Normal the called wave's third enemy now waits its turn, decision CV6: the throwers took the two
+    // places; with them down, the lieutenant is called in again)
+    callEnemyIn(s, id, s.tick + 600, []);
     const events = run(s, id, 6 * 60);
     const attacks = events.filter(
       (e) =>

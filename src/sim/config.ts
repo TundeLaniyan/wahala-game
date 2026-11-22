@@ -556,7 +556,7 @@ export interface ClassicRaidTactics {
   /**
    * Decision AM2: at most this many ORDINARY enemies (agbero, guard, thrower, heavy) hunt the player at once (`alert` /
    * `pursue`). Another that notices him, hears a call or is called in watches him from its ground and goes back to its
-   * route instead; a hit or a player at arm's length still turns it. Lieutenants and bosses are never capped.
+   * route instead; a hit or a player at arm's length still turns it. Bosses are never capped; lieutenants see `capsLieutenant`.
    */
   maxChasers: number;
   /**
@@ -565,6 +565,28 @@ export interface ClassicRaidTactics {
    */
   blastDefeats: EnemyKind[];
   blastVsTough: number;
+  /**
+   * Decision CV6: does the lieutenant take one of the `maxChasers` hunting places (Easy, Normal)? Uncapped it joined
+   * every hunt on top of the cap. Bosses are never capped.
+   */
+  capsLieutenant: boolean;
+  /**
+   * Decision CV1: the tiles round a calm guard it sees ('frontSides': not the three behind it; 'front': only the three
+   * ahead). A player who walks up behind a guard is not seen, and the instant "too close" notice needs him in front or
+   * at its side (`awareness.closeTiles` is 1 in a raid).
+   */
+  nearRing: 'frontSides' | 'front';
+  /**
+   * Decision CV2: how far the quiet click of a generator being LAID is heard (tiles, Manhattan). A blast stays loud
+   * (`perception[kind].hearingTiles` x `awareness.blastHearingScale`).
+   */
+  placeHearingTiles: number;
+  /**
+   * Decision CV2: which tiles of the eight round a CALM raid enemy can see a generator on (the 90-degree view cone
+   * beyond them is unchanged): `front` = only the three ahead (a generator at its shoulder or behind it is unseen),
+   * `frontSides` = those and the two beside it.
+   */
+  trapRing: 'frontSides' | 'front';
 }
 
 /**
@@ -1649,8 +1671,8 @@ export const RAID_TACTICS_LEVELS: Readonly<
     // bruiser, not a second boss (decision RA6)
     // decision AM5: a calm walker sees a generator on its way only from 1 tile and takes it in slowly
     trapSense: {
-      none: { enemyBrawlReactScale: 4.5, calmVisionTiles: 1, reactScale: 1.6 },
-      basic: { enemyBrawlReactScale: 4, calmVisionTiles: 1, reactScale: 1.5 },
+      none: { enemyBrawlReactScale: 4.5, calmVisionTiles: 1, reactScale: 2.1 },
+      basic: { enemyBrawlReactScale: 4, calmVisionTiles: 1, reactScale: 2 },
       expert: { plannerBump: 0, reactScale: 0.8 },
     },
     perception: {
@@ -1680,7 +1702,7 @@ export const RAID_TACTICS_LEVELS: Readonly<
       alertAlliesScale: 0,
       coverTiles: 0,
       groupTactics: false,
-      lookAroundTicks: 120,
+      lookAroundTicks: 240,
       hitChaseTicks: 120,
       patrolStepExtraTicks: 3,
     },
@@ -1732,7 +1754,7 @@ export const RAID_TACTICS_LEVELS: Readonly<
       alertAlliesScale: 1,
       coverTiles: 0,
       groupTactics: true,
-      lookAroundTicks: 90,
+      lookAroundTicks: 150,
       hitChaseTicks: 150,
       patrolStepExtraTicks: 3,
     },
@@ -1811,8 +1833,9 @@ const RAID_MAX_CHASERS = { easy: 1, normal: 2, hard: 3 } as const;
 
 /**
  * Decision AM4: the enemy punches of a Classic raid, by level. A wind-up (catalogue startup + extra) the player can
- * read and step out of: an agbero / guard 60 / 54 (Easy), 50 / 44 (Normal), 40 / 34 ticks (Hard); a reaction of
- * 0.25 s plus half a step (6 ticks) is 21 ticks. The strike is committed to its telegraphed tile; one wind-up at a time
+ * read and step out of: an agbero / guard 68 / 62 (Easy), 58 / 52 (Normal), 40 / 34 ticks (Hard; decision CV7 added
+ * 8 ticks to every Easy and Normal wind-up after the founder's phone test); a reaction of 0.25 s plus half a step
+ * (6 ticks) is 21 ticks. The strike is committed to its telegraphed tile; one wind-up at a time
  * (two on Hard) with a gap between a group's punches; after a hit, `victimFreeTicks` of no enemy hit.
  */
 export const RAID_ENEMY_ATTACKS: Readonly<
@@ -1824,12 +1847,12 @@ export const RAID_ENEMY_ATTACKS: Readonly<
     groupPunchGapTicks: 90,
     victimFreeTicks: 150,
     melee: {
-      agbero: { extraStartupTicks: 56 },
-      guard: { extraStartupTicks: 50 },
-      thrower: { extraStartupTicks: 42 },
-      heavy: { extraStartupTicks: 48 },
-      lieutenant: { extraStartupTicks: 44 },
-      boss: { extraStartupTicks: 30 },
+      agbero: { extraStartupTicks: 64 },
+      guard: { extraStartupTicks: 58 },
+      thrower: { extraStartupTicks: 50 },
+      heavy: { extraStartupTicks: 56 },
+      lieutenant: { extraStartupTicks: 52 },
+      boss: { extraStartupTicks: 38 },
     } as DeepPartial<GameConfig['enemyAttacks']>['melee'],
   },
   normal: {
@@ -1838,12 +1861,12 @@ export const RAID_ENEMY_ATTACKS: Readonly<
     groupPunchGapTicks: 60,
     victimFreeTicks: 120,
     melee: {
-      agbero: { extraStartupTicks: 46 },
-      guard: { extraStartupTicks: 40 },
-      thrower: { extraStartupTicks: 34 },
-      heavy: { extraStartupTicks: 38 },
-      lieutenant: { extraStartupTicks: 36 },
-      boss: { extraStartupTicks: 22 },
+      agbero: { extraStartupTicks: 54 },
+      guard: { extraStartupTicks: 48 },
+      thrower: { extraStartupTicks: 42 },
+      heavy: { extraStartupTicks: 46 },
+      lieutenant: { extraStartupTicks: 44 },
+      boss: { extraStartupTicks: 30 },
     } as DeepPartial<GameConfig['enemyAttacks']>['melee'],
   },
   hard: {
@@ -1874,8 +1897,15 @@ export function raidTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignTacti
     calledChaseTicks: RAID_CALLED_CHASE_TICKS[level],
     maxChasers: RAID_MAX_CHASERS[level],
     blastDefeats: ['agbero', 'guard', 'thrower'],
-    blastVsTough: 2,
+    // decision CV6: a lieutenant (8 health) falls to 2 / 3 / 4 blasts (was 4 at every level)
+    blastVsTough: { easy: 4, normal: 3, hard: 2 }[level],
+    capsLieutenant: level !== 'hard',
+    nearRing: level === 'easy' ? 'front' : 'frontSides',
+    placeHearingTiles: { easy: 0, normal: 0, hard: 1 }[level],
+    trapRing: level === 'hard' ? 'frontSides' : 'front',
   };
+  // decision CV1: in a raid "too close" means at arm's length (and only in front or at its side: see `nearRing`)
+  t.awareness.closeTiles = 1;
   return t;
 }
 

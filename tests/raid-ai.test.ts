@@ -187,13 +187,18 @@ describe('RA3 / RA4: fair generator awareness - no omniscience, real escapes fro
     }
   });
 
+  // decision CV4 deliberately narrowed this to Normal and Hard: an Easy guard sees a generator only from 1 tile and
+  // takes it in slowly, so this 2 s fuse two tiles ahead catches it (Easy is generous; asserted below)
   it('the same generator seen in plain view is escaped by a real walk (negative control)', () => {
-    for (const level of LEVELS) {
+    for (const level of ['normal', 'hard'] as CampaignLevel[]) {
       const s = depotGuard(level);
       onLoop(s, 9, 3, 'down', 2); // at the corner, already turned down the leg: (9,5) two tiles ahead
-      addGenerator(s, { ownerId: 0, x: 9, y: 5, timer: 120 });
+      // a full fuse: since decision CV2 a laid generator is not heard on Normal, so it is seen (reaction and all), not heard
+      addGenerator(s, { ownerId: 0, x: 9, y: 5, timer: s.config.generator.fuseTicks });
       const at: string[] = [];
-      runGuard(s, 150, level, () => at.push(`${s.players[1]!.x},${s.players[1]!.y}`));
+      runGuard(s, s.config.generator.fuseTicks + 30, level, () =>
+        at.push(`${s.players[1]!.x},${s.players[1]!.y}`),
+      );
       expect(hurt(s), level).toBe(false);
       expect(new Set(at).size, level).toBeGreaterThan(1); // it walked out, it was not spared by luck
     }
@@ -253,10 +258,24 @@ describe('RA3 / RA4: fair generator awareness - no omniscience, real escapes fro
 });
 
 describe('RA3: fair pursuit - noticed, bounded, searched, back on its route', () => {
+  it('the same generator with 100 ticks left two tiles ahead: an Easy guard (sees it a tile ahead, takes it in slowly) is caught, a Hard one gets clear (decisions CV4-CV5)', () => {
+    const out: Record<string, boolean> = {};
+    for (const level of ['easy', 'hard'] as CampaignLevel[]) {
+      const s = depotGuard(level);
+      onLoop(s, 9, 3, 'down', 2);
+      addGenerator(s, { ownerId: 0, x: 9, y: 5, timer: 100 });
+      runGuard(s, 130, level);
+      out[level] = hurt(s);
+    }
+    expect(out).toEqual({ easy: true, hard: false });
+  });
+
   it('a guard that spots the player chases, loses him behind a door, searches and walks back to its loop', () => {
     const s = depotGuard('normal');
     onLoop(s, 9, 5, 'left', 3);
-    put(s, 0, 9, 7); // two tiles away: noticed at once
+    // two tiles ahead of it, in its line of sight (decision CV1 deliberately changed this: the player used to stand two
+    // tiles to its side while it looked away, and "too close" alerted it anyway)
+    put(s, 0, 7, 5);
     const states: string[] = [];
     let moved = false;
     runGuard(s, 2400, 'normal', () => {
@@ -267,7 +286,7 @@ describe('RA3: fair pursuit - noticed, bounded, searched, back on its route', ()
         put(s, 0, 1, 1); // into the armour locker behind its closed door: out of reach
       }
     });
-    expect(states.slice(0, 2)).toEqual(['patrol', 'alert']);
+    expect(states.filter((st) => st !== 'patrol')[0]).toBe('alert');
     expect(states).toContain('pursue');
     const after = states.slice(states.indexOf('pursue') + 1);
     expect(after[0]).toMatch(/investigate|return/);
@@ -290,11 +309,17 @@ describe('RA3: fair pursuit - noticed, bounded, searched, back on its route', ()
     letWavesAppear(s);
     const wave2 = s.raid!.waves[1]!.seatIds;
     expect(wave2.length).toBeGreaterThan(0);
+    // every one is called; at most `maxChasers` hunt (decision CV6: on Easy and Normal the lieutenant takes a place too),
+    // the others watch him from their ground and go back to their rounds
+    const cap = s.config.campaignTactics!.classicRaid!.maxChasers;
+    let hunting = 0;
     for (const id of wave2) {
       const m = s.territory!.minds[id]!;
-      expect(['alert', 'pursue']).toContain(m.state);
+      expect(['alert', 'pursue', 'return']).toContain(m.state);
+      if (m.state !== 'return') hunting++;
       expect(m.calledUntil).toBeGreaterThan(s.tick);
     }
+    expect(hunting).toBe(Math.min(cap, wave2.length));
   });
 });
 
