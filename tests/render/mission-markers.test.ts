@@ -377,6 +377,121 @@ describe('the mission view draws a simulated mission', () => {
     views.dispose();
   });
 
+  // ------------------------------------------------------------ boss fight beats (decisions BH1-BH5)
+  it("the sim's boss events draw their beats on the boss: a hit, the shield closing, the defeat; nothing else does", () => {
+    const state = newMission({ id: 'oshodi' });
+    const layout = createLayout(state.width, state.height);
+    const calls: string[] = [];
+    const rec =
+      (name: string) =>
+      (...args: unknown[]): void => {
+        calls.push(`${name}:${args.length}`);
+      };
+    const fx = {
+      flash: rec('flash'),
+      shockwave: rec('shockwave'),
+      sparkle: rec('sparkle'),
+      comicPuff: rec('puff'),
+      dust: rec('dust'),
+      shake: 0,
+    } as unknown as Effects;
+    const views = new MissionViews();
+    const boss = state.players[1]!;
+    const at = { x: boss.x, y: boss.y };
+    views.handleEvents([{ type: 'bossShielded', bossId: 1, reason: 'start' }], state, fx, layout);
+    views.handleEvents([{ type: 'missionPhase', phase: 0, change: 'started' }], state, fx, layout);
+    expect(calls).toEqual([]);
+    views.handleEvents(
+      [{ type: 'bossHit', bossId: 1, byId: 0, hitsLeft: 2, maxHits: 3, ...at }],
+      state,
+      fx,
+      layout,
+    );
+    expect(calls).toEqual(['flash:6', 'shockwave:4', 'shockwave:4', 'sparkle:3']);
+    expect((fx as unknown as { shake: number }).shake).toBeGreaterThan(0);
+    calls.length = 0;
+    views.handleEvents([{ type: 'bossShielded', bossId: 1, reason: 'phase' }], state, fx, layout);
+    expect(calls).toEqual(['flash:6', 'shockwave:4']); // a cold ring, no sparks
+    calls.length = 0;
+    views.handleEvents(
+      [{ type: 'bossDefeated', bossId: 1, creditId: 0, defeat: 'eliminated' }],
+      state,
+      fx,
+      layout,
+    );
+    expect(calls).toContain('puff:2');
+    expect(calls).toContain('dust:4');
+    // no mission, no beats (a normal match never reaches here, but the guard is part of the contract)
+    const plain = { ...state, mission: undefined } as unknown as typeof state;
+    calls.length = 0;
+    views.handleEvents(
+      [{ type: 'bossHit', bossId: 1, byId: 0, hitsLeft: 2, maxHits: 3, ...at }],
+      plain,
+      fx,
+      layout,
+    );
+    expect(calls).toEqual([]);
+    views.dispose();
+  });
+
+  it('a blast on the shielded boss shows ONE cold bounce per blast; the exposed boss gets none', () => {
+    const { state, views, ctx } = rig('oshodi');
+    const layout = createLayout(state.width, state.height);
+    const calls: string[] = [];
+    const fx = {
+      flash: () => calls.push('flash'),
+      shockwave: () => calls.push('ring'),
+      sparkle: () => calls.push('spark'),
+      comicPuff: () => undefined,
+      dust: () => undefined,
+      shake: 0,
+    } as unknown as Effects;
+    const withFx = (time: number): FrameContext => ({ ...ctx(time), fx, layout }) as FrameContext;
+    const boss = state.players[1]!;
+    views.update(withFx(0));
+    expect(calls).toEqual([]);
+    state.flames.push({
+      x: boss.x,
+      y: boss.y,
+      eventId: 77,
+      genId: -1,
+      ownerId: 0,
+      dir: null,
+      tip: false,
+      startTick: state.tick,
+      endTick: state.tick + 30,
+    });
+    views.update(withFx(0.1));
+    expect(calls).toEqual(['flash', 'ring', 'spark']);
+    calls.length = 0;
+    for (let i = 2; i < 8; i++) views.update(withFx(i / 10)); // the same blast keeps burning
+    expect(calls).toEqual([]);
+    // the ring runs the bounce's colour for a moment, then goes back to the shield blue
+    const marker = (views as unknown as { boss: { ringMat: { color: { getHex(): number } } } }).boss;
+    views.update(withFx(0.15));
+    state.flames.length = 0;
+    views.update(withFx(5));
+    expect(marker.ringMat.color.getHex()).toBe(0x4aa8ff);
+    // exposed: the flame is a hit's business, not a bounce
+    state.mission!.boss.shielded = false;
+    state.mission!.phaseState = 'exposed';
+    state.mission!.boss.exposedUntil = state.tick + 600;
+    state.flames.push({
+      x: boss.x,
+      y: boss.y,
+      eventId: 78,
+      genId: -1,
+      ownerId: 0,
+      dir: null,
+      tip: false,
+      startTick: state.tick,
+      endTick: state.tick + 30,
+    });
+    views.update(withFx(6));
+    expect(calls).toEqual([]);
+    views.dispose();
+  });
+
   it('boss-mission seats read as telegraph kinds: the boss as a boss, the crew by variant, the human never', () => {
     const state = newMission({ id: 'oshodi' });
     expect(telegraphKindOf(state, state.players[0]!)).toBeNull();

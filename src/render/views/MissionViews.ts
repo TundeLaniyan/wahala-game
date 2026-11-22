@@ -12,8 +12,12 @@ import {
   SphereGeometry,
 } from 'three';
 import { missionView } from '../../sim';
-import type { MissionNodeView, MissionView } from '../../sim';
+import type { GameState, MissionNodeView, MissionView, SimEvent } from '../../sim';
+import type { Effects } from '../fx/Effects';
+import type { Layout } from '../coords';
 import { ringTexture, tileGlowTexture } from '../textures';
+import { BOSS_FX, bossFxFor, shieldBlockingFlame } from './bossFeedback';
+import type { BossFx, BossFxKind } from './bossFeedback';
 import { CheckpointBeacons } from './CheckpointBeacons';
 import type { BeaconInput } from './CheckpointBeacons';
 import { buildIcon, iconFor } from './missionIcons';
@@ -128,6 +132,11 @@ export class MissionViews implements View {
   private readonly nodes = new Map<string, NodeMarker>();
   private boss: BossMarker | null = null;
   private defeatedAt: number | null = null;
+  /** The boss's last beat (a hit, the shield closing / dropping, a blast bounced off it): the ring runs its tint a moment. */
+  private beat: { until: number; tint: number } | null = null;
+  private pendingBeat: BossFx | null = null;
+  /** The blast whose bounce was already shown (one spark per blast, not per flame tile per frame). */
+  private blockedEvent: number | null = null;
   private readonly seen = new Map<string, number>();
   private readonly arcs: (BufferGeometry | null)[] = new Array<BufferGeometry | null>(ARC_STEPS + 1).fill(
     null,
@@ -189,6 +198,45 @@ export class MissionViews implements View {
     };
   }
 
+  /**
+   * The boss fight's beats, drawn from the sim's own events (decisions BH1-BH5): a hit flashes, rings and shakes the board
+   * a little; the shield closing / dropping pulses in its colour; the last hit is a big burst. No text over the board
+   * (the words are the HUD rail's bar and notices). A match without a boss mission gets no such events.
+   */
+  handleEvents(events: readonly SimEvent[], state: GameState, fx: Effects, layout: Layout): void {
+    if (!state.mission) return;
+    for (const e of events) {
+      if (
+        e.type !== 'bossHit' &&
+        e.type !== 'bossExposed' &&
+        e.type !== 'bossShielded' &&
+        e.type !== 'bossDefeated'
+      )
+        continue;
+      const kind = bossFxFor(e);
+      if (!kind) continue;
+      const boss = state.players[e.bossId];
+      if (!boss) continue;
+      this.burst(kind, e.type === 'bossHit' ? e.x : boss.x, e.type === 'bossHit' ? e.y : boss.y, fx, layout);
+    }
+  }
+
+  private burst(kind: BossFxKind, gx: number, gy: number, fx: Effects, layout: Layout): void {
+    const f = BOSS_FX[kind];
+    const x = layout.wx(gx);
+    const z = layout.wz(gy);
+    fx.flash(x, 0.95, z, f.flashSize, f.flashColor, f.flashLife);
+    fx.shockwave(x, z, f.ring, f.ringColor);
+    if (f.ring2 > 0) fx.shockwave(x, z, f.ring2, f.ring2Color);
+    if (f.spark !== 0) fx.sparkle(gx, gy, f.spark);
+    if (f.smoke) {
+      fx.comicPuff(gx, gy);
+      fx.dust(gx, gy, 12, 1);
+    }
+    if (f.shake > 0) fx.shake = Math.min(1, fx.shake + f.shake);
+    this.pendingBeat = f;
+  }
+
   update(ctx: FrameContext): void {
     const state = ctx.state;
     if (!state.mission) {
@@ -199,6 +247,7 @@ export class MissionViews implements View {
     const view = missionView(state);
     if (!view) return;
     this.group.visible = !this.hidden;
+    this.updateBlocked(ctx);
     this.updateNodes(ctx, view);
     this.updateWarnings(ctx, view);
     this.updateBoss(ctx, view);
@@ -434,6 +483,20 @@ export class MissionViews implements View {
 
   // ------------------------------------------------------------------------------------------- boss
 
+  /** A blast on the shielded boss: the sim does nothing (no event), so the board says so with a cold spark (BH2). */
+  private updateBlocked(ctx: FrameContext): void {
+    const id = shieldBlockingFlame(ctx.state);
+    if (id === null) {
+      this.blockedEvent = null;
+      return;
+    }
+    if (id === this.blockedEvent) return;
+    this.blockedEvent = id;
+    const m = ctx.state.mission;
+    const boss = m ? ctx.state.players[m.bossId] : undefined;
+    if (boss) this.burst('blocked', boss.x, boss.y, ctx.fx, ctx.layout);
+  }
+
   private createBoss(): BossMarker {
     const ringMat = additive(ringTexture());
     const haloMat = additive(haloTexture());
@@ -519,9 +582,16 @@ export class MissionViews implements View {
       );
       b.anchorMat.opacity = view.boss.restoring ? 0.9 : 0.6;
     }
-    b.ring.scale.setScalar(look.radius * 2.1);
-    b.ringMat.color.setHex(look.ringColor);
-    b.ringMat.opacity = look.ring;
+    if (this.pendingBeat) {
+      this.beat = { until: ctx.time + this.pendingBeat.ringBeat, tint: this.pendingBeat.tint };
+      this.pendingBeat = null;
+    }
+    const beating = this.beat !== null && ctx.time < this.beat.until;
+    if (!beating) this.beat = null;
+    // a beat (hit / shield change / bounce): the ring swells and runs the beat's colour for a moment
+    b.ring.scale.setScalar(look.radius * 2.1 * (beating ? 1.25 : 1));
+    b.ringMat.color.setHex(beating && this.beat ? this.beat.tint : look.ringColor);
+    b.ringMat.opacity = beating ? 1 : look.ring;
     const exposed = view.boss.exposed;
     b.halo.visible = exposed;
     b.halo.scale.setScalar(look.radius * 2.6 * (1 + 0.08 * Math.sin(ctx.time * 9)));

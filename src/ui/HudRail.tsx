@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { CampaignHud, EnemyHud, StageAlert, StreakHud, SuddenDeathHud } from '../app/hud';
+import type { BossFeedback, CampaignHud, EnemyHud, StageAlert, StreakHud, SuddenDeathHud } from '../app/hud';
 import type { MissionView } from '../sim';
 import type { Toast } from '../app/store';
 import { useGameStore } from '../app/store';
@@ -38,6 +38,8 @@ export interface HudRailProps {
   /** Campaign health of the local player and the enemies with a bar on screen (null / [] in a normal match). */
   campaign?: CampaignHud | null;
   enemies?: readonly EnemyHud[];
+  /** A boss mission's bar cues (decisions BH1-BH3). */
+  bossFeedback?: BossFeedback | null;
   /** Classic raid: the current objective and the way to it (null outside a raid). */
   raid?: RaidHud | null;
   /** Field mission: the way to the current objective along the walkable route (decision MG6). */
@@ -64,6 +66,7 @@ export function HudRail({
   mission = null,
   campaign = null,
   enemies = [],
+  bossFeedback = null,
   raid = null,
   fieldCue = null,
 }: HudRailProps) {
@@ -194,7 +197,9 @@ export function HudRail({
         >
           <FieldGoal mission={mission} cue={fieldCue} />
           <RaidGoal raid={raid} />
-          {!rumble && <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} />}
+          {!rumble && (
+            <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} feedback={bossFeedback} />
+          )}
           <MissionPanel mission={mission} />
           {!rumble && !side && <KillFeed />}
         </div>
