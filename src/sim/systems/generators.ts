@@ -6,6 +6,7 @@ import { followVehicle } from './vehicleGenerator';
 import { DIR_VEC, tileAt } from '../grid';
 import { Tile } from '../types';
 import type { Dir, GameState, Generator, Player, SimEvent } from '../types';
+import { missionGeneratorCap } from '../mission/rules';
 import { activeGeneratorCount, groundedGeneratorAt, isActing, isGrounded, playersAt } from './queries';
 
 // ------------------------------------------------------------------ placement
@@ -18,10 +19,12 @@ export function tryPlaceGenerator(state: GameState, p: Player, events: SimEvent[
   if (!isActing(state, p) || p.entryUntil !== null || p.carrying !== null) return null;
   if (p.enemyKind !== undefined) return null; // campaign enemies never use the generator economy (decision EA2)
   if (activeGeneratorCount(state, p.id) >= p.capacity) return null;
+  if (activeGeneratorCount(state, p.id) >= missionGeneratorCap(state, p)) return null; // the exposed boss (BB3)
   if (!canPlaceGeneratorAt(state, p.x, p.y)) return null;
   // decision AS3: a short interval between generators, so a fast mount cannot lay a continuous trail (QUICK HANDS lifts it)
   const gap = state.config.generator.placeIntervalTicks;
-  if (gap > 0 && state.tick - p.lastPlaceTick < gap && p.streakRewards.quickHandsUntil <= state.tick) return null;
+  if (gap > 0 && state.tick - p.lastPlaceTick < gap && p.streakRewards.quickHandsUntil <= state.tick)
+    return null;
 
   const cfg = state.config.generator;
   const weak = p.curse?.kind === 'weakFire' && state.tick < p.curse.until;
@@ -196,7 +199,13 @@ export function punchGenerator(
   return throwGenerator(state, p, gen, events, dir);
 }
 
-function throwGenerator(state: GameState, p: Player, gen: Generator, events: SimEvent[], dir = p.facing): boolean {
+function throwGenerator(
+  state: GameState,
+  p: Player,
+  gen: Generator,
+  events: SimEvent[],
+  dir = p.facing,
+): boolean {
   const carried = gen.carriedBy === p.id;
   const fromX = carried ? p.x : gen.x;
   const fromY = carried ? p.y : gen.y;

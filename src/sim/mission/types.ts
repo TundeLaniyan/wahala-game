@@ -387,6 +387,17 @@ export interface NpcDirective {
    * back), so the sim gives its step the calm-walk pace (`enemyPace.ts`). The bot's planner plans with the same pace.
    */
   calm?: true;
+  /**
+   * Boss missions with a boss balance (decision BB1, `BossBalance.groundTiles`): the seat never plans a walk or a
+   * generator farther than this many tiles (Manhattan) from (x, y) - its ground - unless only an escape from danger
+   * leads there. Absent = the soft leash of `radius` only, as before.
+   */
+  ground?: number;
+  /**
+   * Boss missions with a boss balance (decision BB3, `BossBalance.exposedGenerators`): while the directive holds the
+   * seat lays no generator when it already has this many down (the sim refuses it too). Absent = its capacity.
+   */
+  maxGenerators?: number;
 }
 
 /** One telegraphed mission strike (a convoy lane, an audit, a contingency...). Lethal flames land at `landTick`. */

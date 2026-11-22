@@ -50,6 +50,10 @@ export interface Ctx {
   placeVerify: number;
   /** Campaign missions: the leash of the current directive (stay within `radius` of `tile`); null otherwise. */
   leash: { tile: number; radius: number } | null;
+  /** Boss missions with a boss balance (decision BB1): the seat's ground (no goal beyond it but an escape); null otherwise. */
+  ground: { tile: number; radius: number } | null;
+  /** Boss missions with a boss balance (decision BB3): generators the seat may have down now; null = its capacity. */
+  genCap: number | null;
 }
 
 /** Records `units` of work; true when the think's budget is spent (never on standard boards). */
@@ -87,5 +91,7 @@ export function createCtx(profile: AiProfile, rng: RngHolder, board: Board): Ctx
     huntWeight: profile.huntWeight,
     placeVerify: profile.placeVerify,
     leash: null,
+    ground: null,
+    genCap: null,
   };
 }

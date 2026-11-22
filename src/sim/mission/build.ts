@@ -152,7 +152,17 @@ export function buildMissionGame(o: {
     };
   }
   const def = MISSION_DEFS[spec.id];
-  const levelConfig = missionLevelLayer(o.level);
+  // a boss balance (decision BB2): the level's readable wind-up for every bot seat's close attack, in the match config so
+  // the sim and the bots read the same number
+  const balance = def.recipe.balance;
+  const levelConfig = mergeLayers<GameConfig>(
+    missionLevelLayer(o.level),
+    balance
+      ? ({
+          campaignTactics: { botMeleeWindupTicks: balance.meleeWindupTicks[o.level ?? 'normal'] },
+        } as DeepPartial<GameConfig>)
+      : undefined,
+  );
   const players: PlayerSetup[] = [
     // campaign health for the human (the boss and crew keep the one-hit generator fight)
     { name: 'You', characterId: o.humanCharacter, isBot: false, team: 0, maxHp: humanHp, ...human },

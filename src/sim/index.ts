@@ -100,7 +100,15 @@ export {
   radialSquareRadius,
 } from './systems/blastShape';
 export type { RadialOffset, RadialOptions } from './systems/blastShape';
-export { attackReady, chooseAttack, lineTarget, loadoutOf, meleeTarget, primaryOf } from './systems/skills';
+export {
+  attackReady,
+  chooseAttack,
+  lineTarget,
+  loadoutOf,
+  meleeStartupTicks,
+  meleeTarget,
+  primaryOf,
+} from './systems/skills';
 export type { AttackChoice } from './systems/skills';
 export { localChampionTargets, useLocalChampion } from './systems/localChampion';
 export { moveWouldAct } from './systems/contact';
@@ -128,7 +136,8 @@ export type { LaneTile, SpectatorView } from './systems/spectators';
 export * from './mission';
 export * from './campaign/types';
 export * from './raid';
-export { CAMPAIGN_CONFIG, OSHODI_COMBAT_PILOT, campaignConfig } from './config';
+export { BOSS_BALANCE, CAMPAIGN_CONFIG, OSHODI_COMBAT_PILOT, campaignConfig } from './config';
+export type { BossBalance } from './config';
 export type { CombatPilotConfig } from './config';
 export type { CampaignConfig, EnemyAwareness, EnemyMeleeSpec } from './config';
 export {

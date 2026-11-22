@@ -26,6 +26,45 @@ export function missionBossAbsorbs(state: GameState, p: Pick<Player, 'id'>, byId
   return true;
 }
 
+/**
+ * Generators `p` may have down at once on top of his capacity rule (decision BB3): the EXPOSED boss of a fight with a
+ * boss balance, on his way to or at his anchor, keeps at most `exposedGenerators` (the window is an opening). Infinity for everyone else, always outside
+ * boss missions. The bot reads the same cap from its directive (`maxGenerators`).
+ */
+export function missionGeneratorCap(state: GameState, p: Pick<Player, 'id'>): number {
+  const m = state.mission;
+  if (!m || m.field || p.id !== m.bossId || m.boss.shielded || m.boss.defeated || !m.boss.anchor)
+    return Infinity;
+  return m.tuning.boss?.exposedGenerators ?? Infinity;
+}
+
+/**
+ * Which hit decides whether an exposed boss absorbs a lethal event (decision BB4): a hit that is not his own when there
+ * is one. His own generator never costs him a hit, but it must not swallow the player's flames that reach him in the
+ * same tick (a chain his generator set off, or two blasts at once): before, only the first hit in the list was asked.
+ */
+export function bossHitOwner(owners: readonly (number | null)[], bossId: number): number | null {
+  for (const o of owners) if (o !== bossId) return o;
+  return owners[0] ?? null;
+}
+
+/**
+ * Decision BB5: does a flame of a crew or boss generator burn the EXPOSED boss as the player's fire? Yes when the boss
+ * fight's balance says so and the blast it belongs to was set off by the player's generator (the chain seed): the
+ * player's blast set their generator off beside him. Returns the player's id (0) then, else null (no change).
+ */
+export function missionChainOwner(
+  state: GameState,
+  flame: { ownerId: number; eventId: number },
+  victim: Pick<Player, 'id'>,
+): number | null {
+  const m = state.mission;
+  if (!m || m.field || victim.id !== m.bossId || m.boss.shielded || m.boss.defeated) return null;
+  if (!m.tuning.boss?.chainCarriesFire || flame.ownerId === 0) return null;
+  const blast = state.blasts.find((b) => b.id === flame.eventId);
+  return blast && blast.seedOwnerId === 0 ? 0 : null;
+}
+
 /** May an eliminated player come back (respawn.ts)? Only the human, while lives are left; the crew never does. */
 export function missionMayRespawn(state: GameState, id: number): boolean {
   const m = state.mission;

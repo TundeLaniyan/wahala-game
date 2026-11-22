@@ -2,6 +2,10 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Boss balance: Oshodi (branch `claude/wahala-boss-sim`, from `b6b2367`)
+
+Oga Sunmola's boss fight made fair per level (decisions BB1-BB7, `docs/BOSS_BALANCE.md`): he defends his booth while shielded, every bot seat's punch winds up readably (36 / 30 / 24 ticks), the exposed boss keeps 0 / 1 / 2 generators down, his own fire or a crew generator no longer swallows the player's blast, the relays' pace is level-scaled; measured with a scripted person on the real mission (`npm run boss-measure`: Normal deaths per fight 1.5 -> 0.6, Easy won 16/16 with one life lost in all) and tested (`tests/boss-balance*.test.ts`); the other bosses unchanged.
+
 ## iOS viewport (branch `claude/wahala-ios-viewport`, from `acaeae7`)
 
 No persistent page zoom in an iPhone landscape match: gestures blocked during play, refit after every viewport change, a zoomed page counter-scaled into view with a pause-menu escape (`docs/IOS_VIEWPORT.md`, decisions IV1-IV6); tested in Chromium iPhone emulation and Vitest, real-iPhone confirmation pending.

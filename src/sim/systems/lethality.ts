@@ -20,7 +20,7 @@ import type { EliminationCause, GameState, Player, SimEvent } from '../types';
 import { applyCampaignHit } from './campaignDamage';
 import { eliminate } from './eliminate';
 import { canHarm } from './queries';
-import { isShieldedBoss, missionBossAbsorbs } from '../mission/rules';
+import { bossHitOwner, isShieldedBoss, missionBossAbsorbs, missionChainOwner } from '../mission/rules';
 
 export { eliminate };
 
@@ -58,14 +58,16 @@ export function collectFlameHits(state: GameState): LethalHit[] {
     for (const f of state.flames) {
       const on = (f.x === p.x && f.y === p.y) || (leaving && f.x === p.stepFromX && f.y === p.stepFromY);
       if (on && state.tick >= f.startTick && state.tick < f.endTick) {
-        if (!canHarm(state, f.ownerId, p)) continue; // teammate's fire, friendly fire off
+        // a boss fight (decision BB5): their generator the player's blast set off beside the exposed boss is his fire
+        const owner = state.mission ? (missionChainOwner(state, f, p) ?? f.ownerId) : f.ownerId;
+        if (!canHarm(state, owner, p)) continue; // teammate's fire, friendly fire off
         if (f.ownerSafe && f.ownerId === p.id) continue; // a VEHICLE GENERATOR never catches its owner
         hits.push({
           playerId: p.id,
           eventId: f.eventId,
           cause: f.fromSpectator
             ? { kind: 'spectator', ownerId: f.ownerId, eventId: f.eventId }
-            : { kind: 'flame', ownerId: f.ownerId, eventId: f.eventId },
+            : { kind: 'flame', ownerId: owner, eventId: f.eventId },
           graceUntil: Math.max(f.endTick, state.tick + state.config.okada.graceTicks),
         });
       }
@@ -91,8 +93,19 @@ export function applyLethalHits(state: GameState, hits: LethalHit[], events: Sim
     const live = mine.filter((h) => !isImmune(state, p, h.eventId));
     if (live.length === 0) continue;
     if (isShieldedBoss(state, p)) continue; // a mission boss cannot be hurt until the objective exposes it
-    // an exposed boss loses one hit per window to a lethal event, the last one eliminates him (decision BX2)
-    if (missionBossAbsorbs(state, p, causeOwner(live[0]!.cause))) {
+    // an exposed boss loses one hit per window to a lethal event, the last one eliminates him (decision BX2); his own
+    // fire never swallows the player's that reaches him in the same tick (decision BB4)
+    if (
+      state.mission &&
+      missionBossAbsorbs(
+        state,
+        p,
+        bossHitOwner(
+          live.map((h) => causeOwner(h.cause)),
+          state.mission.bossId,
+        ),
+      )
+    ) {
       for (const h of live) p.immune.push({ eventId: h.eventId, until: h.graceUntil });
       continue;
     }
