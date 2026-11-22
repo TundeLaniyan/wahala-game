@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { CampaignHud, EnemyHud } from '../app/hud';
+import type { BossFeedback, CampaignHud, EnemyHud } from '../app/hud';
 import type { MissionView } from '../sim';
 import type { RouteCue } from '../app/routeGuide';
 import { CampaignHealth } from './CampaignHealth';
@@ -18,11 +18,14 @@ export function MissionDock({
   mission,
   campaign = null,
   enemies = [],
+  bossFeedback = null,
   cue = null,
 }: {
   mission: MissionView | null;
   campaign?: CampaignHud | null;
   enemies?: readonly EnemyHud[];
+  /** The boss bar's cues (decisions BH1-BH3). */
+  bossFeedback?: BossFeedback | null;
   /** The way to the current objective (decision MG6). */
   cue?: RouteCue | null;
 }) {
@@ -55,7 +58,7 @@ export function MissionDock({
     >
       {/* a field mission's objective first: on a phone the column is short and this is what matters */}
       <FieldGoal mission={mission} cue={cue} />
-      <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} />
+      <CampaignHealth campaign={campaign} enemies={enemies} mission={mission} feedback={bossFeedback} />
       <MissionPanel mission={mission} />
     </div>
   );

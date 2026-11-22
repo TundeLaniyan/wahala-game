@@ -69,6 +69,8 @@ function huntFromTile(c: Ctx, tile: number): void {
 /** Called by the brain right after the hunt field and its weight are set for a think. No directive = no change. */
 export function applyDirective(c: Ctx): void {
   c.leash = null;
+  c.ground = null;
+  c.genCap = null;
   const d = c.world.obs.directive;
   if (!d) return;
   const { world } = c;
@@ -76,6 +78,9 @@ export function applyDirective(c: Ctx): void {
   if (d.x < 0 || d.y < 0 || d.x >= board.width || d.y >= board.height) return;
   const tile = d.y * board.width + d.x;
   const radius = d.radius ?? 0;
+  // a boss fight's balance (decisions BB1, BB3): the boss's ground while shielded, his generators while exposed
+  if (d.ground !== undefined) c.ground = { tile, radius: d.ground };
+  if (d.maxGenerators !== undefined) c.genCap = d.maxGenerators;
   switch (d.kind) {
     case 'chase':
       c.huntWeight = Math.max(c.huntWeight, DIRECTIVE_PULL);
@@ -119,6 +124,15 @@ export function applyDirective(c: Ctx): void {
       c.leash = { tile, radius };
       return;
   }
+}
+
+/** A goal beyond the directive's ground costs this much: it is taken only when nothing inside it is (an escape). */
+export const GROUND_PENALTY = 1000;
+
+/** Score adjustment of a candidate tile for a directive's ground (decision BB1; 0 without one or inside it). */
+export function groundBias(c: Ctx, tile: number): number {
+  const g = c.ground;
+  return g && manhattanTiles(c.world.board, tile, g.tile) > g.radius ? -GROUND_PENALTY : 0;
 }
 
 /** Score adjustment of a candidate tile for a directive's leash (0 without one). */

@@ -225,7 +225,18 @@ export function migrateDifficulty(value: unknown, fallback: Difficulty): Difficu
 
 export function loadSettings(): GameSettings {
   try {
-    const raw = globalThis.localStorage?.getItem(KEY);
+    return parseSettings(globalThis.localStorage?.getItem(KEY) ?? null);
+  } catch {
+    return { ...DEFAULT_GAME_SETTINGS };
+  }
+}
+
+/**
+ * The settings a saved JSON text stands for (repaired and migrated exactly as `loadSettings` does; null or unreadable
+ * text gives the defaults). Pure, so the Test Lab can read the player's real saved settings from a text it captured.
+ */
+export function parseSettings(raw: string | null): GameSettings {
+  try {
     if (!raw) return { ...DEFAULT_GAME_SETTINGS };
     const saved = JSON.parse(raw) as Partial<GameSettings> & { mode?: unknown; arenaId?: string };
     const merged = { ...DEFAULT_GAME_SETTINGS, ...saved };

@@ -39,9 +39,11 @@ import { fieldNotices } from './fieldGoal';
 import type { FieldNoticeMemory } from './fieldGoal';
 import { BlockedMoves } from './blockedMove';
 import { buildHud } from './hud';
+import { NO_BOSS_MEMORY, bossFeedback, bossNotice, trackBossBar } from './bossBar';
+import type { BossBarMemory } from './bossBar';
 import { raidNotice, supersededCargoNotice } from './raidNotices';
 import { expireKillLines, isCrowded, newKillLines, pushKillLines } from './killFeed';
-import { buildPlayers, matchArenaId, matchRules, suddenDeathTestSetup } from './names';
+import { buildMatchOptions, buildPlayers, suddenDeathTestSetup } from './names';
 import type { MatchVariant } from './names';
 import { cycleSpectateTarget, pickSpectateTarget } from './spectate';
 import { NULL_AUDIO } from './ports';
@@ -171,6 +173,8 @@ export class MatchController implements MissionHost {
   private closingAnnounced = false;
   /** The last field-mission picture seen (checkpoint / leg notices, docs/CHECKPOINT_CLARITY.md). */
   private fieldMemory: FieldNoticeMemory | null = null;
+  /** The boss bar's cue timing (a hit, a blocked blast), learned from the sim's events (decisions BH1-BH3). */
+  private bossMemory: BossBarMemory = NO_BOSS_MEMORY;
   private director: ScenarioDirector | null = null;
   /** Campaign mission presentation (docs/CAMPAIGN_UI.md): own end flow, no MatchSummary, no saved settings. */
   private mission: MissionMeta | null = null;
@@ -206,15 +210,18 @@ export class MatchController implements MissionHost {
     const setup = variant === 'suddenDeathTest' ? suddenDeathTestSetup(settings) : null;
     this.variant = variant;
     this.settings = setup ? setup.settings : settings;
-    const players = buildPlayers(this.settings, seed);
-    const arenaId = setup ? setup.arenaId : matchArenaId(settings);
-    const state = createGame({
-      seed,
-      arenaId,
-      players,
-      settings: setup ? setup.rules : matchRules(settings),
-      ...(setup ? { config: setup.config } : {}),
-    });
+    const options: GameOptions = setup
+      ? {
+          seed,
+          arenaId: setup.arenaId,
+          players: buildPlayers(this.settings, seed),
+          settings: setup.rules,
+          config: setup.config,
+        }
+      : buildMatchOptions(settings, seed);
+    const players = options.players;
+    const arenaId = options.arenaId!;
+    const state = createGame(options);
     // local Classic Battle only (decision CC-F1): the open-field (Level 2) close-combat feel on the cardinal grid; the
     // Sudden Death test match keeps its own rules
     if (!setup) applyClassicCombat(state);
@@ -774,6 +781,7 @@ export class MatchController implements MissionHost {
         : this.excitement * 0.6,
     );
     this.toastsFrom(events, nowMs);
+    this.bossMemory = trackBossBar(this.bossMemory, events, state);
     this.killFeedFrom(state, events, nowMs);
     this.countdownBeeps(state);
 
@@ -940,6 +948,11 @@ export class MatchController implements MissionHost {
         return e.playerId === LOCAL_ID
           ? { ...protectionNotice(e.layer, state.players[LOCAL_ID]!.armour), ttlMs: 3000 }
           : null;
+      // a boss mission's fight (decisions BH1-BH4): a real hit says how many are left, the window closing says it was missed
+      case 'bossHit':
+      case 'bossShielded':
+      case 'bossDefeated':
+        return bossNotice(e);
       // campaign health: what hurt the player, or which layer took the hit (docs/CAMPAIGN_TEXT_NARRATION.md)
       case 'campaignHit':
         return campaignHitNotice(e, batch, LOCAL_ID, state.players[LOCAL_ID]?.armour ?? 0);
@@ -1015,6 +1028,8 @@ export class MatchController implements MissionHost {
         }
       : null;
     const hud = buildHud(state, LOCAL_ID, entry, this.spectateId);
+    const boss = bossFeedback(this.bossMemory.game === state ? this.bossMemory : NO_BOSS_MEMORY, state.tick);
+    if (boss) hud.bossFeedback = boss;
     patch({ hud });
     // field missions: "CHECKPOINT A ✓ · NEXT: ..." the moment a checkpoint is walked through (a view diff, not a rule)
     const field = fieldNotices(this.fieldMemory, hud.mission);

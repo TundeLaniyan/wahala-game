@@ -67,6 +67,13 @@ export function resolveTuning(
       t.sequence = Math.min(t.sequence + 1, nodeCount);
       t.goal = t.sequence;
     }
+    // a boss balance (decision BB6): the objective's pressure at the campaign level (Hard plays the authored numbers)
+    const o = def.recipe.balance?.objective[level];
+    if (o) {
+      t.pulseTicks = Math.round(t.pulseTicks * o.pulse);
+      t.rearmTicks = Math.round(t.rearmTicks * o.rearm);
+      t.crewTicks = Math.round(t.crewTicks * o.crew);
+    }
     // lethal telegraphs have floors (decision MS2): data and modifiers can never go below them
     t.warnTicks = Math.max(
       t.warnTicks,

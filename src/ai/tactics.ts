@@ -3,7 +3,7 @@
  * tools for emergencies and close-combat skills. Each decision is verified against the danger map
  * before it is allowed to change the movement intent.
  */
-import { chooseAttack, loadoutOf, meleeTarget, primaryOf } from '../sim';
+import { chooseAttack, loadoutOf, meleeStartupTicks, meleeTarget, primaryOf } from '../sim';
 import type { Intent } from '../sim';
 import { dirIndex } from './board';
 import type { Ctx } from './context';
@@ -73,7 +73,7 @@ export class Tactics {
     // ---- close combat: B, which is a melee press whenever an opponent is adjacent (never the vehicle)
     if (decideSkill(c) && meleeTarget(obs, me)) {
       intent.special = true;
-      const startup = obs.config.skills.attacks[primaryOf(me)].startupTicks;
+      const startup = meleeStartupTicks(obs.config, me, primaryOf(me)); // a boss fight's wind-up (BB2)
       if (danger.firstHit(world.myTile, T + 1) > T + startup + 14) delete intent.move;
     } else if (
       profile.useSkill &&
@@ -85,7 +85,7 @@ export class Tactics {
       // human makes (`chooseAttack` is the resolver's own choice), only from a tile that is safe for its startup
       const pick = chooseAttack(obs, me);
       if (pick && pick.ready && pick.kind !== primaryOf(me)) {
-        const startup = obs.config.skills.attacks[pick.kind].startupTicks;
+        const startup = meleeStartupTicks(obs.config, me, pick.kind);
         if (danger.firstHit(world.myTile, T + 1) > T + startup + 14) {
           intent.special = true;
           delete intent.move;

@@ -20,8 +20,15 @@ import {
   tick,
 } from '../../src/sim';
 import type { CampaignLevel, GameState, Intents } from '../../src/sim';
-import { LAB_ENTRIES, entriesIn, entryById } from '../../src/testlab/registry';
-import { SCENARIOS, hidingTile, routeExposure, scenarioById } from '../../src/testlab/scenarios/defs';
+import { LAB_ENTRIES, entriesIn, entriesOf, entryById } from '../../src/testlab/registry';
+import {
+  ONE_HIT_POST,
+  ONE_HIT_START,
+  SCENARIOS,
+  hidingTile,
+  routeExposure,
+  scenarioById,
+} from '../../src/testlab/scenarios/defs';
 import type { ScenarioDef } from '../../src/testlab/scenarios/defs';
 import { routeFor } from '../../src/testlab/scenarios/kit';
 import { hashOf } from '../raid-helpers';
@@ -68,15 +75,57 @@ const enemiesAlive = (s: GameState): { id: number; kind: string }[] =>
   s.players.filter((p) => p.id > 0 && p.alive).map((p) => ({ id: p.id, kind: p.enemyKind ?? '' }));
 
 describe('the registry', () => {
-  it('has exactly the two sections with seven entries each, unique ids and one-line objectives', () => {
-    expect(entriesIn('playtest')).toHaveLength(7);
-    expect(entriesIn('scenario')).toHaveLength(7);
+  it('has the seven tests requiring review in the founder’s order and the ten completed ones, unique ids, one-line objectives', () => {
+    expect(entriesOf('review').map((e) => e.id)).toEqual([
+      'cityRumble',
+      'occludedBuildings',
+      'suddenDeath',
+      'boss',
+      'classicRearAmbush',
+      'oneHit',
+      'identifyPlayer',
+    ]);
+    expect(entriesOf('completed').map((e) => e.id)).toEqual([
+      'classicRaid',
+      'recordsVault',
+      'classicBlast',
+      'fieldMission',
+      'roster',
+      'rearApproach',
+      'patrolAmbush',
+      'punchDodge',
+      'pursuit',
+      'flashlight',
+    ]);
+    expect(LAB_ENTRIES).toHaveLength(17);
     expect(new Set(LAB_ENTRIES.map((e) => e.id)).size).toBe(LAB_ENTRIES.length);
     for (const e of LAB_ENTRIES) {
       expect(e.title.length).toBeGreaterThan(2);
       expect(e.objective).not.toMatch(/\n/);
-      expect(e.levels).toBe(true);
     }
+    // every test that needs review says what to look for
+    for (const e of entriesOf('review')) expect(e.lookFor?.length ?? 0).toBeGreaterThan(20);
+  });
+
+  it('keeps every id of the first fourteen tests (their stored feedback stays attached)', () => {
+    for (const id of [
+      'classicRaid',
+      'recordsVault',
+      'classicBlast',
+      'cityRumble',
+      'fieldMission',
+      'boss',
+      'roster',
+      'rearApproach',
+      'patrolAmbush',
+      'oneHit',
+      'punchDodge',
+      'pursuit',
+      'flashlight',
+      'identifyPlayer',
+    ])
+      expect(entryById(id), id).toBeDefined();
+    expect(entriesIn('playtest').length + entriesIn('scenario').length).toBe(LAB_ENTRIES.length);
   });
 
   it('every launch names something that exists in this build (the real modes, never a copy)', () => {
@@ -89,17 +138,37 @@ describe('the registry', () => {
         expect((CAMPAIGN_MISSION_IDS as readonly string[]).includes(l.districtId)).toBe(true);
       if (l.kind === 'classic') expect(STANDARD_ARENA_IDS).toContain(l.arenaId);
       if (l.kind === 'rumble') expect(RUMBLE_ARENA_IDS).toContain(l.arenaId);
+      for (const v of e.variants ?? []) expect(scenarioById(v.scenarioId)).toBeDefined();
     }
     expect(entryById('classicRaid')!.launch).toEqual({ kind: 'raid', raidId: 'warehouseDispatchDepot' });
+    // the rear-ambush review test is the same real first raid
+    expect(entryById('classicRearAmbush')!.launch).toEqual({
+      kind: 'raid',
+      raidId: 'warehouseDispatchDepot',
+    });
     expect(entryById('recordsVault')!.launch).toEqual({ kind: 'raid', raidId: 'recordsVault' });
     expect(entryById('fieldMission')!.launch).toEqual({ kind: 'field', missionId: 'oshodi.approach' });
     expect(entryById('boss')!.launch).toEqual({ kind: 'boss', districtId: 'oshodi' });
+    // occluded buildings: the Lekki Rumble stage (the arena whose buildings fade, e2e/view-clear.spec.ts)
+    expect(entryById('occludedBuildings')!.launch).toMatchObject({ kind: 'rumble', arenaId: 'rumbleLekki' });
+    expect(entryById('suddenDeath')!.launch).toEqual({ kind: 'suddenDeath' });
+    expect(entryById('cityRumble')!.launch).toEqual({ kind: 'rumbleConfigured' });
   });
 
-  it('every scenario entry has a definition and every definition an entry', () => {
-    const ids = LAB_ENTRIES.flatMap((e) => (e.launch.kind === 'scenario' ? [e.launch.scenarioId] : []));
+  it('every scenario (and every variant) has a definition and every definition an entry', () => {
+    const ids = LAB_ENTRIES.flatMap((e) =>
+      e.variants
+        ? e.variants.map((v) => v.scenarioId)
+        : e.launch.kind === 'scenario'
+          ? [e.launch.scenarioId]
+          : [],
+    );
     expect(ids.sort()).toEqual(SCENARIOS.map((s) => s.id).sort());
     for (const s of SCENARIOS) expect(s.setup.length).toBeGreaterThan(0);
+    // the first variant is the entry's own launch
+    for (const e of LAB_ENTRIES)
+      if (e.variants && e.launch.kind === 'scenario')
+        expect(e.variants[0]!.scenarioId).toBe(e.launch.scenarioId);
   });
 });
 
@@ -127,7 +196,9 @@ describe('scenarios', () => {
     const expected: Record<string, string[]> = {
       rearApproach: ['guard'],
       patrolAmbush: ['guard'],
-      oneHit: ['guard', 'agbero', 'thrower'],
+      oneHitAgbero: ['agbero'],
+      oneHitGuard: ['guard'],
+      oneHitThrower: ['thrower'],
       punchDodge: ['guard'],
       pursuit: ['guard', 'guard', 'guard', 'thrower', 'thrower'],
       flashlight: ['guard'],
@@ -176,15 +247,19 @@ describe('scenarios', () => {
     expect(exposure).toBeLessThanOrEqual(2);
   });
 
-  it('one-hit lethality: an agbero, a guard and a thrower stand in one row of the same lane', () => {
-    const s = build(scenarioById('oneHit')!, 'normal');
-    const row = s.raid!.seats.filter((x) => !x.active);
-    expect(row.map((x) => x.kind).sort()).toEqual(['agbero', 'guard', 'thrower']);
-    expect(new Set(row.map((x) => x.spot.y)).size).toBe(1);
-    const xs = row.map((x) => x.spot.x).sort((a, b) => a - b);
-    expect(xs[2]! - xs[0]!).toBe(2); // neighbours
-    expect(s.players[0]!.y).toBe(row[0]!.spot.y); // the player is in the same lane
-    for (const x of row) expect(s.players[x.playerId]!.vitals).toBeDefined();
+  it('one-hit lethality: one ordinary enemy at the entrance post, facing into the depot, the player two steps from behind it', () => {
+    for (const [id, kind] of [
+      ['oneHitAgbero', 'agbero'],
+      ['oneHitGuard', 'guard'],
+      ['oneHitThrower', 'thrower'],
+    ] as const) {
+      const s = build(scenarioById(id)!, 'normal');
+      const seats = s.raid!.seats.filter((x) => !x.active);
+      expect(seats.map((x) => x.kind)).toEqual([kind]);
+      expect(seats[0]!.spot).toEqual(ONE_HIT_POST);
+      expect(s.players[seats[0]!.playerId]!.vitals).toBeDefined(); // ordinary health, nothing granted
+      expect(s.players[0]!).toMatchObject({ x: ONE_HIT_START.x, y: ONE_HIT_START.y });
+    }
   });
 
   it('punch dodge: the guard wakes beside the player and two free tiles are open to step to', () => {

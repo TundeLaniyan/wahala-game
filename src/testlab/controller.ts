@@ -10,15 +10,16 @@ import { patch, useGameStore } from '../app/store';
 import { campaignEnemyLevel } from '../sim';
 import type { CharacterId } from '../sim';
 import { setPlayerMarkerMode } from '../render/playerMarker';
-import type { PlayerMarkerMode } from '../render/playerMarker';
 import { copyText } from './clipboard';
 import { saveFeedback, summarizeFeedback, withFeedback } from './feedback';
 import type { FeedbackStatus, LabLevel } from './feedback';
 import { currentIsolation } from './isolation';
-import { labPatch, levelOf, useLab } from './labStore';
+import { labPatch, levelOf, useLab, variantOf } from './labStore';
 import { normalGameUrl } from './params';
-import { LAB_ENTRIES, entryById } from './registry';
+import { LAB_ENTRIES, entryById, scenarioIdFor } from './registry';
 import type { LabEntry } from './registry';
+import { rumbleFeedbackSetup } from './labActions';
+import { applyRumbleConfig } from './rumbleSetup';
 import { scenarioById } from './scenarios/defs';
 
 /** Did the in-memory isolation install? (Without it the lab refuses to start anything: a test could write a save.) */
@@ -38,7 +39,7 @@ function launch(entry: LabEntry, level: LabLevel): boolean {
     case 'raid':
       return campaign?.qaStartRaid(l.raidId, level) ?? false;
     case 'scenario': {
-      const def = scenarioById(l.scenarioId);
+      const def = scenarioById(scenarioIdFor(entry, variantOf(useLab.getState(), entry.id)) ?? l.scenarioId);
       if (!def || !campaign) return false;
       if (def.id === 'identifyPlayer') setPlayerMarkerMode(useLab.getState().marker);
       return campaign.qaStartRaid(def.raidId, level, {
@@ -72,12 +73,21 @@ function launch(entry: LabEntry, level: LabLevel): boolean {
         rumbleMode: l.mode,
         rumbleArenaId: l.arenaId,
         rumbleCompetitors: l.competitors,
-        difficulty: campaignEnemyLevel(level),
+        difficulty: l.difficulty ?? campaignEnemyLevel(level),
         rumbleMixed: false,
       });
       commands.start();
       return true;
     }
+    case 'rumbleConfigured': {
+      // the normal match start with exactly the set-up the card shows (decision TL6): the same settings, the same path
+      commands.updateSettings(applyRumbleConfig(useGameStore.getState().settings, useLab.getState().rumble));
+      commands.start();
+      return true;
+    }
+    case 'suddenDeath':
+      commands.start('suddenDeathTest');
+      return true;
   }
 }
 
@@ -130,9 +140,11 @@ export function setFighter(character: CharacterId): void {
   commands.updateSettings({ character });
 }
 
-export function setMarker(mode: PlayerMarkerMode): void {
-  setPlayerMarkerMode(mode);
-  labPatch({ marker: mode });
+/** The set-up a feedback entry is marked at: the City Rumble configuration, or the chosen one-hit enemy. */
+function setupDetail(entry: LabEntry): string | undefined {
+  if (entry.launch.kind === 'rumbleConfigured') return rumbleFeedbackSetup();
+  const label = entry.variants?.find((v) => v.id === variantOf(useLab.getState(), entry.id))?.label;
+  return entry.variants ? (label ?? entry.variants[0]!.label) : undefined;
 }
 
 /** Records a status and/or note for one test (the only way a status is ever set). */
@@ -140,7 +152,12 @@ export function setFeedback(entryId: string, change: { status?: FeedbackStatus; 
   const s = useLab.getState();
   const entry = entryById(entryId);
   const level = entry?.levels ? levelOf(s, entryId) : undefined;
-  const next = withFeedback(s.feedback, entryId, { ...change, ...(level ? { level } : {}) });
+  const detail = entry ? setupDetail(entry) : undefined;
+  const next = withFeedback(s.feedback, entryId, {
+    ...change,
+    ...(level ? { level } : {}),
+    ...(detail ? { detail } : {}),
+  });
   const saved = saveFeedback(window.localStorage, next);
   labPatch({ feedback: next, feedbackUnsaved: !saved });
 }

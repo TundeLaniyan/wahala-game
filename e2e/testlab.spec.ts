@@ -8,7 +8,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { expect, test } from '@playwright/test';
 import type { BrowserContext, Page } from '@playwright/test';
-import { inMatch } from './helpers';
+import { inMatch, stepTicks } from './helpers';
 
 const FEEDBACK_KEY = 'wahala.testlab.feedback.v1';
 const LAB = './?debug&q=low&seed=7&noattract&testlab=1';
@@ -26,9 +26,30 @@ async function openLab(page: Page, query = ''): Promise<void> {
   await expect(page.getByTestId('testlab-home')).toBeVisible();
 }
 
-async function startEntry(page: Page, id: string, level?: 'easy' | 'normal' | 'hard'): Promise<void> {
+/** The approved tests live in the collapsed "Completed Tests" list (decision TL7). */
+const COMPLETED = new Set([
+  'classicRaid',
+  'recordsVault',
+  'classicBlast',
+  'fieldMission',
+  'roster',
+  'rearApproach',
+  'patrolAmbush',
+  'punchDodge',
+  'pursuit',
+  'flashlight',
+]);
+
+/** Taps an entry's row on Home, opening the Completed Tests list first when it sits there. */
+async function openEntry(page: Page, id: string): Promise<void> {
+  if (COMPLETED.has(id) && (await page.getByTestId(`testlab-entry-${id}`).count()) === 0)
+    await page.getByTestId('testlab-completed-toggle').tap();
   await page.getByTestId(`testlab-entry-${id}`).tap();
   await expect(page.getByTestId('testlab-entry')).toBeVisible();
+}
+
+async function startEntry(page: Page, id: string, level?: 'easy' | 'normal' | 'hard'): Promise<void> {
+  await openEntry(page, id);
   if (level) await page.getByTestId(`testlab-level-${level}`).tap();
   await page.getByTestId('testlab-start').tap();
   await inMatch(page);
@@ -93,16 +114,32 @@ test.describe('Test Lab', () => {
 
     await openLab(page);
     await expect(page.getByTestId('menu-home')).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: 'Full Playtests' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Isolated Scenarios' })).toBeVisible();
-    await expect(page.locator('[data-testid^="testlab-entry-"]')).toHaveCount(14);
-    await expect(page.getByTestId('testlab-list-playtest').locator('button')).toHaveCount(7);
-    await expect(page.getByTestId('testlab-list-scenario').locator('button')).toHaveCount(7);
+    // decision TL7: "Tests Requiring Review" is the prominent list, in the founder's order; Completed Tests are folded away
+    await expect(page.getByRole('heading', { name: /Tests Requiring Review/ })).toBeVisible();
+    const review = page.getByTestId('testlab-list-review').locator('[data-testid^="testlab-entry-"]');
+    await expect(review).toHaveCount(7);
+    expect(await review.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')))).toEqual([
+      'testlab-entry-cityRumble',
+      'testlab-entry-occludedBuildings',
+      'testlab-entry-suddenDeath',
+      'testlab-entry-boss',
+      'testlab-entry-classicRearAmbush',
+      'testlab-entry-oneHit',
+      'testlab-entry-identifyPlayer',
+    ]);
+    await expect(page.getByTestId('testlab-completed-toggle')).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByTestId('testlab-list-completed')).toHaveCount(0);
+    await page.getByTestId('testlab-completed-toggle').tap();
+    await expect(page.getByTestId('testlab-list-completed').locator('button')).toHaveCount(10);
+    await expect(page.locator('[data-testid^="testlab-entry-"]')).toHaveCount(17);
+    await page.getByTestId('testlab-completed-toggle').tap();
+    await expect(page.getByTestId('testlab-list-completed')).toHaveCount(0);
     await expect(page.getByTestId('testlab-isolation-warning')).toHaveCount(0);
   });
 
   test('phone fit: no page scroll, safe tap targets (44 px), every entry reachable', async ({ page }) => {
     await openLab(page);
+    await page.getByTestId('testlab-completed-toggle').tap(); // the folded list fits too once open
     const fit = await page.evaluate(() => {
       const root = document.querySelector('[data-testid="testlab"]') as HTMLElement;
       const small: string[] = [];
@@ -148,12 +185,14 @@ test.describe('Test Lab', () => {
   }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await openLab(page);
+    await page.getByTestId('testlab-completed-toggle').tap();
     await expect(page.getByTestId('testlab-status-classicRaid')).toHaveText('Not tested');
     await page.getByTestId('testlab-entry-classicRaid').tap();
     await page.getByTestId('testlab-level-hard').tap();
     await page.getByTestId('testlab-feedback-needsWork').tap();
     await page.getByTestId('testlab-note').fill('guard saw me too early');
     await page.getByTestId('testlab-back').tap();
+    await expect(page.getByTestId('testlab-completed-toggle')).toHaveAttribute('aria-expanded', 'true'); // stays open
     await expect(page.getByTestId('testlab-status-classicRaid')).toHaveText('Needs improvement');
     await expect(page.getByTestId('testlab-status-recordsVault')).toHaveText('Not tested');
     // the real storage holds the feedback key and nothing else
@@ -168,9 +207,11 @@ test.describe('Test Lab', () => {
     expect(text).toContain('WAHALA! TEST LAB');
     expect(text).toContain('- [NEEDS IMPROVEMENT] Classic Campaign Raid (Hard): guard saw me too early');
     expect(text).toContain('- [NOT TESTED] Records Vault, night raid');
-    expect(text).toContain('Totals: 0 pass, 1 needs improvement, 0 failed, 13 not tested');
+    expect(text.indexOf('TESTS REQUIRING REVIEW')).toBeLessThan(text.indexOf('COMPLETED TESTS'));
+    expect(text).toContain('Totals: 0 pass, 1 needs improvement, 0 failed, 16 not tested');
     // it comes back after a reload
     await page.reload();
+    await page.getByTestId('testlab-completed-toggle').tap();
     await expect(page.getByTestId('testlab-status-classicRaid')).toHaveText('Needs improvement');
   });
 
@@ -270,13 +311,178 @@ test.describe('Test Lab', () => {
     expect(await realStorage(context)).toEqual(before);
   });
 
-  test('City Rumble starts a real City Rumble match', async ({ page }) => {
+  test('City Rumble parity: with nothing saved the lab shows the normal defaults (Rookie, 16, Free-for-All) and starts them', async ({
+    page,
+  }) => {
     await openLab(page);
-    await startEntry(page, 'cityRumble');
+    await openEntry(page, 'cityRumble');
+    await expect(page.getByTestId('rumble-source')).toHaveAttribute('data-source', 'defaults');
+    await expect(page.getByTestId('rumble-use-current')).toBeDisabled(); // nothing saved to copy
+    // the exact configuration is shown before Start
+    const lines = page.getByTestId('rumble-summary');
+    await expect(lines).toContainText('Free-for-All');
+    await expect(lines).toContainText('Oshodi Transport Metropolis');
+    await expect(lines).toContainText('16 (you and 15 bots)');
+    await expect(lines).toContainText('Rookie');
+    await expect(page.getByTestId('rumble-level-rookie')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('testlab-level-easy')).toHaveCount(0); // no Easy / Normal / Hard here any more
+    await page.getByTestId('testlab-start').tap();
+    await inMatch(page);
     const s = await live(page);
     expect(s.game).toBe('deathmatch');
     expect(s.arena).toBe('rumbleOshodi');
     expect(s.players).toBe(16);
+    expect(await page.evaluate(() => (window as any).__WAHALA__.store.getState().settings.difficulty)).toBe(
+      'rookie',
+    );
+    await returnToLab(page);
+  });
+
+  test('City Rumble parity: Use Current Rumble Settings copies what the player really plays with, shows it, starts it, and writes nothing', async ({
+    page,
+    context,
+  }) => {
+    // the player's real saved settings, written by the normal game before the lab is opened
+    await page.goto('./?debug&q=low&seed=7&noattract');
+    await page.evaluate(() =>
+      localStorage.setItem(
+        'wahala.settings.v1',
+        JSON.stringify({
+          play: 'rumble',
+          rumbleArenaId: 'rumbleLagosIsland',
+          rumbleCompetitors: 24,
+          rumbleMode: 'team',
+          difficulty: 'casual',
+          rumbleMixed: true,
+          rumbleMinutes: 3,
+          character: 'lekkiBoy',
+        }),
+      ),
+    );
+    const before = await realStorage(context);
+    await openLab(page);
+    await openEntry(page, 'cityRumble');
+    // the lab opened on the player's own set-up, read from the real storage before isolation, and says so
+    await expect(page.getByTestId('rumble-source')).toHaveAttribute('data-source', 'current');
+    const summary = page.getByTestId('rumble-summary');
+    await expect(summary).toContainText('Team Deathmatch');
+    await expect(summary).toContainText('Lagos Island');
+    await expect(summary).toContainText('24 (12 v 12, you and 23 bots)');
+    await expect(summary).toContainText('mixed roster');
+    await expect(summary).toContainText('3 min');
+    await expect(summary).toContainText('Lekki Boy');
+    // changing anything makes it Custom; the button brings the real settings back
+    await page.getByTestId('rumble-level-expert').tap();
+    await expect(page.getByTestId('rumble-source')).toHaveAttribute('data-source', 'custom');
+    await expect(summary).toContainText('Expert');
+    await page.getByTestId('rumble-use-current').tap();
+    await expect(page.getByTestId('rumble-source')).toHaveAttribute('data-source', 'current');
+    await expect(summary).not.toContainText('Expert');
+    await page.getByTestId('testlab-start').tap();
+    await inMatch(page);
+    const s = await live(page);
+    expect(s.game).toBe('team');
+    expect(s.arena).toBe('rumbleLagosIsland');
+    expect(s.players).toBe(24);
+    const me = await page.evaluate(() => (window as any).__WAHALA__.getState().players[0].characterId);
+    expect(me).toBe('lekkiBoy');
+    await returnToLab(page);
+    expect(await realStorage(context)).toEqual(before); // the real settings were only read
+  });
+
+  test('City Rumble parity: every size, level and mode is selectable on the card', async ({ page }) => {
+    await openLab(page);
+    await openEntry(page, 'cityRumble');
+    for (const n of [8, 16, 24, 32]) {
+      await page.getByTestId(`rumble-size-${n}`).tap();
+      await expect(page.getByTestId('rumble-summary')).toContainText(`${n} (`);
+    }
+    for (const d of ['rookie', 'beginner', 'casual', 'standard', 'skilled', 'expert', 'nightmare'])
+      await expect(page.getByTestId(`rumble-level-${d}`)).toBeVisible();
+    await page.getByTestId('rumble-mode-survival').tap();
+    await expect(page.getByTestId('rumble-minutes-3')).toHaveCount(0); // no clock in Last Player Standing
+    await page.getByTestId('rumble-mode-team').tap();
+    await expect(page.getByTestId('rumble-ff-on')).toBeVisible();
+  });
+
+  test('Occluded building visibility: a real City Rumble on the Lekki stage (the fading buildings)', async ({
+    page,
+  }) => {
+    await openLab(page);
+    await startEntry(page, 'occludedBuildings');
+    const s = await live(page);
+    expect(s.arena).toBe('rumbleLekki');
+    expect(s.game).toBe('deathmatch');
+    expect(s.players).toBe(8);
+    const vc = await page.evaluate(() => (window as any).__WAHALA__.viewClear());
+    expect(vc.groups).toBeGreaterThan(0); // the buildings that can fade are there
+    await returnToLab(page);
+  });
+
+  test('Sudden Death banner and victory: a real City Rumble that starts in the sudden-death round', async ({
+    page,
+  }) => {
+    await openLab(page);
+    await startEntry(page, 'suddenDeath');
+    await stepTicks(page, 400); // the pre-match countdown and the title card (as e2e/sudden-death-test.spec.ts)
+    const s = await page.evaluate(() => {
+      const w = (window as any).__WAHALA__;
+      const st = w.getState();
+      return {
+        arena: st.arenaId as string,
+        players: st.players.length as number,
+        bots: st.players.filter((p: any) => p.isBot).length as number,
+        stage: st.match.suddenDeath?.stage ?? null,
+        camera: w.store.getState().settings.cameraView as string,
+      };
+    });
+    expect(s.arena).toBe('rumbleOjuelegba');
+    expect(s.players).toBe(3);
+    expect(s.bots).toBe(2);
+    expect(s.stage).toBe('countdown'); // straight into the sudden-death round
+    expect(s.camera).toBe('overview'); // the whole stage in frame, set in memory only
+    await returnToLab(page);
+  });
+
+  test('Classic rear ambush: the real first raid, nothing prepared; One-hit lethality: a chosen enemy at its post', async ({
+    page,
+  }) => {
+    await openLab(page);
+    await startEntry(page, 'classicRearAmbush', 'easy');
+    const raid = await live(page);
+    expect(raid.raid).toBe('warehouseDispatchDepot');
+    expect(raid.game).toBe('raid');
+    await returnToLab(page);
+
+    await openEntry(page, 'oneHit');
+    await expect(page.getByTestId('testlab-variant-agbero')).toHaveAttribute('aria-pressed', 'true'); // the first is the default
+    await page.getByTestId('testlab-variant-thrower').tap();
+    await page.getByTestId('testlab-level-easy').tap();
+    await page.getByTestId('testlab-start').tap();
+    await inMatch(page);
+    const one = await page.evaluate(() => {
+      const st = (window as any).__WAHALA__.getState();
+      const open = st.raid.seats.filter((x: any) => !x.active);
+      return {
+        raid: st.raid.raidId as string,
+        enemies: open.map((x: any) => [x.kind, x.spot.x, x.spot.y]),
+        me: [st.players[0].x, st.players[0].y],
+      };
+    });
+    expect(one.raid).toBe('warehouseDispatchDepot');
+    expect(one.enemies).toEqual([['thrower', 2, 11]]);
+    expect(one.me).toEqual([1, 9]);
+    // Restart keeps the chosen enemy
+    await pause(page);
+    await page.getByTestId('testlab-restart').tap();
+    await inMatch(page);
+    const again = await page.evaluate(() =>
+      (window as any).__WAHALA__
+        .getState()
+        .raid.seats.filter((x: any) => !x.active)
+        .map((x: any) => x.kind),
+    );
+    expect(again).toEqual(['thrower']);
     await returnToLab(page);
   });
 
@@ -325,7 +531,7 @@ test.describe('Test Lab', () => {
     page,
   }) => {
     await openLab(page);
-    await page.getByTestId('testlab-entry-roster').tap();
+    await openEntry(page, 'roster');
     await page.getByTestId('testlab-fighter-lekkiBoy').tap();
     await page.getByTestId('testlab-start').tap();
     await inMatch(page);
@@ -409,5 +615,60 @@ test.describe('Test Lab', () => {
     await page.getByTestId('testlab-return').tap();
     await page.getByTestId('testlab-confirm-leave').tap();
     await expect(page.getByTestId('testlab-home')).toBeVisible({ timeout: 60_000 });
+  });
+
+  test('the three marker styles draw three different sets of parts in the real renderer, and the switch reaches it (decision TL8)', async ({
+    page,
+  }) => {
+    await openLab(page);
+    await openEntry(page, 'identifyPlayer');
+    await page.getByTestId('testlab-start').tap();
+    await inMatch(page);
+    await page.evaluate(() => {
+      const w = (window as any).__WAHALA__;
+      w.controller().frozen = true;
+      w.stepTicks(300);
+      w.advance(30);
+    });
+    /** What the real three.js scene draws for the local fighter's marker right now (pixels of an animated scene are noisy). */
+    const drawn = () =>
+      page.evaluate(() => {
+        const scene = (window as any).__WAHALA__.renderer().scene;
+        const out = { tag: 0, chevron: 0, ground: 0, groundOpacity: 0, groundScale: 0 };
+        scene.traverse((o: any) => {
+          if (!o.visible) return;
+          if (o.isSprite && o.renderOrder === 40) out.tag++;
+          if (o.isSprite && o.renderOrder === 32) out.chevron++;
+          if (o.isMesh && o.position.y === 0.025 && o.scale.x >= 1.5) {
+            out.ground++;
+            out.groundOpacity = o.material.opacity;
+            out.groundScale = o.scale.x;
+          }
+        });
+        return out;
+      });
+    const mode = () => page.evaluate(() => (window as any).__WAHALA__.playerMarker());
+    const label = () => page.getByTestId('marker-hud-button').textContent();
+
+    // the HUD button cycles Indicator -> Indicator + Ground -> Original -> Indicator, and each tap reaches the renderer
+    expect(await mode()).toBe('indicator');
+    expect(await label()).toBe('IND');
+    // (polled: the next rendered frame carries the change)
+    await expect.poll(drawn, { timeout: 60_000 }).toMatchObject({ tag: 1, chevron: 0, ground: 0 }); // the YOU plate only
+    await page.getByTestId('marker-hud-button').tap();
+    expect(await mode()).toBe('indicatorGround');
+    expect(await label()).toBe('IND+G');
+    await expect.poll(drawn, { timeout: 60_000 }).toMatchObject({ tag: 1, chevron: 0, ground: 1 }); // the plate and the floor mark
+    const ground = await drawn();
+    await page.getByTestId('marker-hud-button').tap();
+    expect(await mode()).toBe('original');
+    expect(await label()).toBe('ORIG');
+    await expect.poll(drawn, { timeout: 60_000 }).toMatchObject({ tag: 0, chevron: 1, ground: 0 }); // the old chevron and "You" name tag only
+    // the floor mark is big and strong enough to see at the fixed camera (the first version was neither), still a decal
+    expect(ground.groundScale).toBeGreaterThanOrEqual(1.5);
+    expect(ground.groundOpacity).toBeGreaterThanOrEqual(0.5);
+    expect(ground.groundOpacity).toBeLessThan(0.95);
+    await page.getByTestId('marker-hud-button').tap(); // back to the default
+    expect(await mode()).toBe('indicator');
   });
 });

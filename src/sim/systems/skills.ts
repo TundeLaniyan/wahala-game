@@ -258,6 +258,21 @@ export function useSkill(state: GameState, p: Player, events: SimEvent[]): void 
 }
 
 /**
+ * Ticks from the press to the hit of `kind` by `p`: the catalogue's startup, or a boss mission's readable wind-up for a
+ * generator-bot seat (decision BB2: `campaignTactics.botMeleeWindupTicks`, present only in a boss fight with a boss
+ * balance) when that is longer. The bots plan with the same number. Everyone else: the catalogue, as before.
+ */
+export function meleeStartupTicks(
+  config: Pick<GameState['config'], 'skills' | 'campaignTactics'>,
+  p: Readonly<Pick<Player, 'isBot' | 'enemyKind'>>,
+  kind: AttackKind,
+): number {
+  const base = config.skills.attacks[kind].startupTicks;
+  const windup = config.campaignTactics?.botMeleeWindupTicks;
+  return windup !== undefined && p.isBot && p.enemyKind === undefined ? Math.max(base, windup) : base;
+}
+
+/**
  * Starts `kind` (default: the primary) on `target` (already in reach in `dir`): the startup runs, the effect follows.
  * Returns whether it began (not while recovering from the last attack, on cooldown or already winding up).
  */
@@ -272,7 +287,12 @@ export function beginAttack(
   if (!attackReady(state, p, kind)) return false;
   const spec = state.config.skills.attacks[kind];
   p.facing = dir;
-  const pending = { skill: kind, targetId: target.id, resolveTick: state.tick + spec.startupTicks, dir };
+  const pending = {
+    skill: kind,
+    targetId: target.id,
+    resolveTick: state.tick + meleeStartupTicks(state.config, p, kind),
+    dir,
+  };
   p.attack = pending;
   if (spec.cooldownTicks > 0) p.attackCooldowns[kind] = state.tick + spec.cooldownTicks; // spent even if it whiffs
   if (spec.plantedStartup) p.rootedUntil = Math.max(p.rootedUntil, pending.resolveTick); // VULNERABILITY: planted

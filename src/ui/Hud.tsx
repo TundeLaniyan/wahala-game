@@ -11,7 +11,6 @@ import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
 import { shieldChip } from './combatHudModel';
 import { HudRail } from './HudRail';
-import { SuddenDeathCard } from './SuddenDeath';
 import { Minimap } from './Minimap';
 import { MissionCompass } from './MissionCompass';
 import { MissionDock } from './MissionDock';
@@ -212,6 +211,7 @@ export function Hud() {
               mission={hud.mission}
               campaign={hud.campaign}
               enemies={hud.enemies}
+              bossFeedback={hud.bossFeedback ?? null}
               cue={hud.fieldCue}
             />
           </div>
@@ -276,7 +276,6 @@ export function Hud() {
           </b>
         </div>
       )}
-      {hud.suddenDeath && <SuddenDeathCard sd={hud.suddenDeath} />}
       <HudRail
         alerts={hud.stageAlerts}
         toasts={toasts}
@@ -288,6 +287,7 @@ export function Hud() {
         mission={rumble ? null : hud.mission}
         campaign={hud.campaign}
         enemies={hud.enemies}
+        bossFeedback={hud.bossFeedback ?? null}
         raid={hud.raid}
         fieldCue={rumble ? null : hud.fieldCue}
       />

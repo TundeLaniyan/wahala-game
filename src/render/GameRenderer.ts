@@ -589,6 +589,7 @@ export class GameRenderer {
       });
     }
     this.arena.setViewClearStride(p.viewClearStride);
+    this.arena.setFootprintBudget(p.occlusionFootprints);
     this.effects.setQuality(p);
     this.backdrop.setQuality(p);
     this.living?.setProfile(p);
@@ -656,6 +657,7 @@ export class GameRenderer {
     this.damage?.handleEvents(events, state, fx, this.layout, this.localId);
     this.pilot?.handleEvents(events, state, fx, this.layout, this.localId);
     this.telegraphs?.handleEvents(events, state, fx);
+    this.missionMarkers?.handleEvents(events, state, fx, this.layout);
     for (const e of events) {
       switch (e.type) {
         case 'generatorExploded':

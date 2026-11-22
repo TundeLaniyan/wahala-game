@@ -5,6 +5,7 @@
  */
 import { isBossKind, sourceLabel } from '../app/campaignHud';
 import type { CampaignHud, EnemyHud } from '../app/campaignHud';
+import type { BossFeedback } from '../app/bossBar';
 import type { MissionView } from '../sim';
 
 /** The cause line stays up this long after a hit (ticks, 3.5 s). */
@@ -119,13 +120,24 @@ export function healthModel(c: CampaignHud, seen: SeenProtection = NOTHING_SEEN)
 export interface BossBarModel {
   id: number;
   name: string;
-  kindLabel: 'BOSS' | 'LIEUTENANT' | 'BOSS DEFENCES';
+  kindLabel: 'BOSS' | 'LIEUTENANT';
   /** Mission bosses: what the bar is showing right now (hit-point bosses leave it undefined). */
   state?: 'shielded' | 'exposed' | 'defeated';
   /** Segments drawn, and how many are full. */
   segments: number;
   filled: number;
+  /** "2 / 3": his health, the sim's hits left of the hits he has in all. */
   text: string;
+  /** The segment the hit that just landed took (it flashes and drains); null when no hit is recent. */
+  lostIndex?: number | null;
+  /** "HIT -1": a real hit landed in the last moment (never set without a `bossHit` / `bossDefeated` event). */
+  hitText?: string | null;
+  /** A blast bounced off the shield in the last moment: no damage. */
+  blocked?: boolean;
+  /** Mission bosses: the state line, a tag and what it means for the player ("SHIELDED" / "BLASTS DO NOTHING"). */
+  status?: { tag: string; note: string };
+  /** The exposed window left, 0..1 (a thin timer under the segments); null when not exposed. */
+  window?: number | null;
 }
 
 /** The boss bars of the rail: only boss and lieutenant kinds, bosses first. */
@@ -146,36 +158,62 @@ export function bossBars(enemies: readonly EnemyHud[]): BossBarModel[] {
     });
 }
 
+const clock = (ticks: number): string => {
+  const s = Math.max(0, Math.ceil(ticks / 60));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
 /**
- * The boss bar of a BOSS MISSION (docs/CAMPAIGN_EXPANSION_STATUS.md): those bosses are not hit-point fights, they fall to
- * one blast once the objective exposes them, so the bar shows what really protects them: one segment per defence phase.
- * Full = all three defences up (shielded); a segment goes as each phase is cleared; the last one flashes while the boss is
- * exposed; empty = defeated. Pure read of the mission view; null outside a boss mission or when a hit-point boss bar
- * already shows this boss.
+ * The boss bar of a BOSS MISSION (decisions BH1-BH4, BX1-BX3, docs/DECISIONS.md). The district bosses are generator bots
+ * without hit points: they take BLAST HITS, one per exposure window, so his HEALTH is the sim's `boss.hitsLeft` of
+ * `maxHits` (one full segment per hit he still has) - never phases or defences. Two things sit beside it and are told
+ * apart from damage: SHIELDED (blue; a blast does nothing) and EXPOSED (gold, with the window's countdown; a blast takes
+ * a segment). A hit drains its segment with a flash and "HIT -1", only when the sim sent the event (`feedback`); at zero
+ * the bar reads DEFEATED. Pure read of the mission view; null outside a boss mission or when a hit-point bar already
+ * shows this boss.
  */
 export function missionBossBar(
   view: MissionView | null,
   alreadyShown: readonly BossBarModel[] = [],
+  feedback: BossFeedback | null = null,
 ): BossBarModel | null {
   // a section field mission has no boss (its view carries an empty boss slot): no bar
   if (!view || view.format === 'field' || alreadyShown.some((b) => b.kindLabel === 'BOSS')) return null;
-  const total = view.phaseCount;
-  const state = view.boss.defeated ? 'defeated' : view.boss.exposed ? 'exposed' : 'shielded';
-  // phase = the active phase index (0, 1, 2): that many defences are already down; exposed = only the last one is left
-  const filled = state === 'defeated' ? 0 : state === 'exposed' ? 1 : Math.max(1, total - view.phase);
-  const label =
+  const b = view.boss;
+  const total = b.maxHits ?? view.phaseCount;
+  const left = b.defeated ? 0 : Math.max(0, Math.min(total, b.hitsLeft ?? total - view.phase));
+  const segments = Math.max(1, Math.min(BOSS_SEGMENTS_MAX, total));
+  const filled = left <= 0 ? 0 : Math.max(1, Math.ceil((left / total) * segments));
+  const state = b.defeated ? 'defeated' : b.exposed ? 'exposed' : 'shielded';
+  // the segment the hit took: the first empty one, shown only while the health on the bar agrees with the event's
+  // (the sim's `hitsLeft` after that hit): never a guess, never without a `bossHit` / `bossDefeated`
+  const struck = !!feedback && feedback.sinceHit !== null && feedback.hitsLeft === left;
+  const lostIndex = struck ? filled : null;
+  const blocked = state === 'shielded' && !!feedback && feedback.sinceBlocked !== null;
+  const status =
     state === 'defeated'
-      ? 'DOWN'
+      ? { tag: 'DEFEATED', note: 'HE IS DOWN' }
       : state === 'exposed'
-        ? 'EXPOSED: NOW!'
-        : `${filled} OF ${total} DEFENCES UP`;
+        ? { tag: `EXPOSED ${clock(b.exposedRemainingTicks)}`, note: 'BLAST HIM NOW' }
+        : blocked
+          ? { tag: 'BLOCKED', note: 'NO DAMAGE' }
+          : { tag: 'SHIELDED', note: 'BLASTS DO NOTHING' };
+  const window =
+    state === 'exposed' && b.exposeTotalTicks
+      ? Math.min(1, Math.max(0, b.exposedRemainingTicks / b.exposeTotalTicks))
+      : null;
   return {
-    id: view.boss.playerId,
-    name: view.boss.name ?? 'The boss',
-    kindLabel: 'BOSS DEFENCES',
+    id: b.playerId,
+    name: b.name ?? 'The boss',
+    kindLabel: 'BOSS',
     state,
-    segments: total,
+    segments,
     filled,
-    text: label,
+    text: `${left} / ${total}`,
+    lostIndex,
+    hitText: struck ? 'HIT -1' : null,
+    blocked,
+    status,
+    window,
   };
 }

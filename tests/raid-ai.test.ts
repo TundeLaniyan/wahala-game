@@ -28,6 +28,7 @@ import {
 } from '../src/sim';
 import type { CampaignLevel, GameState, Intents, RaidId } from '../src/sim';
 import { Tile } from '../src/sim/types';
+import { updateTerritory } from '../src/sim/systems/territory';
 import { addGenerator } from './helpers';
 import { advance, knockOut, letWavesAppear, newRaid, put } from './raid-helpers';
 import { ambushDrill, cornerDrill, idlePatrol, raidWithBots, seenDrill, step } from '../scripts/lib/raidAi';
@@ -254,6 +255,34 @@ describe('RA3 / RA4: fair generator awareness - no omniscience, real escapes fro
       expect(trapped, level).toBeGreaterThan(0);
       expect(trapped, level).toBeLessThan(staged);
     }
+  });
+});
+
+describe('CV8: a calm guard notices a player at its shoulder by sight, at once only in front', () => {
+  it('Normal: at its shoulder after the usual reaction, never on the tick; in front at once; Hard: at once', () => {
+    const at = (level: CampaignLevel, dx: number, dy: number): number | null => {
+      const s = depotGuard(level);
+      const g = s.players[1]!;
+      put(s, 1, 9, 3);
+      g.facing = 'down';
+      const m = s.territory!.minds[1]!;
+      m.state = 'watch';
+      m.notice = 0;
+      put(s, 0, 9 + dx, 3 + dy);
+      for (let i = 1; i <= 120; i++) {
+        s.tick++;
+        g.facing = 'down';
+        updateTerritory(s, []);
+        if ((m.state as string) === 'alert') return i;
+      }
+      return null;
+    };
+    const shoulder = at('normal', 1, 0); // (10,3): beside it
+    expect(shoulder).not.toBeNull();
+    expect(shoulder!).toBeGreaterThan(1);
+    expect(at('normal', 0, 1)).toBe(1); // in front: arm's length
+    expect(at('hard', 1, 0)).toBe(1);
+    expect(at('normal', 0, -1)).toBeNull(); // behind
   });
 });
 

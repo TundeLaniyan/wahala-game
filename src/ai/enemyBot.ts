@@ -372,9 +372,9 @@ export class EnemyBot implements Bot {
 
     // 1. a rival next to me: punch (when the catalogue attack is ready; the sim applies the enemy's own cooldown)
     const melee = enemyMeleeTarget(obs, me);
-    // decision CV1 (Classic raids): a calm guard (on its rounds, at its post, walking back) only swings at someone it
-    // can see: a player who crept up right behind it is not felt (the territory's own notice uses the same ring)
-    const ring = obs.config.campaignTactics?.classicRaid?.nearRing;
+    // decisions CV1, CV8 (Classic raids): a calm guard (on its rounds, at its post, walking back) only swings at someone
+    // in its `closeRing` (the territory's instant "too close" uses the same ring): never at a player behind it
+    const ring = obs.config.campaignTactics?.classicRaid?.closeRing;
     if (melee && ring && obs.directive?.calm && !inViewCone(me, melee.target.x, melee.target.y, ring))
       return intent;
     if (melee) {

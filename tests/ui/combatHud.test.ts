@@ -294,8 +294,9 @@ describe('mission panel model (HC5)', () => {
         mission: view({ phaseState: 'exposed', boss: { ...exposed, restoring: true } }),
       }),
     );
-    for (const text of ['BLASTS LEFT 2/3', 'RESTORING: BLAST NOW', 'BOSS EXPOSED 0:12'])
-      expect(html, text).toContain(text);
+    // the hint stays in the panel; the health, shield state and window are the boss BAR's now (decisions BH1-BH4)
+    expect(html).toContain('RESTORING: BLAST NOW');
+    for (const text of ['BLASTS LEFT 2/3', 'BOSS EXPOSED 0:12']) expect(html, text).not.toContain(text);
     // a view without hits (a field mission, an older view) shows neither
     expect(missionPanelModel(view()).boss.hits).toBeUndefined();
   });

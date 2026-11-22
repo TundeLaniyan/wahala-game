@@ -132,3 +132,15 @@ nobody hunting it 11.8 / 10.3 / 9.3 s -> 18.9 / 15.3 / 9.7 s. Easy punches lande
 The scripted players were not in difficulty before either (they completed every opening raid unhurt before and after);
 they measure pressure and opportunity, not how it feels. No physical phone playtest was possible here: the founder's
 test remains the acceptance gate.
+
+## v3.1: the rear approach in the full raid (decision CV8)
+
+The founder passed the isolated rear approach on Easy but found it inconsistent in the real first raid on Normal.
+Logged every alert in the full depot with two scripted players: no detection through a guard's back (alerts from behind
+were ally calls, hits, called waves and investigating guards, which look all round). The difference is the level and the
+layout: on Normal post guard C sees its shoulders as it turns a quarter every 2.5 s, and guard B's beat ends on the tile
+behind C, so that tile is unwatched only 13 % of the time (Easy 25 %) in 1-2 s windows; and a player laying a generator
+there just before C's turn was noticed on that very tick (arm's length at its shoulder was instant). CV8 keeps the
+shoulder as sight (0.5 s) and makes only the tiles in front instant on Easy and Normal. `scripts/raid-rear.ts` (36 timed
+attempts a level, real depot, all of wave 1): Normal noticed by C 4 -> 0, C killed 32 -> 32; Easy 36 / 36 both; Hard
+unchanged (the click is heard). Acceptance test H pins it.
