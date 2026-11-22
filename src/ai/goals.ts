@@ -25,7 +25,7 @@ import { blastReach, isRadial } from './blast';
 import { overBudget } from './context';
 import type { Ctx } from './context';
 import { ZONE_WEIGHT } from './zone';
-import { directiveBias } from './directive';
+import { directiveBias, groundBias } from './directive';
 import { manhattanTiles } from './board';
 import { readyTick, stepTicksOf } from './world';
 
@@ -174,7 +174,8 @@ export function canPlaceNow(c: Ctx): boolean {
     me.enemyKind === undefined &&
     me.carrying === null &&
     me.entryUntil === null &&
-    activeGenerators(c) < me.capacity
+    activeGenerators(c) < me.capacity &&
+    (c.genCap === null || activeGenerators(c) < c.genCap)
   );
 }
 
@@ -394,6 +395,7 @@ export function chooseGoal(c: Ctx, prevGoal: number): Plan | null {
     }
   }
 
+  if (c.ground !== null) for (const cand of cands) cand.score += groundBias(c, cand.tile); // a boss's ground (BB1)
   cands.sort((a, b) => b.score - a.score);
   if (profile.robustEscape) penaliseVulnerable(c, cands, step);
   let skip = nextFloat(c.rng) < profile.mistake ? 1 : 0;

@@ -18,6 +18,7 @@
  */
 import type { CampaignLevel } from '../campaign/levels';
 import { ticks } from '../config';
+import type { BossBalance } from '../config';
 import type { GameState } from '../types';
 import type { NpcRole } from './types';
 
@@ -49,6 +50,12 @@ export interface BossRecipe {
   callCount: Readonly<Record<CampaignLevel, number>>;
   /** Escorts body-block the line between the exposed boss and the human on these levels (else they follow him). */
   escortCover: Readonly<Record<CampaignLevel, boolean>>;
+  /**
+   * The boss balance this fight plays with (decisions BB1-BB6, `config.ts` `BOSS_BALANCE`): his ground while shielded,
+   * the readable wind-up of every bot seat's close attack, the generators he may keep down while exposed. Null = none
+   * (the fight as decided in BX1-BX8).
+   */
+  balance: BossBalance | null;
 }
 
 /** The six district bosses share these numbers; a boss overrides what makes it different (`MissionDef.recipe`). */
@@ -65,6 +72,7 @@ export const DEFAULT_BOSS_RECIPE: BossRecipe = {
   callRoles: ['escort', 'meleeGuard', 'runner'],
   callCount: { easy: 0, normal: 1, hard: 2 },
   escortCover: { easy: false, normal: false, hard: true },
+  balance: null,
 };
 
 /** A recipe with a boss's own overrides. */
@@ -87,6 +95,16 @@ export interface BossTuning {
   callRoles: NpcRole[];
   callCount: number;
   escortCover: boolean;
+  /*
+   * The boss balance at this level (decisions BB1-BB6), present only when the recipe names one (so the other bosses'
+   * state is exactly as before): BB1 his ground while shielded (Manhattan tiles from his post); BB2 the shortest
+   * close-attack wind-up of the mission's bot seats (ticks); BB3 generators the exposed boss may have down at once;
+   * BB5 a crew / boss generator the player's blast sets off burns the exposed boss as the player's fire.
+   */
+  groundTiles?: number;
+  meleeWindupTicks?: number;
+  exposedGenerators?: number;
+  chainCarriesFire?: boolean;
 }
 
 export function resolveBossRecipe(r: BossRecipe, level: CampaignLevel): BossTuning {
@@ -104,6 +122,14 @@ export function resolveBossRecipe(r: BossRecipe, level: CampaignLevel): BossTuni
     callRoles: [...r.callRoles],
     callCount: r.callCount[level],
     escortCover: r.escortCover[level],
+    ...(r.balance
+      ? {
+          groundTiles: r.balance.groundTiles[level],
+          meleeWindupTicks: r.balance.meleeWindupTicks[level],
+          exposedGenerators: r.balance.exposedGenerators[level],
+          chainCarriesFire: r.balance.chainCarriesFire,
+        }
+      : {}),
   };
 }
 

@@ -13,7 +13,8 @@
  *   supportUnit        stay near a runner / defender ally (else the boss)
  *   bossAssistant      interpose: stand on the tile two steps from the boss towards the human
  *   boss               guard its post (radius 3) while shielded; while exposed walk to the anchor and stand on it to
- *                      restore the shield (the runtime roots him there: decision BX1)
+ *                      restore the shield (the runtime roots him there: decision BX1); with a boss balance (decisions
+ *                      BB1, BB3) the guard carries his `ground` and the anchor block his `maxGenerators`
  */
 import { tileIndex } from '../grid';
 import { Tile } from '../types';
@@ -48,8 +49,13 @@ export function directiveFor(state: GameState, id: number): NpcDirective | undef
   switch (seat.role) {
     case 'boss': {
       const anchor = m.boss.anchor;
-      if (exposed && anchor) return { kind: 'block', x: anchor.x, y: anchor.y, radius: 0 };
-      return exposed && human.alive ? { kind: 'flee', x: human.x, y: human.y } : guard(post.x, post.y);
+      const b = m.tuning.boss;
+      // a boss balance (decisions BB1, BB3): his ground while shielded, his generators while he restores at the anchor
+      const cap = exposed && b?.exposedGenerators !== undefined ? { maxGenerators: b.exposedGenerators } : {};
+      if (exposed && anchor) return { kind: 'block', x: anchor.x, y: anchor.y, radius: 0, ...cap };
+      if (exposed && human.alive) return { kind: 'flee', x: human.x, y: human.y };
+      const g = guard(post.x, post.y);
+      return !exposed && b?.groundTiles !== undefined ? { ...g, ground: b.groundTiles } : g;
     }
     case 'meleeGuard':
       return exposed ? chase : guard(post.x, post.y);

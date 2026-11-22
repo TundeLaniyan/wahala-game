@@ -5,6 +5,9 @@ _Last updated at the end of the autonomous Phase 1 build session. Everything bel
 ## Boss health bar and fight readability (branch `claude/wahala-boss-hud`, from `b6b2367`)
 
 The boss mission's bar now shows his real health (the sim's hits left of three), SHIELDED vs EXPOSED vs a blocked blast, a drained segment with "HIT -1" on each real hit, and DEFEATED; board beats and a longer defeat pose come from the sim's boss events (decisions BH1-BH6). Presentation only. Screenshots in `docs/screenshots/boss-hud/` (`scripts/boss-hud-shots.mjs`).
+## Boss balance: Oshodi (branch `claude/wahala-boss-sim`, from `b6b2367`)
+
+Oga Sunmola's boss fight made fair per level (decisions BB1-BB7, `docs/BOSS_BALANCE.md`): he defends his booth while shielded, every bot seat's punch winds up readably (36 / 30 / 24 ticks), the exposed boss keeps 0 / 1 / 2 generators down, his own fire or a crew generator no longer swallows the player's blast, the relays' pace is level-scaled; measured with a scripted person on the real mission (`npm run boss-measure`: Normal deaths per fight 1.5 -> 0.6, Easy won 16/16 with one life lost in all) and tested (`tests/boss-balance*.test.ts`); the other bosses unchanged.
 
 ## iOS viewport (branch `claude/wahala-ios-viewport`, from `acaeae7`)
 

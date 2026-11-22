@@ -22,6 +22,7 @@
     "combat-pilot": "tsx scripts/combat-pilot.ts",
     "sector-ai": "tsx scripts/sector-ai.ts",
     "boss-audit": "tsx scripts/boss-audit.ts",
+    "boss-measure": "tsx scripts/boss-measure.ts",
     "combat-lab-compare": "tsx scripts/combat-lab-compare.ts",
     "streak-measure": "tsx scripts/streak-measure.ts",
     "check:static": "vite build && node scripts/check-static-build.mjs"

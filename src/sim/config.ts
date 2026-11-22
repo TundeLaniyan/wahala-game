@@ -511,6 +511,12 @@ export interface CampaignTacticsConfig {
    */
   seatVariant?: Record<number, EnemyVariantId>;
   /**
+   * Boss missions whose recipe names a boss balance (decision BB2, `BossBalance.meleeWindupTicks` at the level): the
+   * shortest wind-up of a close attack by a generator-bot seat (a bot without `enemyKind`). The sim starts the attack
+   * with it (`meleeStartupTicks`) and the bots plan with it. Absent everywhere else.
+   */
+  botMeleeWindupTicks?: number;
+  /**
    * Decision RA1 (docs/CLASSIC_RAID_AI.md): present ONLY in a Classic raid. The layer then runs its perception (sight,
    * memory, hearing), the territorial state machine with the raid's derived patrol routes, the enemy pace and the cues,
    * but NOT its combat model (`punch`, `enemyHp`, `armoured`, `punchFloorShare`, `blastVsArmoured`, `enemyFramesTicks`,
@@ -1615,6 +1621,54 @@ export const CAMPAIGN_TACTICS_LEVELS: Readonly<
       returnTimeoutTicks: 480,
     },
     punch: { lockoutTicks: 84, staggerTicks: 14, staggerImmunityTicks: 60 },
+  },
+};
+
+/**
+ * THE BOSS BALANCE (decisions BB1-BB6, docs/BOSS_BALANCE.md): what keeps a campaign boss fight readable at each level,
+ * named by a boss's recipe (`BossRecipe.balance`; Oga Sunmola's Oshodi fight today, the other five bosses have none and
+ * play exactly as before). Measured on the real Oshodi mission with a scripted player held to a person's limits
+ * (`npm run boss-measure`): the shielded boss left his booth about a second into the fight and hunted the player across
+ * the corridor, laying most of his generators within three tiles of him; his Punch wound up in 4 ticks (no phone player
+ * can step away from that, and the bots use it to hold a player inside a blast); and he kept laying generators while he
+ * restored, which pushed the player out of the very window the objective had opened.
+ */
+export interface BossBalance {
+  /**
+   * BB1: while SHIELDED the boss never plans a walk or a generator farther than this many tiles (Manhattan) from his post:
+   * he defends his booth (and still bombs a player who comes into it) instead of hunting the whole district invulnerable.
+   */
+  groundTiles: Record<'easy' | 'normal' | 'hard', number>;
+  /**
+   * BB2: the shortest wind-up (ticks from the press to the hit) of a close attack by any boss-mission bot seat (boss and
+   * crew; the catalogue's Punch is 4, Shove 12, Daze Punch 18). A phone player needs about 15 ticks to read it plus up to
+   * half a step to start moving: every level leaves room for that.
+   */
+  meleeWindupTicks: Record<'easy' | 'normal' | 'hard', number>;
+  /** BB3: generators the EXPOSED boss may have down at once (his capacity is 2): the window is an opening, not a minefield. */
+  exposedGenerators: Record<'easy' | 'normal' | 'hard', number>;
+  /**
+   * BB5: while the boss is exposed, a crew or boss generator that the PLAYER's blast sets off burns him as the player's
+   * fire (before, the crew's generator beside him stopped the player's blast wave and its own flames were friendly).
+   */
+  chainCarriesFire: boolean;
+  /**
+   * BB6: the objective's pressure per level, as multipliers of the authored phase numbers (Hard = 1, the design as
+   * authored): `pulse` the time between two strikes a live node calls, `rearm` how long a broken node stays broken,
+   * `crew` how long a runner needs on a broken node to restore it. Larger = gentler.
+   */
+  objective: Record<'easy' | 'normal' | 'hard', { pulse: number; rearm: number; crew: number }>;
+}
+
+export const BOSS_BALANCE: BossBalance = {
+  groundTiles: { easy: 3, normal: 5, hard: 8 },
+  meleeWindupTicks: { easy: 36, normal: 30, hard: 24 },
+  exposedGenerators: { easy: 0, normal: 1, hard: 2 },
+  chainCarriesFire: true,
+  objective: {
+    easy: { pulse: 1.6, rearm: 1.5, crew: 2 },
+    normal: { pulse: 1.25, rearm: 1.25, crew: 1.5 },
+    hard: { pulse: 1, rearm: 1, crew: 1 },
   },
 };
 

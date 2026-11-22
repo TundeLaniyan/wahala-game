@@ -164,6 +164,8 @@ describe('roles play differently (bots, 15 seconds)', () => {
     // the flee directive on the whole district map, as recorded (Oshodi's boss plays in its dispatch corridor since
     // decision WX9; the corridor fights are tests/mission-bosses-fights.test.ts and tests/campaign-world.test.ts)
     const state = newMission({ id: 'oshodi', noSector: true });
+    // (recorded before the boss balance: the crew's catalogue wind-ups, decision BB2, so the scene plays as it did)
+    delete state.config.campaignTactics!.botMeleeWindupTicks;
     const m = state.mission!;
     advance(state, 1);
     const boss = state.players[1]!;

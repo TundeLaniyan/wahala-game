@@ -9,7 +9,7 @@
  * Fictional faction ids (matched by the campaign content worker): see FACTION_IDS and docs/MISSION_SIM.md.
  */
 import { ebuteX } from '../arenas/ebuteWest';
-import { ticks } from '../config';
+import { BOSS_BALANCE, ticks } from '../config';
 import { bossRecipe } from './boss';
 import type { BossRecipe } from './boss';
 import { FINALE_FACTION_ID, OJUELEGBA_BOSS } from './finaleDefs';
@@ -168,7 +168,13 @@ const OSHODI: MissionDef = {
   factionId: FACTION_IDS.oshodi,
   timeLimitSec: 420,
   parSec: 240,
-  recipe: bossRecipe({ anchor: 'post', callRoles: ['escort', 'runner', 'meleeGuard'] }),
+  // decisions BB1-BB6 (docs/BOSS_BALANCE.md): Oga Sunmola defends his booth, his crew's punches are readable, and the
+  // window he is exposed in is an opening
+  recipe: bossRecipe({
+    anchor: 'post',
+    callRoles: ['escort', 'runner', 'meleeGuard'],
+    balance: BOSS_BALANCE,
+  }),
   reinforceMax: 3,
   // the dispatch corridor of the district map (decision WX9): the relays, the convoy lanes and the boss territory, the
   // rest of the city closed by Ring cordons; the human comes in at the west end of the market front
