@@ -77,7 +77,9 @@ export function nightNotice(state: GameState, guard: Player, fighter: Player): N
   const lighting = cfg ? raidLighting(state) : null;
   if (!cfg || !lighting) return null;
   const d = chebyshev(guard, fighter);
-  const close = d <= cfg.contactTiles;
+  // decision CV1: contact in the dark is in front of it or at its side, never right behind it
+  const ring = state.config.campaignTactics?.classicRaid?.nearRing;
+  const close = d <= cfg.contactTiles && (!ring || inViewCone(guard, fighter.x, fighter.y, ring));
   const base = LIGHT_TUNING.guard.range;
   if (!carriesTorch(guard, lighting))
     return { sees: false, close, reactTicks: cfg.reactFarTicks, reach: 0, beamSeen: false };

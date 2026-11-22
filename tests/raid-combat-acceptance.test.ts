@@ -255,3 +255,97 @@ describe('F. a player who plays by ambushes completes raids with them', () => {
     },
   );
 });
+
+/**
+ * G (decisions CV1-CV2): the rear approach. Depot guard C holds its post at (11,9), turning a quarter every few seconds
+ * (`lookAroundTicks`); guard B walks the column above it. The player waits at (9,7), out of both sights; once he has SEEN
+ * C turn to face the wall (a 0.25 s reaction) and B walking away up the column, he walks (10,7) (11,7) (11,8) right
+ * behind C, lays a generator there and walks back the way he came. Every input is a real intent; nothing is staged but
+ * the waiting spot.
+ */
+function rearApproach(level: CampaignLevel): {
+  killed: boolean;
+  noticedBeforeBlast: boolean;
+  hurtBeforeBlast: boolean;
+  planted: boolean;
+} {
+  const { s, bots } = depot(level);
+  put(s, 0, 9, 7);
+  const C = s.players[3]!;
+  const B = s.players[2]!;
+  const h = s.players[0]!;
+  const hp0 = h.vitals!.hp;
+  const toward = (x: number, y: number): Intents[number] =>
+    h.x === x && h.y === y
+      ? {}
+      : { move: x !== h.x ? (x > h.x ? 'right' : 'left') : y > h.y ? 'down' : 'up' };
+  const route = [
+    [10, 7],
+    [11, 7],
+    [11, 8],
+  ] as const;
+  const back = [
+    [11, 7],
+    [10, 7],
+    [9, 7],
+  ] as const;
+  let downSince = -1;
+  let phase: 'wait' | 'go' | 'back' = 'wait';
+  let i = 0;
+  let j = 0;
+  let planted = false;
+  let noticed = false;
+  let hurt = false;
+  for (let t = 0; t < 3000; t++) {
+    if (C.facing === 'down') {
+      if (downSince < 0) downSince = s.tick;
+    } else downSince = -1;
+    let intent: Intents[number] = {};
+    if (
+      phase === 'wait' &&
+      downSince >= 0 &&
+      s.tick - downSince >= 15 &&
+      s.tick - downSince < 105 &&
+      B.facing === 'up' &&
+      B.y <= 6
+    )
+      phase = 'go';
+    if (phase === 'go') {
+      if (h.stepRemaining === 0 && h.x === route[i]![0] && h.y === route[i]![1]) i++;
+      if (i >= route.length) {
+        intent = { place: true };
+        planted = true;
+        phase = 'back';
+      } else intent = toward(route[i]![0], route[i]![1]);
+    } else if (phase === 'back') {
+      if (h.stepRemaining === 0 && h.x === back[j]![0] && h.y === back[j]![1])
+        j = Math.min(j + 1, back.length - 1);
+      intent = toward(back[j]![0], back[j]![1]);
+    }
+    step(s, bots, intent);
+    const blown = planted && s.generators.length === 0;
+    if (!blown) {
+      const st = s.territory!.minds[3]?.state;
+      if (C.alive && (st === 'alert' || st === 'pursue')) noticed = true;
+      if (h.vitals!.hp < hp0) hurt = true;
+    }
+    if (blown && s.flames.length === 0) break;
+  }
+  return { killed: !C.alive, noticedBeforeBlast: noticed, hurtBeforeBlast: hurt, planted };
+}
+
+describe('G. a player who creeps up behind a guard at its post can lay a generator there (decisions CV1-CV2)', () => {
+  for (const level of ['easy', 'normal'] as CampaignLevel[])
+    it(`${level}: unseen, unheard, and the blast kills it`, () => {
+      const r = rearApproach(level);
+      expect(r.planted, 'the window came').toBe(true);
+      expect(r.noticedBeforeBlast, 'the guard never turned on him').toBe(false);
+      expect(r.hurtBeforeBlast).toBe(false);
+      expect(r.killed).toBe(true);
+    });
+  it('hard: the click of a generator laid right behind it is heard, and the guard gets clear', () => {
+    const r = rearApproach('hard');
+    expect(r.planted).toBe(true);
+    expect(r.killed).toBe(false);
+  });
+});

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { Suspense, lazy, useEffect, useRef } from 'react';
 import { commands, mount } from '../app/session';
 import { useGameStore } from '../app/store';
 import { HowToPlay } from './HowToPlay';
@@ -9,6 +9,15 @@ import { MatchLoading } from './MatchLoading';
 import { RaidBriefOverlay } from './campaign/RaidBriefOverlay';
 import { TouchControls } from './TouchControls';
 import { SpectatorControls } from './SpectatorControls';
+import { testLabActive } from '../testlab/params';
+
+// TEMPORARY founder Test Lab (docs/TEST_LAB.md): its own chunk, loaded only with `?testlab=1`
+const lab = {
+  TestLab: lazy(() => import('./testlab').then((m) => ({ default: m.TestLab }))),
+  Pause: lazy(() => import('./testlab').then((m) => ({ default: m.TestLabPause }))),
+  Results: lazy(() => import('./testlab').then((m) => ({ default: m.TestLabResults }))),
+};
+const LAB = testLabActive();
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -47,12 +56,36 @@ export function App() {
       {screen !== 'title' && <Hud />}
       {screen === 'playing' && showTouch && !paused && tutorial !== 'demo' && <TouchControls />}
       {screen === 'playing' && !paused && !tutorial && <SpectatorControls touch={showTouch} />}
-      {screen === 'playing' && paused && !tutorial && <PauseOverlay />}
+      {screen === 'playing' &&
+        paused &&
+        !tutorial &&
+        (LAB ? (
+          <Suspense fallback={null}>
+            <lab.Pause />
+          </Suspense>
+        ) : (
+          <PauseOverlay />
+        ))}
       {/* the raid briefing at the door hand-over (decision MG3): over the held raid, after its loading screen */}
       {screen === 'playing' && !paused && !matchLoad && raidBrief && <RaidBriefOverlay />}
       {screen === 'playing' && tutorial && <HowToPlay />}
-      {screen === 'results' && <ResultsOverlay />}
-      {screen === 'title' && !fatal && <MainMenu />}
+      {screen === 'results' &&
+        (LAB ? (
+          <Suspense fallback={null}>
+            <lab.Results />
+          </Suspense>
+        ) : (
+          <ResultsOverlay />
+        ))}
+      {screen === 'title' &&
+        !fatal &&
+        (LAB ? (
+          <Suspense fallback={null}>
+            <lab.TestLab />
+          </Suspense>
+        ) : (
+          <MainMenu />
+        ))}
       {fatal && (
         <div className="scrim" data-testid="fatal">
           <div className="card lose">

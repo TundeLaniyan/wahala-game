@@ -364,6 +364,7 @@ export class MatchController implements MissionHost {
     this.raidReported = false;
     this.raidAsked = false;
     const state = createGame(options);
+    meta.prepare?.(state); // TEMPORARY Test Lab scenario set-up (docs/TEST_LAB.md); never set in the real game
     this.state = state;
     this.rumble = false;
     this.audio.setListener?.(null);

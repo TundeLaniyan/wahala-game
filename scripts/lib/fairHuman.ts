@@ -655,7 +655,18 @@ export function playRaidFight(
     // foes within 6 WALKING steps (not Manhattan through a pillar: in a maze the closest enemy by straight line can be
     // on the far side of a wall, and fighting it there only lays generators the pillar stops)
     const steps = walkSteps(s, me.x, me.y, 6);
-    const foes = s.players.filter((p) => p.alive && p.enemyKind !== undefined && steps.has(p.y * w + p.x));
+    // with the exit open he heads out: he fights only an enemy hunting him (its "!" is on screen) or at arm's length,
+    // never a calm one at its post (decision CV1 left calm guards unaware of a player passing behind them)
+    const leaving = s.raid!.extraction.open;
+    const foes = s.players.filter(
+      (p) =>
+        p.alive &&
+        p.enemyKind !== undefined &&
+        steps.has(p.y * w + p.x) &&
+        (!leaving ||
+          steps.get(p.y * w + p.x)! <= 1 ||
+          ['alert', 'pursue'].includes(s.territory?.minds[p.id]?.state ?? 'pursue')),
+    );
     let targets = foes.map((p) => p.y * w + p.x);
     let goal: number | null = null;
     if (targets.length === 0 && me.alive) {

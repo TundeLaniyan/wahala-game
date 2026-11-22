@@ -1,5 +1,7 @@
 # Founder QA entry (temporary)
 
+> Superseded and removed: the `?qaraid=` Home button, `qaEntry.ts` and `commands.qaStartRaid` are gone (decision TL1); use `?testlab=1` (docs/TEST_LAB.md). The controller's no-save raid path remains.
+
 Decision RI3. Added for the release that integrates the Classic raid AI / night lighting with the 18-character roster, so
 the founder can test the Records Vault night raid on a phone without replaying the campaign to Lagos Island.
 

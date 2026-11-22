@@ -110,15 +110,24 @@ export function inViewCone(
   observer: Readonly<Pick<Player, 'x' | 'y' | 'facing'>>,
   tx: number,
   ty: number,
+  ring: NearRing = 'all',
 ): boolean {
   const dx = tx - observer.x;
   const dy = ty - observer.y;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) <= 1) return true;
   const v = DIR_VEC[observer.facing];
   const forward = dx * v.dx + dy * v.dy;
   const lateral = Math.abs(dx * v.dy - dy * v.dx);
+  if (Math.max(Math.abs(dx), Math.abs(dy)) <= 1) {
+    // decision CV1 (Classic raids): a calm guard does not see what is right behind it ('frontSides': the three tiles
+    // behind are blind; 'front': only the three tiles ahead count); everywhere else all eight tiles are in view
+    if (ring === 'all') return true;
+    return ring === 'front' ? forward > 0 : forward >= 0;
+  }
   return forward > 0 && forward >= lateral;
 }
+
+/** Which of the eight tiles round a calm watcher it sees (decision CV1): all, all but the three behind, the three ahead. */
+export type NearRing = 'all' | 'frontSides' | 'front';
 
 /**
  * THE ENEMY'S SIGHT OF A PERSON (decisions SA6, RA7): the one rule the territorial state machine uses to notice the
@@ -134,8 +143,8 @@ export function enemySeesPerson(
   view: SightView,
   observer: Readonly<Player>,
   target: Readonly<Player>,
-  o: { range: number; calm: boolean },
+  o: { range: number; calm: boolean; ring?: NearRing },
 ): boolean {
-  if (o.calm && !inViewCone(observer, target.x, target.y)) return false;
+  if (o.calm && !inViewCone(observer, target.x, target.y, o.ring)) return false;
   return canSeePlayer(view, observer, target, o.range);
 }

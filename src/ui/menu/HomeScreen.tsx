@@ -5,9 +5,8 @@
  * City Rumble, the arena and rules) is one tap further, on Choose How to Play.
  */
 import { campaignProgress } from '../../campaign';
-import { qaRaidEntry } from '../../app/qaEntry';
 import { flags } from '../../platform';
-import { CHARACTERS, CHARACTER_IDS, RAID_DEFS } from '../../sim';
+import { CHARACTERS, CHARACTER_IDS } from '../../sim';
 import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
 import { storyInProgress } from '../campaign/currentMission';
@@ -28,7 +27,6 @@ export function HomeScreen() {
   const showCampaign = flags().campaign && !!campaign;
   const progress = campaign?.started ? campaignProgress(campaign.save) : null;
   const inProgress = !!campaign?.started && storyInProgress(campaign.save);
-  const qa = qaRaidEntry();
   return (
     <section className="mn-screen mn-screen-home" data-testid="menu-home">
       <div className="mn-home-heroes" aria-hidden>
@@ -79,18 +77,6 @@ export function HomeScreen() {
           >
             <b>{HOME_COPY.learn.title}</b>
           </button>
-          {qa && showCampaign && (
-            // TEMPORARY founder QA entry (?qaraid=, docs/QA_ENTRY.md): one raid on its own, nothing saved
-            <button
-              type="button"
-              className="mn-home-second qa"
-              data-testid="home-qa-raid"
-              onClick={() => commands.qaStartRaid()}
-            >
-              <b>QA TEST: {RAID_DEFS[qa.raidId].name}</b>
-              <small>{qa.level ? `${qa.level} · ` : ''}test entry · progress is not saved</small>
-            </button>
-          )}
           {flags().online && (
             <button
               type="button"
