@@ -43,7 +43,7 @@ test('Sudden Death: the card goes when play resumes, the clock announces then fo
   test.setTimeout(600_000); // software WebGL on a busy shared machine
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await open(page, '&nobots');
+  await open(page, '&nobots&sdhold'); // the sim is frozen and stepped by hand: the banner's own safety nets stay off
   await toRumbleSetup(page, 'survival');
   await page.getByTestId('rumble-8').click();
   await startMatch(page, { game: 'rumble' });
@@ -137,5 +137,60 @@ test('Sudden Death: the card goes when play resumes, the clock announces then fo
   await step(page, 1);
   const after = await sim(page);
   expect(after.x !== before.x || after.y !== before.y, 'the fighter moved with the chip up').toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Sudden Death: the card is not over the arena and the banner times out on its own when the clock stalls (SU1)', async ({
+  page,
+}) => {
+  test.setTimeout(600_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await open(page, '&nobots&sdcap=20000'); // a long cap: the software renderer here is slow, the check is that it ends at all
+  await toRumbleSetup(page, 'survival');
+  await page.getByTestId('rumble-8').click();
+  await startMatch(page, { game: 'rumble' });
+  await mutate(
+    page,
+    `s.crush = null;
+     s.endgameTraps = { waves: [], liveAt: [], warned: 0, live: 0, warnings: [] };
+     s.players.forEach((p, i) => { if (i > 1) { p.alive = false; p.eliminatedTick = s.tick; p.elimination = { kind: 'crush', eventId: 0 }; } });
+     s.players[0].stats.kills = 2; s.players[1].stats.kills = 2;
+     s.players[0].protectedUntil = 0; s.players[1].protectedUntil = 0;
+     s.match.playTicks = s.config.match.durationTicks - 2;`,
+  );
+  await step(page, 4);
+
+  // the card sits in the rail beside the board: it does not cover the middle of the screen (where the fight is)
+  const card = page.getByTestId('sudden-death-card');
+  await expect(card).toBeVisible();
+  // measured in one go: nothing waits between the card appearing and its box being read
+  const { box, vp } = await page.evaluate(() => {
+    const r = document.querySelector('[data-testid="sudden-death-card"]')!.getBoundingClientRect();
+    return {
+      box: { x: r.x, y: r.y, width: r.width, height: r.height },
+      vp: { width: window.innerWidth, height: window.innerHeight },
+    };
+  });
+  const centre = { x: vp.width / 2, y: vp.height / 2 };
+  expect(
+    box.x <= centre.x && centre.x <= box.x + box.width && box.y <= centre.y && centre.y <= box.y + box.height,
+    'the card is not over the arena centre',
+  ).toBe(false);
+  expect(box.width, 'a compact card').toBeLessThan(vp.width * 0.4);
+
+  // the simulation clock stalls (nothing steps it): the card still goes on its own, within a few seconds
+  expect((await sim(page)).stage).toBe('transition');
+  await expect(card).toHaveCount(0, { timeout: 60_000 });
+  expect((await sim(page)).stage, 'the sim is still holding input: only the banner went').toBe('transition');
+
+  // the same for the full blast announcement: it folds into the chip although no tick arrives
+  const end = await page.evaluate(
+    () => (window as any).__WAHALA__.getState().match.suddenDeath.transitionEndTick,
+  );
+  await step(page, end - (await sim(page)).tick + 1);
+  const clock = page.getByTestId('sudden-death-clock');
+  await expect(clock).toBeVisible();
+  await expect(clock).toHaveAttribute('data-mode', 'compact', { timeout: 60_000 });
   expect(errors).toEqual([]);
 });

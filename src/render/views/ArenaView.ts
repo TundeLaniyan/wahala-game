@@ -12,7 +12,7 @@ import {
 } from 'three';
 import type { BufferGeometry, Material, Texture } from 'three';
 import { arenaLook } from '../arenaLook';
-import type { GameState } from '../../sim';
+import type { GameState, Player } from '../../sim';
 import { Tile } from '../../sim';
 import { modelledPillars, pillarParts, softBlockParts, softVariantFor, softVariants } from '../assets/props';
 import type { SoftVariant } from '../assets/props';
@@ -22,7 +22,17 @@ import { contactShadowTexture, isSharedTexture } from '../textures';
 import { obstacleStyle, pillarIndexFor, resolvePillars } from '../assets/obstacleStyles';
 import { assets } from '../assets/library';
 import type { ObstacleStyle } from '../assets/obstacleStyles';
-import { MAX_HIDE, VIEW_HIDE, occludingTiles } from '../assets/occlusionFade';
+import { MAX_HIDE, occludingTiles } from '../assets/occlusionFade';
+import {
+  OCCLUSION_LOOK,
+  ease,
+  footprintDistance,
+  hideFor,
+  isPushing,
+  outlineStrength,
+  proximity,
+  stackedHide,
+} from '../assets/occlusionFootprint';
 import {
   PILLAR_HEIGHT,
   SOFT_HEIGHT,
@@ -38,19 +48,17 @@ import { playerGridPos } from './motion';
 import { arenaFloorMaps } from '../arenas/floors';
 import { installPaving } from '../arenas/paving/material';
 import { mergeCovers } from '../arenas/boardCover';
-import type { BoardCover, CoverClip } from '../arenas/boardCover';
+import type { BoardCover, CoverBounds, CoverClip } from '../arenas/boardCover';
 import { inClip, renderClip } from '../sectorClip';
 import { buildSectorBarricades } from './SectorBarricades';
 import type { SectorBarricades } from './SectorBarricades';
 import { NEW_ARENA_ART } from '../arenas/newArenas';
 import { InstanceSet } from './InstanceSet';
+import { OcclusionFootprints } from './OcclusionFootprints';
+import type { FootprintEntry } from './OcclusionFootprints';
 import type { FrameContext, View } from './types';
 
 const DROP_TIME = 0.28;
-/** Seconds for an obstacle to dissolve / come back when something stands behind it. */
-const HIDE_TAU = 0.12;
-/** Seconds to become solid again once nothing stands in front (the view must not stay dotted after the fighter steps clear). */
-const HIDE_RELEASE_TAU = 0.05;
 
 /** Slight deterministic yaw of the breakable on a tile (radians); the supply marks follow it. */
 export const softTilt = (x: number, y: number): number => ((x * 31 + y * 17) % 5) * 0.03 - 0.06;
@@ -124,6 +132,12 @@ export class ArenaView implements View {
   private rayFrame = 0;
   /** Tests in a row each faded tile has missed (debounce of the release, `holdMisses`). */
   private readonly rayMiss = new Map<number, number>();
+  /** Faded structures' blocked tiles drawn on the ground (decisions OX1-OX6); budget = `QualityProfile.occlusionFootprints`. */
+  private readonly footprints: OcclusionFootprints;
+  /** The fade group (and so the footprint) each covered tile belongs to. */
+  private readonly groupAt = new Map<number, CoverBounds>();
+  /** Eased footprint strength (0 .. 1) and last distance to the fighter per faded structure (its representative tile). */
+  private readonly outline = new Map<number, { strength: number; distance: number }>();
   private readonly ownedMaterials: Material[] = [];
   private readonly ownedTextures: Texture[] = [];
   private readonly ownedGeometries: BufferGeometry[] = [];
@@ -208,7 +222,12 @@ export class ArenaView implements View {
         clip ? { width: W, height: H, clip } : { width: W, height: H },
       ) ?? null;
     this.cover = mergeCovers(arenaCover, this.barricades?.cover);
-    if (this.cover) this.group.add(this.cover.object);
+    if (this.cover) {
+      this.group.add(this.cover.object);
+      for (const b of this.cover.bounds) for (const t of b.tiles) this.groupAt.set(t, b);
+    }
+    this.footprints = new OcclusionFootprints(this.layout, W);
+    this.group.add(this.footprints.group);
     // field equipment (destroyTargets legs) stands on soft tiles but is drawn by its own view, never as a crate
     this.equipment = new Set((state.mission?.field?.targets ?? []).map((t) => t.y * W + t.x));
     for (const v of this.variants) {
@@ -325,14 +344,39 @@ export class ArenaView implements View {
       }
     this.viewClearTiles(ctx);
     for (const i of this.rayWant) want.add(i);
-    const kIn = 1 - Math.exp(-Math.max(0, dt) / HIDE_TAU);
-    const kOut = 1 - Math.exp(-Math.max(0, dt) / HIDE_RELEASE_TAU);
+    // Readability of what fades because it hides the followed fighter (assets/occlusionFootprint.ts): its dither cap
+    // and the footprint drawn on the ground depend on how close the fighter is and whether it pushes at the structure.
+    const fighter = this.followedFighter(ctx);
+    const fade = new Map<number, { cap: number; prox: number; pushing: boolean; distance: number }>();
+    if (fighter) {
+      const at = playerGridPos(fighter, ctx.alpha);
+      const settled = fighter.stepRemaining <= 0;
+      for (const rep of this.rayWant) {
+        const tiles = this.footprintOf(rep);
+        const distance = footprintDistance(tiles, state.width, at.x, at.y);
+        const pushing = isPushing(tiles, state.width, fighter.x, fighter.y, fighter.facing, settled);
+        const prox = pushing ? 1 : proximity(distance);
+        fade.set(rep, { cap: hideFor(prox), prox, pushing, distance });
+      }
+      // several buildings fading at once: the nearest to the fighter keeps its full cap, the ones behind it a little less
+      // (breakable crates are not ranked: they are low and never push a building's cap down)
+      [...fade.entries()]
+        .filter(([rep]) => this.cache[rep] === Tile.Hard)
+        .sort((a, b) => a[1].distance - b[1].distance)
+        .forEach(([, f], rank) => {
+          f.cap = stackedHide(f.cap, rank);
+        });
+    } else
+      for (const rep of this.rayWant)
+        fade.set(rep, { cap: OCCLUSION_LOOK.farHide, prox: 0, pushing: false, distance: Infinity });
     for (const i of want) if (!this.hideOf.has(i)) this.hideOf.set(i, 0);
     for (const [i, cur] of this.hideOf) {
-      // what hides the fighter or the floor around it dissolves further than a pillar that merely stands in front
-      const target = this.rayWant.has(i) ? VIEW_HIDE : want.has(i) ? MAX_HIDE : 0;
-      const k = target > cur ? kIn : kOut;
-      const next = Math.abs(target - cur) < 0.01 ? target : cur + (target - cur) * k;
+      // what hides the fighter or the floor around it dissolves further than a pillar that merely stands in front;
+      // every tile of a faded building follows the building's own cap (not the pillar rule of the tile in front of a player)
+      const rep = this.groupAt.get(i)?.tile ?? i;
+      const f = fade.get(rep);
+      const target = f ? f.cap : want.has(i) ? MAX_HIDE : 0;
+      const next = ease(cur, target, dt);
       const x = i % state.width;
       const y = Math.floor(i / state.width);
       const kind = this.cache[i];
@@ -342,7 +386,71 @@ export class ArenaView implements View {
       if (next === 0 && target === 0) this.hideOf.delete(i);
       else this.hideOf.set(i, next);
     }
+    this.updateFootprints(fade, dt);
     cover?.commit();
+  }
+
+  /** The fighter the camera follows (the local human, or the spectated one), or undefined while nobody is alive to follow. */
+  private followedFighter(ctx: FrameContext): Player | undefined {
+    const { state, info } = ctx;
+    const id = state.players.some((p) => p.id === info.localPlayerId && p.alive)
+      ? info.localPlayerId
+      : (info.focusPlayerId ?? -1);
+    return state.players.find((p) => p.id === id && p.alive);
+  }
+
+  /** The tiles a faded structure blocks: its whole fade group (a building), or the one tile of a pillar. */
+  private footprintOf(rep: number): readonly number[] {
+    return this.groupAt.get(rep)?.tiles ?? [rep];
+  }
+
+  /**
+   * Draws the footprints of the structures fading because they hide the followed fighter. The strength eases in and
+   * out on its own clock (`ease`), follows proximity and pushing, and is 0 for anything not in the view-clear set (a
+   * pillar that merely stands in front of someone gets no outline). Breakable crates get none: they are low and keep
+   * a solid foot.
+   */
+  private updateFootprints(
+    fade: ReadonlyMap<number, { prox: number; pushing: boolean; distance: number }>,
+    dt: number,
+  ): void {
+    for (const [rep, f] of fade) {
+      if (this.cache[rep] !== Tile.Hard) continue;
+      const target = outlineStrength(OCCLUSION_LOOK.farHide, f.prox, f.pushing);
+      const cur = this.outline.get(rep);
+      this.outline.set(rep, {
+        strength: ease(cur?.strength ?? 0, target, dt),
+        distance: f.distance,
+      });
+    }
+    const entries: FootprintEntry[] = [];
+    for (const [rep, cur] of this.outline) {
+      if (!fade.has(rep)) {
+        const strength = ease(cur.strength, 0, dt);
+        if (strength === 0) {
+          this.outline.delete(rep);
+          continue;
+        }
+        cur.strength = strength;
+      }
+      entries.push({
+        key: rep,
+        tiles: this.footprintOf(rep),
+        strength: cur.strength,
+        distance: cur.distance,
+      });
+    }
+    this.footprints.update(entries);
+  }
+
+  /** Quality (live): how many faded structures get their footprint drawn at once. */
+  setFootprintBudget(n: number): void {
+    this.footprints.setBudget(n);
+  }
+
+  /** Debug / e2e: the footprints on the ground now (structure tiles and strength), strongest first. */
+  footprintStatus(): { drawn: number; tracked: number } {
+    return { drawn: this.footprints.visibleCount(), tracked: this.outline.size };
   }
 
   /** Quality: the view-clear test runs every `stride` frames (1 = every frame). It is never switched off. */
@@ -358,9 +466,14 @@ export class ArenaView implements View {
     points: number;
     fading: number;
     wanted: number[];
+    /** Highest dither (0 .. 1) of a structure the view-clear test wants faded, and the footprints on the ground. */
+    hide: number;
+    footprints: { drawn: number; tracked: number };
   } {
     let fading = 0;
     for (const v of this.hideOf.values()) if (v > 0.3) fading++;
+    let hide = 0;
+    for (const t of this.rayWant) hide = Math.max(hide, this.hideOf.get(t) ?? 0);
     return {
       stride: this.viewStride,
       groups: this.rayBoxes.size,
@@ -368,6 +481,8 @@ export class ArenaView implements View {
       points: this.lastPoints,
       fading,
       wanted: [...this.rayWant],
+      hide,
+      footprints: this.footprintStatus(),
     };
   }
 
@@ -381,11 +496,8 @@ export class ArenaView implements View {
     const cam = ctx.camera;
     if (!cam) return;
     if (this.rayFrame++ % this.viewStride !== 0) return;
-    const { state, layout, info } = ctx;
-    const id = state.players.some((p) => p.id === info.localPlayerId && p.alive)
-      ? info.localPlayerId
-      : (info.focusPlayerId ?? -1);
-    const me = state.players.find((p) => p.id === id && p.alive);
+    const { state, layout } = ctx;
+    const me = this.followedFighter(ctx);
     const prev = new Set(this.rayWant);
     this.rayWant.clear();
     if (!me) {
@@ -521,6 +633,7 @@ export class ArenaView implements View {
     for (const s of this.soft.values()) s.dispose();
     this.contact.dispose();
     this.cover?.dispose();
+    this.footprints.dispose();
     for (const m of this.ownedMaterials) m.dispose();
     for (const t of this.ownedTextures) t.dispose();
     for (const g of this.ownedGeometries) g.dispose();

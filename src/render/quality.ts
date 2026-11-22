@@ -74,6 +74,12 @@ export interface QualityProfile {
    * box checks; a slow device renders so few frames that a stride of 2 is still well under a second. LIVE.
    */
   viewClearStride: number;
+  /**
+   * Footprints drawn at once for faded structures (render/views/OcclusionFootprints.ts: the blocked tiles of a building
+   * that dissolves because it hides the fighter, drawn on the ground, decisions OX1-OX6). Each is at most three small
+   * transparent draws; the nearest to the fighter are kept. Never 0: the fade must not lie about what still blocks. LIVE.
+   */
+  occlusionFootprints: number;
 }
 
 interface Rung extends Omit<QualityProfile, 'rung'> {
@@ -102,6 +108,7 @@ const RUNGS: readonly Rung[] = [
     ambient: 0.15,
     animationStride: 3,
     viewClearStride: 2,
+    occlusionFootprints: 2,
   },
   {
     name: 'Very Low+',
@@ -118,6 +125,7 @@ const RUNGS: readonly Rung[] = [
     ambient: 0.25,
     animationStride: 3,
     viewClearStride: 2,
+    occlusionFootprints: 2,
   },
   {
     name: 'Low',
@@ -135,6 +143,7 @@ const RUNGS: readonly Rung[] = [
     ambient: 0.35,
     animationStride: 2,
     viewClearStride: 2,
+    occlusionFootprints: 3,
   },
   {
     name: 'Low+',
@@ -151,6 +160,7 @@ const RUNGS: readonly Rung[] = [
     ambient: 0.45,
     animationStride: 2,
     viewClearStride: 2,
+    occlusionFootprints: 3,
   },
   {
     name: 'Medium-Low',
@@ -168,6 +178,7 @@ const RUNGS: readonly Rung[] = [
     ambient: 0.55,
     animationStride: 2,
     viewClearStride: 1,
+    occlusionFootprints: 4,
   },
   {
     name: 'Medium',
@@ -185,6 +196,7 @@ const RUNGS: readonly Rung[] = [
     ambient: 0.7,
     animationStride: 1,
     viewClearStride: 1,
+    occlusionFootprints: 5,
   },
   {
     name: 'Medium-High',
@@ -202,6 +214,7 @@ const RUNGS: readonly Rung[] = [
     ambient: 0.85,
     animationStride: 1,
     viewClearStride: 1,
+    occlusionFootprints: 6,
   },
   {
     name: 'High',
@@ -219,6 +232,7 @@ const RUNGS: readonly Rung[] = [
     ambient: 1,
     animationStride: 1,
     viewClearStride: 1,
+    occlusionFootprints: 8,
   },
 ];
 

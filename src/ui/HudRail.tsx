@@ -18,7 +18,7 @@ import type { RouteCue } from '../app/routeGuide';
 import { RuleBanner, StageAlerts } from './StageAlerts';
 import { StreakStatus } from './StreakStatus';
 import { StreakIcon } from './streakIcons';
-import { SuddenDeathClock } from './SuddenDeath';
+import { SuddenDeathCard, SuddenDeathClock } from './SuddenDeath';
 import './HudRail.css';
 
 export interface HudRailProps {
@@ -181,6 +181,7 @@ export function HudRail({
               : undefined
         }
       >
+        {suddenDeath && <SuddenDeathCard sd={suddenDeath} />}
         {!rumble && suddenDeath && <SuddenDeathClock sd={suddenDeath} />}
         {ruleBanner && <RuleBanner text={ruleBanner} />}
         <StageAlerts alerts={alerts} />

@@ -1,80 +1,80 @@
 /* Rumble sudden death: the title card (held input) and the blast clock. Display only; no rules here. */
+/*
+ * The title card (decision SU1): a compact card in the HUD rail beside the board. It used to be a full-screen scrim with a
+ * large panel across the middle of the arena, which stayed up whenever the simulation clock stalled. It is display
+ * only (no input), clipped to the rail's width, and the component ends it on its own clock as well.
+ */
 .sd-card {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
-    max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-  background: radial-gradient(ellipse at center, rgba(40, 0, 0, 0.55), rgba(0, 0, 0, 0.78));
+  align-self: stretch;
+  max-width: 100%;
   pointer-events: none;
-  z-index: 30;
-  animation: sd-in 0.35s ease-out;
+  animation: sd-in 0.2s ease-out;
 }
 .sd-inner {
-  max-width: min(560px, 94vw);
-  max-height: 100%;
-  overflow: hidden;
-  padding: 14px 24px 16px;
-  text-align: center;
+  padding: 5px 9px 6px;
   background:
-    repeating-linear-gradient(-45deg, #ffc61a 0 14px, #1c1a17 14px 28px) top / 100% 7px no-repeat,
-    repeating-linear-gradient(-45deg, #ffc61a 0 14px, #1c1a17 14px 28px) bottom / 100% 7px no-repeat,
-    rgba(12, 10, 8, 0.96);
-  border-left: 4px solid #ff3b1f;
-  border-right: 4px solid #ff3b1f;
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.7);
+    repeating-linear-gradient(-45deg, #ffc61a 0 8px, #1c1a17 8px 16px) top / 100% 4px no-repeat,
+    rgba(12, 10, 8, 0.92);
+  border-left: 3px solid #ff3b1f;
 }
 .sd-inner small {
   display: block;
-  margin-top: 8px;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  margin-top: 2px;
+  font-size: 0.66rem;
+  line-height: 1.15;
+  letter-spacing: 0.03em;
   color: #e9dcc4;
 }
 .sd-inner h2 {
-  margin: 4px 0 8px;
+  margin: 3px 0 0;
   font-family: var(--display);
-  font-size: clamp(2rem, 8vw, 3.6rem);
+  font-size: clamp(0.95rem, 3.4vh, 1.3rem);
+  font-weight: 400;
   line-height: 1;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: #ff3b1f;
-  text-shadow: 0 3px 0 #000;
 }
 .sd-inner ul {
   list-style: none;
-  margin: 0 0 8px;
+  margin: 4px 0 2px;
   padding: 0;
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 .sd-inner li {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
   align-items: baseline;
-  padding: 4px 10px;
+  padding: 1px 5px;
   background: rgba(255, 255, 255, 0.06);
   text-align: left;
-  font-size: 0.9rem;
+  font-size: 0.7rem;
 }
 .sd-inner li.mine {
-  outline: 2px solid var(--gold);
+  outline: 1px solid var(--gold);
 }
-.sd-inner li span {
+.sd-inner li.more {
+  justify-content: flex-start;
   color: #bfb49d;
-  font-size: 0.78rem;
 }
 .sd-inner li em {
   font-style: normal;
   font-weight: 700;
   color: var(--gold);
+  white-space: nowrap;
 }
 .sd-inner p {
-  margin: 0 0 6px;
-  font-size: 0.78rem;
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.2;
   color: #e9dcc4;
+}
+/* a phone held sideways: the rail is short, so the card keeps the title, the tie and who is in it (the rule is in the clock) */
+@media (max-height: 480px) {
+  .sd-inner p {
+    display: none;
+  }
 }
 .sd-clock {
   display: flex;
@@ -111,7 +111,6 @@
 @keyframes sd-in {
   from {
     opacity: 0;
-    transform: scale(1.06);
   }
 }
 @keyframes sd-pulse {
@@ -134,23 +133,6 @@
     opacity: 0.25;
   }
 }
-@media (max-height: 480px) {
-  .sd-inner {
-    padding: 8px 16px 10px;
-  }
-  .sd-inner h2 {
-    font-size: 2rem;
-    margin: 2px 0 4px;
-  }
-  .sd-inner li {
-    padding: 2px 8px;
-    font-size: 0.8rem;
-  }
-  .sd-inner p {
-    display: none;
-  }
-}
-
 .sd-rank {
   flex-basis: 100%;
   display: flex;

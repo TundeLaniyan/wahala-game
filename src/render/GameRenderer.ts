@@ -589,6 +589,7 @@ export class GameRenderer {
       });
     }
     this.arena.setViewClearStride(p.viewClearStride);
+    this.arena.setFootprintBudget(p.occlusionFootprints);
     this.effects.setQuality(p);
     this.backdrop.setQuality(p);
     this.living?.setProfile(p);

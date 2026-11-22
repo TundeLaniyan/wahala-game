@@ -10,14 +10,17 @@
  * geometry drawn with a fadeable material must carry it (InstanceSet adds it when asked to).
  */
 import type { Material } from 'three';
+import { OCCLUSION_LOOK } from './occlusionFootprint';
 
 /** Max fraction of pixels removed (the rest keeps the obstacle's shape readable). */
 export const MAX_HIDE = 0.72;
 /**
- * Dissolve of an object that hides the followed fighter or the floor around it (assets/viewClear.ts): clearly more
- * transparent than the pillar rule, so the fighter reads through it at phone resolution; the rest keeps its outline.
+ * Dissolve cap of an object that hides the followed fighter or the floor around it (assets/viewClear.ts): more
+ * transparent than the pillar rule so the fighter reads through it, but restrained (decision OX1: it was 0.88, which
+ * left a building as good as invisible while it still blocked). It is the far value; `occlusionFootprint.ts` lowers
+ * it while the fighter is next to the structure or pushing at it, and draws the blocked tiles on the ground.
  */
-export const VIEW_HIDE = 0.88;
+export const VIEW_HIDE = OCCLUSION_LOOK.farHide;
 /** Heights (world units) over which the dissolve ramps in: the foot below stays solid. */
 const FOOT = [0.28, 0.7] as const;
 
