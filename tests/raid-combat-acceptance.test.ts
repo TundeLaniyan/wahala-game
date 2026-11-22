@@ -19,6 +19,7 @@ import type { CampaignLevel, GameState, Intents, SimEvent } from '../src/sim';
 import { RAID_ENEMY_ATTACKS } from '../src/sim/config';
 import { RouteLearner, playRaidAmbush } from '../scripts/lib/ambusher';
 import { raidWithBots, step } from '../scripts/lib/raidAi';
+import { rearAttempt } from '../scripts/raid-rear';
 import { explodeAt, knockOut, letWavesAppear, put } from './raid-helpers';
 
 const ORDINARY = new Set(['agbero', 'guard', 'thrower', 'heavy']);
@@ -348,4 +349,28 @@ describe('G. a player who creeps up behind a guard at its post can lay a generat
     expect(r.planted).toBe(true);
     expect(r.killed).toBe(false);
   });
+});
+
+/**
+ * H (decision CV8): in the REAL depot (all of wave 1 on its rounds) the rear approach to post guard C is never caught by
+ * C on the very tick it turns its shoulder to him: on Easy and Normal a player at its shoulder is SEEN (the usual
+ * reaction), not felt at once, so a late planter can still step away. Many timings: seeds x reaction x turns let pass.
+ */
+describe('H. a post guard turning its shoulder to a player behind it does not catch him that tick (decision CV8)', () => {
+  for (const level of ['easy', 'normal'] as CampaignLevel[])
+    it(`${level}: no rear attempt is noticed by the post guard; nearly all kill it`, () => {
+      let tried = 0;
+      let killed = 0;
+      for (const seed of [1, 2])
+        for (const react of [15, 45])
+          for (const skip of [0, 1]) {
+            const r = rearAttempt(level, seed, react, skip);
+            if (!r.window) continue;
+            tried++;
+            if (r.killed) killed++;
+            expect(r.noticed, `seed ${seed} react ${react} skip ${skip}`).toBeNull();
+          }
+      expect(tried).toBeGreaterThanOrEqual(6);
+      expect(killed / tried).toBeGreaterThanOrEqual(0.75);
+    });
 });

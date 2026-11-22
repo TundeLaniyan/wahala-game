@@ -258,7 +258,7 @@ describe('isolation', () => {
   });
 
   it(
-    'the lit raids play byte-for-byte as recorded (scripted full raid, every level; re-recorded for AM1-AM6 and CV1-CV7)',
+    'the lit raids play byte-for-byte as recorded (scripted full raid, every level; re-recorded for AM1-AM6, CV1-CV7 and CV8)',
     { timeout: 180_000 },
     () => {
       const out: Record<string, string> = {};
@@ -275,15 +275,15 @@ describe('isolation', () => {
           out[`${raidId}/${level}`] = `${hashOf(last)}/${r.outcome}`;
         }
       expect(out).toEqual({
-        'warehouseDispatchDepot/easy': '2324dde6:32301/completed',
-        'warehouseDispatchDepot/normal': '82991376:33610/completed',
-        'warehouseDispatchDepot/hard': 'e992f210:32690/completed',
-        'partsStoreroom/easy': 'd45c5b0b:27499/completed',
-        'partsStoreroom/normal': '2ca7f40a:27687/completed',
-        'partsStoreroom/hard': '833bac23:28095/completed',
-        'standbyPlant/easy': 'a5ded5c5:26878/completed',
-        'standbyPlant/normal': '90aa081c:27625/completed',
-        'standbyPlant/hard': 'd542d406:27268/completed',
+        'warehouseDispatchDepot/easy': '4682c4a3:32321/completed',
+        'warehouseDispatchDepot/normal': '78f368b1:33630/completed',
+        'warehouseDispatchDepot/hard': '5933b59b:32715/completed',
+        'partsStoreroom/easy': '2b91416:27519/completed',
+        'partsStoreroom/normal': '89a3abdf:27707/completed',
+        'partsStoreroom/hard': 'a65e024a:28120/completed',
+        'standbyPlant/easy': 'a4055e44:26898/completed',
+        'standbyPlant/normal': '8f6a8fc7:27645/completed',
+        'standbyPlant/hard': 'cec315f1:27293/completed',
       });
     },
   );

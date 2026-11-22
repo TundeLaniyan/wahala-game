@@ -453,6 +453,8 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
       m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil);
     // decision CV1: a Classic raid guard is blind right behind it (undefined everywhere else: all eight tiles)
     const ring = cfg.classicRaid?.nearRing;
+    // decision CV8: instant "too close" only in front of a calm guard on Easy / Normal (its shoulder is seen, not felt)
+    const closeRing = cfg.classicRaid?.closeRing;
     // a night raid (decisions NL10-NL13): a calm enemy sees only by its own torch light, and in the dark notices only at
     // contact; null everywhere else (no `config.nightSight`), so every other match is unchanged
     const night = h !== null && calmNow ? nightNotice(state, p, h) : null;
@@ -471,7 +473,7 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
       (night
         ? night.close
         : manhattan(p, h) <= cfg.awareness.closeTiles &&
-          (!ring || !calmNow || inViewCone(p, h.x, h.y, ring)));
+          (!closeRing || !calmNow || inViewCone(p, h.x, h.y, closeRing)));
     if (h && (sees || close)) {
       m.lastSeen = { x: h.x, y: h.y };
       m.lastSeenTick = T;
