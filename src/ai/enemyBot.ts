@@ -28,6 +28,7 @@ import {
   createRng,
   enemyMeleeTarget,
   chooseThrow,
+  inViewCone,
   nextFloat,
   variantOf,
 } from '../sim';
@@ -250,6 +251,9 @@ export class EnemyBot implements Bot {
       visionDelta: pers.visionDelta,
       reactScale: sense.reactScale * (brawling ? sense.enemyBrawlReactScale : 1),
       ...(calm ? { visionCap: sense.calmVisionTiles, calmCone: true } : {}),
+      // decisions CV1-CV2 (Classic raids): blind right behind it when calm; a laid generator is a quiet click
+      ...(calm && t.classicRaid ? { coneRing: t.classicRaid.trapRing } : {}),
+      ...(t.classicRaid ? { placeHearingTiles: t.classicRaid.placeHearingTiles } : {}),
       seesPlacement:
         sense.seesPlacement &&
         (!(me.attack !== null || obs.tick < me.rootedUntil) || sense.watchesWhileBrawling !== false) &&
@@ -317,6 +321,19 @@ export class EnemyBot implements Bot {
       const step = patrolStep(obs, d.x, d.y);
       if (step) intent.move = step;
     }
+    // decision CV5 (Classic raids): a generator it KNOWS is acted on at once. Standing in its cross it walks out by the
+    // shortest way (the planner could wait beside it to step out at the last moment, and a raid enemy still on the tile
+    // it is leaving is caught: decision CV3); outside every known cross it never steps into one
+    if (d) {
+      const me = obs.players[obs.selfId];
+      if (me && heededCross(obs, me.x, me.y)) {
+        const out = clearStep(obs);
+        if (out) intent.move = out;
+      } else if (me && intent.move) {
+        const v = DIR_VEC[intent.move];
+        if (heededCross(obs, me.x + v.dx, me.y + v.dy)) delete intent.move;
+      }
+    }
     // an enemy is not a generator player: scrub everything but movement
     delete intent.place;
     delete intent.placeHeld;
@@ -355,6 +372,11 @@ export class EnemyBot implements Bot {
 
     // 1. a rival next to me: punch (when the catalogue attack is ready; the sim applies the enemy's own cooldown)
     const melee = enemyMeleeTarget(obs, me);
+    // decision CV1 (Classic raids): a calm guard (on its rounds, at its post, walking back) only swings at someone it
+    // can see: a player who crept up right behind it is not felt (the territory's own notice uses the same ring)
+    const ring = obs.config.campaignTactics?.classicRaid?.nearRing;
+    if (melee && ring && obs.directive?.calm && !inViewCone(me, melee.target.x, melee.target.y, ring))
+      return intent;
     if (melee) {
       const kind = me.enemyKind ? obs.config.enemyAttacks.melee[me.enemyKind] : null;
       if (kind && attackReady(obs, me, kind.attack)) {
@@ -418,6 +440,52 @@ export function patrolStep(obs: Observation, x: number, y: number): Dir | null {
   const dir = first.get(goal);
   if (!dir) return null;
   return near(me.x + DIR_VEC[dir].dx, me.y + DIR_VEC[dir].dy) ? null : dir;
+}
+
+/** Decision CV5: is (x, y) in the cross of a generator this seat takes seriously (known: its real fuse is shown)? */
+function heededCross(obs: Observation, x: number, y: number): boolean {
+  return obs.generators.some(
+    (g) => g.timer < UNHEEDED_FUSE && g.mode !== 'disabled' && inCross(obs, g, x, y),
+  );
+}
+
+/**
+ * Decision CV5: the first step of the shortest walk (at most 6 steps, open floor, no generator, body or flame on the
+ * way, ties in the fixed `DIRS` order) to a tile outside every known generator's cross; null when it cannot step now
+ * or no such walk exists (then the planner decides). Pure.
+ */
+export function clearStep(obs: Observation): Dir | null {
+  const me = obs.players[obs.selfId];
+  if (!me || !me.alive || me.stepRemaining > 1 || obs.tick < me.rootedUntil || obs.tick < me.dazedUntil)
+    return null;
+  if (me.attack !== null) return null;
+  const w = obs.width;
+  const blocked = new Set<number>();
+  for (const g of obs.generators) blocked.add(g.y * w + g.x);
+  for (const p of obs.players) if (p.alive && p.id !== me.id) blocked.add(p.y * w + p.x);
+  for (const f of obs.flames) blocked.add(f.y * w + f.x);
+  const start = me.y * w + me.x;
+  const first = new Map<number, Dir>();
+  let frontier = [start];
+  const seen = new Set([start]);
+  for (let depth = 0; depth < 6 && frontier.length > 0; depth++) {
+    const next: number[] = [];
+    for (const u of frontier)
+      for (const dir of DIRS) {
+        const nx = (u % w) + DIR_VEC[dir].dx;
+        const ny = Math.floor(u / w) + DIR_VEC[dir].dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= obs.height) continue;
+        const v = ny * w + nx;
+        if (seen.has(v) || obs.tiles[v] !== Tile.Empty || blocked.has(v)) continue;
+        seen.add(v);
+        const f = u === start ? dir : first.get(u)!;
+        if (!heededCross(obs, nx, ny)) return f;
+        first.set(v, f);
+        next.push(v);
+      }
+    frontier = next;
+  }
+  return null;
 }
 
 /**

@@ -15,7 +15,7 @@
  */
 import { createBot } from '../../src/ai';
 import type { Bot } from '../../src/ai';
-import { buildRaidGame, campaignEnemyLevel, createGame, observe, tick } from '../../src/sim';
+import { DIR_VEC, buildRaidGame, campaignEnemyLevel, createGame, observe, tick } from '../../src/sim';
 import type { CampaignLevel, GameState, Generator, Intents, Player, RaidId } from '../../src/sim';
 import { raidDirectiveFor } from '../../src/sim/raid/directives';
 import { RAID_TUNING } from '../../src/sim/raid/tuning';
@@ -302,8 +302,10 @@ export function ambushDrill(
 }
 
 /**
- * SEEN: a generator appears on an open tile next to a calm first-wave enemy (not armoured), in its plain view (the
- * eight tiles round a seat are always in view), when a way out of its cross exists within 4 steps. Escaped = not hurt.
+ * SEEN: a generator appears on the open tile right in front of a calm first-wave enemy (not armoured), in its plain
+ * view, when a way out of its cross exists within 4 steps. Escaped = not hurt. (Before decision CV2 any of the four
+ * tiles round it counted, the eight round a seat being always in view; a calm raid guard is now blind behind it, and on
+ * Easy and Normal at its sides too, so only the tile ahead is a fair "in plain view".)
  */
 export function seenDrill(raidId: RaidId, level: CampaignLevel, seed: number): DrillResult {
   const out: DrillResult = { staged: 0, trapped: 0 };
@@ -312,20 +314,12 @@ export function seenDrill(raidId: RaidId, level: CampaignLevel, seed: number): D
   for (const e of s.players) {
     if (e.enemyKind === undefined || !e.alive || !calmOf(s, e.id) || ARMOURED.has(e.enemyKind)) continue;
     if (e.stepRemaining > 0) continue;
-    const spot = (
-      [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ] as const
-    )
-      .map(([dx, dy]) => ({ x: e.x + dx, y: e.y + dy }))
-      .find(
-        (t) =>
-          s.tiles[t.y * w + t.x] === Tile.Empty &&
-          !s.players.some((o) => o.alive && o.x === t.x && o.y === t.y),
-      );
+    const ahead = DIR_VEC[e.facing];
+    const spot = [{ x: e.x + ahead.dx, y: e.y + ahead.dy }].find(
+      (t) =>
+        s.tiles[t.y * w + t.x] === Tile.Empty &&
+        !s.players.some((o) => o.alive && o.x === t.x && o.y === t.y),
+    );
     if (!spot || !escapable(s, e.x, e.y, spot.x, spot.y)) continue;
     out.staged++;
     if (trapRun(raidId, level, seed, e.id, spot.x, spot.y)) out.trapped++;

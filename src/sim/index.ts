@@ -245,7 +245,7 @@ export type { EnemyMindViewState } from './systems/territory';
 export { isCalmMind, tacticsEnemyStepTicks } from './systems/enemyPace';
 export { tacticsPunchDamage, tacticsPunchFloor } from './systems/skills';
 export { tacticsBlastDamage } from './systems/lethality';
-export type { SightView } from './systems/sight';
+export type { NearRing, SightView } from './systems/sight';
 export {
   enemyAttackPhase,
   kindStepTicks,

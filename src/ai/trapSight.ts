@@ -22,6 +22,7 @@
  * exactly as under EF1.
  */
 import { bodyTiles, canSeeTile, inViewCone } from '../sim';
+import type { NearRing } from '../sim';
 import type { Dir, EnemyKind, Generator, Observation, Player, TacticalTrapConfig } from '../sim';
 
 /**
@@ -41,6 +42,10 @@ export interface SightTuning {
   /** Caps the vision radius and limits sight to the cone ahead (a calm stroller's attention, decision SA5). */
   visionCap?: number;
   calmCone?: boolean;
+  /** Decision CV1 (Classic raids): which of the eight tiles round it a calm seat sees (default all). */
+  coneRing?: NearRing;
+  /** Decision CV2 (Classic raids): how far the laying of a generator is heard (default the kind's `hearingTiles`). */
+  placeHearingTiles?: number;
   /** Generators of the seat's own team are known (boss-mission crews lay their own; enemies never hurt each other). */
   teamKnown?: boolean;
   /** It notices a generator being laid by a placer in its sight (trap sense; never through a wall or another body). */
@@ -141,7 +146,7 @@ export class TrapSight {
         if (
           g.ownerId !== me.id &&
           T - g.placedTick <= HEARD_WINDOW_TICKS &&
-          Math.abs(g.x - me.x) + Math.abs(g.y - me.y) <= per.hearingTiles
+          Math.abs(g.x - me.x) + Math.abs(g.y - me.y) <= (tune.placeHearingTiles ?? per.hearingTiles)
         ) {
           this.hear(g, me, cfg, T);
         }
@@ -167,7 +172,7 @@ export class TrapSight {
       let m = this.memory.get(g.id);
       trapSightStats.sightChecks++;
       if (
-        (!tune.calmCone || inViewCone(me, g.x, g.y)) &&
+        (!tune.calmCone || inViewCone(me, g.x, g.y, tune.coneRing)) &&
         canSeeTile(obs, me.x, me.y, g.x, g.y, per.visionTiles, bodies)
       ) {
         m = { x: g.x, y: g.y, firstSeen: m?.firstSeen ?? T, lastSeen: T };
@@ -197,7 +202,7 @@ export class TrapSight {
   ): boolean {
     const placer = obs.players[g.ownerId];
     if (!placer || !placer.alive || placer.id === me.id) return false;
-    if (tune.calmCone && !inViewCone(me, placer.x, placer.y)) return false;
+    if (tune.calmCone && !inViewCone(me, placer.x, placer.y, tune.coneRing)) return false;
     trapSightStats.bodyScans++;
     const bodies = new Set<number>();
     for (const p of obs.players)

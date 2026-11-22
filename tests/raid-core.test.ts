@@ -136,8 +136,11 @@ describe('raid rules', () => {
     const guard = state.raid!.seats[0]!.playerId;
     expect(raidDirectiveFor(state, guard)).toMatchObject({ kind: 'patrol', calm: true });
     expect(observe(state, guard).directive).toEqual(raidDirectiveFor(state, guard));
-    state.players[0]!.x = state.players[guard]!.x + 2;
-    state.players[0]!.y = state.players[guard]!.y;
+    // at arm's length in front of it (decision CV1: "too close" is one tile, in front or at its side, never behind)
+    const g = state.players[guard]!;
+    g.facing = 'right';
+    state.players[0]!.x = g.x + 1;
+    state.players[0]!.y = g.y;
     advance(state, 1);
     expect(state.territory!.minds[guard]!.state).toBe('alert');
     advance(state, state.config.campaignTactics!.awareness.alertTicks);
