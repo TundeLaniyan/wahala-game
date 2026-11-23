@@ -3,8 +3,6 @@
  * Current Rumble Settings", the chosen variant and the player-marker switch. Kept apart from `controller.ts` (which
  * imports the whole app session) so they can be unit-tested headlessly.
  */
-import { setPlayerMarkerMode } from '../render/playerMarker';
-import type { PlayerMarkerMode } from '../render/playerMarker';
 import { labPatch, useLab } from './labStore';
 import { realSettingsText } from './realSnapshot';
 import { realSettingsFrom, rumbleConfigOf, rumbleSummaryLine } from './rumbleSetup';
@@ -37,15 +35,3 @@ export function setVariant(entryId: string, variantId: string): void {
 export function rumbleFeedbackSetup(): string {
   return rumbleSummaryLine(useLab.getState().rumble);
 }
-
-export function setMarker(mode: PlayerMarkerMode): void {
-  setPlayerMarkerMode(mode);
-  labPatch({ marker: mode });
-}
-
-/** The styles the lab's switch offers, in the order the HUD button cycles them. */
-export const MARKER_MODES: readonly { mode: PlayerMarkerMode; label: string }[] = [
-  { mode: 'original', label: 'Original' },
-  { mode: 'indicator', label: 'Indicator' },
-  { mode: 'indicatorGround', label: 'Indicator + Ground' },
-];

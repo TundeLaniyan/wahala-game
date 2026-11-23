@@ -13,7 +13,6 @@ import { entryById } from '../../testlab/registry';
 import { useMenuNav } from '../menu/focusNav';
 import { SettingsPanel } from '../menu/SettingsScreen';
 import type { SettingsTab } from '../menu/SettingsScreen';
-import { MarkerSwitch } from './MarkerSwitch';
 import '../menu/menu.css';
 import '../menu/redesign.css';
 import './testlab.css';
@@ -133,7 +132,6 @@ export function TestLabPause() {
               {entry?.objective}
               {run && entry?.levels ? ` · ${LEVEL_LABEL[run.level]}` : ''}
             </p>
-            {run?.entryId === 'identifyPlayer' && <MarkerSwitch />}
           </aside>
           {confirm && (
             <div className="mn-confirm" role="alertdialog" aria-modal="true" data-testid="testlab-confirm">

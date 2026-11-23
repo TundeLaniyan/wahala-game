@@ -75,17 +75,20 @@ const enemiesAlive = (s: GameState): { id: number; kind: string }[] =>
   s.players.filter((p) => p.id > 0 && p.alive).map((p) => ({ id: p.id, kind: p.enemyKind ?? '' }));
 
 describe('the registry', () => {
-  it('has the seven tests requiring review in the founder’s order and the ten completed ones, unique ids, one-line objectives', () => {
+  it('has the five tests requiring review in the founder’s order and the fifteen completed ones, unique ids, one-line objectives', () => {
     expect(entriesOf('review').map((e) => e.id)).toEqual([
+      'suddenDeath',
+      'identifyPlayer',
+      'teamBlastFfOff',
+      'teamBlastFfOn',
+      'teamBlastOverlap',
+    ]);
+    expect(entriesOf('completed').map((e) => e.id)).toEqual([
       'cityRumble',
       'occludedBuildings',
-      'suddenDeath',
       'boss',
       'classicRearAmbush',
       'oneHit',
-      'identifyPlayer',
-    ]);
-    expect(entriesOf('completed').map((e) => e.id)).toEqual([
       'classicRaid',
       'recordsVault',
       'classicBlast',
@@ -97,7 +100,7 @@ describe('the registry', () => {
       'pursuit',
       'flashlight',
     ]);
-    expect(LAB_ENTRIES).toHaveLength(17);
+    expect(LAB_ENTRIES).toHaveLength(20);
     expect(new Set(LAB_ENTRIES.map((e) => e.id)).size).toBe(LAB_ENTRIES.length);
     for (const e of LAB_ENTRIES) {
       expect(e.title.length).toBeGreaterThan(2);

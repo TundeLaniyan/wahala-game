@@ -147,6 +147,8 @@ export interface SuddenDeathHud {
   }[];
   /** Seconds until the next blast (null while the title card shows or once the sequence is spent). */
   secondsToBlast: number | null;
+  /** Length in seconds of the countdown now running (the main timer's bar is the fraction of it left); null as above. */
+  countdownSeconds: number | null;
   /**
    * The countdown has just begun (the round's first, or the next one after a blast): the blast clock shows its full
    * announcement for `SUDDEN_DEATH_ANNOUNCE_TICKS`, then folds into a one-line chip so it never covers the fight
@@ -225,6 +227,7 @@ export function buildSuddenDeath(state: GameState, localId: number): SuddenDeath
         isLocal: p.id === localId,
       })),
     secondsToBlast: pending ? Math.max(0, Math.ceil(left / 60)) : null,
+    countdownSeconds: pending ? Math.max(1, Math.round((sd.nextBlastTick - countdownFrom) / 60)) : null,
     announce: pending && state.tick - countdownFrom < SUDDEN_DEATH_ANNOUNCE_TICKS,
     cardKey: sd.transitionEndTick,
     announceKey: countdownFrom,

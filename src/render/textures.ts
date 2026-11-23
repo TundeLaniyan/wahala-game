@@ -373,6 +373,83 @@ export function tileGlowTexture(): CanvasTexture {
   });
 }
 
+/**
+ * SAFE blast marking (decision TB2): a calm, steady tile with a DASHED outline and a small ring in the middle, drawn
+ * over a pale fill. Tinted emerald by the overlay; the dark under-outline keeps it readable on a bright floor. The
+ * shape (dashes + ring, no stripes, no pulse) tells it from a dangerous tile without relying on colour.
+ */
+export function safeBlastTexture(): CanvasTexture {
+  return cached('safeblast', () => {
+    const [c, g] = canvas(128, 128);
+    g.fillStyle = 'rgba(255,255,255,0.3)';
+    g.beginPath();
+    g.roundRect(10, 10, 108, 108, 18);
+    g.fill();
+    g.strokeStyle = 'rgba(0,0,0,0.55)';
+    g.lineWidth = 12;
+    g.beginPath();
+    g.roundRect(11, 11, 106, 106, 18);
+    g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,1)';
+    g.lineWidth = 5;
+    g.setLineDash([16, 11]);
+    g.beginPath();
+    g.roundRect(11, 11, 106, 106, 18);
+    g.stroke();
+    g.setLineDash([]);
+    g.strokeStyle = 'rgba(0,0,0,0.55)';
+    g.lineWidth = 11;
+    g.beginPath();
+    g.arc(64, 64, 15, 0, Math.PI * 2);
+    g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,1)';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.arc(64, 64, 15, 0, Math.PI * 2);
+    g.stroke();
+    return tex(c);
+  });
+}
+
+/**
+ * DANGEROUS blast hatch (decision TB2): diagonal hazard stripes over a dark tint with a solid heavy border, laid over
+ * the red danger glow of a team match. Stripes + solid border against the safe tile's dashes + ring: a different shape,
+ * not only a different colour.
+ */
+export function hazardHatchTexture(): CanvasTexture {
+  return cached('hazardhatch', () => {
+    const [c, g] = canvas(128, 128);
+    g.save();
+    g.beginPath();
+    g.roundRect(8, 8, 112, 112, 18);
+    g.clip();
+    g.fillStyle = 'rgba(0,0,0,0.3)';
+    g.fillRect(0, 0, 128, 128);
+    g.fillStyle = 'rgba(255,255,255,0.62)';
+    for (let x = -128; x < 256; x += 32) {
+      g.beginPath();
+      g.moveTo(x, 128);
+      g.lineTo(x + 16, 128);
+      g.lineTo(x + 16 + 128, 0);
+      g.lineTo(x + 128, 0);
+      g.closePath();
+      g.fill();
+    }
+    g.restore();
+    g.strokeStyle = 'rgba(0,0,0,0.7)';
+    g.lineWidth = 12;
+    g.beginPath();
+    g.roundRect(9, 9, 110, 110, 18);
+    g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,1)';
+    g.lineWidth = 6;
+    g.beginPath();
+    g.roundRect(9, 9, 110, 110, 18);
+    g.stroke();
+    return tex(c);
+  });
+}
+
 /** Soft square contact shadow (ambient-occlusion stand-in) laid under pillars and props. */
 export function contactShadowTexture(): CanvasTexture {
   return cached('contact', () => {

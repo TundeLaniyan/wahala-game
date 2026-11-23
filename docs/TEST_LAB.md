@@ -14,16 +14,29 @@ Restart and Return; Classic Blast and City Rumble use their real results with th
 level. **Exit Test Lab** reloads the normal game URL. Layout is for phone landscape: the page never scrolls, the lists scroll
 inside their columns, tap targets are at least 44 px, safe areas are kept.
 
-## Tests Requiring Review (decisions TL6-TL9)
+## Tests Requiring Review (decisions TB4, SDT1-SDT2, PM1)
+The five open checks of the final polish round, in the order to try them. Everything the founder already approved on a phone
+(City Rumble parity, occluded building visibility, the Easy boss, the Classic rear ambush, one-hit lethality) moved to
+Completed Tests; ids and stored feedback are unchanged.
+
 | # | Entry (id) | Launches | What to look for |
 | --- | --- | --- | --- |
-| 1 | City Rumble parity (`cityRumble`) | A real City Rumble through `commands.start` with the set-up on the card (below) | With **Use Current Rumble Settings** it should feel as hard as your normal match |
-| 2 | Occluded building visibility (`occludedBuildings`) | A real City Rumble on the Lekki stage (Free-for-All, 8 fighters, Rookie bots, follow camera), the arena whose buildings fade (`e2e/view-clear.spec.ts`) | A building covering you fades out and comes back solid when you step out |
-| 3 | Sudden Death banner and victory (`suddenDeath`) | The game's own Sudden Death test match (`commands.start('suddenDeathTest')`, decisions SD-T): a real City Rumble on Ojuelegba, you and two bots, straight into the sudden-death round | The SUDDEN DEATH banner and card, the blast clock, a clear victory or defeat screen |
-| 4 | Boss encounter (`boss`) | The Oshodi boss mission through the campaign controller (unlocked here, nothing saved); try Easy and Normal | His model and attacks, readable wind-ups, the crew, Easy kinder than Normal |
-| 5 | Classic rear ambush (`classicRearAmbush`) | The real first raid (Dispatch Depot), nothing prepared | A calm guard does not see or hear you behind it; one blast defeats it |
-| 6 | One-hit lethality (`oneHit`) | Depot, ONE enemy at the entrance post facing into the depot (pick Agbero, Guard or Thrower), you two steps behind it | One generator laid from behind kills it on Easy and Normal; Hard hears it by design |
-| 7 | Player-identification variants (`identifyPlayer`) | Depot, five enemies waking close around you; live marker switch | Original = chevron + "You" tag; Indicator = YOU plate; Indicator + Ground = plate + a ring on the floor |
+| 1 | Sudden Death presentation and timer (`suddenDeath`) | The game's own Sudden Death test match (`commands.start('suddenDeathTest')`): a real City Rumble on Ojuelegba, you and two bots, straight into the sudden-death round | The main timer reads SUDDEN DEATH with the blast countdown and the blast number; a short announcement appears in the side rail and goes by itself; nothing over the middle of the board; the winner stands in the victory pose |
+| 2 | Combined player marker (`identifyPlayer`) | Depot, five enemies waking close around you (no switch: Indicator + Ground is the standard) | The YOU plate follows you, the floor ring stays readable when crowded, neither hides a blast lane, one of each |
+| 3 | Team blast warnings, friendly fire OFF (`teamBlastFfOff`) | Team Blast scene (below) | A teammate's blast is emerald dashed tiles and does not hurt you; a rival's or your own is red with hazard stripes; in the chain wave the rival's link is red |
+| 4 | Team blast warnings, friendly fire ON (`teamBlastFfOn`) | The same scene with friendly fire ON | Nothing is emerald: the teammate's blast is red and striped, and hurts |
+| 5 | Team blast overlap and danger priority (`teamBlastOverlap`) | Overlapping and three-at-once waves, friendly fire OFF | A tile any dangerous blast reaches is red and striped; only teammate-only tiles are emerald |
+
+### Team Blast scene (TB4)
+A small REAL Team Rumble on the Lagos Island stage: you and the other seat of your team (the sim seats teams alternately, so
+that is seat 2) against two rivals. The match options are the normal game's (`buildMatchOptions`, team ruleset, friendly fire
+as named), the other seats stand still and lay generators with the real `place` intent every 9 s (a director feeding intents,
+as the Training Academy does), so each generator has its real owner, fuse, range, chain behaviour and damage; the stage's
+hazards and the crowd are switched off so only the blasts are in the picture. Lay your own with A (a dangerous blast for you).
+Waves repeat: teammate alone, rival alone, teammate and rival side by side, a chain (the teammate's generator sets the rival's
+off), and for the overlap entry three at once. A fallen fighter respawns as in any Team Rumble. The viewer-relative rules are
+in `docs/DECISIONS.md` (TB1-TB4); `tests/testlab/team-blast.test.ts` runs every wave through the real tick and checks the
+labels against real damage; `e2e/team-blast.spec.ts` checks what the real renderer draws.
 
 ### City Rumble set-up (TL6)
 The card holds the same choices a normal match reads: mode (Free-for-All, Team Deathmatch, Last Player Standing), stage (every
@@ -41,7 +54,7 @@ lab's launch and the normal menu's launch with the same settings and seed build 
 play identically for 240 ticks with the real bots.
 
 ## Completed Tests
-Launchable exactly as before: Classic Campaign Raid, Records Vault night raid, Classic Blast, Campaign field mission,
+Launchable exactly as before: City Rumble parity, Occluded building visibility, the Oshodi boss (Easy approved; Normal / Hard jammer-defence tuning is a separate design item), Classic rear ambush, One-hit lethality, Classic Campaign Raid, Records Vault night raid, Classic Blast, Campaign field mission,
 Characters and performance (Team Rumble, Lagos Island, 24 fighters, fighter picker, fps line) and the five isolated scenarios
 below (rear approach, patrol ambush, punch dodge, pursuit, flashlight). Level means the campaign level for raids, field and
 boss (enemy level, health, damage) and the bot level for Classic Blast and the Characters entry.
@@ -57,7 +70,7 @@ Each definition's `setup` lines are the whole preparation; outcomes are never sc
 | Punch warning and dodge | Depot, one guard waking adjacent to the player at (9,5), two free tiles to step to |
 | Pursuit and disengaging | Depot, 3 guards + 2 throwers (throwers start with the guards); player in the open east lane |
 | Flashlight and detection | Records Vault, night, one torch guard; player at the entrance in the dark |
-| Player-identification variants | Depot, 5 enemies waking on the 5 nearest open tiles (2+ steps) around the player at (11,7); marker switch Original / Indicator / Indicator + Ground (default Indicator) in the entry card, the pause menu and a HUD button |
+| Combined player marker | Depot, 5 enemies waking on the 5 nearest open tiles (2+ steps) around the player at (11,7); the combined Indicator + Ground marker is the game's standard (decision PM1), no switch |
 
 ### Why one-hit lethality is a post (TL9)
 A calm raid enemy sees nothing behind it (CV1) and does not hear a generator laid beside it on Easy and Normal (CV2); a

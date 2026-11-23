@@ -30,6 +30,7 @@ import { enterImmersiveMode } from './fullscreen';
 import { AttractController } from './AttractController';
 import { CampaignController } from './campaign';
 import { MatchController } from './MatchController';
+import type { ScenarioDirector } from './MatchController';
 import type { MatchVariant } from './names';
 import { TutorialController } from './TutorialController';
 import { advance, back, editScreen, menuAt, openScreen } from './menu';
@@ -756,6 +757,14 @@ export { input };
  */
 export function labCampaign(): CampaignController | null {
   return campaign;
+}
+
+/**
+ * TEMPORARY Test Lab (decision TB4): runs a prepared real match state under a director (the human plays seat 0, a script
+ * feeds the other seats' intents), exactly as the Training Academy does. Only `src/testlab/controller.ts` calls it.
+ */
+export function labRunScene(state: GameState, director: ScenarioDirector): void {
+  controller?.startScenario(state, director);
 }
 
 function setMenu(menu: MenuState): void {

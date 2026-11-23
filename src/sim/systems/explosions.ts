@@ -276,17 +276,26 @@ export function destroySoftBlocks(
   }
 }
 
+/** One generator of a predicted blast (the seed or a chain link) and the tiles ITS OWN flames cover. */
+export interface BlastPart {
+  gen: Generator;
+  tiles: Set<number>;
+}
+
 /**
- * Read-only prediction of every tile a generator's blast (including chain reactions it would
- * set off) will cover if it exploded right now. Used by the renderer to show danger lanes.
+ * Read-only prediction of a generator's blast split by the generator that burns each tile: the seed's own flames, then
+ * every chain reaction it would set off (each generator explodes once, its flames carry ITS owner - damage follows that
+ * owner, `queries.ts flameHarms`). The single traversal behind `previewBlast` and the viewer-relative blast warnings
+ * (`blastSafety.ts`), so what is drawn is exactly what burns.
  */
-export function previewBlast(state: GameState, gen: Generator): Set<number> {
-  const tiles = new Set<number>();
+export function previewBlastParts(state: GameState, gen: Generator): BlastPart[] {
+  const parts: BlastPart[] = [];
   const seen = new Set<number>([gen.id]);
   const queue: Generator[] = [gen];
   const scratch = new Map<number, number>();
   for (let head = 0; head < queue.length; head++) {
     const g = queue[head]!;
+    const tiles = new Set<number>();
     for (const flame of buildFlames(state, g, 0, scratch)) {
       tiles.add(tileIndex(state, flame.x, flame.y));
       for (const other of triggerableGeneratorsAt(state, flame.x, flame.y)) {
@@ -296,6 +305,17 @@ export function previewBlast(state: GameState, gen: Generator): Set<number> {
         }
       }
     }
+    parts.push({ gen: g, tiles });
   }
+  return parts;
+}
+
+/**
+ * Read-only prediction of every tile a generator's blast (including chain reactions it would
+ * set off) will cover if it exploded right now. Used by the renderer to show danger lanes.
+ */
+export function previewBlast(state: GameState, gen: Generator): Set<number> {
+  const tiles = new Set<number>();
+  for (const part of previewBlastParts(state, gen)) for (const t of part.tiles) tiles.add(t);
   return tiles;
 }

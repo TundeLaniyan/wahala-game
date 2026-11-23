@@ -35,6 +35,8 @@ export type LabLaunch =
   | { kind: 'rumbleConfigured' }
   /** The normal game's own temporary Sudden Death test match (a real City Rumble that starts in the sudden-death round). */
   | { kind: 'suddenDeath' }
+  /** A small real Team Rumble for the viewer-relative blast warnings (`teamBlast.ts`, decision TB4). */
+  | { kind: 'teamBlast'; variant: 'ffOff' | 'ffOn' | 'overlap' }
   /** A prepared raid (`scenarios/defs.ts`). */
   | { kind: 'scenario'; scenarioId: ScenarioId };
 
@@ -71,9 +73,77 @@ export interface LabEntry {
 export const LAB_ENTRIES: readonly LabEntry[] = [
   // ---------------------------------------------------------------- Tests Requiring Review (in this order)
   {
-    id: 'cityRumble',
+    id: 'suddenDeath',
     section: 'playtest',
     group: 'review',
+    title: 'Sudden Death presentation and timer',
+    objective: 'Play a City Rumble round that starts in Sudden Death, and win or lose it.',
+    lookFor:
+      'The main timer reads SUDDEN DEATH with the blast countdown and the blast number; a short announcement appears in the side rail and goes by itself; nothing sits over the middle of the board; the winner stands in the victory pose.',
+    launches:
+      'The game’s own Sudden Death test match: a real City Rumble on the Ojuelegba stage, you and two bots, straight into the sudden-death round.',
+    levels: false,
+    launch: { kind: 'suddenDeath' },
+  },
+  {
+    id: 'identifyPlayer',
+    section: 'scenario',
+    group: 'review',
+    title: 'Combined player marker (Indicator + Ground)',
+    objective:
+      'Find yourself among 5 enemies: the YOU plate over your head and the ring on the floor under you.',
+    lookFor:
+      'The plate follows you, the floor ring stays readable when enemies crowd you, neither hides a blast lane, and there is exactly one of each.',
+    launches:
+      'Depot, five enemies waking close around you. The combined marker is the game’s standard now: there is no switch.',
+    levels: true,
+    launch: { kind: 'scenario', scenarioId: 'identifyPlayer' },
+  },
+  {
+    id: 'teamBlastFfOff',
+    section: 'playtest',
+    group: 'review',
+    title: 'Team blast warnings, friendly fire OFF',
+    objective:
+      'Stand and move around the blasts: a teammate’s blast is safe for you, a rival’s and your own are dangerous.',
+    lookFor:
+      'A teammate’s blast: calm emerald dashed tiles. A rival’s blast or yours: red glow with hazard stripes. Walk into a teammate’s flames: you take no damage. The chain wave: the rival’s link is red even though the teammate lit it.',
+    launches:
+      'A small real Team Rumble on the Lagos Island stage (you, a teammate and two rivals, who stand still). The other seats lay generators with the real controls on a timer; lay your own with A.',
+    levels: false,
+    launch: { kind: 'teamBlast', variant: 'ffOff' },
+  },
+  {
+    id: 'teamBlastFfOn',
+    section: 'playtest',
+    group: 'review',
+    title: 'Team blast warnings, friendly fire ON',
+    objective: 'Same scene with friendly fire ON: every blast, the teammate’s too, is dangerous to you.',
+    lookFor:
+      'Nothing is emerald any more: the teammate’s blast is red with hazard stripes like a rival’s. Standing in it hurts.',
+    launches:
+      'A small real Team Rumble on the Lagos Island stage (you, a teammate and two rivals, who stand still). The other seats lay generators with the real controls on a timer; lay your own with A.',
+    levels: false,
+    launch: { kind: 'teamBlast', variant: 'ffOn' },
+  },
+  {
+    id: 'teamBlastOverlap',
+    section: 'playtest',
+    group: 'review',
+    title: 'Team blast overlap and danger priority',
+    objective: 'Watch where a teammate’s blast overlaps a rival’s: the shared tiles must never look safe.',
+    lookFor:
+      'Overlapping and three-at-once waves: any tile a dangerous blast reaches is red and striped, only tiles reached by the teammate alone are emerald. Friendly fire is OFF.',
+    launches:
+      'A small real Team Rumble on the Lagos Island stage (you, a teammate and two rivals, who stand still). The other seats lay generators with the real controls on a timer; lay your own with A.',
+    levels: false,
+    launch: { kind: 'teamBlast', variant: 'overlap' },
+  },
+  // ---------------------------------------------------------------- Completed Tests (approved; still launchable)
+  {
+    id: 'cityRumble',
+    section: 'playtest',
+    group: 'completed',
     title: 'City Rumble parity',
     objective:
       'Play a City Rumble with the same settings as your normal match and judge whether it feels the same.',
@@ -87,7 +157,7 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
   {
     id: 'occludedBuildings',
     section: 'playtest',
-    group: 'review',
+    group: 'completed',
     title: 'Occluded building visibility',
     objective: 'Walk under and behind the tall buildings of Lekki: the ones covering you should fade out.',
     lookFor:
@@ -104,24 +174,12 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
     },
   },
   {
-    id: 'suddenDeath',
-    section: 'playtest',
-    group: 'review',
-    title: 'Sudden Death banner and victory',
-    objective: 'Play a City Rumble round that starts in Sudden Death, and win or lose it.',
-    lookFor:
-      'The SUDDEN DEATH banner and card, the blast clock beside the board, and a clear victory or defeat screen when it ends.',
-    launches:
-      'The game’s own Sudden Death test match: a real City Rumble on the Ojuelegba stage, you and two bots, straight into the sudden-death round.',
-    levels: false,
-    launch: { kind: 'suddenDeath' },
-  },
-  {
     id: 'boss',
     section: 'playtest',
-    group: 'review',
+    group: 'completed',
     title: 'Boss encounter',
-    objective: 'Defeat the Oshodi boss on Easy, then on Normal.',
+    objective:
+      'Defeat the Oshodi boss on Easy, then on Normal. (Easy approved; Normal and Hard jammer-defence tuning is a separate design item.)',
     lookFor:
       'His model and attacks, how readable his wind-ups are, the crew around him, and whether Easy is clearly kinder than Normal.',
     launches: 'The Oshodi boss mission through the real campaign controller (unlocked here, nothing saved).',
@@ -131,7 +189,7 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
   {
     id: 'classicRearAmbush',
     section: 'playtest',
-    group: 'review',
+    group: 'completed',
     title: 'Classic rear ambush',
     objective: 'In the real first raid, creep up behind a guard and take it out with one generator.',
     lookFor:
@@ -144,7 +202,7 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
   {
     id: 'oneHit',
     section: 'scenario',
-    group: 'review',
+    group: 'completed',
     title: 'One-hit lethality',
     objective:
       'Creep up behind an enemy at its post, lay a generator and step away: one blast should defeat it.',
@@ -160,20 +218,6 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
     ],
     launch: { kind: 'scenario', scenarioId: 'oneHitAgbero' },
   },
-  {
-    id: 'identifyPlayer',
-    section: 'scenario',
-    group: 'review',
-    title: 'Player-identification variants',
-    objective: 'Compare the three marker styles among 5 enemies and say which makes you easiest to find.',
-    lookFor:
-      'Original: the small chevron and You tag. Indicator: one YOU plate over your head. Indicator + Ground: the plate and a ring on the floor under you.',
-    launches:
-      'Depot, five enemies waking close around you; a live marker switch (Original / Indicator / Indicator + Ground) on the card, in the pause menu and on a HUD button.',
-    levels: true,
-    launch: { kind: 'scenario', scenarioId: 'identifyPlayer' },
-  },
-  // ---------------------------------------------------------------- Completed Tests (approved; still launchable)
   {
     id: 'classicRaid',
     section: 'playtest',
