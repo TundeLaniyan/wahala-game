@@ -20,7 +20,6 @@ import { ProgressionBadge } from './ProgressionBadge';
 import { RumbleHud } from './RumbleHud';
 import { CombatLabChip } from './CombatLab';
 
-
 function Portrait({ p }: { p: HudPlayer }) {
   useGameStore((st) => st.portraitsVersion);
   return (
