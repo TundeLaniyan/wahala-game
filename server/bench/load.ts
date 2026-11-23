@@ -15,6 +15,7 @@
  * Flags: --clients N (humans per room, 1-32) --rooms K --profile clean|europe|mobile|bad-mobile
  *   --scenario basic|reconnect|background --procs P (1-4) --duration SEC (match length, default 60)
  *   --reconnect-seconds S (server window, default 30; 10 for the reconnect scenario) --cap SEC (default 150)
+ *   --server-bundle PATH (run the bundled server with plain node)
  *   --label NAME --out DIR --seed N --arena ID --input-gap MS (min ms between input messages, default 80; 0 = unthrottled)
  */
 import { spawn, fork } from 'node:child_process';
@@ -46,6 +47,8 @@ export interface LoadConfig {
   seed: number;
   arena: string;
   inputGapMs: number;
+  /** Run this bundled server (`npm run bundle` output) with plain `node` instead of the TypeScript sources. */
+  serverBundle: string | null;
 }
 
 function parseArgs(argv: string[]): LoadConfig {
@@ -77,6 +80,7 @@ function parseArgs(argv: string[]): LoadConfig {
     seed: Number(get('seed') ?? 1),
     arena: get('arena') ?? 'rumbleOshodi',
     inputGapMs: Number(get('input-gap') ?? 80),
+    serverBundle: get('server-bundle') ? path.resolve(get('server-bundle')!) : null,
   };
 }
 
@@ -189,7 +193,10 @@ export async function runLoad(cfg: LoadConfig): Promise<Record<string, any>> {
   const port = await freePort();
   const serverLog: string[] = [];
   const tsxBin = path.join(ROOT, 'node_modules/.bin/tsx');
-  const server = spawn(tsxBin, ['server/bench/rumbleServerProc.ts'], {
+  const [serverCmd, serverArgs] = cfg.serverBundle
+    ? [process.execPath, [cfg.serverBundle]]
+    : [tsxBin, ['server/bench/rumbleServerProc.ts']];
+  const server = spawn(serverCmd, serverArgs, {
     cwd: ROOT,
     env: {
       ...process.env,

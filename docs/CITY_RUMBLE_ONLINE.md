@@ -104,4 +104,117 @@ Further levers, not yet needed: interest management (only send far entities at a
 
 `server/client/NetMatchClient.ts` plays the role of `MatchController` without simulating: replica → `renderer.loadGame` / `handleEvents` / `render` and `audio.handleEvents` (events filtered to the camera focus as offline), `InputManager.buildIntent` → `InputMsg` on change. The dev page `server/client/index.html` is served by Vite with its own config and is not part of the production build. Full integration into the main app (menus, React HUD, touch controls) is a follow-up behind a build-time flag (section 10).
 
-<!-- sections 7+ are filled in after the load tests -->
+
+## 7. Validation results (Stage 2 and 3)
+
+Full tables, method and raw JSON: `docs/measurements/rumble-online/LOAD_RESULTS.md`. Every number below was measured in this container (4 vCPU Xeon @ 2.3 GHz, 16 GB, Node 22.23); each configuration ran once with random seeds, so compare orders of magnitude, not decimals.
+
+**What kind of client.** *Real browsers*: two Chromium instances (separate contexts) with the real renderer on software WebGL (`server/e2e/two-clients.mjs`). *Simulated clients*: headless Node processes running the real `@colyseus/sdk`, the real `NetReplica` and 60 Hz playout over real WebSockets, driving their seat with the real bot brain reading their own (delayed) replica, through an application-level impairment proxy (`server/bench/impairProxy.ts`: per-chunk delay + jitter with TCP ordering, loss modelled as retransmission stalls with head-of-line blocking; no kernel `tc netem` here). **No physical phone has been tested yet.**
+
+### 7.1 Two real browsers (`npm run demo:two`)
+Two Chromium players: A creates a private room, B joins with the invite link, a full match runs (2 humans + 30 server bots, Oshodi), B is forced offline for 9 s mid-match. Result: both replicas and both results carry the same final hash (`56cc4255` at tick 7596), identical results, 0 hash mismatches, B reconnected and resynced from a keyframe. Screenshots: `docs/screenshots/rumble-online/` (lobby host/guest, both players in the real 3D arena, both results screens with "MATCH: identical"). Caveat: software WebGL draws ~1–2 frames/s here, so the browsers' ping readings and the 33 s reconnection time are main-thread stalls, not network figures.
+
+### 7.2 Connected clients, clean network (32 fighters every time, the rest server bots)
+
+| connected clients | 2 | 4 | 8 | 16 | 32 |
+| --- | --- | --- | --- | --- | --- |
+| server CPU, % of one core (mean) | 28.7 | 29.7 | 23.8 | 20.1 | 9.3 |
+| step ms mean / p99 | 3.2 / 9.3 | 3.2 / 10.1 | 2.5 / 7.5 | 2.0 / 6.0 | 0.6 / 1.8 |
+| down KB/s per client | 10.3 | 10.4 | 10.6 | 10.2 | 10.2 |
+| total egress KB/s | 21 | 42 | 84 | 163 | 326 |
+| input → visible ms p50 / p95 | 80 / 97 | 65 / 81 | 64 / 98 | 65 / 93 | 82 / 130 |
+| hash mismatches / resyncs | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| missed / duplicated eliminations | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+
+Server CPU *falls* as humans replace bots: the bots' AI is the dominant server cost (~0.67 % of a core per bot), a 32-human room costs ~9–10 % of one core. Ticks dropped: 0 in every run.
+
+### 7.3 Impaired networks, 32 clients
+
+| profile | RTT p50 / p95 | input → visible p50 / p95 | tick lag p50 | mismatches | kicks |
+| --- | --- | --- | --- | --- | --- |
+| europe (Lagos→London, ~114 ms RTT ±10) | 116 / 129 ms | 191 / 211 ms | 123 ms | 0 | 0 |
+| mobile (~150 ms ±30, 1 % loss) | 162 / 354 ms | 261 / 457 ms | 183 ms | 0 | 0 |
+| bad-mobile (~250 ms ±60, 3 % loss) | 294 / 615 ms | 448 / 678 ms | 382 ms | 0 | 0 |
+| bad-mobile, unthrottled client inputs, after the fix | 302 / 647 ms | 386 / 683 ms | 388 ms | 0 | **0** (was 9 of 32) |
+
+Generator detonations (`generatorExploded`) and eliminations were identical on every client in every run. "Input → visible" is wall time from sending a new direction to the replica showing that step start: RTT + server tick wait + send batching + jitter buffer. Above ~250 ms it will feel sluggish; client-side prediction of the local fighter is the planned remedy (section 10).
+
+### 7.4 Reconnection and app switching (32 clients, mobile profile)
+- 4 clients dropped abruptly at ~20 s and came back after 3 s: all re-took their seats; `reconnect()` 447–668 ms, keyframe loaded 599–810 ms after the call, first hash-verified consistent state 840–1212 ms after the call (the hash rides every 2 s). While away their seat was autopiloted; 3.4–3.7 s of events were not replayed to them (the keyframe carries the state, not the missed effects).
+- 1 client never returned: after the 10 s window a bot played the seat to the end (139 observed moves, 5 kills / 3 deaths in the results).
+- 4 clients stopped playing out for 10 s with the socket open (a backgrounded mobile tab): ~604 ticks queued, caught up in the first frame after resuming, 0 mismatches, 0 missed events (the picture jumps forward).
+
+### 7.5 Capacity (one server process = one main thread)
+
+| load | server CPU (of one core) | result |
+| --- | --- | --- |
+| 1 room × 32 humans | ~9–10 % | 0 dropped ticks |
+| 2 / 3 / 8 rooms × 32 humans (64 / 96 / 256 clients) | ~15 / 19 / ~40 % | all consistent; at 6–8 rooms the CLIENT processes saturated this 4-vCPU box first |
+| 3 rooms × (2 humans + 30 bots) | ~73 % | 1 dropped tick |
+| 4 rooms × (2 + 30) | ~94 % | 47 dropped ticks: the edge |
+| 6 / 8 rooms × (2 + 30) | saturated | 2282 / 10 799 dropped ticks, still consistent (slow motion) |
+
+**Maximum successfully tested: 256 concurrent connected clients (8 rooms × 32 humans) on one server process, all hash-consistent; and 32 connected clients in one 32-fighter room on every network profile.** Rooms per vCPU: about 3 bot-heavy rooms (measured; 2 with margin) or roughly 7–10 all-human rooms (extrapolated from per-room CPU, not measured to saturation because the clients ran out of CPU first). One process uses one core, so production runs one process per vCPU (section 9).
+
+### 7.6 Bots versus real players
+- Bots are server-side `createBot` brains (the same as offline), seeded from the secret match seed, reading `observe(state)` exactly as offline: same rules, same `Intent`s. They are named `BOT …` and flagged `isBot` in the descriptor, the lobby and the results.
+- Human seats are `isBot: false`; the sim then applies human timing (bots get a minimum attack wind-up, `skills.ts`).
+- A dropped human's seat is played by a bot while they are away (default `dropPolicy: 'autopilot'`; `'idle'` makes it stand still) and for good once the reconnection window (30 s) expires. Kills made by the autopilot count for the seat's owner — a policy decision to revisit before any ranked play.
+- Humans feel latency; bots do not (they act on the authoritative state every tick). In the measurements, the human-like load clients played *through* their delayed replicas, so their decisions are as late as a person's would be.
+
+## 8. Rooms and matchmaking foundation (Stage 4)
+- Room = one Colyseus room `rumble`, id = a 6-character code (`ABCDEFGHJKMNPQRSTUVWXYZ23456789`), shareable as `?room=CODE`. Private rooms are joinable only by code; public rooms are listed for `joinOrCreate` (quick play).
+- Lifecycle (pure `server/src/core/Lobby.ts`): `lobby → countdown (3 s) → playing → results → (rematch) lobby`. Host = first member, promoted on leave; host-only start (private), settings (arena, mode, 3/5 min, bot level) and rematch; public rooms auto-start 20 s after the first player or at 32 humans.
+- Seating: humans in join order, then bots to 32. Team Rumble uses the sim's own `assignTeams` and damage rules (`flameHarms` / `canHarm`), so team play and friendly-fire rules are exactly the offline ones.
+- Results are built from the server's own state (`RumbleMatch.results()`), carry the final state hash, and are identical for every client.
+- Reconciled with the gameplay release `66f3e3d` (Sudden Death timer, permanent player marker, viewer-relative team blast warnings, decisions TB1–TB4), merged into this branch: the team damage rule is server-authoritative (sim), and the viewer-relative warnings are pure functions of `GameState` + viewer, computed by the renderer from the replica with `localPlayerId = seat` — no protocol change; root tests incl. `tests/blast-safety.test.ts` pass on the merged branch.
+
+## 9. Hosting, data and cost (Stage 5)
+
+**Shape.** One Node 22 process per vCPU, each hosting many rooms; TLS (`wss://`) terminated by a reverse proxy; `server/dist/rumble-server.mjs` (one file, `npm run bundle`) runs anywhere Node 22 runs (verified with a full load test against the bundle); `server/Dockerfile` wraps it (not built here). Multi-process / multi-machine matchmaking: Colyseus' Redis presence + driver (`@colyseus/redis-presence`, `@colyseus/redis-driver`), not yet configured. GitHub Pages stays fine for the static client; it cannot host the server.
+
+**Latency from Nigeria.** Published wired ping (WonderNetwork, 2026): Lagos → London ~114 ms, Lagos → Frankfurt ~125 ms; mobile radio access adds to that. With the London-like profile, measured input → visible was 191 / 211 ms (p50 / p95). Prefer London (or another western-European site well peered with the West African cables) over Germany or Finland; a Lagos-local host could roughly halve it but must be measured. **Before choosing, measure from real Nigerian phones** (MTN, Airtel, Glo; 4G and Wi-Fi) to 2–3 candidate regions with a small ping page — the only latency data here is emulated.
+
+**Data per player** (measured, 30 Hz): ~10 KB/s down + ~0.1–0.5 KB/s up ≈ **36 MB per player-hour, ~3 MB per 5-minute match**. The impaired-profile runs measured less (6–7.6 KB/s, also in the server's own count); the cause was not isolated (most likely less in-match activity from the delayed human-like clients), so plan on 10 KB/s. Levers if needed: 20 Hz sends (−10 %), interest management, a key dictionary.
+
+**Server resources per concurrent human (CCU)**, from section 7: full 32-human rooms ≈ 0.3 % of a core per player; bot-filled rooms cost ≈ 9–10 % of a core per room plus ≈ 0.67 % per bot. Egress ≈ 10 KB/s per player ≈ 26 TB per month per 1000 CCU sustained around the clock.
+
+**Cost estimate.** Assumptions: target ≤ 70 % CPU per vCPU; dedicated vCPUs (shared vCPUs risk tick jitter from neighbours — test before relying on them); prices from November 2026 third-party summaries, **to be checked on the providers' own pages before any decision**: Hetzner dedicated CCX13 (2 vCPU) ~€43/month after the June 2026 increase, ≥ 20 TB egress included per server in the EU then ~€1/TB; DigitalOcean extra egress $0.01/GiB; AWS internet egress ~$0.09/GB. CCU = average concurrent humans over the month.
+
+| average CCU | room fill | vCPU needed | egress / month | Hetzner-class (dedicated) | egress on a hyperscaler alone |
+| --- | --- | --- | --- | --- | --- |
+| 100 | 4 humans + 28 bots per room | ~10 | ~2.6 TB | ~5 × CCX13 ≈ €215 | ~$230 |
+| 100 | full (32 humans) | ~1 (2 for redundancy) | ~2.6 TB | 1–2 × CCX13 ≈ €45–90 | ~$230 |
+| 1 000 | 4 humans + 28 bots | ~100 | ~26 TB | ~50 × CCX13 ≈ €2 150 | ~$2 200 |
+| 1 000 | full | ~5 | ~26 TB | 3 × CCX13 ≈ €130 (traffic included) | ~$2 200 |
+| 10 000 | full | ~45 | ~260 TB | ~23 × CCX13 ≈ €1 000 + overage ≈ €0 (460 TB included) | ~$16 800 (tiered $0.09→0.05/GB) |
+
+Reading: **bandwidth is cheap on EU hosts with included traffic and expensive on hyperscalers; CPU is dominated by bots.** Until public matchmaking fills rooms with people, the cost driver is bot AI — profiling and cheapening the bot brain (or a cheaper "filler bot" level) is the main cost lever, not the netcode. Add a small fixed cost for a Redis instance and a monitoring stack. Nothing has been bought, deployed or registered.
+
+**Security.**
+- Authority: clients send only `{s, m, h, b}`; strict validators (exact keys, bounded values, no `__proto__` smuggling), defensive MessagePack decoder limits on the client, Colyseus message size limits on the server.
+- Results, kills, eliminations, teams and the seed come only from the server's simulation; snapshots contain no seed, rng state or hidden pickups (tested).
+- Flooding: invalid messages (> 20 / 10 s) or a sustained flood (> 600 messages / 5 s) → disconnect; a stall burst is never punished (measured fix, regression test).
+- Origins: `RUMBLE_ALLOWED_ORIGINS` allowlist (nothing allowed in production by default), CORS without credentials, optional bearer token for `/metrics`; private room codes are not exposed in metrics.
+- Reconnection tokens: Colyseus' single-use `reconnectionToken`, kept in memory by the client (not localStorage).
+- Not yet done (must be before a public launch): TLS deployment, per-IP limits on room creation and joins (DoS), real accounts / guest identity and name moderation, reporting / bans, abuse of the autopilot policy, an "information" consideration (every client receives every fighter's position: fine for the current full-visibility rules, but interest management would be needed if any rule ever hides players), dependency and container scanning.
+
+## 10. Gaps and next steps
+
+Outstanding implementation gaps (none is hidden behind a passing test):
+1. **No physical phones tested**; real Nigerian network latency not measured (only emulated).
+2. **Client-side prediction** of the local fighter is not built: input → visible is RTT + ~70 ms. Approach: run the local fighter's movement through the real `tick` on a predicted copy and reconcile against server frames (rollback) — the deterministic sim makes this feasible.
+3. **Main-app integration**: the online match runs in a dev page; the main menus, React HUD, kill feed styling, touch controls and settings are not wired (needs a build-time flag like `__WAHALA_SERVER_ONLINE__`, kept out of the static Pages build).
+4. Touch input: the dev page's stick and buttons are untested on devices; the offline touch move-assist features (corner routes, sidestep, beginner assist) are not available online yet (they need the authoritative board, i.e. a server-side port of `MoveGate` assist).
+5. Missed effects after a reconnect are not replayed (state is exact; the 3–4 s of FX/audio while away are skipped).
+6. Multi-process scaling (Redis presence/driver), deployment, TLS, monitoring and per-IP limits are not set up.
+7. Bot CPU is the cost driver; the bot brain has not been profiled for server use.
+8. Spectators (non-playing viewers) and late join into a running match are not supported (rooms lock at start; only reconnection is allowed).
+9. Autopilot kills count for the absent player; revisit before ranked play.
+
+**Next concrete step:** a phone test. Deploy the bundled server on one small EU VM (London region, dedicated vCPU, TLS) — with the founder's approval of the provider and cost — and add a minimal latency/ping page; then run two to four real phones in Lagos on MTN / Airtel / Glo through a full match with the dev client, recording input → visible latency, data used and reconnection on app switches. That single test decides the hosting region and whether client-side prediction is needed before anything else.
+
+## 11. Sources for external figures (checked 2026-11-23; verify before any purchase)
+- Lagos ↔ London / Frankfurt ping: [WonderNetwork Lagos–London](https://wondernetwork.com/pings/Lagos/London), [WonderNetwork Lagos–Frankfurt](https://wondernetwork.com/pings/Lagos/Frankfurt).
+- Hetzner 2026 pricing and included traffic (third-party summaries): [Better Stack review](https://betterstack.com/community/guides/web-servers/hetzner-cloud-review/), [costgoat calculator](https://costgoat.com/pricing/hetzner), [ployz.dev](https://ployz.dev/blog/hetzner-pricing).
+- DigitalOcean bandwidth billing: [docs](https://docs.digitalocean.com/platform/billing/bandwidth/). AWS egress tiers as summarised by [DigitalOcean's AWS egress article](https://www.digitalocean.com/resources/articles/aws-egress-costs) (check the AWS pricing page for the exact region).
