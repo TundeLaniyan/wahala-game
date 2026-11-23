@@ -99,7 +99,7 @@ export class NetMatchClient {
   private spectateId: number | null = null;
   private feed: string[] = [];
   private bytesIn = 0;
-  /** Decompression is async: keep message order with one promise chain. */
+  /** Decompression is async: messages decode concurrently but are applied in order through one promise chain. */
   private inbox: Promise<void> = Promise.resolve();
 
   constructor(private readonly deps: ClientDeps) {}
@@ -147,8 +147,13 @@ export class NetMatchClient {
 
   private enqueue(bytes: Uint8Array, use: (payload: unknown) => void): void {
     this.bytesIn += bytes.byteLength;
+    // Start decompressing NOW (many messages overlap) but apply strictly in arrival order: a browser's stream-based
+    // inflate needs several event-loop turns per message, and a slow renderer leaves only a turn or two between frames
+    // (software WebGL: ~1 fps), so decoding one message at a time would fall hopelessly behind.
+    const inflated = this.deps.inflate(bytes);
+    inflated.catch(() => undefined); // handled below, in order; no unhandled-rejection noise meanwhile
     this.inbox = this.inbox
-      .then(() => this.deps.inflate(bytes))
+      .then(() => inflated)
       .then((raw) => use(unpack(raw)))
       .catch(() => {
         // an undecodable message: the replica can no longer be trusted, ask for a keyframe

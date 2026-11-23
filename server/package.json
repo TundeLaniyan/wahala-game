@@ -8,7 +8,12 @@
     "dev": "../node_modules/.bin/tsx watch src/main.ts",
     "start": "../node_modules/.bin/tsx src/main.ts",
     "typecheck": "../node_modules/.bin/tsc --noEmit -p tsconfig.json",
-    "test": "../node_modules/.bin/vitest run --config vitest.config.ts"
+    "test": "../node_modules/.bin/vitest run --config vitest.config.ts",
+    "client": "../node_modules/.bin/vite --config vite.client.config.ts",
+    "demo:two": "node e2e/two-clients.mjs",
+    "load": "../node_modules/.bin/tsx bench/load.ts",
+    "load:report": "../node_modules/.bin/tsx bench/loadReport.ts",
+    "load:suite": "../node_modules/.bin/tsx bench/loadSuite.ts"
   },
   "dependencies": {
     "@colyseus/core": "^0.18.10",
