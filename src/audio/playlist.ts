@@ -28,6 +28,8 @@ export interface MusicTrack {
   licenceUrl?: string;
   /** File name inside public/audio/music/ (no folders). */
   file: string;
+  /** The Data Saver variant (`lite/<file>`, 96 kbps), when one ships; played only with Data Saver on. */
+  lite?: string;
   /** Loudness trim for this track (default 1, clamped to 0..2). */
   gain: number;
 }
@@ -54,6 +56,7 @@ export interface MusicManifest {
 
 export const SAFE_TRACK_ID = /^[A-Za-z0-9_-]+$/;
 export const SAFE_MUSIC_FILE = /^[A-Za-z0-9_-]+\.(mp3|ogg|m4a)$/;
+export const SAFE_LITE_FILE = /^lite\/[A-Za-z0-9_-]+\.(mp3|ogg|m4a)$/;
 
 export const EMPTY_MANIFEST: MusicManifest = {
   version: 2,
@@ -99,6 +102,7 @@ export function parseMusicManifest(raw: unknown): {
         licence: str(e.licence)!,
         licenceUrl: str(e.licenceUrl) ?? undefined,
         file: e.file,
+        lite: typeof e.lite === 'string' && SAFE_LITE_FILE.test(e.lite) ? e.lite : undefined,
         gain,
       });
     }

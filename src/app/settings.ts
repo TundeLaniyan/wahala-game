@@ -74,6 +74,12 @@ export interface GameSettings {
   moveStyle: MoveStyle;
   /** On-screen controls size (decision NV3): Large grows the two buttons and the thumbstick by 15 %. */
   controlSize: 'normal' | 'large';
+  /**
+   * Data Saver (docs/MOBILE_PERFORMANCE.md): 'on' plays the smaller 96 kbps music files (about 60 % fewer bytes per match);
+   * 'auto' (default) turns itself on only when the browser's own Data Saver (`navigator.connection.saveData`) is on.
+   * Network only: graphics and battery are the Graphics quality setting, and the simulation never sees either.
+   */
+  dataSaver: 'auto' | 'on' | 'off';
   /** Short vibration on a touch button press and when you are hurt, where the device supports it (decision NV4). */
   vibration: 'on' | 'off';
 }
@@ -107,6 +113,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   moveStyle: 'standard',
   controlSize: 'normal',
   vibration: 'on',
+  dataSaver: 'auto',
 };
 
 export const SETTINGS_KEY = 'wahala.settings.v1';
@@ -133,6 +140,7 @@ export const PREFERENCE_KEYS = [
   'moveStyle',
   'controlSize',
   'vibration',
+  'dataSaver',
 ] as const;
 export type PreferenceKey = (typeof PREFERENCE_KEYS)[number];
 
@@ -152,7 +160,18 @@ export function preferenceDefaults(): Pick<GameSettings, PreferenceKey> {
     moveStyle: d.moveStyle,
     controlSize: d.controlSize,
     vibration: d.vibration,
+    dataSaver: d.dataSaver,
   };
+}
+
+/** Is Data Saver in effect? 'on'; or 'auto' while the browser's own Data Saver is on (`saveData`, Chrome / Android). */
+export function dataSaverActive(
+  setting: GameSettings['dataSaver'],
+  nav: unknown = typeof navigator === 'undefined' ? undefined : navigator,
+): boolean {
+  const saveData =
+    (nav as { connection?: { saveData?: boolean } } | undefined)?.connection?.saveData === true;
+  return setting === 'on' || (setting === 'auto' && saveData);
 }
 
 const oneOf = <T>(value: unknown, allowed: readonly T[], fallback: T): T =>
@@ -198,6 +217,7 @@ export function sanitizeSettings(s: GameSettings): GameSettings {
     moveStyle: oneOf(s.moveStyle, MOVE_STYLES, d.moveStyle),
     controlSize: oneOf(s.controlSize, ['normal', 'large'] as const, d.controlSize),
     vibration: oneOf(s.vibration, ['on', 'off'] as const, d.vibration),
+    dataSaver: oneOf(s.dataSaver, ['auto', 'on', 'off'] as const, d.dataSaver),
   };
 }
 

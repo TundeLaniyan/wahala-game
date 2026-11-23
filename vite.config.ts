@@ -1,6 +1,8 @@
 import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { offlineCache } from './scripts/vite/offlineCache.ts';
+import { optimizeModels } from './scripts/vite/optimizeModels.ts';
 
 // GitHub Pages project sites are served from /<repo-name>/.
 export default defineConfig(({ command, isPreview, mode }) => {
@@ -15,7 +17,7 @@ export default defineConfig(({ command, isPreview, mode }) => {
     !!env.WAHALA_ONLINE_URL;
   return {
     base: command === 'build' || isPreview ? '/wahala-game/' : '/',
-    plugins: [react()],
+    plugins: [react(), optimizeModels(), offlineCache()],
     // WAHALA_* feature flags (src/platform/flags.ts) are public build-time switches, never secrets.
     envPrefix: ['VITE_', 'WAHALA_'],
     define: { __WAHALA_SERVER_ONLINE__: JSON.stringify(serverOnline) },
