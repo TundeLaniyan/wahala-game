@@ -1,0 +1,856 @@
+{
+ "sampleRate": 48000,
+ "bpm": 112,
+ "barSeconds": 2.142857142857143,
+ "music": {
+  "_gameplay_levels": {
+   "base_only_lufs": -24.0,
+   "base_perc_lufs": -21.4,
+   "all_three_lufs": -21.0
+  },
+  "defeat": {
+   "role": "defeat sting",
+   "loop": false,
+   "samples": 158400,
+   "seconds": 3.3,
+   "channels": 2,
+   "lufs": -17.0,
+   "rms100Db": -14.7,
+   "peakDb": -6.6,
+   "truePeakDb": -6.6,
+   "bytes": {
+    "ogg": 27877,
+    "m4a": 31971
+   }
+  },
+  "menu_loop": {
+   "role": "main menu",
+   "loop": true,
+   "loopStart": 0,
+   "loopEnd": 1645714,
+   "bars": 16,
+   "desc": "Main Theme, 16-bar loopable instrumental",
+   "samples": 1645714,
+   "seconds": 34.2857,
+   "channels": 2,
+   "lufs": -16.0,
+   "rms100Db": -17.3,
+   "peakDb": -2.8,
+   "truePeakDb": -2.8,
+   "bytes": {
+    "ogg": 285977,
+    "m4a": 319016
+   }
+  },
+  "rumble_base": {
+   "role": "City Rumble stem: base",
+   "loop": true,
+   "loopStart": 0,
+   "loopEnd": 1645714,
+   "bars": 16,
+   "stem": true,
+   "samples": 1645714,
+   "seconds": 34.2857,
+   "channels": 2,
+   "lufs": -24.0,
+   "rms100Db": -24.2,
+   "peakDb": -9.1,
+   "truePeakDb": -9.0,
+   "bytes": {
+    "ogg": 221066,
+    "m4a": 285346
+   }
+  },
+  "rumble_hype": {
+   "role": "City Rumble stem: hype",
+   "loop": true,
+   "loopStart": 0,
+   "loopEnd": 1645714,
+   "bars": 16,
+   "stem": true,
+   "samples": 1645714,
+   "seconds": 34.2857,
+   "channels": 2,
+   "lufs": -31.7,
+   "rms100Db": -36.5,
+   "peakDb": -15.3,
+   "truePeakDb": -15.3,
+   "bytes": {
+    "ogg": 239271,
+    "m4a": 282892
+   }
+  },
+  "rumble_perc": {
+   "role": "City Rumble stem: perc",
+   "loop": true,
+   "loopStart": 0,
+   "loopEnd": 1645714,
+   "bars": 16,
+   "stem": true,
+   "samples": 1645714,
+   "seconds": 34.2857,
+   "channels": 2,
+   "lufs": -24.7,
+   "rms100Db": -28.3,
+   "peakDb": -11.8,
+   "truePeakDb": -11.8,
+   "bytes": {
+    "ogg": 199984,
+    "m4a": 286523
+   }
+  },
+  "sting": {
+   "role": "WAHALA! logo sting",
+   "loop": false,
+   "samples": 200877,
+   "seconds": 4.1849,
+   "channels": 2,
+   "lufs": -14.9,
+   "rms100Db": -9.5,
+   "peakDb": -2.3,
+   "truePeakDb": -1.2,
+   "bytes": {
+    "ogg": 34584,
+    "m4a": 39372
+   }
+  },
+  "trailer": {
+   "role": "optional trailer treatment",
+   "loop": false,
+   "samples": 2023030,
+   "seconds": 42.1465,
+   "channels": 2,
+   "lufs": -15.1,
+   "rms100Db": -10.6,
+   "peakDb": -2.5,
+   "truePeakDb": -1.2,
+   "bytes": {
+    "ogg": 334888,
+    "m4a": 393845
+   }
+  },
+  "victory": {
+   "role": "victory celebration",
+   "loop": false,
+   "samples": 473322,
+   "seconds": 9.8609,
+   "channels": 2,
+   "lufs": -15.0,
+   "rms100Db": -12.6,
+   "peakDb": -2.1,
+   "truePeakDb": -1.3,
+   "bytes": {
+    "ogg": 79171,
+    "m4a": 91978
+   }
+  }
+ },
+ "sfx": {
+  "ui_move": {
+   "category": "ui",
+   "priority": 20,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "menu cursor",
+   "samples": 2880,
+   "seconds": 0.06,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -19.2,
+   "peakDb": -7.2,
+   "truePeakDb": -7.2,
+   "bytes": {
+    "ogg": 984,
+    "m4a": 1416
+   }
+  },
+  "ui_confirm": {
+   "category": "ui",
+   "priority": 30,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "confirm",
+   "samples": 16800,
+   "seconds": 0.35,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -19.0,
+   "peakDb": -10.5,
+   "truePeakDb": -10.4,
+   "bytes": {
+    "ogg": 1798,
+    "m4a": 3564
+   }
+  },
+  "ui_back": {
+   "category": "ui",
+   "priority": 30,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "back/cancel",
+   "samples": 11040,
+   "seconds": 0.23,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -19.0,
+   "peakDb": -10.4,
+   "truePeakDb": -10.4,
+   "bytes": {
+    "ogg": 1799,
+    "m4a": 2706
+   }
+  },
+  "ui_error": {
+   "category": "ui",
+   "priority": 30,
+   "loop": false,
+   "maxVoices": 1,
+   "note": "invalid",
+   "samples": 12960,
+   "seconds": 0.27,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -19.0,
+   "peakDb": -11.5,
+   "truePeakDb": -11.5,
+   "bytes": {
+    "ogg": 2238,
+    "m4a": 3045
+   }
+  },
+  "ui_toggle": {
+   "category": "ui",
+   "priority": 20,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "setting toggle/slider tick",
+   "samples": 3360,
+   "seconds": 0.07,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -19.1,
+   "peakDb": -7.5,
+   "truePeakDb": -7.5,
+   "bytes": {
+    "ogg": 517,
+    "m4a": 1648
+   }
+  },
+  "ui_match_start": {
+   "category": "ui",
+   "priority": 60,
+   "loop": false,
+   "maxVoices": 1,
+   "note": "start match",
+   "samples": 40800,
+   "seconds": 0.85,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -19.0,
+   "peakDb": -10.4,
+   "truePeakDb": -10.3,
+   "bytes": {
+    "ogg": 5434,
+    "m4a": 7231
+   }
+  },
+  "cd_tick": {
+   "category": "ui",
+   "priority": 60,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "3-2-1 countdown",
+   "samples": 4800,
+   "seconds": 0.1,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -19.4,
+   "peakDb": -7.0,
+   "truePeakDb": -7.0,
+   "bytes": {
+    "ogg": 725,
+    "m4a": 1850
+   }
+  },
+  "cd_go": {
+   "category": "ui",
+   "priority": 70,
+   "loop": false,
+   "maxVoices": 1,
+   "note": "round start GO",
+   "samples": 21600,
+   "seconds": 0.45,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -19.0,
+   "peakDb": -10.7,
+   "truePeakDb": -10.7,
+   "bytes": {
+    "ogg": 2798,
+    "m4a": 4330
+   }
+  },
+  "gen_place": {
+   "category": "gen",
+   "priority": 55,
+   "loop": false,
+   "maxVoices": 4,
+   "note": "generator placement",
+   "samples": 23519,
+   "seconds": 0.49,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -16.0,
+   "peakDb": -10.0,
+   "truePeakDb": -10.0,
+   "bytes": {
+    "ogg": 2921,
+    "m4a": 4697
+   }
+  },
+  "gen_fuse_loop": {
+   "category": "danger",
+   "priority": 70,
+   "loop": true,
+   "maxVoices": 3,
+   "note": "fuse loop; per-generator, pitch-detune per instance",
+   "loopStart": 0,
+   "loopEnd": 57600,
+   "samples": 57600,
+   "seconds": 1.2,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -14.0,
+   "peakDb": -3.0,
+   "truePeakDb": -2.4,
+   "bytes": {
+    "ogg": 6544,
+    "m4a": 9777
+   }
+  },
+  "gen_warn_a": {
+   "category": "danger",
+   "priority": 90,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "danger beep A (2.4 kHz)",
+   "samples": 5760,
+   "seconds": 0.12,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -14.0,
+   "peakDb": -4.7,
+   "truePeakDb": -4.7,
+   "bytes": {
+    "ogg": 1582,
+    "m4a": 2034
+   }
+  },
+  "gen_warn_b": {
+   "category": "danger",
+   "priority": 90,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "danger beep B (3.15 kHz); alternate with A",
+   "samples": 5760,
+   "seconds": 0.12,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -14.0,
+   "peakDb": -4.2,
+   "truePeakDb": -4.2,
+   "bytes": {
+    "ogg": 1524,
+    "m4a": 2026
+   }
+  },
+  "gen_arm_final": {
+   "category": "danger",
+   "priority": 92,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "final-half-second whine",
+   "samples": 26400,
+   "seconds": 0.55,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -14.0,
+   "peakDb": -7.8,
+   "truePeakDb": -7.8,
+   "bytes": {
+    "ogg": 3211,
+    "m4a": 5178
+   }
+  },
+  "expl_gen": {
+   "category": "expl",
+   "priority": 95,
+   "loop": false,
+   "maxVoices": 4,
+   "note": "generator explosion",
+   "samples": 91200,
+   "seconds": 1.9,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -11.5,
+   "peakDb": -5.8,
+   "truePeakDb": -4.8,
+   "bytes": {
+    "ogg": 9416,
+    "m4a": 14711
+   }
+  },
+  "expl_chain": {
+   "category": "expl",
+   "priority": 90,
+   "loop": false,
+   "maxVoices": 4,
+   "note": "chain-reaction accent layered 80-120 ms behind expl_gen",
+   "samples": 52800,
+   "seconds": 1.1,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -11.5,
+   "peakDb": -7.2,
+   "truePeakDb": -4.5,
+   "bytes": {
+    "ogg": 5046,
+    "m4a": 9056
+   }
+  },
+  "debris_break": {
+   "category": "expl",
+   "priority": 50,
+   "loop": false,
+   "maxVoices": 3,
+   "note": "destructible obstacle breaks",
+   "samples": 26400,
+   "seconds": 0.55,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -11.5,
+   "peakDb": -2.5,
+   "truePeakDb": -2.5,
+   "bytes": {
+    "ogg": 2763,
+    "m4a": 5070
+   }
+  },
+  "punch_whoosh": {
+   "category": "combat",
+   "priority": 45,
+   "loop": false,
+   "maxVoices": 3,
+   "note": "swing",
+   "samples": 9600,
+   "seconds": 0.2,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -15.0,
+   "peakDb": -4.2,
+   "truePeakDb": -3.7,
+   "bytes": {
+    "ogg": 1206,
+    "m4a": 2669
+   }
+  },
+  "punch_hit": {
+   "category": "combat",
+   "priority": 55,
+   "loop": false,
+   "maxVoices": 3,
+   "note": "punch connects",
+   "samples": 9600,
+   "seconds": 0.2,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -15.0,
+   "peakDb": -6.4,
+   "truePeakDb": -6.4,
+   "bytes": {
+    "ogg": 1220,
+    "m4a": 2565
+   }
+  },
+  "push_shove": {
+   "category": "combat",
+   "priority": 50,
+   "loop": false,
+   "maxVoices": 3,
+   "note": "push",
+   "samples": 13440,
+   "seconds": 0.28,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -15.0,
+   "peakDb": -6.7,
+   "truePeakDb": -6.7,
+   "bytes": {
+    "ogg": 1558,
+    "m4a": 3080
+   }
+  },
+  "kick_thud": {
+   "category": "combat",
+   "priority": 50,
+   "loop": false,
+   "maxVoices": 3,
+   "note": "kicked generator",
+   "samples": 14400,
+   "seconds": 0.3,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -15.0,
+   "peakDb": -9.4,
+   "truePeakDb": -9.4,
+   "bytes": {
+    "ogg": 1587,
+    "m4a": 3199
+   }
+  },
+  "daze": {
+   "category": "combat",
+   "priority": 60,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "daze/freeze",
+   "samples": 38400,
+   "seconds": 0.8,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -15.0,
+   "peakDb": -7.0,
+   "truePeakDb": -6.9,
+   "bytes": {
+    "ogg": 6072,
+    "m4a": 6793
+   }
+  },
+  "damage_hit": {
+   "category": "combat",
+   "priority": 65,
+   "loop": false,
+   "maxVoices": 3,
+   "note": "damage taken",
+   "samples": 12000,
+   "seconds": 0.25,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -15.0,
+   "peakDb": -6.2,
+   "truePeakDb": -6.2,
+   "bytes": {
+    "ogg": 1432,
+    "m4a": 2771
+   }
+  },
+  "elim_comic": {
+   "category": "combat",
+   "priority": 85,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "comic non-graphic elimination",
+   "samples": 59236,
+   "seconds": 1.2341,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -15.0,
+   "peakDb": -4.9,
+   "truePeakDb": -4.9,
+   "bytes": {
+    "ogg": 6491,
+    "m4a": 9719
+   }
+  },
+  "shield_up": {
+   "category": "defense",
+   "priority": 60,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "shield/Okada protection on",
+   "samples": 33600,
+   "seconds": 0.7,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -17.0,
+   "peakDb": -9.6,
+   "truePeakDb": -9.6,
+   "bytes": {
+    "ogg": 4221,
+    "m4a": 6091
+   }
+  },
+  "shield_hit": {
+   "category": "defense",
+   "priority": 70,
+   "loop": false,
+   "maxVoices": 3,
+   "note": "shield absorbs blast/hit",
+   "samples": 16800,
+   "seconds": 0.35,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -17.0,
+   "peakDb": -5.4,
+   "truePeakDb": -5.4,
+   "bytes": {
+    "ogg": 2106,
+    "m4a": 3702
+   }
+  },
+  "shield_break": {
+   "category": "defense",
+   "priority": 75,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "shield breaks",
+   "samples": 27189,
+   "seconds": 0.5664,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -17.0,
+   "peakDb": -8.6,
+   "truePeakDb": -8.6,
+   "bytes": {
+    "ogg": 4015,
+    "m4a": 4936
+   }
+  },
+  "pickup_good": {
+   "category": "pickup",
+   "priority": 55,
+   "loop": false,
+   "maxVoices": 3,
+   "note": "power-up",
+   "samples": 25440,
+   "seconds": 0.53,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -18.0,
+   "peakDb": -6.6,
+   "truePeakDb": -6.0,
+   "bytes": {
+    "ogg": 2837,
+    "m4a": 4828
+   }
+  },
+  "pickup_curse": {
+   "category": "pickup",
+   "priority": 60,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "bad fuel / curse",
+   "samples": 27360,
+   "seconds": 0.57,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -18.0,
+   "peakDb": -8.9,
+   "truePeakDb": -8.9,
+   "bytes": {
+    "ogg": 3925,
+    "m4a": 5099
+   }
+  },
+  "sd_alarm": {
+   "category": "danger",
+   "priority": 88,
+   "loop": false,
+   "maxVoices": 1,
+   "note": "Sudden Death / Wahala Crush warning",
+   "samples": 91200,
+   "seconds": 1.9,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -14.0,
+   "peakDb": -10.7,
+   "truePeakDb": -10.7,
+   "bytes": {
+    "ogg": 13882,
+    "m4a": 14790
+   }
+  },
+  "sd_slam": {
+   "category": "danger",
+   "priority": 80,
+   "loop": false,
+   "maxVoices": 3,
+   "note": "crush block lands",
+   "samples": 38400,
+   "seconds": 0.8,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -14.0,
+   "peakDb": -8.6,
+   "truePeakDb": -7.8,
+   "bytes": {
+    "ogg": 3940,
+    "m4a": 6800
+   }
+  },
+  "boss_telegraph": {
+   "category": "danger",
+   "priority": 95,
+   "loop": false,
+   "maxVoices": 1,
+   "note": "boss attack wind-up",
+   "samples": 52800,
+   "seconds": 1.1,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -14.0,
+   "peakDb": -6.7,
+   "truePeakDb": -6.7,
+   "bytes": {
+    "ogg": 6562,
+    "m4a": 9428
+   }
+  },
+  "boss_slam": {
+   "category": "expl",
+   "priority": 90,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "boss attack lands",
+   "samples": 67200,
+   "seconds": 1.4,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -11.5,
+   "peakDb": -5.4,
+   "truePeakDb": -5.4,
+   "bytes": {
+    "ogg": 6433,
+    "m4a": 11199
+   }
+  },
+  "boss_vuln_open": {
+   "category": "danger",
+   "priority": 85,
+   "loop": false,
+   "maxVoices": 1,
+   "note": "boss vulnerability window open (bright, distinct)",
+   "samples": 35039,
+   "seconds": 0.73,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -14.0,
+   "peakDb": -3.5,
+   "truePeakDb": -3.5,
+   "bytes": {
+    "ogg": 3848,
+    "m4a": 6168
+   }
+  },
+  "boss_hit": {
+   "category": "combat",
+   "priority": 70,
+   "loop": false,
+   "maxVoices": 3,
+   "note": "player hits boss",
+   "samples": 14400,
+   "seconds": 0.3,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -15.0,
+   "peakDb": -7.6,
+   "truePeakDb": -7.6,
+   "bytes": {
+    "ogg": 1852,
+    "m4a": 3221
+   }
+  },
+  "boss_defeat": {
+   "category": "expl",
+   "priority": 95,
+   "loop": false,
+   "maxVoices": 1,
+   "note": "boss defeated",
+   "samples": 99184,
+   "seconds": 2.0663,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -11.5,
+   "peakDb": -4.7,
+   "truePeakDb": -4.3,
+   "bytes": {
+    "ogg": 9616,
+    "m4a": 15682
+   }
+  },
+  "horn_honk": {
+   "category": "amb_event",
+   "priority": 15,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "street horn (also driven by arena events)",
+   "samples": 20160,
+   "seconds": 0.42,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -27.0,
+   "peakDb": -21.7,
+   "truePeakDb": -21.7,
+   "bytes": {
+    "ogg": 2343,
+    "m4a": 4195
+   }
+  },
+  "horn_honk_b": {
+   "category": "amb_event",
+   "priority": 15,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "street horn variant",
+   "samples": 14400,
+   "seconds": 0.3,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -27.0,
+   "peakDb": -21.6,
+   "truePeakDb": -21.6,
+   "bytes": {
+    "ogg": 1868,
+    "m4a": 3295
+   }
+  },
+  "keke_putt": {
+   "category": "amb_event",
+   "priority": 15,
+   "loop": false,
+   "maxVoices": 2,
+   "note": "Keke passes",
+   "samples": 76453,
+   "seconds": 1.5928,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -27.0,
+   "peakDb": -16.9,
+   "truePeakDb": -16.9,
+   "bytes": {
+    "ogg": 9179,
+    "m4a": 17284
+   }
+  },
+  "amb_lagos": {
+   "category": "amb",
+   "priority": 5,
+   "loop": true,
+   "maxVoices": 1,
+   "note": "arena bed, 16 s loop",
+   "loopStart": 0,
+   "loopEnd": 768000,
+   "samples": 768000,
+   "seconds": 16.0,
+   "channels": 1,
+   "lufs": null,
+   "rms100Db": -34.0,
+   "peakDb": -20.1,
+   "truePeakDb": -20.1,
+   "bytes": {
+    "ogg": 74530,
+    "m4a": 117156
+   }
+  }
+ }
+}

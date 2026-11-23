@@ -1,0 +1,1025 @@
+{
+ "version": 1,
+ "status": "DRAFT - synthesised placeholders pending founder listening approval",
+ "sampleRate": 48000,
+ "bpm": 112,
+ "barSeconds": 2.142857142857143,
+ "assets": {
+  "defeat": {
+   "path": "music/defeat",
+   "kind": "music",
+   "seconds": 3.3,
+   "samples": 158400,
+   "loop": false,
+   "bytes": {
+    "ogg": 27877,
+    "m4a": 31971
+   },
+   "role": "defeat sting"
+  },
+  "menu_loop": {
+   "path": "music/menu_loop",
+   "kind": "music",
+   "seconds": 34.2857,
+   "samples": 1645714,
+   "loop": true,
+   "bytes": {
+    "ogg": 285977,
+    "m4a": 319016
+   },
+   "role": "main menu"
+  },
+  "rumble_base": {
+   "path": "music/rumble_base",
+   "kind": "music",
+   "seconds": 34.2857,
+   "samples": 1645714,
+   "loop": true,
+   "bytes": {
+    "ogg": 221066,
+    "m4a": 285346
+   },
+   "role": "City Rumble stem: base"
+  },
+  "rumble_hype": {
+   "path": "music/rumble_hype",
+   "kind": "music",
+   "seconds": 34.2857,
+   "samples": 1645714,
+   "loop": true,
+   "bytes": {
+    "ogg": 239271,
+    "m4a": 282892
+   },
+   "role": "City Rumble stem: hype"
+  },
+  "rumble_perc": {
+   "path": "music/rumble_perc",
+   "kind": "music",
+   "seconds": 34.2857,
+   "samples": 1645714,
+   "loop": true,
+   "bytes": {
+    "ogg": 199984,
+    "m4a": 286523
+   },
+   "role": "City Rumble stem: perc"
+  },
+  "sting": {
+   "path": "music/sting",
+   "kind": "music",
+   "seconds": 4.1849,
+   "samples": 200877,
+   "loop": false,
+   "bytes": {
+    "ogg": 34584,
+    "m4a": 39372
+   },
+   "role": "WAHALA! logo sting"
+  },
+  "trailer": {
+   "path": "music/trailer",
+   "kind": "music",
+   "seconds": 42.1465,
+   "samples": 2023030,
+   "loop": false,
+   "bytes": {
+    "ogg": 334888,
+    "m4a": 393845
+   },
+   "role": "optional trailer treatment"
+  },
+  "victory": {
+   "path": "music/victory",
+   "kind": "music",
+   "seconds": 9.8609,
+   "samples": 473322,
+   "loop": false,
+   "bytes": {
+    "ogg": 79171,
+    "m4a": 91978
+   },
+   "role": "victory celebration"
+  },
+  "ui_move": {
+   "path": "sfx/ui_move",
+   "kind": "sfx",
+   "category": "ui",
+   "priority": 20,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.04,
+   "variance": 0.0,
+   "seconds": 0.06,
+   "samples": 2880,
+   "bytes": {
+    "ogg": 984,
+    "m4a": 1416
+   },
+   "note": "menu cursor"
+  },
+  "ui_confirm": {
+   "path": "sfx/ui_confirm",
+   "kind": "sfx",
+   "category": "ui",
+   "priority": 30,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.04,
+   "variance": 0.0,
+   "seconds": 0.35,
+   "samples": 16800,
+   "bytes": {
+    "ogg": 1798,
+    "m4a": 3564
+   },
+   "note": "confirm"
+  },
+  "ui_back": {
+   "path": "sfx/ui_back",
+   "kind": "sfx",
+   "category": "ui",
+   "priority": 30,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.04,
+   "variance": 0.0,
+   "seconds": 0.23,
+   "samples": 11040,
+   "bytes": {
+    "ogg": 1799,
+    "m4a": 2706
+   },
+   "note": "back/cancel"
+  },
+  "ui_error": {
+   "path": "sfx/ui_error",
+   "kind": "sfx",
+   "category": "ui",
+   "priority": 30,
+   "loop": false,
+   "maxVoices": 1,
+   "cooldown": 0.04,
+   "variance": 0.0,
+   "seconds": 0.27,
+   "samples": 12960,
+   "bytes": {
+    "ogg": 2238,
+    "m4a": 3045
+   },
+   "note": "invalid"
+  },
+  "ui_toggle": {
+   "path": "sfx/ui_toggle",
+   "kind": "sfx",
+   "category": "ui",
+   "priority": 20,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.04,
+   "variance": 0.0,
+   "seconds": 0.07,
+   "samples": 3360,
+   "bytes": {
+    "ogg": 517,
+    "m4a": 1648
+   },
+   "note": "setting toggle/slider tick"
+  },
+  "ui_match_start": {
+   "path": "sfx/ui_match_start",
+   "kind": "sfx",
+   "category": "ui",
+   "priority": 60,
+   "loop": false,
+   "maxVoices": 1,
+   "cooldown": 0.04,
+   "variance": 0.0,
+   "seconds": 0.85,
+   "samples": 40800,
+   "bytes": {
+    "ogg": 5434,
+    "m4a": 7231
+   },
+   "note": "start match"
+  },
+  "cd_tick": {
+   "path": "sfx/cd_tick",
+   "kind": "sfx",
+   "category": "ui",
+   "priority": 60,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.04,
+   "variance": 0.0,
+   "seconds": 0.1,
+   "samples": 4800,
+   "bytes": {
+    "ogg": 725,
+    "m4a": 1850
+   },
+   "note": "3-2-1 countdown"
+  },
+  "cd_go": {
+   "path": "sfx/cd_go",
+   "kind": "sfx",
+   "category": "ui",
+   "priority": 70,
+   "loop": false,
+   "maxVoices": 1,
+   "cooldown": 0.04,
+   "variance": 0.0,
+   "seconds": 0.45,
+   "samples": 21600,
+   "bytes": {
+    "ogg": 2798,
+    "m4a": 4330
+   },
+   "note": "round start GO"
+  },
+  "gen_place": {
+   "path": "sfx/gen_place",
+   "kind": "sfx",
+   "category": "gen",
+   "priority": 55,
+   "loop": false,
+   "maxVoices": 4,
+   "cooldown": 0.05,
+   "variance": 0.03,
+   "seconds": 0.49,
+   "samples": 23519,
+   "bytes": {
+    "ogg": 2921,
+    "m4a": 4697
+   },
+   "note": "generator placement"
+  },
+  "gen_fuse_loop": {
+   "path": "sfx/gen_fuse_loop",
+   "kind": "sfx",
+   "category": "danger",
+   "priority": 70,
+   "loop": true,
+   "maxVoices": 3,
+   "cooldown": 0.06,
+   "variance": 0.0,
+   "seconds": 1.2,
+   "samples": 57600,
+   "bytes": {
+    "ogg": 6544,
+    "m4a": 9777
+   },
+   "note": "fuse loop; per-generator, pitch-detune per instance"
+  },
+  "gen_warn_a": {
+   "path": "sfx/gen_warn_a",
+   "kind": "sfx",
+   "category": "danger",
+   "priority": 90,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.06,
+   "variance": 0.0,
+   "seconds": 0.12,
+   "samples": 5760,
+   "bytes": {
+    "ogg": 1582,
+    "m4a": 2034
+   },
+   "note": "danger beep A (2.4 kHz)"
+  },
+  "gen_warn_b": {
+   "path": "sfx/gen_warn_b",
+   "kind": "sfx",
+   "category": "danger",
+   "priority": 90,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.06,
+   "variance": 0.0,
+   "seconds": 0.12,
+   "samples": 5760,
+   "bytes": {
+    "ogg": 1524,
+    "m4a": 2026
+   },
+   "note": "danger beep B (3.15 kHz); alternate with A"
+  },
+  "gen_arm_final": {
+   "path": "sfx/gen_arm_final",
+   "kind": "sfx",
+   "category": "danger",
+   "priority": 92,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.06,
+   "variance": 0.0,
+   "seconds": 0.55,
+   "samples": 26400,
+   "bytes": {
+    "ogg": 3211,
+    "m4a": 5178
+   },
+   "note": "final-half-second whine"
+  },
+  "expl_gen": {
+   "path": "sfx/expl_gen",
+   "kind": "sfx",
+   "category": "expl",
+   "priority": 95,
+   "loop": false,
+   "maxVoices": 4,
+   "cooldown": 0.04,
+   "variance": 0.035,
+   "seconds": 1.9,
+   "samples": 91200,
+   "bytes": {
+    "ogg": 9416,
+    "m4a": 14711
+   },
+   "note": "generator explosion"
+  },
+  "expl_chain": {
+   "path": "sfx/expl_chain",
+   "kind": "sfx",
+   "category": "expl",
+   "priority": 90,
+   "loop": false,
+   "maxVoices": 4,
+   "cooldown": 0.04,
+   "variance": 0.035,
+   "seconds": 1.1,
+   "samples": 52800,
+   "bytes": {
+    "ogg": 5046,
+    "m4a": 9056
+   },
+   "note": "chain-reaction accent layered 80-120 ms behind expl_gen"
+  },
+  "debris_break": {
+   "path": "sfx/debris_break",
+   "kind": "sfx",
+   "category": "expl",
+   "priority": 50,
+   "loop": false,
+   "maxVoices": 3,
+   "cooldown": 0.04,
+   "variance": 0.035,
+   "seconds": 0.55,
+   "samples": 26400,
+   "bytes": {
+    "ogg": 2763,
+    "m4a": 5070
+   },
+   "note": "destructible obstacle breaks"
+  },
+  "punch_whoosh": {
+   "path": "sfx/punch_whoosh",
+   "kind": "sfx",
+   "category": "combat",
+   "priority": 45,
+   "loop": false,
+   "maxVoices": 3,
+   "cooldown": 0.03,
+   "variance": 0.04,
+   "seconds": 0.2,
+   "samples": 9600,
+   "bytes": {
+    "ogg": 1206,
+    "m4a": 2669
+   },
+   "note": "swing"
+  },
+  "punch_hit": {
+   "path": "sfx/punch_hit",
+   "kind": "sfx",
+   "category": "combat",
+   "priority": 55,
+   "loop": false,
+   "maxVoices": 3,
+   "cooldown": 0.03,
+   "variance": 0.04,
+   "seconds": 0.2,
+   "samples": 9600,
+   "bytes": {
+    "ogg": 1220,
+    "m4a": 2565
+   },
+   "note": "punch connects"
+  },
+  "push_shove": {
+   "path": "sfx/push_shove",
+   "kind": "sfx",
+   "category": "combat",
+   "priority": 50,
+   "loop": false,
+   "maxVoices": 3,
+   "cooldown": 0.03,
+   "variance": 0.04,
+   "seconds": 0.28,
+   "samples": 13440,
+   "bytes": {
+    "ogg": 1558,
+    "m4a": 3080
+   },
+   "note": "push"
+  },
+  "kick_thud": {
+   "path": "sfx/kick_thud",
+   "kind": "sfx",
+   "category": "combat",
+   "priority": 50,
+   "loop": false,
+   "maxVoices": 3,
+   "cooldown": 0.03,
+   "variance": 0.04,
+   "seconds": 0.3,
+   "samples": 14400,
+   "bytes": {
+    "ogg": 1587,
+    "m4a": 3199
+   },
+   "note": "kicked generator"
+  },
+  "daze": {
+   "path": "sfx/daze",
+   "kind": "sfx",
+   "category": "combat",
+   "priority": 60,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.03,
+   "variance": 0.04,
+   "seconds": 0.8,
+   "samples": 38400,
+   "bytes": {
+    "ogg": 6072,
+    "m4a": 6793
+   },
+   "note": "daze/freeze"
+  },
+  "damage_hit": {
+   "path": "sfx/damage_hit",
+   "kind": "sfx",
+   "category": "combat",
+   "priority": 65,
+   "loop": false,
+   "maxVoices": 3,
+   "cooldown": 0.03,
+   "variance": 0.04,
+   "seconds": 0.25,
+   "samples": 12000,
+   "bytes": {
+    "ogg": 1432,
+    "m4a": 2771
+   },
+   "note": "damage taken"
+  },
+  "elim_comic": {
+   "path": "sfx/elim_comic",
+   "kind": "sfx",
+   "category": "combat",
+   "priority": 85,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.03,
+   "variance": 0.04,
+   "seconds": 1.2341,
+   "samples": 59236,
+   "bytes": {
+    "ogg": 6491,
+    "m4a": 9719
+   },
+   "note": "comic non-graphic elimination"
+  },
+  "shield_up": {
+   "path": "sfx/shield_up",
+   "kind": "sfx",
+   "category": "defense",
+   "priority": 60,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.04,
+   "variance": 0.02,
+   "seconds": 0.7,
+   "samples": 33600,
+   "bytes": {
+    "ogg": 4221,
+    "m4a": 6091
+   },
+   "note": "shield/Okada protection on"
+  },
+  "shield_hit": {
+   "path": "sfx/shield_hit",
+   "kind": "sfx",
+   "category": "defense",
+   "priority": 70,
+   "loop": false,
+   "maxVoices": 3,
+   "cooldown": 0.04,
+   "variance": 0.02,
+   "seconds": 0.35,
+   "samples": 16800,
+   "bytes": {
+    "ogg": 2106,
+    "m4a": 3702
+   },
+   "note": "shield absorbs blast/hit"
+  },
+  "shield_break": {
+   "path": "sfx/shield_break",
+   "kind": "sfx",
+   "category": "defense",
+   "priority": 75,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.04,
+   "variance": 0.02,
+   "seconds": 0.5664,
+   "samples": 27189,
+   "bytes": {
+    "ogg": 4015,
+    "m4a": 4936
+   },
+   "note": "shield breaks"
+  },
+  "pickup_good": {
+   "path": "sfx/pickup_good",
+   "kind": "sfx",
+   "category": "pickup",
+   "priority": 55,
+   "loop": false,
+   "maxVoices": 3,
+   "cooldown": 0.05,
+   "variance": 0.0,
+   "seconds": 0.53,
+   "samples": 25440,
+   "bytes": {
+    "ogg": 2837,
+    "m4a": 4828
+   },
+   "note": "power-up"
+  },
+  "pickup_curse": {
+   "path": "sfx/pickup_curse",
+   "kind": "sfx",
+   "category": "pickup",
+   "priority": 60,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.05,
+   "variance": 0.0,
+   "seconds": 0.57,
+   "samples": 27360,
+   "bytes": {
+    "ogg": 3925,
+    "m4a": 5099
+   },
+   "note": "bad fuel / curse"
+  },
+  "sd_alarm": {
+   "path": "sfx/sd_alarm",
+   "kind": "sfx",
+   "category": "danger",
+   "priority": 88,
+   "loop": false,
+   "maxVoices": 1,
+   "cooldown": 0.06,
+   "variance": 0.0,
+   "seconds": 1.9,
+   "samples": 91200,
+   "bytes": {
+    "ogg": 13882,
+    "m4a": 14790
+   },
+   "note": "Sudden Death / Wahala Crush warning"
+  },
+  "sd_slam": {
+   "path": "sfx/sd_slam",
+   "kind": "sfx",
+   "category": "danger",
+   "priority": 80,
+   "loop": false,
+   "maxVoices": 3,
+   "cooldown": 0.06,
+   "variance": 0.0,
+   "seconds": 0.8,
+   "samples": 38400,
+   "bytes": {
+    "ogg": 3940,
+    "m4a": 6800
+   },
+   "note": "crush block lands"
+  },
+  "boss_telegraph": {
+   "path": "sfx/boss_telegraph",
+   "kind": "sfx",
+   "category": "danger",
+   "priority": 95,
+   "loop": false,
+   "maxVoices": 1,
+   "cooldown": 0.06,
+   "variance": 0.0,
+   "seconds": 1.1,
+   "samples": 52800,
+   "bytes": {
+    "ogg": 6562,
+    "m4a": 9428
+   },
+   "note": "boss attack wind-up"
+  },
+  "boss_slam": {
+   "path": "sfx/boss_slam",
+   "kind": "sfx",
+   "category": "expl",
+   "priority": 90,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 0.04,
+   "variance": 0.035,
+   "seconds": 1.4,
+   "samples": 67200,
+   "bytes": {
+    "ogg": 6433,
+    "m4a": 11199
+   },
+   "note": "boss attack lands"
+  },
+  "boss_vuln_open": {
+   "path": "sfx/boss_vuln_open",
+   "kind": "sfx",
+   "category": "danger",
+   "priority": 85,
+   "loop": false,
+   "maxVoices": 1,
+   "cooldown": 0.06,
+   "variance": 0.0,
+   "seconds": 0.73,
+   "samples": 35039,
+   "bytes": {
+    "ogg": 3848,
+    "m4a": 6168
+   },
+   "note": "boss vulnerability window open (bright, distinct)"
+  },
+  "boss_hit": {
+   "path": "sfx/boss_hit",
+   "kind": "sfx",
+   "category": "combat",
+   "priority": 70,
+   "loop": false,
+   "maxVoices": 3,
+   "cooldown": 0.03,
+   "variance": 0.04,
+   "seconds": 0.3,
+   "samples": 14400,
+   "bytes": {
+    "ogg": 1852,
+    "m4a": 3221
+   },
+   "note": "player hits boss"
+  },
+  "boss_defeat": {
+   "path": "sfx/boss_defeat",
+   "kind": "sfx",
+   "category": "expl",
+   "priority": 95,
+   "loop": false,
+   "maxVoices": 1,
+   "cooldown": 0.04,
+   "variance": 0.035,
+   "seconds": 2.0663,
+   "samples": 99184,
+   "bytes": {
+    "ogg": 9616,
+    "m4a": 15682
+   },
+   "note": "boss defeated"
+  },
+  "horn_honk": {
+   "path": "sfx/horn_honk",
+   "kind": "sfx",
+   "category": "amb_event",
+   "priority": 15,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 1.0,
+   "variance": 0.03,
+   "seconds": 0.42,
+   "samples": 20160,
+   "bytes": {
+    "ogg": 2343,
+    "m4a": 4195
+   },
+   "note": "street horn (also driven by arena events)"
+  },
+  "horn_honk_b": {
+   "path": "sfx/horn_honk_b",
+   "kind": "sfx",
+   "category": "amb_event",
+   "priority": 15,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 1.0,
+   "variance": 0.03,
+   "seconds": 0.3,
+   "samples": 14400,
+   "bytes": {
+    "ogg": 1868,
+    "m4a": 3295
+   },
+   "note": "street horn variant"
+  },
+  "keke_putt": {
+   "path": "sfx/keke_putt",
+   "kind": "sfx",
+   "category": "amb_event",
+   "priority": 15,
+   "loop": false,
+   "maxVoices": 2,
+   "cooldown": 1.0,
+   "variance": 0.03,
+   "seconds": 1.5928,
+   "samples": 76453,
+   "bytes": {
+    "ogg": 9179,
+    "m4a": 17284
+   },
+   "note": "Keke passes"
+  },
+  "amb_lagos": {
+   "path": "sfx/amb_lagos",
+   "kind": "sfx",
+   "category": "amb",
+   "priority": 5,
+   "loop": true,
+   "maxVoices": 1,
+   "cooldown": 0.03,
+   "variance": 0.0,
+   "seconds": 16.0,
+   "samples": 768000,
+   "bytes": {
+    "ogg": 74530,
+    "m4a": 117156
+   },
+   "note": "arena bed, 16 s loop"
+  }
+ },
+ "music": {
+  "menu": {
+   "stems": {
+    "main": "menu_loop"
+   },
+   "loop": true
+  },
+  "rumble": {
+   "stems": {
+    "base": "rumble_base",
+    "perc": "rumble_perc",
+    "hype": "rumble_hype"
+   },
+   "loop": true,
+   "layers": [
+    {
+     "base": 1,
+     "perc": 0,
+     "hype": 0
+    },
+    {
+     "base": 1,
+     "perc": 1,
+     "hype": 0
+    },
+    {
+     "base": 1,
+     "perc": 1,
+     "hype": 1
+    }
+   ]
+  },
+  "trailer": {
+   "stems": {
+    "main": "trailer"
+   },
+   "loop": false
+  }
+ },
+ "groups": {
+  "boot": [
+   "ui_move",
+   "ui_confirm",
+   "ui_back",
+   "ui_error",
+   "ui_toggle",
+   "sting"
+  ],
+  "menu": [
+   "menu_loop"
+  ],
+  "match": [
+   "rumble_base",
+   "rumble_perc",
+   "rumble_hype",
+   "amb_lagos",
+   "ui_match_start",
+   "cd_tick",
+   "cd_go",
+   "gen_place",
+   "gen_fuse_loop",
+   "gen_warn_a",
+   "gen_warn_b",
+   "gen_arm_final",
+   "expl_gen",
+   "expl_chain",
+   "debris_break",
+   "punch_whoosh",
+   "punch_hit",
+   "push_shove",
+   "kick_thud",
+   "daze",
+   "damage_hit",
+   "elim_comic",
+   "shield_up",
+   "shield_hit",
+   "shield_break",
+   "pickup_good",
+   "pickup_curse",
+   "sd_alarm",
+   "sd_slam",
+   "horn_honk",
+   "horn_honk_b",
+   "keke_putt"
+  ],
+  "result": [
+   "victory",
+   "defeat"
+  ],
+  "boss": [
+   "boss_telegraph",
+   "boss_slam",
+   "boss_vuln_open",
+   "boss_hit",
+   "boss_defeat"
+  ]
+ },
+ "duck": {
+  "danger": {
+   "music": 0.5,
+   "ambience": 0.35,
+   "hold": 0.35,
+   "release": 0.45
+  },
+  "expl": {
+   "music": 0.42,
+   "ambience": 0.3,
+   "hold": 0.45,
+   "release": 0.6
+  }
+ },
+ "events": {
+  "ui.move": {
+   "sfx": "ui_move"
+  },
+  "ui.confirm": {
+   "sfx": "ui_confirm"
+  },
+  "ui.back": {
+   "sfx": "ui_back"
+  },
+  "ui.error": {
+   "sfx": "ui_error"
+  },
+  "ui.toggle": {
+   "sfx": "ui_toggle"
+  },
+  "match.start": {
+   "sfx": "ui_match_start"
+  },
+  "countdown.tick": {
+   "sfx": "cd_tick"
+  },
+  "countdown.go": {
+   "sfx": "cd_go"
+  },
+  "generator.placed": {
+   "sfx": "gen_place"
+  },
+  "generator.fuse.start": {
+   "loop": "gen_fuse_loop",
+   "key": "fuse:{id}",
+   "volume": 0.8
+  },
+  "generator.fuse.stop": {
+   "stopLoop": "fuse:{id}"
+  },
+  "generator.warn.a": {
+   "sfx": "gen_warn_a"
+  },
+  "generator.warn.b": {
+   "sfx": "gen_warn_b"
+  },
+  "generator.armed.final": {
+   "sfx": "gen_arm_final"
+  },
+  "generator.explode": {
+   "sfx": "expl_gen"
+  },
+  "generator.chain": {
+   "sfx": "expl_chain"
+  },
+  "wall.break": {
+   "sfx": "debris_break"
+  },
+  "generator.kicked": {
+   "sfx": "kick_thud"
+  },
+  "punch.swing": {
+   "sfx": "punch_whoosh"
+  },
+  "punch.hit": {
+   "sfx": "punch_hit"
+  },
+  "push.hit": {
+   "sfx": "push_shove"
+  },
+  "player.daze": {
+   "sfx": "daze"
+  },
+  "player.damage": {
+   "sfx": "damage_hit"
+  },
+  "player.eliminated": {
+   "sfx": "elim_comic"
+  },
+  "shield.up": {
+   "sfx": "shield_up"
+  },
+  "shield.hit": {
+   "sfx": "shield_hit"
+  },
+  "shield.break": {
+   "sfx": "shield_break"
+  },
+  "pickup.good": {
+   "sfx": "pickup_good"
+  },
+  "pickup.curse": {
+   "sfx": "pickup_curse"
+  },
+  "suddendeath.warn": {
+   "sfx": "sd_alarm"
+  },
+  "suddendeath.block": {
+   "sfx": "sd_slam"
+  },
+  "boss.telegraph": {
+   "sfx": "boss_telegraph"
+  },
+  "boss.slam": {
+   "sfx": "boss_slam"
+  },
+  "boss.vulnerable": {
+   "sfx": "boss_vuln_open"
+  },
+  "boss.hit": {
+   "sfx": "boss_hit"
+  },
+  "boss.defeated": {
+   "sfx": "boss_defeat"
+  },
+  "arena.horn": {
+   "sfx": "horn_honk"
+  },
+  "arena.horn2": {
+   "sfx": "horn_honk_b"
+  },
+  "arena.keke": {
+   "sfx": "keke_putt"
+  },
+  "music.menu": {
+   "music": "menu"
+  },
+  "music.rumble": {
+   "music": "rumble",
+   "intensity": 0
+  },
+  "music.intensity.0": {
+   "intensity": 0
+  },
+  "music.intensity.1": {
+   "intensity": 1
+  },
+  "music.intensity.2": {
+   "intensity": 2
+  },
+  "stinger.logo": {
+   "stinger": "sting"
+  },
+  "stinger.victory": {
+   "stinger": "victory"
+  },
+  "stinger.defeat": {
+   "stinger": "defeat"
+  }
+ }
+}

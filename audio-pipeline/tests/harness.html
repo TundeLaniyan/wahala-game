@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>audio harness</title>
+<button id="go">tap</button>
+<script type="module">
+import { AudioManager } from "../src/AudioManager.js";
+window.AudioManager = AudioManager;
+window.manifest = await (await fetch("../src/audio-manifest.json")).json();
+window.ready = true;
+</script>
