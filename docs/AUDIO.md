@@ -10,6 +10,8 @@ loaded per arena; see "Voice lines" below. The crowd's on-screen speech bubbles 
 
 ## Read this first
 
+**Unapproved candidate audio (decision AU1):** the original WAHALA! theme drafts can be auditioned with `?audiodraft` (files staged locally from `tools/audio/candidates/`, never shipped); see `docs/AUDIO_INTEGRATION.md` for the overlay, the exact list of what is still missing, and the promotion steps. They are not part of the soundtrack until the founder approves them.
+
 The `claude/wahala-lagos-audio` branch produced generated Afrobeats music, synthetic Nigerian Pidgin voices and
 generated "Lagos" ambience beds. **The founder rejected all three.** On this branch:
 

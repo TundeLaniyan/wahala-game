@@ -30,6 +30,13 @@ export interface MusicTrack {
   file: string;
   /** Loudness trim for this track (default 1, clamped to 0..2). */
   gain: number;
+  /**
+   * Full URL of the file. Set ONLY by `mergeCandidateMusic` (candidates.ts) for unapproved audition tracks; a manifest
+   * can never supply it (`parseMusicManifest` does not read it), so approved files always come from public/audio/music/.
+   */
+  url?: string;
+  /** True for an unapproved audition track added by the `?audiodraft` overlay; absent for every shipped track. */
+  candidate?: boolean;
 }
 
 export interface ArenaPlaylist {

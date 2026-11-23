@@ -25,7 +25,9 @@
     "boss-measure": "tsx scripts/boss-measure.ts",
     "combat-lab-compare": "tsx scripts/combat-lab-compare.ts",
     "streak-measure": "tsx scripts/streak-measure.ts",
-    "check:static": "vite build && node scripts/check-static-build.mjs"
+    "check:static": "vite build && node scripts/check-static-build.mjs",
+    "audio:stage-candidates": "node tools/audio/candidates/stage.mjs",
+    "audio:unstage-candidates": "node tools/audio/candidates/stage.mjs --clean"
   },
   "dependencies": {
     "@fontsource/anton": "^5.3.0",

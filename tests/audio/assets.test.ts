@@ -58,6 +58,9 @@ describe('rejected generated audio stays disabled', () => {
   it('the only audio files under public/audio are approved Pixabay tracks and the listed, approved voice clips', () => {
     const audioFiles = walk(AUDIO)
       .map((p) => relative(AUDIO, p).split('\\').join('/'))
+      // public/audio/candidates/ is the git-ignored local staging area for UNAPPROVED audition files
+      // (decision AU1); tests/audio/candidates.test.ts proves nothing there is ever tracked or shipped
+      .filter((p) => !p.startsWith('candidates/'))
       .filter((p) => /\.(ogg|mp3|wav|m4a|flac|aac|opus|webm)$/i.test(p));
     const voiceClips = json<{ clips: { file: string }[] }>('voices/recorded.json').clips.map(
       (c) => `voices/recorded/${c.file}`,
