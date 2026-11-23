@@ -80,6 +80,8 @@ interface SeatRuntime {
   /** A bot plays this seat for good (bots, and humans whose reconnection window expired). */
   replaced: boolean;
   held: { move: InputMsg['m']; placeHeld: boolean };
+  /** The latest new direction press, kept until it produces a step or `until` passes (tap = one step). */
+  press: { dir: NonNullable<InputMsg['m']>; until: number } | null;
   /** One-shot buttons pressed since the last tick (BUTTON mask). */
   pressed: number;
   lastSeq: number;
@@ -99,6 +101,12 @@ export interface MatchCounters {
 }
 
 const BOT_SEED_STRIDE = 7919;
+/**
+ * A new direction press is kept this many ticks (or until it produces a step). Offline, `MoveGate` makes a tap one step
+ * by holding the press until the local step finishes (MOVE_BUFFER_TICKS = 10 after that); online only the server knows
+ * when the authoritative step finishes, so it latches the press itself: up to one step's remaining time plus that buffer.
+ */
+export const PRESS_KEEP_TICKS = 24;
 
 export class RumbleMatch {
   readonly state: GameState;
@@ -149,6 +157,7 @@ export class RumbleMatch {
       connected: false,
       replaced: spec.kind === 'bot',
       held: { move: null, placeHeld: false },
+      press: null,
       pressed: 0,
       lastSeq: -1,
       tokens: this.inputsPerSecond,
@@ -197,6 +206,7 @@ export class RumbleMatch {
     if (!s || s.spec.kind !== 'human' || s.replaced) return;
     s.connected = true;
     s.held = { move: null, placeHeld: false };
+    s.press = null;
     s.pressed = 0;
   }
 
@@ -206,6 +216,7 @@ export class RumbleMatch {
     if (!s || s.spec.kind !== 'human') return;
     s.connected = false;
     s.held = { move: null, placeHeld: false };
+    s.press = null;
     s.pressed = 0;
   }
 
@@ -241,6 +252,8 @@ export class RumbleMatch {
       return 'stale';
     }
     s.lastSeq = msg.s;
+    if (msg.m !== null && msg.m !== s.held.move)
+      s.press = { dir: msg.m, until: this.state.tick + PRESS_KEEP_TICKS };
     s.held = { move: msg.m, placeHeld: msg.h };
     s.pressed |= msg.b;
     this.counters.inputsAccepted++;
@@ -258,7 +271,8 @@ export class RumbleMatch {
         continue;
       }
       if (s.spec.kind === 'human' && s.connected && !s.replaced) {
-        const intent: Intent = { move: s.held.move };
+        if (s.press && state.tick >= s.press.until) s.press = null;
+        const intent: Intent = { move: s.held.move ?? s.press?.dir ?? null };
         if (s.held.placeHeld) intent.placeHeld = true;
         if (s.pressed & BUTTON.place) intent.place = true;
         if (s.pressed & BUTTON.special) intent.special = true;
@@ -285,7 +299,16 @@ export class RumbleMatch {
    * The returned frame is for in-process inspection only and must not be kept past this tick.
    */
   step(): TickFrame {
+    const before = this.seats.map((s, i) =>
+      s.press ? this.state.players[i]!.x * 65536 + this.state.players[i]!.y : -1,
+    );
     const events = tick(this.state, this.intentsForTick());
+    // a latched press is spent once it produced a step (or the seat was eliminated)
+    for (let i = 0; i < this.seats.length; i++) {
+      const s = this.seats[i]!;
+      const p = this.state.players[i]!;
+      if (s.press && (!p.alive || p.x * 65536 + p.y !== before[i])) s.press = null;
+    }
     this.counters.ticks++;
     for (const e of events) if (e.type === 'playerEliminated') this.counters.eliminations++;
     predict(this.mirror);
