@@ -80,6 +80,11 @@ export interface NetHud {
 }
 
 const FEED_MAX = 6;
+/**
+ * A held-state change (direction, A held) is sent at most this often; a button press is sent at once. Keeps an honest
+ * client at <= ~30 input messages/s whatever the frame rate, far below the server's sustained flood limit.
+ */
+const MIN_STATE_SEND_MS = 33;
 const PING_EVERY_MS = 1000;
 const RESYNC_GAP_MS = 1000;
 /** City Rumble: events further than this (tiles) from the camera focus are not shown / heard (as offline). */
@@ -93,6 +98,7 @@ export class NetMatchClient {
   private lastFrameMs = -1;
   private seq = 0;
   private sent: { m: InputMsg['m']; h: boolean } = { m: null, h: false };
+  private lastSendMs = -Infinity;
   private lastPingMs = -Infinity;
   private lastResyncMs = -Infinity;
   private rtt: number | null = null;
@@ -228,6 +234,9 @@ export class NetMatchClient {
       held = intent.placeHeld === true;
     }
     if (buttons === 0 && move === this.sent.m && held === this.sent.h) return;
+    const now = this.deps.now();
+    if (buttons === 0 && now - this.lastSendMs < MIN_STATE_SEND_MS) return; // resent next frame if still changed
+    this.lastSendMs = now;
     this.sent = { m: move, h: held };
     const msg: InputMsg = { s: this.seq++, m: move, h: held, b: buttons };
     this.deps.transport.send(MSG.input, msg);

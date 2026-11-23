@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CLOSE, MSG } from '../../src/net/protocol';
+import { FLOOD_LIMIT } from '../src/rooms/RumbleRoom';
 import { TestContext, sleep, until } from './helpers';
 
 const ctx = new TestContext();
@@ -51,5 +52,24 @@ describe('abuse', () => {
     expect(m!.leftWith).toBe(CLOSE.abuse);
     expect(m!.notices.at(-1)).toMatchObject({ code: 'kicked' });
     await until('room disposed', () => ctx.server.metrics.roomCount === 0);
+  });
+
+  it('a burst of valid inputs (a TCP-stall backlog) is applied, never kicked; a sustained flood is kicked', async () => {
+    const { all, code } = await ctx.privateMatch(['Burst', 'Flood'], { durationSec: 60 });
+    const [b, f] = all;
+    await until('frames', () => b!.frameMessages > 5 && f!.frameMessages > 5);
+    // 200 valid inputs at once: well beyond the old 120/s cut-off, as a multi-second mobile stall delivers them
+    for (let i = 0; i < 200; i++)
+      b!.room.send(MSG.input, { s: 10_000 + i, m: i % 2 ? 'up' : 'left', h: false, b: 0 });
+    await until('burst applied', () => ctx.metricsOf(code).inputs.accepted >= 200);
+    await sleep(300);
+    expect(b!.leftWith).toBeNull();
+    expect(ctx.metricsOf(code).net.kicks).toBe(0);
+    // a client that keeps flooding valid inputs beyond FLOOD_LIMIT in one window is disconnected
+    for (let i = 0; i < FLOOD_LIMIT + 50; i++)
+      f!.room.send(MSG.input, { s: 20_000 + i, m: 'up', h: false, b: 0 });
+    await until('flooder kicked', () => f!.leftWith !== null);
+    expect(f!.leftWith).toBe(CLOSE.abuse);
+    expect(b!.leftWith).toBeNull();
   });
 });

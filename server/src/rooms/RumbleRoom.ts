@@ -44,7 +44,15 @@ export const INVALID_WINDOW_MS = 10_000;
 /** A client may ask for a fresh keyframe at most this often. */
 export const RESYNC_MIN_INTERVAL_MS = 1000;
 /** Hard backstop on any client's message rate (a real client sends inputs on change plus one ping a second). */
-const MAX_MESSAGES_PER_SECOND = 120;
+/**
+ * Colyseus' own per-second cut-off (it force-closes the socket). Only a last-resort backstop: an honest mobile client
+ * can deliver several seconds of queued messages at once after a TCP stall (measured: 9 of 32 clients were cut off at
+ * 120/s on the bad-mobile profile). Real flood control is the sustained-rate check below.
+ */
+const MAX_MESSAGES_PER_SECOND = 1000;
+/** Flooding = more than this many messages over FLOOD_WINDOW_MS (an average of 120/s; an honest client sends <= ~31/s). */
+export const FLOOD_LIMIT = 600;
+export const FLOOD_WINDOW_MS = 5000;
 /** A finished match keeps its room this long waiting for a rematch. */
 const RESULTS_LINGER_MS = 10 * 60 * 1000;
 const CODE_ATTEMPTS = 64;
@@ -58,6 +66,9 @@ interface Peer {
   invalidAt: number[];
   lastResyncAt: number;
   kicked: boolean;
+  /** Sustained-rate flood detection: messages since `floodSince`. */
+  floodCount: number;
+  floodSince: number;
 }
 
 export interface RoomDeps {
@@ -89,6 +100,8 @@ export class RumbleRoom extends Room {
   private housekeeping: NodeJS.Timeout | null = null;
   private lingerTimer: NodeJS.Timeout | null = null;
   private lastResults: ResultsMsg | null = null;
+  /** The latest deflated keyframe, shared by every peer that needs one on the same tick. */
+  private keyframeCache: { matchId: string; tick: number; bytes: Uint8Array } | null = null;
   private matchCount = 0;
   private disposed = false;
 
@@ -158,6 +171,8 @@ export class RumbleRoom extends Room {
       messagesIn: 0,
       invalid: 0,
       invalidAt: [],
+      floodCount: 0,
+      floodSince: performance.now(),
       lastResyncAt: -Infinity,
       kicked: false,
     });
@@ -227,7 +242,7 @@ export class RumbleRoom extends Room {
       if (!parsed.ok) return this.invalid(peer);
       const match = this.match;
       if (!match || this.lobby.phase !== 'playing' || peer.seat === null) return; // not in a match: nothing to apply
-      if (match.input(peer.seat, parsed.value, Date.now()) === 'rateLimited') this.invalid(peer);
+      match.input(peer.seat, parsed.value, Date.now());
     });
 
     this.onMessage(MSG.ping, (client, raw) => {
@@ -302,7 +317,24 @@ export class RumbleRoom extends Room {
     if (!peer) return undefined;
     peer.messagesIn++;
     this.metrics.messagesIn++;
+    if (this.flooding(peer)) return undefined;
     return peer;
+  }
+
+  /**
+   * Sustained-rate flood control over consecutive FLOOD_WINDOW_MS windows. A burst (a TCP stall's backlog) is fine; only
+   * a client that keeps sending far faster than any honest client is disconnected.
+   */
+  private flooding(peer: Peer): boolean {
+    if (peer.kicked) return true;
+    const now = performance.now();
+    if (now - peer.floodSince > FLOOD_WINDOW_MS) {
+      peer.floodSince = now;
+      peer.floodCount = 0;
+    }
+    if (++peer.floodCount <= FLOOD_LIMIT) return false;
+    this.kick(peer, 'too many messages');
+    return true;
   }
 
   /** Counts an invalid message; a client over the limit is disconnected (not allowed to reconnect). */
@@ -312,16 +344,16 @@ export class RumbleRoom extends Room {
     const now = performance.now();
     peer.invalidAt.push(now);
     while (peer.invalidAt.length > 0 && now - peer.invalidAt[0]! > INVALID_WINDOW_MS) peer.invalidAt.shift();
-    if (peer.invalidAt.length > INVALID_LIMIT && !peer.kicked) {
-      peer.kicked = true;
-      this.metrics.kicks++;
-      this.deps?.log?.(`room ${this.code}: kicked a client for too many invalid messages`);
-      this.sendTo(peer, MSG.notice, {
-        code: 'kicked',
-        message: 'too many invalid messages',
-      } satisfies NoticeMsg);
-      peer.client.leave(CLOSE.abuse, 'too many invalid messages');
-    }
+    if (peer.invalidAt.length > INVALID_LIMIT) this.kick(peer, 'too many invalid messages');
+  }
+
+  private kick(peer: Peer, reason: string): void {
+    if (peer.kicked) return;
+    peer.kicked = true;
+    this.metrics.kicks++;
+    this.deps?.log?.(`room ${this.code}: kicked a client: ${reason}`);
+    this.sendTo(peer, MSG.notice, { code: 'kicked', message: reason } satisfies NoticeMsg);
+    peer.client.leave(CLOSE.abuse, reason);
   }
 
   /** A well-formed but refused request (not the host, wrong phase ...): tell the sender, count it. */
@@ -449,7 +481,18 @@ export class RumbleRoom extends Room {
   private sendKeyframe(peer: Peer): void {
     const match = this.match;
     if (!match) return;
-    const z = deflateRawSync(pack(match.keyframe())); // packed at once: the keyframe IS the live mirror
+    // one encoding per tick, shared by every peer that needs it then (a match start sends 32 at once: measured 749 ms
+    // event-loop stall with 8 rooms starting together when each peer got its own pack + deflate)
+    const tick = match.state.tick;
+    if (this.keyframeCache?.matchId !== match.descriptor.matchId || this.keyframeCache.tick !== tick) {
+      // packed at once: the keyframe IS the live mirror
+      this.keyframeCache = {
+        matchId: match.descriptor.matchId,
+        tick,
+        bytes: deflateRawSync(pack(match.keyframe())),
+      };
+    }
+    const z = this.keyframeCache.bytes;
     peer.client.sendBytes(MSG.keyframe, z);
     peer.bytesOut += z.length;
     this.metrics.bytesSentTotal += z.length;
@@ -516,7 +559,7 @@ export class RumbleRoom extends Room {
       inputs: {
         accepted: c?.inputsAccepted ?? 0,
         stale: c?.inputsStale ?? 0,
-        rateLimited: c?.inputsRateLimited ?? 0,
+        overRate: c?.inputsOverRate ?? 0,
       },
       matches: { started: m.matchesStarted, finished: m.matchesFinished },
       clients: [...this.peers.values()].map((p) => ({

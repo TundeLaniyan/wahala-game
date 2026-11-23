@@ -110,7 +110,7 @@ export interface RoomMetricsSnapshot {
     kicks: number;
     reconnections: number;
   };
-  inputs: { accepted: number; stale: number; rateLimited: number };
+  inputs: { accepted: number; stale: number; overRate: number };
   matches: { started: number; finished: number };
   clients: ClientMetrics[];
 }

@@ -67,11 +67,11 @@ export interface RumbleMatchOptions {
   hashEvery?: number;
   /** What a dropped human seat does until it reconnects: stand still, or a bot plays it. Default 'autopilot'. */
   dropPolicy?: 'idle' | 'autopilot';
-  /** Max input messages per second per seat (token bucket, burst = the same number). */
+  /** Input messages per second per seat before they are counted as over-rate (token bucket). Default 30. */
   inputsPerSecond?: number;
 }
 
-export type InputVerdict = 'ok' | 'stale' | 'rateLimited' | 'notYours';
+export type InputVerdict = 'ok' | 'stale' | 'notYours';
 
 interface SeatRuntime {
   spec: SeatSpec;
@@ -94,7 +94,12 @@ export interface MatchCounters {
   ticks: number;
   inputsAccepted: number;
   inputsStale: number;
-  inputsRateLimited: number;
+  /**
+   * Inputs beyond `inputsPerSecond` (token bucket). COUNTED, still applied: applying an input is O(1), and a burst is
+   * what an honest mobile client delivers after a TCP stall; dropping it would lose the player's latest held direction.
+   * Flooding is the room's job (a sustained-rate kick), not the match's.
+   */
+  inputsOverRate: number;
   /** Ticks whose frame carried a patch (vs a pure prediction). */
   patchedTicks: number;
   eliminations: number;
@@ -115,7 +120,7 @@ export class RumbleMatch {
     ticks: 0,
     inputsAccepted: 0,
     inputsStale: 0,
-    inputsRateLimited: 0,
+    inputsOverRate: 0,
     patchedTicks: 0,
     eliminations: 0,
   };
@@ -239,15 +244,12 @@ export class RumbleMatch {
   input(seat: number, msg: InputMsg, nowMs: number): InputVerdict {
     const s = this.seats[seat];
     if (!s || s.spec.kind !== 'human' || s.replaced || !s.connected) return 'notYours';
-    // token bucket
+    // token bucket: measures the rate, never rejects (see `MatchCounters.inputsOverRate`)
     const refill = ((nowMs - s.tokensAt) / 1000) * this.inputsPerSecond;
     s.tokens = Math.min(this.inputsPerSecond, s.tokens + Math.max(0, refill));
     s.tokensAt = nowMs;
-    if (s.tokens < 1) {
-      this.counters.inputsRateLimited++;
-      return 'rateLimited';
-    }
-    s.tokens -= 1;
+    if (s.tokens >= 1) s.tokens -= 1;
+    else this.counters.inputsOverRate++;
     if (msg.s <= s.lastSeq) {
       this.counters.inputsStale++;
       return 'stale';

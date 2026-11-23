@@ -257,21 +257,19 @@ describe('input authority', () => {
     expect(m.counters.inputsAccepted).toBe(2);
   });
 
-  it("match.input answers 'rateLimited' past the allowed rate (nowMs is the only clock)", () => {
+  it('over-rate inputs are counted but still applied (a TCP-stall backlog must not lose the latest held state)', () => {
     const m = makeMatch({ bots: 2, inputsPerSecond: 10 });
     const verdicts: string[] = [];
-    for (let i = 1; i <= 15; i++) verdicts.push(m.input(0, { ...ok, s: i }, 1000));
-    expect(verdicts.filter((v) => v === 'ok').length).toBe(10);
-    expect(verdicts.slice(10).every((v) => v === 'rateLimited')).toBe(true);
-    expect(m.counters.inputsRateLimited).toBe(5);
-    // seat 1 has its own bucket
+    // 15 inputs arriving in the same instant: the last one holds 'left' and presses A
+    for (let i = 1; i <= 15; i++)
+      verdicts.push(m.input(0, { s: i, m: i === 15 ? 'left' : 'up', h: false, b: i === 15 ? 1 : 0 }, 1000));
+    expect(verdicts.every((v) => v === 'ok')).toBe(true);
+    expect(m.counters.inputsOverRate).toBe(5);
+    expect(m.counters.inputsAccepted).toBe(15);
+    // seat 1 has its own bucket; a second later seat 0's has refilled
     expect(m.input(1, { ...ok, s: 1 }, 1000)).toBe('ok');
-    // a second later the bucket has refilled
     expect(m.input(0, { ...ok, s: 100 }, 2000)).toBe('ok');
-    // the simulation clock plays no part: stepping does not refill
-    for (let i = 0; i < 120; i++) m.step();
-    const burst = Array.from({ length: 15 }, (_, i) => m.input(0, { ...ok, s: 200 + i }, 2000));
-    expect(burst.filter((v) => v === 'rateLimited').length).toBeGreaterThan(0);
+    expect(m.counters.inputsOverRate).toBe(5);
   });
 
   it("match.input answers 'notYours' for bot seats, disconnected seats and unknown seats", () => {

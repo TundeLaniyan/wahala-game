@@ -1,0 +1,2627 @@
+{
+ "meta": {
+  "label": "basic-clean-c32-r1",
+  "date": "2026-11-23T19:26:00.674Z",
+  "scenario": "basic",
+  "profile": "clean",
+  "profileParams": {
+   "name": "clean",
+   "oneWayMs": 0,
+   "jitterMs": 0,
+   "loss": 0
+  },
+  "humansPerRoom": 32,
+  "rooms": 1,
+  "totalClients": 32,
+  "workerProcesses": 3,
+  "durationSec": 60,
+  "reconnectSeconds": 30,
+  "capSec": 150,
+  "arena": "rumbleOshodi",
+  "seed": 1,
+  "machine": {
+   "cpu": "Intel(R) Xeon(R) Processor @ 2.30GHz",
+   "vcpus": 4,
+   "ramGB": 17,
+   "node": "v22.23.5"
+  },
+  "connectMs": 278,
+  "matchWallSec": 64.8
+ },
+ "server": {
+  "pid": 14081,
+  "cpuPercentOfOneCore": {
+   "mean": 9.8,
+   "p95": 13.3,
+   "max": 15.2,
+   "samples": 61
+  },
+  "rssMB": {
+   "mean": 147.7,
+   "max": 152.6
+  },
+  "heapUsedMB": {
+   "mean": 45.2,
+   "max": 53.1
+  },
+  "eventLoopDelayMs": {
+   "p99Median": 5.29,
+   "p99Worst": 27.85,
+   "max": 116.22
+  },
+  "stepMs": {
+   "mean": 0.91,
+   "p99Median": 5.51,
+   "p99Worst": 9.09,
+   "max": 29.42
+  },
+  "broadcastMs": {
+   "mean": 1.25,
+   "p99Median": 7.33,
+   "p99Worst": 7.74,
+   "max": 31.41
+  },
+  "timerLatenessMs": {
+   "mean": 1.04,
+   "p99Median": 7.13,
+   "p99Worst": 16.54,
+   "max": 38.66
+  },
+  "ticksDropped": 0,
+  "ticksRun": 3750,
+  "inputs": {
+   "accepted": 10113,
+   "stale": 0,
+   "rateLimited": 0
+  },
+  "invalidMessages": 0,
+  "kicks": 0,
+  "resyncsServed": 0,
+  "reconnections": 0,
+  "bytesSentTotal": 20097600,
+  "matchWindowSec": 61.5,
+  "rooms": [
+   {
+    "id": "040724d5",
+    "humans": 32,
+    "ticksRun": 3750,
+    "ticksDropped": 0,
+    "framesBytesPerClient": 625305,
+    "framesBytesRaw": 1728075,
+    "keyframesSent": 32,
+    "bytesSentTotal": 20097600,
+    "messagesIn": 12233,
+    "invalidMessages": 0,
+    "kicks": 0,
+    "resyncsServed": 0,
+    "reconnections": 0,
+    "inputs": {
+     "accepted": 10113,
+     "stale": 0,
+     "rateLimited": 0
+    },
+    "matches": "results",
+    "clientsBytesOut": [
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050,
+     628050
+    ]
+   }
+  ]
+ },
+ "clients": {
+  "configured": 32,
+  "connected": 32,
+  "played": 32,
+  "departed": 0,
+  "connectFailures": [],
+  "kbDownPerSec": {
+   "mean": 10.07,
+   "p50": 10.07,
+   "max": 10.08
+  },
+  "kbUpPerSec": {
+   "mean": 0.17,
+   "p50": 0.17,
+   "max": 0.2
+  },
+  "totalDownKBps": 322.2,
+  "totalUpKBps": 5.5,
+  "rttMs": {
+   "n": 2080,
+   "p50": 0.7,
+   "p95": 7,
+   "max": 60.4,
+   "mean": 1.9
+  },
+  "inputLatencyMs": {
+   "n": 350,
+   "p50": 112.9,
+   "p95": 240.5,
+   "max": 2003.1,
+   "mean": 140.7
+  },
+  "inputLatencyUnresolved": 173,
+  "tickLagMs": {
+   "n": 1984,
+   "p50": 100,
+   "p95": 118,
+   "max": 204,
+   "mean": 98
+  },
+  "bufferTicks": {
+   "n": 7931,
+   "p50": 5,
+   "p95": 7,
+   "max": 12,
+   "mean": 5.1
+  },
+  "hashChecks": 992,
+  "hashMismatches": 0,
+  "resyncs": 0,
+  "resyncRequests": 0,
+  "skippedAhead": 0,
+  "framesApplied": 120000,
+  "inputsSent": 10152,
+  "maxInputsPerSecond": 25,
+  "proxyStalls": 0,
+  "matchWallSecMean": 62.7
+ },
+ "workerProcesses": [
+  {
+   "clients": 11,
+   "cpuPercent": 18.2,
+   "loopDelayMs": {
+    "mean": 0.71,
+    "p99": 11.62,
+    "max": 166.84
+   }
+  },
+  {
+   "clients": 11,
+   "cpuPercent": 18.3,
+   "loopDelayMs": {
+    "mean": 0.71,
+    "p99": 10.3,
+    "max": 144.95
+   }
+  },
+  {
+   "clients": 10,
+   "cpuPercent": 17.2,
+   "loopDelayMs": {
+    "mean": 0.68,
+    "p99": 10.95,
+    "max": 111
+   }
+  }
+ ],
+ "machineCpuPercentOfAllCores": {
+  "mean": 333.7,
+  "p95": 381,
+  "max": 398,
+  "note": "100 = one vCPU fully busy; 400 = all four"
+ },
+ "consistency": [
+  {
+   "room": "040724d5",
+   "clientsCompared": 32,
+   "finalHashesEqual": true,
+   "finalHashEqualsResultsStateHash": true,
+   "resultsIdentical": true,
+   "finalTicksEqual": true,
+   "finalTick": 3750,
+   "eliminations": {
+    "union": 93,
+    "missedUnexplained": 0,
+    "missedInGap": 0,
+    "duplicated": 0
+   },
+   "explosions": {
+    "union": 711,
+    "missedUnexplained": 0,
+    "missedInGap": 0,
+    "duplicated": 0
+   },
+   "resultsKillsSum": 88,
+   "resultsDeathsSum": 93,
+   "eliminationEventsSeen": 93,
+   "eliminationEventsCredited": 88,
+   "eliminationEventsSuddenDeath": 0,
+   "winnerSeat": 20,
+   "draw": false,
+   "matchTick": 3750
+  }
+ ],
+ "allConsistent": true,
+ "reconnects": [],
+ "backgrounds": [],
+ "neverReturning": null,
+ "perClient": [
+  {
+   "index": 0,
+   "seat": 0,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.14,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 9.1,
+    "max": 14.6,
+    "mean": 1.9
+   },
+   "inputLatency": {
+    "n": 8,
+    "p50": 117,
+    "p95": 281.8,
+    "max": 281.8,
+    "mean": 134
+   },
+   "inputLatencyUnresolved": 2,
+   "tickLag": {
+    "n": 62,
+    "p50": 101,
+    "p95": 119,
+    "max": 121,
+    "mean": 103.9
+   },
+   "buffer": {
+    "n": 247,
+    "p50": 5,
+    "p95": 7,
+    "max": 10,
+    "mean": 5.3
+   },
+   "inputsSent": 253,
+   "maxInputsPerSecond": 22,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [
+    "bad_phase: the match is already starting"
+   ],
+   "errors": []
+  },
+  {
+   "index": 1,
+   "seat": 11,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.16,
+   "rtt": {
+    "n": 65,
+    "p50": 0.7,
+    "p95": 3.8,
+    "max": 41.6,
+    "mean": 1.8
+   },
+   "inputLatency": {
+    "n": 13,
+    "p50": 107.5,
+    "p95": 1058.8,
+    "max": 1058.8,
+    "mean": 176.1
+   },
+   "inputLatencyUnresolved": 8,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 117,
+    "max": 121,
+    "mean": 94.2
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 9,
+    "mean": 5
+   },
+   "inputsSent": 295,
+   "maxInputsPerSecond": 19,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 2,
+   "seat": 3,
+   "departed": false,
+   "kbDownPerSec": 10.06,
+   "kbUpPerSec": 0.17,
+   "rtt": {
+    "n": 65,
+    "p50": 0.9,
+    "p95": 7.1,
+    "max": 12.7,
+    "mean": 1.9
+   },
+   "inputLatency": {
+    "n": 15,
+    "p50": 97.9,
+    "p95": 150.7,
+    "max": 150.7,
+    "mean": 97.4
+   },
+   "inputLatencyUnresolved": 3,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 117,
+    "max": 118,
+    "mean": 93.9
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 6,
+    "max": 7,
+    "mean": 4.7
+   },
+   "inputsSent": 319,
+   "maxInputsPerSecond": 19,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 3,
+   "seat": 1,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.15,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 6,
+    "max": 14.5,
+    "mean": 1.7
+   },
+   "inputLatency": {
+    "n": 11,
+    "p50": 116.7,
+    "p95": 197.1,
+    "max": 197.1,
+    "mean": 115.6
+   },
+   "inputLatencyUnresolved": 4,
+   "tickLag": {
+    "n": 62,
+    "p50": 104,
+    "p95": 119,
+    "max": 191,
+    "mean": 105.4
+   },
+   "buffer": {
+    "n": 247,
+    "p50": 6,
+    "p95": 7,
+    "max": 10,
+    "mean": 5.4
+   },
+   "inputsSent": 269,
+   "maxInputsPerSecond": 18,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 4,
+   "seat": 13,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.18,
+   "rtt": {
+    "n": 65,
+    "p50": 0.7,
+    "p95": 4.7,
+    "max": 40.8,
+    "mean": 1.9
+   },
+   "inputLatency": {
+    "n": 11,
+    "p50": 114,
+    "p95": 250.3,
+    "max": 250.3,
+    "mean": 123.8
+   },
+   "inputLatencyUnresolved": 9,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 117,
+    "max": 118,
+    "mean": 97.7
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 8,
+    "mean": 5.2
+   },
+   "inputsSent": 338,
+   "maxInputsPerSecond": 17,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 5,
+   "seat": 4,
+   "departed": false,
+   "kbDownPerSec": 10.06,
+   "kbUpPerSec": 0.19,
+   "rtt": {
+    "n": 65,
+    "p50": 0.9,
+    "p95": 11,
+    "max": 60.4,
+    "mean": 2.9
+   },
+   "inputLatency": {
+    "n": 11,
+    "p50": 112.8,
+    "p95": 132.5,
+    "max": 132.5,
+    "mean": 104.2
+   },
+   "inputLatencyUnresolved": 7,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 118,
+    "max": 130,
+    "mean": 99.1
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 7,
+    "mean": 4.9
+   },
+   "inputsSent": 347,
+   "maxInputsPerSecond": 22,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 6,
+   "seat": 2,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.19,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 6,
+    "max": 14.4,
+    "mean": 1.9
+   },
+   "inputLatency": {
+    "n": 16,
+    "p50": 113.9,
+    "p95": 270.4,
+    "max": 270.4,
+    "mean": 111.8
+   },
+   "inputLatencyUnresolved": 8,
+   "tickLag": {
+    "n": 62,
+    "p50": 101,
+    "p95": 119,
+    "max": 121,
+    "mean": 103.9
+   },
+   "buffer": {
+    "n": 247,
+    "p50": 6,
+    "p95": 7,
+    "max": 10,
+    "mean": 5.4
+   },
+   "inputsSent": 353,
+   "maxInputsPerSecond": 19,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 7,
+   "seat": 14,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.16,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 4.9,
+    "max": 40.7,
+    "mean": 2
+   },
+   "inputLatency": {
+    "n": 10,
+    "p50": 96.4,
+    "p95": 173.2,
+    "max": 173.2,
+    "mean": 98.5
+   },
+   "inputLatencyUnresolved": 6,
+   "tickLag": {
+    "n": 62,
+    "p50": 84,
+    "p95": 102,
+    "max": 118,
+    "mean": 85.7
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 6,
+    "max": 9,
+    "mean": 4.5
+   },
+   "inputsSent": 295,
+   "maxInputsPerSecond": 20,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 8,
+   "seat": 5,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.18,
+   "rtt": {
+    "n": 65,
+    "p50": 0.9,
+    "p95": 11,
+    "max": 60.2,
+    "mean": 2.9
+   },
+   "inputLatency": {
+    "n": 16,
+    "p50": 98.6,
+    "p95": 122.4,
+    "max": 122.4,
+    "mean": 98.5
+   },
+   "inputLatencyUnresolved": 6,
+   "tickLag": {
+    "n": 62,
+    "p50": 84,
+    "p95": 117,
+    "max": 134,
+    "mean": 90
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 6,
+    "max": 7,
+    "mean": 4.5
+   },
+   "inputsSent": 336,
+   "maxInputsPerSecond": 20,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 9,
+   "seat": 7,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.18,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 6,
+    "max": 14.3,
+    "mean": 1.8
+   },
+   "inputLatency": {
+    "n": 10,
+    "p50": 115.5,
+    "p95": 1830.6,
+    "max": 1830.6,
+    "mean": 301.9
+   },
+   "inputLatencyUnresolved": 8,
+   "tickLag": {
+    "n": 62,
+    "p50": 101,
+    "p95": 120,
+    "max": 124,
+    "mean": 105.1
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 6,
+    "p95": 7,
+    "max": 9,
+    "mean": 5.5
+   },
+   "inputsSent": 326,
+   "maxInputsPerSecond": 19,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 10,
+   "seat": 15,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.19,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 6.6,
+    "max": 40.6,
+    "mean": 2.2
+   },
+   "inputLatency": {
+    "n": 13,
+    "p50": 118.9,
+    "p95": 1970.6,
+    "max": 1970.6,
+    "mean": 259.1
+   },
+   "inputLatencyUnresolved": 6,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 118,
+    "max": 137,
+    "mean": 95.1
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 9,
+    "mean": 5
+   },
+   "inputsSent": 352,
+   "maxInputsPerSecond": 22,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 11,
+   "seat": 6,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.17,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 11,
+    "max": 60.1,
+    "mean": 2.9
+   },
+   "inputLatency": {
+    "n": 15,
+    "p50": 112.1,
+    "p95": 127.2,
+    "max": 127.2,
+    "mean": 105.6
+   },
+   "inputLatencyUnresolved": 4,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 119,
+    "max": 119,
+    "mean": 100.1
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 7,
+    "mean": 5.1
+   },
+   "inputsSent": 319,
+   "maxInputsPerSecond": 22,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 12,
+   "seat": 8,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.18,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 6,
+    "max": 14.1,
+    "mean": 1.8
+   },
+   "inputLatency": {
+    "n": 8,
+    "p50": 115.2,
+    "p95": 241.5,
+    "max": 241.5,
+    "mean": 132.3
+   },
+   "inputLatencyUnresolved": 13,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 119,
+    "max": 140,
+    "mean": 101.7
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 9,
+    "mean": 5.3
+   },
+   "inputsSent": 333,
+   "maxInputsPerSecond": 20,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 13,
+   "seat": 16,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.18,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 4.7,
+    "max": 40.5,
+    "mean": 2
+   },
+   "inputLatency": {
+    "n": 13,
+    "p50": 113.5,
+    "p95": 241.1,
+    "max": 241.1,
+    "mean": 122.4
+   },
+   "inputLatencyUnresolved": 1,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 118,
+    "max": 170,
+    "mean": 101.2
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 9,
+    "mean": 5.2
+   },
+   "inputsSent": 336,
+   "maxInputsPerSecond": 22,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 14,
+   "seat": 9,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.17,
+   "rtt": {
+    "n": 65,
+    "p50": 0.9,
+    "p95": 11,
+    "max": 60.1,
+    "mean": 3
+   },
+   "inputLatency": {
+    "n": 10,
+    "p50": 113.1,
+    "p95": 2003.1,
+    "max": 2003.1,
+    "mean": 294.2
+   },
+   "inputLatencyUnresolved": 2,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 117,
+    "max": 119,
+    "mean": 95.1
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 6,
+    "max": 7,
+    "mean": 4.8
+   },
+   "inputsSent": 321,
+   "maxInputsPerSecond": 24,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 15,
+   "seat": 10,
+   "departed": false,
+   "kbDownPerSec": 10.06,
+   "kbUpPerSec": 0.17,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 6,
+    "max": 14,
+    "mean": 1.8
+   },
+   "inputLatency": {
+    "n": 10,
+    "p50": 111.5,
+    "p95": 187.4,
+    "max": 187.4,
+    "mean": 104.5
+   },
+   "inputLatencyUnresolved": 6,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 119,
+    "max": 174,
+    "mean": 103.1
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 10,
+    "mean": 5.4
+   },
+   "inputsSent": 320,
+   "maxInputsPerSecond": 21,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 16,
+   "seat": 19,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.19,
+   "rtt": {
+    "n": 65,
+    "p50": 0.7,
+    "p95": 5.4,
+    "max": 16.2,
+    "mean": 1.7
+   },
+   "inputLatency": {
+    "n": 9,
+    "p50": 111.7,
+    "p95": 127.5,
+    "max": 127.5,
+    "mean": 106.5
+   },
+   "inputLatencyUnresolved": 3,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 118,
+    "max": 119,
+    "mean": 98.6
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 8,
+    "mean": 5.2
+   },
+   "inputsSent": 342,
+   "maxInputsPerSecond": 18,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 17,
+   "seat": 12,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.15,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 11,
+    "max": 60,
+    "mean": 3
+   },
+   "inputLatency": {
+    "n": 10,
+    "p50": 97.6,
+    "p95": 114.4,
+    "max": 114.4,
+    "mean": 99.5
+   },
+   "inputLatencyUnresolved": 3,
+   "tickLag": {
+    "n": 62,
+    "p50": 86,
+    "p95": 117,
+    "max": 119,
+    "mean": 91.9
+   },
+   "buffer": {
+    "n": 249,
+    "p50": 5,
+    "p95": 6,
+    "max": 7,
+    "mean": 4.6
+   },
+   "inputsSent": 270,
+   "maxInputsPerSecond": 21,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 18,
+   "seat": 17,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.17,
+   "rtt": {
+    "n": 65,
+    "p50": 0.8,
+    "p95": 6,
+    "max": 13.8,
+    "mean": 1.8
+   },
+   "inputLatency": {
+    "n": 12,
+    "p50": 113,
+    "p95": 1916.3,
+    "max": 1916.3,
+    "mean": 278.3
+   },
+   "inputLatencyUnresolved": 3,
+   "tickLag": {
+    "n": 62,
+    "p50": 101,
+    "p95": 118,
+    "max": 121,
+    "mean": 104.1
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 6,
+    "p95": 7,
+    "max": 9,
+    "mean": 5.4
+   },
+   "inputsSent": 316,
+   "maxInputsPerSecond": 23,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 19,
+   "seat": 20,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.2,
+   "rtt": {
+    "n": 65,
+    "p50": 0.6,
+    "p95": 5.3,
+    "max": 13.9,
+    "mean": 1.6
+   },
+   "inputLatency": {
+    "n": 11,
+    "p50": 98.2,
+    "p95": 359,
+    "max": 359,
+    "mean": 129.9
+   },
+   "inputLatencyUnresolved": 6,
+   "tickLag": {
+    "n": 62,
+    "p50": 85,
+    "p95": 103,
+    "max": 119,
+    "mean": 89.5
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 6,
+    "max": 9,
+    "mean": 4.6
+   },
+   "inputsSent": 366,
+   "maxInputsPerSecond": 20,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 20,
+   "seat": 21,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.16,
+   "rtt": {
+    "n": 65,
+    "p50": 0.7,
+    "p95": 5,
+    "max": 32.1,
+    "mean": 1.9
+   },
+   "inputLatency": {
+    "n": 12,
+    "p50": 98.5,
+    "p95": 122.5,
+    "max": 122.5,
+    "mean": 104
+   },
+   "inputLatencyUnresolved": 3,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 107,
+    "max": 117,
+    "mean": 94.2
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 6,
+    "max": 7,
+    "mean": 5
+   },
+   "inputsSent": 285,
+   "maxInputsPerSecond": 17,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 21,
+   "seat": 18,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.19,
+   "rtt": {
+    "n": 65,
+    "p50": 0.9,
+    "p95": 6,
+    "max": 13.6,
+    "mean": 1.8
+   },
+   "inputLatency": {
+    "n": 12,
+    "p50": 115.4,
+    "p95": 280.8,
+    "max": 280.8,
+    "mean": 128.8
+   },
+   "inputLatencyUnresolved": 10,
+   "tickLag": {
+    "n": 62,
+    "p50": 101,
+    "p95": 120,
+    "max": 123,
+    "mean": 106.2
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 6,
+    "p95": 7,
+    "max": 10,
+    "mean": 5.6
+   },
+   "inputsSent": 364,
+   "maxInputsPerSecond": 23,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 22,
+   "seat": 23,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.16,
+   "rtt": {
+    "n": 65,
+    "p50": 0.5,
+    "p95": 5.2,
+    "max": 13.8,
+    "mean": 1.4
+   },
+   "inputLatency": {
+    "n": 6,
+    "p50": 113.6,
+    "p95": 160.6,
+    "max": 160.6,
+    "mean": 101.3
+   },
+   "inputLatencyUnresolved": 6,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 117,
+    "max": 119,
+    "mean": 91.5
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 6,
+    "max": 9,
+    "mean": 4.8
+   },
+   "inputsSent": 298,
+   "maxInputsPerSecond": 19,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 23,
+   "seat": 22,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.2,
+   "rtt": {
+    "n": 65,
+    "p50": 0.6,
+    "p95": 6,
+    "max": 35.3,
+    "mean": 2.1
+   },
+   "inputLatency": {
+    "n": 8,
+    "p50": 111.5,
+    "p95": 114.7,
+    "max": 114.7,
+    "mean": 95
+   },
+   "inputLatencyUnresolved": 12,
+   "tickLag": {
+    "n": 62,
+    "p50": 86,
+    "p95": 117,
+    "max": 117,
+    "mean": 90.3
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 6,
+    "max": 7,
+    "mean": 4.8
+   },
+   "inputsSent": 365,
+   "maxInputsPerSecond": 25,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 24,
+   "seat": 24,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.18,
+   "rtt": {
+    "n": 65,
+    "p50": 0.7,
+    "p95": 3.8,
+    "max": 37.7,
+    "mean": 1.7
+   },
+   "inputLatency": {
+    "n": 8,
+    "p50": 113.4,
+    "p95": 248.7,
+    "max": 248.7,
+    "mean": 127.6
+   },
+   "inputLatencyUnresolved": 6,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 118,
+    "max": 204,
+    "mean": 102.7
+   },
+   "buffer": {
+    "n": 247,
+    "p50": 6,
+    "p95": 7,
+    "max": 12,
+    "mean": 5.4
+   },
+   "inputsSent": 332,
+   "maxInputsPerSecond": 19,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 25,
+   "seat": 26,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.14,
+   "rtt": {
+    "n": 65,
+    "p50": 0.5,
+    "p95": 7.9,
+    "max": 19.4,
+    "mean": 1.9
+   },
+   "inputLatency": {
+    "n": 11,
+    "p50": 118.6,
+    "p95": 1930.4,
+    "max": 1930.4,
+    "mean": 282.4
+   },
+   "inputLatencyUnresolved": 1,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 117,
+    "max": 151,
+    "mean": 97
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 9,
+    "mean": 5
+   },
+   "inputsSent": 253,
+   "maxInputsPerSecond": 20,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 26,
+   "seat": 25,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.19,
+   "rtt": {
+    "n": 65,
+    "p50": 0.5,
+    "p95": 8.5,
+    "max": 33.4,
+    "mean": 2.1
+   },
+   "inputLatency": {
+    "n": 13,
+    "p50": 99.5,
+    "p95": 129.6,
+    "max": 129.6,
+    "mean": 105.7
+   },
+   "inputLatencyUnresolved": 3,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 117,
+    "max": 119,
+    "mean": 98.6
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 7,
+    "mean": 5.1
+   },
+   "inputsSent": 347,
+   "maxInputsPerSecond": 22,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 27,
+   "seat": 27,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.2,
+   "rtt": {
+    "n": 65,
+    "p50": 0.5,
+    "p95": 3.8,
+    "max": 9.2,
+    "mean": 1.1
+   },
+   "inputLatency": {
+    "n": 9,
+    "p50": 113.6,
+    "p95": 155.7,
+    "max": 155.7,
+    "mean": 89.1
+   },
+   "inputLatencyUnresolved": 11,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 117,
+    "max": 151,
+    "mean": 100
+   },
+   "buffer": {
+    "n": 247,
+    "p50": 6,
+    "p95": 7,
+    "max": 9,
+    "mean": 5.4
+   },
+   "inputsSent": 372,
+   "maxInputsPerSecond": 25,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 28,
+   "seat": 28,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.15,
+   "rtt": {
+    "n": 65,
+    "p50": 0.6,
+    "p95": 5.7,
+    "max": 15,
+    "mean": 1.6
+   },
+   "inputLatency": {
+    "n": 10,
+    "p50": 112.1,
+    "p95": 252,
+    "max": 252,
+    "mean": 125.1
+   },
+   "inputLatencyUnresolved": 3,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 119,
+    "max": 150,
+    "mean": 96.7
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 9,
+    "mean": 5.1
+   },
+   "inputsSent": 276,
+   "maxInputsPerSecond": 16,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 29,
+   "seat": 31,
+   "departed": false,
+   "kbDownPerSec": 10.08,
+   "kbUpPerSec": 0.15,
+   "rtt": {
+    "n": 65,
+    "p50": 0.6,
+    "p95": 5.1,
+    "max": 9.5,
+    "mean": 1.4
+   },
+   "inputLatency": {
+    "n": 11,
+    "p50": 113.7,
+    "p95": 120.9,
+    "max": 120.9,
+    "mean": 112.7
+   },
+   "inputLatencyUnresolved": 4,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 119,
+    "max": 121,
+    "mean": 98.8
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 6,
+    "p95": 7,
+    "max": 7,
+    "mean": 5.3
+   },
+   "inputsSent": 268,
+   "maxInputsPerSecond": 17,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 30,
+   "seat": 30,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.15,
+   "rtt": {
+    "n": 65,
+    "p50": 0.5,
+    "p95": 3.3,
+    "max": 9.2,
+    "mean": 1
+   },
+   "inputLatency": {
+    "n": 7,
+    "p50": 113.1,
+    "p95": 129.3,
+    "max": 129.3,
+    "mean": 100
+   },
+   "inputLatencyUnresolved": 3,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 117,
+    "max": 168,
+    "mean": 100.2
+   },
+   "buffer": {
+    "n": 247,
+    "p50": 6,
+    "p95": 7,
+    "max": 10,
+    "mean": 5.4
+   },
+   "inputsSent": 264,
+   "maxInputsPerSecond": 25,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  },
+  {
+   "index": 31,
+   "seat": 29,
+   "departed": false,
+   "kbDownPerSec": 10.07,
+   "kbUpPerSec": 0.18,
+   "rtt": {
+    "n": 65,
+    "p50": 0.6,
+    "p95": 4.5,
+    "max": 15,
+    "mean": 1.3
+   },
+   "inputLatency": {
+    "n": 11,
+    "p50": 113.5,
+    "p95": 240.5,
+    "max": 240.5,
+    "mean": 117.9
+   },
+   "inputLatencyUnresolved": 3,
+   "tickLag": {
+    "n": 62,
+    "p50": 100,
+    "p95": 118,
+    "max": 167,
+    "mean": 101.9
+   },
+   "buffer": {
+    "n": 248,
+    "p50": 5,
+    "p95": 7,
+    "max": 9,
+    "mean": 5.3
+   },
+   "inputsSent": 322,
+   "maxInputsPerSecond": 22,
+   "replica": {
+    "framesApplied": 3750,
+    "hashChecks": 31,
+    "hashMismatches": 0,
+    "resyncs": 0,
+    "skippedAhead": 0
+   },
+   "resyncRequests": 0,
+   "proxyStalls": 0,
+   "proxyHolMs": 0,
+   "keyframes": 1,
+   "leaveCodes": [
+    4000
+   ],
+   "notices": [],
+   "errors": []
+  }
+ ],
+ "proxy": {
+  "stalls": 0,
+  "worstClientStalls": 0
+ },
+ "warnings": [],
+ "serverLogErrors": [
+  "[rumble] listening on :39153 (origins: http://localhost:*, http://127.0.0.1:*; reconnect 30s; TEST FAST MODE)\n",
+  "[rumble] room N95EMT created (private)\n",
+  "[rumble] room N95EMT disposed\n",
+  "[rumble] shut down\n"
+ ],
+ "workerLogErrors": [],
+ "timeline": [
+  {
+   "t": 0,
+   "cpu": 0,
+   "rssMB": 123,
+   "stepP99": null,
+   "lateP99": null,
+   "dropped": 0,
+   "loopP99": 1.33
+  },
+  {
+   "t": 1,
+   "cpu": 11.6,
+   "rssMB": 125.8,
+   "stepP99": null,
+   "lateP99": null,
+   "dropped": 0,
+   "loopP99": 7.433
+  },
+  {
+   "t": 2,
+   "cpu": 2.5,
+   "rssMB": 126.1,
+   "stepP99": null,
+   "lateP99": null,
+   "dropped": 0,
+   "loopP99": 2.108
+  },
+  {
+   "t": 3,
+   "cpu": 1.8,
+   "rssMB": 126.1,
+   "stepP99": null,
+   "lateP99": null,
+   "dropped": 0,
+   "loopP99": 0.887
+  },
+  {
+   "t": 4,
+   "cpu": 18,
+   "rssMB": 143.6,
+   "stepP99": 1.79,
+   "lateP99": 1.89,
+   "dropped": 0,
+   "loopP99": 2.706
+  },
+  {
+   "t": 5,
+   "cpu": 9,
+   "rssMB": 143.8,
+   "stepP99": 1.79,
+   "lateP99": 1.89,
+   "dropped": 0,
+   "loopP99": 2.263
+  },
+  {
+   "t": 6,
+   "cpu": 10.1,
+   "rssMB": 144.1,
+   "stepP99": 1.79,
+   "lateP99": 3.3,
+   "dropped": 0,
+   "loopP99": 5.647
+  },
+  {
+   "t": 7,
+   "cpu": 11.9,
+   "rssMB": 144.9,
+   "stepP99": 2.44,
+   "lateP99": 5.93,
+   "dropped": 0,
+   "loopP99": 7.924
+  },
+  {
+   "t": 8,
+   "cpu": 12.6,
+   "rssMB": 145.1,
+   "stepP99": 3.43,
+   "lateP99": 16.54,
+   "dropped": 0,
+   "loopP99": 22.047
+  },
+  {
+   "t": 9,
+   "cpu": 10.5,
+   "rssMB": 145.3,
+   "stepP99": 3.43,
+   "lateP99": 9.25,
+   "dropped": 0,
+   "loopP99": 2.493
+  },
+  {
+   "t": 10,
+   "cpu": 14.9,
+   "rssMB": 145.4,
+   "stepP99": 5.38,
+   "lateP99": 9.25,
+   "dropped": 0,
+   "loopP99": 7.76
+  },
+  {
+   "t": 11,
+   "cpu": 12.2,
+   "rssMB": 144.3,
+   "stepP99": 5.15,
+   "lateP99": 8.3,
+   "dropped": 0,
+   "loopP99": 3.279
+  },
+  {
+   "t": 12,
+   "cpu": 10.3,
+   "rssMB": 145.6,
+   "stepP99": 3.7,
+   "lateP99": 7.78,
+   "dropped": 0,
+   "loopP99": 3.14
+  },
+  {
+   "t": 13,
+   "cpu": 14.5,
+   "rssMB": 145.8,
+   "stepP99": 6.52,
+   "lateP99": 8.3,
+   "dropped": 0,
+   "loopP99": 11.037
+  },
+  {
+   "t": 14,
+   "cpu": 13,
+   "rssMB": 146,
+   "stepP99": 5.38,
+   "lateP99": 7.78,
+   "dropped": 0,
+   "loopP99": 6.474
+  },
+  {
+   "t": 15,
+   "cpu": 12.8,
+   "rssMB": 146,
+   "stepP99": 5.67,
+   "lateP99": 7.78,
+   "dropped": 0,
+   "loopP99": 2.1
+  },
+  {
+   "t": 16,
+   "cpu": 9,
+   "rssMB": 146,
+   "stepP99": 5.67,
+   "lateP99": 7.78,
+   "dropped": 0,
+   "loopP99": 5.081
+  },
+  {
+   "t": 17,
+   "cpu": 11.5,
+   "rssMB": 147.7,
+   "stepP99": 6.52,
+   "lateP99": 5.8,
+   "dropped": 0,
+   "loopP99": 4.172
+  },
+  {
+   "t": 18,
+   "cpu": 9.1,
+   "rssMB": 146.5,
+   "stepP99": 5.67,
+   "lateP99": 4.9,
+   "dropped": 0,
+   "loopP99": 5.901
+  },
+  {
+   "t": 19,
+   "cpu": 10.6,
+   "rssMB": 147.7,
+   "stepP99": 6.52,
+   "lateP99": 5.61,
+   "dropped": 0,
+   "loopP99": 4.696
+  },
+  {
+   "t": 20,
+   "cpu": 15.2,
+   "rssMB": 146.9,
+   "stepP99": 7.06,
+   "lateP99": 4.95,
+   "dropped": 0,
+   "loopP99": 6.105
+  },
+  {
+   "t": 21,
+   "cpu": 10.5,
+   "rssMB": 146.9,
+   "stepP99": 7.58,
+   "lateP99": 6.96,
+   "dropped": 0,
+   "loopP99": 9.268
+  },
+  {
+   "t": 22,
+   "cpu": 8.2,
+   "rssMB": 147.1,
+   "stepP99": 7.57,
+   "lateP99": 8.32,
+   "dropped": 0,
+   "loopP99": 6.245
+  },
+  {
+   "t": 23,
+   "cpu": 11.7,
+   "rssMB": 147,
+   "stepP99": 6.39,
+   "lateP99": 7.8,
+   "dropped": 0,
+   "loopP99": 5.753
+  },
+  {
+   "t": 24,
+   "cpu": 8.1,
+   "rssMB": 147.8,
+   "stepP99": 6.39,
+   "lateP99": 7.8,
+   "dropped": 0,
+   "loopP99": 4.164
+  },
+  {
+   "t": 25,
+   "cpu": 9,
+   "rssMB": 147,
+   "stepP99": 6.39,
+   "lateP99": 7.8,
+   "dropped": 0,
+   "loopP99": 3.033
+  },
+  {
+   "t": 26,
+   "cpu": 9.2,
+   "rssMB": 147.1,
+   "stepP99": 7.06,
+   "lateP99": 7.8,
+   "dropped": 0,
+   "loopP99": 4.713
+  },
+  {
+   "t": 27,
+   "cpu": 7.8,
+   "rssMB": 147.1,
+   "stepP99": 6.39,
+   "lateP99": 7.8,
+   "dropped": 0,
+   "loopP99": 2.829
+  },
+  {
+   "t": 28,
+   "cpu": 9.5,
+   "rssMB": 146.1,
+   "stepP99": 7.58,
+   "lateP99": 8.32,
+   "dropped": 0,
+   "loopP99": 6.876
+  },
+  {
+   "t": 29,
+   "cpu": 7.9,
+   "rssMB": 146.1,
+   "stepP99": 7.6,
+   "lateP99": 8.94,
+   "dropped": 0,
+   "loopP99": 27.847
+  },
+  {
+   "t": 30,
+   "cpu": 9.3,
+   "rssMB": 145.4,
+   "stepP99": 6.26,
+   "lateP99": 8.94,
+   "dropped": 0,
+   "loopP99": 6.212
+  },
+  {
+   "t": 31,
+   "cpu": 7.5,
+   "rssMB": 145.5,
+   "stepP99": 6.26,
+   "lateP99": 7.49,
+   "dropped": 0,
+   "loopP99": 5.95
+  },
+  {
+   "t": 32,
+   "cpu": 8.6,
+   "rssMB": 145.5,
+   "stepP99": 6.71,
+   "lateP99": 5.93,
+   "dropped": 0,
+   "loopP99": 7.629
+  },
+  {
+   "t": 33,
+   "cpu": 7.6,
+   "rssMB": 145.5,
+   "stepP99": 6.71,
+   "lateP99": 5.43,
+   "dropped": 0,
+   "loopP99": 5.286
+  },
+  {
+   "t": 34,
+   "cpu": 7.8,
+   "rssMB": 145.5,
+   "stepP99": 9.09,
+   "lateP99": 7.13,
+   "dropped": 0,
+   "loopP99": 6.736
+  },
+  {
+   "t": 35,
+   "cpu": 8.6,
+   "rssMB": 146.9,
+   "stepP99": 9.09,
+   "lateP99": 7.13,
+   "dropped": 0,
+   "loopP99": 7.138
+  },
+  {
+   "t": 36,
+   "cpu": 8.4,
+   "rssMB": 146.9,
+   "stepP99": 9.09,
+   "lateP99": 7.76,
+   "dropped": 0,
+   "loopP99": 13.085
+  },
+  {
+   "t": 37,
+   "cpu": 9.6,
+   "rssMB": 147.4,
+   "stepP99": 9.09,
+   "lateP99": 7.77,
+   "dropped": 0,
+   "loopP99": 4.942
+  },
+  {
+   "t": 38,
+   "cpu": 13.3,
+   "rssMB": 148.5,
+   "stepP99": 9.09,
+   "lateP99": 7.77,
+   "dropped": 0,
+   "loopP99": 10.152
+  },
+  {
+   "t": 39,
+   "cpu": 9.8,
+   "rssMB": 147.5,
+   "stepP99": 6.71,
+   "lateP99": 7.13,
+   "dropped": 0,
+   "loopP99": 6.073
+  },
+  {
+   "t": 40,
+   "cpu": 7.8,
+   "rssMB": 148.3,
+   "stepP99": 6.48,
+   "lateP99": 7.13,
+   "dropped": 0,
+   "loopP99": 2.845
+  },
+  {
+   "t": 41,
+   "cpu": 8.8,
+   "rssMB": 148.1,
+   "stepP99": 6.2,
+   "lateP99": 7.13,
+   "dropped": 0,
+   "loopP99": 5.294
+  },
+  {
+   "t": 42,
+   "cpu": 7.7,
+   "rssMB": 148.1,
+   "stepP99": 5.68,
+   "lateP99": 7.13,
+   "dropped": 0,
+   "loopP99": 5.368
+  },
+  {
+   "t": 43,
+   "cpu": 8.5,
+   "rssMB": 149,
+   "stepP99": 5.65,
+   "lateP99": 7.13,
+   "dropped": 0,
+   "loopP99": 4.303
+  },
+  {
+   "t": 44,
+   "cpu": 9.4,
+   "rssMB": 149.1,
+   "stepP99": 4.99,
+   "lateP99": 5.63,
+   "dropped": 0,
+   "loopP99": 6.892
+  },
+  {
+   "t": 45,
+   "cpu": 9.3,
+   "rssMB": 149.4,
+   "stepP99": 5.65,
+   "lateP99": 6.82,
+   "dropped": 0,
+   "loopP99": 9.087
+  },
+  {
+   "t": 46,
+   "cpu": 8.6,
+   "rssMB": 149.6,
+   "stepP99": 4.99,
+   "lateP99": 8.16,
+   "dropped": 0,
+   "loopP99": 17.967
+  },
+  {
+   "t": 47,
+   "cpu": 12.6,
+   "rssMB": 149.7,
+   "stepP99": 5,
+   "lateP99": 6.66,
+   "dropped": 0,
+   "loopP99": 4.352
+  },
+  {
+   "t": 48,
+   "cpu": 7.9,
+   "rssMB": 149.8,
+   "stepP99": 4.99,
+   "lateP99": 5.87,
+   "dropped": 0,
+   "loopP99": 4.123
+  },
+  {
+   "t": 49,
+   "cpu": 10.4,
+   "rssMB": 150.2,
+   "stepP99": 5,
+   "lateP99": 5.87,
+   "dropped": 0,
+   "loopP99": 3.984
+  },
+  {
+   "t": 50,
+   "cpu": 12.1,
+   "rssMB": 150.2,
+   "stepP99": 5.51,
+   "lateP99": 6.66,
+   "dropped": 0,
+   "loopP99": 4.918
+  },
+  {
+   "t": 51,
+   "cpu": 8,
+   "rssMB": 150.2,
+   "stepP99": 5.51,
+   "lateP99": 5.87,
+   "dropped": 0,
+   "loopP99": 2.706
+  },
+  {
+   "t": 52,
+   "cpu": 8.4,
+   "rssMB": 150.2,
+   "stepP99": 5.24,
+   "lateP99": 6.01,
+   "dropped": 0,
+   "loopP99": 5.311
+  },
+  {
+   "t": 53,
+   "cpu": 10.1,
+   "rssMB": 149.5,
+   "stepP99": 5.24,
+   "lateP99": 5.87,
+   "dropped": 0,
+   "loopP99": 2.665
+  },
+  {
+   "t": 54,
+   "cpu": 9.6,
+   "rssMB": 149.5,
+   "stepP99": 4.65,
+   "lateP99": 8.41,
+   "dropped": 0,
+   "loopP99": 7.039
+  },
+  {
+   "t": 55,
+   "cpu": 9.2,
+   "rssMB": 149.5,
+   "stepP99": 4.65,
+   "lateP99": 6.31,
+   "dropped": 0,
+   "loopP99": 10.185
+  },
+  {
+   "t": 56,
+   "cpu": 8.7,
+   "rssMB": 149.6,
+   "stepP99": 4.65,
+   "lateP99": 7.37,
+   "dropped": 0,
+   "loopP99": 7.711
+  },
+  {
+   "t": 57,
+   "cpu": 9.4,
+   "rssMB": 148.7,
+   "stepP99": 4.65,
+   "lateP99": 7.37,
+   "dropped": 0,
+   "loopP99": 4.909
+  },
+  {
+   "t": 58,
+   "cpu": 8.5,
+   "rssMB": 148.7,
+   "stepP99": 4.65,
+   "lateP99": 7.37,
+   "dropped": 0,
+   "loopP99": 2.141
+  },
+  {
+   "t": 59,
+   "cpu": 8,
+   "rssMB": 148.7,
+   "stepP99": 4.65,
+   "lateP99": 6.31,
+   "dropped": 0,
+   "loopP99": 3.533
+  },
+  {
+   "t": 60,
+   "cpu": 9.3,
+   "rssMB": 149.6,
+   "stepP99": 4.52,
+   "lateP99": 6.91,
+   "dropped": 0,
+   "loopP99": 2.321
+  },
+  {
+   "t": 61,
+   "cpu": 9.6,
+   "rssMB": 150.8,
+   "stepP99": 4.65,
+   "lateP99": 6.91,
+   "dropped": 0,
+   "loopP99": 3.607
+  },
+  {
+   "t": 62,
+   "cpu": 10.8,
+   "rssMB": 150.8,
+   "stepP99": 4.84,
+   "lateP99": 6.91,
+   "dropped": 0,
+   "loopP99": 3.582
+  },
+  {
+   "t": 63,
+   "cpu": 8.7,
+   "rssMB": 152.3,
+   "stepP99": 4.84,
+   "lateP99": 6.91,
+   "dropped": 0,
+   "loopP99": 1.485
+  },
+  {
+   "t": 64,
+   "cpu": 7.1,
+   "rssMB": 152.3,
+   "stepP99": 4.84,
+   "lateP99": 5.59,
+   "dropped": 0,
+   "loopP99": 3.32
+  },
+  {
+   "t": 65,
+   "cpu": 10.8,
+   "rssMB": 152.6,
+   "stepP99": 5.04,
+   "lateP99": 5,
+   "dropped": 0,
+   "loopP99": 5.614
+  },
+  {
+   "t": 66,
+   "cpu": 4.8,
+   "rssMB": 152.6,
+   "stepP99": null,
+   "lateP99": null,
+   "dropped": 0,
+   "loopP99": 12.266
+  },
+  {
+   "t": 67,
+   "cpu": 6.2,
+   "rssMB": 152.6,
+   "stepP99": null,
+   "lateP99": null,
+   "dropped": 0,
+   "loopP99": 0.166
+  }
+ ]
+}
