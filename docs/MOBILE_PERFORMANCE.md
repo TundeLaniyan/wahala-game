@@ -1,7 +1,11 @@
 # Mobile data, loading speed and low-end Android
 
-Branch `claude/wahala-mobile-optimization`, from the production commit `00eff0a` (the live site's `build.json` and the
-`gh-pages` head `d0625b5` both name it). Presentation / delivery only: no file under `src/sim`, `src/ai`, `src/input`,
+Branch `claude/wahala-mobile-optimization`, from the production commit `00eff0a` (when this work started, the live site's
+`build.json` and the `gh-pages` head `d0625b5` both named it). **Production has since moved to `66f3e3d`** (deployed
+2026-11-23 19:32 UTC: Sudden Death timer, player marker, Team Rumble blast warnings). That release changes no model, audio,
+image, font or package file (code and docs screenshots only), so every asset-transfer number below holds for it; a trial merge
+of this branch with `66f3e3d` is conflict-free (`src/app/session.ts` is the one file both touch), and the merged tree
+type-checks, lints, builds and passes 626 related unit tests. The branch is deliberately left on `00eff0a` for the release owner to merge. Presentation / delivery only: no file under `src/sim`, `src/ai`, `src/input`,
 City Rumble combat or the gameplay release's files was changed, and nothing here is deployed or merged.
 
 ## 0. How to read the numbers
