@@ -77,7 +77,7 @@
   }
 }
 .sd-clock {
-  /* the brief blast announcement: a card in the HUD rail beside the board (decision SX2), never over the arena */
+  /* the brief blast announcement: a card in the HUD rail beside the board (decision SDT2), never over the arena */
   align-self: stretch;
   max-width: 100%;
   display: flex;

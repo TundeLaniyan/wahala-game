@@ -76,11 +76,11 @@ test('Sudden Death: the card goes when play resumes, the clock announces then fo
   await expect(clock).toHaveAttribute('data-mode', 'full');
   await expect(page.getByTestId('sudden-death-status')).toContainText(/BLAST 1 OF 3 · SHIELDS RESPECTED/);
   expect(await clock.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
-  // the announcement is a rail card beside the board, never over the middle of the screen (decision SX2)
+  // the announcement is a rail card beside the board, never over the middle of the screen (decision SDT2)
   const ann = (await clock.boundingBox())!;
   const vpp = page.viewportSize()!;
   expect(ann.x + ann.width / 2, 'not centred over the arena').toBeLessThan(vpp.width * 0.4);
-  // the main timer IS the sim's blast countdown, labelled SUDDEN DEATH (decision SX1)
+  // the main timer IS the sim's blast countdown, labelled SUDDEN DEATH (decision SDT1)
   await expect(page.getByTestId('timer')).toHaveText('1:00');
   await expect(page.getByTestId('timer-sudden-label')).toContainText('SUDDEN');
   await expect(page.getByTestId('timer-sudden-sub')).toHaveAttribute('data-sub', 'BLAST 1 OF 3');

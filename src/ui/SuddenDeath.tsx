@@ -82,7 +82,7 @@ export function SuddenDeathCard({ sd }: { sd: SuddenDeathHud }) {
 }
 
 /**
- * The brief blast announcement (decisions SD-B1, SX2): when a countdown begins (`sd.announce`, a few seconds) a compact
+ * The brief blast announcement (decisions SD-B1, SDT2): when a countdown begins (`sd.announce`, a few seconds) a compact
  * card in the HUD rail beside the board says which blast of the round it is, whether shields count and what that means
  * for the local fighter. It is gone after the announce window (and after `SD_ANNOUNCE_MAX_MS` of real time whatever the
  * simulation clock does), never sits over the board, and never repeats the clock: the COUNTDOWN is the main match timer

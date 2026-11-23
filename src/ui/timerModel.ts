@@ -1,5 +1,5 @@
 /**
- * What the main match clock shows (decision SX1, docs/DECISIONS.md). Normally the match time left. In a Rumble Sudden
+ * What the main match clock shows (decision SDT1, docs/DECISIONS.md). Normally the match time left. In a Rumble Sudden
  * Death round the match clock is spent (0:00) and the only real clock is the sim's blast countdown (`nextBlastTick`),
  * so the primary timer position shows THAT, labelled SUDDEN DEATH: the title card's wait shows the first blast's delay,
  * then each blast's own countdown, and 0:00 once the sequence is spent. A pure read of the HUD snapshot: no timer of its

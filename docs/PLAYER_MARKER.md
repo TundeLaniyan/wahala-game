@@ -66,3 +66,5 @@ remains the default. Screenshots: `docs/screenshots/player-marker/lab-*-v2.jpg` 
 visible parts; mark size and opacity), `tests/testlab/marker-switch.test.ts` (the switch reaches the renderer),
 `e2e/testlab.spec.ts` (real pixels around the player differ between the three styles).
 
+## Decision PM1 (final polish round): Indicator + Ground is the permanent marker
+The founder chose the combined treatment after phone testing. `DEFAULT_PLAYER_MARKER` is `indicatorGround`; the Test Lab's three-way switch and its HUD button are retired. Original and Indicator remain only for unit tests and `?debug`.

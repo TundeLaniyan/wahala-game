@@ -28,6 +28,11 @@ async function openLab(page: Page, query = ''): Promise<void> {
 
 /** The approved tests live in the collapsed "Completed Tests" list (decision TL7). */
 const COMPLETED = new Set([
+  'cityRumble',
+  'occludedBuildings',
+  'boss',
+  'classicRearAmbush',
+  'oneHit',
   'classicRaid',
   'recordsVault',
   'classicBlast',
@@ -117,21 +122,19 @@ test.describe('Test Lab', () => {
     // decision TL7: "Tests Requiring Review" is the prominent list, in the founder's order; Completed Tests are folded away
     await expect(page.getByRole('heading', { name: /Tests Requiring Review/ })).toBeVisible();
     const review = page.getByTestId('testlab-list-review').locator('[data-testid^="testlab-entry-"]');
-    await expect(review).toHaveCount(7);
+    await expect(review).toHaveCount(5);
     expect(await review.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')))).toEqual([
-      'testlab-entry-cityRumble',
-      'testlab-entry-occludedBuildings',
       'testlab-entry-suddenDeath',
-      'testlab-entry-boss',
-      'testlab-entry-classicRearAmbush',
-      'testlab-entry-oneHit',
       'testlab-entry-identifyPlayer',
+      'testlab-entry-teamBlastFfOff',
+      'testlab-entry-teamBlastFfOn',
+      'testlab-entry-teamBlastOverlap',
     ]);
     await expect(page.getByTestId('testlab-completed-toggle')).toHaveAttribute('aria-expanded', 'false');
     await expect(page.getByTestId('testlab-list-completed')).toHaveCount(0);
     await page.getByTestId('testlab-completed-toggle').tap();
-    await expect(page.getByTestId('testlab-list-completed').locator('button')).toHaveCount(10);
-    await expect(page.locator('[data-testid^="testlab-entry-"]')).toHaveCount(17);
+    await expect(page.getByTestId('testlab-list-completed').locator('button')).toHaveCount(15);
+    await expect(page.locator('[data-testid^="testlab-entry-"]')).toHaveCount(20);
     await page.getByTestId('testlab-completed-toggle').tap();
     await expect(page.getByTestId('testlab-list-completed')).toHaveCount(0);
     await expect(page.getByTestId('testlab-isolation-warning')).toHaveCount(0);

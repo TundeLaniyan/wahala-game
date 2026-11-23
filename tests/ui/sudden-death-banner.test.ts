@@ -1,5 +1,5 @@
 /**
- * The SUDDEN DEATH banner lifecycle (decisions SD-B1-SD-B4, SX1-SX2). The title card belongs to the held-input
+ * The SUDDEN DEATH banner lifecycle (decisions SD-B1-SD-B4, SDT1-SDT2). The title card belongs to the held-input
  * transition only; a brief rail announcement shows for a few seconds when a countdown begins (the round's first, and
  * again after every blast), then is gone; the COUNTDOWN itself is the main match timer. Everything is read from the simulation state through the HUD builder (ticks, not wall time), so a paused
  * game keeps the banner exactly as it was, a rematch starts clean, and the sim rules are untouched.
@@ -66,7 +66,7 @@ describe('the title card belongs to the held-input transition only', () => {
   });
 });
 
-describe('the blast announcement is brief; the countdown is the main timer (SD-B1, SX1, SX2)', () => {
+describe('the blast announcement is brief; the countdown is the main timer (SD-B1, SDT1, SDT2)', () => {
   const timer = (s: GameState) => timerModel(buildHud(s, 0, null));
 
   it('announced for the announce window after the countdown begins, then gone (no persistent chip)', () => {

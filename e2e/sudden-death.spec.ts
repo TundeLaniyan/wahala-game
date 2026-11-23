@@ -57,7 +57,7 @@ test.describe('City Rumble: sudden death', () => {
     await expect(page.getByTestId('sudden-death-card')).toHaveCount(0);
     await expect(page.getByTestId('sudden-death-clock')).toBeVisible();
     await expect(page.getByTestId('sudden-death-status')).toContainText(/BLAST 1 OF 3 · SHIELDS RESPECTED/);
-    // the main timer carries the countdown, labelled (decision SX1)
+    // the main timer carries the countdown, labelled (decision SDT1)
     await expect(page.getByTestId('timer')).toHaveText(/^\d+:\d\d$/);
     await expect(page.getByTestId('timer-sudden-label')).toContainText('DEATH');
     await shot(page, info.project.name, 'sudden-death-clock');
