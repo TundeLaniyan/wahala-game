@@ -1,9 +1,26 @@
 import { Group, Sprite, SpriteMaterial, AdditiveBlending } from 'three';
 import type { MeshBasicMaterial } from 'three';
-import { DIR_VEC, canThrow, previewBlast, spectatorLane, spectatorLanding } from '../../sim';
+import {
+  DIR_VEC,
+  addBlastPreview,
+  addLiveFlames,
+  applyDangerPriority,
+  blastSafetyApplies,
+  canThrow,
+  emptyBlastTiles,
+  spectatorLane,
+  spectatorLanding,
+} from '../../sim';
 import type { Dir, TilePos, VehicleEntry } from '../../sim';
 import { entryKey } from '../../sim';
-import { chevronTexture, glowTexture, ringTexture, tileGlowTexture } from '../textures';
+import {
+  chevronTexture,
+  glowTexture,
+  hazardHatchTexture,
+  ringTexture,
+  safeBlastTexture,
+  tileGlowTexture,
+} from '../textures';
 import type { EntryOverlayModel, EntryPick } from '../types';
 import { suddenDeathFloor } from './suddenDeathFrontLook';
 import { TileOverlay } from './TileOverlay';
@@ -37,12 +54,30 @@ export class OverlayViews implements View {
    * never use it: their lanes are drawn exactly as before.
    */
   private readonly nightDanger = new TileOverlay(tileGlowTexture(), 512, 7, 0.046, false);
+  /**
+   * Team matches only (decisions TB1-TB3): the viewer-relative blast marking. A SAFE blast (a teammate's, friendly fire off)
+   * is a steady emerald dashed tile; a DANGEROUS one keeps the red glow and gains a hazard hatch on top. Alpha-blended so
+   * both read on a bright floor. Capacity: every tile a whole radial board of blasts can cover.
+   */
+  private readonly safeFill = new TileOverlay(safeBlastTexture(), 1024, 8, 0.047, false);
+  private readonly dangerHatch = new TileOverlay(hazardHatchTexture(), 1024, 8, 0.048, false);
   private readonly gates: Sprite[] = [];
   private pickTargets: { key: string; kind: 'entry' | 'turn'; x: number; y: number }[] = [];
   private readonly projectiles = new Map<number, Sprite>();
 
   constructor() {
-    this.group.add(this.fill.mesh, this.chevrons.mesh, this.rings.mesh, this.nightDanger.mesh);
+    // named so the browser tests can read what the real scene draws (e2e/team-blast.spec.ts)
+    this.safeFill.mesh.name = 'blast-safe';
+    this.dangerHatch.mesh.name = 'blast-hatch';
+    this.fill.mesh.name = 'blast-fill';
+    this.group.add(
+      this.fill.mesh,
+      this.chevrons.mesh,
+      this.rings.mesh,
+      this.nightDanger.mesh,
+      this.safeFill.mesh,
+      this.dangerHatch.mesh,
+    );
     (this.nightDanger.mesh.material as MeshBasicMaterial).toneMapped = false;
     for (let i = 0; i < 4; i++) {
       const s = new Sprite(
@@ -65,13 +100,20 @@ export class OverlayViews implements View {
     const { state, time, alpha, layout, info } = ctx;
     this.fill.begin();
     this.nightDanger.begin();
+    this.safeFill.begin();
+    this.dangerHatch.begin();
     this.chevrons.begin();
     this.rings.begin();
     const wx = layout.wx;
     const wz = layout.wz;
 
-    // --- blast danger lanes (generators about to explode, and remote ones faintly)
-    const danger = new Map<number, number>();
+    // --- blast danger lanes (generators about to explode, and remote ones faintly), seen from the local player's side
+    // (decisions TB1-TB3): each generator of a chain is labelled by ITS owner through the sim's own damage rule, so a
+    // teammate's blast is SAFE only where it genuinely cannot hurt the viewer, and a tile any dangerous blast covers is
+    // always DANGEROUS. Outside a team match every blast is dangerous and the lanes are drawn exactly as before.
+    const viewerId = info.localPlayerId;
+    const teamed = blastSafetyApplies(state, viewerId);
+    const blast = emptyBlastTiles();
     for (const g of state.generators) {
       // a thrown VEHICLE GENERATOR shows where it will land and what it will burn from the moment it is let go
       const thrown = g.vehicleBorne === true && g.mountedOn === undefined && g.flight !== null;
@@ -80,7 +122,7 @@ export class OverlayViews implements View {
       if (thrown) {
         const k = 1 - g.flight!.remaining / Math.max(1, g.flight!.total);
         intensity = 0.22 + 0.3 * k + 0.1 * Math.sin(time * 22);
-        for (const idx of previewBlast(state, g)) danger.set(idx, Math.max(danger.get(idx) ?? 0, intensity));
+        addBlastPreview(state, viewerId, g, intensity, blast);
         continue;
       }
       if (g.mode === 'timed') {
@@ -91,9 +133,13 @@ export class OverlayViews implements View {
       } else {
         intensity = g.timer < 240 ? 0.3 + 0.25 * Math.sin(time * 14) : 0.1;
       }
-      for (const idx of previewBlast(state, g)) danger.set(idx, Math.max(danger.get(idx) ?? 0, intensity));
+      addBlastPreview(state, viewerId, g, intensity, blast);
     }
-    for (const [idx, intensity] of danger) {
+    if (teamed) {
+      addLiveFlames(state, viewerId, 0.55, blast);
+      applyDangerPriority(blast);
+    }
+    for (const [idx, intensity] of blast.danger) {
       if (ctx.night) {
         this.nightDanger.push({
           x: wx(idx % state.width),
@@ -109,6 +155,23 @@ export class OverlayViews implements View {
         z: wz(Math.floor(idx / state.width)),
         color: 0xff3418,
         intensity,
+        scale: 0.94,
+      });
+      if (teamed)
+        this.dangerHatch.push({
+          x: wx(idx % state.width),
+          z: wz(Math.floor(idx / state.width)),
+          color: 0xff4a1a,
+          intensity: 0.7 + 0.3 * Math.min(1, intensity / 0.66),
+          scale: 0.94,
+        });
+    }
+    for (const idx of teamed ? blast.safe.keys() : []) {
+      this.safeFill.push({
+        x: wx(idx % state.width),
+        z: wz(Math.floor(idx / state.width)),
+        color: 0x2ee6a6,
+        intensity: 0.9 + 0.1 * Math.sin(time * 3 + idx),
         scale: 0.94,
       });
     }
@@ -298,6 +361,8 @@ export class OverlayViews implements View {
     this.drawEntry(ctx, info.entryOverlay);
     this.fill.end();
     this.nightDanger.end();
+    this.safeFill.end();
+    this.dangerHatch.end();
     this.chevrons.end();
     this.rings.end();
   }
@@ -471,6 +536,8 @@ export class OverlayViews implements View {
   dispose(): void {
     this.fill.dispose();
     this.nightDanger.dispose();
+    this.safeFill.dispose();
+    this.dangerHatch.dispose();
     this.chevrons.dispose();
     this.rings.dispose();
     for (const s of this.gates) s.material.dispose();

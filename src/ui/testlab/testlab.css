@@ -262,20 +262,6 @@
   flex-wrap: wrap;
   gap: 10px;
 }
-.tl-marker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-.tl-marker small {
-  flex-basis: 100%;
-  color: var(--mn-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
 
 /* the City Rumble set-up: the card's chips, then the exact configuration beside the feedback */
 .tl-side {
@@ -362,15 +348,6 @@
   .tl .mn-body.tl-entry {
     grid-template-columns: minmax(0, 1fr);
   }
-}
-
-/* the in-match marker button of the "Who am I?" scenario sits with the HUD's round buttons */
-.tl-hud-btn {
-  width: 44px;
-  height: 44px;
-  font-size: 0.7rem;
-  line-height: 1;
-  letter-spacing: 0;
 }
 
 /* the menu's short-screen rules shrink the chips: the Test Lab keeps every tap target at 44 px */

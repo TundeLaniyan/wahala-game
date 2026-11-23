@@ -28,6 +28,11 @@ async function openLab(page: Page, query = ''): Promise<void> {
 
 /** The approved tests live in the collapsed "Completed Tests" list (decision TL7). */
 const COMPLETED = new Set([
+  'cityRumble',
+  'occludedBuildings',
+  'boss',
+  'classicRearAmbush',
+  'oneHit',
   'classicRaid',
   'recordsVault',
   'classicBlast',
@@ -117,21 +122,19 @@ test.describe('Test Lab', () => {
     // decision TL7: "Tests Requiring Review" is the prominent list, in the founder's order; Completed Tests are folded away
     await expect(page.getByRole('heading', { name: /Tests Requiring Review/ })).toBeVisible();
     const review = page.getByTestId('testlab-list-review').locator('[data-testid^="testlab-entry-"]');
-    await expect(review).toHaveCount(7);
+    await expect(review).toHaveCount(5);
     expect(await review.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')))).toEqual([
-      'testlab-entry-cityRumble',
-      'testlab-entry-occludedBuildings',
       'testlab-entry-suddenDeath',
-      'testlab-entry-boss',
-      'testlab-entry-classicRearAmbush',
-      'testlab-entry-oneHit',
       'testlab-entry-identifyPlayer',
+      'testlab-entry-teamBlastFfOff',
+      'testlab-entry-teamBlastFfOn',
+      'testlab-entry-teamBlastOverlap',
     ]);
     await expect(page.getByTestId('testlab-completed-toggle')).toHaveAttribute('aria-expanded', 'false');
     await expect(page.getByTestId('testlab-list-completed')).toHaveCount(0);
     await page.getByTestId('testlab-completed-toggle').tap();
-    await expect(page.getByTestId('testlab-list-completed').locator('button')).toHaveCount(10);
-    await expect(page.locator('[data-testid^="testlab-entry-"]')).toHaveCount(17);
+    await expect(page.getByTestId('testlab-list-completed').locator('button')).toHaveCount(15);
+    await expect(page.locator('[data-testid^="testlab-entry-"]')).toHaveCount(20);
     await page.getByTestId('testlab-completed-toggle').tap();
     await expect(page.getByTestId('testlab-list-completed')).toHaveCount(0);
     await expect(page.getByTestId('testlab-isolation-warning')).toHaveCount(0);
@@ -208,7 +211,7 @@ test.describe('Test Lab', () => {
     expect(text).toContain('- [NEEDS IMPROVEMENT] Classic Campaign Raid (Hard): guard saw me too early');
     expect(text).toContain('- [NOT TESTED] Records Vault, night raid');
     expect(text.indexOf('TESTS REQUIRING REVIEW')).toBeLessThan(text.indexOf('COMPLETED TESTS'));
-    expect(text).toContain('Totals: 0 pass, 1 needs improvement, 0 failed, 16 not tested');
+    expect(text).toContain('Totals: 0 pass, 1 needs improvement, 0 failed, 19 not tested');
     // it comes back after a reload
     await page.reload();
     await page.getByTestId('testlab-completed-toggle').tap();
@@ -593,37 +596,15 @@ test.describe('Test Lab', () => {
     expect(await realStorage(context)).toEqual(before);
   });
 
-  test('Who am I? scenario: the marker switch (Indicator by default) is in the entry, the pause menu and the HUD', async ({
+  test('Who am I? scenario: the combined Indicator + Ground marker is drawn in the real renderer and there is no switch (decision PM1)', async ({
     page,
   }) => {
     await openLab(page);
     await page.getByTestId('testlab-entry-identifyPlayer').tap();
-    await expect(page.getByTestId('marker-indicator')).toHaveAttribute('aria-pressed', 'true');
-    await page.getByTestId('marker-original').tap();
-    await page.getByTestId('marker-indicator').tap(); // back to the default
+    await expect(page.getByTestId('marker-switch')).toHaveCount(0);
     await page.getByTestId('testlab-start').tap();
     await inMatch(page);
-    const mode = () => page.getByTestId('marker-hud-button').textContent();
-    expect(await mode()).toBe('IND');
-    await page.getByTestId('marker-hud-button').tap();
-    expect(await mode()).toBe('IND+G');
-    await pause(page);
-    await expect(page.getByTestId('marker-switch')).toBeVisible();
-    await expect(page.getByTestId('marker-indicatorGround')).toHaveAttribute('aria-pressed', 'true');
-    await page.getByTestId('marker-original').tap();
-    await expect(page.getByTestId('marker-original')).toHaveAttribute('aria-pressed', 'true');
-    await page.getByTestId('testlab-return').tap();
-    await page.getByTestId('testlab-confirm-leave').tap();
-    await expect(page.getByTestId('testlab-home')).toBeVisible({ timeout: 60_000 });
-  });
-
-  test('the three marker styles draw three different sets of parts in the real renderer, and the switch reaches it (decision TL8)', async ({
-    page,
-  }) => {
-    await openLab(page);
-    await openEntry(page, 'identifyPlayer');
-    await page.getByTestId('testlab-start').tap();
-    await inMatch(page);
+    await expect(page.getByTestId('marker-hud-button')).toHaveCount(0);
     await page.evaluate(() => {
       const w = (window as any).__WAHALA__;
       w.controller().frozen = true;
@@ -647,28 +628,13 @@ test.describe('Test Lab', () => {
         });
         return out;
       });
-    const mode = () => page.evaluate(() => (window as any).__WAHALA__.playerMarker());
-    const label = () => page.getByTestId('marker-hud-button').textContent();
-
-    // the HUD button cycles Indicator -> Indicator + Ground -> Original -> Indicator, and each tap reaches the renderer
-    expect(await mode()).toBe('indicator');
-    expect(await label()).toBe('IND');
-    // (polled: the next rendered frame carries the change)
-    await expect.poll(drawn, { timeout: 60_000 }).toMatchObject({ tag: 1, chevron: 0, ground: 0 }); // the YOU plate only
-    await page.getByTestId('marker-hud-button').tap();
-    expect(await mode()).toBe('indicatorGround');
-    expect(await label()).toBe('IND+G');
-    await expect.poll(drawn, { timeout: 60_000 }).toMatchObject({ tag: 1, chevron: 0, ground: 1 }); // the plate and the floor mark
+    expect(await page.evaluate(() => (window as any).__WAHALA__.playerMarker())).toBe('indicatorGround');
+    // the YOU plate over the head AND the floor ring under the fighter; no old chevron; exactly one of each (no duplicates)
+    await expect.poll(drawn, { timeout: 60_000 }).toMatchObject({ tag: 1, chevron: 0, ground: 1 });
     const ground = await drawn();
-    await page.getByTestId('marker-hud-button').tap();
-    expect(await mode()).toBe('original');
-    expect(await label()).toBe('ORIG');
-    await expect.poll(drawn, { timeout: 60_000 }).toMatchObject({ tag: 0, chevron: 1, ground: 0 }); // the old chevron and "You" name tag only
-    // the floor mark is big and strong enough to see at the fixed camera (the first version was neither), still a decal
+    // the floor mark is big and strong enough to see at the fixed camera, still a decal
     expect(ground.groundScale).toBeGreaterThanOrEqual(1.5);
     expect(ground.groundOpacity).toBeGreaterThanOrEqual(0.5);
     expect(ground.groundOpacity).toBeLessThan(0.95);
-    await page.getByTestId('marker-hud-button').tap(); // back to the default
-    expect(await mode()).toBe('indicator');
   });
 });

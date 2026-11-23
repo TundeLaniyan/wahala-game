@@ -1,6 +1,6 @@
 /**
- * The local player's identification marker (decision PI1, docs/PLAYER_MARKER.md): a small "YOU" tag over the head and,
- * in the experimental `indicatorGround` mode, a faint floor-contact tint. Render-only: it reads the frame's state and
+ * The local player's identification marker (decision PI1, docs/PLAYER_MARKER.md): a small "YOU" tag over the head and
+ * a floor ring under the fighter (both, in the standard `indicatorGround` mode, decision PM1). Render-only: it reads the frame's state and
  * the style from `playerMarker.ts`; the tag is drawn over bodies (no depth test, a render order above every sprite
  * of the figures), grows and brightens when rivals crowd the player and is hidden while the player is down.
  */

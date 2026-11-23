@@ -74,10 +74,16 @@ test('Sudden Death: the card goes when play resumes, the clock announces then fo
   await expect(card).toHaveCount(0);
   const clock = page.getByTestId('sudden-death-clock');
   await expect(clock).toHaveAttribute('data-mode', 'full');
-  await expect(page.getByTestId('sudden-death-status')).toContainText(
-    /BLAST 1 OF 3 · SHIELDS RESPECTED · 1:00/,
-  );
+  await expect(page.getByTestId('sudden-death-status')).toContainText(/BLAST 1 OF 3 · SHIELDS RESPECTED/);
   expect(await clock.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+  // the announcement is a rail card beside the board, never over the middle of the screen (decision SDT2)
+  const ann = (await clock.boundingBox())!;
+  const vpp = page.viewportSize()!;
+  expect(ann.x + ann.width / 2, 'not centred over the arena').toBeLessThan(vpp.width * 0.4);
+  // the main timer IS the sim's blast countdown, labelled SUDDEN DEATH (decision SDT1)
+  await expect(page.getByTestId('timer')).toHaveText('1:00');
+  await expect(page.getByTestId('timer-sudden-label')).toContainText('SUDDEN');
+  await expect(page.getByTestId('timer-sudden-sub')).toHaveAttribute('data-sub', 'BLAST 1 OF 3');
 
   // 3. pause holds the announcement exactly as it is; resume carries on
   await page.getByTestId('pause-button').click();
@@ -92,27 +98,15 @@ test('Sudden Death: the card goes when play resumes, the clock announces then fo
     (window as any).__WAHALA__.controller().frozen = true;
   });
 
-  // 4. a few seconds of play later it is a one-line chip: blast and countdown kept, nothing over the fight
+  // 4. a few seconds of play later the announcement is gone; the countdown stays in the main timer
   const s = await sim(page);
   await step(page, s.announceFrom + 180 - s.tick);
-  await expect(clock).toHaveAttribute('data-mode', 'compact');
-  await expect(page.getByTestId('sudden-death-status')).toContainText(/BLAST 1 OF 3 · 0:5\d/);
+  await expect(clock).toHaveCount(0);
+  await expect(page.getByTestId('timer')).toHaveText(/^0:5\d$/);
+  await expect(page.getByTestId('timer-sudden-sub')).toHaveAttribute('data-sub', 'BLAST 1 OF 3');
   await expect(page.getByTestId('sudden-death-ranking')).toHaveCount(0);
-  const box = (await clock.boundingBox())!;
-  expect(box.height, 'one short line').toBeLessThanOrEqual(32);
-  const vp = page.viewportSize()!;
-  expect(box.width, 'not a wide panel across the arena').toBeLessThan(vp.width * 0.45);
-  // a tap where the chip is reaches the game, not the chip
-  const hit = await page.evaluate(
-    ([x, y]) =>
-      (document.elementFromPoint(x!, y!) as HTMLElement | null)?.closest(
-        '[data-testid="sudden-death-clock"]',
-      ) !== null,
-    [box.x + box.width / 2, box.y + box.height / 2],
-  );
-  expect(hit).toBe(false);
 
-  // 5. the fighter answers with the chip up: keys on desktop, the touch pad on a phone
+  // 5. the fighter answers with the countdown up: keys on desktop, the touch pad on a phone
   const before = await sim(page);
   if (isMobile) {
     const zone = (await page.getByTestId('stick-zone').boundingBox())!;
@@ -184,13 +178,13 @@ test('Sudden Death: the card is not over the arena and the banner times out on i
   await expect(card).toHaveCount(0, { timeout: 60_000 });
   expect((await sim(page)).stage, 'the sim is still holding input: only the banner went').toBe('transition');
 
-  // the same for the full blast announcement: it folds into the chip although no tick arrives
+  // the same for the blast announcement: it is gone although no tick arrives
   const end = await page.evaluate(
     () => (window as any).__WAHALA__.getState().match.suddenDeath.transitionEndTick,
   );
   await step(page, end - (await sim(page)).tick + 1);
   const clock = page.getByTestId('sudden-death-clock');
   await expect(clock).toBeVisible();
-  await expect(clock).toHaveAttribute('data-mode', 'compact', { timeout: 60_000 });
+  await expect(clock).toHaveCount(0, { timeout: 60_000 });
   expect(errors).toEqual([]);
 });

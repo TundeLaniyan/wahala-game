@@ -85,7 +85,20 @@ export { readyToStep } from './systems/movement';
 export { secondsRemaining } from './systems/match';
 export { observe } from './observe';
 export type { Observation } from './observe';
-export { previewBlast } from './systems/explosions';
+export { previewBlast, previewBlastParts } from './systems/explosions';
+export type { BlastPart } from './systems/explosions';
+export { flameHarms } from './systems/queries';
+export {
+  addBlastPreview,
+  addLiveFlames,
+  applyDangerPriority,
+  emptyBlastTiles,
+  blastSafetyApplies,
+  blastViewer,
+  labelFlame,
+  labelGenerator,
+} from './systems/blastSafety';
+export type { BlastLabel, BlastTiles } from './systems/blastSafety';
 export { previewSpecial } from './systems/actions';
 export type { SpecialAction } from './systems/actions';
 export { chooseAutoVehicle, scoreRoute } from './systems/autoVehicle';

@@ -82,74 +82,40 @@ export function SuddenDeathCard({ sd }: { sd: SuddenDeathHud }) {
 }
 
 /**
- * The blast clock in the HUD rail during the countdown, and the flash when a blast falls. When a countdown begins
- * (`sd.announce`, a few seconds) it is the full announcement: which blast of the round it is, whether shields count
- * (blasts 1-2: an Okada or Armour layer absorbs one blast each; the final blast ignores them), the countdown, what that
- * means for the local fighter and the kill ranking. Then it folds into a one-line chip (title, blast, countdown; it still
- * pulses in the warning window) so it never sits over the fight for the whole round (decision SD-B1).
+ * The brief blast announcement (decisions SD-B1, SDT2): when a countdown begins (`sd.announce`, a few seconds) a compact
+ * card in the HUD rail beside the board says which blast of the round it is, whether shields count and what that means
+ * for the local fighter. It is gone after the announce window (and after `SD_ANNOUNCE_MAX_MS` of real time whatever the
+ * simulation clock does), never sits over the board, and never repeats the clock: the COUNTDOWN is the main match timer
+ * (`timerModel.ts`), labelled SUDDEN DEATH, so there is no persistent banner or chip.
  */
 export function SuddenDeathClock({ sd }: { sd: SuddenDeathHud }) {
   const status = suddenDeathStatus(sd);
   const brief = useBriefly(sd.announceKey, sd.announce, SD_ANNOUNCE_MAX_MS);
-  const compact = !sd.announce || !brief;
-  if (status && compact)
-    return (
-      <>
-        <div
-          className={`sd-clock compact${sd.warning ? ' warn' : ''}${status.final ? ' final' : ''}`}
-          data-testid="sudden-death-clock"
-          data-mode="compact"
-          data-seconds={sd.secondsToBlast}
-          data-blast={sd.blast}
-          data-final={status.final}
-          role="status"
-          aria-label={`Sudden death: ${status.line}${status.yours ? `. ${status.yours}` : ''}`}
-        >
-          <b>SUDDEN DEATH</b>
-          <span className="sd-status" data-testid="sudden-death-status">
-            {status.blast}
-            {status.final && <em className="sd-shields"> · {status.shields}</em>} ·{' '}
-            <strong>{status.countdown}</strong>
-          </span>
-        </div>
-        {sd.flash && <div className="sd-flash" data-testid="sudden-death-flash" aria-hidden />}
-      </>
-    );
+  if (!status || !sd.announce || !brief) return null;
   return (
-    <>
-      {status && (
-        <div
-          className={`sd-clock${sd.warning ? ' warn' : ''}${status.final ? ' final' : ''}`}
-          data-testid="sudden-death-clock"
-          data-mode="full"
-          data-seconds={sd.secondsToBlast}
-          data-blast={sd.blast}
-          data-final={status.final}
-          role="status"
-        >
-          <b>SUDDEN DEATH</b>
-          <span className="sd-status" data-testid="sudden-death-status">
-            {status.blast} · <em className="sd-shields">{status.shields}</em> ·{' '}
-            <strong>{status.countdown}</strong>
-          </span>
-          {status.yours && (
-            <small className="sd-yours" data-testid="sudden-death-yours">
-              {status.yours}
-            </small>
-          )}
-          <ol className="sd-rank" data-testid="sudden-death-ranking">
-            {sd.ranking
-              .filter((r) => r.contender)
-              .map((r) => (
-                <li key={r.id} className={`${r.isLocal ? 'mine' : ''}${r.alive ? '' : ' out'}`}>
-                  <b style={playerTextStyle(r.slot, r.team)}>{r.isLocal ? 'YOU' : r.name}</b>
-                  <em>{r.kills}</em>
-                </li>
-              ))}
-          </ol>
-        </div>
+    <div
+      className={`sd-clock${sd.warning ? ' warn' : ''}${status.final ? ' final' : ''}`}
+      data-testid="sudden-death-clock"
+      data-mode="full"
+      data-seconds={sd.secondsToBlast}
+      data-blast={sd.blast}
+      data-final={status.final}
+      role="status"
+    >
+      <b>SUDDEN DEATH</b>
+      <span className="sd-status" data-testid="sudden-death-status">
+        {status.blast} · <em className="sd-shields">{status.shields}</em>
+      </span>
+      {status.yours && (
+        <small className="sd-yours" data-testid="sudden-death-yours">
+          {status.yours}
+        </small>
       )}
-      {sd.flash && <div className="sd-flash" data-testid="sudden-death-flash" aria-hidden />}
-    </>
+    </div>
   );
+}
+
+/** The flash when a blast falls (its own element: the announcement is gone by then). */
+export function SuddenDeathFlash({ sd }: { sd: SuddenDeathHud }) {
+  return sd.flash ? <div className="sd-flash" data-testid="sudden-death-flash" aria-hidden /> : null;
 }

@@ -116,3 +116,17 @@ export function canHarm(state: GameState, attackerId: number | null, victim: Pla
   if (!attacker || (!attacker.alive && attacker.spectator !== null)) return true;
   return !teammates(attacker, victim);
 }
+
+/**
+ * Would a flame (or a generator about to burn) with this owner hurt `victim`? The one rule both the lethal-hit check and
+ * the viewer-relative blast warnings use (decision TB1): `canHarm` (self always, a teammate only with friendly fire,
+ * everyone else, spectator throws and the environment) except that a VEHICLE GENERATOR never catches its own owner.
+ */
+export function flameHarms(
+  state: GameState,
+  flame: { ownerId: number | null; ownerSafe?: boolean },
+  victim: Player,
+): boolean {
+  if (flame.ownerSafe === true && flame.ownerId === victim.id) return false;
+  return canHarm(state, flame.ownerId, victim);
+}

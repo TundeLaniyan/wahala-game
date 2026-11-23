@@ -1,6 +1,11 @@
-/** Player identification marker style (decision PI1). Render-only; the Test Lab switches it live. */
+/**
+ * Player identification marker style (decisions PI1, PM1). Render-only. The standard treatment of every match is the
+ * founder-approved combined one, `indicatorGround`: the overhead YOU plate AND the floor ring under the fighter. The
+ * other two styles are kept only for tests and `?debug` (`__WAHALA__.playerMarker`); no menu, pause or Test Lab control
+ * changes it any more.
+ */
 export type PlayerMarkerMode = 'original' | 'indicator' | 'indicatorGround';
-export const DEFAULT_PLAYER_MARKER: PlayerMarkerMode = 'indicator';
+export const DEFAULT_PLAYER_MARKER: PlayerMarkerMode = 'indicatorGround';
 let mode: PlayerMarkerMode = DEFAULT_PLAYER_MARKER;
 export function playerMarkerMode(): PlayerMarkerMode {
   return mode;

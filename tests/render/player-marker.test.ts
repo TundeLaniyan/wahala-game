@@ -96,11 +96,11 @@ function rig(localPlayerId = 0) {
 }
 
 describe('style switch', () => {
-  it('defaults to the indicator and switches live', () => {
-    expect(DEFAULT_PLAYER_MARKER).toBe('indicator');
-    expect(playerMarkerMode()).toBe('indicator');
-    setPlayerMarkerMode('indicatorGround');
+  it('the combined Indicator + Ground treatment is the standard marker (decision PM1); the other styles are test-only', () => {
+    expect(DEFAULT_PLAYER_MARKER).toBe('indicatorGround');
     expect(playerMarkerMode()).toBe('indicatorGround');
+    setPlayerMarkerMode('indicator');
+    expect(playerMarkerMode()).toBe('indicator');
     setPlayerMarkerMode('original');
     expect(playerMarkerMode()).toBe('original');
   });
@@ -141,9 +141,10 @@ describe('style switch', () => {
     const r = rig();
     // the floor decals the marker adds: flat meshes at the marker's height (the rings and shadows sit at other heights)
     const floorMarks = () => r.meshes().filter((m) => m.visible && m.position.y === 0.025 && m.scale.x > 1.5);
+    setPlayerMarkerMode('indicator');
     r.settle(1);
     expect(floorMarks()).toHaveLength(0);
-    setPlayerMarkerMode('indicatorGround');
+    setPlayerMarkerMode(DEFAULT_PLAYER_MARKER); // the standard: Indicator + Ground (decision PM1)
     r.settle(1);
     expect(floorMarks()).toHaveLength(1);
     // decision TL8: it must be seen at the fixed camera (the first version, 0.34-0.54 over a 30 % tint, was not) and still
