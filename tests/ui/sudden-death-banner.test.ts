@@ -1,8 +1,7 @@
 /**
- * The SUDDEN DEATH banner lifecycle (decisions SD-B1-SD-B4, docs/integrated-release/task1-sudden-death.md). The title
- * card belongs to the held-input transition only; the blast clock shows its full announcement for a few seconds when a
- * countdown begins (the round's first, and again after every blast), then folds into a one-line chip for the rest of
- * the fight. Everything is read from the simulation state through the HUD builder (ticks, not wall time), so a paused
+ * The SUDDEN DEATH banner lifecycle (decisions SD-B1-SD-B4, SX1-SX2). The title card belongs to the held-input
+ * transition only; a brief rail announcement shows for a few seconds when a countdown begins (the round's first, and
+ * again after every blast), then is gone; the COUNTDOWN itself is the main match timer. Everything is read from the simulation state through the HUD builder (ticks, not wall time), so a paused
  * game keeps the banner exactly as it was, a rematch starts clean, and the sim rules are untouched.
  */
 import { createElement } from 'react';
@@ -11,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { createGame } from '../../src/sim';
 import type { GameKind, GameState } from '../../src/sim';
 import { SUDDEN_DEATH_ANNOUNCE_TICKS, buildHud } from '../../src/app/hud';
+import { timerModel } from '../../src/ui/timerModel';
 import { RUMBLE_FIXTURE, eventsOf, run, runUntil } from '../helpers';
 
 const { SuddenDeathClock, SuddenDeathCard } = await import('../../src/ui/SuddenDeath');
@@ -66,37 +66,59 @@ describe('the title card belongs to the held-input transition only', () => {
   });
 });
 
-describe('the blast clock announces, then folds into a chip (SD-B1)', () => {
-  it('full for the announce window after the countdown begins, then compact for the rest of the countdown', () => {
+describe('the blast announcement is brief; the countdown is the main timer (SD-B1, SX1, SX2)', () => {
+  const timer = (s: GameState) => timerModel(buildHud(s, 0, null));
+
+  it('announced for the announce window after the countdown begins, then gone (no persistent chip)', () => {
     const s = tied();
     runUntil(s, (ev) => eventsOf(ev, 'suddenDeathCountdown').length > 0, 600);
     expect(sd(s).announce).toBe(true);
     const full = clockHtml(s);
     expect(full).toContain('data-mode="full"');
     expect(full).toContain('SHIELDS RESPECTED');
-    expect(full).toContain('sudden-death-ranking');
+    expect(full).not.toContain('sudden-death-ranking'); // the title card already showed who is tied
     run(s, SUDDEN_DEATH_ANNOUNCE_TICKS - 1);
     expect(sd(s).announce).toBe(true);
     run(s, 1);
     expect(sd(s).announce).toBe(false);
-    const chip = clockHtml(s);
-    expect(chip).toContain('data-mode="compact"');
-    // the legitimate information stays: which blast and the countdown
-    expect(chip).toContain('BLAST 1 OF 3');
-    expect(chip).toMatch(/0:5\d/);
-    // the long lines go
-    expect(chip).not.toContain('sudden-death-ranking');
-    expect(chip).not.toContain('sudden-death-yours');
+    expect(clockHtml(s)).toBe(''); // nothing sits over the fight for the rest of the countdown
   });
 
-  it('stays compact through the warning window (it pulses; it does not expand over the fight)', () => {
+  it('the main timer is the sim countdown to the next blast, labelled SUDDEN DEATH, from the first tick of the round', () => {
     const s = tied();
+    // during the title card's held input: the first blast's delay, not the spent match clock
+    expect(timer(s).sudden?.sub).toBe('BLAST 1 OF 3');
+    expect(timer(s).seconds).toBe(sd(s).firstBlastSeconds);
     runUntil(s, (ev) => eventsOf(ev, 'suddenDeathCountdown').length > 0, 600);
-    const blastAt = s.match.suddenDeath!.nextBlastTick;
-    run(s, blastAt - s.config.suddenDeath.warnTicks - s.tick + 1);
-    expect(sd(s).warning).toBe(true);
-    expect(sd(s).announce).toBe(false);
-    expect(clockHtml(s)).toContain('sd-clock compact warn');
+    const sdState = s.match.suddenDeath!;
+    for (let i = 0; i < 6; i++) {
+      run(s, 97);
+      const t = timer(s);
+      // the displayed seconds are exactly what the simulation says: nextBlastTick - tick, rounded up
+      expect(t.seconds).toBe(Math.ceil((sdState.nextBlastTick - s.tick) / 60));
+      expect(t.sudden).not.toBeNull();
+    }
+    // and it never shows the match clock (0:00) while a blast is pending
+    expect(timer(s).seconds).toBeGreaterThan(0);
+  });
+
+  it('is the match clock again outside a sudden-death round (no label)', () => {
+    const s = rumble();
+    expect(timer(s).sudden).toBeNull();
+    expect(timer(s).seconds).toBe(buildHud(s, 0, null).secondsLeft);
+  });
+
+  it('pulses in the warning window and says FINAL BLAST on the last one', () => {
+    const s = tied();
+    for (const p of s.players) p.armour = 2;
+    runUntil(s, (ev) => eventsOf(ev, 'suddenDeathCountdown').length > 0, 600);
+    expect(timer(s).urgent).toBe(false);
+    run(s, s.match.suddenDeath!.nextBlastTick - s.config.suddenDeath.warnTicks - s.tick + 1);
+    expect(timer(s).urgent).toBe(true);
+    runUntil(s, (ev) => eventsOf(ev, 'suddenDeathBlast').length > 0, 5000);
+    runUntil(s, (ev) => eventsOf(ev, 'suddenDeathBlast').length > 0, 5000);
+    expect(timer(s).sudden?.final).toBe(true);
+    expect(timer(s).sudden?.sub).toContain('FINAL BLAST');
   });
 
   it('announces again after each blast (repeated phase transitions), then folds again', () => {
@@ -108,15 +130,13 @@ describe('the blast clock announces, then folds into a chip (SD-B1)', () => {
     expect(sd(s).announce).toBe(true);
     expect(clockHtml(s)).toContain('data-mode="full"');
     run(s, SUDDEN_DEATH_ANNOUNCE_TICKS);
-    expect(clockHtml(s)).toContain('data-mode="compact"');
+    expect(clockHtml(s)).toBe('');
     runUntil(s, (ev) => eventsOf(ev, 'suddenDeathBlast').length > 0, 5000);
     expect(sd(s).blast).toBe(3);
     expect(sd(s).announce).toBe(true);
     expect(clockHtml(s)).toContain('SHIELDS IGNORED');
     run(s, SUDDEN_DEATH_ANNOUNCE_TICKS);
-    // the final blast's chip still says shields are ignored
-    expect(clockHtml(s)).toContain('data-mode="compact"');
-    expect(clockHtml(s)).toContain('SHIELDS IGNORED');
+    expect(clockHtml(s)).toBe('');
   });
 
   it('a new round mid-match (the last contenders fell together) gets its own card, then its own announcement', () => {

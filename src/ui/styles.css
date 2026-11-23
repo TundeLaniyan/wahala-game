@@ -599,6 +599,50 @@ html[data-vv-fit] .game-root {
   color: #fff;
   animation: pulse 0.5s infinite alternate;
 }
+/* Rumble Sudden Death (decision SX1): the clock is the blast countdown, labelled SUDDEN DEATH, in the red plate; a
+   one-line caption under it names the blast. Same footprint as the match clock plus a thin caption. */
+.timer.sudden .clock {
+  background: linear-gradient(#7a1a10, #3a0c08 85%);
+  border-color: var(--red);
+}
+.timer.sudden .round.sd-tag {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 clamp(4px, 0.9vh, 7px);
+  background: var(--red);
+  color: #fff;
+  font-size: clamp(0.42rem, 1.6vh, 0.62rem);
+  line-height: 1.05;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+.timer.sudden .clock b {
+  color: #fff;
+}
+.timer.sudden .bar i {
+  background: var(--red);
+}
+.timer .sd-blast {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 clamp(4px, 0.9vh, 7px);
+  background: rgba(12, 10, 8, 0.55);
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  font-family: var(--display);
+  font-size: clamp(0.42rem, 1.6vh, 0.62rem);
+  line-height: 1.05;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: #ffd9cf;
+  white-space: nowrap;
+}
+.timer.sudden.urgent .clock b {
+  animation: pulse 0.5s infinite alternate;
+}
 .top-buttons {
   position: absolute;
   top: calc(max(8px, env(safe-area-inset-top)) + 4px);

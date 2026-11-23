@@ -18,7 +18,7 @@ import type { RouteCue } from '../app/routeGuide';
 import { RuleBanner, StageAlerts } from './StageAlerts';
 import { StreakStatus } from './StreakStatus';
 import { StreakIcon } from './streakIcons';
-import { SuddenDeathCard, SuddenDeathClock } from './SuddenDeath';
+import { SuddenDeathCard, SuddenDeathClock, SuddenDeathFlash } from './SuddenDeath';
 import './HudRail.css';
 
 export interface HudRailProps {
@@ -166,10 +166,9 @@ export function HudRail({
   const showSubtitle = subtitle !== null && (mode === 'on' || mode === 'large');
   return (
     <>
-      {rumble && suddenDeath && (
-        // the Sudden Death announcement keeps its own place (top-centre, decision SD-B1): it is not a toast
+      {rumble && suddenDeath?.flash && (
         <div className="hud-rail rail-top" data-testid="hud-rail-sd">
-          <SuddenDeathClock sd={suddenDeath} />
+          <SuddenDeathFlash sd={suddenDeath} />
         </div>
       )}
       <div
@@ -185,7 +184,8 @@ export function HudRail({
         }
       >
         {suddenDeath && <SuddenDeathCard sd={suddenDeath} />}
-        {!rumble && suddenDeath && <SuddenDeathClock sd={suddenDeath} />}
+        {!rumble && suddenDeath?.flash && <SuddenDeathFlash sd={suddenDeath} />}
+        {suddenDeath && <SuddenDeathClock sd={suddenDeath} />}
         {ruleBanner && <RuleBanner text={ruleBanner} />}
         <StageAlerts alerts={alerts} />
         {/* a mission's panel first (its warnings must never be clipped); then the kill feed. City Rumble keeps the kill

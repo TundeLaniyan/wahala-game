@@ -11,6 +11,8 @@ import { useGameStore } from '../app/store';
 import { EntryPanel } from './EntryPanel';
 import { shieldChip } from './combatHudModel';
 import { HudRail } from './HudRail';
+import { timerModel } from './timerModel';
+import type { TimerModel } from './timerModel';
 import { Minimap } from './Minimap';
 import { MissionCompass } from './MissionCompass';
 import { MissionDock } from './MissionDock';
@@ -159,17 +161,44 @@ function Inventory({ me }: { me: HudMe }) {
  * Broadcast-style match clock: a slab of big condensed digits on a dark plate with a round tag and
  * a time bar underneath; from the final 30 seconds the plate turns red and pulses.
  */
-function Timer({ seconds, total, urgent }: { seconds: number; total: number; urgent: boolean }) {
+/** The short caption as two stacked lines for the narrow plate column: BLAST 1 OF 3 -> BLAST / 1 OF 3. */
+function blastLines(sub: string): string[] {
+  const m = /^(FINAL BLAST|BLAST)\s*(.*)$/.exec(sub);
+  if (!m) return [sub];
+  return m[1] === 'FINAL BLAST' ? ['FINAL', 'BLAST'] : [m[1]!, (m[2] ?? '').replace(' OF ', '/')];
+}
+
+function Timer({ model }: { model: TimerModel }) {
+  const { seconds, total, urgent, sudden } = model;
   const mm = Math.floor(seconds / 60);
   const ss = String(seconds % 60).padStart(2, '0');
   const frac = Math.max(0, Math.min(1, seconds / total));
   return (
-    <div className={`timer${urgent ? ' urgent' : ''}`} role="timer" aria-label={`${mm}:${ss} left`}>
+    <div
+      className={`timer${urgent ? ' urgent' : ''}${sudden ? ' sudden' : ''}`}
+      role="timer"
+      data-sudden={sudden ? 'true' : undefined}
+      aria-label={sudden ? `Sudden death, ${sudden.sub}, ${mm}:${ss} to the blast` : `${mm}:${ss} left`}
+    >
       <div className="clock">
-        <span className="round">
-          R<em>1</em>
-        </span>
+        {sudden ? (
+          <span className="round sd-tag" data-testid="timer-sudden-label">
+            <span>SUDDEN</span>
+            <span>DEATH</span>
+          </span>
+        ) : (
+          <span className="round">
+            R<em>1</em>
+          </span>
+        )}
         <b data-testid="timer">{`${mm}:${ss}`}</b>
+        {sudden && (
+          <span className="sd-blast" data-testid="timer-sudden-sub" data-sub={sudden.sub} aria-hidden>
+            {blastLines(sudden.sub).map((l) => (
+              <span key={l}>{l}</span>
+            ))}
+          </span>
+        )}
       </div>
       <div className="bar">
         <i style={{ width: `${frac * 100}%` }} />
@@ -230,7 +259,7 @@ export function Hud() {
           </div>
         </>
       )}
-      <Timer seconds={hud.secondsLeft} total={hud.totalSeconds} urgent={hud.final30} />
+      <Timer model={timerModel(hud)} />
       <div className="top-buttons">
         <button
           type="button"
