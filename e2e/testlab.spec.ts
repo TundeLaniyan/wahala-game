@@ -211,7 +211,7 @@ test.describe('Test Lab', () => {
     expect(text).toContain('- [NEEDS IMPROVEMENT] Classic Campaign Raid (Hard): guard saw me too early');
     expect(text).toContain('- [NOT TESTED] Records Vault, night raid');
     expect(text.indexOf('TESTS REQUIRING REVIEW')).toBeLessThan(text.indexOf('COMPLETED TESTS'));
-    expect(text).toContain('Totals: 0 pass, 1 needs improvement, 0 failed, 16 not tested');
+    expect(text).toContain('Totals: 0 pass, 1 needs improvement, 0 failed, 19 not tested');
     // it comes back after a reload
     await page.reload();
     await page.getByTestId('testlab-completed-toggle').tap();
