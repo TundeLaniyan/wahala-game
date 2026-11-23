@@ -3,10 +3,18 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "WAHALA! City Rumble authoritative multiplayer server (development foundation)",
-  "scripts": {},
+  "description": "WAHALA! City Rumble authoritative multiplayer server (Colyseus room shell around the transport-agnostic match)",
+  "scripts": {
+    "dev": "../node_modules/.bin/tsx watch src/main.ts",
+    "start": "../node_modules/.bin/tsx src/main.ts",
+    "typecheck": "../node_modules/.bin/tsc --noEmit -p tsconfig.json",
+    "test": "../node_modules/.bin/vitest run --config vitest.config.ts"
+  },
   "dependencies": {
-    "@colyseus/sdk": "^0.18.10",
-    "colyseus": "^0.18.12"
+    "@colyseus/core": "^0.18.10",
+    "@colyseus/ws-transport": "^0.18.5"
+  },
+  "devDependencies": {
+    "@colyseus/sdk": "^0.18.10"
   }
 }

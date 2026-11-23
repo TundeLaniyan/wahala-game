@@ -25,6 +25,7 @@ export const MSG = {
   ready: 'ready',
   start: 'start',
   rematch: 'rematch',
+  settings: 'settings',
   // server -> client
   welcome: 'welcome',
   lobby: 'lobby',
@@ -159,4 +160,145 @@ export interface ResultsMsg {
     deaths: number;
     assists: number;
   }[];
+}
+
+// ---------------------------------------------------------------- lobby (rooms, codes, names)
+
+/** Room codes: 6 characters, no 0 / O / 1 / I / L (easy to read aloud and to type). */
+export const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+export const ROOM_CODE_LENGTH = 6;
+/** A room holds up to this many humans, and a match always has this many seats (bots fill the rest). */
+export const MAX_HUMANS = 32;
+export const MATCH_SEATS = 32;
+
+const ROOM_CODE_RE = new RegExp(`^[${ROOM_CODE_ALPHABET}]{${ROOM_CODE_LENGTH}}$`);
+
+/** Normalises what a player typed (case, spaces) and returns the code, or null if it cannot be one. */
+export function normalizeRoomCode(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const code = raw.trim().toUpperCase();
+  return ROOM_CODE_RE.test(code) ? code : null;
+}
+
+/** WebSocket close codes (4000 range) the server uses for its own decisions. 4000-4003 and 4010 belong to Colyseus. */
+export const CLOSE = {
+  /** Too many invalid messages in a short time. */
+  abuse: 4400,
+} as const;
+
+export const PLAYER_NAME_MIN = 2;
+export const PLAYER_NAME_MAX = 24;
+const NAME_RE = /^[\p{L}\p{M}\p{N} _.'-]+$/u;
+
+/**
+ * A player display name: 2-24 characters (code points) of letters, digits, space and `_ . ' -`, trimmed, NFC-normalised,
+ * with runs of spaces collapsed and at least one letter or digit. Returns the cleaned name, or null if it is rejected.
+ */
+export function validatePlayerName(raw: unknown): string | null {
+  if (typeof raw !== 'string' || raw.length > 128) return null;
+  const name = raw.normalize('NFC').trim().replace(/ {2,}/g, ' ');
+  const length = [...name].length;
+  if (length < PLAYER_NAME_MIN || length > PLAYER_NAME_MAX) return null;
+  if (!NAME_RE.test(name) || !/[\p{L}\p{N}]/u.test(name)) return null;
+  if (/\p{M}{4,}/u.test(name)) return null; // no stacked combining marks (Yoruba tone + dot-below needs 2)
+  return name;
+}
+
+export type LobbyPhase = 'lobby' | 'countdown' | 'playing' | 'results';
+
+/** Match settings a room is configured with (public: nothing secret in here). */
+export interface RoomSettings {
+  arenaId: string;
+  game: 'survival' | 'deathmatch' | 'team';
+  durationSec: number;
+  botDifficulty: string;
+}
+
+export interface LobbyMemberView {
+  name: string;
+  characterId: string;
+  ready: boolean;
+  isHost: boolean;
+  /** Seat in the running / finished match; null before a match starts. */
+  seat: number | null;
+  /** False while a playing member's connection is down and their seat is on autopilot. */
+  connected: boolean;
+}
+
+/**
+ * Lobby state, sent to every client on each change (never carries session ids or reconnection tokens).
+ * `you` is the receiving client's index in `members`, so it can tell which row is its own.
+ */
+export interface LobbyMsg {
+  code: string;
+  phase: LobbyPhase;
+  private: boolean;
+  members: LobbyMemberView[];
+  settings: RoomSettings;
+  /** Time left of the pre-match countdown when this message was sent, else null. */
+  countdownMs: number | null;
+  /** Time left before a public lobby starts by itself when this message was sent, else null. */
+  autoStartMs: number | null;
+  /** Seats the server fills with bots when the match starts. */
+  botsToFill: number;
+  you: number | null;
+}
+
+/** A human-readable refusal or warning for one client (never needed to keep playing). */
+export interface NoticeMsg {
+  code: string;
+  message: string;
+}
+
+/** Client -> server: toggle the ready mark. */
+export interface ReadyMsg {
+  ready: boolean;
+}
+
+export function validateReady(raw: unknown): ReadyMsg | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  if (Object.keys(o).length !== 1 || typeof o.ready !== 'boolean') return null;
+  return { ready: o.ready };
+}
+
+/** `start` and `rematch` carry no payload: nothing, null or an empty object. */
+export function validateEmptyMsg(raw: unknown): boolean {
+  if (raw === undefined || raw === null) return true;
+  return typeof raw === 'object' && !Array.isArray(raw) && Object.keys(raw).length === 0;
+}
+
+/** Client -> server (host only): change some of the room settings. Values are checked against the allowed sets by the room. */
+export type SettingsMsg = Partial<RoomSettings>;
+
+const SETTINGS_KEYS = ['arenaId', 'game', 'durationSec', 'botDifficulty'] as const;
+
+export function validateSettingsMsg(raw: unknown): SettingsMsg | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const keys = Object.keys(o);
+  if (keys.length === 0 || keys.length > SETTINGS_KEYS.length) return null;
+  const out: SettingsMsg = {};
+  for (const k of keys) {
+    if (!(SETTINGS_KEYS as readonly string[]).includes(k)) return null;
+  }
+  if ('arenaId' in o) {
+    if (typeof o.arenaId !== 'string' || o.arenaId.length < 1 || o.arenaId.length > 48) return null;
+    out.arenaId = o.arenaId;
+  }
+  if ('game' in o) {
+    if (o.game !== 'survival' && o.game !== 'deathmatch' && o.game !== 'team') return null;
+    out.game = o.game;
+  }
+  if ('durationSec' in o) {
+    if (typeof o.durationSec !== 'number' || !Number.isInteger(o.durationSec)) return null;
+    if (o.durationSec < 1 || o.durationSec > 3600) return null;
+    out.durationSec = o.durationSec;
+  }
+  if ('botDifficulty' in o) {
+    if (typeof o.botDifficulty !== 'string' || o.botDifficulty.length < 1 || o.botDifficulty.length > 24)
+      return null;
+    out.botDifficulty = o.botDifficulty;
+  }
+  return out;
 }

@@ -208,6 +208,7 @@ export class RumbleMatch {
     s.held = { move: null, placeHeld: false };
     s.press = null;
     s.pressed = 0;
+    s.lastSeq = -1; // a (re)connected client starts its own sequence again
   }
 
   /** The seat's connection dropped: it idles or is autopiloted until `connect` or `replaceWithBot`. */
