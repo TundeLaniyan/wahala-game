@@ -5,7 +5,7 @@
  * the real campaign controller (whose save is in memory too), and the scenarios through the controller's no-save raid
  * path with a set-up hook.
  */
-import { commands, labCampaign } from '../app/session';
+import { commands, labCampaign, labRunScene } from '../app/session';
 import { patch, useGameStore } from '../app/store';
 import { campaignEnemyLevel } from '../sim';
 import type { CharacterId } from '../sim';
@@ -20,6 +20,7 @@ import type { LabEntry } from './registry';
 import { rumbleFeedbackSetup } from './labActions';
 import { applyRumbleConfig } from './rumbleSetup';
 import { scenarioById } from './scenarios/defs';
+import { buildTeamBlastScene } from './teamBlast';
 
 /** Did the in-memory isolation install? (Without it the lab refuses to start anything: a test could write a save.) */
 export function isolationOk(): boolean {
@@ -86,6 +87,13 @@ function launch(entry: LabEntry, level: LabLevel): boolean {
     case 'suddenDeath':
       commands.start('suddenDeathTest');
       return true;
+    case 'teamBlast': {
+      // a small real Team Rumble: the player's own fighter, the other seats laying generators through the real intent
+      const scene = buildTeamBlastScene(l.variant, useGameStore.getState().settings);
+      if (!scene) return false;
+      labRunScene(scene.state, scene.director);
+      return true;
+    }
   }
 }
 
