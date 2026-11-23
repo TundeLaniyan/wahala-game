@@ -1,0 +1,162 @@
+/**
+ * City Rumble online wire protocol, version 1 (docs/CITY_RUMBLE_ONLINE.md section 4).
+ *
+ * Transport: one secure WebSocket per client (Colyseus room connection). Control messages are small objects (Colyseus
+ * encodes them as MessagePack); game state travels as binary `deflate-raw(pack(...))` frames built ONCE per room and
+ * sent to every client.
+ *
+ * The client sends INTENT ONLY: which direction is held, whether A is held, and which buttons were pressed. It never
+ * sends a position, a hit, an elimination, a score, a result, a team or a seed; the validator below rejects anything
+ * but the exact input shape. The server applies inputs to its own simulation at its next tick.
+ */
+import type { Dir, GameKind, MatchSettings, PlayerSetup, SimEvent } from '../sim';
+import type { Patch } from './delta';
+import type { PublicState } from './publicState';
+
+export const NET_PROTOCOL = 1;
+export const TICK_RATE = 60;
+
+/** Message type names (Colyseus `type` strings). */
+export const MSG = {
+  // client -> server
+  input: 'in',
+  ping: 'ping',
+  resync: 'resync',
+  ready: 'ready',
+  start: 'start',
+  rematch: 'rematch',
+  // server -> client
+  welcome: 'welcome',
+  lobby: 'lobby',
+  keyframe: 'kf',
+  frames: 'fr',
+  pong: 'pong',
+  results: 'results',
+  notice: 'notice',
+} as const;
+
+// ---------------------------------------------------------------- client -> server
+
+/** One-shot buttons as a bit mask (each is applied once, at the server's next tick). */
+export const BUTTON = {
+  place: 1, // A tap: generator
+  special: 2, // B tap: the one deterministic context special
+  detonate: 4, // A / B hold: remote detonator
+} as const;
+export const BUTTON_MASK = BUTTON.place | BUTTON.special | BUTTON.detonate;
+
+const DIRS: readonly Dir[] = ['up', 'down', 'left', 'right'];
+
+/**
+ * The input message. Sent when the held state changes or a button is pressed (not every tick).
+ *  s: sequence number (strictly increasing per connection; the server drops stale / duplicate ones)
+ *  m: the held direction, or null
+ *  h: A is held (QUICK HANDS lays on every tile while held)
+ *  b: one-shot button mask (BUTTON)
+ */
+export interface InputMsg {
+  s: number;
+  m: Dir | null;
+  h: boolean;
+  b: number;
+}
+
+export type InputError = 'shape' | 'field' | 'range';
+
+/** Strict validation of an untrusted input message: exact keys, exact types, bounded values. */
+export function validateInput(
+  raw: unknown,
+): { ok: true; value: InputMsg } | { ok: false; error: InputError } {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return { ok: false, error: 'shape' };
+  const o = raw as Record<string, unknown>;
+  const keys = Object.keys(o);
+  if (keys.length !== 4 || !('s' in o && 'm' in o && 'h' in o && 'b' in o))
+    return { ok: false, error: 'field' };
+  const { s, m, h, b } = o;
+  if (typeof s !== 'number' || !Number.isInteger(s) || s < 0 || s > 0x7fffffff)
+    return { ok: false, error: 'range' };
+  if (m !== null && !(typeof m === 'string' && (DIRS as readonly string[]).includes(m)))
+    return { ok: false, error: 'range' };
+  if (typeof h !== 'boolean') return { ok: false, error: 'range' };
+  if (typeof b !== 'number' || !Number.isInteger(b) || b < 0 || (b & ~BUTTON_MASK) !== 0)
+    return { ok: false, error: 'range' };
+  return { ok: true, value: { s, m: m as Dir | null, h, b } };
+}
+
+export interface PingMsg {
+  /** Client clock (ms) echoed back in the pong. */
+  c: number;
+}
+
+export function validatePing(raw: unknown): PingMsg | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const o = raw as Record<string, unknown>;
+  if (Object.keys(o).length !== 1 || typeof o.c !== 'number' || !Number.isFinite(o.c)) return null;
+  return { c: o.c };
+}
+
+// ---------------------------------------------------------------- server -> client
+
+/** Everything a client needs to rebuild the match's static parts (config, arena) locally. Public only: no seed. */
+export interface MatchDescriptor {
+  protocol: number;
+  matchId: string;
+  arenaId: string;
+  settings: Partial<MatchSettings> & { game: GameKind };
+  /** One entry per seat, in seat order. Bots are labelled (`isBot`) and named as bots. */
+  players: PlayerSetup[];
+  /** Server ticks per frames message. */
+  sendEvery: number;
+  /** A canonical hash of the public state is attached every this many ticks. */
+  hashEvery: number;
+}
+
+export interface WelcomeMsg {
+  descriptor: MatchDescriptor | null;
+  /** Your seat in the match (null while in the lobby or as a spectator). */
+  seat: number | null;
+  /** Secret, single-use reconnection credential is handled by Colyseus (`reconnectionToken`); never logged. */
+  roomCode: string;
+}
+
+/** Keyframe payload (binary): the whole public state at tick `t`. */
+export interface KeyframePayload {
+  t: number;
+  s: PublicState;
+}
+
+/** One tick: [tick, patch-or-null, events-or-null]. Applied as `predict(replica); applyPatch(replica, patch)`. */
+export type TickFrame = [number, Patch | null, SimEvent[] | null];
+
+/** Frames payload (binary): consecutive ticks, plus an optional [tick, canonicalHash] desync check. */
+export interface FramesPayload {
+  f: TickFrame[];
+  h?: [number, number];
+}
+
+export interface PongMsg {
+  c: number;
+  /** Server tick when the ping was handled. */
+  t: number;
+}
+
+/** Server-trusted results, derived from the server's own simulation only. */
+export interface ResultsMsg {
+  matchId: string;
+  tick: number;
+  winnerSeat: number | null;
+  winnerTeam: number | null;
+  draw: boolean;
+  /** Final state hash (lets every client confirm it saw the same match). */
+  stateHash: number;
+  players: {
+    seat: number;
+    name: string;
+    isBot: boolean;
+    team: number | null;
+    placement: number;
+    kills: number;
+    deaths: number;
+    assists: number;
+  }[];
+}

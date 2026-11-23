@@ -1,0 +1,12 @@
+{
+  "name": "wahala-rumble-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "WAHALA! City Rumble authoritative multiplayer server (development foundation)",
+  "scripts": {},
+  "dependencies": {
+    "@colyseus/sdk": "^0.18.10",
+    "colyseus": "^0.18.12"
+  }
+}
