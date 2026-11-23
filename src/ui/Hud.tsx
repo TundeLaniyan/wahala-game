@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { PICKUP_DEFS, VEHICLE_DEFS } from '../sim';
 import type { PickupKind } from '../sim';
 import { SLOT_CSS } from '../assets/palette';
@@ -19,10 +19,7 @@ import { MissionDock } from './MissionDock';
 import { ProgressionBadge } from './ProgressionBadge';
 import { RumbleHud } from './RumbleHud';
 import { CombatLabChip } from './CombatLab';
-import { testLabActive } from '../testlab/params';
 
-// TEMPORARY Test Lab (docs/TEST_LAB.md): the "Who am I?" scenario's marker button, in the Test Lab's own chunk
-const LabMarkerButton = lazy(() => import('./testlab').then((m) => ({ default: m.MarkerHudButton })));
 
 function Portrait({ p }: { p: HudPlayer }) {
   useGameStore((st) => st.portraitsVersion);
@@ -278,11 +275,6 @@ export function Hud() {
         >
           {muted ? '🔇' : '🔊'}
         </button>
-        {testLabActive() && (
-          <Suspense fallback={null}>
-            <LabMarkerButton />
-          </Suspense>
-        )}
         {stadium && (
           <button
             type="button"

@@ -28,7 +28,6 @@ import { labPatch, levelOf, useLab, variantOf } from '../../testlab/labStore';
 import { entriesOf, entryById } from '../../testlab/registry';
 import type { LabEntry } from '../../testlab/registry';
 import { FeedbackPanel } from './FeedbackPanel';
-import { MarkerSwitch } from './MarkerSwitch';
 import { RumbleSetup, RumbleSummary } from './RumbleSetup';
 import { endedText } from './endedText';
 import '../menu/menu.css';
@@ -270,7 +269,6 @@ function EntryView({ entry }: { entry: LabEntry }) {
               </div>
             </>
           )}
-          {entry.id === 'identifyPlayer' && <MarkerSwitch />}
         </div>
         <div className="tl-side">
           {entry.launch.kind === 'rumbleConfigured' && <RumbleSummary />}

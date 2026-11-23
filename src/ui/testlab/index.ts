@@ -2,4 +2,3 @@
 export { TestLab } from './TestLab';
 export { TestLabPause } from './TestLabPause';
 export { TestLabResults } from './TestLabResults';
-export { MarkerHudButton } from './MarkerSwitch';

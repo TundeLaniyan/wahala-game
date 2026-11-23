@@ -3,8 +3,6 @@
  * the level chosen per test, the feedback, the test that is running and the player-marker style.
  */
 import { create } from 'zustand';
-import { DEFAULT_PLAYER_MARKER } from '../render/playerMarker';
-import type { PlayerMarkerMode } from '../render/playerMarker';
 import type { GameSettings } from '../app/settings';
 import { loadFeedback } from './feedback';
 import type { FeedbackMap, LabLevel } from './feedback';
@@ -27,7 +25,6 @@ export interface LabState {
   feedback: FeedbackMap;
   /** The test started last. Stays set after it ends (the results panel needs it); cleared by "Return to Test Lab". */
   run: LabRun | null;
-  marker: PlayerMarkerMode;
   /** The browser refused to keep the feedback (it still lives in this page). */
   feedbackUnsaved: boolean;
   /** The player's real saved settings, read once when the lab opened (null: none saved). Never written back. */
@@ -57,7 +54,6 @@ function initialLab(): LabState {
     variants: {},
     feedback: loadFeedback(storage()),
     run: null,
-    marker: DEFAULT_PLAYER_MARKER,
     feedbackUnsaved: false,
     realSettings,
     // parity with a normal match: start from what the player really plays with, else from the game's own defaults

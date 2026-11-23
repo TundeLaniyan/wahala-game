@@ -9,7 +9,6 @@ import { commands, labCampaign } from '../app/session';
 import { patch, useGameStore } from '../app/store';
 import { campaignEnemyLevel } from '../sim';
 import type { CharacterId } from '../sim';
-import { setPlayerMarkerMode } from '../render/playerMarker';
 import { copyText } from './clipboard';
 import { saveFeedback, summarizeFeedback, withFeedback } from './feedback';
 import type { FeedbackStatus, LabLevel } from './feedback';
@@ -41,7 +40,6 @@ function launch(entry: LabEntry, level: LabLevel): boolean {
     case 'scenario': {
       const def = scenarioById(scenarioIdFor(entry, variantOf(useLab.getState(), entry.id)) ?? l.scenarioId);
       if (!def || !campaign) return false;
-      if (def.id === 'identifyPlayer') setPlayerMarkerMode(useLab.getState().marker);
       return campaign.qaStartRaid(def.raidId, level, {
         prepare: def.prepare,
         seed: def.seed,
