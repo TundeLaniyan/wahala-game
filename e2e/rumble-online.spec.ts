@@ -331,3 +331,50 @@ test('the connection drops while the match is loading: told, never an endless sp
     await ctxB.close();
   }
 });
+
+test('lobby: guest nickname is checked and cleaned, the host picks FFA or Team and friendly fire, the guest sees it read-only', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(240_000);
+  await openOnline(page);
+  await page.getByTestId('home-rumble-online').click();
+  // markup, control characters and look-alike mixes are refused in words, and Create stays off
+  for (const bad of ['<b>Ada</b>', 'Ada‮Ola', 'Аda']) {
+    await page.getByTestId('ro-name').fill(bad);
+    await expect(page.getByTestId('ro-name-hint')).toHaveAttribute('role', 'alert');
+    await expect(page.getByTestId('ro-create')).toBeDisabled();
+  }
+  // full-width letters and a run of spaces are cleaned (NFKC, collapsed) by the shared rule
+  await page.getByTestId('ro-name').fill('Ａｄａ   Ola');
+  await expect(page.getByTestId('ro-create')).toBeEnabled();
+  await page.getByTestId('ro-create').click();
+  await expect(page.getByTestId('ro-room-code')).toBeVisible({ timeout: 60_000 });
+  const code = (await page.getByTestId('ro-room-code').textContent())!.replace(/[^A-Z0-9]/g, '');
+  await expect(page.getByTestId('ro-member').first()).toContainText('Ada Ola');
+
+  const ctxB = await newPhone(browser);
+  const guest = await ctxB.newPage();
+  try {
+    await joinRoom(guest, code, 'Guest Tunde');
+    await expect(page.getByTestId('ro-member')).toHaveCount(2, { timeout: 30_000 });
+    // Free-for-All (deathmatch) is the default mode: no friendly-fire switch. Team shows it, defaulting to Off.
+    await expect(page.getByTestId('ro-ff-on')).toHaveCount(0);
+    await page.getByTestId('ro-mode-team').click();
+    await expect(page.getByTestId('ro-ff-off')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('ro-ff-on').click();
+    await expect(page.getByTestId('ro-ff-on')).toHaveAttribute('aria-pressed', 'true');
+    // the guest only reads it
+    await expect(guest.getByTestId('ro-set-mode')).toContainText(/team/i, { timeout: 30_000 });
+    await expect(guest.getByTestId('ro-set-friendly-fire')).toContainText(/on/i);
+    await expect(guest.getByTestId('ro-settings')).toHaveCount(0);
+    await expect(guest.getByTestId('ro-settings-read')).toBeVisible();
+    await shot(guest, '6-lobby-team-guest-832x384');
+    // back to FFA: the friendly-fire row goes away on both
+    await page.getByTestId('ro-mode-deathmatch').click();
+    await expect(page.getByTestId('ro-ff-on')).toHaveCount(0);
+    await expect(guest.getByTestId('ro-set-friendly-fire')).toHaveCount(0, { timeout: 30_000 });
+  } finally {
+    await ctxB.close();
+  }
+});

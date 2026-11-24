@@ -15,7 +15,8 @@
     "load:report": "../node_modules/.bin/tsx bench/loadReport.ts",
     "load:suite": "../node_modules/.bin/tsx bench/loadSuite.ts",
     "bundle": "../node_modules/.bin/esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/rumble-server.mjs --banner:js=\"import { createRequire as __wahalaRequire } from 'node:module'; const require = __wahalaRequire(import.meta.url);\" --log-level=warning",
-    "soak": "../node_modules/.bin/tsx bench/soak.ts"
+    "soak": "../node_modules/.bin/tsx bench/soak.ts",
+    "check:shutdown": "../node_modules/.bin/tsx bench/shutdown-check.mts"
   },
   "dependencies": {
     "@colyseus/core": "^0.18.10",
