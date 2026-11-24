@@ -16,7 +16,7 @@
 import { createBot } from '../../src/ai';
 import type { Bot } from '../../src/ai';
 import { DIR_VEC, buildRaidGame, campaignEnemyLevel, createGame, observe, tick } from '../../src/sim';
-import type { CampaignLevel, GameState, Generator, Intents, Player, RaidId } from '../../src/sim';
+import type { CampaignLevel, GameState, Generator, Intents, Player, RaidId, SimEvent } from '../../src/sim';
 import { raidDirectiveFor } from '../../src/sim/raid/directives';
 import { RAID_TUNING } from '../../src/sim/raid/tuning';
 import { isCalmMind } from '../../src/sim/systems/enemyPace';
@@ -157,17 +157,32 @@ export function idlePatrol(
  * enemy's mind turned `alert` (the "!"). `night: false` plays a night raid without its light-based detection (the raid
  * AI's own sight; decision NL13 measurements).
  */
-export function fullRaid(raidId: RaidId, level: CampaignLevel, seed: number, o: { night?: boolean } = {}) {
+export function fullRaid(
+  raidId: RaidId,
+  level: CampaignLevel,
+  seed: number,
+  o: {
+    night?: boolean;
+    prepare?: (s: GameState) => void;
+    onEvents?: (s: GameState, events: SimEvent[]) => void;
+  } = {},
+) {
   const tr = new MovementTracker();
   const was = new Map<string, string>();
   let detections = 0;
+  let prepared = false;
   const r = playRaidFight({
     raidId,
     seed,
     difficulty: campaignEnemyLevel(level),
     level,
     ...(o.night === false ? { config: { nightSight: undefined } } : {}),
+    ...(o.onEvents ? { onEvents: o.onEvents } : {}),
     onTick: (s) => {
+      if (!prepared) {
+        prepared = true;
+        o.prepare?.(s);
+      }
       tr.onTick(s);
       for (const [id, m] of Object.entries(s.territory?.minds ?? {})) {
         if (m.state === 'alert' && was.get(id) !== 'alert') detections++;

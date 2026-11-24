@@ -590,6 +590,15 @@ export interface ClassicRaidTactics {
    */
   closeRing: 'frontSides' | 'front';
   /**
+   * Decision PI7: when a calm guard's own TURN reveals a player who was out of its view a moment before (he stood behind
+   * it while it looked away, then it made its about-face at the end of its run, turned a corner or swept its view), it
+   * does not feel him at arm's length at once: for this many ticks he is noticed only by sight, and the sight reaction
+   * is this long (never shorter than `awareness.noticeTicks`), so he can see it turn and step out of its view. A player
+   * who was already in view, or who walks into view, gets no grace; neither does a guard that already hunts. 0 = off
+   * (Hard: unchanged).
+   */
+  revealGraceTicks: number;
+  /**
    * Decision CV2: how far the quiet click of a generator being LAID is heard (tiles, Manhattan). A blast stays loud
    * (`perception[kind].hearingTiles` x `awareness.blastHearingScale`).
    */
@@ -1963,6 +1972,7 @@ export function raidTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignTacti
     capsLieutenant: level !== 'hard',
     nearRing: level === 'easy' ? 'front' : 'frontSides',
     closeRing: level === 'hard' ? 'frontSides' : 'front',
+    revealGraceTicks: { easy: 66, normal: 54, hard: 0 }[level],
     placeHearingTiles: { easy: 0, normal: 0, hard: 1 }[level],
     trapRing: level === 'hard' ? 'frontSides' : 'front',
   };

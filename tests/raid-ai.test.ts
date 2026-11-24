@@ -268,6 +268,13 @@ describe('CV8: a calm guard notices a player at its shoulder by sight, at once o
       const m = s.territory!.minds[1]!;
       m.state = 'watch';
       m.notice = 0;
+      // the guard has been looking this way for a while when he arrives (decision PI7: a turn that REVEALS him has a
+      // grace, tests/raid-rear-reveal.test.ts; here he walks into view, so none)
+      for (let i = 0; i < 3; i++) {
+        s.tick++;
+        g.facing = 'down';
+        updateTerritory(s, []);
+      }
       put(s, 0, 9 + dx, 3 + dy);
       for (let i = 1; i <= 120; i++) {
         s.tick++;
