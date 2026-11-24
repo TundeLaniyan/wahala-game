@@ -63,6 +63,23 @@ If the laptop has several addresses (Wi-Fi, Ethernet, VPN, Docker), the script l
 
 To see the disconnect policy: during a match turn the phone's Wi-Fi off for a few seconds (its fighter stands for the grace period, then a bot plays it), and turn it back on within the window (you take the same fighter back).
 
+### Two phones on one Wi-Fi: a 15-minute test script (no purchase, nothing hosted)
+
+Needs: the laptop and both phones on the same home Wi-Fi (or the laptop's hotspot), Node 22, nothing else.
+
+1. **Laptop, once:** `npm install` in the repository root and in `server/`. Then `npm run dev:online` and leave it running. Note the `phones on the same Wi-Fi` address it prints. Nothing is built for production and the public game is not touched: the online switch exists only inside this dev process.
+2. **Both phones:** open the printed `http://<laptop-lan-ip>:5173/?online` (landscape). First open `http://<laptop-lan-ip>:2567/health` once to see `{"ok":true}`.
+3. **Phone A (host):** Home, **PLAY ONLINE**. Enter a guest nickname (1-16 characters; it is cleaned by the server, a duplicate in the room becomes "Name 2"; there are no accounts). Pick a fighter first on the Fighter screen if you want one. **Create a private room.** Note the six-character code (or use Copy link).
+4. **Phone B (guest):** Home, **PLAY ONLINE**, a different nickname, type the code (or open the copied link), **Join**. Both phones list the two people as HUMAN and "30 bots will fill the remaining seats" as BOT.
+5. **Host settings:** Free-for-All or Team Rumble (Team also offers Friendly fire Off / On), the stage and the bot level. Both phones tick **READY**; the host taps **START**. The match counts down 3 s and starts for both.
+6. **Play:** touch controls are the offline ones (move pad, A generator, B special). Place generators, fight, watch the chip in the corner (ONLINE with the round-trip ms). Your own movement answers at once (it is predicted); if the server disagrees the fighter is corrected by a small slide.
+7. **Drop test:** on phone B turn Wi-Fi off for about 10 seconds during the match. B shows "Connection lost ... a bot is playing your fighter" (the banner), the fighter stands for the 5 s grace and then a bot plays it (the match never pauses); turn Wi-Fi on within 30 s and B gets the SAME fighter back, no extra life.
+8. **Results:** at the end both phones show the same table; humans carry HUMAN, bots BOT, and a fighter a bot played for a while shows "A bot played N s for this player" (bot kills are not credited to the absent person).
+9. **Public matchmaking:** from a third device (or after leaving) choose **QUICK PLAY**: it waits up to 30 seconds for other people ("Starts by itself in N s"), then bots marked BOT fill the seats. QUICK PLAY always opens a Free-for-All room.
+10. **Stop:** Ctrl-C in the laptop terminal (graceful shutdown: connected phones are told the connection closed and the server exits). Back on the phone, the normal game (offline City Rumble, Classic Blast, the campaign) works exactly as before: reload without `?online`.
+
+What counts as evidence: steps 2-10 on two physical phones is a **real-device test** and is the founder's acceptance gate. The development container runs the same flow only with software-rendered desktop Chromium (an emulated 832 x 384 touch phone: `npm run test:online-e2e`), which proves the code path and the layout, not phone performance, radio behaviour or battery.
+
 ## 3. Firewall
 
 The laptop must accept incoming connections on TCP 5173 (the game) and 2567 (the server).
