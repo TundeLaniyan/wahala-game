@@ -141,6 +141,31 @@ jobs:
       - run: npm ci
       - run: npm run test
 
+  # The City Rumble server package (server/): its own npm package, tested here and never started, deployed or reachable.
+  # It runs the real simulation and real in-process sockets on the runner's loopback, so it needs no backend, secret or
+  # network service, and it does not touch the browser shards. Development-only: the public build never contains it.
+  server:
+    name: Server tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+      # the server scripts use the root toolchain (tsx, tsc, vitest) and import the simulation from ../src
+      - run: npm ci
+      - run: npm ci
+        working-directory: server
+      - run: npm run typecheck
+        working-directory: server
+      - run: npm test
+        working-directory: server
+
   build:
     name: Production build
     runs-on: ubuntu-latest
@@ -258,7 +283,7 @@ jobs:
   # skipped for a documentation-only commit). scripts/ci/plan.ts trusts only commits where this passed.
   gate:
     name: CI gate
-    needs: [plan, quality, unit, build, browser, e2e, e2e-report]
+    needs: [plan, quality, unit, server, build, browser, e2e, e2e-report]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -269,14 +294,15 @@ jobs:
           PLAN: ${{ needs.plan.result }}
           QUALITY: ${{ needs.quality.result }}
           UNIT: ${{ needs.unit.result }}
+          SERVER: ${{ needs.server.result }}
           BUILD: ${{ needs.build.result }}
           BROWSER: ${{ needs.browser.result }}
           E2E: ${{ needs.e2e.result }}
           REPORT: ${{ needs.e2e-report.result }}
         run: |
-          echo "plan=$PLAN full=$FULL quality=$QUALITY unit=$UNIT build=$BUILD browser=$BROWSER e2e=$E2E report=$REPORT"
+          echo "plan=$PLAN full=$FULL quality=$QUALITY unit=$UNIT server=$SERVER build=$BUILD browser=$BROWSER e2e=$E2E report=$REPORT"
           ok=true
-          for r in "$PLAN" "$QUALITY" "$UNIT" "$BUILD"; do [ "$r" = success ] || ok=false; done
+          for r in "$PLAN" "$QUALITY" "$UNIT" "$SERVER" "$BUILD"; do [ "$r" = success ] || ok=false; done
           if [ "$FULL" = true ]; then
             [ "$BROWSER" = success ] && [ "$E2E" = success ] && [ "$REPORT" = success ] || ok=false
           elif [ "$FULL" != false ]; then

@@ -10,14 +10,16 @@ scripts: `scripts/ci/plan.ts`, `scripts/ci/shards.ts`, `scripts/ci/report.ts` (u
 ```
 Plan (+ shard lists) ─┐
 Typecheck and lint ───┤
-Unit tests ───────────┼─> E2E shard 1/12 ┐
+Unit tests ───────────┤
+Server tests ─────────┼─> E2E shard 1/12 ┐
 Production build ─────┤   E2E shard 2/12 ├─> E2E report ─> CI gate ─> Deploy preview
    (dist artifact)    │   ...           │   (merge, every          (release checks,
 Browser cache ────────┘   E2E shard 12/12 ┘   test ran once)          then publish)
 ```
 
-1. **Fast checks** run as parallel jobs: `npm run typecheck` + `npm run lint`, `npm run test` (Vitest), and one
-   production build (`vite build`, uploaded as the `dist` artifact). All are mandatory. Beside them, **Plan**
+1. **Fast checks** run as parallel jobs: `npm run typecheck` + `npm run lint`, `npm run test` (Vitest), the
+   **Server tests** (below) and one production build (`vite build`, uploaded as the `dist` artifact). All are
+   mandatory. Beside them, **Plan**
    decides whether the browser suite is needed (below) and writes the shard lists, and **Browser cache** installs
    the Chromium headless shell with its system packages once and caches them.
 2. **E2E shards** start only when every fast check passed. Each shard is its own GitHub-hosted runner: it
@@ -32,9 +34,18 @@ Browser cache ────────┘   E2E shard 12/12 ┘   test ran once)
    retries, the flaky tests by name (a pass on retry stays visible as flaky and as a warning annotation), and
    every job's duration and the wall clock. It also uploads the per-test durations (`e2e-timings`) for the next
    run's shard plan.
-4. **CI gate** is the one job to require in branch protection. It passes only when plan, the fast checks and (for
+4. **CI gate** is the one job to require in branch protection. It passes only when plan, the fast checks (including the server tests) and (for
    a full run) the browser cache, every shard and the report passed. A cancelled or failed job anywhere fails it.
 5. **Deploy preview** runs only after the gate passed on a push or manual run, never on pull requests. See below.
+
+**Server tests** (job `server`, post-integration PI decisions): the City Rumble server (`server/`, its own npm package:
+Colyseus + the real simulation) runs `npm ci` (root toolchain, then `server/`), `npm run typecheck` and `npm test` (its
+Vitest suite, which plays real 32-fighter matches over in-process sockets on the runner's loopback). It starts no
+service anywhere, needs no secret, backend or open port, deploys nothing and cannot enable Online Play (the public
+build never contains the server or the online client: `scripts/check-static-build.mjs`). It runs beside the other fast
+checks, so it adds no work to the browser shards, and it is a required input of the CI gate (a failed or skipped server
+job fails the gate). A commit that changes `server/` counts as code for `scripts/ci/plan.ts` like any non-documentation
+file.
 
 `fullyParallel` is not set in `playwright.config.ts` (locally the suite runs exactly as before); CI passes
 `--fully-parallel`. That is safe because every test gets its own browser context and page, no spec keeps state
