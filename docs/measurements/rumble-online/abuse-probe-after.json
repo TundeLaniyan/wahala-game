@@ -1,0 +1,97 @@
+{
+ "label": "after",
+ "tree": "claude/wahala-fu2-server",
+ "at": "2026-11-24T17:12:12.628Z",
+ "create-flood": {
+  "requests": 300,
+  "seconds": 0.73,
+  "statuses": {
+   "200": 40,
+   "429": 239,
+   "503": 21
+  },
+  "roomsCreated": 40,
+  "roomsOnServerRightAfter": 40
+ },
+ "xff-spoof": {
+  "requests": 100,
+  "statuses": {
+   "200": 3,
+   "429": 97
+  },
+  "roomsCreated": 3
+ },
+ "start-flood": {
+  "roomsRequested": 6,
+  "roomsCreated": 6,
+  "createErrors": [],
+  "phasesAfter": {
+   "countdown": 3,
+   "playing": 3
+  },
+  "roomsPlaying": 3,
+  "cpuPercentOfOneCore": {
+   "median": 84.2,
+   "max": 99.9
+  },
+  "eventLoopP99Ms": {
+   "median": 87.321,
+   "max": 108.751
+  },
+  "eventLoopMaxMs": 165.636,
+  "droppedTicks": 80,
+  "stepMsP99": 13.935,
+  "limits": {
+   "rooms": 6,
+   "playingRooms": 3,
+   "costInUse": 71.9,
+   "cpuBudget": 75,
+   "waitingToStart": 3,
+   "connections": 6,
+   "trackedKeys": 8,
+   "refused": {
+    "start_cpu_budget": 2,
+    "start_queued": 4
+   }
+  }
+ },
+ "code-guess": {
+  "lockedRoomAndMissingRoomAnswerDiffer": false,
+  "distinctAnswerShapesForLockedVsMissing": 1,
+  "guesses": 200,
+  "guessesAnsweredNotFound": 4,
+  "guessesRateLimited": 196,
+  "seconds": 0.52
+ },
+ "metrics-production": {
+  "statusWithoutToken": 404,
+  "openToAnyone": false
+ },
+ "fast-in-production": {
+  "serverStarted": false,
+  "exitCode": 1,
+  "message": "Error: RUMBLE_TEST_FAST is a test-only mode and cannot run with NODE_ENV=production: unset it (startup refused)"
+ },
+ "names": {
+  "accepted": [
+   "Modupe",
+   "Ada Obi"
+  ],
+  "refused": [
+   "Admin",
+   "Adm1n",
+   "Moderator",
+   "Wahala Staff",
+   "Wahala Team",
+   "System",
+   "Server",
+   "Support",
+   "BOT Emeka",
+   "Official Wahala"
+  ]
+ },
+ "machine": {
+  "cpus": 4,
+  "note": "shared with other workers while the probe ran (load average 7-9 on 4 CPUs): CPU and event-loop figures are pessimistic"
+ }
+}

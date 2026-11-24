@@ -455,6 +455,48 @@ describe('C4: the client address, metrics and production refusals', () => {
     expect((await fetch(`${dev.http}/metrics`)).status).toBe(200);
   });
 
+  it('in production the HTTP reconnect door does not exist (the WebSocket needs the session id AND the token); in development it does', async () => {
+    const prod = await startRumbleServer({
+      port: 0,
+      host: '127.0.0.1',
+      development: false,
+      allowedOrigins: 'https://play.example',
+      runtime: { ...DEFAULT_RUNTIME, limits: OPEN_LIMITS },
+    });
+    try {
+      const r = await fetch(`http://127.0.0.1:${prod.port}/matchmake/reconnect/ABCDEF`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'https://play.example' },
+        body: JSON.stringify({ reconnectionToken: 'ABCDEF:aaaaaaaaa' }),
+      });
+      expect(r.status).toBeGreaterThanOrEqual(400);
+      expect(await r.text()).toMatch(/invalid method/);
+      // the other doors work, and a browser from another origin gets no CORS answer
+      const ok = await fetch(`http://127.0.0.1:${prod.port}/matchmake/create/rumble`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'https://play.example' },
+        body: JSON.stringify({ name: 'Prod Ada', private: true, gid: gid(1) }),
+      });
+      expect(ok.status).toBe(200);
+      expect(ok.headers.get('access-control-allow-origin')).toBe('https://play.example');
+      const evil = await fetch(`http://127.0.0.1:${prod.port}/matchmake/create/rumble`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'https://evil.example' },
+        body: JSON.stringify({ name: 'Evil', private: true, gid: gid(2) }),
+      });
+      expect(evil.headers.get('access-control-allow-origin')).toBeNull();
+    } finally {
+      await prod.close();
+    }
+    const dev = await boot();
+    const r = await fetch(`${dev.http}/matchmake/reconnect/ABCDEF`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ reconnectionToken: 'ABCDEF:aaaaaaaaa' }),
+    });
+    expect(await r.text()).not.toMatch(/invalid method/);
+  });
+
   it('refuses to start in production with the test-only fast mode', async () => {
     await expect(
       startRumbleServer({
@@ -536,7 +578,7 @@ describe('C4: secrets never reach a log, and shutdown leaves nothing running', (
     await (await boot()).close();
     servers.length = 0;
     // from here every JS timer is recorded until it fires or is cleared
-    const live = new Map<object, string>();
+    const live = new Map<unknown, string>();
     const real = {
       st: globalThis.setTimeout,
       si: globalThis.setInterval,

@@ -79,7 +79,12 @@ handler.on('create', (room: any) => {
   tracked.push(t);
   registry.register(room, t);
 });
+// tick books of rooms that are gone: a room's own counters die with it, the whole-run totals must not
+let retiredDropped = 0;
+let retiredRun = 0;
 handler.on('dispose', (room: any) => {
+  retiredDropped += room.loop?.ticksDropped ?? 0;
+  retiredRun += room.loop?.ticksRun ?? 0;
   const t = tracked.find((x) => x.code === String(room.roomId) && x.disposedAt === null);
   if (t) t.disposedAt = Date.now();
 });
@@ -155,6 +160,11 @@ async function sample(withGc: boolean): Promise<Record<string, unknown>> {
     eventLoopDelayMs: loopStats,
     cpuPercent: Math.round(cpuPct * 10) / 10,
     activeResources: kinds,
+    /** Event listeners that could pile up: on the process, and on the room type's own emitter. */
+    listeners: {
+      process: process.eventNames().reduce((n, e) => n + process.listenerCount(e), 0),
+      roomType: handler.eventNames().reduce((n: number, e: string) => n + handler.listenerCount(e), 0),
+    },
     rooms: {
       created: tracked.length,
       disposed: disposed.length,
@@ -164,6 +174,9 @@ async function sample(withGc: boolean): Promise<Record<string, unknown>> {
       clients,
       retainedAfterGc: retained,
       ticksDropped: snaps.reduce((n, r) => n + r.ticks.dropped, 0),
+      /** Whole run, rooms that are gone included. */
+      ticksDroppedTotal: retiredDropped + snaps.reduce((n, r) => n + r.ticks.dropped, 0),
+      ticksRunTotal: retiredRun + snaps.reduce((n, r) => n + r.ticks.run, 0),
       stepP99Ms: snaps.reduce((m, r) => Math.max(m, r.ticks.stepMs.p99), 0),
     },
   };

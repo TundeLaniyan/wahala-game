@@ -30,13 +30,14 @@
 import { fork } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpus as cpuList, loadavg } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client as SdkClient } from '@colyseus/sdk';
 import type { Room } from '@colyseus/sdk';
 import { MSG } from '../../src/net/protocol';
 import { RUMBLE_ARENA_IDS } from '../../src/sim';
-import { percentile, verdictOf } from './soakStats';
+import { percentile, trend, verdictOf } from './soakStats';
 import type { Point } from './soakStats';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -442,6 +443,7 @@ async function main(): Promise<void> {
   const take = async (gc: boolean): Promise<Row> => {
     const at = t(); // the moment the sample was ASKED for (the forced GC itself takes a moment)
     const data = (await server.request({ type: 'sample', gc })).data;
+    data.machineLoad1 = loadavg()[0]; // what ELSE was running on this machine (a loaded box makes loop and CPU figures pessimistic)
     const row = { t: at, gc, data };
     rows.push(row);
     return row;
@@ -505,6 +507,23 @@ async function main(): Promise<void> {
   const cpus = loadRows.map((r) => r.data.cpuPercent as number);
   const rss = rows.map((r) => r.data.memory.rssMB as number);
   const res = finalGc.data;
+  // what grew over the whole steady window: each series is regressed over time (units per minute), so a slow leak of timers,
+  // sockets, listeners or resident memory shows even when the heap after GC is flat
+  const seriesTrend = (pick: (r: Row) => number) => {
+    const pts = steady.map((r) => ({ t: r.t, heapMB: pick(r), rooms: r.data.rooms.live as number }));
+    const tr = trend(pts);
+    return {
+      first: pts[0]?.heapMB ?? null,
+      last: pts.at(-1)?.heapMB ?? null,
+      slopePerMin: round(tr.slopeMBPerMin, 4),
+      tStat: round(tr.tStat, 2),
+      growing: tr.n >= 6 && tr.tStat >= 3 && tr.projectedMBPerHour > 0,
+    };
+  };
+  const kindOf = (kind: string) => (r: Row) => (r.data.activeResources[kind] as number | undefined) ?? 0;
+  const loads = rows.map((r) => r.data.machineLoad1 as number);
+  const dropTotal = res.rooms.ticksDroppedTotal as number;
+  const runTotal = res.rooms.ticksRunTotal as number;
   const kindsBase = baseline.activeResources as Record<string, number>;
   const kindsEnd = res.activeResources as Record<string, number>;
   const summary = {
@@ -549,6 +568,25 @@ async function main(): Promise<void> {
     cpuPercentOfOneCore: {
       mean: round(cpus.reduce((a, b) => a + b, 0) / Math.max(1, cpus.length), 1),
       max: Math.max(...cpus, 0),
+    },
+    ticksOverTheWholeRun: {
+      run: runTotal,
+      dropped: dropTotal,
+      droppedPercent: runTotal > 0 ? round((dropTotal / (runTotal + dropTotal)) * 100, 3) : 0,
+    },
+    machine: {
+      cpus: cpuList().length,
+      loadAverage1m: { mean: round(loads.reduce((a, b) => a + b, 0) / Math.max(1, loads.length), 2), max: round(Math.max(...loads, 0), 2), first: round(loads[0] ?? 0, 2) },
+      note: 'load average of the whole machine at each sample: a value above the CPU count means other work was competing with the soak',
+    },
+    resourceTrendsSteadyWindow: {
+      rssMB: seriesTrend((r) => r.data.memory.rssMB),
+      externalMB: seriesTrend((r) => r.data.memory.externalMB),
+      timers: seriesTrend(kindOf('Timeout')),
+      sockets: seriesTrend((r) => kindOf('TCPSocketWrap')(r) + kindOf('TCPServerWrap')(r)),
+      processListeners: seriesTrend((r) => r.data.listeners.process),
+      roomTypeListeners: seriesTrend((r) => r.data.listeners.roomType),
+      liveRoomsAtSamples: seriesTrend((r) => r.data.rooms.live),
     },
     ticksDroppedPeakInLiveRooms: Math.max(...loadRows.map((r) => r.data.rooms.ticksDropped as number), 0),
     rooms: {
@@ -599,6 +637,9 @@ async function main(): Promise<void> {
     `  event loop delay p99    median ${summary.eventLoopDelayMs.p99MedianOfSamples} ms, worst ${summary.eventLoopDelayMs.p99Worst} ms (max ${summary.eventLoopDelayMs.maxWorst} ms)`,
   );
   console.log(
+    `  whole run ticks         ${summary.ticksOverTheWholeRun.run} run, ${summary.ticksOverTheWholeRun.dropped} dropped (${summary.ticksOverTheWholeRun.droppedPercent} %)`,
+    `  machine load (1 min)    mean ${summary.machine.loadAverage1m.mean}, max ${summary.machine.loadAverage1m.max} on ${summary.machine.cpus} CPUs`,
+    `  growing series          ${Object.entries(summary.resourceTrendsSteadyWindow).filter(([, v]) => v.growing).map(([k]) => k).join(', ') || 'none (rss, external, timers, sockets, listeners all flat)'}`,
     `  cpu                     mean ${summary.cpuPercentOfOneCore.mean}% max ${summary.cpuPercentOfOneCore.max}% of one core; dropped ticks ${summary.ticksDroppedPeakInLiveRooms}`,
   );
   console.log(

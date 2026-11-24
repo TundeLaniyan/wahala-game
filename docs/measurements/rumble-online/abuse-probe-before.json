@@ -1,0 +1,81 @@
+{
+ "label": "before",
+ "tree": "f7cf2ae (pre-change commit, detached worktree)",
+ "at": "2026-11-24T17:11:30.245Z",
+ "create-flood": {
+  "requests": 300,
+  "seconds": 0.75,
+  "statuses": {
+   "200": 300
+  },
+  "roomsCreated": 300,
+  "roomsOnServerRightAfter": 300
+ },
+ "xff-spoof": {
+  "requests": 100,
+  "statuses": {
+   "200": 100
+  },
+  "roomsCreated": 100
+ },
+ "start-flood": {
+  "roomsRequested": 6,
+  "roomsCreated": 6,
+  "createErrors": [],
+  "phasesAfter": {
+   "playing": 6
+  },
+  "roomsPlaying": 6,
+  "cpuPercentOfOneCore": {
+   "median": 97.6,
+   "max": 101.7
+  },
+  "eventLoopP99Ms": {
+   "median": 181.103,
+   "max": 265.251
+  },
+  "eventLoopMaxMs": 327.117,
+  "droppedTicks": 1320,
+  "stepMsP99": 19.227,
+  "limits": null
+ },
+ "code-guess": {
+  "lockedRoomAndMissingRoomAnswerDiffer": true,
+  "distinctAnswerShapesForLockedVsMissing": 2,
+  "guesses": 200,
+  "guessesAnsweredNotFound": 200,
+  "guessesRateLimited": 0,
+  "seconds": 0.49
+ },
+ "metrics-production": {
+  "statusWithoutToken": 200,
+  "openToAnyone": true
+ },
+ "fast-in-production": {
+  "serverStarted": true,
+  "exitCode": null,
+  "message": null
+ },
+ "names": {
+  "accepted": [
+   "Admin",
+   "Adm1n",
+   "Moderator",
+   "Wahala Staff",
+   "Wahala Team",
+   "System",
+   "Server",
+   "Support",
+   "Official Wahala",
+   "Modupe",
+   "Ada Obi"
+  ],
+  "refused": [
+   "BOT Emeka"
+  ]
+ },
+ "machine": {
+  "cpus": 4,
+  "note": "shared with other workers while the probe ran (load average 7-9 on 4 CPUs): CPU and event-loop figures are pessimistic"
+ }
+}

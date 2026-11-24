@@ -268,10 +268,22 @@ export class RumbleRoom extends Room {
     );
     this.lobby.setConnected(client.sessionId, false);
     this.broadcastLobby();
+    // A socket that drops BEFORE its page acknowledged the join (a reconnected browser whose main thread is busy, a flapping
+    // mobile link: the ack is sent by the page's script) was never "joined" as far as Colyseus is concerned, and
+    // `allowReconnection` refuses it at once ("not joined"): the seat would be lost for good although the window had just
+    // started. The seat IS this player's (they were admitted, their lobby entry and fighter exist), so the flag that marks
+    // "never joined" is cleared first (decision FU2S-C5; regression test room.reconnect-flap.test.ts).
+    const pending = client as unknown as { _enqueuedMessages?: unknown };
+    if (pending._enqueuedMessages !== undefined) {
+      pending._enqueuedMessages = undefined;
+      this.metrics.dropsBeforeAck++;
+    }
     try {
       await this.allowReconnection(client, this.rt.reconnectSeconds);
-    } catch {
+    } catch (e) {
       // the window expired (or the room is closing): Colyseus calls onLeave next, which gives the seat to a bot
+      if (!this.disposed && e instanceof Error && e.message !== 'false')
+        this.deps?.log?.(`room ${this.tag}: seat ${peer.seat} could not be held: ${e.message}`);
     }
   }
 
@@ -728,6 +740,7 @@ export class RumbleRoom extends Room {
         resyncsLimited: m.resyncsLimited,
         kicks: m.kicks,
         backpressureKicks: m.backpressureKicks,
+        dropsBeforeAck: m.dropsBeforeAck,
         reconnections: m.reconnections,
         drops: m.drops,
         botTakeovers: m.botTakeovers,

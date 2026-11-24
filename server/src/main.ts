@@ -15,8 +15,11 @@
 import { networkInterfaces } from 'node:os';
 import { startRumbleServer } from './app';
 import { lanAddresses, lanUrls } from './core/lan';
+import { installConsoleLimiter } from './core/logGuard';
 import { loadRuntimeConfig } from './core/options';
 
+// per-client errors the transport prints (an oversized frame, a refused reconnect) are rate-limited per distinct message
+installConsoleLimiter();
 const log = (message: string): void => console.log(`[rumble] ${message}`);
 
 const port = Number(process.env.PORT ?? 2567);

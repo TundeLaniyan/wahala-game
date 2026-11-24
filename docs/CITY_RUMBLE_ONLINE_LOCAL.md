@@ -47,7 +47,9 @@ Set them in the shell before the command (they pass through to the server):
 | `RUMBLE_PING_INTERVAL_MS` | 3000 | How often the server pings each socket (500..30000); with `RUMBLE_PING_MAX_RETRIES` it decides how long a stalled page (first-frame compile, a busy CPU) is tolerated before the socket counts as dropped |
 | `RUMBLE_PING_MAX_RETRIES` | 4 | Missed pongs before the socket is closed (1..20) |
 | `RUMBLE_DROP_POLICY` | `bot` | `bot` or `idle` (see `docs/CITY_RUMBLE_ONLINE.md` section 8) |
-| `RUMBLE_METRICS_TOKEN` | none | Bearer token required by `GET /metrics` |
+| `RUMBLE_METRICS_TOKEN` | none | Bearer token required by `GET /metrics`. In production mode (`NODE_ENV=production`) `/metrics` does not exist at all without a token (404); in development it is open |
+| `RUMBLE_TRUSTED_PROXIES` | none | IPs / CIDR ranges of reverse proxies whose `X-Forwarded-For` the server believes (`10.0.0.0/8,fd00::/8`). Without it every forwarding header is ignored and a client's address is its TCP peer |
+| `RUMBLE_MAX_ROOMS`, `RUMBLE_MAX_PLAYING_ROOMS`, `RUMBLE_CPU_BUDGET`, `RUMBLE_MAX_CONNECTIONS`, ... | see `docs/ONLINE_LIMITS_AND_SECURITY.md` | Capacity and abuse limits (rooms, running matches, estimated CPU, per-guest and per-address rates, idle lobby expiry): defaults suit one process on one core, every one is overridable |
 | `NODE_ENV` | `development` (set by `dev:online`) | `production` turns the localhost development origins off |
 
 macOS / Linux: `RUMBLE_GRACE_SECONDS=2 npm run dev:online`. Windows PowerShell: `$env:RUMBLE_GRACE_SECONDS=2; npm run dev:online`.

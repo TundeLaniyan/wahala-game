@@ -79,7 +79,7 @@ export function tokenMatches(header: string | string[] | undefined, token: strin
 /** Colyseus matchmaking error codes that mean "no such room / not joinable": MATCHMAKE_INVALID_ROOM_ID, _UNHANDLED (full), _EXPIRED. */
 const ROOM_SIDE_CODES: ReadonlySet<number> = new Set([522, 523, 524]);
 
-const OPEN_METHODS = ['joinOrCreate', 'create', 'joinById', 'reconnect'] as const;
+const OPEN_METHODS = ['joinOrCreate', 'create', 'joinById'] as const;
 
 /** The one answer to every join by code that cannot be served: wrong, locked, full, started, or not a joinable room. */
 const unavailable = (): ServerError =>
@@ -135,9 +135,11 @@ export async function startRumbleServer(opts: RumbleServerOptions = {}): Promise
       ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
       : {};
   };
-  // Only what the game uses is reachable: no `join` (join an existing room without creating). The HTTP `reconnect` stays
-  // (the SDK's manual reconnect and the load harness use it) but answers one way whatever is wrong, and failures are throttled.
-  controller.exposedMethods = [...OPEN_METHODS];
+  // Only what the game uses is reachable: no `join` (join an existing room without creating). The browser reconnects over
+  // its WebSocket (room id + session id + reconnection token: two 54-bit secrets), which is the only reconnection door in
+  // production; the HTTP `reconnect` (a single 54-bit token) exists only in development for the SDK's manual reconnect and
+  // the load harness, and even there it answers one way whatever is wrong and its failures are throttled.
+  controller.exposedMethods = development ? [...OPEN_METHODS, 'reconnect'] : [...OPEN_METHODS];
   const original = originalInvoke(controller);
   controller.invokeMethod = async (method, roomName, clientOptions, authOptions) =>
     guardedInvoke(original, method, roomName, clientOptions, authOptions);
