@@ -11,6 +11,7 @@ import { MSG } from '../protocol';
 import type { SettingsMsg } from '../protocol';
 import { Connection, classifyFailure } from './connection';
 import { NetMatchDriver } from './driver';
+import { predictionFromSearch } from './prediction';
 import { inflateRaw } from './inflate';
 import type { ConnStatus, OpenRequest, RumbleSession, RumbleSessionEvents } from './types';
 
@@ -18,6 +19,8 @@ export interface SessionOptions {
   /** Test seams: a custom decompressor / clock. */
   inflate?: (bytes: Uint8Array) => Promise<Uint8Array>;
   now?: () => number;
+  /** Force local prediction on or off (default: on unless the page has `?nopredict`). */
+  prediction?: boolean;
 }
 
 export function createRumbleSession(
@@ -35,7 +38,12 @@ export function createRumbleSession(
     welcome(m) {
       if (m.descriptor && driver?.replica?.descriptor.matchId !== m.descriptor.matchId) {
         driver?.dispose();
-        driver = new NetMatchDriver({ send: (t, msg) => conn.send(t, msg), inflate, now });
+        // local walking prediction is on by default (presentation only, decisions ON4-ON5); `?nopredict` turns it off for diagnosis
+        const search = typeof location === 'undefined' ? '' : location.search;
+        driver = new NetMatchDriver(
+          { send: (t, msg) => conn.send(t, msg), inflate, now },
+          { prediction: options.prediction ?? predictionFromSearch(search) },
+        );
         driver.setConnection(status, null);
         driver.onKeyframeLoaded = (state) => {
           const id = driver?.replica?.descriptor.matchId ?? null;
