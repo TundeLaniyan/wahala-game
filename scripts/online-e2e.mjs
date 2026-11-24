@@ -20,16 +20,33 @@ if (process.env.ONLINE_E2E_SKIP_BUILD !== '1' || !existsSync('dist-online')) {
   if (built.status !== 0) process.exit(built.status ?? 1);
 }
 const children = [];
-const stop = () => children.forEach((c) => c.kill('SIGTERM'));
+// each child leads its own process group: `npx` is only a wrapper, the real server / preview process is its child
+const stop = () =>
+  children.forEach((c) => {
+    try {
+      process.kill(-c.pid, 'SIGTERM');
+    } catch {
+      /* already gone */
+    }
+  });
 process.on('exit', stop);
 process.on('SIGINT', () => process.exit(130));
 const start = (name, cmd, args, opts) => {
-  const c = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], ...opts });
+  const c = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: true, ...opts });
   c.stdout.on('data', (d) => process.stdout.write(`[${name}] ${d}`));
   c.stderr.on('data', (d) => process.stderr.write(`[${name}] ${d}`));
   children.push(c);
   return c;
 };
+for (const port of [SERVER, WEB]) {
+  try {
+    await fetch(`http://127.0.0.1:${port}/`);
+    console.error(`port ${port} is already in use: stop the other process first`);
+    process.exit(2);
+  } catch {
+    /* free */
+  }
+}
 start('server', 'npx', ['tsx', 'src/main.ts'], {
   cwd: 'server',
   env: {
