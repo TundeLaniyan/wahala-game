@@ -33,7 +33,8 @@ export interface RumbleSessionEvents {
   matchReady(driver: RemoteMatchDriver): void;
   /** The connection failed before or during the lobby in a way the player must be told about. */
   failed(
-    reason: 'unreachable' | 'room-not-found' | 'room-full' | 'refused' | 'protocol' | 'unknown',
+    reason:
+      'unreachable' | 'room-not-found' | 'room-full' | 'match-started' | 'refused' | 'protocol' | 'unknown',
     detail: string,
   ): void;
 }

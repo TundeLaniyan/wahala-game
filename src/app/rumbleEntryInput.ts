@@ -9,6 +9,7 @@ import {
   PLAYER_NAME_MIN,
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
+  checkPlayerName,
   normalizeRoomCode,
   validatePlayerName,
 } from '../net/protocol';
@@ -20,15 +21,22 @@ export type NameCheck = { ok: true; name: string } | { ok: false; reason: string
 
 /** Validates a typed display name with the server's own rule and says, in plain words, why it fails. */
 export function nameCheck(raw: string): NameCheck {
-  const name = validatePlayerName(raw);
-  if (name !== null) return { ok: true, name };
-  const tidy = raw.normalize('NFC').trim().replace(/ {2,}/g, ' ');
-  const length = [...tidy].length;
-  if (length < PLAYER_NAME_MIN) return { ok: false, reason: `Use at least ${PLAYER_NAME_MIN} characters.` };
-  if (length > PLAYER_NAME_MAX || raw.length > 128)
-    return { ok: false, reason: `Use at most ${PLAYER_NAME_MAX} characters.` };
-  if (!/[\p{L}\p{N}]/u.test(tidy)) return { ok: false, reason: 'Use at least one letter or number.' };
-  return { ok: false, reason: "Use letters, numbers, spaces and _ . ' - only." };
+  const checked = checkPlayerName(raw);
+  if (checked.name !== null) return { ok: true, name: checked.name };
+  switch (checked.problem) {
+    case 'short':
+      return { ok: false, reason: `Use at least ${PLAYER_NAME_MIN} characters.` };
+    case 'long':
+      return { ok: false, reason: `Use at most ${PLAYER_NAME_MAX} characters.` };
+    case 'letters':
+      return { ok: false, reason: 'Use at least one letter or number.' };
+    case 'mixed-script':
+      return { ok: false, reason: "Don't mix Latin letters with Cyrillic or Greek ones." };
+    case 'bot-like':
+      return { ok: false, reason: 'Names starting with BOT are kept for the server bots.' };
+    default:
+      return { ok: false, reason: "Use letters, numbers, spaces and _ . ' - only." };
+  }
 }
 
 /** The name the entry screen starts with: the last valid one used on this device, else "Player". */
@@ -83,4 +91,5 @@ export function roomCodeFromSearch(search: string): string | null {
 }
 
 /** Why a room could not be opened (the session's `failed` reasons). */
-export type FailReason = 'unreachable' | 'room-not-found' | 'room-full' | 'refused' | 'protocol' | 'unknown';
+export type FailReason =
+  'unreachable' | 'room-not-found' | 'room-full' | 'match-started' | 'refused' | 'protocol' | 'unknown';

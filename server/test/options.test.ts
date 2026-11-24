@@ -46,12 +46,13 @@ describe('room options', () => {
       ok: true,
       value: {
         private: false,
-        autoStartSec: 20,
+        autoStartSec: 30,
         settings: {
           arenaId: 'rumbleOshodi',
           game: 'deathmatch',
           durationSec: 300,
           botDifficulty: 'standard',
+          friendlyFire: false,
         },
       },
     });
@@ -60,11 +61,16 @@ describe('room options', () => {
   });
 
   it('accepts valid choices', () => {
-    const r = parseRoomOptions(
-      { private: true, game: 'team', durationSec: 180, botDifficulty: 'expert', autoStartSec: 5 },
-      DEFAULT_RUNTIME,
-    );
-    expect(r.ok && r.value).toMatchObject({ private: true, autoStartSec: 5 });
+    const raw = { private: true, game: 'team', durationSec: 180, botDifficulty: 'expert', autoStartSec: 5 };
+    // production: the public wait is the server's rule (30 s), whatever a client asks for
+    const r = parseRoomOptions(raw, DEFAULT_RUNTIME);
+    expect(r.ok && r.value).toMatchObject({ private: true, autoStartSec: 30 });
+    // only the test-fast mode honours a client's value
+    expect(
+      parseRoomOptions(raw, FAST).ok && (parseRoomOptions(raw, FAST) as { value: unknown }).value,
+    ).toMatchObject({
+      autoStartSec: 5,
+    });
   });
 
   it.each([
@@ -94,7 +100,7 @@ describe('room options', () => {
     expect(loadRuntimeConfig({ RUMBLE_COUNTDOWN_MS: '10', RUMBLE_AUTOSTART_SEC: '0' })).toMatchObject({
       fast: false,
       countdownMs: 3000,
-      defaultAutoStartSec: 20,
+      defaultAutoStartSec: 30,
     });
     expect(
       loadRuntimeConfig({ RUMBLE_TEST_FAST: '1', RUMBLE_COUNTDOWN_MS: '10', RUMBLE_AUTOSTART_SEC: '0' }),

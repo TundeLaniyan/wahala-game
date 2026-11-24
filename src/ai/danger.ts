@@ -177,6 +177,13 @@ export class DangerBuilder {
     number,
     { obs: object; x: number; y: number; range: number; pierce: boolean; square: number; tiles: number[] }
   >();
+  /**
+   * The observation `radialCache` belongs to. An entry is reused only for the SAME observation object (`e.obs === obs`),
+   * so a new observation drops them all. Without this the map kept an entry, and the whole observation it points at, for
+   * every generator the bot had ever seen: unbounded growth over a match (about 10 MB a minute across 31 bots in a server
+   * room; decision PIS8). The cache's hits, and so every decision, are exactly the same.
+   */
+  private radialCacheObs: object | null = null;
 
   /** Rebuilds `map` from the current observation plus optional hypothetical objects. */
   build(map: DangerMap, world: World, profile: AiProfile, q: DangerQuery = {}): void {
@@ -397,6 +404,10 @@ export class DangerBuilder {
     let tiles: number[];
     if (local && !gone) {
       // nothing this build changes reaches the footprint: the observation's own footprint (cached)
+      if (this.radialCacheObs !== obs) {
+        this.radialCache.clear();
+        this.radialCacheObs = obs;
+      }
       const e = this.radialCache.get(n.id);
       if (e && e.obs === obs && e.x === n.x && e.y === n.y && e.range === n.range && e.pierce === n.pierce && e.square === n.square) {
         tiles = e.tiles;

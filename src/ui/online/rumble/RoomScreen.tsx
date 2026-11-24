@@ -90,6 +90,17 @@ function Settings(p: {
           <dt>Bots</dt>
           <dd data-testid="ro-set-difficulty">{view.difficulty}</dd>
         </div>
+        {view.friendlyFire && (
+          <div>
+            <dt>Friendly fire</dt>
+            <dd data-testid="ro-set-friendly-fire">{view.friendlyFire}</dd>
+          </div>
+        )}
+        {view.teams && (
+          <p className="ro-hint" data-testid="ro-teams-note">
+            {view.teams}
+          </p>
+        )}
         <p className="ro-hint">{p.reason}</p>
       </dl>
     );
@@ -168,6 +179,36 @@ function Settings(p: {
           onChange={(botDifficulty) => p.onChange({ botDifficulty })}
         />
       </div>
+      {s.game === 'team' && (
+        <div className="ro-field">
+          <span className="ro-label" id="ro-ff-label">
+            Friendly fire
+          </span>
+          <div className="mn-opts" role="group" aria-labelledby="ro-ff-label">
+            <Option
+              value={false}
+              current={s.friendlyFire === true}
+              label="Off"
+              title="A teammate's blast does not hurt you (the default)."
+              testId="ro-ff-off"
+              onPick={() => p.onChange({ friendlyFire: false })}
+            />
+            <Option
+              value={true}
+              current={s.friendlyFire === true}
+              label="On"
+              title="A teammate's blast can eliminate you."
+              testId="ro-ff-on"
+              onPick={() => p.onChange({ friendlyFire: true })}
+            />
+          </div>
+        </div>
+      )}
+      {view.teams && (
+        <p className="ro-hint" data-testid="ro-teams-note">
+          {view.teams}
+        </p>
+      )}
       {!p.editable && p.reason && <p className="ro-hint">{p.reason}</p>}
     </fieldset>
   );

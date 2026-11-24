@@ -191,6 +191,12 @@ export const ROOM_CODE_LENGTH = 6;
 /** A room holds up to this many humans, and a match always has this many seats (bots fill the rest). */
 export const MAX_HUMANS = 32;
 export const MATCH_SEATS = 32;
+/**
+ * How long a public (matchmaking) room waits for more humans after the first one joined, in seconds (founder decision,
+ * docs/DECISIONS.md PIS1): then it starts and bots fill the empty seats. It starts earlier when 32 humans are in. The server
+ * default and the entry screen's wording share this one number; only the test-fast server mode may shorten it.
+ */
+export const PUBLIC_WAIT_SECONDS = 30;
 
 const ROOM_CODE_RE = new RegExp(`^[${ROOM_CODE_ALPHABET}]{${ROOM_CODE_LENGTH}}$`);
 
@@ -210,19 +216,102 @@ export const CLOSE = {
 export const PLAYER_NAME_MIN = 2;
 export const PLAYER_NAME_MAX = 24;
 const NAME_RE = /^[\p{L}\p{M}\p{N} _.'-]+$/u;
+/** Characters that draw nothing (zero-width and soft hyphens, variation selectors, Hangul fillers, ...): an invisible name part. */
+const INVISIBLE_RE = /\p{Default_Ignorable_Code_Point}/u;
+const LATIN_RE = /\p{Script=Latin}/u;
+/** Scripts whose letters are routinely used to imitate Latin ones (mixing them with Latin is how a name is spoofed). */
+const LOOKALIKE_SCRIPT_RE = /[\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Armenian}\p{Script=Cherokee}]/u;
 
 /**
- * A player display name: 2-24 characters (code points) of letters, digits, space and `_ . ' -`, trimmed, NFC-normalised,
- * with runs of spaces collapsed and at least one letter or digit. Returns the cleaned name, or null if it is rejected.
+ * A player display name (guest nickname): 2-24 characters (code points) of letters, digits, space and `_ . ' -`, trimmed,
+ * NFKC-normalised (full-width and compatibility forms become plain ones), with runs of spaces collapsed and at least one
+ * letter or digit. Control, zero-width, bidi-control and format characters, emoji and markup are not in the allowed set, so
+ * they are rejected. A name may not mix Latin letters with Cyrillic / Greek / Armenian / Cherokee ones (look-alike spoofing),
+ * and may not read as a server bot ("BOT ..." is how filler bots are labelled). Returns the cleaned name, or null.
  */
 export function validatePlayerName(raw: unknown): string | null {
-  if (typeof raw !== 'string' || raw.length > 128) return null;
-  const name = raw.normalize('NFC').trim().replace(/ {2,}/g, ' ');
+  return checkPlayerName(raw).name;
+}
+
+export type NameProblem =
+  'type' | 'short' | 'long' | 'chars' | 'letters' | 'marks' | 'mixed-script' | 'bot-like';
+
+/** The same check with the reason it failed (the entry screen words it; the server only needs the verdict). */
+export function checkPlayerName(
+  raw: unknown,
+): { name: string; problem: null } | { name: null; problem: NameProblem } {
+  if (typeof raw !== 'string') return { name: null, problem: 'type' };
+  if (raw.length > 128) return { name: null, problem: 'long' };
+  const name = raw.normalize('NFKC').trim().replace(/ {2,}/g, ' ');
   const length = [...name].length;
-  if (length < PLAYER_NAME_MIN || length > PLAYER_NAME_MAX) return null;
-  if (!NAME_RE.test(name) || !/[\p{L}\p{N}]/u.test(name)) return null;
-  if (/\p{M}{4,}/u.test(name)) return null; // no stacked combining marks (Yoruba tone + dot-below needs 2)
-  return name;
+  if (length < PLAYER_NAME_MIN) return { name: null, problem: 'short' };
+  if (length > PLAYER_NAME_MAX) return { name: null, problem: 'long' };
+  if (!NAME_RE.test(name) || INVISIBLE_RE.test(name)) return { name: null, problem: 'chars' };
+  if (!/[\p{L}\p{N}]/u.test(name)) return { name: null, problem: 'letters' };
+  if (/\p{M}{4,}/u.test(name)) return { name: null, problem: 'marks' }; // no stacked combining marks (Yoruba tone + dot-below needs 2)
+  if (LATIN_RE.test(name) && LOOKALIKE_SCRIPT_RE.test(name)) return { name: null, problem: 'mixed-script' };
+  if (looksLikeBot(name)) return { name: null, problem: 'bot-like' };
+  return { name, problem: null };
+}
+
+/** Look-alike letters (Cyrillic / Greek, a few full-width leftovers) folded onto the Latin letter they imitate. */
+const CONFUSABLES: Record<string, string> = {
+  '\u0430': 'a',
+  '\u0432': 'b',
+  '\u0435': 'e',
+  '\u043e': 'o',
+  '\u0440': 'p',
+  '\u0441': 'c',
+  '\u0443': 'y',
+  '\u0445': 'x',
+  '\u0456': 'i',
+  '\u0458': 'j',
+  '\u0455': 's',
+  '\u043a': 'k',
+  '\u043c': 'm',
+  '\u043d': 'h',
+  '\u0442': 't',
+  '\u04bb': 'h',
+  '\u03b1': 'a',
+  '\u03b2': 'b',
+  '\u03b5': 'e',
+  '\u03b9': 'i',
+  '\u03ba': 'k',
+  '\u03bd': 'v',
+  '\u03bf': 'o',
+  '\u03c1': 'p',
+  '\u03c4': 't',
+  '\u03c5': 'u',
+  '\u03c7': 'x',
+  '\u0131': 'i',
+  '\u0142': 'l',
+};
+
+/**
+ * The comparison form of a name: case-folded, accents and marks removed, look-alike letters folded to Latin, separators
+ * removed. Two names with the same skeleton read the same to a person ("Ada", "ADA", "Аda" with a Cyrillic A).
+ */
+export function nameSkeleton(name: string): string {
+  const base = name.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
+  let out = '';
+  for (const ch of base) out += CONFUSABLES[ch] ?? ch;
+  return out.replace(/[ _.'-]/g, '');
+}
+
+/** True when a name reads as "BOT" or "BOT <something>" (also with look-alike letters or 0 for o): reserved for server bots. */
+export function looksLikeBot(name: string): boolean {
+  const key = nameSkeleton(name).replace(/0/g, 'o');
+  const parts = name
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .split(/[ _.'-]+/);
+  const first = parts.find((x) => x !== '') ?? '';
+  const firstKey = [...first]
+    .map((c) => CONFUSABLES[c] ?? c)
+    .join('')
+    .replace(/0/g, 'o');
+  return key === 'bot' || firstKey === 'bot';
 }
 
 export type LobbyPhase = 'lobby' | 'countdown' | 'playing' | 'results';
@@ -233,6 +322,11 @@ export interface RoomSettings {
   game: 'survival' | 'deathmatch' | 'team';
   durationSec: number;
   botDifficulty: string;
+  /**
+   * Team Rumble only (ignored in the other modes): teammates' blasts hurt each other. Defaults to OFF, exactly like the
+   * offline game (decisions WD2, TB1-TB4). Optional: older servers omit it, which means off.
+   */
+  friendlyFire?: boolean;
 }
 
 export interface LobbyMemberView {
@@ -297,7 +391,7 @@ export function validateEmptyMsg(raw: unknown): boolean {
 /** Client -> server (host only): change some of the room settings. Values are checked against the allowed sets by the room. */
 export type SettingsMsg = Partial<RoomSettings>;
 
-const SETTINGS_KEYS = ['arenaId', 'game', 'durationSec', 'botDifficulty'] as const;
+const SETTINGS_KEYS = ['arenaId', 'game', 'durationSec', 'botDifficulty', 'friendlyFire'] as const;
 
 export function validateSettingsMsg(raw: unknown): SettingsMsg | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
@@ -325,6 +419,10 @@ export function validateSettingsMsg(raw: unknown): SettingsMsg | null {
     if (typeof o.botDifficulty !== 'string' || o.botDifficulty.length < 1 || o.botDifficulty.length > 24)
       return null;
     out.botDifficulty = o.botDifficulty;
+  }
+  if ('friendlyFire' in o) {
+    if (typeof o.friendlyFire !== 'boolean') return null;
+    out.friendlyFire = o.friendlyFire;
   }
   return out;
 }
