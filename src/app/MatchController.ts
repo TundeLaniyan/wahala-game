@@ -331,7 +331,7 @@ export class MatchController implements MissionHost {
     this.deps.input.setCardinalOnly?.(false);
     this.audio.startMusic(state.arenaId);
     this.audio.setIntensity(0);
-    patch({ combatLab: 0 });
+    patch({ combatLab: 0, online: true });
     patch({
       screen: 'playing',
       paused: false,
@@ -351,6 +351,7 @@ export class MatchController implements MissionHost {
     const exit = this.remoteExit;
     this.remoteExit = null;
     driver.dispose();
+    patch({ online: false });
     if (callExit) exit?.();
     this.localId = LOCAL_ID;
     this.entry = new VehicleEntryController(LOCAL_ID);
@@ -736,7 +737,7 @@ export class MatchController implements MissionHost {
     const advanced =
       this.loadHold || this.frozen ? { events: [], alpha: this.remoteAlpha } : driver.advance(dtMs);
     this.remoteAlpha = advanced.alpha;
-    if (!this.paused && !this.loadHold && !driver.ended()) this.sendRemoteIntent(next, driver);
+    if (!driver.ended()) this.sendRemoteIntent(next, driver, this.paused || this.loadHold);
     this.afterFrame(advanced.events, nowMs, this.paused ? 0 : dtMs / 1000);
   }
 
@@ -745,10 +746,13 @@ export class MatchController implements MissionHost {
    * move assist), read from the replica's board. The server owns every outcome; `canMove` is always true because the server
    * (which alone knows when the authoritative step finishes) latches a fresh press until it produces a step.
    */
-  private sendRemoteIntent(state: GameState, driver: RemoteMatchDriver): void {
+  private sendRemoteIntent(state: GameState, driver: RemoteMatchDriver, idle: boolean): void {
     const me = state.players[this.localId];
-    if (!me || !me.alive) {
+    if (!me || !me.alive || idle) {
+      // a menu is open or the fighter is down: hand over NOTHING, so the server's held direction stops (it keeps the last
+      // one it was told; the driver sends the release once, then nothing while it stays idle)
       this.deps.input.clear();
+      driver.sendIntent({}, state, 1);
       return;
     }
     this.deps.input.navMode = false;

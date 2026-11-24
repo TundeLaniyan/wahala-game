@@ -89,6 +89,8 @@ export interface UiState {
   settings: GameSettings;
   hud: HudSnapshot | null;
   paused: boolean;
+  /** An ONLINE match is being played (docs/ONLINE_INTEGRATION.md): the pause menu says the match keeps running and offers no Restart. */
+  online: boolean;
   toasts: Toast[];
   /** The kill feed in the HUD rail: eliminations and assists, newest first (app/killFeed.ts). */
   killFeed: KillFeed;
@@ -140,6 +142,7 @@ export const useGameStore = create<UiState>(() => ({
   settings: loadSettings(),
   hud: null,
   paused: false,
+  online: false,
   toasts: [],
   killFeed: [],
   subtitle: null,

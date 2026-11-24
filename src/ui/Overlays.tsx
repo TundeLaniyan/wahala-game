@@ -114,6 +114,8 @@ function ExitConfirm({ kind, onStay, onLeave }: { kind: ExitKind; onStay: () => 
 export function PauseOverlay() {
   const hud = useGameStore((st) => st.hud);
   const settingsOpen = useGameStore((st) => st.pauseSettings);
+  // an online match never pauses for anyone: the menu only stops THIS player's input
+  const online = useGameStore((st) => st.online);
   const mission = useGameStore((st) => st.campaign?.active ?? null);
   const [confirm, setConfirm] = useState(false);
   const [tab, setTab] = useState<SettingsTab>('audio');
@@ -180,8 +182,8 @@ export function PauseOverlay() {
         <div className="mn-overlay-card mn-pause">
           <div className="mn-pause-menu">
             <header>
-              <small className="mn-kicker">Match paused</small>
-              <h2>Paused</h2>
+              <small className="mn-kicker">{online ? 'Online match' : 'Match paused'}</small>
+              <h2>{online ? 'Menu' : 'Paused'}</h2>
             </header>
             <nav className="mn-pause-list" aria-label="Pause menu" aria-hidden={confirm || undefined}>
               <button
@@ -217,7 +219,7 @@ export function PauseOverlay() {
                   <b>Restart</b>
                   <small>Same district, a fresh attempt</small>
                 </button>
-              ) : (
+              ) : online ? null : (
                 <button
                   type="button"
                   className="mn-pause-item"
@@ -269,7 +271,12 @@ export function PauseOverlay() {
                 </small>
               </button>
             </nav>
-            {!mission && <CombatLabPauseSection lab={hud?.combatLab ?? null} />}
+            {online && (
+              <p className="mn-note" data-testid="pause-online-note">
+                The match keeps running while this menu is open. Your fighter stands still until you resume.
+              </p>
+            )}
+            {!mission && !online && <CombatLabPauseSection lab={hud?.combatLab ?? null} />}
           </div>
           {mission ? <MissionPauseInfo mission={mission} /> : <MatchInfo hud={hud} />}
           {confirm && <ExitConfirm kind={kind} onStay={() => commands.resume()} onLeave={leave} />}
