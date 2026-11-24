@@ -14,6 +14,7 @@
 //   node scripts/perf/pages-server.mjs dist --port 4181 &
 //   WAHALA_CHROMIUM=/opt/pw-browsers/chromium node scripts/data-saver-lag-compare.mjs --url http://localhost:4181/wahala-game/ \
 //        --runs 6 --seconds 45 --size 32 --arena rumbleOshodi --quality low --out docs/measurements/fu2/data-saver-lag.json
+//   --viewport 320x180 and --quality veryLow make the software renderer fast enough for hundreds of frames per run
 import { chromium } from '@playwright/test';
 import fs from 'node:fs';
 
@@ -30,6 +31,8 @@ const SIZE = Number(opt('size', '32'));
 const ARENA = opt('arena', 'rumbleOshodi');
 const QUALITY = opt('quality', 'low');
 const CPU = Number(opt('cpu', '1'));
+const PROFILE = argv.includes('--profile');
+const [VW, VH] = opt('viewport', '844x390').split('x').map(Number);
 const OUT = opt('out', '');
 const CONDITIONS = opt('conditions', 'on,off,muted').split(',');
 
@@ -75,7 +78,7 @@ const browser = await chromium.launch({
 
 async function oneRun(condition) {
   const ctx = await browser.newContext({
-    viewport: { width: 844, height: 390 },
+    viewport: { width: VW, height: VH },
     isMobile: true,
     hasTouch: true,
     deviceScaleFactor: 1,
@@ -90,7 +93,7 @@ async function oneRun(condition) {
   const music = [];
   cdp.on('Network.requestWillBeSent', (e) => {
     if (/\/audio\/music\//.test(e.request.url))
-      music.push(new URL(e.request.url).pathname.split('/audio/music/')[1]);
+      music.push(`${e.request.method} ${new URL(e.request.url).pathname.split('/audio/music/')[1]}`);
   });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -136,6 +139,11 @@ async function oneRun(condition) {
   const m0 = Object.fromEntries(
     (await cdp.send('Performance.getMetrics')).metrics.map((m) => [m.name, m.value]),
   );
+  if (PROFILE) {
+    await cdp.send('Profiler.enable');
+    await cdp.send('Profiler.setSamplingInterval', { interval: 2000 });
+    await cdp.send('Profiler.start');
+  }
   const tick0 = await page.evaluate(() => {
     window.__frames.length = 0;
     window.__long.length = 0;
@@ -155,6 +163,23 @@ async function oneRun(condition) {
       stats: w.stats?.() ?? null,
     };
   });
+  let profileTop = null;
+  if (PROFILE) {
+    // self time per function (microseconds between samples), the top ones: where the main thread spent the window
+    const { profile } = await cdp.send('Profiler.stop');
+    const self = new Map();
+    const byId = new Map(profile.nodes.map((n) => [n.id, n]));
+    profile.samples.forEach((id, i) => {
+      const n = byId.get(id);
+      const f = n.callFrame;
+      const key = `${f.functionName || '(anon)'} ${f.url.split('/').pop()}:${f.lineNumber}`;
+      self.set(key, (self.get(key) ?? 0) + (profile.timeDeltas[i] ?? 0));
+    });
+    profileTop = [...self.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 14)
+      .map(([k, v]) => [k, Math.round(v / 1000)]);
+  }
   const m1 = Object.fromEntries(
     (await cdp.send('Performance.getMetrics')).metrics.map((m) => [m.name, m.value]),
   );
@@ -189,6 +214,7 @@ async function oneRun(condition) {
     timings: end.timings,
     mediaStalls: end.stall,
     musicRequests: music,
+    profileTop,
     errors,
   };
 }
@@ -204,7 +230,13 @@ for (let r = 0; r < RUNS; r++) {
       `round ${r + 1} ${c.padEnd(5)} players ${row.players} frames ${row.frameCount} ` +
         `p50 ${row.frameMs.p50} p95 ${row.frameMs.p95} p99 ${row.frameMs.p99} ms | >2x ${row.framesOver2xMedian} >4x ${row.framesOver4xMedian} | ` +
         `long tasks ${row.longTasks.count} | main busy ${row.mainThread.busyFraction} | ticks/s ${row.simTicksPerSecond} | ` +
-        `music ${row.musicRequests.join(',') || '-'} | stalls ${JSON.stringify(row.mediaStalls)}` +
+        `music GET ${row.musicRequests.filter((m) => m.startsWith('GET ') && !m.endsWith('manifest.json')).join(',') || '-'} | stalls ${JSON.stringify(row.mediaStalls)}` +
+        (row.profileTop
+          ? `\n    top self time ms: ${row.profileTop
+              .slice(0, 8)
+              .map(([k, v]) => `${k} ${v}`)
+              .join(' | ')}`
+          : '') +
         (row.errors.length ? ` ERRORS ${row.errors.join(' | ')}` : ''),
     );
   }
@@ -213,8 +245,8 @@ for (let r = 0; r < RUNS; r++) {
 const summary = CONDITIONS.map((c) => {
   const rs = rows.filter((r) => r.condition === c);
   const col = (f) => rs.map(f);
-  const med = (f) => round(median(col(f)));
-  const spread = (f) => [round(Math.min(...col(f))), round(Math.max(...col(f)))];
+  const med = (f, d = 1) => round(median(col(f)), d);
+  const spread = (f, d = 1) => [round(Math.min(...col(f)), d), round(Math.max(...col(f)), d)];
   return {
     condition: c,
     runs: rs.length,
@@ -231,7 +263,13 @@ const summary = CONDITIONS.map((c) => {
     loadMs: { median: med((r) => r.loadMs), range: spread((r) => r.loadMs) },
     mediaWaiting: rs.reduce((s, r) => s + r.mediaStalls.waiting, 0),
     mediaStalled: rs.reduce((s, r) => s + r.mediaStalls.stalled, 0),
-    music: [...new Set(rs.flatMap((r) => r.musicRequests))],
+    music: [
+      ...new Set(
+        rs.flatMap((r) =>
+          r.musicRequests.filter((m) => m.startsWith('GET ') && !m.endsWith('manifest.json')),
+        ),
+      ),
+    ],
   };
 });
 console.log(JSON.stringify(summary, null, 1));

@@ -103,3 +103,12 @@ asks for landscape, but the pause menu shows above the rotate notice (which has 
 - The live 3D attract demo no longer plays behind the menu (`?attract` brings it back for experiments).
 - The Stitch export had no separate designs for the phone Settings / Arena / Academy / Pause / Results screens;
   they follow the same system responsively.
+
+## FU2 amendments (branch `claude/wahala-fu2-ux`, decisions FU2-1 to FU2-6)
+
+- **Choose How to Play** is City Rumble (first, widest, gold), Quick Start (teal) and Classic Blast (plain), in that order; the focus starts on City Rumble. **Quick Start** starts an
+  offline City Rumble Free-for-All (16 fighters, Rookie bots, 3 minutes, Ojuelegba Underbridge) in one tap, never a Classic match; the saved audio, controls, graphics and match
+  setup are untouched. The old "Customise" button is gone. The Training Academy's first section is titled Beginner (id `quick`).
+- **Home** gains a **Music Data Saver** button in the utility row (two lines, >= 44 px: "MUSIC DATA SAVER", "ON" / "OFF", "(auto)" while the setting is Auto). It is the Settings > Audio Data
+  Saver preference (one saved value, no second state) and says it saves music downloads only. Checked at 750 x 336, 832 x 384, 844 x 390 and 390 x 844 (`e2e/menu.spec.ts`;
+  before / after pictures in `docs/screenshots/fu2/`, made with `WAHALA_SHOTS=home,play node scripts/menu-shots.mjs <dir> phone750 phone832 portrait`).
