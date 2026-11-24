@@ -1,0 +1,942 @@
+/*
+ * Online City Rumble screens (decision ON10). They sit in the Stitch menu frame: tokens (--mn-*), the screen frame, the
+ * buttons and the option chips all come from menu.css / flow.css; only what the online flow adds is here. Layouts: phone
+ * landscape first (max-height 520px: 844x390, 832x384), then phone portrait (max-width 700px) and desktop. Tap targets are at
+ * least 44px, nothing scrolls sideways, safe areas come from the frame.
+ */
+.ro-screen .mn-body {
+  display: flex;
+  flex-direction: column;
+}
+.ro-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.ro-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--mn-border);
+  background: rgba(20, 25, 35, 0.88);
+}
+.ro-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mn-amber);
+}
+.ro-hint {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--mn-muted);
+}
+.ro-hint.bad {
+  color: #ffb4ad;
+}
+.ro-sub {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--mn-muted);
+}
+.ro-small {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--mn-muted);
+}
+.ro-big {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  max-width: 34em;
+}
+.ro-input,
+.ro-select {
+  appearance: none;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--mn-border);
+  border-radius: 0;
+  background: rgba(11, 14, 20, 0.85);
+  color: #fff;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.ro-input:focus-visible,
+.ro-select:focus-visible {
+  outline: 2px solid var(--mn-amber);
+  outline-offset: 2px;
+  border-color: var(--mn-amber);
+}
+.ro-input[aria-invalid='true'] {
+  border-color: var(--mn-red);
+}
+.ro-input::placeholder {
+  color: rgba(154, 163, 181, 0.45);
+  letter-spacing: 0.3em;
+}
+.ro-code-input {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-family: var(--mn-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+.ro-select {
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--mn-amber) 50%),
+    linear-gradient(135deg, var(--mn-amber) 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) 50%,
+    calc(100% - 14px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+.ro-link {
+  appearance: none;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--mn-amber);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ro-fake {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px dashed var(--mn-amber);
+  color: var(--mn-amber);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ro-alert,
+.ro-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.ro-alert {
+  border: 1px solid var(--mn-red);
+  background: rgba(255, 59, 48, 0.1);
+}
+.ro-notice {
+  border: 1px solid var(--mn-amber);
+  background: rgba(255, 184, 0, 0.08);
+}
+.ro-x {
+  appearance: none;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -8px -8px -8px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 1.6rem;
+  cursor: pointer;
+}
+.ro-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* the menu's Back is 40px on a phone in landscape; every online screen keeps the full 44px tap target */
+.ro-screen .mn-back {
+  min-height: 44px;
+}
+
+/* ---------- entry ---------- */
+.ro-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+}
+.ro-entry .ro-alert {
+  grid-column: 1 / -1;
+}
+.ro-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ro-fighter {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px 0 0;
+  border-top: 1px solid rgba(46, 56, 77, 0.7);
+}
+.ro-fighter-pic {
+  position: relative;
+  display: block;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 30%, #2c3550, #141923);
+  border: 1px solid var(--mn-border);
+}
+.ro-fighter-pic .mn-fighter-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 8%;
+}
+.ro-fighter-text {
+  min-width: 0;
+}
+.ro-fighter-text b {
+  display: block;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.6rem;
+  letter-spacing: 0.06em;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ro-go .mn-btn {
+  width: 100%;
+}
+.ro-join {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+.ro-join-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ro-join .mn-btn {
+  width: auto;
+}
+
+/* ---------- connecting / error / loading ---------- */
+.ro-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+.ro-error-title {
+  margin: 0;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 2.2rem;
+  letter-spacing: 0.06em;
+  color: var(--mn-amber);
+}
+.ro-spinner {
+  display: flex;
+  gap: 8px;
+}
+.ro-spinner i {
+  width: 12px;
+  height: 12px;
+  background: var(--mn-amber);
+  animation: ro-pulse 1s ease-in-out infinite;
+}
+.ro-spinner i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.ro-spinner i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes ro-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.ro-bar {
+  position: relative;
+  width: min(420px, 90%);
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid var(--mn-border);
+  background: rgba(11, 14, 20, 0.8);
+}
+.ro-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--p, 0%);
+  background: linear-gradient(90deg, var(--mn-amber), var(--mn-amber-deep));
+}
+.ro-bar.indeterminate i {
+  width: 35%;
+  animation: ro-slide 1.2s ease-in-out infinite;
+}
+@keyframes ro-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+/* ---------- room ---------- */
+.ro-room {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 14px;
+  align-items: start;
+  width: 100%;
+}
+.ro-room .wide {
+  grid-column: 1 / -1;
+}
+.ro-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ro-code-block {
+  min-width: 0;
+}
+.ro-code {
+  display: block;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: clamp(2.4rem, 7vw, 3.6rem);
+  line-height: 1;
+  letter-spacing: 0.22em;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(255, 184, 0, 0.35);
+  user-select: all;
+}
+.ro-copy {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.ro-copy .mn-btn {
+  padding: 0 14px;
+  font-size: 1.1rem;
+}
+.ro-seats {
+  display: grid;
+  grid-template-columns: repeat(32, minmax(0, 1fr));
+  gap: 2px;
+  height: 12px;
+}
+.ro-seats i {
+  display: block;
+  background: rgba(46, 56, 77, 0.55);
+}
+.ro-seats i.human {
+  background: var(--mn-green);
+}
+.ro-seats i.bot {
+  background: #6d7a99;
+}
+.ro-seats-line {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--mn-muted);
+}
+.ro-bots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px dashed #6d7a99;
+  background: rgba(109, 122, 153, 0.1);
+  font-size: 0.86rem;
+}
+.ro-bots b {
+  font-weight: 700;
+  color: #dfe5f5;
+}
+.ro-members {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ro-member {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid rgba(46, 56, 77, 0.8);
+  background: rgba(11, 14, 20, 0.55);
+}
+.ro-member[data-you='true'] {
+  border-color: var(--mn-amber);
+  background: rgba(255, 184, 0, 0.08);
+}
+.ro-member[data-connected='false'] {
+  opacity: 0.8;
+  border-style: dashed;
+}
+.ro-member.bots {
+  border-style: dashed;
+}
+.ro-member-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ro-member-name b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  color: #fff;
+}
+.ro-member-name small {
+  color: var(--mn-muted);
+  font-size: 0.72rem;
+}
+.ro-state {
+  color: var(--mn-amber);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ro-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  flex: none;
+}
+.ro-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid var(--mn-border);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.5;
+  color: var(--mn-muted);
+}
+.ro-tag.human {
+  border-color: rgba(0, 230, 118, 0.55);
+  color: #7dffbc;
+}
+.ro-tag.host {
+  border-color: var(--mn-amber);
+  color: var(--mn-amber);
+}
+.ro-tag.ready {
+  border-color: var(--mn-green);
+  background: var(--mn-green);
+  color: #04210f;
+}
+.ro-tag.you {
+  border-color: #fff;
+  color: #fff;
+}
+.ro-tag.bot {
+  border-color: #6d7a99;
+  color: #aab4d0;
+}
+.ro-tag.team {
+  border-color: var(--mn-sand);
+  color: var(--mn-sand);
+}
+.ro-match {
+  position: relative;
+}
+.ro-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.ro-settings:disabled {
+  opacity: 0.6;
+}
+.ro-settings-read {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+.ro-settings-read > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ro-settings-read dt {
+  color: var(--mn-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ro-settings-read dd {
+  margin: 0;
+  font-weight: 700;
+  color: #fff;
+  text-align: right;
+}
+.ro-countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-family: var(--mn-display);
+  font-size: 7rem;
+  line-height: 1;
+  color: var(--mn-amber);
+  background: rgba(8, 10, 15, 0.82);
+  pointer-events: none;
+}
+.ro-foot-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ro-dialog-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(8, 10, 15, 0.82);
+}
+.ro-dialog {
+  width: min(460px, 100%);
+  padding: 18px;
+  border: 1px solid var(--mn-amber);
+  background: var(--mn-elev);
+  text-align: center;
+}
+.ro-dialog h3 {
+  margin: 0 0 6px;
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 2rem;
+  letter-spacing: 0.06em;
+  color: #fff;
+}
+.ro-dialog p {
+  margin: 0 0 12px;
+  color: var(--mn-muted);
+  font-size: 0.92rem;
+}
+
+/* ---------- connection chip and reconnect banner (over the game screen) ---------- */
+.mn-overlay.ro-hud {
+  inset: 0 0 auto 0;
+  z-index: 35;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 0
+    max(8px, env(safe-area-inset-left));
+  background: none;
+  overflow: visible;
+  animation: none;
+  pointer-events: none;
+}
+.ro-hud > * {
+  pointer-events: auto;
+}
+.ro-chip {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 24px;
+  padding: 2px 10px;
+  border: 1px solid var(--mn-border);
+  background: rgba(11, 14, 20, 0.78);
+  color: var(--mn-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ro-chip i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mn-muted);
+}
+.ro-chip.good i {
+  background: var(--mn-green);
+}
+.ro-chip.warn i {
+  background: var(--mn-amber);
+}
+.ro-chip.bad i {
+  background: var(--mn-red);
+}
+.ro-chip-ping {
+  color: var(--mn-muted);
+  font-variant-numeric: tabular-nums;
+}
+.ro-chip[data-ping='poor'] .ro-chip-ping {
+  color: #ffb4ad;
+}
+.ro-banner {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(640px, 100%);
+  padding: 8px 14px;
+  border: 1px solid var(--mn-amber);
+  background: rgba(11, 14, 20, 0.92);
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.5);
+}
+.ro-banner.closed {
+  border-color: var(--mn-red);
+}
+.ro-banner-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.ro-banner-text b {
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.3rem;
+  letter-spacing: 0.06em;
+  color: var(--mn-amber);
+}
+.ro-banner.closed .ro-banner-text b {
+  color: #ffb4ad;
+}
+.ro-banner-text small {
+  color: var(--mn-muted);
+}
+.ro-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+/* ---------- results ---------- */
+.mn-overlay.ro-error-wrap {
+  z-index: 45;
+}
+.ro-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(760px, 100%);
+  max-height: 100%;
+  margin: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--mn-border);
+  background: rgba(20, 25, 35, 0.96);
+}
+.ro-results-head h2 {
+  font-size: clamp(2.2rem, 6vw, 3.4rem);
+}
+.ro-results-wrap[data-tone='win'] .ro-results-head h2 {
+  color: var(--mn-amber);
+}
+.ro-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid rgba(46, 56, 77, 0.8);
+  scrollbar-width: thin;
+  scrollbar-color: var(--mn-border) transparent;
+}
+.ro-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.ro-table th,
+.ro-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(46, 56, 77, 0.6);
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.ro-table thead th {
+  position: sticky;
+  top: 0;
+  background: #141923;
+  color: var(--mn-amber);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.ro-table th:nth-child(n + 3),
+.ro-table td:nth-child(n + 3) {
+  width: 44px;
+  text-align: right;
+}
+.ro-table tr.me td {
+  background: rgba(255, 184, 0, 0.14);
+  color: #fff;
+}
+.ro-table tr.won td:first-child {
+  color: var(--mn-amber);
+  font-weight: 700;
+}
+.ro-table .nm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+.ro-result-name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.ro-note {
+  flex-basis: 100%;
+  color: var(--mn-muted);
+  font-size: 0.74rem;
+}
+.ro-results-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ---------- phone landscape: the screen is short, so everything is compact ---------- */
+@media (max-height: 520px) {
+  .ro-card {
+    gap: 6px;
+    padding: 8px 12px;
+  }
+  .ro-entry,
+  .ro-room {
+    gap: 10px;
+  }
+  .ro-room {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  }
+  .ro-sub {
+    display: none;
+  }
+  .ro-hint {
+    min-height: 1.1em;
+    font-size: 0.74rem;
+  }
+  .ro-input,
+  .ro-select {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+  .ro-code-input {
+    font-size: 1.3rem;
+  }
+  .ro-fighter {
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding-top: 6px;
+  }
+  .ro-fighter-pic {
+    width: 48px;
+    height: 48px;
+  }
+  .ro-fighter-text b {
+    font-size: 1.3rem;
+  }
+  .ro-go .mn-btn {
+    min-height: 44px;
+  }
+  .ro-code {
+    font-size: 2.2rem;
+  }
+  .ro-member {
+    min-height: 44px;
+    padding: 4px 8px;
+  }
+  .ro-copy .mn-btn.small {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 1rem;
+  }
+  .ro-settings {
+    gap: 8px;
+  }
+  .ro-settings .ro-field {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+  .ro-settings .mn-opts {
+    gap: 6px;
+  }
+  .ro-settings .select-wrap,
+  .ro-select {
+    font-size: 0.92rem;
+  }
+  /* the game's compact chip is 40px on a phone; the host's room choices keep the full tap target */
+  .ro-settings .chip.mn-opt {
+    min-height: 44px;
+    padding: 0 9px;
+    font-size: 0.74rem;
+  }
+  .ro-countdown {
+    font-size: 5rem;
+  }
+  .ro-results {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  .ro-results-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ro-results-head .mn-kicker {
+    display: none;
+  }
+  .ro-results-head h2 {
+    font-size: 2rem;
+  }
+  .ro-table th,
+  .ro-table td {
+    padding: 3px 8px;
+  }
+  .ro-error-title {
+    font-size: 1.7rem;
+  }
+  .ro-big {
+    font-size: 1rem;
+  }
+  .ro-dialog {
+    padding: 12px;
+  }
+  .ro-dialog h3 {
+    font-size: 1.6rem;
+  }
+}
+
+/* ---------- phone portrait ---------- */
+@media (max-width: 700px) and (min-height: 521px) {
+  .ro-entry,
+  .ro-room {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ro-code-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ro-copy {
+    justify-content: stretch;
+  }
+  .ro-copy .mn-btn {
+    flex: 1 1 0;
+  }
+  .ro-join {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ro-join .mn-btn {
+    width: 100%;
+  }
+  .ro-results-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ro-results-actions .mn-btn {
+    width: 100%;
+  }
+  .ro-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  /* the room's three buttons: READY and START share a row, LEAVE ROOM sits under them (saves a third of the footer) */
+  .ro-room-screen .mn-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .ro-room-screen .mn-actions .mn-btn {
+    flex: 1 1 40%;
+    width: auto;
+    padding: 0 12px;
+  }
+  .ro-room-screen .mn-actions .danger {
+    flex-basis: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ro-spinner i,
+  .ro-bar.indeterminate i {
+    animation: none;
+  }
+}

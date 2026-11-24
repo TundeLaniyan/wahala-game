@@ -107,7 +107,14 @@ describe('the local game does not depend on the optional layers', () => {
         return !!target && target !== RUMBLE_ENTRY && (OPTIONAL.test(target) || OPTIONAL_APP.test(target));
       });
     });
-    expect(importers.sort()).toEqual(['src/ui/menu/MainMenu.tsx', 'src/ui/menu/SettingsScreen.tsx']);
+    // App.tsx (lazy online overlay) and HomeScreen.tsx (the guarded entry src/online/rumbleEntry.ts) are the Online City
+    // Rumble edges (decision ON10); both sit behind `__WAHALA_SERVER_ONLINE__` / `flags().rumbleOnline`
+    expect(importers.sort()).toEqual([
+      'src/ui/App.tsx',
+      'src/ui/menu/HomeScreen.tsx',
+      'src/ui/menu/MainMenu.tsx',
+      'src/ui/menu/SettingsScreen.tsx',
+    ]);
   });
 
   it('the layers are one-directional: progression imports no online / voice; voice and ads import nothing optional', () => {
