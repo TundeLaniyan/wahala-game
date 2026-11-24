@@ -1,0 +1,6 @@
+# secrets and generated material never go in git
+proxy/certs/
+env/*.env
+!env/compose.local.env
+!env/server.env.example
+local/.run/

@@ -1,0 +1,114 @@
+# Reverse proxy for the City Rumble game server: TLS (https / wss), path allow-list, per-IP limits, no secrets in logs.
+# Rendered by the official nginx image's envsubst step from /etc/nginx/templates (see ops/docker/compose.yml).
+#   PUBLIC_HOST      the hostname players use (also the certificate name), e.g. rumble.example.com
+#   UPSTREAM         host:port of the game server on the private network, e.g. rumble:2567
+#   TLS_CERT / TLS_KEY   paths INSIDE the container (Let's Encrypt: /etc/letsencrypt/live/<host>/fullchain.pem ...)
+#   CREATE_RATE_PER_MIN  room creations per minute per IP (default 12); see docs/ops/08-SECURITY.md
+# Design notes: docs/ops/04-HTTPS-WSS-ARCHITECTURE.md and 08-SECURITY.md.
+
+map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+
+# --- limits (per client IP). Mobile carriers in Nigeria put many phones behind one address (carrier-grade NAT), so
+# these are deliberately generous for honest use and tight only on what an abuser needs in volume: creating rooms and
+# guessing room codes. Reconnection has its own, higher budget so that the 30 s window is never starved by a limit.
+limit_req_zone  $binary_remote_addr zone=rumble_create:10m    rate=${CREATE_RATE_PER_MIN}r/m;
+limit_req_zone  $binary_remote_addr zone=rumble_join:10m      rate=60r/m;
+limit_req_zone  $binary_remote_addr zone=rumble_reconnect:10m rate=180r/m;
+limit_req_zone  $binary_remote_addr zone=rumble_ws:10m        rate=120r/m;
+limit_conn_zone $binary_remote_addr zone=rumble_conn:10m;
+limit_req_status  429;
+limit_conn_status 429;
+
+# Access log WITHOUT the query string (WebSocket URLs carry sessionId there) and with room codes MASKED: a private room's
+# code is its only protection, so it must not sit in a log file that more people can read than can join the room.
+map $uri $log_uri {
+    ~^(?<head>/matchmake/[A-Za-z]+/)  "${head}*";
+    "~^/[A-Za-z0-9_-]{4,24}/[A-Za-z0-9_-]{4,24}$"  "/ws/*";
+    default $uri;
+}
+log_format rumble '$remote_addr [$time_local] "$request_method $log_uri" $status $body_bytes_sent rt=$request_time ua="$http_user_agent"';
+
+server {
+    listen 80;
+    server_name ${PUBLIC_HOST};
+    server_tokens off;
+    # ACME http-01 challenge (certbot --webroot) and nothing else
+    location /.well-known/acme-challenge/ { root /var/www/acme; }
+    location = /health { access_log off; default_type application/json; return 200 '{"ok":true,"edge":"http"}'; }
+    location / { return 301 https://$host$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${PUBLIC_HOST};
+    server_tokens off;
+    access_log /var/log/nginx/rumble_access.log rumble;
+
+    ssl_certificate     ${TLS_CERT};
+    ssl_certificate_key ${TLS_KEY};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options nosniff always;
+
+    # slow-loris and oversized-request protection (matchmaking bodies are a few hundred bytes)
+    client_max_body_size   2k;
+    client_header_timeout  10s;
+    client_body_timeout    10s;
+    keepalive_timeout      30s;
+    send_timeout           30s;
+    large_client_header_buffers 4 8k;
+    # no more than this many simultaneous connections per IP (a classroom behind one NAT address still fits)
+    limit_conn rumble_conn 64;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_hide_header X-Powered-By;
+
+    # liveness for uptime monitors (this is the game server's own /health, through TLS)
+    location = /health {
+        access_log off;
+        proxy_pass http://${UPSTREAM};
+    }
+
+    # /metrics is NOT public. Scrape it on the private network (http://rumble:2567/metrics with the bearer token).
+    location = /metrics { return 404; }
+    # hides the framework banner served at /
+    location = / { return 404; }
+
+    # matchmaking: POST /matchmake/<method>/<roomName>. One budget per kind of request.
+    location ~ ^/matchmake/(create|joinOrCreate)/ {
+        limit_req zone=rumble_create burst=6 nodelay;
+        proxy_pass http://${UPSTREAM};
+    }
+    location ~ ^/matchmake/(join|joinById)/ {
+        limit_req zone=rumble_join burst=20 nodelay;
+        proxy_pass http://${UPSTREAM};
+    }
+    location ~ ^/matchmake/reconnect/ {
+        limit_req zone=rumble_reconnect burst=60 nodelay;
+        proxy_pass http://${UPSTREAM};
+    }
+    location /matchmake/ { return 404; }
+
+    # the game socket: /<processId>/<roomId>?sessionId=...  (anything else is not ours)
+    location ~ "^/[A-Za-z0-9_-]{4,24}/[A-Za-z0-9_-]{4,24}$" {
+        if ($http_upgrade != "websocket") { return 404; }
+        limit_req zone=rumble_ws burst=40 nodelay;
+        proxy_pass http://${UPSTREAM};
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        # the server pings every 3 s, so a quiet socket is a dead one; 75 s tolerates a long mobile stall
+        proxy_read_timeout 75s;
+        proxy_send_timeout 75s;
+        proxy_buffering off;
+    }
+
+    location / { return 404; }
+}

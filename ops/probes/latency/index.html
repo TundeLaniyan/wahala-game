@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>WAHALA latency check</title>
+<style>
+  body{font:16px/1.4 system-ui,sans-serif;margin:0;padding:16px;background:#0e1117;color:#e6edf3}
+  h1{font-size:20px;margin:0 0 4px} p{margin:6px 0;color:#9aa4b2}
+  label{display:block;margin:10px 0 4px} input,textarea,select{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:inherit;font:inherit}
+  textarea{height:150px;font:13px/1.3 ui-monospace,monospace}
+  button{padding:12px 18px;border-radius:8px;border:0;background:#238636;color:#fff;font:600 16px system-ui;margin:12px 8px 12px 0}
+  button.secondary{background:#30363d}
+  table{border-collapse:collapse;width:100%;margin-top:12px;font-size:14px} th,td{padding:6px 4px;border-bottom:1px solid #21262d;text-align:right} th:first-child,td:first-child{text-align:left;word-break:break-all}
+  .bad{color:#f85149}.ok{color:#3fb950}.warn{color:#d29922}
+  pre{white-space:pre-wrap;word-break:break-all;background:#161b22;padding:10px;border-radius:8px;font-size:12px}
+</style>
+</head>
+<body>
+<h1>WAHALA latency check</h1>
+<p>Times small requests from <b>this phone</b> to each address and reports round-trip time, jitter and loss. Run it on mobile data (MTN / Airtel / Glo / 9mobile) and on Wi-Fi, in the place where people will play. Nothing is installed or uploaded.</p>
+
+<label for="net">Network you are on (you type this)</label>
+<select id="net"><option>MTN 4G</option><option>MTN 5G</option><option>Airtel 4G</option><option>Glo 4G</option><option>9mobile / T2 4G</option><option>Wi-Fi</option><option>Other</option></select>
+<label for="city">Where (area / city)</label>
+<input id="city" placeholder="e.g. Yaba, Lagos" autocomplete="off">
+<label for="targets">Addresses to test, one per line: <code>name | https-url</code></label>
+<textarea id="targets" spellcheck="false"></textarea>
+<label for="n">Samples per address</label>
+<input id="n" type="number" value="30" min="10" max="100">
+<div><button id="run">Start</button><button id="copy" class="secondary">Copy results</button></div>
+<p id="status"></p>
+<table id="out"><thead><tr><th>Address</th><th>min</th><th>median</th><th>p95</th><th>jitter</th><th>loss</th></tr></thead><tbody></tbody></table>
+<p>Times are milliseconds. The first request to an address pays the connection set-up and is reported separately.</p>
+<pre id="json" hidden></pre>
+<script>
+"use strict";
+// Public region endpoints used only as latency targets. They are NOT ours, may change or disappear, and a blocked or
+// failed address simply shows 100% loss. Replace them with your own candidate hosts' /health when you have them.
+const DEFAULTS = [
+  "AWS London eu-west-2 | https://dynamodb.eu-west-2.amazonaws.com/ping",
+  "AWS Paris eu-west-3 | https://dynamodb.eu-west-3.amazonaws.com/ping",
+  "AWS Frankfurt eu-central-1 | https://dynamodb.eu-central-1.amazonaws.com/ping",
+  "AWS Stockholm eu-north-1 | https://dynamodb.eu-north-1.amazonaws.com/ping",
+  "AWS Cape Town af-south-1 | https://dynamodb.af-south-1.amazonaws.com/ping",
+  "AWS N. Virginia us-east-1 | https://dynamodb.us-east-1.amazonaws.com/ping"
+];
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+$("targets").value = (params.get("t") ? params.get("t").split(",").map((u) => u.trim()).filter(Boolean) : DEFAULTS).join("\n");
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const pct = (sorted, p) => sorted.length ? sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * p) - 1)] : NaN;
+const f = (x) => Number.isFinite(x) ? Math.round(x) : "-";
+
+/** One timed request. no-cors: the response is opaque but arrives only when the server has answered. */
+async function once(url) {
+  const t0 = performance.now();
+  try {
+    await fetch(url + (url.includes("?") ? "&" : "?") + "r=" + Math.random().toString(36).slice(2), { mode: "no-cors", cache: "no-store", credentials: "omit", signal: AbortSignal.timeout(5000) });
+    return performance.now() - t0;
+  } catch { return null; }
+}
+
+/** Measures `name | url`. Returns summary stats; sample 0 (connection set-up) is kept apart. */
+async function measure(line, n, onTick) {
+  const [name, url] = line.includes("|") ? line.split("|").map((s) => s.trim()) : [line.trim(), line.trim()];
+  const setup = await once(url);
+  const samples = [];
+  let lost = 0;
+  for (let i = 0; i < n; i++) {
+    const ms = await once(url);
+    if (ms === null) lost++; else samples.push(ms);
+    onTick(name, i + 1, n);
+    await sleep(120);
+  }
+  const s = [...samples].sort((a, b) => a - b);
+  const diffs = samples.slice(1).map((v, i) => Math.abs(v - samples[i]));
+  const jitter = diffs.length ? diffs.reduce((a, b) => a + b, 0) / diffs.length : NaN;
+  return { name, url, setupMs: setup === null ? null : Math.round(setup), n, ok: samples.length, lossPct: Math.round((lost / n) * 100), minMs: Math.round(s[0] ?? NaN), medianMs: Math.round(pct(s, 0.5)), p95Ms: Math.round(pct(s, 0.95)), jitterMs: Math.round(jitter) };
+}
+
+let last = null;
+$("run").onclick = async () => {
+  const lines = $("targets").value.split("\n").map((s) => s.trim()).filter(Boolean);
+  const n = Math.max(10, Math.min(100, Number($("n").value) || 30));
+  $("run").disabled = true; $("out").tBodies[0].innerHTML = "";
+  const results = [];
+  for (const line of lines) {
+    const r = await measure(line, n, (name, i, total) => { $("status").textContent = `${name}: ${i}/${total}`; });
+    results.push(r);
+    const cls = r.lossPct > 5 || !Number.isFinite(r.medianMs) ? "bad" : r.medianMs > 200 ? "bad" : r.medianMs > 120 ? "warn" : "ok";
+    const tr = document.createElement("tr");
+    for (const [i, v] of [r.name, f(r.minMs), f(r.medianMs), f(r.p95Ms), f(r.jitterMs), r.lossPct + "%"].entries()) {
+      const td = document.createElement("td"); td.textContent = v; if (i === 2) td.className = cls; tr.append(td);
+    }
+    $("out").tBodies[0].append(tr);
+  }
+  last = { at: new Date().toISOString(), network: $("net").value, where: $("city").value, userAgent: navigator.userAgent, effectiveType: navigator.connection?.effectiveType ?? null, rttHintMs: navigator.connection?.rtt ?? null, results };
+  $("json").hidden = false; $("json").textContent = JSON.stringify(last, null, 1);
+  $("status").textContent = "Done. Tap Copy results and send them back.";
+  $("run").disabled = false;
+};
+$("copy").onclick = async () => {
+  if (!last) return;
+  try { await navigator.clipboard.writeText(JSON.stringify(last)); $("status").textContent = "Copied."; }
+  catch { $("json").hidden = false; $("status").textContent = "Select the text below and copy it."; }
+};
+</script>
+</body>
+</html>
