@@ -105,10 +105,10 @@ export interface StalkResult {
   humanDied: boolean;
 }
 
-const idx = (s: GameState, x: number, y: number): number => y * s.width + x;
+export const idx = (s: GameState, x: number, y: number): number => y * s.width + x;
 
 /** Tiles the human may walk through now: open floor, no living body (his own aside), no generator. */
-function walkable(s: GameState, x: number, y: number): boolean {
+export function walkable(s: GameState, x: number, y: number): boolean {
   if (x < 0 || y < 0 || x >= s.width || y >= s.height) return false;
   if (s.tiles[idx(s, x, y)] !== Tile.Empty) return false;
   for (const p of s.players) if (p.alive && p.id !== 0 && p.x === x && p.y === y) return false;
@@ -117,7 +117,7 @@ function walkable(s: GameState, x: number, y: number): boolean {
 }
 
 /** Breadth-first walk from (sx, sy): the first step direction to the nearest goal tile, or null. */
-function bfs(
+export function bfs(
   s: GameState,
   sx: number,
   sy: number,
@@ -394,7 +394,7 @@ export function stalk(o: StalkOptions): StalkResult {
 import { tick } from '../../src/sim';
 import type { SimEvent } from '../../src/sim';
 /** `step` that also returns the tick's events (the enemy bots decide, the human does `human`). */
-function stepEvents(
+export function stepEvents(
   s: GameState,
   bots: ReturnType<typeof raidWithBots>['bots'],
   human: Intents[number],
@@ -404,7 +404,7 @@ function stepEvents(
   return tick(s, intents);
 }
 
-const dirOf = (dx: number, dy: number): Dir =>
+export const dirOf = (dx: number, dy: number): Dir =>
   Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
 
 export interface DwellResult {
