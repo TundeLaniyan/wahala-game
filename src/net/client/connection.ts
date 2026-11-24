@@ -87,6 +87,9 @@ export class Connection {
     this.room = room;
     room.reconnection.maxRetries = MAX_RETRIES;
     room.reconnection.maxDelay = MAX_DELAY_MS;
+    // the SDK gives up at once on a connection younger than `minUptime` (5 s). A phone that drops while its match is still
+    // loading is exactly that case, and the server holds the seat anyway: always try to come back.
+    room.reconnection.minUptime = 0;
     const h = this.handlers;
     room.onMessage(MSG.welcome, (m: WelcomeMsg) => h.welcome(m));
     room.onMessage(MSG.lobby, (m: LobbyMsg) => h.lobby(m));

@@ -29,6 +29,13 @@ export default function RumbleOnlineScreen() {
     s.step === 'room' && !!s.lobby && (s.lobby.countdownMs !== null || s.lobby.autoStartMs !== null);
   const now = useNow(ticking);
 
+  // The in-match layer (connection chip, reconnect banner, results) is its own lazy chunk. Fetch it now, while the network
+  // is known to work: a phone that drops the moment the match starts must still be told it dropped (a fetch started then
+  // would fail offline and leave the player with no feedback).
+  useEffect(() => {
+    void import('./RumbleOnlineOverlay').catch(() => undefined);
+  }, []);
+
   // Esc / gamepad B belong to the flow while this screen is up (the room asks before leaving)
   useEffect(
     () => setScreenNavHandler((c) => (c === 'cancel' || c === 'back' ? onlineFlow.back() : false)),

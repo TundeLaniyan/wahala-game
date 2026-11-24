@@ -239,16 +239,44 @@ test('the connection drops while the match is loading: told, never an endless sp
   test.setTimeout(600_000);
   const code = await createRoom(page, 'Host Bisi');
   const ctxB = await newPhone(browser);
+  // a slow phone: the guest's 3D model downloads are held until released, so its match stays on the loading screen
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  await ctxB.route(/\.glb(\?.*)?$/, async (route) => {
+    await gate;
+    await route.continue().catch(() => undefined);
+  });
   const guest = await ctxB.newPage();
+  const sockets: string[] = [];
+  const t0 = Date.now();
+  const at = (): string => `+${((Date.now() - t0) / 1000).toFixed(1)}s`;
+  guest.on('websocket', (ws) => {
+    const idx = sockets.length;
+    let frames = 0;
+    sockets.push(`#${idx} open ${at()}`);
+    ws.on('framereceived', () => {
+      frames++;
+      sockets[idx] = `#${idx} open, ${frames} frames in, last at ${at()}`;
+    });
+    ws.on('close', () => sockets.push(`#${idx} closed ${at()} after ${frames} frames`));
+  });
+  guest.on('console', (m) => {
+    if (/net|online|rumble|reconnect|resync/i.test(m.text()))
+      sockets.push(`console ${at()}: ${m.text().slice(0, 160)}`);
+  });
   try {
     await joinRoom(guest, code, 'Guest Chidi');
     await page.getByTestId('ro-ready').click();
     await guest.getByTestId('ro-ready').click();
     await expect(page.getByTestId('ro-start')).toBeEnabled({ timeout: 30_000 });
     await page.getByTestId('ro-start').click();
-    // the guest loses the network while the match is loading (phase "playing", its arena still compiling). A drop during
-    // the countdown is a lobby drop: the server lets that seat go (the room tells the player, "Try again" rejoins).
-    await expect(guest.getByTestId('ro-loading')).toBeVisible({ timeout: 90_000 });
+    sockets.push(`start clicked ${at()}`);
+    // the guest loses the network while the match is loading (phase "playing", its arena models still downloading). A
+    // drop during the countdown is a lobby drop instead: the server lets that seat go (the room tells the player).
+    await expect(guest.getByTestId('match-loading').or(guest.getByTestId('ro-loading'))).toBeVisible({
+      timeout: 90_000,
+    });
+    sockets.push(`offline ${at()}`);
     await ctxB.setOffline(true);
     await guest.waitForTimeout(6000);
     // told in plain words: a reconnect banner / status, or the loading card's stalled note
@@ -258,11 +286,33 @@ test('the connection drops while the match is loading: told, never an endless sp
         .or(guest.getByTestId('ro-loading-stalled'))
         .or(guest.getByTestId('ro-conn-note')),
     ).toBeVisible({ timeout: 60_000 });
+    sockets.push(`online ${at()}`);
     await ctxB.setOffline(false);
+    release();
     // and it gets into the match (the server re-sends a keyframe to the same seat)
     await Promise.all([inMatch(page), inMatch(guest)]);
     expect((await W(guest).state()).humans).toBe(2);
+  } catch (e) {
+    console.log(
+      `[scenario 3 diagnostics] guest=${JSON.stringify(
+        await W(guest)
+          .state()
+          .catch(() => null),
+      )} host=${JSON.stringify(
+        await W(page)
+          .state()
+          .catch(() => null),
+      )}\n` +
+        `sockets:\n${sockets.join('\n')}\nguest text: ${(
+          await guest
+            .locator('body')
+            .innerText()
+            .catch(() => '')
+        ).slice(0, 500)}`,
+    );
+    throw e;
   } finally {
+    release();
     await ctxB.close();
   }
 });
