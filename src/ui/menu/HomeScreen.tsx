@@ -4,8 +4,11 @@
  * Offline, one human against AI bots: no accounts, servers or store. Everything else (Quick Match, Classic Blast,
  * City Rumble, the arena and rules) is one tap further, on Choose How to Play.
  */
+import { useState } from 'react';
 import { campaignProgress } from '../../campaign';
 import { flags } from '../../platform';
+import { rumbleOnlineOffered } from '../../app/rumbleFlags';
+import { loadRumbleOnline } from '../../online/rumbleEntry';
 import { CHARACTERS, CHARACTER_IDS } from '../../sim';
 import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
@@ -20,7 +23,19 @@ export const HOME_COPY = {
   learn: { title: 'LEARN TO PLAY', sub: 'Training Academy' },
 } as const;
 
+/** The Online City Rumble entry: loads the online chunk (guarded dynamic import) and opens its flow. Never at page load. */
+async function openRumbleOnline(): Promise<boolean> {
+  try {
+    const api = await loadRumbleOnline();
+    api?.open();
+    return api !== null;
+  } catch {
+    return false; // the online chunk could not be fetched (offline, a stale cache): say so instead of doing nothing
+  }
+}
+
 export function HomeScreen() {
+  const [onlineFailed, setOnlineFailed] = useState(false);
   const s = useGameStore((st) => st.settings);
   useGameStore((st) => st.portraitsVersion);
   const campaign = useGameStore((st) => st.campaign);
@@ -77,7 +92,23 @@ export function HomeScreen() {
           >
             <b>{HOME_COPY.learn.title}</b>
           </button>
-          {flags().online && (
+          {__WAHALA_SERVER_ONLINE__ && rumbleOnlineOffered() && (
+            <button
+              type="button"
+              className="mn-home-second rumble-online"
+              data-testid="home-rumble-online"
+              onClick={() => void openRumbleOnline().then((ok) => setOnlineFailed(!ok))}
+            >
+              <b>PLAY ONLINE</b>
+              <small role={onlineFailed ? 'alert' : undefined}>
+                {onlineFailed
+                  ? "Couldn't load Online. Check your connection."
+                  : 'City Rumble · up to 32 fighters'}
+              </small>
+            </button>
+          )}
+          {/* the older mock preview: only in mock mode (`?mockonline`), never beside the real Online City Rumble entry */}
+          {flags().onlineMode === 'mock' && (
             <button
               type="button"
               className="mn-home-second online"

@@ -32,6 +32,7 @@ import { CampaignController } from './campaign';
 import { MatchController } from './MatchController';
 import type { ScenarioDirector } from './MatchController';
 import type { MatchVariant } from './names';
+import type { RemoteMatchDriver } from './remoteMatch';
 import { matchArenaId } from './names';
 import { TutorialController } from './TutorialController';
 import { advance, back, currentScreen, editScreen, menuAt, openScreen } from './menu';
@@ -591,6 +592,25 @@ export const commands = {
     loader.back();
   },
   /** Leaves the match for the main menu, at `path` below home (default: the home screen). */
+  /**
+   * Online City Rumble (decision ON3, docs/ONLINE_INTEGRATION.md): plays a server-owned match through the same loading screen
+   * and presentation as an offline start. Called by the lazily loaded online controller once the driver has its first
+   * keyframe. `onExit` runs once when the player leaves through the menu (the online controller then leaves the room).
+   */
+  startRemote(driver: RemoteMatchDriver, onExit?: () => void): void {
+    const arena = driver.state()?.arenaId ?? null;
+    loadMatch(
+      'match',
+      () => controller?.startRemote(driver, onExit ?? null),
+      () => commands.toTitle(),
+      arena,
+    );
+  },
+  /** Starts loading an arena's 3D models now (the online room does it when the lobby names the arena). A no-op when loaded. */
+  prefetchModels(arenaId: string): void {
+    const ids = arenaModels(arenaId);
+    if (ids) void assets.load(ids);
+  },
   toTitle(path: readonly MenuScreen[] = []): void {
     audio.playUi('back');
     subtitles.clear();
@@ -843,10 +863,11 @@ const SPECTATE_KEYS: Record<string, 1 | -1> = {
  * The running match for presentation widgets that draw the board themselves (the City Rumble
  * minimap). Read-only: never mutate the returned state.
  */
-export function liveMatch(): { state: GameState; focusId: number } | null {
+export function liveMatch(): { state: GameState; focusId: number; localId: number } | null {
   const state = controller?.state;
   if (!state) return null;
-  return { state, focusId: controller?.spectating ?? 0 };
+  const localId = controller?.localSeat ?? 0;
+  return { state, focusId: controller?.spectating ?? localId, localId };
 }
 
 /**

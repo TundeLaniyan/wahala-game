@@ -6,6 +6,7 @@
   "description": "WAHALA! - Nigerian-inspired browser arcade game (offline solo vs AI)",
   "scripts": {
     "dev": "vite",
+    "dev:online": "node scripts/dev-online.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -25,7 +26,9 @@
     "boss-measure": "tsx scripts/boss-measure.ts",
     "combat-lab-compare": "tsx scripts/combat-lab-compare.ts",
     "streak-measure": "tsx scripts/streak-measure.ts",
-    "check:static": "vite build && node scripts/check-static-build.mjs"
+    "check:static": "vite build && node scripts/check-static-build.mjs",
+    "build:online": "WAHALA_ONLINE_ENABLED=true WAHALA_ONLINE_URL='ws://{host}:2567' vite build --outDir dist-online --emptyOutDir",
+    "test:online-e2e": "node scripts/online-e2e.mjs"
   },
   "dependencies": {
     "@fontsource/anton": "^5.3.0",
@@ -38,6 +41,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@colyseus/sdk": "^0.18.10",
     "@eslint/js": "^10.0.1",
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/extensions": "^4.5.1",

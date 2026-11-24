@@ -1,0 +1,26 @@
+{
+  "name": "wahala-rumble-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "WAHALA! City Rumble authoritative multiplayer server (Colyseus room shell around the transport-agnostic match)",
+  "scripts": {
+    "dev": "../node_modules/.bin/tsx watch src/main.ts",
+    "start": "../node_modules/.bin/tsx src/main.ts",
+    "typecheck": "../node_modules/.bin/tsc --noEmit -p tsconfig.json",
+    "test": "../node_modules/.bin/vitest run --config vitest.config.ts",
+    "client": "../node_modules/.bin/vite --config vite.client.config.ts",
+    "demo:two": "node e2e/two-clients.mjs",
+    "load": "../node_modules/.bin/tsx bench/load.ts",
+    "load:report": "../node_modules/.bin/tsx bench/loadReport.ts",
+    "load:suite": "../node_modules/.bin/tsx bench/loadSuite.ts",
+    "bundle": "../node_modules/.bin/esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/rumble-server.mjs --banner:js=\"import { createRequire as __wahalaRequire } from 'node:module'; const require = __wahalaRequire(import.meta.url);\" --log-level=warning"
+  },
+  "dependencies": {
+    "@colyseus/core": "^0.18.10",
+    "@colyseus/ws-transport": "^0.18.5"
+  },
+  "devDependencies": {
+    "@colyseus/sdk": "^0.18.10"
+  }
+}

@@ -6,7 +6,8 @@
 import { Suspense, lazy, useEffect, useRef } from 'react';
 import { commands } from '../../app/session';
 import { flags } from '../../platform';
-import { currentScreen, onlineScreenReady } from '../../app/menu';
+import { currentScreen, onlineScreenReady, rumbleOnlineScreenReady } from '../../app/menu';
+import { rumbleOnlineOffered } from '../../app/rumbleFlags';
 import type { MenuScreen } from '../../app/menu';
 import { useGameStore } from '../../app/store';
 import { FLOWFRAME } from '../../render/perf/brand';
@@ -36,6 +37,14 @@ import './redesign.css';
 // The online PREVIEW is its own chunk: a default build never downloads it (it is only reachable with flags().online).
 const OnlineScreen = lazy(() => import('../online/OnlineScreen').then((m) => ({ default: m.OnlineScreen })));
 
+// Online City Rumble (entry, room, loading): its own chunk, present ONLY in a build made with the online switch. With the
+// constant false the bundler drops the import, so a default build emits no online chunk (docs/ONLINE_INTEGRATION.md).
+const RumbleOnlineScreen = __WAHALA_SERVER_ONLINE__
+  ? lazy(() => import('../online/rumble/RumbleOnlineScreen'))
+  : null;
+
+const NoScreen = () => null;
+
 const SCREENS: Record<MenuScreen, React.ComponentType> = {
   home: HomeScreen,
   play: PlayScreen,
@@ -52,6 +61,7 @@ const SCREENS: Record<MenuScreen, React.ComponentType> = {
   campaignResult: ResultScreen,
   campaignComplete: CompleteScreen,
   online: OnlineScreen,
+  rumbleOnline: RumbleOnlineScreen ?? NoScreen,
 };
 
 export function MainMenu() {
@@ -59,6 +69,10 @@ export function MainMenu() {
   const loading = useGameStore((s) => s.loading);
   const campaignOk = useGameStore((s) => campaignScreenReady(currentScreen(s.menu), s.campaign));
   const onlineOk = onlineScreenReady(screen, flags().online);
+  const rumbleOnlineOk = rumbleOnlineScreenReady(
+    screen,
+    RumbleOnlineScreen !== null && rumbleOnlineOffered(),
+  );
   const root = useRef<HTMLDivElement>(null);
   useMenuNav(root, () => {
     if (useGameStore.getState().menu.stack.length <= 1) return false;
@@ -78,6 +92,10 @@ export function MainMenu() {
   useEffect(() => {
     if (!onlineOk) commands.menuHome();
   }, [onlineOk]);
+  // online City Rumble without its build / flag (stale menu state) goes home instead of showing anything
+  useEffect(() => {
+    if (!rumbleOnlineOk) commands.menuHome();
+  }, [rumbleOnlineOk]);
   const Screen = SCREENS[screen];
   const busy = loading !== null && loading.done < loading.total;
   return (
@@ -88,7 +106,7 @@ export function MainMenu() {
         <i className="mn-grain" />
       </div>
       <div className="mn-stage" key={screen}>
-        <Suspense fallback={null}>{onlineOk && <Screen />}</Suspense>
+        <Suspense fallback={null}>{onlineOk && rumbleOnlineOk && <Screen />}</Suspense>
       </div>
       {screen === 'home' && <FirstVisitCard />}
       {busy && loading && (

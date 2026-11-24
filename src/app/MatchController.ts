@@ -47,6 +47,7 @@ import { buildMatchOptions, buildPlayers, suddenDeathTestSetup } from './names';
 import type { MatchVariant } from './names';
 import { cycleSpectateTarget, pickSpectateTarget } from './spectate';
 import { NULL_AUDIO } from './ports';
+import type { RemoteMatchDriver } from './remoteMatch';
 import type {
   AudioPort,
   Bot,
@@ -131,8 +132,22 @@ export interface ControllerDeps {
  */
 export class MatchController implements MissionHost {
   state: GameState | null = null;
+  /**
+   * The seat the local human controls. Offline it is always seat 0 (`LOCAL_ID`); an online match (`startRemote`) controls the
+   * seat the server assigned. Everything the HUD, toasts, kill feed, camera and audio read about "me" goes through it.
+   */
+  private localId = LOCAL_ID;
+  /**
+   * An ONLINE match (docs/ONLINE_INTEGRATION.md, decision ON3): state comes from the driver's server replica instead of the
+   * local simulation, and the local intent is handed to the driver. Null in every offline mode.
+   */
+  private remote: RemoteMatchDriver | null = null;
+  /** Called once when the player leaves an online match through the controller (menu / exit), never when a new online match replaces it. */
+  private remoteExit: (() => void) | null = null;
+  /** The replica's interpolation alpha of the last frame (online only). */
+  private remoteAlpha = 0;
   private bots = new Map<number, Bot>();
-  private readonly entry = new VehicleEntryController(LOCAL_ID);
+  private entry = new VehicleEntryController(LOCAL_ID);
   private readonly audio: MatchAudio;
   private accumulator = 0;
   private lastMs = -1;
@@ -202,6 +217,7 @@ export class MatchController implements MissionHost {
   // ------------------------------------------------------------------ lifecycle
 
   start(settings: GameSettings, seed = Math.floor(Math.random() * 2 ** 31), variant?: MatchVariant): void {
+    this.leaveRemote();
     this.director = null;
     this.briefHold = false;
     this.mission = null;
@@ -267,8 +283,84 @@ export class MatchController implements MissionHost {
       subtitle: null,
       summary: null,
       skipping: false,
-      hud: buildHud(state, LOCAL_ID, null),
+      hud: buildHud(state, this.localId, null),
     });
+  }
+
+  /**
+   * Online City Rumble (decision ON3): plays a match whose state the SERVER owns. The controller keeps its whole
+   * presentation pipeline (HUD, toasts, kill feed, audio, camera, minimap, markers, warnings); only where the next state
+   * comes from (`driver.advance`) and where the local intent goes (`driver.sendIntent`) differ. No bots run here, no result
+   * screen is built here (the online controller shows the server's results), and the local seat is the driver's.
+   * Call it once the driver has its first keyframe (`driver.state()` non-null).
+   */
+  startRemote(driver: RemoteMatchDriver, onExit: (() => void) | null = null): void {
+    const state = driver.state();
+    if (!state) throw new Error('startRemote: the driver has no state yet');
+    this.leaveRemote(false); // a new online match replaces the old one: the room stays
+    this.remoteExit = onExit;
+    this.director = null;
+    this.briefHold = false;
+    this.mission = null;
+    this.clearRaid();
+    this.settings = null;
+    this.variant = undefined;
+    this.remote = driver;
+    this.remoteAlpha = 0;
+    this.localId = driver.localId;
+    this.entry = new VehicleEntryController(this.localId);
+    this.state = state;
+    this.rumble = getArena(state.arenaId).kind === 'rumble';
+    if (!this.rumble) this.audio.setListener?.(null);
+    this.spectateId = null;
+    this.skipping = false;
+    this.closingAnnounced = false;
+    this.bots = new Map(); // the server's bots play there; none here
+    this.accumulator = 0;
+    this.lastMs = -1;
+    this.paused = false;
+    this.frozen = false;
+    this.endedAtMs = null;
+    this.excitement = 0.2;
+    this.countdownShown = -1;
+    this.forced = {};
+    this.entry.sync(state);
+    this.deps.input.clear();
+    this.blocked.reset();
+    this.deps.renderer.loadGame(state);
+    this.deps.input.setCardinalOnly?.(false);
+    this.audio.startMusic(state.arenaId);
+    this.audio.setIntensity(0);
+    patch({ combatLab: 0, online: true });
+    patch({
+      screen: 'playing',
+      paused: false,
+      toasts: [],
+      subtitle: null,
+      summary: null,
+      skipping: false,
+      hud: buildHud(state, this.localId, null),
+    });
+  }
+
+  /** Leaves an online match: releases the driver and gives the controller back to seat 0 (every offline mode). Idempotent. */
+  private leaveRemote(callExit = true): void {
+    const driver = this.remote;
+    if (!driver) return;
+    this.remote = null;
+    const exit = this.remoteExit;
+    this.remoteExit = null;
+    driver.dispose();
+    patch({ online: false });
+    if (callExit) exit?.();
+    this.localId = LOCAL_ID;
+    this.entry = new VehicleEntryController(LOCAL_ID);
+    this.remoteAlpha = 0;
+  }
+
+  /** True while an online match is being played (the pause menu and results flow behave differently). */
+  get isRemote(): boolean {
+    return this.remote !== null;
   }
 
   /**
@@ -278,6 +370,7 @@ export class MatchController implements MissionHost {
    * match goes to `meta.onEnd` instead of the normal results screen.
    */
   startMission(options: GameOptions, meta: MissionMeta): void {
+    this.leaveRemote();
     this.director = null;
     this.briefHold = false;
     this.settings = null;
@@ -328,7 +421,7 @@ export class MatchController implements MissionHost {
       subtitle: null,
       summary: null,
       skipping: false,
-      hud: buildHud(state, LOCAL_ID, null),
+      hud: buildHud(state, this.localId, null),
     });
   }
 
@@ -364,6 +457,7 @@ export class MatchController implements MissionHost {
     if (!this.raid && this.mission && this.state) {
       this.fieldStash = { state: this.state, bots: this.bots, mission: this.mission, rumble: this.rumble };
     }
+    this.leaveRemote();
     this.director = null;
     this.settings = null;
     this.mission = null;
@@ -402,7 +496,7 @@ export class MatchController implements MissionHost {
       subtitle: null,
       summary: null,
       skipping: false,
-      hud: buildHud(state, LOCAL_ID, null),
+      hud: buildHud(state, this.localId, null),
     });
   }
 
@@ -437,7 +531,7 @@ export class MatchController implements MissionHost {
       subtitle: null,
       summary: null,
       skipping: false,
-      hud: buildHud(stash.state, LOCAL_ID, null),
+      hud: buildHud(stash.state, this.localId, null),
     });
     return true;
   }
@@ -463,6 +557,7 @@ export class MatchController implements MissionHost {
    * follows; `start` returns to normal play.
    */
   startScenario(state: GameState, director: ScenarioDirector, botSeats: readonly ScenarioBot[] = []): void {
+    this.leaveRemote();
     this.director = director;
     this.briefHold = false;
     this.mission = null;
@@ -495,7 +590,7 @@ export class MatchController implements MissionHost {
       toasts: [],
       subtitle: null,
       summary: null,
-      hud: buildHud(state, LOCAL_ID, null),
+      hud: buildHud(state, this.localId, null),
     });
   }
 
@@ -561,6 +656,7 @@ export class MatchController implements MissionHost {
   }
 
   stop(): void {
+    this.leaveRemote();
     this.director = null;
     this.briefHold = false;
     this.mission = null;
@@ -598,6 +694,10 @@ export class MatchController implements MissionHost {
   frame(nowMs: number): void {
     const state = this.state;
     if (!state) return;
+    if (this.remote) {
+      this.remoteFrame(nowMs);
+      return;
+    }
     this.deps.input.pollDevices();
     const dtMs = this.lastMs < 0 ? STEP_MS : Math.min(nowMs - this.lastMs, MAX_FRAME_MS);
     this.lastMs = nowMs;
@@ -622,6 +722,52 @@ export class MatchController implements MissionHost {
   }
 
   /**
+   * One animation frame of an online match: the server's frames are played out (never simulated here), the local intent is
+   * sent, and everything else is the offline presentation. The match does not pause for anyone: opening the menu only
+   * stops this player's input (their fighter stands still), as it would anywhere else.
+   */
+  private remoteFrame(nowMs: number): void {
+    const driver = this.remote!;
+    this.deps.input.pollDevices();
+    const dtMs = this.lastMs < 0 ? STEP_MS : Math.min(nowMs - this.lastMs, 250);
+    this.lastMs = nowMs;
+    const next = driver.state();
+    if (!next) return; // a resync cleared the replica: keep drawing the last picture until the keyframe arrives
+    this.state = next;
+    const advanced =
+      this.loadHold || this.frozen ? { events: [], alpha: this.remoteAlpha } : driver.advance(dtMs);
+    this.remoteAlpha = advanced.alpha;
+    if (!driver.ended()) this.sendRemoteIntent(next, driver, this.paused || this.loadHold);
+    this.afterFrame(advanced.events, nowMs, this.paused ? 0 : dtMs / 1000);
+  }
+
+  /**
+   * The local fighter's intent for an online frame: the SAME real input layer as offline (keyboard, gamepad, touch with the
+   * move assist), read from the replica's board. The server owns every outcome; `canMove` is always true because the server
+   * (which alone knows when the authoritative step finishes) latches a fresh press until it produces a step.
+   */
+  private sendRemoteIntent(state: GameState, driver: RemoteMatchDriver, idle: boolean): void {
+    const me = state.players[this.localId];
+    if (!me || !me.alive || idle) {
+      // a menu is open or the fighter is down: hand over NOTHING, so the server's held direction stops (it keeps the last
+      // one it was told; the driver sends the release once, then nothing while it stays idle)
+      this.deps.input.clear();
+      driver.sendIntent({}, state, 1);
+      return;
+    }
+    this.deps.input.navMode = false;
+    const intent = this.deps.input.buildIntent(state.tick, {
+      canMove: true,
+      remoteReady: me.remote && state.generators.some((g) => g.ownerId === me.id && g.mode === 'remote'),
+      legal: (d) => moveWouldAct(state, me, d),
+      board: () => buildMoveBoard(state, me),
+      locked: movementLocked(state, me),
+      quickHands: quickHandsActive(state, me),
+    });
+    driver.sendIntent(intent, state, 1);
+  }
+
+  /**
    * Debug / art review: advances `n` ticks and routes each tick's events exactly like real play
    * (renderer effects, audio, toasts), unlike `stepOnce`, which only runs the simulation.
    */
@@ -636,9 +782,9 @@ export class MatchController implements MissionHost {
     const state = this.state!;
     const director = this.director;
     const intents = this.collectIntents(state);
-    const me = state.players[LOCAL_ID];
+    const me = state.players[this.localId];
     const before =
-      inputTrace.enabled && me && intents[LOCAL_ID]?.move
+      inputTrace.enabled && me && intents[this.localId]?.move
         ? { x: me.x, y: me.y, wait: me.stepRemaining, locked: movementLocked(state, me) }
         : null;
     const events = tick(state, intents);
@@ -661,23 +807,23 @@ export class MatchController implements MissionHost {
 
   private collectIntents(state: GameState): Intents {
     const intents: Intents = {};
-    const me = state.players[LOCAL_ID];
+    const me = state.players[this.localId];
     const scene = this.director?.beforeTick(state) ?? null;
     if (me && !me.isBot && me.alive && this.scripted) {
       // a demo plays the local player: same selector, same intents, but from the script
       this.entry.sync(state);
       this.deps.input.navMode = false;
       this.deps.input.clear();
-      const intent: Intent = { ...scene?.intents[LOCAL_ID] };
+      const intent: Intent = { ...scene?.intents[this.localId] };
       for (const cmd of scene?.ui ?? []) {
         const v = this.applyUi(cmd, state);
         if (v) intent.vehicle = v;
       }
-      intents[LOCAL_ID] = intent;
+      intents[this.localId] = intent;
     } else if (me && !me.isBot && !me.alive && me.spectator !== null && !this.director) {
       // V2 standard match (not tutorials): the eliminated local player walks the sideline lane and throws with A
       this.deps.input.navMode = false;
-      intents[LOCAL_ID] = this.deps.input.buildIntent(state.tick, {
+      intents[this.localId] = this.deps.input.buildIntent(state.tick, {
         canMove: me.spectator.stepRemaining <= 1,
       });
     } else if (me && !me.isBot && me.alive) {
@@ -695,7 +841,7 @@ export class MatchController implements MissionHost {
         locked,
         quickHands: quickHandsActive(state, me),
       });
-      intents[LOCAL_ID] = intent;
+      intents[this.localId] = intent;
       // a classic raid: a request the simulation refuses is shown as a short bump of the fighter (decision TN3)
       if (inputModeFor(state).cardinalOnly)
         this.blocked.observe(
@@ -709,7 +855,7 @@ export class MatchController implements MissionHost {
       this.deps.input.navMode = false;
     }
     for (const [id, intent] of Object.entries(scene?.intents ?? {})) {
-      if (Number(id) !== LOCAL_ID && state.players[Number(id)]?.alive) intents[Number(id)] = intent;
+      if (Number(id) !== this.localId && state.players[Number(id)]?.alive) intents[Number(id)] = intent;
     }
     const botsAt = performance.now();
     for (const [id, bot] of this.bots) {
@@ -774,7 +920,7 @@ export class MatchController implements MissionHost {
     this.audio.handleEvents(heard, state);
     // optional vibration when the local player is hurt (decision NV4): touch play only, Settings > Vibration
     if (this.deps.input.activeDevice === 'touch')
-      vibrate(hapticFor(events, LOCAL_ID), useGameStore.getState().settings.vibration === 'on');
+      vibrate(hapticFor(events, this.localId), useGameStore.getState().settings.vibration === 'on');
     this.audio.setIntensity(
       state.match.phase === 'playing' && state.match.playTicks > state.config.match.durationTicks - 1800
         ? 1
@@ -786,13 +932,13 @@ export class MatchController implements MissionHost {
     this.countdownBeeps(state);
 
     // The renderer interpolates between ticks using the unspent accumulator.
-    const alpha = this.paused ? 0 : Math.min(1, this.accumulator / STEP_MS);
+    const alpha = this.remote ? this.remoteAlpha : this.paused ? 0 : Math.min(1, this.accumulator / STEP_MS);
     this.entry.sync(state);
     // fast-forwarding: draw only now and then, so the frame's time goes into simulating
     if (!this.skipping || this.skipFrames++ % SKIP_RENDER_EVERY === 0)
       this.timers.time('render', () =>
         this.deps.renderer.render(state, alpha, dt, {
-          localPlayerId: LOCAL_ID,
+          localPlayerId: this.localId,
           entryOverlay: this.entry.overlay(state),
           excitement: this.excitement,
           focusPlayerId: this.spectateId,
@@ -811,7 +957,7 @@ export class MatchController implements MissionHost {
     else if (this.mission) {
       this.watchMission(state, nowMs);
       this.watchDoor(state);
-    } else if (state.match.phase === 'ended' && !this.director) this.handleEnded(nowMs);
+    } else if (state.match.phase === 'ended' && !this.director && !this.remote) this.handleEnded(nowMs);
   }
 
   /** A door of the field mission raised a raid request: handed to the campaign once; the campaign starts the raid. */
@@ -895,12 +1041,12 @@ export class MatchController implements MissionHost {
       case 'vehicleWarning': {
         return {
           text: `${VEHICLE_DEFS[e.kind].name.toUpperCase()} INCOMING!`,
-          tone: e.ownerId === LOCAL_ID ? 'info' : 'bad',
+          tone: e.ownerId === this.localId ? 'info' : 'bad',
         };
       }
       // ---- kill-streak rewards (decision SK4): earned, active, consumed, lost - all in the HUD rail
       case 'streakRewardEarned': {
-        if (e.playerId !== LOCAL_ID) return null;
+        if (e.playerId !== this.localId) return null;
         const name = STREAK_REWARD_DEFS[e.reward].name;
         return {
           text:
@@ -913,18 +1059,20 @@ export class MatchController implements MissionHost {
         };
       }
       case 'streakRewardUsed':
-        return e.playerId === LOCAL_ID
+        return e.playerId === this.localId
           ? { text: `${STREAK_REWARD_DEFS[e.reward].name} USED`, tone: 'info', icon: e.reward }
           : null;
       case 'streakRewardEnded':
-        return e.playerId === LOCAL_ID ? { text: 'QUICK HANDS OVER', tone: 'info', icon: e.reward } : null;
+        return e.playerId === this.localId
+          ? { text: 'QUICK HANDS OVER', tone: 'info', icon: e.reward }
+          : null;
       case 'streakRewardResumed':
-        return e.playerId === LOCAL_ID
+        return e.playerId === this.localId
           ? { ...quickHandsResumedNotice(e.ticksLeft), icon: e.reward, ttlMs: 3400 }
           : null;
       // what the others see coming
       case 'vehicleGeneratorLaunched':
-        return e.ownerId === LOCAL_ID
+        return e.ownerId === this.localId
           ? null
           : {
               text: `${VEHICLE_DEFS[e.kind].name.toUpperCase()} WITH A GENERATOR!`,
@@ -932,21 +1080,21 @@ export class MatchController implements MissionHost {
               icon: 'vehicleGenerator',
             };
       case 'knockdownThrown':
-        return e.targetId === LOCAL_ID
+        return e.targetId === this.localId
           ? { text: 'GLOBAL KNOCKDOWN! DUCK!', tone: 'bad', icon: 'globalKnockdown' }
           : null;
       case 'localChampionThrow':
-        return e.targetId === LOCAL_ID
+        return e.targetId === this.localId
           ? { text: 'LOCAL CHAMPION! STEP OFF THE TILE!', tone: 'bad', icon: 'localChampion' }
           : null;
       case 'knockdownEnded':
-        return e.playerId === LOCAL_ID ? { text: 'GET UP AND RUN!', tone: 'info' } : null;
+        return e.playerId === this.localId ? { text: 'GET UP AND RUN!', tone: 'info' } : null;
       case 'trapsWarning':
         return { text: e.wave === 0 ? 'FINAL 30s: FLOOR TRAPS!' : 'MORE TRAPS!', tone: 'bad' };
       // a protection layer absorbed a lethal hit: not a death, so no elimination text (decision HC2)
       case 'protectionBroken':
-        return e.playerId === LOCAL_ID
-          ? { ...protectionNotice(e.layer, state.players[LOCAL_ID]!.armour), ttlMs: 3000 }
+        return e.playerId === this.localId
+          ? { ...protectionNotice(e.layer, state.players[this.localId]!.armour), ttlMs: 3000 }
           : null;
       // a boss mission's fight (decisions BH1-BH4): a real hit says how many are left, the window closing says it was missed
       case 'bossHit':
@@ -955,28 +1103,28 @@ export class MatchController implements MissionHost {
         return bossNotice(e);
       // campaign health: what hurt the player, or which layer took the hit (docs/CAMPAIGN_TEXT_NARRATION.md)
       case 'campaignHit':
-        return campaignHitNotice(e, batch, LOCAL_ID, state.players[LOCAL_ID]?.armour ?? 0);
+        return campaignHitNotice(e, batch, this.localId, state.players[this.localId]?.armour ?? 0);
       case 'playerTeleported':
-        return e.playerId === LOCAL_ID ? { text: 'THROUGH THE MANHOLE!', tone: 'info' } : null;
+        return e.playerId === this.localId ? { text: 'THROUGH THE MANHOLE!', tone: 'info' } : null;
       case 'generatorDoused': {
         const g = state.generators.find((o) => o.id === e.generatorId);
-        return g?.ownerId === LOCAL_ID ? { text: 'YOUR GENERATOR GOT SOAKED!', tone: 'bad' } : null;
+        return g?.ownerId === this.localId ? { text: 'YOUR GENERATOR GOT SOAKED!', tone: 'bad' } : null;
       }
       // kills, deaths and assists are the kill feed's job (killFeedFrom); the rail toasts keep the rest
       case 'playerEliminated': {
-        if (e.playerId === LOCAL_ID) {
+        if (e.playerId === this.localId) {
           // QUICK HANDS paused by the death: its unspent time is stored for the respawn (decision AS7)
-          const bank = state.players[LOCAL_ID]!.streakRewards.quickHandsBank;
+          const bank = state.players[this.localId]!.streakRewards.quickHandsBank;
           return bank > 0 && this.respawnMode ? { ...quickHandsStoredNotice(bank), ttlMs: 3400 } : null;
         }
         if (!this.rumble || this.respawnMode) return null;
         const left = state.players.filter((p) => p.alive).length;
-        if (state.players[LOCAL_ID]!.alive && (left === 10 || left === 5 || left === 3 || left === 2))
+        if (state.players[this.localId]!.alive && (left === 10 || left === 5 || left === 3 || left === 2))
           return { text: left === 2 ? 'FINAL TWO!' : `${left} LEFT STANDING`, tone: 'info' };
         return null;
       }
       case 'playerRespawned':
-        return e.playerId === LOCAL_ID && this.rumble
+        return e.playerId === this.localId && this.rumble
           ? { text: 'BACK IN! SPAWN PROTECTION', tone: 'info' }
           : null;
       case 'crushWarning': {
@@ -1003,11 +1151,11 @@ export class MatchController implements MissionHost {
       patch({ killFeed: [] });
     }
     const assistsOn = events.flatMap((e) =>
-      e.type === 'playerEliminated' && e.playerId !== LOCAL_ID && e.assistIds.includes(LOCAL_ID)
+      e.type === 'playerEliminated' && e.playerId !== this.localId && e.assistIds.includes(this.localId)
         ? [e.playerId]
         : [],
     );
-    const lines = newKillLines(state, LOCAL_ID, this.feedSeen, assistsOn);
+    const lines = newKillLines(state, this.localId, this.feedSeen, assistsOn);
     if (lines.length === 0) return;
     for (const l of lines) this.feedSeen.add(l.key);
     patch({ killFeed: pushKillLines(useGameStore.getState().killFeed, lines, nowMs, isCrowded(state)) });
@@ -1027,7 +1175,7 @@ export class MatchController implements MissionHost {
           vehicle: this.entry.vehicleKind,
         }
       : null;
-    const hud = buildHud(state, LOCAL_ID, entry, this.spectateId);
+    const hud = buildHud(state, this.localId, entry, this.spectateId);
     const boss = bossFeedback(this.bossMemory.game === state ? this.bossMemory : NO_BOSS_MEMORY, state.tick);
     if (boss) hud.bossFeedback = boss;
     patch({ hud });
@@ -1050,7 +1198,7 @@ export class MatchController implements MissionHost {
     }
     if (nowMs - this.endedAtMs > RESULTS_DELAY_MS && useGameStore.getState().screen === 'playing') {
       const result = state.match.result;
-      const me = state.players[LOCAL_ID]!;
+      const me = state.players[this.localId]!;
       // credited eliminations from the simulation (attribution.ts), never a separate count
       const summary: MatchSummary = {
         eliminations: state.players.map((p) => p.stats.kills),
@@ -1062,7 +1210,7 @@ export class MatchController implements MissionHost {
             : (me.eliminatedTick ?? state.tick) - state.config.match.countdownTicks) / 60,
         ),
         localWon:
-          (result?.kind === 'win' && result.winnerId === LOCAL_ID) ||
+          (result?.kind === 'win' && result.winnerId === this.localId) ||
           (result?.kind === 'teamWin' && isTeamMode(state.settings.game) && me.team === result.team),
       };
       this.audio.stopMusic();
@@ -1116,7 +1264,7 @@ export class MatchController implements MissionHost {
   }
 
   private sendVehicle(v: VehicleIntent): void {
-    this.forced[LOCAL_ID] = { ...this.forced[LOCAL_ID], vehicle: v };
+    this.forced[this.localId] = { ...this.forced[this.localId], vehicle: v };
   }
 
   /**
@@ -1173,7 +1321,7 @@ export class MatchController implements MissionHost {
 
   /** Tile the camera follows: the local player, or the survivor being watched. */
   private focusTile(state: GameState): { x: number; y: number } {
-    const p = state.players[this.spectateId ?? LOCAL_ID] ?? state.players[LOCAL_ID]!;
+    const p = state.players[this.spectateId ?? this.localId] ?? state.players[this.localId]!;
     return { x: p.x, y: p.y };
   }
 
@@ -1194,14 +1342,14 @@ export class MatchController implements MissionHost {
     const near = (x: number, y: number): boolean => Math.abs(x - f.x) <= range && Math.abs(y - f.y) <= range;
     const playerNear = (id: number): boolean => {
       const p = state.players[id];
-      return id === LOCAL_ID || (p !== undefined && near(p.x, p.y));
+      return id === this.localId || (p !== undefined && near(p.x, p.y));
     };
     return events.filter((e) => {
       if ('x' in e && typeof e.x === 'number' && 'y' in e && typeof e.y === 'number')
         return (
           near(e.x, e.y) ||
-          ('playerId' in e && e.playerId === LOCAL_ID) ||
-          ('ownerId' in e && e.ownerId === LOCAL_ID)
+          ('playerId' in e && e.playerId === this.localId) ||
+          ('ownerId' in e && e.ownerId === this.localId)
         );
       if ('playerId' in e) return playerNear(e.playerId);
       if ('ownerId' in e) return playerNear(e.ownerId);
@@ -1225,7 +1373,7 @@ export class MatchController implements MissionHost {
       this.spectateId = null;
       return;
     }
-    const me = state.players[LOCAL_ID];
+    const me = state.players[this.localId];
     if (!me || me.alive || state.match.phase === 'countdown') {
       this.spectateId = null;
       return;
@@ -1235,7 +1383,7 @@ export class MatchController implements MissionHost {
       this.spectateId = r?.kind === 'win' ? r.winnerId : this.spectateId;
       return;
     }
-    const next = pickSpectateTarget(state, LOCAL_ID, this.spectateId);
+    const next = pickSpectateTarget(state, this.localId, this.spectateId);
     if (next !== this.spectateId) this.hudClock = -Infinity; // show the new name right away
     this.spectateId = next;
   }
@@ -1243,7 +1391,7 @@ export class MatchController implements MissionHost {
   /** Spectator: watch the next (1) or previous (-1) survivor. */
   cycleSpectate(dir: 1 | -1): void {
     const state = this.state;
-    if (!state || !this.rumble || state.players[LOCAL_ID]?.alive) return;
+    if (!state || !this.rumble || state.players[this.localId]?.alive) return;
     this.spectateId = cycleSpectateTarget(state, this.spectateId, dir);
     this.publishHud(performance.now());
   }
@@ -1251,5 +1399,10 @@ export class MatchController implements MissionHost {
   /** The competitor the camera follows while spectating (null while the local player is alive). */
   get spectating(): number | null {
     return this.spectateId;
+  }
+
+  /** The seat the local human controls (always 0 offline; the server-assigned seat in an online match). */
+  get localSeat(): number {
+    return this.localId;
   }
 }

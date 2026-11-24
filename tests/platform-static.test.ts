@@ -7,19 +7,39 @@
  *  - `createOnline` with default flags never touches a socket.
  * The built output is checked separately by `npm run check:static` (scripts/check-static-build.mjs).
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createOnline } from '../src/online';
 import { resolveFlags } from '../src/platform';
 import { reachable, resolveSpecifier, specifiersOf, stripComments } from './importGraph';
+import { edgesOf, inZone, publicReach, ZONE_PACKAGES } from './online/importGuard';
+
+/** Every .ts/.tsx file under the given repo directories (repo-relative, forward slashes). */
+function walkSources(dirs: string[]): string[] {
+  return dirs.flatMap((d) =>
+    readdirSync(d).flatMap((n) => {
+      const p = join(d, n);
+      return statSync(p).isDirectory()
+        ? walkSources([p])
+        : /\.tsx?$/.test(p)
+          ? [p.split('\\').join('/')]
+          : [];
+    }),
+  );
+}
 
 const FORBIDDEN =
   /\b(WebSocket|RTCPeerConnection|getUserMedia|XMLHttpRequest|EventSource|RTCDataChannel|MediaRecorder)\b|wss?:\/\//;
 const OPTIONAL = /^src\/(online|voice|progression|ads|cosmetics|seasons)\//;
 const OPTIONAL_APP = /^src\/(app\/online\.ts|ui\/online\/)/;
 
+// The two guarded edges. Their guard is proved (not assumed) by the "online zone" block below.
 const guardedAdapterEdge = (from: string, spec: string): boolean =>
-  from.replace(/\\/g, '/').endsWith('src/online/index.ts') && spec === './server/adapter';
+  (from.replace(/\\/g, '/').endsWith('src/online/index.ts') && spec === './server/adapter') ||
+  (from.replace(/\\/g, '/').endsWith('src/online/rumbleEntry.ts') && spec === '../app/rumbleOnline');
+// The Home entry's helper (src/online/rumbleEntry.ts) is governed by its own rule below: only src/ui may import it.
+const RUMBLE_ENTRY = 'src/online/rumbleEntry.ts';
 
 describe('static build boundary (source level)', () => {
   const graph = reachable(['src/main.tsx'], { skipEdge: guardedAdapterEdge });
@@ -83,14 +103,18 @@ describe('the local game does not depend on the optional layers', () => {
     const importers = [...reachable(['src/main.tsx'])].filter((f) => {
       if (OPTIONAL.test(f) || OPTIONAL_APP.test(f)) return false;
       return specifiersOf(readFileSync(f, 'utf8')).some((spec) => {
-        const target = resolveSpecifier(f, spec);
-        return (
-          !!target &&
-          (OPTIONAL.test(target.replace(/\\/g, '/')) || OPTIONAL_APP.test(target.replace(/\\/g, '/')))
-        );
+        const target = resolveSpecifier(f, spec)?.replace(/\\/g, '/');
+        return !!target && target !== RUMBLE_ENTRY && (OPTIONAL.test(target) || OPTIONAL_APP.test(target));
       });
     });
-    expect(importers.sort()).toEqual(['src/ui/menu/MainMenu.tsx', 'src/ui/menu/SettingsScreen.tsx']);
+    // App.tsx is the lazy online overlay's edge (decision ON10, behind `__WAHALA_SERVER_ONLINE__`). HomeScreen.tsx reaches the
+    // online code only through the guarded entry src/online/rumbleEntry.ts (excluded above; the zone test below proves that
+    // edge is the single guarded dynamic import), so it is not an importer of an optional layer itself.
+    expect(importers.sort()).toEqual([
+      'src/ui/App.tsx',
+      'src/ui/menu/MainMenu.tsx',
+      'src/ui/menu/SettingsScreen.tsx',
+    ]);
   });
 
   it('the layers are one-directional: progression imports no online / voice; voice and ads import nothing optional', () => {
@@ -103,6 +127,111 @@ describe('the local game does not depend on the optional layers', () => {
     for (const f of reachable(['src/online/index.ts'], { skipEdge: guardedAdapterEdge })) {
       expect(f).not.toMatch(/^src\/(render|ui|audio|input|app)\//);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The online zone (decision ON2, docs/ONLINE_INTEGRATION.md section 3): src/net/**, src/app/rumbleOnline.ts,
+// src/ui/online/rumble/** and server/** exist only in the online chunk of a server build. The ONE edge from the public graph
+// into it is the dynamic import in src/online/rumbleEntry.ts, lexically guarded by `__WAHALA_SERVER_ONLINE__`.
+// ---------------------------------------------------------------------------------------------------------------------
+describe('the online zone is unreachable from the public bundle except through a guarded dynamic import', () => {
+  // main, plus the guarded entry (it is wired into the Home screen by the online UI package; walking it here keeps the
+  // proof meaningful before and after that wiring)
+  const roots = ['src/main.tsx', RUMBLE_ENTRY];
+  const reach = publicReach(roots);
+
+  it('the walk covers the app and the guarded entry (sanity)', () => {
+    expect(reach.files.size).toBeGreaterThan(150);
+    expect(reach.files.has('src/sim/index.ts')).toBe(true);
+    expect(reach.files.has(RUMBLE_ENTRY)).toBe(true);
+    expect(existsSync('src/app/rumbleOnline.ts')).toBe(true);
+  });
+
+  it('src/net/**, rumbleOnline, src/ui/online/rumble/** and server/** are not reachable (type-only imports are erased)', () => {
+    const leaked = [...reach.files].filter(inZone).map((f) => `${f} <- ${reach.via.get(f) ?? 'root'}`);
+    expect(leaked).toEqual([]);
+  });
+
+  it('no reachable file imports the Colyseus SDK', () => {
+    expect(reach.packages).toEqual([]);
+  });
+
+  it('the entry has exactly one dynamic import of the controller and it is guarded by the build constant', () => {
+    const edges = edgesOf(RUMBLE_ENTRY);
+    const dynamic = edges.filter((e) => e.kind === 'dynamic');
+    expect(dynamic.map((e) => e.target)).toEqual(['src/app/rumbleOnline.ts']);
+    expect(dynamic[0]!.guarded).toBe(true);
+    // every other edge from the entry into the zone is type-only
+    for (const e of edges)
+      if (e.target && inZone(e.target) && e.kind !== 'dynamic') expect(e.kind).toBe('type');
+    expect(reach.guardedIntoZone).toContainEqual({ from: RUMBLE_ENTRY, to: 'src/app/rumbleOnline.ts' });
+  });
+
+  it('every other file: an edge into the zone is erased (type-only) or a guarded dynamic import', () => {
+    const offenders: string[] = [];
+    for (const f of walkSources(['src'])) {
+      if (inZone(f)) continue;
+      for (const e of edgesOf(f)) {
+        if (!e.target || !inZone(e.target)) continue;
+        if (e.kind === 'type') continue;
+        if (e.kind === 'dynamic' && e.guarded) continue;
+        offenders.push(`${f} -> ${e.target} (${e.kind}${e.kind === 'dynamic' ? ', unguarded' : ''})`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('only src/ui imports the entry helper; only the entry loads the controller; only src/net/client/connection.ts names the SDK', () => {
+    const importersOf = (target: string) =>
+      [...walkSources(['src'])].filter((f) =>
+        edgesOf(f).some((e) => e.target === target && e.kind !== 'type'),
+      );
+    for (const f of importersOf(RUMBLE_ENTRY))
+      expect(f, `${f} imports the entry`).toMatch(/^src\/(ui|online)\//);
+    const controllerLoaders = importersOf('src/app/rumbleOnline.ts').filter(
+      (f) => !f.startsWith('src/ui/online/rumble/'),
+    );
+    expect(controllerLoaders).toEqual([RUMBLE_ENTRY]);
+    const sdk = [...walkSources(['src'])].filter((f) =>
+      specifiersOf(readFileSync(f, 'utf8')).some((spec) => ZONE_PACKAGES.test(spec)),
+    );
+    expect(sdk.filter((f) => f !== 'src/net/client/connection.ts')).toEqual([]);
+  });
+
+  it('the match, the simulation, bots, input, rendering and the campaign never reach src/net, src/online, the controller or its screens', () => {
+    const ONLINE_ZONE_AND_ENTRY =
+      /^(?:src\/net\/|src\/online\/|src\/app\/rumbleOnline\.ts$|src\/ui\/online\/rumble\/|server\/)/;
+    const entries: Record<string, string[]> = {
+      'MatchController.ts': ['src/app/MatchController.ts'],
+      'session.ts': ['src/app/session.ts'],
+      'src/sim': ['src/sim/index.ts'],
+      'src/ai': ['src/ai/index.ts'],
+      'src/input': ['src/input/index.ts'],
+      'src/render': ['src/render/index.ts'],
+      campaign: ['src/campaign/index.ts', 'src/app/campaign.ts'],
+    };
+    for (const [name, files] of Object.entries(entries)) {
+      // ALL edges (type-only included): these modules must not even name the online layers
+      expect(
+        [...reachable(files)].filter((f) => ONLINE_ZONE_AND_ENTRY.test(f)),
+        name,
+      ).toEqual([]);
+    }
+    // the one allowed link to online matches is the types-only port: it names neither src/net nor src/online
+    const port = stripComments(readFileSync('src/app/remoteMatch.ts', 'utf8'));
+    expect(edgesOf('src/app/remoteMatch.ts').every((e) => !e.target || !inZone(e.target))).toBe(true);
+    expect(port).not.toMatch(/from\s+['"][^'"]*\b(net|online)\b/);
+  });
+
+  it('the guard check is not vacuous: a planted unguarded dynamic import of the zone IS reported', () => {
+    // same detector on a one-line file in memory: see tests/online/import-guard.test.ts for the full guard matrix
+    expect(
+      publicReach(['tests/online/fixtures/unguarded-entry.ts']).files.has('src/app/rumbleOnline.ts'),
+    ).toBe(true);
+    expect(publicReach(['tests/online/fixtures/guarded-entry.ts']).files.has('src/app/rumbleOnline.ts')).toBe(
+      false,
+    );
   });
 });
 

@@ -4,10 +4,17 @@
  * `envPrefix`) and can be narrowed or widened at run time only for things that never touch a network:
  *
  *   WAHALA_ONLINE_ENABLED=true  build-time: allows the *server* online adapter (needs WAHALA_ONLINE_URL too)
- *   ?mockonline                 run time: the local MOCK online adapters (no sockets, no fetch, no WebRTC)
+ *   ?mockonline                 run time: the local MOCK online adapters (no sockets, no fetch, no WebRTC);
+ *                               `?mockonline=0` (or off/false/no) is "not set"
+ *   WAHALA_ONLINE_URL           build-time: the server endpoint (may contain `{host}`, the page's hostname). With
+ *                               WAHALA_ONLINE_ENABLED this makes a SERVER build (docs/ONLINE_INTEGRATION.md)
+ *   ?online                     run time: in a SERVER build only, shows the Online City Rumble entry (`rumbleOnline`)
  *   WAHALA_VOICE_ENABLED=true   build-time: shows the voice UI state (provider interface only, no WebRTC here)
  *   WAHALA_CAMPAIGN_ENABLED     default true; `false` hides the campaign
  *   WAHALA_EXPERIMENTAL_CONTENT default false; `true` (or ?experimental) shows unfinished roster / content
+ *
+ * `rumbleOnline` needs BOTH switches: a server build AND `?online`. The endpoint is never read from the URL or from a
+ * source default; it is `WAHALA_ONLINE_URL` with `{host}` replaced by `location.hostname`.
  *
  * Nothing under `src/online` may open a connection unless `flags.onlineMode === 'server'`, which can only be
  * true when the build was made with WAHALA_ONLINE_ENABLED=true and an endpoint (docs/ONLINE_ARCHITECTURE.md).
@@ -24,6 +31,10 @@ export interface FeatureFlags {
   voice: boolean;
   campaign: boolean;
   experimentalContent: boolean;
+  /** Online City Rumble is offered: a server build (build switch + endpoint) AND the page was opened with `?online`. */
+  rumbleOnline: boolean;
+  /** The resolved endpoint of a server build (`{host}` substituted), null otherwise or when it is not a valid ws/http URL. */
+  onlineEndpoint: string | null;
 }
 
 /** The defaults baked into every build that sets no variable. */
@@ -33,6 +44,8 @@ export const FLAG_DEFAULTS: Readonly<FeatureFlags> = Object.freeze({
   voice: false,
   campaign: true,
   experimentalContent: false,
+  rumbleOnline: false,
+  onlineEndpoint: null,
 });
 
 export type FlagEnv = Record<string, string | boolean | undefined>;
@@ -48,19 +61,43 @@ function bool(v: unknown, fallback: boolean): boolean {
   return fallback;
 }
 
+/** The token of `WAHALA_ONLINE_URL` that stands for the page's own hostname (the LAN development case). */
+export const HOST_TOKEN = '{host}';
+const ENDPOINT_RE = /^(?:wss?|https?):\/\/[^\s{}]+$/i;
+// a DNS name, an IPv4 address or a bracketed IPv6 address, as `location.hostname` reports them
+const HOSTNAME_RE =
+  /^(?:[a-z0-9]([a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*|\[[0-9a-f:.]+\])$/i;
+
 /**
- * Resolves the flags. Pure: `env` is the build-time environment, `search` the URL query. Only the campaign and
- * experimental flags and the *mock* online mode may be changed from the URL; `server` and `voice` never can.
+ * The endpoint of a server build: `url` with `{host}` replaced by `hostname`, or null when it is empty, needs a hostname
+ * that is missing or malformed, or is not a ws:// wss:// http:// https:// URL. Pure.
  */
-export function resolveFlags(env: FlagEnv, search = ''): FeatureFlags {
+export function resolveEndpoint(url: unknown, hostname: string): string | null {
+  if (typeof url !== 'string') return null;
+  let out = url.trim();
+  if (out.includes(HOST_TOKEN)) {
+    if (!HOSTNAME_RE.test(hostname)) return null;
+    out = out.split(HOST_TOKEN).join(hostname);
+  }
+  return ENDPOINT_RE.test(out) ? out : null;
+}
+
+/**
+ * Resolves the flags. Pure: `env` is the build-time environment, `search` the URL query, `hostname` the page's
+ * `location.hostname` (only used to fill `{host}` in the endpoint). Only the campaign and experimental flags, the
+ * *mock* online mode and the `?online` request may be changed from the URL; `server`, `voice` and the endpoint never can.
+ */
+export function resolveFlags(env: FlagEnv, search = '', hostname = ''): FeatureFlags {
   const q = new URLSearchParams(search);
   const serverBuild =
     truthy(env.WAHALA_ONLINE_ENABLED) &&
     typeof env.WAHALA_ONLINE_URL === 'string' &&
     env.WAHALA_ONLINE_URL !== '';
-  const mock = q.has('mockonline') || (truthy(env.WAHALA_ONLINE_ENABLED) && !serverBuild);
+  const mockQuery = q.has('mockonline') && !falsy(q.get('mockonline'));
+  const mock = mockQuery || (truthy(env.WAHALA_ONLINE_ENABLED) && !serverBuild);
   const onlineMode: OnlineMode = serverBuild ? 'server' : mock ? 'mock' : 'off';
   const campaignQuery = q.get('campaign');
+  const onlineEndpoint = serverBuild ? resolveEndpoint(env.WAHALA_ONLINE_URL, hostname) : null;
   return {
     online: onlineMode !== 'off',
     onlineMode,
@@ -70,6 +107,8 @@ export function resolveFlags(env: FlagEnv, search = ''): FeatureFlags {
         ? bool(campaignQuery, true)
         : bool(env.WAHALA_CAMPAIGN_ENABLED, FLAG_DEFAULTS.campaign),
     experimentalContent: truthy(env.WAHALA_EXPERIMENTAL_CONTENT) || q.has('experimental'),
+    rumbleOnline: onlineEndpoint !== null && q.has('online'),
+    onlineEndpoint,
   };
 }
 
@@ -80,7 +119,8 @@ export function flags(): FeatureFlags {
   if (cached) return cached;
   const env = ((import.meta as unknown as { env?: FlagEnv }).env ?? {}) as FlagEnv;
   const search = typeof location !== 'undefined' ? location.search : '';
-  cached = resolveFlags(env, search);
+  const hostname = typeof location !== 'undefined' ? location.hostname : '';
+  cached = resolveFlags(env, search, hostname);
   return cached;
 }
 

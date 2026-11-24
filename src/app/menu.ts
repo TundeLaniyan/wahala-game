@@ -30,7 +30,10 @@ export type MenuScreen =
   | 'campaignComplete'
   // online PREVIEW (docs/ONLINE_ARCHITECTURE.md): one screen whose steps live in app/online.ts; reachable only when
   // `flags().online` is true (mock or server), never in a default build
-  | 'online';
+  | 'online'
+  // online City Rumble (docs/ONLINE_INTEGRATION.md, decision ON10): entry, room and loading live in the lazily loaded online
+  // chunk; reachable only in a server build opened with `?online` (flags().rumbleOnline), never in a default build
+  | 'rumbleOnline';
 
 export const MENU_SCREENS: readonly MenuScreen[] = [
   'home',
@@ -48,6 +51,7 @@ export const MENU_SCREENS: readonly MenuScreen[] = [
   'campaignResult',
   'campaignComplete',
   'online',
+  'rumbleOnline',
 ];
 
 /**
@@ -56,6 +60,10 @@ export const MENU_SCREENS: readonly MenuScreen[] = [
  */
 export const onlineScreenReady = (screen: MenuScreen, onlineFlag: boolean): boolean =>
   screen !== 'online' || onlineFlag;
+
+/** Online City Rumble exists only when the build offers it: a stale menu state that names it falls back to home. */
+export const rumbleOnlineScreenReady = (screen: MenuScreen, offered: boolean): boolean =>
+  screen !== 'rumbleOnline' || offered;
 
 /** The campaign screens (they share one frame style and are reached from the Home "Campaign" entry). */
 export const CAMPAIGN_SCREENS: readonly MenuScreen[] = [
@@ -122,6 +130,8 @@ export function back(m: MenuState): MenuState {
 export function advance(m: MenuState): MenuState {
   const here = currentScreen(m);
   const below = m.stack.slice(0, -1);
+  // a screen opened from the online entry (the Fighter screen's "change") returns to it
+  if (below.includes('rumbleOnline') && !below.includes('ready')) return openScreen(m, 'rumbleOnline');
   if (below.includes('ready')) return openScreen(m, 'ready');
   const next = NEXT[here];
   return next ? openScreen(m, next) : m;
