@@ -30,3 +30,20 @@ Memory figures are not affected by CPU contention; the dropped-tick, event-loop 
 - **The machine was NOT quiet.** Other workers ran browsers and test suites on the same 4 vCPUs the whole time: sampled 1-minute load average 8.7 at the start, mean 6.3, max 9.7. The server and its clients also shared those CPUs. So the CPU (mean 48 %, max 88 % of one core), event-loop (p99 median 20 ms, worst 119 ms, one 343 ms delay) and dropped-tick (895 of 200 426, 0.45 %) figures are pessimistic and noisy. They are not a capacity measurement; the memory and retention figures are not affected by CPU contention.
 - **Stable:** the heap that survives a full GC is flat (slope 0.027 +/- 0.024 MB/min, not significant; 40.5 MB in the first third, 38.4 MB in the last; 28.3 MB empty, 34.4 MB after teardown). All 233 rooms created were disposed and finalised by the GC, **0 retained**; timers, sockets, process listeners and room-type listeners did not grow (handles after the run equal the baseline: 2 timers, 3 pipes, 1 server socket); 0 client errors and 0 failed cycles over 230 drops (174 reconnected in time, 56 never returned and were taken by a bot), 78 forced match ends and 22 rematches.
 - **Growing, honestly:** the **resident set size** creeps up while the heap does not: first third 402 MB, middle 416 MB, last third 423 MB (+14 MB, then +7 MB: slowing), a fitted slope of 0.88 MB/min over the steady window and 0.34 MB/min after the first 5 minutes (about 20 MB/hour). Nothing the harness can see explains it: the post-GC heap, external memory (it fell from 71 to 22 MB), retained rooms, timers, sockets and listeners are all flat. The most likely cause is allocator and V8 reservation behaviour (fragmentation after hundreds of 32-fighter rooms were built and torn down), not a retained object, but that is **not proven**: 30 minutes cannot tell a plateau from a slow leak at 20 MB/hour. To decide it: a 2-hour run of the same command and a `--heap-snapshots` comparison; meanwhile a host process should have a memory limit and a scheduled restart.
+
+## Repeat on a quiet machine (FU2 integration, 2026-11-24)
+
+The first run above shared the machine with other work. This one ran alone: `npx tsx bench/soak.ts --duration 1800 --rooms 3 --label soak-30min-quiet` for 30.4 minutes, machine load average mean 0.67 and max 1.28 on 4 CPUs. Data: `soak-30min-quiet.json`. (Two earlier attempts were cut short because the sandbox VM was snapshotted while the session was idle; the run was repeated with the session held open.)
+
+| Measure | Result |
+|---|---|
+| Verdict | **STABLE** (steady window 1,734 s, 115 post-GC samples) |
+| Post-GC heap | 38.5 MB mean in the last third (40.3 in the first); slope 0.01 +/- 0.019 MB/min after adjusting for live rooms |
+| Rooms | 232 created, 232 disposed, 232 finalised by GC, 0 retained, 0 live at the end; 0 client errors, 0 failed cycles |
+| Handles | PipeWrap 3, TCPServerWrap 1, Timeout 2 at start and at end; timers, sockets and listeners flat |
+| Event loop (p99) | median of samples 9.8 ms; worst sample 99 ms (max 184 ms) |
+| Dropped ticks | 69 of 199,855 (0.035 %); peak 29 in a live room |
+| CPU | mean 58 % of one core, max 108 % (3 rooms of 32 fighters, 2 humans each, rest bots) |
+| Resident memory | 222 MB at start, 312 MB at the start of the steady window, max 379 MB, 376 MB at the end |
+
+**Resident memory** still rises inside the steady window (0.86 MB/min, t = 6.1), but it flattens at about 377 MB (the last value is within 3 MB of the maximum) while the heap, external memory, handles and retained rooms all stay flat or fall. That reads as allocator and V8 reservation reaching a plateau, not a leak. It is not proven: a 2-hour run is the way to be sure, and a host should still have a memory limit and a scheduled restart. The earlier loaded run's "slow creep to 423 MB" is therefore the load, not the server.
