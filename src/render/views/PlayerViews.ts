@@ -29,6 +29,7 @@ import {
 } from './okadaShield';
 import type { ArmourVisual } from './okadaShield';
 import { addXray } from '../assets/xray';
+import type { XrayHandle } from '../assets/xray';
 import type { PlayerModel } from '../assets/characters';
 import { CanvasTexture } from 'three';
 import { chevronTexture, glowTexture, labelTexture, ringTexture, starTexture } from '../textures';
@@ -76,6 +77,8 @@ interface Visual {
   shadow: Mesh;
   name: Sprite;
   marker: Sprite | null;
+  /** Silhouette twins of the body (render/assets/xray.ts); null for a model without a rig. */
+  xray: XrayHandle | null;
   /** The local human's identification tag (decision PI1); the original chevron above is the `original` style. */
   you: YouMarker | null;
   stars: Sprite[];
@@ -131,6 +134,30 @@ export class PlayerViews implements View {
   private readonly visuals = new Map<number, Visual>();
   /** Team of each player id (Team Rumble), for the end-of-match celebration. */
   private readonly teams = new Map<number, number>();
+
+  /**
+   * The local fighter's crowd silhouette (quality ladder, LIVE; decision PIV2): shown where rivals hide the fighter you
+   * control. Set by the renderer from the profile; a seat built later starts with the current value.
+   */
+  private crowdSilhouette = true;
+
+  setCrowdSilhouette(on: boolean): void {
+    this.crowdSilhouette = on;
+    for (const v of this.visuals.values()) v.xray?.setCrowd(on);
+  }
+
+  /** Debug / tests: the crowd silhouette twins of the local fighter (built, and how many are drawn now). */
+  debugCrowdSilhouette(): { built: number; shown: number } {
+    let built = 0;
+    let shown = 0;
+    for (const v of this.visuals.values()) {
+      for (const c of v.xray?.crowd ?? []) {
+        built++;
+        if (c.visible && !v.culled && v.model.root.visible) shown++;
+      }
+    }
+    return { built, shown };
+  }
 
   /** Fighters whose current attack already swung at the press (`punchSwing`), until it resolves. */
   private readonly swungAt = new Set<number>();
@@ -333,7 +360,10 @@ export class PlayerViews implements View {
     const slot = p.team >= 0 ? teamColor(p.team) : SLOT_COLORS[p.slot % SLOT_COLORS.length]!;
     this.teams.set(p.id, p.team);
     if (p.team >= 0) addTeamKit(model, p.team);
-    if (model.rigged) addXray(model.rigged.body, slot);
+    const xray = model.rigged
+      ? addXray(model.rigged.body, slot, { local: p.id === ctx.info.localPlayerId })
+      : null;
+    xray?.setCrowd(this.crowdSilhouette);
     const ring = new Mesh(
       flat,
       new MeshBasicMaterial({
@@ -459,6 +489,7 @@ export class PlayerViews implements View {
       shadow,
       name,
       marker,
+      xray,
       you,
       stars,
       curse,

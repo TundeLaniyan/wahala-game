@@ -1,0 +1,168 @@
+[
+ {
+  "n": 16,
+  "viewport": "750x336",
+  "quality": "low",
+  "dpr": 2,
+  "shots": "crowd16-750x336",
+  "off": {
+   "drawCalls": 472,
+   "triangles": 1449421,
+   "crowd": {
+    "built": 6,
+    "shown": 0
+   }
+  },
+  "on": {
+   "drawCalls": 478,
+   "triangles": 1467280,
+   "crowd": {
+    "built": 6,
+    "shown": 6
+   }
+  },
+  "frameMedianMs": {
+   "off": [
+    1333.3,
+    1266.5,
+    1283.3
+   ],
+   "on": [
+    1399.9,
+    1316.7,
+    1183.4
+   ]
+  },
+  "wallAt": {
+   "x": 3,
+   "y": 4
+  },
+  "noRivals": {
+   "drawCalls": 208,
+   "triangles": 805361,
+   "crowd": {
+    "built": 6,
+    "shown": 6
+   }
+  },
+  "errors": []
+ },
+ {
+  "n": 32,
+  "viewport": "750x336",
+  "quality": "low",
+  "dpr": 2,
+  "shots": "crowd32-750x336",
+  "off": {
+   "drawCalls": 758,
+   "triangles": 2069353,
+   "crowd": {
+    "built": 6,
+    "shown": 0
+   }
+  },
+  "on": {
+   "drawCalls": 764,
+   "triangles": 2087189,
+   "crowd": {
+    "built": 6,
+    "shown": 6
+   }
+  },
+  "frameMedianMs": {
+   "off": [
+    1550,
+    2066.6
+   ],
+   "on": [
+    1949.8,
+    1983.3
+   ]
+  },
+  "wallAt": {
+   "x": 3,
+   "y": 4
+  },
+  "noRivals": {
+   "drawCalls": 208,
+   "triangles": 805455,
+   "crowd": {
+    "built": 6,
+    "shown": 6
+   }
+  },
+  "errors": []
+ },
+ {
+  "n": 16,
+  "viewport": "832x384",
+  "quality": "low",
+  "dpr": 2,
+  "shots": "crowd16-832x384",
+  "off": {
+   "drawCalls": 472,
+   "triangles": 1449363,
+   "crowd": {
+    "built": 6,
+    "shown": 0
+   }
+  },
+  "on": {
+   "drawCalls": 477,
+   "triangles": 1467266,
+   "crowd": {
+    "built": 6,
+    "shown": 6
+   }
+  },
+  "wallAt": {
+   "x": 3,
+   "y": 4
+  },
+  "noRivals": {
+   "drawCalls": 204,
+   "triangles": 803977,
+   "crowd": {
+    "built": 6,
+    "shown": 6
+   }
+  },
+  "errors": []
+ },
+ {
+  "n": 32,
+  "viewport": "832x384",
+  "quality": "low",
+  "dpr": 2,
+  "shots": "crowd32-832x384",
+  "off": {
+   "drawCalls": 755,
+   "triangles": 2069405,
+   "crowd": {
+    "built": 6,
+    "shown": 0
+   }
+  },
+  "on": {
+   "drawCalls": 762,
+   "triangles": 2086974,
+   "crowd": {
+    "built": 6,
+    "shown": 6
+   }
+  },
+  "wallAt": {
+   "x": 3,
+   "y": 4
+  },
+  "noRivals": {
+   "drawCalls": 204,
+   "triangles": 803956,
+   "crowd": {
+    "built": 6,
+    "shown": 6
+   }
+  },
+  "errors": []
+ }
+]

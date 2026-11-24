@@ -325,6 +325,7 @@ export class GameRenderer {
     const traps = new TrapViews(state.width * state.height);
     const players = new PlayerViews();
     this.players = players;
+    players.setCrowdSilhouette(this.profile.crowdSilhouette);
     this.vehicles = new VehicleViews();
     this.overlays = new OverlayViews();
     const knockdown = new KnockdownViews();
@@ -590,6 +591,7 @@ export class GameRenderer {
     }
     this.arena.setViewClearStride(p.viewClearStride);
     this.arena.setFootprintBudget(p.occlusionFootprints);
+    this.players?.setCrowdSilhouette(p.crowdSilhouette);
     this.effects.setQuality(p);
     this.backdrop.setQuality(p);
     this.living?.setProfile(p);
@@ -883,6 +885,11 @@ export class GameRenderer {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const g = this.rig.screenToGrid(clientX - rect.left, clientY - rect.top, rect.width, rect.height);
     return g ? this.overlays.pick(g.x, g.y) : null;
+  }
+
+  /** The local fighter's crowd silhouette twins: built, and drawn now (debug / tests; null before a match is loaded). */
+  debugCrowdSilhouette(): { built: number; shown: number } | null {
+    return this.players?.debugCrowdSilhouette() ?? null;
   }
 
   /** Debug / art review: frame a world point closely (null restores the normal camera). Never used in play. */

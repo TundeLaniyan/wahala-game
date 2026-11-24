@@ -80,6 +80,13 @@ export interface QualityProfile {
    * transparent draws; the nearest to the fighter are kept. Never 0: the fade must not lie about what still blocks. LIVE.
    */
   occlusionFootprints: number;
+  /**
+   * The local fighter's crowd silhouette (render/crowdSilhouette.ts, decision PIV2): a translucent copy of the fighter
+   * you control drawn where OTHER FIGHTERS (never walls, buildings or props) hide it. One extra draw per skinned mesh
+   * of that one fighter, no extra pass; off on the two Very Low rungs. LIVE (a visibility switch on meshes built at
+   * the start of the match).
+   */
+  crowdSilhouette: boolean;
 }
 
 interface Rung extends Omit<QualityProfile, 'rung'> {
@@ -109,6 +116,7 @@ const RUNGS: readonly Rung[] = [
     animationStride: 3,
     viewClearStride: 2,
     occlusionFootprints: 2,
+    crowdSilhouette: false,
   },
   {
     name: 'Very Low+',
@@ -126,6 +134,7 @@ const RUNGS: readonly Rung[] = [
     animationStride: 3,
     viewClearStride: 2,
     occlusionFootprints: 2,
+    crowdSilhouette: false,
   },
   {
     name: 'Low',
@@ -144,6 +153,7 @@ const RUNGS: readonly Rung[] = [
     animationStride: 2,
     viewClearStride: 2,
     occlusionFootprints: 3,
+    crowdSilhouette: true,
   },
   {
     name: 'Low+',
@@ -161,6 +171,7 @@ const RUNGS: readonly Rung[] = [
     animationStride: 2,
     viewClearStride: 2,
     occlusionFootprints: 3,
+    crowdSilhouette: true,
   },
   {
     name: 'Medium-Low',
@@ -179,6 +190,7 @@ const RUNGS: readonly Rung[] = [
     animationStride: 2,
     viewClearStride: 1,
     occlusionFootprints: 4,
+    crowdSilhouette: true,
   },
   {
     name: 'Medium',
@@ -197,6 +209,7 @@ const RUNGS: readonly Rung[] = [
     animationStride: 1,
     viewClearStride: 1,
     occlusionFootprints: 5,
+    crowdSilhouette: true,
   },
   {
     name: 'Medium-High',
@@ -215,6 +228,7 @@ const RUNGS: readonly Rung[] = [
     animationStride: 1,
     viewClearStride: 1,
     occlusionFootprints: 6,
+    crowdSilhouette: true,
   },
   {
     name: 'High',
@@ -233,6 +247,7 @@ const RUNGS: readonly Rung[] = [
     animationStride: 1,
     viewClearStride: 1,
     occlusionFootprints: 8,
+    crowdSilhouette: true,
   },
 ];
 
