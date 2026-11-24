@@ -28,6 +28,8 @@ import { PUNCH_HZ, PUNCH_Q, SHELF_HZ, tempoFor, toneFor, urgencyOf } from './esc
 import type { MatchClock } from './escalation';
 import { EMPTY_MANIFEST, parseMusicManifest, pickFrom, pickMatchTrack } from './playlist';
 import type { MusicManifest, MusicTrack } from './playlist';
+import { CANDIDATE_DIR, mergeCandidateMusic, wantsMusic } from './candidates';
+import type { CandidateMode } from './candidates';
 import type { Rand } from './rng';
 import type { FetchLike } from './samples';
 import { audioBaseUrl } from './samples';
@@ -59,6 +61,11 @@ export interface MusicOptions {
   /** Rotation randomness (inject a seeded one in tests). */
   rand: Rand;
   baseUrl?: string;
+  /**
+   * Founder-audition overlay (candidates.ts, `?audiodraft`). Default 'off': no candidate request is ever made and the
+   * approved playlist is untouched.
+   */
+  candidateMode?: CandidateMode;
   schedule?: Scheduler;
   onError?: (e: unknown) => void;
   /**
@@ -198,6 +205,8 @@ export function defaultMediaFactory(): MediaFactory | null {
 export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicOptions): MusicPlayer {
   const schedule = o.schedule ?? defaultSchedule;
   const base = `${o.baseUrl ?? audioBaseUrl()}music/`;
+  const candidateBase = `${o.baseUrl ?? audioBaseUrl()}${CANDIDATE_DIR}`;
+  const urlOf = (t: MusicTrack): string => t.url ?? base + t.file;
   const fail = (e: unknown): void => {
     try {
       o.onError?.(e);
@@ -358,7 +367,7 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
       const pitch = enablePreservesPitch(el);
       el.playbackRate = 1;
       const lite = !!track.lite && !liteFailed.has(track.id) && !!o.lite?.();
-      el.src = base + (lite ? track.lite! : track.file);
+      el.src = track.url ?? base + (lite ? track.lite! : track.file);
       const node = ctx.createMediaElementSource(el);
       const gain = ctx.createGain();
       gain.gain.value = 0;
@@ -486,11 +495,26 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
             /* offline / not JSON: silent */
           }
         }
+        const mode = o.candidateMode ?? 'off';
+        if (fetcher && wantsMusic(mode)) {
+          try {
+            const res = await fetcher(`${candidateBase}manifest.json`);
+            if (res.ok)
+              parsed = mergeCandidateMusic(
+                parsed,
+                parseMusicManifest(await res.json()).manifest,
+                mode,
+                candidateBase,
+              );
+          } catch {
+            /* no staged candidates (the normal case): the approved playlist stands */
+          }
+        }
         if (disposed) return report;
         const probe = o.probe;
         await Promise.all(
           parsed.tracks.map(async (t) => {
-            const ok = probe ? await probe(base + t.file).catch(() => false) : true;
+            const ok = probe ? await probe(urlOf(t)).catch(() => false) : true;
             availability.set(t.id, ok);
           }),
         );

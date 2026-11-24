@@ -22,6 +22,8 @@
  */
 import type { GameState, SimEvent } from '../sim';
 import { createAmbience } from './ambience';
+import { CANDIDATE_DIR, candidateModeFromSearch, wantsStings } from './candidates';
+import type { CandidateMode } from './candidates';
 import { matchClock } from './escalation';
 import { createMusicPlayer, defaultMediaFactory, defaultProbe, probeVia } from './music';
 import type { MediaFactory, MusicPlayer, MusicReport, MusicStatus, ProbeLike } from './music';
@@ -50,7 +52,7 @@ import { createReactionDirector } from './reactions';
 import type { ReactionDirector } from './reactions';
 import { clamp01, createRand } from './rng';
 import type { Rand } from './rng';
-import { decoderFor, defaultFetch, loadRecordedSlots } from './samples';
+import { audioBaseUrl, decoderFor, defaultFetch, loadRecordedSlots } from './samples';
 import type { FetchLike, SlotReport } from './samples';
 import { updateStateLoops } from './stateLoops';
 import { createVoicePool } from './voices';
@@ -155,6 +157,11 @@ export interface AudioOptions {
   musicRand?: Rand;
   /** Data Saver (docs/MOBILE_PERFORMANCE.md): true plays the smaller music files. Read whenever a track opens. */
   dataSaver?: () => boolean;
+  /**
+   * Founder-audition overlay for UNAPPROVED candidate audio (candidates.ts, decision AU1). Default: from the page URL
+   * (`?audiodraft`), else 'off'. With 'off' nothing candidate is requested and nothing shipped changes.
+   */
+  candidateMode?: CandidateMode;
 }
 
 interface Graph {
@@ -225,6 +232,9 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
   let arenaWanted: string | null = null;
   let pausedWanted = false;
   let intensity = 0;
+  /** Founder-audition overlay (candidates.ts): 'off' unless the URL has ?audiodraft or the caller passes a mode. */
+  const candidateMode: CandidateMode =
+    opts.candidateMode ?? candidateModeFromSearch(typeof location !== 'undefined' ? location.search : '');
   const musicRand: Rand = opts.musicRand ?? createRand((Date.now() ^ 0x5bd1e995) >>> 0);
   let resuming = false;
   let samples: Promise<SlotReport> = Promise.resolve(EMPTY_REPORT);
@@ -258,6 +268,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       createElement: opts.createMediaElement === undefined ? defaultMediaFactory() : opts.createMediaElement,
       rand: musicRand,
       baseUrl: opts.sampleBaseUrl,
+      candidateMode,
       onError: fail,
       lite: opts.dataSaver,
     });
@@ -395,6 +406,21 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
           fail(e);
           return EMPTY_REPORT;
         });
+        if (wantsStings(candidateMode)) {
+          // candidate victory / defeat stingers (unapproved drafts): loaded AFTER the shipped slots, from their own
+          // folder and slots.json; absent files (the normal case) change nothing
+          const shipped = samples;
+          samples = shipped.then(async (r) => {
+            const c = await loadRecordedSlots({
+              fetch: fetcher,
+              decode: decoderFor(ctx),
+              baseUrl: `${opts.sampleBaseUrl ?? audioBaseUrl()}${CANDIDATE_DIR}`,
+              isCancelled: () => disposed,
+              onSlot: (id, buffer, meta) => g.bank.setRecorded(id, buffer, meta),
+            }).catch(() => EMPTY_REPORT);
+            return { loaded: [...r.loaded, ...c.loaded], skipped: [...r.skipped, ...c.skipped] };
+          });
+        }
         // music first (the title screen wants it), then the two small voice manifests (clips load per match)
         musicLoaded = g.music.load();
         voicesLoaded = musicLoaded.then(() => g.voices.load());

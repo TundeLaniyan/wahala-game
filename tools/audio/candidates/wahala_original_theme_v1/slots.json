@@ -1,0 +1,17 @@
+{
+  "_comment": "Candidate result stingers (unapproved). Loaded only with ?audiodraft=stings|all, after the shipped slots; replaces the synthesised win_sting / lose_sting for that page load only.",
+  "slots": {
+    "win_sting": {
+      "file": "wahala_draft_victory.m4a",
+      "license": "ORIGINAL DRAFT, synthesised by code (no samples, no third-party recordings). Ownership and similarity clearance pending counsel; NOT approved by the founder; never ship until approved (docs/AUDIO_INTEGRATION.md).",
+      "source": "branch ccr-c34a3c6b-ag8exj: render_victory",
+      "gain": 1
+    },
+    "lose_sting": {
+      "file": "wahala_draft_defeat.m4a",
+      "license": "ORIGINAL DRAFT, synthesised by code (no samples, no third-party recordings). Ownership and similarity clearance pending counsel; NOT approved by the founder; never ship until approved (docs/AUDIO_INTEGRATION.md).",
+      "source": "branch ccr-c34a3c6b-ag8exj: render_defeat",
+      "gain": 1
+    }
+  }
+}

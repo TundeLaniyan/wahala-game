@@ -10,3 +10,6 @@ __pycache__/
 .claude/worktrees/
 blob-report
 tools/assets3/vendor/
+
+# Unapproved audio audition candidates are staged here locally only (tools/audio/candidates/stage.mjs, decision AU1)
+public/audio/candidates/
