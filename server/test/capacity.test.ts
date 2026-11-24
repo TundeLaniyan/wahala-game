@@ -469,8 +469,10 @@ describe('C4: the client address, metrics and production refusals', () => {
         headers: { 'content-type': 'application/json', origin: 'https://play.example' },
         body: JSON.stringify({ reconnectionToken: 'ABCDEF:aaaaaaaaa' }),
       });
-      expect(r.status).toBeGreaterThanOrEqual(400);
-      expect(await r.text()).toMatch(/invalid method/);
+      // the door is not exposed: Colyseus' controller does not list it, and the answer is the uniform refusal anyway
+      expect(matchMaker.controller.exposedMethods).not.toContain('reconnect');
+      expect(r.status).toBe(404);
+      expect(parseBusy(JSON.parse(await r.text()).error)?.code).toBe('room_unavailable');
       // the other doors work, and a browser from another origin gets no CORS answer
       const ok = await fetch(`http://127.0.0.1:${prod.port}/matchmake/create/rumble`, {
         method: 'POST',

@@ -40,14 +40,20 @@ describe('a socket that drops before it acknowledged its join', () => {
       ws.onclose = () => reject(new Error('the reconnect was refused'));
       setTimeout(() => reject(new Error('no join message')), 5000);
     });
-    await until('server shows a back', () => b.lobby?.members.find((m) => m.seat === seat)?.connected === true);
+    await until(
+      'server shows a back',
+      () => b.lobby?.members.find((m) => m.seat === seat)?.connected === true,
+    );
 
     // ... and the link drops again before the acknowledgement could be sent
     const room = matchMaker.getLocalRoomById(code)!;
     const fresh = room.clients.find((c) => c.sessionId === sessionId)!;
     ws.onclose = null;
     (fresh.ref as unknown as { terminate(): void }).terminate();
-    await until('b sees a drop again', () => b.lobby?.members.find((m) => m.seat === seat)?.connected === false);
+    await until(
+      'b sees a drop again',
+      () => b.lobby?.members.find((m) => m.seat === seat)?.connected === false,
+    );
     await sleep(500);
 
     // the seat is still a held seat: a member of the lobby, played by a bot meanwhile, the window open

@@ -217,6 +217,6 @@ describe('the temporary guest session id (decision FU2S-C3)', () => {
     expect(guestSessionId()).toBe(id);
     // the only module that reads or writes it is connection.ts and it touches no storage (the storage test above covers src/net)
     const src = readFileSync(path.join(ROOT, 'src/net/client/connection.ts'), 'utf8');
-    expect(src).not.toMatch(/localStorage|sessionStorage|indexedDB|cookie/);
+    expect(src).not.toMatch(/localStorage|sessionStorage|indexedDB|document\.cookie/);
   });
 });

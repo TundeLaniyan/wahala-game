@@ -40,14 +40,19 @@ describe('the 30 s reconnection window, real clock', () => {
     const noticedAt = performance.now();
 
     // after the 5 s grace a bot plays both seats, the match never paused, and the window is still open
-    await until('bots took over', () => match.controlOf(seatB) === 'bot' && match.controlOf(seatC) === 'bot', 15_000);
-    expect(a.lobby!.members.filter((m) => m.botControlled)).toHaveLength(2);
+    await until(
+      'bots took over',
+      () => match.controlOf(seatB) === 'bot' && match.controlOf(seatC) === 'bot',
+      15_000,
+    );
+    await until('the lobby says a bot plays both', () => a.lobby!.members.filter((m) => m.botControlled).length === 2);
     const tickBefore = match.state.tick;
 
     // C comes back at about 20 s (real time): the window is honoured late, the same fighter, nothing reset
     await until('20 s have passed', () => performance.now() - noticedAt >= 20_000, 40_000);
     const fighterC = match.state.players[seatC]!;
     const deathsC = fighterC.stats.deaths;
+    c.leftWith = null; // the 1006 of the drop
     c.attach(await ctx.server.client().reconnect(tokenC));
     await until('C is back', () => c.welcomes.length >= 3 && c.keyframes >= 2);
     expect(c.welcomes.at(-1)).toMatchObject({ seat: seatC, roomCode: code });
@@ -60,7 +65,10 @@ describe('the 30 s reconnection window, real clock', () => {
     await until('B window is over', () => performance.now() - noticedAt >= WINDOW_SEC * 1000 + 1500, 60_000);
     const lateBy = (performance.now() - droppedAt) / 1000;
     expect(lateBy).toBeGreaterThan(WINDOW_SEC);
-    await until('B was removed from the lobby for good', () => !a.lobby!.members.some((m) => m.seat === seatB));
+    await until(
+      'B was removed from the lobby for good',
+      () => !a.lobby!.members.some((m) => m.seat === seatB),
+    );
     expect(match.controlOf(seatB)).toBe('bot');
 
     // door 1: the matchmaking HTTP reconnect: one clear refusal, never a seat

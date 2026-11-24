@@ -11,7 +11,12 @@ export interface LogLimiter {
   admit(key: string): { print: true; suppressedBefore: number } | { print: false };
 }
 
-export function createLogLimiter(burst: number, windowMs: number, now: () => number, maxKeys = 200): LogLimiter {
+export function createLogLimiter(
+  burst: number,
+  windowMs: number,
+  now: () => number,
+  maxKeys = 200,
+): LogLimiter {
   const seen = new Map<string, { at: number; n: number; suppressed: number }>();
   return {
     admit(key) {
@@ -42,10 +47,13 @@ export function installConsoleLimiter(burst = 5, windowMs = 10_000): () => void 
   const wrap =
     (name: 'error' | 'warn'): Writer =>
     (...args) => {
-      const first = String(args[0] ?? '').split('\n')[0]!.slice(0, 120);
+      const first = String(args[0] ?? '')
+        .split('\n')[0]!
+        .slice(0, 120);
       const r = limiter.admit(`${name}:${first}`);
       if (r.print) {
-        if (r.suppressedBefore > 0) originals[name](`[rumble] ${r.suppressedBefore} more like "${first}" were suppressed`);
+        if (r.suppressedBefore > 0)
+          originals[name](`[rumble] ${r.suppressedBefore} more like "${first}" were suppressed`);
         originals[name](...args);
       }
     };

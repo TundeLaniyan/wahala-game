@@ -1,0 +1,63 @@
+{
+ "decision": "FU2S-3",
+ "model": "percent of ONE core per room = ROOM_BASE_COST + BOT_COST * bots (server/src/core/limits.ts)",
+ "constants": {
+  "ROOM_BASE_COST": 10,
+  "BOT_COST": 0.45,
+  "cpuBudgetDefault": 75,
+  "maxPlayingRoomsDefault": 8,
+  "startLoopLagMsDefault": 150
+ },
+ "derived": {
+  "room_1_human_31_bots": 24.0,
+  "room_32_humans": 10.0,
+  "three_bot_rooms": 71.9,
+  "six_full_rooms": 60.0,
+  "fourth_bot_room_fits": false
+ },
+ "dataPoints": [
+  {
+   "what": "32 humans, clean network (npm run load)",
+   "cpuPercentOfOneCore": "9.3-10.6",
+   "source": "docs/CITY_RUMBLE_ONLINE.md 7.2 and Ops audit"
+  },
+  {
+   "what": "1 room, 1 human + 31 bots",
+   "cpuPercentOfOneCore": "about 24",
+   "source": "docs 7.5; Ops audit (two independent runs)"
+  },
+  {
+   "what": "3 rooms of 1 human + 31 bots",
+   "cpuPercentOfOneCore": "72-74",
+   "eventLoopP99Ms": 25,
+   "droppedTicks": 79,
+   "source": "docs 7.5 / PIS8 soak"
+  },
+  {
+   "what": "4 rooms",
+   "cpuPercentOfOneCore": "94",
+   "droppedTicks": 47,
+   "source": "docs 7.5; Ops audit"
+  },
+  {
+   "what": "6 rooms started at once, no budget",
+   "cpuPercentMedian": 97.6,
+   "cpuPercentMax": 101.7,
+   "eventLoopP99MsMedian": 181.1,
+   "droppedTicks": 1320,
+   "source": "abuse-probe-before.json (machine shared, load 7-9 on 4 CPUs)"
+  },
+  {
+   "what": "6 rooms requested with the budget: 3 playing, 3 waiting",
+   "cpuPercentMedian": 84.2,
+   "eventLoopP99MsMedian": 87.3,
+   "droppedTicks": 80,
+   "costInUse": 71.9,
+   "source": "abuse-probe-after.json (machine shared)"
+  }
+ ],
+ "caveats": [
+  "a two-point fit (0 and 31 bots), not checked at other bot counts",
+  "measured on a shared 4-vCPU sandbox, not the hosting target: re-fit on the real host before setting RUMBLE_CPU_BUDGET there"
+ ]
+}

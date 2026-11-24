@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- the probe reads untyped JSON from servers of two different versions */
 /**
  * Black-box abuse probe (decision FU2S-C3 / C4): starts the REAL server process of a given checkout (`--tree`) on a free
  * port, once per scenario, and attacks it over HTTP and WebSocket the way a hostile client could. The same script runs
@@ -23,7 +24,9 @@ const arg = (name: string, fallback: string): string => {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1]! : fallback;
 };
-const TREE = path.resolve(arg('tree', path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')));
+const TREE = path.resolve(
+  arg('tree', path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')),
+);
 const LABEL = arg('label', 'run');
 const OUT = arg('out', '');
 const ROOMS = Number(arg('rooms', '6'));
@@ -126,7 +129,9 @@ const scenarios: Record<string, () => Promise<unknown>> = {
     const s = await boot({});
     try {
       const t0 = performance.now();
-      const res = await pool(300, 30, (i) => post(s.url, '/matchmake/create/rumble', { name: `Flood ${i}`, private: true, gid: guest(i) }));
+      const res = await pool(300, 30, (i) =>
+        post(s.url, '/matchmake/create/rumble', { name: `Flood ${i}`, private: true, gid: guest(i) }),
+      );
       const secs = (performance.now() - t0) / 1000;
       const m = await metrics(s.url);
       return {
@@ -145,9 +150,18 @@ const scenarios: Record<string, () => Promise<unknown>> = {
     const s = await boot({});
     try {
       const res = await pool(100, 10, (i) =>
-        post(s.url, '/matchmake/create/rumble', { name: `Spoof ${i}`, private: true, gid: guest(5000) }, { 'x-forwarded-for': `10.1.${i % 250}.${i % 200}`, 'x-real-ip': `10.2.${i % 250}.1` }),
+        post(
+          s.url,
+          '/matchmake/create/rumble',
+          { name: `Spoof ${i}`, private: true, gid: guest(5000) },
+          { 'x-forwarded-for': `10.1.${i % 250}.${i % 200}`, 'x-real-ip': `10.2.${i % 250}.1` },
+        ),
       );
-      return { requests: 100, statuses: tally(res.map((r) => r.status)), roomsCreated: res.filter((r) => r.status === 200).length };
+      return {
+        requests: 100,
+        statuses: tally(res.map((r) => r.status)),
+        roomsCreated: res.filter((r) => r.status === 200).length,
+      };
     } finally {
       await s.stop();
     }
@@ -160,7 +174,12 @@ const scenarios: Record<string, () => Promise<unknown>> = {
       const results: { created: boolean; error?: string }[] = [];
       for (let i = 0; i < ROOMS; i++) {
         try {
-          const room = await new Client(s.url).create('rumble', { name: `Probe ${i}`, private: true, durationSec: 300, gid: guest(900 + i) });
+          const room = await new Client(s.url).create('rumble', {
+            name: `Probe ${i}`,
+            private: true,
+            durationSec: 300,
+            gid: guest(900 + i),
+          });
           room.onMessage('*', () => undefined);
           room.send('start');
           clients.push(room);
@@ -210,7 +229,12 @@ const scenarios: Record<string, () => Promise<unknown>> = {
   async 'code-guess'() {
     const s = await boot({});
     try {
-      const host = await new Client(s.url).create('rumble', { name: 'Host Ada', private: true, durationSec: 300, gid: guest(1) });
+      const host = await new Client(s.url).create('rumble', {
+        name: 'Host Ada',
+        private: true,
+        durationSec: 300,
+        gid: guest(1),
+      });
       host.onMessage('*', () => undefined);
       host.send('start'); // the room is now started: locked
       await sleep(5000);
@@ -223,7 +247,12 @@ const scenarios: Record<string, () => Promise<unknown>> = {
         msgs.add(r.text.replace(/ZZZZZZ|[A-Z2-9]{6}/g, '<code>'));
       }
       const t0 = performance.now();
-      const res = await pool(200, 1, (i) => post(s.url, `/matchmake/joinById/${'ABCDEF'.slice(0, 5)}${'GHJKMN'[i % 6]}`, { name: 'Guesser', gid: guest(2) }));
+      const res = await pool(200, 1, (i) =>
+        post(s.url, `/matchmake/joinById/${'ABCDEF'.slice(0, 5)}${'GHJKMN'[i % 6]}`, {
+          name: 'Guesser',
+          gid: guest(2),
+        }),
+      );
       const blocked = res.filter((r) => /rate_limited|429/.test(r.text) || r.status === 429).length;
       host.leave().catch(() => undefined);
       return {
@@ -242,7 +271,9 @@ const scenarios: Record<string, () => Promise<unknown>> = {
   async 'metrics-production'() {
     const s = await boot({ NODE_ENV: 'production' });
     try {
-      const r = await fetch(`${s.url}/metrics`).then((x) => x.status).catch(() => 0);
+      const r = await fetch(`${s.url}/metrics`)
+        .then((x) => x.status)
+        .catch(() => 0);
       return { statusWithoutToken: r, openToAnyone: r === 200 };
     } finally {
       await s.stop();
@@ -254,7 +285,15 @@ const scenarios: Record<string, () => Promise<unknown>> = {
     try {
       await Promise.race([s.exited, sleep(1500)]);
       const exited = s.child.exitCode !== null;
-      return { serverStarted: !exited, exitCode: s.child.exitCode, message: s.log.join('').split('\n').find((l) => /test-only|refus/i.test(l)) ?? null };
+      return {
+        serverStarted: !exited,
+        exitCode: s.child.exitCode,
+        message:
+          s.log
+            .join('')
+            .split('\n')
+            .find((l) => /test-only|refus/i.test(l)) ?? null,
+      };
     } finally {
       await s.stop();
     }
@@ -265,7 +304,20 @@ const scenarios: Record<string, () => Promise<unknown>> = {
     const accepted: string[] = [];
     const refused: string[] = [];
     try {
-      const names = ['Admin', 'Adm1n', 'Moderator', 'Wahala Staff', 'Wahala Team', 'System', 'Server', 'Support', 'BOT Emeka', 'Official Wahala', 'Modupe', 'Ada Obi'];
+      const names = [
+        'Admin',
+        'Adm1n',
+        'Moderator',
+        'Wahala Staff',
+        'Wahala Team',
+        'System',
+        'Server',
+        'Support',
+        'BOT Emeka',
+        'Official Wahala',
+        'Modupe',
+        'Ada Obi',
+      ];
       for (const [i, name] of names.entries()) {
         const r = await post(s.url, '/matchmake/create/rumble', { name, private: true, gid: guest(300 + i) });
         (r.status === 200 ? accepted : refused).push(name);

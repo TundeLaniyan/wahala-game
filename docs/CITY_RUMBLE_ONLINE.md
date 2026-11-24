@@ -210,8 +210,14 @@ Caveats. (1) The machine was shared: another worker's headless Chromium was usin
 
 **CI smoke.** `server/test/soak.smoke.test.ts` runs the same harness for about 35 s (2 rooms, no long slot) in the server suite and fails on: a failed cycle or client error, a created room that is not disposed, a live room, registered room or connected client after the teardown, any disposed room still reachable after a full GC, or any active handle (timer, socket) beyond the empty server's. It cannot see a slow in-match leak like the one above (that needs minutes); that class is covered by the unit regression test and the 5-minute soak. `server/test/soakStats.test.ts` tests the verdict rules, including the live-room confounder.
 
+### 7.8 The 30-minute server soak (decision FU2S-10)
+@@SOAK@@
+
+### 7.9 Why the two-browser e2e failed under load (decisions FU2S-9 to FU2S-11)
+Two causes, neither fixed by retrying: starved pages (software WebGL blocked a browser's main thread for up to 83 s, so the liveness check dropped both pages at the same tick at match start) and a real server defect (a socket that dropped again before its join acknowledgement lost its seat for good: the "banner still shown after 120 s" the Ops branch saw). Fixed with a regression test; the check now pins the server and the browsers apart, samples the server's load, runs a light profile and has its own non-required CI job. Evidence, the three leads and the numbers: `docs/ONLINE_LIMITS_AND_SECURITY.md` section 9.
+
 ## 8. Rooms and matchmaking foundation (Stage 4)
-- Room = one Colyseus room `rumble`, id = a 6-character code (`ABCDEFGHJKMNPQRSTUVWXYZ23456789`), shareable as `?room=CODE`. Private rooms are joinable only by code; public rooms are listed for `joinOrCreate` (quick play).
+- Room = one Colyseus room `rumble`, id = a 6-character code (`ABCDEFGHJKMNPQRSTUVWXYZ23456789`), shareable as `?room=CODE`. Private rooms are joinable only by code; public rooms are listed for `joinOrCreate` (quick play) and are matched by the QUICK PLAY mode the player chose (Free-for-All or Team Rumble, `filterBy('mode')`); a public room's settings belong to the server and it cannot be joined by its code (decisions FU2S-1, FU2S-2).
 - Lifecycle (pure `server/src/core/Lobby.ts`): `lobby → countdown (3 s) → playing → results → (rematch) lobby`. Host = first member, promoted on leave; host-only start (private), settings (arena, mode, 3/5 min, bot level) and rematch; public rooms auto-start 30 s after the first player (decision PIS1: fixed by the server, shared constant `PUBLIC_WAIT_SECONDS`) or at once at 32 humans, and bots named `BOT <name>` fill the empty seats.
 - Seating: humans in join order, then bots to 32. Team Rumble uses the sim's own `assignTeams` and damage rules (`flameHarms` / `canHarm`), so team play and friendly-fire rules are exactly the offline ones; friendly fire is the host's optional `friendlyFire` setting, off by default like offline (PIS2). The requirement-by-requirement check is `docs/ONLINE_REQUIREMENTS_MATRIX.md`.
 - Results are built from the server's own state (`RumbleMatch.results()`), carry the final state hash, and are identical for every client.
@@ -275,7 +281,8 @@ Reading: **bandwidth is cheap on EU hosts with included traffic and expensive on
 - Flooding: invalid messages (> 20 / 10 s) or a sustained flood (> 600 messages / 5 s) → disconnect; a stall burst is never punished (measured fix, regression test).
 - Origins: `RUMBLE_ALLOWED_ORIGINS` allowlist (nothing allowed in production by default), CORS without credentials, optional bearer token for `/metrics`; private room codes are not exposed in metrics.
 - Reconnection tokens: Colyseus' single-use `reconnectionToken`, kept in memory by the client (not localStorage).
-- Not yet done (must be before a public launch): TLS deployment, per-IP limits on room creation and joins (DoS), real accounts / guest identity and name moderation, reporting / bans, abuse of the autopilot policy, an "information" consideration (every client receives every fighter's position: fine for the current full-visibility rules, but interest management would be needed if any rule ever hides players), dependency and container scanning.
+- Capacity and abuse limits (global room / playing-room / connection caps, a CPU-cost budget with a fair start queue, per-guest and per-address rates, idle-lobby expiry, a client-address policy for proxies, production refusals, uniform join errors, reserved names) are implemented and measured: `docs/ONLINE_LIMITS_AND_SECURITY.md` (decisions FU2S-3 to FU2S-8).
+- Not yet done (must be before a public launch): TLS deployment, a CDN / volumetric-DDoS decision, real accounts / guest identity beyond the temporary session id, reporting / bans and a profanity list, abuse of the autopilot policy, an "information" consideration (every client receives every fighter's position: fine for the current full-visibility rules, but interest management would be needed if any rule ever hides players), dependency and container scanning.
 
 ## 10. Gaps and next steps
 
@@ -285,7 +292,7 @@ Outstanding implementation gaps (none is hidden behind a passing test):
 3. **Main-app integration**: the online match runs in a dev page; the main menus, React HUD, kill feed styling, touch controls and settings are not wired (needs a build-time flag like `__WAHALA_SERVER_ONLINE__`, kept out of the static Pages build).
 4. Touch input: the dev page's stick and buttons are untested on devices; the offline touch move-assist features (corner routes, sidestep, beginner assist) are not available online yet (they need the authoritative board, i.e. a server-side port of `MoveGate` assist).
 5. Missed effects after a reconnect are not replayed (state is exact; the 3–4 s of FX/audio while away are skipped).
-6. Multi-process scaling (Redis presence/driver), deployment, TLS, monitoring and per-IP limits are not set up.
+6. Multi-process scaling (Redis presence/driver), deployment, TLS and monitoring are not set up (per-guest / per-address limits, global caps and a CPU budget exist now: `docs/ONLINE_LIMITS_AND_SECURITY.md`).
 7. Bot CPU is the cost driver; the bot brain has not been profiled for server use.
 8. Spectators (non-playing viewers) and late join into a running match are not supported (rooms lock at start; only reconnection is allowed).
 9. ~~Autopilot kills count for the absent player~~ Done: personal numbers are human-only, bot numbers are separate (section 8, ON7). The open ranking / reward questions are listed there for the founder.

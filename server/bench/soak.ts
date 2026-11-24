@@ -276,6 +276,45 @@ interface Counters {
 
 const round = (x: number, d = 2): number => Math.round(x * 10 ** d) / 10 ** d;
 
+const growingSeries = (t: Record<string, { growing: boolean }>): string =>
+  Object.entries(t)
+    .filter(([, v]) => v.growing)
+    .map(([k]) => k)
+    .join(', ') || 'none (rss, external, timers, sockets, listeners: all flat)';
+
+/** The short human-readable report next to the JSON (docs/measurements/rumble-online/). */
+function markdownReport(s: any): string {
+  const r = (x: unknown): string => String(x);
+  const rows = Object.entries(s.resourceTrendsSteadyWindow as Record<string, any>)
+    .map(
+      ([k, v]) =>
+        `| ${k} | ${r(v.first)} | ${r(v.last)} | ${r(v.slopePerMin)} | ${r(v.tStat)} | ${v.growing ? '**growing**' : 'flat'} |`,
+    )
+    .join('\n');
+  return [
+    `# Server soak: ${s.label}`,
+    '',
+    `Run ${s.when} on Node ${s.node}; ${s.config.rooms} room slots (one long match of 1 human + 31 bots plus short cycles), ${s.wallSec} s of wall clock, \`${process.argv.slice(2).join(' ')}\`.`,
+    '',
+    `**Verdict: ${String(s.verdict).toUpperCase()}** (post-GC heap over the steady window, ${s.steadyTrend.points} samples over ${s.steadyTrend.spanSec} s): slope ${s.steadyTrend.slopeMBPerMin} +/- ${s.steadyTrend.seMBPerMin} MB/min (t = ${s.steadyTrend.tStat}, r2 = ${s.steadyTrend.r2}), projects ${s.steadyTrend.projectedMBPerHour} MB/h; first third ${s.postGcHeapMB.firstThirdMean} MB, last third ${s.postGcHeapMB.lastThirdMean} MB; empty server ${s.postGcHeapMB.baselineEmpty} MB, after teardown ${s.postGcHeapMB.afterTeardown} MB.`,
+    '',
+    '| Series over the steady window | first | last | slope / min | t | verdict |',
+    '| --- | --- | --- | --- | --- | --- |',
+    rows,
+    '',
+    `- Event loop delay p99: median of samples ${s.eventLoopDelayMs.p99MedianOfSamples} ms, worst ${s.eventLoopDelayMs.p99Worst} ms, single worst delay ${s.eventLoopDelayMs.maxWorst} ms.`,
+    `- CPU of the server process: mean ${s.cpuPercentOfOneCore.mean} %, max ${s.cpuPercentOfOneCore.max} % of one core.`,
+    `- Simulation ticks over the whole run: ${s.ticksOverTheWholeRun.run} run, ${s.ticksOverTheWholeRun.dropped} dropped (${s.ticksOverTheWholeRun.droppedPercent} %).`,
+    `- Rooms: ${s.rooms.created} created, ${s.rooms.disposed} disposed, ${s.rooms.finalizedByGc} finalized by GC, ${s.rooms.liveAtEnd} live at the end, **${s.rooms.retainedAfterGc} retained after a full GC**.`,
+    `- Cycles: ${JSON.stringify(s.counters)}.`,
+    `- Machine load average (1 min) while it ran: mean ${s.machine.loadAverage1m.mean}, max ${s.machine.loadAverage1m.max} on ${s.machine.cpus} CPUs. ${s.machine.loadAverage1m.max > s.machine.cpus ? '**The machine was loaded by other work: CPU, event-loop and dropped-tick figures are pessimistic.**' : 'The machine was not oversubscribed.'}`,
+    `- Active handles: baseline ${JSON.stringify(s.activeResourcesBaseline)} -> end ${JSON.stringify(s.activeResourcesEnd)}.`,
+    '',
+    'Memory figures are not affected by CPU contention; the dropped-tick, event-loop and CPU figures are.',
+    '',
+  ].join('\n');
+}
+
 /** The verdict blocks of the summary, derived from the steady-state post-GC points only (also used by `--analyse --write`). */
 function trendBlocks(points: Point[]) {
   const v = verdictOf(points);
@@ -576,7 +615,11 @@ async function main(): Promise<void> {
     },
     machine: {
       cpus: cpuList().length,
-      loadAverage1m: { mean: round(loads.reduce((a, b) => a + b, 0) / Math.max(1, loads.length), 2), max: round(Math.max(...loads, 0), 2), first: round(loads[0] ?? 0, 2) },
+      loadAverage1m: {
+        mean: round(loads.reduce((a, b) => a + b, 0) / Math.max(1, loads.length), 2),
+        max: round(Math.max(...loads, 0), 2),
+        first: round(loads[0] ?? 0, 2),
+      },
       note: 'load average of the whole machine at each sample: a value above the CPU count means other work was competing with the soak',
     },
     resourceTrendsSteadyWindow: {
@@ -638,9 +681,13 @@ async function main(): Promise<void> {
   );
   console.log(
     `  whole run ticks         ${summary.ticksOverTheWholeRun.run} run, ${summary.ticksOverTheWholeRun.dropped} dropped (${summary.ticksOverTheWholeRun.droppedPercent} %)`,
+  );
+  console.log(
     `  machine load (1 min)    mean ${summary.machine.loadAverage1m.mean}, max ${summary.machine.loadAverage1m.max} on ${summary.machine.cpus} CPUs`,
-    `  growing series          ${Object.entries(summary.resourceTrendsSteadyWindow).filter(([, v]) => v.growing).map(([k]) => k).join(', ') || 'none (rss, external, timers, sockets, listeners all flat)'}`,
-    `  cpu                     mean ${summary.cpuPercentOfOneCore.mean}% max ${summary.cpuPercentOfOneCore.max}% of one core; dropped ticks ${summary.ticksDroppedPeakInLiveRooms}`,
+  );
+  console.log(`  growing series          ${growingSeries(summary.resourceTrendsSteadyWindow)}`);
+  console.log(
+    `  cpu                     mean ${summary.cpuPercentOfOneCore.mean}% max ${summary.cpuPercentOfOneCore.max}% of one core; dropped ticks (peak in live rooms) ${summary.ticksDroppedPeakInLiveRooms}`,
   );
   console.log(
     `  rooms                   created ${summary.rooms.created}, disposed ${summary.rooms.disposed}, finalized ${summary.rooms.finalizedByGc}, live at end ${summary.rooms.liveAtEnd}, retained after GC ${summary.rooms.retainedAfterGc}`,
@@ -653,6 +700,7 @@ async function main(): Promise<void> {
   if (cfg.out) {
     mkdirSync(path.dirname(cfg.out), { recursive: true });
     writeFileSync(cfg.out, JSON.stringify(summary) + '\n');
+    writeFileSync(cfg.out.replace(/\.json$/, '') + '.md', markdownReport(summary));
     console.log(`[soak] wrote ${path.relative(ROOT, cfg.out)}`);
   }
   process.exit(0);
