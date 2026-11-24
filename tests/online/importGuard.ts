@@ -143,6 +143,8 @@ export function edgesOf(file: string): Edge[] {
 export const ZONE = [
   /^src\/net\//,
   /^src\/app\/rumbleOnline\.ts$/,
+  // the controller's own modules (flow, session indirection, fake session, entry-form rules): imported only by the zone
+  /^src\/app\/rumble(?:OnlineFlow|OnlineSession|OnlineFake|EntryInput)\.ts$/,
   /^src\/ui\/online\/rumble\//,
   /^server\//,
 ];

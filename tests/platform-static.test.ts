@@ -107,11 +107,11 @@ describe('the local game does not depend on the optional layers', () => {
         return !!target && target !== RUMBLE_ENTRY && (OPTIONAL.test(target) || OPTIONAL_APP.test(target));
       });
     });
-    // App.tsx (lazy online overlay) and HomeScreen.tsx (the guarded entry src/online/rumbleEntry.ts) are the Online City
-    // Rumble edges (decision ON10); both sit behind `__WAHALA_SERVER_ONLINE__` / `flags().rumbleOnline`
+    // App.tsx is the lazy online overlay's edge (decision ON10, behind `__WAHALA_SERVER_ONLINE__`). HomeScreen.tsx reaches the
+    // online code only through the guarded entry src/online/rumbleEntry.ts (excluded above; the zone test below proves that
+    // edge is the single guarded dynamic import), so it is not an importer of an optional layer itself.
     expect(importers.sort()).toEqual([
       'src/ui/App.tsx',
-      'src/ui/menu/HomeScreen.tsx',
       'src/ui/menu/MainMenu.tsx',
       'src/ui/menu/SettingsScreen.tsx',
     ]);
