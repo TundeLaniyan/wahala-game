@@ -1,0 +1,17 @@
+{
+  "_comment": "Candidate result stingers (unapproved). Loaded only with ?audiodraft=stings|all, after the shipped slots.",
+  "slots": {
+    "win_sting": {
+      "file": "lnds_victory.mp3",
+      "license": "CANDIDATE, NOT approved. Derived from the founder-selected Gemini-generated song 'Lagos No Dey Sleep' (SHA-256 e4b6314d4c27cc27...). Commercial-use rights of the source and of derivatives are unverified; do not ship before founder listening approval and a rights decision (docs/AUDIO_PRODUCTION.md).",
+      "source": "Lagos No Dey Sleep outro",
+      "gain": 1
+    },
+    "lose_sting": {
+      "file": "lnds_defeat.mp3",
+      "license": "CANDIDATE, NOT approved. Derived from the founder-selected Gemini-generated song 'Lagos No Dey Sleep' (SHA-256 e4b6314d4c27cc27...). Commercial-use rights of the source and of derivatives are unverified; do not ship before founder listening approval and a rights decision (docs/AUDIO_PRODUCTION.md).",
+      "source": "Lagos No Dey Sleep groove, tape-stop",
+      "gain": 1
+    }
+  }
+}

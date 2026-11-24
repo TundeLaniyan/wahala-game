@@ -28,8 +28,9 @@ import { PUNCH_HZ, PUNCH_Q, SHELF_HZ, tempoFor, toneFor, urgencyOf } from './esc
 import type { MatchClock } from './escalation';
 import { EMPTY_MANIFEST, parseMusicManifest, pickFrom, pickMatchTrack } from './playlist';
 import type { MusicManifest, MusicTrack } from './playlist';
-import { CANDIDATE_DIR, mergeCandidateMusic, wantsMusic } from './candidates';
+import { CANDIDATE_DIR, mergeCandidateMusic, parseCandidateExtras, wantsMusic } from './candidates';
 import type { CandidateMode } from './candidates';
+import type { MusicVariant } from './musicState';
 import type { Rand } from './rng';
 import type { FetchLike } from './samples';
 import { audioBaseUrl } from './samples';
@@ -89,6 +90,8 @@ export interface MusicStatus {
   available: string[];
   /** Every match pick so far, oldest first. */
   history: string[];
+  /** The soundtrack variant currently wanted by the game state ('normal' unless a candidate variant is on). */
+  variant: MusicVariant;
   /** Playback position of the heard track (seconds) and whether its element is playing (diagnostics). */
   position: number;
   playing: boolean;
@@ -101,6 +104,12 @@ export interface MusicPlayer {
   setScene(scene: MusicScene): void;
   /** A match starts (or restarts): a new track for this arena, tempo and tone back to normal. */
   startMatch(arenaId?: string | null): void;
+  /**
+   * The game state calls for another soundtrack variant (Sudden Death, boss level). Only does something when the
+   * manifest lists variants, i.e. with the unapproved `?audiodraft` overlay; with the shipped playlist it never does.
+   * Cheap and idempotent: the engine may call it every tick.
+   */
+  setVariant(variant: MusicVariant): void;
   /** Every tick/frame during a match: follows the game clock (escalation, match end). */
   update(clock: MatchClock): void;
   setPaused(paused: boolean): void;
@@ -123,6 +132,8 @@ const RATE_STEP = 0.0025;
 const TONE_STEP = 0.01;
 const PAUSE_FADE_MS = 120;
 const RETRY_PLAY_SEC = 1.5;
+/** A variant that has not started playing after this long no longer holds the old track on. */
+const HANDOVER_MAX_SEC = 12;
 
 interface Deck {
   track: MusicTrack;
@@ -141,6 +152,8 @@ interface Deck {
   lite: boolean;
   /** previousMatch before this deck was picked (restored if its file turns out to be broken). */
   prevBefore: string | null;
+  /** Opened by `setVariant` (Sudden Death / boss), not picked as the match's track. */
+  variant: boolean;
   lastPlayTry: number;
 }
 
@@ -252,6 +265,9 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
   let current: Deck | null = null;
   const live = new Set<Deck>();
   let previousMatch: string | null = null;
+  /** The track `openMatch` picked for this match (the variants return to it) and the variant the game state wants. */
+  let matchBase: MusicTrack | null = null;
+  let variant: MusicVariant = 'normal';
   /** Arenas that already had a match this session (their `start` track has been used). */
   const arenasStarted = new Set<string>();
   let previousMenu: string | null = null;
@@ -349,6 +365,11 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
     release(d);
     if (current === d) current = null;
     if (!wasCurrent || disposed) return;
+    if (d.variant) {
+      // a broken variant file: the match goes back to its own track (the variant is skipped from now on)
+      if (wanted === 'match' && matchBase) switchTo(matchBase, CROSSFADE, null, false);
+      return;
+    }
     // try another track for the same scene
     if (d.kind === 'match' && wanted === 'match') {
       previousMatch = d.prevBefore;
@@ -366,8 +387,8 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
       el.loop = true; // a match longer than the track simply goes round again
       const pitch = enablePreservesPitch(el);
       el.playbackRate = 1;
-      const lite = !!track.lite && !liteFailed.has(track.id) && !!o.lite?.();
-      el.src = track.url ?? base + (lite ? track.lite! : track.file);
+      const lite = !!(track.url ? track.liteUrl : track.lite) && !liteFailed.has(track.id) && !!o.lite?.();
+      el.src = track.url ? (lite ? track.liteUrl! : track.url) : base + (lite ? track.lite! : track.file);
       const node = ctx.createMediaElementSource(el);
       const gain = ctx.createGain();
       gain.gain.value = 0;
@@ -386,6 +407,7 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
         released: false,
         lite,
         prevBefore: previousMatch,
+        variant: false,
         lastPlayTry: -Infinity,
       };
       el.addEventListener('error', d.onError);
@@ -415,8 +437,74 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
     const d = openDeck(t, 'match', CROSSFADE);
     if (!d) return;
     current = d;
+    matchBase = t;
     previousMatch = t.id;
     history.push(t.id);
+    if (variant !== 'normal') applyVariant(); // the state already wanted a variant when the track opened
+  }
+
+  /** The variant's track id from the manifest, or null (no variants listed, or the file is missing). */
+  const variantTrackId = (v: MusicVariant): string | null => {
+    const vs = manifest?.variants;
+    if (!vs || v === 'normal') return null;
+    const id = v === 'suddenDeath' ? vs.suddenDeath : vs.boss?.[Number(v.slice(4)) - 1];
+    return id && isAvailable(id) ? id : null;
+  };
+
+  /**
+   * Crossfades the match soundtrack to `target`. When both tracks share a `syncGroup` (same length and bar grid) the
+   * new deck is started at the old deck's playback position, so the beat carries on; the rate follows too.
+   */
+  function switchTo(target: MusicTrack, fade: number, from: Deck | null, isVariant: boolean): void {
+    const prev = from ?? current;
+    if (!prev || prev.released || prev.track.id === target.id) return;
+    const d = openDeck(target, 'match', fade);
+    if (!d) return;
+    d.variant = isVariant;
+    current = d;
+    if (prev.pitch && d.pitch) {
+      d.rate = prev.rate;
+      writeRate(d, prev.rate);
+    }
+    const sync = prev.track.syncGroup !== undefined && prev.track.syncGroup === target.syncGroup;
+    const startedAt = ctx.currentTime;
+    const prevPos = prev.el.currentTime;
+    let done = false;
+    // The old deck keeps sounding until the new one is really playing (a slow network can take seconds), then they
+    // crossfade. If the new stream never starts, the old deck is closed anyway after a while (or the error path
+    // brings the match track back).
+    const handOver = (): void => {
+      if (done) return;
+      done = true;
+      d.el.removeEventListener('playing', onPlaying);
+      cancel();
+      if (!prev.released) closeDeck(prev, fade);
+    };
+    const onPlaying = (): void => {
+      if (sync) {
+        try {
+          // where the beat has got to by now: the old position plus the time the new stream took to start
+          let at = prevPos + (ctx.currentTime - startedAt) * Math.max(0.5, prev.rate);
+          const dur = (d.el as { duration?: number }).duration;
+          if (dur && Number.isFinite(dur) && dur > 0) at %= dur;
+          d.el.currentTime = at;
+        } catch {
+          /* a stream that cannot seek simply starts from its top */
+        }
+      }
+      handOver();
+    };
+    d.el.addEventListener('playing', onPlaying);
+    const cancel = schedule(handOver, HANDOVER_MAX_SEC * 1000);
+  }
+
+  function applyVariant(): void {
+    if (disposed || wanted !== 'match' || !current || current.kind !== 'match' || !matchBase) return;
+    const id = variantTrackId(variant);
+    const t = id ? trackById(id) : variant === 'normal' ? matchBase : undefined;
+    if (!t) return; // this variant has no track (the shipped playlist): nothing changes
+    // a boss level change inside the boss theme is a plain crossfade (no restart); leaving it restores the match track
+    switchTo(t, variant === 'suddenDeath' ? 1.4 : 1.0, null, t.id !== matchBase.id);
   }
 
   function openMenu(): void {
@@ -499,13 +587,16 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
         if (fetcher && wantsMusic(mode)) {
           try {
             const res = await fetcher(`${candidateBase}manifest.json`);
-            if (res.ok)
+            if (res.ok) {
+              const raw: unknown = await res.json();
               parsed = mergeCandidateMusic(
                 parsed,
-                parseMusicManifest(await res.json()).manifest,
+                parseMusicManifest(raw).manifest,
                 mode,
                 candidateBase,
+                parseCandidateExtras(raw),
               );
+            }
           } catch {
             /* no staged candidates (the normal case): the approved playlist stands */
           }
@@ -544,8 +635,15 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
       arena = arenaId ?? null;
       setPausedImpl(false);
       resetEscalation(0.05);
+      variant = 'normal';
+      matchBase = null;
       if (current) closeDeck(current, CROSSFADE);
       openMatch(); // no-op until the manifest has loaded; load() then calls apply()
+    },
+    setVariant(v) {
+      if (disposed || v === variant) return;
+      variant = v;
+      applyVariant();
     },
     update(clock) {
       const d = current;
@@ -585,6 +683,7 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
       paused,
       available: manifest ? manifest.tracks.filter((t) => isAvailable(t.id)).map((t) => t.id) : [],
       history: [...history],
+      variant,
       position: current ? current.el.currentTime : 0,
       playing: current ? !current.el.paused : false,
     }),

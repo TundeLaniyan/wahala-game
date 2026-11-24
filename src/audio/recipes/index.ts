@@ -2,6 +2,7 @@
 import { blastSounds } from './blasts';
 import { ambienceLoops, crowdOneShots } from './crowd';
 import { gameplaySounds } from './gameplay';
+import { productionSounds } from './production';
 import { vehicleSounds } from './vehicles';
 import type { SoundDef } from './types';
 
@@ -9,6 +10,7 @@ export const SOUND_DEFS = {
   ...blastSounds,
   ...vehicleSounds,
   ...gameplaySounds,
+  ...productionSounds,
   ...crowdOneShots,
   ...ambienceLoops,
 } satisfies Record<string, SoundDef>;

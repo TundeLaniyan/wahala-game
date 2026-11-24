@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const SRC = join(here, 'wahala_original_theme_v1');
+const SRC = join(here, 'lagos_no_dey_sleep_v1');
 const DEST = join(here, '..', '..', '..', 'public', 'audio', 'candidates');
 
 if (process.argv.includes('--clean')) {
@@ -17,8 +17,10 @@ if (process.argv.includes('--clean')) {
   console.log('removed', DEST);
 } else {
   mkdirSync(DEST, { recursive: true });
-  const files = readdirSync(SRC).filter((f) => /\.(m4a|json)$/.test(f));
+  const files = readdirSync(SRC).filter((f) => /\.(mp3|json)$/.test(f) && f !== 'report.json');
   for (const f of files) cpSync(join(SRC, f), join(DEST, f));
+  mkdirSync(join(DEST, 'lite'), { recursive: true });
+  for (const f of readdirSync(join(SRC, 'lite'))) cpSync(join(SRC, 'lite', f), join(DEST, 'lite', f)); // Data Saver files
   console.log(
     `staged ${files.length} candidate files in ${DEST} (git-ignored; try /?audiodraft or ?audiodraft=menu|match|stings)`,
   );

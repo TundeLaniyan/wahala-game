@@ -1,0 +1,173 @@
+<title>Lagos No Dey Sleep Soundtrack Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single column of listening stations; each station is one file you can play, with its duration, size and game event. */
+:root{--bg:#f6f1e3;--panel:#fffaf0;--ink:#1b1710;--mute:#665e4b;--line:#d9cfb4;--accent:#f0a800;--on-accent:#1b1710;--flame:#c0391a;--new:#1f6f3a;--old:#6b6350;
+--display:"Archivo","Arial Narrow",Arial,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14120d;--panel:#1e1b13;--ink:#f3ecd8;--mute:#a79f88;--line:#383324;--accent:#f5b700;--on-accent:#14120d;--flame:#ff7a45;--new:#7fd48a;--old:#a79f88;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14120d;--panel:#1e1b13;--ink:#f3ecd8;--mute:#a79f88;--line:#383324;--accent:#f5b700;--on-accent:#14120d;--flame:#ff7a45;--new:#7fd48a;--old:#a79f88;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--display);padding-block:0 4rem;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:60rem;margin:0 auto}
+header{padding-block:1.5rem 1rem;border-bottom:6px solid var(--accent);margin-bottom:1rem}
+h1{font-stretch:62%;font-weight:900;font-size:clamp(2.2rem,8vw,4rem);line-height:.95;margin:0;text-transform:uppercase}
+h1 span{color:var(--accent)}
+h2{font-stretch:75%;font-weight:800;font-size:1.45rem;text-transform:uppercase;margin:0 0 .3rem}
+h3{font-size:1rem;margin:.9rem 0 .2rem;font-weight:700}
+p{max-width:68ch;margin:.35rem 0}
+.tag{font:500 .78rem var(--mono);color:var(--flame);letter-spacing:.06em;text-transform:uppercase;margin:.5rem 0 0}
+.note{color:var(--mute);font-size:.92rem}
+.warn{border-left:6px solid var(--flame);padding:.4rem .8rem;background:var(--panel)}
+section{background:var(--panel);border:1px solid var(--line);padding:1.1rem;margin-block:1rem}
+.row{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.6rem;align-items:center}
+button{font:600 .92rem var(--display);padding:.55rem .9rem;border:2px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;min-height:44px}
+button:hover{background:var(--ink);color:var(--bg)}
+button.p{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+button.p:hover{filter:brightness(1.08);background:var(--accent);color:var(--on-accent)}
+button.on{background:var(--ink);color:var(--bg)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:3px solid var(--flame);outline-offset:2px}
+.card{border-top:1px solid var(--line);padding-block:.8rem;display:grid;gap:.35rem}
+.card:first-of-type{border-top:0}
+.meta{font:400 .76rem var(--mono);color:var(--mute);overflow-wrap:anywhere}
+.meta b{color:var(--ink);font-weight:500}
+.bar{height:6px;background:var(--line);position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;width:0;background:var(--accent)}
+label.lp{font:500 .78rem var(--mono);color:var(--mute);display:inline-flex;gap:.35rem;align-items:center}
+label.lp input{width:1.05rem;height:1.05rem;accent-color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:.6rem;margin-top:.5rem}
+.sfx{border:1px solid var(--line);padding:.6rem;display:grid;gap:.3rem;min-width:0}
+.badge{font:500 .7rem var(--mono);padding:.05rem .4rem;border:1px solid;display:inline-block}
+.badge.new{color:var(--new);border-color:var(--new)}.badge.existing{color:var(--old);border-color:var(--old)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:.8rem;margin-top:.6rem}
+label.rg{font:500 .78rem var(--mono);color:var(--mute);display:grid;gap:.2rem;text-transform:uppercase}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.status{font:500 .8rem var(--mono);color:var(--mute);margin-top:.5rem;min-height:1.2em}
+.chk{display:flex;gap:.6rem;align-items:flex-start;padding:.35rem 0;border-top:1px solid var(--line)}
+.chk input{margin-top:.35rem;width:1.1rem;height:1.1rem;accent-color:var(--accent);flex:none}
+</style>
+<div class="wrap">
+<header>
+<h1>Lagos No Dey Sleep <span>soundtrack review</span></h1>
+<p class="tag">Candidates built from your approved recording · 110 BPM · not approved</p>
+<p class="warn">Everything below except the first item is a candidate. Each music cue is cut and processed from the stems of your approved song (the instrumental is its own drums, bass and other parts, with the vocals taken out by a separation model). Cues that carry extra synthesised percussion, risers or brass stabs say so. The author could not listen to any of it. Your ears decide.</p>
+</header>
+
+<section>
+<h2>Start here</h2>
+<p class="note">Browsers keep audio silent until you tap. Loading decodes everything in this page (about <span id="mb"></span> MB). Start with a low volume: the explosions are loud on purpose.</p>
+<div class="row"><button class="p" id="load">Load audio</button><button id="stop">Stop everything</button></div>
+<div class="ctl"><label class="rg">Volume<input type="range" id="vol" min="0" max="1" step="0.01" value="0.6"></label></div>
+<div class="status" id="status">Not loaded.</div>
+</section>
+
+<section><h2>1 · The approved original</h2><div id="g-orig"></div></section>
+<section><h2>2 · Instrumental menu loop</h2><p class="note">Verse 2 and chorus B of the song without vocals. Listen for: is the loop seamless, is it welcoming on a first screen, does any vocal ghost remain?</p><div id="g-menu"></div></section>
+<section><h2>3 · City Rumble and Sudden Death</h2><p class="note">Same 16-bar grid, so the game can switch between them at the same playback position. The rumble mix leaves room around 3 kHz for warning sounds and keeps the low end audible on phone speakers.</p><div id="g-rumble"></div></section>
+
+<section><h2>4 · Transition demos</h2>
+<p class="note">These use the same crossfade rule as the game: the new track starts where the beat has got to and the old one fades out.</p>
+<h3>Normal play into Sudden Death</h3>
+<div class="row"><button class="p" id="t-start">Start City Rumble mix</button><button id="t-sd">Sudden Death begins</button><button id="t-back">Back to normal</button></div>
+<h3>Boss encounter (level follows the fight)</h3>
+<div class="row"><button class="p" id="b-start">Boss appears (level 1)</button><button id="b-2">Level 2: engaged</button><button id="b-3">Level 3: all-out</button><button id="b-end">Boss defeated: back to City Rumble</button></div>
+<div class="status" id="tstatus"></div>
+</section>
+
+<section><h2>5 · Boss theme (three levels)</h2><p class="note">The song's bass and other parts moved down five semitones (F to C) over its own drums. Level 3 adds synthesised brass stabs, risers and impacts.</p><div id="g-boss"></div></section>
+<section><h2>6 · Logo, victory and defeat</h2><p class="note">The logo sting is the chorus's first sung line from the original recording with a riser and an impact. Victory is the song's own ending. Defeat is one bar of the groove that slows like a tape stopping.</p><div id="g-stinger"></div></section>
+<section><h2>7 · Campaign atmosphere cues</h2><div id="g-camp"></div></section>
+
+<section><h2>8 · Danger over music</h2>
+<p class="note">The gameplay test. Start a music bed, then fire the warnings and blasts. Music dips while they play. You should always hear them clearly.</p>
+<div class="row"><button class="p" id="d-rumble">City Rumble bed</button><button id="d-sd">Sudden Death bed</button><button id="d-boss">Boss level 3 bed</button></div>
+<div class="row"><button data-fx="fuse_tick">Fuse tick</button><button data-fx="explosion_1">Explosion</button><button data-fx="sd_rise">Sudden Death rise</button><button data-fx="crush_slam">Crush slam</button><button data-fx="boss_windup">Boss wind-up</button><button data-fx="boss_impact">Boss impact</button><button data-fx="boss_exposed">Boss exposed</button></div>
+</section>
+
+<section><h2>9 · Sound effects</h2>
+<p class="note">All effects are synthesised by the game at run time (nothing is downloaded). "New" sounds were added in this pass; "Before" is what the game plays today for the same event.</p>
+<div id="sfx"></div></section>
+
+<section><h2>10 · Decisions</h2><p class="note">Tick as you listen. Nothing is saved or sent.</p><div id="checks"></div></section>
+</div>
+<script>
+const ITEMS=__ITEMS__, SFX=__SFX__, AUDIO=__AUDIO__;
+(function(){
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const kb=b=>b>=1048576?(b/1048576).toFixed(1)+' MB':Math.round(b/1024)+' KB';
+const fmt=s=>s>=60?Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'):s.toFixed(1)+' s';
+$('#mb').textContent=(Object.values(AUDIO).reduce((n,v)=>n+v.length*0.75,0)/1048576).toFixed(0);
+let ctx=null,master=null,musicBus=null,fxBus=null,buf={},duckUntil=0;
+const b64=s=>{const bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer;};
+const st=t=>{$('#status').textContent=t};
+let loaded=false,current=null,deck=null;
+$('#load').onclick=async()=>{
+  st('Decoding...');
+  ctx=ctx||new (window.AudioContext||window.webkitAudioContext)(); await ctx.resume();
+  master=ctx.createGain(); master.gain.value=+$('#vol').value; master.connect(ctx.destination);
+  musicBus=ctx.createGain(); musicBus.connect(master); fxBus=ctx.createGain(); fxBus.connect(master);
+  const ids=Object.keys(AUDIO); let n=0;
+  for(const id of ids){ try{buf[id]=await ctx.decodeAudioData(b64(AUDIO[id]));}catch(e){} n++; st('Decoding '+n+' of '+ids.length+'...'); }
+  loaded=true; st('Ready: '+Object.keys(buf).length+' files decoded, '+ctx.sampleRate+' Hz.');
+};
+$('#vol').oninput=e=>{if(master)master.gain.value=+e.target.value};
+function need(){ if(!loaded){st('Press "Load audio" first.');return false;} return true; }
+function stopAll(){ if(current){try{current.src.stop()}catch(_){} current=null;} if(deck){deck.stop();deck=null;} $$('button.on').forEach(b=>b.classList.remove('on')); }
+$('#stop').onclick=stopAll;
+function playBuf(id,{loop=false,bus=null,gain=1}={}){ const s=ctx.createBufferSource(); s.buffer=buf[id]; s.loop=loop; const g=ctx.createGain(); g.gain.value=gain; s.connect(g); g.connect(bus||musicBus); s.start(); return {src:s,gain:g,t0:ctx.currentTime,id}; }
+// ---- music stations
+const GROUPS={orig:'g-orig',menu:'g-menu',rumble:'g-rumble',boss:'g-boss',stinger:'g-stinger',camp:'g-camp'};
+const bars={};
+for(const it of ITEMS){
+  const host=$('#'+GROUPS[it.group]); const el=document.createElement('div'); el.className='card';
+  const extra=(it.added&&it.added.length)?` · <b>added synthesis:</b> ${it.added.join(', ')}`:'';
+  el.innerHTML=`<div><b>${it.title}</b></div>
+  <div class="meta"><b>${it.id==='original'?it.file:it.file}</b> · ${fmt(it.seconds)} · ${kb(it.bytes)}${it.lite?' (Data Saver file '+kb(it.lite)+')':''} · ${it.lufs} LUFS · ${it.loop?'loops':'one-shot'}${extra}</div>
+  <div class="meta"><b>Game event:</b> ${it.event}</div>
+  <div class="row"><button class="p" data-id="${it.id}">Play</button>${it.loop?`<label class="lp"><input type="checkbox" checked> loop</label>`:''}<span class="meta" data-pos="${it.id}"></span></div>
+  <div class="bar"><i data-bar="${it.id}"></i></div>`;
+  host.appendChild(el);
+  $('button',el).onclick=e=>{ if(!need())return; stopAll(); const lp=it.loop&&$('input',el).checked; current=playBuf(it.id,{loop:lp,gain:1}); current.dur=buf[it.id].duration; current.el=el; e.target.classList.add('on'); };
+}
+setInterval(()=>{ if(!current||!ctx) return; const t=(ctx.currentTime-current.t0)%current.dur; const b=$('[data-bar]',current.el); if(b){b.style.width=(100*t/current.dur)+'%';} const p=$('[data-pos]',current.el); if(p)p.textContent=fmt(t)+' / '+fmt(current.dur); },200);
+// ---- two-deck crossfade with position sync
+class Deck{
+  constructor(){this.cur=null;}
+  start(id,{fade=0.3}={}){ this.stop(0.05); this.cur=this._mk(id,0,fade); }
+  _mk(id,offset,fade){ const s=ctx.createBufferSource(); s.buffer=buf[id]; s.loop=true; const g=ctx.createGain(); g.gain.value=0; s.connect(g); g.connect(musicBus); s.start(0,offset); g.gain.setTargetAtTime(1,ctx.currentTime,fade/3); return {id,src:s,g,t0:ctx.currentTime-offset}; }
+  pos(){ if(!this.cur)return 0; return (ctx.currentTime-this.cur.t0)%buf[this.cur.id].duration; }
+  to(id,fade=1.2){ if(!this.cur) return this.start(id); if(this.cur.id===id) return; const p=this.pos(); const old=this.cur; this.cur=this._mk(id,p,fade); old.g.gain.cancelScheduledValues(ctx.currentTime); old.g.gain.setTargetAtTime(0,ctx.currentTime,fade/3); setTimeout(()=>{try{old.src.stop()}catch(_){}} ,(fade+0.5)*1000); }
+  stop(fade=0.3){ if(!this.cur)return; const o=this.cur; this.cur=null; o.g.gain.setTargetAtTime(0,ctx.currentTime,fade/3); setTimeout(()=>{try{o.src.stop()}catch(_){}},(fade+0.3)*1000); }
+}
+const D=()=>{ if(!deck){deck=new Deck();} return deck; };
+const ts=t=>{$('#tstatus').textContent=t};
+const go=(id,label)=>{ if(!need())return; if(current){try{current.src.stop()}catch(_){} current=null;} D().to(id); ts(label+' · position '+D().pos().toFixed(1)+' s of '+buf[id].duration.toFixed(1)+' s'); };
+$('#t-start').onclick=()=>{ if(!need())return; stopAll(); D().start('lnds_rumble'); ts('City Rumble mix playing'); };
+$('#t-sd').onclick=()=>go('lnds_suddendeath','Sudden Death: crossfaded on the same beat');
+$('#t-back').onclick=()=>go('lnds_rumble','Back to the City Rumble mix');
+$('#b-start').onclick=()=>{ if(!need())return; if(!deck||!deck.cur){stopAll();D().start('lnds_boss_1');ts('Boss level 1');} else go('lnds_boss_1','Boss level 1'); };
+$('#b-2').onclick=()=>go('lnds_boss_2','Boss level 2');
+$('#b-3').onclick=()=>go('lnds_boss_3','Boss level 3');
+$('#b-end').onclick=()=>{ go('lnds_rumble','Boss defeated: back to City Rumble'); if(need()) playBuf('boss_down',{bus:fxBus}); };
+// ---- danger over music
+const bed=id=>()=>{ if(!need())return; stopAll(); D().start(id); };
+$('#d-rumble').onclick=bed('lnds_rumble'); $('#d-sd').onclick=bed('lnds_suddendeath'); $('#d-boss').onclick=bed('lnds_boss_3');
+function fx(id,duck=true){ if(!need())return; const dur=buf[id].duration; playBuf(id,{bus:fxBus,gain:1}); if(duck&&musicBus){ const t=ctx.currentTime; musicBus.gain.cancelScheduledValues(t); musicBus.gain.setTargetAtTime(0.5,t,0.01); musicBus.gain.setTargetAtTime(1,t+Math.min(dur,1.2),0.15);} }
+$$('[data-fx]').forEach(b=>b.onclick=()=>{ if(b.dataset.fx==='fuse_tick'){ [0,0.45,0.85,1.2,1.5].forEach(t=>setTimeout(()=>fx('fuse_tick'),t*1000)); } else fx(b.dataset.fx); });
+// ---- sfx
+const host=$('#sfx'); let lastCat='';
+const loops={};
+for(const s of SFX){
+  if(s.cat!==lastCat){ lastCat=s.cat; const h=document.createElement('h3'); h.textContent=s.catTitle; host.appendChild(h); var grid=document.createElement('div'); grid.className='grid'; host.appendChild(grid); }
+  const el=document.createElement('div'); el.className='sfx';
+  const ab=s.replaces?`<div class="row" style="margin-top:.1rem"><button data-b="${s.replaces}">Before: ${s.replaces}</button><button class="p" data-a="${s.id}">After</button><button data-ab="1">A / B</button></div>`:`<div class="row" style="margin-top:.1rem"><button class="p" data-a="${s.id}">Play${s.loop?' (loop)':''}</button></div>`;
+  el.innerHTML=`<div><b>${s.id}</b> <span class="badge ${s.status}">${s.status}</span></div><div class="meta">${s.loop?'loop, ':''}${s.seconds.toFixed(2)} s · ${s.event}</div>${ab}`;
+  grid.appendChild(el);
+  $$('[data-a],[data-b]',el).forEach(b=>b.onclick=()=>{ if(!need())return; const id=b.dataset.a||b.dataset.b; if(loops[id]){try{loops[id].src.stop()}catch(_){} delete loops[id]; b.classList.remove('on'); return;} const l=(id===s.id&&s.loop); const v=playBuf(id,{loop:l,bus:fxBus}); if(l){loops[id]=v;b.classList.add('on');} });
+  const abBtn=$('[data-ab]',el); if(abBtn) abBtn.onclick=()=>{ if(!need())return; playBuf(s.replaces,{bus:fxBus}); setTimeout(()=>playBuf(s.id,{bus:fxBus}),Math.max(900,buf[s.replaces].duration*1000+400)); };
+}
+const CH=['Approved original: this is still the theme I want, and the arrangements feel like it','Menu loop: the loop point is seamless and it is not tiring after two minutes','City Rumble mix: energetic but not distracting; no vocal ghost','Sudden Death: the switch feels like pressure rising, not a different song','Boss theme: distinctive, and the three levels escalate convincingly','Logo sting, victory and defeat fit the game','Campaign atmosphere cues suit briefing, tension and alert','Danger sounds are always clear over the music, on a phone speaker too','New sound effects: keep, revise or drop (note which)','Rights: the source recording and these derivatives are cleared for commercial release'];
+const box=$('#checks'); CH.forEach((t,i)=>{const l=document.createElement('label');l.className='chk';l.innerHTML='<input type="checkbox" id="c'+i+'"><span>'+t+'</span>';box.appendChild(l);});
+})();
+</script>

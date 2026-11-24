@@ -39,6 +39,20 @@ export interface MusicTrack {
   url?: string;
   /** True for an unapproved audition track added by the `?audiodraft` overlay; absent for every shipped track. */
   candidate?: boolean;
+  /** Candidate only (set by the merge): the Data Saver file's full URL. */
+  liteUrl?: string;
+  /**
+   * Candidate only: tracks with the same group have the same length and bar grid, so a variant can take over from
+   * another one at the same playback position (Sudden Death, boss levels).
+   */
+  syncGroup?: string;
+}
+
+/** Music variants the match soundtrack can switch to as the game state changes (candidates only, see candidates.ts). */
+export interface MusicVariants {
+  suddenDeath?: string;
+  /** Boss levels 1..3 (stalking, engaged, all-out), by track id. */
+  boss?: string[];
 }
 
 export interface ArenaPlaylist {
@@ -59,6 +73,8 @@ export interface MusicManifest {
   };
   /** Track ids for the title / menu screens (empty: the menus are silent). */
   menu: string[];
+  /** Only ever set by `mergeCandidateMusic`; a manifest cannot supply it. */
+  variants?: MusicVariants;
 }
 
 export const SAFE_TRACK_ID = /^[A-Za-z0-9_-]+$/;

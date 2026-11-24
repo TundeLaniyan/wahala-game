@@ -84,6 +84,11 @@ const panOf = (c: RouteCtx, x: number): number => {
 const isHuman = (c: RouteCtx, playerId: number): boolean => c.state.players[playerId]?.isBot === false;
 const isEnemy = (c: RouteCtx, playerId: number): boolean =>
   c.state.players[playerId]?.enemyKind !== undefined;
+/** The boss seat of a campaign boss mission (decisions BX1-BX8: only boss missions carry `maxHits`). */
+const isBoss = (c: RouteCtx, playerId: number): boolean =>
+  c.state.mission !== undefined &&
+  c.state.mission.boss.maxHits !== undefined &&
+  c.state.mission.bossId === playerId;
 
 /** Enemy wind-up warnings (decision SV3): each kind at most every 0.35 s, and any two at least 0.15 s apart. */
 const ENEMY_TELL_GAP = 0.35;
@@ -145,7 +150,8 @@ const handlers: Handlers = {
   },
   // Rumble sudden death reuses the existing synthesised cues (no new recording or music is added)
   suddenDeathStarted: (_e, c) => {
-    sfx(c, 'crush_warning');
+    sfx(c, 'sd_rise'); // rising pressure under the title card, then the warning
+    sfx(c, 'crush_warning', 0, 1, 1, 0.1);
     c.buses.duck('warning');
     c.ambience.swell(0.8);
     react(c, { kind: 'gasp', strength: 0.8, force: true, delay: 0.3 });
@@ -287,32 +293,54 @@ const handlers: Handlers = {
   // the telegraph of a melee press (a quick breath of air), and the empty swing of one that found nobody
   attackStarted: (e, c) => {
     // a campaign enemy's wind-up has its own warning (decision SV3); everyone else's press is the quick breath
+    if (isBoss(c, e.playerId)) {
+      // the boss's special attack warning: a rising growl in the warning band (never ducked, never masked by music)
+      if (allow(c, 'bossWindup', 0.9)) sfx(c, 'boss_windup', panOf(c, playerX(c, e.playerId)));
+      return;
+    }
     if (isEnemy(c, e.playerId)) {
       if (enemyTell(c, 'enemyWindup')) sfx(c, 'enemy_windup', panOf(c, playerX(c, e.playerId)));
       return;
     }
-    if (allow(c, 'attackStart', 0.05)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.35, 1.5);
+    if (allow(c, 'attackStart', 0.05))
+      sfx(c, 'punch_swing', panOf(c, playerX(c, e.playerId)), 0.55, jitter(c, 0.05));
   },
   attackResolved: (e, c) => {
+    if (e.hit && isBoss(c, e.playerId)) {
+      if (allow(c, 'bossImpact', 0.3)) {
+        sfx(
+          c,
+          'boss_impact',
+          panOf(c, e.targetId !== null ? playerX(c, e.targetId) : playerX(c, e.playerId)),
+        );
+        c.buses.duck('blast');
+      }
+      return;
+    }
     const lab = c.state.config.combatPilot ? null : feelPresetFor(c.state, c.state.players[e.playerId]);
     if (lab) {
       // the combat test lab, Classic Battle and a human's punch in a raid or mission (decisions CL-L9, CC-F1): a hit is a thud that grows with the level, a miss a quiet low swish
       if (e.hit && e.targetId !== null) {
         const cue = labHitCue(lab);
         if (allow(c, 'labHit', 0.04))
-          sfx(c, 'gen_drop', panOf(c, playerX(c, e.targetId)), cue.gain, cue.rate);
+          sfx(c, 'punch_hit', panOf(c, playerX(c, e.targetId)), cue.gain, cue.rate);
       } else if (!e.hit) {
         const cue = labMissCue();
         if (allow(c, 'labMiss', 0.08)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), cue.gain, cue.rate);
       }
       return;
     }
-    if (!e.hit && allow(c, 'attackWhiff', 0.1)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.3, 0.8);
+    if (e.hit && e.targetId !== null) {
+      if (allow(c, 'punchHit', 0.05))
+        sfx(c, 'punch_hit', panOf(c, playerX(c, e.targetId)), 0.9, jitter(c, 0.06));
+    } else if (!e.hit && allow(c, 'attackWhiff', 0.1))
+      sfx(c, 'punch_swing', panOf(c, playerX(c, e.playerId)), 0.35, 0.85);
   },
   // the combat pilot (decision CP4): every accepted punch is a whoosh; a refused generator a short dull "no"
   // (existing synthesised cues only)
   punchSwing: (e, c) => {
-    if (allow(c, 'punchSwing', 0.06)) sfx(c, 'push', panOf(c, playerX(c, e.playerId)), 0.45, 1.9);
+    if (allow(c, 'punchSwing', 0.06))
+      sfx(c, 'punch_swing', panOf(c, playerX(c, e.playerId)), 0.6, jitter(c, 0.05));
   },
   placeRefused: (e, c) => {
     if (isHuman(c, e.playerId) && allow(c, 'placeRefused', 0.25))
@@ -334,7 +362,7 @@ const handlers: Handlers = {
     sfx(c, 'daze', panOf(c, playerX(c, e.playerId)), 0.5, 1.3);
   },
   playerPushed: (e, c) => {
-    sfx(c, 'gen_drop', panOf(c, playerX(c, e.playerId)), 0.9);
+    sfx(c, 'knock_back', panOf(c, playerX(c, e.playerId)), 0.9, jitter(c, 0.05));
     react(c, { kind: 'gasp', strength: 0.3, chance: 0.4, delay: 0.1 });
   },
   playerDazed: (e, c) => {
@@ -398,6 +426,7 @@ const handlers: Handlers = {
   crushLanded: (e, c) => {
     if (!allow(c, 'crushland', 0.12)) return;
     sfx(c, 'crush_slam', panOf(c, e.x));
+    sfx(c, 'crush_debris', panOf(c, e.x), 0.8, jitter(c, 0.05), 0.07);
     c.buses.duck('blast');
     react(c, { kind: 'gasp', strength: 0.6, chance: 0.7, delay: 0.2 });
   },
@@ -470,7 +499,9 @@ const handlers: Handlers = {
   generatorDoused: (e, c) => sfx(c, 'gen_dud', panOf(c, generatorX(c, e.generatorId))),
   // campaign missions (src/sim/mission): a few existing synthesised cues, nothing new (no music, voices or recordings).
   // The callout and the start are carried by the HUD panel; the outcome by the match-end sting.
-  missionStarted: () => undefined,
+  missionStarted: (_e, c) => {
+    if (c.state.mission?.boss.maxHits !== undefined) sfx(c, 'boss_entrance', 0, 0.9); // a boss mission: the boss arrives
+  },
   missionPhase: (e, c) => {
     if (e.change === 'cleared') sfx(c, 'pickup_rare', 0, 0.8, 1.1);
     else sfx(c, 'ui_start', 0, 0.6);
@@ -486,16 +517,22 @@ const handlers: Handlers = {
     else sfx(c, 'crush_warning', panOf(c, w.x), 0.7);
   },
   bossExposed: (_e, c) => {
-    sfx(c, 'ui_go', 0, 0.8, 0.9);
+    sfx(c, 'boss_exposed', 0, 0.9); // the vulnerability window opens: bright, rising, unmistakable
     c.buses.duck('warning');
   },
   bossShielded: (e, c) => {
-    if (e.reason === 'expired') sfx(c, 'ui_back', 0, 0.8, 0.8);
+    if (e.reason !== 'start') sfx(c, 'boss_shield', 0, e.reason === 'expired' ? 0.9 : 0.7);
   },
-  bossDefeated: (_e, c) => sfx(c, 'win_sting', 0, 0.9),
+  bossDefeated: (_e, c) => {
+    sfx(c, 'boss_down', 0, 1);
+    c.buses.duck('blast');
+  },
   // decisions BX2-BX3: existing synthesised cues only (a heavy blow for a hit on the boss, a short count for the interrupt)
-  bossHit: (e, c) => sfx(c, 'pickup_rare', panOf(c, e.x), 0.9, 0.7),
-  bossInterrupted: (_e, c) => sfx(c, 'ui_count', 0, 0.6, 1.2),
+  bossHit: (e, c) => {
+    sfx(c, 'boss_hit_big', panOf(c, e.x), 1);
+    c.buses.duck('blast');
+  },
+  bossInterrupted: (_e, c) => sfx(c, 'boss_interrupt', 0, 0.9),
   missionOutcome: () => undefined,
   missionCallout: () => undefined,
   // campaign health (decision CC4): existing synthesised cues only. A wound is a dull blow; a hit that did nothing is a
@@ -503,7 +540,7 @@ const handlers: Handlers = {
   campaignHit: (e, c) => {
     const pan = panOf(c, e.x);
     if (e.result === 'damaged') {
-      sfx(c, 'push', pan, isHuman(c, e.victimId) ? 1 : 0.85, 0.7);
+      sfx(c, 'hurt_hit', pan, isHuman(c, e.victimId) ? 1 : 0.8, jitter(c, 0.05));
       // the combat pilot: the human's punch landing on an enemy gets a solid knock on top (decision CP4)
       if (c.state.config.combatPilot && e.source === 'player' && e.byId !== null && isHuman(c, e.byId))
         sfx(c, 'gen_kick', pan, 0.7, 0.8);

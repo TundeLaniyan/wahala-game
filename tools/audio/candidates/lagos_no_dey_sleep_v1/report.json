@@ -1,0 +1,204 @@
+{
+ "bpm": 110.0,
+ "firstBeat": 0.05,
+ "barSeconds": 2.1818181818181817,
+ "cues": {
+  "lnds_menu": {
+   "kind": "music",
+   "description": "Instrumental main-menu loop: verse 2 + chorus B of the approved song, vocals removed (bars 25-40, 16 bars)",
+   "gameEvent": "title / menus",
+   "loop": true,
+   "samples": 1539491,
+   "seconds": 34.909,
+   "lufs": -15.2,
+   "truePeakDb": -2.5,
+   "bytes": 559691,
+   "liteBytes": 279867,
+   "source": "bars 24-39 of drums+bass+other",
+   "addedSynthesis": []
+  },
+  "lnds_rumble": {
+   "kind": "music",
+   "description": "City Rumble in-match mix: chorus A + chorus B, instrumental, drums/bass forward, mid pocket for SFX (16 bars)",
+   "gameEvent": "City Rumble match",
+   "loop": true,
+   "samples": 1539491,
+   "seconds": 34.909,
+   "lufs": -14.7,
+   "truePeakDb": -2.5,
+   "bytes": 559691,
+   "liteBytes": 279867,
+   "source": "bars 8-15 + 32-39 of drums+bass+other",
+   "addedSynthesis": []
+  },
+  "lnds_suddendeath": {
+   "kind": "music",
+   "description": "Sudden Death version: same 16-bar grid as the rumble mix (position-synced crossfade), drums +1.7 dB, brighter, heartbeat toms, hats, snare rolls, risers",
+   "gameEvent": "Sudden Death / Wahala Crush",
+   "loop": true,
+   "samples": 1539491,
+   "seconds": 34.909,
+   "lufs": -14.7,
+   "truePeakDb": -2.5,
+   "bytes": 559691,
+   "liteBytes": 279867,
+   "source": "bars 8-15 + 32-39 of drums+bass+other",
+   "addedSynthesis": [
+    "sub toms",
+    "hats",
+    "snare rolls",
+    "risers",
+    "impacts"
+   ]
+  },
+  "lnds_boss_1": {
+   "kind": "music",
+   "description": "Boss theme level 1/3 (stalking): the song's bass and 'other' stems transposed -5 semitones (F->C) over its own drums; levels share one 16-bar grid",
+   "gameEvent": "boss encounter, intensity 1",
+   "loop": true,
+   "samples": 1539491,
+   "seconds": 34.909,
+   "lufs": -17.0,
+   "truePeakDb": -2.8,
+   "bytes": 559691,
+   "liteBytes": 279867,
+   "source": "bars 24-39 (drums, bass -5 st, other -5 st)",
+   "addedSynthesis": [
+    "sub toms"
+   ]
+  },
+  "lnds_boss_2": {
+   "kind": "music",
+   "description": "Boss theme level 2/3 (engaged): the song's bass and 'other' stems transposed -5 semitones (F->C) over its own drums; levels share one 16-bar grid",
+   "gameEvent": "boss encounter, intensity 2",
+   "loop": true,
+   "samples": 1539491,
+   "seconds": 34.909,
+   "lufs": -15.4,
+   "truePeakDb": -2.5,
+   "bytes": 559691,
+   "liteBytes": 279867,
+   "source": "bars 24-39 (drums, bass -5 st, other -5 st)",
+   "addedSynthesis": [
+    "sub toms",
+    "hats"
+   ]
+  },
+  "lnds_boss_3": {
+   "kind": "music",
+   "description": "Boss theme level 3/3 (all-out): the song's bass and 'other' stems transposed -5 semitones (F->C) over its own drums; levels share one 16-bar grid",
+   "gameEvent": "boss encounter, intensity 3",
+   "loop": true,
+   "samples": 1539491,
+   "seconds": 34.909,
+   "lufs": -14.9,
+   "truePeakDb": -2.5,
+   "bytes": 559691,
+   "liteBytes": 279867,
+   "source": "bars 24-39 (drums, bass -5 st, other -5 st)",
+   "addedSynthesis": [
+    "sub toms",
+    "brass stabs C-G",
+    "snare rolls",
+    "risers",
+    "impacts",
+    "hats"
+   ]
+  },
+  "lnds_sting": {
+   "kind": "stinger",
+   "description": "WAHALA! logo sting: a riser into the chorus's first sung line (the original recording, bars 9-10) with an impact",
+   "gameEvent": "title / logo reveal (no game hook yet)",
+   "loop": false,
+   "samples": 181988,
+   "seconds": 4.127,
+   "lufs": -13.2,
+   "truePeakDb": -2.5,
+   "bytes": 66917,
+   "liteBytes": null,
+   "source": "original mix, 17.5 s - 20.4 s",
+   "addedSynthesis": [
+    "riser",
+    "impact"
+   ]
+  },
+  "lnds_victory": {
+   "kind": "stinger",
+   "description": "Victory cue: the approved song's own outro and ending (bars 42-45), with a low impact on the downbeat",
+   "gameEvent": "match won / mission complete",
+   "loop": false,
+   "samples": 330203,
+   "seconds": 7.488,
+   "lufs": -15.0,
+   "truePeakDb": -2.5,
+   "bytes": 120834,
+   "liteBytes": null,
+   "source": "original mix from 89.5 s to the end",
+   "addedSynthesis": [
+    "impact"
+   ]
+  },
+  "lnds_defeat": {
+   "kind": "stinger",
+   "description": "Defeat cue: one bar of the song's groove that slows like a tape stopping, with a low thud (comic, not cruel)",
+   "gameEvent": "match lost",
+   "loop": false,
+   "samples": 114660,
+   "seconds": 2.6,
+   "lufs": -15.0,
+   "truePeakDb": -2.7,
+   "bytes": 42675,
+   "liteBytes": null,
+   "source": "bar 14 instrumental, tape-stop processed",
+   "addedSynthesis": [
+    "sub tom"
+   ]
+  },
+  "lnds_camp_calm": {
+   "kind": "music",
+   "description": "Campaign calm / briefing bed: the song's intro pad + bass, no drums, no vocals (bars 1-6)",
+   "gameEvent": "campaign briefing, story cards, safe areas",
+   "loop": true,
+   "samples": 577309,
+   "seconds": 13.091,
+   "lufs": -22.0,
+   "truePeakDb": -9.6,
+   "bytes": 210695,
+   "liteBytes": 105369,
+   "source": "bars 0-5 of bass+other",
+   "addedSynthesis": []
+  },
+  "lnds_camp_tension": {
+   "kind": "music",
+   "description": "Campaign tension bed: verse 1's 'other' stem (-5 st, low-passed) with a slow heartbeat (8 bars)",
+   "gameEvent": "raids, stealth, guarded areas",
+   "loop": true,
+   "samples": 769745,
+   "seconds": 17.455,
+   "lufs": -22.0,
+   "truePeakDb": -7.3,
+   "bytes": 280494,
+   "liteBytes": 140269,
+   "source": "bars 16-23 of other -5 st",
+   "addedSynthesis": [
+    "heartbeat sub toms"
+   ]
+  },
+  "lnds_camp_alert": {
+   "kind": "music",
+   "description": "Campaign alert / pursuit bed: the song's hats and snares over its bass at -5 st, risers every 4 bars (8 bars)",
+   "gameEvent": "campaign alert, enemy reinforcements, boss approach",
+   "loop": true,
+   "samples": 769746,
+   "seconds": 17.455,
+   "lufs": -19.3,
+   "truePeakDb": -2.5,
+   "bytes": 280494,
+   "liteBytes": 140269,
+   "source": "bars 24-31 of drums (>1.5 kHz) + bass -5 st",
+   "addedSynthesis": [
+    "risers"
+   ]
+  }
+ }
+}

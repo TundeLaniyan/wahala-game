@@ -18,7 +18,7 @@ import { mediaFactory } from './fakeMedia';
 import { BASE, TRACK_IDS, musicFiles, musicManifest, server } from './fakeServer';
 
 const ROOT = join(__dirname, '../..');
-const CAND_DIR = join(ROOT, 'tools/audio/candidates/wahala_original_theme_v1');
+const CAND_DIR = join(ROOT, 'tools/audio/candidates/lagos_no_dey_sleep_v1');
 const VOL = { master: 0.8, music: 0.45, ambience: 0.65, sfx: 0.85 };
 
 const CAND_BASE = `${BASE}candidates/`;
@@ -200,7 +200,7 @@ describe('the committed candidates are clearly unapproved and cannot ship by acc
     for (const t of raw.tracks) {
       expect(t.approved).toBe(false);
       expect(t.licence).toMatch(/NOT approved/);
-      expect(t.id).toMatch(/^wahala_draft_/);
+      expect(t.id).toMatch(/^lnds_/);
       expect(`${t.id} ${t.file}`).not.toMatch(
         /match_loop|menu_loop|match_tension|sting_(win|lose|draw)|crowd_loop|buspark_loop|kokoro/i,
       );
@@ -222,17 +222,22 @@ describe('the committed candidates are clearly unapproved and cannot ship by acc
     }
   });
 
-  it('every audio file in the candidates folder is listed by its manifest or slots (nothing stray)', () => {
+  it('every audio file in the candidates folder is listed by its manifest or slots (nothing stray), Data Saver files exist', () => {
     const m = JSON.parse(readFileSync(join(CAND_DIR, 'manifest.json'), 'utf8')) as {
-      tracks: { file: string }[];
+      sourceSha256: string;
+      tracks: { file: string; lite?: string }[];
     };
     const s = JSON.parse(readFileSync(join(CAND_DIR, 'slots.json'), 'utf8')) as {
       slots: Record<string, { file: string }>;
     };
+    // the approved recording is identified by its fingerprint in the manifest; the recording itself is never committed
+    expect(m.sourceSha256).toBe('e4b6314d4c27cc2719e51f7cc9f97f4df03dec8920696e744211afc29be3bebc');
     const listed = new Set([...m.tracks.map((t) => t.file), ...Object.values(s.slots).map((e) => e.file)]);
     const audio = readdirSync(CAND_DIR).filter((n) => /\.(m4a|mp3|ogg|wav)$/.test(n));
     // the logo sting is kept for the founder's review but has no in-game hook yet
-    expect(audio.filter((n) => !listed.has(n))).toEqual(['wahala_draft_logo_sting.m4a']);
+    expect(audio.filter((n) => !listed.has(n))).toEqual(['lnds_sting.mp3']);
+    for (const t of m.tracks) if (t.lite) expect(existsSync(join(CAND_DIR, t.lite))).toBe(true);
+    expect(readdirSync(CAND_DIR).filter((n) => /original|approved_main/i.test(n))).toEqual([]);
   });
 
   it('nothing is tracked under public/audio/candidates and the folder is git-ignored', () => {

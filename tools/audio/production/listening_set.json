@@ -1,0 +1,68 @@
+{
+  "categories": [
+    {"id": "combat", "title": "Combat and movement", "items": [
+      {"id": "step_ground", "status": "new", "event": "a fighter takes a step (derived from state; human always, nearby fighters, quieter)"},
+      {"id": "step_heavy", "status": "new", "event": "the boss walks"},
+      {"id": "punch_swing", "status": "new", "replaces": "push", "event": "punch swing / empty swing (was the shove sound)"},
+      {"id": "punch_hit", "status": "new", "replaces": "gen_drop", "event": "a punch lands (lab / pilot used a generator-drop thud)"},
+      {"id": "knock_back", "status": "new", "replaces": "gen_drop", "event": "a fighter is pushed back"},
+      {"id": "hurt_hit", "status": "new", "replaces": "push", "event": "campaign damage taken"},
+      {"id": "elim_boing", "status": "existing", "event": "comic elimination"},
+      {"id": "elim_slide", "status": "existing", "event": "comic elimination"},
+      {"id": "elim_womp", "status": "existing", "event": "comic elimination"},
+      {"id": "daze", "status": "existing", "event": "a fighter is dazed"}
+    ]},
+    {"id": "generators", "title": "Generators and blasts", "items": [
+      {"id": "gen_place", "status": "existing", "event": "generator placed"},
+      {"id": "fuse_tick", "status": "existing", "event": "fuse countdown tick (warning bus)"},
+      {"id": "gen_run_loop", "status": "existing", "loop": true, "event": "burning fuse: the generator engine"},
+      {"id": "gen_rattle_loop", "status": "existing", "loop": true, "event": "last third of the fuse"},
+      {"id": "gen_kick", "status": "existing", "event": "generator kicked"},
+      {"id": "gen_throw", "status": "existing", "event": "generator thrown"},
+      {"id": "explosion_1", "status": "existing", "event": "generator explodes"},
+      {"id": "explosion_rumble", "status": "existing", "event": "low layer of big chain reactions"},
+      {"id": "block_crumble_1", "status": "existing", "event": "a wall breaks (debris)"}
+    ]},
+    {"id": "sudden", "title": "Sudden Death and Wahala Crush", "items": [
+      {"id": "sd_rise", "status": "new", "replaces": "crush_warning", "event": "Sudden Death begins: rising pressure"},
+      {"id": "crush_warning", "status": "existing", "event": "Crush / trap warning"},
+      {"id": "crush_slam", "status": "existing", "event": "a Crush block lands, heavy impact"},
+      {"id": "crush_debris", "status": "new", "event": "rubble after the block lands (layered 70 ms after the slam)"}
+    ]},
+    {"id": "boss", "title": "Boss encounters", "items": [
+      {"id": "boss_entrance", "status": "new", "event": "boss mission starts: the boss arrives"},
+      {"id": "boss_windup", "status": "new", "replaces": "enemy_windup", "event": "boss special attack warning (warning bus, never ducked)"},
+      {"id": "boss_impact", "status": "new", "replaces": "crush_slam", "event": "the boss's attack lands"},
+      {"id": "boss_exposed", "status": "new", "replaces": "ui_go", "event": "vulnerability window opens (was a UI 'go' blip)"},
+      {"id": "boss_shield", "status": "new", "replaces": "ui_back", "event": "boss protection returns"},
+      {"id": "boss_interrupt", "status": "new", "replaces": "ui_count", "event": "a punch interrupts the boss"},
+      {"id": "boss_hit_big", "status": "new", "replaces": "pickup_rare", "event": "a blast hits the exposed boss"},
+      {"id": "boss_down", "status": "new", "replaces": "win_sting", "event": "the boss is defeated"},
+      {"id": "jammer_loop", "status": "new", "loop": true, "event": "relay jammer hum while the boss is protected"}
+    ]},
+    {"id": "ui", "title": "Interface, victory and defeat", "items": [
+      {"id": "ui_click", "status": "existing", "event": "menu selection"},
+      {"id": "ui_confirm", "status": "new", "event": "confirm (available through playUi; UI wiring pending)"},
+      {"id": "ui_back", "status": "existing", "event": "cancel / back"},
+      {"id": "ui_error", "status": "new", "event": "invalid action (available through playUi)"},
+      {"id": "ui_pause", "status": "new", "event": "pause (available through playUi)"},
+      {"id": "ui_resume", "status": "new", "event": "resume (available through playUi)"},
+      {"id": "ui_ready", "status": "new", "event": "match ready (available through playUi)"},
+      {"id": "ui_count", "status": "existing", "event": "3-2-1 countdown tick"},
+      {"id": "ui_go", "status": "existing", "event": "round start"},
+      {"id": "win_sting", "status": "existing", "event": "victory sting (synthesised)"},
+      {"id": "lose_sting", "status": "existing", "event": "defeat sting (synthesised)"}
+    ]},
+    {"id": "lagos", "title": "Lagos street life (existing, synthesised)", "items": [
+      {"id": "danfo_horn", "status": "existing", "event": "Danfo horn"},
+      {"id": "taxi_horn", "status": "existing", "event": "taxi horn"},
+      {"id": "keke_horn", "status": "existing", "event": "Keke horn"},
+      {"id": "danfo_engine_loop", "status": "existing", "loop": true, "event": "Danfo engine"},
+      {"id": "keke_engine_loop", "status": "existing", "loop": true, "event": "Keke engine"},
+      {"id": "okada_engine_loop", "status": "existing", "loop": true, "event": "Okada engine"},
+      {"id": "crowd_loop", "status": "existing", "loop": true, "event": "crowd bed"},
+      {"id": "buspark_loop", "status": "existing", "loop": true, "event": "bus-park bed"},
+      {"id": "rail_bell", "status": "existing", "event": "railcar crossing bell"}
+    ]}
+  ]
+}
