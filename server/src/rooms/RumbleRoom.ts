@@ -180,13 +180,17 @@ export class RumbleRoom extends Room {
     this.broadcastLobby();
   }
 
-  /** An unexpected drop (0.18: `onDrop`). A playing human's seat is autopiloted while we wait for them to come back. */
+  /**
+   * An unexpected drop (0.18: `onDrop`). The fighter stands for `graceSeconds`, then (policy `bot`) a bot plays it
+   * without pausing the match, while we hold the seat for `reconnectSeconds` from now for the human to come back.
+   */
   override async onDrop(client: Client, code?: number): Promise<void> {
     const peer = this.peers.get(client.sessionId);
     const match = this.match;
     if (!peer || peer.kicked || !match || peer.seat === null) return; // onLeave follows
     if (this.lobby.phase !== 'playing' || match.ended || !isReconnectableClose(code)) return;
     match.disconnect(peer.seat);
+    this.metrics.drops++;
     this.lobby.setConnected(client.sessionId, false);
     this.broadcastLobby();
     try {
@@ -196,13 +200,23 @@ export class RumbleRoom extends Room {
     }
   }
 
+  /** The match's grace period for a dropped seat ended and a bot now plays it: tell the lobby (UI: "a bot plays for X"). */
+  private botTookOver(seat: number): void {
+    const member = this.lobby.members.find((m) => m.seat === seat);
+    if (!member) return;
+    this.lobby.setBotControlled(member.sessionId, true);
+    this.metrics.botTakeovers++;
+    this.deps?.log?.(`room ${this.code}: a bot plays seat ${seat} for ${member.name}`);
+    if (!this.disposed) this.broadcastLobby();
+  }
+
   /** The dropped client came back on a new socket (same sessionId). */
   override onReconnect(client: Client): void {
     const peer = this.peers.get(client.sessionId);
     if (!peer) return;
     peer.client = client;
     this.metrics.reconnections++;
-    if (peer.seat !== null) this.match?.connect(peer.seat);
+    if (peer.seat !== null) this.match?.connect(peer.seat); // the same fighter, where it stands: nothing is reset
     this.lobby.setConnected(client.sessionId, true);
     this.broadcastLobby();
     this.sendWelcome(peer);
@@ -398,6 +412,9 @@ export class RumbleRoom extends Room {
         durationSec: s.durationSec,
         seats,
         seed: randomInt(1, 2 ** 31 - 1),
+        graceSeconds: this.rt.graceSeconds,
+        dropPolicy: this.rt.dropPolicy,
+        onBotTakeover: (seat) => this.botTookOver(seat),
       });
     } catch (e) {
       this.deps?.log?.(`room ${this.code}: could not build the match: ${String(e)}`);
@@ -555,6 +572,8 @@ export class RumbleRoom extends Room {
         resyncsLimited: m.resyncsLimited,
         kicks: m.kicks,
         reconnections: m.reconnections,
+        drops: m.drops,
+        botTakeovers: m.botTakeovers,
       },
       inputs: {
         accepted: c?.inputsAccepted ?? 0,

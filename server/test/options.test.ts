@@ -157,3 +157,45 @@ describe('origin policy', () => {
     expect(p.allows('http://example.com')).toBe(false);
   });
 });
+
+describe('disconnect policy configuration (ON8)', () => {
+  it('defaults: 5 s grace, 30 s window, bot policy', () => {
+    expect(DEFAULT_RUNTIME).toMatchObject({ graceSeconds: 5, reconnectSeconds: 30, dropPolicy: 'bot' });
+    expect(loadRuntimeConfig({})).toMatchObject({ graceSeconds: 5, reconnectSeconds: 30, dropPolicy: 'bot' });
+  });
+
+  it('RUMBLE_GRACE_SECONDS takes 0..60 (also outside test-fast mode), anything else falls back to 5', () => {
+    const grace = (v: string | undefined, fast = false): number =>
+      loadRuntimeConfig({ RUMBLE_GRACE_SECONDS: v, ...(fast ? { RUMBLE_TEST_FAST: '1' } : {}) }).graceSeconds;
+    expect(grace('0')).toBe(0);
+    expect(grace('12')).toBe(12);
+    expect(grace('2.5')).toBe(2.5);
+    expect(grace('60')).toBe(60);
+    expect(grace('0.2', true)).toBe(0.2);
+    for (const bad of ['-1', '61', '1e9', 'abc', '', '  ', 'NaN', 'Infinity', undefined]) {
+      expect(grace(bad), String(bad)).toBe(5);
+    }
+  });
+
+  it('RUMBLE_DROP_POLICY is bot or idle (case-insensitive), anything else falls back to bot', () => {
+    const policy = (v: string | undefined): string => loadRuntimeConfig({ RUMBLE_DROP_POLICY: v }).dropPolicy;
+    expect(policy('bot')).toBe('bot');
+    expect(policy('idle')).toBe('idle');
+    expect(policy(' IDLE ')).toBe('idle');
+    for (const bad of ['autopilot', 'kick', 'pause', '', undefined])
+      expect(policy(bad), String(bad)).toBe('bot');
+  });
+
+  it('the reconnection window is validated as before and independent of the grace period', () => {
+    const c = loadRuntimeConfig({
+      RUMBLE_RECONNECT_SECONDS: '45',
+      RUMBLE_GRACE_SECONDS: '10',
+      RUMBLE_DROP_POLICY: 'idle',
+    });
+    expect(c).toMatchObject({ reconnectSeconds: 45, graceSeconds: 10, dropPolicy: 'idle' });
+    expect(loadRuntimeConfig({ RUMBLE_RECONNECT_SECONDS: '0.5' }).reconnectSeconds).toBe(30); // fast mode only
+    expect(
+      loadRuntimeConfig({ RUMBLE_RECONNECT_SECONDS: '0.5', RUMBLE_TEST_FAST: '1' }).reconnectSeconds,
+    ).toBe(0.5);
+  });
+});

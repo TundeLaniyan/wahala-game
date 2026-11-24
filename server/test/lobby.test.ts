@@ -227,9 +227,24 @@ describe('Lobby seats and bots', () => {
       isHost: true,
       seat: null,
       connected: true,
+      botControlled: false,
     });
     expect(JSON.stringify(view)).not.toContain('secret-session');
     expect(lobby.view('ABCDEF').you).toBeNull();
+  });
+
+  it('shows "a bot plays for X" only while the member is away, and reconnecting clears it', () => {
+    const { lobby } = make({ isPrivate: true });
+    lobby.join('a', who('Ada'));
+    lobby.join('b', who('Bayo'));
+    lobby.setConnected('a', false);
+    expect(lobby.view('ABCDEF', 'b').members[0]).toMatchObject({ connected: false, botControlled: false });
+    lobby.setBotControlled('a', true);
+    expect(lobby.view('ABCDEF', 'b').members[0]).toMatchObject({ connected: false, botControlled: true });
+    expect(lobby.view('ABCDEF', 'b').members[1]).toMatchObject({ connected: true, botControlled: false });
+    lobby.setConnected('a', true);
+    expect(lobby.view('ABCDEF', 'b').members[0]).toMatchObject({ connected: true, botControlled: false });
+    lobby.setBotControlled('nobody', true); // unknown member: ignored
   });
 });
 

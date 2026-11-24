@@ -39,6 +39,8 @@ import type {
   PlayerSetup,
 } from '../../../src/sim';
 
+const round1 = (n: number): number => Math.round(n * 10) / 10;
+
 export type RumbleGame = Extract<GameKind, 'survival' | 'deathmatch' | 'team'>;
 
 export interface SeatSpec {
@@ -65,13 +67,49 @@ export interface RumbleMatchOptions {
   sendEvery?: number;
   /** Attach a desync hash every this many ticks. */
   hashEvery?: number;
-  /** What a dropped human seat does until it reconnects: stand still, or a bot plays it. Default 'autopilot'. */
-  dropPolicy?: 'idle' | 'autopilot';
+  /**
+   * What a dropped human seat does once its grace period is over: `bot` (alias `autopilot`, the default) = a bot plays
+   * it, `idle` = it keeps standing until `replaceWithBot` (the room calls that when the reconnection window ends).
+   */
+  dropPolicy?: 'idle' | 'autopilot' | 'bot';
+  /**
+   * Seconds (of match time, 60 ticks each) a dropped seat just stands where it is before the drop policy applies.
+   * Default 0 here (the room passes `RuntimeConfig.graceSeconds`).
+   */
+  graceSeconds?: number;
+  /** Called (from `step`) the tick a replacement bot takes over a dropped human seat after its grace period. */
+  onBotTakeover?: (seat: number) => void;
   /** Input messages per second per seat before they are counted as over-rate (token bucket). Default 30. */
   inputsPerSecond?: number;
 }
 
 export type InputVerdict = 'ok' | 'stale' | 'notYours';
+
+/**
+ * Who acts for a human seat on a tick: the `human`, the replacement `bot`, or `absent` (the connection is down and no
+ * bot plays yet: the grace period, or `idle` policy; the fighter stands where it is and may be hit).
+ */
+export type SeatControl = 'human' | 'bot' | 'absent';
+
+/**
+ * Per human seat, from the server's own simulation: what the sim credited on ticks the human controlled versus ticks
+ * a replacement bot controlled. An `absent` tick belongs to the human (nobody acted, so nothing can be blamed on a
+ * bot; a death while standing is the owner's). `kills + botKills` always equals the simulation's total for the seat.
+ */
+export interface SeatStats {
+  humanKills: number;
+  humanDeaths: number;
+  humanAssists: number;
+  botKills: number;
+  botDeaths: number;
+  botAssists: number;
+  /** Ticks the replacement bot controlled the seat. */
+  autopilotTicks: number;
+  /** Ticks the seat stood with the connection down and no bot yet. */
+  absentTicks: number;
+  /** Connection drops during the match. */
+  drops: number;
+}
 
 interface SeatRuntime {
   spec: SeatSpec;
@@ -88,7 +126,26 @@ interface SeatRuntime {
   tokens: number;
   tokensAt: number;
   bot: Bot | null;
+  /** Tick of the latest drop (null: never dropped). */
+  droppedAtTick: number | null;
+  /** Control on the latest stepped tick (human seats only). */
+  control: SeatControl | null;
+  /** The seat's bot was announced via `onBotTakeover` for the current drop. */
+  announced: boolean;
+  stats: SeatStats;
 }
+
+const newSeatStats = (): SeatStats => ({
+  humanKills: 0,
+  humanDeaths: 0,
+  humanAssists: 0,
+  botKills: 0,
+  botDeaths: 0,
+  botAssists: 0,
+  autopilotTicks: 0,
+  absentTicks: 0,
+  drops: 0,
+});
 
 export interface MatchCounters {
   ticks: number;
@@ -106,6 +163,9 @@ export interface MatchCounters {
 }
 
 const BOT_SEED_STRIDE = 7919;
+/** A bot that takes the seat again after a reconnect is a new brain (fresh plan), seeded differently per takeover. */
+const BOT_TAKEOVER_STRIDE = 104_729;
+const TICKS_PER_SECOND = 60;
 /**
  * A new direction press is kept this many ticks (or until it produces a step). Offline, `MoveGate` makes a tap one step
  * by holding the press until the local step finishes (MOVE_BUFFER_TICKS = 10 after that); online only the server knows
@@ -131,15 +191,20 @@ export class RumbleMatch {
   private pendingLastTick = 0;
   private readonly sendEvery: number;
   private readonly hashEvery: number;
-  private readonly dropPolicy: 'idle' | 'autopilot';
+  private readonly dropPolicy: 'idle' | 'bot';
+  private readonly graceTicks: number;
+  private readonly onBotTakeover: ((seat: number) => void) | undefined;
   private readonly inputsPerSecond: number;
   private readonly seed: number;
+  private readonly statSnap: Int32Array;
 
   constructor(opts: RumbleMatchOptions) {
     this.seed = opts.seed;
     this.sendEvery = Math.max(1, opts.sendEvery ?? 2);
     this.hashEvery = Math.max(this.sendEvery, opts.hashEvery ?? 120);
-    this.dropPolicy = opts.dropPolicy ?? 'autopilot';
+    this.dropPolicy = opts.dropPolicy === 'idle' ? 'idle' : 'bot';
+    this.graceTicks = Math.max(0, Math.round((opts.graceSeconds ?? 0) * TICKS_PER_SECOND));
+    this.onBotTakeover = opts.onBotTakeover;
     this.inputsPerSecond = opts.inputsPerSecond ?? 30;
     const timed = opts.game === 'deathmatch' || opts.game === 'team';
     const settings = {
@@ -168,7 +233,12 @@ export class RumbleMatch {
       tokens: this.inputsPerSecond,
       tokensAt: 0,
       bot: spec.kind === 'bot' ? this.makeBot(seat, spec) : null,
+      droppedAtTick: null,
+      control: null,
+      announced: false,
+      stats: newSeatStats(),
     }));
+    this.statSnap = new Int32Array(opts.seats.length * 3);
     this.mirror = canonicalClone(publicState(this.state));
     this.descriptor = {
       protocol: NET_PROTOCOL,
@@ -183,10 +253,10 @@ export class RumbleMatch {
   }
 
   /** Bots are seeded per seat from the secret match seed (deterministic, never visible to clients). */
-  private makeBot(seat: number, spec: SeatSpec = this.seats[seat]!.spec): Bot {
+  private makeBot(seat: number, spec: SeatSpec = this.seats[seat]!.spec, takeover = 0): Bot {
     return createBot({
       difficulty: spec.difficulty ?? 'standard',
-      seed: this.seed + seat * BOT_SEED_STRIDE,
+      seed: this.seed + seat * BOT_SEED_STRIDE + takeover * BOT_TAKEOVER_STRIDE,
       playerId: seat,
     });
   }
@@ -205,34 +275,82 @@ export class RumbleMatch {
 
   // ---------------------------------------------------------------- connections
 
-  /** A human took (or took back) control of their seat. Clears any stale held input. */
+  /**
+   * A human took (or took back) control of their seat. Clears any stale held input. Only the controller changes: the
+   * fighter is the same object at the same place with the same lives, stats and timers (nothing is reset or respawned;
+   * a fighter who fell while the human was away is simply still down and returns by the mode's normal rules).
+   */
   connect(seat: number): void {
     const s = this.seats[seat];
     if (!s || s.spec.kind !== 'human' || s.replaced) return;
     s.connected = true;
+    s.droppedAtTick = null;
+    s.announced = false;
+    s.bot = null; // a later takeover starts a fresh brain
     s.held = { move: null, placeHeld: false };
     s.press = null;
     s.pressed = 0;
     s.lastSeq = -1; // a (re)connected client starts its own sequence again
+    s.control = 'human';
   }
 
-  /** The seat's connection dropped: it idles or is autopiloted until `connect` or `replaceWithBot`. */
+  /**
+   * The seat's connection dropped. The fighter stands where it is for the grace period (no bot yet); then, with policy
+   * `bot`, a bot plays it (without pausing the match) until `connect` or, for good, `replaceWithBot`.
+   */
   disconnect(seat: number): void {
     const s = this.seats[seat];
-    if (!s || s.spec.kind !== 'human') return;
+    if (!s || s.spec.kind !== 'human' || s.replaced) return;
+    if (s.connected) {
+      s.stats.drops++;
+      s.droppedAtTick = this.state.tick;
+      s.announced = false;
+    }
     s.connected = false;
     s.held = { move: null, placeHeld: false };
     s.press = null;
     s.pressed = 0;
   }
 
-  /** The reconnection window expired: a bot plays the seat for the rest of the match. */
+  /** The reconnection window expired (or the human left on purpose): a bot plays the seat for the rest of the match. */
   replaceWithBot(seat: number): void {
     const s = this.seats[seat];
     if (!s || s.replaced) return;
     s.connected = false;
     s.replaced = true;
-    s.bot ??= this.makeBot(seat);
+    s.bot ??= this.makeBot(seat, s.spec, s.stats.drops);
+    if (s.spec.kind === 'human') this.announceTakeover(seat, s);
+  }
+
+  /** Who controls a human seat at this moment (null for a server-bot seat). */
+  controlOf(seat: number): SeatControl | null {
+    const s = this.seats[seat];
+    if (!s || s.spec.kind !== 'human') return null;
+    return this.controlNow(s);
+  }
+
+  private controlNow(s: SeatRuntime): SeatControl {
+    if (s.replaced) return 'bot';
+    if (s.connected) return 'human';
+    const since = s.droppedAtTick ?? 0;
+    return this.dropPolicy === 'bot' && this.state.tick - since >= this.graceTicks ? 'bot' : 'absent';
+  }
+
+  /** Seats whose replacement bot is playing right now (the lobby shows "a bot plays for X"). */
+  botControlledSeats(): number[] {
+    return this.seats.flatMap((s, i) => (s.spec.kind === 'human' && this.controlNow(s) === 'bot' ? [i] : []));
+  }
+
+  /** What the simulation credited to this seat, split by who controlled it (undefined for server-bot seats). */
+  seatStats(seat: number): Readonly<SeatStats> | undefined {
+    const s = this.seats[seat];
+    return s && s.spec.kind === 'human' ? s.stats : undefined;
+  }
+
+  private announceTakeover(seat: number, s: SeatRuntime): void {
+    if (s.announced) return;
+    s.announced = true;
+    this.onBotTakeover?.(seat);
   }
 
   // ---------------------------------------------------------------- input
@@ -263,7 +381,7 @@ export class RumbleMatch {
     return 'ok';
   }
 
-  private intentsForTick(): Intents {
+  private intentsForTick(controls: readonly (SeatControl | null)[]): Intents {
     const state = this.state;
     const intents: Intents = {};
     for (let seat = 0; seat < this.seats.length; seat++) {
@@ -273,7 +391,7 @@ export class RumbleMatch {
         s.pressed = 0;
         continue;
       }
-      if (s.spec.kind === 'human' && s.connected && !s.replaced) {
+      if (controls[seat] === 'human') {
         if (s.press && state.tick >= s.press.until) s.press = null;
         const intent: Intent = { move: s.held.move ?? s.press?.dir ?? null };
         if (s.held.placeHeld) intent.placeHeld = true;
@@ -284,12 +402,12 @@ export class RumbleMatch {
         intents[seat] = intent;
         continue;
       }
-      const botPlays =
-        s.replaced || (s.spec.kind === 'human' && !s.connected && this.dropPolicy === 'autopilot');
-      if (botPlays) {
-        s.bot ??= this.makeBot(seat);
+      const control = controls[seat];
+      if (s.spec.kind === 'bot' || control === 'bot') {
+        s.bot ??= this.makeBot(seat, s.spec, s.stats.drops);
         intents[seat] = s.bot.decide(observe(state, seat));
       }
+      // `absent`: the connection is down and no bot plays (grace period / idle policy): the fighter stands where it is
     }
     return intents;
   }
@@ -305,7 +423,12 @@ export class RumbleMatch {
     const before = this.seats.map((s, i) =>
       s.press ? this.state.players[i]!.x * 65536 + this.state.players[i]!.y : -1,
     );
-    const events = tick(this.state, this.intentsForTick());
+    const controls = this.seats.map((s) => (s.spec.kind === 'human' ? this.controlNow(s) : null));
+    for (let i = 0; i < controls.length; i++)
+      if (controls[i] === 'bot') this.announceTakeover(i, this.seats[i]!);
+    this.snapshotStats();
+    const events = tick(this.state, this.intentsForTick(controls));
+    this.attributeStats(controls);
     // a latched press is spent once it produced a step (or the seat was eliminated)
     for (let i = 0; i < this.seats.length; i++) {
       const s = this.seats[i]!;
@@ -324,6 +447,48 @@ export class RumbleMatch {
     this.pending.push(pack(frame));
     this.pendingLastTick = this.state.tick;
     return frame;
+  }
+
+  /** Personal stats are read as per-tick deltas of what the sim itself counted (`eliminate()` is its only writer). */
+  private snapshotStats(): void {
+    const snap = this.statSnap;
+    for (let i = 0; i < this.seats.length; i++) {
+      const st = this.state.players[i]!.stats;
+      snap[i * 3] = st.kills;
+      snap[i * 3 + 1] = st.deaths;
+      snap[i * 3 + 2] = st.assists;
+    }
+  }
+
+  /**
+   * Splits this tick's credited kills / deaths / assists between the human and the replacement bot by who controlled
+   * the seat on this tick (the tick the elimination is credited on). The simulation's own counts, and so the match
+   * result, are untouched: this only keeps a second, split ledger.
+   */
+  private attributeStats(controls: readonly (SeatControl | null)[]): void {
+    const snap = this.statSnap;
+    for (let i = 0; i < this.seats.length; i++) {
+      const control = controls[i];
+      if (control === null) continue;
+      const s = this.seats[i]!;
+      const st = this.state.players[i]!.stats;
+      const dk = st.kills - snap[i * 3]!;
+      const dd = st.deaths - snap[i * 3 + 1]!;
+      const da = st.assists - snap[i * 3 + 2]!;
+      const mine = s.stats;
+      if (control === 'bot') {
+        mine.autopilotTicks++;
+        mine.botKills += dk;
+        mine.botDeaths += dd;
+        mine.botAssists += da;
+      } else {
+        if (control === 'absent') mine.absentTicks++;
+        mine.humanKills += dk;
+        mine.humanDeaths += dd;
+        mine.humanAssists += da;
+      }
+      s.control = control;
+    }
   }
 
   /**
@@ -367,15 +532,31 @@ export class RumbleMatch {
       stateHash: this.mirrorHash(),
       players: s.players.map((p, seat) => {
         const x = matchResultFrom(s, seat, { matchId: this.descriptor.matchId });
-        return {
+        const runtime = this.seats[seat]!;
+        const human = runtime.spec.kind === 'human';
+        const split = runtime.stats;
+        const base = {
           seat,
           name: p.name,
-          isBot: this.seats[seat]!.spec.kind === 'bot',
+          isBot: !human,
           team: p.team >= 0 ? p.team : null,
+          // placement is the simulation's own: it counts every credited kill, the replacement bot's included
           placement: x.placement,
-          kills: x.kills,
-          deaths: x.deaths,
-          assists: x.assists,
+        };
+        // Personal numbers: only what the human did. A server-bot seat has no owner: the sim's totals.
+        if (!human) return { ...base, kills: x.kills, deaths: x.deaths, assists: x.assists };
+        return {
+          ...base,
+          kills: split.humanKills,
+          deaths: split.humanDeaths,
+          assists: split.humanAssists,
+          botKills: split.botKills,
+          botDeaths: split.botDeaths,
+          botAssists: split.botAssists,
+          autopilotSeconds: round1(split.autopilotTicks / TICKS_PER_SECOND),
+          absentSeconds: round1(split.absentTicks / TICKS_PER_SECOND),
+          drops: split.drops,
+          controlledByBotAtEnd: this.controlNow(runtime) === 'bot',
         };
       }),
     };
