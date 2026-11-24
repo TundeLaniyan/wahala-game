@@ -158,7 +158,9 @@ test.describe('Team blast warnings', () => {
     let seenSafe = 0;
     let seenDanger = 0;
     let last: Drawn | null = null;
-    for (let t = 400; t <= 2600; t += 40) {
+    // every 150 ticks (not 40): bots lay a generator every few seconds, so 15 frames sample plenty of live blasts, and each
+    // frame costs seconds on a software-rendered CI runner (this test took five minutes there)
+    for (let t = 400; t <= 2600; t += 150) {
       await at(page, t);
       const d = await drawn(page);
       last = d;

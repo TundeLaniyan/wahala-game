@@ -21,7 +21,11 @@ async function musicRequestFor(page: Page, setting: 'on' | 'off' | 'auto'): Prom
   await page.getByTestId('menu-back').click();
   await startMatch(page, { game: 'classic' });
   await expect.poll(() => seen.length, { timeout: 60_000 }).toBeGreaterThan(0);
-  return seen[0]!;
+  const first = seen[0]!;
+  // stop this match drawing before the caller opens another page: two live software-rendered matches at once starve each
+  // other (the second one then never starts on a CI runner)
+  await page.goto('about:blank');
+  return first;
 }
 
 test('Data Saver On streams the lite file; Off streams the full file', async ({ page, browser }) => {

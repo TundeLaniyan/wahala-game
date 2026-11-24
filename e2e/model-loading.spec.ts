@@ -89,6 +89,9 @@ test.describe('on-demand models', () => {
     }
     const lazy = await run(page, '');
     expect(lazy.access.missed).toEqual([]);
+    // the first match must stop drawing before the second starts: two live software-rendered matches at once starve each
+    // other (on a CI runner the second never finishes building its arena)
+    await page.goto('about:blank');
     const ctx2 = await browser.newContext(test.info().project.use as never);
     const eager = await run(await ctx2.newPage(), '&preloadall');
     await ctx2.close();
