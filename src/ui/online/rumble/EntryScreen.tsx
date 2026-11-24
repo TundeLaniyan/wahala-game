@@ -9,7 +9,7 @@ import { fighterArt } from '../../menu/art';
 import { FighterImage } from '../../menu/FighterImage';
 import { PrimaryButton, ScreenFrame, SecondaryButton } from '../../menu/Frame';
 import { PLAYER_NAME_MAX, ROOM_CODE_LENGTH } from '../../../net/protocol';
-import { entryModel } from './models';
+import { entryModel, quickPlayNote } from './models';
 import { TestSessionNote } from './parts';
 import './rumble.css';
 
@@ -142,7 +142,9 @@ export function EntryScreen(p: EntryProps) {
           <SecondaryButton testId="ro-quick" disabled={!m.canQuick} onClick={p.onQuick}>
             Quick play
           </SecondaryButton>
-          <p className="ro-sub">A public room: it starts by itself when it fills or the timer ends.</p>
+          <p className="ro-sub" data-testid="ro-quick-note">
+            {quickPlayNote()}
+          </p>
         </section>
       </div>
     </ScreenFrame>

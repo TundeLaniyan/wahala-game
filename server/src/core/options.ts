@@ -6,6 +6,7 @@ import { CHARACTER_IDS, DIFFICULTIES, RUMBLE_ARENA_IDS } from '../../../src/sim'
 import type { CharacterId, Difficulty } from '../../../src/sim';
 import {
   MATCH_SEATS,
+  PUBLIC_WAIT_SECONDS,
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
   validatePlayerName,
@@ -55,7 +56,11 @@ export interface RuntimeConfig {
   pingMaxRetries: number;
   /** Pre-match countdown. */
   countdownMs: number;
-  /** Public lobbies start by themselves this long after the first human joins (a client may ask for another value). */
+  /**
+   * Public lobbies start by themselves this long after the first human joins, and bots fill the empty seats (decision PIS1:
+   * 30 s, `PUBLIC_WAIT_SECONDS`). Fixed by the server: a client's `autoStartSec` is only honoured in test-fast mode
+   * (otherwise anybody could open a public room that starts at once or never).
+   */
   defaultAutoStartSec: number;
   /**
    * Test-only (`RUMBLE_TEST_FAST=1`): also accept any integer `durationSec` in 5..300. Never enabled in production
@@ -78,7 +83,7 @@ export const DEFAULT_RUNTIME: RuntimeConfig = {
   pingIntervalMs: 3000,
   pingMaxRetries: 4,
   countdownMs: 3000,
-  defaultAutoStartSec: 20,
+  defaultAutoStartSec: PUBLIC_WAIT_SECONDS,
   fast: false,
   tickRate: 60,
   maxCatchUpTicks: 6,
@@ -174,6 +179,10 @@ export function parseSettingsPatch(raw: unknown, rt: RuntimeConfig): Parsed<Part
     }
     out.botDifficulty = o.botDifficulty;
   }
+  if (!isUnset(o.friendlyFire)) {
+    if (typeof o.friendlyFire !== 'boolean') return fail('friendlyFire must be a boolean');
+    out.friendlyFire = o.friendlyFire;
+  }
   return { ok: true, value: out };
 }
 
@@ -183,6 +192,7 @@ export function defaultSettings(): RoomSettings {
     game: DEFAULT_GAME,
     durationSec: DEFAULT_DURATION_SEC,
     botDifficulty: DEFAULT_DIFFICULTY,
+    friendlyFire: false,
   };
 }
 
@@ -192,7 +202,7 @@ export interface RoomOptions {
   autoStartSec: number;
 }
 
-/** Options of the player who creates a room: `{ private?, arenaId?, game?, durationSec?, botDifficulty?, autoStartSec? }`. */
+/** Options of the player who creates a room: `{ private?, arenaId?, game?, durationSec?, botDifficulty?, friendlyFire?, autoStartSec? }`. */
 export function parseRoomOptions(raw: unknown, rt: RuntimeConfig): Parsed<RoomOptions> {
   const o = asRecord(raw);
   let isPrivate = false;
@@ -206,7 +216,8 @@ export function parseRoomOptions(raw: unknown, rt: RuntimeConfig): Parsed<RoomOp
   if (!isUnset(o.autoStartSec)) {
     const v = o.autoStartSec;
     if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 600) return fail('invalid autoStartSec');
-    autoStartSec = v;
+    // the public wait is the server's rule (30 s): a client's value only counts in the test-only fast mode
+    if (rt.fast) autoStartSec = v;
   }
   return {
     ok: true,

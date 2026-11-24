@@ -9,6 +9,7 @@
  */
 import { CHARACTER_IDS } from '../../../src/sim';
 import type { CharacterId, Difficulty } from '../../../src/sim';
+import { PLAYER_NAME_MAX, nameSkeleton } from '../../../src/net/protocol';
 import type { LobbyMemberView, LobbyMsg, LobbyPhase, RoomSettings } from '../../../src/net/protocol';
 import type { SeatSpec } from './RumbleMatch';
 
@@ -85,6 +86,25 @@ export function botName(index: number): string {
   return `BOT ${round === 0 ? base : `${base} ${round + 1}`}`;
 }
 
+/**
+ * A name nobody else in the room has: a duplicate (same case-folded, accent-free, look-alike-folded skeleton) gets " 2",
+ * " 3" ... after it, the base shortened so the whole stays within the name limit. Names are shown to everybody, so two
+ * players can never pose as each other.
+ */
+export function uniqueName(wanted: string, taken: readonly string[]): string {
+  const used = new Set(taken.map(nameSkeleton));
+  if (!used.has(nameSkeleton(wanted))) return wanted;
+  for (let n = 2; ; n++) {
+    const suffix = ` ${n}`;
+    const base = [...wanted]
+      .slice(0, PLAYER_NAME_MAX - suffix.length)
+      .join('')
+      .trimEnd();
+    const candidate = `${base}${suffix}`;
+    if (!used.has(nameSkeleton(candidate))) return candidate;
+  }
+}
+
 export interface LobbyTick {
   /** The visible lobby state changed (phase, countdown): the room should broadcast. */
   changed: boolean;
@@ -145,7 +165,10 @@ export class Lobby {
     if (this.list.length >= this.cfg.maxHumans) return no('full', 'the room is full');
     this.list.push({
       sessionId,
-      name: who.name,
+      name: uniqueName(
+        who.name,
+        this.list.map((m) => m.name),
+      ),
       characterId: who.characterId,
       ready: false,
       isHost: this.list.length === 0,

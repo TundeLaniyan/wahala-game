@@ -40,8 +40,11 @@ export function classifyFailure(error: unknown): { reason: FailReason; detail: s
   const code = typeof e?.code === 'number' ? e.code : null;
   if (code === 4212 || /not found|invalid room|no rooms? (found|available)/i.test(message))
     return { reason: 'room-not-found', detail: message };
-  if (/full|locked|max(imum)? clients|no seats/i.test(message))
-    return { reason: 'room-full', detail: message };
+  // a match that already started: the server locks the room at the countdown's end (nobody new joins; only the players
+  // already in it can reconnect), or refuses the join itself ("the match has started")
+  if (/locked|match has started|already started|in progress/i.test(message))
+    return { reason: 'match-started', detail: message };
+  if (/full|max(imum)? clients|no seats/i.test(message)) return { reason: 'room-full', detail: message };
   if (/protocol|version/i.test(message)) return { reason: 'protocol', detail: message };
   if (code !== null && code >= 4000 && code < 5000) return { reason: 'refused', detail: message };
   if (

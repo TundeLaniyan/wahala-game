@@ -410,6 +410,7 @@ export class RumbleRoom extends Room {
         arenaId: s.arenaId,
         game: s.game,
         durationSec: s.durationSec,
+        friendlyFire: s.friendlyFire === true,
         seats,
         seed: randomInt(1, 2 ** 31 - 1),
         graceSeconds: this.rt.graceSeconds,

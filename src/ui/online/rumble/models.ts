@@ -4,7 +4,7 @@
  * No React, no DOM, no network: unit-tested in tests/ui/rumble-online-models.test.ts. Names are only ever DATA here;
  * the views render them as React text (never HTML).
  */
-import { MATCH_SEATS, ROOM_CODE_LENGTH } from '../../../net/protocol';
+import { MATCH_SEATS, PUBLIC_WAIT_SECONDS, ROOM_CODE_LENGTH } from '../../../net/protocol';
 import { codeView, nameCheck } from '../../../app/rumbleEntryInput';
 import type { CodeView, FailReason, NameCheck } from '../../../app/rumbleEntryInput';
 import type { LobbyMemberView, LobbyMsg, LobbyPhase, ResultsMsg, RoomSettings } from '../../../net/protocol';
@@ -65,6 +65,10 @@ export function entryModel(name: string, codeInput: string, configured: boolean)
   };
 }
 
+/** What QUICK PLAY does, in plain words: the wait is the server's rule (`PUBLIC_WAIT_SECONDS`), then bots fill the seats. */
+export const quickPlayNote = (): string =>
+  `A public room: it waits up to ${PUBLIC_WAIT_SECONDS} seconds for other players (it starts sooner when ${MATCH_SEATS} are in), then bots, clearly marked BOT, fill the empty seats.`;
+
 // ---------------------------------------------------------------- failures
 
 export interface ErrorView {
@@ -106,6 +110,13 @@ export function errorMessage(reason: FailReason | 'not-configured', detail?: str
         title: 'Room is full',
         text: 'That room has no free seat. Ask the host, or try QUICK PLAY for another room.',
         canRetry: true,
+        detail: d,
+      };
+    case 'match-started':
+      return {
+        title: 'Match already started',
+        text: 'That match is already under way, and nobody new can join a running match. Ask the host for a new room, or try QUICK PLAY.',
+        canRetry: false,
         detail: d,
       };
     case 'refused':
@@ -308,7 +319,14 @@ export interface SettingsView {
   /** Null for the untimed mode. */
   duration: string | null;
   difficulty: string;
+  /** Team Rumble only: "Off" / "On", else null. */
+  friendlyFire: string | null;
+  /** Team Rumble only: how the sides are made, else null. */
+  teams: string | null;
 }
+
+/** Teams are the simulation's own balanced split (no picking sides): the room says so in one sentence. */
+export const TEAMS_NOTE = `Two teams of ${MATCH_SEATS / 2}, picked for you and kept even: players and bots are spread across both sides.`;
 
 /** The room settings in words, for guests (read-only) and the Ready summary. */
 export function settingsView(s: RoomSettings): SettingsView {
@@ -321,6 +339,8 @@ export function settingsView(s: RoomSettings): SettingsView {
     rule: mode?.rule ?? '',
     duration: gameIsTimed(s.game) ? (dur?.label ?? `${Math.round(s.durationSec / 60)} min`) : null,
     difficulty: level ?? s.botDifficulty,
+    friendlyFire: s.game === 'team' ? (s.friendlyFire === true ? 'On' : 'Off') : null,
+    teams: s.game === 'team' ? TEAMS_NOTE : null,
   };
 }
 
