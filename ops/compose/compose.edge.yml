@@ -48,5 +48,9 @@ services:
       driver: json-file
       options: { max-size: '10m', max-file: '3' }
 networks:
-  internal: { internal: false }
+  # Fixed subnet so RUMBLE_TRUSTED_PROXIES (ops/env/server.env.example) can name the nginx container's range.
+  internal:
+    internal: false
+    ipam:
+      config: [{ subnet: 172.29.0.0/24 }]
   public: {}

@@ -43,7 +43,7 @@ Preconditions: founder approves provider, region and a budget cap; a hostname wi
 9. Run the latency page and the supervised phone session. Record `/metrics` snapshots and the alert log.
 10. **Tear down** when the test ends (`down -v`, delete the VM). A forgotten VM is the main avoidable cost.
 
-Rollback = `docker compose up -d` with the previous image tag. There is no data to migrate.
+Before a restart, drain: `RUMBLE_METRICS_TOKEN=... node ops/deploy/wait-idle.mjs --base http://127.0.0.1:2567` (exit 0 = no match running). Rollback = `docker compose up -d` with the previous image tag. There is no data to migrate.
 
 ## 5. What is deliberately not here
 

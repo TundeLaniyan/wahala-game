@@ -8,6 +8,7 @@ Based on `claude/wahala-stitch-uiux-v1` @ `f7cf2ae` (the newest server line: LAN
 
 | Doc | Answers |
 | --- | --- |
+| [CONSOLIDATION.md](CONSOLIDATION.md) | Which Ops branch files were selected and rejected, and why |
 | [RELEASE_GATES.md](RELEASE_GATES.md) | **Go / no-go** for public backend hosting; essential vs later |
 | [VALIDATION_STATUS.md](VALIDATION_STATUS.md) | What was proven here, what was not, what needs hosting and real phones |
 | [AUDIT.md](AUDIT.md) | Findings F1-F12 on the server bundle, with evidence and who owns each fix |
