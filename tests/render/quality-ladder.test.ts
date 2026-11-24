@@ -42,6 +42,7 @@ describe('quality ladder', () => {
         expect(hi[k] as number, `${k} at rung ${r}`).toBeGreaterThanOrEqual(lo[k] as number);
       expect(Number(hi.shadows)).toBeGreaterThanOrEqual(Number(lo.shadows));
       expect(Number(hi.antialias)).toBeGreaterThanOrEqual(Number(lo.antialias));
+      expect(Number(hi.crowdSilhouette)).toBeGreaterThanOrEqual(Number(lo.crowdSilhouette));
       // animation updates get rarer (a larger stride) on the way down
       expect(hi.animationStride).toBeLessThanOrEqual(lo.animationStride);
       // the view-clear test runs at least as often higher up

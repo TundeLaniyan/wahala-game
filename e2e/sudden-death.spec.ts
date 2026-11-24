@@ -69,6 +69,9 @@ test.describe('City Rumble: sudden death', () => {
     await expect(page.getByTestId('results')).toBeVisible({ timeout: 90_000 });
     await expect(page.getByTestId('result-title')).toHaveText('ELIMINATED');
     await expect(page.getByTestId('result-detail')).toContainText('sudden death');
+    // the winner is known: no blast countdown and no leftover clock stay on the main timer (decision PIV1)
+    await expect(page.getByTestId('timer')).toHaveText('0:00');
+    await expect(page.getByTestId('timer-sudden-label')).toHaveCount(0);
     await shot(page, info.project.name, 'sudden-death-result');
     expect(errors).toEqual([]);
   });
