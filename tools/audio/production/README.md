@@ -13,3 +13,11 @@ render_set.ts / listening_set.json      # renders the sound-effect listening set
 build_review.py / review_template.html  # one self-contained listening page (embeds the original: do not commit its output)
 ```
 Python needs numpy, scipy, soundfile, librosa and ffmpeg (libmp3lame). Copy the result to `tools/audio/candidates/lagos_no_dey_sleep_v1/`.
+
+## Seven district songs (docs/AUDIO_DISTRICTS.md)
+```
+build_districts.sh ZIP [FADEYI_INSTRUMENTAL.wav]   # verify the pack hashes, analyse, master, write manifest, QA (one command)
+district_analyse.py / make_districts.py / make_district_manifest.py / qa_districts.py   # the steps it runs
+build_districts_review.py + districts_review_template.html   # the listening page (audio fetched by relative URL, not inlined)
+```
+Needs numpy, scipy, soundfile, librosa and ffmpeg (libmp3lame). The mastered MP3s are git-ignored.

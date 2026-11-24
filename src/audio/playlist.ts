@@ -46,6 +46,15 @@ export interface MusicTrack {
    * another one at the same playback position (Sudden Death, boss levels).
    */
   syncGroup?: string;
+  /** Candidate only: where in the file playback starts (seconds, on a bar line). Lets one file give distinct variants. */
+  startAt?: number;
+  /**
+   * Candidate only: the track's bar grid in file time (tempo and the first bar line). Two tracks of the same family
+   * with grids can hand over on the same beat even when they are not the same recording (Sudden Death loops).
+   */
+  grid?: { bpm: number; first: number };
+  /** Candidate only: tracks of one family share a song (and its Sudden Death loop). */
+  family?: string;
 }
 
 /** Music variants the match soundtrack can switch to as the game state changes (candidates only, see candidates.ts). */
@@ -53,6 +62,8 @@ export interface MusicVariants {
   suddenDeath?: string;
   /** Boss levels 1..3 (stalking, engaged, all-out), by track id. */
   boss?: string[];
+  /** Sudden Death loop per track family (a district song's own intensified loop on its own tempo). */
+  suddenDeathFor?: Record<string, string>;
 }
 
 export interface ArenaPlaylist {

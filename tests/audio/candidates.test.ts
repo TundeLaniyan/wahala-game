@@ -52,6 +52,7 @@ describe('mode parsing', () => {
     expect(candidateModeFromSearch('?audiodraft=1')).toBe('all');
     expect(candidateModeFromSearch('?audiodraft=menu')).toBe('menu');
     expect(candidateModeFromSearch('?audiodraft=MATCH')).toBe('match');
+    expect(candidateModeFromSearch('?audiodraft=lnds')).toBe('lnds');
     expect(candidateModeFromSearch('?audiodraft=stings')).toBe('stings');
     expect(candidateModeFromSearch('?audiodraft=off')).toBe('off');
     expect(candidateModeFromSearch('?audiodraft=0')).toBe('off');
@@ -84,11 +85,11 @@ describe('mergeCandidateMusic (pure)', () => {
     expect(base.tracks.every((t) => t.candidate === undefined && t.url === undefined)).toBe(true);
   });
 
-  it('match mode makes the candidate the signature of every listed arena and the default, and leaves the menu alone', () => {
+  it('lnds mode makes the candidate the signature of every listed arena and the default, and leaves the menu alone', () => {
     const base = parsed(
       musicManifest(TRACK_IDS, { menu: ['t0'], arenas: { a1: { signature: 't1' }, a2: {} } }),
     );
-    const m = mergeCandidateMusic(base, parsed(candManifest()), 'match', CAND_BASE);
+    const m = mergeCandidateMusic(base, parsed(candManifest()), 'lnds', CAND_BASE);
     expect(m.menu).toEqual(['t0']);
     expect(m.playlists.default).toEqual(['wahala_draft_rumble']);
     for (const a of ['a1', 'a2']) {
@@ -124,7 +125,7 @@ describe('the music player with the overlay', () => {
   beforeEach(() => void vi.useFakeTimers());
   afterEach(() => void vi.useRealTimers());
 
-  async function rig(mode: 'off' | 'menu' | 'match' | 'all', withCandidates: boolean) {
+  async function rig(mode: 'off' | 'menu' | 'match' | 'lnds' | 'all', withCandidates: boolean) {
     const ctx = new FakeContext();
     const buses = createBuses(ctx, VOL, false);
     const files = musicFiles(
@@ -172,7 +173,7 @@ describe('the music player with the overlay', () => {
   });
 
   it('mode match: any arena plays the candidate rumble mix and the menu stays silent', async () => {
-    const r = await rig('match', true);
+    const r = await rig('lnds', true);
     r.player.setScene('menu');
     expect(heard(r)).toEqual([]);
     r.player.startMatch('arena');

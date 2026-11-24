@@ -78,9 +78,9 @@ describe('candidate variants in the manifest', () => {
     expect(parseCandidateExtras({ variants: { suddenDeath: '../x', boss: ['ok', 3] } }).variants).toEqual({});
     expect(parseMusicManifest(candManifest()).manifest.variants).toBeUndefined();
   });
-  it('only match / all modes carry variants; they point at known candidate tracks; sync groups and lite URLs are set', () => {
+  it('only the lnds / match / all modes carry variants; they point at known candidate tracks; sync groups and lite URLs are set', () => {
     expect(mergeCandidateMusic(shipped, cand, 'menu', CAND, extras).variants).toBeUndefined();
-    const m = mergeCandidateMusic(shipped, cand, 'match', CAND, extras);
+    const m = mergeCandidateMusic(shipped, cand, 'lnds', CAND, extras);
     expect(m.variants).toEqual({ suddenDeath: 'c_sd', boss: ['c_b1', 'c_b2', 'c_b3'] });
     const t = m.tracks.find((x) => x.id === 'c_sd')!;
     expect(t.syncGroup).toBe('g');
@@ -88,9 +88,11 @@ describe('candidate variants in the manifest', () => {
     expect(shipped.variants).toBeUndefined();
   });
   it('a variant naming a track that is not in the candidate manifest is dropped', () => {
-    const m = mergeCandidateMusic(shipped, cand, 'match', CAND, {
+    const m = mergeCandidateMusic(shipped, cand, 'lnds', CAND, {
       syncGroups: {},
       variants: { suddenDeath: 'nope', boss: ['c_b1', 'nope'] },
+      trackMeta: {},
+      arenaMap: {},
     });
     expect(m.variants).toBeUndefined();
   });
@@ -120,7 +122,7 @@ describe('the player switches variants on the same beat', () => {
       createElement: media.create,
       rand: createRand(5),
       baseUrl: BASE,
-      candidateMode: withVariants ? 'match' : 'off',
+      candidateMode: withVariants ? 'lnds' : 'off',
       lite: () => dataSaver,
       onError: (e) => errors.push(e),
     });

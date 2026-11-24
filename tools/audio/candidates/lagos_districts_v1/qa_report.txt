@@ -1,0 +1,16 @@
+track        file         samples  decode  wrapStep/typ  LUFS   TP    phoneLUFS  gridPhase(ms)  combStrength
+ojuelegba    loop  dist_ojuelegba.mp3        5773090  5773090 0.017/0.216  -14.3  -1.7    -16.6          0.0     4.00 ok
+ojuelegba    SD    dist_ojuelegba_sd.mp3     1539491  1539491 0.191/0.335  -13.8  -1.4    -15.7          0.0     3.58 ok
+oshodi       loop  dist_oshodi.mp3           6828387  6828387 0.164/0.214  -14.2  -1.3    -17.2        -10.0     2.48 ok
+oshodi       SD    dist_oshodi_sd.mp3        1365677  1365677 0.132/0.335  -14.8  -1.2    -18.0        -20.9     4.76 ok
+mushin       loop  dist_mushin.mp3           5003346  5003346 0.067/0.256  -14.2  -1.4    -16.9       -272.6     4.18 ok
+mushin       SD    dist_mushin_sd.mp3        1539491  1539491 0.242/0.370  -13.7  -1.1    -15.5       -271.9     3.93 ok
+fadeyi       loop  dist_fadeyi.mp3           5773091  5773091 0.109/0.223  -14.3  -1.6    -19.0          0.0     5.75 ok
+fadeyi       SD    dist_fadeyi_sd.mp3        1539491  1539491 0.043/0.365  -13.7  -1.5    -17.3          0.7     4.82 ok
+ebute        loop  dist_ebute.mp3            6048000  6048000 0.014/0.152  -14.2  -1.7    -18.9         -0.4     3.73 ok
+ebute        SD    dist_ebute_sd.mp3         1612800  1612800 0.080/0.446  -13.7  -1.2    -17.3       -136.1     4.52 ok
+lagosisland  loop  dist_lagosisland.mp3      5773091  5773091 0.066/0.207  -14.3  -1.8    -16.4         -0.5     4.71 ok
+lagosisland  SD    dist_lagosisland_sd.mp3   1539491  1539491 0.010/0.350  -13.7  -1.7    -15.2        144.4     3.72 ok
+lekki        loop  dist_lekki.mp3            5773091  5773091 0.049/0.214  -14.3  -1.3    -16.8         -0.5     4.48 ok
+lekki        SD    dist_lekki_sd.mp3         1539491  1539491 0.263/0.337  -13.8  -1.5    -15.6         -0.5     3.55 ok
+FAILS 0

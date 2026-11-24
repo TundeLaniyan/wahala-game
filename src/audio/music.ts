@@ -411,6 +411,19 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
         lastPlayTry: -Infinity,
       };
       el.addEventListener('error', d.onError);
+      if (track.startAt !== undefined && track.startAt > 0) {
+        // one file, several start points (candidate district songs): seek once the stream is really playing
+        const at = track.startAt;
+        const seek = (): void => {
+          el.removeEventListener('playing', seek);
+          try {
+            el.currentTime = at;
+          } catch {
+            /* a stream that cannot seek starts from its top */
+          }
+        };
+        el.addEventListener('playing', seek);
+      }
     } catch (e) {
       fail(e);
       return null;
@@ -447,7 +460,20 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
   const variantTrackId = (v: MusicVariant): string | null => {
     const vs = manifest?.variants;
     if (!vs || v === 'normal') return null;
-    const id = v === 'suddenDeath' ? vs.suddenDeath : vs.boss?.[Number(v.slice(4)) - 1];
+    let id: string | undefined;
+    if (v === 'suddenDeath') {
+      const fam = matchBase?.family;
+      id = fam ? vs.suddenDeathFor?.[fam] : undefined;
+      // the Lagos No Dey Sleep loop is the Sudden Death of tracks of its own sync group only: never over another song
+      if (
+        !id &&
+        vs.suddenDeath &&
+        matchBase?.syncGroup &&
+        trackById(vs.suddenDeath)?.syncGroup === matchBase.syncGroup
+      ) {
+        id = vs.suddenDeath;
+      }
+    } else id = vs.boss?.[Number(v.slice(4)) - 1];
     return id && isAvailable(id) ? id : null;
   };
 
@@ -467,6 +493,11 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
       writeRate(d, prev.rate);
     }
     const sync = prev.track.syncGroup !== undefined && prev.track.syncGroup === target.syncGroup;
+    // different recordings with bar grids (a district song and its Sudden Death loop): lock the new stream to the old
+    // one's place in the bar, at whatever tempo the song has
+    const gridPrev = prev.track.grid;
+    const gridNext = target.grid;
+    const barSync = !sync && gridPrev !== undefined && gridNext !== undefined;
     const startedAt = ctx.currentTime;
     const prevPos = prev.el.currentTime;
     let done = false;
@@ -481,7 +512,15 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
       if (!prev.released) closeDeck(prev, fade);
     };
     const onPlaying = (): void => {
-      if (sync) {
+      if (barSync && !prev.released) {
+        try {
+          const bar = 240 / gridPrev.bpm;
+          const phase = (((prev.el.currentTime - gridPrev.first) % bar) + bar) % bar;
+          d.el.currentTime = gridNext.first + phase + 0.04; // 40 ms: the seek itself
+        } catch {
+          /* a stream that cannot seek starts from its top */
+        }
+      } else if (sync) {
         try {
           // where the beat has got to by now: the old position plus the time the new stream took to start
           let at = prevPos + (ctx.currentTime - startedAt) * Math.max(0.5, prev.rate);
@@ -603,10 +642,16 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
         }
         if (disposed) return report;
         const probe = o.probe;
+        const probed = new Map<string, Promise<boolean>>(); // tracks that share a file (start-point variants) are probed once
         await Promise.all(
           parsed.tracks.map(async (t) => {
-            const ok = probe ? await probe(urlOf(t)).catch(() => false) : true;
-            availability.set(t.id, ok);
+            const url = urlOf(t);
+            let p = probed.get(url);
+            if (!p) {
+              p = probe ? probe(url).catch(() => false) : Promise.resolve(true);
+              probed.set(url, p);
+            }
+            availability.set(t.id, await p);
           }),
         );
         if (disposed) return report;
