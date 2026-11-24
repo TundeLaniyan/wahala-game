@@ -562,6 +562,11 @@ export interface RaidFightOptions {
   onTick?: (s: GameState) => void;
   /** Called after every tick with that tick's events (the live combat measurements, scripts/raid-live.ts). */
   onEvents?: (s: GameState, events: SimEvent[]) => void;
+  /**
+   * Measurement hook (scripts/lib/nightExploit.ts): when it returns an intent the human sends THAT this tick instead of
+   * the fair-fight policy's; null = the fair-fight human decides as always. Absent = unchanged behaviour.
+   */
+  override?: (s: GameState) => Intents[number] | null;
 }
 
 /** The first soft tile on the quickest walk (crates count as passable, at a cost) from the human to next to `goal`. */
@@ -690,7 +695,8 @@ export function playRaidFight(
         targets = s.players.filter((p) => p.alive && p.enemyKind !== undefined).map((p) => p.y * w + p.x);
       }
     }
-    const intents: Intents = { 0: human.decide(s, targets, goal) };
+    const forced = o.override?.(s) ?? null;
+    const intents: Intents = { 0: forced ?? human.decide(s, targets, goal) };
     for (const [id, bot] of Object.entries(bots)) {
       if (s.players[Number(id)]!.alive) intents[Number(id)] = bot.decide(observe(s, Number(id)));
     }
