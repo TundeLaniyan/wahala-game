@@ -52,6 +52,8 @@ export function warmUrls(urls: readonly string[], opts: WarmOptions = {}): WarmH
   const queue = [...new Set(urls)];
   const seen = new Set(queue);
   const worker = async (): Promise<void> => {
+    // No absolute literal here: the public bundle test allow-lists every URL in a chunk.
+    const base = globalThis.location?.href ?? ''; // empty under Node: the urls are then absolute
     for (let url = queue.shift(); url !== undefined; url = queue.shift()) {
       if (controller.signal.aborted) return;
       try {
@@ -62,9 +64,9 @@ export function warmUrls(urls: readonly string[], opts: WarmOptions = {}): WarmH
         } as RequestInit);
         if (!res.ok) continue;
         const body = await res.arrayBuffer();
-        if (/\.glb$/i.test(new URL(url, 'http://x').pathname))
+        if (/\.glb(?:[?#]|$)/i.test(url))
           for (const uri of externalImageUris(body)) {
-            const next = new URL(uri, new URL(url, globalThis.location?.href ?? 'http://x/')).href;
+            const next = new URL(uri, new URL(url, base || undefined)).href;
             if (!seen.has(next)) {
               seen.add(next);
               queue.push(next);
