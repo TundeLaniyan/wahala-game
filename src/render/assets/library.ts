@@ -55,6 +55,14 @@ export class AssetLibrary {
     return [...URL_BY_ID.keys()];
   }
 
+  /** The URLs of the listed models that are bundled and not loaded yet (what `warmUrls` fetches ahead of a start). */
+  static urlsFor(ids: readonly string[], loaded: (id: string) => boolean = () => false): string[] {
+    return [...new Set(ids)]
+      .filter((id) => !loaded(id))
+      .map((id) => LAZY_URL_BY_ID.get(id) ?? URL_BY_ID.get(id))
+      .filter((u): u is string => !!u);
+  }
+
   /** Ids of the on-demand character models bundled with the build. */
   static lazyIds(): string[] {
     return [...LAZY_URL_BY_ID.keys()];

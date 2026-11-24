@@ -22,7 +22,7 @@ async function openMenu(page: Page, query = ''): Promise<void> {
 }
 
 /**
- * Home -> Play -> Quick Match, tapped N times as fast as the page takes them (each runs the button's own handler):
+ * Home -> Play -> Quick Start (an offline City Rumble Free-for-All, decision FU2-1), tapped N times as fast as the page takes them (each runs the button's own handler):
  * a second tap while a start is on its way must start nothing.
  */
 async function tapQuickPlay(page: Page, times = 3): Promise<void> {

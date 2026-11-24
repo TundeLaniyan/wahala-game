@@ -6,7 +6,7 @@
  * Everything writes the real `GameSettings` through `commands`; the rules are never changed from here.
  */
 import { commands } from '../../app/session';
-import { QUICK_MATCH, QUICK_MATCH_FIGHTERS, QUICK_MATCH_MINUTES } from '../../app/quickMatch';
+import { QUICK_MATCH_FIGHTERS, QUICK_MATCH_MINUTES } from '../../app/quickMatch';
 import { useGameStore } from '../../app/store';
 import { RUMBLE_ARENA_IDS, STANDARD_ARENA_IDS } from '../../sim';
 import { fighterArt } from './art';
@@ -57,7 +57,6 @@ export function PlayScreen() {
             className="mn-play-main"
             data-testid="play-quick"
             aria-label={`${PLAY_CHOICES.quick.name}. ${PLAY_CHOICES.quick.tag}. ${PLAY_CHOICES.quick.text}`}
-            data-quick-arena={QUICK_MATCH.rumbleArenaId}
             onClick={() => {
               commands.startQuickMatch();
             }}

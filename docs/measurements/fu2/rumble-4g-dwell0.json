@@ -1,0 +1,342 @@
+[
+ {
+  "label": "before",
+  "url": "http://localhost:4180/wahala-game/",
+  "query": "",
+  "journey": "rumble",
+  "arena": "rumbleOshodi",
+  "net": "4g",
+  "cpu": 4,
+  "dwellMs": 0,
+  "ttfpMs": {
+   "n": 4,
+   "median": 42502,
+   "min": 34774,
+   "max": 57068,
+   "all": [
+    57068,
+    37710,
+    34774,
+    47294
+   ]
+  },
+  "assetsWaitMs": {
+   "n": 4,
+   "median": 7938,
+   "min": 7807,
+   "max": 9363,
+   "all": [
+    9363,
+    7915,
+    7807,
+    7960
+   ]
+  },
+  "buildMs": {
+   "n": 4,
+   "median": 34334,
+   "min": 26678,
+   "max": 47324,
+   "all": [
+    47324,
+    29603,
+    26678,
+    39064
+   ]
+  },
+  "modelMBBeforeTap": 1.05,
+  "modelMBAfterTap": 6.82,
+  "runs": [
+   {
+    "ttfp": 57068,
+    "assetsWait": 9363,
+    "build": 47324,
+    "phases": [
+     [
+      "starting",
+      86
+     ],
+     [
+      "assets",
+      381
+     ],
+     [
+      "arena",
+      9744
+     ],
+     [
+      "scene",
+      23979
+     ],
+     [
+      "",
+      57068
+     ]
+    ],
+    "modelBytesBeforeTap": 1050520,
+    "modelBytesAfterTap": 6816397,
+    "modelFilesBeforeTap": 4,
+    "modelFilesAfterTap": 32,
+    "errors": []
+   },
+   {
+    "ttfp": 37710,
+    "assetsWait": 7915,
+    "build": 29603,
+    "phases": [
+     [
+      "starting",
+      118
+     ],
+     [
+      "assets",
+      192
+     ],
+     [
+      "arena",
+      8107
+     ],
+     [
+      "scene",
+      18826
+     ],
+     [
+      "",
+      37710
+     ]
+    ],
+    "modelBytesBeforeTap": 1050520,
+    "modelBytesAfterTap": 6816397,
+    "modelFilesBeforeTap": 4,
+    "modelFilesAfterTap": 32,
+    "errors": []
+   },
+   {
+    "ttfp": 34774,
+    "assetsWait": 7807,
+    "build": 26678,
+    "phases": [
+     [
+      "starting",
+      155
+     ],
+     [
+      "assets",
+      289
+     ],
+     [
+      "arena",
+      8096
+     ],
+     [
+      "scene",
+      16600
+     ],
+     [
+      "",
+      34774
+     ]
+    ],
+    "modelBytesBeforeTap": 1050520,
+    "modelBytesAfterTap": 6816397,
+    "modelFilesBeforeTap": 4,
+    "modelFilesAfterTap": 32,
+    "errors": []
+   },
+   {
+    "ttfp": 47294,
+    "assetsWait": 7960,
+    "build": 39064,
+    "phases": [
+     [
+      "starting",
+      152
+     ],
+     [
+      "assets",
+      270
+     ],
+     [
+      "arena",
+      8230
+     ],
+     [
+      "scene",
+      22697
+     ],
+     [
+      "",
+      47294
+     ]
+    ],
+    "modelBytesBeforeTap": 1050520,
+    "modelBytesAfterTap": 6816397,
+    "modelFilesBeforeTap": 4,
+    "modelFilesAfterTap": 32,
+    "errors": []
+   }
+  ]
+ },
+ {
+  "label": "after",
+  "url": "http://localhost:4181/wahala-game/",
+  "query": "",
+  "journey": "rumble",
+  "arena": "rumbleOshodi",
+  "net": "4g",
+  "cpu": 4,
+  "dwellMs": 0,
+  "ttfpMs": {
+   "n": 4,
+   "median": 42014,
+   "min": 37277,
+   "max": 47676,
+   "all": [
+    47676,
+    46139,
+    37889,
+    37277
+   ]
+  },
+  "assetsWaitMs": {
+   "n": 4,
+   "median": 4845,
+   "min": 4362,
+   "max": 7522,
+   "all": [
+    7522,
+    4690,
+    4999,
+    4362
+   ]
+  },
+  "buildMs": {
+   "n": 4,
+   "median": 36152,
+   "min": 32610,
+   "max": 41338,
+   "all": [
+    39639,
+    41338,
+    32610,
+    32664
+   ]
+  },
+  "modelMBBeforeTap": 4.12,
+  "modelMBAfterTap": 3.75,
+  "runs": [
+   {
+    "ttfp": 47676,
+    "assetsWait": 7522,
+    "build": 39639,
+    "phases": [
+     [
+      "assets",
+      515
+     ],
+     [
+      "arena",
+      8037
+     ],
+     [
+      "scene",
+      47334
+     ],
+     [
+      "",
+      47676
+     ]
+    ],
+    "modelBytesBeforeTap": 5197829,
+    "modelBytesAfterTap": 2669088,
+    "modelFilesBeforeTap": 18,
+    "modelFilesAfterTap": 18,
+    "errors": []
+   },
+   {
+    "ttfp": 46139,
+    "assetsWait": 4690,
+    "build": 41338,
+    "phases": [
+     [
+      "assets",
+      111
+     ],
+     [
+      "arena",
+      4801
+     ],
+     [
+      "scene",
+      18136
+     ],
+     [
+      "",
+      46139
+     ]
+    ],
+    "modelBytesBeforeTap": 4328778,
+    "modelBytesAfterTap": 3538139,
+    "modelFilesBeforeTap": 14,
+    "modelFilesAfterTap": 22,
+    "errors": []
+   },
+   {
+    "ttfp": 37889,
+    "assetsWait": 4999,
+    "build": 32610,
+    "phases": [
+     [
+      "assets",
+      280
+     ],
+     [
+      "arena",
+      5279
+     ],
+     [
+      "scene",
+      16139
+     ],
+     [
+      "",
+      37889
+     ]
+    ],
+    "modelBytesBeforeTap": 3905800,
+    "modelBytesAfterTap": 3961117,
+    "modelFilesBeforeTap": 12,
+    "modelFilesAfterTap": 24,
+    "errors": []
+   },
+   {
+    "ttfp": 37277,
+    "assetsWait": 4362,
+    "build": 32664,
+    "phases": [
+     [
+      "assets",
+      251
+     ],
+     [
+      "arena",
+      4613
+     ],
+     [
+      "scene",
+      16256
+     ],
+     [
+      "",
+      37277
+     ]
+    ],
+    "modelBytesBeforeTap": 3905800,
+    "modelBytesAfterTap": 3961117,
+    "modelFilesBeforeTap": 12,
+    "modelFilesAfterTap": 24,
+    "errors": []
+   }
+  ]
+ }
+]
