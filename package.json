@@ -27,7 +27,8 @@
     "combat-lab-compare": "tsx scripts/combat-lab-compare.ts",
     "streak-measure": "tsx scripts/streak-measure.ts",
     "check:static": "vite build && node scripts/check-static-build.mjs",
-    "build:online": "WAHALA_ONLINE_ENABLED=true WAHALA_ONLINE_URL='ws://{host}:2567' vite build --outDir dist-online --emptyOutDir"
+    "build:online": "WAHALA_ONLINE_ENABLED=true WAHALA_ONLINE_URL='ws://{host}:2567' vite build --outDir dist-online --emptyOutDir",
+    "test:online-e2e": "node scripts/online-e2e.mjs"
   },
   "dependencies": {
     "@fontsource/anton": "^5.3.0",
