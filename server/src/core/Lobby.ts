@@ -32,6 +32,8 @@ export interface LobbyMember {
   isHost: boolean;
   /** Connected right now (false only while a playing member's connection is down). */
   connected: boolean;
+  /** A replacement bot plays this member's seat (connection down and the grace period is over). */
+  botControlled: boolean;
   /** Seat in the current / last match; null before a match starts. */
   seat: number | null;
 }
@@ -148,6 +150,7 @@ export class Lobby {
       ready: false,
       isHost: this.list.length === 0,
       connected: true,
+      botControlled: false,
       seat: null,
     });
     if (this.phase === 'lobby') {
@@ -179,7 +182,14 @@ export class Lobby {
     const m = this.find(sessionId);
     if (!m) return;
     m.connected = connected;
+    if (connected) m.botControlled = false;
     if (!connected && m.isHost) this.promoteHost();
+  }
+
+  /** The match handed a dropped member's seat to the replacement bot (or back to the human: `false`). */
+  setBotControlled(sessionId: string, botControlled: boolean): void {
+    const m = this.find(sessionId);
+    if (m) m.botControlled = botControlled;
   }
 
   /** Keeps the host role on a connected member: used when the host leaves or their connection drops. */
@@ -313,6 +323,7 @@ export class Lobby {
       isHost: m.isHost,
       seat: m.seat,
       connected: m.connected,
+      botControlled: m.botControlled,
     }));
     const you = forSessionId === null ? -1 : this.list.findIndex((m) => m.sessionId === forSessionId);
     return {

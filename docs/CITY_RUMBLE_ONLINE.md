@@ -159,7 +159,7 @@ Generator detonations (`generatorExploded`) and eliminations were identical on e
 ### 7.6 Bots versus real players
 - Bots are server-side `createBot` brains (the same as offline), seeded from the secret match seed, reading `observe(state)` exactly as offline: same rules, same `Intent`s. They are named `BOT …` and flagged `isBot` in the descriptor, the lobby and the results.
 - Human seats are `isBot: false`; the sim then applies human timing (bots get a minimum attack wind-up, `skills.ts`).
-- A dropped human's seat is played by a bot while they are away (default `dropPolicy: 'autopilot'`; `'idle'` makes it stand still) and for good once the reconnection window (30 s) expires. Kills made by the autopilot count for the seat's owner — a policy decision to revisit before any ranked play.
+- A dropped human's seat stands for a short grace period (default 5 s), is then played by a replacement bot without pausing the match, can be taken back by the human (the same fighter) within the reconnection window (default 30 s), and belongs to the bot for the rest of the match after it. Replacement-bot kills are NOT credited to the absent player's personal numbers (`ResultsMsg`), while the match score still follows the simulation: see section 8 "Disconnect policy" (decisions ON6-ON8). The measurements in 7.4 were taken before the grace period existed (the bot played from the first moment).
 - Humans feel latency; bots do not (they act on the authoritative state every tick). In the measurements, the human-like load clients played *through* their delayed replicas, so their decisions are as late as a person's would be.
 
 ## 8. Rooms and matchmaking foundation (Stage 4)
@@ -168,6 +168,36 @@ Generator detonations (`generatorExploded`) and eliminations were identical on e
 - Seating: humans in join order, then bots to 32. Team Rumble uses the sim's own `assignTeams` and damage rules (`flameHarms` / `canHarm`), so team play and friendly-fire rules are exactly the offline ones.
 - Results are built from the server's own state (`RumbleMatch.results()`), carry the final state hash, and are identical for every client.
 - Reconciled with the gameplay release `66f3e3d` (Sudden Death timer, permanent player marker, viewer-relative team blast warnings, decisions TB1–TB4), merged into this branch: the team damage rule is server-authoritative (sim), and the viewer-relative warnings are pure functions of `GameState` + viewer, computed by the renderer from the replica with `localPlayerId = seat` — no protocol change; root tests incl. `tests/blast-safety.test.ts` pass on the merged branch.
+
+### Disconnect policy (decisions ON6-ON8)
+What happens when a human's connection drops during a match, all values configurable on the server (`server/src/core/options.ts`):
+
+| Setting | Env var | Default | Meaning |
+| --- | --- | --- | --- |
+| `graceSeconds` | `RUMBLE_GRACE_SECONDS` (0..60) | 5 | The fighter just stands where it is (no bot yet; it can still be hit). Counted in simulation ticks. |
+| `reconnectSeconds` | `RUMBLE_RECONNECT_SECONDS` (1..3600) | 30 | The reserved window, counted from the drop: the human can take back THE SAME fighter until it ends. |
+| `dropPolicy` | `RUMBLE_DROP_POLICY` = `bot` \| `idle` | `bot` | After the grace period a replacement bot plays the seat (`bot`), or the fighter keeps standing until the window ends (`idle`). After the window a bot keeps the seat in both cases. |
+
+Invalid values fall back to the defaults. A deliberate leave (the player quits) skips all of this: a bot has the seat at once and there is no way back. The match never pauses for anyone. Reconnecting only changes who controls the seat: the `Player`, its position, step, lives, protection and respawn timers are untouched; a fighter who fell while the human was away returns as the same down or respawning fighter (the mode's normal rules), never a fresh one. The lobby view marks the member `connected: false` while away and `botControlled: true` once the bot plays (the row leaves the lobby when the window ends; the seat is then a human seat of the descriptor with no connected member).
+
+**Statistics.** The server splits what the simulation credited, per human seat, by who controlled the seat on the tick the credit happened (a tick on which nobody acts, during the grace period or `idle`, belongs to the human). `ResultsMsg.players[]`:
+
+| Field | Meaning |
+| --- | --- |
+| `kills`, `deaths`, `assists` | PERSONAL numbers: only human-controlled time (what a future ranking / XP / achievement layer reads). For a server-bot seat (`isBot`) they are the simulation's totals. |
+| `botKills`, `botDeaths`, `botAssists` (optional, human seats) | What the replacement bot did on the seat. `kills + botKills` = the simulation's total for the seat. |
+| `autopilotSeconds`, `absentSeconds`, `drops` (optional) | Seconds a bot controlled the seat; seconds the seat stood with no controller; connection drops. |
+| `controlledByBotAtEnd` (optional) | A bot (not the human) controlled the seat when the match ended. |
+
+The simulation, team score, Sudden Death and the winner are unchanged: every credited kill counts for the match result, `placement` is the simulation's. Only the personal numbers are split. Older clients keep working (all new fields are optional, protocol version unchanged).
+
+**Open policy questions for the founder** (NOT decided here; the implementation only records the facts so any answer can be applied later):
+1. Does time played by a replacement bot count toward rank, XP or achievements at all (today: no, the personal numbers exclude it, but a match still counts as played)?
+2. Does a long absence forfeit something (rank points, rewards, the seat's placement), and from which length: more than the grace period, the whole window, the whole match?
+3. Does a returning player keep, in the TEAM score, the kills the bot made for their seat while they were away (today yes: the match result follows the simulation; the personal numbers do not)? Should the bot's deaths count against the team?
+4. Should a player who is the host or in a ranked room be treated differently (e.g. a ranked match with a bot-controlled seat)?
+5. Should repeated drops (`drops`) be visible to matchmaking or moderation (e.g. a penalty for leaving, or leniency for a mobile network that keeps dropping)?
+6. Should the grace period and the window differ between public and private rooms or between casual and ranked play?
 
 ## 9. Hosting, data and cost (Stage 5)
 
@@ -210,7 +240,7 @@ Outstanding implementation gaps (none is hidden behind a passing test):
 6. Multi-process scaling (Redis presence/driver), deployment, TLS, monitoring and per-IP limits are not set up.
 7. Bot CPU is the cost driver; the bot brain has not been profiled for server use.
 8. Spectators (non-playing viewers) and late join into a running match are not supported (rooms lock at start; only reconnection is allowed).
-9. Autopilot kills count for the absent player; revisit before ranked play.
+9. ~~Autopilot kills count for the absent player~~ Done: personal numbers are human-only, bot numbers are separate (section 8, ON7). The open ranking / reward questions are listed there for the founder.
 
 **Next concrete step:** a phone test. Deploy the bundled server on one small EU VM (London region, dedicated vCPU, TLS) — with the founder's approval of the provider and cost — and add a minimal latency/ping page; then run two to four real phones in Lagos on MTN / Airtel / Glo through a full match with the dev client, recording input → visible latency, data used and reconnection on app switches. That single test decides the hosting region and whether client-side prediction is needed before anything else.
 

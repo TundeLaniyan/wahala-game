@@ -23,9 +23,27 @@ export const DEFAULT_DIFFICULTY: Difficulty = 'standard';
 export const ALLOWED_DURATIONS: readonly number[] = [180, 300];
 
 /** Server-side knobs. Production values by default; tests relax only what `fast` allows. */
+export type DropPolicy = 'bot' | 'idle';
+export const DROP_POLICIES: readonly DropPolicy[] = ['bot', 'idle'];
+
 export interface RuntimeConfig {
-  /** How long a dropped player's seat waits for them (autopilot meanwhile). */
+  /**
+   * The reserved window, counted from the moment the drop is noticed: the human may take back THE SAME fighter until it
+   * ends; then the seat belongs to a bot for the rest of the match.
+   */
   reconnectSeconds: number;
+  /**
+   * Grace period after a human's connection drops mid-match (`RUMBLE_GRACE_SECONDS`, 0..60): the fighter just stands
+   * where it is, no bot yet. After it, `dropPolicy` decides. A grace longer than the window simply means the bot only
+   * arrives when the window ends.
+   */
+  graceSeconds: number;
+  /**
+   * What happens to a dropped seat once the grace period is over (`RUMBLE_DROP_POLICY`): `bot` = a bot plays the
+   * fighter without pausing the match for anyone; `idle` = it keeps standing until the reconnection window ends (then a
+   * bot takes it for good either way).
+   */
+  dropPolicy: DropPolicy;
   /** Pre-match countdown. */
   countdownMs: number;
   /** Public lobbies start by themselves this long after the first human joins (a client may ask for another value). */
@@ -41,8 +59,13 @@ export interface RuntimeConfig {
   maxCatchUpTicks: number;
 }
 
+export const DEFAULT_GRACE_SECONDS = 5;
+export const MAX_GRACE_SECONDS = 60;
+
 export const DEFAULT_RUNTIME: RuntimeConfig = {
   reconnectSeconds: 30,
+  graceSeconds: DEFAULT_GRACE_SECONDS,
+  dropPolicy: 'bot',
   countdownMs: 3000,
   defaultAutoStartSec: 20,
   fast: false,
@@ -56,9 +79,17 @@ function positiveNumber(raw: string | undefined, fallback: number, min: number, 
   return Number.isFinite(n) && n >= min && n <= max ? n : fallback;
 }
 
+function parseDropPolicy(raw: string | undefined): DropPolicy {
+  const v = raw?.trim().toLowerCase();
+  return (DROP_POLICIES as readonly (string | undefined)[]).includes(v)
+    ? (v as DropPolicy)
+    : DEFAULT_RUNTIME.dropPolicy;
+}
+
 /**
- * Reads `RUMBLE_RECONNECT_SECONDS`, `RUMBLE_TEST_FAST` and (only with fast mode) `RUMBLE_COUNTDOWN_MS` /
- * `RUMBLE_AUTOSTART_SEC`. Invalid values fall back to the defaults.
+ * Reads `RUMBLE_RECONNECT_SECONDS`, `RUMBLE_GRACE_SECONDS` (0..60), `RUMBLE_DROP_POLICY` (`bot` | `idle`),
+ * `RUMBLE_TEST_FAST` and (only with fast mode) `RUMBLE_COUNTDOWN_MS` / `RUMBLE_AUTOSTART_SEC`.
+ * Invalid values fall back to the defaults.
  */
 export function loadRuntimeConfig(env: Record<string, string | undefined> = process.env): RuntimeConfig {
   const fast = env.RUMBLE_TEST_FAST === '1';
@@ -71,6 +102,8 @@ export function loadRuntimeConfig(env: Record<string, string | undefined> = proc
       fast ? 0.1 : 1,
       3600,
     ),
+    graceSeconds: positiveNumber(env.RUMBLE_GRACE_SECONDS, DEFAULT_GRACE_SECONDS, 0, MAX_GRACE_SECONDS),
+    dropPolicy: parseDropPolicy(env.RUMBLE_DROP_POLICY),
     countdownMs: fast
       ? positiveNumber(env.RUMBLE_COUNTDOWN_MS, DEFAULT_RUNTIME.countdownMs, 0, 60_000)
       : 3000,

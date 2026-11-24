@@ -2,6 +2,11 @@
  * Browser origin policy (CORS for matchmaking requests and the WebSocket upgrade).
  * Entries of `RUMBLE_ALLOWED_ORIGINS` are exact origins, or patterns where `*` after a colon is a port and any other
  * `*` is a host label run (`http://localhost:*`, `https://*.example.com`). Non-browser clients send no Origin: allowed.
+ *
+ * Production (`development` false): ONLY the explicit list; with no list nothing is allowed.
+ * Development: the localhost origins (Vite's dev server) PLUS the explicit list, which is where the laptop's LAN origins
+ * go (`npm run dev:online` computes them at start, e.g. `http://192.168.1.23:5173`, docs/CITY_RUMBLE_ONLINE_LOCAL.md).
+ * No LAN range is ever allowed implicitly.
  */
 
 const DEV_ORIGINS = ['http://localhost:*', 'http://127.0.0.1:*'];
@@ -26,7 +31,7 @@ export function createOriginPolicy(list: string | undefined, development: boolea
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
-  const patterns = explicit.length > 0 ? explicit : development ? DEV_ORIGINS : [];
+  const patterns = development ? [...new Set([...DEV_ORIGINS, ...explicit])] : explicit;
   const rules = patterns.map(compile);
   return {
     patterns,

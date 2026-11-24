@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { MATCH_END_BUDGET_MS, TestContext, dropSocket, matchOf, playRandomly, until } from './helpers';
 import type { TestPlayer } from './helpers';
 
-const ctx = new TestContext({ reconnectSeconds: 5 });
+const ctx = new TestContext({ graceSeconds: 0.5, reconnectSeconds: 5 });
 
 describe('connection loss', () => {
-  it('an abrupt drop autopilots the seat; reconnecting within the window restores it and the replica converges', async () => {
+  it('an abrupt drop: a bot plays the seat after the grace period; reconnecting within the window restores it and the replica converges', async () => {
     const { all, code } = await ctx.privateMatch(['Ada', 'Bayo']);
     const [a, b] = all as [TestPlayer, TestPlayer];
     const stopA = playRandomly(a);
@@ -24,7 +24,7 @@ describe('connection loss', () => {
     );
     await until('a left (1006)', () => a.leftWith !== null);
     expect(a.leftWith).toBe(1006);
-    expect(matchOf(code).humanSeatsConnected()).toEqual([b.seat]); // autopilot has the seat, b still plays
+    expect(matchOf(code).humanSeatsConnected()).toEqual([b.seat]); // nobody human on a's seat, b still plays
 
     const room2 = await ctx.server.client().reconnect(token);
     a.leftWith = null;

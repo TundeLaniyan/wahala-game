@@ -1,8 +1,17 @@
 /**
- * Entry point: `npm start` (PORT, default 2567; host 0.0.0.0).
- * Environment: RUMBLE_ALLOWED_ORIGINS, RUMBLE_RECONNECT_SECONDS, RUMBLE_METRICS_TOKEN, NODE_ENV (see README in docs).
+ * Entry point: `npm start` (PORT, default 2567; host 0.0.0.0, so phones on the same Wi-Fi can reach it).
+ * Environment (docs/CITY_RUMBLE_ONLINE.md section 8, docs/CITY_RUMBLE_ONLINE_LOCAL.md):
+ *   PORT                      listen port (default 2567)
+ *   RUMBLE_ALLOWED_ORIGINS    comma list of browser origins; production: nothing is allowed unless listed
+ *   RUMBLE_GRACE_SECONDS      0..60, default 5: a dropped fighter stands this long before a bot plays it
+ *   RUMBLE_RECONNECT_SECONDS  default 30: the human may take back the same fighter within this window
+ *   RUMBLE_DROP_POLICY        `bot` (default) | `idle`
+ *   RUMBLE_METRICS_TOKEN      bearer token for GET /metrics
+ *   NODE_ENV                  `production` turns the localhost development origins off
  */
+import { networkInterfaces } from 'node:os';
 import { startRumbleServer } from './app';
+import { lanAddresses, lanUrls } from './core/lan';
 import { loadRuntimeConfig } from './core/options';
 
 const log = (message: string): void => console.log(`[rumble] ${message}`);
@@ -20,5 +29,9 @@ const running = await startRumbleServer({
 });
 running.server.onShutdown(() => log('shut down'));
 log(
-  `listening on :${running.port} (origins: ${running.origins.patterns.join(', ') || 'none'}; reconnect ${runtime.reconnectSeconds}s${runtime.fast ? '; TEST FAST MODE' : ''})`,
+  `listening on :${running.port} (origins: ${running.origins.patterns.join(', ') || 'none'}; grace ${runtime.graceSeconds}s, reconnect ${runtime.reconnectSeconds}s, drop policy ${runtime.dropPolicy}${runtime.fast ? '; TEST FAST MODE' : ''})`,
 );
+log(`this machine:  ws://localhost:${running.port}   health http://localhost:${running.port}/health`);
+const lan = lanUrls(lanAddresses(networkInterfaces()), running.port);
+if (lan.length === 0) log('no LAN address found (not on a network?): only this machine can connect');
+for (const u of lan) log(`on your network: ${u.ws}   health ${u.health}`);

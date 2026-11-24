@@ -156,9 +156,30 @@ export interface ResultsMsg {
     isBot: boolean;
     team: number | null;
     placement: number;
+    /**
+     * The PERSONAL numbers (what a future ranking / XP / achievement layer reads). For a human seat they count only
+     * time the HUMAN controlled the fighter: nothing a replacement bot did while they were away. For a server-bot seat
+     * (`isBot`) they are the simulation's totals. The match outcome (winner, team score, Sudden Death, `placement`) is
+     * decided by the simulation, which counts every credited kill, and is NOT affected by this split.
+     */
     kills: number;
     deaths: number;
     assists: number;
+    /**
+     * Human seats only (all optional: absent on bots and on older servers). What the replacement bot did on this seat:
+     * `kills + botKills` is the simulation's total for the seat.
+     */
+    botKills?: number;
+    botDeaths?: number;
+    botAssists?: number;
+    /** Seconds a replacement bot controlled the seat. */
+    autopilotSeconds?: number;
+    /** Seconds the seat stood without any controller (the grace period, or the whole window under policy `idle`). */
+    absentSeconds?: number;
+    /** How many times the human's connection dropped during the match. */
+    drops?: number;
+    /** True when a bot (not the human) was in control when the match ended. */
+    controlledByBotAtEnd?: boolean;
   }[];
 }
 
@@ -221,8 +242,13 @@ export interface LobbyMemberView {
   isHost: boolean;
   /** Seat in the running / finished match; null before a match starts. */
   seat: number | null;
-  /** False while a playing member's connection is down and their seat is on autopilot. */
+  /** False while a playing member's connection is down (their seat stands for the grace period, then a bot plays it). */
   connected: boolean;
+  /**
+   * Optional (older servers omit it): true while a replacement bot plays this member's seat, i.e. the connection is
+   * down and the grace period is over. The UI can show "a bot is playing for X"; reconnecting clears it.
+   */
+  botControlled?: boolean;
 }
 
 /**

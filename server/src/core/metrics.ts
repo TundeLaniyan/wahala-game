@@ -73,6 +73,9 @@ export class RoomMetrics {
   resyncsLimited = 0;
   kicks = 0;
   reconnections = 0;
+  /** Connection drops of a playing human, and times a replacement bot took over a dropped seat. */
+  drops = 0;
+  botTakeovers = 0;
   matchesStarted = 0;
   matchesFinished = 0;
 }
@@ -109,6 +112,8 @@ export interface RoomMetricsSnapshot {
     resyncsLimited: number;
     kicks: number;
     reconnections: number;
+    drops: number;
+    botTakeovers: number;
   };
   inputs: { accepted: number; stale: number; overRate: number };
   matches: { started: number; finished: number };
