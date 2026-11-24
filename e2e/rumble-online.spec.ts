@@ -169,6 +169,12 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     await expect(page.getByTestId('net-chip')).toBeVisible();
 
     // the phone's touch pad moves the phone's fighter (the move assist and the server both run): a drag on the stick
+    // The touch pad is only on screen while the fighter is alive: a page that was starved at match start (the loading arena
+    // blocks a software-rendered page for tens of seconds) leaves its fighter standing for the grace period, and a rival's
+    // blast can down it before the page ever shows a frame ("DOWN, back in 2", no pad). That is the game, not a connection
+    // fault: wait for the respawn instead of reading a bounding box that is null (decision FU2S-10; this was the
+    // "stick-zone bounding box is null" failure).
+    await expect(guest.getByTestId('stick-zone')).toBeVisible({ timeout: 90_000 });
     const before = (await W(guest).state()).me!;
     const zone = (await guest.getByTestId('stick-zone').boundingBox())!;
     const cx = zone.x + zone.width * 0.4;

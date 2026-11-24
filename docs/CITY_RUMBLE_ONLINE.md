@@ -211,7 +211,18 @@ Caveats. (1) The machine was shared: another worker's headless Chromium was usin
 **CI smoke.** `server/test/soak.smoke.test.ts` runs the same harness for about 35 s (2 rooms, no long slot) in the server suite and fails on: a failed cycle or client error, a created room that is not disposed, a live room, registered room or connected client after the teardown, any disposed room still reachable after a full GC, or any active handle (timer, socket) beyond the empty server's. It cannot see a slow in-match leak like the one above (that needs minutes); that class is covered by the unit regression test and the 5-minute soak. `server/test/soakStats.test.ts` tests the verdict rules, including the live-room confounder.
 
 ### 7.8 The 30-minute server soak (decision FU2S-10)
-@@SOAK@@
+`cd server && npx tsx bench/soak.ts --duration 1800 --rooms 3 --label soak-30min` (about 30 minutes; start 2026-11-24 17:34 UTC): the real server process with `--expose-gc` and light WebSocket clients: one long match of 1 human + 31 bots plus short cycles (create, play, drop, reconnect or never return, rematch, leave) in two more slots, 233 rooms in all. The summary now also keeps whole-run dropped-tick totals (rooms that are gone included), the machine's load average at every sample and a trend for resident memory, external memory, timers, sockets and listeners. Full numbers: `docs/measurements/rumble-online/soak-30min.json` and `.md`.
+
+| Question | Result |
+| --- | --- |
+| Heap that survives a full GC | **stable**: 0.027 +/- 0.024 MB/min (not significant), 40.5 -> 38.4 MB first to last third |
+| Retained rooms | **0** of 233 (all finalised by the GC) |
+| Timers, sockets, listeners | **flat**; handles after the run equal the baseline |
+| Failures | 0 client errors, 0 failed cycles; 230 drops: 174 reconnected, 56 never returned (a bot kept the seat) |
+| Resident memory (RSS) | **creeping up, honestly not explained**: 402 -> 416 -> 423 MB over the thirds (slowing), about 0.34 MB/min (20 MB/h) after the first 5 minutes, while the heap, external memory and handles are flat; likely allocator / V8 reservation after hundreds of room builds, not proven; needs a 2-hour run |
+| Dropped ticks over the whole run | 895 of 200 426 (0.45 %), event-loop p99 median 20 ms, worst 119 ms, CPU mean 48 % |
+
+The machine was **not quiet** (other workers' browsers and tests: load average mean 6.3, max 9.7 on 4 CPUs), so the dropped-tick, event-loop and CPU rows are pessimistic; the memory rows are not affected. It is not a capacity measurement and was not used to set `RUMBLE_CPU_BUDGET`.
 
 ### 7.9 Why the two-browser e2e failed under load (decisions FU2S-9 to FU2S-11)
 Two causes, neither fixed by retrying: starved pages (software WebGL blocked a browser's main thread for up to 83 s, so the liveness check dropped both pages at the same tick at match start) and a real server defect (a socket that dropped again before its join acknowledgement lost its seat for good: the "banner still shown after 120 s" the Ops branch saw). Fixed with a regression test; the check now pins the server and the browsers apart, samples the server's load, runs a light profile and has its own non-required CI job. Evidence, the three leads and the numbers: `docs/ONLINE_LIMITS_AND_SECURITY.md` section 9.

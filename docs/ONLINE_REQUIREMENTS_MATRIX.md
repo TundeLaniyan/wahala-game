@@ -22,6 +22,8 @@ Status: **MET** = the code already did it, now proved by a test; **MISSING-then-
 
 Server suite: **102 tests / 12 files before, 193 tests / 18 files after** the requirement work and the soak (`cd server && npx vitest run`; 181 / 16 after the requirement work alone, the rest is the soak statistics test and the 35 s soak smoke). The root online subset (`tests/net tests/online tests/app tests/ui/rumble-online-*.test.ts tests/platform-static.test.ts tests/platform-flags.test.ts`) passes: 649 passed, 4 skipped, 1 file skipped (the skips pre-date this work).
 
+After the FU2S work (`claude/wahala-fu2-server`): the server suite is **25 files / 293 tests** (`cd server && npx vitest run`; new files `capacity`, `guard`, `limits`, `clientIp`, `logGuard`, `room.reconnect-flap`, `room.expiry.realtime`), the root online subset (`tests/net tests/online tests/app tests/ui/rumble-online-*.test.ts tests/platform-static.test.ts tests/platform-flags.test.ts`) passes 655 (4 skips that pre-date this work), and `npm run check:static` passes on a default build.
+
 ## Open founder decisions found by this pass (nothing is decided silently)
 
 1. ~~Public Team Rumble.~~ **Resolved (FU2S-1, FU2S-2):** a mode picker that filters matchmaking, and public settings that belong to the server.
