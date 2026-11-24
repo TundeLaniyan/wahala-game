@@ -164,9 +164,16 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     ]);
     const rowsOf = (p: Page) => p.getByTestId('ro-result-row').allInnerTexts();
     const [ra, rb] = await Promise.all([rowsOf(page), rowsOf(guest)]);
-    expect(ra.length).toBeGreaterThanOrEqual(2);
-    expect(ra.map((t) => t.replace(/\s+/g, ' '))).toEqual(rb.map((t) => t.replace(/\s+/g, ' ')));
-    expect(ra.some((t) => /BOT/i.test(t))).toBe(false); // results list the people; bots are summarised, never named as players
+    // the same table for both players; only each viewer's own "YOU" tag differs
+    const norm = (t: string) => t.replace(/\s+/g, ' ').replace(/ YOU\b/, '');
+    expect(ra).toHaveLength(32);
+    expect(ra.map(norm)).toEqual(rb.map(norm));
+    // people and bots are told apart, and a replacement bot's play is not credited to the absent human
+    expect(ra.filter((t) => /\bHUMAN\b/.test(t))).toHaveLength(2);
+    expect(ra.filter((t) => /\bBOT\b/.test(t))).toHaveLength(30);
+    expect(rb.some((t) => /HUMAN.*A bot played \d+ s for this player/.test(t.replace(/\s+/g, ' ')))).toBe(
+      true,
+    );
   } finally {
     await ctxB.close();
   }
