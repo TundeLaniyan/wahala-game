@@ -122,11 +122,15 @@ action. Unverifiable by eye on a phone: that only the selected arena's assets ar
 
 ## What was automated for this checklist, and what was not
 
-- `tests/fu2-raid-acceptance.test.ts` (item 3): the real depot on Normal with the about-face scripted, all of the first wave on its rounds,
-  and a complete raid after it.
-- `e2e/fu2-acceptance.spec.ts` (items 2 and 4): the real game in a browser: 16- and 32-fighter City Rumble with the crowd silhouette
-  present for the local fighter only; the Oshodi boss started from the Test Lab on Easy / Normal / Hard carries 0 / 1 / 2 relay guards and the
-  guards stand at a relay after the sim runs. Software GL, no person.
+- `tests/fu2-raid-acceptance.test.ts` (item 3, 47 s): the real depot on Normal, all of the first wave on its rounds, 204 moments at which
+  the player stands behind an unseen guard and leaves after 0.3 s of being watched. Of the 78 where a guard's turn then faced him, production
+  (grace 0) catches 54 (51 on the very tick of the turn); the shipped build catches none, and nobody within 40 ticks. Then a complete Normal
+  raid with the rear approach scripted on every calm guard in reach: 4 of 4 seeds completed, 0 lives lost, one approach laid and killed per run.
+- `e2e/fu2-acceptance.spec.ts` (items 2 and 4, five tests of 40 s to 70 s each on this loaded box, phone project, Test Lab): a 16- and a
+  32-fighter City Rumble each carry the local fighter's crowd silhouette twins, shown at the Low rung, no rival has one; the Oshodi boss
+  started from the Lab on Easy / Normal / Hard carries 0 / 1 / 2 relay guards and after 40 s of sim with the player beside relay 1 exactly
+  that many backup fighters stand at a relay at least 10 tiles from their posts (the second guard needs the 40 s: 25 s found one). Software
+  GL, no person. In this container the browser needs `WAHALA_MULTIPROCESS=1` (the single-process launch crashes).
 - Item 1 already had browser and unit cover; nothing was added. Items 5 and 6 are not testable until their build lands.
 - NOT automated, on purpose: whether a guard's turn is readable, whether Hard bites, whether the 16 / 32 crowd reads on a real phone
   screen. Those are yours.
