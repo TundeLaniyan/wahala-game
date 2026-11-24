@@ -13,7 +13,8 @@
       "approved": true,
       "gain": 0.8,
       "loudnessLufs": -12.1,
-      "artistSource": "Pixabay uploader handle in the downloaded file name"
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "lite": "lite/pixabay_569473.mp3"
     },
     {
       "id": "pixabay_573648",
@@ -26,7 +27,8 @@
       "approved": true,
       "gain": 0.62,
       "loudnessLufs": -9.8,
-      "artistSource": "Pixabay uploader handle in the downloaded file name"
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "lite": "lite/pixabay_573648.mp3"
     },
     {
       "id": "pixabay_588999",
@@ -39,7 +41,8 @@
       "approved": true,
       "gain": 0.91,
       "loudnessLufs": -13.2,
-      "artistSource": "Pixabay uploader handle in the downloaded file name"
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "lite": "lite/pixabay_588999.mp3"
     },
     {
       "id": "pixabay_491433",
@@ -52,7 +55,8 @@
       "approved": true,
       "gain": 0.72,
       "loudnessLufs": -11.2,
-      "artistSource": "Pixabay uploader handle in the downloaded file name"
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "lite": "lite/pixabay_491433.mp3"
     },
     {
       "id": "pixabay_439622",
@@ -65,7 +69,8 @@
       "approved": true,
       "gain": 0.94,
       "loudnessLufs": -13.5,
-      "artistSource": "Pixabay uploader handle in the downloaded file name"
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "lite": "lite/pixabay_439622.mp3"
     },
     {
       "id": "pixabay_491432",
@@ -78,7 +83,8 @@
       "approved": true,
       "gain": 0.76,
       "loudnessLufs": -11.6,
-      "artistSource": "Pixabay uploader handle in the downloaded file name"
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "lite": "lite/pixabay_491432.mp3"
     },
     {
       "id": "pixabay_496406",
@@ -102,7 +108,8 @@
       "approved": true,
       "gain": 1.15,
       "loudnessLufs": -15.2,
-      "artistSource": "Pixabay uploader handle in the downloaded file name"
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "lite": "lite/pixabay_406552.mp3"
     },
     {
       "id": "pixabay_540950",
@@ -115,7 +122,8 @@
       "approved": true,
       "gain": 0.68,
       "loudnessLufs": -10.6,
-      "artistSource": "Pixabay uploader handle in the downloaded file name"
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "lite": "lite/pixabay_540950.mp3"
     },
     {
       "id": "pixabay_504898",
@@ -128,7 +136,8 @@
       "approved": true,
       "gain": 0.88,
       "loudnessLufs": -12.9,
-      "artistSource": "Pixabay uploader handle in the downloaded file name"
+      "artistSource": "Pixabay uploader handle in the downloaded file name",
+      "lite": "lite/pixabay_504898.mp3"
     },
     {
       "id": "pixabay_601035",
@@ -142,7 +151,8 @@
       "gain": 0.62,
       "loudnessLufs": -9.8,
       "artistSource": "Pixabay uploader handle in the downloaded file name",
-      "note": "City Rumble V2 signature track for rumbleOshodi (supplied 2026-10-25, re-encoded 160 kbps)"
+      "note": "City Rumble V2 signature track for rumbleOshodi (supplied 2026-10-25, re-encoded 160 kbps)",
+      "lite": "lite/pixabay_601035.mp3"
     },
     {
       "id": "pixabay_554543",
@@ -156,7 +166,8 @@
       "gain": 0.56,
       "loudnessLufs": -8.9,
       "artistSource": "Pixabay uploader handle in the downloaded file name",
-      "note": "City Rumble V2 signature track for rumbleLagosIsland (supplied 2026-10-25, re-encoded 160 kbps)"
+      "note": "City Rumble V2 signature track for rumbleLagosIsland (supplied 2026-10-25, re-encoded 160 kbps)",
+      "lite": "lite/pixabay_554543.mp3"
     },
     {
       "id": "pixabay_455231",
@@ -170,7 +181,8 @@
       "gain": 1.11,
       "loudnessLufs": -14.9,
       "artistSource": "Pixabay uploader handle in the downloaded file name",
-      "note": "City Rumble V2 signature track for rumbleApapa (supplied 2026-10-25, re-encoded 160 kbps)"
+      "note": "City Rumble V2 signature track for rumbleApapa (supplied 2026-10-25, re-encoded 160 kbps)",
+      "lite": "lite/pixabay_455231.mp3"
     },
     {
       "id": "pixabay_515507",
@@ -184,7 +196,8 @@
       "gain": 0.64,
       "loudnessLufs": -10.1,
       "artistSource": "Pixabay uploader handle in the downloaded file name",
-      "note": "City Rumble V2 signature track for rumbleOjuelegba (supplied 2026-10-25, re-encoded 160 kbps)"
+      "note": "City Rumble V2 signature track for rumbleOjuelegba (supplied 2026-10-25, re-encoded 160 kbps)",
+      "lite": "lite/pixabay_515507.mp3"
     },
     {
       "id": "pixabay_623364",
@@ -198,7 +211,8 @@
       "gain": 0.79,
       "loudnessLufs": -11.9,
       "artistSource": "Pixabay uploader handle in the downloaded file name",
-      "note": "City Rumble V2 signature track for rumbleLekkiNight (supplied 2026-10-25, re-encoded 160 kbps)"
+      "note": "City Rumble V2 signature track for rumbleLekkiNight (supplied 2026-10-25, re-encoded 160 kbps)",
+      "lite": "lite/pixabay_623364.mp3"
     }
   ],
   "playlists": {
