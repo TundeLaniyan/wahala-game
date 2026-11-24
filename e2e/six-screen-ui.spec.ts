@@ -43,7 +43,9 @@ const live = (page: Page) =>
   });
 
 const savedSettings = (page: Page) =>
-  page.evaluate(() => JSON.parse(localStorage.getItem('wahala.settings.v1') ?? '{}') as Record<string, unknown>);
+  page.evaluate(
+    () => JSON.parse(localStorage.getItem('wahala.settings.v1') ?? '{}') as Record<string, unknown>,
+  );
 
 function watchErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -112,7 +114,17 @@ test.describe('Six-screen UI', () => {
     await open(page, '&noattract');
     await press(page, 'home-play', touch);
     await settled(page);
-    const sizes = info.project.name === 'mobile' ? [[844, 390], [740, 360], [915, 412]] : [[1280, 720], [1920, 1080]];
+    const sizes =
+      info.project.name === 'mobile'
+        ? [
+            [844, 390],
+            [740, 360],
+            [915, 412],
+          ]
+        : [
+            [1280, 720],
+            [1920, 1080],
+          ];
     for (const [width, height] of sizes) {
       await page.setViewportSize({ width: width!, height: height! });
       await settled(page);
@@ -128,11 +140,17 @@ test.describe('Six-screen UI', () => {
       expect(scroll.h, `${where}: page scroll`).toBeLessThanOrEqual(0);
     }
     await expect(page.getByTestId('menu-play')).toContainText('Start here');
-    await expect(page.getByTestId('menu-play')).toContainText('Grid battles. Cross-shaped explosions. Tactical generator action.');
-    await expect(page.getByTestId('menu-play')).toContainText('Open 3D arenas. Generators, special attacks and rival fighters.');
+    await expect(page.getByTestId('menu-play')).toContainText(
+      'Grid battles. Cross-shaped explosions. Tactical generator action.',
+    );
+    await expect(page.getByTestId('menu-play')).toContainText(
+      'Open 3D arenas. Generators, special attacks and rival fighters.',
+    );
     await expect(page.getByTestId('menu-play')).not.toContainText(/story campaign/i);
     await expect(page.getByTestId('home-campaign')).toHaveCount(0);
-    await page.setViewportSize(info.project.name === 'mobile' ? { width: 844, height: 390 } : { width: 1280, height: 720 });
+    await page.setViewportSize(
+      info.project.name === 'mobile' ? { width: 844, height: 390 } : { width: 1280, height: 720 },
+    );
     await settled(page);
     await page.screenshot({ path: `${SHOTS}/${info.project.name}-six-02-play.png` });
     expect(errors).toEqual([]);
@@ -178,18 +196,27 @@ test.describe('Six-screen UI', () => {
     // a setting changed in the pause menu while the Quick Match runs is saved, without the match defaults
     await stepTicks(page, 200); // past the countdown: Esc pauses only once play is on
     await page.evaluate(() => {
-      (window as never as { __WAHALA__: { controller(): { frozen: boolean } } }).__WAHALA__.controller().frozen = false;
+      (
+        window as never as { __WAHALA__: { controller(): { frozen: boolean } } }
+      ).__WAHALA__.controller().frozen = false;
     });
     await pauseSettings(page, 'access');
     await page.getByTestId('shake-off').click();
     const midMatch = await savedSettings(page);
-    expect(midMatch).toMatchObject({ play: 'rumble', arenaId: 'balogunMarket', competitors: 4, shake: 'off' });
+    expect(midMatch).toMatchObject({
+      play: 'rumble',
+      arenaId: 'balogunMarket',
+      competitors: 4,
+      shake: 'off',
+    });
     await page.getByTestId('pause-settings-close').click();
     await exitMatch(page);
     // back at the menu the player's own setup is what the game holds (the Quick Match left nothing behind)
     await page.getByTestId('title-screen').waitFor();
     const own = await page.evaluate(() => {
-      const w = window as never as { __WAHALA__: { store: { getState(): { settings: Record<string, unknown> } } } };
+      const w = window as never as {
+        __WAHALA__: { store: { getState(): { settings: Record<string, unknown> } } };
+      };
       return w.__WAHALA__.store.getState().settings;
     });
     expect(own).toMatchObject({
@@ -200,7 +227,11 @@ test.describe('Six-screen UI', () => {
       character: 'campusQueen',
       shake: 'off',
     });
-    expect(await savedSettings(page)).toMatchObject({ play: 'rumble', arenaId: 'balogunMarket', competitors: 4 });
+    expect(await savedSettings(page)).toMatchObject({
+      play: 'rumble',
+      arenaId: 'balogunMarket',
+      competitors: 4,
+    });
     expect(errors).toEqual([]);
   });
 
@@ -248,7 +279,9 @@ test.describe('Six-screen UI', () => {
     await press(page, 'home-rumble', touch);
     await expect(page.getByTestId('rumble-setup')).toBeVisible();
     await expect(page.getByTestId('setup-style-rumble')).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByTestId('menu-setup')).toContainText('Open 3D arenas. Generators, special attacks and rival fighters.');
+    await expect(page.getByTestId('menu-setup')).toContainText(
+      'Open 3D arenas. Generators, special attacks and rival fighters.',
+    );
     await press(page, 'mode-survival', touch);
     await press(page, 'rumble-8', touch);
     await expect(page.getByTestId('minutes-5')).toHaveCount(0); // Last Player Standing has no clock
@@ -265,7 +298,9 @@ test.describe('Six-screen UI', () => {
     expect(await live(page)).toMatchObject({ game: 'survival', players: 8 });
   });
 
-  test('Story Campaign: Continue Story, the current mission strip and saved progress', async ({ page }, info) => {
+  test('Story Campaign: Continue Story, the current mission strip and saved progress', async ({
+    page,
+  }, info) => {
     const touch = info.project.name === 'mobile';
     const errors = watchErrors(page);
     await open(page, '&noattract');
@@ -276,13 +311,17 @@ test.describe('Six-screen UI', () => {
       c.storyDone();
     });
     await page.evaluate(() => {
-      (window as never as { __WAHALA__: { store: { setState(p: unknown): void } } }).__WAHALA__.store.setState({
+      (
+        window as never as { __WAHALA__: { store: { setState(p: unknown): void } } }
+      ).__WAHALA__.store.setState({
         menu: { stack: ['home'] },
       });
     });
     await clearOshodiSections(page);
     await page.evaluate(() => {
-      (window as never as { __WAHALA__: { store: { setState(p: unknown): void } } }).__WAHALA__.store.setState({
+      (
+        window as never as { __WAHALA__: { store: { setState(p: unknown): void } } }
+      ).__WAHALA__.store.setState({
         menu: { stack: ['home'] },
       });
     });
@@ -350,7 +389,9 @@ test.describe('Six-screen UI', () => {
     await inMatch(page);
     await stepTicks(page, 200); // past the countdown: Esc pauses only once play is on
     await page.evaluate(() => {
-      (window as never as { __WAHALA__: { controller(): { frozen: boolean } } }).__WAHALA__.controller().frozen = false;
+      (
+        window as never as { __WAHALA__: { controller(): { frozen: boolean } } }
+      ).__WAHALA__.controller().frozen = false;
     });
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
@@ -413,7 +454,9 @@ test.describe('Six-screen UI', () => {
     for (const [screen, action] of screens) {
       await page.evaluate(
         (s) =>
-          (window as never as { __WAHALA__: { store: { setState(p: unknown): void } } }).__WAHALA__.store.setState({
+          (
+            window as never as { __WAHALA__: { store: { setState(p: unknown): void } } }
+          ).__WAHALA__.store.setState({
             menu: { stack: s === 'home' ? ['home'] : ['home', s] },
           }),
         screen,

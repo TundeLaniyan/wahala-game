@@ -56,6 +56,7 @@ export default function RumbleOnlineScreen() {
         <ErrorScreen
           reason={s.error?.reason ?? 'unknown'}
           detail={s.error?.detail ?? null}
+          retryAfterSec={s.error?.retryAfterSec ?? null}
           fake={s.fake}
           onRetry={onlineFlow.retry}
           onBack={onlineFlow.dismissError}
@@ -109,6 +110,8 @@ export default function RumbleOnlineScreen() {
           onCode={onlineFlow.setCodeInput}
           onCreate={onlineFlow.createRoom}
           onJoin={onlineFlow.joinRoom}
+          quickMode={s.quickMode}
+          onQuickMode={onlineFlow.setQuickMode}
           onQuick={onlineFlow.quickPlay}
           onChangeFighter={onlineFlow.chooseFighter}
           onBack={onlineFlow.close}

@@ -22,6 +22,10 @@ on:
         type: choice
         options: ['1', '2']
         default: '1'
+      online_e2e:
+        description: Also run the online two-browser check (development-only server, never published)
+        type: boolean
+        default: false
 
 # a newer push supersedes an older run on the same branch; a cancelled run never deploys
 concurrency:
@@ -278,6 +282,71 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node --experimental-strip-types scripts/ci/report.ts timings
+
+  # City Rumble online, two real browsers against the real (development-only) server on localhost: the integration check
+  # that docs/CITY_RUMBLE_ONLINE.md section 7.9 describes. It is its own job on its own runner, so it can neither slow nor
+  # share CPU with the browser shards; it runs only when the change touches the online code or when asked for
+  # (workflow_dispatch input `online_e2e`); it builds the SERVER build into dist-online (never the public `dist`),
+  # publishes nothing, starts no service outside the runner, and is NOT an input of the gate or of the deploy: the public
+  # build never contains online code (scripts/check-static-build.mjs, tests/online/public-bundle.test.ts), and a red run
+  # here is read, not retried. The runner script pins the server and the browsers to different CPUs, samples the server's
+  # own event-loop delay and dropped ticks during the run, and fails when the SERVER stalled (a stalled server makes the
+  # browser result meaningless), without retrying anything.
+  online-e2e:
+    name: Online e2e (two browsers, not required)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: scope
+        env:
+          FORCED: ${{ inputs.online_e2e }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          run=false
+          if [ "$FORCED" = true ]; then run=true
+          else
+            base="$BASE"; [ -n "$base" ] && [ "$base" != 0000000000000000000000000000000000000000 ] || base=HEAD~1
+            if git diff --name-only "$base" HEAD 2>/dev/null | grep -Eq '^(server/|src/net/|src/ui/online/|src/app/rumbleOnline|src/app/rumbleEntryInput|e2e/rumble-online\.spec\.ts|e2e/onlineDiag\.ts|scripts/online-e2e\.mjs)'; then run=true; fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "online e2e: $run"
+      - if: steps.scope.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+      - if: steps.scope.outputs.run == 'true'
+        run: npm ci
+      - if: steps.scope.outputs.run == 'true'
+        run: npm ci
+        working-directory: server
+      - if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/playwright-browser
+      - if: steps.scope.outputs.run == 'true'
+        name: Runner
+        run: |
+          echo "$(nproc) CPUs, $(lscpu | sed -n 's/^Model name: *//p'), $(free -g | awk '/Mem:/ {print $2}') GB"
+      - if: steps.scope.outputs.run == 'true'
+        name: Two browsers, one server (light profile, pinned, server load asserted)
+        env:
+          ONLINE_E2E_PROFILE: light
+          ONLINE_E2E_PIN: '1'
+          ONLINE_E2E_ASSERT_SERVER: '1'
+          ONLINE_E2E_DIAG_DIR: online-e2e-diag
+        run: node scripts/online-e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.scope.outputs.run == 'true'
+        with:
+          name: online-e2e-diagnostics
+          path: online-e2e-diag
+          if-no-files-found: ignore
+          retention-days: 14
 
   # The one required check: green only when every mandatory job passed (or the suite was legitimately
   # skipped for a documentation-only commit). scripts/ci/plan.ts trusts only commits where this passed.

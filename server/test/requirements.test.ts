@@ -126,7 +126,7 @@ describe('1. disconnect defaults: 5 s grace, then a bot, window 30 s from the dr
 describe('4. no new human joins a started match; the members already in it can still come back', () => {
   const ctx = new TestContext({ graceSeconds: 0.5, reconnectSeconds: 5 });
 
-  it('a join by code is refused with the "locked" error the client words as "match already started"; quick play opens another room', async () => {
+  it('a join by code to a started room gets the ONE uniform "room not available" answer (same as a wrong code); quick play opens another room', async () => {
     const { all, code } = await ctx.privateMatch(['Ada', 'Bayo']);
     const [a] = all as [TestPlayer, TestPlayer];
     const err = await joinById(ctx.server, code, 'Late').then(
@@ -134,9 +134,14 @@ describe('4. no new human joins a started match; the members already in it can s
       (e: unknown) => e as { code?: number; message?: string },
     );
     expect(err).not.toBeNull();
-    expect(err!.message).toMatch(/locked/i);
+    // decision FU2S-C4: not found / locked / full / started / public all answer alike, so a code cannot be probed
+    const wrong = await joinById(ctx.server, 'ZZZZZZ', 'Late').then(
+      () => null,
+      (e: unknown) => e as { message?: string },
+    );
+    expect(err!.message).toBe(wrong!.message);
     const { classifyFailure } = await import('../../src/net/client/connection');
-    expect(classifyFailure(err)).toMatchObject({ reason: 'match-started' });
+    expect(classifyFailure(err)).toMatchObject({ reason: 'room-unavailable' });
     const other = ctx.track(await joinOrCreate(ctx.server, 'Late', { durationSec: 10 }));
     expect(other.room.roomId).not.toBe(code);
     expect(matchOf(code).humanSeatsConnected().sort()).toEqual([0, 1]);

@@ -1,7 +1,18 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { getState, mutate, open, startMatch, stepTicks, thumb, chooseArena, openSettings, pauseSettings, launch } from './helpers';
+import {
+  getState,
+  mutate,
+  open,
+  startMatch,
+  stepTicks,
+  thumb,
+  chooseArena,
+  openSettings,
+  pauseSettings,
+  launch,
+} from './helpers';
 
 /** The founder-approved voice clips and the catalogue they belong to. */
 const RECORDED = (
@@ -75,7 +86,8 @@ const lastSpoken = async (page: Page) => (await spoken(page)).at(-1);
  * The newest line of `trigger` spoken so far. Ambient street talk may follow it at any moment (it waits only for
  * the foreground line to finish), so assertions about one reaction look that reaction up instead of the last line.
  */
-const lastOf = async (page: Page, trigger: string) => (await spoken(page)).filter((l) => l.trigger === trigger).at(-1);
+const lastOf = async (page: Page, trigger: string) =>
+  (await spoken(page)).filter((l) => l.trigger === trigger).at(-1);
 /** Waits until no foreground line is speaking (the audio clock runs in real time). */
 const quiet = (page: Page) =>
   expect.poll(async () => (await voices(page))?.speaking ?? null, { timeout: 15_000 }).toBeNull();
@@ -270,7 +282,9 @@ test.describe('Nigerian voice clips', () => {
     expect(st.loaded).toContain('market_come_buy_01');
     expect(await preview(page, 'AMBIENT_SCHEDULER_MARKET')).toBe(true);
     // the market has several street-talk lines now (haggling, price calls); any of them is its own talk
-    const marketLines = RECORDED.filter((c) => lineOf(c.id).trigger === 'AMBIENT_SCHEDULER_MARKET').map((c) => c.id);
+    const marketLines = RECORDED.filter((c) => lineOf(c.id).trigger === 'AMBIENT_SCHEDULER_MARKET').map(
+      (c) => c.id,
+    );
     expect(marketLines).toContain('market_how_much_01');
     expect(marketLines).toContain(`${(await lastSpoken(page))!.clipId}`);
   });

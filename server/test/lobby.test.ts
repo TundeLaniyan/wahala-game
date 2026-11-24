@@ -294,3 +294,45 @@ describe('Lobby results and rematch', () => {
     expect(lobby.rematch('b').ok).toBe(true);
   });
 });
+
+describe('public rooms belong to the server (decision FU2S-2) and a held countdown (FU2S-3)', () => {
+  it('refuses a settings change from the host of a PUBLIC room, whatever it asks for, and leaves them untouched', () => {
+    const { lobby } = make({ isPrivate: false });
+    lobby.join('a', who('Ada'));
+    lobby.join('b', who('Bayo'));
+    for (const patch of [
+      { game: 'team' as const },
+      { friendlyFire: true },
+      { durationSec: 180 },
+      { arenaId: 'rumbleOshodi' },
+    ]) {
+      const r = lobby.updateSettings('a', patch);
+      expect(r).toMatchObject({ ok: false, code: 'public_room' });
+    }
+    expect(lobby.settings).toEqual(SETTINGS);
+  });
+
+  it('a private room host still changes settings', () => {
+    const { lobby } = make({ isPrivate: true });
+    lobby.join('a', who('Ada'));
+    expect(lobby.updateSettings('a', { game: 'team', friendlyFire: true })).toEqual({ ok: true });
+    expect(lobby.settings).toMatchObject({ game: 'team', friendlyFire: true });
+  });
+
+  it('holds the countdown while the server has no match slot: still joinable, flagged in the view, cleared when the match begins', () => {
+    const { lobby, clock } = make({ isPrivate: true });
+    lobby.join('a', who('Ada'));
+    lobby.start('a');
+    clock.t += 3000;
+    expect(lobby.tick()).toEqual({ changed: false, begin: true });
+    lobby.holdCountdown(1000);
+    expect(lobby.phase).toBe('countdown');
+    expect(lobby.view('R', 'a').waitingForSlot).toBe(true);
+    expect(lobby.tick()).toEqual({ changed: false, begin: false });
+    expect(lobby.join('b', who('Bayo'))).toEqual({ ok: true }); // a late joiner is still welcome while it waits
+    clock.t += 1000;
+    expect(lobby.tick().begin).toBe(true);
+    lobby.begin();
+    expect(lobby.view('R', 'a').waitingForSlot).toBeUndefined();
+  });
+});

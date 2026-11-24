@@ -211,6 +211,10 @@ export function normalizeRoomCode(raw: unknown): string | null {
 export const CLOSE = {
   /** Too many invalid messages in a short time. */
   abuse: 4400,
+  /** The client stopped reading (its unsent output grew past the limit), or the server is too busy to run its match. */
+  overload: 4401,
+  /** Nobody touched the lobby for a long time: the room was closed. */
+  idle: 4402,
 } as const;
 
 export const PLAYER_NAME_MIN = 2;
@@ -234,7 +238,7 @@ export function validatePlayerName(raw: unknown): string | null {
 }
 
 export type NameProblem =
-  'type' | 'short' | 'long' | 'chars' | 'letters' | 'marks' | 'mixed-script' | 'bot-like';
+  'type' | 'short' | 'long' | 'chars' | 'letters' | 'marks' | 'mixed-script' | 'bot-like' | 'reserved';
 
 /** The same check with the reason it failed (the entry screen words it; the server only needs the verdict). */
 export function checkPlayerName(
@@ -251,6 +255,7 @@ export function checkPlayerName(
   if (/\p{M}{4,}/u.test(name)) return { name: null, problem: 'marks' }; // no stacked combining marks (Yoruba tone + dot-below needs 2)
   if (LATIN_RE.test(name) && LOOKALIKE_SCRIPT_RE.test(name)) return { name: null, problem: 'mixed-script' };
   if (looksLikeBot(name)) return { name: null, problem: 'bot-like' };
+  if (looksReserved(name)) return { name: null, problem: 'reserved' };
   return { name, problem: null };
 }
 
@@ -314,6 +319,109 @@ export function looksLikeBot(name: string): boolean {
   return key === 'bot' || firstKey === 'bot';
 }
 
+/**
+ * QUICK PLAY mode (decision FU2S-C1): the player chooses Free-for-All or Team Rumble BEFORE matchmaking, and the server only
+ * ever puts players who chose the same mode into the same public room (rooms are filtered by it). Free-for-All is the
+ * Deathmatch ruleset, Team Rumble the Team ruleset. A public room's settings are the server's: nobody (not even the first
+ * player in it) can change its mode, stage or friendly-fire switch.
+ */
+export type QuickMode = 'ffa' | 'team';
+export const QUICK_MODES: readonly QuickMode[] = ['ffa', 'team'];
+export const DEFAULT_QUICK_MODE: QuickMode = 'ffa';
+
+export function parseQuickMode(raw: unknown): QuickMode | null {
+  return raw === 'ffa' || raw === 'team' ? raw : null;
+}
+
+export const quickModeGame = (mode: QuickMode): RoomSettings['game'] =>
+  mode === 'team' ? 'team' : 'deathmatch';
+export const gameQuickMode = (game: RoomSettings['game']): QuickMode => (game === 'team' ? 'team' : 'ffa');
+
+/**
+ * The temporary guest session id a page makes for itself (random, kept in memory only, never stored): the server keys its
+ * per-player limits on it, with a generous per-address ceiling as the backstop only (many phones share one carrier address).
+ */
+export const GUEST_ID_RE = /^[A-Za-z0-9_-]{16,43}$/;
+
+/**
+ * Refusals that are about the SERVER and not about the request (decision FU2S-C3), carried in an error message so every
+ * client can show plain words and a retry time: `server_busy;retry=20;The servers are full ...`.
+ *  - `server_busy`: capacity (rooms, running matches, connections, load): try again in `retry` seconds;
+ *  - `rate_limited`: this player asked too often: wait `retry` seconds;
+ *  - `room_unavailable`: the code does not name a room that can be joined (wrong, full, closed or already started: one
+ *    answer for all of them, so a code cannot be probed).
+ */
+export type BusyCode = 'server_busy' | 'rate_limited' | 'room_unavailable';
+export const BUSY_CODES: readonly BusyCode[] = ['server_busy', 'rate_limited', 'room_unavailable'];
+
+export function encodeBusy(code: BusyCode, retryAfterSec: number, text: string): string {
+  return `${code};retry=${Math.max(0, Math.ceil(retryAfterSec))};${text}`;
+}
+
+export function parseBusy(message: unknown): { code: BusyCode; retryAfterSec: number; text: string } | null {
+  if (typeof message !== 'string') return null;
+  const m = /(?:^|\b)(server_busy|rate_limited|room_unavailable);retry=(\d{1,5});(.*)$/s.exec(message);
+  return m ? { code: m[1] as BusyCode, retryAfterSec: Number(m[2]), text: m[3]!.trim() } : null;
+}
+
+/**
+ * Names that speak for the game or the server (decision FU2S-C4). A word of the first set anywhere in a name (as a whole word,
+ * also spelled with look-alike letters, leet digits or spread over spaces: "Adm1n", "Аdmin" with a Cyrillic A, "A d m i n"),
+ * or any of the second set as the WHOLE name, is refused. Trailing digits do not help ("Admin2"). Honest names that merely
+ * contain such a word inside another ("Systemic", "Hostess", "Modupe") are fine.
+ */
+const RESERVED_ANYWHERE = new Set([
+  'admin',
+  'administrator',
+  'sysadmin',
+  'moderator',
+  'system',
+  'staff',
+  'official',
+  'support',
+  'server',
+  'gamemaster',
+  'wahalateam',
+  'teamwahala',
+  'wahalastaff',
+  'wahalaadmin',
+  'wahalaofficial',
+  'wahalasupport',
+]);
+const RESERVED_WHOLE = new Set([
+  'mod',
+  'mods',
+  'host',
+  'owner',
+  'developer',
+  'gm',
+  'root',
+  'wahala',
+  'null',
+  'undefined',
+  'anonymous',
+]);
+
+const LEET: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't' };
+
+function reservedForms(skeleton: string): string[] {
+  const stripped = skeleton.replace(/\d+$/, '');
+  const leet = (x: string): string => x.replace(/[013457]/g, (c) => LEET[c]!);
+  return [skeleton, stripped, leet(skeleton), leet(stripped)];
+}
+
+/** True when a name reads as the game, a moderator, the server or staff (see RESERVED_*). Used by `checkPlayerName`. */
+export function looksReserved(name: string): boolean {
+  const whole = nameSkeleton(name);
+  if (reservedForms(whole).some((f) => RESERVED_WHOLE.has(f) || RESERVED_ANYWHERE.has(f))) return true;
+  const tokens = name
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .split(/[ _.'-]+/)
+    .filter((t) => t !== '');
+  return tokens.some((t) => reservedForms(nameSkeleton(t)).some((f) => RESERVED_ANYWHERE.has(f)));
+}
+
 export type LobbyPhase = 'lobby' | 'countdown' | 'playing' | 'results';
 
 /** Match settings a room is configured with (public: nothing secret in here). */
@@ -361,6 +469,8 @@ export interface LobbyMsg {
   autoStartMs: number | null;
   /** Seats the server fills with bots when the match starts. */
   botsToFill: number;
+  /** The countdown is over but the server is at its match capacity: the match starts as soon as a slot is free. */
+  waitingForSlot?: boolean;
   you: number | null;
 }
 

@@ -16,7 +16,8 @@ import type {
   RumbleSession,
   RumbleSessionEvents,
 } from '../net/client/types';
-import type { LobbyMsg, ResultsMsg, SettingsMsg } from '../net/protocol';
+import { DEFAULT_QUICK_MODE, parseBusy } from '../net/protocol';
+import type { LobbyMsg, QuickMode, ResultsMsg, SettingsMsg } from '../net/protocol';
 import type { RemoteMatchDriver, RemoteStatus } from './remoteMatch';
 import { NAME_STORAGE_KEY, codeView, initialName, nameCheck, roomCodeFromSearch } from './rumbleEntryInput';
 import type { FailReason } from './rumbleEntryInput';
@@ -26,6 +27,8 @@ export type FlowStep = 'entry' | 'connecting' | 'room' | 'loading' | 'match' | '
 export interface FlowError {
   reason: FailReason | 'not-configured';
   detail: string | null;
+  /** The server's retry hint in seconds (`server-busy`, `rate-limited`), else null. */
+  retryAfterSec?: number | null;
 }
 
 export interface FlowNotice {
@@ -40,6 +43,8 @@ export interface RumbleOnlineState {
   /** The entry form. */
   name: string;
   codeInput: string;
+  /** QUICK PLAY mode the player picked (in memory only): public rooms are matched by it. */
+  quickMode: QuickMode;
   /** Latest lobby message and the clock reading when it arrived (countdowns tick locally between messages). */
   lobby: LobbyMsg | null;
   lobbyAt: number;
@@ -94,6 +99,7 @@ const INITIAL: RumbleOnlineState = {
   step: 'entry',
   name: 'Player',
   codeInput: '',
+  quickMode: DEFAULT_QUICK_MODE,
   lobby: null,
   lobbyAt: 0,
   seat: null,
@@ -175,7 +181,9 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
       },
       notice(msg) {
         if (!live()) return;
-        set({ notice: { id: ++noticeId, code: msg.code, message: msg.message } });
+        // the server's busy / limit notices carry a machine part (`server_busy;retry=20;`): the player reads only the words
+        const busy = parseBusy(msg.message);
+        set({ notice: { id: ++noticeId, code: msg.code, message: busy ? busy.text : msg.message } });
       },
       results(msg) {
         if (!live()) return;
@@ -189,9 +197,13 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
         set({ step: 'match', inMatch: true, confirmLeave: false, error: null });
         deps.startRemote(d);
       },
-      failed(reason, detail) {
+      failed(reason, detail, retryAfterSec) {
         if (!live()) return;
-        set({ step: 'error', error: { reason, detail: detail || null }, confirmLeave: false });
+        set({
+          step: 'error',
+          error: { reason, detail: detail || null, retryAfterSec: retryAfterSec ?? null },
+          confirmLeave: false,
+        });
       },
     };
   }
@@ -267,9 +279,12 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
       const code = codeView(get().codeInput).code;
       if (w && code) begin({ kind: 'join', who: w, code });
     },
+    setQuickMode(mode: QuickMode): void {
+      set({ quickMode: mode });
+    },
     quickPlay(): void {
       const w = who();
-      if (w) begin({ kind: 'quick', who: w });
+      if (w) begin({ kind: 'quick', who: w, mode: get().quickMode });
     },
     chooseFighter(): void {
       deps.nav.chooseFighter();
@@ -297,7 +312,7 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
     leaveRoom(): void {
       dropSession();
       deps.nav.overlay(false);
-      set({ ...fresh(), name: get().name, codeInput: get().codeInput });
+      set({ ...fresh(), name: get().name, codeInput: get().codeInput, quickMode: get().quickMode });
     },
     /**
      * The game's own menu left an online match (Pause > Exit match): leave the room and reset the flow. The game has already

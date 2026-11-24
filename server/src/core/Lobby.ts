@@ -118,6 +118,8 @@ export class Lobby {
   private readonly cfg: LobbyConfig;
   private readonly now: () => number;
   private readonly list: LobbyMember[] = [];
+  /** The countdown is being held because the server is at its match capacity (shown to the players). */
+  waitingForSlot = false;
   private autoStartAt: number | null = null;
   private countdownEndsAt: number | null = null;
 
@@ -194,6 +196,7 @@ export class Lobby {
       this.autoStartAt = null;
       if (this.phase === 'countdown') {
         this.phase = 'lobby';
+        this.waitingForSlot = false;
         this.countdownEndsAt = null;
       }
     }
@@ -253,10 +256,19 @@ export class Lobby {
     return OK;
   }
 
-  /** Host changes settings (lobby phase only). `patch` must already be validated by the room. */
+  /**
+   * Host changes settings (lobby phase only). `patch` must already be validated by the room. A PUBLIC room's settings belong
+   * to the server (decision FU2S-C1): its mode was chosen by every player who queued for it, so nobody, host included,
+   * can change the mode, stage, length, bot level or friendly fire after others joined (or before).
+   */
   updateSettings(sessionId: string, patch: Partial<RoomSettings>): LobbyResult {
     const host = this.requireHost(sessionId);
     if (!host.ok) return host;
+    if (!this.cfg.isPrivate)
+      return no(
+        'public_room',
+        'public rooms use the same settings for everybody; use a private room to choose',
+      );
     if (this.phase !== 'lobby') return no('bad_phase', 'settings can only change in the lobby');
     this.settings = { ...this.settings, ...patch };
     return OK;
@@ -300,10 +312,21 @@ export class Lobby {
     return { changed: false, begin: false };
   }
 
+  /**
+   * The countdown ended but the server has no free match slot yet: stay in the countdown (members can still join, nobody
+   * leaves their seat) and ask again in `ms`. The view tells the clients (`waitingForSlot`).
+   */
+  holdCountdown(ms: number): void {
+    if (this.phase !== 'countdown') return;
+    this.countdownEndsAt = this.now() + ms;
+    this.waitingForSlot = true;
+  }
+
   /** Countdown over: assigns seats (humans in join order, then bots) and enters `playing`. */
   begin(): SeatSpec[] {
     if (this.phase !== 'countdown') throw new Error(`cannot begin a match from phase ${this.phase}`);
     this.phase = 'playing';
+    this.waitingForSlot = false;
     this.countdownEndsAt = null;
     const seats: SeatSpec[] = this.list.map((m, seat) => {
       m.seat = seat;
@@ -329,6 +352,7 @@ export class Lobby {
   /** Building the match failed: back to the lobby. */
   abort(): void {
     this.phase = 'lobby';
+    this.waitingForSlot = false;
     this.countdownEndsAt = null;
     for (const m of this.list) m.seat = null;
     this.autoStartAt = !this.cfg.isPrivate && this.list.length > 0 ? this.now() + this.cfg.autoStartMs : null;
@@ -361,6 +385,7 @@ export class Lobby {
           ? Math.max(0, Math.round(this.autoStartAt - now))
           : null,
       botsToFill: this.botsToFill,
+      ...(this.waitingForSlot && this.phase === 'countdown' ? { waitingForSlot: true } : {}),
       you: you >= 0 ? you : null,
     };
   }

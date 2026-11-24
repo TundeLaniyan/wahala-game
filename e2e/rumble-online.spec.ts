@@ -14,9 +14,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { devices, expect, test } from '@playwright/test';
 import type { Browser, BrowserContext, Page } from '@playwright/test';
+import { DIAG_SCRIPT, readDiag, summariseDiag } from './onlineDiag';
+import { writeFileSync } from 'node:fs';
 
 const BASE = process.env.WAHALA_ONLINE_E2E_URL ?? '';
-const Q = '?debug&q=low&seed=7&noattract&online';
+/**
+ * `ONLINE_E2E_PROFILE=light` (the CI job): the same flow, but both pages render at phone size at the lowest quality, so two
+ * software-WebGL browsers cost a fraction of the CPU of the default profile (a 1280x720 desktop page at quality "low").
+ * Nothing about the connection, the match or the assertions changes: a starved page was the cause of the dropped sockets
+ * this suite once showed (docs/CITY_RUMBLE_ONLINE.md section 7.9), not a reason to retry or to relax a check.
+ */
+const LIGHT = process.env.ONLINE_E2E_PROFILE === 'light';
+const Q = `?debug&q=${LIGHT ? 'veryLow' : 'low'}&seed=7&noattract&online`;
 
 test.skip(!BASE, 'needs the online server build and server: npm run test:online-e2e');
 test.describe.configure({ mode: 'serial' });
@@ -64,6 +73,7 @@ async function newPhone(browser: Browser): Promise<BrowserContext> {
 }
 
 async function openOnline(page: Page, extra = ''): Promise<void> {
+  if (LIGHT) await page.setViewportSize({ width: 832, height: 384 });
   await page.goto(`${BASE}${Q}${extra}`);
   await expect(page.getByTestId('home-rumble-online')).toBeVisible({ timeout: 180_000 });
 }
@@ -101,8 +111,10 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
   browser,
 }) => {
   test.setTimeout(900_000);
+  await page.context().addInitScript(DIAG_SCRIPT); // before the first navigation, so the host page records too
   const code = await createRoom(page, 'Host Ada');
   const ctxB = await newPhone(browser);
+  await ctxB.addInitScript(DIAG_SCRIPT);
   const guest = await ctxB.newPage();
   const log: string[] = [];
   const stamp = () => new Date().toISOString().slice(11, 19);
@@ -113,7 +125,7 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     p.on(
       'console',
       (m) =>
-        (m.type() === 'error' || m.type() === 'warning') &&
+        (m.type() === 'error' || m.type() === 'warning' || /Colyseus reconnection/.test(m.text())) &&
         log.push(`${stamp()} ${name} ${m.type()}: ${m.text().slice(0, 200)}`),
     );
     p.on('pageerror', (e) => log.push(`${stamp()} ${name} PAGEERROR ${e.message.slice(0, 200)}`));
@@ -157,6 +169,12 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     await expect(page.getByTestId('net-chip')).toBeVisible();
 
     // the phone's touch pad moves the phone's fighter (the move assist and the server both run): a drag on the stick
+    // The touch pad is only on screen while the fighter is alive: a page that was starved at match start (the loading arena
+    // blocks a software-rendered page for tens of seconds) leaves its fighter standing for the grace period, and a rival's
+    // blast can down it before the page ever shows a frame ("DOWN, back in 2", no pad). That is the game, not a connection
+    // fault: wait for the respawn instead of reading a bounding box that is null (decision FU2S-10; this was the
+    // "stick-zone bounding box is null" failure).
+    await expect(guest.getByTestId('stick-zone')).toBeVisible({ timeout: 90_000 });
     const before = (await W(guest).state()).me!;
     const zone = (await guest.getByTestId('stick-zone').boundingBox())!;
     const cx = zone.x + zone.width * 0.4;
@@ -224,6 +242,15 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     console.log(`[online-e2e timeline]\n${log.join('\n')}`);
     throw error;
   } finally {
+    // what each PAGE saw: sockets with close codes, main-thread long tasks, frame gaps (a starved browser shows here)
+    const [dh, dg] = await Promise.all([readDiag(page), readDiag(guest)]);
+    const report = `${summariseDiag('host', dh)}\n${summariseDiag('guest', dg)}\n${log.join('\n')}`;
+    console.log(`[online-e2e page diagnostics]\n${report}`);
+    if (process.env.ONLINE_E2E_DIAG_DIR)
+      writeFileSync(
+        `${process.env.ONLINE_E2E_DIAG_DIR}/pages.json`,
+        JSON.stringify({ host: dh, guest: dg, log }, null, 1),
+      );
     await ctxB.close();
   }
 });
@@ -374,6 +401,50 @@ test('lobby: guest nickname is checked and cleaned, the host picks FFA or Team a
     await page.getByTestId('ro-mode-deathmatch').click();
     await expect(page.getByTestId('ro-ff-on')).toHaveCount(0);
     await expect(guest.getByTestId('ro-set-friendly-fire')).toHaveCount(0, { timeout: 30_000 });
+  } finally {
+    await ctxB.close();
+  }
+});
+
+test('quick play: the player picks Free-for-All or Team Rumble, only same-mode players meet, and a public room is read-only for everybody', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(300_000);
+  const quick = async (p: Page, name: string, mode: 'ffa' | 'team'): Promise<string> => {
+    await openOnline(p);
+    await p.getByTestId('home-rumble-online').click();
+    await p.getByTestId('ro-name').fill(name);
+    await p.getByTestId(`ro-quick-mode-${mode}`).click();
+    await expect(p.getByTestId(`ro-quick-mode-${mode}`)).toHaveAttribute('aria-pressed', 'true');
+    // the button and the note say which mode this is, before anything is asked of the server
+    await expect(p.getByTestId('ro-quick')).toContainText(mode === 'team' ? 'Team Rumble' : 'Free-for-All');
+    await p.getByTestId('ro-quick').click();
+    await expect(p.getByTestId('ro-room-code')).toBeVisible({ timeout: 60_000 });
+    return (await p.getByTestId('ro-room-code').textContent())!.replace(/[^A-Z0-9]/g, '');
+  };
+  const ctxB = await newPhone(browser);
+  const guest = await ctxB.newPage();
+  try {
+    const teamRoom = await quick(page, 'Team Ada', 'team');
+    await expect(page.getByTestId('ro-set-mode')).toContainText(/team/i);
+    // a Free-for-All quick play never lands in the Team room
+    const ffaRoom = await quick(guest, 'Ffa Tunde', 'ffa');
+    expect(ffaRoom).not.toBe(teamRoom);
+    await expect(guest.getByTestId('ro-set-mode')).toContainText(/free/i);
+    await expect(page.getByTestId('ro-member')).toHaveCount(1);
+    // the same guest asks again for Team Rumble: the same room as the first player, both listed
+    const again = await quick(guest, 'Team Tunde', 'team');
+    expect(again).toBe(teamRoom);
+    await expect(page.getByTestId('ro-member')).toHaveCount(2, { timeout: 30_000 });
+    await expect(guest.getByTestId('ro-set-mode')).toContainText(/team/i);
+    // a public room's settings belong to the server: even the first player (the host) only reads them
+    for (const p of [page, guest]) {
+      await expect(p.getByTestId('ro-settings')).toHaveCount(0);
+      await expect(p.getByTestId('ro-settings-read')).toBeVisible();
+      await expect(p.getByTestId('ro-set-friendly-fire')).toContainText(/off/i);
+    }
+    await shot(guest, '8-quick-team-guest-832x384');
   } finally {
     await ctxB.close();
   }

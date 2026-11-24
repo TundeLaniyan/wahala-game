@@ -83,7 +83,9 @@ test.describe('audio settings, persistence and music start', () => {
     await expect(page.getByTestId('toggle-voices')).toContainText('on');
   });
 
-  test('mute is remembered, shared by Home and Settings, and the panel is also in the pause menu', async ({ page }) => {
+  test('mute is remembered, shared by Home and Settings, and the panel is also in the pause menu', async ({
+    page,
+  }) => {
     await open(page, '&nobots');
     await openSettings(page);
     await expect(page.getByTestId('toggle-mute')).toContainText('Sound on');
@@ -104,7 +106,9 @@ test.describe('audio settings, persistence and music start', () => {
     await expect(page.getByTestId('pause-overlay').getByTestId('audio-reset')).toBeVisible();
   });
 
-  test('Restore defaults resets the audio mix and the device preferences, never the match setup', async ({ page }) => {
+  test('Restore defaults resets the audio mix and the device preferences, never the match setup', async ({
+    page,
+  }) => {
     await open(page, '&nobots');
     await page.getByTestId('home-play').click();
     await page.getByTestId('home-classic').click();
@@ -131,7 +135,13 @@ test.describe('audio settings, persistence and music start', () => {
     expect(await sliderValue(page, 'music')).toBe('90');
     await expect(page.getByTestId('toggle-voices')).toContainText('on');
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.settings.v1') ?? '{}'));
-    expect(saved).toMatchObject({ quality: 'auto', subtitles: 'off', shake: 'auto', play: 'classic', competitors: 2 });
+    expect(saved).toMatchObject({
+      quality: 'auto',
+      subtitles: 'off',
+      shake: 'auto',
+      play: 'classic',
+      competitors: 2,
+    });
   });
 
   test('a browser with the old saved defaults gets the new mix; a chosen mix is kept until the player asks', async ({

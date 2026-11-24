@@ -202,6 +202,7 @@ export async function runLoad(cfg: LoadConfig): Promise<Record<string, any>> {
       ...process.env,
       PORT: String(port),
       RUMBLE_TEST_FAST: '1',
+      RUMBLE_LIMITS: 'off', // many clients from one address, on purpose
       RUMBLE_RECONNECT_SECONDS: String(cfg.reconnectSeconds),
       NODE_ENV: 'development',
     },

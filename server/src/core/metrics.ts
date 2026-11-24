@@ -72,6 +72,10 @@ export class RoomMetrics {
   resyncsServed = 0;
   resyncsLimited = 0;
   kicks = 0;
+  /** Clients cut off because their unsent output grew past the limit (they were not reading). */
+  backpressureKicks = 0;
+  /** Drops of a connection that had not yet acknowledged its (re)join: the seat is still held (decision FU2S-C5). */
+  dropsBeforeAck = 0;
   reconnections = 0;
   /** Connection drops of a playing human, and times a replacement bot took over a dropped seat. */
   drops = 0;
@@ -111,6 +115,8 @@ export interface RoomMetricsSnapshot {
     resyncsServed: number;
     resyncsLimited: number;
     kicks: number;
+    backpressureKicks: number;
+    dropsBeforeAck: number;
     reconnections: number;
     drops: number;
     botTakeovers: number;

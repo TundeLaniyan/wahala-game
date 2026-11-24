@@ -56,6 +56,56 @@ describe('guest nickname sanitising (shared by the entry screen and the server)'
     expect(checkPlayerName(raw).problem).toBe(problem);
   });
 
+  it.each([
+    'Admin',
+    'ADMIN',
+    'admin2',
+    'Adm1n',
+    'A d m i n',
+    '4dmin',
+    'Аdmin'.replace('А', 'A'),
+    'Administrator',
+    'Moderator',
+    'Moderator Ada',
+    'Ada Moderator',
+    'Mod',
+    'System',
+    'sy5tem',
+    'Server',
+    'Staff',
+    'Wahala Staff',
+    'Wahala Team',
+    'TeamWahala',
+    'Wahala',
+    'Official Wahala',
+    'Support',
+    'Host',
+    'Owner',
+    'Developer',
+    'GM',
+    'Null',
+    'Ａｄｍｉｎ',
+  ])('refuses the reserved / impersonating name %s', (name) => {
+    expect(checkPlayerName(name).problem).toBe('reserved');
+  });
+
+  it.each([
+    'Modupe',
+    'Systemic',
+    'Hostess',
+    'Ownerson',
+    'Adminat',
+    'Staffan',
+    'Servius',
+    'Player',
+    'Host Ada',
+    'Guest Tunde',
+    'Ada Wahala Fan',
+    'Support Chidi'.replace('Support ', 'Sup '),
+  ])('keeps honest names that merely contain such a word: %s', (name) => {
+    expect(checkPlayerName(name).problem).toBeNull();
+  });
+
   it('keeps the filler-bot label for the server: no human can be called BOT', () => {
     for (const name of [
       'BOT Emeka',

@@ -1,6 +1,16 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { exitMatch, getState, mutate, open, settled, startMatch, stepTicks, toRumbleSetup, inMatch } from './helpers';
+import {
+  exitMatch,
+  getState,
+  mutate,
+  open,
+  settled,
+  startMatch,
+  stepTicks,
+  toRumbleSetup,
+  inMatch,
+} from './helpers';
 
 type Debug = {
   __WAHALA__: {
@@ -64,7 +74,10 @@ test.describe('main menu', () => {
       'title',
       'Respawn enabled · team with most kills wins',
     );
-    await expect(page.getByTestId('mode-survival')).toHaveAttribute('title', 'No respawn · last survivor wins');
+    await expect(page.getByTestId('mode-survival')).toHaveAttribute(
+      'title',
+      'No respawn · last survivor wins',
+    );
     await shot(page, info.project.name, 'menu-phone-rumble');
 
     // Last Player Standing has no length and no friendly fire; Team Deathmatch adds both (and team splits)
@@ -236,9 +249,14 @@ test.describe('City Rumble: 32 competitors (Survival)', () => {
       const w = window as never as { __feedYou: boolean };
       w.__feedYou = false;
       const check = (): void => {
-        if (document.querySelector('[data-testid="kill-feed"]')?.textContent?.includes('YOU')) w.__feedYou = true;
+        if (document.querySelector('[data-testid="kill-feed"]')?.textContent?.includes('YOU'))
+          w.__feedYou = true;
       };
-      new MutationObserver(check).observe(document.body, { subtree: true, childList: true, characterData: true });
+      new MutationObserver(check).observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
       check();
     });
 
@@ -265,7 +283,9 @@ test.describe('City Rumble: 32 competitors (Survival)', () => {
     expect(await page.evaluate(() => (window as never as Debug).__WAHALA__.controller().spectating)).toBe(
       killer,
     );
-    await expect.poll(() => page.evaluate(() => (window as never as { __feedYou: boolean }).__feedYou)).toBe(true);
+    await expect
+      .poll(() => page.evaluate(() => (window as never as { __feedYou: boolean }).__feedYou))
+      .toBe(true);
     await shot(page, info.project.name, 'rumble-spectate');
 
     // cycle to another survivor (key on desktop, button on the phone)

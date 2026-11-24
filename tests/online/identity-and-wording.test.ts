@@ -10,7 +10,8 @@ import { describe, expect, it } from 'vitest';
 import { createRumbleOnlineFlow } from '../../src/app/rumbleOnlineFlow';
 import type { FlowDeps } from '../../src/app/rumbleOnlineFlow';
 import { nameCheck } from '../../src/app/rumbleEntryInput';
-import { classifyFailure } from '../../src/net/client/connection';
+import { classifyFailure, guestSessionId } from '../../src/net/client/connection';
+import { GUEST_ID_RE } from '../../src/net/protocol';
 import type { RumbleSession, RumbleSessionEvents } from '../../src/net/client/types';
 import { PUBLIC_WAIT_SECONDS, validatePlayerName } from '../../src/net/protocol';
 import type { LobbyMsg } from '../../src/net/protocol';
@@ -184,5 +185,38 @@ describe('a started match, QUICK PLAY and the Team Rumble room lines', () => {
       expect(ffa.friendlyFire).toBeNull();
       expect(ffa.teams).toBeNull();
     }
+  });
+});
+
+describe('server refusals reach the player as a reason and a retry time (decision FU2S-C3)', () => {
+  it('classifies the server_busy / rate_limited / room_unavailable messages the server sends', () => {
+    expect(classifyFailure(new Error('server_busy;retry=25;The servers are full right now.'))).toEqual({
+      reason: 'server-busy',
+      detail: 'The servers are full right now.',
+      retryAfterSec: 25,
+    });
+    expect(
+      classifyFailure(new Error('rate_limited;retry=7;You are opening rooms too quickly.')),
+    ).toMatchObject({
+      reason: 'rate-limited',
+      retryAfterSec: 7,
+    });
+    expect(classifyFailure(new Error('room_unavailable;retry=0;That room is not open.'))).toMatchObject({
+      reason: 'room-unavailable',
+    });
+    // a plain "full" or "locked" from an old server still maps as before
+    expect(classifyFailure(new Error('the room is full')).reason).toBe('room-full');
+  });
+});
+
+describe('the temporary guest session id (decision FU2S-C3)', () => {
+  it('is 128 random bits in the shape the server accepts, the same for the whole page, and never stored', () => {
+    const id = guestSessionId();
+    expect(id).toMatch(GUEST_ID_RE);
+    expect(id).toHaveLength(22); // 16 bytes in base64url
+    expect(guestSessionId()).toBe(id);
+    // the only module that reads or writes it is connection.ts and it touches no storage (the storage test above covers src/net)
+    const src = readFileSync(path.join(ROOT, 'src/net/client/connection.ts'), 'utf8');
+    expect(src).not.toMatch(/localStorage|sessionStorage|indexedDB|document\.cookie/);
   });
 });

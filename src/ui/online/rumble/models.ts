@@ -7,7 +7,14 @@
 import { MATCH_SEATS, PUBLIC_WAIT_SECONDS, ROOM_CODE_LENGTH } from '../../../net/protocol';
 import { codeView, nameCheck } from '../../../app/rumbleEntryInput';
 import type { CodeView, FailReason, NameCheck } from '../../../app/rumbleEntryInput';
-import type { LobbyMemberView, LobbyMsg, LobbyPhase, ResultsMsg, RoomSettings } from '../../../net/protocol';
+import type {
+  LobbyMemberView,
+  LobbyMsg,
+  LobbyPhase,
+  QuickMode,
+  ResultsMsg,
+  RoomSettings,
+} from '../../../net/protocol';
 import type { ConnStatus } from '../../../net/client/types';
 import type { RemoteStatus } from '../../../app/remoteMatch';
 import { RUMBLE_ARENA_IDS, TEAM_NAMES, getArena } from '../../../sim';
@@ -66,8 +73,18 @@ export function entryModel(name: string, codeInput: string, configured: boolean)
 }
 
 /** What QUICK PLAY does, in plain words: the wait is the server's rule (`PUBLIC_WAIT_SECONDS`), then bots fill the seats. */
-export const quickPlayNote = (): string =>
-  `A public room: it waits up to ${PUBLIC_WAIT_SECONDS} seconds for other players (it starts sooner when ${MATCH_SEATS} are in), then bots, clearly marked BOT, fill the empty seats.`;
+export const quickPlayNote = (mode: QuickMode = 'ffa'): string =>
+  `A public ${mode === 'team' ? 'Team Rumble' : 'Free-for-All'} room: it waits up to ${PUBLIC_WAIT_SECONDS} seconds for other players who chose the same mode (it starts sooner when ${MATCH_SEATS} are in), then bots, clearly marked BOT, fill the empty seats.${mode === 'team' ? ' The server splits everyone into two even teams; friendly fire is off.' : ''} The stage and rules are the server's: nobody in a public room changes them.`;
+
+/** The two QUICK PLAY modes, as the entry screen offers them. */
+export const QUICK_MODE_OPTIONS: readonly { id: QuickMode; name: string; rule: string }[] = [
+  { id: 'ffa', name: 'Free-for-All', rule: 'Everyone for themselves: most eliminations wins.' },
+  {
+    id: 'team',
+    name: 'Team Rumble',
+    rule: 'Two even teams, picked for you. Teammates are safe from each other.',
+  },
+];
 
 // ---------------------------------------------------------------- failures
 
@@ -81,7 +98,16 @@ export interface ErrorView {
 }
 
 /** The plain-words message of a failed connection (docs/CITY_RUMBLE_ONLINE.md section 8: what the player is told). */
-export function errorMessage(reason: FailReason | 'not-configured', detail?: string | null): ErrorView {
+const retry = (sec: number | null | undefined): string =>
+  typeof sec === 'number' && sec > 0
+    ? ` in about ${sec < 90 ? `${sec} seconds` : `${Math.ceil(sec / 60)} minutes`}`
+    : ' in a little while';
+
+export function errorMessage(
+  reason: FailReason | 'not-configured',
+  detail?: string | null,
+  retryAfterSec?: number | null,
+): ErrorView {
   const d = detail && detail.trim() !== '' ? detail.trim().slice(0, 200) : null;
   switch (reason) {
     case 'not-configured':
@@ -117,6 +143,27 @@ export function errorMessage(reason: FailReason | 'not-configured', detail?: str
         title: 'Match already started',
         text: 'That match is already under way, and nobody new can join a running match. Ask the host for a new room, or try QUICK PLAY.',
         canRetry: false,
+        detail: d,
+      };
+    case 'room-unavailable':
+      return {
+        title: 'Room not available',
+        text: 'That room is not open: the code may be wrong, the room may be full or closed, or its match may already have started. Check the code with the host, or try QUICK PLAY.',
+        canRetry: false,
+        detail: d,
+      };
+    case 'server-busy':
+      return {
+        title: 'The servers are busy',
+        text: `Too many people are playing right now. Nothing is wrong on your side: try again${retry(retryAfterSec)}.`,
+        canRetry: true,
+        detail: d,
+      };
+    case 'rate-limited':
+      return {
+        title: 'Slow down a little',
+        text: `You asked for rooms too quickly. Wait${retry(retryAfterSec)} and try again.`,
+        canRetry: true,
         detail: d,
       };
     case 'refused':
@@ -249,6 +296,8 @@ export interface RoomRules {
   /** Why START is disabled (null when it is allowed or not shown). */
   startReason: string | null;
   canChangeSettings: boolean;
+  /** The settings are shown read-only: not the host, or a public room (its settings belong to the server). */
+  settingsReadOnly: boolean;
   settingsReason: string | null;
 }
 
@@ -266,7 +315,9 @@ export function roomRules(lobby: LobbyMsg, conn: ConnStatus): RoomRules {
   else if (!isHost) startReason = 'Only the host can start the match.';
   else if (!inLobby) startReason = 'The match is already starting.';
   let settingsReason: string | null = null;
-  if (!isHost) settingsReason = 'Only the host can change the match.';
+  if (!lobby.private)
+    settingsReason = 'Public rooms use the same rules for everybody. Use a private room to choose.';
+  else if (!isHost) settingsReason = 'Only the host can change the match.';
   else if (!live) settingsReason = offline;
   else if (!inLobby) settingsReason = 'Settings are locked once the match is starting.';
   return {
@@ -278,6 +329,7 @@ export function roomRules(lobby: LobbyMsg, conn: ConnStatus): RoomRules {
     canStart: startReason === null,
     startReason: showStart ? startReason : null,
     canChangeSettings: settingsReason === null,
+    settingsReadOnly: !isHost || !lobby.private,
     settingsReason,
   };
 }

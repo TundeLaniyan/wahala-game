@@ -77,6 +77,8 @@ const entry = (over: Partial<Parameters<typeof EntryScreen>[0]> = {}) =>
       configured: true,
       fake: false,
       fighter: 'streetBaller',
+      quickMode: 'ffa',
+      onQuickMode: noop,
       onName: noop,
       onCode: noop,
       onCreate: noop,
@@ -94,6 +96,25 @@ const disabled = (out: string, id: string): boolean => {
   expect(m, `button ${id}`).not.toBeNull();
   return /\sdisabled(=|\s|>)/.test(m![0]);
 };
+
+describe('entry screen: QUICK PLAY mode choice (decision FU2S-C1)', () => {
+  it('offers Free-for-All and Team Rumble, marks the chosen one, and names the mode on the button and in the note', () => {
+    const ffa = entry();
+    expect(ffa).toContain('data-testid="ro-quick-mode-ffa"');
+    expect(ffa).toContain('data-testid="ro-quick-mode-team"');
+    expect(ffa).toMatch(
+      /data-testid="ro-quick-mode-ffa"[^>]*aria-pressed="true"|aria-pressed="true"[^>]*data-testid="ro-quick-mode-ffa"/,
+    );
+    expect(ffa).toMatch(/Quick play: Free-for-All/);
+    expect(ffa).toMatch(/public Free-for-All room/);
+    const team = entry({ quickMode: 'team' });
+    expect(team).toMatch(/Quick play: Team Rumble/);
+    expect(team).toMatch(/public Team Rumble room/);
+    expect(team).toMatch(/two even teams/);
+    expect(team).toMatch(/friendly fire is off/);
+    expect(team).toMatch(/nobody in a public room changes them/);
+  });
+});
 
 describe('entry screen', () => {
   it('shows the default name, the chosen fighter with a Change link, and the three ways in', () => {

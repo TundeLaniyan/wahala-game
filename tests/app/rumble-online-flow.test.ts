@@ -163,11 +163,35 @@ describe('asking for a room', () => {
     t.actions.joinRoom();
     expect(t.sessions[0]!.opened[0]).toMatchObject({ kind: 'join', code: 'K7M3QX' });
   });
-  it('quick play asks for a public room', () => {
+  it('quick play asks for a public room in Free-for-All unless the player picked Team Rumble, and the pick survives a retry', () => {
+    const t = setup();
+    t.actions.open();
+    expect(t.get().quickMode).toBe('ffa');
+    t.actions.quickPlay();
+    expect(t.sessions[0]!.opened[0]).toMatchObject({ kind: 'quick', mode: 'ffa' });
+    t.sessions[0]!.events.failed('unreachable', '');
+    t.actions.dismissError();
+    t.actions.setQuickMode('team');
+    t.actions.quickPlay();
+    expect(t.sessions[1]!.opened[0]).toMatchObject({ kind: 'quick', mode: 'team' });
+    t.sessions[1]!.events.failed('unreachable', '');
+    t.actions.retry();
+    expect(t.sessions[2]!.opened[0]).toMatchObject({ kind: 'quick', mode: 'team' }); // never silently the other mode
+  });
+  it('a server_busy refusal shows plain words and the retry hint; the machine part of a notice never reaches the player', () => {
     const t = setup();
     t.actions.open();
     t.actions.quickPlay();
-    expect(t.sessions[0]!.opened[0]).toMatchObject({ kind: 'quick' });
+    t.sessions[0]!.events.failed('server-busy', 'The servers are full', 25);
+    expect(t.get().step).toBe('error');
+    expect(t.get().error).toMatchObject({ reason: 'server-busy', retryAfterSec: 25 });
+    t.actions.dismissError();
+    t.actions.createRoom();
+    t.sessions[1]!.events.notice({
+      code: 'server_busy',
+      message: 'server_busy;retry=20;The servers are busy.',
+    });
+    expect(t.get().notice?.message).toBe('The servers are busy.');
   });
   it('"Change" opens the existing Fighter screen', () => {
     const t = setup();
