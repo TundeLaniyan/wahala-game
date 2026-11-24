@@ -1,0 +1,25 @@
+# Laptop / LAN: the server alone in a hardened container, plain ws on :2567. For phones on the same Wi-Fi the GAME PAGE still
+# comes from `npm run dev:online` or a static build; this file is only the backend. See docs/ops/LOCAL_LAPTOP.md.
+#   cp ops/env/server.env.example ops/env/server.local.env     # then edit; the real file is git-ignored
+#   docker compose -f ops/compose/compose.local.yml --env-file ops/env/server.local.env up --build
+services:
+  rumble:
+    build:
+      context: ../..
+      dockerfile: ops/docker/Dockerfile
+    image: wahala-rumble-server:local
+    init: true
+    restart: unless-stopped
+    env_file: ../env/server.local.env
+    ports:
+      - '${RUMBLE_BIND:-0.0.0.0}:${RUMBLE_PORT:-2567}:2567'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1.0
+    stop_grace_period: 10s
+    logging: # server logs hold PRIVATE ROOM CODES ("room ABC123 created"): small, rotated, never shipped off the box by default
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
