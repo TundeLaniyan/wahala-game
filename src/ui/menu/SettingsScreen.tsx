@@ -31,12 +31,37 @@ type Set = (p: Partial<GameSettings>) => void;
 
 function AudioTab({ s, set }: { s: GameSettings; set: Set }) {
   return (
-    <AudioSettingsPanel
-      muted={s.muted}
-      onMutedChange={(muted) => set({ muted })}
-      subtitles={s.subtitles}
-      onSubtitlesChange={(subtitles) => set({ subtitles })}
-    />
+    <>
+      <AudioSettingsPanel
+        muted={s.muted}
+        onMutedChange={(muted) => set({ muted })}
+        subtitles={s.subtitles}
+        onSubtitlesChange={(subtitles) => set({ subtitles })}
+      />
+      <Field
+        label="Data Saver"
+        hint={
+          s.dataSaver === 'on'
+            ? 'On: match music downloads as smaller files (about 60% fewer bytes per match, slightly lower sound quality). Graphics and battery use are unchanged: use Graphics quality for those.'
+            : s.dataSaver === 'off'
+              ? 'Off: music always downloads at full quality, even if your browser has Data Saver on.'
+              : 'Auto: uses the smaller music files only when your browser or phone has its own Data Saver on.'
+        }
+      >
+        <div className="mn-opts">
+          {(['auto', 'on', 'off'] as const).map((v) => (
+            <Option
+              key={v}
+              value={v}
+              current={s.dataSaver}
+              label={v === 'auto' ? 'Auto' : v === 'on' ? 'On' : 'Off'}
+              onPick={(dataSaver) => set({ dataSaver })}
+              testId={`datasaver-${v}`}
+            />
+          ))}
+        </div>
+      </Field>
+    </>
   );
 }
 

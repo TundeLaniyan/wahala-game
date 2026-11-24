@@ -60,7 +60,7 @@ export interface MatchLoaderOptions {
 }
 
 export const DEFAULT_LOADER_OPTIONS: MatchLoaderOptions = {
-  assetWaitMs: 20_000,
+  assetWaitMs: 90_000,
   sceneWaitMs: 12_000,
   firstFrames: 2,
   modelWaitMs: 6_000,

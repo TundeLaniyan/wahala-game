@@ -153,6 +153,8 @@ export interface AudioOptions {
   createMediaElement?: MediaFactory | null;
   /** Randomness for the playlist rotation (default: seeded from the clock at creation). */
   musicRand?: Rand;
+  /** Data Saver (docs/MOBILE_PERFORMANCE.md): true plays the smaller music files. Read whenever a track opens. */
+  dataSaver?: () => boolean;
 }
 
 interface Graph {
@@ -257,6 +259,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       rand: musicRand,
       baseUrl: opts.sampleBaseUrl,
       onError: fail,
+      lite: opts.dataSaver,
     });
     if (matchWanted) {
       music.startMatch(arenaWanted);

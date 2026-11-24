@@ -62,8 +62,26 @@ describe('rejected generated audio stays disabled', () => {
     const voiceClips = json<{ clips: { file: string }[] }>('voices/recorded.json').clips.map(
       (c) => `voices/recorded/${c.file}`,
     );
-    const allowed = new Set([...Object.keys(APPROVED).map((id) => `music/${id}.mp3`), ...voiceClips]);
+    // each approved track may also ship its Data Saver re-encode (docs/MOBILE_PERFORMANCE.md): same track, lower bitrate
+    const allowed = new Set([
+      ...Object.keys(APPROVED).flatMap((id) => [`music/${id}.mp3`, `music/lite/${id}.mp3`]),
+      ...voiceClips,
+    ]);
     expect(audioFiles.filter((p) => !allowed.has(p))).toEqual([]);
+  });
+
+  it('every Data Saver music file belongs to an approved track, is smaller than its master and is listed in the manifest', () => {
+    const raw = json<{ tracks: { id: string; file: string; lite?: string }[] }>('music/manifest.json');
+    const liteDir = join(AUDIO, 'music/lite');
+    const files = readdirSync(liteDir).sort();
+    const listed = raw.tracks.filter((t) => t.lite).map((t) => t.lite!.replace('lite/', ''));
+    expect(files).toEqual(listed.sort());
+    for (const t of raw.tracks.filter((x) => x.lite)) {
+      expect(t.lite).toBe(`lite/${t.file}`);
+      expect(statSync(join(AUDIO, 'music', t.lite!)).size).toBeLessThan(
+        statSync(join(AUDIO, 'music', t.file)).size,
+      );
+    }
   });
 
   it('the music manifest lists exactly the fifteen approved tracks, each with its source and licence', () => {

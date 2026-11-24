@@ -61,6 +61,11 @@ export interface MusicOptions {
   baseUrl?: string;
   schedule?: Scheduler;
   onError?: (e: unknown) => void;
+  /**
+   * Data Saver: true plays a track's `lite` file when it has one (read each time a track opens). A lite file that fails
+   * to play is remembered and the same track plays from its full file instead.
+   */
+  lite?: () => boolean;
 }
 
 export interface MusicStatus {
@@ -125,6 +130,8 @@ interface Deck {
   written: number;
   onError: () => void;
   released: boolean;
+  /** This deck streams the track's Data Saver file. */
+  lite: boolean;
   /** previousMatch before this deck was picked (restored if its file turns out to be broken). */
   prevBefore: string | null;
   lastPlayTry: number;
@@ -225,6 +232,8 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
 
   let manifest: MusicManifest | null = null;
   const availability = new Map<string, boolean>();
+  /** Tracks whose Data Saver file failed to play (they use their full file from then on). */
+  const liteFailed = new Set<string>();
   const report: MusicReport = { loaded: [], failed: [] };
   let loading: Promise<MusicReport> | null = null;
   let disposed = false;
@@ -323,8 +332,10 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
 
   const onDeckError = (d: Deck): void => {
     if (d.released) return;
-    availability.set(d.track.id, false);
-    noteFailure(d.track.id, `${d.track.file}: could not be played`);
+    if (d.lite)
+      liteFailed.add(d.track.id); // the Data Saver file is broken: the same track plays from its full file
+    else availability.set(d.track.id, false);
+    noteFailure(d.track.id, `${d.lite ? d.track.lite : d.track.file}: could not be played`);
     const wasCurrent = current === d;
     release(d);
     if (current === d) current = null;
@@ -346,7 +357,8 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
       el.loop = true; // a match longer than the track simply goes round again
       const pitch = enablePreservesPitch(el);
       el.playbackRate = 1;
-      el.src = base + track.file;
+      const lite = !!track.lite && !liteFailed.has(track.id) && !!o.lite?.();
+      el.src = base + (lite ? track.lite! : track.file);
       const node = ctx.createMediaElementSource(el);
       const gain = ctx.createGain();
       gain.gain.value = 0;
@@ -363,6 +375,7 @@ export function createMusicPlayer(ctx: AudioContextLike, buses: Buses, o: MusicO
         written: 1,
         onError: () => onDeckError(d),
         released: false,
+        lite,
         prevBefore: previousMatch,
         lastPlayTry: -Infinity,
       };

@@ -32,13 +32,14 @@ import { CampaignController } from './campaign';
 import { MatchController } from './MatchController';
 import type { ScenarioDirector } from './MatchController';
 import type { MatchVariant } from './names';
+import { matchArenaId } from './names';
 import { TutorialController } from './TutorialController';
-import { advance, back, editScreen, menuAt, openScreen } from './menu';
+import { advance, back, currentScreen, editScreen, menuAt, openScreen } from './menu';
 import type { MenuScreen, MenuState } from './menu';
 import { routeMenuNav } from './menuNav';
 import { NULL_AUDIO } from './ports';
 import type { AudioPort, MissionHost } from './ports';
-import { sanitizeSettings, saveSettings } from './settings';
+import { dataSaverActive, sanitizeSettings, saveSettings } from './settings';
 import { quickMatchPatch, splitQuickWrite } from './quickMatch';
 import type { GameSettings } from './settings';
 import { QualityNotifier } from './qualityNotice';
@@ -47,6 +48,8 @@ import type { ScreenPoint } from './store';
 import { createSubtitleFeed } from './subtitles';
 import { testLabActive } from '../testlab/params';
 import { MatchLoader } from './matchLoader';
+import { AssetLibrary } from '../render/assets/library';
+import { BOOT_MODELS, arenaModels } from '../render/assets/modelNeeds';
 import type { MatchLoadKind } from './matchLoader';
 
 let controller: MatchController | null = null;
@@ -103,10 +106,32 @@ const loader = new MatchLoader({
 });
 
 /**
+ * The models a start needs (docs/MOBILE_PERFORMANCE.md). A known arena loads its recorded set; anything else (campaign
+ * districts, raids, an unknown id) loads every model, which is what the boot used to do, so it can never miss one.
+ */
+function modelsForStart(arenaId: string | null | undefined): readonly string[] {
+  return arenaModels(arenaId) ?? AssetLibrary.allIds();
+}
+
+/** Starts the load the match loader's `assets` phase waits on (real progress); a no-op when everything is already loaded. */
+function requestModels(ids: readonly string[]): void {
+  const job = assets.load(ids, (done, total) => patch({ loading: { done, total } }));
+  if (!job) return;
+  const mine: Promise<unknown> = job.then(() => {
+    if (assetsLoading === mine) {
+      assetsLoading = null;
+      patch({ loading: null });
+    }
+  });
+  assetsLoading = mine;
+}
+
+/**
  * Starts a match through the loader: the tap is acknowledged at once, the heavy set-up runs after the loading screen
  * painted, and the screen goes once the first frames are drawn. A second start while one runs is ignored.
  */
-function loadMatch(kind: MatchLoadKind, start: () => void, back: () => void): void {
+function loadMatch(kind: MatchLoadKind, start: () => void, back: () => void, arenaId?: string | null): void {
+  requestModels(modelsForStart(arenaId));
   void loader.run(
     kind,
     () => {
@@ -271,7 +296,10 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   }
   patch({ quality: renderer.qualityStatus() });
   try {
-    audio = createAudio({ onSpeak });
+    audio = createAudio({
+      onSpeak,
+      dataSaver: () => dataSaverActive(useGameStore.getState().settings.dataSaver),
+    });
   } catch {
     audio = NULL_AUDIO;
   }
@@ -317,8 +345,12 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   // The live demo behind the menu is skipped for tests (?nobots / ?noattract) and on the lowest quality.
   // Models load once; the live demo behind the menu starts when the rigged cast is ready.
   patch({ loading: { done: 0, total: 1 } });
+  // Boot loads only the hero cast the menus draw portraits from; a match loads its own arena's models (modelNeeds.ts)
+  // `?preloadall` restores the old boot (every model before the menu): the A/B reference of e2e/model-loading.spec.ts
+  const preloadAll = params.has('preloadall');
+  assets.onDemand = !preloadAll;
   assetsLoading = assets
-    .preload(undefined, (done, total) => patch({ loading: { done, total } }))
+    .preload(preloadAll ? undefined : [...BOOT_MODELS], (done, total) => patch({ loading: { done, total } }))
     .then(() => {
       assetsLoading = null;
       try {
@@ -339,6 +371,14 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     active: s.screen === 'playing' && !s.paused,
   });
   viewportGuard.setMode(viewportMode(useGameStore.getState()));
+  // The Ready / Review screen is the last step before START MATCH: fetch that arena's models now (and only that arena's:
+  // browsing the arena cards downloads nothing), so the loading screen is usually already done when the player taps Start.
+  const unsubPrefetch = useGameStore.subscribe((s, prev) => {
+    if (s.menu === prev.menu || currentScreen(s.menu) !== 'ready' || currentScreen(prev.menu) === 'ready')
+      return;
+    const ids = arenaModels(matchArenaId(s.settings));
+    if (ids) void assets.load(ids);
+  });
   const unsubViewport = useGameStore.subscribe((s, prev) => {
     if (s.screen !== prev.screen || s.paused !== prev.paused) viewportGuard?.setMode(viewportMode(s));
   });
@@ -386,6 +426,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     window.removeEventListener('keydown', onSpectateKey);
     resizeObserver?.disconnect();
     unsubViewport();
+    unsubPrefetch();
     viewportGuard?.dispose();
     viewportGuard = null;
     renderer?.dispose();
@@ -425,6 +466,7 @@ const missionHost: MissionHost = {
       'mission',
       () => controller?.startMission(options, meta),
       () => commands.campaignMap(),
+      null,
     );
   },
   stop(): void {
@@ -444,6 +486,7 @@ const missionHost: MissionHost = {
       'raid',
       () => controller?.playRaid(options, meta),
       () => commands.campaignMap(),
+      null,
     );
   },
   resumeField: (resolve) => controller?.resumeField(resolve) ?? false,
@@ -517,6 +560,8 @@ export const commands = {
       'match',
       () => controller?.start(settings, Number.isFinite(seed) && seed > 0 ? seed : undefined, variant),
       () => commands.toTitle(),
+      // the Sudden Death test plays its own arena: load everything for it
+      variant ? null : matchArenaId(settings),
     );
   },
   /** The temporary Sudden Death test match: one human, three bots, straight into the sudden-death round. */
@@ -532,6 +577,7 @@ export const commands = {
       'rematch',
       () => controller?.rematch(),
       () => commands.toTitle(),
+      controller?.state?.arenaId ?? null,
     );
   },
   /** The loading screen's Retry (after a failed start). */
@@ -727,7 +773,17 @@ export const commands = {
     audio.playUi('click');
     tutorialView = useGameStore.getState().settings.cameraView;
     renderer?.setCameraView(tutorialView);
-    tutorial?.open(lesson);
+    // the academy plays on the Danfo Bus Park: its models first (through the loading screen with real progress) unless
+    // they are already loaded, in which case it opens at once as before
+    const arena = 'danfoBusPark';
+    if (!assets.load(modelsForStart(arena))) tutorial?.open(lesson);
+    else
+      loadMatch(
+        'match',
+        () => tutorial?.open(lesson),
+        () => commands.toTitle(),
+        arena,
+      );
   },
   tutorialWatch: (lesson?: number): void => tutorial?.watch(lesson),
   tutorialPractice: (lesson?: number): void => tutorial?.practice(lesson),
@@ -871,6 +927,14 @@ function exposeDebugHandle(): void {
     /** e2e / art review: a field mission's data (start, markers, doors, return), so specs stage on the data's own tiles. */
     fieldMissionDef: (fieldId: string) => FIELD_MISSION_DEFS[fieldId] ?? null,
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
+    /** Measurement / tests: record which model ids the renderer asks for (and which were bundled but not loaded). */
+    assetRecorder: (on: boolean = true) => {
+      assets.recorder = on ? { touched: new Set(), missed: new Set() } : null;
+    },
+    assetAccess: () => ({
+      touched: [...(assets.recorder?.touched ?? [])].sort(),
+      missed: [...(assets.recorder?.missed ?? [])].sort(),
+    }),
     music: () => (audio as { musicStatus?: () => unknown }).musicStatus?.() ?? null,
     /** Match loading: the screen's state now and how many starts actually ran (duplicate taps start nothing). */
     matchLoad: () => ({
