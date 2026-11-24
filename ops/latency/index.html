@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WAHALA region latency check</title>
+    <style>
+      :root {
+        --bg: #10131a;
+        --fg: #eef1f6;
+        --mut: #9aa3b5;
+        --card: #1a1f2b;
+        --ok: #4ade80;
+        --warn: #fbbf24;
+        --bad: #f87171;
+        --acc: #60a5fa;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f6f7fa;
+          --fg: #151822;
+          --mut: #586174;
+          --card: #fff;
+          --ok: #15803d;
+          --warn: #b45309;
+          --bad: #b91c1c;
+          --acc: #1d4ed8;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.45 system-ui,
+          sans-serif;
+        max-width: 720px;
+        margin-inline: auto;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 0 0 4px;
+      }
+      p {
+        color: var(--mut);
+        margin: 0.4em 0;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin: 12px 0;
+      }
+      label {
+        display: block;
+        margin: 8px 0 2px;
+        color: var(--mut);
+        font-size: 0.9rem;
+      }
+      select,
+      input,
+      button,
+      textarea {
+        font: inherit;
+        color: inherit;
+        background: transparent;
+        border: 1px solid var(--mut);
+        border-radius: 8px;
+        padding: 10px;
+        width: 100%;
+      }
+      button {
+        background: var(--acc);
+        color: #fff;
+        border: 0;
+        font-weight: 600;
+        min-height: 48px;
+        margin-top: 12px;
+      }
+      button:disabled {
+        opacity: 0.5;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-variant-numeric: tabular-nums;
+      }
+      th,
+      td {
+        text-align: right;
+        padding: 6px 4px;
+        border-bottom: 1px solid #8884;
+      }
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+      .ok {
+        color: var(--ok);
+      }
+      .warn {
+        color: var(--warn);
+      }
+      .bad {
+        color: var(--bad);
+      }
+      textarea {
+        height: 9em;
+        font:
+          12px/1.3 ui-monospace,
+          monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WAHALA region latency check</h1>
+    <p>
+      Measures round-trip time from <b>this phone, on this network</b> to candidate server regions. Takes
+      about 40 seconds. Nothing is sent anywhere except small requests to the listed addresses; results stay
+      on this page until you copy them.
+    </p>
+
+    <div class="card">
+      <label for="net">Connection right now</label>
+      <select id="net">
+        <option>Wi-Fi</option>
+        <option>4G / LTE</option>
+        <option>5G</option>
+        <option>3G or worse</option>
+      </select>
+      <label for="isp">Network / carrier (e.g. MTN, Airtel, Glo, T2, home fibre)</label>
+      <input id="isp" autocomplete="off" placeholder="MTN" />
+      <label for="city">City / area (optional, coarse, e.g. Lagos)</label>
+      <input id="city" autocomplete="off" placeholder="Lagos" />
+      <button id="go">Start test</button>
+    </div>
+
+    <div class="card">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th>Region</th>
+            <th>min</th>
+            <th>median</th>
+            <th>p95</th>
+            <th>jitter</th>
+            <th>lost</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="note">
+        Times are milliseconds to a response header. They include TLS reuse, so they approximate round-trip
+        time; a real game socket adds a small server tick wait on top.
+      </p>
+    </div>
+
+    <div class="card">
+      <label for="out">Copy this and send it back</label><textarea id="out" readonly></textarea>
+    </div>
+
+    <script>
+      // Candidate regions. AWS publishes a plain GET /ping on every regional DynamoDB endpoint: reachable from any phone, no account,
+      // no cost. They tell us how a phone reaches that REGION; the real server would be in the same city on whatever provider we pick.
+      // Add your own candidate (a server you operate): ?extra=Name|https://host/health,Name2|https://host2/health
+      const TARGETS = [
+        ['London (eu-west-2)', 'https://dynamodb.eu-west-2.amazonaws.com/ping'],
+        ['Paris (eu-west-3)', 'https://dynamodb.eu-west-3.amazonaws.com/ping'],
+        ['Frankfurt (eu-central-1)', 'https://dynamodb.eu-central-1.amazonaws.com/ping'],
+        ['Ireland (eu-west-1)', 'https://dynamodb.eu-west-1.amazonaws.com/ping'],
+        ['Milan (eu-south-1)', 'https://dynamodb.eu-south-1.amazonaws.com/ping'],
+        ['Cape Town (af-south-1)', 'https://dynamodb.af-south-1.amazonaws.com/ping'],
+      ];
+      const extra = new URLSearchParams(location.search).get('extra');
+      if (extra)
+        for (const e of extra.split(',')) {
+          const [n, u] = e.split('|');
+          if (n && /^https?:\/\//.test(u || '')) TARGETS.push([n, u]);
+        }
+      const SAMPLES = 12,
+        TIMEOUT = 6000;
+
+      const $ = (id) => document.getElementById(id);
+      const pct = (a, p) => {
+        const s = [...a].sort((x, y) => x - y);
+        return s.length ? s[Math.min(s.length - 1, Math.floor(s.length * p))] : null;
+      };
+      const cls = (ms) => (ms == null ? 'bad' : ms < 150 ? 'ok' : ms < 250 ? 'warn' : 'bad');
+      const fmt = (v) => (v == null ? '-' : Math.round(v));
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      async function one(url, i) {
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), TIMEOUT);
+        const t0 = performance.now();
+        try {
+          await fetch(`${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}_${i}`, {
+            mode: 'no-cors',
+            cache: 'no-store',
+            signal: ctl.signal,
+          });
+          return performance.now() - t0;
+        } catch {
+          return null;
+        } finally {
+          clearTimeout(t);
+        }
+      }
+
+      async function measure(url) {
+        await one(url, -1); // warm-up: DNS + TLS handshake are not what the game socket pays every message
+        const ok = [];
+        let lost = 0;
+        for (let i = 0; i < SAMPLES; i++) {
+          const v = await one(url, i);
+          v == null ? lost++ : ok.push(v);
+          await sleep(120);
+        }
+        const d = ok.slice(1).map((v, i) => Math.abs(v - ok[i]));
+        return {
+          min: ok.length ? Math.min(...ok) : null,
+          median: pct(ok, 0.5),
+          p95: pct(ok, 0.95),
+          jitter: d.length ? d.reduce((a, b) => a + b, 0) / d.length : null,
+          lost,
+          n: SAMPLES,
+        };
+      }
+
+      function row(name, r) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${name}</td><td>${fmt(r?.min)}</td><td class="${cls(r?.median)}">${fmt(r?.median)}</td><td>${fmt(r?.p95)}</td><td>${fmt(r?.jitter)}</td><td>${r ? `${r.lost}/${r.n}` : '...'}</td>`;
+        return tr;
+      }
+
+      $('go').addEventListener('click', async () => {
+        const btn = $('go');
+        btn.disabled = true;
+        btn.textContent = 'Testing...';
+        const tbody = document.querySelector('#tbl tbody');
+        tbody.innerHTML = '';
+        const results = [];
+        for (const [name, url] of TARGETS) {
+          const tr = row(name, null);
+          tbody.appendChild(tr);
+          const r = await measure(url);
+          results.push({ name, ...r });
+          tr.replaceWith(row(name, r));
+        }
+        const c = navigator.connection || {};
+        const report = {
+          when: new Date().toISOString(),
+          samplesPerRegion: SAMPLES,
+          network: $('net').value,
+          carrier: $('isp').value.trim(),
+          area: $('city').value.trim(),
+          browserHints: {
+            effectiveType: c.effectiveType ?? null,
+            downlinkMbps: c.downlink ?? null,
+            saveData: c.saveData ?? null,
+          },
+          results: results.map((r) => ({
+            name: r.name,
+            minMs: fmt(r.min),
+            medianMs: fmt(r.median),
+            p95Ms: fmt(r.p95),
+            jitterMs: fmt(r.jitter),
+            lost: r.lost,
+          })),
+        };
+        $('out').value = JSON.stringify(report, null, 1);
+        btn.disabled = false;
+        btn.textContent = 'Run again';
+        window.__LATENCY_REPORT__ = report;
+      });
+    </script>
+  </body>
+</html>

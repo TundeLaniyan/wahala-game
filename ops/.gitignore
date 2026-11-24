@@ -1,0 +1,8 @@
+# secrets and generated material never go in git
+env/*.env
+!env/*.env.example
+edge/certs/
+*.pem
+*.key
+*.log
+out/

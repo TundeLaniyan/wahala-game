@@ -1,0 +1,19 @@
+# BuildKit reads this next to the Dockerfile (docker build -f ops/docker/Dockerfile .); the repo root has no .dockerignore.
+**
+!tsconfig.json
+!src/**
+!server/package.json
+!server/package-lock.json
+!server/src/**
+!server/tsconfig.json
+# not needed to bundle, and never ship these
+server/node_modules
+server/dist
+server/test
+server/bench
+server/e2e
+server/client
+**/.env
+**/*.env
+**/*.pem
+**/*.key
