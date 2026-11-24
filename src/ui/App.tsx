@@ -10,6 +10,7 @@ import { RaidBriefOverlay } from './campaign/RaidBriefOverlay';
 import { TouchControls } from './TouchControls';
 import { SpectatorControls } from './SpectatorControls';
 import { testLabActive } from '../testlab/params';
+import { useRumbleOverlay } from '../app/rumbleOverlayHost';
 
 // TEMPORARY founder Test Lab (docs/TEST_LAB.md): its own chunk, loaded only with `?testlab=1`
 const lab = {
@@ -18,6 +19,12 @@ const lab = {
   Results: lazy(() => import('./testlab').then((m) => ({ default: m.TestLabResults }))),
 };
 const LAB = testLabActive();
+
+// Online City Rumble's layer over the game screen (connection chip, reconnect banner, results): its own chunk, present only in
+// a build made with the online switch, and mounted only while an online match is on screen (app/rumbleOverlayHost.ts).
+const RumbleOnlineOverlay = __WAHALA_SERVER_ONLINE__
+  ? lazy(() => import('./online/rumble/RumbleOnlineOverlay'))
+  : null;
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -32,6 +39,7 @@ export function App() {
   const tutorial = useGameStore((s) => s.tutorial?.mode ?? null);
   const matchLoad = useGameStore((s) => s.matchLoad);
   const raidBrief = useGameStore((s) => !!s.campaign?.raidBrief);
+  const rumbleOnlineActive = useRumbleOverlay((s) => s.active);
 
   useEffect(() => {
     const unmount = mount(canvasRef.current!);
@@ -97,6 +105,11 @@ export function App() {
       {screen === 'playing' && portrait && !paused && !matchLoad && <RotateOverlay />}
       {/* the match loading screen, over everything while a start runs (it leads with the rotate hint when upright) */}
       {matchLoad && <MatchLoading load={matchLoad} />}
+      {RumbleOnlineOverlay && rumbleOnlineActive && (
+        <Suspense fallback={null}>
+          <RumbleOnlineOverlay />
+        </Suspense>
+      )}
     </div>
   );
 }
