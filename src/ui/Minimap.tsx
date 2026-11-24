@@ -83,6 +83,7 @@ function draw(
   g: CanvasRenderingContext2D,
   state: GameState,
   focusId: number,
+  localId: number,
   geo: MinimapGeometry,
   base: HTMLCanvasElement,
   time: number,
@@ -93,7 +94,7 @@ function draw(
   const L = minimapLayers(
     state,
     layout,
-    0,
+    localId,
     focusId,
     8,
     discovery ? (x, y) => discovery.known(x, y) : undefined,
@@ -277,7 +278,7 @@ export function Minimap() {
     const tick = (): void => {
       const live = liveMatch();
       if (!live) return;
-      const { state, focusId } = live;
+      const { state, focusId, localId } = live;
       const view = rootSize();
       const short = view.height < 480;
       const maxW = short ? 130 : Math.min(230, view.width * 0.2);
@@ -307,7 +308,7 @@ export function Minimap() {
       const g = canvas.getContext('2d');
       if (!g || !geo || !base) return;
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      draw(g, state, focusId, geo, base, performance.now() / 1000, discovery);
+      draw(g, state, focusId, localId, geo, base, performance.now() / 1000, discovery);
     };
     tick();
     const id = window.setInterval(tick, 1000 / FPS);
