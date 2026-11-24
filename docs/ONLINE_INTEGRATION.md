@@ -63,3 +63,26 @@ See section "Run it" in `docs/CITY_RUMBLE_ONLINE_LOCAL.md` (written by the dev-s
 | U online UI and controller | agent U | `src/app/rumbleOnline.ts`, `src/ui/online/rumble/**`, `src/ui/menu/HomeScreen.tsx` entry button, `src/app/menu.ts` (screen id), `e2e/rumble-online-*.spec.ts` |
 | D remote match integration (MatchController, session, driver, client) | release owner | `src/app/MatchController.ts`, `src/app/session.ts`, `src/app/remoteMatch.ts`, `src/net/client/**` except prediction |
 | P prediction | agent P (Opus) | `src/net/client/prediction/**`, `tests/net/prediction*.test.ts` |
+
+## 9. Validation record (branch `claude/wahala-online-integration`)
+Everything below was run in the development container (software WebGL, no physical phone, no cloud server). A physical-phone test on a real network is still the founder's acceptance gate.
+
+| # | Check | Result | Evidence |
+| --- | --- | --- | --- |
+| 1 | Public production mode, no backend | The default build launches with nothing listening on :2567; no WebSocket is opened, no discovery or polling | `npm run check:static` (no socket / WebRTC / microphone code, no online chunk markers, no endpoint or private address in `dist`); `tests/online/public-bundle.test.ts`; `e2e/online.spec.ts` (`?online`, `?server`, `?voice` do nothing) |
+| 2, 3 | Offline gameplay, Classic Blast and the campaign unchanged | Full unit suite 334 files / 5,271 tests green on the integrated branch (after two import-guard updates, section 3); the CI browser suite runs on the production merge | `npm run check` |
+| 4 | Online flag disabled | No Online entry on Home, no controller loaded | `tests/platform-flags.test.ts`, `tests/platform-static.test.ts`, `tests/online/import-guard.test.ts` |
+| 5 | Online flag enabled locally | `npm run build:online` + `npm run dev:online`; `?online` shows PLAY ONLINE | `docs/CITY_RUMBLE_ONLINE_LOCAL.md` |
+| 6 | Two real browsers, one match | Desktop host + phone-sized guest (832 x 384, touch): join by invite code, ready, start, play | `npm run test:online-e2e` scenario 1 |
+| 7 | 32-fighter room with bots | 2 humans + 30 bots; results table 32 rows, 2 `HUMAN` + 30 `BOT`, identical for both viewers | scenario 1; `docs/CITY_RUMBLE_ONLINE.md` section 7 |
+| 8 | Up to 32 simulated human connections | 32 clients in one room on every network profile; 256 clients (8 rooms x 32) all hash-consistent | `server/bench/` (`docs/CITY_RUMBLE_ONLINE.md` sections 7.3, 7.4, 7.5) |
+| 9 | Disconnect and reconnect | Mid-match drop: told, a bot plays after the grace, the same fighter returns (no reset, no extra life), bot time is noted in the results and not credited to the human | scenario 1 |
+| 10 | Touch controls and prediction | The phone's thumbstick moves the fighter (move assist and server both run); prediction measured per network profile | scenario 1; `docs/ONLINE_PREDICTION.md` |
+| 11 | Identical authoritative results | Both clients render the same 32-row table (compared modulo the viewer's own `YOU` tag); the final replica hash matches the server | scenario 1; replica hash checks |
+| 12 | Disconnect during loading and during a match | Server unreachable: a plain message, no endless spinner, the offline game still works (scenario 2). Drop while the match is loading (arena models held back): told, reconnects, gets into the same seat (scenario 3). A drop in the lobby / countdown is a lobby drop (ON15) | scenarios 2 and 3, five consecutive passes of scenario 3 after the fixes ON13-ON14 |
+| 13 | Mobile-landscape layout | Room, match HUD with the connection chip, the reconnect banner and the results fit 832 x 384 (screens as the two real browsers render them) | `docs/screenshots/online-e2e/` (opt-in capture: `ONLINE_E2E_SHOTS=<dir>`); portrait and other sizes in `docs/screenshots/online-ui/` |
+| 14 | No regression of the mobile performance gains | Default build, emulated phone (844 x 390, DPR 2), cold menu, 3 runs: **5,363 KB -> 5,367 KB** raw transfer (+4 KB, +0.14 %), 28 requests both, 0 WebSockets, JS heap 24-31 MB both (noise). Online code is a separate chunk that a default build does not contain. | measured against the production build `f63e40c`; software emulation, not a physical phone |
+
+Found and fixed by the real two-browser run (decisions ON13-ON15): the SDK's 5 s minimum uptime blocked reconnection of a phone that drops while loading; the lazy in-match layer was fetched at match start (a drop at that moment left no banner); model downloads are now prefetched when the lobby names the arena; server liveness tolerance is configurable.
+
+Known limits (not fixed here): the results table shows the top rows first and scrolls (pinning the viewer's own row is a polish item); the e2e needs a generous server liveness setting on a CPU-starved software-GL machine (`scripts/online-e2e.mjs`); `server/` unit tests are run by `cd server && npx vitest run` and are not part of the root CI.
