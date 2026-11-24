@@ -189,7 +189,8 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     await ctxB.setOffline(true);
     await expect(guest.getByTestId('net-banner')).toBeVisible({ timeout: 60_000 });
     await shot(guest, '5-reconnecting-guest-832x384');
-    await guest.waitForTimeout(8000);
+    // long enough for the server to notice the drop (3 s x 6 pings) and for the 3 s grace to pass: a bot plays meanwhile
+    await guest.waitForTimeout(30_000);
     await ctxB.setOffline(false);
     await expect(guest.getByTestId('net-banner')).toHaveCount(0, { timeout: 120_000 });
     const after = await W(guest).state();
