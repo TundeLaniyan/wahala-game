@@ -294,6 +294,15 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
       deps.nav.overlay(false);
       set({ ...fresh(), name: get().name, codeInput: get().codeInput });
     },
+    /**
+     * The game's own menu left an online match (Pause > Exit match): leave the room and reset the flow. The game has already
+     * gone to the title, so no navigation here.
+     */
+    matchExited(): void {
+      dropSession();
+      deps.nav.overlay(false);
+      set(fresh());
+    },
     /** Leaves the room and the match for Home (results "Back to menu"). */
     backToMenu(): void {
       dropSession();

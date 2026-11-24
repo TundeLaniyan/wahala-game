@@ -107,7 +107,8 @@ export function HomeScreen() {
               </small>
             </button>
           )}
-          {flags().online && (
+          {/* the older mock preview: only in mock mode (`?mockonline`), never beside the real Online City Rumble entry */}
+          {flags().onlineMode === 'mock' && (
             <button
               type="button"
               className="mn-home-second online"

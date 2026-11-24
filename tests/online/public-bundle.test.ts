@@ -314,7 +314,22 @@ describe.skipIf(!CAN_BUILD)(
         addresses: true,
         transform: (src) => src.split(SERVER_TEMPLATE).join(''),
       });
-      expect(problems).toEqual([]);
+      // The Colyseus SDK (online chunk only) carries its OWN fallbacks for callers that pass no URL: a `ws://127.0.0.1:2567`
+      // default, a `localhost` hostname fallback and a `trycloudflare.com` check for Discord activities. Our client ALWAYS
+      // passes the explicit build endpoint (connection.ts, asserted below), so none of them is ever used. They are allowed
+      // here, in the online chunk of a SERVER build only; the public build test above allows none of them.
+      const SDK_OWN_DEFAULTS = ['ws://127.0.0.1:2567', '||`localhost`', 'trycloudflare.com'];
+      const unexplained = problems.filter(
+        (row) =>
+          !(
+            /^assets\/rumbleOnline-[^/]+\.js$/.test(row.file) &&
+            SDK_OWN_DEFAULTS.some((token) => row.sample.includes(token))
+          ),
+      );
+      expect(unexplained).toEqual([]);
+      const connection = readFileSync(join(process.cwd(), 'src/net/client/connection.ts'), 'utf8');
+      expect(connection).toMatch(/new Client\(serverHttpUrl\(this\.url\)\)/); // always the explicit endpoint
+      expect(connection).not.toMatch(/localhost|127\.0\.0\.1|192\.168\.|trycloudflare|ngrok/);
       // every absolute URL in any chunk is an allow-listed library string or the template itself
       const rows: string[] = [];
       for (const file of filesUnder(b.dir, /\.(?:js|html|css|webmanifest)$/)) {
@@ -323,7 +338,14 @@ describe.skipIf(!CAN_BUILD)(
           .split('\\')
           .join('/');
         for (const u of absoluteUrls(readFileSync(file, 'utf8'))) {
-          if (!(hostOf(u) in ALLOWED_ABSOLUTE_HOSTS) && !u.url.startsWith(SERVER_TEMPLATE.slice(0, -5)))
+          if (
+            !(hostOf(u) in ALLOWED_ABSOLUTE_HOSTS) &&
+            !u.url.startsWith(SERVER_TEMPLATE.slice(0, -5)) &&
+            !(
+              /^assets\/rumbleOnline-/.test(rel) &&
+              SDK_OWN_DEFAULTS.some((token) => u.url.includes(token.replace(/^\|\|`|`$/g, '')))
+            )
+          )
             rows.push(`${rel}: ${u.url}`);
         }
       }

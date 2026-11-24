@@ -13,17 +13,32 @@
  * While `SESSION_IS_FAKE` is true the online screens say "Test session: no real server" so a fake can never be mistaken
  * for the real thing. The fake's dev query (`?online&fakeonline[=scenario]`) is handled inside the fake.
  */
+import { createRumbleSession } from '../net/client/session';
 import type { RumbleSession, RumbleSessionEvents } from '../net/client/types';
 import type { RemoteMatchDriver } from './remoteMatch';
+import { rumbleOnlineEndpoint } from './rumbleFlags';
 import { createFakeSession } from './rumbleOnlineFake';
+import { commands } from './session';
 
-export const SESSION_IS_FAKE = true;
+/** The in-memory fake is for screenshots and tests only (`?online&fakeonline`); everything else talks to the real server. */
+export const SESSION_IS_FAKE =
+  typeof location !== 'undefined' && new URLSearchParams(location.search).has('fakeonline');
 
 export function createSession(events: RumbleSessionEvents): RumbleSession {
-  return createFakeSession(events);
+  if (SESSION_IS_FAKE) return createFakeSession(events);
+  const endpoint = rumbleOnlineEndpoint();
+  // the flow never gets here without an endpoint (it shows "Online is not configured in this build" first)
+  if (endpoint === null) throw new Error('online endpoint is not configured');
+  return createRumbleSession(endpoint, events);
 }
 
-/** STUB: `commands.startRemote(driver)` (src/app/session.ts, release owner) replaces this body. */
-export function startRemote(_driver: RemoteMatchDriver): void {
-  // intentionally empty until session.ts provides it
+let onMatchExit: (() => void) | null = null;
+/** The online flow registers what to do when the player leaves a running online match through the game's own menu. */
+export function setMatchExitHandler(handler: (() => void) | null): void {
+  onMatchExit = handler;
+}
+
+/** Hands the server-owned match to the game: the same loading screen and presentation as an offline start. */
+export function startRemote(driver: RemoteMatchDriver): void {
+  commands.startRemote(driver, () => onMatchExit?.());
 }

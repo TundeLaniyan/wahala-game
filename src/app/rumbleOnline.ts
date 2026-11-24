@@ -9,7 +9,7 @@ import { commands } from './session';
 import { useGameStore } from './store';
 import { rumbleOnlineEndpoint } from './rumbleFlags';
 import { setRumbleOverlayActive } from './rumbleOverlayHost';
-import { SESSION_IS_FAKE, createSession, startRemote } from './rumbleOnlineSession';
+import { SESSION_IS_FAKE, createSession, setMatchExitHandler, startRemote } from './rumbleOnlineSession';
 import { createRumbleOnlineFlow } from './rumbleOnlineFlow';
 
 export interface RumbleOnlineApi {
@@ -38,6 +38,8 @@ function safeStorage() {
   };
 }
 
+let suppressExit = false;
+
 const flow = createRumbleOnlineFlow({
   createSession,
   startRemote,
@@ -50,7 +52,15 @@ const flow = createRumbleOnlineFlow({
   nav: {
     show: () => commands.menuOpen('rumbleOnline'),
     home: () => commands.menuHome(),
-    toRoom: () => commands.toTitle(['rumbleOnline']),
+    // back to the room for a rematch: the room stays, so the match-exit handler must not leave it
+    toRoom: () => {
+      suppressExit = true;
+      try {
+        commands.toTitle(['rumbleOnline']);
+      } finally {
+        suppressExit = false;
+      }
+    },
     toTitle: () => commands.toTitle(),
     chooseFighter: () => commands.menuOpen('fighter'),
     overlay: setRumbleOverlayActive,
@@ -61,6 +71,11 @@ const flow = createRumbleOnlineFlow({
 export const useRumbleOnline = flow.useFlow;
 /** The actions of the online screens (create / join / ready / start / settings / rematch / leave / retry ...). */
 export const onlineFlow = flow.actions;
+
+// leaving a running online match through the game's own menu (Pause > Exit match) also leaves the room
+setMatchExitHandler(() => {
+  if (!suppressExit) onlineFlow.matchExited();
+});
 
 export const rumbleOnline: RumbleOnlineApi = {
   open: () => onlineFlow.open(),
