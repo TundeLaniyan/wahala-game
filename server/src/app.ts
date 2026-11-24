@@ -57,6 +57,9 @@ export async function startRumbleServer(opts: RumbleServerOptions = {}): Promise
   const metrics = new MetricsRegistry();
 
   const transport = new WebSocketTransport({
+    // liveness tolerance (RUMBLE_PING_INTERVAL_MS x RUMBLE_PING_MAX_RETRIES, default 3 s x 4): see RuntimeConfig
+    pingInterval: runtime.pingIntervalMs,
+    pingMaxRetries: runtime.pingMaxRetries,
     // Browsers always send Origin on a WebSocket upgrade; refuse the ones we do not allow.
     beforeUpgrade: (request) => {
       if (!origins.allows(request.headers.get('origin')))

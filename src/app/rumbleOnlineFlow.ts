@@ -64,6 +64,8 @@ export interface FlowDeps {
   createSession(events: RumbleSessionEvents): RumbleSession;
   /** Hands the match over to the game (`commands.startRemote`). */
   startRemote(driver: RemoteMatchDriver): void;
+  /** Starts loading an arena's 3D models (a no-op when loaded): the room does it as soon as the lobby names the arena. */
+  prefetch?(arenaId: string): void;
   /** The build's endpoint, or null when online is not configured. */
   endpoint(): string | null;
   /** The fighter chosen in the game (GameSettings.character). */
@@ -147,6 +149,9 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
       lobby(msg) {
         if (!live()) return;
         const s = get();
+        // the arena is known while the players wait: its models load now, so the match start is not a long first-frame stall
+        // behind a loading screen (a stalled page also risks a dropped connection)
+        if (msg.settings.arenaId !== s.lobby?.settings.arenaId) deps.prefetch?.(msg.settings.arenaId);
         const patch: Partial<RumbleOnlineState> = { lobby: msg, lobbyAt: deps.now(), roomCode: msg.code };
         if (s.step === 'results' || s.step === 'match') {
           if (msg.phase === 'lobby') {

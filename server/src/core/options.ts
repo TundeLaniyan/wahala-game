@@ -44,6 +44,15 @@ export interface RuntimeConfig {
    * bot takes it for good either way).
    */
   dropPolicy: DropPolicy;
+  /**
+   * Liveness of a connection (`RUMBLE_PING_INTERVAL_MS`, `RUMBLE_PING_MAX_RETRIES`): the transport pings every
+   * `pingIntervalMs` and terminates a socket that missed `pingMaxRetries` pongs in a row. Colyseus' own default is 3 s x 2
+   * (6 s), which a phone whose page stalls on the first frame of a big arena (or a busy test machine) can exceed; a
+   * dropped socket is not a lost player (the reserved window brings them back), but a longer tolerance avoids needless
+   * drops. A really dead connection is still noticed within `interval x retries` (default 12 s).
+   */
+  pingIntervalMs: number;
+  pingMaxRetries: number;
   /** Pre-match countdown. */
   countdownMs: number;
   /** Public lobbies start by themselves this long after the first human joins (a client may ask for another value). */
@@ -66,6 +75,8 @@ export const DEFAULT_RUNTIME: RuntimeConfig = {
   reconnectSeconds: 30,
   graceSeconds: DEFAULT_GRACE_SECONDS,
   dropPolicy: 'bot',
+  pingIntervalMs: 3000,
+  pingMaxRetries: 4,
   countdownMs: 3000,
   defaultAutoStartSec: 20,
   fast: false,
@@ -103,6 +114,12 @@ export function loadRuntimeConfig(env: Record<string, string | undefined> = proc
       3600,
     ),
     graceSeconds: positiveNumber(env.RUMBLE_GRACE_SECONDS, DEFAULT_GRACE_SECONDS, 0, MAX_GRACE_SECONDS),
+    pingIntervalMs: Math.round(
+      positiveNumber(env.RUMBLE_PING_INTERVAL_MS, DEFAULT_RUNTIME.pingIntervalMs, 500, 30_000),
+    ),
+    pingMaxRetries: Math.round(
+      positiveNumber(env.RUMBLE_PING_MAX_RETRIES, DEFAULT_RUNTIME.pingMaxRetries, 1, 20),
+    ),
     dropPolicy: parseDropPolicy(env.RUMBLE_DROP_POLICY),
     countdownMs: fast
       ? positiveNumber(env.RUMBLE_COUNTDOWN_MS, DEFAULT_RUNTIME.countdownMs, 0, 60_000)

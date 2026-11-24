@@ -43,6 +43,7 @@ let suppressExit = false;
 const flow = createRumbleOnlineFlow({
   createSession,
   startRemote,
+  prefetch: (arenaId) => commands.prefetchModels(arenaId),
   endpoint: rumbleOnlineEndpoint,
   character: () => useGameStore.getState().settings.character,
   storage: safeStorage(),

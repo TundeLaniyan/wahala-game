@@ -44,6 +44,8 @@ Set them in the shell before the command (they pass through to the server):
 | `RUMBLE_ALLOWED_ORIGINS` | computed by `dev:online` | Exact browser origins the server accepts, comma separated. `dev:online` fills in `http://localhost:5173`, `http://127.0.0.1:5173`, `http://<each-lan-ip>:5173`, `http://<machine-name>:5173`, `http://<machine-name>.local:5173`, plus anything you set yourself. Development mode also allows `http://localhost:*` and `http://127.0.0.1:*`. In production mode ONLY the explicit list is allowed (nothing by default, never implicit localhost or a LAN range) |
 | `RUMBLE_GRACE_SECONDS` | 5 | A dropped player's fighter stands this long, then a bot plays it (0..60) |
 | `RUMBLE_RECONNECT_SECONDS` | 30 | The player can take back the same fighter within this window |
+| `RUMBLE_PING_INTERVAL_MS` | 3000 | How often the server pings each socket (500..30000); with `RUMBLE_PING_MAX_RETRIES` it decides how long a stalled page (first-frame compile, a busy CPU) is tolerated before the socket counts as dropped |
+| `RUMBLE_PING_MAX_RETRIES` | 4 | Missed pongs before the socket is closed (1..20) |
 | `RUMBLE_DROP_POLICY` | `bot` | `bot` or `idle` (see `docs/CITY_RUMBLE_ONLINE.md` section 8) |
 | `RUMBLE_METRICS_TOKEN` | none | Bearer token required by `GET /metrics` |
 | `NODE_ENV` | `development` (set by `dev:online`) | `production` turns the localhost development origins off |

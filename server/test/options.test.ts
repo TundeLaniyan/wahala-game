@@ -199,3 +199,18 @@ describe('disconnect policy configuration (ON8)', () => {
     ).toBe(0.5);
   });
 });
+
+describe('connection liveness tolerance (ping)', () => {
+  it('defaults to 3 s x 4 and reads RUMBLE_PING_INTERVAL_MS / RUMBLE_PING_MAX_RETRIES within bounds', () => {
+    const d = loadRuntimeConfig({});
+    expect([d.pingIntervalMs, d.pingMaxRetries]).toEqual([3000, 4]);
+    const c = loadRuntimeConfig({ RUMBLE_PING_INTERVAL_MS: '5000', RUMBLE_PING_MAX_RETRIES: '10' });
+    expect([c.pingIntervalMs, c.pingMaxRetries]).toEqual([5000, 10]);
+  });
+  it('falls back to the defaults for values that are out of range or not numbers', () => {
+    for (const bad of ['0', '-3', 'abc', '1e9', '']) {
+      const c = loadRuntimeConfig({ RUMBLE_PING_INTERVAL_MS: bad, RUMBLE_PING_MAX_RETRIES: bad });
+      expect([c.pingIntervalMs, c.pingMaxRetries], bad).toEqual([3000, 4]);
+    }
+  });
+});

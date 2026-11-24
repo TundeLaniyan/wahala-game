@@ -196,6 +196,23 @@ describe('the room and the match', () => {
     expect(t.get().status).toBe('connected');
     expect(t.get().roomCode).toBe('K7M3QX');
   });
+  it('prefetches the arena models when the lobby names an arena, once per change', () => {
+    const prefetch = vi.fn();
+    const t = setup({ prefetch });
+    t.actions.open();
+    t.actions.createRoom();
+    const s = t.sessions[0]!;
+    s.events.status('connected', '');
+    s.events.lobby(lobbyMsg());
+    const first = lobbyMsg().settings.arenaId;
+    expect(prefetch).toHaveBeenCalledTimes(1);
+    expect(prefetch).toHaveBeenLastCalledWith(first);
+    s.events.lobby(lobbyMsg());
+    expect(prefetch).toHaveBeenCalledTimes(1);
+    s.events.lobby(lobbyMsg({ settings: { ...lobbyMsg().settings, arenaId: 'another-arena' } }));
+    expect(prefetch).toHaveBeenCalledTimes(2);
+    expect(prefetch).toHaveBeenLastCalledWith('another-arena');
+  });
   it('lobby controls go to the session', () => {
     const { t, s } = inRoom();
     t.actions.ready(true);
