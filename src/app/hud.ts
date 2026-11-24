@@ -189,6 +189,16 @@ export const SUDDEN_DEATH_ANNOUNCE_TICKS = 180;
 /** Protection layers a fighter holds: the Okada mount plus the Armour plates (each absorbs one separate lethal hit). */
 const shieldLayers = (p: Readonly<Player> | undefined): number => (p ? (p.mounted ? 1 : 0) + p.armour : 0);
 
+/**
+ * The match clock's seconds left (decision PIV1). Once a Sudden Death round has begun the match time is spent: it is 0 for
+ * good, and it stays 0 after the winner is known. Reading the raw `durationTicks - playTicks` there is wrong in the Sudden
+ * Death Test Lab, whose clock is a long dummy (600 s) the round never reaches: the end screen then showed the unspent
+ * remainder (about 9:21), a clock that means nothing. Before and outside a round it is exactly `secondsRemaining`.
+ */
+export function matchSecondsLeft(state: GameState): number {
+  return state.match.suddenDeath ? 0 : secondsRemaining(state);
+}
+
 export function buildSuddenDeath(state: GameState, localId: number): SuddenDeathHud | null {
   const sd = state.match.suddenDeath;
   if (!sd) return null;
@@ -707,9 +717,9 @@ export function buildHud(
     phase: state.match.phase,
     countdown:
       state.match.phase === 'countdown' ? Math.max(1, Math.ceil(state.match.countdownRemaining / 60)) : 0,
-    secondsLeft: secondsRemaining(state),
+    secondsLeft: matchSecondsLeft(state),
     totalSeconds: Math.round(state.config.match.durationTicks / 60),
-    final30: state.match.phase === 'playing' && secondsRemaining(state) <= 30,
+    final30: state.match.phase === 'playing' && matchSecondsLeft(state) <= 30,
     players: state.players.map((p) => ({
       id: p.id,
       name: p.name,

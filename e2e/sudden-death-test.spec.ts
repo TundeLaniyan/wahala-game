@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { exitMatch, inMatch, open, stepTicks } from './helpers';
+import { exitMatch, inMatch, mutate, open, stepTicks } from './helpers';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -118,4 +118,50 @@ test('Sudden Death test: leaving it puts the saved camera view back and writes n
   expect(await page.evaluate(() => (window as any).__WAHALA__.store.getState().settings.cameraView)).toBe(
     JSON.parse(saved ?? '{}').cameraView ?? 'action',
   );
+});
+
+test('Sudden Death test: the main timer is the blast countdown, then 0:00 (not the dummy match clock) once the winner is known', async ({
+  page,
+}) => {
+  test.setTimeout(600_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await open(page, '&nobots&noattract&sdhold'); // the sim is frozen and stepped by hand
+  await openSuddenDeathTest(page);
+  await page.getByTestId('mode-sd-test').click();
+  await inMatch(page);
+  await stepTicks(page, 400);
+  await page.evaluate(() => (window as any).__WAHALA__.advance(1)); // one routed tick: the HUD publishes the sim
+  const timer = page.getByTestId('timer');
+  const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  // live round: exactly the sim's blast countdown (rounded up), under the SUDDEN DEATH label - never the 10:00 match clock
+  const live = await page.evaluate(() => {
+    const s = (window as any).__WAHALA__.getState();
+    return Math.ceil((s.match.suddenDeath.nextBlastTick - s.tick) / 60);
+  });
+  await expect(timer).toHaveText(mmss(live));
+  await expect(page.getByTestId('timer-sudden-label')).toBeVisible();
+
+  // decide the round: both rivals fall, the human is the last standing
+  await mutate(
+    page,
+    `s.players.forEach((p, i) => { if (i > 0) { p.alive = false; p.eliminatedTick = s.tick; p.elimination = { kind: 'crush', eventId: 0 }; } });`,
+  );
+  await stepTicks(page, 10);
+  await page.evaluate(() => (window as any).__WAHALA__.advance(1));
+  const end = await page.evaluate(() => {
+    const s = (window as any).__WAHALA__.getState();
+    return {
+      phase: s.match.phase,
+      result: s.match.result,
+      rawLeft: Math.ceil((s.config.match.durationTicks - s.match.playTicks) / 60),
+    };
+  });
+  expect(end.phase).toBe('ended');
+  expect(end.result).toMatchObject({ kind: 'win', winnerId: 0 });
+  expect(end.rawLeft).toBeGreaterThan(500); // the stale remainder the timer used to fall back to (about 9:2x)
+  await expect(timer).toHaveText('0:00');
+  await expect(page.getByTestId('timer-sudden-label')).toHaveCount(0);
+  await expect(page.getByTestId('hud')).toHaveAttribute('data-phase', 'ended');
+  expect(errors).toEqual([]);
 });
