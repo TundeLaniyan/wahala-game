@@ -109,7 +109,7 @@ describe('lobby and matchmaking', () => {
     expect(a.seat).not.toBe(b.seat);
     expect(ctx.metricsOf(a.room.roomId).code).toBe(a.room.roomId); // public rooms are listed by code
 
-    await expect(joinById(ctx.server, a.room.roomId, 'Late')).rejects.toThrow(/locked/);
+    await expect(joinById(ctx.server, a.room.roomId, 'Late')).rejects.toThrow(/not open/); // public rooms are only for quick play; one answer for every bad code
     const late = ctx.track(await joinOrCreate(ctx.server, 'Late', { durationSec: 10 }));
     expect(late.room.roomId).not.toBe(a.room.roomId);
   });

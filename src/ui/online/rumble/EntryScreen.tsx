@@ -7,9 +7,10 @@ import { CHARACTERS } from '../../../sim';
 import type { CharacterId } from '../../../sim';
 import { fighterArt } from '../../menu/art';
 import { FighterImage } from '../../menu/FighterImage';
-import { PrimaryButton, ScreenFrame, SecondaryButton } from '../../menu/Frame';
+import { Option, PrimaryButton, ScreenFrame, SecondaryButton } from '../../menu/Frame';
 import { PLAYER_NAME_MAX, ROOM_CODE_LENGTH } from '../../../net/protocol';
-import { entryModel, quickPlayNote } from './models';
+import type { QuickMode } from '../../../net/protocol';
+import { QUICK_MODE_OPTIONS, entryModel, quickPlayNote } from './models';
 import { TestSessionNote } from './parts';
 import './rumble.css';
 
@@ -20,6 +21,9 @@ export interface EntryProps {
   configured: boolean;
   fake: boolean;
   fighter: CharacterId;
+  /** The QUICK PLAY mode picked (Free-for-All or Team Rumble): public rooms are matched by it. */
+  quickMode: QuickMode;
+  onQuickMode(mode: QuickMode): void;
   onName(v: string): void;
   onCode(v: string): void;
   onCreate(): void;
@@ -139,11 +143,24 @@ export function EntryScreen(p: EntryProps) {
           <p id="ro-code-hint" className="ro-hint" data-testid="ro-code-hint">
             {m.code.hint ?? ' '}
           </p>
+          <div className="mn-opts" role="group" aria-label="Quick play mode" data-testid="ro-quick-modes">
+            {QUICK_MODE_OPTIONS.map((o) => (
+              <Option
+                key={o.id}
+                value={o.id}
+                current={p.quickMode}
+                label={o.name}
+                title={o.rule}
+                testId={`ro-quick-mode-${o.id}`}
+                onPick={p.onQuickMode}
+              />
+            ))}
+          </div>
           <SecondaryButton testId="ro-quick" disabled={!m.canQuick} onClick={p.onQuick}>
-            Quick play
+            Quick play: {p.quickMode === 'team' ? 'Team Rumble' : 'Free-for-All'}
           </SecondaryButton>
           <p className="ro-sub" data-testid="ro-quick-note">
-            {quickPlayNote()}
+            {quickPlayNote(p.quickMode)}
           </p>
         </section>
       </div>

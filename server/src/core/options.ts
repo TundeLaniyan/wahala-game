@@ -5,13 +5,19 @@
 import { CHARACTER_IDS, DIFFICULTIES, RUMBLE_ARENA_IDS } from '../../../src/sim';
 import type { CharacterId, Difficulty } from '../../../src/sim';
 import {
+  DEFAULT_QUICK_MODE,
+  GUEST_ID_RE,
   MATCH_SEATS,
   PUBLIC_WAIT_SECONDS,
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
+  parseQuickMode,
+  quickModeGame,
   validatePlayerName,
 } from '../../../src/net/protocol';
-import type { RoomSettings } from '../../../src/net/protocol';
+import type { QuickMode, RoomSettings } from '../../../src/net/protocol';
+import { DEFAULT_LIMITS, UNLIMITED_LIMITS, loadLimits } from './limits';
+import type { LimitsConfig } from './limits';
 
 export type RumbleGameKind = RoomSettings['game'];
 
@@ -71,6 +77,8 @@ export interface RuntimeConfig {
   tickRate: number;
   /** Max simulation ticks run in one timer callback (the rest is dropped and counted). */
   maxCatchUpTicks: number;
+  /** Capacity and abuse limits (decision FU2S-C3, `limits.ts`). */
+  limits: LimitsConfig;
 }
 
 export const DEFAULT_GRACE_SECONDS = 5;
@@ -87,6 +95,7 @@ export const DEFAULT_RUNTIME: RuntimeConfig = {
   fast: false,
   tickRate: 60,
   maxCatchUpTicks: 6,
+  limits: DEFAULT_LIMITS,
 };
 
 function positiveNumber(raw: string | undefined, fallback: number, min: number, max: number): number {
@@ -109,6 +118,8 @@ function parseDropPolicy(raw: string | undefined): DropPolicy {
  */
 export function loadRuntimeConfig(env: Record<string, string | undefined> = process.env): RuntimeConfig {
   const fast = env.RUMBLE_TEST_FAST === '1';
+  // the test-only mode must be impossible in production: refuse here, at configuration time, not only at server start
+  assertProductionSafe({ ...DEFAULT_RUNTIME, fast }, env.NODE_ENV !== 'production');
   return {
     ...DEFAULT_RUNTIME,
     fast,
@@ -132,7 +143,21 @@ export function loadRuntimeConfig(env: Record<string, string | undefined> = proc
     defaultAutoStartSec: fast
       ? positiveNumber(env.RUMBLE_AUTOSTART_SEC, DEFAULT_RUNTIME.defaultAutoStartSec, 0, 600)
       : DEFAULT_RUNTIME.defaultAutoStartSec,
+    // RUMBLE_LIMITS=off (load / soak harnesses driving many rooms from one address) exists only in the test-fast mode,
+    // which production refuses above: there is no way to switch the limits off on a production server
+    limits: fast && env.RUMBLE_LIMITS === 'off' ? UNLIMITED_LIMITS : loadLimits(env),
   };
+}
+
+/**
+ * Refuses a configuration that must never run in production (decision FU2S-C4): the test-only fast mode (short countdown,
+ * odd match lengths, a client-chosen public wait). `development` is `NODE_ENV !== 'production'`.
+ */
+export function assertProductionSafe(runtime: RuntimeConfig, development: boolean): void {
+  if (!development && runtime.fast)
+    throw new Error(
+      'RUMBLE_TEST_FAST is a test-only mode and cannot run with NODE_ENV=production: unset it (startup refused)',
+    );
 }
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -200,6 +225,8 @@ export interface RoomOptions {
   private: boolean;
   settings: RoomSettings;
   autoStartSec: number;
+  /** Public rooms only: the QUICK PLAY mode the room was opened for (rooms are matched by it). */
+  mode: QuickMode;
 }
 
 /** Options of the player who creates a room: `{ private?, arenaId?, game?, durationSec?, botDifficulty?, friendlyFire?, autoStartSec? }`. */
@@ -212,6 +239,12 @@ export function parseRoomOptions(raw: unknown, rt: RuntimeConfig): Parsed<RoomOp
   }
   const patch = parseSettingsPatch(o, rt);
   if (!patch.ok) return patch;
+  let mode: QuickMode = DEFAULT_QUICK_MODE;
+  if (!isUnset(o.mode)) {
+    const m = parseQuickMode(o.mode);
+    if (m === null) return fail('unknown mode');
+    mode = m;
+  }
   let autoStartSec = rt.defaultAutoStartSec;
   if (!isUnset(o.autoStartSec)) {
     const v = o.autoStartSec;
@@ -219,10 +252,20 @@ export function parseRoomOptions(raw: unknown, rt: RuntimeConfig): Parsed<RoomOp
     // the public wait is the server's rule (30 s): a client's value only counts in the test-only fast mode
     if (rt.fast) autoStartSec = v;
   }
-  return {
-    ok: true,
-    value: { private: isPrivate, settings: { ...defaultSettings(), ...patch.value }, autoStartSec },
-  };
+  // A PUBLIC room's settings are the server's: only its QUICK PLAY mode comes from the player (FFA = Deathmatch, Team =
+  // Team Rumble; friendly fire off like offline), the stage, length and bot level are the defaults, and nobody in the room
+  // can change them. The test-only fast mode keeps honouring a client's values so tests can shorten matches.
+  const settings: RoomSettings =
+    isPrivate || rt.fast
+      ? { ...defaultSettings(), ...patch.value }
+      : { ...defaultSettings(), game: quickModeGame(mode) };
+  if (!isPrivate && rt.fast && isUnset(o.game)) settings.game = quickModeGame(mode);
+  return { ok: true, value: { private: isPrivate, settings, autoStartSec, mode } };
+}
+
+/** A guest session id (`gid`) sent by the client, when well formed. */
+export function parseGuestId(raw: unknown): string | null {
+  return typeof raw === 'string' && GUEST_ID_RE.test(raw) ? raw : null;
 }
 
 export interface JoinOptions {

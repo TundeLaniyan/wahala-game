@@ -14,6 +14,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { devices, expect, test } from '@playwright/test';
 import type { Browser, BrowserContext, Page } from '@playwright/test';
+import { DIAG_SCRIPT, readDiag, summariseDiag } from './onlineDiag';
+import { writeFileSync } from 'node:fs';
 
 const BASE = process.env.WAHALA_ONLINE_E2E_URL ?? '';
 const Q = '?debug&q=low&seed=7&noattract&online';
@@ -103,6 +105,8 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
   test.setTimeout(900_000);
   const code = await createRoom(page, 'Host Ada');
   const ctxB = await newPhone(browser);
+  await page.context().addInitScript(DIAG_SCRIPT);
+  await ctxB.addInitScript(DIAG_SCRIPT);
   const guest = await ctxB.newPage();
   const log: string[] = [];
   const stamp = () => new Date().toISOString().slice(11, 19);
@@ -113,7 +117,7 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     p.on(
       'console',
       (m) =>
-        (m.type() === 'error' || m.type() === 'warning') &&
+        (m.type() === 'error' || m.type() === 'warning' || /Colyseus reconnection/.test(m.text())) &&
         log.push(`${stamp()} ${name} ${m.type()}: ${m.text().slice(0, 200)}`),
     );
     p.on('pageerror', (e) => log.push(`${stamp()} ${name} PAGEERROR ${e.message.slice(0, 200)}`));
@@ -224,6 +228,15 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     console.log(`[online-e2e timeline]\n${log.join('\n')}`);
     throw error;
   } finally {
+    // what each PAGE saw: sockets with close codes, main-thread long tasks, frame gaps (a starved browser shows here)
+    const [dh, dg] = await Promise.all([readDiag(page), readDiag(guest)]);
+    const report = `${summariseDiag('host', dh)}\n${summariseDiag('guest', dg)}\n${log.join('\n')}`;
+    console.log(`[online-e2e page diagnostics]\n${report}`);
+    if (process.env.ONLINE_E2E_DIAG_DIR)
+      writeFileSync(
+        `${process.env.ONLINE_E2E_DIAG_DIR}/pages.json`,
+        JSON.stringify({ host: dh, guest: dg, log }, null, 1),
+      );
     await ctxB.close();
   }
 });

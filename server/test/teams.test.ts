@@ -140,7 +140,7 @@ describe('Team Rumble: friendly fire is the offline rule (off by default, host c
       value: { friendlyFire: true },
     });
     expect(parseSettingsPatch({ friendlyFire: 'on' }, DEFAULT_RUNTIME).ok).toBe(false);
-    const created = parseRoomOptions({ game: 'team', friendlyFire: true }, DEFAULT_RUNTIME);
+    const created = parseRoomOptions({ private: true, game: 'team', friendlyFire: true }, DEFAULT_RUNTIME);
     expect(created.ok && created.value.settings).toMatchObject({ game: 'team', friendlyFire: true });
   });
 });

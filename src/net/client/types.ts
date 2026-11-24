@@ -4,7 +4,7 @@
  * replica, and tests / the UI's fakes implement it in memory. Browser-only; imported only from the online chunk.
  */
 import type { RemoteMatchDriver } from '../../app/remoteMatch';
-import type { LobbyMsg, NoticeMsg, ResultsMsg, SettingsMsg, WelcomeMsg } from '../protocol';
+import type { LobbyMsg, NoticeMsg, QuickMode, ResultsMsg, SettingsMsg, WelcomeMsg } from '../protocol';
 
 export type ConnStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'closed';
 
@@ -19,7 +19,8 @@ export interface JoinInfo {
 export type OpenRequest =
   | { kind: 'create'; who: JoinInfo }
   | { kind: 'join'; who: JoinInfo; code: string }
-  | { kind: 'quick'; who: JoinInfo };
+  /** QUICK PLAY: public matchmaking in ONE mode (Free-for-All or Team Rumble); never moved to the other. */
+  | { kind: 'quick'; who: JoinInfo; mode: QuickMode };
 
 /** Everything the session reports, in order. All callbacks are optional-safe: the session never throws into the UI. */
 export interface RumbleSessionEvents {
@@ -34,8 +35,19 @@ export interface RumbleSessionEvents {
   /** The connection failed before or during the lobby in a way the player must be told about. */
   failed(
     reason:
-      'unreachable' | 'room-not-found' | 'room-full' | 'match-started' | 'refused' | 'protocol' | 'unknown',
+      | 'unreachable'
+      | 'room-not-found'
+      | 'room-full'
+      | 'match-started'
+      | 'room-unavailable'
+      | 'server-busy'
+      | 'rate-limited'
+      | 'refused'
+      | 'protocol'
+      | 'unknown',
     detail: string,
+    /** The server's retry hint in seconds (`server-busy`, `rate-limited`). */
+    retryAfterSec?: number,
   ): void;
 }
 

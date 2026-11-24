@@ -158,6 +158,22 @@ describe('failure wording', () => {
     expect(errorMessage('unknown').text).toMatch(/failed/);
     expect(errorMessage('not-configured').text).toBe('Online is not configured in this build.');
   });
+  it('says plainly when the servers are busy or the player asked too fast, with the retry time, and offers Try again', () => {
+    const busy = errorMessage('server-busy', 'The servers are full', 25);
+    expect(busy.title).toBe('The servers are busy');
+    expect(busy.text).toMatch(/Nothing is wrong on your side/);
+    expect(busy.text).toMatch(/in about 25 seconds/);
+    expect(busy.canRetry).toBe(true);
+    expect(errorMessage('server-busy', null, 300).text).toMatch(/in about 5 minutes/);
+    expect(errorMessage('server-busy').text).toMatch(/in a little while/);
+    const slow = errorMessage('rate-limited', null, 8);
+    expect(slow.text).toMatch(/Wait in about 8 seconds and try again/);
+    expect(slow.canRetry).toBe(true);
+    // one answer for every code that cannot be joined: wrong, full, closed, started
+    const gone = errorMessage('room-unavailable');
+    expect(gone.text).toMatch(/wrong, the room may be full or closed, or its match may already have started/);
+    expect(gone.canRetry).toBe(false);
+  });
   it('offers Try again only where trying again can help', () => {
     expect(errorMessage('unreachable').canRetry).toBe(true);
     expect(errorMessage('room-full').canRetry).toBe(true);
@@ -252,6 +268,15 @@ describe('roomRules', () => {
     expect(r.startReason).toBe('Only the host can start the match.');
     expect(r.canChangeSettings).toBe(false);
     expect(r.settingsReason).toBe('Only the host can change the match.');
+  });
+  it("a public room's settings are the server's: read-only for everybody, host included, with the reason", () => {
+    const r = roomRules(lobby({ private: false }), 'connected');
+    expect(r.isHost).toBe(true);
+    expect(r.canChangeSettings).toBe(false);
+    expect(r.settingsReadOnly).toBe(true);
+    expect(r.settingsReason).toMatch(/same rules for everybody/);
+    expect(roomRules(lobby(), 'connected').settingsReadOnly).toBe(false); // a private host edits
+    expect(roomRules(lobby({ you: 1 }), 'connected').settingsReadOnly).toBe(true);
   });
   it('a public room has no START: it starts by itself', () => {
     const r = roomRules(lobby({ private: false }), 'connected');

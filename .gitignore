@@ -10,3 +10,4 @@ __pycache__/
 .claude/worktrees/
 blob-report
 tools/assets3/vendor/
+online-e2e-diag

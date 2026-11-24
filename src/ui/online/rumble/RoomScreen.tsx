@@ -236,7 +236,9 @@ export function RoomScreen(p: RoomProps) {
       : null;
 
   let statusText: string;
-  if (countdown !== null) statusText = `Match starts in ${countdown}`;
+  if (p.lobby.waitingForSlot)
+    statusText = 'The servers are busy: your match starts as soon as a slot is free.';
+  else if (countdown !== null) statusText = `Match starts in ${countdown}`;
   else if (auto !== null) statusText = `Starts by itself in ${auto} s`;
   else if (rules.showStart && rules.startReason && rules.inLobby) statusText = rules.startReason;
   else statusText = `${m.readyLine}`;
@@ -401,12 +403,12 @@ export function RoomScreen(p: RoomProps) {
           <small className="mn-kicker">Match settings</small>
           <Settings
             settings={p.lobby.settings}
-            readOnly={!rules.isHost}
+            readOnly={rules.settingsReadOnly}
             editable={rules.canChangeSettings}
             reason={rules.settingsReason}
             onChange={p.onSettings}
           />
-          {countdown !== null && (
+          {countdown !== null && !p.lobby.waitingForSlot && (
             <p className="ro-countdown" data-testid="ro-countdown" aria-hidden>
               {countdown}
             </p>

@@ -45,10 +45,11 @@ export function ConnectingScreen(p: { what: string; fake: boolean; onCancel(): v
 export function ErrorBody(p: {
   reason: FailReason | 'not-configured';
   detail: string | null;
+  retryAfterSec?: number | null;
   onRetry(): void;
   onBack(): void;
 }) {
-  const e = errorMessage(p.reason, p.detail);
+  const e = errorMessage(p.reason, p.detail, p.retryAfterSec);
   return (
     <div className="ro-center ro-error" data-testid="ro-error" data-reason={p.reason} role="alert">
       <h3 className="ro-error-title">{e.title}</h3>
@@ -77,6 +78,7 @@ export function ErrorBody(p: {
 export function ErrorScreen(p: {
   reason: FailReason | 'not-configured';
   detail: string | null;
+  retryAfterSec?: number | null;
   onRetry(): void;
   onBack(): void;
   fake?: boolean;
@@ -90,7 +92,13 @@ export function ErrorScreen(p: {
       status={p.fake ? <TestSessionNote /> : undefined}
       className="ro-screen"
     >
-      <ErrorBody reason={p.reason} detail={p.detail} onRetry={p.onRetry} onBack={p.onBack} />
+      <ErrorBody
+        reason={p.reason}
+        detail={p.detail}
+        retryAfterSec={p.retryAfterSec}
+        onRetry={p.onRetry}
+        onBack={p.onBack}
+      />
     </ScreenFrame>
   );
 }

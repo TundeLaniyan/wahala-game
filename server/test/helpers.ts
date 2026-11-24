@@ -23,9 +23,16 @@ import type { Dir } from '../../src/sim';
 import { startRumbleServer } from '../src/app';
 import type { RumbleServer, RumbleServerOptions } from '../src/app';
 import { DEFAULT_RUNTIME } from '../src/core/options';
+import { UNLIMITED_LIMITS } from '../src/core/limits';
 import type { RuntimeConfig } from '../src/core/options';
 import type { RoomMetricsSnapshot } from '../src/core/metrics';
 import type { RumbleMatch } from '../src/core/RumbleMatch';
+
+/**
+ * Limits for tests that are not about limits: everything in one process comes from 127.0.0.1 without a guest id, so the
+ * per-player and per-address buckets and room caps are opened wide. `limits.test.ts` / `guard.test.ts` use the real defaults.
+ */
+export const OPEN_LIMITS = UNLIMITED_LIMITS;
 
 export interface TestServer extends RumbleServer {
   url: string;
@@ -42,7 +49,14 @@ export async function startTestServer(
     host: '127.0.0.1',
     development: true,
     log: process.env.RUMBLE_TEST_LOG ? (m) => console.log('[server]', m) : undefined,
-    runtime: { ...DEFAULT_RUNTIME, fast: true, countdownMs: 150, reconnectSeconds: 5, ...runtime },
+    runtime: {
+      ...DEFAULT_RUNTIME,
+      fast: true,
+      countdownMs: 150,
+      reconnectSeconds: 5,
+      limits: OPEN_LIMITS,
+      ...runtime,
+    },
     ...options,
   });
   const http = `http://127.0.0.1:${server.port}`;

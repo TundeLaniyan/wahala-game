@@ -4,14 +4,33 @@
  * starts the real Node multiplayer server and `vite preview` of that build, runs e2e/rumble-online.spec.ts against them in
  * Chromium and stops everything. Local / development only (docs/CITY_RUMBLE_ONLINE_LOCAL.md); CI never runs it.
  * Env: WAHALA_CHROMIUM (browser), ONLINE_E2E_SKIP_BUILD=1 (reuse dist-online), ONLINE_E2E_ARGS (extra Playwright args).
+ *
+ * Evidence (decision FU2S-C5): while the browsers run, this script samples the SERVER's own /metrics once a second
+ * (event-loop delay, cpu, dropped ticks, timer lateness) and the machine load average into
+ * `ONLINE_E2E_DIAG_DIR` (default `online-e2e-diag/`: `server-timeline.jsonl`, `server.log`, the pages' own
+ * `pages.json`) and prints a verdict: was the server starved, or only the browsers? It never retries and never
+ * hides a failure. ONLINE_E2E_ASSERT_SERVER=1 also fails the run when the server itself stalled (the CI job sets it:
+ * a stalled server makes the browser result meaningless). ONLINE_E2E_PIN=1 pins the server to CPU 0 and the browsers
+ * to the other CPUs (taskset) and gives the server the better priority, so the two never fight for one core.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpus, loadavg } from 'node:os';
 
 const WEB = 4830;
 const SERVER = 2567;
 const origin = `http://127.0.0.1:${WEB}`;
 const run = (cmd, args, opts = {}) => spawnSync(cmd, args, { stdio: 'inherit', shell: false, ...opts });
+const DIAG_DIR = process.env.ONLINE_E2E_DIAG_DIR ?? 'online-e2e-diag';
+rmSync(DIAG_DIR, { recursive: true, force: true });
+mkdirSync(DIAG_DIR, { recursive: true });
+const pinned =
+  process.env.ONLINE_E2E_PIN === '1' &&
+  cpus().length >= 3 &&
+  !run('which', ['taskset'], { stdio: 'ignore' }).status;
+/** `taskset` / `nice` wrappers: the server on CPU 0 at normal priority, everything the browsers spawn on the rest, nicer. */
+const withCpus = (set, nice, cmd, args) =>
+  pinned ? ['taskset', ['-c', set, 'nice', '-n', String(nice), cmd, ...args]] : [cmd, args];
 
 if (process.env.ONLINE_E2E_SKIP_BUILD !== '1' || !existsSync('dist-online')) {
   const built = run('npm', ['run', 'build:online'], {
@@ -33,8 +52,13 @@ process.on('exit', stop);
 process.on('SIGINT', () => process.exit(130));
 const start = (name, cmd, args, opts) => {
   const c = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: true, ...opts });
-  c.stdout.on('data', (d) => process.stdout.write(`[${name}] ${d}`));
-  c.stderr.on('data', (d) => process.stderr.write(`[${name}] ${d}`));
+  const tee = (stream) => (d) => {
+    stream.write(`[${name}] ${d}`);
+    if (name === 'server')
+      appendFileSync(`${DIAG_DIR}/server.log`, `${new Date().toISOString().slice(11, 23)} ${d}`);
+  };
+  c.stdout.on('data', tee(process.stdout));
+  c.stderr.on('data', tee(process.stderr));
   children.push(c);
   return c;
 };
@@ -47,7 +71,8 @@ for (const port of [SERVER, WEB]) {
     /* free */
   }
 }
-start('server', 'npx', ['tsx', 'src/main.ts'], {
+const [serverCmd, serverArgs] = withCpus('0', 0, 'npx', ['tsx', 'src/main.ts']);
+start('server', serverCmd, serverArgs, {
   cwd: 'server',
   env: {
     ...process.env,
@@ -82,6 +107,41 @@ const wait = async (url) => {
 };
 await wait(`http://127.0.0.1:${SERVER}/health`);
 await wait(`${origin}/wahala-game/`);
+
+// ---- the server's own view of the run, once a second
+const samples = [];
+const sampler = setInterval(async () => {
+  try {
+    const m = await (
+      await fetch(`http://127.0.0.1:${SERVER}/metrics`, { signal: AbortSignal.timeout(900) })
+    ).json();
+    const row = {
+      t: Date.now(),
+      load1: loadavg()[0],
+      cpu: m.process.cpuPercentSinceLastRead,
+      rssMB: Math.round(m.process.memoryUsage.rss / 1e6),
+      loopMaxMs: m.process.eventLoopDelayMs.max,
+      loopP99Ms: m.process.eventLoopDelayMs.p99,
+      rooms: m.rooms.map((r) => ({
+        phase: r.phase,
+        humans: r.connectedHumans,
+        dropped: r.ticks.dropped,
+        stepP99: r.ticks.stepMs.p99,
+        lateP99: r.ticks.timerLatenessMs.p99,
+        lateMax: r.ticks.timerLatenessMs.max,
+        drops: r.net.drops,
+        reconnections: r.net.reconnections,
+      })),
+    };
+    samples.push(row);
+    appendFileSync(`${DIAG_DIR}/server-timeline.jsonl`, `${JSON.stringify(row)}\n`);
+  } catch {
+    // a /metrics call that does not answer within 900 ms is itself evidence of a stalled server
+    const row = { t: Date.now(), load1: loadavg()[0], metricsTimeout: true };
+    samples.push(row);
+    appendFileSync(`${DIAG_DIR}/server-timeline.jsonl`, `${JSON.stringify(row)}\n`);
+  }
+}, 1000);
 const args = [
   'playwright',
   'test',
@@ -95,14 +155,42 @@ const args = [
   '--reporter=line',
   ...(process.env.ONLINE_E2E_ARGS?.split(' ') ?? []),
 ];
-const result = run('npx', args, {
+const [pwCmd, pwArgs] = withCpus(`1-${cpus().length - 1}`, 5, 'npx', args);
+// async (not spawnSync): the sampler above must keep running while the browsers do
+const runAsync = (cmd, args, opts) =>
+  new Promise((resolve) => {
+    const c = spawn(cmd, args, { stdio: 'inherit', ...opts });
+    c.on('exit', (status) => resolve({ status }));
+    c.on('error', () => resolve({ status: 1 }));
+  });
+const result = await runAsync(pwCmd, pwArgs, {
   env: {
     ...process.env,
+    ONLINE_E2E_DIAG_DIR: DIAG_DIR,
     WAHALA_ONLINE_E2E_URL: `${origin}/wahala-game/`,
     WAHALA_E2E_PREBUILT: '1',
     WAHALA_E2E_PORT: String(WEB),
     WAHALA_MULTIPROCESS: '1',
   },
 });
+clearInterval(sampler);
+const live = samples.filter((r) => !r.metricsTimeout);
+const worst = {
+  loopMaxMs: Math.max(0, ...live.map((r) => r.loopMaxMs)),
+  maxDropped: Math.max(0, ...live.flatMap((r) => r.rooms.map((x) => x.dropped))),
+  lateMaxMs: Math.max(0, ...live.flatMap((r) => r.rooms.map((x) => x.lateMax))),
+  cpuMax: Math.max(0, ...live.map((r) => r.cpu)),
+  loadMax: Math.max(0, ...samples.map((r) => r.load1)),
+  metricsTimeouts: samples.length - live.length,
+};
+// the server is "starved" when its own loop stalled for more than half a second or it lost simulation ticks
+const serverStalled = worst.loopMaxMs > 500 || worst.maxDropped > 0 || worst.metricsTimeouts > 2;
+const verdict = `[online-e2e server verdict] ${serverStalled ? 'SERVER STALLED' : 'server healthy'}: ${JSON.stringify(worst)} over ${samples.length} samples; cpus ${cpus().length}${pinned ? ', pinned' : ''}`;
+console.log(verdict);
+writeFileSync(
+  `${DIAG_DIR}/verdict.json`,
+  JSON.stringify({ stalled: serverStalled, ...worst, samples: samples.length }, null, 1),
+);
 stop();
+if (result.status === 0 && serverStalled && process.env.ONLINE_E2E_ASSERT_SERVER === '1') process.exit(3);
 process.exit(result.status ?? 1);

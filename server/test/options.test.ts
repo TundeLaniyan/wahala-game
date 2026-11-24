@@ -46,6 +46,7 @@ describe('room options', () => {
       ok: true,
       value: {
         private: false,
+        mode: 'ffa',
         autoStartSec: 30,
         settings: {
           arenaId: 'rumbleOshodi',

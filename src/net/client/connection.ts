@@ -7,7 +7,7 @@
  */
 import { Client } from '@colyseus/sdk';
 import type { Room } from '@colyseus/sdk';
-import { MSG } from '../protocol';
+import { MSG, parseBusy } from '../protocol';
 import type { LobbyMsg, NoticeMsg, PongMsg, ResultsMsg, WelcomeMsg } from '../protocol';
 import type { ConnStatus, OpenRequest, RumbleSessionEvents } from './types';
 
@@ -33,11 +33,39 @@ export function serverHttpUrl(url: string): string {
 
 type FailReason = Parameters<RumbleSessionEvents['failed']>[0];
 
+/**
+ * This page's temporary guest session id: 128 random bits, made on first use, kept in memory ONLY (never in storage: a
+ * reload is a new guest). The server keys its per-player limits on it (decision FU2S-C3).
+ */
+let guestId: string | null = null;
+export function guestSessionId(): string {
+  if (guestId === null) {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    guestId = btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  }
+  return guestId;
+}
+
 /** Maps whatever the SDK / fetch threw to a reason the player can be told about in plain words. */
-export function classifyFailure(error: unknown): { reason: FailReason; detail: string } {
+export function classifyFailure(error: unknown): {
+  reason: FailReason;
+  detail: string;
+  retryAfterSec?: number;
+} {
   const e = error as { code?: unknown; message?: unknown; name?: unknown } | null;
   const message = typeof e?.message === 'string' ? e.message : String(error);
   const code = typeof e?.code === 'number' ? e.code : null;
+  // the server's own refusals carry a code and a retry time in the message (protocol `encodeBusy`)
+  const busy = parseBusy(message);
+  if (busy?.code === 'server_busy')
+    return { reason: 'server-busy', detail: busy.text, retryAfterSec: busy.retryAfterSec };
+  if (busy?.code === 'rate_limited')
+    return { reason: 'rate-limited', detail: busy.text, retryAfterSec: busy.retryAfterSec };
+  if (busy?.code === 'room_unavailable') return { reason: 'room-unavailable', detail: busy.text };
   if (code === 4212 || /not found|invalid room|no rooms? (found|available)/i.test(message))
     return { reason: 'room-not-found', detail: message };
   // a match that already started: the server locks the room at the countdown's end (nobody new joins; only the players
@@ -78,11 +106,11 @@ export class Connection {
     // the SDK sends `credentials: 'include'` by default; the server's CORS answer (origin echo, no credentials) is for
     // cookie-less requests, which is all this client needs
     (sdk.http as unknown as { options: { credentials?: string } }).options.credentials = 'omit';
-    const who = { name: req.who.name, characterId: req.who.characterId };
+    const who = { name: req.who.name, characterId: req.who.characterId, gid: guestSessionId() };
     let room: Room;
     if (req.kind === 'create') room = await sdk.create('rumble', { ...who, private: true });
     else if (req.kind === 'join') room = await sdk.joinById(req.code, who);
-    else room = await sdk.joinOrCreate('rumble', who);
+    else room = await sdk.joinOrCreate('rumble', { ...who, mode: req.mode });
     this.attach(room);
   }
 

@@ -34,6 +34,8 @@ export function nameCheck(raw: string): NameCheck {
       return { ok: false, reason: "Don't mix Latin letters with Cyrillic or Greek ones." };
     case 'bot-like':
       return { ok: false, reason: 'Names starting with BOT are kept for the server bots.' };
+    case 'reserved':
+      return { ok: false, reason: 'That name is kept for the game team. Pick another one.' };
     default:
       return { ok: false, reason: "Use letters, numbers, spaces and _ . ' - only." };
   }
@@ -92,4 +94,13 @@ export function roomCodeFromSearch(search: string): string | null {
 
 /** Why a room could not be opened (the session's `failed` reasons). */
 export type FailReason =
-  'unreachable' | 'room-not-found' | 'room-full' | 'match-started' | 'refused' | 'protocol' | 'unknown';
+  | 'unreachable'
+  | 'room-not-found'
+  | 'room-full'
+  | 'match-started'
+  | 'room-unavailable'
+  | 'server-busy'
+  | 'rate-limited'
+  | 'refused'
+  | 'protocol'
+  | 'unknown';

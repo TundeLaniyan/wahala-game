@@ -7,7 +7,7 @@
  * Dev query (read here, nowhere else): `?online&fakeonline[=scenario]` with scenario one of
  *   happy (default)  create / join / quick all succeed and the match runs and ends
  *   hold             `open` never answers (the "connecting" screen stays up)
- *   unreachable | notfound | full | refused | protocol   `open` fails with that reason
+ *   unreachable | notfound | full | busy | limited | refused | protocol   `open` fails with that reason
  * and, whenever `fakeonline` is present, `window.__WAHALA_FAKE_ONLINE__` exposes the event emitters and a few shortcuts so a
  * browser script can put every screen into any state (the screenshot tool does exactly that).
  */
@@ -20,14 +20,18 @@ import type {
   RoomSettings,
   SettingsMsg,
 } from '../net/protocol';
+import { quickModeGame } from '../net/protocol';
 import type { RemoteMatchDriver, RemoteStatus } from './remoteMatch';
 
-type Scenario = 'happy' | 'hold' | 'unreachable' | 'notfound' | 'full' | 'refused' | 'protocol';
+type Scenario =
+  'happy' | 'hold' | 'unreachable' | 'notfound' | 'full' | 'busy' | 'limited' | 'refused' | 'protocol';
 
 const FAIL: Record<Exclude<Scenario, 'happy' | 'hold'>, Parameters<RumbleSessionEvents['failed']>[0]> = {
   unreachable: 'unreachable',
   notfound: 'room-not-found',
   full: 'room-full',
+  busy: 'server-busy',
+  limited: 'rate-limited',
   refused: 'refused',
   protocol: 'protocol',
 };
@@ -187,7 +191,7 @@ export function createFakeSession(events: RumbleSessionEvents): RumbleSession {
       if (scenario !== 'happy') {
         later(350, () => {
           setStatus('closed', 'fake failure');
-          events.failed(FAIL[scenario as keyof typeof FAIL], `fake scenario "${scenario}"`);
+          events.failed(FAIL[scenario as keyof typeof FAIL], `fake scenario "${scenario}"`, 20);
         });
         return;
       }
@@ -219,6 +223,9 @@ export function createFakeSession(events: RumbleSessionEvents): RumbleSession {
           private: req.kind !== 'quick',
           members: create ? [me] : [host, me, ...guests(req.kind === 'quick' ? 3 : 2, true)],
           autoStartMs: req.kind === 'quick' ? 20000 : null,
+          ...(req.kind === 'quick'
+            ? { settings: { ...lobby.settings, game: quickModeGame(req.mode), friendlyFire: false } }
+            : {}),
         });
         if (create) later(900, () => sendLobby({ members: [me, ...guests(2, true)] }));
       });

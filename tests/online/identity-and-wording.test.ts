@@ -186,3 +186,24 @@ describe('a started match, QUICK PLAY and the Team Rumble room lines', () => {
     }
   });
 });
+
+describe('server refusals reach the player as a reason and a retry time (decision FU2S-C3)', () => {
+  it('classifies the server_busy / rate_limited / room_unavailable messages the server sends', () => {
+    expect(classifyFailure(new Error('server_busy;retry=25;The servers are full right now.'))).toEqual({
+      reason: 'server-busy',
+      detail: 'The servers are full right now.',
+      retryAfterSec: 25,
+    });
+    expect(
+      classifyFailure(new Error('rate_limited;retry=7;You are opening rooms too quickly.')),
+    ).toMatchObject({
+      reason: 'rate-limited',
+      retryAfterSec: 7,
+    });
+    expect(classifyFailure(new Error('room_unavailable;retry=0;That room is not open.'))).toMatchObject({
+      reason: 'room-unavailable',
+    });
+    // a plain "full" or "locked" from an old server still maps as before
+    expect(classifyFailure(new Error('the room is full')).reason).toBe('room-full');
+  });
+});

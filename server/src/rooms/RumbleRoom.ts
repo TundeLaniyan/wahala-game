@@ -14,7 +14,15 @@ import { deflateRawSync } from 'node:zlib';
 import { CloseCode, ErrorCode, Room, ServerError, matchMaker } from '@colyseus/core';
 import type { Client } from '@colyseus/core';
 import { pack } from '../../../src/net/pack';
-import { CLOSE, MATCH_SEATS, MAX_HUMANS, MSG } from '../../../src/net/protocol';
+import {
+  CLOSE,
+  MATCH_SEATS,
+  MAX_HUMANS,
+  MSG,
+  encodeBusy,
+  gameQuickMode,
+  parseQuickMode,
+} from '../../../src/net/protocol';
 import type { NoticeMsg, PongMsg, ResultsMsg, WelcomeMsg } from '../../../src/net/protocol';
 import {
   validateEmptyMsg,
@@ -23,6 +31,8 @@ import {
   validateReady,
   validateSettingsMsg,
 } from '../../../src/net/protocol';
+import { BusyError } from '../core/guard';
+import type { Guard, Who } from '../core/guard';
 import { Lobby } from '../core/Lobby';
 import type { LobbyResult } from '../core/Lobby';
 import { RoomMetrics } from '../core/metrics';
@@ -30,6 +40,7 @@ import type { MetricsRegistry, RoomMetricsSnapshot } from '../core/metrics';
 import {
   DEFAULT_RUNTIME,
   makeRoomCode,
+  parseGuestId,
   parseJoinOptions,
   parseRoomOptions,
   parseSettingsPatch,
@@ -59,6 +70,7 @@ const CODE_ATTEMPTS = 64;
 
 interface Peer {
   client: Client;
+  who: Who;
   seat: number | null;
   bytesOut: number;
   messagesIn: number;
@@ -74,9 +86,34 @@ interface Peer {
 export interface RoomDeps {
   runtime: RuntimeConfig;
   metrics: MetricsRegistry;
+  /** Admission control of this process (capacity, budget, per-client limits). */
+  guard: Guard;
   /** Room codes currently in use by this process (checked before the matchmaker's own lookup). */
   usedCodes: Set<string>;
   log?: (message: string) => void;
+}
+
+/** What logs and metrics call a room: the first 8 hex digits of the code's SHA-256 (the code itself is a secret). */
+export const roomTag = (code: string): string => createHash('sha256').update(code).digest('hex').slice(0, 8);
+
+/** Who asked, as the matchmaking wrapper stamped it into the options (`_who`); a call with none is server-internal. */
+export function whoOf(options: unknown): Who {
+  const o = (typeof options === 'object' && options !== null ? options : {}) as {
+    _who?: { ip?: unknown; gid?: unknown };
+  };
+  const w = o._who;
+  if (!w || typeof w.ip !== 'string') return { ip: 'internal', gid: null, internal: true };
+  return { ip: w.ip, gid: parseGuestId(w.gid) };
+}
+
+/** A guard refusal becomes the error the client's SDK throws (HTTP 503 / 429, the message carries code + retry time). */
+export function toServerError(e: unknown): unknown {
+  if (e instanceof BusyError)
+    return new ServerError(
+      e.busy === 'rate_limited' ? 429 : 503,
+      encodeBusy(e.busy, e.retryAfterSec, e.message),
+    );
+  return e;
 }
 
 /** Only an unexpected drop may reconnect: our own kicks, consented leaves and server shutdown (4000 range) may not. */
@@ -104,6 +141,13 @@ export class RumbleRoom extends Room {
   private keyframeCache: { matchId: string; tick: number; bytes: Uint8Array } | null = null;
   private matchCount = 0;
   private disposed = false;
+  /** Short hash of the room code: what logs and metrics call the room (a code is a secret for a private room). */
+  private tag = '';
+  private isPublic = false;
+  /** Last time a person did something in the lobby (not a ping, not a game input). */
+  private lastActivityAt = performance.now();
+  private slotNoticeAt = -Infinity;
+  private guardStarted = false;
 
   /** Validates join options before a seat is reserved (and before an empty room could be created for nothing). */
   static override async onAuth(_token: string, options: unknown): Promise<unknown> {
@@ -122,13 +166,26 @@ export class RumbleRoom extends Room {
     if (!parsed.ok) throw new ServerError(ErrorCode.APPLICATION_ERROR, parsed.error);
     const opts = parsed.value;
 
+    const who = whoOf(options);
     this.code = await this.pickCode(deps);
     this.roomId = this.code;
+    this.tag = roomTag(this.code);
+    try {
+      deps.guard.roomCreating(this.code, who);
+    } catch (e) {
+      deps.usedCodes.delete(this.code);
+      throw toServerError(e);
+    }
+    this.guardStarted = true;
+    this.isPublic = !opts.private;
+    this.lastActivityAt = performance.now();
     this.maxClients = MAX_HUMANS;
     this.autoDispose = true;
     this.patchRate = null; // no Colyseus state: nothing to patch
     this.maxMessagesPerSecond = MAX_MESSAGES_PER_SECOND;
     if (opts.private) await this.setPrivate(true);
+    // the QUICK PLAY mode is what public rooms are matched on (`filterBy`); the room's own metadata carries it
+    await this.setMetadata({ mode: opts.mode });
 
     this.lobby = new Lobby(
       {
@@ -144,7 +201,7 @@ export class RumbleRoom extends Room {
     this.registerMessages();
     this.housekeeping = setInterval(() => this.lobbyTick(), 50);
     deps.metrics.register(this.code, () => this.snapshot());
-    deps.log?.(`room ${this.code} created (${opts.private ? 'private' : 'public'})`);
+    deps.log?.(`room ${this.tag} created (${opts.private ? 'private' : `public ${opts.mode}`})`);
   }
 
   private async pickCode(deps: RoomDeps): Promise<string> {
@@ -162,10 +219,25 @@ export class RumbleRoom extends Room {
   override onJoin(client: Client, options: unknown): void {
     const parsed = parseJoinOptions(options);
     if (!parsed.ok) throw new ServerError(ErrorCode.APPLICATION_ERROR, parsed.error);
+    // a public room only takes players who asked for ITS mode (the matchmaker already filters; this is the backstop)
+    const wanted = parseQuickMode((options as { mode?: unknown } | null)?.mode);
+    if (this.isPublic && wanted !== null && wanted !== gameQuickMode(this.lobby.settings.game))
+      throw new ServerError(ErrorCode.APPLICATION_ERROR, 'wrong mode for this room');
+    const who = whoOf(options);
+    try {
+      this.deps?.guard.connectionOpened(who);
+    } catch (e) {
+      throw toServerError(e);
+    }
     const joined = this.lobby.join(client.sessionId, parsed.value);
-    if (!joined.ok) throw new ServerError(ErrorCode.APPLICATION_ERROR, joined.message);
+    if (!joined.ok) {
+      this.deps?.guard.connectionClosed(who);
+      throw new ServerError(ErrorCode.APPLICATION_ERROR, joined.message);
+    }
+    this.touch();
     this.peers.set(client.sessionId, {
       client,
+      who,
       seat: null,
       bytesOut: 0,
       messagesIn: 0,
@@ -191,6 +263,9 @@ export class RumbleRoom extends Room {
     if (this.lobby.phase !== 'playing' || match.ended || !isReconnectableClose(code)) return;
     match.disconnect(peer.seat);
     this.metrics.drops++;
+    this.deps?.log?.(
+      `room ${this.tag}: seat ${peer.seat} dropped (close ${code ?? 'none'}); reserved ${this.rt.reconnectSeconds}s`,
+    );
     this.lobby.setConnected(client.sessionId, false);
     this.broadcastLobby();
     try {
@@ -206,7 +281,7 @@ export class RumbleRoom extends Room {
     if (!member) return;
     this.lobby.setBotControlled(member.sessionId, true);
     this.metrics.botTakeovers++;
-    this.deps?.log?.(`room ${this.code}: a bot plays seat ${seat} for ${member.name}`);
+    this.deps?.log?.(`room ${this.tag}: a bot plays seat ${seat} for ${member.name}`);
     if (!this.disposed) this.broadcastLobby();
   }
 
@@ -216,6 +291,7 @@ export class RumbleRoom extends Room {
     if (!peer) return;
     peer.client = client;
     this.metrics.reconnections++;
+    this.deps?.log?.(`room ${this.tag}: seat ${peer.seat ?? '-'} reconnected`);
     if (peer.seat !== null) this.match?.connect(peer.seat); // the same fighter, where it stands: nothing is reset
     this.lobby.setConnected(client.sessionId, true);
     this.broadcastLobby();
@@ -225,10 +301,12 @@ export class RumbleRoom extends Room {
   }
 
   /** The client is gone for good: left on purpose, or its reconnection window expired. */
-  override onLeave(client: Client): void {
+  override onLeave(client: Client, code?: number): void {
     const peer = this.peers.get(client.sessionId);
     if (!peer) return;
+    this.deps?.log?.(`room ${this.tag}: seat ${peer.seat ?? '-'} left for good (close ${code ?? 'none'})`);
     this.peers.delete(client.sessionId);
+    this.deps?.guard.connectionClosed(peer.who);
     if (peer.seat !== null && this.match && this.lobby.phase === 'playing')
       this.match.replaceWithBot(peer.seat);
     this.lobby.leave(client.sessionId);
@@ -243,7 +321,8 @@ export class RumbleRoom extends Room {
     this.housekeeping = this.lingerTimer = null;
     this.deps?.metrics.unregister(this.code);
     this.deps?.usedCodes.delete(this.code);
-    this.deps?.log?.(`room ${this.code} disposed`);
+    if (this.guardStarted) this.deps?.guard.roomDisposed(this.code);
+    this.deps?.log?.(`room ${this.tag} disposed`);
   }
 
   // ---------------------------------------------------------------- messages in
@@ -288,6 +367,7 @@ export class RumbleRoom extends Room {
       if (!peer) return;
       const ready = validateReady(raw);
       if (!ready) return this.invalid(peer);
+      this.touch();
       this.lobbyAction(peer, this.lobby.setReady(client.sessionId, ready.ready));
     });
 
@@ -295,6 +375,7 @@ export class RumbleRoom extends Room {
       const peer = this.count(client);
       if (!peer) return;
       if (!validateEmptyMsg(raw)) return this.invalid(peer);
+      this.touch();
       this.lobbyAction(peer, this.lobby.start(client.sessionId));
     });
 
@@ -302,6 +383,7 @@ export class RumbleRoom extends Room {
       const peer = this.count(client);
       if (!peer) return;
       if (!validateEmptyMsg(raw)) return this.invalid(peer);
+      this.touch();
       const res = this.lobby.rematch(client.sessionId);
       if (res.ok) this.afterRematch();
       this.lobbyAction(peer, res);
@@ -314,6 +396,7 @@ export class RumbleRoom extends Room {
       if (!msg) return this.invalid(peer);
       const patch = parseSettingsPatch(msg, this.rt);
       if (!patch.ok) return this.reject(peer, 'bad_settings', patch.error);
+      this.touch();
       this.lobbyAction(peer, this.lobby.updateSettings(client.sessionId, patch.value));
     });
 
@@ -361,13 +444,13 @@ export class RumbleRoom extends Room {
     if (peer.invalidAt.length > INVALID_LIMIT) this.kick(peer, 'too many invalid messages');
   }
 
-  private kick(peer: Peer, reason: string): void {
+  private kick(peer: Peer, reason: string, closeCode: number = CLOSE.abuse): void {
     if (peer.kicked) return;
     peer.kicked = true;
     this.metrics.kicks++;
-    this.deps?.log?.(`room ${this.code}: kicked a client: ${reason}`);
+    this.deps?.log?.(`room ${this.tag}: kicked a client: ${reason}`);
     this.sendTo(peer, MSG.notice, { code: 'kicked', message: reason } satisfies NoticeMsg);
-    peer.client.leave(CLOSE.abuse, reason);
+    peer.client.leave(closeCode, reason);
   }
 
   /** A well-formed but refused request (not the host, wrong phase ...): tell the sender, count it. */
@@ -383,11 +466,72 @@ export class RumbleRoom extends Room {
 
   // ---------------------------------------------------------------- lobby -> match
 
+  /** A person did something in the lobby: the idle clock restarts. */
+  private touch(): void {
+    this.lastActivityAt = performance.now();
+  }
+
   private lobbyTick(): void {
     if (this.disposed) return;
+    const guard = this.deps?.guard;
+    const idleMs = (this.deps?.runtime.limits.lobbyIdleSec ?? Infinity) * 1000;
+    const phase = this.lobby.phase;
+    if ((phase === 'lobby' || phase === 'results') && performance.now() - this.lastActivityAt > idleMs) {
+      this.deps?.log?.(`room ${this.tag}: closed after ${Math.round(idleMs / 1000)} s without activity`);
+      this.closeWith('idle', 'This room was closed because nobody used it for a long time.', CLOSE.idle);
+      return;
+    }
     const r = this.lobby.tick();
-    if (r.begin) this.beginMatch();
-    else if (r.changed) this.broadcastLobby();
+    if (r.begin) {
+      // the server runs only so many matches at once (CPU budget, playing rooms, event-loop health): wait for a slot
+      const d = guard?.requestStart(this.code, this.lobby.botsToFill) ?? { ok: true };
+      if (!d.ok) return this.waitForSlot(guard!, d);
+      this.beginMatch();
+    } else if (r.changed) this.broadcastLobby();
+  }
+
+  /** No free match slot: keep the countdown held, say so (at most every 10 s), and give up after `startWaitMaxSec`. */
+  private waitForSlot(guard: Guard, d: ReturnType<Guard['requestStart']>): void {
+    this.lobby.holdCountdown(1000);
+    const waited = guard.waitedSec(this.code);
+    if (waited > this.rt.limits.startWaitMaxSec) {
+      guard.cancelStart(this.code);
+      const busy = guard.startBusy(d);
+      this.deps?.log?.(
+        `room ${this.tag}: no match slot after ${Math.round(waited)} s (${d.reason}); closing`,
+      );
+      this.closeWith(
+        'server_busy',
+        encodeBusy(
+          'server_busy',
+          busy.retryAfterSec,
+          'The servers are too busy to start your match. Please try again in a little while.',
+        ),
+        CLOSE.overload,
+      );
+      return;
+    }
+    const now = performance.now();
+    if (now - this.slotNoticeAt > 10_000) {
+      this.slotNoticeAt = now;
+      const busy = guard.startBusy(d);
+      for (const p of this.peers.values())
+        this.sendTo(p, MSG.notice, {
+          code: 'server_busy',
+          message: encodeBusy('server_busy', busy.retryAfterSec, busy.message),
+        } satisfies NoticeMsg);
+      this.broadcastLobby();
+    }
+  }
+
+  /** Tells everybody why, then closes the room (no reconnecting). */
+  private closeWith(code: string, message: string, closeCode: number): void {
+    for (const p of this.peers.values()) {
+      p.kicked = true;
+      this.sendTo(p, MSG.notice, { code, message } satisfies NoticeMsg);
+    }
+    this.deps?.guard.matchEnded(this.code);
+    for (const p of [...this.peers.values()]) p.client.leave(closeCode, code);
   }
 
   private afterRematch(): void {
@@ -418,8 +562,9 @@ export class RumbleRoom extends Room {
         onBotTakeover: (seat) => this.botTookOver(seat),
       });
     } catch (e) {
-      this.deps?.log?.(`room ${this.code}: could not build the match: ${String(e)}`);
+      this.deps?.log?.(`room ${this.tag}: could not build the match: ${String(e)}`);
       this.lobby.abort();
+      this.deps?.guard.matchEnded(this.code);
       for (const p of this.peers.values()) {
         this.sendTo(p, MSG.notice, {
           code: 'match_failed',
@@ -447,7 +592,7 @@ export class RumbleRoom extends Room {
       stepMs: 1000 / this.rt.tickRate,
       maxCatchUp: this.rt.maxCatchUpTicks,
       onTick: () => this.tick(),
-      onError: (e) => this.deps?.log?.(`room ${this.code}: tick failed: ${String(e)}`),
+      onError: (e) => this.deps?.log?.(`room ${this.tag}: tick failed: ${String(e)}`),
     });
     this.loop.start();
   }
@@ -476,6 +621,8 @@ export class RumbleRoom extends Room {
     this.lastResults = results;
     for (const peer of this.peers.values()) this.sendTo(peer, MSG.results, results);
     this.lobby.endMatch();
+    this.deps?.guard.matchEnded(this.code);
+    this.touch();
     this.metrics.matchesFinished++;
     this.broadcastLobby();
     this.lingerTimer = setTimeout(() => void this.disconnect(), RESULTS_LINGER_MS);
@@ -490,9 +637,17 @@ export class RumbleRoom extends Room {
     this.metrics.framesMessages++;
     this.metrics.framesBytesPerClient += z.length;
     this.metrics.framesBytesRaw += raw.length;
+    const maxBuffered = this.rt.limits.maxBufferedKiB * 1024;
     for (const peer of this.peers.values()) {
       peer.bytesOut += z.length;
       this.metrics.bytesSentTotal += z.length;
+      // a client that does not read lets its output pile up in server memory: past the limit it is cut off (it may not
+      // come back: a real stall is caught long before by the ping, and a seat dropped this way goes to a bot)
+      const buffered = (peer.client.ref as { bufferedAmount?: number } | undefined)?.bufferedAmount ?? 0;
+      if (buffered > maxBuffered) {
+        this.metrics.backpressureKicks++;
+        this.kick(peer, 'not reading', CLOSE.overload);
+      }
     }
   }
 
@@ -545,7 +700,7 @@ export class RumbleRoom extends Room {
     const loop = this.loop;
     return {
       code: this.lobby.isPrivate ? null : this.code,
-      id: createHash('sha256').update(this.code).digest('hex').slice(0, 8),
+      id: this.tag,
       phase: this.lobby.phase,
       isPrivate: this.lobby.isPrivate,
       humans: this.lobby.humanCount,
@@ -572,6 +727,7 @@ export class RumbleRoom extends Room {
         resyncsServed: m.resyncsServed,
         resyncsLimited: m.resyncsLimited,
         kicks: m.kicks,
+        backpressureKicks: m.backpressureKicks,
         reconnections: m.reconnections,
         drops: m.drops,
         botTakeovers: m.botTakeovers,

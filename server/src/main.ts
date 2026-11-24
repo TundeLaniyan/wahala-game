@@ -6,8 +6,11 @@
  *   RUMBLE_GRACE_SECONDS      0..60, default 5: a dropped fighter stands this long before a bot plays it
  *   RUMBLE_RECONNECT_SECONDS  default 30: the human may take back the same fighter within this window
  *   RUMBLE_DROP_POLICY        `bot` (default) | `idle`
- *   RUMBLE_METRICS_TOKEN      bearer token for GET /metrics
- *   NODE_ENV                  `production` turns the localhost development origins off
+ *   RUMBLE_METRICS_TOKEN      bearer token for GET /metrics (in production /metrics does not exist without it)
+ *   RUMBLE_TRUSTED_PROXIES    IPs / CIDRs of reverse proxies whose X-Forwarded-For is believed (default none)
+ *   RUMBLE_MAX_ROOMS, RUMBLE_MAX_PLAYING_ROOMS, RUMBLE_CPU_BUDGET, RUMBLE_MAX_CONNECTIONS, ...  capacity and abuse limits
+ *                             (server/src/core/limits.ts, docs/ONLINE_OPS_LIMITS.md)
+ *   NODE_ENV                  `production` turns the localhost development origins off, refuses RUMBLE_TEST_FAST
  */
 import { networkInterfaces } from 'node:os';
 import { startRumbleServer } from './app';
@@ -24,6 +27,7 @@ const running = await startRumbleServer({
   runtime,
   allowedOrigins: process.env.RUMBLE_ALLOWED_ORIGINS,
   metricsToken: process.env.RUMBLE_METRICS_TOKEN,
+  trustedProxies: process.env.RUMBLE_TRUSTED_PROXIES,
   handleSignals: true,
   log,
 });

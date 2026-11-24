@@ -24,6 +24,7 @@ import { monitorEventLoopDelay } from 'node:perf_hooks';
 import v8 from 'node:v8';
 import { matchMaker } from '@colyseus/core';
 import { startRumbleServer } from '../src/app';
+import { DEFAULT_LIMITS, UNLIMITED_LIMITS } from '../src/core/limits';
 import { DEFAULT_RUNTIME } from '../src/core/options';
 
 const gc = (globalThis as any).gc as (() => void) | undefined;
@@ -61,6 +62,8 @@ const server = await startRumbleServer({
     countdownMs: num('SOAK_COUNTDOWN_MS', 150),
     reconnectSeconds: num('SOAK_RECONNECT_SECONDS', 3),
     graceSeconds: num('SOAK_GRACE_SECONDS', 0.5),
+    // the soak drives rooms from one address on purpose: no admission limits unless SOAK_LIMITS=default
+    limits: process.env.SOAK_LIMITS === 'default' ? DEFAULT_LIMITS : UNLIMITED_LIMITS,
   },
 });
 

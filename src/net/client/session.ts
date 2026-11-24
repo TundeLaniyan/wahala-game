@@ -86,10 +86,10 @@ export function createRumbleSession(
       try {
         await conn.open(req);
       } catch (error) {
-        const { reason, detail } = classifyFailure(error);
+        const { reason, detail, retryAfterSec } = classifyFailure(error);
         status = 'closed';
         events.status('closed', detail);
-        events.failed(reason, detail);
+        events.failed(reason, detail, retryAfterSec);
       }
     },
     ready: (on) => conn.send(MSG.ready, { ready: on }),
