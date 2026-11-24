@@ -47,6 +47,13 @@ const W = (page: Page) => ({
     }),
 });
 
+/** Opt-in review pictures of the real flow (`ONLINE_E2E_SHOTS=<dir>`): the screens as the two browsers really show them. */
+async function shot(p: Page, name: string): Promise<void> {
+  const dir = process.env.ONLINE_E2E_SHOTS;
+  if (!dir) return;
+  await p.screenshot({ path: `${dir}/${name}.png` }).catch(() => undefined);
+}
+
 async function newPhone(browser: Browser): Promise<BrowserContext> {
   return browser.newContext({
     ...devices['Pixel 7'],
@@ -130,11 +137,15 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     await expect(page.getByTestId('ro-member')).toHaveCount(2, { timeout: 30_000 });
     await expect(guest.getByTestId('ro-member')).toHaveCount(2);
     await expect(page.getByTestId('ro-bots-row')).toBeVisible();
+    await shot(guest, '1-room-guest-832x384');
+    await shot(page, '2-room-host-desktop');
     await page.getByTestId('ro-ready').click();
     await guest.getByTestId('ro-ready').click();
     await expect(page.getByTestId('ro-start')).toBeEnabled({ timeout: 30_000 });
     await page.getByTestId('ro-start').click();
     await Promise.all([inMatch(page), inMatch(guest)]);
+    await shot(guest, '3-match-guest-832x384');
+    await shot(page, '4-match-host-desktop');
     log.push(`${stamp()} in match; host chip ${await chip(page)}; guest chip ${await chip(guest)}`);
 
     const a = await W(page).state();
@@ -177,6 +188,7 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     const seat = b.seat;
     await ctxB.setOffline(true);
     await expect(guest.getByTestId('net-banner')).toBeVisible({ timeout: 60_000 });
+    await shot(guest, '5-reconnecting-guest-832x384');
     await guest.waitForTimeout(8000);
     await ctxB.setOffline(false);
     await expect(guest.getByTestId('net-banner')).toHaveCount(0, { timeout: 120_000 });
@@ -190,6 +202,8 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
       expect(page.getByTestId('ro-results')).toBeVisible({ timeout: 420_000 }),
       expect(guest.getByTestId('ro-results')).toBeVisible({ timeout: 420_000 }),
     ]);
+    await shot(guest, '6-results-guest-832x384');
+    await shot(page, '7-results-host-desktop');
     const rowsOf = (p: Page) => p.getByTestId('ro-result-row').allInnerTexts();
     const [ra, rb] = await Promise.all([rowsOf(page), rowsOf(guest)]);
     // the same table for both players; only each viewer's own "YOU" tag differs

@@ -54,8 +54,8 @@ start('server', 'npx', ['tsx', 'src/main.ts'], {
     PORT: String(SERVER),
     RUMBLE_ALLOWED_ORIGINS: origin,
     RUMBLE_GRACE_SECONDS: '3',
-    RUMBLE_RECONNECT_SECONDS: '25',
-    RUMBLE_PING_MAX_RETRIES: process.env.RUMBLE_PING_MAX_RETRIES ?? '6',
+    RUMBLE_RECONNECT_SECONDS: '60',
+    RUMBLE_PING_MAX_RETRIES: process.env.RUMBLE_PING_MAX_RETRIES ?? '10',
   },
 });
 start('web', 'npx', [
