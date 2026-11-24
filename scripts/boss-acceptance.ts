@@ -20,7 +20,9 @@ const arg = (name: string, d: string): string => {
 const seedsN = Number(arg('seeds', '16'));
 const ids = arg('ids', '') ? (arg('ids', '').split(',') as MissionId[]) : [...CAMPAIGN_MISSION_IDS];
 const levels = arg('levels', 'easy,normal,hard').split(',') as CampaignLevel[];
-const players = arg('players', 'fair,slow').split(',');
+const players = arg('players', 'fair,slow')
+  .split(',')
+  .filter((p) => p !== 'none');
 const agent = process.argv.includes('--agent');
 const maxSec = Number(arg('max', '0'));
 
