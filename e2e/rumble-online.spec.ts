@@ -97,6 +97,33 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
   const code = await createRoom(page, 'Host Ada');
   const ctxB = await newPhone(browser);
   const guest = await ctxB.newPage();
+  const log: string[] = [];
+  const stamp = () => new Date().toISOString().slice(11, 19);
+  for (const [name, p] of [
+    ['host', page],
+    ['guest', guest],
+  ] as const) {
+    p.on(
+      'console',
+      (m) =>
+        (m.type() === 'error' || m.type() === 'warning') &&
+        log.push(`${stamp()} ${name} ${m.type()}: ${m.text().slice(0, 200)}`),
+    );
+    p.on('pageerror', (e) => log.push(`${stamp()} ${name} PAGEERROR ${e.message.slice(0, 200)}`));
+    p.on('websocket', (ws) => {
+      log.push(`${stamp()} ${name} ws open ${ws.url()}`);
+      ws.on('close', () => log.push(`${stamp()} ${name} ws CLOSE ${ws.url()}`));
+    });
+  }
+  const chip = async (p: Page) =>
+    (
+      (
+        await p
+          .getByTestId('net-chip')
+          .allInnerTexts()
+          .catch(() => [])
+      ).join('|') || '-'
+    ).replace(/\s+/g, ' ');
   try {
     await joinRoom(guest, code, 'Guest Tunde');
     // both rooms list two humans; the filler bots are one labelled row, never counted as people
@@ -108,6 +135,7 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     await expect(page.getByTestId('ro-start')).toBeEnabled({ timeout: 30_000 });
     await page.getByTestId('ro-start').click();
     await Promise.all([inMatch(page), inMatch(guest)]);
+    log.push(`${stamp()} in match; host chip ${await chip(page)}; guest chip ${await chip(guest)}`);
 
     const a = await W(page).state();
     const b = await W(guest).state();
@@ -174,6 +202,12 @@ test('two real browsers: room by invite code, a 32-fighter match with bots, touc
     expect(rb.some((t) => /HUMAN.*A bot played \d+ s for this player/.test(t.replace(/\s+/g, ' ')))).toBe(
       true,
     );
+  } catch (error) {
+    log.push(
+      `${stamp()} FAILED: guest chip ${await chip(guest).catch(() => '?')}; host chip ${await chip(page).catch(() => '?')}`,
+    );
+    console.log(`[online-e2e timeline]\n${log.join('\n')}`);
+    throw error;
   } finally {
     await ctxB.close();
   }
