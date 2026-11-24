@@ -11,6 +11,8 @@ import { unpack } from '../pack';
 import { BUTTON, MSG } from '../protocol';
 import type { FramesPayload, InputMsg, KeyframePayload, PongMsg, ResultsMsg, WelcomeMsg } from '../protocol';
 import { NetReplica } from '../replica';
+import { LocalPredictor, PlayerOverlay } from './prediction';
+import type { PredictionConfig, PredictionStats } from './prediction';
 import type { ConnStatus } from './types';
 
 export interface DriverDeps {
@@ -30,6 +32,23 @@ export const MIN_STATE_SEND_MS = 33;
 export const PING_EVERY_MS = 1000;
 export const RESYNC_GAP_MS = 1000;
 
+export interface DriverOptions {
+  /**
+   * Local movement prediction of the local fighter (decisions ON4-ON5, docs/ONLINE_PREDICTION.md): presentation only, the
+   * server stays authoritative. Off by default; `true` or a partial config turns it on (the browser session enables it
+   * unless the page has `?nopredict`, see `predictionFromSearch`).
+   */
+  prediction?: boolean | Partial<PredictionConfig>;
+  /** Debug / tests: after every overlay revert, check the local player is bit-identical to its authoritative copy. */
+  verifyOverlay?: boolean;
+}
+
+/** `RemoteStatus` plus prediction diagnostics (the HUD chip reads only the `RemoteStatus` part). */
+export interface DriverStatus extends RemoteStatus {
+  predictionEnabled: boolean;
+  prediction: PredictionStats | null;
+}
+
 export class NetMatchDriver implements RemoteMatchDriver {
   replica: NetReplica | null = null;
   results: ResultsMsg | null = null;
@@ -48,8 +67,22 @@ export class NetMatchDriver implements RemoteMatchDriver {
   onKeyframeLoaded: ((state: GameState) => void) | null = null;
   /** Decompression is async: messages decode concurrently but are applied in order through one promise chain. */
   private inbox: Promise<void> = Promise.resolve();
+  /** Null when prediction is off. */
+  predictor: LocalPredictor | null;
+  /** The in-place overlay of the predicted step fields on the replica's local player (overlay.ts). */
+  readonly overlay: PlayerOverlay;
+  private readonly predictionConfig: Partial<PredictionConfig> | null;
+  private lastAlpha = 0;
 
-  constructor(private readonly deps: DriverDeps) {}
+  constructor(
+    private readonly deps: DriverDeps,
+    opts: DriverOptions = {},
+  ) {
+    const p = opts.prediction ?? false;
+    this.predictionConfig = p === false ? null : p === true ? {} : p;
+    this.predictor = this.predictionConfig ? new LocalPredictor(this.predictionConfig) : null;
+    this.overlay = new PlayerOverlay(opts.verifyOverlay ?? false);
+  }
 
   // ---------------------------------------------------------------- RemoteMatchDriver
 
@@ -61,13 +94,29 @@ export class NetMatchDriver implements RemoteMatchDriver {
     return this.replica?.state ?? null;
   }
 
+  /**
+   * The overlay protocol (decision ON4): (a) revert the local player to its saved authoritative values, (b) play the
+   * server's frames (patches and hash checks see only authoritative data), (c) save the new authoritative values and draw
+   * the prediction over them. Between two calls the replica's local player shows the prediction; nothing else changes.
+   */
   advance(dtMs: number): { events: SimEvent[]; alpha: number } {
     const replica = this.replica;
     this.heartbeat();
+    this.overlay.revert(); // (a)
     if (!replica?.state || this.disposed) return { events: [], alpha: 0 };
     if (replica.resyncReason) this.requestResync(false);
-    const out = replica.advance(dtMs);
+    const out = replica.advance(dtMs); // (b)
+    this.lastAlpha = out.alpha;
+    this.predict(replica.state, dtMs); // (c)
     return { events: out.events, alpha: out.alpha };
+  }
+
+  /**
+   * Runs `fn` on the purely authoritative replica (overlay reverted, then put back): anything that hashes, compares or
+   * reports the replica (a final-state check against the server's results) must read it through here.
+   */
+  readAuthoritative<T>(fn: (state: GameState | null) => T): T {
+    return this.overlay.withAuthoritative(() => fn(this.replica?.state ?? null));
   }
 
   sendIntent(intent: Intent, state: GameState, _ticks: number): void {
@@ -88,14 +137,20 @@ export class NetMatchDriver implements RemoteMatchDriver {
     const msg: InputMsg = { s: this.seq++, m: move, h: held, b: buttons };
     this.stats.inputsSent++;
     this.deps.send(MSG.input, msg);
+    this.lastSentArrival = this.predictor?.onSent(msg, now) ?? null;
   }
 
-  status(): RemoteStatus {
+  /** The server tick the last sent input is estimated to arrive at (diagnostics; null without prediction). */
+  lastSentArrival: number | null = null;
+
+  status(): DriverStatus {
     return {
       connection: this.connection === 'idle' ? 'closed' : this.connection,
       rttMs: this.rtt,
       bufferedTicks: this.replica?.bufferedTicks ?? 0,
       detail: this.detail,
+      predictionEnabled: this.predictor !== null,
+      prediction: this.predictor ? { ...this.predictor.stats } : null,
     };
   }
 
@@ -105,6 +160,7 @@ export class NetMatchDriver implements RemoteMatchDriver {
 
   dispose(): void {
     this.disposed = true;
+    this.overlay.revert();
   }
 
   // ---------------------------------------------------------------- fed by the session
@@ -112,26 +168,34 @@ export class NetMatchDriver implements RemoteMatchDriver {
   setConnection(status: ConnStatus, detail: string | null): void {
     this.connection = status;
     this.detail = status === 'connected' ? null : detail;
-    if (status === 'reconnecting' || status === 'closed') this.sent = { m: null, h: false };
+    if (status === 'reconnecting' || status === 'closed') {
+      this.sent = { m: null, h: false };
+      this.predictor?.resetInputs();
+    }
   }
 
   onWelcome(msg: WelcomeMsg): void {
     if (!msg.descriptor) return;
     const same = this.replica?.descriptor.matchId === msg.descriptor.matchId;
     if (!same) {
+      this.overlay.revert();
       this.replica = new NetReplica(msg.descriptor);
       this.results = null;
+      if (this.predictionConfig) this.predictor = new LocalPredictor(this.predictionConfig);
     }
     this.seat_ = msg.seat;
     // a reconnect starts from "nothing held": the server's own latch is gone with the old connection
     this.sent = { m: null, h: false };
+    this.predictor?.resetInputs();
   }
 
   onKeyframe(bytes: Uint8Array): void {
     this.enqueue(bytes, (payload) => {
       const replica = this.replica;
       if (!replica) return;
+      this.overlay.revert(); // the overlaid object belongs to the state being replaced
       replica.loadKeyframe(payload as KeyframePayload);
+      this.predictor?.resetView();
       if (replica.state) this.onKeyframeLoaded?.(replica.state);
     });
   }
@@ -142,6 +206,7 @@ export class NetMatchDriver implements RemoteMatchDriver {
 
   onPong(msg: PongMsg): void {
     this.rtt = Math.max(0, this.deps.now() - msg.c);
+    this.predictor?.onPong(msg.c, msg.t);
   }
 
   onResults(msg: ResultsMsg): void {
@@ -154,6 +219,21 @@ export class NetMatchDriver implements RemoteMatchDriver {
   }
 
   // ---------------------------------------------------------------- internals
+
+  /** Step (c) of the overlay protocol: presentation only, the replica's data stays the server's. */
+  private predict(state: GameState, dtMs: number): void {
+    const predictor = this.predictor;
+    if (!predictor || this.seat_ === null) return;
+    const fields = predictor.update({
+      state,
+      seat: this.seat_,
+      alpha: this.lastAlpha,
+      nowMs: this.deps.now(),
+      dtMs,
+    });
+    const me = state.players[this.seat_];
+    if (fields && me) this.overlay.apply(me, fields);
+  }
 
   private enqueue(bytes: Uint8Array, use: (payload: unknown) => void): void {
     this.stats.bytesIn += bytes.byteLength;
