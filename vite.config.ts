@@ -8,6 +8,8 @@ import { optimizeModels } from './scripts/vite/optimizeModels.ts';
 export default defineConfig(({ command, isPreview, mode }) => {
   // The server online adapter is compiled in ONLY when the build asks for it (WAHALA_ONLINE_ENABLED + WAHALA_ONLINE_URL,
   // the same rule as the app's flags). Tests never include it. docs/ONLINE_ARCHITECTURE.md.
+  // `npm run build:online` builds this with the switch on into dist-online/ (git-ignored, never published): the endpoint
+  // there is the TEMPLATE `ws://{host}:2567`, filled in at run time from location.hostname (src/platform/flags.ts).
   // Same rule as `resolveFlags` in src/platform/flags.ts (kept inline: the config must not import app code);
   // tests/online/create-online.test.ts runs both on the same inputs.
   const env = loadEnv(mode, process.cwd(), 'WAHALA_');
