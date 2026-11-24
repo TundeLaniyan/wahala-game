@@ -513,9 +513,9 @@ function testCameraView(test: boolean): void {
 }
 
 /**
- * Quick Match (decision SX11): the beginner defaults hold only for the one match. `quickBase` is the player's own settings
- * from before it (the ones that are saved); it is set while a Quick Match is on or loading and put back at the menu, so
- * the saved Classic arena, player count and bot levels are never overwritten.
+ * Quick Start (decisions SX11, FU2-1): the quick City Rumble Free-for-All values hold only for the one match. `quickBase` is
+ * the player's own settings from before it (the ones that are saved); it is set while a Quick Start is on or loading and put
+ * back at the menu, so the saved game, stage, fighter count, bot level and everything else are never overwritten.
  */
 let quickBase: GameSettings | null = null;
 let quickStarting = false;
@@ -528,7 +528,10 @@ function endQuickMatch(): void {
 
 /** Everything the UI can ask the game to do. */
 export const commands = {
-  /** Choose How to Play, QUICK MATCH: one tap, a beginner Classic match; the saved match preferences stay as they were. */
+  /**
+   * Choose How to Play, QUICK START: one tap, an offline City Rumble Free-for-All (16 fighters, Rookie bots, 3 minutes);
+   * the saved match, audio, controls and graphics preferences stay as they were.
+   */
   startQuickMatch(): void {
     if (loader.busy) return; // a second tap starts nothing (and never captures the quick values as the player's own)
     if (quickBase === null) quickBase = useGameStore.getState().settings;

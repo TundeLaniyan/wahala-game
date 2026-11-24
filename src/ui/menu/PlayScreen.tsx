@@ -1,10 +1,12 @@
 /**
- * Choose How to Play: the three ways in, all visible at once (no carousel): QUICK MATCH (START HERE: one tap starts
- * a beginner match through the normal loading lifecycle), CLASSIC BLAST and CITY RUMBLE (each opens Match Setup with
- * that battle style already selected). The Story Campaign has its own Home entrance and is not repeated here.
+ * Choose How to Play: the three ways in, all visible at once (no carousel), CITY RUMBLE first and most prominent (decision
+ * FU2-4), then QUICK START (one tap starts an offline City Rumble Free-for-All through the normal loading lifecycle, decision
+ * FU2-1) and CLASSIC BLAST (secondary, fully playable; each of those two opens or starts at once). City Rumble and Classic Blast open
+ * Match Setup with that battle style already selected. The Story Campaign has its own Home entrance and is not repeated here.
  * Everything writes the real `GameSettings` through `commands`; the rules are never changed from here.
  */
 import { commands } from '../../app/session';
+import { QUICK_MATCH, QUICK_MATCH_FIGHTERS, QUICK_MATCH_MINUTES } from '../../app/quickMatch';
 import { useGameStore } from '../../app/store';
 import { RUMBLE_ARENA_IDS, STANDARD_ARENA_IDS } from '../../sim';
 import { fighterArt } from './art';
@@ -15,10 +17,10 @@ import { ScreenFrame } from './Frame';
 /** The card copy (pure data: unit-tested, and the words the founder approved for the two styles). */
 export const PLAY_CHOICES = {
   quick: {
-    name: 'Quick Match',
+    name: 'Quick Start',
     tag: 'Start here',
-    text: 'You and two bots on a small arena. Easy bots, no setup. Starts at once.',
-    customise: 'Customise',
+    // generated from the real Quick Start values, so the card can never promise a different match than it starts
+    text: `City Rumble Free-for-All. You and ${QUICK_MATCH_FIGHTERS - 1} Rookie bots, ${QUICK_MATCH_MINUTES} minutes. Starts at once.`,
   },
   classic: {
     name: 'Classic Blast',
@@ -38,13 +40,24 @@ export function PlayScreen() {
   return (
     <ScreenFrame id="play" kicker="Play" title="Choose how to play">
       <div className="mn-play" role="group" aria-label="Choose how to play">
+        <PlayCard
+          id="rumble"
+          testId="home-rumble"
+          preview={stagePreviewUrl(RUMBLE_ARENA_IDS[0]!)}
+          flagship
+          autoFocus
+          onPick={() => {
+            commands.updateSettings({ play: 'rumble' });
+            commands.menuOpen('setup');
+          }}
+        />
         <div className="mn-play-card quick" data-testid="play-quick-card">
           <button
             type="button"
             className="mn-play-main"
             data-testid="play-quick"
-            data-autofocus=""
             aria-label={`${PLAY_CHOICES.quick.name}. ${PLAY_CHOICES.quick.tag}. ${PLAY_CHOICES.quick.text}`}
+            data-quick-arena={QUICK_MATCH.rumbleArenaId}
             onClick={() => {
               commands.startQuickMatch();
             }}
@@ -65,14 +78,6 @@ export function PlayScreen() {
               Play now →
             </span>
           </button>
-          <button
-            type="button"
-            className="mn-play-sub"
-            data-testid="play-quick-customise"
-            onClick={() => commands.menuOpen('setup')}
-          >
-            {PLAY_CHOICES.quick.customise}
-          </button>
         </div>
         <PlayCard
           id="classic"
@@ -83,28 +88,27 @@ export function PlayScreen() {
             commands.menuOpen('setup');
           }}
         />
-        <PlayCard
-          id="rumble"
-          testId="home-rumble"
-          preview={stagePreviewUrl(RUMBLE_ARENA_IDS[0]!)}
-          onPick={() => {
-            commands.updateSettings({ play: 'rumble' });
-            commands.menuOpen('setup');
-          }}
-        />
       </div>
     </ScreenFrame>
   );
 }
 
-function PlayCard(props: { id: 'classic' | 'rumble'; testId: string; preview: string; onPick: () => void }) {
+function PlayCard(props: {
+  id: 'classic' | 'rumble';
+  testId: string;
+  preview: string;
+  onPick: () => void;
+  flagship?: boolean;
+  autoFocus?: boolean;
+}) {
   const c = PLAY_CHOICES[props.id];
   return (
-    <div className={`mn-play-card ${props.id}`}>
+    <div className={`mn-play-card ${props.id}${props.flagship ? ' flagship' : ''}`}>
       <button
         type="button"
         className="mn-play-main"
         data-testid={props.testId}
+        data-autofocus={props.autoFocus ? '' : undefined}
         aria-label={`${c.name}. ${c.text}`}
         onClick={props.onPick}
       >

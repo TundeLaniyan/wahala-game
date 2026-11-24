@@ -16,8 +16,9 @@ describe('Learn to Play sections', () => {
     expect(unsectionedLessons()).toEqual([]);
   });
 
-  it('Quick Start is the five Beginner lessons, and the Generator Tactics pilot stays labelled', () => {
+  it('the first section (Beginner) is the five Beginner lessons, and the Generator Tactics pilot stays labelled', () => {
     expect(ACADEMY_SECTIONS[0]!.id).toBe('quick');
+    expect(ACADEMY_SECTIONS[0]!.title).toBe('Beginner'); // never the name of the Quick Start match (FU2-1)
     expect(ACADEMY_SECTIONS[0]!.lessons).toEqual(LESSONS.slice(0, 5).map((l) => l.id));
     expect(ACADEMY_SECTIONS.find((s) => s.id === 'advanced')!.pilot).toBe(true);
   });
