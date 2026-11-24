@@ -61,7 +61,7 @@ describe('Team Rumble: balanced teams across humans and bots', () => {
         const all = [0, 0];
         const people = [0, 0];
         const bots = [0, 0];
-        players.forEach((p, i) => {
+        players.forEach((_p, i) => {
           const t = teamOf(i);
           expect([0, 1]).toContain(t); // everybody is on a team
           all[t]!++;
