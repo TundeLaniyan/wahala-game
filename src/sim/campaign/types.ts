@@ -264,6 +264,12 @@ export interface EnemyMind {
    * (losing sight of him still sends it to search).
    */
   calledUntil?: number;
+  /**
+   * Decision PI7 (Classic raids only): the facing last seen on this seat (to notice a turn), and the tick until which a
+   * turn that REVEALED the human holds the instant arm's-length notice back (`revealGraceTicks`).
+   */
+  facingSeen?: Dir;
+  graceUntil?: number;
 }
 
 /** Runtime of the territorial state machine (systems/territory.ts). ABSENT outside campaign tactics matches. */

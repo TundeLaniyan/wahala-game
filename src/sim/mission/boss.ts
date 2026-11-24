@@ -105,6 +105,9 @@ export interface BossTuning {
   meleeWindupTicks?: number;
   exposedGenerators?: number;
   chainCarriesFire?: boolean;
+  /** PI8: backup fighters that defend the live relays while the boss is shielded (absent = none: Easy and every other boss). */
+  relayGuards?: number;
+  relayGuardRadius?: number;
 }
 
 export function resolveBossRecipe(r: BossRecipe, level: CampaignLevel): BossTuning {
@@ -128,6 +131,10 @@ export function resolveBossRecipe(r: BossRecipe, level: CampaignLevel): BossTuni
           meleeWindupTicks: r.balance.meleeWindupTicks[level],
           exposedGenerators: r.balance.exposedGenerators[level],
           chainCarriesFire: r.balance.chainCarriesFire,
+          // (nothing is stored at 0, so a level without relay guards keeps its state exactly as it was)
+          ...(r.balance.relayGuards[level] > 0
+            ? { relayGuards: r.balance.relayGuards[level], relayGuardRadius: r.balance.relayGuardRadius }
+            : {}),
         }
       : {}),
   };

@@ -139,6 +139,7 @@ describe('raid rules', () => {
     // at arm's length in front of it (decision CV1: "too close" is one tile, in front or at its side, never behind)
     const g = state.players[guard]!;
     g.facing = 'right';
+    advance(state, 3); // it has been looking that way a moment (decision PI7: a turn that reveals him has a grace)
     state.players[0]!.x = g.x + 1;
     state.players[0]!.y = g.y;
     advance(state, 1);

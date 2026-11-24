@@ -258,7 +258,7 @@ describe('isolation', () => {
   });
 
   it(
-    'the lit raids play byte-for-byte as recorded (scripted full raid, every level; re-recorded for AM1-AM6, CV1-CV7 and CV8)',
+    'the lit raids play byte-for-byte as recorded (scripted full raid, every level; re-recorded for AM1-AM6, CV1-CV7, CV8 and, on Easy / Normal only, PI7; Hard is the production recording)',
     { timeout: 180_000 },
     () => {
       const out: Record<string, string> = {};
@@ -272,16 +272,24 @@ describe('isolation', () => {
             level,
             onTick: (s) => (last = s),
           });
+          // decision PI7 added `revealGraceTicks` to the raid config (and two optional mind fields where it is on): a
+          // Hard run must equal the production recording once that one key is taken out
+          const g = last as GameState;
+          delete (g.config.campaignTactics!.classicRaid as { revealGraceTicks?: number }).revealGraceTicks;
+          for (const m of Object.values(g.territory?.minds ?? {})) {
+            delete m.facingSeen;
+            delete m.graceUntil;
+          }
           out[`${raidId}/${level}`] = `${hashOf(last)}/${r.outcome}`;
         }
       expect(out).toEqual({
-        'warehouseDispatchDepot/easy': '4682c4a3:32321/completed',
-        'warehouseDispatchDepot/normal': '78f368b1:33630/completed',
+        'warehouseDispatchDepot/easy': 'a16c010:32249/completed',
+        'warehouseDispatchDepot/normal': 'e9175201:32541/completed',
         'warehouseDispatchDepot/hard': '5933b59b:32715/completed',
-        'partsStoreroom/easy': '2b91416:27519/completed',
-        'partsStoreroom/normal': '89a3abdf:27707/completed',
+        'partsStoreroom/easy': 'fe7929c3:27547/completed',
+        'partsStoreroom/normal': 'c4db15d9:27654/completed',
         'partsStoreroom/hard': 'a65e024a:28120/completed',
-        'standbyPlant/easy': 'a4055e44:26898/completed',
+        'standbyPlant/easy': 'c0f1594b:26769/completed',
         'standbyPlant/normal': '8f6a8fc7:27645/completed',
         'standbyPlant/hard': 'cec315f1:27293/completed',
       });

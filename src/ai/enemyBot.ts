@@ -115,6 +115,9 @@ export class EnemyBot implements Bot {
   private lastTile = -1;
   /** Classic raid (decision RA5): the directive last followed (kind, and the tile for every kind but a chase). */
   private lastDirective = '';
+  /** Decision PI7: its own facing and the tick it last changed (-1e9 = not since it woke): a calm guard that has just turned does not swing at once. */
+  private lastFacing: Player['facing'] | null = null;
+  private facedTick = -1e9;
 
   constructor(private readonly opts: BotOptions) {
     this.brain = new Brain(enemyProfile(opts.difficulty), opts.seed, opts.playerId);
@@ -303,6 +306,10 @@ export class EnemyBot implements Bot {
       const tile = self.y * raw.width + self.x;
       if (tile !== this.lastTile || self.stepRemaining > 0) this.lastMoveTick = raw.tick;
       this.lastTile = tile;
+      if (self.facing !== this.lastFacing) {
+        if (this.lastFacing !== null) this.facedTick = raw.tick;
+        this.lastFacing = self.facing;
+      }
     }
     // Classic raid (decision RA5): a new order from its territory (the next waypoint, a pause over, a chase begun or
     // given up) is acted on at once, not at the next routine re-plan: patrols keep their exact clockwork timing
@@ -374,8 +381,16 @@ export class EnemyBot implements Bot {
     const melee = enemyMeleeTarget(obs, me);
     // decisions CV1, CV8 (Classic raids): a calm guard (on its rounds, at its post, walking back) only swings at someone
     // in its `closeRing` (the territory's instant "too close" uses the same ring): never at a player behind it
-    const ring = obs.config.campaignTactics?.classicRaid?.closeRing;
-    if (melee && ring && obs.directive?.calm && !inViewCone(me, melee.target.x, melee.target.y, ring))
+    // decision PI7: nor within `revealGraceTicks` of its own last turn (the territory does not feel him at arm's length then either)
+    const raid = obs.config.campaignTactics?.classicRaid;
+    const ring = raid?.closeRing;
+    if (
+      melee &&
+      ring &&
+      obs.directive?.calm &&
+      (!inViewCone(me, melee.target.x, melee.target.y, ring) ||
+        obs.tick - this.facedTick < (raid?.revealGraceTicks ?? 0))
+    )
       return intent;
     if (melee) {
       const kind = me.enemyKind ? obs.config.enemyAttacks.melee[me.enemyKind] : null;

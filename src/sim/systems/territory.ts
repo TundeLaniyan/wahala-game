@@ -422,6 +422,62 @@ function noisesOf(state: GameState): Noise[] {
   return out;
 }
 
+/**
+ * WHAT ONE ENEMY NOTICES OF THE HUMAN `h` THIS TICK (pure; the one place the rule lives, used by `updateTerritory` and by
+ * the measurement harnesses with a ghost `h` on any tile). `calmNow`: patrolling, holding its post or walking back (it
+ * looks where it walks); `sees`: his tile is in its view (cone or ring, range, walls and bodies; by night its torch
+ * light); `near`: he is at arm's length where it would feel him at once (decisions CV1, CV8; never at its back or, on
+ * Easy and Normal, its shoulder); `close`: `near` and not within a reveal grace (decision PI7: `graceUntil`, set when its
+ * own turn revealed him); `held`: the sight reaction it needs while that grace lasts (0 = none). `night` is the night
+ * raid's reading (null elsewhere).
+ */
+export function noticeOf(
+  state: GameState,
+  m: EnemyMind,
+  p: Readonly<Player>,
+  h: Readonly<Player> | null,
+  T: number,
+  graceUntil: number = m.graceUntil ?? -1,
+): {
+  calmNow: boolean;
+  night: ReturnType<typeof nightNotice>;
+  sees: boolean;
+  near: boolean;
+  close: boolean;
+  held: number;
+} {
+  const cfg = state.config.campaignTactics!;
+  // calm (patrol, watch, walking back) it looks where it walks: the cone ahead (and the eight tiles around it)
+  const calmNow = m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil);
+  // decision CV1: a Classic raid guard is blind right behind it (undefined everywhere else: all eight tiles)
+  const ring = cfg.classicRaid?.nearRing;
+  // decision CV8: instant "too close" only in front of a calm guard on Easy / Normal (its shoulder is seen, not felt)
+  const closeRing = cfg.classicRaid?.closeRing;
+  // a night raid (decisions NL10-NL13): a calm enemy sees only by its own torch light, and in the dark notices only at
+  // contact; null everywhere else (no `config.nightSight`), so every other match is unchanged
+  const night = h !== null && calmNow ? nightNotice(state, p, h) : null;
+  const sees =
+    h !== null &&
+    (night
+      ? night.sees
+      : enemySeesPerson(state, p, h, {
+          range: calmNow ? m.spec.calmNoticeTiles : m.spec.noticeTiles,
+          calm: calmNow,
+          ...(ring ? { ring } : {}),
+        }));
+  // decision CV1 (Classic raids): "too close" needs him in front of a calm guard or at its side, never behind it
+  const near =
+    h !== null &&
+    (night
+      ? night.close
+      : manhattan(p, h) <= cfg.awareness.closeTiles &&
+        (!closeRing || !calmNow || inViewCone(p, h.x, h.y, closeRing)));
+  // decision PI7: while its own turn's reveal grace lasts it does not feel him at arm's length and takes `grace` ticks of
+  // sight to register him
+  const held = calmNow && T < graceUntil ? (cfg.classicRaid?.revealGraceTicks ?? 0) : 0;
+  return { calmNow, night, sees, near, close: near && held === 0, held };
+}
+
 /** One tick of every mind (tick.ts, after attacks and projectiles). */
 export function updateTerritory(state: GameState, events: SimEvent[]): void {
   const cfg = state.config.campaignTactics;
@@ -449,31 +505,22 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
     m.humanHpSeen = humanHp;
     const blocked = T < m.noticeBlockedUntil;
     // calm (patrol, watch, walking back) it looks where it walks: the cone ahead (and the eight tiles around it)
-    const calmNow =
-      m.state === 'patrol' || m.state === 'watch' || (m.state === 'return' && T >= m.watchUntil);
-    // decision CV1: a Classic raid guard is blind right behind it (undefined everywhere else: all eight tiles)
-    const ring = cfg.classicRaid?.nearRing;
-    // decision CV8: instant "too close" only in front of a calm guard on Easy / Normal (its shoulder is seen, not felt)
-    const closeRing = cfg.classicRaid?.closeRing;
-    // a night raid (decisions NL10-NL13): a calm enemy sees only by its own torch light, and in the dark notices only at
-    // contact; null everywhere else (no `config.nightSight`), so every other match is unchanged
-    const night = h !== null && calmNow ? nightNotice(state, p, h) : null;
-    const sees =
-      h !== null &&
-      (night
-        ? night.sees
-        : enemySeesPerson(state, p, h, {
-            range: calmNow ? m.spec.calmNoticeTiles : m.spec.noticeTiles,
-            calm: calmNow,
-            ...(ring ? { ring } : {}),
-          }));
-    // decision CV1 (Classic raids): "too close" needs him in front of a calm guard or at its side, never behind it
-    const close =
-      h !== null &&
-      (night
-        ? night.close
-        : manhattan(p, h) <= cfg.awareness.closeTiles &&
-          (!closeRing || !calmNow || inViewCone(p, h.x, h.y, closeRing)));
+    // decision PI7: a calm guard whose own TURN (the about-face at the end of its run, a corner, a post's sweep) reveals a
+    // player who was out of its view a moment ago (behind it) does not feel him at arm's length at once: he is
+    // noticed by sight after `revealGraceTicks`, so he can step out of its view. A player already in view, or one who
+    // walks into view, gets no grace.
+    // (nothing is stored where the grace is off: field missions, Hard and every other match keep their state as it was)
+    const grace = state.config.campaignTactics?.classicRaid?.revealGraceTicks ?? 0;
+    let seen = noticeOf(state, m, p, h, T);
+    if (grace > 0) {
+      const turned = m.facingSeen !== undefined && m.facingSeen !== p.facing;
+      m.facingSeen = p.facing;
+      if (turned && seen.calmNow && h !== null && m.lastSeenTick < T - 1 && (seen.sees || seen.near)) {
+        m.graceUntil = T + grace;
+        seen = noticeOf(state, m, p, h, T);
+      }
+    }
+    const { night, sees, close, held } = seen;
     if (h && (sees || close)) {
       m.lastSeen = { x: h.x, y: h.y };
       m.lastSeenTick = T;
@@ -493,7 +540,8 @@ export function updateTerritory(state: GameState, events: SimEvent[]): void {
         // sight builds up (faster while it is already looking: investigating, or a returning enemy he re-enters on)
         const keen = m.state === 'investigate' || (m.state === 'return' && inside) ? 3 : 1;
         m.notice += keen;
-        const needed = night ? night.reactTicks : m.spec.noticeTicks;
+        // decision PI7: a guard that has just turned to find him at arm's length takes its grace to register him
+        const needed = night ? night.reactTicks : Math.max(m.spec.noticeTicks, held);
         if (m.notice >= needed && (inside || m.state !== 'return')) alert(state, m, p, h, events, null);
       } else {
         // by night, leaving the torch cone restarts the reaction (decision NL11)

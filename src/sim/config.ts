@@ -590,6 +590,15 @@ export interface ClassicRaidTactics {
    */
   closeRing: 'frontSides' | 'front';
   /**
+   * Decision PI7: when a calm guard's own TURN reveals a player who was out of its view a moment before (he stood behind
+   * it while it looked away, then it made its about-face at the end of its run, turned a corner or swept its view), it
+   * does not feel him at arm's length at once: for this many ticks he is noticed only by sight, and the sight reaction
+   * is this long (never shorter than `awareness.noticeTicks`), so he can see it turn and step out of its view. A player
+   * who was already in view, or who walks into view, gets no grace; neither does a guard that already hunts. 0 = off
+   * (Hard: unchanged).
+   */
+  revealGraceTicks: number;
+  /**
    * Decision CV2: how far the quiet click of a generator being LAID is heard (tiles, Manhattan). A blast stays loud
    * (`perception[kind].hearingTiles` x `awareness.blastHearingScale`).
    */
@@ -1658,6 +1667,14 @@ export interface BossBalance {
    * `crew` how long a runner needs on a broken node to restore it. Larger = gentler.
    */
   objective: Record<'easy' | 'normal' | 'hard', { pulse: number; rearm: number; crew: number }>;
+  /**
+   * PI8 (docs/BOSS_JAMMER_PROTECTION.md): how many of the boss's backup fighters (drafted in the order meleeGuard, blocker,
+   * escort; a fallen one is replaced by the next) defend the live RELAYS while the boss is shielded and the objective is
+   * running: each stands within `relayGuardRadius` tiles of one live relay, the first at the relay nearest the player, the
+   * second at the next nearest ..., and hunts him when he comes inside. 0 = the fight as decisions BB1-BB6 left it (Easy).
+   */
+  relayGuards: Record<'easy' | 'normal' | 'hard', number>;
+  relayGuardRadius: number;
 }
 
 export const BOSS_BALANCE: BossBalance = {
@@ -1670,6 +1687,8 @@ export const BOSS_BALANCE: BossBalance = {
     normal: { pulse: 1.25, rearm: 1.25, crew: 1.5 },
     hard: { pulse: 1, rearm: 1, crew: 1 },
   },
+  relayGuards: { easy: 0, normal: 1, hard: 2 },
+  relayGuardRadius: 2,
 };
 
 /** The full tactics config of a level (a fresh copy every call: never a shared constant). */
@@ -1963,6 +1982,7 @@ export function raidTacticsFor(level: 'easy' | 'normal' | 'hard'): CampaignTacti
     capsLieutenant: level !== 'hard',
     nearRing: level === 'easy' ? 'front' : 'frontSides',
     closeRing: level === 'hard' ? 'frontSides' : 'front',
+    revealGraceTicks: { easy: 66, normal: 54, hard: 0 }[level],
     placeHearingTiles: { easy: 0, normal: 0, hard: 1 }[level],
     trapRing: level === 'hard' ? 'frontSides' : 'front',
   };

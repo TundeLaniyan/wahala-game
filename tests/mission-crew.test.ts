@@ -19,6 +19,8 @@ describe('directives from roles (pure sim)', () => {
   it('each role produces its own directive kind', () => {
     const state = newMission({ id: 'oshodi' });
     advance(state, 1);
+    // this is the roles' own directives: the Normal level's relay guard (decision PI8, tests/boss-relay-guard.test.ts) is off
+    delete state.mission!.tuning.boss!.relayGuards;
     const kind = (id: number): string | undefined => directiveFor(state, id)?.kind;
     expect(state.mission!.seats.map((s) => s.role)).toEqual([
       'player',
