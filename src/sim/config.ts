@@ -1667,6 +1667,14 @@ export interface BossBalance {
    * `crew` how long a runner needs on a broken node to restore it. Larger = gentler.
    */
   objective: Record<'easy' | 'normal' | 'hard', { pulse: number; rearm: number; crew: number }>;
+  /**
+   * PI8 (docs/BOSS_JAMMER_PROTECTION.md): how many of the boss's backup fighters (drafted in the order meleeGuard, blocker,
+   * escort; a fallen one is replaced by the next) defend the live RELAYS while the boss is shielded and the objective is
+   * running: each stands within `relayGuardRadius` tiles of one live relay, the first at the relay nearest the player, the
+   * second at the next nearest ..., and hunts him when he comes inside. 0 = the fight as decisions BB1-BB6 left it (Easy).
+   */
+  relayGuards: Record<'easy' | 'normal' | 'hard', number>;
+  relayGuardRadius: number;
 }
 
 export const BOSS_BALANCE: BossBalance = {
@@ -1679,6 +1687,8 @@ export const BOSS_BALANCE: BossBalance = {
     normal: { pulse: 1.25, rearm: 1.25, crew: 1.5 },
     hard: { pulse: 1, rearm: 1, crew: 1 },
   },
+  relayGuards: { easy: 0, normal: 1, hard: 2 },
+  relayGuardRadius: 2,
 };
 
 /** The full tactics config of a level (a fresh copy every call: never a shared constant). */

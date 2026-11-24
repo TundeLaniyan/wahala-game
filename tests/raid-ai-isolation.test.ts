@@ -56,8 +56,10 @@ describe('RA1: everything but a raid is untouched by the raid AI', () => {
   it('the boss missions (Hard), the Academy lessons, Classic and City Rumble', { timeout: 120_000 }, () => {
     expect(bossDigests()).toEqual({
       // re-pinned deliberately for the Oshodi boss balance (decisions BB1-BB6, docs/BOSS_BALANCE.md): the boss's ground,
-      // the crew's readable wind-ups, the level's objective pace (was '5bf33fbf:25547/fa20367d'); the other five unchanged
-      oshodi: '3185bcfb:25126/3359277a',
+      // the crew's readable wind-ups, the level's objective pace (was '5bf33fbf:25547/fa20367d'); the other five unchanged.
+      // Re-pinned again for the Hard relay guards (decision PI8, docs/BOSS_JAMMER_PROTECTION.md; was
+      // '3185bcfb:25126/3359277a'): Easy is the same fight bit for bit (scripts/boss-trace.ts, tests/boss-relay-guard.test.ts)
+      oshodi: '141a2c4e:25121/460ebc18',
       mushin: '965d1df7:22647/e0c25ef7',
       fadeyiSomolu: 'e42a0de0:19116/5fe97435',
       ebuteMetta: '2eb8a1f6:22305/674efe19',

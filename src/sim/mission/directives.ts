@@ -4,6 +4,8 @@
  * rules and sees only the observation).
  *
  *   meleeGuard         guard its post (radius 3) and fight whatever comes in; chases once the boss is exposed
+ *                      (decision PI8: on a level with relay guards the first marshal / blocker / escort defend the live
+ *                      relays instead while the boss is shielded: `relayGuard.ts`)
  *   rangedAttacker     chase the human wherever they are (generators from range, never tied to a post)
  *   blocker            stand on its lane / choke tile
  *   runner             run to the objective's restock / re-arm tile (a destroyed stack, a jammed relay)
@@ -23,6 +25,7 @@ import { makeCtx } from './ctx';
 import { fieldDirective } from './field';
 import { OBJECTIVES } from './objectives';
 import { PRESS_ID } from './objectives/evidence';
+import { relayGuardDirective } from './relayGuard';
 import type { MissionSeat, NpcDirective } from './types';
 
 const DEFAULT_RADIUS = 3;
@@ -45,6 +48,9 @@ export function directiveFor(state: GameState, id: number): NpcDirective | undef
     radius,
   });
   const chase: NpcDirective = { kind: 'chase', x: human.x, y: human.y };
+  // decision PI8: a backup fighter drafted to defend the live relays (a level with relay guards; shielded boss only)
+  const defence = seat.role === 'boss' ? undefined : relayGuardDirective(state, seat);
+  if (defence) return defence;
 
   switch (seat.role) {
     case 'boss': {
