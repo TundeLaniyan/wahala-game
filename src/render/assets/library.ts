@@ -7,7 +7,9 @@
  */
 import type { AnimationClip, BufferGeometry, Material, Mesh, Object3D, Skeleton, SkinnedMesh } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
+import { FULL_GROUP_PREFIXES } from './modelNeeds';
 
 const urls = import.meta.glob('../../assets/models/*.glb', {
   query: '?url',
@@ -44,7 +46,8 @@ export interface LoadedAsset {
 
 export class AssetLibrary {
   private readonly assets = new Map<string, LoadedAsset>();
-  private readonly loader = new GLTFLoader();
+  // the shipped models are meshopt-compressed by the build (scripts/vite/optimizeModels.ts); uncompressed files load as before
+  private readonly loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   private failed: string[] = [];
 
   /** Ids of every eagerly preloaded model file bundled with the build (lazy character models are not included). */
@@ -57,40 +60,86 @@ export class AssetLibrary {
     return [...LAZY_URL_BY_ID.keys()];
   }
 
+  /**
+   * Debug / test recorder (docs/MOBILE_PERFORMANCE.md): which model ids the renderer asked for (`touched`; a prefix query
+   * is recorded as `prefix*`) and which of those were bundled but NOT loaded at that moment (`missed`: a draw that fell back
+   * to its procedural look, or a prefix query that saw fewer models than the build ships). Off (null) outside tests.
+   */
+  recorder: { touched: Set<string>; missed: Set<string> } | null = null;
+
+  private note(id: string): void {
+    const missing = !this.assets.has(id);
+    // Safety net (never expected in a verified build): a model somebody asked for that is bundled but not loaded starts
+    // loading now, so the NEXT use is right and the procedural fallback is only a one-off. Boot-time and match-start loads
+    // make this a no-op in normal play.
+    if (missing && this.onDemand && !this.lazyFailed.has(id) && (URL_BY_ID.has(id) || LAZY_URL_BY_ID.has(id)))
+      void this.ensureOne(id);
+    const r = this.recorder;
+    if (!r) return;
+    r.touched.add(id);
+    if (missing && (URL_BY_ID.has(id) || LAZY_URL_BY_ID.has(id))) r.missed.add(id);
+  }
+
+  /** True once the app loads models per start (not all at boot): enables the miss safety net in `note`. */
+  onDemand = false;
+
   private readonly inFlight = new Map<string, Promise<void>>();
   private readonly lazyFailed = new Set<string>();
   /** Fires when an on-demand model finished loading (views re-dress their seats). */
   onLazyLoaded: (() => void) | null = null;
 
   /**
-   * Loads on-demand character models (once each); resolves when all settled. Never throws: a failure is remembered and the
-   * model is simply never `has()`.
+   * Loads on-demand models (once each); resolves when all settled. Never throws: a failure is remembered and the model is
+   * simply never `has()`. Character models announce themselves through `onLazyLoaded` (views re-dress their seats).
    */
   ensure(ids: readonly string[]): Promise<void> {
-    const jobs: Promise<void>[] = [];
-    for (const id of ids) {
-      if (this.assets.has(id) || this.lazyFailed.has(id)) continue;
-      let job = this.inFlight.get(id);
-      if (!job) {
-        const url = LAZY_URL_BY_ID.get(id) ?? URL_BY_ID.get(id);
-        job = (async () => {
-          try {
-            if (!url) throw new Error('not bundled');
-            const gltf = await this.loader.loadAsync(url);
-            this.assets.set(id, { scene: gltf.scene, clips: gltf.animations });
-            this.onLazyLoaded?.();
-          } catch (error) {
-            console.warn(`[assets] ${id} failed to load`, error);
-            this.lazyFailed.add(id);
-          } finally {
-            this.inFlight.delete(id);
-          }
-        })();
-        this.inFlight.set(id, job);
+    return Promise.all(ids.map((id) => this.ensureOne(id).promise)).then(() => undefined);
+  }
+
+  private ensureOne(id: string): { promise: Promise<void>; started: boolean } {
+    if (this.assets.has(id) || this.lazyFailed.has(id)) return { promise: Promise.resolve(), started: false };
+    let job = this.inFlight.get(id);
+    if (job) return { promise: job, started: false };
+    const url = LAZY_URL_BY_ID.get(id) ?? URL_BY_ID.get(id);
+    job = (async () => {
+      try {
+        if (!url) throw new Error('not bundled');
+        const gltf = await this.loader.loadAsync(url);
+        this.assets.set(id, { scene: gltf.scene, clips: gltf.animations });
+        if (id.startsWith('char_')) this.onLazyLoaded?.();
+      } catch (error) {
+        console.warn(`[assets] ${id} failed to load`, error);
+        this.lazyFailed.add(id);
+      } finally {
+        this.inFlight.delete(id);
       }
-      jobs.push(job);
-    }
-    return Promise.all(jobs).then(() => undefined);
+    })();
+    this.inFlight.set(id, job);
+    return { promise: job, started: true };
+  }
+
+  /**
+   * Loads the listed models for a start (docs/MOBILE_PERFORMANCE.md): the ones not loaded yet, in parallel, sharing any
+   * request already in flight (a prefetch from the Ready screen is not fetched twice). Resolves when all settled, never
+   * rejects; null when there is nothing to wait for. `onProgress(done, total)` counts only the models this call waited on.
+   */
+  load(ids: readonly string[], onProgress?: (done: number, total: number) => void): Promise<void> | null {
+    const todo = [...new Set(ids)].filter((id) => !this.assets.has(id) && !this.lazyFailed.has(id));
+    if (todo.length === 0) return null;
+    let done = 0;
+    onProgress?.(0, todo.length);
+    return Promise.all(
+      todo.map((id) =>
+        this.ensureOne(id).promise.then(() => {
+          onProgress?.(++done, todo.length);
+        }),
+      ),
+    ).then(() => undefined);
+  }
+
+  /** Every bundled model id (eager and on-demand): what an unknown arena loads. */
+  static allIds(): string[] {
+    return [...new Set([...URL_BY_ID.keys(), ...LAZY_URL_BY_ID.keys()])];
   }
 
   /**
@@ -109,10 +158,18 @@ export class AssetLibrary {
 
   /** Ids of the models that finished loading (sorted, so derived choices are stable). */
   loadedIds(prefix = ''): string[] {
+    const r = this.recorder;
+    if (r && prefix) {
+      r.touched.add(`${prefix}*`);
+      for (const id of [...URL_BY_ID.keys(), ...LAZY_URL_BY_ID.keys()])
+        if (id.startsWith(prefix) && !this.assets.has(id) && FULL_GROUP_PREFIXES.includes(prefix))
+          r.missed.add(`${prefix}*`);
+    }
     return [...this.assets.keys()].filter((i) => i.startsWith(prefix)).sort();
   }
 
   has(id: string): boolean {
+    this.note(id);
     return this.assets.has(id);
   }
 
@@ -155,6 +212,7 @@ export class AssetLibrary {
    * `releaseSkeletons` on it (the renderer sweeps the whole scene when a match is unloaded).
    */
   instance(id: string): Object3D | null {
+    this.note(id);
     const a = this.assets.get(id);
     if (!a) return null;
     const obj = clone(a.scene);
@@ -170,11 +228,13 @@ export class AssetLibrary {
   }
 
   clips(id: string): AnimationClip[] {
+    this.note(id);
     return this.assets.get(id)?.clips ?? [];
   }
 
   /** First mesh of an asset (geometry + material), for building InstancedMeshes from static props. */
   firstMesh(id: string): Mesh | null {
+    this.note(id);
     let found: Mesh | null = null;
     this.assets.get(id)?.scene.traverse((o) => {
       const m = o as Mesh;
@@ -191,6 +251,7 @@ export class AssetLibrary {
     id: string,
     filter?: (name: string) => boolean,
   ): { name: string; geometry: BufferGeometry; material: Material }[] {
+    this.note(id);
     const scene = this.assets.get(id)?.scene;
     if (!scene) return [];
     scene.updateMatrixWorld(true);
@@ -211,6 +272,7 @@ export class AssetLibrary {
 
   /** All meshes of an asset with their world matrices applied to a clone of the geometry (see props code). */
   meshes(id: string): Mesh[] {
+    this.note(id);
     const out: Mesh[] = [];
     const scene = this.assets.get(id)?.scene;
     scene?.updateMatrixWorld(true);

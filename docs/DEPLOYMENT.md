@@ -55,7 +55,7 @@ check `build.json` and the browser network panel (all requests should be 200, un
   requests fullscreen and a landscape lock (best effort: iPhone Safari supports neither; add the page to the home
   screen for a full-screen app - `public/manifest.webmanifest` asks for fullscreen landscape).
 - Audio starts after the first tap (browser autoplay rules).
-- Music is streamed per arena (one MP3 when a match starts), not preloaded; 3D models load once with a progress bar.
+- Music is streamed per arena (one MP3 when a match starts), not preloaded (Data Saver plays a 96 kbps copy); 3D models load on demand per arena with a progress bar (`docs/MOBILE_PERFORMANCE.md`). An offline cache worker keeps the hashed build files (GitHub Pages' fixed `max-age=600` is not enough).
 - Voice clips (MP3, 5-37 KB each) are fetched in the background when a match starts, only those that arena uses.
 
 ## Not this

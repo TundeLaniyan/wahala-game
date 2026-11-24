@@ -19,7 +19,7 @@ Every way into a match goes through `MatchLoader.run(kind, start, back)`:
 | Phase | What happens | Shown |
 | --- | --- | --- |
 | `starting` | The tap is taken; the loading screen is published and the loader waits for it to paint (two animation frames, a 250 ms timer fallback for a throttled tab). | "Getting ready..." |
-| `assets` | Only if the boot model preload is still running: the real model count, refreshed four times a second. After 20 s the match starts anyway (every model has a drawn fallback). | "Loading fighters and vehicles 8 / 31" |
+| `assets` | Only while this start's 3D models are still downloading (the boot loads just the hero cast; a start loads its arena's set, and the Ready screen already prefetched it - `render/assets/modelNeeds.ts`, `docs/MOBILE_PERFORMANCE.md`): the real model count, refreshed four times a second. After 90 s the match starts anyway (every model has a drawn fallback). | "Loading fighters and vehicles 8 / 31" |
 | `arena` | One more paint, then the synchronous set-up (`createGame` + scene build). An exception here is a failure. | "Building the arena..." |
 | `scene` | The new match is held (no simulation time passes) until the renderer has drawn 2 frames of it, at most 12 s. Then the hold is released and the screen removed. | "Almost there..." |
 | `failed` | The reason, **Retry** (the same start again) and **Back** (to the menu, or the campaign map for a mission / raid). | "The match did not start" |
