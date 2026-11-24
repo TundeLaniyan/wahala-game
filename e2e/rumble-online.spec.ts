@@ -246,10 +246,9 @@ test('the connection drops while the match is loading: told, never an endless sp
     await guest.getByTestId('ro-ready').click();
     await expect(page.getByTestId('ro-start')).toBeEnabled({ timeout: 30_000 });
     await page.getByTestId('ro-start').click();
-    // the guest loses the network the moment the countdown starts (its arena is still loading)
-    await expect(guest.getByTestId('ro-countdown').or(guest.getByTestId('ro-loading'))).toBeVisible({
-      timeout: 60_000,
-    });
+    // the guest loses the network while the match is loading (phase "playing", its arena still compiling). A drop during
+    // the countdown is a lobby drop: the server lets that seat go (the room tells the player, "Try again" rejoins).
+    await expect(guest.getByTestId('ro-loading')).toBeVisible({ timeout: 90_000 });
     await ctxB.setOffline(true);
     await guest.waitForTimeout(6000);
     // told in plain words: a reconnect banner / status, or the loading card's stalled note
