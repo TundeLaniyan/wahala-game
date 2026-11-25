@@ -39,7 +39,7 @@ export const ACADEMY_SECTIONS: readonly AcademySection[] = [
   },
   {
     id: 'classic',
-    title: 'Classic Blast',
+    title: 'Junction Blast',
     blurb: 'Grid battles: how the Wahala Crush closes the board.',
     lessons: ['crush'],
   },

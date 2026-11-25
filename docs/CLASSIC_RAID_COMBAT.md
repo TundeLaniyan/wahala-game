@@ -2,7 +2,7 @@
 
 Decisions AM1-AM6 (docs/DECISIONS.md). Branch `claude/wahala-classic-combat-v2`, from production `acaeae7`. Classic raids
 only: every rule below is reached through the raid's own config (`raidTacticsFor`, `RAID_ENEMY_ATTACKS`, `classicRaid`)
-or the raid enemy bot's directive; field missions, bosses, the Academy, Classic Blast, City Rumble and multiplayer play
+or the raid enemy bot's directive; field missions, bosses, the Academy, Junction Blast, City Rumble and multiplayer play
 byte-for-byte as before (`tests/raid-ai-isolation.test.ts`).
 
 ## Why the previous raid AI passed its tests and failed the founder

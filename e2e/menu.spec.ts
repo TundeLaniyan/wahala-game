@@ -64,9 +64,10 @@ test.describe('Stitch main menu', () => {
     await expect(page.getByTestId('menu-home')).toBeVisible();
     await page.getByTestId('home-play').click();
     await expect(page.getByTestId('menu-play')).toBeVisible();
-    await page.getByTestId('home-rumble').click(); // City Rumble opens Match Setup with that battle style selected
+    await page.getByTestId('home-rumble').click(); // City Rumble opens its own Match Setup
     await expect(page.getByTestId('menu-setup')).toBeVisible();
-    await expect(page.getByTestId('setup-style-rumble')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('rumble-setup')).toBeVisible();
+    await expect(page.getByTestId('setup-style-classic')).toHaveCount(0); // no Junction Blast choice inside City Rumble
     await page.getByTestId('mode-deathmatch').click();
     await expect(page.getByTestId('menu-steps')).toHaveCount(0);
     await expect(page.getByTestId('setup-arena')).toContainText('Select Arena');
@@ -130,17 +131,16 @@ test.describe('Stitch main menu', () => {
   test('keyboard: arrows move focus, Enter selects, Esc goes back', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'keyboard');
     await open(page, '&nobots&noattract');
-    await page.keyboard.press('ArrowDown'); // lands on PLAY first
+    await page.keyboard.press('ArrowDown'); // lands on QUICK START first
+    await expect(page.getByTestId('home-quick')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
     await expect(page.getByTestId('home-play')).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('menu-play')).toBeVisible();
     await page.keyboard.press('ArrowDown'); // lands on City Rumble, the first card (decision FU2-4)
     await expect(page.getByTestId('home-rumble')).toBeFocused();
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('play-quick')).toBeFocused();
-    await page.keyboard.press('ArrowRight');
     await expect(page.getByTestId('home-classic')).toBeFocused();
-    await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('ArrowLeft');
     await expect(page.getByTestId('home-rumble')).toBeFocused();
     await page.keyboard.press('Enter'); // City Rumble opens Match Setup
@@ -187,7 +187,9 @@ test.describe('Stitch main menu', () => {
       );
       await page.waitForTimeout(700);
     };
-    await press(13); // D-pad down: focus lands on PLAY
+    await press(13); // D-pad down: focus lands on QUICK START
+    await expect(page.getByTestId('home-quick')).toBeFocused();
+    await press(13); // down again: PLAY
     await expect(page.getByTestId('home-play')).toBeFocused();
     await press(0); // A
     await expect(page.getByTestId('menu-play')).toBeVisible();
@@ -337,7 +339,7 @@ test.describe('Stitch main menu', () => {
     }
   });
 
-  test('Home: the Music Data Saver shortcut shares the Settings preference, says when it is automatic, persists, and keeps Home intact at small sizes', async ({
+  test('Home: no Music Data Saver button (it lives in Settings > Audio, which still saves and persists it), and Home stays intact at small sizes', async ({
     page,
   }, info) => {
     const sizes =
@@ -352,17 +354,14 @@ test.describe('Stitch main menu', () => {
             { width: 844, height: 390 },
             { width: 390, height: 844 },
           ];
-    const saver = page.getByTestId('home-datasaver');
-    // the browser's own Data Saver is on: Auto must say ON (auto), truthfully
+    // the browser's own Data Saver is on: Auto must still say ON (auto) in Settings, truthfully
     await page.addInitScript(() =>
       Object.defineProperty(navigator, 'connection', { value: { saveData: true }, configurable: true }),
     );
     await open(page, '&nobots&noattract');
-    await expect(saver).toBeVisible();
-    await expect(saver).toContainText('Music Data Saver');
-    await expect(saver).toContainText('ON (auto)');
-    await expect(saver).toHaveAttribute('aria-label', 'Music Data Saver: ON (auto)');
-    await expect(saver).toHaveAttribute('data-setting', 'auto');
+    await expect(page.getByTestId('menu-home')).toBeVisible();
+    await expect(page.getByTestId('home-datasaver')).toHaveCount(0);
+    await expect(page.getByTestId('menu-home')).not.toContainText('Data Saver');
 
     for (const vp of sizes) {
       await page.setViewportSize(vp);
@@ -376,12 +375,12 @@ test.describe('Stitch main menu', () => {
         return {
           ids: Object.fromEntries(
             [
+              'home-quick',
               'home-play',
               'home-campaign',
               'home-academy',
               'home-settings-icon',
               'home-mute',
-              'home-datasaver',
             ].map((id) => [id, r(id)]),
           ),
           wide: document.scrollingElement!.scrollWidth - innerWidth,
@@ -397,38 +396,30 @@ test.describe('Stitch main menu', () => {
         expect(b.b, `${where}: ${id} below the screen`).toBeLessThanOrEqual(vp.height + 0.5);
         expect(b.h, `${where}: ${id} too small to tap`).toBeGreaterThanOrEqual(44);
       }
-      expect(m.ids['home-datasaver']!.w, `${where}: saver is a real tap target`).toBeGreaterThanOrEqual(44);
-      // the saver never covers a main-menu button or the other utilities
+      // no two Home controls overlap
       const hit = (a: { l: number; t: number; r: number; b: number }, c: typeof a) =>
         a.l < c.r - 1 && c.l < a.r - 1 && a.t < c.b - 1 && c.t < a.b - 1;
-      for (const other of ['home-play', 'home-campaign', 'home-academy', 'home-settings-icon', 'home-mute'])
-        expect(hit(m.ids['home-datasaver']!, m.ids[other]!), `${where}: saver overlaps ${other}`).toBe(false);
-      await page.screenshot({
-        path: `e2e-shots/${info.project.name}-home-saver-${vp.width}x${vp.height}.png`,
-      });
+      const ids = Object.keys(m.ids);
+      for (const x of ids)
+        for (const y of ids)
+          if (x < y) expect(hit(m.ids[x]!, m.ids[y]!), `${where}: ${x} overlaps ${y}`).toBe(false);
+      await page.screenshot({ path: `e2e-shots/${info.project.name}-home-${vp.width}x${vp.height}.png` });
     }
 
-    // a tap while Auto says ON: an explicit OFF, and Settings > Audio shows the very same choice
-    await saver.click();
-    await expect(saver).toContainText('OFF');
-    await expect(saver).not.toContainText('(auto)');
-    await expect(saver).toHaveAttribute('data-setting', 'off');
-    await expect(saver).toHaveAttribute('aria-pressed', 'false');
+    // Settings > Audio keeps the switch: Auto follows the browser, an explicit choice is saved and survives a reload
     await openSettings(page, 'audio');
+    await expect(page.getByTestId('datasaver-auto')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('datasaver-off').click();
     await expect(page.getByTestId('datasaver-off')).toHaveAttribute('aria-pressed', 'true');
-    // ... and the other way: Settings changes what Home shows
     await page.getByTestId('datasaver-on').click();
-    await page.getByTestId('menu-back').click();
-    await expect(saver).toContainText('ON');
-    await expect(saver).toHaveAttribute('data-setting', 'on');
-    // it is the saved preference: still there after a reload
-    await page.reload();
-    await expect(page.getByTestId('title-screen')).toBeVisible();
-    await expect(page.getByTestId('home-datasaver')).toHaveAttribute('data-setting', 'on');
-    await expect(page.getByTestId('home-datasaver')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('datasaver-on')).toHaveAttribute('aria-pressed', 'true');
     expect(
       await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.settings.v1') ?? '{}').dataSaver),
     ).toBe('on');
+    await page.reload();
+    await expect(page.getByTestId('title-screen')).toBeVisible();
+    await openSettings(page, 'audio');
+    await expect(page.getByTestId('datasaver-on')).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('bot difficulty is one slider with plain levels; the mixed roster says what it means; it persists', async ({
@@ -513,7 +504,7 @@ test.describe('Stitch main menu', () => {
     await expect(page.getByRole('group', { name: 'Choose how to play' })).toBeVisible();
     await page.getByTestId('home-rumble').click();
     await expect(page.getByRole('heading', { name: 'Match setup', level: 2 })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Battle style' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'City Rumble mode', level: 3 })).toBeVisible();
     await page.getByTestId('mode-team').click();
     await expect(page.getByRole('heading', { name: 'Select Arena', level: 3 })).toBeVisible();
     await expect(page.getByRole('group', { name: 'City Rumble stages' })).toBeVisible();
@@ -612,7 +603,7 @@ test.describe('Stitch main menu', () => {
     await page.getByTestId('home-play').tap();
     await page.getByTestId('home-rumble').tap();
     await page.getByTestId('mode-survival').tap();
-    // the Battle style chips sit below the arena cards on a portrait phone: scroll back up to the arena cards
+    // the City Rumble mode chips sit below the arena cards on a portrait phone: scroll back up to the arena cards
     await page.getByRole('heading', { name: 'Select Arena' }).scrollIntoViewIfNeeded();
     await expect(page.getByRole('heading', { name: 'Select Arena' })).toBeInViewport();
     await page.getByTestId('rumble-stage-rumbleMushin').tap();

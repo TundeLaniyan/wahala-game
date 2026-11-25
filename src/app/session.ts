@@ -41,7 +41,14 @@ import { routeMenuNav } from './menuNav';
 import { NULL_AUDIO } from './ports';
 import type { AudioPort, MissionHost } from './ports';
 import { dataSaverActive, sanitizeSettings, saveSettings } from './settings';
-import { quickMatchPatch, splitQuickWrite } from './quickMatch';
+import {
+  parseQuickPlanOverride,
+  quickMatchPatch,
+  quickSummary,
+  rollQuickPlan,
+  splitQuickWrite,
+} from './quickMatch';
+import type { QuickPlan } from './quickMatch';
 import type { GameSettings } from './settings';
 import { QualityNotifier } from './qualityNotice';
 import { patch, useGameStore } from './store';
@@ -398,12 +405,7 @@ export function mount(canvas: HTMLCanvasElement): () => void {
   const syncWarm = (): void => {
     const s = useGameStore.getState();
     if (s.screen !== 'title' || loader.busy) return; // a start is on its way: let what is in flight finish
-    const target = prefetchTarget(
-      currentScreen(s.menu),
-      s.settings,
-      prefetchEnv(),
-      params.has('prefetchplay'),
-    );
+    const target = prefetchTarget(currentScreen(s.menu), s.settings, prefetchEnv());
     if (target !== undefined) warmer.follow(target);
   };
   warmingArena = () => warmer.current;
@@ -551,11 +553,25 @@ function testCameraView(test: boolean): void {
  */
 let quickBase: GameSettings | null = null;
 let quickStarting = false;
+/** The draw of the Quick Start on its way or playing (decision QS1); kept until the player is back at the menu. */
+let quickPlan: QuickPlan | null = null;
 function endQuickMatch(): void {
   if (quickBase === null) return;
   const base = quickBase;
   quickBase = null;
-  patch({ settings: base });
+  quickPlan = null;
+  patch({ settings: base, quickSummary: null });
+}
+
+/** A fresh seed for a Quick Start draw: `?seed=N` makes it repeatable (tests), otherwise the browser's secure random. */
+function quickSeed(): number {
+  const fixed = Number(new URLSearchParams(location.search).get('seed'));
+  if (Number.isFinite(fixed) && fixed > 0) return Math.floor(fixed);
+  try {
+    return (crypto.getRandomValues(new Uint32Array(1))[0]! % 2_000_000_000) + 1;
+  } catch {
+    return (Date.now() % 2_000_000_000) + 1;
+  }
 }
 
 /** Debug (`?debug`): the arena whose files the early prefetch is warming now, or null (decision FU2-7). */
@@ -564,13 +580,17 @@ let warmingArena: () => string | null = () => null;
 /** Everything the UI can ask the game to do. */
 export const commands = {
   /**
-   * Choose How to Play, QUICK START: one tap, an offline City Rumble Free-for-All (16 fighters, Rookie bots, 3 minutes);
-   * the saved match, audio, controls and graphics preferences stay as they were.
+   * Home, QUICK START: one tap, an offline City Rumble match drawn at random (decision QS1): one of the seven stages,
+   * Free-for-All or Team Deathmatch, 24 or 32 fighters, Standard bots, three minutes. The draw is made here, once; the
+   * loading screen, the match and a retry all use it. The saved match, audio, controls and graphics preferences stay as they were.
    */
-  startQuickMatch(): void {
+  startQuickMatch(
+    plan: QuickPlan = parseQuickPlanOverride(location.search) ?? rollQuickPlan(quickSeed()),
+  ): void {
     if (loader.busy) return; // a second tap starts nothing (and never captures the quick values as the player's own)
     if (quickBase === null) quickBase = useGameStore.getState().settings;
-    patch({ settings: { ...quickBase, ...quickMatchPatch() } });
+    quickPlan = plan;
+    patch({ settings: { ...quickBase, ...quickMatchPatch(plan) }, quickSummary: quickSummary(plan) });
     quickStarting = true;
     try {
       commands.start();
@@ -986,6 +1006,8 @@ function exposeDebugHandle(): void {
     },
     /** e2e / art review: a field mission's data (start, markers, doors, return), so specs stage on the data's own tiles. */
     fieldMissionDef: (fieldId: string) => FIELD_MISSION_DEFS[fieldId] ?? null,
+    /** The Quick Start's one draw (stage, ruleset, roster) while it is on, else null (decision QS1). */
+    quickPlan: (): QuickPlan | null => quickPlan,
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
     /** The arena the early prefetch is warming now (null: nothing), decision FU2-7. */
     warming: () => warmingArena(),

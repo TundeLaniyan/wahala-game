@@ -12,9 +12,9 @@ describe('Story Campaign current-mission strip', () => {
     expect(cur!.finale).toBe(false);
   });
 
-  it('distinguishes open-field 3D missions from Classic Blast raids (campaign is not Classic-only)', () => {
+  it('distinguishes open-field 3D missions from Junction Blast raids (campaign is not Classic-only)', () => {
     expect(STYLE_LABEL.field).toMatch(/Open-field 3D/);
-    expect(STYLE_LABEL.raid).toMatch(/Classic Blast/);
+    expect(STYLE_LABEL.raid).toMatch(/Junction Blast/);
     expect(STYLE_LABEL.field).not.toMatch(/Classic/);
     const cur = currentMission(createSave(1))!;
     expect(cur.style).toBe(STYLE_LABEL[cur.format]);

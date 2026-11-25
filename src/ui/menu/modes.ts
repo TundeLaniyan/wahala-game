@@ -1,5 +1,5 @@
 /**
- * The mode data the menu shares: the three City Rumble rulesets plus Classic Blast as cards (rule text from the sim
+ * The mode data the menu shares: the three City Rumble rulesets plus Junction Blast as cards (rule text from the sim
  * registries via app/setupSummary), and which one the real settings currently select.
  */
 import { ARENAS } from '../../sim';
@@ -57,7 +57,7 @@ export const MODE_CARDS: readonly ModeCard[] = [
   {
     id: 'classic',
     game: 'Arena',
-    name: 'Classic Blast',
+    name: 'Junction Blast',
     tag: '2-4 fighters',
     rule: 'No respawn · last survivor wins',
     blurb: 'The quick arena match: last one standing, and the Wahala Crush closes the board.',

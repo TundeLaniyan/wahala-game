@@ -1,9 +1,8 @@
 /**
- * Home: the WAHALA! title over the Lagos key art with the three playable fighters, one dominant PLAY button and two
- * secondary choices (STORY CAMPAIGN / CONTINUE STORY, LEARN TO PLAY); Settings and Sound are small utility buttons.
- * Offline, one human against AI bots: no accounts, servers or store. Everything else (City Rumble, Quick Start, Classic Blast,
- * the arena and rules) is one tap further, on Choose How to Play. The utility row also holds the Music Data Saver
- * shortcut (the same saved setting as Settings > Audio).
+ * Home: the WAHALA! title over the Lagos key art with the three playable fighters, in one fixed order (decision QS1):
+ * QUICK START (dominant: an offline City Rumble drawn at random, starts at once), PLAY (opens Choose Your Game: City Rumble
+ * or Junction Blast), BREAK THE RING (the story campaign) and LEARN TO PLAY; Settings and Sound are small utility buttons.
+ * Offline, one human against AI bots: no accounts, servers or store. The Music Data Saver switch lives only in Settings > Audio.
  */
 import { useState } from 'react';
 import { campaignProgress } from '../../campaign';
@@ -15,13 +14,13 @@ import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
 import { storyInProgress } from '../campaign/currentMission';
 import { fighterArt } from './art';
-import { dataSaverShortcut } from './dataSaverShortcut';
 import { FighterImage } from './FighterImage';
 
 /** The Home copy: one place, so labels stay plain and replaceable. */
 export const HOME_COPY = {
-  play: { title: 'PLAY', sub: 'Rumble now!' },
-  story: { title: 'STORY CAMPAIGN', continueTitle: 'CONTINUE STORY' },
+  quick: { title: 'QUICK START', sub: 'Random City Rumble · starts at once' },
+  play: { title: 'PLAY', sub: 'City Rumble · Junction Blast' },
+  story: { title: 'BREAK THE RING', sub: 'Story campaign', continueSub: 'Continue your story' },
   learn: { title: 'LEARN TO PLAY', sub: 'Training Academy' },
 } as const;
 
@@ -39,7 +38,6 @@ async function openRumbleOnline(): Promise<boolean> {
 export function HomeScreen() {
   const [onlineFailed, setOnlineFailed] = useState(false);
   const s = useGameStore((st) => st.settings);
-  const saver = dataSaverShortcut(s.dataSaver);
   useGameStore((st) => st.portraitsVersion);
   const campaign = useGameStore((st) => st.campaign);
   const showCampaign = flags().campaign && !!campaign;
@@ -65,8 +63,17 @@ export function HomeScreen() {
           <button
             type="button"
             className="mn-home-play"
-            data-testid="home-play"
+            data-testid="home-quick"
             data-autofocus=""
+            onClick={() => commands.startQuickMatch()}
+          >
+            <b>{HOME_COPY.quick.title}</b>
+            <small>{HOME_COPY.quick.sub}</small>
+          </button>
+          <button
+            type="button"
+            className="mn-home-second play"
+            data-testid="home-play"
             onClick={() => commands.menuOpen('play')}
           >
             <b>{HOME_COPY.play.title}</b>
@@ -79,12 +86,12 @@ export function HomeScreen() {
               data-testid="home-campaign"
               onClick={() => commands.campaignOpen()}
             >
-              <b>{inProgress ? HOME_COPY.story.continueTitle : HOME_COPY.story.title}</b>
-              {progress && (
-                <small data-testid="home-campaign-progress">
-                  {progress.cleared} / {progress.total} cleared
-                </small>
-              )}
+              <b>{HOME_COPY.story.title}</b>
+              <small data-testid={progress ? 'home-campaign-progress' : undefined}>
+                {progress
+                  ? `${inProgress ? HOME_COPY.story.continueSub + ' · ' : ''}${progress.cleared} / ${progress.total} cleared`
+                  : HOME_COPY.story.sub}
+              </small>
             </button>
           )}
           <button
@@ -144,20 +151,6 @@ export function HomeScreen() {
           onClick={() => commands.updateSettings({ muted: !s.muted })}
         >
           <span aria-hidden>{s.muted ? '🔇' : '🔊'}</span>
-        </button>
-        <button
-          type="button"
-          className={`mn-util mn-saver${saver.effective ? ' on' : ''}`}
-          data-testid="home-datasaver"
-          data-effective={saver.effective ? 'on' : 'off'}
-          data-setting={s.dataSaver}
-          aria-pressed={saver.effective}
-          aria-label={saver.label}
-          title={saver.hint}
-          onClick={() => commands.updateSettings({ dataSaver: saver.next })}
-        >
-          <b>{saver.title}</b>
-          <small>{saver.state}</small>
         </button>
         <span className="mn-keys">
           <kbd>↑↓</kbd> Navigate <kbd>Enter</kbd> Select <kbd>Esc</kbd> Back

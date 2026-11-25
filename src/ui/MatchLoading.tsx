@@ -25,6 +25,7 @@ function stepState(current: MatchLoadPhase, step: MatchLoadPhase): 'done' | 'now
 
 export function MatchLoading({ load }: { load: MatchLoadState }) {
   const portrait = useGameStore((s) => s.portrait);
+  const quick = useGameStore((s) => s.quickSummary);
   const failed = load.phase === 'failed';
   return (
     <div
@@ -46,6 +47,12 @@ export function MatchLoading({ load }: { load: MatchLoadState }) {
         )}
         <small className="mn-kicker">WAHALA!</small>
         <h2>{failed ? 'The match did not start' : loadTitle(load.kind)}</h2>
+        {quick && load.kind === 'match' && (
+          // the Quick Start's one draw: stage, ruleset, roster, bot level (decision QS1)
+          <p className="mn-load-quick" data-testid="match-loading-quick">
+            <b>Quick Start</b> · {quick}
+          </p>
+        )}
         {failed ? (
           <>
             <p className="mn-load-error" data-testid="match-loading-error">

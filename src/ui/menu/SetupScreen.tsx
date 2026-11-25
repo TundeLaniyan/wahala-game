@@ -1,6 +1,8 @@
 /**
  * Match Setup, one screen (the step after Choose How to Play):
- *  - Battle style: Classic Blast or City Rumble (and its ruleset), already selected from the previous screen;
+ *  - Ruleset: City Rumble's Free-for-All / Team Deathmatch / Last Player Standing, or Junction Blast's one ruleset. The game was
+ *    chosen on the previous screen and is never offered here: the City Rumble setup has no Junction Blast choice and vice
+ *    versa (decision QS1; Back returns to Choose How to Play);
  *  - "Select Arena": the arena / stage cards of the chosen game (ArenaPicker.tsx), always in view;
  *  - Opponents: how many fighters and the bot difficulty (one slider, "same for all" or mixed / per bot);
  *  - Match rules: only what the chosen mode has (length, friendly fire, blast shape, crowd throws ...).
@@ -229,7 +231,7 @@ function ClassicRules({ s, set }: { s: GameSettings; set: Set }) {
           testId="toggle-crowd"
         />
       </Field>
-      <Field label="Wahala Crush" hint="The board closes in near the end of every Classic match">
+      <Field label="Wahala Crush" hint="The board closes in near the end of every Junction Blast match">
         <span className="mn-badge locked" data-testid="crush-badge">
           Always on
         </span>
@@ -242,36 +244,24 @@ function ClassicRules({ s, set }: { s: GameSettings; set: Set }) {
   );
 }
 
-/** Battle Style: Classic Blast or City Rumble (and, for City Rumble, its ruleset). Writes the real `play` / `rumbleMode`. */
-function BattleStyle({ s, set }: { s: GameSettings; set: Set }) {
+/**
+ * The ruleset panel of the chosen game. City Rumble: its rulesets (writes the real `rumbleMode`). Junction Blast: its one
+ * ruleset, as a plain description. The other game is never offered here (decision QS1).
+ */
+function Ruleset({ s, set }: { s: GameSettings; set: Set }) {
   const rumbleModes = MODE_CARDS.filter((m) => m.id !== 'classic');
+  const rumble = s.play === 'rumble';
   return (
     <section className="mn-group mn-panel mn-style" aria-labelledby="style-title" data-testid="battle-style">
       <header className="mn-group-head">
-        <h3 id="style-title">Battle style</h3>
+        <h3 id="style-title">{rumble ? 'City Rumble mode' : 'Junction Blast'}</h3>
       </header>
-      <div className="mn-opts mn-seg" role="group" aria-label="Battle style">
-        <Option
-          value="classic"
-          current={s.play}
-          label="Classic Blast"
-          onPick={(play) => set({ play })}
-          testId="setup-style-classic"
-        />
-        <Option
-          value="rumble"
-          current={s.play}
-          label="City Rumble"
-          onPick={(play) => set({ play })}
-          testId="setup-style-rumble"
-        />
-      </div>
       <p className="mn-style-blurb" data-testid="style-blurb">
-        {s.play === 'classic'
-          ? 'Grid battles. Cross-shaped explosions. Tactical generator action.'
-          : 'Open 3D arenas. Generators, special attacks and rival fighters.'}
+        {rumble
+          ? 'Open 3D arenas. Generators, special attacks and rival fighters.'
+          : 'Grid battles. Cross-shaped explosions. Tactical generator action.'}
       </p>
-      {s.play === 'rumble' && (
+      {rumble && (
         <div className="mn-opts mn-seg mn-rumble-modes" role="group" aria-label="City Rumble mode">
           {rumbleModes.map((m) => (
             <Option
@@ -302,7 +292,7 @@ export function SetupScreen() {
   return (
     <ScreenFrame
       id="setup"
-      kicker={rumble ? `City Rumble · ${mode.name}` : 'Classic Blast'}
+      kicker={rumble ? `City Rumble · ${mode.name}` : 'Junction Blast'}
       title="Match setup"
       status={
         <button
@@ -335,7 +325,7 @@ export function SetupScreen() {
       <div className="mn-setup2" data-testid={rumble ? 'rumble-setup' : 'classic-setup'}>
         <ArenaPicker />
         <div className="mn-setup2-side">
-          <BattleStyle s={s} set={set} />
+          <Ruleset s={s} set={set} />
           <section className="mn-group mn-panel" aria-labelledby="opp-title">
             <header className="mn-group-head">
               <h3 id="opp-title">Opponents</h3>

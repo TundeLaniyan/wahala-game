@@ -106,9 +106,16 @@ asks for landscape, but the pause menu shows above the rotate notice (which has 
 
 ## FU2 amendments (branch `claude/wahala-fu2-ux`, decisions FU2-1 to FU2-6)
 
-- **Choose How to Play** is City Rumble (first, widest, gold), Quick Start (teal) and Classic Blast (plain), in that order; the focus starts on City Rumble. **Quick Start** starts an
+- **Choose How to Play** is City Rumble (first, widest, gold), Quick Start (teal) and Junction Blast (plain), in that order; the focus starts on City Rumble. **Quick Start** starts an
   offline City Rumble Free-for-All (16 fighters, Rookie bots, 3 minutes, Ojuelegba Underbridge) in one tap, never a Classic match; the saved audio, controls, graphics and match
   setup are untouched. The old "Customise" button is gone. The Training Academy's first section is titled Beginner (id `quick`).
 - **Home** gains a **Music Data Saver** button in the utility row (two lines, >= 44 px: "MUSIC DATA SAVER", "ON" / "OFF", "(auto)" while the setting is Auto). It is the Settings > Audio Data
   Saver preference (one saved value, no second state) and says it saves music downloads only. Checked at 750 x 336, 832 x 384, 844 x 390 and 390 x 844 (`e2e/menu.spec.ts`;
   before / after pictures in `docs/screenshots/fu2/`, made with `WAHALA_SHOTS=home,play node scripts/menu-shots.mjs <dir> phone750 phone832 portrait`).
+
+## Final hierarchy, Junction Blast and the random Quick Start (decision QS1, 2026-11-25)
+
+- **Home** (top to bottom): QUICK START (dominant gold button: a random offline City Rumble, starts at once), PLAY (Choose How to Play), BREAK THE RING (the story campaign; second line "Story campaign" or "Continue your story · n / total cleared"), LEARN TO PLAY. Small Settings and Sound buttons stay in the utility row; the Music Data Saver button was removed (Settings > Audio keeps the switch).
+- **Choose How to Play**: two cards, CITY RUMBLE (flagship, first, widest) and JUNCTION BLAST (the grid mode, formerly Classic Blast). Each opens Match Setup for that game only; Back returns here. City Rumble setup: Free-for-All, Team Deathmatch, Last Player Standing, arena, fighters, bots, length. Junction Blast setup: grid arenas, players (2-4), bots, crowd throws; no City Rumble choice.
+- **Quick Start** draws once, at the tap (`rollQuickPlan(seed)`): stage 1 of 7, Free-for-All or Team Deathmatch 50 / 50, 24 (30 %) or 32 (70 %) fighters, Standard bots, 3 minutes. The loading screen names the draw. Saved match setup, fighter, audio, graphics, controls and accessibility are untouched (SX11). `?seed=N` repeats a draw; `?debug&quickplan=<stage>:<mode>:<n>` forces one (tests only).
+- Test ids kept for stability: `home-rumble`, `home-classic` (Junction Blast), `classic-setup`; new: `home-quick`, `match-loading-quick`.

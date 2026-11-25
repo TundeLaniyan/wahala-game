@@ -7,7 +7,6 @@ import { ArenaWarmer, prefetchBlocked, prefetchTarget } from '../../src/app/aren
 import type { PrefetchEnv } from '../../src/app/arenaPrefetch';
 import { DEFAULT_GAME_SETTINGS } from '../../src/app/settings';
 import type { GameSettings } from '../../src/app/settings';
-import { QUICK_MATCH_ARENA_ID } from '../../src/app/quickMatch';
 import { arenaModels } from '../../src/render/assets/modelNeeds';
 
 const rumble: GameSettings = { ...DEFAULT_GAME_SETTINGS, play: 'rumble', rumbleArenaId: 'rumbleMushin' };
@@ -16,9 +15,9 @@ const OK: PrefetchEnv = { connection: { saveData: false, effectiveType: '4g' }, 
 
 describe('what is warmed, and on which screen', () => {
   it('the arena the next Start plays, on the setup and fighter screens', () => {
-    expect(prefetchTarget('setup', rumble, OK, false)).toBe('rumbleMushin');
-    expect(prefetchTarget('fighter', rumble, OK, false)).toBe('rumbleMushin');
-    expect(prefetchTarget('setup', classic, OK, false)).toBe('balogunMarket');
+    expect(prefetchTarget('setup', rumble, OK)).toBe('rumbleMushin');
+    expect(prefetchTarget('fighter', rumble, OK)).toBe('rumbleMushin');
+    expect(prefetchTarget('setup', classic, OK)).toBe('balogunMarket');
   });
 
   it('the warm-up has recorded model sets to fetch for every arena it can name', () => {
@@ -27,17 +26,17 @@ describe('what is warmed, and on which screen', () => {
   });
 
   it('the Ready screen leaves things as they are (the decoded prefetch takes over)', () => {
-    expect(prefetchTarget('ready', rumble, OK, false)).toBeUndefined();
+    expect(prefetchTarget('ready', rumble, OK)).toBeUndefined();
   });
 
   it('browsing Home, Settings, the Academy or the campaign downloads nothing', () => {
     for (const screen of ['home', 'settings', 'academy', 'campaign', 'briefing', 'missionBrief'] as const)
-      expect(prefetchTarget(screen, rumble, OK, true), screen).toBeNull();
+      expect(prefetchTarget(screen, rumble, OK), screen).toBeNull();
   });
 
-  it('Choose How to Play warms only the Quick Start arena, and only when that is switched on', () => {
-    expect(prefetchTarget('play', rumble, OK, false)).toBeNull();
-    expect(prefetchTarget('play', rumble, OK, true)).toBe(QUICK_MATCH_ARENA_ID);
+  it('Home and Choose How to Play warm nothing: the Quick Start stage is drawn at the tap (QS1)', () => {
+    expect(prefetchTarget('home', rumble, OK)).toBeNull();
+    expect(prefetchTarget('play', rumble, OK)).toBeNull();
   });
 });
 
@@ -54,7 +53,7 @@ describe('when nothing is warmed', () => {
       const s = { ...rumble, ...over };
       expect(prefetchBlocked(s, env)).toBe(why);
       for (const screen of ['setup', 'fighter', 'ready', 'play'] as const)
-        expect(prefetchTarget(screen, s, env, true), screen).toBeNull();
+        expect(prefetchTarget(screen, s, env), screen).toBeNull();
     });
 
   it('Save-Data wins even when the player set Data Saver to Off', () => {

@@ -1,7 +1,7 @@
 # Campaign combat reliability (decisions RC1-RC8)
 
 Branch `claude/wahala-combat-reliability-v1` (from production `0830ee8`). Scope: the campaign FIELD missions' enemy layer
-(`GameConfig.campaignTactics`, `docs/CAMPAIGN_SECTOR_AI.md`). Classic Blast, City Rumble, multiplayer, raids and the Training
+(`GameConfig.campaignTactics`, `docs/CAMPAIGN_SECTOR_AI.md`). Junction Blast, City Rumble, multiplayer, raids and the Training
 Academy are untouched (their pinned digests and absence tests are unchanged).
 
 ## 1. The problem and the baseline

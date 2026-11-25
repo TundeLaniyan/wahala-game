@@ -1,6 +1,6 @@
 # Mission guidance: briefings, objective HUD and target pins
 
-Worker `cg-guidance` (branch `claude/wahala-cg-guidance`, from production `0b89d09`). Founder feedback: players entered missions, Classic Blast raids above all, without knowing what to destroy, capture, activate or reach. The objective is now explained visually before play, reinforced in play, and confirmed when it completes. Decisions MG1-MG9 in `docs/DECISIONS.md`. Presentation and wording only: no rule, timing, position or save field changed.
+Worker `cg-guidance` (branch `claude/wahala-cg-guidance`, from production `0b89d09`). Founder feedback: players entered missions, Junction Blast raids above all, without knowing what to destroy, capture, activate or reach. The objective is now explained visually before play, reinforced in play, and confirmed when it completes. Decisions MG1-MG9 in `docs/DECISIONS.md`. Presentation and wording only: no rule, timing, position or save field changed.
 
 Everything is DATA-DRIVEN from the mission, leg, boss-recipe and raid data. No UI or render code names a mission id or a coordinate, so the district re-authoring of the other workers (new arenas, moved checkpoints and equipment) flows through unchanged.
 

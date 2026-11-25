@@ -298,7 +298,7 @@ test.describe('Test Lab', () => {
     await returnToLab(page);
   });
 
-  test('Classic Blast starts a real 4-player Classic match with competitive rules', async ({
+  test('Junction Blast starts a real 4-player Classic match with competitive rules', async ({
     page,
     context,
   }) => {

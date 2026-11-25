@@ -37,11 +37,11 @@ export const CRUSH: Lesson = {
   id: 'crush',
   course: 'modes',
   title: 'Wahala Crush',
-  summary: 'Every Classic match: the walls close in.',
+  summary: 'Every Junction Blast match: the walls close in.',
   objective:
     'Survive Wahala Crush: get to the middle while the walls close in, and stay alive until the 0:30 floor traps.',
   facts: [
-    'Every Classic match ends with Wahala Crush. It cannot be switched off.',
+    'Every Junction Blast match ends with Wahala Crush. It cannot be switched off.',
     'From 0:45 the arena fills with concrete from the outside in, one telegraphed tile at a time.',
     'A flashing tile becomes concrete about a second later. Anyone standing on it is out.',
     'In the final 30 seconds floor traps (potholes and oil) land too, in every match.',
@@ -52,7 +52,8 @@ export const CRUSH: Lesson = {
       toCrush(demoBoard([2, 8], () => undefined, { settings: { mode: 'crush' }, config: CRUSH_CONFIG })),
     beats: [
       {
-        caption: '(The clock starts at 0:47 for this lesson.) Every Classic match ends with Wahala Crush.',
+        caption:
+          '(The clock starts at 0:47 for this lesson.) Every Junction Blast match ends with Wahala Crush.',
         acts: { 0: [walk('up', 4)] },
       },
       {

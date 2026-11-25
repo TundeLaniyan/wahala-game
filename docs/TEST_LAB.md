@@ -10,7 +10,7 @@ list (tap its header to open it; the approved tests stay launchable). Tap an ent
 look for**, what it launches, a difficulty (Easy / Normal / Hard, default Normal; City Rumble has its own set-up instead),
 **Start Test** and the feedback buttons. In a test the pause menu has Resume, **Restart Test** (clean start, same level and
 set-up), Controls, Settings and **Return to Test Lab** (asks first). A finished raid, mission or boss shows its result with
-Restart and Return; Classic Blast and City Rumble use their real results with the same two buttons. Esc / back returns one
+Restart and Return; Junction Blast and City Rumble use their real results with the same two buttons. Esc / back returns one
 level. **Exit Test Lab** reloads the normal game URL. Layout is for phone landscape: the page never scrolls, the lists scroll
 inside their columns, tap targets are at least 44 px, safe areas are kept.
 
@@ -54,10 +54,10 @@ lab's launch and the normal menu's launch with the same settings and seed build 
 play identically for 240 ticks with the real bots.
 
 ## Completed Tests
-Launchable exactly as before: City Rumble parity, Occluded building visibility, the Oshodi boss (Easy approved; Normal / Hard jammer-defence tuning is a separate design item), Classic rear ambush, One-hit lethality, Classic Campaign Raid, Records Vault night raid, Classic Blast, Campaign field mission,
+Launchable exactly as before: City Rumble parity, Occluded building visibility, the Oshodi boss (Easy approved; Normal / Hard jammer-defence tuning is a separate design item), Classic rear ambush, One-hit lethality, Classic Campaign Raid, Records Vault night raid, Junction Blast, Campaign field mission,
 Characters and performance (Team Rumble, Lagos Island, 24 fighters, fighter picker, fps line) and the five isolated scenarios
 below (rear approach, patrol ambush, punch dodge, pursuit, flashlight). Level means the campaign level for raids, field and
-boss (enemy level, health, damage) and the bot level for Classic Blast and the Characters entry.
+boss (enemy level, health, damage) and the bot level for Junction Blast and the Characters entry.
 
 Isolated scenarios are real raids prepared by `testlab/scenarios/defs.ts` (fixed seed, 600 s clock, one life count as the raid).
 Each definition's `setup` lines are the whole preparation; outcomes are never scripted.

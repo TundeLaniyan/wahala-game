@@ -28,7 +28,7 @@ export async function open(page: Page, query = ''): Promise<void> {
 }
 
 /**
- * The menu journey: Home -> Play (Choose How to Play) -> Classic Blast or City Rumble -> Match Setup (battle style,
+ * The menu journey: Home -> Play (Choose How to Play) -> Junction Blast or City Rumble -> Match Setup (battle style,
  * arena, opponents, rules; City Rumble has its three rulesets there) -> fighter -> review -> play. These helpers walk
  * the real journey; nothing is set behind the menu's back.
  */
@@ -80,7 +80,7 @@ export async function setDifficulty(page: Page, index: number, testId = 'diff-sl
 }
 
 /**
- * A returning player's start: Home -> Play -> the game they last set up (Classic Blast or City Rumble) -> START MATCH
+ * A returning player's start: Home -> Play -> the game they last set up (Junction Blast or City Rumble) -> START MATCH
  * on Match Setup, which keeps every saved choice. `tap` uses touch taps (phone specs).
  */
 export async function playSavedSetup(page: Page, tap = false): Promise<void> {

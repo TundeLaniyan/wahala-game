@@ -6,8 +6,8 @@ The multiplayer foundation is `claude/wahala-city-rumble-online-30w0rm` (`docs/C
 
 ## 1. Founder boundaries (do not drift)
 - Public GitHub Pages must keep working with NO backend, forever. No paid hosting, cloud provisioning or domain work. No tunnels or LAN addresses hardcoded.
-- Classic Blast keeps its name and place. City Rumble is the only multiplayer priority: 32 fighters, up to 32 humans, bots fill the rest.
-- Offline City Rumble, Classic Blast, campaign, BREAK THE RING never depend on a server. No change to their simulation, progression or initial network need.
+- Junction Blast keeps its name and place. City Rumble is the only multiplayer priority: 32 fighters, up to 32 humans, bots fill the rest.
+- Offline City Rumble, Junction Blast, campaign, BREAK THE RING never depend on a server. No change to their simulation, progression or initial network need.
 - The server is authoritative for movement validity, generator placement, collisions, explosions, damage and results. A client can never create a kill or an outcome.
 - Do not rebalance gameplay, change the offline movement/assist behaviour, the iPhone zoom fix, Lekki visibility, night lighting or the mobile performance gains. Do not merge unapproved audio.
 
@@ -70,7 +70,7 @@ Everything below was run in the development container (software WebGL, no physic
 | # | Check | Result | Evidence |
 | --- | --- | --- | --- |
 | 1 | Public production mode, no backend | The default build launches with nothing listening on :2567; no WebSocket is opened, no discovery or polling | `npm run check:static` (no socket / WebRTC / microphone code, no online chunk markers, no endpoint or private address in `dist`); `tests/online/public-bundle.test.ts`; `e2e/online.spec.ts` (`?online`, `?server`, `?voice` do nothing) |
-| 2, 3 | Offline gameplay, Classic Blast and the campaign unchanged | Full unit suite 334 files / 5,271 tests green on the integrated branch (after two import-guard updates, section 3); the CI browser suite runs on the production merge | `npm run check` |
+| 2, 3 | Offline gameplay, Junction Blast and the campaign unchanged | Full unit suite 334 files / 5,271 tests green on the integrated branch (after two import-guard updates, section 3); the CI browser suite runs on the production merge | `npm run check` |
 | 4 | Online flag disabled | No Online entry on Home, no controller loaded | `tests/platform-flags.test.ts`, `tests/platform-static.test.ts`, `tests/online/import-guard.test.ts` |
 | 5 | Online flag enabled locally | `npm run build:online` + `npm run dev:online`; `?online` shows PLAY ONLINE | `docs/CITY_RUMBLE_ONLINE_LOCAL.md` |
 | 6 | Two real browsers, one match | Desktop host + phone-sized guest (832 x 384, touch): join by invite code, ready, start, play | `npm run test:online-e2e` scenario 1 |

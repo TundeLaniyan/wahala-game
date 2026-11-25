@@ -7,7 +7,7 @@ between them from the pause menu without restarting. It is not a final balance, 
 
 1. Home -> City Rumble -> any mode -> Start (bots are fine).
 2. Pause: the pause button on the HUD (phone), or P / Esc / Start.
-3. Under **Combat test lab**, tap **Off**, **1 Classic+**, **2 Balanced**, **3 Arcade** or **4 Maximum Punch**.
+3. Under **Combat test lab**, tap **Off**, **1 Junction+**, **2 Balanced**, **3 Arcade** or **4 Maximum Punch**.
 4. Resume. The new level is in force at once. A small chip under the minimap shows it, for example "LAB 3 Arcade".
 5. Pause again and pick another level at any time; the match goes on.
 
@@ -20,7 +20,7 @@ Every fighter keeps their own attack: Street Baller the Punch (push), Lekki Boy 
 Shove. The daze, the displacement and the victim's daze immunity never change, so a victim always gets a free window
 after each daze and there is no stun-lock at any level.
 
-| | Off (today) | 1 Classic+ | 2 Balanced | 3 Arcade | 4 Maximum Punch |
+| | Off (today) | 1 Junction+ | 2 Balanced | 3 Arcade | 4 Maximum Punch |
 | --- | --- | --- | --- | --- | --- |
 | Punch startup / hit recovery / same-target lockout (ticks) | 4 / 60 / 180 | 4 / 36 / 144 | 3 / 24 / 108 | 2 / 15 / 72 | 2 / 10 / 36 |
 | Daze Punch startup / hit recovery | 18 / 240 | 18 / 144 | 14 / 90 | 8 / 45 | 4 / 14 |

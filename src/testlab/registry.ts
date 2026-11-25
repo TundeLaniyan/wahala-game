@@ -18,7 +18,7 @@ export type LabLaunch =
   | { kind: 'field'; missionId: string }
   /** A campaign boss mission through the real campaign controller. */
   | { kind: 'boss'; districtId: MissionId }
-  /** A local Classic Blast match through the normal match start (the saved-settings path, in memory). */
+  /** A local Junction Blast match through the normal match start (the saved-settings path, in memory). */
   | { kind: 'classic'; arenaId: string }
   /** A local City Rumble match through the normal match start. `difficulty` set: that bot level (no Easy / Normal / Hard). */
   | {
@@ -190,7 +190,7 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
     id: 'classicRearAmbush',
     section: 'playtest',
     group: 'completed',
-    title: 'Classic rear ambush',
+    title: 'Junction Blast rear ambush',
     objective: 'In the real first raid, creep up behind a guard and take it out with one generator.',
     lookFor:
       'A calm guard does not see or hear you behind it, a generator laid there is a quiet click, and one blast defeats an ordinary guard.',
@@ -222,7 +222,7 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
     id: 'classicRaid',
     section: 'playtest',
     group: 'completed',
-    title: 'Classic Campaign Raid',
+    title: 'Junction Blast Campaign Raid',
     objective: 'Break the 3 marked dispatch crates in the depot and reach the exit.',
     launches:
       'The first Oshodi classic raid (Dispatch Depot, the depot door raid of Terminal Approach), played on its own.',
@@ -243,10 +243,10 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
     id: 'classicBlast',
     section: 'playtest',
     group: 'completed',
-    title: 'Classic Blast',
-    objective: 'Win a standard 4-player Classic Blast match against 3 bots.',
+    title: 'Junction Blast',
+    objective: 'Win a standard 4-player Junction Blast match against 3 bots.',
     launches:
-      'A real Classic Blast match (Danfo Bus Park, one human and 3 bots, the normal rules and Wahala Crush).',
+      'A real Junction Blast match (Danfo Bus Park, one human and 3 bots, the normal rules and Wahala Crush).',
     levels: true,
     launch: { kind: 'classic', arenaId: 'danfoBusPark' },
   },

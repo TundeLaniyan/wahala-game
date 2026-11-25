@@ -1,0 +1,42 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the draw (rollQuickPlan) > pins the draw for fixed seeds (a change of the order or the shares must be deliberate) 1`] = `
+[
+  {
+    "arenaId": "rumbleLagosIsland",
+    "fighters": 32,
+    "mode": "team",
+    "seed": 1,
+  },
+  {
+    "arenaId": "rumbleLekki",
+    "fighters": 24,
+    "mode": "team",
+    "seed": 2,
+  },
+  {
+    "arenaId": "rumbleLekki",
+    "fighters": 32,
+    "mode": "team",
+    "seed": 3,
+  },
+  {
+    "arenaId": "rumbleEbuteMetta",
+    "fighters": 24,
+    "mode": "team",
+    "seed": 4,
+  },
+  {
+    "arenaId": "rumbleLagosIsland",
+    "fighters": 24,
+    "mode": "deathmatch",
+    "seed": 5,
+  },
+  {
+    "arenaId": "rumbleFadeyi",
+    "fighters": 32,
+    "mode": "team",
+    "seed": 6,
+  },
+]
+`;

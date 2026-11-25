@@ -320,7 +320,7 @@ describe('the Workshop, campaign-wide with level 2', () => {
     expect(upgradeLevelText(s, 'capacity')).toBe('Not bought yet · next: +1 generator at once for 6 Parts');
     html = render(CampaignMap, started(s, { selected: 'oshodi' }));
     expect(html).toMatch(/data-testid="workshop-buy-range"[^>]*disabled[^>]*>Maxed/);
-    expect(html).toContain('never in raids, Classic, City Rumble or the Academy');
+    expect(html).toContain('never in raids, Junction Blast, City Rumble or the Academy');
   });
 
   it('is shown on the hub card too, and not before a campaign is started', () => {

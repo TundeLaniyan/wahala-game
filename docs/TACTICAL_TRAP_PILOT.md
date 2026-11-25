@@ -3,7 +3,7 @@
 Founder problem: campaign enemies escape generators too reliably (docs/ENEMY_COMBAT_FAIRNESS.md: the enemy planner saw every
 generator) while punching finishes them faster than a generator does. This pilot makes the generator the tactical weapon
 against ordinary enemies, as ONE isolated, reversible experiment. It is on only in the Training Academy "Generator Tactics"
-lessons; the normal campaign, Classic Blast, City Rumble, multiplayer, online, raids, boss missions and the accepted Level 2
+lessons; the normal campaign, Junction Blast, City Rumble, multiplayer, online, raids, boss missions and the accepted Level 2
 combat feel are untouched.
 
 ## Isolation and removal

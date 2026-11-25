@@ -22,14 +22,15 @@ async function openMenu(page: Page, query = ''): Promise<void> {
 }
 
 /**
- * Home -> Play -> Quick Start (an offline City Rumble Free-for-All, decision FU2-1), tapped N times as fast as the page takes them (each runs the button's own handler):
- * a second tap while a start is on its way must start nothing.
+ * Home -> Quick Start (an offline City Rumble drawn at random, decision QS1; these lifecycle specs name a small plan with
+ * `quickplan` so no 32-fighter match runs on a software renderer), tapped N times as fast as the page takes them (each runs
+ * the button's own handler): a second tap while a start is on its way must start nothing.
  */
+const SMALL = '&quickplan=rumbleOjuelegba:deathmatch:8';
 async function tapQuickPlay(page: Page, times = 3): Promise<void> {
-  if ((await page.getByTestId('menu-home').count()) > 0) await page.getByTestId('home-play').click();
-  await expect(page.getByTestId('play-quick')).toBeVisible();
+  await expect(page.getByTestId('home-quick')).toBeVisible();
   await page.evaluate((n) => {
-    const b = document.querySelector('[data-testid="play-quick"]') as HTMLButtonElement;
+    const b = document.querySelector('[data-testid="home-quick"]') as HTMLButtonElement;
     for (let i = 0; i < n; i++) b.click();
   }, times);
 }
@@ -46,7 +47,7 @@ test('rapid taps: the loading screen answers at once, one match starts, then the
 }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await openMenu(page, '&loaddelay=600');
+  await openMenu(page, SMALL + '&loaddelay=600');
   await tapQuickPlay(page);
   // the same task that took the taps already shows the loading screen (no heavy work has run yet)
   await expect(page.getByTestId('match-loading')).toBeVisible();
@@ -61,7 +62,7 @@ test('rapid taps: the loading screen answers at once, one match starts, then the
 
 test('a slow start keeps a real step on screen; the menu is gone at once', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the same lifecycle on every device');
-  await openMenu(page, '&loaddelay=2500');
+  await openMenu(page, SMALL + '&loaddelay=2500');
   await tapQuickPlay(page, 1);
   await expect(page.getByTestId('match-loading')).toBeVisible();
   await expect(page.getByTestId('match-loading-step')).toHaveText(
@@ -80,7 +81,7 @@ test('an upright phone: the turn-sideways hint and the loading line together, th
 }) => {
   test.skip(!isMobile, 'a touch phone held upright');
   await page.setViewportSize({ width: 390, height: 844 });
-  await openMenu(page, '&loaddelay=2500');
+  await openMenu(page, SMALL + '&loaddelay=2500');
   await tapQuickPlay(page, 1);
   await expect(page.getByTestId('match-loading-rotate')).toBeVisible();
   await expect(page.getByTestId('match-loading-step')).toBeVisible();
@@ -100,7 +101,7 @@ test('an upright phone: the turn-sideways hint and the loading line together, th
 
 test('a failed start: Retry starts it, Back returns to the menu', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the same lifecycle on every device');
-  await openMenu(page, '&loadfail=2');
+  await openMenu(page, SMALL + '&loadfail=2');
   await tapQuickPlay(page, 1);
   await expect(page.getByTestId('match-loading')).toHaveAttribute('data-phase', 'failed', {
     timeout: 30_000,
@@ -129,7 +130,7 @@ test('every 3D model failing to download: drawn fallbacks, the match still start
 }) => {
   test.skip(!isMobile, 'the slow-network case is a phone one');
   await page.route('**/*.glb', (route) => route.abort());
-  await openMenu(page);
+  await openMenu(page, SMALL + '');
   await tapQuickPlay(page, 1);
   await playable(page);
   const assets = await page.evaluate(() => (window as any).__WAHALA__.assets());

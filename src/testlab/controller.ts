@@ -1,6 +1,6 @@
 /**
  * The Test Lab's launcher (docs/TEST_LAB.md, decisions TL1-TL6): starts each entry through the game's own start paths,
- * restarts it cleanly, returns to the lab and records feedback. It adds no rule: Classic Blast and City Rumble start
+ * restarts it cleanly, returns to the lab and records feedback. It adds no rule: Junction Blast and City Rumble start
  * through `commands.start` (their settings live in the in-memory store), raids, the field mission and the boss through
  * the real campaign controller (whose save is in memory too), and the scenarios through the controller's no-save raid
  * path with a set-up hook.

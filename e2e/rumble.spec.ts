@@ -47,7 +47,7 @@ const settingsOf = (page: Page) =>
   });
 
 test.describe('main menu', () => {
-  test('City Rumble is the main entry; Team Rumble from a phone; Classic Blast one choice away', async ({
+  test('City Rumble is the main entry; Team Rumble from a phone; Junction Blast one choice away', async ({
     page,
   }, info) => {
     test.setTimeout(600_000); // software WebGL on a busy shared machine

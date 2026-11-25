@@ -116,6 +116,8 @@ export interface UiState {
   loading: { done: number; total: number } | null;
   /** Bumped when the rendered 3D portraits become available so the UI re-reads them. */
   portraitsVersion: number;
+  /** The compact line describing the Quick Start match on its loading screen (decision QS1); null for every other start. */
+  quickSummary: string | null;
   /** Debug `?cam=stadium`: forces the stadium follow camera; null = chosen per arena. */
   cameraOverride: CameraMode | null;
   /** City Rumble: fast-forwarding to the results after the local player went out. */
@@ -158,6 +160,7 @@ export const useGameStore = create<UiState>(() => ({
   fatal: null,
   loading: { done: 0, total: 1 },
   portraitsVersion: 0,
+  quickSummary: null,
   cameraOverride: null,
   skipping: false,
   tutorial: null,

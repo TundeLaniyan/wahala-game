@@ -130,3 +130,18 @@
 .mn-load-rotate small {
   color: var(--mn-muted);
 }
+
+/* the Quick Start's one draw (stage, ruleset, roster, bot level): a compact line under the title, never over the board */
+.mn-load-quick {
+  margin: 2px 0 0;
+  max-width: 34em;
+  font-size: clamp(0.78rem, 2.4vh, 0.95rem);
+  line-height: 1.35;
+  color: #c3cadb;
+  text-align: center;
+}
+.mn-load-quick b {
+  color: #7fe9d6;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

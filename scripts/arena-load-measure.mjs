@@ -141,9 +141,8 @@ async function oneRun(target) {
     await page.waitForTimeout(DWELL / 2); // reading the review
     startTestId = 'start-button';
   } else if (JOURNEY === 'quick') {
-    await click('home-play');
-    await page.waitForTimeout(DWELL);
-    startTestId = 'play-quick';
+    await page.waitForTimeout(DWELL); // Quick Start is on Home (decision QS1): dwell there, then tap it
+    startTestId = 'home-quick';
   } else if (JOURNEY === 'campaign') {
     await click('home-campaign');
     await click('campaign-start-new');

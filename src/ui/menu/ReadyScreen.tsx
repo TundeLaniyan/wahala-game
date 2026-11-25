@@ -159,7 +159,7 @@ export function ReadyScreen() {
         <div className="mn-panel mn-ready-list" data-testid="ready-summary">
           <Row
             label="Battle style"
-            value={s.play === 'rumble' ? `City Rumble · ${mode.name}` : 'Classic Blast'}
+            value={s.play === 'rumble' ? `City Rumble · ${mode.name}` : 'Junction Blast'}
             screen="setup"
             id="mode"
             testId="ready-mode"

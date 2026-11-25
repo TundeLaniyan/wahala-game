@@ -62,7 +62,8 @@ export function ArenaPicker() {
       <header className="mn-group-head">
         <h3 id="arena-pick-title">Select Arena</h3>
         <span className="mn-group-sub">
-          {rumble ? 'City Rumble stage' : 'Classic arena'}: <b data-testid="arena-selected">{a.name}</b>
+          {rumble ? 'City Rumble stage' : 'Junction Blast arena'}:{' '}
+          <b data-testid="arena-selected">{a.name}</b>
         </span>
       </header>
       <div data-testid={rumble ? 'rumble-stage-picker' : 'arena-picker'}>

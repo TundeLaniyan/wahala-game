@@ -28,7 +28,7 @@ describe('the preset data and the real attack numbers are unchanged', () => {
   it('Off / 1 / 2 / 3 / 4 keep the documented table (no preset was retuned, renamed or reordered)', () => {
     expect(Object.keys(COMBAT_LAB_PRESETS)).toEqual(['1', '2', '3', '4']);
     expect(LEVELS.map((l) => COMBAT_LAB_PRESETS[l].name)).toEqual([
-      'Classic+',
+      'Junction+',
       'Balanced',
       'Arcade',
       'Maximum Punch',
@@ -215,7 +215,7 @@ describe('the menu text comes from the preset data', () => {
     expect(text).toContain('Turns to a rival');
     expect(text).toContain('12 ticks (was 10)');
     expect(text).not.toContain('after a miss'); // the Punch's miss recovery is 8 ticks at both levels
-    expect(labChangeText(2).startsWith('2 Balanced vs 1 Classic+: ')).toBe(true);
+    expect(labChangeText(2).startsWith('2 Balanced vs 1 Junction+: ')).toBe(true);
   });
 
   it('every level has a non-empty change line, level 1 is described against Off, Off against nothing', () => {

@@ -1,5 +1,5 @@
 /**
- * The Home Music Data Saver shortcut (decision FU2-6): it shows the EFFECTIVE state of the one saved Data Saver setting,
+ * The Music Data Saver switch state (decision FU2-6; Settings > Audio uses it, the Home button was removed by QS1): it shows the EFFECTIVE state of the one saved Data Saver setting,
  * says when that is automatic, always saves an explicit On / Off on a tap, and words the effect as MUSIC ONLY.
  */
 import { createElement } from 'react';
@@ -77,25 +77,24 @@ describe('Music Data Saver shortcut state', () => {
   });
 });
 
-describe('Home screen shortcut', () => {
+describe('Home screen (the shortcut was removed: Settings > Audio is the one place, decision QS1)', () => {
   const render = (settings: Partial<GameSettings>) => {
     Object.assign(useGameStore.getInitialState(), { settings: { ...DEFAULT_GAME_SETTINGS, ...settings } });
     return renderToStaticMarkup(createElement(HomeScreen));
   };
 
-  it('is on Home, shows the saved setting, and is a pressed toggle when in effect', () => {
-    const on = render({ dataSaver: 'on' });
-    expect(on).toContain('data-testid="home-datasaver"');
-    expect(on).toContain('data-setting="on"');
-    expect(on).toContain('aria-pressed="true"');
-    expect(on).toContain('Music Data Saver: ON');
-    const off = render({ dataSaver: 'off' });
-    expect(off).toContain('aria-pressed="false"');
-    expect(off).toContain('Music Data Saver: OFF');
+  it('has no Music Data Saver button whatever the saved setting is', () => {
+    for (const dataSaver of ['auto', 'on', 'off'] as const) {
+      const html = render({ dataSaver });
+      expect(html).not.toContain('home-datasaver');
+      expect(html).not.toContain('Data Saver');
+      expect(html).not.toContain('mn-saver');
+    }
   });
 
-  it('says (auto) while the setting is Auto', () => {
-    expect(render({ dataSaver: 'auto' })).toContain('(auto)');
-    expect(render({ dataSaver: 'on' })).not.toContain('(auto)');
+  it('keeps the Settings and Sound utilities', () => {
+    const html = render({});
+    expect(html).toContain('data-testid="home-settings-icon"');
+    expect(html).toContain('data-testid="home-mute"');
   });
 });

@@ -7,17 +7,17 @@ import { CAMPAIGN, getSectionMission, nextMission } from '../../campaign';
 import type { CampaignSave, SectionMissionFormat } from '../../campaign';
 import { FINALE_MISSION_ID } from '../../sim';
 
-/** The two gameplay styles inside the campaign, plainly: open-field City Rumble missions and Classic Blast raids. */
+/** The two gameplay styles inside the campaign, plainly: open-field City Rumble missions and Junction Blast raids. */
 export const STYLE_LABEL: Readonly<Record<SectionMissionFormat, string>> = {
   field: 'Open-field 3D mission',
-  raid: 'Classic Blast raid',
+  raid: 'Junction Blast raid',
   boss: 'Keeper fight',
 };
 
 export interface CurrentMission {
   districtName: string;
   missionName: string;
-  /** "Open-field 3D mission" / "Classic Blast raid" / "Keeper fight". */
+  /** "Open-field 3D mission" / "Junction Blast raid" / "Keeper fight". */
   style: string;
   format: SectionMissionFormat;
   objective: string;

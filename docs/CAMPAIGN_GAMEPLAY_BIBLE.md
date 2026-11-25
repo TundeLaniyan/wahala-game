@@ -26,7 +26,7 @@ Every section separates three states:
 - Heavies and bosses should strongly reward generator tactics; major infrastructure objectives require generator-based
   destruction.
 - **No arbitrary immunity** and no enemy left stuck at one health without a coherent, explained rule.
-- **Distinct balance per mode**: Classic Blast, City Rumble and campaign missions keep separate tuning (they already do:
+- **Distinct balance per mode**: Junction Blast, City Rumble and campaign missions keep separate tuning (they already do:
   `RUMBLE_ECONOMY`, `CAMPAIGN_CONFIG`, per-arena `ArenaDef.config`, campaign levels).
 
 ### 1.2 CURRENT campaign combat

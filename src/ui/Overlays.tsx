@@ -36,7 +36,7 @@ function MatchInfo({ hud }: { hud: HudSnapshot | null }) {
   const total = r ? r.total : (hud?.players.length ?? 0);
   return (
     <aside className="mn-panel mn-pause-info" data-testid="pause-info">
-      <small className="mn-kicker">{s.play === 'rumble' ? 'City Rumble' : 'Classic Blast'}</small>
+      <small className="mn-kicker">{s.play === 'rumble' ? 'City Rumble' : 'Junction Blast'}</small>
       <h3>{arena?.name ?? ''}</h3>
       <p className="mn-pause-summary">{setupSummary(s)}</p>
       <dl className="mn-pause-stats">

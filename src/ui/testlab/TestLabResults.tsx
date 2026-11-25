@@ -1,4 +1,4 @@
-/** The results of a Classic Blast / City Rumble test: the game's real result line, then Restart and Return. */
+/** The results of a Junction Blast / City Rumble test: the game's real result line, then Restart and Return. */
 import { useRef } from 'react';
 import { useGameStore } from '../../app/store';
 import { resultText } from '../../app/resultText';

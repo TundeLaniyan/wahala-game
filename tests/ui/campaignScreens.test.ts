@@ -368,15 +368,19 @@ describe('model helpers', () => {
 });
 
 describe('Home entry', () => {
-  it('shows a Story Campaign entry second (after Play) when the flag is on, with progress once a campaign exists', () => {
+  it('shows a BREAK THE RING campaign entry third (after Quick Start and Play) when the flag is on, with progress once a campaign exists', () => {
     const fresh = render(HomeScreen, freshCampaignUi(createSave(1)));
     expect(fresh).toContain('data-testid="home-campaign"');
+    expect(fresh.indexOf('data-testid="home-quick"')).toBeLessThan(fresh.indexOf('data-testid="home-play"'));
     expect(fresh.indexOf('data-testid="home-play"')).toBeLessThan(
       fresh.indexOf('data-testid="home-campaign"'),
     );
-    expect(fresh).toContain('STORY CAMPAIGN');
+    expect(fresh).toContain('BREAK THE RING');
+    expect(fresh).not.toContain('STORY CAMPAIGN');
     const progressed = render(HomeScreen, started(afterOshodi().save));
-    expect(progressed).toMatch(/data-testid="home-campaign"[\s\S]*CONTINUE STORY[\s\S]*1 \/ 6/);
+    expect(progressed).toMatch(
+      /data-testid="home-campaign"[\s\S]*BREAK THE RING[\s\S]*Continue your story[\s\S]*1 \/ 6/,
+    );
   });
 
   it('is absent when the campaign flag is off or the campaign has not loaded: the menu is as it was', () => {

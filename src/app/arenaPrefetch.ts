@@ -1,19 +1,17 @@
 /**
  * Early arena prefetch (decision FU2-7, docs/MOBILE_PERFORMANCE.md). On-demand model loading keeps the menu light, but it
- * moved the arena's ~7 MB to the Start tap. While the player is on the arena / fighter / (Quick Start's) Choose How to Play
- * screens, the files of the ONE arena the next Start would use are warmed into the browser cache at low priority; nothing
+ * moved the arena's ~7 MB to the Start tap. While the player is on the setup / fighter screens, the files of the ONE arena the next Start would use are warmed into the browser cache at low priority; nothing
  * else is ever fetched ahead, and the choice of arena is followed: a different arena cancels the old warm-up and starts the
  * new one, leaving the flow cancels it. The Ready screen's own decoded prefetch (session.ts) is unchanged.
  *
  * It never runs when the player or the device asked to save data: the browser's own Save-Data (`navigator.connection.saveData`,
- * which Data Saver Auto follows), the saved Data Saver set to On (the same switch as the Home shortcut, so the one setting a
+ * which Data Saver Auto follows), the saved Data Saver set to On (the Settings > Audio switch, so the one setting a
  * player sets also holds back downloads they did not ask for yet) or a 2G connection. `?noprefetch` switches it off for A/B
  * measurement (scripts/arena-load-measure.mjs). Pure planner here; `session.ts` owns the effects.
  */
 import { dataSaverActive } from './settings';
 import type { GameSettings } from './settings';
 import { matchArenaId } from './names';
-import { QUICK_MATCH_ARENA_ID } from './quickMatch';
 import type { MenuScreen } from './menu';
 
 /** The menu screens on which the arena the player is heading for is known well enough to warm its files. */
@@ -41,19 +39,17 @@ export function prefetchBlocked(s: GameSettings, env: PrefetchEnv): string | nul
 /**
  * The arena whose files to warm for this menu screen and settings: an arena id; `null` = warm nothing (cancel what runs);
  * `undefined` = leave things as they are (the Ready screen, where the decoded prefetch takes over and an unfinished
- * warm-up keeps feeding it). Setup and Fighter: the arena the next Start plays. Choose How to Play: only the Quick Start's
- * fixed arena, and only when `quickOnPlay` (the one choice with no Ready screen after it).
+ * warm-up keeps feeding it). Setup and Fighter: the arena the next Start plays. Home and Play warm nothing: the Quick Start
+ * stage is drawn at the tap (decision QS1), so only that one arena is fetched, after the draw.
  */
 export function prefetchTarget(
   screen: MenuScreen,
   s: GameSettings,
   env: PrefetchEnv,
-  quickOnPlay: boolean,
 ): string | null | undefined {
   if (prefetchBlocked(s, env)) return null;
   if (screen === 'ready') return undefined;
   if (PREFETCH_SCREENS.includes(screen)) return matchArenaId(s);
-  if (screen === 'play' && quickOnPlay) return QUICK_MATCH_ARENA_ID;
   return null;
 }
 

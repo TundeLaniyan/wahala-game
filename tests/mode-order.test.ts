@@ -33,12 +33,12 @@ const rumble = (p: Partial<GameSettings>): GameSettings => ({
 });
 
 describe('mode order and wording', () => {
-  it('Free-for-All is first, then Team Deathmatch, then Last Player Standing; Classic Blast stays separate, last', () => {
+  it('Free-for-All is first, then Team Deathmatch, then Last Player Standing; Junction Blast stays separate, last', () => {
     expect(MODE_CARDS.map((m) => m.name)).toEqual([
       'Free-for-All',
       'Team Deathmatch',
       'Last Player Standing',
-      'Classic Blast',
+      'Junction Blast',
     ]);
     expect(RUMBLE_MODE_INFO.map((m) => m.id)).toEqual(['deathmatch', 'team', 'survival']);
   });

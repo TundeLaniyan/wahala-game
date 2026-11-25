@@ -11,7 +11,7 @@ import { PrimaryButton, ScreenFrame } from '../menu/Frame';
 import { MissionBriefCard } from './MissionBriefCard';
 import { useCampaignUi } from './parts';
 
-const FORMAT_KICKER = { field: 'Field mission', raid: 'Classic raid', boss: 'Boss mission' } as const;
+const FORMAT_KICKER = { field: 'Field mission', raid: 'Junction Blast raid', boss: 'Boss mission' } as const;
 
 export function MissionBriefScreen() {
   const ui = useCampaignUi();

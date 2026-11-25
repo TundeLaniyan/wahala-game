@@ -51,7 +51,7 @@ export function arenaGroups(play: GameSettings['play']): ArenaGroup[] {
   if (play === 'rumble') return [{ title: 'City Rumble stages', ids: RUMBLE_ARENA_IDS }];
   const experimental = EXPERIMENTAL_ARENA_IDS.filter((id) => id in ARENAS);
   const groups: ArenaGroup[] = [
-    { title: 'Classic arenas', ids: STANDARD_ARENA_IDS.filter((id) => !experimental.includes(id)) },
+    { title: 'Junction Blast arenas', ids: STANDARD_ARENA_IDS.filter((id) => !experimental.includes(id)) },
   ];
   if (experimental.length) groups.push({ title: 'Test / experimental', ids: experimental });
   return groups;

@@ -291,6 +291,6 @@ describe('menu summary line', () => {
     ).toBe('Last Player Standing · 32 fighters · Lagos Island · Expert bots (mixed)');
     expect(
       setupSummary({ ...classic, competitors: 3, botDifficulties: ['rookie', 'expert', 'casual'] }),
-    ).toBe('Classic Blast · 3 players · Danfo Bus Park · Rookie-Expert bots');
+    ).toBe('Junction Blast · 3 players · Danfo Bus Park · Rookie-Expert bots');
   });
 });

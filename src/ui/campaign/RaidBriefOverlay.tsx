@@ -27,7 +27,7 @@ export function RaidBriefOverlay() {
     >
       <div className="mn-overlay-card raid-brief-card">
         <header className="raid-brief-head">
-          <small className="mn-kicker">{b.district} · Classic raid</small>
+          <small className="mn-kicker">{b.district} · Junction Blast raid</small>
           <h2>{b.title}</h2>
         </header>
         <MissionBriefCard brief={b} compact={brief.compact} testId="raid-brief-card" />

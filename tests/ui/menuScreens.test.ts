@@ -187,34 +187,45 @@ describe('match setup shows only what the chosen mode uses', () => {
 });
 
 describe('mode, ready and home screens', () => {
-  it('Choose How to Play shows City Rumble first, then Quick Start and Classic Blast, with no Story Campaign', () => {
+  it('Choose How to Play shows City Rumble first and Junction Blast second, with no Quick Start and no Story Campaign', () => {
     const html = render(PlayScreen);
-    for (const t of ['play-quick', 'home-classic', 'home-rumble'])
-      expect(html).toContain(`data-testid="${t}"`);
-    // decision FU2-4: City Rumble is the first and the flagship card; Classic Blast is last and plain
+    for (const t of ['home-classic', 'home-rumble']) expect(html).toContain(`data-testid="${t}"`);
+    // decisions FU2-4 / QS1: City Rumble is the first and the flagship card; Junction Blast is the plainer one
     const at = (t: string) => html.indexOf(`data-testid="${t}"`);
-    expect(at('home-rumble')).toBeLessThan(at('play-quick'));
-    expect(at('play-quick')).toBeLessThan(at('home-classic'));
+    expect(at('home-rumble')).toBeLessThan(at('home-classic'));
     expect(html).toMatch(/mn-play-card rumble flagship/);
     expect(html).not.toMatch(/mn-play-card classic flagship/);
-    expect(html).toContain('Quick Start');
-    expect(html).not.toContain('Quick Match');
-    expect(html).not.toContain('play-quick-customise');
-    expect(html).toContain('Start here');
+    expect(html).toContain('Junction Blast');
+    expect(html).not.toContain('Classic Blast');
+    expect(html).not.toContain('play-quick');
+    expect(html).not.toContain('Quick Start');
     expect(html).toContain(PLAY_CHOICES.classic.text);
     expect(html).toContain(PLAY_CHOICES.rumble.text);
     expect(html).not.toMatch(/Story Campaign|home-campaign|carousel/i);
     expect(html).not.toContain('menu-continue');
   });
 
-  it('Match Setup names the battle style and offers the three City Rumble rulesets', () => {
+  it('City Rumble setup offers only City Rumble: its three rulesets, and no Junction Blast choice', () => {
     const rumble = render(SetupScreen, { play: 'rumble', rumbleMode: 'team' });
     for (const m of ['survival', 'deathmatch', 'team']) expect(rumble).toContain(`data-testid="mode-${m}"`);
-    expect(rumble).toContain('Battle style');
+    expect(rumble).toContain('City Rumble mode');
     expect(rumble).toContain('data-testid="setup-start"');
-    const classic = render(SetupScreen, { play: 'classic' });
-    expect(classic).not.toContain('data-testid="mode-team"');
-    expect(classic).toContain('Grid battles. Cross-shaped explosions.');
+    expect(rumble).toContain('data-testid="rumble-setup"');
+    expect(rumble).not.toContain('setup-style-');
+    expect(rumble).not.toContain('Junction Blast');
+    expect(rumble).not.toContain('Classic');
+  });
+
+  it('Junction Blast setup offers only Junction Blast: its own settings, and no City Rumble choice', () => {
+    const junction = render(SetupScreen, { play: 'classic' });
+    expect(junction).toContain('data-testid="classic-setup"');
+    expect(junction).toContain('Junction Blast');
+    expect(junction).toContain('Grid battles. Cross-shaped explosions.');
+    expect(junction).toContain('data-testid="players-3"');
+    expect(junction).not.toContain('data-testid="mode-team"');
+    expect(junction).not.toContain('setup-style-');
+    expect(junction).not.toContain('City Rumble');
+    expect(junction).not.toContain('Classic');
   });
 
   it('shows no numbered step strip on any flow screen', () => {
@@ -267,13 +278,18 @@ describe('mode, ready and home screens', () => {
     ).toBe('Mixed roster: Casual to Nightmare');
   });
 
-  it('Home has one Play button, Learn to Play and the two small utilities, and no invented online features', () => {
+  it('Home has Quick Start first, then Play, Learn to Play and the two small utilities, and no invented online features', () => {
     const html = render(HomeScreen);
-    for (const t of ['home-play', 'home-academy', 'home-settings-icon', 'home-mute', 'home-datasaver'])
+    for (const t of ['home-quick', 'home-play', 'home-academy', 'home-settings-icon', 'home-mute'])
       expect(html).toContain(`data-testid="${t}"`);
-    // not five or six competing actions: the old mode rows and the quick-play card are gone from Home
-    for (const t of ['home-rumble', 'home-classic', 'quick-play'])
+    const at = (t: string) => html.indexOf(`data-testid="${t}"`);
+    expect(at('home-quick')).toBeLessThan(at('home-play'));
+    expect(at('home-play')).toBeLessThan(at('home-academy'));
+    // the Quick Start is the dominant button; the Music Data Saver shortcut and the mode rows are not on Home
+    expect(html).toMatch(/class="mn-home-play"[^>]*data-testid="home-quick"/);
+    for (const t of ['home-rumble', 'home-classic', 'quick-play', 'home-datasaver'])
       expect(html).not.toContain(`data-testid="${t}"`);
+    expect(html).not.toContain('Classic Blast');
     expect(html).not.toMatch(/online|pvp|server status|reward|coins|₦|battle pass/i);
   });
 });

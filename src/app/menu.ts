@@ -4,10 +4,10 @@
  * `UiState.menu`. The match settings themselves stay in `GameSettings` (every screen edits the real
  * settings directly, so a choice always reaches the next match).
  *
- * New-player flow: home -> play (Choose How to Play: Quick Match / Classic Blast / City Rumble) -> setup (battle
- * style, arena and match settings) -> fighter -> ready -> play. Quick Match skips all of it. There are no
- * numbered steps: choosing a style moves straight on to setup, and each later screen has one clear next
- * action. Any screen opened from Ready to edit one choice returns to Ready, so changing one decision never
+ * New-player flow: home -> play (Choose How to Play: City Rumble / Junction Blast) -> setup (that game's ruleset, arena
+ * and match settings) -> fighter -> ready -> play. Quick Start (the first Home button, a random offline City Rumble) skips
+ * all of it. There are no numbered steps: choosing a game moves straight on to its setup, and each later screen has one
+ * clear next action. Any screen opened from Ready to edit one choice returns to Ready, so changing one decision never
  * restarts the whole setup.
  */
 

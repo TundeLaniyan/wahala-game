@@ -62,7 +62,7 @@ function botsLabel(s: GameSettings): string {
 export function setupSummary(s: GameSettings): string {
   const arena = getArena(matchArenaId(s));
   const n = competitorCount(s);
-  if (s.play === 'classic') return [`Classic Blast`, `${n} players`, arena.name, botsLabel(s)].join(' · ');
+  if (s.play === 'classic') return [`Junction Blast`, `${n} players`, arena.name, botsLabel(s)].join(' · ');
   const mode = RUMBLE_MODE_INFO.find((m) => m.id === s.rumbleMode)!;
   const parts = [mode.name];
   if (s.rumbleMode === 'team') parts.push(`${Math.floor(n / 2)} v ${n - Math.floor(n / 2)}`);

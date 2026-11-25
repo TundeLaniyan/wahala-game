@@ -126,6 +126,13 @@
   color: #c3cadb;
   margin-top: 2px;
 }
+.mn-home-second.play {
+  min-height: max(52px, 11.5vh);
+  border-color: #7fe9d6;
+}
+.mn-home-second.play b {
+  font-size: clamp(1.3rem, 5.4vh, 1.8rem);
+}
 .mn-home-second.learn {
   color: #fff;
   background: linear-gradient(180deg, #ff8a3d 0%, #e0561a 100%);
@@ -220,41 +227,6 @@
   color: #ff8a80;
   border-color: #8a3a35;
 }
-/* the Home Music Data Saver pill: two short lines, at least 44 px tall, in the utility row beside Settings and Sound */
-.mn-util.mn-saver {
-  width: auto;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 2px 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 1px;
-  font-family: var(--mn-body);
-  font-size: 0.72rem;
-  line-height: 1.1;
-  text-align: left;
-  white-space: nowrap;
-}
-.mn-util.mn-saver b {
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: 0.68rem;
-  color: #c3cadb;
-}
-.mn-util.mn-saver small {
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: #ff8a80;
-}
-.mn-util.mn-saver.on {
-  border-color: #4fb59f;
-}
-.mn-util.mn-saver.on small {
-  color: #7fe9d6;
-}
 .mn-util:hover,
 .mn-util:focus-visible {
   border-color: var(--mn-amber);
@@ -288,8 +260,8 @@
   height: 100%;
   min-height: 0;
   display: grid;
-  /* City Rumble (first) is the widest card, Classic Blast (last) the plainest (decision FU2-4) */
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+  /* City Rumble (first) is the widest card, Junction Blast the plainer one (decisions FU2-4, QS1) */
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: clamp(8px, 1.6vw, 22px);
   align-items: stretch;
   padding: 2px;

@@ -86,7 +86,7 @@ export function Workshop({ districtId }: { districtId: DistrictId }) {
       <p className="cp-chip-line">
         <small>
           Earn Parts by clearing a mission the first time and by beating your best stars. Upgrades apply in
-          campaign field and boss missions only, never in raids, Classic, City Rumble or the Academy.
+          campaign field and boss missions only, never in raids, Junction Blast, City Rumble or the Academy.
         </small>
       </p>
     </section>

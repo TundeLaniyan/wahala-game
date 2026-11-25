@@ -240,7 +240,7 @@ export interface CombatPilotConfig {
 /**
  * THE TACTICAL TRAP PILOT (docs/TACTICAL_TRAP_PILOT.md, decisions TT1-TT10). An EXPERIMENT, not the campaign baseline:
  * only the Training Academy "Generator Tactics" scenarios (`tutorial/lessons/tactics.ts`) put it in the config; every
- * other match (the campaign, Classic Blast, City Rumble, multiplayer, online, raids, boss missions) has no `tacticalTrap`
+ * other match (the campaign, Junction Blast, City Rumble, multiplayer, online, raids, boss missions) has no `tacticalTrap`
  * key at all and runs the rules exactly as before (its serialised state carries no trace of it). It makes a generator a
  * tactical weapon against campaign ENEMY seats (`Player.enemyKind`): an enemy only knows what it could see or hear
  * (line of sight, player-body concealment, memory, hearing), a punch staggers and slows but cannot finish, and every
@@ -655,7 +655,7 @@ export interface CombatLabPreset {
 export const COMBAT_LAB_PRESETS: Readonly<Record<CombatLabLevel, CombatLabPreset>> = {
   1: {
     level: 1,
-    name: 'Classic+',
+    name: 'Junction+',
     summary: 'Your fighter’s own push / shove / daze, presses kept, misses shown, shorter recovery.',
     startupScale: 1,
     maxStartupTicks: 18,
@@ -739,7 +739,7 @@ export const COMBAT_LAB_PRESETS: Readonly<Record<CombatLabLevel, CombatLabPreset
  */
 export const CLASSIC_COMBAT_PRESET: Readonly<CombatLabPreset> = {
   ...COMBAT_LAB_PRESETS[2],
-  name: 'Classic',
+  name: 'Junction Blast',
   summary:
     'Quicker attacks on the four sides, turns to the rival it can hit, presses kept, hits and misses shown.',
   forwardDiagonals: false,

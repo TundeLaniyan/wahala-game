@@ -110,7 +110,7 @@ function GraphicsTab({ s, set }: { s: GameSettings; set: Set }) {
       </Field>
       <Field
         label="City Rumble camera"
-        hint="Follow: the camera tracks your fighter. Whole stage: the wide overview. Press O in a Rumble to switch. Classic arenas always show the whole board."
+        hint="Follow: the camera tracks your fighter. Whole stage: the wide overview. Press O in a Rumble to switch. Junction Blast arenas always show the whole board."
       >
         <div className="mn-opts">
           <Option

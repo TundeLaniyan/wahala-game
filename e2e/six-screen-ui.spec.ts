@@ -30,6 +30,7 @@ type Debug = {
     };
     camera(): { mode: string } | null;
     matchLoad(): { starts: number };
+    quickPlan(): { arenaId: string; mode: string; fighters: number } | null;
     campaign(): { startNew(): void; storyDone(): void } | null;
   };
 };
@@ -75,7 +76,7 @@ async function expectReachable(page: Page, id: string, where: string, minHeight 
 test.describe('Six-screen UI', () => {
   test.beforeEach(() => test.setTimeout(6 * 60_000));
 
-  test('Home: one Play button, Story Campaign, Learn to Play and small utilities (Music Data Saver included); each leads where it says', async ({
+  test('Home: Quick Start, Play, Break the Ring, Learn to Play and small utilities (no Music Data Saver button); each leads where it says', async ({
     page,
   }, info) => {
     const touch = info.project.name === 'mobile';
@@ -83,23 +84,36 @@ test.describe('Six-screen UI', () => {
     await settled(page);
     await expect(page.getByTestId('menu-home')).toBeVisible();
     for (const id of [
+      'home-quick',
       'home-play',
       'home-campaign',
       'home-academy',
       'home-settings-icon',
       'home-mute',
-      'home-datasaver',
     ])
       await expectReachable(page, id, 'home');
-    // the old competing rows are gone from Home
-    for (const id of ['home-rumble', 'home-classic', 'quick-play', 'home-settings'])
+    // the old competing rows and the Music Data Saver shortcut are gone from Home (the switch is Settings > Audio)
+    for (const id of ['home-rumble', 'home-classic', 'quick-play', 'home-settings', 'home-datasaver'])
       await expect(page.getByTestId(id)).toHaveCount(0);
-    // PLAY is the biggest thing on the screen
-    const play = (await page.getByTestId('home-play').boundingBox())!;
-    for (const id of ['home-campaign', 'home-academy']) {
-      const b = (await page.getByTestId(id).boundingBox())!;
-      expect(play.height, `PLAY taller than ${id}`).toBeGreaterThan(b.height);
-    }
+    // the order is fixed: Quick Start, Play, Break the Ring, Learn to Play; QUICK START is the biggest thing on the screen
+    const boxOf = async (id: string) => (await page.getByTestId(id).boundingBox())!;
+    const [bq, bp, bc, ba] = [
+      await boxOf('home-quick'),
+      await boxOf('home-play'),
+      await boxOf('home-campaign'),
+      await boxOf('home-academy'),
+    ];
+    expect(bq.y < bp.y && bp.y < bc.y && bc.y < ba.y, 'order: Quick Start, Play, Break the Ring, Learn').toBe(
+      true,
+    );
+    for (const [id, b] of [
+      ['home-play', bp],
+      ['home-campaign', bc],
+      ['home-academy', ba],
+    ] as const)
+      expect(bq.height, `QUICK START taller than ${id}`).toBeGreaterThan(b.height);
+    await expect(page.getByTestId('home-quick')).toContainText('QUICK START');
+    await expect(page.getByTestId('home-campaign')).toContainText('BREAK THE RING');
     await page.screenshot({ path: `${SHOTS}/${info.project.name}-six-01-home.png` });
 
     await press(page, 'home-academy', touch);
@@ -118,7 +132,7 @@ test.describe('Six-screen UI', () => {
     await expect(page.getByTestId('menu-home')).toBeVisible();
   });
 
-  test('Choose How to Play: City Rumble first, then Quick Start and Classic Blast, all visible at once, no Story Campaign', async ({
+  test('Choose How to Play: City Rumble first, then Junction Blast, both visible at once, no Quick Start, no Story Campaign', async ({
     page,
   }, info) => {
     const touch = info.project.name === 'mobile';
@@ -141,7 +155,7 @@ test.describe('Six-screen UI', () => {
       await page.setViewportSize({ width: width!, height: height! });
       await settled(page);
       const where = `play at ${width}x${height}`;
-      for (const id of ['play-quick', 'home-classic', 'home-rumble']) await expectReachable(page, id, where);
+      for (const id of ['home-classic', 'home-rumble']) await expectReachable(page, id, where);
       // no sideways scrolling to find a core mode, no page scroll
       const scroll = await page.evaluate(() => ({
         w: document.scrollingElement!.scrollWidth - innerWidth,
@@ -150,15 +164,15 @@ test.describe('Six-screen UI', () => {
       expect(scroll.w, `${where}: sideways scroll`).toBeLessThanOrEqual(0);
       expect(scroll.h, `${where}: page scroll`).toBeLessThanOrEqual(0);
     }
-    await expect(page.getByTestId('menu-play')).toContainText('Start here');
-    await expect(page.getByTestId('menu-play')).toContainText('Quick Start');
-    await expect(page.getByTestId('menu-play')).not.toContainText('Quick Match');
-    await expect(page.getByTestId('menu-play')).toContainText('City Rumble Free-for-All');
-    // the hierarchy (decision FU2-4): City Rumble is first and the widest card; Classic Blast is last
+    await expect(page.getByTestId('menu-play')).toContainText('Junction Blast');
+    await expect(page.getByTestId('menu-play')).not.toContainText('Classic Blast');
+    await expect(page.getByTestId('menu-play')).not.toContainText('Quick Start');
+    await expect(page.getByTestId('play-quick')).toHaveCount(0);
+    // the hierarchy (decisions FU2-4, QS1): City Rumble is first and the widest card; Junction Blast is second
     const box = async (id: string) => (await page.getByTestId(id).boundingBox())!;
-    const [rb, qb, cb] = [await box('home-rumble'), await box('play-quick'), await box('home-classic')];
+    const [rb, cb] = [await box('home-rumble'), await box('home-classic')];
     const inOrder = (a: typeof rb, b: typeof rb) => (a.x === b.x ? a.y < b.y : a.x < b.x);
-    expect(inOrder(rb, qb) && inOrder(qb, cb), 'order: City Rumble, Quick Start, Classic Blast').toBe(true);
+    expect(inOrder(rb, cb), 'order: City Rumble, Junction Blast').toBe(true);
     expect(rb.width * rb.height, 'City Rumble is the biggest card').toBeGreaterThan(cb.width * cb.height);
     await expect(page.getByTestId('menu-play')).toContainText(
       'Grid battles. Cross-shaped explosions. Tactical generator action.',
@@ -176,7 +190,7 @@ test.describe('Six-screen UI', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Quick Start is an offline City Rumble Free-for-All: 16 fighters, Rookie bots, 3 minutes, saved preferences untouched', async ({
+  test('Quick Start is an offline City Rumble drawn at random (24 or 32 fighters, Standard bots, 3 minutes), saved preferences untouched', async ({
     page,
   }, info) => {
     test.skip(info.project.name !== 'desktop', 'the match itself is the same on every device');
@@ -203,16 +217,19 @@ test.describe('Six-screen UI', () => {
     await page.evaluate((m) => localStorage.setItem('wahala.settings.v1', JSON.stringify(m)), mine);
     await page.reload();
     await page.getByTestId('title-screen').waitFor();
-    await page.getByTestId('home-play').click();
-    await page.getByTestId('play-quick').click();
+    await page.getByTestId('home-quick').click();
+    await expect(page.getByTestId('match-loading-quick')).toBeVisible(); // the one draw, named on the loading screen
     await inMatch(page);
     await stepTicks(page, 30);
-    // a genuine City Rumble Free-for-All: the Rumble stage, the respawn ruleset, 16 fighters, 3:00, the stadium camera
+    // a genuine City Rumble match: a Rumble stage, a respawn ruleset, 24 or 32 fighters, 3:00, the stadium camera
+    const plan = (await page.evaluate(() => (window as never as Debug).__WAHALA__.quickPlan()))!;
+    expect([24, 32]).toContain(plan.fighters);
+    expect(['deathmatch', 'team']).toContain(plan.mode);
     expect(await live(page)).toEqual({
-      arenaId: 'rumbleOjuelegba',
-      game: 'deathmatch',
-      players: 16,
-      bots: 15,
+      arenaId: plan.arenaId,
+      game: plan.mode,
+      players: plan.fighters,
+      bots: plan.fighters - 1,
       duration: 180 * 60,
       camera: 'stadium',
     });
@@ -231,8 +248,8 @@ test.describe('Six-screen UI', () => {
       controlSize: 'large',
       dataSaver: 'on',
       quality: 'low',
-      difficulty: 'rookie',
-      rumbleCompetitors: 16,
+      difficulty: 'standard',
+      rumbleCompetitors: plan.fighters,
       rumbleMinutes: 3,
     });
     // decision SX11 / FU2-1: the quick values are temporary; the saved match setup and every preference are untouched
@@ -300,11 +317,10 @@ test.describe('Six-screen UI', () => {
     await open(page, '&noattract');
     // the public build has no Online entry at all (it is compiled out, not hidden)
     for (const id of ['home-rumble-online', 'home-online']) await expect(page.getByTestId(id)).toHaveCount(0);
-    await page.getByTestId('home-play').click();
-    await page.getByTestId('play-quick').click();
+    await page.getByTestId('home-quick').click();
     await inMatch(page);
     await stepTicks(page, 30);
-    expect((await live(page)).game).toBe('deathmatch');
+    expect(['deathmatch', 'team']).toContain((await live(page)).game);
     expect(await page.evaluate(() => (window as never as { __netProbe: string[] }).__netProbe)).toEqual([]);
     expect(sockets).toEqual([]);
     expect(outside, 'requests to any other origin').toEqual([]);
@@ -312,10 +328,9 @@ test.describe('Six-screen UI', () => {
 
   test('Quick Start: rapid taps start exactly one match', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'the lifecycle is the same on every device');
-    await open(page, '&noattract&loaddelay=600');
-    await page.getByTestId('home-play').click();
+    await open(page, '&noattract&loaddelay=600&quickplan=rumbleOjuelegba:deathmatch:8');
     await page.evaluate(() => {
-      const b = document.querySelector('[data-testid="play-quick"]') as HTMLButtonElement;
+      const b = document.querySelector('[data-testid="home-quick"]') as HTMLButtonElement;
       for (let i = 0; i < 4; i++) b.click();
     });
     await expect(page.getByTestId('match-loading')).toBeVisible();
@@ -323,7 +338,7 @@ test.describe('Six-screen UI', () => {
     expect((await page.evaluate(() => (window as never as Debug).__WAHALA__.matchLoad())).starts).toBe(1);
   });
 
-  test('Classic Blast opens Match Setup with Classic Blast selected, and starts with the rules shown', async ({
+  test('Junction Blast opens its own Match Setup (no City Rumble choice), and starts with the rules shown', async ({
     page,
   }, info) => {
     const touch = info.project.name === 'mobile';
@@ -331,8 +346,11 @@ test.describe('Six-screen UI', () => {
     await press(page, 'home-play', touch);
     await press(page, 'home-classic', touch);
     await expect(page.getByTestId('classic-setup')).toBeVisible();
-    await expect(page.getByTestId('setup-style-classic')).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByTestId('setup-style-rumble')).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByTestId('menu-setup')).toContainText('Junction Blast');
+    await expect(page.getByTestId('menu-setup')).not.toContainText('Classic');
+    await expect(page.getByTestId('menu-setup')).not.toContainText('City Rumble');
+    await expect(page.getByTestId('setup-style-rumble')).toHaveCount(0); // the other game is not offered here
+    await expect(page.getByTestId('setup-style-classic')).toHaveCount(0);
     await expect(page.getByTestId('menu-setup')).toContainText('Grid battles. Cross-shaped explosions.');
     await expect(page.getByTestId('mode-team')).toHaveCount(0); // City Rumble rulesets are not Classic's
     await press(page, 'players-2', touch);
@@ -345,7 +363,7 @@ test.describe('Six-screen UI', () => {
     expect(await live(page)).toMatchObject({ game: 'classic', players: 2 });
   });
 
-  test('City Rumble opens Match Setup with City Rumble selected; the ruleset and size shown are the ones played', async ({
+  test('City Rumble opens its own Match Setup (no Junction Blast choice); the ruleset and size shown are the ones played', async ({
     page,
   }, info) => {
     const touch = info.project.name === 'mobile';
@@ -353,7 +371,8 @@ test.describe('Six-screen UI', () => {
     await press(page, 'home-play', touch);
     await press(page, 'home-rumble', touch);
     await expect(page.getByTestId('rumble-setup')).toBeVisible();
-    await expect(page.getByTestId('setup-style-rumble')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('setup-style-classic')).toHaveCount(0); // Junction Blast is not offered here
+    await expect(page.getByTestId('menu-setup')).not.toContainText('Junction Blast');
     await expect(page.getByTestId('menu-setup')).toContainText(
       'Open 3D arenas. Generators, special attacks and rival fighters.',
     );
@@ -362,10 +381,10 @@ test.describe('Six-screen UI', () => {
     await expect(page.getByTestId('minutes-5')).toHaveCount(0); // Last Player Standing has no clock
     await expectReachable(page, 'setup-start', 'rumble setup');
     await page.screenshot({ path: `${SHOTS}/${info.project.name}-six-03-setup-rumble.png` });
-    // switching the battle style on the same screen keeps the screen and changes what it offers
-    await press(page, 'setup-style-classic', touch);
-    await expect(page.getByTestId('classic-setup')).toBeVisible();
-    await press(page, 'setup-style-rumble', touch);
+    // Back returns to Choose How to Play and the choice made there is kept
+    await press(page, 'menu-back', touch);
+    await expect(page.getByTestId('menu-play')).toBeVisible();
+    await press(page, 'home-rumble', touch);
     await expect(page.getByTestId('mode-survival')).toHaveAttribute('aria-pressed', 'true'); // not reset by moving about
     await press(page, 'setup-start', touch);
     await inMatch(page);
@@ -373,13 +392,13 @@ test.describe('Six-screen UI', () => {
     expect(await live(page)).toMatchObject({ game: 'survival', players: 8 });
   });
 
-  test('Story Campaign: Continue Story, the current mission strip and saved progress', async ({
+  test('Break the Ring campaign: Continue your story, the current mission strip and saved progress', async ({
     page,
   }, info) => {
     const touch = info.project.name === 'mobile';
     const errors = watchErrors(page);
     await open(page, '&noattract');
-    await expect(page.getByTestId('home-campaign')).toContainText('STORY CAMPAIGN');
+    await expect(page.getByTestId('home-campaign')).toContainText('BREAK THE RING');
     await page.evaluate(() => {
       const c = (window as never as Debug).__WAHALA__.campaign()!;
       c.startNew();
@@ -402,7 +421,7 @@ test.describe('Six-screen UI', () => {
     });
     await expect(page.getByTestId('menu-home')).toBeVisible();
     // returning player: the button says so and shows the saved progress
-    await expect(page.getByTestId('home-campaign')).toContainText('CONTINUE STORY');
+    await expect(page.getByTestId('home-campaign')).toContainText('Continue your story');
     await press(page, 'home-campaign', touch);
     await expect(page.getByTestId('menu-campaign')).toBeVisible();
     await settled(page);
@@ -419,7 +438,7 @@ test.describe('Six-screen UI', () => {
     expect(before.length).toBeGreaterThan(0);
     await page.reload();
     await page.getByTestId('title-screen').waitFor();
-    await expect(page.getByTestId('home-campaign')).toContainText('CONTINUE STORY');
+    await expect(page.getByTestId('home-campaign')).toContainText('Continue your story');
     await press(page, 'home-campaign', touch);
     // Continue opens the next mission (here the Oshodi keeper's briefing)
     await press(page, 'campaign-continue', touch);
@@ -523,8 +542,8 @@ test.describe('Six-screen UI', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await settled(page);
     const screens: [string, string][] = [
-      ['home', 'home-play'],
-      ['play', 'play-quick'],
+      ['home', 'home-quick'],
+      ['play', 'home-rumble'],
       ['setup', 'setup-start'],
       ['academy', 'academy-continue'],
     ];

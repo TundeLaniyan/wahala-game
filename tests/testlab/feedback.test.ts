@@ -70,11 +70,11 @@ describe('summary', () => {
     expect(text).toContain('\nTESTS REQUIRING REVIEW\n- [NOT TESTED] Sudden Death presentation and timer\n');
     expect(text.indexOf('TESTS REQUIRING REVIEW')).toBeLessThan(text.indexOf('COMPLETED TESTS'));
     expect(text).toContain('\nCOMPLETED TESTS\n');
-    expect(text).toContain('- [PASS] Classic Campaign Raid (Normal): felt fair\n');
+    expect(text).toContain('- [PASS] Junction Blast Campaign Raid (Normal): felt fair\n');
     expect(text).toContain(
       '- [NEEDS IMPROVEMENT] Records Vault, night raid (Hard): too dark near the vault door\n',
     );
-    expect(text).toContain('- [NOT TESTED] Classic Blast\n');
+    expect(text).toContain('- [NOT TESTED] Junction Blast\n');
     expect(lines.at(-1)).toBe('Totals: 1 pass, 1 needs improvement, 0 failed, 18 not tested');
     expect(lines.filter((l) => l.startsWith('- ['))).toHaveLength(LAB_ENTRIES.length);
   });
