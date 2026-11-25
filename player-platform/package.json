@@ -1,0 +1,27 @@
+{
+  "name": "wahala-player-platform",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "WAHALA! player platform: identity, profiles, friends, parties, safety and commerce foundations (dev-only, not deployed)",
+  "scripts": {
+    "dev": "../node_modules/.bin/tsx watch src/main.ts",
+    "start": "../node_modules/.bin/tsx src/main.ts",
+    "typecheck": "../node_modules/.bin/tsc --noEmit -p tsconfig.json",
+    "test": "../node_modules/.bin/vitest run --config vitest.config.ts",
+    "migrate": "../node_modules/.bin/tsx src/cli/migrate.ts",
+    "seed": "../node_modules/.bin/tsx src/cli/seed.ts",
+    "check:config": "../node_modules/.bin/tsx src/cli/checkConfig.ts",
+    "purge": "../node_modules/.bin/tsx src/cli/purge.ts",
+    "bundle": "../node_modules/.bin/esbuild src/main.ts src/cli/migrate.ts src/cli/purge.ts src/cli/checkConfig.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --entry-names=[name] --out-extension:.js=.mjs --external:@electric-sql/pglite --external:pg-native --banner:js=\"import { createRequire as __r } from 'node:module'; const require = __r(import.meta.url);\" --log-level=warning"
+  },
+  "dependencies": {
+    "jose": "^6.2.18",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.6.0",
+    "@types/pg": "^8.15.0",
+    "yaml": "^2.9.1"
+  }
+}

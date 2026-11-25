@@ -1,0 +1,257 @@
+openapi: 3.0.3
+info:
+  title: WAHALA! player platform API
+  version: 0.1.0
+  description: |
+    Persistent identity, profiles, friends, parties, safety and commerce foundations around the City Rumble match server.
+    DEVELOPMENT ONLY: not deployed, not public. Guests need no account. Authentication is `Authorization: Bearer wa_...` (an opaque
+    access token from `/v1/auth/*`). Errors are always `{ "error": { "code", "message", "requestId", "retryAfterMs?" } }`.
+    A route table test (`test/openapi.test.ts`) fails if this file and the server's routes ever disagree.
+servers:
+  - url: http://127.0.0.1:4567
+components:
+  securitySchemes:
+    player:
+      {
+        type: http,
+        scheme: bearer,
+        description: 'Access token (wa_...). 15 minutes; rotate with /v1/auth/refresh.',
+      }
+    service:
+      {
+        type: apiKey,
+        in: header,
+        name: X-Wahala-Signature,
+        description: 'HMAC-SHA256(secret, `${X-Wahala-Timestamp}.${METHOD}.${path}.${rawBody}`); timestamp within 5 minutes.',
+      }
+    admin: { type: http, scheme: bearer, description: 'PLATFORM_ADMIN_TOKEN (moderation). Off when unset.' }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code:
+              {
+                type: string,
+                enum:
+                  [
+                    bad_request,
+                    unauthenticated,
+                    forbidden,
+                    not_found,
+                    conflict,
+                    name_taken,
+                    name_rejected,
+                    rate_limited,
+                    reauth_required,
+                    provider_not_configured,
+                    provider_rejected,
+                    payload_too_large,
+                    restricted_account,
+                    unavailable,
+                    internal,
+                  ],
+              }
+            message: { type: string }
+            requestId: { type: string, format: uuid }
+            retryAfterMs: { type: integer }
+    Tokens:
+      type: object
+      properties:
+        sessionId: { type: string, format: uuid }
+        accessToken: { type: string }
+        accessExpiresAt: { type: string, format: date-time }
+        refreshToken: { type: string }
+        refreshExpiresAt: { type: string, format: date-time }
+    Capabilities:
+      type: object
+      properties:
+        {
+          textChat: { type: boolean },
+          voice: { type: boolean },
+          purchases: { type: boolean },
+          friendCodeOnly: { type: boolean },
+        }
+    MyProfile:
+      type: object
+      properties:
+        id: { type: string, format: uuid, description: Immutable player id. }
+        displayName: { type: string }
+        kind: { type: string, enum: [guest, registered] }
+        friendCode: { type: string }
+        ageGroup: { type: string, enum: [unspecified, under_13, 13_17, adult] }
+        selectedCharacter: { type: string }
+        loadout: { type: object, additionalProperties: { type: string } }
+        presenceVisibility: { type: string, enum: [friends, nobody] }
+        settings: { type: object }
+        createdAt: { type: string, format: date-time }
+        links:
+          {
+            type: array,
+            items:
+              {
+                type: object,
+                properties:
+                  {
+                    provider: { type: string, enum: [google, apple, mock] },
+                    emailHint: { type: string, nullable: true },
+                    linkedAt: { type: string, format: date-time },
+                  },
+              },
+          }
+        capabilities: { $ref: '#/components/schemas/Capabilities' }
+    ProviderCredential:
+      type: object
+      required: [provider, credential]
+      properties:
+        provider: { type: string, enum: [google, apple, mock] }
+        credential:
+          {
+            type: string,
+            description: 'OpenID Connect id token obtained by the client; carries the nonce from /v1/auth/nonce.',
+          }
+  responses:
+    Err:
+      {
+        description: Error,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } },
+      }
+paths:
+  /v1/auth/guest:
+    post:
+      summary: Create a guest account (no credentials needed) and its first session
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      properties:
+                        {
+                          nickname: { type: string },
+                          platform: { type: string, enum: [web, android, ios, dev] },
+                          deviceLabel: { type: string },
+                          ageGroup: { type: string, enum: [unspecified, under_13, 13_17, adult] },
+                        },
+                    },
+                },
+            },
+        }
+      responses: { '201': { description: Created }, default: { $ref: '#/components/responses/Err' } }
+  /v1/auth/providers:
+    get:
+      summary: Which sign-in providers this server can verify right now
+      responses: { '200': { description: OK } }
+  /v1/auth/nonce:
+    post:
+      summary: Single-use nonce to pass to the provider sign-in
+      responses: { '201': { description: Created } }
+  /v1/auth/signin:
+    post:
+      summary: Sign in (or register) with a provider id token verified by the server
+      requestBody:
+        { content: { application/json: { schema: { $ref: '#/components/schemas/ProviderCredential' } } } }
+      responses:
+        {
+          '200': { description: Existing account },
+          '201': { description: New registered account },
+          default: { $ref: '#/components/responses/Err' },
+        }
+  /v1/auth/refresh:
+    post:
+      summary: Rotate the refresh token and get a new access token
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [refreshToken],
+                      properties: { refreshToken: { type: string } },
+                    },
+                },
+            },
+        }
+      responses: { '200': { description: OK }, '401': { $ref: '#/components/responses/Err' } }
+  /v1/auth/logout:
+    post:
+      security: [{ player: [] }]
+      summary: Revoke the current session
+      responses: { '204': { description: Revoked } }
+  /v1/auth/upgrade:
+    post:
+      security: [{ player: [] }]
+      summary: Turn the guest account into a registered one (same player id and profile)
+      requestBody:
+        { content: { application/json: { schema: { $ref: '#/components/schemas/ProviderCredential' } } } }
+      responses: { '200': { description: OK }, '409': { $ref: '#/components/responses/Err' } }
+  /v1/auth/reauth:
+    post:
+      security: [{ player: [] }]
+      summary: Prove the account owner is present (needed for unlink, delete, age changes)
+      requestBody:
+        { content: { application/json: { schema: { $ref: '#/components/schemas/ProviderCredential' } } } }
+      responses: { '204': { description: OK } }
+  /v1/auth/links:
+    post:
+      security: [{ player: [] }]
+      summary: Link another sign-in provider to the account
+      requestBody:
+        { content: { application/json: { schema: { $ref: '#/components/schemas/ProviderCredential' } } } }
+      responses: { '201': { description: Linked } }
+  /v1/auth/links/{provider}:
+    delete:
+      security: [{ player: [] }]
+      summary: Unlink a sign-in provider (never the last one)
+      parameters:
+        [{ name: provider, in: path, required: true, schema: { type: string, enum: [google, apple, mock] } }]
+      responses: { '200': { description: OK } }
+  /v1/auth/sessions:
+    get:
+      security: [{ player: [] }]
+      summary: List the account’s active sessions (devices)
+      responses: { '200': { description: OK } }
+  /v1/auth/sessions/revoke-others:
+    post:
+      security: [{ player: [] }]
+      summary: Sign out every other device
+      responses: { '200': { description: OK } }
+  /v1/auth/sessions/{id}:
+    delete:
+      security: [{ player: [] }]
+      summary: Revoke one of your sessions
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: Revoked } }
+  /v1/me:
+    get:
+      security: [{ player: [] }]
+      summary: Your profile, linked sign-ins and capabilities
+      responses: { '200': { description: OK } }
+    patch:
+      security: [{ player: [] }]
+      summary: Edit your profile (nickname, fighter, age band, presence visibility, settings, loadout)
+      responses: { '200': { description: OK } }
+  /v1/me/delete:
+    post:
+      security: [{ player: [] }]
+      summary: 'Delete the account and erase personal data (body: { confirm: "DELETE" })'
+      responses: { '204': { description: Deleted } }
+  /v1/me/friend-code/rotate:
+    post:
+      security: [{ player: [] }]
+      summary: Replace your friend code (the old one stops working)
+      responses: { '200': { description: OK } }
+  /v1/dev/mock-idp/token:
+    post:
+      summary: 'DEVELOPMENT ONLY: mint a signed test id token (not OAuth; absent unless PLATFORM_MOCK_IDP=1)'
+      responses: { '200': { description: OK } }

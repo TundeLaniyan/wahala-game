@@ -1,0 +1,125 @@
+/**
+ * Composition root: configuration -> database -> services -> routes -> HTTP server. Tests build the same thing with a
+ * PGlite database, a fake clock and a silent logger. Nothing else in the codebase constructs a service.
+ */
+import { ApiError } from './errors';
+import type { PlatformConfig } from './config';
+import type { Db } from './db/types';
+import { loadMigrations, migrate } from './db/migrate';
+import { createHttp } from './http/server';
+import type { PlatformHttp } from './http/server';
+import { createRateLimiter } from './http/rateLimit';
+import type { RateLimiter } from './http/rateLimit';
+import { Router } from './http/router';
+import { IdentityService } from './identity/service';
+import { ProviderRegistry, appleProvider, createMockProvider, googleProvider } from './identity/providers';
+import type { IdentityProvider, MockProvider } from './identity/providers';
+import { createLogger } from './logger';
+import type { Logger } from './logger';
+import { identityRoutes } from './routes/identity';
+import { systemClock } from './util/clock';
+import type { Clock } from './util/clock';
+
+export interface Platform {
+  config: PlatformConfig;
+  db: Db;
+  clock: Clock;
+  logger: Logger;
+  limiter: RateLimiter;
+  router: Router;
+  identity: IdentityService;
+  providers: ProviderRegistry;
+  mockProvider: MockProvider | null;
+  http: PlatformHttp;
+  start(): Promise<number>;
+  close(): Promise<void>;
+}
+
+export interface PlatformOverrides {
+  clock?: Clock;
+  logger?: Logger;
+  limiter?: RateLimiter;
+  /** Providers registered AFTER the configured ones, replacing same-id ones (tests inject a Google verifier with local keys). */
+  providers?: IdentityProvider[];
+  /** Skip running migrations (the caller already did). */
+  skipMigrations?: boolean;
+}
+
+export async function createPlatform(
+  config: PlatformConfig,
+  db: Db,
+  o: PlatformOverrides = {},
+): Promise<Platform> {
+  const clock = o.clock ?? systemClock;
+  const logger = o.logger ?? createLogger(undefined, config.logLevel);
+  const limiter = o.limiter ?? createRateLimiter(clock);
+  const migrations = await loadMigrations();
+  if (!o.skipMigrations) await migrate(db, migrations);
+
+  const providers = new ProviderRegistry();
+  providers.register(googleProvider(config.googleClientIds, clock));
+  providers.register(appleProvider(config.appleClientIds, clock));
+  let mockProvider: MockProvider | null = null;
+  if (config.mockIdentityProvider && config.env !== 'production') {
+    mockProvider = await createMockProvider(clock);
+    providers.register(mockProvider);
+  }
+
+  for (const p of o.providers ?? []) providers.register(p);
+
+  const identity = new IdentityService({
+    db,
+    clock,
+    providers,
+    policy: { refreshDays: config.refreshDays, sessionMaxDays: config.sessionMaxDays },
+    logger,
+    guestIdleDeleteDays: config.guestIdleDeleteDays,
+  });
+
+  const router = new Router();
+  router.addAll(identityRoutes(identity, providers, mockProvider));
+
+  const http = createHttp({
+    router,
+    identity,
+    limiter,
+    clock,
+    logger,
+    allowedOrigins: config.allowedOrigins,
+    trustedProxies: config.trustedProxies,
+    matchServerSecret: config.matchServerSecret,
+    adminToken: config.adminToken,
+    ready: async () => {
+      try {
+        const r = await db.query<{ v: number | null }>('SELECT max(version) AS v FROM schema_migrations');
+        const current = Number(r.rows[0]?.v ?? 0);
+        return {
+          ok: current === migrations.length,
+          detail: { schema: current, expected: migrations.length },
+        };
+      } catch {
+        return { ok: false, detail: { schema: null } };
+      }
+    },
+  });
+
+  return {
+    config,
+    db,
+    clock,
+    logger,
+    limiter,
+    router,
+    identity,
+    providers,
+    mockProvider,
+    http,
+    start: () => http.listen(config.port, config.host),
+    close: async () => {
+      await http.close();
+      await db.close();
+    },
+  };
+}
+
+export { ApiError };
