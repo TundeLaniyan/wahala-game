@@ -2,7 +2,9 @@
  * Guards the founder's decisions on shipped audio:
  *  - the synthetic Afrobeats music, the Kokoro TTS Pidgin voices and the generated Lagos ambience beds of
  *    the `claude/wahala-lagos-audio` branch were REJECTED and may never come back;
- *  - the music is the founder's approved Pixabay tracks, listed below by id and in public/audio/music/manifest.json;
+ *  - the music is the founder's approved Pixabay tracks, listed below by id and in public/audio/music/manifest.json,
+ *    plus the founder-approved WAHALA! originals (seven district songs and the Lagos No Dey Sleep menu / boss music
+ *    and result stingers, approved 2026-11-25, decision AU4), listed in ORIGINAL_MUSIC and ORIGINAL_STINGS below;
  *  - the voices are the founder's approved Gemini TTS clips (2026-10-24), imported by
  *    tools/audio/voices/import_voices.py and listed in public/audio/voices/recorded.json; the rejected
  *    conductor recordings (conductor_cms_01) may never ship.
@@ -43,6 +45,29 @@ const APPROVED: Record<string, string> = {
   pixabay_623364:
     'Pixabay track 623364 by sonican (founder download; exact page URL not reachable from the build environment)',
 };
+/** The seven district songs (founder-approved 2026-11-25): family -> the City Rumble arena that plays it. */
+const DISTRICT_ARENA: Record<string, string> = {
+  ojuelegba: 'rumbleOjuelegba',
+  oshodi: 'rumbleOshodi',
+  mushin: 'rumbleMushin',
+  fadeyi: 'rumbleFadeyi',
+  ebute: 'rumbleEbuteMetta',
+  lagosisland: 'rumbleLagosIsland',
+  lekki: 'rumbleLekki',
+};
+/** Founder-approved WAHALA! original music files (standard in music/, Data Saver in music/lite/). */
+const ORIGINAL_MUSIC = [
+  ...Object.keys(DISTRICT_ARENA).flatMap((f) => [`dist_${f}.mp3`, `dist_${f}_sd.mp3`]),
+  'lnds_menu.mp3',
+  'lnds_boss_1.mp3',
+  'lnds_boss_2.mp3',
+  'lnds_boss_3.mp3',
+];
+/** The two result stingers (sample slots, public/audio root). */
+const ORIGINAL_STINGS: Record<string, string> = {
+  win_sting: 'lnds_victory.mp3',
+  lose_sting: 'lnds_defeat.mp3',
+};
 /** Names of the rejected generated tracks; none may ever come back under any form. */
 const REJECTED_NAMES =
   /match_loop|menu_loop|match_tension|sting_(win|lose|draw)|crowd_loop|buspark_loop|kokoro/i;
@@ -68,6 +93,8 @@ describe('rejected generated audio stays disabled', () => {
     // each approved track may also ship its Data Saver re-encode (docs/MOBILE_PERFORMANCE.md): same track, lower bitrate
     const allowed = new Set([
       ...Object.keys(APPROVED).flatMap((id) => [`music/${id}.mp3`, `music/lite/${id}.mp3`]),
+      ...ORIGINAL_MUSIC.flatMap((f) => [`music/${f}`, `music/lite/${f}`]),
+      ...Object.values(ORIGINAL_STINGS),
       ...voiceClips,
     ]);
     expect(audioFiles.filter((p) => !allowed.has(p))).toEqual([]);
@@ -77,7 +104,8 @@ describe('rejected generated audio stays disabled', () => {
     const raw = json<{ tracks: { id: string; file: string; lite?: string }[] }>('music/manifest.json');
     const liteDir = join(AUDIO, 'music/lite');
     const files = readdirSync(liteDir).sort();
-    const listed = raw.tracks.filter((t) => t.lite).map((t) => t.lite!.replace('lite/', ''));
+    // the A/B start points of one district song share a file, so compare the distinct files
+    const listed = [...new Set(raw.tracks.filter((t) => t.lite).map((t) => t.lite!.replace('lite/', '')))];
     expect(files).toEqual(listed.sort());
     for (const t of raw.tracks.filter((x) => x.lite)) {
       expect(t.lite).toBe(`lite/${t.file}`);
@@ -87,10 +115,11 @@ describe('rejected generated audio stays disabled', () => {
     }
   });
 
-  it('the music manifest lists exactly the fifteen approved tracks, each with its source and licence', () => {
-    const raw = json<{
+  it('the music manifest lists exactly the fifteen approved Pixabay tracks, each with its source and licence', () => {
+    const all = json<{
       tracks: { id: string; file: string; source: string; licence: string; approved: boolean }[];
     }>('music/manifest.json');
+    const raw = { ...all, tracks: all.tracks.filter((t) => t.id.startsWith('pixabay_')) };
     expect(raw.tracks.map((t) => t.id).sort()).toEqual(Object.keys(APPROVED).sort());
     for (const t of raw.tracks) {
       expect(t.file).toBe(`${t.id}.mp3`);
@@ -98,10 +127,26 @@ describe('rejected generated audio stays disabled', () => {
       expect(t.licence).toBe('Pixabay Content License');
       expect(t.approved).toBe(true);
     }
-    const { manifest, rejected } = parseMusicManifest(raw);
+    const { manifest, rejected } = parseMusicManifest(all);
     expect(rejected).toEqual([]);
-    expect(manifest.tracks).toHaveLength(15);
-    expect(JSON.stringify(raw)).not.toMatch(REJECTED_NAMES);
+    expect(manifest.tracks.filter((t) => t.id.startsWith('pixabay_'))).toHaveLength(15);
+    expect(JSON.stringify(all)).not.toMatch(REJECTED_NAMES);
+  });
+
+  it('the other tracks are exactly the founder-approved WAHALA! originals, each flagged approved with a rights note', () => {
+    const all = json<{
+      tracks: { id: string; file: string; lite?: string; licence: string; approved: boolean; gain: number }[];
+    }>('music/manifest.json');
+    const originals = all.tracks.filter((t) => !t.id.startsWith('pixabay_'));
+    expect([...new Set(originals.map((t) => t.file))].sort()).toEqual([...ORIGINAL_MUSIC].sort());
+    for (const t of originals) {
+      expect(t.id).toMatch(/^(dist_[a-z]+_(a|b|sd)|lnds_(menu|boss_[123]))$/);
+      expect(t.approved).toBe(true);
+      expect(t.licence).toMatch(/Founder-approved/);
+      expect(t.licence).toMatch(/rights review pending/); // the commercial-release blocker stays visible in the data
+      expect(t.lite).toBe(`lite/${t.file}`);
+      expect(t.gain).toBe(1); // the masters are already at the -14 LUFS game level
+    }
   });
 
   it('every music file present has its own row (with source page) under "Files present" in LICENSES.md', () => {
@@ -109,7 +154,9 @@ describe('rejected generated audio stays disabled', () => {
     const section = /### Files present\n([\s\S]*?)(\n## |$)/.exec(licences)?.[1] ?? '';
     expect(section).toContain('| File |');
     const rows = section.split('\n').filter((l) => l.startsWith('| `pixabay_'));
-    const present = readdirSync(join(AUDIO, 'music')).filter((n) => n.endsWith('.mp3'));
+    const present = readdirSync(join(AUDIO, 'music')).filter(
+      (n) => n.startsWith('pixabay_') && n.endsWith('.mp3'),
+    );
     for (const f of present) {
       const row = rows.find((l) => l.startsWith(`| \`${f}\``));
       expect(row, `${f} needs a row under "Files present"`).toBeDefined();
@@ -120,7 +167,7 @@ describe('rejected generated audio stays disabled', () => {
 
   it('fourteen approved tracks are installed as real MP3 audio; only #7 (pixabay_496406) is missing', () => {
     const present = readdirSync(join(AUDIO, 'music'))
-      .filter((n) => n.endsWith('.mp3'))
+      .filter((n) => n.startsWith('pixabay_') && n.endsWith('.mp3'))
       .sort();
     expect(present).toEqual(
       Object.keys(APPROVED)
@@ -138,8 +185,31 @@ describe('rejected generated audio stays disabled', () => {
     }
   });
 
-  it('no recordings are listed for the sample slots (effects and ambience beds stay synthesised)', () => {
-    expect(json<{ slots: Record<string, unknown> }>('slots.json').slots).toEqual({});
+  it('the only sample slots are the two founder-approved result stingers (all other effects stay synthesised)', () => {
+    const slots = json<{ slots: Record<string, { file: string; license: string }> }>('slots.json').slots;
+    expect(Object.keys(slots).sort()).toEqual(['lose_sting', 'win_sting']);
+    for (const [slot, file] of Object.entries(ORIGINAL_STINGS)) {
+      expect(slots[slot]!.file).toBe(file);
+      expect(slots[slot]!.license).toMatch(/Founder-approved/);
+      const b = readFileSync(join(AUDIO, file));
+      expect(
+        (b[0] === 0xff && (b[1]! & 0xe0) === 0xe0) || b.subarray(0, 3).toString('latin1') === 'ID3',
+      ).toBe(true);
+    }
+  });
+
+  it('the WAHALA! original music files are real MP3 audio, each Data Saver file smaller than its master', () => {
+    for (const f of ORIGINAL_MUSIC) {
+      for (const dir of ['music', 'music/lite']) {
+        const b = readFileSync(join(AUDIO, dir, f));
+        const mpeg = b[0] === 0xff && (b[1]! & 0xe0) === 0xe0;
+        expect(mpeg || b.subarray(0, 3).toString('latin1') === 'ID3', `${dir}/${f}`).toBe(true);
+        expect(b.length, `${dir}/${f}`).toBeGreaterThan(100_000);
+      }
+      expect(statSync(join(AUDIO, 'music/lite', f)).size).toBeLessThan(
+        statSync(join(AUDIO, 'music', f)).size,
+      );
+    }
   });
 
   it('the generators of the rejected audio are not in the repository', () => {
@@ -147,48 +217,62 @@ describe('rejected generated audio stays disabled', () => {
   });
 });
 
-describe('City Rumble V2 stage music (founder assignment, 2026-10-25)', () => {
-  /** One new licensed track per V2 stage; each always plays its own song there. */
-  const STAGE_SONG: Record<string, string> = {
+describe('City Rumble stage music (founder assignments 2026-10-25, replaced by the district songs 2026-11-25)', () => {
+  /** The earlier licensed track of each V2 stage; it stays as the arena's fallback behind its district song. */
+  const STAGE_FALLBACK: Record<string, string> = {
     rumbleOshodi: 'pixabay_601035', // dmsoundworks - Afrobeat Type Beat 2026 (Reach)
     rumbleLagosIsland: 'pixabay_554543', // rediskasound - Afro Beat Groovy Instrumental
     rumbleOjuelegba: 'pixabay_515507', // solarflex - Afrobeat (Afro Beat)
-    rumbleLekki: 'pixabay_623364', // sonican - Afrobeat Groove (the founder's Lekki Night assignment moved to the researched Lekki)
+    rumbleLekki: 'pixabay_623364', // sonican - Afrobeat Groove
   };
 
-  it('every V2 stage names its own track as playlist, start and signature, and the file is real audio', () => {
+  it('every City Rumble arena plays its own district song (two start points) and keeps its Pixabay song as fallback', () => {
     const raw = json<{
-      playlists: { arenas: Record<string, { tracks: string[]; start: string; signature: string }> };
+      playlists: {
+        arenas: Record<
+          string,
+          { tracks: string[]; start: string; signature: string | null; fallback?: string[] }
+        >;
+      };
     }>('music/manifest.json');
     const { manifest } = parseMusicManifest(raw);
-    for (const [arena, id] of Object.entries(STAGE_SONG)) {
-      expect(raw.playlists.arenas[arena], arena).toEqual({ tracks: [id], start: id, signature: id });
-      // the parser keeps it (the track entry exists and is licensed)
-      expect(manifest.playlists.arenas[arena]?.signature, arena).toBe(id);
-      expect(APPROVED[id]).toBeDefined();
-      const b = readFileSync(join(AUDIO, 'music', `${id}.mp3`));
-      expect(b.length).toBeGreaterThan(1_000_000);
+    for (const [family, arena] of Object.entries(DISTRICT_ARENA)) {
+      const fb = STAGE_FALLBACK[arena];
+      expect(raw.playlists.arenas[arena], arena).toEqual({
+        tracks: [`dist_${family}_a`, `dist_${family}_b`],
+        start: `dist_${family}_a`,
+        signature: null,
+        fallback: fb ? [fb] : [],
+      });
+      expect(manifest.playlists.arenas[arena]?.fallback, arena).toEqual(fb ? [fb] : []);
+      if (fb) {
+        expect(APPROVED[fb]).toBeDefined();
+        expect(readFileSync(join(AUDIO, 'music', `${fb}.mp3`)).length).toBeGreaterThan(1_000_000);
+      }
     }
-    // four different songs, none shared with another arena's signature
-    expect(new Set(Object.values(STAGE_SONG)).size).toBe(4);
-    const others = Object.entries(raw.playlists.arenas)
-      .filter(([a]) => !(a in STAGE_SONG))
-      .map(([, p]) => p.signature);
-    for (const id of Object.values(STAGE_SONG)) expect(others).not.toContain(id);
+    // seven different songs: no file is shared between two districts
+    const files = Object.keys(DISTRICT_ARENA).map(
+      (f) => manifest.tracks.find((t) => t.id === `dist_${f}_a`)!.file,
+    );
+    expect(new Set(files).size).toBe(7);
   });
 });
 
 describe('Oshodi Transport Metropolis (replaced the old Oshodi): audio compatibility', () => {
   const raw = json<{
-    playlists: { default: string[]; arenas: Record<string, { tracks: string[]; signature: string }> };
+    playlists: {
+      default: string[];
+      arenas: Record<string, { tracks: string[]; signature: string | null; fallback?: string[] }>;
+    };
   }>('music/manifest.json');
   const { manifest } = parseMusicManifest(raw);
 
   it("keeps the old Oshodi stage's founder-assigned track under the canonical id, and adds no music", () => {
-    // the canonical id is unchanged, so the founder's signature track and the "rumbleOshodiMetro" absence hold
-    expect(raw.playlists.arenas.rumbleOshodi!.signature).toBe('pixabay_601035');
+    // the canonical id is unchanged; the Oshodi district song plays there now, the earlier signature track is its fallback
+    expect(raw.playlists.arenas.rumbleOshodi!.signature).toBeNull();
+    expect(raw.playlists.arenas.rumbleOshodi!.fallback).toEqual(['pixabay_601035']);
     expect(raw.playlists.arenas.rumbleOshodiMetro).toBeUndefined();
-    expect(playlistFor(manifest, 'rumbleOshodi')).toEqual(['pixabay_601035']);
+    expect(playlistFor(manifest, 'rumbleOshodi')).toEqual(['dist_oshodi_a', 'dist_oshodi_b']);
     const picked = pickMatchTrack(manifest, {
       arenaId: 'rumbleOshodi',
       previous: null,
@@ -196,8 +280,17 @@ describe('Oshodi Transport Metropolis (replaced the old Oshodi): audio compatibi
       rand: () => 0.4,
       firstOnArena: true,
     });
-    expect(picked).toBe('pixabay_601035');
-    expect(APPROVED[picked!]).toBeDefined();
+    expect(picked).toBe('dist_oshodi_a');
+    // with the district files unavailable the arena falls back to its earlier approved track, never silence
+    const fell = pickMatchTrack(manifest, {
+      arenaId: 'rumbleOshodi',
+      previous: null,
+      isAvailable: (id) => id.startsWith('pixabay_'),
+      rand: () => 0.4,
+      firstOnArena: true,
+    });
+    expect(fell).toBe('pixabay_601035');
+    expect(APPROVED[fell!]).toBeDefined();
   });
 
   it('keeps its voice zones (bus park and market) and ships no new recording or voice: cues are synthesised', () => {
@@ -205,7 +298,10 @@ describe('Oshodi Transport Metropolis (replaced the old Oshodi): audio compatibi
     expect(zones.bus_park).toContain('rumbleOshodi');
     expect(zones.market).toContain('rumbleOshodi');
     for (const list of Object.values(zones)) expect(list).not.toContain('rumbleOshodiMetro');
-    expect(json<{ slots: Record<string, unknown> }>('slots.json').slots).toEqual({});
+    expect(Object.keys(json<{ slots: Record<string, unknown> }>('slots.json').slots).sort()).toEqual([
+      'lose_sting',
+      'win_sting',
+    ]);
     const recorded = json<{ clips: { id: string }[] }>('voices/recorded.json').clips.map((c) => c.id);
     expect(recorded.some((id) => /train|rail|oshodi|metro/i.test(id))).toBe(false);
   });

@@ -30,7 +30,10 @@
     "build:online": "WAHALA_ONLINE_ENABLED=true WAHALA_ONLINE_URL='ws://{host}:2567' vite build --outDir dist-online --emptyOutDir",
     "test:online-e2e": "node scripts/online-e2e.mjs",
     "audio:stage-candidates": "node tools/audio/candidates/stage.mjs",
-    "audio:unstage-candidates": "node tools/audio/candidates/stage.mjs --clean"
+    "audio:unstage-candidates": "node tools/audio/candidates/stage.mjs --clean",
+    "audio:release-build": "node tools/audio/release/build_release.mjs",
+    "audio:release-check": "node tools/audio/release/build_release.mjs --check",
+    "audio:release-verify": "node tools/audio/release/verify.mjs"
   },
   "dependencies": {
     "@fontsource/anton": "^5.3.0",

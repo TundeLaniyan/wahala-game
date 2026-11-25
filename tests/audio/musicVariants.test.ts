@@ -73,10 +73,25 @@ describe('candidate variants in the manifest', () => {
   const shipped = parseMusicManifest(musicManifest(['t0'])).manifest;
   const cand = parseMusicManifest(candManifest()).manifest;
   const extras = parseCandidateExtras(candManifest());
-  it('extras keep only safe ids; a manifest cannot smuggle variants into the shipped schema', () => {
+  it('extras keep only safe ids; the parser keeps variants only for listed tracks and never reads a url', () => {
     expect(extras.variants).toEqual({ suddenDeath: 'c_sd', boss: ['c_b1', 'c_b2', 'c_b3'] });
     expect(parseCandidateExtras({ variants: { suddenDeath: '../x', boss: ['ok', 3] } }).variants).toEqual({});
-    expect(parseMusicManifest(candManifest()).manifest.variants).toBeUndefined();
+    // the parser (production schema) keeps variants whose ids are listed tracks, and drops the unknown ones
+    expect(parseMusicManifest(candManifest()).manifest.variants).toEqual({
+      suddenDeath: 'c_sd',
+      boss: ['c_b1', 'c_b2', 'c_b3'],
+    });
+    expect(
+      parseMusicManifest({
+        ...(candManifest() as object),
+        variants: { suddenDeath: 'nope', boss: ['c_b1', 'x'] },
+      }).manifest.variants,
+    ).toBeUndefined();
+    const sneaky = parseMusicManifest({
+      tracks: [{ id: 'a', file: 'a.mp3', licence: 'L', url: 'https://evil.example/a.mp3', candidate: true }],
+    }).manifest.tracks[0]!;
+    expect(sneaky.url).toBeUndefined();
+    expect(sneaky.candidate).toBeUndefined();
   });
   it('only the lnds / match / all modes carry variants; they point at known candidate tracks; sync groups and lite URLs are set', () => {
     expect(mergeCandidateMusic(shipped, cand, 'menu', CAND, extras).variants).toBeUndefined();

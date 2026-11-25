@@ -1,6 +1,8 @@
 # WAHALA! soundtrack production: "Lagos No Dey Sleep" (branch `audio/wahala-production-soundtrack-v1`, decision AU2)
 
-Not merged, not deployed; the Architecture chat owns releases. **Everything here is a candidate. Nothing is approved, nothing is in `public/audio/`, no existing audio was replaced.** Based on `claude/wahala-stitch-uiux-v1` at `f7cf2ae`, with the earlier audition overlay (`audio/wahala-original-theme-integration-v1`, AU1) merged in.
+**Status update (2026-11-25, decision AU4): the founder approved the Lagos No Dey Sleep package; the menu loop, the three boss levels and the victory / defeat stingers now ship (`docs/AUDIO_RELEASE.md`). The generic rumble mix, its Sudden Death, the logo sting and the campaign cues remain candidates. The text below is the original candidate-stage record.**
+
+Not merged, not deployed; the Architecture chat owns releases. **At the time of writing everything here was a candidate; nothing was in `public/audio/`.** Based on `claude/wahala-stitch-uiux-v1` at `f7cf2ae`, with the earlier audition overlay (`audio/wahala-original-theme-integration-v1`, AU1) merged in.
 
 Listening page (private link, plays everything): https://claude.ai/artifact/7A8NRnRmhi39iAcqSD1S7d
 

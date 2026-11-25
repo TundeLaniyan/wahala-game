@@ -668,6 +668,7 @@ export class MatchController implements MissionHost {
 
   setPaused(paused: boolean): void {
     if (!this.state || this.state.match.phase === 'ended' || this.skipping) return;
+    if (paused !== this.paused) this.audio.playUi(paused ? 'pause' : 'resume'); // a menu tick: audible while paused (decision AU4)
     this.paused = paused;
     this.audio.setPaused?.(paused);
     this.deps.input.clear(); // a press made while paused must not become a move on resume

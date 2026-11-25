@@ -213,6 +213,440 @@
       "artistSource": "Pixabay uploader handle in the downloaded file name",
       "note": "City Rumble V2 signature track for rumbleLekkiNight (supplied 2026-10-25, re-encoded 160 kbps)",
       "lite": "lite/pixabay_623364.mp3"
+    },
+    {
+      "id": "dist_ojuelegba_a",
+      "title": "Asphalt Throne (Ojuelegba), start point A",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 01_Ojuelegba_Asphalt-Throne.mp3 (SHA-256 2a9efe2bad8d14f5...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_ojuelegba.mp3",
+      "lite": "lite/dist_ojuelegba.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.3,
+      "startAt": 0,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "ojuelegba"
+    },
+    {
+      "id": "dist_ojuelegba_b",
+      "title": "Asphalt Throne (Ojuelegba), start point B",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 01_Ojuelegba_Asphalt-Throne.mp3 (SHA-256 2a9efe2bad8d14f5...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_ojuelegba.mp3",
+      "lite": "lite/dist_ojuelegba.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.3,
+      "startAt": 69.818,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "ojuelegba"
+    },
+    {
+      "id": "dist_ojuelegba_sd",
+      "title": "Asphalt Throne: Sudden Death loop (16 bars, same tempo)",
+      "artist": null,
+      "source": "derived from the same recording (loudest section plus tension layers)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_ojuelegba_sd.mp3",
+      "lite": "lite/dist_ojuelegba_sd.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -13.8,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "ojuelegba"
+    },
+    {
+      "id": "dist_oshodi_a",
+      "title": "Oshodi Transit (Oshodi), start point A",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 02_Oshodi_Oshodi-Transit.mp3 (SHA-256 69d7b869bcad923b...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_oshodi.mp3",
+      "lite": "lite/dist_oshodi.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.2,
+      "startAt": 0,
+      "grid": {
+        "bpm": 124,
+        "first": 0
+      },
+      "family": "oshodi"
+    },
+    {
+      "id": "dist_oshodi_b",
+      "title": "Oshodi Transit (Oshodi), start point B",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 02_Oshodi_Oshodi-Transit.mp3 (SHA-256 69d7b869bcad923b...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_oshodi.mp3",
+      "lite": "lite/dist_oshodi.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.2,
+      "startAt": 77.419,
+      "grid": {
+        "bpm": 124,
+        "first": 0
+      },
+      "family": "oshodi"
+    },
+    {
+      "id": "dist_oshodi_sd",
+      "title": "Oshodi Transit: Sudden Death loop (16 bars, same tempo)",
+      "artist": null,
+      "source": "derived from the same recording (loudest section plus tension layers)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_oshodi_sd.mp3",
+      "lite": "lite/dist_oshodi_sd.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.8,
+      "grid": {
+        "bpm": 124,
+        "first": 0
+      },
+      "family": "oshodi"
+    },
+    {
+      "id": "dist_mushin_a",
+      "title": "Mushin Heat (Mushin), start point A",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 03_Mushin_Mushin-Heat.mp3 (SHA-256 5e681205240c20f4...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_mushin.mp3",
+      "lite": "lite/dist_mushin.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.2,
+      "startAt": 0,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "mushin"
+    },
+    {
+      "id": "dist_mushin_b",
+      "title": "Mushin Heat (Mushin), start point B",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 03_Mushin_Mushin-Heat.mp3 (SHA-256 5e681205240c20f4...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_mushin.mp3",
+      "lite": "lite/dist_mushin.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.2,
+      "startAt": 52.364,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "mushin"
+    },
+    {
+      "id": "dist_mushin_sd",
+      "title": "Mushin Heat: Sudden Death loop (16 bars, same tempo)",
+      "artist": null,
+      "source": "derived from the same recording (loudest section plus tension layers)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_mushin_sd.mp3",
+      "lite": "lite/dist_mushin_sd.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -13.7,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "mushin"
+    },
+    {
+      "id": "dist_fadeyi_a",
+      "title": "We Still Dey Move (Fadeyi-Somolu), start point A",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 04_Fadeyi-Somolu_We-Still-Dey-Move.mp3 (SHA-256 2225031e5500418f...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_fadeyi.mp3",
+      "lite": "lite/dist_fadeyi.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.3,
+      "startAt": 0,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "fadeyi"
+    },
+    {
+      "id": "dist_fadeyi_b",
+      "title": "We Still Dey Move (Fadeyi-Somolu), start point B",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 04_Fadeyi-Somolu_We-Still-Dey-Move.mp3 (SHA-256 2225031e5500418f...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_fadeyi.mp3",
+      "lite": "lite/dist_fadeyi.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.3,
+      "startAt": 69.818,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "fadeyi"
+    },
+    {
+      "id": "dist_fadeyi_sd",
+      "title": "We Still Dey Move: Sudden Death loop (16 bars, same tempo)",
+      "artist": null,
+      "source": "derived from the same recording (loudest section plus tension layers)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_fadeyi_sd.mp3",
+      "lite": "lite/dist_fadeyi_sd.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -13.7,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "fadeyi"
+    },
+    {
+      "id": "dist_ebute_a",
+      "title": "Steel and Skin (Ebute-Metta), start point A",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 05_Ebute-Metta_Steel-and-Skin.mp3 (SHA-256 a4e16a3ff9aedad0...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_ebute.mp3",
+      "lite": "lite/dist_ebute.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.2,
+      "startAt": 0,
+      "grid": {
+        "bpm": 105,
+        "first": 0
+      },
+      "family": "ebute"
+    },
+    {
+      "id": "dist_ebute_b",
+      "title": "Steel and Skin (Ebute-Metta), start point B",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 05_Ebute-Metta_Steel-and-Skin.mp3 (SHA-256 a4e16a3ff9aedad0...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_ebute.mp3",
+      "lite": "lite/dist_ebute.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.2,
+      "startAt": 73.143,
+      "grid": {
+        "bpm": 105,
+        "first": 0
+      },
+      "family": "ebute"
+    },
+    {
+      "id": "dist_ebute_sd",
+      "title": "Steel and Skin: Sudden Death loop (16 bars, same tempo)",
+      "artist": null,
+      "source": "derived from the same recording (loudest section plus tension layers)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_ebute_sd.mp3",
+      "lite": "lite/dist_ebute_sd.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -13.7,
+      "grid": {
+        "bpm": 105,
+        "first": 0
+      },
+      "family": "ebute"
+    },
+    {
+      "id": "dist_lagosisland_a",
+      "title": "Lagos Market Swagger (Lagos Island), start point A",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 06_Lagos-Island_Lagos-Market-Swagger.mp3 (SHA-256 5f489756d375f906...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_lagosisland.mp3",
+      "lite": "lite/dist_lagosisland.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.3,
+      "startAt": 0,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "lagosisland"
+    },
+    {
+      "id": "dist_lagosisland_b",
+      "title": "Lagos Market Swagger (Lagos Island), start point B",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 06_Lagos-Island_Lagos-Market-Swagger.mp3 (SHA-256 5f489756d375f906...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_lagosisland.mp3",
+      "lite": "lite/dist_lagosisland.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.3,
+      "startAt": 69.818,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "lagosisland"
+    },
+    {
+      "id": "dist_lagosisland_sd",
+      "title": "Lagos Market Swagger: Sudden Death loop (16 bars, same tempo)",
+      "artist": null,
+      "source": "derived from the same recording (loudest section plus tension layers)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_lagosisland_sd.mp3",
+      "lite": "lite/dist_lagosisland_sd.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -13.7,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "lagosisland"
+    },
+    {
+      "id": "dist_lekki_a",
+      "title": "Lekki Power Move (Lekki), start point A",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 07_Lekki_Lekki-Power-Move.mp3 (SHA-256 37aa90c591d8dfea...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_lekki.mp3",
+      "lite": "lite/dist_lekki.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.3,
+      "startAt": 0,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "lekki"
+    },
+    {
+      "id": "dist_lekki_b",
+      "title": "Lekki Power Move (Lekki), start point B",
+      "artist": null,
+      "source": "Gemini-generated, founder pack 2026-11-24, 07_Lekki_Lekki-Power-Move.mp3 (SHA-256 37aa90c591d8dfea...)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_lekki.mp3",
+      "lite": "lite/dist_lekki.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.3,
+      "startAt": 69.818,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "lekki"
+    },
+    {
+      "id": "dist_lekki_sd",
+      "title": "Lekki Power Move: Sudden Death loop (16 bars, same tempo)",
+      "artist": null,
+      "source": "derived from the same recording (loudest section plus tension layers)",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "dist_lekki_sd.mp3",
+      "lite": "lite/dist_lekki_sd.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -13.8,
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      },
+      "family": "lekki"
+    },
+    {
+      "id": "lnds_menu",
+      "title": "Instrumental main-menu loop: verse 2 + chorus B of the approved song, vocals removed (bars 25-40, 16 bars)",
+      "artist": null,
+      "source": "Lagos No Dey Sleep (founder-approved Gemini recording), arranged from its stems",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "lnds_menu.mp3",
+      "lite": "lite/lnds_menu.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -15.2
+    },
+    {
+      "id": "lnds_boss_1",
+      "title": "Boss theme level 1/3 (stalking): the song's bass and 'other' stems transposed -5 semitones (F->C) over its own drums; levels share one 16-bar grid",
+      "artist": null,
+      "source": "Lagos No Dey Sleep (founder-approved Gemini recording), arranged from its stems",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "lnds_boss_1.mp3",
+      "lite": "lite/lnds_boss_1.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -17,
+      "syncGroup": "lnds_grid16",
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      }
+    },
+    {
+      "id": "lnds_boss_2",
+      "title": "Boss theme level 2/3 (engaged): the song's bass and 'other' stems transposed -5 semitones (F->C) over its own drums; levels share one 16-bar grid",
+      "artist": null,
+      "source": "Lagos No Dey Sleep (founder-approved Gemini recording), arranged from its stems",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "lnds_boss_2.mp3",
+      "lite": "lite/lnds_boss_2.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -15.4,
+      "syncGroup": "lnds_grid16",
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      }
+    },
+    {
+      "id": "lnds_boss_3",
+      "title": "Boss theme level 3/3 (all-out): the song's bass and 'other' stems transposed -5 semitones (F->C) over its own drums; levels share one 16-bar grid",
+      "artist": null,
+      "source": "Lagos No Dey Sleep (founder-approved Gemini recording), arranged from its stems",
+      "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+      "file": "lnds_boss_3.mp3",
+      "lite": "lite/lnds_boss_3.mp3",
+      "approved": true,
+      "gain": 1,
+      "loudnessLufs": -14.9,
+      "syncGroup": "lnds_grid16",
+      "grid": {
+        "bpm": 110,
+        "first": 0
+      }
     }
   ],
   "playlists": {
@@ -294,33 +728,94 @@
       },
       "rumbleOshodi": {
         "tracks": [
-          "pixabay_601035"
+          "dist_oshodi_a",
+          "dist_oshodi_b"
         ],
-        "start": "pixabay_601035",
-        "signature": "pixabay_601035"
+        "start": "dist_oshodi_a",
+        "signature": null,
+        "fallback": [
+          "pixabay_601035"
+        ]
       },
       "rumbleLagosIsland": {
         "tracks": [
-          "pixabay_554543"
+          "dist_lagosisland_a",
+          "dist_lagosisland_b"
         ],
-        "start": "pixabay_554543",
-        "signature": "pixabay_554543"
+        "start": "dist_lagosisland_a",
+        "signature": null,
+        "fallback": [
+          "pixabay_554543"
+        ]
       },
       "rumbleOjuelegba": {
         "tracks": [
-          "pixabay_515507"
+          "dist_ojuelegba_a",
+          "dist_ojuelegba_b"
         ],
-        "start": "pixabay_515507",
-        "signature": "pixabay_515507"
+        "start": "dist_ojuelegba_a",
+        "signature": null,
+        "fallback": [
+          "pixabay_515507"
+        ]
       },
       "rumbleLekki": {
         "tracks": [
-          "pixabay_623364"
+          "dist_lekki_a",
+          "dist_lekki_b"
         ],
-        "start": "pixabay_623364",
-        "signature": "pixabay_623364"
+        "start": "dist_lekki_a",
+        "signature": null,
+        "fallback": [
+          "pixabay_623364"
+        ]
+      },
+      "rumbleMushin": {
+        "tracks": [
+          "dist_mushin_a",
+          "dist_mushin_b"
+        ],
+        "start": "dist_mushin_a",
+        "signature": null,
+        "fallback": []
+      },
+      "rumbleFadeyi": {
+        "tracks": [
+          "dist_fadeyi_a",
+          "dist_fadeyi_b"
+        ],
+        "start": "dist_fadeyi_a",
+        "signature": null,
+        "fallback": []
+      },
+      "rumbleEbuteMetta": {
+        "tracks": [
+          "dist_ebute_a",
+          "dist_ebute_b"
+        ],
+        "start": "dist_ebute_a",
+        "signature": null,
+        "fallback": []
       }
     }
   },
-  "menu": []
+  "menu": [
+    "lnds_menu"
+  ],
+  "variants": {
+    "suddenDeathFor": {
+      "ojuelegba": "dist_ojuelegba_sd",
+      "oshodi": "dist_oshodi_sd",
+      "mushin": "dist_mushin_sd",
+      "fadeyi": "dist_fadeyi_sd",
+      "ebute": "dist_ebute_sd",
+      "lagosisland": "dist_lagosisland_sd",
+      "lekki": "dist_lekki_sd"
+    },
+    "boss": [
+      "lnds_boss_1",
+      "lnds_boss_2",
+      "lnds_boss_3"
+    ]
+  }
 }

@@ -156,11 +156,12 @@ export function mergeCandidateMusic(
         tracks: ids,
         signature: null,
         start: e.start && ids.includes(e.start) ? e.start : ids[0]!,
+        ...(arenas[arena]?.fallback ? { fallback: arenas[arena]!.fallback } : {}),
       };
       anyMatch = true;
     }
   }
-  const variants: MusicVariants = {};
+  const variants: MusicVariants = { ...base.variants }; // the shipped variants stay unless a candidate one replaces them
   if (anyMatch) {
     if (extras.variants.suddenDeath && known.has(extras.variants.suddenDeath)) {
       variants.suddenDeath = extras.variants.suddenDeath;

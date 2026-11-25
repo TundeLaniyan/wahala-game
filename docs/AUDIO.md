@@ -14,7 +14,7 @@ loaded per arena; see "Voice lines" below. The crowd's on-screen speech bubbles 
 
 **Soundtrack production (decision AU2):** arrangements of the founder-approved *Lagos No Dey Sleep* (Sudden Death and boss variants included) are candidates reachable with `?audiodraft`; the sound-effect coverage audit and the new effects are in `docs/AUDIO_COVERAGE.md`, the production, rights and approval notes in `docs/AUDIO_PRODUCTION.md`.
 
-**Seven district songs (decision AU3):** mastered loops, Data Saver files, the arena map and per-song Sudden Death loops are in `docs/AUDIO_DISTRICTS.md` (`?audiodraft=match`); candidates only.
+**Seven district songs (decisions AU3, AU4):** mastered loops, Data Saver files, the arena map and per-song Sudden Death loops are in `docs/AUDIO_DISTRICTS.md`. **Founder-approved 2026-11-25 and shipped** with the *Lagos No Dey Sleep* menu / boss music and result stingers: what plays when, the arena map, checksums, merge and validation steps and the open rights blockers are in `docs/AUDIO_RELEASE.md` and `docs/AUDIO_PROVENANCE.md`.
 
 The `claude/wahala-lagos-audio` branch produced generated Afrobeats music, synthetic Nigerian Pidgin voices and
 generated "Lagos" ambience beds. **The founder rejected all three.** On this branch:

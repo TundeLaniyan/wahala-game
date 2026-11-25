@@ -5,7 +5,9 @@
 [`LICENSES.md`](LICENSES.md)) **and the founder-approved voice clips** (`voices/recorded/<id>.mp3`, synthetic
 Nigerian Pidgin voices made with Google Gemini text-to-speech, imported by `tools/audio/voices/import_voices.py`;
 see [`docs/AUDIO.md`](../../docs/AUDIO.md) "Voice lines"). **No effect or ambience recordings are shipped**: every
-other sound is synthesised at runtime (`src/audio/recipes`). The generated music, synthetic Pidgin voices and generated ambience
+other sound is synthesised at runtime (`src/audio/recipes`), apart from the two founder-approved match-result stingers
+(`win_sting`, `lose_sting`: `lnds_victory.mp3`, `lnds_defeat.mp3`) and the founder-approved WAHALA! original music (the
+seven district songs, the menu theme and the boss music: see [`LICENSES.md`](LICENSES.md) and `docs/AUDIO_RELEASE.md`). The generated music, synthetic Pidgin voices and generated ambience
 beds of the `claude/wahala-lagos-audio` branch were rejected and removed (see [`docs/AUDIO.md`](../../docs/AUDIO.md)).
 
 - `music/manifest.json`: the approved tracks, their credits and levels, and the arena playlists for

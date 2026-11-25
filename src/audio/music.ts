@@ -106,7 +106,7 @@ export interface MusicPlayer {
   startMatch(arenaId?: string | null): void;
   /**
    * The game state calls for another soundtrack variant (Sudden Death, boss level). Only does something when the
-   * manifest lists variants, i.e. with the unapproved `?audiodraft` overlay; with the shipped playlist it never does.
+   * manifest lists variants (the shipped one does since decision AU4; before that only the `?audiodraft` overlay).
    * Cheap and idempotent: the engine may call it every tick.
    */
   setVariant(variant: MusicVariant): void;

@@ -39,12 +39,14 @@ describe('public/audio documentation and manifest', () => {
   const dir = join(__dirname, '../../public/audio');
   const read = (f: string): string => readFileSync(join(dir, f), 'utf8');
 
-  it('ships no effect/ambience recordings: slots.json is empty; the audio files are the music and the TTS voice clips', () => {
+  it('ships no effect/ambience recordings: slots.json lists only the two result stingers; the other audio is music and the TTS voice clips', () => {
     const manifest = JSON.parse(read('slots.json')) as { slots: Record<string, { license: string }> };
-    expect(manifest.slots).toEqual({});
-    expect(parseManifest(manifest).entries).toHaveLength(0);
+    expect(Object.keys(manifest.slots).sort()).toEqual(['lose_sting', 'win_sting']);
+    expect(parseManifest(manifest).entries).toHaveLength(2);
     expect(read('README.md')).toMatch(/No effect or ambience recordings are shipped/i);
-    expect(read('LICENSES.md')).toMatch(/approved Pixabay music and the founder-approved Gemini text-to-speech/i);
+    expect(read('LICENSES.md')).toMatch(
+      /approved Pixabay music and the founder-approved Gemini text-to-speech/i,
+    );
     expect(read('LICENSES.md')).toMatch(/not recordings\s+of people/i);
     expect(read('LICENSES.md')).toMatch(/standalone/i);
     expect(read('LICENSES.md')).toMatch(/licen[cs]e/i);

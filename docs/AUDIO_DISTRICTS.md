@@ -1,3 +1,5 @@
+> **Status update (2026-11-25, decision AU4):** the founder approved all seven mastered songs. They ship on their seven City Rumble arenas (start points A and B, with per-song Sudden Death loops); see `docs/AUDIO_RELEASE.md`. The three "start C" standard-arena mappings and the proposed arenas below are not applied. The text below is the candidate-stage record.
+
 # Seven district songs: mastering, loops, arena map and Sudden Death (branch `audio/wahala-production-soundtrack-v1`, decision AU3)
 
 Not merged, not deployed, nothing under `public/audio/`, no shipped track replaced or removed. The Pixabay tracks stay the fallback everywhere; every candidate is reachable only with `?audiodraft`. Continues the branch of `docs/AUDIO_PRODUCTION.md` (Lagos No Dey Sleep): its menu instrumental, boss theme, victory/defeat cues and the existing sound effects are untouched.

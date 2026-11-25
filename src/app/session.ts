@@ -676,8 +676,9 @@ export const commands = {
     setMenu(back(useGameStore.getState().menu));
   },
   menuContinue(): void {
-    audio.playUi('click');
-    setMenu(advance(useGameStore.getState().menu));
+    const next = advance(useGameStore.getState().menu);
+    audio.playUi(currentScreen(next) === 'ready' ? 'ready' : 'click'); // the Ready screen has its own tick (decision AU4)
+    setMenu(next);
   },
   menuHome(): void {
     audio.playUi('back');
@@ -697,10 +698,10 @@ export const commands = {
     campaign?.setLevel(level);
   },
   campaignBuyUpgrade(kind: UpgradeKind): void {
-    audio.playUi(campaign?.buyUpgrade(kind) ? 'click' : 'back');
+    audio.playUi(campaign?.buyUpgrade(kind) ? 'confirm' : 'error');
   },
   campaignRefundUpgrades(): void {
-    audio.playUi(campaign?.refundUpgrades() ? 'click' : 'back');
+    audio.playUi(campaign?.refundUpgrades() ? 'confirm' : 'error');
   },
   campaignDelete(): void {
     audio.playUi('back');
