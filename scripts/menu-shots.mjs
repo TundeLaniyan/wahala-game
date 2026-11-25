@@ -14,8 +14,13 @@ const VIEWPORTS = {
   portrait: { width: 390, height: 844, mobile: true },
   landscape: { width: 844, height: 390, mobile: true },
   small: { width: 667, height: 375, mobile: true },
+  // the two smallest phone landscape sizes the menu must keep intact, and an ordinary portrait phone (FU2-9)
+  phone750: { width: 750, height: 336, mobile: true },
+  phone832: { width: 832, height: 384, mobile: true },
 };
 const only = process.argv.slice(3);
+// WAHALA_SHOTS=home,play : only the Home and Choose-How-to-Play screens (the FU2 menu review); unset = the whole tour
+const FAST = process.env.WAHALA_SHOTS === 'home,play';
 
 const browser = await chromium.launch({
   executablePath: process.env.WAHALA_CHROMIUM || undefined,
@@ -57,6 +62,12 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     console.log(`${name}-${s}`);
   };
   await shot('01-home');
+  if (FAST) {
+    await page.getByTestId('home-play').click();
+    await shot('02-play');
+    await ctx.close();
+    continue;
+  }
   await page.getByTestId('home-rumble').click();
   await shot('02-mode');
   await page.getByTestId('mode-survival').click(); // a tap opens the arena and settings

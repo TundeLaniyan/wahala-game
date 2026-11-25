@@ -1,0 +1,1590 @@
+{
+ "config": {
+  "size": 32,
+  "arena": "rumbleOshodi",
+  "quality": "low",
+  "seconds": 45,
+  "warmup": 8,
+  "cpu": 1,
+  "runs": 4
+ },
+ "summary": [
+  {
+   "condition": "on",
+   "runs": 4,
+   "frameP50": {
+    "median": 2008.3,
+    "range": [
+     1150,
+     2383.2
+    ]
+   },
+   "frameP95": {
+    "median": 4008.2,
+    "range": [
+     2633.2,
+     4766.4
+    ]
+   },
+   "frameP99": {
+    "median": 4041.5,
+    "range": [
+     2633.3,
+     4766.4
+    ]
+   },
+   "over2x": {
+    "median": 2,
+    "range": [
+     0,
+     6
+    ]
+   },
+   "longTasks": {
+    "median": 14,
+    "range": [
+     11,
+     17
+    ]
+   },
+   "busyFraction": {
+    "median": 0.1,
+    "range": [
+     0.1,
+     0.1
+    ]
+   },
+   "ticksPerSecond": {
+    "median": 2.9,
+    "range": [
+     2.5,
+     4.2
+    ]
+   },
+   "loadMs": {
+    "median": 23978.5,
+    "range": [
+     18904,
+     27715
+    ]
+   },
+   "mediaWaiting": 0,
+   "mediaStalled": 0,
+   "music": [
+    "GET lite/pixabay_601035.mp3"
+   ]
+  },
+  {
+   "condition": "off",
+   "runs": 4,
+   "frameP50": {
+    "median": 2291.6,
+    "range": [
+     2049.9,
+     2416.5
+    ]
+   },
+   "frameP95": {
+    "median": 4883.2,
+    "range": [
+     4783.2,
+     4933.2
+    ]
+   },
+   "frameP99": {
+    "median": 4883.2,
+    "range": [
+     4783.2,
+     4933.2
+    ]
+   },
+   "over2x": {
+    "median": 3,
+    "range": [
+     1,
+     4
+    ]
+   },
+   "longTasks": {
+    "median": 12,
+    "range": [
+     8,
+     14
+    ]
+   },
+   "busyFraction": {
+    "median": 0.1,
+    "range": [
+     0.1,
+     0.1
+    ]
+   },
+   "ticksPerSecond": {
+    "median": 2.4,
+    "range": [
+     2.3,
+     2.5
+    ]
+   },
+   "loadMs": {
+    "median": 25845,
+    "range": [
+     24089,
+     26394
+    ]
+   },
+   "mediaWaiting": 0,
+   "mediaStalled": 0,
+   "music": [
+    "GET pixabay_601035.mp3"
+   ]
+  },
+  {
+   "condition": "muted",
+   "runs": 4,
+   "frameP50": {
+    "median": 1483.3,
+    "range": [
+     1050,
+     2199.9
+    ]
+   },
+   "frameP95": {
+    "median": 3274.9,
+    "range": [
+     2533.3,
+     4449.8
+    ]
+   },
+   "frameP99": {
+    "median": 3916.5,
+    "range": [
+     3333.2,
+     4449.8
+    ]
+   },
+   "over2x": {
+    "median": 4,
+    "range": [
+     1,
+     7
+    ]
+   },
+   "longTasks": {
+    "median": 16,
+    "range": [
+     15,
+     16
+    ]
+   },
+   "busyFraction": {
+    "median": 0.2,
+    "range": [
+     0.1,
+     0.2
+    ]
+   },
+   "ticksPerSecond": {
+    "median": 3.5,
+    "range": [
+     2.7,
+     4.8
+    ]
+   },
+   "loadMs": {
+    "median": 23231.5,
+    "range": [
+     18287,
+     30515
+    ]
+   },
+   "mediaWaiting": 0,
+   "mediaStalled": 0,
+   "music": [
+    "GET pixabay_601035.mp3"
+   ]
+  }
+ ],
+ "rows": [
+  {
+   "round": 1,
+   "condition": "on",
+   "players": 32,
+   "loadMs": 27715,
+   "frameCount": 19,
+   "frameMs": {
+    "p50": 2383.2,
+    "p95": 4599.8,
+    "p99": 4599.8,
+    "max": 4599.8,
+    "mean": 2192
+   },
+   "framesOver2xMedian": 0,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 11,
+    "totalMs": 36786,
+    "maxMs": 6098
+   },
+   "mainThread": {
+    "taskSeconds": 3.52,
+    "scriptSeconds": 2.71,
+    "busyFraction": 0.078
+   },
+   "simTicksPerSecond": 2.51,
+   "timings": {
+    "render": 5437.22,
+    "ai": 1.04,
+    "sim": 24.26
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET lite/pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     42281
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     1054
+    ],
+    [
+     "(program) :-1",
+     718
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     144
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     113
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     111
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     79
+    ],
+    [
+     "Ts Frame-BhbwU2SA.js:0",
+     47
+    ],
+    [
+     "addLR Frame-BhbwU2SA.js:0",
+     42
+    ],
+    [
+     "Ns Frame-BhbwU2SA.js:0",
+     37
+    ],
+    [
+     "kc Frame-BhbwU2SA.js:0",
+     35
+    ],
+    [
+     "(garbage collector) :-1",
+     34
+    ],
+    [
+     "bufferSubData :-1",
+     32
+    ],
+    [
+     "Et three-CLpNnD-j.js:4219",
+     31
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 1,
+   "condition": "off",
+   "players": 32,
+   "loadMs": 26246,
+   "frameCount": 18,
+   "frameMs": {
+    "p50": 2416.5,
+    "p95": 4933.2,
+    "p99": 4933.2,
+    "max": 4933.2,
+    "mean": 2455.5
+   },
+   "framesOver2xMedian": 1,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 14,
+    "totalMs": 27182,
+    "maxMs": 7077
+   },
+   "mainThread": {
+    "taskSeconds": 3.48,
+    "scriptSeconds": 2.81,
+    "busyFraction": 0.077
+   },
+   "simTicksPerSecond": 2.33,
+   "timings": {
+    "render": 5224.14,
+    "ai": 0.75,
+    "sim": 7.83
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     43233
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     763
+    ],
+    [
+     "(program) :-1",
+     578
+    ],
+    [
+     "(garbage collector) :-1",
+     252
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     216
+    ],
+    [
+     "Ss Frame-BhbwU2SA.js:0",
+     157
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     85
+    ],
+    [
+     "o three-CLpNnD-j.js:4071",
+     65
+    ],
+    [
+     "o Frame-BhbwU2SA.js:0",
+     56
+    ],
+    [
+     "a three-CLpNnD-j.js:4219",
+     55
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     46
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     43
+    ],
+    [
+     "_t three-CLpNnD-j.js:4219",
+     35
+    ],
+    [
+     "kc Frame-BhbwU2SA.js:0",
+     32
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 1,
+   "condition": "muted",
+   "players": 32,
+   "loadMs": 30515,
+   "frameCount": 21,
+   "frameMs": {
+    "p50": 2199.9,
+    "p95": 4449.8,
+    "p99": 4449.8,
+    "max": 4449.8,
+    "mean": 2094.4
+   },
+   "framesOver2xMedian": 2,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 15,
+    "totalMs": 26534,
+    "maxMs": 6260
+   },
+   "mainThread": {
+    "taskSeconds": 6.31,
+    "scriptSeconds": 5.74,
+    "busyFraction": 0.14
+   },
+   "simTicksPerSecond": 2.69,
+   "timings": {
+    "render": 4597.85,
+    "ai": 0.82,
+    "sim": 18.63
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     43887
+    ],
+    [
+     "getProgramInfoLog :-1",
+     1743
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     1128
+    ],
+    [
+     "getShaderInfoLog :-1",
+     803
+    ],
+    [
+     "(program) :-1",
+     510
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     162
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     114
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     87
+    ],
+    [
+     "Ic Frame-BhbwU2SA.js:0",
+     55
+    ],
+    [
+     "bufferSubData :-1",
+     46
+    ],
+    [
+     "xs Frame-BhbwU2SA.js:0",
+     44
+    ],
+    [
+     "texSubImage2D :-1",
+     41
+    ],
+    [
+     "_t three-CLpNnD-j.js:4219",
+     38
+    ],
+    [
+     "addLR Frame-BhbwU2SA.js:0",
+     37
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 2,
+   "condition": "off",
+   "players": 32,
+   "loadMs": 24089,
+   "frameCount": 20,
+   "frameMs": {
+    "p50": 2333.2,
+    "p95": 4933.1,
+    "p99": 4933.1,
+    "max": 4933.1,
+    "mean": 2176.6
+   },
+   "framesOver2xMedian": 3,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 8,
+    "totalMs": 30378,
+    "maxMs": 6692
+   },
+   "mainThread": {
+    "taskSeconds": 2.86,
+    "scriptSeconds": 2.33,
+    "busyFraction": 0.064
+   },
+   "simTicksPerSecond": 2.38,
+   "timings": {
+    "render": 4641.4,
+    "ai": 0.63,
+    "sim": 10.34
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     43156
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     802
+    ],
+    [
+     "(program) :-1",
+     445
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     126
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     101
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     56
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     48
+    ],
+    [
+     "bufferSubData :-1",
+     35
+    ],
+    [
+     "Et three-CLpNnD-j.js:4219",
+     33
+    ],
+    [
+     "Ic Frame-BhbwU2SA.js:0",
+     33
+    ],
+    [
+     "o Frame-BhbwU2SA.js:0",
+     33
+    ],
+    [
+     "decodeAudioData :-1",
+     33
+    ],
+    [
+     "Ds Frame-BhbwU2SA.js:0",
+     31
+    ],
+    [
+     "_t three-CLpNnD-j.js:4219",
+     28
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 2,
+   "condition": "muted",
+   "players": 32,
+   "loadMs": 18287,
+   "frameCount": 28,
+   "frameMs": {
+    "p50": 1616.6,
+    "p95": 3049.9,
+    "p99": 3383.2,
+    "max": 3383.2,
+    "mean": 1594
+   },
+   "framesOver2xMedian": 1,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 16,
+    "totalMs": 36047,
+    "maxMs": 4846
+   },
+   "mainThread": {
+    "taskSeconds": 10.17,
+    "scriptSeconds": 9.71,
+    "busyFraction": 0.226
+   },
+   "simTicksPerSecond": 3.51,
+   "timings": {
+    "render": 2315.24,
+    "ai": 4.07,
+    "sim": 16.46
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     36155
+    ],
+    [
+     "getProgramInfoLog :-1",
+     4628
+    ],
+    [
+     "getShaderInfoLog :-1",
+     1582
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     1030
+    ],
+    [
+     "(program) :-1",
+     405
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     192
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     134
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     113
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     108
+    ],
+    [
+     "(garbage collector) :-1",
+     64
+    ],
+    [
+     "Es Frame-BhbwU2SA.js:0",
+     58
+    ],
+    [
+     "updateMatrixWorld three-CLpNnD-j.js:0",
+     54
+    ],
+    [
+     "kc Frame-BhbwU2SA.js:0",
+     54
+    ],
+    [
+     "Ds Frame-BhbwU2SA.js:0",
+     52
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 2,
+   "condition": "on",
+   "players": 32,
+   "loadMs": 22539,
+   "frameCount": 28,
+   "frameMs": {
+    "p50": 1699.9,
+    "p95": 3416.5,
+    "p99": 3483.1,
+    "max": 3483.1,
+    "mean": 1592.2
+   },
+   "framesOver2xMedian": 3,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 16,
+    "totalMs": 42630,
+    "maxMs": 4699
+   },
+   "mainThread": {
+    "taskSeconds": 5.12,
+    "scriptSeconds": 4.57,
+    "busyFraction": 0.114
+   },
+   "simTicksPerSecond": 3.36,
+   "timings": {
+    "render": 2743.16,
+    "ai": 2.93,
+    "sim": 11.89
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET lite/pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     41507
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     1026
+    ],
+    [
+     "getShaderInfoLog :-1",
+     577
+    ],
+    [
+     "(program) :-1",
+     434
+    ],
+    [
+     "getProgramInfoLog :-1",
+     251
+    ],
+    [
+     "(garbage collector) :-1",
+     221
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     191
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     184
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     158
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     111
+    ],
+    [
+     "kc Frame-BhbwU2SA.js:0",
+     76
+    ],
+    [
+     "Ds Frame-BhbwU2SA.js:0",
+     71
+    ],
+    [
+     "Es Frame-BhbwU2SA.js:0",
+     61
+    ],
+    [
+     "pc Frame-BhbwU2SA.js:0",
+     61
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 3,
+   "condition": "muted",
+   "players": 32,
+   "loadMs": 21727,
+   "frameCount": 40,
+   "frameMs": {
+    "p50": 1050,
+    "p95": 2533.3,
+    "p99": 3333.2,
+    "max": 3333.2,
+    "mean": 1153.7
+   },
+   "framesOver2xMedian": 6,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 16,
+    "totalMs": 34213,
+    "maxMs": 3847
+   },
+   "mainThread": {
+    "taskSeconds": 9.12,
+    "scriptSeconds": 8.61,
+    "busyFraction": 0.203
+   },
+   "simTicksPerSecond": 4.78,
+   "timings": {
+    "render": 1479.34,
+    "ai": 2.23,
+    "sim": 12.77
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     38173
+    ],
+    [
+     "getProgramInfoLog :-1",
+     2434
+    ],
+    [
+     "getShaderInfoLog :-1",
+     1966
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     1224
+    ],
+    [
+     "(program) :-1",
+     416
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     244
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     169
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     120
+    ],
+    [
+     "Es Frame-BhbwU2SA.js:0",
+     119
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     112
+    ],
+    [
+     "kc Frame-BhbwU2SA.js:0",
+     102
+    ],
+    [
+     "Ts Frame-BhbwU2SA.js:0",
+     80
+    ],
+    [
+     "Ds Frame-BhbwU2SA.js:0",
+     73
+    ],
+    [
+     "(garbage collector) :-1",
+     67
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 3,
+   "condition": "on",
+   "players": 32,
+   "loadMs": 18904,
+   "frameCount": 36,
+   "frameMs": {
+    "p50": 1150,
+    "p95": 2633.2,
+    "p99": 2633.3,
+    "max": 2633.3,
+    "mean": 1252.7
+   },
+   "framesOver2xMedian": 6,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 17,
+    "totalMs": 39410,
+    "maxMs": 3985
+   },
+   "mainThread": {
+    "taskSeconds": 6.06,
+    "scriptSeconds": 5.61,
+    "busyFraction": 0.135
+   },
+   "simTicksPerSecond": 4.22,
+   "timings": {
+    "render": 1348.78,
+    "ai": 3.17,
+    "sim": 14.72
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET lite/pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     41895
+    ],
+    [
+     "getProgramInfoLog :-1",
+     1357
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     1353
+    ],
+    [
+     "(program) :-1",
+     387
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     289
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     212
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     171
+    ],
+    [
+     "Es Frame-BhbwU2SA.js:0",
+     155
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     141
+    ],
+    [
+     "(garbage collector) :-1",
+     94
+    ],
+    [
+     "Ds Frame-BhbwU2SA.js:0",
+     77
+    ],
+    [
+     "updateMatrixWorld three-CLpNnD-j.js:0",
+     72
+    ],
+    [
+     "kc Frame-BhbwU2SA.js:0",
+     63
+    ],
+    [
+     "Ts Frame-BhbwU2SA.js:0",
+     57
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 3,
+   "condition": "off",
+   "players": 32,
+   "loadMs": 26394,
+   "frameCount": 19,
+   "frameMs": {
+    "p50": 2249.9,
+    "p95": 4783.2,
+    "p99": 4783.2,
+    "max": 4783.2,
+    "mean": 2327.1
+   },
+   "framesOver2xMedian": 3,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 14,
+    "totalMs": 41837,
+    "maxMs": 6699
+   },
+   "mainThread": {
+    "taskSeconds": 5.29,
+    "scriptSeconds": 4.87,
+    "busyFraction": 0.118
+   },
+   "simTicksPerSecond": 2.47,
+   "timings": {
+    "render": 4674.13,
+    "ai": 5.88,
+    "sim": 15.65
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     41596
+    ],
+    [
+     "getProgramInfoLog :-1",
+     1734
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     876
+    ],
+    [
+     "(program) :-1",
+     369
+    ],
+    [
+     "getShaderInfoLog :-1",
+     365
+    ],
+    [
+     "f0 Frame-BhbwU2SA.js:0",
+     127
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     98
+    ],
+    [
+     "Ts Frame-BhbwU2SA.js:0",
+     82
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     67
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     61
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     54
+    ],
+    [
+     "Ds Frame-BhbwU2SA.js:0",
+     41
+    ],
+    [
+     "addLR Frame-BhbwU2SA.js:0",
+     38
+    ],
+    [
+     "Es Frame-BhbwU2SA.js:0",
+     33
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 4,
+   "condition": "on",
+   "players": 32,
+   "loadMs": 25418,
+   "frameCount": 20,
+   "frameMs": {
+    "p50": 2316.6,
+    "p95": 4766.4,
+    "p99": 4766.4,
+    "max": 4766.4,
+    "mean": 2257.4
+   },
+   "framesOver2xMedian": 1,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 12,
+    "totalMs": 30199,
+    "maxMs": 6723
+   },
+   "mainThread": {
+    "taskSeconds": 2.97,
+    "scriptSeconds": 2.37,
+    "busyFraction": 0.066
+   },
+   "simTicksPerSecond": 2.47,
+   "timings": {
+    "render": 4431.29,
+    "ai": 0.55,
+    "sim": 7.46
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET lite/pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     46308
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     811
+    ],
+    [
+     "(program) :-1",
+     529
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     130
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     98
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     71
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     58
+    ],
+    [
+     "Es Frame-BhbwU2SA.js:0",
+     43
+    ],
+    [
+     "Ds Frame-BhbwU2SA.js:0",
+     38
+    ],
+    [
+     "Os Frame-BhbwU2SA.js:0",
+     37
+    ],
+    [
+     "updateMatrixWorld three-CLpNnD-j.js:0",
+     37
+    ],
+    [
+     "(garbage collector) :-1",
+     32
+    ],
+    [
+     "xs Frame-BhbwU2SA.js:0",
+     28
+    ],
+    [
+     "bufferSubData :-1",
+     26
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 4,
+   "condition": "off",
+   "players": 32,
+   "loadMs": 25444,
+   "frameCount": 20,
+   "frameMs": {
+    "p50": 2049.9,
+    "p95": 4833.2,
+    "p99": 4833.2,
+    "max": 4833.2,
+    "mean": 2128.3
+   },
+   "framesOver2xMedian": 4,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 10,
+    "totalMs": 30014,
+    "maxMs": 6551
+   },
+   "mainThread": {
+    "taskSeconds": 3.16,
+    "scriptSeconds": 2.56,
+    "busyFraction": 0.07
+   },
+   "simTicksPerSecond": 2.47,
+   "timings": {
+    "render": 4406.51,
+    "ai": 0.59,
+    "sim": 19.09
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     43801
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     782
+    ],
+    [
+     "(program) :-1",
+     461
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     205
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     93
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     77
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     60
+    ],
+    [
+     "kc Frame-BhbwU2SA.js:0",
+     51
+    ],
+    [
+     "Ts Frame-BhbwU2SA.js:0",
+     48
+    ],
+    [
+     "Ss Frame-BhbwU2SA.js:0",
+     44
+    ],
+    [
+     "Ds Frame-BhbwU2SA.js:0",
+     42
+    ],
+    [
+     "fetch :-1",
+     38
+    ],
+    [
+     "bufferSubData :-1",
+     34
+    ],
+    [
+     "ac Frame-BhbwU2SA.js:0",
+     32
+    ]
+   ],
+   "errors": []
+  },
+  {
+   "round": 4,
+   "condition": "muted",
+   "players": 32,
+   "loadMs": 24736,
+   "frameCount": 29,
+   "frameMs": {
+    "p50": 1349.9,
+    "p95": 3499.8,
+    "p99": 4449.8,
+    "max": 4449.8,
+    "mean": 1522.4
+   },
+   "framesOver2xMedian": 7,
+   "framesOver4xMedian": 0,
+   "longTasks": {
+    "count": 16,
+    "totalMs": 39515,
+    "maxMs": 4758
+   },
+   "mainThread": {
+    "taskSeconds": 10.22,
+    "scriptSeconds": 9.77,
+    "busyFraction": 0.227
+   },
+   "simTicksPerSecond": 3.56,
+   "timings": {
+    "render": 3022,
+    "ai": 2.83,
+    "sim": 12.63
+   },
+   "mediaStalls": {
+    "waiting": 0,
+    "stalled": 0,
+    "suspend": 0
+   },
+   "musicRequests": [
+    "GET manifest.json",
+    "HEAD pixabay_569473.mp3",
+    "HEAD pixabay_573648.mp3",
+    "HEAD pixabay_588999.mp3",
+    "HEAD pixabay_491433.mp3",
+    "HEAD pixabay_439622.mp3",
+    "HEAD pixabay_491432.mp3",
+    "HEAD pixabay_496406.mp3",
+    "HEAD pixabay_406552.mp3",
+    "HEAD pixabay_540950.mp3",
+    "HEAD pixabay_504898.mp3",
+    "HEAD pixabay_601035.mp3",
+    "HEAD pixabay_554543.mp3",
+    "HEAD pixabay_455231.mp3",
+    "HEAD pixabay_515507.mp3",
+    "HEAD pixabay_623364.mp3",
+    "GET pixabay_601035.mp3"
+   ],
+   "profileTop": [
+    [
+     "(idle) :-1",
+     35522
+    ],
+    [
+     "getShaderInfoLog :-1",
+     4050
+    ],
+    [
+     "getProgramInfoLog :-1",
+     2249
+    ],
+    [
+     "Gs Frame-BhbwU2SA.js:0",
+     1067
+    ],
+    [
+     "(program) :-1",
+     373
+    ],
+    [
+     "(anon) Frame-BhbwU2SA.js:0",
+     213
+    ],
+    [
+     "Zs Frame-BhbwU2SA.js:0",
+     141
+    ],
+    [
+     "Ls Frame-BhbwU2SA.js:0",
+     122
+    ],
+    [
+     "refresh Frame-BhbwU2SA.js:0",
+     105
+    ],
+    [
+     "Ds Frame-BhbwU2SA.js:0",
+     65
+    ],
+    [
+     "Ts Frame-BhbwU2SA.js:0",
+     61
+    ],
+    [
+     "updateMatrixWorld three-CLpNnD-j.js:0",
+     55
+    ],
+    [
+     "(garbage collector) :-1",
+     54
+    ],
+    [
+     "kc Frame-BhbwU2SA.js:0",
+     51
+    ]
+   ],
+   "errors": []
+  }
+ ]
+}

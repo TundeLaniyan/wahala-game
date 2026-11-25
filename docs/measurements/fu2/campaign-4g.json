@@ -1,0 +1,286 @@
+[
+ {
+  "label": "before",
+  "url": "http://localhost:4180/wahala-game/",
+  "query": "",
+  "journey": "campaign",
+  "net": "4g",
+  "cpu": 4,
+  "dwellMs": 3000,
+  "ttfpMs": {
+   "n": 3,
+   "median": 39756,
+   "min": 37476,
+   "max": 43690,
+   "all": [
+    37476,
+    43690,
+    39756
+   ]
+  },
+  "assetsWaitMs": {
+   "n": 3,
+   "median": 13186,
+   "min": 13148,
+   "max": 16919,
+   "all": [
+    13186,
+    16919,
+    13148
+   ]
+  },
+  "buildMs": {
+   "n": 3,
+   "median": 26226,
+   "min": 23977,
+   "max": 26478,
+   "all": [
+    23977,
+    26478,
+    26226
+   ]
+  },
+  "modelMBBeforeTap": 1.05,
+  "modelMBAfterTap": 13.04,
+  "runs": [
+   {
+    "ttfp": 37476,
+    "assetsWait": 13186,
+    "build": 23977,
+    "phases": [
+     [
+      "starting",
+      237
+     ],
+     [
+      "assets",
+      313
+     ],
+     [
+      "arena",
+      13499
+     ],
+     [
+      "scene",
+      19114
+     ],
+     [
+      "",
+      37476
+     ]
+    ],
+    "modelBytesBeforeTap": 1050520,
+    "modelBytesAfterTap": 13039608,
+    "modelFilesBeforeTap": 4,
+    "modelFilesAfterTap": 62,
+    "errors": []
+   },
+   {
+    "ttfp": 43690,
+    "assetsWait": 16919,
+    "build": 26478,
+    "phases": [
+     [
+      "starting",
+      212
+     ],
+     [
+      "assets",
+      293
+     ],
+     [
+      "arena",
+      17212
+     ],
+     [
+      "scene",
+      25665
+     ],
+     [
+      "",
+      43690
+     ]
+    ],
+    "modelBytesBeforeTap": 1050520,
+    "modelBytesAfterTap": 13039608,
+    "modelFilesBeforeTap": 4,
+    "modelFilesAfterTap": 62,
+    "errors": []
+   },
+   {
+    "ttfp": 39756,
+    "assetsWait": 13148,
+    "build": 26226,
+    "phases": [
+     [
+      "starting",
+      228
+     ],
+     [
+      "assets",
+      382
+     ],
+     [
+      "arena",
+      13530
+     ],
+     [
+      "scene",
+      39458
+     ],
+     [
+      "",
+      39756
+     ]
+    ],
+    "modelBytesBeforeTap": 1050520,
+    "modelBytesAfterTap": 13039608,
+    "modelFilesBeforeTap": 4,
+    "modelFilesAfterTap": 62,
+    "errors": []
+   }
+  ]
+ },
+ {
+  "label": "after",
+  "url": "http://localhost:4181/wahala-game/",
+  "query": "",
+  "journey": "campaign",
+  "net": "4g",
+  "cpu": 4,
+  "dwellMs": 3000,
+  "ttfpMs": {
+   "n": 3,
+   "median": 38499,
+   "min": 37297,
+   "max": 38571,
+   "all": [
+    38571,
+    37297,
+    38499
+   ]
+  },
+  "assetsWaitMs": {
+   "n": 3,
+   "median": 13693,
+   "min": 13440,
+   "max": 13931,
+   "all": [
+    13693,
+    13931,
+    13440
+   ]
+  },
+  "buildMs": {
+   "n": 3,
+   "median": 24433,
+   "min": 23172,
+   "max": 24610,
+   "all": [
+    24610,
+    23172,
+    24433
+   ]
+  },
+  "modelMBBeforeTap": 1.05,
+  "modelMBAfterTap": 13.04,
+  "runs": [
+   {
+    "ttfp": 38571,
+    "assetsWait": 13693,
+    "build": 24610,
+    "phases": [
+     [
+      "starting",
+      165
+     ],
+     [
+      "assets",
+      268
+     ],
+     [
+      "arena",
+      13961
+     ],
+     [
+      "scene",
+      38329
+     ],
+     [
+      "",
+      38570
+     ]
+    ],
+    "modelBytesBeforeTap": 1050520,
+    "modelBytesAfterTap": 13039608,
+    "modelFilesBeforeTap": 4,
+    "modelFilesAfterTap": 62,
+    "errors": []
+   },
+   {
+    "ttfp": 37297,
+    "assetsWait": 13931,
+    "build": 23172,
+    "phases": [
+     [
+      "starting",
+      139
+     ],
+     [
+      "assets",
+      194
+     ],
+     [
+      "arena",
+      14125
+     ],
+     [
+      "scene",
+      21215
+     ],
+     [
+      "",
+      37297
+     ]
+    ],
+    "modelBytesBeforeTap": 1050520,
+    "modelBytesAfterTap": 13039608,
+    "modelFilesBeforeTap": 4,
+    "modelFilesAfterTap": 62,
+    "errors": []
+   },
+   {
+    "ttfp": 38499,
+    "assetsWait": 13440,
+    "build": 24433,
+    "phases": [
+     [
+      "starting",
+      295
+     ],
+     [
+      "assets",
+      626
+     ],
+     [
+      "arena",
+      14066
+     ],
+     [
+      "scene",
+      20694
+     ],
+     [
+      "",
+      38499
+     ]
+    ],
+    "modelBytesBeforeTap": 1050520,
+    "modelBytesAfterTap": 13039608,
+    "modelFilesBeforeTap": 4,
+    "modelFilesAfterTap": 62,
+    "errors": []
+   }
+  ]
+ }
+]

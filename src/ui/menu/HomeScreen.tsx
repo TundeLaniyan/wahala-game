@@ -1,8 +1,9 @@
 /**
  * Home: the WAHALA! title over the Lagos key art with the three playable fighters, one dominant PLAY button and two
  * secondary choices (STORY CAMPAIGN / CONTINUE STORY, LEARN TO PLAY); Settings and Sound are small utility buttons.
- * Offline, one human against AI bots: no accounts, servers or store. Everything else (Quick Match, Classic Blast,
- * City Rumble, the arena and rules) is one tap further, on Choose How to Play.
+ * Offline, one human against AI bots: no accounts, servers or store. Everything else (City Rumble, Quick Start, Classic Blast,
+ * the arena and rules) is one tap further, on Choose How to Play. The utility row also holds the Music Data Saver
+ * shortcut (the same saved setting as Settings > Audio).
  */
 import { useState } from 'react';
 import { campaignProgress } from '../../campaign';
@@ -14,6 +15,7 @@ import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
 import { storyInProgress } from '../campaign/currentMission';
 import { fighterArt } from './art';
+import { dataSaverShortcut } from './dataSaverShortcut';
 import { FighterImage } from './FighterImage';
 
 /** The Home copy: one place, so labels stay plain and replaceable. */
@@ -37,6 +39,7 @@ async function openRumbleOnline(): Promise<boolean> {
 export function HomeScreen() {
   const [onlineFailed, setOnlineFailed] = useState(false);
   const s = useGameStore((st) => st.settings);
+  const saver = dataSaverShortcut(s.dataSaver);
   useGameStore((st) => st.portraitsVersion);
   const campaign = useGameStore((st) => st.campaign);
   const showCampaign = flags().campaign && !!campaign;
@@ -141,6 +144,20 @@ export function HomeScreen() {
           onClick={() => commands.updateSettings({ muted: !s.muted })}
         >
           <span aria-hidden>{s.muted ? '🔇' : '🔊'}</span>
+        </button>
+        <button
+          type="button"
+          className={`mn-util mn-saver${saver.effective ? ' on' : ''}`}
+          data-testid="home-datasaver"
+          data-effective={saver.effective ? 'on' : 'off'}
+          data-setting={s.dataSaver}
+          aria-pressed={saver.effective}
+          aria-label={saver.label}
+          title={saver.hint}
+          onClick={() => commands.updateSettings({ dataSaver: saver.next })}
+        >
+          <b>{saver.title}</b>
+          <small>{saver.state}</small>
         </button>
         <span className="mn-keys">
           <kbd>↑↓</kbd> Navigate <kbd>Enter</kbd> Select <kbd>Esc</kbd> Back

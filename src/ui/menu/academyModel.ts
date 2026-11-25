@@ -19,14 +19,15 @@ export interface AcademySection {
 }
 
 /**
- * QUICK START is the five Beginner lessons (the whole first match, which includes movement: lesson 1). The rest group
+ * The `quick` section (shown as BEGINNER, so it is never confused with the QUICK START match on Choose How to Play, decision
+ * FU2-1) is the five Beginner lessons (everything a first match needs, which includes movement: lesson 1). The rest group
  * the remaining lessons by topic. There is no separate Movement section because the Academy has no further movement
  * lessons; one is not invented.
  */
 export const ACADEMY_SECTIONS: readonly AcademySection[] = [
   {
     id: 'quick',
-    title: 'Quick Start',
+    title: 'Beginner',
     blurb: 'Five short lessons: everything your first match needs.',
     lessons: ['move', 'place', 'escape', 'cross', 'safety'],
   },
@@ -79,7 +80,7 @@ export function sectionProgress(section: AcademySection, p: AcademyProgress): Se
   return { done: ids.filter((id) => p.completed.includes(id)).length, total: ids.length };
 }
 
-/** The section a player should land on: the one holding the next unfinished lesson (Quick Start for a new player). */
+/** The section a player should land on: the one holding the next unfinished lesson (Beginner for a new player). */
 export function startSection(nextLessonId: string | null): AcademySectionId {
   if (!nextLessonId) return 'quick';
   return ACADEMY_SECTIONS.find((s) => s.lessons.includes(nextLessonId))?.id ?? 'quick';

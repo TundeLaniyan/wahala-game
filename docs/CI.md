@@ -11,10 +11,10 @@ scripts: `scripts/ci/plan.ts`, `scripts/ci/shards.ts`, `scripts/ci/report.ts` (u
 Plan (+ shard lists) ─┐
 Typecheck and lint ───┤
 Unit tests ───────────┤
-Server tests ─────────┼─> E2E shard 1/12 ┐
-Production build ─────┤   E2E shard 2/12 ├─> E2E report ─> CI gate ─> Deploy preview
+Server tests ─────────┼─> E2E shard 1/14 ┐
+Production build ─────┤   E2E shard 2/14 ├─> E2E report ─> CI gate ─> Deploy preview
    (dist artifact)    │   ...           │   (merge, every          (release checks,
-Browser cache ────────┘   E2E shard 12/12 ┘   test ran once)          then publish)
+Browser cache ────────┘   E2E shard 14/14 ┘   test ran once)          then publish)
 ```
 
 1. **Fast checks** run as parallel jobs: `npm run typecheck` + `npm run lint`, `npm run test` (Vitest), the
@@ -54,15 +54,15 @@ own match.
 
 ## Shards: count, balance, workers
 
-Default: **12 shards x 1 worker** (`E2E_SHARDS` / `E2E_WORKERS` in `ci.yml`). It was 8 until 2026-11-13, when
+Default: **14 shards x 1 worker** (`E2E_SHARDS` / `E2E_WORKERS` in `ci.yml`). It was 8 until 2026-11-13, when
 the suite had grown to the point that three releases in a row needed shards re-run for the 45-minute step limit
 with every test passing; the founder approved 10, with every test, gate and timeout unchanged. On 2026-11-20 the
 campaign guidance and world release brought the suite to about 372 shard-minutes (from 337), and the release run of
 `0728921` (run 299) had one shard reach the limit twice with every test that ran passing; the founder approved 12,
-again with every test, assertion, gate and the 45-minute step timeout unchanged. Twelve shards run at once; the
+again with every test, assertion, gate and the 45-minute step timeout unchanged. On 2026-11-25 the offline UX release (`81d0c77`, `682ae18`; runs 323 and 324) had 405-437 shard-minutes and shard 9 timed out three times in a row (47 of its 56 tests done at 45 minutes, no test failing), shards 1 and 5 finishing at 45m43s and 45m07s; the founder approved 14, with every test, assertion, gate and the 45-minute step timeout unchanged. Fourteen shards run at once; the
 GitHub-hosted runners allow at least 20 concurrent jobs, and the fast checks finish before the shards start. The split is
 regenerated from the last passing run's durations for whatever N is set, so no list is edited by hand. A manual run
-can pick 4, 6, 8, 10 or 12 shards and 1 or 2 workers: `gh workflow run ci.yml --ref <branch> -f shards=12 -f workers=1` (or the REST dispatch API; the
+can pick 4, 6, 8, 10, 12 or 14 shards and 1 or 2 workers: `gh workflow run ci.yml --ref <branch> -f shards=12 -f workers=1` (or the REST dispatch API; the
 Actions-tab "Run workflow" button only lists workflows present on the default branch, `main`, which has none).
 
 - **Balance.** Playwright's `--shard=i/N` splits the ordered list by count. Measured in run 103 (8 shards): shards

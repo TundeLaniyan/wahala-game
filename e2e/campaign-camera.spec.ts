@@ -265,10 +265,30 @@ test.describe('desktop', () => {
       'mushin.approach',
       'oshodi.approach',
     ]) {
-      await startField(page, id);
-      await freeze(page);
-      await settled(page);
-      counts.push(await gpu(page));
+      // printed as well as thrown (as `inMatch` does): when a shard runs out of time the list reporter keeps only what a test
+      // printed, and this test failed its first attempt on CI runners without saying which of its six starts or steps
+      let step = 'start';
+      const t0 = Date.now();
+      try {
+        await startField(page, id);
+        step = 'freeze';
+        await freeze(page);
+        step = 'settled';
+        await settled(page);
+        step = 'gpu';
+        counts.push(await gpu(page));
+        console.log(
+          `[gpu-test] start ${counts.length} (${id}) ok in ${Math.round((Date.now() - t0) / 1000)} s`,
+        );
+      } catch (error) {
+        const load = await page
+          .evaluate(() => JSON.stringify((window as any).__WAHALA__.matchLoad()))
+          .catch(() => 'unavailable');
+        console.log(
+          `[gpu-test] start ${counts.length + 1} (${id}) failed at '${step}' after ${Math.round((Date.now() - t0) / 1000)} s: ${String(error).slice(0, 300)} | matchLoad ${load}`,
+        );
+        throw error;
+      }
     }
     console.log(`GPU after each start: ${JSON.stringify(counts)}`);
     const [a1, a2, , a3, , a4] = counts as { geometries: number; textures: number }[];

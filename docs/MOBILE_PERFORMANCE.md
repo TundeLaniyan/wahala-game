@@ -252,3 +252,12 @@ The repo is public (Pages Free requires it) so the source, Game Bible and `refer
 - Run the full CI shards before publishing; the browser specs above are new in the shard list.
 - Tools: `scripts/perf/net-measure.mjs` (journeys, per-file wire bytes), `revisit.mjs`, `frame-bench.mjs`, `memory-probe.mjs`,
   `visual-capture.mjs` + `visual-diff.py`, `asset-access.mjs`, `pages-server.mjs`.
+
+## 12. FU2 follow-up: early arena prefetch (decision FU2-7, `docs/measurements/fu2/README.md`)
+
+On-demand models moved an arena's ~7 MB to the Start tap, so the first arena entry felt slower. Kept: the boot still loads only the four heroes, nothing is downloaded for an arena the
+player has not selected, the Data Saver music files and the worker are unchanged. Added: while the player is on the Match Setup or Fighter screen, the ONE selected arena's models and shared
+textures are fetched into the browser / worker cache at low priority (3 at a time, cancelled and replaced when the arena changes, stopped when the player leaves, nothing decoded), never with
+the browser's Save-Data, Data Saver On, 2G, offline or `?noprefetch`. Measured on a throttled profile (software WebGL, so only the model wait is claimed): 4.7 s -> 0.2 s after the tap on 4G with a
+normal dwell, 7.9 -> 4.8 s tapped straight through, 36 -> 33 s on Fast 3G (link-bound); campaign loading unchanged. Warming the Quick Start arena on Choose How to Play (`?prefetchplay`) helped
+more (8.0 -> 4.3 s) but costs up to ~7 MB to players who then go elsewhere, so it is left for a founder decision.

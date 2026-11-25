@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { commands } from '../../app/session';
 import { useGameStore } from '../../app/store';
-import { preferenceDefaults } from '../../app/settings';
+import { dataSaverActive, preferenceDefaults } from '../../app/settings';
 import type { GameSettings, ShakeSetting, SubtitleMode } from '../../app/settings';
 import type { MoveAssistSetting, MoveStyle } from '../../input';
 import { audioPrefs } from '../../audio/prefs';
@@ -42,10 +42,10 @@ function AudioTab({ s, set }: { s: GameSettings; set: Set }) {
         label="Data Saver"
         hint={
           s.dataSaver === 'on'
-            ? 'On: match music downloads as smaller files (about 60% fewer bytes per match, slightly lower sound quality). Graphics and battery use are unchanged: use Graphics quality for those.'
+            ? 'On: music (menu and match) downloads as smaller files (about 60% fewer bytes per track, slightly lower sound quality). Arena and fighter downloads, graphics and battery use are unchanged: use Graphics quality for those. The same switch is on the main menu.'
             : s.dataSaver === 'off'
               ? 'Off: music always downloads at full quality, even if your browser has Data Saver on.'
-              : 'Auto: uses the smaller music files only when your browser or phone has its own Data Saver on.'
+              : `Auto: uses the smaller music files only when your browser or phone has its own Data Saver on (it is ${dataSaverActive(s.dataSaver) ? 'on' : 'off'} now). Music only.`
         }
       >
         <div className="mn-opts">

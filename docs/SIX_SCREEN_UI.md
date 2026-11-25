@@ -7,15 +7,14 @@ authority: the navigation specification below, never the concept art's invented 
 ## Navigation
 
 ```
-Home ── PLAY ───────────► Choose How to Play ─ QUICK MATCH ─► loading ─► match (1 human + 2 Rookie bots, Danfo Bus Park)
-  │                          │                 └ Customise ─► Match Setup
-  │                          ├ CLASSIC BLAST ─────────────► Match Setup (Classic Blast selected)
-  │                          └ CITY RUMBLE ───────────────► Match Setup (City Rumble selected)
+Home ── PLAY ───────────► Choose How to Play ─ CITY RUMBLE (first, flagship) ──► Match Setup (City Rumble selected)
+  │                          ├ QUICK START ─► loading ─► match (offline City Rumble Free-for-All: 16 fighters, Rookie bots, 3:00, Ojuelegba; FU2-1)
+  │                          └ CLASSIC BLAST ─────────────► Match Setup (Classic Blast selected)
   │                                    Match Setup ── START MATCH ─► loading ─► match
   │                                               └ Review ─► Fighter ─► Ready (Edit rows) ─► Start
   ├ STORY CAMPAIGN / CONTINUE STORY ─► Story campaign (current mission strip, map, Continue story)
   ├ LEARN TO PLAY ─► sections ─► lessons (the existing Academy) ; Advanced Training: Sudden Death Test
-  └ Settings · Sound (small buttons)
+  └ Settings · Sound · Music Data Saver (small buttons; the saver is the Settings > Audio preference, FU2-6)
 In a match: Esc / Pause ─► Resume · Restart · Controls · Settings & Sound · EXIT MATCH ─► "Leave this match?" ─► KEEP PLAYING | EXIT MATCH
 ```
 
@@ -24,7 +23,7 @@ In a match: Esc / Pause ─► Resume · Restart · Controls · Settings & Sound
 | Gemini screen | Implemented as | Fidelity notes |
 | --- | --- | --- |
 | 1 Main Menu | `HomeScreen` + `redesign.css`: gold PLAY, dark STORY CAMPAIGN, orange LEARN TO PLAY, settings and sound icons bottom-left, three fighters flanking | The concept's Lekki Bridge dusk painting with the heroes composited in is **not in the repository**. The existing Lagos key art is washed with a dusk gradient and the three approved fighter portraits (rectangular, edge-faded) stand in. |
-| 2 Choose How to Play | `PlayScreen`: three equal cards, Quick Match gold-framed "START HERE" | Card pictures are real arena previews and the selected fighter's portrait, not the concept's illustrated icons. |
+| 2 Choose How to Play | `PlayScreen`: three cards in the order City Rumble (widest, gold-framed), Quick Start (teal, "START HERE"), Classic Blast (plain); FU2-4 | Card pictures are real arena previews and the selected fighter's portrait, not the concept's illustrated icons. |
 | 3 Match Setup | `SetupScreen`: Battle style, arena cards, opponents, difficulty slider, rules, fighter chip, START MATCH | Concept shows "Lives 3 / Time 3:00" for every mode; real rules differ per mode, so the real, per-mode controls are shown. |
 | 4 Story Campaign | `CampaignMap` + the current-mission strip | The concept's "Mission 3 / Osodi Under-bridge / 15%" are placeholders; the strip shows the real next mission. Replay Missions / Explore District map onto the existing map selection and section list. |
 | 5 Learn to Play | `AcademyScreen`: section rail + lesson list | The concept's virtual-joystick illustration is not rebuilt (the Academy lessons themselves teach the controls); not a duplicated simulation. |
@@ -41,7 +40,7 @@ In a match: Esc / Pause ─► Resume · Restart · Controls · Settings & Sound
 
 - Unit: `tests/app/quickMatch.test.ts`, `tests/ui/academyModel.test.ts`, `tests/ui/currentMission.test.ts`, and the updated
   `tests/ui/menuScreens.test.ts`, `tests/app/menu*.test.ts`.
-- Browser: `e2e/six-screen-ui.spec.ts` (Home navigation, the three choices at 844x390 / 740x360 / desktop, Quick Match
-  defaults, duplicate starts, Classic and City Rumble setup, Campaign Continue and saved progress, Academy, Pause / Exit,
+- Browser: `e2e/six-screen-ui.spec.ts` (Home navigation, the three choices at 844x390 / 740x360 / desktop, Quick Start
+  (a City Rumble Free-for-All), duplicate starts, Classic and City Rumble setup, Campaign Continue and saved progress, Academy, Pause / Exit,
   portrait); `e2e/menu.spec.ts`, `onboarding`, `match-loading`, `rumble`, `academy-tactics` and the helpers carry the new route.
 - Review screenshots: `scripts/menu-shots.mjs` and the `six-*` shots written by the spec.
