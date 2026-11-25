@@ -15,8 +15,8 @@ on:
       shards:
         description: Number of E2E shards (separate runners)
         type: choice
-        options: ['4', '6', '8', '10', '12']
-        default: '12'
+        options: ['4', '6', '8', '10', '12', '14']
+        default: '14'
       workers:
         description: Playwright workers per shard
         type: choice
@@ -37,7 +37,7 @@ permissions:
   actions: read
 
 env:
-  E2E_SHARDS: '12'
+  E2E_SHARDS: '14'
   E2E_WORKERS: '1'
 
 jobs:

@@ -51,6 +51,9 @@ import { testLabActive } from '../testlab/params';
 import { MatchLoader } from './matchLoader';
 import { AssetLibrary } from '../render/assets/library';
 import { BOOT_MODELS, arenaModels } from '../render/assets/modelNeeds';
+import { warmUrls } from '../render/assets/warm';
+import { ArenaWarmer, prefetchTarget } from './arenaPrefetch';
+import type { PrefetchEnv } from './arenaPrefetch';
 import type { MatchLoadKind } from './matchLoader';
 
 let controller: MatchController | null = null;
@@ -380,6 +383,33 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     const ids = arenaModels(matchArenaId(s.settings));
     if (ids) void assets.load(ids);
   });
+  // Early arena prefetch (decision FU2-7): warm the files of the arena the player is heading for while they choose it
+  const warmer = new ArenaWarmer((arenaId) => {
+    const ids = arenaModels(arenaId);
+    if (!ids) return null;
+    const have = new Set(assets.loadedIds());
+    return warmUrls(AssetLibrary.urlsFor(ids, (id) => have.has(id)));
+  });
+  const prefetchEnv = (): PrefetchEnv => ({
+    connection: (navigator as Navigator & { connection?: PrefetchEnv['connection'] }).connection,
+    disabled: params.has('noprefetch'),
+    online: navigator.onLine,
+  });
+  const syncWarm = (): void => {
+    const s = useGameStore.getState();
+    if (s.screen !== 'title' || loader.busy) return; // a start is on its way: let what is in flight finish
+    const target = prefetchTarget(
+      currentScreen(s.menu),
+      s.settings,
+      prefetchEnv(),
+      params.has('prefetchplay'),
+    );
+    if (target !== undefined) warmer.follow(target);
+  };
+  warmingArena = () => warmer.current;
+  const unsubWarm = useGameStore.subscribe((s, prev) => {
+    if (s.menu !== prev.menu || s.settings !== prev.settings || s.screen !== prev.screen) syncWarm();
+  });
   const unsubViewport = useGameStore.subscribe((s, prev) => {
     if (s.screen !== prev.screen || s.paused !== prev.paused) viewportGuard?.setMode(viewportMode(s));
   });
@@ -428,6 +458,8 @@ export function mount(canvas: HTMLCanvasElement): () => void {
     resizeObserver?.disconnect();
     unsubViewport();
     unsubPrefetch();
+    unsubWarm();
+    warmer.follow(null);
     viewportGuard?.dispose();
     viewportGuard = null;
     renderer?.dispose();
@@ -513,9 +545,9 @@ function testCameraView(test: boolean): void {
 }
 
 /**
- * Quick Match (decision SX11): the beginner defaults hold only for the one match. `quickBase` is the player's own settings
- * from before it (the ones that are saved); it is set while a Quick Match is on or loading and put back at the menu, so
- * the saved Classic arena, player count and bot levels are never overwritten.
+ * Quick Start (decisions SX11, FU2-1): the quick City Rumble Free-for-All values hold only for the one match. `quickBase` is
+ * the player's own settings from before it (the ones that are saved); it is set while a Quick Start is on or loading and put
+ * back at the menu, so the saved game, stage, fighter count, bot level and everything else are never overwritten.
  */
 let quickBase: GameSettings | null = null;
 let quickStarting = false;
@@ -526,9 +558,15 @@ function endQuickMatch(): void {
   patch({ settings: base });
 }
 
+/** Debug (`?debug`): the arena whose files the early prefetch is warming now, or null (decision FU2-7). */
+let warmingArena: () => string | null = () => null;
+
 /** Everything the UI can ask the game to do. */
 export const commands = {
-  /** Choose How to Play, QUICK MATCH: one tap, a beginner Classic match; the saved match preferences stay as they were. */
+  /**
+   * Choose How to Play, QUICK START: one tap, an offline City Rumble Free-for-All (16 fighters, Rookie bots, 3 minutes);
+   * the saved match, audio, controls and graphics preferences stay as they were.
+   */
   startQuickMatch(): void {
     if (loader.busy) return; // a second tap starts nothing (and never captures the quick values as the player's own)
     if (quickBase === null) quickBase = useGameStore.getState().settings;
@@ -948,6 +986,8 @@ function exposeDebugHandle(): void {
     /** e2e / art review: a field mission's data (start, markers, doors, return), so specs stage on the data's own tiles. */
     fieldMissionDef: (fieldId: string) => FIELD_MISSION_DEFS[fieldId] ?? null,
     assets: () => ({ loaded: assets.loadedIds(), failed: assets.failedIds() }),
+    /** The arena the early prefetch is warming now (null: nothing), decision FU2-7. */
+    warming: () => warmingArena(),
     /** Measurement / tests: record which model ids the renderer asks for (and which were bundled but not loaded). */
     assetRecorder: (on: boolean = true) => {
       assets.recorder = on ? { touched: new Set(), missed: new Set() } : null;

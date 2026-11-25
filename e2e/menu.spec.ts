@@ -11,6 +11,7 @@ import {
   exitMatch,
   mutate,
   open,
+  openSettings,
   setDifficulty,
   settled,
   stepTicks,
@@ -133,11 +134,14 @@ test.describe('Stitch main menu', () => {
     await expect(page.getByTestId('home-play')).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('menu-play')).toBeVisible();
-    await page.keyboard.press('ArrowDown'); // lands on Quick Match
+    await page.keyboard.press('ArrowDown'); // lands on City Rumble, the first card (decision FU2-4)
+    await expect(page.getByTestId('home-rumble')).toBeFocused();
+    await page.keyboard.press('ArrowRight');
     await expect(page.getByTestId('play-quick')).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByTestId('home-classic')).toBeFocused();
-    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
     await expect(page.getByTestId('home-rumble')).toBeFocused();
     await page.keyboard.press('Enter'); // City Rumble opens Match Setup
     await expect(page.getByTestId('menu-setup')).toBeVisible();
@@ -274,6 +278,9 @@ test.describe('Stitch main menu', () => {
             { width: 844, height: 390 },
             { width: 667, height: 375 },
             { width: 915, height: 412 },
+            // the smallest phone landscape sizes (decision FU2-9): Home with the Music Data Saver must stay intact
+            { width: 750, height: 336 },
+            { width: 832, height: 384 },
           ];
     await open(page, '&nobots&noattract');
     const screens: [string, string, string][] = [
@@ -328,6 +335,100 @@ test.describe('Stitch main menu', () => {
       }
       await page.screenshot({ path: `e2e-shots/${info.project.name}-menu-${vp.width}x${vp.height}.png` });
     }
+  });
+
+  test('Home: the Music Data Saver shortcut shares the Settings preference, says when it is automatic, persists, and keeps Home intact at small sizes', async ({
+    page,
+  }, info) => {
+    const sizes =
+      info.project.name === 'desktop'
+        ? [
+            { width: 1280, height: 720 },
+            { width: 1440, height: 900 },
+          ]
+        : [
+            { width: 750, height: 336 },
+            { width: 832, height: 384 },
+            { width: 844, height: 390 },
+            { width: 390, height: 844 },
+          ];
+    const saver = page.getByTestId('home-datasaver');
+    // the browser's own Data Saver is on: Auto must say ON (auto), truthfully
+    await page.addInitScript(() =>
+      Object.defineProperty(navigator, 'connection', { value: { saveData: true }, configurable: true }),
+    );
+    await open(page, '&nobots&noattract');
+    await expect(saver).toBeVisible();
+    await expect(saver).toContainText('Music Data Saver');
+    await expect(saver).toContainText('ON (auto)');
+    await expect(saver).toHaveAttribute('aria-label', 'Music Data Saver: ON (auto)');
+    await expect(saver).toHaveAttribute('data-setting', 'auto');
+
+    for (const vp of sizes) {
+      await page.setViewportSize(vp);
+      await settled(page);
+      const where = `Home at ${vp.width}x${vp.height}`;
+      const m = await page.evaluate(() => {
+        const r = (id: string) => {
+          const b = document.querySelector(`[data-testid="${id}"]`)!.getBoundingClientRect();
+          return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height };
+        };
+        return {
+          ids: Object.fromEntries(
+            [
+              'home-play',
+              'home-campaign',
+              'home-academy',
+              'home-settings-icon',
+              'home-mute',
+              'home-datasaver',
+            ].map((id) => [id, r(id)]),
+          ),
+          wide: document.scrollingElement!.scrollWidth - innerWidth,
+          tall: document.scrollingElement!.scrollHeight - innerHeight,
+        };
+      });
+      expect(m.wide, `${where}: sideways scroll`).toBeLessThanOrEqual(0);
+      expect(m.tall, `${where}: page scroll`).toBeLessThanOrEqual(0);
+      for (const [id, b] of Object.entries(m.ids)) {
+        expect(b.l, `${where}: ${id} off the left`).toBeGreaterThanOrEqual(-0.5);
+        expect(b.t, `${where}: ${id} above the screen`).toBeGreaterThanOrEqual(-0.5);
+        expect(b.r, `${where}: ${id} off the right`).toBeLessThanOrEqual(vp.width + 0.5);
+        expect(b.b, `${where}: ${id} below the screen`).toBeLessThanOrEqual(vp.height + 0.5);
+        expect(b.h, `${where}: ${id} too small to tap`).toBeGreaterThanOrEqual(44);
+      }
+      expect(m.ids['home-datasaver']!.w, `${where}: saver is a real tap target`).toBeGreaterThanOrEqual(44);
+      // the saver never covers a main-menu button or the other utilities
+      const hit = (a: { l: number; t: number; r: number; b: number }, c: typeof a) =>
+        a.l < c.r - 1 && c.l < a.r - 1 && a.t < c.b - 1 && c.t < a.b - 1;
+      for (const other of ['home-play', 'home-campaign', 'home-academy', 'home-settings-icon', 'home-mute'])
+        expect(hit(m.ids['home-datasaver']!, m.ids[other]!), `${where}: saver overlaps ${other}`).toBe(false);
+      await page.screenshot({
+        path: `e2e-shots/${info.project.name}-home-saver-${vp.width}x${vp.height}.png`,
+      });
+    }
+
+    // a tap while Auto says ON: an explicit OFF, and Settings > Audio shows the very same choice
+    await saver.click();
+    await expect(saver).toContainText('OFF');
+    await expect(saver).not.toContainText('(auto)');
+    await expect(saver).toHaveAttribute('data-setting', 'off');
+    await expect(saver).toHaveAttribute('aria-pressed', 'false');
+    await openSettings(page, 'audio');
+    await expect(page.getByTestId('datasaver-off')).toHaveAttribute('aria-pressed', 'true');
+    // ... and the other way: Settings changes what Home shows
+    await page.getByTestId('datasaver-on').click();
+    await page.getByTestId('menu-back').click();
+    await expect(saver).toContainText('ON');
+    await expect(saver).toHaveAttribute('data-setting', 'on');
+    // it is the saved preference: still there after a reload
+    await page.reload();
+    await expect(page.getByTestId('title-screen')).toBeVisible();
+    await expect(page.getByTestId('home-datasaver')).toHaveAttribute('data-setting', 'on');
+    await expect(page.getByTestId('home-datasaver')).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      await page.evaluate(() => JSON.parse(localStorage.getItem('wahala.settings.v1') ?? '{}').dataSaver),
+    ).toBe('on');
   });
 
   test('bot difficulty is one slider with plain levels; the mixed roster says what it means; it persists', async ({

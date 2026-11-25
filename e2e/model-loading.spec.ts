@@ -1,6 +1,9 @@
 /**
  * On-demand 3D models (src/render/assets/modelNeeds.ts, docs/MOBILE_PERFORMANCE.md "On-demand models"):
  *  - the menu fetches only the hero cast, never an arena's models;
+ *  - Home, Choose How to Play, Settings and the Academy fetch nothing; the arena / fighter screens WARM the files of the ONE
+ *    selected arena at low priority (no decoding), follow the choice and stop when the player leaves (decision FU2-7);
+ *    Save-Data, Data Saver On and `?noprefetch` switch that off;
  *  - the Ready screen prefetches the chosen arena's models (and only that arena's);
  *  - a started match has every model its renderer asked for (the recorder's `missed` list is empty) for Classic and
  *    City Rumble, with fewer models than the fully preloaded build and the same static scene (`?preloadall` is the
@@ -49,11 +52,11 @@ test.describe('on-demand models', () => {
     const requested = glbRequests(page);
     await open(page, '&noattract');
     await page.evaluate(() => (window as any).__WAHALA__.assetRecorder(true));
-    // browsing arenas downloads nothing
+    // browsing arenas decodes nothing (the early warm-up only fills the browser cache, decision FU2-7)
     await chooseArena(page, 'surulerePowerYard');
     await chooseArena(page, 'balogunMarket');
     await page.waitForTimeout(800);
-    expect([...new Set(requested)].sort()).toEqual(HEROES);
+    expect((await W(page).loaded()).sort()).toEqual(HEROES);
     // Continue to Fighter, then Ready: the chosen arena's models start downloading before Start is pressed
     await page.getByTestId('menu-continue').click();
     await page.getByTestId('menu-continue').click();
@@ -70,6 +73,58 @@ test.describe('on-demand models', () => {
     expect(loaded.some((id) => id.startsWith('char_') && !HEROES.includes(id))).toBe(false);
     expect(loaded.length).toBeLessThan(51);
   });
+
+  test('the arena screens warm only the selected arena, follow the choice, stop when the player leaves, and Home / Play fetch nothing', async ({
+    page,
+  }) => {
+    test.setTimeout(240_000);
+    const requested = glbRequests(page);
+    const warming = () => page.evaluate(() => (window as any).__WAHALA__.warming() as string | null);
+    await open(page, '&noattract');
+    await page.getByTestId('home-play').click();
+    await page.waitForTimeout(1200);
+    expect(await warming()).toBeNull();
+    expect([...new Set(requested)].sort()).toEqual(HEROES); // Home and Choose How to Play: only the hero cast
+    // Classic setup: the saved arena is the one warmed, then the one the player picks
+    await page.getByTestId('home-classic').click();
+    await expect.poll(warming).not.toBeNull();
+    await chooseArena(page, 'balogunMarket');
+    await expect.poll(warming).toBe('balogunMarket');
+    await expect.poll(() => new Set(requested).has('env_building_a'), { timeout: 60_000 }).toBe(true);
+    expect((await W(page).loaded()).sort()).toEqual(HEROES); // fetched into the cache, never decoded
+    // changing the arena replaces the warm-up
+    await chooseArena(page, 'surulerePowerYard');
+    await expect.poll(warming).toBe('surulerePowerYard');
+    // leaving the flow stops it
+    await page.getByTestId('menu-back').click();
+    await expect(page.getByTestId('menu-play')).toBeVisible();
+    await expect.poll(warming).toBeNull();
+  });
+
+  for (const [name, query, init] of [
+    ['?noprefetch', '&noprefetch', ''],
+    [
+      "the browser's own Save-Data",
+      '',
+      "Object.defineProperty(navigator, 'connection', { value: { saveData: true }, configurable: true })",
+    ],
+    [
+      'Data Saver set to On',
+      '',
+      "localStorage.setItem('wahala.settings.v1', JSON.stringify({ dataSaver: 'on' }))",
+    ],
+  ] as const)
+    test(`no arena is warmed ahead of Start with ${name}`, async ({ page }) => {
+      const requested = glbRequests(page);
+      if (init) await page.addInitScript(init);
+      await open(page, `&noattract${query}`);
+      await page.getByTestId('home-play').click();
+      await page.getByTestId('home-classic').click();
+      await chooseArena(page, 'balogunMarket');
+      await page.waitForTimeout(2500);
+      expect(await page.evaluate(() => (window as any).__WAHALA__.warming())).toBeNull();
+      expect([...new Set(requested)].sort()).toEqual(HEROES);
+    });
 
   test('City Rumble stage: nothing missing, and the same static scene as the fully preloaded build', async ({
     page,

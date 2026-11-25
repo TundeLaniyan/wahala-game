@@ -220,6 +220,41 @@
   color: #ff8a80;
   border-color: #8a3a35;
 }
+/* the Home Music Data Saver pill: two short lines, at least 44 px tall, in the utility row beside Settings and Sound */
+.mn-util.mn-saver {
+  width: auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 2px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  font-family: var(--mn-body);
+  font-size: 0.72rem;
+  line-height: 1.1;
+  text-align: left;
+  white-space: nowrap;
+}
+.mn-util.mn-saver b {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  color: #c3cadb;
+}
+.mn-util.mn-saver small {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #ff8a80;
+}
+.mn-util.mn-saver.on {
+  border-color: #4fb59f;
+}
+.mn-util.mn-saver.on small {
+  color: #7fe9d6;
+}
 .mn-util:hover,
 .mn-util:focus-visible {
   border-color: var(--mn-amber);
@@ -253,7 +288,8 @@
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* City Rumble (first) is the widest card, Classic Blast (last) the plainest (decision FU2-4) */
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: clamp(8px, 1.6vw, 22px);
   align-items: stretch;
   padding: 2px;
@@ -269,11 +305,17 @@
   overflow: hidden;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
-.mn-play-card.quick {
+.mn-play-card.flagship {
   border-color: var(--mn-amber);
   box-shadow:
     0 0 0 2px rgba(255, 184, 0, 0.3),
     0 6px 26px rgba(255, 160, 0, 0.3);
+}
+.mn-play-card.quick {
+  border-color: #4fb59f;
+  box-shadow:
+    0 0 0 1px rgba(79, 181, 159, 0.35),
+    0 6px 20px rgba(0, 0, 0, 0.45);
 }
 .mn-play-main {
   appearance: none;
@@ -329,9 +371,13 @@
   background: rgba(255, 255, 255, 0.08);
   border-radius: 3px;
 }
-.mn-play-card.quick .mn-play-tag {
+.mn-play-card.flagship .mn-play-tag {
   color: #2a1700;
   background: var(--mn-amber);
+}
+.mn-play-card.quick .mn-play-tag {
+  color: #05241d;
+  background: #7fe9d6;
 }
 .mn-play-text {
   display: flex;
@@ -369,28 +415,10 @@
   border: 1px solid #4fb59f;
   border-radius: 5px;
 }
-.mn-play-card.quick .mn-play-go {
+.mn-play-card.flagship .mn-play-go {
   color: #2a1700;
   background: linear-gradient(180deg, #ffe58a, #ffb800);
   border-color: #fff0b0;
-}
-.mn-play-sub {
-  appearance: none;
-  font-family: var(--mn-display) !important;
-  min-height: 44px;
-  border: 0;
-  border-top: 1px solid #3a4458;
-  background: rgba(0, 0, 0, 0.25);
-  color: #ffd36a;
-  font-family: var(--mn-display);
-  font-size: 1.05rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-.mn-play-sub:hover,
-.mn-play-sub:focus-visible {
-  background: rgba(255, 184, 0, 0.14);
 }
 .mn-screen-play .mn-body {
   overflow: hidden;

@@ -11,6 +11,7 @@ import {
   exitMatch,
   getState,
   inMatch,
+  startMatch,
   open,
   pauseSettings,
   settled,
@@ -24,8 +25,10 @@ type Debug = {
     getState(): {
       arenaId: string;
       settings: { game: string };
+      config: { match: { durationTicks: number } };
       players: { isBot: boolean; characterId: string }[];
     };
+    camera(): { mode: string } | null;
     matchLoad(): { starts: number };
     campaign(): { startNew(): void; storyDone(): void } | null;
   };
@@ -39,6 +42,8 @@ const live = (page: Page) =>
       game: s.settings.game,
       players: s.players.length,
       bots: s.players.filter((p) => p.isBot).length,
+      duration: s.config.match.durationTicks,
+      camera: (window as never as Debug).__WAHALA__.camera()?.mode ?? null,
     };
   });
 
@@ -70,14 +75,21 @@ async function expectReachable(page: Page, id: string, where: string, minHeight 
 test.describe('Six-screen UI', () => {
   test.beforeEach(() => test.setTimeout(6 * 60_000));
 
-  test('Home: one Play button, Story Campaign, Learn to Play and small utilities; each leads where it says', async ({
+  test('Home: one Play button, Story Campaign, Learn to Play and small utilities (Music Data Saver included); each leads where it says', async ({
     page,
   }, info) => {
     const touch = info.project.name === 'mobile';
     await open(page, '&noattract');
     await settled(page);
     await expect(page.getByTestId('menu-home')).toBeVisible();
-    for (const id of ['home-play', 'home-campaign', 'home-academy', 'home-settings-icon', 'home-mute'])
+    for (const id of [
+      'home-play',
+      'home-campaign',
+      'home-academy',
+      'home-settings-icon',
+      'home-mute',
+      'home-datasaver',
+    ])
       await expectReachable(page, id, 'home');
     // the old competing rows are gone from Home
     for (const id of ['home-rumble', 'home-classic', 'quick-play', 'home-settings'])
@@ -106,7 +118,7 @@ test.describe('Six-screen UI', () => {
     await expect(page.getByTestId('menu-home')).toBeVisible();
   });
 
-  test('Choose How to Play: Quick Match, Classic Blast and City Rumble are all visible at once, no Story Campaign', async ({
+  test('Choose How to Play: City Rumble first, then Quick Start and Classic Blast, all visible at once, no Story Campaign', async ({
     page,
   }, info) => {
     const touch = info.project.name === 'mobile';
@@ -129,8 +141,7 @@ test.describe('Six-screen UI', () => {
       await page.setViewportSize({ width: width!, height: height! });
       await settled(page);
       const where = `play at ${width}x${height}`;
-      for (const id of ['play-quick', 'home-classic', 'home-rumble', 'play-quick-customise'])
-        await expectReachable(page, id, where);
+      for (const id of ['play-quick', 'home-classic', 'home-rumble']) await expectReachable(page, id, where);
       // no sideways scrolling to find a core mode, no page scroll
       const scroll = await page.evaluate(() => ({
         w: document.scrollingElement!.scrollWidth - innerWidth,
@@ -140,6 +151,15 @@ test.describe('Six-screen UI', () => {
       expect(scroll.h, `${where}: page scroll`).toBeLessThanOrEqual(0);
     }
     await expect(page.getByTestId('menu-play')).toContainText('Start here');
+    await expect(page.getByTestId('menu-play')).toContainText('Quick Start');
+    await expect(page.getByTestId('menu-play')).not.toContainText('Quick Match');
+    await expect(page.getByTestId('menu-play')).toContainText('City Rumble Free-for-All');
+    // the hierarchy (decision FU2-4): City Rumble is first and the widest card; Classic Blast is last
+    const box = async (id: string) => (await page.getByTestId(id).boundingBox())!;
+    const [rb, qb, cb] = [await box('home-rumble'), await box('play-quick'), await box('home-classic')];
+    const inOrder = (a: typeof rb, b: typeof rb) => (a.x === b.x ? a.y < b.y : a.x < b.x);
+    expect(inOrder(rb, qb) && inOrder(qb, cb), 'order: City Rumble, Quick Start, Classic Blast').toBe(true);
+    expect(rb.width * rb.height, 'City Rumble is the biggest card').toBeGreaterThan(cb.width * cb.height);
     await expect(page.getByTestId('menu-play')).toContainText(
       'Grid battles. Cross-shaped explosions. Tactical generator action.',
     );
@@ -156,44 +176,68 @@ test.describe('Six-screen UI', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Quick Match starts one human and two Rookie bots on a small Classic arena, in one tap', async ({
+  test('Quick Start is an offline City Rumble Free-for-All: 16 fighters, Rookie bots, 3 minutes, saved preferences untouched', async ({
     page,
   }, info) => {
     test.skip(info.project.name !== 'desktop', 'the match itself is the same on every device');
     const errors = watchErrors(page);
     await open(page, '&noattract');
-    // a saved City Rumble setup of 32 fighters must not leak into the beginner match
-    await page.evaluate(() =>
-      localStorage.setItem(
-        'wahala.settings.v1',
-        JSON.stringify({
-          play: 'rumble',
-          rumbleCompetitors: 32,
-          character: 'campusQueen',
-          arenaId: 'balogunMarket',
-          competitors: 4,
-          difficulty: 'casual',
-        }),
-      ),
-    );
+    // a saved Classic setup, a 32-fighter Team Rumble and non-default audio / controls must not leak into, or be overwritten by, the quick match
+    const mine = {
+      play: 'classic',
+      competitors: 4,
+      arenaId: 'balogunMarket',
+      rumbleMode: 'team',
+      rumbleCompetitors: 32,
+      rumbleMinutes: 5,
+      rumbleArenaId: 'rumbleOshodi',
+      character: 'campusQueen',
+      difficulty: 'casual',
+      muted: true,
+      musicVolume: 0.25,
+      moveStyle: 'beginner',
+      controlSize: 'large',
+      dataSaver: 'on',
+      quality: 'low',
+    };
+    await page.evaluate((m) => localStorage.setItem('wahala.settings.v1', JSON.stringify(m)), mine);
     await page.reload();
     await page.getByTestId('title-screen').waitFor();
     await page.getByTestId('home-play').click();
     await page.getByTestId('play-quick').click();
     await inMatch(page);
     await stepTicks(page, 30);
-    expect(await live(page)).toEqual({ arenaId: 'danfoBusPark', game: 'classic', players: 3, bots: 2 });
-    // decision SX11: the beginner defaults are temporary; the saved match preferences and the fighter are untouched
-    const saved = await savedSettings(page);
-    expect(saved).toMatchObject({
-      play: 'rumble',
-      rumbleCompetitors: 32,
-      character: 'campusQueen',
-      arenaId: 'balogunMarket',
-      competitors: 4,
-      difficulty: 'casual',
+    // a genuine City Rumble Free-for-All: the Rumble stage, the respawn ruleset, 16 fighters, 3:00, the stadium camera
+    expect(await live(page)).toEqual({
+      arenaId: 'rumbleOjuelegba',
+      game: 'deathmatch',
+      players: 16,
+      bots: 15,
+      duration: 180 * 60,
+      camera: 'stadium',
     });
-    // a setting changed in the pause menu while the Quick Match runs is saved, without the match defaults
+    // the player's own fighter and preferences are the ones playing (and the quick values are not saved)
+    const inGame = await page.evaluate(() => {
+      const w = window as never as {
+        __WAHALA__: { store: { getState(): { settings: Record<string, unknown> } } };
+      };
+      return w.__WAHALA__.store.getState().settings;
+    });
+    expect(inGame).toMatchObject({
+      character: 'campusQueen',
+      muted: true,
+      musicVolume: 0.25,
+      moveStyle: 'beginner',
+      controlSize: 'large',
+      dataSaver: 'on',
+      quality: 'low',
+      difficulty: 'rookie',
+      rumbleCompetitors: 16,
+      rumbleMinutes: 3,
+    });
+    // decision SX11 / FU2-1: the quick values are temporary; the saved match setup and every preference are untouched
+    expect(await savedSettings(page)).toMatchObject(mine);
+    // a setting changed in the pause menu while the Quick Start runs is saved, without the match values
     await stepTicks(page, 200); // past the countdown: Esc pauses only once play is on
     await page.evaluate(() => {
       (
@@ -203,15 +247,10 @@ test.describe('Six-screen UI', () => {
     await pauseSettings(page, 'access');
     await page.getByTestId('shake-off').click();
     const midMatch = await savedSettings(page);
-    expect(midMatch).toMatchObject({
-      play: 'rumble',
-      arenaId: 'balogunMarket',
-      competitors: 4,
-      shake: 'off',
-    });
+    expect(midMatch).toMatchObject({ ...mine, shake: 'off' });
     await page.getByTestId('pause-settings-close').click();
     await exitMatch(page);
-    // back at the menu the player's own setup is what the game holds (the Quick Match left nothing behind)
+    // back at the menu the player's own setup is what the game holds (the Quick Start left nothing behind)
     await page.getByTestId('title-screen').waitFor();
     const own = await page.evaluate(() => {
       const w = window as never as {
@@ -219,23 +258,59 @@ test.describe('Six-screen UI', () => {
       };
       return w.__WAHALA__.store.getState().settings;
     });
-    expect(own).toMatchObject({
-      play: 'rumble',
-      arenaId: 'balogunMarket',
-      competitors: 4,
-      difficulty: 'casual',
-      character: 'campusQueen',
-      shake: 'off',
-    });
-    expect(await savedSettings(page)).toMatchObject({
-      play: 'rumble',
-      arenaId: 'balogunMarket',
-      competitors: 4,
-    });
+    expect(own).toMatchObject({ ...mine, shake: 'off' });
+    expect(await savedSettings(page)).toMatchObject({ ...mine, shake: 'off' });
     expect(errors).toEqual([]);
   });
 
-  test('Quick Match: rapid taps start exactly one match', async ({ page }, info) => {
+  test('the public build is offline: no online host, websocket or cross-origin request from Home through Quick Start to the first playable frame', async ({
+    page,
+    context,
+  }, info) => {
+    test.skip(info.project.name !== 'desktop', 'the network behaviour is the same on every device');
+    // every request the page, its workers and its frames make (Playwright reports them all on the context), and every
+    // socket / peer connection the page script tries to open, from before the first script runs
+    const origin = new URL(info.project.use.baseURL ?? 'http://localhost:4173/wahala-game/').origin;
+    const outside: string[] = [];
+    const sockets: string[] = [];
+    context.on('request', (r) => {
+      const u = new URL(r.url());
+      if ((u.protocol === 'http:' || u.protocol === 'https:') && u.origin !== origin) outside.push(r.url());
+      if (u.protocol === 'ws:' || u.protocol === 'wss:') outside.push(r.url());
+    });
+    page.on('websocket', (w) => sockets.push(w.url()));
+    await page.addInitScript(() => {
+      const w = window as never as Record<string, unknown> & { __netProbe: string[] };
+      w.__netProbe = [];
+      for (const name of ['WebSocket', 'EventSource', 'RTCPeerConnection', 'WebTransport']) {
+        const Real = w[name] as (new (...a: unknown[]) => unknown) | undefined;
+        if (!Real) continue;
+        w[name] = function (...a: unknown[]) {
+          w.__netProbe.push(`${name}(${String(a[0] ?? '')})`);
+          return new Real(...a);
+        };
+      }
+      const beacon = navigator.sendBeacon?.bind(navigator);
+      if (beacon)
+        navigator.sendBeacon = (url: string | URL, data?: BodyInit | null) => {
+          w.__netProbe.push(`sendBeacon(${String(url)})`);
+          return beacon(url, data);
+        };
+    });
+    await open(page, '&noattract');
+    // the public build has no Online entry at all (it is compiled out, not hidden)
+    for (const id of ['home-rumble-online', 'home-online']) await expect(page.getByTestId(id)).toHaveCount(0);
+    await page.getByTestId('home-play').click();
+    await page.getByTestId('play-quick').click();
+    await inMatch(page);
+    await stepTicks(page, 30);
+    expect((await live(page)).game).toBe('deathmatch');
+    expect(await page.evaluate(() => (window as never as { __netProbe: string[] }).__netProbe)).toEqual([]);
+    expect(sockets).toEqual([]);
+    expect(outside, 'requests to any other origin').toEqual([]);
+  });
+
+  test('Quick Start: rapid taps start exactly one match', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'the lifecycle is the same on every device');
     await open(page, '&noattract&loaddelay=600');
     await page.getByTestId('home-play').click();
@@ -384,9 +459,11 @@ test.describe('Six-screen UI', () => {
     test.skip(info.project.name !== 'desktop', 'keyboard pause; the phone pause button has its own specs');
     const errors = watchErrors(page);
     await open(page, '&noattract');
-    await page.getByTestId('home-play').click();
-    await page.getByTestId('play-quick').click();
-    await inMatch(page);
+    // a small Classic match, not Quick Start: Quick Start is a 16-fighter City Rumble now (decision FU2-1), and behind the
+    // pause menu that scene still draws, a frame every few seconds on a CI runner's software renderer, so the menu's
+    // transitions never settle and a click waits for the button to be "stable" until the test times out. The Quick Start
+    // match itself is covered by the other tests of this file.
+    await startMatch(page, { competitors: 2, waitPlaying: false });
     await stepTicks(page, 200); // past the countdown: Esc pauses only once play is on
     await page.evaluate(() => {
       (

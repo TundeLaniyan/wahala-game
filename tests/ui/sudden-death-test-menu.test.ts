@@ -26,7 +26,7 @@ describe('Sudden Death test entry (Learn to Play > Advanced Training)', () => {
     expect(src).toContain('You + 2 bots');
   });
 
-  it('is not a Home row or a play choice, and not in the default (Quick Start) lesson view', () => {
+  it('is not a Home row or a play choice, and not in the default (Beginner) lesson view', () => {
     for (const el of [HomeScreen, PlayScreen, AcademyScreen]) {
       const html = renderToStaticMarkup(createElement(el));
       expect(html).not.toContain('Sudden Death Test');

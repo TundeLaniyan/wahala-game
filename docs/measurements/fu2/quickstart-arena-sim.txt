@@ -1,0 +1,84 @@
+== rumbleOjuelegba
+
+4 matches, 16 players, rumbleOjuelegba, deathmatch, mode crush, seeds 11..14
+difficulty  seats   wins  win%  draws  self-kill%  unassisted%  avg-survive  decide(us)
+rookie         64      4   6.3%      0       4.7%         4.7%      146.4s         44
+
+match length avg 196.0s | decided 4 | draws 0 (timeouts 0) | 0.1 matches/s (29.3s wall)
+self-kill% = eliminated by own generator/vehicle (a rival may have sealed the exit); unassisted% = nobody placed a generator nearby in the last 4s.
+tick cost (all bots + sim, CPU time, this machine): avg 0.69 ms | p50 0.36 | p99 4.51 | max 73.86 ms over 47044 ticks
+survivors: half left at median 180s, two left at median 191s | seats that placed a generator 100%, moved 100%, scored a kill 59%
+engagement: an opponent within 6 tiles in 84.9% of alive samples, mean distance to the nearest opponent 3.6 tiles; with 6 or fewer left: within 6 86.4%, mean 2.7 tiles
+eliminations by cause: rival blast 37, own blast 3, suddenDeath 11
+== rumbleOshodi
+
+4 matches, 16 players, rumbleOshodi, deathmatch, mode crush, seeds 11..14
+difficulty  seats   wins  win%  draws  self-kill%  unassisted%  avg-survive  decide(us)
+rookie         64      3   4.7%      0       0.0%         0.0%      155.8s         64
+
+match length avg 196.0s | decided 3 | draws 1 (timeouts 0) | 0.1 matches/s (44.1s wall)
+self-kill% = eliminated by own generator/vehicle (a rival may have sealed the exit); unassisted% = nobody placed a generator nearby in the last 4s.
+tick cost (all bots + sim, CPU time, this machine): avg 1.00 ms | p50 0.66 | p99 5.10 | max 89.27 ms over 47044 ticks
+survivors: half left at median 180s, two left at median 180s | seats that placed a generator 100%, moved 100%, scored a kill 38%
+engagement: an opponent within 6 tiles in 72.2% of alive samples, mean distance to the nearest opponent 5.3 tiles; with 6 or fewer left: within 6 88.3%, mean 3.4 tiles
+eliminations by cause: suddenDeath 16, rival blast 25
+== rumbleMushin
+
+4 matches, 16 players, rumbleMushin, deathmatch, mode crush, seeds 11..14
+difficulty  seats   wins  win%  draws  self-kill%  unassisted%  avg-survive  decide(us)
+rookie         64      4   6.3%      0       4.7%         4.7%      137.9s         53
+
+match length avg 180.0s | decided 4 | draws 0 (timeouts 0) | 0.1 matches/s (35.9s wall)
+self-kill% = eliminated by own generator/vehicle (a rival may have sealed the exit); unassisted% = nobody placed a generator nearby in the last 4s.
+tick cost (all bots + sim, CPU time, this machine): avg 0.90 ms | p50 0.56 | p99 5.06 | max 94.79 ms over 43204 ticks
+survivors: half left at median -, two left at median - | seats that placed a generator 100%, moved 100%, scored a kill 58%
+engagement: an opponent within 6 tiles in 81.0% of alive samples, mean distance to the nearest opponent 4.0 tiles; with 6 or fewer left: within 6 -, mean 0.0 tiles
+eliminations by cause: rival blast 40, own blast 3
+== rumbleFadeyi
+
+4 matches, 16 players, rumbleFadeyi, deathmatch, mode crush, seeds 11..14
+difficulty  seats   wins  win%  draws  self-kill%  unassisted%  avg-survive  decide(us)
+rookie         64      4   6.3%      0       1.6%         1.6%      129.2s         50
+
+match length avg 180.0s | decided 4 | draws 0 (timeouts 0) | 0.1 matches/s (35.9s wall)
+self-kill% = eliminated by own generator/vehicle (a rival may have sealed the exit); unassisted% = nobody placed a generator nearby in the last 4s.
+tick cost (all bots + sim, CPU time, this machine): avg 0.84 ms | p50 0.46 | p99 4.81 | max 91.04 ms over 43204 ticks
+survivors: half left at median -, two left at median - | seats that placed a generator 100%, moved 100%, scored a kill 53%
+engagement: an opponent within 6 tiles in 84.7% of alive samples, mean distance to the nearest opponent 3.5 tiles; with 6 or fewer left: within 6 -, mean 0.0 tiles
+eliminations by cause: rival blast 52, own blast 1
+== rumbleLagosIsland
+
+4 matches, 16 players, rumbleLagosIsland, deathmatch, mode crush, seeds 11..14
+difficulty  seats   wins  win%  draws  self-kill%  unassisted%  avg-survive  decide(us)
+rookie         64      4   6.3%      0       1.6%         0.0%      142.9s         51
+
+match length avg 196.0s | decided 4 | draws 0 (timeouts 0) | 0.1 matches/s (51.3s wall)
+self-kill% = eliminated by own generator/vehicle (a rival may have sealed the exit); unassisted% = nobody placed a generator nearby in the last 4s.
+tick cost (all bots + sim, CPU time, this machine): avg 0.81 ms | p50 0.49 | p99 4.38 | max 88.54 ms over 47044 ticks
+survivors: half left at median 180s, two left at median 180s | seats that placed a generator 100%, moved 100%, scored a kill 55%
+engagement: an opponent within 6 tiles in 82.1% of alive samples, mean distance to the nearest opponent 4.0 tiles; with 6 or fewer left: within 6 82.4%, mean 4.2 tiles
+eliminations by cause: rival blast 35, own blast 1, suddenDeath 15
+== rumbleLekki
+
+4 matches, 16 players, rumbleLekki, deathmatch, mode crush, seeds 11..14
+difficulty  seats   wins  win%  draws  self-kill%  unassisted%  avg-survive  decide(us)
+rookie         64      4   6.3%      0       0.0%         0.0%      139.5s         56
+
+match length avg 180.0s | decided 4 | draws 0 (timeouts 0) | 0.1 matches/s (46.5s wall)
+self-kill% = eliminated by own generator/vehicle (a rival may have sealed the exit); unassisted% = nobody placed a generator nearby in the last 4s.
+tick cost (all bots + sim, CPU time, this machine): avg 0.96 ms | p50 0.59 | p99 4.80 | max 77.15 ms over 43204 ticks
+survivors: half left at median -, two left at median - | seats that placed a generator 100%, moved 100%, scored a kill 61%
+engagement: an opponent within 6 tiles in 82.6% of alive samples, mean distance to the nearest opponent 4.0 tiles; with 6 or fewer left: within 6 -, mean 0.0 tiles
+eliminations by cause: rival blast 50
+== rumbleEbuteMetta
+
+4 matches, 16 players, rumbleEbuteMetta, deathmatch, mode crush, seeds 11..14
+difficulty  seats   wins  win%  draws  self-kill%  unassisted%  avg-survive  decide(us)
+rookie         64      4   6.3%      0       0.0%         0.0%      144.1s         65
+
+match length avg 180.0s | decided 4 | draws 0 (timeouts 0) | 0.1 matches/s (64.6s wall)
+self-kill% = eliminated by own generator/vehicle (a rival may have sealed the exit); unassisted% = nobody placed a generator nearby in the last 4s.
+tick cost (all bots + sim, CPU time, this machine): avg 1.12 ms | p50 0.75 | p99 4.94 | max 75.59 ms over 43204 ticks
+survivors: half left at median -, two left at median - | seats that placed a generator 100%, moved 100%, scored a kill 45%
+engagement: an opponent within 6 tiles in 76.0% of alive samples, mean distance to the nearest opponent 4.9 tiles; with 6 or fewer left: within 6 -, mean 0.0 tiles
+eliminations by cause: rival blast 39
