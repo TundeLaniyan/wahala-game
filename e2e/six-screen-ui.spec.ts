@@ -11,6 +11,7 @@ import {
   exitMatch,
   getState,
   inMatch,
+  startMatch,
   open,
   pauseSettings,
   settled,
@@ -458,9 +459,11 @@ test.describe('Six-screen UI', () => {
     test.skip(info.project.name !== 'desktop', 'keyboard pause; the phone pause button has its own specs');
     const errors = watchErrors(page);
     await open(page, '&noattract');
-    await page.getByTestId('home-play').click();
-    await page.getByTestId('play-quick').click();
-    await inMatch(page);
+    // a small Classic match, not Quick Start: Quick Start is a 16-fighter City Rumble now (decision FU2-1), and behind the
+    // pause menu that scene still draws, a frame every few seconds on a CI runner's software renderer, so the menu's
+    // transitions never settle and a click waits for the button to be "stable" until the test times out. The Quick Start
+    // match itself is covered by the other tests of this file.
+    await startMatch(page, { competitors: 2, waitPlaying: false });
     await stepTicks(page, 200); // past the countdown: Esc pauses only once play is on
     await page.evaluate(() => {
       (
