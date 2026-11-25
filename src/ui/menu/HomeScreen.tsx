@@ -18,7 +18,7 @@ import { FighterImage } from './FighterImage';
 
 /** The Home copy: one place, so labels stay plain and replaceable. */
 export const HOME_COPY = {
-  quick: { title: 'QUICK START', sub: 'Random City Rumble · starts at once' },
+  quick: { title: 'QUICK START', sub: 'Random City Rumble' },
   play: { title: 'PLAY', sub: 'City Rumble · Junction Blast' },
   story: { title: 'BREAK THE RING', sub: 'Story campaign', continueSub: 'Continue your story' },
   learn: { title: 'LEARN TO PLAY', sub: 'Training Academy' },
