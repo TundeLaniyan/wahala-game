@@ -90,17 +90,27 @@ jobs:
               echo "::warning title=Live preview came from another branch::$live_commit from '$live_branch'; this publish replaces it"
             fi
           fi
-          # The approved soundtrack ships to GitHub Pages only once its commercial-rights clearance is recorded
-          # (decision AU5, public/audio/release-clearance.json). Any other branch's dry run only notes it.
+          # The approved soundtrack ships to GitHub Pages only with a complete rights decision on file
+          # (decision AU5, public/audio/release-clearance.json): status "cleared" (legal clearance) or
+          # "founder-authorised" (the founder's documented, risk-aware decision: who, when, scope, acknowledged
+          # risks, no explicit prohibition found). The digest of the approved file list is checked against the
+          # files by tests/audio/releaseGate.test.ts, which the CI gate requires. Any other branch's dry run only notes it.
           if jq -e '[.tracks[]? | select(.id | test("^(dist|lnds)_"))] | length > 0' site/audio/music/manifest.json >/dev/null 2>&1; then
-            clearance=$(jq -r '.status // "missing"' site/audio/release-clearance.json 2>/dev/null || echo missing)
-            echo "Approved soundtrack in this build; commercial clearance: $clearance"
-            if [ "$clearance" != cleared ]; then
+            rec=site/audio/release-clearance.json
+            clearance=$(jq -r '.status // "missing"' $rec 2>/dev/null || echo missing)
+            echo "Approved soundtrack in this build; rights record: $clearance"
+            ok=false
+            if [ "$clearance" = cleared ]; then
+              jq -e '(.clearedOn | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")) and (.clearedBy | length > 0) and (.evidence | length > 0)' $rec >/dev/null 2>&1 && ok=true
+            elif [ "$clearance" = founder-authorised ]; then
+              jq -e '(.authorisedOn | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")) and (.authorisedBy | length > 0) and (.explicitProhibitionFound == false) and (.scope.sha256sumsDigest | test("^[0-9a-f]{64}$")) and (.scope.files > 0) and (.acknowledgedRisks | length >= 5) and (.evidence | length > 0) and (.withdraw | length > 0)' $rec >/dev/null 2>&1 && ok=true
+            fi
+            if [ "$ok" != true ]; then
               if [ "$publish" = true ]; then
-                echo "::error title=Soundtrack not cleared::this build contains the approved soundtrack but public/audio/release-clearance.json says '$clearance'; it is not published until the commercial-rights clearance is recorded (docs/AUDIO_RIGHTS_ASSESSMENT.md)"
+                echo "::error title=Soundtrack rights record incomplete::this build contains the approved soundtrack but public/audio/release-clearance.json is '$clearance' without a complete record; it is not published until the rights decision is recorded (docs/AUDIO_RIGHTS_ASSESSMENT.md)"
                 exit 1
               fi
-              echo "::notice title=Soundtrack not cleared::dry run; a publish of this build would be refused (clearance: $clearance)"
+              echo "::notice title=Soundtrack rights record incomplete::dry run; a publish of this build would be refused (rights record: $clearance)"
             fi
           fi
           echo "publish=$publish" >> "$GITHUB_OUTPUT"

@@ -2,7 +2,7 @@
 
 Branch `audio/wahala-production-soundtrack-v1`, based on production `claude/wahala-stitch-uiux-v1` at `31d583b` (merged in; nothing newer existed when this was written). **Not merged, not deployed; Architecture owns the release.** Everything the founder approved (2026-11-25: the seven mastered district songs and the *Lagos No Dey Sleep* package) is now ordinary shipped audio on this branch, through the existing engine: no second audio system, no new playback path. No song was generated or changed for this handoff; the creative approval is not reopened.
 
-Rights are **not** cleared: see section 10 and `docs/AUDIO_PROVENANCE.md`. That is a release blocker for a commercial release, not for merging into a development branch.
+Rights: released on the founder's documented authorisation (2026-11-25), **not** a legal clearance; see section 10, `docs/AUDIO_PROVENANCE.md` and `docs/AUDIO_RIGHTS_ASSESSMENT.md`.
 
 ## 1. What plays when
 
@@ -116,7 +116,7 @@ All 15 Pixabay tracks, their files, Data Saver files and manifest entries are re
 
 ## 11. Integration audit (decision AU5, 2026-11-25): what was verified on the integration branch
 
-Branch `claude/wahala-audio-integration` = production `a919f04` + this branch (`9e67999`), **not deployed**: the deploy workflow refuses to publish the soundtrack from the publishing branch until `public/audio/release-clearance.json` says `cleared` (`docs/AUDIO_RIGHTS_ASSESSMENT.md`). Merge: one trivial `.gitignore` conflict; `session.ts`, `MatchController.ts` and `ports.ts` merged cleanly; the existing engine, flags and online-off behaviour are untouched.
+Branch `claude/wahala-audio-integration` = production `a919f04` + this branch (`9e67999`), the deploy workflow publishes the soundtrack from the publishing branch only with a complete rights record in `public/audio/release-clearance.json` (`cleared` or the founder's `founder-authorised`, `docs/AUDIO_RIGHTS_ASSESSMENT.md`). Merge: one trivial `.gitignore` conflict; `session.ts`, `MatchController.ts` and `ports.ts` merged cleanly; the existing engine, flags and online-off behaviour are untouched.
 
 | Required behaviour | Verified by (real Chromium, production build, shipped files) |
 | --- | --- |
@@ -138,4 +138,4 @@ Checksums: `npm run audio:release-verify` passes (38 files); it is now also run 
 
 **Unwired items, audited.** *Logo sting* (`lnds_sting`): there is no boot or logo event; the first click already starts the menu theme, so a sting there would collide with it. A sting needs a deliberate trigger (for example the title screen's first paint, before the gesture, which browsers do not allow audio for). *Campaign atmosphere beds* (`lnds_camp_calm`, `_tension`, `_alert`): the simulation has a real hook for the alert bed (`EnemyCueKind` `'alert'`, `'investigate'`, `'lost'` in `src/sim/types.ts`, emitted by the territory system when an enemy spots the player), and the briefing / map screens are natural places for the calm bed; but each changes what the player hears in the campaign, so each is a product decision, not wired here. Neither needs a new gameplay system.
 
-**Not done / not claimed:** listening on a real phone (`docs/AUDIO_PHONE_ACCEPTANCE.md`), the `<audio loop>` seam by ear, real-device hand-over error on iOS Safari, and anything about commercial rights (not cleared).
+**Not done / not claimed:** listening on a real phone (`docs/AUDIO_PHONE_ACCEPTANCE.md`), the `<audio loop>` seam by ear, real-device hand-over error on iOS Safari, and anything about commercial rights beyond the founder's authorisation (no legal clearance exists).

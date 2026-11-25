@@ -18,14 +18,7 @@
     "bytes": 2381307,
     "seconds": 98.9,
     "bpm": 110,
-    "shipped": [
-      "lnds_menu",
-      "lnds_boss_1",
-      "lnds_boss_2",
-      "lnds_boss_3",
-      "lnds_victory",
-      "lnds_defeat"
-    ]
+    "shipped": ["lnds_menu", "lnds_boss_1", "lnds_boss_2", "lnds_boss_3", "lnds_victory", "lnds_defeat"]
   },
   "districts": [
     {
@@ -156,7 +149,7 @@
     "scripts": "tools/audio/production/ (build_districts.sh, make_districts.py, make_candidates.py), tools/audio/release/ (build_release.mjs)"
   },
   "unresolved": [
-    "Commercial-use rights of the Gemini/Lyria output: Google's official terms were read on 2026-11-25 (docs/AUDIO_RIGHTS_ASSESSMENT.md); no page grants commercial use or an ownership licence to the user, and no warranty or IP indemnity for consumer-app output was found (Lyria is not on Google's indemnified-services list). NOT CLEARED.",
+    "Commercial-use rights of the Gemini/Lyria output: Google's official terms were read on 2026-11-25 (docs/AUDIO_RIGHTS_ASSESSMENT.md); no page grants commercial use or an ownership licence to the user, no warranty or IP indemnity for consumer-app output was found (Lyria is not on Google's indemnified-services list), and no explicit prohibition of commercial use was found either. Released on the founder's documented authorisation (2026-11-25), not a legal clearance.",
     "The SynthID watermark is present in every Lyria track and survives MP3 compression (Google's SynthID page); detectors will flag the shipped files. No page requires labelling music as AI-made, but Google bars misleading people about human authorship. Store and regional AI-content rules are unreviewed.",
     "No similarity check against existing songs, lyrics or titles was done for any of the eight songs.",
     "Copyright in AI-generated music is unsettled in many countries; registering or licensing the music needs counsel.",
@@ -166,7 +159,9 @@
     "The shipped files were not listened to by the assistant; approval is the founder's."
   ],
   "commercialClearance": {
-    "status": "not-cleared",
+    "status": "founder-authorised",
+    "authorisedOn": "2026-11-25",
+    "legalClearance": false,
     "record": "public/audio/release-clearance.json",
     "assessment": "docs/AUDIO_RIGHTS_ASSESSMENT.md",
     "termsReviewedOn": "2026-11-25"

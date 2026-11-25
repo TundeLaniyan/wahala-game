@@ -1,10 +1,12 @@
 # Commercial-rights assessment: the approved soundtrack (decision AU5)
 
-**Status: NOT CLEARED for commercial release.** This is an engineering record of what Google's official pages say, not legal advice and not a clearance. The release is mechanically blocked until a human records the clearance (section 7). Date of the review: 2026-11-25. Every page below was fetched on that date; quotations are short and copied from the fetched text; "My reading" marks interpretation. A longer working memo with the same sources exists in the session notes; the facts here are the ones that matter for the decision.
+**Status: FOUNDER-AUTHORISED for release (2026-11-25), not legally cleared.** This is an engineering record of what Google's official pages say, not legal advice, not a licence and not a lawyer's opinion; none of those exists and none is claimed. The founder, having been given this assessment, decided to release the approved soundtrack on a documented, risk-aware basis (section 7). Date of the review: 2026-11-25. Every page below was fetched on that date; quotations are short and copied from the fetched text; "My reading" marks interpretation. A longer working memo with the same sources exists in the session notes; the facts here are the ones that matter for the decision.
+
+**Correction to the first version of this document.** It was titled "NOT CLEARED" and read the absence of an express commercial-music licence as if it blocked release. That is the wrong inference. Absence of a grant is **not** a prohibition. After reading the Terms of Service, the service-specific terms, the Gemini help page, the Lyria launch post and the Generative AI policies, **no applicable explicit prohibition of commercial use of Gemini-app music was found** (section 2). What the pages also do not do is grant, warrant or indemnify; those are residual risks the founder accepts (section 1), not reasons the release is forbidden.
 
 Scope: the *Lagos No Dey Sleep* theme (menu, boss levels, victory and defeat stingers) and the seven district songs with their Sudden Death loops, all made by the founder in the consumer Gemini app's music feature and processed by us (`docs/AUDIO_PROVENANCE.md`).
 
-## 1. What is NOT established (read this first)
+## 1. What is NOT established (the residual risks the founder accepts)
 
 1. **No official page says the user owns the generated music, or grants a licence to use it commercially.** Google's Terms say only that Google "won’t claim ownership over that content". That is a statement about Google, not a grant to the studio.
 2. **No warranty or IP indemnity for consumer-Gemini output was found.** Google's published indemnity covers listed paid Cloud and Workspace services under an agreement, for *unmodified* output; **Lyria and the consumer Gemini app are not on that list.**
@@ -12,7 +14,9 @@ Scope: the *Lagos No Dey Sleep* theme (menu, boss levels, victory and defeat sti
 4. **The model that made each file is unknown** (the district pack's README names Lyria; no version is recorded). We do not state one.
 5. **Copyright in raw AI output cannot be assumed.** We do not claim exclusive copyright and do not guarantee the tracks are free of third-party claims.
 
-Because of 1 and 2 alone, shipping these files in a commercial game rests on an unconfirmed assumption. That is the outstanding issue.
+Because of 1 and 2 alone, shipping these files in a commercial game rests on an assumption that Google's terms do not forbid it and that nobody will assert a claim. **That assumption is the founder's decision to carry** (section 7); nothing here removes it. It is not "permission": nobody gave any, and nobody refused any.
+
+**What was looked for and not found:** a clause that prohibits commercial use of output from the Gemini app, a clause restricting use of generated music in games or products, or a restriction on selling or sublicensing generated content. The Terms' general prohibitions (illegal use, infringing others' rights, deceiving people that AI content is human-made, using output to develop competing machine-learning models) apply as written and are covered by the acknowledged risks.
 
 ## 2. Official sources and what they say
 
@@ -38,7 +42,7 @@ Also in the Terms: a "consumer" is "An individual who uses Google services for p
 | Question | What we can say | Confidence |
 | --- | --- | --- |
 | Who owns the output | Google does not claim it; no page says the user does. Ownership in the legal sense is left to copyright law (section 2, row 12): raw AI output may have no copyright at all. | Official text quoted; legal effect unverified |
-| May it be used commercially | Not stated either way on any page read. Not permitted is not claimed; permitted is not established. | Absence of text |
+| May it be used commercially | Not stated either way on any page read: no prohibition found, no grant found. Permission is not established; neither is prohibition. | Absence of text |
 | Derivatives (mastering, loops, variants, stems, MP3) | Not addressed. Human creative modification can attract copyright for the human part (US report), but that does not create rights in the underlying Google output. | Absence of text |
 | Watermark | Present in every Lyria track and robust to MP3, noise and speed change. Expect detectors to flag the shipped files. No page says it may or must be kept. | Official text quoted |
 | Disclosure | No page requires labelling music as AI-made. Google bars *misleading* people about human authorship. Store and regional AI-content rules (for example in the EU) are a separate, unchecked question. | Official text quoted; store rules not reviewed |
@@ -54,14 +58,15 @@ Also in the Terms: a "consumer" is "An individual who uses Google services for p
 - The music help page's "last updated" date (script-rendered).
 - Country-specific terms. Absence in the pages read is not proof that no licence or statement exists elsewhere (for example in a paid plan's own terms).
 
-## 5. Options to reach "cleared" (the founder decides)
+## 5. Options (the founder decided: E)
 
 | Option | What it needs | Effect |
 | --- | --- | --- |
 | A. Written confirmation | A lawyer's opinion and/or a written answer from Google (or the terms of a plan that grants commercial use) covering section 6 questions 1-5; the founder's generation records. | Clears the current files if favourable. |
 | B. Re-create through a covered route | Re-generate through a paid service whose terms grant commercial use and (ideally) an IP indemnity, if Google lists Lyria there; Lyria is **not** on the indemnified list today. | New files, new approval, new checksums. |
 | C. Replace | Commission or license the music from human composers (the Pixabay tracks remain available as fallbacks and are unaffected). | Removes the question; costs money and time. |
-| D. Keep it off the public site | Ship the soundtrack only in a private or development build. | What this branch does today. |
+| D. Keep it off the public site | Ship the soundtrack only in a private or development build. | The status until 2026-11-25. |
+| **E. Founder-authorised release (chosen 2026-11-25)** | A written founder decision recorded in `public/audio/release-clearance.json` (who, when, scope = digest of the 38 approved files, acknowledged risks, no explicit prohibition found, how to withdraw). Options A-C remain open later and would upgrade the status to `cleared`. | Ships the soundtrack through the normal gates; the rights risk is the founder's and documented. |
 
 ## 6. Open questions for Google or a lawyer
 
@@ -77,9 +82,12 @@ Also in the Terms: a "consumer" is "An individual who uses Google services for p
 10. (Lawyer) Does the Terms' ban on using output "to develop machine learning models" touch any planned tooling?
 11. Do Gemini Business or Workspace terms differ for output made under a work account?
 
-## 7. How the block works (so nobody ships it by accident)
+## 7. The authorisation mechanism (what stops an unrecorded release, and what does not)
 
-- `public/audio/release-clearance.json` records the status (`not-cleared` today). It is a release record; the music player never reads it.
-- `.github/workflows/deploy.yml`, step "Decide whether to publish": if the built site's `audio/music/manifest.json` lists any `dist_*` or `lnds_*` track and the status is not `cleared`, the **publishing branch's** deploy fails with "Soundtrack not cleared"; any other branch's dry run only prints a notice. A missing record counts as not cleared.
-- `tests/audio/releaseGate.test.ts` checks the record's shape (a `cleared` status needs `clearedOn`, `clearedBy` and `evidence`), that this document and `docs/AUDIO_PROVENANCE.md` agree with it, and that the deploy gate exists. Changing the status to `cleared` is a deliberate commit that someone owns.
-- Do **not** set `cleared` because the open questions look unlikely to matter. Set it when the answers are on file.
+- `public/audio/release-clearance.json` is the release record; the music player never reads it. Statuses: `not-cleared` (publish refused), `founder-authorised` (the founder's documented decision, **not** a legal clearance) and `cleared` (legal clearance with evidence on file).
+- A `founder-authorised` record must carry: who authorised and when (`authorisedBy`, `authorisedOn`), that no explicit prohibition was found (`explicitProhibitionFound: false`), the scope (`scope.files` and `scope.sha256sumsDigest`: the SHA-256 of `tools/audio/release/SHA256SUMS`, so any other set of shipped files is outside the authorisation), at least five acknowledged risks, where the evidence is, and how to withdraw. It states in its own text that it is not a legal clearance.
+- `.github/workflows/deploy.yml`, step "Decide whether to publish": if the built site lists any `dist_*` or `lnds_*` track, the record must be a complete `cleared` or `founder-authorised` record; otherwise the **publishing branch's** deploy fails with "Soundtrack rights record incomplete" (any other branch's dry run only notes it). A missing or `not-cleared` record is incomplete.
+- `tests/audio/releaseGate.test.ts` (mandatory in the CI gate) verifies every shipped file against SHA256SUMS, that the digest in a founder authorisation equals the digest of the file list that ships, that the record does not claim a legal clearance and carries no private conversation address, and that this document and `docs/AUDIO_PROVENANCE.md` state the same status.
+- **What the mechanism does not do:** it does not obtain a licence, does not make the founder's decision a legal opinion and does not bypass the build, security, asset-integrity or regression gates, all of which still apply.
+- **Withdrawal:** set the status to `not-cleared` and republish without the `lnds_` / `dist_` tracks (the Pixabay fallbacks and the synthesised effects remain).
+- **Review triggers:** a rights complaint, a Terms change that bears on this use, a store or regional AI-disclosure rule, or the founder obtaining counsel's view. Open questions in section 6 stay open and are the checklist for that review.

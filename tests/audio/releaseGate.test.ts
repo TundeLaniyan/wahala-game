@@ -2,10 +2,12 @@
  * The approved soundtrack's release guards (decision AU5):
  *  - the shipped audio is byte-for-byte the approved audio (SHA-256 list, `npm run audio:release-verify`), which no CI
  *    step ran until now;
- *  - a commercial-rights clearance record exists, and the deploy workflow refuses to publish the soundtrack to GitHub
- *    Pages on the publishing branch unless the record says "cleared".
+ *  - a rights-decision record exists ("cleared" or the founder's documented "founder-authorised", scoped to the SHA-256
+ *    digest of the approved file list), and the deploy workflow refuses to publish the soundtrack to GitHub Pages on the
+ *    publishing branch unless the record is complete.
  */
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -40,46 +42,84 @@ describe('approved soundtrack: integrity', () => {
   });
 });
 
-describe('approved soundtrack: commercial-rights clearance gate', () => {
-  const clearance = json('public/audio/release-clearance.json') as {
+describe('approved soundtrack: rights decision gate', () => {
+  type Rec = {
     status: string;
-    clearedOn: string | null;
-    clearedBy: string | null;
-    evidence: string | null;
+    clearedOn?: string | null;
+    clearedBy?: string | null;
+    evidence?: string | null;
+    authorisedOn?: string;
+    authorisedBy?: string;
+    explicitProhibitionFound?: boolean;
+    scope?: { files: number; sha256sumsDigest: string };
+    acknowledgedRisks?: string[];
+    withdraw?: string;
   };
+  const rec = json('public/audio/release-clearance.json') as unknown as Rec;
+  const sums = read('tools/audio/release/SHA256SUMS');
 
-  it('has a record whose status is exactly "not-cleared" or "cleared"', () => {
-    expect(['not-cleared', 'cleared']).toContain(clearance.status);
+  it('has a record whose status is "not-cleared", "founder-authorised" or "cleared"', () => {
+    expect(['not-cleared', 'founder-authorised', 'cleared']).toContain(rec.status);
   });
 
-  it('"cleared" requires who, when and where the evidence is kept; "not-cleared" must not claim them', () => {
-    if (clearance.status === 'cleared') {
-      expect(clearance.clearedOn, 'clearedOn').toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(clearance.clearedBy, 'clearedBy').toBeTruthy();
-      expect(clearance.evidence, 'evidence').toBeTruthy();
+  it('"cleared" needs who / when / evidence; "founder-authorised" needs a complete, scoped, risk-aware record', () => {
+    if (rec.status === 'cleared') {
+      expect(rec.clearedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(rec.clearedBy).toBeTruthy();
+      expect(rec.evidence).toBeTruthy();
+    } else if (rec.status === 'founder-authorised') {
+      expect(rec.authorisedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(rec.authorisedBy).toBeTruthy();
+      expect(rec.explicitProhibitionFound).toBe(false);
+      expect(rec.evidence).toBeTruthy();
+      expect(rec.withdraw).toBeTruthy();
+      expect((rec.acknowledgedRisks ?? []).length).toBeGreaterThanOrEqual(5);
     } else {
-      expect(clearance.clearedOn).toBeNull();
-      expect(clearance.clearedBy).toBeNull();
-      expect(clearance.evidence).toBeNull();
+      expect(rec.clearedOn ?? null).toBeNull();
+      expect(rec.clearedBy ?? null).toBeNull();
     }
   });
 
-  it('the provenance document states the same status as the record', () => {
-    const doc = read('docs/AUDIO_PROVENANCE.md');
-    expect(doc).toContain('release-clearance.json');
-    expect(doc.toLowerCase()).toContain(clearance.status === 'cleared' ? 'cleared' : 'not cleared');
+  it('a founder authorisation covers exactly the shipped file list (digest and count of SHA256SUMS)', () => {
+    if (rec.status !== 'founder-authorised') return;
+    expect(rec.scope?.sha256sumsDigest).toBe(createHash('sha256').update(sums).digest('hex'));
+    expect(rec.scope?.files).toBe(sums.trim().split('\n').length);
   });
 
-  it('the deploy workflow refuses to publish an uncleared soundtrack, only on the publishing branch', () => {
+  it("the record never states a legal clearance, a licence or a lawyer's opinion it does not have, and carries no private address", () => {
+    const raw = read('public/audio/release-clearance.json');
+    if (rec.status === 'founder-authorised') expect(raw).toMatch(/NOT a legal clearance/);
+    expect(raw).not.toMatch(/gemini\.google\.com/);
+    expect(read('docs/AUDIO_PROVENANCE.md')).not.toMatch(/gemini\.google\.com\/app\/[a-z0-9]/i);
+  });
+
+  it('the provenance and assessment documents state the same status as the record', () => {
+    const doc = read('docs/AUDIO_PROVENANCE.md').toLowerCase();
+    const assessment = read('docs/AUDIO_RIGHTS_ASSESSMENT.md').toLowerCase();
+    expect(doc).toContain('release-clearance.json');
+    const word =
+      rec.status === 'cleared'
+        ? 'cleared'
+        : rec.status === 'founder-authorised'
+          ? 'founder-authorised'
+          : 'not cleared';
+    expect(doc).toContain(word);
+    expect(assessment).toContain(word);
+  });
+
+  it('the deploy workflow refuses an incomplete rights record, only on the publishing branch', () => {
     const deploy = read('.github/workflows/deploy.yml');
     expect(deploy).toContain('site/audio/release-clearance.json');
-    expect(deploy).toMatch(/\[ "\$clearance" != cleared \]/);
-    expect(deploy).toMatch(/if \[ "\$publish" = true \]; then\s+echo "::error title=Soundtrack not cleared/);
+    expect(deploy).toContain('founder-authorised');
+    expect(deploy).toContain('explicitProhibitionFound == false');
+    expect(deploy).toMatch(
+      /if \[ "\$publish" = true \]; then\s+echo "::error title=Soundtrack rights record incomplete/,
+    );
     // the dry run of any other branch only notes it
-    expect(deploy).toContain('::notice title=Soundtrack not cleared');
+    expect(deploy).toContain('::notice title=Soundtrack rights record incomplete');
   });
 
-  it('the music player never reads the clearance record (it is a release record, not game data)', () => {
+  it('the music player never reads the rights record (it is a release record, not game data)', () => {
     for (const f of ['src/audio/music.ts', 'src/audio/playlist.ts', 'src/audio/engine.ts'])
       expect(existsSync(join(root, f)) ? read(f) : '').not.toContain('release-clearance');
   });
