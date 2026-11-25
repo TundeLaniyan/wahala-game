@@ -113,3 +113,29 @@ All 15 Pixabay tracks, their files, Data Saver files and manifest entries are re
 10. The e2e shards were not run here.
 11. Builds are pinned by checksum, not bit-reproducible across machines.
 12. The three "start C" standard-arena assignments and four proposed arenas are undecided (section 2).
+
+## 11. Integration audit (decision AU5, 2026-11-25): what was verified on the integration branch
+
+Branch `claude/wahala-audio-integration` = production `a919f04` + this branch (`9e67999`), **not deployed**: the deploy workflow refuses to publish the soundtrack from the publishing branch until `public/audio/release-clearance.json` says `cleared` (`docs/AUDIO_RIGHTS_ASSESSMENT.md`). Merge: one trivial `.gitignore` conflict; `session.ts`, `MatchController.ts` and `ports.ts` merged cleanly; the existing engine, flags and online-off behaviour are untouched.
+
+| Required behaviour | Verified by (real Chromium, production build, shipped files) |
+| --- | --- |
+| Menu plays the *Lagos No Dey Sleep* instrumental; silent before the first gesture | `e2e/audio-release.spec.ts` "menu": no audio request and no track before the click; `lnds_menu` playing and advancing after it |
+| Each arena plays its own district song; no other arena's file is fetched | same spec, one arena in CI (the GETs were only `lnds_menu`, `dist_ojuelegba`, `dist_ojuelegba_sd`); **all seven** with `WAHALA_AUDIO_ALL_ARENAS=1` |
+| Sudden Death switches to that arena's loop | seven-arena run: Ojuelegba, Oshodi, Mushin, Fadeyi, Ebute-Metta, Lagos Island, Lekki each: `dist_<x>_a` playing, then `dist_<x>_sd` playing with the position advancing, 17-25 s from the menu click, 0-1 s after the round starts |
+| Boss music family | the real Oshodi boss mission: `lnds_boss_1`, then `lnds_boss_2` and `lnds_boss_3` as the mission phase advances |
+| Victory / defeat cues | a won match starts the 7.49 s victory sample; a lost match starts only the 2.60 s defeat sample (matched by decoded length) |
+| Existing effects still work | `e2e/audio.spec.ts` (settings, unlock, every shipped file decodes, a full match rotates and escalates), `tests/audio/*` |
+| Interface sounds | wired in `session.ts` / `MatchController.ts` (confirm, error, ready, pause, resume), unit-tested; **by ear: founder phone check** |
+| Pixabay tracks remain | non-replaced arenas unchanged; fallback proven: with an arena's own song returning 404 it plays `pixabay_515507`; with its Sudden Death loop missing the song keeps playing; with every music file failing the match still starts and runs without page errors |
+| Music Data Saver | the saved setting picks `lite/lnds_menu.mp3` and `lite/dist_ojuelegba.mp3`; off picks the full files; persists across reloads (`e2e/data-saver.spec.ts` now reads the match track, not the menu theme) |
+| Return to menu | the menu theme returns and exactly one media stream plays after the crossfade |
+| Offline cache / service worker | `e2e/offline-cache.spec.ts` and `offline-cache-update.spec.ts` pass; the worker never touches audio or Range requests and installs without downloading anything |
+
+Bytes on the wire (`docs/measurements/audio/README.md`): no audio before the first gesture; the whole first-match journey costs +1.88 MB (Data Saver off) / +0.72 MB (on) over today's build, not 45.7 MB. The player now HEAD-probes 33 files instead of 15 after the first gesture (headers only).
+
+Checksums: `npm run audio:release-verify` passes (38 files); it is now also run by `tests/audio/releaseGate.test.ts` in the unit suite, which it was not before. `audio:release-build` / `-check` need the founder's master recordings (git-ignored) and cannot run from a clean clone.
+
+**Unwired items, audited.** *Logo sting* (`lnds_sting`): there is no boot or logo event; the first click already starts the menu theme, so a sting there would collide with it. A sting needs a deliberate trigger (for example the title screen's first paint, before the gesture, which browsers do not allow audio for). *Campaign atmosphere beds* (`lnds_camp_calm`, `_tension`, `_alert`): the simulation has a real hook for the alert bed (`EnemyCueKind` `'alert'`, `'investigate'`, `'lost'` in `src/sim/types.ts`, emitted by the territory system when an enemy spots the player), and the briefing / map screens are natural places for the calm bed; but each changes what the player hears in the campaign, so each is a product decision, not wired here. Neither needs a new gameplay system.
+
+**Not done / not claimed:** listening on a real phone (`docs/AUDIO_PHONE_ACCEPTANCE.md`), the `<audio loop>` seam by ear, real-device hand-over error on iOS Safari, and anything about commercial rights (not cleared).
