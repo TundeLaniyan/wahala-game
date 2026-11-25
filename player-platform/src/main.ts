@@ -29,7 +29,7 @@ if (config.env !== 'production' && config.databaseUrl === 'memory')
 // housekeeping: expired sessions, nonces, idle guests, old audit rows (hourly; also `npm run purge`)
 const timer = setInterval(
   () =>
-    void platform.identity
+    void platform
       .purge()
       .then((r) => log.info('purge', r))
       .catch((e: unknown) => log.error('purge failed', { err: e instanceof Error ? e.message : 'unknown' })),

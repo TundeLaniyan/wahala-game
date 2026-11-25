@@ -7,7 +7,7 @@ import { silentLogger } from '../logger';
 const config = loadConfig();
 const platform = await createPlatform(config, await openDb(config), { logger: silentLogger });
 try {
-  console.log(JSON.stringify(await platform.identity.purge()));
+  console.log(JSON.stringify(await platform.purge()));
 } finally {
   await platform.close();
 }

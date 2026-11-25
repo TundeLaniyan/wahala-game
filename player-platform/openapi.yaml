@@ -603,3 +603,225 @@ paths:
           '400': { $ref: '#/components/responses/Err' },
           '401': { $ref: '#/components/responses/Err' },
         }
+
+  /v1/comms/signals:
+    get:
+      summary: The preset quick-chat, ping and emote catalogue (the only things players can send)
+      responses: { '200': { description: '{ signals: [{ id, kind: chat|ping|emote, label, contexts }] }' } }
+  /v1/parties/{id}/signals:
+    post:
+      security: [{ player: [] }]
+      summary: Send a preset signal to your party
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [signalId],
+                      properties: { signalId: { type: string, example: chat.ready } },
+                    },
+                },
+            },
+        }
+      responses:
+        {
+          '201': { description: Sent },
+          '403': { description: Restricted },
+          '429': { $ref: '#/components/responses/Err' },
+        }
+    get:
+      security: [{ player: [] }]
+      summary: Party signals newer than `after` that you may see (blocked and muted senders are hidden)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: after, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        {
+          '200':
+            {
+              description: '{ signals: [{ id, signalId, kind, label, from: { playerId, displayName }, at }] }',
+            },
+        }
+  /v1/mutes:
+    get:
+      security: [{ player: [] }]
+      summary: Players you muted
+      responses: { '200': { description: OK } }
+  /v1/mutes/{playerId}:
+    put:
+      security: [{ player: [] }]
+      summary: Mute a player (you stop receiving their signals, text and voice; they are not told)
+      parameters: [{ name: playerId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: Muted } }
+    delete:
+      security: [{ player: [] }]
+      summary: Unmute a player
+      parameters: [{ name: playerId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: Unmuted } }
+  /v1/reports:
+    post:
+      security: [{ player: [] }]
+      summary: Report a player you actually played or talked with
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [reportedId, category, context],
+                      properties:
+                        {
+                          reportedId: { type: string, format: uuid },
+                          category:
+                            {
+                              type: string,
+                              enum:
+                                [
+                                  abusive_name,
+                                  harassment,
+                                  cheating,
+                                  spam,
+                                  inappropriate_content,
+                                  impersonation,
+                                  other,
+                                ],
+                            },
+                          context: { type: string, enum: [profile, party, match, friend_request, chat] },
+                          contextRef: { type: string, description: 'party id or match id' },
+                          note: { type: string, maxLength: 200 },
+                        },
+                    },
+                },
+            },
+        }
+      responses:
+        {
+          '201': { description: Filed },
+          '200': { description: 'Already reported (idempotent)' },
+          '403': { description: 'No real interaction with that player' },
+        }
+  /v1/me/reports:
+    get:
+      security: [{ player: [] }]
+      summary: The reports you filed and their status
+      responses: { '200': { description: OK } }
+  /v1/voice/status:
+    get:
+      security: [{ player: [] }]
+      summary: Whether voice exists on this server and whether your account may use it (it does not exist yet)
+      responses: { '200': { description: '{ available, eligible, reason }' } }
+  /v1/voice/token:
+    post:
+      security: [{ player: [] }]
+      summary: Ask for a voice room credential for your party (403 for minors; 503 until a media server exists)
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [partyId],
+                      properties: { partyId: { type: string, format: uuid } },
+                    },
+                },
+            },
+        }
+      responses:
+        {
+          '201': { description: Granted },
+          '403': { $ref: '#/components/responses/Err' },
+          '503': { $ref: '#/components/responses/Err' },
+        }
+  /internal/v1/comms/filter:
+    post:
+      security: [{ service: [] }]
+      summary: 'Match server: which of these players may receive this sender’s signal / text / voice (blocks, mutes, restrictions, age)'
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [senderId, recipientIds, kind],
+                      properties:
+                        {
+                          senderId: { type: string, format: uuid },
+                          recipientIds: { type: array, maxItems: 64, items: { type: string, format: uuid } },
+                          kind: { type: string, enum: [signal, text, voice] },
+                        },
+                    },
+                },
+            },
+        }
+      responses: { '200': { description: '{ senderAllowed, reason, recipients }' } }
+  /admin/v1/reports:
+    get:
+      security: [{ admin: [] }]
+      summary: 'Moderator: reports by status, with the target’s distinct-reporter count and each reporter’s dismissal history'
+      parameters:
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [open, actioned, dismissed], default: open },
+          }
+        - { name: limit, in: query, required: false, schema: { type: integer, maximum: 100 } }
+      responses: { '200': { description: OK } }
+  /admin/v1/reports/{id}/resolve:
+    post:
+      security: [{ admin: [] }]
+      summary: 'Moderator: dismiss, warn, restrict signals for 24 h, or suspend the reported account'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [resolution, moderator],
+                      properties:
+                        {
+                          resolution: { type: string, enum: [dismiss, warn, restrict_signals, suspend] },
+                          moderator: { type: string, maxLength: 40 },
+                        },
+                    },
+                },
+            },
+        }
+      responses: { '204': { description: Resolved } }
+  /admin/v1/players/{id}/restrictions/lift:
+    post:
+      security: [{ admin: [] }]
+      summary: 'Moderator: lift every active communication restriction of a player'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: OK } }
+  /v1/dev/parties/{id}/chat:
+    post:
+      x-dev-only: true
+      security: [{ player: [] }]
+      summary: 'DEVELOPMENT ONLY: send a moderated text line to your party (adult registered accounts; absent unless PLATFORM_DEV_TEXT_CHAT=1)'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '201': { description: Sent } }
+    get:
+      x-dev-only: true
+      security: [{ player: [] }]
+      summary: 'DEVELOPMENT ONLY: read party text lines newer than `after`'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: OK } }

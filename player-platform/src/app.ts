@@ -18,8 +18,13 @@ import { createLogger } from './logger';
 import type { Logger } from './logger';
 import { createHandoffSigner } from './handoff/signer';
 import type { HandoffSigner } from './handoff/signer';
+import { DevTextChat, createDevModerator } from './comms/chat';
+import { ReportService } from './comms/reports';
+import { CommsService } from './comms/service';
+import { NullVoiceGateway, VoiceService } from './comms/voice';
 import { MatchService } from './matches/service';
 import { PartyService } from './parties/service';
+import { commsRoutes } from './routes/comms';
 import { identityRoutes } from './routes/identity';
 import { internalRoutes } from './routes/internal';
 import { socialRoutes } from './routes/social';
@@ -40,6 +45,10 @@ export interface Platform {
   social: SocialService;
   parties: PartyService;
   matches: MatchService;
+  comms: CommsService;
+  reports: ReportService;
+  /** Everything periodic that deletes data: sessions, idle guests, old audit rows, dev chat, resolved reports. */
+  purge(): Promise<Record<string, unknown>>;
   presence: PresenceStore;
   signer: HandoffSigner;
   providers: ProviderRegistry;
@@ -115,10 +124,21 @@ export async function createPlatform(
   identity.registerErasure((q, id) => social.erase(q, id));
   identity.registerErasure((q, id) => matches.erase(q, id));
 
+  const comms = new CommsService({ db, clock });
+  const reports = new ReportService({ db, clock, comms, identity });
+  const voice = new VoiceService({ db, comms, gateway: NullVoiceGateway });
+  const chat =
+    config.devTextChat && config.env !== 'production'
+      ? new DevTextChat({ db, clock, comms, moderator: createDevModerator(config.chatDenylist) })
+      : null;
+  identity.registerErasure((q, id) => comms.erase(q, id));
+  identity.registerErasure((q, id) => reports.erase(q, id));
+
   const router = new Router();
   router.addAll(identityRoutes(identity, providers, mockProvider));
   router.addAll(socialRoutes(social, parties, matches, presence, signer));
   router.addAll(internalRoutes(matches));
+  router.addAll(commsRoutes(comms, reports, voice, chat));
 
   const http = createHttp({
     router,
@@ -156,6 +176,11 @@ export async function createPlatform(
     social,
     parties,
     matches,
+    comms,
+    reports,
+    async purge() {
+      return { identity: await identity.purge(), comms: await comms.purge(), reports: await reports.purge() };
+    },
     presence,
     signer,
     providers,

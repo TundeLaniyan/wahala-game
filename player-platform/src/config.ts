@@ -29,6 +29,8 @@ export interface PlatformConfig {
   publicWebUrl: string;
   partyMaxSize: number;
   devTextChat: boolean;
+  /** Operator deny-list for the dev text chat (lower-case words; compared on the look-alike-folded text). Empty by default. */
+  chatDenylist: string[];
   /** Mock checkout (no payment provider): development only. */
   mockCheckout: boolean;
   /** Refresh-token lifetime (sliding) and hard cap, days. */
@@ -73,6 +75,7 @@ export function loadConfig(e: Record<string, string | undefined> = process.env):
     publicWebUrl: (e.PLATFORM_PUBLIC_WEB_URL ?? 'http://localhost:5173').replace(/\/+$/, ''),
     partyMaxSize: Math.round(num(e.PLATFORM_PARTY_MAX_SIZE, 8, 2, 32)),
     devTextChat: flag(e.PLATFORM_DEV_TEXT_CHAT),
+    chatDenylist: list(e.PLATFORM_CHAT_DENYLIST).map((w) => w.toLowerCase()),
     mockCheckout: flag(e.PLATFORM_MOCK_CHECKOUT),
     refreshDays: num(e.PLATFORM_REFRESH_DAYS, 30, 1, 365),
     sessionMaxDays: num(e.PLATFORM_SESSION_MAX_DAYS, 365, 1, 730),
