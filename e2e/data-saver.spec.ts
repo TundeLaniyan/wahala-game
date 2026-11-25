@@ -11,7 +11,14 @@ import { openSettings, open, startMatch } from './helpers';
 async function musicRequestFor(page: Page, setting: 'on' | 'off' | 'auto'): Promise<string> {
   const seen: string[] = [];
   page.on('request', (r) => {
-    if (r.method() === 'GET' && /\/audio\/music\/[^/]*\.mp3$|\/audio\/music\/lite\/[^/]*\.mp3$/.test(r.url()))
+    // the menu theme (lnds_menu) is requested at the first click, before this test has changed the setting: this spec is
+    // about the MATCH track, so the menu theme is left out (a Data Saver choice saved earlier does select lite/lnds_menu.mp3,
+    // see e2e/audio-release.spec.ts and docs/measurements/audio)
+    if (
+      r.method() === 'GET' &&
+      /\/audio\/music\/[^/]*\.mp3$|\/audio\/music\/lite\/[^/]*\.mp3$/.test(r.url()) &&
+      !/\/lnds_menu\.mp3$/.test(r.url())
+    )
       seen.push(new URL(r.url()).pathname);
   });
   await open(page, '&noattract');
