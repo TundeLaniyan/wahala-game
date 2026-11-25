@@ -287,16 +287,20 @@ test.describe('the approved soundtrack, real browser', () => {
       await mutate(page, kill(who));
       await stepTicks(page, 120);
       await page.evaluate(() => (window as any).__WAHALA__.advance(2));
-      await expect
-        .poll(async () => (await page.evaluate(() => (window as any).__starts as { dur: number }[])).length, {
-          timeout: 30_000,
-        })
-        .toBeGreaterThan(0);
-      const durs = (await page.evaluate(() => (window as any).__starts as { dur: number }[])).map(
-        (s) => s.dur,
-      );
-      observed[label] = durs;
+      const starts = () =>
+        page.evaluate(() => ((window as any).__starts as { dur: number }[]).map((x) => x.dur));
       const near = (a: number, b: number) => Math.abs(a - b) < 0.002;
+      const expected = label === 'win' ? lengths.victory : lengths.defeat;
+      // the stinger starts a moment after the match-ended event (the sample may still be decoding): wait for it
+      await expect
+        .poll(async () => (await starts()).some((d) => near(d, expected)), {
+          timeout: 30_000,
+          message: `${label}: the ${label === 'win' ? 'victory' : 'defeat'} stinger (${expected.toFixed(2)} s) starts`,
+        })
+        .toBe(true);
+      await page.waitForTimeout(3000); // the other stinger, had it been wrongly chosen, would have started by now
+      const durs = await starts();
+      observed[label] = durs;
       const hasVictory = durs.some((d) => near(d, lengths.victory));
       const hasDefeat = durs.some((d) => near(d, lengths.defeat));
       console.log(
