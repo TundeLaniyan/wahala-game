@@ -73,7 +73,7 @@ Presence is **not** in the database: an in-memory store with a 90 s TTL (`Presen
 | PP5 | `unspecified` age band = minor | A guest-first game cannot assume an adult; no date of birth is collected. Needs legal confirmation. |
 | PP6 | No password sign-in, ever | Founder rule; providers only. |
 | PP7 | Friend code only, no name search | No enumeration surface for harassment. |
-| PP8 | PGlite (real Postgres engine, WASM) for hermetic tests; the same suite also runs on a real server via `PLATFORM_TEST_DATABASE_URL` | Proven: 179 tests pass on both (PostgreSQL 16.15). |
+| PP8 | PGlite (real Postgres engine, WASM) for hermetic tests; the same suite also runs on a real server via `PLATFORM_TEST_DATABASE_URL` | Proven: 181 tests pass on both (PostgreSQL 16.15). |
 | PP9 | Forward-only migrations with checksums; rollback = restore the pre-deploy backup | Expand-then-contract keeps the previous release runnable on the new schema. |
 | PP10 | Party default size 8, ceiling 32 | Approved match capacity is 32 humans; a social party that large is unusual. **Founder choice.** |
 | PP11 | Parties use PRIVATE rooms of the existing match server; the platform never owns a room, seat or team | No second matchmaking system. Public Quick Play cannot group a party (server feature, founder decision). |
@@ -89,4 +89,6 @@ Presence is **not** in the database: an in-memory store with a 90 s TTL (`Presen
 | A Identity, profiles, database, ops | **done**, 72 tests (PGlite and PostgreSQL 16) |
 | B Friends, blocks, presence, parties, signed match tickets, trusted results | **done**, 116 tests incl. a handshake against the real match server (`PLATFORM_MATCH_HANDOFF.md`) |
 | C Preset signals, mute / block / report, restrictions, moderator API, relay filter, dev-only text chat, voice seam and designs | **done**, 157 tests (`PLATFORM_SAFETY.md`, `PLATFORM_TEXT_CHAT_DESIGN.md`, `PLATFORM_VOICE_DESIGN.md`) |
-| D Catalogue, entitlements, orders, verified idempotent fulfilment, refunds / revocation, provider interfaces, dev-only mock checkout | **done**, 179 tests (`PLATFORM_COMMERCE.md`, `PLATFORM_PROVIDER_REQUIREMENTS.md`, `PLATFORM_INFRASTRUCTURE.md`) |
+| D Catalogue, entitlements, orders, verified idempotent fulfilment, refunds / revocation, provider interfaces, dev-only mock checkout | **done**, 181 tests (`PLATFORM_COMMERCE.md`, `PLATFORM_PROVIDER_REQUIREMENTS.md`, `PLATFORM_INFRASTRUCTURE.md`) |
+
+Integration with the released game: `PLATFORM_INTEGRATION_PLAN.md`. Abuse analysis: `PLATFORM_COLLUSION_ANALYSIS.md`.

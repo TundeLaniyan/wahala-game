@@ -140,7 +140,7 @@ export async function createPlatform(
   identity.registerErasure((q, id) => matches.erase(q, id));
 
   const comms = new CommsService({ db, clock });
-  const reports = new ReportService({ db, clock, comms, identity });
+  const reports = new ReportService({ db, clock, comms, identity, autoRestrict: config.autoRestrict });
   const voice = new VoiceService({ db, comms, gateway: NullVoiceGateway });
   const chat =
     config.devTextChat && config.env !== 'production'

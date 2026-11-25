@@ -334,6 +334,65 @@ describe('reports', () => {
     expect((await send(target, p.id, 'chat.thanks')).status).toBe(201);
   });
 
+  it('collusion: three real co-members can silence presets (bounded to one hour, one channel); a dismissal undoes it; the switch turns it off', async () => {
+    const victim = await newGuest(api, 'Collusion Victim');
+    const [c1, c2, c3] = [await newGuest(api), await newGuest(api), await newGuest(api)];
+    const p = await partyOf(c1, victim, c2, c3);
+    const ids: string[] = [];
+    for (const c of [c1, c2, c3])
+      ids.push((await report(c, victim.id, { contextRef: p.id, category: 'spam' })).body.id);
+    // the attack works: the victim cannot send presets...
+    const blocked = await send(victim, p.id, 'chat.ready');
+    expect(blocked.status).toBe(403);
+    // ...but only presets, only for AUTO_RESTRICT_MS, and nothing else about the account changes
+    expect(blocked.body.error.retryAfterMs).toBeLessThanOrEqual(AUTO_RESTRICT_MS);
+    expect((await api.get('/v1/me', victim.access)).status).toBe(200);
+    expect((await api.get(`/v1/parties/${p.id}`, victim.access)).status).toBe(200);
+    expect((await api.get('/v1/friends', victim.access)).status).toBe(200);
+    // a moderator who dismisses even one report drops the distinct-reporter count below three and the silence ends at once
+    await admin('POST', `/admin/v1/reports/${ids[0]}/resolve`, { resolution: 'dismiss', moderator: 'mod' });
+    expect((await send(victim, p.id, 'chat.ready')).status).toBe(201);
+    // it ends by itself after an hour as well
+    const v2 = await newGuest(api);
+    const [d1, d2, d3] = [await newGuest(api), await newGuest(api), await newGuest(api)];
+    const q = await partyOf(d1, v2, d2, d3);
+    for (const c of [d1, d2, d3]) await report(c, v2.id, { contextRef: q.id });
+    expect((await send(v2, q.id, 'chat.ready')).status).toBe(403);
+    h.clock.advance(AUTO_RESTRICT_MS + 1000);
+    const token = (await api.post('/v1/auth/refresh', { refreshToken: v2.refresh })).body.tokens
+      .accessToken as string;
+    expect((await api.post(`/v1/parties/${q.id}/signals`, { signalId: 'chat.thanks' }, token)).status).toBe(
+      201,
+    );
+  });
+
+  it('PLATFORM_AUTO_RESTRICT=0 (the production default) never silences anyone automatically', async () => {
+    const { loadConfig } = await import('../src/config');
+    expect(loadConfig({ PLATFORM_ENV: 'production' }).autoRestrict).toBe(false);
+    expect(loadConfig({ PLATFORM_ENV: 'production', PLATFORM_AUTO_RESTRICT: '1' }).autoRestrict).toBe(true);
+    expect(loadConfig({}).autoRestrict).toBe(true);
+    const off = await startHarness({ PLATFORM_AUTO_RESTRICT: '0' });
+    try {
+      const o = client(off.base);
+      const t = await newGuest(o);
+      const rs = [await newGuest(o), await newGuest(o), await newGuest(o)];
+      const pp = (await o.post('/v1/parties', {}, rs[0]!.access)).body.party;
+      for (const m of [t, rs[1]!, rs[2]!]) await o.post('/v1/parties/join', { code: pp.code }, m.access);
+      for (const r of rs)
+        await o.post(
+          '/v1/reports',
+          { reportedId: t.id, category: 'spam', context: 'party', contextRef: pp.id },
+          r.access,
+        );
+      expect(
+        (await o.post(`/v1/parties/${pp.id}/signals`, { signalId: 'chat.ready' }, t.access)).status,
+      ).toBe(201);
+      expect((await o.call('GET', '/admin/v1/reports', undefined, TEST_ADMIN)).body.reports.length).toBe(3); // still reaches the moderator queue
+    } finally {
+      await off.close();
+    }
+  });
+
   it('moderators: admin token required; list shows context; dismiss / restrict / suspend act and are audited', async () => {
     expect((await api.get('/admin/v1/reports')).status).toBe(401);
     const user = await newGuest(api);

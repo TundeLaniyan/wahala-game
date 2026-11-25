@@ -12,7 +12,7 @@ Principle: **in production a player can only send things the game already contai
 | Mute | you stop receiving that player's signals / text / voice; they are not told; friendship and party membership unchanged | same |
 | Block (Checkpoint B) | everything a mute does plus: unfriend, no requests, no invitations, no shared party, invisible to each other's search by code | `social`, `parties` |
 | Report | only about someone you really met (same party, same match, a friend request, a friend); idempotent per reporter / target / place; 20 a day; a bounded snapshot of what the reporter saw (signal ids, dev chat lines) and the name at that time; 200-character note, sanitised | `comms` |
-| Restrictions | time-limited bans on `signals`, `text` or `voice`; **automatic** (3 different reporters in 24 h silence signals for 1 h: placeholder, reversible) or by a moderator (24 h) | `comms` |
+| Restrictions | time-limited bans on `signals`, `text` or `voice`; **automatic** (3 different reporters in 24 h silence signals for 1 h: placeholder, reversible, off by default in production) or by a moderator (24 h) | `comms` |
 | Moderator API (`/admin/v1/*`, bearer `PLATFORM_ADMIN_TOKEN`, off unless set) | list reports with the target's distinct-reporter count and each reporter's dismissal history (to spot false-report abuse); dismiss / warn / restrict 24 h / suspend (revokes every session); lift restrictions; every action audited | `comms` |
 | Capabilities | text and voice only for **adult registered** accounts; minors, guests and undeclared ages never send or receive them (tested both directions) | `comms`, `comms.chat` |
 | Dev text chat | `PLATFORM_DEV_TEXT_CHAT=1`, refused by config validation in production, routes absent otherwise; link / e-mail / phone / repetition / deny-list (with look-alike and "l33t" folding) moderation; 24 h retention | `comms.chat` |
@@ -36,3 +36,6 @@ Principle: **in production a player can only send things the game already contai
 - **Match-time evidence**: a report about a match keeps only the match id. The match server owns what happened in the match; it would need to retain a short action log to back reports.
 - **Presets can still annoy** (spam, "targeting" a player with pings): per-player rate limits, mutes and blocks are the controls. In-match pings are relayed by the match server: its call to the filter is part of the handoff (`PLATFORM_MATCH_HANDOFF.md`) and is **not wired yet**.
 - **In-memory rate limiting** (one instance); a shared store is needed with more than one instance.
+
+## 4. Update: automatic restriction (see `PLATFORM_COLLUSION_ANALYSIS.md`)
+The automatic one-hour silence after three different reporters is **off by default in production** (`PLATFORM_AUTO_RESTRICT`), and a moderator's dismissal lifts it. The "collusive reporting" risk above is therefore a moderator-queue risk in production, not an automatic penalty.

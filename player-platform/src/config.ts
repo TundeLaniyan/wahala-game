@@ -31,6 +31,11 @@ export interface PlatformConfig {
   devTextChat: boolean;
   /** Operator deny-list for the dev text chat (lower-case words; compared on the look-alike-folded text). Empty by default. */
   chatDenylist: string[];
+  /**
+   * Automatic, reversible silencing of a player's presets after reports from several different players. DEFAULT: on in
+   * development / test, **OFF in production** until moderators exist (it can be abused by colluding accounts: docs/PLATFORM_COLLUSION_ANALYSIS.md).
+   */
+  autoRestrict: boolean;
   /** Mock checkout (no payment provider): development only. */
   mockCheckout: boolean;
   /** Refresh-token lifetime (sliding) and hard cap, days. */
@@ -75,6 +80,8 @@ export function loadConfig(e: Record<string, string | undefined> = process.env):
     publicWebUrl: (e.PLATFORM_PUBLIC_WEB_URL ?? 'http://localhost:5173').replace(/\/+$/, ''),
     partyMaxSize: Math.round(num(e.PLATFORM_PARTY_MAX_SIZE, 8, 2, 32)),
     devTextChat: flag(e.PLATFORM_DEV_TEXT_CHAT),
+    autoRestrict:
+      e.PLATFORM_AUTO_RESTRICT === undefined ? env !== 'production' : flag(e.PLATFORM_AUTO_RESTRICT),
     chatDenylist: list(e.PLATFORM_CHAT_DENYLIST).map((w) => w.toLowerCase()),
     mockCheckout: flag(e.PLATFORM_MOCK_CHECKOUT),
     refreshDays: num(e.PLATFORM_REFRESH_DAYS, 30, 1, 365),

@@ -75,7 +75,15 @@ export function cleanNote(raw: unknown): string | null {
 }
 
 export class ReportService {
-  constructor(private readonly d: { db: Db; clock: Clock; comms: CommsService; identity: IdentityService }) {}
+  constructor(
+    private readonly d: {
+      db: Db;
+      clock: Clock;
+      comms: CommsService;
+      identity: IdentityService;
+      autoRestrict: boolean;
+    },
+  ) {}
 
   /** Is there a real interaction between reporter and target in this context? Throws `forbidden` (one message) when not. */
   private async verifyContact(q: Queryable, me: string, input: ReportInput): Promise<void> {
@@ -195,6 +203,7 @@ export class ReportService {
   }
 
   private async maybeAutoRestrict(q: Queryable, target: string, now: Date): Promise<void> {
+    if (!this.d.autoRestrict) return;
     const r = await q.query<{ n: number }>(
       "SELECT count(DISTINCT reporter_id)::int AS n FROM reports WHERE reported_id = $1 AND status <> 'dismissed' AND created_at > $2",
       [target, addMs(now, -DAY)],
@@ -290,6 +299,18 @@ export class ReportService {
           moderator.slice(0, 40),
         ],
       );
+      // a moderator who dismisses the reports that triggered an AUTOMATIC restriction undoes it unless the threshold is still met
+      if (resolution === 'dismiss') {
+        const left = await q.query<{ n: number }>(
+          "SELECT count(DISTINCT reporter_id)::int AS n FROM reports WHERE reported_id = $1 AND status <> 'dismissed' AND created_at > $2",
+          [rep.reported_id, addMs(now, -DAY)],
+        );
+        if (left.rows[0]!.n < AUTO_RESTRICT_REPORTERS)
+          await q.query(
+            "UPDATE comm_restrictions SET lifted_at = $2 WHERE player_id = $1 AND source = 'auto' AND lifted_at IS NULL AND until > $2",
+            [rep.reported_id, now],
+          );
+      }
       if (resolution === 'restrict_signals')
         await this.d.comms.restrict(
           q,
