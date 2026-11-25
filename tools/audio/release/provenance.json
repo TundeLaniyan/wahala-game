@@ -4,7 +4,13 @@
   "generator": {
     "statedByFounder": "Gemini (the district pack's README names Lyria)",
     "product": "unknown: which Gemini/Lyria product, tier and model version made each file is not recorded in the repository",
-    "generationRecords": "not available to this workstream; the founder should keep the generation history (account, date, prompt)"
+    "generationRecords": "not available to this workstream; the founder should keep the generation history (account, date, prompt)",
+    "conversation": {
+      "where": "one conversation in the Google Gemini consumer app music interface (reported by the founder)",
+      "publicReference": "gemini-app-conversation:sha256:109b1671d017e9fec45020e20934cb0e2ee7da17207cea0b48b7a801b803f5d0",
+      "fullAddress": "NOT COMMITTED: kept in the founder's private provenance record (decision AU5: an account-bound address in a public repository identifies the account and its history)",
+      "modelVersion": "unknown: not recorded; do not infer (the chat model and the music-generation model are different; the district pack README names Lyria)"
+    }
   },
   "lagosNoDeySleep": {
     "sourceFile": "lagos_no_dey_sleep201.mp3",
@@ -12,7 +18,14 @@
     "bytes": 2381307,
     "seconds": 98.9,
     "bpm": 110,
-    "shipped": ["lnds_menu", "lnds_boss_1", "lnds_boss_2", "lnds_boss_3", "lnds_victory", "lnds_defeat"]
+    "shipped": [
+      "lnds_menu",
+      "lnds_boss_1",
+      "lnds_boss_2",
+      "lnds_boss_3",
+      "lnds_victory",
+      "lnds_defeat"
+    ]
   },
   "districts": [
     {
@@ -143,13 +156,19 @@
     "scripts": "tools/audio/production/ (build_districts.sh, make_districts.py, make_candidates.py), tools/audio/release/ (build_release.mjs)"
   },
   "unresolved": [
-    "Commercial-use rights of the Gemini/Lyria output (terms of the exact product and tier) are unverified: Google's terms pages could not be opened from the build environment.",
-    "Whether the output carries a watermark (SynthID) or triggers an AI-content disclosure duty (store policies, EU AI Act transparency) is unverified.",
+    "Commercial-use rights of the Gemini/Lyria output: Google's official terms were read on 2026-11-25 (docs/AUDIO_RIGHTS_ASSESSMENT.md); no page grants commercial use or an ownership licence to the user, and no warranty or IP indemnity for consumer-app output was found (Lyria is not on Google's indemnified-services list). NOT CLEARED.",
+    "The SynthID watermark is present in every Lyria track and survives MP3 compression (Google's SynthID page); detectors will flag the shipped files. No page requires labelling music as AI-made, but Google bars misleading people about human authorship. Store and regional AI-content rules are unreviewed.",
     "No similarity check against existing songs, lyrics or titles was done for any of the eight songs.",
     "Copyright in AI-generated music is unsettled in many countries; registering or licensing the music needs counsel.",
     "Exclusivity: the generator's terms may allow it to produce similar content for others.",
     "Vocal content: the district songs carry short sung bursts (Fadeyi-Somolu has sung lines) and the logo sting (not shipped) used the original vocal; performer or lyric questions are open. The shipped Fadeyi master is the stem instrumental and may still contain ghost vocals (not listened to).",
     "The mastered derivatives inherit whatever rights the sources have.",
     "The shipped files were not listened to by the assistant; approval is the founder's."
-  ]
+  ],
+  "commercialClearance": {
+    "status": "not-cleared",
+    "record": "public/audio/release-clearance.json",
+    "assessment": "docs/AUDIO_RIGHTS_ASSESSMENT.md",
+    "termsReviewedOn": "2026-11-25"
+  }
 }
