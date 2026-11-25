@@ -1,3 +1,16 @@
 {
-  "slots": {}
+  "slots": {
+    "win_sting": {
+      "file": "lnds_victory.mp3",
+      "license": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md. Derived from the founder-selected Gemini-generated song \"Lagos No Dey Sleep\".",
+      "source": "Lagos No Dey Sleep outro",
+      "gain": 1
+    },
+    "lose_sting": {
+      "file": "lnds_defeat.mp3",
+      "license": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md. Derived from the founder-selected Gemini-generated song \"Lagos No Dey Sleep\".",
+      "source": "Lagos No Dey Sleep groove, tape-stop",
+      "gain": 1
+    }
+  }
 }

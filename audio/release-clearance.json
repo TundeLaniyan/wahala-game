@@ -1,0 +1,27 @@
+{
+  "subject": "the approved WAHALA! soundtrack (Lagos No Dey Sleep package + seven district songs): files whose track ids start with lnds_ or dist_ in music/manifest.json, and the lnds_victory / lnds_defeat stingers",
+  "status": "founder-authorised",
+  "decision": "AU5",
+  "meaning": "Released on the founder's documented, risk-aware decision. This is NOT a legal clearance, NOT a licence from Google and NOT a lawyer's opinion; none exists. Google's official terms were reviewed on 2026-11-25 and no explicit prohibition of commercial use of Gemini-app music was found, but no grant, warranty or indemnity was found either (docs/AUDIO_RIGHTS_ASSESSMENT.md).",
+  "authorisedBy": "WAHALA! founder (repository owner)",
+  "authorisedOn": "2026-11-25",
+  "authorisation": "Written instruction from the founder in the release assignment 'Approved Soundtrack Release, Junction Blast Rename and Final Menu UX' (2026-11-25): proceed with a documented, risk-aware release of the approved soundtrack; do not fabricate permission or a legal opinion.",
+  "explicitProhibitionFound": false,
+  "scope": {
+    "files": 38,
+    "sha256sumsDigest": "8c78ebce21f1017674df6818b456e2822b1d58d60fa6a8627b3b12f8b06ec1a6",
+    "note": "SHA-256 of tools/audio/release/SHA256SUMS. A different set of shipped files is outside this authorisation: a new decision (and a new digest) is needed."
+  },
+  "acknowledgedRisks": [
+    "R1 No grant: no official Google page says the user owns Gemini-app music or licenses it for commercial use; Google only says it will not claim ownership.",
+    "R2 No exclusivity or copyright assurance: purely AI-generated material may have no copyright, and similar output may be produced for others.",
+    "R3 No non-infringement warranty or indemnity for consumer-app output; Lyria and the Gemini app are not on Google's indemnified-services list. A third-party claim would fall on the studio.",
+    "R4 'Business user' ambiguity: a studio shipping a game may count as a business user under the Terms; how that applies to a consumer-app account is unconfirmed.",
+    "R5 Editing, mastering, looping, stem separation and mixing are not addressed by any official page.",
+    "R6 SynthID: the watermark survives MP3 compression; detectors will flag the files. No page requires labelling the music as AI-made, but misleading people about human authorship is barred. Store and regional AI-disclosure rules are unreviewed.",
+    "R7 No similarity check against existing songs, lyrics or titles was done; vocals or likeness questions are open.",
+    "R8 Terms can change; whether new terms reach earlier output is not stated."
+  ],
+  "evidence": "Official-source review dated 2026-11-25 (docs/AUDIO_RIGHTS_ASSESSMENT.md, sections 2-3); provenance and generation history (docs/AUDIO_PROVENANCE.md, tools/audio/release/provenance.json); the founder's private provenance record (conversation address, account, prompts, generation dates) is kept by the founder and referenced here only by the SHA-256 in docs/AUDIO_PROVENANCE.md.",
+  "withdraw": "On a rights complaint, a Terms change that prohibits this use, or a founder decision: set status to \"not-cleared\" (the next publish is then refused) and remove or replace the lnds_ / dist_ tracks; the Pixabay fallbacks stay."
+}
