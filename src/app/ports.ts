@@ -32,7 +32,10 @@ export interface AudioPort {
   stopMusic(): void;
   setIntensity(level: number): void;
   handleEvents(events: readonly SimEvent[], state: Readonly<GameState>): void;
-  playUi(kind: 'click' | 'back' | 'start' | 'countdown' | 'go'): void;
+  playUi(
+    kind:
+      'click' | 'back' | 'start' | 'countdown' | 'go' | 'confirm' | 'error' | 'pause' | 'resume' | 'ready',
+  ): void;
   /** Follow camera (City Rumble): pan relative to this tile x; null = across the whole arena. Optional. */
   setListener?(x: number | null): void;
 }

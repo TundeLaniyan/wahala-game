@@ -146,7 +146,7 @@ describe('arena playlists and signature tracks', () => {
   it('the shipped manifest: every standard arena has its own signature track (founder table), City Rumble rotates', () => {
     const raw = JSON.parse(readFileSync(join(__dirname, '../../public/audio/music/manifest.json'), 'utf8'));
     const m = parse(raw);
-    expect(m.tracks).toHaveLength(15);
+    expect(m.tracks.filter((t) => t.id.startsWith('pixabay_'))).toHaveLength(15);
     const FOUNDER: Record<string, string> = {
       danfoBusPark: 'pixabay_504898',
       balogunMarket: 'pixabay_573648',
@@ -168,12 +168,16 @@ describe('arena playlists and signature tracks', () => {
     }
     // nine different songs: one per arena, all nine supplied files used
     expect(new Set(Object.values(FOUNDER)).size).toBe(9);
-    // a Rumble community without a founder-assigned track (Mushin, Fadeyi, Ebute-Metta) rotates the default list and never repeats back to back
+    // every City Rumble community plays its own district song (two start points): it alternates, never back to back,
+    // and opens on start point A the first time
     const rumble = playlistFor(m, 'rumbleMushin');
-    expect(rumble.length).toBeGreaterThanOrEqual(3);
-    for (const id of rumble) expect(m.playlists.default).toContain(id);
+    expect(rumble).toEqual(['dist_mushin_a', 'dist_mushin_b']);
     const picks = season(m, 60, { arenaId: 'rumbleMushin', isAvailable: () => true });
     for (let i = 1; i < picks.length; i++) expect(picks[i]).not.toBe(picks[i - 1]);
+    // with the district files unavailable and no fallback listed, a community without an earlier song uses the default pool
+    const fb = season(m, 20, { arenaId: 'rumbleMushin', isAvailable: (id) => id.startsWith('pixabay_') });
+    expect(fb.length).toBe(20);
+    for (const id of fb) expect(m.playlists.default).toContain(id);
   });
 });
 

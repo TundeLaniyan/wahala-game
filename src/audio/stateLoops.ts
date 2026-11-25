@@ -67,5 +67,11 @@ export function updateStateLoops(
       });
     });
 
+  // a boss mission whose boss is still protected: the relay jammer's pulsing hum (stops when the shield is down or he falls)
+  const boss = state.mission?.boss;
+  if (boss && boss.maxHits !== undefined && boss.shielded && !boss.defeated) {
+    loops.set('boss:jammer', 'jammer_loop', { gain: 0.45, rate: 1, pan: 0 });
+  }
+
   loops.end();
 }

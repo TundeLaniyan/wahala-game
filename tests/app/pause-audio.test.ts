@@ -71,4 +71,25 @@ describe('pausing during the countdown', () => {
       'paused:true',
     ]);
   });
+
+  it('plays the pause and resume menu ticks once per real state change, and stays silent on repeats', () => {
+    const { controller, log } = make();
+    log.length = 0;
+    controller.setPaused(true);
+    controller.setPaused(true); // no change: no second tick
+    controller.setPaused(false);
+    controller.setPaused(false);
+    expect(log.filter((l) => l.startsWith('ui:'))).toEqual(['ui:pause', 'ui:resume']);
+    for (let i = 0; i < 20; i++) controller.frame(2000 + i * 16);
+    expect(
+      log.filter(
+        (l) =>
+          l.startsWith('ui:') &&
+          l !== 'ui:pause' &&
+          l !== 'ui:resume' &&
+          l !== 'ui:go' &&
+          l !== 'ui:countdown',
+      ),
+    ).toEqual([]);
+  });
 });

@@ -1,0 +1,33 @@
+{
+  "_comment": "What the founder-approved release ships and how it is wired (decision AU4). build_release.mjs turns this plus the two candidate packs into public/audio/. Nothing here is a listening choice: the founder approved the seven district soundtracks and the Lagos No Dey Sleep package (2026-11-25); this file only encodes where each approved file plays.",
+  "licence": "Founder-approved WAHALA! original (Gemini-generated); commercial-release rights review pending, see docs/AUDIO_PROVENANCE.md",
+  "approvedOn": "2026-11-25",
+  "districts": {
+    "pack": "lagos_districts_v1",
+    "shipTracks": ["a", "b"],
+    "songs": {
+      "ojuelegba": { "arena": "rumbleOjuelegba", "pixabayFallback": ["pixabay_515507"] },
+      "oshodi": { "arena": "rumbleOshodi", "pixabayFallback": ["pixabay_601035"] },
+      "mushin": { "arena": "rumbleMushin", "pixabayFallback": [] },
+      "fadeyi": { "arena": "rumbleFadeyi", "pixabayFallback": [] },
+      "ebute": { "arena": "rumbleEbuteMetta", "pixabayFallback": [] },
+      "lagosisland": { "arena": "rumbleLagosIsland", "pixabayFallback": ["pixabay_554543"] },
+      "lekki": { "arena": "rumbleLekki", "pixabayFallback": ["pixabay_623364"] }
+    }
+  },
+  "lnds": {
+    "pack": "lagos_no_dey_sleep_v1",
+    "menu": "lnds_menu",
+    "boss": ["lnds_boss_1", "lnds_boss_2", "lnds_boss_3"],
+    "bossSyncGroup": "lnds_grid16",
+    "stingers": { "win_sting": "lnds_victory", "lose_sting": "lnds_defeat" },
+    "notShipped": {
+      "lnds_rumble": "generic LNDS Rumble mix: no arena uses it (founder: do not replace the district songs with it)",
+      "lnds_suddendeath": "the Sudden Death of lnds_rumble only; every district has its own",
+      "lnds_sting": "logo sting: no engine hook yet (no splash/logo event); kept in the candidate pack",
+      "lnds_camp_calm": "campaign atmosphere cue: no engine hook yet; kept in the candidate pack",
+      "lnds_camp_tension": "campaign atmosphere cue: no engine hook yet; kept in the candidate pack",
+      "lnds_camp_alert": "campaign atmosphere cue: no engine hook yet; kept in the candidate pack"
+    }
+  }
+}

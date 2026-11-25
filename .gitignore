@@ -11,3 +11,10 @@ __pycache__/
 blob-report
 tools/assets3/vendor/
 online-e2e-diag
+
+# Unapproved audio audition candidates are staged here locally only (tools/audio/candidates/stage.mjs, decision AU1)
+public/audio/candidates/
+
+# Mastered district MP3s are generated from the founder's recordings (tools/audio/production/build_districts.sh); not committed
+tools/audio/candidates/lagos_districts_v1/*.mp3
+tools/audio/candidates/lagos_districts_v1/lite/

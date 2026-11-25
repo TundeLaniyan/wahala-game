@@ -37,6 +37,23 @@ const APPROVED_FILES = new Set(
     .map((t) => t.file),
 );
 
+/** The two founder-approved result stingers (sample slots in the audio root, public/audio/slots.json). */
+const STING_FILES = new Set(
+  Object.values(
+    (
+      JSON.parse(readFileSync(new URL('../public/audio/slots.json', import.meta.url), 'utf8')) as {
+        slots: Record<string, { file: string }>;
+      }
+    ).slots,
+  ).map((s) => s.file),
+);
+/** Tracks of the music manifest (the missing #7 excluded): what the player lists as available. */
+const AVAILABLE_TRACKS = (
+  JSON.parse(readFileSync(new URL('../public/audio/music/manifest.json', import.meta.url), 'utf8')) as {
+    tracks: { id: string; file: string }[];
+  }
+).tracks.filter((t) => t.file !== 'pixabay_496406.mp3').length;
+
 /** The approved voice clips (public/audio/voices/recorded.json). */
 const VOICE_FILES = new Set(
   (
@@ -216,7 +233,11 @@ test.describe('audio settings, persistence and music start', () => {
     const voiceReqs = audioFiles.filter((u) =>
       /\/audio\/voices\/recorded\/[A-Za-z0-9_-]+\.mp3(\?|$)/.test(u),
     );
-    expect(audioFiles.filter((u) => !musicReqs.includes(u) && !voiceReqs.includes(u))).toEqual([]);
+    // the two result stingers are sample slots in the audio root (slots.json)
+    const stingReqs = audioFiles.filter((u) => [...STING_FILES].some((f) => u.includes(`/audio/${f}`)));
+    expect(
+      audioFiles.filter((u) => !musicReqs.includes(u) && !voiceReqs.includes(u) && !stingReqs.includes(u)),
+    ).toEqual([]);
     expect(
       musicReqs.map((u) => /([A-Za-z0-9_-]+\.mp3)(\?|$)/.exec(u)![1]).filter((f) => !APPROVED_FILES.has(f!)),
     ).toEqual([]);
@@ -271,7 +292,9 @@ const musicState = (page: Page): Promise<MusicState> =>
   page.evaluate(() => (window as unknown as { __WAHALA__: { music: () => MusicState } }).__WAHALA__.music());
 
 test.describe('the approved soundtrack in a real browser', () => {
-  test('every supplied track (fourteen) fetches and decodes as real audio', async ({ page }) => {
+  test('every supplied track (the fourteen Pixabay songs and the WAHALA! originals) fetches and decodes as real audio', async ({
+    page,
+  }) => {
     await open(page, '&nobots');
     const decoded = await page.evaluate(
       async (files) => {
@@ -295,7 +318,9 @@ test.describe('the approved soundtrack in a real browser', () => {
     expect(ok.map((d) => d.file).sort()).toEqual(
       [...APPROVED_FILES].filter((f) => f !== 'pixabay_496406.mp3').sort(),
     );
-    for (const d of ok) expect(d.seconds, d.file).toBeGreaterThan(75); // the shortest (sonican, Lekki Nightworks) is 80 s
+    // the shortest Pixabay track (sonican, Lekki Nightworks) is 80 s; the originals are bar-aligned loops (the Sudden
+    // Death loops are about 31-37 s, the menu and boss files 35 s)
+    for (const d of ok) expect(d.seconds, d.file).toBeGreaterThan(/^(pixabay_)/.test(d.file) ? 75 : 25);
     // track #7 is not supplied yet: its slot stays empty
     expect(decoded.find((d) => d.file === 'pixabay_496406.mp3')?.ok).toBe(false);
   });
@@ -312,7 +337,9 @@ test.describe('the approved soundtrack in a real browser', () => {
     // the opponent is idle (&nobots): with the (mandatory) Wahala Crush it would be crushed before the final
     // 30 s, ending the match. This test is about the music, so the closing walls are taken out of this state.
     await mutate(page, 's.crush = null;');
-    await expect.poll(async () => (await musicState(page)).available.length, { timeout: 30_000 }).toBe(14);
+    await expect
+      .poll(async () => (await musicState(page)).available.length, { timeout: 30_000 })
+      .toBe(AVAILABLE_TRACKS);
     // the first bus-park match opens with the bus park's starting track, and it really plays
     await expect.poll(async () => (await musicState(page)).track, { timeout: 30_000 }).toBe('pixabay_504898');
     await page.evaluate(() => {

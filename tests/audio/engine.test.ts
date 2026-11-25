@@ -214,9 +214,9 @@ describe('event mapping', () => {
     expectIds(SAMPLES.missionNode, 'pickup_1');
     expectIds(SAMPLES.missionWarning, 'crush_warning');
     expectIds({ type: 'missionPhase', phase: 1, change: 'cleared' }, 'pickup_rare');
-    expectIds(SAMPLES.bossExposed, 'ui_go');
-    expectIds(SAMPLES.bossShielded, 'ui_back');
-    expectIds(SAMPLES.bossDefeated, 'win_sting');
+    expectIds(SAMPLES.bossExposed, 'boss_exposed'); // decision AU2: its own sound, no longer a UI blip
+    expectIds(SAMPLES.bossShielded, 'boss_shield');
+    expectIds(SAMPLES.bossDefeated, 'boss_down');
     // classic raids reuse existing synthesised cues too (decision RD12); the sting itself stays the match end's
     expectIds(SAMPLES.cargoHit, 'vehicle_hit_gen');
     expectIds(SAMPLES.cargoDestroyed, 'block_crumble_2', 'pickup_rare'); // a marked crate: break + objective chime
@@ -237,7 +237,7 @@ describe('event mapping', () => {
     rig.audio.handleEvents([SAMPLES.raidOutcome], s);
     expect(rig.ids()).not.toContain('win_sting'); // matchEnded owns the sting
     // campaign health (decision CC4): a wound, a glancing blow and a defeat reuse existing synthesised cues
-    expectIds(SAMPLES.campaignHit, 'push');
+    expectIds(SAMPLES.campaignHit, 'hurt_hit');
     expectIds({ ...SAMPLES.campaignHit, result: 'invulnerable' } as SimEvent, 'push');
     expectIds(SAMPLES.campaignDefeated, 'bottle_smash');
     // enemy projectiles: the throw cue, the smash on a rival, a thud on a wall, silence when nothing lands

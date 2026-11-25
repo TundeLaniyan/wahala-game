@@ -1,0 +1,159 @@
+<title>WAHALA Seven District Soundtracks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: arena map first, then one card per district: originals beside the game-ready versions, with the evidence next to each player. */
+:root{--bg:#f6f1e3;--panel:#fffaf0;--ink:#1b1710;--mute:#665e4b;--line:#d9cfb4;--accent:#f0a800;--on-accent:#1b1710;--flame:#c0391a;--good:#1f6f3a;
+--display:"Archivo","Arial Narrow",Arial,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14120d;--panel:#1e1b13;--ink:#f3ecd8;--mute:#a79f88;--line:#383324;--accent:#f5b700;--on-accent:#14120d;--flame:#ff7a45;--good:#7fd48a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14120d;--panel:#1e1b13;--ink:#f3ecd8;--mute:#a79f88;--line:#383324;--accent:#f5b700;--on-accent:#14120d;--flame:#ff7a45;--good:#7fd48a;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--display);padding-block:0 4rem;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:64rem;margin:0 auto}
+header{padding-block:1.5rem 1rem;border-bottom:6px solid var(--accent);margin-bottom:1rem}
+h1{font-stretch:62%;font-weight:900;font-size:clamp(2.1rem,7.5vw,3.8rem);line-height:.95;margin:0;text-transform:uppercase}
+h1 span{color:var(--accent)}
+h2{font-stretch:75%;font-weight:800;font-size:1.4rem;text-transform:uppercase;margin:0 0 .3rem}
+h3{font-size:1rem;margin:.9rem 0 .2rem;font-weight:700}
+p{max-width:70ch;margin:.35rem 0}
+.tag{font:500 .78rem var(--mono);color:var(--flame);letter-spacing:.06em;text-transform:uppercase;margin:.5rem 0 0}
+.note{color:var(--mute);font-size:.92rem}
+.warn{border-left:6px solid var(--flame);padding:.4rem .8rem;background:var(--panel)}
+section{background:var(--panel);border:1px solid var(--line);padding:1.1rem;margin-block:1rem}
+.row{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.55rem;align-items:center}
+button{font:600 .9rem var(--display);padding:.5rem .85rem;border:2px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;min-height:44px}
+button:hover{background:var(--ink);color:var(--bg)}
+button.p{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+button.p:hover{filter:brightness(1.08);background:var(--accent);color:var(--on-accent)}
+button.on{background:var(--ink);color:var(--bg)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--flame);outline-offset:2px}
+.tbl{overflow-x:auto;margin-top:.5rem}
+table{border-collapse:collapse;width:100%;font:400 .8rem var(--mono)}
+th,td{border-bottom:1px solid var(--line);padding:.35rem .5rem;text-align:left;white-space:nowrap}
+th{color:var(--mute);font-weight:500}
+.meta{font:400 .76rem var(--mono);color:var(--mute);overflow-wrap:anywhere}
+.meta b{color:var(--ink);font-weight:500}
+.bar{height:6px;background:var(--line);position:relative;margin-top:.3rem}
+.bar i{position:absolute;inset:0 auto 0 0;width:0;background:var(--accent)}
+.card{border:1px solid var(--line);padding:1rem;margin-block:1rem;background:var(--bg)}
+.card h3{font-size:1.2rem;margin:0}
+.flag{border-left:6px solid var(--flame);padding:.3rem .7rem;margin:.5rem 0;font-size:.92rem}
+.flag.ok{border-color:var(--good)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:.8rem;margin-top:.6rem}
+label.rg{font:500 .78rem var(--mono);color:var(--mute);display:grid;gap:.2rem;text-transform:uppercase}
+label.lp{font:500 .78rem var(--mono);color:var(--mute);display:inline-flex;gap:.35rem;align-items:center}
+label.lp input{width:1.05rem;height:1.05rem;accent-color:var(--accent)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.status{font:500 .8rem var(--mono);color:var(--mute);margin-top:.4rem;min-height:1.2em}
+.chk{display:flex;gap:.6rem;align-items:flex-start;padding:.35rem 0;border-top:1px solid var(--line)}
+.chk input{margin-top:.35rem;width:1.1rem;height:1.1rem;accent-color:var(--accent);flex:none}
+</style>
+<div class="wrap">
+<header>
+<h1>Seven district songs <span>originals vs game-ready</span></h1>
+<p class="tag">Candidates · not approved · nothing here replaces the Pixabay tracks</p>
+<p class="warn">Each card has your original recording exactly as received (unedited MP3 bytes) beside the mastered, looped game version. The mastering was measured, not heard: nobody has listened to these masters. Use the A/B button to hear the same moment in both. Audio loads when you press play.</p>
+</header>
+
+<section><h2>Controls</h2>
+<div class="ctl"><label class="rg">Volume<input type="range" id="vol" min="0" max="1" step="0.01" value="0.7"></label></div>
+<div class="row"><button id="stop">Stop everything</button></div>
+<div class="status" id="status">Press a play button to start.</div></section>
+
+<section><h2>Arena to song map</h2>
+<p class="note">All seven City Rumble arenas have exactly one district song, so the match for that arena plays it. Two start points (A, B) of the same seamless loop alternate between matches, so a rematch opens somewhere else in the song. Three standard arenas share a district and get a different start point (C) of the same song. Every other arena keeps its Pixabay track. Nothing is shipped: this is what <code>?audiodraft=match</code> plays.</p>
+<div class="tbl"><table id="map"></table></div>
+<h3>Proposed, not applied</h3>
+<p class="note" id="prop"></p></section>
+
+<section><h2>Summary</h2><div class="tbl"><table id="sum"></table></div>
+<p class="note">Source loudness is what you sent; "Game" is the decoded master. Phone view is loudness after a 150 Hz high-pass, to simulate a phone speaker (the existing Pixabay tracks measure about -17.6 LUFS there after their gains). Sizes are the standard 192 kbps file and the Data Saver 96 kbps file.</p></section>
+
+<div id="cards"></div>
+
+<section><h2>Decisions</h2><p class="note">Tick as you listen. Nothing is saved or sent.</p><div id="checks"></div></section>
+</div>
+<script>
+const DATA=__DATA__;
+(function(){
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const kb=b=>b>=1048576?(b/1048576).toFixed(2)+' MB':Math.round(b/1024)+' KB';
+const fmt=s=>{s=Math.max(0,s);return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')};
+let ctx=null,master=null,cur=null,deck=null;const cache={};
+const st=t=>{$('#status').textContent=t};
+async function ensure(){ if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=+$('#vol').value;master.connect(ctx.destination);} if(ctx.state!=='running')await ctx.resume(); }
+$('#vol').oninput=e=>{if(master)master.gain.value=+e.target.value};
+function load(name){ if(!cache[name]) cache[name]=(async()=>{ st('Loading '+name+'...'); const r=await fetch('audio/'+name+'.mp3'); if(!r.ok) throw new Error(name+' '+r.status); const b=await ctx.decodeAudioData(await r.arrayBuffer()); st('Loaded '+name+' ('+b.duration.toFixed(1)+' s)'); return b; })(); return cache[name]; }
+function stopAll(){ if(cur){try{cur.src.stop()}catch(_){}cur=null;} if(deck){deck.stop();deck=null;} if(htmlAudio){htmlAudio.pause();htmlAudio=null;} $$('button.on').forEach(b=>b.classList.remove('on')); }
+$('#stop').onclick=stopAll;
+function start(buf,{offset=0,loop=false,gain=1}={}){ const s=ctx.createBufferSource(); s.buffer=buf; s.loop=loop; const g=ctx.createGain(); g.gain.value=gain; s.connect(g); g.connect(master); s.start(0,offset); return {src:s,gain:g,t0:ctx.currentTime-offset,buf,loop}; }
+function pos(h){ const p=ctx.currentTime-h.t0; return h.loop?p%h.buf.duration:p; }
+let htmlAudio=null;
+// ---- arena map
+const rows=[['Arena','Kind','Song','Opens with','Rotates through']];
+const KIND=a=>/^rumble/.test(a)?'City Rumble':'standard';
+for(const d of DATA.districts){ d.arenas.forEach((a,i)=>rows.push([a,KIND(a),d.title+' ('+d.district+')', i===0?'start A':'start C', i===0?'A, B (alternate)':'C only'])); }
+$('#map').innerHTML=rows.map((r,i)=>'<tr>'+r.map(c=>'<'+(i?'td':'th')+'>'+c+'</'+(i?'td':'th')+'>').join('')+'</tr>').join('');
+$('#prop').textContent=Object.entries(DATA.proposed).map(([a,p])=>a+' to '+p.track.replace('dist_','').replace('_',' start ')+' ('+p.fit+' fit)').join(' · ')+'. Not applied: the geography is looser, and each would repeat a song that already has an arena.';
+// ---- summary
+const hdr=['Song','Key / BPM','Source','Loop','Source LUFS / TP','Game LUFS / TP','Phone view','Standard / Data Saver','Sudden Death loop'];
+$('#sum').innerHTML='<tr>'+hdr.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+DATA.districts.map(d=>'<tr><td>'+d.title+'</td><td>'+d.key+' / '+d.bpm+'</td><td>'+fmt(d.srcSeconds)+'</td><td>'+fmt(d.loop.seconds)+' ('+Math.round(d.loop.fractionOfSong*100)+'%, '+d.loop.bars+' bars)</td><td>'+d.srcLufs+' / +'+d.srcTp+'</td><td>'+d.master.lufs+' / '+d.master.decodedTruePeakDb+'</td><td>'+d.master.phoneLufs+'</td><td>'+kb(d.master.bytes)+' / '+kb(d.master.liteBytes)+'</td><td>'+d.sd.bars+' bars, '+fmt(d.sd.seconds)+', '+kb(d.sd.bytes)+' / '+kb(d.sd.liteBytes)+'</td></tr>').join('');
+// ---- cards
+const cards=$('#cards');
+for(const d of DATA.districts){
+  const el=document.createElement('div'); el.className='card'; el.id='c-'+d.id;
+  const segs=d.vocal.segments.map(([s,e,inl])=>`<button data-vs="${s}" data-inl="${inl?1:0}" title="${inl?'inside the game loop':'outside the loop (cut out)'}">${fmt(s)}${inl?'':' (cut)'}</button>`).join('');
+  const br=Object.entries(d.bitrates).map(([k,v])=>`<tr><td>${k} kbps</td><td>${kb(v.bytes)}</td><td>${v.snrDb} dB</td><td>${(v.bandwidthHz/1000).toFixed(1)} kHz</td></tr>`).join('');
+  const saving=Math.round(100*(1-d.master.liteBytes/d.master.bytes));
+  el.innerHTML=`<h3>${d.district}: ${d.title}</h3>
+  <div class="meta">${d.arenas.join(', ')} · ${d.key} · ${d.bpm} BPM · source ${fmt(d.srcSeconds)} · game loop ${fmt(d.loop.seconds)} (${d.loop.bars} bars of the song, from ${fmt(d.loop.src0)} to ${fmt(d.loop.src1)}) · loop seam: ${d.loop.wrapOk?'clean':'CHECK'} (join similarity ${d.loop.joinSimilarity}) · ${d.instrumental?'instrumental made from stems':'full mix'}</div>
+  <div class="flag ${d.id==='fadeyi'?'':'ok'}">${d.note}</div>
+  <div class="row"><button class="p" data-a="orig">Original</button><button class="p" data-a="master">Game version</button><button data-a="lite">Data Saver (96 kbps)</button><button data-a="ab">A / B same moment</button><label class="lp"><input type="checkbox" data-m checked> level-match</label>${d.id==='fadeyi'?'<button data-a="vocal">Mastered with vocals</button>':''}</div>
+  <div class="row"><span class="meta">Start point:</span>${['a','b','c','d'].map(k=>`<button data-st="${k}">${k.toUpperCase()} ${fmt(d.starts[k])}</button>`).join('')}<button data-a="seam">Hear the loop seam</button><button data-a="gamestream">Play like the game (streamed &lt;audio loop&gt;)</button></div>
+  <div class="row"><span class="meta">Flagged vocal-like moments (${d.vocal.count}; ${(d.vocal.toInstrumentalDb)} dB vs the rest):</span>${segs||'<span class="meta">none detected</span>'}</div>
+  <div class="row"><span class="meta">Sudden Death:</span><button data-a="sd">Sudden Death loop</button><button class="p" data-a="trans">Normal into Sudden Death</button><button data-a="back">Back to normal</button></div>
+  <div class="bar"><i></i></div><div class="meta" data-pos></div>
+  <div class="tbl"><table><tr><th>Bitrate</th><th>Size</th><th>Match to master</th><th>Bandwidth</th></tr>${br}</table></div>
+  <div class="meta">Data Saver saves ${saving}% (${kb(d.master.bytes)} to ${kb(d.master.liteBytes)}). Loudness: source ${d.srcLufs} LUFS with ${d.srcClipped} clipped samples and a +${d.srcTp} dB true peak; game ${d.master.lufs} LUFS, true peak ${d.master.decodedTruePeakDb} dB. Level spread across the loop ${d.loop.bars?Math.max(...d.levels).toFixed(1):''} to ${Math.min(...d.levels).toFixed(1)} dB per bar.</div>`;
+  cards.appendChild(el);
+  const bar=$('.bar i',el), pe=$('[data-pos]',el); el._tick=()=>{ if(!cur||cur.card!==el) return; const p=pos(cur); bar.style.width=(100*p/cur.buf.duration)+'%'; pe.textContent=cur.label+' · '+fmt(p)+' / '+fmt(cur.buf.duration); };
+  const go=async(name,o={},label)=>{ await ensure(); const b=await load(name); stopAll(); cur=start(b,o); cur.card=el; cur.label=label||name; return cur; };
+  const lm=()=>$('[data-m]',el).checked?Math.pow(10,(d.master.lufs-d.srcLufs)/20):1;
+  const bar_=240/d.bpm;
+  $$('[data-a]',el).forEach(b=>b.onclick=async()=>{
+    const a=b.dataset.a;
+    try{
+    if(a==='orig'){ await go('orig_'+d.id,{gain:lm()},'original'); b.classList.add('on'); }
+    else if(a==='master'){ await go('master_'+d.id,{loop:true},'game version (loops)'); b.classList.add('on'); }
+    else if(a==='lite'){ await go('lite_'+d.id,{loop:true},'Data Saver'); b.classList.add('on'); }
+    else if(a==='vocal'){ await go('master_fadeyi_vocal',{loop:true},'mastered with vocals'); b.classList.add('on'); }
+    else if(a==='seam'){ const bf=await load('master_'+d.id); await ensure(); stopAll(); cur=start(bf,{offset:bf.duration-6,loop:true}); cur.card=el; cur.label='loop seam (6 s before the end, then round)'; b.classList.add('on'); }
+    else if(a==='ab'){ await ensure(); const mb=await load('master_'+d.id), ob=await load('orig_'+d.id);
+      if(cur&&cur.card===el&&cur.kind==='ab'){ const p=pos(cur); const toMaster=cur.which==='orig'; stopAll(); const gain=toMaster?1:lm(); const buf=toMaster?mb:ob; const off=toMaster?Math.max(0,p-d.loop.src0):d.loop.src0+p; cur=start(buf,{offset:off%buf.duration,loop:toMaster,gain}); cur.kind='ab'; cur.which=toMaster?'master':'orig'; cur.card=el; cur.label='A/B: '+cur.which; cur.base=d.loop.src0; }
+      else { const h=cur&&cur.card===el?pos(cur):0; stopAll(); cur=start(mb,{offset:0,loop:true}); cur.kind='ab'; cur.which='master'; cur.card=el; cur.label='A/B: master (press again for the original at the same moment)'; }
+      b.classList.add('on'); }
+    else if(a==='sd'){ await go('sd_'+d.id,{loop:true},'Sudden Death loop'); b.classList.add('on'); }
+    else if(a==='trans'||a==='back'){ await ensure(); const mb=await load('master_'+d.id), sb=await load('sd_'+d.id);
+      if(!deck){ stopAll(); deck=new Deck(mb,sb,bar_); deck.start(); }
+      if(a==='trans') deck.to('sd'); else deck.to('base');
+      cur=deck.view(); cur.card=el; b.classList.add('on'); }
+    else if(a==='gamestream'){ stopAll(); htmlAudio=new Audio('audio/master_'+d.id+'.mp3'); htmlAudio.loop=true; htmlAudio.volume=+$('#vol').value; htmlAudio.currentTime=Math.max(0,0); await htmlAudio.play(); htmlAudio.onloadedmetadata=()=>{}; htmlAudio.currentTime=Math.max(0,htmlAudio.duration-6||0); st('Streamed <audio loop> like the game: it starts 6 s before the end so you hear the browser looping it'); b.classList.add('on'); }
+    }catch(e){ st('Could not play: '+e.message); }
+  });
+  $$('[data-st]',el).forEach(b=>b.onclick=async()=>{ await ensure(); const mb=await load('master_'+d.id); stopAll(); cur=start(mb,{offset:d.starts[b.dataset.st],loop:true}); cur.card=el; cur.label='game version from start point '+b.dataset.st.toUpperCase(); b.classList.add('on'); });
+  $$('[data-vs]',el).forEach(b=>b.onclick=async()=>{ await ensure(); const ob=await load('orig_'+d.id); stopAll(); const s=+b.dataset.vs; cur=start(ob,{offset:Math.max(0,s-2),gain:lm()}); cur.card=el; cur.label='original from '+fmt(s-2)+' (the flagged moment is 2 s in)'; b.classList.add('on'); });
+}
+// ---- Sudden Death hand-over exactly as the engine does it: enter at the same place in the bar
+class Deck{
+  constructor(base,sd,bar){this.base=base;this.sd=sd;this.bar=bar;this.now=null;}
+  _mk(buf,off){ const s=ctx.createBufferSource(); s.buffer=buf; s.loop=true; const g=ctx.createGain(); g.gain.value=0; s.connect(g); g.connect(master); s.start(0,off); return {src:s,g,t0:ctx.currentTime-off,buf}; }
+  start(){ this.now=this._mk(this.base,0); this.now.g.gain.setTargetAtTime(1,ctx.currentTime,0.05); this.which='base'; }
+  to(w){ if(w===this.which) return; const p=((ctx.currentTime-this.now.t0)%this.now.buf.duration); const phase=p%this.bar; const buf=w==='sd'?this.sd:this.base; const off=(w==='sd'?phase:Math.floor(p/this.bar)*this.bar*0+phase)+0.04; const old=this.now; this.now=this._mk(buf,off%buf.duration); this.now.g.gain.setTargetAtTime(1,ctx.currentTime,0.25); old.g.gain.setTargetAtTime(0,ctx.currentTime,0.25); setTimeout(()=>{try{old.src.stop()}catch(_){}},1800); this.which=w; }
+  stop(){ for(const x of [this.now]) if(x){x.g.gain.setTargetAtTime(0,ctx.currentTime,0.05); setTimeout(()=>{try{x.src.stop()}catch(_){}},300);} }
+  view(){ const me=this; return {get src(){return me.now.src}, get t0(){return me.now.t0}, get buf(){return me.now.buf}, loop:true, label:'Sudden Death hand-over demo: '+me.which, get which(){return me.which}}; }
+}
+setInterval(()=>{ for(const c of $$('.card')) c._tick&&c._tick(); },200);
+const CH=['The seven songs suit their districts','Fadeyi-Somolu: the vocals are a problem, or the instrumental is good enough','Oshodi is too repetitive, or it works','Brief vocal-like moments (list them) are acceptable or must be removed','Loop seams are not noticeable','Game versions are loud and clear enough on a phone speaker','Data Saver files are good enough','Sudden Death hand-overs feel musical','The arena map is right (and the proposed extras: yes or no)','Rights: the recordings and these derivatives are cleared for commercial release'];
+const box=$('#checks'); CH.forEach((t,i)=>{const l=document.createElement('label');l.className='chk';l.innerHTML='<input type="checkbox" id="k'+i+'"><span>'+t+'</span>';box.appendChild(l);});
+})();
+</script>

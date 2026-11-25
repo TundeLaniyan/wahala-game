@@ -22,6 +22,8 @@
  */
 import type { GameState, SimEvent } from '../sim';
 import { createAmbience } from './ambience';
+import { CANDIDATE_DIR, candidateModeFromSearch, wantsStings } from './candidates';
+import type { CandidateMode } from './candidates';
 import { matchClock } from './escalation';
 import { createMusicPlayer, defaultMediaFactory, defaultProbe, probeVia } from './music';
 import type { MediaFactory, MusicPlayer, MusicReport, MusicStatus, ProbeLike } from './music';
@@ -39,6 +41,8 @@ import type { Buses, Volumes } from './buses';
 import { defaultContextFactory, primeContext, resumeContext } from './context';
 import { createEventRouter } from './eventRouter';
 import type { EventRouter } from './eventRouter';
+import { createFootsteps } from './footsteps';
+import type { Footsteps } from './footsteps';
 import { createFuseTracker } from './fuse';
 import type { FuseTracker } from './fuse';
 import { createLoopSet } from './loops';
@@ -50,7 +54,8 @@ import { createReactionDirector } from './reactions';
 import type { ReactionDirector } from './reactions';
 import { clamp01, createRand } from './rng';
 import type { Rand } from './rng';
-import { decoderFor, defaultFetch, loadRecordedSlots } from './samples';
+import { musicVariantFor } from './musicState';
+import { audioBaseUrl, decoderFor, defaultFetch, loadRecordedSlots } from './samples';
 import type { FetchLike, SlotReport } from './samples';
 import { updateStateLoops } from './stateLoops';
 import { createVoicePool } from './voices';
@@ -99,7 +104,10 @@ export interface AudioEngine {
    * follows). Null (the default) pans across the whole arena, as on the standard one-screen arenas.
    */
   setListener(x: number | null): void;
-  playUi(kind: 'click' | 'back' | 'start' | 'countdown' | 'go'): void;
+  playUi(
+    kind:
+      'click' | 'back' | 'start' | 'countdown' | 'go' | 'confirm' | 'error' | 'pause' | 'resume' | 'ready',
+  ): void;
   /** Resolves when optional recorded sample slots have been tried (always resolves, never rejects). */
   whenSamplesLoaded(): Promise<SlotReport>;
   /** Resolves when the music manifest has been read and its files probed (never rejects). */
@@ -155,6 +163,11 @@ export interface AudioOptions {
   musicRand?: Rand;
   /** Data Saver (docs/MOBILE_PERFORMANCE.md): true plays the smaller music files. Read whenever a track opens. */
   dataSaver?: () => boolean;
+  /**
+   * Founder-audition overlay for UNAPPROVED candidate audio (candidates.ts, decision AU1). Default: from the page URL
+   * (`?audiodraft`), else 'off'. With 'off' nothing candidate is requested and nothing shipped changes.
+   */
+  candidateMode?: CandidateMode;
 }
 
 interface Graph {
@@ -168,6 +181,7 @@ interface Graph {
   loops: LoopSet;
   router: EventRouter;
   fuse: FuseTracker;
+  steps: Footsteps;
   music: MusicPlayer;
   voices: PidginVoices;
   reactor: PidginReactor;
@@ -184,6 +198,7 @@ const SILENT_MUSIC: MusicStatus = {
   paused: false,
   available: [],
   history: [],
+  variant: 'normal',
   position: 0,
   playing: false,
 };
@@ -194,6 +209,11 @@ const UI_SOUND: Record<Parameters<AudioEngine['playUi']>[0], SoundId> = {
   start: 'ui_start',
   countdown: 'ui_count',
   go: 'ui_go',
+  confirm: 'ui_confirm',
+  error: 'ui_error',
+  pause: 'ui_pause',
+  resume: 'ui_resume',
+  ready: 'ui_ready',
 };
 const EMPTY_REPORT: SlotReport = { loaded: [], skipped: [] };
 
@@ -225,6 +245,9 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
   let arenaWanted: string | null = null;
   let pausedWanted = false;
   let intensity = 0;
+  /** Founder-audition overlay (candidates.ts): 'off' unless the URL has ?audiodraft or the caller passes a mode. */
+  const candidateMode: CandidateMode =
+    opts.candidateMode ?? candidateModeFromSearch(typeof location !== 'undefined' ? location.search : '');
   const musicRand: Rand = opts.musicRand ?? createRand((Date.now() ^ 0x5bd1e995) >>> 0);
   let resuming = false;
   let samples: Promise<SlotReport> = Promise.resolve(EMPTY_REPORT);
@@ -258,6 +281,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       createElement: opts.createMediaElement === undefined ? defaultMediaFactory() : opts.createMediaElement,
       rand: musicRand,
       baseUrl: opts.sampleBaseUrl,
+      candidateMode,
       onError: fail,
       lite: opts.dataSaver,
     });
@@ -285,6 +309,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
       loops: createLoopSet(ctx, bank, buses),
       router: createEventRouter({ mixer, buses, crowd, ambience, now: () => ctx.currentTime }),
       fuse: createFuseTracker(),
+      steps: createFootsteps(mixer, musicRand),
       music,
       voices,
       reactor: createPidginReactor(voices),
@@ -395,6 +420,21 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
           fail(e);
           return EMPTY_REPORT;
         });
+        if (wantsStings(candidateMode)) {
+          // candidate victory / defeat stingers (unapproved drafts): loaded AFTER the shipped slots, from their own
+          // folder and slots.json; absent files (the normal case) change nothing
+          const shipped = samples;
+          samples = shipped.then(async (r) => {
+            const c = await loadRecordedSlots({
+              fetch: fetcher,
+              decode: decoderFor(ctx),
+              baseUrl: `${opts.sampleBaseUrl ?? audioBaseUrl()}${CANDIDATE_DIR}`,
+              isCancelled: () => disposed,
+              onSlot: (id, buffer, meta) => g.bank.setRecorded(id, buffer, meta),
+            }).catch(() => EMPTY_REPORT);
+            return { loaded: [...r.loaded, ...c.loaded], skipped: [...r.skipped, ...c.skipped] };
+          });
+        }
         // music first (the title screen wants it), then the two small voice manifests (clips load per match)
         musicLoaded = g.music.load();
         voicesLoaded = musicLoaded.then(() => g.voices.load());
@@ -471,11 +511,15 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
     handleEvents(events, state) {
       guard((g) => {
         // the music follows the game clock even while muted, so unmuting lands on the right tempo
-        if (matchWanted) g.music.update(matchClock(state));
+        if (matchWanted) {
+          g.music.update(matchClock(state));
+          g.music.setVariant(musicVariantFor(state)); // Sudden Death / boss level: no-op unless variants are listed
+        }
         if (pausedWanted) return; // paused: no gameplay sound, whatever the caller sends
         if (muted) return;
         keepRunning(g);
         g.router.handle(events, state);
+        g.steps.update(state, g.ctx.currentTime, (x) => g.router.panFor(state, x));
         g.reactor.handle(events, state, g.router.lastNearMisses, g.router.panFor);
         if (ambienceWanted) g.voices.update(g.ctx.currentTime, intensity);
         g.fuse.update(state, g.ctx.currentTime, (e) => {
@@ -488,6 +532,7 @@ export function createAudio(opts: AudioOptions = {}): AudioEngine {
           } else g.mixer.play('gen_remote_blip', { pan, rate: 1 + 0.25 * e.urgency });
         });
         if (state.match.phase === 'ended') {
+          g.steps.reset();
           g.fuse.reset();
           g.loops.stopAll();
         } else updateStateLoops(g.loops, state, (x) => g.router.panFor(state, x));

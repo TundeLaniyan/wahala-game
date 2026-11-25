@@ -5,7 +5,9 @@
 [`LICENSES.md`](LICENSES.md)) **and the founder-approved voice clips** (`voices/recorded/<id>.mp3`, synthetic
 Nigerian Pidgin voices made with Google Gemini text-to-speech, imported by `tools/audio/voices/import_voices.py`;
 see [`docs/AUDIO.md`](../../docs/AUDIO.md) "Voice lines"). **No effect or ambience recordings are shipped**: every
-other sound is synthesised at runtime (`src/audio/recipes`). The generated music, synthetic Pidgin voices and generated ambience
+other sound is synthesised at runtime (`src/audio/recipes`), apart from the two founder-approved match-result stingers
+(`win_sting`, `lose_sting`: `lnds_victory.mp3`, `lnds_defeat.mp3`) and the founder-approved WAHALA! original music (the
+seven district songs, the menu theme and the boss music: see [`LICENSES.md`](LICENSES.md) and `docs/AUDIO_RELEASE.md`). The generated music, synthetic Pidgin voices and generated ambience
 beds of the `claude/wahala-lagos-audio` branch were rejected and removed (see [`docs/AUDIO.md`](../../docs/AUDIO.md)).
 
 - `music/manifest.json`: the approved tracks, their credits and levels, and the arena playlists for
@@ -73,6 +75,14 @@ warnings, never ducked), `react` (crowd reactions) and `amb` (ambience beds).
 | `gen_run_loop`, `gen_rattle_loop` (loops) | sfx | burning-fuse generator engine and last-third rattle |
 | `gen_place`, `gen_remote_blip`, `gen_powerdown`, `gen_dud`, `gen_kick`, `gen_carry`, `gen_throw`, `gen_drop` | sfx / warn | generator handling |
 | `fuse_tick` | warn | countdown tick |
+| `step_ground`, `step_heavy` | sfx | footsteps (the human and nearby fighters) and the boss's heavy step |
+| `punch_swing`, `punch_hit`, `knock_back`, `hurt_hit` | sfx | punch swing, punch impact, a fighter thrown back, damage taken |
+| `ui_confirm`, `ui_error`, `ui_pause`, `ui_resume`, `ui_ready` | sfx | interface sounds (`playUi`) |
+| `sd_rise`, `crush_debris` | warn / sfx | Sudden Death rising pressure; rubble after a Wahala Crush block lands |
+| `boss_entrance`, `boss_impact`, `boss_shield`, `boss_hit_big`, `boss_down` | sfx | boss arrives, boss attack lands, protection returns, boss hit, boss falls |
+| `boss_windup`, `boss_exposed` | warn | boss attack warning, vulnerability window opens |
+| `boss_interrupt` | sfx | a punch interrupts the boss |
+| `jammer_loop` (loop) | sfx | the relay jammer's hum while the boss is protected |
 | `block_crumble_1`, `block_crumble_2` | sfx | soft blocks breaking |
 | `danfo_horn`, `taxi_horn`, `keke_horn`, `okada_horn` | warn | vehicle warnings |
 | `train_horn`, `rail_bell` | warn | the Oshodi Red Line railcar's horn and the level-crossing bell (synthesised) |
