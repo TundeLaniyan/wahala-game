@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { isDocPath, planFromDiff } from '../../scripts/ci/plan';
 import { entries, problems, summarise } from '../../scripts/ci/report';
 import type { JsonReport } from '../../scripts/ci/report';
-import { balance, listLines, weights } from '../../scripts/ci/shards';
+import { attemptsDuration, balance, listLines, mergeTimings, weights } from '../../scripts/ci/shards';
+import { splitUnit, unitWeights, verifyReports } from '../../scripts/ci/unit-shards';
 
 describe('CI plan: when the browser suite may be skipped', () => {
   it('treats only docs/, reference/, README.md and CLAUDE.md as documentation', () => {
@@ -163,5 +164,89 @@ describe('CI shards: duration-balanced test lists', () => {
       ),
     ).toEqual([10, 20, 4, 100]);
     expect(weights(['x'], {})).toEqual([60_000]);
+  });
+});
+
+describe('E2E shard timings: what a test costs its runner (decision FU2-CI4)', () => {
+  it('adds up every attempt, so a retried test counts its failed try too', () => {
+    expect(attemptsDuration([{ duration: 530_000 }, { duration: 480_000 }])).toBe(1_010_000);
+    expect(attemptsDuration([{ duration: 5 }])).toBe(5);
+    expect(attemptsDuration([])).toBeNull();
+    const report = {
+      suites: [
+        {
+          title: 'a.spec.ts',
+          specs: [
+            {
+              title: 'flaky',
+              tests: [{ projectName: 'desktop', results: [{ duration: 500 }, { duration: 400 }] }],
+            },
+          ],
+        },
+      ],
+    } as unknown as JsonReport;
+    expect(listLines(report)).toEqual([{ line: '[desktop] › a.spec.ts › flaky', duration: 900 }]);
+  });
+
+  it('keeps the last known duration of a test a later run did not reach, and lets a positive new one replace it', () => {
+    const previous = { a: 60_000, b: 30_000, c: 10_000 };
+    const latest = { a: 90_000, b: 0, d: 0, e: 5_000 }; // b was skipped this time, d is a new skipped test
+    expect(mergeTimings(previous, latest)).toEqual({ a: 90_000, b: 30_000, c: 10_000, d: 0, e: 5_000 });
+  });
+});
+
+describe('Unit shards: balanced by file duration, and every file runs exactly once (decision FU2-CI5)', () => {
+  const files = [
+    'tests/a.test.ts',
+    'tests/b.test.ts',
+    'tests/c.test.ts',
+    'tests/d.test.ts',
+    'tests/e.test.ts',
+  ];
+
+  it('puts the longest files on different shards and weighs an unknown file at the mean of the known ones', () => {
+    const timings = { 'tests/a.test.ts': 120_000, 'tests/b.test.ts': 110_000, 'tests/c.test.ts': 10_000 };
+    const w = unitWeights(files, timings);
+    expect(w.slice(0, 3)).toEqual([120_000, 110_000, 10_000]);
+    expect(w[3]).toBe(80_000); // (120 + 110 + 10) / 3
+    const shards = splitUnit(files, timings, 2);
+    const of = (f: string) => shards.findIndex((s) => s.files.includes(f));
+    expect(of('tests/a.test.ts')).not.toBe(of('tests/b.test.ts'));
+    expect(shards.flatMap((s) => s.files).sort()).toEqual([...files].sort()); // each file once, none lost
+    expect(unitWeights(files, {})).toEqual([1, 1, 1, 1, 1]); // nothing recorded: a count split
+  });
+
+  const report = (names: string[], extra: Record<string, unknown> = {}) => ({
+    numTotalTests: names.length * 2,
+    numFailedTests: 0,
+    testResults: names.map((n, i) => ({
+      name: `/work/repo/${n}`,
+      status: 'passed',
+      startTime: 1000,
+      endTime: 1000 + 500 * (i + 1),
+    })),
+    ...extra,
+  });
+
+  it('accepts a complete, passing set of shard reports and reads each file duration', () => {
+    const v = verifyReports(files, [report(files.slice(0, 2)), report(files.slice(2))], '/work/repo');
+    expect(v.problems).toEqual([]);
+    expect(v.files).toBe(5);
+    expect(v.durations['tests/a.test.ts']).toBe(500);
+  });
+
+  it('names a lost file, a repeated file, an unknown file and a failure', () => {
+    const lost = verifyReports(files, [report(files.slice(0, 4))], '/work/repo');
+    expect(lost.problems).toEqual(['did not run in any shard: tests/e.test.ts']);
+    const twice = verifyReports(files, [report(files), report(['tests/a.test.ts'])], '/work/repo');
+    expect(twice.problems).toEqual(['ran 2 times: tests/a.test.ts']);
+    const stray = verifyReports(files, [report([...files, 'tests/z.test.ts'])], '/work/repo');
+    expect(stray.problems).toEqual(['ran but is not a listed test file: tests/z.test.ts']);
+    const bad = report(files, { numFailedTests: 1 });
+    (bad.testResults[2] as { status: string }).status = 'failed';
+    expect(verifyReports(files, [bad], '/work/repo').problems).toEqual([
+      'failed file: tests/c.test.ts',
+      '1 test(s) failed',
+    ]);
   });
 });

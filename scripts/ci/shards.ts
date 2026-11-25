@@ -5,11 +5,17 @@
  * as slow as the phone ones and the skipped-by-design tests cluster, so a count split left one shard of eight
  * at 23 minutes and another at 3. Instead every test from `playwright test --list` goes to exactly one shard,
  * longest first, onto the shard with the least work so far (LPT), using the per-test durations the previous
- * successful run recorded (`timings` below); a test with none is estimated (`weights`). Each shard
+ * latest run recorded (`timings` below); a test with none is estimated (`weights`). Each shard
  * then runs `playwright test --test-list shard-i.txt`; the report job checks that every listed test ran once.
  *
+ * What a recorded duration is (decision FU2-CI4): the time a test cost its runner, ALL attempts added up. A test that
+ * failed once and passed on retry (the campaign GPU test took about 17 minutes this way in run 323) counted only its
+ * passing attempt before, so the plan under-filled the shard that got it. And durations are recorded by every run that
+ * produced a merged report, not only a fully passing one: a test a run did not reach keeps its last known duration, so
+ * one timed-out shard no longer freezes the plan at an older, smaller suite.
+ *
  *   node --experimental-strip-types scripts/ci/shards.ts split <listed.json> <timings.json|-> <N> <outdir>
- *   node --experimental-strip-types scripts/ci/shards.ts timings <merged.json> <out.json>
+ *   node --experimental-strip-types scripts/ci/shards.ts timings <merged.json> <out.json> [previous.json]
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,16 +28,30 @@ interface Suite {
   suites?: Suite[];
 }
 
+/** A test's cost on its runner: every attempt (a retry costs as much as the first try). null: it has no result. */
+export function attemptsDuration(results: readonly { duration: number }[]): number | null {
+  return results.length ? results.reduce((sum, r) => sum + r.duration, 0) : null;
+}
+
+/** The recorded durations of a run laid over the previous ones: only a positive new duration replaces an old one. */
+export function mergeTimings(
+  previous: Readonly<Record<string, number>>,
+  latest: Readonly<Record<string, number>>,
+): Record<string, number> {
+  const out: Record<string, number> = { ...previous };
+  for (const [line, d] of Object.entries(latest)) if (d > 0 || !(line in out)) out[line] = d;
+  return out;
+}
+
 /** One `--test-list` line per spec x project: `[project] › file › describe › title`. */
 export function listLines(report: JsonReport): { line: string; duration: number | null }[] {
   const out: { line: string; duration: number | null }[] = [];
   const walk = (suite: Suite, path: string[]): void => {
     for (const spec of suite.specs ?? [])
       for (const t of spec.tests) {
-        const last = t.results[t.results.length - 1];
         out.push({
           line: [`[${t.projectName}]`, ...path, spec.title].join(' › '),
-          duration: last ? last.duration : null,
+          duration: attemptsDuration(t.results),
         });
       }
     for (const child of suite.suites ?? []) walk(child, [...path, child.title]);
@@ -102,7 +122,7 @@ function split(listedPath: string, timingsPath: string, n: number, outdir: strin
   const md = [
     '### E2E shard plan',
     '',
-    `${lines.length} tests over ${n} shards, longest first; ${known} with a duration from the last successful run (others: their spec file's mean, or the 90th percentile for a new file).`,
+    `${lines.length} tests over ${n} shards, longest first; ${known} with a recorded duration, retries included (others: their spec file's mean, or the 90th percentile for a new file).`,
     '',
     '| Shard | Tests | Expected (last run speed) |',
     '| --- | --- | --- |',
@@ -121,13 +141,15 @@ function main(argv: string[]): number {
   }
   if (mode === 'timings' && a && b) {
     const merged = JSON.parse(readFileSync(a, 'utf8')) as JsonReport;
-    const out: Record<string, number> = {};
-    for (const t of listLines(merged)) if (t.duration !== null) out[t.line] = t.duration;
-    writeFileSync(b, JSON.stringify(out, null, 1));
+    const previous: Record<string, number> =
+      c && c !== '-' && existsSync(c) ? JSON.parse(readFileSync(c, 'utf8')) : {};
+    const latest: Record<string, number> = {};
+    for (const t of listLines(merged)) if (t.duration !== null) latest[t.line] = t.duration;
+    writeFileSync(b, JSON.stringify(mergeTimings(previous, latest), null, 1));
     return 0;
   }
   console.error(
-    'usage: shards.ts split <listed.json> <timings.json|-> <N> <outdir> | shards.ts timings <merged.json> <out.json>',
+    'usage: shards.ts split <listed.json> <timings.json|-> <N> <outdir> | shards.ts timings <merged.json> <out.json> [previous.json]',
   );
   return 2;
 }

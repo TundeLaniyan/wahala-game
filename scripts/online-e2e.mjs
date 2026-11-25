@@ -126,6 +126,7 @@ const sampler = setInterval(async () => {
         phase: r.phase,
         humans: r.connectedHumans,
         dropped: r.ticks.dropped,
+        ran: r.ticks.run,
         stepP99: r.ticks.stepMs.p99,
         lateP99: r.ticks.timerLatenessMs.p99,
         lateMax: r.ticks.timerLatenessMs.max,
@@ -175,16 +176,23 @@ const result = await runAsync(pwCmd, pwArgs, {
 });
 clearInterval(sampler);
 const live = samples.filter((r) => !r.metricsTimeout);
+// the share of a room's ticks the server lost (decision FU2-CI7): one lost tick in thousands is what a healthy server on a
+// shared runner does (the 30-minute quiet soak: 0.035 %), so a single drop is not "stalled"; the first 300 ticks of a room
+// (its start, when the 32-fighter state is built) are too few to be a share
+const droppedPct = (x) => (x.ran >= 300 ? (100 * x.dropped) / x.ran : 0);
 const worst = {
   loopMaxMs: Math.max(0, ...live.map((r) => r.loopMaxMs)),
   maxDropped: Math.max(0, ...live.flatMap((r) => r.rooms.map((x) => x.dropped))),
+  maxDroppedPct: Number(Math.max(0, ...live.flatMap((r) => r.rooms.map(droppedPct))).toFixed(2)),
   lateMaxMs: Math.max(0, ...live.flatMap((r) => r.rooms.map((x) => x.lateMax))),
   cpuMax: Math.max(0, ...live.map((r) => r.cpu)),
   loadMax: Math.max(0, ...samples.map((r) => r.load1)),
   metricsTimeouts: samples.length - live.length,
 };
-// the server is "starved" when its own loop stalled for more than half a second or it lost simulation ticks
-const serverStalled = worst.loopMaxMs > 500 || worst.maxDropped > 0 || worst.metricsTimeouts > 2;
+// the server is "starved" when its own loop stalled for more than half a second, it lost more than 2 % of a room's
+// simulation ticks, or its /metrics did not answer (the CI run 330 failure: 1 dropped tick, loop delay 130 ms, 5 of 5 tests
+// passed: not starved)
+const serverStalled = worst.loopMaxMs > 500 || worst.maxDroppedPct > 2 || worst.metricsTimeouts > 2;
 const verdict = `[online-e2e server verdict] ${serverStalled ? 'SERVER STALLED' : 'server healthy'}: ${JSON.stringify(worst)} over ${samples.length} samples; cpus ${cpus().length}${pinned ? ', pinned' : ''}`;
 console.log(verdict);
 writeFileSync(
