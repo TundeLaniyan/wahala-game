@@ -2,20 +2,22 @@
 
 Workflows: `.github/workflows/ci.yml` (every push except `main`/`gh-pages`, pull requests, manual runs) and
 `.github/workflows/deploy.yml` (called only by CI); composite action `.github/actions/playwright-browser`. Helper
-scripts: `scripts/ci/plan.ts`, `scripts/ci/shards.ts`, `scripts/ci/report.ts` (unit-tested in
+scripts: `scripts/ci/plan.ts`, `scripts/ci/shards.ts`, `scripts/ci/unit-shards.ts`, `scripts/ci/report.ts` (unit-tested in
 `tests/ci/ciScripts.test.ts`).
 
 ## Release path
 
 ```
-Plan (+ shard lists) ─┐
-Typecheck and lint ───┤
-Unit tests ───────────┤
-Server tests ─────────┼─> E2E shard 1/14 ┐
-Production build ─────┤   E2E shard 2/14 ├─> E2E report ─> CI gate ─> Deploy preview
-   (dist artifact)    │   ...           │   (merge, every          (release checks,
-Browser cache ────────┘   E2E shard 14/14 ┘   test ran once)          then publish)
+Plan (+ e2e and unit shard lists) ─┬─> Unit shard 1/4 ... 4/4 ─> Unit tests (every file ran once) ──────┐
+Typecheck and lint ────────────────┤                                                                    │
+Production build (dist artifact) ──┼─> E2E shard 1/14 ┐                                                 ├─> CI gate ─> Deploy preview
+Browser cache ─────────────────────┘   ...            ├─> E2E report (merge, every test ran once) ─────┤   (release checks,
+Server tests ──────────────────────────────────────────┘   E2E shard 14/14                              │    then publish)
 ```
+
+The browser shards start as soon as the build, the shard lists and the browser cache are ready (about 2.5 minutes into
+a run); they do **not** wait for the unit tests, which run beside them. The unit tests stay mandatory: the `Unit tests`
+job is an input of the CI gate, and the deploy runs only after the gate (decision FU2-CI5).
 
 1. **Fast checks** run as parallel jobs: `npm run typecheck` + `npm run lint`, `npm run test` (Vitest), the
    **Server tests** (below) and one production build (`vite build`, uploaded as the `dist` artifact). All are
@@ -53,6 +55,35 @@ file.
 `--fully-parallel`. That is safe because every test gets its own browser context and page, no spec keeps state
 between tests (no `beforeAll`, no module-level mutable state, unique screenshot paths), and each test sets up its
 own match.
+
+## Unit shards (decision FU2-CI5)
+
+`npm run test` as one job took 15-20 minutes against its 20-minute step limit (run 330 was cancelled at 20m15s) and
+the browser shards used to wait for it. The unit tests now run on `UNIT_SHARDS` (4) runners. `scripts/ci/unit-shards.ts
+split` (in the Plan job, every run: the unit tests are mandatory even for a documentation-only commit) assigns every
+`tests/**/*.test.ts` file to exactly one shard, longest first (LPT, as for the browser shards), from the per-file
+durations of the latest run (artifact `unit-timings`) or, with none, the committed seed `scripts/ci/unit-timings.seed.json`
+(a full local run of 348 files). Vitest's own `--shard` splits a hash-ordered list by count, which ignores that a few
+files (the scripted district and boss playthroughs) take minutes. Each `Unit shard i/4` runs `vitest run <its files>` with
+the JSON reporter. The `Unit tests` job, which keeps its name because the gate reads it, then checks that every shard
+passed, **every test file ran exactly once, none unexpected, none failed** (`unit-shards.ts verify`), and records the
+new durations for the next plan. A lost, repeated or failing file fails it.
+
+## Concurrency (decision FU2-CI6)
+
+One group per class of run, so that full runs of different branches do not exhaust the account's concurrent runners: the
+publishing branch has its own group (`ci-release`; a newer push supersedes the older run; a cancelled run never
+deploys); **every other branch shares one queued group** (`ci-feature`, never cancelled in progress: a second branch's run
+waits for the first, a third replaces the one still waiting); a pull request keeps its own group. Limit: a branch whose
+`ci.yml` is an older copy (the audio branch, until it takes this file) is in its own per-branch group and is not covered.
+
+## Shard timings (decision FU2-CI4)
+
+The E2E shard plan uses the durations of the latest run that produced a merged report, not only a fully passing one, and a
+test's duration is **all its attempts added up**. A test a run did not reach (its shard timed out) keeps its last known
+duration. Before: only a fully passing run recorded timings (the last was run 318, so the plans of runs 323-330 used old
+numbers and no entry for the tests added since), and a retried test counted only its passing attempt (the campaign GPU test
+cost 17 minutes with its failed first try and was planned as 8).
 
 ## Shards: count, balance, workers
 
@@ -152,6 +183,22 @@ test (15 minutes at `test.slow()` x 300 s) plus its retry still fits, and a stuc
 whole release for hours. Failure screenshots and retry traces (DOM snapshots, network, sources; no screencast,
 which costs seconds per frame on software WebGL) are in the merged `playwright-report` artifact; each shard's
 `blob-report-i` artifact is kept for 14 days.
+
+## Measured: the pipeline before and after the audit corrections (2026-11-25)
+
+Real runs of this repository, GitHub-hosted runners (not estimates):
+
+| | Before | After (run 331, `47bbb17`) |
+| --- | --- | --- |
+| Unit tests | one job, 14m55s - 20m15s (run 330 cancelled at the 20-minute limit) | 4 shards in parallel: 6.8 / 6.3 / 5.3 / 4.4 min, then the check job 0.3 min |
+| Browser shards start | after the unit job: about 20-24 min into the run | **2.6 min** into the run |
+| Slowest / fastest browser shard (limit 45 min) | 45-46 min (timeouts) / 18-23 min | 39.8 / 21.4 min (14 shards; the plan still used the old timings, see above) |
+| Whole run to the deploy | run 318 (green): 77 min; runs 323-330: no green run within 3 attempts | **44.7 min** (11:21:02 to 12:05:43), green, deployed |
+| Online E2E (not required) | failed on one lost tick (130 ms worst loop delay, 5 of 5 tests passed) | passed (10.1 min) |
+
+The saving comes from the browser shards no longer waiting for the unit tests (about 17-21 minutes) and from the unit tests
+themselves (about 10-14 minutes), not from the shard count. One run is one sample: runner speed varies between runs (the
+same suite took 405-463 shard-minutes across runs 323-331).
 
 ## Benchmarks
 
