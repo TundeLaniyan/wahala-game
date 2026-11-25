@@ -59,10 +59,10 @@ describe('Home entry', () => {
     setFlagsForTests(flagsWith({ rumbleOnline: true, onlineEndpoint: 'ws://x:1' }));
     expect(html(createElement(HomeScreen))).not.toContain('home-rumble-online');
   });
-  it('is a secondary button next to the others when the flag is on', () => {
+  it('is a small button in the utility row (the four main buttons keep their room) when the flag is on', () => {
     setFlagsForTests(flagsWith({ rumbleOnline: true, onlineEndpoint: 'ws://x:1' }));
     const out = html(createElement(HomeScreen));
-    expect(out).toMatch(/class="mn-home-second rumble-online"[^>]*data-testid="home-rumble-online"/);
+    expect(out).toMatch(/class="mn-util mn-online rumble-online"[^>]*data-testid="home-rumble-online"/);
     expect(out).toContain('PLAY ONLINE');
     expect(out).toContain('data-testid="home-play"'); // the existing buttons are untouched
     expect(out).toContain('data-testid="home-academy"');

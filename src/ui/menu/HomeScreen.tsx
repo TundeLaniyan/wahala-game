@@ -2,7 +2,7 @@
  * Home: the WAHALA! title over the Lagos key art with the three playable fighters, in one fixed order (decision QS1):
  * QUICK START (dominant: an offline City Rumble drawn at random, starts at once), PLAY (opens Choose Your Game: City Rumble
  * or Junction Blast), BREAK THE RING (the story campaign) and LEARN TO PLAY; Settings and Sound are small utility buttons.
- * Offline, one human against AI bots: no accounts, servers or store. The Music Data Saver switch lives only in Settings > Audio.
+ * Offline, one human against AI bots: no accounts, servers or store (the dormant online entries, only in builds that have them, are small buttons in the utility row). The Music Data Saver switch lives only in Settings > Audio.
  */
 import { useState } from 'react';
 import { campaignProgress } from '../../campaign';
@@ -102,33 +102,6 @@ export function HomeScreen() {
           >
             <b>{HOME_COPY.learn.title}</b>
           </button>
-          {__WAHALA_SERVER_ONLINE__ && rumbleOnlineOffered() && (
-            <button
-              type="button"
-              className="mn-home-second rumble-online"
-              data-testid="home-rumble-online"
-              onClick={() => void openRumbleOnline().then((ok) => setOnlineFailed(!ok))}
-            >
-              <b>PLAY ONLINE</b>
-              <small role={onlineFailed ? 'alert' : undefined}>
-                {onlineFailed
-                  ? "Couldn't load Online. Check your connection."
-                  : 'City Rumble · up to 32 fighters'}
-              </small>
-            </button>
-          )}
-          {/* the older mock preview: only in mock mode (`?mockonline`), never beside the real Online City Rumble entry */}
-          {flags().onlineMode === 'mock' && (
-            <button
-              type="button"
-              className="mn-home-second online"
-              data-testid="home-online"
-              onClick={() => commands.menuOpen('online')}
-            >
-              <b>Online</b>
-              <small>Preview · mock server · no real players</small>
-            </button>
-          )}
         </nav>
       </div>
 
@@ -152,6 +125,34 @@ export function HomeScreen() {
         >
           <span aria-hidden>{s.muted ? '🔇' : '🔊'}</span>
         </button>
+        {/* online entries (never in the public build) sit in the utility row so the four main buttons keep their room */}
+        {__WAHALA_SERVER_ONLINE__ && rumbleOnlineOffered() && (
+          <button
+            type="button"
+            className="mn-util mn-online rumble-online"
+            data-testid="home-rumble-online"
+            onClick={() => void openRumbleOnline().then((ok) => setOnlineFailed(!ok))}
+          >
+            <b>PLAY ONLINE</b>
+            <small role={onlineFailed ? 'alert' : undefined}>
+              {onlineFailed
+                ? "Couldn't load Online. Check your connection."
+                : 'City Rumble · up to 32 fighters'}
+            </small>
+          </button>
+        )}
+        {/* the older mock preview: only in mock mode (`?mockonline`), never beside the real Online City Rumble entry */}
+        {flags().onlineMode === 'mock' && (
+          <button
+            type="button"
+            className="mn-util mn-online online"
+            data-testid="home-online"
+            onClick={() => commands.menuOpen('online')}
+          >
+            <b>Online</b>
+            <small>Preview · mock server · no real players</small>
+          </button>
+        )}
         <span className="mn-keys">
           <kbd>↑↓</kbd> Navigate <kbd>Enter</kbd> Select <kbd>Esc</kbd> Back
         </span>

@@ -208,7 +208,9 @@ test.describe('Test Lab', () => {
     await expect(page.getByTestId('testlab-copy')).toHaveText('Copied');
     const text = await page.evaluate(() => navigator.clipboard.readText());
     expect(text).toContain('WAHALA! TEST LAB');
-    expect(text).toContain('- [NEEDS IMPROVEMENT] Classic Campaign Raid (Hard): guard saw me too early');
+    expect(text).toContain(
+      '- [NEEDS IMPROVEMENT] Junction Blast Campaign Raid (Hard): guard saw me too early',
+    );
     expect(text).toContain('- [NOT TESTED] Records Vault, night raid');
     expect(text.indexOf('TESTS REQUIRING REVIEW')).toBeLessThan(text.indexOf('COMPLETED TESTS'));
     expect(text).toContain('Totals: 0 pass, 1 needs improvement, 0 failed, 19 not tested');
@@ -218,7 +220,7 @@ test.describe('Test Lab', () => {
     await expect(page.getByTestId('testlab-status-classicRaid')).toHaveText('Needs improvement');
   });
 
-  test('Classic Campaign Raid: the real depot raid; Restart, Return (confirmed), nothing saved, Exit', async ({
+  test('Junction Blast Campaign Raid: the real depot raid; Restart, Return (confirmed), nothing saved, Exit', async ({
     page,
     context,
   }) => {
@@ -447,7 +449,7 @@ test.describe('Test Lab', () => {
     await returnToLab(page);
   });
 
-  test('Classic rear ambush: the real first raid, nothing prepared; One-hit lethality: a chosen enemy at its post', async ({
+  test('Junction Blast rear ambush: the real first raid, nothing prepared; One-hit lethality: a chosen enemy at its post', async ({
     page,
   }) => {
     await openLab(page);
