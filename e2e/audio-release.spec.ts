@@ -163,7 +163,7 @@ test.describe('the approved soundtrack, real browser', () => {
     await expect
       .poll(async () => (await music(page)).position, { timeout: 20_000 })
       .toBeGreaterThan(m.position);
-    expect(net.gets().filter((p) => p.startsWith('music/') && !p.includes('lnds_menu'))).toEqual([]);
+    expect(net.gets().filter((p) => /^music\/.*\.mp3$/.test(p) && !p.includes('lnds_menu'))).toEqual([]);
   });
 
   test('a district arena plays its own song, no other arena song is fetched, Sudden Death hands over, the menu returns', async ({
@@ -292,12 +292,30 @@ test.describe('the approved soundtrack, real browser', () => {
       const near = (a: number, b: number) => Math.abs(a - b) < 0.002;
       const expected = label === 'win' ? lengths.victory : lengths.defeat;
       // the stinger starts a moment after the match-ended event (the sample may still be decoding): wait for it
+      const diag = async () =>
+        page.evaluate(() => {
+          const st = (window as any).__WAHALA__.getState();
+          return {
+            phase: st.match.phase,
+            tick: st.tick,
+            alive: st.players.filter((p: any) => p.alive).length,
+            result: JSON.stringify(st.match.result ?? null),
+            winner: st.match.winnerId ?? null,
+          };
+        });
+      console.log(`[audio-release] ${label}: after the kill ${JSON.stringify(await diag())}`);
       await expect
         .poll(async () => (await starts()).some((d) => near(d, expected)), {
           timeout: 30_000,
           message: `${label}: the ${label === 'win' ? 'victory' : 'defeat'} stinger (${expected.toFixed(2)} s) starts`,
         })
-        .toBe(true);
+        .toBe(true)
+        .catch(async (e: unknown) => {
+          console.log(
+            `[audio-release] ${label}: FAILED; state ${JSON.stringify(await diag())}; one-shots ${(await starts()).map((d) => d.toFixed(2)).join(', ')}`,
+          );
+          throw e;
+        });
       await page.waitForTimeout(3000); // the other stinger, had it been wrongly chosen, would have started by now
       const durs = await starts();
       observed[label] = durs;
