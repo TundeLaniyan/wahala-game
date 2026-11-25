@@ -2,6 +2,10 @@
 
 Machine-readable record: `tools/audio/release/provenance.json` (source file names, sizes, SHA-256, tool versions). Nothing here is a legal conclusion; Google's terms pages could not be opened from the build environment.
 
+## Release status (decision AU5)
+
+**Commercial clearance: not cleared.** The record is `public/audio/release-clearance.json`; `tests/audio/releaseGate.test.ts` keeps it consistent with this document, and the deploy workflow refuses to publish the soundtrack to GitHub Pages from the publishing branch until the record says `cleared` (with who, when and where the evidence is kept). The full assessment of Google's terms and the open questions is being written to `docs/AUDIO_RIGHTS_ASSESSMENT.md`; this section is the interim state.
+
 ## What was generated, by whom, from what
 
 | Item | Source | SHA-256 of the source |
