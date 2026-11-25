@@ -13,7 +13,9 @@
 | Selected fighter, loadout, cross-device settings | profile | until deletion | non-identifying |
 | Session rows: hashed tokens, platform, a short device label, created / last used | security, "your devices" | until expiry + 30 days | **no IP address, no user agent** stored |
 | Audit events (type, actor id, subject id, small detail, request id) | security / abuse investigation | **400 days** | never tokens, credentials or free text |
-| Friends, blocks, parties, presence, match participation (Checkpoint B) | social features, non-ranked history | until deletion (own rows) | presence is memory only (TTL), not stored |
+| Friends, friend requests, blocks, parties and invitations (Checkpoint B) | social features | until deletion (own rows; requests lapse after 30 days, invitations after 10 minutes, parties close when empty or idle 6 h) | blocks are never shown to the blocked person |
+| Presence (Checkpoint B) | show friends online | **memory only**, 90 s TTL, never in the database | a player can set it to `nobody` |
+| Match participation (Checkpoint B) | non-ranked history of the player's own matches | until deletion; after deletion the row stays for the other players but names nobody (`Deleted player`) | facts only: no XP, rating, rank or reward; only the match server can write it |
 | Reports and mutes (Checkpoint C) | safety | reports: **180 days after resolution** (**OPEN**); mutes until deletion | a report keeps a snapshot of the reported signal |
 | Orders and entitlements (Checkpoint D) | ownership of cosmetics, refunds | entitlements until deletion; **financial records** as the tax / accounting rules require (**OPEN**) | no card data ever |
 

@@ -63,6 +63,8 @@ export const RATES = {
   write: { burst: 30, perMin: 60 },
   /** Friend requests and invitations (spam / harassment vector). */
   social: { burst: 10, perMin: 10 },
+  /** Joining a party by code: guesses are the abuse (31^8 codes, so a slow rate is plenty for honest use). */
+  partyJoin: { burst: 6, perMin: 6 },
   /** Reports (abuse of the report button is itself abuse). */
   report: { burst: 5, perMin: 5 },
   /** Preset quick-chat / pings / emotes. */

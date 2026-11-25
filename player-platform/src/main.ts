@@ -37,8 +37,21 @@ const timer = setInterval(
 );
 timer.unref();
 
+// parties: expire invitations, close idle ones, drop silent members (every 30 s)
+const partyTimer = setInterval(
+  () =>
+    void platform.parties
+      .sweep()
+      .catch((e: unknown) =>
+        log.error('party sweep failed', { err: e instanceof Error ? e.message : 'unknown' }),
+      ),
+  30_000,
+);
+partyTimer.unref();
+
 const stop = (): void => {
   clearInterval(timer);
+  clearInterval(partyTimer);
   void platform.close().finally(() => process.exit(0));
 };
 process.on('SIGTERM', stop);

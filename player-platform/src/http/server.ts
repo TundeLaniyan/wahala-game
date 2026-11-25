@@ -35,6 +35,8 @@ export interface HttpOptions {
   trustedProxies: readonly string[];
   matchServerSecret: string;
   adminToken: string;
+  /** Called after every successful player authentication (presence keeps-alive). */
+  onAuthenticated?: (p: Principal) => void;
   /** Readiness probe: resolves when the database answers and the schema is current. */
   ready: () => Promise<{ ok: boolean; detail?: Record<string, unknown> }>;
 }
@@ -167,6 +169,7 @@ export function createHttp(o: HttpOptions): PlatformHttp {
         if (typeof h !== 'string' || !h.startsWith('Bearer '))
           throw new ApiError('unauthenticated', 'sign in required');
         principal = await o.identity.authenticate(h.slice(7).trim());
+        o.onAuthenticated?.(principal);
       } else if (def.auth === 'service') {
         verifyServiceRequest(o.matchServerSecret, now, {
           method,

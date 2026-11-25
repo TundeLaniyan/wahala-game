@@ -17,7 +17,7 @@
 
 The platform never sits in the match's data path and cannot affect a tick. If the platform is down, guests still play: identity is an *optional* layer on top of the match server's existing anonymous join.
 
-Code layout (`player-platform/src`): `config.ts` (env -> validated config) · `db/` (driver-independent `Db`, `pg` and PGlite adapters, versioned migrations) · `http/` (router, rate limiter, trusted-proxy address rule, service HMAC, the server shell) · `identity/` (nickname, providers, sessions, service, capabilities) · `routes/` (thin handlers: parse -> service -> envelope) · `logger.ts` (redacting structured log) · `audit.ts` · `app.ts` (composition root).
+Code layout (`player-platform/src`): `config.ts` (env -> validated config) · `social/` (friends, blocks, presence) · `parties/` · `handoff/` (ticket signer + the verifier the match server imports) · `matches/` (trusted history) · `db/` (driver-independent `Db`, `pg` and PGlite adapters, versioned migrations) · `http/` (router, rate limiter, trusted-proxy address rule, service HMAC, the server shell) · `identity/` (nickname, providers, sessions, service, capabilities) · `routes/` (thin handlers: parse -> service -> envelope) · `logger.ts` (redacting structured log) · `audit.ts` · `app.ts` (composition root).
 
 Conventions: JSON; `/v1` path versioning; one error envelope `{ error: { code, message, requestId, retryAfterMs? } }`; strict bodies (unknown keys refused, so a client can never smuggle an id, kind, status, price or owner); identity always from the access token, never the body; time and randomness injectable; every service takes a `Db`, never a driver.
 
@@ -45,7 +45,20 @@ Conventions: JSON; `/v1` path versioning; one error envelope `{ error: { code, m
 | `audit_events` | security trail | no foreign keys (survives deletion); ids and codes only, never tokens or free text |
 | `schema_migrations` | versions + checksums | an applied file that was edited is refused |
 
-Checkpoint B adds friendships, requests, blocks, parties, members, invitations, handoff tickets, matches, participants; C adds mutes, reports, signals; D adds the catalogue, prices, entitlements, orders and provider events (each section is added here when the checkpoint lands).
+**Checkpoint B (migrations 0002-0004):**
+
+| Table | Purpose | Key constraints |
+| --- | --- | --- |
+| `friend_requests` | pending / answered requests | one pending request per PAIR (unique index on `LEAST/GREATEST`), no self request |
+| `friendships` | one row per friendship | ids stored ordered (`player_a < player_b`): symmetric and unique |
+| `blocks` | who blocked whom | no self block; checked both ways by every feature that connects two players |
+| `parties`, `party_members`, `party_invites` | private parties | one live code per party (partial unique index); a player is in **one** party (unique on `player_id`); `in_match` iff a room code is set (CHECK); one pending invite per (party, player) |
+| `handoff_tickets` | log of signed match tickets (no token stored) | what lets the platform refuse a result that names someone never admitted to the room |
+| `matches`, `match_participants` | **non-ranked** facts written only by the signed server calls | `id` = the server's match id (idempotency); no XP / rating / rank / reward column exists (tested); a bot can never carry a player id (CHECK) |
+
+Presence is **not** in the database: an in-memory store with a 90 s TTL (`PresenceStore` is the seam for Redis). `in_match` can only be set by the server's signed `started` call.
+
+Checkpoints C and D add mutes, reports, signals, then the catalogue, prices, entitlements, orders and provider events (each section is added here when the checkpoint lands).
 
 ## 4. Decisions (PP = player platform; nothing here changes gameplay)
 
@@ -58,15 +71,18 @@ Checkpoint B adds friendships, requests, blocks, parties, members, invitations, 
 | PP5 | `unspecified` age band = minor | A guest-first game cannot assume an adult; no date of birth is collected. Needs legal confirmation. |
 | PP6 | No password sign-in, ever | Founder rule; providers only. |
 | PP7 | Friend code only, no name search | No enumeration surface for harassment. |
-| PP8 | PGlite (real Postgres engine, WASM) for hermetic tests; the same suite also runs on a real server via `PLATFORM_TEST_DATABASE_URL` | Proven: 72 tests pass on both (PostgreSQL 16.15). |
+| PP8 | PGlite (real Postgres engine, WASM) for hermetic tests; the same suite also runs on a real server via `PLATFORM_TEST_DATABASE_URL` | Proven: 116 tests pass on both (PostgreSQL 16.15). |
 | PP9 | Forward-only migrations with checksums; rollback = restore the pre-deploy backup | Expand-then-contract keeps the previous release runnable on the new schema. |
 | PP10 | Party default size 8, ceiling 32 | Approved match capacity is 32 humans; a social party that large is unusual. **Founder choice.** |
+| PP11 | Parties use PRIVATE rooms of the existing match server; the platform never owns a room, seat or team | No second matchmaking system. Public Quick Play cannot group a party (server feature, founder decision). |
+| PP12 | Match tickets are Ed25519 JWTs the server verifies with the public key; results are HMAC-signed server calls | A compromised match server cannot mint identities; a client has no route that records anything. |
+| PP13 | A leader's **host ticket** (`room: "*"`) exists because the room code does not exist when the room is created | Found by the handshake test: the leader could not otherwise be tied to a seat. |
 
 ## 5. Checkpoint status
 
 | Checkpoint | State |
 | --- | --- |
 | A Identity, profiles, database, ops | **done**, 72 tests (PGlite and PostgreSQL 16) |
-| B Friends, presence, parties, match handoff | next |
+| B Friends, blocks, presence, parties, signed match tickets, trusted results | **done**, 116 tests incl. a handshake against the real match server (`PLATFORM_MATCH_HANDOFF.md`) |
 | C Quick chat, safety, reports, comms design | planned |
 | D Catalogue, entitlements, sandbox commerce | planned |

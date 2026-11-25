@@ -16,7 +16,16 @@ import { ProviderRegistry, appleProvider, createMockProvider, googleProvider } f
 import type { IdentityProvider, MockProvider } from './identity/providers';
 import { createLogger } from './logger';
 import type { Logger } from './logger';
+import { createHandoffSigner } from './handoff/signer';
+import type { HandoffSigner } from './handoff/signer';
+import { MatchService } from './matches/service';
+import { PartyService } from './parties/service';
 import { identityRoutes } from './routes/identity';
+import { internalRoutes } from './routes/internal';
+import { socialRoutes } from './routes/social';
+import { createPresenceStore } from './social/presence';
+import type { PresenceStore } from './social/presence';
+import { SocialService } from './social/service';
 import { systemClock } from './util/clock';
 import type { Clock } from './util/clock';
 
@@ -28,6 +37,11 @@ export interface Platform {
   limiter: RateLimiter;
   router: Router;
   identity: IdentityService;
+  social: SocialService;
+  parties: PartyService;
+  matches: MatchService;
+  presence: PresenceStore;
+  signer: HandoffSigner;
   providers: ProviderRegistry;
   mockProvider: MockProvider | null;
   http: PlatformHttp;
@@ -76,8 +90,35 @@ export async function createPlatform(
     guestIdleDeleteDays: config.guestIdleDeleteDays,
   });
 
+  const startedAt = clock();
+  const presence = createPresenceStore(clock);
+  const signer = await createHandoffSigner({
+    privateKeyPem: config.handoffPrivateKeyPem || undefined,
+    audience: config.handoffAudience,
+    clock,
+  });
+  const social = new SocialService({ db, clock, presence });
+  const parties = new PartyService({
+    db,
+    clock,
+    identity,
+    social,
+    presence,
+    signer,
+    maxSize: config.partyMaxSize,
+    publicWebUrl: config.publicWebUrl,
+    startedAt,
+  });
+  const matches = new MatchService({ db, clock, presence, parties });
+  // account deletion erases every module's rows in the same transaction
+  identity.registerErasure((q, id, now) => parties.erase(q, id, now));
+  identity.registerErasure((q, id) => social.erase(q, id));
+  identity.registerErasure((q, id) => matches.erase(q, id));
+
   const router = new Router();
   router.addAll(identityRoutes(identity, providers, mockProvider));
+  router.addAll(socialRoutes(social, parties, matches, presence, signer));
+  router.addAll(internalRoutes(matches));
 
   const http = createHttp({
     router,
@@ -85,6 +126,7 @@ export async function createPlatform(
     limiter,
     clock,
     logger,
+    onAuthenticated: (p) => presence.touch(p.playerId),
     allowedOrigins: config.allowedOrigins,
     trustedProxies: config.trustedProxies,
     matchServerSecret: config.matchServerSecret,
@@ -111,6 +153,11 @@ export async function createPlatform(
     limiter,
     router,
     identity,
+    social,
+    parties,
+    matches,
+    presence,
+    signer,
     providers,
     mockProvider,
     http,

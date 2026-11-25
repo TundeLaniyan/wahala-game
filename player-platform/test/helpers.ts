@@ -9,7 +9,11 @@ import type { Platform, PlatformOverrides } from '../src/app';
 import { loadConfig } from '../src/config';
 import type { PlatformConfig } from '../src/config';
 import type { RateLimiter } from '../src/http/rateLimit';
+import { signServiceRequest } from '../src/http/serviceAuth';
 import { silentLogger } from '../src/logger';
+
+export const TEST_SECRET = 'm'.repeat(40);
+export const TEST_ADMIN = 'a'.repeat(40);
 
 export interface FakeClock {
   now: Date;
@@ -76,6 +80,8 @@ export async function startHarness(
       PLATFORM_MOCK_IDP: '1',
       PORT: '0',
       PLATFORM_GOOGLE_CLIENT_IDS: '',
+      PLATFORM_MATCH_SERVER_SECRET: TEST_SECRET,
+      PLATFORM_ADMIN_TOKEN: TEST_ADMIN,
       ...env,
     }),
     ...o.config,
@@ -170,4 +176,39 @@ export async function newRegistered(api: Api, subject: string, nickname?: string
     refresh: r.body.tokens.refreshToken as string,
     profile: r.body.profile,
   };
+}
+
+/** A call as the MATCH SERVER makes it: HMAC-signed with the shared secret. */
+export async function internalCall(
+  base: string,
+  clock: FakeClock,
+  path: string,
+  body: unknown,
+  opts: { secret?: string; ts?: number; method?: string } = {},
+): Promise<Reply> {
+  const method = opts.method ?? 'POST';
+  const raw = JSON.stringify(body);
+  const ts = opts.ts ?? clock.now.getTime();
+  const res = await fetch(base + path, {
+    method,
+    headers: {
+      'content-type': 'application/json',
+      'x-wahala-timestamp': String(ts),
+      'x-wahala-signature': signServiceRequest(opts.secret ?? TEST_SECRET, ts, method, path, raw),
+    },
+    body: raw,
+  });
+  const text = await res.text();
+  return { status: res.status, body: text ? JSON.parse(text) : undefined, headers: res.headers };
+}
+
+/** Two or more guests that are friends with each other (through the real friend-code flow). */
+export async function befriend(api: Api, a: { access: string }, b: { friendCode: string; access: string }) {
+  const sent = await api.post('/v1/friends/requests', { code: b.friendCode }, a.access);
+  if (sent.status !== 201 && sent.status !== 200)
+    throw new Error(`friend request failed: ${sent.status} ${JSON.stringify(sent.body)}`);
+  const incoming = await api.get('/v1/friends/requests', b.access);
+  const id = incoming.body.incoming[0].id as string;
+  const acc = await api.post(`/v1/friends/requests/${id}/accept`, {}, b.access);
+  if (acc.status !== 200) throw new Error(`accept failed: ${acc.status}`);
 }

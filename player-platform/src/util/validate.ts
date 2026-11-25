@@ -61,3 +61,25 @@ export function paramUuid(v: string | undefined, what = 'id'): string {
   if (!isUuid(v)) throw badRequest(`${what} must be an id`);
   return v.toLowerCase();
 }
+
+export function arr(o: Obj, key: string, max: number): unknown[] {
+  const v = o[key];
+  if (!Array.isArray(v) || v.length > max) throw badRequest(`${key} must be a list of at most ${max}`);
+  return v;
+}
+
+export function optInt(o: Obj, key: string, min: number, max: number): number | null {
+  return o[key] === undefined || o[key] === null ? null : int(o, key, min, max);
+}
+
+export function optBool(o: Obj, key: string): boolean | null {
+  return o[key] === undefined || o[key] === null ? null : bool(o, key);
+}
+
+export function isoDate(o: Obj, key: string): Date {
+  const v = str(o, key, 10, 40);
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime()) || d.getUTCFullYear() < 2024 || d.getUTCFullYear() > 2100)
+    throw badRequest(`${key} must be an ISO date`);
+  return d;
+}

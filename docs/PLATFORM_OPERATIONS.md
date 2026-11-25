@@ -35,6 +35,7 @@ Useful: `npm run check:config` (validates the environment, prints every problem,
 - `GET /health`: process is up (liveness).
 - `GET /ready`: database answers **and** the schema version equals the code's migration count (`503` otherwise). Use it for the container health check and the load balancer.
 - Structured logs: one JSON object per line, `t`, `level`, `msg`, plus fields; one `request` line per call (`route` pattern, status, ms, request id). Tokens, Authorization values, e-mail, addresses and invite / friend / room codes are redacted by field name **and** by value shape (tests: `test/http.test.ts`, `test/config.test.ts`).
+- Housekeeping timers in `main.ts`: party sweep every 30 s (expire invitations, drop members silent for 10 minutes, close idle parties, release a party whose match never reported back), identity purge hourly. With several instances run each on ONE instance (or behind an advisory lock): both are idempotent but wasteful in parallel.
 - Metrics endpoint: not built (the request log carries status and latency; a Prometheus exporter is a small follow-up).
 
 ## 3. Migrations

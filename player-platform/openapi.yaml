@@ -255,3 +255,351 @@ paths:
     post:
       summary: 'DEVELOPMENT ONLY: mint a signed test id token (not OAuth; absent unless PLATFORM_MOCK_IDP=1)'
       responses: { '200': { description: OK } }
+
+  /v1/friends:
+    get:
+      security: [{ player: [] }]
+      summary: Your friends with presence (as each of them allows it to be seen)
+      responses:
+        {
+          '200':
+            {
+              description: '{ friends: [{ playerId, displayName, selectedCharacter, presence: online|away|in_match|offline, since }] }',
+            },
+        }
+  /v1/friends/requests:
+    get:
+      security: [{ player: [] }]
+      summary: Pending friend requests, incoming and outgoing
+      responses: { '200': { description: '{ incoming: [...], outgoing: [...] }' } }
+    post:
+      security: [{ player: [] }]
+      summary: Send a friend request by friend code
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [code],
+                      properties: { code: { type: string, description: '8-character friend code' } },
+                    },
+                },
+            },
+        }
+      responses:
+        {
+          '200': { description: 'Accepted at once (they had asked you)' },
+          '201': { description: Pending },
+          '404': { $ref: '#/components/responses/Err' },
+          '409': { $ref: '#/components/responses/Err' },
+        }
+  /v1/friends/requests/{id}/accept:
+    post:
+      security: [{ player: [] }]
+      summary: Accept a friend request
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: OK } }
+  /v1/friends/requests/{id}/decline:
+    post:
+      security: [{ player: [] }]
+      summary: Decline a friend request
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: Declined } }
+  /v1/friends/requests/{id}:
+    delete:
+      security: [{ player: [] }]
+      summary: Cancel a friend request you sent
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: Cancelled } }
+  /v1/friends/{playerId}:
+    delete:
+      security: [{ player: [] }]
+      summary: Remove a friend
+      parameters: [{ name: playerId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: Removed } }
+  /v1/blocks:
+    get:
+      security: [{ player: [] }]
+      summary: Players you blocked
+      responses: { '200': { description: OK } }
+  /v1/blocks/{playerId}:
+    put:
+      security: [{ player: [] }]
+      summary: Block a player (unfriends, cancels requests and invitations, separates a shared party)
+      parameters: [{ name: playerId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: Blocked } }
+    delete:
+      security: [{ player: [] }]
+      summary: Unblock a player
+      parameters: [{ name: playerId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: Unblocked } }
+  /v1/presence:
+    put:
+      security: [{ player: [] }]
+      summary: 'Heartbeat: say you are online or away (call every ~30 s; expires after 90 s)'
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [status],
+                      properties: { status: { type: string, enum: [online, away] } },
+                    },
+                },
+            },
+        }
+      responses: { '204': { description: OK } }
+  /v1/me/matches:
+    get:
+      security: [{ player: [] }]
+      summary: Your recent non-ranked match history (written only by the match server)
+      responses:
+        {
+          '200':
+            {
+              description: '{ matches: [{ matchId, game, arenaId, endedAt, durationSec, humans, you: { placement, kills, deaths, assists, botKills, botDeaths, botAssists, controlledByBotAtEnd, team } }] }',
+            },
+        }
+  /v1/parties:
+    post:
+      security: [{ player: [] }]
+      summary: Create a private party (you lead it)
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                { schema: { type: object, properties: { mode: { type: string, enum: [ffa, team] } } } },
+            },
+        }
+      responses: { '201': { description: Created }, '409': { $ref: '#/components/responses/Err' } }
+  /v1/parties/current:
+    get:
+      security: [{ player: [] }]
+      summary: The party you are in, or null
+      responses: { '200': { description: '{ party: PartyView | null }' } }
+  /v1/parties/join:
+    post:
+      security: [{ player: [] }]
+      summary: Join a party by its shareable code
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                { schema: { type: object, required: [code], properties: { code: { type: string } } } },
+            },
+        }
+      responses:
+        {
+          '200': { description: Joined },
+          '404':
+            { description: 'Not available (wrong, full, closed, expired, or blocked: one answer for all)' },
+        }
+  /v1/parties/{id}:
+    get:
+      security: [{ player: [] }]
+      summary: A party you are a member of
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: OK } }
+    patch:
+      security: [{ player: [] }]
+      summary: 'Leader: change the party mode (free-for-all or team)'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [mode],
+                      properties: { mode: { type: string, enum: [ffa, team] } },
+                    },
+                },
+            },
+        }
+      responses: { '200': { description: OK } }
+  /v1/parties/{id}/leave:
+    post:
+      security: [{ player: [] }]
+      summary: Leave the party (the leader leaving promotes the longest-standing member)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: Left } }
+  /v1/parties/{id}/ready:
+    post:
+      security: [{ player: [] }]
+      summary: Set your ready flag
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                { schema: { type: object, required: [ready], properties: { ready: { type: boolean } } } },
+            },
+        }
+      responses: { '200': { description: OK } }
+  /v1/parties/{id}/kick:
+    post:
+      security: [{ player: [] }]
+      summary: 'Leader: remove a member'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [playerId],
+                      properties: { playerId: { type: string, format: uuid } },
+                    },
+                },
+            },
+        }
+      responses: { '200': { description: OK } }
+  /v1/parties/{id}/promote:
+    post:
+      security: [{ player: [] }]
+      summary: 'Leader: hand the leadership to another member'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [playerId],
+                      properties: { playerId: { type: string, format: uuid } },
+                    },
+                },
+            },
+        }
+      responses: { '200': { description: OK } }
+  /v1/parties/{id}/code/rotate:
+    post:
+      security: [{ player: [] }]
+      summary: 'Leader: replace the party code (the old one stops working)'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: OK } }
+  /v1/parties/{id}/invites:
+    post:
+      security: [{ player: [] }]
+      summary: 'Leader: invite a friend (expires after 10 minutes)'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [friendId],
+                      properties: { friendId: { type: string, format: uuid } },
+                    },
+                },
+            },
+        }
+      responses: { '201': { description: Invited } }
+  /v1/invites:
+    get:
+      security: [{ player: [] }]
+      summary: Party invitations sent to you that are still valid
+      responses: { '200': { description: OK } }
+  /v1/invites/{id}/accept:
+    post:
+      security: [{ player: [] }]
+      summary: Accept a party invitation
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: OK } }
+  /v1/invites/{id}/decline:
+    post:
+      security: [{ player: [] }]
+      summary: Decline a party invitation
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: Declined } }
+  /v1/parties/{id}/match:
+    post:
+      security: [{ player: [] }]
+      summary: 'Leader: report the match server room code the party will play in'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [roomCode],
+                      properties:
+                        {
+                          roomCode:
+                            {
+                              type: string,
+                              description: '6-character code of the private room the leader created on the match server',
+                            },
+                        },
+                    },
+                },
+            },
+        }
+      responses: { '200': { description: OK } }
+    delete:
+      security: [{ player: [] }]
+      summary: 'Leader: return the party to the lobby (room abandoned or match over)'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: OK } }
+  /v1/parties/{id}/match/ticket:
+    post:
+      security: [{ player: [] }]
+      summary: 'Member: get a signed two-minute ticket for the party’s room'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '201': { description: '{ ticket (EdDSA JWT), roomCode, expiresAt, audience }' } }
+  /.well-known/jwks.json:
+    get:
+      summary: Public keys the match server uses to verify tickets
+      responses: { '200': { description: JWKS } }
+  /internal/v1/matches/started:
+    post:
+      security: [{ service: [] }]
+      summary: 'Match server: a match began (participants with their ticketed player ids)'
+      description: 'Body: { matchId, game: survival|deathmatch|team, arenaId, roomCode?, seats, startedAt, participants: [{ seat, playerId?, name, isBot, team? }] }. Every non-null playerId must hold a ticket issued for roomCode.'
+      responses:
+        {
+          '201': { description: Recorded },
+          '200': { description: Duplicate },
+          '400': { $ref: '#/components/responses/Err' },
+          '401': { $ref: '#/components/responses/Err' },
+        }
+  /internal/v1/matches/finished:
+    post:
+      security: [{ service: [] }]
+      summary: 'Match server: a match ended (final facts per seat). Idempotent: the first call wins'
+      description: 'Body adds endedAt, durationSec and results: [{ seat, placement, kills, deaths, assists, botKills, botDeaths, botAssists, controlledByBotAtEnd }]. Facts only: no XP, rating or reward exists.'
+      responses:
+        {
+          '201': { description: Recorded },
+          '200': { description: Duplicate },
+          '400': { $ref: '#/components/responses/Err' },
+          '401': { $ref: '#/components/responses/Err' },
+        }
