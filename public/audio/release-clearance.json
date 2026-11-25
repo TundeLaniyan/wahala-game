@@ -1,0 +1,10 @@
+{
+  "subject": "the approved WAHALA! soundtrack (Lagos No Dey Sleep package + seven district songs): files whose track ids start with lnds_ or dist_ in music/manifest.json, and the lnds_victory / lnds_defeat stingers",
+  "status": "not-cleared",
+  "decision": "AU5",
+  "why": "Commercial-use rights for music generated in the consumer Gemini app are not documented as cleared. The studio has not recorded a licence or terms review that covers shipping these recordings in a commercial game. See docs/AUDIO_PROVENANCE.md and docs/AUDIO_RIGHTS_ASSESSMENT.md.",
+  "toClear": "Set status to \"cleared\" and fill clearedOn, clearedBy and evidence (a link or document name in the private provenance record) ONLY after the open questions of docs/AUDIO_RIGHTS_ASSESSMENT.md are answered. The deploy workflow refuses to publish a build containing these tracks to GitHub Pages while status is anything but \"cleared\".",
+  "clearedOn": null,
+  "clearedBy": null,
+  "evidence": null
+}

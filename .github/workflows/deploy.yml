@@ -90,6 +90,19 @@ jobs:
               echo "::warning title=Live preview came from another branch::$live_commit from '$live_branch'; this publish replaces it"
             fi
           fi
+          # The approved soundtrack ships to GitHub Pages only once its commercial-rights clearance is recorded
+          # (decision AU5, public/audio/release-clearance.json). Any other branch's dry run only notes it.
+          if jq -e '[.tracks[]? | select(.id | test("^(dist|lnds)_"))] | length > 0' site/audio/music/manifest.json >/dev/null 2>&1; then
+            clearance=$(jq -r '.status // "missing"' site/audio/release-clearance.json 2>/dev/null || echo missing)
+            echo "Approved soundtrack in this build; commercial clearance: $clearance"
+            if [ "$clearance" != cleared ]; then
+              if [ "$publish" = true ]; then
+                echo "::error title=Soundtrack not cleared::this build contains the approved soundtrack but public/audio/release-clearance.json says '$clearance'; it is not published until the commercial-rights clearance is recorded (docs/AUDIO_RIGHTS_ASSESSMENT.md)"
+                exit 1
+              fi
+              echo "::notice title=Soundtrack not cleared::dry run; a publish of this build would be refused (clearance: $clearance)"
+            fi
+          fi
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "publish=$publish mode=$mode"
