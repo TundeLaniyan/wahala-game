@@ -8,7 +8,7 @@ Local development only. **Nothing is deployed, no infrastructure is bought, no p
 
 ```bash
 cd player-platform && npm install
-PLATFORM_MOCK_IDP=1 npm start          # http://127.0.0.1:4567, guests + mock sign-in
+PLATFORM_MOCK_IDP=1 PLATFORM_MOCK_CHECKOUT=1 npm start          # http://127.0.0.1:4567, guests + mock sign-in
 ```
 
 **With a real Postgres** (what the tests also exercise): any Postgres 14+ and

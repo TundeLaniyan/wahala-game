@@ -18,12 +18,24 @@ import { createLogger } from './logger';
 import type { Logger } from './logger';
 import { createHandoffSigner } from './handoff/signer';
 import type { HandoffSigner } from './handoff/signer';
+import { randomBytes } from 'node:crypto';
+import { CatalogService } from './commerce/catalog';
+import {
+  AppleIapProvider,
+  GooglePlayProvider,
+  PaymentProviders,
+  WebCheckoutProvider,
+  createMockProvider as createMockPayments,
+} from './commerce/providers';
+import type { MockCheckoutProvider } from './commerce/providers';
+import { CommerceService } from './commerce/service';
 import { DevTextChat, createDevModerator } from './comms/chat';
 import { ReportService } from './comms/reports';
 import { CommsService } from './comms/service';
 import { NullVoiceGateway, VoiceService } from './comms/voice';
 import { MatchService } from './matches/service';
 import { PartyService } from './parties/service';
+import { commerceRoutes } from './routes/commerce';
 import { commsRoutes } from './routes/comms';
 import { identityRoutes } from './routes/identity';
 import { internalRoutes } from './routes/internal';
@@ -47,6 +59,9 @@ export interface Platform {
   matches: MatchService;
   comms: CommsService;
   reports: ReportService;
+  catalog: CatalogService;
+  commerce: CommerceService;
+  mockPayments: MockCheckoutProvider | null;
   /** Everything periodic that deletes data: sessions, idle guests, old audit rows, dev chat, resolved reports. */
   purge(): Promise<Record<string, unknown>>;
   presence: PresenceStore;
@@ -134,11 +149,28 @@ export async function createPlatform(
   identity.registerErasure((q, id) => comms.erase(q, id));
   identity.registerErasure((q, id) => reports.erase(q, id));
 
+  // commerce FOUNDATIONS: the mock exists only in development / test; the real providers are unconfigured skeletons
+  const sandbox = config.mockCheckout && config.env !== 'production';
+  const mockPayments = sandbox ? createMockPayments(clock, randomBytes(32).toString('hex')) : null;
+  const paymentProviders = new PaymentProviders([
+    ...(mockPayments ? [mockPayments] : []),
+    WebCheckoutProvider,
+    AppleIapProvider,
+    GooglePlayProvider,
+  ]);
+  const catalog = new CatalogService({ db, clock, sandboxVisible: sandbox });
+  await catalog.syncFromGame();
+  const commerce = new CommerceService({ db, clock, identity, catalog, providers: paymentProviders });
+  identity.registerErasure((q, id) => commerce.erase(q, id));
+
   const router = new Router();
   router.addAll(identityRoutes(identity, providers, mockProvider));
   router.addAll(socialRoutes(social, parties, matches, presence, signer));
   router.addAll(internalRoutes(matches));
   router.addAll(commsRoutes(comms, reports, voice, chat));
+  router.addAll(
+    commerceRoutes({ catalog, commerce, providers: paymentProviders, mock: mockPayments, sandbox }),
+  );
 
   const http = createHttp({
     router,
@@ -178,8 +210,16 @@ export async function createPlatform(
     matches,
     comms,
     reports,
+    catalog,
+    commerce,
+    mockPayments,
     async purge() {
-      return { identity: await identity.purge(), comms: await comms.purge(), reports: await reports.purge() };
+      return {
+        identity: await identity.purge(),
+        comms: await comms.purge(),
+        reports: await reports.purge(),
+        orders: await commerce.expireStale(),
+      };
     },
     presence,
     signer,

@@ -153,13 +153,11 @@ export class DevTextChat {
         ORDER BY c.id DESC LIMIT $4`,
       [partyId, after, me, CHAT_PAGE],
     );
-    return r.rows
-      .reverse()
-      .map((x) => ({
-        id: Number(x.id),
-        from: { playerId: x.sender_id, displayName: x.display_name },
-        text: x.body,
-        at: x.created_at.toISOString(),
-      }));
+    return r.rows.reverse().map((x) => ({
+      id: Number(x.id),
+      from: { playerId: x.sender_id, displayName: x.display_name },
+      text: x.body,
+      at: x.created_at.toISOString(),
+    }));
   }
 }

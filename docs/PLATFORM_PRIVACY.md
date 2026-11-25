@@ -18,7 +18,7 @@
 | Match participation (Checkpoint B) | non-ranked history of the player's own matches | until deletion; after deletion the row stays for the other players but names nobody (`Deleted player`) | facts only: no XP, rating, rank or reward; only the match server can write it |
 | Reports, mutes, restrictions (Checkpoint C) | safety | resolved reports **180 days** (**OPEN**), open ones until decided; mutes until deletion; restrictions 90 days after they end | a report keeps the name at the time, a <= 200-character note and a snapshot of the preset signals seen; erasure of either person deletes the note, evidence and name |
 | Dev-only text lines (never production) | exercising moderation seams | 24 hours | refused by the production config |
-| Orders and entitlements (Checkpoint D) | ownership of cosmetics, refunds | entitlements until deletion; **financial records** as the tax / accounting rules require (**OPEN**) | no card data ever |
+| Orders and entitlements (Checkpoint D) | ownership of cosmetics, refunds, disputes | entitlements deleted with the account; **order rows kept** (item, amount, currency, provider reference, status; idempotency key erased) as the tax / accounting rules require (**OPEN: period**) | no card data, no payment credential, no billing address is ever stored; only a provider transaction id |
 
 Not collected: precise location, contacts, device identifiers, advertising ids, voice recordings, unrestricted chat text (none exists).
 

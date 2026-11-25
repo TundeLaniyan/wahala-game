@@ -825,3 +825,273 @@ paths:
       summary: 'DEVELOPMENT ONLY: read party text lines newer than `after`'
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       responses: { '200': { description: OK } }
+
+  /v1/shop/status:
+    get:
+      summary: Which payment providers are live (none in production today) and whether the sandbox is on
+      responses: { '200': { description: '{ providers, purchasesEnabled, sandbox }' } }
+  /v1/shop/catalog:
+    get:
+      security: [{ player: [] }]
+      summary: The catalogue with your ownership; prices only where an operator has set them
+      parameters:
+        [
+          {
+            name: category,
+            in: query,
+            required: false,
+            schema:
+              {
+                type: string,
+                enum:
+                  [outfit, generator_skin, emote, elimination_effect, banner, vehicle_cosmetic, narration],
+              },
+          },
+        ]
+      responses:
+        {
+          '200':
+            {
+              description: '{ items: [{ id, category, name, description, rarity, owned, forSale, prices: [{ currency, amountMinor, sandbox }] }] }',
+            },
+        }
+  /v1/shop/entitlements:
+    get:
+      security: [{ player: [] }]
+      summary: What you own beyond the defaults, plus the narration feature keys
+      responses: { '200': { description: '{ items, features }' } }
+  /v1/shop/orders:
+    post:
+      security: [{ player: [] }]
+      summary: Start a purchase (header Idempotency-Key required). The PRICE is the server’s; adults on registered accounts only
+      parameters:
+        [
+          {
+            name: Idempotency-Key,
+            in: header,
+            required: true,
+            schema: { type: string, minLength: 8, maxLength: 80 },
+          },
+        ]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [itemId, provider],
+                      properties:
+                        {
+                          itemId: { type: string },
+                          provider: { type: string, enum: [mock, web, apple, google] },
+                        },
+                    },
+                },
+            },
+        }
+      responses:
+        {
+          '201': { description: Created },
+          '200':
+            { description: 'Existing order returned (same key, or an order for that item is still open)' },
+          '403': { $ref: '#/components/responses/Err' },
+          '409': { $ref: '#/components/responses/Err' },
+          '501': { description: 'Provider not configured' },
+        }
+    get:
+      security: [{ player: [] }]
+      summary: Your orders
+      responses: { '200': { description: OK } }
+  /v1/shop/orders/{id}:
+    get:
+      security: [{ player: [] }]
+      summary: One of your orders
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: OK } }
+  /v1/shop/orders/{id}/cancel:
+    post:
+      security: [{ player: [] }]
+      summary: Abandon an order that has not been paid
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: OK }, '409': { $ref: '#/components/responses/Err' } }
+  /v1/shop/orders/{id}/receipt:
+    post:
+      security: [{ player: [] }]
+      summary: 'Store purchases: report the receipt; the server verifies it with the store (never believed)'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                { schema: { type: object, required: [receipt], properties: { receipt: { type: string } } } },
+            },
+        }
+      responses: { '200': { description: OK }, '501': { description: 'Provider not configured' } }
+  /v1/shop/webhooks/{provider}:
+    post:
+      summary: A payment provider’s server-to-server notification (authenticated by the provider’s signature, not by a player)
+      parameters:
+        [
+          {
+            name: provider,
+            in: path,
+            required: true,
+            schema: { type: string, enum: [mock, web, apple, google] },
+          },
+        ]
+      responses:
+        {
+          '200': { description: '{ results: [{ eventId, outcome: applied|duplicate|ignored, ... }] }' },
+          '401': { $ref: '#/components/responses/Err' },
+          '501': { description: 'Provider not configured' },
+        }
+  /v1/dev/mock-checkout/{orderId}/complete:
+    post:
+      x-dev-only: true
+      summary: 'DEVELOPMENT ONLY: play the payment provider’s server. Builds a SIGNED test event for an order and delivers it through the real webhook path (no money moves; absent unless PLATFORM_MOCK_CHECKOUT=1)'
+      parameters: [{ name: orderId, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [outcome],
+                      properties:
+                        {
+                          outcome:
+                            { type: string, enum: [succeeded, failed, cancelled, refunded, chargeback] },
+                          amountMinor: { type: integer },
+                          currency: { type: string },
+                          eventId: { type: string },
+                        },
+                    },
+                },
+            },
+        }
+      responses: { '200': { description: OK } }
+  /admin/v1/orders:
+    get:
+      security: [{ admin: [] }]
+      summary: 'Operator: orders by status'
+      parameters: [{ name: status, in: query, required: false, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+  /admin/v1/orders/{id}/revoke:
+    post:
+      security: [{ admin: [] }]
+      summary: 'Operator: revoke a purchased entitlement without a refund (fraud, abuse)'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [reason, operator],
+                      properties: { reason: { type: string }, operator: { type: string } },
+                    },
+                },
+            },
+        }
+      responses: { '200': { description: OK } }
+  /admin/v1/players/{id}/grants:
+    post:
+      security: [{ admin: [] }]
+      summary: 'Operator: grant an item without a sale (promotion, compensation)'
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [itemId, operator],
+                      properties: { itemId: { type: string }, operator: { type: string } },
+                    },
+                },
+            },
+        }
+      responses: { '204': { description: Granted } }
+  /admin/v1/catalog/{itemId}/price:
+    put:
+      security: [{ admin: [] }]
+      summary: 'Operator: set the active price of an item (the founder supplies every real price; none exists today)'
+      parameters: [{ name: itemId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [currency, amountMinor, operator],
+                      properties:
+                        {
+                          currency: { type: string, example: NGN },
+                          amountMinor: { type: integer, minimum: 1 },
+                          operator: { type: string },
+                        },
+                    },
+                },
+            },
+        }
+      responses: { '204': { description: Set } }
+  /admin/v1/catalog/{itemId}/sale:
+    put:
+      security: [{ admin: [] }]
+      summary: 'Operator: mark an item sellable (or not). Earned and default items need a deliberate decision'
+      parameters: [{ name: itemId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [purchasable, operator],
+                      properties: { purchasable: { type: boolean }, operator: { type: string } },
+                    },
+                },
+            },
+        }
+      responses: { '204': { description: Set } }
+  /admin/v1/catalog/{itemId}/store-products/{provider}:
+    put:
+      security: [{ admin: [] }]
+      summary: 'Operator: the product id this item has in a store (Apple, Google, web)'
+      parameters:
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+        - { name: provider, in: path, required: true, schema: { type: string, enum: [apple, google, web] } }
+      requestBody:
+        {
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [productId, operator],
+                      properties: { productId: { type: string }, operator: { type: string } },
+                    },
+                },
+            },
+        }
+      responses: { '204': { description: Set } }

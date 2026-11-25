@@ -211,11 +211,17 @@ describe('profile', () => {
     expect(removed.body.profile.settings).toEqual({ locale: 'en-NG' });
   });
 
-  it('cannot equip a cosmetic yet (no entitlements exist before commerce)', async () => {
+  it('cannot equip a cosmetic they do not own (owned items are covered in commerce.test.ts)', async () => {
     const g = await newGuest(api);
     expect(
       (await api.patch('/v1/me', { loadout: { fighterSkin: 'skin-agbada-gold' } }, g.access)).status,
-    ).toBe(400);
+    ).toBe(403);
+    expect((await api.patch('/v1/me', { loadout: { fighterSkin: 'no-such-item' } }, g.access)).status).toBe(
+      400,
+    );
+    expect((await api.patch('/v1/me', { loadout: { fighterSkin: 'skin-default' } }, g.access)).status).toBe(
+      200,
+    ); // the free starting look
     expect((await api.patch('/v1/me', { loadout: {} }, g.access)).status).toBe(200);
   });
 

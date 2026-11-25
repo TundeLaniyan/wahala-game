@@ -22,6 +22,8 @@ try {
       console.log(`${name}: skipped (${e instanceof Error ? e.message : 'error'})`);
     }
   }
+  if (config.mockCheckout)
+    console.log(`sandbox shop items (test money only): ${(await platform.catalog.seedSandbox()).join(', ')}`);
 } finally {
   await platform.close();
 }

@@ -3,6 +3,7 @@
 !player-platform
 !src/net/protocol.ts
 !src/sim/data/characters.ts
+!src/cosmetics
 player-platform/node_modules
 player-platform/dist
 player-platform/test

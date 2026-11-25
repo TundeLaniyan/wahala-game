@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # WAHALA! player platform: reproducible container build. Build context = the REPOSITORY ROOT (the service shares the match
-# server's name rule from src/net/protocol.ts and the fighter list from src/sim/data/characters.ts):
+# server's name rule from src/net/protocol.ts, the fighter list from src/sim/data/characters.ts and the cosmetic catalogue in src/cosmetics):
 #   docker build -f player-platform/Dockerfile -t wahala-player-platform:local .
 # The image holds one bundled file per entry (server, migrate, purge, config check) + the SQL migrations, runs as the unprivileged
 # `node` user and contains no dev dependency, no PGlite and no source. TLS is terminated in front of it (docs/PLATFORM_OPERATIONS.md).
@@ -16,6 +16,7 @@ RUN npm install --prefix /repo --no-save --no-package-lock --ignore-scripts esbu
  && test "$(/repo/node_modules/.bin/esbuild --version)" = "${ESBUILD_VERSION}"
 COPY src/net/protocol.ts src/net/protocol.ts
 COPY src/sim/data/characters.ts src/sim/data/characters.ts
+COPY src/cosmetics src/cosmetics
 COPY player-platform player-platform
 RUN cd player-platform && npm run bundle && test -s dist/main.mjs
 

@@ -24,6 +24,8 @@ export type AuditType =
   | 'match.recorded'
   | 'report.filed'
   | 'report.resolved'
+  | 'commerce.catalog_changed'
+  | 'commerce.order_created'
   | 'commerce.fulfilled'
   | 'commerce.revoked'
   | 'commerce.refunded';

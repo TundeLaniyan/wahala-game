@@ -17,7 +17,7 @@
 
 The platform never sits in the match's data path and cannot affect a tick. If the platform is down, guests still play: identity is an *optional* layer on top of the match server's existing anonymous join.
 
-Code layout (`player-platform/src`): `config.ts` (env -> validated config) · `social/` (friends, blocks, presence) · `parties/` · `handoff/` (ticket signer + the verifier the match server imports) · `matches/` (trusted history) · `comms/` (signals, mutes, restrictions, reports, relay filter, dev chat, voice seam) · `db/` (driver-independent `Db`, `pg` and PGlite adapters, versioned migrations) · `http/` (router, rate limiter, trusted-proxy address rule, service HMAC, the server shell) · `identity/` (nickname, providers, sessions, service, capabilities) · `routes/` (thin handlers: parse -> service -> envelope) · `logger.ts` (redacting structured log) · `audit.ts` · `app.ts` (composition root).
+Code layout (`player-platform/src`): `config.ts` (env -> validated config) · `social/` (friends, blocks, presence) · `parties/` · `handoff/` (ticket signer + the verifier the match server imports) · `matches/` (trusted history) · `comms/` (signals, mutes, restrictions, reports, relay filter, dev chat, voice seam) · `commerce/` (catalogue, orders, state machine, provider interfaces + dev mock) · `db/` (driver-independent `Db`, `pg` and PGlite adapters, versioned migrations) · `http/` (router, rate limiter, trusted-proxy address rule, service HMAC, the server shell) · `identity/` (nickname, providers, sessions, service, capabilities) · `routes/` (thin handlers: parse -> service -> envelope) · `logger.ts` (redacting structured log) · `audit.ts` · `app.ts` (composition root).
 
 Conventions: JSON; `/v1` path versioning; one error envelope `{ error: { code, message, requestId, retryAfterMs? } }`; strict bodies (unknown keys refused, so a client can never smuggle an id, kind, status, price or owner); identity always from the access token, never the body; time and randomness injectable; every service takes a `Db`, never a driver.
 
@@ -60,7 +60,7 @@ Presence is **not** in the database: an in-memory store with a 90 s TTL (`Presen
 
 **Checkpoint C (migration 0005):** `mutes`; `comm_restrictions` (`signals` / `text` / `voice`, `auto` or `moderator`, time-limited, liftable); `reports` (reporter, target, category, context + ref, <= 200-char note, name at report time, <= 8 KiB evidence snapshot, `open` / `actioned` / `dismissed`, one OPEN report per reporter / target / place by a partial unique index); `party_signals` (preset ids only, latest 200 per party); `dev_chat_messages` (development flag only, purged at 24 h).
 
-Checkpoint D adds the catalogue, prices, entitlements, orders and provider events.
+**Checkpoint D (migration 0006):** `catalog_items` (closed categories, `affects_gameplay` CHECKed false, `purchasable` default false), `catalog_prices` (integer minor units; `XTS` only on sandbox rows), `store_products`, `orders` (state, price snapshot, idempotency key, unique provider ref, one open order per player and item), `order_events` (unique per provider event id), `entitlements` (source purchase needs an order). Full description: `PLATFORM_COMMERCE.md`.
 
 ## 4. Decisions (PP = player platform; nothing here changes gameplay)
 
@@ -73,12 +73,13 @@ Checkpoint D adds the catalogue, prices, entitlements, orders and provider event
 | PP5 | `unspecified` age band = minor | A guest-first game cannot assume an adult; no date of birth is collected. Needs legal confirmation. |
 | PP6 | No password sign-in, ever | Founder rule; providers only. |
 | PP7 | Friend code only, no name search | No enumeration surface for harassment. |
-| PP8 | PGlite (real Postgres engine, WASM) for hermetic tests; the same suite also runs on a real server via `PLATFORM_TEST_DATABASE_URL` | Proven: 157 tests pass on both (PostgreSQL 16.15). |
+| PP8 | PGlite (real Postgres engine, WASM) for hermetic tests; the same suite also runs on a real server via `PLATFORM_TEST_DATABASE_URL` | Proven: 179 tests pass on both (PostgreSQL 16.15). |
 | PP9 | Forward-only migrations with checksums; rollback = restore the pre-deploy backup | Expand-then-contract keeps the previous release runnable on the new schema. |
 | PP10 | Party default size 8, ceiling 32 | Approved match capacity is 32 humans; a social party that large is unusual. **Founder choice.** |
 | PP11 | Parties use PRIVATE rooms of the existing match server; the platform never owns a room, seat or team | No second matchmaking system. Public Quick Play cannot group a party (server feature, founder decision). |
 | PP12 | Match tickets are Ed25519 JWTs the server verifies with the public key; results are HMAC-signed server calls | A compromised match server cannot mint identities; a client has no route that records anything. |
 | PP14 | Production communication is PRESET ONLY; free text and voice are designs, not features | Nothing to moderate in content; abuse is handled by limits, mutes, blocks, reports and restrictions. **Founder decision** whether free text ever ships. |
+| PP15 | Commerce is provider-independent and cosmetic-only; ownership follows only a server-verified event; no real price exists | Founder rule; the schema refuses gameplay items. |
 | PP13 | A leader's **host ticket** (`room: "*"`) exists because the room code does not exist when the room is created | Found by the handshake test: the leader could not otherwise be tied to a seat. |
 
 ## 5. Checkpoint status
@@ -88,4 +89,4 @@ Checkpoint D adds the catalogue, prices, entitlements, orders and provider event
 | A Identity, profiles, database, ops | **done**, 72 tests (PGlite and PostgreSQL 16) |
 | B Friends, blocks, presence, parties, signed match tickets, trusted results | **done**, 116 tests incl. a handshake against the real match server (`PLATFORM_MATCH_HANDOFF.md`) |
 | C Preset signals, mute / block / report, restrictions, moderator API, relay filter, dev-only text chat, voice seam and designs | **done**, 157 tests (`PLATFORM_SAFETY.md`, `PLATFORM_TEXT_CHAT_DESIGN.md`, `PLATFORM_VOICE_DESIGN.md`) |
-| D Catalogue, entitlements, sandbox commerce | planned |
+| D Catalogue, entitlements, orders, verified idempotent fulfilment, refunds / revocation, provider interfaces, dev-only mock checkout | **done**, 179 tests (`PLATFORM_COMMERCE.md`, `PLATFORM_PROVIDER_REQUIREMENTS.md`, `PLATFORM_INFRASTRUCTURE.md`) |
