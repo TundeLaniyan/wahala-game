@@ -285,8 +285,8 @@ test.describe('the approved soundtrack, real browser', () => {
       });
       await page.evaluate(() => ((window as any).__starts.length = 0));
       await mutate(page, kill(who));
-      await stepTicks(page, 120);
-      await page.evaluate(() => (window as any).__WAHALA__.advance(2));
+      // `advance` is the fully routed tick (the sim's events reach the audio layer); `stepTicks` is not, so the match is ended here
+      await page.evaluate(() => (window as any).__WAHALA__.advance(3));
       const starts = () =>
         page.evaluate(() => ((window as any).__starts as { dur: number }[]).map((x) => x.dur));
       const near = (a: number, b: number) => Math.abs(a - b) < 0.002;
