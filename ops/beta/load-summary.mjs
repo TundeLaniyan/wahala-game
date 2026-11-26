@@ -1,5 +1,5 @@
-// Summarises one load run: node load-summary.cjs <run folder> (reads samples.jsonl). Used by load.sh.
-const fs = require('fs'); const dir = process.argv[2];
+// Summarises one load run: node load-summary.mjs <run folder> (reads samples.jsonl). Used by load.sh.
+import fs from 'node:fs'; const dir = process.argv[2];
 const rows = fs.readFileSync(dir + '/samples.jsonl', 'utf8').trim().split('\n').map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
 const mb = (s) => { const m = /([\d.]+)\s*(MiB|GiB|KiB|B)/.exec(s); if (!m) return null; return Number(m[1]) * ({ GiB: 1024, MiB: 1, KiB: 1 / 1024, B: 1 / 1048576 })[m[2]]; };
 const per = {};

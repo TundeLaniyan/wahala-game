@@ -298,14 +298,12 @@ async function social() {
   const find = await call('POST', '/v1/friends/requests', { code: A.friendCode }, B.access);
   check(find.status === 404, 'the blocked player cannot find the blocker by code');
   // rate limit + abuse
-  let limited = 0;
   const burst = await Promise.all(Array.from({ length: 60 }, () => call('POST', '/v1/auth/guest', { platform: 'web', ...INV })));
-  limited = burst.filter((r) => r.status === 429).length;
+  const limited = burst.filter((r) => r.status === 429).length;
   check(limited > 0, 'a flood of account creation from one address is rate-limited', `${limited}/60 refused with 429`);
   const ra = burst.find((r) => r.status === 429);
   check(Number(ra?.headers.get('retry-after')) >= 1, 'the refusal says when to retry (Retry-After)');
   // deletion
-  const z = (await call('POST', '/v1/auth/guest', { platform: 'web', ...INV })).body ?? null;
   s.social = { done: true };
   save(s);
 }

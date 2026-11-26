@@ -9,6 +9,7 @@
 //   api       platform database load: N accounts, W concurrent workers on authenticated reads for --seconds
 //   probe     how the capacity guard answers when more rooms start than the server allows
 import { randomBytes } from 'node:crypto';
+import net from 'node:net';
 import { Client, parseArgs, sleep } from '../scripts/lib.mjs';
 
 const scenario = process.argv[2];
@@ -25,9 +26,24 @@ const result = (name, data) => console.log(`RESULT ${JSON.stringify({ scenario, 
 const DIRS = ['up', 'down', 'left', 'right'];
 const pct = (a, p) => { const s = [...a].sort((x, y) => x - y); return s.length ? Math.round(s[Math.min(s.length - 1, Math.floor(s.length * p))]) : null; };
 
+/** A tiny TCP relay in front of the match server, so a test can cut a client's connection the way a dying network does (the server sees close 1006,
+ *  not the polite close a leaving client sends). */
+function relay(target) {
+  const { hostname, port } = new URL(target);
+  const socks = new Set();
+  const server = net.createServer((c) => {
+    const up = net.connect(Number(port), hostname);
+    socks.add(c); socks.add(up);
+    c.pipe(up); up.pipe(c);
+    const end = () => { c.destroy(); up.destroy(); socks.delete(c); socks.delete(up); };
+    c.on('error', end); up.on('error', end); c.on('close', end); up.on('close', end);
+  });
+  return new Promise((res) => server.listen(0, '127.0.0.1', () => res({ url: `http://127.0.0.1:${server.address().port}`, killAll: () => { for (const x of socks) x.destroy(); }, close: () => server.close() })));
+}
+
 /** One simulated human: joins (or creates) a room, ignores frames but counts them, sends a stick direction ~10 times a second. */
 class Human {
-  constructor(name) { this.name = name; this.gid = randomBytes(16).toString('base64url'); /* the real client sends one random guest id per page: the server's join limits are per guest id */ this.sdk = new Client(o.url); this.room = null; this.frames = 0; this.results = null; this.closed = null; this.notices = []; this.seq = 0; this.timer = null; }
+  constructor(name, url = o.url) { this.name = name; this.url = url; this.gid = randomBytes(16).toString('base64url'); /* the real client sends one random guest id per page: the server's join limits are per guest id */ this.sdk = new Client(url); this.room = null; this.frames = 0; this.results = null; this.closed = null; this.notices = []; this.seq = 0; this.timer = null; }
   attach(room) {
     this.room = room;
     room.onMessage('fr', () => { this.frames++; });
@@ -51,11 +67,11 @@ class Human {
   async leave() { this.stop(); try { await this.room?.leave(); } catch { /* already gone */ } }
 }
 
-async function startRoom(i, humans, seconds) {
-  const host = new Human(`LoadH${i}x0`);
+async function startRoom(i, humans, seconds, urls = []) {
+  const host = new Human(`LoadH${i}x0`, urls[0] ?? o.url);
   const code = await host.create();
   const members = [host];
-  for (let h = 1; h < humans; h++) { const m = new Human(`LoadH${i}x${h}`); await m.join(code); members.push(m); }
+  for (let h = 1; h < humans; h++) { const m = new Human(`LoadH${i}x${h}`, urls[h] ?? o.url); await m.join(code); members.push(m); }
   await sleep(300);
   host.room.send('settings', { durationSec: seconds });
   await sleep(200);
@@ -111,26 +127,26 @@ async function churn() {
   result('create-leave', { created, refused: cfail, errors: Object.fromEntries(errs2) });
 }
 
-/** The network vanishes: kill the socket without the polite close message a leaving client sends. */
-const abrupt = (h) => { const ws = h.room.connection.transport.ws; if (typeof ws.terminate === 'function') ws.terminate(); else ws.close(); };
-
 async function reconnect() {
   const S = num('seconds');
-  const { members } = await startRoom(0, 3, S);
+  const proxies = [null, await relay(o.url), await relay(o.url)]; // host direct; the two others through a relay that can be cut
+  const { members } = await startRoom(0, 3, S, proxies.map((p) => p?.url ?? o.url));
   await sleep(8000);
   const [, back, gone] = members;
   const token = back.room.reconnectionToken;
-  back.stop(); back.room.reconnection.enabled = false; abrupt(back);
+  back.stop(); back.room.reconnection.enabled = false; gone.stop(); gone.room.reconnection.enabled = false;
   const t0 = Date.now();
-  gone.stop(); gone.room.reconnection.enabled = false; abrupt(gone);
+  proxies[1].killAll(); proxies[2].killAll(); // both connections die at once (a tunnel, a lift, a dead router)
   await sleep(1500);
-  let backOk = false, backMs = null;
-  try { const r = await back.sdk.reconnect(token); back.attach(r); back.play(); backOk = true; backMs = Date.now() - t0; } catch (e) { console.log(`reconnect failed: ${e.message}`); }
+  let backOk = false, backMs = null, why = null;
+  try { const r = await back.sdk.reconnect(token); back.attach(r); back.play(); backOk = true; backMs = Date.now() - t0; } catch (e) { why = String(e.message ?? e).slice(0, 100); }
   const framesAtBack = back.frames;
   const deadline = Date.now() + (S + 90) * 1000;
   while (Date.now() < deadline && !members[0].results) await sleep(500);
-  result('reconnect', { returnedWithinWindow: backOk, reconnectMs: backMs, framesAfterReturn: back.frames - framesAtBack, matchFinishedForHost: !!members[0].results, droppedForeverClosedWith: gone.closed });
+  await sleep(1000);
+  result('reconnect', { returnedWithinWindow: backOk, reconnectMs: backMs, failure: why, framesAfterReturn: back.frames - framesAtBack, matchFinishedForHost: !!members[0].results, returnedHumanGotResults: !!back.results, neverReturnedHumanClosedWith: gone.closed });
   await Promise.all(members.map((m) => m.leave()));
+  proxies.forEach((p) => p?.close());
 }
 
 async function api() {

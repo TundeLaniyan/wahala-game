@@ -8,6 +8,7 @@
 #   ops/beta/load.sh reconnect
 #   ops/beta/load.sh api --workers 30 --seconds 30
 #   ops/beta/load.sh probe --rooms 5 --seconds 40
+#   ops/beta/load.sh outage                   (database + platform down mid-match; then the match server killed mid-match)
 #   ops/beta/load.sh soak --minutes 30            (a steady trickle of matches and joins; memory growth is the result)
 # Simulated clients are NOT phones. A sandbox is NOT your server. Read docs/ops/BETA_LOAD_RESULTS.md before quoting any number.
 set -uo pipefail
@@ -58,10 +59,28 @@ case "$scenario" in
       wait $RP
       echo "soak round $n done, $(( (end - $(date +%s)) / 60 )) min left"
     done ;;
+  outage)
+    # (1) backend outage in the middle of a match: database AND platform stopped for 25 s, then started again
+    drv rooms --rooms 1 --humans 2 --seconds 180 >"$OUT/rooms-1.log" & RP=$!
+    sleep 45
+    echo "BACKEND OUTAGE: database and platform stopped for 25 s while a match is being played" | tee -a "$OUT/load.log"
+    dc stop platform db >/dev/null 2>&1; sleep 25; dc start db >/dev/null 2>&1; sleep 4; dc start platform >/dev/null 2>&1
+    t0=$(date +%s); until curl -sk --max-time 3 "https://127.0.0.1:$(grep -E '^EDGE_HTTPS_PORT=' "$BETA_STATE/beta.env" | cut -d= -f2)/platform-health" | grep -q '"ok":true'; do sleep 1; [ $(( $(date +%s) - t0 )) -gt 90 ] && break; done
+    echo "platform answering again $(( $(date +%s) - t0 )) s after it was started" | tee -a "$OUT/load.log"
+    wait $RP; grep -h "^RESULT" "$OUT/rooms-1.log" | tee -a "$OUT/load.log" | cut -c1-400
+    # (2) the match server itself is killed mid-match (SIGKILL from outside Docker: a real crash)
+    drv rooms --rooms 1 --humans 2 --seconds 180 >"$OUT/rooms-2.log" & RP=$!
+    sleep 40
+    pid="$(docker inspect -f '{{.State.Pid}}' "$P-rumble-1")"; st="$(docker inspect -f '{{.State.StartedAt}}' "$P-rumble-1")"; t0=$(date +%s); kill -9 "$pid"
+    until [ "$(docker inspect -f '{{.State.Health.Status}}' "$P-rumble-1")" = healthy ] && [ "$(docker inspect -f '{{.State.StartedAt}}' "$P-rumble-1")" != "$st" ]; do sleep 1; [ $(( $(date +%s) - t0 )) -gt 90 ] && break; done
+    echo "MATCH SERVER CRASHED mid-match; restarted by Docker and healthy again after $(( $(date +%s) - t0 )) s" | tee -a "$OUT/load.log"
+    drv churn --cycles 5 --conc 1 | tee -a "$OUT/load.log" | grep -E "^RESULT" | cut -c1-300
+    echo "(the 2 humans of the crashed match lost it: an in-memory match does not survive its server dying; documented limit)" | tee -a "$OUT/load.log"
+    wait $RP; grep -h "^RESULT" "$OUT/rooms-2.log" | tee -a "$OUT/load.log" | cut -c1-400 ;;
   *) drv "$scenario" "${args[@]}" | tee -a "$OUT/load.log" ;;
 esac
 sleep 6 # a quiet tail: does memory and CPU come back down?
 kill $SP 2>/dev/null; wait $SP 2>/dev/null; trap - EXIT
 
-node "$HERE/load-summary.cjs" "$OUT" | tee "$OUT/summary.txt"
+node "$HERE/load-summary.mjs" "$OUT" | tee "$OUT/summary.txt"
 echo "files: $OUT"
