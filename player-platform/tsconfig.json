@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2023"],
+    "noEmit": true
+  },
+  "include": ["src", "test", "../src/net/protocol.ts", "../src/sim/data/characters.ts", "../src/cosmetics"]
+}
