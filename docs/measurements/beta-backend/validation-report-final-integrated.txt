@@ -6,7 +6,7 @@ PASS    curl present
 PASS    base64 present
 PASS    docker daemon reachable (29.9.2)
 PASS    docker compose plugin present
-INFO    isolated state folder: /tmp/wahala-validate.HMjS5O (project wahala-validate)
+INFO    isolated state folder: /tmp/wahala-validate.lgPBai (project wahala-validate)
 
 == 1. build the real images and start the full stack
 PASS    init: secrets, Ed25519 ticket key, temporary certificate
@@ -41,7 +41,7 @@ PASS    the match server's /metrics needs its token
 == 3. the edge and the accounts, through https (a client's view)
 PASS    edge: match server /health - HTTP 200
 PASS    edge: platform /platform-health - HTTP 200
-PASS    ticket public key is published and has no private part - kid mgJuiXxsDKeP4EnaZZoiy_CaRLktwsSNv0MSLQWDbg8
+PASS    ticket public key is published and has no private part - kid lBDn0NZn1XwrZZlMtM7Jf1t3OXKPwxgSVIw9ulOILUQ
 PASS    never public: GET /metrics - HTTP 404
 PASS    never public: GET /ready - HTTP 404
 PASS    never public: POST /internal/v1/matches/started - HTTP 404
@@ -106,11 +106,11 @@ PASS    I11: raw HTTP matchmaking (create, join by code, quick play) without a t
 INFO    match started - 180 s match, 2 humans + bots, waiting for the server's result...
 PASS    the authoritative server finished the match and sent the results to both humans - 186 s
 PASS    the match had 32 fighters: 2 humans and 30 server bots - 32 fighters
-PASS    both clients saw the identical final state hash - 1594410246
-PASS    I4a: the match server itself reported the finished match to the platform (this validator posted nothing) - recorded as GGWK5Z-1:c3f...
+PASS    both clients saw the identical final state hash - 3769751455
+PASS    I4a: the match server itself reported the finished match to the platform (this validator posted nothing) - recorded as V35GAU-1:454...
 
 match: 22 passed, 0 failed, 0 blocked-by-integration
-INFO    server load while the match ran (cpu % of one core, RSS MB, playing rooms): peak cpu 53.2%, peak rss 174 MB, dropped ticks 2, samples 18
+INFO    server load while the match ran (cpu % of one core, RSS MB, playing rooms): peak cpu 46.8%, peak rss 174 MB, dropped ticks 1, samples 18
 
 == 5. signed match results (platform side) and replay protection
 PASS    unsigned / forged / stale internal call refused (nosig)
@@ -122,7 +122,7 @@ PASS    a replayed signed 'finished' changes nothing (first call wins; each play
 PASS    the match server itself posted started and finished with the real results (nothing was posted by this validator before the history check in step 6)
 
 == 6. friends, parties, quick signals, mute, block, report, rate limits
-PASS    the signed result is in the member's own history - {"placement":32,"kills":0,"deaths":12,"assists":0,"botKills":0,"botDeaths":0,"botAssists":0,"controlledByBotAtEnd":false,"team":null}
+PASS    the signed result is in the member's own history - {"placement":32,"kills":0,"deaths":11,"assists":0,"botKills":0,"botDeaths":0,"botAssists":0,"controlledByBotAtEnd":false,"team":null}
 PASS    I4: the recorded placement and kills equal the authoritative server's own final results for this player - {"recorded":{"placement":32,"kills":0},"server":{"placement":32,"kills":0}}
 PASS    I4b: the leader has the same match in their own history
 PASS    a stranger's history does not contain it
@@ -147,7 +147,7 @@ PASS    the refusal says when to retry (Retry-After)
 social: 21 passed, 0 failed, 0 blocked-by-integration
 PASS    operator API is reachable ONLY from inside (needs the admin token)
 PASS    operator API refuses a wrong token
-PASS    platform /metrics answers with the token ({"uptimeSec":260,"process":{"rssMb":72,"heapUsedMb":12,"externalMb":4},"eventLoop":{"p50Ms":20.2,"p99Ms":21.3,"maxMs":80.8},"db":{"total":9,"idle":9,"...)
+PASS    platform /metrics answers with the token ({"uptimeSec":267,"process":{"rssMb":72,"heapUsedMb":11,"externalMb":4},"eventLoop":{"p50Ms":20.2,"p99Ms":20.7,"maxMs":78.4},"db":{"total":10,"idle":10...)
 PASS    match server /metrics shows its capacity guard (rooms, CPU budget)
 PASS    the playing-room cap is active in the running server
 
@@ -232,13 +232,13 @@ PASS    after-full-restart: the party persisted (leader alone after the block)
 persist: 8 passed, 0 failed, 0 blocked-by-integration
 
 == 7a. a platform outage does not delay a match (I5)
-PASS    I5 baseline: with the platform up, a ticketed match starts - 3062 ms after Start
+PASS    I5 baseline: with the platform up, a ticketed match starts - 3081 ms after Start
 
 outage: 1 passed, 0 failed, 0 blocked-by-integration
 
 outage: 0 passed, 0 failed, 0 blocked-by-integration
-PASS    I5: with the platform STOPPED, the match still starts (the cached public key verifies the ticket) - 3057 ms after Start (baseline 3062 ms)
-PASS    I5: the outage did not delay the start by more than 2 s - 3057 vs 3062 + 2000 ms
+PASS    I5: with the platform STOPPED, the match still starts (the cached public key verifies the ticket) - 3056 ms after Start (baseline 3081 ms)
+PASS    I5: the outage did not delay the start by more than 2 s - 3056 vs 3081 + 2000 ms
 PASS    I5: the match keeps running while the platform is away - playing
 
 outage: 3 passed, 0 failed, 0 blocked-by-integration
@@ -254,7 +254,7 @@ PASS    rotate admin-token completed
 PASS    after rotation the OLD admin token is refused
 PASS    after rotation the NEW admin token works
 PASS    rotate ticket-key completed
-PASS    the published ticket key changed ("kid":"mgJuiXxsDKeP4EnaZZoiy_CaRLktwsSNv0MSLQWDbg8" -> "kid":"xGyAzX3FiV4Ka4KZ0Kgf-vbcD9wBC7JTqeka3n29QJ4")
+PASS    the published ticket key changed ("kid":"lBDn0NZn1XwrZZlMtM7Jf1t3OXKPwxgSVIw9ulOILUQ" -> "kid":"NK7zXwbcznAVokqvo6L9827geXERWxl3_SBe3tY3GE0")
 PASS    rotate db-password completed
 PASS    the NEW database password works over the network (positive control)
 PASS    the OLD database password is refused by PostgreSQL
@@ -287,12 +287,12 @@ PASS    after-rollback: the party persisted (leader alone after the block)
 persist: 8 passed, 0 failed, 0 blocked-by-integration
 
 == 8. backup and restoration
-PASS    manual backup: backup ok: wahala-20261126T144331Z.dump 76549 bytes
-PASS    backup file exists (76549 bytes, mode 600)
+PASS    manual backup: backup ok: wahala-20261126T153347Z.dump 76542 bytes
+PASS    backup file exists (76542 bytes, mode 600)
 PASS    backup files are private (0600)
 PASS    restore-test: backup : 19 players, 19 profiles, 19 sessions, 27 audit rows, schema 6
 INFO    DISASTER SIMULATED: sessions, friendships, match history and profiles deleted from the live database
-PASS    restore into the live database completed (restored wahala-20261126T144331Z.dump and restarted the services.)
+PASS    restore into the live database completed (restored wahala-20261126T153347Z.dump and restarted the services.)
 PASS    after-disaster-restore: A's account and nickname persisted, the session survived (refresh token still valid)
 PASS    after-disaster-restore: B's account and nickname persisted, the session survived (refresh token still valid)
 PASS    after-disaster-restore: C's account and nickname persisted, the session survived (refresh token still valid)
@@ -305,14 +305,14 @@ PASS    after-disaster-restore: the party persisted (leader alone after the bloc
 persist: 8 passed, 0 failed, 0 blocked-by-integration
 
 == 9. logs contain no secrets, tokens or room codes
-PASS    779 log lines from every service: no secret, no token, no room code, no friend code
+PASS    780 log lines from every service: no secret, no token, no room code, no friend code
 PASS    logs are structured (one JSON line per request with the route pattern, not the path)
 
 == 10. graceful shutdown
-PASS    platform stopped cleanly: exit 0 in 262 ms
-PASS    rumble stopped cleanly: exit 0 in 233 ms
-PASS    edge stopped cleanly: exit 0 in 302 ms
-PASS    db stopped cleanly: exit 0 in 265 ms
+PASS    platform stopped cleanly: exit 0 in 232 ms
+PASS    rumble stopped cleanly: exit 0 in 186 ms
+PASS    edge stopped cleanly: exit 0 in 287 ms
+PASS    db stopped cleanly: exit 0 in 288 ms
 PASS    restart after the clean stop
 PASS    after-clean-stop: A's account and nickname persisted, the session survived (refresh token still valid)
 PASS    after-clean-stop: B's account and nickname persisted, the session survived (refresh token still valid)
@@ -326,6 +326,6 @@ PASS    after-clean-stop: the party persisted (leader alone after the block)
 persist: 8 passed, 0 failed, 0 blocked-by-integration
 
 == RESULT
-257 passed, 0 failed, 0 blocked by an integration that belongs to another team; 618 s
-full report: /tmp/wahala-validate.HMjS5O/validate/report.txt
+257 passed, 0 failed, 0 blocked by an integration that belongs to another team; 643 s
+full report: /tmp/wahala-validate.lgPBai/validate/report.txt
 BACKEND VALIDATION: NO FAILURES
