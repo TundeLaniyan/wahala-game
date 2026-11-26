@@ -113,6 +113,30 @@ describe('entering as a guest', () => {
     expect(s().phase).toBe('ready');
   });
 
+  it("the YOU tab shows the player's own recorded matches, loaded on sign-in and again when the tab is opened", async () => {
+    const fake = new FakePlatform();
+    const { c, s } = setup(fake);
+    await c.actions.open();
+    expect(s().history).toEqual([]);
+    fake.matches = [
+      {
+        matchId: 'm1:abc',
+        game: 'team',
+        arenaId: 'rumbleOshodi',
+        endedAt: 'x',
+        durationSec: 180,
+        you: { placement: 3, kills: 5, deaths: 2 },
+        humans: 2,
+      },
+    ];
+    c.actions.setTab('friends');
+    c.actions.setTab('you');
+    await settle();
+    expect(s().history).toHaveLength(1);
+    expect(s().history[0]!.you.placement).toBe(3);
+    c.actions.close();
+  });
+
   it('an invite-only platform asks for the code, refuses a wrong one, and a right one creates the account (the code is sent once and never kept)', async () => {
     const fake = new FakePlatform();
     fake.inviteCodes = ['BETA-CODE-1234567'];

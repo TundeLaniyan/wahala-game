@@ -68,7 +68,7 @@ Optional safety check (30 seconds, in the room lobby): on Phone B tap the **...*
 4. Both results tables were identical, and the second match (Team Deathmatch) also finished.
 5. No red error banner stayed on either phone.
 
-To confirm the server recorded your matches as the real match server saw them (not what a phone claims), the laptop window shows lines from `[platform]` and `[server]`; the automated run (section 7) checks it exactly.
+To confirm the server recorded your matches as the real match server saw them (not what a phone claims): on each phone open **PLAY ONLINE → YOU → Recent matches**. The line for your match (for example `Free-for-All: 12th of 32 fighters, 3 eliminations`) is written by the match server's signed report, never by a phone, and must agree with your row in the results table. The automated run (section 7) checks the same facts exactly.
 
 ## 5. A third phone as the impostor (optional, 2 minutes)
 

@@ -55,6 +55,8 @@ export class FakePlatform {
     }
   >();
   invites: { id: string; partyId: string; from: string; to: string }[] = [];
+  /** The recorded matches `GET /v1/me/matches` answers with (the real platform writes them from the match server's signed report). */
+  matches: Record<string, unknown>[] = [];
   /** Private beta: account creation needs one of these codes (null = open). */
   inviteCodes: string[] | null = null;
   tickets: { player: string; room: string; ticket: string }[] = [];
@@ -210,7 +212,11 @@ export class FakePlatform {
     if (method === 'POST' && path === '/v1/auth/guest') {
       const b = this.strict(body, ['nickname', 'platform', 'deviceLabel', 'ageGroup', 'inviteCode']);
       if (this.inviteCodes && !this.inviteCodes.includes(String(b.inviteCode ?? '')))
-        return this.err(403, 'invite_required', 'this beta is invite-only: an invite code is needed to create an account');
+        return this.err(
+          403,
+          'invite_required',
+          'this beta is invite-only: an invite code is needed to create an account',
+        );
       const name = typeof b.nickname === 'string' ? b.nickname : `Guest${this.seq + 1}`;
       if ([...this.players.values()].some((p) => p.name === name))
         return this.err(409, 'name_taken', 'That name is already taken.');
@@ -249,6 +255,7 @@ export class FakePlatform {
       me.name = name;
       return this.json(200, { profile: this.profile(me) });
     }
+    if (path === '/v1/me/matches' && method === 'GET') return this.json(200, { matches: this.matches });
     if (path === '/v1/presence' && method === 'PUT') {
       this.strict(body, ['status']);
       return this.json(204, null);

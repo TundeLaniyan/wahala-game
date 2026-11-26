@@ -22,7 +22,15 @@ const classic: GameSettings = { ...DEFAULT_GAME_SETTINGS, play: 'classic', compe
 
 describe('difficulty picker logic', () => {
   it('names and describes all seven levels; a new player starts on Rookie everywhere', () => {
-    expect(DIFFICULTIES).toEqual(['rookie', 'beginner', 'casual', 'standard', 'skilled', 'expert', 'nightmare']);
+    expect(DIFFICULTIES).toEqual([
+      'rookie',
+      'beginner',
+      'casual',
+      'standard',
+      'skilled',
+      'expert',
+      'nightmare',
+    ]);
     for (const d of DIFFICULTIES) {
       expect(LEVEL_LABEL[d].length).toBeGreaterThan(3);
       expect(LEVEL_HINT[d].length).toBeGreaterThan(10);

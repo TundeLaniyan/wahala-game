@@ -105,6 +105,7 @@ const state = (over: Partial<PlatformState> = {}): PlatformState => ({
   stale: false,
   inviteNeeded: false,
   inviteRefused: false,
+  history: [],
   handoff: 'idle',
   ...over,
 });
@@ -142,6 +143,38 @@ describe('platform panel on the entry screen', () => {
     );
     expect(beta).toContain('data-testid="pf-unavailable"');
     expect(beta).not.toMatch(/play online as a guest/);
+  });
+
+  it('recent matches: none yet, or the recorded ones as plain sentences', () => {
+    expect(panel(state())).toContain('data-testid="pf-history-empty"');
+    const row = (
+      game: 'team' | 'deathmatch' | 'survival',
+      placement: number | null,
+      kills: number | null,
+    ) => ({
+      matchId: `${game}:${placement}`,
+      game,
+      arenaId: 'rumbleOshodi',
+      endedAt: 'x',
+      durationSec: 180,
+      you: { placement, kills, deaths: 0 },
+      humans: 2,
+    });
+    const out = panel(
+      state({
+        history: [
+          row('team', 3, 5),
+          row('deathmatch', 1, 1),
+          row('survival', 22, 0),
+          row('team', null, null),
+        ],
+      }),
+    );
+    expect(out).toContain('Team Rumble: 3rd of 32 fighters, 5 eliminations');
+    expect(out).toContain('Free-for-All: 1st of 32 fighters, 1 elimination');
+    expect(out).toContain('Survival: 22nd of 32 fighters, 0 eliminations');
+    expect(out).toContain('Team Rumble: no placing');
+    expect(out).not.toContain('pf-history-empty');
   });
 
   it('identity: nickname as text, the Guest label, the friend code with Copy, the fighter, and the device-only warning', () => {

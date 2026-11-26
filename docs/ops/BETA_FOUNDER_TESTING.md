@@ -51,10 +51,10 @@ Wait about a minute. It prints your laptop's numeric address, for example `192.1
 | 7 | Choose **3 MIN**, **Ready**, **Start** (30 bots fill the rest: 32 fighters in all) | **Ready** |
 | 8 | In the match tap **Signal** → **Nice one!** | "PhoneA: Nice one!" appears in the side rail |
 | 9 | Keep playing | **Reconnect test:** Airplane mode ON for about 15 s, then OFF: you come back as the same fighter |
-| 10 | Match ends: both phones show the **same results table** (2 HUMAN, 30 BOT) | |
+| 10 | Match ends: both phones show the **same results table** (2 HUMAN, 30 BOT). Then **PLAY ONLINE → YOU → Recent matches** shows your recorded line | Same |
 | 11 | **Rematch**, choose **Team Deathmatch**, Ready, Start, play, finish | |
 
-**How to confirm the results are trusted.** The numbers in the results table come from the match server's own simulation (a phone cannot invent them). To see that the platform recorded them: the laptop window prints `[platform]` lines when a match starts and finishes. For an exact check, run on the laptop after the match: `node scripts/mp/restart-check.mjs` is NOT needed; instead trust the automated version (`npm run test:private-e2e`), which compares the recorded history with the server's results row by row.
+**How to confirm the results are trusted.** After a match, on each phone go back to the Online screen: **PLAY ONLINE → YOU**. Under **Recent matches** there is one line for the match you just played, for example `Free-for-All: 12th of 32 fighters, 3 eliminations`. That line is **not** written by the phone: the match server (the authority that ran the match) sends it to the platform, signed with a secret the phones never see, and the platform refuses anything else. It must agree with your own row in the results table (placing and eliminations) on both phones. Phone A and Phone B each see their own line. If a line is missing or differs, note the step and report it (see below). A phone cannot make it up: a result sent without the server's signature is refused (checked automatically by the validation, `docs/FINAL_INTEGRATION.md`).
 
 ### If a connection fails
 
@@ -109,7 +109,7 @@ Do this only when you have decided to host. **Before anything is deployed, you m
    | 4 | **Start private match**: both phones are in one room, both **VERIFIED** | |
    | 5 | Pick **Free-for-All**, play a full 3-minute match, send a **Signal** | Receives it |
    | 6 | **Reconnect test:** Airplane mode 15 s, then back | |
-   | 7 | Compare the two results tables: identical, 32 rows | |
+   | 7 | Compare the two results tables: identical, 32 rows. Then **YOU → Recent matches**: the recorded line matches your row | Same |
    | 8 | **Rematch** as **Team Deathmatch**, play it | |
    | 9 | **Refusal checks:** a third person with the link but **no code** cannot create an account; the same code is used by no one else | |
 

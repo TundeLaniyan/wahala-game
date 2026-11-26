@@ -10,9 +10,7 @@ const builtWithPlatform = (): boolean => typeof __WAHALA_PLATFORM__ !== 'undefin
 
 /** The hosted private-beta client (build constant, only ever true together with the platform client). */
 export function privateBeta(): boolean {
-  return (
-    builtWithPlatform() && typeof __WAHALA_PRIVATE_BETA__ !== 'undefined' && __WAHALA_PRIVATE_BETA__
-  );
+  return builtWithPlatform() && typeof __WAHALA_PRIVATE_BETA__ !== 'undefined' && __WAHALA_PRIVATE_BETA__;
 }
 
 export function platformEnabled(): boolean {

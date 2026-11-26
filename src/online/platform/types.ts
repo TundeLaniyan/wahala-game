@@ -34,6 +34,18 @@ export interface Tokens {
   refreshExpiresAt: string;
 }
 
+/** One of the player's own recent matches, as the PLATFORM recorded it from the match server's signed report (`GET /v1/me/matches`). */
+export interface HistoryView {
+  matchId: string;
+  game: 'survival' | 'deathmatch' | 'team';
+  arenaId: string;
+  endedAt: string | null;
+  durationSec: number | null;
+  you: { placement: number | null; kills: number | null; deaths: number | null };
+  /** How many humans of that match had a platform account. */
+  humans: number;
+}
+
 export interface FriendView {
   playerId: string;
   displayName: string;

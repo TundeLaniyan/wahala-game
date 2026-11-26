@@ -19,6 +19,7 @@ import type { PlatformClient, PlatformError, Result } from './client';
 import type {
   BlockView,
   FriendView,
+  HistoryView,
   InviteView,
   MuteView,
   MyProfile,
@@ -51,6 +52,8 @@ export interface PlatformState {
   blocks: BlockView[];
   mutes: MuteView[];
   invites: InviteView[];
+  /** The player's own recent matches, as the platform recorded them from the match server (newest first). */
+  history: HistoryView[];
   party: PartyView | null;
   tab: PlatformTab;
   /** The action in flight (its key), so its button shows busy and is not pressed twice. */
@@ -114,6 +117,7 @@ const INITIAL: PlatformState = {
   blocks: [],
   mutes: [],
   invites: [],
+  history: [],
   party: null,
   tab: 'you',
   busy: null,
@@ -247,12 +251,13 @@ export function createPlatformController(deps: ControllerDeps) {
   // ---------------------------------------------------------------- loading and polling
 
   async function loadSocial(): Promise<void> {
-    const [friends, requests, blocks, mutes, invites] = await Promise.all([
+    const [friends, requests, blocks, mutes, invites, history] = await Promise.all([
       client.friends(),
       client.requests(),
       client.blocks(),
       client.mutes(),
       client.invites(),
+      client.history(),
     ]);
     const patch: Partial<PlatformState> = {};
     if (friends.ok) patch.friends = friends.value;
@@ -263,6 +268,7 @@ export function createPlatformController(deps: ControllerDeps) {
     if (blocks.ok) patch.blocks = blocks.value;
     if (mutes.ok) patch.mutes = mutes.value;
     if (invites.ok) patch.invites = invites.value;
+    if (history.ok) patch.history = history.value;
     set(patch);
   }
 
@@ -343,7 +349,10 @@ export function createPlatformController(deps: ControllerDeps) {
   async function connect(): Promise<void> {
     set({ phase: 'connecting', message: null });
     const typed = deps.room.name().trim();
-    const me = await client.ensureGuest(typed && typed !== 'Player' ? typed : undefined, inviteCode || undefined);
+    const me = await client.ensureGuest(
+      typed && typed !== 'Player' ? typed : undefined,
+      inviteCode || undefined,
+    );
     if (!opened) {
       set({ phase: me.ok ? 'ready' : 'idle', me: me.ok ? me.value : null });
       return;
@@ -422,6 +431,13 @@ export function createPlatformController(deps: ControllerDeps) {
     },
     setTab(tab: PlatformTab): void {
       set({ tab });
+      if (tab === 'you') void actions.refreshHistory();
+    },
+    /** The YOU tab asks for the player's recent matches again (a match may have ended since the screen was last open). */
+    async refreshHistory(): Promise<void> {
+      if (get().phase !== 'ready') return;
+      const r = await client.history();
+      if (r.ok) set({ history: r.value });
     },
     dismissMessage(id: number): void {
       if (get().message?.id === id) set({ message: null });

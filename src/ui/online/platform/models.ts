@@ -28,6 +28,28 @@ export const PARTY_MODE_OPTIONS = [
   { id: 'team', name: 'Team Rumble' },
 ] as const;
 
+/** One recorded match as a sentence: "Team Rumble: 3rd of 32 fighters, 5 eliminations". Pure. */
+export function historyLine(m: {
+  game: string;
+  you: { placement: number | null; kills: number | null };
+}): string {
+  const name = m.game === 'team' ? 'Team Rumble' : m.game === 'survival' ? 'Survival' : 'Free-for-All';
+  const n = m.you.placement;
+  const ord =
+    n === null
+      ? null
+      : `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th')}`;
+  const kills = m.you.kills;
+  return [
+    name,
+    ord === null ? 'no placing' : `${ord} of 32 fighters`,
+    kills === null ? null : `${kills} elimination${kills === 1 ? '' : 's'}`,
+  ]
+    .filter(Boolean)
+    .join(', ')
+    .replace(', ', ': ');
+}
+
 /** The friend code shown in two groups of four (easier to read aloud), e.g. "K7M3 QXAB". */
 export const groupedCode = (code: string): string =>
   code.length === 8 ? `${code.slice(0, 4)} ${code.slice(4)}` : code;

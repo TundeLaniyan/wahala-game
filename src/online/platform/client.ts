@@ -13,6 +13,7 @@ import type { TokenStore, StoredSession } from './tokens';
 import type {
   BlockView,
   FriendView,
+  HistoryView,
   InviteView,
   MuteView,
   MyProfile,
@@ -343,6 +344,10 @@ export class PlatformClient {
       friendId,
     });
     return r.ok ? ok(r.value.invite) : r;
+  }
+  async history(): Promise<Result<HistoryView[]>> {
+    const r = await this.call<{ matches: HistoryView[] }>('GET', '/v1/me/matches');
+    return r.ok ? ok(r.value.matches) : r;
   }
   async invites(): Promise<Result<InviteView[]>> {
     const r = await this.call<{ invites: InviteView[] }>('GET', '/v1/invites');

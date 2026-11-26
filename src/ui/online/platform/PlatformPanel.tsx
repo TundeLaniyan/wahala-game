@@ -4,7 +4,7 @@
  * join by code, invitations, members, leader controls, the private match). Presentational: the state and the actions come in
  * as props. Every name is React text. When the platform does not answer the panel says so and online play stays guest-only.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PlatformController, PlatformState } from '../../../online/platform/controller';
 import { FRIEND_CODE_LENGTH, cleanCode } from '../../../online/platform/controller';
 import type { PartyMode } from '../../../online/platform/types';
@@ -15,6 +15,7 @@ import {
   PARTY_MODE_OPTIONS,
   PRESENCE_LABEL,
   groupedCode,
+  historyLine,
   invitableFriends,
   kindLabel,
   partyLine,
@@ -59,6 +60,10 @@ function Identity({ state, act, fighterName }: PlatformPanelProps) {
   const [draft, setDraft] = useState(me.displayName);
   const [copied, flash] = useFlash();
   const kind = kindLabel(me.kind);
+  // a match may have ended since this tab was last on screen: ask for the recorded matches again
+  useEffect(() => {
+    void act.refreshHistory();
+  }, [act]);
   const save = () => {
     void act.setNickname(draft).then((ok) => ok && setEditing(false));
   };
@@ -164,7 +169,31 @@ function Identity({ state, act, fighterName }: PlatformPanelProps) {
       {me.kind === 'guest' && (
         <p className="ro-sub">A guest lives on this device only: clearing the browser data loses it.</p>
       )}
+      <History state={state} />
     </div>
+  );
+}
+
+/** The player's own recent matches as the platform recorded them: written only from the match server's signed report, never by a phone. */
+function History({ state }: { state: PlatformState }) {
+  const rows = state.history.slice(0, 5);
+  return (
+    <section className="pf-history" aria-label="Recent matches" data-testid="pf-history">
+      <small className="mn-kicker">Recent matches</small>
+      {rows.length === 0 ? (
+        <p className="ro-sub" data-testid="pf-history-empty">
+          None yet. A match you play in a party is recorded here by the match server.
+        </p>
+      ) : (
+        <ul className="pf-list" aria-label="Recorded matches">
+          {rows.map((m) => (
+            <li key={m.matchId} className="pf-row" data-testid="pf-history-row">
+              {historyLine(m)}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

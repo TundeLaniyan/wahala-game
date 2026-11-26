@@ -14,7 +14,11 @@ describe('menu focus navigation (D-pad / arrows)', () => {
 
   it('moves to the nearest control in the pressed direction', () => {
     const from = (x: typeof a, dir: 'up' | 'down' | 'left' | 'right') =>
-      nearestInDirection(x.rect, dir, all.filter((o) => o !== x))?.id ?? null;
+      nearestInDirection(
+        x.rect,
+        dir,
+        all.filter((o) => o !== x),
+      )?.id ?? null;
     expect(from(a, 'right')).toBe('b');
     expect(from(a, 'down')).toBe('c');
     expect(from(d, 'up')).toBe('b');

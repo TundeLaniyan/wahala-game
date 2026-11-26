@@ -12,7 +12,11 @@ function hudFor(game: 'classic' | 'survival') {
   const state = createGame({
     seed: 1,
     arenaId: 'rumbleLagosIsland',
-    players: Array.from({ length: 4 }, (_, i) => ({ name: `P${i}`, characterId: 'streetBaller' as const, isBot: i > 0 })),
+    players: Array.from({ length: 4 }, (_, i) => ({
+      name: `P${i}`,
+      characterId: 'streetBaller' as const,
+      isBot: i > 0,
+    })),
     settings: { game },
   });
   return { state, me: () => buildHud(state, 0, null).me! };
