@@ -255,9 +255,14 @@ test.describe('desktop', () => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await open(page, '&noattract');
-    // the same field mission twice, then another district's map and back, twice (A, A, B, A, B, A)
+    // The first start is a WARM-UP and is not compared: a cold start has created fewer GPU resources than any later one, by an amount
+    // that depends on how many frames the machine had drawn when it was counted (102 then 151 and 153 on a slow runner, flat 143 and
+    // 143 on a fast one: CI runs 344 and 354, and this test on two CPU cores). That is progressive creation, not a leak, and it made
+    // this test fail its first attempt on slow runners. A leak is growth between WARM starts, which is what is compared below.
+    // Then: the same field mission twice, another district's map and back, twice (warm-up, A, A, B, A, B, A)
     const counts: { geometries: number; textures: number }[] = [];
     for (const id of [
+      'oshodi.approach',
       'oshodi.approach',
       'oshodi.approach',
       'mushin.approach',
@@ -291,7 +296,7 @@ test.describe('desktop', () => {
       }
     }
     console.log(`GPU after each start: ${JSON.stringify(counts)}`);
-    const [a1, a2, , a3, , a4] = counts as { geometries: number; textures: number }[];
+    const [, a1, a2, , a3, , a4] = counts as { geometries: number; textures: number }[];
     // before the fix every start left about 42 textures and 4 geometries (CF6). A restart is flat; a district seen once
     // leaves its shared, cached assets (models and enemy looks the asset library keeps for the next map that uses them:
     // 19 textures measured for Mushin's map, 39 after all 13 campaign maps, then flat: docs/CAMPAIGN_CAMERA.md CF10);
