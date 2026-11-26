@@ -51,6 +51,9 @@ class Human {
     room.onMessage('results', (m) => { this.results = m; });
     room.onMessage('notice', (m) => { this.notices.push(m); });
     room.onMessage('*', () => {});
+    room.reconnection.maxRetries = 15; room.reconnection.minUptime = 0; // as the game client: the SDK itself retries after a drop
+    room.onDrop(() => { this.droppedAt = Date.now(); });
+    room.onReconnect(() => { this.reconnectedAt = Date.now(); });
     room.onLeave((code) => { this.closed = code; this.stop(); });
     room.onError(() => {});
   }
@@ -131,20 +134,20 @@ async function reconnect() {
   const S = num('seconds');
   const proxies = [null, await relay(o.url), await relay(o.url)]; // host direct; the two others through a relay that can be cut
   const { members } = await startRoom(0, 3, S, proxies.map((p) => p?.url ?? o.url));
-  await sleep(8000);
+  await sleep(20000); // well inside the match
   const [, back, gone] = members;
-  const token = back.room.reconnectionToken;
-  back.stop(); back.room.reconnection.enabled = false; gone.stop(); gone.room.reconnection.enabled = false;
+  gone.stop(); gone.room.reconnection.enabled = false; // this one's network never comes back: the seat must fall to a bot, the match must go on
   const t0 = Date.now();
-  proxies[1].killAll(); proxies[2].killAll(); // both connections die at once (a tunnel, a lift, a dead router)
-  await sleep(1500);
-  let backOk = false, backMs = null, why = null;
-  try { const r = await back.sdk.reconnect(token); back.attach(r); back.play(); backOk = true; backMs = Date.now() - t0; } catch (e) { why = String(e.message ?? e).slice(0, 100); }
+  proxies[1].killAll(); proxies[2].killAll(); // both connections die at once (a tunnel, a lift, a dead router); `back` retries by itself, as the game does
+  let waited = 0;
+  while (!back.reconnectedAt && waited < 25000) { await sleep(250); waited += 250; }
   const framesAtBack = back.frames;
+  await sleep(5000);
   const deadline = Date.now() + (S + 90) * 1000;
   while (Date.now() < deadline && !members[0].results) await sleep(500);
-  await sleep(1000);
-  result('reconnect', { returnedWithinWindow: backOk, reconnectMs: backMs, failure: why, framesAfterReturn: back.frames - framesAtBack, matchFinishedForHost: !!members[0].results, returnedHumanGotResults: !!back.results, neverReturnedHumanClosedWith: gone.closed });
+  await sleep(1500);
+  result('reconnect', { returnedWithinWindow: !!back.reconnectedAt, reconnectMs: back.reconnectedAt ? back.reconnectedAt - t0 : null, framesInFirst5sAfterReturn: back.frames - framesAtBack,
+    matchFinishedForHost: !!members[0].results, returnedHumanGotResults: !!back.results, neverReturnedHumanClosedWith: gone.closed });
   await Promise.all(members.map((m) => m.leave()));
   proxies.forEach((p) => p?.close());
 }
