@@ -38,6 +38,8 @@ export interface PlatformConfig {
    * development / test, **OFF in production** until moderators exist (it can be abused by colluding accounts: docs/PLATFORM_COLLUSION_ANALYSIS.md).
    */
   autoRestrict: boolean;
+  /** Anonymous account creation per address: `burst/perMinute`. Default 5/6; a private beta with friends behind one NAT needs more. */
+  guestCreateRate: { burst: number; perMin: number };
   /**
    * PRIVATE BETA MODE: no Google / Apple provider is configured and accounts are GUESTS ONLY (sign-in answers 501). Production
    * normally refuses to start without a real identity provider; this explicit switch is the visible acknowledgement that it is
@@ -73,6 +75,17 @@ function num(v: string | undefined, fallback: number, min: number, max: number):
   return Number.isFinite(n) && n >= min && n <= max ? n : fallback;
 }
 
+function parseRate(
+  v: string | undefined,
+  fallback: { burst: number; perMin: number },
+): { burst: number; perMin: number } {
+  const m = /^(\d{1,3})\/(\d{1,4})$/.exec((v ?? '').trim());
+  if (!m) return fallback;
+  const burst = Number(m[1]);
+  const perMin = Number(m[2]);
+  return burst >= 1 && perMin >= 1 ? { burst, perMin } : fallback;
+}
+
 export function loadConfig(e: Record<string, string | undefined> = process.env): PlatformConfig {
   const env: PlatformEnv =
     e.PLATFORM_ENV === 'production' ? 'production' : e.PLATFORM_ENV === 'test' ? 'test' : 'development';
@@ -94,6 +107,7 @@ export function loadConfig(e: Record<string, string | undefined> = process.env):
     publicWebUrl: (e.PLATFORM_PUBLIC_WEB_URL ?? 'http://localhost:5173').replace(/\/+$/, ''),
     partyMaxSize: Math.round(num(e.PLATFORM_PARTY_MAX_SIZE, 8, 2, 32)),
     devTextChat: flag(e.PLATFORM_DEV_TEXT_CHAT),
+    guestCreateRate: parseRate(e.PLATFORM_GUEST_CREATE_RATE, { burst: 5, perMin: 6 }),
     guestOnly: flag(e.PLATFORM_GUEST_ONLY),
     metricsToken: e.PLATFORM_METRICS_TOKEN ?? '',
     dbPoolMax: Math.round(num(e.PLATFORM_DB_POOL_MAX, 10, 1, 100)),

@@ -21,6 +21,7 @@ import type { Clock } from '../util/clock';
 import { safeEqual } from '../util/secrets';
 import { clientIp, ipKey, parseTrusted } from './clientIp';
 import { RATES } from './rateLimit';
+import type { Rate } from './rateLimit';
 import type { RateLimiter } from './rateLimit';
 import type { RouteContext, Router } from './router';
 import { verifyServiceRequest } from './serviceAuth';
@@ -41,6 +42,8 @@ export interface HttpOptions {
   metrics: Metrics;
   metricsToken: string;
   db: Db;
+  /** Per-class overrides of `RATES` (configuration, e.g. a more generous guest-creation limit for a private beta). */
+  rates?: Partial<Record<keyof typeof RATES, Rate>>;
   /** Called after every successful player authentication (presence keeps-alive). */
   onAuthenticated?: (p: Principal) => void;
   /** Readiness probe: resolves when the database answers and the schema is current. */
@@ -203,7 +206,7 @@ export function createHttp(o: HttpOptions): PlatformHttp {
       }
       if (def.rate) {
         const key = `${def.rate}:${principal?.playerId ?? ip}`;
-        const r = o.limiter.take(key, RATES[def.rate]);
+        const r = o.limiter.take(key, o.rates?.[def.rate] ?? RATES[def.rate]);
         if (!r.ok) throw new ApiError('rate_limited', 'slow down', { retryAfterMs: r.retryAfterMs });
       }
 

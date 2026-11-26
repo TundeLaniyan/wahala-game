@@ -164,8 +164,20 @@ export async function createPlatform(
     AppleIapProvider,
     GooglePlayProvider,
   ]);
+  const schema = async (): Promise<{ ok: boolean; current: number | null; expected: number }> => {
+    try {
+      const r = await db.query<{ v: number | null }>('SELECT max(version) AS v FROM schema_migrations');
+      const current = Number(r.rows[0]?.v ?? 0);
+      return { ok: current === migrations.length, current, expected: migrations.length };
+    } catch {
+      return { ok: false, current: null, expected: migrations.length };
+    }
+  };
+
   const catalog = new CatalogService({ db, clock, sandboxVisible: sandbox });
-  await catalog.syncFromGame();
+  // on a database that is not at this build's schema (production never migrates itself) the sync would die on a missing table:
+  // skip it, so the caller's schema check gives the operator the clear "run migrate" message instead of a stack trace
+  if (!o.skipMigrations || (await schema()).ok) await catalog.syncFromGame();
   const commerce = new CommerceService({ db, clock, identity, catalog, providers: paymentProviders });
   identity.registerErasure((q, id) => commerce.erase(q, id));
 
@@ -179,19 +191,10 @@ export async function createPlatform(
   );
 
   const metrics = new Metrics();
-  const schema = async (): Promise<{ ok: boolean; current: number | null; expected: number }> => {
-    try {
-      const r = await db.query<{ v: number | null }>('SELECT max(version) AS v FROM schema_migrations');
-      const current = Number(r.rows[0]?.v ?? 0);
-      return { ok: current === migrations.length, current, expected: migrations.length };
-    } catch {
-      return { ok: false, current: null, expected: migrations.length };
-    }
-  };
-
   const http = createHttp({
     router,
     metrics,
+    rates: { guestCreate: config.guestCreateRate },
     metricsToken: config.metricsToken,
     db,
     identity,

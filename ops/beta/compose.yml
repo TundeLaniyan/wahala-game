@@ -25,6 +25,9 @@ services:
     <<: *hardened
     image: ${POSTGRES_IMAGE:-postgres:16}
     read_only: false # PostgreSQL writes its data directory and sockets; the volume is the only writable path
+    # No tini here: it runs as root without CAP_KILL, cannot signal the postgres user's process and dies on `stop` ("Operation not
+    # permitted"), which kills PostgreSQL uncleanly. The official image runs postgres as PID 1 and handles SIGINT/SIGTERM itself.
+    init: false
     cap_drop: [ALL]
     cap_add: [CHOWN, SETUID, SETGID, FOWNER, DAC_OVERRIDE] # the entrypoint fixes volume ownership, then drops to the postgres user
     environment:
@@ -94,6 +97,7 @@ services:
       PLATFORM_APPLE_CLIENT_IDS: ${PLATFORM_APPLE_CLIENT_IDS:-}
       PLATFORM_PARTY_MAX_SIZE: ${PLATFORM_PARTY_MAX_SIZE:-8}
       PLATFORM_DB_POOL_MAX: ${PLATFORM_DB_POOL_MAX:-10}
+      PLATFORM_GUEST_CREATE_RATE: ${PLATFORM_GUEST_CREATE_RATE:-15/20}
       PLATFORM_AUTO_RESTRICT: '0'
     secrets: [database_url, match_server_secret, admin_token, platform_metrics_token, handoff_private_key]
     depends_on:
