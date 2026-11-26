@@ -1,5 +1,8 @@
 dist
 dist-online
+dist-private
+private-e2e-diag
+.local
 node_modules
 reference
 package-lock.json

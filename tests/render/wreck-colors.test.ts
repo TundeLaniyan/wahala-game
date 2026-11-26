@@ -16,7 +16,10 @@ describe('wreck colours', () => {
       expect(c, k).toHaveLength(3);
       for (const rgb of c) {
         expect(rgb).toHaveLength(3);
-        for (const v of rgb) (expect(v).toBeGreaterThanOrEqual(0), expect(v).toBeLessThanOrEqual(1));
+        for (const v of rgb) {
+          expect(v).toBeGreaterThanOrEqual(0);
+          expect(v).toBeLessThanOrEqual(1);
+        }
       }
     }
   });
