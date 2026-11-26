@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "dev:online": "node scripts/dev-online.mjs",
+    "dev:private": "node scripts/dev-online.mjs --platform",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

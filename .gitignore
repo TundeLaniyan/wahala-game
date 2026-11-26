@@ -18,3 +18,6 @@ public/audio/candidates/
 # Mastered district MP3s are generated from the founder's recordings (tools/audio/production/build_districts.sh); not committed
 tools/audio/candidates/lagos_districts_v1/*.mp3
 tools/audio/candidates/lagos_districts_v1/lite/
+
+# local private-test secrets (scripts/dev-online.mjs --platform)
+.local/
