@@ -2,6 +2,9 @@
 **
 !tsconfig.json
 !src/**
+!player-platform/package.json
+!player-platform/package-lock.json
+!player-platform/src/handoff/**
 !server/package.json
 !server/package-lock.json
 !server/src/**

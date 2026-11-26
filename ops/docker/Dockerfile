@@ -25,6 +25,11 @@ COPY server/package.json server/package-lock.json server/
 RUN --mount=type=bind,from=extra-ca,target=/extra-ca \
     if [ -f /extra-ca/ca-bundle.crt ]; then export NODE_EXTRA_CA_CERTS=/extra-ca/ca-bundle.crt; fi; \
     cd server && npm ci
+# the match server imports the platform's ticket verifier (player-platform/src/handoff: only `jose`, decision MP-PLAT)
+COPY player-platform/package.json player-platform/package-lock.json player-platform/
+RUN --mount=type=bind,from=extra-ca,target=/extra-ca \
+    if [ -f /extra-ca/ca-bundle.crt ]; then export NODE_EXTRA_CA_CERTS=/extra-ca/ca-bundle.crt; fi; \
+    cd player-platform && npm ci
 # the server's `bundle` script calls ../node_modules/.bin/esbuild: provide exactly that, at the pinned version
 RUN --mount=type=bind,from=extra-ca,target=/extra-ca \
     if [ -f /extra-ca/ca-bundle.crt ]; then export NODE_EXTRA_CA_CERTS=/extra-ca/ca-bundle.crt; fi; \
@@ -32,6 +37,7 @@ RUN --mount=type=bind,from=extra-ca,target=/extra-ca \
  && test "$(/repo/node_modules/.bin/esbuild --version)" = "${ESBUILD_VERSION}"
 COPY tsconfig.json ./
 COPY src ./src
+COPY player-platform/src/handoff ./player-platform/src/handoff
 COPY server ./server
 RUN cd server && npm run bundle && test -s dist/rumble-server.mjs
 
