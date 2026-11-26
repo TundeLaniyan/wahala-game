@@ -37,6 +37,17 @@ rumble_metrics() { dc exec -T rumble sh -c 'node -e "fetch(\"http://127.0.0.1:25
 platform_metrics() { dc exec -T platform sh -c 'node -e "fetch(\"http://127.0.0.1:4567/metrics\",{headers:{authorization:\"Bearer \"+require(\"fs\").readFileSync(\"/run/secrets/platform_metrics_token\",\"utf8\").trim()}}).then(r=>r.text()).then(console.log)"' 2>/dev/null; }
 wait_healthy() { local i; for i in $(seq 1 90); do local bad; bad="$(dc ps --format '{{.Service}} {{.State}} {{.Health}}' | awk '$1!="migrate" && $1!="" && ($2!="running" || ($3!="healthy" && $3!=""))')"; [ -z "$bad" ] && return 0; sleep 2; done; return 1; }
 
+# A real crash: SIGKILL the container's main process from the host. (`docker kill` counts as a manual stop and Docker then
+# deliberately does NOT restart the container, so it would not test the restart policy.) Returns 0 when Docker restarted it by itself.
+crash() {
+  local c="${BETA_PROJECT}-$1-1" before pid i now
+  before="$(docker inspect -f '{{.State.StartedAt}}' "$c")"; pid="$(docker inspect -f '{{.State.Pid}}' "$c")"
+  kill -9 "$pid" 2>/dev/null || { info "cannot signal the host process (not root?): falling back to docker kill + start, the restart policy is NOT tested for $1"; docker kill "$c" >/dev/null; sleep 1; dc start "$1" >/dev/null 2>&1; }
+  for i in $(seq 1 60); do now="$(docker inspect -f '{{.State.StartedAt}}' "$c")"; [ "$now" != "$before" ] && break; sleep 1; done
+  [ "$now" != "$before" ] || return 1
+  wait_healthy
+}
+
 step "0. preflight"
 for c in docker openssl curl base64; do command -v $c >/dev/null && ok "$c present" || { bad "$c missing"; exit 1; }; done
 docker info >/dev/null 2>&1 && ok "docker daemon reachable ($(docker info --format '{{.ServerVersion}}'))" || { bad "docker daemon not reachable"; exit 1; }
@@ -123,11 +134,11 @@ step "7. restarts, crashes and persistence"
 drv persist before-any-restart
 dc restart platform >/dev/null 2>&1; wait_healthy && drv persist after-platform-restart || bad "platform did not come back after a restart"
 dc restart db >/dev/null 2>&1; wait_healthy; sleep 3; drv persist after-database-restart
-dc kill -s KILL db >/dev/null 2>&1; sleep 1; dc up -d db >/dev/null 2>&1; wait_healthy && ok "PostgreSQL killed with SIGKILL (no clean shutdown) recovered by itself" || bad "PostgreSQL did not recover from SIGKILL"
+crash db && ok "PostgreSQL killed with SIGKILL (no clean shutdown): restarted by Docker and recovered by itself" || bad "PostgreSQL did not recover from SIGKILL"
 sleep 4; drv persist after-database-crash
-dc kill -s KILL platform >/dev/null 2>&1; sleep 3; wait_healthy && ok "a crashed platform is restarted by the restart policy" || bad "platform not restarted after a kill"
+crash platform && ok "a crashed platform (SIGKILL) is restarted by Docker's restart policy" || bad "platform not restarted after a crash"
 drv persist after-platform-crash
-dc kill -s KILL rumble >/dev/null 2>&1; sleep 3; wait_healthy && ok "a crashed match server is restarted by the restart policy" || bad "match server not restarted after a kill"
+crash rumble && ok "a crashed match server (SIGKILL) is restarted by Docker's restart policy" || bad "match server not restarted after a crash"
 dc stop db >/dev/null 2>&1; sleep 5
 code="$(curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1:$PORT/v1/auth/providers)"; [ "$code" = 200 ] && ok "database OUTAGE: public, database-free endpoints keep answering (HTTP 200)" || bad "providers endpoint during outage: $code"
 code="$(curl -sk -o /dev/null -w '%{http_code}' -XPOST https://127.0.0.1:$PORT/v1/auth/guest -H 'content-type: application/json' -d '{}')"; [ "$code" = 503 ] || [ "$code" = 500 ] && ok "database OUTAGE: a request that needs the database fails cleanly (HTTP $code, no crash)" || bad "guest creation during outage: $code"
@@ -135,6 +146,7 @@ curl -sk https://127.0.0.1:$PORT/health | grep -q '"ok":true' && ok "database OU
 dc start db >/dev/null 2>&1; wait_healthy; sleep 8
 expect "RECOVERY: the platform serves database requests again without a restart" "201" "$(curl -sk -o /dev/null -w '%{http_code}' -XPOST https://127.0.0.1:$PORT/v1/auth/guest -H 'content-type: application/json' -d '{}')"
 drv persist after-outage-recovery
+dc logs --no-color --no-log-prefix >"$V/logs-before-down.log" 2>&1  # `down` deletes the containers and their logs: keep them for the leak scan
 dc down >/dev/null 2>&1; dc up -d >/dev/null 2>&1; wait_healthy && ok "full stop and start (down / up): everything healthy again" || bad "stack did not return after down/up"
 drv persist after-full-restart
 
@@ -149,7 +161,7 @@ dc exec -T db psql -U wahala -d wahala -qc "delete from sessions; delete from fr
 drv persist after-disaster-restore
 
 step "9. logs contain no secrets, tokens or room codes"
-dc logs --no-color --no-log-prefix >"$V/all.log" 2>&1
+{ cat "$V/logs-before-down.log" 2>/dev/null; dc logs --no-color --no-log-prefix 2>&1; } >"$V/all.log"
 leak=0; for sname in db_password match_server_secret admin_token platform_metrics_token rumble_metrics_token; do grep -qF "$(cat "$S/secrets/$sname")" "$V/all.log" && { bad "secret $sname appears in a log"; leak=1; }; done
 grep -qE 'wa_[A-Za-z0-9_-]{20,}|wr_[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}' "$V/all.log" && { bad "a token-shaped string appears in a log"; leak=1; }
 code="$(node -e 'try{console.log(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).match.code)}catch{}' "$V/validate.json" 2>/dev/null || true)"
