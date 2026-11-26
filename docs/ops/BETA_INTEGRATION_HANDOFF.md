@@ -9,7 +9,7 @@
 | 2. Bind identity to the seat | `server/src/rooms/RumbleRoom.ts`, `server/src/core/Lobby.ts`: the platform id and name come from the verified ticket only (server-stamped `_acct`; client options starting with `_` are stripped); the typed name is ignored; one seat per account |
 | 3. Signed `started` / `finished` calls | `server/src/core/platform.ts` (`report`) from `RumbleRoom.reportToPlatform`: HMAC over `ts.POST.path.body`, 2 s timeout, retries in memory, never delays a tick or a start. The match id is `<match id>:<room nonce>` (a rematch in the same room is a different match) |
 | 4. Client asks for the ticket and sends the invite code | `src/online/platform/*` (`ensureGuest(nickname, inviteCode)`, ticket fetched right before each use), `src/ui/online/platform/PlatformPanel.tsx` (invite form), `EntryScreen` (private-beta mode) |
-| Shared secret as a file | `PLATFORM_MATCH_SERVER_SECRET_FILE` read by `loadPlatformConfig` (both set, unreadable or empty: the server refuses to start) |
+| Shared secret as a file | the match server imports no file system module (a guard in `server/test/requirements.test.ts`), so the compose entrypoint turns `/run/secrets/match_server_secret` into `PLATFORM_MATCH_SERVER_SECRET` inside the container only (not in `docker inspect`), exactly as it does for the metrics token |
 
 ## 1. Wiring that is already in place (no deployment change needed when you integrate)
 
@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | `PLATFORM_JWKS_URL` | `http://platform:4567/.well-known/jwks.json` | private network; the platform's public key set (Ed25519, `kid`) |
 | `PLATFORM_INTERNAL_URL` | `http://platform:4567` | base for the signed calls (`/internal/v1/matches/started`, `/finished`) |
-| `PLATFORM_MATCH_SERVER_SECRET_FILE` | `/run/secrets/match_server_secret` | the HMAC key, a file, never an env var. The match server must read the file (the platform reads the same file) |
+| `PLATFORM_MATCH_SERVER_SECRET` | from `/run/secrets/match_server_secret` by the `rumble` entrypoint | the HMAC key, a file on disk and a variable only inside the container, never in the compose file. The platform reads the same file |
 
 The edge does **not** route `/internal/*` publicly (checked by `validate.sh`), so these calls only ever travel on the private `app` network. If you prefer other variable names, change the three lines in the compose file in the same commit.
 

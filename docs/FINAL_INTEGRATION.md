@@ -23,7 +23,7 @@ The final branch is built **from production `10d0b26`**, then `git merge --no-ff
 
 | # | Disagreement | Resolution |
 | --- | --- | --- |
-| 1 | Backend Ops' compose passes `PLATFORM_MATCH_SERVER_SECRET_FILE`; the match server only read `PLATFORM_MATCH_SERVER_SECRET` | the server reads the file (both set, unreadable or empty = refuse to start): `server/src/core/platform.ts` |
+| 1 | Backend Ops' compose passes `PLATFORM_MATCH_SERVER_SECRET_FILE`; the match server only reads `PLATFORM_MATCH_SERVER_SECRET`, and a first version that read the file itself failed the server's no-file-system guard (`server/test/requirements.test.ts`) | the `rumble` entrypoint turns the secret file into the variable inside the container only, as Ops already does for the metrics token (`ops/beta/compose.yml`); the server stays fs-free |
 | 2 | The Ops hand-off said "no ticket = a guest as today"; that leaves the invite gate bypassable by talking to the match server directly (requirement 5) | `RUMBLE_REQUIRE_TICKET=1`, compose default: decision FC-1 |
 | 3 | The Ops acceptance test I3 joined a *second* player to a party whose match was already open; the platform correctly refuses a late joiner (no late join) | I3 now has the party member type a different name and checks the seat carries the platform name and verified id |
 | 4 | The Ops validator replayed `started` / `finished` with the results' match id; the real server records `<match id>:<room nonce>`, so the platform held two matches and every history check failed (16 failures in the first combined run) | the validator reads the id the platform recorded, after the server's own report (FC-3) |

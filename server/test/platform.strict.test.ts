@@ -153,28 +153,12 @@ describe('configuration fails closed', () => {
     expect(loadPlatformConfig({}).requireTicket).toBe(false);
   });
 
-  it('the match-server secret comes from a file; both a file and a value, or an unreadable or empty file, refuse to start', () => {
-    const files: Record<string, string> = { '/run/secrets/m': 'file-secret-value\n', '/run/secrets/empty': '  \n' };
-    const read = (p: string): string => {
-      const v = files[p];
-      if (v === undefined) throw new Error('ENOENT');
-      return v;
-    };
-    const base = { PLATFORM_INTERNAL_URL: 'http://p:4567' };
-    expect(
-      loadPlatformConfig({ ...base, PLATFORM_MATCH_SERVER_SECRET_FILE: '/run/secrets/m' }, read).secret,
-    ).toBe('file-secret-value');
-    expect(() =>
-      loadPlatformConfig(
-        { ...base, PLATFORM_MATCH_SERVER_SECRET: 'x', PLATFORM_MATCH_SERVER_SECRET_FILE: '/run/secrets/m' },
-        read,
-      ),
-    ).toThrow(/both set/);
-    expect(() => loadPlatformConfig({ ...base, PLATFORM_MATCH_SERVER_SECRET_FILE: '/nope' }, read)).toThrow(
-      /cannot be read/,
-    );
-    expect(() =>
-      loadPlatformConfig({ ...base, PLATFORM_MATCH_SERVER_SECRET_FILE: '/run/secrets/empty' }, read),
-    ).toThrow(/empty/);
+  it('the match-server secret is read from the environment only (a secret FILE is turned into it by the container entrypoint, so the server imports no file system module)', () => {
+    const cfg = loadPlatformConfig({
+      PLATFORM_INTERNAL_URL: 'http://p:4567',
+      PLATFORM_MATCH_SERVER_SECRET: 'env-secret-value',
+    });
+    expect(cfg.secret).toBe('env-secret-value');
+    expect(loadPlatformConfig({ PLATFORM_INTERNAL_URL: 'http://p:4567' }).secret).toBeNull();
   });
 });

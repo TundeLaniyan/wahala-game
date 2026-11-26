@@ -14,7 +14,6 @@
  * No Colyseus import: unit-testable with injected fetch and clock.
  */
 import { createHmac } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { HOST_ROOM, verifyHandoffTicket } from '../../../player-platform/src/handoff/verify';
 import type { TicketClaims } from '../../../player-platform/src/handoff/verify';
 import { remoteHandoffKeys } from '../../../player-platform/src/handoff/remote';
@@ -37,29 +36,17 @@ export interface PlatformConfig {
 }
 
 /**
- * `PLATFORM_MATCH_SERVER_SECRET` directly, or `PLATFORM_MATCH_SERVER_SECRET_FILE` (a path: the hosted deployment mounts secrets as
- * files, never as environment variables). Both set is a configuration mistake and refused, as the platform does.
+ * Reads the link's configuration from the environment. The server imports no file system module (a deliberate guard,
+ * `server/test/requirements.test.ts`): a secret that lives in a file (the hosted deployment's `/run/secrets/...`) is turned into
+ * `PLATFORM_MATCH_SERVER_SECRET` by the container's entrypoint, inside the container only (`ops/beta/compose.yml`), exactly as the
+ * metrics token is.
  */
-export function loadPlatformConfig(
-  env: Record<string, string | undefined> = process.env,
-  readFile: (path: string) => string = (p) => readFileSync(p, 'utf8'),
-): PlatformConfig {
+export function loadPlatformConfig(env: Record<string, string | undefined> = process.env): PlatformConfig {
   const v = (k: string): string | null => {
     const x = env[k]?.trim();
     return x ? x : null;
   };
-  const file = v('PLATFORM_MATCH_SERVER_SECRET_FILE');
-  if (file && v('PLATFORM_MATCH_SERVER_SECRET'))
-    throw new Error('PLATFORM_MATCH_SERVER_SECRET and PLATFORM_MATCH_SERVER_SECRET_FILE are both set: give the secret once');
-  let secret = v('PLATFORM_MATCH_SERVER_SECRET');
-  if (file) {
-    try {
-      secret = readFile(file).trim() || null;
-    } catch {
-      throw new Error('PLATFORM_MATCH_SERVER_SECRET_FILE cannot be read: refusing to start with results reporting half configured');
-    }
-    if (!secret) throw new Error('PLATFORM_MATCH_SERVER_SECRET_FILE is empty');
-  }
+  const secret = v('PLATFORM_MATCH_SERVER_SECRET');
   const requireTicket = env.RUMBLE_REQUIRE_TICKET === '1';
   if (requireTicket && !v('PLATFORM_JWKS_URL'))
     throw new Error('RUMBLE_REQUIRE_TICKET=1 needs PLATFORM_JWKS_URL: a server that must check tickets cannot start without the keys');

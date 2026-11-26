@@ -85,7 +85,6 @@ services:
       PORT: '4567'
       PLATFORM_HOST: 0.0.0.0
       DATABASE_URL_FILE: /run/secrets/database_url
-      PLATFORM_MATCH_SERVER_SECRET_FILE: /run/secrets/match_server_secret
       PLATFORM_ADMIN_TOKEN_FILE: /run/secrets/admin_token
       PLATFORM_METRICS_TOKEN_FILE: /run/secrets/platform_metrics_token
       PLATFORM_HANDOFF_PRIVATE_KEY_FILE: /run/secrets/handoff_private_key
@@ -116,9 +115,9 @@ services:
   rumble:
     image: wahala-rumble-server:local
     <<: *hardened
-    # the server reads its metrics token from the environment: a tiny wrapper turns the secret FILE into that variable inside the
-    # container only (it is not in `docker inspect`)
-    entrypoint: ['sh', '-c', 'export RUMBLE_METRICS_TOKEN="$$(cat /run/secrets/rumble_metrics_token)"; exec node rumble-server.mjs']
+    # the server reads its metrics token and the platform's shared secret from the environment (it imports no file system module): a tiny
+    # wrapper turns each secret FILE into its variable inside the container only (neither is in `docker inspect`)
+    entrypoint: ['sh', '-c', 'export RUMBLE_METRICS_TOKEN="$$(cat /run/secrets/rumble_metrics_token)" PLATFORM_MATCH_SERVER_SECRET="$$(cat /run/secrets/match_server_secret)"; exec node rumble-server.mjs']
     environment:
       NODE_ENV: production
       PORT: '2567'
@@ -141,7 +140,6 @@ services:
       RUMBLE_REQUIRE_TICKET: ${RUMBLE_REQUIRE_TICKET:-1}
       PLATFORM_JWKS_URL: http://platform:4567/.well-known/jwks.json
       PLATFORM_INTERNAL_URL: http://platform:4567
-      PLATFORM_MATCH_SERVER_SECRET_FILE: /run/secrets/match_server_secret
     secrets: [rumble_metrics_token, match_server_secret]
     networks: [app]
     expose: ['2567']
