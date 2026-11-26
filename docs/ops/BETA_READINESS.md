@@ -8,7 +8,7 @@ Status words, used literally: **IMPLEMENTED** (the code or configuration exists,
 
 | Evidence | Result |
 | --- | --- |
-| `ops/beta/validate.sh` (full, real Docker: builds the two images, starts the whole stack, plays a real 3-minute 32-fighter match through the TLS edge) | **RUN6_RESULT** |
+| `ops/beta/validate.sh` (full, real Docker: builds the two images, starts the whole stack, plays a real 3-minute 32-fighter match through the TLS edge) | **241 passed, 0 failed, 2 BLOCKED BY INTEGRATION** (both named in section 3), 602 s, final run on HEAD of this branch; the report is `docs/measurements/beta-backend/validation-report-full.txt`. It includes a real 186 s match with 32 fighters (2 humans, 30 bots) through the TLS edge, identical final state hash on both clients, peak match-server CPU 42 % and RSS 171 MB, 0 dropped ticks |
 | Platform unit and integration suite (`player-platform/test`) | 196 / 196 pass on PGlite **and** on PostgreSQL 16 |
 | Platform typecheck and root ESLint (`ops/`, `player-platform/`) | clean |
 | Load and soak (`ops/beta/load.sh`, real matches, simulated clients) | `BETA_LOAD_RESULTS.md`; initial cap 2 simultaneous matches |
