@@ -1,7 +1,7 @@
 /** `npm run check:config`: validates the environment and prints every problem. Exit 1 on any. Never prints a secret value. */
-import { loadConfig, validateConfig } from '../config';
+import { loadConfig, validateConfig, withSecretFiles } from '../config';
 
-const c = loadConfig();
+const c = loadConfig(withSecretFiles());
 const problems = validateConfig(c);
 const mask = (s: string): string => (s ? `set (${s.length} chars)` : 'not set');
 console.log(

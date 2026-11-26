@@ -4,10 +4,10 @@
  */
 import { createPlatform } from '../app';
 import { openDb } from '../bootstrap';
-import { loadConfig } from '../config';
+import { loadConfig, withSecretFiles } from '../config';
 import { silentLogger } from '../logger';
 
-const config = loadConfig();
+const config = loadConfig(withSecretFiles());
 if (config.env === 'production') {
   console.error('seed refuses to run in production');
   process.exit(1);

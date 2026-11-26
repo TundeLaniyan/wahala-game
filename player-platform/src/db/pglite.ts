@@ -24,5 +24,6 @@ export async function createPgliteDb(dataDir?: string): Promise<Db> {
     ...wrap(db),
     tx: (fn) => db.transaction((t) => fn(wrap(t as unknown as PGlite))),
     close: () => db.close(),
+    stats: () => null,
   };
 }

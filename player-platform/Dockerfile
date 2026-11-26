@@ -6,13 +6,21 @@
 # `node` user and contains no dev dependency, no PGlite and no source. TLS is terminated in front of it (docs/PLATFORM_OPERATIONS.md).
 ARG NODE_IMAGE=node:22-slim
 
+# OPTIONAL extra CA certificates for the build stage only (a TLS-inspecting corporate or sandbox proxy). Empty by default.
+# Pass a directory holding `ca-bundle.crt`:  docker build --build-context extra-ca=/path/to/dir ...  Nothing of it lands in a layer.
+FROM scratch AS extra-ca
+
 FROM ${NODE_IMAGE} AS build
 WORKDIR /repo
 ARG ESBUILD_VERSION=0.28.2
 ENV npm_config_update_notifier=false npm_config_fund=false npm_config_audit=false
 COPY player-platform/package.json player-platform/package-lock.json player-platform/
-RUN cd player-platform && npm ci --ignore-scripts
-RUN npm install --prefix /repo --no-save --no-package-lock --ignore-scripts esbuild@${ESBUILD_VERSION} \
+RUN --mount=type=bind,from=extra-ca,target=/extra-ca \
+    if [ -f /extra-ca/ca-bundle.crt ]; then export NODE_EXTRA_CA_CERTS=/extra-ca/ca-bundle.crt; fi; \
+    cd player-platform && npm ci --ignore-scripts
+RUN --mount=type=bind,from=extra-ca,target=/extra-ca \
+    if [ -f /extra-ca/ca-bundle.crt ]; then export NODE_EXTRA_CA_CERTS=/extra-ca/ca-bundle.crt; fi; \
+    npm install --prefix /repo --no-save --no-package-lock --ignore-scripts esbuild@${ESBUILD_VERSION} \
  && test "$(/repo/node_modules/.bin/esbuild --version)" = "${ESBUILD_VERSION}"
 COPY src/net/protocol.ts src/net/protocol.ts
 COPY src/sim/data/characters.ts src/sim/data/characters.ts

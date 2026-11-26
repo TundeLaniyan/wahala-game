@@ -5,17 +5,39 @@
  */
 import { createPlatform } from './app';
 import { openDb } from './bootstrap';
-import { loadConfig, validateConfig } from './config';
+import { loadConfig, validateConfig, withSecretFiles } from './config';
 import { createLogger } from './logger';
 
-const config = loadConfig();
+let config: ReturnType<typeof loadConfig>;
+try {
+  config = loadConfig(withSecretFiles());
+} catch (e) {
+  createLogger().error('configuration problem', {
+    problem: e instanceof Error ? e.message : 'unreadable secret file',
+  });
+  process.exit(1);
+}
 const log = createLogger(undefined, config.logLevel);
 const problems = validateConfig(config);
 if (problems.length > 0) {
   for (const p of problems) log.error('configuration problem', { problem: p });
   process.exit(1);
 }
-const platform = await createPlatform(config, await openDb(config), { logger: log });
+// Production NEVER migrates by itself: the operator runs `migrate` first (so a release is a deliberate step and a rollback to an
+// older build is refused by the schema check instead of silently running on a newer schema).
+const platform = await createPlatform(config, await openDb(config), {
+  logger: log,
+  skipMigrations: config.env === 'production',
+});
+const schema = await platform.schema();
+if (!schema.ok) {
+  log.error('database schema is not current: run the migrate step first', {
+    current: schema.current,
+    expected: schema.expected,
+  });
+  await platform.close();
+  process.exit(1);
+}
 const port = await platform.start();
 log.info('player platform listening', {
   port,
@@ -49,10 +71,24 @@ const partyTimer = setInterval(
 );
 partyTimer.unref();
 
-const stop = (): void => {
+let stopping = false;
+const stop = (signal: string): void => {
+  if (stopping) return;
+  stopping = true;
+  log.info('shutting down', { signal, graceMs: config.shutdownGraceMs });
   clearInterval(timer);
   clearInterval(partyTimer);
-  void platform.close().finally(() => process.exit(0));
+  platform.drain(); // /ready -> 503 first, so the proxy stops sending new requests
+  platform
+    .close(config.shutdownGraceMs)
+    .then(() => {
+      log.info('stopped');
+      process.exit(0);
+    })
+    .catch((e: unknown) => {
+      log.error('shutdown failed', { err: e instanceof Error ? e.message : 'unknown' });
+      process.exit(1);
+    });
 };
-process.on('SIGTERM', stop);
-process.on('SIGINT', stop);
+process.on('SIGTERM', () => stop('SIGTERM'));
+process.on('SIGINT', () => stop('SIGINT'));

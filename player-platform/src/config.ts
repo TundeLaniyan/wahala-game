@@ -3,6 +3,8 @@
  * pass) and never echoes a secret value. Production (`PLATFORM_ENV=production`) refuses everything that exists only for
  * development: the mock identity provider, mock checkout, dev text chat, an in-memory database, short or missing secrets.
  */
+import { readFileSync } from 'node:fs';
+
 export type PlatformEnv = 'development' | 'test' | 'production';
 
 export interface PlatformConfig {
@@ -36,6 +38,18 @@ export interface PlatformConfig {
    * development / test, **OFF in production** until moderators exist (it can be abused by colluding accounts: docs/PLATFORM_COLLUSION_ANALYSIS.md).
    */
   autoRestrict: boolean;
+  /**
+   * PRIVATE BETA MODE: no Google / Apple provider is configured and accounts are GUESTS ONLY (sign-in answers 501). Production
+   * normally refuses to start without a real identity provider; this explicit switch is the visible acknowledgement that it is
+   * intended. It never enables anything: it only waives that one requirement.
+   */
+  guestOnly: boolean;
+  /** Bearer token for `GET /metrics`. Empty in production = the route does not exist. */
+  metricsToken: string;
+  /** Postgres pool ceiling: bounds the connections this process can hold open (the server's own limit is `max_connections`). */
+  dbPoolMax: number;
+  /** How long a stop waits for in-flight requests before closing the rest, ms. */
+  shutdownGraceMs: number;
   /** Mock checkout (no payment provider): development only. */
   mockCheckout: boolean;
   /** Refresh-token lifetime (sliding) and hard cap, days. */
@@ -80,6 +94,10 @@ export function loadConfig(e: Record<string, string | undefined> = process.env):
     publicWebUrl: (e.PLATFORM_PUBLIC_WEB_URL ?? 'http://localhost:5173').replace(/\/+$/, ''),
     partyMaxSize: Math.round(num(e.PLATFORM_PARTY_MAX_SIZE, 8, 2, 32)),
     devTextChat: flag(e.PLATFORM_DEV_TEXT_CHAT),
+    guestOnly: flag(e.PLATFORM_GUEST_ONLY),
+    metricsToken: e.PLATFORM_METRICS_TOKEN ?? '',
+    dbPoolMax: Math.round(num(e.PLATFORM_DB_POOL_MAX, 10, 1, 100)),
+    shutdownGraceMs: Math.round(num(e.PLATFORM_SHUTDOWN_GRACE_SECONDS, 8, 0, 60) * 1000),
     autoRestrict:
       e.PLATFORM_AUTO_RESTRICT === undefined ? env !== 'production' : flag(e.PLATFORM_AUTO_RESTRICT),
     chatDenylist: list(e.PLATFORM_CHAT_DENYLIST).map((w) => w.toLowerCase()),
@@ -107,6 +125,8 @@ export function validateConfig(c: PlatformConfig): string[] {
   }
   if (c.matchServerSecret && c.matchServerSecret.length < MIN_SECRET)
     problems.push(`PLATFORM_MATCH_SERVER_SECRET must be at least ${MIN_SECRET} characters`);
+  if (c.metricsToken && c.metricsToken.length < MIN_SECRET)
+    problems.push(`PLATFORM_METRICS_TOKEN must be at least ${MIN_SECRET} characters`);
   if (c.adminToken && c.adminToken.length < MIN_SECRET)
     problems.push(`PLATFORM_ADMIN_TOKEN must be at least ${MIN_SECRET} characters`);
   if (prod) {
@@ -128,10 +148,46 @@ export function validateConfig(c: PlatformConfig): string[] {
       problems.push('production origins must not include localhost');
     if (!c.publicWebUrl.startsWith('https://'))
       problems.push('PLATFORM_PUBLIC_WEB_URL must be https in production');
-    if (c.googleClientIds.length === 0 && c.appleClientIds.length === 0)
+    if (c.googleClientIds.length === 0 && c.appleClientIds.length === 0 && !c.guestOnly)
       problems.push(
-        'production needs at least one real identity provider (PLATFORM_GOOGLE_CLIENT_IDS or PLATFORM_APPLE_CLIENT_IDS) or accounts cannot be registered',
+        'production needs at least one real identity provider (PLATFORM_GOOGLE_CLIENT_IDS or PLATFORM_APPLE_CLIENT_IDS), or set PLATFORM_GUEST_ONLY=1 to run a guests-only private beta on purpose',
       );
   }
   return problems;
+}
+
+/** Secrets that may come from a file (Docker / Compose secrets, systemd credentials) instead of an environment variable. */
+export const FILE_SECRETS = [
+  'DATABASE_URL',
+  'PLATFORM_MATCH_SERVER_SECRET',
+  'PLATFORM_ADMIN_TOKEN',
+  'PLATFORM_METRICS_TOKEN',
+  'PLATFORM_HANDOFF_PRIVATE_KEY',
+] as const;
+
+/**
+ * `NAME_FILE=/run/secrets/x` supplies `NAME` from the file's contents (trailing whitespace trimmed). A secret in a file does not show in
+ * `docker inspect`, `/proc/<pid>/environ` of other users, or a process listing. Setting both `NAME` and `NAME_FILE`, or pointing at a
+ * missing / empty file, is an ERROR (it fails loudly instead of silently starting without the secret).
+ */
+export function withSecretFiles(
+  env: Record<string, string | undefined> = process.env,
+  read: (path: string) => string = (p) => readFileSync(p, 'utf8'),
+): Record<string, string | undefined> {
+  const out = { ...env };
+  for (const name of FILE_SECRETS) {
+    const file = env[`${name}_FILE`];
+    if (file === undefined || file === '') continue;
+    if (env[name] !== undefined && env[name] !== '')
+      throw new Error(`set either ${name} or ${name}_FILE, not both`);
+    let text: string;
+    try {
+      text = read(file).replace(/\s+$/, '');
+    } catch {
+      throw new Error(`${name}_FILE points at a file that cannot be read`);
+    }
+    if (text === '') throw new Error(`${name}_FILE points at an empty file`);
+    out[name] = text;
+  }
+  return out;
 }

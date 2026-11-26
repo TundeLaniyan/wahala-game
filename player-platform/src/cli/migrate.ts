@@ -1,9 +1,9 @@
 /** `npm run migrate`: applies pending migrations to DATABASE_URL and exits. Run it BEFORE starting a new release. */
 import { openDb } from '../bootstrap';
-import { loadConfig, validateConfig } from '../config';
+import { loadConfig, validateConfig, withSecretFiles } from '../config';
 import { migrate } from '../db/migrate';
 
-const config = loadConfig();
+const config = loadConfig(withSecretFiles());
 if (config.databaseUrl === 'memory') {
   console.error(
     'DATABASE_URL is not set: nothing to migrate (the in-memory database migrates itself on start).',

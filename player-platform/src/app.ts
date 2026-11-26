@@ -15,6 +15,7 @@ import { IdentityService } from './identity/service';
 import { ProviderRegistry, appleProvider, createMockProvider, googleProvider } from './identity/providers';
 import type { IdentityProvider, MockProvider } from './identity/providers';
 import { createLogger } from './logger';
+import { Metrics } from './metrics';
 import type { Logger } from './logger';
 import { createHandoffSigner } from './handoff/signer';
 import type { HandoffSigner } from './handoff/signer';
@@ -69,8 +70,13 @@ export interface Platform {
   providers: ProviderRegistry;
   mockProvider: MockProvider | null;
   http: PlatformHttp;
+  metrics: Metrics;
+  /** The database's schema version against this build's migrations (production start refuses to run on a mismatch). */
+  schema(): Promise<{ ok: boolean; current: number | null; expected: number }>;
   start(): Promise<number>;
-  close(): Promise<void>;
+  /** Stop taking traffic (`/ready` -> 503) without closing anything yet. */
+  drain(): void;
+  close(graceMs?: number): Promise<void>;
 }
 
 export interface PlatformOverrides {
@@ -172,8 +178,22 @@ export async function createPlatform(
     commerceRoutes({ catalog, commerce, providers: paymentProviders, mock: mockPayments, sandbox }),
   );
 
+  const metrics = new Metrics();
+  const schema = async (): Promise<{ ok: boolean; current: number | null; expected: number }> => {
+    try {
+      const r = await db.query<{ v: number | null }>('SELECT max(version) AS v FROM schema_migrations');
+      const current = Number(r.rows[0]?.v ?? 0);
+      return { ok: current === migrations.length, current, expected: migrations.length };
+    } catch {
+      return { ok: false, current: null, expected: migrations.length };
+    }
+  };
+
   const http = createHttp({
     router,
+    metrics,
+    metricsToken: config.metricsToken,
+    db,
     identity,
     limiter,
     clock,
@@ -184,16 +204,8 @@ export async function createPlatform(
     matchServerSecret: config.matchServerSecret,
     adminToken: config.adminToken,
     ready: async () => {
-      try {
-        const r = await db.query<{ v: number | null }>('SELECT max(version) AS v FROM schema_migrations');
-        const current = Number(r.rows[0]?.v ?? 0);
-        return {
-          ok: current === migrations.length,
-          detail: { schema: current, expected: migrations.length },
-        };
-      } catch {
-        return { ok: false, detail: { schema: null } };
-      }
+      const r = await schema();
+      return { ok: r.ok, detail: { schema: r.current, expected: r.expected } };
     },
   });
 
@@ -226,9 +238,13 @@ export async function createPlatform(
     providers,
     mockProvider,
     http,
+    metrics,
+    schema,
     start: () => http.listen(config.port, config.host),
-    close: async () => {
-      await http.close();
+    drain: () => http.drain(),
+    close: async (graceMs = 0) => {
+      await http.close(graceMs);
+      metrics.stop();
       await db.close();
     },
   };
