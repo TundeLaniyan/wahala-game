@@ -657,6 +657,20 @@ export function createPlatformController(deps: ControllerDeps) {
         if (get().handoff === 'reporting') set({ handoff: 'idle' });
       }
     },
+    /**
+     * Leader, inside a private room while the party is a lobby (e.g. after a match the server reported finished, the room
+     * lingers for a rematch): tell the party this room's code again so members who left can come back.
+     */
+    async shareRoom(code: string): Promise<void> {
+      const p = get().party;
+      if (!p?.you.isLeader || p.status !== 'open') return;
+      autoJoined.add(code);
+      const r = await act('handoff', () => client.openMatch(p.id, code));
+      if (r.ok) {
+        applyParty(r.value);
+        say('good', 'Your party can join this room now.');
+      }
+    },
     /** Leader, outside the room: the party is a lobby again (the room was abandoned). */
     async endMatch(): Promise<void> {
       const p = get().party;

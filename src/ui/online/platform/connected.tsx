@@ -62,7 +62,7 @@ export function PlatformEntryScreen(props: EntryProps) {
 }
 
 /** The party, compact, inside the room: who is in it and whether its room is this one. */
-function RoomParty({ inRoom }: { inRoom: string | null }) {
+function RoomParty({ inRoom, privateRoom }: { inRoom: string | null; privateRoom: boolean }) {
   const state = pf().useStore();
   const p = state.party;
   if (state.phase !== 'ready' || !p) return null;
@@ -94,6 +94,17 @@ function RoomParty({ inRoom }: { inRoom: string | null }) {
           Go to the party room
         </button>
       )}
+      {line.canShare && privateRoom && inRoom && (
+        <button
+          type="button"
+          className="mn-btn mn-secondary"
+          data-testid="pf-party-share-room"
+          disabled={state.handoff !== 'idle' || state.busy === 'handoff'}
+          onClick={() => void pf().actions.shareRoom(inRoom)}
+        >
+          Send this room to my party
+        </button>
+      )}
     </section>
   );
 }
@@ -113,7 +124,7 @@ export function PlatformRoomScreen(props: RoomProps) {
       {...props}
       extra={
         <>
-          <RoomParty inRoom={inRoom} />
+          <RoomParty inRoom={inRoom} privateRoom={props.lobby.private} />
           <SignalPanel {...signals} />
         </>
       }

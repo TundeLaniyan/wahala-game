@@ -48,6 +48,8 @@ export interface PartyLine {
   canStart: boolean;
   /** The leader, outside the room, may turn the party back into a lobby. */
   canEnd: boolean;
+  /** The leader, inside a room while the party is a lobby, may send the party this room's code. */
+  canShare?: boolean;
 }
 
 /** What the party panel says and offers, from the party view and the room this client is in. */
@@ -82,6 +84,7 @@ export function partyLine(
     canJoin: false,
     canStart: leader && inRoom === null,
     canEnd: false,
+    canShare: leader && inRoom !== null,
   };
 }
 

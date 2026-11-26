@@ -245,6 +245,20 @@ describe('party and the private-match handoff', () => {
     hide();
   });
 
+  it('after the match the party is a lobby again; the leader can send the room (still open for a rematch) once more', async () => {
+    const { fake, lead } = await party();
+    await lead.c.actions.startMatch();
+    await lead.c.actions.roomChanged('K7M3QX', true);
+    fake.parties.get(lead.s().party!.id)!.room = null; // the server reported the match finished
+    const hide = lead.c.actions.show();
+    await settle();
+    expect(lead.s().party?.status).toBe('open');
+    await lead.c.actions.shareRoom('K7M3QX');
+    expect(lead.s().party?.match?.roomCode).toBe('K7M3QX');
+    expect(lead.room.opened).toHaveLength(1); // the leader is not sent anywhere
+    hide();
+  });
+
   it('a Quick Play (unticketed) room is never reported to the party', async () => {
     const { fake, lead } = await party();
     await lead.c.actions.startMatch();
