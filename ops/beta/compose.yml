@@ -93,13 +93,16 @@ services:
       PLATFORM_PUBLIC_WEB_URL: ${PUBLIC_WEB_URL}
       PLATFORM_TRUSTED_PROXIES: 172.29.0.0/24
       PLATFORM_GUEST_ONLY: ${PLATFORM_GUEST_ONLY:-1}
+      # invite-only: an account can only be created with a code from state/secrets/invite_codes (wahala-beta.sh invite new). Default ON.
+      PLATFORM_INVITE_REQUIRED: ${INVITE_ONLY:-1}
+      PLATFORM_INVITE_CODES_FILE: /run/secrets/invite_codes
       PLATFORM_GOOGLE_CLIENT_IDS: ${PLATFORM_GOOGLE_CLIENT_IDS:-}
       PLATFORM_APPLE_CLIENT_IDS: ${PLATFORM_APPLE_CLIENT_IDS:-}
       PLATFORM_PARTY_MAX_SIZE: ${PLATFORM_PARTY_MAX_SIZE:-8}
       PLATFORM_DB_POOL_MAX: ${PLATFORM_DB_POOL_MAX:-10}
       PLATFORM_GUEST_CREATE_RATE: ${PLATFORM_GUEST_CREATE_RATE:-15/20}
       PLATFORM_AUTO_RESTRICT: '0'
-    secrets: [database_url, match_server_secret, admin_token, platform_metrics_token, handoff_private_key]
+    secrets: [database_url, match_server_secret, admin_token, platform_metrics_token, handoff_private_key, invite_codes]
     depends_on:
       migrate: { condition: service_completed_successfully }
     networks: [app, data]
@@ -130,7 +133,12 @@ services:
       RUMBLE_CPU_BUDGET: ${RUMBLE_CPU_BUDGET:-70}
       RUMBLE_MAX_CONNECTIONS: ${RUMBLE_MAX_CONNECTIONS:-200}
       RUMBLE_MAX_ROOMS: ${RUMBLE_MAX_ROOMS:-40}
-    secrets: [rumble_metrics_token]
+      # Hand-off to the player platform (docs/ops/BETA_INTEGRATION_HANDOFF.md). The match server in this repository does not read
+      # these yet; they are the wiring Architecture's integration will use, so enabling it needs no deployment change.
+      PLATFORM_JWKS_URL: http://platform:4567/.well-known/jwks.json
+      PLATFORM_INTERNAL_URL: http://platform:4567
+      PLATFORM_MATCH_SERVER_SECRET_FILE: /run/secrets/match_server_secret
+    secrets: [rumble_metrics_token, match_server_secret]
     networks: [app]
     expose: ['2567']
     stop_grace_period: 20s
@@ -238,6 +246,8 @@ secrets:
     file: ${BETA_STATE:-./state}/secrets/rumble_metrics_token
   handoff_private_key:
     file: ${BETA_STATE:-./state}/secrets/handoff_private_key
+  invite_codes:
+    file: ${BETA_STATE:-./state}/secrets/invite_codes
 
 volumes:
   wahala-db:

@@ -14,9 +14,12 @@ const scenario = process.argv[2];
 const o = parseArgs(process.argv.slice(3), {
   url: 'http://rumble:2567', // the match server on the private network (the edge's per-IP limiters would measure the limiter, not the server)
   'platform-url': 'http://platform:4567',
-  rooms: 1, humans: 2, seconds: 30, workers: 20, accounts: 12, cycles: 100, conc: 4,
+  invite: '', rooms: 1, humans: 2, seconds: 180, workers: 20, accounts: 12, cycles: 100, conc: 4,
 });
 const num = (k) => Number(o[k]);
+// the server only accepts the two real match lengths (180 s and 300 s) in production: a load test plays real matches
+const SECS = [180, 300];
+if (['rooms', 'reconnect', 'probe'].includes(scenario) && !SECS.includes(num('seconds'))) { console.error('--seconds must be 180 or 300 (the match lengths the production server allows)'); process.exit(2); }
 const result = (name, data) => console.log(`RESULT ${JSON.stringify({ scenario, name, ...data })}`);
 const DIRS = ['up', 'down', 'left', 'right'];
 const pct = (a, p) => { const s = [...a].sort((x, y) => x - y); return s.length ? Math.round(s[Math.min(s.length - 1, Math.floor(s.length * p))]) : null; };
@@ -69,7 +72,7 @@ async function rooms() {
   const startupMs = Date.now() - t0;
   console.log(`rooms started: ${started.length}/${K} in ${startupMs} ms (errors: ${errors.length})`);
   const all = started.flatMap((r) => r.members);
-  const deadline = Date.now() + (S + 60) * 1000;
+  const deadline = Date.now() + (S + 90) * 1000;
   while (Date.now() < deadline && !all.every((m) => m.results || m.closed !== null)) await sleep(500);
   const finished = all.filter((m) => m.results).length;
   result('rooms', { rooms: K, humansPerRoom: H, matchSeconds: S, roomsStarted: started.length, startErrors: errors, startupMs, humans: all.length, humansWithResults: finished,
@@ -108,7 +111,7 @@ async function churn() {
 }
 
 async function reconnect() {
-  const S = Math.max(40, num('seconds'));
+  const S = num('seconds');
   const { members } = await startRoom(0, 3, S);
   await sleep(8000);
   const [, back, gone] = members;
@@ -120,7 +123,7 @@ async function reconnect() {
   let backOk = false, backMs = null;
   try { const r = await back.sdk.reconnect(token); back.attach(r); back.play(); backOk = true; backMs = Date.now() - t0; } catch (e) { console.log(`reconnect failed: ${e.message}`); }
   const framesAtBack = back.frames;
-  const deadline = Date.now() + (S + 60) * 1000;
+  const deadline = Date.now() + (S + 90) * 1000;
   while (Date.now() < deadline && !members[0].results) await sleep(500);
   result('reconnect', { returnedWithinWindow: backOk, reconnectMs: backMs, framesAfterReturn: back.frames - framesAtBack, matchFinishedForHost: !!members[0].results, droppedForeverClosedWith: gone.closed });
   await Promise.all(members.map((m) => m.leave()));
@@ -138,7 +141,7 @@ async function api() {
   };
   const tokens = [];
   for (let i = 0; i < num('accounts'); i++) {
-    const r = await fetch(`${P}/v1/auth/guest`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ platform: 'web' }) });
+    const r = await fetch(`${P}/v1/auth/guest`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ platform: 'web', ...(o.invite ? { inviteCode: o.invite } : {}) }) });
     if (r.status === 201) tokens.push((await r.json()).tokens.accessToken);
     else await sleep(1000);
   }

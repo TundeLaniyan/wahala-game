@@ -46,6 +46,9 @@ export interface PlatformConfig {
    * intended. It never enables anything: it only waives that one requirement.
    */
   guestOnly: boolean;
+  /** Private beta: account creation needs one of these codes (`inviteCode` in the request). Empty when not required. */
+  inviteRequired: boolean;
+  inviteCodes: string[];
   /** Bearer token for `GET /metrics`. Empty in production = the route does not exist. */
   metricsToken: string;
   /** Postgres pool ceiling: bounds the connections this process can hold open (the server's own limit is `max_connections`). */
@@ -109,6 +112,8 @@ export function loadConfig(e: Record<string, string | undefined> = process.env):
     devTextChat: flag(e.PLATFORM_DEV_TEXT_CHAT),
     guestCreateRate: parseRate(e.PLATFORM_GUEST_CREATE_RATE, { burst: 5, perMin: 6 }),
     guestOnly: flag(e.PLATFORM_GUEST_ONLY),
+    inviteRequired: flag(e.PLATFORM_INVITE_REQUIRED),
+    inviteCodes: (e.PLATFORM_INVITE_CODES ?? '').split(/[\s,]+/).filter(Boolean),
     metricsToken: e.PLATFORM_METRICS_TOKEN ?? '',
     dbPoolMax: Math.round(num(e.PLATFORM_DB_POOL_MAX, 10, 1, 100)),
     shutdownGraceMs: Math.round(num(e.PLATFORM_SHUTDOWN_GRACE_SECONDS, 8, 0, 60) * 1000),
@@ -143,6 +148,10 @@ export function validateConfig(c: PlatformConfig): string[] {
     problems.push(`PLATFORM_METRICS_TOKEN must be at least ${MIN_SECRET} characters`);
   if (c.adminToken && c.adminToken.length < MIN_SECRET)
     problems.push(`PLATFORM_ADMIN_TOKEN must be at least ${MIN_SECRET} characters`);
+  if (c.inviteRequired && c.inviteCodes.length === 0)
+    problems.push('PLATFORM_INVITE_REQUIRED=1 needs at least one code in PLATFORM_INVITE_CODES (an invite-only beta must never start open)');
+  if (c.inviteCodes.some((x) => !/^[A-Za-z0-9_-]{10,64}$/.test(x)))
+    problems.push('every invite code must be 10-64 letters, digits, - or _ (short codes can be guessed)');
   if (prod) {
     if (c.databaseUrl === 'memory')
       problems.push('production needs DATABASE_URL (the in-memory database is development only)');
@@ -177,6 +186,7 @@ export const FILE_SECRETS = [
   'PLATFORM_ADMIN_TOKEN',
   'PLATFORM_METRICS_TOKEN',
   'PLATFORM_HANDOFF_PRIVATE_KEY',
+  'PLATFORM_INVITE_CODES',
 ] as const;
 
 /**

@@ -14,7 +14,10 @@ dc() {
 }
 say() { printf '%s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
-need_init() { [ -f "$ENVFILE" ] || die "not set up yet. Run:  ops/beta/wahala-beta.sh init --origin https://YOUR-GAME-PAGE-ORIGIN --web-url https://YOUR-GAME-PAGE"; }
+need_init() {
+  [ -f "$ENVFILE" ] || die "not set up yet. Run:  ops/beta/wahala-beta.sh init --origin https://YOUR-GAME-PAGE-ORIGIN --web-url https://YOUR-GAME-PAGE"
+  [ -s "$BETA_STATE/secrets/invite_codes" ] || { (umask 077; printf 'wb-%s\n' "$(openssl rand -hex 8)" > "$BETA_STATE/secrets/invite_codes"); chmod 644 "$BETA_STATE/secrets/invite_codes"; }
+}
 have() { command -v "$1" >/dev/null 2>&1; }
 
 usage() { cat <<'U'
@@ -35,6 +38,8 @@ WAHALA! private beta: operator commands
   cert --domain NAME --email ADDRESS [--staging]          get a real TLS certificate (needs the domain to point at this server)
   cert-renew                                              renew the certificate and reload the edge (run weekly)
   admin METHOD PATH [JSON]                                call the platform's operator API from inside the server (never exposed publicly)
+  invite new|list|revoke CODE                             invite-only beta: make, show or withdraw the codes that allow creating an account
+  rotate NAME                                             replace one secret with a fresh random one and restart what uses it (NAME: admin-token, platform-metrics-token, rumble-metrics-token, match-server-secret, db-password, ticket-key)
   psql                                                    open a database shell
   validate [--full]                                       run the complete automated backend verification (separate throw-away stack)
   destroy --yes                                           REMOVE the whole beta: containers, networks and ALL data (backups in state/backups are kept)
@@ -63,6 +68,7 @@ cmd_init() {
   gen admin_token "$(openssl rand -hex 32)"
   gen platform_metrics_token "$(openssl rand -hex 32)"
   gen rumble_metrics_token "$(openssl rand -hex 32)"
+  [ -s "$BETA_STATE/secrets/invite_codes" ] && [ $force -eq 0 ] || { printf 'wb-%s\n' "$(openssl rand -hex 8)" > "$BETA_STATE/secrets/invite_codes"; say "created secret: invite_codes (your first invite code is inside; show it with: wahala-beta.sh invite list)"; }
   [ -f "$BETA_STATE/secrets/handoff_private_key" ] && [ $force -eq 0 ] || { openssl genpkey -algorithm ed25519 -out "$BETA_STATE/secrets/handoff_private_key" 2>/dev/null; say "created secret: handoff_private_key (Ed25519)"; }
   # readable by the service users inside the containers; the folder (0700) is what keeps other people on this server out
   chmod 644 "$BETA_STATE"/secrets/*
@@ -78,6 +84,8 @@ cmd_init() {
 GAME_ORIGINS=$origin
 PUBLIC_WEB_URL=$web
 PLATFORM_GUEST_ONLY=1
+# 1 = an account can only be created with an invite code (wahala-beta.sh invite new). Leave at 1 for the beta.
+INVITE_ONLY=1
 # Ports on this server. 443 and 80 are the normal web ports (the certificate tool needs 80).
 EDGE_HTTPS_PORT=443
 EDGE_HTTP_PORT=80
@@ -232,6 +240,62 @@ cmd_admin() {
       .then(async r=>{console.log(r.status);console.log(await r.text())})' "$method" "$path" "$body"
 }
 
+cmd_invite() {
+  need_init
+  local f="$BETA_STATE/secrets/invite_codes" sub="${1:-}" code="${2:-}"
+  case "$sub" in
+    new) printf 'wb-%s\n' "$(openssl rand -hex 8)" >> "$f"; chmod 644 "$f"; code="$(tail -1 "$f")"
+         dc up -d --force-recreate platform >/dev/null && wait_ready || die "platform did not restart: read the logs"
+         say "new invite code (give it to ONE tester): $code";;
+    list) say "valid invite codes (anyone holding one can create an account):"; sed 's/^/  /' "$f";;
+    revoke) [ -n "$code" ] || die "usage: invite revoke CODE"
+         grep -qxF "$code" "$f" || die "that code is not in the list"
+         [ "$(grep -cv '^$' "$f")" -gt 1 ] || die "that is the last code: add a new one first (invite new), an invite-only beta must never be left without codes"
+         grep -vxF "$code" "$f" > "$f.tmp" && mv "$f.tmp" "$f"; chmod 644 "$f"
+         dc up -d --force-recreate platform >/dev/null && wait_ready || die "platform did not restart: read the logs"
+         say "revoked. People who already have an account keep it; only NEW accounts need a valid code.";;
+    *) die "usage: invite new | invite list | invite revoke CODE";;
+  esac
+}
+
+# Secret rotation. The old value is kept in state/secrets-old (0700) so a bad rotation can be put back by hand; nothing else is touched.
+cmd_rotate() {
+  need_init
+  local name="${1:-}" file users new
+  case "$name" in
+    admin-token)           file=admin_token;            users="platform";;
+    platform-metrics-token) file=platform_metrics_token; users="platform monitor";;
+    rumble-metrics-token)  file=rumble_metrics_token;   users="rumble monitor";;
+    match-server-secret)   file=match_server_secret;    users="platform rumble";;
+    ticket-key)            file=handoff_private_key;    users="platform";;
+    db-password)           file=db_password;            users="platform backup";;
+    *) die "usage: rotate NAME   (NAME: admin-token, platform-metrics-token, rumble-metrics-token, match-server-secret, db-password, ticket-key)";;
+  esac
+  have openssl || die "openssl is required"
+  umask 077; mkdir -p "$BETA_STATE/secrets-old"; chmod 700 "$BETA_STATE/secrets-old"
+  cp -p "$BETA_STATE/secrets/$file" "$BETA_STATE/secrets-old/$file.$(date -u +%Y%m%dT%H%M%SZ)"
+  if [ "$name" = ticket-key ]; then
+    openssl genpkey -algorithm ed25519 -out "$BETA_STATE/secrets/$file.new" 2>/dev/null
+    mv "$BETA_STATE/secrets/$file.new" "$BETA_STATE/secrets/$file"
+  elif [ "$name" = db-password ]; then
+    new="$(openssl rand -hex 24)"
+    # change it inside PostgreSQL first (over the container's own local socket), then in the files that carry it
+    printf "ALTER USER wahala PASSWORD '%s';" "$new" | dc exec -T db psql -U wahala -d postgres -q >/dev/null || die "could not change the database password (nothing else was changed)"
+    printf '%s' "$new" > "$BETA_STATE/secrets/db_password"; printf 'postgres://wahala:%s@db:5432/wahala' "$new" > "$BETA_STATE/secrets/database_url"
+  else
+    printf '%s' "$(openssl rand -hex 32)" > "$BETA_STATE/secrets/$file"
+  fi
+  chmod 644 "$BETA_STATE"/secrets/*
+  say "new $name written (old copy kept in $BETA_STATE/secrets-old). Restarting: $users"
+  dc up -d --force-recreate $users >/dev/null || die "restart failed: read the logs; the old secret is in $BETA_STATE/secrets-old"
+  wait_ready || die "services unhealthy after the rotation: read the logs; the old secret is in $BETA_STATE/secrets-old"
+  say "rotated $name."
+  case "$name" in
+    ticket-key) say "Match tickets are valid for 120 seconds: tickets signed with the old key stop working at once, players simply ask for a new one. The match server must re-read /.well-known/jwks.json (see docs/ops/BETA_INTEGRATION_HANDOFF.md).";;
+    db-password) say "Backups use the new password from now on.";;
+  esac
+}
+
 cmd_psql() { need_init; dc exec db psql -U wahala -d wahala; }
 cmd_validate() { exec "$HERE/validate.sh" "$@"; }
 cmd_destroy() {
@@ -243,6 +307,6 @@ c="${1:-help}"; shift || true
 case "$c" in
   help|-h|--help) usage;; init) cmd_init "$@";; build) cmd_build;; up) cmd_up;; down) need_init; dc down;; status) cmd_status;; logs) cmd_logs "$@";;
   backup) cmd_backup;; backups) cmd_backups;; restore-test) cmd_restore_test "$@";; restore) cmd_restore "$@";; update) cmd_update;; rollback) cmd_rollback;;
-  cert) cmd_cert "$@";; cert-renew) cmd_cert_renew;; admin) cmd_admin "$@";; psql) cmd_psql;; validate) cmd_validate "$@";; destroy) cmd_destroy "$@";;
+  cert) cmd_cert "$@";; cert-renew) cmd_cert_renew;; admin) cmd_admin "$@";; rotate) cmd_rotate "$@";; invite) cmd_invite "$@";; psql) cmd_psql;; validate) cmd_validate "$@";; destroy) cmd_destroy "$@";;
   *) usage; exit 2;;
 esac

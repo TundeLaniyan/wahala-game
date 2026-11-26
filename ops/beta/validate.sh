@@ -27,7 +27,7 @@ trap cleanup EXIT
 
 drv() { # run one driver phase in a container that has the Colyseus SDK; talks to the edge on the host network
   docker run --rm --network host --user "$(id -u):$(id -g)" -v "$HERE/..:/repo/ops:ro" -v "$V:/state" -v "$S/certs:/certs:ro" \
-    -e NODE_EXTRA_CA_CERTS=/certs/fullchain.pem wahala-validate-driver:local node /repo/ops/beta/checks.mjs "$@" --url "https://127.0.0.1:$PORT" --http-url "http://127.0.0.1:$PORT_HTTP" --state /state/validate.json 2>&1 | tee -a "$REPORT"
+    -e NODE_EXTRA_CA_CERTS=/certs/fullchain.pem wahala-validate-driver:local node /repo/ops/beta/checks.mjs "$@" --url "https://127.0.0.1:$PORT" --http-url "http://127.0.0.1:$PORT_HTTP" --state /state/validate.json --invite "$(head -1 "$S/secrets/invite_codes")" 2>&1 | tee -a "$REPORT"
 }
 internal() { # internal MODE PATH FILE: the signed call, made from INSIDE the private network
   local mode="$1" path="$2" file="$3"
@@ -105,7 +105,7 @@ step "4. a real authoritative match through the TLS edge"
 if [ $QUICK -eq 1 ]; then MS=0; else MS=180; fi
 ( while sleep 10; do rumble_metrics | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const m=JSON.parse(d);const p=m.rooms.filter(r=>r.phase==="playing");console.log(JSON.stringify({cpu:m.process.cpuPercentSinceLastRead,rssMB:Math.round(m.process.memoryUsage.rss/1e6),playing:p.length,step99:p[0]?.ticks.stepMs.p99??null,dropped:p.reduce((n,r)=>n+r.ticks.dropped,0)}))}catch{}})' 2>/dev/null; done >> "$V/match-samples.jsonl" ) 2>/dev/null &
 SAMPLER=$!
-drv match --match-seconds $MS
+drv match --match-seconds $MS ${VALIDATE_INTEGRATION:+--integration}
 kill $SAMPLER 2>/dev/null; wait $SAMPLER 2>/dev/null
 [ -s "$V/match-samples.jsonl" ] && info "server load while the match ran (cpu % of one core, RSS MB, playing rooms): $(node -e 'const l=require("fs").readFileSync(process.argv[1],"utf8").trim().split("\n").map(x=>JSON.parse(x));const cpu=l.map(x=>x.cpu);console.log("peak cpu "+Math.max(...cpu)+"%, peak rss "+Math.max(...l.map(x=>x.rssMB))+" MB, dropped ticks "+Math.max(...l.map(x=>x.dropped))+", samples "+l.length)' "$V/match-samples.jsonl" 2>/dev/null || echo "see $V/match-samples.jsonl")"
 
@@ -141,14 +141,35 @@ drv persist after-platform-crash
 crash rumble && ok "a crashed match server (SIGKILL) is restarted by Docker's restart policy" || bad "match server not restarted after a crash"
 dc stop db >/dev/null 2>&1; sleep 5
 code="$(curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1:$PORT/v1/auth/providers)"; [ "$code" = 200 ] && ok "database OUTAGE: public, database-free endpoints keep answering (HTTP 200)" || bad "providers endpoint during outage: $code"
-code="$(curl -sk -o /dev/null -w '%{http_code}' -XPOST https://127.0.0.1:$PORT/v1/auth/guest -H 'content-type: application/json' -d '{}')"; [ "$code" = 503 ] || [ "$code" = 500 ] && ok "database OUTAGE: a request that needs the database fails cleanly (HTTP $code, no crash)" || bad "guest creation during outage: $code"
+code="$(curl -sk -o /dev/null -w '%{http_code}' -XPOST https://127.0.0.1:$PORT/v1/auth/guest -H 'content-type: application/json' -d "{\"inviteCode\":\"$(head -1 "$S/secrets/invite_codes")\"}")"; [ "$code" = 503 ] || [ "$code" = 500 ] && ok "database OUTAGE: a request that needs the database fails cleanly (HTTP $code, no crash)" || bad "guest creation during outage: $code"
 curl -sk https://127.0.0.1:$PORT/health | grep -q '"ok":true' && ok "database OUTAGE: the match server (no database) keeps serving" || bad "match server affected by the database outage"
 dc start db >/dev/null 2>&1; wait_healthy; sleep 8
-expect "RECOVERY: the platform serves database requests again without a restart" "201" "$(curl -sk -o /dev/null -w '%{http_code}' -XPOST https://127.0.0.1:$PORT/v1/auth/guest -H 'content-type: application/json' -d '{}')"
+expect "RECOVERY: the platform serves database requests again without a restart" "201" "$(curl -sk -o /dev/null -w '%{http_code}' -XPOST https://127.0.0.1:$PORT/v1/auth/guest -H 'content-type: application/json' -d "{\"inviteCode\":\"$(head -1 "$S/secrets/invite_codes")\"}")"
 drv persist after-outage-recovery
 dc logs --no-color --no-log-prefix >"$V/logs-before-down.log" 2>&1  # `down` deletes the containers and their logs: keep them for the leak scan
 dc down >/dev/null 2>&1; dc up -d >/dev/null 2>&1; wait_healthy && ok "full stop and start (down / up): everything healthy again" || bad "stack did not return after down/up"
 drv persist after-full-restart
+
+step "7b. secret rotation (the operator procedure, on the live stack)"
+admin_status() { dc exec -T platform node -e 'fetch("http://127.0.0.1:4567/admin/v1/reports",{headers:{authorization:"Bearer "+process.argv[1]}}).then(r=>console.log(r.status))' "$1" 2>/dev/null | tr -d '\r'; }
+old_admin="$(cat "$S/secrets/admin_token")"; expect "before rotation the admin token works" "200" "$(admin_status "$old_admin")"
+"$SCRIPT" rotate admin-token >"$V/rotate1.out" 2>&1 && ok "rotate admin-token completed" || { bad "rotate admin-token"; tail -3 "$V/rotate1.out"; }
+expect "after rotation the OLD admin token is refused" "401" "$(admin_status "$old_admin")"
+expect "after rotation the NEW admin token works" "200" "$(admin_status "$(cat "$S/secrets/admin_token")")"
+kid_before="$(curl -sk https://127.0.0.1:$PORT/.well-known/jwks.json | grep -o '"kid":"[^"]*"' | head -1)"
+"$SCRIPT" rotate ticket-key >"$V/rotate2.out" 2>&1 && ok "rotate ticket-key completed" || { bad "rotate ticket-key"; tail -3 "$V/rotate2.out"; }
+kid_after="$(curl -sk https://127.0.0.1:$PORT/.well-known/jwks.json | grep -o '"kid":"[^"]*"' | head -1)"
+[ -n "$kid_after" ] && [ "$kid_before" != "$kid_after" ] && ok "the published ticket key changed ($kid_before -> $kid_after)" || bad "the ticket key did not change"
+old_pw="$(cat "$S/secrets/db_password")"
+"$SCRIPT" rotate db-password >"$V/rotate3.out" 2>&1 && ok "rotate db-password completed" || { bad "rotate db-password"; tail -3 "$V/rotate3.out"; }
+dc exec -T -e PGPASSWORD="$old_pw" db psql -h 127.0.0.1 -U wahala -d wahala -Atc "select 1" >/dev/null 2>&1 && bad "the OLD database password still works" || ok "the OLD database password is refused by PostgreSQL"
+expect "the platform uses the new password (guest creation works)" "201" "$(curl -sk -o /dev/null -w '%{http_code}' -XPOST https://127.0.0.1:$PORT/v1/auth/guest -H 'content-type: application/json' -d "{\"inviteCode\":\"$(head -1 "$S/secrets/invite_codes")\"}")"
+old_rm="$(cat "$S/secrets/rumble_metrics_token")"
+for sname in platform-metrics-token rumble-metrics-token match-server-secret; do "$SCRIPT" rotate $sname >"$V/rotate-$sname.out" 2>&1 && ok "rotate $sname completed" || { bad "rotate $sname"; tail -3 "$V/rotate-$sname.out"; }; done
+rm_status() { dc exec -T rumble node -e 'fetch("http://127.0.0.1:2567/metrics",{headers:{authorization:"Bearer "+process.argv[1]}}).then(r=>console.log(r.status))' "$1" 2>/dev/null | tr -d '\r'; }
+expect "the match server's /metrics refuses the OLD token" "401" "$(rm_status "$old_rm")"
+expect "the match server's /metrics accepts the NEW token" "200" "$(rm_status "$(cat "$S/secrets/rumble_metrics_token")")"
+drv persist after-rotation
 
 step "8. backup and restoration"
 "$SCRIPT" backup >"$V/backup.out" 2>&1 && ok "manual backup: $(grep 'backup ok' "$V/backup.out" | tail -1)" || { bad "backup"; tail -3 "$V/backup.out"; }

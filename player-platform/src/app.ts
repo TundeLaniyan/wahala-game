@@ -39,6 +39,7 @@ import { PartyService } from './parties/service';
 import { commerceRoutes } from './routes/commerce';
 import { commsRoutes } from './routes/comms';
 import { identityRoutes } from './routes/identity';
+import { createInviteGate } from './identity/invites';
 import { internalRoutes } from './routes/internal';
 import { socialRoutes } from './routes/social';
 import { createPresenceStore } from './social/presence';
@@ -182,7 +183,7 @@ export async function createPlatform(
   identity.registerErasure((q, id) => commerce.erase(q, id));
 
   const router = new Router();
-  router.addAll(identityRoutes(identity, providers, mockProvider));
+  router.addAll(identityRoutes(identity, providers, mockProvider, createInviteGate(config.inviteRequired, config.inviteCodes)));
   router.addAll(socialRoutes(social, parties, matches, presence, signer));
   router.addAll(internalRoutes(matches));
   router.addAll(commsRoutes(comms, reports, voice, chat));

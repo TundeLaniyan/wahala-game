@@ -1,6 +1,7 @@
 import { ApiError, badRequest } from '../errors';
 import type { RouteDef } from '../http/router';
 import type { IdentityService, ProfilePatch } from '../identity/service';
+import type { InviteGate } from '../identity/invites';
 import { PROVIDER_IDS } from '../identity/providers';
 import type { MockProvider, ProviderRegistry } from '../identity/providers';
 import { AGE_GROUPS, CLIENT_PLATFORMS } from '../identity/types';
@@ -13,6 +14,7 @@ export function identityRoutes(
   identity: IdentityService,
   providers: ProviderRegistry,
   mock: MockProvider | null,
+  invites: InviteGate = { required: false, allows: () => true },
 ): RouteDef[] {
   const routes: RouteDef[] = [
     {
@@ -22,7 +24,9 @@ export function identityRoutes(
       rate: 'guestCreate',
       summary: 'Create a guest account (no credentials needed) and its first session',
       async handler(ctx) {
-        const b = obj(ctx.json(), ['nickname', 'platform', 'deviceLabel', 'ageGroup']);
+        const b = obj(ctx.json(), ['nickname', 'platform', 'deviceLabel', 'ageGroup', 'inviteCode']);
+        if (!invites.allows(optStr(b, 'inviteCode', 1, 128)))
+          throw new ApiError('invite_required', 'this beta is invite-only: an invite code is needed to create an account');
         const r = await identity.createGuest({
           nickname: optStr(b, 'nickname', 1, 128),
           platform: optOneOf(b, 'platform', CLIENT_PLATFORMS) ?? 'web',

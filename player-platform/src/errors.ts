@@ -3,6 +3,7 @@ export type ErrorCode =
   | 'bad_request'
   | 'unauthenticated'
   | 'forbidden'
+  | 'invite_required'
   | 'not_found'
   | 'conflict'
   | 'name_taken'
@@ -21,6 +22,7 @@ const STATUS: Record<ErrorCode, number> = {
   unauthenticated: 401,
   reauth_required: 401,
   forbidden: 403,
+  invite_required: 403,
   restricted_account: 403,
   not_found: 404,
   conflict: 409,

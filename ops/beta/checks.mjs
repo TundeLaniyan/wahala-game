@@ -10,8 +10,9 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import tls from 'node:tls';
 import { Client, WebSocket, parseArgs, sleep } from '../scripts/lib.mjs';
 
-const o = parseArgs(process.argv.slice(3), { url: 'https://127.0.0.1:18443', 'http-url': 'http://127.0.0.1:18080', state: '/state/validate.json', origin: 'https://example.github.io', 'match-seconds': 180 });
+const o = parseArgs(process.argv.slice(3), { url: 'https://127.0.0.1:18443', 'http-url': 'http://127.0.0.1:18080', state: '/state/validate.json', origin: 'https://example.github.io', 'match-seconds': 180, integration: false, invite: '' });
 const phase = process.argv[2];
+const INV = o.invite ? { inviteCode: o.invite } : {};
 const rows = [];
 const add = (s, n, d = '') => {
   rows.push([s, n, d]);
@@ -38,7 +39,7 @@ async function call(method, path, body, token, headers = {}) {
   return { status: r.status, body: j, headers: r.headers, text: t };
 }
 const guest = async (nickname) => {
-  const r = await call('POST', '/v1/auth/guest', { platform: 'web', ...(nickname ? { nickname } : {}) });
+  const r = await call('POST', '/v1/auth/guest', { platform: 'web', ...INV, ...(nickname ? { nickname } : {}) });
   if (r.status !== 201) throw new Error(`guest ${nickname}: ${r.status} ${r.text.slice(0, 120)}`);
   return { id: r.body.profile.id, name: r.body.profile.displayName, friendCode: r.body.profile.friendCode, access: r.body.tokens.accessToken, refresh: r.body.tokens.refreshToken };
 };
@@ -106,11 +107,17 @@ async function accounts() {
   check(/^wa_/.test(s.A.access) && /^wr_/.test(s.A.refresh), 'tokens are opaque and prefixed (never a bare id)');
   check((await call('GET', '/v1/me')).status === 401 && (await call('GET', '/v1/me', undefined, 'wa_garbage')).status === 401, 'no token / a made-up token is refused');
   check((await call('GET', '/v1/me', undefined, s.A.refresh)).status === 401, 'a refresh token is not an access token');
-  const dup = await call('POST', '/v1/auth/guest', { nickname: 'validate  ADA', platform: 'web' });
+  const dup = await call('POST', '/v1/auth/guest', { nickname: 'validate  ADA', platform: 'web', ...INV });
   check(dup.status === 409, 'a nickname that only differs by case/space is taken', `HTTP ${dup.status}`);
-  const bad = await call('POST', '/v1/auth/guest', { nickname: 'Admin', platform: 'web' });
+  const bad = await call('POST', '/v1/auth/guest', { nickname: 'Admin', platform: 'web', ...INV });
   check(bad.status === 422, 'a staff-impersonating nickname is refused', `HTTP ${bad.status}`);
-  const smuggle = await call('POST', '/v1/auth/guest', { platform: 'web', kind: 'registered' });
+  if (o.invite) {
+    const none = await call('POST', '/v1/auth/guest', { platform: 'web' });
+    check(none.status === 403 && none.body?.error?.code === 'invite_required', 'invite-only: creating an account WITHOUT a code is refused', `HTTP ${none.status}`);
+    const wrong = await call('POST', '/v1/auth/guest', { platform: 'web', inviteCode: 'wb-0000000000000000' });
+    check(wrong.status === 403 && wrong.body?.error?.code === 'invite_required', 'invite-only: a WRONG code is refused', `HTTP ${wrong.status}`);
+  }
+  const smuggle = await call('POST', '/v1/auth/guest', { platform: 'web', kind: 'registered', ...INV });
   check(smuggle.status === 400, 'unknown fields in a request are refused (no smuggling a role)');
   // refresh rotation + reuse detection (on a throw-away guest)
   const d = await guest();
@@ -176,7 +183,30 @@ async function match() {
   for (let i = 0; i < 50 && !(lobbiesB.at(-1)?.members?.length >= 2); i++) await sleep(100);
   const names = (lobbiesB.at(-1)?.members ?? []).map((m) => m.name).sort();
   check(names.join('|') === [s.A.name, s.B.name].sort().join('|'), 'both party members are in the SAME authoritative room', names.join(', '));
-  add('BLOCKED', 'match server verifies the ticket and binds the platform id to the seat', 'BLOCKED BY INTEGRATION (Architecture): the server ignores `ticket` today; acceptance test in docs/ops/BETA_INTEGRATION_HANDOFF.md');
+  if (!o.integration) {
+    add('BLOCKED', 'match server verifies the ticket and binds the platform id to the seat', 'BLOCKED BY INTEGRATION (Architecture): the server ignores `ticket` today; acceptance tests I1-I3 (run with --integration) are in docs/ops/BETA_INTEGRATION_HANDOFF.md');
+  } else {
+    // ACCEPTANCE TESTS I1-I3 of docs/ops/BETA_INTEGRATION_HANDOFF.md: they FAIL against a server that ignores `ticket` (checked), and must PASS once it verifies it.
+    const refused = async (opts) => { try { const r = await new Client(o.url).joinById(code, { characterId: 'streetBaller', ...opts }); await r.leave().catch(() => {}); return false; } catch { return true; } };
+    check(await refused({ name: 'Mallory', ticket: host.body.ticket }), 'I1: a HOST ticket (room "*") cannot be used to join an existing room');
+    check(await refused({ name: 'Mallory', ticket: t.body.ticket.slice(0, -4) + 'AAAA' }), 'I2: a tampered ticket is refused by the match server');
+    const D = await guest('IntegD');
+    const dj = await call('POST', '/v1/parties/join', { code: party.code }, D.access);
+    const dt = dj.status === 200 ? await call('POST', `/v1/parties/${party.id}/match/ticket`, {}, D.access) : null;
+    if (dt?.status === 201) {
+      const lobbiesD = [];
+      try {
+        const roomD = await new Client(o.url).joinById(code, { name: 'Impostor', characterId: 'streetBaller', ticket: dt.body.ticket });
+        roomD.onMessage('*', () => {});
+        roomD.onMessage('lobby', (m) => lobbiesD.push(m));
+        for (let i = 0; i < 30 && !lobbiesD.at(-1); i++) await sleep(100);
+        const names = (lobbiesD.at(-1)?.members ?? []).map((m) => m.name);
+        check(names.includes(D.name) && !names.includes('Impostor'), 'I3: a ticketed player sits under the PLATFORM name, whatever name the client sends', names.join(', '));
+        await roomD.leave().catch(() => {});
+      } catch (e) { add('FAIL', 'I3: a ticketed player can join with a valid ticket', String(e.message ?? e).slice(0, 100)); }
+    } else add('FAIL', 'I3: could not obtain a member ticket for the test account', `HTTP ${dt?.status ?? dj.status}`);
+    if (dj.status === 200) await call('POST', `/v1/parties/${party.id}/leave`, {}, D.access);
+  }
   if (Number(o['match-seconds']) === 0) {
     add('INFO', 'quick mode: the match itself is not played (run validate.sh without --quick for the full 3-minute match)');
     s.match = { code, partyId: party.id, quick: true };
@@ -269,13 +299,13 @@ async function social() {
   check(find.status === 404, 'the blocked player cannot find the blocker by code');
   // rate limit + abuse
   let limited = 0;
-  const burst = await Promise.all(Array.from({ length: 60 }, () => call('POST', '/v1/auth/guest', { platform: 'web' })));
+  const burst = await Promise.all(Array.from({ length: 60 }, () => call('POST', '/v1/auth/guest', { platform: 'web', ...INV })));
   limited = burst.filter((r) => r.status === 429).length;
   check(limited > 0, 'a flood of account creation from one address is rate-limited', `${limited}/60 refused with 429`);
   const ra = burst.find((r) => r.status === 429);
   check(Number(ra?.headers.get('retry-after')) >= 1, 'the refusal says when to retry (Retry-After)');
   // deletion
-  const z = (await call('POST', '/v1/auth/guest', { platform: 'web' })).body ?? null;
+  const z = (await call('POST', '/v1/auth/guest', { platform: 'web', ...INV })).body ?? null;
   s.social = { done: true };
   save(s);
 }

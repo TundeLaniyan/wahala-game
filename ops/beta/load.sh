@@ -24,7 +24,7 @@ OUT="$BETA_STATE/load/$label"; rm -rf "$OUT"; mkdir -p "$OUT"
 docker image inspect wahala-validate-driver:local >/dev/null 2>&1 || { echo "the driver image is missing: run ops/beta/validate.sh once first (it builds wahala-validate-driver:local)"; exit 1; }
 [ "$(docker inspect -f '{{.State.Health.Status}}' "$P-rumble-1" 2>/dev/null)" = healthy ] || { echo "the stack is not running and healthy ($P): start it first"; exit 1; }
 
-drv() { docker run --rm --network "${P}_app" --user "$(id -u):$(id -g)" -v "$HERE/..:/repo/ops:ro" wahala-validate-driver:local node /repo/ops/beta/load.mjs "$@" 2>&1; }
+drv() { docker run --rm --network "${P}_app" --user "$(id -u):$(id -g)" -v "$HERE/..:/repo/ops:ro" wahala-validate-driver:local node /repo/ops/beta/load.mjs "$@" --invite "$(head -1 "$BETA_STATE/secrets/invite_codes" 2>/dev/null)" 2>&1; }
 metrics() { dc exec -T rumble sh -c 'node -e "fetch(\"http://127.0.0.1:2567/metrics\",{headers:{authorization:\"Bearer \"+require(\"fs\").readFileSync(\"/run/secrets/rumble_metrics_token\",\"utf8\").trim()}}).then(r=>r.text()).then(console.log).catch(()=>console.log(\"{}\"))"' 2>/dev/null | tr -d '\r' | head -1; }
 pgconn() { dc exec -T db psql -U wahala -d wahala -Atc "select count(*) from pg_stat_activity where datname='wahala'" 2>/dev/null | tr -d '\r'; }
 
@@ -47,10 +47,13 @@ case "$scenario" in
     end=$(( $(date +%s) + minutes * 60 )); n=0
     while [ "$(date +%s)" -lt "$end" ]; do
       n=$((n + 1))
-      drv rooms --rooms 2 --humans 3 --seconds 40 | tee -a "$OUT/load.log" | grep -E "^RESULT|rooms started" | cut -c1-260
-      drv churn --cycles 40 --conc 3 | tee -a "$OUT/load.log" | grep -E "^RESULT" | cut -c1-260
-      drv api --workers 8 --seconds 10 --accounts 6 | tee -a "$OUT/load.log" | grep -E "^RESULT" | cut -c1-260
-      echo "soak round $n done $(( (end - $(date +%s)) / 60 )) min left"
+      drv rooms --rooms 2 --humans 3 --seconds 180 >>"$OUT/load.log" & RP=$!
+      for k in 1 2 3; do
+        drv churn --cycles 40 --conc 3 | tee -a "$OUT/load.log" | grep -E "^RESULT" | cut -c1-260
+        drv api --workers 8 --seconds 15 --accounts 6 | tee -a "$OUT/load.log" | grep -E "^RESULT" | cut -c1-260
+      done
+      wait $RP
+      echo "soak round $n done, $(( (end - $(date +%s)) / 60 )) min left"
     done ;;
   *) drv "$scenario" "${args[@]}" | tee -a "$OUT/load.log" ;;
 esac
@@ -72,12 +75,18 @@ for (const [svc, a] of Object.entries(per)) {
   const cpu = a.map((x) => x.cpu).filter(Number.isFinite), mem = a.map((x) => x.mem).filter(Number.isFinite);
   console.log(`${svc.padEnd(9)} cpu avg ${avg(cpu).toFixed(0)}% max ${max(cpu).toFixed(0)}%   mem first ${mem[0]?.toFixed(0)} MB, max ${max(mem).toFixed(0)} MB, last ${mem.at(-1)?.toFixed(0)} MB`);
 }
-const rm = rows.map((r) => r.rumble).filter((m) => m && Object.keys(m).length);
+const rm = rows.map((r) => r.rumble).filter((m) => m && m.limits);
 if (rm.length) {
-  const keys = new Set(rm.flatMap((m) => Object.keys(m)));
-  console.log('match server /metrics fields seen: ' + [...keys].join(', '));
-  const pick = (f) => rm.map((m) => m[f]).filter((v) => typeof v === 'number');
-  for (const f of ['rooms', 'playingRooms', 'players', 'humans', 'cpuPct', 'timerLatenessP99Ms', 'droppedTicks', 'rssMb', 'heapUsedMb']) { const v = pick(f); if (v.length) console.log(`  ${f}: max ${max(v)}, last ${v.at(-1)}`); }
+  const mx = (f) => max(rm.map(f).filter(Number.isFinite));
+  const rooms = rm.flatMap((m) => m.rooms ?? []);
+  console.log(`match server: playing rooms max ${mx((m) => m.limits.playingRooms)}, connections max ${mx((m) => m.limits.connections)}, capacity cost in use max ${mx((m) => m.limits.costInUse)} of CPU budget ${rm[0].limits.cpuBudget}`);
+  console.log(`  process: RSS max ${(mx((m) => m.process.memoryUsage.rss) / 1048576).toFixed(0)} MB, event-loop delay p99 max ${mx((m) => m.process.eventLoopDelayMs.p99)} ms, cpu (server's own reading) max ${mx((m) => m.process.cpuPercentSinceLastRead)} %`);
+  if (rooms.length) {
+    const rx = (f) => max(rooms.map(f).filter(Number.isFinite));
+    console.log(`  rooms: tick step p99 max ${rx((r) => r.ticks.stepMs.p99)} ms, timer lateness p99 max ${rx((r) => r.ticks.timerLatenessMs.p99)} ms (a tick is 16.7 ms), DROPPED TICKS ${rx((r) => r.ticks.dropped)}, bot takeovers ${rx((r) => r.net.botTakeovers)}, reconnections ${rx((r) => r.net.reconnections)}, drops ${rx((r) => r.net.drops)}, kicks ${rx((r) => r.net.kicks)}, invalid messages ${rx((r) => r.net.invalidMessages)}`);
+  }
+  const ref = {}; for (const m of rm) for (const [k, v] of Object.entries(m.limits.refused ?? {})) ref[k] = Math.max(ref[k] ?? 0, v);
+  console.log(`  refused by the capacity guard: ${JSON.stringify(ref)}`);
 }
 const dbc = rows.map((r) => Number(r.dbConnections)).filter(Number.isFinite);
 if (dbc.length) console.log(`PostgreSQL connections (limit 40 in compose): max ${max(dbc)}, last ${dbc.at(-1)}`);
