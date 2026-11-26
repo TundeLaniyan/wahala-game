@@ -26,6 +26,8 @@ export const MSG = {
   start: 'start',
   rematch: 'rematch',
   settings: 'settings',
+  /** A preset quick signal (chat / ping / emote id from `SIGNALS`); never free text. */
+  signal: 'sig',
   // server -> client
   welcome: 'welcome',
   lobby: 'lobby',
@@ -34,6 +36,8 @@ export const MSG = {
   pong: 'pong',
   results: 'results',
   notice: 'notice',
+  /** A relayed quick signal (`SignalInMsg`). */
+  signalIn: 'sigr',
 } as const;
 
 // ---------------------------------------------------------------- client -> server
@@ -451,6 +455,16 @@ export interface LobbyMemberView {
    * down and the grace period is over. The UI can show "a bot is playing for X"; reconnecting clears it.
    */
   botControlled?: boolean;
+  /**
+   * Optional (guest-only servers omit it): the seat was admitted with a signed platform ticket, so `name` is the player's
+   * platform nickname and `playerId` is real. A guest is never verified, whatever name they type.
+   */
+  verified?: boolean;
+  /**
+   * Only for a verified member: the immutable platform player id (an opaque random UUID, never a name). It is what the
+   * client needs to mute / block / report that player through the platform API. Guests have none.
+   */
+  playerId?: string;
 }
 
 /**
@@ -535,4 +549,68 @@ export function validateSettingsMsg(raw: unknown): SettingsMsg | null {
     out.friendlyFire = o.friendlyFire;
   }
   return out;
+}
+
+// ---------------------------------------------------------------- quick signals (presets only; decision MP-SIG)
+
+/**
+ * The preset vocabulary a match may relay. COPIED as data from `player-platform/src/comms/catalogue.ts` (the platform owns
+ * the catalogue; a test keeps the two lists identical). `where`: `lobby` = while the room waits (the party's gathering),
+ * `match` = to everybody during a match, `team` = to teammates only during a Team match (and to nobody in Free-for-All).
+ * There is NO free text in this protocol, and no message can carry anything but one of these ids.
+ */
+export const SIGNAL_DEFS: readonly {
+  id: string;
+  kind: 'chat' | 'ping' | 'emote';
+  where: readonly ('lobby' | 'match' | 'team')[];
+}[] = [
+  { id: 'chat.ready', kind: 'chat', where: ['lobby', 'match', 'team'] },
+  { id: 'chat.lets_go', kind: 'chat', where: ['lobby', 'match', 'team'] },
+  { id: 'chat.wait', kind: 'chat', where: ['lobby'] },
+  { id: 'chat.good_luck', kind: 'chat', where: ['lobby', 'match', 'team'] },
+  { id: 'chat.nice', kind: 'chat', where: ['lobby', 'match', 'team'] },
+  { id: 'chat.thanks', kind: 'chat', where: ['lobby', 'match', 'team'] },
+  { id: 'chat.sorry', kind: 'chat', where: ['lobby', 'match', 'team'] },
+  { id: 'chat.gg', kind: 'chat', where: ['lobby', 'match', 'team'] },
+  { id: 'chat.rematch', kind: 'chat', where: ['lobby'] },
+  { id: 'chat.help', kind: 'chat', where: ['team'] },
+  { id: 'ping.attack', kind: 'ping', where: ['team'] },
+  { id: 'ping.defend', kind: 'ping', where: ['team'] },
+  { id: 'ping.danger', kind: 'ping', where: ['team'] },
+  { id: 'ping.regroup', kind: 'ping', where: ['team'] },
+  { id: 'ping.go_here', kind: 'ping', where: ['team'] },
+  { id: 'ping.on_my_way', kind: 'ping', where: ['team'] },
+  { id: 'emote.wave', kind: 'emote', where: ['lobby', 'match', 'team'] },
+  { id: 'emote.cheer', kind: 'emote', where: ['lobby', 'match', 'team'] },
+  { id: 'emote.laugh', kind: 'emote', where: ['lobby', 'match', 'team'] },
+  { id: 'emote.shrug', kind: 'emote', where: ['lobby', 'match', 'team'] },
+  { id: 'emote.salute', kind: 'emote', where: ['lobby', 'match', 'team'] },
+];
+
+export const SIGNAL_IDS: readonly string[] = SIGNAL_DEFS.map((d) => d.id);
+
+/** Client -> server: exactly `{ id }`. */
+export interface SignalMsg {
+  id: string;
+}
+
+export function validateSignalMsg(raw: unknown): SignalMsg | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  if (Object.keys(o).length !== 1 || typeof o.id !== 'string' || !SIGNAL_IDS.includes(o.id)) return null;
+  return { id: o.id };
+}
+
+/**
+ * Server -> client: a relayed signal. `seat` is the SENDER's seat in the running match, or null while the room is a lobby
+ * (then `name` identifies the sender). `x`, `y` are the sender's tile for a ping (the server attaches them; a client can never
+ * send a position), else null. `tick` is the server tick (null in the lobby).
+ */
+export interface SignalInMsg {
+  id: string;
+  seat: number | null;
+  name: string;
+  x: number | null;
+  y: number | null;
+  tick: number | null;
 }
