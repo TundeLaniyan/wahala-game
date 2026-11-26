@@ -486,10 +486,15 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
         return;
       }
       const code = s.lobby?.code ?? s.roomCode;
-      const next: OpenRequest = code && req.kind !== 'join' ? { kind: 'join', who: req.who, code } : req;
-      // a ticket is single-use: "Try again" never re-sends it; it asks the platform for a new one first
+      const wasTicketed = req.kind !== 'quick' && !!req.ticket;
+      const next: OpenRequest =
+        code && req.kind !== 'join'
+          ? { kind: 'join', who: req.who, code, ...(wasTicketed ? { ticket: req.ticket } : {}) }
+          : req;
+      // a ticket is single-use: "Try again" never re-sends it; it asks the platform for a new one first (a ticketed
+      // room is never silently re-entered as an anonymous guest)
       const source = refetchTicket;
-      if (next.kind !== 'quick' && next.ticket && source) {
+      if (wasTicketed && next.kind !== 'quick' && source) {
         set({ step: 'connecting', error: null });
         const mine = generation;
         void source().then((ticket) => {
@@ -503,6 +508,15 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
               error: { reason: 'ticket', detail: null, retryAfterSec: null },
               confirmLeave: false,
             });
+        });
+        return;
+      }
+      if (wasTicketed) {
+        // no way to get a new ticket: never re-send the used one
+        set({
+          step: 'error',
+          error: { reason: 'ticket', detail: null, retryAfterSec: null },
+          confirmLeave: false,
         });
         return;
       }
