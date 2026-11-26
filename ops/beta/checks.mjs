@@ -177,7 +177,8 @@ async function match() {
   check(!verifyTicket(t.body.ticket, jwks, { room: 'ZZZZZZ' }).ok, 'the same ticket is refused for another room');
   const forged = t.body.ticket.slice(0, -4) + 'AAAA';
   check(!verifyTicket(forged, jwks, { room: code }).ok, 'a tampered ticket is refused');
-  const roomB = await new Client(o.url).joinById(code, { name: s.B.name, characterId: 'streetBaller', ticket: t.body.ticket });
+  // integrated server: B types a DIFFERENT name on purpose (acceptance test I3: the seat carries the platform name, never the typed one)
+  const roomB = await new Client(o.url).joinById(code, { name: o.integration ? 'Impostor' : s.B.name, characterId: 'streetBaller', ticket: t.body.ticket });
   roomB.onMessage('*', () => {});
   roomB.onMessage('lobby', (m) => lobbiesB.push(m));
   for (let i = 0; i < 50 && !(lobbiesB.at(-1)?.members?.length >= 2); i++) await sleep(100);
@@ -190,22 +191,18 @@ async function match() {
     const refused = async (opts) => { try { const r = await new Client(o.url).joinById(code, { characterId: 'streetBaller', ...opts }); await r.leave().catch(() => {}); return false; } catch { return true; } };
     check(await refused({ name: 'Mallory', ticket: host.body.ticket }), 'I1: a HOST ticket (room "*") cannot be used to join an existing room');
     check(await refused({ name: 'Mallory', ticket: t.body.ticket.slice(0, -4) + 'AAAA' }), 'I2: a tampered ticket is refused by the match server');
-    const D = await guest('IntegD');
-    const dj = await call('POST', '/v1/parties/join', { code: party.code }, D.access);
-    const dt = dj.status === 200 ? await call('POST', `/v1/parties/${party.id}/match/ticket`, {}, D.access) : null;
-    if (dt?.status === 201) {
-      const lobbiesD = [];
-      try {
-        const roomD = await new Client(o.url).joinById(code, { name: 'Impostor', characterId: 'streetBaller', ticket: dt.body.ticket });
-        roomD.onMessage('*', () => {});
-        roomD.onMessage('lobby', (m) => lobbiesD.push(m));
-        for (let i = 0; i < 30 && !lobbiesD.at(-1); i++) await sleep(100);
-        const names = (lobbiesD.at(-1)?.members ?? []).map((m) => m.name);
-        check(names.includes(D.name) && !names.includes('Impostor'), 'I3: a ticketed player sits under the PLATFORM name, whatever name the client sends', names.join(', '));
-        await roomD.leave().catch(() => {});
-      } catch (e) { add('FAIL', 'I3: a ticketed player can join with a valid ticket', String(e.message ?? e).slice(0, 100)); }
-    } else add('FAIL', 'I3: could not obtain a member ticket for the test account', `HTTP ${dt?.status ?? dj.status}`);
-    if (dj.status === 200) await call('POST', `/v1/parties/${party.id}/leave`, {}, D.access);
+    // I3 (the typed name 'Impostor' was sent above): the lobby of the real server shows B under the PLATFORM name, nobody called Impostor
+    check(names.includes(s.B.name) && !names.includes('Impostor'), 'I3: a ticketed player sits under the PLATFORM name, whatever name the client sends', names.join(', '));
+    const lobbyB = lobbiesA.at(-1)?.members?.find((m) => m.name === s.B.name);
+    check(lobbyB?.verified === true && lobbyB?.playerId === s.B.id, 'I3b: the seat carries the verified platform player id (the same one the platform issued)', JSON.stringify({ verified: lobbyB?.verified, id: lobbyB?.playerId === s.B.id }));
+    // direct access without a ticket (raw HTTP and the SDK): refused on every entry point, even with a real room code
+    const raw = async (path, body) => { const r = await fetch(`${o['http-url'] ?? o.url}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null); return r ? r.status : 0; };
+    check(await refused({ name: 'Uninvited' }), 'I7: a plain guest cannot join the room by its code, even though the code is known');
+    let guestCreate = true; try { const r = await new Client(o.url).create('rumble', { name: 'Uninvited', private: true }); await r.leave().catch(() => {}); } catch { guestCreate = false; }
+    check(!guestCreate, 'I8: a plain guest cannot create a room on the match server directly');
+    let guestQuick = true; try { const r = await new Client(o.url).joinOrCreate('rumble', { name: 'Uninvited', mode: 'ffa' }); await r.leave().catch(() => {}); } catch { guestQuick = false; }
+    check(!guestQuick, 'I9: quick play is closed in the private beta (no seat without a ticket)');
+    check(await refused({ name: 'Mallory', ticket: 'eyJhbGciOiJFZERTQSJ9.e30.AAAA' }), 'I10: a made-up ticket is refused');
   }
   if (Number(o['match-seconds']) === 0) {
     add('INFO', 'quick mode: the match itself is not played (run validate.sh without --quick for the full 3-minute match)');
@@ -269,6 +266,14 @@ async function social() {
   if (s.match?.matchId) {
     const hist = await call('GET', '/v1/me/matches', undefined, B.access);
     check(hist.status === 200 && hist.body.matches.length === 1 && hist.body.matches[0].humans === 2, 'the signed result is in the member\'s own history', JSON.stringify(hist.body.matches[0]?.you));
+    if (o.integration) {
+      // I4: the rows came from the MATCH SERVER's own signed calls, and are the facts of its simulation (not what a client says, not what the validator replayed)
+      const mine = s.match.players?.find((p) => p.name === B.name);
+      const me = hist.body.matches[0]?.you;
+      check(!!mine && me?.placement === mine.placement && me?.kills === (typeof mine.kills === 'number' ? mine.kills : null), 'I4: the recorded placement and kills equal the authoritative server\'s own final results for this player', JSON.stringify({ recorded: me && { placement: me.placement, kills: me.kills }, server: mine && { placement: mine.placement, kills: mine.kills } }));
+      const histA = await call('GET', '/v1/me/matches', undefined, A.access);
+      check(histA.body.matches.length === 1 && histA.body.matches[0].matchId === hist.body.matches[0].matchId, 'I4b: the leader has the same match in their own history');
+    }
     check((await call('GET', '/v1/me/matches', undefined, C.access)).body.matches.length === 0, 'a stranger\'s history does not contain it');
   }
   // friends
@@ -336,7 +341,69 @@ async function persist() {
   save(s);
 }
 
-const phases = { edge, accounts, match, social, persist };
+// =========================================================================================================== outage (I5)
+// I5 (docs/ops/BETA_INTEGRATION_HANDOFF.md): a platform outage never delays a match. Three stages, with validate.sh stopping and
+// starting the platform between them: `prepare` (account, party, a warm-up ticketed room so the match server has the platform's
+// public key cached, a baseline start time with the platform UP), `down` (platform stopped: host ticket made BEFORE the stop, a room
+// is created with it, the match is started and its start time compared with the baseline), `after` (platform back: it is healthy and
+// the match whose reports were lost left no half-written record).
+async function outage() {
+  const s = load();
+  const stage = process.argv[3];
+  const timedStart = async (ticket, name) => {
+    const room = await new Client(o.url).create('rumble', { private: true, name, characterId: 'streetBaller', ticket });
+    const lobbies = [];
+    room.onMessage('*', () => {});
+    room.onMessage('lobby', (m) => lobbies.push(m));
+    for (let i = 0; i < 50 && !lobbies.at(-1); i++) await sleep(100);
+    const t0 = Date.now();
+    room.send('start');
+    for (let i = 0; i < 400 && lobbies.at(-1)?.phase !== 'playing'; i++) await sleep(25);
+    const ms = lobbies.at(-1)?.phase === 'playing' ? Date.now() - t0 : null;
+    await sleep(1500); // let the match run a moment: the server keeps simulating while the platform is away
+    const phaseLater = lobbies.at(-1)?.phase;
+    await room.leave().catch(() => {});
+    return { ms, phaseLater, code: room.roomId };
+  };
+  const ticketFor = async (X, partyId) => (await call('POST', `/v1/parties/${partyId}/match/ticket`, {}, X.access)).body.ticket;
+  if (stage === 'prepare') {
+    const X = await guest('OutageX');
+    const party = (await call('POST', '/v1/parties', { mode: 'ffa' }, X.access)).body.party;
+    const up = await timedStart(await ticketFor(X, party.id), X.name);
+    check(up.ms !== null, 'I5 baseline: with the platform up, a ticketed match starts', `${up.ms} ms after Start`);
+    s.outage = { X, partyId: party.id, baselineMs: up.ms };
+    save(s);
+    return;
+  }
+  if (stage === 'down') {
+    const { X, partyId, baselineMs } = s.outage;
+    // the ticket is made now ... validate.sh stopped the platform BEFORE this phase, so ask the platform first through a ticket minted earlier
+    const r = await timedStart(s.outage.hostTicket, X.name);
+    check(r.ms !== null, 'I5: with the platform STOPPED, the match still starts (the cached public key verifies the ticket)', `${r.ms} ms after Start (baseline ${baselineMs} ms)`);
+    check(r.ms !== null && r.ms <= baselineMs + 2000, 'I5: the outage did not delay the start by more than 2 s', `${r.ms} vs ${baselineMs} + 2000 ms`);
+    check(r.phaseLater === 'playing', 'I5: the match keeps running while the platform is away', String(r.phaseLater));
+    s.outage.downRoom = r.code;
+    save(s);
+    return;
+  }
+  if (stage === 'mint') {
+    // called while the platform is still up, right before it is stopped: the ticket lives 120 s
+    const { X, partyId } = s.outage;
+    s.outage.hostTicket = await ticketFor(X, partyId);
+    save(s);
+    return;
+  }
+  if (stage === 'after') {
+    const h = await call('GET', '/platform-health');
+    check(h.status === 200, 'I5: the platform is healthy again after the outage', `HTTP ${h.status}`);
+    const hist = await call('GET', '/v1/me/matches', undefined, s.outage.X.access);
+    check(hist.status === 200 && Array.isArray(hist.body.matches), 'I5: the platform answers history requests, and no match from the outage was invented', `${hist.body?.matches?.length} entries`);
+    return;
+  }
+  add('FAIL', `outage: unknown stage ${stage}`);
+}
+
+const phases = { edge, accounts, match, social, persist, outage };
 if (!phases[phase]) {
   console.error(`usage: checks.mjs ${Object.keys(phases).join('|')}`);
   process.exit(2);

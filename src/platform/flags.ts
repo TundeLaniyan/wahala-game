@@ -12,6 +12,10 @@
  *   WAHALA_PLATFORM_URL         build-time: the player-platform HTTP API (may contain `{host}`). Only in a SERVER build: then
  *                               the online flow gains guest identity, friends, parties and quick signals (`platform`,
  *                               docs/PLATFORM_CLIENT.md). Never read from the URL; a default build has none of it.
+ *   WAHALA_PRIVATE_BETA=1       build-time: the hosted private-beta client (docs/ops/BETA_FRONTEND.md). Only inside a SERVER build
+ *                               with a platform URL: the Online entry is then offered without `?online` (testers open one plain
+ *                               link), the invite code is asked for and quick play / room codes are hidden. Nothing else changes;
+ *                               without a server build it does nothing at all, so it can never switch a public build on.
  *   WAHALA_VOICE_ENABLED=true   build-time: shows the voice UI state (provider interface only, no WebRTC here)
  *   WAHALA_CAMPAIGN_ENABLED     default true; `false` hides the campaign
  *   WAHALA_EXPERIMENTAL_CONTENT default false; `true` (or ?experimental) shows unfinished roster / content
@@ -126,6 +130,9 @@ export function resolveFlags(env: FlagEnv, search = '', hostname = ''): FeatureF
   const onlineEndpoint = serverBuild ? resolveEndpoint(env.WAHALA_ONLINE_URL, hostname) : null;
   // the platform exists only inside a server build: a platform URL alone (or with only half of the online switch) is nothing
   const platformEndpoint = serverBuild ? resolvePlatformEndpoint(env.WAHALA_PLATFORM_URL, hostname) : null;
+  // the hosted private beta asks for the Online entry itself (the one link testers open); only a SERVER build with a platform URL can
+  const onlineRequested =
+    q.has('online') || (serverBuild && platformEndpoint !== null && truthy(env.WAHALA_PRIVATE_BETA));
   return {
     online: onlineMode !== 'off',
     onlineMode,
@@ -135,9 +142,9 @@ export function resolveFlags(env: FlagEnv, search = '', hostname = ''): FeatureF
         ? bool(campaignQuery, true)
         : bool(env.WAHALA_CAMPAIGN_ENABLED, FLAG_DEFAULTS.campaign),
     experimentalContent: truthy(env.WAHALA_EXPERIMENTAL_CONTENT) || q.has('experimental'),
-    rumbleOnline: onlineEndpoint !== null && q.has('online'),
+    rumbleOnline: onlineEndpoint !== null && onlineRequested,
     onlineEndpoint,
-    platform: onlineEndpoint !== null && q.has('online') && platformEndpoint !== null,
+    platform: onlineEndpoint !== null && onlineRequested && platformEndpoint !== null,
     platformEndpoint,
   };
 }

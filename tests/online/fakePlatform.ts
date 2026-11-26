@@ -55,6 +55,8 @@ export class FakePlatform {
     }
   >();
   invites: { id: string; partyId: string; from: string; to: string }[] = [];
+  /** Private beta: account creation needs one of these codes (null = open). */
+  inviteCodes: string[] | null = null;
   tickets: { player: string; room: string; ticket: string }[] = [];
   nameChanges = new Map<string, number>();
   private seq = 0;
@@ -206,7 +208,9 @@ export class FakePlatform {
   ): Response {
     const m = (re: RegExp) => re.exec(path);
     if (method === 'POST' && path === '/v1/auth/guest') {
-      const b = this.strict(body, ['nickname', 'platform', 'deviceLabel', 'ageGroup']);
+      const b = this.strict(body, ['nickname', 'platform', 'deviceLabel', 'ageGroup', 'inviteCode']);
+      if (this.inviteCodes && !this.inviteCodes.includes(String(b.inviteCode ?? '')))
+        return this.err(403, 'invite_required', 'this beta is invite-only: an invite code is needed to create an account');
       const name = typeof b.nickname === 'string' ? b.nickname : `Guest${this.seq + 1}`;
       if ([...this.players.values()].some((p) => p.name === name))
         return this.err(409, 'name_taken', 'That name is already taken.');

@@ -22,6 +22,9 @@ export default defineConfig(({ command, isPreview, mode }) => {
   // (tests/online/build-guard.test.ts runs both on the same inputs). Never in test mode.
   const platformUrl = (env.WAHALA_PLATFORM_URL ?? '').trim().split('{host}').join('h');
   const platform = serverOnline && /^https?:\/\/[^\s{}]+$/i.test(platformUrl);
+  // The hosted PRIVATE BETA client (docs/ops/BETA_FRONTEND.md): a platform build that also sets WAHALA_PRIVATE_BETA=1. It asks for an
+  // invite code and offers only the party's private match (the beta match server refuses everyone without a platform ticket).
+  const privateBeta = platform && /^(1|true|on|yes)$/i.test((env.WAHALA_PRIVATE_BETA ?? '').trim());
   return {
     base: command === 'build' || isPreview ? '/wahala-game/' : '/',
     plugins: [react(), optimizeModels(), offlineCache()],
@@ -30,6 +33,7 @@ export default defineConfig(({ command, isPreview, mode }) => {
     define: {
       __WAHALA_SERVER_ONLINE__: JSON.stringify(serverOnline),
       __WAHALA_PLATFORM__: JSON.stringify(platform),
+      __WAHALA_PRIVATE_BETA__: JSON.stringify(privateBeta),
     },
     build: {
       target: 'es2022',

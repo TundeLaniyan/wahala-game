@@ -288,3 +288,38 @@ describe('platform and platformEndpoint: only inside a server build that names a
     expect(FLAG_DEFAULTS.platformEndpoint).toBeNull();
   });
 });
+
+describe('WAHALA_PRIVATE_BETA (docs/ops/BETA_FRONTEND.md)', () => {
+  const SERVER = {
+    WAHALA_ONLINE_ENABLED: 'true',
+    WAHALA_ONLINE_URL: 'wss://play.example.invalid',
+    WAHALA_PLATFORM_URL: 'https://play.example.invalid',
+  };
+  it('a hosted beta build offers the Online entry and the platform without ?online', () => {
+    const f = resolveFlags({ ...SERVER, WAHALA_PRIVATE_BETA: '1' }, '', 'beta.example.invalid');
+    expect(f.rumbleOnline).toBe(true);
+    expect(f.platform).toBe(true);
+  });
+  it('the same server build without the beta switch still needs ?online', () => {
+    expect(resolveFlags(SERVER, '', 'h').rumbleOnline).toBe(false);
+    expect(resolveFlags(SERVER, '?online', 'h').rumbleOnline).toBe(true);
+  });
+  it('the beta switch alone, or with half the online switch or no platform URL, switches nothing on: a public build is never opened by it', () => {
+    expect(resolveFlags({ WAHALA_PRIVATE_BETA: '1' }, '', 'h')).toEqual(FLAG_DEFAULTS);
+    expect(
+      resolveFlags({ WAHALA_PRIVATE_BETA: '1', WAHALA_ONLINE_URL: 'wss://x.example.invalid' }, '', 'h')
+        .rumbleOnline,
+    ).toBe(false);
+    expect(
+      resolveFlags(
+        {
+          WAHALA_PRIVATE_BETA: '1',
+          WAHALA_ONLINE_ENABLED: 'true',
+          WAHALA_ONLINE_URL: 'wss://x.example.invalid',
+        },
+        '',
+        'h',
+      ).rumbleOnline,
+    ).toBe(false);
+  });
+});

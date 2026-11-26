@@ -103,3 +103,55 @@ describe('__WAHALA_PLATFORM__ (docs/PLATFORM_CLIENT.md)', () => {
     expect(platformDefine('true', 'ws://{host}:2567', 'http://{host}:4567', 'test')).toBe('false');
   });
 });
+
+describe('__WAHALA_PRIVATE_BETA__ (docs/ops/BETA_FRONTEND.md)', () => {
+  const saved = process.env.WAHALA_PRIVATE_BETA;
+  const savedP = process.env.WAHALA_PLATFORM_URL;
+  afterEach(() => {
+    for (const [k, v] of [
+      ['WAHALA_PRIVATE_BETA', saved],
+      ['WAHALA_PLATFORM_URL', savedP],
+    ] as const) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
+  function beta(over: Record<string, string | undefined>, mode = 'production'): string {
+    for (const [k, v] of Object.entries(over)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    return (config as unknown as ConfigFn)({ command: 'build', mode }).define.__WAHALA_PRIVATE_BETA__!;
+  }
+  const ON = {
+    WAHALA_ONLINE_ENABLED: 'true',
+    WAHALA_ONLINE_URL: 'wss://play.example.invalid',
+    WAHALA_PLATFORM_URL: 'https://play.example.invalid',
+  };
+
+  it('is false by default, with only the beta switch, and in test mode', () => {
+    expect(
+      beta({
+        WAHALA_ONLINE_ENABLED: undefined,
+        WAHALA_ONLINE_URL: undefined,
+        WAHALA_PLATFORM_URL: undefined,
+        WAHALA_PRIVATE_BETA: undefined,
+      }),
+    ).toBe('false');
+    expect(
+      beta({
+        WAHALA_ONLINE_ENABLED: undefined,
+        WAHALA_ONLINE_URL: undefined,
+        WAHALA_PLATFORM_URL: undefined,
+        WAHALA_PRIVATE_BETA: '1',
+      }),
+    ).toBe('false');
+    expect(beta({ ...ON, WAHALA_PRIVATE_BETA: '1' }, 'test')).toBe('false');
+  });
+
+  it('is true only for a platform build that also asks for the beta; a platform build without the switch stays a normal online client', () => {
+    expect(beta({ ...ON, WAHALA_PRIVATE_BETA: undefined })).toBe('false');
+    expect(beta({ ...ON, WAHALA_PRIVATE_BETA: '1' })).toBe('true');
+    expect(beta({ ...ON, WAHALA_PRIVATE_BETA: 'true', WAHALA_PLATFORM_URL: undefined })).toBe('false');
+  });
+});

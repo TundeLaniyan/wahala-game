@@ -9,6 +9,7 @@ import { CHARACTERS } from '../../../sim';
 import type { CharacterId } from '../../../sim';
 import { onlineFlow, platform, useRumbleOnline } from '../../../app/rumbleOnline';
 import type { PlatformController } from '../../../online/platform/controller';
+import { privateBeta } from '../../../online/platform/enabled';
 import { signalPlace, signalsFor } from '../../../online/platform/signals';
 import { EntryScreen } from '../rumble/EntryScreen';
 import type { EntryProps } from '../rumble/EntryScreen';
@@ -56,7 +57,16 @@ export function PlatformEntryScreen(props: EntryProps) {
   return (
     <EntryScreen
       {...props}
-      extra={<PlatformPanel state={state} act={pf().actions} fighterName={fighterName} inRoom={inRoom} />}
+      privateBeta={privateBeta()}
+      extra={
+        <PlatformPanel
+          state={state}
+          act={pf().actions}
+          fighterName={fighterName}
+          inRoom={inRoom}
+          privateBeta={privateBeta()}
+        />
+      }
     />
   );
 }

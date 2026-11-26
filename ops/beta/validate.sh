@@ -12,6 +12,9 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(cd "$HERE/../.." && pwd)"
 QUICK=0; KEEP=0; BUILD=1
+# The match server is integrated (decision FC-1): the integration checks I1-I10 run by default. VALIDATE_INTEGRATION=0 restores the old
+# "validator posts the results itself" behaviour, for a server that is NOT linked to the platform.
+INTEG="--integration"; [ "${VALIDATE_INTEGRATION:-1}" = "0" ] && INTEG=""
 for a in "$@"; do case "$a" in --quick) QUICK=1;; --keep) KEEP=1;; --no-build) BUILD=0;; *) echo "unknown option $a"; exit 2;; esac; done
 export BETA_STATE="${VALIDATE_STATE:-$(mktemp -d -t wahala-validate.XXXXXX)}" BETA_PROJECT=wahala-validate
 SCRIPT="$HERE/wahala-beta.sh"; S="$BETA_STATE"; V="$S/validate"; mkdir -p "$V"; chmod 777 "$V"
@@ -115,7 +118,7 @@ step "4. a real authoritative match through the TLS edge"
 if [ $QUICK -eq 1 ]; then MS=0; else MS=180; fi
 ( while sleep 10; do rumble_metrics | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const m=JSON.parse(d);const p=m.rooms.filter(r=>r.phase==="playing");console.log(JSON.stringify({cpu:m.process.cpuPercentSinceLastRead,rssMB:Math.round(m.process.memoryUsage.rss/1e6),playing:p.length,step99:p[0]?.ticks.stepMs.p99??null,dropped:p.reduce((n,r)=>n+r.ticks.dropped,0)}))}catch{}})' 2>/dev/null; done >> "$V/match-samples.jsonl" ) 2>/dev/null &
 SAMPLER=$!
-drv match --match-seconds $MS ${VALIDATE_INTEGRATION:+--integration}
+drv match --match-seconds $MS $INTEG
 kill $SAMPLER 2>/dev/null; wait $SAMPLER 2>/dev/null
 [ -s "$V/match-samples.jsonl" ] && info "server load while the match ran (cpu % of one core, RSS MB, playing rooms): $(node -e 'const l=require("fs").readFileSync(process.argv[1],"utf8").trim().split("\n").map(x=>JSON.parse(x));const cpu=l.map(x=>x.cpu);console.log("peak cpu "+Math.max(...cpu)+"%, peak rss "+Math.max(...l.map(x=>x.rssMB))+" MB, dropped ticks "+Math.max(...l.map(x=>x.dropped))+", samples "+l.length)' "$V/match-samples.jsonl" 2>/dev/null || echo "see $V/match-samples.jsonl")"
 
@@ -124,16 +127,24 @@ if [ -s "$V/finished.json" ]; then
   for mode in nosig badsig stale; do
     code="$(internal $mode /internal/v1/matches/started started.json | awk '{print $1}')"; expect "unsigned / forged / stale internal call refused ($mode)" "401" "$code"
   done
-  expect "signed 'started' accepted" "201" "$(internal ok /internal/v1/matches/started started.json | awk '{print $1}')"
-  expect "the same 'started' again is a harmless duplicate" "200" "$(internal ok /internal/v1/matches/started started.json | awk '{print $1}')"
-  expect "a result naming a player who was never ticketed is REFUSED" "400" "$(internal ok /internal/v1/matches/started untokened.json | awk '{print $1}')"
-  expect "signed 'finished' accepted" "201" "$(internal ok /internal/v1/matches/finished finished.json | awk '{print $1}')"
-  expect "a replayed 'finished' changes nothing (first call wins)" "200" "$(internal ok /internal/v1/matches/finished finished.json | awk '{print $1}')"
-  blocked "the match server itself posts started / finished and attaches the ticket's player id to the seat: BLOCKED BY INTEGRATION (Architecture). The calls above use the real shared secret and the real results of the real match above, sent by the validator in the server's place."
+  if [ -n "$INTEG" ]; then
+    # the match server already sent the signed calls itself, after the real match above: what the validator posts now is a REPLAY
+    expect "the same signed 'started' body again is a harmless duplicate (the match server's own call came first)" "200" "$(internal ok /internal/v1/matches/started started.json | awk '{print $1}')"
+    expect "a result naming a player who was never ticketed is REFUSED" "400" "$(internal ok /internal/v1/matches/started untokened.json | awk '{print $1}')"
+    expect "a replayed signed 'finished' changes nothing (first call wins; each player's history is checked against the real results in step 6)" "200" "$(internal ok /internal/v1/matches/finished finished.json | awk '{print $1}')"
+    ok "the match server itself posted started and finished with the real results (nothing was posted by this validator before the history check in step 6)"
+  else
+    expect "signed 'started' accepted" "201" "$(internal ok /internal/v1/matches/started started.json | awk '{print $1}')"
+    expect "the same 'started' again is a harmless duplicate" "200" "$(internal ok /internal/v1/matches/started started.json | awk '{print $1}')"
+    expect "a result naming a player who was never ticketed is REFUSED" "400" "$(internal ok /internal/v1/matches/started untokened.json | awk '{print $1}')"
+    expect "signed 'finished' accepted" "201" "$(internal ok /internal/v1/matches/finished finished.json | awk '{print $1}')"
+    expect "a replayed 'finished' changes nothing (first call wins)" "200" "$(internal ok /internal/v1/matches/finished finished.json | awk '{print $1}')"
+    blocked "the match server itself posts started / finished and attaches the ticket's player id to the seat: BLOCKED BY INTEGRATION. The calls above were sent by the validator in the server's place (VALIDATE_INTEGRATION=0)."
+  fi
 else info "quick mode: signed-results checks skipped (they need a played match)"; fi
 
 step "6. friends, parties, quick signals, mute, block, report, rate limits"
-drv social
+drv social $INTEG
 expect "operator API is reachable ONLY from inside (needs the admin token)" "200" "$("$SCRIPT" admin GET /admin/v1/reports 2>/dev/null | head -1)"
 expect "operator API refuses a wrong token" "401" "$(dc exec -T platform node -e 'fetch("http://127.0.0.1:4567/admin/v1/reports",{headers:{authorization:"Bearer wrong"}}).then(r=>console.log(r.status))' | tr -d '\r')"
 m="$(platform_metrics)"; echo "$m" | grep -q '"requests"' && ok "platform /metrics answers with the token ($(echo "$m" | tr -d '\n' | cut -c1-150)...)" || bad "platform /metrics"
@@ -159,6 +170,16 @@ drv persist after-outage-recovery
 dc logs --no-color --no-log-prefix >"$V/logs-before-down.log" 2>&1  # `down` deletes the containers and their logs: keep them for the leak scan
 dc down >/dev/null 2>&1; dc up -d >/dev/null 2>&1; wait_healthy && ok "full stop and start (down / up): everything healthy again" || bad "stack did not return after down/up"
 drv persist after-full-restart
+
+step "7a. a platform outage does not delay a match (I5)"
+if [ -n "$INTEG" ]; then
+  drv outage prepare
+  drv outage mint
+  dc stop platform >/dev/null 2>&1
+  drv outage down
+  dc start platform >/dev/null 2>&1; wait_healthy && ok "the platform started again after the outage test" || bad "the platform did not come back"
+  drv outage after
+else info "integration checks are off (VALIDATE_INTEGRATION=0): the outage test is skipped"; fi
 
 step "7b. secret rotation (the operator procedure, on the live stack)"
 admin_status() { dc exec -T platform node -e 'fetch("http://127.0.0.1:4567/admin/v1/reports",{headers:{authorization:"Bearer "+process.argv[1]}}).then(r=>console.log(r.status))' "$1" 2>/dev/null | tr -d '\r'; }

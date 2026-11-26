@@ -8,6 +8,13 @@ import { flags } from '../../platform';
 /** The build constant, read so that a bundler config without the define (the server's dev client) still runs: false. */
 const builtWithPlatform = (): boolean => typeof __WAHALA_PLATFORM__ !== 'undefined' && __WAHALA_PLATFORM__;
 
+/** The hosted private-beta client (build constant, only ever true together with the platform client). */
+export function privateBeta(): boolean {
+  return (
+    builtWithPlatform() && typeof __WAHALA_PRIVATE_BETA__ !== 'undefined' && __WAHALA_PRIVATE_BETA__
+  );
+}
+
 export function platformEnabled(): boolean {
   return builtWithPlatform() && flags().platform && flags().platformEndpoint !== null;
 }

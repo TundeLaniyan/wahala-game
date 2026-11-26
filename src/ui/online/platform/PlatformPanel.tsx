@@ -26,6 +26,8 @@ export type PlatformActions = PlatformController['actions'];
 export interface PlatformPanelProps {
   state: PlatformState;
   act: PlatformActions;
+  /** The hosted private-beta client: there is no guest fallback, the platform is the only way in. */
+  privateBeta?: boolean;
   /** The fighter chosen in the game (its display name). */
   fighterName: string;
   /** The room this client is in (null at the entry). */
@@ -601,6 +603,55 @@ export function PartyBlock({ state, act, inRoom }: Pick<PlatformPanelProps, 'sta
   );
 }
 
+/** The invite-only beta: this device has no account yet, so the invite code is asked for here (never stored, sent once). */
+function InviteForm({ state, act }: { state: PlatformState; act: PlatformActions }) {
+  const [code, setCode] = useState('');
+  return (
+    <form
+      className="pf-invite"
+      data-testid="pf-invite"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void act.signInWithInvite(code);
+      }}
+    >
+      <p className="ro-sub" role="status" data-testid="pf-invite-note">
+        This is a private beta. Enter your invite code to create your player.
+      </p>
+      <label htmlFor="pf-invite-code" className="ro-label">
+        Invite code
+      </label>
+      <input
+        id="pf-invite-code"
+        className="ro-input"
+        data-testid="pf-invite-code"
+        type="text"
+        autoComplete="off"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+        maxLength={128}
+        value={code}
+        aria-invalid={state.inviteRefused}
+        onChange={(e) => setCode(e.target.value)}
+      />
+      {state.inviteRefused && (
+        <p className="ro-hint bad" role="alert" data-testid="pf-invite-refused">
+          That invite code was not accepted. Check it and try again.
+        </p>
+      )}
+      <button
+        type="submit"
+        className="mn-btn mn-primary"
+        data-testid="pf-invite-submit"
+        disabled={code.trim() === ''}
+      >
+        Join the beta
+      </button>
+    </form>
+  );
+}
+
 export function PlatformPanel(p: PlatformPanelProps) {
   const s = p.state;
   if (s.phase === 'idle' || s.phase === 'connecting')
@@ -624,18 +675,26 @@ export function PlatformPanel(p: PlatformPanelProps) {
         data-testid="pf-panel"
         data-phase={s.phase}
       >
-        <p className="ro-sub" data-testid="pf-unavailable" role="status">
-          Friends and parties are unavailable right now. You can still play online as a guest.
-        </p>
-        <Message state={s} act={p.act} />
-        <button
-          type="button"
-          className="mn-btn mn-secondary"
-          data-testid="pf-retry"
-          onClick={() => void p.act.retry()}
-        >
-          Retry
-        </button>
+        {s.inviteNeeded ? (
+          <InviteForm state={s} act={p.act} />
+        ) : (
+          <>
+            <p className="ro-sub" data-testid="pf-unavailable" role="status">
+              {p.privateBeta
+                ? 'The beta player service is not answering. Check your connection and try again.'
+                : 'Friends and parties are unavailable right now. You can still play online as a guest.'}
+            </p>
+            <Message state={s} act={p.act} />
+            <button
+              type="button"
+              className="mn-btn mn-secondary"
+              data-testid="pf-retry"
+              onClick={() => void p.act.retry()}
+            >
+              Retry
+            </button>
+          </>
+        )}
       </section>
     );
   const invitesBadge = s.invites.length + s.incoming.length;

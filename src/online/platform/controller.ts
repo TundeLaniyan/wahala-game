@@ -60,6 +60,10 @@ export interface PlatformState {
   nameError: string | null;
   /** The last poll got no answer: the panel says the player service is unreachable (and keeps retrying). */
   stale: boolean;
+  /** The platform is invite-only and this device has no account yet: the panel asks for the invite code. */
+  inviteNeeded: boolean;
+  /** The invite code just tried was not accepted (shown under the field). */
+  inviteRefused: boolean;
   handoff: HandoffState;
 }
 
@@ -116,6 +120,8 @@ const INITIAL: PlatformState = {
   message: null,
   nameError: null,
   stale: false,
+  inviteNeeded: false,
+  inviteRefused: false,
   handoff: 'idle',
 };
 
@@ -201,6 +207,8 @@ export function createPlatformController(deps: ControllerDeps) {
   let ticks = 0;
   let messageId = 0;
   let connecting: Promise<void> | null = null;
+  /** The invite code typed for the account creation in flight (memory only, cleared as soon as it was used). */
+  let inviteCode = '';
   /** The party whose room code still has to be reported (the leader created the room with a host ticket). */
   let pendingReport: string | null = null;
   /** Room codes this client already joined (or was sent to) automatically: never twice for the same code. */
@@ -335,16 +343,23 @@ export function createPlatformController(deps: ControllerDeps) {
   async function connect(): Promise<void> {
     set({ phase: 'connecting', message: null });
     const typed = deps.room.name().trim();
-    const me = await client.ensureGuest(typed && typed !== 'Player' ? typed : undefined);
+    const me = await client.ensureGuest(typed && typed !== 'Player' ? typed : undefined, inviteCode || undefined);
     if (!opened) {
       set({ phase: me.ok ? 'ready' : 'idle', me: me.ok ? me.value : null });
       return;
     }
     if (!me.ok) {
-      set({ phase: 'unavailable', stale: isOutage(me.error) });
+      if (me.error.code === 'invite_required') {
+        // an invite-only platform and no (valid) code: ask for it. The code is kept in memory only, for this page.
+        set({ phase: 'unavailable', stale: false, inviteNeeded: true, inviteRefused: inviteCode !== '' });
+        inviteCode = '';
+        return;
+      }
+      set({ phase: 'unavailable', stale: isOutage(me.error), inviteNeeded: false, inviteRefused: false });
       return;
     }
-    set({ phase: 'ready', me: me.value, stale: false });
+    inviteCode = '';
+    set({ phase: 'ready', me: me.value, stale: false, inviteNeeded: false, inviteRefused: false });
     deps.room.setName(me.value.displayName);
     void client.heartbeat('online');
     await Promise.all([loadSocial(), pollParty()]);
@@ -380,6 +395,14 @@ export function createPlatformController(deps: ControllerDeps) {
       opened = false;
       visible = 0;
       stopTimers();
+    },
+    /** The invite form of an invite-only platform: create this device's guest account with the code (never stored). */
+    signInWithInvite(code: string): Promise<void> {
+      const clean = code.trim();
+      if (!clean) return Promise.resolve();
+      inviteCode = clean;
+      set({ phase: 'idle' });
+      return actions.open();
     },
     /** "Retry" on the unavailable panel. */
     retry(): Promise<void> {

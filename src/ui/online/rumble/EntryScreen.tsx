@@ -32,6 +32,8 @@ export interface EntryProps {
   onQuick(): void;
   onChangeFighter(): void;
   onBack(): void;
+  /** The hosted private-beta client: no quick play, no room codes; the party starts the private match. */
+  privateBeta?: boolean;
   /** Optional extra card under the two entry cards (the player-platform panel of a platform build). */
   extra?: ReactNode;
 }
@@ -109,6 +111,14 @@ export function EntryScreen(p: EntryProps) {
           </div>
         </section>
 
+        {p.privateBeta ? (
+          <section className="ro-card" aria-label="Private beta">
+            <p className="ro-sub" data-testid="ro-beta-note">
+              Private beta: one person makes a party below, invites friends, and starts a private match. The
+              others join it automatically.
+            </p>
+          </section>
+        ) : (
         <section className="ro-card ro-go" aria-label="Get a room">
           <PrimaryButton testId="ro-create" disabled={!m.canCreate} autoFocus onClick={p.onCreate}>
             Create room
@@ -166,6 +176,7 @@ export function EntryScreen(p: EntryProps) {
             {quickPlayNote(p.quickMode)}
           </p>
         </section>
+        )}
         {p.extra}
       </div>
     </ScreenFrame>

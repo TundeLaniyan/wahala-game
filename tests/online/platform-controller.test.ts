@@ -113,6 +113,29 @@ describe('entering as a guest', () => {
     expect(s().phase).toBe('ready');
   });
 
+  it('an invite-only platform asks for the code, refuses a wrong one, and a right one creates the account (the code is sent once and never kept)', async () => {
+    const fake = new FakePlatform();
+    fake.inviteCodes = ['BETA-CODE-1234567'];
+    const { c, s, room } = setup(fake);
+    room.typed = 'Ada';
+    await c.actions.open();
+    expect(s().phase).toBe('unavailable');
+    expect(s().inviteNeeded).toBe(true);
+    expect(s().inviteRefused).toBe(false);
+    await c.actions.signInWithInvite('wrong-code');
+    expect(s().phase).toBe('unavailable');
+    expect(s().inviteNeeded).toBe(true);
+    expect(s().inviteRefused).toBe(true);
+    await c.actions.signInWithInvite('  BETA-CODE-1234567 ');
+    expect(s().phase).toBe('ready');
+    expect(s().inviteNeeded).toBe(false);
+    expect(s().me?.displayName).toBe('Ada');
+    // the code went to the account creation only: no other request carries it, and a later retry does not resend it
+    const withCode = fake.requests.filter((r) => JSON.stringify(r.body ?? '').includes('BETA-CODE'));
+    expect(withCode.map((r) => r.path)).toEqual(['/v1/auth/guest']);
+    c.actions.close();
+  });
+
   it('polls the party only while a panel is visible, and stops every timer on close', async () => {
     const { fake, c, timers } = setup();
     await c.actions.open();

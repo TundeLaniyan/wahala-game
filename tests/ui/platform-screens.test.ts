@@ -103,6 +103,8 @@ const state = (over: Partial<PlatformState> = {}): PlatformState => ({
   message: null,
   nameError: null,
   stale: false,
+  inviteNeeded: false,
+  inviteRefused: false,
   handoff: 'idle',
   ...over,
 });
@@ -118,6 +120,28 @@ describe('platform panel on the entry screen', () => {
     expect(down).toMatch(/You can still play online as a guest/);
     expect(down).toContain('data-testid="pf-retry"');
     expect(down).not.toContain('pf-tab-');
+  });
+
+  it('an invite-only platform shows the invite form instead of the guest fallback; a refused code says so; the beta wording never offers guest play', () => {
+    const ask = panel(state({ phase: 'unavailable', me: null, inviteNeeded: true }));
+    expect(ask).toContain('data-testid="pf-invite"');
+    expect(ask).toContain('data-testid="pf-invite-code"');
+    expect(ask).toContain('data-testid="pf-invite-submit"');
+    expect(ask).not.toContain('pf-invite-refused');
+    expect(ask).not.toContain('data-testid="pf-unavailable"');
+    const refused = panel(state({ phase: 'unavailable', me: null, inviteNeeded: true, inviteRefused: true }));
+    expect(refused).toContain('data-testid="pf-invite-refused"');
+    const beta = html(
+      createElement(PlatformPanel, {
+        state: state({ phase: 'unavailable', me: null }),
+        act,
+        fighterName: 'Street Baller',
+        inRoom: null,
+        privateBeta: true,
+      }),
+    );
+    expect(beta).toContain('data-testid="pf-unavailable"');
+    expect(beta).not.toMatch(/play online as a guest/);
   });
 
   it('identity: nickname as text, the Guest label, the friend code with Copy, the fighter, and the device-only warning', () => {

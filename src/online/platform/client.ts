@@ -202,7 +202,7 @@ export class PlatformClient {
    * reused (refreshed when needed); a session the platform no longer knows is replaced by a new guest. A platform that does
    * not answer is an error: the caller keeps the guest-only online play.
    */
-  async ensureGuest(nickname?: string): Promise<Result<MyProfile>> {
+  async ensureGuest(nickname?: string, inviteCode?: string): Promise<Result<MyProfile>> {
     if (this.hasSession()) {
       const me = await this.me();
       if (me.ok || me.error.code !== 'unauthenticated') return me;
@@ -212,7 +212,11 @@ export class PlatformClient {
       this.raw<{ profile: MyProfile; tokens: Tokens }>(
         'POST',
         '/v1/auth/guest',
-        name ? { platform: 'web', nickname: name } : { platform: 'web' },
+        {
+          platform: 'web',
+          ...(name ? { nickname: name } : {}),
+          ...(inviteCode ? { inviteCode } : {}),
+        },
         null,
       );
     let r = await create(nickname);
