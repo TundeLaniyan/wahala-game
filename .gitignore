@@ -1,6 +1,8 @@
 node_modules
 dist
 dist-online
+dist-private
+private-e2e-diag
 playwright-report
 test-results
 e2e-shots
