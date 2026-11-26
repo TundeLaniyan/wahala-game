@@ -50,6 +50,7 @@ const cfg: PlatformConfig = {
   audience: 'wahala-rumble',
   internalUrl: 'http://platform.invalid',
   secret: SECRET,
+  requireTicket: false,
 };
 
 async function ticket(

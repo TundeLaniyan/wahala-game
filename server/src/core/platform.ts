@@ -14,6 +14,7 @@
  * No Colyseus import: unit-testable with injected fetch and clock.
  */
 import { createHmac } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { HOST_ROOM, verifyHandoffTicket } from '../../../player-platform/src/handoff/verify';
 import type { TicketClaims } from '../../../player-platform/src/handoff/verify';
 import { remoteHandoffKeys } from '../../../player-platform/src/handoff/remote';
@@ -26,18 +27,48 @@ export interface PlatformConfig {
   /** `PLATFORM_INTERNAL_URL` (origin of the platform API) + `PLATFORM_MATCH_SERVER_SECRET`: both needed to report and filter. */
   internalUrl: string | null;
   secret: string | null;
+  /**
+   * `RUMBLE_REQUIRE_TICKET=1` (the hosted private beta, decision FC-1): every matchmaking request from the network must carry a
+   * valid platform ticket, so nobody who did not get one from the platform (which only issues them to invited accounts) can
+   * reach a room by connecting to this server directly. Quick play (no ticket) is closed. It needs `PLATFORM_JWKS_URL`: a server
+   * asked to require tickets that cannot verify any refuses to start (fail closed).
+   */
+  requireTicket: boolean;
 }
 
-export function loadPlatformConfig(env: Record<string, string | undefined> = process.env): PlatformConfig {
+/**
+ * `PLATFORM_MATCH_SERVER_SECRET` directly, or `PLATFORM_MATCH_SERVER_SECRET_FILE` (a path: the hosted deployment mounts secrets as
+ * files, never as environment variables). Both set is a configuration mistake and refused, as the platform does.
+ */
+export function loadPlatformConfig(
+  env: Record<string, string | undefined> = process.env,
+  readFile: (path: string) => string = (p) => readFileSync(p, 'utf8'),
+): PlatformConfig {
   const v = (k: string): string | null => {
     const x = env[k]?.trim();
     return x ? x : null;
   };
+  const file = v('PLATFORM_MATCH_SERVER_SECRET_FILE');
+  if (file && v('PLATFORM_MATCH_SERVER_SECRET'))
+    throw new Error('PLATFORM_MATCH_SERVER_SECRET and PLATFORM_MATCH_SERVER_SECRET_FILE are both set: give the secret once');
+  let secret = v('PLATFORM_MATCH_SERVER_SECRET');
+  if (file) {
+    try {
+      secret = readFile(file).trim() || null;
+    } catch {
+      throw new Error('PLATFORM_MATCH_SERVER_SECRET_FILE cannot be read: refusing to start with results reporting half configured');
+    }
+    if (!secret) throw new Error('PLATFORM_MATCH_SERVER_SECRET_FILE is empty');
+  }
+  const requireTicket = env.RUMBLE_REQUIRE_TICKET === '1';
+  if (requireTicket && !v('PLATFORM_JWKS_URL'))
+    throw new Error('RUMBLE_REQUIRE_TICKET=1 needs PLATFORM_JWKS_URL: a server that must check tickets cannot start without the keys');
   return {
     jwksUrl: v('PLATFORM_JWKS_URL'),
     audience: v('PLATFORM_HANDOFF_AUDIENCE') ?? 'wahala-rumble',
     internalUrl: v('PLATFORM_INTERNAL_URL')?.replace(/\/+$/, '') ?? null,
-    secret: v('PLATFORM_MATCH_SERVER_SECRET'),
+    secret,
+    requireTicket,
   };
 }
 

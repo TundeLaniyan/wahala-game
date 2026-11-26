@@ -37,7 +37,7 @@ const running = await startRumbleServer({
 running.server.onShutdown(() => log('shut down'));
 log(
   running.platform.tickets || running.platform.reporting
-    ? `player platform: tickets ${running.platform.tickets ? 'verified' : 'NOT accepted'}, results/filter ${running.platform.reporting ? 'reported' : 'off'} (PLATFORM_* environment)`
+    ? `player platform: tickets ${running.platform.tickets ? 'verified' : 'NOT accepted'}, results/filter ${running.platform.reporting ? 'reported' : 'off'}${running.platform.cfg.requireTicket ? '; a ticket is REQUIRED for every join (private beta)' : ''} (PLATFORM_* environment)`
     : 'player platform: not configured (guest-only, as before)',
 );
 log(

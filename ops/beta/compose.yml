@@ -133,8 +133,12 @@ services:
       RUMBLE_CPU_BUDGET: ${RUMBLE_CPU_BUDGET:-70}
       RUMBLE_MAX_CONNECTIONS: ${RUMBLE_MAX_CONNECTIONS:-200}
       RUMBLE_MAX_ROOMS: ${RUMBLE_MAX_ROOMS:-40}
-      # Hand-off to the player platform (docs/ops/BETA_INTEGRATION_HANDOFF.md). The match server in this repository does not read
-      # these yet; they are the wiring Architecture's integration will use, so enabling it needs no deployment change.
+      # Hand-off to the player platform (docs/ops/BETA_INTEGRATION_HANDOFF.md, decision FC-1). The match server verifies the
+      # platform's signed tickets with the published keys, binds the verified id to the seat, and posts the signed `started` /
+      # `finished` calls. RUMBLE_REQUIRE_TICKET=1 closes every other way in: a request from the network without a valid ticket
+      # (raw HTTP, a script, quick play, a guessed room code) is refused, and the platform issues tickets only to accounts made
+      # with an invite code. Set to 0 only for the capacity load driver, which plays as ticketless guests (ops/beta/load.sh).
+      RUMBLE_REQUIRE_TICKET: ${RUMBLE_REQUIRE_TICKET:-1}
       PLATFORM_JWKS_URL: http://platform:4567/.well-known/jwks.json
       PLATFORM_INTERNAL_URL: http://platform:4567
       PLATFORM_MATCH_SERVER_SECRET_FILE: /run/secrets/match_server_secret

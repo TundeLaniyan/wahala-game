@@ -201,6 +201,22 @@ export async function startRumbleServer(opts: RumbleServerOptions = {}): Promise
     if (method === 'joinOrCreate') clean.private = false; // quick play is public matchmaking; private rooms use `create`
     try {
       guard.checkMatchmake(kind, who);
+      // hosted private beta: nothing from the network gets a seat without a platform ticket (the platform only issues them to
+      // invited accounts). A reconnection is not matchmaking: it presents a seat this server itself reserved.
+      if (
+        platform.cfg.requireTicket &&
+        !internal &&
+        method !== 'reconnect' &&
+        (ticket === undefined || ticket === null)
+      ) {
+        guard.joinFailed(who);
+        throw new ServerError(
+          403,
+          method === 'joinOrCreate'
+            ? 'quick play is closed in the private beta: use your party to start a private match'
+            : 'this server admits invited players only: sign in through the beta page',
+        );
+      }
       if (ticket !== undefined && ticket !== null) {
         // tickets are for private rooms: a creation (host ticket) or a join by code (a ticket for THAT room); never quick play
         if (method === 'joinOrCreate')

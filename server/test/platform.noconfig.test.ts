@@ -15,6 +15,7 @@ beforeAll(async () => {
         audience: 'wahala-rumble',
         internalUrl: null,
         secret: null,
+        requireTicket: false,
       }),
     },
   );
