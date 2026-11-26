@@ -38,7 +38,7 @@ import { BusyError } from '../core/guard';
 import type { Guard, Who } from '../core/guard';
 import { Lobby } from '../core/Lobby';
 import type { LobbyResult } from '../core/Lobby';
-import { PlatformLink } from '../core/platform';
+import type { PlatformLink } from '../core/platform';
 import type { Verified } from '../core/platform';
 import { RoomMetrics } from '../core/metrics';
 import type { MetricsRegistry, RoomMetricsSnapshot } from '../core/metrics';
