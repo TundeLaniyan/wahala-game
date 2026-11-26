@@ -9,7 +9,7 @@
  * What a client may send is exactly: input (`in`), `ping`, `resync`, `ready`, `start` / `rematch` / `settings` (host
  * only). Anything else is counted and ignored; a client that sends too many invalid messages is disconnected.
  */
-import { createHash, randomInt } from 'node:crypto';
+import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { deflateRawSync } from 'node:zlib';
 import { CloseCode, ErrorCode, Room, ServerError, matchMaker } from '@colyseus/core';
 import type { Client } from '@colyseus/core';
@@ -19,12 +19,15 @@ import {
   MATCH_SEATS,
   MAX_HUMANS,
   MSG,
+  SIGNAL_DEFS,
   encodeBusy,
   gameQuickMode,
   parseQuickMode,
 } from '../../../src/net/protocol';
-import type { NoticeMsg, PongMsg, ResultsMsg, WelcomeMsg } from '../../../src/net/protocol';
+import type { NoticeMsg, PongMsg, ResultsMsg, SignalInMsg, WelcomeMsg } from '../../../src/net/protocol';
 import {
+  validatePlayerName,
+  validateSignalMsg,
   validateEmptyMsg,
   validateInput,
   validatePing,
@@ -35,6 +38,8 @@ import { BusyError } from '../core/guard';
 import type { Guard, Who } from '../core/guard';
 import { Lobby } from '../core/Lobby';
 import type { LobbyResult } from '../core/Lobby';
+import { PlatformLink } from '../core/platform';
+import type { Verified } from '../core/platform';
 import { RoomMetrics } from '../core/metrics';
 import type { MetricsRegistry, RoomMetricsSnapshot } from '../core/metrics';
 import {
@@ -67,6 +72,11 @@ export const FLOOD_WINDOW_MS = 5000;
 /** A finished match keeps its room this long waiting for a rematch. */
 const RESULTS_LINGER_MS = 10 * 60 * 1000;
 const CODE_ATTEMPTS = 64;
+/** Preset signals: a burst of this many, then one per `SIGNAL_REFILL_MS` (excess is dropped, never punished). */
+export const SIGNAL_BURST = 4;
+export const SIGNAL_REFILL_MS = 1000;
+/** How long the platform's answer about who may hear whom is trusted before it is asked again. */
+export const FILTER_REFRESH_MS = 30_000;
 
 interface Peer {
   client: Client;
@@ -78,6 +88,9 @@ interface Peer {
   invalidAt: number[];
   lastResyncAt: number;
   kicked: boolean;
+  /** Preset-signal rate limit (token bucket). */
+  signalTokens: number;
+  signalAt: number;
   /** Sustained-rate flood detection: messages since `floodSince`. */
   floodCount: number;
   floodSince: number;
@@ -88,6 +101,8 @@ export interface RoomDeps {
   metrics: MetricsRegistry;
   /** Admission control of this process (capacity, budget, per-client limits). */
   guard: Guard;
+  /** The optional link to the player platform (tickets are verified before the room sees a join; results are reported from here). */
+  platform?: PlatformLink;
   /** Room codes currently in use by this process (checked before the matchmaker's own lookup). */
   usedCodes: Set<string>;
   log?: (message: string) => void;
@@ -104,6 +119,16 @@ export function whoOf(options: unknown): Who {
   const w = o._who;
   if (!w || typeof w.ip !== 'string') return { ip: 'internal', gid: null, internal: true };
   return { ip: w.ip, gid: parseGuestId(w.gid) };
+}
+
+/**
+ * A seat admitted with a verified ticket shows the PLATFORM nickname whatever name the client typed (identity is separate from the
+ * editable display name), so that is the name the join options are validated with. Guests: unchanged.
+ */
+export function withVerifiedName(options: unknown): unknown {
+  const o = typeof options === 'object' && options !== null ? (options as Record<string, unknown>) : null;
+  const acct = o?._acct as { name?: unknown } | undefined;
+  return o && acct && typeof acct.name === 'string' ? { ...o, name: acct.name } : options;
 }
 
 /** A guard refusal becomes the error the client's SDK throws (HTTP 503 / 429, the message carries code + retry time). */
@@ -148,10 +173,16 @@ export class RumbleRoom extends Room {
   private lastActivityAt = performance.now();
   private slotNoticeAt = -Infinity;
   private guardStarted = false;
+  /** Makes a platform match id unique per ROOM instance (room codes are reused over time; the platform's first report wins). */
+  private readonly nonce = randomBytes(4).toString('hex');
+  private matchStartedAt = '';
+  /** Who may receive whose preset signals, from the platform's filter (verified senders only), refreshed every 30 s. */
+  private filterCache = new Map<string, { senderAllowed: boolean; recipients: Set<string> }>();
+  private filterAt = -Infinity;
 
   /** Validates join options before a seat is reserved (and before an empty room could be created for nothing). */
   static override async onAuth(_token: string, options: unknown): Promise<unknown> {
-    const parsed = parseJoinOptions(options);
+    const parsed = parseJoinOptions(withVerifiedName(options));
     if (!parsed.ok) throw new ServerError(ErrorCode.APPLICATION_ERROR, parsed.error);
     return parsed.value;
   }
@@ -217,7 +248,7 @@ export class RumbleRoom extends Room {
   }
 
   override onJoin(client: Client, options: unknown): void {
-    const parsed = parseJoinOptions(options);
+    const parsed = parseJoinOptions(withVerifiedName(options));
     if (!parsed.ok) throw new ServerError(ErrorCode.APPLICATION_ERROR, parsed.error);
     // a public room only takes players who asked for ITS mode (the matchmaker already filters; this is the backstop)
     const wanted = parseQuickMode((options as { mode?: unknown } | null)?.mode);
@@ -229,7 +260,20 @@ export class RumbleRoom extends Room {
     } catch (e) {
       throw toServerError(e);
     }
-    const joined = this.lobby.join(client.sessionId, parsed.value);
+    // `_acct` is stamped by the matchmaking wrapper after it verified a ticket (clients cannot send `_` options): the seat then
+    // belongs to that platform player and shows the platform nickname; no ticket = a guest with the name they typed
+    const acct = ((options as { _acct?: Verified } | null)?._acct ?? null) as Verified | null;
+    const name = acct ? validatePlayerName(acct.name) : parsed.value.name;
+    if (name === null) {
+      this.deps?.guard.connectionClosed(who);
+      throw new ServerError(ErrorCode.APPLICATION_ERROR, 'invalid ticket');
+    }
+    const joined = this.lobby.join(client.sessionId, {
+      name,
+      characterId: parsed.value.characterId,
+      accountId: acct?.sub ?? null,
+      restricted: acct?.restricted ?? false,
+    });
     if (!joined.ok) {
       this.deps?.guard.connectionClosed(who);
       throw new ServerError(ErrorCode.APPLICATION_ERROR, joined.message);
@@ -247,6 +291,8 @@ export class RumbleRoom extends Room {
       floodSince: performance.now(),
       lastResyncAt: -Infinity,
       kicked: false,
+      signalTokens: SIGNAL_BURST,
+      signalAt: performance.now(),
     });
     this.sendWelcome(this.peers.get(client.sessionId)!);
     this.broadcastLobby();
@@ -412,6 +458,14 @@ export class RumbleRoom extends Room {
       this.lobbyAction(peer, this.lobby.updateSettings(client.sessionId, patch.value));
     });
 
+    this.onMessage(MSG.signal, (client, raw) => {
+      const peer = this.count(client);
+      if (!peer) return;
+      const msg = validateSignalMsg(raw);
+      if (!msg) return this.invalid(peer);
+      void this.relaySignal(peer, msg.id);
+    });
+
     // Anything else (unknown type, a position, a kill, a team, a seed ...) has no handler: counted and ignored.
     this.onMessage('*', (client) => {
       const peer = this.count(client);
@@ -419,6 +473,92 @@ export class RumbleRoom extends Room {
       this.metrics.unknownMessages++;
       this.invalid(peer);
     });
+  }
+
+  // ---------------------------------------------------------------- preset signals (decision MP-SIG)
+
+  /**
+   * Relays one preset signal. What a signal may be and who hears it: `SIGNAL_DEFS` (lobby while waiting; during a match to
+   * everybody, or to teammates only for team signals, never in Free-for-All). The sender's tile for a ping is attached HERE. A
+   * per-seat token bucket drops the excess silently. For a verified sender the platform's filter (mutes, blocks, restrictions)
+   * decides which verified recipients hear it; if the platform cannot answer, presets are delivered (they cannot carry content).
+   */
+  private async relaySignal(peer: Peer, id: string): Promise<void> {
+    const member = this.lobby.find(peer.client.sessionId);
+    const def = SIGNAL_DEFS.find((d) => d.id === id);
+    if (!member || !def) return;
+    const playing = this.lobby.phase === 'playing' && this.match !== null && peer.seat !== null;
+    const team = this.lobby.settings.game === 'team';
+    const toAll = playing ? def.where.includes('match') : def.where.includes('lobby');
+    const toTeam = playing && team && def.where.includes('team');
+    if (!toAll && !toTeam)
+      return this.reject(peer, 'signal_not_allowed', 'That signal is not available right now.');
+    // refill, then spend one token
+    const now = performance.now();
+    peer.signalTokens = Math.min(SIGNAL_BURST, peer.signalTokens + (now - peer.signalAt) / SIGNAL_REFILL_MS);
+    peer.signalAt = now;
+    if (peer.signalTokens < 1) {
+      this.metrics.signalsLimited++;
+      return;
+    }
+    peer.signalTokens -= 1;
+    this.touch();
+    const state = this.match?.state ?? null;
+    const me = playing && state && peer.seat !== null ? state.players[peer.seat] : undefined;
+    const out: SignalInMsg = {
+      id,
+      seat: playing ? peer.seat : null,
+      name: member.name,
+      x: def.kind === 'ping' && me ? me.x : null,
+      y: def.kind === 'ping' && me ? me.y : null,
+      tick: playing && state ? state.tick : null,
+    };
+    const filter = member.accountId ? await this.filterFor(member.accountId) : null;
+    if (filter && !filter.senderAllowed)
+      return this.reject(peer, 'signal_restricted', 'You cannot send signals right now.');
+    for (const other of this.peers.values()) {
+      if (other === peer || other.kicked) continue;
+      const m = this.lobby.find(other.client.sessionId);
+      if (!m || !m.connected) continue;
+      if (
+        !toAll &&
+        !(
+          toTeam &&
+          me &&
+          state &&
+          peer.seat !== null &&
+          other.seat !== null &&
+          state.players[other.seat]?.team === me.team
+        )
+      )
+        continue;
+      if (filter && m.accountId && !filter.recipients.has(m.accountId)) {
+        this.metrics.signalsFiltered++;
+        continue;
+      }
+      this.sendTo(other, MSG.signalIn, out);
+      this.metrics.signalsRelayed++;
+    }
+  }
+
+  /** The platform's answer for one verified sender (fresh for `FILTER_REFRESH_MS`); null = unknown (not configured / outage). */
+  private async filterFor(
+    senderId: string,
+  ): Promise<{ senderAllowed: boolean; recipients: Set<string> } | null> {
+    const platform = this.deps?.platform;
+    if (!platform?.reporting) return null;
+    const cached = this.filterCache.get(senderId);
+    if (cached && performance.now() - this.filterAt < FILTER_REFRESH_MS) return cached;
+    const ids = this.lobby.members
+      .map((m) => m.accountId)
+      .filter((x): x is string => x !== null && x !== senderId);
+    const fresh = await platform.filter(senderId, ids);
+    if (fresh) {
+      this.filterCache.set(senderId, fresh);
+      this.filterAt = performance.now();
+      return fresh;
+    }
+    return cached ?? null; // an outage keeps the last answer, or delivers presets when there never was one
   }
 
   private count(client: Client): Peer | undefined {
@@ -595,6 +735,10 @@ export class RumbleRoom extends Room {
     }
     void this.lock();
     this.metrics.matchesStarted++;
+    this.filterCache.clear(); // a new match asks the platform afresh who may hear whom
+    this.filterAt = -Infinity;
+    this.matchStartedAt = new Date().toISOString();
+    this.reportToPlatform('started', match);
     this.broadcastLobby();
     for (const peer of this.peers.values()) {
       this.sendWelcome(peer);
@@ -631,6 +775,7 @@ export class RumbleRoom extends Room {
     if (last) this.sendFrames(last);
     const results = match.results();
     this.lastResults = results;
+    this.reportToPlatform('finished', match, results);
     for (const peer of this.peers.values()) this.sendTo(peer, MSG.results, results);
     this.lobby.endMatch();
     this.deps?.guard.matchEnded(this.code);
@@ -638,6 +783,63 @@ export class RumbleRoom extends Room {
     this.metrics.matchesFinished++;
     this.broadcastLobby();
     this.lingerTimer = setTimeout(() => void this.disconnect(), RESULTS_LINGER_MS);
+  }
+
+  // ---------------------------------------------------------------- results to the platform (trusted, server-signed)
+
+  /**
+   * Reports the match to the player platform, only when at least one seat belongs to a VERIFIED player (a guest-only match is not
+   * reported: there is nobody to record it for). Built entirely from the server's own state; a client cannot influence it. Fire and
+   * forget: `PlatformLink.report` never throws and never waits for the platform.
+   */
+  private reportToPlatform(kind: 'started' | 'finished', match: RumbleMatch, results?: ResultsMsg): void {
+    const platform = this.deps?.platform;
+    if (!platform?.reporting || !this.lobby.members.some((m) => m.accountId !== null)) return;
+    try {
+      const s = this.lobby.settings;
+      const participants = match.state.players.map((p, seat) => {
+        const member = this.lobby.members.find((m) => m.seat === seat);
+        return {
+          seat,
+          ...(member?.accountId ? { playerId: member.accountId } : {}),
+          name: p.name,
+          isBot: !member,
+          ...(p.team >= 0 ? { team: p.team } : {}),
+        };
+      });
+      const common = {
+        matchId: `${match.descriptor.matchId}:${this.nonce}`,
+        game: s.game,
+        arenaId: s.arenaId,
+        ...(this.lobby.isPrivate ? { roomCode: this.code } : {}),
+        seats: MATCH_SEATS,
+        startedAt: this.matchStartedAt || new Date().toISOString(),
+        participants,
+      };
+      if (kind === 'started' || !results) return platform.report('started', common);
+      const num = (v: unknown): number | undefined =>
+        typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+      platform.report('finished', {
+        ...common,
+        endedAt: new Date().toISOString(),
+        durationSec: Math.min(7200, Math.max(0, Math.round(results.tick / 60))),
+        results: results.players.map((r) => ({
+          seat: r.seat,
+          ...(num(r.placement) !== undefined ? { placement: num(r.placement) } : {}),
+          ...(num(r.kills) !== undefined ? { kills: num(r.kills) } : {}),
+          ...(num(r.deaths) !== undefined ? { deaths: num(r.deaths) } : {}),
+          ...(num(r.assists) !== undefined ? { assists: num(r.assists) } : {}),
+          ...(num(r.botKills) !== undefined ? { botKills: num(r.botKills) } : {}),
+          ...(num(r.botDeaths) !== undefined ? { botDeaths: num(r.botDeaths) } : {}),
+          ...(num(r.botAssists) !== undefined ? { botAssists: num(r.botAssists) } : {}),
+          ...(typeof r.controlledByBotAtEnd === 'boolean'
+            ? { controlledByBotAtEnd: r.controlledByBotAtEnd }
+            : {}),
+        })),
+      });
+    } catch (e) {
+      this.deps?.log?.(`room ${this.tag}: could not report to the platform: ${String(e)}`); // never affects the match
+    }
   }
 
   // ---------------------------------------------------------------- messages out
@@ -735,6 +937,9 @@ export class RumbleRoom extends Room {
         messagesIn: m.messagesIn,
         invalidMessages: m.invalidMessages,
         unknownMessages: m.unknownMessages,
+        signalsRelayed: m.signalsRelayed,
+        signalsLimited: m.signalsLimited,
+        signalsFiltered: m.signalsFiltered,
         rejectedActions: m.rejectedActions,
         resyncsServed: m.resyncsServed,
         resyncsLimited: m.resyncsLimited,

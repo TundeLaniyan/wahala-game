@@ -37,6 +37,13 @@ export interface LobbyMember {
   botControlled: boolean;
   /** Seat in the current / last match; null before a match starts. */
   seat: number | null;
+  /**
+   * The platform player id from a VERIFIED ticket, else null (a guest). Set only by the room after it verified the ticket; the
+   * name above is then the platform nickname, not anything the client typed.
+   */
+  accountId: string | null;
+  /** From the ticket: a minor / unspecified age band (no unrestricted text or voice; presets only anyway). */
+  restricted: boolean;
 }
 
 export type LobbyResult = { ok: true } | { ok: false; code: string; message: string };
@@ -160,8 +167,14 @@ export class Lobby {
 
   // ---------------------------------------------------------------- membership
 
-  join(sessionId: string, who: { name: string; characterId: CharacterId }): LobbyResult {
+  join(
+    sessionId: string,
+    who: { name: string; characterId: CharacterId; accountId?: string | null; restricted?: boolean },
+  ): LobbyResult {
     if (this.find(sessionId)) return no('already_joined', 'already in this room');
+    // one seat per platform player: a second ticket for the same account (another tab) cannot take a second seat
+    if (who.accountId && this.list.some((m) => m.accountId === who.accountId))
+      return no('duplicate_account', 'this player is already in the room');
     if (this.phase !== 'lobby' && this.phase !== 'countdown')
       return no('in_progress', 'the match has started');
     if (this.list.length >= this.cfg.maxHumans) return no('full', 'the room is full');
@@ -177,6 +190,8 @@ export class Lobby {
       connected: true,
       botControlled: false,
       seat: null,
+      accountId: who.accountId ?? null,
+      restricted: who.restricted ?? false,
     });
     if (this.phase === 'lobby') {
       if (!this.cfg.isPrivate && this.autoStartAt === null)
@@ -371,6 +386,8 @@ export class Lobby {
       seat: m.seat,
       connected: m.connected,
       botControlled: m.botControlled,
+      // identity is separate from the editable display name: `verified` and the opaque player id come only from a verified ticket
+      ...(m.accountId !== null ? { verified: true, playerId: m.accountId } : {}),
     }));
     const you = forSessionId === null ? -1 : this.list.findIndex((m) => m.sessionId === forSessionId);
     return {

@@ -22,6 +22,8 @@ import { BusyError, Guard } from './core/guard';
 import type { Matchmake } from './core/guard';
 import { LoopLagSensor } from './core/loopLag';
 import { ipKey, normaliseForwardedHeaders, parseTrustedProxies } from './core/clientIp';
+import { PlatformLink, loadPlatformConfig } from './core/platform';
+import type { PlatformConfig } from './core/platform';
 import { createRumbleRoomClass, toServerError } from './rooms/RumbleRoom';
 import { DEFAULT_QUICK_MODE, encodeBusy, normalizeRoomCode, parseQuickMode } from '../../src/net/protocol';
 
@@ -56,6 +58,11 @@ export interface RumbleServerOptions {
   trustedProxies?: string;
   /** Install SIGINT / SIGTERM handlers that shut down gracefully and exit. Default false (main.ts turns it on). */
   handleSignals?: boolean;
+  /**
+   * The optional link to the player platform (signed tickets, trusted result reporting, signal filter): `PLATFORM_*` environment
+   * (`loadPlatformConfig`). Unset = guest-only, exactly as before. A ready-made `PlatformLink` may be passed (tests).
+   */
+  platform?: PlatformConfig | PlatformLink;
   log?: (message: string) => void;
 }
 
@@ -65,6 +72,7 @@ export interface RumbleServer {
   metrics: MetricsRegistry;
   origins: OriginPolicy;
   guard: Guard;
+  platform: PlatformLink;
   close(): Promise<void>;
 }
 
@@ -78,6 +86,20 @@ export function tokenMatches(header: string | string[] | undefined, token: strin
 
 /** Colyseus matchmaking error codes that mean "no such room / not joinable": MATCHMAKE_INVALID_ROOM_ID, _UNHANDLED (full), _EXPIRED. */
 const ROOM_SIDE_CODES: ReadonlySet<number> = new Set([522, 523, 524]);
+
+/** What the player is told about a refused ticket (the client turns any message containing "ticket" into "your sign-in for this match expired"). */
+function ticketRefusal(reason: 'invalid' | 'wrong_room' | 'replayed' | 'unavailable'): string {
+  switch (reason) {
+    case 'wrong_room':
+      return 'ticket not valid for this room';
+    case 'replayed':
+      return 'ticket already used';
+    case 'unavailable':
+      return 'tickets are not accepted by this server: join as a guest';
+    default:
+      return 'invalid ticket';
+  }
+}
 
 const OPEN_METHODS = ['joinOrCreate', 'create', 'joinById'] as const;
 
@@ -102,6 +124,10 @@ export async function startRumbleServer(opts: RumbleServerOptions = {}): Promise
     () => lag.read(),
   );
   const log = opts.log;
+  const platform =
+    opts.platform instanceof PlatformLink
+      ? opts.platform
+      : new PlatformLink(opts.platform ?? loadPlatformConfig(), { log });
 
   const transport = new WebSocketTransport({
     // liveness tolerance (RUMBLE_PING_INTERVAL_MS x RUMBLE_PING_MAX_RETRIES, default 3 s x 4): see RuntimeConfig
@@ -164,6 +190,10 @@ export async function startRumbleServer(opts: RumbleServerOptions = {}): Promise
     const clean: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(raw)) if (!k.startsWith('_')) clean[k] = v;
     clean._who = { ip, gid: who.gid };
+    // a platform ticket is checked HERE, once, and only the verified result (`_acct`, server-stamped) reaches the room; the raw
+    // ticket never does
+    const ticket = clean.ticket;
+    delete clean.ticket;
     const mode = parseQuickMode(raw.mode);
     if (raw.mode !== undefined && raw.mode !== null && mode === null)
       throw new ServerError(400, 'unknown mode');
@@ -171,6 +201,22 @@ export async function startRumbleServer(opts: RumbleServerOptions = {}): Promise
     if (method === 'joinOrCreate') clean.private = false; // quick play is public matchmaking; private rooms use `create`
     try {
       guard.checkMatchmake(kind, who);
+      if (ticket !== undefined && ticket !== null) {
+        // tickets are for private rooms: a creation (host ticket) or a join by code (a ticket for THAT room); never quick play
+        if (method === 'joinOrCreate')
+          throw new ServerError(403, 'tickets are not used for quick play: join without one');
+        const code = method === 'joinById' ? normalizeRoomCode(roomName) : null;
+        if (method === 'joinById' && !code) {
+          guard.joinFailed(who);
+          throw unavailable();
+        }
+        const t = await platform.verifyTicket(ticket, code);
+        if (!t.ok) {
+          if (method === 'joinById') guard.joinFailed(who);
+          throw new ServerError(403, ticketRefusal(t.reason));
+        }
+        clean._acct = t.who;
+      }
       let target = roomName;
       if (method === 'joinById') {
         const code = normalizeRoomCode(roomName);
@@ -232,7 +278,7 @@ export async function startRumbleServer(opts: RumbleServerOptions = {}): Promise
     },
   });
   server
-    .define('rumble', createRumbleRoomClass({ runtime, metrics, guard, usedCodes: new Set(), log }))
+    .define('rumble', createRumbleRoomClass({ runtime, metrics, guard, platform, usedCodes: new Set(), log }))
     .filterBy(['mode']);
 
   await server.listen(opts.port ?? 2567, opts.host ?? '0.0.0.0');
@@ -259,7 +305,7 @@ export async function startRumbleServer(opts: RumbleServerOptions = {}): Promise
     })();
     return closing;
   };
-  return { server, port, metrics, origins, guard, close };
+  return { server, port, metrics, origins, guard, platform, close };
 }
 
 type Invoke = (
