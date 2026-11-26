@@ -172,7 +172,10 @@ kid_after="$(curl -sk https://127.0.0.1:$PORT/.well-known/jwks.json | grep -o '"
 [ -n "$kid_after" ] && [ "$kid_before" != "$kid_after" ] && ok "the published ticket key changed ($kid_before -> $kid_after)" || bad "the ticket key did not change"
 old_pw="$(cat "$S/secrets/db_password")"
 "$SCRIPT" rotate db-password >"$V/rotate3.out" 2>&1 && ok "rotate db-password completed" || { bad "rotate db-password"; tail -3 "$V/rotate3.out"; }
-dc exec -T -e PGPASSWORD="$old_pw" db psql -h 127.0.0.1 -U wahala -d wahala -Atc "select 1" >/dev/null 2>&1 && bad "the OLD database password still works" || ok "the OLD database password is refused by PostgreSQL"
+# from ANOTHER container over the network, the way the platform connects (inside the database container the local socket is trusted)
+pgtry() { docker run --rm --network "${BETA_PROJECT}_data" -e PGPASSWORD="$1" "${POSTGRES_IMAGE:-postgres:16}" psql -h db -U wahala -d wahala -Atc "select 1" >/dev/null 2>&1; }
+pgtry "$(cat "$S/secrets/db_password")" && ok "the NEW database password works over the network (positive control)" || bad "the new database password does not work over the network"
+pgtry "$old_pw" && bad "the OLD database password still works over the network" || ok "the OLD database password is refused by PostgreSQL"
 expect "the platform uses the new password (guest creation works)" "201" "$(curl -sk -o /dev/null -w '%{http_code}' -XPOST https://127.0.0.1:$PORT/v1/auth/guest -H 'content-type: application/json' -d "{\"inviteCode\":\"$(head -1 "$S/secrets/invite_codes")\"}")"
 old_rm="$(cat "$S/secrets/rumble_metrics_token")"
 for sname in platform-metrics-token rumble-metrics-token match-server-secret; do "$SCRIPT" rotate $sname >"$V/rotate-$sname.out" 2>&1 && ok "rotate $sname completed" || { bad "rotate $sname"; tail -3 "$V/rotate-$sname.out"; }; done

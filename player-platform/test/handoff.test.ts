@@ -26,7 +26,7 @@ async function openParty(room = ROOM) {
   const opened = await api.post(`/v1/parties/${p.id}/match`, { roomCode: room }, lead.access);
   return { lead, m, p, opened };
 }
-const jwks = async () => (await api.get('/.well-known/jwks.json')).body as { keys: { x: string }[] };
+const jwks = async () => (await api.get('/.well-known/jwks.json')).body as { keys: { x: string; kid: string }[] };
 
 describe('opening a match for a party', () => {
   it('the leader reports the match server room code; members then see it and the party is in_match', async () => {
@@ -99,7 +99,7 @@ describe('match tickets (platform -> client -> match server)', () => {
       party: null,
       restricted: false,
     })
-      .setProtectedHeader({ alg: 'EdDSA', kid: 'handoff-1' })
+      .setProtectedHeader({ alg: 'EdDSA', kid: (await jwks()).keys[0]!.kid }) // the REAL key id with an attacker's key
       .setIssuer('wahala-platform')
       .setAudience('wahala-rumble')
       .setSubject(m.id)
@@ -439,5 +439,14 @@ describe('results come only from the signed match server', () => {
     );
     const names = cols.rows.map((c) => c.column_name).join(' ');
     expect(names).not.toMatch(/xp|rating|rank|reward|elo|mmr|points|coins/i);
+  });
+
+  it('the published key id is the key thumbprint: two different keys never share one (rotation is visible to a caching verifier)', async () => {
+    const { calculateJwkThumbprint } = await import('jose');
+    const k = (await jwks()).keys[0]!;
+    expect(k.kid).toBe(await calculateJwkThumbprint({ kty: 'OKP', crv: 'Ed25519', x: k.x }));
+    const other = await generateKeyPair('EdDSA', { crv: 'Ed25519', extractable: true });
+    const pub = await exportJWK(other.publicKey);
+    expect(await calculateJwkThumbprint(pub)).not.toBe(k.kid);
   });
 });
