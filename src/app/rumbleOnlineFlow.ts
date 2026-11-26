@@ -17,7 +17,8 @@ import type {
   RumbleSessionEvents,
 } from '../net/client/types';
 import { DEFAULT_QUICK_MODE, parseBusy } from '../net/protocol';
-import type { LobbyMsg, QuickMode, ResultsMsg, SettingsMsg } from '../net/protocol';
+import type { LobbyMsg, QuickMode, ResultsMsg, SettingsMsg, SignalInMsg } from '../net/protocol';
+import { signalAllowed, signalLabel, signalPlace } from '../online/platform/signals';
 import type { RemoteMatchDriver, RemoteStatus } from './remoteMatch';
 import { NAME_STORAGE_KEY, codeView, initialName, nameCheck, roomCodeFromSearch } from './rumbleEntryInput';
 import type { FailReason } from './rumbleEntryInput';
@@ -37,6 +38,26 @@ export interface FlowNotice {
   code: string;
   message: string;
 }
+
+/** One relayed quick signal, as the room panels and the HUD rail show it (the label is looked up by id). */
+export interface SignalFeedItem {
+  /** Increases with every signal received. */
+  key: number;
+  id: string;
+  label: string;
+  /** The sender's name as the server gave it (React text, never HTML). */
+  name: string;
+  /** The sender's seat in a running match, else null. */
+  seat: number | null;
+  /** This client sent it. */
+  mine: boolean;
+  at: number;
+}
+
+/** How many received signals the panels keep (newest last). */
+export const SIGNAL_FEED_MAX = 6;
+/** The client sends the same signal at most this often (the server has its own limits; this only spares a click storm). */
+export const SIGNAL_REPEAT_MS = 2000;
 
 export interface RumbleOnlineState {
   step: FlowStep;
@@ -63,6 +84,19 @@ export interface RumbleOnlineState {
   confirmLeave: boolean;
   /** The session is the in-memory fake (no server): views say so. */
   fake: boolean;
+  /** The current room was opened with a platform ticket (the party's private room). */
+  ticketed: boolean;
+  /** The id of the match in this room (from the server's match descriptor / results), null before the first match. */
+  matchId: string | null;
+  /** Received quick signals, newest last (at most SIGNAL_FEED_MAX), already without locally muted senders. */
+  signals: SignalFeedItem[];
+  /**
+   * Names whose signals this browser hides for the rest of the page (a guest has no platform id, so a mute of a guest is
+   * local only; a platform mute is also applied here at once). Never stored, never sent.
+   */
+  localMutes: string[];
+  /** The server said this player may not send signals right now: the picker is hidden. */
+  signalsBlocked: boolean;
 }
 
 export interface FlowDeps {
@@ -79,6 +113,8 @@ export interface FlowDeps {
   search(): string;
   now(): number;
   fake: boolean;
+  /** Optional: a signal arrived while a match is on screen (the HUD rail shows it beside the board). */
+  onMatchSignal?(item: SignalFeedItem): void;
   nav: {
     /** Shows the online flow over the menu (opens the menu screen). */
     show(): void;
@@ -112,6 +148,11 @@ const INITIAL: RumbleOnlineState = {
   inMatch: false,
   confirmLeave: false,
   fake: false,
+  ticketed: false,
+  matchId: null,
+  signals: [],
+  localMutes: [],
+  signalsBlocked: false,
 };
 
 export function createRumbleOnlineFlow(deps: FlowDeps) {
@@ -124,7 +165,13 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
   /** Bumped for every new session: events of an older one are ignored. */
   let generation = 0;
   let lastRequest: OpenRequest | null = null;
+  /** For a ticketed request: how to get a NEW ticket (a ticket is single-use: a retry never re-sends the old one). */
+  let refetchTicket: (() => Promise<string | null>) | null = null;
+  /** The one automatic retry after a ticket refusal has been used for this request. */
+  let ticketRetried = false;
   let noticeId = 0;
+  let signalKey = 0;
+  const lastSent = new Map<string, number>();
 
   const dropSession = (): void => {
     generation++;
@@ -137,6 +184,8 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
   const fresh = (): Partial<RumbleOnlineState> => ({
     ...INITIAL,
     fake: deps.fake,
+    // local mutes last for the page, whatever room comes next
+    localMutes: get().localMutes,
     name: initialName(deps.storage.get(NAME_STORAGE_KEY)),
     codeInput: roomCodeFromSearch(deps.search()) ?? '',
   });
@@ -150,7 +199,11 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
       },
       welcome(msg) {
         if (!live()) return;
-        set({ seat: msg.seat, roomCode: msg.roomCode });
+        set({
+          seat: msg.seat,
+          roomCode: msg.roomCode,
+          ...(msg.descriptor ? { matchId: msg.descriptor.matchId } : {}),
+        });
       },
       lobby(msg) {
         if (!live()) return;
@@ -183,12 +236,36 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
         if (!live()) return;
         // the server's busy / limit notices carry a machine part (`server_busy;retry=20;`): the player reads only the words
         const busy = parseBusy(msg.message);
-        set({ notice: { id: ++noticeId, code: msg.code, message: busy ? busy.text : msg.message } });
+        set({
+          notice: { id: ++noticeId, code: msg.code, message: busy ? busy.text : msg.message },
+          // a sender the platform restricted is told so by the server: the picker hides until the room changes
+          ...(/restrict/i.test(msg.code) ? { signalsBlocked: true } : {}),
+        });
+      },
+      signal(msg: SignalInMsg) {
+        if (!live()) return;
+        const label = signalLabel(msg.id);
+        if (label === null) return; // an id this client does not know is never shown
+        const s = get();
+        if (s.localMutes.includes(msg.name)) return;
+        const you = s.lobby && s.lobby.you !== null ? s.lobby.members[s.lobby.you] : undefined;
+        const mine = you !== undefined && (msg.seat !== null ? msg.seat === you.seat : msg.name === you.name);
+        const item: SignalFeedItem = {
+          key: ++signalKey,
+          id: msg.id,
+          label,
+          name: String(msg.name).slice(0, 40),
+          seat: msg.seat,
+          mine,
+          at: deps.now(),
+        };
+        set({ signals: [...s.signals, item].slice(-SIGNAL_FEED_MAX) });
+        if (s.step === 'match') deps.onMatchSignal?.(item);
       },
       results(msg) {
         if (!live()) return;
         deps.nav.overlay(true);
-        set({ results: msg, step: 'results', inMatch: true, confirmLeave: false });
+        set({ results: msg, matchId: msg.matchId, step: 'results', inMatch: true, confirmLeave: false });
       },
       matchReady(d) {
         if (!live()) return;
@@ -199,6 +276,22 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
       },
       failed(reason, detail, retryAfterSec) {
         if (!live()) return;
+        // the server did not take the platform ticket (expired / used): ONE automatic retry with a NEW ticket
+        if (reason === 'ticket' && refetchTicket && !ticketRetried && lastRequest) {
+          ticketRetried = true;
+          const req = lastRequest;
+          void refetchTicket().then((ticket) => {
+            if (mine !== generation) return;
+            if (ticket && req.kind !== 'quick') begin({ ...req, ticket }, true);
+            else
+              set({
+                step: 'error',
+                error: { reason: 'ticket', detail: detail || null, retryAfterSec: null },
+                confirmLeave: false,
+              });
+          });
+          return;
+        }
         set({
           step: 'error',
           error: { reason, detail: detail || null, retryAfterSec: retryAfterSec ?? null },
@@ -208,13 +301,20 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
     };
   }
 
-  function begin(req: OpenRequest): void {
+  /**
+   * Opens a room. `keepTicketState` is true only for the automatic ticket retry (the refetch source and the used retry stay);
+   * any other request starts clean, and an unticketed one forgets the refetch source.
+   */
+  function begin(req: OpenRequest, keepTicketState = false): void {
     if (deps.endpoint() === null) {
       set({ step: 'error', error: { reason: 'not-configured', detail: null } });
       return;
     }
     dropSession();
     lastRequest = req;
+    const ticketed = req.kind !== 'quick' && !!req.ticket;
+    if (!keepTicketState) ticketRetried = false;
+    if (!ticketed) refetchTicket = null;
     const mine = generation;
     const s = createSessionSafely(mine);
     session = s;
@@ -225,6 +325,10 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
       status: 'connecting',
       statusDetail: '',
       confirmLeave: false,
+      ticketed,
+      signals: [],
+      signalsBlocked: false,
+      matchId: null,
     });
     void s.open(req).catch((e: unknown) => {
       if (mine !== generation) return;
@@ -278,6 +382,49 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
       const w = who();
       const code = codeView(get().codeInput).code;
       if (w && code) begin({ kind: 'join', who: w, code });
+    },
+    /**
+     * Opens the party's private room with a platform ticket (src/online/platform/controller.ts): `create` with the leader's
+     * host ticket, `join` with a member ticket. `refetch` gives a NEW ticket for the one retry after a ticket refusal and
+     * for "Try again". The name is the entry field's (the server uses the ticket's platform nickname anyway).
+     */
+    openTicketed(
+      req: { kind: 'create' } | { kind: 'join'; code: string },
+      ticket: string,
+      refetch: () => Promise<string | null>,
+    ): void {
+      const check = nameCheck(get().name);
+      const w: JoinInfo = { name: check.ok ? check.name : 'Player', characterId: deps.character() };
+      refetchTicket = refetch;
+      begin(
+        req.kind === 'create'
+          ? { kind: 'create', who: w, ticket }
+          : { kind: 'join', who: w, code: req.code, ticket },
+      );
+    },
+    /**
+     * Sends a preset quick signal when the room's phase allows that id (lobby / results: lobby signals; a match: match or
+     * team signals). The same id at most once per SIGNAL_REPEAT_MS. Returns whether it was sent.
+     */
+    sendSignal(id: string): boolean {
+      const s = get();
+      if (!session || s.status !== 'connected' || !s.lobby || s.signalsBlocked) return false;
+      if (!signalAllowed(id, signalPlace(s.lobby.phase, s.lobby.settings.game))) return false;
+      const now = deps.now();
+      const last = lastSent.get(id);
+      if (last !== undefined && now - last < SIGNAL_REPEAT_MS) return false;
+      lastSent.set(id, now);
+      session.sendSignal(id);
+      return true;
+    },
+    /** Hides this name's signals for the rest of the page (and the ones already shown). */
+    muteLocal(name: string): void {
+      const s = get();
+      if (s.localMutes.includes(name)) return;
+      set({ localMutes: [...s.localMutes, name], signals: s.signals.filter((x) => x.name !== name) });
+    },
+    unmuteLocal(name: string): void {
+      set({ localMutes: get().localMutes.filter((n) => n !== name) });
     },
     setQuickMode(mode: QuickMode): void {
       set({ quickMode: mode });
@@ -339,7 +486,41 @@ export function createRumbleOnlineFlow(deps: FlowDeps) {
         return;
       }
       const code = s.lobby?.code ?? s.roomCode;
-      begin(code && req.kind !== 'join' ? { kind: 'join', who: req.who, code } : req);
+      const wasTicketed = req.kind !== 'quick' && !!req.ticket;
+      const next: OpenRequest =
+        code && req.kind !== 'join'
+          ? { kind: 'join', who: req.who, code, ...(wasTicketed ? { ticket: req.ticket } : {}) }
+          : req;
+      // a ticket is single-use: "Try again" never re-sends it; it asks the platform for a new one first (a ticketed
+      // room is never silently re-entered as an anonymous guest)
+      const source = refetchTicket;
+      if (wasTicketed && next.kind !== 'quick' && source) {
+        set({ step: 'connecting', error: null });
+        const mine = generation;
+        void source().then((ticket) => {
+          if (mine !== generation) return;
+          if (ticket) {
+            refetchTicket = source;
+            begin({ ...next, ticket });
+          } else
+            set({
+              step: 'error',
+              error: { reason: 'ticket', detail: null, retryAfterSec: null },
+              confirmLeave: false,
+            });
+        });
+        return;
+      }
+      if (wasTicketed) {
+        // no way to get a new ticket: never re-send the used one
+        set({
+          step: 'error',
+          error: { reason: 'ticket', detail: null, retryAfterSec: null },
+          confirmLeave: false,
+        });
+        return;
+      }
+      begin(next);
     },
     dismissError(): void {
       if (get().inMatch) {

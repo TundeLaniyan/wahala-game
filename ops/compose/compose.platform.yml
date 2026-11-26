@@ -1,0 +1,66 @@
+# Player platform, LOCAL development stack: Postgres 16 + one-shot migration + the API. NOTHING here is deployed anywhere.
+#   cp ops/env/platform.env.example ops/env/platform.local.env     # then edit; the real file is git-ignored
+#   docker compose -f ops/compose/compose.platform.yml --env-file ops/env/platform.local.env up --build
+# The match server (City Rumble) is a SEPARATE stack (compose.local.yml) and is not touched or required: the platform works
+# alone, and the two meet only through the handoff contract (docs/PLATFORM_MATCH_HANDOFF.md).
+# Ports are bound to 127.0.0.1: this stack is for this machine only. Postgres has no published port at all.
+name: wahala-platform
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wahala
+      POSTGRES_PASSWORD: ${PLATFORM_DB_PASSWORD:?set PLATFORM_DB_PASSWORD in ops/env/platform.local.env}
+      POSTGRES_DB: wahala
+    volumes:
+      - platform-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U wahala -d wahala']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID, FOWNER, DAC_OVERRIDE]
+    mem_limit: 512m
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: player-platform/Dockerfile
+    image: wahala-player-platform:local
+    command: ['node', 'migrate.mjs']
+    restart: 'no'
+    environment:
+      DATABASE_URL: postgres://wahala:${PLATFORM_DB_PASSWORD}@db:5432/wahala
+    depends_on:
+      db: { condition: service_healthy }
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+
+  platform:
+    image: wahala-player-platform:local
+    init: true
+    restart: unless-stopped
+    env_file: ../env/platform.local.env
+    environment:
+      DATABASE_URL: postgres://wahala:${PLATFORM_DB_PASSWORD}@db:5432/wahala
+    ports:
+      - '127.0.0.1:${PLATFORM_PORT:-4567}:4567'
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
+    stop_grace_period: 10s
+    logging: # structured JSON, no secrets; small and rotated, never shipped off the machine by default
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+volumes:
+  platform-db:

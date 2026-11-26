@@ -49,6 +49,23 @@ describe('identity is in memory only (no accounts, no stored token)', () => {
     expect(users.map((f) => path.relative(ROOT, f))).toEqual(['src/app/rumbleOnline.ts']);
   });
 
+  it('the player-platform client (a separate, optional layer) keeps its session in ONE module and ONE key', () => {
+    const platform = [
+      ...walk(path.join(ROOT, 'src/online/platform')),
+      ...(statSync(path.join(ROOT, 'src/ui/online'), { throwIfNoEntry: false })?.isDirectory()
+        ? walk(path.join(ROOT, 'src/ui/online')).filter((f) => f.includes(`${path.sep}platform${path.sep}`))
+        : []),
+    ];
+    const users = platform.filter((f) =>
+      /localStorage|sessionStorage|indexedDB|document\.cookie|caches\.open/.test(readFileSync(f, 'utf8')),
+    );
+    expect(users.map((f) => path.relative(ROOT, f).split(path.sep).join('/'))).toEqual([
+      'src/online/platform/tokens.ts',
+    ]);
+    const tokens = readFileSync(path.join(ROOT, 'src/online/platform/tokens.ts'), 'utf8');
+    expect(tokens.match(/'wahala\.[a-z.0-9]+'/g)).toEqual(["'wahala.platform.v1'"]);
+  });
+
   it('the flow writes exactly one key, the guest display name; nothing else is stored, whatever the room does', () => {
     const writes: [string, string][] = [];
     let events: RumbleSessionEvents | null = null;
@@ -60,6 +77,7 @@ describe('identity is in memory only (no accounts, no stored token)', () => {
       start: () => undefined,
       rematch: () => undefined,
       settings: () => undefined,
+      sendSignal: () => undefined,
       leave: async () => undefined,
     };
     const deps: FlowDeps = {

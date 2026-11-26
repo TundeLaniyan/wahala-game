@@ -41,6 +41,8 @@ const ONLINE_SOURCES = [
   /^src\/app\/rumbleOnline\.ts$/,
   /^src\/ui\/online\/rumble\//,
   /^src\/online\/server\//,
+  /^src\/online\/platform\//,
+  /^src\/ui\/online\/platform\//,
   /(?:^|\/)node_modules\/@colyseus\//,
   /^server\//,
 ];
@@ -214,6 +216,8 @@ describe.skipIf(!CAN_BUILD)('public production build (default environment)', () 
     expect(hit('new EventSource(u)')).toBe(true);
     expect(hit('createRumbleSession()')).toBe(true);
     expect(hit('ABCDEFGHJKMNPQRSTUVWXYZ23456789')).toBe(true);
+    expect(hit("localStorage.getItem('wahala.platform.v1')")).toBe(true);
+    expect(hit("fetch(base + '/v1/auth/guest')")).toBe(true);
   });
 
   it('boot makes no request but same-origin assets: index.html, every chunk and the service worker name only allow-listed absolute URLs', () => {
@@ -354,3 +358,110 @@ describe.skipIf(!CAN_BUILD)(
     });
   },
 );
+
+/** The online dynamic entries and every chunk they import statically (shared chunks Rollup splits off between them). */
+function onlineClosure(b: Built): Set<string> {
+  const byFile = new Map(Object.entries(b.manifest).map(([k, e]) => [e.file, k] as const));
+  const seen = new Set<string>();
+  const walk = (key: string): void => {
+    const e = b.manifest[key];
+    if (!e || seen.has(e.file)) return;
+    seen.add(e.file);
+    for (const next of e.imports ?? []) walk(next);
+  };
+  for (const e of onlineChunks(b)) walk(byFile.get(e.file)!);
+  return seen;
+}
+
+/** The platform API template of the platform build below (`{host}` filled in at run time, like the online endpoint). */
+const PLATFORM_TEMPLATE = 'http://{host}:4567';
+
+describe.skipIf(!CAN_BUILD)(
+  'server + platform build (WAHALA_PLATFORM_URL=http://{host}:4567, docs/PLATFORM_CLIENT.md)',
+  () => {
+    let b: Built;
+    beforeAll(() => {
+      b = build('platform', {
+        WAHALA_ONLINE_ENABLED: 'true',
+        WAHALA_ONLINE_URL: SERVER_TEMPLATE,
+        WAHALA_PLATFORM_URL: PLATFORM_TEMPLATE,
+      });
+      cleanup.push(b.dir);
+    }, BUILD_TIMEOUT);
+
+    it('the platform client is in the lazily loaded online chunks only, never in what the page loads at start-up', () => {
+      const online = onlineClosure(b);
+      const boot = new Set(bootChunks(b));
+      const withPlatform = [...b.sources.entries()]
+        .filter(([, srcs]) => srcs.some((x) => /^src\/(?:online|ui\/online)\/platform\//.test(x)))
+        .map(([chunk]) => chunk);
+      expect(withPlatform.length).toBeGreaterThan(0);
+      for (const chunk of withPlatform) {
+        expect(online.has(chunk), `${chunk} is not an online chunk`).toBe(true);
+        expect(boot.has(chunk), `${chunk} is loaded at start-up`).toBe(false);
+      }
+      for (const chunk of bootChunks(b)) {
+        const src = read(b, chunk);
+        expect(/wahala\.platform\.v1|\/v1\/auth\/guest|\/match\/ticket/.test(src), chunk).toBe(false);
+      }
+    });
+
+    it('the platform strings are present (the scan is not vacuous) and only in online chunks', () => {
+      const online = onlineClosure(b);
+      const hits = filesUnder(b.dir, /\.js$/)
+        .map((f) =>
+          f
+            .slice(b.dir.length + 1)
+            .split('\\')
+            .join('/'),
+        )
+        .filter((rel) => /wahala\.platform\.v1|\/v1\/auth\/guest/.test(read(b, rel)));
+      expect(hits.length).toBeGreaterThan(0);
+      expect(hits.filter((h) => !online.has(h))).toEqual([]);
+    });
+
+    it('the platform URL is the {host} template, never a concrete host', () => {
+      const joined = filesUnder(b.dir, /\.js$/)
+        .map((f) => readFileSync(f, 'utf8'))
+        .join('\n');
+      expect(joined.includes(PLATFORM_TEMPLATE)).toBe(true);
+      const problems = scanBuild(b.dir, {
+        api: false,
+        markers: [],
+        addresses: true,
+        transform: (src) => src.split(SERVER_TEMPLATE).join('').split(PLATFORM_TEMPLATE).join(''),
+      });
+      // the Colyseus SDK's own fallbacks, in the online chunk only (see the server build above)
+      const SDK_OWN_DEFAULTS = ['ws://127.0.0.1:2567', '||`localhost`', 'trycloudflare.com'];
+      expect(
+        problems.filter(
+          (row) =>
+            !(
+              /^assets\/rumbleOnline-[^/]+\.js$/.test(row.file) &&
+              SDK_OWN_DEFAULTS.some((token) => row.sample.includes(token))
+            ),
+        ),
+      ).toEqual([]);
+    });
+  },
+);
+
+describe.skipIf(!CAN_BUILD)('the platform needs the server build (a platform URL alone adds nothing)', () => {
+  let b: Built;
+  beforeAll(() => {
+    b = build('platform-only', { WAHALA_PLATFORM_URL: PLATFORM_TEMPLATE });
+    cleanup.push(b.dir);
+  }, BUILD_TIMEOUT);
+
+  it('no online chunk, no platform string, no platform module', () => {
+    expect(onlineChunks(b)).toEqual([]);
+    for (const file of filesUnder(b.dir, /\.js$/)) {
+      const src = readFileSync(file, 'utf8');
+      expect(/wahala\.platform\.v1|\/v1\/auth\/guest|\/match\/ticket/.test(src), file).toBe(false);
+    }
+    const offenders = [...b.sources.entries()].filter(([, srcs]) =>
+      srcs.some((x) => /^src\/(?:online|ui\/online)\/platform\//.test(x)),
+    );
+    expect(offenders).toEqual([]);
+  });
+});

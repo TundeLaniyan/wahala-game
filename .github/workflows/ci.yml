@@ -249,14 +249,22 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             server/package-lock.json
+            player-platform/package-lock.json
       # the server scripts use the root toolchain (tsx, tsc, vitest) and import the simulation from ../src
       - run: npm ci
       - run: npm ci
         working-directory: server
+      # the match server imports the platform's ticket verifier, and the wired integration test needs both packages
+      - run: npm ci
+        working-directory: player-platform
       - run: npm run typecheck
         working-directory: server
       - run: npm test
         working-directory: server
+      - run: npm run typecheck
+        working-directory: player-platform
+      - run: npm test
+        working-directory: player-platform
 
   build:
     name: Production build

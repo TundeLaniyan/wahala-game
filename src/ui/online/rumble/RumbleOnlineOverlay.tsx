@@ -11,6 +11,8 @@ import { NetStatusChip, ReconnectBanner } from './NetStatus';
 import { resultsModel } from './models';
 import { ResultsPanel } from './ResultsPanel';
 import { ErrorBody } from './StatusScreens';
+import { platformEnabled } from '../../../online/platform/enabled';
+import { PlatformMatchSignals, PlatformResultsExtra } from '../platform/connected';
 import './rumble.css';
 
 export default function RumbleOnlineOverlay() {
@@ -33,6 +35,7 @@ export default function RumbleOnlineOverlay() {
         canRematch={s.status === 'connected' && s.lobby?.phase === 'results'}
         onRematch={onlineFlow.rematch}
         onMenu={onlineFlow.backToMenu}
+        extra={platformEnabled() ? <PlatformResultsExtra /> : undefined}
       />
     );
   }
@@ -57,6 +60,7 @@ export default function RumbleOnlineOverlay() {
   return (
     <div className="mn-overlay ro-hud" data-testid="ro-hud">
       <NetStatusChip status={status} />
+      {platformEnabled() && <PlatformMatchSignals />}
       <ReconnectBanner status={status} onRetry={onlineFlow.retry} onMenu={onlineFlow.backToMenu} />
     </div>
   );

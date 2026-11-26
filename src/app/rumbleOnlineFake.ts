@@ -246,6 +246,11 @@ export function createFakeSession(events: RumbleSessionEvents): RumbleSession {
       if (!lobby.members[you]?.isHost) return;
       sendLobby({ settings: { ...lobby.settings, ...patch } as RoomSettings });
     },
+    sendSignal(id: string) {
+      // the fake server relays the signal straight back (the real one filters and rate-limits it)
+      const seat = lobby.phase === 'playing' ? (lobby.members[you]?.seat ?? null) : null;
+      later(120, () => events.signal({ id, seat, name: myName, x: null, y: null, tick: null }));
+    },
     async leave(): Promise<void> {
       left = true;
       for (const t of timers) clearTimeout(t);

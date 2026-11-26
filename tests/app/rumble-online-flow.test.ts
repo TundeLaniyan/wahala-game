@@ -32,6 +32,9 @@ class TestSession implements RumbleSession {
   settings(p: SettingsMsg) {
     this.calls.push(`settings:${JSON.stringify(p)}`);
   }
+  sendSignal(id: string) {
+    this.calls.push(`signal:${id}`);
+  }
   async leave() {
     this.left++;
   }
@@ -451,5 +454,188 @@ describe('Back / Esc', () => {
     t.actions.createRoom();
     t.sessions[0]!.events.matchReady(driver());
     expect(t.actions.back()).toBe(false);
+  });
+});
+
+describe('platform tickets (docs/PLATFORM_CLIENT.md): single-use, fetched fresh, never re-sent', () => {
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  it('openTicketed sends the ticket with create / join only, and Quick Play never carries one', () => {
+    const t = setup();
+    t.actions.open();
+    t.actions.openTicketed({ kind: 'create' }, 'T1', async () => 'T2');
+    expect(t.sessions[0]!.opened[0]).toMatchObject({ kind: 'create', ticket: 'T1' });
+    expect(t.get().ticketed).toBe(true);
+    t.actions.openTicketed({ kind: 'join', code: 'K7M3QX' }, 'T3', async () => 'T4');
+    expect(t.sessions[1]!.opened[0]).toMatchObject({ kind: 'join', code: 'K7M3QX', ticket: 'T3' });
+    t.actions.quickPlay();
+    expect(t.sessions[2]!.opened[0]).not.toHaveProperty('ticket');
+    expect(t.get().ticketed).toBe(false);
+  });
+
+  it('a ticket refusal fetches a NEW ticket and retries ONCE; a second refusal is the plain "sign-in expired" error', async () => {
+    const t = setup();
+    t.actions.open();
+    const refetch = vi.fn(async () => `T${refetch.mock.calls.length + 1}`);
+    t.actions.openTicketed({ kind: 'join', code: 'K7M3QX' }, 'T1', refetch);
+    t.sessions[0]!.events.failed('ticket', 'invalid ticket');
+    await settle();
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(t.sessions[1]!.opened[0]).toMatchObject({ kind: 'join', code: 'K7M3QX', ticket: 'T2' });
+    expect(t.get().step).toBe('connecting');
+    t.sessions[1]!.events.failed('ticket', 'ticket already used');
+    await settle();
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(t.get().step).toBe('error');
+    expect(t.get().error?.reason).toBe('ticket');
+    // "Try again" asks for another new ticket: the used ones are never sent again
+    t.actions.retry();
+    await settle();
+    expect(refetch).toHaveBeenCalledTimes(2);
+    const sent = t.sessions.flatMap((s) => s.opened.map((o) => (o.kind === 'quick' ? null : o.ticket)));
+    expect(sent).toEqual(['T1', 'T2', 'T3']);
+  });
+
+  it('no new ticket available (platform down): the error says the sign-in expired, no session opens', async () => {
+    const t = setup();
+    t.actions.open();
+    t.actions.openTicketed({ kind: 'create' }, 'T1', async () => null);
+    t.sessions[0]!.events.failed('ticket', 'invalid ticket');
+    await settle();
+    expect(t.sessions).toHaveLength(1);
+    expect(t.get().error?.reason).toBe('ticket');
+  });
+
+  it('a room lost after a ticketed create is rejoined by code with a new ticket', async () => {
+    const t = setup();
+    t.actions.open();
+    t.actions.openTicketed({ kind: 'create' }, 'HOST', async () => 'MEMBER');
+    t.sessions[0]!.events.welcome({ descriptor: null, seat: null, roomCode: 'K7M3QX' });
+    t.sessions[0]!.events.failed('unreachable', 'gone');
+    t.actions.retry();
+    await settle();
+    expect(t.sessions[1]!.opened[0]).toMatchObject({ kind: 'join', code: 'K7M3QX', ticket: 'MEMBER' });
+  });
+});
+
+describe('quick signals (presets only)', () => {
+  const sig = (id: string, name = 'Bisi', seat: number | null = null) => ({
+    id,
+    seat,
+    name,
+    x: null,
+    y: null,
+    tick: null,
+  });
+
+  function inRoom(phase: LobbyMsg['phase'] = 'lobby', game: 'deathmatch' | 'team' = 'deathmatch') {
+    let clock = 1000;
+    const onMatchSignal = vi.fn();
+    const t = setup({ now: () => clock, onMatchSignal });
+    t.actions.open();
+    t.actions.createRoom();
+    const s = t.sessions[0]!;
+    s.events.status('connected', '');
+    s.events.lobby(
+      lobbyMsg({
+        phase,
+        settings: { arenaId: 'rumbleOshodi', game, durationSec: 300, botDifficulty: 'standard' },
+        members: [
+          { name: 'Ada', characterId: 'streetBaller', ready: false, isHost: true, seat: 0, connected: true },
+          {
+            name: 'Bisi',
+            characterId: 'streetBaller',
+            ready: false,
+            isHost: false,
+            seat: 1,
+            connected: true,
+            verified: true,
+            playerId: 'p-bisi',
+          },
+        ],
+      }),
+    );
+    return { t, s, onMatchSignal, tick: (ms: number) => (clock += ms) };
+  }
+
+  it('only the ids the phase allows are sent; the same id at most every 2 s', () => {
+    const { t, s, tick } = inRoom('lobby');
+    expect(t.actions.sendSignal('chat.wait')).toBe(true);
+    expect(t.actions.sendSignal('ping.attack')).toBe(false); // a team ping is never a lobby signal
+    expect(t.actions.sendSignal('chat.free text')).toBe(false);
+    expect(t.actions.sendSignal('chat.wait')).toBe(false);
+    tick(2000);
+    expect(t.actions.sendSignal('chat.wait')).toBe(true);
+    expect(s.calls.filter((c) => c.startsWith('signal:'))).toEqual(['signal:chat.wait', 'signal:chat.wait']);
+  });
+
+  it('a Free-for-All match allows match signals, a Team match the team pings too; the countdown allows none', () => {
+    expect(inRoom('playing', 'deathmatch').t.actions.sendSignal('ping.attack')).toBe(false);
+    expect(inRoom('playing', 'deathmatch').t.actions.sendSignal('chat.gg')).toBe(true);
+    expect(inRoom('playing', 'team').t.actions.sendSignal('ping.attack')).toBe(true);
+    expect(inRoom('playing', 'team').t.actions.sendSignal('chat.wait')).toBe(false);
+    expect(inRoom('countdown').t.actions.sendSignal('chat.ready')).toBe(false);
+  });
+
+  it('nothing is sent while the connection is down', () => {
+    const { t, s } = inRoom('lobby');
+    s.events.status('reconnecting', 'lost');
+    expect(t.actions.sendSignal('chat.ready')).toBe(false);
+  });
+
+  it('received signals are labelled from the catalogue; unknown ids are dropped; the feed keeps the newest six', () => {
+    const { t, s } = inRoom('lobby');
+    s.events.signal(sig('chat.gg'));
+    s.events.signal(sig('chat.<script>'));
+    expect(t.get().signals.map((x) => [x.name, x.label])).toEqual([['Bisi', 'Good game']]);
+    for (let i = 0; i < 8; i++) s.events.signal(sig('emote.wave'));
+    expect(t.get().signals).toHaveLength(6);
+  });
+
+  it('my own echo is marked mine (lobby: by name, match: by seat)', () => {
+    const { t, s } = inRoom('lobby');
+    s.events.signal(sig('chat.ready', 'Ada'));
+    expect(t.get().signals.at(-1)!.mine).toBe(true);
+  });
+
+  it('a local mute hides that sender now and later, for the rest of the page, and sends nothing anywhere', () => {
+    const { t, s } = inRoom('lobby');
+    s.events.signal(sig('chat.gg', 'Bisi'));
+    t.actions.muteLocal('Bisi');
+    expect(t.get().signals).toEqual([]);
+    s.events.signal(sig('chat.nice', 'Bisi'));
+    expect(t.get().signals).toEqual([]);
+    expect(s.calls.filter((c) => !c.startsWith('signal:'))).toEqual([]);
+    t.actions.leaveRoom();
+    expect(t.get().localMutes).toEqual(['Bisi']);
+    t.actions.unmuteLocal('Bisi');
+    expect(t.get().localMutes).toEqual([]);
+  });
+
+  it('during a match a signal also goes to the HUD rail hook; in the room it does not', () => {
+    const { t, s, onMatchSignal } = inRoom('lobby');
+    s.events.signal(sig('chat.gg'));
+    expect(onMatchSignal).not.toHaveBeenCalled();
+    s.events.lobby(lobbyMsg({ phase: 'playing' }));
+    s.events.matchReady(driver());
+    s.events.signal(sig('chat.nice', 'Bisi', 1));
+    expect(onMatchSignal).toHaveBeenCalledWith(expect.objectContaining({ label: 'Nice one!', seat: 1 }));
+    expect(t.get().step).toBe('match');
+  });
+
+  it('a "restricted" notice from the server hides the picker (no sending) until the room changes', () => {
+    const { t, s } = inRoom('lobby');
+    s.events.notice({ code: 'signals_restricted', message: 'You cannot send messages right now.' });
+    expect(t.get().signalsBlocked).toBe(true);
+    expect(t.actions.sendSignal('chat.ready')).toBe(false);
+    t.actions.createRoom();
+    expect(t.get().signalsBlocked).toBe(false);
+  });
+
+  it('the match id comes from the match descriptor and the results', () => {
+    const { t, s } = inRoom('lobby');
+    expect(t.get().matchId).toBeNull();
+    s.events.results({ ...results, matchId: 'm-42' });
+    expect(t.get().matchId).toBe('m-42');
   });
 });

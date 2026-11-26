@@ -14,6 +14,8 @@ import { useNow } from './hooks';
 import { inviteLink, remainingMs } from './models';
 import { RoomScreen } from './RoomScreen';
 import { ConnectingScreen, ErrorScreen, LoadingScreen, MatchScreen } from './StatusScreens';
+import { platformEnabled } from '../../../online/platform/enabled';
+import { PlatformEntryScreen, PlatformRoomScreen } from '../platform/connected';
 
 const pageLocation = (): { origin: string; pathname: string } =>
   typeof location === 'undefined'
@@ -28,6 +30,10 @@ export default function RumbleOnlineScreen() {
   const ticking =
     s.step === 'room' && !!s.lobby && (s.lobby.countdownMs !== null || s.lobby.autoStartMs !== null);
   const now = useNow(ticking);
+  // a platform build (docs/PLATFORM_CLIENT.md) plugs friends, parties and quick signals into the same screens
+  const withPlatform = platformEnabled();
+  const Room = withPlatform ? PlatformRoomScreen : RoomScreen;
+  const Entry = withPlatform ? PlatformEntryScreen : EntryScreen;
 
   // The in-match layer (connection chip, reconnect banner, results) is its own lazy chunk. Fetch it now, while the network
   // is known to work: a phone that drops the moment the match starts must still be told it dropped (a fetch started then
@@ -75,7 +81,7 @@ export default function RumbleOnlineScreen() {
     case 'room':
       if (s.lobby)
         return (
-          <RoomScreen
+          <Room
             lobby={s.lobby}
             conn={s.status}
             fake={s.fake}
@@ -100,7 +106,7 @@ export default function RumbleOnlineScreen() {
       return <MatchScreen fake={s.fake} onBack={onlineFlow.backToMenu} />;
     default:
       return (
-        <EntryScreen
+        <Entry
           name={s.name}
           codeInput={s.codeInput}
           configured={rumbleOnlineEndpoint() !== null}

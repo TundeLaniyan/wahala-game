@@ -137,7 +137,35 @@ export async function launch(page: Page, character?: string): Promise<void> {
  * the loader's phase, the frames drawn and the screen.
  */
 export async function inMatch(page: Page): Promise<void> {
-  await expect(page.getByTestId('hud')).toBeVisible({ timeout: 120_000 });
+  try {
+    await expect(page.getByTestId('hud')).toBeVisible({ timeout: 120_000 });
+  } catch (error) {
+    // The intermittent CI failure of e2e/audio.spec.ts (second match never shows its HUD) printed nothing about the page: say
+    // where the app was (screen, menu stack, loader, pending errors) so the next occurrence can be told apart.
+    const where = await page
+      .evaluate(() => {
+        const w = window as unknown as {
+          __WAHALA__?: {
+            matchLoad(): unknown;
+            store: { getState(): { screen: string; menu: { stack: string[] }; settings: { play: string } } };
+          };
+        };
+        const st = w.__WAHALA__?.store.getState();
+        return JSON.stringify({
+          screen: st?.screen,
+          menu: st?.menu.stack,
+          play: st?.settings.play,
+          load: w.__WAHALA__?.matchLoad(),
+          overlays: [...document.querySelectorAll('[data-testid]')]
+            .map((e) => e.getAttribute('data-testid'))
+            .filter((t) => /^(menu-|match-loading|hud|pause|exit|title)/.test(t ?? ''))
+            .slice(0, 12),
+        });
+      })
+      .catch(() => 'unavailable');
+    console.log(`[inMatch] the HUD did not appear: ${where}`);
+    throw new Error(`the HUD did not appear: ${where}`, { cause: error });
+  }
   try {
     await expect(page.getByTestId('match-loading')).toHaveCount(0, { timeout: 240_000 });
   } catch (error) {

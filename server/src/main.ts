@@ -36,6 +36,11 @@ const running = await startRumbleServer({
 });
 running.server.onShutdown(() => log('shut down'));
 log(
+  running.platform.tickets || running.platform.reporting
+    ? `player platform: tickets ${running.platform.tickets ? 'verified' : 'NOT accepted'}, results/filter ${running.platform.reporting ? 'reported' : 'off'} (PLATFORM_* environment)`
+    : 'player platform: not configured (guest-only, as before)',
+);
+log(
   `listening on :${running.port} (origins: ${running.origins.patterns.join(', ') || 'none'}; grace ${runtime.graceSeconds}s, reconnect ${runtime.reconnectSeconds}s, drop policy ${runtime.dropPolicy}${runtime.fast ? '; TEST FAST MODE' : ''})`,
 );
 log(`this machine:  ws://localhost:${running.port}   health http://localhost:${running.port}/health`);

@@ -3,6 +3,7 @@
  * fighter is the one already chosen in the game (the roster is not duplicated: "Change" opens the Fighter screen). Names
  * and codes are controlled inputs; every string shown is React text. Presentational: the connected screen supplies props.
  */
+import type { ReactNode } from 'react';
 import { CHARACTERS } from '../../../sim';
 import type { CharacterId } from '../../../sim';
 import { fighterArt } from '../../menu/art';
@@ -31,6 +32,8 @@ export interface EntryProps {
   onQuick(): void;
   onChangeFighter(): void;
   onBack(): void;
+  /** Optional extra card under the two entry cards (the player-platform panel of a platform build). */
+  extra?: ReactNode;
 }
 
 export function EntryScreen(p: EntryProps) {
@@ -163,6 +166,7 @@ export function EntryScreen(p: EntryProps) {
             {quickPlayNote(p.quickMode)}
           </p>
         </section>
+        {p.extra}
       </div>
     </ScreenFrame>
   );

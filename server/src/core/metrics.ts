@@ -68,6 +68,9 @@ export class RoomMetrics {
   messagesIn = 0;
   invalidMessages = 0;
   unknownMessages = 0;
+  signalsRelayed = 0;
+  signalsLimited = 0;
+  signalsFiltered = 0;
   rejectedActions = 0;
   resyncsServed = 0;
   resyncsLimited = 0;
@@ -111,6 +114,9 @@ export interface RoomMetricsSnapshot {
     messagesIn: number;
     invalidMessages: number;
     unknownMessages: number;
+    signalsRelayed: number;
+    signalsLimited: number;
+    signalsFiltered: number;
     rejectedActions: number;
     resyncsServed: number;
     resyncsLimited: number;
