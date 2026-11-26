@@ -18,7 +18,7 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { devices, expect, test } from '@playwright/test';
-import type { Browser, BrowserContext, Page } from '@playwright/test';
+import type { Browser, BrowserContext, Page, WebSocketRoute } from '@playwright/test';
 
 const BASE = process.env.WAHALA_PRIVATE_E2E_URL ?? '';
 const PLATFORM = process.env.WAHALA_PRIVATE_E2E_PLATFORM ?? '';
@@ -107,6 +107,25 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
   const nameA = `Ada ${tag}`;
   const nameB = `Bayo ${tag}`;
   const ctxB = await phone(browser);
+  // B's connection to the match server goes through a test-controlled pass-through, so the "network loss" is the same every time:
+  // `dropB()` closes B's live socket (close code 4010, what a browser that lost its network produces: see the server log) and
+  // refuses new ones until `restoreB()` (browser offline emulation does not reliably cut an open WebSocket)
+  let bBlocked = false;
+  const bLive: { page: WebSocketRoute; server: WebSocketRoute }[] = [];
+  await ctxB.routeWebSocket(/:\d+\/[A-Za-z0-9]/, (ws) => {
+    if (bBlocked) {
+      void ws.close({ code: 4010, reason: 'offline (test)' });
+      return;
+    }
+    bLive.push({ page: ws, server: ws.connectToServer() });
+  });
+  const dropB = async (): Promise<void> => {
+    bBlocked = true;
+    for (const x of bLive.splice(0)) {
+      await x.server.close({ code: 1001 }).catch(() => undefined);
+      await x.page.close({ code: 4010, reason: 'offline (test)' }).catch(() => undefined);
+    }
+  };
   const ctxC = await browser.newContext({ viewport: { width: 900, height: 700 } });
   const b = await ctxB.newPage();
   const c = await ctxC.newPage();
@@ -116,7 +135,15 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     ['B', b],
     ['C', c],
   ] as const)
-    p.on('pageerror', (e) => errors.push(`${n}: ${e.message.slice(0, 200)}`));
+    p.on('pageerror', (e) =>
+      errors.push(
+        `${n} @${new Date().toISOString().slice(11, 19)}: ${e.message.slice(0, 200)} :: ${(e.stack ?? '')
+          .split('\n')
+          .slice(1, 4)
+          .map((l) => l.trim().slice(0, 140))
+          .join(' | ')}`,
+      ),
+    );
   try {
     // ---- 1. guests choose nicknames
     await Promise.all([openOnline(a), openOnline(b)]);
@@ -229,9 +256,10 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     await c.getByTestId('ro-leave').click();
     await c.getByTestId('ro-leave-confirm').click();
     await expect(a.getByTestId('ro-member')).toHaveCount(2, { timeout: 60_000 });
+    await ctxC.close(); // three software-rendered browsers starve the server and each other: C has done its part
 
     // ---- 7. Free-for-All match
-    await a.getByTestId('ro-duration-180').click(); // 3-minute matches keep the run short
+    // the default 5-minute match: slow software rendering must not let it end before the reconnection step is done
     await a.getByTestId('ro-ready').click();
     await b.getByTestId('ro-ready').click();
     await expect(a.getByTestId('ro-start')).toBeEnabled({ timeout: 30_000 });
@@ -245,6 +273,18 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     expect(sa.game).toBe('deathmatch');
     await shot(a, '10-match-A');
     await shot(b, '11-match-B-phone');
+
+    // B loses its connection (right after the match starts) and comes back to the SAME seat
+    const seatB = sb.seat;
+    await dropB();
+    await expect(b.getByTestId('net-banner')).toBeVisible({ timeout: 60_000 });
+    await b.waitForTimeout(10_000); // the server saw the close at once: after its 3 s grace a bot plays the seat; the 30 s window is still open
+    bBlocked = false;
+    await expect(b.getByTestId('net-banner')).toHaveCount(0, { timeout: 120_000 });
+    const back = await W(b).state();
+    expect(back.seat).toBe(seatB);
+    expect(back.humans).toBe(2);
+    await shot(b, '12-reconnected-B-phone');
 
     // a quick signal in the match, from A to B (Free-for-All: match-wide presets only)
     await a.getByTestId('qs-hud-toggle').click();
@@ -260,19 +300,6 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
       );
     test.info().annotations.push({ type: 'signal-in-match-rail-B', description: String(railSaw) });
     await shot(b, '11b-signal-B-phone');
-
-    // B's touch pad moves B's fighter; B loses its connection and comes back to the SAME seat
-    await expect(b.getByTestId('stick-zone')).toBeVisible({ timeout: 90_000 });
-    const seatB = sb.seat;
-    await ctxB.setOffline(true);
-    await expect(b.getByTestId('net-banner')).toBeVisible({ timeout: 60_000 });
-    await b.waitForTimeout(30_000); // the server notices the drop (3 s x 6 pings), a bot plays the seat, the 30 s window is still open
-    await ctxB.setOffline(false);
-    await expect(b.getByTestId('net-banner')).toHaveCount(0, { timeout: 120_000 });
-    const back = await W(b).state();
-    expect(back.seat).toBe(seatB);
-    expect(back.humans).toBe(2);
-    await shot(b, '12-reconnected-B-phone');
 
     // ---- 8. results: identical for both; the PLATFORM recorded the match (written by the server)
     await Promise.all([
@@ -307,6 +334,7 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     await expect(b.getByTestId('ro-room')).toHaveAttribute('data-phase', 'lobby', { timeout: 60_000 });
     await expect(a.getByTestId('pf-verified')).toHaveCount(2); // still the same two verified players
     await a.getByTestId('ro-mode-team').click();
+    await a.getByTestId('ro-duration-180').click(); // the second match can be the short one
     await expect(b.getByTestId('ro-set-mode')).toContainText(/team/i, { timeout: 30_000 });
     await a.getByTestId('ro-ready').click();
     await b.getByTestId('ro-ready').click();
@@ -335,6 +363,6 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     expect(errors, 'no page errors in any browser').toEqual([]);
   } finally {
     await ctxB.close();
-    await ctxC.close();
+    await ctxC.close().catch(() => undefined);
   }
 });
