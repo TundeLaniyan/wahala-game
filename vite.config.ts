@@ -17,12 +17,20 @@ export default defineConfig(({ command, isPreview, mode }) => {
     mode !== 'test' &&
     /^(1|true|on|yes)$/i.test((env.WAHALA_ONLINE_ENABLED ?? '').trim()) &&
     !!env.WAHALA_ONLINE_URL;
+  // The player-platform client (docs/PLATFORM_CLIENT.md) exists only in a SERVER build that also names an http(s) platform
+  // API (`WAHALA_PLATFORM_URL`, `{host}` allowed): the same rule as `platformEndpoint` in src/platform/flags.ts
+  // (tests/online/build-guard.test.ts runs both on the same inputs). Never in test mode.
+  const platformUrl = (env.WAHALA_PLATFORM_URL ?? '').trim().split('{host}').join('h');
+  const platform = serverOnline && /^https?:\/\/[^\s{}]+$/i.test(platformUrl);
   return {
     base: command === 'build' || isPreview ? '/wahala-game/' : '/',
     plugins: [react(), optimizeModels(), offlineCache()],
     // WAHALA_* feature flags (src/platform/flags.ts) are public build-time switches, never secrets.
     envPrefix: ['VITE_', 'WAHALA_'],
-    define: { __WAHALA_SERVER_ONLINE__: JSON.stringify(serverOnline) },
+    define: {
+      __WAHALA_SERVER_ONLINE__: JSON.stringify(serverOnline),
+      __WAHALA_PLATFORM__: JSON.stringify(platform),
+    },
     build: {
       target: 'es2022',
       chunkSizeWarningLimit: 900,

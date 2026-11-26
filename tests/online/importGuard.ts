@@ -146,6 +146,9 @@ export const ZONE = [
   // the controller's own modules (flow, session indirection, fake session, entry-form rules): imported only by the zone
   /^src\/app\/rumble(?:OnlineFlow|OnlineSession|OnlineFake|EntryInput)\.ts$/,
   /^src\/ui\/online\/rumble\//,
+  // the player-platform client (docs/PLATFORM_CLIENT.md): API client, token store, controller, and its screens
+  /^src\/online\/platform\//,
+  /^src\/ui\/online\/platform\//,
   /^server\//,
 ];
 export const inZone = (file: string): boolean => ZONE.some((re) => re.test(file));

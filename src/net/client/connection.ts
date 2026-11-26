@@ -8,7 +8,7 @@
 import { Client } from '@colyseus/sdk';
 import type { Room } from '@colyseus/sdk';
 import { MSG, parseBusy } from '../protocol';
-import type { LobbyMsg, NoticeMsg, PongMsg, ResultsMsg, WelcomeMsg } from '../protocol';
+import type { LobbyMsg, NoticeMsg, PongMsg, ResultsMsg, SignalInMsg, WelcomeMsg } from '../protocol';
 import type { ConnStatus, OpenRequest, RumbleSessionEvents } from './types';
 
 export interface ConnHandlers {
@@ -19,6 +19,7 @@ export interface ConnHandlers {
   pong(m: PongMsg): void;
   results(m: ResultsMsg): void;
   notice(m: NoticeMsg): void;
+  signal(m: SignalInMsg): void;
   status(s: ConnStatus, detail: string): void;
 }
 
@@ -66,6 +67,8 @@ export function classifyFailure(error: unknown): {
   if (busy?.code === 'rate_limited')
     return { reason: 'rate-limited', detail: busy.text, retryAfterSec: busy.retryAfterSec };
   if (busy?.code === 'room_unavailable') return { reason: 'room-unavailable', detail: busy.text };
+  // a platform match ticket the server would not take (expired, already used, for another room): fetch a new one
+  if (/\bticket\b/i.test(message)) return { reason: 'ticket', detail: message };
   if (code === 4212 || /not found|invalid room|no rooms? (found|available)/i.test(message))
     return { reason: 'room-not-found', detail: message };
   // a match that already started: the server locks the room at the countdown's end (nobody new joins; only the players
@@ -108,8 +111,15 @@ export class Connection {
     (sdk.http as unknown as { options: { credentials?: string } }).options.credentials = 'omit';
     const who = { name: req.who.name, characterId: req.who.characterId, gid: guestSessionId() };
     let room: Room;
-    if (req.kind === 'create') room = await sdk.create('rumble', { ...who, private: true });
-    else if (req.kind === 'join') room = await sdk.joinById(req.code, who);
+    // a platform ticket goes with create / join only (never Quick Play), and only when the player has one
+    if (req.kind === 'create')
+      room = await sdk.create('rumble', {
+        ...who,
+        private: true,
+        ...(req.ticket ? { ticket: req.ticket } : {}),
+      });
+    else if (req.kind === 'join')
+      room = await sdk.joinById(req.code, { ...who, ...(req.ticket ? { ticket: req.ticket } : {}) });
     else room = await sdk.joinOrCreate('rumble', { ...who, mode: req.mode });
     this.attach(room);
   }
@@ -129,6 +139,7 @@ export class Connection {
     room.onMessage(MSG.pong, (m: PongMsg) => h.pong(m));
     room.onMessage(MSG.results, (m: ResultsMsg) => h.results(m));
     room.onMessage(MSG.notice, (m: NoticeMsg) => h.notice(m));
+    room.onMessage(MSG.signalIn, (m: SignalInMsg) => h.signal(m));
     room.onDrop((code) => {
       this.droppedAt = performance.now();
       this.setStatus('reconnecting', `connection lost (${code})`);

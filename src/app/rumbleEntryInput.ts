@@ -102,5 +102,6 @@ export type FailReason =
   | 'server-busy'
   | 'rate-limited'
   | 'refused'
+  | 'ticket'
   | 'protocol'
   | 'unknown';

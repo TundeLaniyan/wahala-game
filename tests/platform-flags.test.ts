@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FLAG_DEFAULTS, resolveEndpoint, resolveFlags } from '../src/platform/flags';
+import { FLAG_DEFAULTS, resolveEndpoint, resolveFlags, resolvePlatformEndpoint } from '../src/platform/flags';
 
 describe('feature flags', () => {
   it('defaults: online and voice off, campaign on, experimental off', () => {
@@ -195,5 +195,96 @@ describe('rumbleOnline and the endpoint: two independent switches (decision ON1)
     const src = readFileSync('src/platform/flags.ts', 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
     expect(src).not.toMatch(/localhost|127\.0\.0\.1|0\.0\.0\.0|192\.168|ngrok|trycloudflare|loca\.lt/i);
     expect(src).not.toMatch(/wss?:\/\/[a-z0-9{]/i);
+  });
+});
+
+describe('platform and platformEndpoint: only inside a server build that names a platform API (docs/PLATFORM_CLIENT.md)', () => {
+  const SERVER = { WAHALA_ONLINE_ENABLED: 'true', WAHALA_ONLINE_URL: 'ws://{host}:2567' };
+  const PF = { ...SERVER, WAHALA_PLATFORM_URL: 'http://{host}:4567' };
+
+  // [what the BUILD has, the page URL query, platform, platformEndpoint for hostname 192.0.2.7]
+  const table: [string, Record<string, string>, string, boolean, string | null][] = [
+    ['default build, no query', {}, '', false, null],
+    ['default build, ?online&platform=http://x', {}, '?online&platform=http://x', false, null],
+    [
+      'default build, ?online&WAHALA_PLATFORM_URL=http://evil',
+      {},
+      '?online&WAHALA_PLATFORM_URL=http://evil',
+      false,
+      null,
+    ],
+    [
+      'platform URL without the online build',
+      { WAHALA_PLATFORM_URL: 'http://{host}:4567' },
+      '?online',
+      false,
+      null,
+    ],
+    [
+      'platform URL with only the build switch',
+      { WAHALA_ONLINE_ENABLED: 'true', WAHALA_PLATFORM_URL: 'http://{host}:4567' },
+      '?online',
+      false,
+      null,
+    ],
+    [
+      'platform URL with only the online endpoint',
+      { WAHALA_ONLINE_URL: 'ws://{host}:2567', WAHALA_PLATFORM_URL: 'http://{host}:4567' },
+      '?online',
+      false,
+      null,
+    ],
+    ['server build without a platform URL, ?online', SERVER, '?online', false, null],
+    ['server + platform build, no query', PF, '', false, 'http://192.0.2.7:4567'],
+    ['server + platform build, ?online', PF, '?online', true, 'http://192.0.2.7:4567'],
+    [
+      'server + platform build, ?online&platform=http://evil (ignored)',
+      PF,
+      '?online&platform=http://evil:1',
+      true,
+      'http://192.0.2.7:4567',
+    ],
+    [
+      'fixed https platform, trailing slash trimmed',
+      { ...SERVER, WAHALA_PLATFORM_URL: 'https://api.example.invalid/' },
+      '?online',
+      true,
+      'https://api.example.invalid',
+    ],
+    [
+      'a ws:// platform URL is refused',
+      { ...SERVER, WAHALA_PLATFORM_URL: 'ws://{host}:4567' },
+      '?online',
+      false,
+      null,
+    ],
+    [
+      'a malformed platform URL is refused',
+      { ...SERVER, WAHALA_PLATFORM_URL: 'api.invalid' },
+      '?online',
+      false,
+      null,
+    ],
+    ['an empty platform URL is nothing', { ...SERVER, WAHALA_PLATFORM_URL: '' }, '?online', false, null],
+  ];
+  for (const [name, env, search, platform, endpoint] of table) {
+    it(name, () => {
+      const f = resolveFlags(env, search, '192.0.2.7');
+      expect(f.platform).toBe(platform);
+      expect(f.platformEndpoint).toBe(endpoint);
+      // the platform never turns online on by itself, and never changes the online endpoint
+      if (f.platform) expect(f.rumbleOnline).toBe(true);
+    });
+  }
+
+  it('a malformed hostname makes a {host} platform URL unusable', () => {
+    for (const host of ['', 'a b', 'x/evil']) expect(resolveFlags(PF, '?online', host).platform).toBe(false);
+    expect(resolvePlatformEndpoint('https://p.invalid', '')).toBe('https://p.invalid');
+    expect(resolvePlatformEndpoint('wss://p.invalid', '')).toBeNull();
+  });
+
+  it('the defaults are off', () => {
+    expect(FLAG_DEFAULTS.platform).toBe(false);
+    expect(FLAG_DEFAULTS.platformEndpoint).toBeNull();
   });
 });

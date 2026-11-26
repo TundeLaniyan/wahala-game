@@ -1,0 +1,299 @@
+/*
+ * Player-platform panels and quick signals (docs/PLATFORM_CLIENT.md). They sit inside the online screens and reuse their
+ * look (rumble.css: .ro-card, .ro-tag, .ro-input, .ro-dialog; menu.css: .mn-btn, .chip.mn-opt). Tap targets are at least
+ * 44 px; nothing scrolls sideways; phone landscape (max-height 520px) and portrait (max-width 700px) stack the lists.
+ */
+.pf-panel {
+  grid-column: 1 / -1;
+}
+.pf-tabs {
+  margin-bottom: 2px;
+}
+.pf-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.pf-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-id-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pf-id-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.pf-id-name b {
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+.pf-code {
+  font-family: var(--mn-display);
+  font-weight: 400;
+  font-size: 1.6rem;
+  letter-spacing: 0.12em;
+  color: var(--mn-amber);
+}
+.pf-name-form,
+.pf-inline-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pf-name-form .ro-input,
+.pf-inline-row .ro-input {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: 44px;
+}
+.pf-code-input {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+.pf-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 1px solid var(--mn-border);
+  background: rgba(11, 14, 20, 0.5);
+}
+.pf-row[data-you='true'] {
+  border-color: var(--mn-amber);
+}
+.pf-row-name {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.pf-row-name b {
+  overflow-wrap: anywhere;
+}
+.pf-row-name small {
+  color: var(--mn-muted);
+  font-size: 0.8rem;
+}
+.pf-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pf-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pf-blocks summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--mn-muted);
+}
+.pf-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--mn-border);
+  background: rgba(11, 14, 20, 0.8);
+  font-size: 0.9rem;
+}
+.pf-message.good {
+  border-color: var(--mn-green);
+}
+.pf-message.bad {
+  border-color: var(--mn-red);
+}
+.ro-tag.pf-guest {
+  border-color: var(--mn-muted);
+  color: var(--mn-muted);
+}
+.ro-tag.pf-verified {
+  border-color: var(--mn-green);
+  color: var(--mn-green);
+}
+.pf-member-btn {
+  appearance: none;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--mn-border);
+  background: rgba(20, 25, 35, 0.85);
+  color: var(--mn-text);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.pf-member-btn:hover,
+.pf-member-btn:focus-visible {
+  border-color: var(--mn-amber);
+}
+.pf-member-dialog {
+  max-height: 100%;
+  overflow-y: auto;
+}
+.pf-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-report {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-report-cats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.pf-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid var(--mn-border);
+  cursor: pointer;
+}
+.pf-radio input {
+  width: 20px;
+  height: 20px;
+}
+.pf-note {
+  min-height: 64px;
+  resize: vertical;
+}
+.pf-room-party {
+  grid-column: 1 / -1;
+}
+
+/* ---------- quick signals ---------- */
+.qs-panel {
+  grid-column: 1 / -1;
+}
+.qs-picker,
+.qs-hud-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.qs-btn {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--mn-border);
+  background: rgba(30, 38, 56, 0.85);
+  color: var(--mn-text);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.qs-btn.ping {
+  border-color: var(--mn-amber);
+}
+.qs-btn.emote {
+  border-color: var(--mn-green);
+}
+.qs-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.qs-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+.qs-item b {
+  color: var(--mn-amber);
+}
+.qs-item.mine b {
+  color: var(--mn-green);
+}
+/* in a match: the button sits under the connection chip, in the top-right corner, never over the middle of the board */
+.qs-hud {
+  align-self: flex-end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: min(360px, 100%);
+}
+.qs-hud-toggle {
+  min-width: 88px;
+}
+.qs-hud-picker {
+  justify-content: flex-end;
+  padding: 6px;
+  border: 1px solid var(--mn-border);
+  background: rgba(11, 14, 20, 0.92);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.pf-results-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-results-extra .qs-panel {
+  padding: 8px 10px;
+}
+
+@media (max-height: 520px) {
+  .pf-code {
+    font-size: 1.3rem;
+  }
+  .qs-hud {
+    max-width: min(300px, 60vw);
+  }
+  .qs-hud-picker {
+    max-height: calc(100vh - 110px);
+  }
+  .pf-results-extra .qs-feed {
+    display: none;
+  }
+}
+@media (max-width: 700px) and (min-height: 521px) {
+  .pf-actions .mn-btn {
+    flex: 1 1 100%;
+  }
+  .pf-row-actions {
+    width: 100%;
+  }
+  .pf-row-actions .mn-btn {
+    flex: 1 1 0;
+  }
+}

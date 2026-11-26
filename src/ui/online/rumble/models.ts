@@ -173,6 +173,13 @@ export function errorMessage(
         canRetry: true,
         detail: d,
       };
+    case 'ticket':
+      return {
+        title: 'Sign-in expired',
+        text: 'Your sign-in for this match expired. Try again.',
+        canRetry: true,
+        detail: d,
+      };
     case 'protocol':
       return {
         title: 'Version mismatch',
