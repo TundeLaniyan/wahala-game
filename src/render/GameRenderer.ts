@@ -28,6 +28,7 @@ import type { CameraMode } from './cameraModes';
 import { createLayout } from './coords';
 import type { Layout } from './coords';
 import { Effects } from './fx/Effects';
+import { wreckColors } from './wreckColors';
 import type { ShakeMode } from './shake';
 import { profileFor, rungOfPreset, rungOfSetting } from './quality';
 import type { QualityLevel, QualityProfile, QualitySetting } from './quality';
@@ -157,24 +158,6 @@ function safeStorage(): Pick<Storage, 'getItem' | 'setItem'> | undefined {
     return undefined;
   }
 }
-
-const WRECK_COLORS: Record<string, [number, number, number][]> = {
-  danfo: [
-    [1, 0.76, 0.1],
-    [0.1, 0.1, 0.1],
-    [0.75, 0.75, 0.78],
-  ],
-  taxi: [
-    [0.0, 0.65, 0.9],
-    [0.95, 0.96, 0.98],
-    [0.12, 0.14, 0.18],
-  ],
-  keke: [
-    [0.97, 0.78, 0.08],
-    [0.14, 0.16, 0.2],
-    [0.12, 0.12, 0.12],
-  ],
-};
 
 /**
  * Owns the WebGL renderer and the scene for one match. It only READS the simulation state and
@@ -739,8 +722,8 @@ export class GameRenderer {
         }
         case 'vehicleDestroyed': {
           const info = this.vehicles.wreckInfo(e.vehicleId);
-          if (info) fx.wreck(info.x, 0.5, info.z, WRECK_COLORS[info.kind]!);
-          else fx.wreck(this.layout.wx(e.x), 0.5, this.layout.wz(e.y), WRECK_COLORS.danfo!);
+          if (info) fx.wreck(info.x, 0.5, info.z, wreckColors(info.kind));
+          else fx.wreck(this.layout.wx(e.x), 0.5, this.layout.wz(e.y), wreckColors('danfo'));
           break;
         }
         case 'skillUsed': {
