@@ -8,6 +8,7 @@
 //   reconnect a human drops mid-match: one comes back inside the window, one never returns (a bot must take the seat)
 //   api       platform database load: N accounts, W concurrent workers on authenticated reads for --seconds
 //   probe     how the capacity guard answers when more rooms start than the server allows
+import { randomBytes } from 'node:crypto';
 import { Client, parseArgs, sleep } from '../scripts/lib.mjs';
 
 const scenario = process.argv[2];
@@ -26,7 +27,7 @@ const pct = (a, p) => { const s = [...a].sort((x, y) => x - y); return s.length 
 
 /** One simulated human: joins (or creates) a room, ignores frames but counts them, sends a stick direction ~10 times a second. */
 class Human {
-  constructor(name) { this.name = name; this.sdk = new Client(o.url); this.room = null; this.frames = 0; this.results = null; this.closed = null; this.notices = []; this.seq = 0; this.timer = null; }
+  constructor(name) { this.name = name; this.gid = randomBytes(16).toString('base64url'); /* the real client sends one random guest id per page: the server's join limits are per guest id */ this.sdk = new Client(o.url); this.room = null; this.frames = 0; this.results = null; this.closed = null; this.notices = []; this.seq = 0; this.timer = null; }
   attach(room) {
     this.room = room;
     room.onMessage('fr', () => { this.frames++; });
@@ -37,8 +38,8 @@ class Human {
     room.onLeave((code) => { this.closed = code; this.stop(); });
     room.onError(() => {});
   }
-  async create(opts = {}) { this.attach(await this.sdk.create('rumble', { private: true, name: this.name, characterId: 'streetBaller', ...opts })); return this.room.roomId; }
-  async join(code) { this.attach(await this.sdk.joinById(code, { name: this.name, characterId: 'streetBaller' })); }
+  async create(opts = {}) { this.attach(await this.sdk.create('rumble', { private: true, name: this.name, characterId: 'streetBaller', gid: this.gid, ...opts })); return this.room.roomId; }
+  async join(code) { this.attach(await this.sdk.joinById(code, { name: this.name, characterId: 'streetBaller', gid: this.gid })); }
   play() {
     let dir = DIRS[Math.floor(Math.random() * 4)];
     this.timer = setInterval(() => {
@@ -76,7 +77,7 @@ async function rooms() {
   while (Date.now() < deadline && !all.every((m) => m.results || m.closed !== null)) await sleep(500);
   const finished = all.filter((m) => m.results).length;
   result('rooms', { rooms: K, humansPerRoom: H, matchSeconds: S, roomsStarted: started.length, startErrors: errors, startupMs, humans: all.length, humansWithResults: finished,
-    humansDisconnected: all.filter((m) => !m.results && m.closed !== null).length, framesPerHuman: Math.round(all.reduce((a, m) => a + m.frames, 0) / Math.max(1, all.length)),
+    humansDisconnected: all.filter((m) => !m.results && m.closed !== null).length, closeCodes: all.filter((m) => m.closed !== null).map((m) => m.closed), framesPerHuman: Math.round(all.reduce((a, m) => a + m.frames, 0) / Math.max(1, all.length)),
     notices: all.flatMap((m) => m.notices).slice(0, 5) });
   await Promise.all(all.map((m) => m.leave()));
 }
@@ -110,15 +111,18 @@ async function churn() {
   result('create-leave', { created, refused: cfail, errors: Object.fromEntries(errs2) });
 }
 
+/** The network vanishes: kill the socket without the polite close message a leaving client sends. */
+const abrupt = (h) => { const ws = h.room.connection.transport.ws; if (typeof ws.terminate === 'function') ws.terminate(); else ws.close(); };
+
 async function reconnect() {
   const S = num('seconds');
   const { members } = await startRoom(0, 3, S);
   await sleep(8000);
   const [, back, gone] = members;
   const token = back.room.reconnectionToken;
-  back.stop(); back.room.reconnection.enabled = false; back.room.connection.transport.ws.terminate?.() ?? back.room.connection.close(4001);
+  back.stop(); back.room.reconnection.enabled = false; abrupt(back);
   const t0 = Date.now();
-  gone.stop(); gone.room.reconnection.enabled = false; gone.room.connection.transport.ws.terminate?.() ?? gone.room.connection.close(4001);
+  gone.stop(); gone.room.reconnection.enabled = false; abrupt(gone);
   await sleep(1500);
   let backOk = false, backMs = null;
   try { const r = await back.sdk.reconnect(token); back.attach(r); back.play(); backOk = true; backMs = Date.now() - t0; } catch (e) { console.log(`reconnect failed: ${e.message}`); }
@@ -152,7 +156,7 @@ async function api() {
   const worker = async () => { while (Date.now() < end) { const r = await call('GET', '/v1/auth/sessions', undefined, tokens[n++ % tokens.length]); counts.set(r.status, (counts.get(r.status) ?? 0) + 1); lat.push(r.ms); } };
   await Promise.all(Array.from({ length: num('workers') }, worker));
   const total = lat.length;
-  result('platform-reads', { workers: num('workers'), seconds: num('seconds'), requests: total, perSecond: Math.round(total / num('seconds')), statuses: Object.fromEntries(counts), p50Ms: pct(lat, 0.5), p99Ms: pct(lat, 0.99), maxMs: Math.round(Math.max(...lat)) });
+  result('platform-reads', { workers: num('workers'), seconds: num('seconds'), requests: total, perSecond: Math.round(total / num('seconds')), statuses: Object.fromEntries(counts), p50Ms: pct(lat, 0.5), p99Ms: pct(lat, 0.99), maxMs: Math.round(lat.reduce((a, b) => Math.max(a, b), 0)) });
 }
 
 async function probe() {

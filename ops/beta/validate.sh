@@ -92,6 +92,16 @@ net="${BETA_PROJECT}_data"; empty_url="postgres://wahala:$(cat "$S/secrets/db_pa
 cfg=(--network "$net" -e PLATFORM_ENV=production -e "DATABASE_URL=$empty_url" -e PLATFORM_ALLOWED_ORIGINS=https://a.example -e PLATFORM_PUBLIC_WEB_URL=https://a.example -e PLATFORM_GUEST_ONLY=1
   -e PLATFORM_MATCH_SERVER_SECRET=$(printf 's%.0s' {1..40}) -e PLATFORM_ADMIN_TOKEN=$(printf 'a%.0s' {1..40}) -e "PLATFORM_HANDOFF_PRIVATE_KEY=$(cat "$S/secrets/handoff_private_key")")
 out="$(docker run --rm "${cfg[@]}" wahala-player-platform:local 2>&1 | head -c 500)"; echo "$out" | grep -q "schema is not current" && ok "production never migrates by itself: an empty database stops the platform" || bad "platform started on an unmigrated database: $out"
+# migrations and rollback: the same database, migrated, then marked as one version NEWER than this build knows (what an old build sees after a bad release)
+docker run --rm --network "$net" -e PLATFORM_ENV=production -e "DATABASE_URL=$empty_url" -e PLATFORM_GUEST_ONLY=1 wahala-player-platform:local node migrate.mjs >"$V/migrate-empty.out" 2>&1 && ok "the one-shot migrate step builds the schema on an empty database" || { bad "migrate on an empty database"; tail -3 "$V/migrate-empty.out"; }
+probe="${BETA_PROJECT}-schemaprobe"
+docker rm -f "$probe" >/dev/null 2>&1; docker run -d --name "$probe" "${cfg[@]}" wahala-player-platform:local >/dev/null; sleep 8
+out="$(docker logs "$probe" 2>&1 | head -c 600)"; echo "$out" | grep -q "listening\|started" && ok "after migrate the platform accepts the database and starts" || bad "the platform did not start on a migrated database: $out"
+docker rm -f "$probe" >/dev/null 2>&1
+dc exec -T db psql -U wahala -d wahala_empty -qc "insert into schema_migrations (version, name, checksum) values (9999, 'from_the_future', 'x')" >/dev/null
+docker run -d --name "$probe" "${cfg[@]}" wahala-player-platform:local >/dev/null; sleep 6
+out="$(docker logs "$probe" 2>&1 | head -c 700)"; docker rm -f "$probe" >/dev/null 2>&1
+echo "$out" | grep -q "schema is not current" && ok "an OLDER build refuses a database that a newer release changed (it never guesses; the handbook says restore the pre-release backup)" || bad "an old build started on a newer schema: $out"
 dc exec -T db psql -U wahala -d postgres -qc "drop database wahala_empty" >/dev/null
 out="$(r -e NODE_ENV=production -e RUMBLE_TEST_FAST=1 wahala-rumble-server:local)"; echo "$out" | grep -qi "RUMBLE_TEST_FAST" && ok "the match server refuses its test-only fast mode in production" || bad "match server accepted fast mode: $out"
 expect "the match server's /metrics needs its token" "401" "$(dc exec -T rumble node -e 'fetch("http://127.0.0.1:2567/metrics").then(r=>console.log(r.status))' | tr -d '\r')"
@@ -170,6 +180,11 @@ rm_status() { dc exec -T rumble node -e 'fetch("http://127.0.0.1:2567/metrics",{
 expect "the match server's /metrics refuses the OLD token" "401" "$(rm_status "$old_rm")"
 expect "the match server's /metrics accepts the NEW token" "200" "$(rm_status "$(cat "$S/secrets/rumble_metrics_token")")"
 drv persist after-rotation
+# rollback mechanics: the stored "previous" images are put back and everything returns healthy. (The previous images here are the same build:
+# this proves the PROCEDURE works, not that a particular old release is compatible.)
+docker tag wahala-rumble-server:local wahala-rumble-server:previous; docker tag wahala-player-platform:local wahala-player-platform:previous
+"$SCRIPT" rollback >"$V/rollback.out" 2>&1 && ok "rollback: the previous images are restored and every service is healthy again" || { bad "rollback"; tail -3 "$V/rollback.out"; }
+drv persist after-rollback
 
 step "8. backup and restoration"
 "$SCRIPT" backup >"$V/backup.out" 2>&1 && ok "manual backup: $(grep 'backup ok' "$V/backup.out" | tail -1)" || { bad "backup"; tail -3 "$V/backup.out"; }
