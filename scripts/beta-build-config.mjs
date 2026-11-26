@@ -19,6 +19,10 @@ export function betaBuildEnv(env, opts = {}) {
     );
   else if (/[/:@\s]/.test(domain))
     errors.push('BETA_DOMAIN is a bare host name (play.example.com): no scheme, port, path or @');
+  else if (!opts.allowLocal && /^\d{1,3}(\.\d{1,3}){3}$/.test(domain))
+    errors.push(
+      `BETA_DOMAIN "${domain}" is an IP address: the real certificate needs a domain name (use --allow-local for a LAN rehearsal)`,
+    );
   else if (!opts.allowLocal && !HOST.test(domain))
     errors.push(`BETA_DOMAIN "${domain}" is not a public domain name`);
   else if (
