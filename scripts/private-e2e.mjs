@@ -5,7 +5,7 @@
  * by DATABASE_URL), the real player platform, the real match server (platform-linked) and `vite preview`, then runs
  * e2e/private-multiplayer.spec.ts in TWO real Chromium contexts and stops everything. Local / development only: CI never runs it.
  * Env: WAHALA_CHROMIUM, PRIVATE_E2E_SKIP_BUILD=1 (reuse dist-private), PRIVATE_E2E_ARGS (extra Playwright args),
- *      PRIVATE_E2E_KEEP=1 (leave the stack running afterwards for manual poking).
+ *      PRIVATE_E2E_KEEP=1 (leave the stack running afterwards for manual poking), PRIVATE_E2E_STACK_ONLY=1 (start the stack, no tests).
  * Prints the stack's URLs and writes the server / platform logs to `private-e2e-diag/`.
  */
 import { spawn, spawnSync } from 'node:child_process';
@@ -137,6 +137,10 @@ console.log(
   `[private-e2e] stack up: web ${origin}/wahala-game/  match server :${SERVER}  platform :${PLATFORM}`,
 );
 
+if (process.env.PRIVATE_E2E_STACK_ONLY === '1') {
+  console.log('[private-e2e] PRIVATE_E2E_STACK_ONLY=1: the stack keeps running (Ctrl-C to stop)');
+  await new Promise(() => undefined);
+}
 const result = spawnSync(
   'npx',
   [

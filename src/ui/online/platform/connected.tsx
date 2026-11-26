@@ -61,6 +61,30 @@ export function PlatformEntryScreen(props: EntryProps) {
   );
 }
 
+/**
+ * The platform's last notice (a report sent, a mute done, a refusal) inside the room: the entry screen's panel is not on screen
+ * there, and an action taken from a member's menu must say that it worked.
+ */
+function RoomMessage() {
+  const state = pf().useStore();
+  const m = state.message;
+  if (!m) return null;
+  return (
+    <div className={`pf-message ${m.tone}`} role="status" data-testid="pf-message">
+      <span>{m.text}</span>
+      <button
+        type="button"
+        className="ro-x"
+        aria-label="Dismiss"
+        data-testid="pf-message-dismiss"
+        onClick={() => pf().actions.dismissMessage(m.id)}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 /** The party, compact, inside the room: who is in it and whether its room is this one. */
 function RoomParty({ inRoom, privateRoom }: { inRoom: string | null; privateRoom: boolean }) {
   const state = pf().useStore();
@@ -124,6 +148,7 @@ export function PlatformRoomScreen(props: RoomProps) {
       {...props}
       extra={
         <>
+          <RoomMessage />
           <RoomParty inRoom={inRoom} privateRoom={props.lobby.private} />
           <SignalPanel {...signals} />
         </>
