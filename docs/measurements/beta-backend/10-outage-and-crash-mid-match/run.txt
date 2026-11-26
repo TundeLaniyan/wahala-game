@@ -1,0 +1,20 @@
+== outage (j-outage): 2026-11-26T06:34:27Z
+BACKEND OUTAGE: database and platform stopped for 25 s while a match is being played
+platform answering again 1 s after it was started
+RESULT {"scenario":"rooms","name":"rooms","rooms":1,"humansPerRoom":2,"matchSeconds":180,"roomsStarted":1,"startErrors":[],"startupMs":541,"humans":2,"humansWithResults":2,"humansDisconnected":0,"closeCodes":[],"framesPerHuman":5476,"notices":[]}
+MATCH SERVER CRASHED mid-match; restarted by Docker and healthy again after 6 s
+RESULT {"scenario":"churn","name":"join-leave","cycles":5,"concurrency":1,"ok":5,"fail":0,"joinP50Ms":7,"joinP99Ms":8,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":5,"refused":0,"errors":{}}
+(the 2 humans of the crashed match lost it: an in-memory match does not survive its server dying; documented limit)
+RESULT {"scenario":"rooms","name":"rooms","rooms":1,"humansPerRoom":2,"matchSeconds":180,"roomsStarted":1,"startErrors":[],"startupMs":542,"humans":2,"humansWithResults":0,"humansDisconnected":2,"closeCodes":[4003,4003],"framesPerHuman":1018,"notices":[]}
+samples: 60 over 247 s   (CPU % are per container; 100 % = one core)
+rumble    cpu avg 27% max 50%   mem first 117 MB, max 118 MB, last 57 MB
+platform  cpu avg 1% max 9%   mem first 19 MB, max 20 MB, last 18 MB
+db        cpu avg 1% max 6%   mem first 21 MB, max 21 MB, last 20 MB
+edge      cpu avg 0% max 3%   mem first 12 MB, max 13 MB, last 12 MB
+match server: playing rooms max 1, connections max 2, capacity cost in use max 23.5 of CPU budget 70
+  process: RSS max 167 MB, event-loop delay p99 max 22.588 ms, cpu (server's own reading) max 38.7 %
+  rooms: tick step p99 max 14.918 ms, timer lateness p99 max 4.813 ms (a tick is 16.7 ms), DROPPED TICKS 0, bot takeovers 0, reconnections 0, drops 0, kicks 0, invalid messages 0
+  refused by the capacity guard: {}
+PostgreSQL connections (limit 40 in compose): max 2, last 2
+files: /tmp/claude-0/validate-state/load/j-outage

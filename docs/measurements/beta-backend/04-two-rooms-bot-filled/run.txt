@@ -1,0 +1,14 @@
+== rooms (d2-2rooms): 2026-11-26T06:09:44Z
+rooms started: 2/2 in 1049 ms (errors: 0)
+RESULT {"scenario":"rooms","name":"rooms","rooms":2,"humansPerRoom":2,"matchSeconds":180,"roomsStarted":2,"startErrors":[],"startupMs":1049,"humans":4,"humansWithResults":4,"humansDisconnected":0,"closeCodes":[],"framesPerHuman":5476,"notices":[]}
+samples: 48 over 198 s   (CPU % are per container; 100 % = one core)
+rumble    cpu avg 59% max 98%   mem first 103 MB, max 156 MB, last 156 MB
+platform  cpu avg 1% max 11%   mem first 30 MB, max 30 MB, last 29 MB
+db        cpu avg 1% max 9%   mem first 37 MB, max 37 MB, last 37 MB
+edge      cpu avg 0% max 2%   mem first 11 MB, max 11 MB, last 11 MB
+match server: playing rooms max 2, connections max 4, capacity cost in use max 47 of CPU budget 70
+  process: RSS max 204 MB, event-loop delay p99 max 59.992 ms, cpu (server's own reading) max 80.8 %
+  rooms: tick step p99 max 26.62 ms, timer lateness p99 max 58.299 ms (a tick is 16.7 ms), DROPPED TICKS 1, bot takeovers 0, reconnections 0, drops 0, kicks 0, invalid messages 0
+  refused by the capacity guard: {}
+PostgreSQL connections (limit 40 in compose): max 2, last 2
+files: /tmp/claude-0/validate-state/load/d2-2rooms

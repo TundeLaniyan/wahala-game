@@ -4,6 +4,18 @@ Operations, infrastructure and security work for the existing authoritative City
 
 Based on `claude/wahala-stitch-uiux-v1` @ `f7cf2ae` (the newest server line: LAN support, identity rules, soak harness, shutdown check). The older `claude/wahala-city-rumble-online-30w0rm` line diverged; it is not merged here.
 
+## Private beta on one server (start here for the hosted beta)
+
+| Doc | Answers |
+| --- | --- |
+| [BETA_HANDBOOK.md](BETA_HANDBOOK.md) | **The founder's runbook**: what to rent, exact commands, certificate, invites, backups, updates, rotation, shutting it all down |
+| [BETA_READINESS.md](BETA_READINESS.md) | The readiness matrix (IMPLEMENTED / TESTED / MISSING / BLOCKED / DEFERRED) and the verdict |
+| [BETA_LOAD_RESULTS.md](BETA_LOAD_RESULTS.md) | Load and soak evidence on the deployed stack, and the initial concurrency cap |
+| [BETA_SECURITY_AND_RECOVERY.md](BETA_SECURITY_AND_RECOVERY.md) | Abuse tests, defects found, backup and restore drill |
+| [BETA_INTEGRATION_HANDOFF.md](BETA_INTEGRATION_HANDOFF.md) | What Architecture connects, with acceptance tests |
+
+Tooling: `ops/beta/wahala-beta.sh` (one operator command), `ops/beta/compose.yml`, `ops/beta/validate.sh` (real-Docker verification), `ops/beta/load.sh` (load and soak). The rest of this pack is the match server's own operations material the beta builds on.
+
 ## Read in this order
 
 | Doc | Answers |

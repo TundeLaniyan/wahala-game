@@ -1,0 +1,14 @@
+== rooms (c3-1room-32humans): 2026-11-26T06:38:39Z
+rooms started: 1/1 in 698 ms (errors: 0)
+RESULT {"scenario":"rooms","name":"rooms","rooms":1,"humansPerRoom":32,"matchSeconds":300,"roomsStarted":1,"startErrors":[],"startupMs":698,"humans":32,"humansWithResults":32,"humansDisconnected":0,"closeCodes":[],"framesPerHuman":9076,"notices":[{"code":"bad_phase","message":"settings can only change in the lobby"},{"code":"bad_phase","message":"the match is already starting"}]}
+samples: 77 over 319 s   (CPU % are per container; 100 % = one core)
+rumble    cpu avg 9% max 20%   mem first 57 MB, max 77 MB, last 77 MB
+platform  cpu avg 1% max 12%   mem first 18 MB, max 19 MB, last 19 MB
+db        cpu avg 1% max 6%   mem first 21 MB, max 24 MB, last 21 MB
+edge      cpu avg 0% max 3%   mem first 12 MB, max 14 MB, last 13 MB
+match server: playing rooms max 1, connections max 32, capacity cost in use max 10 of CPU budget 70
+  process: RSS max 120 MB, event-loop delay p99 max 2.157 ms, cpu (server's own reading) max 13.5 %
+  rooms: tick step p99 max 2.173 ms, timer lateness p99 max 1.898 ms (a tick is 16.7 ms), DROPPED TICKS 0, bot takeovers 0, reconnections 0, drops 0, kicks 0, invalid messages 0
+  refused by the capacity guard: {}
+PostgreSQL connections (limit 40 in compose): max 2, last 2
+files: /tmp/claude-0/validate-state/load/c3-1room-32humans

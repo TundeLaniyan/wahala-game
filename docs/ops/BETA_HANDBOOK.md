@@ -20,13 +20,13 @@ One server, six small programs started together by one command. **Only the edge 
 
 | | Minimum for the beta | Why |
 | --- | --- | --- |
-| Server | **2 vCPU, 4 GB memory, 40 GB SSD** (dedicated CPU is better than shared) | the game server uses one full core when 2-3 matches run; the rest of the stack needs about 1 GB |
+| Server | **2 vCPU, 4 GB memory, 40 GB SSD** (dedicated CPU is better than shared) | the game server uses most of one core when 2 matches with computer-controlled fighters run; the rest of the stack needs about 1 GB |
 | System | **Ubuntu 24.04 LTS** | the instructions below are for it |
 | Place | **London** first (about 104 ms from Lagos, `HOSTING_COSTS.md`); measure from a phone before deciding | |
 | Domain | any name you control, for example `play.yourname.com` | players connect to `https://play.yourname.com`; the certificate needs a real name |
 | Cost | see `HOSTING_COSTS.md` (about $20-45 a month for a server of this size; billed by the hour at most providers, so a test weekend costs very little) | not a quote |
 
-How many players: **at most 3 matches at once** (that is what the server allows and what was measured, `BETA_LOAD_RESULTS.md`), which is a handful of friends per match plus computer-controlled fighters filling every match to 32. This is an **invite-only** beta: do not announce the address publicly.
+How many players: **at most 2 matches at once** (that is what the server allows and what was measured, `BETA_LOAD_RESULTS.md`), which is a handful of friends per match plus computer-controlled fighters filling every match to 32. This is an **invite-only** beta: do not announce the address publicly.
 
 ## 2. One-time server preparation
 
@@ -138,7 +138,7 @@ ops/beta/wahala-beta.sh invite revoke wb-xxxxxxxxxxxxxxxx   # stop one code (exi
 | restart after the server itself rebooted | nothing: every service starts by itself (`restart: unless-stopped`) |
 | get alerts on your phone | put a Slack/Discord-style webhook address into `ops/beta/state/beta.env` as `BETA_ALERT_WEBHOOK=...`, then `ops/beta/wahala-beta.sh up` |
 
-**What an alert means** (they appear in `status` and in `logs monitor` as lines with `"level":"warn"` or `"crit"`; `info` lines need no action): `down` a service stopped answering (it is restarted automatically; if it keeps coming back, `logs <service>`); `restart` the game server restarted; `disk` under 20 % free (warn) or 10 % (critical): copy backups away, `docker system prune -f`, or enlarge the disk; `memory` the game server is near its limit; `backup` no good backup for 30 hours (warn) or 54 hours (critical); `certificate` expires within 21 days (warn) or 7 days (critical): see section 5; `capacity` more matches in play than the comfortable number (informational: at the maximum of 3 the server politely refuses new matches); `cpu`, `tick-step`, `timer-lateness`, `event-loop` the game server is overloaded and a game may feel slow: reduce the number of simultaneous matches; `stuck-room` a match has run suspiciously long; `platform-restart`, `platform-memory`, `platform-latency`, `platform-5xx` the platform restarted, is using too much memory, is slow or is answering with errors (`logs platform`); `db-pool-waiting` / `db-pool-full` the platform is waiting for database connections; `platform-rate-limited` somebody is being refused for asking too often (normal in small numbers).
+**What an alert means** (they appear in `status` and in `logs monitor` as lines with `"level":"warn"` or `"crit"`; `info` lines need no action): `down` a service stopped answering (it is restarted automatically; if it keeps coming back, `logs <service>`); `restart` the game server restarted; `disk` under 20 % free (warn) or 10 % (critical): copy backups away, `docker system prune -f`, or enlarge the disk; `memory` the game server is near its limit; `backup` no good backup for 30 hours (warn) or 54 hours (critical); `certificate` expires within 21 days (warn) or 7 days (critical): see section 5; `capacity` more matches in play than the comfortable number (informational: at the maximum of 2 the server queues new matches); `cpu`, `tick-step`, `timer-lateness`, `event-loop` the game server is overloaded and a game may feel slow: reduce the number of simultaneous matches; `stuck-room` a match has run suspiciously long; `platform-restart`, `platform-memory`, `platform-latency`, `platform-5xx` the platform restarted, is using too much memory, is slow or is answering with errors (`logs platform`); `db-pool-waiting` / `db-pool-full` the platform is waiting for database connections; `platform-rate-limited` somebody is being refused for asking too often (normal in small numbers).
 
 ## 8. Backups and restoring
 
@@ -199,7 +199,7 @@ Players' login sessions are separate: they use random tokens stored only as hash
 
 - The provider's bill: the monthly server price. Players' traffic is small (about 36 MB per player-hour); check the provider's traffic graph weekly.
 - Resource use, any time: `ops/beta/wahala-beta.sh status` (memory and CPU per service). The game server's memory is about 170 MB with no match and about 150 MB more per running match.
-- **Capacity.** The server allows 3 matches in play at once and politely refuses a 4th ("server busy, try again in a moment") instead of slowing everyone down. The numbers behind it are in `BETA_LOAD_RESULTS.md`. Do not raise the limits without re-measuring.
+- **Capacity.** The server allows 2 matches in play at once and queues a 3rd: its players see "the servers are busy, your match starts as soon as a slot is free", and if no slot frees up within 2 minutes the room is closed with a polite "try again in a little while" ("server busy, try again in a moment") instead of slowing everyone down. The numbers behind it are in `BETA_LOAD_RESULTS.md`. Do not raise the limits without re-measuring.
 
 ## 12. Turning the beta off completely
 
@@ -215,7 +215,7 @@ Players' login sessions are separate: they use random tokens stored only as hash
 | --- | --- |
 | `https://play.../health` does not answer | `ops/beta/wahala-beta.sh status`. If a service is not `healthy`: `logs <service>`. If the server itself does not answer, check the provider's panel and `ufw status` |
 | Browser says the certificate is untrusted | section 5 (the temporary certificate is still in use) |
-| Players get "server busy" | normal at 3 matches; wait a few minutes. If it persists with nobody playing: `status`, then `logs rumble` |
+| Players get "server busy" | normal when 2 matches are already being played; the match starts when one ends, or the players are told to try again after 2 minutes. If it persists with nobody playing: `status`, then `logs rumble` |
 | Players cannot create accounts | they need an invite code (section 6), or the platform is down (`logs platform`) |
 | `status` shows `no backup yet` after a day | `logs backup`; run `backup` by hand; send the output to the developer |
 | The disk is almost full | `docker system prune -f` (removes only unused images), delete old files in `state/backups` after copying them away |

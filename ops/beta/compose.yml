@@ -129,7 +129,7 @@ services:
       RUMBLE_RECONNECT_SECONDS: '30'
       RUMBLE_DROP_POLICY: bot
       # capacity protection, set from the measured evidence in docs/ops/BETA_LOAD_RESULTS.md
-      RUMBLE_MAX_PLAYING_ROOMS: ${RUMBLE_MAX_PLAYING_ROOMS:-3}
+      RUMBLE_MAX_PLAYING_ROOMS: ${RUMBLE_MAX_PLAYING_ROOMS:-2} # two matches at once: the measured comfortable ceiling for bot-filled rooms (BETA_LOAD_RESULTS.md)
       RUMBLE_CPU_BUDGET: ${RUMBLE_CPU_BUDGET:-70}
       RUMBLE_MAX_CONNECTIONS: ${RUMBLE_MAX_CONNECTIONS:-200}
       RUMBLE_MAX_ROOMS: ${RUMBLE_MAX_ROOMS:-40}

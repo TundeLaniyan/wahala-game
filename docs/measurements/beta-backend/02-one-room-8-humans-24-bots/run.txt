@@ -1,0 +1,5 @@
+== rooms (b-1room-8humans): 2026-11-26T05:45:03Z
+rooms started: 1/1 in 584 ms (errors: 0)
+RESULT {"scenario":"rooms","name":"rooms","rooms":1,"humansPerRoom":8,"matchSeconds":180,"roomsStarted":1,"startErrors":[],"startupMs":584,"humans":8,"humansWithResults":8,"humansDisconnected":0,"framesPerHuman":5925,"notices":[]}
+ops/beta/load.sh: line 60: syntax error near unexpected token `;'
+ops/beta/load.sh: line 60: `;'

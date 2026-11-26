@@ -1,0 +1,14 @@
+== rooms (e2-3rooms): 2026-11-26T06:13:07Z
+rooms started: 3/3 in 1573 ms (errors: 0)
+RESULT {"scenario":"rooms","name":"rooms","rooms":3,"humansPerRoom":2,"matchSeconds":180,"roomsStarted":3,"startErrors":[],"startupMs":1573,"humans":6,"humansWithResults":4,"humansDisconnected":2,"closeCodes":[4401,4401],"framesPerHuman":3651,"notices":[{"code":"server_busy","message":"server_busy;retry=10;The servers are busy. Your match starts as soon as a slot is free."},{"code":"server_busy","message":"server_busy;retry=10;The servers are busy. Your match starts as soon as a slot is free."},{"code":"server_busy","message":"server_busy;retry=10;The servers are busy. Your match starts as soon as a slot is free."},{"code":"server_busy","message":"server_busy;retry=10;The servers are busy. Your match starts as soon as a slot is free."},{"code":"server_busy","message":"server_busy;retry=10;The servers are busy. Your match starts as soon as a slot is free."}]}
+samples: 48 over 197 s   (CPU % are per container; 100 % = one core)
+rumble    cpu avg 60% max 95%   mem first 119 MB, max 162 MB, last 158 MB
+platform  cpu avg 1% max 10%   mem first 29 MB, max 30 MB, last 29 MB
+db        cpu avg 1% max 6%   mem first 37 MB, max 38 MB, last 37 MB
+edge      cpu avg 0% max 3%   mem first 11 MB, max 12 MB, last 12 MB
+match server: playing rooms max 2, connections max 6, capacity cost in use max 47 of CPU budget 70
+  process: RSS max 206 MB, event-loop delay p99 max 44.034 ms, cpu (server's own reading) max 84.9 %
+  rooms: tick step p99 max 31.565 ms, timer lateness p99 max 41.105 ms (a tick is 16.7 ms), DROPPED TICKS 0, bot takeovers 0, reconnections 0, drops 0, kicks 0, invalid messages 0
+  refused by the capacity guard: {"start_cpu_budget":13}
+PostgreSQL connections (limit 40 in compose): max 2, last 2
+files: /tmp/claude-0/validate-state/load/e2-3rooms

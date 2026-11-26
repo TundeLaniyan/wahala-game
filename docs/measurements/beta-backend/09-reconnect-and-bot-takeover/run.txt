@@ -1,0 +1,16 @@
+== reconnect (i4-reconnect): 2026-11-26T07:09:00Z
+[Colyseus reconnection]: ⏳ will retry in 0.2 seconds...
+[Colyseus reconnection]: 🔄 Re-establishing sessionId 'cJ6351g4x' with roomId 'MJAU7T'... (attempt 1 of 15)
+[Colyseus reconnection]: ✅ reconnection successful!
+RESULT {"scenario":"reconnect","name":"reconnect","returnedWithinWindow":true,"reconnectMs":214,"framesInFirst5sAfterReturn":4960,"matchFinishedForHost":true,"returnedHumanGotResults":true,"neverReturnedHumanClosedWith":1006}
+samples: 48 over 197 s   (CPU % are per container; 100 % = one core)
+rumble    cpu avg 45% max 96%   mem first 113 MB, max 150 MB, last 150 MB
+platform  cpu avg 1% max 11%   mem first 32 MB, max 32 MB, last 32 MB
+db        cpu avg 1% max 5%   mem first 22 MB, max 22 MB, last 21 MB
+edge      cpu avg 0% max 3%   mem first 13 MB, max 13 MB, last 12 MB
+match server: playing rooms max 2, connections max 5, capacity cost in use max 46.1 of CPU budget 70
+  process: RSS max 199 MB, event-loop delay p99 max 66.939 ms, cpu (server's own reading) max 75.8 %
+  rooms: tick step p99 max 17.138 ms, timer lateness p99 max 59.252 ms (a tick is 16.7 ms), DROPPED TICKS 3, bot takeovers 1, reconnections 1, drops 2, kicks 0, invalid messages 0
+  refused by the capacity guard: {}
+PostgreSQL connections (limit 40 in compose): max 2, last 2
+files: /tmp/claude-0/validate-state/load/i4-reconnect
