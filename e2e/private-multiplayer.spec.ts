@@ -23,6 +23,11 @@ import type { Browser, BrowserContext, Page, WebSocketRoute } from '@playwright/
 const BASE = process.env.WAHALA_PRIVATE_E2E_URL ?? '';
 const PLATFORM = process.env.WAHALA_PRIVATE_E2E_PLATFORM ?? '';
 const Q = '?debug&q=veryLow&seed=7&noattract&online';
+// The HOSTED private-beta stack (scripts/beta-e2e.mjs: the Docker stack behind its TLS edge, the match server REQUIRING platform tickets,
+// the platform INVITE-ONLY, the beta build of the client). Without these the spec runs against the local development stack.
+const INVITE = process.env.WAHALA_PRIVATE_E2E_INVITE ?? '';
+const SERVER_HTTP = process.env.WAHALA_PRIVATE_E2E_SERVER ?? '';
+const STRICT = INVITE !== '';
 
 test.skip(!BASE, 'needs the private multiplayer stack: npm run test:private-e2e');
 test.describe.configure({ mode: 'serial' });
@@ -64,6 +69,12 @@ async function phone(browser: Browser): Promise<BrowserContext> {
 async function openOnline(page: Page): Promise<void> {
   await page.goto(`${BASE}${Q}`);
   await page.getByTestId('home-rumble-online').click({ timeout: 180_000 });
+  if (STRICT) {
+    // the invite-only beta: this device has no account yet, so the invite code is asked for before anything else
+    await expect(page.getByTestId('pf-invite')).toBeVisible({ timeout: 60_000 });
+    await page.getByTestId('pf-invite-code').fill(INVITE);
+    await page.getByTestId('pf-invite-submit').click();
+  }
   await expect(page.getByTestId('pf-identity')).toBeVisible({ timeout: 60_000 });
 }
 
@@ -112,7 +123,7 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
   // refuses new ones until `restoreB()` (browser offline emulation does not reliably cut an open WebSocket)
   let bBlocked = false;
   const bLive: { page: WebSocketRoute; server: WebSocketRoute }[] = [];
-  await ctxB.routeWebSocket(/:\d+\/[A-Za-z0-9]/, (ws) => {
+  await ctxB.routeWebSocket(/\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\?.*sessionId=/, (ws) => {
     if (bBlocked) {
       void ws.close({ code: 4010, reason: 'offline (test)' });
       return;
@@ -199,43 +210,72 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     await shot(a, '06-room-A');
     await shot(b, '07-room-B-phone');
 
-    // ---- 5. a plain guest joins the same room by code typing A's nickname: no badge, another name, no platform identity
-    await c.goto(`${BASE}${Q}`);
-    await c.getByTestId('home-rumble-online').click({ timeout: 180_000 });
-    await c.getByTestId('ro-name').fill(nameA);
-    await c.getByTestId('ro-code').fill(code);
-    await c.getByTestId('ro-join').click();
-    await expect(c.getByTestId('ro-room-code')).toBeVisible({ timeout: 60_000 });
-    await expect(a.getByTestId('ro-member')).toHaveCount(3, { timeout: 60_000 });
-    await expect(a.getByTestId('pf-verified')).toHaveCount(2); // still two: C has no badge
-    const fake = (await a.getByTestId('ro-member').allInnerTexts()).find((t) =>
-      new RegExp(`${nameA} 2`).test(t),
-    );
-    expect(fake, 'the impostor is shown under a different name').toBeTruthy();
-    expect(fake!).not.toMatch(/verified/i);
-    await shot(a, '08-room-with-guest-A');
+    // ---- 5. an outsider with the room code
+    if (!STRICT) {
+      await c.goto(`${BASE}${Q}`);
+      await c.getByTestId('home-rumble-online').click({ timeout: 180_000 });
+      await c.getByTestId('ro-name').fill(nameA);
+      await c.getByTestId('ro-code').fill(code);
+      await c.getByTestId('ro-join').click();
+      await expect(c.getByTestId('ro-room-code')).toBeVisible({ timeout: 60_000 });
+      await expect(a.getByTestId('ro-member')).toHaveCount(3, { timeout: 60_000 });
+      await expect(a.getByTestId('pf-verified')).toHaveCount(2); // still two: C has no badge
+      const fake = (await a.getByTestId('ro-member').allInnerTexts()).find((t) =>
+        new RegExp(`${nameA} 2`).test(t),
+      );
+      expect(fake, 'the impostor is shown under a different name').toBeTruthy();
+      expect(fake!).not.toMatch(/verified/i);
+      await shot(a, '08-room-with-guest-A');
+    } else {
+      // the hosted beta: someone who has the page and even the ROOM CODE but no invite cannot get an account, and cannot reach the
+      // match server around the page either (every matchmaking request needs a platform ticket)
+      await c.goto(`${BASE}${Q}`);
+      await c.getByTestId('home-rumble-online').click({ timeout: 180_000 });
+      await expect(c.getByTestId('pf-invite')).toBeVisible({ timeout: 60_000 });
+      await c.getByTestId('pf-invite-code').fill('not-a-real-invite-code');
+      await c.getByTestId('pf-invite-submit').click();
+      await expect(c.getByTestId('pf-invite-refused')).toBeVisible({ timeout: 60_000 });
+      await expect(c.getByTestId('pf-identity')).toHaveCount(0);
+      for (const id of ['ro-create', 'ro-join', 'ro-quick', 'ro-code'])
+        await expect(c.getByTestId(id)).toHaveCount(0);
+      for (const [path, data] of [
+        ['/matchmake/create/rumble', { name: 'Mallory', private: true }],
+        [`/matchmake/joinById/${code}`, { name: nameA }],
+        ['/matchmake/joinOrCreate/rumble', { name: 'Mallory', mode: 'ffa' }],
+        [`/matchmake/joinById/${code}`, { name: nameA, ticket: 'eyJhbGciOiJFZERTQSJ9.e30.AAAA' }],
+      ] as const) {
+        const r = await c.request.post(`${SERVER_HTTP}${path}`, { data, failOnStatusCode: false });
+        expect(r.status(), path).toBeGreaterThanOrEqual(400);
+        expect(await r.text(), path).not.toMatch(/sessionId|reservation/i);
+      }
+      await expect(a.getByTestId('ro-member')).toHaveCount(2); // nobody got a seat
+      await shot(c, '08-uninvited-C');
+    }
 
     // ---- 6. quick signals in the lobby; B mutes A; the member menu offers block and report
     await a.getByTestId('qs-send-chat-lets_go').click();
     await expect(b.getByTestId('qs-feed-item').first()).toContainText(/Let's go/i, { timeout: 30_000 });
-    await expect(c.getByTestId('qs-feed-item').first()).toContainText(/Let's go/i, { timeout: 30_000 }); // a guest hears it too
+    if (!STRICT)
+      await expect(c.getByTestId('qs-feed-item').first()).toContainText(/Let's go/i, { timeout: 30_000 }); // a guest hears it too
     await b.getByTestId('pf-member-menu').first().click();
     await expect(b.getByTestId('pf-member-dialog')).toBeVisible();
     await expect(b.getByTestId('pf-member-block')).toBeVisible();
     await expect(b.getByTestId('pf-member-report')).toBeVisible();
     await shot(b, '09-member-menu-B-phone');
     await b.getByTestId('pf-member-mute').click();
-    // C has no platform id in the room (it joined without a ticket): from A's side only a LOCAL hide exists for C
-    await a
-      .getByTestId('ro-member')
-      .filter({ hasText: `${nameA} 2` })
-      .getByTestId('pf-member-menu')
-      .click();
-    await expect(a.getByTestId('pf-member-local-mute')).toBeVisible();
-    await expect(a.getByTestId('pf-member-block')).toHaveCount(0);
-    await expect(a.getByTestId('pf-member-report')).toHaveCount(0);
-    await a.getByTestId('pf-member-close').click();
-    await expect(a.getByTestId('pf-member-dialog')).toHaveCount(0);
+    if (!STRICT) {
+      // C has no platform id in the room (it joined without a ticket): from A's side only a LOCAL hide exists for C
+      await a
+        .getByTestId('ro-member')
+        .filter({ hasText: `${nameA} 2` })
+        .getByTestId('pf-member-menu')
+        .click();
+      await expect(a.getByTestId('pf-member-local-mute')).toBeVisible();
+      await expect(a.getByTestId('pf-member-block')).toHaveCount(0);
+      await expect(a.getByTestId('pf-member-report')).toHaveCount(0);
+      await a.getByTestId('pf-member-close').click();
+      await expect(a.getByTestId('pf-member-dialog')).toHaveCount(0);
+    }
     // B unmutes A again (the later match signals are then wanted)
     await expect(b.getByTestId('pf-member-unmute')).toBeVisible({ timeout: 30_000 }); // the same dialog now offers Unmute
     await b.getByTestId('pf-member-unmute').click();
@@ -252,10 +292,12 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
       timeout: 30_000,
     });
 
-    // C leaves; the match is A + B
-    await c.getByTestId('ro-leave').click();
-    await c.getByTestId('ro-leave-confirm').click();
-    await expect(a.getByTestId('ro-member')).toHaveCount(2, { timeout: 60_000 });
+    if (!STRICT) {
+      // C leaves; the match is A + B
+      await c.getByTestId('ro-leave').click();
+      await c.getByTestId('ro-leave-confirm').click();
+      await expect(a.getByTestId('ro-member')).toHaveCount(2, { timeout: 60_000 });
+    }
     await ctxC.close(); // three software-rendered browsers starve the server and each other: C has done its part
 
     // ---- 7. Free-for-All match

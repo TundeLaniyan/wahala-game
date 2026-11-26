@@ -52,7 +52,7 @@ ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443/tcp && ufw --force enable
 6. Get the code (until it is merged, use the branch name):
 
 ```bash
-git clone https://github.com/TundeLaniyan/wahala-game.git && cd wahala-game && git checkout claude/wahala-backend-ops-v1
+git clone https://github.com/TundeLaniyan/wahala-game.git && cd wahala-game && git checkout claude/wahala-final-private-beta-v1
 ```
 
 ## 3. First start
@@ -87,7 +87,7 @@ From any computer: open `https://play.yourname.com/health` in a browser. It show
 ops/beta/wahala-beta.sh validate --quick
 ```
 
-It ends with `BACKEND VALIDATION: NO FAILURES` and a report file. Any `FAIL` line means: do not invite anyone, send the report to the developer. Lines marked `BLOCKED` are not failures: they are the parts that need the game itself to be connected (`BETA_INTEGRATION_HANDOFF.md`).
+It ends with `BACKEND VALIDATION: NO FAILURES` and a report file. Any `FAIL` line means: do not invite anyone, send the report to the developer. The final line also shows `0 blocked`: the match server is connected to the platform (`BETA_INTEGRATION_HANDOFF.md`), so nothing is waiting on anybody. A full run (no `--quick`) takes about 11 minutes and plays a real 3-minute match.
 
 ## 5. The certificate (HTTPS)
 
@@ -125,7 +125,7 @@ ops/beta/wahala-beta.sh invite list       # everybody's valid codes
 ops/beta/wahala-beta.sh invite revoke wb-xxxxxxxxxxxxxxxx   # stop one code (existing accounts keep working)
 ```
 
-(The game must send the code when it creates the account: see `BETA_INTEGRATION_HANDOFF.md` item 4. Until that is built nobody can create an account from the game itself, which is the safe default.)
+The beta page asks the tester for the code when it creates their player (a private-beta build of the game, `docs/ops/BETA_FRONTEND.md`); the code is sent once and never kept. A wrong code is refused with a plain message. The invite code is also what protects the match server: it only seats players who hold a ticket from the platform, and the platform only issues tickets to accounts.
 
 ## 7. Every day
 
@@ -223,4 +223,4 @@ Players' login sessions are separate: they use random tokens stored only as hash
 
 ## 14. What this does not do (so nobody is surprised)
 
-No real payments, no text or voice chat, no ranked play, no automatic scaling or second server. Google and Apple sign-in are switched off (they need accounts only you can create); every player is a guest with an invite code. The game itself is not yet connected to the accounts and tickets (`BETA_INTEGRATION_HANDOFF.md`).
+No real payments, no text or voice chat, no ranked play, no automatic scaling or second server. Google and Apple sign-in are switched off (they need accounts only you can create); every player is a guest with an invite code. The match server is connected to the accounts and tickets, and requires a ticket for every join (`BETA_INTEGRATION_HANDOFF.md`).

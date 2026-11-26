@@ -230,14 +230,29 @@ async function match() {
     const humans = r.players.filter((p) => !p.isBot);
     check(r.players.length === 32 && humans.length === 2, 'the match had 32 fighters: 2 humans and 30 server bots', `${r.players.length} fighters`);
     check(results[0].stateHash === results[1]?.stateHash, 'both clients saw the identical final state hash', String(r.stateHash));
-    s.match = { code, matchId: r.matchId, tick: r.tick, players: r.players, partyId: party.id, tookSec: took };
+    // INTEGRATED server: it reported the match to the platform ITSELF (its id is `<match id>:<room nonce>`, never the bare one). Wait for that record
+    // (the call is fire and forget) and build every replay below from the id the PLATFORM holds, so a replay is a replay and not a second match.
+    let recordedId = null;
+    if (o.integration) {
+      const rf = await call('POST', '/v1/auth/refresh', { refreshToken: s.A.refresh });
+      if (rf.status === 200) { s.A.access = rf.body.tokens.accessToken; s.A.refresh = rf.body.tokens.refreshToken; }
+      let rec = null;
+      for (let i = 0; i < 60 && !rec; i++) {
+        const h = await call('GET', '/v1/me/matches', undefined, s.A.access);
+        rec = h.body?.matches?.find((m) => m.endedAt) ?? null;
+        if (!rec) await sleep(500);
+      }
+      check(!!rec, 'I4a: the match server itself reported the finished match to the platform (this validator posted nothing)', rec ? `recorded as ${rec.matchId.slice(0, 12)}...` : 'nothing recorded within 30 s');
+      recordedId = rec?.matchId ?? null;
+    }
+    s.match = { code, matchId: recordedId ?? r.matchId, tick: r.tick, players: r.players, partyId: party.id, tookSec: took };
     // the bodies the match server will send to the platform once Architecture wires it (docs/PLATFORM_MATCH_HANDOFF.md section 3),
     // built from the REAL results of this real match; validate.sh posts them with the real shared secret from inside the network
     const idByName = { [s.A.name]: s.A.id, [s.B.name]: s.B.id };
     const lobby = lobbiesA.at(-1) ?? {};
     const participants = r.players.map((p) => ({ seat: p.seat, playerId: !p.isBot ? (idByName[p.name] ?? null) : null, name: p.name, isBot: p.isBot, team: p.team ?? null }));
     const base = {
-      matchId: String(r.matchId).replace(/[^A-Za-z0-9_.:-]/g, '_').slice(0, 64).padEnd(6, '_'),
+      matchId: recordedId ?? String(r.matchId).replace(/[^A-Za-z0-9_.:-]/g, '_').slice(0, 64).padEnd(6, '_'),
       game: lobby.settings?.game ?? 'deathmatch',
       arenaId: lobby.settings?.arenaId ?? 'rumbleOshodi',
       roomCode: code,

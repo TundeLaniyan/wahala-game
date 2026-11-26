@@ -621,7 +621,10 @@ describe('C4: secrets never reach a log, and shutdown leaves nothing running', (
         connections: 0,
       });
       await sleep(1500); // Colyseus' own 1 s bookkeeping timers (presence, stats) finish by themselves
-      expect([...live.values()].filter((w) => !/\/sdk\//.test(w))).toEqual([]);
+      // Not ours: the client SDK, and @pm2/io (a dependency of Colyseus whose IPC transport re-arms a 200 ms retry timer while the
+      // process is not under pm2; CI run 351 recorded it inside the window although a first start had settled the others). A timer
+      // that any code of this repository creates, or that Colyseus' room code leaves behind, still fails here.
+      expect([...live.values()].filter((w) => !/\/sdk\/|node_modules\/@pm2\/io\//.test(w))).toEqual([]);
     } finally {
       Object.assign(g, {
         setTimeout: real.st,

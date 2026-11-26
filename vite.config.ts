@@ -25,8 +25,15 @@ export default defineConfig(({ command, isPreview, mode }) => {
   // The hosted PRIVATE BETA client (docs/ops/BETA_FRONTEND.md): a platform build that also sets WAHALA_PRIVATE_BETA=1. It asks for an
   // invite code and offers only the party's private match (the beta match server refuses everyone without a platform ticket).
   const privateBeta = platform && /^(1|true|on|yes)$/i.test((env.WAHALA_PRIVATE_BETA ?? '').trim());
+  // Production builds live under /wahala-game/ (GitHub Pages). The hosted private-beta client is its own site: it is built for the
+  // root of its own host (or WAHALA_BASE), and only a private-beta build may change the base at all.
+  const base = privateBeta
+    ? (env.WAHALA_BASE ?? '').trim() || '/'
+    : command === 'build' || isPreview
+      ? '/wahala-game/'
+      : '/';
   return {
-    base: command === 'build' || isPreview ? '/wahala-game/' : '/',
+    base,
     plugins: [react(), optimizeModels(), offlineCache()],
     // WAHALA_* feature flags (src/platform/flags.ts) are public build-time switches, never secrets.
     envPrefix: ['VITE_', 'WAHALA_'],

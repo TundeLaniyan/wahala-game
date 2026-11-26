@@ -2,6 +2,7 @@ node_modules
 dist
 dist-online
 dist-private
+dist-beta
 private-e2e-diag
 playwright-report
 test-results

@@ -1,0 +1,330 @@
+
+== 0. preflight
+PASS    docker present
+PASS    openssl present
+PASS    curl present
+PASS    base64 present
+PASS    docker daemon reachable (29.9.2)
+PASS    docker compose plugin present
+INFO    isolated state folder: /tmp/wahala-validate.y7xft9 (project wahala-validate)
+
+== 1. build the real images and start the full stack
+PASS    init: secrets, Ed25519 ticket key, temporary certificate
+PASS    wahala-rumble-server runs as an unprivileged user
+PASS    wahala-player-platform runs as an unprivileged user
+PASS    compose up (db -> migrate -> platform / match server -> edge, backup, monitor)
+PASS    every service reports healthy
+PASS    migrations ran to the current schema
+PASS    only the edge publishes a port (database, match server, platform, monitor are private)
+PASS    db is not on the public network (wahala-validate_data )
+PASS    rumble is not on the public network (wahala-validate_app )
+PASS    platform is not on the public network (wahala-validate_app wahala-validate_data )
+PASS    app and data networks are internal (no route to or from the internet)
+PASS    the database container has no route to the internet
+
+== 2. production refusals (the real images, started wrongly on purpose)
+PASS    platform with NO configuration refuses to start
+PASS    production refuses PLATFORM_MOCK_IDP=1
+PASS    production refuses PLATFORM_MOCK_CHECKOUT=1
+PASS    production refuses PLATFORM_DEV_TEXT_CHAT=1
+PASS    production refuses a short admin token
+PASS    a secret given twice (value and file) is refused
+PASS    a missing secret file stops the start (never a silent start without it)
+NOTICE:  database "wahala_empty" does not exist, skipping
+PASS    production never migrates by itself: an empty database stops the platform
+PASS    the one-shot migrate step builds the schema on an empty database
+PASS    after migrate the platform accepts the database and starts
+PASS    an OLDER build refuses a database that a newer release changed (it never guesses; the handbook says restore the pre-release backup)
+PASS    the match server refuses its test-only fast mode in production
+PASS    the match server's /metrics needs its token
+
+== 3. the edge and the accounts, through https (a client's view)
+PASS    edge: match server /health - HTTP 200
+PASS    edge: platform /platform-health - HTTP 200
+PASS    ticket public key is published and has no private part - kid AO_gtRiIZtCfOz0ICc3DjopqzeUoj1KGD6NvMVx7SyQ
+PASS    never public: GET /metrics - HTTP 404
+PASS    never public: GET /ready - HTTP 404
+PASS    never public: POST /internal/v1/matches/started - HTTP 404
+PASS    never public: POST /internal/v1/comms/filter - HTTP 404
+PASS    never public: GET /admin/v1/reports - HTTP 404
+PASS    never public: GET /debug - HTTP 404
+PASS    plain http redirects to https - HTTP 308
+PASS    a non-WebSocket request to the socket path is refused - HTTP 426
+PASS    CORS echoes the allowed origin; HSTS is sent
+PASS    CORS refuses another origin
+PASS    an oversized body is refused - HTTP 413
+PASS    TLS 1.0 / 1.1 are refused
+PASS    WebSocket upgrade from a disallowed origin is refused - 403
+
+edge: 16 passed, 0 failed, 0 blocked-by-integration
+PASS    guests get distinct immutable ids
+PASS    tokens are opaque and prefixed (never a bare id)
+PASS    no token / a made-up token is refused
+PASS    a refresh token is not an access token
+PASS    a nickname that only differs by case/space is taken - HTTP 409
+PASS    a staff-impersonating nickname is refused - HTTP 422
+PASS    invite-only: creating an account WITHOUT a code is refused - HTTP 403
+PASS    invite-only: a WRONG code is refused - HTTP 403
+PASS    unknown fields in a request are refused (no smuggling a role)
+PASS    refresh rotates both tokens
+PASS    the old access token stops working at rotation
+PASS    replaying the old refresh token is refused
+PASS    reuse revokes the whole session (the thief and the owner both lose it)
+PASS    logout revokes the session at once
+PASS    guest-only beta: no sign-in provider is offered - {"providers":[]}
+PASS    Google sign-in is disabled (501) until real credentials exist - HTTP 501
+PASS    the development identity provider does not exist in production
+PASS    the mock checkout does not exist in production
+PASS    no payment provider is active; purchases are off - {"providers":[],"purchasesEnabled":false,"sandbox":false}
+PASS    unrestricted text chat does not exist in production
+PASS    voice chat is off - {"available":false,"eligible":false,"reason":"Voice chat is not available yet."}
+PASS    an unknown fighter id is refused
+PASS    profile settings persist
+
+accounts: 23 passed, 0 failed, 0 blocked-by-integration
+PASS    no secret value is in any container's configuration (docker inspect)
+
+== 4. a real authoritative match through the TLS edge
+PASS    friends form a party by code
+PASS    the leader gets a HOST ticket before the room exists
+PASS    a member cannot get a room ticket before the leader opens a room
+PASS    a private room is created on the authoritative server through wss:// - code length 6
+PASS    the leader reports the room code to the platform
+PASS    the member's match ticket verifies with ONLY the published public key (EdDSA, audience, room, expiry) - restricted=true
+PASS    the same ticket is refused for another room
+PASS    a tampered ticket is refused
+PASS    both party members are in the SAME authoritative room - Validate Ada, Validate Bola
+PASS    I1: a HOST ticket (room "*") cannot be used to join an existing room
+PASS    I2: a tampered ticket is refused by the match server
+PASS    I3: a ticketed player sits under the PLATFORM name, whatever name the client sends - Validate Ada, Validate Bola
+PASS    I3b: the seat carries the verified platform player id (the same one the platform issued) - {"verified":true,"id":true}
+PASS    I7: a plain guest cannot join the room by its code, even though the code is known
+PASS    I8: a plain guest cannot create a room on the match server directly
+PASS    I9: quick play is closed in the private beta (no seat without a ticket)
+PASS    I10: a made-up ticket is refused
+INFO    match started - 180 s match, 2 humans + bots, waiting for the server's result...
+PASS    the authoritative server finished the match and sent the results to both humans - 186 s
+PASS    the match had 32 fighters: 2 humans and 30 server bots - 32 fighters
+PASS    both clients saw the identical final state hash - 3524086832
+PASS    I4a: the match server itself reported the finished match to the platform (this validator posted nothing) - recorded as KHAZGB-1:14d...
+
+match: 21 passed, 0 failed, 0 blocked-by-integration
+INFO    server load while the match ran (cpu % of one core, RSS MB, playing rooms): peak cpu 47%, peak rss 174 MB, dropped ticks 0, samples 18
+
+== 5. signed match results (platform side) and replay protection
+PASS    unsigned / forged / stale internal call refused (nosig)
+PASS    unsigned / forged / stale internal call refused (badsig)
+PASS    unsigned / forged / stale internal call refused (stale)
+PASS    the same signed 'started' body again is a harmless duplicate (the match server's own call came first)
+PASS    a result naming a player who was never ticketed is REFUSED
+PASS    a replayed signed 'finished' changes nothing (first call wins; each player's history is checked against the real results in step 6)
+PASS    the match server itself posted started and finished with the real results (nothing was posted by this validator before the history check in step 6)
+
+== 6. friends, parties, quick signals, mute, block, report, rate limits
+PASS    the signed result is in the member's own history - {"placement":31,"kills":0,"deaths":12,"assists":0,"botKills":0,"botDeaths":0,"botAssists":0,"controlledByBotAtEnd":false,"team":null}
+PASS    I4: the recorded placement and kills equal the authoritative server's own final results for this player - {"recorded":{"placement":31,"kills":0},"server":{"placement":31,"kills":0}}
+PASS    I4b: the leader has the same match in their own history
+PASS    a stranger's history does not contain it
+PASS    friend request by friend code
+PASS    only the receiver can accept
+PASS    the receiver accepts
+PASS    friendship is visible to both
+PASS    presence shows a friend online
+PASS    a preset quick signal is sent
+PASS    free text is refused (presets only)
+PASS    the other member sees it
+PASS    a muted sender disappears for the muter
+PASS    a report about someone you actually played with is filed
+PASS    a report about a stranger is refused
+PASS    block
+PASS    blocking removes the friendship
+PASS    blocking removes the blocked member from the shared party
+PASS    the blocked player cannot find the blocker by code
+PASS    a flood of account creation from one address is rate-limited - 49/60 refused with 429
+PASS    the refusal says when to retry (Retry-After)
+
+social: 21 passed, 0 failed, 0 blocked-by-integration
+PASS    operator API is reachable ONLY from inside (needs the admin token)
+PASS    operator API refuses a wrong token
+PASS    platform /metrics answers with the token ({"uptimeSec":262,"process":{"rssMb":72,"heapUsedMb":11,"externalMb":4},"eventLoop":{"p50Ms":20.2,"p99Ms":20.8,"maxMs":79.4},"db":{"total":10,"idle":10...)
+PASS    match server /metrics shows its capacity guard (rooms, CPU budget)
+PASS    the playing-room cap is active in the running server
+
+== 7. restarts, crashes and persistence
+PASS    before-any-restart: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    before-any-restart: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    before-any-restart: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    before-any-restart: profile settings persisted
+PASS    before-any-restart: the block persisted
+PASS    before-any-restart: match history persisted
+PASS    before-any-restart: the mute persisted
+PASS    before-any-restart: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+PASS    after-platform-restart: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-platform-restart: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-platform-restart: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-platform-restart: profile settings persisted
+PASS    after-platform-restart: the block persisted
+PASS    after-platform-restart: match history persisted
+PASS    after-platform-restart: the mute persisted
+PASS    after-platform-restart: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+PASS    after-database-restart: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-database-restart: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-database-restart: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-database-restart: profile settings persisted
+PASS    after-database-restart: the block persisted
+PASS    after-database-restart: match history persisted
+PASS    after-database-restart: the mute persisted
+PASS    after-database-restart: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+PASS    PostgreSQL killed with SIGKILL (no clean shutdown): restarted by Docker and recovered by itself
+PASS    after-database-crash: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-database-crash: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-database-crash: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-database-crash: profile settings persisted
+PASS    after-database-crash: the block persisted
+PASS    after-database-crash: match history persisted
+PASS    after-database-crash: the mute persisted
+PASS    after-database-crash: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+PASS    a crashed platform (SIGKILL) is restarted by Docker's restart policy
+PASS    after-platform-crash: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-platform-crash: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-platform-crash: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-platform-crash: profile settings persisted
+PASS    after-platform-crash: the block persisted
+PASS    after-platform-crash: match history persisted
+PASS    after-platform-crash: the mute persisted
+PASS    after-platform-crash: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+PASS    a crashed match server (SIGKILL) is restarted by Docker's restart policy
+PASS    database OUTAGE: public, database-free endpoints keep answering (HTTP 200)
+PASS    database OUTAGE: a request that needs the database fails cleanly (HTTP 500, no crash)
+PASS    database OUTAGE: the match server (no database) keeps serving
+PASS    RECOVERY: the platform serves database requests again without a restart
+PASS    after-outage-recovery: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-outage-recovery: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-outage-recovery: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-outage-recovery: profile settings persisted
+PASS    after-outage-recovery: the block persisted
+PASS    after-outage-recovery: match history persisted
+PASS    after-outage-recovery: the mute persisted
+PASS    after-outage-recovery: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+PASS    full stop and start (down / up): everything healthy again
+PASS    after-full-restart: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-full-restart: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-full-restart: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-full-restart: profile settings persisted
+PASS    after-full-restart: the block persisted
+PASS    after-full-restart: match history persisted
+PASS    after-full-restart: the mute persisted
+PASS    after-full-restart: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+
+== 7a. a platform outage does not delay a match (I5)
+PASS    I5 baseline: with the platform up, a ticketed match starts - 3076 ms after Start
+
+outage: 1 passed, 0 failed, 0 blocked-by-integration
+
+outage: 0 passed, 0 failed, 0 blocked-by-integration
+PASS    I5: with the platform STOPPED, the match still starts (the cached public key verifies the ticket) - 3077 ms after Start (baseline 3076 ms)
+PASS    I5: the outage did not delay the start by more than 2 s - 3077 vs 3076 + 2000 ms
+PASS    I5: the match keeps running while the platform is away - playing
+
+outage: 3 passed, 0 failed, 0 blocked-by-integration
+PASS    the platform started again after the outage test
+PASS    I5: the platform is healthy again after the outage - HTTP 200
+PASS    I5: the platform answers history requests, and no match from the outage was invented - 0 entries
+
+outage: 2 passed, 0 failed, 0 blocked-by-integration
+
+== 7b. secret rotation (the operator procedure, on the live stack)
+PASS    before rotation the admin token works
+PASS    rotate admin-token completed
+PASS    after rotation the OLD admin token is refused
+PASS    after rotation the NEW admin token works
+PASS    rotate ticket-key completed
+PASS    the published ticket key changed ("kid":"AO_gtRiIZtCfOz0ICc3DjopqzeUoj1KGD6NvMVx7SyQ" -> "kid":"B_PmRvcWAmNx-pEGdyomKjCCY9R-ynA79XYYl6nsIQU")
+PASS    rotate db-password completed
+PASS    the NEW database password works over the network (positive control)
+PASS    the OLD database password is refused by PostgreSQL
+PASS    the platform uses the new password (guest creation works)
+PASS    rotate platform-metrics-token completed
+PASS    rotate rumble-metrics-token completed
+PASS    rotate match-server-secret completed
+PASS    the match server's /metrics refuses the OLD token
+PASS    the match server's /metrics accepts the NEW token
+PASS    after-rotation: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-rotation: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-rotation: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-rotation: profile settings persisted
+PASS    after-rotation: the block persisted
+PASS    after-rotation: match history persisted
+PASS    after-rotation: the mute persisted
+PASS    after-rotation: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+PASS    rollback: the previous images are restored and every service is healthy again
+PASS    after-rollback: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-rollback: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-rollback: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-rollback: profile settings persisted
+PASS    after-rollback: the block persisted
+PASS    after-rollback: match history persisted
+PASS    after-rollback: the mute persisted
+PASS    after-rollback: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+
+== 8. backup and restoration
+PASS    manual backup: backup ok: wahala-20261126T122345Z.dump 76577 bytes
+PASS    backup file exists (76577 bytes, mode 600)
+PASS    backup files are private (0600)
+PASS    restore-test: backup : 19 players, 19 profiles, 19 sessions, 27 audit rows, schema 6
+INFO    DISASTER SIMULATED: sessions, friendships, match history and profiles deleted from the live database
+PASS    restore into the live database completed (restored wahala-20261126T122345Z.dump and restarted the services.)
+PASS    after-disaster-restore: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-disaster-restore: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-disaster-restore: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-disaster-restore: profile settings persisted
+PASS    after-disaster-restore: the block persisted
+PASS    after-disaster-restore: match history persisted
+PASS    after-disaster-restore: the mute persisted
+PASS    after-disaster-restore: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+
+== 9. logs contain no secrets, tokens or room codes
+PASS    777 log lines from every service: no secret, no token, no room code, no friend code
+PASS    logs are structured (one JSON line per request with the route pattern, not the path)
+
+== 10. graceful shutdown
+PASS    platform stopped cleanly: exit 0 in 245 ms
+PASS    rumble stopped cleanly: exit 0 in 215 ms
+PASS    edge stopped cleanly: exit 0 in 320 ms
+PASS    db stopped cleanly: exit 0 in 267 ms
+PASS    restart after the clean stop
+PASS    after-clean-stop: A's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-clean-stop: B's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-clean-stop: C's account and nickname persisted, the session survived (refresh token still valid)
+PASS    after-clean-stop: profile settings persisted
+PASS    after-clean-stop: the block persisted
+PASS    after-clean-stop: match history persisted
+PASS    after-clean-stop: the mute persisted
+PASS    after-clean-stop: the party persisted (leader alone after the block)
+
+persist: 8 passed, 0 failed, 0 blocked-by-integration
+
+== RESULT
+256 passed, 0 failed, 0 blocked by an integration that belongs to another team; 635 s
+full report: /tmp/wahala-validate.y7xft9/validate/report.txt
+BACKEND VALIDATION: NO FAILURES

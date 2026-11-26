@@ -1,8 +1,15 @@
-# Private beta: what Architecture still has to connect, and the exact tests that prove it
+# Private beta: the match-server integration (DONE on `claude/wahala-final-private-beta-v1`, decision FC-1)
 
-**Status: BLOCKED BY INTEGRATION.** Everything on the deployment and platform side is built and verified (`BETA_READINESS.md`). The items below need changes in files that Architecture owns (the match server `server/src/**`, the game client `src/**`, the online UI). This branch did not touch them. No second identity, party or matchmaking system exists or is proposed: the platform issues tickets, the match server (the authority for rooms) checks them.
+**Status: INTEGRATED.** This file was the hand-off written by Backend Ops while the match server, the game client and the online UI were Architecture's. Those parts now exist in this branch and the two checks Backend Ops reported as `BLOCKED BY INTEGRATION` run, and pass, in `ops/beta/validate.sh` (see `docs/FINAL_INTEGRATION.md` for the run). The sections below are kept as the specification and now read as "what was connected and where":
 
-The contract itself is already written and unit-tested: `docs/PLATFORM_MATCH_HANDOFF.md` (sections 2-3), `player-platform/src/handoff/verify.ts` (reference verifier), `player-platform/src/http/serviceAuth.ts` (reference signer, 7 lines), `docs/openapi/platform.yaml`. This file adds only: the deployment wiring that is already in place, the precise list of changes, and the acceptance tests.
+| Hand-off item | Where it lives now |
+| --- | --- |
+| 1. Verify tickets at join / create | `server/src/app.ts` (`guardedInvoke`) + `server/src/core/platform.ts` (`PlatformLink.verifyTicket`: EdDSA signature against the JWKS with re-fetch on an unknown `kid`, issuer, audience, expiry, the room bound in the ticket, single use) |
+| "No ticket = a guest as today" | still true for a server **without** `RUMBLE_REQUIRE_TICKET` (offline-style dev, `npm run dev:private`). **The hosted beta sets `RUMBLE_REQUIRE_TICKET=1`** (the compose default): every matchmaking request from the network needs a valid ticket, so nobody can go around the invite gate by talking to the match server directly. See `docs/ops/BETA_FRONTEND.md` section 3 |
+| 2. Bind identity to the seat | `server/src/rooms/RumbleRoom.ts`, `server/src/core/Lobby.ts`: the platform id and name come from the verified ticket only (server-stamped `_acct`; client options starting with `_` are stripped); the typed name is ignored; one seat per account |
+| 3. Signed `started` / `finished` calls | `server/src/core/platform.ts` (`report`) from `RumbleRoom.reportToPlatform`: HMAC over `ts.POST.path.body`, 2 s timeout, retries in memory, never delays a tick or a start. The match id is `<match id>:<room nonce>` (a rematch in the same room is a different match) |
+| 4. Client asks for the ticket and sends the invite code | `src/online/platform/*` (`ensureGuest(nickname, inviteCode)`, ticket fetched right before each use), `src/ui/online/platform/PlatformPanel.tsx` (invite form), `EntryScreen` (private-beta mode) |
+| Shared secret as a file | `PLATFORM_MATCH_SERVER_SECRET_FILE` read by `loadPlatformConfig` (both set, unreadable or empty: the server refuses to start) |
 
 ## 1. Wiring that is already in place (no deployment change needed when you integrate)
 
