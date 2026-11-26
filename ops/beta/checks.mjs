@@ -196,13 +196,16 @@ async function match() {
     const lobbyB = lobbiesA.at(-1)?.members?.find((m) => m.name === s.B.name);
     check(lobbyB?.verified === true && lobbyB?.playerId === s.B.id, 'I3b: the seat carries the verified platform player id (the same one the platform issued)', JSON.stringify({ verified: lobbyB?.verified, id: lobbyB?.playerId === s.B.id }));
     // direct access without a ticket (raw HTTP and the SDK): refused on every entry point, even with a real room code
-    const raw = async (path, body) => { const r = await fetch(`${o['http-url'] ?? o.url}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null); return r ? r.status : 0; };
+    const raw = async (path, body) => { const r = await fetch(`${o.url}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null); return r ? r.status : 0; };
     check(await refused({ name: 'Uninvited' }), 'I7: a plain guest cannot join the room by its code, even though the code is known');
     let guestCreate = true; try { const r = await new Client(o.url).create('rumble', { name: 'Uninvited', private: true }); await r.leave().catch(() => {}); } catch { guestCreate = false; }
     check(!guestCreate, 'I8: a plain guest cannot create a room on the match server directly');
     let guestQuick = true; try { const r = await new Client(o.url).joinOrCreate('rumble', { name: 'Uninvited', mode: 'ffa' }); await r.leave().catch(() => {}); } catch { guestQuick = false; }
     check(!guestQuick, 'I9: quick play is closed in the private beta (no seat without a ticket)');
     check(await refused({ name: 'Mallory', ticket: 'eyJhbGciOiJFZERTQSJ9.e30.AAAA' }), 'I10: a made-up ticket is refused');
+    // I11: raw HTTP, the way a script outside the game would call the matchmaker (through the TLS edge): refused, and no seat reservation in the answer
+    const rawStatuses = [await raw('/matchmake/create/rumble', { name: 'Uninvited', private: true }), await raw(`/matchmake/joinById/${code}`, { name: 'Uninvited' }), await raw('/matchmake/joinOrCreate/rumble', { name: 'Uninvited', mode: 'ffa' })];
+    check(rawStatuses.every((st) => st >= 400 && st < 500), 'I11: raw HTTP matchmaking (create, join by code, quick play) without a ticket is refused, through the edge', rawStatuses.join(', '));
   }
   if (Number(o['match-seconds']) === 0) {
     add('INFO', 'quick mode: the match itself is not played (run validate.sh without --quick for the full 3-minute match)');
@@ -391,7 +394,7 @@ async function outage() {
     return;
   }
   if (stage === 'down') {
-    const { X, partyId, baselineMs } = s.outage;
+    const { X, baselineMs } = s.outage;
     // the ticket is made now ... validate.sh stopped the platform BEFORE this phase, so ask the platform first through a ticket minted earlier
     const r = await timedStart(s.outage.hostTicket, X.name);
     check(r.ms !== null, 'I5: with the platform STOPPED, the match still starts (the cached public key verifies the ticket)', `${r.ms} ms after Start (baseline ${baselineMs} ms)`);

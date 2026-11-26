@@ -61,6 +61,7 @@ describe.skipIf(!haveServer)('platform <-> match server, wired', () => {
         audience: 'wahala-rumble',
         internalUrl: h.base,
         secret: TEST_SECRET,
+        requireTicket: false,
       },
       {
         now: () => h.clock.now.getTime(),
