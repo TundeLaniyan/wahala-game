@@ -1,0 +1,2 @@
+# Everything the operator generates on the server: secrets, certificates, backups, the env file. NEVER commit any of it.
+state/
