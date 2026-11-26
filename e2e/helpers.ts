@@ -22,7 +22,30 @@ export interface TestState {
   result: unknown;
 }
 
+/**
+ * What the page said while the test ran (console errors and warnings, uncaught errors, failed requests) and what the test did (the
+ * Start tap with the screen it hit). Printed when a match start fails (`inMatch`): the open audio E2E failure (second match never
+ * shows its HUD, docs/CI.md) has so far been seen without any of this.
+ */
+const pageLog = new WeakMap<Page, string[]>();
+const note = (page: Page, line: string): void => {
+  const l = pageLog.get(page) ?? [];
+  l.push(`${new Date().toISOString().slice(11, 23)} ${line}`.slice(0, 300));
+  if (l.length > 60) l.shift();
+  pageLog.set(page, l);
+};
+
 export async function open(page: Page, query = ''): Promise<void> {
+  if (!pageLog.has(page)) {
+    pageLog.set(page, []);
+    page.on('console', (m) => {
+      if (m.type() === 'error' || m.type() === 'warning') note(page, `console.${m.type()}: ${m.text()}`);
+    });
+    page.on('pageerror', (e) => note(page, `pageerror: ${e.message}`));
+    page.on('requestfailed', (r) =>
+      note(page, `requestfailed: ${r.url().slice(-80)} ${r.failure()?.errorText ?? ''}`),
+    );
+  }
   await page.goto(`./?debug&q=low&seed=7${query}`);
   await expect(page.getByTestId('title-screen')).toBeVisible();
 }
@@ -126,6 +149,7 @@ export async function launch(page: Page, character?: string): Promise<void> {
   }
   if ((await page.getByTestId('menu-fighter').count()) > 0) await page.getByTestId('menu-continue').click();
   await page.getByTestId('start-button').click();
+  note(page, 'Start tapped');
 }
 
 /**
@@ -163,7 +187,34 @@ export async function inMatch(page: Page): Promise<void> {
         });
       })
       .catch(() => 'unavailable');
+    // is the page alive? requestAnimationFrame callbacks in two seconds (a frozen main thread gives 0 or 1), and the tab's visibility
+    const alive = await page
+      .evaluate(
+        () =>
+          new Promise<string>((resolve) => {
+            let frames = 0;
+            const stop = performance.now() + 2000;
+            const tick = (): void => {
+              frames++;
+              if (performance.now() < stop) requestAnimationFrame(tick);
+              else resolve(`${frames} animation frames in 2 s, tab ${document.visibilityState}`);
+            };
+            requestAnimationFrame(tick);
+            setTimeout(
+              () =>
+                resolve(
+                  `${frames} animation frames, then no answer for 6 s, tab ${document.visibilityState}`,
+                ),
+              6000,
+            );
+          }),
+      )
+      .catch(() => 'the page did not answer');
     console.log(`[inMatch] the HUD did not appear: ${where}`);
+    console.log(`[inMatch] page liveness: ${alive}`);
+    console.log(
+      `[inMatch] last page events:\n${(pageLog.get(page) ?? []).slice(-20).join('\n') || '(none recorded)'}`,
+    );
     throw new Error(`the HUD did not appear: ${where}`, { cause: error });
   }
   try {

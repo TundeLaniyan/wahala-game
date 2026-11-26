@@ -1,6 +1,6 @@
 # WAHALA! City Rumble: multiplayer operations pack
 
-Operations, infrastructure and security work for the existing authoritative City Rumble server (Node 22 + Colyseus, 32 fighters, bot filling, 30 s reconnection). **It does not change the simulation, netcode, server gameplay, the Pages workflow, or any file under `src/` or `server/`.** Everything added is under `ops/` and `docs/ops/`. Nothing was bought, provisioned, deployed, merged or made public.
+Operations, infrastructure and security work for the existing authoritative City Rumble server (Node 22 + Colyseus, 32 fighters, bot filling, 30 s reconnection). The pack itself changes nothing in the simulation, netcode or the Pages workflow. (On `claude/wahala-final-private-beta-v1` it is combined with the match-server ticket integration and the private-beta client: see [../FINAL_INTEGRATION.md](../FINAL_INTEGRATION.md).) Nothing was bought, provisioned, deployed, merged or made public.
 
 Based on `claude/wahala-stitch-uiux-v1` @ `f7cf2ae` (the newest server line: LAN support, identity rules, soak harness, shutdown check). The older `claude/wahala-city-rumble-online-30w0rm` line diverged; it is not merged here.
 
@@ -12,7 +12,9 @@ Based on `claude/wahala-stitch-uiux-v1` @ `f7cf2ae` (the newest server line: LAN
 | [BETA_READINESS.md](BETA_READINESS.md) | The readiness matrix (IMPLEMENTED / TESTED / MISSING / BLOCKED / DEFERRED) and the verdict |
 | [BETA_LOAD_RESULTS.md](BETA_LOAD_RESULTS.md) | Load and soak evidence on the deployed stack, and the initial concurrency cap |
 | [BETA_SECURITY_AND_RECOVERY.md](BETA_SECURITY_AND_RECOVERY.md) | Abuse tests, defects found, backup and restore drill |
-| [BETA_INTEGRATION_HANDOFF.md](BETA_INTEGRATION_HANDOFF.md) | What Architecture connects, with acceptance tests |
+| [BETA_INTEGRATION_HANDOFF.md](BETA_INTEGRATION_HANDOFF.md) | What was connected between the match server, client and platform, and where it lives |
+| [BETA_FRONTEND.md](BETA_FRONTEND.md) | The private-beta client: build, hosting, origins, and what protects every entry point |
+| [BETA_FOUNDER_TESTING.md](BETA_FOUNDER_TESTING.md) | The two founder procedures: same-Wi-Fi with two phones, and the hosted supervised beta |
 
 Tooling: `ops/beta/wahala-beta.sh` (one operator command), `ops/beta/compose.yml`, `ops/beta/validate.sh` (real-Docker verification), `ops/beta/load.sh` (load and soak). The rest of this pack is the match server's own operations material the beta builds on.
 

@@ -13,7 +13,7 @@
  * WAHALA_CHROMIUM. Env: BETA_E2E_SKIP_BUILD=1 (reuse dist-beta), BETA_E2E_KEEP=1 (leave the stack up), EXTRA_CA_DIR (a TLS-inspecting
  * proxy's CA for the image build), BETA_E2E_ARGS (extra Playwright arguments).
  */
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
   appendFileSync,
   createReadStream,
@@ -122,36 +122,43 @@ writeFileSync(
 );
 cleanup.push(() => rmSync('playwright.beta.config.ts', { force: true }));
 
-const result = spawnSync(
-  'npx',
-  [
-    'playwright',
-    'test',
-    'e2e/private-multiplayer.spec.ts',
-    '--config=playwright.beta.config.ts',
-    '--project=desktop',
-    '--workers=1',
-    '--trace',
-    'off',
-    '--timeout=900000',
-    '--retries=0',
-    '--reporter=line',
-    ...(process.env.BETA_E2E_ARGS?.split(' ') ?? []),
-  ],
-  {
-    stdio: 'inherit',
-    env: {
-      ...env,
-      WAHALA_PRIVATE_E2E_URL: `${ORIGIN}/`,
-      WAHALA_PRIVATE_E2E_PLATFORM: `https://${DOMAIN}`,
-      WAHALA_PRIVATE_E2E_SERVER: `https://${DOMAIN}`,
-      WAHALA_PRIVATE_E2E_INVITE: invite,
-      NODE_EXTRA_CA_CERTS: join(STATE, 'certs/fullchain.pem'),
-      WAHALA_MULTIPROCESS: '1',
-      CI: process.env.CI ?? '',
+// async on purpose: the page server above lives in THIS process, and a synchronous spawn would freeze it while the browsers need it
+const result = await new Promise((resolve) => {
+  const child = spawn(
+    'npx',
+    [
+      'playwright',
+      'test',
+      'e2e/private-multiplayer.spec.ts',
+      '--config=playwright.beta.config.ts',
+      '--project=desktop',
+      '--workers=1',
+      '--trace',
+      'off',
+      '--timeout=900000',
+      '--retries=0',
+      '--reporter=line',
+      ...(process.env.BETA_E2E_ARGS?.split(' ') ?? []),
+    ],
+    {
+      stdio: 'inherit',
+      env: {
+        ...env,
+        WAHALA_PRIVATE_E2E_URL: `${ORIGIN}/`,
+        WAHALA_PRIVATE_E2E_PLATFORM: `https://${DOMAIN}`,
+        WAHALA_PRIVATE_E2E_SERVER: `https://${DOMAIN}`,
+        WAHALA_PRIVATE_E2E_INVITE: invite,
+        NODE_EXTRA_CA_CERTS: join(STATE, 'certs/fullchain.pem'),
+        // the test domain is this machine: a machine that sends web traffic through a proxy (a sandbox, a company network) must not send it there
+        NO_PROXY: `${DOMAIN},127.0.0.1,localhost`,
+        no_proxy: `${DOMAIN},127.0.0.1,localhost`,
+        WAHALA_MULTIPROCESS: '1',
+        CI: process.env.CI ?? '',
+      },
     },
-  },
-);
+  );
+  child.on('exit', (status) => resolve({ status }));
+});
 for (const svc of ['rumble', 'platform']) {
   const r = spawnSync(
     'docker',

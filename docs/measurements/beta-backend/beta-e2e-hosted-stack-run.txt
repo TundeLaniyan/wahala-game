@@ -1,0 +1,17 @@
+created secret: db_password
+created secret: database_url
+created secret: match_server_secret
+created secret: admin_token
+created secret: platform_metrics_token
+created secret: rumble_metrics_token
+created secret: invite_codes (your first invite code is inside; show it with: wahala-beta.sh invite list)
+created secret: handoff_private_key (Ed25519)
+created a TEMPORARY self-signed certificate (replace it: wahala-beta.sh cert --domain play.wahala-beta.dev --email you@example.com)
+Set-up done. State folder: /tmp/wahala-beta-e2e-state (back it up; it holds every secret). Next:  ops/beta/wahala-beta.sh up
+the beta backend is running. Check it:  ops/beta/wahala-beta.sh status
+Running 1 test using 1 worker
+[1/1] [desktop] › e2e/private-multiplayer.spec.ts:108:1 › private multiplayer: guests, nicknames, friends, party, one private room, signals, mute / report, reconnect, results, rematch in Team Rumble
+  Slow test file: [desktop] › e2e/private-multiplayer.spec.ts (9.4m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  1 passed (9.5m)
+the beta backend is gone. Your secrets, certificates and backups remain in /tmp/wahala-beta-e2e-state (delete that folder to remove them too).

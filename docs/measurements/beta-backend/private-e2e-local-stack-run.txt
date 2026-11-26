@@ -1,0 +1,180 @@
+> wahala-game@0.1.0 test:private-e2e
+> node scripts/private-e2e.mjs
+NOTICE:  drop cascades to 27 other objects
+DETAIL:  drop cascades to table schema_migrations
+drop cascades to table players
+drop cascades to table profiles
+drop cascades to table identity_links
+drop cascades to table sessions
+drop cascades to table auth_nonces
+drop cascades to table audit_events
+drop cascades to table friend_requests
+drop cascades to table friendships
+drop cascades to table blocks
+drop cascades to table parties
+drop cascades to table party_members
+drop cascades to table party_invites
+drop cascades to table handoff_tickets
+drop cascades to table matches
+drop cascades to table match_participants
+drop cascades to table mutes
+drop cascades to table comm_restrictions
+drop cascades to table reports
+drop cascades to table party_signals
+drop cascades to table dev_chat_messages
+drop cascades to table catalog_items
+drop cascades to table catalog_prices
+drop cascades to table store_products
+drop cascades to table orders
+drop cascades to table order_events
+drop cascades to table entitlements
+[private-e2e] PostgreSQL: postgres://postgres@127.0.0.1:54329/wahala_platform
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 939 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-private/index.html                                                   2.32 kB │ gzip:   0.97 kB
+dist-private/sw.js                                                        8.80 kB
+dist-private/assets/bebas-neue-latin-400-normal-Bi-ndsyu.woff            11.18 kB
+dist-private/assets/space-grotesk-latin-700-normal-RjhwGPKo.woff2        12.84 kB
+dist-private/assets/space-grotesk-latin-500-normal-lFbtlQH6.woff2        13.31 kB
+dist-private/assets/space-grotesk-latin-400-normal-CJ-V5oYT.woff2        13.38 kB
+dist-private/assets/bebas-neue-latin-400-normal-9mHNbWWO.woff2           13.76 kB
+dist-private/assets/anton-latin-400-normal-AUNGEG_V.woff                 15.63 kB
+dist-private/assets/space-grotesk-latin-700-normal-CwsQ-cCU.woff         16.41 kB
+dist-private/assets/space-grotesk-latin-500-normal-CNSSEhBt.woff         16.98 kB
+dist-private/assets/space-grotesk-latin-400-normal-BnQMeOim.woff         17.00 kB
+dist-private/assets/barlow-condensed-latin-500-normal-HIEiP5Ov.woff      18.60 kB
+dist-private/assets/anton-latin-400-normal-Byf51wtH.woff2                18.61 kB
+dist-private/assets/barlow-condensed-latin-700-normal-Dmwat-ge.woff      18.82 kB
+dist-private/assets/barlow-condensed-latin-600-normal-BFJEwTuo.woff      18.89 kB
+dist-private/assets/barlow-condensed-latin-500-normal-BgYH2mbd.woff2     21.42 kB
+dist-private/assets/barlow-condensed-latin-600-normal-DepVgxBB.woff2     22.30 kB
+dist-private/assets/barlow-condensed-latin-700-normal-v1xN8_Wq.woff2     22.44 kB
+dist-private/assets/keyart-768-EuE_ghc6.webp                             34.43 kB
+dist-private/assets/fighter-campusQueen-360-Ds68WDhL.webp                36.46 kB
+dist-private/assets/fighter-lekkiBoy-360-CCD8SrEF.webp                   41.91 kB
+dist-private/assets/fighter-streetBaller-360-AFX9fXal.webp               43.63 kB
+dist-private/assets/section-ebuteMetta-railYard-tBFxMjho.webp            56.82 kB
+dist-private/assets/district-lekki-briefing-CS8yfgxL.webp                58.69 kB
+dist-private/assets/boss-ikennaWayside-intro-B9yhCkYq.webp               60.73 kB
+dist-private/assets/raid-warehouseDispatchDepot-BxkCHYUY.webp            60.84 kB
+dist-private/assets/boss-ogaSunmola-intro-Y41UEJRF.webp                  60.86 kB
+dist-private/assets/district-ebuteMetta-briefing-C_wmhHm_.webp           61.66 kB
+dist-private/assets/district-lagosIsland-briefing-utk44SQP.webp          61.72 kB
+dist-private/assets/district-ojuelegba-briefing-P0IgG8cy.webp            61.78 kB
+dist-private/assets/boss-barristerQuill-intro-DnjnjRHt.webp              61.81 kB
+dist-private/assets/prologue-CFNWUg0Z.webp                               62.04 kB
+dist-private/assets/section-oshodi-approach-njtT_pzl.webp                62.19 kB
+dist-private/assets/district-mushin-briefing-C3TsSrJG.webp               62.42 kB
+dist-private/assets/district-fadeyiSomolu-briefing-C0xovHAk.webp         62.59 kB
+dist-private/assets/district-oshodi-briefing-Bfx6qQOx.webp               62.76 kB
+dist-private/assets/boss-stewardHalcyon-intro-DEhgVGr9.webp              63.03 kB
+dist-private/assets/ending-BVN0TJTF.webp                                 63.15 kB
+dist-private/assets/boss-madamRonke-intro-CL6nqdvP.webp                  63.28 kB
+dist-private/assets/boss-marshalKobo-intro-BG7Z4XCl.webp                 63.41 kB
+dist-private/assets/finale-u-aeewqY.webp                                 63.45 kB
+dist-private/assets/env_wall_low-PUDStiut.glb                            66.42 kB
+dist-private/assets/prop_pillar_bollard-BWnmtEBD.glb                     69.27 kB
+dist-private/assets/prop_pillar_jersey-vI7nqFmU.glb                      74.92 kB
+dist-private/assets/prop_soft_fishcrates-v8X3FkX5.glb                    81.04 kB
+dist-private/assets/prop_soft_drums-exU2qqN4.glb                         84.05 kB
+dist-private/assets/env_shopsign-gKSDddzB.glb                            85.34 kB
+dist-private/assets/keyart-1376-CFEYBsvy.webp                            85.51 kB
+dist-private/assets/floor_orm-DdHogsWG.jpg                               94.15 kB
+dist-private/assets/prop_soft_cabledrum-C3XWqcsq.glb                     96.48 kB
+dist-private/assets/env_lamp-omBRRSRB.glb                               108.48 kB
+dist-private/assets/fighter-campusQueen-720-DqLUAPey.webp               111.53 kB
+dist-private/assets/fighter-lekkiBoy-720-D1Hh9gLS.webp                  115.94 kB
+dist-private/assets/floor_albedo-Bz49x_ZI.jpg                           117.18 kB
+dist-private/assets/env_barrel-BvC49BGX.glb                             118.57 kB
+dist-private/assets/prop_pillar_scaffold-DCQFfux0.glb                   119.89 kB
+dist-private/assets/env_bleacher-7iXyIFxU.glb                           120.00 kB
+dist-private/assets/fighter-streetBaller-720-DIPNZdgK.webp              123.38 kB
+dist-private/assets/prop_pillar_cabinet-Dyo4zW4I.glb                    124.41 kB
+dist-private/assets/prop_pillar_kiosk-D_OaBW3y.glb                      131.61 kB
+dist-private/assets/env_poles-DmEMfT5k.glb                              148.90 kB
+dist-private/assets/prop_soft_barrier-BPsjVjkA.glb                      161.46 kB
+dist-private/assets/floor_normal-CM4kDHO6.jpg                           167.89 kB
+dist-private/assets/prop_soft_tyres-CBFZG3Rn.glb                        173.27 kB
+dist-private/assets/env_wall_corner-BLWRznwn.glb                        173.32 kB
+dist-private/assets/env_tyrestack-D8rpE8hi.glb                          178.70 kB
+dist-private/assets/prop_pillar_a-DlwauPut.glb                          187.49 kB
+dist-private/assets/prop_soft_crate_b-DBU4dNZZ.glb                      190.74 kB
+dist-private/assets/prop_soft_crate-CVG_dgFc.glb                        190.81 kB
+dist-private/assets/prop_pillar_c-T22virwV.glb                          192.20 kB
+dist-private/assets/prop_soft_kegs-DSuyVNTb.glb                         197.49 kB
+dist-private/assets/prop_pillar_b-Df8hHruw.glb                          202.23 kB
+dist-private/assets/prop_soft_cartons-Dmre_erf.glb                      202.28 kB
+dist-private/assets/prop_pillar_container_a-BWFTUz1b.glb                206.87 kB
+dist-private/assets/prop_pillar_market-Ci3rqhKJ.glb                     207.96 kB
+dist-private/assets/prop_pillar_pier-C_0ci2Ju.glb                       208.08 kB
+dist-private/assets/prop_pillar_wallstub-Tcj47KKe.glb                   208.14 kB
+dist-private/assets/prop_soft_crates-Bh-GcDcD.glb                       213.66 kB
+dist-private/assets/prop_pillar_container_b-nWszwMbO.glb                218.22 kB
+dist-private/assets/prop_pillar_column-oXqO0OYc.glb                     248.34 kB
+dist-private/assets/prop_soft_sacks-BPE5n3NG.glb                        367.06 kB
+dist-private/assets/env_wall-B0G1TGy3.glb                               378.55 kB
+dist-private/assets/env_wall_b-CY94tF1K.glb                             379.93 kB
+dist-private/assets/env_wall_c-DJ5ayVcE.glb                             382.03 kB
+dist-private/assets/env_kiosk-CaPKIqML.glb                              419.62 kB
+dist-private/assets/gen_generator-CI_wyUUp.glb                          431.57 kB
+dist-private/assets/env_building_c-Dgg7Rmk4.glb                         603.32 kB
+dist-private/assets/env_building_a-Bqaij23i.glb                         616.12 kB
+dist-private/assets/env_building_d-mDFM6d3f.glb                         628.25 kB
+dist-private/assets/env_building_b-DU4O2SfK.glb                         676.32 kB
+dist-private/assets/veh_okada-DGdebOjy.glb                              877.38 kB
+dist-private/assets/char_areaBoss-CmtbWYRS.glb                          903.16 kB
+dist-private/assets/veh_keke-BXKY2DGr.glb                               934.04 kB
+dist-private/assets/veh_taxi-CgYKwMXg.glb                               954.59 kB
+dist-private/assets/char_bottleThrower-DM0FB9j3.glb                   1,030.63 kB
+dist-private/assets/char_agbero-thqoBht0.glb                          1,061.72 kB
+dist-private/assets/char_bossStewardHalcyon-B-8Sl5mj.glb              1,067.34 kB
+dist-private/assets/veh_danfo-Ba7LW3HH.glb                            1,101.40 kB
+dist-private/assets/char_areaBoy-BQ2B6XJj.glb                         1,108.16 kB
+dist-private/assets/char_marketEnforcer-B_W84xxh.glb                  1,112.13 kB
+dist-private/assets/char_lekkiBoy-Bgt7NdYA.glb                        1,145.27 kB
+dist-private/assets/char_lieutenant-CmyZpS4t.glb                      1,157.58 kB
+dist-private/assets/char_ringSecurity-BDK0H-uy.glb                    1,165.56 kB
+dist-private/assets/char_bossMarshalKobo-WtsdeiOJ.glb                 1,190.11 kB
+dist-private/assets/char_bossOgaSunmola-Bx29ZoMH.glb                  1,195.89 kB
+dist-private/assets/char_streetBaller-BIFbmlBB.glb                    1,196.21 kB
+dist-private/assets/char_routeMarshal-DQhdYccY.glb                    1,213.72 kB
+dist-private/assets/char_bossIkennaWayside-N-naJ3bk.glb               1,218.12 kB
+dist-private/assets/char_bossBarristerQuill-7FOxx1jE.glb              1,244.45 kB
+dist-private/assets/char_bossMadamRonke-CCjAK9Gy.glb                  1,281.09 kB
+dist-private/assets/char_campusQueen-CUu5sLIA.glb                     1,300.47 kB
+dist-private/assets/char_bossTheLandlord-B6YXLxcI.glb                 1,335.44 kB
+dist-private/assets/char_heavyEnforcer-Dfn1Sstk.glb                   1,336.03 kB
+dist-private/assets/crowd-Cf8Icn4K.glb                                1,670.65 kB
+dist-private/assets/testlab-CmPBQqB6.css                                  5.14 kB │ gzip:   1.51 kB
+dist-private/assets/connected-Isc-H4Ad.css                               17.11 kB │ gzip:   4.04 kB
+dist-private/assets/index-BDsJI1YH.css                                  174.16 kB │ gzip:  34.25 kB
+dist-private/assets/rolldown-runtime-WkwZ5CU-.js                          0.59 kB │ gzip:   0.36 kB
+dist-private/assets/briefPreview-CtKHLIk8.js                              1.88 kB │ gzip:   1.10 kB
+dist-private/assets/RumbleOnlineScreen-C7NMPisQ.js                        2.65 kB │ gzip:   1.22 kB
+dist-private/assets/Frame-CxcqNQSF.js                                     2.75 kB │ gzip:   0.96 kB
+dist-private/assets/RumbleOnlineOverlay-CKmv7tou.js                       5.04 kB │ gzip:   1.68 kB
+dist-private/assets/adapter-COTIM36a.js                                   6.28 kB │ gzip:   2.63 kB
+dist-private/assets/testlab-Cnn9be7r.js                                  42.05 kB │ gzip:  13.54 kB
+dist-private/assets/RaidViews-BoNhk148.js                                42.42 kB │ gzip:  13.61 kB
+dist-private/assets/connected-DTQ51Xwi.js                                54.89 kB │ gzip:  13.85 kB
+dist-private/assets/OnlineScreen-Dq3jvnaJ.js                             71.58 kB │ gzip:  22.36 kB
+dist-private/assets/rumbleOnline-Czu-sg9F.js                            231.22 kB │ gzip:  74.41 kB
+dist-private/assets/sim-BS9BL5sX.js                                     433.49 kB │ gzip: 134.02 kB
+dist-private/assets/index-Cll4LaWM.js                                   444.33 kB │ gzip: 136.57 kB
+dist-private/assets/three-CLpNnD-j.js                                   680.98 kB │ gzip: 172.40 kB
+dist-private/assets/session-CM-erdFA.js                               1,289.24 kB │ gzip: 441.97 kB
+✓ built in 1.59s
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 900 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[private-e2e] stack up: web http://127.0.0.1:4831/wahala-game/  match server :2568  platform :4568
+Running 1 test using 1 worker
+[1/1] [desktop] › e2e/private-multiplayer.spec.ts:108:1 › private multiplayer: guests, nicknames, friends, party, one private room, signals, mute / report, reconnect, results, rematch in Team Rumble
+  Slow test file: [desktop] › e2e/private-multiplayer.spec.ts (9.4m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  1 passed (9.4m)

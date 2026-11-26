@@ -139,8 +139,12 @@ describe('City Rumble AI determinism and cost', () => {
     expect(aiCounters.deferred).toBeGreaterThan(0); // the allowance really is in use
     // a single re-plan never runs far past its budget (one in-flight check may finish)
     expect(aiCounters.maxThinkWork).toBeLessThanOrEqual(LARGE_WORK_BUDGET.hard + 6);
-    // generous CPU-time bound (shared machines): 32 hard bots + the simulation (measured ~1.5 ms)
-    expect(msPerTick).toBeLessThan(12);
+    // A coarse CPU-time ceiling, not the regression detector (the deterministic work budgets above are). Measured: 32 Hard bots plus the
+    // simulation cost 7.5 to 8.9 ms per tick (median window) on a quiet 4-core machine, alone, beside two CPU hogs and with four copies
+    // running at once on two cores (CPU time barely moves under time-slicing); CI runs 326, 346 and 351 measured 12.1, 12.5 and 12.6 on
+    // slower shared runners, which failed the old 12 ms bound that was 1.45 x the quiet cost (the "~1.5 ms" it quoted is long out of
+    // date). 20 ms is 2.4 x the quiet cost and 1.6 x the slowest runner seen; a runaway (say, a re-plan that stops being bounded) still fails.
+    expect(msPerTick).toBeLessThan(20);
   });
 
   it('reasons about the nearest few rivals inside a local window', () => {
