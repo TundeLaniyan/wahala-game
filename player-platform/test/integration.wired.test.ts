@@ -201,10 +201,24 @@ describe.skipIf(!haveServer)('platform <-> match server, wired', () => {
     });
     expect(forged.status).toBe(400);
 
+    // REMATCH in the same, lingering room (the party was released when match 1 ended): the leader's host ticket is bound to this room
+    // the first time it is accepted, so match 2 is recorded as well (found by the two-browser acceptance run)
+    leadRoom.send('rematch');
+    await until('back in the room lobby', () => leadLobbies.at(-1)?.phase === 'lobby', 30_000);
+    results.length = 0;
+    leadRoom.send('start');
+    await until('the rematch ended', () => results.length > 0, 120_000);
+    let again: unknown[] = [];
+    await until('platform has both matches', () => {
+      void api.get('/v1/me/matches', lead.access).then((r) => (again = r.body.matches));
+      return again.length === 2;
+    });
+    expect(((await api.get('/v1/me/matches', member.access)).body.matches as unknown[]).length).toBe(2);
+
     await impostor.leave();
     await memberRoom.leave();
     await leadRoom.leave();
-  }, 240_000);
+  }, 360_000);
 
   it('a platform outage never stops a ticketed match: it starts and ends, the result is simply not recorded', async () => {
     const api = client(h.base);

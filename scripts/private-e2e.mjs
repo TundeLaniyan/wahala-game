@@ -102,6 +102,8 @@ start('server', 'npx', ['tsx', 'src/main.ts'], {
     RUMBLE_ALLOWED_ORIGINS: origin,
     RUMBLE_GRACE_SECONDS: '3',
     RUMBLE_RECONNECT_SECONDS: '30',
+    // software-rendered pages stall for seconds: tolerate it like scripts/online-e2e.mjs (3 s x 6 pings)
+    RUMBLE_PING_MAX_RETRIES: process.env.RUMBLE_PING_MAX_RETRIES ?? '6',
     PLATFORM_JWKS_URL: `http://127.0.0.1:${PLATFORM}/.well-known/jwks.json`,
     PLATFORM_INTERNAL_URL: `http://127.0.0.1:${PLATFORM}`,
     PLATFORM_MATCH_SERVER_SECRET: secret,

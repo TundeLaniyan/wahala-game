@@ -249,14 +249,24 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     // a quick signal in the match, from A to B (Free-for-All: match-wide presets only)
     await a.getByTestId('qs-hud-toggle').click();
     await a.getByTestId('qs-hud-send-chat-nice').click();
-    await expect(b.getByText(/Nice one/i).first()).toBeVisible({ timeout: 30_000 });
+    // B's rail shows it for a few seconds: look for it, take a picture, and prove delivery at the results (the feed keeps it)
+    const railSaw = await b
+      .getByText(/Nice one/i)
+      .first()
+      .waitFor({ state: 'visible', timeout: 10_000 })
+      .then(
+        () => true,
+        () => false,
+      );
+    test.info().annotations.push({ type: 'signal-in-match-rail-B', description: String(railSaw) });
+    await shot(b, '11b-signal-B-phone');
 
     // B's touch pad moves B's fighter; B loses its connection and comes back to the SAME seat
     await expect(b.getByTestId('stick-zone')).toBeVisible({ timeout: 90_000 });
     const seatB = sb.seat;
     await ctxB.setOffline(true);
     await expect(b.getByTestId('net-banner')).toBeVisible({ timeout: 60_000 });
-    await b.waitForTimeout(15_000); // inside the 30 s reconnection window; a bot plays the seat meanwhile
+    await b.waitForTimeout(30_000); // the server notices the drop (3 s x 6 pings), a bot plays the seat, the 30 s window is still open
     await ctxB.setOffline(false);
     await expect(b.getByTestId('net-banner')).toHaveCount(0, { timeout: 120_000 });
     const back = await W(b).state();
@@ -278,6 +288,10 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     expect(ra.filter((t) => /\bBOT\b/.test(t))).toHaveLength(30);
     expect(ra.join(' ')).toContain(nameA);
     await shot(a, '13-results-A');
+    // delivered to B: its feed holds the signal (the room panel sits under the results overlay, so it is attached, not visible)
+    await expect(b.locator('[data-testid="qs-feed-item"][data-signal="chat.nice"]').first()).toBeAttached({
+      timeout: 30_000,
+    });
     await expect.poll(async () => (await history(a)).length, { timeout: 60_000 }).toBe(1);
     await expect.poll(async () => (await history(b)).length, { timeout: 60_000 }).toBe(1);
     const h1a = (await history(a))[0]!;

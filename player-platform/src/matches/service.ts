@@ -113,6 +113,15 @@ export class MatchService {
         [p.playerId, roomCode, HOST_ROOM],
       );
       if (t.rowCount === 0) throw new ApiError('bad_request', 'a participant holds no ticket for this room');
+      // The leader's HOST ticket was accepted because their party still reports this room. Once the match ends the party is
+      // released (code cleared), but the room lingers for a rematch and the leader is still in it: bind that ticket to THIS room
+      // now, so a rematch in the same room keeps being recorded. Same condition as above, nothing wider (decision MP-PLAT).
+      await q.query(
+        `UPDATE handoff_tickets t SET room_code = $2
+          WHERE t.player_id = $1 AND t.room_code = $3
+            AND EXISTS (SELECT 1 FROM parties p WHERE p.id = t.party_id AND p.leader_id = t.player_id AND p.match_room_code = $2)`,
+        [p.playerId, roomCode, HOST_ROOM],
+      );
     }
   }
 
