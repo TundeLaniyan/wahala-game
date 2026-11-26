@@ -32,6 +32,9 @@ class TestSession implements RumbleSession {
   settings(p: SettingsMsg) {
     this.calls.push(`settings:${JSON.stringify(p)}`);
   }
+  sendSignal(id: string) {
+    this.calls.push(`signal:${id}`);
+  }
   async leave() {
     this.left++;
   }

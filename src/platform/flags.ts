@@ -9,6 +9,9 @@
  *   WAHALA_ONLINE_URL           build-time: the server endpoint (may contain `{host}`, the page's hostname). With
  *                               WAHALA_ONLINE_ENABLED this makes a SERVER build (docs/ONLINE_INTEGRATION.md)
  *   ?online                     run time: in a SERVER build only, shows the Online City Rumble entry (`rumbleOnline`)
+ *   WAHALA_PLATFORM_URL         build-time: the player-platform HTTP API (may contain `{host}`). Only in a SERVER build: then
+ *                               the online flow gains guest identity, friends, parties and quick signals (`platform`,
+ *                               docs/PLATFORM_CLIENT.md). Never read from the URL; a default build has none of it.
  *   WAHALA_VOICE_ENABLED=true   build-time: shows the voice UI state (provider interface only, no WebRTC here)
  *   WAHALA_CAMPAIGN_ENABLED     default true; `false` hides the campaign
  *   WAHALA_EXPERIMENTAL_CONTENT default false; `true` (or ?experimental) shows unfinished roster / content
@@ -35,6 +38,16 @@ export interface FeatureFlags {
   rumbleOnline: boolean;
   /** The resolved endpoint of a server build (`{host}` substituted), null otherwise or when it is not a valid ws/http URL. */
   onlineEndpoint: string | null;
+  /**
+   * The player-platform features (guest identity, friends, parties, quick signals) are offered: `rumbleOnline` AND a
+   * `platformEndpoint`. False in every build without both switches, whatever the URL says.
+   */
+  platform: boolean;
+  /**
+   * The platform API base URL of a SERVER build made with `WAHALA_PLATFORM_URL` (`{host}` substituted), null otherwise or
+   * when it is not an http:// or https:// URL.
+   */
+  platformEndpoint: string | null;
 }
 
 /** The defaults baked into every build that sets no variable. */
@@ -46,6 +59,8 @@ export const FLAG_DEFAULTS: Readonly<FeatureFlags> = Object.freeze({
   experimentalContent: false,
   rumbleOnline: false,
   onlineEndpoint: null,
+  platform: false,
+  platformEndpoint: null,
 });
 
 export type FlagEnv = Record<string, string | boolean | undefined>;
@@ -82,6 +97,17 @@ export function resolveEndpoint(url: unknown, hostname: string): string | null {
   return ENDPOINT_RE.test(out) ? out : null;
 }
 
+const HTTP_RE = /^https?:\/\//i;
+
+/**
+ * The platform API endpoint: `url` resolved like `resolveEndpoint` but http:// or https:// only (it is a REST API, not a
+ * socket), without a trailing slash. Pure.
+ */
+export function resolvePlatformEndpoint(url: unknown, hostname: string): string | null {
+  const out = resolveEndpoint(url, hostname);
+  return out !== null && HTTP_RE.test(out) ? out.replace(/\/+$/, '') : null;
+}
+
 /**
  * Resolves the flags. Pure: `env` is the build-time environment, `search` the URL query, `hostname` the page's
  * `location.hostname` (only used to fill `{host}` in the endpoint). Only the campaign and experimental flags, the
@@ -98,6 +124,8 @@ export function resolveFlags(env: FlagEnv, search = '', hostname = ''): FeatureF
   const onlineMode: OnlineMode = serverBuild ? 'server' : mock ? 'mock' : 'off';
   const campaignQuery = q.get('campaign');
   const onlineEndpoint = serverBuild ? resolveEndpoint(env.WAHALA_ONLINE_URL, hostname) : null;
+  // the platform exists only inside a server build: a platform URL alone (or with only half of the online switch) is nothing
+  const platformEndpoint = serverBuild ? resolvePlatformEndpoint(env.WAHALA_PLATFORM_URL, hostname) : null;
   return {
     online: onlineMode !== 'off',
     onlineMode,
@@ -109,6 +137,8 @@ export function resolveFlags(env: FlagEnv, search = '', hostname = ''): FeatureF
     experimentalContent: truthy(env.WAHALA_EXPERIMENTAL_CONTENT) || q.has('experimental'),
     rumbleOnline: onlineEndpoint !== null && q.has('online'),
     onlineEndpoint,
+    platform: onlineEndpoint !== null && q.has('online') && platformEndpoint !== null,
+    platformEndpoint,
   };
 }
 

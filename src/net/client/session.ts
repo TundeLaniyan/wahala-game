@@ -66,6 +66,7 @@ export function createRumbleSession(
       events.results(m);
     },
     notice: (m) => events.notice(m),
+    signal: (m) => events.signal(m),
     status(s, detail) {
       status = s;
       driver?.setConnection(s, detail);
@@ -96,6 +97,7 @@ export function createRumbleSession(
     start: () => conn.send(MSG.start, {}),
     rematch: () => conn.send(MSG.rematch, {}),
     settings: (patch: SettingsMsg) => conn.send(MSG.settings, patch),
+    sendSignal: (id: string) => conn.send(MSG.signal, { id }),
     async leave(): Promise<void> {
       driver?.dispose();
       driver = null;

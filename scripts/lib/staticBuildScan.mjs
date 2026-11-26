@@ -30,6 +30,10 @@ export const ONLINE_CHUNK_MARKERS = [
   ['colyseus', /colyseus/i],
   ['room-code alphabet (src/net/protocol.ts)', /ABCDEFGHJKMNPQRSTUVWXYZ23456789/],
   ['RumbleSession', /RumbleSession/],
+  // the player-platform client (src/online/platform/**, docs/PLATFORM_CLIENT.md): its storage key and its API paths
+  ['platform storage key', /wahala\.platform\.v1/],
+  ['platform guest sign-in route', /\/v1\/auth\/guest/],
+  ['platform match ticket route', /\/match\/ticket/],
 ];
 
 /** Strings of the online UI that live in the MAIN bundle of a server build (the Home entry), but never in a public one. */

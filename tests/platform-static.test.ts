@@ -101,7 +101,9 @@ describe('the local game does not depend on the optional layers', () => {
 
   it('outside the optional layers themselves, only the menu shell (lazy Online screen, read-only Settings row) imports them', () => {
     const importers = [...reachable(['src/main.tsx'])].filter((f) => {
-      if (OPTIONAL.test(f) || OPTIONAL_APP.test(f)) return false;
+      // files of the online zone (src/net, the online controller and flow, its screens) exist only in the online chunk:
+      // they are part of the optional layer themselves (the zone block below proves the one guarded edge into them)
+      if (OPTIONAL.test(f) || OPTIONAL_APP.test(f) || inZone(f)) return false;
       return specifiersOf(readFileSync(f, 'utf8')).some((spec) => {
         const target = resolveSpecifier(f, spec)?.replace(/\\/g, '/');
         return !!target && target !== RUMBLE_ENTRY && (OPTIONAL.test(target) || OPTIONAL_APP.test(target));

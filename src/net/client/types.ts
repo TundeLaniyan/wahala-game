@@ -4,7 +4,15 @@
  * replica, and tests / the UI's fakes implement it in memory. Browser-only; imported only from the online chunk.
  */
 import type { RemoteMatchDriver } from '../../app/remoteMatch';
-import type { LobbyMsg, NoticeMsg, QuickMode, ResultsMsg, SettingsMsg, WelcomeMsg } from '../protocol';
+import type {
+  LobbyMsg,
+  NoticeMsg,
+  QuickMode,
+  ResultsMsg,
+  SettingsMsg,
+  SignalInMsg,
+  WelcomeMsg,
+} from '../protocol';
 
 export type ConnStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'closed';
 
@@ -15,10 +23,15 @@ export interface JoinInfo {
   characterId: string;
 }
 
-/** What the player asked for when opening a room. */
+/**
+ * What the player asked for when opening a room. `ticket` (create / join only, never Quick Play): a signed, single-use
+ * player-platform match ticket (docs/PLATFORM_MATCH_HANDOFF.md); the server then seats a VERIFIED player. Without it the
+ * join is the anonymous guest join. A ticket is fetched right before it is used and never re-sent (reconnection is the
+ * server's own token).
+ */
 export type OpenRequest =
-  | { kind: 'create'; who: JoinInfo }
-  | { kind: 'join'; who: JoinInfo; code: string }
+  | { kind: 'create'; who: JoinInfo; ticket?: string }
+  | { kind: 'join'; who: JoinInfo; code: string; ticket?: string }
   /** QUICK PLAY: public matchmaking in ONE mode (Free-for-All or Team Rumble); never moved to the other. */
   | { kind: 'quick'; who: JoinInfo; mode: QuickMode };
 
@@ -30,6 +43,8 @@ export interface RumbleSessionEvents {
   notice(msg: NoticeMsg): void;
   /** The server's final results (derived from its own simulation). */
   results(msg: ResultsMsg): void;
+  /** A preset quick signal relayed by the server (an id from `SIGNAL_IDS`, never free text). */
+  signal(msg: SignalInMsg): void;
   /** The first keyframe of a match is loaded: the driver can be handed to `commands.startRemote`. */
   matchReady(driver: RemoteMatchDriver): void;
   /** The connection failed before or during the lobby in a way the player must be told about. */
@@ -43,6 +58,7 @@ export interface RumbleSessionEvents {
       | 'server-busy'
       | 'rate-limited'
       | 'refused'
+      | 'ticket'
       | 'protocol'
       | 'unknown',
     detail: string,
@@ -59,6 +75,8 @@ export interface RumbleSession {
   start(): void;
   rematch(): void;
   settings(patch: SettingsMsg): void;
+  /** Sends a preset quick signal (`SIGNAL_IDS`); the server decides who receives it (and may drop it). */
+  sendSignal(id: string): void;
   /** Leaves the room and closes the connection. Idempotent. */
   leave(): Promise<void>;
   /** The match driver once `matchReady` fired, null before and after the match. */
