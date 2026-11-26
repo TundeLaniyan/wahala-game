@@ -71,3 +71,33 @@ What both cover: guest onboarding (the hosted run through the invite form), nick
 | 5 | Moderation | reports are stored and readable by command; no moderator screen, nobody is alerted |
 | 6 | Privacy and age policy | counsel review, the Nigerian data-protection position and a guardian / age rule are founder decisions (the platform treats an unspecified age as a minor) |
 | 7 | Sandbox-only workarounds | a local `docker` shim (the sandbox's containers have no outbound route) and base images pulled from a mirror (Docker Hub's anonymous pull limit); neither is in the repository. A real server pulls normally |
+
+## 6. Recommended server and limits (first hosted beta)
+
+| Item | Value | Basis |
+| --- | --- | --- |
+| Server | **Ubuntu 24.04 LTS, 2 vCPU (dedicated if possible), 4 GB memory, 40 GB SSD**, one public IPv4 | Backend Ops' load evidence (`docs/ops/BETA_LOAD_RESULTS.md`); in this validation a real 32-fighter match peaked at about 50 % of one core and 173 MB for the match server; the rest of the stack is about 1 GB |
+| Simultaneous matches | **2** (`RUMBLE_MAX_PLAYING_ROOMS`, the compose default); a third match queues up to 2 minutes | no new measurements were taken here, so the limit is not raised |
+| Fighters per match | 32 in all (humans plus bots), existing bot-fill and 30 s reconnection rules unchanged | locked product rules; I5 and the browser runs show 2 humans + 30 bots |
+| Testers | 4 to 8 invited people, in at most two parties playing at a time | follows from the match limit |
+| Match server | **one process**; a restart ends the matches in progress | by design, validated (crash and restart) |
+| Backups | nightly dump on the same disk, restore **tested** (disaster drill); copy off the server by hand | validation section 8 |
+
+## 7. The private-beta client and its hosting
+
+Strategy, build, origins and the table of what protects each entry point: **`docs/ops/BETA_FRONTEND.md`**. In one paragraph: the public Pages game is untouched and online-off; the private beta uses a separate build (`BETA_DOMAIN=play.yourname.com npm run build:beta` into `dist-beta/`, never published by CI) hosted as a static site on its own origin; that origin is the one exact origin both servers allow; PLAY ONLINE appears without `?online`, asks for the invite code, and offers only the party's private match; every entry point (account creation, the match server's matchmaking, raw HTTP, a leaked room code, another website) is refused without an invite-backed account and a platform ticket. Typing `?online` on the public site still does nothing (`tests/online/build-guard.test.ts`, `tests/platform-flags.test.ts`, `scripts/check-static-build.mjs`).
+
+## 8. Founder testing
+
+Two separate procedures, in **`docs/ops/BETA_FOUNDER_TESTING.md`**: **A.** one laptop and two phones on the same Wi-Fi (commands, addresses, invite, start, reconnect, confirming the trusted results on the phone under YOU > Recent matches, and what to do when a connection fails; the full tap table is `docs/PLATFORM_LOCAL_TEST.md`); **B.** the supervised hosted beta (what the founder must provide first, the exact steps, the acceptance run on two phones on mobile data, the limits and the stop conditions). Nothing was purchased or deployed.
+
+## 9. Exact remaining hosting prerequisites
+
+1. A rented Linux server (section 6) and the decision to pay for it.
+2. A domain and its `A` record; the real certificate (`wahala-beta.sh cert`, practice mode first).
+3. The address of the static page the beta client will live on, and a static host for it.
+4. An email address for the certificate authority; optionally an alert webhook and an off-server place for backups.
+5. A privacy notice for testers and a minimum-age policy (the platform treats an unspecified age as a minor); counsel's view of the Nigerian data-protection position.
+6. A named person who watches the beta while testers play and reads reports (`wahala-beta.sh admin GET /admin/v1/reports`).
+7. On the server: `ops/beta/wahala-beta.sh validate --quick` must say `NO FAILURES` before anyone is invited.
+8. Real-phone and mobile-network acceptance (procedure B, step 5): **pending**.

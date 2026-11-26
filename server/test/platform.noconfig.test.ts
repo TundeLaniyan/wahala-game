@@ -1,4 +1,5 @@
 /** A server with no platform configured (the default, and every public / guest-only setup) refuses a ticket instead of trusting a name. */
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createHandoffSigner } from '../../player-platform/src/handoff/signer';
 import { PlatformLink } from '../src/core/platform';
@@ -43,5 +44,26 @@ describe('no platform configured', () => {
     const guest = await server.client().create('rumble', { name: 'Gus', private: true });
     expect(guest.roomId).toMatch(/^[A-Z0-9]{6}$/);
     await guest.leave();
+  });
+});
+
+describe('the platform link needs nothing of the platform package until a platform is configured', () => {
+  it("has no value import of player-platform at load time (its dependency `jose` may not be installed: guest-only servers, dev and the online e2e job install only the server's own)", () => {
+    const src = readFileSync(new URL('../src/core/platform.ts', import.meta.url), 'utf8');
+    const staticValueImports = [
+      ...src.matchAll(/^import\s+(?!type\b)[^;]*from\s+['"][^'"]*player-platform[^'"]*['"]/gm),
+    ];
+    expect(staticValueImports.map((m) => m[0])).toEqual([]);
+  });
+  it('ready() with no platform configured resolves without loading anything', async () => {
+    const link = new PlatformLink({
+      jwksUrl: null,
+      audience: 'wahala-rumble',
+      internalUrl: null,
+      secret: null,
+      requireTicket: false,
+    });
+    expect(link.tickets).toBe(false);
+    await expect(link.ready()).resolves.toBeUndefined();
   });
 });

@@ -14,9 +14,14 @@
  * No Colyseus import: unit-testable with injected fetch and clock.
  */
 import { createHmac } from 'node:crypto';
-import { HOST_ROOM, verifyHandoffTicket } from '../../../player-platform/src/handoff/verify';
-import type { TicketClaims } from '../../../player-platform/src/handoff/verify';
-import { remoteHandoffKeys } from '../../../player-platform/src/handoff/remote';
+import type { TicketClaims, verifyHandoffTicket } from '../../../player-platform/src/handoff/verify';
+
+// Ticket verification needs `jose`, which lives in player-platform's dependencies. The match server must still start (guest-only, dev,
+// CI) on a machine that never installed them, so the verifier is loaded the first time a platform is configured, never at import.
+// (Found by the informational online e2e job, which installs only the root and server dependencies.)
+const loadVerifier = () => import('../../../player-platform/src/handoff/verify');
+const loadRemoteKeys = () => import('../../../player-platform/src/handoff/remote');
+type Keys = Parameters<typeof verifyHandoffTicket>[1]['keys'];
 
 export interface PlatformConfig {
   /** `PLATFORM_JWKS_URL`: the platform's public keys. Unset = tickets are not accepted at all. */
@@ -49,7 +54,9 @@ export function loadPlatformConfig(env: Record<string, string | undefined> = pro
   const secret = v('PLATFORM_MATCH_SERVER_SECRET');
   const requireTicket = env.RUMBLE_REQUIRE_TICKET === '1';
   if (requireTicket && !v('PLATFORM_JWKS_URL'))
-    throw new Error('RUMBLE_REQUIRE_TICKET=1 needs PLATFORM_JWKS_URL: a server that must check tickets cannot start without the keys');
+    throw new Error(
+      'RUMBLE_REQUIRE_TICKET=1 needs PLATFORM_JWKS_URL: a server that must check tickets cannot start without the keys',
+    );
   return {
     jwksUrl: v('PLATFORM_JWKS_URL'),
     audience: v('PLATFORM_HANDOFF_AUDIENCE') ?? 'wahala-rumble',
@@ -69,7 +76,7 @@ export interface PlatformDeps {
   now?: () => number;
   log?: (message: string) => void;
   /** Test hook: a key source instead of the remote JWKS. */
-  keys?: Parameters<typeof verifyHandoffTicket>[1]['keys'];
+  keys?: Keys;
 }
 
 /** What the room stamps on a verified seat (server-side only; a client cannot send these: option keys starting `_` are stripped). */
@@ -85,7 +92,8 @@ export type TicketRefusal = 'invalid' | 'wrong_room' | 'replayed' | 'unavailable
 export class PlatformLink {
   readonly tickets: boolean;
   readonly reporting: boolean;
-  private readonly keys: Parameters<typeof verifyHandoffTicket>[1]['keys'] | null;
+  private readonly injectedKeys: Keys | null;
+  private verifier: Promise<{ verify: typeof verifyHandoffTicket; keys: Keys }> | null = null;
   private readonly fetchFn: FetchLike;
   private readonly now: () => number;
   private readonly log: (m: string) => void;
@@ -98,8 +106,8 @@ export class PlatformLink {
     readonly cfg: PlatformConfig,
     deps: PlatformDeps = {},
   ) {
-    this.keys = deps.keys ?? (cfg.jwksUrl ? remoteHandoffKeys(cfg.jwksUrl) : null);
-    this.tickets = this.keys !== null;
+    this.injectedKeys = deps.keys ?? null;
+    this.tickets = this.injectedKeys !== null || cfg.jwksUrl !== null;
     this.reporting = cfg.internalUrl !== null && cfg.secret !== null;
     this.fetchFn = deps.fetch ?? ((url, init) => fetch(url, init));
     this.now = deps.now ?? (() => Date.now());
@@ -107,6 +115,27 @@ export class PlatformLink {
   }
 
   // ------------------------------------------------------------------ tickets
+
+  /** Loads the verifier and the key source once. Rejects when they cannot be loaded (a missing dependency): callers treat that as "tickets unavailable". */
+  private load(): Promise<{ verify: typeof verifyHandoffTicket; keys: Keys }> {
+    this.verifier ??= (async () => {
+      const { verifyHandoffTicket: verify } = await loadVerifier();
+      const keys =
+        this.injectedKeys ??
+        (this.cfg.jwksUrl ? (await loadRemoteKeys()).remoteHandoffKeys(this.cfg.jwksUrl) : null);
+      if (!keys) throw new Error('no ticket keys configured');
+      return { verify, keys };
+    })();
+    return this.verifier;
+  }
+
+  /**
+   * Loads the ticket verifier now. A server that REQUIRES tickets calls this at start-up and refuses to run when it throws: it must
+   * never come up unable to check the tickets it demands.
+   */
+  async ready(): Promise<void> {
+    if (this.tickets) await this.load();
+  }
 
   /**
    * Verifies a ticket for a room creation (`roomCode` null: only a host ticket passes) or a join of `roomCode`. Consumes the ticket
@@ -116,10 +145,17 @@ export class PlatformLink {
     token: unknown,
     roomCode: string | null,
   ): Promise<{ ok: true; who: Verified } | { ok: false; reason: TicketRefusal }> {
-    if (!this.keys) return this.refuse('unavailable');
+    if (!this.tickets) return this.refuse('unavailable');
+    let loaded: { verify: typeof verifyHandoffTicket; keys: Keys };
+    try {
+      loaded = await this.load();
+    } catch (e) {
+      this.log(`platform tickets unavailable: ${String(e)}`);
+      return this.refuse('unavailable');
+    }
     this.sweep();
-    const r = await verifyHandoffTicket(token, {
-      keys: this.keys,
+    const r = await loaded.verify(token, {
+      keys: loaded.keys,
       audience: this.cfg.audience,
       roomCode,
       now: new Date(this.now()),
@@ -235,5 +271,3 @@ export class PlatformLink {
     }
   }
 }
-
-export { HOST_ROOM };

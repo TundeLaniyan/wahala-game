@@ -128,6 +128,10 @@ export async function startRumbleServer(opts: RumbleServerOptions = {}): Promise
     opts.platform instanceof PlatformLink
       ? opts.platform
       : new PlatformLink(opts.platform ?? loadPlatformConfig(), { log });
+  // a server that REQUIRES tickets must be able to check them: it refuses to start otherwise (it never comes up open). One that merely
+  // accepts them reports the problem and carries on as a guest server.
+  if (platform.cfg.requireTicket) await platform.ready();
+  else void platform.ready().catch((e) => log?.(`player platform tickets cannot be verified: ${String(e)}`));
 
   const transport = new WebSocketTransport({
     // liveness tolerance (RUMBLE_PING_INTERVAL_MS x RUMBLE_PING_MAX_RETRIES, default 3 s x 4): see RuntimeConfig
