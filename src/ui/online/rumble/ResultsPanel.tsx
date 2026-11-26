@@ -3,6 +3,7 @@
  * the winner line, the host's REMATCH and BACK TO MENU for everyone. Built from `ResultsMsg` only: nothing here is computed
  * by the client. Names are React text. Presentational.
  */
+import type { ReactNode } from 'react';
 import { PrimaryButton, SecondaryButton } from '../../menu/Frame';
 import type { ResultsView } from './models';
 import './rumble.css';
@@ -15,6 +16,8 @@ export interface ResultsPanelProps {
   canRematch: boolean;
   onRematch(): void;
   onMenu(): void;
+  /** Optional block above the buttons (a platform build: quick signals while everyone looks at the results). */
+  extra?: ReactNode;
 }
 
 export function ResultsPanel(p: ResultsPanelProps) {
@@ -78,6 +81,7 @@ export function ResultsPanel(p: ResultsPanelProps) {
             </tbody>
           </table>
         </div>
+        {p.extra}
         <div className="ro-results-actions">
           {p.isHost ? (
             <PrimaryButton testId="ro-rematch" disabled={!p.canRematch} autoFocus onClick={p.onRematch}>

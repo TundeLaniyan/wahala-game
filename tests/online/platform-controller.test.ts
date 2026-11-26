@@ -48,6 +48,9 @@ class Room implements RoomBridge {
   setName(n: string) {
     this.names.push(n);
   }
+  character() {
+    return 'streetBaller';
+  }
 }
 
 class Timers {

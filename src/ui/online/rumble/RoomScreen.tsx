@@ -5,6 +5,7 @@
  * and LEAVE ROOM always. Presentational: the connected screen supplies props; the server decides every rule shown here.
  */
 import { useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { CHARACTERS, DIFFICULTIES } from '../../../sim';
 import type { CharacterId, Difficulty } from '../../../sim';
 import type { ConnStatus } from '../../../net/client/types';
@@ -46,6 +47,12 @@ export interface RoomProps {
   onLeave(): void;
   onDismissNotice(id: number): void;
   onRetry(): void;
+  /** Optional cards after the match settings (a platform build: the party strip and the quick signals). */
+  extra?: ReactNode;
+  /** Optional controls at the end of a member row, by the member's index in `lobby.members` (badge, member menu). */
+  memberExtra?: (index: number) => ReactNode;
+  /** Optional dialog layer (a platform build: the member menu). */
+  overlay?: ReactNode;
 }
 
 const fighterName = (id: string): string => CHARACTERS[id as CharacterId]?.name ?? id;
@@ -369,7 +376,7 @@ export function RoomScreen(p: RoomProps) {
           )}
 
           <ul className="ro-members" data-testid="ro-members" aria-label="Players in the room">
-            {m.rows.map((r) => (
+            {m.rows.map((r, i) => (
               <li
                 key={r.key}
                 className="ro-member"
@@ -394,6 +401,7 @@ export function RoomScreen(p: RoomProps) {
                     </Tag>
                   ))}
                 </span>
+                {p.memberExtra?.(i)}
               </li>
             ))}
           </ul>
@@ -414,6 +422,7 @@ export function RoomScreen(p: RoomProps) {
             </p>
           )}
         </section>
+        {p.extra}
       </div>
 
       <span className="ro-visually-hidden" role="status" aria-live="polite" data-testid="ro-live">
@@ -471,6 +480,7 @@ export function RoomScreen(p: RoomProps) {
           </div>
         </div>
       )}
+      {p.overlay}
     </ScreenFrame>
   );
 }

@@ -359,6 +359,20 @@ describe.skipIf(!CAN_BUILD)(
   },
 );
 
+/** The online dynamic entries and every chunk they import statically (shared chunks Rollup splits off between them). */
+function onlineClosure(b: Built): Set<string> {
+  const byFile = new Map(Object.entries(b.manifest).map(([k, e]) => [e.file, k] as const));
+  const seen = new Set<string>();
+  const walk = (key: string): void => {
+    const e = b.manifest[key];
+    if (!e || seen.has(e.file)) return;
+    seen.add(e.file);
+    for (const next of e.imports ?? []) walk(next);
+  };
+  for (const e of onlineChunks(b)) walk(byFile.get(e.file)!);
+  return seen;
+}
+
 /** The platform API template of the platform build below (`{host}` filled in at run time, like the online endpoint). */
 const PLATFORM_TEMPLATE = 'http://{host}:4567';
 
@@ -376,13 +390,16 @@ describe.skipIf(!CAN_BUILD)(
     }, BUILD_TIMEOUT);
 
     it('the platform client is in the lazily loaded online chunks only, never in what the page loads at start-up', () => {
-      const online = new Set(onlineChunks(b).map((e) => e.file));
+      const online = onlineClosure(b);
+      const boot = new Set(bootChunks(b));
       const withPlatform = [...b.sources.entries()]
         .filter(([, srcs]) => srcs.some((x) => /^src\/(?:online|ui\/online)\/platform\//.test(x)))
         .map(([chunk]) => chunk);
       expect(withPlatform.length).toBeGreaterThan(0);
-      for (const chunk of withPlatform)
-        expect(online.has(chunk), `${chunk} is not an online dynamic chunk`).toBe(true);
+      for (const chunk of withPlatform) {
+        expect(online.has(chunk), `${chunk} is not an online chunk`).toBe(true);
+        expect(boot.has(chunk), `${chunk} is loaded at start-up`).toBe(false);
+      }
       for (const chunk of bootChunks(b)) {
         const src = read(b, chunk);
         expect(/wahala\.platform\.v1|\/v1\/auth\/guest|\/match\/ticket/.test(src), chunk).toBe(false);
@@ -390,7 +407,7 @@ describe.skipIf(!CAN_BUILD)(
     });
 
     it('the platform strings are present (the scan is not vacuous) and only in online chunks', () => {
-      const online = new Set(onlineChunks(b).map((e) => e.file));
+      const online = onlineClosure(b);
       const hits = filesUnder(b.dir, /\.js$/)
         .map((f) =>
           f

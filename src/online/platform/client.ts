@@ -234,6 +234,12 @@ export class PlatformClient {
     return r.ok ? ok(r.value.profile) : r;
   }
 
+  /** The fighter the ticket names (the platform validates it against the roster). */
+  async setFighter(selectedCharacter: string): Promise<Result<MyProfile>> {
+    const r = await this.call<{ profile: MyProfile }>('PATCH', '/v1/me', { selectedCharacter });
+    return r.ok ? ok(r.value.profile) : r;
+  }
+
   /** Presence heartbeat (`PUT /v1/presence`): the platform forgets it after 90 s. */
   heartbeat(status: 'online' | 'away' = 'online'): Promise<Result<void>> {
     return this.call('PUT', '/v1/presence', { status });

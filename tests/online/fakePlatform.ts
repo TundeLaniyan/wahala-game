@@ -233,6 +233,7 @@ export class FakePlatform {
     if (path === '/v1/me' && method === 'GET') return this.json(200, { profile: this.profile(me) });
     if (path === '/v1/me' && method === 'PATCH') {
       const b = this.strict(body, ['displayName', 'selectedCharacter']);
+      if (b.displayName === undefined) return this.json(200, { profile: this.profile(me) });
       const name = String(b.displayName);
       if (name.toLowerCase().includes('admin'))
         return this.err(422, 'name_rejected', 'That name reads as staff.');

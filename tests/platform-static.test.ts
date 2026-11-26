@@ -191,8 +191,9 @@ describe('the online zone is unreachable from the public bundle except through a
       );
     for (const f of importersOf(RUMBLE_ENTRY))
       expect(f, `${f} imports the entry`).toMatch(/^src\/(ui|online)\//);
+    // the controller's own screens (online zone) read its stores; nothing else but the guarded entry loads it
     const controllerLoaders = importersOf('src/app/rumbleOnline.ts').filter(
-      (f) => !f.startsWith('src/ui/online/rumble/'),
+      (f) => !f.startsWith('src/ui/online/rumble/') && !f.startsWith('src/ui/online/platform/'),
     );
     expect(controllerLoaders).toEqual([RUMBLE_ENTRY]);
     const sdk = [...walkSources(['src'])].filter((f) =>

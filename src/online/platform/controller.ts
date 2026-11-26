@@ -82,6 +82,8 @@ export interface RoomBridge {
   name(): string;
   /** Shows the platform nickname on the entry screen too (unticketed rooms use that field). */
   setName(name: string): void;
+  /** The fighter chosen in the game (the ticket carries the platform's copy of it). */
+  character(): string;
 }
 
 export interface Timers {
@@ -348,6 +350,15 @@ export function createPlatformController(deps: ControllerDeps) {
     await Promise.all([loadSocial(), pollParty()]);
   }
 
+  /** The ticket names the platform's fighter: bring it in line with the game's choice first (best effort, never blocks). */
+  async function syncFighter(): Promise<void> {
+    const want = deps.room.character();
+    const me = get().me;
+    if (!me || !want || me.selectedCharacter === want) return;
+    const r = await client.setFighter(want);
+    if (r.ok) set({ me: r.value });
+  }
+
   async function ticketFor(partyId: string): Promise<string | null> {
     const r = await client.ticket(partyId);
     return r.ok ? r.value.ticket : null;
@@ -588,6 +599,7 @@ export function createPlatformController(deps: ControllerDeps) {
           set({ party: p });
         }
         const partyId = p.id;
+        await syncFighter();
         const t = await act('handoff', () => client.ticket(partyId));
         if (!t.ok) return;
         if (!t.value.host && t.value.roomCode) {
@@ -610,6 +622,7 @@ export function createPlatformController(deps: ControllerDeps) {
       try {
         autoJoined.add(code);
         const partyId = p.id;
+        await syncFighter();
         const t = await act('handoff', () => client.ticket(partyId));
         if (!t.ok) return;
         deps.room.open({ kind: 'join', code: t.value.roomCode ?? code }, t.value.ticket, () =>
