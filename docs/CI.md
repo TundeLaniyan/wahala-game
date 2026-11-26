@@ -224,3 +224,13 @@ Cancelled run: [#102](https://github.com/TundeLaniyan/wahala-game/actions/runs/4
 a newer push: shards cancelled, gate failed, deploy skipped.
 
 (130 = the 128 tests plus the new B-button regression test on both projects; its desktop copy is skipped by design.)
+
+## Known intermittent browser failures (2026-11-26 review)
+
+Recorded so that a red shard is read, not re-run blindly. None of them was caused by the private multiplayer branch.
+
+| Test | Seen | What the failure is | Status |
+| --- | --- | --- | --- |
+| `e2e/audio.spec.ts` "a match plays its arena track, escalates ... pauses and rotates" | run 341 (production `20cc59a`, shard 14, both attempts; passed on re-run), run 343 (platform branch `e77d864`, shard 7, both attempts) | The SECOND `startMatch` of the test (after the first match was exited and another arena chosen) never shows its HUD within 120 s (`inMatch`, `e2e/helpers.ts`). The same test passed in runs 339, 342 and 344 and locally 8 of 8 times (normal, on 2 CPUs, 4 repeats). | **Unexplained.** Not a regression of any branch (it failed on production code and on a branch that never touched the menu). `inMatch` now prints the screen, menu stack, loader state and visible overlays when the HUD does not appear, so the next occurrence says whether the start tap was ignored (loader busy), the loader hung, or the page was starved. A cause is not claimed. |
+| `e2e/campaign-camera.spec.ts` "restarting a mission keeps the GPU resources flat" | run 344 (shard 3) | `textures, restart`: 49 against a limit of 3; the retry timed out waiting for a mission status. | Known flake (also fails locally on `f7cf2ae`, noted in the earlier CI audit). Campaign code, untouched by this work. |
+| a shard at 45 minutes | run 344 (shard 10), runs 339 / 341 (shards at 43-47 min) | The planner's per-test durations come from the previous run that produced a merged report; a run that fails or times out records an incomplete picture and the next plan is lopsided. | The shard step still fails at 45 minutes: a pure timeout is a balance problem, not a test failure. Rebalancing happens on the next full run; do not raise the timeout. |
