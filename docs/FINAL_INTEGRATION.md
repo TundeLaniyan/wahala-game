@@ -49,6 +49,12 @@ Backend Ops reported `241 passed, 0 failed, 2 blocked by integration`. The two b
 
 The exact `started` and `finished` contracts are `docs/PLATFORM_MATCH_HANDOFF.md` section 3, `docs/openapi/platform.yaml` and `player-platform/src/matches/service.ts` (`StartedInput`, `FinishedInput`). The server builds the bodies in `RumbleRoom.reportToPlatform` from its own state only (match id `<id>:<room nonce>`; the room code for private rooms; one participant per seat, with the verified `playerId` for human seats and `isBot` for the rest; results with placement and eliminations), signed `HMAC-SHA256(ts.POST.path.body)`, 2 s timeout, never awaited by the match.
 
+## 3b. Docker validation (`ops/beta/validate.sh`, the real images, one Linux machine)
+
+**Final run on the head code: 257 passed, 0 failed, 0 blocked, 643 s** (`docs/measurements/beta-backend/validation-report-final-integrated.txt`). Backend Ops' run before the integration was 241 passed, 0 failed, 2 blocked. Sections: preflight, build the real images and start the full stack (db, migrate, platform, match server, edge, backup, monitor), production refusals (the real images started wrongly on purpose), the edge and the accounts through https, **a real 3-minute authoritative match with 32 fighters (2 humans, 30 bots) through the TLS edge** (peak match-server CPU about 50 % of one core, RSS about 173 MB, 0 dropped ticks, identical final state hash on both clients), signed results and replay protection, friends / parties / quick signals / mute / block / report / rate limits, restarts and crashes (platform, database SIGKILL, match server SIGKILL, database outage, full stop and start), **a platform outage during a match (I5)**, secret rotation (admin token, ticket key, database password, metrics tokens, the shared secret) and rollback, **backup, restore test and a disaster drill**, logs scanned for secrets, tokens and room codes (none), graceful shutdown of every service.
+
+What this machine could and could not do. It is a Linux sandbox with Docker Engine 29.9.2 on the `vfs` storage driver (which fills the disk quickly: the run failed twice with "no space left on device" until the Docker data was pruned). **Not performed:** a rented server, a real domain, a real certificate authority (the validation uses a temporary self-signed certificate; `wahala-beta.sh cert` was never run against Let's Encrypt), real phones, real mobile networks, an alert delivered to a real webhook, a backup copied off the machine. `update` against a deliberately broken release was not tested (Backend Ops' note stands). The validation does not prove sizing for more than 2 simultaneous matches.
+
 ## 4. Two-browser end-to-end on the combined stack
 
 Two real runs of `e2e/private-multiplayer.spec.ts` (A desktop, B phone-sized touch, C an outsider), both **1 passed**:
@@ -101,3 +107,44 @@ Two separate procedures, in **`docs/ops/BETA_FOUNDER_TESTING.md`**: **A.** one l
 6. A named person who watches the beta while testers play and reads reports (`wahala-beta.sh admin GET /admin/v1/reports`).
 7. On the server: `ops/beta/wahala-beta.sh validate --quick` must say `NO FAILURES` before anyone is invited.
 8. Real-phone and mobile-network acceptance (procedure B, step 5): **pending**.
+
+## 10. CI
+
+| Run | Commit | Result |
+| --- | --- | --- |
+| 352 | `3b376ca` | cancelled by me (it contained the secret-file loader that failed the server's no-file-system guard) |
+| 353 | `9d45393` | cancelled by me: the first run in which the informational **Online e2e** job was in scope showed that the match server could not start without `player-platform/node_modules` (it imported `jose` at load time) |
+| 354 | `20f132d` | **failed**: only E2E shard 10, twice (attempt 2 was a re-run of the failed jobs): the campaign GPU-resources test failed its first attempt and its doubled time pushed the shard past 45 minutes. Reproduced locally and fixed at its cause (FC-7, not a longer timeout) |
+| **355** | **`b0670d6`** | **green: 28 jobs succeeded, 2 skipped (the two publish jobs, by design on a branch that is not the publishing branch), CI gate success.** Unit tests, Server tests, all 14 browser shards, E2E report, Online e2e (not required) and Release checks all passed; no job was re-run |
+
+Docs-only commits made after run 355 are skipped by the browser suite (`scripts/ci/plan.ts`). Nothing was published: the live build is still `d164e45`.
+
+Defects the combined work found and fixed (all with tests): the secret-file loader versus the no-fs guard (FC-1), the Ops validator's replay ids (FC-3), the eager `jose` import (lazy ticket verification), a lost platform secret line in the compose edit (the validation answered 503 on every internal call and failed the whole results and history chain: caught within the hour), the AI per-tick ceiling (FC-5), the timer-leak filter (FC-4), the GPU test's cold baseline (FC-7), the beta build proof, and the IP-address domain. Earlier on the integration branch: the Okada wreck-colour crash (already released as `d164e45`).
+
+## 11. Acceptance gates
+
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| The consolidated Docker stack builds and starts | **PASS** | validation sections 1 and 10 |
+| Required integration tests all pass | **PASS** | 257 / 0 / 0; server 318, platform 198 (PGlite and PostgreSQL 16.15), client online suites, ops monitoring rules 15 |
+| Invite-only access on every relevant entry point | **PASS** (tested) | `docs/ops/BETA_FRONTEND.md` section 3: account creation, match server matchmaking, raw HTTP, a leaked room code, another origin |
+| Guest and registered identities cannot be impersonated | **PASS for guests** (I3, I3b); registered sign-in does not exist in this beta (Google and Apple answer 501 by design), so there is nothing to impersonate and it is **untested** | `ops/beta/validate.sh`, `server/test/platform.test.ts` |
+| The match simulation remains authoritative | **PASS** | clients send intents only; results come from the server's own simulation; I4 compares what the platform recorded with the server's results; identical state hash on both clients |
+| Reconnection and signed results work | **PASS** | both browser runs (same seat inside 30 s), validation sections 4 to 5 and 7a |
+| Database backups and restoration pass | **PASS** | validation section 8 (backup, restore test, disaster drill) |
+| Two-browser end-to-end gameplay passes | **PASS** | two real-browser runs, section 4 |
+| Full relevant CI passes | **PASS** | run 355, section 10 |
+| Default GitHub Pages remains offline-first | **PASS** | `tests/online/build-guard.test.ts`, `tests/platform-flags.test.ts`, `scripts/check-static-build.mjs` (in CI), live `build.json` unchanged at `d164e45`, nothing published |
+| Backend and deployment documentation matches the code | **PASS with one note** | `docs/ops/*` and `docs/FINAL_INTEGRATION.md` updated for FC-1 to FC-7; the older `docs/ops/DEPLOYMENT.md`, `HOSTING_ARCHITECTURE.md` and `CAPACITY.md` describe the match server on its own and were not rewritten |
+| Real phones, real carrier, a real host | **PENDING** (never done) | `docs/ops/BETA_FOUNDER_TESTING.md` |
+
+## 12. Verdict
+
+**CONDITIONAL GO** for a supervised, invite-only, hosted private beta. Every engineering gate that can be checked on one machine passes, with evidence. It is not "READY FOR PRIVATE HOSTED BETA" without conditions because three things have not been done and cannot be done here, and one defect is still open:
+
+1. **Real phones, real mobile networks, a real server, domain and certificate: pending.** Procedure A (two phones on one Wi-Fi) is the first step and costs nothing; procedure B is the hosted acceptance. Both are written and not yet run.
+2. **The founder's prerequisites** (section 9): the server, the domain, the page address, the privacy and age position, a watcher.
+3. **`e2e/audio.spec.ts` (second match never shows its HUD) is still OPEN and unexplained** (FC-6). It did not fail in the final green run, but it has failed intermittently on production, Ops and platform code. It has never been seen on a real player's phone; a real second-match hang in the field is not ruled out.
+4. **No new capacity measurement:** at most 2 simultaneous matches, 4 to 8 testers.
+
+Do not merge this branch into the publishing branch without a separate release decision; do not deploy a server until the founder prerequisites are in hand.

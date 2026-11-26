@@ -2,6 +2,13 @@
 
 _Last updated at the end of the autonomous Phase 1 build session. Everything below was verified by the commands listed under "Verification". Nothing is claimed that was not run._
 
+## Final private-multiplayer consolidation (branch `claude/wahala-final-private-beta-v1`, docs/FINAL_INTEGRATION.md, decisions FC-1 to FC-7)
+
+- Production `10d0b26` (live build `d164e45`) + the private multiplayer branch (`60c1a46`) + Backend Ops (`16231ba`), no textual conflicts; the semantic ones are listed in `docs/FINAL_INTEGRATION.md`. **Not merged into the publishing branch, not deployed.**
+- The match server requires platform tickets in the hosted beta (`RUMBLE_REQUIRE_TICKET=1`), loads ticket verification lazily, and reports `started` / `finished` itself; the client asks for the invite code and has a separate private-beta build (`npm run build:beta`); the YOU tab lists the player's recorded matches.
+- Evidence: `ops/beta/validate.sh` 257 passed / 0 failed / 0 blocked on the real Docker images; two real-browser runs (`npm run test:private-e2e`, `npm run test:beta-e2e`, the second against the hosted stack with invite-only admission and ticket-requiring match server); CI run 355 green.
+- **Open:** `e2e/audio.spec.ts` second-match HUD failure (unexplained, FC-6); real phones, mobile networks and a real host (never done); capacity limit stays at 2 simultaneous matches (no new measurements).
+
 ## Okada wreck-colour hotfix and open reliability issue (2026-11-26, from production `20cc59a`)
 
 - **Hotfix `d164e45`:** destroying an Okada threw inside the render loop (`Effects.wreck` got no chunk colours, because the Okada was allowed on the Rumble stages but missing from the break-up colour table). `src/render/wreckColors.ts` now has a colour set for every `VehicleKind` and falls back to the Danfo colours for an unknown kind; `GameRenderer` uses it. Regression test `tests/render/wreck-colors.test.ts`. Only the render table changed: no simulation, audio, menu or asset file (the published `gh-pages` diff against `20cc59a` is the five rehashed JS bundles, `index.html`, `404.html`, `sw.js` and `build.json`). Found by the private multiplayer browser run; the multiplayer branch carries the same files unchanged.
