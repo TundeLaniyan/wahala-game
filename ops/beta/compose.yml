@@ -1,0 +1,253 @@
+# WAHALA! private-beta backend: ONE server, one command.  Operator entry point: ops/beta/wahala-beta.sh (never call this file by hand).
+#
+#   internet --443/80--> edge (nginx, TLS) --app network--> rumble (match server)     \
+#                                                      \--> platform (accounts, friends, parties)  --data network--> db (PostgreSQL)
+#
+# Only the edge publishes ports. PostgreSQL, the match server and the platform have NO published port; /metrics, /admin and
+# /internal are never routed by the edge. Secrets are FILES (state/secrets/*), mounted read-only at /run/secrets, never
+# environment variables, so `docker inspect` and process listings do not show them.
+name: wahala-beta
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: '10m', max-file: '5' } # logs hold no tokens and no room codes (tested); still small and rotated
+
+x-hardened: &hardened
+  init: true
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  logging: *logging
+
+services:
+  db:
+    <<: *hardened
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    read_only: false # PostgreSQL writes its data directory and sockets; the volume is the only writable path
+    # No tini here: it runs as root without CAP_KILL, cannot signal the postgres user's process and dies on `stop` ("Operation not
+    # permitted"), which kills PostgreSQL uncleanly. The official image runs postgres as PID 1 and handles SIGINT/SIGTERM itself.
+    init: false
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID, FOWNER, DAC_OVERRIDE] # the entrypoint fixes volume ownership, then drops to the postgres user
+    environment:
+      POSTGRES_USER: wahala
+      POSTGRES_DB: wahala
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    command:
+      - postgres
+      - -c
+      - max_connections=${DB_MAX_CONNECTIONS:-40}
+      - -c
+      - shared_buffers=${DB_SHARED_BUFFERS:-128MB}
+      - -c
+      - log_min_duration_statement=500
+      - -c
+      - idle_in_transaction_session_timeout=60000
+      - -c
+      - password_encryption=scram-sha-256
+    secrets: [db_password]
+    volumes:
+      - wahala-db:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U wahala -d wahala']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    stop_grace_period: 30s # a clean PostgreSQL shutdown checkpoints; killing it forces crash recovery on the next start
+    shm_size: 128m
+    mem_limit: ${DB_MEM_LIMIT:-768m}
+    cpus: ${DB_CPUS:-1.0}
+    pids_limit: 200
+
+  # One-shot: applies pending migrations, then exits. The platform refuses to start on any other schema version.
+  migrate:
+    image: wahala-player-platform:local
+    <<: *hardened
+    restart: 'no'
+    command: ['node', 'migrate.mjs']
+    environment:
+      PLATFORM_ENV: production
+      DATABASE_URL_FILE: /run/secrets/database_url
+      PLATFORM_GUEST_ONLY: '1'
+    secrets: [database_url]
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [data]
+    mem_limit: 256m
+
+  platform:
+    image: wahala-player-platform:local
+    <<: *hardened
+    environment:
+      PLATFORM_ENV: production
+      PORT: '4567'
+      PLATFORM_HOST: 0.0.0.0
+      DATABASE_URL_FILE: /run/secrets/database_url
+      PLATFORM_MATCH_SERVER_SECRET_FILE: /run/secrets/match_server_secret
+      PLATFORM_ADMIN_TOKEN_FILE: /run/secrets/admin_token
+      PLATFORM_METRICS_TOKEN_FILE: /run/secrets/platform_metrics_token
+      PLATFORM_HANDOFF_PRIVATE_KEY_FILE: /run/secrets/handoff_private_key
+      PLATFORM_ALLOWED_ORIGINS: ${GAME_ORIGINS}
+      PLATFORM_PUBLIC_WEB_URL: ${PUBLIC_WEB_URL}
+      PLATFORM_TRUSTED_PROXIES: 172.29.0.0/24
+      PLATFORM_GUEST_ONLY: ${PLATFORM_GUEST_ONLY:-1}
+      # invite-only: an account can only be created with a code from state/secrets/invite_codes (wahala-beta.sh invite new). Default ON.
+      PLATFORM_INVITE_REQUIRED: ${INVITE_ONLY:-1}
+      PLATFORM_INVITE_CODES_FILE: /run/secrets/invite_codes
+      PLATFORM_GOOGLE_CLIENT_IDS: ${PLATFORM_GOOGLE_CLIENT_IDS:-}
+      PLATFORM_APPLE_CLIENT_IDS: ${PLATFORM_APPLE_CLIENT_IDS:-}
+      PLATFORM_PARTY_MAX_SIZE: ${PLATFORM_PARTY_MAX_SIZE:-8}
+      PLATFORM_DB_POOL_MAX: ${PLATFORM_DB_POOL_MAX:-10}
+      PLATFORM_GUEST_CREATE_RATE: ${PLATFORM_GUEST_CREATE_RATE:-15/20}
+      PLATFORM_AUTO_RESTRICT: '0'
+    secrets: [database_url, match_server_secret, admin_token, platform_metrics_token, handoff_private_key, invite_codes]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [app, data]
+    expose: ['4567']
+    stop_grace_period: 15s
+    mem_limit: ${PLATFORM_MEM_LIMIT:-384m}
+    cpus: ${PLATFORM_CPUS:-0.5}
+    pids_limit: 128
+    tmpfs: ['/tmp']
+
+  rumble:
+    image: wahala-rumble-server:local
+    <<: *hardened
+    # the server reads its metrics token from the environment: a tiny wrapper turns the secret FILE into that variable inside the
+    # container only (it is not in `docker inspect`)
+    entrypoint: ['sh', '-c', 'export RUMBLE_METRICS_TOKEN="$$(cat /run/secrets/rumble_metrics_token)"; exec node rumble-server.mjs']
+    environment:
+      NODE_ENV: production
+      PORT: '2567'
+      RUMBLE_ALLOWED_ORIGINS: ${GAME_ORIGINS}
+      RUMBLE_TRUSTED_PROXIES: 172.29.0.0/24
+      # locked product requirements (docs/ops/CAPACITY.md, ONLINE_REQUIREMENTS_MATRIX.md): do not change for the beta
+      RUMBLE_GRACE_SECONDS: '5'
+      RUMBLE_RECONNECT_SECONDS: '30'
+      RUMBLE_DROP_POLICY: bot
+      # capacity protection, set from the measured evidence in docs/ops/BETA_LOAD_RESULTS.md
+      RUMBLE_MAX_PLAYING_ROOMS: ${RUMBLE_MAX_PLAYING_ROOMS:-2} # two matches at once: the measured comfortable ceiling for bot-filled rooms (BETA_LOAD_RESULTS.md)
+      RUMBLE_CPU_BUDGET: ${RUMBLE_CPU_BUDGET:-70}
+      RUMBLE_MAX_CONNECTIONS: ${RUMBLE_MAX_CONNECTIONS:-200}
+      RUMBLE_MAX_ROOMS: ${RUMBLE_MAX_ROOMS:-40}
+      # Hand-off to the player platform (docs/ops/BETA_INTEGRATION_HANDOFF.md). The match server in this repository does not read
+      # these yet; they are the wiring Architecture's integration will use, so enabling it needs no deployment change.
+      PLATFORM_JWKS_URL: http://platform:4567/.well-known/jwks.json
+      PLATFORM_INTERNAL_URL: http://platform:4567
+      PLATFORM_MATCH_SERVER_SECRET_FILE: /run/secrets/match_server_secret
+    secrets: [rumble_metrics_token, match_server_secret]
+    networks: [app]
+    expose: ['2567']
+    stop_grace_period: 20s
+    mem_limit: ${RUMBLE_MEM_LIMIT:-1g}
+    cpus: ${RUMBLE_CPUS:-1.0}
+    pids_limit: 256
+
+  edge:
+    image: ${EDGE_IMAGE:-nginx:1.28-alpine}
+    <<: *hardened
+    cap_add: [CHOWN, SETUID, SETGID] # only so the nginx master can start its unprivileged workers
+    depends_on:
+      rumble: { condition: service_healthy }
+      platform: { condition: service_healthy }
+    ports:
+      - '${EDGE_BIND:-0.0.0.0}:${EDGE_HTTPS_PORT:-443}:8443'
+      - '${EDGE_BIND:-0.0.0.0}:${EDGE_HTTP_PORT:-80}:8080'
+    volumes:
+      - ../edge/nginx.beta.conf:/etc/nginx/nginx.conf:ro
+      - ../edge/allow.conf:/etc/edge/allow.conf:ro
+      - ${BETA_STATE:-./state}/certs:/etc/edge/certs:ro
+      - ${BETA_STATE:-./state}/acme:/var/www/acme:ro
+    tmpfs: ['/tmp', '/var/cache/nginx']
+    networks: [app, public]
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/health | grep -q ok']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    stop_grace_period: 15s
+    mem_limit: 128m
+    cpus: 0.5
+
+  # Nightly pg_dump into state/backups (custom format, 0600), keeps BACKUP_KEEP_DAYS days, writes a heartbeat the monitor reads.
+  backup:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    <<: *hardened
+    user: '${BETA_UID:-1000}:${BETA_GID:-1000}'
+    entrypoint: ['sh', '/opt/backup-loop.sh']
+    environment:
+      PGHOST: db
+      PGUSER: wahala
+      PGDATABASE: wahala
+      PGPASSFILE: /tmp/.pgpass
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-3}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    secrets: [db_password]
+    volumes:
+      - ./backup-loop.sh:/opt/backup-loop.sh:ro
+      - ${BETA_STATE:-./state}/backups:/backups
+    tmpfs: ['/tmp']
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [data]
+    mem_limit: 128m
+
+  # Polls the services on the private network and writes JSON alert lines to its log (and to BETA_ALERT_WEBHOOK if you set one).
+  monitor:
+    image: ${NODE_IMAGE:-node:22-slim}
+    <<: *hardened
+    user: '${BETA_UID:-1000}:${BETA_GID:-1000}'
+    command: ['node', '/opt/beta/monitor.mjs']
+    environment:
+      RUMBLE_URL: http://rumble:2567
+      PLATFORM_URL: http://platform:4567
+      BACKUP_DIR: /backups
+      CERT_FILE: /etc/edge/certs/fullchain.pem
+      POLL_SECONDS: '30'
+      BETA_ALERT_WEBHOOK: ${BETA_ALERT_WEBHOOK:-}
+    secrets: [rumble_metrics_token, platform_metrics_token]
+    volumes:
+      - ./monitor.mjs:/opt/beta/monitor.mjs:ro
+      - ../monitoring/rules.mjs:/opt/monitoring/rules.mjs:ro
+      - ../monitoring/platform-rules.mjs:/opt/monitoring/platform-rules.mjs:ro
+      - ${BETA_STATE:-./state}/backups:/backups:ro
+      - ${BETA_STATE:-./state}/certs:/etc/edge/certs:ro
+    tmpfs: ['/tmp']
+    depends_on:
+      rumble: { condition: service_healthy }
+      platform: { condition: service_healthy }
+    networks: [app]
+    mem_limit: 128m
+
+networks:
+  # `internal: true` = no route to the internet and none from it. Fixed subnet so the services can name the edge as a trusted proxy.
+  app:
+    internal: true
+    ipam: { config: [{ subnet: 172.29.0.0/24 }] }
+  data:
+    internal: true
+  public: {}
+
+secrets:
+  db_password:
+    file: ${BETA_STATE:-./state}/secrets/db_password
+  database_url:
+    file: ${BETA_STATE:-./state}/secrets/database_url
+  match_server_secret:
+    file: ${BETA_STATE:-./state}/secrets/match_server_secret
+  admin_token:
+    file: ${BETA_STATE:-./state}/secrets/admin_token
+  platform_metrics_token:
+    file: ${BETA_STATE:-./state}/secrets/platform_metrics_token
+  rumble_metrics_token:
+    file: ${BETA_STATE:-./state}/secrets/rumble_metrics_token
+  handoff_private_key:
+    file: ${BETA_STATE:-./state}/secrets/handoff_private_key
+  invite_codes:
+    file: ${BETA_STATE:-./state}/secrets/invite_codes
+
+volumes:
+  wahala-db:

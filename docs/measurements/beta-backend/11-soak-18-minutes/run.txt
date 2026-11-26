@@ -1,0 +1,63 @@
+== soak (k-soak): 2026-11-26T06:44:01Z
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":4,"joinP99Ms":14,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":52678,"perSecond":3512,"statuses":{"200":344,"429":52334},"p50Ms":1,"p99Ms":26,"maxMs":92}
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":19,"joinP99Ms":179,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":65410,"perSecond":4361,"statuses":{"200":272,"429":65138},"p50Ms":1,"p99Ms":19,"maxMs":112}
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":6,"joinP99Ms":89,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":68229,"perSecond":4549,"statuses":{"200":300,"429":67929},"p50Ms":1,"p99Ms":17,"maxMs":85}
+soak round 1 done, 11 min left
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":4,"joinP99Ms":14,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":52634,"perSecond":3509,"statuses":{"200":344,"429":52290},"p50Ms":1,"p99Ms":26,"maxMs":75}
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":15,"joinP99Ms":113,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":57496,"perSecond":3833,"statuses":{"200":283,"429":57213},"p50Ms":1,"p99Ms":22,"maxMs":81}
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":9,"joinP99Ms":40,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":67197,"perSecond":4480,"statuses":{"200":302,"429":66895},"p50Ms":1,"p99Ms":20,"maxMs":78}
+soak round 2 done, 7 min left
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":4,"joinP99Ms":8,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":66745,"perSecond":4450,"statuses":{"200":344,"429":66401},"p50Ms":1,"p99Ms":18,"maxMs":78}
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":5,"joinP99Ms":14,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":60133,"perSecond":4009,"statuses":{"200":282,"429":59851},"p50Ms":1,"p99Ms":21,"maxMs":79}
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":8,"joinP99Ms":18,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":63563,"perSecond":4238,"statuses":{"200":322,"429":63241},"p50Ms":1,"p99Ms":19,"maxMs":72}
+soak round 3 done, 4 min left
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":4,"joinP99Ms":13,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":66029,"perSecond":4402,"statuses":{"200":344,"429":65685},"p50Ms":1,"p99Ms":21,"maxMs":78}
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":6,"joinP99Ms":46,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":64855,"perSecond":4324,"statuses":{"200":259,"429":64596},"p50Ms":1,"p99Ms":19,"maxMs":89}
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":13,"joinP99Ms":143,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":52346,"perSecond":3490,"statuses":{"200":318,"429":52028},"p50Ms":1,"p99Ms":25,"maxMs":72}
+soak round 4 done, 1 min left
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":4,"joinP99Ms":20,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":55218,"perSecond":3681,"statuses":{"200":344,"429":54874},"p50Ms":1,"p99Ms":24,"maxMs":80}
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":7,"joinP99Ms":57,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":63924,"perSecond":4262,"statuses":{"200":243,"429":63681},"p50Ms":1,"p99Ms":17,"maxMs":76}
+RESULT {"scenario":"churn","name":"join-leave","cycles":40,"concurrency":3,"ok":40,"fail":0,"joinP50Ms":8,"joinP99Ms":34,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+RESULT {"scenario":"api","name":"platform-reads","workers":8,"seconds":15,"requests":50266,"perSecond":3351,"statuses":{"200":318,"429":49948},"p50Ms":1,"p99Ms":26,"maxMs":83}
+soak round 5 done, -3 min left
+samples: 259 over 1091 s   (CPU % are per container; 100 % = one core)
+rumble    cpu avg 55% max 100%   mem first 71 MB, max 187 MB, last 187 MB
+platform  cpu avg 11% max 54%   mem first 19 MB, max 36 MB, last 31 MB
+db        cpu avg 1% max 19%   mem first 20 MB, max 37 MB, last 22 MB
+edge      cpu avg 0% max 3%   mem first 13 MB, max 14 MB, last 12 MB
+match server: playing rooms max 2, connections max 10, capacity cost in use max 46.6 of CPU budget 70
+  process: RSS max 235 MB, event-loop delay p99 max 57.174 ms, cpu (server's own reading) max 94.3 %
+  rooms: tick step p99 max 32.226 ms, timer lateness p99 max 55.198 ms (a tick is 16.7 ms), DROPPED TICKS 11, bot takeovers 0, reconnections 0, drops 0, kicks 0, invalid messages 0
+  refused by the capacity guard: {}
+PostgreSQL connections (limit 40 in compose): max 9, last 2
+files: /tmp/claude-0/validate-state/load/k-soak
+SERIES-DONE

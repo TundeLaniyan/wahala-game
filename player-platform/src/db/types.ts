@@ -20,6 +20,8 @@ export interface Db extends Queryable {
   /** Runs `fn` in one transaction: commit when it resolves, roll back when it throws. Not re-entrant. */
   tx<T>(fn: (q: Queryable) => Promise<T>): Promise<T>;
   close(): Promise<void>;
+  /** Connection pool occupancy (Postgres pool only; null for the in-process dev database). */
+  stats(): { total: number; idle: number; waiting: number; max: number } | null;
 }
 
 /** Postgres SQLSTATE of a driver error (both drivers expose it as `code`). */

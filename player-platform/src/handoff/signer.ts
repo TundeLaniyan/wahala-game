@@ -1,6 +1,6 @@
 /** Signs match tickets with an Ed25519 private key. Production supplies the key (`PLATFORM_HANDOFF_PRIVATE_KEY`, PKCS8 PEM); development makes an ephemeral one. */
 import { randomUUID } from 'node:crypto';
-import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair, importPKCS8 } from 'jose';
+import { SignJWT, calculateJwkThumbprint, createLocalJWKSet, exportJWK, generateKeyPair, importPKCS8 } from 'jose';
 import type { JWK, JWTVerifyGetKey } from 'jose';
 import type { Clock } from '../util/clock';
 import { TICKET_ISSUER, TICKET_TTL_SECONDS } from './verify';
@@ -38,7 +38,10 @@ export async function createHandoffSigner(opts: {
     privateKey = pair.privateKey;
     publicJwk = await exportJWK(pair.publicKey);
   }
-  const jwk: JWK = { ...publicJwk, kid: 'handoff-1', alg: 'EdDSA', use: 'sig' };
+  // The key id IS the key's RFC 7638 thumbprint: a rotated key always has a new id, so a match server that caches keys by id
+  // sees an unknown `kid` and re-fetches the key set (a fixed id would make a rotation invisible to it).
+  const kid = await calculateJwkThumbprint(publicJwk);
+  const jwk: JWK = { ...publicJwk, kid, alg: 'EdDSA', use: 'sig' };
   const set = { keys: [jwk] };
   return {
     audience: opts.audience,
@@ -53,7 +56,7 @@ export async function createHandoffSigner(opts: {
         party: c.party,
         restricted: c.restricted,
       })
-        .setProtectedHeader({ alg: 'EdDSA', kid: 'handoff-1' })
+        .setProtectedHeader({ alg: 'EdDSA', kid })
         .setIssuer(TICKET_ISSUER)
         .setAudience(opts.audience)
         .setSubject(c.sub)

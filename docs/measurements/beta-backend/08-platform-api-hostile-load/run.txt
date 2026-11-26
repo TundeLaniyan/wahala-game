@@ -1,0 +1,13 @@
+== api (h2-api): 2026-11-26T06:17:08Z
+accounts for the load: 12
+RESULT {"scenario":"api","name":"platform-reads","workers":30,"seconds":30,"requests":166985,"perSecond":5566,"statuses":{"200":488,"429":166497},"p50Ms":3,"p99Ms":43,"maxMs":105}
+samples: 11 over 41 s   (CPU % are per container; 100 % = one core)
+rumble    cpu avg 1% max 10%   mem first 130 MB, max 131 MB, last 130 MB
+platform  cpu avg 33% max 52%   mem first 29 MB, max 33 MB, last 32 MB
+db        cpu avg 1% max 6%   mem first 37 MB, max 54 MB, last 39 MB
+edge      cpu avg 0% max 2%   mem first 11 MB, max 11 MB, last 11 MB
+match server: playing rooms max 0, connections max 0, capacity cost in use max 0 of CPU budget 70
+  process: RSS max 180 MB, event-loop delay p99 max 3.459 ms, cpu (server's own reading) max 0.7 %
+  refused by the capacity guard: {"start_cpu_budget":14,"start_queued":2}
+PostgreSQL connections (limit 40 in compose): max 11, last 3
+files: /tmp/claude-0/validate-state/load/h2-api

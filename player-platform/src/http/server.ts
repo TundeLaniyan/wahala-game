@@ -15,10 +15,13 @@ import { requestContext } from '../context';
 import type { IdentityService } from '../identity/service';
 import type { Principal } from '../identity/types';
 import type { Logger } from '../logger';
+import type { Metrics } from '../metrics';
+import type { Db } from '../db/types';
 import type { Clock } from '../util/clock';
 import { safeEqual } from '../util/secrets';
 import { clientIp, ipKey, parseTrusted } from './clientIp';
 import { RATES } from './rateLimit';
+import type { Rate } from './rateLimit';
 import type { RateLimiter } from './rateLimit';
 import type { RouteContext, Router } from './router';
 import { verifyServiceRequest } from './serviceAuth';
@@ -35,6 +38,12 @@ export interface HttpOptions {
   trustedProxies: readonly string[];
   matchServerSecret: string;
   adminToken: string;
+  /** Operational metrics + the token that opens `GET /metrics` (empty token = no such route). */
+  metrics: Metrics;
+  metricsToken: string;
+  db: Db;
+  /** Per-class overrides of `RATES` (configuration, e.g. a more generous guest-creation limit for a private beta). */
+  rates?: Partial<Record<keyof typeof RATES, Rate>>;
   /** Called after every successful player authentication (presence keeps-alive). */
   onAuthenticated?: (p: Principal) => void;
   /** Readiness probe: resolves when the database answers and the schema is current. */
@@ -51,7 +60,10 @@ const SECURITY_HEADERS: Record<string, string> = {
 export interface PlatformHttp {
   server: Server;
   listen(port: number, host: string): Promise<number>;
-  close(): Promise<void>;
+  /** Stop taking work: `/ready` answers 503 so a proxy stops sending traffic; in-flight requests finish. */
+  drain(): void;
+  /** Close the listener, wait up to `graceMs` for in-flight requests, then cut what remains. */
+  close(graceMs?: number): Promise<void>;
   /** For tests: handle without a socket is not provided; use `listen(0)`. */
 }
 
@@ -129,9 +141,18 @@ export function createHttp(o: HttpOptions): PlatformHttp {
       }
       if (path === '/ready') {
         routeName = 'GET /ready';
-        const r = await o.ready();
+        const r = o.metrics.draining ? { ok: false, detail: { draining: true } } : await o.ready();
         status = r.ok ? 200 : 503;
         send(res, status, { ok: r.ok, ...r.detail }, base, null);
+        return;
+      }
+      if (path === '/metrics' && o.metricsToken) {
+        routeName = 'GET /metrics';
+        const h = req.headers.authorization;
+        if (typeof h !== 'string' || !safeEqual(h, `Bearer ${o.metricsToken}`))
+          throw new ApiError('unauthenticated', 'metrics token required');
+        status = 200;
+        send(res, 200, o.metrics.snapshot(o.db), base, null);
         return;
       }
       const ipRate = o.limiter.take(`ip:${ip}`, RATES.ip);
@@ -185,7 +206,7 @@ export function createHttp(o: HttpOptions): PlatformHttp {
       }
       if (def.rate) {
         const key = `${def.rate}:${principal?.playerId ?? ip}`;
-        const r = o.limiter.take(key, RATES[def.rate]);
+        const r = o.limiter.take(key, o.rates?.[def.rate] ?? RATES[def.rate]);
         if (!r.ok) throw new ApiError('rate_limited', 'slow down', { retryAfterMs: r.retryAfterMs });
       }
 
@@ -240,12 +261,9 @@ export function createHttp(o: HttpOptions): PlatformHttp {
       );
     } finally {
       // one line per request: route pattern (never the raw path: it can hold a code), status, duration, request id. No address, no body.
-      o.logger.info('request', {
-        requestId,
-        route: routeName,
-        status,
-        ms: Math.round(performance.now() - started),
-      });
+      const took = performance.now() - started;
+      o.metrics.record(status, took);
+      o.logger.info('request', { requestId, route: routeName, status, ms: Math.round(took) });
     }
   }
 
@@ -271,10 +289,17 @@ export function createHttp(o: HttpOptions): PlatformHttp {
         server.once('error', reject);
         server.listen(port, host, () => resolve((server.address() as AddressInfo).port));
       }),
-    close: () =>
+    drain: () => {
+      o.metrics.draining = true;
+    },
+    close: (graceMs = 0) =>
       new Promise((resolve) => {
-        server.close(() => resolve());
-        server.closeAllConnections();
+        o.metrics.draining = true;
+        server.close(() => resolve()); // stops accepting; resolves when the last connection is gone
+        server.closeIdleConnections();
+        // in-flight requests get `graceMs` to finish, then whatever is left is cut
+        const t = setTimeout(() => server.closeAllConnections(), graceMs);
+        t.unref();
       }),
   };
 }

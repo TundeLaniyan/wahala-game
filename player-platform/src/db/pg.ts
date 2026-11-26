@@ -3,7 +3,15 @@ import type { Db, Queryable, QueryResult } from './types';
 
 /** A `pg` connection pool as a `Db`. Returns int8 as a string (never silently loses precision) and timestamptz as Date. */
 export function createPgDb(connectionString: string, opts: { max?: number } = {}): Db {
-  const pool = new pg.Pool({ connectionString, max: opts.max ?? 10, idleTimeoutMillis: 30_000 });
+  const pool = new pg.Pool({
+    connectionString,
+    max: opts.max ?? 10,
+    idleTimeoutMillis: 30_000,
+    // bounds: a stuck query or a client that never answers cannot hold a connection (or the process) forever
+    connectionTimeoutMillis: 5_000,
+    statement_timeout: 15_000,
+    idle_in_transaction_session_timeout: 30_000,
+  });
   // an idle client erroring must not crash the process
   pool.on('error', () => undefined);
   const wrap = (q: pg.Pool | pg.PoolClient): Queryable => ({
@@ -32,5 +40,11 @@ export function createPgDb(connectionString: string, opts: { max?: number } = {}
       }
     },
     close: () => pool.end(),
+    stats: () => ({
+      total: pool.totalCount,
+      idle: pool.idleCount,
+      waiting: pool.waitingCount,
+      max: opts.max ?? 10,
+    }),
   };
 }

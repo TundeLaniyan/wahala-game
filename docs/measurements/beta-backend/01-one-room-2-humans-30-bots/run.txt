@@ -1,0 +1,14 @@
+== rooms (a2-1room-2humans): 2026-11-26T06:01:36Z
+rooms started: 1/1 in 557 ms (errors: 0)
+RESULT {"scenario":"rooms","name":"rooms","rooms":1,"humansPerRoom":2,"matchSeconds":180,"roomsStarted":1,"startErrors":[],"startupMs":557,"humans":2,"humansWithResults":2,"humansDisconnected":0,"closeCodes":[],"framesPerHuman":5476,"notices":[]}
+samples: 48 over 198 s   (CPU % are per container; 100 % = one core)
+rumble    cpu avg 30% max 50%   mem first 46 MB, max 115 MB, last 115 MB
+platform  cpu avg 1% max 10%   mem first 30 MB, max 30 MB, last 30 MB
+db        cpu avg 1% max 6%   mem first 37 MB, max 37 MB, last 37 MB
+edge      cpu avg 0% max 2%   mem first 11 MB, max 12 MB, last 11 MB
+match server: playing rooms max 1, connections max 2, capacity cost in use max 23.5 of CPU budget 70
+  process: RSS max 164 MB, event-loop delay p99 max 9.022 ms, cpu (server's own reading) max 41 %
+  rooms: tick step p99 max 21.892 ms, timer lateness p99 max 8.185 ms (a tick is 16.7 ms), DROPPED TICKS 0, bot takeovers 0, reconnections 0, drops 0, kicks 0, invalid messages 0
+  refused by the capacity guard: {}
+PostgreSQL connections (limit 40 in compose): max 2, last 2
+files: /tmp/claude-0/validate-state/load/a2-1room-2humans

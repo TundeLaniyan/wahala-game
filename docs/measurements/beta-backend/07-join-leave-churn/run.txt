@@ -1,0 +1,13 @@
+== churn (g2-churn): 2026-11-26T06:16:51Z
+RESULT {"scenario":"churn","name":"join-leave","cycles":150,"concurrency":5,"ok":150,"fail":0,"joinP50Ms":4,"joinP99Ms":22,"errors":{}}
+RESULT {"scenario":"churn","name":"create-leave","created":30,"refused":0,"errors":{}}
+samples: 4 over 12 s   (CPU % are per container; 100 % = one core)
+rumble    cpu avg 3% max 6%   mem first 122 MB, max 130 MB, last 130 MB
+platform  cpu avg 2% max 7%   mem first 29 MB, max 30 MB, last 29 MB
+db        cpu avg 1% max 4%   mem first 37 MB, max 37 MB, last 37 MB
+edge      cpu avg 0% max 0%   mem first 11 MB, max 11 MB, last 11 MB
+match server: playing rooms max 0, connections max 0, capacity cost in use max 0 of CPU budget 70
+  process: RSS max 179 MB, event-loop delay p99 max 1.1 ms, cpu (server's own reading) max 14.5 %
+  refused by the capacity guard: {"start_cpu_budget":14,"start_queued":2}
+PostgreSQL connections (limit 40 in compose): max 2, last 2
+files: /tmp/claude-0/validate-state/load/g2-churn

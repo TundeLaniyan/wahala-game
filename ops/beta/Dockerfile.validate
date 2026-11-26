@@ -1,0 +1,13 @@
+# The verification driver's runtime: Node 22 + the match server's own SDK (the same one the game uses), so the validator needs only
+# Docker on the host. The repository's ops/ folder is mounted at run time; nothing from it is baked in.
+#   docker build -f ops/beta/Dockerfile.validate -t wahala-validate-driver:local .
+ARG NODE_IMAGE=node:22-slim
+FROM scratch AS extra-ca
+FROM ${NODE_IMAGE}
+WORKDIR /repo/server
+COPY server/package.json server/package-lock.json ./
+RUN --mount=type=bind,from=extra-ca,target=/extra-ca \
+    if [ -f /extra-ca/ca-bundle.crt ]; then export NODE_EXTRA_CA_CERTS=/extra-ca/ca-bundle.crt; fi; \
+    npm ci --ignore-scripts --no-audit --no-fund
+WORKDIR /repo
+USER node

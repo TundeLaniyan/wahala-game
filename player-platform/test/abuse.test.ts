@@ -34,6 +34,26 @@ describe('rate limiting and abuse', () => {
     expect((await api.post('/v1/auth/guest', {})).status).toBe(201);
   });
 
+  it('the guest-creation limit is configurable (PLATFORM_GUEST_CREATE_RATE) and a bad value falls back to the safe default', async () => {
+    const { loadConfig } = await import('../src/config');
+    expect(loadConfig({ PLATFORM_GUEST_CREATE_RATE: '15/20' }).guestCreateRate).toEqual({
+      burst: 15,
+      perMin: 20,
+    });
+    for (const bad of ['', '0/5', '5/0', 'abc', '-1/3', '999999/1'])
+      expect(loadConfig({ PLATFORM_GUEST_CREATE_RATE: bad }).guestCreateRate).toEqual({
+        burst: 5,
+        perMin: 6,
+      });
+    const h = await limited({ PLATFORM_GUEST_CREATE_RATE: '8/10' });
+    open.push(h);
+    const api = client(h.base);
+    const statuses: number[] = [];
+    for (let i = 0; i < 10; i++) statuses.push((await api.post('/v1/auth/guest', {})).status);
+    expect(statuses.filter((s) => s === 201)).toHaveLength(8);
+    expect(statuses.filter((s) => s === 429)).toHaveLength(2);
+  });
+
   it('a forged X-Forwarded-For does NOT buy a fresh bucket unless the peer is a trusted proxy', async () => {
     const h = await limited();
     open.push(h);

@@ -1,0 +1,13 @@
+== probe (f2-guard-5rooms): 2026-11-26T06:16:30Z
+RESULT {"scenario":"probe","name":"capacity-guard","roomsTried":5,"createdRooms":5,"createRefusals":[],"noticesPerHost":[[],[],["{\"code\":\"server_busy\",\"message\":\"server_busy;retry=10;The servers are busy. Your match starts as soo"],["{\"code\":\"server_busy\",\"message\":\"server_busy;retry=10;The servers are busy. Your match starts as soo"],["{\"code\":\"server_busy\",\"message\":\"server_busy;retry=10;The servers are busy. Your match starts as soo"]]}
+samples: 5 over 16 s   (CPU % are per container; 100 % = one core)
+rumble    cpu avg 12% max 44%   mem first 157 MB, max 158 MB, last 143 MB
+platform  cpu avg 0% max 0%   mem first 29 MB, max 29 MB, last 29 MB
+db        cpu avg 1% max 5%   mem first 37 MB, max 37 MB, last 37 MB
+edge      cpu avg 1% max 3%   mem first 12 MB, max 12 MB, last 11 MB
+match server: playing rooms max 1, connections max 5, capacity cost in use max 24 of CPU budget 70
+  process: RSS max 206 MB, event-loop delay p99 max 4.139 ms, cpu (server's own reading) max 35.9 %
+  rooms: tick step p99 max 7.813 ms, timer lateness p99 max 1.149 ms (a tick is 16.7 ms), DROPPED TICKS 0, bot takeovers 0, reconnections 0, drops 0, kicks 0, invalid messages 0
+  refused by the capacity guard: {"start_cpu_budget":14,"start_queued":2}
+PostgreSQL connections (limit 40 in compose): max 2, last 2
+files: /tmp/claude-0/validate-state/load/f2-guard-5rooms
