@@ -34,6 +34,40 @@ The final branch is built **from production `10d0b26`**, then `git merge --no-ff
 
 Everything of production (offline game, all 21 campaign missions, City Rumble and Junction Blast, the approved soundtrack and audio engine, the Home and Quick Start menus, the mobile optimisations, the Okada renderer fix and its test) **plus**: the player platform (`player-platform/`), the platform-linked match server (`server/`), the private multiplayer client (`src/online/platform/`, `src/ui/online/platform/`), and the Ops package (`ops/beta/`, `docs/ops/`). The default (public) build contains none of the online code: `tests/online/build-guard.test.ts`, `tests/platform-static.test.ts`, `scripts/check-static-build.mjs`.
 
-## 3. Results
 
-Filled in from the actual runs; see sections 4 to 7.
+## 3. The two checks Backend Ops reported as blocked
+
+Backend Ops reported `241 passed, 0 failed, 2 blocked by integration`. The two blocked checks were: **(1)** the match server verifies the signed ticket and binds the verified player id to the seat; **(2)** the match server itself sends the signed `started` and `finished` calls (the validator had been posting them in its place). Both now run in `ops/beta/validate.sh` and pass, on the real Docker images through the TLS edge:
+
+| Required confirmation | Evidence (`docs/measurements/beta-backend/validation-report-final-integrated.txt`) |
+| --- | --- |
+| 1. The server verifies signed tickets and binds verified ids to the right seats | I1 (a host ticket cannot join an existing room), I2 (a tampered ticket is refused), I3 (a ticketed player sits under the platform name whatever name the client sends), I3b (the seat carries the verified platform id), I10 (a made-up ticket is refused); unit `server/test/platform.test.ts` (forged key, expired, wrong room, wrong audience, replayed, wrongly scoped, one seat per account) |
+| 2. The server sends authenticated lifecycle events and trusted results | I4a (the match server itself reported the finished match: the validator posted nothing before the check), I4 (the recorded placement and eliminations equal the server's own final results), I4b (the leader has the same match); step 5: unsigned, forged and stale internal calls refused (401), a result naming a never-ticketed player refused (400), a replay changes nothing; I5 (platform stopped: the match still starts within 2 s of the baseline and keeps running) |
+| 3. The client obtains and submits the correct platform-issued ticket | `tests/online/platform-controller.test.ts` (a fresh ticket right before each use, a leader's host ticket, a member's room ticket, one retry on a refusal) and the hosted-stack browser run (section 5) |
+| 4. Guest-only compatibility where authorised | a server without `RUMBLE_REQUIRE_TICKET` is exactly the old guest server (`server/test/platform.test.ts`, `platform.noconfig.test.ts`, the whole existing server suite); the public Pages game never touches any of it |
+| 5. Uninvited visitors cannot bypass admission through the match server or the matchmaking APIs | `RUMBLE_REQUIRE_TICKET=1` (decision FC-1): I7 (a guest cannot join by a known room code), I8 (cannot create a room), I9 (quick play closed), **I11** (raw HTTP create / join by code / quick play through the edge, no browser, no SDK: refused), unit `server/test/platform.strict.test.ts`, and in a real browser (section 5): a wrong invite code refused, no create / join / quick-play controls, raw matchmaking requests refused, nobody got a seat |
+
+The exact `started` and `finished` contracts are `docs/PLATFORM_MATCH_HANDOFF.md` section 3, `docs/openapi/platform.yaml` and `player-platform/src/matches/service.ts` (`StartedInput`, `FinishedInput`). The server builds the bodies in `RumbleRoom.reportToPlatform` from its own state only (match id `<id>:<room nonce>`; the room code for private rooms; one participant per seat, with the verified `playerId` for human seats and `isBot` for the rest; results with placement and eliminations), signed `HMAC-SHA256(ts.POST.path.body)`, 2 s timeout, never awaited by the match.
+
+## 4. Two-browser end-to-end on the combined stack
+
+Two real runs of `e2e/private-multiplayer.spec.ts` (A desktop, B phone-sized touch, C an outsider), both **1 passed**:
+
+| Run | Stack | Result |
+| --- | --- | --- |
+| `npm run test:private-e2e` | development stack: real PostgreSQL 16.15, platform, platform-linked match server, server build of the game | passed, 9.4 min (`docs/measurements/beta-backend/private-e2e-local-stack-run.txt`) |
+| `npm run test:beta-e2e` | the **hosted** stack: the real Docker images behind the TLS edge, the match server **requiring tickets**, the platform **invite-only**, the **private-beta client** on another origin | passed, 9.5 min (`docs/measurements/beta-backend/beta-e2e-hosted-stack-run.txt`); the match-server and platform logs hold no invite code and no secret |
+
+What both cover: guest onboarding (the hosted run through the invite form), nicknames, friends by code, party creation and joining, one private room, both players VERIFIED with platform names, preset quick signals in the lobby and in the match, mute and report performed (block reachable), a 3-minute private Free-for-All with 2 humans and 30 bots (32 fighters), a touch pad, a forced disconnect and reconnection to the SAME seat inside the 30 s window, identical results on both browsers, the platform history written by the server for both players, the room lobby again (rematch), Team Rumble, a second match with signals and results, recorded again. On the hosted stack the outsider C instead proves rejection: a wrong invite code is refused in the page, there are no create / join / quick-play controls, raw `matchmake` requests (create, join by code, quick play, a made-up ticket) are refused, and the room still has two members.
+
+## 5. Open problems and risks
+
+| # | Item | State |
+| --- | --- | --- |
+| 1 | `e2e/audio.spec.ts`: the second match never shows its HUD | **OPEN**, unexplained, intermittent, seen on production, Ops and platform code; narrowed and diagnostics extended (decision FC-6); never "fixed" by a longer wait |
+| 2 | Real phones, real mobile networks, a real host, domain and certificate | **NOT DONE** (listed as pending, never claimed) |
+| 3 | The match server is one process | a restart ends the running matches and their results are not recorded; the platform and the match server restart cleanly in between (validated) |
+| 4 | Capacity | the evidence is Backend Ops' (`docs/ops/BETA_LOAD_RESULTS.md`, taken with ticketless guests: admission does not change a match's cost). **No new capacity measurements were taken**, so the limit stays at 2 simultaneous matches |
+| 5 | Moderation | reports are stored and readable by command; no moderator screen, nobody is alerted |
+| 6 | Privacy and age policy | counsel review, the Nigerian data-protection position and a guardian / age rule are founder decisions (the platform treats an unspecified age as a minor) |
+| 7 | Sandbox-only workarounds | a local `docker` shim (the sandbox's containers have no outbound route) and base images pulled from a mirror (Docker Hub's anonymous pull limit); neither is in the repository. A real server pulls normally |

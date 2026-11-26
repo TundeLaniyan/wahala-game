@@ -85,6 +85,7 @@ services:
       PORT: '4567'
       PLATFORM_HOST: 0.0.0.0
       DATABASE_URL_FILE: /run/secrets/database_url
+      PLATFORM_MATCH_SERVER_SECRET_FILE: /run/secrets/match_server_secret
       PLATFORM_ADMIN_TOKEN_FILE: /run/secrets/admin_token
       PLATFORM_METRICS_TOKEN_FILE: /run/secrets/platform_metrics_token
       PLATFORM_HANDOFF_PRIVATE_KEY_FILE: /run/secrets/handoff_private_key
