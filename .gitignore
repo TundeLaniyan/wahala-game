@@ -3,6 +3,7 @@ dist
 dist-online
 dist-private
 dist-beta
+dist-tunnel
 private-e2e-diag
 playwright-report
 test-results

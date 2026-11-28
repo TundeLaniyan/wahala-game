@@ -1,0 +1,333 @@
+{
+  "when": "2026-11-28T14:16:05.551Z",
+  "passed": 38,
+  "failed": 1,
+  "results": [
+    {
+      "area": "launcher",
+      "name": "one command starts the whole test and prints \"THE TEST IS RUNNING\"",
+      "ok": true,
+      "detail": "61 s"
+    },
+    {
+      "area": "launcher",
+      "name": "it prints the public address, a private link per tester and an invite code",
+      "ok": true,
+      "detail": "3 links"
+    },
+    {
+      "area": "launcher",
+      "name": "its own protection self-test passed before any link was shown",
+      "ok": true,
+      "detail": "24 checks"
+    },
+    {
+      "area": "security",
+      "name": "a stranger without a link gets the refusal page (403)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "security",
+      "name": "GET /v1/auth/providers without a link is refused (403)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "security",
+      "name": "GET /platform-health without a link is refused (403)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "security",
+      "name": "GET /.well-known/jwks.json without a link is refused (403)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "security",
+      "name": "POST /matchmake/create/rumble without a link is refused (403)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "security",
+      "name": "POST /matchmake/joinOrCreate/rumble without a link is refused (403)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "security",
+      "name": "POST /matchmake/joinById/ABCDEF without a link is refused (403)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "security",
+      "name": "GET /assets/index.js without a link is refused (403)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "security",
+      "name": "a made-up private link is refused",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "security",
+      "name": "a real private link sets a Secure, HttpOnly, SameSite cookie and redirects to the game without the token",
+      "ok": true,
+      "detail": "wahala_gate=<token>; Path=/; Max-Age=43200; Secure; HttpOnly; SameSite=Lax"
+    },
+    {
+      "area": "frontend",
+      "name": "with the cookie the real game page loads from the tunnel address, no localhost in it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "frontend",
+      "name": "the page finds its servers from its own address at run time (wss://{host}, https://{host}), nothing fixed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "frontend",
+      "name": "real game assets are served through the tunnel path (audio manifest, correct type)",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "frontend",
+      "name": "the service worker is served and never cached long",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "security",
+      "name": "/admin/v1/reports is never public: 404 even with full access",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "area": "security",
+      "name": "/internal/v1/matches/finished is never public: 404 even with full access",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "area": "security",
+      "name": "/metrics is never public: 404 even with full access",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "area": "security",
+      "name": "/ready is never public: 404 even with full access",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "area": "security",
+      "name": "/debug/anything is never public: 404 even with full access",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "area": "security",
+      "name": "/internal/ is never public: 404 even with full access",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "area": "security",
+      "name": "/admin/ is never public: 404 even with full access",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "area": "security",
+      "name": "raw matchmaking WITH the cookie but no platform ticket is refused by the match server",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "security",
+      "name": "an account cannot be created without a WAHALA! invite code (cookie alone is not enough)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "limits",
+      "name": "guessing private links is rate-limited (429 after the burst)",
+      "ok": true,
+      "detail": "4 refused, 26 limited"
+    },
+    {
+      "area": "limits",
+      "name": "room-creation flooding is rate-limited at the entrance (429)",
+      "ok": true,
+      "detail": "403 403 403 429 429 429 429 429 429 429 429 429 429 429"
+    },
+    {
+      "area": "limits",
+      "name": "the capacity limits are in force: at most 2 matches playing, a CPU budget, tickets required",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "security",
+      "name": "the visitor's real address (CF-Connecting-IP) is what the limits and logs see",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "security",
+      "name": "no secret, invite code or access token appears in any container's configuration (docker inspect)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "security",
+      "name": "only the entrance publishes a port, and only on 127.0.0.1; PostgreSQL, the platform and the match server publish none",
+      "ok": false,
+      "detail": "wahala-tunnel-e2e-edge-1 80/tcp, 127.0.0.1:18080->8080/tcp"
+    },
+    {
+      "area": "browsers",
+      "name": "two real browsers play the whole private beta through the tunnel (onboarding, friends, party, FFA 32 fighters, signals, reconnection, results, Team Rumble, second match, outsiders refused)",
+      "ok": true,
+      "detail": "10 min"
+    },
+    {
+      "area": "browsers",
+      "name": "WebSocket connections were opened and the only unplanned closes are the planned drop of browser B",
+      "ok": true,
+      "detail": "A opened 4 closed 3; B opened 4 closed 3"
+    },
+    {
+      "area": "status",
+      "name": "the status command shows services, people connected, accounts, recorded matches and refusals",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "privacy",
+      "name": "no access token, invite code or secret appears in any service log",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "privacy",
+      "name": "tester email addresses are never written to a service log",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "shutdown",
+      "name": "one command stops everything: exit 0, no container, no network, the tunnel address closed",
+      "ok": true,
+      "detail": "181 s; containers left 0, networks left 0, address closed"
+    },
+    {
+      "area": "shutdown",
+      "name": "the access list is emptied on shutdown (no old token still opens anything)",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "metrics": {
+    "ws": {
+      "A": {
+        "opened": 4,
+        "closed": 3,
+        "events": [
+          "37s open",
+          "94s close",
+          "111s open",
+          "111s close",
+          "111s open",
+          "409s close",
+          "409s open"
+        ]
+      },
+      "B": {
+        "opened": 4,
+        "closed": 3,
+        "events": [
+          "38s open",
+          "94s close",
+          "112s open",
+          "141s close",
+          "153s open",
+          "409s close",
+          "433s open"
+        ]
+      }
+    },
+    "rtt": [
+      {
+        "who": "A",
+        "when": "match-1-start",
+        "chipMs": null,
+        "healthMs": 11671
+      },
+      {
+        "who": "B",
+        "when": "match-1-start",
+        "chipMs": null,
+        "healthMs": 2553
+      },
+      {
+        "who": "B",
+        "when": "after-reconnect",
+        "chipMs": null,
+        "healthMs": 3425
+      },
+      {
+        "who": "A",
+        "when": "after-B-reconnect",
+        "chipMs": null,
+        "healthMs": 405
+      },
+      {
+        "who": "A",
+        "when": "match-2-team-start",
+        "chipMs": 442,
+        "healthMs": 6557
+      },
+      {
+        "who": "B",
+        "when": "match-2-team-start",
+        "chipMs": null,
+        "healthMs": 454
+      },
+      {
+        "who": "A",
+        "when": "end",
+        "chipMs": null,
+        "healthMs": 41
+      },
+      {
+        "who": "B",
+        "when": "end",
+        "chipMs": null,
+        "healthMs": 45
+      }
+    ],
+    "bytes": {
+      "A": {
+        "first": 6587747,
+        "total": 28488446,
+        "requests": 356
+      },
+      "B": {
+        "first": 6583081,
+        "total": 28486063,
+        "requests": 355
+      }
+    }
+  }
+}

@@ -1,2 +1,4 @@
 # Everything the operator generates on the server: secrets, certificates, backups, the env file. NEVER commit any of it.
 state/
+# the founder-laptop tunnel test (scripts/beta-tunnel.mjs): its own secrets, testers' emails and tokens, tunnel files. NEVER commit.
+tunnel-state/

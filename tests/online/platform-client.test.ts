@@ -237,7 +237,7 @@ describe('errors, timeouts and a platform that is down', () => {
     expect(fake.requests.find((r) => r.body && 'status' in r.body)?.path).toBe('/v1/presence');
   });
 
-  it('every request goes to the configured platform base URL only, without cookies', async () => {
+  it('every request goes to the configured platform base URL only, and carries cookies only to its own origin (never `include`)', async () => {
     const urls: string[] = [];
     const creds: (RequestCredentials | undefined)[] = [];
     const fake = new FakePlatform();
@@ -254,7 +254,8 @@ describe('errors, timeouts and a platform that is down', () => {
     await client.ensureGuest();
     expect((await client.friends()).ok).toBe(true);
     expect(urls.every((u) => u.startsWith(`${BASE}/v1/`))).toBe(true);
-    expect(creds.every((c) => c === 'omit')).toBe(true);
+    // never `include`: a cookie can only ever go to the page's own origin (same-origin), never to the platform on another one
+    expect(creds.every((c) => c === 'same-origin')).toBe(true);
   });
 });
 

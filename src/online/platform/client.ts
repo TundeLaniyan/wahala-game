@@ -125,7 +125,9 @@ export class PlatformClient {
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: ctl?.signal,
-        credentials: 'omit',
+        // `same-origin`, not `omit`: a hosted page on ANOTHER origin still sends no cookies (as before), while a page served from the very
+        // address of its API (the founder-laptop tunnel, docs/ops/BETA_TUNNEL_TESTING.md) sends the access cookie its private link set
+        credentials: 'same-origin',
         cache: 'no-store',
       });
     } catch (e) {

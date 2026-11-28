@@ -17,6 +17,7 @@
  *   9. back in the room lobby (rematch), switch to TEAM Rumble, a second match: signals, results, recorded again
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { writeFileSync } from 'node:fs';
 import { devices, expect, test } from '@playwright/test';
 import type { Browser, BrowserContext, Page, WebSocketRoute } from '@playwright/test';
 
@@ -28,6 +29,67 @@ const Q = '?debug&q=veryLow&seed=7&noattract&online';
 const INVITE = process.env.WAHALA_PRIVATE_E2E_INVITE ?? '';
 const SERVER_HTTP = process.env.WAHALA_PRIVATE_E2E_SERVER ?? '';
 const STRICT = INVITE !== '';
+// The founder-laptop TUNNEL run (scripts/beta-tunnel-e2e.mjs): every request first needs the access cookie that a tester's private link sets.
+const GATE = {
+  A: process.env.WAHALA_PRIVATE_E2E_GATE_A ?? '',
+  B: process.env.WAHALA_PRIVATE_E2E_GATE_B ?? '',
+  C: process.env.WAHALA_PRIVATE_E2E_GATE_C ?? '',
+};
+const GATED = GATE.A !== '';
+const METRICS_FILE = process.env.WAHALA_PRIVATE_E2E_METRICS ?? '';
+
+/** What the browsers saw: WebSocket opens and closes, round-trip samples (the game's own ping chip and a timed request) and bytes transferred. */
+const metrics: {
+  ws: Record<string, { opened: number; closed: number; events: string[] }>;
+  rtt: { who: string; when: string; chipMs: number | null; healthMs: number }[];
+  bytes: Record<string, { first: number; total: number; requests: number }>;
+} = { ws: {}, rtt: [], bytes: {} };
+const sampling: { stop: () => void } = { stop: () => undefined };
+const t0 = Date.now();
+const stamp = (): string => `${Math.round((Date.now() - t0) / 1000)}s`;
+
+function track(page: Page, who: string): void {
+  metrics.ws[who] = { opened: 0, closed: 0, events: [] };
+  metrics.bytes[who] = { first: 0, total: 0, requests: 0 };
+  page.on('websocket', (ws) => {
+    const m = metrics.ws[who]!;
+    m.opened++;
+    m.events.push(`${stamp()} open`);
+    ws.on('close', () => {
+      m.closed++;
+      m.events.push(`${stamp()} close`);
+    });
+    ws.on('socketerror', (e) => m.events.push(`${stamp()} error ${String(e).slice(0, 80)}`));
+  });
+  page.on('requestfinished', (r) => {
+    void r
+      .sizes()
+      .then((sz) => {
+        const b = metrics.bytes[who]!;
+        b.total += sz.responseBodySize + sz.responseHeadersSize;
+        b.requests++;
+      })
+      .catch(() => undefined);
+  });
+}
+
+/** Round-trip samples from inside the page: the game's own ping chip and the time of a small authenticated request through the whole path. */
+async function sample(page: Page, who: string, when: string): Promise<void> {
+  const chip = await page
+    .getByTestId('net-ping')
+    .first()
+    .innerText({ timeout: 2000 })
+    .then((t) => Number(/(\d+)/.exec(t)?.[1] ?? NaN))
+    .catch(() => NaN);
+  const healthMs = await page
+    .evaluate(async () => {
+      const t = performance.now();
+      await fetch('/platform-health', { cache: 'no-store' }).then((r) => r.text());
+      return Math.round(performance.now() - t);
+    })
+    .catch(() => -1);
+  metrics.rtt.push({ who, when, chipMs: Number.isFinite(chip) ? chip : null, healthMs });
+}
 
 test.skip(!BASE, 'needs the private multiplayer stack: npm run test:private-e2e');
 test.describe.configure({ mode: 'serial' });
@@ -66,7 +128,15 @@ async function phone(browser: Browser): Promise<BrowserContext> {
   });
 }
 
-async function openOnline(page: Page): Promise<void> {
+/** The tunnel's door: a tester's private link sets the access cookie, then everything else works as usual. */
+async function enterGate(page: Page, token: string): Promise<void> {
+  if (!token) return;
+  const r = await page.goto(`${BASE}__enter?k=${token}`);
+  expect(r?.status(), 'the private link opens the door').toBeLessThan(400);
+}
+
+async function openOnline(page: Page, gate = ''): Promise<void> {
+  await enterGate(page, gate);
   await page.goto(`${BASE}${Q}`);
   await page.getByTestId('home-rumble-online').click({ timeout: 180_000 });
   if (STRICT) {
@@ -140,6 +210,8 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
   const ctxC = await browser.newContext({ viewport: { width: 900, height: 700 } });
   const b = await ctxB.newPage();
   const c = await ctxC.newPage();
+  track(a, 'A');
+  track(b, 'B');
   const errors: string[] = [];
   for (const [n, p] of [
     ['A', a],
@@ -157,7 +229,9 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     );
   try {
     // ---- 1. guests choose nicknames
-    await Promise.all([openOnline(a), openOnline(b)]);
+    await Promise.all([openOnline(a, GATE.A), openOnline(b, GATE.B)]);
+    metrics.bytes.A!.first = metrics.bytes.A!.total;
+    metrics.bytes.B!.first = metrics.bytes.B!.total;
     await expect(a.getByTestId('pf-guest-label')).toBeVisible();
     await setNickname(a, nameA);
     await setNickname(b, nameB);
@@ -229,6 +303,7 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     } else {
       // the hosted beta: someone who has the page and even the ROOM CODE but no invite cannot get an account, and cannot reach the
       // match server around the page either (every matchmaking request needs a platform ticket)
+      await enterGate(c, GATE.C);
       await c.goto(`${BASE}${Q}`);
       await c.getByTestId('home-rumble-online').click({ timeout: 180_000 });
       await expect(c.getByTestId('pf-invite')).toBeVisible({ timeout: 60_000 });
@@ -250,6 +325,46 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
       }
       await expect(a.getByTestId('ro-member')).toHaveCount(2); // nobody got a seat
       await shot(c, '08-uninvited-C');
+      if (GATED) {
+        // a stranger with NO private link at all: nothing is reachable, not the page, not the API, not a socket
+        const ctxD = await browser.newContext({ viewport: { width: 900, height: 700 } });
+        const d = await ctxD.newPage();
+        const home = await d.goto(`${BASE}${Q}`);
+        expect(home?.status(), 'a stranger without a link gets the refusal page').toBe(403);
+        await expect(d.locator('body')).toContainText(/private test/i);
+        expect(
+          (await d.goto(`${BASE}__enter?k=${'0'.repeat(32)}`))?.status(),
+          'a made-up link is refused',
+        ).toBe(403);
+        for (const [path, method] of [
+          ['/v1/auth/providers', 'get'],
+          ['/platform-health', 'get'],
+          ['/.well-known/jwks.json', 'get'],
+          ['/matchmake/create/rumble', 'post'],
+          ['/matchmake/joinOrCreate/rumble', 'post'],
+        ] as const) {
+          const r = await (method === 'get'
+            ? d.request.get(`${SERVER_HTTP}${path}`, { failOnStatusCode: false })
+            : d.request.post(`${SERVER_HTTP}${path}`, {
+                data: { name: 'Mallory', private: true, mode: 'ffa' },
+                failOnStatusCode: false,
+              }));
+          expect(r.status(), `${path} without a link`).toBe(403);
+        }
+        const wsResult = await d.evaluate(
+          () =>
+            new Promise<string>((resolve) => {
+              const ws = new WebSocket(`wss://${location.host}/abc/DEFGHI?sessionId=guess`);
+              ws.onopen = () => resolve('open');
+              ws.onerror = () => resolve('refused');
+              ws.onclose = () => resolve('refused');
+              setTimeout(() => resolve('no answer'), 15_000);
+            }),
+        );
+        expect(wsResult, 'a WebSocket without a link is refused').toBe('refused');
+        await shot(d, '08b-stranger-no-link');
+        await ctxD.close();
+      }
     }
 
     // ---- 6. quick signals in the lobby; B mutes A; the member menu offers block and report
@@ -313,6 +428,14 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     expect(sa.humans).toBe(2);
     expect(sa.seat).not.toBe(sb.seat);
     expect(sa.game).toBe('deathmatch');
+    // the game's own ping, every 20 s while the matches run (the page is busy drawing 32 fighters: only the chip is a fair network figure)
+    const sampler = setInterval(() => {
+      void sample(a, 'A', 'during');
+      void sample(b, 'B', 'during');
+    }, 20_000);
+    sampling.stop = () => clearInterval(sampler);
+    await sample(a, 'A', 'match-1-start');
+    await sample(b, 'B', 'match-1-start');
     await shot(a, '10-match-A');
     await shot(b, '11-match-B-phone');
 
@@ -327,6 +450,8 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     expect(back.seat).toBe(seatB);
     expect(back.humans).toBe(2);
     await shot(b, '12-reconnected-B-phone');
+    await sample(b, 'B', 'after-reconnect');
+    await sample(a, 'A', 'after-B-reconnect');
 
     // a quick signal in the match, from A to B (Free-for-All: match-wide presets only)
     await a.getByTestId('qs-hud-toggle').click();
@@ -390,6 +515,8 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     expect(ta.humans).toBe(2);
     expect([0, 1]).toContain(ta.team);
     expect([0, 1]).toContain(tb.team);
+    await sample(a, 'A', 'match-2-team-start');
+    await sample(b, 'B', 'match-2-team-start');
     await shot(a, '14-team-match-A');
     // a team signal reaches the team (and is refused in Free-for-All, covered by the server tests)
     await a.getByTestId('qs-hud-toggle').click();
@@ -403,7 +530,11 @@ test('private multiplayer: guests, nicknames, friends, party, one private room, 
     const games = (await history(a)).map((m) => m.game).sort();
     expect(games).toEqual(['deathmatch', 'team']);
     expect(errors, 'no page errors in any browser').toEqual([]);
+    await sample(a, 'A', 'end');
+    await sample(b, 'B', 'end');
   } finally {
+    sampling.stop();
+    if (METRICS_FILE) writeFileSync(METRICS_FILE, JSON.stringify(metrics, null, 2));
     await ctxB.close();
     await ctxC.close().catch(() => undefined);
   }

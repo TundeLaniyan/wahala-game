@@ -1,0 +1,92 @@
+{
+  "ws": {
+    "A": {
+      "opened": 4,
+      "closed": 3,
+      "events": [
+        "37s open",
+        "94s close",
+        "111s open",
+        "111s close",
+        "111s open",
+        "409s close",
+        "409s open"
+      ]
+    },
+    "B": {
+      "opened": 4,
+      "closed": 3,
+      "events": [
+        "38s open",
+        "94s close",
+        "112s open",
+        "141s close",
+        "153s open",
+        "409s close",
+        "433s open"
+      ]
+    }
+  },
+  "rtt": [
+    {
+      "who": "A",
+      "when": "match-1-start",
+      "chipMs": null,
+      "healthMs": 11671
+    },
+    {
+      "who": "B",
+      "when": "match-1-start",
+      "chipMs": null,
+      "healthMs": 2553
+    },
+    {
+      "who": "B",
+      "when": "after-reconnect",
+      "chipMs": null,
+      "healthMs": 3425
+    },
+    {
+      "who": "A",
+      "when": "after-B-reconnect",
+      "chipMs": null,
+      "healthMs": 405
+    },
+    {
+      "who": "A",
+      "when": "match-2-team-start",
+      "chipMs": 442,
+      "healthMs": 6557
+    },
+    {
+      "who": "B",
+      "when": "match-2-team-start",
+      "chipMs": null,
+      "healthMs": 454
+    },
+    {
+      "who": "A",
+      "when": "end",
+      "chipMs": null,
+      "healthMs": 41
+    },
+    {
+      "who": "B",
+      "when": "end",
+      "chipMs": null,
+      "healthMs": 45
+    }
+  ],
+  "bytes": {
+    "A": {
+      "first": 6587747,
+      "total": 28488446,
+      "requests": 356
+    },
+    "B": {
+      "first": 6583081,
+      "total": 28486063,
+      "requests": 355
+    }
+  }
+}

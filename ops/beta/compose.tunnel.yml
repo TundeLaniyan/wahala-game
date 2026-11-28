@@ -1,0 +1,29 @@
+# WAHALA! founder-laptop TUNNEL: an override of compose.yml (docs/ops/BETA_TUNNEL_TESTING.md). Never call this by hand: the launcher
+# (`npm run beta:tunnel`, scripts/beta-tunnel.mjs) writes the secrets and the settings and runs
+#   docker compose -p wahala-tunnel -f ops/beta/compose.yml -f ops/beta/compose.tunnel.yml --env-file <tunnel state>/tunnel.env ...
+#
+# What changes compared with the server stack, and nothing else:
+#   * the edge is the TUNNEL edge (ops/edge/nginx.tunnel.conf): plain HTTP, published on 127.0.0.1 ONLY (not 0.0.0.0, not 80/443);
+#     it also serves the game page; two generated files (the tunnel's host, the testers' access tokens) are mounted read-only;
+#   * the monitor does not look for a TLS certificate (Cloudflare holds it).
+# Unchanged: PostgreSQL, the match server and the platform have no published port; secrets are files; the match server REQUIRES a platform
+# ticket; accounts need an invite code; at most 2 matches play at once; /admin /internal /metrics are never routed.
+#
+# `!override` needs Docker Compose 2.24 or newer (the launcher checks).
+services:
+  edge:
+    ports: !override
+      - '127.0.0.1:${TUNNEL_PORT:-18080}:8080'
+    volumes: !override
+      - ../edge/nginx.tunnel.conf:/etc/nginx/nginx.conf:ro
+      - ${BETA_STATE}/tunnel:/etc/edge/tunnel:ro
+      - ../edge/tunnel-denied.html:/etc/edge/denied/tunnel-denied.html:ro
+      - ${GAME_DIST}:/srv/game:ro
+  monitor:
+    environment:
+      CERT_FILE: ''
+    volumes: !override
+      - ./monitor.mjs:/opt/beta/monitor.mjs:ro
+      - ../monitoring/rules.mjs:/opt/monitoring/rules.mjs:ro
+      - ../monitoring/platform-rules.mjs:/opt/monitoring/platform-rules.mjs:ro
+      - ${BETA_STATE}/backups:/backups:ro

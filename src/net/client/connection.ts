@@ -106,9 +106,10 @@ export class Connection {
     await this.close();
     this.setStatus('connecting', 'opening the room');
     const sdk = new Client(serverHttpUrl(this.url));
-    // the SDK sends `credentials: 'include'` by default; the server's CORS answer (origin echo, no credentials) is for
-    // cookie-less requests, which is all this client needs
-    (sdk.http as unknown as { options: { credentials?: string } }).options.credentials = 'omit';
+    // the SDK sends `credentials: 'include'` by default; the server's CORS answer (origin echo, no credentials) is for cookie-less
+    // cross-origin requests, which is all this client needs. `same-origin` keeps that (no cookie ever goes to another origin) and lets a
+    // page served from its server's own address send the access cookie of the founder-laptop tunnel (docs/ops/BETA_TUNNEL_TESTING.md)
+    (sdk.http as unknown as { options: { credentials?: string } }).options.credentials = 'same-origin';
     const who = { name: req.who.name, characterId: req.who.characterId, gid: guestSessionId() };
     let room: Room;
     // a platform ticket goes with create / join only (never Quick Play), and only when the player has one
