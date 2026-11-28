@@ -33,7 +33,7 @@ See the list: `npm run beta:tunnel:testers -- list`. Remove someone: `npm run be
 npm run beta:tunnel
 ```
 
-Leave that Terminal window open. It prints, in order: your Mac is ready, the game is built, the tunnel is open, the services are healthy, **22 protection checks passed**, and then a box titled **THE TEST IS RUNNING** with:
+Leave that Terminal window open. It prints, in order: your Mac is ready, the game is built, the tunnel is open, the services are healthy, **24 protection checks passed**, and then a box titled **THE TEST IS RUNNING** with:
 
 * **the website address** (looks like `https://word-word-word.trycloudflare.com`; it is **new every time you start**);
 * **one private link per tester** (the address plus `/__enter?k=...`);
@@ -86,8 +86,8 @@ It closes the tunnel, removes the game services and empties the access list, the
 ## 8. Honest limits
 
 * **Cloudflare Quick Tunnels are for testing:** no guarantee of uptime, the address changes every run, and Cloudflare may change or stop the service. Do not use this for a launch.
-* **`--allowed-mail`.** The brief for this test says Cloudflare offers an email-protected Quick Tunnel option. The build environment could not open Cloudflare's documentation or run a real tunnel, so **it could not be verified here**, and the test does not depend on it. The launcher only *looks* at `cloudflared tunnel --help` and tells you whether your installed version lists the option; if it does, you can try it yourself by adding it to the start command (`npm run beta:tunnel -- --cloudflared-arg=...`, exact form per `cloudflared tunnel --help`). Watch for a login page appearing for the game's own requests: the launcher's checks would then fail and it would shut down rather than share an address.
-* **Latency and size.** Players in Nigeria reach a laptop through Cloudflare and your home connection. The game needs a steady connection and your **upload speed** matters: expect a good experience with 2 to 4 players on a typical fibre or 4G connection, not more. The first page load is large (the 3D models and audio): testers on mobile data should expect several tens of megabytes (measured numbers are in `docs/measurements/beta-tunnel/`).
+* **`--allowed-mail`.** The brief for this test says Cloudflare offers an email-protected Quick Tunnel option. The build environment could not open Cloudflare's documentation or run a real tunnel, so **it could not be verified here**, and the test does not depend on it. The launcher only *looks* at `cloudflared tunnel --help` and tells you whether your installed version lists the option; if it does, you can try it yourself: pass its pieces with `--cloudflared-arg`, once per piece (`npm run beta:tunnel -- --cloudflared-arg FIRST --cloudflared-arg SECOND`; the launcher does not guess the syntax, `cloudflared tunnel --help` shows it). Watch for a login page appearing for the game's own requests: the launcher's checks would then fail and it would shut down rather than share an address.
+* **Latency and size.** Players in Nigeria reach a laptop through Cloudflare and your home connection, so your **upload speed** and your testers' signal decide how it feels. Nobody has measured that yet: the first real numbers are yours (the game shows a connection chip with its ping in milliseconds; write down what your testers see). What *was* measured, on one machine through the local stand-in: a browser downloads about **4 MB** to reach the invite screen and about **20 MB** for a whole session of two 3-minute matches (the 3D models and sounds load on demand); on this laptop the accounts service answered in a median 6 ms (95% under 21 ms) and room creation in about 45 ms, so the laptop itself is not the slow part. Do not read anything into the game's ping from that run: both browsers were drawing 32 fighters in software on a shared machine, which dominated it. Tell testers on mobile data about the size, and to use Wi-Fi when they can.
 * **Your laptop is the server:** heavy use (a video call, a big download) slows the game for everyone.
 * **Your testers' emails never leave your Mac.** They are labels for the links; nothing is sent to them automatically. You send the links yourself.
 * This is a **private test**: no ranked play, no payments, no free chat, no public matchmaking. The public GitHub Pages game is not involved and is unchanged.
@@ -114,3 +114,23 @@ If step 1 or 2 fails, copy the last 30 lines of the Terminal window and the outp
 | a tester sees "private test" | they did not open their private link on this device, or the link is from an earlier run: send the current link |
 | a tester sees "That invite code was not accepted" | check the code with `npm run beta:tunnel:invite -- list` |
 | the first build fails | check your internet connection and retry; it continues from where it stopped |
+| "The saved settings do not match the saved database" | you replaced the folder `ops/beta/tunnel-state` but the old test database is still in Docker: `npm run beta:tunnel -- --reset-data` (deletes the test accounts and results only; testers and invite codes are kept) |
+
+## 11. What was tested, and what was not
+
+`npm run test:beta-tunnel-e2e` (developer command, needs root and Docker; it does not need cloudflared or the internet) starts the real launcher in test mode and records its results in `docs/measurements/beta-tunnel/`. **42 checks, 0 failed** on the final run:
+
+| Area | What was proved |
+| --- | --- |
+| **Launcher** | one command starts PostgreSQL, the accounts service, the match server and the entrance, waits until they are healthy, runs its own 24 protection checks, and prints the address, a private link per tester and the invite codes |
+| **Strangers** | without a private link the page, the API, the room endpoints, the ticket keys and the game files all answer 403 with a plain page; a made-up link is refused; guessing links is rate-limited (429) |
+| **Invite and tickets** | with the link but no invite code an account cannot be made; raw room creation without a platform ticket is refused by the match server; quick play is closed |
+| **Never public** | `/admin`, `/internal`, `/metrics`, `/ready`, `/debug` answer 404 even with full access; no secret, invite code or access token appears in `docker inspect` or in any service log; no tester email appears in a service log |
+| **Ports** | only the entrance publishes a port, on 127.0.0.1 only; PostgreSQL, the accounts service and the match server publish none |
+| **Limits** | room-creation flooding is cut off (429); at most 2 matches playing, a CPU budget and mandatory tickets are in force; the visitor's real address (from Cloudflare's header) is what the limits and the logs see |
+| **Page and sockets** | the page finds its servers from its own address at run time (`wss://` and `https://`, nothing fixed, no localhost), the audio and game files load, the service worker is never cached long |
+| **Operator commands** | adding a tester gives a working link at once, removing one stops it at once, a new invite code works and the first still does |
+| **Two real browsers** | invited onboarding, nicknames, friends, party, a private **Free-for-All with 32 fighters** (2 people, 30 computer fighters), quick signals, a dropped connection and the 30-second **reconnection** to the same fighter, identical results on both, the match recorded by the match server, **Team Rumble**, a **second match**, back to the room lobby; a visitor with a link but no invite code and a stranger with no link are both refused, also by raw requests and by a raw WebSocket |
+| **Shutdown** | `npm run beta:tunnel:stop` exits 0, leaves no container and no network, closes the address and empties the access list |
+
+**Not tested, so not claimed:** Cloudflare's real network and a real `cloudflared` (the build environment cannot reach it; a local program stands in for Cloudflare, terminating TLS at a made-up `*.trycloudflare.com` name and forwarding the way cloudflared does); a physical phone; mobile data or any Nigerian network; a Mac (the launcher is plain Node and Docker Compose, but it has only run on Linux); latency across the internet. Section 9 is the checklist for those.

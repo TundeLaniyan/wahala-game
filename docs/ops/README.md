@@ -15,6 +15,7 @@ Based on `claude/wahala-stitch-uiux-v1` @ `f7cf2ae` (the newest server line: LAN
 | [BETA_INTEGRATION_HANDOFF.md](BETA_INTEGRATION_HANDOFF.md) | What was connected between the match server, client and platform, and where it lives |
 | [BETA_FRONTEND.md](BETA_FRONTEND.md) | The private-beta client: build, hosting, origins, and what protects every entry point |
 | [BETA_FOUNDER_TESTING.md](BETA_FOUNDER_TESTING.md) | The two founder procedures: same-Wi-Fi with two phones, and the hosted supervised beta |
+| [BETA_TUNNEL_TESTING.md](BETA_TUNNEL_TESTING.md) | **Free remote test from the founder's MacBook** through a Cloudflare Quick Tunnel: one command, private links, what was and was not tested |
 
 Tooling: `ops/beta/wahala-beta.sh` (one operator command), `ops/beta/compose.yml`, `ops/beta/validate.sh` (real-Docker verification), `ops/beta/load.sh` (load and soak). The rest of this pack is the match server's own operations material the beta builds on.
 

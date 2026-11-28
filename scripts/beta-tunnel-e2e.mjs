@@ -78,7 +78,15 @@ launcher = spawn(
 );
 const onData = (d) => {
   launcherOut += d.toString();
-  appendFileSync(LOG, d.toString().replace(ANSI, ''));
+  // the saved log is evidence, not a secret store: private links and invite codes are blanked before anything is written
+  appendFileSync(
+    LOG,
+    d
+      .toString()
+      .replace(ANSI, '')
+      .replace(/k=[0-9a-f]{32}/g, 'k=<token>')
+      .replace(/wb-[0-9a-f]{16}/g, 'wb-<invite>'),
+  );
 };
 launcher.stdout.on('data', onData);
 launcher.stderr.on('data', onData);

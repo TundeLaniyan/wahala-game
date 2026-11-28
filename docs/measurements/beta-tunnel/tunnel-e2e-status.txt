@@ -1,7 +1,7 @@
 
 WAHALA! private test: status
   address   https://rapid-fox-lagos-demo.trycloudflare.com
-  running since 2026-11-28T14:02:39.451Z
+  running since 2026-11-28T14:17:50.147Z
 
 Services:
   backup    running
@@ -17,11 +17,11 @@ Match server:
   capacity: {"rooms":0,"playingRooms":0,"costInUse":0,"cpuBudget":70,"waitingToStart":0,"connections":0,"trackedKeys":16,"refused":{"guest_create":1}}
 
 Accounts and results:
-  2 players, 2 active sessions, 2 finished matches recorded
+  3 players, 3 active sessions, 2 finished matches recorded
 
 Entrance, last 30 minutes:
-  714 requests; page_or_ws 314, matchmake 29, enter 5, metrics 2, platform_api 194, static 170
-  refused: 46 without an access link (403), 1 wrong address (421), 37 too many requests (429), 13 not found (404); server errors 0
+  790 requests; page_or_ws 361, matchmake 29, enter 6, metrics 2, platform_api 191, static 201
+  refused: 47 without an access link (403), 1 wrong address (421), 37 too many requests (429), 13 not found (404); server errors 0
 
 More detail:  npm run beta:tunnel:logs -- rumble     (also: edge, platform, db)
 

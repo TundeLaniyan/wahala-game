@@ -1,6 +1,9 @@
 dist
 dist-online
 dist-private
+dist-beta
+dist-tunnel
+ops/beta/tunnel-state
 private-e2e-diag
 .local
 node_modules

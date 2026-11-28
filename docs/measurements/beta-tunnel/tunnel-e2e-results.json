@@ -1,13 +1,13 @@
 {
-  "when": "2026-11-28T14:16:05.551Z",
-  "passed": 38,
-  "failed": 1,
+  "when": "2026-11-28T14:31:29.569Z",
+  "passed": 42,
+  "failed": 0,
   "results": [
     {
       "area": "launcher",
       "name": "one command starts the whole test and prints \"THE TEST IS RUNNING\"",
       "ok": true,
-      "detail": "61 s"
+      "detail": "52 s"
     },
     {
       "area": "launcher",
@@ -192,8 +192,26 @@
     {
       "area": "security",
       "name": "only the entrance publishes a port, and only on 127.0.0.1; PostgreSQL, the platform and the match server publish none",
-      "ok": false,
-      "detail": "wahala-tunnel-e2e-edge-1 80/tcp, 127.0.0.1:18080->8080/tcp"
+      "ok": true,
+      "detail": "wahala-tunnel-e2e-edge-1 127.0.0.1:18080->8080"
+    },
+    {
+      "area": "operations",
+      "name": "adding a tester while the test runs gives them a working private link at once",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "area": "operations",
+      "name": "removing a tester stops their link at once",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "operations",
+      "name": "a new invite code works (and the first one still does)",
+      "ok": true,
+      "detail": "HTTP 201"
     },
     {
       "area": "browsers",
@@ -205,7 +223,7 @@
       "area": "browsers",
       "name": "WebSocket connections were opened and the only unplanned closes are the planned drop of browser B",
       "ok": true,
-      "detail": "A opened 4 closed 3; B opened 4 closed 3"
+      "detail": "A opened 4 closed 3; B opened 5 closed 4"
     },
     {
       "area": "status",
@@ -244,26 +262,28 @@
         "opened": 4,
         "closed": 3,
         "events": [
-          "37s open",
-          "94s close",
-          "111s open",
-          "111s close",
-          "111s open",
-          "409s close",
-          "409s open"
+          "34s open",
+          "90s close",
+          "106s open",
+          "107s close",
+          "109s open",
+          "399s close",
+          "404s open"
         ]
       },
       "B": {
-        "opened": 4,
-        "closed": 3,
+        "opened": 5,
+        "closed": 4,
         "events": [
-          "38s open",
-          "94s close",
-          "112s open",
-          "141s close",
-          "153s open",
-          "409s close",
-          "433s open"
+          "34s open",
+          "89s close",
+          "113s open",
+          "113s close",
+          "113s open",
+          "134s close",
+          "144s open",
+          "399s close",
+          "419s open"
         ]
       }
     },
@@ -271,62 +291,320 @@
       {
         "who": "A",
         "when": "match-1-start",
-        "chipMs": null,
-        "healthMs": 11671
+        "chipMs": 230,
+        "healthMs": 31
       },
       {
         "who": "B",
         "when": "match-1-start",
         "chipMs": null,
-        "healthMs": 2553
+        "healthMs": 160
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 320,
+        "healthMs": 152
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 66
       },
       {
         "who": "B",
         "when": "after-reconnect",
-        "chipMs": null,
-        "healthMs": 3425
+        "chipMs": 684,
+        "healthMs": 4203
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 1043,
+        "healthMs": 278
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 254,
+        "healthMs": 44
       },
       {
         "who": "A",
         "when": "after-B-reconnect",
+        "chipMs": 2293,
+        "healthMs": 14
+      },
+      {
+        "who": "B",
+        "when": "during",
         "chipMs": null,
-        "healthMs": 405
+        "healthMs": 78
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 337
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 432
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 625
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 86
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 395
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 2793,
+        "healthMs": 145
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 333
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 272,
+        "healthMs": 58
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 111
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 48,
+        "healthMs": 18
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 120
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 483,
+        "healthMs": 367
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 2267
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 327,
+        "healthMs": 159
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 246,
+        "healthMs": 114
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 229,
+        "healthMs": 55
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 338,
+        "healthMs": 301
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 14
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 36
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 88
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 57
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 1228
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 505
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 244
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 1181
       },
       {
         "who": "A",
         "when": "match-2-team-start",
-        "chipMs": 442,
-        "healthMs": 6557
+        "chipMs": 325,
+        "healthMs": 294
       },
       {
         "who": "B",
         "when": "match-2-team-start",
         "chipMs": null,
-        "healthMs": 454
+        "healthMs": 6715
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 271,
+        "healthMs": 125
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 3569,
+        "healthMs": 3524
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 350,
+        "healthMs": 173
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 4009,
+        "healthMs": 4760
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 3326,
+        "healthMs": 69
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 212,
+        "healthMs": 1642
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 178,
+        "healthMs": 219
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 2352,
+        "healthMs": 5398
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 559,
+        "healthMs": 37
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 393
+      },
+      {
+        "who": "B",
+        "when": "during",
+        "chipMs": 507,
+        "healthMs": 56
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": 216,
+        "healthMs": 42
       },
       {
         "who": "A",
         "when": "end",
         "chipMs": null,
-        "healthMs": 41
+        "healthMs": 24
+      },
+      {
+        "who": "A",
+        "when": "during",
+        "chipMs": null,
+        "healthMs": 60
       },
       {
         "who": "B",
         "when": "end",
         "chipMs": null,
-        "healthMs": 45
+        "healthMs": 53
       }
     ],
     "bytes": {
       "A": {
-        "first": 6587747,
-        "total": 28488446,
-        "requests": 356
+        "first": 3973810,
+        "total": 19528923,
+        "requests": 375
       },
       "B": {
-        "first": 6583081,
-        "total": 28486063,
-        "requests": 355
+        "first": 3979364,
+        "total": 21408810,
+        "requests": 374
       }
     }
   }
